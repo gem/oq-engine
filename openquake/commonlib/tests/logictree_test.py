@@ -22,6 +22,8 @@ Tests for python logic tree processor.
 import os
 import random
 import unittest
+import collections
+
 import numpy
 from lxml import etree
 
@@ -1530,10 +1532,9 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         if errormessage is not None:
             self.assertEqual(errormessage, str(exc.exception))
 
-    def parse_valid(self, xml, filter_keys=('Shield',), num_samples=0):
+    def parse_valid(self, xml, filter_keys=('Shield',)):
         return logictree.GsimLogicTree(
-            StringIO(xml), 'applyToTectonicRegionType',
-            filter_keys, num_samples)
+            StringIO(xml), 'applyToTectonicRegionType', filter_keys)
 
     def test_not_xml(self):
         self.parse_invalid('xxx', etree.XMLSyntaxError)
@@ -1678,19 +1679,23 @@ class GsimLogicTreeTestCase(unittest.TestCase):
                         <uncertaintyModel>
                             SadighEtAl
                         </uncertaintyModel>
-                        <uncertaintyWeight>0.49</uncertaintyWeight>
+                        <uncertaintyWeight>0.4</uncertaintyWeight>
                     </logicTreeBranch>
                     <logicTreeBranch branchID="b2">
                         <uncertaintyModel>
                             ToroEtAl
                         </uncertaintyModel>
-                        <uncertaintyWeight>0.51</uncertaintyWeight>
+                        <uncertaintyWeight>0.6</uncertaintyWeight>
                     </logicTreeBranch>
                 </logicTreeBranchSet>
             </logicTreeBranchingLevel>
         </logicTree>
         """)
-        r1, r2, r3 = list(self.parse_valid(xml, ['Volcanic'], num_samples=3))
-        self.assertEqual(r1.value['Volcanic'], 'ToroEtAl')
-        self.assertEqual(r2.value['Volcanic'], 'ToroEtAl')
-        self.assertEqual(r3.value['Volcanic'], 'SadighEtAl')
+        # test a large number of samples with the algorithm used in the engine
+        counter = collections.Counter()
+        gsim_lt = self.parse_valid(xml, ['Volcanic'])
+        for seed in range(1000):
+            rlz = logictree.sample_one(gsim_lt, random.Random(seed))
+            counter[rlz.lt_path] += 1
+        # the percentages will be close to 40% and 60%
+        self.assertEqual(counter, {('b1',): 414, ('b2',): 586})

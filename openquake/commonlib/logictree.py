@@ -98,7 +98,7 @@ class ValidationError(LogicTreeError):
 
 
 # private function used in sample
-def _sample(branches, rnd):
+def sample_one(branches, rnd):
     # Draw a random number and iterate through the branches in the set
     # (adding up their weights) until the random value falls into
     # the interval occupied by a branch. Return the latter.
@@ -128,7 +128,7 @@ def sample(weighted_objects, num_samples, rnd):
     """
     subsequence = []
     for _ in xrange(num_samples):
-        subsequence.append(_sample(weighted_objects, rnd))
+        subsequence.append(sample_one(weighted_objects, rnd))
     return subsequence
 
 
@@ -1155,8 +1155,8 @@ class GsimLogicTree(object):
     A GsimLogicTree instance is an iterable yielding `LtRealization`
     tuples with attributes `value`, `weight` and `lt_path`, where
     `value` is a dictionary {trt: gsim}, `weight` is a number in the
-    interval 0..1 or None, in the case of sampling and `lt_path` is
-    a tuple with the branch ids of the given realization.
+    interval 0..1 and `lt_path` is a tuple with the branch ids of the
+    given realization.
 
     :param str fname:
         full path of the gsim_logic_tree file
@@ -1164,18 +1164,11 @@ class GsimLogicTree(object):
         the string `"applyToTectonicRegionType"`
     :param filter_keys:
         a sequence of distinct tectonic region types
-    :param int num_samples:
-        the number of sampling to generate (if 0, perform full enumeration)
-    :param int seed:
-        the random number seed, used only in sampling mode
     """
-    def __init__(self, fname, branchset_filter, filter_keys,
-                 num_samples=0, seed=0):
+    def __init__(self, fname, branchset_filter, filter_keys):
         self.fname = fname
         self.branchset_filter = branchset_filter
         self.filter_keys = sorted(filter_keys)
-        self.num_samples = num_samples
-        self.seed = 0
         assert branchset_filter == 'applyToTectonicRegionType'
         if len(self.filter_keys) > len(set(self.filter_keys)):
             raise ValueError(
@@ -1251,15 +1244,7 @@ class GsimLogicTree(object):
             filter_keys.append(branchset[self.branchset_filter])
             groups.append(list(branches))
         # with T tectonic region types there are T groups and T branches
-        if self.num_samples:
-            rnd = random.Random(self.seed)
-            # take a branch for each group `num_samples` times
-            branches_iter = (
-                [sample(branches, 1, rnd)[0] for branches in groups]
-                for _ in xrange(self.num_samples))
-        else:
-            branches_iter = itertools.product(*groups)
-        for branches in branches_iter:
+        for branches in itertools.product(*groups):
             weight = 1
             lt_path = []
             value = {}
@@ -1269,5 +1254,4 @@ class GsimLogicTree(object):
                 assert branch.uncertainty in self.values[fkey], \
                     branch.uncertainty  # sanity check
                 value[fkey] = branch.uncertainty
-            yield LtRealization(
-                value, None if self.num_samples else weight, tuple(lt_path))
+            yield LtRealization(value, weight, tuple(lt_path))
