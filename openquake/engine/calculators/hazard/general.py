@@ -412,19 +412,22 @@ class BaseHazardCalculator(base.Calculator):
         """
         logs.LOG.progress("initializing realizations")
         num_samples = self.hc.number_of_logic_tree_samples
-        num_rlzs = 0
+        num_rlzs_dict = {}  # num rlzs per source model logic tree path
         for idx, (sm, weight, sm_lt_path) in enumerate(self.source_model_lt):
             lt_model = models.LtSourceModel.objects.get(
                 hazard_calculation=self.hc, sm_lt_path=sm_lt_path)
-            rlzs = list(lt_model.make_gsim_lt(seed=self.hc.random_seed + idx))
-            num_rlzs += len(rlzs)
+            gsim_lt = lt_model.make_gsim_lt(seed=self.hc.random_seed + idx)
+            num_rlzs_dict[sm_lt_path] = gsim_lt.get_num_paths()
             if num_samples:  # sampling
-                rlzs = [rlzs[0]]  # pick one gsim realization
+                rlzs = [next(iter(gsim_lt))]  # pick one gsim realization
+            else:
+                rlzs = list(gsim_lt)  # full enumeration
             logs.LOG.info('Creating %d GMPE realization(s) for model %s, %s',
                           len(rlzs), lt_model.sm_name, lt_model.sm_lt_path)
             self._initialize_realizations(idx, lt_model, rlzs)
+        num_rlzs = sum(num_rlzs_dict.itervalues())
         if num_samples > num_rlzs:
-            logs.LOG.warn("""\
+            logs.LOG.warn("""
 The total number of realizations is %d but you are using %d samplings.
 That means that some GMPEs will be sampled more than once, resulting in
 duplicated data and redundant computation. You should switch to full
