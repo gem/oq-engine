@@ -1175,7 +1175,8 @@ class GsimLogicTree(object):
                 'The given tectonic region types are not distinct: %s' %
                 ','.join(self.filter_keys))
         self.values = collections.defaultdict(list)  # {fkey: uncertainties}
-        self.branches = sorted(self._parse_lt())
+        self.branches = sorted(
+            self._parse_lt(), key=operator.attrgetter('bset'))
         if filter_keys and not self.branches:
             raise InvalidLogicTree(
                 'Could not find branches with attribute %r in %s' %
