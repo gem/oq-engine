@@ -35,26 +35,24 @@ class ClassicalHazardCase15TestCase(BaseQATestCase):
             [['SM1'], ['BA2008', 'T2002']],
             [['SM1'], ['CB2008', 'C2003']],
             [['SM1'], ['CB2008', 'T2002']],
-            [['SM2', 'a3pt2b0pt8'], ['BA2008', 'C2003']],
-            [['SM2', 'a3pt2b0pt8'], ['BA2008', 'T2002']],
-            [['SM2', 'a3pt2b0pt8'], ['CB2008', 'C2003']],
-            [['SM2', 'a3pt2b0pt8'], ['CB2008', 'T2002']],
-            [['SM2', 'a3b1'], ['BA2008', 'C2003']],
-            [['SM2', 'a3b1'], ['BA2008', 'T2002']],
-            [['SM2', 'a3b1'], ['CB2008', 'C2003']],
-            [['SM2', 'a3b1'], ['CB2008', 'T2002']],
+            [['SM2', 'a3pt2b0pt8'], ['BA2008']],
+            [['SM2', 'a3pt2b0pt8'], ['CB2008']],
+            [['SM2', 'a3b1'], ['BA2008']],
+            [['SM2', 'a3b1'], ['CB2008']],
         ]
 
         csvdir = os.path.join(CURRENTDIR, 'expected_results')
         j = '_'.join
         for sm_path, gsim_path in lt_paths:
 
-            fname = '%s_PGA.txt' % j(sm_path + gsim_path)
+            fname = 'PGA/hazard_curve-smltp_%s-gsimltp_%s.csv' % (
+                j(sm_path), j(gsim_path))
             compare_hazard_curve_with_csv(
                 hc, sm_path, gsim_path, 'PGA', None, None,
                 os.path.join(csvdir, fname), ' ', rtol=1e-7)
 
-            fname = '%s_SA(0.1).txt' % j(sm_path + gsim_path)
+            fname = 'SA-0.1/hazard_curve-smltp_%s-gsimltp_%s.csv' % (
+                j(sm_path), j(gsim_path))
             compare_hazard_curve_with_csv(
                 hc, sm_path, gsim_path, 'SA', 0.1, 5.0,
                 os.path.join(csvdir, fname), ' ', rtol=1e-7)
