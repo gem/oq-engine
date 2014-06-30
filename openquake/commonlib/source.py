@@ -16,7 +16,6 @@
 import sys
 import math
 import copy
-import operator
 from itertools import izip
 
 from shapely import wkt
