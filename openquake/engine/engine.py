@@ -16,8 +16,6 @@
 """Engine: A collection of fundamental functions for initializing and running
 calculations."""
 
-import ConfigParser
-import csv
 import getpass
 import os
 import sys
@@ -33,7 +31,6 @@ import openquake.engine
 
 from django.core import exceptions
 from django import db as django_db
-from lxml import etree
 
 from openquake.engine import logs
 from openquake.engine.db import models
@@ -49,9 +46,10 @@ from openquake import risklib
 from openquake import nrmllib
 
 from openquake.commonlib.general import str2bool
+from openquake.commonlib import readini
 
 
-INPUT_TYPES = dict(models.INPUT_TYPE_CHOICES)
+INPUT_TYPES = set(dict(models.INPUT_TYPE_CHOICES))
 
 UNABLE_TO_DEL_HC_FMT = 'Unable to delete hazard calculation: %s'
 UNABLE_TO_DEL_RC_FMT = 'Unable to delete risk calculation: %s'
@@ -190,86 +188,6 @@ def prepare_job(user_name="openquake", log_level='progress'):
     )
 
 
-def parse_config(source):
-    """Parse a dictionary of parameters from an INI-style config file.
-
-    :param source:
-        File-like object containing the config parameters.
-    :returns:
-        Two dictionaries (as a 2-tuple). The first contains all of the
-        parameters/values parsed from the job.ini file. The second contains
-        absolute paths to all of the files referenced in the job.ini, keyed by
-        the parameter name.
-    """
-    cp = ConfigParser.ConfigParser()
-    cp.readfp(source)
-
-    base_path = os.path.dirname(
-        os.path.join(os.path.abspath('.'), source.name))
-    params = dict(base_path=base_path)
-    params['inputs'] = dict()
-
-    # Directory containing the config file we're parsing.
-    base_path = os.path.dirname(os.path.abspath(source.name))
-
-    for sect in cp.sections():
-        for key, value in cp.items(sect):
-            if key == 'sites_csv':
-                # Parse site coordinates from the csv file,
-                # return as MULTIPOINT WKT:
-                path = value
-                if not os.path.isabs(path):
-                    # It's a relative path
-                    path = os.path.join(base_path, path)
-                params['sites'] = _parse_sites_csv(open(path, 'r'))
-            elif key.endswith('_file'):
-                input_type = key[:-5]
-                if not input_type in INPUT_TYPES:
-                    raise ValueError(
-                        'The parameter %s in the .ini file does '
-                        'not correspond to a valid input type' % key)
-                path = value
-                # The `path` may be a path relative to the config file, or it
-                # could be an absolute path.
-                if not os.path.isabs(path):
-                    # It's a relative path.
-                    path = os.path.join(base_path, path)
-
-                params['inputs'][input_type] = path
-            else:
-                params[key] = value
-
-    # convert back to dict as defaultdict is not pickleable
-    params['inputs'] = dict(params['inputs'])
-
-    # load source inputs (the paths are the source_model_logic_tree)
-    smlt = params['inputs'].get('source_model_logic_tree')
-    if smlt:
-        params['inputs']['source'] = [
-            os.path.join(base_path, src_path)
-            for src_path in _collect_source_model_paths(smlt)]
-
-    return params
-
-
-def _parse_sites_csv(fh):
-    """
-    Get sites of interest from a csv file. The csv file (``fh``) is expected to
-    have 2 columns: lon,lat.
-
-    :param fh:
-        File-like containing lon,lat coordinates in csv format.
-
-    :returns:
-        MULTIPOINT WKT representing all of the sites in the csv file.
-    """
-    reader = csv.reader(fh)
-    coords = []
-    for lon, lat in reader:
-        coords.append('%s %s' % (lon, lat))
-    return 'MULTIPOINT(%s)' % ', '.join(coords)
-
-
 def create_calculation(model, params):
     """
     Given a params `dict` parsed from the config file, create a
@@ -305,25 +223,6 @@ def create_calculation(model, params):
     calc.save()
 
     return calc
-
-
-def _collect_source_model_paths(smlt):
-    """
-    Given a path to a source model logic tree or a file-like, collect all of
-    the soft-linked path names to the source models it contains and return them
-    as a uniquified list (no duplicates).
-    """
-    src_paths = []
-    tree = etree.parse(smlt)
-    for branch_set in tree.xpath('//nrml:logicTreeBranchSet',
-                                 namespaces=nrmllib.PARSE_NS_MAP):
-
-        if branch_set.get('uncertaintyType') == 'sourceModel':
-            for branch in branch_set.xpath(
-                    './nrml:logicTreeBranch/nrml:uncertaintyModel',
-                    namespaces=nrmllib.PARSE_NS_MAP):
-                src_paths.append(branch.text)
-    return sorted(set(src_paths))
 
 
 # used by bin/openquake and openquake.server.views
@@ -609,7 +508,12 @@ def job_from_file(cfg_file_path, username, log_level, exports,
     # create the job
     job = prepare_job(user_name=username, log_level=log_level)
     # read calculation params and create the calculation profile
-    params = parse_config(open(cfg_file_path, 'r'))
+    params = readini.parse_config(open(cfg_file_path, 'r'))
+    missing = set(params['inputs']) - INPUT_TYPES
+    if missing:
+        raise ValueError(
+            'The parameters %s in the .ini file does '
+            'not correspond to a valid input type' % ', '.join(missing))
 
     if hazard_output_id is None and hazard_calculation_id is None:
         # this is a hazard calculation, not a risk one
