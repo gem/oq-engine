@@ -300,7 +300,7 @@ def _deep_eq(a, b, decimal, exclude=None):
 def writetmp(content=None, dir=None, prefix="tmp", suffix="tmp"):
     """Create temporary file with the given content.
 
-    Please note: the temporary file must be deleted bu the caller.
+    Please note: the temporary file must be deleted by the caller.
 
     :param string content: the content to write to the temporary file.
     :param string dir: directory where the file should be created
