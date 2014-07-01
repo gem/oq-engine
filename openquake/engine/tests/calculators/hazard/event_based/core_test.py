@@ -286,3 +286,18 @@ post_processing.gmvs_to_haz_curve`.
         actual_poes = core.gmvs_to_haz_curve(gmvs, imls, invest_time, duration)
         numpy.testing.assert_array_almost_equal(
             expected_poes, actual_poes, decimal=6)
+
+
+class UnknownGsimTestCase(unittest.TestCase):
+    # the case where the source model contains a TRT which does not
+    # exist in the gsim_logic_tree file
+    def test(self):
+        cfg = helpers.get_data_path('bad_gsim/job.ini')
+        job = helpers.get_job(cfg, username=getpass.getuser())
+        calc = core.EventBasedHazardCalculator(job)
+        with self.assertRaises(ValueError) as ctxt:
+            calc.initialize_sources()
+        errmsg = str(ctxt.exception)
+        assert errmsg.startswith(
+            "Found in 'source_model.xml' a tectonic region type "
+            "'Active Shallow Crust' inconsistent with the ones"), errmsg
