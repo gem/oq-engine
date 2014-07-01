@@ -18,6 +18,7 @@
 import unittest
 
 from openquake.hazardlib import geo as hazardlib_geo
+from openquake.commonlib import readini
 
 from openquake.engine import engine
 from openquake.engine.calculators.hazard import general
@@ -130,7 +131,7 @@ class ParseRiskModelsTestCase(unittest.TestCase):
         job = engine.prepare_job(username)
 
         cfg = helpers.get_data_path('classical_job-sd-imt.ini')
-        params = engine.parse_config(open(cfg, 'r'))
+        params = readini.parse_config(open(cfg, 'r'))
 
         haz_calc = engine.create_calculation(models.HazardCalculation, params)
         haz_calc = models.HazardCalculation.objects.get(id=haz_calc.id)
