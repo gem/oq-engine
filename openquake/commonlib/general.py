@@ -21,7 +21,9 @@
 Utility functions of general interest.
 """
 
+import os
 import math
+import tempfile
 import collections
 
 import numpy
@@ -293,3 +295,25 @@ def _deep_eq(a, b, decimal, exclude=None):
             numpy.testing.assert_almost_equal(a, b, decimal=decimal)
         else:
             assert a == b, "%s != %s" % (a, b)
+
+
+def writetmp(content=None, dir=None, prefix="tmp", suffix="tmp"):
+    """Create temporary file with the given content.
+
+    Please note: the temporary file must be deleted bu the caller.
+
+    :param string content: the content to write to the temporary file.
+    :param string dir: directory where the file should be created
+    :param string prefix: file name prefix
+    :param string suffix: file name suffix
+    :returns: a string with the path to the temporary file
+    """
+    if dir is not None:
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+    fh, path = tempfile.mkstemp(dir=dir, prefix=prefix, suffix=suffix)
+    if content:
+        fh = os.fdopen(fh, "w")
+        fh.write(content)
+        fh.close()
+    return path
