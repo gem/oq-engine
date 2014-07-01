@@ -300,6 +300,11 @@ class BaseHazardCalculator(base.Calculator):
             # save TrtModels for each tectonic region type
             gsims_by_trt = lt_model.make_gsim_lt(trts).values
             for sc in source_collectors:
+                if not sc.trt in gsims_by_trt:
+                    gsim_file = self.hc.inputs['gsim_logic_tree']
+                    raise ValueError(
+                        "Found in %r a tectonic region type %r inconsistent "
+                        "with the ones in %r" % (sm, sc.trt, gsim_file))
                 # NB: the source_collectors are ordered by number of sources
                 # and lexicographically, so the models are in the right order
                 trt_model_id = models.TrtModel.objects.create(
