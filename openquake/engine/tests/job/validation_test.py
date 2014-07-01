@@ -27,6 +27,7 @@ from openquake.engine.tests.utils import helpers
 from openquake.engine.tests.utils.helpers import get_data_path
 
 from openquake.commonlib.general import deep_eq
+from openquake.commonlib import readini
 
 
 VALID_IML_IMT = {
@@ -919,7 +920,7 @@ class ValidateTestCase(unittest.TestCase):
         # warning should be raised.
         cfg_file = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
         job = engine.prepare_job()
-        params = engine.parse_config(open(cfg_file, 'r'))
+        params = readini.parse_config(open(cfg_file, 'r'))
         # Add a few superfluous parameters:
         params['ses_per_logic_tree_path'] = 5
         params['ground_motion_correlation_model'] = 'JB2009'
