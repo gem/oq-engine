@@ -31,8 +31,8 @@ def parse_config(source):
     :param source:
         File-like object containing the config parameters.
     :returns:
-        Two dictionaries (as a 2-tuple). The first contains all of the
-        parameters/values parsed from the job.ini file. The second contains
+        A dictionary containing all of the parameters/values parsed from
+        the job.ini file as well as a subdictionary 'inputs' containing
         absolute paths to all of the files referenced in the job.ini, keyed by
         the parameter name.
     """
