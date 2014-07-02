@@ -105,7 +105,7 @@ class BaseHazardCalculator(base.Calculator):
     def __init__(self, job):
         super(BaseHazardCalculator, self).__init__(job)
 
-        # two crucial parameters from openquake.cfg
+        # three crucial parameters from openquake.cfg
         self.source_max_weight = int(
             config.get('hazard', 'source_max_weight'))
         self.rupture_block_size = int(
@@ -163,7 +163,6 @@ class BaseHazardCalculator(base.Calculator):
                 yield args
                 task_no += 1
                 num_blocks += 1
-                task_no += 1
                 num_sources += len(block)
                 logs.LOG.info('Processing %d sources out of %d' %
                               sc.filtered_sources)
