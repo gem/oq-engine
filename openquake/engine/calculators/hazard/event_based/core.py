@@ -228,7 +228,7 @@ def compute_ruptures(
                     indices = r_sites.indices if len(r_sites) < len(sitecol) \
                         else None  # None means that nothing was filtered
                     prob_rup = models.ProbabilisticRupture.create(
-                        rup, ses_coll, indices)
+                        rup, ses_coll, trt_model, indices)
                     for ses_idx, num_occurrences in ses_num_occ[rup]:
                         for occ_no in range(1, num_occurrences + 1):
                             rup_seed = rnd.randint(0, models.MAX_SINT_32)
