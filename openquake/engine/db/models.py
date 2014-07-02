@@ -1923,6 +1923,8 @@ class Gmf(djm.Model):
                     for ses_rup in ses_ruptures:
                         yield ses_rup, sites, computer.compute(ses_rup.seed)
 
+    # this method in the future will replace __iter__, by enabling
+    # GMF-export by recomputation
     def iternew(self):
         """
         Get the ground motion fields per SES ("GMF set") for
