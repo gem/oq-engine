@@ -73,7 +73,7 @@ class FakeRupture(object):
         self.id = id
 
 
-class RuptureCollectorTestCase(unittest.TestCase):
+class GmfCalculatorTestCase(unittest.TestCase):
     """Tests for the routines used by the event-based hazard calculator"""
 
     # test a case with 5 sites and 2 ruptures
@@ -96,9 +96,10 @@ class RuptureCollectorTestCase(unittest.TestCase):
         pga = PGA()
         rlz = mock.Mock()
         rlz.id = 1
-        coll = core.RuptureCollector(
+        coll = core.GmfCalculator(
             params, [pga], [gsim], trt_model_id=1, task_no=0)
-        coll.calc_gmf(site_coll, rup.rupture, rup.id, rup_seed)
+        rdata = core.RuptureData(site_coll, rup.rupture, [(rup.id, rup_seed)])
+        coll.calc_gmfs([rdata])
         expected_rups = {
             ('AkkarBommer2010', pga, 0): [rup_id],
             ('AkkarBommer2010', pga, 1): [rup_id],
