@@ -113,8 +113,6 @@ class BaseHazardCalculator(base.Calculator):
         self.concurrent_tasks = int(
             config.get('hazard', 'concurrent_tasks'))
 
-        # a dictionary trt_model_id -> rupture_data
-        self.rupt_collector = collections.defaultdict(list)
         # a dictionary trt_model_id -> num_ruptures
         self.num_ruptures = collections.defaultdict(int)
         # now a dictionary (trt_model_id, gsim) -> poes
