@@ -70,7 +70,7 @@ class RuptureData(object):
         the `openquake.engine.db.models.ProbabilisticRupture` instance
 
     The attribute `.r_sites` contains the (sub)collection of the sites
-    affected by the rupture/
+    affected by the rupture.
     The attribute `.rupid_seed_pairs` contains a list of pairs
     `(rupid, seed)` where `rupid` is the id of an
     `openquake.engine.db.models.SESRupture` instance and `seed` is
