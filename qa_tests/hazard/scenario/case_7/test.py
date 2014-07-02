@@ -21,7 +21,7 @@ from openquake.engine.db import models
 from qa_tests import _utils as qa_utils
 
 
-class ScenarioHazardCase6TestCase(qa_utils.BaseQATestCase):
+class ScenarioHazardCase7TestCase(qa_utils.BaseQATestCase):
 
     @attr('qa', 'hazard', 'scenario')
     def test(self):
