@@ -25,7 +25,6 @@ import collections
 
 import numpy
 
-from openquake.hazardlib import correlation
 from openquake.hazardlib.imt import from_string
 
 # FIXME: one must import the engine before django to set DJANGO_SETTINGS_MODULE
@@ -84,28 +83,6 @@ def store_site_model(job, site_model_source):
     return writer.CacheInserter.saveall(data)
 
 
-def get_correl_model(hc):
-    """
-    Helper function for constructing the appropriate correlation model.
-
-    :param hc:
-        A :class:`openquake.engine.db.models.HazardCalculation` instance.
-
-    :returns:
-        A correlation object. See :mod:`openquake.hazardlib.correlation` for
-        more info.
-    """
-    correl_model_cls = getattr(
-        correlation,
-        '%sCorrelationModel' % hc.ground_motion_correlation_model,
-        None)
-    if correl_model_cls is None:
-        # There's no correlation model for this calculation.
-        return None
-
-    return correl_model_cls(**hc.ground_motion_correlation_params)
-
-
 def all_equal(obj, value):
     """
     :param obj: a numpy array or something else
@@ -127,10 +104,21 @@ class BaseHazardCalculator(base.Calculator):
 
     def __init__(self, job):
         super(BaseHazardCalculator, self).__init__(job)
-        self.source_max_weight = int(config.get('hazard', 'source_max_weight'))
-        self.rupt_collectors = []
-        self.num_ruptures = collections.defaultdict(float)
-        self.curves = {}  # {trt_model_id, gsim: curves_by_imt}
+
+        # three crucial parameters from openquake.cfg
+        self.source_max_weight = int(
+            config.get('hazard', 'source_max_weight'))
+        self.rupture_block_size = int(
+            config.get('hazard', 'rupture_block_size'))
+        self.concurrent_tasks = int(
+            config.get('hazard', 'concurrent_tasks'))
+
+        # a dictionary trt_model_id -> rupture_data
+        self.rupt_collector = collections.defaultdict(list)
+        # a dictionary trt_model_id -> num_ruptures
+        self.num_ruptures = collections.defaultdict(int)
+        # now a dictionary (trt_model_id, gsim) -> poes
+        self.curves = {}
 
     @property
     def hc(self):
@@ -152,6 +140,7 @@ class BaseHazardCalculator(base.Calculator):
             for args in self._task_args:
                 yield args
             return
+
         sitecol = self.hc.site_collection
         task_no = 0
         for trt_model_id in self.source_collector:
@@ -172,8 +161,8 @@ class BaseHazardCalculator(base.Calculator):
                         trt_model.id, gsims, task_no)
                 self._task_args.append(args)
                 yield args
-                num_blocks += 1
                 task_no += 1
+                num_blocks += 1
                 num_sources += len(block)
                 logs.LOG.info('Processing %d sources out of %d' %
                               sc.filtered_sources)

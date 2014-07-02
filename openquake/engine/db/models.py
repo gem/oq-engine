@@ -35,16 +35,17 @@ from datetime import datetime
 import numpy
 from scipy import interpolate
 
-from django.db import transaction, connections
+from django.db import connections
 from django.core.exceptions import ObjectDoesNotExist
 
 from django.contrib.gis.db import models as djm
 from shapely import wkt
 
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import source, geo
+from openquake.hazardlib import source, geo, calc, correlation
 from openquake.hazardlib.calc import filters
-from openquake.hazardlib.site import Site, SiteCollection
+from openquake.hazardlib.site import (
+    Site, SiteCollection, FilteredSiteCollection)
 
 from openquake.commonlib.general import distinct
 from openquake.commonlib.riskloaders import loss_type_to_cost_type
@@ -628,6 +629,24 @@ class HazardCalculation(djm.Model):
         """
         return self.inputs.get('site_model')
 
+    def get_correl_model(self):
+        """
+        Helper function for constructing the appropriate correlation model.
+
+        :returns:
+            A correlation object. See :mod:`openquake.hazardlib.correlation`
+            for more info.
+        """
+        correl_model_cls = getattr(
+            correlation,
+            '%sCorrelationModel' % self.ground_motion_correlation_model,
+            None)
+        if correl_model_cls is None:
+            # There's no correlation model for this calculation.
+            return None
+
+        return correl_model_cls(**self.ground_motion_correlation_params)
+
     ## TODO: this could be implemented with a view, now that there is
     ## a site table
     def get_closest_site_model_data(self, point):
@@ -770,12 +789,12 @@ class HazardCalculation(djm.Model):
 
     def get_imts(self):
         """
-        Returns intensity mesure types or
-        intensity mesure types with levels.
+        Returns intensity mesure types or intensity mesure types with levels
+        in a fixed order.
         """
 
-        return (self.intensity_measure_types or
-                self.intensity_measure_types_and_levels.keys())
+        return sorted(self.intensity_measure_types or
+                      self.intensity_measure_types_and_levels)
 
     def save_sites(self, coordinates):
         """
@@ -1672,7 +1691,7 @@ class ProbabilisticRupture(djm.Model):
     magnitude = djm.FloatField(null=False)
     _hypocenter = fields.FloatArrayField(null=False)
     rake = djm.FloatField(null=False)
-    tectonic_region_type = djm.TextField(null=False)
+    trt_model = djm.ForeignKey('TrtModel')
     is_from_fault_source = djm.NullBooleanField(null=False)
     is_multi_surface = djm.NullBooleanField(null=False)
     surface = fields.PickleField(null=False)
@@ -1695,7 +1714,7 @@ class ProbabilisticRupture(djm.Model):
         db_table = 'hzrdr\".\"probabilistic_rupture'
 
     @classmethod
-    def create(cls, rupture, ses_collection, site_indices=None):
+    def create(cls, rupture, ses_collection, trt_model, site_indices=None):
         """
         Create a ProbabilisticRupture row on the database.
 
@@ -1703,6 +1722,8 @@ class ProbabilisticRupture(djm.Model):
             a hazardlib rupture
         :param ses_collection:
             a Stochastic Event Set Collection object
+        :param trt_model:
+            the TRTModel generating the rupture
         :param site_indices:
             an array of indices for the site_collection
         """
@@ -1714,12 +1735,17 @@ class ProbabilisticRupture(djm.Model):
             ses_collection=ses_collection,
             magnitude=rupture.mag,
             rake=rupture.rake,
-            tectonic_region_type=rupture.tectonic_region_type or 'NA',
+            trt_model=trt_model,
             is_from_fault_source=iffs,
             is_multi_surface=ims,
             surface=rupture.surface,
             _hypocenter=[hp.longitude, hp.latitude, hp.depth],
             site_indices=site_indices)
+
+    @property
+    def tectonic_region_type(self):
+        """The TRT associated to the underlying trt_model"""
+        return self.trt_model.tectonic_region_type
 
     _geom = None
 
@@ -1851,10 +1877,7 @@ class SESRupture(djm.Model):
         return self.rupture.hypocenter
 
 
-class _Point(object):
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
+_Point = collections.namedtuple('_Point', 'x y')
 
 
 class Gmf(djm.Model):
@@ -1867,6 +1890,86 @@ class Gmf(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"gmf'
+
+    def by_rupture(self, ses_collection_id=None, ses_ordinal=None):
+        """
+        Yields triples (ses_rupture, sites, gmf_dict)
+        """
+        hc = self.output.oq_job.hazard_calculation
+        correl_model = hc.get_correl_model()
+        gsims = self.lt_realization.get_gsim_instances()
+        assert gsims, 'No GSIMs found for realization %d!' % \
+            self.lt_realization.id  # look into hzdr.assoc_lt_rlz_trt_model
+        # NB: the IMTs must be sorted for consistency with the classical
+        # calculator when computing the hazard curves from the GMFs
+        imts = map(from_string, sorted(hc.intensity_measure_types))
+        for ses_coll in SESCollection.objects.filter(
+                output__oq_job=self.output.oq_job):
+            # filter by ses_collection
+            if ses_collection_id and ses_collection_id != ses_coll.id:
+                continue
+            for ses in ses_coll:
+                # filter by ses_ordinal
+                if ses_ordinal and ses_ordinal != ses.ordinal:
+                    continue
+                for rupture, ses_ruptures in itertools.groupby(
+                        ses, operator.attrgetter('rupture')):
+                    sites = hc.site_collection if rupture.site_indices is None\
+                        else FilteredSiteCollection(
+                            rupture.site_indices, hc.site_collection)
+                    computer = calc.gmf.GmfComputer(
+                        rupture, sites, imts, gsims,
+                        hc.truncation_level, correl_model)
+                    for ses_rup in ses_ruptures:
+                        yield ses_rup, sites, computer.compute(ses_rup.seed)
+
+    # this method in the future will replace __iter__, by enabling
+    # GMF-export by recomputation
+    def iternew(self):
+        """
+        Get the ground motion fields per SES ("GMF set") for
+        the XML export. Each "GMF set" should:
+
+            * have an `investigation_time` attribute
+            * have an `stochastic_event_set_id` attribute
+            * be iterable, yielding a sequence of "GMF" objects
+
+            Each "GMF" object should:
+
+            * have an `imt` attribute
+            * have an `sa_period` attribute (only if `imt` is 'SA')
+            * have an `sa_damping` attribute (only if `imt` is 'SA')
+            * have a `rupture_id` attribute (to indicate which rupture
+              contributed to this gmf)
+            * be iterable, yielding a sequence of "GMF node" objects
+
+            Each "GMF node" object should have:
+
+            * a `gmv` attribute (to indicate the ground motion value
+            * `lon` and `lat` attributes (to indicate the geographical location
+              of the ground motion field)
+
+        If a SES does not generate any GMF, it is ignored.
+        """
+        for ses_coll in SESCollection.objects.filter(
+                output__oq_job=self.output.oq_job):
+            for ses in ses_coll:
+                gmfset = []  # set of GMFs generate by the same SES
+                for ses_rup, sites, gmf_dict in self.by_rupture(
+                        ses_coll.id, ses.ordinal):
+                    for gsim, imt in gmf_dict:
+                        gmvs = gmf_dict[gsim, imt]
+                        im_type, sa_period, sa_damping = imt
+                            # using a generator here saves a lot of memory
+                        nodes = (_GroundMotionFieldNode(gmv, _Point(x, y))
+                                 for gmv, x, y in
+                                 zip(gmvs, sites.lons, sites.lats))
+                        gmfset.append(
+                            _GroundMotionField(
+                                im_type, sa_period, sa_damping,
+                                ses_rup.tag, nodes))
+                if gmfset:
+                    yield GmfSet(ses, gmfset)
 
     # this part is tested in models_test:GmfsPerSesTestCase
     def __iter__(self):
@@ -1915,9 +2018,8 @@ class Gmf(djm.Model):
         GROUP BY imt, sa_period, sa_damping, tag
         ORDER BY imt, sa_period, sa_damping, tag;
         """ % (hc.id, self.id, ses.ordinal, ses_coll.id)
-                with transaction.commit_on_success(using='job_init'):
-                    curs = getcursor('job_init')
-                    curs.execute(query)
+                curs = getcursor('job_init')
+                curs.execute(query)
                 # a set of GMFs generate by the same SES, one per rupture
                 gmfset = []
                 for (imt, sa_period, sa_damping, rupture_tag, gmvs,
@@ -1951,7 +2053,8 @@ class GmfSet(object):
             'GMFsPerSES(investigation_time=%f, '
             'stochastic_event_set_id=%s,\n%s)' % (
                 self.ses.investigation_time,
-                self.ses.ordinal, '\n'.join(str(g) for g in self.gmfset)))
+                self.ses.ordinal, '\n'.join(
+                    sorted(str(g) for g in self.gmfset))))
 
 
 class _GroundMotionField(object):
@@ -1992,8 +2095,12 @@ class _GroundMotionFieldNode(object):
         self.gmv = gmv
         self.location = loc
 
+    def __lt__(self, other):
+        """Add an ordering by lon/lat, useful to have reproducible export"""
+        return self.location < other.location
+
     def __str__(self):
-        "Return lon, lat and gmv of the node in a compact string form"
+        """Return lon, lat and gmv of the node in a compact string form"""
         return '<X=%9.5f, Y=%9.5f, GMV=%9.7f>' % (
             self.location.x, self.location.y, self.gmv)
 
@@ -2327,6 +2434,14 @@ class LtRealization(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"lt_realization'
         ordering = ['ordinal']
+
+    def get_gsim_instances(self):
+        """
+        Return the GSIM instances associated to the current realization
+        by looking at the association table.
+        """
+        return [logictree.GSIM[art.gsim]() for art in
+                AssocLtRlzTrtModel.objects.filter(rlz=self)]
 
 
 ## Tables in the 'riskr' schema.
