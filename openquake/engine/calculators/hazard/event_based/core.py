@@ -31,6 +31,7 @@ For more information on computing ground motion fields, see
 :mod:`openquake.hazardlib.calc.gmf`.
 """
 
+import math
 import time
 import random
 import operator
@@ -41,6 +42,7 @@ import numpy.random
 from django.db import transaction
 from openquake.hazardlib.calc import gmf, filters
 from openquake.hazardlib.imt import from_string
+from openquake.hazardlib.site import FilteredSiteCollection
 
 from openquake.commonlib import logictree
 from openquake.commonlib.general import block_splitter
@@ -55,30 +57,34 @@ from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
 
 # NB: beware of large caches
 inserter = writer.CacheInserter(models.GmfData, 1000)
-source_inserter = writer.CacheInserter(models.SourceInfo, 10000)
+source_inserter = writer.CacheInserter(models.SourceInfo, 100)
 
 
 class RuptureData(object):
     """
-    Containers for a main rupture and its copies. It has the attributes:
+    Containers for a main rupture and its copies.
 
-    :param r_sites:
-        the collection of sites affected by the rupture
+    :param sitecol:
+        the SiteCollection instance associated to the current calculation
     :param rupture:
-        an `openquake.hazardlib.source.rupture.
-            ParametricProbabilisticRupture` instance
-    :param rupid_seed_pairs:
-        a list of pairs `(rupid, seed)` where `rupid` is the id of an
-        `openquake.engine.db.models.SESRupture` instance and `seed` is
-        an integer to be used as stochastic seed
-    """
-    def __init__(self, r_sites, rupture, rupid_seed_pairs):
-        self.r_sites = r_sites
-        self.rupture = rupture
-        self.rupid_seed_pairs = rupid_seed_pairs
+        the `openquake.engine.db.models.ProbabilisticRupture` instance
 
-    @property
-    def weight(self):
+    The attribute `.r_sites` contains the (sub)collection of the sites
+    affected by the rupture/
+    The attribute `.rupid_seed_pairs` contains a list of pairs
+    `(rupid, seed)` where `rupid` is the id of an
+    `openquake.engine.db.models.SESRupture` instance and `seed` is
+    an integer to be used as stochastic seed.
+    """
+    def __init__(self, sitecol, rupture):
+        self.rupture = rupture
+        self.rupid_seed_pairs = [
+            (r.id, r.seed) for r in
+            models.SESRupture.objects.filter(rupture=rupture)]
+        self.r_sites = sitecol if rupture.site_indices is None \
+            else FilteredSiteCollection(rupture.site_indices, sitecol)
+
+    def get_weight(self):
         """
         The weight of a RuptureData object is the number of rupid_seed_pairs
         it contains, i.e. the number of GMFs it can generate.
@@ -166,7 +172,7 @@ def compute_ruptures(
 
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     all_ses = range(1, hc.ses_per_logic_tree_path + 1)
-    rupture_data = []
+    all_ruptures = 0
 
     filter_sites_mon = LightMonitor(
         'filtering sites', job_id, compute_ruptures)
@@ -219,7 +225,6 @@ def compute_ruptures(
                     continue
 
             # saving ses_ruptures
-            ses_ruptures = []
             with save_ruptures_mon:
                 # using a django transaction make the saving faster
                 with transaction.commit_on_success(using='job_init'):
@@ -230,22 +235,16 @@ def compute_ruptures(
                     for ses_idx, num_occurrences in ses_num_occ[rup]:
                         for occ_no in range(1, num_occurrences + 1):
                             rup_seed = rnd.randint(0, models.MAX_SINT_32)
-                            ses_rup = models.SESRupture.create(
+                            models.SESRupture.create(
                                 prob_rup, ses_idx, src.source_id,
                                 rup.rup_no, occ_no, rup_seed)
-                            ses_ruptures.append(ses_rup)
-
-            # collecting ses_ruptures
-            rupture_data.append(
-                RuptureData(r_sites, rup,
-                            [(ses_rup.id, ses_rup.seed)
-                             for ses_rup in ses_ruptures]))
 
         # log calc_time per distinct rupture
         if ses_num_occ:
             num_ruptures = len(ses_num_occ)
             tot_ruptures = sum(num for rup in ses_num_occ
                                for ses, num in ses_num_occ[rup])
+            all_ruptures += tot_ruptures
             source_inserter.add(
                 models.SourceInfo(trt_model_id=trt_model_id,
                                   source_id=src.source_id,
@@ -261,7 +260,7 @@ def compute_ruptures(
     save_ruptures_mon.flush()
     source_inserter.flush()
 
-    return rupture_data, trt_model_id, task_no
+    return all_ruptures, trt_model_id
 
 
 @tasks.oqtask
@@ -280,11 +279,9 @@ def compute_and_save_gmfs(job_id, sids, trt_model_id, rupture_data, task_no):
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     params = dict(
-
         correl_model=hc.get_correl_model(),
-        truncation_level=hc.truncation_level,
-        maximum_distance=hc.maximum_distance)
-    imts = map(from_string, hc.intensity_measure_types)
+        truncation_level=hc.truncation_level)
+    imts = map(from_string, sorted(hc.intensity_measure_types))
     rlzs = models.TrtModel.objects.get(pk=trt_model_id).get_rlzs_by_gsim()
     gsims = [logictree.GSIM[gsim]() for gsim in rlzs]
     calc = GmfCalculator(params, imts, gsims, trt_model_id, task_no)
@@ -427,21 +424,20 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
     def task_completed(self, task_result):
         """
         :param task_result:
-            a triple (rupture_data, trt_model_id, task_no)
+            a pair (num_ruptures, trt_model_id)
 
         If the parameter `ground_motion_fields` is set, compute and save
         the GMFs from the ruptures generated by the given task.
         """
-        if not self.hc.ground_motion_fields:
-            return  # do nothing
-        rupture_data, trt_model_id, task_no = task_result
-        if rupture_data:
-            self.rupt_collector[trt_model_id].extend(rupture_data)
-            self.num_ruptures[trt_model_id] += len(rupture_data)
+        num_ruptures, trt_model_id = task_result
+        if num_ruptures:
+            self.num_ruptures[trt_model_id] += num_ruptures
 
     def post_execute(self):
-        for trt_model in models.TrtModel.objects.filter(
-                lt_model__hazard_calculation=self.hc):
+        trt_models = models.TrtModel.objects.filter(
+            lt_model__hazard_calculation=self.hc)
+        # save the right number of occurring ruptures
+        for trt_model in trt_models:
             trt_model.num_ruptures = self.num_ruptures.get(trt_model.id, 0)
             trt_model.save()
         self.initialize_realizations()
@@ -456,20 +452,34 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                 output_type='gmf')
             models.Gmf.objects.create(output=output, lt_realization=rlz)
 
-        # generate the GMFs and optionally the hazard curves too
-        otm = tasks.OqTaskManager(compute_and_save_gmfs, logs.LOG.progress)
-        task_no = 0
-        sids = self.hc.site_collection.sids
-        for trt_model_id, rupture_data in self.rupt_collector.iteritems():
-            for rdata in block_splitter(rupture_data, self.concurrent_tasks):
-                logs.LOG.info('Sending task #%s', task_no + 1)
-                otm.submit(self.job.id, sids, trt_model_id, rdata, task_no)
-                task_no += 1
-        otm.aggregate_results(self.agg_curves, self.curves)
+        self.generate_gmfs(trt_models)
 
         # now save the curves, if any
         if self.curves:
             self.save_hazard_curves()
+
+    @EnginePerformanceMonitor.monitor
+    def generate_gmfs(self, trt_models):
+        """
+        Generate the GMFs and optionally the hazard curves too
+        """
+        sitecol = self.hc.site_collection
+        otm = tasks.OqTaskManager(compute_and_save_gmfs, logs.LOG.progress)
+        num_tasks_hint = math.ceil(
+            float(self.concurrent_tasks) / len(trt_models))
+        task_no = 0
+        for trt_model in trt_models:
+            rupture_data = [
+                RuptureData(self.hc.site_collection, rupture)
+                for rupture in models.ProbabilisticRupture.objects.filter(
+                    trt_model=trt_model)]
+            for rdata in block_splitter(rupture_data, num_tasks_hint,
+                                        RuptureData.get_weight):
+                logs.LOG.info('Sending task #%s', task_no + 1)
+                otm.submit(self.job.id, sitecol.sids, trt_model.id,
+                           rdata, task_no)
+                task_no += 1
+        otm.aggregate_results(self.agg_curves, self.curves)
 
     def initialize_ses_db_records(self, lt_model):
         """
