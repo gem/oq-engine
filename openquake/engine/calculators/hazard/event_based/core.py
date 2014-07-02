@@ -43,7 +43,7 @@ from openquake.hazardlib.calc import gmf, filters
 from openquake.hazardlib.imt import from_string
 
 from openquake.commonlib import logictree
-from openquake.commonlib.general import split_on_max_weight
+from openquake.commonlib.general import block_splitter
 
 from openquake.engine import logs, writer
 from openquake.engine.calculators.hazard import general
@@ -55,6 +55,7 @@ from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
 
 # NB: beware of large caches
 inserter = writer.CacheInserter(models.GmfData, 1000)
+source_inserter = writer.CacheInserter(models.SourceInfo, 10000)
 
 
 class RuptureData(object):
@@ -133,20 +134,6 @@ def gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
     return poes
 
 
-def split(items, nblocks):
-    """
-    Produce blocks of items from a list of items, each one
-    with a `.weight` attribute. The number of produced blocks
-    will be close but not necessarily equal to `nblocks`.
-
-    :params items: a sequence of wighted items
-    :param nblocks: hint for the number of blocks to generate
-    """
-    pairs = [(item, item.weight) for item in items]
-    weight = sum(w for (_, w) in pairs) / nblocks
-    return split_on_max_weight(pairs, weight)
-
-
 @tasks.oqtask
 def compute_ruptures(
         job_id, sitecol, src_seeds, trt_model_id, gsims, task_no):
@@ -180,6 +167,8 @@ def compute_ruptures(
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     all_ses = range(1, hc.ses_per_logic_tree_path + 1)
     rupture_data = []
+    # calculator; this is important when computing the hazard curves
+    sorted_imts = map(from_string, sorted(hc.intensity_measure_types))
 
     filter_sites_mon = LightMonitor(
         'filtering sites', job_id, compute_ruptures)
@@ -192,7 +181,6 @@ def compute_ruptures(
 
     # Compute and save stochastic event sets
     rnd = random.Random()
-    num_distinct_ruptures = 0
     total_ruptures = 0
 
     for src, seed in src_seeds:
@@ -260,20 +248,20 @@ def compute_ruptures(
             num_ruptures = len(ses_num_occ)
             tot_ruptures = sum(num for rup in ses_num_occ
                                for ses, num in ses_num_occ[rup])
-            logs.LOG.info(
-                'job=%d, src=%s:%s, num_ruptures=%d, tot_ruptures=%d, '
-                'num_sites=%d, calc_time=%fs', job_id, src.source_id,
-                src.__class__.__name__, num_ruptures, tot_ruptures,
-                len(s_sites), time.time() - t0)
-            num_distinct_ruptures += num_ruptures
+            source_inserter.add(
+                models.SourceInfo(trt_model_id=trt_model_id,
+                                  source_id=src.source_id,
+                                  source_class=src.__class__.__name__,
+                                  num_sites=len(s_sites),
+                                  num_ruptures=num_ruptures,
+                                  occ_ruptures=tot_ruptures,
+                                  calc_time=time.time() - t0))
 
-    if num_distinct_ruptures:
-        logs.LOG.info('job=%d, task %d generated %d/%d ruptures',
-                      job_id, task_no, num_distinct_ruptures, total_ruptures)
     filter_sites_mon.flush()
     generate_ruptures_mon.flush()
     filter_ruptures_mon.flush()
     save_ruptures_mon.flush()
+    source_inserter.flush()
 
     return rupture_data, trt_model_id, task_no
 
@@ -398,6 +386,8 @@ class GmfCalculator(object):
         :param num_ses: number of Stochastic Event Sets
         """
         gmf = collections.defaultdict(dict)  # (gsim, imt) > {site_id: poes}
+        zeros = {imt: numpy.zeros(len(imtls[str(imt)]))
+                 for imt in self.imts}
         for (gsim, imt, site_id), gmvs in self.gmvs_per_site.iteritems():
             gmf[gsim, imt][site_id] = gmvs_to_haz_curve(
                 gmvs, imtls[str(imt)], invest_time, num_ses * invest_time)
@@ -406,9 +396,9 @@ class GmfCalculator(object):
             gsim = gsim_obj.__class__.__name__
             curves_by_imt = []
             for imt in self.imts:
-                ground_motion_field = [gmf[gsim, imt].get(site_id, 0)
-                                       for site_id in sids]
-                curves_by_imt.append(ground_motion_field)
+                curves_by_imt.append(
+                    numpy.array([gmf[gsim, imt].get(site_id, zeros[imt])
+                                 for site_id in sids]))
             curves_by_gsim.append((gsim, curves_by_imt))
         return curves_by_gsim
 
@@ -451,7 +441,6 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
             self.rupt_collector[trt_model_id].extend(rupture_data)
             self.num_ruptures[trt_model_id] += len(rupture_data)
 
-    @EnginePerformanceMonitor.monitor
     def post_execute(self):
         for trt_model in models.TrtModel.objects.filter(
                 lt_model__hazard_calculation=self.hc):
@@ -474,7 +463,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         task_no = 0
         sids = self.hc.site_collection.sids
         for trt_model_id, rupture_data in self.rupt_collector.iteritems():
-            for rdata in split(rupture_data, 256):
+            for rdata in block_splitter(rupture_data, 256):
                 logs.LOG.info('Sending task #%s', task_no + 1)
                 otm.submit(self.job.id, sids, trt_model_id, rdata, task_no)
                 task_no += 1

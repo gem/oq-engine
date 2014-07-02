@@ -201,11 +201,13 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         # 242 = 121 sites * 2 IMTs
         num_gmf1 = models.GmfData.objects.filter(
             gmf__lt_realization=rlz1, task_no=0).count()
+
         num_gmf2 = models.GmfData.objects.filter(
             gmf__lt_realization=rlz2, task_no=0).count()
 
         self.assertEqual(num_gmf1, 242)
         self.assertEqual(num_gmf2, 242)
+        # NB: with source_max_weight=20000 5 tasks are generated
 
         # Now check for the correct number of hazard curves:
         curves = models.HazardCurve.objects.filter(output__oq_job=job)
@@ -285,3 +287,18 @@ post_processing.gmvs_to_haz_curve`.
         actual_poes = core.gmvs_to_haz_curve(gmvs, imls, invest_time, duration)
         numpy.testing.assert_array_almost_equal(
             expected_poes, actual_poes, decimal=6)
+
+
+class UnknownGsimTestCase(unittest.TestCase):
+    # the case where the source model contains a TRT which does not
+    # exist in the gsim_logic_tree file
+    def test(self):
+        cfg = helpers.get_data_path('bad_gsim/job.ini')
+        job = helpers.get_job(cfg, username=getpass.getuser())
+        calc = core.EventBasedHazardCalculator(job)
+        with self.assertRaises(ValueError) as ctxt:
+            calc.initialize_sources()
+        errmsg = str(ctxt.exception)
+        assert errmsg.startswith(
+            "Found in 'source_model.xml' a tectonic region type "
+            "'Active Shallow Crust' inconsistent with the ones"), errmsg

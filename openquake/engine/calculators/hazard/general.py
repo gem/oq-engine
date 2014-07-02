@@ -19,6 +19,7 @@
 """Common code for the hazard calculators."""
 
 import os
+import random
 import itertools
 import collections
 
@@ -58,13 +59,6 @@ POES_PARAM_NAME = "POES"
 # Dilation in decimal degrees (http://en.wikipedia.org/wiki/Decimal_degrees)
 # 1e-5 represents the approximate distance of one meter at the equator.
 DILATION_ONE_METER = 1e-5
-
-
-def _normalize(prob, zero):
-    # make sure that the elements of prob are matrices with n_levels elements,
-    # possibly all zeros; zero is a matrix of n_sites * n_levels zeros
-    return numpy.array(
-        [zero[0] if all_equal(p, 0) else p for p in prob], dtype=float)
 
 
 def store_site_model(job, site_model_source):
@@ -167,6 +161,7 @@ class BaseHazardCalculator(base.Calculator):
                 yield args
                 task_no += 1
                 num_blocks += 1
+                task_no += 1
                 num_sources += len(block)
                 logs.LOG.info('Processing %d sources out of %d' %
                               sc.filtered_sources)
@@ -177,17 +172,11 @@ class BaseHazardCalculator(base.Calculator):
             trt_model.num_ruptures = sc.num_ruptures
             trt_model.save()
 
-        # save job_stats
-        js = models.JobStats.objects.get(oq_job=self.job)
-        js.num_sources = [model.get_num_sources()
-                          for model in models.LtSourceModel.objects.filter(
-                              hazard_calculation=self.hc)]
-        js.num_sites = len(sitecol)
-        js.save()
-
     def task_completed(self, result):
         """
-        Simply call the method `agg_curves`
+        Simply call the method `agg_curves`.
+
+        :param result: the result of the .core_calc_task
         """
         self.agg_curves(self.curves, result)
 
@@ -214,7 +203,7 @@ class BaseHazardCalculator(base.Calculator):
         for gsim, probs in curves_by_gsim:
             pnes = []
             for prob, zero in itertools.izip(probs, self.zeros):
-                pnes.append(1 - _normalize(prob, zero))
+                pnes.append(1 - (zero if all_equal(prob, 0) else prob))
             pnes1 = numpy.array(pnes)
             pnes2 = 1 - acc.get((trt_model_id, gsim), self.zeros)
 
@@ -299,6 +288,11 @@ class BaseHazardCalculator(base.Calculator):
             # save TrtModels for each tectonic region type
             gsims_by_trt = lt_model.make_gsim_lt(trts).values
             for sc in source_collectors:
+                if not sc.trt in gsims_by_trt:
+                    gsim_file = self.hc.inputs['gsim_logic_tree']
+                    raise ValueError(
+                        "Found in %r a tectonic region type %r inconsistent "
+                        "with the ones in %r" % (sm, sc.trt, gsim_file))
                 # NB: the source_collectors are ordered by number of sources
                 # and lexicographically, so the models are in the right order
                 trt_model_id = models.TrtModel.objects.create(
@@ -411,17 +405,31 @@ class BaseHazardCalculator(base.Calculator):
         number of the realization (zero-based).
         """
         logs.LOG.progress("initializing realizations")
+        num_samples = self.hc.number_of_logic_tree_samples
+        gsim_lt_dict = {}  # gsim_lt per source model logic tree path
         for idx, (sm, weight, sm_lt_path) in enumerate(self.source_model_lt):
             lt_model = models.LtSourceModel.objects.get(
                 hazard_calculation=self.hc, sm_lt_path=sm_lt_path)
-            lt = iter(lt_model.make_gsim_lt(seed=self.hc.random_seed + idx))
-            if self.hc.number_of_logic_tree_samples:  # sampling
-                rlzs = [lt.next()]  # pick one gsim realization
-            else:  # full enumeration
-                rlzs = list(lt)  # pick all gsim realizations
+            if not sm_lt_path in gsim_lt_dict:
+                gsim_lt_dict[sm_lt_path] = lt_model.make_gsim_lt()
+            gsim_lt = gsim_lt_dict[sm_lt_path]
+            if num_samples:  # sampling, pick just one gsim realization
+                rnd = random.Random(self.hc.random_seed + idx)
+                rlzs = [logictree.sample_one(gsim_lt, rnd)]
+            else:
+                rlzs = list(gsim_lt)  # full enumeration
             logs.LOG.info('Creating %d GMPE realization(s) for model %s, %s',
                           len(rlzs), lt_model.sm_name, lt_model.sm_lt_path)
             self._initialize_realizations(idx, lt_model, rlzs)
+        num_ind_rlzs = sum(gsim_lt.get_num_paths()
+                           for gsim_lt in gsim_lt_dict.itervalues())
+        if num_samples > num_ind_rlzs:
+            logs.LOG.warn("""
+The number of independent realizations is %d but you are using %d samplings.
+That means that some GMPEs will be sampled more than once, resulting in
+duplicated data and redundant computation. You should switch to full
+enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
+""", num_ind_rlzs, num_samples)
 
     @transaction.commit_on_success(using='job_init')
     def _initialize_realizations(self, idx, lt_model, realizations):

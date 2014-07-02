@@ -16,6 +16,7 @@
 
 import getpass
 import unittest
+import mock
 
 import numpy
 
@@ -97,7 +98,13 @@ store_site_model'
 
         for args in self.calc.task_arg_gen():
             pass  # filter sources and save num_ruptures
-        self.calc.initialize_realizations()
+
+        with mock.patch('openquake.engine.logs.LOG.warn') as warn:
+            self.calc.initialize_realizations()
+        # check that the warning about too many samples is printed
+        msg, num_rlzs, num_samples = warn.call_args[0]
+        self.assertEqual(num_rlzs, 1)
+        self.assertEqual(num_samples, 2)
 
         # We expect 2 logic tree realizations
         ltr1, ltr2 = models.LtRealization.objects.filter(
@@ -138,11 +145,6 @@ store_site_model'
         hc = self.job.hazard_calculation
 
         self.calc.pre_execute()
-
-        # Test the job stats:
-        job_stats = models.JobStats.objects.get(oq_job=self.job.id)
-        # num sources * num lt samples / block size (items per task):
-        self.assertEqual(120, job_stats.num_sites)
 
         # Update job status to move on to the execution phase.
         self.job.is_running = True
