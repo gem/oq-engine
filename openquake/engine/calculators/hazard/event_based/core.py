@@ -473,8 +473,10 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                 RuptureData(self.hc.site_collection, rupture)
                 for rupture in models.ProbabilisticRupture.objects.filter(
                     trt_model=trt_model)]
-            for rdata in block_splitter(rupture_data, num_tasks_hint,
-                                        RuptureData.get_weight):
+            if not rupture_data:
+                continue
+            for rdata in split_in_blocks(rupture_data, num_tasks_hint,
+                                         RuptureData.get_weight):
                 otm.submit(self.job.id, sitecol.sids, trt_model.id,
                            rdata, task_no)
                 task_no += 1
