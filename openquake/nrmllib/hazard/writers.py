@@ -318,7 +318,8 @@ def gen_gmfs(gmf_set):
     Generate GMF nodes from a gmf_set
     :param gmf_set: a sequence of GMF objects with attributes
     imt, sa_period, sa_damping, rupture_id and containing a list
-    of GMF nodes with attributes gmv and location.
+    of GMF nodes with attributes gmv and location. The nodes
+    are sorted by lon/lat.
     """
     for gmf in gmf_set:
         gmf_node = node.Node('gmf')
@@ -333,7 +334,7 @@ def gen_gmfs(gmf_set):
             node.Node('node', dict(gmv=str(n.gmv),
                                    lon=str(n.location.x),
                                    lat=str(n.location.y)))
-            for n in gmf)
+            for n in sorted(gmf))
         yield gmf_node
 
 
