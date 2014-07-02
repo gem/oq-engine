@@ -167,8 +167,6 @@ def compute_ruptures(
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     all_ses = range(1, hc.ses_per_logic_tree_path + 1)
     rupture_data = []
-    # calculator; this is important when computing the hazard curves
-    sorted_imts = map(from_string, sorted(hc.intensity_measure_types))
 
     filter_sites_mon = LightMonitor(
         'filtering sites', job_id, compute_ruptures)
@@ -463,7 +461,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         task_no = 0
         sids = self.hc.site_collection.sids
         for trt_model_id, rupture_data in self.rupt_collector.iteritems():
-            for rdata in block_splitter(rupture_data, 256):
+            for rdata in block_splitter(rupture_data, self.concurrent_tasks):
                 logs.LOG.info('Sending task #%s', task_no + 1)
                 otm.submit(self.job.id, sids, trt_model_id, rdata, task_no)
                 task_no += 1
