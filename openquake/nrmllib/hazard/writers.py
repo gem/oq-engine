@@ -330,11 +330,12 @@ def gen_gmfs(gmf_set):
         tag = gmf.rupture_id
         if tag:
             gmf_node['ruptureId'] = tag
+        sorted_nodes = sorted(gmf)
         gmf_node.nodes = (
             node.Node('node', dict(gmv=str(n.gmv),
                                    lon=str(n.location.x),
                                    lat=str(n.location.y)))
-            for n in sorted(gmf))
+            for n in sorted_nodes)
         yield gmf_node
 
 
