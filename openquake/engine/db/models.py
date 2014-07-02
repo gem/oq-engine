@@ -1691,7 +1691,7 @@ class ProbabilisticRupture(djm.Model):
     magnitude = djm.FloatField(null=False)
     _hypocenter = fields.FloatArrayField(null=False)
     rake = djm.FloatField(null=False)
-    tectonic_region_type = djm.TextField(null=False)
+    trt_model = djm.ForeignKey('TrtModel')
     is_from_fault_source = djm.NullBooleanField(null=False)
     is_multi_surface = djm.NullBooleanField(null=False)
     surface = fields.PickleField(null=False)
@@ -1714,7 +1714,7 @@ class ProbabilisticRupture(djm.Model):
         db_table = 'hzrdr\".\"probabilistic_rupture'
 
     @classmethod
-    def create(cls, rupture, ses_collection, site_indices=None):
+    def create(cls, rupture, ses_collection, trt_model, site_indices=None):
         """
         Create a ProbabilisticRupture row on the database.
 
@@ -1722,6 +1722,8 @@ class ProbabilisticRupture(djm.Model):
             a hazardlib rupture
         :param ses_collection:
             a Stochastic Event Set Collection object
+        :param trt_model:
+            the TRTModel generating the rupture
         :param site_indices:
             an array of indices for the site_collection
         """
@@ -1733,12 +1735,17 @@ class ProbabilisticRupture(djm.Model):
             ses_collection=ses_collection,
             magnitude=rupture.mag,
             rake=rupture.rake,
-            tectonic_region_type=rupture.tectonic_region_type or 'NA',
+            trt_model=trt_model,
             is_from_fault_source=iffs,
             is_multi_surface=ims,
             surface=rupture.surface,
             _hypocenter=[hp.longitude, hp.latitude, hp.depth],
             site_indices=site_indices)
+
+    @property
+    def tectonic_region_type(self):
+        """The TRT associated to the underlying trt_model"""
+        return self.trt_model.tectonic_region_type
 
     _geom = None
 
