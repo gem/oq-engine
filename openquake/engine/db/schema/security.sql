@@ -69,7 +69,7 @@ GRANT ALL ON SCHEMA uiapi TO oq_admin;
 
 -- hzrdi schema
 GRANT SELECT,INSERT ON hzrdi.hazard_site            TO oq_job_init;
-GRANT SELECT,INSERT ON hzrdi.site_model           TO oq_job_init;
+GRANT SELECT,INSERT ON hzrdi.site_model             TO oq_job_init;
 
 -- hzrdr schema
 GRANT SELECT,INSERT        ON hzrdr.hazard_curve      TO oq_job_init;
@@ -117,7 +117,7 @@ GRANT SELECT,INSERT,UPDATE ON uiapi.oq_job             TO oq_job_init;
 GRANT SELECT,INSERT,UPDATE ON uiapi.job_stats          TO oq_job_init;
 GRANT SELECT,INSERT,UPDATE ON uiapi.job_stats          TO oq_job_init;
 GRANT SELECT,INSERT,UPDATE ON uiapi.hazard_calculation TO oq_job_init;
-GRANT SELECT,INSERT        ON uiapi.risk_calculation   TO oq_job_init;
+GRANT SELECT,INSERT,UPDATE ON uiapi.risk_calculation   TO oq_job_init;
 
 GRANT SELECT,INSERT,UPDATE ON uiapi.output             TO oq_job_init;
 GRANT SELECT,INSERT,DELETE ON uiapi.performance        TO oq_job_init;

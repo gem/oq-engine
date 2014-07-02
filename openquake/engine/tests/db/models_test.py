@@ -177,7 +177,7 @@ class ProbabilisticRuptureTestCase(unittest.TestCase):
             hazard_calculation=job.hazard_calculation, ordinal=0,
             sm_lt_path='foo')
         lt_rlz = models.LtRealization.objects.create(
-            lt_model=lt_model, ordinal=0, gsim_lt_path='bar')
+            lt_model=lt_model, ordinal=0, gsim_lt_path='bar', weight=1)
         output = models.Output.objects.create(
             oq_job=job, display_name='test', output_type='ses')
         ses_coll = models.SESCollection.objects.create(
@@ -198,14 +198,23 @@ class ProbabilisticRuptureTestCase(unittest.TestCase):
             Point(3.9, 2.2, 10), Point(4.90402718, 3.19634248, 10),
             Point(5.9, 2.2, 90), Point(4.89746275, 1.20365263, 90))
 
+        trt = 'Active Shallow Crust'
+        trt_model = models.TrtModel.objects.create(
+            lt_model=lt_model,
+            tectonic_region_type=trt,
+            num_sources=0,
+            num_ruptures=1,
+            min_mag=5,
+            max_mag=5,
+            gsims=['testGSIM'])
         self.fault_rupture = models.ProbabilisticRupture.objects.create(
             ses_collection=ses_coll, magnitude=5, rake=0, surface=sfs,
-            tectonic_region_type='Active Shallow Crust',
-            is_from_fault_source=True, is_multi_surface=False)
+            trt_model=trt_model, is_from_fault_source=True,
+            is_multi_surface=False)
         self.source_rupture = models.ProbabilisticRupture.objects.create(
             ses_collection=ses_coll, magnitude=5, rake=0, surface=ps,
-            tectonic_region_type='Active Shallow Crust',
-            is_from_fault_source=False, is_multi_surface=False)
+            trt_model=trt_model, is_from_fault_source=False,
+            is_multi_surface=False)
 
     def test_fault_rupture(self):
         # Test loading a fault rupture from the DB, just to illustrate a use
@@ -228,79 +237,6 @@ class ProbabilisticRuptureTestCase(unittest.TestCase):
         self.assertEqual((4.89746275, 1.20365263, 90.0),
                          source_rupture.bottom_left_corner)
         self.assertEqual((5.9, 2.2, 90.0), source_rupture.bottom_right_corner)
-
-
-def get_tags(gmf_data):
-    """
-    Get the rupture tags associated to a given gmf_data record
-    """
-    for r_id in gmf_data.rupture_ids:
-        yield models.SESRupture.objects.get(pk=r_id).tag
-
-
-class GmfsPerSesTestCase(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cfg = helpers.get_data_path('event_based_hazard/job.ini')
-        job = helpers.get_job(cfg)
-        lt_model = models.LtSourceModel.objects.create(
-            hazard_calculation=job.hazard_calculation,
-            ordinal=1, sm_lt_path="test_sm")
-        lt_model_2 = models.LtSourceModel.objects.create(
-            hazard_calculation=job.hazard_calculation,
-            ordinal=2, sm_lt_path="test_sm_2")
-        rlz1 = models.LtRealization.objects.create(
-            lt_model=lt_model, ordinal=1, weight=None,
-            gsim_lt_path="test_gsim")
-        rlz2 = models.LtRealization.objects.create(
-            lt_model=lt_model, ordinal=2, weight=None,
-            gsim_lt_path="test_gsim_2")
-        ses_coll = models.SESCollection.objects.create(
-            output=models.Output.objects.create_output(
-                job, "Test SES Collection 1", "ses"),
-            lt_model=lt_model, ordinal=1)
-        # create a second SESCollection; this is to avoid regressions
-        # in models.Gmf.__iter__ which should yield a single
-        # GmfSet even if there are several SES collections
-        models.SESCollection.objects.create(
-            output=models.Output.objects.create_output(
-                job, "Test SES Collection 2", "ses"),
-            lt_model=lt_model_2, ordinal=2)
-
-        gmf_data1 = helpers.create_gmf_data_records(job, rlz1, ses_coll)[0]
-        points = [(15.3, 38.22), (15.7, 37.22),
-                  (15.4, 38.09), (15.56, 38.1), (15.2, 38.2)]
-        gmf_data2 = helpers.create_gmf_data_records(
-            job, rlz2, ses_coll, points)[0]
-        cls.gmf1 = gmf_data1.gmf  # a Gmf instance
-        cls.ruptures1 = tuple(get_tags(gmf_data1))
-        cls.ruptures2 = tuple(get_tags(gmf_data2))
-        cls.investigation_time = job.hazard_calculation.investigation_time
-
-    def test_branch_lt(self):
-        [gmfset] = self.gmf1  # exhaust Gmf.__iter__
-        expected = """\
-GMFsPerSES(investigation_time=%f, stochastic_event_set_id=1,
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%s
-<X= 15.31000, Y= 38.22500, GMV=0.1000000>
-<X= 15.48000, Y= 38.09100, GMV=0.1000000>
-<X= 15.48100, Y= 38.25000, GMV=0.1000000>
-<X= 15.56500, Y= 38.17000, GMV=0.1000000>
-<X= 15.71000, Y= 37.22500, GMV=0.1000000>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%s
-<X= 15.31000, Y= 38.22500, GMV=0.2000000>
-<X= 15.48000, Y= 38.09100, GMV=0.2000000>
-<X= 15.48100, Y= 38.25000, GMV=0.2000000>
-<X= 15.56500, Y= 38.17000, GMV=0.2000000>
-<X= 15.71000, Y= 37.22500, GMV=0.2000000>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%s
-<X= 15.31000, Y= 38.22500, GMV=0.3000000>
-<X= 15.48000, Y= 38.09100, GMV=0.3000000>
-<X= 15.48100, Y= 38.25000, GMV=0.3000000>
-<X= 15.56500, Y= 38.17000, GMV=0.3000000>
-<X= 15.71000, Y= 37.22500, GMV=0.3000000>))""" % (
-            (self.investigation_time,) + self.ruptures1)
-        self.assertEqual(str(gmfset), expected)
 
 
 class PrepGeometryTestCase(unittest.TestCase):
