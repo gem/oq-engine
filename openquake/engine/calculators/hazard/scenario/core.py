@@ -169,6 +169,9 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
             for _ in xrange(self.hc.number_of_ground_motion_fields)]
 
         with self.monitor('saving ruptures'):
+            # in order to save a ProbabilisticRupture, a TrtModel is needed;
+            # here we generate a fake one, corresponding to the tectonic
+            # region type NA i.e. Not Available
             trt_model = models.TrtModel.objects.create(
                 tectonic_region_type='NA',
                 num_sources=0,
