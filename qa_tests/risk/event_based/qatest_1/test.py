@@ -18,6 +18,8 @@ from qa_tests import risk
 
 from openquake.engine.db import models
 
+from numpy.testing import assert_almost_equal as aae
+
 
 class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
     hazard_calculation_fixture = "PEB QA test 1"
@@ -25,6 +27,19 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
     @noseattr('qa', 'risk', 'event_based')
     def test(self):
         self._run_test()
+
+    expected_elt_b2 = [  # the first 10 values for structural
+        ('smlt=00|ses=1250|src=3|rup=002-01', 5.55, 4598.15454207),
+        ('smlt=00|ses=0899|src=3|rup=006-01', 6.75, 3229.03853895),
+        ('smlt=00|ses=0236|src=3|rup=004-01', 6.15, 1429.41738598),
+        ('smlt=00|ses=0833|src=3|rup=006-01', 6.75, 1333.06460009),
+        ('smlt=00|ses=1159|src=3|rup=001-02', 5.25, 1027.93870557),
+        ('smlt=00|ses=1395|src=3|rup=001-01', 5.25, 1004.52792749),
+        ('smlt=00|ses=0410|src=3|rup=001-01', 5.25, 801.220856365),
+        ('smlt=00|ses=1652|src=3|rup=003-01', 5.85, 710.514040648),
+        ('smlt=00|ses=0986|src=3|rup=001-01', 5.25, 661.852362756),
+        ('smlt=00|ses=0296|src=3|rup=002-01', 5.55, 605.144033155),
+    ]
 
     def expected_output_data(self):
         branches = dict(
@@ -71,12 +86,66 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
                  poes=data[i * 2 + 1, 2:]))
             for i, branch in enumerate(branches.values())]
 
-        #NB: the event loss table check has been temporarily removed
+        return loss_curves + aggregate_loss_curves
+
+    def check_event_loss_table(self, job):
         # we check only the first 10 values of the event loss table
-        #data = self._csv('event_loss_table')[1:, 0:3]
-        #data = sorted(data, key=lambda v: -v[2])[0:10]
-        #event_loss_table_b1 = [('event_loss_table', None)] + [
-        #    ((u'event_loss', branches["b1"], "structural", i),
-        #     models.EventLossData(rupture_id=i, aggregate_loss=j))
-        #    for i, _m, j in data]
-        return loss_curves + aggregate_loss_curves  # + event_loss_table_b1
+        # for loss_type=structural and branch b2
+        tags = [row[0] for row in self.expected_elt_b2]
+
+        el_b2 = models.EventLoss.objects.get(
+            hazard_output__gmf__lt_realization__gsim_lt_path=['b2'],
+            output__output_type='event_loss',
+            output__oq_job=job,
+            loss_type='structural')
+        elt = models.EventLossData.objects.filter(
+            event_loss=el_b2.id, rupture__tag__in=tags
+        ).order_by('-aggregate_loss')
+        for e, row in zip(elt, self.expected_elt_b2):
+            self.assertEqual(e.rupture.tag, row[0])
+            self.assertEqual(e.rupture.rupture.mag, row[1])
+            self.assertAlmostEqual(e.aggregate_loss, row[2])
+
+    def check_loss_map(self, job):
+        lm_with_stats = models.LossMap.objects.filter(
+            output__oq_job=job, statistics__isnull=True,
+            loss_type='structural').order_by('poe', 'hazard_output')
+        self.assertEqual(lm_with_stats.count(), 6)
+        lm1, lm2 = lm_with_stats[:2]  # loss maps for poe=0.1 for 2 rlzs
+        actual_lm1 = [
+            point.value for point in models.LossMapData.objects.filter(
+                loss_map=lm1).order_by('asset_ref', 'loss_map__poe')]
+        aae(actual_lm1, [644.42878691, 234.89986442,
+                         664.82432932, 753.55988728])
+
+        actual_lm2 = [
+            point.value for point in models.LossMapData.objects.filter(
+                loss_map=lm2).order_by('asset_ref', 'loss_map__poe')]
+        aae(actual_lm2, [376.21304957, 219.38682742,
+                         639.86715118,  801.07318199])
+
+    def check_loss_map_mean(self, job):
+        lm_with_stats = models.LossMap.objects.filter(
+            output__oq_job=job, statistics='mean',
+            loss_type='structural').order_by('poe')
+        self.assertEqual(lm_with_stats.count(), 3)
+        actual = [
+            point.value for point in models.LossMapData.objects.filter(
+                loss_map__in=lm_with_stats).order_by(
+                'asset_ref', 'loss_map__poe')]
+        aae(actual, [514.22057893, 0., 0.,
+                     227.85575576, 0., 0.,
+                     652.50322751, 0., 0.,
+                     778.04645901, 0., 0.])
+
+    def check_loss_map_quantile(self, job):
+        lm_with_quantile = models.LossMap.objects.filter(
+            output__oq_job=job, statistics='quantile',
+            loss_type='structural').order_by('poe')
+        self.assertEqual(lm_with_quantile.count(), 9)
+        actual_0 = [
+            point.value for point in models.LossMapData.objects.filter(
+                loss_map=lm_with_quantile[0]).order_by(
+                'asset_ref', 'loss_map__poe')]
+        aae(actual_0, [376.24261986, 219.38682742,
+                       639.86715118, 753.55988728])

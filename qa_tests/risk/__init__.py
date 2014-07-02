@@ -87,7 +87,9 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
                 self._test_path('job_risk.ini'),
                 self.hazard_id(haz_job))
 
-            self.check_outputs(job)
+            for attr in dir(self):
+                if attr.startswith('check_'):
+                    getattr(self, attr)(job)
 
             if hasattr(self, 'expected_outputs'):
                 expected_outputs = self.expected_outputs()

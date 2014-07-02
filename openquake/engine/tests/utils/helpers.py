@@ -34,19 +34,20 @@ import tempfile
 import textwrap
 import time
 
+from django.core import exceptions
+
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.tom import PoissonTOM
-
-from django.core import exceptions
+from openquake.commonlib.general import writetmp as touch
+from openquake.commonlib import readini
 
 from openquake.engine.db import models
 from openquake.engine import engine
 from openquake.engine import logs
 from openquake.engine.utils import config
 from openquake.engine.job.validation import validate
-
 
 CD = os.path.dirname(__file__)  # current directory
 
@@ -267,28 +268,6 @@ def cleanup_loggers():
     sys.stderr = STDERR
 
 
-def touch(content=None, dir=None, prefix="tmp", suffix="tmp"):
-    """Create temporary file with the given content.
-
-    Please note: the temporary file must be deleted bu the caller.
-
-    :param string content: the content to write to the temporary file.
-    :param string dir: directory where the file should be created
-    :param string prefix: file name prefix
-    :param string suffix: file name suffix
-    :returns: a string with the path to the temporary file
-    """
-    if dir is not None:
-        if not os.path.exists(dir):
-            os.makedirs(dir)
-    fh, path = tempfile.mkstemp(dir=dir, prefix=prefix, suffix=suffix)
-    if content:
-        fh = os.fdopen(fh, "w")
-        fh.write(content)
-        fh.close()
-    return path
-
-
 class ConfigTestCase(object):
     """Class which contains various configuration- and environment-related
     testing helpers."""
@@ -347,7 +326,7 @@ def get_job(cfg, username="openquake", hazard_calculation_id=None,
         return engine.job_from_file(cfg, username, 'error', [])
 
     job = engine.prepare_job(username)
-    params = engine.parse_config(open(cfg, 'r'))
+    params = readini.parse_config(open(cfg, 'r'))
 
     params.update(
         dict(hazard_output_id=hazard_output_id,
@@ -559,7 +538,7 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
     hazard_job.status = "complete"
     hazard_job.save()
     job = engine.prepare_job(username)
-    params = engine.parse_config(open(risk_cfg, 'r'))
+    params = readini.parse_config(open(risk_cfg, 'r'))
 
     params.update(dict(hazard_output_id=hazard_output.output.id))
 
