@@ -77,6 +77,19 @@ CREATE TABLE hzrdi.site_model (
 ) TABLESPACE hzrdi_ts;
 SELECT AddGeometryColumn('hzrdi', 'site_model', 'location', 4326, 'POINT', 2);
 
+-- table for the intensity measure types
+CREATE TABLE hzrdi.imt(
+  id SERIAL PRIMARY KEY,
+  imt_str VARCHAR UNIQUE NOT NULL, -- full string representation of the IMT
+  im_type VARCHAR NOT NULL, -- short string for the IMT
+  sa_period FLOAT CONSTRAINT imt_sa_period
+        CHECK(((im_type = 'SA') AND (sa_period IS NOT NULL))
+              OR ((im_type != 'SA') AND (sa_period IS NULL))),
+  sa_damping FLOAT CONSTRAINT imt_sa_damping
+        CHECK(((im_type = 'SA') AND (sa_damping IS NOT NULL))
+            OR ((im_type != 'SA') AND (sa_damping IS NULL))),
+  UNIQUE (im_type, sa_period, sa_damping)
+) TABLESPACE hzrdi_ts;
 
 -- An OpenQuake engine run started by the user
 CREATE TABLE uiapi.oq_job (
@@ -386,13 +399,13 @@ CREATE TABLE hzrdr.probabilistic_rupture (
     id SERIAL PRIMARY KEY,
     ses_collection_id INTEGER NOT NULL,
     rake float NOT NULL,
-    tectonic_region_type VARCHAR NOT NULL,
     is_from_fault_source BOOLEAN NOT NULL,
     is_multi_surface BOOLEAN NOT NULL,
     surface BYTEA NOT NULL,
     magnitude float NOT NULL,
     _hypocenter FLOAT[3],
-    site_indices INTEGER[]
+    site_indices INTEGER[],
+    trt_model_id INTEGER NOT NULL
 ) TABLESPACE hzrdr_ts;
 
 
@@ -404,6 +417,14 @@ CREATE TABLE hzrdr.ses_rupture (
     seed INTEGER NOT NULL
 ) TABLESPACE hzrdr_ts;
 
+-- gmf_rupture table ---------------------------------------------------
+CREATE TABLE hzrdr.gmf_rupture (
+   id SERIAL PRIMARY KEY,
+   rupture_id INTEGER NOT NULL,  -- fk to hzrdr.ses_rupture
+   gsim TEXT NOT NULL,
+   imt TEXT NOT NULL, -- fk to hzrdi.imt
+   ground_motion_field FLOAT[] NOT NULL
+) TABLESPACE hzrdr_ts;
 
 CREATE TABLE hzrdr.gmf (
     id SERIAL PRIMARY KEY,
@@ -514,7 +535,7 @@ CREATE TABLE hzrdr.lt_source_model (
 -- logic tree source model infos
 CREATE TABLE hzrdr.trt_model (
    id SERIAL PRIMARY KEY,
-   lt_model_id INTEGER NOT NULL, -- fk to lt_source_model
+   lt_model_id INTEGER, -- fk to lt_source_model
    tectonic_region_type TEXT NOT NULL,
    num_sources INTEGER NOT NULL,
    num_ruptures INTEGER NOT NULL,
@@ -546,7 +567,7 @@ CREATE TABLE hzrdr.lt_realization (
     id SERIAL PRIMARY KEY,
     lt_model_id INTEGER NOT NULL, -- fk hzrdr.lt_mode.id
     ordinal INTEGER NOT NULL,
-    weight NUMERIC, -- path weight, used only for full paths enumeration
+    weight NUMERIC, -- path weight
     gsim_lt_path VARCHAR[] NOT NULL -- list of the logic tree branchIDs
 ) TABLESPACE hzrdr_ts;
 
@@ -1012,6 +1033,19 @@ FOREIGN KEY (ses_collection_id) REFERENCES hzrdr.ses_collection(id);
 ALTER TABLE hzrdr.ses_rupture
 ADD CONSTRAINT hzrdr_ses_rupture_probabilistic_rupture_fk
 FOREIGN KEY (rupture_id) REFERENCES hzrdr.probabilistic_rupture(id)
+ON DELETE CASCADE;
+
+-- hzrdr.ses_rupture to hzrdr.trt_model FK
+ALTER TABLE hzrdr.probabilistic_rupture
+ADD CONSTRAINT hzrdr_probabilistic_rupture_trt_model_fk
+FOREIGN KEY (trt_model_id) REFERENCES hzrdr.trt_model(id)
+ON DELETE CASCADE;
+
+-- hzrdr.gmf_rupture -> hzrdi.imt FK
+ALTER TABLE hzrdr.gmf_rupture
+ADD CONSTRAINT hzrdr_gmf_rupture_imt_fk
+FOREIGN KEY (imt)
+REFERENCES hzrdi.imt(imt_str)
 ON DELETE CASCADE;
 
 ALTER TABLE riskr.loss_map
