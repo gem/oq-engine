@@ -1924,7 +1924,7 @@ class Gmf(djm.Model):
                         yield ses_rup, sites, computer.compute(ses_rup.seed)
 
     # this part is tested in EventBasedExportTestCase
-    def __iter__(self):
+    def iternew(self):
         """
         Get the ground motion fields per SES ("GMF set") for
         the XML export. Each "GMF set" should:
@@ -1967,6 +1967,70 @@ class Gmf(djm.Model):
                             _GroundMotionField(
                                 im_type, sa_period, sa_damping,
                                 ses_rup.tag, nodes))
+                if gmfset:
+                    yield GmfSet(ses, gmfset)
+
+
+    # this part is tested in models_test:GmfsPerSesTestCase
+    def __iter__(self):
+        """
+        Get the ground motion fields per SES ("GMF set") for
+        the XML export. Each "GMF set" should:
+
+            * have an `investigation_time` attribute
+            * have an `stochastic_event_set_id` attribute
+            * be iterable, yielding a sequence of "GMF" objects
+
+            Each "GMF" object should:
+
+            * have an `imt` attribute
+            * have an `sa_period` attribute (only if `imt` is 'SA')
+            * have an `sa_damping` attribute (only if `imt` is 'SA')
+            * have a `rupture_id` attribute (to indicate which rupture
+              contributed to this gmf)
+            * be iterable, yielding a sequence of "GMF node" objects
+
+            Each "GMF node" object should have:
+
+            * a `gmv` attribute (to indicate the ground motion value
+            * `lon` and `lat` attributes (to indicate the geographical location
+              of the ground motion field)
+
+        If a SES does not generate any GMF, it is ignored.
+        """
+        hc = self.output.oq_job.hazard_calculation
+        for ses_coll in SESCollection.objects.filter(
+                output__oq_job=self.output.oq_job):
+            for ses in ses_coll:
+                query = """\
+        SELECT imt, sa_period, sa_damping, tag,
+               array_agg(gmv) AS gmvs,
+               array_agg(ST_X(location::geometry)) AS xs,
+               array_agg(ST_Y(location::geometry)) AS ys
+        FROM (SELECT imt, sa_period, sa_damping,
+             unnest(rupture_ids) as rupture_id, location, unnest(gmvs) AS gmv
+           FROM hzrdr.gmf_data, hzrdi.hazard_site
+            WHERE site_id = hzrdi.hazard_site.id AND hazard_calculation_id=%s
+           AND gmf_id=%d) AS x, hzrdr.ses_rupture AS y,
+           hzrdr.probabilistic_rupture AS z
+        WHERE x.rupture_id = y.id AND y.rupture_id=z.id
+        AND y.ses_id=%d AND z.ses_collection_id=%d
+        GROUP BY imt, sa_period, sa_damping, tag
+        ORDER BY imt, sa_period, sa_damping, tag;
+        """ % (hc.id, self.id, ses.ordinal, ses_coll.id)
+                curs = getcursor('job_init')
+                curs.execute(query)
+                # a set of GMFs generate by the same SES, one per rupture
+                gmfset = []
+                for (imt, sa_period, sa_damping, rupture_tag, gmvs,
+                     xs, ys) in curs:
+                    # using a generator here saves a lot of memory
+                    nodes = (_GroundMotionFieldNode(gmv, _Point(x, y))
+                             for gmv, x, y in zip(gmvs, xs, ys))
+                    gmfset.append(
+                        _GroundMotionField(
+                            imt, sa_period, sa_damping, rupture_tag,
+                            nodes))
                 if gmfset:
                     yield GmfSet(ses, gmfset)
 
@@ -2032,7 +2096,10 @@ class _GroundMotionFieldNode(object):
         self.location = loc
 
     def __lt__(self, other):
-        """Add an ordering by lon/lat, useful to have reproducible export"""
+        """
+        A reproducible ordering by lon and lat; used in
+        :function:`openquake.nrmllib.hazard.writers.gen_gmfs`
+        """
         return self.location < other.location
 
     def __str__(self):
