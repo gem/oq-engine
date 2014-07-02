@@ -1877,10 +1877,7 @@ class SESRupture(djm.Model):
         return self.rupture.hypocenter
 
 
-class _Point(object):
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
+_Point = collections.namedtuple('_Point', 'x y')
 
 
 class Gmf(djm.Model):
@@ -2034,8 +2031,12 @@ class _GroundMotionFieldNode(object):
         self.gmv = gmv
         self.location = loc
 
+    def __lt__(self, other):
+        """Add an ordering by lon/lat, useful to have reproducible export"""
+        return self.location < other.location
+
     def __str__(self):
-        "Return lon, lat and gmv of the node in a compact string form"
+        """Return lon, lat and gmv of the node in a compact string form"""
         return '<X=%9.5f, Y=%9.5f, GMV=%9.7f>' % (
             self.location.x, self.location.y, self.gmv)
 
