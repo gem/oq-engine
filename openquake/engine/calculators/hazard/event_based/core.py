@@ -45,7 +45,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import FilteredSiteCollection
 
 from openquake.commonlib import logictree
-from openquake.commonlib.general import block_splitter
+from openquake.commonlib.general import split_in_blocks
 
 from openquake.engine import logs, writer
 from openquake.engine.calculators.hazard import general
@@ -475,7 +475,6 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                     trt_model=trt_model)]
             for rdata in block_splitter(rupture_data, num_tasks_hint,
                                         RuptureData.get_weight):
-                logs.LOG.info('Sending task #%s', task_no + 1)
                 otm.submit(self.job.id, sitecol.sids, trt_model.id,
                            rdata, task_no)
                 task_no += 1
