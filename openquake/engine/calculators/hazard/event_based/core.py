@@ -43,7 +43,7 @@ from openquake.hazardlib.calc import gmf, filters
 from openquake.hazardlib.imt import from_string
 
 from openquake.commonlib import logictree
-from openquake.commonlib.general import block_splitter
+from openquake.commonlib.general import split_in_blocks
 
 from openquake.engine import logs, writer
 from openquake.engine.calculators.hazard import general
@@ -458,9 +458,10 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         otm = tasks.OqTaskManager(compute_and_save_gmfs, logs.LOG.progress)
         task_no = 0
         sids = self.hc.site_collection.sids
+        num_blocks_hint = self.concurrent_tasks
         for trt_model_id, rupture_data in self.rupt_collector.iteritems():
-            for rdata in block_splitter(rupture_data, self.concurrent_tasks):
-                logs.LOG.info('Sending task #%s', task_no + 1)
+            for rdata in split_in_blocks(
+                    rupture_data, num_blocks_hint, RuptureData.get_weight):
                 otm.submit(self.job.id, sids, trt_model_id, rdata, task_no)
                 task_no += 1
         otm.aggregate_results(self.agg_curves, self.curves)
