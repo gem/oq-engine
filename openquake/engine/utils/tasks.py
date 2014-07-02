@@ -19,16 +19,13 @@
 
 """Utility functions related to splitting work into tasks."""
 
-import sys
-import cPickle
-import traceback
-import psutil
-
 from celery.result import ResultSet
 from celery.app import current_app
 from celery.task import task
 
-from openquake.engine import logs, no_distribute
+from openquake.commonlib.parallel import \
+    TaskManager, safely_call, check_mem_usage, pickle_sequence, no_distribute
+from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.utils import config
 from openquake.engine.writer import CacheInserter
@@ -39,142 +36,9 @@ class JobNotRunning(Exception):
     pass
 
 
-ONE_MB = 1024 * 1024
-
-
-def check_mem_usage(mem_percent=80):
+class OqTaskManager(TaskManager):
     """
-    Display a warning if we are running out of memory
-
-    :param int mem_percent: the memory limit as a percentage
-    """
-    used_mem_percent = psutil.phymem_usage().percent
-    if used_mem_percent > mem_percent:
-        logs.LOG.warn('Using over %d%% of the memory!', used_mem_percent)
-
-
-class Pickled(object):
-    """
-    An utility to manually pickling/unpickling objects.
-    The reason is that celery does not use the HIGHEST_PROTOCOL,
-    so relying on celery is slower. Moreover Pickled instances
-    have a nice string representation and length giving the size
-    of the pickled bytestring.
-
-    :param obj: the object to pickle
-    """
-    def __init__(self, obj):
-        self.objrepr = repr(obj)
-        self.pik = cPickle.dumps(obj, cPickle.HIGHEST_PROTOCOL)
-
-    def __repr__(self):
-        """String representation of the pickled object"""
-        return '<Pickled %s %dK>' % (self.objrepr, len(self) / 1024)
-
-    def __len__(self):
-        """Length of the pickled bytestring"""
-        return len(self.pik)
-
-    def unpickle(self):
-        """Unpickle the underlying object"""
-        return cPickle.loads(self.pik)
-
-
-def pickle_sequence(objects):
-    """
-    Convert an iterable of objects into a list of pickled objects.
-    If the iterable contains copies, the pickling will be done only once.
-    If the iterable contains objects already pickled, they will not be
-    pickled again.
-
-    :param objects: a sequence of objects to pickle
-    """
-    cache = {}
-    out = []
-    for obj in objects:
-        obj_id = id(obj)
-        if obj_id not in cache:
-            if isinstance(obj, Pickled):  # already pickled
-                cache[obj_id] = obj
-            else:  # pickle the object
-                cache[obj_id] = Pickled(obj)
-        out.append(cache[obj_id])
-    return out
-
-
-def safely_call(func, args):
-    """
-    Call the given function with the given arguments safely, i.e.
-    by trapping the exceptions. Return a pair (result, exc_type)
-    where exc_type is None if no exceptions occur, otherwise it
-    is the exception class and the result is a string containing
-    error message and traceback.
-
-    :param func: the function to call
-    :param args: the arguments
-    """
-    try:
-        return func(*args), None
-    except:
-        etype, exc, tb = sys.exc_info()
-        tb_str = ''.join(traceback.format_tb(tb))
-        return '\n%s%s: %s' % (tb_str, etype.__name__, exc), etype
-
-
-def aggregate_result_set(rset, agg, acc):
-    """
-    Loop on a set of celery AsyncResults and update the accumulator
-    by using the aggregation function.
-
-    :param rset: a :class:`celery.result.ResultSet` instance
-    :param agg: the aggregation function, (acc, val) -> new acc
-    :param acc: the initial value of the accumulator
-    :returns: the final value of the accumulator
-    """
-    backend = current_app().backend
-    for task_id, result_dict in rset.iter_native():
-        check_mem_usage()  # log a warning if too much memory is used
-        result_pik = result_dict['result']
-        result, exctype = result_pik.unpickle()  # this is always negligible
-        if exctype:
-            raise RuntimeError(result)
-        acc = agg(acc, result)
-        del backend._cache[task_id]  # work around a celery bug
-    return acc
-
-
-def log_percent_gen(taskname, todo, progress):
-    """
-    Generator factory. Each time the generator object is called
-    log a message if the percentage is bigger than the last one.
-    Yield the number of calls done at the current iteration.
-
-    :param str taskname:
-        the name of the task
-    :param int todo:
-        the number of times the generator object will be called
-    :param progress:
-        a logging function for the progress report
-    """
-    progress('spawned %d tasks of kind %s', todo, taskname)
-    yield 0
-    done = 1
-    prev_percent = 0
-    while done < todo:
-        percent = int(float(done) / todo * 100)
-        if percent > prev_percent:
-            progress('%s %3d%%', taskname, percent)
-            prev_percent = percent
-        yield done
-        done += 1
-    progress('%s 100%%', taskname)
-    yield done
-
-
-class OqTaskManager(object):
-    """
-    A manager to submit several tasks of the same type.
-    The usage is::
+    A celery-based task manager. The usage is::
 
       oqm = OqTaskManager(do_something, logs.LOG.progress)
       oqm.send(arg1, arg2)
@@ -183,57 +47,40 @@ class OqTaskManager(object):
 
     Progress report is built-in.
     """
-    def __init__(self, oqtask, progress, name=None, distribute=None):
-        self.oqtask = oqtask
-        self.progress = progress
-        self.name = name or oqtask.__name__
-        self.distribute = (not no_distribute() if distribute is None
-                           else distribute)
-        self.results = []
-        self.sent = 0
-
-    def aggregate_results(self, agg, acc):
-        """
-        Loop on a set of results and update the accumulator
-        by using the aggregation function.
-
-        :param results: a list of results
-        :param agg: the aggregation function, (acc, val) -> new acc
-        :param acc: the initial value of the accumulator
-        :returns: the final value of the accumulator
-        """
-        logs.LOG.info('Sent %dM of data', self.sent / ONE_MB)
-        log_percent = log_percent_gen(
-            self.name, len(self.results), self.progress)
-        log_percent.next()
-
-        def agg_and_percent(acc, val):
-            res = agg(acc, val)
-            log_percent.next()
-            return res
-
-        if self.distribute:
-            return aggregate_result_set(
-                ResultSet(self.results), agg_and_percent, acc)
-        return reduce(agg_and_percent, self.results, acc)
-
     def submit(self, *args):
         """
         Submit an oqtask with the given arguments to celery and return
         an AsyncResult. If the variable OQ_NO_DISTRIBUTE is set, the
         task function is run in process and the result is returned.
         """
-        if self.distribute:
+        check_mem_usage()  # log a warning if too much memory is used
+        if no_distribute():
+            res = safely_call(self.oqtask.task_func, args)
+        else:
             piks = pickle_sequence(args)
             self.sent += sum(len(p) for p in piks)
-            check_mem_usage()  # log a warning if too much memory is used
             res = self.oqtask.delay(*piks)
-        else:
-            res = self.oqtask.task_func(*args)
         self.results.append(res)
 
+    def aggregate_result_set(self, agg, acc):
+        """
+        Loop on a set of celery AsyncResults and update the accumulator
+        by using the aggregation function.
 
-def map_reduce(task, task_args, agg, acc, name=None, distribute=None):
+        :param agg: the aggregation function, (acc, val) -> new acc
+        :param acc: the initial value of the accumulator
+        :returns: the final value of the accumulator
+        """
+        backend = current_app().backend
+        rset = ResultSet(self.results)
+        for task_id, result_dict in rset.iter_native():
+            check_mem_usage()  # log a warning if too much memory is used
+            acc = agg(acc, result_dict['result'].unpickle())
+            del backend._cache[task_id]  # work around a celery bug
+        return acc
+
+
+def map_reduce(task, task_args, agg, acc, name=None):
     """
     Given a task and an iterable of positional arguments, apply the
     task function to the arguments in parallel and return an aggregate
@@ -258,7 +105,7 @@ def map_reduce(task, task_args, agg, acc, name=None, distribute=None):
     :param acc: the initial value of the accumulator
     :returns: the final value of the accumulator
     """
-    oqm = OqTaskManager(task, logs.LOG.progress, name, distribute)
+    oqm = OqTaskManager(task, logs.LOG.progress, name)
     for args in task_args:
         oqm.submit(*args)
     return oqm.aggregate_results(agg, acc)
@@ -328,8 +175,7 @@ def oqtask(task_func):
                     operation='storing task id',
                     task_id=tsk.request.id).delete()
     celery_queue = config.get('amqp', 'celery_queue')
-    f = lambda *args: Pickled(
-        safely_call(wrapped, [a.unpickle() for a in args]))
+    f = lambda *args: safely_call(wrapped, args, pickle=True)
     f.__name__ = task_func.__name__
     tsk = task(f, queue=celery_queue)
     tsk.task_func = task_func

@@ -48,6 +48,7 @@ from openquake.hazardlib.site import (
     Site, SiteCollection, FilteredSiteCollection)
 
 from openquake.commonlib.general import distinct
+from openquake.commonlib.riskloaders import loss_type_to_cost_type
 from openquake.commonlib import logictree
 
 from openquake.engine.db import fields
@@ -90,7 +91,6 @@ MAX_SINT_32 = (2 ** 31) - 1
 
 #: Kind of supported type of loss outputs
 LOSS_TYPES = ["structural", "nonstructural", "fatalities", "contents"]
-
 
 #: relative tolerance to consider two risk outputs (almost) equal
 RISK_RTOL = 0.05
@@ -143,13 +143,6 @@ def _get_prep_value(self, value):
     return val
 
 djm.FloatField.get_prep_value = _get_prep_value
-
-
-def cost_type(loss_type):
-    if loss_type == "fatalities":
-        return "occupants"
-    else:
-        return loss_type
 
 
 def risk_almost_equal(o1, o2, key=lambda x: x, rtol=RISK_RTOL, atol=RISK_ATOL):
@@ -351,11 +344,8 @@ class JobStats(djm.Model):
     oq_job = djm.ForeignKey('OqJob')
     start_time = djm.DateTimeField(editable=False, default=datetime.utcnow)
     stop_time = djm.DateTimeField(editable=False)
-    # The number of total sites in job
-    num_sites = djm.IntegerField(null=True)
     # The disk space occupation in bytes
     disk_space = djm.IntegerField(null=True)
-    num_sources = fields.IntArrayField(null=True)
 
     class Meta:
         db_table = 'uiapi\".\"job_stats'
@@ -795,9 +785,6 @@ class HazardCalculation(djm.Model):
             site_ids = [hsite.id for hsite in hsites]
             sc = SiteCollection.from_points(lons, lats, site_ids, self)
         self._site_collection = sc
-        js = JobStats.objects.get(oq_job=self.oqjob)
-        js.num_sites = len(sc)
-        js.save()
         return sc
 
     def get_imts(self):
@@ -1121,22 +1108,6 @@ class RiskCalculation(djm.Model):
     @property
     def exposure_model(self):
         return self.preloaded_exposure_model or self.oqjob.exposuremodel
-
-    def vulnerability_inputs(self, retrofitted):
-        for loss_type in LOSS_TYPES:
-            ctype = cost_type(loss_type)
-
-            vulnerability_input = self.vulnerability_input(ctype, retrofitted)
-            if vulnerability_input is not None:
-                yield vulnerability_input, loss_type
-
-    def vulnerability_input(self, ctype, retrofitted=False):
-        if retrofitted:
-            input_type = "%s_vulnerability_retrofitted" % ctype
-        else:
-            input_type = "%s_vulnerability" % ctype
-
-        return self.inputs.get(input_type)
 
     @property
     def investigation_time(self):
@@ -1718,13 +1689,26 @@ class ProbabilisticRupture(djm.Model):
     """
     ses_collection = djm.ForeignKey('SESCollection')
     magnitude = djm.FloatField(null=False)
-    hypocenter = djm.PointField(srid=DEFAULT_SRID)
+    _hypocenter = fields.FloatArrayField(null=False)
     rake = djm.FloatField(null=False)
     tectonic_region_type = djm.TextField(null=False)
     is_from_fault_source = djm.NullBooleanField(null=False)
     is_multi_surface = djm.NullBooleanField(null=False)
     surface = fields.PickleField(null=False)
     site_indices = fields.IntArrayField(null=True)
+
+    # NB (MS): the proper solution would be to store the hypocenter as a 3D
+    # point, however I was unable to do so, due to a bug in Django 1.3
+    # (I was getting a GeometryProxy exception).
+    # The GEOS library we are using does not even support
+    # the WKT for 3D points; that's why I am storing the point as a
+    # 3D array, as a workaround; luckily, we never perform any
+    # geospatial query on the hypocenter.
+    # we will be able to do better when we will upgrade (Geo)Django
+    @property
+    def hypocenter(self):
+        """Convert the 3D array into a hazardlib point"""
+        return geo.Point(*self._hypocenter)
 
     class Meta:
         db_table = 'hzrdr\".\"probabilistic_rupture'
@@ -1744,6 +1728,7 @@ class ProbabilisticRupture(djm.Model):
         iffs = is_from_fault_source(rupture)
         ims = is_multi_surface(rupture)
         lons, lats, depths = get_geom(rupture.surface, iffs, ims)
+        hp = rupture.hypocenter
         return cls.objects.create(
             ses_collection=ses_collection,
             magnitude=rupture.mag,
@@ -1752,7 +1737,7 @@ class ProbabilisticRupture(djm.Model):
             is_from_fault_source=iffs,
             is_multi_surface=ims,
             surface=rupture.surface,
-            hypocenter=rupture.hypocenter.wkt2d,
+            _hypocenter=[hp.longitude, hp.latitude, hp.depth],
             site_indices=site_indices)
 
     _geom = None
@@ -2325,22 +2310,19 @@ class LtSourceModel(djm.Model):
             lt_model=self, num_ruptures__gt=0).values_list(
             'tectonic_region_type', flat=True)
 
-    def make_gsim_lt(self, trts=(), seed=None):
+    def make_gsim_lt(self, trts=()):
         """
         Helper to instantiate a GsimLogicTree object from the logic tree file.
 
         :param trts:
             sequence of tectonic region types (if not given uses
-            .get_tectonic_region_types() extracting the relevant trts)
-        :param seed:
-            seed used for the sampling (if not given uses hc.random_seed)
+            .get_tectonic_region_types() which extracts the relevant trts)
         """
         hc = self.hazard_calculation
         fname = os.path.join(hc.base_path, hc.inputs['gsim_logic_tree'])
         return logictree.GsimLogicTree(
             fname, 'applyToTectonicRegionType',
-            trts or self.get_tectonic_region_types(),
-            hc.number_of_logic_tree_samples, seed or hc.random_seed)
+            trts or self.get_tectonic_region_types())
 
     def __iter__(self):
         """
@@ -2388,6 +2370,24 @@ class TrtModel(djm.Model):
         ordering = ['id']
         # NB: the TrtModels are built in the right order, see
         # BaseHazardCalculator.initialize_sources
+
+
+class SourceInfo(djm.Model):
+    """
+    Source specific infos
+    """
+    trt_model = djm.ForeignKey('TrtModel')
+    source_id = djm.TextField(null=False)
+    source_class = djm.TextField(null=False)
+    num_sources = djm.IntegerField(null=False)
+    num_sites = djm.IntegerField(null=False)
+    num_ruptures = djm.IntegerField(null=False)
+    occ_ruptures = djm.IntegerField(null=False)
+    calc_time = djm.FloatField(null=False)
+
+    class Meta:
+        db_table = 'hzrdr\".\"source_info'
+        ordering = ['trt_model_id', 'source_id']
 
 
 class AssocLtRlzTrtModel(djm.Model):
@@ -2945,7 +2945,8 @@ class EventLossData(djm.Model):
         """
         Convert EventLossData into a CSV string
         """
-        return '%s,%s' % (self.rupture.id, self.aggregate_loss)
+        return '%s,%s,%s' % (self.rupture.tag, self.rupture.rupture.mag,
+                             self.aggregate_loss)
 
 
 class BCRDistribution(djm.Model):
@@ -3197,7 +3198,7 @@ class ExposureModel(djm.Model):
             for computing losses for `loss_type`
         """
         if loss_type != "fatalities":
-            ct = cost_type(loss_type)
+            ct = loss_type_to_cost_type(loss_type)
             return self.exposuredata_set.filter(
                 cost__cost_type__name=ct).exists()
         else:
@@ -3471,7 +3472,6 @@ class ExposureData(djm.Model):
         """
         if loss_type == "fatalities":
             return getattr(self, "people")
-
         return getattr(self, loss_type)
 
     def retrofitted(self, loss_type):

@@ -187,7 +187,7 @@ def set_up_arg_parser():
         help=(
             'Use with --run-hazard and --run-risk to automatically export '
             'all calculation results to the specified format. Only "xml" is '
-            'supported currently. This is optional. If not specified, '
+            'fully supported currently. This is optional. If not specified, '
             'nothing will be exported; results will only be stored in the '
             'database.'
         )

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4" xmlns:gml="http://www.opengis.net/gml">
+  <sourceModel name="DISS Fault Model">
+	
+		<complexFaultSource id="A" name="Zone A" tectonicRegion="Subduction Interface">
+	            <complexFaultGeometry>
+	                <faultTopEdge>
+	                    <gml:LineString>
+	                        <gml:posList> -77.18 17.75 5.00 -77.10 18.92 5.00  </gml:posList>
+	                    </gml:LineString>
+	                </faultTopEdge>
+	                <faultBottomEdge>
+	                    <gml:LineString>
+	                        <gml:posList> -77.86 17.69 50.00 -77.70 18.96 50.00  </gml:posList>
+	                    </gml:LineString>
+	                </faultBottomEdge>
+	            </complexFaultGeometry>
+	            <magScaleRel>WC1994</magScaleRel>
+	            <ruptAspectRatio>2.0</ruptAspectRatio>
+	            <truncGutenbergRichterMFD aValue="2.47" bValue="0.48" minMag="5.0" maxMag="8.5" />
+	            <rake>90.0</rake>
+	    </complexFaultSource>		
+
+	    <complexFaultSource id="F" name="Zone F" tectonicRegion="Active Shallow Crust">
+	      <complexFaultGeometry>
+		<faultTopEdge>
+		  <gml:LineString>
+		    <gml:posList>
+		      -79.27 17.85 5
+		      -78.96 16.74 5 
+		      -78.95 16.13 5
+		      -78.79 14.76 5                  
+		    </gml:posList>
+		  </gml:LineString>
+		</faultTopEdge>
+		<faultBottomEdge>
+		  <gml:LineString>
+		    <gml:posList>
+		      -79.19 17.88 60
+		      -78.86 16.75 60
+		      -78.86 16.15 60
+		      -78.71 14.76 60 
+		    </gml:posList>
+		  </gml:LineString>
+		</faultBottomEdge>
+	      </complexFaultGeometry>
+	      <magScaleRel>WC1994</magScaleRel>
+	      <ruptAspectRatio>2.0</ruptAspectRatio>
+	      <truncGutenbergRichterMFD aValue="2.976" bValue="0.64" minMag="5.0" maxMag="8" />
+	      <rake>180.0</rake>
+	    </complexFaultSource>
+
+  </sourceModel>
+</nrml>
