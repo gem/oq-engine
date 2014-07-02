@@ -77,8 +77,7 @@ class RuptureData(object):
         self.rupture = rupture
         self.rupid_seed_pairs = rupid_seed_pairs
 
-    @property
-    def weight(self):
+    def get_weight(self):
         """
         The weight of a RuptureData object is the number of rupid_seed_pairs
         it contains, i.e. the number of GMFs it can generate.
@@ -284,7 +283,7 @@ def compute_and_save_gmfs(job_id, sids, trt_model_id, rupture_data, task_no):
         correl_model=hc.get_correl_model(),
         truncation_level=hc.truncation_level,
         maximum_distance=hc.maximum_distance)
-    imts = map(from_string, hc.intensity_measure_types)
+    imts = map(from_string, sorted(hc.intensity_measure_types))
     rlzs = models.TrtModel.objects.get(pk=trt_model_id).get_rlzs_by_gsim()
     gsims = [logictree.GSIM[gsim]() for gsim in rlzs]
     calc = GmfCalculator(params, imts, gsims, trt_model_id, task_no)
