@@ -108,8 +108,6 @@ class BaseHazardCalculator(base.Calculator):
         # three crucial parameters from openquake.cfg
         self.source_max_weight = int(
             config.get('hazard', 'source_max_weight'))
-        self.rupture_block_size = int(
-            config.get('hazard', 'rupture_block_size'))
         self.concurrent_tasks = int(
             config.get('hazard', 'concurrent_tasks'))
 
