@@ -173,7 +173,7 @@ def compute_ruptures(
 
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     all_ses = range(1, hc.ses_per_logic_tree_path + 1)
-    all_ruptures = 0
+    tot_ruptures = 0
 
     filter_sites_mon = LightMonitor(
         'filtering sites', job_id, compute_ruptures)
@@ -240,19 +240,18 @@ def compute_ruptures(
                                 prob_rup, ses_idx, src.source_id,
                                 rup.rup_no, occ_no, rup_seed)
 
-        # log calc_time per distinct rupture
         if ses_num_occ:
             num_ruptures = len(ses_num_occ)
-            tot_ruptures = sum(num for rup in ses_num_occ
+            occ_ruptures = sum(num for rup in ses_num_occ
                                for ses, num in ses_num_occ[rup])
-            all_ruptures += tot_ruptures
+            tot_ruptures += occ_ruptures
             source_inserter.add(
                 models.SourceInfo(trt_model_id=trt_model_id,
                                   source_id=src.source_id,
                                   source_class=src.__class__.__name__,
                                   num_sites=len(s_sites),
                                   num_ruptures=num_ruptures,
-                                  occ_ruptures=tot_ruptures,
+                                  occ_ruptures=occ_ruptures,
                                   calc_time=time.time() - t0))
 
     filter_sites_mon.flush()
@@ -261,7 +260,7 @@ def compute_ruptures(
     save_ruptures_mon.flush()
     source_inserter.flush()
 
-    return all_ruptures, trt_model_id
+    return tot_ruptures, trt_model_id
 
 
 @tasks.oqtask
@@ -281,6 +280,8 @@ def compute_and_save_gmfs(job_id, sids, rupture_data, task_no):
         correl_model=hc.get_correl_model(),
         truncation_level=hc.truncation_level)
     imts = map(from_string, sorted(hc.intensity_measure_types))
+    # NB: by construction rupture_data is a non-empty list with
+    # ruptures of homogeneous trt_model
     trt_model = rupture_data[0].rupture.trt_model
     rlzs = trt_model.get_rlzs_by_gsim()
     gsims = [logictree.GSIM[gsim]() for gsim in rlzs]
