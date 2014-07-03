@@ -28,7 +28,7 @@ from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.imt import from_string
 import openquake.hazardlib.gsim
 
-from openquake.commonlib.general import split_on_blocks, distinct
+from openquake.commonlib.general import split_in_blocks, distinct
 from openquake.commonlib import source
 
 from openquake.engine.calculators.hazard import general as haz_general
@@ -198,7 +198,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         ses_ruptures = models.SESRupture.objects.filter(
             rupture__ses_collection=self.ses_coll.id)
         for task_no, ruptures in enumerate(
-                split_on_blocks(ses_ruptures, self.concurrent_tasks)):
+                split_in_blocks(ses_ruptures, self.concurrent_tasks)):
             yield self.job.id, ruptures, self.sites, self.gmf.id, task_no
 
     def task_completed(self, result):
