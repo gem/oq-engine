@@ -470,7 +470,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         rupture_data = []
         for rupture in models.ProbabilisticRupture.objects.filter(
                 trt_model__lt_model__hazard_calculation=self.hc
-            ).order_by('trt_model'):
+                ).order_by('trt_model'):
             rdata = RuptureData(
                 self.hc.site_collection, rupture,
                 [(r.id, r.seed) for r in rupture.sesrupture_set.all()])
