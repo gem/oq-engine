@@ -195,7 +195,7 @@ def block_splitter(items, max_weight, weight=lambda item: 1,
 
 
 def split_in_blocks(sequence, hint, weight=lambda item: 1,
-                   kind=lambda item: 'Unspecified'):
+                    kind=lambda item: 'Unspecified'):
     """
     Split the `sequence` in a number of WeightedSequences close to `hint`.
 

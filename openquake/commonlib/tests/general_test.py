@@ -108,14 +108,15 @@ class BlockSplitterTestCase(unittest.TestCase):
         s4 = Source('area', 4)
         s5 = Source('area', 4)
         blocks = list(
-            block_splitter([s1, s2, s3, s4, s5], 6, attrgetter('weight'),
-                           attrgetter('typology')))
+            block_splitter([s1, s2, s3, s4, s5], max_weight=6,
+                           weight=attrgetter('weight'),
+                           kind=attrgetter('typology')))
         self.assertEqual(map(len, blocks), [2, 2, 1])
         self.assertEqual([b.weight for b in blocks], [2, 6, 4])
 
         blocks = list(
-            split_in_blocks([s1, s2, s3, s4, s5], 6, attrgetter('weight'),
-                            attrgetter('typology')))
+            split_in_blocks([s1, s2, s3, s4, s5], hint=6,
+                            weight=attrgetter('weight'),
+                            kind=attrgetter('typology')))
         self.assertEqual(map(len, blocks), [2, 1, 1, 1])
         self.assertEqual([b.weight for b in blocks], [2, 2, 4, 4])
-
