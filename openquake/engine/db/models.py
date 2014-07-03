@@ -138,7 +138,7 @@ def _get_prep_value(self, value):
     if value is None:
         return None
     val = float(value)
-    if val < 1E-300:
+    if abs(val) < 1E-300:
         return 0.
     return val
 
@@ -1971,7 +1971,6 @@ class Gmf(djm.Model):
                 if gmfset:
                     yield GmfSet(ses, gmfset)
 
-    # this part is tested in models_test:GmfsPerSesTestCase
     def __iter__(self):
         """
         Get the ground motion fields per SES ("GMF set") for
@@ -2096,7 +2095,10 @@ class _GroundMotionFieldNode(object):
         self.location = loc
 
     def __lt__(self, other):
-        """Add an ordering by lon/lat, useful to have reproducible export"""
+        """
+        A reproducible ordering by lon and lat; used in
+        :function:`openquake.nrmllib.hazard.writers.gen_gmfs`
+        """
         return self.location < other.location
 
     def __str__(self):
