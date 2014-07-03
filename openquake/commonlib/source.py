@@ -28,6 +28,10 @@ from openquake.nrmllib.hazard import parsers as haz_parsers
 from openquake.commonlib.general import block_splitter
 
 
+class DuplicateID(Exception):
+    """Raised when two sources with the same ID are found in a source model"""
+
+
 class SourceCollector(object):
     """
     A container for the following parameters:
@@ -167,7 +171,8 @@ def parse_source_model(fname, nrml_to_hazardlib,
     for src_nrml in haz_parsers.SourceModelParser(fname).parse():
         src = nrml_to_hazardlib(src_nrml)
         if src.source_id in source_ids:
-            raise NameError('The source ID %s is duplicated!' % src.source_id)
+            raise DuplicateID(
+                'The source ID %s is duplicated!' % src.source_id)
         apply_uncertainties(src)
         trt = src.tectonic_region_type
         if trt not in source_stats_dict:
