@@ -70,7 +70,7 @@ from openquake.engine.utils import tasks
 from openquake.engine.performance import LightMonitor
 
 
-inserter = writer.CacheInserter(models.SourceInfo, 10000)
+inserter = writer.CacheInserter(models.SourceInfo, 100)
 
 
 class BoundingBox(object):
