@@ -287,7 +287,7 @@ def compute_and_save_gmfs(job_id, sids, rupture_data, task_no):
     trt_model = rupture_data[0].rupture.trt_model
     rlzs = trt_model.get_rlzs_by_gsim()
     gsims = [logictree.GSIM[gsim]() for gsim in rlzs]
-    calc = GmfCalculator(params, imts, gsims, trt_model_id, task_no)
+    calc = GmfCalculator(params, imts, gsims, trt_model.id, task_no)
 
     with EnginePerformanceMonitor(
             'computing gmfs', job_id, compute_and_save_gmfs):
@@ -473,7 +473,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
             RuptureData(self.hc.site_collection, rupture)
             for rupture in models.ProbabilisticRupture.objects.filter(
                 trt_model__lt_model__hazard_calculation=self.hc
-            ).order_by('trt_model_id')]
+            ).order_by('trt_model')]
                 
         for rdata in split_in_blocks(
                 rupture_data, self.concurrent_tasks,
