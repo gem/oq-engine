@@ -1971,7 +1971,6 @@ class Gmf(djm.Model):
                 if gmfset:
                     yield GmfSet(ses, gmfset)
 
-    # this part is tested in models_test:GmfsPerSesTestCase
     def __iter__(self):
         """
         Get the ground motion fields per SES ("GMF set") for
