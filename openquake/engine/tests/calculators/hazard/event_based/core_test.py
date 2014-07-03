@@ -60,17 +60,18 @@ def make_site_coll(lon, lat, n):
 
 class FakeRupture(object):
     def __init__(self, id, trt, mag=5.0, rake=90.):
-        hypocenter = Point(17.788328, -77.219496, 7.8125)
+        self.hypocenter = Point(17.788328, -77.219496, 7.8125)
         lons = numpy.array(
             [-78.18106621, -78.18013243, -78.17919864, -78.15399318,
              -78.15305962, -78.15212606])
         lats = numpy.array(
             [15.615, 15.615, 15.615, 15.56553731,
              15.56553731,  15.56553731])
-        surface = ComplexFaultSurface(Mesh(lons, lats, None))
-        self.rupture = Rupture(mag, rake, trt, hypocenter,
-                               surface, ComplexFaultSource)
+        self.surface = ComplexFaultSurface(Mesh(lons, lats, None))
+        self.mag = mag
+        self.rake = rake
         self.id = id
+        self.site_indices = None
 
 
 class GmfCalculatorTestCase(unittest.TestCase):
@@ -98,7 +99,7 @@ class GmfCalculatorTestCase(unittest.TestCase):
         rlz.id = 1
         coll = core.GmfCalculator(
             params, [pga], [gsim], trt_model_id=1, task_no=0)
-        rdata = core.RuptureData(site_coll, rup.rupture, [(rup.id, rup_seed)])
+        rdata = core.RuptureData(site_coll, rup, [(rup.id, rup_seed)])
         coll.calc_gmfs([rdata])
         expected_rups = {
             ('AkkarBommer2010', pga, 0): [rup_id],
