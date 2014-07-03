@@ -138,7 +138,7 @@ def _get_prep_value(self, value):
     if value is None:
         return None
     val = float(value)
-    if val < 1E-300:
+    if abs(val) < 1E-300:
         return 0.
     return val
 
