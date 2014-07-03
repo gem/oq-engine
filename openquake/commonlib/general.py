@@ -150,13 +150,15 @@ def ceil(a, b):
     return int(math.ceil(float(a) / b))
 
 
-def block_splitter(items, max_weight, weight=lambda item: 1):
+def block_splitter(items, max_weight, weight=lambda item: 1,
+                   kind=lambda item: 'Unspecified'):
     """
     :param items: an iterator over items
     :param max_weight: the max weight to split on
     :param weight: a function returning the weigth of a given item
+    :param kind: a function returning the kind of a given item
 
-    Group together the pairs until the total weight exceeds the
+    Group together items of the same kind until the total weight exceeds the
     `max_weight` and yield `WeightedSequence` instances. Items
     with weight zero are ignored.
 
@@ -171,28 +173,39 @@ def block_splitter(items, max_weight, weight=lambda item: 1):
     if max_weight <= 0:
         raise ValueError('max_weight=%s' % max_weight)
     ws = WeightedSequence([])
+    prev_kind = 'Unspecified'
     for item in items:
         w = weight(item)
+        k = kind(item)
         if w < 0:  # error
             raise ValueError('The item %r got a negative weight %s!' %
                              (item, w))
         elif w == 0:  # ignore items with 0 weight
             pass
-        elif ws.weight + w > max_weight:
+        elif ws.weight + w > max_weight or k != prev_kind:
             new_ws = WeightedSequence([(item, w)])
             if ws:
                 yield ws
             ws = new_ws
         else:
             ws.append((item, w))
+        prev_kind = k
     if ws:
         yield ws
 
 
-def split_in_blocks(sequence, hint, weight=lambda item: 1):
+def split_in_blocks(sequence, hint, weight=lambda item: 1,
+                   kind=lambda item: 'Unspecified'):
     """
     Split the `sequence` in a number of WeightedSequences close to `hint`.
-    It tries to make the WeightedSequences balanced. For instance
+
+    :param sequence: a finite sequence of items
+    :param hint: an integer suggesting the number of subsequences to generate
+    :param weight: a function returning the weigth of a given item
+    :param kind: a function returning the kind of a given item
+
+    The WeightedSequences are of homogeneous kind and they try to be
+    balanced in weight. For instance
 
      >>> items = 'ABCDE'
      >>> list(split_in_blocks(items, 3))
@@ -202,7 +215,7 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1):
     assert hint > 0, hint
     items = list(sequence)
     total_weight = float(sum(weight(item) for item in items))
-    return block_splitter(items, math.ceil(total_weight / hint), weight)
+    return block_splitter(items, math.ceil(total_weight / hint), weight, kind)
 
 
 def deep_eq(a, b, decimal=7, exclude=None):
