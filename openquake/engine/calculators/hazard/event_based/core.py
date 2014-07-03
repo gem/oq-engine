@@ -68,19 +68,17 @@ class RuptureData(object):
         the SiteCollection instance associated to the current calculation
     :param rupture:
         the `openquake.engine.db.models.ProbabilisticRupture` instance
+    :param rupid_seed_pairs:
+        a list of pairs `(rupid, seed)` where `rupid` is the id of an
+        `openquake.engine.db.models.SESRupture` instance and `seed` is
+        an integer to be used as stochastic seed.
 
     The attribute `.r_sites` contains the (sub)collection of the sites
     affected by the rupture.
-    The attribute `.rupid_seed_pairs` contains a list of pairs
-    `(rupid, seed)` where `rupid` is the id of an
-    `openquake.engine.db.models.SESRupture` instance and `seed` is
-    an integer to be used as stochastic seed.
     """
-    def __init__(self, sitecol, rupture):
+    def __init__(self, sitecol, rupture, rupid_seed_pairs):
         self.rupture = rupture
-        self.rupid_seed_pairs = [
-            (r.id, r.seed) for r in
-            models.SESRupture.objects.filter(rupture=rupture)]
+        self.rupid_seed_pairs = rupid_seed_pairs
         self.r_sites = sitecol if rupture.site_indices is None \
             else FilteredSiteCollection(rupture.site_indices, sitecol)
 
@@ -469,16 +467,19 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         sitecol = self.hc.site_collection
         otm = tasks.OqTaskManager(compute_and_save_gmfs, logs.LOG.progress)
         task_no = 0
-        rupture_data = [
-            RuptureData(self.hc.site_collection, rupture)
-            for rupture in models.ProbabilisticRupture.objects.filter(
+        rupture_data = []
+        for rupture in models.ProbabilisticRupture.objects.filter(
                 trt_model__lt_model__hazard_calculation=self.hc
-            ).order_by('trt_model')]
-                
-        for rdata in split_in_blocks(
+            ).order_by('trt_model'):
+            rdata = RuptureData(
+                self.hc.site_collection, rupture,
+                [(r.id, r.seed) for r in rupture.sesrupture_set.all()])
+            rupture_data.append(rdata)
+
+        for rblock in split_in_blocks(
                 rupture_data, self.concurrent_tasks,
                 RuptureData.get_weight, RuptureData.get_trt):
-            otm.submit(self.job.id, sitecol.sids, rdata, task_no)
+            otm.submit(self.job.id, sitecol.sids, rblock, task_no)
             task_no += 1
         otm.aggregate_results(self.agg_curves, self.curves)
 
