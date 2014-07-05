@@ -71,8 +71,9 @@ def distribute_by_assets(job_id, calc, taxonomy, counts, outputdict):
     nbytes = builder.calc_nbytes(haz_outs)
     if nbytes:
         estimate_mb = nbytes / 1024 / 1024 * 3
-        logs.LOG.info('you should need less than %dM (rough estimate)',
-                      estimate_mb)
+        if estimate_mb > 1:
+            logs.LOG.info('you should need less than %dM (rough estimate)',
+                          estimate_mb)
         phymem = psutil.phymem_usage()
         available_memory = (1 - phymem.percent / 100) * phymem.total
         available_mb = available_memory / 1024 / 1024
