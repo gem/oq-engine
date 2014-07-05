@@ -478,12 +478,12 @@ class ProbabilisticEventBased(object):
         imt = self.vulnerability_functions[loss_type].imt
         for getter in getters:
             with getter_monitor.copy('getting hazard'):
-                gmvs = getter.get_data(imt)
+                gmvs = numpy.array(getter.get_data(imt))
             with getter_monitor.copy('computing individual risk'):
                 all_outputs.append(
                     Output(getter.hid, getter.weight, loss_type,
                            self(loss_type, getter.assets, gmvs,
-                                getter.epsilons, getter.rupture_ids)))
+                                getter.get_epsilons(), getter.rupture_ids)))
         return all_outputs
 
     def statistics(self, all_outputs, quantiles, post_processing):
