@@ -39,19 +39,14 @@ class AssetSiteAssociationError(Exception):
     pass
 
 
-def make_epsilons(asset_count, num_ruptures, seed, correlation,
-                  epsilon_sampling):
+def make_epsilons(asset_count, num_samples, seed, correlation):
     """
     :param int asset_count: the number of assets
     :param int num_ruptures: the number of ruptures
     :param int seed: a random seed
     :param float correlation: the correlation coefficient
-    :param str epsilon_sampling: specify how to compute the epsilon matrix
-
-    If `epsilon_sampling` is 0, generate the full epsilon matrix;
-    else generate a reduced epsilon matrix.
     """
-    zeros = numpy.zeros((asset_count, epsilon_sampling or num_ruptures))
+    zeros = numpy.zeros((asset_count, num_samples))
     return scientific.make_epsilons(zeros, seed, correlation)
 
 
@@ -334,8 +329,9 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
             for lt_model_id in lt_model_ids:
                 ses_coll = models.SESCollection.objects.get(
                     lt_model=lt_model_id)
-                samples = self.epsilon_sampling or \
-                    ses_coll.get_ruptures().count()
+                num_ruptures = ses_coll.get_ruptures().count()
+                samples = min(self.epsilon_sampling, num_ruptures) \
+                    if self.epsilon_sampling else num_ruptures
                 self.epsilons_shape[ses_coll.id] = (num_assets, samples)
         elif self.hc.calculation_mode == 'scenario':
             samples = self.hc.number_of_ground_motion_fields
@@ -368,16 +364,15 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
                 scid = ses_coll.id
                 self.rupture_ids[scid] = ses_coll.get_ruptures(
                     ).values_list('id', flat=True)
+                num_samples = self.epsilons_shape[scid][1]
                 self.epsilons[scid] = make_epsilons(
-                    len(self.asset_ids), len(self.rupture_ids[scid]),
-                    self.rc.master_seed, self.rc.asset_correlation,
-                    self.epsilon_sampling)
+                    len(self.asset_ids), num_samples,
+                    self.rc.master_seed, self.rc.asset_correlation)
         elif self.hc.calculation_mode == 'scenario':
             self.rupture_ids[0] = []
             self.epsilons[0] = make_epsilons(
                 len(self.asset_ids), self.hc.number_of_ground_motion_fields,
-                self.rc.master_seed, self.rc.asset_correlation,
-                self.epsilon_sampling)
+                self.rc.master_seed, self.rc.asset_correlation)
 
     def _indices_asset_site(self, asset_block):
         """
