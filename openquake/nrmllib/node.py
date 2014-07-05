@@ -201,6 +201,7 @@ try:
 except ImportError:
     from xml import etree
 
+
 ## this is duplicated from hazardlib to avoid a dependency
 def with_slots(cls):
     """
@@ -248,18 +249,6 @@ def with_slots(cls):
 
 
 ######################## utilities for the Node class #########################
-
-def strip_fqtag(tag):
-    """
-    Get the short representation of a fully qualified tag
-
-    :param str tag: a (fully qualified or not) XML tag
-    """
-    s = str(tag)
-    pieces = s.rsplit('}', 1)  # split on '}', to remove the namespace part
-    if len(pieces) == 2:
-        s = pieces[1]
-    return s
 
 
 def _displayattrs(attrib, expandattrs):
@@ -322,13 +311,25 @@ class Node(object):
         :param unicode text: the Node text (default None)
         :param nodes: an iterable of subnodes (default empty list)
         """
-        self.tag = strip_fqtag(fulltag)
+        self.tag = self.strip_fqtag(fulltag)
         self.attrib = {} if attrib is None else attrib
         self.text = text
         self.nodes = [] if nodes is None else nodes
         if self.nodes and self.text is not None:
             raise ValueError(
                 'A branch node cannot have a value, got %r' % self.text)
+
+    def strip_fqtag(self, tag):
+        """
+        Get the short representation of a fully qualified tag
+
+        :param str tag: a (fully qualified or not) XML tag
+        """
+        s = str(tag)
+        pieces = s.rsplit('}', 1)  # split on '}', to remove the namespace part
+        if len(pieces) == 2:
+            s = pieces[1]
+        return s
 
     def __getattr__(self, name):
         for node in self.nodes:
@@ -412,6 +413,14 @@ class Node(object):
         generator is empty.
         """
         return bool(self.nodes)
+
+
+class NodeNoStrip(Node):
+    """
+    A Node class not stripping the tag qualification
+    """
+    def strip_fqtag(self, tag):
+        return tag
 
 
 def node_from_dict(dic, nodecls=Node):
