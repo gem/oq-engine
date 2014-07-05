@@ -42,7 +42,7 @@ MEMORY_ERROR = '''Running the calculation will require approximately
 %dM, i.e. more than the memory which is available right now (%dM).
 Please increase the free memory or apply a stringent region
 constraint to reduce the number of assets. Alternatively you can set
-epsilons_management=fast in openquake.cfg. It the correlation is
+epsilon_sampling in openquake.cfg. It the correlation is
 nonzero, consider setting asset_correlation=0 to avoid building the
 correlation matrix.'''
 
@@ -66,21 +66,20 @@ def distribute_by_assets(job_id, calc, taxonomy, counts, outputdict):
     logs.LOG.info('taxonomy=%s, assets=%d', taxonomy, counts)
     with calc.monitor("associating asset->site"):
         builder = hazard_getters.GetterBuilder(
-            taxonomy, calc.rc, calc.eps_man)
+            taxonomy, calc.rc, calc.eps_sampling)
     haz_outs = calc.rc.hazard_outputs()
     nbytes = builder.calc_nbytes(haz_outs)
     if nbytes:
         estimate_mb = nbytes / 1024 / 1024 * 3
-        if calc.eps_man == 'fast' and calc.rc.asset_correlation == 0:
+        if calc.eps_sampling and calc.rc.asset_correlation == 0:
             pass  # using much less memory than the estimate, don't log
         else:
-            logs.LOG.info('epsilons_management=%s: '
-                          'you should need less than %dM (rough estimate)',
-                          calc.eps_man, estimate_mb)
+            logs.LOG.info('you should need less than %dM (rough estimate)',
+                          estimate_mb)
         phymem = psutil.phymem_usage()
         available_memory = (1 - phymem.percent / 100) * phymem.total
         available_mb = available_memory / 1024 / 1024
-        if calc.eps_man == 'full' and nbytes * 3 > available_memory:
+        if calc.eps_sampling == 0 and nbytes * 3 > available_memory:
             raise MemoryError(MEMORY_ERROR % (estimate_mb, available_mb))
 
     task_no = 0
@@ -186,7 +185,7 @@ class RiskCalculator(base.Calculator):
         num_taxonomies = len(self.taxonomies_asset_count)
         logs.LOG.info('Considering %d assets of %d distinct taxonomies',
                       num_assets, num_taxonomies)
-        self.eps_man = config.get('risk', 'epsilons_management')
+        self.eps_sampling = int(config.get('risk', 'epsilon_sampling'))
 
     @EnginePerformanceMonitor.monitor
     def execute(self):
