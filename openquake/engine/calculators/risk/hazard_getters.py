@@ -179,7 +179,7 @@ class GroundMotionValuesGetter(HazardGetter):
         """
         Expand the inner epsilons to the right number
         """
-        return expand(self.epsilons, len(self.rupture_ids))
+        return expand(self.epsilons.T, len(self.rupture_ids)).T
 
     def _get_gmv_dict(self, imt_type, sa_period, sa_damping):
         """
