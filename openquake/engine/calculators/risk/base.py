@@ -71,15 +71,12 @@ def distribute_by_assets(job_id, calc, taxonomy, counts, outputdict):
     nbytes = builder.calc_nbytes(haz_outs)
     if nbytes:
         estimate_mb = nbytes / 1024 / 1024 * 3
-        if calc.eps_sampling and calc.rc.asset_correlation == 0:
-            pass  # using much less memory than the estimate, don't log
-        else:
-            logs.LOG.info('you should need less than %dM (rough estimate)',
-                          estimate_mb)
+        logs.LOG.info('you should need less than %dM (rough estimate)',
+                      estimate_mb)
         phymem = psutil.phymem_usage()
         available_memory = (1 - phymem.percent / 100) * phymem.total
         available_mb = available_memory / 1024 / 1024
-        if calc.eps_sampling == 0 and nbytes * 3 > available_memory:
+        if nbytes * 3 > available_memory:
             raise MemoryError(MEMORY_ERROR % (estimate_mb, available_mb))
 
     task_no = 0
