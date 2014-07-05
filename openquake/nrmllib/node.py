@@ -420,7 +420,15 @@ class NodeNoStrip(Node):
     A Node class not stripping the tag qualification
     """
     def strip_fqtag(self, tag):
-        return tag
+        s = str(tag)
+        pieces = s.rsplit('}', 1)  # split on '}', to remove the namespace part
+        if len(pieces) == 2:
+            if pieces[0] == '{http://www.opengis.net/gml':
+                # FIXME: horrible special case
+                s = 'gml:' + pieces[1]
+            else:
+                s = pieces[1]
+        return s
 
 
 def node_from_dict(dic, nodecls=Node):
@@ -458,7 +466,7 @@ def node_from_elem(elem, nodecls=Node):
     if not children:
         return nodecls(elem.tag, dict(elem.attrib), elem.text)
     return nodecls(elem.tag, dict(elem.attrib),
-                   nodes=map(node_from_elem, children))
+                   nodes=[node_from_elem(ch, nodecls) for ch in children])
 
 
 # taken from https://gist.github.com/651801, which comes for the effbot
