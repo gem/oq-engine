@@ -334,12 +334,13 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
             for lt_model_id in lt_model_ids:
                 ses_coll = models.SESCollection.objects.get(
                     lt_model=lt_model_id)
-                samples = ses_coll.get_ruptures().count()
+                samples = self.epsilon_sampling or \
+                    ses_coll.get_ruptures().count()
                 self.epsilons_shape[ses_coll.id] = (num_assets, samples)
         elif self.hc.calculation_mode == 'scenario':
             samples = self.hc.number_of_ground_motion_fields
             self.epsilons_shape[0] = (num_assets, samples)
-        if self.epsilon_sampling and self.epsilons_shape:
+        if self.epsilons_shape:
             # size of the correlation matrix
             return num_assets * num_assets * BYTES_PER_FLOAT
         nbytes = 0
