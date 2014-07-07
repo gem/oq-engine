@@ -99,6 +99,9 @@ class GroundMotionValuesGetterTestCase(HazardCurveGetterTestCase):
         self.assertEqual(len(rupture_ids), 3)
         [gmvs] = self.getter.get_data(self.imt)
         numpy.testing.assert_allclose([0.1, 0.2, 0.3], gmvs)
+        numpy.testing.assert_allclose(
+            numpy.array([[0.49671415, -0.1382643, 0.64768854]]),
+            self.getter.get_epsilons())  # shape (1, 3)
 
 
 class ScenarioGetterTestCase(GroundMotionValuesGetterTestCase):
