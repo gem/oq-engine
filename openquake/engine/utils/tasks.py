@@ -71,6 +71,8 @@ class OqTaskManager(TaskManager):
         :param acc: the initial value of the accumulator
         :returns: the final value of the accumulator
         """
+        if not self.results:
+            return acc
         backend = current_app().backend
         rset = ResultSet(self.results)
         for task_id, result_dict in rset.iter_native():

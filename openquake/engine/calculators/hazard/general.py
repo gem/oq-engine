@@ -151,7 +151,6 @@ class BaseHazardCalculator(base.Calculator):
                 self.source_max_weight,
                 self.hc.area_source_discretization)
             num_blocks = 0
-            num_sources = 0
             for block in source_blocks:
                 args = (self.job.id, sitecol, block,
                         trt_model.id, gsims, task_no)
@@ -159,13 +158,17 @@ class BaseHazardCalculator(base.Calculator):
                 yield args
                 task_no += 1
                 num_blocks += 1
-                num_sources += len(block)
                 logs.LOG.info('Processing %d sources out of %d' %
                               sc.filtered_sources)
-
-            logs.LOG.progress('Generated %d block(s) for %s, TRT=%s',
-                              num_blocks, ltpath, sc.trt)
-            trt_model.num_sources = num_sources
+            if not sc.sources:
+                logs.LOG.warn(
+                    'Could not find sources close to the sites in %s '
+                    '(maximum_distance=%s km)',
+                    trt_model.lt_model.sm_name, self.hc.maximum_distance)
+            else:
+                logs.LOG.progress('Generated %d block(s) for %s, TRT=%s',
+                                  num_blocks, ltpath, sc.trt)
+            trt_model.num_sources = len(sc.sources)
             trt_model.num_ruptures = sc.num_ruptures
             trt_model.save()
 
@@ -543,7 +546,10 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
 
         num_rlzs = models.LtRealization.objects.filter(
             lt_model__hazard_calculation=self.hc).count()
-
+        if not num_rlzs:
+            logs.LOG.warn('No realizations for hazard_calculation_id=%d',
+                          self.hc.id)
+            return
         num_site_blocks_per_incr = int(CURVE_CACHE_SIZE) / int(num_rlzs)
         if num_site_blocks_per_incr == 0:
             # This means we have `num_rlzs` >= `CURVE_CACHE_SIZE`.
