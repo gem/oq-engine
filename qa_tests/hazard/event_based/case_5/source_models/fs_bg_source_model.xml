@@ -1033,7 +1033,7 @@
         <hypoDepth probability="1.0" depth="9.0"/>
       </hypoDepthDist>
     </areaSource>
-    <areaSource id="339" name="DEAS141" tectonicRegion="Stable Shallow Crust">
+    <areaSource id="1339" name="DEAS141" tectonicRegion="Stable Shallow Crust">
       <areaGeometry>
         <gml:Polygon>
           <gml:exterior>
@@ -1291,7 +1291,7 @@
       <truncGutenbergRichterMFD aValue="3.9322" bValue="1.34" minMag="6.4" maxMag="6.8"/>
       <rake>90.0</rake>
     </simpleFaultSource>
-    <simpleFaultSource id="323" name="ITCS044" tectonicRegion="Active Shallow Crust">
+    <simpleFaultSource id="1323" name="ITCS044" tectonicRegion="Active Shallow Crust">
       <simpleFaultGeometry>
         <gml:LineString>
           <gml:posList>9.21602706445 45.1555287905 9.25645636929 45.1877167851 9.29688464252 45.2199047798 9.35715705075 45.2398017764 9.42902686305 45.2401237764 9.47246500782 45.2381597767 9.51590215304 45.236194777 9.56736930079 45.2307927779 9.61883544823 45.2253897788 9.67030259419 45.2199877797 9.72270625188 45.2033947825 9.77510990175 45.1868007853 9.83238881096 45.1680237884 9.88966771001 45.1492457915 9.94694559775 45.1304687947 10.0042244753 45.1116907978</gml:posList>
@@ -1305,7 +1305,7 @@
       <truncGutenbergRichterMFD aValue="4.28448" bValue="1.317" minMag="6.4" maxMag="7.0"/>
       <rake>90.0</rake>
     </simpleFaultSource>
-    <simpleFaultSource id="327" name="ITCS048" tectonicRegion="Active Shallow Crust">
+    <simpleFaultSource id="1327" name="ITCS048" tectonicRegion="Active Shallow Crust">
       <simpleFaultGeometry>
         <gml:LineString>
           <gml:posList>11.1523643247 46.0566123282 11.1292218415 46.0254043604 11.0934190663 45.9851964018 11.0374265643 45.920778468 10.9814343876 45.8563605341 10.958759775 45.8206565707 10.9139744669 45.7707956216 10.866632726 45.7157266778 10.8260416989 45.6650957294 10.7698122469 45.6092297862 10.7216268752 45.5697808262 10.6734406212 45.5303308662 10.607341325 45.4921519049 10.5449663376 45.4644949328 10.5086233757 45.4582909391 10.4611432193 45.4540279434 10.4025694699 45.4535089439</gml:posList>
@@ -1333,7 +1333,7 @@
       <truncGutenbergRichterMFD aValue="3.12057" bValue="1.048" minMag="6.4" maxMag="7.0"/>
       <rake>80.0</rake>
     </simpleFaultSource>
-    <simpleFaultSource id="338" name="ITCS065" tectonicRegion="Active Shallow Crust">
+    <simpleFaultSource id="1338" name="ITCS065" tectonicRegion="Active Shallow Crust">
       <simpleFaultGeometry>
         <gml:LineString>
           <gml:posList>13.5883037583 45.9106374804 13.5500215816 45.9041864804 13.5117384051 45.8977344804 13.4630415683 45.9036984804 13.4143437315 45.9096614804 13.3600100266 45.9204364803 13.3056763219 45.9312104803 13.2513426173 45.9419844803 13.1970089129 45.9527594803</gml:posList>
