@@ -77,8 +77,9 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
     def test(self):
         self.calculator.pre_execute()
         # there are 2 assets and 1 taxonomy; will generate a supertask
-        # for the taxonomy and 1 subtask, for the two assets
+        # for the taxonomy and 2 subtasks, for the two assets (the
+        # risk block_size is 1)
         self.assertEqual(self.calculator.taxonomies_asset_count, {'VF': 2})
 
         self.calculator.execute()
-        self.assertEqual(self.calculator.acc, {self.job.id: 1})
+        self.assertEqual(self.calculator.acc, {self.job.id: 2})
