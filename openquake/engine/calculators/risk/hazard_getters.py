@@ -34,34 +34,23 @@ from openquake.engine.db import models
 
 BYTES_PER_FLOAT = numpy.zeros(1, dtype=float).nbytes
 
+SCENARIO = 0  # constant for readability
+NRUPTURES = 1  # constant for readability
+
 
 class AssetSiteAssociationError(Exception):
     pass
 
 
-def make_epsilons(asset_count, num_ruptures, seed, correlation,
-                  epsilons_management):
+def make_epsilons(asset_count, num_samples, seed, correlation):
     """
     :param int asset_count: the number of assets
     :param int num_ruptures: the number of ruptures
     :param int seed: a random seed
     :param float correlation: the correlation coefficient
-    :param str epsilons_management: specify how to compute the epsilon matrix
-
-    If `epsilons_management` is 'full', generate the full epsilon matrix;
-    if it is 'fast' generate a vector of epsilons.
     """
-    if epsilons_management == 'full':
-        # generate the full epsilon matrix
-        zeros = numpy.zeros((asset_count, num_ruptures))
-        return scientific.make_epsilons(zeros, seed, correlation)
-    elif epsilons_management == 'fast':
-        # use a single epsilon for all realizations
-        zeros = numpy.zeros((asset_count, 1))
-        return scientific.make_epsilons(zeros, seed, correlation).reshape(-1)
-    else:
-        raise RuntimeError('Wrong parameter epsilons_management '
-                           'in openquake.cfg: %r' % epsilons_management)
+    zeros = numpy.zeros((asset_count, num_samples))
+    return scientific.make_epsilons(zeros, seed, correlation)
 
 
 class HazardGetter(object):
@@ -157,12 +146,39 @@ class HazardCurveGetter(HazardGetter):
         return all_curves
 
 
+def expand(array, N):
+    """
+    Given a non-empty array with n elements, expands it to a larger
+    array with N elements. If N < n, returns the original array.
+
+    >>> expand([1], 3)
+    array([1, 1, 1])
+    >>> expand([1, 2, 3], 10)
+    array([1, 2, 3, 1, 2, 3, 1, 2, 3, 1])
+    >>> expand(numpy.zeros((2, 10)), 5).shape
+    (5, 10)
+    """
+    n = len(array)
+    assert n > 0, 'Empty array'
+    if n >= N:
+        return array
+    return numpy.array([array[i % n] for i in xrange(N)])
+
+
 class GroundMotionValuesGetter(HazardGetter):
     """
     Hazard getter for loading ground motion values.
     """ + HazardGetter.__doc__
     rupture_ids = None  # set by the GetterBuilder
     epsilons = None  # set by the GetterBuilder
+
+    def get_epsilons(self):
+        """
+        Expand the inner epsilons to the right number
+        """
+        # NB: notice the double transpose below; a shape (1, 3) will go into
+        # (1, 3); without, it would go incorrectly into (3, 3)
+        return expand(self.epsilons.T, len(self.rupture_ids)).T
 
     def _get_gmv_dict(self, imt_type, sa_period, sa_damping):
         """
@@ -217,6 +233,12 @@ class ScenarioGetter(HazardGetter):
     epsilons = None  # set by the GetterBuilder
     num_samples = None  # set by the GetterBuilder
 
+    def get_epsilons(self):
+        """
+        Return the inner epsilons, set by the builder
+        """
+        return self.epsilons
+
     def get_data(self, imt):
         """
         Extracts the GMFs for the given `imt` from the hazard output.
@@ -264,10 +286,10 @@ class GetterBuilder(object):
     Warning: instantiating a GetterBuilder performs a potentially
     expensive geospatial query.
     """
-    def __init__(self, taxonomy, rc, epsilons_management='full'):
+    def __init__(self, taxonomy, rc, epsilon_sampling=0):
         self.taxonomy = taxonomy
         self.rc = rc
-        self.epsilons_management = epsilons_management
+        self.epsilon_sampling = epsilon_sampling
         self.hc = rc.get_hazard_calculation()
         max_dist = rc.best_maximum_distance * 1000  # km to meters
         cursor = models.getcursor('job_init')
@@ -311,20 +333,13 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
             for lt_model_id in lt_model_ids:
                 ses_coll = models.SESCollection.objects.get(
                     lt_model=lt_model_id)
-                if self.epsilons_management == 'full':
-                    samples = ses_coll.get_ruptures().count()
-                else:
-                    samples = 1
+                num_ruptures = ses_coll.get_ruptures().count()
+                samples = min(self.epsilon_sampling, num_ruptures) \
+                    if self.epsilon_sampling else num_ruptures
                 self.epsilons_shape[ses_coll.id] = (num_assets, samples)
         elif self.hc.calculation_mode == 'scenario':
-                if self.epsilons_management == 'full':
-                    samples = self.hc.number_of_ground_motion_fields
-                else:
-                    samples = 1
-                self.epsilons_shape[0] = (num_assets, samples)
-        if self.epsilons_management == 'fast' and self.epsilons_shape:
-            # size of the correlation matrix
-            return num_assets * num_assets * BYTES_PER_FLOAT
+            samples = self.hc.number_of_ground_motion_fields
+            self.epsilons_shape[SCENARIO] = (num_assets, samples)
         nbytes = 0
         for (n, r) in self.epsilons_shape.values():
             # the max(n, r) is taken because if n > r then the limiting
@@ -350,16 +365,15 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
                 scid = ses_coll.id
                 self.rupture_ids[scid] = ses_coll.get_ruptures(
                     ).values_list('id', flat=True)
+                num_samples = self.epsilons_shape[scid][NRUPTURES]
                 self.epsilons[scid] = make_epsilons(
-                    len(self.asset_ids), len(self.rupture_ids[scid]),
-                    self.rc.master_seed, self.rc.asset_correlation,
-                    self.epsilons_management)
+                    len(self.asset_ids), num_samples,
+                    self.rc.master_seed, self.rc.asset_correlation)
         elif self.hc.calculation_mode == 'scenario':
-            self.rupture_ids[0] = []
-            self.epsilons[0] = make_epsilons(
+            self.rupture_ids[SCENARIO] = []
+            self.epsilons[SCENARIO] = make_epsilons(
                 len(self.asset_ids), self.hc.number_of_ground_motion_fields,
-                self.rc.master_seed, self.rc.asset_correlation,
-                self.epsilons_management)
+                self.rc.master_seed, self.rc.asset_correlation)
 
     def _indices_asset_site(self, asset_block):
         """
@@ -420,7 +434,7 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
                 getter.rupture_ids = self.rupture_ids[ses_coll_id]
                 getter.epsilons = self.epsilons[ses_coll_id][indices]
             elif self.hc.calculation_mode == 'scenario':
-                getter.num_samples = self.epsilons_shape[0][1]
-                getter.epsilons = self.epsilons[0][indices]
+                getter.num_samples = self.epsilons_shape[SCENARIO][NRUPTURES]
+                getter.epsilons = self.epsilons[SCENARIO][indices]
             getters.append(getter)
         return getters
