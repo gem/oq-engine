@@ -25,6 +25,7 @@ import psutil
 from openquake.nrmllib.risk import parsers
 from openquake.risklib.workflows import RiskModel
 from openquake.commonlib.riskloaders import get_taxonomy_vfs
+from openquake.commonlib.general import ceil
 
 from openquake.engine import logs, export
 from openquake.engine.db import models
@@ -34,9 +35,6 @@ from openquake.engine.calculators.risk import \
 from openquake.engine.utils import config, tasks
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.input.exposure import ExposureDBWriter
-
-
-BLOCK_SIZE = 100  # number of assets per block
 
 MEMORY_ERROR = '''Running the calculation will require approximately
 %dM, i.e. more than the memory which is available right now (%dM).
@@ -84,10 +82,11 @@ def distribute_by_assets(job_id, calc, taxonomy, counts, outputdict):
     otm = tasks.OqTaskManager(calc.core_calc_task, logs.LOG.progress, name)
     with calc.monitor("building epsilons"):
         builder.init_epsilons(haz_outs)
-    for offset in range(0, counts, BLOCK_SIZE):
+    block_size = ceil(counts, ceil(calc.concurrent_tasks, 2))
+    for offset in range(0, counts, block_size):
         with calc.monitor("getting asset chunks"):
             assets = models.ExposureData.objects.get_asset_chunk(
-                calc.rc, taxonomy, offset, BLOCK_SIZE)
+                calc.rc, taxonomy, offset, block_size)
         with calc.monitor("building getters"):
             try:
                 getters = builder.make_getters(
