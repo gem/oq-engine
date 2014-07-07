@@ -70,10 +70,9 @@ def distribute_by_assets(job_id, calc, taxonomy, counts, outputdict):
     haz_outs = calc.rc.hazard_outputs()
     nbytes = builder.calc_nbytes(haz_outs)
     if nbytes:
+        # TODO: the estimate should be revised by taking into account
+        # the number of realizations
         estimate_mb = nbytes / 1024 / 1024 * 3
-        if estimate_mb > 1:
-            logs.LOG.info('you should need less than %dM (rough estimate)',
-                          estimate_mb)
         phymem = psutil.phymem_usage()
         available_memory = (1 - phymem.percent / 100) * phymem.total
         available_mb = available_memory / 1024 / 1024
