@@ -17,7 +17,7 @@
 
 from openquake.engine import logs
 from openquake.engine.performance import EnginePerformanceMonitor
-from openquake.engine.utils import tasks
+from openquake.engine.utils import tasks, config
 
 # Routing key format string for communication between tasks and the control
 # node.
@@ -39,6 +39,12 @@ class Calculator(object):
         self.job = job
         self.num_tasks = None
         self._task_args = []
+
+        # three crucial parameters from openquake.cfg
+        self.source_max_weight = int(
+            config.get('hazard', 'source_max_weight'))
+        self.concurrent_tasks = int(
+            config.get('hazard', 'concurrent_tasks'))
 
     def monitor(self, operation):
         """
