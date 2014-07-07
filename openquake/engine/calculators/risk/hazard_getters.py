@@ -153,8 +153,8 @@ def expand(array, N):
     >>> expand([1, 2, 3], 10)
     array([1, 2, 3, 1, 2, 3, 1, 2, 3, 1])
 
-    >>> expand(numpy.zeros((10, 2)), 5).shape
-    (10, 5)
+    >>> expand(numpy.zeros((2, 10)), 5).shape
+    (5, 10)
     """
     n = len(array)
     assert n > 0, 'Empty array'
@@ -174,6 +174,8 @@ class GroundMotionValuesGetter(HazardGetter):
         """
         Expand the inner epsilons to the right number
         """
+        # NB: notice the double transpose below; a shape (1, 3) will go into
+        # (1, 3); without, it would go incorrectly into (3, 3)
         return expand(self.epsilons.T, len(self.rupture_ids)).T
 
     def _get_gmv_dict(self, imt_type, sa_period, sa_damping):
