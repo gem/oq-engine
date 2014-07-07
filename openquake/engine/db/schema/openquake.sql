@@ -1027,7 +1027,8 @@ ON DELETE CASCADE;
 -- hzrdr.probabilistic_rupture to hzrdr.ses_collection FK
 ALTER TABLE hzrdr.probabilistic_rupture
 ADD CONSTRAINT hzrdr_probabilistic_rupture_ses_collection_fk
-FOREIGN KEY (ses_collection_id) REFERENCES hzrdr.ses_collection(id);
+FOREIGN KEY (ses_collection_id) REFERENCES hzrdr.ses_collection(id)
+ON DELETE CASCADE;
 
 -- hzrdr.ses_rupture to hzrdr.probabilistic_rupture FK
 ALTER TABLE hzrdr.ses_rupture

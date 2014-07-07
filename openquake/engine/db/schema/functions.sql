@@ -89,3 +89,10 @@ SELECT a.hazard_calculation_id, sources_done, sources_todo FROM
    GROUP by y.hazard_calculation_id) AS b
 WHERE a.hazard_calculation_id=b.hazard_calculation_id;
 
+
+CREATE VIEW riskr.event_loss_view AS
+SELECT b.tag as rupture_tag, c.id AS rupture_id,
+   aggregate_loss, output_id, loss_type FROM
+   riskr.event_loss_data AS a, hzrdr.ses_rupture AS b,
+   hzrdr.probabilistic_rupture AS c, riskr.event_loss as d
+WHERE a.rupture_id=b.id AND b.rupture_id=c.id AND a.event_loss_id=d.id;
