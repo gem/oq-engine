@@ -34,6 +34,9 @@ from openquake.engine.db import models
 
 BYTES_PER_FLOAT = numpy.zeros(1, dtype=float).nbytes
 
+SCENARIO = 0  # constant for readability
+NRUPTURES = 1  # constant for readability
+
 
 class AssetSiteAssociationError(Exception):
     pass
@@ -336,7 +339,7 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
                 self.epsilons_shape[ses_coll.id] = (num_assets, samples)
         elif self.hc.calculation_mode == 'scenario':
             samples = self.hc.number_of_ground_motion_fields
-            self.epsilons_shape[0] = (num_assets, samples)
+            self.epsilons_shape[SCENARIO] = (num_assets, samples)
         nbytes = 0
         for (n, r) in self.epsilons_shape.values():
             # the max(n, r) is taken because if n > r then the limiting
@@ -362,13 +365,13 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
                 scid = ses_coll.id
                 self.rupture_ids[scid] = ses_coll.get_ruptures(
                     ).values_list('id', flat=True)
-                num_samples = self.epsilons_shape[scid][1]
+                num_samples = self.epsilons_shape[scid][NRUPTURES]
                 self.epsilons[scid] = make_epsilons(
                     len(self.asset_ids), num_samples,
                     self.rc.master_seed, self.rc.asset_correlation)
         elif self.hc.calculation_mode == 'scenario':
-            self.rupture_ids[0] = []
-            self.epsilons[0] = make_epsilons(
+            self.rupture_ids[SCENARIO] = []
+            self.epsilons[SCENARIO] = make_epsilons(
                 len(self.asset_ids), self.hc.number_of_ground_motion_fields,
                 self.rc.master_seed, self.rc.asset_correlation)
 
@@ -431,7 +434,7 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
                 getter.rupture_ids = self.rupture_ids[ses_coll_id]
                 getter.epsilons = self.epsilons[ses_coll_id][indices]
             elif self.hc.calculation_mode == 'scenario':
-                getter.num_samples = self.epsilons_shape[0][1]
-                getter.epsilons = self.epsilons[0][indices]
+                getter.num_samples = self.epsilons_shape[SCENARIO][NRUPTURES]
+                getter.epsilons = self.epsilons[SCENARIO][indices]
             getters.append(getter)
         return getters
