@@ -152,7 +152,6 @@ def expand(array, N):
     array([1, 1, 1])
     >>> expand([1, 2, 3], 10)
     array([1, 2, 3, 1, 2, 3, 1, 2, 3, 1])
-
     >>> expand(numpy.zeros((2, 10)), 5).shape
     (5, 10)
     """
