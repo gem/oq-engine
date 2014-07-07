@@ -60,20 +60,21 @@ def make_site_coll(lon, lat, n):
 
 class FakeRupture(object):
     def __init__(self, id, trt, mag=5.0, rake=90.):
-        hypocenter = Point(17.788328, -77.219496, 7.8125)
+        self.hypocenter = Point(17.788328, -77.219496, 7.8125)
         lons = numpy.array(
             [-78.18106621, -78.18013243, -78.17919864, -78.15399318,
              -78.15305962, -78.15212606])
         lats = numpy.array(
             [15.615, 15.615, 15.615, 15.56553731,
              15.56553731,  15.56553731])
-        surface = ComplexFaultSurface(Mesh(lons, lats, None))
-        self.rupture = Rupture(mag, rake, trt, hypocenter,
-                               surface, ComplexFaultSource)
+        self.surface = ComplexFaultSurface(Mesh(lons, lats, None))
+        self.mag = mag
+        self.rake = rake
         self.id = id
+        self.site_indices = None
 
 
-class RuptureCollectorTestCase(unittest.TestCase):
+class GmfCalculatorTestCase(unittest.TestCase):
     """Tests for the routines used by the event-based hazard calculator"""
 
     # test a case with 5 sites and 2 ruptures
@@ -96,9 +97,10 @@ class RuptureCollectorTestCase(unittest.TestCase):
         pga = PGA()
         rlz = mock.Mock()
         rlz.id = 1
-        coll = core.RuptureCollector(
+        coll = core.GmfCalculator(
             params, [pga], [gsim], trt_model_id=1, task_no=0)
-        coll.calc_gmf(site_coll, rup.rupture, rup.id, rup_seed)
+        rdata = core.RuptureData(site_coll, rup, [(rup.id, rup_seed)])
+        coll.calc_gmfs([rdata])
         expected_rups = {
             ('AkkarBommer2010', pga, 0): [rup_id],
             ('AkkarBommer2010', pga, 1): [rup_id],
@@ -286,3 +288,18 @@ post_processing.gmvs_to_haz_curve`.
         actual_poes = core.gmvs_to_haz_curve(gmvs, imls, invest_time, duration)
         numpy.testing.assert_array_almost_equal(
             expected_poes, actual_poes, decimal=6)
+
+
+class UnknownGsimTestCase(unittest.TestCase):
+    # the case where the source model contains a TRT which does not
+    # exist in the gsim_logic_tree file
+    def test(self):
+        cfg = helpers.get_data_path('bad_gsim/job.ini')
+        job = helpers.get_job(cfg, username=getpass.getuser())
+        calc = core.EventBasedHazardCalculator(job)
+        with self.assertRaises(ValueError) as ctxt:
+            calc.initialize_sources()
+        errmsg = str(ctxt.exception)
+        assert errmsg.startswith(
+            "Found in 'source_model.xml' a tectonic region type "
+            "'Active Shallow Crust' inconsistent with the ones"), errmsg

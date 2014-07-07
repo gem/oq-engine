@@ -28,7 +28,7 @@ from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.imt import from_string
 import openquake.hazardlib.gsim
 
-from openquake.commonlib.general import block_splitter, distinct
+from openquake.commonlib.general import split_in_blocks, distinct
 from openquake.commonlib import source
 
 from openquake.engine.calculators.hazard import general as haz_general
@@ -54,7 +54,7 @@ def gmfs(job_id, ses_ruptures, sitecol, gmf_id, task_no):
     # SA(0.8) and SA(0.80) are considered the same
     imts = distinct(from_string(x) for x in hc.intensity_measure_types)
     gsim = AVAILABLE_GSIMS[hc.gsim]()  # instantiate the GSIM class
-    correlation_model = haz_general.get_correl_model(hc)
+    correlation_model = hc.get_correl_model()
 
     cache = collections.defaultdict(list)  # {site_id, imt -> gmvs}
     inserter = writer.CacheInserter(models.GmfData, 1000)
@@ -65,12 +65,13 @@ def gmfs(job_id, ses_ruptures, sitecol, gmf_id, task_no):
     with EnginePerformanceMonitor('computing gmfs', job_id, gmfs):
         gmf = GmfComputer(rupture, sitecol, imts, [gsim], hc.truncation_level,
                           correlation_model)
+        gname = gsim.__class__.__name__
         for ses_rup in ses_ruptures:
             gmf_dict = gmf.compute(ses_rup.seed)
             for gname, imt in gmf_dict:
                 for site_id, gmv in zip(sitecol.sids, gmf_dict[gname, imt]):
                     # float may be needed below to convert 1x1 matrices
-                    cache[site_id, imt].append((float(gmv), ses_rup.id))
+                    cache[site_id, imt].append((gmv, ses_rup.id))
 
     with EnginePerformanceMonitor('saving gmfs', job_id, gmfs):
         for (site_id, imt), data in cache.iteritems():
@@ -100,8 +101,6 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         super(ScenarioHazardCalculator, self).__init__(*args, **kwargs)
         self.gmf = None
         self.rupture = None
-        self.rupture_block_size = int(
-            config.get('hazard', 'rupture_block_size'))
 
     def initialize_sources(self):
         """
@@ -168,8 +167,18 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
             for _ in xrange(self.hc.number_of_ground_motion_fields)]
 
         with self.monitor('saving ruptures'):
+            # in order to save a ProbabilisticRupture, a TrtModel is needed;
+            # here we generate a fake one, corresponding to the tectonic
+            # region type NA i.e. Not Available
+            trt_model = models.TrtModel.objects.create(
+                tectonic_region_type='NA',
+                num_sources=0,
+                num_ruptures=len(all_seeds),
+                min_mag=self.rupture.mag,
+                max_mag=self.rupture.mag,
+                gsims=[self.hc.gsim])
             prob_rup = models.ProbabilisticRupture.create(
-                self.rupture, self.ses_coll)
+                self.rupture, self.ses_coll, trt_model)
             inserter = writer.CacheInserter(models.SESRupture, 100000)
             for ses_idx, seed in enumerate(all_seeds):
                 inserter.add(
@@ -189,7 +198,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         ses_ruptures = models.SESRupture.objects.filter(
             rupture__ses_collection=self.ses_coll.id)
         for task_no, ruptures in enumerate(
-                block_splitter(ses_ruptures, self.rupture_block_size)):
+                split_in_blocks(ses_ruptures, self.concurrent_tasks)):
             yield self.job.id, ruptures, self.sites, self.gmf.id, task_no
 
     def task_completed(self, result):

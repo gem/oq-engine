@@ -341,6 +341,16 @@ class ClassicalExportTestCase(BaseExportTestCase):
 
 
 class EventBasedExportTestCase(BaseExportTestCase):
+    expected_gmfs = 'expected_gmfset_1.txt', 'expected_gmfset_2.txt'
+
+    def check_file_content(self, fname, content):
+        fullname = os.path.join(os.path.dirname(__file__), fname)
+        with open(fullname + '.actual', 'w') as actual:
+            actual.write(content)
+        expected_content = open(fullname).read().rstrip()  # strip newline
+        self.assertEqual(expected_content, content)
+        # remove the .actual file if the test pass
+        os.remove(fullname + '.actual')
 
     @attr('slow')
     def test_export_for_event_based(self):
@@ -356,11 +366,9 @@ class EventBasedExportTestCase(BaseExportTestCase):
             cfg = helpers.get_data_path('event_based_hazard/job.ini')
 
             # run the calculation in process to create something to export
-            os.environ['OQ_NO_DISTRIBUTE'] = '1'
-            try:
-                job = helpers.run_job(cfg)
-            finally:
-                del os.environ['OQ_NO_DISTRIBUTE']
+            with mock.patch.dict(os.environ, {'OQ_NO_DISTRIBUTE': '1'}):
+                job = helpers.run_job(cfg, maximum_distance=1,
+                                      ses_per_logic_tree_path=1)
             self.assertEqual(job.status, 'complete')
 
             outputs = export_core.get_outputs(job.id)
@@ -399,6 +407,12 @@ class EventBasedExportTestCase(BaseExportTestCase):
             for f in exported_files:
                 self._test_exported_file(f)
 
+            # check the exact values of the GMFs
+            [gmfset1] = gmf_outputs[0].gmf
+            [gmfset2] = gmf_outputs[1].gmf
+            self.check_file_content('expected_gmfset_1.txt', str(gmfset1))
+            self.check_file_content('expected_gmfset_2.txt', str(gmfset2))
+
             ################
             # Hazard curves:
             haz_curves = outputs.filter(output_type='hazard_curve')
@@ -426,13 +440,9 @@ class ScenarioExportTestCase(BaseExportTestCase):
 
         try:
             cfg = helpers.get_data_path('scenario_hazard/job.ini')
-
             # run the calculation in process to create something to export
-            os.environ['OQ_NO_DISTRIBUTE'] = '1'
-            try:
+            with mock.patch.dict(os.environ, {'OQ_NO_DISTRIBUTE': '1'}):
                 helpers.run_job(cfg)
-            finally:
-                del os.environ['OQ_NO_DISTRIBUTE']
             job = models.OqJob.objects.latest('id')
             self.assertEqual(job.status, 'complete')
 
