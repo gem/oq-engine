@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-
+import os
 import getpass
 import unittest
 import mock
@@ -299,3 +299,15 @@ class HelpersTestCase(unittest.TestCase):
 
         expected = numpy.array([0.44] * 16).reshape((4, 4))
         numpy.testing.assert_allclose(expected, result)
+
+
+class NoSourcesTestCase(unittest.TestCase):
+    def test(self):
+        cfg = helpers.get_data_path('classical_job.ini')
+        with mock.patch.dict(os.environ, {'OQ_NO_DISTRIBUTE': '1'}), \
+                mock.patch('openquake.engine.logs.LOG.warn') as warn:
+            # using a small maximum distance of 1 km, so that no sources
+            # are found, and checking that no realizations are generated
+            helpers.run_job(cfg, maximum_distance=1)
+            self.assertEqual(warn.call_args[0][0],
+                             'No realizations for hazard_calculation_id=%d')
