@@ -48,7 +48,6 @@ from openquake.engine.calculators.post_processing import (
 )
 from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard as hazard_export
-from openquake.engine.utils import config
 from openquake.engine.performance import EnginePerformanceMonitor
 
 #: Maximum number of hazard curves to cache, for selects or inserts
@@ -104,13 +103,6 @@ class BaseHazardCalculator(base.Calculator):
 
     def __init__(self, job):
         super(BaseHazardCalculator, self).__init__(job)
-
-        # three crucial parameters from openquake.cfg
-        self.source_max_weight = int(
-            config.get('hazard', 'source_max_weight'))
-        self.concurrent_tasks = int(
-            config.get('hazard', 'concurrent_tasks'))
-
         # a dictionary trt_model_id -> num_ruptures
         self.num_ruptures = collections.defaultdict(int)
         # now a dictionary (trt_model_id, gsim) -> poes
