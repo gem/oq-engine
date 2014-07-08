@@ -54,7 +54,7 @@ def validate(job, job_type, params, exports):
     try:
         form_class = globals()[formname]
     except KeyError:
-        return 'Could not find form class for "%s"' % calc_mode
+        return 'Could not find form class %s for "%s"' % (formname, calc_mode)
 
     files = set(params['inputs'])
     form = form_class(instance=calculation, files=files, exports=exports)
@@ -72,7 +72,6 @@ def validate(job, job_type, params, exports):
               'hazard_calculation_id'):
         if p in params_copy:
             params_copy.pop(p)
-
     for param in set(params_copy.keys()).difference(set(form._meta.fields)):
         msg = "Unknown parameter '%s' for calculation mode '%s'. Ignoring."
         msg %= (param, calc_mode)
@@ -627,6 +626,24 @@ class EventBasedRiskForm(BaseOQModelForm):
         return super_valid
 
 
+class EventBasedFRRiskForm(EventBasedRiskForm):
+    calc_mode = 'event_based_fr'
+
+    def is_valid(self):
+        super_valid = super(EventBasedFRRiskForm, self).is_valid()
+        rc = self.instance          # RiskCalculation instance
+
+        if rc.sites_disagg and not (rc.mag_bin_width
+                                    and rc.coordinate_bin_width
+                                    and rc.distance_bin_width):
+            self._add_error('sites_disagg', "disaggregation requires "
+                            "mag_bin_width, coordinate_bin_width, "
+                            "distance_bin_width")
+            return False
+
+        return super_valid
+
+
 class ScenarioDamageRiskForm(BaseOQModelForm):
     calc_mode = 'scenario_damage'
 
@@ -734,7 +751,8 @@ def sites_is_valid(mdl):
 
 def sites_disagg_is_valid(mdl):
     # sites_disagg is optional in risk event based
-    if mdl.calculation_mode == 'event_based' and mdl.sites_disagg is None:
+    if mdl.calculation_mode.startswith('event_based') \
+            and mdl.sites_disagg is None:
         return True, []
     valid = True
     errors = []
@@ -1064,7 +1082,8 @@ def region_constraint_is_valid(_mdl):
 
 def mag_bin_width_is_valid(mdl):
     # mag_bin_width is optional in risk event based
-    if mdl.calculation_mode == 'event_based' and mdl.sites_disagg is None:
+    if mdl.calculation_mode.startswith('event_based') \
+            and mdl.sites_disagg is None:
         return True, []
 
     if not mdl.mag_bin_width > 0.0:
@@ -1074,7 +1093,8 @@ def mag_bin_width_is_valid(mdl):
 
 def distance_bin_width_is_valid(mdl):
     # distance_bin_width is optional in risk event based
-    if mdl.calculation_mode == 'event_based' and mdl.sites_disagg is None:
+    if mdl.calculation_mode.startswith('event_based') \
+            and mdl.sites_disagg is None:
         return True, []
 
     if not mdl.distance_bin_width > 0.0:
@@ -1084,7 +1104,8 @@ def distance_bin_width_is_valid(mdl):
 
 def coordinate_bin_width_is_valid(mdl):
     # coordinate_bin_width is optional in risk event based
-    if mdl.calculation_mode == 'event_based' and mdl.sites_disagg is None:
+    if mdl.calculation_mode.startswith('event_based') \
+            and mdl.sites_disagg is None:
         return True, []
 
     if not mdl.coordinate_bin_width > 0.0:
@@ -1123,7 +1144,7 @@ def insured_losses_is_valid(_mdl):
 
 
 def loss_curve_resolution_is_valid(mdl):
-    if mdl.calculation_mode == 'event_based':
+    if mdl.calculation_mode.startswith('event_based'):
         if (mdl.loss_curve_resolution is not None and
                 mdl.loss_curve_resolution < 1):
             return False, ['Loss Curve Resolution must be >= 1']
@@ -1191,7 +1212,7 @@ def time_event_is_valid(_mdl):
 
 
 def risk_investigation_time_is_valid(_mdl):
-    if _mdl.calculation_mode != 'event_based':
+    if not _mdl.calculation_mode.startswith('event_based'):
         return False, ['`risk_investigation_time` is only used '
                        'in event based calculations']
     if _mdl.risk_investigation_time is not None:
