@@ -136,7 +136,9 @@ class EventBasedFRRiskCalculator(core.EventBasedRiskCalculator):
         # create a Gmf output for each realization
         self.hcalc = EBHC(self.hc.oqjob)
         self.hcalc.source_model_lt = SourceModelLogicTree.from_hc(self.hc)
-        self.hcalc.initialize_realizations()
+        if models.LtRealization.objects.filter(
+                lt_model__hazard_calculation=self.hc).count() == 0:
+            self.hcalc.initialize_realizations()
         self.compute_risk()
 
     @EnginePerformanceMonitor.monitor
@@ -177,9 +179,6 @@ class EventBasedFRRiskCalculator(core.EventBasedRiskCalculator):
                            getter_builders, outputdict,
                            self.calculator_parameters)
         self.acc = otm.aggregate_results(self.agg_result, {})
-
-    def post_processing(self):
-        pass
 
 
 class GmfGetter(object):
