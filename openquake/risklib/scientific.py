@@ -393,6 +393,45 @@ class DegenerateDistribution(Distribution):
             loss_ratio, [loss_ratio > mean or not mean], [0, 1])
 
 
+class EpsilonProvider(object):
+    """
+    A provider of epsilons. If the correlation coefficient is nonzero,
+    when instantiate it builds an NxN correlation matrix for the N
+    assets. When the .sample method is called, N epsilons are returned.
+
+    :param int num_assets: the number of assets
+    :param float correlation: coefficient in the range [0, 1]
+    """
+    def __init__(self, num_assets, correlation):
+        self.num_assets = num_assets
+        self.correlation = correlation
+        if self.correlation:
+            self.means_vector = numpy.zeros(num_assets)
+            self.covariance_matrix = (
+                numpy.ones((num_assets, num_assets)) * correlation +
+                numpy.diag(numpy.ones(num_assets)) * (1 - correlation))
+
+    def sample(self, seed):
+        """
+        Returns a vector with `num_assets` epsilons, generated from the
+        correlation matrix and the given `seed`.
+
+        :param int seed: the random seed used to generate the epsilons
+        """
+        numpy.random.seed(seed)
+        if not self.correlation:
+            return numpy.random.normal(size=self.num_assets)
+        return numpy.random.multivariate_normal(
+            self.means_vector, self.covariance_matrix, 1).reshape(-1)
+
+    def sample_many(self, seeds):
+        """
+        Given an array of `num_seeds` elements, returns an array
+        with shape (num_assets, num_seeds)`
+        """
+        return numpy.array([self.sample(seed) for seed in seeds]).T
+
+
 def make_epsilons(matrix, seed, correlation):
     """
     Given a matrix N * R returns a matrix of the same shape N * R
