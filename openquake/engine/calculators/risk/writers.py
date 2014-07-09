@@ -394,9 +394,7 @@ def combine_builders(builders):
 
     for builder in builders:
         for loss_type in a_builder.calc.loss_types:
-
-            if len(hazard_outputs) > 1:
-                outputs.extend(builder.statistical_outputs(loss_type))
+            outputs.extend(builder.statistical_outputs(loss_type))
 
             for hazard in hazard_outputs:
                 outputs.extend(builder.individual_outputs(loss_type, hazard))
