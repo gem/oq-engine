@@ -305,6 +305,8 @@ class OutputDict(dict):
 
         kwargs.update(self.kwargs)
         output_id = self.get(**kwargs)
+        if kwargs['output_type'] == 'event_loss_curve':
+            import pdb; pdb.set_trace()
         globals().get(kwargs['output_type'])(
             kwargs.pop('loss_type'), output_id, *args)
 
@@ -391,7 +393,6 @@ def combine_builders(builders):
     a_builder = builders[0]
 
     hazard_outputs = a_builder.calc.rc.hazard_outputs()
-
     for builder in builders:
         for loss_type in a_builder.calc.loss_types:
             outputs.extend(builder.statistical_outputs(loss_type))
