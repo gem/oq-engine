@@ -8,7 +8,8 @@ from openquake.engine.calculators.hazard.event_based.core \
 
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
-from openquake.engine.performance import EnginePerformanceMonitor
+from openquake.engine.performance import (
+    EnginePerformanceMonitor, LightMonitor)
 
 from openquake.hazardlib.imt import from_string
 from openquake.commonlib.general import split_in_blocks
@@ -27,7 +28,7 @@ class AssetSiteAssociationError(Exception):
 
 
 @tasks.oqtask
-def event_based_fr(job_id, rupture_data, rc, risk_models, assocs,
+def event_based_fr(job_id, rupture_data, rc, risk_models, getter_builders,
                    outputdict, params):
     """
     :param int job_id:
@@ -43,68 +44,84 @@ def event_based_fr(job_id, rupture_data, rc, risk_models, assocs,
     correl_model = hc.get_correl_model()
     truncation_level = hc.truncation_level
     imts = map(from_string, sorted(hc.intensity_measure_types))
+
     # NB: by construction rupture_data is a non-empty list with
     # ruptures of homogeneous trt_model
     trt_model = rupture_data[0].rupture.trt_model
 
-    getters = []
-    gmv_dict = dict((str(imt), collections.defaultdict(dict)) for imt in imts)
-    for gsim_name, rlzs in trt_model.get_rlzs_by_gsim().iteritems():
-        gsim = GSIM[gsim_name]()
-        for rlz in rlzs:
-            gmf = models.Gmf.objects.filter(lt_realization=rlz).latest('id')
-            getter = GmfGetter(gmf, epsilons=[], site_ids=[], assets=[],
-                               rupture_ids=[], gmv_dict=gmv_dict.copy())
-            for rdata in rupture_data:
-                for _gsim_name, imt, site_id, rupid, gmv in rdata.calc_gmf(
-                        imts, [gsim], truncation_level, correl_model):
-                    getter.gmv_dict[str(imt)][site_id][rupid] = gmv
-                    getter.rupture_ids.append(rupid)
-                    getters.append(getter)
-
-    monitor = EnginePerformanceMonitor(
-        None, job_id, event_based_fr, tracing=True)
     elt = {}  # event loss table
-    for taxonomy, risk_model in risk_models.iteritems():
-        with db.transaction.commit_on_success(using='job_init'):
-            assets, site_ids = assocs[taxonomy]
-            with monitor.copy('building epsilons'):
-                epsilons = scientific.make_epsilons(
-                    numpy.zeros((len(assets), len(getters[0].rupture_ids))),
-                    rc.master_seed, rc.asset_correlation)
-            for getter in getters:
-                getter.site_ids = site_ids
-                getter.assets = assets
-                getter.epsilons = epsilons
+    rlz2gsim = {
+        art.rlz: GSIM[art.gsim]()
+        for art in models.AssocLtRlzTrtModel.objects.filter(
+            trt_model=trt_model)}
 
+    getdata_mon = EnginePerformanceMonitor(
+        'getting hazard', job_id, event_based_fr)
+    gmf_mon = getdata_mon.copy('building gmf')
+    getters_mon = getdata_mon.copy('building getters')
+    for builder in getter_builders.itervalues():
+        builder.init_epsilons(rc.asset_correlation)
+
+    for rdata in rupture_data:
+        with gmf_mon:
+            for rlz, gsim in rlz2gsim.iteritems():
+                rlz.gmv_dict = dict((str(imt), collections.defaultdict(dict))
+                                    for imt in imts)
+                for gsim_name, imt, site_id, rupid, gmv in rdata.calc_gmf(
+                        imts, [gsim], truncation_level, correl_model):
+                    rlz.gmv_dict[str(imt)][site_id][rupid] = gmv
+
+        with getters_mon:
+            for taxonomy, builder in getter_builders.iteritems():
+                getters = [
+                    builder.make_getter(
+                        rlz, rdata.rupid_seed_pairs, rlz.gmv_dict)
+                    for rlz in rlz2gsim]
+
+        with db.transaction.commit_on_success(using='job_init'):
             elt.update(
                 core.do_event_based(
-                    risk_model, getters, outputdict, params, monitor))
+                    risk_models[taxonomy], getters, outputdict, params,
+                    getdata_mon))
+
+    #getdata_mon.flush()
+    #gmf_mon.flush()
+    #getters_mon.flush()
     return elt
 
 
-def assoc_assets_sites(rc, taxonomy):
-    """
-    Return two lists asset_ids, site_ids
-    """
-    cursor = models.getcursor('job_init')
-    query = '''\
-SELECT exp.id AS asset_id, hsite.id AS site_id
-FROM riski.exposure_data AS exp
-JOIN hzrdi.hazard_site AS hsite
-ON exp.site::TEXT=hsite.location::TEXT
-WHERE hsite.hazard_calculation_id = %s
-AND exposure_model_id = %s AND taxonomy=%s
-AND ST_COVERS(ST_GeographyFromText(%s), exp.site)'''
-    args = (rc.hazard_calculation.id, rc.exposure_model.id, taxonomy,
-            rc.region_constraint.wkt)
-    # print cursor.mogrify(query, args) useful when debugging
-    cursor.execute(query, args)
-    assets_sites = cursor.fetchall()
-    if not assets_sites:
-        raise AssetSiteAssociationError(
-            'Could not associated any asset of taxonomy %s' % taxonomy)
-    return zip(*assets_sites)  # asset_ids, site_ids
+class GetterBuilder(object):
+    def __init__(self, rc, taxonomy):
+        self.rc = rc
+        self.taxonomy = taxonomy
+        cursor = models.getcursor('job_init')
+        query = '''\
+    SELECT exp.id AS asset_id, hsite.id AS site_id
+    FROM riski.exposure_data AS exp
+    JOIN hzrdi.hazard_site AS hsite
+    ON exp.site::TEXT=hsite.location::TEXT
+    WHERE hsite.hazard_calculation_id = %s
+    AND exposure_model_id = %s AND taxonomy=%s
+    AND ST_COVERS(ST_GeographyFromText(%s), exp.site)'''
+        args = (rc.hazard_calculation.id, rc.exposure_model.id, taxonomy,
+                rc.region_constraint.wkt)
+        # print cursor.mogrify(query, args) useful when debugging
+        cursor.execute(query, args)
+        assets_sites = cursor.fetchall()
+        if not assets_sites:
+            raise AssetSiteAssociationError(
+                'Could not associated any asset of taxonomy %s' % taxonomy)
+        self.asset_ids, self.site_ids = zip(*assets_sites)
+        self.assets = models.ExposureData.objects.get_asset_chunk(
+            rc, taxonomy, asset_ids=self.asset_ids)
+
+    def init_epsilons(self, asset_correlation):
+        self.ep = scientific.EpsilonProvider(
+            len(self.assets), asset_correlation)
+
+    def make_getter(self, gmf, rupid_seed_pairs, gmv_dict):
+        return GmfGetter(gmf, self.ep, rupid_seed_pairs, self.site_ids,
+                         self.assets, gmv_dict)
 
 
 class EventBasedFRRiskCalculator(core.EventBasedRiskCalculator):
@@ -120,20 +137,13 @@ class EventBasedFRRiskCalculator(core.EventBasedRiskCalculator):
         self.hcalc = EBHC(self.hc.oqjob)
         self.hcalc.source_model_lt = SourceModelLogicTree.from_hc(self.hc)
         self.hcalc.initialize_realizations()
-        # can we avoid to create the Gmf objects altogether?
-        # the outputs probably needs to be there
-        for rlz in self.hcalc._get_realizations():
-            output = models.Output.objects.create(
-                oq_job=self.job,
-                display_name='GMF rlz-%s' % rlz.id,
-                output_type='gmf')
-            models.Gmf.objects.create(output=output, lt_realization=rlz)
-        self.generate_gmfs()
+        self.compute_risk()
 
     @EnginePerformanceMonitor.monitor
-    def generate_gmfs(self):
+    def compute_risk(self):
         """
-        Generate the GMFs and optionally the hazard curves too
+        Generate the GMFs and optionally the hazard curves too, then
+        compute the risk.
         """
         otm = tasks.OqTaskManager(event_based_fr, logs.LOG.progress)
         rupture_data = []
@@ -145,45 +155,54 @@ class EventBasedFRRiskCalculator(core.EventBasedRiskCalculator):
                 [(r.id, r.seed) for r in rupture.sesrupture_set.all()])
             rupture_data.append(rdata)
 
-        assocs = {}
+        getter_builders = {}
         with self.monitor('associating assets<->sites'):
             for taxonomy in self.risk_models:
                 logs.LOG.info('associating assets<->sites for taxonomy %s',
                               taxonomy)
                 try:
-                    asset_ids, site_ids = assoc_assets_sites(self.rc, taxonomy)
+                    with db.transaction.commit_on_success(using='job_init'):
+                        getter_builders[taxonomy] = GetterBuilder(
+                            self.rc, taxonomy)
                 except AssetSiteAssociationError as e:
                     logs.LOG.warn(str(e))
                     continue
-                assets = models.ExposureData.objects.get_asset_chunk(
-                    self.rc, taxonomy, asset_ids=asset_ids)
-                assocs[taxonomy] = assets, site_ids
-
         outputdict = writers.combine_builders(
             [ob(self) for ob in self.output_builders])
-        for rblock in split_in_blocks(
-                rupture_data, self.concurrent_tasks,
-                RuptureData.get_weight, RuptureData.get_trt):
-            otm.submit(self.job.id, rblock, self.rc, self.risk_models,
-                       assocs, outputdict, self.calculator_parameters)
+        with self.monitor('sending ruptures'):
+            for rblock in split_in_blocks(
+                    rupture_data, self.concurrent_tasks,
+                    RuptureData.get_weight, RuptureData.get_trt):
+                otm.submit(self.job.id, rblock, self.rc, self.risk_models,
+                           getter_builders, outputdict,
+                           self.calculator_parameters)
         self.acc = otm.aggregate_results(self.agg_result, {})
+
+    def post_processing(self):
+        pass
 
 
 class GmfGetter(object):
     """
-    Hazard getter for computing ground motion values from ruptures
+    Hazard getter for computing ground motion values and epsilons from ruptures
     """
-    def __init__(self, gmf, epsilons, site_ids, assets, rupture_ids, gmv_dict):
-        self.hid = gmf.id
-        self.weight = gmf.lt_realization.weight
+    def __init__(self, lt_rlz, epsilon_provider, rupid_seed_pairs,
+                 site_ids, assets, gmv_dict):
+        self.rlz = lt_rlz
+        self.epsilon_provider = epsilon_provider
+        self.rupture_ids, self.seeds = zip(*rupid_seed_pairs)
         self.site_ids = site_ids
         self.assets = assets
-        self.rupture_ids = rupture_ids
         self.gmv_dict = gmv_dict
-        self.epsilons = epsilons
+        self.hid = lt_rlz.lt_model.ses_collection.output.id
+        self.weight = lt_rlz.weight
 
     def get_epsilons(self):
-        return self.epsilons
+        """
+        Build the needed epsilon matrix from the given assets and seeds,
+        by using the underlying epsilon provider.
+        """
+        return self.epsilon_provider.sample_many(self.seeds)
 
     def get_data(self, imt):
         """
