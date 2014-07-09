@@ -312,7 +312,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
         newdict = acc.copy()
         for (loss_type, out_id), counter in event_loss_table.iteritems():
-            newdict[loss_type, out_id] += counter
+            try:
+                c = newdict[loss_type, out_id]
+            except KeyError:
+                pass
+            else:
+                newdict[loss_type, out_id] = c + counter
         return newdict
 
     def post_process(self):

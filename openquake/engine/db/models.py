@@ -2407,7 +2407,8 @@ class SourceInfo(djm.Model):
 
 class AssocLtRlzTrtModel(djm.Model):
     """
-    Associations between logic tree realizations and TrtModels
+    Associations between logic tree realizations and TrtModels. Fixed
+    a realization and a TRT, the gsim is unique.
     """
     rlz = djm.ForeignKey('LtRealization')
     trt_model = djm.ForeignKey('TrtModel')
