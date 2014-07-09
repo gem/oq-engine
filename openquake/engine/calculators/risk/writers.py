@@ -305,8 +305,6 @@ class OutputDict(dict):
 
         kwargs.update(self.kwargs)
         output_id = self.get(**kwargs)
-        if kwargs['output_type'] == 'event_loss_curve':
-            import pdb; pdb.set_trace()
         globals().get(kwargs['output_type'])(
             kwargs.pop('loss_type'), output_id, *args)
 
