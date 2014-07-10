@@ -136,9 +136,16 @@ class EventBasedFRRiskCalculator(core.EventBasedRiskCalculator):
         # create a Gmf output for each realization
         self.hcalc = EBHC(self.hc.oqjob)
         self.hcalc.source_model_lt = SourceModelLogicTree.from_hc(self.hc)
-        if models.LtRealization.objects.filter(
-                lt_model__hazard_calculation=self.hc).count() == 0:
+        with db.transaction.commit_on_success(using='job_init'):
+            models.LtRealization.objects.filter(
+                lt_model__hazard_calculation=self.hc).delete()
             self.hcalc.initialize_realizations()
+            for rlz in self.hcalc._get_realizations():
+                output = models.Output.objects.create(
+                    oq_job=self.job,
+                    display_name='GMF rlz-%s' % rlz.id,
+                    output_type='gmf')
+                models.Gmf.objects.create(output=output, lt_realization=rlz)
         self.compute_risk()
 
     @EnginePerformanceMonitor.monitor
@@ -169,8 +176,9 @@ class EventBasedFRRiskCalculator(core.EventBasedRiskCalculator):
                 except AssetSiteAssociationError as e:
                     logs.LOG.warn(str(e))
                     continue
-        outputdict = writers.combine_builders(
-            [ob(self) for ob in self.output_builders])
+        with db.transaction.commit_on_success(using='job_init'):
+            outputdict = writers.combine_builders(
+                [ob(self) for ob in self.output_builders])
         with self.monitor('sending ruptures'):
             for rblock in split_in_blocks(
                     rupture_data, self.concurrent_tasks,
@@ -193,7 +201,7 @@ class GmfGetter(object):
         self.site_ids = site_ids
         self.assets = assets
         self.gmv_dict = gmv_dict
-        self.hid = lt_rlz.lt_model.ses_collection.output.id
+        self.hid = models.Gmf.objects.get(lt_realization=lt_rlz).output.id
         self.weight = lt_rlz.weight
 
     def get_epsilons(self):
