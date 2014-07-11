@@ -2328,22 +2328,24 @@ class LtSourceModel(djm.Model):
     def make_gsim_lt(self, trts=()):
         """
         Helper to instantiate a GsimLogicTree object from the logic tree file.
-
-        :param trts:
-            sequence of tectonic region types (if not given uses
-            .get_tectonic_region_types() which extracts the relevant trts)
         """
         hc = self.hazard_calculation
+        trts = trts or self.get_tectonic_region_types()
         fname = os.path.join(hc.base_path, hc.inputs['gsim_logic_tree'])
-        return logictree.GsimLogicTree(
-            fname, 'applyToTectonicRegionType',
-            trts or self.get_tectonic_region_types())
+        gsim_lt = logictree.GsimLogicTree(
+            fname, 'applyToTectonicRegionType', trts)
+        for trt in trts:
+            if not trt in gsim_lt.values:
+                raise ValueError(
+                    "Found in %r a tectonic region type %r inconsistent with "
+                    "the ones in %r" % (self.sm_name, trt, fname))
+        return gsim_lt
 
     def __iter__(self):
         """
         Yield the realizations corresponding to the given model
         """
-        return self.ltrealization_set.all()
+        return iter(self.ltrealization_set.all())
 
 
 class TrtModel(djm.Model):
@@ -2379,6 +2381,12 @@ class TrtModel(djm.Model):
         for art in AssocLtRlzTrtModel.objects.filter(trt_model=self.id):
             dic[art.gsim].append(art.rlz)
         return dic
+
+    def get_gsim_instances(self):
+        """
+        Return the GSIM instances associated to the current TrtModel
+        """
+        return [logictree.GSIM[gsim]() for gsim in self.gsims]
 
     class Meta:
         db_table = 'hzrdr\".\"trt_model'
