@@ -93,6 +93,9 @@ def event_based_fr(job_id, rupture_data, rc, risk_models, getter_builders,
     gmf_mon = getdata_mon.copy('generating gmf')
     getters_mon = getdata_mon.copy('building getters')
 
+    core.save_individual_outputs = lambda *args: None
+    core.save_statistical_outputs = lambda *args: None
+
     # init the Epsilon Provider only once per taxonomy
     for builder in getter_builders:
         builder.init_epsilon_provider(rc.asset_correlation)
@@ -123,54 +126,6 @@ def event_based_fr(job_id, rupture_data, rc, risk_models, getter_builders,
     #gmf_mon.flush()
     #getters_mon.flush()
     return elt
-
-
-class GetterBuilder(object):
-    # instantiated on the controller node, initialized on the workers
-    def __init__(self, rc, taxonomy):
-        self.rc = rc
-        self.taxonomy = taxonomy
-        cursor = models.getcursor('job_init')
-        query = '''\
-    SELECT exp.id AS asset_id, hsite.id AS site_id
-    FROM riski.exposure_data AS exp
-    JOIN hzrdi.hazard_site AS hsite
-    ON exp.site::TEXT=hsite.location::TEXT
-    WHERE hsite.hazard_calculation_id = %s
-    AND exposure_model_id = %s AND taxonomy=%s
-    AND ST_COVERS(ST_GeographyFromText(%s), exp.site)'''
-        args = (rc.hazard_calculation.id, rc.exposure_model.id, taxonomy,
-                rc.region_constraint.wkt)
-        # print cursor.mogrify(query, args) useful when debugging
-        cursor.execute(query, args)
-        assets_sites = cursor.fetchall()
-        if not assets_sites:
-            raise AssetSiteAssociationError(
-                'Could not associated any asset of taxonomy %s' % taxonomy)
-        self.asset_ids, self.site_ids = zip(*assets_sites)
-        self.assets = models.ExposureData.objects.get_asset_chunk(
-            rc, taxonomy, asset_ids=self.asset_ids)
-
-    def init_epsilon_provider(self, asset_correlation):
-        """
-        Initialize the underlying EpsilonProvider. If there is
-        asset_correlation, a correlation matrix is instantiated.
-        """
-        self.ep = scientific.EpsilonProvider(
-            len(self.assets), asset_correlation)
-
-    def init_getters(self, rlzs, imts, rupid_seed_pairs):
-        """
-        Build the getters for the given realizations by using the
-        given rupid_seed_pairs and the parameters in the GetterBuilder.
-        """
-        self.getters = []
-        for rlz in rlzs:
-            gmv_dict = dict(
-                (str(imt), collections.defaultdict(dict)) for imt in imts)
-            self.getters.append(
-                GmfGetter(rlz, gmv_dict, self.ep, rupid_seed_pairs,
-                          self.site_ids, self.assets))
 
 
 class EventBasedFRRiskCalculator(core.EventBasedRiskCalculator):
@@ -247,23 +202,31 @@ class GmfGetter(object):
     """
     Hazard getter for computing ground motion values and epsilons from ruptures
     """
-    def __init__(self, lt_rlz, gmv_dict, epsilon_provider, rupid_seed_pairs,
-                 site_ids, assets):
+    def __init__(self, builder, lt_rlz, gmv_dict, rupid_seed_pairs):
+        self.builder = builder
         self.rlz = lt_rlz
-        self.epsilon_provider = epsilon_provider
         self.rupture_ids, self.seeds = zip(*rupid_seed_pairs)
-        self.site_ids = site_ids
-        self.assets = assets
         self.gmv_dict = gmv_dict
         self.hid = models.Gmf.objects.get(lt_realization=lt_rlz).output.id
-        self.weight = lt_rlz.weight
+
+    @property
+    def weight(self):
+        return self.rlz.weight
+
+    @property
+    def site_ids(self):
+        return self.builder.site_ids
+
+    @property
+    def assets(self):
+        return self.builder.assets
 
     def get_epsilons(self):
         """
         Build the needed epsilon matrix from the given assets and seeds,
         by using the underlying epsilon provider.
         """
-        return self.epsilon_provider.sample(self.seeds)
+        return self.builder.epsilon_provider.sample(self.seeds)
 
     def get_data(self, imt):
         """
@@ -272,20 +235,81 @@ class GmfGetter(object):
         :param str imt: Intensity Measure Type
         :returns: a list of N arrays with R elements each.
         """
-        all_gmvs = []
         gmv_dict = self.gmv_dict[imt]
+        all_gmvs = []
+        hits = 0
         for site_id in self.site_ids:
             gmv = gmv_dict[site_id]
-            if not gmv:
-                logs.LOG.info('No data for site_id=%d, imt=%s', site_id, imt)
+            if gmv:
+                hits += 1
             array = numpy.array([gmv.get(r, 0.) for r in self.rupture_ids])
             all_gmvs.append(array)
+        if not hits:
+            # the rupture will affect assets of another taxonomy
+            logs.LOG.info('No assets affected by %r', self)
         return all_gmvs
 
     def __repr__(self):
+        """
+        A string representation of the GmfGetter display a few interesting
+        attributes, such as the taxonomy, the ruptures, the realization and
+        the number of GMVs it contains.
+        """
         num_gmvs = 0
         for imt, gmv_dict in self.gmv_dict.iteritems():
-            for site_id, gmv in gmv_dict.itervalues():
+            for site_id, gmv in gmv_dict.iteritems():
                 num_gmvs += len(gmv)
-        return '<%s with %d nonzero elements>' % (
-            self.__class__.__name__, num_gmvs)
+        rupids = ', '.join(map(str, self.rupture_ids))
+        return '<%s(taxonomy=%s, rupture=%s, rlz=%d) with %d nonzero ' \
+            'elements>' % (self.__class__.__name__, self.builder.taxonomy,
+                           rupids, self.rlz.id, num_gmvs)
+
+
+class GetterBuilder(object):
+    """
+    A class used to instantiate GmfGetter objects.
+    """
+    # instantiated on the controller node, initialized on the workers
+    def __init__(self, rc, taxonomy):
+        self.rc = rc
+        self.taxonomy = taxonomy
+        cursor = models.getcursor('job_init')
+        query = '''\
+    SELECT exp.id AS asset_id, hsite.id AS site_id
+    FROM riski.exposure_data AS exp
+    JOIN hzrdi.hazard_site AS hsite
+    ON exp.site::TEXT=hsite.location::TEXT
+    WHERE hsite.hazard_calculation_id = %s
+    AND exposure_model_id = %s AND taxonomy=%s
+    AND ST_COVERS(ST_GeographyFromText(%s), exp.site)'''
+        args = (rc.hazard_calculation.id, rc.exposure_model.id, taxonomy,
+                rc.region_constraint.wkt)
+        # print cursor.mogrify(query, args) useful when debugging
+        cursor.execute(query, args)
+        assets_sites = cursor.fetchall()
+        if not assets_sites:
+            raise AssetSiteAssociationError(
+                'Could not associated any asset of taxonomy %s' % taxonomy)
+        self.asset_ids, self.site_ids = zip(*assets_sites)
+        self.assets = models.ExposureData.objects.get_asset_chunk(
+            rc, taxonomy, asset_ids=self.asset_ids)
+
+    def init_epsilon_provider(self, asset_correlation):
+        """
+        Initialize the underlying EpsilonProvider. If there is
+        asset_correlation, a correlation matrix is instantiated.
+        """
+        self.epsilon_provider = scientific.EpsilonProvider(
+            len(self.assets), asset_correlation)
+
+    def init_getters(self, rlzs, imts, rupid_seed_pairs):
+        """
+        Build the getters for the given realizations by using the
+        given rupid_seed_pairs and the parameters in the GetterBuilder.
+        """
+        self.getters = []
+        for rlz in rlzs:
+            gmv_dict = dict(
+                (str(imt), collections.defaultdict(dict)) for imt in imts)
+            self.getters.append(
+                GmfGetter(self, rlz, gmv_dict, rupid_seed_pairs))

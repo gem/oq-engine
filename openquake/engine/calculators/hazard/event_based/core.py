@@ -153,7 +153,7 @@ def gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
 
 @tasks.oqtask
 def compute_ruptures(
-        job_id, sitecol, src_seeds, trt_model_id, gsims, task_no):
+        job_id, sitecol, src_seeds, trt_model_id, task_no):
     """
     Celery task for the stochastic event set calculator.
 
@@ -172,8 +172,6 @@ def compute_ruptures(
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param src_seeds:
         List of pairs (source, seed)
-    :params gsims:
-        list of distinct GSIM instances
     :param task_no:
         an ordinal so that GMV can be collected in a reproducible order
     """
@@ -426,11 +424,11 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         hc = self.hc
         rnd = random.Random()
         rnd.seed(hc.random_seed)
-        for job_id, sitecol, block, lt_model, gsims, task_no in \
+        for job_id, sitecol, block, lt_model, task_no in \
                 super(EventBasedHazardCalculator, self).task_arg_gen():
             ss = [(src, rnd.randint(0, models.MAX_SINT_32))
                   for src in block]  # source, seed pairs
-            yield job_id, sitecol, ss, lt_model, gsims, task_no
+            yield job_id, sitecol, ss, lt_model, task_no
 
     def task_completed(self, task_result):
         """
