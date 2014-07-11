@@ -181,17 +181,15 @@ class RequireEventBasedHazardTestCase(unittest.TestCase):
         self.assertIsNotNone(val.get_error())
 
         calc.rc.inputs = {'source_model_logic_tree': None}
-        self.assertIsNone(val.get_error())
+        self.assertIsNotNone(val.get_error())
 
         calc.rc.hazard_calculation.calculation_mode = 'classical'
         self.assertEqual(("The provided hazard calculation ID "
                           "is not a event based calculation"), val.get_error())
 
         calc.rc.hazard_calculation = None
-        calc.rc.hazard_output.output_type = "gmf"
-        self.assertIsNone(val.get_error())
         calc.rc.hazard_output.output_type = "ses"
-        self.assertIsNone(val.get_error())
+        self.assertIsNotNone(val.get_error())
 
         calc.rc.hazard_output.output_type = "gmf_scenario"
         self.assertEqual(("The provided hazard is not a "

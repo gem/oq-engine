@@ -135,7 +135,6 @@ class BaseHazardCalculator(base.Calculator):
             trt_model = models.TrtModel.objects.get(pk=trt_model_id)
             sc = self.source_collector[trt_model_id]
             ltpath = tuple(trt_model.lt_model.sm_lt_path)
-            gsims = [logictree.GSIM[gsim]() for gsim in trt_model.gsims]
 
             # NB: the filtering of the sources by site is slow
             source_blocks = sc.gen_blocks(
@@ -144,8 +143,7 @@ class BaseHazardCalculator(base.Calculator):
                 self.hc.area_source_discretization)
             num_blocks = 0
             for block in source_blocks:
-                args = (self.job.id, sitecol, block,
-                        trt_model.id, gsims, task_no)
+                args = (self.job.id, sitecol, block, trt_model.id, task_no)
                 self._task_args.append(args)
                 yield args
                 task_no += 1
@@ -276,15 +274,13 @@ class BaseHazardCalculator(base.Calculator):
             lt_model = models.LtSourceModel.objects.create(
                 hazard_calculation=self.hc, sm_lt_path=smpath, ordinal=i,
                 sm_name=sm, weight=weight)
+            if self.hc.inputs.get('gsim_logic_tree'):  # check TRTs
+                gsims_by_trt = lt_model.make_gsim_lt(trts).values
+            else:
+                gsims_by_trt = {}
 
             # save TrtModels for each tectonic region type
-            gsims_by_trt = lt_model.make_gsim_lt(trts).values
             for sc in source_collectors:
-                if not sc.trt in gsims_by_trt:
-                    gsim_file = self.hc.inputs['gsim_logic_tree']
-                    raise ValueError(
-                        "Found in %r a tectonic region type %r inconsistent "
-                        "with the ones in %r" % (sm, sc.trt, gsim_file))
                 # NB: the source_collectors are ordered by number of sources
                 # and lexicographically, so the models are in the right order
                 trt_model_id = models.TrtModel.objects.create(
@@ -294,7 +290,7 @@ class BaseHazardCalculator(base.Calculator):
                     num_ruptures=sc.num_ruptures,
                     min_mag=sc.min_mag,
                     max_mag=sc.max_mag,
-                    gsims=gsims_by_trt[sc.trt]).id
+                    gsims=gsims_by_trt.get(sc.trt, [])).id
                 self.source_collector[trt_model_id] = sc
 
     @EnginePerformanceMonitor.monitor
@@ -412,7 +408,7 @@ class BaseHazardCalculator(base.Calculator):
                 rlzs = list(gsim_lt)  # full enumeration
             logs.LOG.info('Creating %d GMPE realization(s) for model %s, %s',
                           len(rlzs), lt_model.sm_name, lt_model.sm_lt_path)
-            self._initialize_realizations(idx, lt_model, rlzs)
+            self._initialize_realizations(idx, lt_model, rlzs, gsim_lt)
         num_ind_rlzs = sum(gsim_lt.get_num_paths()
                            for gsim_lt in gsim_lt_dict.itervalues())
         if num_samples > num_ind_rlzs:
@@ -424,7 +420,7 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
 """, num_ind_rlzs, num_samples)
 
     @transaction.commit_on_success(using='job_init')
-    def _initialize_realizations(self, idx, lt_model, realizations):
+    def _initialize_realizations(self, idx, lt_model, realizations, gsim_lt):
         # create the realizations for the given lt source model
         trt_models = lt_model.trtmodel_set.filter(num_ruptures__gt=0)
         if not trt_models:
@@ -440,10 +436,12 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
                 weight=weight, ordinal=rlz_ordinal)
             rlz_ordinal += 1
             for trt_model in trt_models:
+                trt = trt_model.tectonic_region_type
                 # populate the association table rlz <-> trt_model
                 models.AssocLtRlzTrtModel.objects.create(
-                    rlz=rlz, trt_model=trt_model,
-                    gsim=gsim_by_trt[trt_model.tectonic_region_type])
+                    rlz=rlz, trt_model=trt_model, gsim=gsim_by_trt[trt])
+                trt_model.gsims = gsim_lt.values[trt]
+                trt_model.save()
 
     def _get_outputs_for_export(self):
         """
