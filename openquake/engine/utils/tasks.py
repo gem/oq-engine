@@ -16,8 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-
 """Utility functions related to splitting work into tasks."""
+
+import cPickle
 
 from celery.result import ResultSet
 from celery.app import current_app
@@ -77,7 +78,10 @@ class OqTaskManager(TaskManager):
         rset = ResultSet(self.results)
         for task_id, result_dict in rset.iter_native():
             check_mem_usage()  # log a warning if too much memory is used
-            acc = agg(acc, result_dict['result'].unpickle())
+            result = result_dict['result']
+            if isinstance(result, cPickle.PicklingError):
+                raise result
+            acc = agg(acc, result.unpickle())
             del backend._cache[task_id]  # work around a celery bug
         return acc
 
