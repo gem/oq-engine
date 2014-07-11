@@ -257,8 +257,7 @@ def run_calc(job, log_level, log_file, exports, job_type):
     logs.set_level(log_level)
     try:
         with job_stats(job):  # run the job
-            with django_db.transaction.commit_on_success(using='job_init'):
-                _do_run_calc(calculator, exports, job_type)
+            _do_run_calc(calculator, exports, job_type)
     finally:
         logging.root.removeHandler(handler)
     return calculator
