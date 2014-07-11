@@ -209,7 +209,7 @@ class GmfGetter(object):
         Build the needed epsilon matrix from the given assets and seeds,
         by using the underlying epsilon provider.
         """
-        return self.epsilon_provider.sample_many(self.seeds)
+        return self.epsilon_provider.sample(self.seeds)
 
     def get_data(self, imt):
         """
