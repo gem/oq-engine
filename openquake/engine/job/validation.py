@@ -629,20 +629,6 @@ class EventBasedRiskForm(BaseOQModelForm):
 class EventBasedFRRiskForm(EventBasedRiskForm):
     calc_mode = 'event_based_fr'
 
-    def is_valid(self):
-        super_valid = super(EventBasedFRRiskForm, self).is_valid()
-        rc = self.instance          # RiskCalculation instance
-
-        if rc.sites_disagg and not (rc.mag_bin_width
-                                    and rc.coordinate_bin_width
-                                    and rc.distance_bin_width):
-            self._add_error('sites_disagg', "disaggregation requires "
-                            "mag_bin_width, coordinate_bin_width, "
-                            "distance_bin_width")
-            return False
-
-        return super_valid
-
 
 class ScenarioDamageRiskForm(BaseOQModelForm):
     calc_mode = 'scenario_damage'
