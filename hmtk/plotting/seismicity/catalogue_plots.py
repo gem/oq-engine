@@ -286,7 +286,8 @@ def get_completeness_adjusted_table(catalogue, completeness, dmag, end_year):
         #print mag_bins[obs_idx], temp_rates
         temp_rates = temp_rates.astype(float) / obs_time[iloc]
         if iloc == n_comp - 1:
-            obs_rates[obs_idx] = temp_rates
+            # TODO This hack seems to fix the error in Numpy v.1.8.1
+            obs_rates[np.where(obs_idx)[0]] = temp_rates
         else:
             obs_rates[obs_idx[:-1]] = temp_rates
     selector = np.where(obs_rates > 0.)[0]
