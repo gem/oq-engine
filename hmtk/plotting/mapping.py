@@ -62,6 +62,7 @@ from hmtk.sources.area_source import mtkAreaSource
 from hmtk.sources.point_source import mtkPointSource
 from hmtk.plotting.beachball import Beach
 from hmtk.sources.simple_fault_source import mtkSimpleFaultSource
+from hmtk.sources.complex_fault_source import mtkComplexFaultSource
 
 DEFAULT_SYMBOLOGY = [(-np.inf, 1., 'k.'), # M < 1
                      (1., 2., 'g*'), # 1 < M < 2
@@ -248,7 +249,9 @@ class HMTKBaseMap(object):
         :param float border_width:
             Line width of border (see matplotlib documentation for detail)
         """
-        x, y = self.m(source.geometry.lons, source.geometry.lats)
+        lons = np.hstack([source.geometry.lons, source.geometry.lons[0]])
+        lats = np.hstack([source.geometry.lats, source.geometry.lats[0]])
+        x, y = self.m(lons, lats)
         self.m.plot(x, y, border, linewidth=border_width)
 
     def _plot_point_source(self, source, point_marker='ks', point_size=2.0):
@@ -288,8 +291,49 @@ class HMTKBaseMap(object):
         x, y = self.m(trace_lons, trace_lats)
         self.m.plot(x, y, border, linewidth=1.3 * border_width)
 
+    def _plot_complex_fault(self, source, border='k-', border_width=1.0,
+            min_depth=0., max_depth=None, alpha=1.0):
+        """
+        Plots the simple fault source as a composite of the fault trace
+        and the surface projection of the fault.
+        :param source:
+            Fault source as instance of :class: mtkSimpleFaultSource
+        :param str border:
+            Line properties of border (see matplotlib documentation for detail)
+        :param float border_width:
+            Line width of border (see matplotlib documentation for detail)
+        """
+        if not max_depth:
+            max_depth = 70.
+        # Get outline
+        top_edge = np.column_stack([source.geometry.mesh.lons[0],
+                                    source.geometry.mesh.lats[0]])
+
+        bottom_edge = np.column_stack([source.geometry.mesh.lons[-1][::-1],
+                                       source.geometry.mesh.lats[-1][::-1]])
+        outline = np.vstack([top_edge, bottom_edge, top_edge[0,:]])
+        lons = source.geometry.mesh.lons.flatten()
+        lats = source.geometry.mesh.lats.flatten()
+        depths = source.geometry.mesh.depths.flatten()
+        norm = Normalize(vmin=min_depth, vmax=max_depth)
+        x1, y1 = self.m(lons, lats)
+        self.m.scatter(x1, y1,
+                       marker=".",
+                       s=20,
+                       c=depths,
+                       norm=norm,
+                       cmap="jet_r",
+                       alpha=alpha,
+                       linewidths=0.0,
+                       zorder=2)
+        # Plot border
+        x2, y2 = self.m(outline[:, 0], outline[:, 1])
+        self.m.plot(x2, y2, border, linewidth=border_width)
+
+
     def add_source_model(self, model, area_border='k-', border_width=1.0,
-            point_marker='ks', point_size=2.0, overlay=False):
+            point_marker='ks', point_size=2.0, overlay=False, min_depth=0.,
+            max_depth=None, alpha=1.0):
         """
         Adds a source model to the map
         :param model:
@@ -301,6 +345,9 @@ class HMTKBaseMap(object):
                 self._plot_area_source(source, area_border, border_width)
             elif isinstance(source, mtkPointSource):
                 self._plot_point_source(source, point_marker, point_size)
+            elif isinstance(source, mtkComplexFaultSource):
+                self._plot_complex_fault(source, area_border, border_width,
+                                         min_depth, max_depth, alpha)
             elif isinstance(source, mtkSimpleFaultSource):
                 self._plot_simple_fault(source, area_border, border_width)
             else:
@@ -421,6 +468,3 @@ class HMTKBaseMap(object):
                 plt.gca().add_collection(beach)
                 if not overlay:
                     plt.show()
-            
-            
-        
