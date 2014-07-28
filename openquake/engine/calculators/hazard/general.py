@@ -550,6 +550,13 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
             logs.LOG.warn('No realizations for hazard_calculation_id=%d',
                           self.hc.id)
             return
+
+        if num_rlzs == 1 and self.hc.quantile_hazard_curves:
+            logs.LOG.warn(
+                'There is only one realization, the configuration parameter '
+                'quantile_hazard_curves should not be set')
+            return
+
         num_site_blocks_per_incr = int(CURVE_CACHE_SIZE) / int(num_rlzs)
         if num_site_blocks_per_incr == 0:
             # This means we have `num_rlzs` >= `CURVE_CACHE_SIZE`.
