@@ -267,6 +267,8 @@ store_site_model'
         self.job.status = 'clean_up'
         self.job.save()
 
+        # now test the hazard calculation can be removed
+        self.job.hazard_calculation.delete(using='admin')
 
 def update_result_matrix(current, new):
     return 1 - (1 - current) * (1 - new)
