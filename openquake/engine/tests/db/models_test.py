@@ -202,6 +202,7 @@ class ProbabilisticRuptureTestCase(unittest.TestCase):
         trt_model = models.TrtModel.objects.create(
             lt_model=lt_model,
             tectonic_region_type=trt,
+            num_sources=0,
             num_ruptures=1,
             min_mag=5,
             max_mag=5,

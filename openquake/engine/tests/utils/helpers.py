@@ -581,6 +581,7 @@ def create_ses_ruptures(job, ses_collection, num):
     trt_model = models.TrtModel.objects.create(
         lt_model=lt_model,
         tectonic_region_type=trt,
+        num_sources=0,
         num_ruptures=1,
         min_mag=4,
         max_mag=6,
