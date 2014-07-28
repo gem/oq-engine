@@ -80,6 +80,7 @@ class OqTaskManager(TaskManager):
             check_mem_usage()  # log a warning if too much memory is used
             result = result_dict['result']
             if isinstance(result, cPickle.PicklingError):
+                # this may happen if pickling the input arguments fails
                 raise result
             acc = agg(acc, result.unpickle())
             del backend._cache[task_id]  # work around a celery bug
