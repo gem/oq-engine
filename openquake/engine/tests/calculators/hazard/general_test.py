@@ -16,6 +16,7 @@
 
 
 import unittest
+import mock
 
 from openquake.hazardlib import geo as hazardlib_geo
 from openquake.commonlib import readini
@@ -181,3 +182,17 @@ class InitializeSourcesTestCase(unittest.TestCase):
         self.assertEqual(
             [m1.get_num_sources(), m2.get_num_sources(), m3.get_num_sources()],
             [1, 1, 1])
+
+
+class NonEmptyQuantileTestCase(unittest.TestCase):
+    # you cannot compute the quantiles if there is only 1 realization
+    def test(self):
+        cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
+        with mock.patch('openquake.engine.logs.LOG.warn') as warn:
+            helpers.run_job(cfg, number_of_logic_tree_samples=1,
+                            quantile_hazard_curves='0.1 0.2',
+                            hazard_maps=None, uniform_hazard_spectra=None)
+        msg = warn.call_args[0][0]
+        self.assertEqual(msg, 'There is only one realization, the configuration'
+                         ' parameter quantile_hazard_curves should not be set')
+
