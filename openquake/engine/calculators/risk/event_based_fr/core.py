@@ -141,6 +141,11 @@ class EventBasedFRRiskCalculator(core.EventBasedRiskCalculator):
         self.hcalc = EBHC(self.hc.oqjob)
         self.hcalc.source_model_lt = SourceModelLogicTree.from_hc(self.hc)
         with db.transaction.commit_on_success(using='job_init'):
+            # TODO: think about how to remove the need for .delete()
+            # one should retrieve only the latest realizations
+            # for a given hazard calculation; alternatively, the
+            # realizations should be associated to RiskCalculation,
+            # not to HazardCalculation
             models.LtRealization.objects.filter(
                 lt_model__hazard_calculation=self.hc).delete()
             self.hcalc.initialize_realizations()
