@@ -394,7 +394,7 @@ class HazardCalculation(djm.Model):
     ########################
     # Logic Tree parameters:
     ########################
-    random_seed = djm.IntegerField(null=True, blank=True)
+    random_seed = djm.IntegerField(null=False, blank=True, default=42)
     number_of_logic_tree_samples = djm.IntegerField(null=True, blank=True)
 
     ###############################################
@@ -957,7 +957,7 @@ class RiskCalculation(djm.Model):
 
     # A seed used to generate random values to be applied to
     # vulnerability functions
-    master_seed = djm.IntegerField(null=True, blank=True)
+    master_seed = djm.IntegerField(null=False, blank=True, default=42)
 
     ####################################################
     # For calculators that output (conditional) loss map
