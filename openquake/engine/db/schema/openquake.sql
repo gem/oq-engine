@@ -161,7 +161,7 @@ CREATE TABLE uiapi.hazard_calculation (
     inputs BYTEA,  -- stored as a pickled Python `dict`
     region_grid_spacing float,
     -- logic tree parameters:
-    random_seed INTEGER,
+    random_seed INTEGER NOT NULL,
     number_of_logic_tree_samples INTEGER,
     -- ERF parameters:
     rupture_mesh_spacing float,
@@ -243,7 +243,7 @@ CREATE TABLE uiapi.risk_calculation (
     CHECK (
       (asset_correlation IS NULL) OR
       ((asset_correlation >= 0) AND (asset_correlation <= 1))),
-    master_seed INTEGER NULL,
+    master_seed INTEGER NOT NULL,
 
     mag_bin_width float,
     distance_bin_width float,
