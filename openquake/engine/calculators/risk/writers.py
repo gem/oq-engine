@@ -393,7 +393,7 @@ def combine_builders(builders):
     if a_builder.calc.rc.calculation_mode == 'event_based_fr':
         hos = []
         for ho in hazard_outputs:
-            for rlz in ho.ses.lt_model.__iter__():
+            for rlz in ho.ses.lt_model:
                 gmf = models.Gmf.objects.get(lt_realization=rlz)
                 hos.append(gmf.output)
         hazard_outputs = hos
