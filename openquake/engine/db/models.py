@@ -2402,7 +2402,6 @@ class SourceInfo(djm.Model):
     trt_model = djm.ForeignKey('TrtModel')
     source_id = djm.TextField(null=False)
     source_class = djm.TextField(null=False)
-    num_sources = djm.IntegerField(null=False)
     num_sites = djm.IntegerField(null=False)
     num_ruptures = djm.IntegerField(null=False)
     occ_ruptures = djm.IntegerField(null=False)
@@ -2410,7 +2409,7 @@ class SourceInfo(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"source_info'
-        ordering = ['trt_model_id', 'source_id']
+        ordering = ['trt_model', 'source_id']
 
 
 class AssocLtRlzTrtModel(djm.Model):

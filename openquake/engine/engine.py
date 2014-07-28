@@ -55,8 +55,7 @@ UNABLE_TO_DEL_HC_FMT = 'Unable to delete hazard calculation: %s'
 UNABLE_TO_DEL_RC_FMT = 'Unable to delete risk calculation: %s'
 
 LOG_FORMAT = ('[%(asctime)s %(calc_domain)s #%(calc_id)s %(hostname)s '
-              '%(levelname)s %(processName)s/%(process)s %(name)s] '
-              '%(message)s')
+              '%(levelname)s %(processName)s/%(process)s] %(message)s')
 
 TERMINATE = str2bool(config.get('celery', 'terminate_workers_on_revoke'))
 
@@ -94,11 +93,6 @@ def _update_log_record(self, record):
         record.calc_domain = self.calc_domain
     if not hasattr(record, 'calc_id'):
         record.calc_id = self.calc.id
-    logger_name_prefix = 'oq.%s.%s' % (record.calc_domain, record.calc_id)
-    if record.name.startswith(logger_name_prefix):
-        record.name = record.name[len(logger_name_prefix):].lstrip('.')
-        if not record.name:
-            record.name = 'root'
 
 
 class LogStreamHandler(logging.StreamHandler):
