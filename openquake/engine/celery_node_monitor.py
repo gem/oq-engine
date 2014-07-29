@@ -26,7 +26,6 @@ import celery.task.control
 from amqplib.client_0_8.exceptions import AMQPChannelException
 
 from openquake.engine import logs
-from openquake.engine.utils import config
 from openquake.commonlib.general import str2bool
 
 
@@ -130,8 +129,8 @@ class CeleryNodeMonitor(object):
                 dead_nodes = list(self.live_nodes - live_nodes)
                 logs.LOG.critical(
                     'Cluster nodes not accessible: %s', dead_nodes)
-                terminate = os.environ.get(
-                    'OQ_TERMINATE_JOB_WHEN_CELERY_IS_DOWN', True)
+                terminate = str2bool(os.environ.get(
+                    'OQ_TERMINATE_JOB_WHEN_CELERY_IS_DOWN', 'true'))
                 if terminate:
                     os.kill(os.getpid(), signal.SIGABRT)  # commit suicide
 
