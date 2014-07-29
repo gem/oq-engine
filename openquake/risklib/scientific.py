@@ -403,7 +403,7 @@ class EpsilonProvider(object):
     Here is an example without correlation:
 
     >>> ep = EpsilonProvider(num_assets=3, correlation=0)
-    >>> ep.sample([42, 43])
+    >>> ep.sample(seeds=[42, 43])
     array([[ 0.49671415,  0.25739993],
            [-0.1382643 , -0.90848143],
            [ 0.64768854, -0.37850311]])
@@ -412,7 +412,7 @@ class EpsilonProvider(object):
     epsilon for a given seed:
 
     >>> ep = EpsilonProvider(num_assets=3, correlation=1)
-    >>> ep.sample([42, 43])
+    >>> ep.sample(seeds=[42, 43])
     array([[-0.49671415, -0.25739993],
            [-0.49671415, -0.25739993],
            [-0.49671415, -0.25739993]])
