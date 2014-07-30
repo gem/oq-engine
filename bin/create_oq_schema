@@ -224,9 +224,9 @@ uri="psycopg2://$db_admin_user:@localhost:$db_port/$db_name"
 
 # Create schemas and apply all migrations
 echo ".. Creating schemas .."
-PYTHONPATH=$HOME/md/scripts:$HOME/oq-engine python $HOME/md/scripts/sqlplain/bin/sqlplain_upgrade $uri openquake.engine.db.schema.upgrades init_db
+PYTHONPATH=$HOME/md/scripts:. python $HOME/md/scripts/sqlplain/bin/sqlplain_upgrade $uri openquake.engine.db.schema.upgrades init_db
 echo ".. Running migration scripts .."
-PYTHONPATH=$HOME/md/scripts:$HOME/oq-engine python $HOME/md/scripts/sqlplain/bin/sqlplain_upgrade $uri openquake.engine.db.schema.upgrades upgrade
+PYTHONPATH=$HOME/md/scripts:. python $HOME/md/scripts/sqlplain/bin/sqlplain_upgrade $uri openquake.engine.db.schema.upgrades upgrade
 
 echo ".. Setting table ownership"
 psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "ALTER DATABASE $db_name OWNER TO oq_admin"
