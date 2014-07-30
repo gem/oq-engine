@@ -3310,7 +3310,7 @@ class AssetManager(djm.GeoManager):
             self._get_people_query_helper(
                 rc.exposure_model.category, rc.time_event))
 
-        args += occupants_args + (offset,)
+        args += occupants_args
 
         if asset_ids is None:
             assets_cond = 'true'
@@ -3334,16 +3334,16 @@ class AssetManager(djm.GeoManager):
                   {occupants_cond} AND {assets_cond}
             GROUP BY riski.exposure_data.id
             ORDER BY ST_X(geometry(site)), ST_Y(geometry(site))
-            OFFSET %s
             """.format(people_field=people_field,
                        occupants_cond=occupants_cond,
                        assets_cond=assets_cond,
                        costs=cost_type_fields,
                        costs_join=cost_type_joins,
                        occupancy_join=occupancy_join)
-
+        if offset:
+            query += 'OFFSET %d ' % offset
         if size is not None:
-            query += 'LIMIT %s' % size
+            query += 'LIMIT %d' % size
         return query, args
 
     def _get_people_query_helper(self, category, time_event):
