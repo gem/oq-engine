@@ -32,7 +32,7 @@ psql_batch_options='--set ON_ERROR_STOP=1'
 # Where do the table spaces live?
 tspace_path='/var/lib/postgresql/9.1/main/ts'
 # What table spaces should be created?
-tspace_list="admin hzrdi hzrdr riski riskr uiapi htemp"
+tspace_list="hzrdi hzrdr riski riskr uiapi"
 
 db_port=5432
 schema_path=`dirname $0`/../openquake/engine/db/schema
@@ -206,34 +206,6 @@ psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $postgis/p
 psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $postgis/spatial_ref_sys.sql
 psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $postgres_contrib/postgis_comments.sql
 
-echo ".. Running schema definition file: $schema_file .."
-if [ "$verbose" = "off" ]; then
-    psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $schema_file >> /dev/null
-else
-    psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $schema_file
-fi
-
-# Apply database function definitions if present.
-functions_file="$schema_path/functions.sql"
-if [ -r $functions_file ]; then
-    echo ".. Running functions file: $functions_file .."
-    psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $functions_file
-fi
-
-# Load static data if present.
-load_file="$schema_path/load.sql"
-if [ -r $load_file ]; then
-    echo ".. Loading static data from: $load_file .."
-    psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $load_file
-fi
-
-# Apply database schema/table comments if present.
-comments_file="$schema_path/comments.sql"
-if [ -r $comments_file ]; then
-    echo ".. Running comments file: $comments_file .."
-    psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $comments_file
-fi
-
 # Create OpenQuake database group if not present.
 oq_group_present=`psql -p $db_port -U $db_admin_user -d postgres $psql_batch_options -A -t -c "SELECT COUNT(*) FROM pg_group WHERE groname = '$db_group_name';"`
 if [ $oq_group_present -eq 0 ]; then
@@ -248,26 +220,11 @@ for role in $db_roles; do
     fi
 done
 
-# Apply database security settings if present.
-security_file="$schema_path/security.sql"
-if [ -r $security_file ]; then
-    echo ".. Running security settings file: $security_file .."
-    psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $security_file
-fi
+uri="psycopg2://$db_admin_user:@localhost:$db_port/$db_name"
 
-# Apply database table indexes if present.
-indexes_file="$schema_path/indexes.sql"
-if [ -r $indexes_file ]; then
-    echo ".. Applying index definitions: $indexes_file .."
-    psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $indexes_file
-fi
-
-echo ".. Setting table ownership"
-psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "ALTER DATABASE $db_name OWNER TO oq_admin"
-for schema in $tspace_list; do
-    for tbl in `psql -qAt -c "select tablename from pg_tables where schemaname = '$schema';" $db_name`; do
-        psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "alter table $schema.$tbl owner to oq_admin"
-    done
-done
-
+# Create schemas and apply all migrations
+echo ".. Creating schemas .."
+PYTHONPATH=$HOME/md/scripts:$HOME/oq-engine python $HOME/md/scripts/sqlplain/bin/sqlplain_upgrade $uri openquake.engine.db.schema.upgrades install_versioning
+echo ".. Running migration scripts .."
+PYTHONPATH=$HOME/md/scripts:$HOME/oq-engine python $HOME/md/scripts/sqlplain/bin/sqlplain_upgrade $uri openquake.engine.db.schema.upgrades upgrade
 echo ".. Done .."
