@@ -1,0 +1,31 @@
+Contribution names and dates were collected from GitHub stats and may not
+reflect the actual beginning date of an individual's contribution. If you
+think a name is missing or a date is incorrect, please let us know. =)
+
+- The OpenQuake Team
+
+
+Code
+----
+Andrea Cerisara         January 2012
+Anton Gritsay           January 2012
+Giuseppe Vallarelli     February 2012
+Lars Butler             May 2012
+Damiano Monelli         June 2012
+Luis Rodríguez          December 2012
+Matteo Nastasi          December 2012
+Michele Simionato       December 2012
+Luigi Panzeri           February 2013
+Marco Pagani            July 2013
+Graeme Weatherill       September 2013
+Yenshin Chen            November 2013
+Daniele Vigano          March 2014
+Julio Garcia            March 2014
+
+Research
+--------
+NOTE(larsbutler): I'm not sure about these dates.
+Damiano Monelli         January 2012
+Laurentiu Danciu        January 2012
+Marco Pagani            January 2012
+Graeme Weatherill       January 2012
