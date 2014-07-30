@@ -32,8 +32,7 @@ from openquake.engine.calculators.hazard.event_based.core \
 
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
-from openquake.engine.performance import (
-    EnginePerformanceMonitor, LightMonitor)
+from openquake.engine.performance import EnginePerformanceMonitor
 
 from openquake.hazardlib.imt import from_string
 from openquake.commonlib.general import split_in_blocks
@@ -88,6 +87,8 @@ def event_based_fr(job_id, rupture_data, rc, risk_models, getter_builders,
         for art in models.AssocLtRlzTrtModel.objects.filter(
             trt_model=trt_model).order_by('rlz'))
 
+    # TODO: the following monitors should be replaced by LightMonitors,
+    # since they write a lot on the database, once per asset
     getdata_mon = EnginePerformanceMonitor(
         'getting hazard', job_id, event_based_fr)
     gmf_mon = getdata_mon.copy('generating gmf')
@@ -121,10 +122,6 @@ def event_based_fr(job_id, rupture_data, rc, risk_models, getter_builders,
                     core.do_event_based(
                         risk_model, builder.getters,
                         outputdict, params, getdata_mon))
-
-    #getdata_mon.flush()
-    #gmf_mon.flush()
-    #getters_mon.flush()
     return elt
 
 
