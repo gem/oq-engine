@@ -224,7 +224,7 @@ uri="psycopg2://$db_admin_user:@localhost:$db_port/$db_name"
 
 # Create schemas and apply all migrations
 echo ".. Creating schemas .."
-PYTHONPATH=$HOME/md/scripts:$HOME/oq-engine python $HOME/md/scripts/sqlplain/bin/sqlplain_upgrade $uri openquake.engine.db.schema.upgrades install_versioning
+PYTHONPATH=$HOME/md/scripts:$HOME/oq-engine python $HOME/md/scripts/sqlplain/bin/sqlplain_upgrade $uri openquake.engine.db.schema.upgrades init_db
 echo ".. Running migration scripts .."
 PYTHONPATH=$HOME/md/scripts:$HOME/oq-engine python $HOME/md/scripts/sqlplain/bin/sqlplain_upgrade $uri openquake.engine.db.schema.upgrades upgrade
 
