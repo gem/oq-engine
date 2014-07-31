@@ -248,9 +248,9 @@ def run_calc(job, log_level, log_file, exports, job_type):
     handler = (LogFileHandler(job_type, calc, log_file) if log_file
                else LogStreamHandler(job_type, calc))
     logging.root.addHandler(handler)
+    logs.set_level(log_level)
     try:
         with job_stats(job):  # run the job
-            logs.set_level(log_level)
             _do_run_calc(calculator, exports, job_type)
     finally:
         logging.root.removeHandler(handler)

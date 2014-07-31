@@ -302,7 +302,6 @@ class OutputDict(dict):
         function name given by the `output_type` argument.
         3) Call such function with the given positional arguments.
         """
-
         kwargs.update(self.kwargs)
         output_id = self.get(**kwargs)
         globals().get(kwargs['output_type'])(
@@ -389,12 +388,18 @@ def combine_builders(builders):
         return outputs
 
     a_builder = builders[0]
-
     hazard_outputs = a_builder.calc.rc.hazard_outputs()
+    # now a special case for event_based_fr
+    if a_builder.calc.rc.calculation_mode == 'event_based_fr':
+        hos = []
+        for ho in hazard_outputs:
+            for rlz in ho.ses.lt_model:
+                gmf = models.Gmf.objects.get(lt_realization=rlz)
+                hos.append(gmf.output)
+        hazard_outputs = hos
 
     for builder in builders:
         for loss_type in a_builder.calc.loss_types:
-
             if len(hazard_outputs) > 1:
                 outputs.extend(builder.statistical_outputs(loss_type))
 

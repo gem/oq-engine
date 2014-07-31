@@ -922,6 +922,7 @@ class RiskCalculation(djm.Model):
         (u'classical', u'Classical PSHA'),
         (u'classical_bcr', u'Classical BCR'),
         (u'event_based', u'Probabilistic Event-Based'),
+        (u'event_based_fr', u'Event-Based From Ruptures'),
         (u'scenario', u'Scenario'),
         (u'scenario_damage', u'Scenario Damage'),
         (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
@@ -1063,6 +1064,8 @@ class RiskCalculation(djm.Model):
             elif self.calculation_mode in ["event_based", "event_based_bcr"]:
                 filters = dict(
                     output_type='gmf', gmf__lt_realization__isnull=False)
+            elif self.calculation_mode == "event_based_fr":
+                filters = dict(output_type='ses')
             elif self.calculation_mode in ['scenario', 'scenario_damage']:
                 filters = dict(output_type='gmf_scenario')
             else:
@@ -2325,22 +2328,24 @@ class LtSourceModel(djm.Model):
     def make_gsim_lt(self, trts=()):
         """
         Helper to instantiate a GsimLogicTree object from the logic tree file.
-
-        :param trts:
-            sequence of tectonic region types (if not given uses
-            .get_tectonic_region_types() which extracts the relevant trts)
         """
         hc = self.hazard_calculation
+        trts = trts or self.get_tectonic_region_types()
         fname = os.path.join(hc.base_path, hc.inputs['gsim_logic_tree'])
-        return logictree.GsimLogicTree(
-            fname, 'applyToTectonicRegionType',
-            trts or self.get_tectonic_region_types())
+        gsim_lt = logictree.GsimLogicTree(
+            fname, 'applyToTectonicRegionType', trts)
+        for trt in trts:
+            if not trt in gsim_lt.values:
+                raise ValueError(
+                    "Found in %r a tectonic region type %r inconsistent with "
+                    "the ones in %r" % (self.sm_name, trt, fname))
+        return gsim_lt
 
     def __iter__(self):
         """
         Yield the realizations corresponding to the given model
         """
-        return self.ltrealization_set.all()
+        return iter(self.ltrealization_set.all())
 
 
 class TrtModel(djm.Model):
@@ -2377,6 +2382,12 @@ class TrtModel(djm.Model):
             dic[art.gsim].append(art.rlz)
         return dic
 
+    def get_gsim_instances(self):
+        """
+        Return the GSIM instances associated to the current TrtModel
+        """
+        return [logictree.GSIM[gsim]() for gsim in self.gsims]
+
     class Meta:
         db_table = 'hzrdr\".\"trt_model'
         ordering = ['id']
@@ -2403,7 +2414,8 @@ class SourceInfo(djm.Model):
 
 class AssocLtRlzTrtModel(djm.Model):
     """
-    Associations between logic tree realizations and TrtModels
+    Associations between logic tree realizations and TrtModels. Fixed
+    a realization and a TRT, the gsim is unique.
     """
     rlz = djm.ForeignKey('LtRealization')
     trt_model = djm.ForeignKey('TrtModel')
@@ -3264,7 +3276,8 @@ class AssetManager(djm.GeoManager):
     Asset manager
     """
 
-    def get_asset_chunk(self, rc, taxonomy, offset, size):
+    def get_asset_chunk(self, rc, taxonomy, offset=0, size=None,
+                        asset_ids=None):
         """
         :returns:
 
@@ -3281,10 +3294,11 @@ class AssetManager(djm.GeoManager):
         """
 
         query, args = self._get_asset_chunk_query_args(
-            rc, taxonomy, offset, size)
+            rc, taxonomy, offset, size, asset_ids)
         return list(self.raw(query, args))
 
-    def _get_asset_chunk_query_args(self, rc, taxonomy, offset, size):
+    def _get_asset_chunk_query_args(
+            self, rc, taxonomy, offset, size, asset_ids):
         """
         Build a parametric query string and the corresponding args for
         #get_asset_chunk
@@ -3296,8 +3310,13 @@ class AssetManager(djm.GeoManager):
             self._get_people_query_helper(
                 rc.exposure_model.category, rc.time_event))
 
-        args += occupants_args + (size, offset)
+        args += occupants_args
 
+        if asset_ids is None:
+            assets_cond = 'true'
+        else:
+            assets_cond = 'riski.exposure_data.id IN (%s)' % ', '.join(
+                map(str, asset_ids))
         cost_type_fields, cost_type_joins = self._get_cost_types_query_helper(
             rc.exposure_model.costtype_set.all())
 
@@ -3312,16 +3331,19 @@ class AssetManager(djm.GeoManager):
             WHERE exposure_model_id = %s AND
                   taxonomy = %s AND
                   ST_COVERS(ST_GeographyFromText(%s), site) AND
-                  {occupants_cond}
+                  {occupants_cond} AND {assets_cond}
             GROUP BY riski.exposure_data.id
             ORDER BY ST_X(geometry(site)), ST_Y(geometry(site))
-            LIMIT %s OFFSET %s
             """.format(people_field=people_field,
                        occupants_cond=occupants_cond,
+                       assets_cond=assets_cond,
                        costs=cost_type_fields,
                        costs_join=cost_type_joins,
                        occupancy_join=occupancy_join)
-
+        if offset:
+            query += 'OFFSET %d ' % offset
+        if size is not None:
+            query += 'LIMIT %d' % size
         return query, args
 
     def _get_people_query_helper(self, category, time_event):
