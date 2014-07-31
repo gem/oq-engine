@@ -312,7 +312,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
         newdict = acc.copy()
         for (loss_type, out_id), counter in event_loss_table.iteritems():
-            newdict[loss_type, out_id] += counter
+            try:
+                c = newdict[loss_type, out_id]
+            except KeyError:
+                pass
+            else:
+                newdict[loss_type, out_id] = c + counter
         return newdict
 
     def post_process(self):
@@ -335,10 +340,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         loss_type=loss_type,
                         hazard_output=hazard_output)
                     inserter = writer.CacheInserter(models.EventLossData, 9999)
-
-                    ses_coll = models.SESCollection.objects.get(
-                        lt_model=hazard_output.output_container.
-                        lt_realization.lt_model)
+                    if isinstance(hazard_output.output_container,
+                                  models.SESCollection):
+                        ses_coll = hazard_output.output_container
+                    else:  # extract the SES collection from the Gmf
+                        ses_coll = models.SESCollection.objects.get(
+                            lt_model=hazard_output.output_container.
+                            lt_realization.lt_model)
                     rupture_ids = ses_coll.get_ruptures().values_list(
                         'id', flat=True)
                     for rupture_id in rupture_ids:
