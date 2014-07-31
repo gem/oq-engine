@@ -159,7 +159,7 @@ if [ "$check_table_spaces" == "on" ]; then
         # Create the actual table space.
         ts_found=`psql -p $db_port -U $db_admin_user -d postgres $psql_batch_options -A -t -c "SELECT COUNT(*) FROM pg_tablespace WHERE spcname = '$full_ts_name';"`
         if [ $ts_found -eq 0 ]; then
-            psql -p $db_port -d postgres -U $db_admin_user -c "CREATE TABLESPACE $full_ts_name LOCATION '$full_tspace_path'" $psql_batch_options
+            psql -p $db_port -d postgres -U $db_admin_user -c "CREATE TABLESPACE $full_ts_name OWNER oq_admin LOCATION'$full_tspace_path'" $psql_batch_options
         fi
     done
 fi
@@ -171,19 +171,6 @@ fi
 # Starting from here this script is executing many batches
 # Stopping as soon as one fails makes the error stand out
 set -e
-
-# Create the OpenQuake database
-echo ".. Creating database $db_name .."
-psql -p $db_port -d postgres -U $db_admin_user -c "CREATE DATABASE $db_name" $psql_batch_options
-
-postgres_contrib="/usr/share/postgresql/9.1/contrib"
-postgis="$postgres_contrib/postgis-1.5"
-# Load the PostGIS stuff into the newly created OpenQuake database.
-echo ".. Loading postgis functions/data into $db_name .."
-psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $postgis/postgis.sql
-
-psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $postgis/spatial_ref_sys.sql
-psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $postgres_contrib/postgis_comments.sql
 
 # Create OpenQuake database group if not present.
 oq_group_present=`psql -p $db_port -U $db_admin_user -d postgres $psql_batch_options -A -t -c "SELECT COUNT(*) FROM pg_group WHERE groname = '$db_group_name';"`
@@ -199,20 +186,28 @@ for role in $db_roles; do
     fi
 done
 
-uri="$db_admin_user:openquake@localhost:$db_port/$db_name"
+# Create the OpenQuake database
+echo ".. Creating database $db_name .."
+psql -p $db_port -d postgres -U $db_admin_user -c "CREATE DATABASE $db_name OWNER oq_admin" $psql_batch_options
+
+postgres_contrib="/usr/share/postgresql/9.1/contrib"
+postgis="$postgres_contrib/postgis-1.5"
+# Load the PostGIS stuff into the newly created OpenQuake database, must be run as postgres
+echo ".. Loading postgis functions/data into $db_name .."
+psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $postgis/postgis.sql
+psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $postgis/spatial_ref_sys.sql
+psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $postgres_contrib/postgis_comments.sql
+
+# fix ownership of three public tables from postgres to oq_admin
+psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "ALTER TABLE spatial_ref_sys OWNER TO oq_admin"
+psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "ALTER TABLE geometry_columns OWNER TO oq_admin"
+psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "ALTER TABLE geography_columns OWNER TO oq_admin"
+
+uri="oq_admin:openquake@localhost:$db_port/$db_name"
 
 # Create schemas and apply all migrations
 echo ".. Creating schemas .."
-PYTHONPATH=.:../oq-commonlib bin/oq_upgrade $uri openquake.engine.db.schema.upgrades init_db
+PYTHONPATH=.:../oq-commonlib bin/oq_upgrade init_db
 echo ".. Running migration scripts .."
-PYTHONPATH=.:../oq-commonlib bin/oq_upgrade $uri openquake.engine.db.schema.upgrades upgrade
-
-echo ".. Setting table ownership .."
-psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "ALTER DATABASE $db_name OWNER TO oq_admin"
-for schema in $tspace_list; do
-    for tbl in `psql -qAt -c "select tablename from pg_tables where schemaname = '$schema';" $db_name`; do
-        psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "alter table $schema.$tbl owner to oq_admin"
-    done
-done
-psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "alter table revision_info owner to oq_admin"
+PYTHONPATH=.:../oq-commonlib bin/oq_upgrade upgrade
 echo ".. Done .."

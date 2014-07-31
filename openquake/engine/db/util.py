@@ -94,7 +94,6 @@ class Connection(Resource):
         self._debugstream = None
 
     def open(self):
-        import pdb; pdb.set_trace()
         self.dbapi = psycopg2.connect(**self.uridict)
         self.dbapi.autocommit = self.autocommit
         self.opened = True
