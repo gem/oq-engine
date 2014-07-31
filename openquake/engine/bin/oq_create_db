@@ -140,6 +140,21 @@ else
     check_table_spaces="on"
 fi
 
+# Create OpenQuake database group if not present.
+echo ".. creating roles .."
+oq_group_present=`psql -p $db_port -U $db_admin_user -d postgres $psql_batch_options -A -t -c "SELECT COUNT(*) FROM pg_group WHERE groname = '$db_group_name';"`
+if [ $oq_group_present -eq 0 ]; then
+    psql -p $db_port -d postgres -U $db_admin_user -c "CREATE ROLE $db_group_name"
+fi
+
+# Create OpenQuake database users/roles if/as needed.
+for role in $db_roles; do
+    role_present=`psql -p $db_port -U $db_admin_user -d postgres $psql_batch_options -A -t -c "SELECT COUNT(*) FROM pg_user WHERE usename = '$role';"`
+    if [ $role_present -eq 0 ]; then
+        psql -p $db_port -d postgres -U $db_admin_user -c "CREATE ROLE $role WITH LOGIN IN GROUP openquake" $psql_batch_options
+    fi
+done
+
 echo -n ".. Current table spaces: "
 echo `psql -p $db_port -U $db_admin_user -c '\db' -d postgres $psql_batch_options | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }'`
 
@@ -172,20 +187,6 @@ fi
 # Starting from here this script is executing many batches
 # Stopping as soon as one fails makes the error stand out
 set -e
-
-# Create OpenQuake database group if not present.
-oq_group_present=`psql -p $db_port -U $db_admin_user -d postgres $psql_batch_options -A -t -c "SELECT COUNT(*) FROM pg_group WHERE groname = '$db_group_name';"`
-if [ $oq_group_present -eq 0 ]; then
-    psql -p $db_port -d postgres -U $db_admin_user -c "CREATE ROLE $db_group_name"
-fi
-
-# Create OpenQuake database users/roles if/as needed.
-for role in $db_roles; do
-    role_present=`psql -p $db_port -U $db_admin_user -d postgres $psql_batch_options -A -t -c "SELECT COUNT(*) FROM pg_user WHERE usename = '$role';"`
-    if [ $role_present -eq 0 ]; then
-        psql -p $db_port -d postgres -U $db_admin_user -c "CREATE ROLE $role WITH LOGIN IN GROUP openquake" $psql_batch_options
-    fi
-done
 
 # Create the OpenQuake database
 echo ".. Creating database $db_name .."
