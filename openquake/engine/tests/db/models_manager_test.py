@@ -145,9 +145,10 @@ class AssetManagerTestCase(unittest.TestCase):
         m2 = p2.start()
         m2.return_value = ("cost_type_fields", "cost_type_joins")
 
+        asset_ids = [13, 14]
         try:
             query, args = self.manager._get_asset_chunk_query_args(
-                rc, "taxonomy", 0, 1)
+                rc, "taxonomy", 0, 1, asset_ids)
             self.assertEqual("""
             SELECT riski.exposure_data.*,
                    occupants_fields AS people,
@@ -159,16 +160,15 @@ class AssetManagerTestCase(unittest.TestCase):
             WHERE exposure_model_id = %s AND
                   taxonomy = %s AND
                   ST_COVERS(ST_GeographyFromText(%s), site) AND
-                  occupants_cond
+                  occupants_cond AND riski.exposure_data.id IN (13, 14)
             GROUP BY riski.exposure_data.id
             ORDER BY ST_X(geometry(site)), ST_Y(geometry(site))
-            LIMIT %s OFFSET %s
-            """, query)
+            LIMIT 1""", query)
 
             self.assertEqual(args,
                              (0, 'taxonomy',
                               'SRID=4326; REGION CONSTRAINT',
-                              'occ_arg1', 'occ_arg2', 1, 0))
+                              'occ_arg1', 'occ_arg2'))
         finally:
             p1.stop()
             p2.stop()
