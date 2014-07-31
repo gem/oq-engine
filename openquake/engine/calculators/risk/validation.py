@@ -147,10 +147,8 @@ class RequireEventBasedHazard(Validator):
             return "The provided hazard is not a gmf or ses collection"
 
         if rc.hazard_outputs()[0].output_type == "ses":
-            if 'source_model_logic_tree' not in rc.inputs:
-                return ("source_model_logic_tree_file and "
-                        "gsim_logic_tree_file "
-                        "is mandatory "
+            if 'gsim_logic_tree' not in rc.inputs:
+                return ("gsim_logic_tree_file is mandatory "
                         "when the hazard output is a ses collection")
 
 
