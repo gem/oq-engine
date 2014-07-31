@@ -199,7 +199,7 @@ for role in $db_roles; do
     fi
 done
 
-uri="$db_admin_user:@localhost:$db_port/$db_name"
+uri="$db_admin_user:openquake@localhost:$db_port/$db_name"
 
 # Create schemas and apply all migrations
 echo ".. Creating schemas .."
