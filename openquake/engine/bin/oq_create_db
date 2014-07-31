@@ -208,7 +208,7 @@ uri="$oq_admin_user:openquake@localhost:$db_port/$db_name"
 
 # Create schemas and apply all migrations
 echo ".. Creating schemas .."
-PYTHONPATH=.:../oq-commonlib bin/oq_upgrade init_db
+PYTHONPATH=.:../oq-commonlib bin/oq_upgrade init_db $uri
 echo ".. Running migration scripts .."
-PYTHONPATH=.:../oq-commonlib bin/oq_upgrade upgrade
+PYTHONPATH=.:../oq-commonlib bin/oq_upgrade upgrade $uri
 echo ".. Done .."
