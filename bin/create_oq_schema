@@ -45,15 +45,6 @@ fixtures=""
 
 db_admin_user="postgres"
 
-this_is_linux=0
-# Are we running on linux?
-if [ -f "`which uname`" ]; then
-    os_name=`uname | tr '[:upper:]' '[:lower:]' | cut -f1`
-    if [ "$os_name" = "linux" ]; then
-        this_is_linux=1
-    fi
-fi
-
 # What is the name of the db group that all OpenQuake db users belong to?
 db_group_name="openquake"
 
@@ -108,8 +99,6 @@ do
     esac
 done
 
-schema_file="$schema_path/openquake.sql"
-
 # if --verbose is off, set "quiet" mode for psql
 if [ "$verbose" = "off" ]; then
     psql_batch_options="$psql_batch_options -q"
@@ -128,11 +117,6 @@ fi
 
 if [ "$table_spaces_only" == "off" ]; then
     # None of this is relevant if we only want to check table spaces.
-    if [ ! -r $schema_file ]; then
-        echo "!! Could not find/read schema file: $schema_file"
-        exit 5
-    fi
-
     if [ "$user_interaction" = "on" ]; then
         # Last chance to abort.
         echo "!! This will destroy *ALL* data in the OpenQuake database named $db_name !!"
@@ -169,11 +153,7 @@ if [ "$check_table_spaces" == "on" ]; then
         if [ $? -ne 0 ]; then
             echo ".. Creating table space path $full_tspace_path .."
             mkdir -p $full_tspace_path
-            if [ $this_is_linux -eq 1 ]; then
-                chown -R postgres.postgres $full_tspace_path
-            else
-                chown -R postgres $full_tspace_path
-            fi
+            chown -R postgres.postgres $full_tspace_path
         fi
 
         # Create the actual table space.
@@ -195,7 +175,6 @@ set -e
 # Create the OpenQuake database
 echo ".. Creating database $db_name .."
 psql -p $db_port -d postgres -U $db_admin_user -c "CREATE DATABASE $db_name" $psql_batch_options
-createlang -p $db_port -d $db_name -U $db_admin_user plpythonu
 
 postgres_contrib="/usr/share/postgresql/9.1/contrib"
 postgis="$postgres_contrib/postgis-1.5"
