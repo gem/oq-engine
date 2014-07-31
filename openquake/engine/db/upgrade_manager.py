@@ -109,8 +109,7 @@ class UpgradeManager(object):
             return set(version for version, in curs.fetchall())
         except:
             raise VersioningNotInstalled(
-                '%(database)s: perform the steps in the documentation'
-                % conn.uridict)
+                'perform the steps in the documentation')
 
     def get_max_version(self):
         '''
