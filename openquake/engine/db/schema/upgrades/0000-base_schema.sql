@@ -22,7 +22,6 @@ SET client_min_messages TO WARNING;
 ------------------------------------------------------------------------
 -- Name space definitions go here
 ------------------------------------------------------------------------
-CREATE SCHEMA admin;
 CREATE SCHEMA hzrdi;
 CREATE SCHEMA hzrdr;
 CREATE SCHEMA riski;
@@ -33,29 +32,6 @@ CREATE SCHEMA uiapi;
 ------------------------------------------------------------------------
 -- Table definitions go here
 ------------------------------------------------------------------------
-
-
--- Organization
-CREATE TABLE admin.organization (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR NOT NULL,
-    address VARCHAR,
-    url VARCHAR,
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE admin_ts;
-
-
--- Revision information
-CREATE TABLE admin.revision_info (
-    id SERIAL PRIMARY KEY,
-    artefact VARCHAR NOT NULL,
-    revision VARCHAR NOT NULL,
-    -- The step will be used for schema upgrades and data migrations.
-    step INTEGER NOT NULL DEFAULT 0,
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE admin_ts;
 
 
 -- Site-specific parameters for hazard calculations.
@@ -553,14 +529,16 @@ CREATE TABLE hzrdr.source_info (
   num_sites INTEGER NOT NULL,
   num_ruptures INTEGER NOT NULL,
   occ_ruptures INTEGER NOT NULL,
-  calc_time FLOAT NOT NULL);
+  calc_time FLOAT NOT NULL
+) TABLESPACE hzrdr_ts;
 
 -- associations logic tree realizations <-> trt_models
 CREATE TABLE hzrdr.assoc_lt_rlz_trt_model(
 id SERIAL,
 rlz_id INTEGER NOT NULL,
 trt_model_id INTEGER NOT NULL,
-gsim TEXT NOT NULL);
+gsim TEXT NOT NULL
+) TABLESPACE hzrdr_ts;
 
 -- keep track of logic tree realization progress for a given calculation
 CREATE TABLE hzrdr.lt_realization (
@@ -758,7 +736,8 @@ CREATE TABLE riskr.dmg_state (
     dmg_state VARCHAR NOT NULL,
     lsi SMALLINT NOT NULL CHECK(lsi >= 0),
     UNIQUE (risk_calculation_id, dmg_state),
-    UNIQUE (risk_calculation_id, lsi));
+    UNIQUE (risk_calculation_id, lsi)
+) TABLESPACE riskr_ts;
 
 -- Damage Distribution Per Asset
 CREATE TABLE riskr.dmg_dist_per_asset (
@@ -886,7 +865,7 @@ CREATE TABLE hzrdi.hazard_site (
     id SERIAL PRIMARY KEY,
     hazard_calculation_id INTEGER NOT NULL,
     location GEOGRAPHY(point) NOT NULL
-) TABLESPACE htemp_ts;
+) TABLESPACE hzrdi_ts;
 
 ------------------------------------------------------------------------
 -- Constraints (foreign keys etc.) go here
@@ -1211,3 +1190,446 @@ CREATE VIEW hzrdr.gmf_data_job AS
    INNER JOIN uiapi.output AS c
    ON b.output_id=c.id
    WHERE output_type='gmf';
+/*
+  Copyright (c) 2010-2014, GEM Foundation.
+
+  OpenQuake is free software: you can redistribute it and/or modify it
+  under the terms of the GNU Affero General Public License as published
+  by the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OpenQuake is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+
+-- hzrdi.hazard_site
+CREATE UNIQUE INDEX hzrdi_hazard_site_location_hazard_calculation_uniq_idx
+ON hzrdi.hazard_site(location, hazard_calculation_id);
+
+CREATE INDEX hzrdi_hazard_site_hazard_calculation_idx
+ON hzrdi.hazard_site(hazard_calculation_id);
+
+-- hzrdi.site_model
+CREATE INDEX hzrdi_site_model_job_id_idx ON hzrdi.site_model(job_id);
+
+-- indexes for the uiapi.performance table
+CREATE INDEX uiapi_performance_oq_job_id_idx ON uiapi.performance(oq_job_id);
+CREATE INDEX uiapi_oq_job_user_name_idx ON uiapi.oq_job(user_name);
+CREATE INDEX uiapi_performance_operation_idx ON uiapi.performance(operation);
+
+CREATE INDEX uiapi_oq_job_status_running on uiapi.oq_job(status) WHERE status = 'running';
+
+-- hzrdr indices on foreign keys
+-- hazard map
+CREATE INDEX hzrdr_hazard_map_output_id_idx on hzrdr.hazard_map(output_id);
+-- hazard curve
+CREATE INDEX hzrdr_hazard_curve_output_id_idx on hzrdr.hazard_curve(output_id);
+CREATE INDEX hzrdr_hazard_curve_data_hazard_curve_id_idx on hzrdr.hazard_curve_data(hazard_curve_id);
+
+-- hzrdr.assoc_lt_rlz_trt_model
+CREATE UNIQUE INDEX hzrdr_assoc_lt_rlz_trt_model_uniq_idx ON 
+hzrdr.assoc_lt_rlz_trt_model(rlz_id, trt_model_id);
+ 
+-- gmf
+CREATE INDEX hzrdr_gmf_output_id_idx on hzrdr.gmf(output_id);
+CREATE INDEX hzrdr_gmf_lt_realization_idx on hzrdr.gmf(lt_realization_id);
+
+-- uhs
+CREATE INDEX hzrdr_uhs_output_id_idx on hzrdr.uhs(output_id);
+CREATE INDEX hzrdr_uhs_data_uhs_id_idx on hzrdr.uhs_data(uhs_id);
+
+-- ses
+CREATE INDEX hzrdr_ses_collection_ouput_id_idx on hzrdr.ses_collection(output_id);
+
+-- ses_rupture
+CREATE UNIQUE INDEX hzrdr_ses_rupture_tag_uniq_idx ON hzrdr.ses_rupture(rupture_id, tag);
+CREATE INDEX hzrdr_ses_rupture_ses_id_idx on hzrdr.ses_rupture(ses_id);
+CREATE INDEX hzrdr_ses_rupture_tag_idx ON hzrdr.ses_rupture (tag);
+
+-- disagg_result
+CREATE INDEX hzrdr_disagg_result_location_idx on hzrdr.disagg_result using gist(location);
+-- lt_realization
+CREATE INDEX hzrdr_lt_model_hazard_calculation_id_idx on hzrdr.lt_source_model(hazard_calculation_id);
+
+-- gmf_data
+CREATE INDEX hzrdr_gmf_data_idx on hzrdr.gmf_data(site_id);
+CREATE INDEX hzrdr_gmf_imt_idx on hzrdr.gmf_data(imt);
+CREATE INDEX hzrdr_gmf_sa_period_idx on hzrdr.gmf_data(sa_period);
+CREATE INDEX hzrdr_gmf_sa_damping_idx on hzrdr.gmf_data(sa_damping);
+CREATE INDEX hzrdr_gmf_task_no_idx on hzrdr.gmf_data(task_no);
+
+-- riskr indexes
+CREATE INDEX riskr_loss_map_output_id_idx on riskr.loss_map(output_id);
+CREATE INDEX riskr_loss_map_data_loss_map_id_idx on riskr.loss_map_data(loss_map_id);
+CREATE INDEX riskr_loss_map_data_loss_map_data_idx on riskr.loss_map_data(asset_ref);
+CREATE INDEX riskr_loss_curve_output_id_idx on riskr.loss_curve(output_id);
+CREATE INDEX riskr_loss_curve_data_loss_curve_id_idx on riskr.loss_curve_data(loss_curve_id);
+CREATE INDEX riskr_loss_curve_data_loss_curve_asset_ref_idx on riskr.loss_curve_data(asset_ref);
+CREATE INDEX riskr_aggregate_loss_curve_data_loss_curve_id_idx on riskr.aggregate_loss_curve_data(loss_curve_id);
+
+CREATE INDEX riskr_bcr_distribution_output_id_idx on riskr.bcr_distribution(output_id);
+CREATE INDEX riskr_bcr_distribution_data_bcr_distribution_id_idx on riskr.bcr_distribution_data(bcr_distribution_id);
+
+CREATE INDEX riskr_dmg_state_rc_id_idx on riskr.dmg_state(risk_calculation_id);
+CREATE INDEX riskr_dmg_state_lsi_idx on riskr.dmg_state(lsi);
+
+-- riski indexes
+CREATE INDEX riski_exposure_data_site_idx ON riski.exposure_data USING gist(site);
+CREATE INDEX riski_exposure_model_job_id_idx ON riski.exposure_model(job_id);
+CREATE INDEX riski_exposure_data_taxonomy_idx ON riski.exposure_data(taxonomy);
+CREATE INDEX riski_exposure_data_exposure_model_id_idx on riski.exposure_data(exposure_model_id);
+CREATE INDEX riski_exposure_data_site_stx_idx ON riski.exposure_data(ST_X(geometry(site)));
+CREATE INDEX riski_exposure_data_site_sty_idx ON riski.exposure_data(ST_Y(geometry(site)));
+CREATE INDEX riski_cost_type_name_idx ON riski.cost_type(name);
+/*
+  Copyright (c) 2010-2014, GEM Foundation.
+
+  OpenQuake is free software: you can redistribute it and/or modify it
+  under the terms of the GNU Affero General Public License as published
+  by the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OpenQuake is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+
+CREATE OR REPLACE FUNCTION format_exc(operation TEXT, error TEXT, tab_name TEXT) RETURNS TEXT AS $$
+BEGIN
+    RETURN operation || ': error: ' || error || ' (' || tab_name || ')';
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION refresh_last_update() RETURNS TRIGGER
+LANGUAGE plpgsql AS
+$$
+DECLARE
+BEGIN
+    NEW.last_update := timezone('UTC'::text, now());
+    RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION refresh_last_update() IS
+'Refresh the ''last_update'' time stamp whenever a row is updated.';
+
+
+CREATE AGGREGATE array_concat(anyarray)(sfunc=array_cat, stype=anyarray, initcond='{}');
+
+
+----- statistical helpers
+
+CREATE TYPE moment AS (
+  n bigint,
+  sum double precision,
+  sum2 double precision);
+
+CREATE FUNCTION moment_from_array(double precision[])
+RETURNS moment AS $$
+SELECT sum(1), sum(v), sum(v * v) FROM unnest($1) AS v
+$$ LANGUAGE sql;
+
+CREATE OR REPLACE FUNCTION stats_from_moment(moment)
+RETURNS TABLE(n BIGINT, avg DOUBLE PRECISION, std DOUBLE PRECISION) AS $$
+SELECT $1.n, $1.sum / $1.n,
+       sqrt(($1.sum2 - $1.sum ^ 2 / $1.n) / ($1.n - 1))
+$$ LANGUAGE sql;
+
+CREATE OR REPLACE FUNCTION moment_add(moment, moment)
+RETURNS moment AS $$
+SELECT $1.n + $2.n, $1.sum + $2.sum, $1.sum2 + $2.sum2
+$$ LANGUAGE sql;
+
+CREATE AGGREGATE moment_sum(moment)(
+   sfunc=moment_add, stype=moment, initcond='(0,0,0)');
+
+-- typical usage is a SELECT * FROM hzrdr.gmf_stats WHERE output_id=2;
+CREATE VIEW hzrdr.gmf_stats AS
+SELECT output_id, gmf_id, imt, sa_period, sa_damping,
+      (stats).n, (stats).avg, (stats).std FROM (
+  SELECT output_id, b.id as gmf_id, imt, sa_period, sa_damping,
+  stats_from_moment(moment_sum(moment_from_array(gmvs))) AS stats
+  FROM hzrdr.gmf_data as a
+  INNER JOIN hzrdr.gmf AS b
+  ON a.gmf_id=b.id
+  GROUP BY output_id, b.id, imt, sa_period, sa_damping) AS x;
+
+-- how many sources where done with respect to the total for each haz_calc
+CREATE VIEW hzrdr.source_progress AS
+SELECT a.hazard_calculation_id, sources_done, sources_todo FROM
+   (SELECT y.hazard_calculation_id, count(x.id) AS sources_done
+   FROM hzrdr.source_info AS x, hzrdr.lt_source_model AS y, hzrdr.trt_model AS z
+   WHERE x.trt_model_id = z.id AND z.lt_model_id=y.id
+   GROUP BY y.hazard_calculation_id) AS a,
+   (SELECT y.hazard_calculation_id, sum(num_sources) AS sources_todo
+   FROM hzrdr.lt_source_model AS y, hzrdr.trt_model AS z
+   WHERE z.lt_model_id=y.id
+   GROUP by y.hazard_calculation_id) AS b
+WHERE a.hazard_calculation_id=b.hazard_calculation_id;
+
+
+CREATE VIEW riskr.event_loss_view AS
+SELECT b.tag as rupture_tag, c.id AS rupture_id,
+   aggregate_loss, output_id, loss_type FROM
+   riskr.event_loss_data AS a, hzrdr.ses_rupture AS b,
+   hzrdr.probabilistic_rupture AS c, riskr.event_loss as d
+WHERE a.rupture_id=b.id AND b.rupture_id=c.id AND a.event_loss_id=d.id;
+
+/*
+Security
+*/
+
+-- Please note that all OpenQuake database roles are a member of the
+-- 'openquake' database group.
+-- Granting certain privileges to the 'openquake' group hence applies to all
+-- of our database users/roles.
+
+GRANT USAGE ON SCHEMA hzrdi TO GROUP openquake;
+GRANT USAGE ON SCHEMA hzrdr TO GROUP openquake;
+GRANT USAGE ON SCHEMA riski TO GROUP openquake;
+GRANT USAGE ON SCHEMA riskr TO GROUP openquake;
+GRANT USAGE ON SCHEMA uiapi TO GROUP openquake;
+
+GRANT ALL ON ALL SEQUENCES IN SCHEMA hzrdi TO GROUP openquake;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA hzrdr TO GROUP openquake;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA riski TO GROUP openquake;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA riskr TO GROUP openquake;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA uiapi TO GROUP openquake;
+
+-- Users in the `openquake` group have read access to everything
+GRANT SELECT ON ALL TABLES IN SCHEMA hzrdi TO GROUP openquake;
+GRANT SELECT ON ALL TABLES IN SCHEMA hzrdr TO GROUP openquake;
+GRANT SELECT ON ALL TABLES IN SCHEMA riski TO GROUP openquake;
+GRANT SELECT ON ALL TABLES IN SCHEMA riskr TO GROUP openquake;
+GRANT SELECT ON ALL TABLES IN SCHEMA uiapi TO GROUP openquake;
+GRANT SELECT ON geography_columns          TO GROUP openquake;
+GRANT SELECT ON geometry_columns           TO GROUP openquake;
+GRANT SELECT ON spatial_ref_sys            TO GROUP openquake;
+
+-- `oq_admin` has full SELECT/INSERT/UPDATE/DELETE access to all tables.
+-- In fact, `oq_admin` is the only user that can delete records
+-- with the exception the uiapi.performance table.
+GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA hzrdi TO oq_admin;
+GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA hzrdr TO oq_admin;
+GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA riski TO oq_admin;
+GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA riskr TO oq_admin;
+GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA uiapi TO oq_admin;
+
+GRANT ALL ON SCHEMA hzrdi TO oq_admin;
+GRANT ALL ON SCHEMA hzrdr TO oq_admin;
+GRANT ALL ON SCHEMA riski TO oq_admin;
+GRANT ALL ON SCHEMA riskr TO oq_admin;
+GRANT ALL ON SCHEMA uiapi TO oq_admin;
+
+----------------------------------------------
+-- Specific permissions for individual tables:
+----------------------------------------------
+
+-- hzrdi schema
+GRANT SELECT,INSERT ON hzrdi.hazard_site            TO oq_job_init;
+GRANT SELECT,INSERT ON hzrdi.site_model             TO oq_job_init;
+
+-- hzrdr schema
+GRANT SELECT,INSERT        ON hzrdr.hazard_curve      TO oq_job_init;
+GRANT SELECT,INSERT,UPDATE ON hzrdr.hazard_curve_data TO oq_job_init;
+GRANT SELECT,INSERT        ON hzrdr.gmf               TO oq_job_init;
+GRANT SELECT,INSERT        ON hzrdr.gmf_data          TO oq_job_init;
+GRANT SELECT,INSERT        ON hzrdr.disagg_result     TO oq_job_init;
+GRANT SELECT,INSERT,UPDATE ON hzrdr.hazard_map        TO oq_job_init;
+GRANT SELECT,INSERT        ON hzrdr.uhs               TO oq_job_init;
+GRANT SELECT,INSERT        ON hzrdr.uhs_data          TO oq_job_init;
+GRANT SELECT,INSERT,UPDATE ON hzrdr.lt_realization    TO oq_job_init;
+GRANT SELECT,INSERT        ON hzrdr.lt_source_model   TO oq_job_init;
+GRANT SELECT,INSERT,UPDATE ON hzrdr.trt_model         TO oq_job_init;
+GRANT SELECT,INSERT        ON hzrdr.source_info       TO oq_job_init;
+GRANT SELECT,INSERT        ON hzrdr.assoc_lt_rlz_trt_model TO oq_job_init;
+GRANT SELECT,INSERT        ON hzrdr.ses_collection    TO oq_job_init;
+GRANT SELECT,INSERT        ON hzrdr.ses_rupture       TO oq_job_init;
+GRANT SELECT,INSERT        ON hzrdr.probabilistic_rupture TO oq_job_init;
+
+-- riski schema
+GRANT SELECT,INSERT ON ALL TABLES IN SCHEMA riski   TO oq_job_init;
+GRANT UPDATE        ON riski.occupancy              TO oq_job_init;
+
+-- riskr schema
+GRANT SELECT,INSERT,UPDATE ON riskr.loss_curve                TO oq_job_init;
+GRANT SELECT,INSERT,UPDATE ON riskr.loss_curve_data           TO oq_job_init;
+GRANT SELECT,INSERT,UPDATE ON riskr.aggregate_loss_curve_data TO oq_job_init;
+GRANT SELECT,INSERT,UPDATE ON riskr.loss_map                  TO oq_job_init;
+GRANT SELECT,INSERT,UPDATE ON riskr.loss_map_data             TO oq_job_init;
+GRANT SELECT,INSERT,UPDATE ON riskr.loss_fraction             TO oq_job_init;
+GRANT SELECT,INSERT,UPDATE ON riskr.loss_fraction_data        TO oq_job_init;
+GRANT SELECT,INSERT,UPDATE ON riskr.aggregate_loss            TO oq_job_init;
+GRANT SELECT,INSERT,UPDATE ON riskr.bcr_distribution          TO oq_job_init;
+GRANT SELECT,INSERT,UPDATE ON riskr.bcr_distribution_data     TO oq_job_init;
+GRANT SELECT,INSERT,UPDATE ON riskr.dmg_state                 TO oq_job_init;
+GRANT SELECT,INSERT,UPDATE ON riskr.dmg_dist_per_asset        TO oq_job_init;
+GRANT SELECT,INSERT,UPDATE ON riskr.dmg_dist_per_taxonomy     TO oq_job_init;
+GRANT SELECT,INSERT,UPDATE ON riskr.dmg_dist_total            TO oq_job_init;
+GRANT SELECT,INSERT,UPDATE ON riskr.event_loss                TO oq_job_init;
+GRANT SELECT,INSERT,UPDATE ON riskr.event_loss_data           TO oq_job_init;
+
+-- uiapi schema
+GRANT SELECT,INSERT,UPDATE ON uiapi.oq_job             TO oq_job_init;
+-- oq_job_init is granted write access to record job start time and other job stats at job init time
+GRANT SELECT,INSERT,UPDATE ON uiapi.job_stats          TO oq_job_init;
+GRANT SELECT,INSERT,UPDATE ON uiapi.job_stats          TO oq_job_init;
+GRANT SELECT,INSERT,UPDATE ON uiapi.hazard_calculation TO oq_job_init;
+GRANT SELECT,INSERT,UPDATE ON uiapi.risk_calculation   TO oq_job_init;
+
+GRANT SELECT,INSERT,UPDATE ON uiapi.output             TO oq_job_init;
+GRANT SELECT,INSERT,DELETE ON uiapi.performance        TO oq_job_init;
+
+/*
+Comments
+*/
+
+
+-- schemas ------------------------------------------------------
+COMMENT ON SCHEMA hzrdi IS 'Hazard input model';
+COMMENT ON SCHEMA hzrdr IS 'Hazard result data';
+COMMENT ON SCHEMA riski IS 'Risk input model';
+COMMENT ON SCHEMA riskr IS 'Risk result data';
+COMMENT ON SCHEMA uiapi IS 'Data required by the API presented to the various OpenQuake UIs';
+
+
+-- hzrdr schema tables ------------------------------------------
+COMMENT ON TABLE hzrdr.hazard_curve IS 'A collection of hazard curves. This table defines common attributes for the collection.';
+COMMENT ON COLUMN hzrdr.hazard_curve.output_id IS 'The foreign key to the output record that represents the corresponding hazard curve.';
+COMMENT ON COLUMN hzrdr.hazard_curve.lt_realization_id IS 'Only required for non-statistical curves';
+COMMENT ON COLUMN hzrdr.hazard_curve.imt IS 'Intensity Measure Type: PGA, PGV, PGD, SA, IA, RSD, or MMI';
+COMMENT ON COLUMN hzrdr.hazard_curve.imls IS 'Intensity Measure Levels common to this set of hazard curves';
+COMMENT ON COLUMN hzrdr.hazard_curve.statistics IS 'Statistic type, one of:
+    - Mean     (mean)
+    - Quantile (quantile)';
+COMMENT ON COLUMN hzrdr.hazard_curve.quantile IS 'The quantile for quantile statistical data.';
+COMMENT ON COLUMN hzrdr.hazard_curve.sa_period IS 'Spectral Acceleration period; only relevent when imt = SA';
+COMMENT ON COLUMN hzrdr.hazard_curve.sa_damping IS 'Spectral Acceleration damping; only relevent when imt = SA';
+
+
+COMMENT ON TABLE hzrdr.hazard_curve_data IS 'Holds location/POE data for hazard curves';
+COMMENT ON COLUMN hzrdr.hazard_curve_data.hazard_curve_id IS 'The foreign key to the hazard curve record for this node.';
+COMMENT ON COLUMN hzrdr.hazard_curve_data.poes IS 'Probabilities of exceedence.';
+
+COMMENT ON TABLE hzrdr.hazard_map IS 'A complete hazard map, for a given IMT and PoE';
+COMMENT ON COLUMN hzrdr.hazard_map.poe IS 'Probability of exceedence';
+COMMENT ON COLUMN hzrdr.hazard_map.statistics IS 'Statistic type, one of:
+    - Median   (median)
+    - Quantile (quantile)';
+COMMENT ON COLUMN hzrdr.hazard_map.quantile IS 'The quantile level for quantile statistical data.';
+
+
+-- riski schema tables ------------------------------------------
+COMMENT ON TABLE riski.exposure_data IS 'Per-asset risk exposure data';
+COMMENT ON COLUMN riski.exposure_data.area IS 'asset area';
+COMMENT ON COLUMN riski.exposure_data.asset_ref IS 'A unique identifier (within the exposure model) for the asset at hand';
+COMMENT ON COLUMN riski.exposure_data.exposure_model_id IS 'Foreign key to the exposure model';
+COMMENT ON COLUMN riski.exposure_data.number_of_units IS 'number of assets, people etc.';
+COMMENT ON COLUMN riski.exposure_data.taxonomy IS 'A reference to the taxonomy that should be used for the asset at hand';
+
+
+COMMENT ON TABLE riski.exposure_model IS 'A risk exposure model';
+COMMENT ON COLUMN riski.exposure_model.area_type IS 'area type. one of: aggregated or per_asset';
+COMMENT ON COLUMN riski.exposure_model.area_unit IS 'area unit of measure e.g. sqm';
+COMMENT ON COLUMN riski.exposure_model.category IS 'The risk category modelled';
+COMMENT ON COLUMN riski.exposure_model.description IS 'An optional description of the risk exposure model at hand';
+
+COMMENT ON COLUMN riski.exposure_model.name IS 'The exposure model name';
+
+COMMENT ON COLUMN riski.exposure_model.taxonomy_source IS 'the taxonomy system used to classify the assets';
+
+
+COMMENT ON TABLE riski.occupancy IS 'Occupancy for a given exposure data set';
+COMMENT ON COLUMN riski.occupancy.exposure_data_id IS 'Foreign key to the exposure data set to which the occupancy data applies.';
+COMMENT ON COLUMN riski.occupancy.period IS 'describes the occupancy data e.g. day, night etc.';
+COMMENT ON COLUMN riski.occupancy.occupants IS 'number of occupants';
+
+-- riskr schema tables ------------------------------------------
+COMMENT ON TABLE riskr.loss_map IS 'Holds metadata for loss maps.';
+COMMENT ON COLUMN riskr.loss_map.output_id IS 'The foreign key to the output record that represents the corresponding loss map.';
+COMMENT ON COLUMN riskr.loss_map.poe IS 'Probability of exceedance (for probabilistic loss maps)';
+
+
+COMMENT ON TABLE riskr.loss_map_data IS 'Holds an asset, its position and a value plus (for non-scenario maps) the standard deviation for its loss.';
+COMMENT ON COLUMN riskr.loss_map_data.loss_map_id IS 'The foreign key to the loss map';
+COMMENT ON COLUMN riskr.loss_map_data.asset_ref IS 'The asset reference';
+COMMENT ON COLUMN riskr.loss_map_data.location IS 'The position of the asset';
+COMMENT ON COLUMN riskr.loss_map_data.value IS 'The value of the loss';
+COMMENT ON COLUMN riskr.loss_map_data.std_dev IS 'The standard deviation of the loss (for scenario maps, for non-scenario maps the standard deviation is NULL)';
+
+
+COMMENT ON TABLE riskr.loss_curve IS 'Holds the parameters common to a set of loss curves.';
+COMMENT ON COLUMN riskr.loss_curve.output_id IS 'The foreign key to the output record that represents the corresponding loss curve.';
+COMMENT ON COLUMN riskr.loss_curve.aggregate IS 'Is the curve an aggregate curve?';
+
+
+COMMENT ON TABLE riskr.loss_curve_data IS 'Holds the probabilities of exceedance for a given loss curve.';
+COMMENT ON COLUMN riskr.loss_curve_data.loss_curve_id IS 'The foreign key to the curve record to which the loss curve data belongs';
+COMMENT ON COLUMN riskr.loss_curve_data.asset_ref IS 'The asset id';
+COMMENT ON COLUMN riskr.loss_curve_data.location IS 'The position of the asset';
+COMMENT ON COLUMN riskr.loss_curve_data.asset_value IS 'The value of the asset';
+COMMENT ON COLUMN riskr.loss_curve_data.loss_ratios IS 'Loss ratios';
+COMMENT ON COLUMN riskr.loss_curve_data.poes IS 'Probabilities of exceedence';
+
+
+COMMENT ON TABLE riskr.aggregate_loss_curve_data IS 'Holds the probabilities of exceedance for the whole exposure model.';
+COMMENT ON COLUMN riskr.aggregate_loss_curve_data.loss_curve_id IS 'The foreign key to the loss curve record to which the aggregate loss curve data belongs';
+COMMENT ON COLUMN riskr.aggregate_loss_curve_data.losses IS 'Losses';
+COMMENT ON COLUMN riskr.aggregate_loss_curve_data.poes IS 'Probabilities of exceedence';
+
+COMMENT ON TABLE riskr.bcr_distribution IS 'Holds metadata for the benefit-cost ratio distribution';
+COMMENT ON COLUMN riskr.bcr_distribution.output_id IS 'The foreign key to the output record that represents the corresponding BCR distribution.';
+
+COMMENT ON TABLE riskr.bcr_distribution_data IS 'Holds the actual data for the BCR distribution';
+COMMENT ON COLUMN riskr.bcr_distribution_data.bcr_distribution_id IS 'The foreign key to the record to which the BCR distribution data belongs';
+COMMENT ON COLUMN riskr.bcr_distribution_data.asset_ref IS 'The asset id';
+COMMENT ON COLUMN riskr.bcr_distribution_data.average_annual_loss_original IS 'The Expected annual loss computed by using the original model';
+COMMENT ON COLUMN riskr.bcr_distribution_data.average_annual_loss_retrofitted IS 'The Expected annual loss computed by using the retrofitted model';
+COMMENT ON COLUMN riskr.bcr_distribution_data.bcr IS 'The actual benefit-cost ratio';
+
+COMMENT ON TABLE riskr.dmg_state IS 'Holds the damage_states associated to a given output';
+
+-- uiapi schema tables ------------------------------------------
+
+COMMENT ON TABLE uiapi.oq_job IS 'Date related to an OpenQuake job that was created in the UI.';
+COMMENT ON COLUMN uiapi.oq_job.job_pid IS 'The process id (PID) of the OpenQuake engine runner process';
+COMMENT ON COLUMN uiapi.oq_job.supervisor_pid IS 'The process id (PID) of the supervisor for this OpenQuake job';
+COMMENT ON COLUMN uiapi.oq_job.status IS 'One of: pending, running, failed or succeeded.';
+COMMENT ON COLUMN uiapi.oq_job.duration IS 'The job''s duration in seconds (only available once the jobs terminates).';
+
+COMMENT ON TABLE uiapi.performance IS 'Tracks task performance';
+COMMENT ON COLUMN uiapi.performance.duration IS 'Duration of the operation in seconds';
+COMMENT ON COLUMN uiapi.performance.pymemory IS 'Memory occupation in Python (Mbytes)';
+COMMENT ON COLUMN uiapi.performance.pgmemory IS 'Memory occupation in Postgres (Mbytes)';
+
+
+COMMENT ON TABLE uiapi.job_stats IS 'Tracks various job statistics';
+COMMENT ON COLUMN uiapi.job_stats.disk_space IS 'How much the disk space occupation increased during the computation (in bytes)';
+
+
+COMMENT ON TABLE uiapi.output IS 'A single OpenQuake calculation engine output. The data may reside in a file or in the database.';
+COMMENT ON COLUMN uiapi.output.display_name IS 'The GUI display name to be used for this output.';
+COMMENT ON COLUMN uiapi.output.output_type IS 'Output type, one of:
+    - unknown
+    - hazard_curve
+    - hazard_map
+    - gmf
+    - loss_curve
+    - loss_map
+    - dmg_dist_per_asset
+    - dmg_dist_per_taxonomy
+    - dmg_dist_total
+    - bcr_distribution';
+COMMENT ON COLUMN uiapi.output.oq_job_id IS 'The job that produced this output;
+NULL if the output was imported from an external source';

@@ -220,20 +220,20 @@ for role in $db_roles; do
     fi
 done
 
-uri="psycopg2://$db_admin_user:@localhost:$db_port/$db_name"
+uri="$db_admin_user:@localhost:$db_port/$db_name"
 
 # Create schemas and apply all migrations
 echo ".. Creating schemas .."
-PYTHONPATH=$HOME/md/scripts:. python $HOME/md/scripts/sqlplain/bin/sqlplain_upgrade $uri openquake.engine.db.schema.upgrades init_db
+PYTHONPATH=.:../oq-commonlib bin/oq_upgrade $uri openquake.engine.db.schema.upgrades init_db
 echo ".. Running migration scripts .."
-PYTHONPATH=$HOME/md/scripts:. python $HOME/md/scripts/sqlplain/bin/sqlplain_upgrade $uri openquake.engine.db.schema.upgrades upgrade
+PYTHONPATH=.:../oq-commonlib bin/oq_upgrade $uri openquake.engine.db.schema.upgrades upgrade
 
-echo ".. Setting table ownership"
+echo ".. Setting table ownership .."
 psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "ALTER DATABASE $db_name OWNER TO oq_admin"
 for schema in $tspace_list; do
     for tbl in `psql -qAt -c "select tablename from pg_tables where schemaname = '$schema';" $db_name`; do
         psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "alter table $schema.$tbl owner to oq_admin"
     done
 done
-
+psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "alter table revision_info owner to oq_admin"
 echo ".. Done .."
