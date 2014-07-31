@@ -16,6 +16,26 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+Here is a minimal example of usage:
+
+.. code-block:: python
+
+    from openquake.commonlib import sap
+    def fun(input, inplace, output=None, x='X', out='/tmp'):
+        'Example'
+        print locals()
+
+    p = sap.Parser(fun)
+    p.arg('input', 'input file or archive')
+    p.arg('output', 'output archive')
+    p.opt('out', 'optional output file')
+    p.flg('inplace', 'convert inplace')
+    p.callfunc()
+
+Parsers can be composed too.
+"""
+
 import sys
 import inspect
 import argparse
@@ -119,29 +139,3 @@ def compose(parsers, name='main', parentparser=None):
         return func(**kw)
     main.__name__ = name
     return Parser(main, name, parentparser)
-
-
-def fun1(input, inplace, output=None, x='X', out='/tmp'):
-    'Example 1'
-    print locals()
-
-
-def fun2(input, inplace, output=None, x='X', out='/tmp'):
-    'Example 2'
-    print locals()
-
-if __name__ == '__main__':
-    sap1 = Parser(fun1)
-    sap1.arg('input', 'input file or archive')
-    sap1.arg('output', 'output archive')
-    sap1.opt('out', 'optional output file')
-    sap1.flg('inplace', 'convert inplace')
-
-    sap2 = Parser(fun2)
-    sap2.arg('input', 'input file or archive')
-    sap2.arg('output', 'output archive')
-    sap2.opt('out', 'optional output file')
-    sap2.flg('inplace', 'convert inplace')
-
-    sap = compose([sap1, sap2])
-    sap.callfunc()
