@@ -44,6 +44,7 @@ verbose="off"
 fixtures=""
 
 db_admin_user="postgres"
+oq_admin_user="oq_admin"
 
 # What is the name of the db group that all OpenQuake db users belong to?
 db_group_name="openquake"
@@ -72,7 +73,7 @@ do
         db_port=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
         ;;
     --db-user=*)
-        db_admin_user=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+        oq_admin_user=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
         ;;
     --no-tab-spaces)
         check_table_spaces="off"
@@ -203,7 +204,7 @@ psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "ALTER TAB
 psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "ALTER TABLE geometry_columns OWNER TO oq_admin"
 psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "ALTER TABLE geography_columns OWNER TO oq_admin"
 
-uri="oq_admin:openquake@localhost:$db_port/$db_name"
+uri="$oq_admin_user:openquake@localhost:$db_port/$db_name"
 
 # Create schemas and apply all migrations
 echo ".. Creating schemas .."
