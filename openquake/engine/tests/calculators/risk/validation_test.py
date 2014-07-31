@@ -174,24 +174,27 @@ class RequireEventBasedHazardTestCase(unittest.TestCase):
         val = validation.RequireEventBasedHazard(calc)
 
         calc.rc.hazard_calculation.calculation_mode = 'event_based'
+        # here calc.rc.inputs is a Mock object and therefore
+        # hc.gsim_logic_tree_file is a not None Mock object;
+        # no validation error should be raised
         self.assertIsNone(val.get_error())
 
         output.output_type = "ses"
-        calc.rc.inputs = {}
-        self.assertIsNotNone(val.get_error())
-
-        calc.rc.inputs = {'source_model_logic_tree': None}
-        self.assertIsNone(val.get_error())
+        calc.rc.inputs = {}  # hence no gsim_logic_tree_file
+        self.assertEqual(
+            val.get_error(), 'gsim_logic_tree_file is mandatory when the '
+            'hazard output is a ses collection')
 
         calc.rc.hazard_calculation.calculation_mode = 'classical'
         self.assertEqual(("The provided hazard calculation ID "
                           "is not a event based calculation"), val.get_error())
 
         calc.rc.hazard_calculation = None
-        calc.rc.hazard_output.output_type = "gmf"
-        self.assertIsNone(val.get_error())
         calc.rc.hazard_output.output_type = "ses"
-        self.assertIsNone(val.get_error())
+        # we must get an error because there is no gsim_logic_tree_file
+        self.assertEqual(
+            val.get_error(), 'gsim_logic_tree_file is mandatory when the '
+            'hazard output is a ses collection')
 
         calc.rc.hazard_output.output_type = "gmf_scenario"
         self.assertEqual(("The provided hazard is not a "
