@@ -181,7 +181,7 @@ def save_disagg_result(job_id, site_id, bin_edges, trt_names, matrix,
 
 
 @tasks.oqtask
-def compute_disagg(job_id, sitecol, sources, trt_model_id, gsims,
+def compute_disagg(job_id, sitecol, sources, trt_model_id,
                    trt_num, curves_dict, bin_edges):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
@@ -194,8 +194,6 @@ def compute_disagg(job_id, sitecol, sources, trt_model_id, gsims,
         list of hazardlib source objects
     :param lt_model:
         an instance of :class:`openquake.engine.db.models.LtSourceModel`
-    :param dict gsims:
-        a list of distinct GSIM instances
     :param dict trt_num:
         a dictionary Tectonic Region Type -> incremental number
     :param curves_dict:
@@ -209,6 +207,7 @@ def compute_disagg(job_id, sitecol, sources, trt_model_id, gsims,
     mon = LightMonitor('disagg', job_id, compute_disagg)
     hc = models.OqJob.objects.get(id=job_id).hazard_calculation
     trt_model = models.TrtModel.objects.get(pk=trt_model_id)
+    gsims = trt_model.get_gsim_instances()
     lt_model_id = trt_model.lt_model.id
     rlzs = trt_model.get_rlzs_by_gsim()
     trt_names = tuple(trt_model.lt_model.get_tectonic_region_types())
@@ -319,7 +318,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                            for site in self.hc.site_collection)
 
         oqm = tasks.OqTaskManager(compute_disagg, logs.LOG.progress)
-        for job_id, sitecol, srcs, trt_model_id, gsims, task_no in \
+        for job_id, sitecol, srcs, trt_model_id, task_no in \
                 self.task_arg_gen():
 
             lt_model = models.TrtModel.objects.get(pk=trt_model_id).lt_model
@@ -361,7 +360,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                     mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
 
             oqm.submit(self.job.id, sitecol, srcs, trt_model_id,
-                       gsims, trt_num, curves_dict, self.bin_edges)
+                       trt_num, curves_dict, self.bin_edges)
 
         res = oqm.aggregate_results(self.agg_result, {})
         self.save_disagg_results(res)  # dictionary key -> probability array
