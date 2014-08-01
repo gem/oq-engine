@@ -36,6 +36,7 @@ tspace_list="hzrdi hzrdr riski riskr uiapi"
 
 db_port=5432
 schema_path=`dirname $0`/../openquake/engine/db/schema
+bin_path=`dirname $0`/../openquake/engine/bin
 db_name=`python -c "from openquake.engine.settings import DATABASES; print DATABASES['default']['NAME']"`
 user_interaction="on"
 check_table_spaces="on"
@@ -205,7 +206,7 @@ uri="oq_admin:openquake@localhost:$db_port/$db_name"
 
 # Create schemas and apply all migrations
 echo ".. Creating schemas .."
-PYTHONPATH=.:../oq-commonlib oq_upgrade init_db $uri
+PYTHONPATH=.:../oq-commonlib $bin_path/oq_upgrade init_db $uri
 echo ".. Running migration scripts .."
-PYTHONPATH=.:../oq-commonlib oq_upgrade upgrade $uri
+PYTHONPATH=.:../oq-commonlib $bin_path/oq_upgrade upgrade $uri
 echo ".. Done .."
