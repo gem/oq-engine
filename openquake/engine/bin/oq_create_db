@@ -64,7 +64,7 @@ do
             echo "!! Schema path $schema_path does not exist or is not readable."
             exit 1
         fi
-        bin_path=../../bin
+        bin_path=$schema_path/../../bin
         ;;
     --db-name=*)
         db_name=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
