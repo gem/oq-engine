@@ -64,7 +64,6 @@ do
             echo "!! Schema path $schema_path does not exist or is not readable."
             exit 1
         fi
-        bin_path=$schema_path/../../bin
         ;;
     --db-name=*)
         db_name=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
@@ -205,6 +204,7 @@ psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "ALTER TAB
 uri="oq_admin:openquake@localhost:$db_port/$db_name"
 
 # Create schemas and apply all migrations
+bin_path=$schema_path/../../bin
 echo ".. Creating schemas .."
 PYTHONPATH=.:../oq-commonlib $bin_path/oq_upgrade init_db $uri
 echo ".. Running migration scripts .."
