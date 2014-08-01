@@ -36,7 +36,6 @@ tspace_list="hzrdi hzrdr riski riskr uiapi"
 
 db_port=5432
 schema_path=`dirname $0`/../openquake/engine/db/schema
-bin_path=`dirname $0`/../openquake/engine/bin
 db_name=`python -c "from openquake.engine.settings import DATABASES; print DATABASES['default']['NAME']"`
 user_interaction="on"
 check_table_spaces="on"
@@ -65,6 +64,7 @@ do
             echo "!! Schema path $schema_path does not exist or is not readable."
             exit 1
         fi
+        bin_path=`dirname $0`/../openquake/engine/bin
         ;;
     --db-name=*)
         db_name=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
