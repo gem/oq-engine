@@ -2,6 +2,7 @@
 
 help() {
 cat <<HSD
+This script must be run as postgres user.
 `basename $0` initialises the given database with the OpenQuake schema.
 Also, table space paths are created as needed (unless this is turned off
 by the user).
@@ -12,7 +13,6 @@ The command line arguments are as follows:
 
     --db-name=name         The name of the database to set up.
     --db-port=port         The postgresql server port (default: 5432)
-    --db-user=user         Run all commands as this database user [postgres].
     --no-tab-spaces        Don't check/create table spaces and their paths
     --schema-path=path     Absolute path to directory with the schema files.
     --tab-spaces-only      Check/create table spaces and their paths and exit
@@ -44,7 +44,6 @@ verbose="off"
 fixtures=""
 
 db_admin_user="postgres"
-oq_admin_user="oq_admin"
 
 # What is the name of the db group that all OpenQuake db users belong to?
 db_group_name="openquake"
@@ -71,9 +70,6 @@ do
         ;;
     --db-port=*)
         db_port=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
-        ;;
-    --db-user=*)
-        oq_admin_user=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
         ;;
     --no-tab-spaces)
         check_table_spaces="off"
@@ -205,7 +201,7 @@ psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "ALTER TAB
 psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "ALTER TABLE geometry_columns OWNER TO oq_admin"
 psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "ALTER TABLE geography_columns OWNER TO oq_admin"
 
-uri="$oq_admin_user:openquake@localhost:$db_port/$db_name"
+uri="oq_admin:openquake@localhost:$db_port/$db_name"
 
 # Create schemas and apply all migrations
 echo ".. Creating schemas .."
