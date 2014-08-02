@@ -204,8 +204,9 @@ psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "ALTER TAB
 uri="oq_admin:openquake@localhost:$db_port/$db_name"
 
 # Create schemas and apply all migrations
+bin_path=$schema_path/../../bin
 echo ".. Creating schemas .."
-PYTHONPATH=.:../oq-commonlib openquake/engine/bin/oq_upgrade init $uri
+PYTHONPATH=.:../oq-commonlib $bin_path/oq_upgrade init $uri
 echo ".. Running migration scripts .."
-PYTHONPATH=.:../oq-commonlib openquake/engine/bin/oq_upgrade upgrade $uri
+PYTHONPATH=.:../oq-commonlib $bin_path/oq_upgrade upgrade $uri
 echo ".. Done .."
