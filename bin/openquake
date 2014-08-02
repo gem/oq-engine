@@ -5,7 +5,7 @@
 """
 OpenQuake: software for seismic hazard and risk assessment
 """
-
+import importlib
 import argparse
 import getpass
 import os
@@ -42,6 +42,7 @@ except ImportError:
     pass
 
 from openquake.commonlib import source
+from openquake.engine.db import util
 import openquake.engine
 
 from openquake.engine import __version__
@@ -98,6 +99,11 @@ def set_up_arg_parser():
         '--config-file',
         help='Custom openquake.cfg file, to override default configurations',
         metavar='CONFIG_FILE'
+    )
+    general_grp.add_argument(
+        '--db',
+        help='Upgrade the openquake database',
+        choices=['init', 'upgrade']
     )
 
     hazard_grp = parser.add_argument_group('Hazard')
@@ -433,8 +439,25 @@ def main():
     if args.no_distribute:
         os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'
 
+    if args.db:
+        uri = 'oq_admin:openquake@localhost/openquake'
+        upgrades = 'openquake.engine.db.schema.upgrades'
+        conn = util.Connection(uri).open()
+        try:
+            # upgrader is an UpgradeManager instance defined in the __init__.py
+            upgrader = importlib.import_module(upgrades).upgrader
+        except ImportError:
+            sys.exit('Could not import %s (not in the PYTHONPATH?)' % upgrades)
+        if not upgrader.read_scripts():
+            sys.exit('The upgrade_dir does not contain scripts matching '
+                     'the pattern %s' % upgrader.pattern)
+        with conn.begin():
+            return getattr(upgrader, args.db)(conn)
+        sys.exit(0)
+        
     if args.list_inputs:
         list_inputs(args.list_inputs)
+
     # hazard
     elif args.list_hazard_calculations:
         list_calculations(models.HazardCalculation.objects)
