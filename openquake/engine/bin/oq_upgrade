@@ -26,7 +26,7 @@ def main(command='upgrade', uri='oq_admin:openquake@localhost/openquake',
 if __name__ == '__main__':
     p = sap.Parser(main)
     p.arg('command', 'command to perform', choices=[
-            'init_db', 'install_versioning', 'upgrade'])
+            'init', 'install_versioning', 'upgrade'])
     p.arg('uri', 'database URI (driver://usr:pwd@host/db)')
     p.arg('upgrades', 'package where the upgrades scripts are stored')
     p.callfunc()

@@ -50,13 +50,30 @@ class UpgradeManager(object):
         conn.execute(CREATE_VERSIONING % self.version_table)
         self._insert_script(self.read_scripts()[0], conn)
 
-    def init_db(self, conn):
+    def init(self, conn):
         """
         Create the version table and run the base script on an empty database.
         """
         base = self.read_scripts()[0]['fname']
         util.create_from_filename(os.path.join(self.upgrade_dir, base))(conn)
         self.install_versioning(conn)
+
+    def upgrade(self, conn):
+        '''
+        Upgrade the database from the current version to the maximum
+        version in the upgrade scripts.
+        '''
+        db_versions = self.get_db_versions(conn)
+        self.starting_version = sorted(db_versions)[-1]  # the highest version
+        self.ending_version = self.get_max_version()
+        if self.starting_version == self.ending_version:
+            print 'The database is updated at version %s. Nothing to do.' % (
+                self.starting_version)
+            return
+        print 'The database is at version %s. Upgrading to version %s.' % (
+            self.starting_version, self.ending_version)
+        self._from_to_version(conn, self.starting_version, self.ending_version,
+                              db_versions=db_versions)
 
     def _from_to_version(self, conn, from_version, to_version, db_versions):
         scripts = self.read_scripts(from_version, to_version, db_versions)
@@ -95,8 +112,8 @@ class UpgradeManager(object):
         if scripts:
             raise SystemExit(
                 'Your database is not updated. You can update it by running '
-                'bin/oq_upgrade which will process the following new versions:'
-                ': %s' % [s['version'] for s in scripts])
+                'openquake --db upgrade which will process the '
+                'following new versions: %s' % [s['version'] for s in scripts])
 
     def get_db_versions(self, conn):
         """
@@ -122,23 +139,6 @@ class UpgradeManager(object):
             if match:
                 version = match['version']
         return version
-
-    def upgrade(self, conn):
-        '''
-        Upgrade the database from the current version to the maximum
-        version in the upgrade scripts.
-        '''
-        db_versions = self.get_db_versions(conn)
-        self.starting_version = sorted(db_versions)[-1]  # the highest version
-        self.ending_version = self.get_max_version()
-        if self.starting_version == self.ending_version:
-            print 'The database is updated at version %s. Nothing to do.' % (
-                self.starting_version)
-            return
-        print 'The database is at version %s. Upgrading to version %s.' % (
-            self.starting_version, self.ending_version)
-        self._from_to_version(conn, self.starting_version, self.ending_version,
-                              db_versions=db_versions)
 
     def parse_script_name(self, fname):
         '''
