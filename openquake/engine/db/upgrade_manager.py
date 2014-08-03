@@ -112,7 +112,7 @@ class UpgradeManager(object):
         if scripts:
             raise SystemExit(
                 'Your database is not updated. You can update it by running '
-                'openquake --db upgrade which will process the '
+                'openquake --upgrade-db which will process the '
                 'following new versions: %s' % [s['version'] for s in scripts])
 
     def get_db_versions(self, conn):
