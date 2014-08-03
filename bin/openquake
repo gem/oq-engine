@@ -101,9 +101,8 @@ def set_up_arg_parser():
         metavar='CONFIG_FILE'
     )
     general_grp.add_argument(
-        '--db',
+        '--upgrade-db', action='store_true',
         help='Upgrade the openquake database',
-        choices=['init', 'upgrade']
     )
 
     hazard_grp = parser.add_argument_group('Hazard')
@@ -439,7 +438,7 @@ def main():
     if args.no_distribute:
         os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'
 
-    if args.db:
+    if args.upgrade_db:
         uri = 'oq_admin:openquake@localhost/openquake'
         upgrades = 'openquake.engine.db.schema.upgrades'
         conn = util.Connection(uri).open()
@@ -451,8 +450,11 @@ def main():
         if not upgrader.read_scripts():
             sys.exit('The upgrade_dir does not contain scripts matching '
                      'the pattern %s' % upgrader.pattern)
+        if not conn.all("select tablename from pg_tables "
+                        "where tablename='revision_info'"):
+            upgrader.install_versioning(conn)
         with conn.begin():
-            return getattr(upgrader, args.db)(conn)
+            return upgrader.upgrade(conn)
         sys.exit(0)
         
     if args.list_inputs:

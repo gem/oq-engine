@@ -272,13 +272,14 @@ _devtest_innervm_run () {
     ssh $lxc_ip "echo \"local   all             \$USER          trust\" | sudo tee -a /etc/postgresql/9.1/main/pg_hba.conf"
     ssh $lxc_ip "set -e
         for dbu in oq_job_init oq_admin; do
-            sudo sed -i \"1ilocal   openquake   \$dbu                   md5\" /etc/postgresql/9.1/main/pg_hba.conf
+            sudo sed -i \"1ilocal   openquake   \$dbu                   trust\" /etc/postgresql/9.1/main/pg_hba.conf
         done"
 
     ssh $lxc_ip "sudo sed -i 's/#standard_conforming_strings = on/standard_conforming_strings = off/g' /etc/postgresql/9.1/main/postgresql.conf"
 
     ssh $lxc_ip "sudo service postgresql restart"
     ssh $lxc_ip "set -e ; sudo su postgres -c \"cd oq-engine ; openquake/engine/bin/oq_create_db --yes --db-name=openquake --schema-path=openquake/engine/db/schema\""
+    ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-commonlib\" ; cd oq-engine ; bin/openquake --upgrade--db"
 
     # run celeryd daemon
     ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-commonlib\" ; cd oq-engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
@@ -426,8 +427,8 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "sudo sed -i 's/#standard_conforming_strings = on/standard_conforming_strings = off/g' /etc/postgresql/9.1/main/postgresql.conf"
 
     ssh $lxc_ip "sudo service postgresql restart"
-    # ssh $lxc_ip "sudo -u postgres createuser -d -e -i -l -s -w \$USER"
     ssh $lxc_ip "set -e ; sudo -u postgres oq_create_db --yes --db-name=openquake --no-tab-spaces --schema-path=/usr/share/pyshared/openquake/engine/db/schema"
+    ssh $lxc_ip "set e; openquake --ugrade-db"
 
     # run celeryd daemon
     ssh $lxc_ip "cd /usr/openquake/engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
