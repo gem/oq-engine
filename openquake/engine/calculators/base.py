@@ -39,9 +39,7 @@ class Calculator(object):
         self.job = job
         self.num_tasks = None
         self._task_args = []
-        # two crucial parameters from openquake.cfg
-        self.source_max_weight = int(
-            config.get('hazard', 'source_max_weight'))
+        # a crucial parameter from openquake.cfg
         self.concurrent_tasks = int(
             config.get('hazard', 'concurrent_tasks'))
 

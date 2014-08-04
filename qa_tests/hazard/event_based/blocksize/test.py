@@ -14,11 +14,11 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
 This is a regression test with the goal of avoiding the reintroduction
-of a dependence from the configuration parameter `source_max_weight`.
+of a dependence from the configuration parameter `concurrent_tasks`.
 We use a source model with 398 sources and a single SES.
 Due to the distance filtering only 7 sources are relevant, but some
 of them are area sources generating a lot of point sources.
-We test the independence from the parameter `source_max_weight`
+We test the independence from the parameter `concurrent_tasks`
 """
 
 import os
@@ -34,33 +34,29 @@ class EventBasedHazardTestCase(qa_utils.BaseQATestCase):
     # then you will see in /tmp a few files which you can diff
     # to see the problem
     expected_tags = [
-        'smlt=00|ses=0001|src=1-389|rup=002-01',
-        'smlt=00|ses=0001|src=2-126|rup=001-01',
-        'smlt=00|ses=0001|src=2-315|rup=002-01',
-        'smlt=00|ses=0001|src=2-52|rup=002-01',
-        'smlt=00|ses=0001|src=3-255|rup=002-01'
+        'smlt=00|ses=0001|src=1-296|rup=002-01',
+        'smlt=00|ses=0001|src=2-231|rup=002-01',
+        'smlt=00|ses=0001|src=2-40|rup=001-01',
+        'smlt=00|ses=0001|src=24-72|rup=002-01',
     ]
     expected_gmfs = '''\
 GMFsPerSES(investigation_time=5.000000, stochastic_event_set_id=1,
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=1-389|rup=002-01
-<X=131.00000, Y= 40.00000, GMV=0.0019092>
-<X=131.00000, Y= 40.10000, GMV=0.0017119>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=2-126|rup=001-01
-<X=131.00000, Y= 40.00000, GMV=0.0001250>
-<X=131.00000, Y= 40.10000, GMV=0.0001781>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=2-315|rup=002-01
-<X=131.00000, Y= 40.00000, GMV=0.0015655>
-<X=131.00000, Y= 40.10000, GMV=0.0016485>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=2-52|rup=002-01
-<X=131.00000, Y= 40.00000, GMV=0.0002431>
-<X=131.00000, Y= 40.10000, GMV=0.0001554>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=3-255|rup=002-01
-<X=131.00000, Y= 40.00000, GMV=0.0002826>
-<X=131.00000, Y= 40.10000, GMV=0.0004627>))'''
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=1-296|rup=002-01
+<X=131.00000, Y= 40.00000, GMV=0.0068590>
+<X=131.00000, Y= 40.10000, GMV=0.0066422>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=2-231|rup=002-01
+<X=131.00000, Y= 40.00000, GMV=0.0009365>
+<X=131.00000, Y= 40.10000, GMV=0.0009827>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=2-40|rup=001-01
+<X=131.00000, Y= 40.00000, GMV=0.0001138>
+<X=131.00000, Y= 40.10000, GMV=0.0001653>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=24-72|rup=002-01
+<X=131.00000, Y= 40.00000, GMV=0.0005475>
+<X=131.00000, Y= 40.10000, GMV=0.0007085>))'''
 
     @attr('qa', 'hazard', 'event_based')
     def test_4(self):
-        tags_4, gmfs_4 = self.run_with_max_weight(400)  # 29 tasks
+        tags_4, gmfs_4 = self.run_with_concurrent_tasks(4)
         self.assertEqual(tags_4, self.expected_tags)
         if self.DEBUG:  # write the output on /tmp so you can diff it
             open('/tmp/4-got.txt', 'w').write(gmfs_4)
@@ -69,15 +65,15 @@ GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=3-255
 
     @attr('qa', 'hazard', 'event_based')
     def test_8(self):
-        tags_8, gmfs_8 = self.run_with_max_weight(800)  # 15 tasks
+        tags_8, gmfs_8 = self.run_with_concurrent_tasks(8)
         self.assertEqual(tags_8, self.expected_tags)
         if self.DEBUG:  # write the output on /tmp so you can diff it
             open('/tmp/8-got.txt', 'w').write(gmfs_8)
             open('/tmp/8-exp.txt', 'w').write(self.expected_gmfs)
         self.assertEqual(gmfs_8, self.expected_gmfs)
 
-    def run_with_max_weight(self, n):
-        with config.context('hazard', source_max_weight=n):
+    def run_with_concurrent_tasks(self, n):
+        with config.context('hazard', concurrent_tasks=n):
             cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
             job = self.run_hazard(cfg)
             tags = models.SESRupture.objects.filter(
