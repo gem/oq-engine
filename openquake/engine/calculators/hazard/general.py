@@ -22,6 +22,7 @@ import os
 import random
 import itertools
 import collections
+from operator import attrgetter
 
 import numpy
 
@@ -60,6 +61,14 @@ POES_PARAM_NAME = "POES"
 # Dilation in decimal degrees (http://en.wikipedia.org/wiki/Decimal_degrees)
 # 1e-5 represents the approximate distance of one meter at the equator.
 DILATION_ONE_METER = 1e-5
+
+
+class Proxy(object):
+    def __init__(self, obj):
+        self.__obj = obj
+
+    def __getattr__(self, name):
+        return getattr(self.__obj, name)
 
 
 def store_site_model(job, site_model_source):
@@ -162,6 +171,7 @@ class BaseHazardCalculator(base.Calculator):
 
         sitecol = self.hc.site_collection
         task_no = 0
+        all_sources = []
         for trt_model_id in self.source_collector:
             trt_model = models.TrtModel.objects.get(pk=trt_model_id)
             sc = self.source_collector[trt_model_id]
@@ -175,24 +185,28 @@ class BaseHazardCalculator(base.Calculator):
                     '(maximum_distance=%s km)',
                     trt_model.lt_model.sm_name, self.hc.maximum_distance)
                 continue
-            ltpath = tuple(trt_model.lt_model.sm_lt_path)
-
-            source_blocks = split_in_blocks(
-                sc.sources, self.concurrent_tasks,
-                weight=sc.update_num_ruptures)
-
-            num_blocks = 0
-            for block in source_blocks:
-                args = (self.job.id, sitecol, block, trt_model.id, task_no)
-                self._task_args.append(args)
-                yield args
-                task_no += 1
-                num_blocks += 1
-            logs.LOG.progress('Generated %d block(s) for %s, TRT=%s',
-                              num_blocks, ltpath, sc.trt)
+            for src in sc.sources:
+                proxy = Proxy(src)
+                proxy.trt_model = trt_model
+                proxy.weight = sc.update_num_ruptures(src)
+                proxy.typology = src.__class__.__name__
+                all_sources.append(proxy)
             trt_model.num_sources = len(sc.sources)
             trt_model.num_ruptures = sc.num_ruptures
             trt_model.save()
+
+        source_blocks = split_in_blocks(
+            all_sources, self.concurrent_tasks,
+            attrgetter('weight'), attrgetter('trt_model'))
+
+        num_blocks = 0
+        for block in source_blocks:
+            args = (self.job.id, sitecol, block, block[0].trt_model.id,
+                    task_no)
+            self._task_args.append(args)
+            yield args
+            task_no += 1
+            num_blocks += 1
 
     def task_completed(self, result):
         """
