@@ -63,14 +63,6 @@ POES_PARAM_NAME = "POES"
 DILATION_ONE_METER = 1e-5
 
 
-class Proxy(object):
-    def __init__(self, obj):
-        self.__obj = obj
-
-    def __getattr__(self, name):
-        return getattr(self.__obj, name)
-
-
 def store_site_model(job, site_model_source):
     """Invoke site model parser and save the site-specified parameter data to
     the database.
@@ -119,6 +111,30 @@ def filter_and_split_sources(job_id, sources):
             for ss in source.split_source(src, discr):
                 srcs.append(ss)
     return srcs
+
+
+class AllSources(object):
+    def __init__(self):
+        self.sources = []
+        self.weights = []
+        self.trt_models = []
+
+    def append(self, src, weight, trt_model):
+        self.sources.append(src)
+        self.weights.append(weight)
+        self.trt_models.append(trt_model)
+
+    def get_weight(self, src):
+        return self.weights[self.sources.index(src)]
+
+    def get_trt_model(self, src):
+        return self.trt_models[self.sources.index(src)]
+
+    def split(self, hint):
+        for block in split_in_blocks(
+                self.sources, hint, self.get_weight, self.get_trt_model):
+            trt_model = self.get_trt_model(block[0])
+            yield trt_model, block
 
 
 class BaseHazardCalculator(base.Calculator):
@@ -171,14 +187,15 @@ class BaseHazardCalculator(base.Calculator):
 
         sitecol = self.hc.site_collection
         task_no = 0
-        all_sources = []
-        for trt_model_id in self.source_collector:
+        all_sources = AllSources()
+        for trt_model_id in sorted(self.source_collector):
             trt_model = models.TrtModel.objects.get(pk=trt_model_id)
             sc = self.source_collector[trt_model_id]
             # NB: the filtering of the sources by site is slow, so it is
             # done in parallel
-            sc.sources = self.parallel_apply(
-                filter_and_split_sources, sc.sources)
+            sc.sources = sorted(
+                self.parallel_apply(filter_and_split_sources, sc.sources),
+                key=attrgetter('source_id'))
             if not sc.sources:
                 logs.LOG.warn(
                     'Could not find sources close to the sites in %s '
@@ -186,22 +203,14 @@ class BaseHazardCalculator(base.Calculator):
                     trt_model.lt_model.sm_name, self.hc.maximum_distance)
                 continue
             for src in sc.sources:
-                proxy = Proxy(src)
-                proxy.trt_model = trt_model
-                proxy.weight = sc.update_num_ruptures(src)
-                proxy.typology = src.__class__.__name__
-                all_sources.append(proxy)
+                all_sources.append(src, sc.update_num_ruptures(src), trt_model)
             trt_model.num_sources = len(sc.sources)
             trt_model.num_ruptures = sc.num_ruptures
             trt_model.save()
 
-        source_blocks = split_in_blocks(
-            all_sources, self.concurrent_tasks,
-            attrgetter('weight'), attrgetter('trt_model'))
-
         num_blocks = 0
-        for block in source_blocks:
-            args = (self.job.id, sitecol, block, block[0].trt_model.id,
+        for trt_model, block in all_sources.split(self.concurrent_tasks):
+            args = (self.job.id, sitecol, block, trt_model.id,
                     task_no)
             self._task_args.append(args)
             yield args
