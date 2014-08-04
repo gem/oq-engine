@@ -35,28 +35,24 @@ class EventBasedHazardTestCase(qa_utils.BaseQATestCase):
     # to see the problem
     expected_tags = [
         'smlt=00|ses=0001|src=1-389|rup=002-01',
-        'smlt=00|ses=0001|src=2-126|rup=001-01',
-        'smlt=00|ses=0001|src=2-315|rup=002-01',
-        'smlt=00|ses=0001|src=2-52|rup=002-01',
-        'smlt=00|ses=0001|src=3-255|rup=002-01'
+        'smlt=00|ses=0001|src=2-148|rup=002-01',
+        'smlt=00|ses=0001|src=2-324|rup=001-01',
+        'smlt=00|ses=0001|src=24-88|rup=002-01'
     ]
     expected_gmfs = '''\
 GMFsPerSES(investigation_time=5.000000, stochastic_event_set_id=1,
 GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=1-389|rup=002-01
 <X=131.00000, Y= 40.00000, GMV=0.0019092>
 <X=131.00000, Y= 40.10000, GMV=0.0017119>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=2-126|rup=001-01
-<X=131.00000, Y= 40.00000, GMV=0.0001250>
-<X=131.00000, Y= 40.10000, GMV=0.0001781>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=2-315|rup=002-01
-<X=131.00000, Y= 40.00000, GMV=0.0015655>
-<X=131.00000, Y= 40.10000, GMV=0.0016485>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=2-52|rup=002-01
-<X=131.00000, Y= 40.00000, GMV=0.0002431>
-<X=131.00000, Y= 40.10000, GMV=0.0001554>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=3-255|rup=002-01
-<X=131.00000, Y= 40.00000, GMV=0.0002826>
-<X=131.00000, Y= 40.10000, GMV=0.0004627>))'''
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=2-148|rup=002-01
+<X=131.00000, Y= 40.00000, GMV=0.0006156>
+<X=131.00000, Y= 40.10000, GMV=0.0006437>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=2-324|rup=001-01
+<X=131.00000, Y= 40.00000, GMV=0.0007488>
+<X=131.00000, Y= 40.10000, GMV=0.0010947>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=24-88|rup=002-01
+<X=131.00000, Y= 40.00000, GMV=0.0004448>
+<X=131.00000, Y= 40.10000, GMV=0.0005748>))'''
 
     @attr('qa', 'hazard', 'event_based')
     def test_4(self):
