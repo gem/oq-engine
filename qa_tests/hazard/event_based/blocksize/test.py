@@ -35,24 +35,24 @@ class EventBasedHazardTestCase(qa_utils.BaseQATestCase):
     # to see the problem
     expected_tags = [
         'smlt=00|ses=0001|src=1-296|rup=002-01',
-        'smlt=00|ses=0001|src=2-231|rup=002-01',
-        'smlt=00|ses=0001|src=2-40|rup=001-01',
-        'smlt=00|ses=0001|src=24-72|rup=002-01',
+        'smlt=00|ses=0001|src=2-148|rup=002-01',
+        'smlt=00|ses=0001|src=2-324|rup=001-01',
+        'smlt=00|ses=0001|src=24-88|rup=002-01'
     ]
     expected_gmfs = '''\
 GMFsPerSES(investigation_time=5.000000, stochastic_event_set_id=1,
 GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=1-296|rup=002-01
 <X=131.00000, Y= 40.00000, GMV=0.0068590>
 <X=131.00000, Y= 40.10000, GMV=0.0066422>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=2-231|rup=002-01
-<X=131.00000, Y= 40.00000, GMV=0.0009365>
-<X=131.00000, Y= 40.10000, GMV=0.0009827>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=2-40|rup=001-01
-<X=131.00000, Y= 40.00000, GMV=0.0001138>
-<X=131.00000, Y= 40.10000, GMV=0.0001653>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=24-72|rup=002-01
-<X=131.00000, Y= 40.00000, GMV=0.0005475>
-<X=131.00000, Y= 40.10000, GMV=0.0007085>))'''
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=2-148|rup=002-01
+<X=131.00000, Y= 40.00000, GMV=0.0006156>
+<X=131.00000, Y= 40.10000, GMV=0.0006437>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=2-324|rup=001-01
+<X=131.00000, Y= 40.00000, GMV=0.0007488>
+<X=131.00000, Y= 40.10000, GMV=0.0010947>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=24-88|rup=002-01
+<X=131.00000, Y= 40.00000, GMV=0.0004448>
+<X=131.00000, Y= 40.10000, GMV=0.0005748>))'''
 
     @attr('qa', 'hazard', 'event_based')
     def test_4(self):
