@@ -18,8 +18,6 @@
 
 """Utility functions related to splitting work into tasks."""
 
-import cPickle
-
 from celery.result import ResultSet
 from celery.app import current_app
 from celery.task import task
@@ -79,8 +77,7 @@ class OqTaskManager(TaskManager):
         for task_id, result_dict in rset.iter_native():
             check_mem_usage()  # log a warning if too much memory is used
             result = result_dict['result']
-            if isinstance(result, cPickle.PicklingError):
-                # this may happen if pickling the input arguments fails
+            if isinstance(result, BaseException):
                 raise result
             acc = agg(acc, result.unpickle())
             del backend._cache[task_id]  # work around a celery bug
