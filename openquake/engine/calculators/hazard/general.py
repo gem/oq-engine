@@ -131,9 +131,10 @@ class BaseHazardCalculator(base.Calculator):
 
         sitecol = self.hc.site_collection
         task_no = 0
-        for trt_model_id in self.source_collector:
+        for trt_model_id in sorted(self.source_collector):
             trt_model = models.TrtModel.objects.get(pk=trt_model_id)
             sc = self.source_collector[trt_model_id]
+            sc.sources.sort(key=lambda src: src.source_id)
             ltpath = tuple(trt_model.lt_model.sm_lt_path)
 
             # NB: the filtering of the sources by site is slow
