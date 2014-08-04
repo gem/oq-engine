@@ -11,7 +11,8 @@ Please note: the /usr/bin/openquake script requires a celeryconfig.py
 file in the PYTHONPATH.  Please make sure this is the case and that your
 celeryconfig.py file works with your python-celery setup.
 
-Feel free to copy /usr/openquake/engine/celeryconfig.py and revise it as needed.
+Feel free to copy /usr/openquake/engine/celeryconfig.py and revise it
+as needed.
 """
 
 PY_MODULES = ['openquake.engine.bin.oqscript']
@@ -42,7 +43,7 @@ setup(
 
     include_package_data=True,
     package_data={"openquake.engine": [
-        "db/schema/*.sql", "db/schema/upgrades/*/*/*.sql",
+        "db/schema/upgrades/*.sql",
         "openquake.cfg", "README", "LICENSE"]},
     exclude_package_data={"": ["bin/oqpath.py", "bin/oq_check_monitors",
                                "bin/oq_log_sink"]},
