@@ -23,12 +23,10 @@ import numpy
 from nose.plugins.attrib import attr
 
 from openquake.hazardlib.imt import PGA
-from openquake.hazardlib.source.rupture import Rupture
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
-from openquake.hazardlib.source.complex_fault import ComplexFaultSource
 from openquake.hazardlib.gsim import get_available_gsims
 
 from openquake.engine.db import models
@@ -256,6 +254,8 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
                     if src.__class__.__name__ != 'PointSource':
                         yield src.source_id, seed
 
+        self.calc.job.is_running = True
+        self.calc.job.save()
         actual = list(process_args(self.calc.task_arg_gen()))
         self.assertEqual(expected, actual)
 
