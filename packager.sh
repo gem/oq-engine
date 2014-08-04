@@ -427,8 +427,7 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "sudo sed -i 's/#standard_conforming_strings = on/standard_conforming_strings = off/g' /etc/postgresql/9.1/main/postgresql.conf"
 
     ssh $lxc_ip "sudo service postgresql restart"
-    #ssh $lxc_ip "set -e ; sudo -u postgres oq_create_db --yes --db-name=openquake --no-tab-spaces --schema-path=/usr/share/pyshared/openquake/engine/db/schema"
-    ssh $lxc_ip "set -e ; sudo su postgres -c\"cd \$HOME/oq-engine ; bash openquake/engine/bin/oq_create_db --yes --db-name=openquake --schema-path=openquake/engine/db/schema\""
+    ssh $lxc_ip "set -e ; sudo su postgres -c\"cd /usr/share/pyshared/openquake/engine ; bash bin/oq_create_db --yes --db-name=openquake --schema-path=db/schema\""
     ssh $lxc_ip "set e; openquake --ugrade-db"
 
     # run celeryd daemon
