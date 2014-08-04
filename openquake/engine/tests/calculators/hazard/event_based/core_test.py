@@ -206,7 +206,6 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
         self.assertEqual(num_gmf1, 242)
         self.assertEqual(num_gmf2, 242)
-        # NB: with source_max_weight=20000 5 tasks are generated
 
         # Now check for the correct number of hazard curves:
         curves = models.HazardCurve.objects.filter(output__oq_job=job)
