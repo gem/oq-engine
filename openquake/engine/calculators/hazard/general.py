@@ -116,24 +116,20 @@ def filter_and_split_sources(job_id, sources):
 class AllSources(object):
     def __init__(self):
         self.sources = []
-        self.weights = []
-        self.trt_models = []
+        self.weight = {}
+        self.trt_model = {}
 
     def append(self, src, weight, trt_model):
         self.sources.append(src)
-        self.weights.append(weight)
-        self.trt_models.append(trt_model)
-
-    def get_weight(self, src):
-        return self.weights[self.sources.index(src)]
-
-    def get_trt_model(self, src):
-        return self.trt_models[self.sources.index(src)]
+        self.weight[src] = weight
+        self.trt_model[src] = trt_model
 
     def split(self, hint):
         for block in split_in_blocks(
-                self.sources, hint, self.get_weight, self.get_trt_model):
-            trt_model = self.get_trt_model(block[0])
+                self.sources, hint,
+                self.weight.__getitem__,
+                self.trt_model.__getitem__):
+            trt_model = self.trt_model[block[0]]
             yield trt_model, block
 
 
