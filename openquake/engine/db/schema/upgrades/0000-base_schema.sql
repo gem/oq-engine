@@ -18,6 +18,7 @@
 
 -- Disable unnecessarily verbose output
 SET client_min_messages TO WARNING;
+SET ROLE TO oq_admin;
 
 ------------------------------------------------------------------------
 -- Name space definitions go here
