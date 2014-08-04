@@ -251,7 +251,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             for args in arg_gen:
                 # args is (job_id, sitecol, src_seed_pairs, ...)
                 for src, seed in args[2]:
-                    if src.__class__.__name__ != 'PointSource':
+                    if src.typology != 'PointSource':
                         yield src.source_id, seed
 
         self.calc.job.is_running = True
