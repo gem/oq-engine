@@ -414,11 +414,11 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         hc = self.hc
         rnd = random.Random()
         rnd.seed(hc.random_seed)
-        for job_id, sitecol, block, lt_model, task_no in \
+        for job_id, sitecol, block, trt_model_id, task_no in \
                 super(EventBasedHazardCalculator, self).task_arg_gen():
             ss = [(src, rnd.randint(0, models.MAX_SINT_32))
                   for src in block]  # source, seed pairs
-            yield job_id, sitecol, ss, lt_model, task_no
+            yield job_id, sitecol, ss, trt_model_id, task_no
 
     def task_completed(self, task_result):
         """
