@@ -90,52 +90,6 @@ class SourceCollector(object):
         self.num_ruptures += weight
         return weight
 
-    def filter_sources(self, src_filter):
-        """
-        Filter the sources with the given filtering function and
-        returns a new SourceCollector instance.
-
-        :param src_filter:
-            a filter function taking a source and returning a
-            false value (or None) if the the source has to be discarded.
-        """
-        srcs = [src for src in self.sources
-                if src_filter(src) is not None]
-        return self.__class__(self.trt, srcs)
-
-    def _filter_and_split_sources(self, src_filter, discr):
-        # NB: as a side effect it throws away the unfiltered sources
-        srcs = []
-        tot_sources = 0
-        for src in self.sources:
-            sites = src_filter(src)
-            if sites is not None:
-                for ss in split_source(src, discr):
-                    tot_sources += 1
-                    srcs.append(ss)
-                    yield ss
-                    self.filtered_sources = (len(srcs), tot_sources)
-            else:
-                tot_sources += 1
-        self.sources = srcs  # throw away unfiltered sources
-
-    def gen_blocks(self, src_filter, max_weight, discr):
-        """
-        Filter the sources of the given tectonic region type,
-        split them and finally group them in blocks not exceeding
-        the maximum weight.
-
-        :param src_filter: a filtering function on sources
-        :param max_weight: the limit used to collect the sources
-        :param discr: area source discretization
-        """
-        num_sources = len(self.sources)
-        assert num_sources, 'No sources for TRT=%s!' % self.trt
-        return block_splitter(
-            self._filter_and_split_sources(src_filter, discr),
-            max_weight * num_sources / (num_sources + 100),
-            self.update_num_ruptures)
-
     def __repr__(self):
         return '<%s TRT=%s, %d source(s)>' % (self.__class__.__name__,
                                               self.trt, len(self.sources))
