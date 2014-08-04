@@ -35,7 +35,8 @@ from openquake.nrmllib import parsers as nrml_parsers
 from openquake.nrmllib.risk import parsers
 
 from openquake.commonlib import logictree, source
-from openquake.commonlib.general import block_splitter, distinct
+from openquake.commonlib.general import \
+    block_splitter, split_in_blocks, distinct
 
 from openquake.engine.input import exposure
 from openquake.engine import logs
@@ -49,6 +50,7 @@ from openquake.engine.calculators.post_processing import (
 from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.performance import EnginePerformanceMonitor
+from openquake.engine.utils import tasks
 
 #: Maximum number of hazard curves to cache, for selects or inserts
 CURVE_CACHE_SIZE = 100000
@@ -95,6 +97,21 @@ def all_equal(obj, value):
         return eq
 
 
+@tasks.oqtask
+def filter_and_split_sources(job_id, sources):
+    """
+    """
+    hc = models.HazardCalculation.objects.get(oqjob=job_id)
+    discr = hc.area_source_discretization
+    srcs = []
+    for src in sources:
+        sites = hc.sites_affected_by(src)
+        if sites is not None:
+            for ss in source.split_source(src, discr):
+                srcs.append(ss)
+    return srcs
+
+
 class BaseHazardCalculator(base.Calculator):
     """
     Abstract base class for hazard calculators. Contains a bunch of common
@@ -116,6 +133,20 @@ class BaseHazardCalculator(base.Calculator):
         """
         return self.job.hazard_calculation
 
+    def parallel_apply(self, task, data):
+        """
+        Apply a list filtering task to a list of data.
+        Return the list of filtered data.
+        """
+        if not data:
+            return []
+        elif len(data) == 1:
+            return task.task_func(self.job.id, data)
+        alldata = [(self.job.id, block)
+                   for block in split_in_blocks(
+                       data, self.concurrent_tasks)]
+        return tasks.map_reduce(task, alldata, list.__add__, [])
+
     def task_arg_gen(self):
         """
         Loop through realizations and sources to generate a sequence of
@@ -134,13 +165,22 @@ class BaseHazardCalculator(base.Calculator):
         for trt_model_id in self.source_collector:
             trt_model = models.TrtModel.objects.get(pk=trt_model_id)
             sc = self.source_collector[trt_model_id]
+            # NB: the filtering of the sources by site is slow, so it is
+            # done in parallel
+            sc.sources = self.parallel_apply(
+                filter_and_split_sources, sc.sources)
+            if not sc.sources:
+                logs.LOG.warn(
+                    'Could not find sources close to the sites in %s '
+                    '(maximum_distance=%s km)',
+                    trt_model.lt_model.sm_name, self.hc.maximum_distance)
+                continue
             ltpath = tuple(trt_model.lt_model.sm_lt_path)
 
-            # NB: the filtering of the sources by site is slow
-            source_blocks = sc.gen_blocks(
-                self.hc.sites_affected_by,
-                self.source_max_weight,
-                self.hc.area_source_discretization)
+            source_blocks = split_in_blocks(
+                sc.sources, self.concurrent_tasks,
+                weight=sc.update_num_ruptures)
+
             num_blocks = 0
             for block in source_blocks:
                 args = (self.job.id, sitecol, block, trt_model.id, task_no)
@@ -148,16 +188,8 @@ class BaseHazardCalculator(base.Calculator):
                 yield args
                 task_no += 1
                 num_blocks += 1
-                logs.LOG.info('Processing %d sources out of %d' %
-                              sc.filtered_sources)
-            if not sc.sources:
-                logs.LOG.warn(
-                    'Could not find sources close to the sites in %s '
-                    '(maximum_distance=%s km)',
-                    trt_model.lt_model.sm_name, self.hc.maximum_distance)
-            else:
-                logs.LOG.progress('Generated %d block(s) for %s, TRT=%s',
-                                  num_blocks, ltpath, sc.trt)
+            logs.LOG.progress('Generated %d block(s) for %s, TRT=%s',
+                              num_blocks, ltpath, sc.trt)
             trt_model.num_sources = len(sc.sources)
             trt_model.num_ruptures = sc.num_ruptures
             trt_model.save()
