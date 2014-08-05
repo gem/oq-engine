@@ -103,9 +103,7 @@ class UpgradeManager(object):
             return conn.scalar(
                 'select max(version) from {}'.format(self.version_table))
         except:
-            raise VersioningNotInstalled(
-                '%(database)s: perform the steps in the documentation'
-                % conn.uridict)
+            raise VersioningNotInstalled('Run openquake --upgrade-db')
 
     def check_version(self, conn):
         scripts = self.read_scripts(db_versions=self.get_db_versions(conn))
