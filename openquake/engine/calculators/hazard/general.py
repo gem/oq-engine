@@ -207,9 +207,10 @@ class BaseHazardCalculator(base.Calculator):
             # NB: the filtering of the sources by site is slow, so it is
             # done in parallel
             logs.LOG.progress(
-                'Filtering/splitting %d source(s) of TRT=%s, source model=%s',
-                len(sc.sources), trt_model.tectonic_region_type,
-                trt_model.lt_model.sm_name)
+                'Filtering/splitting %d source(s) for sm_lt_path=%s, '
+                'TRT=%s, model=%s', len(sc.sources),
+                tuple(trt_model.lt_model.sm_lt_path),
+                trt_model.tectonic_region_type, trt_model.lt_model.sm_name)
             sc.sources = sorted(
                 self.parallel_apply(filter_and_split_sources, sc.sources),
                 key=attrgetter('source_id'))
@@ -234,7 +235,7 @@ class BaseHazardCalculator(base.Calculator):
             yield args
             task_no += 1
             tot_sources += len(block)
-        logs.LOG.info('Filtered %d sources for %d TRTs',
+        logs.LOG.info('Processed %d sources for %d TRTs',
                       tot_sources, len(self.source_collector))
 
     def task_completed(self, result):
