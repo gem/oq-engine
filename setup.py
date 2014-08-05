@@ -15,11 +15,11 @@ Feel free to copy /usr/openquake/engine/celeryconfig.py and revise it
 as needed.
 """
 
-PY_MODULES = ['openquake.engine.bin.oqscript']
+PY_MODULES = ['openquake.engine.bin.openquake']
 
 setup(
     entry_points={
-        "console_scripts": ["openquake = openquake.engine.bin.oqscript:main"]
+        "console_scripts": ["openquake = openquake.engine.bin.openquake:main"]
     },
     name="openquake.engine",
     version=version,
@@ -44,9 +44,7 @@ setup(
     include_package_data=True,
     package_data={"openquake.engine": [
         "db/schema/upgrades/*.sql",
-        "openquake.cfg", "README", "LICENSE"]},
-    exclude_package_data={"": ["bin/oqpath.py", "bin/oq_check_monitors",
-                               "bin/oq_log_sink"]},
+        "openquake.cfg", "openquake_worker.cfg", "README", "LICENSE"]},
     scripts=["openquake/engine/bin/oq_create_db"],
 
     namespace_packages=['openquake'],
