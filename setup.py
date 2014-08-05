@@ -15,11 +15,13 @@ Feel free to copy /usr/openquake/engine/celeryconfig.py and revise it
 as needed.
 """
 
-PY_MODULES = ['openquake.engine.bin.openquake']
+PY_MODULES = ['openquake.engine.bin.openquake_cli']
 
 setup(
     entry_points={
-        "console_scripts": ["openquake = openquake.engine.bin.openquake:main"]
+        "console_scripts": [
+            "openquake = openquake.engine.bin.openquake_cli:main"
+        ]
     },
     name="openquake.engine",
     version=version,
