@@ -78,15 +78,17 @@ def do_event_based(risk_model, getters, outputdict, params, monitor):
     # NB: event_loss_table is a dictionary (loss_type, out_id) -> loss,
     # out_id can be None, and it that case it stores the statistics
     event_loss_table = {}
+    rupture_ids = getters[0].rupture_ids  # in the right order
 
     # save outputs and stats and populate the event loss table
     for loss_type, outputs in outputs_per_loss_type.iteritems():
         for out in outputs:
             if params.sites_disagg:
                 with monitor.copy('disaggregating results'):
-                    rupture_ids = out.output.event_loss_table.keys()
+                    ruptures = [models.SESRupture.objects.get(pk=rid)
+                                for rid in rupture_ids]
                     disagg_outputs = disaggregate(
-                        out.output, rupture_ids, params)
+                        out.output, [r.rupture for r in ruptures], params)
             else:
                 disagg_outputs = None
 
@@ -227,7 +229,7 @@ class DisaggregationOutputs(object):
         self.fractions = fractions
 
 
-def disaggregate(outputs, rupture_ids, params):
+def disaggregate(outputs, ruptures, params):
     """
     Compute disaggregation outputs given the individual `outputs` and `params`
 
@@ -242,8 +244,7 @@ def disaggregate(outputs, rupture_ids, params):
       an instance of :class:`DisaggregationOutputs`
     """
     def disaggregate_site(site, loss_ratios):
-        for fraction, rupture_id in zip(loss_ratios, rupture_ids):
-            rupture = models.SESRupture.objects.get(pk=rupture_id).rupture
+        for fraction, rupture in zip(loss_ratios, ruptures):
             s = rupture.surface
             m = mesh.Mesh(numpy.array([site.x]), numpy.array([site.y]), None)
 
@@ -271,7 +272,7 @@ def disaggregate(outputs, rupture_ids, params):
             # functions
             assets_disagg = itertools.chain(
                 assets_disagg,
-                itertools.repeat(asset, len(rupture_ids)))
+                itertools.repeat(asset, len(ruptures)))
 
     if assets_disagg:
         magnitudes, coordinates, fractions = zip(*disagg_matrix)
