@@ -35,12 +35,6 @@ try:
 except ImportError:
     sys.path.append('/usr/openquake/engine')
 
-try:
-    import oqpath
-    oqpath.set_oq_path()
-except ImportError:
-    pass
-
 from openquake.commonlib import source
 from openquake.engine.db import util
 import openquake.engine
