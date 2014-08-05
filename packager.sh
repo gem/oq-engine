@@ -428,7 +428,7 @@ _pkgtest_innervm_run () {
 
     ssh $lxc_ip "sudo service postgresql restart"
     ssh $lxc_ip "set -e ; sudo su postgres -c\"cd /usr/share/pyshared/openquake/engine ; bash bin/oq_create_db --yes --db-name=openquake --schema-path=db/schema\""
-    ssh $lxc_ip "set e; openquake --ugrade-db"
+    ssh $lxc_ip "set e; openquake --upgrade-db"
 
     # run celeryd daemon
     ssh $lxc_ip "cd /usr/openquake/engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
