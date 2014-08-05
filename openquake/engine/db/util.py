@@ -88,6 +88,13 @@ class Resource(object):
 
 
 class Connection(Resource):
+    @classmethod
+    def from_dbapi(cls, conn):
+        self = cls(str(conn), conn.autocommit)
+        self.dbapi = conn
+        self.opened = True
+        return self
+
     def __init__(self, uristr, autocommit=False):
         self.uridict = dissect(uristr)
         self.autocommit = autocommit
