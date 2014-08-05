@@ -101,6 +101,10 @@ def all_equal(obj, value):
 @tasks.oqtask
 def filter_and_split_sources(job_id, sources):
     """
+    Filter and split a list of hazardlib sources.
+
+    :param int job_id: ID of the current job
+    :param list sources: the original sources
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     discr = hc.area_source_discretization
@@ -114,17 +118,29 @@ def filter_and_split_sources(job_id, sources):
 
 
 class AllSources(object):
+    """
+    A container for sources of different tectonic region types.
+    The `split` method yields pairs (trt_model, block-of-sources).
+    """
     def __init__(self):
         self.sources = []
         self.weight = {}
         self.trt_model = {}
 
     def append(self, src, weight, trt_model):
+        """
+        Collect a source, together with its weight and trt_model.
+        """
         self.sources.append(src)
         self.weight[src] = weight
         self.trt_model[src] = trt_model
 
     def split(self, hint):
+        """
+        Split the sources in a number of blocks close to the given `hint`.
+
+        :param int hint: hint for the number of blocks
+        """
         for block in split_in_blocks(
                 self.sources, hint,
                 self.weight.__getitem__,
@@ -182,7 +198,6 @@ class BaseHazardCalculator(base.Calculator):
             return
 
         sitecol = self.hc.site_collection
-        task_no = 0
         all_sources = AllSources()
         for trt_model_id in sorted(self.source_collector):
             trt_model = models.TrtModel.objects.get(pk=trt_model_id)
@@ -204,14 +219,13 @@ class BaseHazardCalculator(base.Calculator):
             trt_model.num_ruptures = sc.num_ruptures
             trt_model.save()
 
-        num_blocks = 0
+        task_no = 0
         for trt_model, block in all_sources.split(self.concurrent_tasks):
             args = (self.job.id, sitecol, block, trt_model.id,
                     task_no)
             self._task_args.append(args)
             yield args
             task_no += 1
-            num_blocks += 1
 
     def task_completed(self, result):
         """
