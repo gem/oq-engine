@@ -117,7 +117,6 @@ class SourceCollector(object):
                     self.filtered_sources = (len(srcs), tot_sources)
             else:
                 tot_sources += 1
-        self.sources = srcs  # throw away unfiltered sources
 
     def gen_blocks(self, src_filter, max_weight, discr):
         """
@@ -131,9 +130,11 @@ class SourceCollector(object):
         """
         num_sources = len(self.sources)
         assert num_sources, 'No sources for TRT=%s!' % self.trt
-        return block_splitter(
+        self.sources = sorted(
             self._filter_and_split_sources(src_filter, discr),
-            max_weight * num_sources / (num_sources + 100),
+            key=lambda src: src.source_id)
+        return block_splitter(
+            self.sources, max_weight * num_sources / (num_sources + 100),
             self.update_num_ruptures)
 
     def __repr__(self):
