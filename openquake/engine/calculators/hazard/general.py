@@ -197,7 +197,8 @@ class BaseHazardCalculator(base.Calculator):
             for args in self._task_args:
                 yield args
             return
-
+        self.job.is_running = True
+        self.job.save()
         sitecol = self.hc.site_collection
         all_sources = AllSources()
         for trt_model_id in sorted(self.source_collector):
