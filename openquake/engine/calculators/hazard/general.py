@@ -141,12 +141,13 @@ class AllSources(object):
 
         :param int hint: hint for the number of blocks
         """
-        for block in split_in_blocks(
-                self.sources, hint,
-                self.weight.__getitem__,
-                self.trt_model.__getitem__):
-            trt_model = self.trt_model[block[0]]
-            yield trt_model, block
+        if self.sources:
+            for block in split_in_blocks(
+                    self.sources, hint,
+                    self.weight.__getitem__,
+                    self.trt_model.__getitem__):
+                trt_model = self.trt_model[block[0]]
+                yield trt_model, block
 
 
 class BaseHazardCalculator(base.Calculator):
