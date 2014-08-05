@@ -176,7 +176,6 @@ class InitializeSourcesTestCase(unittest.TestCase):
         self.assertEqual(
             [m1.get_num_sources(), m2.get_num_sources(), m3.get_num_sources()],
             [2, 2, 2])
-
         for args in self.calc.task_arg_gen():
             pass  # now filtering the sources
         self.assertEqual(
@@ -193,6 +192,6 @@ class NonEmptyQuantileTestCase(unittest.TestCase):
                             quantile_hazard_curves='0.1 0.2',
                             hazard_maps=None, uniform_hazard_spectra=None)
         msg = warn.call_args[0][0]
-        self.assertEqual(msg, 'There is only one realization, the configuration'
-                         ' parameter quantile_hazard_curves should not be set')
-
+        self.assertEqual(
+            msg, 'There is only one realization, the configuration'
+            ' parameter quantile_hazard_curves should not be set')
