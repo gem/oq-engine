@@ -16,8 +16,6 @@ from os.path import dirname
 from os.path import expanduser
 from os.path import join
 
-from django.core.exceptions import ObjectDoesNotExist
-
 # just in the case that are you using oq-engine from sources
 # with the rest of oq libraries installed into the system (or a
 # virtual environment) you must set this environment variable
@@ -35,7 +33,6 @@ try:
 except ImportError:
     sys.path.append('/usr/openquake/engine')
 
-from openquake.commonlib import source
 from openquake.engine.db import util
 import openquake.engine
 
@@ -315,7 +312,7 @@ def export_hazard_outputs(hc_id, target_dir, export_type):
         print 'Exporting %s...' % output
         export(hazard_export.export, output.id, target_dir, export_type)
 
-    
+
 def export_risk(risk_output_id, target_dir, export_type):
     export(risk_export.export, risk_output_id, target_dir, export_type)
 
@@ -326,7 +323,7 @@ def export_risk_outputs(rc_id, target_dir, export_type):
         print 'Exporting %s...' % output
         export(risk_export.export, output.id, target_dir, export_type)
 
-    
+
 def export(fn, output_id, target_dir, export_type):
     """
     Simple UI wrapper around
@@ -450,7 +447,7 @@ def main():
         with conn.begin():
             return upgrader.upgrade(conn)
         sys.exit(0)
-        
+
     if args.list_inputs:
         list_inputs(args.list_inputs)
 
@@ -485,7 +482,7 @@ def main():
     elif args.export_risk_outputs is not None:
         rc_id, target_dir = args.export_risk_outputs
         export_risk_outputs(int(rc_id), expanduser(target_dir),
-                              args.export_type)
+                            args.export_type)
     elif args.run_risk is not None:
         if (args.hazard_output_id is None
                 and args.hazard_calculation_id is None):
