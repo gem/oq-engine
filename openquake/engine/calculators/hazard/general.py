@@ -220,12 +220,16 @@ class BaseHazardCalculator(base.Calculator):
             trt_model.save()
 
         task_no = 0
+        tot_sources = 0
         for trt_model, block in all_sources.split(self.concurrent_tasks):
             args = (self.job.id, sitecol, block, trt_model.id,
                     task_no)
             self._task_args.append(args)
             yield args
             task_no += 1
+            tot_sources += len(block)
+        logs.LOG.info('Filtered %d sources for %d TRTs',
+                      tot_sources, len(self.source_collector))
 
     def task_completed(self, result):
         """
