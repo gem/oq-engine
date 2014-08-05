@@ -430,9 +430,8 @@ def main():
         os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'
 
     if args.upgrade_db:
-        uri = 'oq_admin:openquake@localhost/openquake'
         upgrades = 'openquake.engine.db.schema.upgrades'
-        conn = util.Connection(uri).open()
+        conn = util.Connection.from_dbapi(models.getcursor('admin').connection)
         try:
             # upgrader is an UpgradeManager instance defined in the __init__.py
             upgrader = importlib.import_module(upgrades).upgrader
