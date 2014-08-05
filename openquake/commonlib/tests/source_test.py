@@ -565,24 +565,10 @@ class SourceCollectorTestCase(unittest.TestCase):
         self.check('Stable Continental Crust', 'num_ruptures', 0)
         self.check('Active Shallow Crust', 'num_ruptures', 0)
 
-    def test_gen_blocks(self):
-        def src_filter(src):
-            if src.source_id in ('1', '5'):
-                return site.SiteCollection(self.SITES)
-
-        max_weight = 100
-        sc = self.source_collector['Volcanic']
-        blocks = sc.gen_blocks(
-            src_filter, max_weight,
-            self.nrml_to_hazardlib.area_source_discretization)
-        [seq] = list(blocks)
-        [src] = seq
-        self.assertEqual(src.source_id, '5')
-
     def test_repr(self):
         self.assertEqual(
             repr(self.source_collector['Volcanic']),
-            '<SourceCollector TRT=Volcanic, 1 source(s)>')
+            '<SourceCollector TRT=Volcanic, 3 source(s)>')
         self.assertEqual(
             repr(self.source_collector['Stable Continental Crust']),
             '<SourceCollector TRT=Stable Continental Crust, 1 source(s)>')
