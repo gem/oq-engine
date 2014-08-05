@@ -253,8 +253,6 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
                     if src.__class__.__name__ != 'PointSource':
                         yield src.source_id, seed
 
-        self.calc.job.is_running = True
-        self.calc.job.save()
         actual = list(process_args(self.calc.task_arg_gen()))
         self.assertEqual(expected, actual)
 
