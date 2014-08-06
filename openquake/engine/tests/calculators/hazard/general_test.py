@@ -176,8 +176,7 @@ class InitializeSourcesTestCase(unittest.TestCase):
         self.assertEqual(
             [m1.get_num_sources(), m2.get_num_sources(), m3.get_num_sources()],
             [2, 2, 2])
-        for args in self.calc.task_arg_gen():
-            pass  # now filtering the sources
+        self.calc.process_sources()
         self.assertEqual(
             [m1.get_num_sources(), m2.get_num_sources(), m3.get_num_sources()],
             [1, 1, 1])
