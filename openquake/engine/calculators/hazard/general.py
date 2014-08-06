@@ -206,10 +206,10 @@ class BaseHazardCalculator(base.Calculator):
             sc = self.source_collector[trt_model_id]
             # NB: the filtering of the sources by site is slow, so it is
             # done in parallel
+            sm_lt_path = tuple(trt_model.lt_model.sm_lt_path)
             logs.LOG.progress(
                 'Filtering/splitting %d source(s) for sm_lt_path=%s, '
-                'TRT=%s, model=%s', len(sc.sources),
-                tuple(trt_model.lt_model.sm_lt_path),
+                'TRT=%s, model=%s', len(sc.sources), sm_lt_path,
                 trt_model.tectonic_region_type, trt_model.lt_model.sm_name)
             sc.sources = sorted(
                 self.parallel_apply(filter_and_split_sources, sc.sources),
@@ -217,8 +217,9 @@ class BaseHazardCalculator(base.Calculator):
             if not sc.sources:
                 logs.LOG.warn(
                     'Could not find sources close to the sites in %s '
-                    '(maximum_distance=%s km)',
-                    trt_model.lt_model.sm_name, self.hc.maximum_distance)
+                    'sm_lt_path=%s, maximum_distance=%s km',
+                    trt_model.lt_model.sm_name, sm_lt_path,
+                    self.hc.maximum_distance)
                 continue
             for src in sc.sources:
                 all_sources.append(src, sc.update_num_ruptures(src), trt_model)
