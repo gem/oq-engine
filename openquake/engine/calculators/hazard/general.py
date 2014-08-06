@@ -173,20 +173,6 @@ class BaseHazardCalculator(base.Calculator):
         """
         return self.job.hazard_calculation
 
-    def parallel_apply(self, task, data, *args):
-        """
-        Apply a list filtering task to a list of data.
-        Return the list of filtered data.
-        """
-        if not data:
-            return []
-        elif len(data) == 1:
-            return task.task_func(self.job.id, data, *args)
-        alldata = [(self.job.id, block) + args
-                   for block in split_in_blocks(
-                       data, self.concurrent_tasks)]
-        return tasks.map_reduce(task, alldata, list.__add__, [])
-
     @EnginePerformanceMonitor.monitor
     def process_sources(self):
         """
@@ -208,8 +194,10 @@ class BaseHazardCalculator(base.Calculator):
                 'sm_lt_path=%s, TRT=%s, model=%s', i, num_models,
                 len(sc.sources), sm_lt_path, trt_model.tectonic_region_type,
                 trt_model.lt_model.sm_name)
-            sc.sources = self.parallel_apply(
-                filter_and_split_sources, sc.sources, self.hc.site_collection)
+            sc.sources = tasks.parallel_apply(
+                filter_and_split_sources,
+                (self.job.id, sc.sources, self.hc.site_collection),
+                self.concurrent_tasks)
             sc.sources.sort(key=attrgetter('source_id'))
             if not sc.sources:
                 logs.LOG.warn(
