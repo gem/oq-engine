@@ -269,10 +269,9 @@ _devtest_innervm_run () {
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
     # configure the machine to run tests
-    ssh $lxc_ip "echo \"local   all             \$USER          trust\" | sudo tee -a /etc/postgresql/9.1/main/pg_hba.conf"
     ssh $lxc_ip "set -e
         for dbu in oq_job_init oq_admin; do
-            sudo sed -i \"1ilocal   openquake   \$dbu                   trust\" /etc/postgresql/9.1/main/pg_hba.conf
+            sudo sed -i \"1ilocal   openquake   \$dbu                   md5\" /etc/postgresql/9.1/main/pg_hba.conf
         done"
 
     ssh $lxc_ip "sudo sed -i 's/#standard_conforming_strings = on/standard_conforming_strings = off/g' /etc/postgresql/9.1/main/postgresql.conf"
