@@ -187,6 +187,7 @@ class BaseHazardCalculator(base.Calculator):
                        data, self.concurrent_tasks)]
         return tasks.map_reduce(task, alldata, list.__add__, [])
 
+    @EnginePerformanceMonitor.monitor
     def process_sources(self):
         """
         Filter and split the sources in parallel.
