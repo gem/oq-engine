@@ -25,7 +25,8 @@ import unittest
 
 from openquake.engine.utils import tasks
 
-from openquake.engine.tests.utils.tasks import failing_task, just_say_hello
+from openquake.engine.tests.utils.tasks import \
+    failing_task, just_say_hello, get_even
 
 
 class MapReduceTestCase(unittest.TestCase):
@@ -64,3 +65,7 @@ class MapReduceTestCase(unittest.TestCase):
                                 lst.append)
         self.assertEqual(res, None)
         self.assertEqual(lst, ['hello'] * 5)
+
+    def test_parallel_apply(self):
+        got = tasks.parallel_apply(get_even, (1, [1, 2, 3, 4, 5]))
+        self.assertEqual(got, [2, 4])
