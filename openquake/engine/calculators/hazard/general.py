@@ -201,16 +201,18 @@ class BaseHazardCalculator(base.Calculator):
         self.job.save()
         sitecol = self.hc.site_collection
         all_sources = AllSources()
-        for trt_model_id in sorted(self.source_collector):
+        num_models = len(self.source_collector)
+        for i, trt_model_id in enumerate(sorted(self.source_collector)):
             trt_model = models.TrtModel.objects.get(pk=trt_model_id)
             sc = self.source_collector[trt_model_id]
             # NB: the filtering of the sources by site is slow, so it is
             # done in parallel
             sm_lt_path = tuple(trt_model.lt_model.sm_lt_path)
             logs.LOG.progress(
-                'Filtering/splitting %d source(s) for sm_lt_path=%s, '
-                'TRT=%s, model=%s', len(sc.sources), sm_lt_path,
-                trt_model.tectonic_region_type, trt_model.lt_model.sm_name)
+                '[%d of %d] Filtering/splitting %d source(s) for '
+                'sm_lt_path=%s, TRT=%s, model=%s', i, num_models,
+                len(sc.sources), sm_lt_path, trt_model.tectonic_region_type,
+                trt_model.lt_model.sm_name)
             sc.sources = sorted(
                 self.parallel_apply(filter_and_split_sources, sc.sources),
                 key=attrgetter('source_id'))
