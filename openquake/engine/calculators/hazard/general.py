@@ -185,22 +185,14 @@ class BaseHazardCalculator(base.Calculator):
                        data, self.concurrent_tasks)]
         return tasks.map_reduce(task, alldata, list.__add__, [])
 
-    def task_arg_gen(self):
+    def process_sources(self):
         """
-        Loop through realizations and sources to generate a sequence of
-        task arg tuples. Each tuple of args applies to a single task.
-        Yielded results are of the form
-        (job_id, site_collection, sources, trt_model_id, gsims, task_no).
+        Filter and split the sources in parallel.
+        Return the list of processed sources.
         """
-        if self._task_args:
-            # the method was already called and the arguments generated
-            for args in self._task_args:
-                yield args
-            return
+        all_sources = AllSources()
         self.job.is_running = True
         self.job.save()
-        sitecol = self.hc.site_collection
-        all_sources = AllSources()
         num_models = len(self.source_collector)
         for i, trt_model_id in enumerate(sorted(self.source_collector), 1):
             trt_model = models.TrtModel.objects.get(pk=trt_model_id)
@@ -213,9 +205,9 @@ class BaseHazardCalculator(base.Calculator):
                 'sm_lt_path=%s, TRT=%s, model=%s', i, num_models,
                 len(sc.sources), sm_lt_path, trt_model.tectonic_region_type,
                 trt_model.lt_model.sm_name)
-            sc.sources = sorted(
-                self.parallel_apply(filter_and_split_sources, sc.sources),
-                key=attrgetter('source_id'))
+            sc.sources = self.parallel_apply(
+                filter_and_split_sources, sc.sources)
+            sc.sources.sort(key=attrgetter('source_id'))
             if not sc.sources:
                 logs.LOG.warn(
                     'Could not find sources close to the sites in %s '
@@ -228,7 +220,22 @@ class BaseHazardCalculator(base.Calculator):
             trt_model.num_sources = len(sc.sources)
             trt_model.num_ruptures = sc.num_ruptures
             trt_model.save()
+        return all_sources
 
+    def task_arg_gen(self):
+        """
+        Loop through realizations and sources to generate a sequence of
+        task arg tuples. Each tuple of args applies to a single task.
+        Yielded results are of the form
+        (job_id, site_collection, sources, trt_model_id, gsims, task_no).
+        """
+        if self._task_args:
+            # the method was already called and the arguments generated
+            for args in self._task_args:
+                yield args
+            return
+        all_sources = self.process_sources()
+        sitecol = self.hc.site_collection
         task_no = 0
         tot_sources = 0
         for trt_model, block in all_sources.split(self.concurrent_tasks):
