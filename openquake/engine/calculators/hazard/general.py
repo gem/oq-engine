@@ -202,7 +202,7 @@ class BaseHazardCalculator(base.Calculator):
         sitecol = self.hc.site_collection
         all_sources = AllSources()
         num_models = len(self.source_collector)
-        for i, trt_model_id in enumerate(sorted(self.source_collector)):
+        for i, trt_model_id in enumerate(sorted(self.source_collector), 1):
             trt_model = models.TrtModel.objects.get(pk=trt_model_id)
             sc = self.source_collector[trt_model_id]
             # NB: the filtering of the sources by site is slow, so it is
@@ -238,6 +238,8 @@ class BaseHazardCalculator(base.Calculator):
             yield args
             task_no += 1
             tot_sources += len(block)
+            logs.LOG.info('Generated task #%d, %d sources, weight=%d',
+                          task_no, len(block), block.weight)
         logs.LOG.info('Processed %d sources for %d TRTs',
                       tot_sources, len(self.source_collector))
 
