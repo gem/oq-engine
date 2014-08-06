@@ -179,7 +179,7 @@ class BaseHazardCalculator(base.Calculator):
         Filter and split the sources in parallel.
         Return the list of processed sources.
         """
-        all_sources = AllSources()
+        self.all_sources = AllSources()
         self.job.is_running = True
         self.job.save()
         num_models = len(self.source_collector)
@@ -207,11 +207,11 @@ class BaseHazardCalculator(base.Calculator):
                     self.hc.maximum_distance)
                 continue
             for src in sc.sources:
-                all_sources.append(src, sc.update_num_ruptures(src), trt_model)
+                self.all_sources.append(
+                    src, sc.update_num_ruptures(src), trt_model)
             trt_model.num_sources = len(sc.sources)
             trt_model.num_ruptures = sc.num_ruptures
             trt_model.save()
-        return all_sources
 
     def task_arg_gen(self):
         """
@@ -225,18 +225,17 @@ class BaseHazardCalculator(base.Calculator):
             for args in self._task_args:
                 yield args
             return
-        all_sources = self.process_sources()
         sitecol = self.hc.site_collection
         task_no = 0
         tot_sources = 0
-        for trt_model, block in all_sources.split(self.concurrent_tasks):
+        for trt_model, block in self.all_sources.split(self.concurrent_tasks):
             args = (self.job.id, sitecol, block, trt_model.id,
                     task_no)
             self._task_args.append(args)
             yield args
             task_no += 1
             tot_sources += len(block)
-            logs.LOG.info('Generated task #%d, %d sources, weight=%d',
+            logs.LOG.info('Submitting task #%d, %d sources, weight=%d',
                           task_no, len(block), block.weight)
         logs.LOG.info('Processed %d sources for %d TRTs',
                       tot_sources, len(self.source_collector))
@@ -299,6 +298,7 @@ class BaseHazardCalculator(base.Calculator):
         self.parse_risk_models()
         self.initialize_site_model()
         self.initialize_sources()
+        self.process_sources()
         self.imtls = self.hc.intensity_measure_types_and_levels
         if self.imtls:
             n_levels = sum(len(lvls) for lvls in self.imtls.itervalues()
