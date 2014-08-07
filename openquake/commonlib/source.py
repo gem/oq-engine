@@ -25,7 +25,6 @@ from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source.rupture import Rupture as HazardlibRupture
 from openquake.nrmllib import models as nrml_models
 from openquake.nrmllib.hazard import parsers as haz_parsers
-from openquake.commonlib.general import block_splitter
 
 
 class DuplicateID(Exception):
@@ -91,53 +90,6 @@ class SourceCollector(object):
         weight = (num_ruptures if src.__class__.__name__ == 'PointSource'
                   else num_ruptures * 40)
         return weight
-
-    def filter_sources(self, src_filter):
-        """
-        Filter the sources with the given filtering function and
-        returns a new SourceCollector instance.
-
-        :param src_filter:
-            a filter function taking a source and returning a
-            false value (or None) if the the source has to be discarded.
-        """
-        srcs = [src for src in self.sources
-                if src_filter(src) is not None]
-        return self.__class__(self.trt, srcs)
-
-    def _filter_and_split_sources(self, src_filter, discr):
-        # NB: as a side effect it throws away the unfiltered sources
-        srcs = []
-        tot_sources = 0
-        for src in self.sources:
-            sites = src_filter(src)
-            if sites is not None:
-                for ss in split_source(src, discr):
-                    tot_sources += 1
-                    srcs.append(ss)
-                    yield ss
-                    self.filtered_sources = (len(srcs), tot_sources)
-            else:
-                tot_sources += 1
-
-    def gen_blocks(self, src_filter, max_weight, discr):
-        """
-        Filter the sources of the given tectonic region type,
-        split them and finally group them in blocks not exceeding
-        the maximum weight.
-
-        :param src_filter: a filtering function on sources
-        :param max_weight: the limit used to collect the sources
-        :param discr: area source discretization
-        """
-        num_sources = len(self.sources)
-        assert num_sources, 'No sources for TRT=%s!' % self.trt
-        self.sources = sorted(
-            self._filter_and_split_sources(src_filter, discr),
-            key=lambda src: src.source_id)
-        return block_splitter(
-            self.sources, max_weight * num_sources / (num_sources + 100),
-            self.update_num_ruptures)
 
     def __repr__(self):
         return '<%s TRT=%s, %d source(s)>' % (self.__class__.__name__,
