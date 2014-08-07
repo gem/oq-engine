@@ -542,7 +542,6 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
         weights = [rlz.weight for rlz in models.LtRealization.objects.filter(
             lt_model__hazard_calculation=self.hc)]
         num_rlzs = len(weights)
-        num_sites = len(self.hc.site_collection)
         if not num_rlzs:
             logs.LOG.warn('No realizations for hazard_calculation_id=%d',
                           self.hc.id)
@@ -620,21 +619,19 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
                     )
                     container_ids['q%s' % quantile] = q_hc.id
 
-            # array num_rlzs * num_sites * num_levels
+            # num_rlzs * num_sites * num_levels
+            # NB: different IMTs can have different num_levels
             all_curves_for_imt = numpy.array(self.curves_by_imt[imt])
-
-            # array num_sites * num_rlzs * num_levels
-            all_curves_for_site = all_curves_for_imt.transpose(1, 0, 2)
 
             with transaction.commit_on_success(using='job_init'):
                 inserter = writer.CacheInserter(
                     models.HazardCurveData, CURVE_CACHE_SIZE)
 
                 # curve_poes below is an array num_rlzs * num_levels
-                for site, curve_poes in zip(
-                        self.hc.site_collection, all_curves_for_site):
+                for i, site in enumerate(self.hc.site_collection):
                     wkt = site.location.wkt2d
-
+                    curve_poes = numpy.array(
+                        [c_by_rlz[i] for c_by_rlz in all_curves_for_imt])
                     # do means and quantiles
                     # quantiles first:
                     if self.hc.quantile_hazard_curves:
