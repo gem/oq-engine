@@ -489,41 +489,42 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
                 investigation_time=self.hc.investigation_time)
 
             with self.monitor('building curves per realization'):
-                for imt, curves in zip(
-                        sorted_imts, models.build_curves(rlz, self.curves)):
-                    curves_by_imt[imt].append(curves)
+                imt_curves = zip(
+                    sorted_imts, models.build_curves(rlz, self.curves))
+            for imt, curves in imt_curves:
+                curves_by_imt[imt].append(curves)
 
-                    # create a new `HazardCurve` 'container' record for each
-                    # realization for each intensity measure type
-                    hc_im_type, sa_period, sa_damping = from_string(imt)
+                # create a new `HazardCurve` 'container' record for each
+                # realization for each intensity measure type
+                hc_im_type, sa_period, sa_damping = from_string(imt)
 
-                    # save output
-                    hco = models.Output.objects.create(
-                        oq_job=self.job,
-                        display_name="Hazard Curve rlz-%s-%s" % (rlz.id, imt),
-                        output_type='hazard_curve',
-                    )
+                # save output
+                hco = models.Output.objects.create(
+                    oq_job=self.job,
+                    display_name="Hazard Curve rlz-%s-%s" % (rlz.id, imt),
+                    output_type='hazard_curve',
+                )
 
-                    # save hazard_curve
-                    haz_curve = models.HazardCurve.objects.create(
-                        output=hco,
-                        lt_realization=rlz,
-                        investigation_time=self.hc.investigation_time,
-                        imt=hc_im_type,
-                        imls=imtls[imt],
-                        sa_period=sa_period,
-                        sa_damping=sa_damping,
-                    )
+                # save hazard_curve
+                haz_curve = models.HazardCurve.objects.create(
+                    output=hco,
+                    lt_realization=rlz,
+                    investigation_time=self.hc.investigation_time,
+                    imt=hc_im_type,
+                    imls=imtls[imt],
+                    sa_period=sa_period,
+                    sa_damping=sa_damping,
+                )
 
-                    # save hazard_curve_data
-                    logs.LOG.info('saving %d hazard curves for %s, imt=%s',
-                                  len(points), hco, imt)
-                    writer.CacheInserter.saveall([models.HazardCurveData(
-                        hazard_curve=haz_curve,
-                        poes=list(poes),
-                        location='POINT(%s %s)' % (p.longitude, p.latitude),
-                        weight=rlz.weight)
-                        for p, poes in zip(points, curves)])
+                # save hazard_curve_data
+                logs.LOG.info('saving %d hazard curves for %s, imt=%s',
+                              len(points), hco, imt)
+                writer.CacheInserter.saveall([models.HazardCurveData(
+                    hazard_curve=haz_curve,
+                    poes=list(poes),
+                    location='POINT(%s %s)' % (p.longitude, p.latitude),
+                    weight=rlz.weight)
+                    for p, poes in zip(points, curves)])
 
         self.curves = {}  # save memory for the post-processing phase
         if self.hc.mean_hazard_curves or self.hc.quantile_hazard_curves:
