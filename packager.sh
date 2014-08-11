@@ -129,7 +129,8 @@ usage () {
 
     echo
     echo "USAGE:"
-    echo "    $0 [-D|--development] [-B|--binaries] [-U|--unsigned] [-R|--repository]    build debian source package."
+    echo "    $0 [-D|--development] [-S--sources_copy] [-B|--binaries] [-U|--unsigned] [-R|--repository]    build debian source package."
+    echo "       if -S is present try to copy sources to <GEM_DEB_MONOTONE>/sources directory"
     echo "       if -B is present binary package is build too."
     echo "       if -R is present update the local repository to the new current package"
     echo "       if -D is present a package with self-computed version is produced."
@@ -507,6 +508,7 @@ EOF
 #
 #  MAIN
 #
+BUILD_SOURCES_COPY=0
 BUILD_BINARIES=0
 BUILD_REPOSITORY=0
 BUILD_DEVEL=0
@@ -525,6 +527,9 @@ while [ $# -gt 0 ]; do
                 echo
                 exit 1
             fi
+            ;;
+        -S|--sources_copy)
+            BUILD_SOURCES_COPY=1
             ;;
         -B|--binaries)
             BUILD_BINARIES=1
@@ -664,14 +669,10 @@ dpkg-buildpackage $DPBP_FLAG
 cd -
 
 # if the monotone directory exists and is the "gem" repo and is the "master" branch then ...
-if [ -d "$GEM_DEB_MONOTONE/sources" ]; then
-    if [ $BUILD_BINARIES -eq 0 -a -d "$GEM_DEB_MONOTONE" ]; then
-        if [ "git://$repo_id" == "$GEM_GIT_REPO" -a "$branch_id" == "master" ]; then
-            cp build-deb/${GEM_DEB_PACKAGE}_*.changes \
-             build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
-            "${GEM_DEB_MONOTONE}/sources"
-        fi
-    fi
+if [ -d "$GEM_DEB_MONOTONE/sources" -a $BUILD_SOURCES_COPY -eq 1 ]; then
+    cp build-deb/${GEM_DEB_PACKAGE}_*.changes \
+        build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
+        "${GEM_DEB_MONOTONE}/sources"
 fi
 
 if [ $BUILD_DEVEL -ne 1 ]; then
