@@ -480,11 +480,11 @@ EOF
         repo_tmpdir="$(mktemp -d "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}.XXXXXX")"
 
         # if the monotone directory exists and is the "gem" repo and is the "master" branch then ...
-        if [ -d "$GEM_DEB_MONOTONE" ]; then
+        if [ -d "$GEM_DEB_MONOTONE/binaries" ]; then
             if [ "git://$repo_id" == "$GEM_GIT_REPO" -a "$branch_id" == "master" ]; then
                 cp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
                     build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
-                    "${GEM_DEB_MONOTONE}"
+                    "${GEM_DEB_MONOTONE}/binaries"
             fi
         fi
 
@@ -662,6 +662,17 @@ fi
 
 dpkg-buildpackage $DPBP_FLAG
 cd -
+
+# if the monotone directory exists and is the "gem" repo and is the "master" branch then ...
+if [ -d "$GEM_DEB_MONOTONE/sources" ]; then
+    if [ $BUILD_BINARIES -eq 0 -a -d "$GEM_DEB_MONOTONE" ]; then
+        if [ "git://$repo_id" == "$GEM_GIT_REPO" -a "$branch_id" == "master" ]; then
+            cp build-deb/${GEM_DEB_PACKAGE}_*.changes \
+             build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
+            "${GEM_DEB_MONOTONE}/sources"
+        fi
+    fi
+fi
 
 if [ $BUILD_DEVEL -ne 1 ]; then
     exit 0
