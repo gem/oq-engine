@@ -742,7 +742,7 @@ EOF
             if [ "git://$repo_id" == "$GEM_GIT_REPO" -a "$branch_id" == "master" ]; then
                 cp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
                     build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
-                    "${GEM_DEB_MONOTONE}"
+                    "${GEM_DEB_MONOTONE}/binaries"
                 PKG_COMMIT="$(git rev-parse HEAD | cut -c 1-7)"
                 grep '_COMMIT' _jenkins_deps_info \
                   | sed 's/\(^.*=[0-9a-f]\{7\}\).*/\1/g' \
