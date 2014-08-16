@@ -119,6 +119,12 @@ class Parser(object):
         namespace = self.parentparser.parse_args(argv or sys.argv[1:])
         return self.func(**vars(namespace))
 
+    def help(self):
+        """
+        Return the help message as a string
+        """
+        return self.parentparser.format_help()
+
 
 def compose(parsers, name='main', parentparser=None):
     """

@@ -21,3 +21,22 @@ class SapTestCase(unittest.TestCase):
         p.arg('a', 'first argument')
         with self.assertRaises(NameError):
             p.flg('c', 'third argument')
+
+    def test_help(self):
+        p = sap.Parser(f)
+        p.arg('a', 'first argument')
+        p.opt('b', 'second argument')
+        self.assertEqual(p.help(), '''\
+usage: nosetests [-h] [-b B] a
+
+positional arguments:
+  a            first argument
+
+optional arguments:
+  -h, --help   show this help message and exit
+  -b B, --b B  second argument
+''')
+        # missing argparse description for 'c' and 'd'
+        with self.assertRaises(NameError):
+            self.assertEqual(
+                ['1', '2', False, '3'], p.callfunc('1 -b=2 -d=3'.split()))
