@@ -135,7 +135,7 @@ def compose(parsers, name='main', parentparser=None):
     :param parsers: a list of Parser instances
     :param name: the name of the composed parser
     """
-    assert len(parsers) > 1, parsers
+    assert len(parsers) >= 1, parsers
     parentparser = parentparser or argparse.ArgumentParser()
     subparsers = parentparser.add_subparsers(
         help='available subcommands (see sub help)')
