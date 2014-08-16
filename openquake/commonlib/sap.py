@@ -57,7 +57,6 @@ class Parser(object):
         self.name = name or func.__name__
         args, varargs, varkw, defaults = inspect.getargspec(func)
         defaults = defaults or ()
-        self.argdict = OrderedDict()
         nodefaults = len(args) - len(defaults)
         alldefaults = (NODEFAULT,) * nodefaults + defaults
         self.argdict = OrderedDict(zip(args, alldefaults))
@@ -65,15 +64,21 @@ class Parser(object):
             description=func.__doc__)
         self.names = set()
         self.all_arguments = []
+        self._argno = 0
 
     def _add(self, name, *args, **kw):
         """
         Add an argument to the underlying parser and grow the list
         .all_arguments and the set .names
         """
+        argname = self.argdict.keys()[self._argno]
+        if argname != name:
+            raise NameError(
+                'Setting argument %s, but it should be %s' % (name, argname))
         self.parentparser.add_argument(*args, **kw)
         self.all_arguments.append((args, kw))
         self.names.add(name)
+        self._argno += 1
 
     def arg(self, name, help, type=None, choices=None, metavar=None):
         """Describe a positional argument"""
