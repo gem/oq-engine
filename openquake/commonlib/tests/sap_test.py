@@ -16,6 +16,28 @@ class SapTestCase(unittest.TestCase):
         self.assertEqual(
             ['1', '2', False, '3'], p.callfunc('1 -b=2 -d=3'.split()))
 
+    def test_group(self):
+        p = sap.Parser(f)
+        p.arg('a', 'first argument')
+        p.opt('b', 'second argument')
+        p.group('other arguments')
+        p.flg('c', 'third argument')
+        p.opt('d', 'fourth argument')
+        self.assertEqual(p.help(), '''\
+usage: nosetests [-h] [-b B] [-c] [-d 1] a
+
+positional arguments:
+  a            first argument
+
+optional arguments:
+  -h, --help   show this help message and exit
+  -b B, --b B  second argument
+
+other arguments:
+  -c, --c      third argument
+  -d 1, --d 1  fourth argument
+''')
+
     def test_NameError(self):
         p = sap.Parser(f)
         p.arg('a', 'first argument')

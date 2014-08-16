@@ -64,7 +64,11 @@ class Parser(object):
             description=func.__doc__)
         self.names = set()
         self.all_arguments = []
-        self._argno = 0
+        self._group = self.parentparser
+        self._argno = 0  # used in the NameError check in the _add method
+
+    def group(self, descr):
+        self._group = self.parentparser.add_argument_group(descr)
 
     def _add(self, name, *args, **kw):
         """
@@ -75,7 +79,7 @@ class Parser(object):
         if argname != name:
             raise NameError(
                 'Setting argument %s, but it should be %s' % (name, argname))
-        self.parentparser.add_argument(*args, **kw)
+        self._group.add_argument(*args, **kw)
         self.all_arguments.append((args, kw))
         self.names.add(name)
         self._argno += 1
