@@ -99,13 +99,13 @@ class Parser(object):
             kw['default'] = default
             kw['metavar'] = metavar or str(default)
         abbrev = abbrev or '-' + name[0]
-        longname = '--' + name
+        longname = '--' + name.replace('_', '-')
         self._add(name, abbrev, longname, **kw)
 
     def flg(self, name, help, abbrev=None):
         """Describe a flag"""
         abbrev = abbrev or '-' + name[0]
-        longname = '--' + name
+        longname = '--' + name.replace('_', '-')
         self._add(name, abbrev, longname, action='store_true', help=help)
 
     def callfunc(self, argv=None):

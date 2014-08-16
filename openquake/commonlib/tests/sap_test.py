@@ -40,3 +40,16 @@ optional arguments:
         with self.assertRaises(NameError):
             self.assertEqual(
                 ['1', '2', False, '3'], p.callfunc('1 -b=2 -d=3'.split()))
+
+    def test_long_argument(self):
+        # test the replacement '_' -> '-' in variable names
+        p = sap.Parser(lambda a_long_argument: None)
+        p.opt('a_long_argument', 'a long argument')
+        self.assertEqual(p.help(), '''\
+usage: nosetests [-h] [-a A_LONG_ARGUMENT]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -a A_LONG_ARGUMENT, --a-long-argument A_LONG_ARGUMENT
+                        a long argument
+''')
