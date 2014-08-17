@@ -622,7 +622,7 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
             # num_rlzs * num_sites * num_levels
             # NB: different IMTs can have different num_levels
             all_curves_for_imt = numpy.array(self.curves_by_imt[imt])
-
+            del self.curves_by_imt[imt]  # save memory
             with transaction.commit_on_success(using='job_init'):
                 inserter = writer.CacheInserter(
                     models.HazardCurveData, CURVE_CACHE_SIZE)
