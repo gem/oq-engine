@@ -73,7 +73,7 @@ GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=24-72
         self.assertEqual(gmfs_8, self.expected_gmfs)
 
     def run_with_concurrent_tasks(self, n):
-        with config.context('hazard', concurrent_tasks=n):
+        with config.context('celery', concurrent_tasks=n):
             cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
             job = self.run_hazard(cfg)
             tags = models.SESRupture.objects.filter(
