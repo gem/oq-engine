@@ -45,6 +45,18 @@ from collections import OrderedDict
 NODEFAULT = object()
 
 
+def get_parentparser(parser, description=None, help=True, version='0.0'):
+    """
+    """
+    if parser is None:
+        return argparse.ArgumentParser(
+            description=description, version=version, add_help=help)
+    elif hasattr(parser, 'parentparser'):
+        return parser.parentparser
+    else:
+        return parser
+
+
 class Parser(object):
     """
     A simple way to define command processors based on argparse.
@@ -52,20 +64,23 @@ class Parser(object):
     composed together, by dispatching on a given name (if not given,
     the function name is used).
     """
-    def __init__(self, func, name=None, parentparser=None):
+    def __init__(self, func, name=None, parentparser=None,
+                 help=True, version='0.0'):
         self.func = func
         self.name = name or func.__name__
-        args, varargs, varkw, defaults = inspect.getargspec(func)
+        args, self.varargs, varkw, defaults = inspect.getargspec(func)
+        assert self.varargs is None, self.varargs
         defaults = defaults or ()
         nodefaults = len(args) - len(defaults)
         alldefaults = (NODEFAULT,) * nodefaults + defaults
         self.argdict = OrderedDict(zip(args, alldefaults))
-        self.parentparser = parentparser or argparse.ArgumentParser(
-            description=func.__doc__)
+        self.parentparser = get_parentparser(
+            parentparser, description=func.__doc__, help=help, version=version)
         self.names = set()
         self.all_arguments = []
         self._group = self.parentparser
         self._argno = 0  # used in the NameError check in the _add method
+        self.checked = False  # used in the check_arguments method
 
     def group(self, descr):
         self._group = self.parentparser.add_argument_group(descr)
@@ -112,14 +127,19 @@ class Parser(object):
         longname = '--' + name.replace('_', '-')
         self._add(name, abbrev, longname, action='store_true', help=help)
 
+    def check_arguments(self):
+        for name, default in self.argdict.iteritems():
+            if not name in self.names and default is NODEFAULT:
+                raise NameError('Missing argparse description for %s' % name)
+
     def callfunc(self, argv=None):
         """
         Parse the argv list and extract a dictionary of arguments which
         is then passed to  the function underlying the Parser.
         """
-        for name, default in self.argdict.iteritems():
-            if not name in self.names and default is NODEFAULT:
-                raise NameError('Missing argparse description for %s' % name)
+        if not self.checked:
+            self.check_arguments()
+            self.checked = True
         namespace = self.parentparser.parse_args(argv or sys.argv[1:])
         return self.func(**vars(namespace))
 
@@ -130,7 +150,7 @@ class Parser(object):
         return self.parentparser.format_help()
 
 
-def compose(parsers, name='main', parentparser=None):
+def compose(parsers, name='main', description=None, version='0.0', help=True):
     """
     Collects together different arguments parsers and builds a single
     Parser dispatching on the subparsers depending on
@@ -140,7 +160,8 @@ def compose(parsers, name='main', parentparser=None):
     :param name: the name of the composed parser
     """
     assert len(parsers) >= 1, parsers
-    parentparser = parentparser or argparse.ArgumentParser()
+    parentparser = argparse.ArgumentParser(
+        description=description, version=version, add_help=help)
     subparsers = parentparser.add_subparsers(
         help='available subcommands (see sub help)')
     for p in parsers:
