@@ -247,7 +247,7 @@ def compute_hazard_curves(
                         gsim, r_sites, rupture, sorted_imts, sorted_imls,
                         hc.truncation_level, make_ctxt_mon, calc_poes_mon)):
                     curv[i] *= pnes
-             
+
         inserter.add(
             models.SourceInfo(trt_model_id=trt_model_id,
                               source_id=source.source_id,
