@@ -96,8 +96,7 @@ store_site_model'
             lt_model__hazard_calculation=self.job.hazard_calculation.id)
         self.assertEqual(0, len(ltrs))
 
-        for args in self.calc.task_arg_gen():
-            pass  # filter sources and save num_ruptures
+        self.calc.process_sources()
 
         with mock.patch('openquake.engine.logs.LOG.warn') as warn:
             self.calc.initialize_realizations()
@@ -126,8 +125,7 @@ store_site_model'
         self.calc.job.hazard_calculation.number_of_logic_tree_samples = 0
         self.calc.job.hazard_calculation.save()
         self.calc.initialize_sources()
-        for args in self.calc.task_arg_gen():
-            pass  # filter sources and save num_ruptures
+        self.calc.process_sources()
 
         self.calc.initialize_realizations()
 
@@ -148,7 +146,6 @@ store_site_model'
 
         # Update job status to move on to the execution phase.
         self.job.is_running = True
-
         self.job.status = 'executing'
         self.job.save()
         self.calc.execute()
