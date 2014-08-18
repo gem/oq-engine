@@ -36,8 +36,7 @@ from openquake.nrmllib import parsers as nrml_parsers
 from openquake.nrmllib.risk import parsers
 
 from openquake.commonlib import logictree, source
-from openquake.commonlib.general import \
-    block_splitter, split_in_blocks, distinct
+from openquake.commonlib.general import split_in_blocks, distinct
 
 from openquake.engine.input import exposure
 from openquake.engine import logs
@@ -151,6 +150,12 @@ class AllSources(object):
                 trt_model = self.trt_model[block[0]]
                 yield trt_model, block
 
+    def get_total_weight(self):
+        """
+        Return the total weight of the sources
+        """
+        return sum(self.weight.itervalues())
+
 
 class BaseHazardCalculator(base.Calculator):
     """
@@ -212,6 +217,9 @@ class BaseHazardCalculator(base.Calculator):
             trt_model.num_sources = len(sc.sources)
             trt_model.num_ruptures = sc.num_ruptures
             trt_model.save()
+        total_weight = self.all_sources.get_total_weight()
+        logs.LOG.info('Total weight of the sources=%d', total_weight)
+        return total_weight
 
     def task_arg_gen(self):
         """
