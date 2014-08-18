@@ -19,9 +19,7 @@ from openquake.engine import logs
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.utils import tasks, config
 
-# Routing key format string for communication between tasks and the control
-# node.
-ROUTING_KEY_FMT = 'oq.job.%(job_id)s.tasks'
+from openquake.commonlib.source import SourceCollector
 
 
 class Calculator(object):
@@ -39,9 +37,11 @@ class Calculator(object):
         self.job = job
         self.num_tasks = None
         self._task_args = []
-        # a crucial parameter from openquake.cfg
+        # two parameters from openquake.cfg
         self.concurrent_tasks = int(
-            config.get('hazard', 'concurrent_tasks'))
+            config.get('celery', 'concurrent_tasks'))
+        SourceCollector.POINT_SOURCE_WEIGHT = float(
+            config.get('hazard', 'point_source_weight'))
 
     def monitor(self, operation):
         """
