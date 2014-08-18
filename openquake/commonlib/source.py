@@ -85,8 +85,10 @@ class SourceCollector(object):
             an instance of :class:
             `openquake.hazardlib.source.base.BaseSeismicSource`
         """
-        weight = src.count_ruptures()
-        self.num_ruptures += weight
+        num_ruptures = src.count_ruptures()
+        self.num_ruptures += num_ruptures
+        weight = (num_ruptures if src.__class__.__name__ == 'PointSource'
+                  else num_ruptures * 40)
         return weight
 
     def __repr__(self):
