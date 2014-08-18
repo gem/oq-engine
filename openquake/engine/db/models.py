@@ -831,18 +831,6 @@ class HazardCalculation(djm.Model):
 
         return investigation_time
 
-    def sites_affected_by(self, src):
-        """
-        If the maximum_distance is set returns the filtered subset of
-        the site collection, otherwise return the whole connection.
-        NB: this method returns `None` if the filtering does not
-        find any site close to the source.
-
-        :param src: the source object used for the filtering
-        """
-        return src.filter_sites_by_distance_to_source(
-            self.maximum_distance, self.site_collection)
-
     def gen_ruptures(self, sources, monitor, site_coll):
         """
         Yield (source, rupture, affected_sites) for each rupture
