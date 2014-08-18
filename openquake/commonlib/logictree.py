@@ -1144,9 +1144,7 @@ class GMPELogicTree(BaseLogicTree):
 
 
 BranchTuple = namedtuple('BranchTuple', 'bset, id, uncertainty, weight')
-BranchTuple.__lt__ = lambda self, other: (
-    self.bset['branchSetID'] < other.bset['branchSetID']
-    and self.id < other.id)
+
 
 class InvalidLogicTree(Exception):
     pass
@@ -1177,7 +1175,8 @@ class GsimLogicTree(object):
                 'The given tectonic region types are not distinct: %s' %
                 ','.join(self.filter_keys))
         self.values = collections.defaultdict(list)  # {fkey: uncertainties}
-        self.branches = sorted(self._parse_lt())
+        self.branches = sorted(
+            self._parse_lt(), key=lambda b: (b.bset['branchSetID'], b.id))
         if filter_keys and not self.branches:
             raise InvalidLogicTree(
                 'Could not find branches with attribute %r in %s' %

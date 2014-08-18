@@ -185,6 +185,8 @@ class TaskManager(object):
 
     Progress report is built-in.
     """
+    executor = executor
+
     def __init__(self, oqtask, progress, name=None):
         self.oqtask = oqtask
         self.progress = progress
@@ -203,7 +205,7 @@ class TaskManager(object):
         if no_distribute():
             res = safely_call(self.oqtask, args)
         else:
-            res = executor.submit(safely_call, self.oqtask, args)
+            res = self.executor.submit(safely_call, self.oqtask, args)
         self.results.append(res)
 
     def aggregate_result_set(self, agg, acc):
