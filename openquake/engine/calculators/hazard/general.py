@@ -22,6 +22,7 @@ import os
 import random
 import itertools
 import collections
+from operator import attrgetter
 
 import numpy
 
@@ -35,7 +36,8 @@ from openquake.nrmllib import parsers as nrml_parsers
 from openquake.nrmllib.risk import parsers
 
 from openquake.commonlib import logictree, source
-from openquake.commonlib.general import distinct
+from openquake.commonlib.general import \
+    block_splitter, split_in_blocks, distinct
 
 from openquake.engine.input import exposure
 from openquake.engine import logs
@@ -49,6 +51,7 @@ from openquake.engine.calculators.post_processing import (
 from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.performance import EnginePerformanceMonitor
+from openquake.engine.utils import tasks
 
 #: Maximum number of hazard curves to cache, for selects or inserts
 CURVE_CACHE_SIZE = 100000
@@ -95,6 +98,60 @@ def all_equal(obj, value):
         return eq
 
 
+@tasks.oqtask
+def filter_and_split_sources(job_id, sources, sitecol):
+    """
+    Filter and split a list of hazardlib sources.
+
+    :param int job_id: ID of the current job
+    :param list sources: the original sources
+    :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
+    """
+    hc = models.HazardCalculation.objects.get(oqjob=job_id)
+    discr = hc.area_source_discretization
+    maxdist = hc.maximum_distance
+    srcs = []
+    for src in sources:
+        sites = src.filter_sites_by_distance_to_source(maxdist, sitecol)
+        if sites is not None:
+            for ss in source.split_source(src, discr):
+                srcs.append(ss)
+    return srcs
+
+
+class AllSources(object):
+    """
+    A container for sources of different tectonic region types.
+    The `split` method yields pairs (trt_model, block-of-sources).
+    """
+    def __init__(self):
+        self.sources = []
+        self.weight = {}
+        self.trt_model = {}
+
+    def append(self, src, weight, trt_model):
+        """
+        Collect a source, together with its weight and trt_model.
+        """
+        self.sources.append(src)
+        self.weight[src] = weight
+        self.trt_model[src] = trt_model
+
+    def split(self, hint):
+        """
+        Split the sources in a number of blocks close to the given `hint`.
+
+        :param int hint: hint for the number of blocks
+        """
+        if self.sources:
+            for block in split_in_blocks(
+                    self.sources, hint,
+                    self.weight.__getitem__,
+                    self.trt_model.__getitem__):
+                trt_model = self.trt_model[block[0]]
+                yield trt_model, block
+
+
 class BaseHazardCalculator(base.Calculator):
     """
     Abstract base class for hazard calculators. Contains a bunch of common
@@ -116,6 +173,46 @@ class BaseHazardCalculator(base.Calculator):
         """
         return self.job.hazard_calculation
 
+    @EnginePerformanceMonitor.monitor
+    def process_sources(self):
+        """
+        Filter and split the sources in parallel.
+        Return the list of processed sources.
+        """
+        self.all_sources = AllSources()
+        self.job.is_running = True
+        self.job.save()
+        num_models = len(self.source_collector)
+        for i, trt_model_id in enumerate(sorted(self.source_collector), 1):
+            trt_model = models.TrtModel.objects.get(pk=trt_model_id)
+            sc = self.source_collector[trt_model_id]
+            # NB: the filtering of the sources by site is slow, so it is
+            # done in parallel
+            sm_lt_path = tuple(trt_model.lt_model.sm_lt_path)
+            logs.LOG.progress(
+                '[%d of %d] Filtering/splitting %d source(s) for '
+                'sm_lt_path=%s, TRT=%s, model=%s', i, num_models,
+                len(sc.sources), sm_lt_path, trt_model.tectonic_region_type,
+                trt_model.lt_model.sm_name)
+            sc.sources = tasks.parallel_apply(
+                filter_and_split_sources,
+                (self.job.id, sc.sources, self.hc.site_collection),
+                self.concurrent_tasks)
+            sc.sources.sort(key=attrgetter('source_id'))
+            if not sc.sources:
+                logs.LOG.warn(
+                    'Could not find sources close to the sites in %s '
+                    'sm_lt_path=%s, maximum_distance=%s km',
+                    trt_model.lt_model.sm_name, sm_lt_path,
+                    self.hc.maximum_distance)
+                continue
+            for src in sc.sources:
+                self.all_sources.append(
+                    src, sc.update_num_ruptures(src), trt_model)
+            trt_model.num_sources = len(sc.sources)
+            trt_model.num_ruptures = sc.num_ruptures
+            trt_model.save()
+
     def task_arg_gen(self):
         """
         Loop through realizations and sources to generate a sequence of
@@ -128,40 +225,20 @@ class BaseHazardCalculator(base.Calculator):
             for args in self._task_args:
                 yield args
             return
-
         sitecol = self.hc.site_collection
         task_no = 0
-        for trt_model_id in sorted(self.source_collector):
-            trt_model = models.TrtModel.objects.get(pk=trt_model_id)
-            sc = self.source_collector[trt_model_id]
-            sc.sources.sort(key=lambda src: src.source_id)
-            ltpath = tuple(trt_model.lt_model.sm_lt_path)
-
-            # NB: the filtering of the sources by site is slow
-            source_blocks = sc.gen_blocks(
-                self.hc.sites_affected_by,
-                self.source_max_weight,
-                self.hc.area_source_discretization)
-            num_blocks = 0
-            for block in source_blocks:
-                args = (self.job.id, sitecol, block, trt_model.id, task_no)
-                self._task_args.append(args)
-                yield args
-                task_no += 1
-                num_blocks += 1
-                logs.LOG.info('Processing %d sources out of %d' %
-                              sc.filtered_sources)
-            if not sc.sources:
-                logs.LOG.warn(
-                    'Could not find sources close to the sites in %s '
-                    '(maximum_distance=%s km)',
-                    trt_model.lt_model.sm_name, self.hc.maximum_distance)
-            else:
-                logs.LOG.progress('Generated %d block(s) for %s, TRT=%s',
-                                  num_blocks, ltpath, sc.trt)
-            trt_model.num_sources = len(sc.sources)
-            trt_model.num_ruptures = sc.num_ruptures
-            trt_model.save()
+        tot_sources = 0
+        for trt_model, block in self.all_sources.split(self.concurrent_tasks):
+            args = (self.job.id, sitecol, block, trt_model.id,
+                    task_no)
+            self._task_args.append(args)
+            yield args
+            task_no += 1
+            tot_sources += len(block)
+            logs.LOG.info('Submitting task #%d, %d sources, weight=%d',
+                          task_no, len(block), block.weight)
+        logs.LOG.info('Processed %d sources for %d TRTs',
+                      tot_sources, len(self.source_collector))
 
     def task_completed(self, result):
         """
@@ -221,6 +298,7 @@ class BaseHazardCalculator(base.Calculator):
         self.parse_risk_models()
         self.initialize_site_model()
         self.initialize_sources()
+        self.process_sources()
         self.imtls = self.hc.intensity_measure_types_and_levels
         if self.imtls:
             n_levels = sum(len(lvls) for lvls in self.imtls.itervalues()
