@@ -583,7 +583,7 @@ class SitesContext(object):
     Only those required parameters are made available in a result context
     object.
     """
-    __slots__ = ('vs30', 'vs30measured', 'z1pt0', 'z2pt5')
+    __slots__ = ('vs30', 'vs30measured', 'z1pt0', 'z2pt5', 'lons', 'lats')
 
 
 class DistancesContext(object):

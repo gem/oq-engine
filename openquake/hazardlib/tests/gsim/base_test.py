@@ -434,7 +434,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
             'mag rake dip ztor hypo_depth width'.split()
         )
         self.gsim_class.REQUIRES_SITES_PARAMETERS = set(
-            'vs30 vs30measured z1pt0 z2pt5'.split()
+            'vs30 vs30measured z1pt0 z2pt5 lons lats'.split()
         )
         sites = SiteCollection([self.site1, self.site2])
         sctx, rctx, dctx = self.gsim.make_contexts(sites, self.rupture)
@@ -451,6 +451,8 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.assertTrue((sctx.vs30measured == [False, True]).all())
         self.assertTrue((sctx.z1pt0 == [12.1, 112.1]).all())
         self.assertTrue((sctx.z2pt5 == [15.1, 115.1]).all())
+        self.assertTrue((sctx.lons == [1, -2]).all())
+        self.assertTrue((sctx.lats == [2, -3]).all())
         self.assertTrue((dctx.rjb == [6, 7]).all())
         self.assertTrue((dctx.rx == [4, 5]).all())
         self.assertTrue((dctx.rrup == [10, 11]).all())
@@ -466,12 +468,14 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
     def test_some_values(self):
         self.gsim_class.REQUIRES_DISTANCES = set('rjb rx'.split())
         self.gsim_class.REQUIRES_RUPTURE_PARAMETERS = set('mag rake'.split())
-        self.gsim_class.REQUIRES_SITES_PARAMETERS = set('vs30 z1pt0'.split())
+        self.gsim_class.REQUIRES_SITES_PARAMETERS = \
+            set('vs30 z1pt0 lons'.split())
         sites = SiteCollection([self.site1, self.site2])
         sctx, rctx, dctx = self.gsim.make_contexts(sites, self.rupture)
         self.assertEqual((rctx.mag, rctx.rake), (123.45, 123.56))
         self.assertTrue((sctx.vs30 == (456, 1456)).all())
         self.assertTrue((sctx.z1pt0 == (12.1, 112.1)).all())
+        self.assertTrue((sctx.lons == [1, -2]).all())
         self.assertTrue((dctx.rx == (4, 5)).all())
         self.assertFalse(hasattr(rctx, 'dip'))
         self.assertFalse(hasattr(sctx, 'vs30measured'))
