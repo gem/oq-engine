@@ -22,9 +22,77 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import SA, PGV
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.geo import Point
-from openquake.hazardlib.calc.gmf import ground_motion_fields
+from openquake.hazardlib.calc.gmf import (
+    ground_motion_fields, CorrelationButNoInterIntraStdDevs)
 from openquake.hazardlib.correlation import JB2009CorrelationModel
 
+
+class BaseFakeGSIM(object):
+    expect_stddevs = True
+    expect_same_sitecol = True
+
+    def __init__(self, testcase):
+        self.testcase = testcase
+
+    def make_contexts(gsim, sites, rupture):
+        raise NotImplementedError
+
+    def get_mean_and_stddevs(gsim, mean, std_inter, std_intra, imt,
+                             stddev_types):
+        raise NotImplementedError
+
+    def to_imt_unit_values(gsim, intensities):
+        return intensities - 10.
+
+class FakeGSIMInterIntraStdDevs(BaseFakeGSIM):
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set(
+        [const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT]
+    )
+
+    def make_contexts(gsim, sites, rupture):
+        if gsim.expect_same_sitecol:
+            gsim.testcase.assertIs(sites, gsim.testcase.sites)
+        else:
+            gsim.testcase.assertIsNot(sites, gsim.testcase.sites)
+        gsim.testcase.assertIs(rupture, gsim.testcase.rupture)
+        return sites.vs30, sites.z1pt0, sites.z2pt5
+
+    def get_mean_and_stddevs(gsim, mean, std_inter, std_intra, imt,
+                             stddev_types):
+        assert imt is gsim.testcase.imt1 or imt is gsim.testcase.imt2
+        if gsim.expect_stddevs:
+            gsim.testcase.assertEqual(stddev_types, [const.StdDev.INTER_EVENT,
+                                            const.StdDev.INTRA_EVENT])
+            # + 10 is needed to make sure that to_imt_unit_values()
+            # is called on the result of gmf calc
+            return mean + 10, [std_inter, std_intra]
+        else:
+            gsim.testcase.assertEqual(stddev_types, [])
+            return mean + 10, []
+
+class FakeGSIMTotalStdDev(BaseFakeGSIM):
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
+
+    def make_contexts(gsim, sites, rupture):
+        if gsim.expect_same_sitecol:
+            gsim.testcase.assertIs(sites, gsim.testcase.sites_total)
+        else:
+            gsim.testcase.assertIsNot(sites, gsim.testcase.sites_total)
+        gsim.testcase.assertIs(rupture, gsim.testcase.rupture)
+        return sites.vs30, sites.z1pt0, sites.z2pt5
+
+    def get_mean_and_stddevs(gsim, mean, std_total, not_used, imt,
+                             stddev_types):
+        assert imt is gsim.testcase.imt1 or imt is gsim.testcase.imt2
+        if gsim.expect_stddevs:
+            gsim.testcase.assertEqual(stddev_types, [const.StdDev.TOTAL])
+
+            # + 10 is needed to make sure that to_imt_unit_values()
+            # is called on the result of gmf calc
+            return mean + 10, [std_total]
+        else:
+            gsim.testcase.assertEqual(stddev_types, [])
+            return mean + 10, []
 
 class BaseGMFCalcTestCase(unittest.TestCase):
     def setUp(self):
@@ -79,70 +147,6 @@ class BaseGMFCalcTestCase(unittest.TestCase):
         self.imt1 = SA(10, 5)
         self.imt2 = PGV()
 
-        class BaseFakeGSIM(object):
-            expect_stddevs = True
-            expect_same_sitecol = True
-
-            def make_contexts(gsim, sites, rupture):
-                raise NotImplementedError
-
-            def get_mean_and_stddevs(gsim, mean, std_inter, std_intra, imt,
-                                     stddev_types):
-                raise NotImplementedError
-
-            def to_imt_unit_values(gsim, intensities):
-                return intensities - 10.
-
-        class FakeGSIMInterIntraStdDevs(BaseFakeGSIM):
-            DEFINED_FOR_STANDARD_DEVIATION_TYPES = set(
-                [const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT]
-            )
-
-            def make_contexts(gsim, sites, rupture):
-                if gsim.expect_same_sitecol:
-                    self.assertIs(sites, self.sites)
-                else:
-                    self.assertIsNot(sites, self.sites)
-                self.assertIs(rupture, self.rupture)
-                return sites.vs30, sites.z1pt0, sites.z2pt5
-
-            def get_mean_and_stddevs(gsim, mean, std_inter, std_intra, imt,
-                                     stddev_types):
-                assert imt is self.imt1 or imt is self.imt2
-                if gsim.expect_stddevs:
-                    self.assertEqual(stddev_types, [const.StdDev.INTER_EVENT,
-                                                    const.StdDev.INTRA_EVENT])
-                    # + 10 is needed to make sure that to_imt_unit_values()
-                    # is called on the result of gmf calc
-                    return mean + 10, [std_inter, std_intra]
-                else:
-                    self.assertEqual(stddev_types, [])
-                    return mean + 10, []
-
-        class FakeGSIMTotalStdDev(BaseFakeGSIM):
-            DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
-
-            def make_contexts(gsim, sites, rupture):
-                if gsim.expect_same_sitecol:
-                    self.assertIs(sites, self.sites_total)
-                else:
-                    self.assertIsNot(sites, self.sites_total)
-                self.assertIs(rupture, self.rupture)
-                return sites.vs30, sites.z1pt0, sites.z2pt5
-
-            def get_mean_and_stddevs(gsim, mean, std_total, not_used, imt,
-                                     stddev_types):
-                assert imt is self.imt1 or imt is self.imt2
-                if gsim.expect_stddevs:
-                    self.assertEqual(stddev_types, [const.StdDev.TOTAL])
-
-                    # + 10 is needed to make sure that to_imt_unit_values()
-                    # is called on the result of gmf calc
-                    return mean + 10, [std_total]
-                else:
-                    self.assertEqual(stddev_types, [])
-                    return mean + 10, []
-
         def rupture_site_filter(rupture_site_gen):
             [(rupture, sites)] = rupture_site_gen
             assert rupture is self.rupture
@@ -151,8 +155,8 @@ class BaseGMFCalcTestCase(unittest.TestCase):
 
         self.rupture_site_filter = rupture_site_filter
 
-        self.gsim = FakeGSIMInterIntraStdDevs()
-        self.total_stddev_gsim = FakeGSIMTotalStdDev()
+        self.gsim = FakeGSIMInterIntraStdDevs(self)
+        self.total_stddev_gsim = FakeGSIMTotalStdDev(self)
 
 
 class GMFCalcNoCorrelationTestCase(BaseGMFCalcTestCase):
@@ -385,6 +389,30 @@ class GMFCalcCorrelatedTestCase(BaseGMFCalcTestCase):
         self.assertAlmostEqual(s2_intensity.mean(), mean2, delta=1e-3)
         self.assertAlmostEqual(s1_intensity.std(), intra1, delta=2e-3)
         self.assertAlmostEqual(s2_intensity.std(), intra2, delta=1e-2)
+
+    def test_correlation_with_total_stddev(self):
+        mean1 = 10
+        mean2 = 14
+        inter = 1e-300
+        intra1 = 0.2
+        intra2 = 1.6
+        p1 = Point(0, 0)
+        p2 = Point(0, 0.3)
+        sites = [Site(p1, mean1, False, inter, intra1),
+                 Site(p2, mean2, False, inter, intra2)]
+        self.sites = SiteCollection(sites)
+
+        numpy.random.seed(41)
+        cormo = JB2009CorrelationModel(vs30_clustering=False)
+        gsim = FakeGSIMTotalStdDev(self)
+        gsim.expect_same_sitecol = False
+        with self.assertRaises(CorrelationButNoInterIntraStdDevs):
+            ground_motion_fields(
+                self.rupture, self.sites, [self.imt1], gsim,
+                truncation_level=None, realizations=6000,
+                correlation_model=cormo,
+           )
+
 
     def test_rupture_site_filtering(self):
         mean = 10
