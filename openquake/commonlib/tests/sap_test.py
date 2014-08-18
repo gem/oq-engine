@@ -44,24 +44,22 @@ other arguments:
         with self.assertRaises(NameError):
             p.flg('c', 'third argument')
 
-    def test_help(self):
-        p = sap.Parser(f, version=None)
+    def test_no_help(self):
+        p = sap.Parser(f, help=None, version=None)
         p.arg('a', 'first argument')
         p.opt('b', 'second argument')
         self.assertEqual(p.help(), '''\
-usage: nosetests [-h] [-b B] a
+usage: nosetests [-b B] a
 
 positional arguments:
   a            first argument
 
 optional arguments:
-  -h, --help   show this help message and exit
   -b B, --b B  second argument
 ''')
-        # missing argparse description for 'c' and 'd'
+        # missing argparse specification for 'c'
         with self.assertRaises(NameError):
-            self.assertEqual(
-                ['1', '2', False, '3'], p.callfunc('1 -b=2 -d=3'.split()))
+            p.check_arguments()
 
     def test_long_argument(self):
         # test the replacement '_' -> '-' in variable names
