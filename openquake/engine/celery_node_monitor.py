@@ -26,6 +26,7 @@ import celery.task.control
 from amqplib.client_0_8.exceptions import AMQPChannelException
 
 from openquake.engine import logs
+from openquake.engine.utils import config
 from openquake.commonlib.general import str2bool
 
 
@@ -118,10 +119,7 @@ class CeleryNodeMonitor(object):
     def check_nodes(self):
         """
         Check that the expected celery nodes are all up. The loop
-        continues until the main thread keeps running. In case of
-        heavy computations it is best to set the environment variable
-        OQ_TERMINATE_JOB_WHEN_CELERY_IS_DOWN=false, otherwise if any
-        node does not respond to the ping the calculation is killed.
+        continues until the main thread keeps running.
         """
         while self.job_is_running(sleep=self.interval):
             live_nodes = self.ping(timeout=self.interval)
@@ -129,8 +127,8 @@ class CeleryNodeMonitor(object):
                 dead_nodes = list(self.live_nodes - live_nodes)
                 logs.LOG.critical(
                     'Cluster nodes not accessible: %s', dead_nodes)
-                terminate = str2bool(os.environ.get(
-                    'OQ_TERMINATE_JOB_WHEN_CELERY_IS_DOWN', 'true'))
+                terminate = str2bool(
+                    config.get('celery', 'terminate_job_when_celery_is_down'))
                 if terminate:
                     os.kill(os.getpid(), signal.SIGABRT)  # commit suicide
 

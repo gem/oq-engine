@@ -77,7 +77,7 @@ class ClassicalHazardCase11TestCase(qa_utils.BaseQATestCase):
       <gml:Point>
         <gml:pos>0.0 0.0</gml:pos>
       </gml:Point>
-      <poEs>0.0106744601702 0.000803487930336 9.71146367725e-05 0.0</poEs>
+      <poEs>0.0106744601702 0.000803487930335 9.71146367726e-05 0.0</poEs>
     </hazardCurve>
   </hazardCurves>
 </nrml>"""
