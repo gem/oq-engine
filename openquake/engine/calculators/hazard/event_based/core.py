@@ -184,8 +184,6 @@ def compute_ruptures(
 
     # Compute and save stochastic event sets
     rnd = random.Random()
-    total_ruptures = 0
-
     for src, seed in src_seeds:
         t0 = time.time()
         rnd.seed(seed)
@@ -201,6 +199,7 @@ def compute_ruptures(
         # for each occurring rupture for each ses in the ses collection
         ses_num_occ = collections.defaultdict(list)
         with generate_ruptures_mon:  # generating ruptures for the given source
+            ruptures_per_src = 0
             for rup_no, rup in enumerate(src.iter_ruptures(), 1):
                 rup.rup_no = rup_no
                 for ses_idx in all_ses:
@@ -208,7 +207,7 @@ def compute_ruptures(
                     num_occurrences = rup.sample_number_of_occurrences()
                     if num_occurrences:
                         ses_num_occ[rup].append((ses_idx, num_occurrences))
-                        total_ruptures += num_occurrences
+                        ruptures_per_src += num_occurrences
 
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
@@ -243,14 +242,19 @@ def compute_ruptures(
             occ_ruptures = sum(num for rup in ses_num_occ
                                for ses, num in ses_num_occ[rup])
             tot_ruptures += occ_ruptures
-            source_inserter.add(
-                models.SourceInfo(trt_model_id=trt_model_id,
-                                  source_id=src.source_id,
-                                  source_class=src.__class__.__name__,
-                                  num_sites=len(s_sites),
-                                  num_ruptures=num_ruptures,
-                                  occ_ruptures=occ_ruptures,
-                                  calc_time=time.time() - t0))
+        else:
+            num_ruptures = ruptures_per_src
+            occ_ruptures = 0
+
+        # save SourceInfo
+        source_inserter.add(
+            models.SourceInfo(trt_model_id=trt_model_id,
+                              source_id=src.source_id,
+                              source_class=src.__class__.__name__,
+                              num_sites=len(s_sites),
+                              num_ruptures=num_ruptures,
+                              occ_ruptures=occ_ruptures,
+                              calc_time=time.time() - t0))
 
     filter_sites_mon.flush()
     generate_ruptures_mon.flush()
