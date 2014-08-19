@@ -318,7 +318,12 @@ class BaseHazardCalculator(base.Calculator):
         self.parse_risk_models()
         self.initialize_site_model()
         self.initialize_sources()
+
+        # The input weight is given by the number of ruptures generated
+        # by the sources; for point sources however a corrective factor
+        # given by the parameter `point_source_weight` is applied
         input_weight = self.process_sources()
+
         self.imtls = self.hc.intensity_measure_types_and_levels
         n_sites = len(self.hc.site_collection)
         if self.imtls:
@@ -330,7 +335,7 @@ class BaseHazardCalculator(base.Calculator):
                          for imt in sorted(self.imtls)]
             logs.LOG.info('%d IMT level(s) and %d site(s)', n_levels, n_sites)
 
-        # The output size is a pure number which is proportional to the size
+        # The output weight is a pure number which is proportional to the size
         # of the expected output of the calculator. For classical and disagg
         # calculators it is given by n_sites * n_realizations * n_levels;
         # for the event based calculator is given by n_sites * n_realizations
