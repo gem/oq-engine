@@ -432,12 +432,6 @@ class EventBasedHazardForm(BaseHazardModelForm):
                                         msg)
                         all_valid = False
 
-                if not hc.ground_motion_fields:
-                    msg = ('`hazard_curves_from_gmfs` requires '
-                           '`ground_motion_fields` to be `true`')
-                    self._add_error('hazard_curves_from_gmfs', msg)
-                    all_valid = False
-
         return all_valid
 
 

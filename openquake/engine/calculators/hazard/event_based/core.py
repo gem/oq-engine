@@ -262,7 +262,7 @@ def compute_ruptures(
 
 
 @tasks.oqtask
-def compute_and_save_gmfs(job_id, sids, rupture_data, task_no):
+def compute_gmfs_and_curves(job_id, sids, rupture_data, task_no):
     """
     :param int job_id:
         ID of the currently running job
@@ -281,26 +281,27 @@ def compute_and_save_gmfs(job_id, sids, rupture_data, task_no):
     # NB: by construction rupture_data is a non-empty list with
     # ruptures of homogeneous trt_model
     trt_model = rupture_data[0].rupture.trt_model
-    rlzs = trt_model.get_rlzs_by_gsim()
-    gsims = [logictree.GSIM[gsim]() for gsim in rlzs]
+    rlzs_by_gsim = trt_model.get_rlzs_by_gsim()
+    gsims = [logictree.GSIM[gsim]() for gsim in rlzs_by_gsim]
     calc = GmfCalculator(params, imts, gsims, trt_model.id, task_no)
 
     with EnginePerformanceMonitor(
-            'computing gmfs', job_id, compute_and_save_gmfs):
+            'computing gmfs', job_id, compute_gmfs_and_curves):
         calc.calc_gmfs(rupture_data)
 
     if hc.hazard_curves_from_gmfs:
         with EnginePerformanceMonitor(
-                'hazard curves from gmfs', job_id, compute_and_save_gmfs):
+                'hazard curves from gmfs', job_id, compute_gmfs_and_curves):
             curves_by_gsim = calc.to_haz_curves(
                 sids, hc.intensity_measure_types_and_levels,
                 hc.investigation_time, hc.ses_per_logic_tree_path)
     else:
         curves_by_gsim = []
 
-    with EnginePerformanceMonitor(
-            'saving gmfs', job_id, compute_and_save_gmfs):
-        calc.save_gmfs(rlzs)
+    if hc.ground_motion_fields:
+        with EnginePerformanceMonitor(
+                'saving gmfs', job_id, compute_gmfs_and_curves):
+            calc.save_gmfs(rlzs_by_gsim)
 
     return curves_by_gsim, trt_model.id, []
 
@@ -349,12 +350,12 @@ class GmfCalculator(object):
                 self.ruptures_per_site[
                     gsim_name, imt, site_id].append(rupid)
 
-    def save_gmfs(self, rlzs):
+    def save_gmfs(self, rlzs_by_gsim):
         """
         Helper method to save the computed GMF data to the database.
         """
         for gsim_name, imt, site_id in self.gmvs_per_site:
-            for rlz in rlzs[gsim_name]:
+            for rlz in rlzs_by_gsim[gsim_name]:
                 imt_name, sa_period, sa_damping = imt
                 inserter.add(models.GmfData(
                     gmf=models.Gmf.objects.get(lt_realization=rlz),
@@ -439,39 +440,45 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         for trt_model in trt_models:
             trt_model.num_ruptures = self.num_ruptures.get(trt_model.id, 0)
             trt_model.save()
-        if not self.hc.ground_motion_fields:
+        if (not self.hc.ground_motion_fields and
+                not self.hc.hazard_curves_from_gmfs):
             return  # do nothing
 
         # create a Gmf output for each realization
         self.initialize_realizations()
-        for rlz in self._get_realizations():
-            output = models.Output.objects.create(
-                oq_job=self.job,
-                display_name='GMF rlz-%s' % rlz.id,
-                output_type='gmf')
-            models.Gmf.objects.create(output=output, lt_realization=rlz)
+        if self.hc.ground_motion_fields:
+            for rlz in self._get_realizations():
+                output = models.Output.objects.create(
+                    oq_job=self.job,
+                    display_name='GMF rlz-%s' % rlz.id,
+                    output_type='gmf')
+                models.Gmf.objects.create(output=output, lt_realization=rlz)
 
-        self.generate_gmfs()
+        self.generate_gmfs_and_curves()
 
         # now save the curves, if any
         if self.curves:
             self.save_hazard_curves()
 
     @EnginePerformanceMonitor.monitor
-    def generate_gmfs(self):
+    def generate_gmfs_and_curves(self):
         """
         Generate the GMFs and optionally the hazard curves too
         """
         sitecol = self.hc.site_collection
-        otm = tasks.OqTaskManager(compute_and_save_gmfs, logs.LOG.progress)
+        otm = tasks.OqTaskManager(compute_gmfs_and_curves, logs.LOG.progress)
         task_no = 0
         rupture_data = []
         for rupture in models.ProbabilisticRupture.objects.filter(
                 trt_model__lt_model__hazard_calculation=self.hc
                 ).order_by('trt_model'):
+            # NB: the ordering here must be done explicitly, even
+            # if have set the ordering field in the Django model;
+            # it looks like a shortcoming of Django
+            ruptures = rupture.sesrupture_set.all()
             rdata = RuptureData(
                 self.hc.site_collection, rupture,
-                [(r.id, r.seed) for r in rupture.sesrupture_set.all()])
+                [(r.id, r.seed) for r in ruptures])
             rupture_data.append(rdata)
 
         for rblock in split_in_blocks(
@@ -529,8 +536,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         # has some value (not an empty list), do this additional
         # post-processing.
         if self.hc.mean_hazard_curves or self.hc.quantile_hazard_curves:
-            with self.monitor('generating mean/quantile curves'):
-                self.do_aggregate_post_proc()
+            self.do_aggregate_post_proc()
 
         if self.hc.hazard_maps:
             with self.monitor('generating hazard maps'):
