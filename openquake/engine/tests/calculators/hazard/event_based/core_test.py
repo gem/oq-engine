@@ -23,12 +23,10 @@ import numpy
 from nose.plugins.attrib import attr
 
 from openquake.hazardlib.imt import PGA
-from openquake.hazardlib.source.rupture import Rupture
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
-from openquake.hazardlib.source.complex_fault import ComplexFaultSource
 from openquake.hazardlib.gsim import get_available_gsims
 
 from openquake.engine.db import models
@@ -208,7 +206,6 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
         self.assertEqual(num_gmf1, 242)
         self.assertEqual(num_gmf2, 242)
-        # NB: with source_max_weight=20000 5 tasks are generated
 
         # Now check for the correct number of hazard curves:
         curves = models.HazardCurve.objects.filter(output__oq_job=job)

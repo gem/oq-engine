@@ -14,11 +14,11 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
 This is a regression test with the goal of avoiding the reintroduction
-of a dependence from the configuration parameter `source_max_weight`.
+of a dependence from the configuration parameter `concurrent_tasks`.
 We use a source model with 398 sources and a single SES.
 Due to the distance filtering only 7 sources are relevant, but some
 of them are area sources generating a lot of point sources.
-We test the independence from the parameter `source_max_weight`
+We test the independence from the parameter `concurrent_tasks`
 """
 
 import os
@@ -56,7 +56,7 @@ GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=24-72
 
     @attr('qa', 'hazard', 'event_based')
     def test_4(self):
-        tags_4, gmfs_4 = self.run_with_max_weight(400)  # 29 tasks
+        tags_4, gmfs_4 = self.run_with_concurrent_tasks(4)
         self.assertEqual(tags_4, self.expected_tags)
         if self.DEBUG:  # write the output on /tmp so you can diff it
             open('/tmp/4-got.txt', 'w').write(gmfs_4)
@@ -65,15 +65,15 @@ GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=24-72
 
     @attr('qa', 'hazard', 'event_based')
     def test_8(self):
-        tags_8, gmfs_8 = self.run_with_max_weight(800)  # 15 tasks
+        tags_8, gmfs_8 = self.run_with_concurrent_tasks(8)
         self.assertEqual(tags_8, self.expected_tags)
         if self.DEBUG:  # write the output on /tmp so you can diff it
             open('/tmp/8-got.txt', 'w').write(gmfs_8)
             open('/tmp/8-exp.txt', 'w').write(self.expected_gmfs)
         self.assertEqual(gmfs_8, self.expected_gmfs)
 
-    def run_with_max_weight(self, n):
-        with config.context('hazard', source_max_weight=n):
+    def run_with_concurrent_tasks(self, n):
+        with config.context('celery', concurrent_tasks=n):
             cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
             job = self.run_hazard(cfg)
             tags = models.SESRupture.objects.filter(
