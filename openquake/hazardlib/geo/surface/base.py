@@ -241,23 +241,60 @@ class BaseQuadrilateralSurface(BaseSurface):
         top_edge = self.get_mesh()[0:1]
 
         dists = []
-        for i in range(top_edge.lons.shape[1] - 1):
-            p1 = Point(
-                top_edge.lons[0, i], top_edge.lats[0, i], top_edge.depths[0, i]
-            )
-            p2 = Point(
-                top_edge.lons[0, i + 1], top_edge.lats[0, i + 1],
-                top_edge.depths[0, i + 1]
-            )
-            azimuth = p1.azimuth(p2)
-            dists.append(
-                geodetic.distance_to_arc(
-                    p1.longitude, p1.latitude, azimuth, mesh.lons, mesh.lats
-                )
-            )
-        dists = numpy.array(dists)
+        if top_edge.lons.shape[1] < 3:
 
-        return numpy.min(dists, axis=0)
+            for i in range(top_edge.lons.shape[1] - 1):
+                p1 = Point(
+                    top_edge.lons[0, i],
+                    top_edge.lats[0, i],
+                    top_edge.depths[0, i]
+                )
+                p2 = Point(
+                    top_edge.lons[0, i + 1], top_edge.lats[0, i + 1],
+                    top_edge.depths[0, i + 1]
+                )
+                azimuth = p1.azimuth(p2)
+                dists.append(
+                    geodetic.distance_to_arc(
+                        p1.longitude, p1.latitude, azimuth,
+                        mesh.lons, mesh.lats
+                    )
+                )
+
+        else:
+
+            for i in range(top_edge.lons.shape[1] - 1):
+                p1 = Point(
+                    top_edge.lons[0, i],
+                    top_edge.lats[0, i],
+                    top_edge.depths[0, i]
+                )
+                p2 = Point(
+                    top_edge.lons[0, i + 1],
+                    top_edge.lats[0, i + 1],
+                    top_edge.depths[0, i + 1]
+                )
+                # Swapping
+                if i == 0:
+                    pt = p1
+                    p1 = p2
+                    p2 = pt
+                # Computing azimuth and distance
+                azimuth = p1.azimuth(p2)
+                tmp = geodetic.distance_to_semi_arc(p1.longitude, 
+                                                    p1.latitude, 
+                                                    azimuth,
+                                                    mesh.lons, mesh.lats)
+                # Correcting the sign of the distance
+                if i == 0:
+                    tmp *= -1
+                dists.append(tmp)
+
+        dists = numpy.array(dists)
+        iii = abs(dists).argmin(axis=0)
+        dst = dists[iii, range(dists.shape[1])]
+
+        return dst
 
     def get_top_edge_depth(self):
         """

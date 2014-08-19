@@ -404,11 +404,6 @@ def distance_to_semi_arc(alon, alat, aazimuth, plons, plats):
     # Initialise the array containing the final distances
     distance = numpy.zeros_like(plons)
 
-    print '----------------'
-    print idx
-    print idx_not
-    print 'azimuth_to_target', azimuth_to_target, ' aazimuth', aazimuth
-
     # Compute the distance between the semi-arc (defined by initial point and
     # azimuth) and the set of sites in the semi-space
     if len(idx):

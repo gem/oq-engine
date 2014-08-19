@@ -119,8 +119,8 @@ class GetJoynerBooreDistanceTestCase(unittest.TestCase):
 
 class GetRXDistanceTestCase(unittest.TestCase):
     def _test1to7surface(self):
-        corners = [[(0, 0, 8), (-0.1, 0, 8)],
-                   [(0, 0, 9), (-0.1, 0, 9)]]
+        corners = [[(0, 0, 8), (-0.05, 0, 8), (-0.1, 0, 8)],
+                   [(0, 0, 9), (-0.05, 0, 9), (-0.1, 0, 9)]]
         surface = DummySurface(corners)
         return surface
 
