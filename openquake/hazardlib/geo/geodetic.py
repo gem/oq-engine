@@ -385,6 +385,50 @@ def point_at(lon, lat, azimuth, distance):
     return lons, lats
 
 
+def distance_to_semi_arc(alon, alat, aazimuth, plons, plats):
+    """
+    """
+
+    if type(plons) is float:
+        plons = numpy.array([plons])
+        plats = numpy.array([plats])
+
+    azimuth_to_target = azimuth(alon, alat, plons, plats)
+
+    idx = numpy.nonzero(numpy.cos(numpy.radians(
+        (aazimuth-azimuth_to_target) % 360)) > 0.0)
+
+    idx_not = numpy.nonzero(numpy.cos(numpy.radians(
+        (aazimuth-azimuth_to_target) % 360)) <= 0.0)
+
+    # Initialise the array containing the final distances
+    distance = numpy.zeros_like(plons)
+
+    print '----------------'
+    print idx
+    print idx_not
+    print 'azimuth_to_target', azimuth_to_target, ' aazimuth', aazimuth
+
+    # Compute the distance between the semi-arc (defined by initial point and
+    # azimuth) and the set of sites in the semi-space
+    if len(idx):
+        distance_to_target = geodetic_distance(alon, alat,
+                                               plons[idx], plats[idx])
+        t_angle = (azimuth_to_target[idx] - aazimuth + 360) % 360
+        angle = numpy.arccos((numpy.sin(numpy.radians(t_angle)) *
+                              numpy.sin(distance_to_target /
+                                        EARTH_RADIUS)).clip(-1, 1))
+        distance[idx] = (numpy.pi / 2 - angle) * EARTH_RADIUS
+
+    # This what we should use for the calculation of points 'behind' the
+    # reference point
+    if len(idx_not):
+        distance[idx_not] = geodetic_distance(alon, alat, 
+                                              plons[idx_not], plats[idx_not])
+
+    return distance
+
+
 def distance_to_arc(alon, alat, aazimuth, plons, plats):
     """
     Calculate a closest distance between a great circle arc and a point
