@@ -62,11 +62,11 @@ POES_PARAM_NAME = "POES"
 DILATION_ONE_METER = 1e-5
 
 
-class SourceModelLimit(Exception):
+class InputWeightLimit(Exception):
     pass
 
 
-class OutputSizeLimit(Exception):
+class OutputWeightLimit(Exception):
     pass
 
 
@@ -318,7 +318,7 @@ class BaseHazardCalculator(base.Calculator):
         self.parse_risk_models()
         self.initialize_site_model()
         self.initialize_sources()
-        sources_weight = self.process_sources()
+        input_weight = self.process_sources()
         self.imtls = self.hc.intensity_measure_types_and_levels
         n_sites = len(self.hc.site_collection)
         if self.imtls:
@@ -335,38 +335,39 @@ class BaseHazardCalculator(base.Calculator):
         # calculators it is given by n_sites * n_realizations * n_levels;
         # for the event based calculator is given by n_sites * n_realizations
         # * n_levels * n_imts * n_ses
-        output_size = n_sites * self.get_max_realizations()
+        output_weight = n_sites * self.get_max_realizations()
         if 'EventBased' in self.__class__.__name__:
-            output_size *= len(self.hc.intensity_measure_types) * \
+            output_weight *= len(self.hc.intensity_measure_types) * \
                 self.hc.ses_per_logic_tree_path
         else:
-            output_size *= sum(len(lvls) for lvls in self.imtls.itervalues())
+            output_weight *= sum(len(lvls) for lvls in self.imtls.itervalues())
 
-        logs.LOG.info('Total weight of the sources=%s', sources_weight)
-        logs.LOG.info('Expected output size=%s', output_size)
-        self.check_limits(sources_weight, output_size)
+        logs.LOG.info('Total weight of the sources=%s', input_weight)
+        logs.LOG.info('Expected output size=%s', output_weight)
+        self.check_limits(input_weight, output_weight)
+        return input_weight, output_weight
 
-    def check_limits(self, sources_weight, output_size):
+    def check_limits(self, input_weight, output_weight):
         """
         Compute the total weight of the source model and the expected
-        output size and compare them with the parameters max_sources_weight
-        and max_output_size in openquake.cfg; if the parameters are set
+        output size and compare them with the parameters max_input_weight
+        and max_output_weight in openquake.cfg; if the parameters are set
         """
-        if (self.max_sources_weight and
-                sources_weight > self.max_sources_weight):
-            raise SourceModelLimit(
-                'A limit of %d on the maximum source model size was set. '
-                'The size of your model is %d. Please reduce your source model'
-                ' or raise the parameter max_sources_weight in openquake.cfg'
-                % (self.max_sources_weight, sources_weight))
-        elif self.max_output_size and output_size > self.max_output_size:
-            raise OutputSizeLimit(
-                'A limit of %d on the maximum output size was set. '
-                'The size of your output is %d. Please reduce the number '
+        if (self.max_input_weight and
+                input_weight > self.max_input_weight):
+            raise InputWeightLimit(
+                'A limit of %d on the maximum source model weight was set. '
+                'The weight of your model is %d. Please reduce your model '
+                'or raise the parameter max_input_weight in openquake.cfg'
+                % (self.max_input_weight, input_weight))
+        elif self.max_output_weight and output_weight > self.max_output_weight:
+            raise OutputWeightLimit(
+                'A limit of %d on the maximum output weight was set. '
+                'The weight of your output is %d. Please reduce the number '
                 'of sites, the number of IMTs, the number of realizations '
                 'or the number of stochastic event sets; otherwise, '
-                'raise the parameter max_output_size in openquake.cfg'
-                % (self.max_sources_weight, sources_weight))
+                'raise the parameter max_output_weight in openquake.cfg'
+                % (self.max_input_weight, input_weight))
 
     def post_execute(self):
         """Inizialize realizations"""
