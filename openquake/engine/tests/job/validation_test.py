@@ -489,23 +489,6 @@ class EventBasedHazardFormTestCase(unittest.TestCase):
         actual_warnings = [m.message.message for m in w]
         self.assertEqual(sorted(expected_warnings), sorted(actual_warnings))
 
-    def test_gmfs_false_hazard_curves_true(self):
-        # An error should be raised if `hazard_curves_from_gmfs` is `True`, but
-        # `ground_motion_fields` is `False`.
-        # GMFs are needed to compute hazard curves.
-        expected_errors = {
-            'hazard_curves_from_gmfs': ['`hazard_curves_from_gmfs` requires '
-                                        '`ground_motion_fields` to be `true`'],
-        }
-        self.hc.ground_motion_fields = False
-        self.hc.hazard_curves_from_gmfs = True
-
-        form = validation.EventBasedHazardForm(instance=self.hc, files=None)
-
-        self.assertFalse(form.is_valid())
-        equal, err = deep_eq(expected_errors, dict(form.errors))
-        self.assertTrue(equal, err)
-
 
 class DisaggHazardFormTestCase(unittest.TestCase):
 
