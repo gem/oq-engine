@@ -512,10 +512,11 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         latter piece basically defines the work to be done in the
         `execute` phase.)
         """
-        super(EventBasedHazardCalculator, self).pre_execute()
+        weights = super(EventBasedHazardCalculator, self).pre_execute()
         for lt_model in models.LtSourceModel.objects.filter(
                 hazard_calculation=self.hc):
             self.initialize_ses_db_records(lt_model)
+        return weights
 
     def post_process(self):
         """

@@ -40,10 +40,10 @@ class Calculator(object):
         # parameters from openquake.cfg
         self.concurrent_tasks = int(
             config.get('celery', 'concurrent_tasks'))
-        self.max_sources_weight = float(
-            config.get('hazard', 'max_sources_weight'))
-        self.max_output_size = float(
-            config.get('hazard', 'max_output_size'))
+        self.max_input_weight = float(
+            config.get('hazard', 'max_input_weight'))
+        self.max_output_weight = float(
+            config.get('hazard', 'max_output_weight'))
         SourceCollector.POINT_SOURCE_WEIGHT = float(
             config.get('hazard', 'point_source_weight'))
 
