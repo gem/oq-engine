@@ -195,6 +195,9 @@ class DistanceToArcTest(unittest.TestCase):
         dist = geodetic.distance_to_arc(12.3, 44.5, 39.4,
                                         plons=13.4, plats=46.9)
         self.assertAlmostEqual(dist, -105.12464364)
+        dist = geodetic.distance_to_arc(12.3, 44.5, 219.4,
+                                        plons=13.4, plats=46.9)
+        self.assertAlmostEqual(dist, +105.12464364)
         dist = geodetic.distance_to_arc(12.3, 44.5, 39.4,
                                         plons=13.4, plats=44.9)
         self.assertAlmostEqual(dist, 38.34459954)
