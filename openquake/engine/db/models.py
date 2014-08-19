@@ -2363,12 +2363,13 @@ class TrtModel(djm.Model):
     def get_rlzs_by_gsim(self):
         """
         Return the realizations associated to the current TrtModel
-        as a dictionary {gsim_name: [rlz, ...]}
+        as an ordered dictionary {gsim_name: [rlz, ...]}
         """
         dic = collections.defaultdict(list)
         for art in AssocLtRlzTrtModel.objects.filter(trt_model=self.id):
             dic[art.gsim].append(art.rlz)
-        return dic
+        return collections.OrderedDict(
+            (gsim, dic[gsim]) for gsim in sorted(dic))
 
     def get_gsim_instances(self):
         """
