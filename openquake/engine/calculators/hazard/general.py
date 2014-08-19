@@ -36,8 +36,7 @@ from openquake.nrmllib import parsers as nrml_parsers
 from openquake.nrmllib.risk import parsers
 
 from openquake.commonlib import logictree, source
-from openquake.commonlib.general import \
-    block_splitter, split_in_blocks, distinct
+from openquake.commonlib.general import split_in_blocks, distinct
 
 from openquake.engine.input import exposure
 from openquake.engine import logs
@@ -151,6 +150,12 @@ class AllSources(object):
                 trt_model = self.trt_model[block[0]]
                 yield trt_model, block
 
+    def get_total_weight(self):
+        """
+        Return the total weight of the sources
+        """
+        return sum(self.weight.itervalues())
+
 
 class BaseHazardCalculator(base.Calculator):
     """
@@ -212,6 +217,9 @@ class BaseHazardCalculator(base.Calculator):
             trt_model.num_sources = len(sc.sources)
             trt_model.num_ruptures = sc.num_ruptures
             trt_model.save()
+        total_weight = self.all_sources.get_total_weight()
+        logs.LOG.info('Total weight of the sources=%d', total_weight)
+        return total_weight
 
     def task_arg_gen(self):
         """
@@ -554,6 +562,8 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
         """
         imtls = self.hc.intensity_measure_types_and_levels
         points = self.hc.points_to_compute()
+        sorted_imts = sorted(imtls)
+        curves_by_imt = dict((imt, []) for imt in sorted_imts)
 
         for rlz in self._get_realizations():
             # create a multi-imt curve
@@ -565,11 +575,13 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
                 investigation_time=self.hc.investigation_time)
 
             with self.monitor('building curves per realization'):
-                curves_by_imt = models.build_curves(rlz, self.curves)
+                imt_curves = zip(
+                    sorted_imts, models.build_curves(rlz, self.curves))
+            for imt, curves in imt_curves:
+                curves_by_imt[imt].append(curves)
 
-            # create a new `HazardCurve` 'container' record for each
-            # realization for each intensity measure type
-            for imt, curves in zip(sorted(imtls), curves_by_imt):
+                # create a new `HazardCurve` 'container' record for each
+                # realization for each intensity measure type
                 hc_im_type, sa_period, sa_damping = from_string(imt)
 
                 # save output
@@ -601,6 +613,8 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
                     for p, poes in zip(points, curves)])
 
         self.curves = {}  # save memory for the post-processing phase
+        if self.hc.mean_hazard_curves or self.hc.quantile_hazard_curves:
+            self.curves_by_imt = curves_by_imt
 
     @EnginePerformanceMonitor.monitor
     def do_aggregate_post_proc(self):
@@ -612,26 +626,18 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
         Post-processing results will be stored directly into the database.
         """
         del self.source_collector  # save memory
-
-        num_rlzs = models.LtRealization.objects.filter(
-            lt_model__hazard_calculation=self.hc).count()
+        weights = [rlz.weight for rlz in models.LtRealization.objects.filter(
+            lt_model__hazard_calculation=self.hc)]
+        num_rlzs = len(weights)
         if not num_rlzs:
             logs.LOG.warn('No realizations for hazard_calculation_id=%d',
                           self.hc.id)
             return
-
-        if num_rlzs == 1 and self.hc.quantile_hazard_curves:
+        elif num_rlzs == 1 and self.hc.quantile_hazard_curves:
             logs.LOG.warn(
                 'There is only one realization, the configuration parameter '
                 'quantile_hazard_curves should not be set')
             return
-
-        num_site_blocks_per_incr = int(CURVE_CACHE_SIZE) / int(num_rlzs)
-        if num_site_blocks_per_incr == 0:
-            # This means we have `num_rlzs` >= `CURVE_CACHE_SIZE`.
-            # The minimum number of sites should be 1.
-            num_site_blocks_per_incr = 1
-        slice_incr = num_site_blocks_per_incr * num_rlzs  # unit: num records
 
         if self.hc.mean_hazard_curves:
             # create a new `HazardCurve` 'container' record for mean
@@ -700,54 +706,46 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
                     )
                     container_ids['q%s' % quantile] = q_hc.id
 
-            all_curves_for_imt = models.order_by_location(
-                models.HazardCurveData.objects.all_curves_for_imt(
-                    self.job.id, im_type, sa_period, sa_damping))
-
+            # num_rlzs * num_sites * num_levels
+            # NB: different IMTs can have different num_levels
+            all_curves_for_imt = numpy.array(self.curves_by_imt[imt])
+            del self.curves_by_imt[imt]  # save memory
             with transaction.commit_on_success(using='job_init'):
                 inserter = writer.CacheInserter(
                     models.HazardCurveData, CURVE_CACHE_SIZE)
 
-                for chunk in models.queryset_iter(all_curves_for_imt,
-                                                  slice_incr):
-                    # slice each chunk by `num_rlzs` into `site_chunk`
-                    # and compute the aggregate
-                    for site_chunk in block_splitter(chunk, num_rlzs):
-                        site = site_chunk[0].location
-                        curves_poes = [x.poes for x in site_chunk]
-                        curves_weights = [x.weight for x in site_chunk]
-
-                        # do means and quantiles
-                        # quantiles first:
-                        if self.hc.quantile_hazard_curves:
-                            for quantile in self.hc.quantile_hazard_curves:
-                                if self.hc.number_of_logic_tree_samples == 0:
-                                    # explicitly weighted quantiles
-                                    q_curve = weighted_quantile_curve(
-                                        curves_poes, curves_weights, quantile
-                                    )
-                                else:
-                                    # implicitly weighted quantiles
-                                    q_curve = quantile_curve(
-                                        curves_poes, quantile
-                                    )
-                                inserter.add(
-                                    models.HazardCurveData(
-                                        hazard_curve_id=(
-                                            container_ids['q%s' % quantile]),
-                                        poes=q_curve.tolist(),
-                                        location=site.wkt)
-                                )
-
-                        # then means
-                        if self.hc.mean_hazard_curves:
-                            m_curve = mean_curve(
-                                curves_poes, weights=curves_weights
-                            )
+                # curve_poes below is an array num_rlzs * num_levels
+                for i, site in enumerate(self.hc.site_collection):
+                    wkt = site.location.wkt2d
+                    curve_poes = numpy.array(
+                        [c_by_rlz[i] for c_by_rlz in all_curves_for_imt])
+                    # do means and quantiles
+                    # quantiles first:
+                    if self.hc.quantile_hazard_curves:
+                        for quantile in self.hc.quantile_hazard_curves:
+                            if self.hc.number_of_logic_tree_samples == 0:
+                                # explicitly weighted quantiles
+                                q_curve = weighted_quantile_curve(
+                                    curve_poes, weights, quantile)
+                            else:
+                                # implicitly weighted quantiles
+                                q_curve = quantile_curve(
+                                    curve_poes, quantile)
                             inserter.add(
                                 models.HazardCurveData(
-                                    hazard_curve_id=container_ids['mean'],
-                                    poes=m_curve.tolist(),
-                                    location=site.wkt)
+                                    hazard_curve_id=(
+                                        container_ids['q%s' % quantile]),
+                                    poes=q_curve.tolist(),
+                                    location=wkt)
                             )
+
+                    # then means
+                    if self.hc.mean_hazard_curves:
+                        m_curve = mean_curve(curve_poes, weights=weights)
+                        inserter.add(
+                            models.HazardCurveData(
+                                hazard_curve_id=container_ids['mean'],
+                                poes=m_curve.tolist(),
+                                location=wkt)
+                        )
                 inserter.flush()
