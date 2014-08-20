@@ -1,7 +1,5 @@
 #!/bin/bash
 set -x
-# Exit at the first error
-set -e
 
 help() {
 cat <<HSD
@@ -162,6 +160,10 @@ fi
 if [ "$table_spaces_only" == "on" ]; then
     exit 0
 fi
+
+# Exit at the first error, should not be on the first line, otherwise it
+# exits too early (at the `read` command)
+set -e
 
 # Create the OpenQuake database
 echo ".. Creating database $db_name .."
