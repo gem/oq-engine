@@ -387,6 +387,8 @@ def point_at(lon, lat, azimuth, distance):
 
 def distance_to_semi_arc(alon, alat, aazimuth, plons, plats):
     """
+    In this method we use as reference system centerd on (alon, alat) and with 
+    the y-axis correspondin to aazimuth direction. 
     """
 
     if type(plons) is float:
@@ -395,17 +397,19 @@ def distance_to_semi_arc(alon, alat, aazimuth, plons, plats):
 
     azimuth_to_target = azimuth(alon, alat, plons, plats)
 
+    # Find the indexes of the points in the positive y halfspace
     idx = numpy.nonzero(numpy.cos(numpy.radians(
         (aazimuth-azimuth_to_target) % 360)) > 0.0)
 
+    # Find the indexes of the points in the negative y halfspace 
     idx_not = numpy.nonzero(numpy.cos(numpy.radians(
         (aazimuth-azimuth_to_target) % 360)) <= 0.0)
 
     # Initialise the array containing the final distances
     distance = numpy.zeros_like(plons)
 
-    # Compute the distance between the semi-arc (defined by initial point and
-    # azimuth) and the set of sites in the semi-space
+    # Compute the distance between the semi-arc with 'aazimuth' direction 
+    # and the set of sites in the positive half-space
     if len(idx):
         distance_to_target = geodetic_distance(alon, alat,
                                                plons[idx], plats[idx])
@@ -415,8 +419,8 @@ def distance_to_semi_arc(alon, alat, aazimuth, plons, plats):
                                         EARTH_RADIUS)).clip(-1, 1))
         distance[idx] = (numpy.pi / 2 - angle) * EARTH_RADIUS
 
-    # This what we should use for the calculation of points 'behind' the
-    # reference point
+    # Compute the distance between the reference point and the set of sites 
+    # in the negative half-space
     if len(idx_not):
         distance[idx_not] = geodetic_distance(alon, alat, 
                                               plons[idx_not], plats[idx_not])

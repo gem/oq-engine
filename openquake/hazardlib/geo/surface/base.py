@@ -281,8 +281,8 @@ class BaseQuadrilateralSurface(BaseSurface):
                     p2 = pt
                 # Computing azimuth and distance
                 azimuth = p1.azimuth(p2)
-                tmp = geodetic.distance_to_semi_arc(p1.longitude, 
-                                                    p1.latitude, 
+                tmp = geodetic.distance_to_semi_arc(p1.longitude,
+                                                    p1.latitude,
                                                     azimuth,
                                                     mesh.lons, mesh.lats)
                 # Correcting the sign of the distance
@@ -290,6 +290,7 @@ class BaseQuadrilateralSurface(BaseSurface):
                     tmp *= -1
                 dists.append(tmp)
 
+        # Computing distances
         dists = numpy.array(dists)
         iii = abs(dists).argmin(axis=0)
         dst = dists[iii, range(dists.shape[1])]
