@@ -33,7 +33,6 @@ try:
 except ImportError:
     sys.path.append('/usr/openquake/engine')
 
-from openquake.engine.db import util
 import openquake.engine
 
 from openquake.engine import __version__
@@ -431,7 +430,8 @@ def main():
 
     if args.upgrade_db:
         upgrades = 'openquake.engine.db.schema.upgrades'
-        conn = util.Connection.from_dbapi(models.getcursor('admin').connection)
+        conn = models.getcursor('admin').connection
+        curs = conn.cursor()
         try:
             # upgrader is an UpgradeManager instance defined in the __init__.py
             upgrader = importlib.import_module(upgrades).upgrader
@@ -440,11 +440,18 @@ def main():
         if not upgrader.read_scripts():
             sys.exit('The upgrade_dir does not contain scripts matching '
                      'the pattern %s' % upgrader.pattern)
-        if not conn.all("select tablename from pg_tables "
-                        "where tablename='revision_info'"):
+        curs.execute("SELECT tablename FROM pg_tables "
+                     "WHERE tablename='revision_info'")
+        revision_info = curs.fetchall()
+        if not revision_info:
             upgrader.install_versioning(conn)
-        with conn.begin():
+        try:
             return upgrader.upgrade(conn)
+        except:
+            conn.rollback()
+            raise
+        else:
+            conn.commit()
         sys.exit(0)
 
     if args.list_inputs:
