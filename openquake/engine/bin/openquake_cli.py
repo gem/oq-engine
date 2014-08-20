@@ -6,6 +6,7 @@
 OpenQuake: software for seismic hazard and risk assessment
 """
 import importlib
+import logging
 import argparse
 import getpass
 import os
@@ -36,7 +37,7 @@ except ImportError:
 import openquake.engine
 
 from openquake.engine import __version__
-from openquake.engine import engine
+from openquake.engine import engine, logs
 from openquake.engine.db import models
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.export import risk as risk_export
@@ -429,6 +430,8 @@ def main():
         os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'
 
     if args.upgrade_db:
+        logging.basicConfig(level=logging.INFO)
+        logs.set_level('info')
         upgrades = 'openquake.engine.db.schema.upgrades'
         conn = models.getcursor('admin').connection
         curs = conn.cursor()
@@ -446,7 +449,7 @@ def main():
         if not revision_info:
             upgrader.install_versioning(conn)
         try:
-            return upgrader.upgrade(conn)
+            upgrader.upgrade(conn)
         except:
             conn.rollback()
             raise
