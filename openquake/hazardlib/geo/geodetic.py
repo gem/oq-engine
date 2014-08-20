@@ -92,17 +92,53 @@ def distance(lons1, lats1, depths1, lons2, lats2, depths2):
 def min_distance_from_segment(seglons, seglats, lons, lats):
     """
     """
+
     # Compute the azimuth of the segment
-    seg_azim = azimuth(seglons[0], seglats[0], seglons[1], seglats[2])
+    seg_azim = azimuth(seglons[0], seglats[0], seglons[1], seglats[1])
+
     # Compute the angle between the segment azimuth and the direction obtained
     # connecting the first point defining the segment and each site
     azimuth1 = azimuth(seglons[0], seglats[0], lons, lats)
+
     # Compute the angle between the segment azimuth and the direction obtained
     # connecting the second point defining the segment and each site
     azimuth2 = azimuth(seglons[1], seglats[1], lons, lats)
+
+    # Find the points inside the band defined by the two line perpendicular
+    # to the segment direction passing through the two vertexes of the segment
+    # For these point the closest distance is the distance from the great arc.
+    idx_in = numpy.nonzero(
+        (numpy.cos(numpy.radians(seg_azim-azimuth1 % 360)) >= 0.0) &
+        (numpy.cos(numpy.radians(seg_azim-azimuth2 % 360)) <= 0.0))
+
     # Find the points outside the band defined by the two line perpendicular
     # to the segment direction passing through the two vertexes of the segment
-    idx_out = numpy.nonzero((angle1-seg_azimuth)
+    # For these point the closest distance is the minimum of the distance from
+    # the two point vertexes.
+    idx_out = numpy.nonzero(
+        (numpy.cos(numpy.radians(seg_azim-azimuth1 % 360)) < 0.0) |
+        (numpy.cos(numpy.radians(seg_azim-azimuth2 % 360)) > 0.0))
+
+    # Find the indexes of points 'on the left of the segment'
+    idx_neg = numpy.nonzero(numpy.sin(numpy.radians(
+        (azimuth1-seg_azim) % 360)) < 0.0)
+
+    # Now let's compute the distances
+    dists = numpy.zeros_like(lons)
+    if len(idx_in):
+        dists[idx_in] = distance_to_arc(seglons[0],
+                                        seglats[0],
+                                        seg_azim,
+                                        lons[idx_in],
+                                        lats[idx_in])
+
+    if len(idx_out):
+        dists[idx_out] = (min_geodetic_distance(seglons, seglats,
+                                               lons[idx_out], lats[idx_out]))
+
+    dists = abs(dists)
+    dists[idx_neg] = -1 * dists[idx_neg]
+    return dists
 
 
 def min_geodetic_distance(mlons, mlats, slons, slats):

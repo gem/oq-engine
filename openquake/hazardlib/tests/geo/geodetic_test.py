@@ -192,7 +192,6 @@ class MinDistanceTest(SpeedupsTestCase):
 class DistanceToSemiArcTest(unittest.TestCase):
     # values in this test are based on the tests used for the
     # DistanceToArcTest
-    # TODO we must add a test for a point that is in the backward semi-space
     def test_one_point(self):
         dist = geodetic.distance_to_semi_arc(12.3, 44.5, 39.4,
                                              plons=13.4, plats=46.9)
@@ -203,13 +202,13 @@ class DistanceToSemiArcTest(unittest.TestCase):
         dist = geodetic.distance_to_semi_arc(12.3, 44.5, 39.4,
                                              plons=13.4, plats=44.9)
         self.assertAlmostEqual(dist, 38.34459954)
-        # This tests the position of a point in the y-negative quadrants of a
+        # This tests the distance to a point in the y-negative halfspace in a
         # reference system which uses as the origin the reference point
         # (i.e. (12.3; 44.5)) and the y direction as the direction with
         # azimuth = 39.4)
         dist = geodetic.distance_to_semi_arc(12.3, 44.5, 39.4,
                                              plons=11.3, plats=44.5)
-        self.assertAlmostEqual(dist, 79.3093368)
+        self.assertAlmostEqual(dist, -79.3093368)
 
 
 class DistanceToArcTest(unittest.TestCase):
