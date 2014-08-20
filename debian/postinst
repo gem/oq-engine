@@ -140,7 +140,7 @@ if [ -f /usr/lib/postgresql/9.1/bin/postgres ]; then
     done
     chmod 644 $LOGFILE
 
-    num_of_errors=`grep -i error $LOGFILE | grep -v "is not empty" | grep -v error_msg_ | wc -l`
+    num_of_errors=`grep -i error $LOGFILE | grep -v "is not empty" | grep -v error_msg_ | grep -v ON_ERROR_STOP | wc -l`
     if [ $num_of_errors -gt 0 ]; then
         echo "Failed to initialise the openquake database"
         echo "Please file a bug here:"
