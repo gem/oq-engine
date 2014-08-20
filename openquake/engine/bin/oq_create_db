@@ -1,5 +1,7 @@
 #!/bin/bash
-set -x
+# Exit at the first error
+set -e
+
 help() {
 cat <<HSD
 This script must be run as postgres user.
@@ -159,10 +161,6 @@ fi
 if [ "$table_spaces_only" == "on" ]; then
     exit 0
 fi
-
-# Starting from here this script is executing many batches
-# Stopping as soon as one fails makes the error stand out
-set -e
 
 # Create the OpenQuake database
 echo ".. Creating database $db_name .."
