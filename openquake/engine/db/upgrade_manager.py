@@ -1,8 +1,7 @@
 import os
 import re
-import sys
 import runpy
-from openquake.engine.db import util
+from openquake.engine import logs
 
 
 class DuplicatedVersion(RuntimeError):
@@ -21,24 +20,49 @@ executed TIMESTAMP NOT NULL DEFAULT now()
 '''
 
 
-# errors are not trapped on purpose, sincetransactions should be managed
+def apply_sql_script(conn, fname):
+    """
+    Apply the given SQL script to the database
+
+    :param conn: a DB API 2 connection
+    :param fname: full path to the creation script
+    """
+    sql = open(fname).read()
+    try:
+        conn.cursor().execute(sql)
+    except:
+        logs.LOG.error('Error executing %s' % fname)
+        raise
+
+
+# errors are not trapped on purpose, since transactions should be managed
 # in client code
 class UpgradeManager(object):
+    """
+    The package containing the upgrade scripts should contain an instance
+    of the UpgradeManager called `upgrader` in the __init__.py file. It
+    should also specify the initializations parameters
 
+    :param version_pattern:
+        a regulation expression for the script version number
+    :param upgrade_dir:
+        the directory were the upgrade script reside
+    :param version_table:
+        the name of the table containing the versions
+    """
     def __init__(self, version_pattern, upgrade_dir,
-                 version_table='sqlplain_versioning', echo=False):
+                 version_table='sqlplain_versioning'):
         self.upgrade_dir = upgrade_dir
         self.version_pattern = version_pattern
         self.pattern = r'^(%s[rs]?)-([\w\-_]+)\.(sql|py)$' % version_pattern
         self.version_table = version_table
         if re.match('[\w_\.]+', version_table) is None:
             raise ValueError(version_table)
-        self.echo = echo
         self.version = None  # will be updated after the run
         self.starting_version = None  # will be updated after the run
 
     def _insert_script(self, script, conn):
-        conn.execute(
+        conn.cursor().execute(
             'INSERT INTO {} VALUES (%s, %s)'.format(self.version_table),
             (script['version'], script['name']))
 
@@ -46,8 +70,10 @@ class UpgradeManager(object):
         """
         Create the version table into an already populated database
         and insert the base script.
+
+        :param conn: a DB API 2 connection
         """
-        conn.execute(CREATE_VERSIONING % self.version_table)
+        conn.cursor().execute(CREATE_VERSIONING % self.version_table)
         self._insert_script(self.read_scripts()[0], conn)
 
     def init(self, conn):
@@ -55,7 +81,7 @@ class UpgradeManager(object):
         Create the version table and run the base script on an empty database.
         """
         base = self.read_scripts()[0]['fname']
-        util.create_from_filename(os.path.join(self.upgrade_dir, base))(conn)
+        apply_sql_script(conn, os.path.join(self.upgrade_dir, base))
         self.install_versioning(conn)
 
     def upgrade(self, conn):
@@ -67,11 +93,11 @@ class UpgradeManager(object):
         self.starting_version = sorted(db_versions)[-1]  # the highest version
         self.ending_version = self.get_max_version()
         if self.starting_version == self.ending_version:
-            print 'The database is updated at version %s. Nothing to do.' % (
-                self.starting_version)
+            logs.LOG.warn('The database is updated at version %s. '
+                          'Nothing to do.', self.starting_version)
             return
-        print 'The database is at version %s. Upgrading to version %s.' % (
-            self.starting_version, self.ending_version)
+        logs.LOG.warn('The database is at version %s. Upgrading to version '
+                      '%s.', self.starting_version, self.ending_version)
         self._from_to_version(conn, self.starting_version, self.ending_version,
                               db_versions=db_versions)
 
@@ -79,14 +105,13 @@ class UpgradeManager(object):
         scripts = self.read_scripts(from_version, to_version, db_versions)
         for script in scripts:  # script is a dictionary
             fullname = os.path.join(self.upgrade_dir, script['fname'])
-            if self.echo:
-                sys.stderr.write('Executing %s\n' % fullname)
+            logs.LOG.warn('Executing %s', fullname)
             if script['ext'] == 'py':  # Python script with a upgrade(conn)
                 runpy.run_path(fullname)['upgrade'](conn)
                 self._insert_script(script, conn)
             else:  # SQL script
                 # notice that this prints the file name in case of error
-                util.create_from_filename(fullname)(conn)
+                apply_sql_script(conn, fullname)
                 self._insert_script(script, conn)
         if scripts:  # save the last version
             self.version = scripts[-1]['version']
@@ -99,9 +124,11 @@ class UpgradeManager(object):
         Get the latest version of the database by looking at the
         version table.
         """
+        curs = conn.cursor()
         try:
-            return conn.scalar(
+            curs.execute(
                 'select max(version) from {}'.format(self.version_table))
+            return curs.fetchall()[0][0]
         except:
             raise VersioningNotInstalled('Run openquake --upgrade-db')
 
