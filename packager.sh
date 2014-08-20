@@ -78,6 +78,7 @@ sig_hand () {
     echo "signal trapped"
     if [ "$lxc_name" != "" ]; then
         set +e
+        scp "${lxc_ip}:/var/tmp/openquake-db-installation" openquake-db-installation
         scp "${lxc_ip}:/tmp/celeryd.log" celeryd.log
         scp "${lxc_ip}:ssh.log" ssh.history
         echo "Destroying [$lxc_name] lxc"
@@ -629,6 +630,7 @@ devtest_run () {
     _devtest_innervm_run "$branch_id" "$lxc_ip"
     inner_ret=$?
 
+    scp "${lxc_ip}:/var/tmp/openquake-db-installation" openquake-db-installation.dev || true
     scp "${lxc_ip}:/tmp/celeryd.log" celeryd.log
     scp "${lxc_ip}:ssh.log" devtest.history
 
@@ -702,6 +704,7 @@ EOF
     _pkgtest_innervm_run $lxc_ip
     inner_ret=$?
 
+    scp "${lxc_ip}:/var/tmp/openquake-db-installation" openquake-db-installation.pkg || true
     scp "${lxc_ip}:/tmp/celeryd.log" celeryd.log
     scp "${lxc_ip}:ssh.log" pkgtest.history
 
