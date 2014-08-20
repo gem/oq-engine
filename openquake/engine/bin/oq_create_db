@@ -7,7 +7,7 @@ This script must be run as postgres user.
 Also, table space paths are created as needed (unless this is turned off
 by the user).
 
-!! This will *destroy* all data in the OpenQuake database !!
+!! The database must not exist already !!
 
 The command line arguments are as follows:
 
@@ -112,27 +112,7 @@ if [ "$(whoami)" != "postgres" ]; then
 fi
 
 
-if [ "$table_spaces_only" == "off" ]; then
-    # None of this is relevant if we only want to check table spaces.
-    if [ "$user_interaction" = "on" ]; then
-        # Last chance to abort.
-        echo "!! This will destroy *ALL* data in the OpenQuake database named $db_name !!"
-        echo 'Press <enter> to continue or Ctrl-C to abort'
-        read
-    fi
-
-    # Drop database
-    echo ".. Dropping database $db_name .."
-    psql -p $db_port -d postgres -U $db_admin_user -c "DROP DATABASE IF EXISTS $db_name" $psql_batch_options
-    # Drop table spaces..
-    if [ "$check_table_spaces" == "on" ]; then
-        for tspace in $tspace_list; do
-            full_ts_name="${tspace}_ts"
-            echo ".. Dropping table space $full_ts_name .."
-            psql -p $db_port -d postgres -U $db_admin_user -c "DROP TABLESPACE IF EXISTS $full_ts_name" $psql_batch_options
-        done
-    fi
-else
+if [ "$table_spaces_only" == "on" ]; then
     check_table_spaces="on"
 fi
 

@@ -18,7 +18,14 @@
 
 -- Disable unnecessarily verbose output
 SET client_min_messages TO WARNING;
+
+-- Set role to oq_admin and make sure it can act on the tablespaces
 SET ROLE TO oq_admin;
+GRANT CREATE ON tablespace hzrdr_ts TO oq_admin;
+GRANT CREATE ON tablespace hzrdi_ts TO oq_admin;
+GRANT CREATE ON tablespace riski_ts TO oq_admin;
+GRANT CREATE ON tablespace riskr_ts TO oq_admin;
+GRANT CREATE ON tablespace uiapi_ts TO oq_admin;
 
 ------------------------------------------------------------------------
 -- Name space definitions go here
@@ -1191,23 +1198,8 @@ CREATE VIEW hzrdr.gmf_data_job AS
    INNER JOIN uiapi.output AS c
    ON b.output_id=c.id
    WHERE output_type='gmf';
-/*
-  Copyright (c) 2010-2014, GEM Foundation.
 
-  OpenQuake is free software: you can redistribute it and/or modify it
-  under the terms of the GNU Affero General Public License as published
-  by the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  OpenQuake is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU Affero General Public License
-  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
+------------------------------ INDEXES -----------------------------------------
 
 -- hzrdi.hazard_site
 CREATE UNIQUE INDEX hzrdi_hazard_site_location_hazard_calculation_uniq_idx
@@ -1288,23 +1280,8 @@ CREATE INDEX riski_exposure_data_exposure_model_id_idx on riski.exposure_data(ex
 CREATE INDEX riski_exposure_data_site_stx_idx ON riski.exposure_data(ST_X(geometry(site)));
 CREATE INDEX riski_exposure_data_site_sty_idx ON riski.exposure_data(ST_Y(geometry(site)));
 CREATE INDEX riski_cost_type_name_idx ON riski.cost_type(name);
-/*
-  Copyright (c) 2010-2014, GEM Foundation.
 
-  OpenQuake is free software: you can redistribute it and/or modify it
-  under the terms of the GNU Affero General Public License as published
-  by the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  OpenQuake is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU Affero General Public License
-  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
+--------------------------------- FUNCTIONS -------------------------------------
 
 CREATE OR REPLACE FUNCTION format_exc(operation TEXT, error TEXT, tab_name TEXT) RETURNS TEXT AS $$
 BEGIN
