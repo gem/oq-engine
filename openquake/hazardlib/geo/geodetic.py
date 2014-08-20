@@ -89,6 +89,22 @@ def distance(lons1, lats1, depths1, lons2, lats2, depths2):
     return numpy.sqrt(hdist ** 2 + vdist ** 2)
 
 
+def min_distance_from_segment(seglons, seglats, lons, lats):
+    """
+    """
+    # Compute the azimuth of the segment
+    seg_azim = azimuth(seglons[0], seglats[0], seglons[1], seglats[2])
+    # Compute the angle between the segment azimuth and the direction obtained
+    # connecting the first point defining the segment and each site
+    azimuth1 = azimuth(seglons[0], seglats[0], lons, lats)
+    # Compute the angle between the segment azimuth and the direction obtained
+    # connecting the second point defining the segment and each site
+    azimuth2 = azimuth(seglons[1], seglats[1], lons, lats)
+    # Find the points outside the band defined by the two line perpendicular
+    # to the segment direction passing through the two vertexes of the segment
+    idx_out = numpy.nonzero((angle1-seg_azimuth)
+
+
 def min_geodetic_distance(mlons, mlats, slons, slats):
     """
     Same as :func:`min_distance`, but calculates only minimum geodetic distance
@@ -387,8 +403,8 @@ def point_at(lon, lat, azimuth, distance):
 
 def distance_to_semi_arc(alon, alat, aazimuth, plons, plats):
     """
-    In this method we use as reference system centerd on (alon, alat) and with 
-    the y-axis correspondin to aazimuth direction. 
+    In this method we use as reference system centerd on (alon, alat) and with
+    the y-axis correspondin to aazimuth direction.
     """
 
     if type(plons) is float:
@@ -401,14 +417,19 @@ def distance_to_semi_arc(alon, alat, aazimuth, plons, plats):
     idx = numpy.nonzero(numpy.cos(numpy.radians(
         (aazimuth-azimuth_to_target) % 360)) > 0.0)
 
-    # Find the indexes of the points in the negative y halfspace 
+    # Find the indexes of the points in the negative y halfspace
     idx_not = numpy.nonzero(numpy.cos(numpy.radians(
         (aazimuth-azimuth_to_target) % 360)) <= 0.0)
+
+    idx_ll_quadr = numpy.nonzero((numpy.cos(numpy.radians(
+        (aazimuth-azimuth_to_target) % 360)) <= 0.0) &
+                                 (numpy.sin(numpy.radians(
+        (aazimuth-azimuth_to_target) % 360)) > 0.0))
 
     # Initialise the array containing the final distances
     distance = numpy.zeros_like(plons)
 
-    # Compute the distance between the semi-arc with 'aazimuth' direction 
+    # Compute the distance between the semi-arc with 'aazimuth' direction
     # and the set of sites in the positive half-space
     if len(idx):
         distance_to_target = geodetic_distance(alon, alat,
@@ -419,11 +440,12 @@ def distance_to_semi_arc(alon, alat, aazimuth, plons, plats):
                                         EARTH_RADIUS)).clip(-1, 1))
         distance[idx] = (numpy.pi / 2 - angle) * EARTH_RADIUS
 
-    # Compute the distance between the reference point and the set of sites 
+    # Compute the distance between the reference point and the set of sites
     # in the negative half-space
     if len(idx_not):
-        distance[idx_not] = geodetic_distance(alon, alat, 
+        distance[idx_not] = geodetic_distance(alon, alat,
                                               plons[idx_not], plats[idx_not])
+        distance[idx_ll_quadr] = -1 * distance[idx_ll_quadr]
 
     return distance
 
