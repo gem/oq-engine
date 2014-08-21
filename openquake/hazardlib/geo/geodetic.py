@@ -154,7 +154,7 @@ def min_distance_from_segment(seglons, seglats, lons, lats):
                                                 lons[idx_out], lats[idx_out]))
 
     # Finally we correct the sign of the distances in order to make sure that
-    # the poinst on the right semispace defined using as a reference the
+    # the points on the right semispace defined using as a reference the
     # direction defined by the segment (i.e. the direction defined by going
     # from the first point to the second one) have a positive distance and
     # the others a negative one.
