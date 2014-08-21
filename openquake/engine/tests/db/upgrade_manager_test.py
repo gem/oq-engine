@@ -34,11 +34,9 @@ def temp_script(name, content):
 
 
 class UpgradeManagerTestCase(unittest.TestCase):
-    """
-    Apply the scripts in openquake.engine.tests.db.upgrades to the database.
-    All the tables in the test scripts are in the `test` schema, which
-    automatically created an destroyed in the setUp/tearDown methods.
-    """
+    # Apply the scripts in openquake.engine.tests.db.upgrades to the database.
+    # All the tables in the test scripts are in the `test` schema, which is
+    # automatically created an destroyed in the setUp/tearDown methods.
     def setUp(self):
         conn.cursor().execute('CREATE SCHEMA test')
         conn.commit()  # make sure the schema really exists
