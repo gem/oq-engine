@@ -86,6 +86,8 @@ class UpgradeManager(object):
     def init(self, conn):
         """
         Create the version table and run the base script on an empty database.
+
+        :param conn: a DB API 2 connection
         """
         base = self.read_scripts()[0]['fname']
         logs.LOG.info('Creating the initial schema from %s',  base)
@@ -128,30 +130,25 @@ class UpgradeManager(object):
             versions_applied.append(script['version'])
         return versions_applied
 
-    def get_db_version(self, conn):
+    def check_versions(self, conn):
         """
-        Get the latest version of the database by looking at the
-        version table.
+        :param conn: a DB API 2 connection
+        :returns: a list with the versions that will be applied
         """
-        curs = conn.cursor()
-        try:
-            curs.execute(
-                'select max(version) from {}'.format(self.version_table))
-            return curs.fetchall()[0][0]
-        except:
-            raise VersioningNotInstalled('Run openquake --upgrade-db')
-
-    def check_version(self, conn):
         scripts = self.read_scripts(skip_versions=self.get_db_versions(conn))
+        versions = [s['version'] for s in scripts]
         if scripts:
             raise SystemExit(
                 'Your database is not updated. You can update it by running '
                 'openquake --upgrade-db which will process the '
-                'following new versions: %s' % [s['version'] for s in scripts])
+                'following new versions: %s' % versions)
+        return versions
 
     def get_db_versions(self, conn):
         """
-        Get all the versions stored in the database as a set
+        Get all the versions stored in the database as a set.
+
+        :param conn: a DB API 2 connection
         """
         curs = conn.cursor()
         query = 'select version from {}'.format(self.version_table)
@@ -159,19 +156,20 @@ class UpgradeManager(object):
             curs.execute(query)
             return set(version for version, in curs.fetchall())
         except:
-            raise VersioningNotInstalled(
-                'perform the steps in the documentation')
+            raise VersioningNotInstalled('Run openquake --upgrade-db')
 
-    def parse_script_name(self, fname):
+    def parse_script_name(self, script_name):
         '''
         Parse a script name and return a dictionary with fields
         fname, name, version and ext (or None if the name does not match).
+
+        :param name: name of the script
         '''
-        match = re.match(self.pattern, fname)
+        match = re.match(self.pattern, script_name)
         if not match:
             return
         version, name, ext = match.groups()
-        return dict(fname=fname, version=version, name=name, ext=ext)
+        return dict(fname=script_name, version=version, name=name, ext=ext)
 
     def read_scripts(self, minversion=None, maxversion=None, skip_versions=()):
         """
