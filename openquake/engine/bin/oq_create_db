@@ -188,8 +188,3 @@ psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $postgres_
 psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "ALTER TABLE spatial_ref_sys OWNER TO oq_admin"
 psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "ALTER TABLE geometry_columns OWNER TO oq_admin"
 psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "ALTER TABLE geography_columns OWNER TO oq_admin"
-
-# Create schemas and apply all migrations
-echo ".. Creating schemas .."
-psql -p $db_port -U $db_admin_user -d $db_name $psql_batch_options -f $schema_path/upgrades/0000-base_schema.sql
-echo ".. Done .."
