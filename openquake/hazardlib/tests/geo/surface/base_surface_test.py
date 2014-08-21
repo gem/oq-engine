@@ -181,6 +181,77 @@ class GetRXDistanceTestCase(unittest.TestCase):
         self.assertAlmostEqual(surface.get_rx_distance(sites)[0],
                                -3.9313415355436705, places=4)
 
+    def test9_non_planar_surface_case1(self):
+        # vertical, non-planar surface made of two segments, both of 40 km
+        # length. The first segment has an azimuth of 80 degrees while the
+        # second has an azimuth of 30 degrees. The surface presents therefore
+        # a kink pointing towards south-east
+        corners = [
+            [(0., 0., 0.), (0.354264, 0.062466, 0), (0.534131, 0.373999, 0)],
+            [(0., 0., 10.), (0.354264, 0.062466, 10), (0.534131, 0.373999, 10)]
+        ]
+        surface = DummySurface(corners)
+
+        # distances are tested on 4 points. The first two are on the hanging-
+        # wall and foot-wall of the first segment (10 km distance), while
+        # the third and fourth are on the hanging-wall and foot-wall of the
+        # second segment (20 km distance)
+        sites = Mesh.from_points_list([
+            Point(0.192748, -0.057333), Point(0.161515, 0.119799),
+            Point(0.599964, 0.128300), Point(0.288427, 0.308164)
+        ])
+        numpy.testing.assert_allclose(
+            surface.get_rx_distance(sites),
+            [10., -10., 20., -20], rtol=1e-5
+        )
+
+    def test10_non_planar_surface_case2(self):
+        # vertical, non-planar surface made of two segments, both of 40 km
+        # length. The first segment has an azimuth of 30 degrees while the
+        # second has an azimuth of 80 degrees. The surface presents therefore
+        # a kink pointing towards north-west
+        corners = [
+            [(0., 0., 0.), (0.179866, 0.311534, 0), (0.534137, 0.373994, 0)],
+            [(0., 0., 10.), (0.179866, 0.311534, 10), (0.534137, 0.373994, 10)]
+        ]
+        surface = DummySurface(corners)
+
+        # distances are tested on 4 points. The first two are on the hanging-
+        # wall and foot-wall of the first segment (10 km distance), while
+        # the third and fourth are on the hanging-wall and foot-wall of the
+        # second segment (20 km distance)
+        sites = Mesh.from_points_list([
+            Point(0.167816, 0.110801), Point(0.012048, 0.200733),
+            Point(0.388234, 0.165633), Point(0.325767, 0.519897)
+        ])
+        numpy.testing.assert_allclose(
+            surface.get_rx_distance(sites),
+            [10., -10., 20., -20], rtol=1e-5
+        )
+
+    def test11_non_planar_surface_case3(self):
+        # same geometry as 'test10_non_planar_surface_case2' but with reversed
+        # strike (edges specified in the opposite direction)
+        corners = [
+            [(0.534137, 0.373994, 0), (0.179866, 0.311534, 0), (0., 0., 0.)],
+            [(0.534137, 0.373994, 10), (0.179866, 0.311534, 10), (0., 0., 10.)]
+        ]
+        surface = DummySurface(corners)
+
+        # distances are tested on 4 points. The first two are on the foot-
+        # wall and hanging-wall of the first segment (10 km distance), while
+        # the third and fourth are on the foot-wall and hanging-wall of the
+        # second segment (20 km distance)
+        sites = Mesh.from_points_list([
+            Point(0.167816, 0.110801), Point(0.012048, 0.200733),
+            Point(0.388234, 0.165633), Point(0.325767, 0.519897)
+        ])
+        # distances remain the same, but signs are reversed
+        numpy.testing.assert_allclose(
+            surface.get_rx_distance(sites),
+            [-10., 10., -20., 20], rtol=1e-5
+        )
+
 
 class GetTopEdgeDepthTestCase(unittest.TestCase):
     def test_with_depth(self):
