@@ -2,8 +2,10 @@ import os
 import unittest
 import psycopg2
 import importlib
+from contextlib import contextmanager
+
 from openquake.engine.db.models import getcursor
-from openquake.engine.db.upgrade_manager import upgrade_db
+from openquake.engine.db.upgrade_manager import upgrade_db, DuplicatedVersion
 
 conn = getcursor('admin').connection
 pkg = 'openquake.engine.tests.db.upgrades'
@@ -20,11 +22,15 @@ def count(conn, tablename):
     return curs.fetchall()[0][0]
 
 
-def add_temp_script(name, content):
+@contextmanager
+def temp_script(name, content):
     fname = os.path.join(upgrader.upgrade_dir, name)
     with open(fname, 'w') as s:
         s.write(content)
-    return fname
+    try:
+        yield
+    finally:
+        os.remove(fname)
 
 
 class UpgradeManagerTestCase(unittest.TestCase):
@@ -67,12 +73,9 @@ class UpgradeManagerTestCase(unittest.TestCase):
         # give it a higher number
         # here we emulate this use case with a reserved script 04 entering
         # when the database is already at version 05
-        fname = add_temp_script('04-do-nothing.sql', 'select 1')
-        try:
+        with temp_script('04-do-nothing.sql', 'select 1'):
             applied = upgrade_db(conn, pkg, skip_versions='02 03'.split())
             self.assertEqual(applied, ['04'])
-        finally:
-            os.remove(fname)
 
     def test_syntax_error(self):
         with self.assertRaises(psycopg2.ProgrammingError) as ctx:
@@ -83,6 +86,12 @@ class UpgradeManagerTestCase(unittest.TestCase):
     def test_insert_error(self):
         with self.assertRaises(psycopg2.DataError):
             upgrade_from_scratch(skip=['02'])  # run 03-insert-error.sql
+
+    def test_duplicated_version(self):
+        # there are two scripts with version '01'
+        with self.assertRaises(DuplicatedVersion):
+            with temp_script('01-do-nothing.sql', 'select 1'):
+                upgrade_from_scratch()
 
     def tearDown(self):
         # in case of errors upgrade_db has already performed a rollback
