@@ -36,7 +36,7 @@ def _db_cfg(db_name):
 
     :returns: Configuration dict, structured like so::
         {'ENGINE': 'django.db.backends.postgresql_psycopg2',
-         'NAME': 'openquake',
+         'NAME': 'openquake2',
          'USER': 'openquake',
          'PASSWORD': 'secret',
          'HOST': 'localhost',
