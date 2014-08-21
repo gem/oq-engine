@@ -49,17 +49,22 @@ class UpgradeManager(object):
     :param upgrade_dir:
         the directory were the upgrade script reside
     :param version_table:
-        the name of the table containing the versions
+        the name of the table containing the versions [ex. public.db_version]
     """
     def __init__(self, version_pattern, upgrade_dir,
-                 version_table='db_version'):
+                 version_table='public.db_version'):
         self.upgrade_dir = upgrade_dir
         self.version_pattern = version_pattern
         self.pattern = r'^(%s[rs]?)-([\w\-_]+)\.(sql|py)$' % version_pattern
         self.version_table = version_table
+        if '.' in version_table:  # contains the schema name
+            self.version_schema_name, self.version_table_name = \
+                version_table.split('.')
+        else:  # assume the schema name is 'public'
+            self.version_schema_name, self.version_table_name = \
+                ('public', self.version_table)
         if re.match('[\w_\.]+', version_table) is None:
             raise ValueError(version_table)
-        self.version = None  # will be updated after the run
         self.starting_version = None  # will be updated after the run
 
     def _insert_script(self, script, conn):
@@ -74,6 +79,7 @@ class UpgradeManager(object):
 
         :param conn: a DB API 2 connection
         """
+        logs.LOG.info('Creating the versioning table %s', self.version_table)
         conn.cursor().execute(CREATE_VERSIONING % self.version_table)
         self._insert_script(self.read_scripts()[0], conn)
 
@@ -82,31 +88,36 @@ class UpgradeManager(object):
         Create the version table and run the base script on an empty database.
         """
         base = self.read_scripts()[0]['fname']
+        logs.LOG.info('Creating the initial schema from %s',  base)
         apply_sql_script(conn, os.path.join(self.upgrade_dir, base))
         self.install_versioning(conn)
 
-    def upgrade(self, conn):
+    def upgrade(self, conn, skip_versions=()):
         '''
         Upgrade the database from the current version to the maximum
         version in the upgrade scripts.
+
+        :param conn: a DBAPI 2 connection
+        :param skip_versions: the versions to skip
         '''
         db_versions = self.get_db_versions(conn)
-        self.starting_version = sorted(db_versions)[-1]  # the highest version
-        self.ending_version = self.get_max_version()
-        if self.starting_version == self.ending_version:
+        self.starting_version = max(db_versions)
+        to_skip = sorted(db_versions | set(skip_versions))
+        scripts = self.read_scripts(None, None, to_skip)
+        if not scripts:
             logs.LOG.warn('The database is updated at version %s. '
                           'Nothing to do.', self.starting_version)
-            return
+            return []
+        self.ending_version = max(s['version'] for s in scripts)
         logs.LOG.warn('The database is at version %s. Upgrading to version '
                       '%s.', self.starting_version, self.ending_version)
-        self._from_to_version(conn, self.starting_version, self.ending_version,
-                              db_versions=db_versions)
+        return self._upgrade(conn, scripts)
 
-    def _from_to_version(self, conn, from_version, to_version, db_versions):
-        scripts = self.read_scripts(from_version, to_version, db_versions)
+    def _upgrade(self, conn, scripts):
+        versions_applied = []
         for script in scripts:  # script is a dictionary
             fullname = os.path.join(self.upgrade_dir, script['fname'])
-            logs.LOG.warn('Executing %s', fullname)
+            logs.LOG.info('Executing %s', fullname)
             if script['ext'] == 'py':  # Python script with a upgrade(conn)
                 runpy.run_path(fullname)['upgrade'](conn)
                 self._insert_script(script, conn)
@@ -114,11 +125,8 @@ class UpgradeManager(object):
                 # notice that this prints the file name in case of error
                 apply_sql_script(conn, fullname)
                 self._insert_script(script, conn)
-        if scripts:  # save the last version
-            self.version = scripts[-1]['version']
-
-    def from_scratch(self, conn):
-        self._from_to_version(conn, None, None, ())
+            versions_applied.append(script['version'])
+        return versions_applied
 
     def get_db_version(self, conn):
         """
@@ -134,7 +142,7 @@ class UpgradeManager(object):
             raise VersioningNotInstalled('Run openquake --upgrade-db')
 
     def check_version(self, conn):
-        scripts = self.read_scripts(db_versions=self.get_db_versions(conn))
+        scripts = self.read_scripts(skip_versions=self.get_db_versions(conn))
         if scripts:
             raise SystemExit(
                 'Your database is not updated. You can update it by running '
@@ -154,18 +162,6 @@ class UpgradeManager(object):
             raise VersioningNotInstalled(
                 'perform the steps in the documentation')
 
-    def get_max_version(self):
-        '''
-        Get the maximum version from the upgrade scripts. Return None
-        if there are no scripts.
-        '''
-        version = None
-        for scriptname in sorted(os.listdir(self.upgrade_dir)):
-            match = self.parse_script_name(scriptname)
-            if match:
-                version = match['version']
-        return version
-
     def parse_script_name(self, fname):
         '''
         Parse a script name and return a dictionary with fields
@@ -177,10 +173,14 @@ class UpgradeManager(object):
         version, name, ext = match.groups()
         return dict(fname=fname, version=version, name=name, ext=ext)
 
-    def read_scripts(self, minversion=None, maxversion=None, db_versions=()):
+    def read_scripts(self, minversion=None, maxversion=None, skip_versions=()):
         """
         Extract the upgrade scripts from a directory as a list of
         dictionaries, ordered by version.
+
+        :param minversion: the minimum version to consider
+        :param maxversion: the maximum version to consider
+        :param skipversions: the versions to skip
         """
         scripts = []
         versions = {}  # a script is unique per version
@@ -188,7 +188,7 @@ class UpgradeManager(object):
             match = self.parse_script_name(scriptname)
             if match:
                 version = match['version']
-                if version in db_versions:
+                if version in skip_versions:
                     continue  # do not collect scripts already applied
                 elif minversion and version <= minversion:
                     continue  # do not collect versions too old
@@ -206,12 +206,15 @@ class UpgradeManager(object):
         return scripts
 
 
-def upgrade_db(conn, pkg_name):
+def upgrade_db(conn, pkg_name, from_scratch=False, skip_versions=()):
     """
     Upgrade a database by running several scripts in a single transaction.
 
     :param conn: a DB API 2 connection
-    :pkg_name: the name of the package containing the upgrade scripts
+    :param str pkg_name: the name of the package containing the upgrade scripts
+    :param bool from_scratch: whether to run the base creation script
+    :param list skip_versions: the versions to skip
+    :returns: the version numbers of the new scripts applied the database
     """
     curs = conn.cursor()
     try:
@@ -223,15 +226,26 @@ def upgrade_db(conn, pkg_name):
     if not upgrader.read_scripts():
         raise SystemExit('The upgrade_dir does not contain scripts matching '
                          'the pattern %s' % upgrader.pattern)
-    curs.execute("SELECT tablename FROM pg_tables WHERE tablename=%s",
-                 (upgrader.version_table,))
-    versioning_table = curs.fetchall()
-    if not versioning_table:
-        upgrader.install_versioning(conn)
     try:
-        upgrader.upgrade(conn)
+        if from_scratch:  # assume an empty db
+            # run the base schema script
+            upgrader.init(conn)
+        else:  # already populated db
+            # check if there is already a versioning table
+            curs.execute("SELECT tablename FROM pg_tables "
+                         "WHERE schemaname=%s AND tablename=%s",
+                         (upgrader.version_schema_name,
+                          upgrader.version_table_name))
+            versioning_table = curs.fetchall()
+            # if not, create it
+            if not versioning_table:
+                upgrader.install_versioning(conn)
+        # run the upgrade scripts
+        versions_applied = upgrader.upgrade(conn, skip_versions)
     except:
         conn.rollback()
         raise
     else:
         conn.commit()
+
+    return versions_applied
