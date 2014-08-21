@@ -12,10 +12,6 @@ pkg = 'openquake.engine.tests.db.upgrades'
 upgrader = importlib.import_module(pkg).upgrader
 
 
-def upgrade_from_scratch(skip=None):
-    return upgrade_db(conn, pkg, from_scratch=True, skip_versions=skip)
-
-
 def count(conn, tablename):
     curs = conn.cursor()
     curs.execute('SELECT COUNT(*) FROM %s' % tablename)
@@ -37,6 +33,14 @@ class UpgradeManagerTestCase(unittest.TestCase):
     # Apply the scripts in openquake.engine.tests.db.upgrades to the database.
     # All the tables in the test scripts are in the `test` schema, which is
     # automatically created an destroyed in the setUp/tearDown methods.
+    # This test consider the 5 scripts in openquake.engine.tests.db.upgrades:
+
+    ## 0000-base_schema.sql
+    ## 0001-populate.sql
+    ## 0002-a-syntax-error.sql
+    ## 0003-insert-error.sql
+    ## 0005-populate_model.py
+
     def setUp(self):
         conn.cursor().execute('CREATE SCHEMA test')
         conn.commit()  # make sure the schema really exists
@@ -54,8 +58,8 @@ class UpgradeManagerTestCase(unittest.TestCase):
             'The upgrade_dir does not contain scripts matching the pattern'))
 
     def test_ok(self):
-        applied = upgrade_from_scratch(skip='02 03'.split())
-        self.assertEqual(applied, '01 05'.split())
+        applied = upgrade_db(conn, pkg, skip_versions='0002 0003'.split())
+        self.assertEqual(applied, '0001 0005'.split())
         self.assertEqual(count(conn, 'test.hazard_calculation'), 2)
         self.assertEqual(count(conn, 'test.lt_source_model'), 6)
 
@@ -71,25 +75,32 @@ class UpgradeManagerTestCase(unittest.TestCase):
         # give it a higher number
         # here we emulate this use case with a reserved script 04 entering
         # when the database is already at version 05
-        with temp_script('04-do-nothing.sql', 'select 1'):
-            applied = upgrade_db(conn, pkg, skip_versions='02 03'.split())
-            self.assertEqual(applied, ['04'])
+        with temp_script('0004-do-nothing.sql', 'SELECT 1'):
+            applied = upgrade_db(conn, pkg, skip_versions='0002 0003'.split())
+            self.assertEqual(applied, ['0004'])
 
     def test_syntax_error(self):
         with self.assertRaises(psycopg2.ProgrammingError) as ctx:
-            upgrade_from_scratch(skip=['01'])
+            upgrade_db(conn, pkg, skip_versions=['0001'])
         self.assertTrue(str(ctx.exception).startswith(
             'syntax error at or near'))
 
     def test_insert_error(self):
         with self.assertRaises(psycopg2.DataError):
-            upgrade_from_scratch(skip=['02'])  # run 03-insert-error.sql
+            # run 03-insert-error.sql
+            upgrade_db(conn, pkg, skip_versions=['0002'])
+        # check that the rollback works: the version
+        # table contains only the base script and the
+        # tables are not populated, i.e. '0001' was rolled back
+        self.assertEqual(count(conn, 'test.version'), 1)
+        self.assertEqual(count(conn, 'test.hazard_calculation'), 0)
+        self.assertEqual(count(conn, 'test.lt_source_model'), 0)
 
     def test_duplicated_version(self):
-        # there are two scripts with version '01'
+        # there are two scripts with version '0001'
         with self.assertRaises(DuplicatedVersion):
-            with temp_script('01-do-nothing.sql', 'select 1'):
-                upgrade_from_scratch()
+            with temp_script('0001-do-nothing.sql', 'SELECT 1'):
+                upgrade_db(conn, pkg)
 
     def tearDown(self):
         # in case of errors upgrade_db has already performed a rollback
