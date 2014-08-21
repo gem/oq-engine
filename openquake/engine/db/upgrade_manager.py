@@ -44,19 +44,19 @@ class UpgradeManager(object):
     of the UpgradeManager called `upgrader` in the __init__.py file. It
     should also specify the initializations parameters
 
-    :param version_pattern:
-        a regulation expression for the script version number
     :param upgrade_dir:
         the directory were the upgrade script reside
     :param version_table:
-        the name of the table containing the versions [ex. public.db_version]
+        the name of the versioning table (default public.revision_info)
+    :param version_pattern:
+        a regulation expression for the script version number (\d\d\d\d)
     """
-    def __init__(self, version_pattern, upgrade_dir,
-                 version_table='public.db_version'):
+    def __init__(self, upgrade_dir, version_table='public.revision_info',
+                 version_pattern='\d\d\d\d'):
         self.upgrade_dir = upgrade_dir
+        self.version_table = version_table
         self.version_pattern = version_pattern
         self.pattern = r'^(%s[rs]?)-([\w\-_]+)\.(sql|py)$' % version_pattern
-        self.version_table = version_table
         if '.' in version_table:  # contains the schema name
             self.version_schema_name, self.version_table_name = \
                 version_table.split('.')
@@ -204,13 +204,12 @@ class UpgradeManager(object):
         return scripts
 
 
-def upgrade_db(conn, pkg_name, from_scratch=False, skip_versions=()):
+def upgrade_db(conn, pkg_name, skip_versions=()):
     """
     Upgrade a database by running several scripts in a single transaction.
 
     :param conn: a DB API 2 connection
     :param str pkg_name: the name of the package containing the upgrade scripts
-    :param bool from_scratch: whether to run the base creation script
     :param list skip_versions: the versions to skip
     :returns: the version numbers of the new scripts applied the database
     """
@@ -225,19 +224,17 @@ def upgrade_db(conn, pkg_name, from_scratch=False, skip_versions=()):
         raise SystemExit('The upgrade_dir does not contain scripts matching '
                          'the pattern %s' % upgrader.pattern)
     try:
-        if from_scratch:  # assume an empty db
-            # run the base schema script
+        # check if there is already a versioning table
+        curs.execute("SELECT tablename FROM pg_tables "
+                     "WHERE schemaname=%s AND tablename=%s",
+                     (upgrader.version_schema_name,
+                      upgrader.version_table_name))
+        versioning_table = curs.fetchall()
+        # if not, run the base script and create the versioning table
+        if not versioning_table:
             upgrader.init(conn)
-        else:  # already populated db
-            # check if there is already a versioning table
-            curs.execute("SELECT tablename FROM pg_tables "
-                         "WHERE schemaname=%s AND tablename=%s",
-                         (upgrader.version_schema_name,
-                          upgrader.version_table_name))
-            versioning_table = curs.fetchall()
-            # if not, create it
-            if not versioning_table:
-                upgrader.install_versioning(conn)
+            conn.commit()
+
         # run the upgrade scripts
         versions_applied = upgrader.upgrade(conn, skip_versions)
     except:
