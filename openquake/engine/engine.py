@@ -242,7 +242,7 @@ def run_calc(job, log_level, log_file, exports, job_type):
         'hazard' or 'risk'
     """
     # first of all check the database version and exit if the db is outdated
-    upgrader.check_version(django_db.connections['admin'])
+    upgrader.check_versions(django_db.connections['admin'])
 
     calc_mode = getattr(job, '%s_calculation' % job_type).calculation_mode
     calculator = get_calculator_class(job_type, calc_mode)(job)
