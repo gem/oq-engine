@@ -35,7 +35,11 @@ CREATE SCHEMA hzrdr;
 CREATE SCHEMA riski;
 CREATE SCHEMA riskr;
 CREATE SCHEMA uiapi;
-
+COMMENT ON SCHEMA hzrdi IS 'Hazard input model';
+COMMENT ON SCHEMA hzrdr IS 'Hazard result data';
+COMMENT ON SCHEMA riski IS 'Risk input model';
+COMMENT ON SCHEMA riskr IS 'Risk result data';
+COMMENT ON SCHEMA uiapi IS 'Data required by the API presented to the various OpenQuake UIs';
 
 ------------------------------------------------------------------------
 -- Table definitions go here
@@ -99,6 +103,11 @@ CREATE TABLE uiapi.oq_job (
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE uiapi_ts;
 
+COMMENT ON TABLE uiapi.oq_job IS 'Date related to an OpenQuake job that was created in the UI.';
+COMMENT ON COLUMN uiapi.oq_job.job_pid IS 'The process id (PID) of the OpenQuake engine runner process';
+COMMENT ON COLUMN uiapi.oq_job.supervisor_pid IS 'The process id (PID) of the supervisor for this OpenQuake job';
+COMMENT ON COLUMN uiapi.oq_job.status IS 'One of: pending, running, failed or succeeded.';
+COMMENT ON COLUMN uiapi.oq_job.duration IS 'The job''s duration in seconds (only available once the jobs terminates).';
 
 -- Tracks task performance
 CREATE TABLE uiapi.performance (
@@ -113,6 +122,11 @@ CREATE TABLE uiapi.performance (
     pgmemory BIGINT
 )  TABLESPACE uiapi_ts;
 
+COMMENT ON TABLE uiapi.performance IS 'Tracks task performance';
+COMMENT ON COLUMN uiapi.performance.duration IS 'Duration of the operation in seconds';
+COMMENT ON COLUMN uiapi.performance.pymemory IS 'Memory occupation in Python (Mbytes)';
+COMMENT ON COLUMN uiapi.performance.pgmemory IS 'Memory occupation in Postgres (Mbytes)';
+
 
 -- Tracks various job statistics
 CREATE TABLE uiapi.job_stats (
@@ -124,6 +138,9 @@ CREATE TABLE uiapi.job_stats (
     -- The number of total sites in the calculation
     disk_space BIGINT -- The disk space occupation in bytes
 ) TABLESPACE uiapi_ts;
+
+COMMENT ON TABLE uiapi.job_stats IS 'Tracks various job statistics';
+COMMENT ON COLUMN uiapi.job_stats.disk_space IS 'How much the disk space occupation increased during the computation (in bytes)';
 
 
 CREATE TABLE uiapi.hazard_calculation (
@@ -288,6 +305,22 @@ CREATE TABLE uiapi.output (
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE uiapi_ts;
 
+COMMENT ON TABLE uiapi.output IS 'A single OpenQuake calculation engine output. The data may reside in a file or in the database.';
+COMMENT ON COLUMN uiapi.output.display_name IS 'The GUI display name to be used for this output.';
+COMMENT ON COLUMN uiapi.output.output_type IS 'Output type, one of:
+    - unknown
+    - hazard_curve
+    - hazard_map
+    - gmf
+    - loss_curve
+    - loss_map
+    - dmg_dist_per_asset
+    - dmg_dist_per_taxonomy
+    - dmg_dist_total
+    - bcr_distribution';
+COMMENT ON COLUMN uiapi.output.oq_job_id IS 'The job that produced this output;
+NULL if the output was imported from an external source';
+
 
 -- Complete hazard map
 CREATE TABLE hzrdr.hazard_map (
@@ -319,6 +352,13 @@ CREATE TABLE hzrdr.hazard_map (
     imls float[] NOT NULL
 ) TABLESPACE hzrdr_ts;
 
+COMMENT ON TABLE hzrdr.hazard_map IS 'A complete hazard map, for a given IMT and PoE';
+COMMENT ON COLUMN hzrdr.hazard_map.poe IS 'Probability of exceedence';
+COMMENT ON COLUMN hzrdr.hazard_map.statistics IS 'Statistic type, one of:
+    - Median   (median)
+    - Quantile (quantile)';
+COMMENT ON COLUMN hzrdr.hazard_map.quantile IS 'The quantile level for quantile statistical data.';
+
 
 -- Hazard curve data.
 CREATE TABLE hzrdr.hazard_curve (
@@ -348,6 +388,18 @@ CREATE TABLE hzrdr.hazard_curve (
             OR ((imt != 'SA') AND (sa_damping IS NULL)))
 ) TABLESPACE hzrdr_ts;
 
+COMMENT ON TABLE hzrdr.hazard_curve IS 'A collection of hazard curves. This table defines common attributes for the collection.';
+COMMENT ON COLUMN hzrdr.hazard_curve.output_id IS 'The foreign key to the output record that represents the corresponding hazard curve.';
+COMMENT ON COLUMN hzrdr.hazard_curve.lt_realization_id IS 'Only required for non-statistical curves';
+COMMENT ON COLUMN hzrdr.hazard_curve.imt IS 'Intensity Measure Type: PGA, PGV, PGD, SA, IA, RSD, or MMI';
+COMMENT ON COLUMN hzrdr.hazard_curve.imls IS 'Intensity Measure Levels common to this set of hazard curves';
+COMMENT ON COLUMN hzrdr.hazard_curve.statistics IS 'Statistic type, one of:
+    - Mean     (mean)
+    - Quantile (quantile)';
+COMMENT ON COLUMN hzrdr.hazard_curve.quantile IS 'The quantile for quantile statistical data.';
+COMMENT ON COLUMN hzrdr.hazard_curve.sa_period IS 'Spectral Acceleration period; only relevent when imt = SA';
+COMMENT ON COLUMN hzrdr.hazard_curve.sa_damping IS 'Spectral Acceleration damping; only relevent when imt = SA';
+
 
 -- Hazard curve node data.
 CREATE TABLE hzrdr.hazard_curve_data (
@@ -364,6 +416,9 @@ CREATE TABLE hzrdr.hazard_curve_data (
 SELECT AddGeometryColumn('hzrdr', 'hazard_curve_data', 'location', 4326, 'POINT', 2);
 ALTER TABLE hzrdr.hazard_curve_data ALTER COLUMN location SET NOT NULL;
 
+COMMENT ON TABLE hzrdr.hazard_curve_data IS 'Holds location/POE data for hazard curves';
+COMMENT ON COLUMN hzrdr.hazard_curve_data.hazard_curve_id IS 'The foreign key to the hazard curve record for this node.';
+COMMENT ON COLUMN hzrdr.hazard_curve_data.poes IS 'Probabilities of exceedence.';
 
 -- Stochastic Event Set Collection
 -- A container for all of the Stochastic Event Sets in a given
@@ -578,6 +633,11 @@ CREATE TABLE riskr.loss_map (
             OR (((statistics != 'quantile') AND (quantile IS NULL))))
 ) TABLESPACE riskr_ts;
 
+COMMENT ON TABLE riskr.loss_map IS 'Holds metadata for loss maps.';
+COMMENT ON COLUMN riskr.loss_map.output_id IS 'The foreign key to the output record that represents the corresponding loss map.';
+COMMENT ON COLUMN riskr.loss_map.poe IS 'Probability of exceedance (for probabilistic loss maps)';
+
+
 CREATE TABLE riskr.loss_map_data (
     id SERIAL PRIMARY KEY,
     loss_map_id INTEGER NOT NULL, -- FK to loss_map.id
@@ -589,6 +649,13 @@ CREATE TABLE riskr.loss_map_data (
 ) TABLESPACE riskr_ts;
 SELECT AddGeometryColumn('riskr', 'loss_map_data', 'location', 4326, 'POINT', 2);
 ALTER TABLE riskr.loss_map_data ALTER COLUMN location SET NOT NULL;
+
+COMMENT ON TABLE riskr.loss_map_data IS 'Holds an asset, its position and a value plus (for non-scenario maps) the standard deviation for its loss.';
+COMMENT ON COLUMN riskr.loss_map_data.loss_map_id IS 'The foreign key to the loss map';
+COMMENT ON COLUMN riskr.loss_map_data.asset_ref IS 'The asset reference';
+COMMENT ON COLUMN riskr.loss_map_data.location IS 'The position of the asset';
+COMMENT ON COLUMN riskr.loss_map_data.value IS 'The value of the loss';
+COMMENT ON COLUMN riskr.loss_map_data.std_dev IS 'The standard deviation of the loss (for scenario maps, for non-scenario maps the standard deviation is NULL)';
 
 
 -- Loss fraction data.
@@ -676,6 +743,9 @@ CREATE TABLE riskr.loss_curve (
             OR (((statistics != 'quantile') AND (quantile IS NULL))))
 ) TABLESPACE riskr_ts;
 
+COMMENT ON TABLE riskr.loss_curve IS 'Holds the parameters common to a set of loss curves.';
+COMMENT ON COLUMN riskr.loss_curve.output_id IS 'The foreign key to the output record that represents the corresponding loss curve.';
+COMMENT ON COLUMN riskr.loss_curve.aggregate IS 'Is the curve an aggregate curve?';
 
 -- Loss curve data. Holds the asset, its position and value plus the calculated
 -- curve.
@@ -700,6 +770,14 @@ SELECT AddGeometryColumn('riskr', 'loss_curve_data', 'location', 4326, 'POINT',
                          2);
 ALTER TABLE riskr.loss_curve_data ALTER COLUMN location SET NOT NULL;
 
+COMMENT ON TABLE riskr.loss_curve_data IS 'Holds the probabilities of exceedance for a given loss curve.';
+COMMENT ON COLUMN riskr.loss_curve_data.loss_curve_id IS 'The foreign key to the curve record to which the loss curve data belongs';
+COMMENT ON COLUMN riskr.loss_curve_data.asset_ref IS 'The asset id';
+COMMENT ON COLUMN riskr.loss_curve_data.location IS 'The position of the asset';
+COMMENT ON COLUMN riskr.loss_curve_data.asset_value IS 'The value of the asset';
+COMMENT ON COLUMN riskr.loss_curve_data.loss_ratios IS 'Loss ratios';
+COMMENT ON COLUMN riskr.loss_curve_data.poes IS 'Probabilities of exceedence';
+
 
 -- Aggregate loss curve data.  Holds the probability of exceedence of certain
 -- levels of losses for the whole exposure model.
@@ -719,6 +797,11 @@ CREATE TABLE riskr.aggregate_loss_curve_data (
     stddev_loss FLOAT
 ) TABLESPACE riskr_ts;
 
+COMMENT ON TABLE riskr.aggregate_loss_curve_data IS 'Holds the probabilities of exceedance for the whole exposure model.';
+COMMENT ON COLUMN riskr.aggregate_loss_curve_data.loss_curve_id IS 'The foreign key to the loss curve record to which the aggregate loss curve data belongs';
+COMMENT ON COLUMN riskr.aggregate_loss_curve_data.losses IS 'Losses';
+COMMENT ON COLUMN riskr.aggregate_loss_curve_data.poes IS 'Probabilities of exceedence';
+
 -- Benefit-cost ratio distribution
 CREATE TABLE riskr.bcr_distribution (
     id SERIAL PRIMARY KEY,
@@ -726,6 +809,10 @@ CREATE TABLE riskr.bcr_distribution (
     loss_type VARCHAR NOT NULL,
     hazard_output_id INTEGER NULL
 ) TABLESPACE riskr_ts;
+
+COMMENT ON TABLE riskr.bcr_distribution IS 'Holds metadata for the benefit-cost ratio distribution';
+COMMENT ON COLUMN riskr.bcr_distribution.output_id IS 'The foreign key to the output record that represents the corresponding BCR distribution.';
+
 
 CREATE TABLE riskr.bcr_distribution_data (
     id SERIAL PRIMARY KEY,
@@ -738,6 +825,14 @@ CREATE TABLE riskr.bcr_distribution_data (
 SELECT AddGeometryColumn('riskr', 'bcr_distribution_data', 'location', 4326, 'POINT', 2);
 ALTER TABLE riskr.bcr_distribution_data ALTER COLUMN location SET NOT NULL;
 
+COMMENT ON TABLE riskr.bcr_distribution_data IS 'Holds the actual data for the BCR distribution';
+COMMENT ON COLUMN riskr.bcr_distribution_data.bcr_distribution_id IS 'The foreign key to the record to which the BCR distribution data belongs';
+COMMENT ON COLUMN riskr.bcr_distribution_data.asset_ref IS 'The asset id';
+COMMENT ON COLUMN riskr.bcr_distribution_data.average_annual_loss_original IS 'The Expected annual loss computed by using the original model';
+COMMENT ON COLUMN riskr.bcr_distribution_data.average_annual_loss_retrofitted IS 'The Expected annual loss computed by using the retrofitted model';
+COMMENT ON COLUMN riskr.bcr_distribution_data.bcr IS 'The actual benefit-cost ratio';
+
+
 CREATE TABLE riskr.dmg_state (
     id SERIAL PRIMARY KEY,
     risk_calculation_id INTEGER NOT NULL REFERENCES uiapi.risk_calculation,
@@ -746,6 +841,9 @@ CREATE TABLE riskr.dmg_state (
     UNIQUE (risk_calculation_id, dmg_state),
     UNIQUE (risk_calculation_id, lsi)
 ) TABLESPACE riskr_ts;
+
+COMMENT ON TABLE riskr.dmg_state IS 'Holds the damage_states associated to a given output';
+
 
 -- Damage Distribution Per Asset
 CREATE TABLE riskr.dmg_dist_per_asset (
@@ -805,6 +903,16 @@ CREATE TABLE riski.exposure_model (
 
 ) TABLESPACE riski_ts;
 
+COMMENT ON TABLE riski.exposure_model IS 'A risk exposure model';
+COMMENT ON COLUMN riski.exposure_model.area_type IS 'area type. one of: aggregated or per_asset';
+COMMENT ON COLUMN riski.exposure_model.area_unit IS 'area unit of measure e.g. sqm';
+COMMENT ON COLUMN riski.exposure_model.category IS 'The risk category modelled';
+COMMENT ON COLUMN riski.exposure_model.description IS 'An optional description of the risk exposure model at hand';
+
+COMMENT ON COLUMN riski.exposure_model.name IS 'The exposure model name';
+
+COMMENT ON COLUMN riski.exposure_model.taxonomy_source IS 'the taxonomy system used to classify the assets';
+
 
 -- Cost Conversion table
 CREATE TABLE riski.cost_type (
@@ -844,6 +952,13 @@ CREATE TABLE riski.exposure_data (
     UNIQUE (exposure_model_id, asset_ref)
 ) TABLESPACE riski_ts;
 
+COMMENT ON TABLE riski.exposure_data IS 'Per-asset risk exposure data';
+COMMENT ON COLUMN riski.exposure_data.area IS 'asset area';
+COMMENT ON COLUMN riski.exposure_data.asset_ref IS 'A unique identifier (within the exposure model) for the asset at hand';
+COMMENT ON COLUMN riski.exposure_data.exposure_model_id IS 'Foreign key to the exposure model';
+COMMENT ON COLUMN riski.exposure_data.number_of_units IS 'number of assets, people etc.';
+COMMENT ON COLUMN riski.exposure_data.taxonomy IS 'A reference to the taxonomy that should be used for the asset at hand';
+
 
 CREATE TABLE riski.cost (
     id SERIAL PRIMARY KEY,
@@ -867,6 +982,12 @@ CREATE TABLE riski.occupancy (
     period VARCHAR NOT NULL,
     occupants float NOT NULL
 ) TABLESPACE riski_ts;
+
+COMMENT ON TABLE riski.occupancy IS 'Occupancy for a given exposure data set';
+COMMENT ON COLUMN riski.occupancy.exposure_data_id IS 'Foreign key to the exposure data set to which the occupancy data applies.';
+COMMENT ON COLUMN riski.occupancy.period IS 'describes the occupancy data e.g. day, night etc.';
+COMMENT ON COLUMN riski.occupancy.occupants IS 'number of occupants';
+
 
 -- calculation points of interest with parameters extracted from site_model or hc
 CREATE TABLE hzrdi.hazard_site (
@@ -1468,146 +1589,3 @@ GRANT SELECT,INSERT,UPDATE ON uiapi.risk_calculation   TO oq_job_init;
 
 GRANT SELECT,INSERT,UPDATE ON uiapi.output             TO oq_job_init;
 GRANT SELECT,INSERT,DELETE ON uiapi.performance        TO oq_job_init;
-
-/*
-Comments
-*/
-
-
--- schemas ------------------------------------------------------
-COMMENT ON SCHEMA hzrdi IS 'Hazard input model';
-COMMENT ON SCHEMA hzrdr IS 'Hazard result data';
-COMMENT ON SCHEMA riski IS 'Risk input model';
-COMMENT ON SCHEMA riskr IS 'Risk result data';
-COMMENT ON SCHEMA uiapi IS 'Data required by the API presented to the various OpenQuake UIs';
-
-
--- hzrdr schema tables ------------------------------------------
-COMMENT ON TABLE hzrdr.hazard_curve IS 'A collection of hazard curves. This table defines common attributes for the collection.';
-COMMENT ON COLUMN hzrdr.hazard_curve.output_id IS 'The foreign key to the output record that represents the corresponding hazard curve.';
-COMMENT ON COLUMN hzrdr.hazard_curve.lt_realization_id IS 'Only required for non-statistical curves';
-COMMENT ON COLUMN hzrdr.hazard_curve.imt IS 'Intensity Measure Type: PGA, PGV, PGD, SA, IA, RSD, or MMI';
-COMMENT ON COLUMN hzrdr.hazard_curve.imls IS 'Intensity Measure Levels common to this set of hazard curves';
-COMMENT ON COLUMN hzrdr.hazard_curve.statistics IS 'Statistic type, one of:
-    - Mean     (mean)
-    - Quantile (quantile)';
-COMMENT ON COLUMN hzrdr.hazard_curve.quantile IS 'The quantile for quantile statistical data.';
-COMMENT ON COLUMN hzrdr.hazard_curve.sa_period IS 'Spectral Acceleration period; only relevent when imt = SA';
-COMMENT ON COLUMN hzrdr.hazard_curve.sa_damping IS 'Spectral Acceleration damping; only relevent when imt = SA';
-
-
-COMMENT ON TABLE hzrdr.hazard_curve_data IS 'Holds location/POE data for hazard curves';
-COMMENT ON COLUMN hzrdr.hazard_curve_data.hazard_curve_id IS 'The foreign key to the hazard curve record for this node.';
-COMMENT ON COLUMN hzrdr.hazard_curve_data.poes IS 'Probabilities of exceedence.';
-
-COMMENT ON TABLE hzrdr.hazard_map IS 'A complete hazard map, for a given IMT and PoE';
-COMMENT ON COLUMN hzrdr.hazard_map.poe IS 'Probability of exceedence';
-COMMENT ON COLUMN hzrdr.hazard_map.statistics IS 'Statistic type, one of:
-    - Median   (median)
-    - Quantile (quantile)';
-COMMENT ON COLUMN hzrdr.hazard_map.quantile IS 'The quantile level for quantile statistical data.';
-
-
--- riski schema tables ------------------------------------------
-COMMENT ON TABLE riski.exposure_data IS 'Per-asset risk exposure data';
-COMMENT ON COLUMN riski.exposure_data.area IS 'asset area';
-COMMENT ON COLUMN riski.exposure_data.asset_ref IS 'A unique identifier (within the exposure model) for the asset at hand';
-COMMENT ON COLUMN riski.exposure_data.exposure_model_id IS 'Foreign key to the exposure model';
-COMMENT ON COLUMN riski.exposure_data.number_of_units IS 'number of assets, people etc.';
-COMMENT ON COLUMN riski.exposure_data.taxonomy IS 'A reference to the taxonomy that should be used for the asset at hand';
-
-
-COMMENT ON TABLE riski.exposure_model IS 'A risk exposure model';
-COMMENT ON COLUMN riski.exposure_model.area_type IS 'area type. one of: aggregated or per_asset';
-COMMENT ON COLUMN riski.exposure_model.area_unit IS 'area unit of measure e.g. sqm';
-COMMENT ON COLUMN riski.exposure_model.category IS 'The risk category modelled';
-COMMENT ON COLUMN riski.exposure_model.description IS 'An optional description of the risk exposure model at hand';
-
-COMMENT ON COLUMN riski.exposure_model.name IS 'The exposure model name';
-
-COMMENT ON COLUMN riski.exposure_model.taxonomy_source IS 'the taxonomy system used to classify the assets';
-
-
-COMMENT ON TABLE riski.occupancy IS 'Occupancy for a given exposure data set';
-COMMENT ON COLUMN riski.occupancy.exposure_data_id IS 'Foreign key to the exposure data set to which the occupancy data applies.';
-COMMENT ON COLUMN riski.occupancy.period IS 'describes the occupancy data e.g. day, night etc.';
-COMMENT ON COLUMN riski.occupancy.occupants IS 'number of occupants';
-
--- riskr schema tables ------------------------------------------
-COMMENT ON TABLE riskr.loss_map IS 'Holds metadata for loss maps.';
-COMMENT ON COLUMN riskr.loss_map.output_id IS 'The foreign key to the output record that represents the corresponding loss map.';
-COMMENT ON COLUMN riskr.loss_map.poe IS 'Probability of exceedance (for probabilistic loss maps)';
-
-
-COMMENT ON TABLE riskr.loss_map_data IS 'Holds an asset, its position and a value plus (for non-scenario maps) the standard deviation for its loss.';
-COMMENT ON COLUMN riskr.loss_map_data.loss_map_id IS 'The foreign key to the loss map';
-COMMENT ON COLUMN riskr.loss_map_data.asset_ref IS 'The asset reference';
-COMMENT ON COLUMN riskr.loss_map_data.location IS 'The position of the asset';
-COMMENT ON COLUMN riskr.loss_map_data.value IS 'The value of the loss';
-COMMENT ON COLUMN riskr.loss_map_data.std_dev IS 'The standard deviation of the loss (for scenario maps, for non-scenario maps the standard deviation is NULL)';
-
-
-COMMENT ON TABLE riskr.loss_curve IS 'Holds the parameters common to a set of loss curves.';
-COMMENT ON COLUMN riskr.loss_curve.output_id IS 'The foreign key to the output record that represents the corresponding loss curve.';
-COMMENT ON COLUMN riskr.loss_curve.aggregate IS 'Is the curve an aggregate curve?';
-
-
-COMMENT ON TABLE riskr.loss_curve_data IS 'Holds the probabilities of exceedance for a given loss curve.';
-COMMENT ON COLUMN riskr.loss_curve_data.loss_curve_id IS 'The foreign key to the curve record to which the loss curve data belongs';
-COMMENT ON COLUMN riskr.loss_curve_data.asset_ref IS 'The asset id';
-COMMENT ON COLUMN riskr.loss_curve_data.location IS 'The position of the asset';
-COMMENT ON COLUMN riskr.loss_curve_data.asset_value IS 'The value of the asset';
-COMMENT ON COLUMN riskr.loss_curve_data.loss_ratios IS 'Loss ratios';
-COMMENT ON COLUMN riskr.loss_curve_data.poes IS 'Probabilities of exceedence';
-
-
-COMMENT ON TABLE riskr.aggregate_loss_curve_data IS 'Holds the probabilities of exceedance for the whole exposure model.';
-COMMENT ON COLUMN riskr.aggregate_loss_curve_data.loss_curve_id IS 'The foreign key to the loss curve record to which the aggregate loss curve data belongs';
-COMMENT ON COLUMN riskr.aggregate_loss_curve_data.losses IS 'Losses';
-COMMENT ON COLUMN riskr.aggregate_loss_curve_data.poes IS 'Probabilities of exceedence';
-
-COMMENT ON TABLE riskr.bcr_distribution IS 'Holds metadata for the benefit-cost ratio distribution';
-COMMENT ON COLUMN riskr.bcr_distribution.output_id IS 'The foreign key to the output record that represents the corresponding BCR distribution.';
-
-COMMENT ON TABLE riskr.bcr_distribution_data IS 'Holds the actual data for the BCR distribution';
-COMMENT ON COLUMN riskr.bcr_distribution_data.bcr_distribution_id IS 'The foreign key to the record to which the BCR distribution data belongs';
-COMMENT ON COLUMN riskr.bcr_distribution_data.asset_ref IS 'The asset id';
-COMMENT ON COLUMN riskr.bcr_distribution_data.average_annual_loss_original IS 'The Expected annual loss computed by using the original model';
-COMMENT ON COLUMN riskr.bcr_distribution_data.average_annual_loss_retrofitted IS 'The Expected annual loss computed by using the retrofitted model';
-COMMENT ON COLUMN riskr.bcr_distribution_data.bcr IS 'The actual benefit-cost ratio';
-
-COMMENT ON TABLE riskr.dmg_state IS 'Holds the damage_states associated to a given output';
-
--- uiapi schema tables ------------------------------------------
-
-COMMENT ON TABLE uiapi.oq_job IS 'Date related to an OpenQuake job that was created in the UI.';
-COMMENT ON COLUMN uiapi.oq_job.job_pid IS 'The process id (PID) of the OpenQuake engine runner process';
-COMMENT ON COLUMN uiapi.oq_job.supervisor_pid IS 'The process id (PID) of the supervisor for this OpenQuake job';
-COMMENT ON COLUMN uiapi.oq_job.status IS 'One of: pending, running, failed or succeeded.';
-COMMENT ON COLUMN uiapi.oq_job.duration IS 'The job''s duration in seconds (only available once the jobs terminates).';
-
-COMMENT ON TABLE uiapi.performance IS 'Tracks task performance';
-COMMENT ON COLUMN uiapi.performance.duration IS 'Duration of the operation in seconds';
-COMMENT ON COLUMN uiapi.performance.pymemory IS 'Memory occupation in Python (Mbytes)';
-COMMENT ON COLUMN uiapi.performance.pgmemory IS 'Memory occupation in Postgres (Mbytes)';
-
-
-COMMENT ON TABLE uiapi.job_stats IS 'Tracks various job statistics';
-COMMENT ON COLUMN uiapi.job_stats.disk_space IS 'How much the disk space occupation increased during the computation (in bytes)';
-
-
-COMMENT ON TABLE uiapi.output IS 'A single OpenQuake calculation engine output. The data may reside in a file or in the database.';
-COMMENT ON COLUMN uiapi.output.display_name IS 'The GUI display name to be used for this output.';
-COMMENT ON COLUMN uiapi.output.output_type IS 'Output type, one of:
-    - unknown
-    - hazard_curve
-    - hazard_map
-    - gmf
-    - loss_curve
-    - loss_map
-    - dmg_dist_per_asset
-    - dmg_dist_per_taxonomy
-    - dmg_dist_total
-    - bcr_distribution';
-COMMENT ON COLUMN uiapi.output.oq_job_id IS 'The job that produced this output;
-NULL if the output was imported from an external source';
