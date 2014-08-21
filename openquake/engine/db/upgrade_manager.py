@@ -1,6 +1,7 @@
 import os
 import re
 import runpy
+import importlib
 from openquake.engine import logs
 
 
@@ -51,7 +52,7 @@ class UpgradeManager(object):
         the name of the table containing the versions
     """
     def __init__(self, version_pattern, upgrade_dir,
-                 version_table='sqlplain_versioning'):
+                 version_table='db_version'):
         self.upgrade_dir = upgrade_dir
         self.version_pattern = version_pattern
         self.pattern = r'^(%s[rs]?)-([\w\-_]+)\.(sql|py)$' % version_pattern
@@ -203,3 +204,34 @@ class UpgradeManager(object):
                         'Duplicated versions {%s,%s}' %
                         (scriptname, previousname))
         return scripts
+
+
+def upgrade_db(conn, pkg_name):
+    """
+    Upgrade a database by running several scripts in a single transaction.
+
+    :param conn: a DB API 2 connection
+    :pkg_name: the name of the package containing the upgrade scripts
+    """
+    curs = conn.cursor()
+    try:
+        # upgrader is an UpgradeManager instance defined in the __init__.py
+        upgrader = importlib.import_module(pkg_name).upgrader
+    except ImportError:
+        raise SystemExit(
+            'Could not import %s (not in the PYTHONPATH?)' % pkg_name)
+    if not upgrader.read_scripts():
+        raise SystemExit('The upgrade_dir does not contain scripts matching '
+                         'the pattern %s' % upgrader.pattern)
+    curs.execute("SELECT tablename FROM pg_tables WHERE tablename=%s",
+                 (upgrader.version_table,))
+    versioning_table = curs.fetchall()
+    if not versioning_table:
+        upgrader.install_versioning(conn)
+    try:
+        upgrader.upgrade(conn)
+    except:
+        conn.rollback()
+        raise
+    else:
+        conn.commit()
