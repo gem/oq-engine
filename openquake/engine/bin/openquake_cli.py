@@ -5,7 +5,6 @@
 """
 OpenQuake: software for seismic hazard and risk assessment
 """
-import importlib
 import logging
 import argparse
 import getpass
@@ -38,7 +37,7 @@ import openquake.engine
 
 from openquake.engine import __version__
 from openquake.engine import engine, logs
-from openquake.engine.db import models
+from openquake.engine.db import models, upgrade_manager
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.export import risk as risk_export
 from openquake.engine.tools.import_gmf_scenario import import_gmf_scenario
@@ -432,29 +431,8 @@ def main():
     if args.upgrade_db:
         logging.basicConfig(level=logging.INFO)
         logs.set_level('info')
-        upgrades = 'openquake.engine.db.schema.upgrades'
         conn = models.getcursor('admin').connection
-        curs = conn.cursor()
-        try:
-            # upgrader is an UpgradeManager instance defined in the __init__.py
-            upgrader = importlib.import_module(upgrades).upgrader
-        except ImportError:
-            sys.exit('Could not import %s (not in the PYTHONPATH?)' % upgrades)
-        if not upgrader.read_scripts():
-            sys.exit('The upgrade_dir does not contain scripts matching '
-                     'the pattern %s' % upgrader.pattern)
-        curs.execute("SELECT tablename FROM pg_tables "
-                     "WHERE tablename='revision_info'")
-        revision_info = curs.fetchall()
-        if not revision_info:
-            upgrader.install_versioning(conn)
-        try:
-            upgrader.upgrade(conn)
-        except:
-            conn.rollback()
-            raise
-        else:
-            conn.commit()
+        upgrade_manager.upgrade_db(conn, 'openquake.engine.db.schema.upgrades')
         sys.exit(0)
 
     if args.list_inputs:
