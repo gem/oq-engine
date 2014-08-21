@@ -2392,7 +2392,8 @@ class SourceInfo(djm.Model):
     source_class = djm.TextField(null=False)
     num_sites = djm.IntegerField(null=False)
     num_ruptures = djm.IntegerField(null=False)
-    occ_ruptures = djm.IntegerField(null=False)
+    occ_ruptures = djm.IntegerField(null=True)
+    uniq_ruptures = djm.IntegerField(null=True)
     calc_time = djm.FloatField(null=False)
 
     class Meta:

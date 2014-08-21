@@ -250,8 +250,9 @@ def compute_ruptures(
                               source_id=src.source_id,
                               source_class=src.__class__.__name__,
                               num_sites=len(s_sites),
-                              num_ruptures=num_ruptures,
+                              num_ruptures=rup_no,
                               occ_ruptures=occ_ruptures,
+                              uniq_ruptures=num_ruptures,
                               calc_time=time.time() - t0))
 
     filter_sites_mon.flush()
