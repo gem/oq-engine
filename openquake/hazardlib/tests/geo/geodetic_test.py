@@ -189,6 +189,41 @@ class MinDistanceTest(SpeedupsTestCase):
                    expected_mpoint_indices=[0, 1])
 
 
+class TestMinDistanceToSegment(unittest.TestCase):
+
+    def setUp(self):
+        self.slons = [-1.2, 1.4]
+        self.slats = [-0.3, 0.5]
+
+    def test_one(self):
+        # Positive distance halfspace - within segment
+        dist = geodetic.min_distance_from_segment(self.slons, self.slats,
+                                                  lons=numpy.array([0.0]),
+                                                  lats=numpy.array([-2.0]))
+        self.assertAlmostEqual(dist, 219.90986712)
+
+    def test_two(self):
+        # Negative distance halfspace - within segment
+        dist = geodetic.min_distance_from_segment(self.slons, self.slats,
+                                                  lons=numpy.array([0.0]),
+                                                  lats=numpy.array([2.0]))
+        self.assertAlmostEqual(dist, -205.18959626)
+
+    def test_three(self):
+        # Positive distance halfspace - outside segment
+        dist = geodetic.min_distance_from_segment(self.slons, self.slats,
+                                                  lons=numpy.array([3.0]),
+                                                  lats=numpy.array([0.0]))
+        self.assertAlmostEqual(dist, 186.394507344)
+
+    def test_four(self):
+        # Negative distance halfspace - outside segment
+        dist = geodetic.min_distance_from_segment(self.slons, self.slats,
+                                                  lons=numpy.array([-2.0]),
+                                                  lats=numpy.array([0.5]))
+        self.assertAlmostEqual(dist, -125.802091893)
+
+
 class DistanceToSemiArcTest(unittest.TestCase):
     # values in this test are based on the tests used for the
     # DistanceToArcTest

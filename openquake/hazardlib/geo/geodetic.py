@@ -91,6 +91,24 @@ def distance(lons1, lats1, depths1, lons2, lats2, depths2):
 
 def min_distance_from_segment(seglons, seglats, lons, lats):
     """
+    This function computes the shortest distance to a segment in a 2D reference
+    system.
+
+    :parameter seglons:
+        A list or an array of floats specifying the longitude values of the two
+        vertexes deliminting the segment.
+    :parameter seglats:
+        A list or an array of floats specifying the latitude values of the two
+        vertexes deliminting the segment.
+    :parameter lons:
+        A list or a 1D array of floats specifying the longitude values of the
+        points for which the calculation of the shortest distance is requested.
+    :parameter lats:
+        A list or a 1D array of floats specifying the latitude values of the
+        points for which the calculation of the shortest distance is requested.
+    :returns:
+        An array of the same shape as lons which contains for each point
+        defined by (lons, lats) the shortest distance to the segment.
     """
 
     # Compute the azimuth of the segment
@@ -104,7 +122,7 @@ def min_distance_from_segment(seglons, seglats, lons, lats):
     # connecting the second point defining the segment and each site
     azimuth2 = azimuth(seglons[1], seglats[1], lons, lats)
 
-    # Find the points inside the band defined by the two line perpendicular
+    # Find the points inside the band defined by the two lines perpendicular
     # to the segment direction passing through the two vertexes of the segment
     # For these point the closest distance is the distance from the great arc.
     idx_in = numpy.nonzero(
@@ -123,21 +141,26 @@ def min_distance_from_segment(seglons, seglats, lons, lats):
     idx_neg = numpy.nonzero(numpy.sin(numpy.radians(
         (azimuth1-seg_azim) % 360)) < 0.0)
 
-    # Now let's compute the distances
+    # Now let's compute the distances for the two cases.
     dists = numpy.zeros_like(lons)
-    if len(idx_in):
+    if len(idx_in[0]):
         dists[idx_in] = distance_to_arc(seglons[0],
                                         seglats[0],
                                         seg_azim,
                                         lons[idx_in],
                                         lats[idx_in])
-
-    if len(idx_out):
+    if len(idx_out[0]):
         dists[idx_out] = (min_geodetic_distance(seglons, seglats,
-                                               lons[idx_out], lats[idx_out]))
+                                                lons[idx_out], lats[idx_out]))
 
+    # Finally we correct the sign of the distances in order to make sure that
+    # the poinst on the right semispace defined using as a reference the
+    # direction defined by the segment (i.e. the direction defined by going
+    # from the first point to the second one) have a positive distance and
+    # the others a negative one.
     dists = abs(dists)
     dists[idx_neg] = -1 * dists[idx_neg]
+
     return dists
 
 
@@ -450,17 +473,16 @@ def distance_to_semi_arc(alon, alat, aazimuth, plons, plats):
     azimuth_to_target = azimuth(alon, alat, plons, plats)
 
     # Find the indexes of the points in the positive y halfspace
-    idx = numpy.nonzero(numpy.cos(numpy.radians(
-        (aazimuth-azimuth_to_target) % 360)) > 0.0)
+    idx = numpy.nonzero(numpy.cos(
+        numpy.radians((aazimuth-azimuth_to_target) % 360)) > 0.0)
 
     # Find the indexes of the points in the negative y halfspace
-    idx_not = numpy.nonzero(numpy.cos(numpy.radians(
-        (aazimuth-azimuth_to_target) % 360)) <= 0.0)
+    idx_not = numpy.nonzero(numpy.cos(
+        numpy.radians((aazimuth-azimuth_to_target) % 360)) <= 0.0)
 
-    idx_ll_quadr = numpy.nonzero((numpy.cos(numpy.radians(
-        (aazimuth-azimuth_to_target) % 360)) <= 0.0) &
-                                 (numpy.sin(numpy.radians(
-        (aazimuth-azimuth_to_target) % 360)) > 0.0))
+    idx_ll_quadr = numpy.nonzero(
+        (numpy.cos(numpy.radians((aazimuth-azimuth_to_target) % 360)) <= 0.0) &
+        (numpy.sin(numpy.radians((aazimuth-azimuth_to_target) % 360)) > 0.0))
 
     # Initialise the array containing the final distances
     distance = numpy.zeros_like(plons)

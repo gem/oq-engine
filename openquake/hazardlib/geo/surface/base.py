@@ -279,12 +279,21 @@ class BaseQuadrilateralSurface(BaseSurface):
                     pt = p1
                     p1 = p2
                     p2 = pt
+
                 # Computing azimuth and distance
-                azimuth = p1.azimuth(p2)
-                tmp = geodetic.distance_to_semi_arc(p1.longitude,
-                                                    p1.latitude,
-                                                    azimuth,
-                                                    mesh.lons, mesh.lats)
+                if i == 0 or i == top_edge.lons.shape[1] - 2:
+                    azimuth = p1.azimuth(p2)
+                    tmp = geodetic.distance_to_semi_arc(p1.longitude,
+                                                        p1.latitude,
+                                                        azimuth,
+                                                        mesh.lons, mesh.lats)
+                else:
+                    tmp = geodetic.min_distance_from_segment([p1.longitude,
+                                                              p2.longitude],
+                                                             [p1.latitude,
+                                                              p2.latitude],
+                                                             mesh.lons,
+                                                             mesh.lats)
                 # Correcting the sign of the distance
                 if i == 0:
                     tmp *= -1
