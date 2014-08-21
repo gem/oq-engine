@@ -169,7 +169,7 @@ set -e
 
 db_present=`psql -p $db_port -U $db_admin_user -d postgres $psql_batch_options -A -t -c "SELECT COUNT(*) FROM pg_database WHERE datname='openquake2';"`
 if [ $db_present -eq 1 ]; then
-    echo "There is already an openquake2 database. Doing nothing."
+    echo "WARNING: there is already an openquake2 database."
     exit 0
 fi
 
