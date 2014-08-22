@@ -23,6 +23,7 @@ from __future__ import division
 import abc
 import math
 import warnings
+import functools
 
 import scipy.stats
 from scipy.special import ndtr
@@ -57,6 +58,7 @@ class MetaGSIM(abc.ABCMeta):
         return super(MetaGSIM, cls).__call__(*args, **kw)
 
 
+@functools.total_ordering
 class GroundShakingIntensityModel(object):
     """
     Base class for all the ground shaking intensity models.
@@ -457,6 +459,18 @@ class GroundShakingIntensityModel(object):
         if not type(imt) in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
             raise ValueError('imt %s is not supported by %s' %
                              (type(imt).__name__, type(self).__name__))
+
+    def __lt__(self, other):
+        """
+        The GSIMs are ordered according to their name
+        """
+        return self.__class__.__name__ < other.__class__.__name__
+
+    def __eq__(self, other):
+        """
+        The GSIMs are equal if their names are equal
+        """
+        return self.__class__.__name__ == other.__class__.__name__
 
 
 def _truncnorm_sf(truncation_level, values):

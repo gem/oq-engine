@@ -523,3 +523,17 @@ class GsimWarningTestCase(unittest.TestCase):
         self.assertEqual(
             warning_msg, 'MyGMPE is not independently verified - '
             'the user is liable for their application')
+
+
+class GsimOrderingTestCase(unittest.TestCase):
+    def test_ordering_and_equality(self):
+        a = TGMPE()
+        b = TIPE()
+        self.assertLess(a, b)  # 'TGMPE' < 'TIPE'
+        self.assertGreater(b, a)
+        self.assertNotEqual(a, b)
+        a1 = TGMPE()
+        b1 = TIPE()
+        self.assertEqual(a, a1)
+        self.assertEqual(b, b1)
+        self.assertNotEqual(a, b1)
