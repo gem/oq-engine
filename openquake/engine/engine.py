@@ -40,6 +40,7 @@ from openquake.engine.celery_node_monitor import CeleryNodeMonitor
 from openquake.engine.writer import CacheInserter
 from openquake.engine.settings import DATABASES
 from openquake.engine.db.models import Performance
+from openquake.engine.db.schema.upgrades import upgrader
 
 from openquake import hazardlib
 from openquake import risklib
@@ -240,6 +241,9 @@ def run_calc(job, log_level, log_file, exports, job_type):
     :param str job_type:
         'hazard' or 'risk'
     """
+    # first of all check the database version and exit if the db is outdated
+    upgrader.check_versions(django_db.connections['admin'])
+
     calc_mode = getattr(job, '%s_calculation' % job_type).calculation_mode
     calculator = get_calculator_class(job_type, calc_mode)(job)
     calc = job.calculation
@@ -443,6 +447,8 @@ def run_job(cfg_file, log_level, log_file, exports, hazard_output_id=None,
     :param str hazard_calculation_id:
         The Hazard Calculation ID used by the risk calculation (can be None)
     """
+    # first of all check the database version and exit if the db is outdated
+    upgrader.check_versions(django_db.connections['admin'])
     with CeleryNodeMonitor(openquake.engine.no_distribute(), interval=3):
         hazard = hazard_output_id is None and hazard_calculation_id is None
         if log_file is not None:
