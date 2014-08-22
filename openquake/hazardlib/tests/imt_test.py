@@ -96,3 +96,13 @@ class SATestCase(unittest.TestCase):
     def test_wrong_damping(self):
         self.assertRaises(ValueError, imt_module.SA, period=0.1, damping=0)
         self.assertRaises(ValueError, imt_module.SA, period=0.1, damping=-1)
+
+
+class ImtOrderingTestCase(unittest.TestCase):
+    def test_ordering_and_equality(self):
+        a = imt_module.from_string('SA(0.1)')
+        b = imt_module.from_string('SA(0.10)')
+        c = imt_module.from_string('SA(0.2)')
+        self.assertLess(a, c)
+        self.assertGreater(c, a)
+        self.assertEqual(a, b)
