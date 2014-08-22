@@ -19,6 +19,7 @@ types.
 """
 import re
 import operator
+import functools
 
 # NB: (MS) the management of the IMTs implemented here is horrible and will
 # be thrown away when we will need to introduce a new IMT.
@@ -43,6 +44,7 @@ def from_string(imt):
         return globals()[imt](None, None)
 
 
+@functools.total_ordering
 class _IMT(tuple):
     """
     Base class for intensity measure type.
@@ -72,11 +74,8 @@ class _IMT(tuple):
             return 'SA(%s)' % self[1]
         return self[0]
 
-    def __le__(self, other):
+    def __lt__(self, other):
         return str(self) < str(other)
-
-    def __ge__(self, other):
-        return str(self) > str(other)
 
     def __repr__(self):
         return '%s(%s)' % (type(self).__name__,

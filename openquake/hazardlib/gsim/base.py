@@ -23,6 +23,7 @@ from __future__ import division
 import abc
 import math
 import warnings
+import functools
 
 import scipy.stats
 from scipy.special import ndtr
@@ -57,6 +58,7 @@ class MetaGSIM(abc.ABCMeta):
         return super(MetaGSIM, cls).__call__(*args, **kw)
 
 
+@functools.total_ordering
 class GroundShakingIntensityModel(object):
     """
     Base class for all the ground shaking intensity models.
@@ -469,12 +471,6 @@ class GroundShakingIntensityModel(object):
         The GSIMs are equal if their names are equal
         """
         return self.__class__.__name__ == other.__class__.__name__
-
-    def __ne__(self, other):
-        """
-        The GSIMs are different if their names are different
-        """
-        return not self.__eq__(other)
 
 
 def _truncnorm_sf(truncation_level, values):
