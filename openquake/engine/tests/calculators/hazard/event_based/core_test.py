@@ -86,32 +86,28 @@ class GmfCalculatorTestCase(unittest.TestCase):
         gsim = get_available_gsims()['AkkarBommer2010']()
         num_sites = 5
         site_coll = make_site_coll(-78, 15.5, num_sites)
-        params = dict(truncation_level=3,
-                      correl_model=None,
-                      maximum_distance=200,
-                      num_sites=num_sites)
         rup_id, rup_seed = 42, 44
         rup = FakeRupture(rup_id, trt)
         pga = PGA()
         rlz = mock.Mock()
         rlz.id = 1
         coll = core.GmfCalculator(
-            params, [pga], [gsim], trt_model_id=1, task_no=0)
+            [pga], [gsim], trt_model_id=1, task_no=0, truncation_level=3)
         rdata = core.RuptureData(site_coll, rup, [(rup.id, rup_seed)])
         coll.calc_gmfs([rdata])
         expected_rups = {
-            ('AkkarBommer2010', pga, 0): [rup_id],
-            ('AkkarBommer2010', pga, 1): [rup_id],
-            ('AkkarBommer2010', pga, 2): [rup_id],
-            ('AkkarBommer2010', pga, 3): [rup_id],
-            ('AkkarBommer2010', pga, 4): [rup_id],
+            ('AkkarBommer2010', 'PGA', 0): [rup_id],
+            ('AkkarBommer2010', 'PGA', 1): [rup_id],
+            ('AkkarBommer2010', 'PGA', 2): [rup_id],
+            ('AkkarBommer2010', 'PGA', 3): [rup_id],
+            ('AkkarBommer2010', 'PGA', 4): [rup_id],
         }
         expected_gmvs = {
-            ('AkkarBommer2010', pga, 0): [0.1027847118266612],
-            ('AkkarBommer2010', pga, 1): [0.02726361912605336],
-            ('AkkarBommer2010', pga, 2): [0.0862595971325641],
-            ('AkkarBommer2010', pga, 3): [0.04727148908077005],
-            ('AkkarBommer2010', pga, 4): [0.04750575818347277],
+            ('AkkarBommer2010', 'PGA', 0): [0.1027847118266612],
+            ('AkkarBommer2010', 'PGA', 1): [0.02726361912605336],
+            ('AkkarBommer2010', 'PGA', 2): [0.0862595971325641],
+            ('AkkarBommer2010', 'PGA', 3): [0.04727148908077005],
+            ('AkkarBommer2010', 'PGA', 4): [0.04750575818347277],
         }
         numpy.testing.assert_equal(coll.ruptures_per_site, expected_rups)
         for i, gmvs in expected_gmvs.iteritems():
