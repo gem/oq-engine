@@ -458,6 +458,24 @@ class GroundShakingIntensityModel(object):
             raise ValueError('imt %s is not supported by %s' %
                              (type(imt).__name__, type(self).__name__))
 
+    def __lt__(self, other):
+        """
+        The GSIMs are ordered according to their name
+        """
+        return self.__class__.__name__ < other.__class__.__name__
+
+    def __eq__(self, other):
+        """
+        The GSIMs are equal if their names are equal
+        """
+        return self.__class__.__name__ == other.__class__.__name__
+
+    def __ne__(self, other):
+        """
+        The GSIMs are different if their names are different
+        """
+        return not self.__eq__(other)
+
 
 def _truncnorm_sf(truncation_level, values):
     """

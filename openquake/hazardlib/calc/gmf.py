@@ -17,6 +17,7 @@
 Module :mod:`~openquake.hazardlib.calc.gmf` exports
 :func:`ground_motion_fields`.
 """
+import collections
 
 import numpy
 import scipy.stats
@@ -47,8 +48,8 @@ class GmfComputer(object):
 
        gmfcomputer = GmfComputer(rupture, r_sites, imts, gsim,
                                  truncation_level, correlation_model)
-       gmf_dict1 = gmfcomputer.compute(seed1)
-       gmf_dict2 = gmfcomputer.compute(seed2)
+       gmf1 = gmfcomputer.compute(seed1)
+       gmf2 = gmfcomputer.compute(seed2)
 
     :param :class:`openquake.hazardlib.source.rupture.Rupture` rupture:
         Rupture to calculate ground motion fields radiated from.
@@ -75,8 +76,8 @@ class GmfComputer(object):
         case non-correlated ground motion fields are calculated.
         Correlation model is not used if ``truncation_level`` is zero.
     """
-    def __init__(self, rupture, sites, imts, gsims, truncation_level,
-                 correlation_model=None):
+    def __init__(self, rupture, sites, imts, gsims,
+                 truncation_level=None, correlation_model=None):
         assert sites and imts and gsims, (sites, imts, gsims)
         self.rupture = rupture
         self.sites = sites
@@ -91,7 +92,7 @@ class GmfComputer(object):
         # the method doing the real stuff; use compute instead
         if seed is not None:
             numpy.random.seed(seed)
-        result = {}
+        result = collections.OrderedDict()
         sctx, rctx, dctx = self.ctx[gsim]
 
         if self.truncation_level == 0:
@@ -167,19 +168,22 @@ class GmfComputer(object):
         :param seed:
             the seed for the numpy random number generator
         :returns:
-            A dictionary (gsim_name, imt) -> ground motion values per each site
+            A list of pairs
+            [((gsim_name, imt_name), ground_motion_values), ...]
         """
-        gmf_by_gsim_imt = {}
+        gmf_by_gsim_imt = []
         for gsim in self.gsims:
             gname = gsim.__class__.__name__
-            for imt, gmf in self._compute(
-                    seed, gsim, realizations=1).iteritems():
+            result = self._compute(seed, gsim, realizations=1)
+            for imt, gmf in result.iteritems():
                 # consider 1 realization, i.e. return column 0-th of the gmf
-                gmf_by_gsim_imt[gname, imt] = \
-                    numpy.array(map(float, gmf[:, 0]), dtype=float)
+                gmvs = numpy.array(map(float, gmf[:, 0]), dtype=float)
+                gmf_by_gsim_imt.append(((gname, str(imt)), gmvs))
         return gmf_by_gsim_imt
 
 
+# this is not used in the engine; it is still useful for usage in IPython
+# when demonstrating hazardlib capabilities
 def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
                          realizations, correlation_model=None,
                          rupture_site_filter=filters.rupture_site_noop_filter,
