@@ -254,7 +254,6 @@ def compute_hazard_curves(
                               source_class=source.__class__.__name__,
                               num_sites=num_sites,
                               num_ruptures=num_ruptures,
-                              occ_ruptures=num_ruptures,
                               calc_time=time.time() - t0))
 
     make_ctxt_mon.flush()
