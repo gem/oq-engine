@@ -3,7 +3,7 @@
 #
 # see: dh_installdeb(1)
 
-#set -x
+set -x
 set -e
 
 # summary of how this script can be called:
@@ -133,21 +133,20 @@ if [ -f /usr/lib/postgresql/9.1/bin/postgres ]; then
     pgport=`cat /etc/postgresql/9.1/main/postgresql.conf | perl -wane ' if ($_ =~ /^\s*port\s*=/) { s/^\s*port\s*=\s*(\d+).*$/$1/; print $_; }'`
     LOGFILE=/var/tmp/openquake-db-installation
     rm -f $LOGFILE
-    su -c "/usr/bin/oq_create_db --yes --db-name=openquake --db-port=$pgport --schema-path=$IDIR/db/schema > $LOGFILE 2>&1" postgres
+    su -c "/usr/bin/oq_create_db --yes --db-name=openquake2 --db-port=$pgport --schema-path=$IDIR/db/schema > $LOGFILE 2>&1" postgres
     for dbu in oq_admin oq_job_init
     do
         su -c "psql -p $pgport -c \"ALTER ROLE $dbu WITH PASSWORD 'openquake'\" >> $LOGFILE 2>&1" postgres
     done
     chmod 644 $LOGFILE
 
-    num_of_errors=`grep -i error $LOGFILE | grep -v "is not empty" | grep -v error_msg_ | wc -l`
+    num_of_errors=`grep -i error $LOGFILE | grep -v "is not empty" | grep -v error_msg_ | grep -v ON_ERROR_STOP | wc -l`
     if [ $num_of_errors -gt 0 ]; then
         echo "Failed to initialise the openquake database"
         echo "Please file a bug here:"
         echo "    https://bugs.launchpad.net/openquake/+filebug"
         echo "and attach this file to it:"
         echo "    $LOGFILE"
-        su -c "psql -p $pgport c \"DROP DATABASE openquake\" >/dev/null 2>&1" postgres
         db_stop
         exit 1
     fi
