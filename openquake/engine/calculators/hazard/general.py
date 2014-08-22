@@ -243,7 +243,7 @@ class BaseHazardCalculator(base.Calculator):
             yield args
             task_no += 1
             tot_sources += len(block)
-            logs.LOG.info('Submitting task #%d, %d sources, weight=%d',
+            logs.LOG.info('Submitting task #%d, %d source(s), weight=%d',
                           task_no, len(block), block.weight)
         logs.LOG.info('Processed %d sources for %d TRTs',
                       tot_sources, len(self.source_collector))
