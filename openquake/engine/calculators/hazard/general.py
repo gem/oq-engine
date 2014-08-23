@@ -98,11 +98,12 @@ def all_equal(obj, value):
 
 
 @tasks.oqtask
-def filter_and_split_sources(job_id, sources, sitecol):
+def filter_and_split_sources(job_id, task_no, sources, sitecol):
     """
     Filter and split a list of hazardlib sources.
 
     :param int job_id: ID of the current job
+    :param int task_no: ordinal of the current task
     :param list sources: the original sources
     :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
     """
@@ -199,10 +200,10 @@ class BaseHazardCalculator(base.Calculator):
                 'sm_lt_path=%s, TRT=%s, model=%s', i, num_models,
                 len(sc.sources), sm_lt_path, trt_model.tectonic_region_type,
                 trt_model.lt_model.sm_name)
-            sc.sources = tasks.parallel_apply(
+            sc.sources = tasks.apply_reduce(
                 filter_and_split_sources,
                 (self.job.id, sc.sources, self.hc.site_collection),
-                self.concurrent_tasks)
+                list.__add__, [], self.concurrent_tasks)
             sc.sources.sort(key=attrgetter('source_id'))
             if not sc.sources:
                 logs.LOG.warn(
@@ -282,8 +283,6 @@ class BaseHazardCalculator(base.Calculator):
                 pnes.append(1 - (zero if all_equal(prob, 0) else prob))
             pnes1 = numpy.array(pnes)
             pnes2 = 1 - acc.get((trt_model_id, gsim), self.zeros)
-
-            # TODO: add a test like Yufang computation testing the broadcast
             acc[trt_model_id, gsim] = 1 - pnes1 * pnes2
 
         if self.hc.poes_disagg:
