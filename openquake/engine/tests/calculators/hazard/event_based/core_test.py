@@ -93,8 +93,7 @@ class GmfCalculatorTestCase(unittest.TestCase):
         rlz.id = 1
         calc = core.GmfCalculator(
             [pga], [gsim], trt_model_id=1, task_no=0, truncation_level=3)
-        rdata = core.RuptureData(site_coll, rup, [('fake', rup.id, rup_seed)])
-        calc.calc_gmfs(rdata)
+        calc.calc_gmfs(site_coll, rup, [(rup.id, rup_seed)])
         expected_rups = {
             ('AkkarBommer2010', 'PGA', 0): [rup_id],
             ('AkkarBommer2010', 'PGA', 1): [rup_id],
