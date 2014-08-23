@@ -59,7 +59,7 @@ def get_gmvs_for_location(location, job):
     :param job:
         The job that generated the GMVs
     :returns:
-        `list` of ground motion values, as floats
+        `list` of ground motion values, as floats, sorted by value
     """
     [output] = job.output_set.filter(output_type='gmf')
 
@@ -70,4 +70,4 @@ def get_gmvs_for_location(location, job):
     gmvs = []
     for gmf in models.GmfData.objects.filter(site=site, gmf=output.gmf):
         gmvs.extend(gmf.gmvs)
-    return gmvs
+    return sorted(gmvs)

@@ -99,7 +99,7 @@ def gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
 
 @tasks.oqtask
 def compute_ruptures(
-        job_id, sitecol, src_seeds, trt_model_id, task_no):
+        job_id, sitecol, src_seeds, trt_model_id):
     """
     Celery task for the stochastic event set calculator.
 
@@ -118,8 +118,6 @@ def compute_ruptures(
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param src_seeds:
         List of pairs (source, seed)
-    :param task_no:
-        an ordinal so that GMV can be collected in a reproducible order
     """
     # NB: all realizations in gsims correspond to the same source model
     trt_model = models.TrtModel.objects.get(pk=trt_model_id)
@@ -221,12 +219,10 @@ def compute_ruptures(
 
 
 @tasks.oqtask
-def compute_gmfs_and_curves(job_id, task_no, ses_ruptures, sitecol):
+def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol):
     """
     :param int job_id:
         ID of the currently running job
-    :param int task_no:
-        the ordinal number of the currently running task
     :param ses_ruptures:
         a list with of SESRuptures with homogeneous TrtModel
     :param sitecol:
@@ -239,7 +235,7 @@ def compute_gmfs_and_curves(job_id, task_no, ses_ruptures, sitecol):
     trt_model = ses_ruptures[0].rupture.trt_model
     rlzs_by_gsim = trt_model.get_rlzs_by_gsim()
     gsims = [logictree.GSIM[gsim]() for gsim in rlzs_by_gsim]
-    calc = GmfCalculator(sorted(imts), sorted(gsims), trt_model.id, task_no,
+    calc = GmfCalculator(sorted(imts), sorted(gsims), trt_model.id,
                          hc.truncation_level, hc.get_correl_model())
 
     with EnginePerformanceMonitor(
@@ -272,7 +268,7 @@ class GmfCalculator(object):
     """
     A class to store ruptures and then compute and save ground motion fields.
     """
-    def __init__(self, sorted_imts, sorted_gsims, trt_model_id, task_no,
+    def __init__(self, sorted_imts, sorted_gsims, trt_model_id,
                  truncation_level=None, correl_model=None):
         """
         :param sorted_imts:
@@ -281,8 +277,6 @@ class GmfCalculator(object):
             a sorted list of hazardlib GSIM instances
         :param int trt_model_id:
             the ID of a TRTModel instance
-        :param int task_no:
-            the number of the task that generated the GMFs
         :param int truncation_level:
             the truncation level, or None
         :param str correl_model:
@@ -291,7 +285,6 @@ class GmfCalculator(object):
         self.sorted_imts = sorted_imts
         self.sorted_gsims = sorted_gsims
         self.trt_model_id = trt_model_id
-        self.task_no = task_no
         self.truncation_level = truncation_level
         self.correl_model = correl_model
         # NB: I tried to use a single dictionary
@@ -332,7 +325,7 @@ class GmfCalculator(object):
                 imt_name, sa_period, sa_damping = from_string(imt_str)
                 inserter.add(models.GmfData(
                     gmf=models.Gmf.objects.get(lt_realization=rlz),
-                    task_no=self.task_no,
+                    task_no=0,
                     imt=imt_name,
                     sa_period=sa_period,
                     sa_damping=sa_damping,
@@ -389,11 +382,11 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         hc = self.hc
         rnd = random.Random()
         rnd.seed(hc.random_seed)
-        for job_id, sitecol, block, trt_model_id, task_no in \
+        for job_id, sitecol, block, trt_model_id in \
                 super(EventBasedHazardCalculator, self).task_arg_gen():
             ss = [(src, rnd.randint(0, models.MAX_SINT_32))
                   for src in block]  # source, seed pairs
-            yield job_id, sitecol, ss, trt_model_id, task_no
+            yield job_id, sitecol, ss, trt_model_id
 
     def task_completed(self, task_result):
         """
