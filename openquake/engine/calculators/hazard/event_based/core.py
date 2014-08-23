@@ -46,7 +46,7 @@ from openquake.hazardlib.site import FilteredSiteCollection
 
 from openquake.commonlib import logictree
 
-from openquake.engine import writer
+from openquake.engine import logs, writer
 from openquake.engine.calculators.hazard import general
 from openquake.engine.calculators.hazard.classical import (
     post_processing as cls_post_proc)
@@ -444,11 +444,14 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                 lt_model__hazard_calculation=self.hc):
             sesruptures = models.SESRupture.objects.filter(
                 rupture__trt_model=trt_model)
+            logs.LOG.progress(
+                'Processing %d ruptures for TRT=%s',
+                sesruptures.count(), trt_model.tectonic_region_type)
             curves = tasks.apply_reduce(
                 compute_gmfs_and_curves,
                 (self.job.id, list(sesruptures), sitecol),
                 self.agg_curves, {}, self.concurrent_tasks)
-            # dictionary (trt_model_id, gsim_name) -> curves
+            # NB: dictionaries (trt_model_id, gsim_name) -> curves
             self.curves.update(curves)
 
     def initialize_ses_db_records(self, lt_model):
