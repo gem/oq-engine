@@ -26,7 +26,7 @@ aaae = numpy.testing.assert_array_almost_equal
 # a test for the case ground_motion_fields=false, hazard_curves_from_gmvs=true
 class EventBasedHazardCase6TestCase(qa_utils.BaseQATestCase):
 
-    @attr('qa', 'hazard', 'classical')
+    @attr('qa', 'hazard', 'event_based')
     def test(self):
         expected_mean_poes = [0.962621437215, 0.934650031955, 0.894381466273,
                               0.837844843687, 0.782933836463]
