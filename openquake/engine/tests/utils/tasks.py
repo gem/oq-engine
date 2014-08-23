@@ -91,5 +91,5 @@ def fake_risk_task(job_id, risk_model, getters, outputdict, params):
 
 
 @test_task
-def get_even(job_id, numbers):
+def get_even(job_id, task_no, numbers):
     return [n for n in numbers if n % 2 == 0]

@@ -30,8 +30,11 @@ class EventBasedHazardCase6TestCase(qa_utils.BaseQATestCase):
 
     @attr('qa', 'hazard', 'classical')
     def test(self):
-        expected_mean_poes = []
-        expected_q0_1_poes = []
+        expected_mean_poes = [0.962621437215, 0.934650031955, 0.894381466273,
+                              0.837844843687, 0.782933836463]
+
+        expected_q0_1_poes = [0.838637792751, 0.749373612177, 0.623662070173,
+                              0.496434891584, 0.385987239512]
 
         job = self.run_hazard(
             os.path.join(os.path.dirname(__file__), 'job.ini'))
@@ -40,8 +43,8 @@ class EventBasedHazardCase6TestCase(qa_utils.BaseQATestCase):
         [mean_curve] = models.HazardCurveData.objects \
             .filter(hazard_curve__output__oq_job=job.id,
                     hazard_curve__statistics='mean')
-        print mean_curve.poes
-        #aaae(expected_mean_poes, mean_curve.poes, decimal=7)
+        # print mean_curve.poes
+        aaae(expected_mean_poes, mean_curve.poes, decimal=7)
 
         # quantiles
         [quantile_0_1_curve] = \
@@ -49,5 +52,5 @@ class EventBasedHazardCase6TestCase(qa_utils.BaseQATestCase):
                 hazard_curve__output__oq_job=job.id,
                 hazard_curve__statistics='quantile').order_by(
                 'hazard_curve__quantile')
-        print quantile_0_1_curve.poes
-        #aaae(expected_q0_1_poes, quantile_0_1_curve.poes, decimal=7)
+        # print quantile_0_1_curve.poes
+        aaae(expected_q0_1_poes, quantile_0_1_curve.poes, decimal=7)
