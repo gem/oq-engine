@@ -80,6 +80,7 @@ class OqTaskManager(TaskManager):
             result = result_dict['result']
             if isinstance(result, BaseException):
                 raise result
+            self.received += len(result)
             acc = agg(acc, result.unpickle())
             del backend._cache[task_id]  # work around a celery bug
         return acc
