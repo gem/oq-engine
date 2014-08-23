@@ -2118,6 +2118,8 @@ class GmfData(djm.Model):
         ordering = ['gmf', 'task_no']
 
 
+# XXX: we should order the gmvs consistently
+# currently the scenario export test works by accident
 def _get_gmf(curs, gmf_id, imtype, sa_period, sa_damping):
     # returns site_id, gmvs for the given gmf_id and imt
     query = '''\

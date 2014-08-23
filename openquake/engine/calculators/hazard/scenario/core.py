@@ -41,13 +41,12 @@ AVAILABLE_GSIMS = openquake.hazardlib.gsim.get_available_gsims()
 
 
 @tasks.oqtask
-def gmfs(job_id, ses_ruptures, sitecol, gmf_id, task_no):
+def gmfs(job_id, ses_ruptures, sitecol, gmf_id):
     """
     :param int job_id: the current job ID
     :param ses_ruptures: a set of `SESRupture` instances
     :param sitecol: a `SiteCollection` instance
     :param int gmf_id: the ID of a `Gmf` instance
-    :param int task_no: the task number
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     # distinct is here to make sure that IMTs such as
@@ -79,7 +78,7 @@ def gmfs(job_id, ses_ruptures, sitecol, gmf_id, task_no):
             inserter.add(
                 models.GmfData(
                     gmf_id=gmf_id,
-                    task_no=task_no,
+                    task_no=0,
                     imt=imt[0],
                     sa_period=imt[1],
                     sa_damping=imt[2],
@@ -197,9 +196,8 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         """
         ses_ruptures = models.SESRupture.objects.filter(
             rupture__ses_collection=self.ses_coll.id)
-        for task_no, ruptures in enumerate(
-                split_in_blocks(ses_ruptures, self.concurrent_tasks)):
-            yield self.job.id, ruptures, self.sites, self.gmf.id, task_no
+        for ruptures in split_in_blocks(ses_ruptures, self.concurrent_tasks):
+            yield self.job.id, ruptures, self.sites, self.gmf.id
 
     def task_completed(self, result):
         """Do nothing"""
