@@ -119,9 +119,9 @@ def map_reduce(task, task_args, agg, acc, name=None):
 def apply_reduce(task, task_args, agg, acc, concurrent_tasks,
                  weight=lambda item: 1, kind=lambda item: 'Unspecified'):
     """
-    Apply a list processing task to a tuple of task_args
-    with the form (job_id, task_no, data, *args).
-    Return the list of processed data.
+    Apply a task to a tuple of the form (job_id, task_no, data, *args)
+    by splitting the data in chunks and reduce the results with an
+    aggregation function.
 
     :param task: an oqtask
     :param task_args: the arguments to be passed to the task function
@@ -135,9 +135,9 @@ def apply_reduce(task, task_args, agg, acc, concurrent_tasks,
     data = task_args[1]
     args = task_args[2:]
     if not data:
-        return []
-    elif len(data) == 1:
-        return task.task_func(job_id, 0, data, *args)
+        return acc
+    elif len(data) == 1 or not concurrent_tasks:
+        return agg(acc, task.task_func(job_id, 0, data, *args))
     blocks = split_in_blocks(data, concurrent_tasks, weight, kind)
     alldata = [(job_id, block_no, block) + args
                for block_no, block in enumerate(blocks)]

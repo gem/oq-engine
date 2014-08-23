@@ -203,7 +203,7 @@ class BaseHazardCalculator(base.Calculator):
             sc.sources = tasks.apply_reduce(
                 filter_and_split_sources,
                 (self.job.id, sc.sources, self.hc.site_collection),
-                list.__add__, [], self.concurrent_tasks)
+                list.__add__, [], self.concurrent_tasks // 2)
             sc.sources.sort(key=attrgetter('source_id'))
             if not sc.sources:
                 logs.LOG.warn(
