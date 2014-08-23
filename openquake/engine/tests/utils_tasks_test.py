@@ -69,4 +69,4 @@ class MapReduceTestCase(unittest.TestCase):
     def test_apply_reduce(self):
         got = tasks.apply_reduce(
             get_even, (1, [1, 2, 3, 4, 5]), list.__add__, [], 2)
-        self.assertEqual(got, [2, 4])
+        self.assertEqual(sorted(got), [2, 4])
