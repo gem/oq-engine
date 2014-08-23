@@ -28,7 +28,7 @@ import numpy
 from django import db
 
 from openquake.engine.calculators.hazard.event_based.core \
-    import RuptureData, EventBasedHazardCalculator as EBHC
+    import EventBasedHazardCalculator as EBHC
 
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
