@@ -46,4 +46,4 @@ class EBHazardSpatialCorrelCase1TestCase(qa_utils.BaseQATestCase):
         )
 
         numpy.testing.assert_almost_equal(joint_prob_0_5, 0.99, decimal=1)
-        numpy.testing.assert_almost_equal(joint_prob_1_0, 0.72, decimal=1)
+        numpy.testing.assert_almost_equal(joint_prob_1_0, 0.41, decimal=1)
