@@ -2123,7 +2123,7 @@ class GmfData(djm.Model):
 def _get_gmf(curs, gmf_id, imtype, sa_period, sa_damping):
     # returns site_id, gmvs for the given gmf_id and imt
     query = '''\
-    SELECT site_id, array_concat(gmvs ORDER BY task_no)
+    SELECT site_id, array_concat(gmvs), array_concat(rupture_ids)
     FROM hzrdr.gmf_data WHERE gmf_id=%s AND imt=%s {}
     GROUP BY site_id ORDER BY site_id'''
     if imtype == 'SA':
@@ -2131,29 +2131,31 @@ def _get_gmf(curs, gmf_id, imtype, sa_period, sa_damping):
                      (gmf_id, imtype, sa_period, sa_damping))
     else:
         curs.execute(query.format(''), (gmf_id, imtype))
-    return curs.fetchall()
+    for site_id, gmvs, rupture_ids in curs:
+        gmv = dict(zip(rupture_ids, gmvs))
+        yield site_id, [gmv[r] for r in sorted(rupture_ids)]
 
 
-def get_gmvs_per_site(output, imt, sort=sorted):
+# used in the scenario QA tests
+def get_gmvs_per_site(output, imt):
     """
     Iterator for walking through all :class:`GmfData` objects associated
     to a given output. Notice that values for the same site are
-    displayed together and then ordered according to the iml, so that
-    it is possible to get reproducible outputs in the test cases.
+    displayed together and ordered according to the rupture ids, so that
+    it is possible to get consistent outputs in the test cases.
 
     :param output: instance of :class:`openquake.engine.db.models.Output`
 
     :param string imt: a string with the IMT to extract
 
-    :param sort: callable used for sorting the list of ground motion values.
-
     :returns: a list of ground motion values per each site
     """
     curs = getcursor('job_init')
     for site_id, gmvs in _get_gmf(curs, output.gmf.id, *from_string(imt)):
-        yield sort(gmvs)
+        yield gmvs
 
 
+# used in the scenario export
 def get_gmfs_scenario(output, imt=None):
     """
     Iterator for walking through all :class:`GmfData` objects associated
