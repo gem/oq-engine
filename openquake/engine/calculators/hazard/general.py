@@ -339,7 +339,7 @@ class BaseHazardCalculator(base.Calculator):
                           n_imts, n_levels, n_sites)
         else:
             n_imts = len(self.hc.intensity_measure_types)
-            n_levels = None
+            n_levels = 0
 
         # The output weight is a pure number which is proportional to the size
         # of the expected output of the calculator. For classical and disagg
