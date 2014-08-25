@@ -559,14 +559,14 @@ def event_based(loss_values, tses, time_span,
     """
     reference_losses = numpy.linspace(0, max(loss_values), curve_resolution)
 
-    # TODO(lp) we can optimize more here instead of run a complete
-    # double-looping. E.g. sort loss_values, binary search in it, etc.
-    times = numpy.array(
-        [numpy.where(loss_values > loss)[0].size for loss in reference_losses])
+    # counts how many loss_values are bigger than the reference loss
+    times = [(loss_values > loss).sum() for loss in reference_losses]
+    # NB: (loss_values > loss).sum() is MUCH more efficient than
+    # sum(loss_values > loss). Incredibly more efficient in memory.
 
     rates_of_exceedance = numpy.array(times) / float(tses)
 
-    poes = 1 - numpy.exp(-rates_of_exceedance * time_span)
+    poes = 1. - numpy.exp(-rates_of_exceedance * time_span)
 
     return reference_losses, poes
 

@@ -379,16 +379,22 @@ class ProbabilisticEventBased(object):
             time_span, tses,
             loss_curve_resolution,
             conditional_loss_poes,
-            insured_losses=False):
+            insured_losses=False,
+            return_loss_matrix=True):
         """
         See :func:`openquake.risklib.scientific.event_based` for a description
-        of the input parameters
+        of the input parameters. The last parameter is
+
+        :param bool return_loss_matrix:
+            if False the loss_matrix is not saved in the Output tuple
+            (a trick to save memory in the case of no disaggregation)
         """
         self.vulnerability_functions = vulnerability_functions
         self.curves = calculators.EventBasedLossCurve(
             time_span, tses, loss_curve_resolution)
         self.maps = calculators.LossMap(conditional_loss_poes)
         self.insured_losses = insured_losses
+        self.return_loss_matrix = return_loss_matrix
 
     def event_loss(self, loss_matrix, event_ids):
         """
@@ -436,7 +442,6 @@ class ProbabilisticEventBased(object):
         average_losses = numpy.array([scientific.average_loss(losses, poes)
                                       for losses, poes in curves])
         stddev_losses = numpy.std(loss_matrix, axis=1)
-
         values = utils.numpy_map(lambda a: a.value(loss_type), assets)
         maps = self.maps(curves)
         elt = self.event_loss(loss_matrix.transpose() * values, event_ids)
@@ -457,8 +462,8 @@ class ProbabilisticEventBased(object):
             stddev_insured_losses = None
 
         return self.Output(
-            assets, loss_matrix, curves,
-            average_losses, stddev_losses,
+            assets, loss_matrix if self.return_loss_matrix else None,
+            curves, average_losses, stddev_losses,
             insured_curves, average_insured_losses, stddev_insured_losses,
             maps, elt)
 
@@ -480,10 +485,10 @@ class ProbabilisticEventBased(object):
             with getter_monitor.copy('getting hazard'):
                 gmvs = numpy.array(getter.get_data(imt))
             with getter_monitor.copy('computing individual risk'):
+                out = self(loss_type, getter.assets, gmvs,
+                           getter.get_epsilons(), getter.rupture_ids)
                 all_outputs.append(
-                    Output(getter.hid, getter.weight, loss_type,
-                           self(loss_type, getter.assets, gmvs,
-                                getter.get_epsilons(), getter.rupture_ids)))
+                    Output(getter.hid, getter.weight, loss_type, out))
         return all_outputs
 
     def statistics(self, all_outputs, quantiles, post_processing):
@@ -748,6 +753,21 @@ class RiskModel(object):
         """
         return dict((loss_type, self.workflow.compute_all_outputs(
                     getters, loss_type, getter_monitor))
+                    for loss_type in self.loss_types)
+
+    def compute_output(self, getter, getter_monitor):
+        """
+        :param getter:
+            a callable hazard getter
+        :param getter_monitor:
+            a context manager monitoring the time and resources
+            spent the in the computation
+        :returns:
+            a dictionary with the output corresponding to the
+            getter, keyed by the loss type
+        """
+        return dict((loss_type, self.workflow.compute_all_outputs(
+                    [getter], loss_type, getter_monitor)[0])
                     for loss_type in self.loss_types)
 
     def compute_stats(self, outputs, quantiles, post_processing):
