@@ -34,7 +34,6 @@ from openquake.engine.db import models
 
 BYTES_PER_FLOAT = numpy.zeros(1, dtype=float).nbytes
 
-SCENARIO = 0  # constant for readability
 NRUPTURES = 1  # constant for readability
 
 
@@ -71,11 +70,12 @@ class HazardGetter(object):
    :attr site_ids:
         The ids of the sites associated to the hazards
     """
+    builder = None  # set by the GetterBuilder
+
     def __init__(self, hazard_output, assets, site_ids):
         self.hazard_output = hazard_output
         self.assets = assets
         self.site_ids = site_ids
-        self.epsilons = None
 
     def __repr__(self):
         shape = getattr(self.epsilons, 'shape', None)
@@ -169,8 +169,18 @@ class GroundMotionValuesGetter(HazardGetter):
     """
     Hazard getter for loading ground motion values.
     """ + HazardGetter.__doc__
-    rupture_ids = None  # set by the GetterBuilder
-    epsilons = None  # set by the GetterBuilder
+    sescoll = None  # set by the GetterBuilder
+    indices = None  # set by the GetterBuilder
+
+    @property
+    def rupture_ids(self):
+        """rupture_ids for the current getter"""
+        return self.builder.rupture_ids[self.sescoll.id]
+
+    @property
+    def epsilons(self):
+        """epsilon matrix for the current getter"""
+        return self.builder.epsilons[self.sescoll.id][self.indices]
 
     def get_epsilons(self):
         """
@@ -289,8 +299,9 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
                     if self.epsilon_sampling else num_ruptures
                 self.epsilons_shape[ses_coll.id] = (num_assets, samples)
         elif self.hc.calculation_mode == 'scenario':
+            [out] = self.hc.oqjob.output_set.filter(output_type='ses')
             samples = self.hc.number_of_ground_motion_fields
-            self.epsilons_shape[SCENARIO] = (num_assets, samples)
+            self.epsilons_shape[out.ses.id] = (num_assets, samples)
         nbytes = 0
         for (n, r) in self.epsilons_shape.values():
             # the max(n, r) is taken because if n > r then the limiting
@@ -323,9 +334,10 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
         elif self.hc.calculation_mode == 'scenario':
             n = self.hc.number_of_ground_motion_fields
             [out] = self.hc.oqjob.output_set.filter(output_type='ses')
-            self.rupture_ids[SCENARIO] = out.ses.get_ruptures(
+            scid = out.ses.id  # ses collection id
+            self.rupture_ids[scid] = out.ses.get_ruptures(
                 ).values_list('id', flat=True) or range(n)
-            self.epsilons[SCENARIO] = make_epsilons(
+            self.epsilons[scid] = make_epsilons(
                 len(self.asset_ids), n, self.rc.master_seed,
                 self.rc.asset_correlation)
 
@@ -382,13 +394,13 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
         getters = []
         for ho in hazard_outputs:
             getter = gettercls(ho, assets, site_ids)
+            getter.builder = self
+            getter.indices = indices
             if self.hc.calculation_mode == 'event_based':
-                ses_coll_id = models.SESCollection.objects.get(
-                    lt_model=ho.output_container.lt_realization.lt_model).id
-                getter.rupture_ids = self.rupture_ids[ses_coll_id]
-                getter.epsilons = self.epsilons[ses_coll_id][indices]
+                getter.sescoll = models.SESCollection.objects.get(
+                    lt_model=ho.output_container.lt_realization.lt_model)
             elif self.hc.calculation_mode == 'scenario':
-                getter.rupture_ids = self.rupture_ids[SCENARIO]
-                getter.epsilons = self.epsilons[SCENARIO][indices]
+                [out] = ho.oq_job.output_set.filter(output_type='ses')
+                getter.sescoll = out.ses
             getters.append(getter)
         return getters
