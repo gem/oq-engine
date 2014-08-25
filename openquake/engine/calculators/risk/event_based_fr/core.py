@@ -109,9 +109,6 @@ def event_based_fr(job_id, sites, rc, risk_models,
         for rlz, group in itertools.groupby(
             assocs, operator.attrgetter('rlz'))}
 
-    #core.save_individual_outputs = lambda *args: None
-    #core.save_statistical_outputs = lambda *args: None
-
     # building the getters, i.e. initialize .gmv_dict and .hid
     with getters_mon:
         for builder in getter_builders:
