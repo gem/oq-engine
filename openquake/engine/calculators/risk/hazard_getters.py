@@ -224,55 +224,6 @@ class GroundMotionValuesGetter(HazardGetter):
         return all_gmvs
 
 
-class ScenarioGetter(HazardGetter):
-    """
-    Hazard getter for loading ground motion values.
-    """ + HazardGetter.__doc__
-
-    rupture_ids = []  # there are no ruptures on the db
-    epsilons = None  # set by the GetterBuilder
-    num_samples = None  # set by the GetterBuilder
-
-    def get_epsilons(self):
-        """
-        Return the inner epsilons, set by the builder
-        """
-        return self.epsilons
-
-    def get_data(self, imt):
-        """
-        Extracts the GMFs for the given `imt` from the hazard output.
-
-        :param str imt: Intensity Measure Type
-        :returns: a list of N arrays with R elements each.
-        """
-        imt_type, sa_period, sa_damping = from_string(imt)
-        gmf_id = self.hazard_output.output_container.id
-        if sa_period:
-            imt_query = 'imt=%s and sa_period=%s and sa_damping=%s'
-        else:
-            imt_query = 'imt=%s and sa_period is %s and sa_damping is %s'
-        cursor = models.getcursor('job_init')
-        templ = ('select site_id, gmvs from '
-                 'hzrdr.gmf_data where gmf_id=%s and site_id in %s '
-                 'and {} order by site_id, task_no'.format(imt_query))
-        args = (gmf_id, tuple(set(self.site_ids)),
-                imt_type, sa_period, sa_damping)
-        cursor.execute(templ, args)
-
-        gmvs_dict = {}  # site_id -> gmvs array
-        for sid, group in itertools.groupby(cursor, operator.itemgetter(0)):
-            gmvs = []
-            for site_id, gmvs_ in group:
-                gmvs.extend(gmvs_)
-            gmvs_dict[sid] = numpy.array(gmvs, dtype=float)
-        # TODO: add the test for the case where there is no data
-        # for the given site and vector of zeros is returned
-        return [gmvs_dict[sid] if sid in gmvs_dict
-                else numpy.zeros(self.num_samples, dtype=float)
-                for sid in self.site_ids]
-
-
 class GetterBuilder(object):
     """
     A facility to build hazard getters. When instantiated, populates
@@ -438,7 +389,6 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
                 getter.epsilons = self.epsilons[ses_coll_id][indices]
             elif self.hc.calculation_mode == 'scenario':
                 getter.rupture_ids = self.rupture_ids[SCENARIO]
-                getter.num_samples = self.epsilons_shape[SCENARIO][NRUPTURES]
                 getter.epsilons = self.epsilons[SCENARIO][indices]
             getters.append(getter)
         return getters
