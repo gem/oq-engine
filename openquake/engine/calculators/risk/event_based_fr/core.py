@@ -55,6 +55,17 @@ class AssetSiteAssociationError(Exception):
     pass
 
 
+def split_site_collection(sitecol, num_chunks):
+    """
+    Split the full site collection in several FilteredSiteCollections
+
+    :param sitecol: full site collection
+    :param num_chunks: hint for the number of blocks to generate
+    """
+    for indices in split_in_blocks(sitecol.indices, num_chunks):
+        yield FilteredSiteCollection(indices, sitecol)
+
+
 @tasks.oqtask
 def event_based_fr(job_id, sites, rc, risk_models,
                    getter_builders, outputdict, params):
@@ -75,9 +86,9 @@ def event_based_fr(job_id, sites, rc, risk_models,
         derived outputs
     """
     hc = rc.hazard_calculation
+    site_ids = set(sites.complete.sids)
     truncation_level = hc.truncation_level
     sorted_imts = sorted(map(from_string, hc.intensity_measure_types))
-    sitecol = SiteCollection(sites)
 
     # init the Epsilon Provider only once
     for builder in getter_builders:
@@ -120,11 +131,11 @@ def event_based_fr(job_id, sites, rc, risk_models,
                     for rupture, group in itertools.groupby(
                             ses_ruptures, operator.attrgetter('rupture')):
                         if rupture.site_indices is None:
-                            r_sites = sitecol
+                            r_sites = sites
                         else:
                             r_sites = FilteredSiteCollection(
-                                rupture.site_indices, sitecol)
-                            if len(r_sites) == 0:
+                                rupture.site_indices, sites.complete)
+                            if not site_ids.intersection(r_sites.sids):
                                 continue  # skip ruptures not contributing
 
                         # populating the gmv_dicts for each getter
@@ -210,8 +221,8 @@ class EventBasedFRRiskCalculator(core.EventBasedRiskCalculator):
 
         args = []
         # compute the risk by splitting by sites
-        for sites in split_in_blocks(
-                list(self.hc.site_collection), self.concurrent_tasks):
+        for sites in split_site_collection(
+                self.hc.site_collection, self.concurrent_tasks):
             args.append((self.job.id, sites, self.rc,
                          risk_models, getter_builders, outputdict,
                          self.calculator_parameters))
@@ -231,7 +242,7 @@ class GmfGetter(object):
         self.gmv_dict = gmv_dict
         self.sorted_imts = sorted_imts
         self.trt_models = trt_models
-        self.sorted_gsims = gsims
+        self.gsims = gsims
         self.hid = models.Gmf.objects.get(lt_realization=lt_rlz).output.id
 
     @property
@@ -253,17 +264,27 @@ class GmfGetter(object):
         """
         return self.builder.epsilon_provider.sample(self.seeds)
 
-    def build_data(self, rupture, r_sites, rupid_seed_pairs,
-                   truncation_level, correl_model=None):
+    def build_data(self, rupture, sitecol, rupid_seed_pairs,
+                   truncation_level=None, correl_model=None):
         """
+        :param rupture:
+            a ProbabilisticRupture instance
+        :param sitecol:
+            the collections of sites where to compute the GMFs
+        :param rupid_seed_pairs:
+            [(r.id, r.seed), ...] for each SESRupture associated the rupture
+        :param truncation_level:
+            the truncation level (or None)
+        :param correl_model:
+            the correlation model (or None)
         """
-        c = GmfComputer(rupture, r_sites, self.sorted_imts, self.sorted_gsims,
+        c = GmfComputer(rupture, sitecol, self.sorted_imts, self.gsims,
                         truncation_level, correl_model)
         for rupid, seed in rupid_seed_pairs:
             self.rupture_ids.append(rupid)
             self.seeds.append(seed)
             for (gsim_name, imt), gmvs in c.compute(seed):
-                for site_id, gmv in zip(r_sites.sids, gmvs):
+                for site_id, gmv in zip(sitecol.sids, gmvs):
                     self.gmv_dict[imt][site_id][rupid] = gmv
 
     def get_data(self, imt):
