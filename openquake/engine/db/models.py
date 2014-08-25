@@ -351,6 +351,24 @@ class JobStats(djm.Model):
         db_table = 'uiapi\".\"job_stats'
 
 
+# created at the end of the pre_execute phase
+class JobInfo(djm.Model):
+    '''
+    Store information about a job.
+    '''
+    oq_job = djm.ForeignKey('OqJob')
+    parent_job = djm.ForeignKey('OqJob')
+    num_sites = djm.IntegerField(null=False)
+    num_realizations = djm.IntegerField(null=False)
+    num_imts = djm.IntegerField(null=False)
+    num_levels = djm.FloatField(null=False)
+    input_weight = djm.FloatField(null=False)
+    output_weight = djm.FloatField(null=False)
+
+    class Meta:
+        db_table = 'uiapi\".\"job_info'
+
+
 class HazardCalculation(djm.Model):
     '''
     Parameters needed to run a Hazard job.
