@@ -370,10 +370,13 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
                     len(self.asset_ids), num_samples,
                     self.rc.master_seed, self.rc.asset_correlation)
         elif self.hc.calculation_mode == 'scenario':
-            self.rupture_ids[SCENARIO] = []
+            n = self.hc.number_of_ground_motion_fields
+            [out] = self.hc.oqjob.output_set.filter(output_type='ses')
+            self.rupture_ids[SCENARIO] = out.ses.get_ruptures(
+                ).values_list('id', flat=True) or range(n)
             self.epsilons[SCENARIO] = make_epsilons(
-                len(self.asset_ids), self.hc.number_of_ground_motion_fields,
-                self.rc.master_seed, self.rc.asset_correlation)
+                len(self.asset_ids), n, self.rc.master_seed,
+                self.rc.asset_correlation)
 
     def _indices_asset_site(self, asset_block):
         """
@@ -434,6 +437,7 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
                 getter.rupture_ids = self.rupture_ids[ses_coll_id]
                 getter.epsilons = self.epsilons[ses_coll_id][indices]
             elif self.hc.calculation_mode == 'scenario':
+                getter.rupture_ids = self.rupture_ids[SCENARIO]
                 getter.num_samples = self.epsilons_shape[SCENARIO][NRUPTURES]
                 getter.epsilons = self.epsilons[SCENARIO][indices]
             getters.append(getter)
