@@ -182,6 +182,43 @@ class InitializeSourcesTestCase(unittest.TestCase):
             [1, 1, 1])
 
 
+class CalculationLimitsTestCase(unittest.TestCase):
+    def test_check_limits_classical(self):
+        # this is a based on a demo with 3 realizations, 2 sites and 4 rlzs
+        cfg = helpers.get_data_path(
+            'calculators/hazard/classical/haz_map_test_job.ini')
+        job = helpers.get_job(cfg)
+        models.JobStats.objects.create(oq_job=job)
+        hc = job.hazard_calculation
+        calc = get_calculator_class('hazard', hc.calculation_mode)(job)
+        input_weight, output_weight = calc.pre_execute()
+        self.assertEqual(input_weight, 225)
+        self.assertEqual(output_weight, 24)
+
+        calc.max_input_weight = 1
+        with self.assertRaises(general.InputWeightLimit):
+            calc.check_limits(input_weight, output_weight)
+
+        calc.max_input_weight = 1000
+        calc.max_output_weight = 1
+        with self.assertRaises(general.OutputWeightLimit):
+            calc.check_limits(input_weight, output_weight)
+
+    def test_check_limits_event_based(self):
+        # this is a based on a demo with 2 realizations, 5 ses,
+        # 2 imt and 121 sites
+        cfg = helpers.get_data_path(
+            'event_based_hazard/job.ini')
+        job = helpers.get_job(cfg)
+        models.JobStats.objects.create(oq_job=job)
+        hc = job.hazard_calculation
+        calc = get_calculator_class('hazard', hc.calculation_mode)(job)
+        input_weight, output_weight = calc.pre_execute()
+        self.assertEqual(input_weight, 1352.75)
+        self.assertEqual(output_weight, 2420)
+        # NB: 2420 = 121 sites * 2 IMT * 2 rlzs * 5 SES
+
+
 class NonEmptyQuantileTestCase(unittest.TestCase):
     # you cannot compute the quantiles if there is only 1 realization
     def test(self):
