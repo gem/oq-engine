@@ -350,8 +350,7 @@ class BaseHazardCalculator(base.Calculator):
         max_realizations = self.get_max_realizations()
         output_weight = n_sites * n_imts * max_realizations
         if 'EventBased' in self.__class__.__name__:
-            output_weight *= len(self.hc.intensity_measure_types) * \
-                self.hc.ses_per_logic_tree_path
+            output_weight *= self.hc.ses_per_logic_tree_path
         else:
             output_weight *= n_levels
 
