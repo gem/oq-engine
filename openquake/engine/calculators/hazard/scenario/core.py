@@ -32,7 +32,7 @@ from openquake.commonlib.general import split_in_blocks, distinct
 from openquake.commonlib import source
 
 from openquake.engine.calculators.hazard import general as haz_general
-from openquake.engine.utils import tasks, config
+from openquake.engine.utils import tasks
 from openquake.engine.db import models
 from openquake.engine import writer
 from openquake.engine.performance import EnginePerformanceMonitor
@@ -67,14 +67,14 @@ def gmfs(job_id, ses_ruptures, sitecol, gmf_id, task_no):
                           correlation_model)
         gname = gsim.__class__.__name__
         for ses_rup in ses_ruptures:
-            gmf_dict = gmf.compute(ses_rup.seed)
-            for gname, imt in gmf_dict:
-                for site_id, gmv in zip(sitecol.sids, gmf_dict[gname, imt]):
+            for (gname, imt), gmvs in gmf.compute(ses_rup.seed):
+                for site_id, gmv in zip(sitecol.sids, gmvs):
                     # float may be needed below to convert 1x1 matrices
                     cache[site_id, imt].append((gmv, ses_rup.id))
 
     with EnginePerformanceMonitor('saving gmfs', job_id, gmfs):
-        for (site_id, imt), data in cache.iteritems():
+        for (site_id, imt_str), data in cache.iteritems():
+            imt = from_string(imt_str)
             gmvs, rup_ids = zip(*data)
             inserter.add(
                 models.GmfData(
