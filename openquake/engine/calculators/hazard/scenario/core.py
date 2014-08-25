@@ -138,6 +138,14 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         n_gmf = self.hc.number_of_ground_motion_fields
         output_weight = n_sites * n_imts * n_gmf
         logs.LOG.info('Expected output size=%s', output_weight)
+        models.JobInfo.objects.create(
+            oq_job=self.job,
+            num_sites=n_sites,
+            num_realizations=1,
+            num_imts=n_imts,
+            num_levels=0,
+            input_weight=0,
+            output_weight=output_weight)
         self.check_limits(input_weight=0, output_weight=output_weight)
         return 0, output_weight
 

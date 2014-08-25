@@ -327,28 +327,45 @@ class BaseHazardCalculator(base.Calculator):
         self.imtls = self.hc.intensity_measure_types_and_levels
         n_sites = len(self.hc.site_collection)
         if self.imtls:
-            n_levels = sum(len(lvls) for lvls in self.imtls.itervalues())
+            n_imts = float(len(self.imtls))
+            n_levels = sum(len(lvls) for lvls in self.imtls.itervalues()
+                           ) / n_imts
             self.zeros = numpy.array(
                 [numpy.zeros((n_sites, len(self.imtls[imt])))
                  for imt in sorted(self.imtls)])
             self.ones = [numpy.zeros(len(self.imtls[imt]), dtype=float)
                          for imt in sorted(self.imtls)]
-            logs.LOG.info('%d IMT level(s) and %d site(s)', n_levels, n_sites)
+            logs.LOG.info('%d IMT, %s level(s) and %d site(s)',
+                          n_imts, n_levels, n_sites)
+        else:
+            n_imts = len(self.hc.intensity_measure_types)
+            n_levels = None
 
         # The output weight is a pure number which is proportional to the size
         # of the expected output of the calculator. For classical and disagg
-        # calculators it is given by n_sites * n_realizations * n_levels;
+        # calculators it is given by
+        # n_sites * n_realizations * n_imts * n_levels;
         # for the event based calculator is given by n_sites * n_realizations
         # * n_levels * n_imts * n_ses
-        output_weight = n_sites * self.get_max_realizations()
+        max_realizations = self.get_max_realizations()
+        output_weight = n_sites * n_imts * max_realizations
         if 'EventBased' in self.__class__.__name__:
             output_weight *= len(self.hc.intensity_measure_types) * \
                 self.hc.ses_per_logic_tree_path
         else:
-            output_weight *= sum(len(lvls) for lvls in self.imtls.itervalues())
+            output_weight *= n_levels
 
         logs.LOG.info('Total weight of the sources=%s', input_weight)
         logs.LOG.info('Expected output size=%s', output_weight)
+        with transaction.commit_on_success(using='job_init'):
+            models.JobInfo.objects.create(
+                oq_job=self.job,
+                num_sites=n_sites,
+                num_realizations=max_realizations,
+                num_imts=n_imts,
+                num_levels=n_levels,
+                input_weight=input_weight,
+                output_weight=output_weight)
         self.check_limits(input_weight, output_weight)
         return input_weight, output_weight
 
