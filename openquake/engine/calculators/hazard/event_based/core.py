@@ -100,9 +100,9 @@ class RuptureData(object):
         computer = gmf.GmfComputer(self.rupture, self.r_sites, imts, gsims,
                                    truncation_level, correl_model)
         for rupid, seed in self.rupid_seed_pairs:
-            for (gsim_name, imt), gmvs in computer.compute(seed).iteritems():
+            for (gsim_name, imt_str), gmvs in computer.compute(seed):
                 for site_id, gmv in zip(self.r_sites.sids, gmvs):
-                    yield gsim_name, imt, site_id, rupid, gmv
+                    yield gsim_name, imt_str, site_id, rupid, gmv
 
 
 # NB (MS): the approach used here will not work for non-poissonian models
@@ -250,8 +250,9 @@ def compute_ruptures(
                               source_id=src.source_id,
                               source_class=src.__class__.__name__,
                               num_sites=len(s_sites),
-                              num_ruptures=num_ruptures,
+                              num_ruptures=rup_no,
                               occ_ruptures=occ_ruptures,
+                              uniq_ruptures=num_ruptures,
                               calc_time=time.time() - t0))
 
     filter_sites_mon.flush()
@@ -276,16 +277,14 @@ def compute_and_save_gmfs(job_id, sids, rupture_data, task_no):
         the number of the task that generated the rupture_data
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
-    params = dict(
-        correl_model=hc.get_correl_model(),
-        truncation_level=hc.truncation_level)
-    imts = map(from_string, sorted(hc.intensity_measure_types))
+    imts = map(from_string, hc.intensity_measure_types)
     # NB: by construction rupture_data is a non-empty list with
     # ruptures of homogeneous trt_model
     trt_model = rupture_data[0].rupture.trt_model
     rlzs = trt_model.get_rlzs_by_gsim()
     gsims = [logictree.GSIM[gsim]() for gsim in rlzs]
-    calc = GmfCalculator(params, imts, gsims, trt_model.id, task_no)
+    calc = GmfCalculator(sorted(imts), sorted(gsims), trt_model.id, task_no,
+                         hc.truncation_level, hc.get_correl_model())
 
     with EnginePerformanceMonitor(
             'computing gmfs', job_id, compute_and_save_gmfs):
@@ -311,27 +310,32 @@ class GmfCalculator(object):
     """
     A class to store ruptures and then compute and save ground motion fields.
     """
-    def __init__(self, params, imts, gsims, trt_model_id, task_no):
+    def __init__(self, sorted_imts, sorted_gsims, trt_model_id, task_no,
+                 truncation_level=None, correl_model=None):
         """
-        :param params:
-            a dictionary of parameters with keys
-            correl_model, truncation_level, maximum_distance
-        :param imts:
-            an ordered list of hazardlib intensity measure types
+        :param sorted_imts:
+            a sorted list of hazardlib intensity measure types
+        :param sorted_gsims:
+            a sorted list of hazardlib GSIM instances
         :param int trt_model_id:
             the ID of a TRTModel instance
         :param int task_no:
             the number of the task that generated the rupture_data
+        :param int truncation_level:
+            the truncation level, or None
+        :param str correl_model:
+            the correlation model, or None
         """
-        self.params = params
-        self.imts = imts
+        self.sorted_imts = sorted_imts
+        self.sorted_gsims = sorted_gsims
         self.trt_model_id = trt_model_id
         self.task_no = task_no
+        self.truncation_level = truncation_level
+        self.correl_model = correl_model
         # NB: I tried to use a single dictionary
         # {site_id: [(gmv, rupt_id),...]} but it took a lot more memory (MS)
         self.gmvs_per_site = collections.defaultdict(list)
         self.ruptures_per_site = collections.defaultdict(list)
-        self.gsims = gsims
 
     def calc_gmfs(self, rupture_data):
         """
@@ -344,8 +348,8 @@ class GmfCalculator(object):
         """
         for rdata in rupture_data:
             for gsim_name, imt, site_id, rupid, gmv in rdata.calc_gmf(
-                    self.imts, self.gsims, self.params['truncation_level'],
-                    self.params['correl_model']):
+                    self.sorted_imts, self.sorted_gsims, self.truncation_level,
+                    self.correl_model):
                 self.gmvs_per_site[
                     gsim_name, imt, site_id].append(gmv)
                 self.ruptures_per_site[
@@ -355,9 +359,9 @@ class GmfCalculator(object):
         """
         Helper method to save the computed GMF data to the database.
         """
-        for gsim_name, imt, site_id in self.gmvs_per_site:
+        for gsim_name, imt_str, site_id in self.gmvs_per_site:
             for rlz in rlzs[gsim_name]:
-                imt_name, sa_period, sa_damping = imt
+                imt_name, sa_period, sa_damping = from_string(imt_str)
                 inserter.add(models.GmfData(
                     gmf=models.Gmf.objects.get(lt_realization=rlz),
                     task_no=self.task_no,
@@ -365,8 +369,9 @@ class GmfCalculator(object):
                     sa_period=sa_period,
                     sa_damping=sa_damping,
                     site_id=site_id,
-                    gmvs=self.gmvs_per_site[gsim_name, imt, site_id],
-                    rupture_ids=self.ruptures_per_site[gsim_name, imt, site_id]
+                    gmvs=self.gmvs_per_site[gsim_name, imt_str, site_id],
+                    rupture_ids=self.ruptures_per_site[
+                        gsim_name, imt_str, site_id]
                 ))
         inserter.flush()
         self.gmvs_per_site.clear()
@@ -382,16 +387,16 @@ class GmfCalculator(object):
         :param num_ses: number of Stochastic Event Sets
         """
         gmf = collections.defaultdict(dict)  # (gsim, imt) > {site_id: poes}
-        zeros = {imt: numpy.zeros(len(imtls[str(imt)]))
-                 for imt in self.imts}
+        sorted_imts = map(str, self.sorted_imts)
+        zeros = {imt: numpy.zeros(len(imtls[imt])) for imt in sorted_imts}
         for (gsim, imt, site_id), gmvs in self.gmvs_per_site.iteritems():
             gmf[gsim, imt][site_id] = gmvs_to_haz_curve(
-                gmvs, imtls[str(imt)], invest_time, num_ses * invest_time)
+                gmvs, imtls[imt], invest_time, num_ses * invest_time)
         curves_by_gsim = []
-        for gsim_obj in self.gsims:
+        for gsim_obj in self.sorted_gsims:
             gsim = gsim_obj.__class__.__name__
             curves_by_imt = []
-            for imt in self.imts:
+            for imt in sorted_imts:
                 curves_by_imt.append(
                     numpy.array([gmf[gsim, imt].get(site_id, zeros[imt])
                                  for site_id in sids]))
