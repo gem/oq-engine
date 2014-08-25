@@ -755,6 +755,21 @@ class RiskModel(object):
                     getters, loss_type, getter_monitor))
                     for loss_type in self.loss_types)
 
+    def compute_output(self, getter, getter_monitor):
+        """
+        :param getter:
+            a callable hazard getter
+        :param getter_monitor:
+            a context manager monitoring the time and resources
+            spent the in the computation
+        :returns:
+            a dictionary with the output corresponding to the
+            getter, keyed by the loss type
+        """
+        return dict((loss_type, self.workflow.compute_all_outputs(
+                    [getter], loss_type, getter_monitor)[0])
+                    for loss_type in self.loss_types)
+
     def compute_stats(self, outputs, quantiles, post_processing):
         """
         :param outputs:
