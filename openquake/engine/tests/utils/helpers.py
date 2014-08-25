@@ -486,6 +486,10 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
             output=models.Output.objects.create_output(
                 hazard_job, "Test gmf scenario output", "gmf_scenario"))
 
+        models.SESCollection.objects.create(
+            output=models.Output.objects.create_output(
+                hazard_job, "Test SES Collection", "ses"),
+            lt_model=None, ordinal=0)
         site_ids = hazard_job.hazard_calculation.save_sites(
             [(15.48, 38.0900001), (15.565, 38.17), (15.481, 38.25)])
         for site_id in site_ids:
@@ -494,7 +498,8 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
                 task_no=0,
                 imt="PGA",
                 site_id=site_id,
-                gmvs=[0.1, 0.2, 0.3])
+                gmvs=[0.1, 0.2, 0.3],
+                rupture_ids=[0, 1, 2])
 
     elif output_type in ("ses", "gmf"):
         hazard_output = create_gmf_data_records(hazard_job, rlz)[0].gmf
