@@ -450,7 +450,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
             curves = tasks.apply_reduce(
                 compute_gmfs_and_curves,
                 (self.job.id, list(sesruptures), sitecol),
-                self.agg_curves, {}, self.concurrent_tasks // 2)
+                self.agg_curves, {}, self.concurrent_tasks)
             # NB: dictionaries (trt_model_id, gsim_name) -> curves
             self.curves.update(curves)
 
