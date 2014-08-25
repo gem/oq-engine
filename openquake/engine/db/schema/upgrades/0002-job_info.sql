@@ -11,6 +11,7 @@ output_weight FLOAT NOT NULL
 ) TABLESPACE uiapi_ts;
 
 GRANT SELECT,INSERT ON uiapi.job_info TO oq_job_init;
+GRANT USAGE ON uiapi.job_info_id_seq TO oq_job_init;
 
 COMMENT ON TABLE uiapi.job_info IS 'Information about a given job';
 COMMENT ON COLUMN uiapi.job_info.num_sites IS 'The number of affected sites';
