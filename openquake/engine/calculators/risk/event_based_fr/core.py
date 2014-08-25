@@ -22,6 +22,8 @@ for experimentation purposes. It is expected to change heavily in the near
 future. DO NOT USE IT.
 """
 
+import operator
+import itertools
 import collections
 import numpy
 
@@ -35,6 +37,9 @@ from openquake.engine.utils import tasks
 from openquake.engine.performance import EnginePerformanceMonitor
 
 from openquake.hazardlib.imt import from_string
+from openquake.hazardlib.site import FilteredSiteCollection, SiteCollection
+from openquake.hazardlib.calc.gmf import GmfComputer
+
 from openquake.commonlib.general import split_in_blocks
 from openquake.commonlib.logictree import SourceModelLogicTree, GSIM
 
@@ -50,14 +55,23 @@ class AssetSiteAssociationError(Exception):
     pass
 
 
+def split_site_collection(sitecol, num_chunks):
+    """
+    Split the full site collection in several FilteredSiteCollections
+
+    :param sitecol: full site collection
+    :param num_chunks: hint for the number of blocks to generate
+    """
+    for indices in split_in_blocks(sitecol.indices, num_chunks):
+        yield FilteredSiteCollection(indices, sitecol)
+
+
 @tasks.oqtask
-def event_based_fr(job_id, rupture_data, rc, risk_models, getter_builders,
-                   outputdict, params):
+def event_based_fr(job_id, sites, rc, risk_models,
+                   getter_builders, outputdict, params):
     """
     :param int job_id:
         ID of the currently running job
-    :param rupture_data:
-        a list of RuptureData instances
     :param rc:
         a :class:`openquake.engine.db.models.RiskCalculation` instance
     :param risk_models:
@@ -72,50 +86,62 @@ def event_based_fr(job_id, rupture_data, rc, risk_models, getter_builders,
         derived outputs
     """
     hc = rc.hazard_calculation
-    correl_model = hc.get_correl_model()
+    site_ids = set(sites.complete.sids)
     truncation_level = hc.truncation_level
-    imts = map(from_string, sorted(hc.intensity_measure_types))
+    sorted_imts = sorted(map(from_string, hc.intensity_measure_types))
 
-    # NB: by construction rupture_data is a non-empty list with
-    # ruptures of homogeneous trt_model
-    trt_model = rupture_data[0].rupture.trt_model
-
-    elt = {}  # event loss table
-    # ordered mapping realization -> gsim instance
-    rlz2gsim = collections.OrderedDict(
-        (art.rlz, GSIM[art.gsim]())
-        for art in models.AssocLtRlzTrtModel.objects.filter(
-            trt_model=trt_model).order_by('rlz'))
+    # init the Epsilon Provider only once
+    for builder in getter_builders:
+        builder.init_epsilon_provider(asset_correlation=0)
 
     # TODO: the following monitors should be replaced by LightMonitors,
     # since they write a lot on the database, once per asset
     getdata_mon = EnginePerformanceMonitor(
         'getting hazard', job_id, event_based_fr)
-    gmf_mon = getdata_mon.copy('generating gmf')
     getters_mon = getdata_mon.copy('building getters')
 
-    core.save_individual_outputs = lambda *args: None
-    core.save_statistical_outputs = lambda *args: None
+    assocs = models.AssocLtRlzTrtModel.objects.filter(
+        trt_model__lt_model__hazard_calculation=hc).order_by('rlz')
 
-    # init the Epsilon Provider only once per taxonomy
+    # mapping realization -> [(trt_model, gsim)]
+    rlz2gsims = {
+        rlz: [(a.trt_model, GSIM[a.gsim]()) for a in group]
+        for rlz, group in itertools.groupby(
+            assocs, operator.attrgetter('rlz'))}
+
+    # building the getters, i.e. initialize .gmv_dict and .hid
+    with getters_mon:
+        for builder in getter_builders:
+            builder.init_getters(sorted_imts, rlz2gsims)
+
     for builder in getter_builders:
-        builder.init_epsilon_provider(rc.asset_correlation)
+        for getter in builder.getters:
+            for gsim, trt_model in zip(getter.gsims, getter.trt_models):
+                # read the ruptures from the db
+                with getdata_mon.copy('reading ruptures'):
+                    ses_ruptures = models.SESRupture.objects.filter(
+                        rupture__trt_model=trt_model)
 
-    for rdata in rupture_data:
-        # building the getters, i.e. initialize .gmv_dict and .hid
-        with getters_mon:
-            for builder in getter_builders:
-                builder.init_getters(rlz2gsim, imts, rdata.rupid_seed_pairs)
+                with getdata_mon.copy('generating gmf'):
+                    # NB: the ruptures are already ordered by tag
+                    # and therefore by '.rupture'
+                    for rupture, group in itertools.groupby(
+                            ses_ruptures, operator.attrgetter('rupture')):
+                        if rupture.site_indices is None:
+                            r_sites = sites
+                        else:
+                            r_sites = FilteredSiteCollection(
+                                rupture.site_indices, sites.complete)
+                            if not site_ids.intersection(r_sites.sids):
+                                continue  # skip ruptures not contributing
 
-        # populating the gmv_dicts for each getter
-        with gmf_mon:
-            for builder in getter_builders:
-                for getter, gsim in zip(builder.getters, rlz2gsim.values()):
-                    for gsim_name, imt, site_id, rupid, gmv in rdata.calc_gmf(
-                            imts, [gsim], truncation_level, correl_model):
-                        getter.gmv_dict[str(imt)][site_id][rupid] = gmv
+                        # populating the gmv_dicts for each getter
+                        getter.build_data(
+                            rupture, r_sites, [(r.id, r.seed) for r in group],
+                            truncation_level)
 
         # computing risk
+        elt = {}  # event loss table
         with db.transaction.commit_on_success(using='job_init'):
             for risk_model, builder in zip(risk_models, getter_builders):
                 elt.update(
@@ -126,6 +152,16 @@ def event_based_fr(job_id, rupture_data, rc, risk_models, getter_builders,
 
 
 class EventBasedFRRiskCalculator(core.EventBasedRiskCalculator):
+
+    def pre_execute(self):
+        """
+        Inherited from core.EventBasedRiskCalculator.pre_execute.
+        Enforces no correlation, both on GMFs and assets.
+        """
+        correl_model = self.hc.get_correl_model()
+        assert correl_model is None, correl_model
+        assert not self.rc.asset_correlation, self.rc.asset_correlation
+        core.EventBasedRiskCalculator.pre_execute(self)
 
     @EnginePerformanceMonitor.monitor
     def execute(self):
@@ -159,16 +195,6 @@ class EventBasedFRRiskCalculator(core.EventBasedRiskCalculator):
         Generate the GMFs and optionally the hazard curves too, then
         compute the risk.
         """
-        otm = tasks.OqTaskManager(event_based_fr, logs.LOG.progress)
-        rupture_data = []
-        for rupture in models.ProbabilisticRupture.objects.filter(
-                trt_model__lt_model__hazard_calculation=self.hc
-                ).order_by('trt_model'):
-            rdata = RuptureData(
-                self.hc.site_collection, rupture,
-                [(r.id, r.seed) for r in rupture.sesrupture_set.all()])
-            rupture_data.append(rdata)
-
         getter_builders = []
         risk_models = []
         with self.monitor('associating assets<->sites'):
@@ -190,25 +216,30 @@ class EventBasedFRRiskCalculator(core.EventBasedRiskCalculator):
             outputdict = writers.combine_builders(
                 [ob(self) for ob in self.output_builders])
 
-        with self.monitor('sending ruptures'):
-            for rblock in split_in_blocks(
-                    rupture_data, self.concurrent_tasks,
-                    RuptureData.get_weight, RuptureData.get_trt):
-                otm.submit(self.job.id, rblock, self.rc,
-                           risk_models, getter_builders, outputdict,
-                           self.calculator_parameters)
-        self.acc = otm.aggregate_results(self.agg_result, {})
+        args = []
+        # compute the risk by splitting by sites
+        for sites in split_site_collection(
+                self.hc.site_collection, self.concurrent_tasks):
+            args.append((self.job.id, sites, self.rc,
+                         risk_models, getter_builders, outputdict,
+                         self.calculator_parameters))
+        self.acc = tasks.map_reduce(event_based_fr, args, self.agg_result, {})
 
 
 class GmfGetter(object):
     """
     Hazard getter for computing ground motion values and epsilons from ruptures
     """
-    def __init__(self, builder, lt_rlz, gmv_dict, rupid_seed_pairs):
+    def __init__(self, builder, lt_rlz, gmv_dict, sorted_imts,
+                 trt_models, gsims):
         self.builder = builder
         self.rlz = lt_rlz
-        self.rupture_ids, self.seeds = zip(*rupid_seed_pairs)
+        self.rupture_ids = []
+        self.seeds = []
         self.gmv_dict = gmv_dict
+        self.sorted_imts = sorted_imts
+        self.trt_models = trt_models
+        self.gsims = gsims
         self.hid = models.Gmf.objects.get(lt_realization=lt_rlz).output.id
 
     @property
@@ -230,6 +261,29 @@ class GmfGetter(object):
         """
         return self.builder.epsilon_provider.sample(self.seeds)
 
+    def build_data(self, rupture, sitecol, rupid_seed_pairs,
+                   truncation_level=None, correl_model=None):
+        """
+        :param rupture:
+            a ProbabilisticRupture instance
+        :param sitecol:
+            the collections of sites where to compute the GMFs
+        :param rupid_seed_pairs:
+            [(r.id, r.seed), ...] for each SESRupture associated the rupture
+        :param truncation_level:
+            the truncation level (or None)
+        :param correl_model:
+            the correlation model (or None)
+        """
+        c = GmfComputer(rupture, sitecol, self.sorted_imts, self.gsims,
+                        truncation_level, correl_model)
+        for rupid, seed in rupid_seed_pairs:
+            self.rupture_ids.append(rupid)
+            self.seeds.append(seed)
+            for (gsim_name, imt), gmvs in c.compute(seed):
+                for site_id, gmv in zip(sitecol.sids, gmvs):
+                    self.gmv_dict[imt][site_id][rupid] = gmv
+
     def get_data(self, imt):
         """
         Extracts the GMFs for the given `imt` from the .gmv_dict
@@ -239,7 +293,7 @@ class GmfGetter(object):
         """
         gmv_dict = self.gmv_dict[imt]
         all_gmvs = []
-        hits = 0
+        hits = 0  # how many sites are affected by the current ruptures
         for site_id in self.site_ids:
             gmv = gmv_dict[site_id]
             if gmv:
@@ -304,14 +358,16 @@ class GetterBuilder(object):
         self.epsilon_provider = scientific.EpsilonProvider(
             len(self.assets), asset_correlation)
 
-    def init_getters(self, rlzs, imts, rupid_seed_pairs):
+    def init_getters(self, sorted_imts, rlz2gsims):
         """
         Build the getters for the given realizations by using the
         given rupid_seed_pairs and the parameters in the GetterBuilder.
         """
         self.getters = []
-        for rlz in rlzs:
+        for rlz, pairs in rlz2gsims.iteritems():
             gmv_dict = dict(
-                (str(imt), collections.defaultdict(dict)) for imt in imts)
+                (str(imt), collections.defaultdict(dict))
+                for imt in sorted_imts)
+            trt_models, gsims = zip(*sorted(pairs))
             self.getters.append(
-                GmfGetter(self, rlz, gmv_dict, rupid_seed_pairs))
+                GmfGetter(self, rlz, gmv_dict, sorted_imts, trt_models, gsims))
