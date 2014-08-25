@@ -341,7 +341,7 @@ def get_job(cfg, username="openquake", hazard_calculation_id=None,
     return job
 
 
-def create_gmf(hazard_job, rlz=None):
+def create_gmf(hazard_job, rlz=None, output_type="gmf"):
     """
     Returns the created Gmf object.
     """
@@ -354,7 +354,7 @@ def create_gmf(hazard_job, rlz=None):
 
     gmf = models.Gmf.objects.create(
         output=models.Output.objects.create_output(
-            hazard_job, "Test Hazard output", "gmf"),
+            hazard_job, "Test Hazard output", output_type),
         lt_realization=rlz)
 
     return gmf
@@ -388,23 +388,23 @@ def create_gmf_data_records(hazard_job, rlz=None, ses_coll=None, points=None):
     return records
 
 
-# NB: create_gmf_from_csv and populate_gmf_data_from_csv
-# will be unified in the future
-def create_gmf_from_csv(job, fname):
+def create_gmf_from_csv(job, fname, output_type="gmf"):
     """
-    Populate the gmf_data table for an event_based calculation.
+    Populate the gmf_data table for an event_based (default)
+    or scenario calculation (output_type="gmf_scenario").
     """
     hc = job.hazard_calculation
-    hc.investigation_time = 50
-    hc.ses_per_logic_tree_path = 1
-    hc.save()
+    if output_type == "gmf":  # event based
+        hc.investigation_time = 50
+        hc.ses_per_logic_tree_path = 1
+        hc.save()
 
     # tricks to fool the oqtask decorator
     job.is_running = True
     job.status = 'post_processing'
     job.save()
 
-    gmf = create_gmf(job)
+    gmf = create_gmf(job, output_type=output_type)
 
     ses_coll = models.SESCollection.objects.create(
         output=models.Output.objects.create_output(
@@ -428,39 +428,6 @@ def create_gmf_from_csv(job, fname):
                 task_no=0,
                 imt="PGA", gmvs=gmvs,
                 rupture_ids=[r.id for r in ruptures],
-                site_id=site_id)
-
-    return gmf
-
-
-def populate_gmf_data_from_csv(job, fname):
-    """
-    Populate the gmf_data table for a scenario calculation.
-    """
-    # tricks to fool the oqtask decorator
-    job.is_running = True
-    job.status = 'post_processing'
-    job.save()
-
-    gmf = models.Gmf.objects.create(
-        output=models.Output.objects.create_output(
-            job, "Test Hazard output", "gmf_scenario"))
-
-    with open(fname, 'rb') as csvfile:
-        gmfreader = csv.reader(csvfile, delimiter=',')
-        locations = gmfreader.next()
-
-        gmv_matrix = numpy.array(
-            [map(float, row) for row in gmfreader]).transpose()
-
-        for i, gmvs in enumerate(gmv_matrix):
-            point = tuple(map(float, locations[i].split()))
-            [site_id] = job.hazard_calculation.save_sites([point])
-            models.GmfData.objects.create(
-                task_no=0,
-                imt="PGA",
-                gmf=gmf,
-                gmvs=gmvs,
                 site_id=site_id)
 
     return gmf
