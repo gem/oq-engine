@@ -665,6 +665,7 @@ class Scenario(object):
         loss_ratio_matrix = self.vulnerability_functions[loss_type].apply_to(
             ground_motion_values, epsilons)
 
+        # aggregating per asset, getting a vector of R elements
         aggregate_losses = numpy.sum(
             loss_ratio_matrix.transpose() * values, axis=1)
 
