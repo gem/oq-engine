@@ -89,17 +89,17 @@ def distance(lons1, lats1, depths1, lons2, lats2, depths2):
     return numpy.sqrt(hdist ** 2 + vdist ** 2)
 
 
-def min_distance_from_segment(seglons, seglats, lons, lats):
+def min_distance_to_segment(seglons, seglats, lons, lats):
     """
     This function computes the shortest distance to a segment in a 2D reference
     system.
 
     :parameter seglons:
         A list or an array of floats specifying the longitude values of the two
-        vertexes deliminting the segment.
+        vertexes delimiting the segment.
     :parameter seglats:
         A list or an array of floats specifying the latitude values of the two
-        vertexes deliminting the segment.
+        vertexes delimiting the segment.
     :parameter lons:
         A list or a 1D array of floats specifying the longitude values of the
         points for which the calculation of the shortest distance is requested.
@@ -109,7 +109,13 @@ def min_distance_from_segment(seglons, seglats, lons, lats):
     :returns:
         An array of the same shape as lons which contains for each point
         defined by (lons, lats) the shortest distance to the segment.
+        Distances are negative for those points that stay on the 'left side'
+        of the segment direction and whose projection lies within the segment
+        edges. For all other points, distance is positive.
     """
+
+    # Check the size of the seglons, seglats arrays
+    assert len(seglons) == len(seglats) == 2
 
     # Compute the azimuth of the segment
     seg_azim = azimuth(seglons[0], seglats[0], seglons[1], seglats[1])
@@ -126,20 +132,20 @@ def min_distance_from_segment(seglons, seglats, lons, lats):
     # to the segment direction passing through the two vertexes of the segment.
     # For these points the closest distance is the distance from the great arc.
     idx_in = numpy.nonzero(
-        (numpy.cos(numpy.radians(seg_azim-azimuth1 % 360)) >= 0.0) &
-        (numpy.cos(numpy.radians(seg_azim-azimuth2 % 360)) <= 0.0))
+        (numpy.cos(numpy.radians(seg_azim-azimuth1)) >= 0.0) &
+        (numpy.cos(numpy.radians(seg_azim-azimuth2)) <= 0.0))
 
     # Find the points outside the band defined by the two line perpendicular
     # to the segment direction passing through the two vertexes of the segment.
     # For these points the closest distance is the minimum of the distance from
     # the two point vertexes.
     idx_out = numpy.nonzero(
-        (numpy.cos(numpy.radians(seg_azim-azimuth1 % 360)) < 0.0) |
-        (numpy.cos(numpy.radians(seg_azim-azimuth2 % 360)) > 0.0))
+        (numpy.cos(numpy.radians(seg_azim-azimuth1)) < 0.0) |
+        (numpy.cos(numpy.radians(seg_azim-azimuth2)) > 0.0))
 
     # Find the indexes of points 'on the left of the segment'
     idx_neg = numpy.nonzero(numpy.sin(numpy.radians(
-        (azimuth1-seg_azim) % 360)) < 0.0)
+        (azimuth1-seg_azim))) < 0.0)
 
     # Now let's compute the distances for the two cases.
     dists = numpy.zeros_like(lons)
@@ -462,8 +468,11 @@ def point_at(lon, lat, azimuth, distance):
 
 def distance_to_semi_arc(alon, alat, aazimuth, plons, plats):
     """
-    In this method we use as reference system centerd on (alon, alat) and with
-    the y-axis correspondin to aazimuth direction.
+    In this method we use a reference system centerd on (alon, alat) and with
+    the y-axis corresponding to aazimuth direction to calculate the minimum
+    distance from a semiarc with generates in (alon, alat).
+
+    Parameters are the same as for :func:`distance_to_arc`.
     """
 
     if type(plons) is float:
@@ -474,21 +483,23 @@ def distance_to_semi_arc(alon, alat, aazimuth, plons, plats):
 
     # Find the indexes of the points in the positive y halfspace
     idx = numpy.nonzero(numpy.cos(
-        numpy.radians((aazimuth-azimuth_to_target) % 360)) > 0.0)
+        numpy.radians((aazimuth-azimuth_to_target))) > 0.0)
 
     # Find the indexes of the points in the negative y halfspace
     idx_not = numpy.nonzero(numpy.cos(
-        numpy.radians((aazimuth-azimuth_to_target) % 360)) <= 0.0)
+        numpy.radians((aazimuth-azimuth_to_target))) <= 0.0)
 
     idx_ll_quadr = numpy.nonzero(
-        (numpy.cos(numpy.radians((aazimuth-azimuth_to_target) % 360)) <= 0.0) &
-        (numpy.sin(numpy.radians((aazimuth-azimuth_to_target) % 360)) > 0.0))
+        (numpy.cos(numpy.radians((aazimuth-azimuth_to_target))) <= 0.0) &
+        (numpy.sin(numpy.radians((aazimuth-azimuth_to_target))) > 0.0))
 
     # Initialise the array containing the final distances
     distance = numpy.zeros_like(plons)
 
     # Compute the distance between the semi-arc with 'aazimuth' direction
-    # and the set of sites in the positive half-space
+    # and the set of sites in the positive half-space. The shortest distance to
+    # the semi-arc in this case can be computed using the function
+    # :func:`openquake.hazardlib.geo.geodetic.distance_to_arc`.
     if len(idx):
         distance_to_target = geodetic_distance(alon, alat,
                                                plons[idx], plats[idx])
@@ -499,7 +510,9 @@ def distance_to_semi_arc(alon, alat, aazimuth, plons, plats):
         distance[idx] = (numpy.pi / 2 - angle) * EARTH_RADIUS
 
     # Compute the distance between the reference point and the set of sites
-    # in the negative half-space
+    # in the negative half-space. The shortest distance for the semi-arc for
+    # all the points in the negative semi-space simply corresponds to the
+    # shortest distance to its origin.
     if len(idx_not):
         distance[idx_not] = geodetic_distance(alon, alat,
                                               plons[idx_not], plats[idx_not])

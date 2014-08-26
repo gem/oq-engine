@@ -243,23 +243,23 @@ class BaseQuadrilateralSurface(BaseSurface):
         dists = []
         if top_edge.lons.shape[1] < 3:
 
-            for i in range(top_edge.lons.shape[1] - 1):
-                p1 = Point(
-                    top_edge.lons[0, i],
-                    top_edge.lats[0, i],
-                    top_edge.depths[0, i]
+            i = 0
+            p1 = Point(
+                top_edge.lons[0, i],
+                top_edge.lats[0, i],
+                top_edge.depths[0, i]
+            )
+            p2 = Point(
+                top_edge.lons[0, i + 1], top_edge.lats[0, i + 1],
+                top_edge.depths[0, i + 1]
+            )
+            azimuth = p1.azimuth(p2)
+            dists.append(
+                geodetic.distance_to_arc(
+                    p1.longitude, p1.latitude, azimuth,
+                    mesh.lons, mesh.lats
                 )
-                p2 = Point(
-                    top_edge.lons[0, i + 1], top_edge.lats[0, i + 1],
-                    top_edge.depths[0, i + 1]
-                )
-                azimuth = p1.azimuth(p2)
-                dists.append(
-                    geodetic.distance_to_arc(
-                        p1.longitude, p1.latitude, azimuth,
-                        mesh.lons, mesh.lats
-                    )
-                )
+            )
 
         else:
 
