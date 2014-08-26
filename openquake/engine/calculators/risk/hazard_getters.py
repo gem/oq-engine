@@ -149,7 +149,7 @@ class HazardCurveGetter(HazardGetter):
 def expand(array, N):
     """
     Given a non-empty array with n elements, expands it to a larger
-    array with N elements. If N < n, returns the original array.
+    array with N elements.
 
     >>> expand([1], 3)
     array([1, 1, 1])
@@ -161,7 +161,8 @@ def expand(array, N):
     n = len(array)
     assert n > 0, 'Empty array'
     if n >= N:
-        return array
+        raise ValueError('Cannot expand an array of %d elements to %d',
+                         n, N)
     return numpy.array([array[i % n] for i in xrange(N)])
 
 
@@ -174,21 +175,30 @@ class GroundMotionValuesGetter(HazardGetter):
 
     @property
     def rupture_ids(self):
-        """rupture_ids for the current getter"""
+        """
+        Rupture_ids for the current getter
+        """
         return self.builder.rupture_ids[self.sescoll.id]
 
     @property
     def epsilons(self):
-        """epsilon matrix for the current getter"""
+        """
+        Epsilon matrix for the current getter
+        """
         return self.builder.epsilons[self.sescoll.id][self.indices]
 
     def get_epsilons(self):
         """
-        Expand the inner epsilons to the right number
+        Expand the inner epsilons to the right number, if needed
         """
-        # NB: notice the double transpose below; a shape (1, 3) will go into
-        # (1, 3); without, it would go incorrectly into (3, 3)
-        return expand(self.epsilons.T, len(self.rupture_ids)).T
+        eps = self.epsilons
+        _n, m = eps.shape
+        e = len(self.rupture_ids)
+        if e > m:  # there are more ruptures than epsilons
+            # notice the double transpose below; a shape (1, 3) will go into
+            # (1, 3); without, it would go incorrectly into (3, 3)
+            return expand(eps.T, e).T
+        return eps
 
     def _get_gmv_dict(self, imt_type, sa_period, sa_damping):
         """
