@@ -34,7 +34,7 @@ from openquake.commonlib import source
 from openquake.engine.calculators.hazard import general as haz_general
 from openquake.engine.utils import tasks
 from openquake.engine.db import models
-from openquake.engine import writer
+from openquake.engine import logs, writer
 from openquake.engine.performance import EnginePerformanceMonitor
 
 AVAILABLE_GSIMS = openquake.hazardlib.gsim.get_available_gsims()
@@ -131,6 +131,22 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         self.initialize_sources()
         self.initialize_site_model()
         self.create_ruptures()
+        n_imts = len(distinct(from_string(imt)
+                              for imt in self.hc.intensity_measure_types))
+        n_sites = len(self.hc.site_collection)
+        n_gmf = self.hc.number_of_ground_motion_fields
+        output_weight = n_sites * n_imts * n_gmf
+        logs.LOG.info('Expected output size=%s', output_weight)
+        models.JobInfo.objects.create(
+            oq_job=self.job,
+            num_sites=n_sites,
+            num_realizations=1,
+            num_imts=n_imts,
+            num_levels=0,
+            input_weight=0,
+            output_weight=output_weight)
+        self.check_limits(input_weight=0, output_weight=output_weight)
+        return 0, output_weight
 
     def create_ruptures(self):
         # check filtering
