@@ -62,6 +62,14 @@ POES_PARAM_NAME = "POES"
 DILATION_ONE_METER = 1e-5
 
 
+class InputWeightLimit(Exception):
+    pass
+
+
+class OutputWeightLimit(Exception):
+    pass
+
+
 def store_site_model(job, site_model_source):
     """Invoke site model parser and save the site-specified parameter data to
     the database.
@@ -199,10 +207,16 @@ class BaseHazardCalculator(base.Calculator):
                 'sm_lt_path=%s, TRT=%s, model=%s', i, num_models,
                 len(sc.sources), sm_lt_path, trt_model.tectonic_region_type,
                 trt_model.lt_model.sm_name)
-            sc.sources = tasks.apply_reduce(
-                filter_and_split_sources,
-                (self.job.id, sc.sources, self.hc.site_collection),
-                list.__add__, [], self.concurrent_tasks // 2)
+            if len(sc.sources) > self.concurrent_tasks:
+                # filter in parallel
+                sc.sources = tasks.apply_reduce(
+                    filter_and_split_sources,
+                    (self.job.id, sc.sources, self.hc.site_collection),
+                    list.__add__, [], self.concurrent_tasks)
+            else:  # few sources
+                # filter sequentially on a single core
+                sc.sources = filter_and_split_sources.task_func(
+                    self.job.id, sc.sources, self.hc.site_collection)
             sc.sources.sort(key=attrgetter('source_id'))
             if not sc.sources:
                 logs.LOG.warn(
@@ -217,9 +231,7 @@ class BaseHazardCalculator(base.Calculator):
             trt_model.num_sources = len(sc.sources)
             trt_model.num_ruptures = sc.num_ruptures
             trt_model.save()
-        total_weight = self.all_sources.get_total_weight()
-        logs.LOG.info('Total weight of the sources=%d', total_weight)
-        return total_weight
+        return self.all_sources.get_total_weight()
 
     def task_arg_gen(self):
         """
@@ -303,21 +315,77 @@ class BaseHazardCalculator(base.Calculator):
         self.parse_risk_models()
         self.initialize_site_model()
         self.initialize_sources()
-        self.process_sources()
+
+        # The input weight is given by the number of ruptures generated
+        # by the sources; for point sources however a corrective factor
+        # given by the parameter `point_source_weight` is applied
+        input_weight = self.process_sources()
+
         self.imtls = self.hc.intensity_measure_types_and_levels
+        n_sites = len(self.hc.site_collection)
         if self.imtls:
+            n_imts = float(len(self.imtls))
             n_levels = sum(len(lvls) for lvls in self.imtls.itervalues()
-                           ) / float(len(self.imtls))
-            n_sites = len(self.hc.site_collection)
+                           ) / n_imts
             self.zeros = numpy.array(
                 [numpy.zeros((n_sites, len(self.imtls[imt])))
                  for imt in sorted(self.imtls)])
             self.ones = [numpy.zeros(len(self.imtls[imt]), dtype=float)
                          for imt in sorted(self.imtls)]
+            logs.LOG.info('%d IMT, %s level(s) and %d site(s)',
+                          n_imts, n_levels, n_sites)
+        else:
+            n_imts = len(self.hc.intensity_measure_types)
+            n_levels = 0
 
-            total = len(self.imtls) * n_levels * n_sites
-            logs.LOG.info('%d IMT(s), %d level(s) and %d sites, total %d',
-                          len(self.imtls), n_levels, n_sites, total)
+        # The output weight is a pure number which is proportional to the size
+        # of the expected output of the calculator. For classical and disagg
+        # calculators it is given by
+        # n_sites * n_realizations * n_imts * n_levels;
+        # for the event based calculator is given by n_sites * n_realizations
+        # * n_levels * n_imts * n_ses
+        max_realizations = self.get_max_realizations()
+        output_weight = n_sites * n_imts * max_realizations
+        if 'EventBased' in self.__class__.__name__:
+            output_weight *= self.hc.ses_per_logic_tree_path
+        else:
+            output_weight *= n_levels
+
+        logs.LOG.info('Total weight of the sources=%s', input_weight)
+        logs.LOG.info('Expected output size=%s', output_weight)
+        with transaction.commit_on_success(using='job_init'):
+            models.JobInfo.objects.create(
+                oq_job=self.job,
+                num_sites=n_sites,
+                num_realizations=max_realizations,
+                num_imts=n_imts,
+                num_levels=n_levels,
+                input_weight=input_weight,
+                output_weight=output_weight)
+        self.check_limits(input_weight, output_weight)
+        return input_weight, output_weight
+
+    def check_limits(self, input_weight, output_weight):
+        """
+        Compute the total weight of the source model and the expected
+        output size and compare them with the parameters max_input_weight
+        and max_output_weight in openquake.cfg; if the parameters are set
+        """
+        if (self.max_input_weight and
+                input_weight > self.max_input_weight):
+            raise InputWeightLimit(
+                'A limit of %d on the maximum source model weight was set. '
+                'The weight of your model is %d. Please reduce your model '
+                'or raise the parameter max_input_weight in openquake.cfg'
+                % (self.max_input_weight, input_weight))
+        elif self.max_output_weight and output_weight > self.max_output_weight:
+            raise OutputWeightLimit(
+                'A limit of %d on the maximum output weight was set. '
+                'The weight of your output is %d. Please reduce the number '
+                'of sites, the number of IMTs, the number of realizations '
+                'or the number of stochastic event sets; otherwise, '
+                'raise the parameter max_output_weight in openquake.cfg'
+                % (self.max_input_weight, input_weight))
 
     def post_execute(self):
         """Inizialize realizations"""
@@ -465,6 +533,26 @@ class BaseHazardCalculator(base.Calculator):
         site_model_inp = self.hc.site_model
         if site_model_inp:
             store_site_model(self.job, site_model_inp)
+
+    def get_max_realizations(self):
+        """
+        Return the number of realizations that will be generated.
+        In the event based case such number can be over-estimated,
+        if the method is called in the pre_execute phase, because
+        some tectonic region types may have no occurrencies. The
+        number is correct if the method is called in the post_execute
+        phase.
+        """
+        if self.hc.number_of_logic_tree_samples:
+            return self.hc.number_of_logic_tree_samples
+        gsim_lt_dict = {}  # gsim_lt per source model logic tree path
+        for sm, weight, sm_lt_path in self.source_model_lt:
+            lt_model = models.LtSourceModel.objects.get(
+                hazard_calculation=self.hc, sm_lt_path=sm_lt_path)
+            if not sm_lt_path in gsim_lt_dict:
+                gsim_lt_dict[sm_lt_path] = lt_model.make_gsim_lt()
+        return sum(gsim_lt.get_num_paths()
+                   for gsim_lt in gsim_lt_dict.itervalues())
 
     def initialize_realizations(self):
         """

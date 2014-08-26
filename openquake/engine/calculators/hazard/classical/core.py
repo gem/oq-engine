@@ -288,7 +288,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         latter piece basically defines the work to be done in the
         `execute` phase.).
         """
-        super(ClassicalHazardCalculator, self).pre_execute()
+        weights = super(ClassicalHazardCalculator, self).pre_execute()
         # a dictionary with the bounding boxes for earch source
         # model and each site, defined only for disaggregation
         # calculations:
@@ -299,6 +299,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                 ((lt_model.id, site.id), BoundingBox(lt_model.id, site.id))
                 for site in self.hc.site_collection
                 for lt_model in lt_models)
+        return weights
 
     def post_process(self):
         """
