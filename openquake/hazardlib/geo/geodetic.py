@@ -165,7 +165,7 @@ def min_distance_to_segment(seglons, seglats, lons, lats):
     # from the first point to the second one) have a positive distance and
     # the others a negative one.
     dists = abs(dists)
-    dists[idx_neg] = -1 * dists[idx_neg]
+    dists[idx_neg] = - dists[idx_neg]
 
     return dists
 
