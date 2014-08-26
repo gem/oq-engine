@@ -34,7 +34,6 @@ from openquake.engine.db import models
 
 BYTES_PER_FLOAT = numpy.zeros(1, dtype=float).nbytes
 
-SCENARIO = 0  # constant for readability
 NRUPTURES = 1  # constant for readability
 
 
@@ -71,11 +70,12 @@ class HazardGetter(object):
    :attr site_ids:
         The ids of the sites associated to the hazards
     """
+    builder = None  # set by the GetterBuilder
+
     def __init__(self, hazard_output, assets, site_ids):
         self.hazard_output = hazard_output
         self.assets = assets
         self.site_ids = site_ids
-        self.epsilons = None
 
     def __repr__(self):
         shape = getattr(self.epsilons, 'shape', None)
@@ -149,7 +149,7 @@ class HazardCurveGetter(HazardGetter):
 def expand(array, N):
     """
     Given a non-empty array with n elements, expands it to a larger
-    array with N elements. If N < n, returns the original array.
+    array with N elements.
 
     >>> expand([1], 3)
     array([1, 1, 1])
@@ -161,7 +161,8 @@ def expand(array, N):
     n = len(array)
     assert n > 0, 'Empty array'
     if n >= N:
-        return array
+        raise ValueError('Cannot expand an array of %d elements to %d',
+                         n, N)
     return numpy.array([array[i % n] for i in xrange(N)])
 
 
@@ -169,16 +170,35 @@ class GroundMotionValuesGetter(HazardGetter):
     """
     Hazard getter for loading ground motion values.
     """ + HazardGetter.__doc__
-    rupture_ids = None  # set by the GetterBuilder
-    epsilons = None  # set by the GetterBuilder
+    sescoll = None  # set by the GetterBuilder
+    indices = None  # set by the GetterBuilder
+
+    @property
+    def rupture_ids(self):
+        """
+        Rupture_ids for the current getter
+        """
+        return self.builder.rupture_ids[self.sescoll.id]
+
+    @property
+    def epsilons(self):
+        """
+        Epsilon matrix for the current getter
+        """
+        return self.builder.epsilons[self.sescoll.id][self.indices]
 
     def get_epsilons(self):
         """
-        Expand the inner epsilons to the right number
+        Expand the inner epsilons to the right number, if needed
         """
-        # NB: notice the double transpose below; a shape (1, 3) will go into
-        # (1, 3); without, it would go incorrectly into (3, 3)
-        return expand(self.epsilons.T, len(self.rupture_ids)).T
+        eps = self.epsilons
+        _n, m = eps.shape
+        e = len(self.rupture_ids)
+        if e > m:  # there are more ruptures than epsilons
+            # notice the double transpose below; a shape (1, 3) will go into
+            # (1, 3); without, it would go incorrectly into (3, 3)
+            return expand(eps.T, e).T
+        return eps
 
     def _get_gmv_dict(self, imt_type, sa_period, sa_damping):
         """
@@ -193,7 +213,7 @@ class GroundMotionValuesGetter(HazardGetter):
         cursor = models.getcursor('job_init')
         cursor.execute('select site_id, rupture_ids, gmvs from '
                        'hzrdr.gmf_data where gmf_id=%s and site_id in %s '
-                       'and {} order by site_id, task_no'.format(imt_query),
+                       'and {} order by site_id'.format(imt_query),
                        (gmf_id, tuple(self.site_ids),
                         imt_type, sa_period, sa_damping))
         for sid, group in itertools.groupby(cursor, operator.itemgetter(0)):
@@ -222,55 +242,6 @@ class GroundMotionValuesGetter(HazardGetter):
             array = numpy.array([gmv.get(r, 0.) for r in self.rupture_ids])
             all_gmvs.append(array)
         return all_gmvs
-
-
-class ScenarioGetter(HazardGetter):
-    """
-    Hazard getter for loading ground motion values.
-    """ + HazardGetter.__doc__
-
-    rupture_ids = []  # there are no ruptures on the db
-    epsilons = None  # set by the GetterBuilder
-    num_samples = None  # set by the GetterBuilder
-
-    def get_epsilons(self):
-        """
-        Return the inner epsilons, set by the builder
-        """
-        return self.epsilons
-
-    def get_data(self, imt):
-        """
-        Extracts the GMFs for the given `imt` from the hazard output.
-
-        :param str imt: Intensity Measure Type
-        :returns: a list of N arrays with R elements each.
-        """
-        imt_type, sa_period, sa_damping = from_string(imt)
-        gmf_id = self.hazard_output.output_container.id
-        if sa_period:
-            imt_query = 'imt=%s and sa_period=%s and sa_damping=%s'
-        else:
-            imt_query = 'imt=%s and sa_period is %s and sa_damping is %s'
-        cursor = models.getcursor('job_init')
-        templ = ('select site_id, gmvs from '
-                 'hzrdr.gmf_data where gmf_id=%s and site_id in %s '
-                 'and {} order by site_id, task_no'.format(imt_query))
-        args = (gmf_id, tuple(set(self.site_ids)),
-                imt_type, sa_period, sa_damping)
-        cursor.execute(templ, args)
-
-        gmvs_dict = {}  # site_id -> gmvs array
-        for sid, group in itertools.groupby(cursor, operator.itemgetter(0)):
-            gmvs = []
-            for site_id, gmvs_ in group:
-                gmvs.extend(gmvs_)
-            gmvs_dict[sid] = numpy.array(gmvs, dtype=float)
-        # TODO: add the test for the case where there is no data
-        # for the given site and vector of zeros is returned
-        return [gmvs_dict[sid] if sid in gmvs_dict
-                else numpy.zeros(self.num_samples, dtype=float)
-                for sid in self.site_ids]
 
 
 class GetterBuilder(object):
@@ -338,8 +309,9 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
                     if self.epsilon_sampling else num_ruptures
                 self.epsilons_shape[ses_coll.id] = (num_assets, samples)
         elif self.hc.calculation_mode == 'scenario':
+            [out] = self.hc.oqjob.output_set.filter(output_type='ses')
             samples = self.hc.number_of_ground_motion_fields
-            self.epsilons_shape[SCENARIO] = (num_assets, samples)
+            self.epsilons_shape[out.ses.id] = (num_assets, samples)
         nbytes = 0
         for (n, r) in self.epsilons_shape.values():
             # the max(n, r) is taken because if n > r then the limiting
@@ -370,10 +342,14 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
                     len(self.asset_ids), num_samples,
                     self.rc.master_seed, self.rc.asset_correlation)
         elif self.hc.calculation_mode == 'scenario':
-            self.rupture_ids[SCENARIO] = []
-            self.epsilons[SCENARIO] = make_epsilons(
-                len(self.asset_ids), self.hc.number_of_ground_motion_fields,
-                self.rc.master_seed, self.rc.asset_correlation)
+            n = self.hc.number_of_ground_motion_fields
+            [out] = self.hc.oqjob.output_set.filter(output_type='ses')
+            scid = out.ses.id  # ses collection id
+            self.rupture_ids[scid] = out.ses.get_ruptures(
+                ).values_list('id', flat=True) or range(n)
+            self.epsilons[scid] = make_epsilons(
+                len(self.asset_ids), n, self.rc.master_seed,
+                self.rc.asset_correlation)
 
     def _indices_asset_site(self, asset_block):
         """
@@ -428,13 +404,13 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
         getters = []
         for ho in hazard_outputs:
             getter = gettercls(ho, assets, site_ids)
+            getter.builder = self
+            getter.indices = indices
             if self.hc.calculation_mode == 'event_based':
-                ses_coll_id = models.SESCollection.objects.get(
-                    lt_model=ho.output_container.lt_realization.lt_model).id
-                getter.rupture_ids = self.rupture_ids[ses_coll_id]
-                getter.epsilons = self.epsilons[ses_coll_id][indices]
+                getter.sescoll = models.SESCollection.objects.get(
+                    lt_model=ho.output_container.lt_realization.lt_model)
             elif self.hc.calculation_mode == 'scenario':
-                getter.num_samples = self.epsilons_shape[SCENARIO][NRUPTURES]
-                getter.epsilons = self.epsilons[SCENARIO][indices]
+                [out] = ho.oq_job.output_set.filter(output_type='ses')
+                getter.sescoll = out.ses
             getters.append(getter)
         return getters

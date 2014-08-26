@@ -104,17 +104,16 @@ class GroundMotionValuesGetterTestCase(HazardCurveGetterTestCase):
             self.getter.get_epsilons())  # shape (1, 3)
 
 
-class ScenarioGetterTestCase(GroundMotionValuesGetterTestCase):
+class ScenarioTestCase(GroundMotionValuesGetterTestCase):
 
     hazard_demo = get_data_path('scenario_hazard/job.ini')
     risk_demo = get_data_path('scenario_risk/job.ini')
     hazard_output_type = 'gmf_scenario'
-    getter_class = hazard_getters.ScenarioGetter
     taxonomy = 'RM'
 
     def test_nbytes(self):
         # 10 realizations * 1 asset
-        self.assertEqual(self.getter.num_samples, 10)
+        self.assertEqual(len(self.getter.rupture_ids), 10)
         self.assertEqual(self.nbytes, 80)
 
     def test_call(self):
@@ -125,4 +124,5 @@ class ScenarioGetterTestCase(GroundMotionValuesGetterTestCase):
         self.assertEqual(self.getter.assets, [a1])
 
         [gmvs] = self.getter.get_data(self.imt)
-        numpy.testing.assert_allclose([0.1, 0.2, 0.3], gmvs)
+        expected = [0.1, 0.2, 0.3] + [0] * 7
+        numpy.testing.assert_allclose(expected, gmvs)
