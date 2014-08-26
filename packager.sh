@@ -214,7 +214,7 @@ _wait_ssh () {
 #                     - builds oq-hazardlib speedups
 #                     - installs oq-engine sources on lxc
 #                     - set up postgres
-#                     - creates database schema
+#                     - upgrade db
 #                     - runs celeryd
 #                     - runs tests
 #                     - runs coverage
@@ -283,7 +283,7 @@ _devtest_innervm_run () {
     ssh $lxc_ip "sudo sed -i 's/#standard_conforming_strings = on/standard_conforming_strings = off/g' /etc/postgresql/9.1/main/postgresql.conf"
 
     ssh $lxc_ip "sudo service postgresql restart"
-    ssh $lxc_ip "set -e ; sudo su postgres -c \"cd oq-engine ; openquake/engine/bin/oq_create_db --yes --db-name=openquake2 --schema-path=openquake/engine/db/schema\""
+    ssh $lxc_ip "set -e ; sudo su postgres -c \"cd oq-engine ; openquake/engine/bin/oq_create_db --yes --db-name=openquake2\""
     ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-commonlib\" ; cd oq-engine ; bin/openquake --upgrade-db"
 
     # run celeryd daemon
@@ -358,7 +358,7 @@ celeryd_wait $GEM_MAXLOOP"
 #                     - adds repositories to apt sources on lxc
 #                     - performs package tests (install, remove, reinstall ..)
 #                     - set up postgres
-#                     - creates database schema
+#                     - upgrade db
 #                     - runs celeryd
 #                     - executes demos
 #
