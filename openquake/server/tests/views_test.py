@@ -615,7 +615,7 @@ class SubmitJobTestCase(unittest.TestCase):
             'status': '**  complete (hazard)',
             'description': u'Virtual Island Seismic Hazard, ses=5'})
 
-        self.run_job('job_risk.ini', job.hazard_calculation.id)
+        self.run_job('job_risk.ini', job.id)
         args, kw = tasks.update_calculation.call_args
         self.assertEqual(kw, {
             'status': '**  complete (risk)',
