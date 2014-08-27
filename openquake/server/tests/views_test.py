@@ -493,6 +493,8 @@ FakeJob = namedtuple(
 )
 FakeJob.calculation = property(
     lambda self: self.risk_calculation or self.hazard_calculation)
+FakeJob.job_type = property(
+    lambda self: 'risk' if self.risk_calculation else 'hazard')
 
 FakeCalc = namedtuple('FakeCalc', 'id, description')
 
@@ -504,7 +506,7 @@ class RunCalcTestCase(BaseViewTestCase):
         self.request.user.username = 'openquake'
         self.request.method = 'POST'
         self.request.POST = dict(database="platform")
-        self.request.POST['hazard_calculation_id'] = 666
+        self.request.POST['hazard_job_id'] = 666
         self.request.META = dict()
         self.request.META['HTTP_HOST'] = 'www.openquake.org'
         self.executor_call_data = dict(count=0, args=None)
@@ -597,11 +599,11 @@ class SubmitJobTestCase(unittest.TestCase):
         self.nd.stop()
         self.uc.stop()
 
-    def run_job(self, job_ini, hazard_calculation_id=None):
+    def run_job(self, job_ini, hazard_job_id=None):
         cfg_file = os.path.join(DATADIR, job_ini)
         job, future = views.submit_job(
             cfg_file, DATADIR, 'openquake',
-            hazard_calculation_id=hazard_calculation_id,
+            hazard_job_id=hazard_job_id,
             logfile=os.path.join(TMPDIR, 'server_tests.log'))
         future.result()  # wait
         return job

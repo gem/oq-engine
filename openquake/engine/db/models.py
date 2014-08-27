@@ -308,6 +308,13 @@ class OqJob(djm.Model):
         db_table = 'uiapi\".\"oq_job'
 
     @property
+    def job_type(self):
+        """
+        'hazard' or 'risk'
+        """
+        return 'hazard' if self.risk_calculation is None else 'risk'
+
+    @property
     def calculation(self):
         """
         :returns: a calculation object (hazard or risk) depending on
@@ -317,6 +324,10 @@ class OqJob(djm.Model):
         to access the common feature of a Calculation object.
         """
         return self.hazard_calculation or self.risk_calculation
+
+    def __repr__(self):
+        return '<%s %d, %s>' % (self.__class__.___name__,
+                                self.id, self.job_type)
 
 
 class Performance(djm.Model):

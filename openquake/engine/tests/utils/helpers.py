@@ -129,15 +129,13 @@ def run_job(cfg, exports=None, hazard_calculation_id=None,
     job.save()
 
     logfile = os.path.join(tempfile.gettempdir(), 'qatest.log')
-    job_type = 'risk' if (
-        hazard_calculation_id or hazard_output_id) else 'hazard'
 
     # update calculation parameters
     for name, value in params.iteritems():
         setattr(job.calculation, name, value)
     job.calculation.save()
 
-    engine.run_calc(job, 'error', logfile, exports, job_type)
+    engine.run_calc(job, 'error', logfile, exports, job.job_type)
     return job
 
 
