@@ -217,7 +217,7 @@ class BaseHazardCalculator(base.Calculator):
             else:  # few sources
                 # filter sequentially on a single core
                 sc.sources = filter_and_split_sources.task_func(
-                    self.job.id, sc.sources, self.hc.site_collection)
+                    self.job.id, 0, sc.sources, self.hc.site_collection)
             sc.sources.sort(key=attrgetter('source_id'))
             if not sc.sources:
                 logs.LOG.warn(
