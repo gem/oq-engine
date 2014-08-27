@@ -356,7 +356,7 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
             self.epsilons[scid] = eps = make_epsilons(
                 len(self.asset_ids), n, self.rc.master_seed,
                 self.rc.asset_correlation)
-            models.Epsilon.saveall(ses_coll, self.asset_sites, eps)
+            models.Epsilon.saveall(out.ses, self.asset_sites, eps)
 
     def _indices_asset_site(self, asset_block):
         """
