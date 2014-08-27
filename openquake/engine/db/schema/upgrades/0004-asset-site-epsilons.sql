@@ -18,7 +18,8 @@ CREATE TABLE riskr.epsilon (
 id SERIAL PRIMARY KEY,
 asset_site_id INTEGER NOT NULL REFERENCES riskr.asset_site (id),
 ses_collection_id INTEGER NOT NULL REFERENCES hzrdr.ses_collection (id),
-epsilons FLOAT[] NOT NULL
+epsilons FLOAT[] NOT NULL,
+UNIQUE (asset_site_id, ses_collection_id)
 ) TABLESPACE riskr_ts;
 
 GRANT SELECT,INSERT ON riskr.epsilon TO oq_job_init;
