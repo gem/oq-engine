@@ -19,12 +19,7 @@
 -- Disable unnecessarily verbose output
 SET client_min_messages TO WARNING;
 
--- Set role to oq_admin and make sure it can act on the tablespaces
-GRANT CREATE ON tablespace hzrdr_ts TO oq_admin;
-GRANT CREATE ON tablespace hzrdi_ts TO oq_admin;
-GRANT CREATE ON tablespace riski_ts TO oq_admin;
-GRANT CREATE ON tablespace riskr_ts TO oq_admin;
-GRANT CREATE ON tablespace uiapi_ts TO oq_admin;
+-- Set role to oq_admin
 SET ROLE TO oq_admin;
 
 ------------------------------------------------------------------------
