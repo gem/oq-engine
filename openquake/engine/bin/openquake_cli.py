@@ -46,9 +46,10 @@ from openquake.engine.tools import save_hazards, load_hazards
 
 HAZARD_OUTPUT_ARG = "--hazard-output-id"
 HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
+HAZARD_JOB_ARG = "--hazard-job-id"
 MISSING_HAZARD_MSG = ("Please specify the ID of the hazard output (or "
-                      "calculation) to be used by using '%s (or %s) <id>'" %
-                      (HAZARD_OUTPUT_ARG, HAZARD_CALCULATION_ARG))
+                      "job) to be used by using '%s (or %s) <id>'" %
+                      (HAZARD_OUTPUT_ARG, HAZARD_JOB_ARG))
 
 
 def set_up_arg_parser():
@@ -147,8 +148,14 @@ def set_up_arg_parser():
     risk_grp.add_argument(
         HAZARD_CALCULATION_ARG,
         '--hc',
-        help='Use the desired hazard calculation as input for the risk job',
+        help=('Use the desired hazard calculation as input for the risk job'
+              ' [DEPRECATED]'),
         metavar='HAZARD_CALCULATION_ID')
+    risk_grp.add_argument(
+        HAZARD_JOB_ARG,
+        '--hj',
+        help='Use the desired hazard job as input for the risk job',
+        metavar='HAZARD_JOB_ID')
     risk_grp.add_argument(
         '--list-risk-calculations',
         '--lrc',
@@ -271,8 +278,8 @@ def list_calculations(calc_manager):
     if len(calcs) == 0:
         print 'None'
     else:
-        print ('calc_id | status | last_update | '
-               'description')
+        print ('job_id | calc_id |     status |         last_update | '
+               '        description')
         for calc in calcs:
             latest_job = calc.oqjob
             if latest_job.is_running:
@@ -286,8 +293,8 @@ def list_calculations(calc_manager):
                 '%Y-%m-%d %H:%M:%S %Z'
             )
 
-            print '%s | %s | %s | %s' % (
-                calc.id, status, last_update, calc.description
+            print '%6d | %7d | %10s | %s| %s' % (
+                calc.oqjob.id, calc.id, status, last_update, calc.description
             )
 
 
@@ -472,13 +479,13 @@ def main():
                             args.export_type)
     elif args.run_risk is not None:
         if (args.hazard_output_id is None
-                and args.hazard_calculation_id is None):
+                and args.hazard_job_id is None):
             sys.exit(MISSING_HAZARD_MSG)
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
         engine.run_job(expanduser(args.run_risk), args.log_level, log_file,
                        args.exports, hazard_output_id=args.hazard_output_id,
-                       hazard_calculation_id=args.hazard_calculation_id)
+                       hazard_job_id=args.hazard_job_id)
     elif args.delete_risk_calculation is not None:
         del_risk_calc(args.delete_risk_calculation, args.yes)
     # import
