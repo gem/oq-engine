@@ -55,7 +55,7 @@ INPUT_TYPES = set(dict(models.INPUT_TYPE_CHOICES))
 UNABLE_TO_DEL_HC_FMT = 'Unable to delete hazard calculation: %s'
 UNABLE_TO_DEL_RC_FMT = 'Unable to delete risk calculation: %s'
 
-LOG_FORMAT = ('[%(asctime)s %(calc_domain)s #%(calc_id)s %(hostname)s '
+LOG_FORMAT = ('[%(asctime)s %(job_type)s job #%(job_id)s %(hostname)s '
               '%(levelname)s %(processName)s/%(process)s] %(message)s')
 
 TERMINATE = str2bool(config.get('celery', 'terminate_workers_on_revoke'))
@@ -90,21 +90,21 @@ def _update_log_record(self, record):
     """
     if not hasattr(record, 'hostname'):
         record.hostname = '-'
-    if not hasattr(record, 'calc_domain'):
-        record.calc_domain = self.calc_domain
-    if not hasattr(record, 'calc_id'):
-        record.calc_id = self.calc.id
+    if not hasattr(record, 'job_type'):
+        record.job_type = self.job_type
+    if not hasattr(record, 'job_id'):
+        record.job_id = self.job.id
 
 
 class LogStreamHandler(logging.StreamHandler):
     """
     Log stream handler
     """
-    def __init__(self, calc_domain, calc):
+    def __init__(self, job):
         super(LogStreamHandler, self).__init__()
         self.setFormatter(logging.Formatter(LOG_FORMAT))
-        self.calc_domain = calc_domain
-        self.calc = calc
+        self.job_type = job.job_type
+        self.job = job
 
     def emit(self, record):  # pylint: disable=E0202
         _update_log_record(self, record)
@@ -115,11 +115,11 @@ class LogFileHandler(logging.FileHandler):
     """
     Log file handler
     """
-    def __init__(self, calc_domain, calc, log_file):
+    def __init__(self, job, log_file):
         super(LogFileHandler, self).__init__(log_file)
         self.setFormatter(logging.Formatter(LOG_FORMAT))
-        self.calc_domain = calc_domain
-        self.calc = calc
+        self.job_type = job.job_type
+        self.job = job
         self.log_file = log_file
 
     def emit(self, record):  # pylint: disable=E0202
@@ -246,11 +246,10 @@ def run_calc(job, log_level, log_file, exports, job_type):
 
     calc_mode = getattr(job, '%s_calculation' % job_type).calculation_mode
     calculator = get_calculator_class(job_type, calc_mode)(job)
-    calc = job.calculation
 
     # initialize log handlers
-    handler = (LogFileHandler(job_type, calc, log_file) if log_file
-               else LogStreamHandler(job_type, calc))
+    handler = (LogFileHandler(job, log_file) if log_file
+               else LogStreamHandler(job))
     logging.root.addHandler(handler)
     logs.set_level(log_level)
     try:
