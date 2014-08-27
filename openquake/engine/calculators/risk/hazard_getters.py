@@ -249,7 +249,8 @@ class GetterBuilder(object):
     A facility to build hazard getters. When instantiated, populates
     the lists .asset_ids and .site_ids with the associations between
     the assets in the current exposure model and the sites in the
-    previous hazard calculation.
+    previous hazard calculation. It also populate the `asset_site`
+    table in the database.
 
     :param str taxonomy: the taxonomy we are interested in
     :param rc: a :class:`openquake.engine.db.models.RiskCalculation` instance
@@ -264,25 +265,29 @@ class GetterBuilder(object):
         self.hc = rc.get_hazard_calculation()
         max_dist = rc.best_maximum_distance * 1000  # km to meters
         cursor = models.getcursor('job_init')
-        cursor.execute("""
-SELECT DISTINCT ON (exp.id) exp.id AS asset_id, hsite.id AS site_id
+        cursor.execute(
+            """\
+WITH assocs AS (SELECT DISTINCT ON (exp.id) %s, exp.id, hsite.id
 FROM riski.exposure_data AS exp
 JOIN hzrdi.hazard_site AS hsite
 ON ST_DWithin(exp.site, hsite.location, %s)
 WHERE hsite.hazard_calculation_id = %s
 AND exposure_model_id = %s AND taxonomy=%s
 AND ST_COVERS(ST_GeographyFromText(%s), exp.site)
-ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
-""", (max_dist, self.hc.id, rc.exposure_model.id, taxonomy,
-            rc.region_constraint.wkt))
-        assets_sites = cursor.fetchall()
-        if not assets_sites:
+ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false))
+INSERT INTO riskr.asset_site (risk_job_id, asset_id, site_id)
+SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
+                          rc.exposure_model.id, taxonomy,
+                          rc.region_constraint.wkt))
+        self.asset_sites = models.AssetSite.objects.filter(risk_job=rc.oqjob)
+        if not self.asset_sites:
             raise AssetSiteAssociationError(
                 'Could not associated any asset of taxonomy %s to '
                 'hazard sites within the distance of %s km'
                 % (taxonomy, self.rc.best_maximum_distance))
 
-        self.asset_ids, self.site_ids = zip(*assets_sites)
+        self.asset_ids = [a.asset_id for a in self.asset_sites]
+        self.site_ids = [a.site_id for a in self.asset_sites]
         self.rupture_ids = {}
         self.epsilons = {}
         self.epsilons_shape = {}
@@ -338,18 +343,20 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
                 self.rupture_ids[scid] = ses_coll.get_ruptures(
                     ).values_list('id', flat=True)
                 num_samples = self.epsilons_shape[scid][NRUPTURES]
-                self.epsilons[scid] = make_epsilons(
+                self.epsilons[scid] = eps = make_epsilons(
                     len(self.asset_ids), num_samples,
                     self.rc.master_seed, self.rc.asset_correlation)
+                models.Epsilon.saveall(ses_coll, self.asset_sites, eps)
         elif self.hc.calculation_mode == 'scenario':
             n = self.hc.number_of_ground_motion_fields
             [out] = self.hc.oqjob.output_set.filter(output_type='ses')
             scid = out.ses.id  # ses collection id
             self.rupture_ids[scid] = out.ses.get_ruptures(
                 ).values_list('id', flat=True) or range(n)
-            self.epsilons[scid] = make_epsilons(
+            self.epsilons[scid] = eps = make_epsilons(
                 len(self.asset_ids), n, self.rc.master_seed,
                 self.rc.asset_correlation)
+            models.Epsilon.saveall(ses_coll, self.asset_sites, eps)
 
     def _indices_asset_site(self, asset_block):
         """
