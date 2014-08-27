@@ -337,7 +337,7 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
             nbytes += max(n, r) * n * BYTES_PER_FLOAT
         return nbytes
 
-    def init_epsilons(self, hazard_outputs):
+    def init_epsilons(self, hazard_outputs, monitor):
         """
         :param hazard_outputs: the outputs of a hazard calculation
 
@@ -350,16 +350,21 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
             lt_model_ids = set(ho.output_container.lt_realization.lt_model.id
                                for ho in hazard_outputs)
             for lt_model_id in lt_model_ids:
-                ses_coll = models.SESCollection.objects.get(
-                    lt_model=lt_model_id)
-                scid = ses_coll.id
-                self.rupture_ids[scid] = ses_coll.get_ruptures(
-                    ).values_list('id', flat=True)
+                with monitor.copy('reading ruptures'):
+                    ses_coll = models.SESCollection.objects.get(
+                        lt_model=lt_model_id)
+                    scid = ses_coll.id
+                    self.rupture_ids[scid] = ses_coll.get_ruptures(
+                        ).values_list('id', flat=True)
+                num_assets = len(self.asset_ids)
                 num_samples = self.epsilons_shape[scid][NRUPTURES]
-                eps = make_epsilons(
-                    len(self.asset_ids), num_samples,
-                    self.rc.master_seed, self.rc.asset_correlation)
-                models.Epsilon.saveall(ses_coll, self.asset_sites, eps)
+                logs.LOG.info('Building (%d, %d) epsilons for taxonomy %s',
+                              num_assets, num_samples, self.taxonomy)
+                with monitor.copy('building epsilons'):
+                    eps = make_epsilons(
+                        num_assets, num_samples,
+                        self.rc.master_seed, self.rc.asset_correlation)
+                    models.Epsilon.saveall(ses_coll, self.asset_sites, eps)
         elif self.hc.calculation_mode == 'scenario':
             n = self.hc.number_of_ground_motion_fields
             [out] = self.hc.oqjob.output_set.filter(output_type='ses')
@@ -375,10 +380,10 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
         """
         Build the appropriate hazard getters from the given hazard
         outputs. The assets which have no corresponding hazard site
-        within the maximum distance are discarded. A RuntimeError is
-        raised if all assets are discarded. From outputs coming from
+        within the maximum distance are discarded. An AssetSiteAssociationError
+        is raised if all assets are discarded. From outputs coming from
         an event based or a scenario calculation the right epsilons
-        corresponding to the assets are stored in the getters.
+        corresponding to the assets are stored in the database
 
         :param gettercls:
             the HazardGetter subclass to use
