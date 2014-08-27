@@ -210,10 +210,10 @@ class BaseHazardCalculator(base.Calculator):
                 trt_model.lt_model.sm_name)
             if len(sc.sources) > self.concurrent_tasks:
                 # filter in parallel
-                sc.sources = tasks.parallel_apply(
+                sc.sources = tasks.apply_reduce(
                     filter_and_split_sources,
                     (self.job.id, sc.sources, self.hc.site_collection),
-                    self.concurrent_tasks)
+                    list.__add__, [], self.concurrent_tasks)
             else:  # few sources
                 # filter sequentially on a single core
                 sc.sources = filter_and_split_sources.task_func(
