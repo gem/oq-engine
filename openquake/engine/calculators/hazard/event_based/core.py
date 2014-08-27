@@ -440,13 +440,15 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         Generate the GMFs and optionally the hazard curves too
         """
         sitecol = self.hc.site_collection
-        for trt_model in models.TrtModel.objects.filter(
-                lt_model__hazard_calculation=self.hc):
+        trt_models = models.TrtModel.objects.filter(
+            lt_model__hazard_calculation=self.hc)
+        n = trt_models.count()
+        for i, trt_model in enumerate(trt_models, 1):
             sesruptures = models.SESRupture.objects.filter(
                 rupture__trt_model=trt_model)
             logs.LOG.progress(
-                'Processing %d ruptures for TRT=%s',
-                sesruptures.count(), trt_model.tectonic_region_type)
+                '[%d of %d] Processing %d ruptures for TRT=%s',
+                i, n, sesruptures.count(), trt_model.tectonic_region_type)
             curves = tasks.apply_reduce(
                 compute_gmfs_and_curves,
                 (self.job.id, list(sesruptures), sitecol),
