@@ -82,8 +82,7 @@ def distribute_by_assets(job_id, calc, taxonomy, counts, outputdict):
     task_no = 0
     name = calc.core_calc_task.__name__ + '[%s]' % taxonomy
     otm = tasks.OqTaskManager(calc.core_calc_task, logs.LOG.progress, name)
-    with calc.monitor("building epsilons"):
-        builder.init_epsilons(haz_outs)
+    builder.init_epsilons(haz_outs, calc.monitor(''))
     for offset in range(0, counts, BLOCK_SIZE):
         with calc.monitor("getting asset chunks"):
             assets = models.ExposureData.objects.get_asset_chunk(
