@@ -116,7 +116,7 @@ def create_detect_job_file(*candidates):
     return detect_job_file
 
 
-def _prepare_job(request, hazard_output_id, hazard_calculation_id,
+def _prepare_job(request, hazard_output_id, hazard_job_id,
                  detect_job_file):
     """
     Creates a temporary directory, move uploaded files there and
@@ -242,10 +242,10 @@ def run_calc(request, job_type):
     foreign_calc_id = request.POST.get('foreign_calculation_id')
 
     hazard_output_id = request.POST.get('hazard_output_id')
-    hazard_calculation_id = request.POST.get('hazard_calculation_id')
+    hazard_job_id = request.POST.get('hazard_job_id')
 
     einfo, exctype = safely_call(
-        _prepare_job, (request, hazard_output_id, hazard_calculation_id,
+        _prepare_job, (request, hazard_output_id, hazard_job_id,
                        create_detect_job_file("job.ini", "job_risk.ini")))
     if exctype:
         tasks.update_calculation(callback_url, status="failed", einfo=einfo)
@@ -254,7 +254,7 @@ def run_calc(request, job_type):
         job_file, temp_dir = einfo
     job, _fut = submit_job(job_file, temp_dir, request.POST['database'],
                            callback_url, foreign_calc_id,
-                           hazard_output_id, hazard_calculation_id)
+                           hazard_output_id, hazard_job_id)
     try:
         response_data = _get_calc_info(job_type, job.calculation.id)
     except ObjectDoesNotExist:
@@ -265,7 +265,7 @@ def run_calc(request, job_type):
 
 def submit_job(job_file, temp_dir, dbname,
                callback_url=None, foreign_calc_id=None,
-               hazard_output_id=None, hazard_calculation_id=None,
+               hazard_output_id=None, hazard_job_id=None,
                logfile=None):
     """
     Create a job object from the given job.ini file in the job directory
@@ -273,15 +273,14 @@ def submit_job(job_file, temp_dir, dbname,
     """
     job, exctype = safely_call(
         oq_engine.job_from_file, (job_file, "platform", DEFAULT_LOG_LEVEL, [],
-                                  hazard_output_id, hazard_calculation_id))
+                                  hazard_output_id, hazard_job_id))
     if exctype:
         tasks.update_calculation(callback_url, status="failed", einfo=job)
         raise exctype(job)
 
     calc = job.calculation
-    job_type = 'risk' if job.calculation is job.risk_calculation else 'hazard'
     future = executor.submit(
-        tasks.safely_call, tasks.run_calc, job_type, calc.id, temp_dir,
+        tasks.safely_call, tasks.run_calc, job.job_type, calc.id, temp_dir,
         callback_url, foreign_calc_id, dbname, logfile)
     return job, future
 
