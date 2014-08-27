@@ -28,5 +28,5 @@ COMMENT ON TABLE riskr.epsilon IS 'The epsilons for each asset and SES collectio
 
 COMMENT ON COLUMN riskr.epsilon.asset_site_id IS 'The asset and site associated to the given epsilons';
 
-COMMENT ON COLUMN riskr.epsilon.ses_collection_id IS 'The SES collection corresponding to the given epsilons'
-COMMENT ON COLUMN riskr.epsilon.epsilons IS 'The array of epsilons'
+COMMENT ON COLUMN riskr.epsilon.ses_collection_id IS 'The SES collection corresponding to the given epsilons';
+COMMENT ON COLUMN riskr.epsilon.epsilons IS 'The array of epsilons';
