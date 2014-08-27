@@ -1533,6 +1533,19 @@ class SESCollection(djm.Model):
         db_table = 'hzrdr\".\"ses_collection'
         ordering = ['ordinal']
 
+    @property
+    def sm_lt_path(self):
+        """
+        The source model logic tree path corresponding to the collection
+        """
+        if self.lt_model is None:  # scenario
+            return ()
+        return tuple(self.lt_model.sm_lt_path)
+
+    def get_ruptures(self):
+        """Return the SESRuptures associated to self"""
+        return SESRupture.objects.filter(rupture__ses_collection=self.id)
+
     def __iter__(self):
         """
         Iterator for walking through all child :class:`SES` objects.
@@ -1548,18 +1561,9 @@ class SESCollection(djm.Model):
         """
         return self.output.oq_job.hazard_calculation.ses_per_logic_tree_path
 
-    def get_ruptures(self):
-        """Return the SESRuptures associated to self"""
-        return SESRupture.objects.filter(rupture__ses_collection=self.id)
-
-    @property
-    def sm_lt_path(self):
-        """
-        The source model logic tree path corresponding to the collection
-        """
-        if self.lt_model is None:  # scenario
-            return ()
-        return tuple(self.lt_model.sm_lt_path)
+    def __repr__(self):
+        return '<%s=%d, lt_model=%s, ordinal=%d>' % (
+            self.__class__.__name__, self.id, self.lt_model.id, self.ordinal)
 
 
 class SES(object):
@@ -3462,6 +3466,7 @@ class ExposureData(djm.Model):
 
     class Meta:
         db_table = 'riski\".\"exposure_data'
+        ordering = ['asset_ref']
 
     def __str__(self):
         return "%s (%s-%s @ %s)" % (
@@ -3599,6 +3604,11 @@ class AssetSite(djm.Model):
 
     class Meta:
         db_table = 'riskr\".\"asset_site'
+        ordering = ['asset']
+
+    def __repr__(self):
+        return '<%s=%d, (%d, %d)>' % (self.__class__.__name__,
+                                      self.id, self.asset.id, self.site.id)
 
 
 class Epsilon(djm.Model):
@@ -3619,12 +3629,16 @@ class Epsilon(djm.Model):
         """
         assert len(asset_sites) == len(epsilon_matrix), (
             len(asset_sites), len(epsilon_matrix))
-
-        writer.CacheInserter.saveall([
-            cls.objects.create(asset_site=asset_site,
-                               ses_collection=ses_coll,
-                               epsilons=list(epsilons))
-            for asset_site, epsilons in zip(asset_sites, epsilon_matrix)])
+        data = [cls(asset_site=asset_site,
+                    ses_collection=ses_coll,
+                    epsilons=list(epsilons))
+                for asset_site, epsilons in zip(asset_sites, epsilon_matrix)]
+        return writer.CacheInserter.saveall(data)
 
     class Meta:
         db_table = 'riskr\".\"epsilon'
+        ordering = ['asset_site']
+
+    def __repr__(self):
+        return '<%s %r %r>' % (self.__class__.__name__, self.asset_site,
+                               self.ses_collection)
