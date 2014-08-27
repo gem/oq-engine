@@ -4,8 +4,7 @@
 help() {
 cat <<HSD
 This script must be run as postgres user.
-`basename $0` initialises the given database with the OpenQuake schema.
-Also, table space paths are created as needed (unless this is turned off
+Table space paths are created as needed (unless this is turned off
 by the user).
 
 !! The database must not exist already !!
@@ -15,7 +14,6 @@ The command line arguments are as follows:
     --db-name=name         The name of the database to set up.
     --db-port=port         The postgresql server port (default: 5432)
     --no-tab-spaces        Don't check/create table spaces and their paths
-    --schema-path=path     Absolute path to directory with the schema files.
     --tab-spaces-only      Check/create table spaces and their paths and exit
     --verbose              Enable verbose output
     --load-fixtures=path   Load test fixtures from path
@@ -36,7 +34,6 @@ tspace_path='/var/lib/postgresql/9.1/main/ts'
 tspace_list="hzrdi hzrdr riski riskr uiapi"
 
 db_port=5432
-schema_path=`dirname $0`/../openquake/engine/db/schema
 db_name=`python -c "from openquake.engine.settings import DATABASES; print DATABASES['default']['NAME']"`
 user_interaction="on"
 check_table_spaces="on"
@@ -58,14 +55,6 @@ EOF
 for i in $*
 do
     case $i in
-    --schema-path=*)
-        schema_path=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
-        test \( -d "$schema_path" -a -r "$schema_path" \)
-        if [ $? -ne 0 ]; then
-            echo "!! Schema path $schema_path does not exist or is not readable."
-            exit 1
-        fi
-        ;;
     --db-name=*)
         db_name=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
         ;;
@@ -153,6 +142,10 @@ if [ "$check_table_spaces" == "on" ]; then
         ts_found=`psql -p $db_port -U $db_admin_user -d postgres $psql_batch_options -A -t -c "SELECT COUNT(*) FROM pg_tablespace WHERE spcname = '$full_ts_name';"`
         if [ $ts_found -eq 0 ]; then
             psql -p $db_port -d postgres -U $db_admin_user -c "CREATE TABLESPACE $full_ts_name OWNER oq_admin LOCATION'$full_tspace_path'" $psql_batch_options
+        else  # grant permission to existing tablespaces, to be sure
+            psql -p $db_port -d postgres -U $db_admin_user -c \
+            "GRANT CREATE ON tablespace $full_ts_name TO oq_admin" \
+            $psql_batch_options
         fi
     done
 fi
