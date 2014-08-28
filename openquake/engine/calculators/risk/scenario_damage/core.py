@@ -109,6 +109,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         self.acc = {}
         self.damage_state_ids = None
 
+    @EnginePerformanceMonitor.monitor
     def agg_result(self, acc, task_result):
         """
         Update the dictionary acc, i.e. aggregate the damage distribution
