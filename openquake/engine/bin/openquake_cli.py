@@ -45,7 +45,6 @@ from openquake.engine.tools.import_hazard_curves import import_hazard_curves
 from openquake.engine.tools import save_hazards, load_hazards
 
 HAZARD_OUTPUT_ARG = "--hazard-output-id"
-HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
 HAZARD_JOB_ARG = "--hazard-job-id"
 MISSING_HAZARD_MSG = ("Please specify the ID of the hazard output (or "
                       "job) to be used by using '%s (or %s) <id>'" %
@@ -145,12 +144,6 @@ def set_up_arg_parser():
         '--ho',
         help='Use the desired hazard output as input for the risk job',
         metavar='HAZARD_OUTPUT')
-    risk_grp.add_argument(
-        HAZARD_CALCULATION_ARG,
-        '--hc',
-        help=('Use the desired hazard calculation as input for the risk job'
-              ' [DEPRECATED]'),
-        metavar='HAZARD_CALCULATION_ID')
     risk_grp.add_argument(
         HAZARD_JOB_ARG,
         '--hj',
