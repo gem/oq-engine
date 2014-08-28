@@ -82,38 +82,33 @@ def build_getters(job_id, counts_taxonomy, calc):
         # initializing the epsilons
         builder.init_epsilons(haz_outs)
 
-        # building the getters
+        # building the tasks
+        task_no = 0
+        name = calc.core_calc_task.__name__ + '[%s]' % taxonomy
+        otm = tasks.OqTaskManager(calc.core_calc_task, logs.LOG.progress, name)
+
         for offset in range(0, counts, BLOCK_SIZE):
             with calc.monitor("getting asset chunks"):
                 assets = models.ExposureData.objects.get_asset_chunk(
                     calc.rc, taxonomy, offset, BLOCK_SIZE)
             with calc.monitor("building getters"):
                 try:
-                    all_getters.append(
-                        builder.make_getters(
-                            calc.getter_class, haz_outs, assets))
+                    getters = builder.make_getters(
+                        calc.getter_class, haz_outs, assets)
                 except hazard_getters.AssetSiteAssociationError as err:
                     # TODO: add a test for this corner case
                     # https://bugs.launchpad.net/oq-engine/+bug/1317796
                     logs.LOG.warn('Taxonomy %s: %s', taxonomy, err)
                     continue
 
-    return all_getters
+            # submitting task
+            task_no += 1
+            logs.LOG.info('Built task #%d for taxonomy %s', task_no, taxonomy)
+            risk_model = calc.risk_models[taxonomy]
+            otm.submit(job_id, risk_model, getters,
+                       calc.outputdict, calc.calculator_parameters)
 
-
-@tasks.oqtask
-def build_output(job_id, all_getters, outputdict, calc):
-    """
-    """
-    acc = calc.acc
-    for getters in all_getters:
-        taxonomy = getters[0].builder.taxonomy
-        risk_model = calc.risk_models[taxonomy]
-        result = calc.core_calc_task.task_func(
-            job_id, risk_model, getters, outputdict,
-            calc.calculator_parameters)
-        acc = calc.agg_result(acc, result)
-    return acc
+    return otm
 
 
 class RiskCalculator(base.Calculator):
@@ -197,19 +192,14 @@ class RiskCalculator(base.Calculator):
         """
         Method responsible for the distribution strategy.
         """
-        # first, build the getters
+        self.outputdict = writers.combine_builders(
+            [ob(self) for ob in self.output_builders])
         ct = sorted((counts, taxonomy) for taxonomy, counts
                     in self.taxonomies_asset_count.iteritems())
-        all_getters = tasks.apply_reduce(
-            build_getters, (self.job.id, ct, self), list.__add__, [],
-            self.concurrent_tasks)
-
-        # then, run the real computation
-        outputdict = writers.combine_builders(
-            [ob(self) for ob in self.output_builders])
         self.acc = tasks.apply_reduce(
-            build_output, (self.job.id, all_getters, outputdict, self),
-            self.agg_result, self.acc, self.concurrent_tasks)
+            build_getters, (self.job.id, ct, self),
+            lambda acc, otm: otm.aggregate_results(self.agg_result, acc),
+            self.acc, self.concurrent_tasks)
 
     def _get_outputs_for_export(self):
         """
