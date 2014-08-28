@@ -69,6 +69,7 @@ def do_classical(risk_model, getters, outputdict, params, monitor):
         getters, monitor.copy('getting data'))
     stats_per_loss_type = risk_model.compute_stats(
         outputs_per_loss_type, params.quantiles, post_processing)
+    import pdb; pdb.set_trace()
     for loss_type, outputs in outputs_per_loss_type.iteritems():
         stats = stats_per_loss_type[loss_type]
         with monitor.copy('saving risk'):
