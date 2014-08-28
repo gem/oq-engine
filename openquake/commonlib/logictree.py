@@ -1084,7 +1084,7 @@ class GsimLogicTree(object):
         try:
             GSIM[value]
         except KeyError:
-            raise NameError('Unknown GSIM %r' % value)
+            raise NameError('Unknown GSIM %r in file %r' % (value, self.fname))
 
     def __iter__(self):
         # yield realizations for both sampling and full enumeration

@@ -28,7 +28,7 @@ import numpy
 from lxml import etree
 
 
-from StringIO import StringIO
+from StringIO import StringIO as StringIOBase
 from decimal import Decimal
 from mock import Mock
 
@@ -40,6 +40,11 @@ from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 from openquake.commonlib import logictree
 
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
+
+
+class StringIO(StringIOBase):
+    def __repr__(self):
+        return '<StringIO>'
 
 
 class _TestableSourceModelLogicTree(logictree.SourceModelLogicTree):
@@ -1523,7 +1528,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         </logicTree>
         """)
         self.parse_invalid(
-            xml, NameError, "Unknown GSIM 'SAdighEtAl1997'")
+            xml, NameError, "Unknown GSIM 'SAdighEtAl1997' in file <StringIO>")
 
     def test_tectonic_region_type_used_twice(self):
         xml = _make_nrml("""\
