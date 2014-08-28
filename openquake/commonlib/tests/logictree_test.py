@@ -36,8 +36,6 @@ import openquake.hazardlib
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
-from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
-from openquake.hazardlib.gsim.chiou_youngs_2008 import ChiouYoungs2008
 
 from openquake.commonlib import logictree
 
@@ -58,24 +56,6 @@ class _TestableSourceModelLogicTree(logictree.SourceModelLogicTree):
 
     def _get_source_model(self, filename):
         return StringIO(self.files[filename])
-
-    def __fail(self, *args, **kwargs):
-        raise AssertionError("this method shouldn't be called")
-
-
-class _TestableGMPELogicTree(logictree.GMPELogicTree):
-    def __init__(self, filename, content, basepath, tectonic_region_types,
-                 validate=True):
-        if not validate:
-            self.validate_branchset = self.__fail
-            self.validate_tree = self.__fail
-            self.validate_filters = self.__fail
-            self.validate_uncertainty_value = self.__fail
-        super(_TestableGMPELogicTree, self).__init__(
-            tectonic_region_types, content, basepath, filename, validate)
-
-    def skip_branchset_condition(self, attrs):
-        return False
 
     def __fail(self, *args, **kwargs):
         raise AssertionError("this method shouldn't be called")
@@ -1059,97 +1039,6 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
             lt.root_branchset, 'sourceModel', {}, [('b1', '1.0', 'sm')])
 
 
-class GMPELogicTreeTestCase(unittest.TestCase):
-    def assert_result(self, lt, result):
-        actual_result = {}
-        branchset = lt.root_branchset
-        while branchset is not None:
-            self.assertNotEqual(len(branchset.branches), 0)
-            trt = branchset.filters['applyToTectonicRegionType']
-            actual_result[trt] = [
-                (branch.branch_id, str(branch.weight), branch.value)
-                for branch in branchset.branches
-            ]
-            next_branchset = branchset.branches[0].child_branchset
-            for branch in branchset.branches:
-                self.assertTrue(branch.child_branchset is next_branchset)
-            branchset = next_branchset
-            self.assertTrue(trt in result)
-            self.assertEqual(actual_result[trt], result[trt])
-        self.assertEqual(set(actual_result), set(result))
-        self.assertEqual(actual_result, result)
-
-    def test(self):
-        gmpe = _make_nrml("""\
-        <logicTree logicTreeID="lt1">
-            <logicTreeBranchingLevel branchingLevelID="bl1">
-                <logicTreeBranchSet uncertaintyType="gmpeModel"
-                            branchSetID="bs1"
-                            applyToTectonicRegionType="Subduction Interface">
-                    <logicTreeBranch branchID="b1">
-                        <uncertaintyModel>
-                            SadighEtAl1997
-                        </uncertaintyModel>
-                        <uncertaintyWeight>0.7</uncertaintyWeight>
-                    </logicTreeBranch>
-                    <logicTreeBranch branchID="b2">
-                        <uncertaintyModel>
-                            ChiouYoungs2008
-                        </uncertaintyModel>
-                        <uncertaintyWeight>0.3</uncertaintyWeight>
-                    </logicTreeBranch>
-                </logicTreeBranchSet>
-            </logicTreeBranchingLevel>
-            <logicTreeBranchingLevel branchingLevelID="bl2">
-                <logicTreeBranchSet uncertaintyType="gmpeModel"
-                            branchSetID="bs2"
-                            applyToTectonicRegionType="Active Shallow Crust">
-                    <logicTreeBranch branchID="b3">
-                        <uncertaintyModel>
-                            SadighEtAl1997
-                        </uncertaintyModel>
-                        <uncertaintyWeight>1.0</uncertaintyWeight>
-                    </logicTreeBranch>
-                </logicTreeBranchSet>
-            </logicTreeBranchingLevel>
-            <logicTreeBranchingLevel branchingLevelID="bl3">
-                <logicTreeBranchSet uncertaintyType="gmpeModel"
-                            branchSetID="bs3"
-                            applyToTectonicRegionType="Volcanic">
-                    <logicTreeBranch branchID="b4">
-                        <uncertaintyModel>
-                            ChiouYoungs2008
-                        </uncertaintyModel>
-                        <uncertaintyWeight>0.1</uncertaintyWeight>
-                    </logicTreeBranch>
-                    <logicTreeBranch branchID="b5">
-                        <uncertaintyModel>
-                            SadighEtAl1997
-                        </uncertaintyModel>
-                        <uncertaintyWeight>0.9</uncertaintyWeight>
-                    </logicTreeBranch>
-                </logicTreeBranchSet>
-            </logicTreeBranchingLevel>
-        </logicTree>
-        """)
-        trts = ['Subduction Interface', 'Active Shallow Crust', 'Volcanic']
-        gmpe_lt = _TestableGMPELogicTree('gmpe', gmpe, '/base', trts,
-                                         validate=False)
-        self.assert_result(gmpe_lt, {
-            'Subduction Interface': [
-                ('b1', '0.7', SadighEtAl1997),
-                ('b2', '0.3', ChiouYoungs2008)
-            ],
-            'Active Shallow Crust': [
-                ('b3', '1.0', SadighEtAl1997)
-            ],
-            'Volcanic': [
-                ('b4', '0.1', ChiouYoungs2008),
-                ('b5', '0.9', SadighEtAl1997),
-            ]
-        })
-
-
 class SampleTestCase(unittest.TestCase):
 
     def test_sample(self):
@@ -1616,6 +1505,26 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         self.parse_invalid(xml, logictree.InvalidLogicTree,
                            'Branching level bl1 has multiple branchsets')
 
+    def test_invalid_gsim(self):
+        xml = _make_nrml("""\
+        <logicTree logicTreeID="lt1">
+            <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                            branchSetID="bs1"
+                            applyToTectonicRegionType="Shield">
+                    <logicTreeBranch branchID="b1">
+                        <uncertaintyModel>
+                            SAdighEtAl1997
+                        </uncertaintyModel>
+                        <uncertaintyWeight>1.0</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+        </logicTree>
+        """)
+        self.parse_invalid(
+            xml, NameError, "Unknown GSIM 'SAdighEtAl1997'")
+
     def test_tectonic_region_type_used_twice(self):
         xml = _make_nrml("""\
         <logicTree logicTreeID="lt1">
@@ -1677,13 +1586,13 @@ class GsimLogicTreeTestCase(unittest.TestCase):
                                     applyToTectonicRegionType="Volcanic">
                     <logicTreeBranch branchID="b1">
                         <uncertaintyModel>
-                            SadighEtAl
+                            SadighEtAl1997
                         </uncertaintyModel>
                         <uncertaintyWeight>0.4</uncertaintyWeight>
                     </logicTreeBranch>
                     <logicTreeBranch branchID="b2">
                         <uncertaintyModel>
-                            ToroEtAl
+                            ToroEtAl2002
                         </uncertaintyModel>
                         <uncertaintyWeight>0.6</uncertaintyWeight>
                     </logicTreeBranch>

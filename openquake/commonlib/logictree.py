@@ -38,7 +38,6 @@ import openquake.nrmllib
 from openquake.nrmllib.node import node_from_xml
 
 import openquake.hazardlib
-from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 
 #: Minimum value for a seed number
 MIN_SINT_32 = -(2 ** 31)
@@ -982,167 +981,6 @@ class SourceModelLogicTree(BaseLogicTree):
         return apply_uncertainties
 
 
-class GMPELogicTree(BaseLogicTree):
-    """
-    GMPE logic tree parser.
-
-    :param tectonic_region_types:
-        Set of all tectonic region type names that are used in corresponding
-        source models. Used to check that there are GMPEs for each, but
-        no unattended ones. That check is only performed if ``validate``
-        parameter is set to ``True`` (see :class:`BaseLogicTree`), otherwise
-        it can be an empty sequence.
-    """
-    #: Base GMPE class (all valid GMPEs must extend it).
-    BASE_GMPE = GroundShakingIntensityModel
-
-    @classmethod
-    def from_hc(cls, hc, known_tectonic_region_types):
-        """
-        Return a GMPELogicTree instance from a HazardCalculation
-        """
-        fname = hc.inputs['gsim_logic_tree']
-        content = file(fname).read()
-        return cls(
-            tectonic_region_types=known_tectonic_region_types, content=content,
-            basepath=hc.base_path, filename=fname, validate=False,
-            seed=hc.random_seed, num_samples=hc.number_of_logic_tree_samples)
-
-    def __init__(self, tectonic_region_types, *args, **kwargs):
-        self.tectonic_region_types = frozenset(tectonic_region_types)
-        self.defined_tectonic_region_types = set()
-        super(GMPELogicTree, self).__init__(*args, **kwargs)
-
-    def skip_branchset_condition(self, attrs):
-        """
-        Skip the branchset if it corresponds to an unknown tectonic
-        region type.
-
-        :param attrs: a dictionary with the attributes of the branchset
-        """
-        return (attrs['applyToTectonicRegionType']
-                not in self.tectonic_region_types)
-
-    def make_trt_to_gsim(self, branch_ids):
-        """
-        :return:
-            Dictionary mapping tectonic region type names to instances
-            of hazardlib GSIM objects.
-        """
-        branchset = self.root_branchset
-        trt_to_gsim = {}
-        branch_ids = list(reversed(branch_ids))
-
-        while branchset is not None:
-            branch = branchset.get_branch_by_id(branch_ids.pop(-1))
-            trt = branchset.filters['applyToTectonicRegionType']
-
-            assert trt not in trt_to_gsim
-            trt_to_gsim[trt] = branch.value
-            branchset = branch.child_branchset
-
-        return trt_to_gsim
-
-    def parse_uncertainty_value(self, node, branchset, classname):
-        """
-        See superclass' method for description and signature specification.
-
-        Convert gmpe import path to a gmpe object.
-        """
-        return GSIM[classname]
-
-    def validate_uncertainty_value(self, node, branchset, value):
-        """
-        See superclass' method for description and signature specification.
-
-        Checks that the value is a class name in the dictionary reported
-        by get_available_gsims, i.e. a GSIM class.
-        """
-        try:
-            GSIM[value]
-        except KeyError:
-            raise ValidationError(
-                node, self.filename, self.basepath,
-                'unknown class %r; available classes are: %s' % (
-                    value, list(GSIM)))
-
-    def parse_filters(self, node, uncertainty_type, filters):
-        """
-        See superclass' method for description and signature specification.
-
-        Does nothing, simply returns ``filters``.
-        """
-        return filters
-
-    def validate_filters(self, node, uncertainty_type, filters):
-        """
-        See superclass' method for description and signature specification.
-
-        Checks that there is only one filter -- "applyToTectonicRegionType",
-        its value is used only once and appears in the set of types, provided
-        to constructor.
-        """
-        if not filters \
-                or len(filters) > 1 \
-                or filters.keys() != ['applyToTectonicRegionType']:
-            raise ValidationError(
-                node, self.filename, self.basepath,
-                'branch sets in gmpe logic tree must define only '
-                '"applyToTectonicRegionType" filter'
-            )
-        trt = filters['applyToTectonicRegionType']
-        if not trt in self.tectonic_region_types:
-            raise ValidationError(
-                node, self.filename, self.basepath,
-                "source models don't define sources of tectonic region "
-                "type %r" % trt
-            )
-        if trt in self.defined_tectonic_region_types:
-            raise ValidationError(
-                node, self.filename, self.basepath,
-                'gmpe uncertainty for tectonic region type %r has already '
-                'been defined' % trt
-            )
-        self.defined_tectonic_region_types.add(trt)
-
-    def validate_tree(self, tree_node, root_branchset):
-        """
-        See superclass' method for description and signature specification.
-
-        Checks that for all tectonic region types that are defined in source
-        models there is a branchset defined.
-        """
-        missing_trts = self.tectonic_region_types \
-            - self.defined_tectonic_region_types
-        if missing_trts:
-            raise ValidationError(
-                tree_node, self.filename, self.basepath,
-                'the following tectonic region types are defined '
-                'in source model logic tree but not in gmpe logic tree: %s' %
-                list(sorted(missing_trts))
-            )
-
-    def validate_branchset(self, branchset_node, depth, number, branchset):
-        """
-        See superclass' method for description and signature specification.
-
-        Checks that uncertainty type is "gmpeModel" (only those are allowed)
-        and that there is only one branchset in each branching level.
-        """
-        if not branchset.uncertainty_type == 'gmpeModel':
-            raise ValidationError(
-                branchset_node, self.filename, self.basepath,
-                'only uncertainties of type "gmpeModel" are allowed '
-                'in gmpe logic tree'
-            )
-        if number != 0:
-            raise ValidationError(
-                branchset_node, self.filename, self.basepath,
-                'only one branchset on each branching level is allowed '
-                'in gmpe logic tree'
-            )
-
-
 BranchTuple = namedtuple('BranchTuple', 'bset, id, uncertainty, weight')
 
 
@@ -1227,6 +1065,7 @@ class GsimLogicTree(object):
                         weights.append(weight)
                         branch_id = branch['branchID']
                         uncertainty = branch.uncertaintyModel.text.strip()
+                        self.validate_gsim(uncertainty)
                         self.values[fkey].append(uncertainty)
                         yield BranchTuple(
                             branchset, branch_id, uncertainty, weight)
@@ -1234,6 +1073,18 @@ class GsimLogicTree(object):
         if len(fkeys) > len(set(fkeys)):
             raise InvalidLogicTree('Found duplicated %s=%s' % (
                 self.branchset_filter, fkeys))
+
+    def validate_gsim(self, value):
+        """
+        Checks that the value is a class name in the dictionary reported
+        by get_available_gsims, i.e. a GSIM class.
+
+        :param str value: the name of an existing GSIM class
+        """
+        try:
+            GSIM[value]
+        except KeyError:
+            raise NameError('Unknown GSIM %r' % value)
 
     def __iter__(self):
         # yield realizations for both sampling and full enumeration
