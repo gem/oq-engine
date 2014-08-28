@@ -48,62 +48,72 @@ correlation matrix.'''
 
 
 @tasks.oqtask
-def distribute_by_assets(job_id, calc, taxonomy, counts, outputdict):
+def build_getters(job_id, counts_taxonomy, calc):
     """
-    Spawn risk tasks and return an OqTaskManager instance.
-
     :param job_id:
         ID of the current risk job
+    :param counts_taxonomy:
+        a sorted list of pairs (counts, taxonomy) for each bunch of assets
     :param calc:
         :class:`openquake.engine.calculators.risk.base.RiskCalculator` instance
-    :param str taxonomy:
-        taxonomy of the current bunch of assets
-    :param int counts:
-        number of assets of the given taxonomy
-    :param outputdict:
-        :class:`openquake.engine.calculators.risk.writers.OutputDict` instance
     """
-    logs.LOG.info('taxonomy=%s, assets=%d', taxonomy, counts)
-    with calc.monitor("associating asset->site"):
-        builder = hazard_getters.GetterBuilder(
-            taxonomy, calc.rc, calc.eps_sampling)
-    haz_outs = calc.rc.hazard_outputs()
-    nbytes = builder.calc_nbytes(haz_outs)
-    if nbytes:
-        # TODO: the estimate should be revised by taking into account
-        # the number of realizations
-        estimate_mb = nbytes / 1024 / 1024 * 3
-        phymem = psutil.phymem_usage()
-        available_memory = (1 - phymem.percent / 100) * phymem.total
-        available_mb = available_memory / 1024 / 1024
-        if nbytes * 3 > available_memory:
-            raise MemoryError(MEMORY_ERROR % (estimate_mb, available_mb))
+    all_getters = []
+    for counts, taxonomy in counts_taxonomy:
+        logs.LOG.info('taxonomy=%s, assets=%d', taxonomy, counts)
 
-    task_no = 0
-    name = calc.core_calc_task.__name__ + '[%s]' % taxonomy
-    otm = tasks.OqTaskManager(calc.core_calc_task, logs.LOG.progress, name)
-    builder.init_epsilons(haz_outs)
-    for offset in range(0, counts, BLOCK_SIZE):
-        with calc.monitor("getting asset chunks"):
-            assets = models.ExposureData.objects.get_asset_chunk(
-                calc.rc, taxonomy, offset, BLOCK_SIZE)
-        with calc.monitor("building getters"):
-            try:
-                getters = builder.make_getters(
-                    calc.getter_class, haz_outs, assets)
-            except hazard_getters.AssetSiteAssociationError as err:
-                # TODO: add a test for this corner case
-                # https://bugs.launchpad.net/oq-engine/+bug/1317796
-                logs.LOG.warn('Taxonomy %s: %s', taxonomy, err)
-                continue
-        # submitting task
-        task_no += 1
-        logs.LOG.info('Built task #%d for taxonomy %s', task_no, taxonomy)
+        # building the GetterBuilder
+        with calc.monitor("associating asset->site"):
+            builder = hazard_getters.GetterBuilder(
+                taxonomy, calc.rc, calc.eps_sampling)
+
+        # estimating the needed memory
+        haz_outs = calc.rc.hazard_outputs()
+        nbytes = builder.calc_nbytes(haz_outs)
+        if nbytes:
+            # TODO: the estimate should be revised by taking into account
+            # the number of realizations
+            estimate_mb = nbytes / 1024 / 1024 * 3
+            phymem = psutil.phymem_usage()
+            available_memory = (1 - phymem.percent / 100) * phymem.total
+            available_mb = available_memory / 1024 / 1024
+            if nbytes * 3 > available_memory:
+                raise MemoryError(MEMORY_ERROR % (estimate_mb, available_mb))
+
+        # initializing the epsilons
+        builder.init_epsilons(haz_outs)
+
+        # building the getters
+        for offset in range(0, counts, BLOCK_SIZE):
+            with calc.monitor("getting asset chunks"):
+                assets = models.ExposureData.objects.get_asset_chunk(
+                    calc.rc, taxonomy, offset, BLOCK_SIZE)
+            with calc.monitor("building getters"):
+                try:
+                    all_getters.append(
+                        builder.make_getters(
+                            calc.getter_class, haz_outs, assets))
+                except hazard_getters.AssetSiteAssociationError as err:
+                    # TODO: add a test for this corner case
+                    # https://bugs.launchpad.net/oq-engine/+bug/1317796
+                    logs.LOG.warn('Taxonomy %s: %s', taxonomy, err)
+                    continue
+
+    return all_getters
+
+
+@tasks.oqtask
+def build_output(job_id, all_getters, outputdict, calc):
+    """
+    """
+    acc = calc.acc
+    for getters in all_getters:
+        taxonomy = getters[0].builder.taxonomy
         risk_model = calc.risk_models[taxonomy]
-        otm.submit(calc.job.id, risk_model, getters, outputdict,
-                   calc.calculator_parameters)
-
-    return otm
+        result = calc.core_calc_task.task_func(
+            job_id, risk_model, getters, outputdict,
+            calc.calculator_parameters)
+        acc = calc.agg_result(acc, result)
+    return acc
 
 
 class RiskCalculator(base.Calculator):
@@ -127,7 +137,6 @@ class RiskCalculator(base.Calculator):
                   validation.NoRiskModels]
 
     bcr = False  # flag overridden in BCR calculators
-    run_subtasks = distribute_by_assets
 
     def __init__(self, job):
         super(RiskCalculator, self).__init__(job)
@@ -186,28 +195,21 @@ class RiskCalculator(base.Calculator):
     @EnginePerformanceMonitor.monitor
     def execute(self):
         """
-        Method responsible for the distribution strategy. It divides
-        the considered exposure into chunks of homogeneous assets
-        (i.e. having the same taxonomy).
+        Method responsible for the distribution strategy.
         """
-        def agg(acc, otm):
-            return otm.aggregate_results(self.agg_result, acc)
-        run = self.run_subtasks
-        name = run.__name__ + '[%s]' % self.core_calc_task.__name__
-        self.acc = tasks.map_reduce(
-            run, self.task_arg_gen(), agg, self.acc, name)
-
-    def task_arg_gen(self):
-        """
-        Yields the argument to be submitted to run_subtasks. Tasks with
-        fewer assets are submitted first.
-        """
-        outputdict = writers.combine_builders(
-            [ob(self) for ob in self.output_builders])
+        # first, build the getters
         ct = sorted((counts, taxonomy) for taxonomy, counts
                     in self.taxonomies_asset_count.iteritems())
-        for counts, taxonomy in ct:
-            yield self.job.id, self, taxonomy, counts, outputdict
+        all_getters = tasks.apply_reduce(
+            build_getters, (self.job.id, ct, self), list.__add__, [],
+            self.concurrent_tasks)
+
+        # then, run the real computation
+        outputdict = writers.combine_builders(
+            [ob(self) for ob in self.output_builders])
+        self.acc = tasks.apply_reduce(
+            build_output, (self.job.id, all_getters, outputdict, self),
+            self.agg_result, self.acc, self.concurrent_tasks)
 
     def _get_outputs_for_export(self):
         """
