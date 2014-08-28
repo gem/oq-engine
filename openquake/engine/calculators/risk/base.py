@@ -154,11 +154,12 @@ class RiskCalculator(base.Calculator):
             3. Validate exposure and risk models
         """
         with self.monitor('get exposure'):
-            self.taxonomies_asset_count = (
-                self.rc.preloaded_exposure_model or
+            exposure = self.rc.exposure_model
+            if exposure is None:
                 ExposureDBWriter(self.job).serialize(
                     parsers.ExposureModelParser(self.rc.inputs['exposure']))
-                ).taxonomies_in(self.rc.region_constraint)
+            self.taxonomies_asset_count = \
+                self.rc.exposure_model.taxonomies_in(self.rc.region_constraint)
 
         with self.monitor('parse risk models'):
             self.risk_models = self.get_risk_models()
