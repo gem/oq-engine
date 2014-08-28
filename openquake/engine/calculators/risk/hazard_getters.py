@@ -361,8 +361,7 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
             ses_collections = []
         for ses_coll in ses_collections:
             scid = ses_coll.id  # ses collection id
-            num_assets = len(self.asset_ids)
-            num_samples = self.epsilons_shape[scid][NRUPTURES]
+            num_assets, num_samples = self.epsilons_shape[scid]
             self.rupture_ids[scid] = ses_coll.get_ruptures(
                 ).values_list('id', flat=True) or range(
                 self.hc.number_of_ground_motion_fields)
@@ -401,10 +400,27 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
                 % (annotated_assets, self.rc.best_maximum_distance))
         if not self.epsilons_shape:
             self.init_epsilons(hazard_outputs)
-        asset_ids = set(a.asset.id for a in asset_sites)
-        annotated = [asset for asset in annotated_assets
-                     if asset.id in asset_ids]
-        site_ids = [x.site.id for x in asset_sites]
+
+        # skip the annotated assets without hazard
+        asset_site_dict = {a.asset.id: a.site.id for a in asset_sites}
+        annotated = []
+        site_ids = []
+        skipped = []
+        for asset in annotated_assets:
+            try:
+                site_id = asset_site_dict[asset.id]
+            except KeyError:
+                # skipping assets without hazard
+                skipped.append(asset.asset_ref)
+                continue
+            annotated.append(asset)
+            site_ids.append(site_id)
+        if skipped:
+            logs.LOG.warn('Could not associate %d assets to hazard sites '
+                          'within the distance of %s km', len(skipped),
+                          self.rc.best_maximum_distance)
+
+        # build the getters
         getters = []
         for ho in hazard_outputs:
             getter = gettercls(ho, annotated, site_ids)
