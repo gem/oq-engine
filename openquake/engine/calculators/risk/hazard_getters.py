@@ -187,7 +187,7 @@ class GroundMotionValuesGetter(HazardGetter):
         """
         epsilon_rows = []  # ordered by asset_site_id
         for eps in models.Epsilon.objects.filter(
-                ses_collection=self.sescoll,
+                ses_collection=self.sescoll.id,
                 asset_site__in=self.asset_site_ids):
             epsilon_rows.append(eps.epsilons)
         assert epsilon_rows, ('No epsilons for ses_collection_id=%s' %
@@ -337,7 +337,7 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
             nbytes += max(n, r) * n * BYTES_PER_FLOAT
         return nbytes
 
-    def init_epsilons(self, hazard_outputs, monitor):
+    def init_epsilons(self, hazard_outputs):
         """
         :param hazard_outputs: the outputs of a hazard calculation
 
@@ -349,32 +349,27 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
         if self.hc.calculation_mode == 'event_based':
             lt_model_ids = set(ho.output_container.lt_realization.lt_model.id
                                for ho in hazard_outputs)
-            for lt_model_id in lt_model_ids:
-                with monitor.copy('reading ruptures'):
-                    ses_coll = models.SESCollection.objects.get(
-                        lt_model=lt_model_id)
-                    scid = ses_coll.id
-                    self.rupture_ids[scid] = ses_coll.get_ruptures(
-                        ).values_list('id', flat=True)
-                num_assets = len(self.asset_ids)
-                num_samples = self.epsilons_shape[scid][NRUPTURES]
-                logs.LOG.info('Building (%d, %d) epsilons for taxonomy %s',
-                              num_assets, num_samples, self.taxonomy)
-                with monitor.copy('building epsilons'):
-                    eps = make_epsilons(
-                        num_assets, num_samples,
-                        self.rc.master_seed, self.rc.asset_correlation)
-                    models.Epsilon.saveall(ses_coll, self.asset_sites, eps)
+            ses_collections = [
+                models.SESCollection.objects.get(lt_model=lt_model_id)
+                for lt_model_id in lt_model_ids]
         elif self.hc.calculation_mode == 'scenario':
-            n = self.hc.number_of_ground_motion_fields
             [out] = self.hc.oqjob.output_set.filter(output_type='ses')
-            scid = out.ses.id  # ses collection id
-            self.rupture_ids[scid] = out.ses.get_ruptures(
-                ).values_list('id', flat=True) or range(n)
+            ses_collections = [out.ses]
+        else:
+            ses_collections = []
+        for ses_coll in ses_collections:
+            scid = ses_coll.id  # ses collection id
+            num_assets = len(self.asset_ids)
+            num_samples = self.epsilons_shape[scid][NRUPTURES]
+            self.rupture_ids[scid] = ses_coll.get_ruptures(
+                ).values_list('id', flat=True) or range(
+                self.hc.number_of_ground_motion_fields)
+            logs.LOG.info('Building (%d, %d) epsilons for taxonomy %s',
+                          num_assets, num_samples, self.taxonomy)
             eps = make_epsilons(
-                len(self.asset_ids), n, self.rc.master_seed,
-                self.rc.asset_correlation)
-            models.Epsilon.saveall(out.ses, self.asset_sites, eps)
+                num_assets, num_samples,
+                self.rc.master_seed, self.rc.asset_correlation)
+            models.Epsilon.saveall(ses_coll, self.asset_sites, eps)
 
     def make_getters(self, gettercls, hazard_outputs, annotated_assets):
         """
