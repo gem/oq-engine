@@ -71,6 +71,7 @@ class HazardGetter(object):
         The ids of the sites associated to the hazards
     """
     builder = None  # set by the GetterBuilder
+    epsilons = None  # overridden in the GroundMotionValuesGetter
 
     def __init__(self, hazard_output, assets, site_ids):
         self.hazard_output = hazard_output
@@ -80,8 +81,9 @@ class HazardGetter(object):
     def __repr__(self):
         shape = getattr(self.epsilons, 'shape', None)
         eps = ', %s epsilons' % str(shape) if shape else ''
-        return "<%s %d assets%s>" % (
-            self.__class__.__name__, len(self.assets), eps)
+        return "<%s %d assets%s, taxonomy=%s>" % (
+            self.__class__.__name__, len(self.assets), eps,
+            self.builder.taxonomy)
 
     def get_data(self):
         """
