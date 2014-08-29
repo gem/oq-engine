@@ -44,10 +44,17 @@ DEFAULT_CURVE_RESOLUTION = 50
 
 
 class VulnerabilityFunction(object):
-    # FIXME (lp). Provide description
     def __init__(self, imt, imls, mean_loss_ratios, covs=None,
                  distribution="LN"):
         """
+        A wrapper around a probabilistic distribution function
+        (currently only the log normal distribution is supported).
+        It is meant to be pickeable to allow distributed computation.
+        The only important method is `.apply_to`, which applies
+        the vulnerability function to a given set of ground motion
+        fields and epsilons and return a loss matrix with N x R
+        elements.
+
         :param str imt: Intensity Measure Type as a string
 
         :param list imls: Intensity Measure Levels for the
@@ -103,14 +110,17 @@ class VulnerabilityFunction(object):
     def apply_to(self, ground_motion_values, epsilons):
         """
         Apply a copy of the vulnerability function to a set of N
-        ground motion vectors, by using N epsilon vectors of length R.
-        N is the number of assets and R the number of realizations.
+        ground motion vectors, by using N epsilon vectors of length R,
+        where N is the number of assets and R the number of realizations.
 
         :param ground_motion_values:
            matrix of floats N x R
         :param epsilons:
            matrix of floats N x R
         """
+        # NB: changing the order of the ground motion values for a given
+        # asset without changing the order of the corresponding epsilon
+        # values gives inconsistent results, see the MeanLossTestCase
         assert len(epsilons) == len(ground_motion_values), (
             len(epsilons), len(ground_motion_values))
         vulnerability_function = copy.copy(self)
@@ -224,7 +234,7 @@ class VulnerabilityFunction(object):
         ret = numpy.zeros(len(imls))
 
         # imls are clipped to max(iml)
-        imls = numpy.piecewise(
+        imls_curve = numpy.piecewise(
             imls,
             [imls > self.imls[-1]],
             [self.imls[-1], lambda x: x])
@@ -232,14 +242,13 @@ class VulnerabilityFunction(object):
         # for imls such that iml > min(iml) we get a mean loss ratio
         # by interpolation and sample the distribution
 
-        idxs = numpy.where(imls >= self.imls[0])[0]
-        imls = numpy.array(imls)[idxs]
-        means = self._mlr_i1d(imls)
+        idxs, = numpy.where(imls_curve >= self.imls[0])
+        imls_curve = numpy.array(imls_curve)[idxs]
+        means = self._mlr_i1d(imls_curve)
 
         # apply uncertainty
-        covs = self._cov_for(imls)
-        ret[idxs] = self.distribution.sample(means, covs, covs * imls)
-
+        covs = self._cov_for(imls_curve)
+        ret[idxs] = self.distribution.sample(means, covs, covs * imls_curve)
         return ret
 
     @utils.memoized
@@ -482,23 +491,24 @@ class LogNormalDistribution(Distribution):
     :func:`numpy.random.multivariate_normal` with dimensions
     assets_num x samples_num.
 
-    :attr epsilon_idx: a counter used in sampling to iterate over the
+    :attr asset_idx: a counter used in sampling to iterate over the
     attribute `epsilons`
     """
     def __init__(self, epsilons=None):
         self.epsilons = epsilons
-        self.epsilon_idx = 0
+        self.asset_idx = 0
 
     def sample(self, means, covs, _stddevs):
         if self.epsilons is None:
             raise ValueError("A LogNormalDistribution must be initialized "
                              "before you can use it")
-        epsilons = self.epsilons[self.epsilon_idx]
-        self.epsilon_idx += 1
+        epsilons = self.epsilons[self.asset_idx]
+        self.asset_idx += 1
         if isinstance(epsilons, (numpy.ndarray, list, tuple)):
             epsilons = epsilons[0:len(covs)]
         sigma = numpy.sqrt(numpy.log(covs ** 2.0 + 1.0))
-        return means / numpy.sqrt(1 + covs ** 2) * numpy.exp(epsilons * sigma)
+        probs = means / numpy.sqrt(1 + covs ** 2) * numpy.exp(epsilons * sigma)
+        return probs
 
     def survival(self, loss_ratio, mean, stddev):
         # scipy does not handle correctly the limit case stddev = 0.

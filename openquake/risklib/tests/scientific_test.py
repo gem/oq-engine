@@ -22,6 +22,8 @@ import pickle
 import numpy
 from openquake.risklib import DegenerateDistribution, utils, scientific
 
+aaae = numpy.testing.assert_array_almost_equal
+
 
 class DegenerateDistributionTest(unittest.TestCase):
     def setUp(self):
@@ -239,7 +241,36 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
             [0.000, 0.000, 0.000, 0.000, 0.917],
             [0.000, 0.000, 0.000, 0.000, 0.480],
         ])
-        numpy.testing.assert_array_almost_equal(lrem, expected_lrem, decimal=3)
+        aaae(lrem, expected_lrem, decimal=3)
+
+
+class MeanLossTestCase(unittest.TestCase):
+    def test_mean_loss(self):
+        vf = scientific.VulnerabilityFunction(
+            'PGA', imls=[0.1, 0.2, 0.3, 0.5, 0.7],
+            mean_loss_ratios=[0.0035, 0.07, 0.14, 0.28, 0.56],
+            covs=[0.1, 0.2, 0.3, 0.4, 0.5])
+
+        epsilons = [0.98982371, 0.2776809, -0.44858935, 0.96196624,
+                    -0.82757864, 0.53465707, 1.22838619]
+        imls = [0.280357, 0.443609, 0.241845, 0.506982, 0.459758,
+                0.456199, 0.38077]
+        mean = vf.apply_to([imls], [epsilons])[0].mean()
+        aaae(mean, 0.2318058254)
+
+        # if you don't reorder the epsilons, the mean loss depends on
+        # the order of the imls!
+        reordered_imls = [0.443609, 0.280357, 0.241845, 0.506982, 0.459758,
+                          0.456199, 0.38077]
+        mean2 = vf.apply_to([reordered_imls], [epsilons])[0].mean()
+        aaae(mean2, 0.238145174018)
+        self.assertGreater(abs(mean2 - mean), 0.005)
+
+        # by reordering the epsilons the problem is solved
+        reordered_epsilons = [0.2776809, 0.98982371, -0.44858935, 0.96196624,
+                              -0.82757864, 0.53465707, 1.22838619]
+        mean3 = vf.apply_to([reordered_imls], [reordered_epsilons])[0].mean()
+        aaae(mean3, mean)
 
 
 class LogNormalDistributionTestCase(unittest.TestCase):
