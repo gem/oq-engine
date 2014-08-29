@@ -8,7 +8,12 @@ from openquake.engine import writer, engine
 
 
 def create_ses_gmf(job, fname):
-    # create ses output
+    """
+    Create SES and GMF output records.
+
+    :param job: an :class:`openquake.engine.db.models.OqJob` instance
+    :param fname: name of the file containing the GMF data
+    """
     output = models.Output.objects.create(
         oq_job=job,
         display_name='SES Collection',
