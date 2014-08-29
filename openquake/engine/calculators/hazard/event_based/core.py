@@ -228,19 +228,22 @@ def compute_gmfs_and_curves(job_id, task_no, ses_ruptures, sitecol):
     :param int task_no:
         the ordinal number of the currently running task
     :param ses_ruptures:
-        a list with of SESRuptures with homogeneous TrtModel
+        a list of blocks of SESRuptures with homogeneous TrtModel
     :param sitecol:
         a SiteCollection instance
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     imts = map(from_string, hc.intensity_measure_types)
-    # NB: by construction ses_ruptures is a non-empty list with
+
+    result = {}  # trt_model_id -> (curves_by_gsim, [])
+    # NB: by construction each block is a non-empty list with
     # ruptures of homogeneous trt_model
     trt_model = ses_ruptures[0].rupture.trt_model
     rlzs_by_gsim = trt_model.get_rlzs_by_gsim()
     gsims = [logictree.GSIM[gsim]() for gsim in rlzs_by_gsim]
-    calc = GmfCalculator(sorted(imts), sorted(gsims), trt_model.id, task_no,
-                         hc.truncation_level, hc.get_correl_model())
+    calc = GmfCalculator(
+        sorted(imts), sorted(gsims), trt_model.id,
+        task_no, hc.truncation_level, hc.get_correl_model())
 
     with EnginePerformanceMonitor(
             'computing gmfs', job_id, compute_gmfs_and_curves):
@@ -253,19 +256,20 @@ def compute_gmfs_and_curves(job_id, task_no, ses_ruptures, sitecol):
 
     if hc.hazard_curves_from_gmfs:
         with EnginePerformanceMonitor(
-                'hazard curves from gmfs', job_id, compute_gmfs_and_curves):
-            curves_by_gsim = calc.to_haz_curves(
+                'hazard curves from gmfs',
+                job_id, compute_gmfs_and_curves):
+            result[trt_model.id] = (calc.to_haz_curves(
                 sitecol.sids, hc.intensity_measure_types_and_levels,
-                hc.investigation_time, hc.ses_per_logic_tree_path)
+                hc.investigation_time, hc.ses_per_logic_tree_path), [])
     else:
-        curves_by_gsim = []
+        result[trt_model.id] = ([], [])
 
     if hc.ground_motion_fields:
         with EnginePerformanceMonitor(
                 'saving gmfs', job_id, compute_gmfs_and_curves):
             calc.save_gmfs(rlzs_by_gsim)
 
-    return curves_by_gsim, trt_model.id, []
+    return result
 
 
 class GmfCalculator(object):
@@ -440,21 +444,17 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         Generate the GMFs and optionally the hazard curves too
         """
         sitecol = self.hc.site_collection
-        trt_models = models.TrtModel.objects.filter(
-            lt_model__hazard_calculation=self.hc)
-        n = trt_models.count()
-        for i, trt_model in enumerate(trt_models, 1):
-            sesruptures = models.SESRupture.objects.filter(
-                rupture__trt_model=trt_model)
-            logs.LOG.progress(
-                '[%d of %d] Processing %d ruptures for TRT=%s',
-                i, n, sesruptures.count(), trt_model.tectonic_region_type)
-            curves = tasks.apply_reduce(
-                compute_gmfs_and_curves,
-                (self.job.id, list(sesruptures), sitecol),
-                self.agg_curves, {}, self.concurrent_tasks)
-            # NB: dictionaries (trt_model_id, gsim_name) -> curves
-            self.curves.update(curves)
+        sesruptures = []  # collect the ruptures in a fixed order
+        for trt_model in models.TrtModel.objects.filter(
+                lt_model__hazard_calculation=self.hc):
+            sesruptures.extend(
+                models.SESRupture.objects.filter(
+                    rupture__trt_model=trt_model))
+        self.curves = tasks.apply_reduce(
+            compute_gmfs_and_curves,
+            (self.job.id, sesruptures, sitecol),
+            self.agg_curves, {}, self.concurrent_tasks,
+            key=lambda sr: sr.rupture.trt_model.id)
 
     def initialize_ses_db_records(self, lt_model):
         """
