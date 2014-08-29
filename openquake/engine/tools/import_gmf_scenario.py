@@ -7,6 +7,29 @@ from openquake.engine.db import models
 from openquake.engine import writer, engine
 
 
+def create_ses_gmf(job, fname):
+    """
+    Create SES and GMF output records.
+
+    :param job: an :class:`openquake.engine.db.models.OqJob` instance
+    :param fname: name of the file containing the GMF data
+    """
+    output = models.Output.objects.create(
+        oq_job=job,
+        display_name='SES Collection',
+        output_type='ses')
+    ses_coll = models.SESCollection.objects.create(
+        output=output, lt_model=None, ordinal=0)
+
+    # create gmf output
+    output = models.Output.objects.create(
+        oq_job=job,
+        display_name="Imported from %r'" % fname,
+        output_type="gmf_scenario")
+    gmf = models.Gmf.objects.create(output=output)
+    return ses_coll, gmf
+
+
 def import_rows(hc, gmf_coll, rows):
     """
     Import a list of records into the gmf_data and hazard_site tables.
@@ -24,7 +47,8 @@ def import_rows(hc, gmf_coll, rows):
         gmfs.append(
             models.GmfData(
                 imt=imt_type, sa_period=sa_period, sa_damping=sa_damping,
-                gmvs=gmvs, site_id=site_id[wkt], gmf=gmf_coll, task_no=0))
+                gmvs=gmvs, rupture_ids=range(len(gmvs)),
+                site_id=site_id[wkt], gmf=gmf_coll, task_no=0))
     del site_id
     writer.CacheInserter.saveall(gmfs)
 
@@ -53,12 +77,7 @@ def import_gmf_scenario(fileobj):
     )
     # XXX: probably the maximum_distance should be entered by the user
 
-    out = models.Output.objects.create(
-        oq_job=job,
-        display_name='Imported from %r' % fname,
-        output_type='gmf_scenario')
-
-    gmf_coll = models.Gmf.objects.create(output=out)
+    ses_coll, gmf_coll = create_ses_gmf(job, fname)
 
     rows = []
     if fname.endswith('.xml'):
@@ -80,7 +99,7 @@ def import_gmf_scenario(fileobj):
     job.duration = time.time() - t0
     job.status = 'complete'
     job.save()
-    return out
+    return gmf_coll.output
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()

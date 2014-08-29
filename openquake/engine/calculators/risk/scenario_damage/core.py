@@ -99,7 +99,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
 
     # FIXME. scenario damage calculator does not use output builders
     output_builders = []
-    getter_class = hazard_getters.ScenarioGetter
+    getter_class = hazard_getters.GroundMotionValuesGetter
 
     def __init__(self, job):
         super(ScenarioDamageRiskCalculator, self).__init__(job)
