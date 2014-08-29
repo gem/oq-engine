@@ -1550,7 +1550,7 @@ class SESCollection(djm.Model):
 
     def get_ruptures(self):
         """Return the SESRuptures associated to self"""
-        return SESRupture.objects.filter(rupture__ses_collection=self)
+        return SESRupture.objects.filter(rupture__ses_collection=self.id)
 
     @property
     def sm_lt_path(self):

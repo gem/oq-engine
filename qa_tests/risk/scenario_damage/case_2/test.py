@@ -128,7 +128,7 @@ class ScenarioDamageRiskCase2TestCase(risk.BaseRiskQATestCase):
         job = helpers.get_job(
             helpers.get_data_path("scenario_hazard/job.ini"))
         fname = self._test_path('../case_1/gmf_scenario.csv')
-        helpers.populate_gmf_data_from_csv(job, fname)
+        helpers.create_gmf_from_csv(job, fname, 'gmf_scenario')
         return job
 
     def expected_outputs(self):

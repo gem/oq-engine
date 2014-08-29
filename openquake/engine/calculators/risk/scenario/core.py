@@ -103,7 +103,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
 
     output_builders = [writers.LossMapBuilder]
 
-    getter_class = hazard_getters.ScenarioGetter
+    getter_class = hazard_getters.GroundMotionValuesGetter
 
     def __init__(self, job):
         super(ScenarioRiskCalculator, self).__init__(job)
