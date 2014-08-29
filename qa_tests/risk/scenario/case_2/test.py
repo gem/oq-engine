@@ -31,7 +31,7 @@ class ScenarioRiskCase2TestCase(risk.BaseRiskQATestCase):
         job = helpers.get_job(
             helpers.get_data_path("scenario_hazard/job.ini"))
         fname = self._test_path('gmf_scenario.csv')
-        helpers.populate_gmf_data_from_csv(job, fname)
+        helpers.create_gmf_from_csv(job, fname, 'gmf_scenario')
         # this is needed to make happy the GetterBuilder
         job.hazard_calculation.number_of_ground_motion_fields = 1000
         job.hazard_calculation.save()
@@ -46,7 +46,7 @@ class ScenarioRiskCase2TestCase(risk.BaseRiskQATestCase):
         return data
 
     def expected_data(self):
-        return [[[522.675485, 248.86320],
-                 [516.1156, 369.162],
-                 [200.0154, 94.8534]],
-                [1238.806, 519.7878]]
+        return [[[523.06275339, 248.83131322],
+                 [500.83619571, 324.42264285],
+                 [200.3348642,  96.17884412]],
+                [1224.23381329, 478.73144303]]
