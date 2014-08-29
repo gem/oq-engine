@@ -60,6 +60,8 @@ POES_PARAM_NAME = "POES"
 # Dilation in decimal degrees (http://en.wikipedia.org/wiki/Decimal_degrees)
 # 1e-5 represents the approximate distance of one meter at the equator.
 DILATION_ONE_METER = 1e-5
+ # the following is quite arbitrary, it gives output weights that I like (MS)
+NORMALIZATION_FACTOR = 1E-4
 
 
 class InputWeightLimit(Exception):
@@ -278,7 +280,7 @@ class BaseHazardCalculator(base.Calculator):
         :param acc:
             A dictionary of curves
         :param result:
-            A triplet `(curves_by_gsim, trt_model_id, bbs)`.
+            A dictionary `{trt_model_id: (curves_by_gsim, bbs)}`.
             `curves_by_gsim` is a list of pairs `(gsim, curves_by_imt)`
             where `curves_by_imt` is a list of 2-D numpy arrays
             representing the new results which need to be combined
@@ -286,18 +288,18 @@ class BaseHazardCalculator(base.Calculator):
             `acc[tr_model_id, gsim][j]` where `gsim` is the GSIM
             name and `j` is the IMT ordinal.
         """
-        curves_by_gsim, trt_model_id, bbs = result
-        for gsim, probs in curves_by_gsim:
-            pnes = []
-            for prob, zero in itertools.izip(probs, self.zeros):
-                pnes.append(1 - (zero if all_equal(prob, 0) else prob))
-            pnes1 = numpy.array(pnes)
-            pnes2 = 1 - acc.get((trt_model_id, gsim), self.zeros)
-            acc[trt_model_id, gsim] = 1 - pnes1 * pnes2
+        for trt_model_id, (curves_by_gsim, bbs) in result.iteritems():
+            for gsim, probs in curves_by_gsim:
+                pnes = []
+                for prob, zero in itertools.izip(probs, self.zeros):
+                    pnes.append(1 - (zero if all_equal(prob, 0) else prob))
+                pnes1 = numpy.array(pnes)
+                pnes2 = 1 - acc.get((trt_model_id, gsim), self.zeros)
+                acc[trt_model_id, gsim] = 1 - pnes1 * pnes2
 
-        if self.hc.poes_disagg:
-            for bb in bbs:
-                self.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
+            if self.hc.poes_disagg:
+                for bb in bbs:
+                    self.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
 
         return acc
 
@@ -343,11 +345,13 @@ class BaseHazardCalculator(base.Calculator):
         # calculators it is given by
         # n_sites * n_realizations * n_imts * n_levels;
         # for the event based calculator is given by n_sites * n_realizations
-        # * n_levels * n_imts * n_ses
+        # * n_levels * n_imts * (n_ses * investigation_time) / 10000
         max_realizations = self.get_max_realizations()
         output_weight = n_sites * n_imts * max_realizations
         if 'EventBased' in self.__class__.__name__:
-            output_weight *= self.hc.ses_per_logic_tree_path
+            total_time = (self.hc.investigation_time *
+                          self.hc.ses_per_logic_tree_path)
+            output_weight *= total_time * NORMALIZATION_FACTOR
         else:
             output_weight *= n_levels
 
