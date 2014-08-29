@@ -215,7 +215,7 @@ class CalculationLimitsTestCase(unittest.TestCase):
         calc = get_calculator_class('hazard', hc.calculation_mode)(job)
         input_weight, output_weight = calc.pre_execute()
         self.assertEqual(input_weight, 1352.75)
-        self.assertEqual(output_weight, 12.1)
+        self.assertAlmostEqual(output_weight, 12.1)
         # NB: 12.1 = 121 sites * 2 IMT * 2 rlzs * 5 SES * 50/10000 years
 
 
