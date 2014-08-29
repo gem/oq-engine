@@ -37,9 +37,8 @@ def pre_execute(job_ini):
 
     calc_mode = job.hazard_calculation.calculation_mode
     calculator = get_calculator_class('hazard', calc_mode)(job)
-    calc = job.calculation
 
-    handler = LogStreamHandler('hazard', calc)
+    handler = LogStreamHandler(job)
     logging.root.addHandler(handler)
     logs.set_level('info')
 
