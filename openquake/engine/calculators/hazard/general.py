@@ -60,6 +60,8 @@ POES_PARAM_NAME = "POES"
 # Dilation in decimal degrees (http://en.wikipedia.org/wiki/Decimal_degrees)
 # 1e-5 represents the approximate distance of one meter at the equator.
 DILATION_ONE_METER = 1e-5
+ # the following is quite arbitrary, it gives output weights that I like (MS)
+NORMALIZATION_FACTOR = 1E-4
 
 
 class InputWeightLimit(Exception):
@@ -345,11 +347,13 @@ class BaseHazardCalculator(base.Calculator):
         # calculators it is given by
         # n_sites * n_realizations * n_imts * n_levels;
         # for the event based calculator is given by n_sites * n_realizations
-        # * n_levels * n_imts * n_ses
+        # * n_levels * n_imts * (n_ses * investigation_time) / 10000
         max_realizations = self.get_max_realizations()
         output_weight = n_sites * n_imts * max_realizations
         if 'EventBased' in self.__class__.__name__:
-            output_weight *= self.hc.ses_per_logic_tree_path
+            total_time = (self.hc.investigation_time *
+                          self.hc.ses_per_logic_tree_path)
+            output_weight *= total_time * NORMALIZATION_FACTOR
         else:
             output_weight *= n_levels
 
