@@ -26,7 +26,7 @@ from openquake.engine import engine
 from openquake.engine.tests.utils import helpers
 
 
-class PrepareJobTestCase(unittest.TestCase):
+class JobFromFileTestCase(unittest.TestCase):
 
     def test_prepare_job_default_user(self):
         job = engine.prepare_job()
@@ -61,6 +61,23 @@ class PrepareJobTestCase(unittest.TestCase):
         job = engine.prepare_job(log_level='debug')
 
         self.assertEqual('debug', job.log_level)
+
+    def test_job_from_file(self):
+        # make a hazard job
+        haz_cfg = helpers.get_data_path('event_based_hazard/job.ini')
+        haz_job = engine.job_from_file(haz_cfg, 'test_user')
+
+        # make a fake Output
+        out = models.Output.objects.create(
+            oq_job=haz_job, display_name='fake', output_type='gmf')
+
+        # make a risk job
+        risk_cfg = helpers.get_data_path('event_based_risk/job.ini')
+        risk_job = engine.job_from_file(risk_cfg, 'test_user',
+                                        hazard_output_id=out.id)
+        # make sure the hazard calculation is associated correctly
+        self.assertEqual(risk_job.risk_calculation.get_hazard_calculation().id,
+                         haz_job.hazard_calculation_id)
 
 
 class CreateHazardCalculationTestCase(unittest.TestCase):
