@@ -1,8 +1,8 @@
 CREATE TABLE riskr.asset_site (
 id SERIAL PRIMARY KEY,
-risk_job_id INTEGER NOT NULL REFERENCES uiapi.oq_job (id),
-asset_id INTEGER NOT NULL REFERENCES riski.exposure_data (id),
-site_id INTEGER NOT NULL REFERENCES hzrdi.hazard_site (id)
+risk_job_id INTEGER NOT NULL REFERENCES uiapi.oq_job (id) ON DELETE CASCADE,
+asset_id INTEGER NOT NULL REFERENCES riski.exposure_data (id) ON DELETE CASCADE,
+site_id INTEGER NOT NULL REFERENCES hzrdi.hazard_site (id) ON DELETE CASCADE
 ) TABLESPACE riskr_ts;
 
 GRANT SELECT,INSERT ON riskr.asset_site TO oq_job_init;
@@ -16,8 +16,10 @@ COMMENT ON COLUMN riskr.asset_site.site_id IS 'The hazard site ID';
 
 CREATE TABLE riskr.epsilon (
 id SERIAL PRIMARY KEY,
-asset_site_id INTEGER NOT NULL REFERENCES riskr.asset_site (id),
-ses_collection_id INTEGER NOT NULL REFERENCES hzrdr.ses_collection (id),
+asset_site_id INTEGER NOT NULL REFERENCES riskr.asset_site (id)
+                               ON DELETE CASCADE,
+ses_collection_id INTEGER NOT NULL REFERENCES hzrdr.ses_collection (id)
+                               ON DELETE CASCADE,
 epsilons FLOAT[] NOT NULL,
 UNIQUE (asset_site_id, ses_collection_id)
 ) TABLESPACE riskr_ts;
