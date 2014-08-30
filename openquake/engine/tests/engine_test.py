@@ -77,7 +77,7 @@ class JobFromFileTestCase(unittest.TestCase):
                                         hazard_output_id=out.id)
         # make sure the hazard calculation is associated correctly
         self.assertEqual(risk_job.risk_calculation.get_hazard_calculation().id,
-                         haz_job.hazard_calculation_id)
+                         haz_job.hazard_calculation.id)
 
 
 class CreateHazardCalculationTestCase(unittest.TestCase):
