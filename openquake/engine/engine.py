@@ -427,7 +427,7 @@ def print_outputs_summary(outputs):
                 o.id, o.get_output_type_display(), o.display_name)
 
 
-def run_job(cfg_file, log_level, log_file, exports, hazard_output_id=None,
+def run_job(cfg_file, log_level, log_file, exports=(), hazard_output_id=None,
             hazard_job_id=None):
     """
     Run a job using the specified config file and other options.
@@ -479,7 +479,7 @@ def run_job(cfg_file, log_level, log_file, exports, hazard_output_id=None,
 
 
 @django_db.transaction.commit_on_success
-def job_from_file(cfg_file_path, username, log_level, exports,
+def job_from_file(cfg_file_path, username, log_level='info', exports=(),
                   hazard_output_id=None, hazard_job_id=None):
     """
     Create a full job profile from a job config file.
@@ -527,7 +527,10 @@ def job_from_file(cfg_file_path, username, log_level, exports,
         return job
 
     # otherwise run a risk calculation
-    haz_job = models.OqJob.objects.get(pk=hazard_job_id)
+    if hazard_job_id:
+        haz_job = models.OqJob.objects.get(pk=hazard_job_id)
+    else:  # extract the hazard job from the hazard_output_id
+        haz_job = models.Output.objects.get(pk=hazard_output_id).oq_job
     assert haz_job.job_type == 'hazard', haz_job
     params.update(dict(hazard_output_id=hazard_output_id,
                        hazard_calculation_id=haz_job.hazard_calculation.id))
