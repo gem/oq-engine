@@ -223,7 +223,7 @@ class GroundMotionValuesGetter(HazardGetter):
         cursor.execute('select site_id, rupture_ids, gmvs from '
                        'hzrdr.gmf_data where gmf_id=%s and site_id in %s '
                        'and {} order by site_id'.format(imt_query),
-                       (gmf_id, tuple(self.site_ids),
+                       (gmf_id, tuple(set(self.site_ids)),
                         imt_type, sa_period, sa_damping))
         for sid, group in itertools.groupby(cursor, operator.itemgetter(0)):
             gmvs = []
