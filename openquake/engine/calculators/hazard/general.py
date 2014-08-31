@@ -314,9 +314,13 @@ class BaseHazardCalculator(base.Calculator):
         """
         Initialize risk models, site model and sources
         """
-        self.parse_risk_models()
-        self.initialize_site_model()
-        self.initialize_sources()
+        # if you don't use a transaction, errors will be eaten
+        with transaction.commit_on_success(using='job_init'):
+            self.parse_risk_models()
+        with transaction.commit_on_success(using='job_init'):
+            self.initialize_site_model()
+        with transaction.commit_on_success(using='job_init'):
+            self.initialize_sources()
 
         # The input weight is given by the number of ruptures generated
         # by the sources; for point sources however a corrective factor
@@ -522,6 +526,13 @@ class BaseHazardCalculator(base.Calculator):
                 exposure.ExposureDBWriter(
                     self.job).serialize(
                     parsers.ExposureModelParser(hc.inputs['exposure']))
+
+        # save IMTs
+        imt_strings = self.hc.get_imts()
+        imts = distinct(map(from_string, imt_strings))
+        if len(imt_strings) > imts:
+            logs.LOG.warn('Found duplicated IMTs: %s', imt_strings)
+        models.Imt.save_new(imts)
 
     @EnginePerformanceMonitor.monitor
     def initialize_site_model(self):
