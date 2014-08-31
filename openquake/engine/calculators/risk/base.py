@@ -162,8 +162,16 @@ class RiskCalculator(base.Calculator):
 
         with self.monitor('parse risk models'):
             self.risk_models = self.get_risk_models()
-            for rm in self.risk_models.itervalues():
-                self.loss_types.update(rm.loss_types)
+
+        # populate ImtTaxonomy
+        imt_taxonomy_set = set()
+        for rm in self.risk_models.itervalues():
+            self.loss_types.update(rm.loss_types)
+            for imt in rm.imts:
+                imt_taxonomy_set.add((imt, rm.taxonomy))
+        for imt, taxonomy in imt_taxonomy_set:
+            models.ImtTaxonomy.objects.create(
+                job=self.job, imt=models.Imt.get(imt), taxonomy=taxonomy)
 
             # consider only the taxonomies in the risk models if
             # taxonomies_from_model has been set to True in the
