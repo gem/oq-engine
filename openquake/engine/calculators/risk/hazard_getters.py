@@ -225,7 +225,7 @@ class GroundMotionValuesGetter(HazardGetter):
         cursor.execute('select site_id, rupture_ids, gmvs from '
                        'hzrdr.gmf_data where gmf_id=%s and site_id in %s '
                        'and {} order by site_id'.format(imt_query),
-                       (gmf_id, tuple(self.site_ids),
+                       (gmf_id, tuple(set(self.site_ids)),
                         imt_type, sa_period, sa_damping))
         for sid, group in itertools.groupby(cursor, operator.itemgetter(0)):
             gmvs = []
@@ -307,7 +307,7 @@ WITH assocs AS (
   AND ST_COVERS(ST_GeographyFromText(%s), exp.site)
   ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
 )
-INSERT INTO riskr.asset_site (risk_job_id, asset_id, site_id)
+INSERT INTO riskr.asset_site (job_id, asset_id, site_id)
 SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
                           rc.exposure_model.id, taxonomy,
                           rc.region_constraint.wkt))
@@ -318,7 +318,7 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
 
         # now read the associations just inserted
         self.asset_sites = models.AssetSite.objects.filter(
-            risk_job=rc.oqjob, asset__taxonomy=taxonomy)
+            job=rc.oqjob, asset__taxonomy=taxonomy)
         if not self.asset_sites:
             raise AssetSiteAssociationError(
                 'Could not associated any asset of taxonomy %s to '
@@ -415,7 +415,7 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
         """
         # NB: the annotations to the assets are added by models.AssetManager
         asset_sites = models.AssetSite.objects.filter(
-            risk_job=self.rc.oqjob, asset__in=annotated_assets)
+            job=self.rc.oqjob, asset__in=annotated_assets)
         if not asset_sites:
             raise AssetSiteAssociationError(
                 'Could not associated any asset in %s to '

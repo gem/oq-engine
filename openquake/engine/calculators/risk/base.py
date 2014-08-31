@@ -57,7 +57,6 @@ def build_getters(job_id, counts_taxonomy, calc):
     :param calc:
         :class:`openquake.engine.calculators.risk.base.RiskCalculator` instance
     """
-    all_getters = []
     for counts, taxonomy in counts_taxonomy:
         logs.LOG.info('taxonomy=%s, assets=%d', taxonomy, counts)
 

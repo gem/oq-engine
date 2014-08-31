@@ -109,6 +109,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         super(ScenarioRiskCalculator, self).__init__(job)
         self.acc = ({}, {})  # aggregate_losses and insured_losses accumulators
 
+    @EnginePerformanceMonitor.monitor
     def agg_result(self, acc, task_result):
         aggregate_losses_acc, insured_losses_acc = acc[0].copy(), acc[1].copy()
         aggregate_losses_dict, insured_losses_dict = task_result
