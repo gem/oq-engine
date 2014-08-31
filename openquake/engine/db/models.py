@@ -3637,7 +3637,7 @@ class AssetSite(djm.Model):
     Contains the association exposure_data_id -> site_id, as generated
     by the current risk job.
     """
-    risk_job = djm.ForeignKey('OqJob', null=False)
+    job = djm.ForeignKey('OqJob', null=False)
     asset = djm.ForeignKey('ExposureData', null=False)
     site = djm.ForeignKey('HazardSite', null=False)
 
