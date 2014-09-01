@@ -26,7 +26,6 @@ Model representations of the OpenQuake DB tables.
 '''
 
 import os
-import ast
 import collections
 import operator
 import itertools
@@ -401,8 +400,8 @@ class JobParam(djm.Model):
         try:
             value = cls.all_params[name](value_as_string)
         except:
-            raise ValueError('Could not convert to a Python type: %s'
-                             % value_as_string)
+            raise ValueError('Could not convert to a Python type %s=%s'
+                             % (name, value_as_string))
         return cls.objects.create(job=job, name=name, value=repr(value))
 
     # dictionary param_name -> converter_function(text) -> python object
@@ -417,14 +416,14 @@ class JobParam(djm.Model):
         export_dir=unicode,
         export_multi_curves=str2bool,
         ground_motion_correlation_model=valid.Choice('JB2009', ''),
-        ground_motion_correlation_params=ast.literal_eval,
+        ground_motion_correlation_params=valid.dictionary,
         ground_motion_fields=str2bool,
         gsim=valid.Choice(*GSIMS),
         hazard_curves_from_gmfs=str2bool,
         hazard_maps=str2bool,
         inputs=dict,
         intensity_measure_types=valid.intensity_measure_types,
-        intensity_measure_types_and_levels=ast.literal_eval,
+        intensity_measure_types_and_levels=valid.dictionary,
         investigation_time=float,
         maximum_distance=float,
         mean_hazard_curves=str2bool,
