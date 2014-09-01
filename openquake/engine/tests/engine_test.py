@@ -13,11 +13,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-
+import sys
 import getpass
 import subprocess
 import unittest
 import warnings
+from StringIO import StringIO
 
 from openquake.engine.db import models
 from django.core import exceptions
@@ -343,3 +344,62 @@ class DeleteRiskCalcTestCase(unittest.TestCase):
         risk_calc = risk_job.risk_calculation
 
         self.assertRaises(RuntimeError, engine.del_risk_calc, risk_calc.id)
+
+
+class FakeOutput(object):
+    def __init__(self, id, output_type, display_name):
+        self.id = id
+        self.output_type = output_type
+        self.display_name = display_name
+
+    def get_output_type_display(self):
+        return self.display_name + str(self.id)
+
+
+class PrintSummaryTestCase(unittest.TestCase):
+    outputs = [FakeOutput(i, 'gmf', 'gmf') for i in range(1, 12)]
+
+    def print_outputs_summary(self, full):
+        orig_stdout = sys.stdout
+        sys.stdout = StringIO()
+        try:
+            engine.print_outputs_summary(self.outputs, full)
+            got = sys.stdout.getvalue()
+        finally:
+            sys.stdout = orig_stdout
+        return got
+
+    def test_print_outputs_summary_full(self):
+        self.assertEqual(self.print_outputs_summary(full=True), '''\
+  id | output_type | name
+   1 | gmf1 | gmf
+   2 | gmf2 | gmf
+   3 | gmf3 | gmf
+   4 | gmf4 | gmf
+   5 | gmf5 | gmf
+   6 | gmf6 | gmf
+   7 | gmf7 | gmf
+   8 | gmf8 | gmf
+   9 | gmf9 | gmf
+  10 | gmf10 | gmf
+  11 | gmf11 | gmf
+''')
+
+    def test_print_outputs_summary_short(self):
+        self.assertEqual(
+            self.print_outputs_summary(full=False), '''\
+  id | output_type | name
+   1 | gmf1 | gmf
+   2 | gmf2 | gmf
+   3 | gmf3 | gmf
+   4 | gmf4 | gmf
+   5 | gmf5 | gmf
+   6 | gmf6 | gmf
+   7 | gmf7 | gmf
+   8 | gmf8 | gmf
+   9 | gmf9 | gmf
+  10 | gmf10 | gmf
+ ... | gmf11 | 1 additional output(s)
+Some outputs where not shown. You can see the full list with the commands
+`openquake --list-hazard-outputs` or `openquake --list-risk-outputs`
+''')
