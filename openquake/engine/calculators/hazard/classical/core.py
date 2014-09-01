@@ -182,7 +182,7 @@ def _calc_pnes(gsim, r_sites, rupture, imts, imls, truncation_level,
 
 @tasks.oqtask
 def compute_hazard_curves(
-        job_id, sitecol, sources, trt_model_id, task_no):
+        job_id, sitecol, sources, trt_model_id):
     """
     This task computes R2 * I hazard curves (each one is a
     numpy array of S * L floats) from the given source_ruptures
@@ -196,8 +196,6 @@ def compute_hazard_curves(
         a block of source objects
     :param trt_model:
         a :class:`openquake.engine.db.TrtModel` instance
-    :param int task_no:
-        the ordinal number of the current task
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     total_sites = len(sitecol)
