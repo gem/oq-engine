@@ -89,6 +89,41 @@ def _get_min_distance_to_volcanic_front(lons, lats):
     return surf.get_rx_distance(sites)
 
 
+def _apply_subduction_trench_correction(mean, x_tr, H, rrup):
+    """
+    Implement equation for subduction trench correction as described in
+    equation 3.5.2-1, page 3-148 of "Technical Reports on National Seismic
+    Hazard Maps for Japan"
+    """
+    V1 = 10 ** ((-4.021e-5 * x_tr + 9.905e-3) * (H - 30))
+    V2 = np.maximum(1., (10 ** (-0.012)) * ((rrup / 300.) ** 2.064))
+
+    corr = V2
+    if H > 30:
+        corr *= V1
+
+    return np.log(np.exp(mean) * corr)
+
+
+def _apply_volcanic_front_correction(mean, x_vf, H):
+    """
+    Implement equation for volcanic front correction as described in equation
+    3.5.2.-2, page 3-149 of "Technical Reports on National Seismic
+    Hazard Maps for Japan"
+    """
+    V1 = numpy.zeros_like(x_vf)
+
+    idx = x_vf <= 75
+    V1[idx] = 4.28e-5 * x_vf[idx] * (H - 30)
+
+    idx = x_vf > 75
+    V1[idx] = 3.21e-3 * (H - 30)
+
+    V1 = 10 ** V1
+
+    return np.log(np.exp(mean) * V1)
+
+
 class SiMidorikawa1999Asc(GMPE):
     """
     Implements GMPE developed by Hongjun Si and Saburoh Midorikawa (1999) as
@@ -117,8 +152,9 @@ class SiMidorikawa1999Asc(GMPE):
         const.StdDev.TOTAL
     ])
 
-    #: No site parameters are needed
-    REQUIRES_SITES_PARAMETERS = set()
+    #: Required site parameters are geographical coordinates, used to
+    #: compute volcanic front and subduction trench corrections
+    REQUIRES_SITES_PARAMETERS = set(('lons', 'lats'))
 
     #: Required rupture parameters are magnitude, and hypocentral depth
     REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
