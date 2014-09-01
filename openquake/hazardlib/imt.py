@@ -41,7 +41,11 @@ def from_string(imt):
         period = float(match.group(1))
         return SA(period, DEFAULT_SA_DAMPING)
     else:
-        return globals()[imt](None, None)
+        try:
+            imt_class = globals()[imt]
+        except KeyError:
+            raise ValueError('Unknown IMT: %s' % imt)
+        return imt_class(None, None)
 
 
 @functools.total_ordering
