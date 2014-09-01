@@ -108,12 +108,11 @@ def all_equal(obj, value):
 
 
 @tasks.oqtask
-def filter_and_split_sources(job_id, task_no, sources, sitecol):
+def filter_and_split_sources(job_id, sources, sitecol):
     """
     Filter and split a list of hazardlib sources.
 
     :param int job_id: ID of the current job
-    :param int task_no: ordinal of the current task
     :param list sources: the original sources
     :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
     """
@@ -219,7 +218,7 @@ class BaseHazardCalculator(base.Calculator):
             else:  # few sources
                 # filter sequentially on a single core
                 sc.sources = filter_and_split_sources.task_func(
-                    self.job.id, 0, sc.sources, self.hc.site_collection)
+                    self.job.id, sc.sources, self.hc.site_collection)
             sc.sources.sort(key=attrgetter('source_id'))
             if not sc.sources:
                 logs.LOG.warn(
@@ -241,7 +240,7 @@ class BaseHazardCalculator(base.Calculator):
         Loop through realizations and sources to generate a sequence of
         task arg tuples. Each tuple of args applies to a single task.
         Yielded results are of the form
-        (job_id, site_collection, sources, trt_model_id, gsims, task_no).
+        (job_id, site_collection, sources, trt_model_id, gsims).
         """
         if self._task_args:
             # the method was already called and the arguments generated
@@ -252,12 +251,11 @@ class BaseHazardCalculator(base.Calculator):
         task_no = 0
         tot_sources = 0
         for trt_model, block in self.all_sources.split(self.concurrent_tasks):
-            args = (self.job.id, sitecol, block, trt_model.id,
-                    task_no)
+            args = (self.job.id, sitecol, block, trt_model.id)
             self._task_args.append(args)
             yield args
-            task_no += 1
             tot_sources += len(block)
+            task_no += 1
             logs.LOG.info('Submitting task #%d, %d source(s), weight=%d',
                           task_no, len(block), block.weight)
         logs.LOG.info('Processed %d sources for %d TRTs',

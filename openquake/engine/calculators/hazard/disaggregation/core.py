@@ -318,8 +318,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                            for site in self.hc.site_collection)
 
         oqm = tasks.OqTaskManager(compute_disagg, logs.LOG.progress)
-        for job_id, sitecol, srcs, trt_model_id, task_no in \
-                self.task_arg_gen():
+        for job_id, sitecol, srcs, trt_model_id in self.task_arg_gen():
 
             lt_model = models.TrtModel.objects.get(pk=trt_model_id).lt_model
             trt_num = dict((trt, i) for i, trt in enumerate(
