@@ -514,6 +514,10 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
             'The parameters %s in the .ini file does '
             'not correspond to a valid input type' % ', '.join(missing))
 
+    # populate JobParam
+    for name, value in sorted(params.iteritems()):
+        models.JobParam.create(job, name, value)
+
     if hazard_output_id is None and hazard_job_id is None:
         # this is a hazard calculation, not a risk one
         job.hazard_calculation = create_calculation(

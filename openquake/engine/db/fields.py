@@ -15,6 +15,8 @@
 
 """Custom Django field and formfield types (for models and forms."""
 
+import ast
+
 import numpy
 import re
 import zlib
@@ -201,6 +203,26 @@ class CharArrayField(djm.Field):
         defaults = {'form_class': StringArrayFormField}
         defaults.update(kwargs)
         return super(CharArrayField, self).formfield(**defaults)
+
+
+class LiteralField(djm.Field):
+    """
+    Convert from Postgres TEXT to Python objects and viceversa by using
+    `ast.literal_eval` and `repr`.
+    """
+
+    __metaclass__ = djm.SubfieldBase
+
+    def db_type(self, _connection=None):
+        return 'text'
+
+    def to_python(self, value):
+        if value is not None:
+            return ast.literal_eval(value)
+
+    def get_prep_value(self, value):
+        if value is not None:
+            return repr(value)
 
 
 class PickleField(djm.Field):

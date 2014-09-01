@@ -364,8 +364,6 @@ class EventBasedHazardForm(BaseHazardModelForm):
             'truncation_level',
             'maximum_distance',
             'ses_per_logic_tree_path',
-            'ground_motion_correlation_model',
-            'ground_motion_correlation_params',
             'ground_motion_fields',
             'hazard_curves_from_gmfs',
             'mean_hazard_curves',
@@ -511,8 +509,6 @@ class ScenarioHazardForm(BaseHazardModelForm):
             'maximum_distance',
             'number_of_ground_motion_fields',
             'gsim',
-            'ground_motion_correlation_model',
-            'ground_motion_correlation_params',
             'export_dir',
             'inputs',
         )
@@ -1007,22 +1003,6 @@ def ses_per_logic_tree_path_is_valid(mdl):
     if not sps > 0:
         return False, ['`Stochastic Event Sets Per Sample` '
                        '(ses_per_logic_tree_path) must be > 0']
-    return True, []
-
-
-def ground_motion_correlation_model_is_valid(_mdl):
-    # No additional validation is required;
-    # the model form and fields will take care of validation based on the
-    # valid choices defined for this field.
-    return True, []
-
-
-def ground_motion_correlation_params_is_valid(_mdl):
-    # No additional validation is required;
-    # it is not appropriate to do detailed checks on the correlation model
-    # parameters at this point because the parameters are specific to a given
-    # correlation model.
-    # Field normalization should make sure that the input is properly formed.
     return True, []
 
 
