@@ -96,7 +96,10 @@ def not_empty(text):
 
 
 def namelist(text):
-    """String -> list of identifiers"""
+    """
+    :param text: input string
+    :returns: list of identifiers
+    """
     names = text.split()
     if not names:
         raise ValueError('Got an empty name list')
@@ -104,7 +107,10 @@ def namelist(text):
 
 
 def longitude(text):
-    """String -> longitude float"""
+    """
+    :param text: input string
+    :returns: longitude float
+    """
     lon = float(text)
     if lon > 180.:
         raise ValueError('longitude %s > 180' % lon)
@@ -114,7 +120,10 @@ def longitude(text):
 
 
 def latitude(text):
-    """String -> latitude float"""
+    """
+    :param text: input string
+    :returns: latitude float
+    """
     lat = float(text)
     if lat > 90.:
         raise ValueError('latitude %s > 90' % lat)
@@ -124,7 +133,10 @@ def latitude(text):
 
 
 def positiveint(text):
-    """String -> positive integer"""
+    """
+    :param text: input string
+    :returns: positive integer
+    """
     i = int(text)
     if i < 0:
         raise ValueError('integer %d < 0' % i)
@@ -132,7 +144,10 @@ def positiveint(text):
 
 
 def positivefloat(text):
-    """String -> positive float"""
+    """
+    :param text: input string
+    :returns: positive float
+    """
     f = float(text)
     if f < 0:
         raise ValueError('float %d < 0' % f)
@@ -148,7 +163,10 @@ _BOOL_DICT = {
 
 
 def boolean(text):
-    """String -> boolean"""
+    """
+    :param text: input string such as '0', '1', 'true', 'false'
+    :returns: boolean
+    """
     if text.lower() in _BOOL_DICT and text.lower() != text:
         raise ValueError('%r is not a lowercase string' % text)
     try:
@@ -162,7 +180,8 @@ probability = FloatRange(0, 1)
 
 def intensity_measure_types(text):
     """
-    String -> non-empty list of Intensity Measure Type objects
+    :param text: input string
+    :returns: non-empty list of Intensity Measure Type objects
 
     >>> intensity_measure_types('PGA')
     ['PGA']
@@ -177,18 +196,19 @@ def intensity_measure_types(text):
 
 def dictionary(text):
     """
-    String -> Python dictionary
+    :param text: input string
+    :returns: a Python dictionary
 
     >>> dictionary('')
-    Traceback (most recent call last):
-    ...
-    ValueError: '' is not a valid Python dictionary
+    {}
     >>> dictionary('{}')
     {}
     >>> dictionary('{"a": 1}')
     {'a': 1}
     """
+    if not text:
+        return {}
     try:
-        return dict(ast.literal_eval(text))
+        return ast.literal_eval(text)
     except:
         raise ValueError('%r is not a valid Python dictionary' % text)
