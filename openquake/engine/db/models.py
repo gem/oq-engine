@@ -308,6 +308,13 @@ class OqJob(djm.Model):
         db_table = 'uiapi\".\"oq_job'
 
     @property
+    def job_type(self):
+        """
+        'hazard' or 'risk'
+        """
+        return 'hazard' if self.risk_calculation is None else 'risk'
+
+    @property
     def calculation(self):
         """
         :returns: a calculation object (hazard or risk) depending on
@@ -317,6 +324,10 @@ class OqJob(djm.Model):
         to access the common feature of a Calculation object.
         """
         return self.hazard_calculation or self.risk_calculation
+
+    def __repr__(self):
+        return '<%s %d, %s>' % (self.__class__.__name__,
+                                self.id, self.job_type)
 
 
 class Performance(djm.Model):
@@ -341,7 +352,7 @@ class JobStats(djm.Model):
     '''
     Capture various statistics about a job.
     '''
-    oq_job = djm.ForeignKey('OqJob')
+    oq_job = djm.OneToOneField('OqJob')
     start_time = djm.DateTimeField(editable=False, default=datetime.utcnow)
     stop_time = djm.DateTimeField(editable=False)
     # The disk space occupation in bytes
@@ -356,7 +367,7 @@ class JobInfo(djm.Model):
     '''
     Store information about a job.
     '''
-    oq_job = djm.ForeignKey('OqJob')
+    oq_job = djm.OneToOneField('OqJob')
     parent_job = djm.ForeignKey('OqJob')
     num_sites = djm.IntegerField(null=False)
     num_realizations = djm.IntegerField(null=False)
@@ -1116,12 +1127,40 @@ class RiskCalculation(djm.Model):
 
     @property
     def exposure_model(self):
-        return self.preloaded_exposure_model or self.oqjob.exposuremodel
+        """
+        Return the right exposure model by following rules in order:
+
+        1. if the `preloaded_exposure_model_id` is set in job_risk.ini, use it
+        2. if an exposure_file is defined in job_risk.ini, use it
+        3. if an exposure was used in the hazard job, use it
+        4. if no exposure is found, return None
+        """
+        haz_job = self.get_hazard_calculation().oqjob
+        return (self.preloaded_exposure_model or
+                extract_from([self.oqjob, haz_job], 'exposuremodel'))
 
     @property
     def investigation_time(self):
         return (self.risk_investigation_time or
                 self.get_hazard_calculation().investigation_time)
+
+
+def extract_from(objlist, attr):
+    """
+    Extract an attribute from a list of Django objects, by scanning
+    them in order until a not None attribute is found. If nothing is
+    found, or if an exception ObjectDoesNotExist is raised, return None.
+
+    :param objlist: the list of Django objects
+    :param str attr: the name of the attribute to look for
+    """
+    for obj in objlist:
+        try:
+            value = getattr(obj, attr, None)
+        except ObjectDoesNotExist:
+            value = None
+        if value is not None:
+            return value
 
 
 def _prep_geometry(kwargs):
