@@ -135,6 +135,38 @@ def str2bool(value):
     return value.lower() in ("true", "yes", "t", "1")
 
 
+def str2floats(value):
+    """
+    Convert a string into a list of floats
+    >>> str2floats('')
+    []
+    >>> str2floats('1')
+    [1.0]
+    >>> str2floats('1.1 1.2')
+    [1.1, 1.2]
+    >>> str2floats('1.1, 1.2')  # commas are ignored
+    [1.1, 1.2]
+    """
+    return map(float, value.replace(',', '').split())
+
+
+def str2coords(value):
+    """
+    Convert a non-empty string into a list of coordinates
+    >>> str2coords('')
+    Traceback (most recent call last):
+    ...
+    ValueError: Empty list of coordinates: ''
+    >>> str2coords('1.1 1.2')
+    [[1.1, 1.2]]
+    >>> str2coords('1.1 1.2, 2.2 2.3')
+    [[1.1, 1.2], [2.2, 2.3]]
+    """
+    if not value.strip():
+        raise ValueError('Empty list of coordinates: %r' % value)
+    return map(str2floats, value.split(','))
+
+
 def ceil(a, b):
     """
     Divide a / b and return the biggest integer close to the quotient.

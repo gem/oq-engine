@@ -21,6 +21,7 @@ Validation library
 """
 
 import re
+import ast
 import collections
 
 
@@ -169,3 +170,32 @@ def IMTstr(text):
     if period:
         return IMT('SA', float(period), 5.0)
     return IMT(text, None, None)
+
+
+def intensity_measure_types(text):
+    """
+    String -> list of Intensity Measure Type objects
+    """
+    imts = []
+    for chunk in text.split(','):
+        imts.append(str(IMTstr(chunk.strip())))
+    return imts
+
+
+def dictionary(text):
+    """
+    String -> Python dictionary
+
+    >>> dictionary('')
+    Traceback (most recent call last):
+    ...
+    ValueError: '' is not a valid Python dictionary
+    >>> dictionary('{}')
+    {}
+    >>> dictionary('{"a": 1}')
+    {'a': 1}
+    """
+    try:
+        return dict(ast.literal_eval(text))
+    except:
+        raise ValueError('%r is not a valid Python dictionary' % text)
