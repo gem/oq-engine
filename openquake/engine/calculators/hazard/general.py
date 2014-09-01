@@ -211,10 +211,10 @@ class BaseHazardCalculator(base.Calculator):
                 trt_model.lt_model.sm_name)
             if len(sc.sources) > self.concurrent_tasks:
                 # filter in parallel
-                sc.sources = tasks.parallel_apply(
+                sc.sources = tasks.apply_reduce(
                     filter_and_split_sources,
                     (self.job.id, sc.sources, self.hc.site_collection),
-                    self.concurrent_tasks)
+                    list.__add__, [], self.concurrent_tasks)
             else:  # few sources
                 # filter sequentially on a single core
                 sc.sources = filter_and_split_sources.task_func(
@@ -240,7 +240,7 @@ class BaseHazardCalculator(base.Calculator):
         Loop through realizations and sources to generate a sequence of
         task arg tuples. Each tuple of args applies to a single task.
         Yielded results are of the form
-        (job_id, site_collection, sources, trt_model_id, gsims, task_no).
+        (job_id, site_collection, sources, trt_model_id, gsims).
         """
         if self._task_args:
             # the method was already called and the arguments generated
@@ -251,12 +251,11 @@ class BaseHazardCalculator(base.Calculator):
         task_no = 0
         tot_sources = 0
         for trt_model, block in self.all_sources.split(self.concurrent_tasks):
-            args = (self.job.id, sitecol, block, trt_model.id,
-                    task_no)
+            args = (self.job.id, sitecol, block, trt_model.id)
             self._task_args.append(args)
             yield args
-            task_no += 1
             tot_sources += len(block)
+            task_no += 1
             logs.LOG.info('Submitting task #%d, %d source(s), weight=%d',
                           task_no, len(block), block.weight)
         logs.LOG.info('Processed %d sources for %d TRTs',
@@ -281,7 +280,7 @@ class BaseHazardCalculator(base.Calculator):
         :param acc:
             A dictionary of curves
         :param result:
-            A triplet `(curves_by_gsim, trt_model_id, bbs)`.
+            A dictionary `{trt_model_id: (curves_by_gsim, bbs)}`.
             `curves_by_gsim` is a list of pairs `(gsim, curves_by_imt)`
             where `curves_by_imt` is a list of 2-D numpy arrays
             representing the new results which need to be combined
@@ -289,20 +288,18 @@ class BaseHazardCalculator(base.Calculator):
             `acc[tr_model_id, gsim][j]` where `gsim` is the GSIM
             name and `j` is the IMT ordinal.
         """
-        curves_by_gsim, trt_model_id, bbs = result
-        for gsim, probs in curves_by_gsim:
-            pnes = []
-            for prob, zero in itertools.izip(probs, self.zeros):
-                pnes.append(1 - (zero if all_equal(prob, 0) else prob))
-            pnes1 = numpy.array(pnes)
-            pnes2 = 1 - acc.get((trt_model_id, gsim), self.zeros)
+        for trt_model_id, (curves_by_gsim, bbs) in result.iteritems():
+            for gsim, probs in curves_by_gsim:
+                pnes = []
+                for prob, zero in itertools.izip(probs, self.zeros):
+                    pnes.append(1 - (zero if all_equal(prob, 0) else prob))
+                pnes1 = numpy.array(pnes)
+                pnes2 = 1 - acc.get((trt_model_id, gsim), self.zeros)
+                acc[trt_model_id, gsim] = 1 - pnes1 * pnes2
 
-            # TODO: add a test like Yufang computation testing the broadcast
-            acc[trt_model_id, gsim] = 1 - pnes1 * pnes2
-
-        if self.hc.poes_disagg:
-            for bb in bbs:
-                self.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
+            if self.hc.poes_disagg:
+                for bb in bbs:
+                    self.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
 
         return acc
 

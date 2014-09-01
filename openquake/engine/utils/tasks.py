@@ -18,8 +18,6 @@
 
 """Utility functions related to splitting work into tasks."""
 
-import multiprocessing
-
 from celery.result import ResultSet
 from celery.app import current_app
 from celery.task import task
@@ -82,6 +80,7 @@ class OqTaskManager(TaskManager):
             result = result_dict['result']
             if isinstance(result, BaseException):
                 raise result
+            self.received += len(result)
             acc = agg(acc, result.unpickle())
             del backend._cache[task_id]  # work around a celery bug
         return acc
@@ -118,30 +117,31 @@ def map_reduce(task, task_args, agg, acc, name=None):
     return oqm.aggregate_results(agg, acc)
 
 
-def parallel_apply(task, task_args,
-                   concurrent_tasks=multiprocessing.cpu_count(),
-                   weight=lambda item: 1, kind=lambda item: 'Unspecified'):
+def apply_reduce(task, task_args, agg, acc, concurrent_tasks,
+                 weight=lambda item: 1, key=lambda item: 'Unspecified'):
     """
-    Apply a list processing task to a tuple of task_args
-    with the form (job_id, data, *args).
-    Return the list of processed data.
+    Apply a task to a tuple of the form (job_id, data, *args)
+    by splitting the data in chunks and reduce the results with an
+    aggregation function.
 
     :param task: an oqtask
     :param task_args: the arguments to be passed to the task function
+    :param agg: the aggregation function
+    :param acc: initial value of the accumulator
     :param concurrent_tasks: hint about how many tasks to generate
     :param weight: function to extract the weight of an item in data
-    :param kind: function to extract the kind of an item in data
+    :param key: function to extract the kind of an item in data
     """
     job_id = task_args[0]
     data = task_args[1]
     args = task_args[2:]
     if not data:
-        return []
-    elif len(data) == 1:
-        return task.task_func(job_id, data, *args)
-    blocks = split_in_blocks(data, concurrent_tasks, weight, kind)
+        return acc
+    elif len(data) == 1 or not concurrent_tasks:
+        return agg(acc, task.task_func(job_id, data, *args))
+    blocks = split_in_blocks(data, concurrent_tasks, weight, key)
     alldata = [(job_id, block) + args for block in blocks]
-    return map_reduce(task, alldata, list.__add__, [])
+    return map_reduce(task, alldata, agg, acc)
 
 
 # used to implement BaseCalculator.parallelize, which takes in account
