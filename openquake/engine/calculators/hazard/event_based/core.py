@@ -46,7 +46,7 @@ from openquake.hazardlib.site import FilteredSiteCollection
 
 from openquake.commonlib import logictree
 
-from openquake.engine import logs, writer
+from openquake.engine import writer
 from openquake.engine.calculators.hazard import general
 from openquake.engine.calculators.hazard.classical import (
     post_processing as cls_post_proc)
@@ -237,7 +237,7 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol):
     trt_model = ses_ruptures[0].rupture.trt_model
     rlzs_by_gsim = trt_model.get_rlzs_by_gsim()
     gsims = [logictree.GSIM[gsim]() for gsim in rlzs_by_gsim]
-    calc = GmfCalculator(sorted(imts), sorted(gsims), trt_model.id,
+    calc = GmfCalculator(
         sorted(imts), sorted(gsims), trt_model.id,
         hc.truncation_level, hc.get_correl_model())
 
