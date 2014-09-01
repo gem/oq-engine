@@ -24,6 +24,69 @@ import numpy as np
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGV
+from openquake.hazardlib.geo import Point, Line, Mesh, SimpleFaultSurface
+
+
+# Subduction trench axis (table 3.5.2-1) page 3-150
+SUB_TRENCH = Line([
+    Point(143.50, 24.00),
+    Point(143.00, 29.00),
+    Point(141.90, 33.80),
+    Point(142.40, 35.80),
+    Point(143.25, 36.55),
+    Point(143.80, 37.70),
+    Point(144.20, 39.20),
+    Point(144.30, 40.10),
+    Point(144.65, 41.00),
+    Point(146.80, 42.00),
+    Point(153.00, 45.50)
+]).resample(10.)
+
+
+# Volcanic front coordinates (table 3.5.2-2, page 3-150)
+VOLCANIC_FRONT = Line([
+    Point(122.00, 24.50),
+    Point(124.00, 24.50),
+    Point(128.30, 27.90),
+    Point(129.70, 29.50),
+    Point(130.80, 31.50),
+    Point(131.60, 33.40),
+    Point(132.00, 34.90),
+    Point(133.70, 35.30),
+    Point(134.90, 35.30),
+    Point(136.90, 36.20)
+])
+
+
+def _get_min_distance_to_sub_trench(lons, lats):
+    """
+    Compute and return minimum distance between subduction trench line
+    (defined by 'SUB_TRENCH') and points specified by 'lons' and 'lats'
+    """
+    trench = Mesh.from_points_list(SUB_TRENCH.points)
+    sites = Mesh(lons, lats, None)
+
+    return trench.get_min_distance(sites)
+
+
+def _get_min_distance_to_volcanic_front(lons, lats):
+    """
+    Compute and return minimum distance between volcanic front line (defined by
+    'VOLCANIC_FRONT') and points specified by 'lons' and 'lats'.
+
+    Distance is negative if point is located east of the volcanic front,
+    positive otherwise.
+    """
+    surf = SimpleFaultSurface.from_fault_data(
+        VOLCANIC_FRONT,
+        upper_seismogenic_depth=0.,
+        lower_seismogenic_depth=10.,
+        dip=90.,
+        mesh_spacing=10.
+    )
+    sites = Mesh(lons, lats, None)
+
+    return surf.get_rx_distance(sites)
 
 
 class SiMidorikawa1999Asc(GMPE):
