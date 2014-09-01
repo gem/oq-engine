@@ -425,17 +425,17 @@ def print_outputs_summary(outputs, full=True):
     List of :class:`openquake.engine.db.models.Output` objects.
     """
     if len(outputs) > 0:
-        print 'id | output_type | name'
-        for output_display, group in itertools.groupby(
+        print '  id | output_type | name'
+        for output_type, group in itertools.groupby(
                 outputs.order_by('output_type'),
                 key=operator.attrgetter('output_type')):
             outs = sorted(group, key=operator.attrgetter('display_name'))
             for i, o in enumerate(outs):
                 if not full and i >= 10:
-                    print ' ... | %s | %d additional outputs' % (
+                    print ' ... | %s | %d additional output(s)' % (
                         o.get_output_type_display(), len(outs) - 10)
                     break
-                print '%s | %s | %s' % (
+                print '%4d | %s | %s' % (
                     o.id, o.get_output_type_display(), o.display_name)
 
 
