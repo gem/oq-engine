@@ -91,10 +91,9 @@ class GmfCalculatorTestCase(unittest.TestCase):
         pga = PGA()
         rlz = mock.Mock()
         rlz.id = 1
-        coll = core.GmfCalculator(
-            [pga], [gsim], trt_model_id=1, task_no=0, truncation_level=3)
-        rdata = core.RuptureData(site_coll, rup, [(rup.id, rup_seed)])
-        coll.calc_gmfs([rdata])
+        calc = core.GmfCalculator(
+            [pga], [gsim], trt_model_id=1, truncation_level=3)
+        calc.calc_gmfs(site_coll, rup, [(rup.id, rup_seed)])
         expected_rups = {
             ('AkkarBommer2010', 'PGA', 0): [rup_id],
             ('AkkarBommer2010', 'PGA', 1): [rup_id],
@@ -109,9 +108,25 @@ class GmfCalculatorTestCase(unittest.TestCase):
             ('AkkarBommer2010', 'PGA', 3): [0.04727148908077005],
             ('AkkarBommer2010', 'PGA', 4): [0.04750575818347277],
         }
-        numpy.testing.assert_equal(coll.ruptures_per_site, expected_rups)
+        numpy.testing.assert_equal(calc.ruptures_per_site, expected_rups)
         for i, gmvs in expected_gmvs.iteritems():
             numpy.testing.assert_allclose(gmvs, expected_gmvs[i])
+
+        # 5 curves (one per each site) for 3 levels, 1 IMT
+        [(gname, [curves])] = calc.to_haz_curves(
+            site_coll.sids, dict(PGA=[0.03, 0.04, 0.05]),
+            invest_time=50., num_ses=10)
+        self.assertEqual(gname, 'AkkarBommer2010')
+        numpy.testing.assert_array_almost_equal(
+            curves,
+            [[0.09516258, 0.09516258, 0.09516258],  # curve site1
+             [0.00000000, 0.00000000, 0.00000000],  # curve site2
+             [0.09516258, 0.09516258, 0.09516258],  # curve site3
+             [0.09516258, 0.09516258, 0.00000000],  # curve site4
+             [0.09516258, 0.09516258, 0.00000000],  # curve site5
+             ])
+
+
 
 
 class EventBasedHazardCalculatorTestCase(unittest.TestCase):
@@ -192,16 +207,18 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             rupture__ses_collection__output__oq_job=job.id).count()
         self.assertEqual(num_ruptures, 94)
 
-        # check that we generated the right number of rows in GmfData
-        # 242 = 121 sites * 2 IMTs
         num_gmf1 = models.GmfData.objects.filter(
-            gmf__lt_realization=rlz1, task_no=0).count()
+            gmf__lt_realization=rlz1).count()
 
         num_gmf2 = models.GmfData.objects.filter(
-            gmf__lt_realization=rlz2, task_no=0).count()
+            gmf__lt_realization=rlz2).count()
 
-        self.assertEqual(num_gmf1, 242)
-        self.assertEqual(num_gmf2, 242)
+        # check that we generated the same number of rows in GmfData
+        # for both realizations
+        self.assertEqual(num_gmf1, num_gmf2)
+        # check that the number of tasks is a multiple of
+        # 242 = 121 sites * 2 IMTs
+        self.assertEqual(num_gmf1 % 242, 0)
 
         # Now check for the correct number of hazard curves:
         curves = models.HazardCurve.objects.filter(output__oq_job=job)
