@@ -464,9 +464,10 @@ _pkgtest_innervm_run () {
 
         for demo_dir in \$(find ./risk  -mindepth 1 -maxdepth 1 -type d | sort); do
             cd \$demo_dir
-            echo \"Running demo in \$demo_dir\"
+            echo \"Running \$demo_dir/job_hazard.ini\"
             openquake --run-hazard job_hazard.ini -l info
             job_id=\$(openquake --list-hazard-calculations | tail -1 | awk '{print \$1}')
+            echo \"Running \$demo_dir/job_risk.ini\"
             openquake --run-risk job_risk.ini --exports xml --hazard-job-id \$job_id -l info
             cd -
         done"
