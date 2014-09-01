@@ -24,10 +24,14 @@ import numpy as np
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGV
-from openquake.hazardlib.geo import Point, Line, Mesh, SimpleFaultSurface
+from openquake.hazardlib.geo import (
+    Point, Line, Mesh, RectangularMesh, SimpleFaultSurface
+)
 
 
 # Subduction trench axis (table 3.5.2-1) page 3-150
+# The trench axis is resampled at 10 km to more precisely compute the
+# minimum distance
 SUB_TRENCH = Line([
     Point(143.50, 24.00),
     Point(143.00, 29.00),
@@ -44,18 +48,15 @@ SUB_TRENCH = Line([
 
 
 # Volcanic front coordinates (table 3.5.2-2, page 3-150)
-VOLCANIC_FRONT = Line([
-    Point(122.00, 24.50),
-    Point(124.00, 24.50),
-    Point(128.30, 27.90),
-    Point(129.70, 29.50),
-    Point(130.80, 31.50),
-    Point(131.60, 33.40),
-    Point(132.00, 34.90),
-    Point(133.70, 35.30),
-    Point(134.90, 35.30),
-    Point(136.90, 36.20)
-])
+VOLCANIC_FRONT_LONS = [
+    122.00, 124.00, 128.30, 129.70, 130.80, 131.60, 132.00, 133.70, 134.90,
+    136.90
+]
+
+
+VOLCANIC_FRONT_LATS = [
+     24.50, 24.50, 27.90, 29.50, 31.50, 33.40, 34.90, 35.30, 35.30, 36.20
+]
 
 
 def _get_min_distance_to_sub_trench(lons, lats):
@@ -72,21 +73,25 @@ def _get_min_distance_to_sub_trench(lons, lats):
 def _get_min_distance_to_volcanic_front(lons, lats):
     """
     Compute and return minimum distance between volcanic front line (defined by
-    'VOLCANIC_FRONT') and points specified by 'lons' and 'lats'.
+    'VOLCANIC_FRONT_LONS' and 'VOLCANIC_FRONT_LATS') and points specified by
+    'lons' and 'lats'.
 
     Distance is negative if point is located east of the volcanic front,
     positive otherwise.
     """
-    surf = SimpleFaultSurface.from_fault_data(
-        VOLCANIC_FRONT,
-        upper_seismogenic_depth=0.,
-        lower_seismogenic_depth=10.,
-        dip=90.,
-        mesh_spacing=10.
+    # create 2D mesh from volcanic front coordinates. The mesh is constructed
+    # by repeating volcanic front coordinates at two depths levels: 0 and 10 km
+    vf_depths = np.zeros((2, len(VOLCANIC_FRONT_LONS)))
+    vf_depths[1, :] += 10
+    vf_lons = np.array([VOLCANIC_FRONT_LONS, VOLCANIC_FRONT_LONS])
+    vf_lats = np.array([VOLCANIC_FRONT_LATS, VOLCANIC_FRONT_LATS])
+
+    vf = SimpleFaultSurface(
+        RectangularMesh(vf_lons, vf_lats, vf_depths)
     )
     sites = Mesh(lons, lats, None)
 
-    return surf.get_rx_distance(sites)
+    return vf.get_rx_distance(sites)
 
 
 def _apply_subduction_trench_correction(mean, x_tr, H, rrup):
@@ -111,7 +116,7 @@ def _apply_volcanic_front_correction(mean, x_vf, H):
     3.5.2.-2, page 3-149 of "Technical Reports on National Seismic
     Hazard Maps for Japan"
     """
-    V1 = numpy.zeros_like(x_vf)
+    V1 = np.zeros_like(x_vf)
 
     idx = x_vf <= 75
     V1[idx] = 4.28e-5 * x_vf[idx] * (H - 30)
@@ -287,6 +292,8 @@ class SiMidorikawa1999SInterNorthEastCorrection(SiMidorikawa1999SInter):
     Extend :class:`SiMidorikawa1999SInter` and takes into account
     correction for northeast Japan (i.e. proximity to subduction trench)
     """
+    REQUIRES_SITES_PARAMETERS = set(('lons', 'lats'))
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         Implements equation 3.5.1-1 page 148 for mean value and equation
@@ -313,6 +320,8 @@ class SiMidorikawa1999SInterSouthWestCorrection(SiMidorikawa1999SInter):
     Extend :class:`SiMidorikawa1999SInter` and takes into account
     correction for southwest Japan (i.e. proximity with volcanic front)
     """
+    REQUIRES_SITES_PARAMETERS = set(('lons', 'lats'))
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         Implements equation 3.5.1-1 page 148 for mean value and equation
@@ -366,6 +375,8 @@ class SiMidorikawa1999SSlabNorthEastCorrection(SiMidorikawa1999SSlab):
     Extend :class:`SiMidorikawa1999SSlab` and takes into account
     correction for northeast Japan (i.e. proximity to subduction trench)
     """
+    REQUIRES_SITES_PARAMETERS = set(('lons', 'lats'))
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         Implements equation 3.5.1-1 page 148 for mean value and equation
@@ -392,6 +403,8 @@ class SiMidorikawa1999SSlabSouthWestCorrection(SiMidorikawa1999SSlab):
     Extend :class:`SiMidorikawa1999SSlab` and takes into account
     correction for southwest Japan (i.e. proximity to volcanic front)
     """
+    REQUIRES_SITES_PARAMETERS = set(('lons', 'lats'))
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         Implements equation 3.5.1-1 page 148 for mean value and equation
