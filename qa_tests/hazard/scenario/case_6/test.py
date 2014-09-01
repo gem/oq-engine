@@ -28,7 +28,7 @@ class ScenarioHazardCase6TestCase(qa_utils.BaseQATestCase):
         cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
         job = self.run_hazard(cfg)
         [output] = export.core.get_outputs(job.id, 'gmf_scenario')
-        gmfs = list(models.get_gmvs_per_site(output, 'PGA', sort=lambda x: x))
+        gmfs = list(models.get_gmvs_per_site(output, 'PGA'))
         realizations = 2e4
         first_value = 0.5
         second_value = 1.0
