@@ -427,9 +427,9 @@ def print_outputs_summary(outputs, full=True):
     if len(outputs) > 0:
         print 'id | output_type | name'
         for output_type, group in itertools.groupby(
-                outputs.order_by('output_type'),
+                outputs.order_by('output_type', 'display_name'),
                 operator.attrgetter('output_type')):
-            outlist = list(group)
+            outlist = sorted(group)
             for i, o in enumerate(outlist):
                 if not full and i >= 10:
                     print ' ... | %d additional outputs of kind %s | ...' % (
