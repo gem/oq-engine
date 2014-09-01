@@ -16,12 +16,14 @@
 """Engine: A collection of fundamental functions for initializing and running
 calculations."""
 
-import getpass
 import os
 import sys
 import time
+import getpass
 import logging
 import warnings
+import itertools
+import operator
 from contextlib import contextmanager
 from datetime import datetime
 
@@ -386,19 +388,21 @@ def del_risk_calc(rc_id):
                            'Access denied')
 
 
-def list_hazard_outputs(hc_id):
+def list_hazard_outputs(hc_id, full=True):
     """
     List the outputs for a given
     :class:`~openquake.engine.db.models.HazardCalculation`.
 
     :param hc_id:
         ID of a hazard calculation.
+    :param bool full:
+        If True produce a full listing, otherwise a short version
     """
     outputs = get_outputs('hazard', hc_id)
     hc = models.HazardCalculation.objects.get(pk=hc_id)
     if hc.calculation_mode == 'scenario':  # ignore SES output
         outputs = outputs.filter(output_type='gmf_scenario')
-    print_outputs_summary(outputs)
+    print_outputs_summary(outputs, full)
 
 
 def touch_log_file(log_file):
@@ -413,18 +417,26 @@ def touch_log_file(log_file):
 def print_results(calc_id, duration, list_outputs):
     print 'Calculation %d completed in %d seconds. Results:' % (
         calc_id, duration)
-    list_outputs(calc_id)
+    list_outputs(calc_id, full=False)
 
 
-def print_outputs_summary(outputs):
+def print_outputs_summary(outputs, full=True):
     """
     List of :class:`openquake.engine.db.models.Output` objects.
     """
     if len(outputs) > 0:
         print 'id | output_type | name'
-        for o in outputs.order_by('output_type'):
-            print '%s | %s | %s' % (
-                o.id, o.get_output_type_display(), o.display_name)
+        for output_type, group in itertools.groupby(
+                outputs.order_by('output_type'),
+                operator.attrgetter('output_type')):
+            outlist = list(group)
+            for i, o in enumerate(outlist):
+                if not full and i >= 10:
+                    print ' ... | %d additional outputs of kind %s | ...' % (
+                        len(outlist) - 10, output_type)
+                    break
+                print '%s | %s | %s' % (
+                    o.id, o.get_output_type_display(), o.display_name)
 
 
 def run_job(cfg_file, log_level, log_file, exports=(), hazard_output_id=None,
@@ -546,15 +558,17 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
     return job
 
 
-def list_risk_outputs(rc_id):
+def list_risk_outputs(rc_id, full=True):
     """
     List the outputs for a given
     :class:`~openquake.engine.db.models.RiskCalculation`.
 
     :param rc_id:
         ID of a risk calculation.
+    :param bool full:
+        If True produce a full listing, otherwise a short version
     """
-    print_outputs_summary(get_outputs('risk', rc_id))
+    print_outputs_summary(get_outputs('risk', rc_id), full)
 
 
 def get_outputs(job_type, calc_id):
