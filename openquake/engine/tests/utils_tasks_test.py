@@ -66,6 +66,7 @@ class MapReduceTestCase(unittest.TestCase):
         self.assertEqual(res, None)
         self.assertEqual(lst, ['hello'] * 5)
 
-    def test_parallel_apply(self):
-        got = tasks.parallel_apply(get_even, (1, [1, 2, 3, 4, 5]))
-        self.assertEqual(got, [2, 4])
+    def test_apply_reduce(self):
+        got = tasks.apply_reduce(
+            get_even, (1, [1, 2, 3, 4, 5]), list.__add__, [], 2)
+        self.assertEqual(sorted(got), [2, 4])
