@@ -158,7 +158,7 @@ class EventBasedFRRiskCalculator(core.EventBasedRiskCalculator):
         Inherited from core.EventBasedRiskCalculator.pre_execute.
         Enforces no correlation, both on GMFs and assets.
         """
-        correl_model = self.hc.get_correl_model()
+        correl_model = models.get_correl_model(self.job)
         assert correl_model is None, correl_model
         assert not self.rc.asset_correlation, self.rc.asset_correlation
         core.EventBasedRiskCalculator.pre_execute(self)
