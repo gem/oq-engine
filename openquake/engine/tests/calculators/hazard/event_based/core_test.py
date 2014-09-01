@@ -91,10 +91,9 @@ class GmfCalculatorTestCase(unittest.TestCase):
         pga = PGA()
         rlz = mock.Mock()
         rlz.id = 1
-        coll = core.GmfCalculator(
+        calc = core.GmfCalculator(
             [pga], [gsim], trt_model_id=1, task_no=0, truncation_level=3)
-        rdata = core.RuptureData(site_coll, rup, [(rup.id, rup_seed)])
-        coll.calc_gmfs([rdata])
+        calc.calc_gmfs(site_coll, rup, [(rup.id, rup_seed)])
         expected_rups = {
             ('AkkarBommer2010', 'PGA', 0): [rup_id],
             ('AkkarBommer2010', 'PGA', 1): [rup_id],
@@ -109,9 +108,25 @@ class GmfCalculatorTestCase(unittest.TestCase):
             ('AkkarBommer2010', 'PGA', 3): [0.04727148908077005],
             ('AkkarBommer2010', 'PGA', 4): [0.04750575818347277],
         }
-        numpy.testing.assert_equal(coll.ruptures_per_site, expected_rups)
+        numpy.testing.assert_equal(calc.ruptures_per_site, expected_rups)
         for i, gmvs in expected_gmvs.iteritems():
             numpy.testing.assert_allclose(gmvs, expected_gmvs[i])
+
+        # 5 curves (one per each site) for 3 levels, 1 IMT
+        [(gname, [curves])] = calc.to_haz_curves(
+            site_coll.sids, dict(PGA=[0.03, 0.04, 0.05]),
+            invest_time=50., num_ses=10)
+        self.assertEqual(gname, 'AkkarBommer2010')
+        numpy.testing.assert_array_almost_equal(
+            curves,
+            [[0.09516258, 0.09516258, 0.09516258],  # curve site1
+             [0.00000000, 0.00000000, 0.00000000],  # curve site2
+             [0.09516258, 0.09516258, 0.09516258],  # curve site3
+             [0.09516258, 0.09516258, 0.00000000],  # curve site4
+             [0.09516258, 0.09516258, 0.00000000],  # curve site5
+             ])
+
+
 
 
 class EventBasedHazardCalculatorTestCase(unittest.TestCase):

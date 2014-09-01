@@ -267,7 +267,7 @@ def compute_hazard_curves(
         (gsim.__class__.__name__,
          [0 if general.all_equal(c, 1) else 1. - c for c in curv])
         for gsim, curv in zip(gsims, curves)]
-    return curves_by_gsim, trt_model_id, bbs
+    return {trt_model_id: (curves_by_gsim, bbs)}
 
 
 class ClassicalHazardCalculator(general.BaseHazardCalculator):

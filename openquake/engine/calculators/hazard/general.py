@@ -108,11 +108,12 @@ def all_equal(obj, value):
 
 
 @tasks.oqtask
-def filter_and_split_sources(job_id, sources, sitecol):
+def filter_and_split_sources(job_id, task_no, sources, sitecol):
     """
     Filter and split a list of hazardlib sources.
 
     :param int job_id: ID of the current job
+    :param int task_no: ordinal of the current task
     :param list sources: the original sources
     :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
     """
@@ -211,14 +212,14 @@ class BaseHazardCalculator(base.Calculator):
                 trt_model.lt_model.sm_name)
             if len(sc.sources) > self.concurrent_tasks:
                 # filter in parallel
-                sc.sources = tasks.parallel_apply(
+                sc.sources = tasks.apply_reduce(
                     filter_and_split_sources,
                     (self.job.id, sc.sources, self.hc.site_collection),
-                    self.concurrent_tasks)
+                    list.__add__, [], self.concurrent_tasks)
             else:  # few sources
                 # filter sequentially on a single core
                 sc.sources = filter_and_split_sources.task_func(
-                    self.job.id, sc.sources, self.hc.site_collection)
+                    self.job.id, 0, sc.sources, self.hc.site_collection)
             sc.sources.sort(key=attrgetter('source_id'))
             if not sc.sources:
                 logs.LOG.warn(
@@ -281,7 +282,7 @@ class BaseHazardCalculator(base.Calculator):
         :param acc:
             A dictionary of curves
         :param result:
-            A triplet `(curves_by_gsim, trt_model_id, bbs)`.
+            A dictionary `{trt_model_id: (curves_by_gsim, bbs)}`.
             `curves_by_gsim` is a list of pairs `(gsim, curves_by_imt)`
             where `curves_by_imt` is a list of 2-D numpy arrays
             representing the new results which need to be combined
@@ -289,20 +290,18 @@ class BaseHazardCalculator(base.Calculator):
             `acc[tr_model_id, gsim][j]` where `gsim` is the GSIM
             name and `j` is the IMT ordinal.
         """
-        curves_by_gsim, trt_model_id, bbs = result
-        for gsim, probs in curves_by_gsim:
-            pnes = []
-            for prob, zero in itertools.izip(probs, self.zeros):
-                pnes.append(1 - (zero if all_equal(prob, 0) else prob))
-            pnes1 = numpy.array(pnes)
-            pnes2 = 1 - acc.get((trt_model_id, gsim), self.zeros)
+        for trt_model_id, (curves_by_gsim, bbs) in result.iteritems():
+            for gsim, probs in curves_by_gsim:
+                pnes = []
+                for prob, zero in itertools.izip(probs, self.zeros):
+                    pnes.append(1 - (zero if all_equal(prob, 0) else prob))
+                pnes1 = numpy.array(pnes)
+                pnes2 = 1 - acc.get((trt_model_id, gsim), self.zeros)
+                acc[trt_model_id, gsim] = 1 - pnes1 * pnes2
 
-            # TODO: add a test like Yufang computation testing the broadcast
-            acc[trt_model_id, gsim] = 1 - pnes1 * pnes2
-
-        if self.hc.poes_disagg:
-            for bb in bbs:
-                self.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
+            if self.hc.poes_disagg:
+                for bb in bbs:
+                    self.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
 
         return acc
 
