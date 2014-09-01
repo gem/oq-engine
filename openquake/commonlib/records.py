@@ -17,6 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.nrmllib.node import Node
+from openquake.hazardlib import imt
 from openquake.commonlib.record import Record, Field, Unique, ForeignKey
 from openquake.commonlib import valid
 
@@ -30,7 +31,7 @@ class DiscreteVulnerabilitySet(Record):
     vulnerabilitySetID = Field(str)
     assetCategory = Field(valid.category)
     lossCategory = Field(str)
-    IMT = Field(valid.IMTstr)
+    IMT = Field(imt.from_string)
 
     def to_node(self):
         node = Node('discreteVulnerabilitySet', dict(
@@ -103,7 +104,7 @@ class FFSetDiscrete(Record):
     ordinal = Field(int)
     taxonomy = Field(valid.not_empty)
     noDamageLimit = Field(valid.NoneOr(valid.positivefloat))
-    IMT = Field(valid.IMTstr)
+    IMT = Field(imt.from_string)
     imlUnit = Field(str)
 
     def to_node(self):
@@ -362,7 +363,7 @@ class Gmf(Record):
     pkey = Unique('stochasticEventSetId', 'imtStr', 'ruptureId')
 
     stochasticEventSetId = Field(int)
-    imtStr = Field(valid.IMTstr)
+    imtStr = Field(imt.from_string)
     ruptureId = Field(str)
 
     def to_node(self):

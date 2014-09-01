@@ -1,4 +1,5 @@
 import unittest
+from openquake.hazardlib import imt
 from openquake.commonlib import valid
 
 
@@ -59,12 +60,12 @@ class ValidationTestCase(unittest.TestCase):
             valid.probability('-0.1')
 
     def test_IMTstr(self):
-        self.assertEqual(valid.IMTstr('SA(1)'), ('SA', 1, 5))
-        self.assertEqual(valid.IMTstr('SA(1.)'), ('SA', 1, 5))
-        self.assertEqual(valid.IMTstr('SA(0.5)'), ('SA', 0.5, 5))
-        self.assertEqual(valid.IMTstr('PGV'), ('PGV', None, None))
+        self.assertEqual(imt.from_string('SA(1)'), ('SA', 1, 5))
+        self.assertEqual(imt.from_string('SA(1.)'), ('SA', 1, 5))
+        self.assertEqual(imt.from_string('SA(0.5)'), ('SA', 0.5, 5))
+        self.assertEqual(imt.from_string('PGV'), ('PGV', None, None))
         with self.assertRaises(ValueError):
-            valid.IMTstr('S(1)')
+            imt.from_string('S(1)')
 
     def test_choice(self):
         validator = valid.Choice('aggregated', 'per_asset')

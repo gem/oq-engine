@@ -23,6 +23,7 @@ Validation library
 import re
 import ast
 import collections
+from openquake.hazardlib import imt
 
 
 class NoneOr(object):
@@ -158,27 +159,19 @@ def boolean(text):
 
 probability = FloatRange(0, 1)
 
-IMT = collections.namedtuple('IMT', 'imt saPeriod saDamping')
-
-
-def IMTstr(text):
-    """String -> namedtuple with fields imt, saPeriod, saDamping"""
-    mo = re.match(r'PGA|PGV|PGD|IA|RSD|MMI|SA\((\d+\.?\d*)\)', text)
-    if mo is None:
-        raise ValueError('%r is not a valid IMT' % text)
-    period = mo.group(1)
-    if period:
-        return IMT('SA', float(period), 5.0)
-    return IMT(text, None, None)
-
 
 def intensity_measure_types(text):
     """
-    String -> list of Intensity Measure Type objects
+    String -> non-empty list of Intensity Measure Type objects
+
+    >>> intensity_measure_types('PGA')
+    ['PGA']
+    >>> intensity_measure_types('PGA, SA(1.00)')
+    ['PGA', 'SA(1.0)']
     """
     imts = []
     for chunk in text.split(','):
-        imts.append(str(IMTstr(chunk.strip())))
+        imts.append(str(imt.from_string(chunk.strip())))
     return imts
 
 
