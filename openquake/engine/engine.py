@@ -425,18 +425,24 @@ def print_outputs_summary(outputs, full=True):
     List of :class:`openquake.engine.db.models.Output` objects.
     """
     if len(outputs) > 0:
+        truncated = False
         print '  id | output_type | name'
         for output_type, group in itertools.groupby(
-                outputs.order_by('output_type'),
+                sorted(outputs, key=operator.attrgetter('output_type')),
                 key=operator.attrgetter('output_type')):
             outs = sorted(group, key=operator.attrgetter('display_name'))
             for i, o in enumerate(outs):
                 if not full and i >= 10:
                     print ' ... | %s | %d additional output(s)' % (
                         o.get_output_type_display(), len(outs) - 10)
+                    truncated = True
                     break
                 print '%4d | %s | %s' % (
                     o.id, o.get_output_type_display(), o.display_name)
+        if truncated:
+            print ('Some outputs where not shown. You can see the full list '
+                   'with the commands\n`openquake --list-hazard-outputs` or '
+                   '`openquake --list-risk-outputs`')
 
 
 def run_job(cfg_file, log_level, log_file, exports=(), hazard_output_id=None,
