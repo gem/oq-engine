@@ -276,7 +276,8 @@ def compute_and_save_gmfs(job_id, sids, rupture_data, task_no):
     :param int task_no:
         the number of the task that generated the rupture_data
     """
-    hc = models.HazardCalculation.objects.get(oqjob=job_id)
+    job = models.OqJob.objects.get(pk=job_id)
+    hc = job.hazard_calculation
     imts = map(from_string, hc.intensity_measure_types)
     # NB: by construction rupture_data is a non-empty list with
     # ruptures of homogeneous trt_model
@@ -284,7 +285,7 @@ def compute_and_save_gmfs(job_id, sids, rupture_data, task_no):
     rlzs = trt_model.get_rlzs_by_gsim()
     gsims = [logictree.GSIM[gsim]() for gsim in rlzs]
     calc = GmfCalculator(sorted(imts), sorted(gsims), trt_model.id, task_no,
-                         hc.truncation_level, hc.get_correl_model())
+                         hc.truncation_level, models.get_correl_model(job))
 
     with EnginePerformanceMonitor(
             'computing gmfs', job_id, compute_and_save_gmfs):

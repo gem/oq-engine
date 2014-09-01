@@ -26,6 +26,7 @@ Model representations of the OpenQuake DB tables.
 '''
 
 import os
+import ast
 import collections
 import operator
 import itertools
@@ -43,13 +44,15 @@ from shapely import wkt
 
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import source, geo, calc, correlation
+from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.site import (
     Site, SiteCollection, FilteredSiteCollection)
 
-from openquake.commonlib.general import distinct
+from openquake.commonlib.general import (
+    distinct, str2bool, str2floats, str2coords)
 from openquake.commonlib.riskloaders import loss_type_to_cost_type
-from openquake.commonlib import logictree
+from openquake.commonlib import logictree, valid
 
 from openquake.engine.db import fields
 from openquake.engine import writer
@@ -124,6 +127,7 @@ VULNERABILITY_TYPE_CHOICES = [choice[0]
                               for choice in INPUT_TYPE_CHOICES
                               if choice[0].endswith('vulnerability')]
 
+GSIMS = get_available_gsims()
 
 #: The output of HazardCalculation.gen_ruptures
 SourceRuptureSites = collections.namedtuple(
@@ -325,27 +329,26 @@ class OqJob(djm.Model):
         """
         return self.hazard_calculation or self.risk_calculation
 
+    def get_param(self, name, default=None):
+        """
+        Return the value of the requested parameter.
+        If the parameter does not exist in the database,
+        return the default value.
+
+        :param name: the name of the parameter
+        :param default: default if the parameter is missing
+
+        NB: since job_param.value is NOT NULL, `.get_param(name)`
+        can return None only if the parameter is missing.
+        """
+        try:
+            return JobParam.objects.get(job=self, name=name).value
+        except ObjectDoesNotExist:
+            return default
+
     def __repr__(self):
         return '<%s %d, %s>' % (self.__class__.__name__,
                                 self.id, self.job_type)
-
-
-class Performance(djm.Model):
-    '''
-    Contains performance information about the operations performed by a task
-    launched by a job.
-    '''
-    oq_job = djm.ForeignKey('OqJob')
-    task_id = djm.TextField(null=True)
-    task = djm.TextField(null=True)
-    operation = djm.TextField(null=False)
-    start_time = djm.DateTimeField(editable=False)
-    duration = djm.FloatField(null=True)
-    pymemory = djm.IntegerField(null=True)
-    pgmemory = djm.IntegerField(null=True)
-
-    class Meta:
-        db_table = 'uiapi\".\"performance'
 
 
 class JobStats(djm.Model):
@@ -378,6 +381,83 @@ class JobInfo(djm.Model):
 
     class Meta:
         db_table = 'uiapi\".\"job_info'
+
+
+class JobParam(djm.Model):
+    '''
+    The parameters of a job
+    '''
+    job = djm.ForeignKey('OqJob')
+    name = djm.TextField(null=False)
+    value = fields.LiteralField(null=False)
+
+    class Meta:
+        db_table = 'uiapi\".\"job_param'
+
+    @classmethod
+    def create(cls, job, name, value_as_string):
+        if not name in cls.all_params:
+            raise NameError('Unknown parameter: %s' % name)
+        try:
+            value = cls.all_params[name](value_as_string)
+        except:
+            raise ValueError('Could not convert to a Python type: %s'
+                             % value_as_string)
+        return cls.objects.create(job=job, name=name, value=repr(value))
+
+    # dictionary param_name -> converter_function(text) -> python object
+    all_params = dict(
+        area_source_discretization=float,
+        base_path=unicode,
+        calculation_mode=str,
+        description=unicode,
+        export_dir=unicode,
+        export_multi_curves=str2bool,
+        ground_motion_correlation_model=valid.Choice('JB2009', ''),
+        ground_motion_correlation_params=ast.literal_eval,
+        gsim=valid.Choice(*GSIMS),
+        hazard_maps=str2bool,
+        inputs=dict,
+        intensity_measure_types_and_levels=ast.literal_eval,
+        intensity_measure_types=valid.intensity_measure_types,
+        investigation_time=float,
+        maximum_distance=float,
+        mean_hazard_curves=str2bool,
+        number_of_ground_motion_fields=int,
+        number_of_logic_tree_samples=int,
+        poes=str2floats,
+        quantile_hazard_curves=str2floats,
+        random_seed=int,
+        reference_depth_to_1pt0km_per_sec=float,
+        reference_depth_to_2pt5km_per_sec=float,
+        reference_vs30_type=valid.Choice('measured', 'inferred'),
+        reference_vs30_value=float,
+        region=str2coords,
+        region_grid_spacing=float,
+        rupture_mesh_spacing=float,
+        sites=str2coords,
+        truncation_level=float,
+        uniform_hazard_spectra=str2bool,
+        width_of_mfd_bin=float,
+        )
+
+
+class Performance(djm.Model):
+    '''
+    Contains performance information about the operations performed by a task
+    launched by a job.
+    '''
+    oq_job = djm.ForeignKey('OqJob')
+    task_id = djm.TextField(null=True)
+    task = djm.TextField(null=True)
+    operation = djm.TextField(null=False)
+    start_time = djm.DateTimeField(editable=False)
+    duration = djm.FloatField(null=True)
+    pymemory = djm.IntegerField(null=True)
+    pgmemory = djm.IntegerField(null=True)
+
+    class Meta:
+        db_table = 'uiapi\".\"performance'
 
 
 class HazardCalculation(djm.Model):
@@ -531,12 +611,6 @@ class HazardCalculation(djm.Model):
         blank=True,
         choices=GROUND_MOTION_CORRELATION_MODELS,
     )
-    ground_motion_correlation_params = fields.DictField(
-        help_text=('Parameters specific to the chosen ground motion'
-                   ' correlation model'),
-        null=True,
-        blank=True,
-    )
 
     ###################################
     # Disaggregation Calculator params:
@@ -657,24 +731,6 @@ class HazardCalculation(djm.Model):
         Get the site model filename for this calculation
         """
         return self.inputs.get('site_model')
-
-    def get_correl_model(self):
-        """
-        Helper function for constructing the appropriate correlation model.
-
-        :returns:
-            A correlation object. See :mod:`openquake.hazardlib.correlation`
-            for more info.
-        """
-        correl_model_cls = getattr(
-            correlation,
-            '%sCorrelationModel' % self.ground_motion_correlation_model,
-            None)
-        if correl_model_cls is None:
-            # There's no correlation model for this calculation.
-            return None
-
-        return correl_model_cls(**self.ground_motion_correlation_params)
 
     ## TODO: this could be implemented with a view, now that there is
     ## a site table
@@ -1928,6 +1984,28 @@ class SESRupture(djm.Model):
 _Point = collections.namedtuple('_Point', 'x y')
 
 
+def get_correl_model(job):
+    """
+    Helper function for constructing the appropriate correlation model.
+
+    :returns:
+        A correlation object. See :mod:`openquake.hazardlib.correlation`
+        for more info.
+    """
+    correl_model_name = job.get_param('ground_motion_correlation_model')
+    if correl_model_name is None:
+        # There's no correlation model for this calculation.
+        return None
+    correl_model_cls = getattr(
+        correlation, '%sCorrelationModel' % correl_model_name, None)
+    if correl_model_cls is None:
+        # There's no correlation model for this calculation.
+        return None
+
+    return correl_model_cls(
+        **job.get_param('ground_motion_correlation_params'))
+
+
 class Gmf(djm.Model):
     """
     A collection of ground motion field (GMF) sets for a given logic tree
@@ -1943,8 +2021,9 @@ class Gmf(djm.Model):
         """
         Yields triples (ses_rupture, sites, gmf_dict)
         """
-        hc = self.output.oq_job.hazard_calculation
-        correl_model = hc.get_correl_model()
+        job = self.output.oq_job
+        hc = job.hazard_calculation
+        correl_model = get_correl_model(job)
         gsims = self.lt_realization.get_gsim_instances()
         assert gsims, 'No GSIMs found for realization %d!' % \
             self.lt_realization.id  # look into hzdr.assoc_lt_rlz_trt_model
