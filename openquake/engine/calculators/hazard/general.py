@@ -280,7 +280,7 @@ class BaseHazardCalculator(base.Calculator):
         :param acc:
             A dictionary of curves
         :param result:
-            A triplet `(curves_by_gsim, trt_model_id, bbs)`.
+            A dictionary `{trt_model_id: (curves_by_gsim, bbs)}`.
             `curves_by_gsim` is a list of pairs `(gsim, curves_by_imt)`
             where `curves_by_imt` is a list of 2-D numpy arrays
             representing the new results which need to be combined
@@ -288,18 +288,18 @@ class BaseHazardCalculator(base.Calculator):
             `acc[tr_model_id, gsim][j]` where `gsim` is the GSIM
             name and `j` is the IMT ordinal.
         """
-        curves_by_gsim, trt_model_id, bbs = result
-        for gsim, probs in curves_by_gsim:
-            pnes = []
-            for prob, zero in itertools.izip(probs, self.zeros):
-                pnes.append(1 - (zero if all_equal(prob, 0) else prob))
-            pnes1 = numpy.array(pnes)
-            pnes2 = 1 - acc.get((trt_model_id, gsim), self.zeros)
-            acc[trt_model_id, gsim] = 1 - pnes1 * pnes2
+        for trt_model_id, (curves_by_gsim, bbs) in result.iteritems():
+            for gsim, probs in curves_by_gsim:
+                pnes = []
+                for prob, zero in itertools.izip(probs, self.zeros):
+                    pnes.append(1 - (zero if all_equal(prob, 0) else prob))
+                pnes1 = numpy.array(pnes)
+                pnes2 = 1 - acc.get((trt_model_id, gsim), self.zeros)
+                acc[trt_model_id, gsim] = 1 - pnes1 * pnes2
 
-        if self.hc.poes_disagg:
-            for bb in bbs:
-                self.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
+            if self.hc.poes_disagg:
+                for bb in bbs:
+                    self.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
 
         return acc
 
