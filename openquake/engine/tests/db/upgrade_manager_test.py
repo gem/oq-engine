@@ -105,7 +105,7 @@ class UpgradeManagerTestCase(unittest.TestCase):
                 upgrade_db(conn, pkg)
 
     def test_version_db(self):
-        self.assertEqual(version_db(conn), '0000')
+        self.assertEqual(version_db(conn, pkg), '0000')
 
     def check_message(self, html, expected):
         with mock.patch('urllib.urlopen') as urlopen:
@@ -116,14 +116,14 @@ class UpgradeManagerTestCase(unittest.TestCase):
         self.check_message('''
 >0000-base_schema.sql<
 >0001-uniq-ruptures.sql<
-''', 'Your database is at version 0000. If you upgrade to the latest master, you will arrive at version 0001.')
+''', 'Your database is at version 0000. If you upgrade to the latest master, you will arrive at version 0001.\nThe following scripts can be applied safely:\nhttps://github.com/gem/oq-engine/tree/master/openquake/engine/db/schema/upgrades/0000-base_schema.sql\nhttps://github.com/gem/oq-engine/tree/master/openquake/engine/db/schema/upgrades/0001-uniq-ruptures.sql')
 
     def test_tricky_upgrade(self):
         self.check_message('''
 >0000-base_schema.sql<
 >0001-slow-uniq-ruptures.sql<
 >0002-danger-drop-gmf.sql<
-''', 'Your database is at version 0000. If you upgrade to the latest master, you will arrive at version 0002.\nPlease note that the following scripts could be slow:\nhttps://github.com/gem/oq-engine/tree/master/openquake/engine/db/schema/upgrades/0001-slow-uniq-ruptures.sql\nPlease note that the following scripts are potentially dangerous and could destroy your data:\nhttps://github.com/gem/oq-engine/tree/master/openquake/engine/db/schema/upgrades/0002-danger-drop-gmf.sql')
+''', 'Your database is at version 0000. If you upgrade to the latest master, you will arrive at version 0002.\nThe following scripts can be applied safely:\nhttps://github.com/gem/oq-engine/tree/master/openquake/engine/db/schema/upgrades/0000-base_schema.sql\nPlease note that the following scripts could be slow:\nhttps://github.com/gem/oq-engine/tree/master/openquake/engine/db/schema/upgrades/0001-slow-uniq-ruptures.sql\nPlease note that the following scripts are potentially dangerous and could destroy your data:\nhttps://github.com/gem/oq-engine/tree/master/openquake/engine/db/schema/upgrades/0002-danger-drop-gmf.sql')
 
     def tearDown(self):
         # in case of errors upgrade_db has already performed a rollback
