@@ -432,6 +432,7 @@ class JobParam(djm.Model):
         investigation_time=valid.positivefloat,
         loss_curve_resolution=valid.positiveint,
         lrem_steps_per_interval=valid.positiveint,
+        master_seed=valid.positiveint,
         maximum_distance=valid.positivefloat,
         mean_hazard_curves=str2bool,
         number_of_ground_motion_fields=valid.positiveint,
