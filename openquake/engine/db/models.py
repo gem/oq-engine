@@ -429,6 +429,7 @@ class JobParam(djm.Model):
         intensity_measure_types=valid.intensity_measure_types,
         intensity_measure_types_and_levels=valid.dictionary,
         investigation_time=valid.positivefloat,
+        loss_curve_resolution=valid.positiveint,
         maximum_distance=valid.positivefloat,
         mean_hazard_curves=str2bool,
         number_of_ground_motion_fields=valid.positiveint,
