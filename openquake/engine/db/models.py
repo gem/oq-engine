@@ -404,7 +404,7 @@ class JobParam(djm.Model):
                              % (convert.__name__, name, value_as_string))
         return cls.objects.create(job=job, name=name, value=repr(value))
 
-    # dictionary param_name -> converter_function(text) -> python object
+    # dictionary param_name -> converter_function: text -> python object
     valid_params = dict(
         area_source_discretization=float,
         asset_correlation=valid.FloatRange(0, 1),
@@ -441,6 +441,7 @@ class JobParam(djm.Model):
         reference_vs30_type=valid.Choice('measured', 'inferred'),
         reference_vs30_value=float,
         region=valid.coordinates,
+        region_constraint=valid.coordinates,
         region_grid_spacing=float,
         rupture_mesh_spacing=float,
         ses_per_logic_tree_path=int,
