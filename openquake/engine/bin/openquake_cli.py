@@ -50,6 +50,9 @@ MISSING_HAZARD_MSG = ("Please specify the ID of the hazard output (or "
                       "job) to be used by using '%s (or %s) <id>'" %
                       (HAZARD_OUTPUT_ARG, HAZARD_JOB_ARG))
 
+logging.basicConfig(level=logging.INFO)
+logs.set_level('info')
+
 
 def set_up_arg_parser():
     """Set up and return an :class:`argparse.ArgumentParser` with all of the
@@ -97,6 +100,10 @@ def set_up_arg_parser():
     general_grp.add_argument(
         '--version-db', action='store_true',
         help='Show the current version of the openquake database',
+    )
+    general_grp.add_argument(
+        '--what-if-I-upgrade', action='store_true',
+        help='Show what will happen to the openquake database if you upgrade',
     )
 
     hazard_grp = parser.add_argument_group('Hazard')
@@ -433,15 +440,18 @@ def main():
         os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'
 
     if args.upgrade_db:
-        logging.basicConfig(level=logging.INFO)
-        logs.set_level('info')
         conn = models.getcursor('admin').connection
-        upgrade_manager.upgrade_db(conn, 'openquake.engine.db.schema.upgrades')
+        upgrade_manager.upgrade_db(conn)
         sys.exit(0)
 
     if args.version_db:
         conn = models.getcursor('admin').connection
         print upgrade_manager.version_db(conn)
+        sys.exit(0)
+
+    if args.what_if_I_upgrade:
+        conn = models.getcursor('admin').connection
+        print upgrade_manager.what_if_I_upgrade(conn)
         sys.exit(0)
 
     if args.list_inputs:
