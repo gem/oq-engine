@@ -290,8 +290,9 @@ def what_if_I_upgrade(conn, pkg_name='openquake.engine.db.schema.upgrades'):
     :param conn: a DB API 2 connection
     :param str pkg_name: the name of the package with the upgrade scripts
     """
-    msg_ok_ = ('Your database is at version %s. If you upgrade to the latest '
+    header_ = ('Your database is at version %s. If you upgrade to the latest '
                'master, you will arrive at version %s.')
+    msg_safe_ = '\nThe following scripts can be applied safely:\n%s'
     msg_slow_ = '\nPlease note that the following scripts could be slow:\n%s'
     msg_danger_ = ('\nPlease note that the following scripts are potentially '
                    'dangerous and could destroy your data:\n%s')
@@ -310,7 +311,9 @@ def what_if_I_upgrade(conn, pkg_name='openquake.engine.db.schema.upgrades'):
             danger.append(url)
         else:
             safe.append(url)
-    msg_ok = msg_ok_ % (current_version, future_version)
+    header = header_ % (current_version, future_version)
+    msg_safe = msg_safe_ % '\n'.join(safe)
     msg_slow = msg_slow_ % '\n'.join(slow)
     msg_danger = msg_danger_ % '\n'.join(danger)
-    return msg_ok + (msg_slow if slow else '') + (msg_danger if danger else '')
+    return header + (msg_safe if safe else '') + (msg_slow if slow else '') \
+        + (msg_danger if danger else '')
