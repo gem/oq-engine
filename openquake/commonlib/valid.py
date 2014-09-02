@@ -22,22 +22,21 @@ Validation library
 
 import re
 import ast
-import collections
 from openquake.hazardlib import imt
 
 
 class NoneOr(object):
     """
     Accept the empty string (casted to None) or something else validated
-    by the cast callable.
+    by the underlying `cast` validator.
     """
     def __init__(self, cast):
         self.cast = cast
+        self.__name__ = cast.__name__
 
     def __call__(self, value):
-        if value == '':
-            return None
-        return self.cast(value)
+        if value:
+            return self.cast(value)
 
 
 class Choice(object):
@@ -46,6 +45,7 @@ class Choice(object):
     """
     def __init__(self, *choices):
         self.choices = choices
+        self.__name__ = 'Choice%s' % str(choices)
 
     def __call__(self, value):
         if not value in self.choices:
@@ -62,6 +62,7 @@ class Regex(object):
     """
     def __init__(self, regex):
         self.rx = re.compile(regex)
+        self.__name__ = 'Regex[%s]' % regex
 
     def __call__(self, value):
         if self.rx.match(value) is None:
@@ -76,6 +77,7 @@ class FloatRange(object):
     def __init__(self, minrange, maxrange):
         self.minrange = minrange
         self.maxrange = maxrange
+        self.__name__ = 'FloatRange[%s:%s]' % (minrange, maxrange)
 
     def __call__(self, value):
         f = float(value)
@@ -132,6 +134,35 @@ def latitude(text):
     return lat
 
 
+def lonlat(text):
+    """
+    :param text: a pair of coordinates
+    :returns: a tuple (longitude, latitude)
+
+    >>> lonlat('12 14')
+    (12.0, 14.0)
+    """
+    lon, lat = text.split()
+    return longitude(lon), latitude(lat)
+
+
+def coordinates(value):
+    """
+    Convert a non-empty string into a list of lon-lat coordinates
+    >>> coordinates('')
+    Traceback (most recent call last):
+    ...
+    ValueError: Empty list of coordinates: ''
+    >>> coordinates('1.1 1.2')
+    [(1.1, 1.2)]
+    >>> coordinates('1.1 1.2, 2.2 2.3')
+    [(1.1, 1.2), (2.2, 2.3)]
+    """
+    if not value.strip():
+        raise ValueError('Empty list of coordinates: %r' % value)
+    return map(lonlat, value.split(','))
+
+
 def positiveint(text):
     """
     :param text: input string
@@ -178,6 +209,23 @@ def boolean(text):
 probability = FloatRange(0, 1)
 
 
+def probabilities(text):
+    """
+    :param text: input text, comma separated or space separated
+    :returns: a list of probabilities
+
+    >>> probabilities('')
+    []
+    >>> probabilities('1')
+    [1.0]
+    >>> probabilities('0.1 0.2')
+    [0.1, 0.2]
+    >>> probabilities('0.1, 0.2')  # commas are ignored
+    [0.1, 0.2]
+    """
+    return map(probability, text.replace(',', ' ').split())
+
+
 def intensity_measure_types(text):
     """
     :param text: input string
@@ -212,3 +260,20 @@ def dictionary(text):
         return ast.literal_eval(text)
     except:
         raise ValueError('%r is not a valid Python dictionary' % text)
+
+
+def parameters(**names_vals):
+    """
+    Returns a dictionary {name: validator} by making sure
+    that the validators are callable objects with a `__name__`.
+    """
+    for name, val in names_vals.iteritems():
+        if not callable(val):
+            raise ValueError(
+                '%r for %s is not a validator: it is not callable'
+                % (val, name))
+        if not hasattr(val, '__name__'):
+            raise ValueError(
+                '%r for %s is not a validator: it has no __name__'
+                % (val, name))
+    return names_vals

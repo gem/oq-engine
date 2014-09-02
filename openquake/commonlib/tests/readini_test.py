@@ -68,14 +68,14 @@ random_seed=0
             shutil.rmtree(temp_dir)
 
     def test__parse_sites_csv(self):
-        expected_wkt = 'MULTIPOINT(0.1 0.2, 2 3, 4.1 5.6)'
+        expected = '0.1 0.2, 2 3, 4.1 5.6'
         source = StringIO.StringIO("""\
 0.1,0.2
 2,3
 4.1,5.6
 """)
-        wkt = readini._parse_sites_csv(source)
-        self.assertEqual(expected_wkt, wkt)
+        sites = readini._parse_sites_csv(source)
+        self.assertEqual(expected, sites)
 
     def test_parse_config_with_sites_csv(self):
         sites_csv = general.writetmp(content='1.0,2.1\n3.0,4.1\n5.0,6.1')
@@ -96,7 +96,7 @@ random_seed=5
 
             expected_params = {
                 'base_path': exp_base_path,
-                'sites': 'MULTIPOINT(1.0 2.1, 3.0 4.1, 5.0 6.1)',
+                'sites': '1.0 2.1, 3.0 4.1, 5.0 6.1',
                 'calculation_mode': 'classical',
                 'truncation_level': '3',
                 'random_seed': '5',

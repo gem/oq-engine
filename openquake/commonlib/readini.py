@@ -51,7 +51,7 @@ def parse_config(source):
         for key, value in cp.items(sect):
             if key == 'sites_csv':
                 # Parse site coordinates from the csv file,
-                # return as MULTIPOINT WKT:
+                # return as a string 'lon1 lat1, lon2 lat2, ... , lonN latN'
                 path = value
                 if not os.path.isabs(path):
                     # It's a relative path
@@ -92,10 +92,10 @@ def _parse_sites_csv(fh):
         File-like containing lon,lat coordinates in csv format.
 
     :returns:
-        MULTIPOINT WKT representing all of the sites in the csv file.
+        lon-lat pairs representing all of the sites in the csv file.
     """
     reader = csv.reader(fh)
     coords = []
     for lon, lat in reader:
         coords.append('%s %s' % (lon, lat))
-    return 'MULTIPOINT(%s)' % ', '.join(coords)
+    return ', '.join(coords)
