@@ -362,7 +362,6 @@ class EventBasedHazardFormTestCase(unittest.TestCase):
             maximum_distance=100.0,
             ses_per_logic_tree_path=5,
             ground_motion_correlation_model='JB2009',
-            ground_motion_correlation_params={"vs30_clustering": True},
             ground_motion_fields=True,
             hazard_curves_from_gmfs=True,
             mean_hazard_curves=True,

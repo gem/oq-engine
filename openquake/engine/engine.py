@@ -518,6 +518,10 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
     for name, value in sorted(params.iteritems()):
         models.JobParam.create(job, name, value)
 
+    if 'sites' in params:
+        # in the future `sites` will be removed by the HazardCalculation
+        params['sites'] = 'MULTIPOINT(%(sites)s)' % params
+
     if hazard_output_id is None and hazard_job_id is None:
         # this is a hazard calculation, not a risk one
         job.hazard_calculation = create_calculation(
