@@ -181,6 +181,14 @@ def boolean(text):
 probability = FloatRange(0, 1)
 
 
+def probabilities(text):
+    """
+    :param text: input text, comma separated or space separated
+    :returns: a list of probabilities
+    """
+    return map(probability, text.replace(',', ' ').split())
+
+
 def intensity_measure_types(text):
     """
     :param text: input string
