@@ -121,6 +121,10 @@ INPUT_TYPE_CHOICES = (
     (u'structural_vulnerability_retrofitted',
      u'Structural Vulnerability Retrofitted'))
 
+
+GROUND_MOTION_CORRELATION_MODELS = [
+    'JB2009', 'Jayaram-Baker 2009']
+
 VULNERABILITY_TYPE_CHOICES = [choice[0]
                               for choice in INPUT_TYPE_CHOICES
                               if choice[0].endswith('vulnerability')]
@@ -418,7 +422,8 @@ class JobParam(djm.Model):
         mag_bin_width=valid.positivefloat,
         export_dir=unicode,
         export_multi_curves=str2bool,
-        ground_motion_correlation_model=valid.Choice('JB2009', ''),
+        ground_motion_correlation_model=valid.NoneOr(
+            valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)),
         ground_motion_correlation_params=valid.dictionary,
         ground_motion_fields=str2bool,
         gsim=valid.Choice(*GSIMS),
@@ -617,16 +622,6 @@ class HazardCalculation(djm.Model):
                    ' branch (enumerated or randomly sampled'),
         null=True,
         blank=True,
-    )
-    GROUND_MOTION_CORRELATION_MODELS = (
-        (u'JB2009', u'Jayaram-Baker 2009'),
-    )
-    ground_motion_correlation_model = djm.TextField(
-        help_text=('Name of the ground correlation model to use in the'
-                   ' calculation'),
-        null=True,
-        blank=True,
-        choices=GROUND_MOTION_CORRELATION_MODELS,
     )
 
     ###################################
