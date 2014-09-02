@@ -22,7 +22,6 @@ Validation library
 
 import re
 import ast
-import collections
 from openquake.hazardlib import imt
 
 
@@ -33,6 +32,7 @@ class NoneOr(object):
     """
     def __init__(self, cast):
         self.cast = cast
+        self.__name__ = cast.__name__
 
     def __call__(self, value):
         if value == '':
@@ -46,6 +46,7 @@ class Choice(object):
     """
     def __init__(self, *choices):
         self.choices = choices
+        self.__name__ = 'Choice%s' % str(choices)
 
     def __call__(self, value):
         if not value in self.choices:
@@ -62,6 +63,7 @@ class Regex(object):
     """
     def __init__(self, regex):
         self.rx = re.compile(regex)
+        self.__name__ = 'Regex[%s]' % regex
 
     def __call__(self, value):
         if self.rx.match(value) is None:
@@ -76,6 +78,7 @@ class FloatRange(object):
     def __init__(self, minrange, maxrange):
         self.minrange = minrange
         self.maxrange = maxrange
+        self.__name__ = 'FloatRange[%s:%s]' % (minrange, maxrange)
 
     def __call__(self, value):
         f = float(value)
