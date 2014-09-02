@@ -135,6 +135,35 @@ def latitude(text):
     return lat
 
 
+def lonlat(text):
+    """
+    :param text: a pair of coordinates
+    :returns: a tuple (longitude, latitude)
+
+    >>> lonlat('12 14')
+    (12.0, 14.0)
+    """
+    lon, lat = text.split()
+    return longitude(lon), latitude(lat)
+
+
+def coordinates(value):
+    """
+    Convert a non-empty string into a list of lon-lat coordinates
+    >>> coordinates('')
+    Traceback (most recent call last):
+    ...
+    ValueError: Empty list of coordinates: ''
+    >>> coordinates('1.1 1.2')
+    [(1.1, 1.2)]
+    >>> coordinates('1.1 1.2, 2.2 2.3')
+    [(1.1, 1.2), (2.2, 2.3)]
+    """
+    if not value.strip():
+        raise ValueError('Empty list of coordinates: %r' % value)
+    return map(lonlat, value.split(','))
+
+
 def positiveint(text):
     """
     :param text: input string
@@ -185,6 +214,15 @@ def probabilities(text):
     """
     :param text: input text, comma separated or space separated
     :returns: a list of probabilities
+
+    >>> probabilities('')
+    []
+    >>> probabilities('1')
+    [1.0]
+    >>> probabilities('0.1 0.2')
+    [0.1, 0.2]
+    >>> probabilities('0.1, 0.2')  # commas are ignored
+    [0.1, 0.2]
     """
     return map(probability, text.replace(',', ' ').split())
 
