@@ -667,7 +667,7 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
                 imt_curves = zip(
                     sorted_imts, models.build_curves(rlz, self.curves))
             for imt, curves in imt_curves:
-                if not self.job.get_param('stats_only'):
+                if self.job.get_param('individual_curves', missing=True):
                     self.save_curves_for_rlz_imt(
                         rlz, imt, imtls[imt], points, curves)
                 curves_by_imt[imt].append(curves)
