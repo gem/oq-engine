@@ -297,7 +297,8 @@ def what_if_I_upgrade(conn, pkg_name='openquake.engine.db.schema.upgrades'):
     msg_danger_ = ('\nPlease note that the following scripts are potentially '
                    'dangerous and could destroy your data:\n%s')
     upgrader = UpgradeManager.instance(conn, pkg_name)
-    current_version = max(upgrader.get_db_versions(conn))
+    applied_versions = upgrader.get_db_versions(conn)
+    current_version = max(applied_versions)
     slow = []
     danger = []
     safe = []
@@ -309,8 +310,11 @@ def what_if_I_upgrade(conn, pkg_name='openquake.engine.db.schema.upgrades'):
             slow.append(url)
         elif script['flag'] == '-danger':
             danger.append(url)
-        else:
+        elif script['version'] not in applied_versions:
             safe.append(url)
+    if future_version == current_version:
+        return 'Your database is already updated at version %s.' % \
+            current_version
     header = header_ % (current_version, future_version)
     msg_safe = msg_safe_ % '\n'.join(safe)
     msg_slow = msg_slow_ % '\n'.join(slow)
