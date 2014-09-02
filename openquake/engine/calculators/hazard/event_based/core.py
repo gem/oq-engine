@@ -228,7 +228,8 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol):
     :param sitecol:
         a SiteCollection instance
     """
-    hc = models.HazardCalculation.objects.get(oqjob=job_id)
+    job = models.OqJob.objects.get(pk=job_id)
+    hc = job.hazard_calculation
     imts = map(from_string, hc.intensity_measure_types)
 
     result = {}  # trt_model_id -> (curves_by_gsim, [])
@@ -239,7 +240,7 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol):
     gsims = [logictree.GSIM[gsim]() for gsim in rlzs_by_gsim]
     calc = GmfCalculator(
         sorted(imts), sorted(gsims), trt_model.id,
-        hc.truncation_level, hc.get_correl_model())
+        hc.truncation_level, models.get_correl_model(job))
 
     with EnginePerformanceMonitor(
             'computing gmfs', job_id, compute_gmfs_and_curves):
