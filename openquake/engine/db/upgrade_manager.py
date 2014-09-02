@@ -56,7 +56,7 @@ class UpgradeManager(object):
     UPGRADES = 'openquake/engine/db/schema/upgrades/'
 
     def __init__(self, upgrade_dir, version_table='public.revision_info',
-                 version_pattern='\d\d\d\d', flag_pattern='(-slow-|-danger)?'):
+                 version_pattern='\d\d\d\d', flag_pattern='(-slow|-danger)?'):
         self.upgrade_dir = upgrade_dir
         self.version_table = version_table
         self.version_pattern = version_pattern
@@ -215,32 +215,31 @@ class UpgradeManager(object):
         """
         Extract the OpenQuake upgrade scripts from the links in the GitHub page
         """
+        link_pattern = '>\s*{0}\s*<'.format(self.pattern[1:-1])
         page = urllib.urlopen(self.upgrades_url).read()
-        for mo in re.finditer('>\s*{0}\s*<'.forma(self.pattern), page):
+        for mo in re.finditer(link_pattern, page):
             scriptname = mo.group(0)[1:-1].strip()
             yield self.parse_script_name(scriptname)
 
+    @classmethod
+    def instance(cls, conn, pkg_name='openquake.engine.db.schema.upgrades'):
+        """
+        Return an :class:`UpgradeManager` instance.
 
-def upgrade_db(conn, pkg_name, skip_versions=()):
-    """
-    Upgrade a database by running several scripts in a single transaction.
-
-    :param conn: a DB API 2 connection
-    :param str pkg_name: the name of the package containing the upgrade scripts
-    :param list skip_versions: the versions to skip
-    :returns: the version numbers of the new scripts applied the database
-    """
-    curs = conn.cursor()
-    try:
-        # upgrader is an UpgradeManager instance defined in the __init__.py
-        upgrader = importlib.import_module(pkg_name).upgrader
-    except ImportError:
-        raise SystemExit(
-            'Could not import %s (not in the PYTHONPATH?)' % pkg_name)
-    if not upgrader.read_scripts():
-        raise SystemExit('The upgrade_dir does not contain scripts matching '
-                         'the pattern %s' % upgrader.pattern)
-    try:
+        :param conn: a DB API 2 connection
+        :param str pkg_name: the name of the package with the upgrade scripts
+        """
+        try:
+            # upgrader is an UpgradeManager instance defined in the __init__.py
+            upgrader = importlib.import_module(pkg_name).upgrader
+        except ImportError:
+            raise SystemExit(
+                'Could not import %s (not in the PYTHONPATH?)' % pkg_name)
+        if not upgrader.read_scripts():
+            raise SystemExit(
+                'The upgrade_dir does not contain scripts matching '
+                'the pattern %s' % upgrader.pattern)
+        curs = conn.cursor()
         # check if there is already a versioning table
         curs.execute("SELECT tablename FROM pg_tables "
                      "WHERE schemaname=%s AND tablename=%s",
@@ -251,29 +250,67 @@ def upgrade_db(conn, pkg_name, skip_versions=()):
         if not versioning_table:
             upgrader.init(conn)
             conn.commit()
+        return upgrader
 
-        # run the upgrade scripts
+
+def upgrade_db(conn, pkg_name='openquake.engine.db.schema.upgrades',
+               skip_versions=()):
+    """
+    Upgrade a database by running several scripts in a single transaction.
+
+    :param conn: a DB API 2 connection
+    :param str pkg_name: the name of the package with the upgrade scripts
+    :param list skip_versions: the versions to skip
+    :returns: the version numbers of the new scripts applied the database
+    """
+    upgrader = UpgradeManager.instance(conn, pkg_name)
+    # run the upgrade scripts
+    try:
         versions_applied = upgrader.upgrade(conn, skip_versions)
     except:
         conn.rollback()
         raise
     else:
         conn.commit()
-
     return versions_applied
 
 
-def version_db(conn, version_table='public.revision_info'):
+def version_db(conn, pkg_name='openquake.engine.db.schema.upgrades'):
     """
     :param conn: a DB API 2 connection
+    :param str pkg_name: the name of the package with the upgrade scripts
     :returns: the current version of the database
     """
-    curs = conn.cursor()
-    curs.execute("SELECT 1 FROM pg_tables "
-                 "WHERE schemaname=%s AND tablename=%s",
-                 version_table.split('.'))
-    if not curs.fetchall():
-        return 'could not find the table %s: run --upgrade-db first' % (
-            version_table)
-    curs.execute('SELECT max(version) FROM %s' % version_table)
-    return curs.fetchall()[0][0]
+    upgrader = UpgradeManager.instance(conn, pkg_name)
+    return max(upgrader.get_db_versions(conn))
+
+
+def what_if_I_upgrade(conn, pkg_name='openquake.engine.db.schema.upgrades'):
+    """
+    :param conn: a DB API 2 connection
+    :param str pkg_name: the name of the package with the upgrade scripts
+    """
+    msg_ok_ = ('Your database is at version %s. If you upgrade to the latest '
+               'master, you will arrive at version %s.')
+    msg_slow_ = '\nPlease note that the following scripts could be slow:\n%s'
+    msg_danger_ = ('\nPlease note that the following scripts are potentially '
+                   'dangerous and could destroy your data:\n%s')
+    upgrader = UpgradeManager.instance(conn, pkg_name)
+    current_version = max(upgrader.get_db_versions(conn))
+    slow = []
+    danger = []
+    safe = []
+    future_version = current_version
+    for script in upgrader.extract_upgrade_scripts():
+        url = script['url']
+        future_version = script['version']
+        if script['flag'] == '-slow':
+            slow.append(url)
+        elif script['flag'] == '-danger':
+            danger.append(url)
+        else:
+            safe.append(url)
+    msg_ok = msg_ok_ % (current_version, future_version)
+    msg_slow = msg_slow_ % '\n'.join(slow)
+    msg_danger = msg_danger_ % '\n'.join(danger)
+    return msg_ok + (msg_slow if slow else '') + (msg_danger if danger else '')
