@@ -48,8 +48,7 @@ from openquake.hazardlib.calc import filters
 from openquake.hazardlib.site import (
     Site, SiteCollection, FilteredSiteCollection)
 
-from openquake.commonlib.general import (
-    distinct, str2bool, str2floats, str2coords)
+from openquake.commonlib.general import distinct, str2bool
 from openquake.commonlib.riskloaders import loss_type_to_cost_type
 from openquake.commonlib import logictree, valid
 
@@ -395,21 +394,24 @@ class JobParam(djm.Model):
 
     @classmethod
     def create(cls, job, name, value_as_string):
-        if not name in cls.all_params:
+        if not name in cls.valid_params:
             raise NameError('Unknown parameter: %s' % name)
+        convert = cls.valid_params[name]
         try:
-            value = cls.all_params[name](value_as_string)
+            value = convert(value_as_string)
         except:
-            raise ValueError('Could not convert to a Python type %s=%s'
-                             % (name, value_as_string))
+            raise ValueError('Could not convert to %s: %s=%s'
+                             % (convert.__name__, name, value_as_string))
         return cls.objects.create(job=job, name=name, value=repr(value))
 
     # dictionary param_name -> converter_function(text) -> python object
-    all_params = dict(
+    valid_params = dict(
         area_source_discretization=float,
+        asset_correlation=valid.FloatRange(0, 1),
         base_path=unicode,
         calculation_mode=str,
         coordinate_bin_width=float,
+        conditional_loss_poes=valid.probabilities,
         description=unicode,
         distance_bin_width=float,
         mag_bin_width=float,
@@ -430,19 +432,19 @@ class JobParam(djm.Model):
         number_of_ground_motion_fields=int,
         number_of_logic_tree_samples=int,
         num_epsilon_bins=int,
-        poes=str2floats,
-        poes_disagg=str2floats,
-        quantile_hazard_curves=str2floats,
+        poes=valid.probabilities,
+        poes_disagg=valid.probabilities,
+        quantile_hazard_curves=valid.probabilities,
         random_seed=int,
         reference_depth_to_1pt0km_per_sec=float,
         reference_depth_to_2pt5km_per_sec=float,
         reference_vs30_type=valid.Choice('measured', 'inferred'),
         reference_vs30_value=float,
-        region=str2coords,
+        region=valid.coordinates,
         region_grid_spacing=float,
         rupture_mesh_spacing=float,
         ses_per_logic_tree_path=int,
-        sites=str2coords,
+        sites=valid.coordinates,
         truncation_level=float,
         uniform_hazard_spectra=str2bool,
         width_of_mfd_bin=float,
