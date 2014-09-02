@@ -451,7 +451,13 @@ def main():
 
     if args.what_if_I_upgrade:
         conn = models.getcursor('admin').connection
-        print upgrade_manager.what_if_I_upgrade(conn)
+        msg = upgrade_manager.what_if_I_upgrade(conn)
+        print msg
+        if not msg.startswith('Your database is already updated'):
+            print '''Click on the links if you want to know what exactly the
+scripts are doing. Even slow script can be fast if your database is small or
+touch tables that are empty; even dangerous scripts are fine if they
+touch empty tables or data you are not interested in.'''
         sys.exit(0)
 
     if args.list_inputs:
