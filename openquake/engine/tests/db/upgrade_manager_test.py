@@ -1,11 +1,13 @@
 import os
+import mock
 import unittest
 import psycopg2
 import importlib
 from contextlib import contextmanager
 
 from openquake.engine.db.models import getcursor
-from openquake.engine.db.upgrade_manager import upgrade_db, DuplicatedVersion
+from openquake.engine.db.upgrade_manager import (
+    upgrade_db, version_db, what_if_I_upgrade, DuplicatedVersion)
 
 conn = getcursor('admin').connection
 pkg = 'openquake.engine.tests.db.upgrades'
@@ -101,6 +103,27 @@ class UpgradeManagerTestCase(unittest.TestCase):
         with self.assertRaises(DuplicatedVersion):
             with temp_script('0001-do-nothing.sql', 'SELECT 1'):
                 upgrade_db(conn, pkg)
+
+    def test_version_db(self):
+        self.assertEqual(version_db(conn), '0000')
+
+    def check_message(self, html, expected):
+        with mock.patch('urllib.urlopen') as urlopen:
+            urlopen().read.return_value = html
+            self.assertEqual(expected, what_if_I_upgrade(conn, pkg))
+
+    def test_safe_upgrade(self):
+        self.check_message('''
+>0000-base_schema.sql<
+>0001-uniq-ruptures.sql<
+''', 'Your database is at version 0000. If you upgrade to the latest master, you will arrive at version 0001.')
+
+    def test_tricky_upgrade(self):
+        self.check_message('''
+>0000-base_schema.sql<
+>0001-slow-uniq-ruptures.sql<
+>0002-danger-drop-gmf.sql<
+''', 'Your database is at version 0000. If you upgrade to the latest master, you will arrive at version 0002.\nPlease note that the following scripts could be slow:\nhttps://github.com/gem/oq-engine/tree/master/openquake/engine/db/schema/upgrades/0001-slow-uniq-ruptures.sql\nPlease note that the following scripts are potentially dangerous and could destroy your data:\nhttps://github.com/gem/oq-engine/tree/master/openquake/engine/db/schema/upgrades/0002-danger-drop-gmf.sql')
 
     def tearDown(self):
         # in case of errors upgrade_db has already performed a rollback
