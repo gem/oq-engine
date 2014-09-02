@@ -327,14 +327,14 @@ class OqJob(djm.Model):
         """
         return self.hazard_calculation or self.risk_calculation
 
-    def get_param(self, name, default=None):
+    def get_param(self, name, missing=None):
         """
         Return the value of the requested parameter.
         If the parameter does not exist in the database,
-        return the default value.
+        return the missing value.
 
         :param name: the name of the parameter
-        :param default: default if the parameter is missing
+        :param missing: value returned if the parameter is missing
 
         NB: since job_param.value is NOT NULL, `.get_param(name)`
         can return None only if the parameter is missing.
@@ -423,6 +423,7 @@ class JobParam(djm.Model):
         gsim=valid.Choice(*GSIMS),
         hazard_curves_from_gmfs=str2bool,
         hazard_maps=str2bool,
+        individual_curves=str2bool,
         inputs=dict,
         insured_losses=str2bool,
         intensity_measure_types=valid.intensity_measure_types,
