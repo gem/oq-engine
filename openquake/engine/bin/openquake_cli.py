@@ -94,6 +94,10 @@ def set_up_arg_parser():
         '--upgrade-db', action='store_true',
         help='Upgrade the openquake database',
     )
+    general_grp.add_argument(
+        '--version-db', action='store_true',
+        help='Show the current version of the openquake database',
+    )
 
     hazard_grp = parser.add_argument_group('Hazard')
     hazard_grp.add_argument(
@@ -433,6 +437,11 @@ def main():
         logs.set_level('info')
         conn = models.getcursor('admin').connection
         upgrade_manager.upgrade_db(conn, 'openquake.engine.db.schema.upgrades')
+        sys.exit(0)
+
+    if args.version_db:
+        conn = models.getcursor('admin').connection
+        print upgrade_manager.version_db(conn)
         sys.exit(0)
 
     if args.list_inputs:
