@@ -1,6 +1,7 @@
 import os
 import re
 import runpy
+import urllib
 import importlib
 from openquake.engine import logs
 
@@ -51,12 +52,18 @@ class UpgradeManager(object):
     :param version_pattern:
         a regulation expression for the script version number (\d\d\d\d)
     """
+    ENGINE_URL = 'https://github.com/gem/oq-engine/tree/master/'
+    UPGRADES = 'openquake/engine/db/schema/upgrades/'
+
     def __init__(self, upgrade_dir, version_table='public.revision_info',
-                 version_pattern='\d\d\d\d'):
+                 version_pattern='\d\d\d\d', flag_pattern='(-slow-|-danger)?'):
         self.upgrade_dir = upgrade_dir
         self.version_table = version_table
         self.version_pattern = version_pattern
-        self.pattern = r'^(%s[rs]?)-([\w\-_]+)\.(sql|py)$' % version_pattern
+        self.flag_pattern = flag_pattern
+        self.pattern = r'^(%s)%s-([\w\-_]+)\.(sql|py)$' % (
+            version_pattern, flag_pattern)
+        self.upgrades_url = self.ENGINE_URL + self.UPGRADES
         if '.' in version_table:  # contains the schema name
             self.version_schema_name, self.version_table_name = \
                 version_table.split('.')
@@ -168,8 +175,9 @@ class UpgradeManager(object):
         match = re.match(self.pattern, script_name)
         if not match:
             return
-        version, name, ext = match.groups()
-        return dict(fname=script_name, version=version, name=name, ext=ext)
+        version, flag, name, ext = match.groups()
+        return dict(fname=script_name, version=version, name=name,
+                    flag=flag, ext=ext, url=self.upgrades_url + script_name)
 
     def read_scripts(self, minversion=None, maxversion=None, skip_versions=()):
         """
@@ -202,6 +210,15 @@ class UpgradeManager(object):
                         'Duplicated versions {%s,%s}' %
                         (scriptname, previousname))
         return scripts
+
+    def extract_upgrade_scripts(self):
+        """
+        Extract the OpenQuake upgrade scripts from the links in the GitHub page
+        """
+        page = urllib.urlopen(self.upgrades_url).read()
+        for mo in re.finditer('>\s*{0}\s*<'.forma(self.pattern), page):
+            scriptname = mo.group(0)[1:-1].strip()
+            yield self.parse_script_name(scriptname)
 
 
 def upgrade_db(conn, pkg_name, skip_versions=()):
@@ -244,3 +261,19 @@ def upgrade_db(conn, pkg_name, skip_versions=()):
         conn.commit()
 
     return versions_applied
+
+
+def version_db(conn, version_table='public.revision_info'):
+    """
+    :param conn: a DB API 2 connection
+    :returns: the current version of the database
+    """
+    curs = conn.cursor()
+    curs.execute("SELECT 1 FROM pg_tables "
+                 "WHERE schemaname=%s AND tablename=%s",
+                 version_table.split('.'))
+    if not curs.fetchall():
+        return 'could not find the table %s: run --upgrade-db first' % (
+            version_table)
+    curs.execute('SELECT max(version) FROM %s' % version_table)
+    return curs.fetchall()[0][0]
