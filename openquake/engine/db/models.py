@@ -342,7 +342,7 @@ class OqJob(djm.Model):
         try:
             return JobParam.objects.get(job=self, name=name).value
         except ObjectDoesNotExist:
-            return default
+            return missing
 
     def __repr__(self):
         return '<%s %d, %s>' % (self.__class__.__name__,
@@ -406,15 +406,15 @@ class JobParam(djm.Model):
 
     # dictionary param_name -> converter_function: text -> python object
     valid_params = dict(
-        area_source_discretization=float,
+        area_source_discretization=valid.positivefloat,
         asset_correlation=valid.FloatRange(0, 1),
         base_path=unicode,
         calculation_mode=str,
-        coordinate_bin_width=float,
+        coordinate_bin_width=valid.positivefloat,
         conditional_loss_poes=valid.probabilities,
         description=unicode,
-        distance_bin_width=float,
-        mag_bin_width=float,
+        distance_bin_width=valid.positivefloat,
+        mag_bin_width=valid.positivefloat,
         export_dir=unicode,
         export_multi_curves=str2bool,
         ground_motion_correlation_model=valid.Choice('JB2009', ''),
@@ -428,29 +428,30 @@ class JobParam(djm.Model):
         insured_losses=str2bool,
         intensity_measure_types=valid.intensity_measure_types,
         intensity_measure_types_and_levels=valid.dictionary,
-        investigation_time=float,
-        maximum_distance=float,
+        investigation_time=valid.positivefloat,
+        maximum_distance=valid.positivefloat,
         mean_hazard_curves=str2bool,
-        number_of_ground_motion_fields=int,
-        number_of_logic_tree_samples=int,
-        num_epsilon_bins=int,
+        number_of_ground_motion_fields=valid.positiveint,
+        number_of_logic_tree_samples=valid.positiveint,
+        num_epsilon_bins=valid.positiveint,
         poes=valid.probabilities,
         poes_disagg=valid.probabilities,
         quantile_hazard_curves=valid.probabilities,
-        random_seed=int,
-        reference_depth_to_1pt0km_per_sec=float,
-        reference_depth_to_2pt5km_per_sec=float,
+        random_seed=valid.positiveint,
+        reference_depth_to_1pt0km_per_sec=valid.positivefloat,
+        reference_depth_to_2pt5km_per_sec=valid.positivefloat,
         reference_vs30_type=valid.Choice('measured', 'inferred'),
-        reference_vs30_value=float,
+        reference_vs30_value=valid.positivefloat,
         region=valid.coordinates,
         region_constraint=valid.coordinates,
-        region_grid_spacing=float,
-        rupture_mesh_spacing=float,
-        ses_per_logic_tree_path=int,
+        region_grid_spacing=valid.positivefloat,
+        risk_investigation_time=valid.positivefloat,
+        rupture_mesh_spacing=valid.positivefloat,
+        ses_per_logic_tree_path=valid.positiveint,
         sites=valid.coordinates,
-        truncation_level=float,
+        truncation_level=valid.positivefloat,
         uniform_hazard_spectra=str2bool,
-        width_of_mfd_bin=float,
+        width_of_mfd_bin=valid.positivefloat,
         )
 
 
