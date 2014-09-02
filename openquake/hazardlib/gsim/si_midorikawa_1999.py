@@ -14,8 +14,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`SiMidorikawa1999Asc`, class:`SiMidorikawa1999SInter`,
-and class:`SiMidorikawaSSlab`.
+Module exports :class:`SiMidorikawa1999Asc`, :class:`SiMidorikawa1999SInter`,
+:class:`SiMidorikawaSSlab`, :class:`SiMidorikawa1999SInterNorthEastCorrection`,
+:class:`SiMidorikawa1999SInterSouthWestCorrection`,
+:class:`SiMidorikawa1999SSlabNorthEastCorrection` and
+:class:`SiMidorikawa1999SSlabSouthWestCorrection`.
 """
 from __future__ import division
 
@@ -25,70 +28,84 @@ from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGV
 from openquake.hazardlib.geo import (
-    Point, Line, Mesh, RectangularMesh, SimpleFaultSurface
+    Mesh, RectangularMesh, SimpleFaultSurface
 )
 
 
-# Subduction trench axis (table 3.5.2-1) page 3-150
-# The trench axis is resampled at 10 km to more precisely compute the
-# minimum distance
-SUB_TRENCH = Line([
-    Point(143.50, 24.00),
-    Point(143.00, 29.00),
-    Point(141.90, 33.80),
-    Point(142.40, 35.80),
-    Point(143.25, 36.55),
-    Point(143.80, 37.70),
-    Point(144.20, 39.20),
-    Point(144.30, 40.10),
-    Point(144.65, 41.00),
-    Point(146.80, 42.00),
-    Point(153.00, 45.50)
-]).resample(10.)
+# Subduction trench coordinates (table 3.5.2-1) page 3-150
+SUB_TRENCH_LONS = np.array([
+    143.50, 143.00, 141.90, 142.40, 143.25, 143.80, 144.20, 144.30, 144.65,
+    146.80, 153.00
+])
 
+SUB_TRENCH_LATS = np.array([
+    24.00, 29.00, 33.80, 35.80, 36.55, 37.70, 39.20, 40.10, 41.00, 42.00, 45.50
+])
 
 # Volcanic front coordinates (table 3.5.2-2, page 3-150)
-VOLCANIC_FRONT_LONS = [
+VOLCANIC_FRONT_LONS = np.array([
     122.00, 124.00, 128.30, 129.70, 130.80, 131.60, 132.00, 133.70, 134.90,
     136.90
-]
+])
+
+VOLCANIC_FRONT_LATS = np.array([
+    24.50, 24.50, 27.90, 29.50, 31.50, 33.40, 34.90, 35.30, 35.30, 36.20
+])
 
 
-VOLCANIC_FRONT_LATS = [
-     24.50, 24.50, 27.90, 29.50, 31.50, 33.40, 34.90, 35.30, 35.30, 36.20
-]
+def _construct_surface(lons, lats, upper_depth, lower_depth):
+    """
+    Utility method that constructs and return a simple fault surface with top
+    edge specified by `lons` and `lats` and extending vertically from
+    `upper_depth` to `lower_depth`.
+
+    The underlying mesh is built by repeating the same coordinates
+    (`lons` and `lats`) at the two specified depth levels.
+    """
+    depths = np.array([
+        np.zeros_like(lons) + upper_depth,
+        np.zeros_like(lats) + lower_depth
+    ])
+
+    mesh = RectangularMesh(
+        np.tile(lons, (2, 1)), np.tile(lats, (2, 1)), depths
+    )
+
+    return SimpleFaultSurface(mesh)
 
 
 def _get_min_distance_to_sub_trench(lons, lats):
     """
-    Compute and return minimum distance between subduction trench line
-    (defined by 'SUB_TRENCH') and points specified by 'lons' and 'lats'
+    Compute and return minimum distance between subduction trench
+    and points specified by 'lons' and 'lats'
+
+    The method creates an instance of
+    :class:`openquake.hazardlib.geo.SimpleFaultSurface` to model the subduction
+    trench. The surface is assumed vertical and extending from 0 to 10 km
+    depth.
+    The 10 km depth value is arbitrary given that distance calculation depend
+    only on top edge depth. The method calls then
+    :meth:`openquake.hazardlib.geo.base.BaseQuadrilateralSurface.get_rx_distance`
+    and return its absolute value.
     """
-    trench = Mesh.from_points_list(SUB_TRENCH.points)
+    trench = _construct_surface(SUB_TRENCH_LONS, SUB_TRENCH_LATS, 0., 10.)
     sites = Mesh(lons, lats, None)
 
-    return trench.get_min_distance(sites)
+    return np.abs(trench.get_rx_distance(sites))
 
 
 def _get_min_distance_to_volcanic_front(lons, lats):
     """
-    Compute and return minimum distance between volcanic front line (defined by
-    'VOLCANIC_FRONT_LONS' and 'VOLCANIC_FRONT_LATS') and points specified by
-    'lons' and 'lats'.
+    Compute and return minimum distance between volcanic front and points
+    specified by 'lons' and 'lats'.
 
     Distance is negative if point is located east of the volcanic front,
     positive otherwise.
-    """
-    # create 2D mesh from volcanic front coordinates. The mesh is constructed
-    # by repeating volcanic front coordinates at two depths levels: 0 and 10 km
-    vf_depths = np.zeros((2, len(VOLCANIC_FRONT_LONS)))
-    vf_depths[1, :] += 10
-    vf_lons = np.array([VOLCANIC_FRONT_LONS, VOLCANIC_FRONT_LONS])
-    vf_lats = np.array([VOLCANIC_FRONT_LATS, VOLCANIC_FRONT_LATS])
 
-    vf = SimpleFaultSurface(
-        RectangularMesh(vf_lons, vf_lats, vf_depths)
-    )
+    The method uses the same approach as :meth:`_get_min_distance_to_sub_trench`
+    but final distance is returned without taking the absolute value.
+    """
+    vf = _construct_surface(VOLCANIC_FRONT_LONS, VOLCANIC_FRONT_LATS, 0., 10.)
     sites = Mesh(lons, lats, None)
 
     return vf.get_rx_distance(sites)
