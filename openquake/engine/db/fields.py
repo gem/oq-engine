@@ -221,8 +221,7 @@ class LiteralField(djm.Field):
             return ast.literal_eval(value)
 
     def get_prep_value(self, value):
-        if value is not None:
-            return repr(value)
+        return repr(value)
 
 
 class PickleField(djm.Field):
