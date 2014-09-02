@@ -361,8 +361,6 @@ class EventBasedHazardFormTestCase(unittest.TestCase):
             truncation_level=0.0,
             maximum_distance=100.0,
             ses_per_logic_tree_path=5,
-            ground_motion_correlation_model='JB2009',
-            ground_motion_correlation_params={"vs30_clustering": True},
             ground_motion_fields=True,
             hazard_curves_from_gmfs=True,
             mean_hazard_curves=True,
@@ -616,7 +614,6 @@ class ScenarioFormTestCase(unittest.TestCase):
             truncation_level=0.1,
             maximum_distance=100.0,
             gsim='BooreAtkinson2008',
-            ground_motion_correlation_model='JB2009',
             number_of_ground_motion_fields=10,
         )
 
@@ -917,8 +914,7 @@ class ValidateTestCase(unittest.TestCase):
 
         expected_warnings = [
             "Unknown parameter '%s' for calculation mode 'classical'."
-            " Ignoring." % x for x in ('ses_per_logic_tree_path',
-                                       'ground_motion_correlation_model')
+            " Ignoring." % x for x in ('ses_per_logic_tree_path',)
         ]
 
         actual_warnings = [m.message.message for m in w]
