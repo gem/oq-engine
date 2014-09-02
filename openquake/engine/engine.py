@@ -538,7 +538,7 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
 
     if 'sites' in params:
         # in the future `sites` will be removed by the HazardCalculation
-        params['sites'] = 'MULTIPOINT(%(sites)s)' % params
+        params['sites'] = 'MULTIPOINT(%s)' % params['sites'].replace('\t', ' ')
 
     if hazard_output_id is None and hazard_job_id is None:
         # this is a hazard calculation, not a risk one
