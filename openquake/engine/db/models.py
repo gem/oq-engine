@@ -53,7 +53,7 @@ from openquake.commonlib.riskloaders import loss_type_to_cost_type
 from openquake.commonlib import logictree, valid
 
 from openquake.engine.db import fields
-from openquake.engine import writer
+from openquake.engine import logs, writer
 
 #: Kind of supported curve statistics
 STAT_CHOICES = (
@@ -395,7 +395,8 @@ class JobParam(djm.Model):
     @classmethod
     def create(cls, job, name, value_as_string):
         if not name in cls.valid_params:
-            raise NameError('Unknown parameter: %s' % name)
+            logs.LOG.warn('Unknown parameter %s, ignored' % name)
+            return
         convert = cls.valid_params[name]
         try:
             value = convert(value_as_string)
@@ -405,7 +406,7 @@ class JobParam(djm.Model):
         return cls.objects.create(job=job, name=name, value=repr(value))
 
     # dictionary param_name -> converter_function: text -> python object
-    valid_params = dict(
+    valid_params = valid.parameters(
         area_source_discretization=valid.positivefloat,
         asset_correlation=valid.FloatRange(0, 1),
         base_path=unicode,
@@ -430,6 +431,7 @@ class JobParam(djm.Model):
         intensity_measure_types_and_levels=valid.dictionary,
         investigation_time=valid.positivefloat,
         loss_curve_resolution=valid.positiveint,
+        lrem_steps_per_interval=valid.positiveint,
         maximum_distance=valid.positivefloat,
         mean_hazard_curves=str2bool,
         number_of_ground_motion_fields=valid.positiveint,
@@ -450,7 +452,7 @@ class JobParam(djm.Model):
         rupture_mesh_spacing=valid.positivefloat,
         ses_per_logic_tree_path=valid.positiveint,
         sites=valid.coordinates,
-        truncation_level=valid.positivefloat,
+        truncation_level=valid.NoneOr(valid.positivefloat),
         uniform_hazard_spectra=str2bool,
         width_of_mfd_bin=valid.positivefloat,
         )
