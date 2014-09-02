@@ -424,6 +424,7 @@ class JobParam(djm.Model):
         hazard_curves_from_gmfs=str2bool,
         hazard_maps=str2bool,
         inputs=dict,
+        insured_losses=str2bool,
         intensity_measure_types=valid.intensity_measure_types,
         intensity_measure_types_and_levels=valid.dictionary,
         investigation_time=float,
