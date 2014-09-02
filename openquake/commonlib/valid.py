@@ -28,16 +28,15 @@ from openquake.hazardlib import imt
 class NoneOr(object):
     """
     Accept the empty string (casted to None) or something else validated
-    by the cast callable.
+    by the underlying `cast` validator.
     """
     def __init__(self, cast):
         self.cast = cast
         self.__name__ = cast.__name__
 
     def __call__(self, value):
-        if value == '':
-            return None
-        return self.cast(value)
+        if value:
+            return self.cast(value)
 
 
 class Choice(object):
@@ -261,3 +260,20 @@ def dictionary(text):
         return ast.literal_eval(text)
     except:
         raise ValueError('%r is not a valid Python dictionary' % text)
+
+
+def parameters(**names_vals):
+    """
+    Returns a dictionary {name: validator} by making sure
+    that the validators are callable objects with a `__name__`.
+    """
+    for name, val in names_vals.iteritems():
+        if not callable(val):
+            raise ValueError(
+                '%r for %s is not a validator: it is not callable'
+                % (val, name))
+        if not hasattr(val, '__name__'):
+            raise ValueError(
+                '%r for %s is not a validator: it has no __name__'
+                % (val, name))
+    return names_vals
