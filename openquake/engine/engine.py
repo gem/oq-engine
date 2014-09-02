@@ -205,9 +205,13 @@ def create_calculation(model, params):
     calc_fields = model._meta.get_all_field_names()
 
     for param in set(params) - set(calc_fields):
+        # the following parameters will be removed by HazardCalculation
+        if param in ('ground_motion_correlation_model',
+                     'ground_motion_correlation_params'):
+            params.pop(param)
         # FIXME(lp). Django 1.3 does not allow using _id fields in model
         # __init__. We will check these fields in pre-execute phase
-        if param not in [
+        elif param not in [
                 'preloaded_exposure_model_id', 'hazard_output_id',
                 'hazard_calculation_id']:
             msg = "Unknown parameter '%s'. Ignoring."
@@ -531,6 +535,14 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
         raise ValueError(
             'The parameters %s in the .ini file does '
             'not correspond to a valid input type' % ', '.join(missing))
+
+    # populate JobParam
+    for name, value in sorted(params.iteritems()):
+        models.JobParam.create(job, name, value)
+
+    if 'sites' in params:
+        # in the future `sites` will be removed by the HazardCalculation
+        params['sites'] = 'MULTIPOINT(%s)' % params['sites'].replace('\t', ' ')
 
     if hazard_output_id is None and hazard_job_id is None:
         # this is a hazard calculation, not a risk one
