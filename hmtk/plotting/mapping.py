@@ -51,6 +51,7 @@
 Module hmtk.plotting.catalogue.map is a graphical
 function for plotting the spatial distribution of events
 '''
+import collections
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.basemap import Basemap
@@ -61,6 +62,7 @@ from openquake.hazardlib.geo.polygon import Polygon
 from hmtk.sources.area_source import mtkAreaSource
 from hmtk.sources.point_source import mtkPointSource
 from hmtk.plotting.beachball import Beach
+from hmtk.plotting.plotting_utils import DISSIMILAR_COLOURLIST
 from hmtk.sources.simple_fault_source import mtkSimpleFaultSource
 from hmtk.sources.complex_fault_source import mtkComplexFaultSource
 
@@ -78,6 +80,7 @@ DEFAULT_SYMBOLOGY = [(-np.inf, 1., 'k.'), # M < 1
 LEGEND_OFFSET=(1.3, 1.0)
 PORTRAIT_ASPECT = (6, 8)
 LANDSCAPE_ASPECT = (8, 6)
+NCOLS = len(DISSIMILAR_COLOURLIST)
 
 def _fault_polygon_from_mesh(source):
     """
@@ -230,7 +233,7 @@ class HMTKBaseMap(object):
                                  catalogue.data['magnitude'] < sym[1])
             mag_size = 1.2 * np.min([sym[0] + 0.5, sym[1] - 0.5])
             x, y = self.m(catalogue.data['longitude'][idx],
-                           catalogue.data['latitude'][idx])
+                          catalogue.data['latitude'][idx])
             self.m.plot(x, y, sym[2], markersize=mag_size, label=leg_str)
 
         plt.legend(bbox_to_anchor=LEGEND_OFFSET)
@@ -325,7 +328,7 @@ class HMTKBaseMap(object):
                        cmap="jet_r",
                        alpha=alpha,
                        linewidths=0.0,
-                       zorder=2)
+                       zorder=4)
         # Plot border
         x2, y2 = self.m(outline[:, 0], outline[:, 1])
         self.m.plot(x2, y2, border, linewidth=border_width)
@@ -411,7 +414,7 @@ class HMTKBaseMap(object):
                        s=(smin + data ** sscale),
                        c=colour,
                        alpha=alpha,
-                       zorder=4)
+                       zorder=2)
         if not overlay:
             plt.show()
 
@@ -468,3 +471,49 @@ class HMTKBaseMap(object):
                 plt.gca().add_collection(beach)
                 if not overlay:
                     plt.show()
+
+    def add_catalogue_cluster(self, catalogue, vcl, flagvector,
+            cluster_id=None, overlay=True):
+        """
+        Creates a plot of a catalogue showing where particular clusters exist
+        """
+        # Create simple magnitude scaled point basemap
+        self.add_size_scaled_points(catalogue.data['longitude'],
+                                    catalogue.data['latitude'],
+                                    catalogue.data['magnitude'],
+                                    shape="o",
+                                    alpha=0.8,
+                                    colour=(0.5, 0.5, 0.5),
+                                    smin=1.0,
+                                    sscale=1.5,
+                                    overlay=True)
+        # If cluster ID is not specified just show mainshocks
+        if cluster_id is None:
+            idx = flagvector == 0
+            self.add_size_scaled_points(catalogue.data['longitude'][idx],
+                                        catalogue.data['latitude'][idx],
+                                        catalogue.data['magnitude'][idx],
+                                        shape="o",
+                                        colour="r",
+                                        smin=1.0,
+                                        sscale=1.5,
+                                        overlay=overlay)
+            return
+        if not isinstance(cluster_id, collections.Iterable):
+            cluster_id = [cluster_id]
+        for iloc, clid in enumerate(cluster_id):
+            if iloc == (len(cluster_id) - 1):
+                # On last iteration set overlay to function overlay
+                temp_overlay = overlay
+            else:
+                temp_overlay = True
+            idx = vcl == clid
+            self.add_size_scaled_points(
+                catalogue.data["longitude"][idx],
+                catalogue.data["latitude"][idx],
+                catalogue.data["magnitude"][idx],
+                shape="o",
+                colour=DISSIMILAR_COLOURLIST[(iloc + 1) % NCOLS],
+                smin=1.0,
+                sscale=1.5,
+                overlay=temp_overlay)
