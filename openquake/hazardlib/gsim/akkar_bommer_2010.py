@@ -306,11 +306,12 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
 
         mean, stddevs = super(AkkarBommer2010SWISS01, self).\
         get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
-        mean, stddevs = self._apply_adjustments(mean, stddevs, sites, rup, dists, imt, 
-           stddev_types)
+        mean, stddevs = self._apply_adjustments(mean, stddevs, sites, rup, 
+                        dists, imt, stddev_types)
         return mean, stddevs
 
-    def _apply_adjustments(self, mean, stddevs, sites, rup, dists, imt, stddev_types):
+    def _apply_adjustments(self, mean, stddevs, sites, rup, dists, imt, 
+        stddev_types):
 
         C_ADJ = self.COEFFS_FS_ROCK[imt]
         c1_rrup = self._compute_C1_term(C_ADJ, imt, dists)
@@ -322,7 +323,8 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
         mean_corr = np.log(mean_corr)
         print phi_ss
 
-        std_corr = self._get_corr_stddevs(self.COEFFS[imt], stddev_types,len(sites.vs30), phi_ss)
+        std_corr = self._get_corr_stddevs(self.COEFFS[imt], stddev_types,
+                   len(sites.vs30), phi_ss)
         
         stddevs = np.log(10 ** np.array(std_corr))
         
@@ -375,7 +377,8 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
         idx = dists.rjb < C['Rc11']
         c1_rrup[idx] = C['phi_11']
         idx = (dists.rjb >= C['Rc11']) & (dists.rjb <= C['Rc21'])
-        c1_rrup[idx] = C['phi_11'] + (C['phi_21'] - C['phi_11']) * ((dists.rjb[idx] - C['Rc11']) / (C['Rc21'] - C['Rc11']))
+        c1_rrup[idx] = C['phi_11'] + (C['phi_21'] - C['phi_11']) * \
+        ((dists.rjb[idx] - C['Rc11']) / (C['Rc21'] - C['Rc11']))
         idx = dists.rjb > C['Rc21']
         c1_rrup[idx] = C['phi_21']
         return c1_rrup
