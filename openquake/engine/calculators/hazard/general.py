@@ -653,21 +653,23 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
         points = self.hc.points_to_compute()
         sorted_imts = sorted(imtls)
         curves_by_imt = dict((imt, []) for imt in sorted_imts)
+        individual_curves = self.job.get_param('individual_curves', missing=True)
 
         for rlz in self._get_realizations():
-            # create a multi-imt curve
-            multicurve = models.Output.objects.create_output(
-                self.job, "hc-multi-imt-rlz-%s" % rlz.id,
-                "hazard_curve_multi")
-            models.HazardCurve.objects.create(
-                output=multicurve, lt_realization=rlz,
-                investigation_time=self.hc.investigation_time)
+            if individual_curves:
+                # create a multi-imt curve
+                multicurve = models.Output.objects.create_output(
+                    self.job, "hc-multi-imt-rlz-%s" % rlz.id,
+                    "hazard_curve_multi")
+                models.HazardCurve.objects.create(
+                    output=multicurve, lt_realization=rlz,
+                    investigation_time=self.hc.investigation_time)
 
             with self.monitor('building curves per realization'):
                 imt_curves = zip(
                     sorted_imts, models.build_curves(rlz, self.curves))
             for imt, curves in imt_curves:
-                if self.job.get_param('individual_curves', missing=True):
+                if individual_curves:
                     self.save_curves_for_rlz_imt(
                         rlz, imt, imtls[imt], points, curves)
                 curves_by_imt[imt].append(curves)
