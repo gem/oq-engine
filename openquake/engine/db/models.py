@@ -331,11 +331,15 @@ class OqJob(djm.Model):
         """
         return self.hazard_calculation or self.risk_calculation
 
-    def get_param(self, name, missing=None):
+    def get_param(self, name, missing=ObjectDoesNotExist):
         """
-        Return the value of the requested parameter.
-        If the parameter does not exist in the database,
-        return the missing value.
+        `job.get_param(name)` returns the value of the requested parameter
+        or raise an ObjectDoesNotExist exception if the parameter does not
+        exist in the database.
+
+        `job.get_param(name, missing)` returns the value of the requested
+        parameter or the `missing` value if the parameter does not
+        exist in the database.
 
         :param name: the name of the parameter
         :param missing: value returned if the parameter is missing
@@ -343,6 +347,8 @@ class OqJob(djm.Model):
         NB: since job_param.value is NOT NULL, `.get_param(name)`
         can return None only if the parameter is missing.
         """
+        if missing is ObjectDoesNotExist:
+            return JobParam.objects.get(job=self, name=name).value
         try:
             return JobParam.objects.get(job=self, name=name).value
         except ObjectDoesNotExist:
