@@ -445,7 +445,7 @@ def main():
         print msg
         if msg.startswith('Your database is already updated'):
             pass
-        elif not args.yes and confirm('Proceed? (y/N) '):
+        elif args.yes or confirm('Proceed? (y/N) '):
             upgrade_manager.upgrade_db(conn)
         sys.exit(0)
 
