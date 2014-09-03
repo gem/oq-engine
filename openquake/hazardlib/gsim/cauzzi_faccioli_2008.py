@@ -23,7 +23,7 @@ import numpy as np
 # standard acceleration of gravity in m/s**2
 from scipy.constants import g
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
-from openquake.hazardlib.gsim.cauzzi_faccioli_2008_coeffs import (
+from openquake.hazardlib.gsim.cauzzi_faccioli_2008_swiss_coeffs import (
     COEFFS_FS_ROCK_SWISS01,
     COEFFS_FS_ROCK_SWISS04,
     COEFFS_FS_ROCK_SWISS08,
