@@ -436,7 +436,6 @@ class AkkarBommer2010SWISS01T(AkkarBommer2010SWISS01):
 
     def _compute_phi_ss(self, C, rup, c1_rrup, imt):
         C_ADJ= self.COEFFS_PHI_SS[imt]
-        print 'phi_ss: ',C_ADJ['phi_ss']
         return (C_ADJ['phi_ss']/np.log(10))
 
 class AkkarBommer2010SWISS04T(AkkarBommer2010SWISS04):
@@ -453,7 +452,6 @@ class AkkarBommer2010SWISS04T(AkkarBommer2010SWISS04):
 
     def _compute_phi_ss(self, C, rup, c1_rrup, imt):
         C_ADJ= self.COEFFS_PHI_SS[imt]
-        print 'phi_ss: ',C_ADJ['phi_ss']
         return (C_ADJ['phi_ss']/np.log(10))
 
 class AkkarBommer2010SWISS08T(AkkarBommer2010SWISS08):
@@ -469,6 +467,5 @@ class AkkarBommer2010SWISS08T(AkkarBommer2010SWISS08):
     COEFFS_PHI_SS=COEFFS_PHI_SS_MEAN
     def _compute_phi_ss(self, C, rup, c1_rrup, imt):
         C_ADJ= self.COEFFS_PHI_SS[imt]
-        print 'phi_ss: ',C_ADJ['phi_ss']
         return (C_ADJ['phi_ss']/np.log(10))
 
