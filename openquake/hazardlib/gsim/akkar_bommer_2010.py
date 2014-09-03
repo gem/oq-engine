@@ -24,7 +24,7 @@ import numpy as np
 from scipy.constants import g
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
-from openquake.hazardlib.gsim.akkar_bommer_2010_coeffs import (
+from openquake.hazardlib.gsim.akkar_bommer_2010_swiss_coeffs import (
                                             COEFFS_FS_ROCK_SWISS01,
                                             COEFFS_FS_ROCK_SWISS04,
                                             COEFFS_FS_ROCK_SWISS08,
