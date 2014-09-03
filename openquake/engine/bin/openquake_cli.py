@@ -50,9 +50,6 @@ MISSING_HAZARD_MSG = ("Please specify the ID of the hazard output (or "
                       "job) to be used by using '%s (or %s) <id>'" %
                       (HAZARD_OUTPUT_ARG, HAZARD_JOB_ARG))
 
-logging.basicConfig(level=logging.INFO)
-logs.set_level('info')
-
 
 def set_up_arg_parser():
     """Set up and return an :class:`argparse.ArgumentParser` with all of the
@@ -440,8 +437,14 @@ def main():
         os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'
 
     if args.upgrade_db:
+        logging.basicConfig(level=logging.INFO)
+        logs.set_level('info')
         conn = models.getcursor('admin').connection
-        upgrade_manager.upgrade_db(conn)
+        msg = upgrade_manager.what_if_I_upgrade(
+            conn, extract_scripts='read_scripts')
+        print msg
+        if not args.yes and confirm('Proceed? (y/N) '):
+            upgrade_manager.upgrade_db(conn)
         sys.exit(0)
 
     if args.version_db:
@@ -451,13 +454,7 @@ def main():
 
     if args.what_if_I_upgrade:
         conn = models.getcursor('admin').connection
-        msg = upgrade_manager.what_if_I_upgrade(conn)
-        print msg
-        if not msg.startswith('Your database is already updated'):
-            print '''Click on the links if you want to know what exactly the
-scripts are doing. Even slow script can be fast if your database is small or
-touch tables that are empty; even dangerous scripts are fine if they
-touch empty tables or data you are not interested in.'''
+        print upgrade_manager.what_if_I_upgrade(conn)
         sys.exit(0)
 
     if args.list_inputs:

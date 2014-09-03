@@ -285,10 +285,15 @@ def version_db(conn, pkg_name='openquake.engine.db.schema.upgrades'):
     return max(upgrader.get_db_versions(conn))
 
 
-def what_if_I_upgrade(conn, pkg_name='openquake.engine.db.schema.upgrades'):
+def what_if_I_upgrade(conn, pkg_name='openquake.engine.db.schema.upgrades',
+                      extract_scripts='extract_upgrade_scripts'):
     """
-    :param conn: a DB API 2 connection
-    :param str pkg_name: the name of the package with the upgrade scripts
+    :param conn:
+        a DB API 2 connection
+    :param str pkg_name:
+        the name of the package with the upgrade scripts
+    :param extract_scripts:
+        name of the method to extract the scripts
     """
     header_ = ('Your database is at version %s. If you upgrade to the latest '
                'master, you will arrive at version %s.')
@@ -303,7 +308,7 @@ def what_if_I_upgrade(conn, pkg_name='openquake.engine.db.schema.upgrades'):
     danger = []
     safe = []
     future_version = current_version
-    for script in upgrader.extract_upgrade_scripts():
+    for script in getattr(upgrader, extract_scripts)():
         url = script['url']
         future_version = script['version']
         if script['flag'] == '-slow':
@@ -319,5 +324,14 @@ def what_if_I_upgrade(conn, pkg_name='openquake.engine.db.schema.upgrades'):
     msg_safe = msg_safe_ % '\n'.join(safe)
     msg_slow = msg_slow_ % '\n'.join(slow)
     msg_danger = msg_danger_ % '\n'.join(danger)
-    return header + (msg_safe if safe else '') + (msg_slow if slow else '') \
+    msg = header + (msg_safe if safe else '') + (msg_slow if slow else '') \
         + (msg_danger if danger else '')
+    msg += ('\nClick on the links if you want to know what exactly the '
+            'scripts are doing.')
+    if slow:
+        msg += ('\nEven slow script can be fast if your database is small or'
+                ' touch tables that are empty.')
+    if danger:
+        msg += ('\nEven dangerous scripts are fine if they '
+                'touch empty tables or data you are not interested in.')
+    return msg
