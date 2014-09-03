@@ -113,13 +113,9 @@ class UpgradeManager(object):
         self.starting_version = max(db_versions)
         to_skip = sorted(db_versions | set(skip_versions))
         scripts = self.read_scripts(None, None, to_skip)
-        if not scripts:
-            logs.LOG.warn('The database is updated at version %s. '
-                          'Nothing to do.', self.starting_version)
+        if not scripts:  # no new scripts to apply
             return []
         self.ending_version = max(s['version'] for s in scripts)
-        logs.LOG.warn('The database is at version %s. Upgrading to version '
-                      '%s.', self.starting_version, self.ending_version)
         return self._upgrade(conn, scripts)
 
     def _upgrade(self, conn, scripts):
