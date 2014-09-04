@@ -220,6 +220,7 @@ def do_uhs_post_proc(job):
             rlz_maps = maps_for_poe.filter(
                 statistics=None, lt_realization=rlz
             )
+            assert rlz_maps, 'Could not find HazardMaps for rlz=%d' % rlz.id
             rlz_uhs = make_uhs(rlz_maps)
             _save_uhs(job, rlz_uhs, poe, rlz=rlz)
 
