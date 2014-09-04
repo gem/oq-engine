@@ -189,11 +189,13 @@ def do_uhs_post_proc(job):
     :param job:
         Instance of :class:`openquake.engine.db.models.OqJob`.
     """
-    hc = job.hazard_calculation
+    poes = job.get_param('poes')
+    quantile_hazard_curves = job.get_param('quantile_hazard_curves', [])
 
-    rlzs = models.LtRealization.objects.filter(lt_model__hazard_calculation=hc)
+    rlzs = models.LtRealization.objects.filter(
+        lt_model__hazard_calculation=job.hazard_calculation)
 
-    for poe in hc.poes:
+    for poe in poes:
         maps_for_poe = models.HazardMap.objects.filter(
             output__oq_job=job, poe=poe
         )
@@ -205,7 +207,7 @@ def do_uhs_post_proc(job):
             _save_uhs(job, mean_uhs, poe, statistics='mean')
 
         # quantiles (if defined)
-        for quantile in hc.quantile_hazard_curves:
+        for quantile in quantile_hazard_curves:
             quantile_maps = maps_for_poe.filter(
                 statistics='quantile', quantile=quantile
             )
