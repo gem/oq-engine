@@ -26,7 +26,6 @@ import numpy
 from django.db import transaction
 from itertools import izip
 
-from openquake.engine.calculators.hazard.general import CURVE_CACHE_SIZE
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
 from openquake.engine.writer import CacheInserter
@@ -320,7 +319,7 @@ def _save_uhs(job, uhs_results, poe, rlz=None, statistics=None, quantile=None):
     uhs.save()
 
     with transaction.commit_on_success(using='job_init'):
-        inserter = CacheInserter(models.UHSData, CURVE_CACHE_SIZE)
+        inserter = CacheInserter(models.UHSData, 10000)
         for lon, lat, imls in uhs_results['uh_spectra']:
             inserter.add(
                 models.UHSData(

@@ -48,8 +48,6 @@ from openquake.commonlib import logictree
 
 from openquake.engine import writer
 from openquake.engine.calculators.hazard import general
-from openquake.engine.calculators.hazard.classical import (
-    post_processing as post_proc)
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
 from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
@@ -499,11 +497,3 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         # post-processing.
         if self.hc.mean_hazard_curves or self.hc.quantile_hazard_curves:
             self.do_aggregate_post_proc()
-
-        if self.hc.hazard_maps:
-            with self.monitor('generating hazard maps'):
-                hazard_curves = models.HazardCurve.objects.filter(
-                    output__oq_job=self.job, imt__isnull=False)
-                tasks.apply_reduce(
-                    post_proc.hazard_curves_to_hazard_map,
-                    (self.job.id, hazard_curves, self.hc.poes))

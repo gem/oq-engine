@@ -61,10 +61,8 @@ from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
 
-from openquake.engine import logs, writer
+from openquake.engine import writer
 from openquake.engine.calculators.hazard import general
-from openquake.engine.calculators.hazard.classical import (
-    post_processing as post_proc)
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
 from openquake.engine.performance import LightMonitor
@@ -306,25 +304,6 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         Optionally generates aggregate curves, hazard maps and
         uniform_hazard_spectra.
         """
-        logs.LOG.debug('> starting post processing')
-
         # means/quantiles:
         if self.hc.mean_hazard_curves or self.hc.quantile_hazard_curves:
             self.do_aggregate_post_proc()
-
-        # hazard maps:
-        # required for computing UHS
-        # if `hazard_maps` is false but `uniform_hazard_spectra` is true,
-        # just don't export the maps
-        if self.hc.hazard_maps or self.hc.uniform_hazard_spectra:
-            with self.monitor('generating hazard maps'):
-                hazard_curves = models.HazardCurve.objects.filter(
-                    output__oq_job=self.job, imt__isnull=False)
-                tasks.apply_reduce(
-                    post_proc.hazard_curves_to_hazard_map,
-                    (self.job.id, hazard_curves, self.hc.poes))
-
-        if self.hc.uniform_hazard_spectra:
-            post_proc.do_uhs_post_proc(self.job)
-
-        logs.LOG.debug('< done with post processing')
