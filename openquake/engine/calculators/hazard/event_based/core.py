@@ -483,17 +483,3 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                 hazard_calculation=self.hc):
             self.initialize_ses_db_records(lt_model)
         return weights
-
-    def post_process(self):
-        """
-        If requested, perform additional processing of GMFs to produce hazard
-        curves.
-        """
-        if not self.hc.hazard_curves_from_gmfs:
-            return
-
-        # If `mean_hazard_curves` is True and/or `quantile_hazard_curves`
-        # has some value (not an empty list), do this additional
-        # post-processing.
-        if self.hc.mean_hazard_curves or self.hc.quantile_hazard_curves:
-            self.do_aggregate_post_proc()
