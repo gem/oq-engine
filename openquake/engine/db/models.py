@@ -131,7 +131,7 @@ VULNERABILITY_TYPE_CHOICES = [choice[0]
 
 GSIMS = get_available_gsims()
 
-RAISE_EXC = object()
+RAISE_EXC = object()  # sentinel used in OqJob.get_param
 
 
 class MissingParameter(KeyError):
