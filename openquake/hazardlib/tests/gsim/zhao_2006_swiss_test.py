@@ -50,7 +50,8 @@ class ZhaoEtAl2006AscSWISS05TestCase(BaseGSIMTestCase):
         self.check('ZHAO06Swiss/ZETAL06_MEAN_VsK-5.csv',
                    max_discrep_percentage=0.4)
     def test_std_total(self):
-        self.check('ZHAO06Swiss/ZETAL06_STD_TOTAL_SigmaSS_TMR.csv',max_discrep_percentage=0.50)
+        self.check('ZHAO06Swiss/ZETAL06_STD_TOTAL_SigmaSS_TMR.csv',
+        max_discrep_percentage=0.50)
 
 class ZhaoEtAl2006AscSWISS03TestCase(BaseGSIMTestCase):
     GSIM_CLASS = ZhaoEtAl2006AscSWISS03
@@ -59,7 +60,8 @@ class ZhaoEtAl2006AscSWISS03TestCase(BaseGSIMTestCase):
         self.check('ZHAO06Swiss/ZETAL06_MEAN_VsK-3.csv',
                    max_discrep_percentage=0.4)
     def test_std_total(self):
-        self.check('ZHAO06Swiss/ZETAL06_STD_TOTAL_SigmaSS_TMR.csv',max_discrep_percentage=0.50)  
+        self.check('ZHAO06Swiss/ZETAL06_STD_TOTAL_SigmaSS_TMR.csv',
+        max_discrep_percentage=0.50)  
                            
 class ZhaoEtAl2006AscSWISS08TestCase(BaseGSIMTestCase):
     GSIM_CLASS = ZhaoEtAl2006AscSWISS08
@@ -68,7 +70,8 @@ class ZhaoEtAl2006AscSWISS08TestCase(BaseGSIMTestCase):
         self.check('ZHAO06Swiss/ZETAL06_MEAN_VsK-8.csv',
                    max_discrep_percentage=0.4)                   
     def test_std_total(self):
-        self.check('ZHAO06Swiss/ZETAL06_STD_TOTAL_SigmaSS_TMR.csv',max_discrep_percentage=0.50)
+        self.check('ZHAO06Swiss/ZETAL06_STD_TOTAL_SigmaSS_TMR.csv',
+        max_discrep_percentage=0.50)
 
 class ZhaoEtAl2006AscSWISS08TestCase(BaseGSIMTestCase):
     GSIM_CLASS = ZhaoEtAl2006AscSWISS08
@@ -77,7 +80,8 @@ class ZhaoEtAl2006AscSWISS08TestCase(BaseGSIMTestCase):
         self.check('ZHAO06Swiss/ZETAL06_MEAN_VsK-8.csv',
                    max_discrep_percentage=0.4)                   
     def test_std_total(self):
-        self.check('ZHAO06Swiss/ZETAL06_STD_TOTAL_SigmaSS_TMR.csv',max_discrep_percentage=0.50)
+        self.check('ZHAO06Swiss/ZETAL06_STD_TOTAL_SigmaSS_TMR.csv',
+        max_discrep_percentage=0.50)
 
 class ZhaoEtAl2006AscSWISS05TTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ZhaoEtAl2006AscSWISS05T
@@ -86,7 +90,8 @@ class ZhaoEtAl2006AscSWISS05TTestCase(BaseGSIMTestCase):
         self.check('ZHAO06Swiss/ZETAL06_MEAN_VsK-5.csv',
                    max_discrep_percentage=0.4)
     def test_std_total(self):
-        self.check('ZHAO06Swiss/ZETAL06_STD_TOTAL_SigmaSS_T.csv',max_discrep_percentage=0.50)
+        self.check('ZHAO06Swiss/ZETAL06_STD_TOTAL_SigmaSS_T.csv',
+        max_discrep_percentage=0.50)
 
 class ZhaoEtAl2006AscSWISS03TTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ZhaoEtAl2006AscSWISS03T
@@ -95,7 +100,8 @@ class ZhaoEtAl2006AscSWISS03TTestCase(BaseGSIMTestCase):
         self.check('ZHAO06Swiss/ZETAL06_MEAN_VsK-3.csv',
                    max_discrep_percentage=0.4)
     def test_std_total(self):
-        self.check('ZHAO06Swiss/ZETAL06_STD_TOTAL_SigmaSS_T.csv',max_discrep_percentage=0.50)  
+        self.check('ZHAO06Swiss/ZETAL06_STD_TOTAL_SigmaSS_T.csv',
+        max_discrep_percentage=0.50)  
                            
 class ZhaoEtAl2006AscSWISS08TTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ZhaoEtAl2006AscSWISS08T
@@ -104,4 +110,5 @@ class ZhaoEtAl2006AscSWISS08TTestCase(BaseGSIMTestCase):
         self.check('ZHAO06Swiss/ZETAL06_MEAN_VsK-8.csv',
                    max_discrep_percentage=0.4)                   
     def test_std_total(self):
-        self.check('ZHAO06Swiss/ZETAL06_STD_TOTAL_SigmaSS_T.csv',max_discrep_percentage=0.50)
+        self.check('ZHAO06Swiss/ZETAL06_STD_TOTAL_SigmaSS_T.csv',
+        max_discrep_percentage=0.50)
