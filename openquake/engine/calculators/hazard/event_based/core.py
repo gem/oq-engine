@@ -49,7 +49,7 @@ from openquake.commonlib import logictree
 from openquake.engine import writer
 from openquake.engine.calculators.hazard import general
 from openquake.engine.calculators.hazard.classical import (
-    post_processing as cls_post_proc)
+    post_processing as post_proc)
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
 from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
@@ -447,8 +447,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         self.curves = tasks.apply_reduce(
             compute_gmfs_and_curves,
             (self.job.id, sesruptures, sitecol),
-            self.agg_curves, {}, self.concurrent_tasks,
-            key=lambda sr: sr.rupture.trt_model.id)
+            self.agg_curves, {}, key=lambda sr: sr.rupture.trt_model.id)
 
     def initialize_ses_db_records(self, lt_model):
         """
@@ -503,8 +502,8 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
 
         if self.hc.hazard_maps:
             with self.monitor('generating hazard maps'):
-                self.parallelize(
-                    cls_post_proc.hazard_curves_to_hazard_map_task,
-                    cls_post_proc.hazard_curves_to_hazard_map_task_arg_gen(
-                        self.job),
-                    lambda res: None)
+                hazard_curves = models.HazardCurve.objects.filter(
+                    output__oq_job=self.job, imt__isnull=False)
+                tasks.apply_reduce(
+                    post_proc.hazard_curves_to_hazard_map,
+                    (self.job.id, hazard_curves, self.hc.poes))

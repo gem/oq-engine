@@ -214,7 +214,7 @@ class BaseHazardCalculator(base.Calculator):
                 sc.sources = tasks.apply_reduce(
                     filter_and_split_sources,
                     (self.job.id, sc.sources, self.hc.site_collection),
-                    list.__add__, [], self.concurrent_tasks)
+                    list.__add__, [])
             else:  # few sources
                 # filter sequentially on a single core
                 sc.sources = filter_and_split_sources.task_func(

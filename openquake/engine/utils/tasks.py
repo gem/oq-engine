@@ -31,6 +31,8 @@ from openquake.engine.utils import config
 from openquake.engine.writer import CacheInserter
 from openquake.engine.performance import EnginePerformanceMonitor
 
+CONCURRENT_TASKS = int(config.get('celery', 'concurrent_tasks'))
+
 
 class JobNotRunning(Exception):
     pass
@@ -117,8 +119,11 @@ def map_reduce(task, task_args, agg, acc, name=None):
     return oqm.aggregate_results(agg, acc)
 
 
-def apply_reduce(task, task_args, agg, acc, concurrent_tasks,
-                 weight=lambda item: 1, key=lambda item: 'Unspecified'):
+def apply_reduce(task, task_args,
+                 agg=lambda a, x: x, acc=None,
+                 concurrent_tasks=CONCURRENT_TASKS,
+                 weight=lambda item: 1,
+                 key=lambda item: 'Unspecified'):
     """
     Apply a task to a tuple of the form (job_id, data, *args)
     by splitting the data in chunks and reduce the results with an
