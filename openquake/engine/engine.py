@@ -207,7 +207,8 @@ def create_calculation(model, params):
     for param in set(params) - set(calc_fields):
         # the following parameters will be removed by HazardCalculation
         if param in ('ground_motion_correlation_model',
-                     'ground_motion_correlation_params'):
+                     'ground_motion_correlation_params',
+                     'individual_curves'):
             params.pop(param)
         # FIXME(lp). Django 1.3 does not allow using _id fields in model
         # __init__. We will check these fields in pre-execute phase
