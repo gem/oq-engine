@@ -43,7 +43,7 @@ aaae = numpy.testing.assert_array_almost_equal
 
 
 # package prefix used for mock.patching
-MOCK_PREFIX = "openquake.engine.calculators.hazard.classical.post_processing"
+MOCK_PREFIX = "openquake.engine.calculators.hazard.post_processing"
 
 
 class HazardMapsTestCase(unittest.TestCase):
