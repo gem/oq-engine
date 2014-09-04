@@ -1,4 +1,4 @@
-#  -*- coding: utf-8 -*-
+#  -*- coding: latin-1 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 #  Copyright (c) 2013, GEM Foundation
@@ -17,12 +17,30 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Validation library
+Validation library for the engine, the desktop tools, and anything else
 """
 
 import re
 import ast
 from openquake.hazardlib import imt
+
+
+def compose(*validators):
+    """
+    Implement composition of validators. For instance
+
+    >>> utf8_not_empty = compose(utf8, not_empty)
+    >>> utf8_not_empty  # doctest: +ELLIPSIS
+    <function compose(utf8,not_empty) at ...>
+    """
+    def composed_validator(text):
+        out = text
+        for val in reversed(validators):
+            out = val(out)
+        return out
+    composed_validator.__name__ = 'compose(%s)' % ','.join(
+        val.__name__ for val in validators)
+    return composed_validator
 
 
 class NoneOr(object):
@@ -97,15 +115,49 @@ def not_empty(text):
     return text
 
 
+def utf8(text):
+    r"""
+    Check that the string is UTF-8. Returns a unicode object.
+
+    >>> utf8('à')
+    Traceback (most recent call last):
+    ...
+    ValueError: Not UTF-8: '\xe0'
+    """
+    try:
+        return text.decode('utf-8')
+    except UnicodeDecodeError:
+        raise ValueError('Not UTF-8: %r' % text)
+
+
+def utf8_not_empty(text):
+    """Check that the string is UTF-8 and not empty"""
+    return utf8(not_empty(text))
+
+
 def namelist(text):
     """
     :param text: input string
     :returns: list of identifiers
+
+    >>> namelist('a1  b_2\t_c')
+    ['a1', 'b_2', '_c']
+
+    >>> namelist('a1 b_2 1c')
+    Traceback (most recent call last):
+        ...
+    ValueError: List of names containing an invalid name: 1c
     """
     names = text.split()
     if not names:
         raise ValueError('Got an empty name list')
-    return map(name, names)
+    for n in names:
+        try:
+            name(n)
+        except ValueError:
+            raise ValueError('List of names containing an invalid name:'
+                             ' %s' % n)
+    return names
 
 
 def longitude(text):
@@ -242,6 +294,30 @@ def intensity_measure_types(text):
     return imts
 
 
+def intensity_measure_types_and_levels(text):
+    """
+    :param text: input string
+    :returns: Intensity Measure Type and Levels dictionary
+
+    >>> intensity_measure_types_and_levels('{"PGA": [0.1, 0.2]}')
+    {'PGA': [0.1, 0.2]}
+
+    >>> intensity_measure_types_and_levels('{"PGA": [0.1]}')
+    Traceback (most recent call last):
+       ...
+    ValueError: Not enough imls for PGA: [0.1]
+    """
+    dic = dictionary(text)
+    for imt, imls in dic.iteritems():
+        if len(imls) < 2:
+            raise ValueError('Not enough imls for %s: %s' % (imt, imls))
+        map(positivefloat, imls)
+        if imls != sorted(imls):
+            raise ValueError('The imls for %s are not sorted: %s' %
+                             (imt, imls))
+    return dic
+
+
 def dictionary(text):
     """
     :param text: input string
@@ -277,3 +353,51 @@ def parameters(**names_vals):
                 '%r for %s is not a validator: it has no __name__'
                 % (val, name))
     return names_vals
+
+
+class ParamSet():
+    """
+    A set of valid interrelated parameters. Here is an example
+    of usage:
+
+    >>> class MyParams(ParamSet):
+    ...     _params = parameters(a=positiveint, b=positivefloat)
+    ...
+    ...     def constraint_not_too_big(self):
+    ...         "The sum of a={a} and b={b} must be under 10"
+    ...         return self.a + self.b < 10
+
+    >>> MyParams(a='1', b='7.2')
+    <MyParams a=1, b=7.2>
+
+    >>> MyParams(a='1', b='9.2')
+    Traceback (most recent call last):
+    ...
+    ValueError: The sum of a=1 and b=9.2 must be under 10
+
+    The constraints are applied in lexicographic order.
+    """
+    _params = {}
+
+    def __init__(self, **names_vals):
+        for name, val in names_vals.iteritems():
+            if name.startswith(('_', 'constraint_')):
+                raise NameError('The parameter name %s is not acceptable'
+                                % name)
+            try:
+                convert = self._params[name]
+            except KeyError:
+                raise NameError('The parameter %r is unknown' % name)
+            setattr(self, name, convert(val))
+
+        constraints = sorted(getattr(self, constraint)
+                             for constraint in dir(self.__class__)
+                             if constraint.startswith('constraint_'))
+        for constraint in constraints:
+            if not constraint():
+                raise ValueError(constraint.__doc__.format(**vars(self)))
+
+    def __repr__(self):
+        names = sorted(n for n in vars(self) if not n.startswith('_'))
+        nameval = ', '.join('%s=%s' % (n, getattr(self, n)) for n in names)
+        return '<%s %s>' % (self.__class__.__name__, nameval)
