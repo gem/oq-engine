@@ -47,6 +47,9 @@ from openquake.engine.calculators.post_processing import quantile_curve
 from openquake.engine.calculators.post_processing import (
     weighted_quantile_curve
 )
+from openquake.engine.calculators.hazard.post_processing import (
+    hazard_curves_to_hazard_map, do_uhs_post_proc)
+
 from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.performance import EnginePerformanceMonitor
@@ -855,3 +858,27 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
                             location=wkt)
                     )
             inserter.flush()
+
+    def post_process(self):
+        """
+        Optionally generates aggregate curves, hazard maps and
+        uniform_hazard_spectra.
+        """
+        # means/quantiles:
+        if self.hc.mean_hazard_curves or self.hc.quantile_hazard_curves:
+            self.do_aggregate_post_proc()
+
+        # hazard maps:
+        # required for computing UHS
+        # if `hazard_maps` is false but `uniform_hazard_spectra` is true,
+        # just don't export the maps
+        if self.hc.hazard_maps or self.hc.uniform_hazard_spectra:
+            with self.monitor('generating hazard maps'):
+                hazard_curves = models.HazardCurve.objects.filter(
+                    output__oq_job=self.job, imt__isnull=False)
+                tasks.apply_reduce(
+                    hazard_curves_to_hazard_map,
+                    (self.job.id, hazard_curves, self.hc.poes))
+
+        if self.hc.uniform_hazard_spectra:
+            do_uhs_post_proc(self.job)

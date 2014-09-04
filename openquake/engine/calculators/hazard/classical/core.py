@@ -298,12 +298,3 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                 for site in self.hc.site_collection
                 for lt_model in lt_models)
         return weights
-
-    def post_process(self):
-        """
-        Optionally generates aggregate curves, hazard maps and
-        uniform_hazard_spectra.
-        """
-        # means/quantiles:
-        if self.hc.mean_hazard_curves or self.hc.quantile_hazard_curves:
-            self.do_aggregate_post_proc()
