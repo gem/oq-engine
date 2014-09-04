@@ -818,7 +818,7 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
             del self.curves_by_imt[imt]  # save memory
 
             inserter = writer.CacheInserter(
-                models.HazardCurveData, 10000)
+                models.HazardCurveData, max_cache_size=10000)
 
             # curve_poes below is an array num_rlzs * num_levels
             for i, site in enumerate(self.hc.site_collection):

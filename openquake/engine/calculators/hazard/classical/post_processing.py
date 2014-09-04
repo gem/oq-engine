@@ -319,7 +319,7 @@ def _save_uhs(job, uhs_results, poe, rlz=None, statistics=None, quantile=None):
     uhs.save()
 
     with transaction.commit_on_success(using='job_init'):
-        inserter = CacheInserter(models.UHSData, 10000)
+        inserter = CacheInserter(models.UHSData, max_cache_size=10000)
         for lon, lat, imls in uhs_results['uh_spectra']:
             inserter.add(
                 models.UHSData(
