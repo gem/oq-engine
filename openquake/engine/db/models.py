@@ -419,14 +419,14 @@ class JobParam(djm.Model):
     valid_params = valid.parameters(
         area_source_discretization=valid.positivefloat,
         asset_correlation=valid.FloatRange(0, 1),
-        base_path=unicode,
+        base_path=valid.utf8,
         calculation_mode=str,
         coordinate_bin_width=valid.positivefloat,
         conditional_loss_poes=valid.probabilities,
-        description=unicode,
+        description=valid.utf8_not_empty,
         distance_bin_width=valid.positivefloat,
         mag_bin_width=valid.positivefloat,
-        export_dir=unicode,
+        export_dir=valid.utf8,
         export_multi_curves=str2bool,
         ground_motion_correlation_model=valid.NoneOr(
             valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)),
@@ -439,7 +439,8 @@ class JobParam(djm.Model):
         inputs=dict,
         insured_losses=str2bool,
         intensity_measure_types=valid.intensity_measure_types,
-        intensity_measure_types_and_levels=valid.dictionary,
+        intensity_measure_types_and_levels=
+        valid.intensity_measure_types_and_levels,
         investigation_time=valid.positivefloat,
         loss_curve_resolution=valid.positiveint,
         lrem_steps_per_interval=valid.positiveint,
