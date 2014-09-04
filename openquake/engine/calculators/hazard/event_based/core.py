@@ -48,8 +48,6 @@ from openquake.commonlib import logictree
 
 from openquake.engine import writer
 from openquake.engine.calculators.hazard import general
-from openquake.engine.calculators.hazard.classical import (
-    post_processing as cls_post_proc)
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
 from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
@@ -447,8 +445,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         self.curves = tasks.apply_reduce(
             compute_gmfs_and_curves,
             (self.job.id, sesruptures, sitecol),
-            self.agg_curves, {}, self.concurrent_tasks,
-            key=lambda sr: sr.rupture.trt_model.id)
+            self.agg_curves, {}, key=lambda sr: sr.rupture.trt_model.id)
 
     def initialize_ses_db_records(self, lt_model):
         """
@@ -486,25 +483,3 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                 hazard_calculation=self.hc):
             self.initialize_ses_db_records(lt_model)
         return weights
-
-    def post_process(self):
-        """
-        If requested, perform additional processing of GMFs to produce hazard
-        curves.
-        """
-        if not self.hc.hazard_curves_from_gmfs:
-            return
-
-        # If `mean_hazard_curves` is True and/or `quantile_hazard_curves`
-        # has some value (not an empty list), do this additional
-        # post-processing.
-        if self.hc.mean_hazard_curves or self.hc.quantile_hazard_curves:
-            self.do_aggregate_post_proc()
-
-        if self.hc.hazard_maps:
-            with self.monitor('generating hazard maps'):
-                self.parallelize(
-                    cls_post_proc.hazard_curves_to_hazard_map_task,
-                    cls_post_proc.hazard_curves_to_hazard_map_task_arg_gen(
-                        self.job),
-                    lambda res: None)
