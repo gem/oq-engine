@@ -317,10 +317,12 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         # if `hazard_maps` is false but `uniform_hazard_spectra` is true,
         # just don't export the maps
         if self.hc.hazard_maps or self.hc.uniform_hazard_spectra:
-            self.parallelize(
-                post_proc.hazard_curves_to_hazard_map_task,
-                post_proc.hazard_curves_to_hazard_map_task_arg_gen(self.job),
-                lambda res: None)
+            with self.monitor('generating hazard maps'):
+                hazard_curves = models.HazardCurve.objects.filter(
+                    output__oq_job=self.job, imt__isnull=False)
+                tasks.apply_reduce(
+                    post_proc.hazard_curves_to_hazard_map,
+                    (self.job.id, hazard_curves, self.hc.poes))
 
         if self.hc.uniform_hazard_spectra:
             post_proc.do_uhs_post_proc(self.job)

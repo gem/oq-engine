@@ -26,7 +26,6 @@ import numpy
 from django.db import transaction
 from itertools import izip
 
-from openquake.engine import logs
 from openquake.engine.calculators.hazard.general import CURVE_CACHE_SIZE
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
@@ -111,9 +110,8 @@ _UHS_DISP_NAME_QUANTILE_FMT = '%(quantile)s Quantile UHS (%(poe)s)'
 _UHS_DISP_NAME_FMT = 'UHS (%(poe)s) rlz-%(rlz)s'
 
 
-# Silencing 'Too many local variables'
-# pylint: disable=R0914
-def hazard_curves_to_hazard_map(job_id, hazard_curve_id, poes):
+@tasks.oqtask
+def hazard_curves_to_hazard_map(job_id, hazard_curves, poes):
     """
     Function to process a set of hazard curves into 1 hazard map for each PoE
     in ``poes``.
@@ -122,87 +120,66 @@ def hazard_curves_to_hazard_map(job_id, hazard_curve_id, poes):
 
     :param int job_id:
         ID of the current :class:`openquake.engine.db.models.OqJob`.
-    :param int hazard_curve_id:
-        ID of a set of
+    :param hazard_curves:
+        a list of
         :class:`hazard curves <openquake.engine.db.models.HazardCurve>`.
     :param list poes:
         List of PoEs for which we want to iterpolate hazard maps.
     """
     job = models.OqJob.objects.get(id=job_id)
-    hc = models.HazardCurve.objects.get(id=hazard_curve_id)
+    for hc in hazard_curves:
+        hcd = list(models.HazardCurveData.objects.all_curves_simple(
+            filter_args=dict(hazard_curve=hc.id), order_by='location'
+        ))
+        imt = hc.imt
+        if imt == 'SA':
+            # if it's SA, include the period using the standard notation
+            imt = 'SA(%s)' % hc.sa_period
 
-    hcd = models.HazardCurveData.objects.all_curves_simple(
-        filter_args=dict(hazard_curve=hc.id), order_by='location'
-    )
-    hcd = list(hcd)
+        # Gather all of the curves and compute the maps, for all PoEs
+        curves = (_poes for _, _, _poes in hcd)
+        hazard_maps = compute_hazard_maps(curves, hc.imls, poes)
 
-    imt = hc.imt
-    if imt == 'SA':
-        # if it's SA, include the period using the standard notation
-        imt = 'SA(%s)' % hc.sa_period
+        with transaction.commit_on_success(using='job_init'):
+            # Prepare the maps to be saved to the DB
+            for i, poe in enumerate(poes):
+                map_values = hazard_maps[i]
+                lons = numpy.empty(map_values.shape)
+                lats = numpy.empty(map_values.shape)
 
-    # Gather all of the curves and compute the maps, for all PoEs
-    curves = (poes for _, _, poes in hcd)
-    hazard_maps = compute_hazard_maps(curves, hc.imls, poes)
+                for loc_idx, _ in enumerate(map_values):
+                    lons[loc_idx] = hcd[loc_idx][0]
+                    lats[loc_idx] = hcd[loc_idx][1]
 
-    # Prepare the maps to be saved to the DB
-    for i, poe in enumerate(poes):
-        map_values = hazard_maps[i]
-        lons = numpy.empty(map_values.shape)
-        lats = numpy.empty(map_values.shape)
+                # Create 'Output' records for the map for this PoE
+                if hc.statistics == 'mean':
+                    disp_name = _HAZ_MAP_DISP_NAME_MEAN_FMT % dict(
+                        poe=poe, imt=imt)
+                elif hc.statistics == 'quantile':
+                    disp_name = _HAZ_MAP_DISP_NAME_QUANTILE_FMT % dict(
+                        poe=poe, imt=imt, quantile=hc.quantile)
+                else:
+                    disp_name = _HAZ_MAP_DISP_NAME_FMT % dict(
+                        poe=poe, imt=imt, rlz=hc.lt_realization.id)
 
-        for loc_idx, _ in enumerate(map_values):
-            lons[loc_idx] = hcd[loc_idx][0]
-            lats[loc_idx] = hcd[loc_idx][1]
-
-        # Create 'Output' records for the map for this PoE
-        if hc.statistics == 'mean':
-            disp_name = _HAZ_MAP_DISP_NAME_MEAN_FMT % dict(poe=poe, imt=imt)
-        elif hc.statistics == 'quantile':
-            disp_name = _HAZ_MAP_DISP_NAME_QUANTILE_FMT % dict(
-                poe=poe, imt=imt, quantile=hc.quantile)
-        else:
-            disp_name = _HAZ_MAP_DISP_NAME_FMT % dict(
-                poe=poe, imt=imt, rlz=hc.lt_realization.id)
-
-        output = models.Output.objects.create_output(
-            job, disp_name, 'hazard_map'
-        )
-        # Save the complete hazard map
-        models.HazardMap.objects.create(
-            output=output,
-            lt_realization=hc.lt_realization,
-            investigation_time=hc.investigation_time,
-            imt=hc.imt,
-            statistics=hc.statistics,
-            quantile=hc.quantile,
-            sa_period=hc.sa_period,
-            sa_damping=hc.sa_damping,
-            poe=poe,
-            lons=lons.tolist(),
-            lats=lats.tolist(),
-            imls=map_values.tolist(),
-        )
-
-hazard_curves_to_hazard_map_task = tasks.oqtask(hazard_curves_to_hazard_map)
-
-
-def hazard_curves_to_hazard_map_task_arg_gen(job):
-    """
-    Yield task arguments for processing hazard curves into hazard maps.
-
-    :param job:
-        A :class:`openquake.engine.db.models.OqJob` which has some hazard
-        curves associated with it.
-    """
-    poes = job.hazard_calculation.poes
-
-    hazard_curve_ids = models.HazardCurve.objects.filter(
-        output__oq_job=job, imt__isnull=False).values_list('id', flat=True)
-    logs.LOG.debug('num haz curves: %d', len(hazard_curve_ids))
-
-    for hazard_curve_id in hazard_curve_ids:
-        yield job.id, hazard_curve_id, poes
+                output = models.Output.objects.create_output(
+                    job, disp_name, 'hazard_map'
+                )
+                # Save the complete hazard map
+                models.HazardMap.objects.create(
+                    output=output,
+                    lt_realization=hc.lt_realization,
+                    investigation_time=hc.investigation_time,
+                    imt=hc.imt,
+                    statistics=hc.statistics,
+                    quantile=hc.quantile,
+                    sa_period=hc.sa_period,
+                    sa_damping=hc.sa_damping,
+                    poe=poe,
+                    lons=lons.tolist(),
+                    lats=lats.tolist(),
+                    imls=map_values.tolist(),
+                )
 
 
 def do_uhs_post_proc(job):
