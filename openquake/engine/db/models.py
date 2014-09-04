@@ -131,6 +131,13 @@ VULNERABILITY_TYPE_CHOICES = [choice[0]
 
 GSIMS = get_available_gsims()
 
+RAISE_EXC = object()
+
+
+class MissingParameter(KeyError):
+    """Raised by OqJob.get_param when a parameter is missing in the database"""
+
+
 #: The output of HazardCalculation.gen_ruptures
 SourceRuptureSites = collections.namedtuple(
     'SourceRuptureSites',
@@ -331,10 +338,10 @@ class OqJob(djm.Model):
         """
         return self.hazard_calculation or self.risk_calculation
 
-    def get_param(self, name, missing=ObjectDoesNotExist):
+    def get_param(self, name, missing=RAISE_EXC):
         """
         `job.get_param(name)` returns the value of the requested parameter
-        or raise an ObjectDoesNotExist exception if the parameter does not
+        or raise a MissingParameter exception if the parameter does not
         exist in the database.
 
         `job.get_param(name, missing)` returns the value of the requested
@@ -347,11 +354,11 @@ class OqJob(djm.Model):
         NB: since job_param.value is NOT NULL, `.get_param(name)`
         can return None only if the parameter is missing.
         """
-        if missing is ObjectDoesNotExist:
-            return JobParam.objects.get(job=self, name=name).value
         try:
             return JobParam.objects.get(job=self, name=name).value
         except ObjectDoesNotExist:
+            if missing is RAISE_EXC:
+                raise MissingParameter(name)
             return missing
 
     def __repr__(self):
@@ -2010,7 +2017,7 @@ def get_correl_model(job):
         A correlation object. See :mod:`openquake.hazardlib.correlation`
         for more info.
     """
-    correl_model_name = job.get_param('ground_motion_correlation_model')
+    correl_model_name = job.get_param('ground_motion_correlation_model', None)
     if correl_model_name is None:
         # There's no correlation model for this calculation.
         return None
@@ -2019,9 +2026,8 @@ def get_correl_model(job):
     if correl_model_cls is None:
         # There's no correlation model for this calculation.
         return None
-
-    return correl_model_cls(
-        **job.get_param('ground_motion_correlation_params'))
+    gmc_params = job.get_param('ground_motion_correlation_params', None)
+    return correl_model_cls(**gmc_params)
 
 
 class Gmf(djm.Model):
