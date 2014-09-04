@@ -209,9 +209,11 @@ def do_uhs_post_proc(job):
             quantile_maps = maps_for_poe.filter(
                 statistics='quantile', quantile=quantile
             )
-            quantile_uhs = make_uhs(quantile_maps)
-            _save_uhs(job, quantile_uhs, poe, statistics='quantile',
-                      quantile=quantile)
+            if quantile_maps:
+                # they are missing if there is a single realization
+                quantile_uhs = make_uhs(quantile_maps)
+                _save_uhs(job, quantile_uhs, poe, statistics='quantile',
+                          quantile=quantile)
 
         # for each logic tree branch:
         for rlz in rlzs:
