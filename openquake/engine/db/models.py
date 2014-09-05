@@ -675,10 +675,6 @@ class HazardCalculation(djm.Model):
     class Meta:
         db_table = 'uiapi\".\"hazard_calculation'
 
-    # class attributes used as defaults; I am avoiding `__init__`
-    # to avoid issues with Django caching mechanism (MS)
-    _points_to_compute = None
-
     @property
     def vulnerability_models(self):
         return [self.inputs[vf_type]
@@ -734,55 +730,27 @@ class HazardCalculation(djm.Model):
         if len(site_model_data) == 1:
             return site_model_data[0]
 
-    def points_to_compute(self, save_sites=True):
+    def save_hazard_sites(self):
         """
-        Generate a :class:`~openquake.hazardlib.geo.mesh.Mesh` of points.
-        These points indicate the locations of interest in a hazard
-        calculation.
-
-        The mesh can be calculated given a `region` polygon and
-        `region_grid_spacing` (the discretization parameter), or from a list of
-        `sites`.
-
-        .. note::
-            This mesh is cached for efficiency when dealing with large numbers
-            of calculation points. If you need to clear the cache and
-            recompute, set `_points_to_compute` to `None` and call this method
-            again.
+        Populate the table HazardSite by inferring the points from
+        the sites, region, or exposure.
         """
-        if self._points_to_compute is None:
-            if self.pk and 'exposure' in self.inputs:
-                assets = self.oqjob.exposuremodel.exposuredata_set.all(
-                    ).order_by('asset_ref')
-
-                # the points here must be sorted
-                lons, lats = zip(*sorted(set((asset.site.x, asset.site.y)
-                                             for asset in assets)))
-                # Cache the mesh:
-                self._points_to_compute = geo.Mesh(
-                    numpy.array(lons), numpy.array(lats), depths=None
-                )
-            elif self.region and self.region_grid_spacing:
-                # assume that the polygon is a single linear ring
-                coords = self.region.coords[0]
-                points = [geo.Point(*x) for x in coords]
-                poly = geo.Polygon(points)
-                # Cache the mesh:
-                self._points_to_compute = poly.discretize(
-                    self.region_grid_spacing
-                )
-            elif self.sites is not None:
-                lons, lats = zip(*self.sites.coords)
-                # Cache the mesh:
-                self._points_to_compute = geo.Mesh(
-                    numpy.array(lons), numpy.array(lats), depths=None
-                )
-            # store the sites
-            if save_sites and self._points_to_compute:
-                self.save_sites([(pt.longitude, pt.latitude)
-                                 for pt in self._points_to_compute])
-
-        return self._points_to_compute
+        if self.pk and 'exposure' in self.inputs:
+            assets = self.oqjob.exposuremodel.exposuredata_set.all(
+                ).order_by('asset_ref')
+            # the coords here must be sorted
+            coords = sorted(
+                set((asset.site.x, asset.site.y) for asset in assets))
+        elif self.region and self.region_grid_spacing:
+            # assume that the polygon is a single linear ring
+            coords = self.region.coords[0]
+            points = geo.Polygon([geo.Point(*x) for x in coords]).discretize(
+                self.region_grid_spacing)
+            coords = [(p.longitude, p.latitude) for p in points]
+        elif self.sites is not None:
+            coords = self.sites.coords
+        # store the sites
+        self.save_sites(coords)
 
     @property
     def site_collection(self):

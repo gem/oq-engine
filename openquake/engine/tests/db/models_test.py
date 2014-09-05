@@ -36,72 +36,6 @@ from openquake.engine.db import models
 from openquake.engine.tests.utils import helpers
 
 
-class HazardCalculationGeometryTestCase(unittest.TestCase):
-    """Test special geometry handling in the HazardCalculation constructor."""
-
-    def test_points_to_compute_none(self):
-        hc = models.HazardCalculation.create()
-        self.assertIsNone(hc.points_to_compute())
-
-        hc = models.HazardCalculation.create(region=[(1, 2), (3, 4), (5, 6)])
-        # There's no region grid spacing
-        self.assertIsNone(hc.points_to_compute())
-
-    def test_points_to_compute_region(self):
-        lons = [
-            6.761295081695822, 7.022590163391642,
-            7.28388524508746, 7.54518032678328,
-            7.806475408479099, 8.067770490174919,
-            8.329065571870737, 6.760434846130313,
-            7.020869692260623, 7.281304538390934,
-            7.541739384521245, 7.802174230651555,
-            8.062609076781865, 8.323043922912175,
-            6.759582805761787, 7.019165611523571,
-            7.278748417285356, 7.53833122304714,
-            7.797914028808925, 8.057496834570708,
-            8.317079640332492, 6.758738863707749,
-            7.017477727415495, 7.276216591123242,
-            7.534955454830988, 7.793694318538734,
-            8.05243318224648, 8.311172045954226,
-        ]
-
-        lats = [
-            46.5, 46.5,
-            46.5, 46.5,
-            46.5, 46.5,
-            46.5, 46.320135678816236,
-            46.320135678816236, 46.320135678816236,
-            46.320135678816236, 46.320135678816236,
-            46.320135678816236, 46.320135678816236,
-            46.140271357632486, 46.140271357632486,
-            46.140271357632486, 46.140271357632486,
-            46.140271357632486, 46.140271357632486,
-            46.140271357632486, 45.96040703644873,
-            45.96040703644873, 45.96040703644873,
-            45.96040703644873, 45.96040703644873,
-            45.96040703644873, 45.96040703644873,
-        ]
-
-        hc = models.HazardCalculation.create(
-            region=[(6.5, 45.8), (6.5, 46.5), (8.5, 46.5), (8.5, 45.8)],
-            region_grid_spacing=20)
-        mesh = hc.points_to_compute(save_sites=False)
-
-        numpy.testing.assert_array_almost_equal(lons, mesh.lons)
-        numpy.testing.assert_array_almost_equal(lats, mesh.lats)
-
-    def test_points_to_compute_sites(self):
-        lons = [6.5, 6.5, 8.5, 8.5]
-        lats = [45.8, 46.5, 46.5, 45.8]
-        hc = models.HazardCalculation.create(
-            sites=[(6.5, 45.8), (6.5, 46.5), (8.5, 46.5), (8.5, 45.8)])
-
-        mesh = hc.points_to_compute(save_sites=False)
-
-        numpy.testing.assert_array_equal(lons, mesh.lons)
-        numpy.testing.assert_array_equal(lats, mesh.lats)
-
-
 class ProbabilisticRuptureTestCase(unittest.TestCase):
 
     @classmethod
@@ -200,9 +134,8 @@ class GetSiteCollectionTestCase(unittest.TestCase):
         # check each and every value.
         # Instead, we'll just test that the lenth of each site collection attr
         # is equal to the number of points of interest in the calculation.
-        expected_len = len(job.hazard_calculation.points_to_compute())
+        expected_len = len(site_coll)
 
-        self.assertEqual(expected_len, len(site_coll))
         self.assertEqual(expected_len, len(site_coll.vs30))
         self.assertEqual(expected_len, len(site_coll.vs30measured))
         self.assertEqual(expected_len, len(site_coll.z1pt0))
@@ -222,11 +155,6 @@ class GetSiteCollectionTestCase(unittest.TestCase):
         self.assertTrue((site_coll.vs30measured).all())
         self.assertTrue((site_coll.z1pt0 == 100).all())
         self.assertTrue((site_coll.z2pt5 == 5).all())
-
-        # just for sanity, make sure the meshes are correct (the locations)
-        job_mesh = job.hazard_calculation.points_to_compute()
-        self.assertTrue((job_mesh.lons == site_coll.mesh.lons).all())
-        self.assertTrue((job_mesh.lats == site_coll.mesh.lats).all())
 
         # test SESCollection
         calc.initialize_sources()
