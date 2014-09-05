@@ -46,7 +46,7 @@ from openquake.hazardlib.site import FilteredSiteCollection
 
 from openquake.commonlib import logictree
 
-from openquake.engine import logs, writer
+from openquake.engine import writer
 from openquake.engine.calculators.hazard import general
 from openquake.engine.calculators.hazard.classical import (
     post_processing as cls_post_proc)
