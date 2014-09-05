@@ -47,7 +47,6 @@ from openquake.engine.db import models
 from openquake.engine import engine
 from openquake.engine import logs
 from openquake.engine.utils import config
-from openquake.engine.job.validation import validate
 
 CD = os.path.dirname(__file__)  # current directory
 
@@ -324,7 +323,7 @@ def get_job(cfg, username="openquake", hazard_calculation_id=None,
         return engine.job_from_file(cfg, username, 'error', [])
 
     job = engine.prepare_job(username)
-    params = readini.parse_config(open(cfg, 'r'))
+    params = readini.parse_config(open(cfg, 'r')).__dict__
 
     params.update(
         dict(hazard_output_id=hazard_output_id,
@@ -515,12 +514,10 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
     risk_calc = engine.create_calculation(models.RiskCalculation, params)
     job.risk_calculation = risk_calc
     job.save()
-    error_message = validate(job, 'risk', params, [])
 
     # reload risk calculation to have all the types converted properly
     job.risk_calculation = models.RiskCalculation.objects.get(id=risk_calc.id)
-    if error_message:
-        raise RuntimeError(error_message)
+
     return job, set(params['inputs'])
 
 
