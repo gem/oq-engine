@@ -36,7 +36,6 @@ from django import db as django_db
 
 from openquake.engine import logs
 from openquake.engine.db import models
-from openquake.engine.job.validation import validate
 from openquake.engine.utils import config, get_calculator_class
 from openquake.engine.celery_node_monitor import CeleryNodeMonitor
 from openquake.engine.writer import CacheInserter
@@ -48,7 +47,7 @@ from openquake import hazardlib
 from openquake import risklib
 from openquake import nrmllib
 
-from openquake.commonlib import readini, valid, oqvalidation
+from openquake.commonlib import readini, valid
 
 
 INPUT_TYPES = set(dict(models.INPUT_TYPE_CHOICES))
@@ -529,30 +528,21 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
     # create the job
     job = prepare_job(user_name=username, log_level=log_level)
     # read calculation params and create the calculation profile
-    params = readini.parse_config(open(cfg_file_path, 'r'))
-    missing = set(params['inputs']) - INPUT_TYPES
+    oqparam = readini.parse_config(open(cfg_file_path, 'r'))
+    missing = set(oqparam.inputs) - INPUT_TYPES
     if missing:
         raise ValueError(
             'The parameters %s in the .ini file does '
             'not correspond to a valid input type' % ', '.join(missing))
 
-    params.setdefault('sites', '')
-    job.save_params(vars(oqvalidation.OqParam(**params)))
-
-    if params['sites']:
-        # in the future `sites` will be removed by the HazardCalculation
-        params['sites'] = 'MULTIPOINT(%s)' % params['sites'].replace('\t', ' ')
+    params = vars(oqparam).copy()
+    job.save_params(params)
 
     if hazard_output_id is None and hazard_job_id is None:
         # this is a hazard calculation, not a risk one
         job.hazard_calculation = create_calculation(
             models.HazardCalculation, params)
         job.save()
-
-        # validate and raise an error if there are any problems
-        error_message = validate(job, 'hazard', params, exports)
-        if error_message:
-            raise RuntimeError(error_message)
         return job
 
     # otherwise run a risk calculation
@@ -567,11 +557,6 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
     calculation = create_calculation(models.RiskCalculation, params)
     job.risk_calculation = calculation
     job.save()
-
-    # validate and raise an error if there are any problems
-    error_message = validate(job, 'risk', params,  exports)
-    if error_message:
-        raise RuntimeError(error_message)
     return job
 
 
