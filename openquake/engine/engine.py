@@ -206,18 +206,10 @@ def create_calculation(model, params):
         # the following parameters will be removed by HazardCalculation
         if param in ('ground_motion_correlation_model',
                      'ground_motion_correlation_params',
-                     'individual_curves'):
-            params.pop(param)
-        # FIXME(lp). Django 1.3 does not allow using _id fields in model
-        # __init__. We will check these fields in pre-execute phase
-        elif param not in [
+                     'individual_curves') and param not in (
                 'preloaded_exposure_model_id', 'hazard_output_id',
-                'hazard_calculation_id']:
-            msg = "Unknown parameter '%s'. Ignoring."
-            msg %= param
-            warnings.warn(msg, RuntimeWarning)
+                'hazard_calculation_id'):
             params.pop(param)
-
     calc = model.create(**params)
     calc.full_clean()
     calc.save()
