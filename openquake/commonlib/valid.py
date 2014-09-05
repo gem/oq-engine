@@ -24,6 +24,7 @@ import re
 import ast
 import logging
 from openquake.hazardlib import imt
+from openquake.commonlib.general import distinct
 
 
 def compose(*validators):
@@ -299,10 +300,16 @@ def intensity_measure_types(value):
     ['PGA']
     >>> intensity_measure_types('PGA, SA(1.00)')
     ['PGA', 'SA(1.0)']
+    >>> intensity_measure_types('SA(0.1), SA(0.10)')
+    Traceback (most recent call last):
+      ...
+    ValueError: Duplicated IMTs in SA(0.1), SA(0.10)
     """
     imts = []
     for chunk in value.split(','):
         imts.append(str(imt.from_string(chunk.strip())))
+    if len(distinct(imts)) < len(imts):
+        raise ValueError('Duplicated IMTs in %s' % value)
     return imts
 
 

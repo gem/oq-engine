@@ -56,8 +56,8 @@ def parse_config(source):
                 # return a string 'lon1 lat1, lon2 lat2, ... , lonN latN'
                 path = value if os.path.isabs(value) else os.path.join(
                     base_path, value)
-                params['sites'] = open(path, 'U').read().replace(
-                    ',', ' ').replace('\n', ',')
+                sites = open(path, 'U').read().strip().replace(',', ' ')
+                params['sites'] = sites.replace('\n', ',')
             elif key.endswith('_file'):
                 input_type = key[:-5]
                 path = value if os.path.isabs(value) else os.path.join(
