@@ -89,7 +89,7 @@ class CreateHazardCalculationTestCase(unittest.TestCase):
         self.params = {
             'base_path': 'path/to/job.ini',
             'calculation_mode': 'classical',
-            'region': '1 1 2 2 3 3',
+            'region': [(1, 1), (2, 2), (3, 3)],
             'width_of_mfd_bin': '1',
             'rupture_mesh_spacing': '1',
             'area_source_discretization': '2',
@@ -159,11 +159,12 @@ class CreateRiskCalculationTestCase(unittest.TestCase):
             'hazard_output_id': hazard_output.output.id,
             'base_path': 'path/to/job.ini',
             'export_dir': '/tmp/xxx',
-            'calculation_mode': 'classical',
+            'calculation_mode': 'classical_risk',
             # just some sample params
             'lrem_steps_per_interval': 5,
             'conditional_loss_poes': '0.01, 0.02, 0.05',
-            'region_constraint': '-0.5 0.5, 0.5 0.5, 0.5 -0.5, -0.5, -0.5',
+            'region_constraint': [(-0.5, 0.5), (0.5, 0.5), (0.5, -0.5),
+                                  (-0.5, -0.5)],
         }
 
         rc = engine.create_calculation(models.RiskCalculation, params)
@@ -171,7 +172,7 @@ class CreateRiskCalculationTestCase(unittest.TestCase):
         # Normalize/clean fields by fetching a fresh copy from the db.
         rc = models.RiskCalculation.objects.get(id=rc.id)
 
-        self.assertEqual(rc.calculation_mode, 'classical')
+        self.assertEqual(rc.calculation_mode, 'classical_risk')
         self.assertEqual(rc.lrem_steps_per_interval, 5)
         self.assertEqual(rc.conditional_loss_poes, [0.01, 0.02, 0.05])
         self.assertEqual(
