@@ -439,8 +439,7 @@ class HazardCalculation(djm.Model):
 
     @classmethod
     def create(cls, **kw):
-        _prep_geometry(kw)
-        return cls(**kw)
+        return cls(**_prep_geometry(kw))
 
     # Contains the absolute path to the directory containing the job config
     # file.
@@ -934,8 +933,7 @@ class RiskCalculation(djm.Model):
     '''
     @classmethod
     def create(cls, **kw):
-        _prep_geometry(kw)
-        return cls(**kw)
+        return cls(**_prep_geometry(kw))
 
     #: Default maximum asset-hazard distance in km
     DEFAULT_MAXIMUM_DISTANCE = 5
@@ -1187,13 +1185,12 @@ def _prep_geometry(kwargs):
     so that it can save to the database in a geometry field.
 
     :param dict kwargs:
-        `dict` representing some keyword arguments, which may contain geometry
-        definitions in some sort of string or list form
-
+        keyword arguments, which may contain geometry definitions in
+        a list form
     :returns:
-        The modified ``kwargs``, with WKT to replace the input geometry
-        definitions.
+        a dictionary with the geometries converted into WKT
     """
+    kw = kwargs.copy()
     # If geometries were specified as string lists of coords,
     # convert them to WKT before doing anything else.
     for field, wkt_fmt in (('sites', 'MULTIPOINT(%s)'),
@@ -1208,10 +1205,8 @@ def _prep_geometry(kwargs):
             if field in ('region', 'region_constraint'):
                 points.append(points[0])
             # update the field
-            kwargs[field] = wkt_fmt % ', '.join(points)
-
-    # return the (possibly) modified kwargs
-    return kwargs
+            kw[field] = wkt_fmt % ', '.join(points)
+    return kw
 
 
 class OutputManager(djm.Manager):
