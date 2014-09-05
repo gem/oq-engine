@@ -145,9 +145,6 @@ class ParseRiskModelsTestCase(unittest.TestCase):
             job.hazard_calculation.calculation_mode)(job)
         calc.parse_risk_models()
 
-        self.assertEqual([(1.0, -1.0), (0.0, 0.0)],
-                         [(point.latitude, point.longitude)
-                          for point in haz_calc.points_to_compute()])
         self.assertEqual(['PGA'], haz_calc.get_imts())
 
         self.assertEqual(

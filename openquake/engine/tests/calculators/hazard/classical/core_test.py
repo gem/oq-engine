@@ -67,16 +67,6 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
 
         self.assertEqual(2601, len(sm_nodes))
 
-        num_pts_to_compute = len(
-            self.job.hazard_calculation.points_to_compute())
-
-        hazard_site = models.HazardSite.objects.filter(
-            hazard_calculation=self.job.hazard_calculation)
-
-        # The site model is good. Now test that `hazard_site` was computed.
-        # For now, just test the length.
-        self.assertEqual(num_pts_to_compute, len(hazard_site))
-
     def test_initialize_site_model_no_site_model(self):
         patch_path = 'openquake.engine.calculators.hazard.general.\
 store_site_model'
