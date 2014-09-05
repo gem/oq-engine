@@ -377,7 +377,7 @@ class ParamSet(object):
     ...     params = parameters(a=positiveint, b=positivefloat)
     ...
     ...     def constrain_not_too_big(self):
-    ...         "The sum of a={a} and b={b} must be under 10"
+    ...         "The sum of a and b must be under 10. "
     ...         return self.a + self.b < 10
 
     >>> MyParams(a='1', b='7.2')
@@ -386,7 +386,9 @@ class ParamSet(object):
     >>> MyParams(a='1', b='9.2')
     Traceback (most recent call last):
     ...
-    ValueError: The sum of a=1 and b=9.2 must be under 10
+    ValueError: The sum of a and b must be under 10. Got:
+    a=1
+    b=9.2
 
     The constrains are applied in lexicographic order.
     """
