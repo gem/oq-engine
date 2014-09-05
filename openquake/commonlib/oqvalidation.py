@@ -111,6 +111,8 @@ class OqParam(valid.ParamSet):
         """
         Must specify either region, sites or exposure_file.
         """
+        if self.calculation_mode not in HAZARD_CALCULATORS:
+            return True  # no check on the sites for risk
         if getattr(self, 'region', None):
             return self.sites is None and not 'exposure' in self.inputs
         elif 'exposure' in self.inputs:
