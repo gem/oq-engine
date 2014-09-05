@@ -39,7 +39,6 @@ from django.db import connections
 from django.core.exceptions import ObjectDoesNotExist
 
 from django.contrib.gis.db import models as djm
-from shapely import wkt
 
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import source, geo, calc, correlation
@@ -49,10 +48,10 @@ from openquake.hazardlib.site import (
 
 from openquake.commonlib.general import distinct
 from openquake.commonlib.riskloaders import loss_type_to_cost_type
-from openquake.commonlib import logictree, oqvalidation
+from openquake.commonlib import logictree
 
 from openquake.engine.db import fields
-from openquake.engine import logs, writer
+from openquake.engine import writer
 
 #: Kind of supported curve statistics
 STAT_CHOICES = (
@@ -954,11 +953,11 @@ class RiskCalculation(djm.Model):
     description = djm.TextField(default='', blank=True)
 
     CALC_MODE_CHOICES = (
-        (u'classical', u'Classical PSHA'),
+        (u'classical_risk', u'Classical PSHA'),
         (u'classical_bcr', u'Classical BCR'),
-        (u'event_based', u'Probabilistic Event-Based'),
+        (u'event_based_risk', u'Probabilistic Event-Based'),
         (u'event_based_fr', u'Event-Based From Ruptures'),
-        (u'scenario', u'Scenario'),
+        (u'scenario_risk', u'Scenario'),
         (u'scenario_damage', u'Scenario Damage'),
         (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
     )
@@ -1093,15 +1092,16 @@ class RiskCalculation(djm.Model):
         if self.hazard_output:
             return [self.hazard_output]
         elif self.hazard_calculation:
-            if self.calculation_mode in ["classical", "classical_bcr"]:
+            if self.calculation_mode in ["classical_risk", "classical_bcr"]:
                 filters = dict(output_type='hazard_curve_multi',
                                hazard_curve__lt_realization__isnull=False)
-            elif self.calculation_mode in ["event_based", "event_based_bcr"]:
+            elif self.calculation_mode in [
+                    "event_based_risk", "event_based_bcr"]:
                 filters = dict(
                     output_type='gmf', gmf__lt_realization__isnull=False)
             elif self.calculation_mode == "event_based_fr":
                 filters = dict(output_type='ses')
-            elif self.calculation_mode in ['scenario', 'scenario_damage']:
+            elif self.calculation_mode in ['scenario_risk', 'scenario_damage']:
                 filters = dict(output_type='gmf_scenario')
             else:
                 raise NotImplementedError
@@ -1200,42 +1200,17 @@ def _prep_geometry(kwargs):
                            ('sites_disagg', 'MULTIPOINT(%s)'),
                            ('region', 'POLYGON((%s))'),
                            ('region_constraint', 'POLYGON((%s))')):
-        if field in kwargs:
-            geom = kwargs[field]
-            if not geom:
-                continue
-            try:
-                wkt.loads(geom)
-                # if this succeeds, we know the wkt is at least valid
-                # we don't know the geometry type though; we'll leave that
-                # to subsequent validation
-            except wkt.ReadingError:
-                try:
-                    coords = [
-                        float(x) for x in fields.ARRAY_RE.split(geom)
-                    ]
-                except ValueError:
-                    raise ValueError(
-                        'Could not coerce `str` to a list of `float`s'
-                    )
-                else:
-                    if not len(coords) % 2 == 0:
-                        raise ValueError(
-                            'Got an odd number of coordinate values'
-                        )
-                    else:
-                        # Construct WKT from the coords
-                        # NOTE: ordering is expected to be lon,lat
-                        points = ['%s %s' % (coords[i], coords[i + 1])
-                                  for i in xrange(0, len(coords), 2)]
-                        # if this is the region, close the linear polygon
-                        # ring by appending the first coord to the end
-                        if field in ('region', 'region_constraint'):
-                            points.append(points[0])
-                        # update the field
-                        kwargs[field] = wkt_fmt % ', '.join(points)
+        coords = kwargs.get(field)
+        if coords:  # construct WKT from the coords
+            points = ['%s %s' % lon_lat for lon_lat in coords]
+            # if this is the region, close the linear polygon
+            # ring by appending the first coord to the end
+            if field in ('region', 'region_constraint'):
+                points.append(points[0])
+            # update the field
+            kwargs[field] = wkt_fmt % ', '.join(points)
 
-    # return the (possbily) modified kwargs
+    # return the (possibly) modified kwargs
     return kwargs
 
 

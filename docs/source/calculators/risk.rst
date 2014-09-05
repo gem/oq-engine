@@ -15,7 +15,7 @@ Hazard Getters
 *************************
 Classical PSHA Calculator
 *************************
-.. automodule:: openquake.engine.calculators.risk.classical.core
+.. automodule:: openquake.engine.calculators.risk.classical_risk.core
 
 *****************************
 Classical PSHA BCR Calculator
@@ -25,7 +25,7 @@ Classical PSHA BCR Calculator
 ***************************
 Event-Based PSHA Calculator
 ***************************
-.. automodule:: openquake.engine.calculators.risk.event_based.core
+.. automodule:: openquake.engine.calculators.risk.event_based_risk.core
 
 *******************************
 Event-Based PSHA BCR Calculator
@@ -35,7 +35,7 @@ Event-Based PSHA BCR Calculator
 *******************
 Scenario Calculator
 *******************
-.. automodule:: openquake.engine.calculators.risk.scenario.core
+.. automodule:: openquake.engine.calculators.risk.scenario_risk.core
 
 **************************
 Scenario Damage Calculator
