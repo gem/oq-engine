@@ -22,6 +22,7 @@ Validation library for the engine, the desktop tools, and anything else
 
 import re
 import ast
+import logging
 from openquake.hazardlib import imt
 
 
@@ -33,8 +34,8 @@ def compose(*validators):
     >>> utf8_not_empty  # doctest: +ELLIPSIS
     <function compose(utf8,not_empty) at ...>
     """
-    def composed_validator(text):
-        out = text
+    def composed_validator(value):
+        out = value
         for val in reversed(validators):
             out = val(out)
         return out
@@ -108,14 +109,14 @@ class FloatRange(object):
         return f
 
 
-def not_empty(text):
+def not_empty(value):
     """Check that the string is not empty"""
-    if not text:
+    if not value:
         raise ValueError('Got an empty string')
-    return text
+    return value
 
 
-def utf8(text):
+def utf8(value):
     r"""
     Check that the string is UTF-8. Returns a unicode object.
 
@@ -125,19 +126,19 @@ def utf8(text):
     ValueError: Not UTF-8: '\xe0'
     """
     try:
-        return text.decode('utf-8')
+        return value.decode('utf-8')
     except UnicodeDecodeError:
-        raise ValueError('Not UTF-8: %r' % text)
+        raise ValueError('Not UTF-8: %r' % value)
 
 
-def utf8_not_empty(text):
+def utf8_not_empty(value):
     """Check that the string is UTF-8 and not empty"""
-    return utf8(not_empty(text))
+    return utf8(not_empty(value))
 
 
-def namelist(text):
+def namelist(value):
     """
-    :param text: input string
+    :param value: input string
     :returns: list of identifiers
 
     >>> namelist('a1  b_2\t_c')
@@ -148,7 +149,7 @@ def namelist(text):
         ...
     ValueError: List of names containing an invalid name: 1c
     """
-    names = text.split()
+    names = value.split()
     if not names:
         raise ValueError('Got an empty name list')
     for n in names:
@@ -160,12 +161,12 @@ def namelist(text):
     return names
 
 
-def longitude(text):
+def longitude(value):
     """
-    :param text: input string
+    :param value: input string
     :returns: longitude float
     """
-    lon = float(text)
+    lon = float(value)
     if lon > 180.:
         raise ValueError('longitude %s > 180' % lon)
     elif lon < -180.:
@@ -173,12 +174,12 @@ def longitude(text):
     return lon
 
 
-def latitude(text):
+def latitude(value):
     """
-    :param text: input string
+    :param value: input string
     :returns: latitude float
     """
-    lat = float(text)
+    lat = float(value)
     if lat > 90.:
         raise ValueError('latitude %s > 90' % lat)
     elif lat < -90.:
@@ -186,15 +187,15 @@ def latitude(text):
     return lat
 
 
-def lonlat(text):
+def lonlat(value):
     """
-    :param text: a pair of coordinates
+    :param value: a pair of coordinates
     :returns: a tuple (longitude, latitude)
 
     >>> lonlat('12 14')
     (12.0, 14.0)
     """
-    lon, lat = text.split()
+    lon, lat = value.split()
     return longitude(lon), latitude(lat)
 
 
@@ -215,29 +216,30 @@ def coordinates(value):
     return map(lonlat, value.split(','))
 
 
-def positiveint(text):
+def positiveint(value):
     """
-    :param text: input string
+    :param value: input string
     :returns: positive integer
     """
-    i = int(text)
+    i = int(not_empty(value))
     if i < 0:
         raise ValueError('integer %d < 0' % i)
     return i
 
 
-def positivefloat(text):
+def positivefloat(value):
     """
-    :param text: input string
+    :param value: input string
     :returns: positive float
     """
-    f = float(text)
+    f = float(not_empty(value))
     if f < 0:
         raise ValueError('float %d < 0' % f)
     return f
 
 
 _BOOL_DICT = {
+    '': False,
     '0': False,
     '1': True,
     'false': False,
@@ -245,25 +247,35 @@ _BOOL_DICT = {
 }
 
 
-def boolean(text):
+def boolean(value):
     """
-    :param text: input string such as '0', '1', 'true', 'false'
+    :param value: input string such as '0', '1', 'true', 'false'
     :returns: boolean
+
+    >>> boolean('')
+    False
+    >>> boolean('True')
+    True
+    >>> boolean('false')
+    False
+    >>> boolean('t')
+    Traceback (most recent call last):
+        ...
+    ValueError: Not a boolean: t
     """
-    if text.lower() in _BOOL_DICT and text.lower() != text:
-        raise ValueError('%r is not a lowercase string' % text)
+    value = value.strip().lower()
     try:
-        return _BOOL_DICT[text]
+        return _BOOL_DICT[value]
     except KeyError:
-        raise ValueError('Not a boolean: %s' % text)
+        raise ValueError('Not a boolean: %s' % value)
 
 
 probability = FloatRange(0, 1)
 
 
-def probabilities(text):
+def probabilities(value):
     """
-    :param text: input text, comma separated or space separated
+    :param value: input string, comma separated or space separated
     :returns: a list of probabilities
 
     >>> probabilities('')
@@ -275,12 +287,12 @@ def probabilities(text):
     >>> probabilities('0.1, 0.2')  # commas are ignored
     [0.1, 0.2]
     """
-    return map(probability, text.replace(',', ' ').split())
+    return map(probability, value.replace(',', ' ').split())
 
 
-def intensity_measure_types(text):
+def intensity_measure_types(value):
     """
-    :param text: input string
+    :param value: input string
     :returns: non-empty list of Intensity Measure Type objects
 
     >>> intensity_measure_types('PGA')
@@ -289,14 +301,14 @@ def intensity_measure_types(text):
     ['PGA', 'SA(1.0)']
     """
     imts = []
-    for chunk in text.split(','):
+    for chunk in value.split(','):
         imts.append(str(imt.from_string(chunk.strip())))
     return imts
 
 
-def intensity_measure_types_and_levels(text):
+def intensity_measure_types_and_levels(value):
     """
-    :param text: input string
+    :param value: input string
     :returns: Intensity Measure Type and Levels dictionary
 
     >>> intensity_measure_types_and_levels('{"PGA": [0.1, 0.2]}')
@@ -307,7 +319,7 @@ def intensity_measure_types_and_levels(text):
        ...
     ValueError: Not enough imls for PGA: [0.1]
     """
-    dic = dictionary(text)
+    dic = dictionary(value)
     for imt, imls in dic.iteritems():
         if len(imls) < 2:
             raise ValueError('Not enough imls for %s: %s' % (imt, imls))
@@ -318,9 +330,9 @@ def intensity_measure_types_and_levels(text):
     return dic
 
 
-def dictionary(text):
+def dictionary(value):
     """
-    :param text: input string
+    :param value: input string
     :returns: a Python dictionary
 
     >>> dictionary('')
@@ -330,12 +342,12 @@ def dictionary(text):
     >>> dictionary('{"a": 1}')
     {'a': 1}
     """
-    if not text:
+    if not value:
         return {}
     try:
-        return ast.literal_eval(text)
+        return ast.literal_eval(value)
     except:
-        raise ValueError('%r is not a valid Python dictionary' % text)
+        raise ValueError('%r is not a valid Python dictionary' % value)
 
 
 def parameters(**names_vals):
@@ -355,15 +367,16 @@ def parameters(**names_vals):
     return names_vals
 
 
-class ParamSet():
+# used in commonlib.oqvalidation
+class ParamSet(object):
     """
     A set of valid interrelated parameters. Here is an example
     of usage:
 
     >>> class MyParams(ParamSet):
-    ...     _params = parameters(a=positiveint, b=positivefloat)
+    ...     params = parameters(a=positiveint, b=positivefloat)
     ...
-    ...     def constraint_not_too_big(self):
+    ...     def constrain_not_too_big(self):
     ...         "The sum of a={a} and b={b} must be under 10"
     ...         return self.a + self.b < 10
 
@@ -375,27 +388,35 @@ class ParamSet():
     ...
     ValueError: The sum of a=1 and b=9.2 must be under 10
 
-    The constraints are applied in lexicographic order.
+    The constrains are applied in lexicographic order.
     """
-    _params = {}
+    params = {}
 
     def __init__(self, **names_vals):
         for name, val in names_vals.iteritems():
-            if name.startswith(('_', 'constraint_')):
+            if name.startswith(('_', 'constrain_')):
                 raise NameError('The parameter name %s is not acceptable'
                                 % name)
             try:
-                convert = self._params[name]
+                convert = self.__class__.params[name]
             except KeyError:
-                raise NameError('The parameter %r is unknown' % name)
-            setattr(self, name, convert(val))
+                logging.warn('The parameter %r is unknown, ignoring' % name)
+                continue
+            try:
+                value = convert(val)
+            except:
+                raise ValueError('Could not convert to %s: %s=%s'
+                                 % (convert.__name__, name, val))
+            setattr(self, name, value)
 
-        constraints = sorted(getattr(self, constraint)
-                             for constraint in dir(self.__class__)
-                             if constraint.startswith('constraint_'))
-        for constraint in constraints:
-            if not constraint():
-                raise ValueError(constraint.__doc__.format(**vars(self)))
+        constrains = sorted(getattr(self, constrain)
+                            for constrain in dir(self.__class__)
+                            if constrain.startswith('constrain_'))
+        for constrain in constrains:
+            if not constrain():
+                dump = '\n'.join('%s=%s' % (n, v)
+                                 for n, v in sorted(self.__dict__.items()))
+                raise ValueError(constrain.__doc__ + 'Got:\n' + dump)
 
     def __repr__(self):
         names = sorted(n for n in vars(self) if not n.startswith('_'))
