@@ -536,7 +536,7 @@ class BaseHazardCalculator(base.Calculator):
         parse it and load it into the `hzrdi.site_model` table.
         """
         logs.LOG.progress("initializing sites")
-        self.hc.points_to_compute(save_sites=True)
+        self.hc.save_hazard_sites()
 
         site_model_inp = self.hc.site_model
         if site_model_inp:
@@ -654,7 +654,8 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
         curve results.
         """
         imtls = self.hc.intensity_measure_types_and_levels
-        points = self.hc.points_to_compute()
+        points = models.HazardSite.objects.filter(
+            hazard_calculation=self.hc).order_by('id')
         sorted_imts = sorted(imtls)
         curves_by_imt = dict((imt, []) for imt in sorted_imts)
         individual_curves = self.job.get_param(
@@ -721,7 +722,7 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
         writer.CacheInserter.saveall([models.HazardCurveData(
             hazard_curve=haz_curve,
             poes=list(poes),
-            location='POINT(%s %s)' % (p.longitude, p.latitude),
+            location=p.location,
             weight=rlz.weight)
             for p, poes in zip(points, curves)])
 
