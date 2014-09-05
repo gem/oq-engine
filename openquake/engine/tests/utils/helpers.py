@@ -507,7 +507,7 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
     hazard_job.status = "complete"
     hazard_job.save()
     job = engine.prepare_job(username)
-    params = readini.parse_config(open(risk_cfg, 'r'))
+    params = vars(readini.parse_config(open(risk_cfg)))
 
     params.update(dict(hazard_output_id=hazard_output.output.id))
 
