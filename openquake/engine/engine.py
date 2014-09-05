@@ -48,8 +48,7 @@ from openquake import hazardlib
 from openquake import risklib
 from openquake import nrmllib
 
-from openquake.commonlib.general import str2bool
-from openquake.commonlib import readini
+from openquake.commonlib import readini, valid, oqvalidation
 
 
 INPUT_TYPES = set(dict(models.INPUT_TYPE_CHOICES))
@@ -60,7 +59,7 @@ UNABLE_TO_DEL_RC_FMT = 'Unable to delete risk calculation: %s'
 LOG_FORMAT = ('[%(asctime)s %(job_type)s job #%(job_id)s %(hostname)s '
               '%(levelname)s %(processName)s/%(process)s] %(message)s')
 
-TERMINATE = str2bool(config.get('celery', 'terminate_workers_on_revoke'))
+TERMINATE = valid.boolean(config.get('celery', 'terminate_workers_on_revoke'))
 
 
 def cleanup_after_job(job, terminate):
@@ -537,11 +536,10 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
             'The parameters %s in the .ini file does '
             'not correspond to a valid input type' % ', '.join(missing))
 
-    # populate JobParam
-    for name, value in sorted(params.iteritems()):
-        models.JobParam.create(job, name, value)
+    params.setdefault('sites', '')
+    job.save_params(vars(oqvalidation.OqParam(**params)))
 
-    if 'sites' in params:
+    if params['sites']:
         # in the future `sites` will be removed by the HazardCalculation
         params['sites'] = 'MULTIPOINT(%s)' % params['sites'].replace('\t', ' ')
 

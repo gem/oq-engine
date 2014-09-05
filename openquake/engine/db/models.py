@@ -43,14 +43,13 @@ from shapely import wkt
 
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import source, geo, calc, correlation
-from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.site import (
     Site, SiteCollection, FilteredSiteCollection)
 
-from openquake.commonlib.general import distinct, str2bool
+from openquake.commonlib.general import distinct
 from openquake.commonlib.riskloaders import loss_type_to_cost_type
-from openquake.commonlib import logictree, valid
+from openquake.commonlib import logictree, oqvalidation
 
 from openquake.engine.db import fields
 from openquake.engine import logs, writer
@@ -122,14 +121,9 @@ INPUT_TYPE_CHOICES = (
      u'Structural Vulnerability Retrofitted'))
 
 
-GROUND_MOTION_CORRELATION_MODELS = [
-    'JB2009', 'Jayaram-Baker 2009']
-
 VULNERABILITY_TYPE_CHOICES = [choice[0]
                               for choice in INPUT_TYPE_CHOICES
                               if choice[0].endswith('vulnerability')]
-
-GSIMS = get_available_gsims()
 
 RAISE_EXC = object()  # sentinel used in OqJob.get_param
 
@@ -361,6 +355,16 @@ class OqJob(djm.Model):
                 raise MissingParameter(name)
             return missing
 
+    def save_params(self, params):
+        """
+        Save on the database table job_params the given parameters.
+
+        :param job: an :class:`OqJob` instance
+        :param params: a dictionary {name: string} of parameters
+        """
+        for name, value in params.iteritems():
+            JobParam.objects.create(job=self, name=name, value=repr(value))
+
     def __repr__(self):
         return '<%s %d, %s>' % (self.__class__.__name__,
                                 self.id, self.job_type)
@@ -408,74 +412,6 @@ class JobParam(djm.Model):
 
     class Meta:
         db_table = 'uiapi\".\"job_param'
-
-    @classmethod
-    def create(cls, job, name, value_as_string):
-        if not name in cls.valid_params:
-            logs.LOG.warn('Unknown parameter %s, ignored' % name)
-            return
-        convert = cls.valid_params[name]
-        try:
-            value = convert(value_as_string)
-        except:
-            raise ValueError('Could not convert to %s: %s=%s'
-                             % (convert.__name__, name, value_as_string))
-        return cls.objects.create(job=job, name=name, value=repr(value))
-
-    # dictionary param_name -> converter_function: text -> python object
-    valid_params = valid.parameters(
-        area_source_discretization=valid.positivefloat,
-        asset_correlation=valid.FloatRange(0, 1),
-        base_path=valid.utf8,
-        calculation_mode=str,
-        coordinate_bin_width=valid.positivefloat,
-        conditional_loss_poes=valid.probabilities,
-        description=valid.utf8_not_empty,
-        distance_bin_width=valid.positivefloat,
-        mag_bin_width=valid.positivefloat,
-        export_dir=valid.utf8,
-        export_multi_curves=str2bool,
-        ground_motion_correlation_model=valid.NoneOr(
-            valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)),
-        ground_motion_correlation_params=valid.dictionary,
-        ground_motion_fields=str2bool,
-        gsim=valid.Choice(*GSIMS),
-        hazard_curves_from_gmfs=str2bool,
-        hazard_maps=str2bool,
-        individual_curves=str2bool,
-        inputs=dict,
-        insured_losses=str2bool,
-        intensity_measure_types=valid.intensity_measure_types,
-        intensity_measure_types_and_levels=
-        valid.intensity_measure_types_and_levels,
-        investigation_time=valid.positivefloat,
-        loss_curve_resolution=valid.positiveint,
-        lrem_steps_per_interval=valid.positiveint,
-        master_seed=valid.positiveint,
-        maximum_distance=valid.positivefloat,
-        mean_hazard_curves=str2bool,
-        number_of_ground_motion_fields=valid.positiveint,
-        number_of_logic_tree_samples=valid.positiveint,
-        num_epsilon_bins=valid.positiveint,
-        poes=valid.probabilities,
-        poes_disagg=valid.probabilities,
-        quantile_hazard_curves=valid.probabilities,
-        random_seed=valid.positiveint,
-        reference_depth_to_1pt0km_per_sec=valid.positivefloat,
-        reference_depth_to_2pt5km_per_sec=valid.positivefloat,
-        reference_vs30_type=valid.Choice('measured', 'inferred'),
-        reference_vs30_value=valid.positivefloat,
-        region=valid.coordinates,
-        region_constraint=valid.coordinates,
-        region_grid_spacing=valid.positivefloat,
-        risk_investigation_time=valid.positivefloat,
-        rupture_mesh_spacing=valid.positivefloat,
-        ses_per_logic_tree_path=valid.positiveint,
-        sites=valid.coordinates,
-        truncation_level=valid.NoneOr(valid.positivefloat),
-        uniform_hazard_spectra=str2bool,
-        width_of_mfd_bin=valid.positivefloat,
-        )
 
 
 class Performance(djm.Model):
@@ -1266,7 +1202,7 @@ def _prep_geometry(kwargs):
                            ('region_constraint', 'POLYGON((%s))')):
         if field in kwargs:
             geom = kwargs[field]
-            if geom is None:
+            if not geom:
                 continue
             try:
                 wkt.loads(geom)
