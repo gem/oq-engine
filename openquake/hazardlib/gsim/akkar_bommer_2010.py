@@ -24,13 +24,12 @@ import numpy as np
 from scipy.constants import g
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
-from openquake.hazardlib import cons
+from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.akkar_bommer_2010_swiss_coeffs import (
     COEFFS_FS_ROCK_SWISS01,
     COEFFS_FS_ROCK_SWISS04,
     COEFFS_FS_ROCK_SWISS08,
-    COEFFS_PHI_SS_MEAN
 )
 from openquake.hazardlib.gsim.utils_swiss_gmpe import _apply_adjustments
 
@@ -43,7 +42,7 @@ class AkkarBommer2010(GMPE):
     and Spectral Accelerations in Europe, the Mediterranean Region, and
     the Middle East", Seismological Research Letters, 81(2), 195-206.
     SA at 4 s (not supported by the original equations) has been added in the
-    context of the SHARE project and assumed to be equal to SA at 3 s bu
+    context of the SHARE project and assumed to be equal to SA at 3 s but
     scaled with proper factor.
     Equation coefficients for PGA and SA periods up to 0.05 seconds have been
     taken from updated model as described in 'Extending ground-motion
@@ -73,7 +72,7 @@ class AkkarBommer2010(GMPE):
     #: :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`, see page 196.
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
-    #: Supported standard deviation types are inter-event, intra-even
+    #: Supported standard deviation types are inter-event, intra-event
     #: and total, see equation 2, page 199.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
         const.StdDev.TOTAL,
@@ -214,8 +213,8 @@ class AkkarBommer2010(GMPE):
     #: 200-201 of 'Empirical Equations for the Prediction of PGA, PGV,
     #: and Spectral Accelerations in Europe, the Mediterranean Region, and
     #: the Middle East'
-    COEFFS = CoeffsTable(sa_damping=5, table="""
-    IMT      b1         b2          b3          b4         b5         b6         b7          b8          b9          b10        Sigma1    Sigma2    SigmaTo
+    COEFFS = CoeffsTable(sa_damping=5, table="""\
+    IMT      b1         b2          b3          b4         b5         b6         b7          b8          b9          b10        Sigma1    Sigma2    SigmaTot
     pga      1.43525    0.74866    -0.06520    -2.72950    0.25139    7.74959    0.08320     0.00766    -0.05823     0.07087    0.2611    0.1056    0.281646179
     0.01     1.43153    0.75258    -0.06557    -2.73290    0.25170    7.73304    0.08105     0.00745    -0.05886     0.07169    0.2616    0.1051    0.281922986
     0.02     1.48690    0.75966    -0.06767    -2.82146    0.26510    7.20661    0.07825     0.00618    -0.06111     0.06756    0.2635    0.1114    0.286080775
@@ -296,7 +295,7 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
        K-value for PGA were not provided but infered from SA[0.01s]
        the model considers a fixed value of vs30=1100m/s
     2) small-magnitude correction
-    3) single station sigma - inter-event magnitude/distance adjustmen
+    3) single station sigma - inter-event magnitude/distance adjustment
 
     Disclaimer: these equations are modified to be used for the
     Swiss Seismic Hazard Model [2014].
@@ -316,11 +315,9 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
         get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
 
         mean, stddevs = _apply_adjustments(
-            AkkarBommer2010.COEFFS,
-            self.COEFFS_FS_ROCK[imt],
-            mean, stddevs, sites, rup, dists, imt, stddev_types,
-            mean_phi_ss=False
-        )
+            AkkarBommer2010.COEFFS, self.COEFFS_FS_ROCK[imt],
+            mean, stddevs, sites, rup, dists.rjb, imt, stddev_types,
+            mean_phi_ss=False)
 
         return mean, stddevs
 
@@ -358,12 +355,12 @@ class AkkarBommer2010SWISS01T(AkkarBommer2010):
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
 
-        mean, stddevs = super(AkkarBommer2010SWISS01T, self).
-        get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        mean, stddevs = super(AkkarBommer2010SWISS01T, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
 
         mean, stddevs = _apply_adjustments(
             AkkarBommer2010.COEFFS, self.COEFFS_FS_ROCK[imt],
-            mean, stddevs, sites, rup, dists, imt, stddev_types,
+            mean, stddevs, sites, rup, dists.rjb, imt, stddev_types,
             mean_phi_ss=True
         )
 
@@ -383,12 +380,12 @@ class AkkarBommer2010SWISS04T(AkkarBommer2010):
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
 
-        mean, stddevs = super(AkkarBommer2010SWISS04T, self).
-        get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        mean, stddevs = super(AkkarBommer2010SWISS04T, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
 
         mean, stddevs = _apply_adjustments(
             AkkarBommer2010.COEFFS, self.COEFFS_FS_ROCK[imt],
-            mean, stddevs, sites, rup, dists, imt, stddev_types,
+            mean, stddevs, sites, rup, dists.rjb, imt, stddev_types,
             mean_phi_ss=True
         )
 
@@ -407,8 +404,8 @@ class AkkarBommer2010SWISS08T(AkkarBommer2010):
     """
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        mean, stddevs = super(AkkarBommer2010SWISS08, self).
-        get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        mean, stddevs = super(AkkarBommer2010SWISS08T, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
         mean, stddevs = _apply_adjustments(
             AkkarBommer2010.COEFFS, self.COEFFS_FS_ROCK[imt],
             mean, stddevs, sites, rup, dists, imt, stddev_types,
