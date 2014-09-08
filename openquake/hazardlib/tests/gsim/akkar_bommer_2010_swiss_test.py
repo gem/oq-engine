@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2012-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -15,12 +15,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-from openquake.hazardlib.gsim.akkar_bommer_2010 import (AkkarBommer2010SWISS01
-    AkkarBommer2010SWISS04,
-    AkkarBommer2010SWISS08,
-    AkkarBommer2010SWISS01T,
-    AkkarBommer2010SWISS04T,
-    AkkarBommer2010SWISS08T)
+from openquake.hazardlib.gsim.akkar_bommer_2010 import (
+                                AkkarBommer2010SWISS01
+                                AkkarBommer2010SWISS04,
+                                AkkarBommer2010SWISS08,
+                                AkkarBommer2010SWISS01T,
+                                AkkarBommer2010SWISS04T,
+                                AkkarBommer2010SWISS08T)
 
 class AkkarBommer2010SWISS01TestCase(BaseGSIMTestCase):
     GSIM_CLASS = AkkarBommer2010SWISS01

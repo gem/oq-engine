@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2012-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -285,7 +285,7 @@ class AkkarBommer2010(GMPE):
 class AkkarBommer2010SWISS01(AkkarBommer2010):
 
     """
-    This class extends :class:AkkarBommer2010,
+    This class extends :class:AkkarBommer2010:
     adjusted to be used for the Swiss Hazard Model [2014].
     1) kappa value
        K-adjustments corresponding to model 01 - as prepared by Ben Edwards
@@ -299,11 +299,15 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
     The use of these models is the soly responsability of the hazard modeler.
 
     Model implmented by laurentiu.danciu@gmail.com
-
     """
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values. 
+        """
+        
         mean, stddevs = super(AkkarBommer2010SWISS01, self).\
         get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
         mean, stddevs = self._apply_adjustments(mean, stddevs, sites, rup, 
@@ -312,7 +316,12 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
 
     def _apply_adjustments(self, mean, stddevs, sites, rup, dists, imt, 
         stddev_types):
-
+        
+        """
+        This method applies adjustments to the mean and standard deviation.
+        The small-magnitude adjustments are applied to mean, whereas the single 
+        station sigma is applied to the standard deviation.  
+        """
         C_ADJ = self.COEFFS_FS_ROCK[imt]
         c1_rrup = self._compute_C1_term(C_ADJ, imt, dists)
         phi_ss = self._compute_phi_ss(C_ADJ, rup, c1_rrup, imt)
@@ -321,7 +330,6 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
         self._compute_small_mag_correction_term(C_ADJ, rup.mag, imt, dists.rjb)
 
         mean_corr = np.log(mean_corr)
-        print phi_ss
 
         std_corr = self._get_corr_stddevs(self.COEFFS[imt], stddev_types,
                    len(sites.vs30), phi_ss)
@@ -334,6 +342,7 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
         """
         small magnitude correction applied to the median values
         """
+        
         if mag >= 3.00 and mag < 5.5:
             min_term = np.minimum(rjb, C['Rm'])
             max_term = np.maximum(min_term, 10)
@@ -350,6 +359,7 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
         as the total standard deviation - as proposed to be used in
         the Swiss Hazard Model [2014].
         """
+        
         stddevs = []
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
@@ -373,6 +383,7 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
         Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
         """
+        
         c1_rrup = np.zeros_like(dists.rjb)
         idx = dists.rjb < C['Rc11']
         c1_rrup[idx] = C['phi_11']
@@ -390,6 +401,7 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
         The phi_ss coeff are used to compute the single station sigma
         phi_ss natural logarithm units
         """
+        
         phi_ss = 0
 
         if rup.mag < C['Mc1']:
@@ -407,31 +419,32 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
     COEFFS_FS_ROCK=COEFFS_FS_ROCK_SWISS01
 
 class AkkarBommer2010SWISS04(AkkarBommer2010SWISS01):
-
     """
-    This class extends :class:AkkarBommer2010,following same strategy 
+    This class extends :class:AkkarBommer2010:following same strategy 
     as for :class:AkkarBommer2010SWISS01 
     """
+    
     COEFFS_FS_ROCK=COEFFS_FS_ROCK_SWISS04
 
 class AkkarBommer2010SWISS08(AkkarBommer2010SWISS01):
-
     """
-    This class extends :class:AkkarBommer2010,following same strategy 
+    This class extends :class:AkkarBommer2010:following same strategy 
     as for :class:AkkarBommer2010SWISS01 to be used for the 
     Swiss Hazard Model [2014].
     """
+    
     COEFFS_FS_ROCK=COEFFS_FS_ROCK_SWISS08
 
 class AkkarBommer2010SWISS01T(AkkarBommer2010SWISS01):
     """
-    This class extends :class:AkkarBommer2010,following same strategy 
+    This class extends :class:AkkarBommer2010:following same strategy 
     as for :class:AkkarBommer2010SWISS01 to be used for the Swiss 
     Hazard Model [2014]. 
     The standard deviation of this model is reported as the 
     single station sigma computed from a mean value (tau) as prepared by 
     B. Edwards for the Swiss Hazard Model
     """
+    
     COEFFS_PHI_SS=COEFFS_PHI_SS_MEAN
 
     def _compute_phi_ss(self, C, rup, c1_rrup, imt):
@@ -439,15 +452,15 @@ class AkkarBommer2010SWISS01T(AkkarBommer2010SWISS01):
         return (C_ADJ['phi_ss']/np.log(10))
 
 class AkkarBommer2010SWISS04T(AkkarBommer2010SWISS04):
-
     """
-    This class extends :class:AkkarBommer2010,following same strategy 
+    This class extends :class:AkkarBommer2010:following same strategy 
     as for :class:AkkarBommer2010SWISS04 to be used for the 
     Swiss Hazard Model [2014].
     The standard deviation of this model is reported as the 
     single station sigma computed from a mean value (tau) as prepared by 
     B. Edwards for the Swiss Hazard Model
     """
+    
     COEFFS_PHI_SS=COEFFS_PHI_SS_MEAN
 
     def _compute_phi_ss(self, C, rup, c1_rrup, imt):
@@ -455,15 +468,15 @@ class AkkarBommer2010SWISS04T(AkkarBommer2010SWISS04):
         return (C_ADJ['phi_ss']/np.log(10))
 
 class AkkarBommer2010SWISS08T(AkkarBommer2010SWISS08):
-
     """
-    This class extends :class:AkkarBommer2010,following same strategy 
+    This class extends :class:AkkarBommer2010:following same strategy 
     as for :class:AkkarBommer2010SWISS08 to be used for the 
     Swiss Hazard Model [2014].
     The standard deviation of this model is reported as the 
     single station sigma computed from a mean value (tau) as prepared by 
     B. Edwards for the Swiss Hazard Model
     """
+    
     COEFFS_PHI_SS=COEFFS_PHI_SS_MEAN
     def _compute_phi_ss(self, C, rup, c1_rrup, imt):
         C_ADJ= self.COEFFS_PHI_SS[imt]
