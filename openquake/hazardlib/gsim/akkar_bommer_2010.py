@@ -24,13 +24,15 @@ import numpy as np
 from scipy.constants import g
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
-from openquake.hazardlib.gsim.akkar_bommer_2010_swiss_coeffs import (
-                                            COEFFS_FS_ROCK_SWISS01,
-                                            COEFFS_FS_ROCK_SWISS04,
-                                            COEFFS_FS_ROCK_SWISS08,
-                                            COEFFS_PHI_SS_MEAN)
-from openquake.hazardlib import const
+from openquake.hazardlib import cons
 from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.gsim.akkar_bommer_2010_swiss_coeffs import (
+    COEFFS_FS_ROCK_SWISS01,
+    COEFFS_FS_ROCK_SWISS04,
+    COEFFS_FS_ROCK_SWISS08,
+    COEFFS_PHI_SS_MEAN
+)
+from openquake.hazardlib.gsim.utils_swiss_gmpe import _apply_adjustments
 
 
 class AkkarBommer2010(GMPE):
@@ -41,14 +43,14 @@ class AkkarBommer2010(GMPE):
     and Spectral Accelerations in Europe, the Mediterranean Region, and
     the Middle East", Seismological Research Letters, 81(2), 195-206.
     SA at 4 s (not supported by the original equations) has been added in the
-    context of the SHARE project and assumed to be equal to SA at 3 s but
+    context of the SHARE project and assumed to be equal to SA at 3 s bu
     scaled with proper factor.
     Equation coefficients for PGA and SA periods up to 0.05 seconds have been
-    taken from updated model as described in 'Extending ground-motion 
-    prediction equations for spectral accelerations to higher response 
-    frequencies',Julian J. Bommer, Sinan Akkar, Stephane Drouet, 
-    Bull. Earthquake Eng. (2012) volume 10, pages 379 - 399. 
-    Coefficients for PGV and SA above 0.05 seconds are taken from the 
+    taken from updated model as described in 'Extending ground-motion
+    prediction equations for spectral accelerations to higher response
+    frequencies',Julian J. Bommer, Sinan Akkar, Stephane Drouet,
+    Bull. Earthquake Eng. (2012) volume 10, pages 379 - 399.
+    Coefficients for PGV and SA above 0.05 seconds are taken from the
     original 2010 publication.
     """
     #: Supported tectonic region type is 'active shallow crust' because the
@@ -71,7 +73,7 @@ class AkkarBommer2010(GMPE):
     #: :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`, see page 196.
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
-    #: Supported standard deviation types are inter-event, intra-event
+    #: Supported standard deviation types are inter-event, intra-even
     #: and total, see equation 2, page 199.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
         const.StdDev.TOTAL,
@@ -116,8 +118,9 @@ class AkkarBommer2010(GMPE):
         if isinstance(imt, SA) and imt.period == 4.0:
             mean /= 0.8
 
-        istddevs = self._get_stddevs(C, stddev_types, 
-            num_sites=len(sites.vs30))
+        istddevs = self._get_stddevs(
+            C, stddev_types, num_sites=len(sites.vs30)
+        )
 
         stddevs = np.log(10 ** np.array(istddevs))
 
@@ -211,8 +214,8 @@ class AkkarBommer2010(GMPE):
     #: 200-201 of 'Empirical Equations for the Prediction of PGA, PGV,
     #: and Spectral Accelerations in Europe, the Mediterranean Region, and
     #: the Middle East'
-    COEFFS = CoeffsTable(sa_damping=5, table="""\
-    IMT      b1         b2          b3          b4         b5         b6         b7          b8          b9          b10        Sigma1    Sigma2    SigmaTot
+    COEFFS = CoeffsTable(sa_damping=5, table="""
+    IMT      b1         b2          b3          b4         b5         b6         b7          b8          b9          b10        Sigma1    Sigma2    SigmaTo
     pga      1.43525    0.74866    -0.06520    -2.72950    0.25139    7.74959    0.08320     0.00766    -0.05823     0.07087    0.2611    0.1056    0.281646179
     0.01     1.43153    0.75258    -0.06557    -2.73290    0.25170    7.73304    0.08105     0.00745    -0.05886     0.07169    0.2616    0.1051    0.281922986
     0.02     1.48690    0.75966    -0.06767    -2.82146    0.26510    7.20661    0.07825     0.00618    -0.06111     0.06756    0.2635    0.1114    0.286080775
@@ -282,6 +285,7 @@ class AkkarBommer2010(GMPE):
     pgv     -2.12833    1.21448    -0.08137    -2.46942    0.22349    6.41443    0.20354     0.08484    -0.05856     0.01305    0.2562    0.1083    0.278149834
     """)
 
+
 class AkkarBommer2010SWISS01(AkkarBommer2010):
 
     """
@@ -292,7 +296,7 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
        K-value for PGA were not provided but infered from SA[0.01s]
        the model considers a fixed value of vs30=1100m/s
     2) small-magnitude correction
-    3) single station sigma - inter-event magnitude/distance adjustment
+    3) single station sigma - inter-event magnitude/distance adjustmen
 
     Disclaimer: these equations are modified to be used for the
     Swiss Seismic Hazard Model [2014].
@@ -305,180 +309,111 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values. 
+        for spec of input and result values.
         """
-        
-        mean, stddevs = super(AkkarBommer2010SWISS01, self).\
+
+        mean, stddevs = super(AkkarBommer2010SWISS01, self).
         get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
-        mean, stddevs = self._apply_adjustments(mean, stddevs, sites, rup, 
-                        dists, imt, stddev_types)
+
+        mean, stddevs = _apply_adjustments(
+            AkkarBommer2010.COEFFS,
+            self.COEFFS_FS_ROCK[imt],
+            mean, stddevs, sites, rup, dists, imt, stddev_types,
+            mean_phi_ss=False
+        )
+
         return mean, stddevs
 
-    def _apply_adjustments(self, mean, stddevs, sites, rup, dists, imt, 
-        stddev_types):
-        
-        """
-        This method applies adjustments to the mean and standard deviation.
-        The small-magnitude adjustments are applied to mean, whereas the single 
-        station sigma is applied to the standard deviation.  
-        """
-        C_ADJ = self.COEFFS_FS_ROCK[imt]
-        c1_rrup = self._compute_C1_term(C_ADJ, imt, dists)
-        phi_ss = self._compute_phi_ss(C_ADJ, rup, c1_rrup, imt)
-        
-        mean_corr = np.exp(mean) * C_ADJ['k_adj'] * \
-        self._compute_small_mag_correction_term(C_ADJ, rup.mag, imt, dists.rjb)
+    COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS01
 
-        mean_corr = np.log(mean_corr)
-
-        std_corr = self._get_corr_stddevs(self.COEFFS[imt], stddev_types,
-                   len(sites.vs30), phi_ss)
-        
-        stddevs = np.log(10 ** np.array(std_corr))
-        
-        return mean_corr, stddevs
-
-    def _compute_small_mag_correction_term(self, C, mag, imt, rjb):
-        """
-        small magnitude correction applied to the median values
-        """
-        
-        if mag >= 3.00 and mag < 5.5:
-            min_term = np.minimum(rjb, C['Rm'])
-            max_term = np.maximum(min_term, 10)
-            term_ln = np.log(max_term / 20)
-            term_ratio = ((5.50 - mag) / C['a1'])
-            temp = (term_ratio) ** C['a2'] * (C['b1'] + C['b2'] * term_ln)
-            return 1 / np.exp(temp)
-        else:
-            return 1
-
-    def _get_corr_stddevs(self, C, stddev_types, num_sites, phi_ss):
-        """
-        Return standard deviations adjusted for single station sigma
-        as the total standard deviation - as proposed to be used in
-        the Swiss Hazard Model [2014].
-        """
-        
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(
-                    np.sqrt(
-                        C['Sigma2'] *
-                        C['Sigma2'] +
-                        phi_ss *
-                        phi_ss) +
-                    np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(C['Sigma1'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(C['Sigma2'] + np.zeros(num_sites))
-        return stddevs
-
-    def _compute_C1_term(self, C, imt, dists):
-        """
-        Return C1 coeffs as function of Rrup as proposed by 
-        Rodriguez-Marek et al (2013)
-        The C1 coeff are used to compute the single station sigma
-        """
-        
-        c1_rrup = np.zeros_like(dists.rjb)
-        idx = dists.rjb < C['Rc11']
-        c1_rrup[idx] = C['phi_11']
-        idx = (dists.rjb >= C['Rc11']) & (dists.rjb <= C['Rc21'])
-        c1_rrup[idx] = C['phi_11'] + (C['phi_21'] - C['phi_11']) * \
-        ((dists.rjb[idx] - C['Rc11']) / (C['Rc21'] - C['Rc11']))
-        idx = dists.rjb > C['Rc21']
-        c1_rrup[idx] = C['phi_21']
-        return c1_rrup
-
-    def _compute_phi_ss(self, C, rup, c1_rrup, imt):
-        """
-        Return phi_ss coeffs as function of magnitude as 
-        proposed by Rodriguez-Marek et al (2013)
-        The phi_ss coeff are used to compute the single station sigma
-        phi_ss natural logarithm units
-        """
-        
-        phi_ss = 0
-
-        if rup.mag < C['Mc1']:
-            phi_ss = c1_rrup
-
-        elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
-            phi_ss = c1_rrup + \
-                (C['C2'] - c1_rrup) * \
-                ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
-        elif rup.mag > C['Mc2']:
-            phi_ss = C['C2']
-
-        return (phi_ss) / np.log(10)
-        
-    COEFFS_FS_ROCK=COEFFS_FS_ROCK_SWISS01
 
 class AkkarBommer2010SWISS04(AkkarBommer2010SWISS01):
     """
-    This class extends :class:AkkarBommer2010:following same strategy 
-    as for :class:AkkarBommer2010SWISS01 
+    This class extends :class:AkkarBommer2010:following same strategy
+    as for :class:AkkarBommer2010SWISS01
     """
-    
-    COEFFS_FS_ROCK=COEFFS_FS_ROCK_SWISS04
+
+    COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS04
+
 
 class AkkarBommer2010SWISS08(AkkarBommer2010SWISS01):
     """
-    This class extends :class:AkkarBommer2010:following same strategy 
-    as for :class:AkkarBommer2010SWISS01 to be used for the 
+    This class extends :class:AkkarBommer2010:following same strategy
+    as for :class:AkkarBommer2010SWISS01 to be used for the
     Swiss Hazard Model [2014].
     """
-    
-    COEFFS_FS_ROCK=COEFFS_FS_ROCK_SWISS08
 
-class AkkarBommer2010SWISS01T(AkkarBommer2010SWISS01):
+    COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS08
+
+
+class AkkarBommer2010SWISS01T(AkkarBommer2010):
     """
-    This class extends :class:AkkarBommer2010:following same strategy 
-    as for :class:AkkarBommer2010SWISS01 to be used for the Swiss 
-    Hazard Model [2014]. 
-    The standard deviation of this model is reported as the 
-    single station sigma computed from a mean value (tau) as prepared by 
+    This class extends :class:AkkarBommer2010:following same strategy
+    as for :class:AkkarBommer2010SWISS01 to be used for the Swiss
+    Hazard Model [2014].
+    The standard deviation of this model is reported as the
+    single station sigma computed from a mean value (tau) as prepared by
     B. Edwards for the Swiss Hazard Model
     """
-    
-    COEFFS_PHI_SS=COEFFS_PHI_SS_MEAN
 
-    def _compute_phi_ss(self, C, rup, c1_rrup, imt):
-        C_ADJ= self.COEFFS_PHI_SS[imt]
-        return (C_ADJ['phi_ss']/np.log(10))
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
 
-class AkkarBommer2010SWISS04T(AkkarBommer2010SWISS04):
+        mean, stddevs = super(AkkarBommer2010SWISS01T, self).
+        get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+
+        mean, stddevs = _apply_adjustments(
+            AkkarBommer2010.COEFFS, self.COEFFS_FS_ROCK[imt],
+            mean, stddevs, sites, rup, dists, imt, stddev_types,
+            mean_phi_ss=True
+        )
+
+        return mean, stddevs
+    COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS01
+
+
+class AkkarBommer2010SWISS04T(AkkarBommer2010):
     """
-    This class extends :class:AkkarBommer2010:following same strategy 
-    as for :class:AkkarBommer2010SWISS04 to be used for the 
+    This class extends :class:AkkarBommer2010:following same strategy
+    as for :class:AkkarBommer2010SWISS04 to be used for the
     Swiss Hazard Model [2014].
-    The standard deviation of this model is reported as the 
-    single station sigma computed from a mean value (tau) as prepared by 
+    The standard deviation of this model is reported as the
+    single station sigma computed from a mean value (tau) as prepared by
     B. Edwards for the Swiss Hazard Model
     """
-    
-    COEFFS_PHI_SS=COEFFS_PHI_SS_MEAN
 
-    def _compute_phi_ss(self, C, rup, c1_rrup, imt):
-        C_ADJ= self.COEFFS_PHI_SS[imt]
-        return (C_ADJ['phi_ss']/np.log(10))
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
 
-class AkkarBommer2010SWISS08T(AkkarBommer2010SWISS08):
+        mean, stddevs = super(AkkarBommer2010SWISS04T, self).
+        get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+
+        mean, stddevs = _apply_adjustments(
+            AkkarBommer2010.COEFFS, self.COEFFS_FS_ROCK[imt],
+            mean, stddevs, sites, rup, dists, imt, stddev_types,
+            mean_phi_ss=True
+        )
+
+        return mean, stddevs
+    COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS04
+
+
+class AkkarBommer2010SWISS08T(AkkarBommer2010):
     """
-    This class extends :class:AkkarBommer2010:following same strategy 
-    as for :class:AkkarBommer2010SWISS08 to be used for the 
+    This class extends :class:AkkarBommer2010:following same strategy
+    as for :class:AkkarBommer2010SWISS08 to be used for the
     Swiss Hazard Model [2014].
-    The standard deviation of this model is reported as the 
-    single station sigma computed from a mean value (tau) as prepared by 
+    The standard deviation of this model is reported as the
+    single station sigma computed from a mean value (tau) as prepared by
     B. Edwards for the Swiss Hazard Model
     """
-    
-    COEFFS_PHI_SS=COEFFS_PHI_SS_MEAN
-    def _compute_phi_ss(self, C, rup, c1_rrup, imt):
-        C_ADJ= self.COEFFS_PHI_SS[imt]
-        return (C_ADJ['phi_ss']/np.log(10))
 
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        mean, stddevs = super(AkkarBommer2010SWISS08, self).
+        get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        mean, stddevs = _apply_adjustments(
+            AkkarBommer2010.COEFFS, self.COEFFS_FS_ROCK[imt],
+            mean, stddevs, sites, rup, dists, imt, stddev_types,
+            mean_phi_ss=True
+        )
+
+        return mean, stddevs
+    COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS08
