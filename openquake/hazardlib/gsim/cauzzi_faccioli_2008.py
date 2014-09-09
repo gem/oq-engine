@@ -1,6 +1,6 @@
-# -*- coding: utf-8 -*-
+# coding: utf-8
 # The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
+# Copyright (C) 2012 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -18,6 +18,7 @@
 Module exports :class:`CauzziFaccioli2008`.
 """
 from __future__ import division
+
 import numpy as np
 # standard acceleration of gravity in m/s**2
 from scipy.constants import g
@@ -28,7 +29,7 @@ from openquake.hazardlib.gsim.cauzzi_faccioli_2008_coeffs import (
     COEFFS_FS_ROCK_SWISS01,
     COEFFS_FS_ROCK_SWISS04,
     COEFFS_FS_ROCK_SWISS08,
-    )
+)
 from openquake.hazardlib.gsim.utils_swiss_gmpe import _apply_adjustments
 
 
@@ -634,14 +635,15 @@ class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
         mean, stddevs = super(CauzziFaccioli2008SWISS01, self).\
             get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
 
+        tau_ss = 'Sigma2'
+        log_phi_ss = np.log(10)
         mean, stddevs = _apply_adjustments(
-            CauzziFaccioli2008.COEFFS, self.COEFFS_FS_ROCK[imt],
+            CauzziFaccioli2008.COEFFS, self.COEFFS_FS_ROCK[imt], tau_ss,
             mean, stddevs, sites, rup, dists.rhypo, imt, stddev_types,
-            mean_phi_ss=False
+            log_phi_ss, mean_phi_ss=False
         )
 
-        return mean, stddevs
-
+        return mean, np.log(10 ** np.array(stddevs))
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS01
 
 
@@ -676,13 +678,15 @@ class CauzziFaccioli2008SWISS01T(CauzziFaccioli2008):
         mean, stddevs = super(CauzziFaccioli2008SWISS01T, self).\
             get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
 
+        tau_ss = 'Sigma2'
+        log_phi_ss = np.log(10)
         mean, stddevs = _apply_adjustments(
-            CauzziFaccioli2008.COEFFS, self.COEFFS_FS_ROCK[imt],
+            CauzziFaccioli2008.COEFFS, self.COEFFS_FS_ROCK[imt], tau_ss,
             mean, stddevs, sites, rup, dists.rhypo, imt, stddev_types,
-            mean_phi_ss=True
+            log_phi_ss, mean_phi_ss=True
         )
 
-        return mean, stddevs
+        return mean, np.log(10 ** np.array(stddevs))
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS01
 
 
@@ -699,14 +703,15 @@ class CauzziFaccioli2008SWISS04T(CauzziFaccioli2008):
         mean, stddevs = super(CauzziFaccioli2008SWISS04T, self).\
             get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
 
+        tau_ss = 'Sigma2'
+        log_phi_ss = np.log(10)
         mean, stddevs = _apply_adjustments(
-            CauzziFaccioli2008.COEFFS,
-            self.COEFFS_FS_ROCK[imt],
+            CauzziFaccioli2008.COEFFS, self.COEFFS_FS_ROCK[imt], tau_ss,
             mean, stddevs, sites, rup, dists.rhypo, imt, stddev_types,
-            mean_phi_ss=True
+            log_phi_ss, mean_phi_ss=True
         )
 
-        return mean, stddevs
+        return mean, np.log(10 ** np.array(stddevs))
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS04
 
 
@@ -723,12 +728,13 @@ class CauzziFaccioli2008SWISS08T(CauzziFaccioli2008):
         mean, stddevs = super(CauzziFaccioli2008SWISS08T, self).\
             get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
 
+        tau_ss = 'Sigma2'
+        log_phi_ss = np.log(10)
         mean, stddevs = _apply_adjustments(
-            CauzziFaccioli2008.COEFFS,
-            self.COEFFS_FS_ROCK[imt],
+            CauzziFaccioli2008.COEFFS, self.COEFFS_FS_ROCK[imt], tau_ss,
             mean, stddevs, sites, rup, dists.rhypo, imt, stddev_types,
-            mean_phi_ss=True
+            log_phi_ss, mean_phi_ss=True
         )
 
-        return mean, stddevs
+        return mean, np.log(10 ** np.array(stddevs))
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS08
