@@ -53,7 +53,7 @@ def _compute_small_mag_correction_term(C, mag, imt, rhypo):
         return 1
 
 
-def _compute_phi_ss(C, rup, c1_rrup, imt, mean_phi_ss):
+def _compute_phi_ss(C, rup, c1_rrup, imt, log_phi_ss, mean_phi_ss):
     """
     Return phi_ss coeffs as function of magnitude as
     proposed by Rodriguez-Marek et al (2013)
@@ -62,7 +62,7 @@ def _compute_phi_ss(C, rup, c1_rrup, imt, mean_phi_ss):
     """
     if mean_phi_ss:
         C_ADJ = COEFFS_PHI_SS_MEAN[imt]
-        return (C_ADJ['phi_ss']/np.log(10))
+        return (C_ADJ['phi_ss'] / log_phi_ss)
 
     else:
         phi_ss = 0
@@ -77,48 +77,48 @@ def _compute_phi_ss(C, rup, c1_rrup, imt, mean_phi_ss):
         elif rup.mag > C['Mc2']:
             phi_ss = C['C2']
 
-        return (phi_ss) / np.log(10)
+        return (phi_ss / log_phi_ss)
 
 
-def _get_corr_stddevs(C, stddev_types, num_sites, phi_ss):
+def _get_corr_stddevs(C, tau_ss, stddev_types, num_sites, phi_ss):
     """
     Return standard deviations adjusted for single station sigma
     as the total standard deviation - as proposed to be used in
     the Swiss Hazard Model [2014].
     """
-
     stddevs = []
     for stddev_type in stddev_types:
         if stddev_type == const.StdDev.TOTAL:
             stddevs.append(
                 np.sqrt(
-                    C['Sigma2'] * C['Sigma2'] +
+                    C[tau_ss] * C[tau_ss] +
                     phi_ss * phi_ss) +
                 np.zeros(num_sites))
     return stddevs
 
 
-def _apply_adjustments(COEFFS, C_ADJ, mean, stddevs, sites, rup, dists, imt,
-                       stddev_types, mean_phi_ss):
+def _apply_adjustments(COEFFS, C_ADJ, tau_ss, mean, stddevs, sites, rup, dists,
+                       imt, stddev_types, log_phi_ss, mean_phi_ss):
     """
     This method applies adjustments to the mean and standard deviation.
     The small-magnitude adjustments are applied to mean, whereas the single
     station sigma is applied to the standard deviation.
     """
     c1_rrup = _compute_C1_term(C_ADJ, imt, dists)
-    phi_ss = _compute_phi_ss(C_ADJ, rup, c1_rrup, imt, mean_phi_ss)
+    phi_ss = _compute_phi_ss(C_ADJ, rup, c1_rrup, imt, log_phi_ss, mean_phi_ss)
 
     mean_corr = np.exp(mean) * C_ADJ['k_adj'] * \
         _compute_small_mag_correction_term(C_ADJ, rup.mag, imt, dists)
 
     mean_corr = np.log(mean_corr)
 
-    std_corr = _get_corr_stddevs(COEFFS[imt], stddev_types, len(sites.vs30),
-                                 phi_ss)
+    std_corr = _get_corr_stddevs(COEFFS[imt], tau_ss, stddev_types,
+                                 len(sites.vs30), phi_ss)
 
-    stddevs = np.log(10 ** np.array(std_corr))
+    stddevs = np.array(std_corr)
 
     return mean_corr, stddevs
+
 
 COEFFS_PHI_SS_MEAN = CoeffsTable(sa_damping=5, table="""\
     IMT              phi_ss
