@@ -22,23 +22,32 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGV, PGA, SA
 from openquake.hazardlib.gsim.edwards_fah_2013a import (
-                                        EdwardsFah2013Alpine60MPa,
-                                        EdwardsFah2013Alpine60MPaMR)
+    EdwardsFah2013Alpine60MPa,
+    EdwardsFah2013Alpine60MPaMR
+)
 from openquake.hazardlib.gsim.edwards_fah_2013f_coeffs import (
-                                        COEFFS_FORELAND_60Bars,
-                                        COEFFS_FORELAND_10Bars,
-                                        COEFFS_FORELAND_20Bars,
-                                        COEFFS_FORELAND_30Bars,
-                                        COEFFS_FORELAND_50Bars,
-                                        COEFFS_FORELAND_75Bars,
-                                        COEFFS_FORELAND_90Bars,
-                                        COEFFS_FORELAND_120Bars)
+    COEFFS_FORELAND_60Bars,
+    COEFFS_FORELAND_10Bars,
+    COEFFS_FORELAND_20Bars,
+    COEFFS_FORELAND_30Bars,
+    COEFFS_FORELAND_50Bars,
+    COEFFS_FORELAND_75Bars,
+    COEFFS_FORELAND_90Bars,
+    COEFFS_FORELAND_120Bars
+)
+from openquake.hazardlib.gsim.utils_swiss_gmpe import (
+    _apply_adjustments,
+    _compute_phi_ss,
+    _compute_C1_term,
+    _get_corr_stddevs
+)
+
 
 class EdwardsFah2013Foreland60MPa(EdwardsFah2013Alpine60MPa):
 
     """
-    This function implements the GMPE developed by Ben Edwards and 
-    Donath Fah and published as "A Stochastic Ground-Motion Model 
+    This function implements the GMPE developed by Ben Edwards and
+    Donath Fah and published as "A Stochastic Ground-Motion Model
     for Switzerland" Bulletin of the Seismological
     Society of America, Vol. 103, No. 1, pp. 78–98, February 2013.
     The GMPE was parametrized by Carlo Cauzzi to be implemented in OpenQuake.
@@ -46,7 +55,6 @@ class EdwardsFah2013Foreland60MPa(EdwardsFah2013Alpine60MPa):
     tectonic regionalizations defined for the Switzerland -
     therefore this GMPE is region specific".
     """
-
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         compute mean for Foreland
@@ -93,128 +101,98 @@ class EdwardsFah2013Foreland60MPa(EdwardsFah2013Alpine60MPa):
     M1 = 5.00
     M2 = 4.70
 
-    COEFFS=COEFFS_FORELAND_60Bars
+    COEFFS = COEFFS_FORELAND_60Bars
+
 
 class EdwardsFah2013Foreland10MPa(EdwardsFah2013Foreland60MPa):
 
-    COEFFS=COEFFS_FORELAND_10Bars
+    COEFFS = COEFFS_FORELAND_10Bars
+
 
 class EdwardsFah2013Foreland20MPa(EdwardsFah2013Foreland60MPa):
 
-    COEFFS=COEFFS_FORELAND_20Bars
+    COEFFS = COEFFS_FORELAND_20Bars
+
 
 class EdwardsFah2013Foreland30MPa(EdwardsFah2013Foreland60MPa):
 
-    COEFFS=COEFFS_FORELAND_30Bars
+    COEFFS = COEFFS_FORELAND_30Bars
+
 
 class EdwardsFah2013Foreland50MPa(EdwardsFah2013Foreland60MPa):
 
-    COEFFS=COEFFS_FORELAND_50Bars
+    COEFFS = COEFFS_FORELAND_50Bars
+
 
 class EdwardsFah2013Foreland75MPa(EdwardsFah2013Foreland60MPa):
 
-    COEFFS=COEFFS_FORELAND_75Bars
+    COEFFS = COEFFS_FORELAND_75Bars
+
 
 class EdwardsFah2013Foreland90MPa(EdwardsFah2013Foreland60MPa):
 
-    COEFFS=COEFFS_FORELAND_90Bars
+    COEFFS = COEFFS_FORELAND_90Bars
+
 
 class EdwardsFah2013Foreland120MPa(EdwardsFah2013Foreland60MPa):
 
-    COEFFS=COEFFS_FORELAND_120Bars
+    COEFFS = COEFFS_FORELAND_120Bars
+
 
 class EdwardsFah2013Foreland60MPaMR(EdwardsFah2013Foreland60MPa):
     """
     Adjustment of a single station sigma for magnitude and distance dependance
     """
-
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
 
         mean, stddevs = super(EdwardsFah2013Foreland60MPaMR, self).\
             get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
-        stddevs = self._apply_adjustments(stddevs, sites, rup, 
-                        dists, imt, stddev_types)
-        return mean, stddevs
 
-    def _apply_adjustments(self, stddevs, sites, rup, dists, imt, 
-                           stddev_types):
+        c1_rrup = _compute_C1_term(
+            EdwardsFah2013Foreland60MPa.COEFFS[imt], imt, dists.rrup
+        )
 
-        C_ADJ = self.COEFFS[imt]
-        c1_rrup = self._compute_C1_term(C_ADJ, imt, dists)
-        phi_ss_mr = self._compute_phi_ss(C_ADJ, rup, c1_rrup, imt)
-        
-        std_corr = self._get_corr_stddevs(
-            self.COEFFS[imt], stddev_types, len(sites.vs30), phi_ss_mr)
+        log_phi_ss = 1.00
+        tau_ss = 'tau'
+        phi_ss_mr = _compute_phi_ss(
+            EdwardsFah2013Foreland60MPa.COEFFS[imt], rup, c1_rrup, imt,
+            log_phi_ss, mean_phi_ss=False
+        )
+
+        std_corr = _get_corr_stddevs(
+            EdwardsFah2013Foreland60MPa.COEFFS[imt], tau_ss, stddev_types,
+            len(sites.vs30), phi_ss_mr
+        )
+
         stddevs = np.array(std_corr)
 
-        return stddevs
+        return mean, stddevs
+    COEFFS = COEFFS_FORELAND_60Bars
 
-    def _compute_C1_term(self, C, imt, dists):
-        """
-        Return C1 coeffs as function of Rrup as proposed by 
-        Rodriguez-Marek et al (2013)
-        The C1 coeff are used to compute the single station sigma
-        """
-        c1_rrup = np.zeros_like(dists.rrup)
-        idx = dists.rrup < C['Rc11']
-        c1_rrup[idx] = C['phi_11']
-        idx = (dists.rrup >= C['Rc11']) & (dists.rrup <= C['Rc21'])
-        c1_rrup[idx] = C['phi_11'] + \
-            (C['phi_21'] - C['phi_11']) *  \
-            ((dists.rrup[idx] - C['Rc11']) / (C['Rc21'] - C['Rc11']))
-        idx = dists.rrup > C['Rc21']
-        c1_rrup[idx] = C['phi_21']
-        return c1_rrup
-
-    def _compute_phi_ss(self, C, rup, c1_rrup, imt):
-        """
-        Return C1 coeffs as function of Rrup as proposed 
-        by Rodriguez-Marek et al (2013)
-        The C1 coeff are used to compute the single station sigma
-        """
-        phi_ss = 0
-
-        if rup.mag < C['Mc1']:
-            phi_ss = c1_rrup
-        elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
-            phi_ss = c1_rrup + \
-                (C['C2'] - c1_rrup) * \
-                ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
-        elif rup.mag > C['Mc2']:
-            phi_ss = C['C2']
-        return phi_ss
-
-    def _get_corr_stddevs(self, C, stddev_types, num_sites, phi_ss):
-        """
-        Return standard deviations adjusted for single station sigma
-        as proposed to be used in the new Swiss Hazard Model [2014].
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(
-                    np.sqrt(C['tau'] ** 2 + phi_ss ** 2) + np.zeros(num_sites))
-        return stddevs
 
 class EdwardsFah2013Foreland10MPaMR(EdwardsFah2013Foreland60MPaMR):
-    COEFFS=COEFFS_FORELAND_10Bars
+    COEFFS = COEFFS_FORELAND_10Bars
+
 
 class EdwardsFah2013Foreland20MPaMR(EdwardsFah2013Foreland60MPaMR):
-    COEFFS=COEFFS_FORELAND_20Bars
+    COEFFS = COEFFS_FORELAND_20Bars
+
 
 class EdwardsFah2013Foreland30MPaMR(EdwardsFah2013Foreland60MPaMR):
-    COEFFS=COEFFS_FORELAND_30Bars
+    COEFFS = COEFFS_FORELAND_30Bars
+
 
 class EdwardsFah2013Foreland50MPaMR(EdwardsFah2013Foreland60MPaMR):
-    COEFFS=COEFFS_FORELAND_50Bars
+    COEFFS = COEFFS_FORELAND_50Bars
+
 
 class EdwardsFah2013Foreland75MPaMR(EdwardsFah2013Foreland60MPaMR):
-    COEFFS=COEFFS_FORELAND_75Bars
+    COEFFS = COEFFS_FORELAND_75Bars
+
 
 class EdwardsFah2013Foreland90MPaMR(EdwardsFah2013Foreland60MPaMR):
-    COEFFS=COEFFS_FORELAND_90Bars
+    COEFFS = COEFFS_FORELAND_90Bars
+
 
 class EdwardsFah2013Foreland120MPaMR(EdwardsFah2013Foreland60MPaMR):
-    COEFFS=COEFFS_FORELAND_120Bars
-
+    COEFFS = COEFFS_FORELAND_120Bars
