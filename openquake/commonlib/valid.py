@@ -23,8 +23,10 @@ Validation library for the engine, the desktop tools, and anything else
 import re
 import ast
 import logging
-from openquake.hazardlib import imt
+from openquake.hazardlib import imt, scalerel
 from openquake.commonlib.general import distinct
+
+SCALEREL = scalerel.get_available_magnitude_scalerel()
 
 
 def compose(*validators):
@@ -356,6 +358,57 @@ def dictionary(value):
     except:
         raise ValueError('%r is not a valid Python dictionary' % value)
 
+
+############################# SOURCES/RUPTURES ###############################
+
+def mag_scale_rel(value):
+    """
+    :param value: name of a Magnitude-Scale relationship in hazardlib
+    :returns: the corresponding hazardlib object
+    """
+    try:
+        return SCALEREL[value]()
+    except KeyError:
+        raise ValueError('%r is not a recognized magnitude-scale '
+                         'relationship' % value)
+
+
+def pmf(value):
+    """
+    Comvert a string into a Probability Mass Function.
+
+    :param value:
+        a sequence of probabilities summing up to 1 (no commas)
+    :returns:
+        a list of pairs [(probability, index), ...] with index starting from 0
+
+    >>> pmf("0.157 0.843")
+    [(0.157, 0), (0.843, 1)]
+    """
+    probs = probabilities(value)
+    if sum(probs) != 1.0:
+        raise ValueError('The probabilities %s do not sum up to 1!' % value)
+    return [(p, i) for i, p in enumerate(probs)]
+
+
+def posList(value):
+    """
+    The value is a string with the form
+    `lon1 lat1 [depth1] ...  lonN latN [depthN]`
+    without commas, where the depts are optional.
+
+    :returns: a list of triples (lon, lat, depth)
+
+    where the depths are 0 if not explicitly given.
+    """
+    values = value.split()
+    num_values = len(values)
+    if num_values % 3 and num_values % 2:
+        raise ValueError('Wrong number: nor pairs not triplets: %s' % values)
+    return values
+
+
+###########################################################################
 
 def parameters(**names_vals):
     """

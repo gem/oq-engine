@@ -74,6 +74,7 @@ class OqParam(valid.ParamSet):
         number_of_ground_motion_fields=valid.positiveint,
         number_of_logic_tree_samples=valid.positiveint,
         num_epsilon_bins=valid.positiveint,
+        hazard_calculation_id=valid.NoneOr(valid.positiveint),
         poes=valid.probabilities,
         poes_disagg=valid.probabilities,
         quantile_hazard_curves=valid.probabilities,

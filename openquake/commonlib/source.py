@@ -24,7 +24,9 @@ from openquake.hazardlib import geo, mfd, pmf, scalerel, source
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source.rupture import Rupture as HazardlibRupture
 from openquake.nrmllib import models as nrml_models
-from openquake.nrmllib.hazard import parsers as haz_parsers
+from openquake.nrmllib.node import node_from_nrml, node_factory
+
+from openquake.commonlib import valid
 
 
 class DuplicateID(Exception):
@@ -113,23 +115,21 @@ class SourceCollector(object):
         return num_sources < other_sources
 
 
-def parse_source_model(fname, nrml_to_hazardlib,
-                       apply_uncertainties=lambda src: None):
+def parse_source_model(fname, parser, apply_uncertainties=lambda src: None):
     """
     Parse a NRML source model and return an ordered list of SourceCollector
     instances.
 
     :param str fname:
         the full pathname of the source model file
-    :param nrml_to_hazardlib:
-        :class:`openquake.commonlib.source.NrmlHazardlibConverter` instance
+    :param parser:
+        :class:`openquake.commonlib.source.SourceParser` instance
     :param apply_uncertainties:
         a function modifying the sources (or do nothing)
     """
     source_stats_dict = {}
     source_ids = set()
-    for src_nrml in haz_parsers.SourceModelParser(fname).parse():
-        src = nrml_to_hazardlib(src_nrml)
+    for src in parser.parse(fname):
         if src.source_id in source_ids:
             raise DuplicateID(
                 'The source ID %s is duplicated!' % src.source_id)
@@ -380,7 +380,6 @@ class NrmlHazardlibConverter(object):
             shapely_line = wkt.loads(edge)
             line = geo.Line([geo.Point(*x) for x in shapely_line.coords])
             edges.append(line)
-
         mf_dist = self._mfd_to_hazardlib(src.mfd)
         msr = scalerel.get_available_magnitude_scalerel()[src.mag_scale_rel]()
 
@@ -646,3 +645,280 @@ def split_source(src, area_source_discretization):
             yield s
     else:  # characteristic sources are not split since they are small
         yield src
+
+
+make_source = node_factory(
+    valid.parameters(
+        dip=valid.FloatRange(0, 90),
+        rake=valid.FloatRange(-180, 180),
+        magnitude=valid.positivefloat,
+        lon=valid.longitude,
+        lat=valid.latitude,
+        depth=valid.positivefloat,
+        upperSeismoDepth=valid.positivefloat,
+        lowerSeismoDepth=valid.positivefloat,
+        posList=valid.posList,
+        pos=valid.lonlat,
+        aValue=float,
+        bValue=valid.positivefloat,
+        magScaleRel=valid.mag_scale_rel,
+        tectonicRegion=str,
+        ruptAspectRatio=valid.positivefloat,
+        maxMag=valid.positivefloat,
+        minMag=valid.positivefloat,
+        binWidth=valid.positivefloat,
+        probability=valid.probability,
+        strike=valid.FloatRange(0, 360),
+        occurRates=valid.probabilities,
+        probs_occur=valid.pmf,
+        ))
+
+
+def split_coords_2d(seq):
+    lons, lats = [], []
+    for i, el in enumerate(seq):
+        if i % 2 == 0:
+            lons.append(valid.longitude(el))
+        elif i % 2 == 1:
+            lats.append(valid.latitude(el))
+    return zip(lons, lats, [0.0] * len(lons))
+
+
+def split_coords_3d(seq):
+    lons, lats, depths = [], [], []
+    for i, el in enumerate(seq):
+        if i % 3 == 0:
+            lons.append(valid.longitude(el))
+        elif i % 3 == 1:
+            lats.append(valid.latitude(el))
+        elif i % 3 == 2:
+            depths.append(valid.positivefloat(el))
+    return zip(lons, lats, depths)
+
+
+class SourceParser(object):
+    """
+    """
+    def __init__(self, investigation_time, rupture_mesh_spacing,
+                 width_of_mfd_bin, area_source_discretization):
+        self.area_source_discretization = area_source_discretization
+        self.rupture_mesh_spacing = rupture_mesh_spacing
+        self.width_of_mfd_bin = width_of_mfd_bin
+        self.tom = PoissonTOM(investigation_time)
+
+    def parse(self, nrmlfile):
+        self.nrmlfile = nrmlfile
+        return map(self, node_from_nrml(nrmlfile, make_source).sourceModel)
+
+    def __call__(self, source_node):
+        parse = getattr(self, 'parse_' + source_node.tag)
+        return parse(source_node)
+
+    def geo_line(self, edge):
+        coords = split_coords_2d(~edge.LineString.posList)
+        return geo.Line([geo.Point(*p) for p in coords])
+
+    def geo_lines(self, edges):
+        lines = []
+        for edge in edges:
+            coords = split_coords_3d(~edge.LineString.posList)
+            lines.append(geo.Line([geo.Point(*p) for p in coords]))
+        return lines
+
+    def geo_planar(self, surface):
+        x = surface.topLeft
+        top_left = geo.Point(x['lon'], x['lat'], x['depth'])
+        x = surface.topRight
+        top_right = geo.Point(x['lon'], x['lat'], x['depth'])
+        x = surface.bottomLeft
+        bottom_left = geo.Point(x['lon'], x['lat'], x['depth'])
+        x = surface.bottomRight
+        bottom_right = geo.Point(x['lon'], x['lat'], x['depth'])
+        return geo.PlanarSurface(
+            self.rupture_mesh_spacing,
+            surface.attrib.get('strike', 0.),
+            surface.attrib.get('dip', 90.),
+            top_left, top_right, bottom_right, bottom_left)
+
+    def parse_mfdist(self, node):
+        [mfd_node] = [subnode for subnode in node if subnode.tag in (
+            'incrementalMFD', 'truncGutenbergRichterMFD')]
+        if mfd_node.tag == 'incrementalMFDincrementalMFD':
+            return mfd.EvenlyDiscretizedMFD(
+                min_mag=mfd_node['min_mag'], bin_width=mfd_node['binWidth'],
+                occurrence_rates=~mfd_node.occur_rates)
+        elif mfd_node.tag == 'truncGutenbergRichterMFD':
+            return mfd.TruncatedGRMFD(
+                a_val=mfd_node['aValue'], b_val=mfd_node['bValue'],
+                min_mag=mfd_node['minMag'], max_mag=mfd_node['maxMag'],
+                bin_width=self.width_of_mfd_bin
+            )
+
+    def parse_npdist(self, node):
+        npd = pmf.PMF(
+            [(x['probability'],
+              geo.NodalPlane(strike=x['strike'], dip=x['dip'], rake=x['rake']))
+             for x in node.nodalPlaneDist])
+        return npd
+
+    def parse_hpdist(self, node):
+        hd = pmf.PMF([(x['probability'], x['depth'])
+                      for x in node.hypoDepthDist])
+        return hd
+
+    def parse_areaSource(self, node):
+        geom = node.areaGeometry
+        coords = split_coords_2d(~geom.Polygon.exterior.LinearRing.posList)
+        polygon = geo.Polygon([geo.Point(*xy) for xy in coords])
+        msr = ~node.magScaleRel
+        return source.AreaSource(
+            source_id=node['id'],
+            name=node['name'],
+            tectonic_region_type=node['tectonicRegion'],
+            mfd=self.parse_mfdist(node),
+            rupture_mesh_spacing=self.rupture_mesh_spacing,
+            magnitude_scaling_relationship=msr,
+            rupture_aspect_ratio=~node.ruptAspectRatio,
+            upper_seismogenic_depth=~geom.upperSeismoDepth,
+            lower_seismogenic_depth=~geom.lowerSeismoDepth,
+            nodal_plane_distribution=self.parse_npdist(node),
+            hypocenter_distribution=self.parse_hpdist(node),
+            polygon=polygon,
+            area_discretization=self.area_source_discretization,
+            temporal_occurrence_model=self.tom,
+        )
+
+    def parse_pointSource(self, node):
+        geom = node.pointGeometry
+        lon_lat = ~geom.Point.pos
+        msr = ~node.magScaleRel
+        return source.PointSource(
+            source_id=node['id'],
+            name=node['name'],
+            tectonic_region_type=node['tectonicRegion'],
+            mfd=self.parse_mfdist(node),
+            rupture_mesh_spacing=self.rupture_mesh_spacing,
+            magnitude_scaling_relationship=msr,
+            rupture_aspect_ratio=~node.ruptAspectRatio,
+            upper_seismogenic_depth=~geom.upperSeismoDepth,
+            lower_seismogenic_depth=~geom.lowerSeismoDepth,
+            location=geo.Point(*lon_lat),
+            nodal_plane_distribution=self.parse_npdist(node),
+            hypocenter_distribution=self.parse_hpdist(node),
+            temporal_occurrence_model=self.default_tom,
+        )
+
+    def parse_simpleFaultSource(self, node):
+        geom = node.simpleFaultGeometry
+        simple = source.SimpleFaultSource(
+            source_id=node['id'],
+            name=node['name'],
+            tectonic_region_type=node['tectonicRegion'],
+            mfd=self.parse_mfdist(node),
+            rupture_mesh_spacing=self.rupture_mesh_spacing,
+            magnitude_scaling_relationship=~node.magScaleRel,
+            rupture_aspect_ratio=~node.ruptAspectRatio,
+            upper_seismogenic_depth=~geom.upperSeismoDepth,
+            lower_seismogenic_depth=~geom.lowerSeismoDepth,
+            fault_trace=self.geo_line(geom),
+            dip=~geom.dip,
+            rake=~node.rake,
+            temporal_occurrence_model=self.default_tom,
+        )
+        return simple
+
+    def parse_complexFaultSource(self, node):
+        geom = node.complexFaultGeometry
+        cmplx = source.ComplexFaultSource(
+            source_id=node['id'],
+            name=node['name'],
+            tectonic_region_type=node['tectonicRegion'],
+            mfd=self.parse_mfdist(node),
+            rupture_mesh_spacing=self.rupture_mesh_spacing,
+            magnitude_scaling_relationship=~node.magScaleRel,
+            rupture_aspect_ratio=~node.ruptAspectRatio,
+            edges=self.geo_lines(geom),
+            rake=~node.rake,
+            temporal_occurrence_model=self.default_tom,
+        )
+        return cmplx
+
+    def parse_surface(self, surface_nodes):
+        surface_node = surface_nodes[0]
+        if surface_node.tag == 'simpleFaultGeometry':
+            surface = geo.SimpleFaultSurface.from_fault_data(
+                self.geo_line(surface_node),
+                ~surface_node.upperSeismoDepth,
+                ~surface_node.lowerSeismoDepth,
+                ~surface_node.dip,
+                self.rupture_mesh_spacing)
+        elif surface_node.tag == 'complexFaultGeometry':
+            surface = geo.ComplexFaultSurface.from_fault_data(
+                self.geo_lines(surface_node),
+                self.rupture_mesh_spacing)
+        else:  # a collection of planar surfaces
+            planar_surfaces = map(self.geo_planar, surface_nodes)
+            surface = geo.MultiSurface(planar_surfaces)
+        return surface
+
+    def parse_characteristicFaultSource(self, node):
+        char = source.CharacteristicFaultSource(
+            source_id=node['id'],
+            name=node['name'],
+            tectonic_region_type=node['tectonicRegion'],
+            mfd=self.parse_mfdist(node),
+            surface=self.parse_surface(node.surface),
+            rake=~node.rake,
+            temporal_occurrence_model=self.default_tom,
+        )
+        return char
+
+    def parse_nonParametricSeismicSource(self, node):
+        rup_pmf_data = []
+        for rupt in node:
+            hp = rupt.hypocenter
+            probs = pmf.PMF(rupt['probs_occur'])
+            trt = node['tectonicRegion']
+            if rupt.tag == 'simpleFaultRupture':
+                hrupt = self.parse_simpleFaultRupture(rupt)
+            elif rupt.tag == 'complexFaultRupture':
+                hrupt = self.parse_complexFaultRupture(rupt)
+            elif rupt.tag == 'singlePlaneRupture':
+                hrupt = source.rupture.Rupture(
+                    mag=~rupt.magnitude, rake=~rupt.rake,
+                    tectonic_region_type=trt,
+                    hypocenter=geo.Point(hp['lon'], hp['lat'], hp['depth']),
+                    surface=self.parse_surface([rupt.planarSurface]),
+                    source_typology=None)
+            elif rupt.tag == 'multiPlanesRupture':
+                hrupt = source.rupture.Rupture(
+                    mag=~rupt.magnitude, rake=~rupt.rake,
+                    tectonic_region_type=trt,
+                    hypocenter=geo.Point(hp['lon'], hp['lat'], hp['depth']),
+                    surface=self.parse_surface(
+                        list(rupt.getnodes('planarSurface'))),
+                    source_typology=None)
+            else:
+                raise ValueError('Unknown rupture tag %s' % rupt.tag)
+            rup_pmf_data.append((hrupt, probs))
+        nps = source.NonParametricSeismicSource(
+            node['id'], node['name'], trt, rup_pmf_data)
+        return nps
+
+    def parse_simpleFaultRupture(self, node):
+        hp = node.hypocenter
+        rupt = source.rupture.Rupture(
+            mag=~node.magnitude, rake=~node.rake, tectonic_region_type=None,
+            hypocenter=geo.Point(hp['lon'], hp['lat'], hp['depth']),
+            surface=self.parse_surface([node.simpleFaultGeometry]),
+            source_typology=source.SimpleFaultSource)
+        return rupt
+
+    def parse_complexFaultRupture(self, node):
+        hp = node.hypocenter
+        rupt = source.rupture.Rupture(
+            mag=~node.magnitude, rake=~node.rake, tectonic_region_type=None,
+            hypocenter=geo.Point(hp['lon'], hp['lat'], hp['depth']),
+            surface=self.parse_surface([node.complexFaultGeometry]),
+            source_typology=source.ComplexFaultSource)
+        return rupt
