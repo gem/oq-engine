@@ -224,3 +224,23 @@ xmlns:gml="http://www.opengis.net/gml"
     def test_can_pickle(self):
         node = n.Node('tag')
         self.assertEqual(cPickle.loads(cPickle.dumps(node)), node)
+
+    def test_node_factory(self):
+        make_valid_node = n.node_factory(dict(a=float, b=int))
+        self.assertEqual(make_valid_node.__doc__, '''Node factory. Known types:
+a: float
+b: int''')
+        xmlfile = cStringIO.StringIO("""\
+<root>
+<general>
+<a>1</a>
+<b>2</b>
+</general>
+<section1 param="xxx" />
+<section2 param="yyy" />
+</root>
+""")
+        node = n.node_from_xml(xmlfile, make_valid_node)
+        self.assertEqual(~node.general.a, 1.0)
+        self.assertEqual(~node.general.b, 2)
+        self.assertEqual(node.section1['param'], 'xxx')

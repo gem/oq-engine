@@ -56,11 +56,17 @@ The subnodes can be retrieved with the dot notation:
 >>> root.a
 <a {} A1 >
 
+The value of a node can be extract with the `~` operator:
+
+>>> ~root.a
+'A1'
+
 If there are multiple subnodes with the same name
 
 >>> root.append(Node('a', {}, 'A2'))  # add another 'a' node
 
 the dot notation will retrieve the first node.
+
 It is possible to retrieve the other nodes from the ordinal
 index:
 
@@ -319,7 +325,8 @@ class Node(object):
             raise ValueError(
                 'A branch node cannot have a value, got %r' % self.text)
 
-    def strip_fqtag(self, tag):
+    @staticmethod
+    def strip_fqtag(tag):
         """
         Get the short representation of a fully qualified tag
 
@@ -402,6 +409,14 @@ class Node(object):
         else:  # assume an integer or a slice
             del self.nodes[i]
 
+    def __invert__(self):
+        """
+        Return the value of a leaf; raise a TypeError if the node is not a leaf
+        """
+        if self:
+            raise TypeError('%s is a composite node, not a leaf' % self)
+        return self.text
+
     def __len__(self):
         """Return the number of subnodes"""
         return len(self.nodes)
@@ -431,7 +446,41 @@ class NodeNoStrip(Node):
         return s
 
 
-def node_from_dict(dic, nodecls=Node):
+def node_factory(validators):
+    """
+    Return a node factory which produces instances with values and
+    attributes converted into valid Python objects by using the
+    given validators.
+
+    :param validators: a dictionary of functions text -> plain Python object
+    """
+    doc = "Node factory. Known types:\n%s" % '\n'.join(
+        '%s: %s' % (n, v.__name__) for n, v in validators.iteritems())
+
+    def make_valid_node(fulltag, attrib=None, text=None, nodes=None):
+        tag = Node.strip_fqtag(fulltag)
+        if attrib:
+            for n, v in attrib.iteritems():
+                if n in validators:
+                    try:
+                        attrib[n] = validators[n](v)
+                    except ValueError as err:
+                        raise ValueError('Could not convert %s->%s: %s' %
+                                         (n, validators[n].__name__, err))
+        else:
+            attrib = {}
+        if tag in validators:
+            try:
+                text = validators[tag](text, **attrib)
+            except ValueError as err:
+                raise ValueError('Could not convert %s->%s: %s' %
+                                 (tag, validators[tag].__name__, err))
+        return Node(tag, attrib, text, nodes)
+    make_valid_node.__doc__ = doc
+    return make_valid_node
+
+
+def node_from_dict(dic, nodefactory=Node):
     """
     Convert a (nested) dictionary with attributes tag, attrib, text, nodes
     into a Node object.
@@ -441,8 +490,8 @@ def node_from_dict(dic, nodecls=Node):
     attrib = dic.get('attrib', {})
     nodes = dic.get('nodes', [])
     if not nodes:
-        return nodecls(tag, attrib, text)
-    return nodecls(tag, attrib, nodes=map(node_from_dict, nodes))
+        return nodefactory(tag, attrib, text)
+    return nodefactory(tag, attrib, nodes=map(node_from_dict, nodes))
 
 
 def node_to_dict(node):
@@ -458,15 +507,15 @@ def node_to_dict(node):
     return dic
 
 
-def node_from_elem(elem, nodecls=Node):
+def node_from_elem(elem, nodefactory=Node):
     """
     Convert (recursively) an ElementTree object into a Node object.
     """
     children = list(elem)
     if not children:
-        return nodecls(elem.tag, dict(elem.attrib), elem.text)
-    return nodecls(elem.tag, dict(elem.attrib),
-                   nodes=[node_from_elem(ch, nodecls) for ch in children])
+        return nodefactory(elem.tag, dict(elem.attrib), elem.text)
+    return nodefactory(elem.tag, dict(elem.attrib),
+                   nodes=[node_from_elem(ch, nodefactory) for ch in children])
 
 
 # taken from https://gist.github.com/651801, which comes for the effbot
@@ -495,14 +544,14 @@ def node_to_elem(root):
     return namespace["e1"]
 
 
-def node_from_xml(xmlfile, nodecls=Node, parser=nrmllib.COMPATPARSER):
+def node_from_xml(xmlfile, nodefactory=Node, parser=nrmllib.COMPATPARSER):
     """
     Convert a .xml file into a Node object.
 
     :param xmlfile: a file name or file object open for reading
     """
     root = etree.parse(xmlfile, parser).getroot()
-    return node_from_elem(root, nodecls)
+    return node_from_elem(root, nodefactory)
 
 
 def node_to_xml(node, output=sys.stdout):
@@ -519,14 +568,17 @@ def node_to_xml(node, output=sys.stdout):
         w.serialize(node)
 
 
-def node_from_nrml(xmlfile, nodecls=Node):
+def node_from_nrml(xmlfile, nodefactory=Node):
     """
     Convert a NRML file into a Node object.
 
     :param xmlfile: a file name or file object open for reading
     """
-    root = nrmllib.assert_valid(xmlfile).getroot()
-    node = node_from_elem(root, nodecls)
+    # if the nodefactory is doing its own validation,
+    # disable the XSD validation
+    validate = nodefactory.__name__ != 'make_valid_node'
+    root = nrmllib.assert_valid(xmlfile, validate=validate).getroot()
+    node = node_from_elem(root, nodefactory)
     for nsname, nsvalue in root.nsmap.iteritems():
         if nsname is None:
             node['xmlns'] = nsvalue
@@ -560,7 +612,7 @@ def node_to_nrml(node, output=sys.stdout, nsmap=None):
         nrmllib.assert_valid(output)
 
 
-def node_from_ini(ini_file, nodecls=Node, root_name='ini'):
+def node_from_ini(ini_file, nodefactory=Node, root_name='ini'):
     """
     Convert a .ini file into a Node object.
 
@@ -569,7 +621,7 @@ def node_from_ini(ini_file, nodecls=Node, root_name='ini'):
     fileobj = open(ini_file) if isinstance(ini_file, basestring) else ini_file
     cfp = ConfigParser.RawConfigParser()
     cfp.readfp(fileobj)
-    root = nodecls(root_name)
+    root = nodefactory(root_name)
     sections = cfp.sections()
     for section in sections:
         params = dict(cfp.items(section))
@@ -591,7 +643,7 @@ def node_to_ini(node, output=sys.stdout):
     output.flush()
 
 
-def node_copy(node, nodecls=Node):
+def node_copy(node, nodefactory=Node):
     """Make a deep copy of the node"""
-    return nodecls(node.tag, node.attrib.copy(), node.text,
-                   [node_copy(n, nodecls) for n in node])
+    return nodefactory(node.tag, node.attrib.copy(), node.text,
+                       [node_copy(n, nodefactory) for n in node])
