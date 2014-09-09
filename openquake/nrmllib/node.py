@@ -454,7 +454,7 @@ def node_factory(validators):
 
     :param validators: a dictionary of functions text -> plain Python object
     """
-    doc = "Node factory. Known types:\n%s" % '\n'.join(
+    doc = "Node factory. Known objects:\n%s" % '\n'.join(
         '%s: %s' % (n, v.__name__) for n, v in validators.iteritems())
 
     def make_valid_node(fulltag, attrib=None, text=None, nodes=None):

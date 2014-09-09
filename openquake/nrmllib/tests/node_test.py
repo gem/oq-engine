@@ -227,7 +227,8 @@ xmlns:gml="http://www.opengis.net/gml"
 
     def test_node_factory(self):
         make_valid_node = n.node_factory(dict(a=float, b=int))
-        self.assertEqual(make_valid_node.__doc__, '''Node factory. Known types:
+        self.assertEqual(make_valid_node.__doc__, '''\
+Node factory. Known objects:
 a: float
 b: int''')
         xmlfile = cStringIO.StringIO("""\
