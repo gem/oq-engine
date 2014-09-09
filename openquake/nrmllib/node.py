@@ -575,7 +575,8 @@ def node_from_nrml(xmlfile, nodefactory=Node):
     :param xmlfile: a file name or file object open for reading
     """
     # if the nodefactory is doing its own validation,
-    # disable the XSD validation
+    # disable the XSD validation; by convention the name of a validating
+    # nodefactory is assumed to be 'make_valid_node'
     validate = nodefactory.__name__ != 'make_valid_node'
     root = nrmllib.assert_valid(xmlfile, validate=validate).getroot()
     node = node_from_elem(root, nodefactory)
