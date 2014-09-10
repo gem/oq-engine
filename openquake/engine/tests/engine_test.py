@@ -115,26 +115,6 @@ class CreateHazardCalculationTestCase(unittest.TestCase):
         self.assertEqual(hc.truncation_level, 0.0)
         self.assertEqual(hc.maximum_distance, 200.0)
 
-    def test_create_hazard_calculation_warns(self):
-        # If unknown parameters are specified in the config file, we expect
-        # `create_hazard_calculation` to raise warnings and ignore those
-        # parameters.
-
-        # Add some random unknown params:
-        self.params['blargle'] = 'spork'
-        self.params['do_science'] = 'true'
-
-        expected_warnings = [
-            "Unknown parameter 'blargle'. Ignoring.",
-            "Unknown parameter 'do_science'. Ignoring.",
-        ]
-
-        with warnings.catch_warnings(record=True) as w:
-            engine.create_calculation(
-                models.HazardCalculation, self.params)
-        actual_warnings = [msg.message.message for msg in w]
-        self.assertEqual(sorted(expected_warnings), sorted(actual_warnings))
-
 
 class CreateRiskCalculationTestCase(unittest.TestCase):
 
