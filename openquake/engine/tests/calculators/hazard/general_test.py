@@ -133,7 +133,8 @@ class ParseRiskModelsTestCase(unittest.TestCase):
 
         cfg = helpers.get_data_path('classical_job-sd-imt.ini')
         params = vars(readini.parse_config(open(cfg)))
-
+        del params['hazard_calculation_id']
+        del params['hazard_output_id']
         haz_calc = engine.create_calculation(models.HazardCalculation, params)
         haz_calc = models.HazardCalculation.objects.get(id=haz_calc.id)
         job.hazard_calculation = haz_calc
