@@ -36,7 +36,6 @@ from django import db as django_db
 
 from openquake.engine import logs
 from openquake.engine.db import models
-from openquake.engine.job.validation import validate
 from openquake.engine.utils import config, get_calculator_class
 from openquake.engine.celery_node_monitor import CeleryNodeMonitor
 from openquake.engine.writer import CacheInserter
@@ -48,8 +47,7 @@ from openquake import hazardlib
 from openquake import risklib
 from openquake import nrmllib
 
-from openquake.commonlib.general import str2bool
-from openquake.commonlib import readini
+from openquake.commonlib import readini, valid
 
 
 INPUT_TYPES = set(dict(models.INPUT_TYPE_CHOICES))
@@ -60,7 +58,7 @@ UNABLE_TO_DEL_RC_FMT = 'Unable to delete risk calculation: %s'
 LOG_FORMAT = ('[%(asctime)s %(job_type)s job #%(job_id)s %(hostname)s '
               '%(levelname)s %(processName)s/%(process)s] %(message)s')
 
-TERMINATE = str2bool(config.get('celery', 'terminate_workers_on_revoke'))
+TERMINATE = valid.boolean(config.get('celery', 'terminate_workers_on_revoke'))
 
 
 def cleanup_after_job(job, terminate):
@@ -208,18 +206,10 @@ def create_calculation(model, params):
         # the following parameters will be removed by HazardCalculation
         if param in ('ground_motion_correlation_model',
                      'ground_motion_correlation_params',
-                     'individual_curves'):
-            params.pop(param)
-        # FIXME(lp). Django 1.3 does not allow using _id fields in model
-        # __init__. We will check these fields in pre-execute phase
-        elif param not in [
+                     'individual_curves') and param not in (
                 'preloaded_exposure_model_id', 'hazard_output_id',
-                'hazard_calculation_id']:
-            msg = "Unknown parameter '%s'. Ignoring."
-            msg %= param
-            warnings.warn(msg, RuntimeWarning)
+                'hazard_calculation_id'):
             params.pop(param)
-
     calc = model.create(**params)
     calc.full_clean()
     calc.save()
@@ -527,53 +517,44 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
     :raises:
         `RuntimeError` if the input job configuration is not valid
     """
-    # create the job
+    # determine the previous hazard job, if any
+    if hazard_job_id:
+        haz_job = models.OqJob.objects.get(pk=hazard_job_id)
+    elif hazard_output_id:  # extract the hazard job from the hazard_output_id
+        haz_job = models.Output.objects.get(pk=hazard_output_id).oq_job
+    else:
+        haz_job = None  # no previous hazard job
+    if haz_job:
+        assert haz_job.job_type == 'hazard', haz_job
+
+    # create the current job
     job = prepare_job(user_name=username, log_level=log_level)
     # read calculation params and create the calculation profile
-    params = readini.parse_config(open(cfg_file_path, 'r'))
-    missing = set(params['inputs']) - INPUT_TYPES
+    oqparam = readini.parse_config(
+        open(cfg_file_path),
+        haz_job.hazard_calculation.id if haz_job and not hazard_output_id else None,
+        hazard_output_id)
+    missing = set(oqparam.inputs) - INPUT_TYPES
     if missing:
         raise ValueError(
             'The parameters %s in the .ini file does '
             'not correspond to a valid input type' % ', '.join(missing))
 
-    # populate JobParam
-    for name, value in sorted(params.iteritems()):
-        models.JobParam.create(job, name, value)
-
-    if 'sites' in params:
-        # in the future `sites` will be removed by the HazardCalculation
-        params['sites'] = 'MULTIPOINT(%s)' % params['sites'].replace('\t', ' ')
+    params = vars(oqparam).copy()
+    job.save_params(params)
 
     if hazard_output_id is None and hazard_job_id is None:
         # this is a hazard calculation, not a risk one
+        del params['hazard_calculation_id']
+        del params['hazard_output_id']
         job.hazard_calculation = create_calculation(
             models.HazardCalculation, params)
         job.save()
-
-        # validate and raise an error if there are any problems
-        error_message = validate(job, 'hazard', params, exports)
-        if error_message:
-            raise RuntimeError(error_message)
         return job
-
-    # otherwise run a risk calculation
-    if hazard_job_id:
-        haz_job = models.OqJob.objects.get(pk=hazard_job_id)
-    else:  # extract the hazard job from the hazard_output_id
-        haz_job = models.Output.objects.get(pk=hazard_output_id).oq_job
-    assert haz_job.job_type == 'hazard', haz_job
-    params.update(dict(hazard_output_id=hazard_output_id,
-                       hazard_calculation_id=haz_job.hazard_calculation.id))
 
     calculation = create_calculation(models.RiskCalculation, params)
     job.risk_calculation = calculation
     job.save()
-
-    # validate and raise an error if there are any problems
-    error_message = validate(job, 'risk', params,  exports)
-    if error_message:
-        raise RuntimeError(error_message)
     return job
 
 

@@ -39,21 +39,19 @@ from django.db import connections
 from django.core.exceptions import ObjectDoesNotExist
 
 from django.contrib.gis.db import models as djm
-from shapely import wkt
 
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import source, geo, calc, correlation
-from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.site import (
     Site, SiteCollection, FilteredSiteCollection)
 
-from openquake.commonlib.general import distinct, str2bool
+from openquake.commonlib.general import distinct
 from openquake.commonlib.riskloaders import loss_type_to_cost_type
-from openquake.commonlib import logictree, valid
+from openquake.commonlib import logictree
 
 from openquake.engine.db import fields
-from openquake.engine import logs, writer
+from openquake.engine import writer
 
 #: Kind of supported curve statistics
 STAT_CHOICES = (
@@ -122,14 +120,9 @@ INPUT_TYPE_CHOICES = (
      u'Structural Vulnerability Retrofitted'))
 
 
-GROUND_MOTION_CORRELATION_MODELS = [
-    'JB2009', 'Jayaram-Baker 2009']
-
 VULNERABILITY_TYPE_CHOICES = [choice[0]
                               for choice in INPUT_TYPE_CHOICES
                               if choice[0].endswith('vulnerability')]
-
-GSIMS = get_available_gsims()
 
 RAISE_EXC = object()  # sentinel used in OqJob.get_param
 
@@ -361,6 +354,16 @@ class OqJob(djm.Model):
                 raise MissingParameter(name)
             return missing
 
+    def save_params(self, params):
+        """
+        Save on the database table job_params the given parameters.
+
+        :param job: an :class:`OqJob` instance
+        :param params: a dictionary {name: string} of parameters
+        """
+        for name, value in params.iteritems():
+            JobParam.objects.create(job=self, name=name, value=repr(value))
+
     def __repr__(self):
         return '<%s %d, %s>' % (self.__class__.__name__,
                                 self.id, self.job_type)
@@ -409,73 +412,6 @@ class JobParam(djm.Model):
     class Meta:
         db_table = 'uiapi\".\"job_param'
 
-    @classmethod
-    def create(cls, job, name, value_as_string):
-        if not name in cls.valid_params:
-            logs.LOG.warn('Unknown parameter %s, ignored' % name)
-            return
-        convert = cls.valid_params[name]
-        try:
-            value = convert(value_as_string)
-        except:
-            raise ValueError('Could not convert to %s: %s=%s'
-                             % (convert.__name__, name, value_as_string))
-        return cls.objects.create(job=job, name=name, value=repr(value))
-
-    # dictionary param_name -> converter_function: text -> python object
-    valid_params = valid.parameters(
-        area_source_discretization=valid.positivefloat,
-        asset_correlation=valid.FloatRange(0, 1),
-        base_path=unicode,
-        calculation_mode=str,
-        coordinate_bin_width=valid.positivefloat,
-        conditional_loss_poes=valid.probabilities,
-        description=unicode,
-        distance_bin_width=valid.positivefloat,
-        mag_bin_width=valid.positivefloat,
-        export_dir=unicode,
-        export_multi_curves=str2bool,
-        ground_motion_correlation_model=valid.NoneOr(
-            valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)),
-        ground_motion_correlation_params=valid.dictionary,
-        ground_motion_fields=str2bool,
-        gsim=valid.Choice(*GSIMS),
-        hazard_curves_from_gmfs=str2bool,
-        hazard_maps=str2bool,
-        individual_curves=str2bool,
-        inputs=dict,
-        insured_losses=str2bool,
-        intensity_measure_types=valid.intensity_measure_types,
-        intensity_measure_types_and_levels=valid.dictionary,
-        investigation_time=valid.positivefloat,
-        loss_curve_resolution=valid.positiveint,
-        lrem_steps_per_interval=valid.positiveint,
-        master_seed=valid.positiveint,
-        maximum_distance=valid.positivefloat,
-        mean_hazard_curves=str2bool,
-        number_of_ground_motion_fields=valid.positiveint,
-        number_of_logic_tree_samples=valid.positiveint,
-        num_epsilon_bins=valid.positiveint,
-        poes=valid.probabilities,
-        poes_disagg=valid.probabilities,
-        quantile_hazard_curves=valid.probabilities,
-        random_seed=valid.positiveint,
-        reference_depth_to_1pt0km_per_sec=valid.positivefloat,
-        reference_depth_to_2pt5km_per_sec=valid.positivefloat,
-        reference_vs30_type=valid.Choice('measured', 'inferred'),
-        reference_vs30_value=valid.positivefloat,
-        region=valid.coordinates,
-        region_constraint=valid.coordinates,
-        region_grid_spacing=valid.positivefloat,
-        risk_investigation_time=valid.positivefloat,
-        rupture_mesh_spacing=valid.positivefloat,
-        ses_per_logic_tree_path=valid.positiveint,
-        sites=valid.coordinates,
-        truncation_level=valid.NoneOr(valid.positivefloat),
-        uniform_hazard_spectra=str2bool,
-        width_of_mfd_bin=valid.positivefloat,
-        )
-
 
 class Performance(djm.Model):
     '''
@@ -503,8 +439,7 @@ class HazardCalculation(djm.Model):
 
     @classmethod
     def create(cls, **kw):
-        _prep_geometry(kw)
-        return cls(**kw)
+        return cls(**_prep_geometry(kw))
 
     # Contains the absolute path to the directory containing the job config
     # file.
@@ -998,8 +933,7 @@ class RiskCalculation(djm.Model):
     '''
     @classmethod
     def create(cls, **kw):
-        _prep_geometry(kw)
-        return cls(**kw)
+        return cls(**_prep_geometry(kw))
 
     #: Default maximum asset-hazard distance in km
     DEFAULT_MAXIMUM_DISTANCE = 5
@@ -1017,11 +951,11 @@ class RiskCalculation(djm.Model):
     description = djm.TextField(default='', blank=True)
 
     CALC_MODE_CHOICES = (
-        (u'classical', u'Classical PSHA'),
+        (u'classical_risk', u'Classical PSHA'),
         (u'classical_bcr', u'Classical BCR'),
-        (u'event_based', u'Probabilistic Event-Based'),
+        (u'event_based_risk', u'Probabilistic Event-Based'),
         (u'event_based_fr', u'Event-Based From Ruptures'),
-        (u'scenario', u'Scenario'),
+        (u'scenario_risk', u'Scenario'),
         (u'scenario_damage', u'Scenario Damage'),
         (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
     )
@@ -1156,15 +1090,16 @@ class RiskCalculation(djm.Model):
         if self.hazard_output:
             return [self.hazard_output]
         elif self.hazard_calculation:
-            if self.calculation_mode in ["classical", "classical_bcr"]:
+            if self.calculation_mode in ["classical_risk", "classical_bcr"]:
                 filters = dict(output_type='hazard_curve_multi',
                                hazard_curve__lt_realization__isnull=False)
-            elif self.calculation_mode in ["event_based", "event_based_bcr"]:
+            elif self.calculation_mode in [
+                    "event_based_risk", "event_based_bcr"]:
                 filters = dict(
                     output_type='gmf', gmf__lt_realization__isnull=False)
             elif self.calculation_mode == "event_based_fr":
                 filters = dict(output_type='ses')
-            elif self.calculation_mode in ['scenario', 'scenario_damage']:
+            elif self.calculation_mode in ['scenario_risk', 'scenario_damage']:
                 filters = dict(output_type='gmf_scenario')
             else:
                 raise NotImplementedError
@@ -1250,56 +1185,28 @@ def _prep_geometry(kwargs):
     so that it can save to the database in a geometry field.
 
     :param dict kwargs:
-        `dict` representing some keyword arguments, which may contain geometry
-        definitions in some sort of string or list form
-
+        keyword arguments, which may contain geometry definitions in
+        a list form
     :returns:
-        The modified ``kwargs``, with WKT to replace the input geometry
-        definitions.
+        a dictionary with the geometries converted into WKT
     """
+    kw = kwargs.copy()
     # If geometries were specified as string lists of coords,
     # convert them to WKT before doing anything else.
     for field, wkt_fmt in (('sites', 'MULTIPOINT(%s)'),
                            ('sites_disagg', 'MULTIPOINT(%s)'),
                            ('region', 'POLYGON((%s))'),
                            ('region_constraint', 'POLYGON((%s))')):
-        if field in kwargs:
-            geom = kwargs[field]
-            if geom is None:
-                continue
-            try:
-                wkt.loads(geom)
-                # if this succeeds, we know the wkt is at least valid
-                # we don't know the geometry type though; we'll leave that
-                # to subsequent validation
-            except wkt.ReadingError:
-                try:
-                    coords = [
-                        float(x) for x in fields.ARRAY_RE.split(geom)
-                    ]
-                except ValueError:
-                    raise ValueError(
-                        'Could not coerce `str` to a list of `float`s'
-                    )
-                else:
-                    if not len(coords) % 2 == 0:
-                        raise ValueError(
-                            'Got an odd number of coordinate values'
-                        )
-                    else:
-                        # Construct WKT from the coords
-                        # NOTE: ordering is expected to be lon,lat
-                        points = ['%s %s' % (coords[i], coords[i + 1])
-                                  for i in xrange(0, len(coords), 2)]
-                        # if this is the region, close the linear polygon
-                        # ring by appending the first coord to the end
-                        if field in ('region', 'region_constraint'):
-                            points.append(points[0])
-                        # update the field
-                        kwargs[field] = wkt_fmt % ', '.join(points)
-
-    # return the (possbily) modified kwargs
-    return kwargs
+        coords = kwargs.get(field)
+        if coords:  # construct WKT from the coords
+            points = ['%s %s' % lon_lat for lon_lat in coords]
+            # if this is the region, close the linear polygon
+            # ring by appending the first coord to the end
+            if field in ('region', 'region_constraint'):
+                points.append(points[0])
+            # update the field
+            kw[field] = wkt_fmt % ', '.join(points)
+    return kw
 
 
 class OutputManager(djm.Manager):
