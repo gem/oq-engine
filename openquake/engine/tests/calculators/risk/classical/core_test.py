@@ -15,7 +15,7 @@
 
 from openquake.engine.tests.calculators.risk import base_test
 
-from openquake.engine.calculators.risk.classical import core as classical
+from openquake.engine.calculators.risk.classical_risk import core as classical
 from openquake.engine.db import models
 
 
