@@ -198,8 +198,10 @@ understand the types defined in the XSD schema.
 """
 
 import sys
+import pprint
 import cStringIO
 import ConfigParser
+
 from openquake import nrmllib
 from openquake.nrmllib.writers import StreamingXMLWriter
 try:
@@ -446,38 +448,71 @@ class NodeNoStrip(Node):
         return s
 
 
-def node_factory(validators):
-    """
-    Return a node factory which produces instances with values and
-    attributes converted into valid Python objects by using the
-    given validators.
+# base class not to used directly
+class _LiteralNode(Node):
+    __slots__ = ['_value']
+    validators = {}  # to be overridden in subclasses
 
-    :param validators: a dictionary of functions text -> plain Python object
-    """
-    doc = "Node factory. Known objects:\n%s" % '\n'.join(
-        '%s: %s' % (n, v.__name__) for n, v in validators.iteritems())
-
-    def make_valid_node(fulltag, attrib=None, text=None, nodes=None):
-        tag = Node.strip_fqtag(fulltag)
+    def __init__(self, fulltag, attrib=None, text=None, nodes=None):
+        validators = self.__class__.validators
+        tag = self.strip_fqtag(fulltag)
+        self._value = text
         if attrib:
+            # cast the attributes
             for n, v in attrib.iteritems():
                 if n in validators:
                     try:
                         attrib[n] = validators[n](v)
-                    except ValueError as err:
+                    except Exception as exc:
                         raise ValueError('Could not convert %s->%s: %s' %
-                                         (n, validators[n].__name__, err))
+                                         (n, validators[n].__name__, exc))
         else:
             attrib = {}
         if tag in validators:
+            # try to cast the node, if the tag is known
+            assert not nodes, 'You cannot cast a composite node: %s' % nodes
             try:
-                text = validators[tag](text, **attrib)
-            except ValueError as err:
+                self._value = validators[tag](text, **attrib)
+            except Exception as exc:
                 raise ValueError('Could not convert %s->%s: %s' %
-                                 (tag, validators[tag].__name__, err))
-        return Node(tag, attrib, text, nodes)
-    make_valid_node.__doc__ = doc
-    return make_valid_node
+                                 (tag, validators[tag].__name__, exc))
+        super(_LiteralNode, self).__init__(tag, attrib, text, nodes)
+
+    def to_python(self):
+        """
+        Convert the node into a literal Python object
+        """
+        if not self.nodes:
+            return (self.tag, self.attrib, self.text, [])
+        else:
+            return (self.tag, self.attrib, self.text,
+                    [n.to_python() for n in self.nodes])
+
+    def pprint(self, stream=None, indent=1, width=80, depth=None):
+        """
+        Pretty print the underlying literal Python object
+        """
+        pprint.pprint(self.to_python(), stream, indent, width, depth)
+
+    def __invert__(self):
+        """
+        Return the value of a leaf; raise a TypeError if the node is not a leaf
+        """
+        if self:
+            raise TypeError('%s is a composite node, not a leaf' % self)
+        return self._value
+
+
+def literal_node_class(validators):
+    """
+    Build a LiteralNode class with the given validators.
+
+    :param validators: a dictionary of functions text -> literal Python object
+    """
+    doc = "Node factory. Known objects:\n%s" % '\n'.join(
+        '%s: %s' % (n, v.__name__) for n, v in validators.iteritems())
+    return type('LiteralNode', (_LiteralNode, ),
+                dict(__doc__=doc, validators=validators, __slots__=[]))
 
 
 def node_from_dict(dic, nodefactory=Node):
@@ -514,8 +549,10 @@ def node_from_elem(elem, nodefactory=Node):
     children = list(elem)
     if not children:
         return nodefactory(elem.tag, dict(elem.attrib), elem.text)
-    return nodefactory(elem.tag, dict(elem.attrib),
-                   nodes=[node_from_elem(ch, nodefactory) for ch in children])
+    return nodefactory(elem.tag,
+                       dict(elem.attrib),
+                       nodes=[node_from_elem(ch, nodefactory)
+                              for ch in children])
 
 
 # taken from https://gist.github.com/651801, which comes for the effbot
@@ -574,10 +611,8 @@ def node_from_nrml(xmlfile, nodefactory=Node):
 
     :param xmlfile: a file name or file object open for reading
     """
-    # if the nodefactory is doing its own validation,
-    # disable the XSD validation; by convention the name of a validating
-    # nodefactory is assumed to be 'make_valid_node'
-    validate = nodefactory.__name__ != 'make_valid_node'
+    # disable the XSD validation for LiteralNode factories
+    validate = nodefactory.__name__ != 'LiteralNode'
     root = nrmllib.assert_valid(xmlfile, validate=validate).getroot()
     node = node_from_elem(root, nodefactory)
     for nsname, nsvalue in root.nsmap.iteritems():
