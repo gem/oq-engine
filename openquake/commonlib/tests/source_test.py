@@ -16,6 +16,7 @@
 import os
 import decimal
 import unittest
+from StringIO import StringIO
 
 from numpy.testing import assert_allclose
 
@@ -35,12 +36,13 @@ from openquake.commonlib import source as source_input
 from openquake import nrmllib
 from openquake.commonlib.general import deep_eq
 
-# Test NRML to use (contains 1 of each source type).
-MIXED_SRC_MODEL = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(nrmllib.__file__))),
-    'examples/source_model/mixed.xml')
+# directory where the example files are
+NRML_DIR = os.path.dirname(os.path.dirname(os.path.dirname(nrmllib.__file__)))
 
-DUPLICATE_IDS_SRC_MODEL = os.path.join(
+# Test NRML to use (contains 1 of each source type).
+MIXED_SRC_MODEL = os.path.join(NRML_DIR, 'examples/source_model/mixed.xml')
+
+DUPLICATE_ID_SRC_MODEL = os.path.join(
     os.path.dirname(__file__), 'data', 'invalid_source_model.xml')
 
 
@@ -581,12 +583,41 @@ class SourceCollectorTestCase(unittest.TestCase):
 
 
 class ParseSourceModelTestCase(unittest.TestCase):
-    def test(self):
-        nrml_to_hazardlib = source_input.SourceParser(
+
+    def test_well_formed_rupture(self):
+        parser = source_input.RuptureParser(rupture_mesh_spacing=1.)
+        [rup] = parser.parse(StringIO('''\
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <simpleFaultRupture>
+        <magnitude>7.65</magnitude>
+        <rake>15.0</rake>
+        <hypocenter lon="0.0" lat="0.0" depth="15.0"/>
+        <simpleFaultGeometry>
+                <gml:LineString>
+                    <gml:posList>
+                        -124.704 40.363
+                        -124.977 41.214
+                        -125.140 42.096
+                    </gml:posList>
+                </gml:LineString>
+            <dip>50.0</dip>
+            <upperSeismoDepth>12.5</upperSeismoDepth>
+            <lowerSeismoDepth>19.5</lowerSeismoDepth>
+        </simpleFaultGeometry>
+    </simpleFaultRupture>
+</nrml>
+'''))
+        self.assertEqual(rup.mag, 7.65)
+        self.assertEqual(rup.rake, 15.0)
+
+    def test_duplicate_id(self):
+        parser = source_input.SourceParser(
             investigation_time=50.,
             rupture_mesh_spacing=1,  # km
             width_of_mfd_bin=0.1,  # for Truncated GR MFDs
             area_source_discretization=10.)
         with self.assertRaises(source_input.DuplicateID):
             source_input.parse_source_model(
-                DUPLICATE_IDS_SRC_MODEL, nrml_to_hazardlib)
+                DUPLICATE_ID_SRC_MODEL, parser)
