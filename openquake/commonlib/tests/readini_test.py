@@ -30,7 +30,6 @@ bar = baz
             'hazard_output_id': 42,
             'region': [(1.0, 1.0), (2.0, 2.0), (3.0, 3.0)],
             'inputs': {},
-            'sites': None
         }
 
         params = vars(readini.parse_config(source, hazard_output_id=42))

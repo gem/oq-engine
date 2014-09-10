@@ -128,12 +128,13 @@ class OqParam(valid.ParamSet):
         """
         if self.calculation_mode not in HAZARD_CALCULATORS:
             return True  # no check on the sites for risk
+        sites = getattr(self, 'sites', None)
         if getattr(self, 'region', None):
-            return self.sites is None and not 'exposure' in self.inputs
+            return sites is None and not 'exposure' in self.inputs
         elif 'exposure' in self.inputs:
-            return self.sites is None
+            return sites is None
         else:
-            return self.sites is not None
+            return sites is not None
 
     def constrain_poes(self):
         """
