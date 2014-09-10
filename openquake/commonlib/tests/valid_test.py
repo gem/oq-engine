@@ -4,6 +4,7 @@ from openquake.commonlib import valid
 
 
 class ValidationTestCase(unittest.TestCase):
+    # more is done in the doctests inside commonlib.valid
 
     def test_name(self):
         self.assertEqual(valid.name('x'), 'x')
@@ -79,22 +80,7 @@ class ValidationTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             valid.not_empty("")
 
-    def test_boolean(self):
-        self.assertEqual(valid.boolean('0'), False)
-        self.assertEqual(valid.boolean('1'), True)
-        self.assertEqual(valid.boolean('false'), False)
-        self.assertEqual(valid.boolean('true'), True)
-        with self.assertRaises(ValueError):
-            valid.boolean('')
-        with self.assertRaises(ValueError):
-            valid.boolean('xxx')
-        with self.assertRaises(ValueError):
-            valid.boolean('True')
-        with self.assertRaises(ValueError):
-            valid.boolean('False')
-
     def test_none_or(self):
-        validator = valid.NoneOr(valid.boolean)
+        validator = valid.NoneOr(valid.positiveint)
         self.assertEqual(validator(''), None)
-        with self.assertRaises(ValueError):
-            validator('xxx')
+        self.assertEqual(validator('1'), 1)
