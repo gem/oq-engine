@@ -273,7 +273,9 @@ def boolean(value):
         raise ValueError('Not a boolean: %s' % value)
 
 
+range01 = FloatRange(0, 1)
 probability = FloatRange(0, 1)
+probability.__name__ = 'probability'
 
 
 def probabilities(value):
@@ -341,8 +343,8 @@ def intensity_measure_types_and_levels(value):
 
 def dictionary(value):
     """
-    :param value: input string
-    :returns: a Python dictionary
+    :param value: input string corresponding to a literal Python object
+    :returns: the Python object
 
     >>> dictionary('')
     {}
@@ -366,11 +368,11 @@ def mag_scale_rel(value):
     :param value: name of a Magnitude-Scale relationship in hazardlib
     :returns: the corresponding hazardlib object
     """
-    try:
-        return SCALEREL[value]()
-    except KeyError:
+    value = value.strip()
+    if value not in SCALEREL:
         raise ValueError('%r is not a recognized magnitude-scale '
                          'relationship' % value)
+    return value
 
 
 def pmf(value):
@@ -397,15 +399,16 @@ def posList(value):
     `lon1 lat1 [depth1] ...  lonN latN [depthN]`
     without commas, where the depts are optional.
 
-    :returns: a list of triples (lon, lat, depth)
-
-    where the depths are 0 if not explicitly given.
+    :returns: a list of floats without other validations
     """
     values = value.split()
     num_values = len(values)
     if num_values % 3 and num_values % 2:
         raise ValueError('Wrong number: nor pairs not triplets: %s' % values)
-    return values
+    try:
+        return map(float, values)
+    except Exception as exc:
+        raise ValueError('Found a non-float in %s: %s' % (value, exc))
 
 
 def point3d(value, lon, lat, depth):
@@ -416,6 +419,32 @@ def point3d(value, lon, lat, depth):
     :returns: a validated triple (lon, lat, depth)
     """
     return longitude(lon), latitude(lat), positivefloat(depth)
+
+
+def probability_depth(value, probability, depth):
+    """
+    This is used to convert nodes of the form
+    <hypoDepth probability="PROB" depth="DEPTH" />
+
+    :returns a validated pair (probability, depth)
+    """
+    return (range01(probability), positivefloat(depth))
+
+
+strike_range = FloatRange(0, 360)
+dip_range = FloatRange(0, 90)
+rake_range = FloatRange(-180, 180)
+
+
+def nodal_plane(value, probability, strike, dip, rake):
+    """
+    This is used to convert nodes of the form
+     <nodalPlane probability="0.3" strike="0.0" dip="90.0" rake="0.0" />
+
+    :returns a validated pair (probability, depth)
+    """
+    return (range01(probability), strike_range(strike),
+            dip_range(dip), rake_range(rake))
 
 
 ###########################################################################
