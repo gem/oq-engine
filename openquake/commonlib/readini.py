@@ -26,12 +26,16 @@ def _collect_source_model_paths(smlt):
     return sorted(set(src_paths))
 
 
-def parse_config(source):
+def parse_config(source, hazard_job_id=None, hazard_output_id=None):
     """
     Parse a dictionary of parameters from an INI-style config file.
 
     :param source:
         File-like object containing the config parameters.
+    :param hazard_job_id:
+        The ID of a previous job (or None)
+    :param hazard_ouput_id:
+        The output of a previous job (or None)
     :returns:
         An :class:`openquake.commonlib.oqvalidation.OqParam` instance
         containing the validate and casted parameters/values parsed from
@@ -44,7 +48,9 @@ def parse_config(source):
 
     base_path = os.path.dirname(
         os.path.join(os.path.abspath('.'), source.name))
-    params = dict(base_path=base_path, inputs={}, sites='')
+    params = dict(base_path=base_path, inputs={}, sites='',
+                  hazard_calculation_id=hazard_job_id,
+                  hazard_output_id=hazard_output_id)
 
     # Directory containing the config file we're parsing.
     base_path = os.path.dirname(os.path.abspath(source.name))

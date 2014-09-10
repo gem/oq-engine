@@ -56,7 +56,9 @@ class OqParam(valid.ParamSet):
         ground_motion_correlation_params=valid.dictionary,
         ground_motion_fields=valid.boolean,
         gsim=valid.Choice(*GSIMS),
+        hazard_calculation_id=valid.NoneOr(valid.positiveint),
         hazard_curves_from_gmfs=valid.boolean,
+        hazard_output_id=valid.NoneOr(valid.positiveint),
         hazard_maps=valid.boolean,
         individual_curves=valid.boolean,
         inputs=dict,
@@ -97,6 +99,19 @@ class OqParam(valid.ParamSet):
         uniform_hazard_spectra=valid.boolean,
         width_of_mfd_bin=valid.positivefloat,
         )
+
+    def constrain_hazard_calculation_and_output(self):
+        """
+        The parameters `hazard_calculation_id` and `hazard_output_id`
+        are not correct for this calculator.
+        """
+        if self.calculation_mode in HAZARD_CALCULATORS:
+            return (self.hazard_calculation_id is None and
+                    self.hazard_output_id is None)
+        return (self.hazard_calculation_id is None and
+                self.hazard_output_id is not None) or \
+            (self.hazard_calculation_id is not None and
+             self.hazard_output_id is None)
 
     def constrain_truncation_level_disaggregation(self):
         """
