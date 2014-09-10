@@ -26,12 +26,13 @@ bar = baz
         expected_params = {
             'base_path': exp_base_path,
             'calculation_mode': 'classical_risk',
+            'hazard_calculation_id': None,
+            'hazard_output_id': 42,
             'region': [(1.0, 1.0), (2.0, 2.0), (3.0, 3.0)],
             'inputs': {},
-            'sites': None
         }
 
-        params = vars(readini.parse_config(source))
+        params = vars(readini.parse_config(source, hazard_output_id=42))
 
         self.assertEqual(expected_params, params)
 
@@ -55,6 +56,8 @@ random_seed=0
             expected_params = {
                 'base_path': exp_base_path,
                 'calculation_mode': 'classical',
+                'hazard_calculation_id': None,
+                'hazard_output_id': None,
                 'truncation_level': 0.0,
                 'random_seed': 0,
                 'maximum_distance': 0.0,
@@ -95,6 +98,8 @@ reference_depth_to_1pt0km_per_sec = 100.0
                 'base_path': exp_base_path,
                 'sites': [(1.0, 2.1), (3.0, 4.1), (5.0, 6.1)],
                 'calculation_mode': 'classical',
+                'hazard_calculation_id': None,
+                'hazard_output_id': None,
                 'truncation_level': 3.0,
                 'random_seed': 5,
                 'maximum_distance': 0.0,
