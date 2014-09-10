@@ -37,8 +37,8 @@ def compose(*validators):
     """
     def composed_validator(value):
         out = value
-        for val in reversed(validators):
-            out = val(out)
+        for validator in reversed(validators):
+            out = validator(out)
         return out
     composed_validator.__name__ = 'compose(%s)' % ','.join(
         val.__name__ for val in validators)
