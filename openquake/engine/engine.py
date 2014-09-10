@@ -531,7 +531,9 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
     job = prepare_job(user_name=username, log_level=log_level)
     # read calculation params and create the calculation profile
     oqparam = readini.parse_config(
-        open(cfg_file_path), haz_job.id if haz_job else None, hazard_output_id)
+        open(cfg_file_path),
+        haz_job.hazard_calculation.id if haz_job else None,
+        hazard_output_id)
     missing = set(oqparam.inputs) - INPUT_TYPES
     if missing:
         raise ValueError(
