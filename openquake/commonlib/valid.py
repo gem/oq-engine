@@ -408,6 +408,16 @@ def posList(value):
     return values
 
 
+def point3d(value, lon, lat, depth):
+    """
+    This is used to convert nodes of the form
+    <hypocenter lon="LON" lat="LAT" depth="DEPTH"/>
+
+    :returns: a validated triple (lon, lat, depth)
+    """
+    return longitude(lon), latitude(lat), positivefloat(depth)
+
+
 ###########################################################################
 
 def parameters(**names_vals):

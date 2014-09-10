@@ -669,6 +669,10 @@ make_source = node_factory(
         binWidth=valid.positivefloat,
         probability=valid.probability,
         strike=valid.FloatRange(0, 360),
+        topLeft=valid.point3d,
+        topRight=valid.point3d,
+        bottomLeft=valid.point3d,
+        bottomRight=valid.point3d,
         occurRates=valid.probabilities,
         probs_occur=valid.pmf,
         ))
@@ -726,14 +730,10 @@ class SourceParser(object):
         return lines
 
     def geo_planar(self, surface):
-        x = surface.topLeft
-        top_left = geo.Point(x['lon'], x['lat'], x['depth'])
-        x = surface.topRight
-        top_right = geo.Point(x['lon'], x['lat'], x['depth'])
-        x = surface.bottomLeft
-        bottom_left = geo.Point(x['lon'], x['lat'], x['depth'])
-        x = surface.bottomRight
-        bottom_right = geo.Point(x['lon'], x['lat'], x['depth'])
+        top_left = geo.Point(*~surface.topLeft)
+        top_right = geo.Point(*~surface.topRight)
+        bottom_left = geo.Point(*~surface.bottomLeft)
+        bottom_right = geo.Point(*~surface.bottomRight)
         return geo.PlanarSurface(
             self.rupture_mesh_spacing,
             surface.attrib.get('strike', 0.),
@@ -751,8 +751,7 @@ class SourceParser(object):
             return mfd.TruncatedGRMFD(
                 a_val=mfd_node['aValue'], b_val=mfd_node['bValue'],
                 min_mag=mfd_node['minMag'], max_mag=mfd_node['maxMag'],
-                bin_width=self.width_of_mfd_bin
-            )
+                bin_width=self.width_of_mfd_bin)
         else:
             raise ValueError('Unknown MFD: %s' % mfd_node.tag)
 
@@ -787,8 +786,7 @@ class SourceParser(object):
             hypocenter_distribution=self.parse_hpdist(node),
             polygon=polygon,
             area_discretization=self.area_source_discretization,
-            temporal_occurrence_model=self.tom,
-        )
+            temporal_occurrence_model=self.tom)
 
     def parse_pointSource(self, node):
         geom = node.pointGeometry
@@ -807,8 +805,7 @@ class SourceParser(object):
             location=geo.Point(*lon_lat),
             nodal_plane_distribution=self.parse_npdist(node),
             hypocenter_distribution=self.parse_hpdist(node),
-            temporal_occurrence_model=self.tom,
-        )
+            temporal_occurrence_model=self.tom)
 
     def parse_simpleFaultSource(self, node):
         geom = node.simpleFaultGeometry
@@ -825,8 +822,7 @@ class SourceParser(object):
             fault_trace=self.geo_line(geom),
             dip=~geom.dip,
             rake=~node.rake,
-            temporal_occurrence_model=self.tom,
-        )
+            temporal_occurrence_model=self.tom)
         return simple
 
     def parse_complexFaultSource(self, node):
@@ -841,8 +837,7 @@ class SourceParser(object):
             rupture_aspect_ratio=~node.ruptAspectRatio,
             edges=self.geo_lines(geom),
             rake=~node.rake,
-            temporal_occurrence_model=self.tom,
-        )
+            temporal_occurrence_model=self.tom)
         return cmplx
 
     def parse_surface(self, surface_nodes):
@@ -871,14 +866,13 @@ class SourceParser(object):
             mfd=self.parse_mfdist(node),
             surface=self.parse_surface(node.surface),
             rake=~node.rake,
-            temporal_occurrence_model=self.tom,
-        )
+            temporal_occurrence_model=self.tom)
         return char
 
     def parse_nonParametricSeismicSource(self, node):
         rup_pmf_data = []
         for rupt in node:
-            hp = rupt.hypocenter
+            hp = ~rupt.hypocenter
             probs = pmf.PMF(rupt['probs_occur'])
             trt = node['tectonicRegion']
             if rupt.tag == 'simpleFaultRupture':
@@ -889,14 +883,14 @@ class SourceParser(object):
                 hrupt = source.rupture.Rupture(
                     mag=~rupt.magnitude, rake=~rupt.rake,
                     tectonic_region_type=trt,
-                    hypocenter=geo.Point(hp['lon'], hp['lat'], hp['depth']),
+                    hypocenter=geo.Point(*hp),
                     surface=self.parse_surface([rupt.planarSurface]),
                     source_typology=None)
             elif rupt.tag == 'multiPlanesRupture':
                 hrupt = source.rupture.Rupture(
                     mag=~rupt.magnitude, rake=~rupt.rake,
                     tectonic_region_type=trt,
-                    hypocenter=geo.Point(hp['lon'], hp['lat'], hp['depth']),
+                    hypocenter=geo.Point(*hp),
                     surface=self.parse_surface(
                         list(rupt.getnodes('planarSurface'))),
                     source_typology=None)
@@ -908,19 +902,17 @@ class SourceParser(object):
         return nps
 
     def parse_simpleFaultRupture(self, node):
-        hp = node.hypocenter
         rupt = source.rupture.Rupture(
             mag=~node.magnitude, rake=~node.rake, tectonic_region_type=None,
-            hypocenter=geo.Point(hp['lon'], hp['lat'], hp['depth']),
+            hypocenter=geo.Point(*~node.hypocenter),
             surface=self.parse_surface([node.simpleFaultGeometry]),
             source_typology=source.SimpleFaultSource)
         return rupt
 
     def parse_complexFaultRupture(self, node):
-        hp = node.hypocenter
         rupt = source.rupture.Rupture(
             mag=~node.magnitude, rake=~node.rake, tectonic_region_type=None,
-            hypocenter=geo.Point(hp['lon'], hp['lat'], hp['depth']),
+            hypocenter=geo.Point(*~node.hypocenter),
             surface=self.parse_surface([node.complexFaultGeometry]),
             source_typology=source.ComplexFaultSource)
         return rupt
