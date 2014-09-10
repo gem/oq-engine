@@ -517,10 +517,21 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
     :raises:
         `RuntimeError` if the input job configuration is not valid
     """
-    # create the job
+    # determine the previous hazard job, if any
+    if hazard_job_id:
+        haz_job = models.OqJob.objects.get(pk=hazard_job_id)
+    elif hazard_output_id:  # extract the hazard job from the hazard_output_id
+        haz_job = models.Output.objects.get(pk=hazard_output_id).oq_job
+    else:
+        haz_job = None  # no previous hazard job
+    if haz_job:
+        assert haz_job.job_type == 'hazard', haz_job
+
+    # create the current job
     job = prepare_job(user_name=username, log_level=log_level)
     # read calculation params and create the calculation profile
-    oqparam = readini.parse_config(open(cfg_file_path, 'r'))
+    oqparam = readini.parse_config(
+        open(cfg_file_path), haz_job.id if haz_job else None, hazard_output_id)
     missing = set(oqparam.inputs) - INPUT_TYPES
     if missing:
         raise ValueError(
@@ -532,19 +543,12 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
 
     if hazard_output_id is None and hazard_job_id is None:
         # this is a hazard calculation, not a risk one
+        del params['hazard_calculation_id']
+        del params['hazard_output_id']
         job.hazard_calculation = create_calculation(
             models.HazardCalculation, params)
         job.save()
         return job
-
-    # otherwise run a risk calculation
-    if hazard_job_id:
-        haz_job = models.OqJob.objects.get(pk=hazard_job_id)
-    else:  # extract the hazard job from the hazard_output_id
-        haz_job = models.Output.objects.get(pk=hazard_output_id).oq_job
-    assert haz_job.job_type == 'hazard', haz_job
-    params.update(dict(hazard_output_id=hazard_output_id,
-                       hazard_calculation_id=haz_job.hazard_calculation.id))
 
     calculation = create_calculation(models.RiskCalculation, params)
     job.risk_calculation = calculation
