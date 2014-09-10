@@ -483,9 +483,9 @@ class _LiteralNode(Node):
         Convert the node into a literal Python object
         """
         if not self.nodes:
-            return (self.tag, self.attrib, self.text, [])
+            return (self.tag, self.attrib, self._value, [])
         else:
-            return (self.tag, self.attrib, self.text,
+            return (self.tag, self.attrib, self._value,
                     [n.to_python() for n in self.nodes])
 
     def pprint(self, stream=None, indent=1, width=80, depth=None):

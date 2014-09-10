@@ -227,7 +227,7 @@ xmlns:gml="http://www.opengis.net/gml"
 
     def test_node_factory(self):
         LiteralNode = n.literal_node_class(dict(a=float, b=int))
-        self.assertEqual(make_valid_node.__doc__, '''\
+        self.assertEqual(LiteralNode.__doc__, '''\
 Node factory. Known objects:
 a: float
 b: int''')
@@ -245,3 +245,12 @@ b: int''')
         self.assertEqual(~node.general.a, 1.0)
         self.assertEqual(~node.general.b, 2)
         self.assertEqual(node.section1['param'], 'xxx')
+        self.assertEqual(
+            node.to_python(), (
+                'root',
+                {},
+                None,
+                [('general', {}, None, [('a', {}, 1.0, []), ('b', {}, 2, [])]),
+                 ('section1', {'param': 'xxx'}, None, []),
+                 ('section2', {'param': 'yyy'}, None, [])])
+            )
