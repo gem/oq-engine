@@ -743,16 +743,18 @@ class SourceParser(object):
     def parse_mfdist(self, node):
         [mfd_node] = [subnode for subnode in node if subnode.tag in (
             'incrementalMFD', 'truncGutenbergRichterMFD')]
-        if mfd_node.tag == 'incrementalMFDincrementalMFD':
+        if mfd_node.tag == 'incrementalMFD':
             return mfd.EvenlyDiscretizedMFD(
-                min_mag=mfd_node['min_mag'], bin_width=mfd_node['binWidth'],
-                occurrence_rates=~mfd_node.occur_rates)
+                min_mag=mfd_node['minMag'], bin_width=mfd_node['binWidth'],
+                occurrence_rates=~mfd_node.occurRates)
         elif mfd_node.tag == 'truncGutenbergRichterMFD':
             return mfd.TruncatedGRMFD(
                 a_val=mfd_node['aValue'], b_val=mfd_node['bValue'],
                 min_mag=mfd_node['minMag'], max_mag=mfd_node['maxMag'],
                 bin_width=self.width_of_mfd_bin
             )
+        else:
+            raise ValueError('Unknown MFD: %s' % mfd_node.tag)
 
     def parse_npdist(self, node):
         npd = pmf.PMF(
@@ -805,7 +807,7 @@ class SourceParser(object):
             location=geo.Point(*lon_lat),
             nodal_plane_distribution=self.parse_npdist(node),
             hypocenter_distribution=self.parse_hpdist(node),
-            temporal_occurrence_model=self.default_tom,
+            temporal_occurrence_model=self.tom,
         )
 
     def parse_simpleFaultSource(self, node):
@@ -823,7 +825,7 @@ class SourceParser(object):
             fault_trace=self.geo_line(geom),
             dip=~geom.dip,
             rake=~node.rake,
-            temporal_occurrence_model=self.default_tom,
+            temporal_occurrence_model=self.tom,
         )
         return simple
 
@@ -839,7 +841,7 @@ class SourceParser(object):
             rupture_aspect_ratio=~node.ruptAspectRatio,
             edges=self.geo_lines(geom),
             rake=~node.rake,
-            temporal_occurrence_model=self.default_tom,
+            temporal_occurrence_model=self.tom,
         )
         return cmplx
 
@@ -869,7 +871,7 @@ class SourceParser(object):
             mfd=self.parse_mfdist(node),
             surface=self.parse_surface(node.surface),
             rake=~node.rake,
-            temporal_occurrence_model=self.default_tom,
+            temporal_occurrence_model=self.tom,
         )
         return char
 

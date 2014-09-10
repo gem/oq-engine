@@ -40,7 +40,7 @@ MIXED_SRC_MODEL = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(nrmllib.__file__))),
     'examples/source_model/mixed.xml')
 
-INVALID_SRC_MODEL = os.path.join(
+DUPLICATE_IDS_SRC_MODEL = os.path.join(
     os.path.dirname(__file__), 'data', 'invalid_source_model.xml')
 
 
@@ -528,7 +528,7 @@ class SourceCollectorTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.nrml_to_hazardlib = source_input.NrmlHazardlibConverter(
+        cls.nrml_to_hazardlib = source_input.SourceParser(
             investigation_time=50.,
             rupture_mesh_spacing=1,  # km
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
@@ -582,11 +582,11 @@ class SourceCollectorTestCase(unittest.TestCase):
 
 class ParseSourceModelTestCase(unittest.TestCase):
     def test(self):
-        nrml_to_hazardlib = source_input.NrmlHazardlibConverter(
+        nrml_to_hazardlib = source_input.SourceParser(
             investigation_time=50.,
             rupture_mesh_spacing=1,  # km
             width_of_mfd_bin=0.1,  # for Truncated GR MFDs
             area_source_discretization=10.)
         with self.assertRaises(source_input.DuplicateID):
             source_input.parse_source_model(
-                INVALID_SRC_MODEL, nrml_to_hazardlib)
+                DUPLICATE_IDS_SRC_MODEL, nrml_to_hazardlib)
