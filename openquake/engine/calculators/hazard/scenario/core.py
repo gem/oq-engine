@@ -20,8 +20,6 @@ Scenario calculator core functionality
 import collections
 import random
 
-from openquake.nrmllib.hazard.parsers import RuptureModelParser
-
 # HAZARDLIB
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc.gmf import GmfComputer
@@ -107,13 +105,11 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         Get the rupture_model file from the job.ini file, and set the
         attribute self.rupture.
         """
-        nrml = RuptureModelParser(self.hc.inputs['rupture_model']).parse()
-        self.rupture = source.NrmlHazardlibConverter(
-            self.hc.investigation_time,
-            self.hc.rupture_mesh_spacing,
-            self.hc.width_of_mfd_bin,
-            self.hc.area_source_discretization,
-        )(nrml)
+        rup_spacing = self.job.get_param('rupture_mesh_spacing')
+        rup_model = self.job.get_param('inputs')['rupture_model']
+        conv = source.RuptureConverter(rup_spacing)
+        rup_node, = conv.read_nrml(rup_model)
+        self.rupture = conv.convert_node(rup_node)
 
     def initialize_realizations(self):
         """There are no realizations for the scenario calculator"""
