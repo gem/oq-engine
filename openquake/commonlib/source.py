@@ -16,6 +16,7 @@
 import math
 import copy
 from itertools import izip
+from contextlib import contextmanager
 
 from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
@@ -298,7 +299,7 @@ def split_coords_3d(seq):
         elif i % 3 == 1:
             lats.append(valid.latitude(el))
         elif i % 3 == 2:
-            depths.append(valid.positivefloat(el))
+            depths.append(valid.depth(el))
     return zip(lons, lats, depths)
 
 
@@ -308,31 +309,42 @@ class RuptureConverter(object):
         self.rupture_mesh_spacing = rupture_mesh_spacing
 
     def read_nrml(self, fname):
+        self.fname = fname
         return node_from_nrml(fname, ValidNode)
 
-    def convert_node(self, source_node):
+    @contextmanager
+    def context(self, node):
         try:
+            yield node
+        except Exception as exc:
+            raise ValueError(
+                'node %s: %s, line %s of %s' %
+                (node.tag, exc, node.lineno, self.fname))
+
+    def convert_node(self, source_node):
+        with self.context(source_node):
             convert = getattr(self, 'convert_' + source_node.tag)
-        except AttributeError:
-            raise ValueError('Unknown source tag %s' % source_node.tag)
         return convert(source_node)
 
     def geo_line(self, edge):
-        coords = split_coords_2d(~edge.LineString.posList)
+        with self.context(edge.LineString.posList) as plist:
+            coords = split_coords_2d(~plist)
         return geo.Line([geo.Point(*p) for p in coords])
 
     def geo_lines(self, edges):
         lines = []
         for edge in edges:
-            coords = split_coords_3d(~edge.LineString.posList)
+            with self.context(edge):
+                coords = split_coords_3d(~edge.LineString.posList)
             lines.append(geo.Line([geo.Point(*p) for p in coords]))
         return lines
 
     def geo_planar(self, surface):
-        top_left = geo.Point(*~surface.topLeft)
-        top_right = geo.Point(*~surface.topRight)
-        bottom_left = geo.Point(*~surface.bottomLeft)
-        bottom_right = geo.Point(*~surface.bottomRight)
+        with self.context(surface):
+            top_left = geo.Point(*~surface.topLeft)
+            top_right = geo.Point(*~surface.topRight)
+            bottom_left = geo.Point(*~surface.bottomLeft)
+            bottom_right = geo.Point(*~surface.bottomRight)
         return geo.PlanarSurface(
             self.rupture_mesh_spacing,
             surface['strike'], surface['dip'],
@@ -403,29 +415,32 @@ class SourceConverter(RuptureConverter):
         self.tom = PoissonTOM(investigation_time)
 
     def convert_mfdist(self, node):
-        [mfd_node] = [subnode for subnode in node if subnode.tag in (
-            'incrementalMFD', 'truncGutenbergRichterMFD')]
-        if mfd_node.tag == 'incrementalMFD':
-            return mfd.EvenlyDiscretizedMFD(
-                min_mag=mfd_node['minMag'], bin_width=mfd_node['binWidth'],
-                occurrence_rates=~mfd_node.occurRates)
-        elif mfd_node.tag == 'truncGutenbergRichterMFD':
-            return mfd.TruncatedGRMFD(
-                a_val=mfd_node['aValue'], b_val=mfd_node['bValue'],
-                min_mag=mfd_node['minMag'], max_mag=mfd_node['maxMag'],
-                bin_width=self.width_of_mfd_bin)
-        else:
-            raise ValueError('Unknown MFD: %s' % mfd_node.tag)
+        with self.context(node):
+            [mfd_node] = [subnode for subnode in node if subnode.tag in (
+                'incrementalMFD', 'truncGutenbergRichterMFD')]
+            if mfd_node.tag == 'incrementalMFD':
+                return mfd.EvenlyDiscretizedMFD(
+                    min_mag=mfd_node['minMag'], bin_width=mfd_node['binWidth'],
+                    occurrence_rates=~mfd_node.occurRates)
+            elif mfd_node.tag == 'truncGutenbergRichterMFD':
+                return mfd.TruncatedGRMFD(
+                    a_val=mfd_node['aValue'], b_val=mfd_node['bValue'],
+                    min_mag=mfd_node['minMag'], max_mag=mfd_node['maxMag'],
+                    bin_width=self.width_of_mfd_bin)
+            else:
+                raise ValueError('Unknown MFD: %s' % mfd_node.tag)
 
     def convert_npdist(self, node):
-        npdist = []
-        for np in node.nodalPlaneDist:
-            prob, strike, dip, rake = ~np
-            npdist.append((prob, geo.NodalPlane(strike, dip, rake)))
-        return pmf.PMF(npdist)
+        with self.context(node):
+            npdist = []
+            for np in node.nodalPlaneDist:
+                prob, strike, dip, rake = ~np
+                npdist.append((prob, geo.NodalPlane(strike, dip, rake)))
+            return pmf.PMF(npdist)
 
     def convert_hpdist(self, node):
-        return pmf.PMF([~hd for hd in node.hypoDepthDist])
+        with self.context(node):
+            return pmf.PMF([~hd for hd in node.hypoDepthDist])
 
     def convert_areaSource(self, node):
         geom = node.areaGeometry

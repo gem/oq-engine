@@ -190,6 +190,17 @@ def latitude(value):
     return lat
 
 
+def depth(value):
+    """
+    :param value: input string
+    :returns: float >= 0
+    """
+    dep = float(value)
+    if dep < 0:
+        raise ValueError('depth %s < 0' % dep)
+    return dep
+
+
 def lonlat(value):
     """
     :param value: a pair of coordinates

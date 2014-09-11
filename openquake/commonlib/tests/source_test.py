@@ -41,6 +41,12 @@ MIXED_SRC_MODEL = os.path.join(NRML_DIR, 'examples/source_model/mixed.xml')
 DUPLICATE_ID_SRC_MODEL = os.path.join(
     os.path.dirname(__file__), 'data', 'invalid_source_model.xml')
 
+SINGLE_PLANE_RUPTURE = os.path.join(
+    os.path.dirname(__file__), 'data', 'single-plane-rupture.xml')
+
+MULTI_PLANES_RUPTURE = os.path.join(
+    os.path.dirname(__file__), 'data', 'multi-planes-rupture.xml')
+
 
 class NrmlSourceToHazardlibTestCase(unittest.TestCase):
     """Tests for converting NRML source model objects to the hazardlib
@@ -348,9 +354,18 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         eq, msg = deep_eq(self._expected_char_multi, self.char_multi)
         self.assertTrue(eq, msg)
 
-    def test_raises_useful_error(self):
-        # Test that the source id and name are included with conversion errors,
-        # to help the users deal with problems in their source models.
+    def test_duplicate_id(self):
+        converter = source_input.SourceConverter(
+            investigation_time=50.,
+            rupture_mesh_spacing=1,
+            width_of_mfd_bin=0.1,
+            area_source_discretization=10,
+        )
+        with self.assertRaises(source_input.DuplicateID):
+            source_input.parse_source_model(
+                DUPLICATE_ID_SRC_MODEL, converter)
+
+    def test_raises_useful_error_1(self):
         area_file = StringIO("""\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
@@ -398,6 +413,57 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             self.nrml_to_hazardlib.read_nrml(area_file)
         self.assertEqual(str(ctx.exception), msg)
+
+    def test_raises_useful_error_2(self):
+        area_file = StringIO("""\
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <sourceModel name="Some Source Model">
+        <areaSource id="1" name="Quito" tectonicRegion="Active Shallow Crust">
+            <areaGeometry>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing>
+                            <gml:posList>
+                             -122.5 37.5
+                             -121.5 37.5
+                             -121.5 38.5
+                             -122.5 38.5
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>10.0</lowerSeismoDepth>
+            </areaGeometry>
+            <magScaleRel>PeerMSR</magScaleRel>
+            <ruptAspectRatio>1.5</ruptAspectRatio>
+            <incrementalMFD minMag="6.55" binWidth="0.1">
+                <occurRates>0.0010614989 8.8291627E-4 7.3437777E-4
+                            6.108288E-4 5.080653E-4
+                </occurRates>
+            </incrementalMFD>
+            <nodalPlanedist>
+                <nodalPlane probability="0.3" strike="0.0" dip="90.0" rake="0.0" />
+                <nodalPlane probability="0.7" strike="90.0" dip="45.0" rake="90.0" />
+            </nodalPlanedist>
+            <hypoDepthDist>
+                <hypoDepth probability="0.5" depth="4.0" />
+                <hypoDepth probability="0.5" depth="8.0" />
+            </hypoDepthDist>
+        </areaSource>
+
+    </sourceModel>
+</nrml>
+""")
+        area = self.nrml_to_hazardlib.read_nrml(
+            area_file).sourceModel.areaSource
+        with self.assertRaises(ValueError) as ctx:
+            self.nrml_to_hazardlib.convert_node(area)
+        self.assertIn(
+            "node areaSource: No subnode named 'nodalPlaneDist'"
+            " found in 'areaSource', line 5 of", str(ctx.exception))
 
 
 class AreaToPointsTestCase(unittest.TestCase):
@@ -543,7 +609,12 @@ class SourceCollectorTestCase(unittest.TestCase):
             '<SourceCollector TRT=Active Shallow Crust, 2 source(s)>')
 
 
-class ParseSourceModelTestCase(unittest.TestCase):
+class RuptureConverterTestCase(unittest.TestCase):
+
+    def test_ok_ruptures(self):
+        converter = source_input.RuptureConverter(rupture_mesh_spacing=1.5)
+        for fname in (SINGLE_PLANE_RUPTURE, MULTI_PLANES_RUPTURE):
+            converter.read_nrml(fname)
 
     def test_well_formed_rupture(self):
         converter = source_input.RuptureConverter(rupture_mesh_spacing=1.)
@@ -603,13 +674,3 @@ class ParseSourceModelTestCase(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             converter.read_nrml(rup_file)
         self.assertIn('line 7', str(ctx.exception))
-
-    def test_duplicate_id(self):
-        converter = source_input.SourceConverter(
-            investigation_time=50.,
-            rupture_mesh_spacing=1,  # km
-            width_of_mfd_bin=0.1,  # for Truncated GR MFDs
-            area_source_discretization=10.)
-        with self.assertRaises(source_input.DuplicateID):
-            source_input.parse_source_model(
-                DUPLICATE_ID_SRC_MODEL, converter)

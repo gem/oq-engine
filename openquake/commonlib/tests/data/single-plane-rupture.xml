@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <singlePlaneRupture probs_occur="0.544 0.456">
+    <magnitude>8.3</magnitude>
+    <rake>90</rake>
+    <hypocenter lon="143.002955858" lat="40.7262059218" depth="26.1010071663"/>
+    <planarSurface strike="80" dip="10">
+      <topLeft lon="143.1" lat="41.6" depth="9.0"/>
+      <topRight lon="143.914077283" lat="40.2004228785" depth="9.0"/>
+      <bottomLeft lon="142.073108814" lat="41.2516896915" depth="43.2020143326"/>
+      <bottomRight lon="142.908427318" lat="39.8523326793" depth="43.2020143326"/>
+    </planarSurface>
+  </singlePlaneRupture>
+</nrml>
