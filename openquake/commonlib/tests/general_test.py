@@ -24,7 +24,8 @@ import unittest
 from operator import attrgetter
 from collections import namedtuple
 
-from openquake.commonlib.general import block_splitter, split_in_blocks
+from openquake.commonlib.general import (
+    block_splitter, split_in_blocks, assert_independent)
 
 
 class BlockSplitterTestCase(unittest.TestCase):
@@ -120,3 +121,9 @@ class BlockSplitterTestCase(unittest.TestCase):
                             kind=attrgetter('typology')))
         self.assertEqual(map(len, blocks), [2, 1, 1, 1])
         self.assertEqual([b.weight for b in blocks], [2, 2, 4, 4])
+
+
+class CodeDependenciesTestCase(unittest.TestCase):
+    def test(self):
+        assert_independent('openquake.commonlib.oqvalidation',
+                           'openquake.risklib', 'openquake.nrmllib')

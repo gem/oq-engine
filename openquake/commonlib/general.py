@@ -22,8 +22,10 @@ Utility functions of general interest.
 """
 
 import os
+import sys
 import math
 import tempfile
+import subprocess
 import collections
 
 import numpy
@@ -325,3 +327,46 @@ def writetmp(content=None, dir=None, prefix="tmp", suffix="tmp"):
         fh.write(content)
         fh.close()
     return path
+
+
+def run_in_process(code, *args):
+    """
+    Run in an external process the given Python code and return the
+    output as a Python object. If there are arguments, then code is
+    taken as a template and traditional string interpolation is performed.
+
+    :param code: string or template describing Python code
+    :param args: arguments to be used for interpolation
+    :returns: the output of the process, as a Python object
+    """
+    if args:
+        code %= args
+    out = subprocess.check_output([sys.executable, '-c', code])
+    if out:
+        return eval(out, {}, {})
+
+
+class CodeDependencyError(Exception):
+    pass
+
+
+def assert_independent(module, *packages):
+    """
+    Make sure that the given module does not depend from the given
+    packages. For instance
+
+    >>> assert_independent('openquake.hazardlib.imt', 'openquake.nrmllib')
+    """
+    assert packages, 'At least one package must be specified'
+    get_imported_modules = """\
+import sys
+before_modules = set(sys.modules)
+import %s
+after_modules = set(sys.modules)
+print after_modules - before_modules
+""" % module
+    imported_modules = run_in_process(get_imported_modules)
+    for mod in imported_modules:
+        if mod.startswith(packages):
+            raise CodeDependencyError('%s depends on %s' % (
+                module, mod))
