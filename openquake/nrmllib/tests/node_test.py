@@ -227,10 +227,11 @@ xmlns:gml="http://www.opengis.net/gml"
 
     def test_node_factory(self):
         class ValidNode(n.LiteralNode):
+            "ValidNode test implementation. "
             validators = dict(a=float, b=int)
 
         self.assertEqual(ValidNode.__doc__, '''\
-Node factory. Known objects:
+ValidNode test implementation. Known validators:
 a: float
 b: int''')
         xmlfile = cStringIO.StringIO("""\
