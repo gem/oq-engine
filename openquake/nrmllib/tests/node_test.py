@@ -226,8 +226,10 @@ xmlns:gml="http://www.opengis.net/gml"
         self.assertEqual(cPickle.loads(cPickle.dumps(node)), node)
 
     def test_node_factory(self):
-        LiteralNode = n.literal_node_class(dict(a=float, b=int))
-        self.assertEqual(LiteralNode.__doc__, '''\
+        class ValidNode(n.LiteralNode):
+            validators = dict(a=float, b=int)
+
+        self.assertEqual(ValidNode.__doc__, '''\
 Node factory. Known objects:
 a: float
 b: int''')
@@ -241,12 +243,12 @@ b: int''')
 <section2 param="yyy" />
 </root>
 """)
-        node = n.node_from_xml(xmlfile, LiteralNode)
+        node = n.node_from_xml(xmlfile, ValidNode)
         self.assertEqual(~node.general.a, 1.0)
         self.assertEqual(~node.general.b, 2)
         self.assertEqual(node.section1['param'], 'xxx')
         self.assertEqual(
-            node.to_python(), (
+            n.to_python(node), (
                 'root',
                 {},
                 None,

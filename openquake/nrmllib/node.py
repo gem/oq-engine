@@ -56,7 +56,7 @@ The subnodes can be retrieved with the dot notation:
 >>> root.a
 <a {} A1 >
 
-The value of a node can be extract with the `~` operator:
+The value of a node can be extracted with the `~` operator:
 
 >>> ~root.a
 'A1'
@@ -198,7 +198,7 @@ understand the types defined in the XSD schema.
 """
 
 import sys
-import pprint
+import pprint as pp
 import cStringIO
 import ConfigParser
 
@@ -279,7 +279,7 @@ def _displayattrs(attrib, expandattrs):
 def _display(node, indent, expandattrs, expandvals, output):
     """Core function to display a Node object"""
     attrs = _displayattrs(node.attrib, expandattrs)
-    val = ' %s' % node.text if expandvals and node.text else ''
+    val = ' %s' % str(node.text) if expandvals and node.text else ''
     output.write(indent + node.tag + attrs + val + '\n')
     for sub_node in node:
         _display(sub_node, indent + '  ', expandattrs, expandvals, output)
@@ -310,9 +310,10 @@ class Node(object):
     is that subnodes can be lazily generated and that they can be accessed
     with the dot notation.
     """
-    __slots__ = ('tag', 'attrib', 'text', 'nodes')
+    __slots__ = ('tag', 'attrib', 'text', 'nodes', 'lineno')
 
-    def __init__(self, fulltag, attrib=None, text=None, nodes=None):
+    def __init__(self, fulltag, attrib=None, text=None,
+                 nodes=None, lineno=None):
         """
         :param str tag: the Node name
         :param dict attrib: the Node attributes
@@ -323,6 +324,7 @@ class Node(object):
         self.attrib = {} if attrib is None else attrib
         self.text = text
         self.nodes = [] if nodes is None else nodes
+        self.lineno = lineno
         if self.nodes and self.text is not None:
             raise ValueError(
                 'A branch node cannot have a value, got %r' % self.text)
@@ -448,71 +450,71 @@ class NodeNoStrip(Node):
         return s
 
 
-# base class not to used directly
-class _LiteralNode(Node):
-    __slots__ = ['_value']
-    validators = {}  # to be overridden in subclasses
+class MetaLiteralNode(type):
+    """
+    Metaclass adding __slots__ and extending the docstring with a note
+    about the known validators. Moreover it checks for the attribute
+    `.validators`.
+    """
+    def __new__(meta, name, bases, dic):
+        doc = "Known validators:\n%s" % '\n'.join(
+            '%s: %s' % (n, v.__name__)
+            for n, v in dic['validators'].iteritems())
+        dic['__doc__'] = dic.get('__doc__', '') + doc
+        dic['__slots__'] = dic.get('__slots__', [])
+        return super(MetaLiteralNode, meta).__new__(meta, name, bases, dic)
 
-    def __init__(self, fulltag, attrib=None, text=None, nodes=None):
+
+class LiteralNode(Node):
+    """
+    Subclasses should define a non-empty dictionary of validators.
+    """
+    validators = {}  # to be overridden in subclasses
+    __metaclass__ = MetaLiteralNode
+
+    def __init__(self, fulltag, attrib=None, text=None,
+                 nodes=None, lineno=None):
         validators = self.__class__.validators
         tag = self.strip_fqtag(fulltag)
-        self._value = text
-        if attrib:
+        if tag in validators:
+            # try to cast the node, if the tag is known
+            assert not nodes, 'You cannot cast a composite node: %s' % nodes
+            try:
+                text = validators[tag](text, **attrib)
+                attrib = {}
+            except Exception as exc:
+                raise ValueError('Could not convert %s->%s: %s, line %s' %
+                                 (tag, validators[tag].__name__, exc, lineno))
+        elif attrib:
             # cast the attributes
             for n, v in attrib.iteritems():
                 if n in validators:
                     try:
                         attrib[n] = validators[n](v)
                     except Exception as exc:
-                        raise ValueError('Could not convert %s->%s: %s' %
-                                         (n, validators[n].__name__, exc))
+                        raise ValueError(
+                            'Could not convert %s->%s: %s, line %s' %
+                            (n, validators[n].__name__, exc, lineno))
         else:
             attrib = {}
-        if tag in validators:
-            # try to cast the node, if the tag is known
-            assert not nodes, 'You cannot cast a composite node: %s' % nodes
-            try:
-                self._value = validators[tag](text, **attrib)
-            except Exception as exc:
-                raise ValueError('Could not convert %s->%s: %s' %
-                                 (tag, validators[tag].__name__, exc))
-        super(_LiteralNode, self).__init__(tag, attrib, text, nodes)
-
-    def to_python(self):
-        """
-        Convert the node into a literal Python object
-        """
-        if not self.nodes:
-            return (self.tag, self.attrib, self._value, [])
-        else:
-            return (self.tag, self.attrib, self._value,
-                    [n.to_python() for n in self.nodes])
-
-    def pprint(self, stream=None, indent=1, width=80, depth=None):
-        """
-        Pretty print the underlying literal Python object
-        """
-        pprint.pprint(self.to_python(), stream, indent, width, depth)
-
-    def __invert__(self):
-        """
-        Return the value of a leaf; raise a TypeError if the node is not a leaf
-        """
-        if self:
-            raise TypeError('%s is a composite node, not a leaf' % self)
-        return self._value
+        super(LiteralNode, self).__init__(tag, attrib, text, nodes, lineno)
 
 
-def literal_node_class(validators):
+def to_python(self):
     """
-    Build a LiteralNode class with the given validators.
-
-    :param validators: a dictionary of functions text -> literal Python object
+    Convert the node into a literal Python object
     """
-    doc = "Node factory. Known objects:\n%s" % '\n'.join(
-        '%s: %s' % (n, v.__name__) for n, v in validators.iteritems())
-    return type('LiteralNode', (_LiteralNode, ),
-                dict(__doc__=doc, validators=validators, __slots__=[]))
+    if not self.nodes:
+        return (self.tag, self.attrib, self.text, [])
+    else:
+        return (self.tag, self.attrib, self.text, map(to_python, self.nodes))
+
+
+def pprint(self, stream=None, indent=1, width=80, depth=None):
+    """
+    Pretty print the underlying literal Python object
+    """
+    pp.pprint(to_python(self), stream, indent, width, depth)
 
 
 def node_from_dict(dic, nodefactory=Node):
@@ -548,11 +550,12 @@ def node_from_elem(elem, nodefactory=Node):
     """
     children = list(elem)
     if not children:
-        return nodefactory(elem.tag, dict(elem.attrib), elem.text)
+        return nodefactory(elem.tag, dict(elem.attrib), elem.text,
+                           lineno=elem.sourceline)
     return nodefactory(elem.tag,
                        dict(elem.attrib),
                        nodes=[node_from_elem(ch, nodefactory)
-                              for ch in children])
+                              for ch in children], lineno=elem.sourceline)
 
 
 # taken from https://gist.github.com/651801, which comes for the effbot
@@ -612,7 +615,7 @@ def node_from_nrml(xmlfile, nodefactory=Node):
     :param xmlfile: a file name or file object open for reading
     """
     # disable the XSD validation for LiteralNode factories
-    validate = nodefactory.__name__ != 'LiteralNode'
+    validate = not isinstance(nodefactory, MetaLiteralNode)
     root = nrmllib.assert_valid(xmlfile, validate=validate).getroot()
     node = node_from_elem(root, nodefactory)
     for nsname, nsvalue in root.nsmap.iteritems():
