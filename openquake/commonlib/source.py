@@ -310,7 +310,10 @@ class RuptureConverter(object):
 
     def read_nrml(self, fname):
         self.fname = fname
-        return node_from_nrml(fname, ValidNode)
+        try:
+            return node_from_nrml(fname, ValidNode)
+        except ValueError as exc:
+            raise ValueError('%s in %s' % (exc, fname))
 
     @contextmanager
     def context(self, node):
