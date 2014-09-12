@@ -290,7 +290,7 @@ WITH assocs AS (
   AND exposure_model_id = %s AND taxonomy=%s
   AND ST_COVERS(ST_GeographyFromText(%s), exp.site)
 )
-INSERT INTO riskr.asset_site (risk_job_id, asset_id, site_id)
+INSERT INTO riskr.asset_site (job_id, asset_id, site_id)
 SELECT * FROM assocs""", (rc.oqjob.id, self.hc.id,
                           rc.exposure_model.id, taxonomy,
                           rc.region_constraint.wkt))
