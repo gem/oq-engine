@@ -249,7 +249,7 @@ b: int''')
         self.assertEqual(~node.general.b, 2)
         self.assertEqual(node.section1['param'], 'xxx')
         self.assertEqual(
-            n.to_python(node), (
+            n.to_literal(node), (
                 'root',
                 {},
                 None,

@@ -500,21 +500,21 @@ class LiteralNode(Node):
         super(LiteralNode, self).__init__(tag, attrib, text, nodes, lineno)
 
 
-def to_python(self):
+def to_literal(self):
     """
     Convert the node into a literal Python object
     """
     if not self.nodes:
         return (self.tag, self.attrib, self.text, [])
     else:
-        return (self.tag, self.attrib, self.text, map(to_python, self.nodes))
+        return (self.tag, self.attrib, self.text, map(to_literal, self.nodes))
 
 
 def pprint(self, stream=None, indent=1, width=80, depth=None):
     """
     Pretty print the underlying literal Python object
     """
-    pp.pprint(to_python(self), stream, indent, width, depth)
+    pp.pprint(to_literal(self), stream, indent, width, depth)
 
 
 def node_from_dict(dic, nodefactory=Node):
