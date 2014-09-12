@@ -284,7 +284,7 @@ _devtest_innervm_run () {
 
     ssh $lxc_ip "sudo service postgresql restart"
     ssh $lxc_ip "set -e ; sudo su postgres -c \"cd oq-engine ; openquake/engine/bin/oq_create_db --yes --db-name=openquake2\""
-    ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-commonlib\" ; cd oq-engine ; bin/openquake --upgrade-db"
+    ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-commonlib\" ; cd oq-engine ; bin/openquake --upgrade-db --yes"
 
     # run celeryd daemon
     ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-commonlib\" ; cd oq-engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
@@ -432,7 +432,7 @@ _pkgtest_innervm_run () {
 
     ssh $lxc_ip "sudo service postgresql restart"
     # XXX: should the --upgrade-db command go in the postint script?
-    ssh $lxc_ip "set -e; openquake --upgrade-db"
+    ssh $lxc_ip "set -e; openquake --upgrade-db --yes"
 
     # run celeryd daemon
     ssh $lxc_ip "cd /usr/openquake/engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
@@ -464,9 +464,10 @@ _pkgtest_innervm_run () {
 
         for demo_dir in \$(find ./risk  -mindepth 1 -maxdepth 1 -type d | sort); do
             cd \$demo_dir
-            echo \"Running demo in \$demo_dir\"
+            echo \"Running \$demo_dir/job_hazard.ini\"
             openquake --run-hazard job_hazard.ini -l info
             job_id=\$(openquake --list-hazard-calculations | tail -1 | awk '{print \$1}')
+            echo \"Running \$demo_dir/job_risk.ini\"
             openquake --run-risk job_risk.ini --exports xml --hazard-job-id \$job_id -l info
             cd -
         done"
