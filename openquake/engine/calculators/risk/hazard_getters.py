@@ -31,6 +31,8 @@ from openquake.risklib import scientific
 
 from openquake.engine import logs
 from openquake.engine.db import models
+from django.db import transaction
+
 
 BYTES_PER_FLOAT = numpy.zeros(1, dtype=float).nbytes
 
@@ -275,8 +277,26 @@ class GetterBuilder(object):
         max_dist = rc.best_maximum_distance * 1000  # km to meters
         cursor = models.getcursor('job_init')
 
-        # insert the associations for the current taxonomy
-        self.assoc_query = cursor.mogrify("""\
+        hazard_exposure = models.extract_from([self.hc.oqjob], 'exposuremodel')
+        if self.rc.exposure_model is hazard_exposure:
+            # no need of geospatial queries, just join on the location
+            self.assoc_query = cursor.mogrify("""\
+WITH assocs AS (
+  SELECT %s, exp.id, hsite.id
+  FROM riski.exposure_data AS exp
+  JOIN hzrdi.hazard_site AS hsite
+  ON exp.site::text = hsite.location::text
+  WHERE hsite.hazard_calculation_id = %s
+  AND exposure_model_id = %s AND taxonomy=%s
+  AND ST_COVERS(ST_GeographyFromText(%s), exp.site)
+)
+INSERT INTO riskr.asset_site (risk_job_id, asset_id, site_id)
+SELECT * FROM assocs""", (rc.oqjob.id, self.hc.id,
+                          rc.exposure_model.id, taxonomy,
+                          rc.region_constraint.wkt))
+        else:
+            # associate each asset to the closest hazard site
+            self.assoc_query = cursor.mogrify("""\
 WITH assocs AS (
   SELECT DISTINCT ON (exp.id) %s, exp.id, hsite.id
   FROM riski.exposure_data AS exp
@@ -291,7 +311,10 @@ INSERT INTO riskr.asset_site (job_id, asset_id, site_id)
 SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
                           rc.exposure_model.id, taxonomy,
                           rc.region_constraint.wkt))
-        cursor.execute(self.assoc_query)
+
+        # insert the associations for the current taxonomy
+        with transaction.commit_on_success(using='job_init'):
+            cursor.execute(self.assoc_query)
 
         # now read the associations just inserted
         self.asset_sites = models.AssetSite.objects.filter(
