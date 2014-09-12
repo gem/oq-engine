@@ -3675,6 +3675,14 @@ class Epsilon(djm.Model):
         """
         Insert the epsilon matrix associated to the given
         SES collection for each asset_sites association.
+
+        :param ses_coll:
+            a :class:`openquake.engine.db.models.SESCollection` instance
+        :param asset_sites:
+            a list of :class:`openquake.engine.db.models.AssetSite` instances
+        :param epsilon_matrix:
+            a numpy matrix with NxE elements, where `N` is the number of assets
+            and `E` the number of events for the given SESCollection
         """
         assert len(asset_sites) == len(epsilon_matrix), (
             len(asset_sites), len(epsilon_matrix))
