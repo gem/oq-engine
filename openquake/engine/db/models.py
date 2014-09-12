@@ -39,7 +39,6 @@ from django.db import connections
 from django.core.exceptions import ObjectDoesNotExist
 
 from django.contrib.gis.db import models as djm
-from shapely import wkt
 
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import source, geo, calc, correlation
@@ -120,9 +119,16 @@ INPUT_TYPE_CHOICES = (
     (u'structural_vulnerability_retrofitted',
      u'Structural Vulnerability Retrofitted'))
 
+
 VULNERABILITY_TYPE_CHOICES = [choice[0]
                               for choice in INPUT_TYPE_CHOICES
                               if choice[0].endswith('vulnerability')]
+
+RAISE_EXC = object()  # sentinel used in OqJob.get_param
+
+
+class MissingParameter(KeyError):
+    """Raised by OqJob.get_param when a parameter is missing in the database"""
 
 
 #: The output of HazardCalculation.gen_ruptures
@@ -325,27 +331,42 @@ class OqJob(djm.Model):
         """
         return self.hazard_calculation or self.risk_calculation
 
+    def get_param(self, name, missing=RAISE_EXC):
+        """
+        `job.get_param(name)` returns the value of the requested parameter
+        or raise a MissingParameter exception if the parameter does not
+        exist in the database.
+
+        `job.get_param(name, missing)` returns the value of the requested
+        parameter or the `missing` value if the parameter does not
+        exist in the database.
+
+        :param name: the name of the parameter
+        :param missing: value returned if the parameter is missing
+
+        NB: since job_param.value is NOT NULL, `.get_param(name)`
+        can return None only if the parameter is missing.
+        """
+        try:
+            return JobParam.objects.get(job=self, name=name).value
+        except ObjectDoesNotExist:
+            if missing is RAISE_EXC:
+                raise MissingParameter(name)
+            return missing
+
+    def save_params(self, params):
+        """
+        Save on the database table job_params the given parameters.
+
+        :param job: an :class:`OqJob` instance
+        :param params: a dictionary {name: string} of parameters
+        """
+        for name, value in params.iteritems():
+            JobParam.objects.create(job=self, name=name, value=repr(value))
+
     def __repr__(self):
         return '<%s %d, %s>' % (self.__class__.__name__,
                                 self.id, self.job_type)
-
-
-class Performance(djm.Model):
-    '''
-    Contains performance information about the operations performed by a task
-    launched by a job.
-    '''
-    oq_job = djm.ForeignKey('OqJob')
-    task_id = djm.TextField(null=True)
-    task = djm.TextField(null=True)
-    operation = djm.TextField(null=False)
-    start_time = djm.DateTimeField(editable=False)
-    duration = djm.FloatField(null=True)
-    pymemory = djm.IntegerField(null=True)
-    pgmemory = djm.IntegerField(null=True)
-
-    class Meta:
-        db_table = 'uiapi\".\"performance'
 
 
 class JobStats(djm.Model):
@@ -380,6 +401,36 @@ class JobInfo(djm.Model):
         db_table = 'uiapi\".\"job_info'
 
 
+class JobParam(djm.Model):
+    '''
+    The parameters of a job
+    '''
+    job = djm.ForeignKey('OqJob')
+    name = djm.TextField(null=False)
+    value = fields.LiteralField(null=False)
+
+    class Meta:
+        db_table = 'uiapi\".\"job_param'
+
+
+class Performance(djm.Model):
+    '''
+    Contains performance information about the operations performed by a task
+    launched by a job.
+    '''
+    oq_job = djm.ForeignKey('OqJob')
+    task_id = djm.TextField(null=True)
+    task = djm.TextField(null=True)
+    operation = djm.TextField(null=False)
+    start_time = djm.DateTimeField(editable=False)
+    duration = djm.FloatField(null=True)
+    pymemory = djm.IntegerField(null=True)
+    pgmemory = djm.IntegerField(null=True)
+
+    class Meta:
+        db_table = 'uiapi\".\"performance'
+
+
 class HazardCalculation(djm.Model):
     '''
     Parameters needed to run a Hazard job.
@@ -388,8 +439,7 @@ class HazardCalculation(djm.Model):
 
     @classmethod
     def create(cls, **kw):
-        _prep_geometry(kw)
-        return cls(**kw)
+        return cls(**_prep_geometry(kw))
 
     # Contains the absolute path to the directory containing the job config
     # file.
@@ -521,22 +571,6 @@ class HazardCalculation(djm.Model):
         null=True,
         blank=True,
     )
-    GROUND_MOTION_CORRELATION_MODELS = (
-        (u'JB2009', u'Jayaram-Baker 2009'),
-    )
-    ground_motion_correlation_model = djm.TextField(
-        help_text=('Name of the ground correlation model to use in the'
-                   ' calculation'),
-        null=True,
-        blank=True,
-        choices=GROUND_MOTION_CORRELATION_MODELS,
-    )
-    ground_motion_correlation_params = fields.DictField(
-        help_text=('Parameters specific to the chosen ground motion'
-                   ' correlation model'),
-        null=True,
-        blank=True,
-    )
 
     ###################################
     # Disaggregation Calculator params:
@@ -657,24 +691,6 @@ class HazardCalculation(djm.Model):
         Get the site model filename for this calculation
         """
         return self.inputs.get('site_model')
-
-    def get_correl_model(self):
-        """
-        Helper function for constructing the appropriate correlation model.
-
-        :returns:
-            A correlation object. See :mod:`openquake.hazardlib.correlation`
-            for more info.
-        """
-        correl_model_cls = getattr(
-            correlation,
-            '%sCorrelationModel' % self.ground_motion_correlation_model,
-            None)
-        if correl_model_cls is None:
-            # There's no correlation model for this calculation.
-            return None
-
-        return correl_model_cls(**self.ground_motion_correlation_params)
 
     ## TODO: this could be implemented with a view, now that there is
     ## a site table
@@ -917,8 +933,7 @@ class RiskCalculation(djm.Model):
     '''
     @classmethod
     def create(cls, **kw):
-        _prep_geometry(kw)
-        return cls(**kw)
+        return cls(**_prep_geometry(kw))
 
     #: Default maximum asset-hazard distance in km
     DEFAULT_MAXIMUM_DISTANCE = 5
@@ -936,11 +951,11 @@ class RiskCalculation(djm.Model):
     description = djm.TextField(default='', blank=True)
 
     CALC_MODE_CHOICES = (
-        (u'classical', u'Classical PSHA'),
+        (u'classical_risk', u'Classical PSHA'),
         (u'classical_bcr', u'Classical BCR'),
-        (u'event_based', u'Probabilistic Event-Based'),
+        (u'event_based_risk', u'Probabilistic Event-Based'),
         (u'event_based_fr', u'Event-Based From Ruptures'),
-        (u'scenario', u'Scenario'),
+        (u'scenario_risk', u'Scenario'),
         (u'scenario_damage', u'Scenario Damage'),
         (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
     )
@@ -1075,15 +1090,16 @@ class RiskCalculation(djm.Model):
         if self.hazard_output:
             return [self.hazard_output]
         elif self.hazard_calculation:
-            if self.calculation_mode in ["classical", "classical_bcr"]:
+            if self.calculation_mode in ["classical_risk", "classical_bcr"]:
                 filters = dict(output_type='hazard_curve_multi',
                                hazard_curve__lt_realization__isnull=False)
-            elif self.calculation_mode in ["event_based", "event_based_bcr"]:
+            elif self.calculation_mode in [
+                    "event_based_risk", "event_based_bcr"]:
                 filters = dict(
                     output_type='gmf', gmf__lt_realization__isnull=False)
             elif self.calculation_mode == "event_based_fr":
                 filters = dict(output_type='ses')
-            elif self.calculation_mode in ['scenario', 'scenario_damage']:
+            elif self.calculation_mode in ['scenario_risk', 'scenario_damage']:
                 filters = dict(output_type='gmf_scenario')
             else:
                 raise NotImplementedError
@@ -1169,56 +1185,28 @@ def _prep_geometry(kwargs):
     so that it can save to the database in a geometry field.
 
     :param dict kwargs:
-        `dict` representing some keyword arguments, which may contain geometry
-        definitions in some sort of string or list form
-
+        keyword arguments, which may contain geometry definitions in
+        a list form
     :returns:
-        The modified ``kwargs``, with WKT to replace the input geometry
-        definitions.
+        a dictionary with the geometries converted into WKT
     """
+    kw = kwargs.copy()
     # If geometries were specified as string lists of coords,
     # convert them to WKT before doing anything else.
     for field, wkt_fmt in (('sites', 'MULTIPOINT(%s)'),
                            ('sites_disagg', 'MULTIPOINT(%s)'),
                            ('region', 'POLYGON((%s))'),
                            ('region_constraint', 'POLYGON((%s))')):
-        if field in kwargs:
-            geom = kwargs[field]
-            if geom is None:
-                continue
-            try:
-                wkt.loads(geom)
-                # if this succeeds, we know the wkt is at least valid
-                # we don't know the geometry type though; we'll leave that
-                # to subsequent validation
-            except wkt.ReadingError:
-                try:
-                    coords = [
-                        float(x) for x in fields.ARRAY_RE.split(geom)
-                    ]
-                except ValueError:
-                    raise ValueError(
-                        'Could not coerce `str` to a list of `float`s'
-                    )
-                else:
-                    if not len(coords) % 2 == 0:
-                        raise ValueError(
-                            'Got an odd number of coordinate values'
-                        )
-                    else:
-                        # Construct WKT from the coords
-                        # NOTE: ordering is expected to be lon,lat
-                        points = ['%s %s' % (coords[i], coords[i + 1])
-                                  for i in xrange(0, len(coords), 2)]
-                        # if this is the region, close the linear polygon
-                        # ring by appending the first coord to the end
-                        if field in ('region', 'region_constraint'):
-                            points.append(points[0])
-                        # update the field
-                        kwargs[field] = wkt_fmt % ', '.join(points)
-
-    # return the (possibly) modified kwargs
-    return kwargs
+        coords = kwargs.get(field)
+        if coords:  # construct WKT from the coords
+            points = ['%s %s' % lon_lat for lon_lat in coords]
+            # if this is the region, close the linear polygon
+            # ring by appending the first coord to the end
+            if field in ('region', 'region_constraint'):
+                points.append(points[0])
+            # update the field
+            kw[field] = wkt_fmt % ', '.join(points)
+    return kw
 
 
 class Imt(djm.Model):
@@ -1988,6 +1976,27 @@ class SESRupture(djm.Model):
 _Point = collections.namedtuple('_Point', 'x y')
 
 
+def get_correl_model(job):
+    """
+    Helper function for constructing the appropriate correlation model.
+
+    :returns:
+        A correlation object. See :mod:`openquake.hazardlib.correlation`
+        for more info.
+    """
+    correl_model_name = job.get_param('ground_motion_correlation_model', None)
+    if correl_model_name is None:
+        # There's no correlation model for this calculation.
+        return None
+    correl_model_cls = getattr(
+        correlation, '%sCorrelationModel' % correl_model_name, None)
+    if correl_model_cls is None:
+        # There's no correlation model for this calculation.
+        return None
+    gmc_params = job.get_param('ground_motion_correlation_params', None)
+    return correl_model_cls(**gmc_params)
+
+
 class Gmf(djm.Model):
     """
     A collection of ground motion field (GMF) sets for a given logic tree
@@ -2003,8 +2012,9 @@ class Gmf(djm.Model):
         """
         Yields triples (ses_rupture, sites, gmf_dict)
         """
-        hc = self.output.oq_job.hazard_calculation
-        correl_model = hc.get_correl_model()
+        job = self.output.oq_job
+        hc = job.hazard_calculation
+        correl_model = get_correl_model(job)
         gsims = self.lt_realization.get_gsim_instances()
         assert gsims, 'No GSIMs found for realization %d!' % \
             self.lt_realization.id  # look into hzdr.assoc_lt_rlz_trt_model
@@ -3721,6 +3731,14 @@ class Epsilon(djm.Model):
         """
         Insert the epsilon matrix associated to the given
         SES collection for each asset_sites association.
+
+        :param ses_coll:
+            a :class:`openquake.engine.db.models.SESCollection` instance
+        :param asset_sites:
+            a list of :class:`openquake.engine.db.models.AssetSite` instances
+        :param epsilon_matrix:
+            a numpy matrix with NxE elements, where `N` is the number of assets
+            and `E` the number of events for the given SESCollection
         """
         assert len(asset_sites) == len(epsilon_matrix), (
             len(asset_sites), len(epsilon_matrix))

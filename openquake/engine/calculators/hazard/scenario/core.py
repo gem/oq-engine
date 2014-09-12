@@ -50,12 +50,13 @@ def gmfs(job_id, ses_ruptures, sitecol, gmf_id):
     :param sitecol: a `SiteCollection` instance
     :param int gmf_id: the ID of a `Gmf` instance
     """
-    hc = models.HazardCalculation.objects.get(oqjob=job_id)
+    job = models.OqJob.objects.get(pk=job_id)
+    hc = job.hazard_calculation
     # distinct is here to make sure that IMTs such as
     # SA(0.8) and SA(0.80) are considered the same
     imts = distinct(from_string(x) for x in hc.intensity_measure_types)
     gsim = AVAILABLE_GSIMS[hc.gsim]()  # instantiate the GSIM class
-    correlation_model = hc.get_correl_model()
+    correlation_model = models.get_correl_model(job)
 
     cache = collections.defaultdict(list)  # {site_id, imt -> gmvs}
     inserter = writer.CacheInserter(models.GmfData, 1000)

@@ -35,17 +35,15 @@ from openquake.engine.tests.utils import helpers
 
 from openquake.engine.db import models
 from openquake.engine.calculators import post_processing
-from openquake.engine.calculators.hazard.classical import (
+from openquake.engine.calculators.hazard import (
     post_processing as post_proc)
-from openquake.engine.calculators.hazard.classical.post_processing import (
-    hazard_curves_to_hazard_map
-)
+
 
 aaae = numpy.testing.assert_array_almost_equal
 
 
 # package prefix used for mock.patching
-MOCK_PREFIX = "openquake.engine.calculators.hazard.classical.post_processing"
+MOCK_PREFIX = "openquake.engine.calculators.hazard.post_processing"
 
 
 class HazardMapsTestCase(unittest.TestCase):
@@ -166,8 +164,8 @@ class HazardMapTaskFuncTestCase(unittest.TestCase):
             compute.return_value = self.MOCK_HAZARD_MAP
 
             for curve in lt_haz_curves:
-                hazard_curves_to_hazard_map(
-                    self.job.id, curve.id, self.TEST_POES)
+                post_proc.hazard_curves_to_hazard_map.task_func(
+                    self.job.id, [curve], self.TEST_POES)
 
                 lt_rlz = curve.lt_realization
                 # There should be two maps: 1 for each PoE
@@ -188,8 +186,8 @@ class HazardMapTaskFuncTestCase(unittest.TestCase):
             compute.return_value = self.MOCK_HAZARD_MAP
 
             for curve in mean_haz_curves:
-                hazard_curves_to_hazard_map(
-                    self.job.id, curve.id, self.TEST_POES)
+                post_proc.hazard_curves_to_hazard_map.task_func(
+                    self.job.id, [curve], self.TEST_POES)
 
                 hm_0_1, hm_0_02 = models.HazardMap.objects.filter(
                     output__oq_job=self.job,
@@ -210,8 +208,8 @@ class HazardMapTaskFuncTestCase(unittest.TestCase):
                     quantile=quantile)
 
                 for curve in quantile_haz_curves:
-                    hazard_curves_to_hazard_map(
-                        self.job.id, curve.id, self.TEST_POES)
+                    post_proc.hazard_curves_to_hazard_map.task_func(
+                        self.job.id, [curve], self.TEST_POES)
 
                     hm_0_1, hm_0_02 = models.HazardMap.objects.filter(
                         output__oq_job=self.job,
