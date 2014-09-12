@@ -22,7 +22,7 @@ from openquake.risklib import workflows
 
 from openquake.engine.calculators.risk import (
     hazard_getters, writers, validation)
-from openquake.engine.calculators.risk.classical import core as classical
+from openquake.engine.calculators.risk.classical_risk import core as classical
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.utils import tasks
 
