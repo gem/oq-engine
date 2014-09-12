@@ -37,7 +37,7 @@ from openquake.engine.utils import tasks
 from openquake.engine.performance import EnginePerformanceMonitor
 
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.site import FilteredSiteCollection, SiteCollection
+from openquake.hazardlib.site import FilteredSiteCollection
 from openquake.hazardlib.calc.gmf import GmfComputer
 
 from openquake.commonlib.general import split_in_blocks
@@ -47,7 +47,7 @@ from openquake.risklib import scientific
 
 from openquake.engine import logs
 
-from openquake.engine.calculators.risk.event_based import core
+from openquake.engine.calculators.risk.event_based_risk import core
 from openquake.engine.calculators.risk import writers
 
 
@@ -158,7 +158,7 @@ class EventBasedFRRiskCalculator(core.EventBasedRiskCalculator):
         Inherited from core.EventBasedRiskCalculator.pre_execute.
         Enforces no correlation, both on GMFs and assets.
         """
-        correl_model = self.hc.get_correl_model()
+        correl_model = models.get_correl_model(self.job)
         assert correl_model is None, correl_model
         assert not self.rc.asset_correlation, self.rc.asset_correlation
         core.EventBasedRiskCalculator.pre_execute(self)
