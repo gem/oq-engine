@@ -94,6 +94,14 @@ def set_up_arg_parser():
         '--upgrade-db', action='store_true',
         help='Upgrade the openquake database',
     )
+    general_grp.add_argument(
+        '--version-db', action='store_true',
+        help='Show the current version of the openquake database',
+    )
+    general_grp.add_argument(
+        '--what-if-I-upgrade', action='store_true',
+        help='Show what will happen to the openquake database if you upgrade',
+    )
 
     hazard_grp = parser.add_argument_group('Hazard')
     hazard_grp.add_argument(
@@ -432,7 +440,23 @@ def main():
         logging.basicConfig(level=logging.INFO)
         logs.set_level('info')
         conn = models.getcursor('admin').connection
-        upgrade_manager.upgrade_db(conn, 'openquake.engine.db.schema.upgrades')
+        msg = upgrade_manager.what_if_I_upgrade(
+            conn, extract_scripts='read_scripts')
+        print msg
+        if msg.startswith('Your database is already updated'):
+            pass
+        elif args.yes or confirm('Proceed? (y/N) '):
+            upgrade_manager.upgrade_db(conn)
+        sys.exit(0)
+
+    if args.version_db:
+        conn = models.getcursor('admin').connection
+        print upgrade_manager.version_db(conn)
+        sys.exit(0)
+
+    if args.what_if_I_upgrade:
+        conn = models.getcursor('admin').connection
+        print upgrade_manager.what_if_I_upgrade(conn)
         sys.exit(0)
 
     if args.list_inputs:
