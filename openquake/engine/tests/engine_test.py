@@ -13,11 +13,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-
+import sys
 import getpass
 import subprocess
 import unittest
 import warnings
+from StringIO import StringIO
 
 from openquake.engine.db import models
 from django.core import exceptions
@@ -88,7 +89,7 @@ class CreateHazardCalculationTestCase(unittest.TestCase):
         self.params = {
             'base_path': 'path/to/job.ini',
             'calculation_mode': 'classical',
-            'region': '1 1 2 2 3 3',
+            'region': [(1, 1), (2, 2), (3, 3)],
             'width_of_mfd_bin': '1',
             'rupture_mesh_spacing': '1',
             'area_source_discretization': '2',
@@ -114,26 +115,6 @@ class CreateHazardCalculationTestCase(unittest.TestCase):
         self.assertEqual(hc.truncation_level, 0.0)
         self.assertEqual(hc.maximum_distance, 200.0)
 
-    def test_create_hazard_calculation_warns(self):
-        # If unknown parameters are specified in the config file, we expect
-        # `create_hazard_calculation` to raise warnings and ignore those
-        # parameters.
-
-        # Add some random unknown params:
-        self.params['blargle'] = 'spork'
-        self.params['do_science'] = 'true'
-
-        expected_warnings = [
-            "Unknown parameter 'blargle'. Ignoring.",
-            "Unknown parameter 'do_science'. Ignoring.",
-        ]
-
-        with warnings.catch_warnings(record=True) as w:
-            engine.create_calculation(
-                models.HazardCalculation, self.params)
-        actual_warnings = [msg.message.message for msg in w]
-        self.assertEqual(sorted(expected_warnings), sorted(actual_warnings))
-
 
 class CreateRiskCalculationTestCase(unittest.TestCase):
 
@@ -158,11 +139,12 @@ class CreateRiskCalculationTestCase(unittest.TestCase):
             'hazard_output_id': hazard_output.output.id,
             'base_path': 'path/to/job.ini',
             'export_dir': '/tmp/xxx',
-            'calculation_mode': 'classical',
+            'calculation_mode': 'classical_risk',
             # just some sample params
             'lrem_steps_per_interval': 5,
             'conditional_loss_poes': '0.01, 0.02, 0.05',
-            'region_constraint': '-0.5 0.5, 0.5 0.5, 0.5 -0.5, -0.5, -0.5',
+            'region_constraint': [(-0.5, 0.5), (0.5, 0.5), (0.5, -0.5),
+                                  (-0.5, -0.5)],
         }
 
         rc = engine.create_calculation(models.RiskCalculation, params)
@@ -170,7 +152,7 @@ class CreateRiskCalculationTestCase(unittest.TestCase):
         # Normalize/clean fields by fetching a fresh copy from the db.
         rc = models.RiskCalculation.objects.get(id=rc.id)
 
-        self.assertEqual(rc.calculation_mode, 'classical')
+        self.assertEqual(rc.calculation_mode, 'classical_risk')
         self.assertEqual(rc.lrem_steps_per_interval, 5)
         self.assertEqual(rc.conditional_loss_poes, [0.01, 0.02, 0.05])
         self.assertEqual(
@@ -343,3 +325,62 @@ class DeleteRiskCalcTestCase(unittest.TestCase):
         risk_calc = risk_job.risk_calculation
 
         self.assertRaises(RuntimeError, engine.del_risk_calc, risk_calc.id)
+
+
+class FakeOutput(object):
+    def __init__(self, id, output_type, display_name):
+        self.id = id
+        self.output_type = output_type
+        self.display_name = display_name
+
+    def get_output_type_display(self):
+        return self.display_name + str(self.id)
+
+
+class PrintSummaryTestCase(unittest.TestCase):
+    outputs = [FakeOutput(i, 'gmf', 'gmf') for i in range(1, 12)]
+
+    def print_outputs_summary(self, full):
+        orig_stdout = sys.stdout
+        sys.stdout = StringIO()
+        try:
+            engine.print_outputs_summary(self.outputs, full)
+            got = sys.stdout.getvalue()
+        finally:
+            sys.stdout = orig_stdout
+        return got
+
+    def test_print_outputs_summary_full(self):
+        self.assertEqual(self.print_outputs_summary(full=True), '''\
+  id | output_type | name
+   1 | gmf1 | gmf
+   2 | gmf2 | gmf
+   3 | gmf3 | gmf
+   4 | gmf4 | gmf
+   5 | gmf5 | gmf
+   6 | gmf6 | gmf
+   7 | gmf7 | gmf
+   8 | gmf8 | gmf
+   9 | gmf9 | gmf
+  10 | gmf10 | gmf
+  11 | gmf11 | gmf
+''')
+
+    def test_print_outputs_summary_short(self):
+        self.assertEqual(
+            self.print_outputs_summary(full=False), '''\
+  id | output_type | name
+   1 | gmf1 | gmf
+   2 | gmf2 | gmf
+   3 | gmf3 | gmf
+   4 | gmf4 | gmf
+   5 | gmf5 | gmf
+   6 | gmf6 | gmf
+   7 | gmf7 | gmf
+   8 | gmf8 | gmf
+   9 | gmf9 | gmf
+  10 | gmf10 | gmf
+ ... | gmf11 | 1 additional output(s)
+Some outputs where not shown. You can see the full list with the commands
+`openquake --list-hazard-outputs` or `openquake --list-risk-outputs`
+''')

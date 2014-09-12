@@ -47,13 +47,13 @@ from openquake.engine.calculators.post_processing import quantile_curve
 from openquake.engine.calculators.post_processing import (
     weighted_quantile_curve
 )
+from openquake.engine.calculators.hazard.post_processing import (
+    hazard_curves_to_hazard_map, do_uhs_post_proc)
+
 from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.utils import tasks
-
-#: Maximum number of hazard curves to cache, for selects or inserts
-CURVE_CACHE_SIZE = 100000
 
 QUANTILE_PARAM_NAME = "QUANTILE_LEVELS"
 POES_PARAM_NAME = "POES"
@@ -62,6 +62,9 @@ POES_PARAM_NAME = "POES"
 DILATION_ONE_METER = 1e-5
  # the following is quite arbitrary, it gives output weights that I like (MS)
 NORMALIZATION_FACTOR = 1E-4
+# the following is also arbitrary, it is used to decide when to parallelize
+# the filtering (MS)
+LOTS_OF_SOURCES_SITES = 1E4
 
 
 class InputWeightLimit(Exception):
@@ -198,6 +201,7 @@ class BaseHazardCalculator(base.Calculator):
         self.job.is_running = True
         self.job.save()
         num_models = len(self.source_collector)
+        num_sites = len(self.hc.site_collection)
         for i, trt_model_id in enumerate(sorted(self.source_collector), 1):
             trt_model = models.TrtModel.objects.get(pk=trt_model_id)
             sc = self.source_collector[trt_model_id]
@@ -209,13 +213,13 @@ class BaseHazardCalculator(base.Calculator):
                 'sm_lt_path=%s, TRT=%s, model=%s', i, num_models,
                 len(sc.sources), sm_lt_path, trt_model.tectonic_region_type,
                 trt_model.lt_model.sm_name)
-            if len(sc.sources) > self.concurrent_tasks:
+            if len(sc.sources) * num_sites > LOTS_OF_SOURCES_SITES:
                 # filter in parallel
                 sc.sources = tasks.apply_reduce(
                     filter_and_split_sources,
                     (self.job.id, sc.sources, self.hc.site_collection),
-                    list.__add__, [], self.concurrent_tasks)
-            else:  # few sources
+                    list.__add__, [])
+            else:  # few sources and sites
                 # filter sequentially on a single core
                 sc.sources = filter_and_split_sources.task_func(
                     self.job.id, sc.sources, self.hc.site_collection)
@@ -664,57 +668,73 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
         points = self.hc.points_to_compute()
         sorted_imts = sorted(imtls)
         curves_by_imt = dict((imt, []) for imt in sorted_imts)
+        individual_curves = self.job.get_param(
+            'individual_curves', missing=True)
 
         for rlz in self._get_realizations():
-            # create a multi-imt curve
-            multicurve = models.Output.objects.create_output(
-                self.job, "hc-multi-imt-rlz-%s" % rlz.id,
-                "hazard_curve_multi")
-            models.HazardCurve.objects.create(
-                output=multicurve, lt_realization=rlz,
-                investigation_time=self.hc.investigation_time)
+            if individual_curves:
+                # create a multi-imt curve
+                multicurve = models.Output.objects.create_output(
+                    self.job, "hc-multi-imt-rlz-%s" % rlz.id,
+                    "hazard_curve_multi")
+                models.HazardCurve.objects.create(
+                    output=multicurve, lt_realization=rlz,
+                    investigation_time=self.hc.investigation_time)
 
             with self.monitor('building curves per realization'):
                 imt_curves = zip(
                     sorted_imts, models.build_curves(rlz, self.curves))
             for imt, curves in imt_curves:
+                if individual_curves:
+                    self.save_curves_for_rlz_imt(
+                        rlz, imt, imtls[imt], points, curves)
                 curves_by_imt[imt].append(curves)
-
-                # create a new `HazardCurve` 'container' record for each
-                # realization for each intensity measure type
-                hc_im_type, sa_period, sa_damping = from_string(imt)
-
-                # save output
-                hco = models.Output.objects.create(
-                    oq_job=self.job,
-                    display_name="Hazard Curve rlz-%s-%s" % (rlz.id, imt),
-                    output_type='hazard_curve',
-                )
-
-                # save hazard_curve
-                haz_curve = models.HazardCurve.objects.create(
-                    output=hco,
-                    lt_realization=rlz,
-                    investigation_time=self.hc.investigation_time,
-                    imt=hc_im_type,
-                    imls=imtls[imt],
-                    sa_period=sa_period,
-                    sa_damping=sa_damping,
-                )
-
-                # save hazard_curve_data
-                logs.LOG.info('saving %d hazard curves for %s, imt=%s',
-                              len(points), hco, imt)
-                writer.CacheInserter.saveall([models.HazardCurveData(
-                    hazard_curve=haz_curve,
-                    poes=list(poes),
-                    location='POINT(%s %s)' % (p.longitude, p.latitude),
-                    weight=rlz.weight)
-                    for p, poes in zip(points, curves)])
 
         self.curves = {}  # save memory for the post-processing phase
         if self.hc.mean_hazard_curves or self.hc.quantile_hazard_curves:
             self.curves_by_imt = curves_by_imt
+
+    def save_curves_for_rlz_imt(self, rlz, imt, imls, points, curves):
+        """
+        Save the curves corresponding to a given realization and IMT.
+
+        :param rlz: a LtRealization instance
+        :param imt: an IMT string
+        :param imls: the intensity measure levels for the given IMT
+        :param points: the points associated to the curves
+        :param curves: the curves
+        """
+        # create a new `HazardCurve` 'container' record for each
+        # realization for each intensity measure type
+        hc_im_type, sa_period, sa_damping = from_string(imt)
+
+        # save output
+        hco = models.Output.objects.create(
+            oq_job=self.job,
+            display_name="Hazard Curve rlz-%s-%s" % (rlz.id, imt),
+            output_type='hazard_curve',
+        )
+
+        # save hazard_curve
+        haz_curve = models.HazardCurve.objects.create(
+            output=hco,
+            lt_realization=rlz,
+            investigation_time=self.hc.investigation_time,
+            imt=hc_im_type,
+            imls=imls,
+            sa_period=sa_period,
+            sa_damping=sa_damping,
+        )
+
+        # save hazard_curve_data
+        logs.LOG.info('saving %d hazard curves for %s, imt=%s',
+                      len(points), hco, imt)
+        writer.CacheInserter.saveall([models.HazardCurveData(
+            hazard_curve=haz_curve,
+            poes=list(poes),
+            location='POINT(%s %s)' % (p.longitude, p.latitude),
+            weight=rlz.weight)
+            for p, poes in zip(points, curves)])
 
     @EnginePerformanceMonitor.monitor
     def do_aggregate_post_proc(self):
@@ -810,42 +830,72 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
             # NB: different IMTs can have different num_levels
             all_curves_for_imt = numpy.array(self.curves_by_imt[imt])
             del self.curves_by_imt[imt]  # save memory
-            with transaction.commit_on_success(using='job_init'):
-                inserter = writer.CacheInserter(
-                    models.HazardCurveData, CURVE_CACHE_SIZE)
 
-                # curve_poes below is an array num_rlzs * num_levels
-                for i, site in enumerate(self.hc.site_collection):
-                    wkt = site.location.wkt2d
-                    curve_poes = numpy.array(
-                        [c_by_rlz[i] for c_by_rlz in all_curves_for_imt])
-                    # do means and quantiles
-                    # quantiles first:
-                    if self.hc.quantile_hazard_curves:
-                        for quantile in self.hc.quantile_hazard_curves:
-                            if self.hc.number_of_logic_tree_samples == 0:
-                                # explicitly weighted quantiles
-                                q_curve = weighted_quantile_curve(
-                                    curve_poes, weights, quantile)
-                            else:
-                                # implicitly weighted quantiles
-                                q_curve = quantile_curve(
-                                    curve_poes, quantile)
-                            inserter.add(
-                                models.HazardCurveData(
-                                    hazard_curve_id=(
-                                        container_ids['q%s' % quantile]),
-                                    poes=q_curve.tolist(),
-                                    location=wkt)
-                            )
+            inserter = writer.CacheInserter(
+                models.HazardCurveData, max_cache_size=10000)
 
-                    # then means
-                    if self.hc.mean_hazard_curves:
-                        m_curve = mean_curve(curve_poes, weights=weights)
+            # curve_poes below is an array num_rlzs * num_levels
+            for i, site in enumerate(self.hc.site_collection):
+                wkt = site.location.wkt2d
+                curve_poes = numpy.array(
+                    [c_by_rlz[i] for c_by_rlz in all_curves_for_imt])
+                # do means and quantiles
+                # quantiles first:
+                if self.hc.quantile_hazard_curves:
+                    for quantile in self.hc.quantile_hazard_curves:
+                        if self.hc.number_of_logic_tree_samples == 0:
+                            # explicitly weighted quantiles
+                            q_curve = weighted_quantile_curve(
+                                curve_poes, weights, quantile)
+                        else:
+                            # implicitly weighted quantiles
+                            q_curve = quantile_curve(
+                                curve_poes, quantile)
                         inserter.add(
                             models.HazardCurveData(
-                                hazard_curve_id=container_ids['mean'],
-                                poes=m_curve.tolist(),
+                                hazard_curve_id=(
+                                    container_ids['q%s' % quantile]),
+                                poes=q_curve.tolist(),
                                 location=wkt)
                         )
-                inserter.flush()
+
+                # then means
+                if self.hc.mean_hazard_curves:
+                    m_curve = mean_curve(curve_poes, weights=weights)
+                    inserter.add(
+                        models.HazardCurveData(
+                            hazard_curve_id=container_ids['mean'],
+                            poes=m_curve.tolist(),
+                            location=wkt)
+                    )
+            inserter.flush()
+
+    def post_process(self):
+        """
+        Optionally generates aggregate curves, hazard maps and
+        uniform_hazard_spectra.
+        """
+        # means/quantiles:
+        if self.hc.mean_hazard_curves or self.hc.quantile_hazard_curves:
+            self.do_aggregate_post_proc()
+
+        # hazard maps:
+        # required for computing UHS
+        # if `hazard_maps` is false but `uniform_hazard_spectra` is true,
+        # just don't export the maps
+        if self.hc.hazard_maps or self.hc.uniform_hazard_spectra:
+            with self.monitor('generating hazard maps'):
+                hazard_curves = models.HazardCurve.objects.filter(
+                    output__oq_job=self.job, imt__isnull=False)
+                tasks.apply_reduce(
+                    hazard_curves_to_hazard_map,
+                    (self.job.id, hazard_curves, self.hc.poes))
+
+        if self.hc.uniform_hazard_spectra:
+            individual_curves = self.job.get_param(
+                'individual_curves', missing=True)
+            if individual_curves is False:
+                logs.LOG.warn('The parameter `individual_curves` is false, '
+                              'cannot compute the UHS curves')
+            else:
+                do_uhs_post_proc(self.job)
