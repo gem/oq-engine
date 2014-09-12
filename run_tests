@@ -8,7 +8,7 @@ error=0
 xmllint --noout --schema openquake/nrmllib/schema/nrml.xsd `find ./examples -name "*.xml"`
 validation_retcode=$?
 
-python $(which nosetests) --with-doctest "$@"
+python $(which nosetests) -v --with-doctest "$@"
 nosetests_ret_code=$?
 
 if [ "$validation_retcode" -ne "0" ]; then

@@ -56,11 +56,17 @@ The subnodes can be retrieved with the dot notation:
 >>> root.a
 <a {} A1 >
 
+The value of a node can be extracted with the `~` operator:
+
+>>> ~root.a
+'A1'
+
 If there are multiple subnodes with the same name
 
 >>> root.append(Node('a', {}, 'A2'))  # add another 'a' node
 
 the dot notation will retrieve the first node.
+
 It is possible to retrieve the other nodes from the ordinal
 index:
 
@@ -192,8 +198,10 @@ understand the types defined in the XSD schema.
 """
 
 import sys
+import pprint as pp
 import cStringIO
 import ConfigParser
+
 from openquake import nrmllib
 from openquake.nrmllib.writers import StreamingXMLWriter
 try:
@@ -271,7 +279,7 @@ def _displayattrs(attrib, expandattrs):
 def _display(node, indent, expandattrs, expandvals, output):
     """Core function to display a Node object"""
     attrs = _displayattrs(node.attrib, expandattrs)
-    val = ' %s' % node.text if expandvals and node.text else ''
+    val = ' %s' % str(node.text) if expandvals and node.text else ''
     output.write(indent + node.tag + attrs + val + '\n')
     for sub_node in node:
         _display(sub_node, indent + '  ', expandattrs, expandvals, output)
@@ -302,9 +310,10 @@ class Node(object):
     is that subnodes can be lazily generated and that they can be accessed
     with the dot notation.
     """
-    __slots__ = ('tag', 'attrib', 'text', 'nodes')
+    __slots__ = ('tag', 'attrib', 'text', 'nodes', 'lineno')
 
-    def __init__(self, fulltag, attrib=None, text=None, nodes=None):
+    def __init__(self, fulltag, attrib=None, text=None,
+                 nodes=None, lineno=None):
         """
         :param str tag: the Node name
         :param dict attrib: the Node attributes
@@ -315,11 +324,13 @@ class Node(object):
         self.attrib = {} if attrib is None else attrib
         self.text = text
         self.nodes = [] if nodes is None else nodes
+        self.lineno = lineno
         if self.nodes and self.text is not None:
             raise ValueError(
                 'A branch node cannot have a value, got %r' % self.text)
 
-    def strip_fqtag(self, tag):
+    @staticmethod
+    def strip_fqtag(tag):
         """
         Get the short representation of a fully qualified tag
 
@@ -402,6 +413,14 @@ class Node(object):
         else:  # assume an integer or a slice
             del self.nodes[i]
 
+    def __invert__(self):
+        """
+        Return the value of a leaf; raise a TypeError if the node is not a leaf
+        """
+        if self:
+            raise TypeError('%s is a composite node, not a leaf' % self)
+        return self.text
+
     def __len__(self):
         """Return the number of subnodes"""
         return len(self.nodes)
@@ -431,7 +450,74 @@ class NodeNoStrip(Node):
         return s
 
 
-def node_from_dict(dic, nodecls=Node):
+class MetaLiteralNode(type):
+    """
+    Metaclass adding __slots__ and extending the docstring with a note
+    about the known validators. Moreover it checks for the attribute
+    `.validators`.
+    """
+    def __new__(meta, name, bases, dic):
+        doc = "Known validators:\n%s" % '\n'.join(
+            '%s: %s' % (n, v.__name__)
+            for n, v in dic['validators'].iteritems())
+        dic['__doc__'] = dic.get('__doc__', '') + doc
+        dic['__slots__'] = dic.get('__slots__', [])
+        return super(MetaLiteralNode, meta).__new__(meta, name, bases, dic)
+
+
+class LiteralNode(Node):
+    """
+    Subclasses should define a non-empty dictionary of validators.
+    """
+    validators = {}  # to be overridden in subclasses
+    __metaclass__ = MetaLiteralNode
+
+    def __init__(self, fulltag, attrib=None, text=None,
+                 nodes=None, lineno=None):
+        validators = self.__class__.validators
+        tag = self.strip_fqtag(fulltag)
+        if tag in validators:
+            # try to cast the node, if the tag is known
+            assert not nodes, 'You cannot cast a composite node: %s' % nodes
+            try:
+                text = validators[tag](text, **attrib)
+                attrib = {}
+            except Exception as exc:
+                raise ValueError('Could not convert %s->%s: %s, line %s' %
+                                 (tag, validators[tag].__name__, exc, lineno))
+        elif attrib:
+            # cast the attributes
+            for n, v in attrib.iteritems():
+                if n in validators:
+                    try:
+                        attrib[n] = validators[n](v)
+                    except Exception as exc:
+                        raise ValueError(
+                            'Could not convert %s->%s: %s, line %s' %
+                            (n, validators[n].__name__, exc, lineno))
+        else:
+            attrib = {}
+        super(LiteralNode, self).__init__(tag, attrib, text, nodes, lineno)
+
+
+def to_literal(self):
+    """
+    Convert the node into a literal Python object
+    """
+    if not self.nodes:
+        return (self.tag, self.attrib, self.text, [])
+    else:
+        return (self.tag, self.attrib, self.text, map(to_literal, self.nodes))
+
+
+def pprint(self, stream=None, indent=1, width=80, depth=None):
+    """
+    Pretty print the underlying literal Python object
+    """
+    pp.pprint(to_literal(self), stream, indent, width, depth)
+
+
+def node_from_dict(dic, nodefactory=Node):
     """
     Convert a (nested) dictionary with attributes tag, attrib, text, nodes
     into a Node object.
@@ -441,8 +527,8 @@ def node_from_dict(dic, nodecls=Node):
     attrib = dic.get('attrib', {})
     nodes = dic.get('nodes', [])
     if not nodes:
-        return nodecls(tag, attrib, text)
-    return nodecls(tag, attrib, nodes=map(node_from_dict, nodes))
+        return nodefactory(tag, attrib, text)
+    return nodefactory(tag, attrib, nodes=map(node_from_dict, nodes))
 
 
 def node_to_dict(node):
@@ -458,15 +544,18 @@ def node_to_dict(node):
     return dic
 
 
-def node_from_elem(elem, nodecls=Node):
+def node_from_elem(elem, nodefactory=Node):
     """
     Convert (recursively) an ElementTree object into a Node object.
     """
     children = list(elem)
     if not children:
-        return nodecls(elem.tag, dict(elem.attrib), elem.text)
-    return nodecls(elem.tag, dict(elem.attrib),
-                   nodes=[node_from_elem(ch, nodecls) for ch in children])
+        return nodefactory(elem.tag, dict(elem.attrib), elem.text,
+                           lineno=elem.sourceline)
+    return nodefactory(elem.tag,
+                       dict(elem.attrib),
+                       nodes=[node_from_elem(ch, nodefactory)
+                              for ch in children], lineno=elem.sourceline)
 
 
 # taken from https://gist.github.com/651801, which comes for the effbot
@@ -495,14 +584,14 @@ def node_to_elem(root):
     return namespace["e1"]
 
 
-def node_from_xml(xmlfile, nodecls=Node, parser=nrmllib.COMPATPARSER):
+def node_from_xml(xmlfile, nodefactory=Node, parser=nrmllib.COMPATPARSER):
     """
     Convert a .xml file into a Node object.
 
     :param xmlfile: a file name or file object open for reading
     """
     root = etree.parse(xmlfile, parser).getroot()
-    return node_from_elem(root, nodecls)
+    return node_from_elem(root, nodefactory)
 
 
 def node_to_xml(node, output=sys.stdout):
@@ -519,14 +608,16 @@ def node_to_xml(node, output=sys.stdout):
         w.serialize(node)
 
 
-def node_from_nrml(xmlfile, nodecls=Node):
+def node_from_nrml(xmlfile, nodefactory=Node):
     """
     Convert a NRML file into a Node object.
 
     :param xmlfile: a file name or file object open for reading
     """
-    root = nrmllib.assert_valid(xmlfile).getroot()
-    node = node_from_elem(root, nodecls)
+    # disable the XSD validation for LiteralNode factories
+    validate = not isinstance(nodefactory, MetaLiteralNode)
+    root = nrmllib.assert_valid(xmlfile, validate=validate).getroot()
+    node = node_from_elem(root, nodefactory)
     for nsname, nsvalue in root.nsmap.iteritems():
         if nsname is None:
             node['xmlns'] = nsvalue
@@ -560,7 +651,7 @@ def node_to_nrml(node, output=sys.stdout, nsmap=None):
         nrmllib.assert_valid(output)
 
 
-def node_from_ini(ini_file, nodecls=Node, root_name='ini'):
+def node_from_ini(ini_file, nodefactory=Node, root_name='ini'):
     """
     Convert a .ini file into a Node object.
 
@@ -569,7 +660,7 @@ def node_from_ini(ini_file, nodecls=Node, root_name='ini'):
     fileobj = open(ini_file) if isinstance(ini_file, basestring) else ini_file
     cfp = ConfigParser.RawConfigParser()
     cfp.readfp(fileobj)
-    root = nodecls(root_name)
+    root = nodefactory(root_name)
     sections = cfp.sections()
     for section in sections:
         params = dict(cfp.items(section))
@@ -591,7 +682,7 @@ def node_to_ini(node, output=sys.stdout):
     output.flush()
 
 
-def node_copy(node, nodecls=Node):
+def node_copy(node, nodefactory=Node):
     """Make a deep copy of the node"""
-    return nodecls(node.tag, node.attrib.copy(), node.text,
-                   [node_copy(n, nodecls) for n in node])
+    return nodefactory(node.tag, node.attrib.copy(), node.text,
+                       [node_copy(n, nodefactory) for n in node])
