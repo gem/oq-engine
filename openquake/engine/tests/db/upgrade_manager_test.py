@@ -1,11 +1,13 @@
 import os
+import mock
 import unittest
 import psycopg2
 import importlib
 from contextlib import contextmanager
 
 from openquake.engine.db.models import getcursor
-from openquake.engine.db.upgrade_manager import upgrade_db, DuplicatedVersion
+from openquake.engine.db.upgrade_manager import (
+    upgrade_db, version_db, what_if_I_upgrade, DuplicatedVersion)
 
 conn = getcursor('admin').connection
 pkg = 'openquake.engine.tests.db.upgrades'
@@ -101,6 +103,45 @@ class UpgradeManagerTestCase(unittest.TestCase):
         with self.assertRaises(DuplicatedVersion):
             with temp_script('0001-do-nothing.sql', 'SELECT 1'):
                 upgrade_db(conn, pkg)
+
+    def test_version_db(self):
+        self.assertEqual(version_db(conn, pkg), '0000')
+
+    def check_message(self, html, expected):
+        with mock.patch('urllib.urlopen') as urlopen:
+            urlopen().read.return_value = html
+            got = what_if_I_upgrade(conn, pkg)
+            self.assertEqual(got, expected)
+
+    def test_safe_upgrade(self):
+        expected = '''\
+Your database is at version 0000. If you upgrade to the latest master, you will arrive at version 0001.
+The following scripts can be applied safely:
+https://github.com/gem/oq-engine/tree/master/openquake/engine/db/schema/upgrades/0001-uniq-ruptures.sql
+Click on the links if you want to know what exactly the scripts are doing.'''
+        self.check_message('''
+>0000-base_schema.sql<
+>0001-uniq-ruptures.sql<''', expected)
+
+    def test_tricky_upgrade(self):
+        expected = '''\
+Your database is at version 0000. If you upgrade to the latest master, you will arrive at version 0002.
+Please note that the following scripts could be slow:
+https://github.com/gem/oq-engine/tree/master/openquake/engine/db/schema/upgrades/0001-slow-uniq-ruptures.sql
+Please note that the following scripts are potentially dangerous and could destroy your data:
+https://github.com/gem/oq-engine/tree/master/openquake/engine/db/schema/upgrades/0002-danger-drop-gmf.sql
+Click on the links if you want to know what exactly the scripts are doing.
+Even slow script can be fast if your database is small or touch tables that are empty.
+Even dangerous scripts are fine if they touch empty tables or data you are not interested in.'''
+        self.check_message('''
+>0000-base_schema.sql<
+>0001-slow-uniq-ruptures.sql<
+>0002-danger-drop-gmf.sql<
+''', expected)
+
+    def test_updated(self):
+        self.check_message(
+            '', 'Your database is already updated at version 0000.')
 
     def tearDown(self):
         # in case of errors upgrade_db has already performed a rollback
