@@ -425,3 +425,28 @@ class TestSelector(unittest.TestCase):
                                                       lower_mag=5.5)
         np.testing.assert_array_almost_equal(test_cat_1.data['magnitude'],
                                              np.array([6., 7.]))
+
+    def test_create_cluster_set(self):
+        """
+
+        """
+        # Setup function
+        self.catalogue = Catalogue()
+        self.catalogue.data["EventID"] = np.array([1, 2, 3, 4, 5, 6])
+        self.catalogue.data["magnitude"] = np.array([7.0, 5.0, 5.0,
+                                                     5.0, 4.0, 4.0])
+        selector0 = CatalogueSelector(self.catalogue)
+        vcl = np.array([0, 1, 1, 1, 2, 2])
+        cluster_set = selector0.create_cluster_set(vcl)
+        np.testing.assert_array_equal(cluster_set[0].data["EventID"],
+                                      np.array([1]))
+        np.testing.assert_array_almost_equal(cluster_set[0].data["magnitude"],
+                                             np.array([7.0]))
+        np.testing.assert_array_equal(cluster_set[1].data["EventID"],
+                                      np.array([2, 3, 4]))
+        np.testing.assert_array_almost_equal(cluster_set[1].data["magnitude"],
+                                             np.array([5.0, 5.0, 5.0]))
+        np.testing.assert_array_equal(cluster_set[2].data["EventID"],
+                                      np.array([5, 6]))
+        np.testing.assert_array_almost_equal(cluster_set[2].data["magnitude"],
+                                             np.array([4.0, 4.0])) 

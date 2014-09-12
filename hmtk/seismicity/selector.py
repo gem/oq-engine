@@ -55,6 +55,7 @@ and earthquake catalogue
 '''
 
 import numpy as np
+from collections import OrderedDict
 from datetime import datetime
 from copy import deepcopy
 from openquake.hazardlib.geo.point import Point
@@ -404,3 +405,25 @@ class CatalogueSelector(object):
             self.catalogue.data['magnitude'] < upper_mag)
 
         return self.select_catalogue(is_valid)
+
+    def create_cluster_set(self, vcl):
+        """
+        For a given catalogue and list of cluster IDs this function splits
+        the catalogue into a dictionary containing an individual catalogue
+        of events within each cluster
+        :param numpy.ndarray vcl:
+            Cluster ID list
+        
+        :returns:
+            Dictionary of instances of the :class:
+            hmtk.seismicity.catalogue.Catalogue, where each instance
+            if the catalogue of each cluster
+        """
+        num_clust = np.max(vcl)
+        cluster_set = []
+        for clid in range(0, num_clust + 1):
+            idx = np.where(vcl == clid)[0]
+            cluster_cat = deepcopy(self.catalogue)
+            cluster_cat.select_catalogue_events(idx)
+            cluster_set.append((clid, cluster_cat))
+        return OrderedDict(cluster_set)
