@@ -39,75 +39,11 @@ from openquake.engine.tests.utils import helpers
 class HazardCalculationGeometryTestCase(unittest.TestCase):
     """Test special geometry handling in the HazardCalculation constructor."""
 
-    def test_sites_from_wkt(self):
-        # should succeed with no errors
-        hjp = models.HazardCalculation.create(sites='MULTIPOINT(1 2, 3 4)')
-        expected_wkt = (
-            'MULTIPOINT (1.0000000000000000 2.0000000000000000,'
-            ' 3.0000000000000000 4.0000000000000000)'
-        )
-
-        self.assertEqual(expected_wkt, hjp.sites.wkt)
-
-    def test_sites_invalid_str(self):
-        self.assertRaises(
-            ValueError, models.HazardCalculation.create, sites='a 5')
-
-    def test_sites_odd_num_of_coords_in_str_list(self):
-        self.assertRaises(
-            ValueError, models.HazardCalculation.create, sites='1 2, 3')
-
-    def test_sites_valid_str_list(self):
-        hjp = models.HazardCalculation.create(sites='1 2, 3 4')
-        expected_wkt = (
-            'MULTIPOINT (1.0000000000000000 2.0000000000000000,'
-            ' 3.0000000000000000 4.0000000000000000)'
-        )
-
-        self.assertEqual(expected_wkt, hjp.sites.wkt)
-
-    def test_region_from_wkt(self):
-        hjp = models.HazardCalculation.create(
-            region='POLYGON((1 2, 3 4, 5 6, 1 2))')
-        expected_wkt = (
-            'POLYGON ((1.0000000000000000 2.0000000000000000, '
-            '3.0000000000000000 4.0000000000000000, '
-            '5.0000000000000000 6.0000000000000000, '
-            '1.0000000000000000 2.0000000000000000))'
-        )
-
-        self.assertEqual(expected_wkt, hjp.region.wkt)
-
-    def test_region_invalid_str(self):
-        self.assertRaises(
-            ValueError, models.HazardCalculation.create,
-            region='0, 0, 5a 5, 1, 3, 0, 0'
-        )
-
-    def test_region_odd_num_of_coords_in_str_list(self):
-        self.assertRaises(
-            ValueError, models.HazardCalculation.create,
-            region='1 2, 3 4, 5 6, 1'
-        )
-
-    def test_region_valid_str_list(self):
-        # note that the last coord (with closes the ring) can be ommitted
-        # in this case
-        hjp = models.HazardCalculation.create(region='1 2, 3 4, 5 6')
-        expected_wkt = (
-            'POLYGON ((1.0000000000000000 2.0000000000000000, '
-            '3.0000000000000000 4.0000000000000000, '
-            '5.0000000000000000 6.0000000000000000, '
-            '1.0000000000000000 2.0000000000000000))'
-        )
-
-        self.assertEqual(expected_wkt, hjp.region.wkt)
-
     def test_points_to_compute_none(self):
         hc = models.HazardCalculation.create()
         self.assertIsNone(hc.points_to_compute())
 
-        hc = models.HazardCalculation.create(region='1 2, 3 4, 5 6')
+        hc = models.HazardCalculation.create(region=[(1, 2), (3, 4), (5, 6)])
         # There's no region grid spacing
         self.assertIsNone(hc.points_to_compute())
 
@@ -147,7 +83,7 @@ class HazardCalculationGeometryTestCase(unittest.TestCase):
         ]
 
         hc = models.HazardCalculation.create(
-            region='6.5 45.8, 6.5 46.5, 8.5 46.5, 8.5 45.8',
+            region=[(6.5, 45.8), (6.5, 46.5), (8.5, 46.5), (8.5, 45.8)],
             region_grid_spacing=20)
         mesh = hc.points_to_compute(save_sites=False)
 
@@ -158,7 +94,7 @@ class HazardCalculationGeometryTestCase(unittest.TestCase):
         lons = [6.5, 6.5, 8.5, 8.5]
         lats = [45.8, 46.5, 46.5, 45.8]
         hc = models.HazardCalculation.create(
-            sites='6.5 45.8, 6.5 46.5, 8.5 46.5, 8.5 45.8')
+            sites=[(6.5, 45.8), (6.5, 46.5), (8.5, 46.5), (8.5, 45.8)])
 
         mesh = hc.points_to_compute(save_sites=False)
 
@@ -237,33 +173,6 @@ class ProbabilisticRuptureTestCase(unittest.TestCase):
         self.assertEqual((4.89746275, 1.20365263, 90.0),
                          source_rupture.bottom_left_corner)
         self.assertEqual((5.9, 2.2, 90.0), source_rupture.bottom_right_corner)
-
-
-class PrepGeometryTestCase(unittest.TestCase):
-
-    def test__prep_geometry(self):
-        the_input = {
-            # with commas between every value
-            'sites': '-1.1, -1.2, 1.3, 0.0',
-            # with no commas
-            'region': '-1 1 1 1 1 -1 -1 -1',
-            # with randomly placed commas
-            'region_constraint': (
-                '-0.5 0.5 0.0, 2.0 0.5 0.5, 0.5 -0.5 -0.5, -0.5'),
-            'something': 'else',
-        }
-
-        expected = {
-            'sites': 'MULTIPOINT(-1.1 -1.2, 1.3 0.0)',
-            'region': (
-                'POLYGON((-1.0 1.0, 1.0 1.0, 1.0 -1.0, -1.0 -1.0, -1.0 1.0))'),
-            'region_constraint': (
-                'POLYGON((-0.5 0.5, 0.0 2.0, 0.5 0.5, 0.5 -0.5, -0.5 -0.5, '
-                '-0.5 0.5))'),
-            'something': 'else',
-        }
-
-        self.assertEqual(expected, models._prep_geometry(the_input))
 
 
 class FloatFieldTestCase(unittest.TestCase):

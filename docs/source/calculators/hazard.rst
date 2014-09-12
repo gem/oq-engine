@@ -16,11 +16,11 @@ Classical PSHA Core
 ===================
 .. automodule:: openquake.engine.calculators.hazard.classical.core
 
-Classical PSHA Post-Processing
+Hazard Curves Post-Processing
 ==============================
-.. automodule:: openquake.engine.calculators.hazard.classical.post_processing
-.. autofunction:: openquake.engine.calculators.hazard.classical.post_processing.hazard_curves_to_hazard_map_task
-.. autofunction:: openquake.engine.calculators.hazard.classical.post_processing.do_post_process
+.. automodule:: openquake.engine.calculators.hazard.post_processing
+.. autofunction:: openquake.engine.calculators.hazard.post_processing.hazard_curves_to_hazard_map
+.. autofunction:: openquake.engine.calculators.hazard.post_processing.do_post_process
 
 ***************************
 Event-Based PSHA Calculator
@@ -30,10 +30,6 @@ Event-Based PSHA Calculator
 Event-Based Core
 ================
 .. automodule:: openquake.engine.calculators.hazard.event_based.core
-
-Event-Based Post-Proccessing
-============================
-.. automodule:: openquake.engine.calculators.hazard.event_based.post_processing
 
 *******************
 Scenario Calculator
