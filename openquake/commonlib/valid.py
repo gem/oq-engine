@@ -248,8 +248,16 @@ def positivefloat(value):
     """
     f = float(not_empty(value))
     if f < 0:
-        raise ValueError('float %d < 0' % f)
+        raise ValueError('float %s < 0' % f)
     return f
+
+
+def positivefloats(value):
+    """
+    :param value: string of whitespace separated floats
+    :returns: a list of positive floats
+    """
+    return map(positivefloat, value.split())
 
 
 _BOOL_DICT = {

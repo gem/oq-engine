@@ -408,11 +408,11 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
     </sourceModel>
 </nrml>
 """)
-        msg = ('Could not convert occurRates->probabilities: -0.0010614989 is '
-               'smaller than the min, 0, line 25')
+        msg = ('Could not convert occurRates->positivefloats: '
+               'float -0.0010614989 < 0, line 25')
         with self.assertRaises(ValueError) as ctx:
             self.nrml_to_hazardlib.read_nrml(area_file)
-        self.assertEqual(str(ctx.exception), msg)
+        self.assertIn(msg, str(ctx.exception))
 
     def test_raises_useful_error_2(self):
         area_file = StringIO("""\
@@ -459,7 +459,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 """)
         area = self.nrml_to_hazardlib.read_nrml(
             area_file).sourceModel.areaSource
-        with self.assertRaises(ValueError) as ctx:
+        with self.assertRaises(NameError) as ctx:
             self.nrml_to_hazardlib.convert_node(area)
         self.assertIn(
             "node areaSource: No subnode named 'nodalPlaneDist'"
