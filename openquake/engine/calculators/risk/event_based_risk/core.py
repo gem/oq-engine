@@ -317,6 +317,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         # accumulator for the event loss tables
         self.acc = collections.defaultdict(collections.Counter)
 
+    @EnginePerformanceMonitor.monitor
     def agg_result(self, acc, event_loss_table):
         """
         Updates the event loss table
