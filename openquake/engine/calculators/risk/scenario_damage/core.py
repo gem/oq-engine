@@ -75,7 +75,7 @@ def scenario_damage(job_id, risk_model, getters, outputdict, params):
             writers.damage_distribution(
                 getter.assets, fractions, params.damage_state_ids)
 
-        return aggfractions, risk_model.taxonomy
+        return {risk_model.taxonomy: aggfractions}
 
 
 class ScenarioDamageRiskCalculator(base.RiskCalculator):
@@ -109,6 +109,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         self.acc = {}
         self.damage_state_ids = None
 
+    @EnginePerformanceMonitor.monitor
     def agg_result(self, acc, task_result):
         """
         Update the dictionary acc, i.e. aggregate the damage distribution
@@ -119,11 +120,11 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
             A pair (fractions, taxonomy)
         """
         acc = acc.copy()
-        fractions, taxonomy = task_result
-        if fractions is not None:
-            if taxonomy not in acc:
-                acc[taxonomy] = numpy.zeros(fractions.shape)
-            acc[taxonomy] += fractions
+        for taxonomy, fractions in task_result.iteritems():
+            if fractions is not None:
+                if taxonomy not in acc:
+                    acc[taxonomy] = numpy.zeros(fractions.shape)
+                acc[taxonomy] += fractions
         return acc
 
     def post_process(self):
