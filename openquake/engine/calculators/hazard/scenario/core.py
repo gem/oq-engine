@@ -108,7 +108,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         rup_spacing = self.job.get_param('rupture_mesh_spacing')
         rup_model = self.job.get_param('inputs')['rupture_model']
         conv = source.RuptureConverter(rup_spacing)
-        rup_node, = conv.read_nrml(rup_model)
+        rup_node, = conv.read_nodes(rup_model)
         self.rupture = conv.convert_node(rup_node)
 
     def initialize_realizations(self):
