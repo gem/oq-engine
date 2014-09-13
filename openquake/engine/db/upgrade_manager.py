@@ -291,8 +291,6 @@ def what_if_I_upgrade(conn, pkg_name='openquake.engine.db.schema.upgrades',
     :param extract_scripts:
         name of the method to extract the scripts
     """
-    header_ = ('Your database is at version %s. If you upgrade to the latest '
-               'master, you will arrive at version %s.')
     msg_safe_ = '\nThe following scripts can be applied safely:\n%s'
     msg_slow_ = '\nPlease note that the following scripts could be slow:\n%s'
     msg_danger_ = ('\nPlease note that the following scripts are potentially '
@@ -303,20 +301,18 @@ def what_if_I_upgrade(conn, pkg_name='openquake.engine.db.schema.upgrades',
     slow = []
     danger = []
     safe = []
-    future_version = current_version
     for script in getattr(upgrader, extract_scripts)():
         url = script['url']
-        future_version = script['version']
         if script['flag'] == '-slow':
             slow.append(url)
         elif script['flag'] == '-danger':
             danger.append(url)
         elif script['version'] not in applied_versions:
             safe.append(url)
-    if future_version == current_version:
+    if not safe and not slow and not danger:
         return 'Your database is already updated at version %s.' % \
             current_version
-    header = header_ % (current_version, future_version)
+    header = 'Your database is at version %s.' % current_version
     msg_safe = msg_safe_ % '\n'.join(safe)
     msg_slow = msg_slow_ % '\n'.join(slow)
     msg_danger = msg_danger_ % '\n'.join(danger)
