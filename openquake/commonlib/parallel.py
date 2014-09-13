@@ -301,7 +301,7 @@ class PerformanceMonitor(object):
     the execution of a block of code. Should be used as a context manager,
     as follows::
 
-     with PerformanceMonitor([os.getpid()]) as mm:
+     with PerformanceMonitor() as mm:
          do_something()
      deltamemory, = mm.mem
 

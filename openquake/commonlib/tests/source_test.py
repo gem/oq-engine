@@ -61,7 +61,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
             area_source_discretization=1.,  # km
         )
-        source_nodes = converter.read_nrml(MIXED_SRC_MODEL).sourceModel
+        source_nodes = converter.read_nodes(MIXED_SRC_MODEL)
         (cls.area, cls.point, cls.simple, cls.cmplx, cls.char_simple,
          cls.char_complex, cls.char_multi) = map(
             converter.convert_node, source_nodes)
@@ -411,7 +411,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         msg = ('Could not convert occurRates->positivefloats: '
                'float -0.0010614989 < 0, line 25')
         with self.assertRaises(ValueError) as ctx:
-            self.nrml_to_hazardlib.read_nrml(area_file)
+            self.nrml_to_hazardlib.read_nodes(area_file).next()
         self.assertIn(msg, str(ctx.exception))
 
     def test_raises_useful_error_2(self):
@@ -457,8 +457,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
     </sourceModel>
 </nrml>
 """)
-        area = self.nrml_to_hazardlib.read_nrml(
-            area_file).sourceModel.areaSource
+        [area] = self.nrml_to_hazardlib.read_nodes(area_file)
         with self.assertRaises(NameError) as ctx:
             self.nrml_to_hazardlib.convert_node(area)
         self.assertIn(
@@ -614,11 +613,11 @@ class RuptureConverterTestCase(unittest.TestCase):
     def test_ok_ruptures(self):
         converter = source_input.RuptureConverter(rupture_mesh_spacing=1.5)
         for fname in (SINGLE_PLANE_RUPTURE, MULTI_PLANES_RUPTURE):
-            converter.read_nrml(fname)
+            converter.read_nodes(fname)
 
     def test_well_formed_rupture(self):
         converter = source_input.RuptureConverter(rupture_mesh_spacing=1.)
-        [node] = converter.read_nrml(StringIO('''\
+        [node] = converter.read_nodes(StringIO('''\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -672,5 +671,5 @@ class RuptureConverterTestCase(unittest.TestCase):
         converter = source_input.RuptureConverter(rupture_mesh_spacing=1.)
         # at line 7 there is an invalid depth="-5.0"
         with self.assertRaises(ValueError) as ctx:
-            converter.read_nrml(rup_file)
+            converter.read_nodes(rup_file).next()
         self.assertIn('line 7', str(ctx.exception))

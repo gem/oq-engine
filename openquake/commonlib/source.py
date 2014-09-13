@@ -21,7 +21,7 @@ from contextlib import contextmanager
 
 from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.nrmllib.node import node_from_nrml, LiteralNode
+from openquake.nrmllib.node import read_nodes, LiteralNode
 from openquake.commonlib import valid
 
 
@@ -125,7 +125,7 @@ def parse_source_model(fname, converter, apply_uncertainties=lambda src: None):
     """
     source_stats_dict = {}
     source_ids = set()
-    for src_node in converter.read_nrml(fname).sourceModel:
+    for src_node in converter.read_nodes(fname):
         src = converter.convert_node(src_node)
         if src.source_id in source_ids:
             raise DuplicateID(
@@ -314,26 +314,21 @@ class RuptureConverter(object):
     then into Hazardlib ruptures. Example of usage:
 
     >> conv = RuptureConverter(rupture_mesh_spacing=1.0)
-    >> [rup_node] = conv.read_nrml(fname)
+    >> [rup_node] = conv.read_nodes(fname)
     >> hazardlib_rupture = conv.convert_node(rup_node)
     """
     def __init__(self, rupture_mesh_spacing):
         self.rupture_mesh_spacing = rupture_mesh_spacing
         self.fname = None
 
-    def read_nrml(self, fname):
+    def read_nodes(self, fname):
         """
         Convert a NRML file into a ValidNode object
 
         :param fname: file name of file object
         """
         self.fname = fname
-        try:
-            return node_from_nrml(fname, ValidNode)
-        except:
-            etype, exc, tb = sys.exc_info()
-            msg = '%s in %s' % (exc, fname)
-            raise etype, msg, tb
+        return read_nodes(fname, lambda elem: 'Rupture' in elem.tag, ValidNode)
 
     @contextmanager
     def context(self, node):
@@ -509,6 +504,8 @@ class RuptureConverter(object):
 
 class SourceConverter(RuptureConverter):
     """
+    Convert sources from NRML into valid literal nodes and
+    then into Hazardlib sources.
     """
     def __init__(self, investigation_time, rupture_mesh_spacing,
                  width_of_mfd_bin, area_source_discretization):
@@ -516,6 +513,15 @@ class SourceConverter(RuptureConverter):
         self.rupture_mesh_spacing = rupture_mesh_spacing
         self.width_of_mfd_bin = width_of_mfd_bin
         self.tom = PoissonTOM(investigation_time)
+
+    def read_nodes(self, fname):
+        """
+        Convert a NRML file into an iterator over ValidNode objects
+
+        :param fname: file name of file object
+        """
+        self.fname = fname
+        return read_nodes(fname, lambda elem: 'Source' in elem.tag, ValidNode)
 
     def convert_node(self, node):
         """
