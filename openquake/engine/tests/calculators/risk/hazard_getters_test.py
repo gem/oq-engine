@@ -55,6 +55,7 @@ class HazardCurveGetterTestCase(unittest.TestCase):
 
         ho = self.job.risk_calculation.hazard_output
         self.nbytes = self.builder.calc_nbytes([ho])
+        self.builder.init_epsilons([ho])
         [self.getter] = self.builder.make_getters(
             self.getter_class, [ho], self.assets)
 
