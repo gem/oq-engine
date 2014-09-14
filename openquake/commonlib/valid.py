@@ -102,7 +102,7 @@ class FloatRange(object):
         self.__name__ = 'FloatRange[%s:%s]' % (minrange, maxrange)
 
     def __call__(self, value):
-        f = float(value)
+        f = float_(value)
         if f > self.maxrange:
             raise ValueError('%r is bigger than the max, %r' %
                              (f, self.maxrange))
@@ -164,12 +164,23 @@ def namelist(value):
     return names
 
 
+def float_(value):
+    """
+    :param value: input string
+    :returns: a floating point number
+    """
+    try:
+        return float(value)
+    except:
+        raise ValueError('%r is not a float' % value)
+
+
 def longitude(value):
     """
     :param value: input string
     :returns: longitude float
     """
-    lon = float(value)
+    lon = float_(value)
     if lon > 180.:
         raise ValueError('longitude %s > 180' % lon)
     elif lon < -180.:
@@ -182,7 +193,7 @@ def latitude(value):
     :param value: input string
     :returns: latitude float
     """
-    lat = float(value)
+    lat = float_(value)
     if lat > 90.:
         raise ValueError('latitude %s > 90' % lat)
     elif lat < -90.:
@@ -195,7 +206,7 @@ def depth(value):
     :param value: input string
     :returns: float >= 0
     """
-    dep = float(value)
+    dep = float_(value)
     if dep < 0:
         raise ValueError('depth %s < 0' % dep)
     return dep
@@ -425,7 +436,7 @@ def posList(value):
     if num_values % 3 and num_values % 2:
         raise ValueError('Wrong number: nor pairs not triplets: %s' % values)
     try:
-        return map(float, values)
+        return map(float_, values)
     except Exception as exc:
         raise ValueError('Found a non-float in %s: %s' % (value, exc))
 

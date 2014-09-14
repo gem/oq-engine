@@ -27,9 +27,10 @@ from openquake.hazardlib import scalerel
 from openquake.hazardlib import source
 from openquake.hazardlib.tom import PoissonTOM
 
-from openquake.commonlib import source as source_input
+from openquake.commonlib import source as s
 
 from openquake import nrmllib
+from openquake.nrmllib.node import read_nodes
 from openquake.commonlib.general import deep_eq
 
 # directory where the example files are
@@ -41,11 +42,20 @@ MIXED_SRC_MODEL = os.path.join(NRML_DIR, 'examples/source_model/mixed.xml')
 DUPLICATE_ID_SRC_MODEL = os.path.join(
     os.path.dirname(__file__), 'data', 'invalid_source_model.xml')
 
+SIMPLE_FAULT_RUPTURE = os.path.join(
+    os.path.dirname(__file__), 'data', 'simple-fault-rupture.xml')
+
+COMPLEX_FAULT_RUPTURE = os.path.join(
+    os.path.dirname(__file__), 'data', 'complex-fault-rupture.xml')
+
 SINGLE_PLANE_RUPTURE = os.path.join(
     os.path.dirname(__file__), 'data', 'single-plane-rupture.xml')
 
 MULTI_PLANES_RUPTURE = os.path.join(
     os.path.dirname(__file__), 'data', 'multi-planes-rupture.xml')
+
+filter_sources = lambda el: 'Source' in el.tag
+filter_ruptures = lambda el: 'Rupture' in el.tag
 
 
 class NrmlSourceToHazardlibTestCase(unittest.TestCase):
@@ -55,13 +65,13 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        converter = source_input.SourceConverter(
+        converter = s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,  # km
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
             area_source_discretization=1.,  # km
         )
-        source_nodes = converter.read_nodes(MIXED_SRC_MODEL)
+        source_nodes = read_nodes(MIXED_SRC_MODEL, filter_sources, s.ValidNode)
         (cls.area, cls.point, cls.simple, cls.cmplx, cls.char_simple,
          cls.char_complex, cls.char_multi) = map(
             converter.convert_node, source_nodes)
@@ -71,7 +81,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         cls.rupture_mesh_spacing = 1  # km
         cls.width_of_mfd_bin = 1.  # for Truncated GR MFDs
         cls.area_source_discretization = 1.  # km
-        cls.nrml_to_hazardlib = converter
+        cls.converter = converter
 
     @property
     def _expected_point(self):
@@ -355,14 +365,14 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         self.assertTrue(eq, msg)
 
     def test_duplicate_id(self):
-        converter = source_input.SourceConverter(
+        converter = s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,
             width_of_mfd_bin=0.1,
             area_source_discretization=10,
         )
-        with self.assertRaises(source_input.DuplicateID):
-            source_input.parse_source_model(
+        with self.assertRaises(s.DuplicateID):
+            s.parse_source_model(
                 DUPLICATE_ID_SRC_MODEL, converter)
 
     def test_raises_useful_error_1(self):
@@ -411,7 +421,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         msg = ('Could not convert occurRates->positivefloats: '
                'float -0.0010614989 < 0, line 25')
         with self.assertRaises(ValueError) as ctx:
-            self.nrml_to_hazardlib.read_nodes(area_file).next()
+            read_nodes(area_file, filter_sources, s.ValidNode).next()
         self.assertIn(msg, str(ctx.exception))
 
     def test_raises_useful_error_2(self):
@@ -457,9 +467,9 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
     </sourceModel>
 </nrml>
 """)
-        [area] = self.nrml_to_hazardlib.read_nodes(area_file)
+        [area] = read_nodes(area_file, filter_sources, s.ValidNode)
         with self.assertRaises(NameError) as ctx:
-            self.nrml_to_hazardlib.convert_node(area)
+            self.converter.convert_node(area)
         self.assertIn(
             "node areaSource: No subnode named 'nodalPlaneDist'"
             " found in 'areaSource', line 5 of", str(ctx.exception))
@@ -501,7 +511,7 @@ class AreaToPointsTestCase(unittest.TestCase):
             area_discretization=self.area_source_discretization,
             temporal_occurrence_model=PoissonTOM(50.),
         )
-        actual = list(source_input.area_to_point_sources(area, 10))
+        actual = list(s.area_to_point_sources(area, 10))
         self.assertEqual(len(actual), 96)  # expected 96 points
         self.assertAlmostEqual(actual[0].mfd.a_val, 0.1177287669604317)
 
@@ -537,7 +547,7 @@ class AreaToPointsTestCase(unittest.TestCase):
             area_discretization=self.area_source_discretization,
             temporal_occurrence_model=PoissonTOM(50.0),
         )
-        actual = list(source_input.area_to_point_sources(area, 10))
+        actual = list(s.area_to_point_sources(area, 10))
         self.assertEqual(len(actual), 96)  # expected 96 points
         assert_allclose(
             actual[0].mfd.occurrence_rates,
@@ -556,15 +566,14 @@ class SourceCollectorTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.nrml_to_hazardlib = source_input.SourceConverter(
+        cls.converter = s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,  # km
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
             area_source_discretization=1.)
         cls.source_collector = dict(
-            (sc.trt, sc) for sc in source_input.parse_source_model(
-                MIXED_SRC_MODEL, cls.nrml_to_hazardlib,
-                lambda src: None))
+            (sc.trt, sc) for sc in s.parse_source_model(
+                MIXED_SRC_MODEL, cls.converter, lambda src: None))
         cls.sitecol = site.SiteCollection(cls.SITES)
 
     def check(self, trt, attr, value):
@@ -610,39 +619,12 @@ class SourceCollectorTestCase(unittest.TestCase):
 
 class RuptureConverterTestCase(unittest.TestCase):
 
-    def test_ok_ruptures(self):
-        converter = source_input.RuptureConverter(rupture_mesh_spacing=1.5)
-        for fname in (SINGLE_PLANE_RUPTURE, MULTI_PLANES_RUPTURE):
-            converter.read_nodes(fname)
-
-    def test_well_formed_rupture(self):
-        converter = source_input.RuptureConverter(rupture_mesh_spacing=1.)
-        [node] = converter.read_nodes(StringIO('''\
-<?xml version='1.0' encoding='utf-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.4">
-    <simpleFaultRupture>
-        <magnitude>7.65</magnitude>
-        <rake>15.0</rake>
-        <hypocenter lon="0.0" lat="0.0" depth="15.0"/>
-        <simpleFaultGeometry>
-                <gml:LineString>
-                    <gml:posList>
-                        -124.704 40.363
-                        -124.977 41.214
-                        -125.140 42.096
-                    </gml:posList>
-                </gml:LineString>
-            <dip>50.0</dip>
-            <upperSeismoDepth>12.5</upperSeismoDepth>
-            <lowerSeismoDepth>19.5</lowerSeismoDepth>
-        </simpleFaultGeometry>
-    </simpleFaultRupture>
-</nrml>
-'''))
-        rup = converter.convert_node(node)
-        self.assertEqual(rup.mag, 7.65)
-        self.assertEqual(rup.rake, 15.0)
+    def test_well_formed_ruptures(self):
+        converter = s.RuptureConverter(rupture_mesh_spacing=1.5)
+        for fname in (SIMPLE_FAULT_RUPTURE, COMPLEX_FAULT_RUPTURE,
+                      SINGLE_PLANE_RUPTURE, MULTI_PLANES_RUPTURE):
+            node, = read_nodes(fname, filter_ruptures, s.ValidNode)
+            converter.convert_node(node)
 
     def test_ill_formed_rupture(self):
         rup_file = StringIO('''\
@@ -668,8 +650,8 @@ class RuptureConverterTestCase(unittest.TestCase):
     </simpleFaultRupture>
 </nrml>
 ''')
-        converter = source_input.RuptureConverter(rupture_mesh_spacing=1.)
+
         # at line 7 there is an invalid depth="-5.0"
         with self.assertRaises(ValueError) as ctx:
-            converter.read_nodes(rup_file).next()
+            read_nodes(rup_file, filter_ruptures, s.ValidNode).next()
         self.assertIn('line 7', str(ctx.exception))

@@ -123,9 +123,11 @@ def parse_source_model(fname, converter, apply_uncertainties=lambda src: None):
     :param apply_uncertainties:
         a function modifying the sources (or do nothing)
     """
+    converter.fname = fname
     source_stats_dict = {}
     source_ids = set()
-    for src_node in converter.read_nodes(fname):
+    src_nodes = read_nodes(fname, lambda elem: 'Source' in elem.tag, ValidNode)
+    for src_node in src_nodes:
         src = converter.convert_node(src_node)
         if src.source_id in source_ids:
             raise DuplicateID(
@@ -310,25 +312,12 @@ def split_coords_3d(seq):
 
 class RuptureConverter(object):
     """
-    Convert ruptures from NRML format to valid literal nodes and
-    then into Hazardlib ruptures. Example of usage:
-
-    >> conv = RuptureConverter(rupture_mesh_spacing=1.0)
-    >> [rup_node] = conv.read_nodes(fname)
-    >> hazardlib_rupture = conv.convert_node(rup_node)
+    Convert ruptures from nodes into Hazardlib ruptures.
     """
+    fname = None  # should be set externally
+
     def __init__(self, rupture_mesh_spacing):
         self.rupture_mesh_spacing = rupture_mesh_spacing
-        self.fname = None
-
-    def read_nodes(self, fname):
-        """
-        Convert a NRML file into a ValidNode object
-
-        :param fname: file name of file object
-        """
-        self.fname = fname
-        return read_nodes(fname, lambda elem: 'Rupture' in elem.tag, ValidNode)
 
     @contextmanager
     def context(self, node):
@@ -475,7 +464,7 @@ class RuptureConverter(object):
         :param trt: the tectonic region type (possibly None)
         """
         with self.context(node):
-            surfaces = [node.PlanarSurface]
+            surfaces = [node.planarSurface]
         hrupt = source.rupture.Rupture(
             mag=mag, rake=rake,
             tectonic_region_type=None,
@@ -504,8 +493,7 @@ class RuptureConverter(object):
 
 class SourceConverter(RuptureConverter):
     """
-    Convert sources from NRML into valid literal nodes and
-    then into Hazardlib sources.
+    Convert sources from valid nodes into Hazardlib objects.
     """
     def __init__(self, investigation_time, rupture_mesh_spacing,
                  width_of_mfd_bin, area_source_discretization):
@@ -513,15 +501,6 @@ class SourceConverter(RuptureConverter):
         self.rupture_mesh_spacing = rupture_mesh_spacing
         self.width_of_mfd_bin = width_of_mfd_bin
         self.tom = PoissonTOM(investigation_time)
-
-    def read_nodes(self, fname):
-        """
-        Convert a NRML file into an iterator over ValidNode objects
-
-        :param fname: file name of file object
-        """
-        self.fname = fname
-        return read_nodes(fname, lambda elem: 'Source' in elem.tag, ValidNode)
 
     def convert_node(self, node):
         """
