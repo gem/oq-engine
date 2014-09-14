@@ -47,7 +47,7 @@ class Calculator(object):
         SourceCollector.POINT_SOURCE_WEIGHT = float(
             config.get('hazard', 'point_source_weight'))
 
-    def monitor(self, operation):
+    def monitor(self, operation=None):
         """
         Return a :class:`openquake.engine.performance.EnginePerformanceMonitor`
         instance, associated to the operation and with tracing and flushing
