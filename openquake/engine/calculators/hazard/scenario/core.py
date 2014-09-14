@@ -26,8 +26,9 @@ from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.imt import from_string
 import openquake.hazardlib.gsim
 
+from openquake.nrmllib.node import read_nodes
 from openquake.commonlib.general import split_in_blocks, distinct
-from openquake.commonlib import source
+from openquake.commonlib.source import ValidNode, RuptureConverter
 
 from openquake.engine.calculators.hazard import general as haz_general
 from openquake.engine.utils import tasks
@@ -107,9 +108,9 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         """
         rup_spacing = self.job.get_param('rupture_mesh_spacing')
         rup_model = self.job.get_param('inputs')['rupture_model']
-        conv = source.RuptureConverter(rup_spacing)
-        rup_node, = conv.read_nodes(rup_model)
-        self.rupture = conv.convert_node(rup_node)
+        rup_node, = read_nodes(rup_model, lambda el: 'Rupture' in el.tag,
+                               ValidNode)
+        self.rupture = RuptureConverter(rup_spacing).convert_node(rup_node)
 
     def initialize_realizations(self):
         """There are no realizations for the scenario calculator"""
