@@ -50,9 +50,10 @@ def nrml_schema_file():
 COMPATPARSER = etree.ETCompatXMLParser()
 
 
-def assert_valid(source, parser=COMPATPARSER, validate=True):
+def assert_valid(source, parser=COMPATPARSER):
     """
     Raises a `lxml.etree.DocumentInvalid` error for invalid files.
+    NB: it works by keeping the whole tree in memory.
 
     :param source: a filename or a file-like object.
     """
@@ -67,8 +68,7 @@ def assert_valid(source, parser=COMPATPARSER, validate=True):
         _NRML_SCHEMA = etree.XMLSchema(etree.parse(nrml_schema_file()))
     try:
         parsed = etree.parse(source, parser)
-        if validate:
-            _NRML_SCHEMA.assertValid(parsed)
+        _NRML_SCHEMA.assertValid(parsed)
     except Exception as e:
         raise InvalidFile('%s:%s' % (fname, e))
     return parsed

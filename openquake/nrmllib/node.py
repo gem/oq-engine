@@ -124,7 +124,7 @@ nodes are not created a instantiation time. They are created as
 soon as you start iterating on the lazytree. In particular
 list(lazytree) will generated all of them. If your goal is to
 store the tree on the filesystem in XML format you should use
-a writing routing converting a subnode at the time, without
+a writing routine converting a subnode at the time, without
 requiring the full list of them. The routines provided by lxml
 and ElementTree are no good, however nrmllib.writers
 provide an StreamingXMLWriter just for that purpose.
@@ -193,8 +193,8 @@ Then subnodes and attributes can be conveniently accessed:
 '45.16667'
 
 The Node class provides no facility to cast strings into Python types;
-this is a job for a separate library which should be able to
-understand the types defined in the XSD schema.
+this is a job for the LiteralNode class which can be subclassed and
+supplemented by a dictionary of validators.
 """
 
 import sys
@@ -495,8 +495,6 @@ class LiteralNode(Node):
                         raise ValueError(
                             'Could not convert %s->%s: %s, line %s' %
                             (n, validators[n].__name__, exc, lineno))
-        else:
-            attrib = {}
         super(LiteralNode, self).__init__(tag, attrib, text, nodes, lineno)
 
 
@@ -584,6 +582,29 @@ def node_to_elem(root):
     return namespace["e1"]
 
 
+def read_nodes(fname, filter_elem, nodefactory=Node):
+    """
+    Convert an XML file into a lazy iterator over Node objects
+    satifying the given specification, i.e. a function element -> boolean.
+
+    :param fname: file name of file object
+    :param filter_elem: element specification
+
+    In case of errors, add the file name to the error message.
+    """
+    try:
+        for _, el in etree.iterparse(fname, remove_comments=True):
+            if filter_elem(el):
+                yield node_from_elem(el, nodefactory)
+                el.clear()  # save memory
+    except:
+        etype, exc, tb = sys.exc_info()
+        msg = str(exc)
+        if not unicode(fname) in msg:
+            msg = '%s in %s' % (msg, fname)
+        raise etype, msg, tb
+
+
 def node_from_xml(xmlfile, nodefactory=Node, parser=nrmllib.COMPATPARSER):
     """
     Convert a .xml file into a Node object.
@@ -614,9 +635,7 @@ def node_from_nrml(xmlfile, nodefactory=Node):
 
     :param xmlfile: a file name or file object open for reading
     """
-    # disable the XSD validation for LiteralNode factories
-    validate = not isinstance(nodefactory, MetaLiteralNode)
-    root = nrmllib.assert_valid(xmlfile, validate=validate).getroot()
+    root = nrmllib.assert_valid(xmlfile).getroot()
     node = node_from_elem(root, nodefactory)
     for nsname, nsvalue in root.nsmap.iteritems():
         if nsname is None:
