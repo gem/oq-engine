@@ -323,7 +323,7 @@ class RuptureConverter(object):
     def context(self, node):
         """
         Context manager managing exceptions and adding line number
-        of the corrent node and name of the current file being processed
+        of the current node and name of the current file being processed
         to the error message.
 
         :param node: the current node being processed
@@ -402,7 +402,7 @@ class RuptureConverter(object):
            :class:`openquake.hazardlib.geo.simpleFaultSurface` instance
         2. there is a single complexFaultGeometry node; returns a
            :class:`openquake.hazardlib.geo.complexFaultSurface` instance
-        3. there is a list of PlanarSurface notes; returns a
+        3. there is a list of PlanarSurface nodes; returns a
            :class:`openquake.hazardlib.geo.MultiSurface` instance
 
         :param surface_nodes: surface nodes as just described
@@ -429,7 +429,9 @@ class RuptureConverter(object):
         Convert a simpleFaultRupture node.
 
         :param node: the rupture node
-        :param trt: the tectonic region type (possibly None)
+        :param mag: the rupture magnitude
+        :param rake: the rupture rake angle
+        :param hypocenter: the rupture hypocenter
         """
         with self.context(node):
             surfaces = [node.simpleFaultGeometry]
@@ -445,7 +447,9 @@ class RuptureConverter(object):
         Convert a complexFaultRupture node.
 
         :param node: the rupture node
-        :param trt: the tectonic region type (possibly None)
+        :param mag: the rupture magnitude
+        :param rake: the rupture rake angle
+        :param hypocenter: the rupture hypocenter
         """
         with self.context(node):
             surfaces = [node.complexFaultGeometry]
@@ -461,7 +465,9 @@ class RuptureConverter(object):
         Convert a singlePlaneRupture node.
 
         :param node: the rupture node
-        :param trt: the tectonic region type (possibly None)
+        :param mag: the rupture magnitude
+        :param rake: the rupture rake angle
+        :param hypocenter: the rupture hypocenter
         """
         with self.context(node):
             surfaces = [node.planarSurface]
@@ -478,7 +484,9 @@ class RuptureConverter(object):
         Convert a multiPlanesRupture node.
 
         :param node: the rupture node
-        :param trt: the tectonic region type (possibly None)
+        :param mag: the rupture magnitude
+        :param rake: the rupture rake angle
+        :param hypocenter: the rupture hypocenter
         """
         with self.context(node):
             surfaces = list(node.getnodes('planarSurface'))
@@ -534,8 +542,6 @@ class SourceConverter(RuptureConverter):
                     a_val=mfd_node['aValue'], b_val=mfd_node['bValue'],
                     min_mag=mfd_node['minMag'], max_mag=mfd_node['maxMag'],
                     bin_width=self.width_of_mfd_bin)
-            else:
-                raise ValueError('Unknown MFD: %s' % mfd_node.tag)
 
     def convert_npdist(self, node):
         """
@@ -665,7 +671,7 @@ class SourceConverter(RuptureConverter):
 
     def convert_characteristicFaultSource(self, node):
         """
-        Convert the given node into a characteristi fault object.
+        Convert the given node into a characteristic fault object.
 
         :param node: a node with tag areaGeometry
         :returns: a :class:`openquake.hazardlib.source.CharacteristicFaultSource` instance
@@ -691,7 +697,7 @@ class SourceConverter(RuptureConverter):
         rup_pmf_data = []
         for rupnode in node:
             probs = pmf.PMF(rupnode['probs_occur'])
-            rup = RuptureConverter.convert_node(rupnode)
+            rup = RuptureConverter.convert_node(self, rupnode)
             rup.tectonic_region_type = trt
             rup_pmf_data.append((rup, probs))
         nps = source.NonParametricSeismicSource(

@@ -54,6 +54,9 @@ SINGLE_PLANE_RUPTURE = os.path.join(
 MULTI_PLANES_RUPTURE = os.path.join(
     os.path.dirname(__file__), 'data', 'multi-planes-rupture.xml')
 
+NONPARAMETRIC_SOURCE = os.path.join(
+    os.path.dirname(__file__), 'data', 'nonparametric-source.xml')
+
 filter_sources = lambda el: 'Source' in el.tag
 filter_ruptures = lambda el: 'Rupture' in el.tag
 
@@ -473,6 +476,16 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         self.assertIn(
             "node areaSource: No subnode named 'nodalPlaneDist'"
             " found in 'areaSource', line 5 of", str(ctx.exception))
+
+    @unittest.skip  # this is skipped on purpose until Damiano fixes hazardlib
+    def test_nonparametric_source_ok(self):
+        converter = s.SourceConverter(
+            investigation_time=50.,
+            rupture_mesh_spacing=1,  # km
+            width_of_mfd_bin=1.,  # for Truncated GR MFDs
+            area_source_discretization=1.)
+        np, = read_nodes(NONPARAMETRIC_SOURCE, filter_sources, s.ValidNode)
+        converter.convert_node(np)
 
 
 class AreaToPointsTestCase(unittest.TestCase):
