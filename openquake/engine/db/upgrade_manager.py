@@ -10,6 +10,10 @@ class DuplicatedVersion(RuntimeError):
     pass
 
 
+class VersionTooSmall(RuntimeError):
+    pass
+
+
 class VersioningNotInstalled(RuntimeError):
     pass
 
@@ -309,9 +313,16 @@ def what_if_I_upgrade(conn, pkg_name='openquake.engine.db.schema.upgrades',
             danger.append(url)
         elif script['version'] not in applied_versions:
             safe.append(url)
+        if script['version'] < current_version:
+            # you cannot apply a script with a version number lower than the
+            # current db version: ensure that upgrades are strictly incremental
+            raise VersionTooSmall(
+                'Your database is at version %s but you want to apply %s??'
+                % script['fname'])
     if not safe and not slow and not danger:
         return 'Your database is already updated at version %s.' % \
             current_version
+
     header = 'Your database is at version %s.' % current_version
     msg_safe = msg_safe_ % '\n'.join(safe)
     msg_slow = msg_slow_ % '\n'.join(slow)
