@@ -60,6 +60,7 @@ class OqParam(valid.ParamSet):
         hazard_curves_from_gmfs=valid.boolean,
         hazard_output_id=valid.NoneOr(valid.positiveint),
         hazard_maps=valid.boolean,
+        hypocenter=valid.point3d,
         individual_curves=valid.boolean,
         inputs=dict,
         insured_losses=valid.boolean,

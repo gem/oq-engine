@@ -23,8 +23,10 @@ Validation library for the engine, the desktop tools, and anything else
 import re
 import ast
 import logging
-from openquake.hazardlib import imt
+from openquake.hazardlib import imt, scalerel
 from openquake.commonlib.general import distinct
+
+SCALEREL = scalerel.get_available_magnitude_scalerel()
 
 
 def compose(*validators):
@@ -100,7 +102,7 @@ class FloatRange(object):
         self.__name__ = 'FloatRange[%s:%s]' % (minrange, maxrange)
 
     def __call__(self, value):
-        f = float(value)
+        f = float_(value)
         if f > self.maxrange:
             raise ValueError('%r is bigger than the max, %r' %
                              (f, self.maxrange))
@@ -162,12 +164,23 @@ def namelist(value):
     return names
 
 
+def float_(value):
+    """
+    :param value: input string
+    :returns: a floating point number
+    """
+    try:
+        return float(value)
+    except:
+        raise ValueError('%r is not a float' % value)
+
+
 def longitude(value):
     """
     :param value: input string
     :returns: longitude float
     """
-    lon = float(value)
+    lon = float_(value)
     if lon > 180.:
         raise ValueError('longitude %s > 180' % lon)
     elif lon < -180.:
@@ -180,12 +193,23 @@ def latitude(value):
     :param value: input string
     :returns: latitude float
     """
-    lat = float(value)
+    lat = float_(value)
     if lat > 90.:
         raise ValueError('latitude %s > 90' % lat)
     elif lat < -90.:
         raise ValueError('latitude %s < -90' % lat)
     return lat
+
+
+def depth(value):
+    """
+    :param value: input string
+    :returns: float >= 0
+    """
+    dep = float_(value)
+    if dep < 0:
+        raise ValueError('depth %s < 0' % dep)
+    return dep
 
 
 def lonlat(value):
@@ -235,8 +259,16 @@ def positivefloat(value):
     """
     f = float(not_empty(value))
     if f < 0:
-        raise ValueError('float %d < 0' % f)
+        raise ValueError('float %s < 0' % f)
     return f
+
+
+def positivefloats(value):
+    """
+    :param value: string of whitespace separated floats
+    :returns: a list of positive floats
+    """
+    return map(positivefloat, value.split())
 
 
 _BOOL_DICT = {
@@ -271,7 +303,9 @@ def boolean(value):
         raise ValueError('Not a boolean: %s' % value)
 
 
+range01 = FloatRange(0, 1)
 probability = FloatRange(0, 1)
+probability.__name__ = 'probability'
 
 
 def probabilities(value):
@@ -339,8 +373,8 @@ def intensity_measure_types_and_levels(value):
 
 def dictionary(value):
     """
-    :param value: input string
-    :returns: a Python dictionary
+    :param value: input string corresponding to a literal Python object
+    :returns: the Python object
 
     >>> dictionary('')
     {}
@@ -356,6 +390,94 @@ def dictionary(value):
     except:
         raise ValueError('%r is not a valid Python dictionary' % value)
 
+
+############################# SOURCES/RUPTURES ###############################
+
+def mag_scale_rel(value):
+    """
+    :param value: name of a Magnitude-Scale relationship in hazardlib
+    :returns: the corresponding hazardlib object
+    """
+    value = value.strip()
+    if value not in SCALEREL:
+        raise ValueError('%r is not a recognized magnitude-scale '
+                         'relationship' % value)
+    return value
+
+
+def pmf(value):
+    """
+    Comvert a string into a Probability Mass Function.
+
+    :param value:
+        a sequence of probabilities summing up to 1 (no commas)
+    :returns:
+        a list of pairs [(probability, index), ...] with index starting from 0
+
+    >>> pmf("0.157 0.843")
+    [(0.157, 0), (0.843, 1)]
+    """
+    probs = probabilities(value)
+    if sum(probs) != 1.0:
+        raise ValueError('The probabilities %s do not sum up to 1!' % value)
+    return [(p, i) for i, p in enumerate(probs)]
+
+
+def posList(value):
+    """
+    The value is a string with the form
+    `lon1 lat1 [depth1] ...  lonN latN [depthN]`
+    without commas, where the depts are optional.
+
+    :returns: a list of floats without other validations
+    """
+    values = value.split()
+    num_values = len(values)
+    if num_values % 3 and num_values % 2:
+        raise ValueError('Wrong number: nor pairs not triplets: %s' % values)
+    try:
+        return map(float_, values)
+    except Exception as exc:
+        raise ValueError('Found a non-float in %s: %s' % (value, exc))
+
+
+def point3d(value, lon, lat, depth):
+    """
+    This is used to convert nodes of the form
+    <hypocenter lon="LON" lat="LAT" depth="DEPTH"/>
+
+    :returns: a validated triple (lon, lat, depth)
+    """
+    return longitude(lon), latitude(lat), positivefloat(depth)
+
+
+def probability_depth(value, probability, depth):
+    """
+    This is used to convert nodes of the form
+    <hypoDepth probability="PROB" depth="DEPTH" />
+
+    :returns a validated pair (probability, depth)
+    """
+    return (range01(probability), positivefloat(depth))
+
+
+strike_range = FloatRange(0, 360)
+dip_range = FloatRange(0, 90)
+rake_range = FloatRange(-180, 180)
+
+
+def nodal_plane(value, probability, strike, dip, rake):
+    """
+    This is used to convert nodes of the form
+     <nodalPlane probability="0.3" strike="0.0" dip="90.0" rake="0.0" />
+
+    :returns a validated pair (probability, depth)
+    """
+    return (range01(probability), strike_range(strike),
+            dip_range(dip), rake_range(rake))
+
+
+###########################################################################
 
 def parameters(**names_vals):
     """

@@ -17,14 +17,12 @@ import sys
 import math
 import copy
 from itertools import izip
+from contextlib import contextmanager
 
-from shapely import wkt
-
-from openquake.hazardlib import geo, mfd, pmf, scalerel, source
+from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.source.rupture import Rupture as HazardlibRupture
-from openquake.nrmllib import models as nrml_models
-from openquake.nrmllib.hazard import parsers as haz_parsers
+from openquake.nrmllib.node import read_nodes, LiteralNode
+from openquake.commonlib import valid
 
 
 class DuplicateID(Exception):
@@ -102,7 +100,7 @@ class SourceCollector(object):
 
     def __lt__(self, other):
         """
-        Make sure there is a full ordering of SourceCollector objects.
+        Make sure there is a precise ordering of SourceCollector objects.
         Objects with less sources are put first; in case the number
         of sources is the same, use lexicographic ordering on the trts
         """
@@ -113,23 +111,24 @@ class SourceCollector(object):
         return num_sources < other_sources
 
 
-def parse_source_model(fname, nrml_to_hazardlib,
-                       apply_uncertainties=lambda src: None):
+def parse_source_model(fname, converter, apply_uncertainties=lambda src: None):
     """
     Parse a NRML source model and return an ordered list of SourceCollector
     instances.
 
     :param str fname:
         the full pathname of the source model file
-    :param nrml_to_hazardlib:
-        :class:`openquake.commonlib.source.NrmlHazardlibConverter` instance
+    :param converter:
+        :class:`openquake.commonlib.source.SourceConverter` instance
     :param apply_uncertainties:
         a function modifying the sources (or do nothing)
     """
+    converter.fname = fname
     source_stats_dict = {}
     source_ids = set()
-    for src_nrml in haz_parsers.SourceModelParser(fname).parse():
-        src = nrml_to_hazardlib(src_nrml)
+    src_nodes = read_nodes(fname, lambda elem: 'Source' in elem.tag, ValidNode)
+    for src_node in src_nodes:
+        src = converter.convert_node(src_node)
         if src.source_id in source_ids:
             raise DuplicateID(
                 'The source ID %s is duplicated!' % src.source_id)
@@ -142,417 +141,6 @@ def parse_source_model(fname, nrml_to_hazardlib,
 
     # return ordered SourceCollectors
     return sorted(source_stats_dict.itervalues())
-
-
-## NB: this is a job for generic functions
-class NrmlHazardlibConverter(object):
-    """
-    Converter from NRML objects to hazardlib objects. To be instantiated
-    with the following parameters:
-
-    :param float investigation_time:
-        investigation time parameter
-    :param float rupture_mesh_spacing:
-        rupture mesh spacing parameter
-    :param float width_of_mfd_bin:
-        width of mfd bin parameter
-    :param area_source_discretization:
-        area source discretization parameter
-    """
-    def __init__(self, investigation_time, rupture_mesh_spacing,
-                 width_of_mfd_bin, area_source_discretization):
-        self.investigation_time = investigation_time
-        self.rupture_mesh_spacing = rupture_mesh_spacing
-        self.width_of_mfd_bin = width_of_mfd_bin
-        self.area_source_discretization = area_source_discretization
-        self.default_tom = PoissonTOM(investigation_time) \
-            if investigation_time else None  # None for scenario calculator
-
-    def __call__(self, src):
-        """
-        Convert a seismic source or rupture object from the NRML representation
-        to the HazardLib representation. Inputs can be point, area,
-        simple fault, or complex fault sources, or simple or complex fault
-        ruptures.
-
-        See :mod:`openquake.nrmllib.models` and
-        :mod:`openquake.hazardlib.source`.
-
-        :param src:
-            :mod:`openquake.nrmllib.models` seismic source or rupture instance.
-
-        :returns:
-            The HazardLib representation of the input source or rupture.
-        """
-        if isinstance(src, (nrml_models.AreaSource, nrml_models.PointSource,
-                            nrml_models.ComplexFaultSource,
-                            nrml_models.SimpleFaultSource,
-                            nrml_models.CharacteristicSource)):
-            return self._nrml_source_to_hazardlib(src)
-        elif isinstance(src, (nrml_models.ComplexFaultRuptureModel,
-                              nrml_models.SimpleFaultRuptureModel)):
-            return self._nrml_rupture_to_hazardlib(src)
-
-    def _nrml_source_to_hazardlib(self, src):
-        """
-        Convert a NRML source object into the HazardLib representation.
-        """
-        # The ordering of the switch here matters because:
-        #   - AreaSource inherits from PointSource
-        #   - ComplexFaultSource inherits from SimpleFaultSource
-        try:
-            if isinstance(src, nrml_models.AreaSource):
-                return self._area_to_hazardlib(src)
-            elif isinstance(src, nrml_models.PointSource):
-                return self._point_to_hazardlib(src)
-            elif isinstance(src, nrml_models.ComplexFaultSource):
-                return self._complex_to_hazardlib(src)
-            elif isinstance(src, nrml_models.SimpleFaultSource):
-                return self._simple_to_hazardlib(src)
-            elif isinstance(src, nrml_models.CharacteristicSource):
-                return self._characteristic_to_hazardlib(src)
-        except:
-            etype, err, tb = sys.exc_info()
-            msg = ("The following error has occurred with "
-                   "source id='%s', name='%s': %s" %
-                   (src.id, src.name, err.message))
-            raise etype, msg, tb
-
-    def _nrml_rupture_to_hazardlib(self, src):
-        """
-        Convert a NRML rupture object into the HazardLib representation.
-
-        Parameters and return values are similar to :func:`nrml_to_hazardlib`.
-        """
-        if isinstance(src, nrml_models.ComplexFaultRuptureModel):
-            return self._complex_rupture_to_hazardlib(src)
-        elif isinstance(src, nrml_models.SimpleFaultRuptureModel):
-            return self._simple_rupture_to_hazardlib(src)
-
-    def _point_to_hazardlib(self, src):
-        """Convert a NRML point source to the HazardLib equivalent.
-
-        See :mod:`openquake.nrmllib.models` and
-        :mod:`openquake.hazardlib.source`.
-
-        :param src:
-            :class:`openquake.nrmllib.models.PointSource` instance.
-        :returns:
-            The HazardLib representation of the input source.
-        """
-        shapely_pt = wkt.loads(src.geometry.wkt)
-
-        mf_dist = self._mfd_to_hazardlib(src.mfd)
-
-        # nodal plane distribution:
-        npd = pmf.PMF(
-            [(x.probability,
-              geo.NodalPlane(strike=x.strike, dip=x.dip, rake=x.rake))
-             for x in src.nodal_plane_dist]
-        )
-
-        # hypocentral depth distribution:
-        hd = pmf.PMF([(x.probability, x.depth) for x in src.hypo_depth_dist])
-
-        msr = scalerel.get_available_magnitude_scalerel()[src.mag_scale_rel]()
-
-        point = source.PointSource(
-            source_id=src.id,
-            name=src.name,
-            tectonic_region_type=src.trt,
-            mfd=mf_dist,
-            rupture_mesh_spacing=self.rupture_mesh_spacing,
-            magnitude_scaling_relationship=msr,
-            rupture_aspect_ratio=src.rupt_aspect_ratio,
-            upper_seismogenic_depth=src.geometry.upper_seismo_depth,
-            lower_seismogenic_depth=src.geometry.lower_seismo_depth,
-            location=geo.Point(shapely_pt.x, shapely_pt.y),
-            nodal_plane_distribution=npd,
-            hypocenter_distribution=hd,
-            temporal_occurrence_model=self.default_tom,
-        )
-
-        return point
-
-    def _area_to_hazardlib(self, src):
-        """Convert a NRML area source to the HazardLib equivalent.
-
-        See :mod:`openquake.nrmllib.models` and
-        :mod:`openquake.hazardlib.source`.
-
-        :param src:
-            :class:`openquake.nrmllib.models.PointSource` instance.
-        :returns:
-            The HazardLib representation of the input source.
-        """
-        shapely_polygon = wkt.loads(src.geometry.wkt)
-        hazardlib_polygon = geo.Polygon(
-            # We ignore the last coordinate in the sequence here, since it is a
-            # duplicate of the first. hazardlib will close the loop for us.
-            [geo.Point(*x) for x in list(shapely_polygon.exterior.coords)[:-1]]
-        )
-
-        mf_dist = self._mfd_to_hazardlib(src.mfd)
-
-        # nodal plane distribution:
-        npd = pmf.PMF(
-            [(x.probability,
-              geo.NodalPlane(strike=x.strike, dip=x.dip, rake=x.rake))
-             for x in src.nodal_plane_dist]
-        )
-
-        # hypocentral depth distribution:
-        hd = pmf.PMF([(x.probability, x.depth) for x in src.hypo_depth_dist])
-
-        msr = scalerel.get_available_magnitude_scalerel()[src.mag_scale_rel]()
-        area = source.AreaSource(
-            source_id=src.id,
-            name=src.name,
-            tectonic_region_type=src.trt,
-            mfd=mf_dist,
-            rupture_mesh_spacing=self.rupture_mesh_spacing,
-            magnitude_scaling_relationship=msr,
-            rupture_aspect_ratio=src.rupt_aspect_ratio,
-            upper_seismogenic_depth=src.geometry.upper_seismo_depth,
-            lower_seismogenic_depth=src.geometry.lower_seismo_depth,
-            nodal_plane_distribution=npd, hypocenter_distribution=hd,
-            polygon=hazardlib_polygon,
-            area_discretization=self.area_source_discretization,
-            temporal_occurrence_model=self.default_tom,
-        )
-
-        return area
-
-    def _simple_to_hazardlib(self, src):
-        """Convert a NRML simple fault source to the HazardLib equivalent.
-
-        See :mod:`openquake.nrmllib.models` and
-        :mod:`openquake.hazardlib.source`.
-
-        :param src:
-            :class:`openquake.nrmllib.models.SimpleFaultRuptureModel` instance.
-        :returns:
-            The HazardLib representation of the input source.
-        """
-        shapely_line = wkt.loads(src.geometry.wkt)
-        fault_trace = geo.Line([geo.Point(*x) for x in shapely_line.coords])
-
-        mf_dist = self._mfd_to_hazardlib(src.mfd)
-        msr = scalerel.get_available_magnitude_scalerel()[src.mag_scale_rel]()
-
-        simple = source.SimpleFaultSource(
-            source_id=src.id,
-            name=src.name,
-            tectonic_region_type=src.trt,
-            mfd=mf_dist,
-            rupture_mesh_spacing=self.rupture_mesh_spacing,
-            magnitude_scaling_relationship=msr,
-            rupture_aspect_ratio=src.rupt_aspect_ratio,
-            upper_seismogenic_depth=src.geometry.upper_seismo_depth,
-            lower_seismogenic_depth=src.geometry.lower_seismo_depth,
-            fault_trace=fault_trace,
-            dip=src.geometry.dip,
-            rake=src.rake,
-            temporal_occurrence_model=self.default_tom,
-        )
-
-        return simple
-
-    def _complex_to_hazardlib(self, src):
-        """Convert a NRML complex fault source to the HazardLib equivalent.
-
-        See :mod:`openquake.nrmllib.models` and
-        :mod:`openquake.hazardlib.source`.
-
-        :param src:
-            :class:`openquake.nrmllib.models.ComplexFaultRuptureModel` instance
-        :returns:
-            The HazardLib representation of the input source.
-        """
-        edges_wkt = []
-        edges_wkt.append(src.geometry.top_edge_wkt)
-        edges_wkt.extend(src.geometry.int_edges)
-        edges_wkt.append(src.geometry.bottom_edge_wkt)
-
-        edges = []
-
-        for edge in edges_wkt:
-            shapely_line = wkt.loads(edge)
-            line = geo.Line([geo.Point(*x) for x in shapely_line.coords])
-            edges.append(line)
-
-        mf_dist = self._mfd_to_hazardlib(src.mfd)
-        msr = scalerel.get_available_magnitude_scalerel()[src.mag_scale_rel]()
-
-        cmplx = source.ComplexFaultSource(
-            source_id=src.id,
-            name=src.name,
-            tectonic_region_type=src.trt,
-            mfd=mf_dist,
-            rupture_mesh_spacing=self.rupture_mesh_spacing,
-            magnitude_scaling_relationship=msr,
-            rupture_aspect_ratio=src.rupt_aspect_ratio,
-            edges=edges,
-            rake=src.rake,
-            temporal_occurrence_model=self.default_tom,
-        )
-
-        return cmplx
-
-    def _characteristic_to_hazardlib(self, src):
-        """
-        Convert a NRML characteristic fault source to the HazardLib equivalent.
-
-        The surface of a characteristic fault source can be one of the
-        following:
-            * simple fault
-            * complex fault
-            * one or more planar surfaces
-
-        See :mod:`openquake.nrmllib.models` and
-        :mod:`openquake.hazardlib.source`.
-
-        :param src:
-            :class:`openquake.nrmllib.models.CharacteristicSource` instance.
-        :returns:
-            The HazardLib representation of the input source.
-        """
-        mf_dist = self._mfd_to_hazardlib(src.mfd)
-
-        if isinstance(src.surface, nrml_models.SimpleFaultGeometry):
-            shapely_line = wkt.loads(src.surface.wkt)
-            fault_trace = geo.Line(
-                [geo.Point(*x) for x in shapely_line.coords])
-
-            surface = geo.SimpleFaultSurface.from_fault_data(
-                fault_trace,
-                src.surface.upper_seismo_depth,
-                src.surface.lower_seismo_depth,
-                src.surface.dip,
-                self.rupture_mesh_spacing,
-            )
-        elif isinstance(src.surface, nrml_models.ComplexFaultGeometry):
-            edges_wkt = []
-            edges_wkt.append(src.surface.top_edge_wkt)
-            edges_wkt.extend(src.surface.int_edges)
-            edges_wkt.append(src.surface.bottom_edge_wkt)
-
-            edges = []
-
-            for edge in edges_wkt:
-                shapely_line = wkt.loads(edge)
-                line = geo.Line([geo.Point(*x) for x in shapely_line.coords])
-                edges.append(line)
-
-            surface = geo.ComplexFaultSurface.from_fault_data(
-                edges, self.rupture_mesh_spacing)
-        else:
-            # A collection of planar surfaces
-            planar_surfaces = []
-            for planar_surface in src.surface:
-                kwargs = planar_surface.__dict__
-                kwargs.update(dict(mesh_spacing=self.rupture_mesh_spacing))
-
-                planar_surfaces.append(geo.PlanarSurface(**kwargs))
-
-            surface = geo.MultiSurface(planar_surfaces)
-
-        char = source.CharacteristicFaultSource(
-            source_id=src.id,
-            name=src.name,
-            tectonic_region_type=src.trt,
-            mfd=mf_dist,
-            surface=surface,
-            rake=src.rake,
-            temporal_occurrence_model=self.default_tom,
-        )
-        return char
-
-    def _simple_rupture_to_hazardlib(self, src):
-        """Convert a NRML simple fault source to the HazardLib equivalent.
-
-        See :mod:`openquake.nrmllib.models` and
-        :mod:`openquake.hazardlib.source`.
-
-        :param src:
-            :class:`openquake.nrmllib.models.PointSource` instance.
-        :returns:
-            The HazardLib representation of the input rupture.
-        """
-
-        shapely_line = wkt.loads(src.geometry.wkt)
-        fault_trace = geo.Line([geo.Point(*x) for x in shapely_line.coords])
-        geom = src.geometry
-
-        surface = geo.SimpleFaultSurface.from_fault_data(
-            fault_trace, geom.upper_seismo_depth, geom.lower_seismo_depth,
-            geom.dip, self.rupture_mesh_spacing)
-
-        rupture = HazardlibRupture(
-            mag=src.magnitude, rake=src.rake,
-            tectonic_region_type=None, hypocenter=geo.Point(*src.hypocenter),
-            surface=surface, source_typology=source.SimpleFaultSource)
-
-        return rupture
-
-    def _complex_rupture_to_hazardlib(self, src):
-        """Convert a NRML complex fault source to the HazardLib equivalent.
-
-        See :mod:`openquake.nrmllib.models` and
-        :mod:`openquake.hazardlib.source`.
-
-        :param src:
-            :class:`openquake.nrmllib.models.PointSource` instance.
-        :returns:
-            The HazardLib representation of the input rupture.
-        """
-
-        edges_wkt = []
-        edges_wkt.append(src.geometry.top_edge_wkt)
-        edges_wkt.extend(src.geometry.int_edges)
-        edges_wkt.append(src.geometry.bottom_edge_wkt)
-
-        edges = []
-
-        for edge in edges_wkt:
-            shapely_line = wkt.loads(edge)
-            line = geo.Line([geo.Point(*x) for x in shapely_line.coords])
-            edges.append(line)
-
-        surface = geo.ComplexFaultSurface.from_fault_data(
-            edges, self.rupture_mesh_spacing)
-
-        rupture = HazardlibRupture(
-            mag=src.magnitude, rake=src.rake,
-            tectonic_region_type=None, hypocenter=geo.Point(*src.hypocenter),
-            surface=surface, source_typology=source.ComplexFaultSource)
-
-        return rupture
-
-    def _mfd_to_hazardlib(self, src_mfd):
-        """Convert a NRML MFD to an HazardLib MFD.
-
-        :param src_mfd:
-            :class:`openquake.nrmllib.models.IncrementalMFD` or
-            :class:`openquake.nrmllib.models.TGRMFD` instance.
-        :returns:
-            The HazardLib representation of the MFD. See
-            :mod:`openquake.hazardlib.mfd`.
-        """
-        bin_width = self.width_of_mfd_bin
-        if isinstance(src_mfd, nrml_models.TGRMFD):
-            assert bin_width is not None
-            return mfd.TruncatedGRMFD(
-                a_val=src_mfd.a_val, b_val=src_mfd.b_val,
-                min_mag=src_mfd.min_mag,
-                max_mag=src_mfd.max_mag,
-                bin_width=bin_width
-            )
-        elif isinstance(src_mfd, nrml_models.IncrementalMFD):
-            return mfd.EvenlyDiscretizedMFD(
-                min_mag=src_mfd.min_mag, bin_width=src_mfd.bin_width,
-                occurrence_rates=src_mfd.occur_rates
-            )
 
 
 def area_to_point_sources(area_src, area_src_disc):
@@ -646,3 +234,472 @@ def split_source(src, area_source_discretization):
             yield s
     else:  # characteristic sources are not split since they are small
         yield src
+
+
+class ValidNode(LiteralNode):
+    """
+    A subclass of LiteralNode to be used when parsing sources and
+    ruptures from NRML files.
+    """
+    validators = valid.parameters(
+        strike=valid.strike_range,  # needed for the moment
+        dip=valid.dip_range,  # needed for the moment
+        rake=valid.rake_range,  # needed for the moment
+        magnitude=valid.positivefloat,
+        lon=valid.longitude,
+        lat=valid.latitude,
+        depth=valid.positivefloat,
+        upperSeismoDepth=valid.positivefloat,
+        lowerSeismoDepth=valid.positivefloat,
+        posList=valid.posList,
+        pos=valid.lonlat,
+        aValue=float,
+        bValue=valid.positivefloat,
+        magScaleRel=valid.mag_scale_rel,
+        tectonicRegion=str,
+        ruptAspectRatio=valid.positivefloat,
+        maxMag=valid.positivefloat,
+        minMag=valid.positivefloat,
+        binWidth=valid.positivefloat,
+        probability=valid.probability,
+        hypocenter=valid.point3d,
+        topLeft=valid.point3d,
+        topRight=valid.point3d,
+        bottomLeft=valid.point3d,
+        bottomRight=valid.point3d,
+        hypoDepth=valid.probability_depth,
+        nodalPlane=valid.nodal_plane,
+        occurRates=valid.positivefloats,
+        probs_occur=valid.pmf,
+        )
+
+
+def split_coords_2d(seq):
+    """
+    :param seq: a flat list with lons and lats
+    :returns: a validated list of pairs (lon, lat)
+
+    >>> split_coords_2d([1.1, 2.1, 2.2, 2.3])
+    [(1.1, 2.1), (2.2, 2.3)]
+    """
+    lons, lats = [], []
+    for i, el in enumerate(seq):
+        if i % 2 == 0:
+            lons.append(valid.longitude(el))
+        elif i % 2 == 1:
+            lats.append(valid.latitude(el))
+    return zip(lons, lats)
+
+
+def split_coords_3d(seq):
+    """
+    :param seq: a flat list with lons, lats and depths
+    :returns: a validated list of (lon, lat, depths) triplets
+
+    >>> split_coords_3d([1.1, 2.1, 0.1, 2.3, 2.4, 0.1])
+    [(1.1, 2.1, 0.1), (2.3, 2.4, 0.1)]
+    """
+    lons, lats, depths = [], [], []
+    for i, el in enumerate(seq):
+        if i % 3 == 0:
+            lons.append(valid.longitude(el))
+        elif i % 3 == 1:
+            lats.append(valid.latitude(el))
+        elif i % 3 == 2:
+            depths.append(valid.depth(el))
+    return zip(lons, lats, depths)
+
+
+class RuptureConverter(object):
+    """
+    Convert ruptures from nodes into Hazardlib ruptures.
+    """
+    fname = None  # should be set externally
+
+    def __init__(self, rupture_mesh_spacing):
+        self.rupture_mesh_spacing = rupture_mesh_spacing
+
+    @contextmanager
+    def context(self, node):
+        """
+        Context manager managing exceptions and adding line number
+        of the current node and name of the current file being processed
+        to the error message.
+
+        :param node: the current node being processed
+        """
+        try:
+            yield node
+        except:
+            etype, exc, tb = sys.exc_info()
+            msg = 'node %s: %s, line %s of %s' % (
+                node.tag, exc, node.lineno, self.fname)
+            raise etype, msg, tb
+
+    def convert_node(self, node):
+        """
+        Convert the given rupture node into a hazardlib rupture, depending
+        on the node tag.
+
+        :param node: a node representing a rupture
+        """
+        with self.context(node):
+            convert_rupture = getattr(self, 'convert_' + node.tag)
+            mag = ~node.magnitude
+            rake = ~node.rake
+            hypocenter = ~node.hypocenter
+        return convert_rupture(node, mag, rake, hypocenter)
+
+    def geo_line(self, edge):
+        """
+        Utility function to convert a node of kind edge
+        into a :class:`openquake.hazardlib.geo.Line` instance.
+
+        :param edge: a node describing an edge
+        """
+        with self.context(edge.LineString.posList) as plist:
+            coords = split_coords_2d(~plist)
+        return geo.Line([geo.Point(*p) for p in coords])
+
+    def geo_lines(self, edges):
+        """
+        Utility function to convert a list of edges into a list of
+        :class:`openquake.hazardlib.geo.Line` instances.
+
+        :param edge: a node describing an edge
+        """
+        lines = []
+        for edge in edges:
+            with self.context(edge):
+                coords = split_coords_3d(~edge.LineString.posList)
+            lines.append(geo.Line([geo.Point(*p) for p in coords]))
+        return lines
+
+    def geo_planar(self, surface):
+        """
+        Utility to convert a PlanarSurface node with subnodes
+        topLeft, topRight, bottomLeft, bottomRight into a
+        :class:`openquake.hazardlib.geo.PlanarSurface` instance.
+
+        :param surface: PlanarSurface node
+        """
+        with self.context(surface):
+            top_left = geo.Point(*~surface.topLeft)
+            top_right = geo.Point(*~surface.topRight)
+            bottom_left = geo.Point(*~surface.bottomLeft)
+            bottom_right = geo.Point(*~surface.bottomRight)
+        return geo.PlanarSurface(
+            self.rupture_mesh_spacing,
+            surface['strike'], surface['dip'],
+            top_left, top_right, bottom_right, bottom_left)
+
+    def convert_surfaces(self, surface_nodes):
+        """
+        Utility to convert a list of surface nodes into a single hazardlib
+        surface. There are three possibilities:
+
+        1. there is a single simpleFaultGeometry node; returns a
+           :class:`openquake.hazardlib.geo.simpleFaultSurface` instance
+        2. there is a single complexFaultGeometry node; returns a
+           :class:`openquake.hazardlib.geo.complexFaultSurface` instance
+        3. there is a list of PlanarSurface nodes; returns a
+           :class:`openquake.hazardlib.geo.MultiSurface` instance
+
+        :param surface_nodes: surface nodes as just described
+        """
+        surface_node = surface_nodes[0]
+        if surface_node.tag == 'simpleFaultGeometry':
+            surface = geo.SimpleFaultSurface.from_fault_data(
+                self.geo_line(surface_node),
+                ~surface_node.upperSeismoDepth,
+                ~surface_node.lowerSeismoDepth,
+                ~surface_node.dip,
+                self.rupture_mesh_spacing)
+        elif surface_node.tag == 'complexFaultGeometry':
+            surface = geo.ComplexFaultSurface.from_fault_data(
+                self.geo_lines(surface_node),
+                self.rupture_mesh_spacing)
+        else:  # a collection of planar surfaces
+            planar_surfaces = map(self.geo_planar, surface_nodes)
+            surface = geo.MultiSurface(planar_surfaces)
+        return surface
+
+    def convert_simpleFaultRupture(self, node, mag, rake, hypocenter):
+        """
+        Convert a simpleFaultRupture node.
+
+        :param node: the rupture node
+        :param mag: the rupture magnitude
+        :param rake: the rupture rake angle
+        :param hypocenter: the rupture hypocenter
+        """
+        with self.context(node):
+            surfaces = [node.simpleFaultGeometry]
+        rupt = source.rupture.Rupture(
+            mag=mag, rake=rake, tectonic_region_type=None,
+            hypocenter=geo.Point(*hypocenter),
+            surface=self.convert_surfaces(surfaces),
+            source_typology=source.SimpleFaultSource)
+        return rupt
+
+    def convert_complexFaultRupture(self, node, mag, rake, hypocenter):
+        """
+        Convert a complexFaultRupture node.
+
+        :param node: the rupture node
+        :param mag: the rupture magnitude
+        :param rake: the rupture rake angle
+        :param hypocenter: the rupture hypocenter
+        """
+        with self.context(node):
+            surfaces = [node.complexFaultGeometry]
+        rupt = source.rupture.Rupture(
+            mag=mag, rake=rake, tectonic_region_type=None,
+            hypocenter=geo.Point(*hypocenter),
+            surface=self.convert_surfaces(surfaces),
+            source_typology=source.ComplexFaultSource)
+        return rupt
+
+    def convert_singlePlaneRupture(self, node, mag, rake, hypocenter):
+        """
+        Convert a singlePlaneRupture node.
+
+        :param node: the rupture node
+        :param mag: the rupture magnitude
+        :param rake: the rupture rake angle
+        :param hypocenter: the rupture hypocenter
+        """
+        with self.context(node):
+            surfaces = [node.planarSurface]
+        hrupt = source.rupture.Rupture(
+            mag=mag, rake=rake,
+            tectonic_region_type=None,
+            hypocenter=geo.Point(*hypocenter),
+            surface=self.convert_surfaces(surfaces),
+            source_typology=source.NonParametricSeismicSource)
+        return hrupt
+
+    def convert_multiPlanesRupture(self, node, mag, rake, hypocenter):
+        """
+        Convert a multiPlanesRupture node.
+
+        :param node: the rupture node
+        :param mag: the rupture magnitude
+        :param rake: the rupture rake angle
+        :param hypocenter: the rupture hypocenter
+        """
+        with self.context(node):
+            surfaces = list(node.getnodes('planarSurface'))
+        hrupt = source.rupture.Rupture(
+            mag=mag, rake=rake,
+            tectonic_region_type=None,
+            hypocenter=geo.Point(*hypocenter),
+            surface=self.convert_surfaces(surfaces),
+            source_typology=source.NonParametricSeismicSource)
+        return hrupt
+
+
+class SourceConverter(RuptureConverter):
+    """
+    Convert sources from valid nodes into Hazardlib objects.
+    """
+    def __init__(self, investigation_time, rupture_mesh_spacing,
+                 width_of_mfd_bin, area_source_discretization):
+        self.area_source_discretization = area_source_discretization
+        self.rupture_mesh_spacing = rupture_mesh_spacing
+        self.width_of_mfd_bin = width_of_mfd_bin
+        self.tom = PoissonTOM(investigation_time)
+
+    def convert_node(self, node):
+        """
+        Convert the given node into a hazardlib source, depending
+        on the node tag.
+
+        :param node: a node representing a source
+        """
+        with self.context(node):
+            convert_source = getattr(self, 'convert_' + node.tag)
+        return convert_source(node)
+
+    def convert_mfdist(self, node):
+        """
+        Convert the given node into a Magnitude-Frequency Distribution
+        object.
+
+        :param node: a node of kind incrementalMFD or truncGutenbergRichterMFD
+        :returns: a :class:`openquake.hazardlib.mdf.EvenlyDiscretizedMFD.` or
+                  :class:`openquake.hazardlib.mdf.TruncatedGRMFD` instance
+        """
+        with self.context(node):
+            [mfd_node] = [subnode for subnode in node if subnode.tag in (
+                'incrementalMFD', 'truncGutenbergRichterMFD')]
+            if mfd_node.tag == 'incrementalMFD':
+                return mfd.EvenlyDiscretizedMFD(
+                    min_mag=mfd_node['minMag'], bin_width=mfd_node['binWidth'],
+                    occurrence_rates=~mfd_node.occurRates)
+            elif mfd_node.tag == 'truncGutenbergRichterMFD':
+                return mfd.TruncatedGRMFD(
+                    a_val=mfd_node['aValue'], b_val=mfd_node['bValue'],
+                    min_mag=mfd_node['minMag'], max_mag=mfd_node['maxMag'],
+                    bin_width=self.width_of_mfd_bin)
+
+    def convert_npdist(self, node):
+        """
+        Convert the given node into a Nodal Plane Distribution.
+
+        :param node: a nodalPlaneDist node
+        :returns: a :class:`openquake.hazardlib.geo.NodalPlane` instance
+        """
+        with self.context(node):
+            npdist = []
+            for np in node.nodalPlaneDist:
+                prob, strike, dip, rake = ~np
+                npdist.append((prob, geo.NodalPlane(strike, dip, rake)))
+            return pmf.PMF(npdist)
+
+    def convert_hpdist(self, node):
+        """
+        Convert the given node into a probability mass function for the
+        hypo depth distribution.
+
+        :param node: a hypoDepthDist node
+        :returns: a :class:`openquake.hazardlib.pmf.PMF` instance
+        """
+        with self.context(node):
+            return pmf.PMF([~hd for hd in node.hypoDepthDist])
+
+    def convert_areaSource(self, node):
+        """
+        Convert the given node into an area source object.
+
+        :param node: a node with tag areaGeometry
+        :returns: a :class:`openquake.hazardlib.source.AreaSource` instance
+        """
+        geom = node.areaGeometry
+        coords = split_coords_2d(~geom.Polygon.exterior.LinearRing.posList)
+        polygon = geo.Polygon([geo.Point(*xy) for xy in coords])
+        msr = valid.SCALEREL[~node.magScaleRel]()
+        return source.AreaSource(
+            source_id=node['id'],
+            name=node['name'],
+            tectonic_region_type=node['tectonicRegion'],
+            mfd=self.convert_mfdist(node),
+            rupture_mesh_spacing=self.rupture_mesh_spacing,
+            magnitude_scaling_relationship=msr,
+            rupture_aspect_ratio=~node.ruptAspectRatio,
+            upper_seismogenic_depth=~geom.upperSeismoDepth,
+            lower_seismogenic_depth=~geom.lowerSeismoDepth,
+            nodal_plane_distribution=self.convert_npdist(node),
+            hypocenter_distribution=self.convert_hpdist(node),
+            polygon=polygon,
+            area_discretization=self.area_source_discretization,
+            temporal_occurrence_model=self.tom)
+
+    def convert_pointSource(self, node):
+        """
+        Convert the given node into a point source object.
+
+        :param node: a node with tag pointGeometry
+        :returns: a :class:`openquake.hazardlib.source.PointSource` instance
+        """
+        geom = node.pointGeometry
+        lon_lat = ~geom.Point.pos
+        msr = valid.SCALEREL[~node.magScaleRel]()
+        return source.PointSource(
+            source_id=node['id'],
+            name=node['name'],
+            tectonic_region_type=node['tectonicRegion'],
+            mfd=self.convert_mfdist(node),
+            rupture_mesh_spacing=self.rupture_mesh_spacing,
+            magnitude_scaling_relationship=msr,
+            rupture_aspect_ratio=~node.ruptAspectRatio,
+            upper_seismogenic_depth=~geom.upperSeismoDepth,
+            lower_seismogenic_depth=~geom.lowerSeismoDepth,
+            location=geo.Point(*lon_lat),
+            nodal_plane_distribution=self.convert_npdist(node),
+            hypocenter_distribution=self.convert_hpdist(node),
+            temporal_occurrence_model=self.tom)
+
+    def convert_simpleFaultSource(self, node):
+        """
+        Convert the given node into a simple fault object.
+
+        :param node: a node with tag areaGeometry
+        :returns: a :class:`openquake.hazardlib.source.SimpleFaultSource`
+                  instance
+        """
+        geom = node.simpleFaultGeometry
+        msr = valid.SCALEREL[~node.magScaleRel]()
+        simple = source.SimpleFaultSource(
+            source_id=node['id'],
+            name=node['name'],
+            tectonic_region_type=node['tectonicRegion'],
+            mfd=self.convert_mfdist(node),
+            rupture_mesh_spacing=self.rupture_mesh_spacing,
+            magnitude_scaling_relationship=msr,
+            rupture_aspect_ratio=~node.ruptAspectRatio,
+            upper_seismogenic_depth=~geom.upperSeismoDepth,
+            lower_seismogenic_depth=~geom.lowerSeismoDepth,
+            fault_trace=self.geo_line(geom),
+            dip=~geom.dip,
+            rake=~node.rake,
+            temporal_occurrence_model=self.tom)
+        return simple
+
+    def convert_complexFaultSource(self, node):
+        """
+        Convert the given node into a complex fault object.
+
+        :param node: a node with tag areaGeometry
+        :returns: a :class:`openquake.hazardlib.source.ComplexFaultSource`
+                  instance
+        """
+        geom = node.complexFaultGeometry
+        msr = valid.SCALEREL[~node.magScaleRel]()
+        cmplx = source.ComplexFaultSource(
+            source_id=node['id'],
+            name=node['name'],
+            tectonic_region_type=node['tectonicRegion'],
+            mfd=self.convert_mfdist(node),
+            rupture_mesh_spacing=self.rupture_mesh_spacing,
+            magnitude_scaling_relationship=msr,
+            rupture_aspect_ratio=~node.ruptAspectRatio,
+            edges=self.geo_lines(geom),
+            rake=~node.rake,
+            temporal_occurrence_model=self.tom)
+        return cmplx
+
+    def convert_characteristicFaultSource(self, node):
+        """
+        Convert the given node into a characteristic fault object.
+
+        :param node: a node with tag areaGeometry
+        :returns: a :class:`openquake.hazardlib.source.CharacteristicFaultSource` instance
+        """
+        char = source.CharacteristicFaultSource(
+            source_id=node['id'],
+            name=node['name'],
+            tectonic_region_type=node['tectonicRegion'],
+            mfd=self.convert_mfdist(node),
+            surface=self.convert_surfaces(node.surface),
+            rake=~node.rake,
+            temporal_occurrence_model=self.tom)
+        return char
+
+    def convert_nonParametricSeismicSource(self, node):
+        """
+        Convert the given node into a non parametric source object.
+
+        :param node: a node with tag areaGeometry
+        :returns: a :class:`openquake.hazardlib.source.NonParametricSeismicSource` instance
+        """
+        trt = node['tectonicRegion']
+        rup_pmf_data = []
+        for rupnode in node:
+            probs = pmf.PMF(rupnode['probs_occur'])
+            rup = RuptureConverter.convert_node(self, rupnode)
+            rup.tectonic_region_type = trt
+            rup_pmf_data.append((rup, probs))
+        nps = source.NonParametricSeismicSource(
+            node['id'], node['name'], trt, rup_pmf_data)
+        return nps
