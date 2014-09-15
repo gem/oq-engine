@@ -418,7 +418,7 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
             job=self.rc.oqjob, asset__in=annotated_assets)
         if not asset_sites:
             raise AssetSiteAssociationError(
-                'Could not associated any asset in %s to '
+                'Could not associate any asset in %s to '
                 'hazard sites within the distance of %s km'
                 % (annotated_assets, self.rc.best_maximum_distance))
         if not self.epsilons_shape:
