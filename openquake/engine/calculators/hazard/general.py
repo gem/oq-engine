@@ -318,7 +318,10 @@ class BaseHazardCalculator(base.Calculator):
         """
         Initialize risk models, site model and sources
         """
-        # if you don't use a transaction, errors will be eaten
+        # if you don't use a transaction, errors will be masked
+        # i.e. from wrong queries you could get errors such as
+        # "cannot rollback" "failed transaction" instead of the
+        # real error message
         with transaction.commit_on_success(using='job_init'):
             self.parse_risk_models()
         with transaction.commit_on_success(using='job_init'):
