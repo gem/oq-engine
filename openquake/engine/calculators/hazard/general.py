@@ -415,7 +415,7 @@ class BaseHazardCalculator(base.Calculator):
         logs.LOG.progress("initializing sources")
         self.source_model_lt = logictree.SourceModelLogicTree.from_hc(self.hc)
         sm_paths = distinct(self.source_model_lt)
-        nrml_to_hazardlib = source.NrmlHazardlibConverter(
+        nrml_to_hazardlib = source.SourceConverter(
             self.hc.investigation_time,
             self.hc.rupture_mesh_spacing,
             self.hc.width_of_mfd_bin,
