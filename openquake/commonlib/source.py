@@ -277,10 +277,10 @@ class ValidNode(LiteralNode):
 def split_coords_2d(seq):
     """
     :param seq: a flat list with lons and lats
-    :returns: a validated list of triplets (lon, lat, 0.0)
+    :returns: a validated list of pairs (lon, lat)
 
     >>> split_coords_2d([1.1, 2.1, 2.2, 2.3])
-    [(1.1, 2.1, 0.0), (2.2, 2.3, 0.0)]
+    [(1.1, 2.1), (2.2, 2.3)]
     """
     lons, lats = [], []
     for i, el in enumerate(seq):
@@ -288,7 +288,7 @@ def split_coords_2d(seq):
             lons.append(valid.longitude(el))
         elif i % 2 == 1:
             lats.append(valid.latitude(el))
-    return zip(lons, lats, [0.0] * len(lons))
+    return zip(lons, lats)
 
 
 def split_coords_3d(seq):
