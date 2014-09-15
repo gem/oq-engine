@@ -127,7 +127,10 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         latter piece basically defines the work to be done in the
         `execute` phase.)
         """
-        # if you don't use a transaction, errors will be eaten
+        # if you don't use a transaction, errors will be masked
+        # i.e. from wrong queries you could get errors such as
+        # "cannot rollback" "failed transaction" instead of the
+        # real error message
         with transaction.commit_on_success(using='job_init'):
             self.parse_risk_models()
         with transaction.commit_on_success(using='job_init'):
