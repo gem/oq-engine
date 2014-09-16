@@ -60,7 +60,7 @@ class UpgradeManagerTestCase(unittest.TestCase):
         self.assertTrue(str(ctx.exception).startswith(
             'The upgrade_dir does not contain scripts matching the pattern'))
 
-    def test_ok(self):
+    def test_script_lower_than_current_version(self):
         applied = upgrade_db(conn, pkg, skip_versions='0002 0003'.split())
         self.assertEqual(applied, '0001 0005'.split())
         self.assertEqual(count(conn, 'test.hazard_calculation'), 2)
