@@ -31,6 +31,8 @@ from openquake.risklib import scientific
 
 from openquake.engine import logs
 from openquake.engine.db import models
+from django.db import transaction
+
 
 BYTES_PER_FLOAT = numpy.zeros(1, dtype=float).nbytes
 
@@ -71,6 +73,7 @@ class HazardGetter(object):
         The ids of the sites associated to the hazards
     """
     builder = None  # set by the GetterBuilder
+    epsilons = None  # overridden in the GroundMotionValuesGetter
 
     def __init__(self, hazard_output, assets, site_ids):
         self.hazard_output = hazard_output
@@ -80,8 +83,9 @@ class HazardGetter(object):
     def __repr__(self):
         shape = getattr(self.epsilons, 'shape', None)
         eps = ', %s epsilons' % str(shape) if shape else ''
-        return "<%s %d assets%s>" % (
-            self.__class__.__name__, len(self.assets), eps)
+        return "<%s %d assets%s, taxonomy=%s>" % (
+            self.__class__.__name__, len(self.assets), eps,
+            self.builder.taxonomy)
 
     def get_data(self):
         """
@@ -171,7 +175,7 @@ class GroundMotionValuesGetter(HazardGetter):
     Hazard getter for loading ground motion values.
     """ + HazardGetter.__doc__
     sescoll = None  # set by the GetterBuilder
-    indices = None  # set by the GetterBuilder
+    asset_site_ids = None  # set by the GetterBuilder
 
     @property
     def rupture_ids(self):
@@ -185,7 +189,14 @@ class GroundMotionValuesGetter(HazardGetter):
         """
         Epsilon matrix for the current getter
         """
-        return self.builder.epsilons[self.sescoll.id][self.indices]
+        epsilon_rows = []  # ordered by asset_site_id
+        for eps in models.Epsilon.objects.filter(
+                ses_collection=self.sescoll.id,
+                asset_site__in=self.asset_site_ids):
+            epsilon_rows.append(eps.epsilons)
+        assert epsilon_rows, ('No epsilons for ses_collection_id=%s' %
+                              self.sescoll.id)
+        return numpy.array(epsilon_rows)
 
     def get_epsilons(self):
         """
@@ -214,7 +225,7 @@ class GroundMotionValuesGetter(HazardGetter):
         cursor.execute('select site_id, rupture_ids, gmvs from '
                        'hzrdr.gmf_data where gmf_id=%s and site_id in %s '
                        'and {} order by site_id'.format(imt_query),
-                       (gmf_id, tuple(self.site_ids),
+                       (gmf_id, tuple(set(self.site_ids)),
                         imt_type, sa_period, sa_damping))
         for sid, group in itertools.groupby(cursor, operator.itemgetter(0)):
             gmvs = []
@@ -249,7 +260,8 @@ class GetterBuilder(object):
     A facility to build hazard getters. When instantiated, populates
     the lists .asset_ids and .site_ids with the associations between
     the assets in the current exposure model and the sites in the
-    previous hazard calculation.
+    previous hazard calculation. It also populate the `asset_site`
+    table in the database.
 
     :param str taxonomy: the taxonomy we are interested in
     :param rc: a :class:`openquake.engine.db.models.RiskCalculation` instance
@@ -264,27 +276,58 @@ class GetterBuilder(object):
         self.hc = rc.get_hazard_calculation()
         max_dist = rc.best_maximum_distance * 1000  # km to meters
         cursor = models.getcursor('job_init')
-        cursor.execute("""
-SELECT DISTINCT ON (exp.id) exp.id AS asset_id, hsite.id AS site_id
-FROM riski.exposure_data AS exp
-JOIN hzrdi.hazard_site AS hsite
-ON ST_DWithin(exp.site, hsite.location, %s)
-WHERE hsite.hazard_calculation_id = %s
-AND exposure_model_id = %s AND taxonomy=%s
-AND ST_COVERS(ST_GeographyFromText(%s), exp.site)
-ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
-""", (max_dist, self.hc.id, rc.exposure_model.id, taxonomy,
-            rc.region_constraint.wkt))
-        assets_sites = cursor.fetchall()
-        if not assets_sites:
+
+        hazard_exposure = models.extract_from([self.hc.oqjob], 'exposuremodel')
+        if self.rc.exposure_model is hazard_exposure:
+            # no need of geospatial queries, just join on the location
+            self.assoc_query = cursor.mogrify("""\
+WITH assocs AS (
+  SELECT %s, exp.id, hsite.id
+  FROM riski.exposure_data AS exp
+  JOIN hzrdi.hazard_site AS hsite
+  ON exp.site::text = hsite.location::text
+  WHERE hsite.hazard_calculation_id = %s
+  AND exposure_model_id = %s AND taxonomy=%s
+  AND ST_COVERS(ST_GeographyFromText(%s), exp.site)
+)
+INSERT INTO riskr.asset_site (job_id, asset_id, site_id)
+SELECT * FROM assocs""", (rc.oqjob.id, self.hc.id,
+                          rc.exposure_model.id, taxonomy,
+                          rc.region_constraint.wkt))
+        else:
+            # associate each asset to the closest hazard site
+            self.assoc_query = cursor.mogrify("""\
+WITH assocs AS (
+  SELECT DISTINCT ON (exp.id) %s, exp.id, hsite.id
+  FROM riski.exposure_data AS exp
+  JOIN hzrdi.hazard_site AS hsite
+  ON ST_DWithin(exp.site, hsite.location, %s)
+  WHERE hsite.hazard_calculation_id = %s
+  AND exposure_model_id = %s AND taxonomy=%s
+  AND ST_COVERS(ST_GeographyFromText(%s), exp.site)
+  ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
+)
+INSERT INTO riskr.asset_site (job_id, asset_id, site_id)
+SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
+                          rc.exposure_model.id, taxonomy,
+                          rc.region_constraint.wkt))
+
+        # insert the associations for the current taxonomy
+        with transaction.commit_on_success(using='job_init'):
+            cursor.execute(self.assoc_query)
+
+        # now read the associations just inserted
+        self.asset_sites = models.AssetSite.objects.filter(
+            job=rc.oqjob, asset__taxonomy=taxonomy)
+        if not self.asset_sites:
             raise AssetSiteAssociationError(
                 'Could not associated any asset of taxonomy %s to '
                 'hazard sites within the distance of %s km'
                 % (taxonomy, self.rc.best_maximum_distance))
 
-        self.asset_ids, self.site_ids = zip(*assets_sites)
+        self.asset_ids = [a.asset_id for a in self.asset_sites]
+        self.site_ids = [a.site_id for a in self.asset_sites]
         self.rupture_ids = {}
-        self.epsilons = {}
         self.epsilons_shape = {}
 
     def calc_nbytes(self, hazard_outputs):
@@ -331,86 +374,87 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
         if self.hc.calculation_mode == 'event_based':
             lt_model_ids = set(ho.output_container.lt_realization.lt_model.id
                                for ho in hazard_outputs)
-            for lt_model_id in lt_model_ids:
-                ses_coll = models.SESCollection.objects.get(
-                    lt_model=lt_model_id)
-                scid = ses_coll.id
-                self.rupture_ids[scid] = ses_coll.get_ruptures(
-                    ).values_list('id', flat=True)
-                num_samples = self.epsilons_shape[scid][NRUPTURES]
-                self.epsilons[scid] = make_epsilons(
-                    len(self.asset_ids), num_samples,
-                    self.rc.master_seed, self.rc.asset_correlation)
+            ses_collections = [
+                models.SESCollection.objects.get(lt_model=lt_model_id)
+                for lt_model_id in lt_model_ids]
         elif self.hc.calculation_mode == 'scenario':
-            n = self.hc.number_of_ground_motion_fields
             [out] = self.hc.oqjob.output_set.filter(output_type='ses')
-            scid = out.ses.id  # ses collection id
-            self.rupture_ids[scid] = out.ses.get_ruptures(
-                ).values_list('id', flat=True) or range(n)
-            self.epsilons[scid] = make_epsilons(
-                len(self.asset_ids), n, self.rc.master_seed,
-                self.rc.asset_correlation)
+            ses_collections = [out.ses]
+        else:
+            ses_collections = []
+        for ses_coll in ses_collections:
+            scid = ses_coll.id  # ses collection id
+            num_assets, num_samples = self.epsilons_shape[scid]
+            self.rupture_ids[scid] = ses_coll.get_ruptures(
+                ).values_list('id', flat=True) or range(
+                self.hc.number_of_ground_motion_fields)
+            logs.LOG.info('Building (%d, %d) epsilons for taxonomy %s',
+                          num_assets, num_samples, self.taxonomy)
+            eps = make_epsilons(
+                num_assets, num_samples,
+                self.rc.master_seed, self.rc.asset_correlation)
+            models.Epsilon.saveall(ses_coll, self.asset_sites, eps)
 
-    def _indices_asset_site(self, asset_block):
-        """
-        Filter the given assets by the asset_ids known to the builder
-        and determine their indices.
-
-        :param asset_block: a block of assets of the right taxonomy
-        :returns: three lists of the same lenght indices, assets, site_ids
-        """
-        indices = []
-        assets = []
-        site_ids = []
-        for asset in asset_block:
-            assert asset.taxonomy == self.taxonomy, (
-                asset.taxonomy, self.taxonomy)
-            try:
-                idx = self.asset_ids.index(asset.id)
-            except ValueError:  # asset.id not in list
-                logs.LOG.info(
-                    "No hazard has been found for "
-                    "the asset %s within %s km", asset,
-                    self.rc.best_maximum_distance)
-            else:
-                site_ids.append(self.site_ids[idx])
-                assets.append(asset)
-                indices.append(idx)
-        return indices, assets, site_ids
-
-    def make_getters(self, gettercls, hazard_outputs, asset_block):
+    def make_getters(self, gettercls, hazard_outputs, annotated_assets):
         """
         Build the appropriate hazard getters from the given hazard
         outputs. The assets which have no corresponding hazard site
-        within the maximum distance are discarded. A RuntimeError is
-        raised if all assets are discarded. From outputs coming from
+        within the maximum distance are discarded. An AssetSiteAssociationError
+        is raised if all assets are discarded. From outputs coming from
         an event based or a scenario calculation the right epsilons
-        corresponding to the assets are stored in the getters.
+        corresponding to the assets are stored in the database
 
-        :param gettercls: the HazardGetter subclass to use
-        :param hazard_outputs: the outputs of a hazard calculation
-        :param asset_block: a block of assets
+        :param gettercls:
+            the HazardGetter subclass to use
+        :param hazard_outputs:
+            the outputs of a hazard calculation
+        :param annotated_assets:
+            a block of assets with additional attributes
 
         :returns: a list of HazardGetter instances
         """
-        indices, assets, site_ids = self._indices_asset_site(asset_block)
-        if not indices:
+        # NB: the annotations to the assets are added by models.AssetManager
+        asset_sites = models.AssetSite.objects.filter(
+            job=self.rc.oqjob, asset__in=annotated_assets)
+        if not asset_sites:
             raise AssetSiteAssociationError(
                 'Could not associated any asset in %s to '
                 'hazard sites within the distance of %s km'
-                % (asset_block, self.rc.best_maximum_distance))
-        if not self.epsilons:
+                % (annotated_assets, self.rc.best_maximum_distance))
+        if not self.epsilons_shape:
             self.init_epsilons(hazard_outputs)
+
+        # skip the annotated assets without hazard
+        asset_site_dict = {a.asset.id: a.site.id for a in asset_sites}
+        annotated = []
+        site_ids = []
+        skipped = []
+        for asset in annotated_assets:
+            try:
+                site_id = asset_site_dict[asset.id]
+            except KeyError:
+                # skipping assets without hazard
+                skipped.append(asset.asset_ref)
+                continue
+            annotated.append(asset)
+            site_ids.append(site_id)
+        if skipped:
+            logs.LOG.warn('Could not associate %d assets to hazard sites '
+                          'within the distance of %s km', len(skipped),
+                          self.rc.best_maximum_distance)
+
+        # build the getters
         getters = []
         for ho in hazard_outputs:
-            getter = gettercls(ho, assets, site_ids)
+            getter = gettercls(ho, annotated, site_ids)
             getter.builder = self
-            getter.indices = indices
             if self.hc.calculation_mode == 'event_based':
                 getter.sescoll = models.SESCollection.objects.get(
                     lt_model=ho.output_container.lt_realization.lt_model)
+                getter.asset_site_ids = [a.id for a in asset_sites]
             elif self.hc.calculation_mode == 'scenario':
                 [out] = ho.oq_job.output_set.filter(output_type='ses')
                 getter.sescoll = out.ses
+                getter.asset_site_ids = [a.id for a in asset_sites]
             getters.append(getter)
         return getters
