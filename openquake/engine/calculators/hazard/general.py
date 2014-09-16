@@ -318,10 +318,10 @@ class BaseHazardCalculator(base.Calculator):
         """
         Initialize risk models, site model and sources
         """
-        # if you don't use a transaction, errors will be masked
-        # i.e. from wrong queries you could get errors such as
-        # "cannot rollback" "failed transaction" instead of the
-        # real error message
+        # if you don't use an explicit transaction, errors will be masked
+        # the problem is that Django by default performs implicit transactions
+        # without rollback, see
+        # https://docs.djangoproject.com/en/1.3/topics/db/transactions/
         with transaction.commit_on_success(using='job_init'):
             self.parse_risk_models()
         with transaction.commit_on_success(using='job_init'):
