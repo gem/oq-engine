@@ -23,6 +23,7 @@ Validation library for the engine, the desktop tools, and anything else
 import re
 import ast
 import logging
+from decimal import Decimal
 from openquake.hazardlib import imt, scalerel
 from openquake.commonlib.general import distinct
 
@@ -418,7 +419,7 @@ def pmf(value):
     [(0.157, 0), (0.843, 1)]
     """
     probs = probabilities(value)
-    if sum(probs) != 1.0:
+    if sum(map(Decimal, value.split())) != 1:
         raise ValueError('The probabilities %s do not sum up to 1!' % value)
     return [(p, i) for i, p in enumerate(probs)]
 
