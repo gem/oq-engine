@@ -50,7 +50,7 @@ class PMF(object):
 
     def __init__(self, data, epsilon=1E-15):
         probs, values = zip(*data)
-        if any(prob <= 0 for prob in probs):
+        if any(prob < 0 for prob in probs):
             raise ValueError('a probability in %s is not positive'
                              % list(probs))
         if abs(float(sum(probs)) - 1.0) > epsilon:
