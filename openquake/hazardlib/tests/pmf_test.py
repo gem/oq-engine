@@ -33,7 +33,10 @@ class PMFTestCase(unittest.TestCase):
         self.assertRaises(ValueError, PMF, [])
 
     def test_negative_or_zero_prob(self):
+        # negative probs are refused
         data = [(-1, 0)] + [(Decimal('1.0'), 1), (Decimal('1.0'), 2)]
         self.assertRaises(ValueError, PMF, data)
+
+        # 0 probs are accepted
         data = [(0, 0)] + [(Decimal('0.5'), 1), (Decimal('0.5'), 2)]
-        self.assertRaises(ValueError, PMF, data)
+        PMF(data)
