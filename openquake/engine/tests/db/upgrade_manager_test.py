@@ -7,7 +7,8 @@ from contextlib import contextmanager
 
 from openquake.engine.db.models import getcursor
 from openquake.engine.db.upgrade_manager import (
-    upgrade_db, version_db, what_if_I_upgrade, DuplicatedVersion)
+    upgrade_db, version_db, what_if_I_upgrade,
+    VersionTooSmall, DuplicatedVersion)
 
 conn = getcursor('admin').connection
 pkg = 'openquake.engine.tests.db.upgrades'
@@ -70,7 +71,7 @@ class UpgradeManagerTestCase(unittest.TestCase):
         # numbering from 5 because I am working on the script #4,
         # when I finally merge my upgrade will not be lost even if
         # higher number scripts entered before it. One can even reserve
-        # a bunch of numbers, say from 0020 to 0029, for upgrades affering
+        # a bunch of numbers, say from 0020 to 0029, for upgrades belonging
         # to the same project.
         # NB: if the higher number scripts contain incompatible changes
         # the migration will fail; then you must fix the script and
@@ -80,6 +81,11 @@ class UpgradeManagerTestCase(unittest.TestCase):
         with temp_script('0004-do-nothing.sql', 'SELECT 1'):
             applied = upgrade_db(conn, pkg, skip_versions='0002 0003'.split())
             self.assertEqual(applied, ['0004'])
+
+        # lower version scripts are rejected by what_if_I_upgrade
+        with temp_script('0004-do-nothing.sql', 'SELECT 1'):
+            with self.assertRaises(VersionTooSmall):
+                what_if_I_upgrade(conn, pkg)
 
     def test_syntax_error(self):
         with self.assertRaises(psycopg2.ProgrammingError) as ctx:
@@ -115,7 +121,7 @@ class UpgradeManagerTestCase(unittest.TestCase):
 
     def test_safe_upgrade(self):
         expected = '''\
-Your database is at version 0000. If you upgrade to the latest master, you will arrive at version 0001.
+Your database is at version 0000.
 The following scripts can be applied safely:
 https://github.com/gem/oq-engine/tree/master/openquake/engine/db/schema/upgrades/0001-uniq-ruptures.sql
 Click on the links if you want to know what exactly the scripts are doing.'''
@@ -125,7 +131,7 @@ Click on the links if you want to know what exactly the scripts are doing.'''
 
     def test_tricky_upgrade(self):
         expected = '''\
-Your database is at version 0000. If you upgrade to the latest master, you will arrive at version 0002.
+Your database is at version 0000.
 Please note that the following scripts could be slow:
 https://github.com/gem/oq-engine/tree/master/openquake/engine/db/schema/upgrades/0001-slow-uniq-ruptures.sql
 Please note that the following scripts are potentially dangerous and could destroy your data:
