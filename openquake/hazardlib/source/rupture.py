@@ -132,7 +132,7 @@ class NonParametricProbabilisticRupture(BaseProbabilisticRupture):
         abscissae represent number of rupture occurrences (in increasing order,
         staring from 0) and values in the ordinates represent associated
         probabilities. Example: if, for a given time span, a rupture has
-        probability ``0.8`` to not occurre, ``0.15`` to occur once, and
+        probability ``0.8`` to not occurr, ``0.15`` to occur once, and
         ``0.05`` to occur twice, the ``pmf`` can be defined as ::
 
             pmf = PMF([(Decimal('0.8'), 0), (Decimal('0.15'), 1), Decimal('0.05', 2)])

@@ -121,7 +121,7 @@ class JB2009CorrelationModel(BaseCorrelationModel):
         if isinstance(imt, SA):
             period = imt.period
         else:
-            assert isinstance(imt, PGA)
+            assert isinstance(imt, PGA), imt
             period = 0
 
         # formulae are from page 1700
