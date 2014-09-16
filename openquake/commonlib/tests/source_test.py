@@ -477,7 +477,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             "node areaSource: No subnode named 'nodalPlaneDist'"
             " found in 'areaSource', line 5 of", str(ctx.exception))
 
-    @unittest.skip  # this is skipped on purpose until Damiano fixes hazardlib
     def test_nonparametric_source_ok(self):
         converter = s.SourceConverter(
             investigation_time=50.,

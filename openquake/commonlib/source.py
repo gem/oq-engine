@@ -388,9 +388,8 @@ class RuptureConverter(object):
             top_right = geo.Point(*~surface.topRight)
             bottom_left = geo.Point(*~surface.bottomLeft)
             bottom_right = geo.Point(*~surface.bottomRight)
-        return geo.PlanarSurface(
+        return geo.PlanarSurface.from_corner_points(
             self.rupture_mesh_spacing,
-            surface['strike'], surface['dip'],
             top_left, top_right, bottom_right, bottom_left)
 
     def convert_surfaces(self, surface_nodes):
