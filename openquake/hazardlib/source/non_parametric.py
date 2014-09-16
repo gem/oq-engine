@@ -27,22 +27,6 @@ from openquake.hazardlib.slots import with_slots
 
 
 @with_slots
-class NonParametricMFD(object):
-    """
-    Fake MFD class returning minimum and maximum magnitudes of the
-    underlying ruptures.
-    """
-    __slots__ = ['min_mag', 'max_mag']
-
-    def __init__(self, ruptures):
-        self.min_mag = min(r.mag for r in ruptures)
-        self.max_mag = max(r.mag for r in ruptures)
-
-    def get_min_max_mag(self):
-        return self.min_mag, self.max_mag
-
-
-@with_slots
 class NonParametricSeismicSource(BaseSeismicSource):
     """
     Non Parametric Seismic Source explicitly defines earthquake ruptures in the
@@ -60,13 +44,12 @@ class NonParametricSeismicSource(BaseSeismicSource):
         rupture to occur N times (the PMF must be defined from a minimum number
         of occurrences equal to 0)
     """
-    __slots__ = BaseSeismicSource.__slots__ + ['data', 'mfd']
+    __slots__ = BaseSeismicSource.__slots__ + ['data']
 
     def __init__(self, source_id, name, tectonic_region_type, data):
         super(NonParametricSeismicSource, self). \
             __init__(source_id, name, tectonic_region_type)
         self.data = data
-        self.mfd = NonParametricMFD([r for (r, _) in data])
 
     def iter_ruptures(self):
         """
@@ -89,6 +72,15 @@ class NonParametricSeismicSource(BaseSeismicSource):
         `openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`.
         """
         return len(self.data)
+
+    def get_min_max_mag(self):
+        """
+        Return the minimum and maximum magnitudes of the ruptures generated
+        by the source
+        """
+        min_mag = min(rup.mag for rup, pmf in self.data)
+        max_mag = max(rup.mag for rup, pmf in self.data)
+        return min_mag, max_mag
 
     def get_rupture_enclosing_polygon(self, dilation=0):
         """
