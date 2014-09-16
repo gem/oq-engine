@@ -22,13 +22,12 @@ from openquake.hazardlib.pmf import PMF
 
 class PMFTestCase(unittest.TestCase):
     def test_creation(self):
-        data = [(Decimal('0.1'), i) for i in xrange(10)]
-        pmf = PMF(data[:])
-        self.assertEqual(pmf.data, data)
+        pmf = PMF((Decimal('0.1'), i) for i in xrange(10))
+        self.assertEqual(pmf.data, [(0.1, i) for i in xrange(10)])
 
     def test_wrong_sum(self):
         data = [(0.1, i) for i in xrange(10)]
-        self.assertRaises(ValueError, PMF, data)
+        self.assertRaises(ValueError, PMF, data, 1E-16)
 
     def test_empty_data(self):
         self.assertRaises(ValueError, PMF, [])
