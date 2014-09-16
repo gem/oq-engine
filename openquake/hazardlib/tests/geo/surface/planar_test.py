@@ -142,6 +142,33 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
             Point(0, 1.000001, 2), Point(0, -1, 2)
         )
 
+    def test_vertical_surf_from_corner_points(self):
+        # vertical surface pointing North
+        surf = PlanarSurface.from_corner_points(
+            2., Point(0, 0, 0), Point(0, 1, 0), Point(0, 1, 5), Point(0, 0, 5)
+        )
+        self.assertEqual(surf.mesh_spacing, 2.)
+        self.assertAlmostEqual(surf.strike, 0.)
+        self.assertAlmostEqual(surf.dip, 90.)
+        self.assertEqual(surf.top_left, Point(0, 0, 0))
+        self.assertEqual(surf.top_right, Point(0, 1, 0))
+        self.assertEqual(surf.bottom_left, Point(0, 0, 5))
+        self.assertEqual(surf.bottom_right, Point(0, 1, 5))
+
+    def test_inclined_surf_from_corner_points(self):
+        # inclined surface (dip = 45) with 45 degrees strike
+        surf = PlanarSurface.from_corner_points(
+            2., Point(0, 0, 0), Point(0.5, 0.5, 0),
+            Point(0.563593, 0.436408, 10.), Point(0.063592, -0.063592, 10)
+        )
+        self.assertEqual(surf.mesh_spacing, 2.)
+        self.assertAlmostEqual(surf.strike, 45., delta=0.1)
+        self.assertAlmostEqual(surf.dip, 45., delta=0.1)
+        self.assertEqual(surf.top_left, Point(0, 0, 0))
+        self.assertEqual(surf.top_right, Point(0.5, 0.5, 0))
+        self.assertEqual(surf.bottom_left, Point(0.063592, -0.063592, 10))
+        self.assertEqual(surf.bottom_right, Point(0.563593, 0.436408, 10.))
+
 
 class PlanarSurfaceProjectTestCase(unittest.TestCase):
     def test1(self):
