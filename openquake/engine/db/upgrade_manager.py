@@ -318,7 +318,7 @@ def what_if_I_upgrade(conn, pkg_name='openquake.engine.db.schema.upgrades',
             # current db version: ensure that upgrades are strictly incremental
             raise VersionTooSmall(
                 'Your database is at version %s but you want to apply %s??'
-                % script['fname'])
+                % (current_version, script['fname']))
     if not safe and not slow and not danger:
         return 'Your database is already updated at version %s.' % \
             current_version
