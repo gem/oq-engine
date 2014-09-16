@@ -307,18 +307,21 @@ def what_if_I_upgrade(conn, pkg_name='openquake.engine.db.schema.upgrades',
     safe = []
     for script in getattr(upgrader, extract_scripts)():
         url = script['url']
-        if script['flag'] == '-slow':
+        if script['version'] in applied_versions:
+            continue
+        elif script['flag'] == '-slow':
             slow.append(url)
         elif script['flag'] == '-danger':
             danger.append(url)
-        elif script['version'] not in applied_versions:
-            safe.append(url)
-        if script['version'] < current_version:
+        elif script['version'] < current_version:
             # you cannot apply a script with a version number lower than the
             # current db version: ensure that upgrades are strictly incremental
             raise VersionTooSmall(
                 'Your database is at version %s but you want to apply %s??'
                 % (current_version, script['fname']))
+        else:
+            safe.append(url)
+
     if not safe and not slow and not danger:
         return 'Your database is already updated at version %s.' % \
             current_version
