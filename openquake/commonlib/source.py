@@ -68,7 +68,7 @@ class SourceCollector(object):
         assert src.tectonic_region_type == self.trt, (
             src.tectonic_region_type, self.trt)
         self.sources.append(src)
-        min_mag, max_mag = src.mfd.get_min_max_mag()
+        min_mag, max_mag = src.get_min_max_mag()
         prev_min_mag = self.min_mag
         if prev_min_mag is None or min_mag < prev_min_mag:
             self.min_mag = min_mag
