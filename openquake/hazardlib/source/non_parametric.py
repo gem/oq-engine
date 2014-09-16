@@ -49,7 +49,6 @@ class NonParametricSeismicSource(BaseSeismicSource):
     def __init__(self, source_id, name, tectonic_region_type, data):
         super(NonParametricSeismicSource, self). \
             __init__(source_id, name, tectonic_region_type)
-
         self.data = data
 
     def iter_ruptures(self):
@@ -73,6 +72,15 @@ class NonParametricSeismicSource(BaseSeismicSource):
         `openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`.
         """
         return len(self.data)
+
+    def get_min_max_mag(self):
+        """
+        Return the minimum and maximum magnitudes of the ruptures generated
+        by the source
+        """
+        min_mag = min(rup.mag for rup, pmf in self.data)
+        max_mag = max(rup.mag for rup, pmf in self.data)
+        return min_mag, max_mag
 
     def get_rupture_enclosing_polygon(self, dilation=0):
         """

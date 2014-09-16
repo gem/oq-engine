@@ -31,22 +31,29 @@ class PMF(object):
         random variable to take value of the second item.
 
         There must be at least one tuple in the list. All probabilities
-        must sum up to 1. In order to guarantee that regardless of float
-        values representation on a machine in use using of type Decimal
-        is recommended.
+        must sum up to 1 within the given precision.
 
         The type of values (second items in tuples) is not strictly defined,
         those can be objects of any (mixed or homogeneous) type.
 
+    :param epsilon:
+        the tolerance for the sum of the probabilities (default 1E-15)
+
     :raises ValueError:
         If probabilities do not sum up to 1 or there is zero or negative
         probability.
+
+    NB: in the engine the sum is checked to be exactly one by using
+    Decimal numbers.
     """
     __slots__ = ['data']
 
-    def __init__(self, data):
-        if not data or (sum(prob for (prob, value) in data) != 1.0):
-            raise ValueError('values do not sum up to 1.0')
-        if any(prob <= 0 for (prob, value) in data):
-            raise ValueError('probability is not positive')
-        self.data = data
+    def __init__(self, data, epsilon=1E-15):
+        probs, values = zip(*data)
+        if any(prob < 0 for prob in probs):
+            raise ValueError('a probability in %s is not positive'
+                             % list(probs))
+        if abs(float(sum(probs)) - 1.0) > epsilon:
+            raise ValueError('probabilities %s do not sum up to 1.0'
+                             % list(probs))
+        self.data = zip(map(float, probs), values)
