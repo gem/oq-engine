@@ -36,6 +36,8 @@ from openquake.engine.db import models
 from openquake.engine import logs, writer
 from openquake.engine.performance import EnginePerformanceMonitor
 
+from django.db import transaction
+
 AVAILABLE_GSIMS = openquake.hazardlib.gsim.get_available_gsims()
 
 
@@ -125,9 +127,16 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         latter piece basically defines the work to be done in the
         `execute` phase.)
         """
-        self.parse_risk_models()
-        self.initialize_sources()
-        self.initialize_site_model()
+        # if you don't use an explicit transaction, errors will be masked
+        # the problem is that Django by default performs implicit transactions
+        # without rollback, see
+        # https://docs.djangoproject.com/en/1.3/topics/db/transactions/
+        with transaction.commit_on_success(using='job_init'):
+            self.parse_risk_models()
+        with transaction.commit_on_success(using='job_init'):
+            self.initialize_site_model()
+        with transaction.commit_on_success(using='job_init'):
+            self.initialize_sources()
         self.create_ruptures()
         n_imts = len(distinct(from_string(imt)
                               for imt in self.hc.intensity_measure_types))
