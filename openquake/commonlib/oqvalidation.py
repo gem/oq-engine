@@ -101,7 +101,7 @@ class OqParam(valid.ParamSet):
         width_of_mfd_bin=valid.positivefloat,
         )
 
-    def constrain_hazard_calculation_and_output(self):
+    def is_valid_hazard_calculation_and_output(self):
         """
         The parameters `hazard_calculation_id` and `hazard_output_id`
         are not correct for this calculator.
@@ -114,7 +114,7 @@ class OqParam(valid.ParamSet):
             (self.hazard_calculation_id is not None and
              self.hazard_output_id is None)
 
-    def constrain_truncation_level_disaggregation(self):
+    def is_valid_truncation_level_disaggregation(self):
         """
         Truncation level must be set for disaggregation calculations
         """
@@ -123,7 +123,7 @@ class OqParam(valid.ParamSet):
         else:
             return True
 
-    def constrain_geometry(self):
+    def is_valid_geometry(self):
         """
         Must specify either region, sites or exposure_file.
         """
@@ -137,7 +137,7 @@ class OqParam(valid.ParamSet):
         else:
             return sites is not None
 
-    def constrain_poes(self):
+    def is_valid_poes(self):
         """
         When computing hazard maps and/or uniform hazard spectra,
         the poes list must be non-empty.
@@ -148,7 +148,7 @@ class OqParam(valid.ParamSet):
         else:
             return True
 
-    def constrain_site_model(self):
+    def is_valid_site_model(self):
         """
         In absence of a site_model file the site model parameters
         must be all set.
@@ -162,5 +162,9 @@ class OqParam(valid.ParamSet):
         else:
             return True
 
-    #'`intensity_measure_types_and_levels` is ignored when '
-    #    'a `vulnerability_file` is specified'
+    def is_valid_maximum_distance(self):
+        """
+        The maximum_distance must be set for all hazard calculators
+        """
+        return self.calculation_mode in RISK_CALCULATORS or (
+            getattr(self, 'maximum_distance', None))

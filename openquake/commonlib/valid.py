@@ -506,7 +506,7 @@ class ParamSet(object):
     >>> class MyParams(ParamSet):
     ...     params = parameters(a=positiveint, b=positivefloat)
     ...
-    ...     def constrain_not_too_big(self):
+    ...     def is_valid_not_too_big(self):
     ...         "The sum of a and b must be under 10. "
     ...         return self.a + self.b < 10
 
@@ -526,7 +526,7 @@ class ParamSet(object):
 
     def __init__(self, **names_vals):
         for name, val in names_vals.iteritems():
-            if name.startswith(('_', 'constrain_')):
+            if name.startswith(('_', 'is_valid_')):
                 raise NameError('The parameter name %s is not acceptable'
                                 % name)
             try:
@@ -541,14 +541,14 @@ class ParamSet(object):
                                  % (convert.__name__, name, val))
             setattr(self, name, value)
 
-        constrains = sorted(getattr(self, constrain)
-                            for constrain in dir(self.__class__)
-                            if constrain.startswith('constrain_'))
-        for constrain in constrains:
-            if not constrain():
+        valids = sorted(getattr(self, valid)
+                        for valid in dir(self.__class__)
+                        if valid.startswith('is_valid_'))
+        for is_valid in valids:
+            if not is_valid():
                 dump = '\n'.join('%s=%s' % (n, v)
                                  for n, v in sorted(self.__dict__.items()))
-                raise ValueError(constrain.__doc__ + 'Got:\n' + dump)
+                raise ValueError(is_valid.__doc__ + 'Got:\n' + dump)
 
     def __repr__(self):
         names = sorted(n for n in vars(self) if not n.startswith('_'))

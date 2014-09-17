@@ -45,7 +45,7 @@ calculation_mode = classical
 [site]
 sites = 0 0
 site_model_file = %s
-maximum_distance=0
+maximum_distance=1
 truncation_level=0
 random_seed=0
     """ % site_model_input)
@@ -60,7 +60,7 @@ random_seed=0
                 'hazard_output_id': None,
                 'truncation_level': 0.0,
                 'random_seed': 0,
-                'maximum_distance': 0.0,
+                'maximum_distance': 1.0,
                 'inputs': {'site_model': site_model_input},
                 'sites': [(0.0, 0.0)],
             }
@@ -81,7 +81,7 @@ calculation_mode = classical
 [geometry]
 sites_csv = %s
 [misc]
-maximum_distance=0
+maximum_distance=1
 truncation_level=3
 random_seed=5
 [site_params]
@@ -102,7 +102,7 @@ reference_depth_to_1pt0km_per_sec = 100.0
                 'hazard_output_id': None,
                 'truncation_level': 3.0,
                 'random_seed': 5,
-                'maximum_distance': 0.0,
+                'maximum_distance': 1.0,
                 'inputs': {},
                 'reference_depth_to_1pt0km_per_sec': 100.0,
                 'reference_depth_to_2pt5km_per_sec': 5.0,
