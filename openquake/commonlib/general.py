@@ -366,6 +366,9 @@ def import_all(module_or_package):
     [pkg_path] = mod_or_pkg.__path__
     n = len(pkg_path)
     for cwd, dirs, files in os.walk(pkg_path):
+        if all(os.path.basename(f) != '__init__.py' for f in files):
+            # the current working directory is not a subpackage
+            continue
         for f in files:
             if f.endswith('.py'):
                 modname = (module_or_package + cwd[n:].replace('/', '.') +
