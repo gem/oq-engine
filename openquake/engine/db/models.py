@@ -890,8 +890,7 @@ class HazardCalculation(djm.Model):
         for src in sources:
             with filtsources_mon:
                 s_sites = src.filter_sites_by_distance_to_source(
-                    self.maximum_distance, site_coll
-                ) if self.maximum_distance else site_coll
+                    self.maximum_distance, site_coll)
                 if s_sites is None:
                     continue
 
@@ -903,8 +902,7 @@ class HazardCalculation(djm.Model):
             for rupture in ruptures:
                 with filtruptures_mon:
                     r_sites = filters.filter_sites_by_distance_to_rupture(
-                        rupture, self.maximum_distance, s_sites
-                        ) if self.maximum_distance else s_sites
+                        rupture, self.maximum_distance, s_sites)
                     if r_sites is None:
                         continue
                 yield SourceRuptureSites(src, rupture, r_sites)
