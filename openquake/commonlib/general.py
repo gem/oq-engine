@@ -25,6 +25,7 @@ import os
 import sys
 import math
 import tempfile
+import importlib
 import subprocess
 import collections
 
@@ -350,6 +351,32 @@ class CodeDependencyError(Exception):
     pass
 
 
+def import_all(module_or_package):
+    """
+    If `module_or_package` is a module, just import it; if it is a package,
+    recursively imports all the modules it contains. Returns the name of
+    the modules that were imported as a set. The set can be empty if
+    the modules were already in sys.modules.
+    """
+    already_imported = set(sys.modules)
+    mod_or_pkg = importlib.import_module(module_or_package)
+    if not hasattr(mod_or_pkg, '__path__'):  # is a simple module
+        return set(sys.modules) - already_imported
+    # else import all modules contained in the package
+    [pkg_path] = mod_or_pkg.__path__
+    n = len(pkg_path)
+    for cwd, dirs, files in os.walk(pkg_path):
+        for f in files:
+            if f.endswith('.py'):
+                modname = (module_or_package + cwd[n:].replace('/', '.') +
+                           '.' + os.path.basename(f[:-3]))
+                try:
+                    importlib.import_module(modname)
+                except:
+                    print >> sys.stderr, 'Could not import', modname
+    return set(sys.modules) - already_imported
+
+
 def assert_independent(module, *packages):
     """
     Make sure that the given module does not depend from the given
@@ -359,11 +386,8 @@ def assert_independent(module, *packages):
     """
     assert packages, 'At least one package must be specified'
     get_imported_modules = """\
-import sys
-before_modules = set(sys.modules)
-import %s
-after_modules = set(sys.modules)
-print after_modules - before_modules
+from openquake.commonlib.general import import_all
+print import_all(%r)
 """ % module
     imported_modules = run_in_process(get_imported_modules)
     for mod in imported_modules:
