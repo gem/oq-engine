@@ -14,8 +14,8 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import decimal
 import unittest
+from StringIO import StringIO
 
 from numpy.testing import assert_allclose
 
@@ -27,21 +27,38 @@ from openquake.hazardlib import scalerel
 from openquake.hazardlib import source
 from openquake.hazardlib.tom import PoissonTOM
 
-from openquake.nrmllib import parsers as nrml_parsers
-from openquake.nrmllib import models as nrml_models
-
-from openquake.commonlib import source as source_input
+from openquake.commonlib import source as s
 
 from openquake import nrmllib
+from openquake.nrmllib.node import read_nodes
 from openquake.commonlib.general import deep_eq
 
-# Test NRML to use (contains 1 of each source type).
-MIXED_SRC_MODEL = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(nrmllib.__file__))),
-    'examples/source_model/mixed.xml')
+# directory where the example files are
+NRML_DIR = os.path.dirname(os.path.dirname(os.path.dirname(nrmllib.__file__)))
 
-INVALID_SRC_MODEL = os.path.join(
+# Test NRML to use (contains 1 of each source type).
+MIXED_SRC_MODEL = os.path.join(NRML_DIR, 'examples/source_model/mixed.xml')
+
+DUPLICATE_ID_SRC_MODEL = os.path.join(
     os.path.dirname(__file__), 'data', 'invalid_source_model.xml')
+
+SIMPLE_FAULT_RUPTURE = os.path.join(
+    os.path.dirname(__file__), 'data', 'simple-fault-rupture.xml')
+
+COMPLEX_FAULT_RUPTURE = os.path.join(
+    os.path.dirname(__file__), 'data', 'complex-fault-rupture.xml')
+
+SINGLE_PLANE_RUPTURE = os.path.join(
+    os.path.dirname(__file__), 'data', 'single-plane-rupture.xml')
+
+MULTI_PLANES_RUPTURE = os.path.join(
+    os.path.dirname(__file__), 'data', 'multi-planes-rupture.xml')
+
+NONPARAMETRIC_SOURCE = os.path.join(
+    os.path.dirname(__file__), 'data', 'nonparametric-source.xml')
+
+filter_sources = lambda el: 'Source' in el.tag
+filter_ruptures = lambda el: 'Rupture' in el.tag
 
 
 class NrmlSourceToHazardlibTestCase(unittest.TestCase):
@@ -51,22 +68,23 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        parser = nrml_parsers.SourceModelParser(MIXED_SRC_MODEL)
-
+        converter = s.SourceConverter(
+            investigation_time=50.,
+            rupture_mesh_spacing=1,  # km
+            width_of_mfd_bin=1.,  # for Truncated GR MFDs
+            area_source_discretization=1.,  # km
+        )
+        source_nodes = read_nodes(MIXED_SRC_MODEL, filter_sources, s.ValidNode)
         (cls.area, cls.point, cls.simple, cls.cmplx, cls.char_simple,
-         cls.char_complex, cls.char_multi) = list(parser.parse())
+         cls.char_complex, cls.char_multi) = map(
+            converter.convert_node, source_nodes)
 
         # the parameters here would typically be specified in the job .ini
         cls.investigation_time = 50.
         cls.rupture_mesh_spacing = 1  # km
         cls.width_of_mfd_bin = 1.  # for Truncated GR MFDs
         cls.area_source_discretization = 1.  # km
-        cls.nrml_to_hazardlib = source_input.NrmlHazardlibConverter(
-            investigation_time=50.,
-            rupture_mesh_spacing=1,  # km
-            width_of_mfd_bin=1.,  # for Truncated GR MFDs
-            area_source_discretization=1.,  # km
-        )
+        cls.converter = converter
 
     @property
     def _expected_point(self):
@@ -76,13 +94,8 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 
         np1 = geo.NodalPlane(strike=0.0, dip=90.0, rake=0.0)
         np2 = geo.NodalPlane(strike=90.0, dip=45.0, rake=90.0)
-        npd = pmf.PMF(
-            [(decimal.Decimal("0.3"), np1), (decimal.Decimal("0.7"), np2)]
-        )
-
-        hd = pmf.PMF(
-            [(decimal.Decimal("0.5"), 4.0), (decimal.Decimal("0.5"), 8.0)]
-        )
+        npd = pmf.PMF([(0.3, np1), (0.7, np2)])
+        hd = pmf.PMF([(0.5, 4.0), (0.5, 8.0)])
 
         point = source.PointSource(
             source_id="2",
@@ -113,13 +126,8 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 
         np1 = geo.NodalPlane(strike=0.0, dip=90.0, rake=0.0)
         np2 = geo.NodalPlane(strike=90.0, dip=45.0, rake=90.0)
-        npd = pmf.PMF(
-            [(decimal.Decimal("0.3"), np1), (decimal.Decimal("0.7"), np2)]
-        )
-
-        hd = pmf.PMF(
-            [(decimal.Decimal("0.5"), 4.0), (decimal.Decimal("0.5"), 8.0)]
-        )
+        npd = pmf.PMF([(0.3, np1), (0.7, np2)])
+        hd = pmf.PMF([(0.5, 4.0), (0.5, 8.0)])
 
         polygon = geo.Polygon(
             [geo.Point(-122.5, 37.5), geo.Point(-121.5, 37.5),
@@ -142,7 +150,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             area_discretization=self.area_source_discretization,
             temporal_occurrence_model=PoissonTOM(50.),
         )
-
         return area
 
     @property
@@ -173,7 +180,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             rake=30.0,
             temporal_occurrence_model=PoissonTOM(50.)
         )
-
         return simple
 
     @property
@@ -217,7 +223,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             rake=30.0,
             temporal_occurrence_model=PoissonTOM(50.),
         )
-
         return cmplx
 
     @property
@@ -335,98 +340,151 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         return char
 
     def test_point_to_hazardlib(self):
-        exp = self._expected_point
-        actual = self.nrml_to_hazardlib(self.point)
-
-        eq, msg = deep_eq(exp, actual)
-
+        eq, msg = deep_eq(self._expected_point, self.point)
         self.assertTrue(eq, msg)
 
     def test_area_to_hazardlib(self):
-        exp = self._expected_area
-        actual = self.nrml_to_hazardlib(self.area)
-
-        eq, msg = deep_eq(exp, actual)
-
+        eq, msg = deep_eq(self.area, self._expected_area)
         self.assertTrue(eq, msg)
 
     def test_simple_to_hazardlib(self):
-        exp = self._expected_simple
-        actual = self.nrml_to_hazardlib(self.simple)
-
-        eq, msg = deep_eq(exp, actual)
-
+        eq, msg = deep_eq(self._expected_simple, self.simple)
         self.assertTrue(eq, msg)
 
     def test_complex_to_hazardlib(self):
-        exp = self._expected_complex
-        actual = self.nrml_to_hazardlib(self.cmplx)
-
-        eq, msg = deep_eq(exp, actual)
-
+        eq, msg = deep_eq(self._expected_complex, self.cmplx)
         self.assertTrue(eq, msg)
 
     def test_characteristic_simple(self):
-        exp = self._expected_char_simple
-        actual = self.nrml_to_hazardlib(self.char_simple)
-
-        eq, msg = deep_eq(exp, actual)
-
+        eq, msg = deep_eq(self._expected_char_simple, self.char_simple)
         self.assertTrue(eq, msg)
 
     def test_characteristic_complex(self):
-        exp = self._expected_char_complex
-        actual = self.nrml_to_hazardlib(self.char_complex)
-        eq, msg = deep_eq(exp, actual)
+        eq, msg = deep_eq(self._expected_char_complex, self.char_complex)
         self.assertTrue(eq, msg)
 
     def test_characteristic_multi(self):
-        exp = self._expected_char_multi
-        actual = self.nrml_to_hazardlib(self.char_multi)
-
-        eq, msg = deep_eq(exp, actual)
-
+        eq, msg = deep_eq(self._expected_char_multi, self.char_multi)
         self.assertTrue(eq, msg)
 
-    def test_raises_useful_error(self):
-        # Test that the source id and name are included with conversion errors,
-        # to help the users deal with problems in their source models.
-        area_geom = nrml_models.AreaGeometry(
-            wkt='POLYGON((0.0 0.0, 1.0 0.0, 0.0 0.0 ))',
-            upper_seismo_depth=0.0, lower_seismo_depth=10.0,
+    def test_duplicate_id(self):
+        converter = s.SourceConverter(
+            investigation_time=50.,
+            rupture_mesh_spacing=1,
+            width_of_mfd_bin=0.1,
+            area_source_discretization=10,
         )
-        area_mfd = nrml_models.IncrementalMFD(
-            min_mag=6.55, bin_width=0.1,
-            occur_rates=[0.0010614989, 8.8291627E-4, 7.3437777E-4, 6.108288E-4,
-                         5.080653E-4],
-        )
-        area_npd = [
-            nrml_models.NodalPlane(probability=decimal.Decimal("0.3"),
-                                   strike=0.0, dip=90.0, rake=0.0),
-            nrml_models.NodalPlane(probability=decimal.Decimal("0.7"),
-                                   strike=90.0, dip=45.0, rake=90.0),
-        ]
-        area_hdd = [
-            nrml_models.HypocentralDepth(probability=decimal.Decimal("0.5"),
-                                         depth=4.0),
-            nrml_models.HypocentralDepth(probability=decimal.Decimal("0.5"),
-                                         depth=8.0),
-        ]
-        area_src = nrml_models.AreaSource(
-            id='1', name='Quito', trt='Active Shallow Crust',
-            geometry=area_geom, mag_scale_rel='PeerMSR',
-            rupt_aspect_ratio=1.5, mfd=area_mfd, nodal_plane_dist=area_npd,
-            hypo_depth_dist=area_hdd,
-        )
+        with self.assertRaises(s.DuplicateID):
+            s.parse_source_model(
+                DUPLICATE_ID_SRC_MODEL, converter)
 
-        with self.assertRaises(Exception) as ar:
-            self.nrml_to_hazardlib(area_src)
-        expected_error = (
-            "The following error has occurred with source id='1', "
-            "name='Quito': Could not create geometry because of errors while "
-            "reading input."
-        )
-        self.assertEqual(expected_error, ar.exception.message)
+    def test_raises_useful_error_1(self):
+        area_file = StringIO("""\
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <sourceModel name="Some Source Model">
+        <areaSource id="1" name="Quito" tectonicRegion="Active Shallow Crust">
+            <areaGeometry>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing>
+                            <gml:posList>
+                             -122.5 37.5
+                             -121.5 37.5
+                             -121.5 38.5
+                             -122.5 38.5
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>10.0</lowerSeismoDepth>
+            </areaGeometry>
+            <magScaleRel>PeerMSR</magScaleRel>
+            <ruptAspectRatio>1.5</ruptAspectRatio>
+            <incrementalMFD minMag="6.55" binWidth="0.1">
+                <occurRates>-0.0010614989 8.8291627E-4 7.3437777E-4
+                            6.108288E-4 5.080653E-4
+                </occurRates>
+            </incrementalMFD>
+            <nodalPlaneDist>
+                <nodalPlane probability="0.3" strike="0.0" dip="90.0" rake="0.0" />
+                <nodalPlane probability="0.7" strike="90.0" dip="45.0" rake="90.0" />
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth probability="0.5" depth="4.0" />
+                <hypoDepth probability="0.5" depth="8.0" />
+            </hypoDepthDist>
+        </areaSource>
+
+    </sourceModel>
+</nrml>
+""")
+        msg = ('Could not convert occurRates->positivefloats: '
+               'float -0.0010614989 < 0, line 25')
+        with self.assertRaises(ValueError) as ctx:
+            read_nodes(area_file, filter_sources, s.ValidNode).next()
+        self.assertIn(msg, str(ctx.exception))
+
+    def test_raises_useful_error_2(self):
+        area_file = StringIO("""\
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <sourceModel name="Some Source Model">
+        <areaSource id="1" name="Quito" tectonicRegion="Active Shallow Crust">
+            <areaGeometry>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing>
+                            <gml:posList>
+                             -122.5 37.5
+                             -121.5 37.5
+                             -121.5 38.5
+                             -122.5 38.5
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>10.0</lowerSeismoDepth>
+            </areaGeometry>
+            <magScaleRel>PeerMSR</magScaleRel>
+            <ruptAspectRatio>1.5</ruptAspectRatio>
+            <incrementalMFD minMag="6.55" binWidth="0.1">
+                <occurRates>0.0010614989 8.8291627E-4 7.3437777E-4
+                            6.108288E-4 5.080653E-4
+                </occurRates>
+            </incrementalMFD>
+            <nodalPlanedist>
+                <nodalPlane probability="0.3" strike="0.0" dip="90.0" rake="0.0" />
+                <nodalPlane probability="0.7" strike="90.0" dip="45.0" rake="90.0" />
+            </nodalPlanedist>
+            <hypoDepthDist>
+                <hypoDepth probability="0.5" depth="4.0" />
+                <hypoDepth probability="0.5" depth="8.0" />
+            </hypoDepthDist>
+        </areaSource>
+
+    </sourceModel>
+</nrml>
+""")
+        [area] = read_nodes(area_file, filter_sources, s.ValidNode)
+        with self.assertRaises(NameError) as ctx:
+            self.converter.convert_node(area)
+        self.assertIn(
+            "node areaSource: No subnode named 'nodalPlaneDist'"
+            " found in 'areaSource', line 5 of", str(ctx.exception))
+
+    def test_nonparametric_source_ok(self):
+        converter = s.SourceConverter(
+            investigation_time=50.,
+            rupture_mesh_spacing=1,  # km
+            width_of_mfd_bin=1.,  # for Truncated GR MFDs
+            area_source_discretization=1.)
+        np, = read_nodes(NONPARAMETRIC_SOURCE, filter_sources, s.ValidNode)
+        converter.convert_node(np)
 
 
 class AreaToPointsTestCase(unittest.TestCase):
@@ -443,12 +501,8 @@ class AreaToPointsTestCase(unittest.TestCase):
         )
         np1 = geo.NodalPlane(strike=0.0, dip=90.0, rake=0.0)
         np2 = geo.NodalPlane(strike=90.0, dip=45.0, rake=90.0)
-        npd = pmf.PMF(
-            [(decimal.Decimal("0.3"), np1), (decimal.Decimal("0.7"), np2)]
-        )
-        hd = pmf.PMF(
-            [(decimal.Decimal("0.5"), 4.0), (decimal.Decimal("0.5"), 8.0)]
-        )
+        npd = pmf.PMF([(0.3, np1), (0.7, np2)])
+        hd = pmf.PMF([(0.5, 4.0), (0.5, 8.0)])
         polygon = geo.Polygon(
             [geo.Point(-122.5, 37.5), geo.Point(-121.5, 37.5),
              geo.Point(-121.5, 38.5), geo.Point(-122.5, 38.5)]
@@ -469,7 +523,7 @@ class AreaToPointsTestCase(unittest.TestCase):
             area_discretization=self.area_source_discretization,
             temporal_occurrence_model=PoissonTOM(50.),
         )
-        actual = list(source_input.area_to_point_sources(area, 10))
+        actual = list(s.area_to_point_sources(area, 10))
         self.assertEqual(len(actual), 96)  # expected 96 points
         self.assertAlmostEqual(actual[0].mfd.a_val, 0.1177287669604317)
 
@@ -483,12 +537,8 @@ class AreaToPointsTestCase(unittest.TestCase):
         )
         np1 = geo.NodalPlane(strike=0.0, dip=90.0, rake=0.0)
         np2 = geo.NodalPlane(strike=90.0, dip=45.0, rake=90.0)
-        npd = pmf.PMF(
-            [(decimal.Decimal("0.3"), np1), (decimal.Decimal("0.7"), np2)]
-        )
-        hd = pmf.PMF(
-            [(decimal.Decimal("0.5"), 4.0), (decimal.Decimal("0.5"), 8.0)]
-        )
+        npd = pmf.PMF([(0.3, np1), (0.7, np2)])
+        hd = pmf.PMF([(0.5, 4.0), (0.5, 8.0)])
         polygon = geo.Polygon(
             [geo.Point(-122.5, 37.5), geo.Point(-121.5, 37.5),
              geo.Point(-121.5, 38.5), geo.Point(-122.5, 38.5)]
@@ -509,7 +559,7 @@ class AreaToPointsTestCase(unittest.TestCase):
             area_discretization=self.area_source_discretization,
             temporal_occurrence_model=PoissonTOM(50.0),
         )
-        actual = list(source_input.area_to_point_sources(area, 10))
+        actual = list(s.area_to_point_sources(area, 10))
         self.assertEqual(len(actual), 96)  # expected 96 points
         assert_allclose(
             actual[0].mfd.occurrence_rates,
@@ -528,15 +578,14 @@ class SourceCollectorTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.nrml_to_hazardlib = source_input.NrmlHazardlibConverter(
+        cls.converter = s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,  # km
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
             area_source_discretization=1.)
         cls.source_collector = dict(
-            (sc.trt, sc) for sc in source_input.parse_source_model(
-                MIXED_SRC_MODEL, cls.nrml_to_hazardlib,
-                lambda src: None))
+            (sc.trt, sc) for sc in s.parse_source_model(
+                MIXED_SRC_MODEL, cls.converter, lambda src: None))
         cls.sitecol = site.SiteCollection(cls.SITES)
 
     def check(self, trt, attr, value):
@@ -580,13 +629,41 @@ class SourceCollectorTestCase(unittest.TestCase):
             '<SourceCollector TRT=Active Shallow Crust, 2 source(s)>')
 
 
-class ParseSourceModelTestCase(unittest.TestCase):
-    def test(self):
-        nrml_to_hazardlib = source_input.NrmlHazardlibConverter(
-            investigation_time=50.,
-            rupture_mesh_spacing=1,  # km
-            width_of_mfd_bin=0.1,  # for Truncated GR MFDs
-            area_source_discretization=10.)
-        with self.assertRaises(source_input.DuplicateID):
-            source_input.parse_source_model(
-                INVALID_SRC_MODEL, nrml_to_hazardlib)
+class RuptureConverterTestCase(unittest.TestCase):
+
+    def test_well_formed_ruptures(self):
+        converter = s.RuptureConverter(rupture_mesh_spacing=1.5)
+        for fname in (SIMPLE_FAULT_RUPTURE, COMPLEX_FAULT_RUPTURE,
+                      SINGLE_PLANE_RUPTURE, MULTI_PLANES_RUPTURE):
+            node, = read_nodes(fname, filter_ruptures, s.ValidNode)
+            converter.convert_node(node)
+
+    def test_ill_formed_rupture(self):
+        rup_file = StringIO('''\
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <simpleFaultRupture>
+        <magnitude>7.65</magnitude>
+        <rake>15.0</rake>
+        <hypocenter lon="0.0" lat="0.0" depth="-5.0"/>
+        <simpleFaultGeometry>
+                <gml:LineString>
+                    <gml:posList>
+                        -124.704 40.363
+                        -124.977 41.214
+                        -125.140 42.096
+                    </gml:posList>
+                </gml:LineString>
+            <dip>50.0</dip>
+            <upperSeismoDepth>12.5</upperSeismoDepth>
+            <lowerSeismoDepth>19.5</lowerSeismoDepth>
+        </simpleFaultGeometry>
+    </simpleFaultRupture>
+</nrml>
+''')
+
+        # at line 7 there is an invalid depth="-5.0"
+        with self.assertRaises(ValueError) as ctx:
+            read_nodes(rup_file, filter_ruptures, s.ValidNode).next()
+        self.assertIn('line 7', str(ctx.exception))
