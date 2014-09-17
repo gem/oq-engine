@@ -182,14 +182,16 @@ class BaseHazardCalculator(base.Calculator):
         self.num_ruptures = collections.defaultdict(int)
         # now a dictionary (trt_model_id, gsim) -> poes
         self.curves = {}
+        self._hc = None
 
     @property
     def hc(self):
         """
-        A shorter and more convenient way of accessing the
-        :class:`~openquake.engine.db.models.HazardCalculation`.
+        A shorter and more convenient way of accessing the oqparam object
         """
-        return self.job.hazard_calculation
+        if self._hc is None:
+            self._hc = self.job.get_oqparam()
+        return self._hc
 
     @EnginePerformanceMonitor.monitor
     def process_sources(self):
