@@ -20,10 +20,7 @@ from openquake.hazardlib.gsim.cauzzi_faccioli_2008 import (
     CauzziFaccioli2008,
     CauzziFaccioli2008SWISS01,
     CauzziFaccioli2008SWISS04,
-    CauzziFaccioli2008SWISS08,
-    CauzziFaccioli2008SWISS01T,
-    CauzziFaccioli2008SWISS04T,
-    CauzziFaccioli2008SWISS08T
+    CauzziFaccioli2008SWISS08
 )
 # Test data was prepared and provided by B. Edwards
 
@@ -63,38 +60,3 @@ class CauzziFaccioli2008SWISS08TestCase(BaseGSIMTestCase):
         self.check('CF08Swiss/CF08_STD_TOTAL_SigmaSS_TMR.csv',
                    max_discrep_percentage=0.50)
 
-
-class CauzziFaccioli2008SWISS01TTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = CauzziFaccioli2008SWISS01T
-
-    def test_mean(self):
-        self.check('CF08Swiss/CF08_MEAN_VsK_1.csv',
-                   max_discrep_percentage=0.50)
-
-    def test_std_total(self):
-        self.check('CF08Swiss/CF08_STD_TOTAL_SigmaSS_T.csv',
-                   max_discrep_percentage=0.50)
-
-
-class CauzziFaccioli2008SWISS04TTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = CauzziFaccioli2008SWISS04T
-
-    def test_mean(self):
-        self.check('CF08Swiss/CF08_MEAN_VsK_4.csv',
-                   max_discrep_percentage=0.50)
-
-    def test_std_total(self):
-        self.check('CF08Swiss/CF08_STD_TOTAL_SigmaSS_T.csv',
-                   max_discrep_percentage=0.50)
-
-
-class CauzziFaccioli2008SWISS08TTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = CauzziFaccioli2008SWISS08T
-
-    def test_mean(self):
-        self.check('CF08Swiss/CF08_MEAN_VsK_8.csv',
-                   max_discrep_percentage=0.50)
-
-    def test_std_total(self):
-        self.check('CF08Swiss/CF08_STD_TOTAL_SigmaSS_T.csv',
-                   max_discrep_percentage=0.50)
