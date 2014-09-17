@@ -319,7 +319,7 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
         mean, stddevs = _apply_adjustments(
             AkkarBommer2010.COEFFS, self.COEFFS_FS_ROCK[imt], tau_ss,
             mean, stddevs, sites, rup, dists.rjb, imt, stddev_types,
-            log_phi_ss, mean_phi_ss=False)
+            log_phi_ss)
 
         return mean,  np.log(10 ** np.array(stddevs))
 
@@ -342,84 +342,4 @@ class AkkarBommer2010SWISS08(AkkarBommer2010SWISS01):
     Swiss Hazard Model [2014].
     """
 
-    COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS08
-
-
-class AkkarBommer2010SWISS01T(AkkarBommer2010):
-    """
-    This class extends :class:AkkarBommer2010:following same strategy
-    as for :class:AkkarBommer2010SWISS01 to be used for the Swiss
-    Hazard Model [2014].
-    The standard deviation of this model is reported as the
-    single station sigma computed from a mean value (tau) as prepared by
-    B. Edwards for the Swiss Hazard Model
-    """
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-
-        mean, stddevs = super(AkkarBommer2010SWISS01T, self).\
-            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
-
-        tau_ss = 'Sigma2'
-        log_phi_ss = np.log(10)
-        mean, stddevs = _apply_adjustments(
-            AkkarBommer2010.COEFFS, self.COEFFS_FS_ROCK[imt], tau_ss,
-            mean, stddevs, sites, rup, dists.rjb, imt, stddev_types,
-            log_phi_ss, mean_phi_ss=True
-        )
-
-        return mean, stddevs
-    COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS01
-
-
-class AkkarBommer2010SWISS04T(AkkarBommer2010):
-    """
-    This class extends :class:AkkarBommer2010:following same strategy
-    as for :class:AkkarBommer2010SWISS04 to be used for the
-    Swiss Hazard Model [2014].
-    The standard deviation of this model is reported as the
-    single station sigma computed from a mean value (tau) as prepared by
-    B. Edwards for the Swiss Hazard Model
-    """
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-
-        mean, stddevs = super(AkkarBommer2010SWISS04T, self).\
-            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
-
-        tau_ss = 'Sigma2'
-        log_phi_ss = np.log(10)
-        mean, stddevs = _apply_adjustments(
-            AkkarBommer2010.COEFFS, self.COEFFS_FS_ROCK[imt], tau_ss,
-            mean, stddevs, sites, rup, dists.rjb, imt, stddev_types,
-            log_phi_ss, mean_phi_ss=True
-        )
-
-        return mean, stddevs
-    COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS04
-
-
-class AkkarBommer2010SWISS08T(AkkarBommer2010):
-    """
-    This class extends :class:AkkarBommer2010:following same strategy
-    as for :class:AkkarBommer2010SWISS08 to be used for the
-    Swiss Hazard Model [2014].
-    The standard deviation of this model is reported as the
-    single station sigma computed from a mean value (tau) as prepared by
-    B. Edwards for the Swiss Hazard Model
-    """
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        mean, stddevs = super(AkkarBommer2010SWISS08T, self).\
-            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
-
-        tau_ss = 'Sigma2'
-        log_phi_ss = np.log(10)
-        mean, stddevs = _apply_adjustments(
-            AkkarBommer2010.COEFFS, self.COEFFS_FS_ROCK[imt], tau_ss,
-            mean, stddevs, sites, rup, dists, imt, stddev_types,
-            log_phi_ss, mean_phi_ss=True
-        )
-
-        return mean, stddevs
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS08
