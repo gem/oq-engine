@@ -175,10 +175,9 @@ def update_calculation(callback_url=None, **query):
     """
     if callback_url is None:
         return
-    try:  # post to an external service
-        url = urllib2.urlopen(callback_url, data=urllib.urlencode(query))
-    finally:
-        url.close()
+    # post to an external service
+    url = urllib2.urlopen(callback_url, data=urllib.urlencode(query))
+    url.close()
 
 
 #: Simple structure that holds all the query components needed to
