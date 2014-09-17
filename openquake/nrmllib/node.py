@@ -48,7 +48,7 @@ Node objects can be converted into nicely indented strings:
 >>> print root.to_str()
 root
   a A1
-  b{attrb=B} B1
+  b{attrb='B'} B1
 <BLANKLINE>
 
 The subnodes can be retrieved with the dot notation:
@@ -270,7 +270,7 @@ def _displayattrs(attrib, expandattrs):
     if not attrib:
         return ''
     if expandattrs:
-        alist = ['%s=%s' % item for item in sorted(attrib.iteritems())]
+        alist = ['%s=%r' % item for item in sorted(attrib.iteritems())]
     else:
         alist = attrib.keys()
     return '{%s}' % ', '.join(alist)
