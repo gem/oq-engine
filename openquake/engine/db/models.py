@@ -1186,6 +1186,62 @@ def _prep_geometry(kwargs):
     return kw
 
 
+class Imt(djm.Model):
+    """
+    Table with the Intensity Measure Types
+    """
+    imt_str = djm.TextField(null=False)
+    im_type = djm.TextField(choices=IMT_CHOICES)
+    sa_period = djm.FloatField(null=True)
+    sa_damping = djm.FloatField(null=True)
+    stored_imts = None
+
+    @classmethod
+    def get(cls, imt_str):
+        """
+        :param imt_str: a string specifying the IMT
+        :returns: a :class:`openquake.engine.db.models.Imt` instance
+        """
+        if cls.stored_imts is None:  # the first time
+            cls.stored_imts = {imt.imt_str: imt
+                               for imt in Imt.objects.filter()}
+        return cls.stored_imts[imt_str]
+
+    @classmethod
+    def save_new(cls, hazardlib_imts):
+        """
+        Save the intensity measure types not already stored in the database.
+
+        :param hazardlib_imts: a list of hazardlib IMT tuples
+        """
+        if cls.stored_imts is None:  # the first time
+            cls.stored_imts = {imt.imt_str: imt
+                               for imt in Imt.objects.filter()}
+        for x in hazardlib_imts:
+            imt_str = str(x)
+            if imt_str not in cls.stored_imts:
+                imt = cls.objects.create(
+                    imt_str=imt_str,
+                    im_type=x[0], sa_period=x[1], sa_damping=x[2])
+                cls.stored_imts[imt_str] = imt
+
+    class Meta:
+        db_table = 'hzrdi\".\"imt'
+
+
+class ImtTaxonomy(djm.Model):
+    """
+    Table with the associations IMT, taxonomy, as extracted from the risk
+    models.
+    """
+    job = djm.ForeignKey('OqJob', null=False)
+    imt = djm.ForeignKey('Imt', null=False)
+    taxonomy = djm.TextField(null=True)
+
+    class Meta:
+        db_table = 'riski\".\"imt_taxonomy'
+
+
 class OutputManager(djm.Manager):
     """
     Manager class to filter and create Output objects
