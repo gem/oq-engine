@@ -44,11 +44,12 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import source, geo, calc, correlation
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.site import (
-    Site, SiteCollection, FilteredSiteCollection)
+    SiteCollection, FilteredSiteCollection)
 
 from openquake.commonlib.general import distinct
 from openquake.commonlib.riskloaders import loss_type_to_cost_type
 from openquake.commonlib.oqvalidation import OqParam
+from openquake.commonlib.readinput import get_site_collection
 from openquake.commonlib import logictree
 
 from openquake.engine.db import fields
@@ -440,304 +441,24 @@ class Performance(djm.Model):
         db_table = 'uiapi\".\"performance'
 
 
-class HazardCalculation(djm.Model):
+class HazardCalculation(object):
     '''
-    Parameters needed to run a Hazard job.
+    Small wrapper around oqparam instances
     '''
     _site_collection = ()  # see the corresponding instance variable
 
-    @classmethod
-    def create(cls, **kw):
-        return cls(**_prep_geometry(kw))
+    def __init__(self, job):
+        self.oqjob = job
+        self.oqparam = self.oqjob.get_oqparam()
 
-    # Contains the absolute path to the directory containing the job config
-    # file.
-    base_path = djm.TextField()
-    export_dir = djm.TextField(null=True, blank=True)
-
-    #####################
-    # General parameters:
-    #####################
-
-    # A description for this config profile which is meaningful to a user.
-    description = djm.TextField(default='', blank=True)
-
-    CALC_MODE_CHOICES = (
-        (u'classical', u'Classical PSHA'),
-        (u'event_based', u'Probabilistic Event-Based'),
-        (u'disaggregation', u'Disaggregation'),
-        (u'scenario', u'Scenario'),
-    )
-    calculation_mode = djm.TextField(choices=CALC_MODE_CHOICES)
-    inputs = fields.PickleField(blank=True)
-
-    # For the calculation geometry, choose either `region` (with
-    # `region_grid_spacing`) or `sites`.
-    region = djm.PolygonField(srid=DEFAULT_SRID, null=True, blank=True)
-    # Discretization parameter for a `region`. Units in degrees.
-    region_grid_spacing = djm.FloatField(null=True, blank=True)
-    # The points of interest for a calculation.
-    sites = djm.MultiPointField(srid=DEFAULT_SRID, null=True, blank=True)
-
-    ########################
-    # Logic Tree parameters:
-    ########################
-    random_seed = djm.IntegerField(null=False, default=42)
-    number_of_logic_tree_samples = djm.IntegerField(null=True, blank=True)
-
-    ###############################################
-    # ERF (Earthquake Rupture Forecast) parameters:
-    ###############################################
-    rupture_mesh_spacing = djm.FloatField(
-        help_text=('Rupture mesh spacing (in kilometers) for simple/complex '
-                   'fault sources rupture discretization'),
-        null=True,
-        blank=True,
-
-    )
-    width_of_mfd_bin = djm.FloatField(
-        help_text=('Truncated Gutenberg-Richter MFD (Magnitude Frequency'
-                   'Distribution) bin width'),
-        null=True,
-        blank=True,
-    )
-    area_source_discretization = djm.FloatField(
-        help_text='Area Source Disretization, in kilometers',
-        null=True,
-        blank=True,
-    )
-
-    ##################
-    # Site parameters:
-    ##################
-    # If there is no `site_model`, these 4 parameters must be specified:
-    reference_vs30_value = djm.FloatField(
-        help_text='Shear wave velocity in the uppermost 30 m. In m/s.',
-        null=True,
-        blank=True,
-    )
-    VS30_TYPE_CHOICES = (
-        (u'measured', u'Measured'),
-        (u'inferred', u'Inferred'),
-    )
-    reference_vs30_type = djm.TextField(
-        choices=VS30_TYPE_CHOICES,
-        null=True,
-        blank=True,
-    )
-    reference_depth_to_2pt5km_per_sec = djm.FloatField(
-        help_text='Depth to where shear-wave velocity = 2.5 km/sec. In km.',
-        null=True,
-        blank=True,
-    )
-    reference_depth_to_1pt0km_per_sec = djm.FloatField(
-        help_text='Depth to where shear-wave velocity = 1.0 km/sec. In m.',
-        null=True,
-        blank=True,
-    )
-
-    #########################
-    # Calculation parameters:
-    #########################
-    investigation_time = djm.FloatField(
-        help_text=('Time span (in years) for probability of exceedance '
-                   'calculation'),
-        null=True,
-        blank=True,
-    )
-    intensity_measure_types_and_levels = fields.DictField(
-        help_text=(
-            'Dictionary containing for each intensity measure type ("PGA", '
-            '"PGV", "PGD", "SA", "IA", "RSD", "MMI"), the list of intensity '
-            'measure levels for calculating probability of exceedence'),
-        null=True,
-        blank=True,
-    )
-    truncation_level = fields.NullFloatField(
-        help_text='Level for ground motion distribution truncation',
-        null=True,
-        blank=True,
-    )
-    maximum_distance = djm.FloatField(
-        help_text=('Maximum distance (in km) of sources to be considered in '
-                   'the probability of exceedance calculation. Sources more '
-                   'than this distance away (from the sites of interest) are '
-                   'ignored.'),
-    )
-
-    ################################
-    # Event-Based Calculator params:
-    ################################
-    intensity_measure_types = fields.CharArrayField(
-        help_text=(
-            'List of intensity measure types (input for GMF calculation)'),
-        null=True,
-        blank=True,
-    )
-    ses_per_logic_tree_path = djm.IntegerField(
-        help_text=('Number of Stochastic Event Sets to compute per logic tree'
-                   ' branch (enumerated or randomly sampled'),
-        null=True,
-        blank=True,
-    )
-
-    ###################################
-    # Disaggregation Calculator params:
-    ###################################
-    mag_bin_width = djm.FloatField(
-        help_text=('Width of magnitude bins, which ultimately defines the size'
-                   ' of the magnitude dimension of a disaggregation matrix'),
-        null=True,
-        blank=True,
-    )
-    distance_bin_width = djm.FloatField(
-        help_text=('Width of distance bins, which ultimately defines the size'
-                   ' of the distance dimension of a disaggregation matrix'),
-        null=True,
-        blank=True,
-    )
-    coordinate_bin_width = djm.FloatField(
-        help_text=('Width of coordinate bins, which ultimately defines the'
-                   ' size of the longitude and latitude dimensions of a'
-                   ' disaggregation matrix'),
-        null=True,
-        blank=True,
-    )
-    num_epsilon_bins = djm.IntegerField(
-        help_text=('Number of epsilon bins, which defines the size of the'
-                   ' epsilon dimension of a disaggregation matrix'),
-        null=True,
-        blank=True,
-    )
-    ################################
-    # Scenario Calculator params:
-    ################################
-    gsim = djm.TextField(
-        help_text=('Name of the ground shaking intensity model to use in the '
-                   'calculation'),
-        null=True,
-        blank=True,
-    )
-    number_of_ground_motion_fields = djm.IntegerField(
-        null=True,
-        blank=True,
-    )
-    poes_disagg = fields.FloatArrayField(
-        help_text=('The probabilities of exceedance for which we interpolate'
-                   ' grond motion values from hazard curves. This GMV is used'
-                   ' as input for computing disaggregation histograms'),
-        null=True,
-        blank=True,
-    )
-
-    ################################
-    # Output/post-processing params:
-    ################################
-    # Classical params:
-    ###################
-    mean_hazard_curves = fields.OqNullBooleanField(
-        help_text='Compute mean hazard curves',
-        null=True,
-        blank=True,
-    )
-    quantile_hazard_curves = fields.FloatArrayField(
-        help_text='Compute quantile hazard curves',
-        null=True,
-        blank=True,
-    )
-    poes = fields.FloatArrayField(
-        help_text=('PoEs (probabilities of exceedence) to be used for '
-                   'computing hazard maps and uniform hazard spectra'),
-        null=True,
-        blank=True,
-    )
-    hazard_maps = fields.OqNullBooleanField(
-        help_text='Compute hazard maps',
-        null=True,
-        blank=True,
-    )
-    uniform_hazard_spectra = fields.OqNullBooleanField(
-        help_text=('Compute uniform hazard spectra; if true, hazard maps will'
-                   ' be computed as well'),
-        null=True,
-        blank=True,
-    )
-    export_multi_curves = fields.OqNullBooleanField(
-        help_text=('If true hazard curve outputs that groups multiple curves '
-                   'in multiple imt will be exported when asked in export '
-                   'phase.'))
-    # Event-Based params:
-    #####################
-    ground_motion_fields = fields.OqNullBooleanField(
-        help_text=('If true, ground motion fields will be computed (in '
-                   'addition to stochastic event sets)'),
-        null=True,
-        blank=True,
-    )
-    hazard_curves_from_gmfs = fields.OqNullBooleanField(
-        help_text=('If true, ground motion fields will be post-processed into '
-                   'hazard curves.'),
-        null=True,
-        blank=True,
-    )
-
-    class Meta:
-        db_table = 'uiapi\".\"hazard_calculation'
+    def __getattr__(self, name):
+        return getattr(self.oqparam, name)
 
     @property
     def vulnerability_models(self):
         return [self.inputs[vf_type]
                 for vf_type in VULNERABILITY_TYPE_CHOICES
                 if vf_type in self.inputs]
-
-    @property
-    def site_model(self):
-        """
-        Get the site model filename for this calculation
-        """
-        return self.inputs.get('site_model')
-
-    ## TODO: this could be implemented with a view, now that there is
-    ## a site table
-    def get_closest_site_model_data(self, point):
-        """Get the closest available site model data from the database
-        for a given site model and :class:`openquake.hazardlib.geo.point.Point`
-
-        :param site:
-            :class:`openquake.hazardlib.geo.point.Point` instance.
-
-        :returns:
-            The closest :class:`openquake.engine.db.models.SiteModel`
-            for the given ``point`` of interest.
-
-            This function uses the PostGIS `ST_Distance_Sphere
-            <http://postgis.refractions.net/docs/ST_Distance_Sphere.html>`_
-            function to calculate distance.
-
-            If there is no site model data, return `None`.
-        """
-        query = """
-        SELECT
-            hzrdi.site_model.*,
-            min(ST_Distance_Sphere(location, %s))
-                AS min_distance
-        FROM hzrdi.site_model
-        WHERE job_id = %s
-        GROUP BY id
-        ORDER BY min_distance
-        LIMIT 1;"""
-
-        raw_query_set = SiteModel.objects.raw(
-            query, ['SRID=4326; %s' % point.wkt2d, self.oqjob.id]
-        )
-
-        site_model_data = list(raw_query_set)
-
-        assert len(site_model_data) <= 1, (
-            "This query should return at most 1 record.")
-
-        if len(site_model_data) == 1:
-            return site_model_data[0]
 
     def save_hazard_sites(self):
         """
@@ -790,23 +511,11 @@ class HazardCalculation(djm.Model):
         # ordering no ruptures are generated and the test
         # qa_tests/hazard/disagg/case_1/test.py fails with a bad
         # error message
-        if self.site_model:
-            sites = []
-            for hsite in hsites:
-                pt = geo.point.Point(hsite.location.x, hsite.location.y)
-                smd = self.get_closest_site_model_data(pt)
-                measured = smd.vs30_type == 'measured'
-                vs30 = smd.vs30
-                z1pt0 = smd.z1pt0
-                z2pt5 = smd.z2pt5
-                sites.append(Site(pt, vs30, measured, z1pt0, z2pt5, hsite.id))
-            sc = SiteCollection(sites)
-        else:
-            lons = [hsite.location.x for hsite in hsites]
-            lats = [hsite.location.y for hsite in hsites]
-            site_ids = [hsite.id for hsite in hsites]
-            sc = SiteCollection.from_points(lons, lats, site_ids, self)
-        self._site_collection = sc
+        lons = [hsite.location.x for hsite in hsites]
+        lats = [hsite.location.y for hsite in hsites]
+        site_ids = [hsite.id for hsite in hsites]
+        points = geo.Mesh(lons, lats, depts=None)
+        self._site_collection = sc = get_site_collection(points, site_ids)
         return sc
 
     def get_imts(self):
@@ -824,7 +533,7 @@ class HazardCalculation(djm.Model):
         :param coordinates: a sequence of (lon, lat) pairs
         :returns: the ids of the inserted HazardSite instances
         """
-        sites = [HazardSite(hazard_calculation=self,
+        sites = [HazardSite(hazard_calculation=self.job.id,
                             location='POINT(%s %s)' % coord)
                  for coord in coordinates]
         return writer.CacheInserter.saveall(sites)
