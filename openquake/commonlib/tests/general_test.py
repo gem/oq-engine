@@ -125,5 +125,4 @@ class BlockSplitterTestCase(unittest.TestCase):
 
 class CodeDependenciesTestCase(unittest.TestCase):
     def test(self):
-        assert_independent('openquake.commonlib.oqvalidation',
-                           'openquake.risklib', 'openquake.nrmllib')
+        assert_independent('openquake.commonlib', 'openquake.engine')
