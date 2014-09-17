@@ -48,6 +48,7 @@ from openquake.hazardlib.site import (
 
 from openquake.commonlib.general import distinct
 from openquake.commonlib.riskloaders import loss_type_to_cost_type
+from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import logictree
 
 from openquake.engine.db import fields
@@ -353,6 +354,14 @@ class OqJob(djm.Model):
             if missing is RAISE_EXC:
                 raise MissingParameter(name)
             return missing
+
+    def get_oqparam(self):
+        """
+        Return an OqParam object as read from the database
+        """
+        params = {row.name: row.value
+                  for row in JobParam.objects.filter(job=self)}
+        return OqParam(**params)
 
     def save_params(self, params):
         """
