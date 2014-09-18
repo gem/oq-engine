@@ -15,7 +15,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`CauzziFaccioli2008`.
+Module exports :class:`CauzziFaccioli2008`,
+class:`CauzziFaccioli2008SWISS01`, 
+class:`CauzziFaccioli2008SWISS04`
+class:`CauzziFaccioli2008SWISS08`
 """
 from __future__ import division
 
@@ -28,8 +31,7 @@ from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib.gsim.cauzzi_faccioli_2008_coeffs import (
     COEFFS_FS_ROCK_SWISS01,
     COEFFS_FS_ROCK_SWISS04,
-    COEFFS_FS_ROCK_SWISS08,
-)
+    COEFFS_FS_ROCK_SWISS08)
 from openquake.hazardlib.gsim.utils_swiss_gmpe import _apply_adjustments
 
 
