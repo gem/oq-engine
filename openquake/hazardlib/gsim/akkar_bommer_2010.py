@@ -294,9 +294,9 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
     This class extends :class:AkkarBommer2010:
     adjusted to be used for the Swiss Hazard Model [2014].
     1) kappa value
-       K-adjustments corresponding to model 01 - as prepared by Ben Edwards
-       K-value for PGA were not provided but infered from SA[0.01s]
-       the model considers a fixed value of vs30=1100m/s
+    K-adjustments corresponding to model 01 - as prepared by Ben Edwards
+    K-value for PGA were not provided but infered from SA[0.01s]
+    the model considers a fixed value of vs30=1100m/s
     2) small-magnitude correction
     3) single station sigma - inter-event magnitude/distance adjustment
 
