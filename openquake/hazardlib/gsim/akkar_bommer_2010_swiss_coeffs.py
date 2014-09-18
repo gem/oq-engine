@@ -18,8 +18,6 @@
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.imt import PGA, PGV, SA
 
-#: Coefficient table constructed from the electronic suplements of the
-#: original paper.
 
 
 COEFFS_FS_ROCK_SWISS01 = CoeffsTable(sa_damping=5, table="""\
