@@ -18,10 +18,7 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.akkar_bommer_2010 import (
     AkkarBommer2010SWISS01,
     AkkarBommer2010SWISS04,
-    AkkarBommer2010SWISS08,
-    AkkarBommer2010SWISS01T,
-    AkkarBommer2010SWISS04T,
-    AkkarBommer2010SWISS08T
+    AkkarBommer2010SWISS08
     )
 
 
