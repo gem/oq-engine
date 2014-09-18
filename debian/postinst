@@ -3,7 +3,7 @@
 #
 # see: dh_installdeb(1)
 
-set -x
+# set -x
 set -e
 
 # summary of how this script can be called:
