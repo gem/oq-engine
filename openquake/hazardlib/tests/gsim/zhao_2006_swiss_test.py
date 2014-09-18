@@ -19,10 +19,7 @@ from openquake.hazardlib.gsim.zhao_2006 import (ZhaoEtAl2006Asc,
                                                 
 from openquake.hazardlib.gsim.zhao_2006  import (ZhaoEtAl2006AscSWISS05, 
                                                  ZhaoEtAl2006AscSWISS03,
-                                                 ZhaoEtAl2006AscSWISS08,
-                                                 ZhaoEtAl2006AscSWISS05T,
-                                                 ZhaoEtAl2006AscSWISS03T,
-                                                 ZhaoEtAl2006AscSWISS08T)
+                                                 ZhaoEtAl2006AscSWISS08)
 from openquake.hazardlib.gsim.base import (SitesContext, 
                                            RuptureContext, 
                                            DistancesContext)
@@ -81,34 +78,4 @@ class ZhaoEtAl2006AscSWISS08TestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.4)                   
     def test_std_total(self):
         self.check('ZHAO06Swiss/ZETAL06_STD_TOTAL_SigmaSS_TMR.csv',
-        max_discrep_percentage=0.50)
-
-class ZhaoEtAl2006AscSWISS05TTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = ZhaoEtAl2006AscSWISS05T
-
-    def test_mean(self):
-        self.check('ZHAO06Swiss/ZETAL06_MEAN_VsK-5.csv',
-                   max_discrep_percentage=0.4)
-    def test_std_total(self):
-        self.check('ZHAO06Swiss/ZETAL06_STD_TOTAL_SigmaSS_T.csv',
-        max_discrep_percentage=0.50)
-
-class ZhaoEtAl2006AscSWISS03TTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = ZhaoEtAl2006AscSWISS03T
-
-    def test_mean(self):
-        self.check('ZHAO06Swiss/ZETAL06_MEAN_VsK-3.csv',
-                   max_discrep_percentage=0.4)
-    def test_std_total(self):
-        self.check('ZHAO06Swiss/ZETAL06_STD_TOTAL_SigmaSS_T.csv',
-        max_discrep_percentage=0.50)  
-                           
-class ZhaoEtAl2006AscSWISS08TTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = ZhaoEtAl2006AscSWISS08T
-
-    def test_mean(self):
-        self.check('ZHAO06Swiss/ZETAL06_MEAN_VsK-8.csv',
-                   max_discrep_percentage=0.4)                   
-    def test_std_total(self):
-        self.check('ZHAO06Swiss/ZETAL06_STD_TOTAL_SigmaSS_T.csv',
         max_discrep_percentage=0.50)

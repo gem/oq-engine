@@ -15,3 +15,12 @@ Zhao et al. 2006
 
 .. autoclass:: ZhaoEtAl2006SInterNSHMP2008
     :members:
+
+.. autoclass:: ZhaoEtAl2006AscSWISS05
+    :members:
+
+.. autoclass:: ZhaoEtAl2006AscSWISS03
+    :members:
+
+.. autoclass:: ZhaoEtAl2006AscSWISS08
+    :members:
