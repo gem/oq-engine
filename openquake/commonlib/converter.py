@@ -299,6 +299,14 @@ class Exposure(Converter):
             except NameError:
                 area_type = ''
                 area_unit = ''
+            try:
+                deductible_is_abs = conv.deductible['isAbsolute']
+            except NameError:  # no <deductible> node
+                deductible_is_abs = ''
+            try:
+                ins_limit_is_abs = conv.insuranceLimit['isAbsolute']
+            except NameError:  # no <insuranceLimit> node
+                ins_limit_is_abs = ''
             yield records.Exposure(
                 node['id'],
                 node['category'],
@@ -306,8 +314,8 @@ class Exposure(Converter):
                 node.description.text.strip(),
                 area_type,
                 area_unit,
-                conv.deductible['isAbsolute'],
-                conv.insuranceLimit['isAbsolute'])
+                deductible_is_abs,
+                ins_limit_is_abs)
         else:
             yield records.Exposure(
                 node['id'],

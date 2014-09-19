@@ -129,7 +129,7 @@ class OqParam(valid.ParamSet):
         """
         if self.calculation_mode not in HAZARD_CALCULATORS:
             return True  # no check on the sites for risk
-        sites = getattr(self, 'sites', None)
+        sites = getattr(self, 'sites', self.inputs.get('site'))
         if getattr(self, 'region', None):
             return sites is None and not 'exposure' in self.inputs
         elif 'exposure' in self.inputs:
@@ -168,3 +168,22 @@ class OqParam(valid.ParamSet):
         """
         return self.calculation_mode in RISK_CALCULATORS or (
             getattr(self, 'maximum_distance', None))
+
+    def is_valid_imtls(self):
+        """
+        If the IMTs and levels are extracted from the risk models,
+        they must not be set directly.
+        """
+        if 'fragility' in self.inputs or 'vulnerabily' in self.inputs:
+            return getattr(
+                self, 'intensity_measure_types_and_levels', None) is None
+        return True
+
+    def is_valid_imts(self):
+        """
+        If the IMTs are extracted from the risk models,
+        they must not be set directly.
+        """
+        if 'fragility' in self.inputs or 'vulnerabily' in self.inputs:
+            return getattr(self, 'intensity_measure_types', None) is None
+        return True

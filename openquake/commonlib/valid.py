@@ -24,10 +24,22 @@ import re
 import ast
 import logging
 from decimal import Decimal
-from openquake.hazardlib import imt, scalerel
+from openquake.hazardlib import imt, scalerel, gsim
 from openquake.commonlib.general import distinct
 
 SCALEREL = scalerel.get_available_magnitude_scalerel()
+
+GSIM = gsim.get_available_gsims()
+
+
+def gsim(value):
+    """
+    Make sure the given value is the name of an available GSIM class.
+    """
+    try:
+        return GSIM[value]
+    except KeyError:
+        raise ValueError('Unknown GSIM: %s' % value)
 
 
 def compose(*validators):

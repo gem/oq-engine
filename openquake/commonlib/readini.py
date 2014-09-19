@@ -1,5 +1,4 @@
 import ConfigParser
-import csv
 import os
 from lxml import etree
 
@@ -57,14 +56,7 @@ def parse_config(source, hazard_calculation_id=None, hazard_output_id=None):
 
     for sect in cp.sections():
         for key, value in cp.items(sect):
-            if key == 'sites_csv':
-                # Parse site coordinates from the csv file,
-                # return a string 'lon1 lat1, lon2 lat2, ... , lonN latN'
-                path = value if os.path.isabs(value) else os.path.join(
-                    base_path, value)
-                sites = open(path, 'U').read().strip().replace(',', ' ')
-                params['sites'] = sites.replace('\n', ',')
-            elif key.endswith('_file'):
+            if key == 'sites_csv' or key.endswith('_file'):
                 input_type = key[:-5]
                 path = value if os.path.isabs(value) else os.path.join(
                     base_path, value)
