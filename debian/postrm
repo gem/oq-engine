@@ -4,8 +4,11 @@
 # Skeleton maintainer script showing all the possible cases.
 # Written by Charles Briscoe-Smith, March-April 1998.  Public Domain.
 
+if [ $GEM_SET_DEBUG ]; then
+    set -x
+fi
+
 # Abort if any command returns an error value
-#set -x
 set -e
 
 # This script is called twice during the removal of the package; once

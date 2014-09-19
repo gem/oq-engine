@@ -3,7 +3,9 @@
 #
 # see: dh_installdeb(1)
 
-#set -x
+if [ $GEM_SET_DEBUG ]; then
+    set -x
+fi
 set -e
 
 GEM_DEB_PACKAGE="python-oq-engine"
