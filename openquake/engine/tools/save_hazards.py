@@ -122,22 +122,27 @@ class HazardDumper(object):
                with (format 'csv', header true, encoding 'utf8')""" % query,
             self.outdir, filename, mode)
 
-    def hazard_calculation(self, hc_id, job_id):
-        """Dump hazard_calculation, oqjob, lt_realization, hazard_site"""
-        self._copy(
-            "select * from uiapi.hazard_calculation where id = %s" % hc_id,
-            'uiapi.hazard_calculation.csv')
+    def hazard_calculation(self, job_id):
+        """Dump oqjob, lt_realization, hazard_site"""
         self._copy(
             """select * from uiapi.oq_job where id = %s""" % job_id,
             'uiapi.oq_job.csv')
         self._copy(
-            """select * from hzrdr.lt_realization
-               where hazard_calculation_id = %s""" % hc_id,
-            'hzrdr.lt_realization.csv')
+            """select * from hzrdr.lt_source_model
+               where hazard_calculation_id = %s""" % job_id,
+            'hzrdr.lt_source_model.csv')
+        lt_model_ids = self.curs.tuplestr(
+            'select id from hzrdr.lt_source_model '
+            'where hazard_calculation_id= %s' % job_id)
+        if lt_model_ids != '()':
+            self._copy(
+                """select * from hzrdr.lt_realization
+               where lt_model_id in %s""" % lt_model_ids,
+                'hzrdr.lt_realization.csv')
         self._copy(
             """select * from hzrdi.hazard_site
-               where hazard_calculation_id = %s""" % hc_id,
-               'hzrdi.hazard_site.csv')
+               where hazard_calculation_id = %s""" % job_id,
+            'hzrdi.hazard_site.csv')
 
     def output(self, ids):
         """Dump output"""
@@ -164,7 +169,7 @@ class HazardDumper(object):
         """Dump gmf, gmf_data"""
         self._copy(
             """select * from hzrdr.gmf where output_id in %s)""" % output,
-               'hzrdr.gmf.csv', mode='a')
+            'hzrdr.gmf.csv', mode='a')
 
         coll_ids = self.curs.tuplestr('select id from hzrdr.gmf '
                                       'where output_id in %s' % output)
@@ -182,15 +187,15 @@ class HazardDumper(object):
         coll_ids = self.curs.tuplestr('select id from hzrdr.ses_collection '
                                       'where output_id in %s' % output)
         self._copy(
-            """select * from hzrdr.ses
+            """select * from hzrdr.probabilistic_rupture
                where ses_collection_id in %s""" % coll_ids,
-            'hzrdr.ses.csv', mode='a')
+            'hzrdr.probabilistic_rupture.csv', mode='a')
 
-        ses_ids = self.curs.tuplestr(
-            'select id from hzrdr.ses where ses_collection_id in %s'
-            % coll_ids)
+        pr_ids = self.curs.tuplestr(
+            'select id from hzrdr.probabilistic_rupture '
+            'where ses_collection_id in %s' % coll_ids)
         self._copy(
-            """select * from hzrdr.ses_rupture where ses_id in %s""" % ses_ids,
+            "select * from hzrdr.ses_rupture where rupture_id in %s" % pr_ids,
             'hzrdr.ses_rupture.csv', 'a')
 
     def dump(self, hazard_calculation_id):
@@ -198,9 +203,9 @@ class HazardDumper(object):
         Dump all the data associated to a given hazard_calculation_id
         and relevant for risk.
         """
-        hc = models.HazardCalculation(hazard_calculation_id)
+        job = models.OqJob.objects.get(pk=hazard_calculation_id)
 
-        outputs = hc.oqjob.output_set.all().values_list('output_type', 'id')
+        outputs = job.output_set.all().values_list('output_type', 'id')
 
         if not outputs:
             raise RuntimeError(
@@ -217,7 +222,7 @@ class HazardDumper(object):
         outputs = sorted(outputs, key=lambda o: ordering[o[0]])
 
         # dump data and collect generated filenames
-        self.hazard_calculation(hc.id, hc.oqjob.id)
+        self.hazard_calculation(job.id)
         all_outs = [output_id for _output_type, output_id in outputs]
         self.output(_tuplestr(all_outs))
 
