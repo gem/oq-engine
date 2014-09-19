@@ -67,8 +67,7 @@ def get_gmvs_for_location(location, job):
     """
     [output] = job.output_set.filter(output_type='gmf')
 
-    [site] = models.HazardSite.objects.filter(
-        hazard_calculation=job.hazard_calculation).extra(
+    [site] = models.HazardSite.objects.filter(hazard_calculation=job).extra(
         where=["location::geometry ~= 'SRID=4326;%s'::geometry"
                % location])
     gmv_by_rup = {}

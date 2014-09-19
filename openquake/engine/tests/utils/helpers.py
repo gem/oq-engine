@@ -130,9 +130,7 @@ def run_job(cfg, exports=None, hazard_calculation_id=None,
     logfile = os.path.join(tempfile.gettempdir(), 'qatest.log')
 
     # update calculation parameters
-    for name, value in params.iteritems():
-        setattr(job.calculation, name, value)
-    job.calculation.save()
+    job.save_params(params)
 
     engine.run_calc(job, 'error', logfile, exports, job.job_type)
     return job
@@ -313,18 +311,19 @@ def random_string(length=16):
 
 
 def get_job(cfg, username="openquake", hazard_calculation_id=None,
-            hazard_output_id=None):
+            hazard_output_id=None, **extras):
     """
     Given a path to a config file and a hazard_calculation_id
     (or, alternatively, a hazard_output_id, create a
     :class:`openquake.engine.db.models.OqJob` object for a risk calculation.
     """
     if hazard_calculation_id is None and hazard_output_id is None:
-        return engine.job_from_file(cfg, username, 'error', [])
+        return engine.job_from_file(cfg, username, 'error', [], extras=extras)
 
     job = engine.prepare_job(username)
-    params = vars(readini.parse_config(
-            open(cfg), hazard_calculation_id, hazard_output_id))
+    oqparam = readini.parse_config(
+        open(cfg), hazard_calculation_id, hazard_output_id)
+    params = vars(oqparam)
     risk_calc = engine.create_calculation(models.RiskCalculation, params)
     risk_calc = models.RiskCalculation.objects.get(id=risk_calc.id)
     job.risk_calculation = risk_calc
@@ -336,11 +335,9 @@ def create_gmf(hazard_job, rlz=None, output_type="gmf"):
     """
     Returns the created Gmf object.
     """
-    hc = hazard_job.hazard_calculation
-
     rlz = rlz or models.LtRealization.objects.create(
         lt_model=models.LtSourceModel.objects.create(
-            hazard_calculation=hc, ordinal=0, sm_lt_path="test_sm"),
+            hazard_calculation=hazard_job, ordinal=0, sm_lt_path="test_sm"),
         ordinal=0, weight=1, gsim_lt_path="test_gsim")
 
     gmf = models.Gmf.objects.create(
@@ -388,7 +385,6 @@ def create_gmf_from_csv(job, fname, output_type="gmf"):
     if output_type == "gmf":  # event based
         hc.investigation_time = 50
         hc.ses_per_logic_tree_path = 1
-        hc.save()
 
     # tricks to fool the oqtask decorator
     job.is_running = True
@@ -442,7 +438,7 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
     hc = hazard_job.hazard_calculation
 
     lt_model = models.LtSourceModel.objects.create(
-        hazard_calculation=hazard_job.hazard_calculation,
+        hazard_calculation=hazard_job,
         ordinal=1, sm_lt_path="test_sm")
 
     rlz = models.LtRealization.objects.create(
@@ -466,7 +462,7 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
         for point in ["POINT(-1.01 1.01)", "POINT(0.9 1.01)",
                       "POINT(0.01 0.01)", "POINT(0.9 0.9)"]:
             models.HazardSite.objects.create(
-                hazard_calculation=hc, location=point)
+                hazard_calculation=hazard_job, location=point)
             models.HazardCurveData.objects.create(
                 hazard_curve=hazard_output,
                 poes=[0.1, 0.2, 0.3],
@@ -501,8 +497,9 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
     hazard_job.status = "complete"
     hazard_job.save()
     job = engine.prepare_job(username)
-    params = vars(readini.parse_config(open(risk_cfg),
-                                       hazard_output_id=hazard_output.output.id))
+    params = vars(
+        readini.parse_config(
+            open(risk_cfg), hazard_output_id=hazard_output.output.id))
 
     risk_calc = engine.create_calculation(models.RiskCalculation, params)
     job.risk_calculation = risk_calc
@@ -531,7 +528,7 @@ def create_ses_ruptures(job, ses_collection, num):
     information.
     """
     lt_model = models.LtSourceModel.objects.create(
-        hazard_calculation=job.hazard_calculation,
+        hazard_calculation=job,
         ordinal=0,
         sm_lt_path=['b1'],
         sm_name='test source model',

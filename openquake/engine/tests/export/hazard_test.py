@@ -520,7 +520,7 @@ class Bug1202290TestCase(unittest.TestCase):
 
     def test(self):
         output = mock.Mock()
-        output.oq_job.hazard_calculation.id = 1202290
+        output.oq_job.id = 1202290
         output.hazard_curve = mock.Mock()
         output.hazard_curve.__iter__ = lambda x: iter([])
         target = mock.Mock()

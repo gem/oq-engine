@@ -117,7 +117,7 @@ def count(gmf_value, gmfs_site_one, gmfs_site_two,
 
 
 def compare_hazard_curve_with_csv(
-        hc, sm_lt_path, gsim_lt_path, imt, sa_period, sa_damping,
+        job, sm_lt_path, gsim_lt_path, imt, sa_period, sa_damping,
         csv_name, csv_delimiter, rtol):
     """
     This is useful in tests that compares the hazard curves in the db with
@@ -125,7 +125,7 @@ def compare_hazard_curve_with_csv(
     `lon, lat, poe1, poe2, ...`
     """
     rlzs = list(
-        models.LtRealization.objects.filter(lt_model__hazard_calculation=hc))
+        models.LtRealization.objects.filter(lt_model__hazard_calculation=job))
     # there is some contorsion here since is seems that Django filtering
     # with CharArrayFields does not work, so I get all the realizations
     # and I extract by hand the one with the given lt_paths
@@ -175,7 +175,7 @@ class DisaggHazardTestCase(BaseQATestCase):
         expected = os.path.join(self.working_dir, 'expected_output')
         job = self.run_hazard(cfg, exports=['xml'])
         hc = job.hazard_calculation
-        export_dir = os.path.join(hc.export_dir, 'calc_%d' % hc.id)
+        export_dir = os.path.join(hc.export_dir, 'calc_%d' % job.id)
 
         # compare the directories and print a report
         dc = filecmp.dircmp(expected, export_dir)

@@ -185,7 +185,7 @@ def prepare_job(user_name="openquake", log_level='progress'):
 def create_calculation(model, params):
     """
     Given a params `dict` parsed from the config file, create a
-    :class:`~openquake.engine.db.models.HazardCalculation`.
+    :class:`~openquake.engine.db.models.RiskCalculation`.
 
     :param model:
         a Calculation class object
@@ -199,16 +199,6 @@ def create_calculation(model, params):
     if "export_dir" in params:
         params["export_dir"] = os.path.abspath(params["export_dir"])
 
-    calc_fields = model._meta.get_all_field_names()
-
-    for param in set(params) - set(calc_fields):
-        # the following parameters will be removed by HazardCalculation
-        if param in ('ground_motion_correlation_model',
-                     'ground_motion_correlation_params',
-                     'individual_curves') and param not in (
-                'preloaded_exposure_model_id', 'hazard_output_id',
-                'hazard_calculation_id'):
-            params.pop(param)
     calc = model.create(**params)
     calc.full_clean()
     calc.save()
@@ -312,21 +302,21 @@ def _do_run_calc(calc, exports, job_type):
     logs.LOG.debug("*> complete")
 
 
-def del_haz_calc(hc_id):
+def del_haz_calc(job_id):
     """
     Delete a hazard calculation and all associated outputs.
 
-    :param hc_id:
+    :param job_id:
         ID of a :class:`~openquake.engine.db.models.HazardCalculation`.
     """
     try:
-        hc = models.HazardCalculation.objects.get(id=hc_id)
+        job = models.OqJob.objects.get(id=job_id)
     except exceptions.ObjectDoesNotExist:
         raise RuntimeError('Unable to delete hazard calculation: '
-                           'ID=%s does not exist' % hc_id)
+                           'ID=%s does not exist' % job_id)
 
     user = getpass.getuser()
-    if hc.oqjob.user_name == user:
+    if job.user_name == user:
         # we are allowed to delete this
 
         # but first, check if any risk calculations are referencing any of our
@@ -338,7 +328,7 @@ def del_haz_calc(hc_id):
 
         # check for a reference to hazard outputs
         assoc_outputs = models.RiskCalculation.objects.filter(
-            hazard_output__oq_job__hazard_calculation=hc_id
+            hazard_output__oq_job=job_id
         )
         if assoc_outputs.count() > 0:
             raise RuntimeError(msg % ', '.join([str(x.id)
@@ -346,7 +336,7 @@ def del_haz_calc(hc_id):
 
         # check for a reference to the hazard calculation itself
         assoc_calcs = models.RiskCalculation.objects.filter(
-            hazard_calculation=hc_id
+            hazard_calculation=job_id
         )
         if assoc_calcs.count() > 0:
             raise RuntimeError(msg % ', '.join([str(x.id)
@@ -354,7 +344,7 @@ def del_haz_calc(hc_id):
 
         # No risk calculation are referencing what we want to delete.
         # Carry on with the deletion.
-        hc.delete(using='admin')
+        job.delete(using='admin')
     else:
         # this doesn't belong to the current user
         raise RuntimeError(UNABLE_TO_DEL_HC_FMT % 'Access denied')
@@ -385,7 +375,7 @@ def del_risk_calc(rc_id):
 def list_hazard_outputs(hc_id, full=True):
     """
     List the outputs for a given
-    :class:`~openquake.engine.db.models.HazardCalculation`.
+    :class:`~openquake.engine.db.models.OqJob`.
 
     :param hc_id:
         ID of a hazard calculation.
@@ -393,7 +383,7 @@ def list_hazard_outputs(hc_id, full=True):
         If True produce a full listing, otherwise a short version
     """
     outputs = get_outputs('hazard', hc_id)
-    hc = models.HazardCalculation.objects.get(pk=hc_id)
+    hc = models.HazardCalculation(hc_id)
     if hc.calculation_mode == 'scenario':  # ignore SES output
         outputs = outputs.filter(output_type='gmf_scenario')
     print_outputs_summary(outputs, full)
@@ -476,11 +466,9 @@ def run_job(cfg_file, log_level, log_file, exports=(), hazard_output_id=None,
         duration = time.time() - t0
         if hazard:
             if job.status == 'complete':
-                print_results(job.hazard_calculation.id,
-                              duration, list_hazard_outputs)
+                print_results(job.id, duration, list_hazard_outputs)
             else:
-                sys.exit('Calculation %s failed' %
-                         job.hazard_calculation.id)
+                sys.exit('Calculation %s failed' % job.id)
         else:
             if job.status == 'complete':
                 print_results(job.risk_calculation.id,
@@ -492,7 +480,7 @@ def run_job(cfg_file, log_level, log_file, exports=(), hazard_output_id=None,
 
 @django_db.transaction.commit_on_success
 def job_from_file(cfg_file_path, username, log_level='info', exports=(),
-                  hazard_output_id=None, hazard_job_id=None):
+                  hazard_output_id=None, hazard_job_id=None, **extras):
     """
     Create a full job profile from a job config file.
 
@@ -510,7 +498,8 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
     :param int hazard_job_id:
         ID of a complete hazard job to use as input to this
         calculation. Specify this xor ``hazard_output_id``.
-
+    :params extras:
+        Extra parameters (used only in the tests to override the params)
     :returns:
         :class:`openquake.engine.db.models.OqJob` object
     :raises:
@@ -531,30 +520,24 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
     # read calculation params and create the calculation profile
     oqparam = readini.parse_config(
         open(cfg_file_path),
-        haz_job.hazard_calculation.id
-        if haz_job and not hazard_output_id else None,
+        haz_job.id if haz_job and not hazard_output_id else None,
         hazard_output_id)
-    missing = set(oqparam.inputs) - INPUT_TYPES
-    if missing:
-        raise ValueError(
-            'The parameters %s in the .ini file does '
-            'not correspond to a valid input type' % ', '.join(missing))
 
     params = vars(oqparam).copy()
+    params.update(extras)
     job.save_params(params)
 
     if hazard_output_id is None and hazard_job_id is None:
         # this is a hazard calculation, not a risk one
         del params['hazard_calculation_id']
         del params['hazard_output_id']
-        job.hazard_calculation = create_calculation(
-            models.HazardCalculation, params)
         job.save()
         return job
 
     calculation = create_calculation(models.RiskCalculation, params)
     job.risk_calculation = calculation
     job.save()
+
     return job
 
 
@@ -583,4 +566,4 @@ def get_outputs(job_type, calc_id):
     if job_type == 'risk':
         return models.Output.objects.filter(oq_job__risk_calculation=calc_id)
     else:
-        return models.Output.objects.filter(oq_job__hazard_calculation=calc_id)
+        return models.Output.objects.filter(oq_job=calc_id)

@@ -173,7 +173,7 @@ class LogicTreeBasedTestCase(object):
         """
         :returns: the hazard calculation id for the given `job`
         """
-        return job.hazard_calculation.id
+        return job.id
 
 
 class CompleteTestCase(object):
@@ -247,9 +247,10 @@ class FixtureBasedQATestCase(LogicTreeBasedTestCase, BaseRiskQATestCase):
     save_load = False
 
     def _get_queryset(self):
-        return models.HazardCalculation.objects.filter(
-            description=self.hazard_calculation_fixture,
-            oqjob__status="complete")
+        return models.JobParam.objects.filter(
+            value=self.hazard_calculation_fixture,
+            name='description',
+            job__status="complete")
 
     def get_hazard_job(self):
         if not self._get_queryset().exists():
@@ -259,11 +260,11 @@ class FixtureBasedQATestCase(LogicTreeBasedTestCase, BaseRiskQATestCase):
             self.assertEqual('complete', job.status)
         else:
             warnings.warn("Using existing Hazard input")
-            job = self._get_queryset().latest('oqjob__last_update').oqjob
+            job = self._get_queryset().latest('job__last_update').job
 
         if self.save_load:
             # Close the opened transactions
-            saved_calculation = save_hazards.main(job.hazard_calculation.id)
+            saved_calculation = save_hazards.main(job.id)
 
             # FIXME Here on, to avoid deadlocks due to stale
             # transactions, we commit all the opened transactions. We
@@ -275,7 +276,6 @@ class FixtureBasedQATestCase(LogicTreeBasedTestCase, BaseRiskQATestCase):
 
             [load_calculation] = load_hazards.hazard_load(
                 models.getcursor('admin').connection, saved_calculation)
-            return models.OqJob.objects.get(
-                hazard_calculation__id=load_calculation)
+            return models.OqJob.objects.get(pk=load_calculation)
         else:
             return job

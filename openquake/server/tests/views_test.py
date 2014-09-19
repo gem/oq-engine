@@ -132,7 +132,7 @@ class CalcToResponseDataTestCase(unittest.TestCase):
         self.calc = mock.Mock()
         field_names = [
             'base_path', 'export_dir', 'owner',
-            'region', 'sites', 'region_constraint', 'sites_disagg',
+            'region', 'region_constraint',
             'hazard_calculation', 'hazard_output',
             'description', 'maximum_distance',
         ]
@@ -148,17 +148,9 @@ class CalcToResponseDataTestCase(unittest.TestCase):
             '{ "type": "Polygon", "coordinates": '
             '[[[1, 1], [2, 3], [3, 1], [1, 1]]] }'
         )
-        self.calc.sites.geojson = (
-            '{ "type": "MultiPoint", "coordinates": '
-            '[[100.0, 0.0], [101.0, 1.0]] }'
-        )
         self.calc.region_constraint.geojson = (
             '{ "type": "Polygon", "coordinates": '
             '[[[2, 2], [3, 4], [4, 1], [1, 1]]] }'
-        )
-        self.calc.sites_disagg.geojson = (
-            '{ "type": "MultiPoint", "coordinates": '
-            '[[100.1, 0.1], [101.1, 1.1]] }'
         )
 
         # risk inputs
@@ -181,14 +173,6 @@ class CalcToResponseDataTestCase(unittest.TestCase):
             'region_constraint': {
                 u'coordinates': [[[2, 2], [3, 4], [4, 1], [1, 1]]],
                 u'type': u'Polygon',
-            },
-            'sites': {
-                u'coordinates': [[100.0, 0.0], [101.0, 1.0]],
-                u'type': u'MultiPoint',
-            },
-            'sites_disagg': {
-                u'coordinates': [[100.1, 0.1], [101.1, 1.1]],
-                u'type': u'MultiPoint',
             },
         }
 
@@ -214,7 +198,7 @@ class CalcHazardResultsTestCase(BaseViewTestCase):
         ]
         with mock.patch('openquake.engine.engine.get_outputs') as gho:
             with mock.patch('openquake.engine.db.models'
-                            '.HazardCalculation.objects.get') as hc_get:
+                            '.HazardCalculation') as hc_get:
                 hc_get.return_value.oqjob.status = 'complete'
                 gho.return_value = [
                     FakeOutput(1, 'output1', 'hazard_curve'),
@@ -234,7 +218,7 @@ class CalcHazardResultsTestCase(BaseViewTestCase):
     def test_404_no_outputs(self):
         with mock.patch('openquake.engine.engine.get_outputs') as gho:
             with mock.patch('openquake.engine.db.models'
-                            '.HazardCalculation.objects.get') as hc_get:
+                            '.HazardCalculation') as hc_get:
                 hc_get.return_value.oqjob.status = 'complete'
                 gho.return_value = []
                 response = views.calc_results(self.request, 'hazard', 7)
@@ -243,7 +227,7 @@ class CalcHazardResultsTestCase(BaseViewTestCase):
 
     def test_404_calc_not_exists(self):
         with mock.patch('openquake.engine.db.models'
-                        '.HazardCalculation.objects.get') as hc_get:
+                        '.HazardCalculation') as hc_get:
             hc_get.side_effect = ObjectDoesNotExist
             response = views.calc_results(self.request, 'hazard', 7)
 
@@ -251,7 +235,7 @@ class CalcHazardResultsTestCase(BaseViewTestCase):
 
     def test_404_calc_not_complete(self):
         with mock.patch('openquake.engine.db.models'
-                        '.HazardCalculation.objects.get') as hc_get:
+                        '.HazardCalculation') as hc_get:
             hc_get.return_value.oqjob.status = 'pre_executing'
             response = views.calc_results(self.request, 'hazard', 7)
 
