@@ -56,7 +56,7 @@ class InitializeSourcesTestCase(unittest.TestCase):
         models.JobStats.objects.create(oq_job=job)
         hc = job.hazard_calculation
         cls.calc = get_calculator_class('hazard', hc.calculation_mode)(job)
-        cls.calc.initialize_site_model()
+        cls.calc.store_sites()
         assert len(hc.site_collection) == 2, len(hc.site_collection)
 
     def test_filtering_sources(self):
