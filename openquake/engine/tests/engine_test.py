@@ -75,9 +75,9 @@ class JobFromFileTestCase(unittest.TestCase):
         risk_cfg = helpers.get_data_path('event_based_risk/job.ini')
         risk_job = engine.job_from_file(risk_cfg, 'test_user',
                                         hazard_output_id=out.id)
-        # make sure the hazard calculation is associated correctly
-        self.assertEqual(risk_job.risk_calculation.get_hazard_calculation().id,
-                         haz_job.id)
+        # make sure the hazard job is associated correctly
+        oqjob = risk_job.risk_calculation.get_hazard_calculation().oqjob
+        self.assertEqual(oqjob.id, haz_job.id)
 
 
 class CreateRiskCalculationTestCase(unittest.TestCase):
@@ -88,7 +88,7 @@ class CreateRiskCalculationTestCase(unittest.TestCase):
         hazard_job = helpers.get_job(hazard_cfg, 'openquake')
         hc = hazard_job.hazard_calculation
         lt_model = models.LtSourceModel.objects.create(
-            hazard_calculation=hazard_job.hazard_calculation,
+            hazard_calculation=hazard_job,
             ordinal=1, sm_lt_path="test_sm")
         rlz = models.LtRealization.objects.create(
             lt_model=lt_model, ordinal=1, weight=None,
@@ -153,7 +153,6 @@ class DeleteHazCalcTestCase(unittest.TestCase):
     def test_del_haz_calc(self):
         hazard_job = helpers.get_job(
             self.hazard_cfg, username=getpass.getuser())
-        hazard_calc = hazard_job.hazard_calculation
 
         models.Output.objects.create_output(
             hazard_job, 'test_curves_1', output_type='hazard_curve'
@@ -164,21 +163,21 @@ class DeleteHazCalcTestCase(unittest.TestCase):
 
         # Sanity check: make sure the hazard calculation and outputs exist in
         # the database:
-        hazard_calcs = models.OqJob.objects.filter(id=hazard_calc.id)
-        self.assertEqual(1, hazard_calcs.count())
+        hazard_jobs = models.OqJob.objects.filter(id=hazard_job.id)
+        self.assertEqual(1, hazard_jobs.count())
 
         outputs = models.Output.objects.filter(oq_job=hazard_job.id)
         self.assertEqual(2, outputs.count())
 
         # Delete the calculation
-        engine.del_haz_calc(hazard_calc.id)
+        engine.del_haz_calc(hazard_job.id)
 
         # Check that the hazard calculation and its outputs were deleted:
         outputs = models.Output.objects.filter(oq_job=hazard_job.id)
         self.assertEqual(0, outputs.count())
 
-        hazard_calcs = models.OqJob.objects.filter(id=hazard_calc.id)
-        self.assertEqual(0, hazard_calcs.count())
+        hazard_jobs = models.OqJob.objects.filter(id=hazard_job.id)
+        self.assertEqual(0, hazard_jobs.count())
 
     def test_del_haz_calc_does_not_exist(self):
         self.assertRaises(RuntimeError, engine.del_haz_calc, -1)
@@ -189,9 +188,7 @@ class DeleteHazCalcTestCase(unittest.TestCase):
         # In this case, deletion is now allowed and should raise an exception.
         hazard_job = helpers.get_job(
             self.hazard_cfg, username=helpers.random_string())
-        hazard_calc = hazard_job.hazard_calculation
-
-        self.assertRaises(RuntimeError, engine.del_haz_calc, hazard_calc.id)
+        self.assertRaises(RuntimeError, engine.del_haz_calc, hazard_job.id)
 
     def test_del_haz_calc_referenced_by_risk_calc(self):
         # Test the case where a risk calculation is referencing the hazard
@@ -204,13 +201,12 @@ class DeleteHazCalcTestCase(unittest.TestCase):
         risk_calc = risk_job.risk_calculation
 
         hazard_job = risk_job.risk_calculation.hazard_output.oq_job
-        hazard_calc = hazard_job.hazard_calculation
 
         risk_calc.hazard_output = None
-        risk_calc.hazard_calculation = hazard_calc
+        risk_calc.hazard_calculation = hazard_job
         risk_calc.save(using='admin')
 
-        self.assertRaises(RuntimeError, engine.del_haz_calc, hazard_calc.id)
+        self.assertRaises(RuntimeError, engine.del_haz_calc, hazard_job.id)
 
     def test_del_haz_calc_output_referenced_by_risk_calc(self):
         # Test the case where a risk calculation is referencing one of the
@@ -221,9 +217,7 @@ class DeleteHazCalcTestCase(unittest.TestCase):
             output_type='curve', username=getpass.getuser()
         )
         hazard_job = risk_job.risk_calculation.hazard_output.oq_job
-        hazard_calc = hazard_job.hazard_calculation
-
-        self.assertRaises(RuntimeError, engine.del_haz_calc, hazard_calc.id)
+        self.assertRaises(RuntimeError, engine.del_haz_calc, hazard_job.id)
 
 
 class DeleteRiskCalcTestCase(unittest.TestCase):
