@@ -28,7 +28,7 @@ NOT_IMPLEMENTED = 501
 JSON = 'application/json'
 
 IGNORE_FIELDS = ('base_path', 'export_dir')
-GEOM_FIELDS = ('region', 'sites', 'region_constraint', 'sites_disagg')
+GEOM_FIELDS = ('region', 'region_constraint')
 RISK_INPUTS = ('hazard_calculation', 'hazard_output')
 
 DEFAULT_LOG_LEVEL = 'progress'

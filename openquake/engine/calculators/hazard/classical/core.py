@@ -195,7 +195,7 @@ def compute_hazard_curves(
     :param trt_model:
         a :class:`openquake.engine.db.TrtModel` instance
     """
-    hc = models.HazardCalculation.objects.get(oqjob=job_id)
+    hc = models.HazardCalculation(job_id)
     total_sites = len(sitecol)
     sitemesh = sitecol.mesh
     sorted_imts = sorted(hc.intensity_measure_types_and_levels)
@@ -206,7 +206,7 @@ def compute_hazard_curves(
     gsims = trt_model.get_gsim_instances()
     curves = [[numpy.ones([total_sites, len(ls)]) for ls in sorted_imls]
               for gsim in gsims]
-    if hc.poes_disagg:  # doing disaggregation
+    if hasattr(hc, 'poes_disagg'):  # doing disaggregation
         lt_model_id = trt_model.lt_model.id
         bbs = [BoundingBox(lt_model_id, site_id) for site_id in sitecol.sids]
     else:
@@ -228,7 +228,7 @@ def compute_hazard_curves(
         for _source, rupture, r_sites in rows:
             num_sites = max(num_sites, len(r_sites))
             num_ruptures += 1
-            if hc.poes_disagg:  # doing disaggregation
+            if hasattr(hc, 'poes_disagg'):  # doing disaggregation
                 jb_dists = rupture.surface.get_joyner_boore_distance(sitemesh)
                 closest_points = rupture.surface.get_closest_points(sitemesh)
                 for bb, dist, point in itertools.izip(
@@ -290,9 +290,9 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         # a dictionary with the bounding boxes for earch source
         # model and each site, defined only for disaggregation
         # calculations:
-        if self.hc.poes_disagg:
+        if hasattr(self.hc, 'poes_disagg'):
             lt_models = models.LtSourceModel.objects.filter(
-                hazard_calculation=self.hc)
+                hazard_calculation=self.job)
             self.bb_dict = dict(
                 ((lt_model.id, site.id), BoundingBox(lt_model.id, site.id))
                 for site in self.hc.site_collection

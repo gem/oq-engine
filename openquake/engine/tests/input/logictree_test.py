@@ -35,8 +35,8 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         self.rnd = random.Random(hc.random_seed)
         self.source_model_lt = logictree.SourceModelLogicTree.from_hc(hc)
         sm = models.LtSourceModel(
-            hazard_calculation=hc, ordinal=0, sm_lt_path=[], sm_name='sm test',
-            weight=None)
+            hazard_calculation=job, ordinal=0, sm_lt_path=[],
+            sm_name='sm test', weight=None)
         self.gmpe_lt = sm.make_gsim_lt(
             ['Active Shallow Crust', 'Subduction Interface'])
 
@@ -71,8 +71,8 @@ class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
         hc = job.hazard_calculation
         self.source_model_lt = logictree.SourceModelLogicTree.from_hc(hc)
         sm = models.LtSourceModel(
-            hazard_calculation=hc, ordinal=0, sm_lt_path=[], sm_name='sm test',
-            weight=None)
+            hazard_calculation=job, ordinal=0, sm_lt_path=[],
+            sm_name='sm test', weight=None)
         self.gmpe_lt = sm.make_gsim_lt(
             ['Active Shallow Crust', 'Subduction Interface'])
 

@@ -17,7 +17,6 @@ import sys
 import getpass
 import subprocess
 import unittest
-import warnings
 from StringIO import StringIO
 
 from openquake.engine.db import models
@@ -78,42 +77,7 @@ class JobFromFileTestCase(unittest.TestCase):
                                         hazard_output_id=out.id)
         # make sure the hazard calculation is associated correctly
         self.assertEqual(risk_job.risk_calculation.get_hazard_calculation().id,
-                         haz_job.hazard_calculation.id)
-
-
-class CreateHazardCalculationTestCase(unittest.TestCase):
-
-    def setUp(self):
-        # Just the bare minimum set of params to satisfy not null constraints
-        # in the db.
-        self.params = {
-            'base_path': 'path/to/job.ini',
-            'calculation_mode': 'classical',
-            'region': [(1, 1), (2, 2), (3, 3)],
-            'width_of_mfd_bin': '1',
-            'rupture_mesh_spacing': '1',
-            'area_source_discretization': '2',
-            'investigation_time': 50,
-            'truncation_level': 0,
-            'maximum_distance': 200,
-            'number_of_logic_tree_samples': 1,
-            'intensity_measure_types_and_levels': dict(PGA=[1, 2, 3, 4]),
-            'random_seed': 37,
-        }
-
-    def test_create_hazard_calculation(self):
-        hc = engine.create_calculation(models.HazardCalculation, self.params)
-
-        # Normalize/clean fields by fetching a fresh copy from the db.
-        hc = models.HazardCalculation.objects.get(id=hc.id)
-
-        self.assertEqual(hc.calculation_mode, 'classical')
-        self.assertEqual(hc.width_of_mfd_bin, 1.0)
-        self.assertEqual(hc.rupture_mesh_spacing, 1.0)
-        self.assertEqual(hc.area_source_discretization, 2.0)
-        self.assertEqual(hc.investigation_time, 50.0)
-        self.assertEqual(hc.truncation_level, 0.0)
-        self.assertEqual(hc.maximum_distance, 200.0)
+                         haz_job.id)
 
 
 class CreateRiskCalculationTestCase(unittest.TestCase):
@@ -200,9 +164,7 @@ class DeleteHazCalcTestCase(unittest.TestCase):
 
         # Sanity check: make sure the hazard calculation and outputs exist in
         # the database:
-        hazard_calcs = models.HazardCalculation.objects.filter(
-            id=hazard_calc.id
-        )
+        hazard_calcs = models.OqJob.objects.filter(id=hazard_calc.id)
         self.assertEqual(1, hazard_calcs.count())
 
         outputs = models.Output.objects.filter(oq_job=hazard_job.id)
@@ -215,9 +177,7 @@ class DeleteHazCalcTestCase(unittest.TestCase):
         outputs = models.Output.objects.filter(oq_job=hazard_job.id)
         self.assertEqual(0, outputs.count())
 
-        hazard_calcs = models.HazardCalculation.objects.filter(
-            id=hazard_calc.id
-        )
+        hazard_calcs = models.OqJob.objects.filter(id=hazard_calc.id)
         self.assertEqual(0, hazard_calcs.count())
 
     def test_del_haz_calc_does_not_exist(self):

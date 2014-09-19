@@ -30,11 +30,11 @@ def create_ses_gmf(job, fname):
     return ses_coll, gmf
 
 
-def import_rows(hc, gmf_coll, rows):
+def import_rows(job, gmf_coll, rows):
     """
     Import a list of records into the gmf_data and hazard_site tables.
 
-    :param hc: :class:`openquake.engine.db.models.HazardCalculation` instance
+    :param job: :class:`openquake.engine.db.models.OqJob` instance
     :param gmf_coll: :class:`openquake.engine.db.models.Gmf` instance
     :param rows: a list of records (imt_type, sa_period, sa_damping, gmvs, wkt)
     """
@@ -43,7 +43,7 @@ def import_rows(hc, gmf_coll, rows):
     for imt_type, sa_period, sa_damping, gmvs, wkt in rows:
         if wkt not in site_id:  # create a new site
             site_id[wkt] = models.HazardSite.objects.create(
-                hazard_calculation=hc, location=wkt).id
+                hazard_calculation=job, location=wkt).id
         gmfs.append(
             models.GmfData(
                 imt=imt_type, sa_period=sa_period, sa_damping=sa_damping,
@@ -67,23 +67,17 @@ def import_gmf_scenario(fileobj):
     fname = fileobj.name
 
     job = engine.prepare_job()
-    hc = models.HazardCalculation.objects.create(
-        base_path=os.path.dirname(fname),
-        description='Scenario importer, file %s' % os.path.basename(fname),
-        calculation_mode='scenario',
-        maximum_distance=100,
-        intensity_measure_types_and_levels={},
-        inputs={},
-    )
+
     # XXX: probably the maximum_distance should be entered by the user
 
     ses_coll, gmf_coll = create_ses_gmf(job, fname)
 
     rows = []
+    imts = set()
     if fname.endswith('.xml'):
         # convert the XML into a tab-separated StringIO
         for imt, gmvs, loc in GMFScenarioParser(fileobj).parse():
-            hc.intensity_measure_types_and_levels[imt] = []
+            imts.add(imt)
             imt_type, sa_period, sa_damping = from_string(imt)
             sa_period = '\N' if sa_period is None else str(sa_period)
             sa_damping = '\N' if sa_damping is None else str(sa_damping)
@@ -92,10 +86,18 @@ def import_gmf_scenario(fileobj):
     else:  # assume a tab-separated file
         for line in fileobj:
             rows.append(line.split('\t'))
-    import_rows(hc, gmf_coll, rows)
-    hc.number_of_ground_motion_fields = len(rows)
-    hc.save()  # update intensity_measure_types_and_levels
-    job.hazard_calculation = hc
+    import_rows(job, gmf_coll, rows)
+    job.save_params(
+        dict(
+            base_path=os.path.dirname(fname),
+            description='Scenario importer, file %s' % os.path.basename(fname),
+            calculation_mode='scenario',
+            maximum_distance=100,
+            intensity_measure_types=list(imts),
+            inputs={},
+            number_of_ground_motion_fields=len(rows)
+            ))
+
     job.duration = time.time() - t0
     job.status = 'complete'
     job.save()

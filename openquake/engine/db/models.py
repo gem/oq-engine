@@ -48,8 +48,8 @@ from openquake.hazardlib.site import (
 
 from openquake.commonlib.general import distinct
 from openquake.commonlib.riskloaders import loss_type_to_cost_type
+from openquake.commonlib.readinput import get_site_collection, get_points
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib.readinput import get_site_collection
 from openquake.commonlib import logictree
 
 from openquake.engine.db import fields
@@ -281,7 +281,6 @@ class OqJob(djm.Model):
     An OpenQuake engine run started by the user
     '''
     user_name = djm.TextField()
-    hazard_calculation = djm.OneToOneField('HazardCalculation', null=True)
     risk_calculation = djm.OneToOneField('RiskCalculation', null=True)
     LOG_LEVEL_CHOICES = (
         (u'debug', u'Debug'),
@@ -333,6 +332,11 @@ class OqJob(djm.Model):
         """
         return self.hazard_calculation or self.risk_calculation
 
+    @property
+    def hazard_calculation(self):
+        return HazardCalculation(self) \
+            if self.risk_calculation is None else None
+
     def get_param(self, name, missing=RAISE_EXC):
         """
         `job.get_param(name)` returns the value of the requested parameter
@@ -360,9 +364,10 @@ class OqJob(djm.Model):
         """
         Return an OqParam object as read from the database
         """
-        params = {row.name: row.value
-                  for row in JobParam.objects.filter(job=self)}
-        return OqParam(**params)
+        oqparam = object.__new__(OqParam)
+        for row in JobParam.objects.filter(job=self):
+            setattr(oqparam, row.name, row.value)
+        return oqparam
 
     def save_params(self, params):
         """
@@ -373,6 +378,18 @@ class OqJob(djm.Model):
         """
         for name, value in params.iteritems():
             JobParam.objects.create(job=self, name=name, value=repr(value))
+
+    def save_param(self, **name_vals):
+        """
+        Update parameters in JobParam, or create them, if needed
+        """
+        for name, value in name_vals.iteritems():
+            jplist = list(JobParam.objects.filter(job=self, name=name))
+            if jplist:  # update an existing parameter
+                jplist[0].value = repr(value)
+                jplist[0].save()
+            else:  # add new parameter
+                JobParam.objects.filter(job=self, name=name, value=repr(value))
 
     def __repr__(self):
         return '<%s %d, %s>' % (self.__class__.__name__,
@@ -448,11 +465,16 @@ class HazardCalculation(object):
     _site_collection = ()  # see the corresponding instance variable
 
     def __init__(self, job):
-        self.oqjob = job
-        self.oqparam = self.oqjob.get_oqparam()
-
-    def __getattr__(self, name):
-        return getattr(self.oqparam, name)
+        if isinstance(job, (int, long)):  # passed the job_id
+            self.oqjob = OqJob.objects.get(pk=job)
+        else:
+            self.oqjob = job
+        params = vars(self.oqjob.get_oqparam())
+        collisions = set(params) & set(vars(self))
+        if collisions:
+            raise NameError('The parameters %s will override attributes '
+                            'of HazardCalculation instances' % collisions)
+        vars(self).update(params)
 
     @property
     def vulnerability_models(self):
@@ -465,22 +487,15 @@ class HazardCalculation(object):
         Populate the table HazardSite by inferring the points from
         the sites, region, or exposure.
         """
-        if self.pk and 'exposure' in self.inputs:
-            assets = self.oqjob.exposuremodel.exposuredata_set.all(
-                ).order_by('asset_ref')
+        if 'exposure' in self.inputs:
+            assets = self.oqjob.exposuremodel.exposuredata_set.all()
             # the coords here must be sorted
             coords = sorted(
                 set((asset.site.x, asset.site.y) for asset in assets))
-        elif self.region and self.region_grid_spacing:
-            # assume that the polygon is a single linear ring
-            coords = self.region.coords[0]
-            points = geo.Polygon([geo.Point(*x) for x in coords]).discretize(
-                self.region_grid_spacing)
-            coords = [(p.longitude, p.latitude) for p in points]
-        elif self.sites is not None:
-            coords = self.sites.coords
-        # store the sites
-        self.save_sites(coords)
+            points = [geo.Point(*x) for x in coords]
+        else:
+            points = get_points(self.oqjob.get_oqparam())
+        self.save_sites((p.longitude, p.latitude) for p in points)
 
     @property
     def site_collection(self):
@@ -499,9 +514,7 @@ class HazardCalculation(object):
             return self._site_collection
 
         hsites = HazardSite.objects.filter(
-            hazard_calculation=self).order_by('id')
-        if not hsites:
-            raise RuntimeError('No sites were imported!')
+            hazard_calculation=self.oqjob).order_by('id')
         # NB: the sites MUST be ordered. The issue is that the disaggregation
         # calculator has a for loop of kind
         # for site in sites:
@@ -511,11 +524,14 @@ class HazardCalculation(object):
         # ordering no ruptures are generated and the test
         # qa_tests/hazard/disagg/case_1/test.py fails with a bad
         # error message
-        lons = [hsite.location.x for hsite in hsites]
-        lats = [hsite.location.y for hsite in hsites]
+        if not hsites:
+            raise RuntimeError('No sites were imported!')
+        lons = numpy.array([hsite.location.x for hsite in hsites])
+        lats = numpy.array([hsite.location.y for hsite in hsites])
         site_ids = [hsite.id for hsite in hsites]
-        points = geo.Mesh(lons, lats, depts=None)
-        self._site_collection = sc = get_site_collection(points, site_ids)
+        points = geo.Mesh(lons, lats, depths=None)
+        self._site_collection = sc = get_site_collection(
+            self.oqjob.get_oqparam(), points, site_ids)
         return sc
 
     def get_imts(self):
@@ -523,19 +539,20 @@ class HazardCalculation(object):
         Returns intensity mesure types or intensity mesure types with levels
         in a fixed order.
         """
+        imts = getattr(self, 'intensity_measure_types', None) or \
+            self.intensity_measure_types_and_levels
+        return sorted(imts)
 
-        return sorted(self.intensity_measure_types or
-                      self.intensity_measure_types_and_levels)
-
-    def save_sites(self, coordinates):
+    # this is used in the tests, see helpers.py
+    def save_sites(self, coords):
         """
         Save all the gives sites on the hzrdi.hazard_site table.
         :param coordinates: a sequence of (lon, lat) pairs
         :returns: the ids of the inserted HazardSite instances
         """
-        sites = [HazardSite(hazard_calculation=self.job.id,
-                            location='POINT(%s %s)' % coord)
-                 for coord in coordinates]
+        sites = [HazardSite(hazard_calculation=self.oqjob,
+                            location='POINT(%s %s)' % (lon, lat))
+                 for lon, lat in coords]
         return writer.CacheInserter.saveall(sites)
 
     def total_investigation_time(self):
@@ -662,8 +679,7 @@ class RiskCalculation(djm.Model):
     # the HazardCalculation object used by the risk calculation when
     # each individual Output (i.e. each hazard logic tree realization)
     # is considered
-    hazard_calculation = djm.ForeignKey("HazardCalculation",
-                                        null=True, blank=True)
+    hazard_calculation = djm.ForeignKey("OqJob", null=True, blank=True)
 
     risk_investigation_time = djm.FloatField(
         help_text=('Override the time span (in years) with which the '
@@ -759,8 +775,8 @@ class RiskCalculation(djm.Model):
             :class:`HazardCalculation` instance.
         """
         try:
-            hcalc = (self.hazard_calculation or
-                     self.hazard_output.oq_job.hazard_calculation)
+            hcalc = HazardCalculation(self.hazard_calculation or
+                                      self.hazard_output.oq_job)
         except ObjectDoesNotExist:
             raise RuntimeError("The provided hazard does not exist")
         return hcalc
@@ -788,7 +804,7 @@ class RiskCalculation(djm.Model):
             else:
                 raise NotImplementedError
 
-            return self.hazard_calculation.oqjob.output_set.filter(
+            return self.hazard_calculation.output_set.filter(
                 **filters).order_by('id')
         else:
             raise RuntimeError("Neither hazard calculation "
@@ -811,7 +827,8 @@ class RiskCalculation(djm.Model):
             dist = self.DEFAULT_MAXIMUM_DISTANCE
 
         hc = self.get_hazard_calculation()
-        if hc.sites is None and hc.region_grid_spacing is not None:
+        import pdb; pdb.set_trace()
+        if getattr(hc, 'region_grid_spacing', None) is not None:
             dist = min(dist, hc.region_grid_spacing * numpy.sqrt(2) / 2)
 
         # if we are computing hazard at exact location we set the
@@ -1318,7 +1335,7 @@ class SESCollection(djm.Model):
         Iterator for walking through all child :class:`SES` objects.
         """
         hc = self.output.oq_job.hazard_calculation
-        n = hc.ses_per_logic_tree_path or 1  # scenario
+        n = getattr(hc, 'ses_per_logic_tree_path', 1)  # 1 for scenario
         for ordinal in xrange(1, n + 1):
             yield SES(self, ordinal)
 
@@ -1799,9 +1816,8 @@ class Gmf(djm.Model):
 
         If a SES does not generate any GMF, it is ignored.
         """
-        hc = self.output.oq_job.hazard_calculation
-        for ses_coll in SESCollection.objects.filter(
-                output__oq_job=self.output.oq_job):
+        job = self.output.oq_job
+        for ses_coll in SESCollection.objects.filter(output__oq_job=job):
             for ses in ses_coll:
                 query = """\
         SELECT imt, sa_period, sa_damping, tag,
@@ -1818,7 +1834,7 @@ class Gmf(djm.Model):
         AND y.ses_id=%d AND z.ses_collection_id=%d
         GROUP BY imt, sa_period, sa_damping, tag
         ORDER BY imt, sa_period, sa_damping, tag;
-        """ % (hc.id, self.id, ses.ordinal, ses_coll.id)
+        """ % (job.id, self.id, ses.ordinal, ses_coll.id)
                 curs = getcursor('job_init')
                 curs.execute(query)
                 # a set of GMFs generate by the same SES, one per rupture
@@ -2103,7 +2119,7 @@ class LtSourceModel(djm.Model):
     """
     Identify a logic tree source model.
     """
-    hazard_calculation = djm.ForeignKey('HazardCalculation')
+    hazard_calculation = djm.ForeignKey('OqJob')
     ordinal = djm.IntegerField()
     sm_lt_path = fields.CharArrayField()
     sm_name = djm.TextField(null=False)
@@ -2132,7 +2148,7 @@ class LtSourceModel(djm.Model):
         """
         Helper to instantiate a GsimLogicTree object from the logic tree file.
         """
-        hc = self.hazard_calculation
+        hc = HazardCalculation(self.hazard_calculation)
         trts = trts or self.get_tectonic_region_types()
         fname = os.path.join(hc.base_path, hc.inputs['gsim_logic_tree'])
         gsim_lt = logictree.GsimLogicTree(
@@ -3375,7 +3391,7 @@ class HazardSite(djm.Model):
     parameters are use for all points of interest).
     """
 
-    hazard_calculation = djm.ForeignKey('HazardCalculation')
+    hazard_calculation = djm.ForeignKey('OqJob')
     location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
