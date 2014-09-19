@@ -50,31 +50,6 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         # before filtering and splitting there are 118 sources
         self.assertEqual(118, len(collector.sources))
 
-    @attr('slow')
-    def test_initialize_site_model(self):
-        # we need a slightly different config file for this test
-        cfg = helpers.get_data_path(
-            'simple_fault_demo_hazard/job_with_site_model.ini')
-        self.job = helpers.get_job(cfg)
-        self.calc = core.ClassicalHazardCalculator(self.job)
-
-        self.calc.initialize_site_model()
-        # If the site model isn't valid for the calculation geometry, a
-        # `RuntimeError` should be raised here
-
-        # Okay, it's all good. Now check the count of the site model records.
-        sm_nodes = models.SiteModel.objects.filter(job=self.job)
-
-        self.assertEqual(2601, len(sm_nodes))
-
-    def test_initialize_site_model_no_site_model(self):
-        patch_path = 'openquake.engine.calculators.hazard.general.\
-store_site_model'
-        with helpers.patch(patch_path) as store_sm_patch:
-            self.calc.initialize_site_model()
-            # We should never try to store a site model in this case.
-            self.assertEqual(0, store_sm_patch.call_count)
-
     def test_initialize_realizations_montecarlo(self):
         # We need initialize sources first (read logic trees, parse sources,
         # etc.)
@@ -111,11 +86,10 @@ store_site_model'
     def test_initialize_realizations_enumeration(self):
         self.calc.initialize_site_model()
         # enumeration is triggered by zero value used as number of realizations
-        self.calc.job.save_param(number_of_logic_tree_samples=0)
+        self.calc._hc.number_of_logic_tree_samples = 0
 
         self.calc.initialize_sources()
         self.calc.process_sources()
-
         self.calc.initialize_realizations()
 
         [ltr] = models.LtRealization.objects.filter(
