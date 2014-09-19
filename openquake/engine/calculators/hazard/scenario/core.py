@@ -131,7 +131,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         with transaction.commit_on_success(using='job_init'):
             self.parse_risk_models()
         with transaction.commit_on_success(using='job_init'):
-            self.initialize_site_model()
+            self.store_sites()
         with transaction.commit_on_success(using='job_init'):
             self.initialize_sources()
         self.create_ruptures()

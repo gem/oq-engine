@@ -64,26 +64,6 @@ class OQRouterTestCase(unittest.TestCase):
 
         self._db_for_write_helper(classes, expected_db)
 
-    def test_hzrdi_read_schema(self):
-        '''
-        For each model in the 'hzrdi' schema, test for proper db routing
-        for read operations.
-        '''
-        classes = [oq.SiteModel]
-        expected_db = 'job_init'
-
-        self._db_for_read_helper(classes, expected_db)
-
-    def test_hzrdi_write_schema(self):
-        '''
-        For each model in the 'hzrdi' schema, test for proper db routing
-        for write operations.
-        '''
-        classes = [oq.SiteModel]
-        expected_db = 'job_init'
-
-        self._db_for_write_helper(classes, expected_db)
-
     def test_uiapi_read_schema(self):
         '''
         For each model in the 'uiapi' schema, test for proper db routing
