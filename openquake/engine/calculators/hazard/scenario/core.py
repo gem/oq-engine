@@ -27,7 +27,7 @@ from openquake.hazardlib.imt import from_string
 import openquake.hazardlib.gsim
 
 from openquake.nrmllib.node import read_nodes
-from openquake.commonlib.general import split_in_blocks, distinct
+from openquake.commonlib.general import split_in_blocks
 from openquake.commonlib.source import ValidNode, RuptureConverter
 
 from openquake.engine.calculators.hazard import general as haz_general
