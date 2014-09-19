@@ -126,7 +126,7 @@ class GetSiteCollectionTestCase(unittest.TestCase):
         calc = cls_core.ClassicalHazardCalculator(job)
 
         # Bootstrap the `hazard_site` table:
-        calc.initialize_site_model()
+        calc.store_sites()
         calc.initialize_sources()
 
         site_coll = job.hazard_calculation.site_collection
@@ -147,7 +147,7 @@ class GetSiteCollectionTestCase(unittest.TestCase):
         models.JobStats.objects.create(oq_job=job)
 
         calc = scen_core.ScenarioHazardCalculator(job)
-        calc.initialize_site_model()
+        calc.store_sites()
         site_coll = job.hazard_calculation.site_collection
 
         # all of the parameters should be the same:
