@@ -1,6 +1,8 @@
 #!/bin/bash
 
-# set -x
+if [ $GEM_SET_DEBUG ]; then
+    set -x
+fi
 
 help() {
 cat <<HSD
