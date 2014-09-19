@@ -96,14 +96,13 @@ reference_depth_to_1pt0km_per_sec = 100.0
 
             expected_params = {
                 'base_path': exp_base_path,
-                'sites': [(1.0, 2.1), (3.0, 4.1), (5.0, 6.1)],
                 'calculation_mode': 'classical',
                 'hazard_calculation_id': None,
                 'hazard_output_id': None,
                 'truncation_level': 3.0,
                 'random_seed': 5,
                 'maximum_distance': 1.0,
-                'inputs': {},
+                'inputs': {'site': sites_csv},
                 'reference_depth_to_1pt0km_per_sec': 100.0,
                 'reference_depth_to_2pt5km_per_sec': 5.0,
                 'reference_vs30_type': 'measured',
