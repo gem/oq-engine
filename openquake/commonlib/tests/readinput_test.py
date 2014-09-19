@@ -19,8 +19,8 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         <site lon="0.0" lat="0.2" vs30="200.0" vs30Type="inferred" z1pt0="100.0" z2pt5="2.0" />
     </siteModel>
 </nrml>''')
-        oqparam = mock.Mock(inputs={})
-        oqparam.inputs['site_model'] = data
+        oqparam = mock.Mock()
+        oqparam.inputs = dict(site_model=data)
         expected = [
             SiteParam(z1pt0=100.0, z2pt5=2.0, measured=False, vs30=1200.0,
                       lon=0.0, lat=0.0),
