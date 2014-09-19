@@ -50,12 +50,14 @@ class Mesh(object):
     #: approximation is required -- set to 5 meters.
     DIST_TOLERANCE = 0.005
 
-    def __init__(self, lons, lats, depths):
+    def __init__(self, lons, lats, depths=None):
         assert (isinstance(lons, numpy.ndarray)
                 and isinstance(lats, numpy.ndarray)
-                and (depths is None or isinstance(depths, numpy.ndarray)))
+                and (depths is None or isinstance(depths, numpy.ndarray))
+                ), (type(lons), type(lats), type(depths))
         assert ((lons.shape == lats.shape)
-                and (depths is None or depths.shape == lats.shape))
+                and (depths is None or depths.shape == lats.shape)
+                ), (lons.shape, lats.shape)
         assert lons.size > 0
         self.lons = lons
         self.lats = lats
@@ -128,8 +130,9 @@ class Mesh(object):
         """
         assert (isinstance(item, slice) or
                 (isinstance(item, (list, tuple))
-                 and all(isinstance(subitem, slice) for subitem in item))), \
-               '%s objects can only be indexed by slices' % type(self).__name__
+                 and all(isinstance(subitem, slice) for subitem in item))
+                ), '%s objects can only be indexed by slices' % \
+            type(self).__name__
         lons = self.lons[item]
         lats = self.lats[item]
         depths = None
