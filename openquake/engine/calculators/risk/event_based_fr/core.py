@@ -101,7 +101,7 @@ def event_based_fr(job_id, sites, rc, risk_models,
     getters_mon = getdata_mon.copy('building getters')
 
     assocs = models.AssocLtRlzTrtModel.objects.filter(
-        trt_model__lt_model__hazard_calculation=hc).order_by('rlz')
+        trt_model__lt_model__hazard_calculation=hc.oqjob).order_by('rlz')
 
     # mapping realization -> [(trt_model, gsim)]
     rlz2gsims = {
@@ -180,7 +180,7 @@ class EventBasedFRRiskCalculator(core.EventBasedRiskCalculator):
             # realizations should be associated to RiskCalculation,
             # not to HazardCalculation
             models.LtRealization.objects.filter(
-                lt_model__hazard_calculation=self.hc).delete()
+                lt_model__hazard_calculation=self.job).delete()
             self.hcalc.initialize_realizations()
             for rlz in self.hcalc._get_realizations():
                 output = models.Output.objects.create(
@@ -338,7 +338,7 @@ class GetterBuilder(object):
     WHERE hsite.hazard_calculation_id = %s
     AND exposure_model_id = %s AND taxonomy=%s
     AND ST_COVERS(ST_GeographyFromText(%s), exp.site)'''
-        args = (rc.hazard_calculation.id, rc.exposure_model.id, taxonomy,
+        args = (rc.hazard_calculation.oqjob.id, rc.exposure_model.id, taxonomy,
                 rc.region_constraint.wkt)
         # print cursor.mogrify(query, args) useful when debugging
         cursor.execute(query, args)

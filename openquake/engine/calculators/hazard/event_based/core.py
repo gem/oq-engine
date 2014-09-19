@@ -121,7 +121,7 @@ def compute_ruptures(
     trt_model = models.TrtModel.objects.get(pk=trt_model_id)
     ses_coll = models.SESCollection.objects.get(lt_model=trt_model.lt_model)
 
-    hc = models.HazardCalculation.objects.get(oqjob=job_id)
+    hc = models.HazardCalculation(job_id)
     all_ses = range(1, hc.ses_per_logic_tree_path + 1)
     tot_ruptures = 0
 
@@ -228,7 +228,7 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol):
     """
     job = models.OqJob.objects.get(pk=job_id)
     hc = job.hazard_calculation
-    imts = map(from_string, hc.intensity_measure_types)
+    imts = map(from_string, hc.get_imts())
 
     result = {}  # trt_model_id -> (curves_by_gsim, [])
     # NB: by construction each block is a non-empty list with
@@ -249,7 +249,7 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol):
             calc.calc_gmfs(
                 r_sites, rupture, [(r.id, r.seed) for r in group])
 
-    if hc.hazard_curves_from_gmfs:
+    if hasattr(hc, 'hazard_curves_from_gmfs'):
         with EnginePerformanceMonitor(
                 'hazard curves from gmfs',
                 job_id, compute_gmfs_and_curves):
@@ -405,18 +405,18 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
 
     def post_execute(self):
         trt_models = models.TrtModel.objects.filter(
-            lt_model__hazard_calculation=self.hc)
+            lt_model__hazard_calculation=self.job)
         # save the right number of occurring ruptures
         for trt_model in trt_models:
             trt_model.num_ruptures = self.num_ruptures.get(trt_model.id, 0)
             trt_model.save()
-        if (not self.hc.ground_motion_fields and
-                not self.hc.hazard_curves_from_gmfs):
+        if (not getattr(self.hc, 'ground_motion_fields', None) and
+                not getattr(self.hc, 'hazard_curves_from_gmfs')):
             return  # do nothing
 
         # create a Gmf output for each realization
         self.initialize_realizations()
-        if self.hc.ground_motion_fields:
+        if hasattr(self.hc, 'ground_motion_fields'):
             for rlz in self._get_realizations():
                 output = models.Output.objects.create(
                     oq_job=self.job,
@@ -438,7 +438,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         sitecol = self.hc.site_collection
         sesruptures = []  # collect the ruptures in a fixed order
         for trt_model in models.TrtModel.objects.filter(
-                lt_model__hazard_calculation=self.hc):
+                lt_model__hazard_calculation=self.job):
             sesruptures.extend(
                 models.SESRupture.objects.filter(
                     rupture__trt_model=trt_model))
@@ -480,6 +480,6 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         """
         weights = super(EventBasedHazardCalculator, self).pre_execute()
         for lt_model in models.LtSourceModel.objects.filter(
-                hazard_calculation=self.hc):
+                hazard_calculation=self.job):
             self.initialize_ses_db_records(lt_model)
         return weights

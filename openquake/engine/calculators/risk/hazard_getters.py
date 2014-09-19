@@ -291,7 +291,7 @@ WITH assocs AS (
   AND ST_COVERS(ST_GeographyFromText(%s), exp.site)
 )
 INSERT INTO riskr.asset_site (job_id, asset_id, site_id)
-SELECT * FROM assocs""", (rc.oqjob.id, self.hc.id,
+SELECT * FROM assocs""", (rc.oqjob.id, self.hc.oqjob.id,
                           rc.exposure_model.id, taxonomy,
                           rc.region_constraint.wkt))
         else:
@@ -308,7 +308,7 @@ WITH assocs AS (
   ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
 )
 INSERT INTO riskr.asset_site (job_id, asset_id, site_id)
-SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
+SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.oqjob.id,
                           rc.exposure_model.id, taxonomy,
                           rc.region_constraint.wkt))
 

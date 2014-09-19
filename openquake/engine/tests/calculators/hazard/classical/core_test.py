@@ -83,7 +83,7 @@ store_site_model'
 
         # No realizations yet:
         ltrs = models.LtRealization.objects.filter(
-            lt_model__hazard_calculation=self.job.hazard_calculation.id)
+            lt_model__hazard_calculation=self.job)
         self.assertEqual(0, len(ltrs))
 
         self.calc.process_sources()
@@ -97,8 +97,7 @@ store_site_model'
 
         # We expect 2 logic tree realizations
         ltr1, ltr2 = models.LtRealization.objects.filter(
-            lt_model__hazard_calculation=self.job.hazard_calculation.id
-        ).order_by("id")
+            lt_model__hazard_calculation=self.job).order_by("id")
 
         # Check each ltr contents, just to be thorough.
         self.assertEqual(0, ltr1.ordinal)
@@ -112,15 +111,15 @@ store_site_model'
     def test_initialize_realizations_enumeration(self):
         self.calc.initialize_site_model()
         # enumeration is triggered by zero value used as number of realizations
-        self.calc.job.hazard_calculation.number_of_logic_tree_samples = 0
-        self.calc.job.hazard_calculation.save()
+        self.calc.job.save_param(number_of_logic_tree_samples=0)
+
         self.calc.initialize_sources()
         self.calc.process_sources()
 
         self.calc.initialize_realizations()
 
         [ltr] = models.LtRealization.objects.filter(
-            lt_model__hazard_calculation=self.job.hazard_calculation.id)
+            lt_model__hazard_calculation=self.job)
 
         # Check each ltr contents, just to be thorough.
         self.assertEqual(0, ltr.ordinal)
@@ -150,7 +149,7 @@ store_site_model'
         self.calc.post_execute()
 
         lt_rlzs = models.LtRealization.objects.filter(
-            lt_model__hazard_calculation=self.job.hazard_calculation.id)
+            lt_model__hazard_calculation=self.job)
 
         self.assertEqual(2, len(lt_rlzs))
 
@@ -255,7 +254,8 @@ store_site_model'
         self.job.save()
 
         # now test the hazard calculation can be removed
-        self.job.hazard_calculation.delete(using='admin')
+        self.job.delete(using='admin')
+
 
 def update_result_matrix(current, new):
     return 1 - (1 - current) * (1 - new)

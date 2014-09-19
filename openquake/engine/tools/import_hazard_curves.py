@@ -25,12 +25,13 @@ def import_hazard_curves(fileobj):
     fname = fileobj.name
     curs = connections['job_init'].cursor().cursor.cursor  # DB API cursor
     job = engine.prepare_job()
-    hc = models.HazardCalculation.objects.create(
+    job.save_params(dict(
         base_path=os.path.dirname(fname),
         description='HazardCurve importer, file %s' % os.path.basename(fname),
-        calculation_mode='classical', maximum_distance=100)
+        calculation_mode='classical', maximum_distance=100))
     # XXX: what about the maximum_distance?
 
+    hc = models.HazardCalculation(job)
     out = models.Output.objects.create(
         display_name='Imported from %r' % fname, output_type='hazard_curve',
         oq_job=job)
@@ -67,7 +68,6 @@ def import_hazard_curves(fileobj):
         curs.connection.commit()
     finally:
         f.close()
-    job.hazard_calculation = hc
     job.save()
     return out
 

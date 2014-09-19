@@ -305,7 +305,7 @@ def list_imported_outputs():
     List outputs which were imported from a file, not calculated from a job
     """
     outputs = models.Output.objects.filter(
-        oq_job__hazard_calculation__description__contains=' importer, file ')
+        oq_job__job_param__description__contains=' importer, file ')
     engine.print_outputs_summary(outputs)
 
 
@@ -314,8 +314,7 @@ def export_hazard(haz_output_id, target_dir, export_type):
 
 
 def export_hazard_outputs(hc_id, target_dir, export_type):
-    for output in models.Output.objects.filter(
-            oq_job__hazard_calculation=hc_id):
+    for output in models.Output.objects.filter(oq_job=hc_id):
         print 'Exporting %s...' % output
         export(hazard_export.export, output.id, target_dir, export_type)
 
@@ -368,7 +367,7 @@ def delete_uncompleted_calculations():
             oqjob__status="successful"):
         del_risk_calc(rc.id, True)
 
-    for hc in models.HazardCalculation.objects.filter(
+    for hc in models.OqJob.objects.filter(
             oqjob__user_name=getpass.getuser()).exclude(
             oqjob__status="successful"):
         del_haz_calc(hc.id, True)
@@ -464,7 +463,7 @@ def main():
 
     # hazard
     elif args.list_hazard_calculations:
-        list_calculations(models.HazardCalculation.objects)
+        list_calculations(models.OqJob.objects)
     elif args.list_hazard_outputs is not None:
         engine.list_hazard_outputs(args.list_hazard_outputs)
     elif args.export_hazard is not None:
@@ -510,12 +509,12 @@ def main():
         with open(args.load_gmf) as f:
             out = import_gmf_scenario(f)
             print 'Added output id=%d of type %s; hazard_calculation_id=%d'\
-                % (out.id, out.output_type, out.oq_job.hazard_calculation.id)
+                % (out.id, out.output_type, out.oq_job.id)
     elif args.load_curve is not None:
         with open(args.load_curve) as f:
             out = import_hazard_curves(f)
             print 'Added output id=%d of type %s; hazard_calculation_id=%d'\
-                % (out.id, out.output_type, out.oq_job.hazard_calculation.id)
+                % (out.id, out.output_type, out.oq_job.id)
     elif args.list_imported_outputs:
         list_imported_outputs()
     elif args.delete_uncompleted_calculations:
