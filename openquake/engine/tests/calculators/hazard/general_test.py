@@ -18,9 +18,6 @@
 import unittest
 import mock
 
-from openquake.hazardlib import geo as hazardlib_geo
-from openquake.commonlib import readini
-
 from openquake.engine import engine
 from openquake.engine.calculators.hazard import general
 from openquake.engine.utils import get_calculator_class
@@ -29,73 +26,22 @@ from openquake.engine.db import models
 from openquake.engine.tests.utils import helpers
 
 
-class StoreSiteModelTestCase(unittest.TestCase):
-
-    def test_store_site_model(self):
-        # Setup
-        site_model = helpers.get_data_path('site_model.xml')
-
-        exp_site_model = [
-            dict(lon=-122.5, lat=37.5, vs30=800.0, vs30_type="measured",
-                 z1pt0=100.0, z2pt5=5.0),
-            dict(lon=-122.6, lat=37.6, vs30=801.0, vs30_type="measured",
-                 z1pt0=101.0, z2pt5=5.1),
-            dict(lon=-122.7, lat=37.7, vs30=802.0, vs30_type="measured",
-                 z1pt0=102.0, z2pt5=5.2),
-            dict(lon=-122.8, lat=37.8, vs30=803.0, vs30_type="measured",
-                 z1pt0=103.0, z2pt5=5.3),
-            dict(lon=-122.9, lat=37.9, vs30=804.0, vs30_type="measured",
-                 z1pt0=104.0, z2pt5=5.4),
-        ]
-
-        job = models.OqJob.objects.create(user_name="openquake")
-        ids = general.store_site_model(job, site_model)
-
-        actual_site_model = models.SiteModel.objects.filter(
-            job=job).order_by('id')
-
-        for i, exp in enumerate(exp_site_model):
-            act = actual_site_model[i]
-
-            self.assertAlmostEqual(exp['lon'], act.location.x)
-            self.assertAlmostEqual(exp['lat'], act.location.y)
-            self.assertAlmostEqual(exp['vs30'], act.vs30)
-            self.assertEqual(exp['vs30_type'], act.vs30_type)
-            self.assertAlmostEqual(exp['z1pt0'], act.z1pt0)
-            self.assertAlmostEqual(exp['z2pt5'], act.z2pt5)
-
-        # last, check that the `store_site_model` function returns all of the
-        # newly-inserted records
-        for i, s in enumerate(ids):
-            self.assertEqual(s, actual_site_model[i].id)
-
-
 class ParseRiskModelsTestCase(unittest.TestCase):
     def test(self):
-        # check that if risk models are provided, then the ``points to
-        # compute`` and the imls are got from there
-
-        username = helpers.default_user()
-
-        job = engine.prepare_job(username)
-
+        # check that if risk models are provided, then the sites
+        # and the imls are got from there
         cfg = helpers.get_data_path('classical_job-sd-imt.ini')
-        params = vars(readini.parse_config(open(cfg)))
-        del params['hazard_calculation_id']
-        del params['hazard_output_id']
+        job = engine.job_from_file(cfg, helpers.default_user())
         job.is_running = True
         job.save()
 
-        haz_calc = models.HazardCalculation(job)
-        calc = get_calculator_class(
-            'hazard',
-            job.hazard_calculation.calculation_mode)(job)
+        haz_calc = job.hazard_calculation
+        calc = get_calculator_class('hazard', haz_calc.calculation_mode)(job)
         calc.parse_risk_models()
 
-        self.assertEqual(['PGA'], haz_calc.get_imts())
+        self.assertEqual(['PGA'], calc.hc.get_imts())
 
-        self.assertEqual(
-            3, haz_calc.oqjob.exposuremodel.exposuredata_set.count())
+        self.assertEqual(3, calc.job.exposuremodel.exposuredata_set.count())
 
         return job
 
@@ -116,7 +62,7 @@ class InitializeSourcesTestCase(unittest.TestCase):
     def test_filtering_sources(self):
         self.calc.initialize_sources()
         m1, m2, m3 = models.LtSourceModel.objects.filter(
-            hazard_calculation=self.calc.hc)
+            hazard_calculation=self.calc.job)
         self.assertEqual(
             [m1.get_num_sources(), m2.get_num_sources(), m3.get_num_sources()],
             [2, 2, 2])

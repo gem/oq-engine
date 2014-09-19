@@ -42,20 +42,17 @@ AVAILABLE_GSIMS = openquake.hazardlib.gsim.get_available_gsims()
 
 
 @tasks.oqtask
-def gmfs(job_id, ses_ruptures, sitecol, gmf_id):
+def gmfs(job_id, ses_ruptures, sitecol, imts, gmf_id):
     """
     :param int job_id: the current job ID
     :param ses_ruptures: a set of `SESRupture` instances
     :param sitecol: a `SiteCollection` instance
+    :param imts: a list of hazardlib IMT instances
     :param int gmf_id: the ID of a `Gmf` instance
     """
-    job = models.OqJob.objects.get(pk=job_id)
-    hc = job.hazard_calculation
-    # distinct is here to make sure that IMTs such as
-    # SA(0.8) and SA(0.80) are considered the same
-    imts = distinct(from_string(x) for x in hc.get_imts())
+    hc = models.HazardCalculation(job_id)
     gsim = AVAILABLE_GSIMS[hc.gsim]()  # instantiate the GSIM class
-    correlation_model = models.get_correl_model(job)
+    correlation_model = models.get_correl_model(hc.oqjob)
 
     cache = collections.defaultdict(list)  # {site_id, imt -> gmvs}
     inserter = writer.CacheInserter(models.GmfData, 1000)
@@ -108,8 +105,8 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         Get the rupture_model file from the job.ini file, and set the
         attribute self.rupture.
         """
-        rup_spacing = self.job.get_param('rupture_mesh_spacing')
-        rup_model = self.job.get_param('inputs')['rupture_model']
+        rup_spacing = self.hc.rupture_mesh_spacing
+        rup_model = self.hc.inputs['rupture_model']
         rup_node, = read_nodes(rup_model, lambda el: 'Rupture' in el.tag,
                                ValidNode)
         self.rupture = RuptureConverter(rup_spacing).convert_node(rup_node)
@@ -138,17 +135,18 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         with transaction.commit_on_success(using='job_init'):
             self.initialize_sources()
         self.create_ruptures()
-        n_imts = len(distinct(from_string(imt)
-                              for imt in self.hc.intensity_measure_types))
-        n_sites = len(self.hc.site_collection)
-        n_gmf = self.hc.number_of_ground_motion_fields
-        output_weight = n_sites * n_imts * n_gmf
+        hc = models.HazardCalculation(self.job)
+
+        self.imts = imts = map(from_string, hc.get_imts())
+        n_sites = len(hc.site_collection)
+        n_gmf = hc.number_of_ground_motion_fields
+        output_weight = n_sites * len(imts) * n_gmf
         logs.LOG.info('Expected output size=%s', output_weight)
         models.JobInfo.objects.create(
             oq_job=self.job,
             num_sites=n_sites,
             num_realizations=1,
-            num_imts=n_imts,
+            num_imts=len(imts),
             num_levels=0,
             input_weight=0,
             output_weight=output_weight)
@@ -158,13 +156,12 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
     def create_ruptures(self):
         # check filtering
         hc = self.hc
-        if hc.maximum_distance:
-            self.sites = filters.filter_sites_by_distance_to_rupture(
-                self.rupture, hc.maximum_distance, hc.site_collection)
-            if self.sites is None:
-                raise RuntimeError(
-                    'All sites where filtered out! '
-                    'maximum_distance=%s km' % hc.maximum_distance)
+        self.sites = filters.filter_sites_by_distance_to_rupture(
+            self.rupture, hc.maximum_distance, hc.site_collection)
+        if self.sites is None:
+            raise RuntimeError(
+                'All sites where filtered out! '
+                'maximum_distance=%s km' % hc.maximum_distance)
 
         # create ses output
         output = models.Output.objects.create(
@@ -220,7 +217,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         ses_ruptures = models.SESRupture.objects.filter(
             rupture__ses_collection=self.ses_coll.id)
         for ruptures in split_in_blocks(ses_ruptures, self.concurrent_tasks):
-            yield self.job.id, ruptures, self.sites, self.gmf.id
+            yield self.job.id, ruptures, self.sites, self.imts, self.gmf.id
 
     def task_completed(self, result):
         """Do nothing"""
