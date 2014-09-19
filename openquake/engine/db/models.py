@@ -389,7 +389,7 @@ class OqJob(djm.Model):
                 jplist[0].value = repr(value)
                 jplist[0].save()
             else:  # add new parameter
-                JobParam.objects.filter(job=self, name=name, value=repr(value))
+                JobParam.objects.create(job=self, name=name, value=repr(value))
 
     def __repr__(self):
         return '<%s %d, %s>' % (self.__class__.__name__,
@@ -827,7 +827,6 @@ class RiskCalculation(djm.Model):
             dist = self.DEFAULT_MAXIMUM_DISTANCE
 
         hc = self.get_hazard_calculation()
-        import pdb; pdb.set_trace()
         if getattr(hc, 'region_grid_spacing', None) is not None:
             dist = min(dist, hc.region_grid_spacing * numpy.sqrt(2) / 2)
 

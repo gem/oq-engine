@@ -541,6 +541,8 @@ class BaseHazardCalculator(base.Calculator):
 
         # save IMTs
         imt_strings = hc.get_imts()
+        # distinct is here to make sure that IMTs such as
+        # SA(0.8) and SA(0.80) are considered the same
         imts = distinct(map(from_string, imt_strings))
         if len(imt_strings) > imts:
             logs.LOG.warn('Found duplicated IMTs: %s', imt_strings)

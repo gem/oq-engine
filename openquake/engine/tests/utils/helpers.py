@@ -123,14 +123,11 @@ def run_job(cfg, exports=None, hazard_calculation_id=None,
         exports = []
 
     job = get_job(cfg, hazard_calculation_id=hazard_calculation_id,
-                  hazard_output_id=hazard_output_id)
+                  hazard_output_id=hazard_output_id, **params)
     job.is_running = True
     job.save()
 
     logfile = os.path.join(tempfile.gettempdir(), 'qatest.log')
-
-    # update calculation parameters
-    job.save_params(params)
 
     engine.run_calc(job, 'error', logfile, exports, job.job_type)
     return job
@@ -318,7 +315,7 @@ def get_job(cfg, username="openquake", hazard_calculation_id=None,
     :class:`openquake.engine.db.models.OqJob` object for a risk calculation.
     """
     if hazard_calculation_id is None and hazard_output_id is None:
-        return engine.job_from_file(cfg, username, 'error', [], extras=extras)
+        return engine.job_from_file(cfg, username, 'error', [], **extras)
 
     job = engine.prepare_job(username)
     oqparam = readini.parse_config(
