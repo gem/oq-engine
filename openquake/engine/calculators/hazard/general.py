@@ -119,7 +119,7 @@ def filter_and_split_sources(job_id, sources, sitecol):
     :param list sources: the original sources
     :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
     """
-    hc = models.HazardCalculation.objects.get(oqjob=job_id)
+    hc = models.HazardCalculation(job_id)
     discr = hc.area_source_discretization
     maxdist = hc.maximum_distance
     srcs = []
@@ -190,7 +190,7 @@ class BaseHazardCalculator(base.Calculator):
         A shorter and more convenient way of accessing the oqparam object
         """
         if self._hc is None:
-            self._hc = self.job.get_oqparam()
+            self._hc = models.HazardCalculation(self.job)
         return self._hc
 
     @EnginePerformanceMonitor.monitor
@@ -303,7 +303,7 @@ class BaseHazardCalculator(base.Calculator):
                 pnes2 = 1 - acc.get((trt_model_id, gsim), self.zeros)
                 acc[trt_model_id, gsim] = 1 - pnes1 * pnes2
 
-            if self.hc.poes_disagg:
+            if hasattr(self.hc, 'poes_disagg'):
                 for bb in bbs:
                     self.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
 
@@ -314,7 +314,7 @@ class BaseHazardCalculator(base.Calculator):
         Get all of the logic tree realizations for this calculation.
         """
         return models.LtRealization.objects\
-            .filter(lt_model__hazard_calculation=self.hc).order_by('id')
+            .filter(lt_model__hazard_calculation=self.job).order_by('id')
 
     def pre_execute(self):
         """
@@ -336,7 +336,7 @@ class BaseHazardCalculator(base.Calculator):
         # given by the parameter `point_source_weight` is applied
         input_weight = self.process_sources()
 
-        self.imtls = self.hc.intensity_measure_types_and_levels
+        self.imtls = getattr(self.hc, 'intensity_measure_types_and_levels', {})
         n_sites = len(self.hc.site_collection)
         if self.imtls:
             n_imts = float(len(self.imtls))
@@ -441,7 +441,7 @@ class BaseHazardCalculator(base.Calculator):
 
             self.source_model_lt.tectonic_region_types.update(trts)
             lt_model = models.LtSourceModel.objects.create(
-                hazard_calculation=self.hc, sm_lt_path=smpath, ordinal=i,
+                hazard_calculation=self.job, sm_lt_path=smpath, ordinal=i,
                 sm_name=sm, weight=weight)
             if self.hc.inputs.get('gsim_logic_tree'):  # check TRTs
                 gsims_by_trt = lt_model.make_gsim_lt(trts).values
@@ -501,7 +501,9 @@ class BaseHazardCalculator(base.Calculator):
             if hc.intensity_measure_types is not None:
                 hc.intensity_measure_types = list(set(
                     hc.intensity_measure_types))
-            hc.save()
+            self.job.save_param(
+                intensity_measure_types_and_levels=
+                hc.intensity_measure_types_and_levels)
             logs.LOG.info("Got IMT and levels "
                           "from vulnerability models: %s - %s" % (
                               hc.intensity_measure_types_and_levels,
@@ -513,7 +515,6 @@ class BaseHazardCalculator(base.Calculator):
 
             parser = iter(parsers.FragilityModelParser(
                 hc.inputs['fragility']))
-            hc = self.hc
 
             fragility_format, _limit_states = parser.next()
 
@@ -528,7 +529,9 @@ class BaseHazardCalculator(base.Calculator):
                 for _taxonomy, iml, _params, _no_damage_limit in parser)
             hc.intensity_measure_types.extend(
                 hc.intensity_measure_types_and_levels)
-            hc.save()
+            self.job.save_param(
+                intensity_measure_types_and_levels=
+                hc.intensity_measure_types_and_levels)
 
         if 'exposure' in hc.inputs:
             with logs.tracing('storing exposure'):
@@ -537,7 +540,7 @@ class BaseHazardCalculator(base.Calculator):
                     parsers.ExposureModelParser(hc.inputs['exposure']))
 
         # save IMTs
-        imt_strings = self.hc.get_imts()
+        imt_strings = hc.get_imts()
         imts = distinct(map(from_string, imt_strings))
         if len(imt_strings) > imts:
             logs.LOG.warn('Found duplicated IMTs: %s', imt_strings)
@@ -547,16 +550,9 @@ class BaseHazardCalculator(base.Calculator):
     def initialize_site_model(self):
         """
         Populate the hazard site table.
-
-        If a site model is specified in the calculation configuration,
-        parse it and load it into the `hzrdi.site_model` table.
         """
         logs.LOG.progress("initializing sites")
         self.hc.save_hazard_sites()
-
-        site_model_inp = self.hc.site_model
-        if site_model_inp:
-            store_site_model(self.job, site_model_inp)
 
     def get_max_realizations(self):
         """
@@ -572,7 +568,7 @@ class BaseHazardCalculator(base.Calculator):
         gsim_lt_dict = {}  # gsim_lt per source model logic tree path
         for sm, weight, sm_lt_path in self.source_model_lt:
             lt_model = models.LtSourceModel.objects.get(
-                hazard_calculation=self.hc, sm_lt_path=sm_lt_path)
+                hazard_calculation=self.job, sm_lt_path=sm_lt_path)
             if not sm_lt_path in gsim_lt_dict:
                 gsim_lt_dict[sm_lt_path] = lt_model.make_gsim_lt()
         return sum(gsim_lt.get_num_paths()
@@ -593,7 +589,7 @@ class BaseHazardCalculator(base.Calculator):
         gsim_lt_dict = {}  # gsim_lt per source model logic tree path
         for idx, (sm, weight, sm_lt_path) in enumerate(self.source_model_lt):
             lt_model = models.LtSourceModel.objects.get(
-                hazard_calculation=self.hc, sm_lt_path=sm_lt_path)
+                hazard_calculation=self.job, sm_lt_path=sm_lt_path)
             if not sm_lt_path in gsim_lt_dict:
                 gsim_lt_dict[sm_lt_path] = lt_model.make_gsim_lt()
             gsim_lt = gsim_lt_dict[sm_lt_path]
@@ -648,7 +644,7 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
         outputs if this option was turned off in the calculation profile.
         """
         outputs = export_core.get_outputs(self.job.id)
-        if not self.hc.export_multi_curves:
+        if not getattr(self.hc, 'export_multi_curves', None):
             outputs = outputs.exclude(output_type='hazard_curve_multi')
         return outputs
 
@@ -671,7 +667,7 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
         """
         imtls = self.hc.intensity_measure_types_and_levels
         points = models.HazardSite.objects.filter(
-            hazard_calculation=self.hc).order_by('id')
+            hazard_calculation=self.job).order_by('id')
         sorted_imts = sorted(imtls)
         curves_by_imt = dict((imt, []) for imt in sorted_imts)
         individual_curves = self.job.get_param(
@@ -697,7 +693,8 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
                 curves_by_imt[imt].append(curves)
 
         self.curves = {}  # save memory for the post-processing phase
-        if self.hc.mean_hazard_curves or self.hc.quantile_hazard_curves:
+        if getattr(self.hc, 'mean_hazard_curves', None) or \
+                getattr(self.hc, 'quantile_hazard_curves', None):
             self.curves_by_imt = curves_by_imt
 
     def save_curves_for_rlz_imt(self, rlz, imt, imls, points, curves):
@@ -753,11 +750,11 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
         """
         del self.source_collector  # save memory
         weights = [rlz.weight for rlz in models.LtRealization.objects.filter(
-            lt_model__hazard_calculation=self.hc)]
+            lt_model__hazard_calculation=self.job)]
         num_rlzs = len(weights)
         if not num_rlzs:
             logs.LOG.warn('No realizations for hazard_calculation_id=%d',
-                          self.hc.id)
+                          self.job.id)
             return
         elif num_rlzs == 1 and self.hc.quantile_hazard_curves:
             logs.LOG.warn(
@@ -882,14 +879,16 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
         uniform_hazard_spectra.
         """
         # means/quantiles:
-        if self.hc.mean_hazard_curves or self.hc.quantile_hazard_curves:
+        if getattr(self.hc, 'mean_hazard_curves', None) or \
+                getattr(self.hc, 'quantile_hazard_curves', None):
             self.do_aggregate_post_proc()
 
         # hazard maps:
         # required for computing UHS
         # if `hazard_maps` is false but `uniform_hazard_spectra` is true,
         # just don't export the maps
-        if self.hc.hazard_maps or self.hc.uniform_hazard_spectra:
+        if (getattr(self.hc, 'hazard_maps', None) or
+                getattr(self.hc, 'uniform_hazard_spectra', None)):
             with self.monitor('generating hazard maps'):
                 hazard_curves = models.HazardCurve.objects.filter(
                     output__oq_job=self.job, imt__isnull=False)
@@ -897,7 +896,7 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
                     hazard_curves_to_hazard_map,
                     (self.job.id, hazard_curves, self.hc.poes))
 
-        if self.hc.uniform_hazard_spectra:
+        if getattr(self.hc, 'uniform_hazard_spectra', None):
             individual_curves = self.job.get_param(
                 'individual_curves', missing=True)
             if individual_curves is False:

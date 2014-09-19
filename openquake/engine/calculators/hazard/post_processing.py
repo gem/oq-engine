@@ -193,7 +193,7 @@ def do_uhs_post_proc(job):
     quantile_hazard_curves = job.get_param('quantile_hazard_curves', [])
 
     rlzs = models.LtRealization.objects.filter(
-        lt_model__hazard_calculation=job.hazard_calculation)
+        lt_model__hazard_calculation=job)
 
     for poe in poes:
         maps_for_poe = models.HazardMap.objects.filter(

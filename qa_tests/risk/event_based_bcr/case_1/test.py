@@ -34,15 +34,7 @@ class EventBasedBCRCase1TestCase(risk.BaseRiskQATestCase):
 
     def get_hazard_job(self):
         job = helpers.get_job(
-            helpers.get_data_path("event_based_hazard/job.ini"))
-
-        job.hazard_calculation = models.HazardCalculation.objects.create(
-            truncation_level=job.hazard_calculation.truncation_level,
-            maximum_distance=job.hazard_calculation.maximum_distance,
-            intensity_measure_types_and_levels=(
-                job.hazard_calculation.intensity_measure_types_and_levels),
-            calculation_mode="event_based",
-            investigation_time=50,
+            helpers.get_data_path("event_based_hazard/job.ini"),
             ses_per_logic_tree_path=1)
         job.save()
 

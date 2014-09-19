@@ -70,58 +70,6 @@ class StoreSiteModelTestCase(unittest.TestCase):
             self.assertEqual(s, actual_site_model[i].id)
 
 
-class ClosestSiteModelTestCase(unittest.TestCase):
-
-    def setUp(self):
-        self.hc = models.HazardCalculation.objects.create(
-            maximum_distance=200,
-            calculation_mode="classical",
-            inputs={'site_model': ['fake']})
-        self.job = models.OqJob.objects.create(
-            user_name="openquake", hazard_calculation=self.hc)
-
-    def test_get_closest_site_model_data(self):
-        # This test scenario is the following:
-        # Site model data nodes arranged 2 degrees apart (longitudinally) along
-        # the same parallel (indicated below by 'd' characters).
-        #
-        # The sites of interest are located at (-0.0000001, 0) and
-        # (0.0000001, 0) (from left to right).
-        # Sites of interest are indicated by 's' characters.
-        #
-        # To illustrate, a super high-tech nethack-style diagram:
-        #
-        # -1.........0.........1   V ← oh no, a vampire!
-        #  d        s s        d
-
-        sm1 = models.SiteModel(
-            job=self.job, vs30_type='measured', vs30=0.0000001,
-            z1pt0=0.0000001, z2pt5=0.0000001, location='POINT(-1 0)'
-        )
-        sm1.save()
-        sm2 = models.SiteModel(
-            job=self.job, vs30_type='inferred', vs30=0.0000002,
-            z1pt0=0.0000002, z2pt5=0.0000002, location='POINT(1 0)'
-        )
-        sm2.save()
-
-        # NOTE(larsbutler): I tried testing the site (0, 0), but the result
-        # actually alternated between the the two site model nodes on each test
-        # run. It's very strange indeed. It must be a PostGIS thing.
-        # (Or we can blame the vampire.)
-        #
-        # Thus, I decided to not include this in my test case, since it caused
-        # the test to intermittently fail.
-        point1 = hazardlib_geo.Point(-0.0000001, 0)
-        point2 = hazardlib_geo.Point(0.0000001, 0)
-
-        res1 = self.hc.get_closest_site_model_data(point1)
-        res2 = self.hc.get_closest_site_model_data(point2)
-
-        self.assertEqual(sm1, res1)
-        self.assertEqual(sm2, res2)
-
-
 class ParseRiskModelsTestCase(unittest.TestCase):
     def test(self):
         # check that if risk models are provided, then the ``points to
@@ -135,12 +83,10 @@ class ParseRiskModelsTestCase(unittest.TestCase):
         params = vars(readini.parse_config(open(cfg)))
         del params['hazard_calculation_id']
         del params['hazard_output_id']
-        haz_calc = engine.create_calculation(models.HazardCalculation, params)
-        haz_calc = models.HazardCalculation.objects.get(id=haz_calc.id)
-        job.hazard_calculation = haz_calc
         job.is_running = True
         job.save()
 
+        haz_calc = models.HazardCalculation(job)
         calc = get_calculator_class(
             'hazard',
             job.hazard_calculation.calculation_mode)(job)

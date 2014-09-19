@@ -198,7 +198,7 @@ class HazardDumper(object):
         Dump all the data associated to a given hazard_calculation_id
         and relevant for risk.
         """
-        hc = models.HazardCalculation.objects.get(pk=hazard_calculation_id)
+        hc = models.HazardCalculation(hazard_calculation_id)
 
         outputs = hc.oqjob.output_set.all().values_list('output_type', 'id')
 
@@ -221,7 +221,8 @@ class HazardDumper(object):
         all_outs = [output_id for _output_type, output_id in outputs]
         self.output(_tuplestr(all_outs))
 
-        for output_type, output_group in itertools.groupby(outputs, lambda x: x[0]):
+        for output_type, output_group in itertools.groupby(
+                outputs, lambda x: x[0]):
             output_ids = [output_id for output_type, output_id in output_group]
             ids = _tuplestr(output_ids)
             print "Dumping %s %s in %s" % (output_type, ids, self.outdir)
@@ -242,7 +243,7 @@ def main(hazard_calculation_id, outdir=None):
     """
     logging.basicConfig(level=logging.WARN)
 
-    assert models.HazardCalculation.objects.filter(
+    assert models.OqJob.objects.filter(
         pk=hazard_calculation_id).exists(), ("The provided hazard calculation "
                                              "does not exist")
 

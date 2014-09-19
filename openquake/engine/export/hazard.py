@@ -208,7 +208,7 @@ def _export_hazard_curve(output, target, export_type):
 
     hcd = _curve_data(hc)
     metadata = _curve_metadata(output, target)
-    haz_calc = output.oq_job.hazard_calculation
+    haz_calc = output.oq_job
     dest = _get_result_export_dest(
         haz_calc.id, target, hc, file_ext=export_type)
     writercls = writers.HazardCurveGeoJSONWriter \
@@ -233,7 +233,7 @@ def export_hazard_curve_csv(output, target):
     (lon lat poe1 ... poeN), where the fields are space separated.
     """
     hc = models.HazardCurve.objects.get(output=output.id)
-    haz_calc_id = output.oq_job.hazard_calculation.id
+    haz_calc_id = output.oq_job.id
     dest = _get_result_export_dest(haz_calc_id, target, hc, file_ext='csv')
     x_y_poes = models.HazardCurveData.objects.all_curves_simple(
         filter_args=dict(hazard_curve=hc.id))
@@ -256,7 +256,7 @@ def export_hazard_curve_multi_xml(output, target):
         metadata = _curve_metadata(hc.output, target)
         metadata_set.append(metadata)
 
-    haz_calc = output.oq_job.hazard_calculation
+    haz_calc = output.oq_job
     dest = _get_result_export_dest(haz_calc.id, target, hcs)
 
     writer = writers.MultiHazardCurveXMLWriter(dest, metadata_set)
@@ -318,7 +318,7 @@ def export_gmf_xml(output, target):
     """
     gmf = models.Gmf.objects.get(output=output.id)
     lt_rlz = gmf.lt_realization
-    haz_calc = output.oq_job.hazard_calculation
+    haz_calc = output.oq_job
 
     sm_lt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path)
     gsim_lt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
@@ -347,7 +347,7 @@ def export_gmf_scenario_xml(output, target):
     :returns:
         The same return value as defined by :func:`export`.
     """
-    haz_calc = output.oq_job.hazard_calculation
+    haz_calc = output.oq_job
     dest = _get_result_export_dest(haz_calc.id, target, output.gmf)
     gmfs = models.get_gmfs_scenario(output)
     writer = writers.ScenarioGMFXMLWriter(dest)
@@ -372,7 +372,7 @@ def export_ses_xml(output, target):
         file).
     """
     ses_coll = models.SESCollection.objects.get(output=output.id)
-    haz_calc = output.oq_job.hazard_calculation
+    haz_calc = output.oq_job
     sm_lt_path = core.LT_PATH_JOIN_TOKEN.join(ses_coll.sm_lt_path)
 
     dest = _get_result_export_dest(haz_calc.id, target,
@@ -389,7 +389,7 @@ def _export_hazard_map(output, target, writer_class, file_ext):
     General hazard map export code.
     """
     hazard_map = models.HazardMap.objects.get(output=output)
-    haz_calc = output.oq_job.hazard_calculation
+    haz_calc = output.oq_job
 
     if hazard_map.lt_realization is not None:
         # If the maps are for a specified logic tree realization,
@@ -508,7 +508,7 @@ def export_disagg_matrix_xml(output, target):
     # We expect 1 result per `Output`
     [disagg_result] = models.DisaggResult.objects.filter(output=output)
     lt_rlz = disagg_result.lt_realization
-    haz_calc = output.oq_job.hazard_calculation
+    haz_calc = output.oq_job
 
     dest = _get_result_export_dest(haz_calc.id, target,
                                    output.disagg_matrix)
@@ -556,7 +556,7 @@ def export_uh_spectra_xml(output, target):
         A list containing the exported file name.
     """
     uhs = models.UHS.objects.get(output=output)
-    haz_calc = output.oq_job.hazard_calculation
+    haz_calc = output.oq_job
 
     dest = _get_result_export_dest(haz_calc.id, target, output.uh_spectra)
 

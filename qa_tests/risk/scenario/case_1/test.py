@@ -77,6 +77,5 @@ class ImportGmfScenarioTestCase(risk.BaseRiskQATestCase):
             output = import_gmf_scenario(data)
         job = output.oq_job
         # this is needed to make happy the GetterBuilder
-        job.hazard_calculation.number_of_ground_motion_fields = 3
-        job.hazard_calculation.save()
+        job.save_param(number_of_ground_motion_fields=3)
         return job

@@ -56,8 +56,7 @@ class ClassicalBCRCase1TestCase(risk.BaseRiskQATestCase):
             (0.80, 0.00), (0.9, 0.00), (1.0, 0.00)]
 
         models.HazardSite.objects.create(
-            hazard_calculation=job.hazard_calculation,
-            location="POINT(1 1)")
+            hazard_calculation=job, location="POINT(1 1)")
         models.HazardCurveData.objects.create(
             hazard_curve=models.HazardCurve.objects.create(
                 output=models.Output.objects.create_output(
@@ -74,7 +73,7 @@ class ClassicalBCRCase1TestCase(risk.BaseRiskQATestCase):
             bcr_distribution__output__oq_job=job)
 
         return [result.average_annual_loss_original,
-            result.average_annual_loss_retrofitted, result.bcr]
+                result.average_annual_loss_retrofitted, result.bcr]
 
     def expected_data(self):
         return [0.009379, 0.006586, 0.483091]

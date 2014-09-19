@@ -44,7 +44,7 @@ class ProbabilisticRuptureTestCase(unittest.TestCase):
         job = helpers.get_job(cfg)
 
         lt_model = models.LtSourceModel.objects.create(
-            hazard_calculation=job.hazard_calculation, ordinal=0,
+            hazard_calculation=job, ordinal=0,
             sm_lt_path='foo')
         lt_rlz = models.LtRealization.objects.create(
             lt_model=lt_model, ordinal=0, gsim_lt_path='bar', weight=1)
