@@ -62,6 +62,14 @@ ON r.id=o.risk_calculation_id;
 
 DROP TABLE uiapi.hazard_calculation;
 
--- TODO: drop the site_model table, now useless
+-- drop the site_model table, now useless
+DROP TABLE hzrdi.site_model;
+
 
 GRANT SELECT,INSERT,UPDATE ON uiapi.job_param TO oq_job_init;
+
+-- add a forgotten ON DELETE CASCADE on job_info
+ALTER TABLE uiapi.job_info
+DROP CONSTRAINT job_info_oq_job_id_fkey,
+ADD CONSTRAINT job_info_oq_job_id_fkey
+   FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
