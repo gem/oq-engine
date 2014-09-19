@@ -21,6 +21,8 @@ import numpy
 import StringIO
 import shutil
 
+from django.core.exceptions import ObjectDoesNotExist
+
 from qa_tests import _utils as qa_utils
 from openquake.engine.tests.utils import helpers
 
@@ -246,21 +248,19 @@ class FixtureBasedQATestCase(LogicTreeBasedTestCase, BaseRiskQATestCase):
     # calculation and run the risk calculation from the load one
     save_load = False
 
-    def _get_queryset(self):
-        return models.JobParam.objects.filter(
-            value=self.hazard_calculation_fixture,
-            name='description',
-            job__status="complete")
-
     def get_hazard_job(self):
-        if not self._get_queryset().exists():
+        try:
+            job = models.JobParam.objects.filter(
+                name='description',
+                value__contains=self.hazard_calculation_fixture,
+                job__status="complete").latest('id').job
+        except ObjectDoesNotExist:
             warnings.warn("Computing Hazard input from scratch")
             job = helpers.run_job(
                 self._test_path('job_haz.ini'))
             self.assertEqual('complete', job.status)
         else:
             warnings.warn("Using existing Hazard input")
-            job = self._get_queryset().latest('job__last_update').job
 
         if self.save_load:
             # Close the opened transactions
