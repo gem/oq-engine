@@ -32,7 +32,6 @@ from openquake.hazardlib.imt import from_string
 from openquake.engine.db import models
 from django.db import transaction
 
-from openquake.nrmllib import parsers as nrml_parsers
 from openquake.nrmllib.risk import parsers
 
 from openquake.commonlib import logictree, source
@@ -73,28 +72,6 @@ class InputWeightLimit(Exception):
 
 class OutputWeightLimit(Exception):
     pass
-
-
-def store_site_model(job, site_model_source):
-    """Invoke site model parser and save the site-specified parameter data to
-    the database.
-
-    :param job:
-        The job that is loading this site_model_source
-    :param site_model_source:
-        Filename or file-like object containing the site model XML data.
-    :returns:
-        `list` of ids of the newly-inserted `hzrdi.site_model` records.
-    """
-    parser = nrml_parsers.SiteModelParser(site_model_source)
-    data = [models.SiteModel(vs30=node.vs30,
-                             vs30_type=node.vs30_type,
-                             z1pt0=node.z1pt0,
-                             z2pt5=node.z2pt5,
-                             location=node.wkt,
-                             job_id=job.id)
-            for node in parser.parse()]
-    return writer.CacheInserter.saveall(data)
 
 
 def all_equal(obj, value):
@@ -327,7 +304,7 @@ class BaseHazardCalculator(base.Calculator):
         with transaction.commit_on_success(using='job_init'):
             self.parse_risk_models()
         with transaction.commit_on_success(using='job_init'):
-            self.initialize_site_model()
+            self.store_sites()
         with transaction.commit_on_success(using='job_init'):
             self.initialize_sources()
 
@@ -549,7 +526,7 @@ class BaseHazardCalculator(base.Calculator):
         models.Imt.save_new(imts)
 
     @EnginePerformanceMonitor.monitor
-    def initialize_site_model(self):
+    def store_sites(self):
         """
         Populate the hazard site table.
         """
