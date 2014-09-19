@@ -1966,7 +1966,7 @@ def get_gmfs_scenario(output, imt=None):
     """
     hc = output.oq_job.hazard_calculation
     if imt is None:
-        imts = distinct(from_string(x) for x in hc.intensity_measure_types)
+        imts = distinct(from_string(x) for x in hc.get_imts())
     else:
         imts = [from_string(imt)]
     curs = getcursor('job_init')
