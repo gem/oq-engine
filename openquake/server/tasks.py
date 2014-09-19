@@ -49,6 +49,7 @@ class ProgressHandler(logging.Handler):
         logging.Handler.__init__(self)
         self.callback_url = callback_url
         self.calc = calc
+        self.description = calc.get_param('description')
 
     def emit(self, record):
         """
@@ -57,7 +58,7 @@ class ProgressHandler(logging.Handler):
         update_calculation(
             self.callback_url,
             status=record.getMessage(),
-            description=self.calc.description)
+            description=self.description)
 
 
 def safely_call(func, *args):
@@ -71,7 +72,7 @@ def safely_call(func, *args):
         logger.error(str(e), exc_info=True)
 
 
-def run_calc(job_type, calc_id, calc_dir,
+def run_calc(job_type, job_id, calc_dir,
              callback_url=None, foreign_calc_id=None,
              dbname="platform", log_file=None):
     """
@@ -82,8 +83,8 @@ def run_calc(job_type, calc_id, calc_dir,
 
     :param job_type:
         'hazard' or 'risk'
-    :param calc_id:
-        the calculation id on the engine
+    :param job_id:
+        the ID of the job on the engine
     :param calc_dir:
         the directory with the input files
     :param callback_url:
@@ -93,14 +94,11 @@ def run_calc(job_type, calc_id, calc_dir,
     :param dbname:
         the platform database name
     """
-    if job_type == 'hazard':
-        job = oqe_models.OqJob.objects.get(hazard_calculation=calc_id)
-    else:
-        job = oqe_models.OqJob.objects.get(risk_calculation=calc_id)
-    update_calculation(callback_url, status="started", engine_id=calc_id)
+    job = oqe_models.OqJob.objects.get(pk=job_id)
+    update_calculation(callback_url, status="started", engine_id=job_id)
 
     exports = []
-    progress_handler = ProgressHandler(callback_url, job.calculation)
+    progress_handler = ProgressHandler(callback_url, job)
     logging.root.addHandler(progress_handler)
     try:
         engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, exports, job_type)
@@ -150,7 +148,7 @@ def _trigger_migration(job, callback_url, foreign_calc_id, dbname="platform"):
 
     update_calculation(
         callback_url,
-        description=job.calculation.description,
+        description=job.get_param('description'),
         status="transfering outputs")
 
     platform_connection = psycopg2.connect(
