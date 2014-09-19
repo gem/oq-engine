@@ -197,9 +197,9 @@ class CalcHazardResultsTestCase(BaseViewTestCase):
              'url': 'http://www.openquake.org/v1/calc/hazard/result/3'},
         ]
         with mock.patch('openquake.engine.engine.get_outputs') as gho:
-            with mock.patch('openquake.engine.db.models'
-                            '.HazardCalculation') as hc_get:
-                hc_get.return_value.oqjob.status = 'complete'
+            with mock.patch('openquake.engine.db.models.OqJob.objects.get'
+                            ) as oqjob:
+                oqjob.return_value.status = 'complete'
                 gho.return_value = [
                     FakeOutput(1, 'output1', 'hazard_curve'),
                     FakeOutput(2, 'output2', 'hazard_curve'),
@@ -217,26 +217,24 @@ class CalcHazardResultsTestCase(BaseViewTestCase):
 
     def test_404_no_outputs(self):
         with mock.patch('openquake.engine.engine.get_outputs') as gho:
-            with mock.patch('openquake.engine.db.models'
-                            '.HazardCalculation') as hc_get:
-                hc_get.return_value.oqjob.status = 'complete'
+            with mock.patch('openquake.engine.db.models.OqJob.objects.get'
+                            ) as oqjob:
+                oqjob.return_value.status = 'complete'
                 gho.return_value = []
                 response = views.calc_results(self.request, 'hazard', 7)
 
         self.assertEqual(404, response.status_code)
 
     def test_404_calc_not_exists(self):
-        with mock.patch('openquake.engine.db.models'
-                        '.HazardCalculation') as hc_get:
-            hc_get.side_effect = ObjectDoesNotExist
+        with mock.patch('openquake.engine.db.models.OqJob') as oqjob:
+            oqjob.side_effect = ObjectDoesNotExist
             response = views.calc_results(self.request, 'hazard', 7)
 
         self.assertEqual(404, response.status_code)
 
     def test_404_calc_not_complete(self):
-        with mock.patch('openquake.engine.db.models'
-                        '.HazardCalculation') as hc_get:
-            hc_get.return_value.oqjob.status = 'pre_executing'
+        with mock.patch('openquake.engine.db.models.OqJob') as oqjob:
+            oqjob.return_value.oqjob.status = 'pre_executing'
             response = views.calc_results(self.request, 'hazard', 7)
 
         self.assertEqual(404, response.status_code)
@@ -284,16 +282,16 @@ class CalcRiskResultsTestCase(BaseViewTestCase):
 
     def test_404_calc_not_exists(self):
         with mock.patch('openquake.engine.db.models'
-                        '.RiskCalculation.objects.get') as hc_get:
-            hc_get.side_effect = ObjectDoesNotExist
+                        '.RiskCalculation.objects.get') as rc_get:
+            rc_get.side_effect = ObjectDoesNotExist
             response = views.calc_results(self.request, 'risk', 1)
 
         self.assertEqual(404, response.status_code)
 
     def test_404_calc_not_complete(self):
         with mock.patch('openquake.engine.db.models'
-                        '.RiskCalculation.objects.get') as hc_get:
-            hc_get.return_value.oqjob.status = 'pre_executing'
+                        '.RiskCalculation.objects.get') as rc_get:
+            rc_get.return_value.oqjob.status = 'pre_executing'
             response = views.calc_results(self.request, 'risk', 1)
 
         self.assertEqual(404, response.status_code)
@@ -473,7 +471,7 @@ class FakeTempUploadedFile(object):
 
 FakeUser = namedtuple('FakeUser', 'id')
 FakeJob = namedtuple(
-    'FakeJob', 'status, owner, hazard_calculation, risk_calculation'
+    'FakeJob', 'id, status, owner, hazard_calculation, risk_calculation'
 )
 FakeJob.calculation = property(
     lambda self: self.risk_calculation or self.hazard_calculation)
@@ -540,7 +538,7 @@ class RunCalcTestCase(BaseViewTestCase):
                 multi_mock['mkdtemp'].return_value = temp_dir
 
                 fake_job = FakeJob(
-                    'pending', FakeUser(1), None,
+                    777, 'pending', FakeUser(1), None,
                     FakeCalc(777, 'Fake Calc Desc'),
                 )
                 multi_mock['job_from_file'].return_value = fake_job
