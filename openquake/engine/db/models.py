@@ -1705,7 +1705,7 @@ class Gmf(djm.Model):
                             rupture.site_indices, hc.site_collection)
                     computer = calc.gmf.GmfComputer(
                         rupture, sites, imts, gsims,
-                        hc.truncation_level, correl_model)
+                        getattr(hc, 'truncation_level', None), correl_model)
                     for ses_rup in ses_ruptures:
                         yield ses_rup, sites, computer.compute(ses_rup.seed)
 

@@ -61,7 +61,8 @@ def gmfs(job_id, ses_ruptures, sitecol, imts, gmf_id):
     # NB: ses_ruptures a non-empty list produced by the block_splitter
     rupture = ses_ruptures[0].rupture  # ProbabilisticRupture instance
     with EnginePerformanceMonitor('computing gmfs', job_id, gmfs):
-        gmf = GmfComputer(rupture, sitecol, imts, [gsim], hc.truncation_level,
+        gmf = GmfComputer(rupture, sitecol, imts, [gsim],
+                          getattr(hc, 'truncation_level', None),
                           correlation_model)
         gname = gsim.__class__.__name__
         for ses_rup in ses_ruptures:

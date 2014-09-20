@@ -234,7 +234,7 @@ def compute_disagg(job_id, sitecol, sources, trt_model_id,
             bdata = _collect_bins_data(
                 mon, trt_num, source_ruptures, site, curves_dict[site.id],
                 trt_model_id, gsims, hc.intensity_measure_types_and_levels,
-                hc.poes_disagg, hc.truncation_level,
+                hc.poes_disagg, getattr(hc, 'truncation_level', None),
                 hc.num_epsilon_bins)
 
         if not bdata.pnes:  # no contributions for this site
@@ -307,7 +307,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         Run the disaggregation phase after hazard curve finalization.
         """
         hc = self.hc
-        tl = self.hc.truncation_level
+        tl = getattr(self.hc, 'truncation_level', None)
         mag_bin_width = self.hc.mag_bin_width
         eps_edges = numpy.linspace(-tl, tl, self.hc.num_epsilon_bins + 1)
         logs.LOG.info('%d epsilon bins from %s to %s', len(eps_edges) - 1,
