@@ -241,7 +241,8 @@ def compute_hazard_curves(
             for gsim, curv in itertools.izip(gsims, curves):
                 for i, pnes in enumerate(_calc_pnes(
                         gsim, r_sites, rupture, sorted_imts, sorted_imls,
-                        hc.truncation_level, make_ctxt_mon, calc_poes_mon)):
+                        getattr(hc, 'truncation_level', None),
+                        make_ctxt_mon, calc_poes_mon)):
                     curv[i] *= pnes
 
         inserter.add(

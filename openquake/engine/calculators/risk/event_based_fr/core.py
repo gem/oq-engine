@@ -87,7 +87,7 @@ def event_based_fr(job_id, sites, rc, risk_models,
     """
     hc = rc.hazard_calculation
     site_ids = set(sites.complete.sids)
-    truncation_level = hc.truncation_level
+    truncation_level = getattr(hc, 'truncation_level', None)
     sorted_imts = sorted(map(from_string, hc.intensity_measure_types))
 
     # init the Epsilon Provider only once

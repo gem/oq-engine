@@ -238,7 +238,7 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol):
     gsims = [logictree.GSIM[gsim]() for gsim in rlzs_by_gsim]
     calc = GmfCalculator(
         sorted(imts), sorted(gsims), trt_model.id,
-        hc.truncation_level, models.get_correl_model(job))
+        getattr(hc, 'truncation_level', None), models.get_correl_model(job))
 
     with EnginePerformanceMonitor(
             'computing gmfs', job_id, compute_gmfs_and_curves):
