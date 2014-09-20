@@ -45,10 +45,10 @@ from openquake.engine.tools.import_hazard_curves import import_hazard_curves
 from openquake.engine.tools import save_hazards, load_hazards
 
 HAZARD_OUTPUT_ARG = "--hazard-output-id"
-HAZARD_JOB_ARG = "--hazard-job-id"
+HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
 MISSING_HAZARD_MSG = ("Please specify the ID of the hazard output (or "
                       "job) to be used by using '%s (or %s) <id>'" %
-                      (HAZARD_OUTPUT_ARG, HAZARD_JOB_ARG))
+                      (HAZARD_OUTPUT_ARG, HAZARD_CALCULATION_ARG))
 
 
 def set_up_arg_parser():
@@ -153,10 +153,10 @@ def set_up_arg_parser():
         help='Use the desired hazard output as input for the risk job',
         metavar='HAZARD_OUTPUT')
     risk_grp.add_argument(
-        HAZARD_JOB_ARG,
-        '--hj',
+        HAZARD_CALCULATION_ARG,
+        '--hc',
         help='Use the desired hazard job as input for the risk job',
-        metavar='HAZARD_JOB_ID')
+        metavar='HAZARD_CALCULATION_ID')
     risk_grp.add_argument(
         '--list-risk-calculations',
         '--lrc',
@@ -495,13 +495,13 @@ def main():
                             args.export_type)
     elif args.run_risk is not None:
         if (args.hazard_output_id is None
-                and args.hazard_job_id is None):
+                and args.hazard_calculation_id is None):
             sys.exit(MISSING_HAZARD_MSG)
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
         engine.run_job(expanduser(args.run_risk), args.log_level, log_file,
                        args.exports, hazard_output_id=args.hazard_output_id,
-                       hazard_job_id=args.hazard_job_id)
+                       hazard_calculation_id=args.hazard_calculation_id)
     elif args.delete_risk_calculation is not None:
         del_risk_calc(args.delete_risk_calculation, args.yes)
     # import
