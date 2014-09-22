@@ -256,11 +256,11 @@ def list_inputs(input_type):
         print "%9d|%s" % (inp.id, inp.name)
 
 
-def list_calculations(calc_manager):
+def list_calculations(job_manager):
     """
     Print a summary of past calculations.
 
-    :param calc_manager:
+    :param job_manager:
 
        a django manager (e.g.
        :class:`openquake.engine.db.models.RiskCalculation.objects`)
@@ -272,17 +272,19 @@ def list_calculations(calc_manager):
     # directly from files) we filter out the calculation without the
     # corresponding job
 
-    calcs = calc_manager.filter(
-        oqjob__user_name=getpass.getuser(),
-        oqjob__isnull=False).order_by('oqjob__last_update')
+    jobs = job_manager.filter(
+        user_name=getpass.getuser()).order_by('last_update')
 
-    if len(calcs) == 0:
+    if len(jobs) == 0:
         print 'None'
     else:
         print ('job_id | calc_id |     status |         last_update | '
                '        description')
-        for calc in calcs:
-            latest_job = calc.oqjob
+        for job in jobs:
+            descr = job.get_param('description', None)
+            if descr is None:
+                continue
+            latest_job = job
             if latest_job.is_running:
                 status = 'pending'
             else:
@@ -293,10 +295,8 @@ def list_calculations(calc_manager):
             last_update = latest_job.last_update.strftime(
                 '%Y-%m-%d %H:%M:%S %Z'
             )
-
             print '%6d | %7d | %10s | %s| %s' % (
-                calc.oqjob.id, calc.id, status, last_update, calc.description
-            )
+                job.id, job.id, status, last_update, descr)
 
 
 # TODO: the command-line switches are not tested, included this one
