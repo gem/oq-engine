@@ -13,7 +13,7 @@ from openquake.commonlib.converter import Converter
 from openquake.commonlib.source import ValidNode, RuptureConverter
 
 
-def get_points(oqparam):
+def get_mesh(oqparam):
     """
     Extract the mesh of points to compute from the sites,
     the sites_csv, the region or the exposure.
@@ -85,22 +85,22 @@ def get_site_model(oqparam):
         yield ~node
 
 
-def get_site_collection(oqparam, points=None, site_ids=None):
+def get_site_collection(oqparam, mesh=None, site_ids=None):
     """
     Returns a SiteCollection instance by looking at the points and the
     site model defined by the configuration parameters.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param points:
-        a mesh or list of hazardlib points; if None the points are
-        determined by invoking get_points
+    :param mesh:
+        a mesh of hazardlib points; if None the mesh is
+        determined by invoking get_mesh
     :param site_ids:
         a list of integers to identify the points; if None, a
         range(1, len(points) + 1) is used
     """
-    points = points or get_points(oqparam)
-    site_ids = site_ids or range(1, len(points) + 1)
+    mesh = mesh or get_mesh(oqparam)
+    site_ids = site_ids or range(1, len(mesh) + 1)
     if oqparam.inputs.get('site_model'):
         sitecol = []
         exact_matches = 0
@@ -108,7 +108,7 @@ def get_site_collection(oqparam, points=None, site_ids=None):
             get_site_model(oqparam),
             getlon=operator.itemgetter(4),
             getlat=operator.itemgetter(5))
-        for i, pt in zip(site_ids, points):
+        for i, pt in zip(site_ids, mesh):
             param, dist = site_model_param.\
                 get_closest(pt.longitude, pt.latitude)
             exact_matches += dist is 0
@@ -123,7 +123,7 @@ def get_site_collection(oqparam, points=None, site_ids=None):
 
     # else use the default site params
     return site.SiteCollection.from_points(
-        points.lons, points.lats, site_ids, oqparam)
+        mesh.lons, mesh.lats, site_ids, oqparam)
 
 
 def get_rupture(oqparam):
