@@ -219,7 +219,7 @@ class EventBasedFRRiskCalculator(core.EventBasedRiskCalculator):
         args = []
         # compute the risk by splitting by sites
         for sites in split_site_collection(
-                self.hc.site_collection, self.concurrent_tasks):
+                self.site_collection, self.concurrent_tasks):
             args.append((self.job.id, sites, self.rc,
                          risk_models, getter_builders, outputdict,
                          self.calculator_parameters))

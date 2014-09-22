@@ -132,14 +132,14 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         with transaction.commit_on_success(using='job_init'):
             self.parse_risk_models()
         with transaction.commit_on_success(using='job_init'):
-            self.store_sites()
+            self.initialize_site_collection()
         with transaction.commit_on_success(using='job_init'):
             self.initialize_sources()
         self.create_ruptures()
         hc = models.HazardCalculation(self.job)
 
         self.imts = imts = map(from_string, hc.get_imts())
-        n_sites = len(hc.site_collection)
+        n_sites = len(self.site_collection)
         n_gmf = hc.number_of_ground_motion_fields
         output_weight = n_sites * len(imts) * n_gmf
         logs.LOG.info('Expected output size=%s', output_weight)
@@ -158,7 +158,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         # check filtering
         hc = self.hc
         self.sites = filters.filter_sites_by_distance_to_rupture(
-            self.rupture, hc.maximum_distance, hc.site_collection)
+            self.rupture, hc.maximum_distance, self.site_collection)
         if self.sites is None:
             raise RuntimeError(
                 'All sites where filtered out! '

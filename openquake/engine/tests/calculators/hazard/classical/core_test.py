@@ -43,7 +43,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         return job, calc
 
     def test_initialize_sources(self):
-        self.calc.store_sites()
+        self.calc.initialize_site_collection()
         self.calc.initialize_sources()
         # there is a single model
         [collector] = self.calc.source_collector.values()
@@ -53,7 +53,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
     def test_initialize_realizations_montecarlo(self):
         # We need initialize sources first (read logic trees, parse sources,
         # etc.)
-        self.calc.store_sites()
+        self.calc.initialize_site_collection()
         self.calc.initialize_sources()
 
         # No realizations yet:
@@ -84,7 +84,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         self.assertEqual(['b1'], ltr2.gsim_lt_path)
 
     def test_initialize_realizations_enumeration(self):
-        self.calc.store_sites()
+        self.calc.initialize_site_collection()
         # enumeration is triggered by zero value used as number of realizations
         self.calc._hc.number_of_logic_tree_samples = 0
 

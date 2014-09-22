@@ -435,7 +435,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         """
         Generate the GMFs and optionally the hazard curves too
         """
-        sitecol = self.hc.site_collection
+        sitecol = self.site_collection
         sesruptures = []  # collect the ruptures in a fixed order
         for trt_model in models.TrtModel.objects.filter(
                 lt_model__hazard_calculation=self.job):

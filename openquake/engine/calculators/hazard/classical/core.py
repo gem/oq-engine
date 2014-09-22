@@ -296,6 +296,6 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                 hazard_calculation=self.job)
             self.bb_dict = dict(
                 ((lt_model.id, site.id), BoundingBox(lt_model.id, site.id))
-                for site in self.hc.site_collection
+                for site in self.site_collection
                 for lt_model in lt_models)
         return weights

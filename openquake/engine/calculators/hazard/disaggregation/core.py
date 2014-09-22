@@ -315,7 +315,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
 
         self.bin_edges = {}
         curves_dict = dict((site.id, self.get_curves(site))
-                           for site in self.hc.site_collection)
+                           for site in self.site_collection)
 
         oqm = tasks.OqTaskManager(compute_disagg, logs.LOG.progress)
         for job_id, sitecol, srcs, trt_model_id in self.task_arg_gen():
@@ -334,7 +334,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
             logs.LOG.info('%d mag bins from %s to %s', len(mag_edges) - 1,
                           min_mag, max_mag)
 
-            for site in self.hc.site_collection:
+            for site in self.site_collection:
                 curves = curves_dict[site.id]
                 if not curves:
                     continue  # skip zero-valued hazard curves
