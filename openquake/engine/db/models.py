@@ -48,7 +48,7 @@ from openquake.hazardlib.site import (
 
 from openquake.commonlib.general import distinct
 from openquake.commonlib.riskloaders import loss_type_to_cost_type
-from openquake.commonlib.readinput import get_site_collection, get_points
+from openquake.commonlib.readinput import get_points
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import logictree
 
@@ -464,43 +464,6 @@ class HazardCalculation(object):
         else:
             points = get_points(self.oqjob.get_oqparam())
         self.save_sites((p.longitude, p.latitude) for p in points)
-
-    @property
-    def site_collection(self):
-        """
-        Create a SiteCollection from a HazardCalculation object.
-        First, take all of the points/locations of interest defined by the
-        calculation geometry. For each point, do distance queries on the site
-        model and get the site parameters which are closest to the point of
-        interest. This aggregation of points to the closest site parameters
-        is what we store in the `site_collection` field.
-        If the computation does not specify a site model the same 4 reference
-        site parameters are used for all sites. The sites are ordered by id,
-        to ensure reproducibility in tests.
-        """
-        if len(self._site_collection):
-            return self._site_collection
-
-        hsites = HazardSite.objects.filter(
-            hazard_calculation=self.oqjob).order_by('id')
-        # NB: the sites MUST be ordered. The issue is that the disaggregation
-        # calculator has a for loop of kind
-        # for site in sites:
-        #     bin_edge, disagg_matrix = disaggregation(site, ...)
-        # the generated ruptures are random if the order of the sites
-        # is random, even if the seed is fixed; in particular for some
-        # ordering no ruptures are generated and the test
-        # qa_tests/hazard/disagg/case_1/test.py fails with a bad
-        # error message
-        if not hsites:
-            raise RuntimeError('No sites were imported!')
-        lons = numpy.array([hsite.location.x for hsite in hsites])
-        lats = numpy.array([hsite.location.y for hsite in hsites])
-        site_ids = [hsite.id for hsite in hsites]
-        points = geo.Mesh(lons, lats, depths=None)
-        self._site_collection = sc = get_site_collection(
-            self.oqjob.get_oqparam(), points, site_ids)
-        return sc
 
     def get_imts(self):
         """
@@ -1673,7 +1636,7 @@ class Gmf(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"gmf'
 
-    def by_rupture(self, ses_collection_id=None, ses_ordinal=None):
+    def by_rupture(self, sitecol, ses_collection_id=None, ses_ordinal=None):
         """
         Yields triples (ses_rupture, sites, gmf_dict)
         """
@@ -1697,9 +1660,9 @@ class Gmf(djm.Model):
                     continue
                 for rupture, ses_ruptures in itertools.groupby(
                         ses, operator.attrgetter('rupture')):
-                    sites = hc.site_collection if rupture.site_indices is None\
+                    sites = sitecol if rupture.site_indices is None\
                         else FilteredSiteCollection(
-                            rupture.site_indices, hc.site_collection)
+                            rupture.site_indices, sitecol)
                     computer = calc.gmf.GmfComputer(
                         rupture, sites, imts, gsims,
                         getattr(hc, 'truncation_level', None), correl_model)

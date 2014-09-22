@@ -27,6 +27,7 @@ from operator import attrgetter
 import numpy
 
 from openquake.hazardlib.imt import from_string
+from openquake.hazardlib import geo
 
 # FIXME: one must import the engine before django to set DJANGO_SETTINGS_MODULE
 from openquake.engine.db import models
@@ -36,6 +37,7 @@ from openquake.nrmllib.risk import parsers
 
 from openquake.commonlib import logictree, source
 from openquake.commonlib.general import split_in_blocks, distinct
+from openquake.commonlib.readinput import get_site_collection
 
 from openquake.engine.input import exposure
 from openquake.engine import logs
@@ -180,7 +182,7 @@ class BaseHazardCalculator(base.Calculator):
         self.job.is_running = True
         self.job.save()
         num_models = len(self.source_collector)
-        num_sites = len(self.hc.site_collection)
+        num_sites = len(self.site_collection)
         for i, trt_model_id in enumerate(sorted(self.source_collector), 1):
             trt_model = models.TrtModel.objects.get(pk=trt_model_id)
             sc = self.source_collector[trt_model_id]
@@ -196,12 +198,12 @@ class BaseHazardCalculator(base.Calculator):
                 # filter in parallel
                 sc.sources = tasks.apply_reduce(
                     filter_and_split_sources,
-                    (self.job.id, sc.sources, self.hc.site_collection),
+                    (self.job.id, sc.sources, self.site_collection),
                     list.__add__, [])
             else:  # few sources and sites
                 # filter sequentially on a single core
                 sc.sources = filter_and_split_sources.task_func(
-                    self.job.id, sc.sources, self.hc.site_collection)
+                    self.job.id, sc.sources, self.site_collection)
             sc.sources.sort(key=attrgetter('source_id'))
             if not sc.sources:
                 logs.LOG.warn(
@@ -230,7 +232,7 @@ class BaseHazardCalculator(base.Calculator):
             for args in self._task_args:
                 yield args
             return
-        sitecol = self.hc.site_collection
+        sitecol = self.site_collection
         task_no = 0
         tot_sources = 0
         for trt_model, block in self.all_sources.split(self.concurrent_tasks):
@@ -304,7 +306,7 @@ class BaseHazardCalculator(base.Calculator):
         with transaction.commit_on_success(using='job_init'):
             self.parse_risk_models()
         with transaction.commit_on_success(using='job_init'):
-            self.store_sites()
+            self.initialize_site_collection()
         with transaction.commit_on_success(using='job_init'):
             self.initialize_sources()
 
@@ -314,7 +316,7 @@ class BaseHazardCalculator(base.Calculator):
         input_weight = self.process_sources()
 
         self.imtls = getattr(self.hc, 'intensity_measure_types_and_levels', {})
-        n_sites = len(self.hc.site_collection)
+        n_sites = len(self.site_collection)
         if self.imtls:
             n_imts = float(len(self.imtls))
             n_levels = sum(len(lvls) for lvls in self.imtls.itervalues()
@@ -526,12 +528,33 @@ class BaseHazardCalculator(base.Calculator):
         models.Imt.save_new(imts)
 
     @EnginePerformanceMonitor.monitor
-    def store_sites(self):
+    def initialize_site_collection(self):
         """
-        Populate the hazard site table.
+        Populate the hazard site table and create a sitecollection attribute.
         """
-        logs.LOG.progress("initializing sites")
+        logs.LOG.progress("saving sites")
         self.hc.save_hazard_sites()
+
+        logs.LOG.progress("initializing site collection")
+        hsites = models.HazardSite.objects.filter(
+            hazard_calculation=self.job).order_by('id')
+        # NB: the sites MUST be ordered. The issue is that the disaggregation
+        # calculator has a for loop of kind
+        # for site in sites:
+        #     bin_edge, disagg_matrix = disaggregation(site, ...)
+        # the generated ruptures are random if the order of the sites
+        # is random, even if the seed is fixed; in particular for some
+        # ordering no ruptures are generated and the test
+        # qa_tests/hazard/disagg/case_1/test.py fails with a bad
+        # error message
+        if not hsites:
+            raise RuntimeError('No sites were imported!')
+        lons = numpy.array([hsite.location.x for hsite in hsites])
+        lats = numpy.array([hsite.location.y for hsite in hsites])
+        site_ids = [hsite.id for hsite in hsites]
+        points = geo.Mesh(lons, lats)
+        self.site_collection = get_site_collection(
+            self.job.get_oqparam(), points, site_ids)
 
     def get_max_realizations(self):
         """
@@ -817,7 +840,7 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
                 models.HazardCurveData, max_cache_size=10000)
 
             # curve_poes below is an array num_rlzs * num_levels
-            for i, site in enumerate(self.hc.site_collection):
+            for i, site in enumerate(self.site_collection):
                 wkt = site.location.wkt2d
                 curve_poes = numpy.array(
                     [c_by_rlz[i] for c_by_rlz in all_curves_for_imt])
