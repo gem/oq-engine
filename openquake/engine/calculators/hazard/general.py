@@ -27,7 +27,6 @@ from operator import attrgetter
 import numpy
 
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import geo
 
 # FIXME: one must import the engine before django to set DJANGO_SETTINGS_MODULE
 from openquake.engine.db import models
