@@ -105,7 +105,14 @@ class RequireClassicalHazard(Validator):
     Checks that the given hazard has hazard curves
     """
     def get_error(self):
-        pass
+        rc = self.calc.rc
+
+        if rc.hazard_calculation:
+            if rc.hazard_calculation.calculation_mode != 'classical':
+                return ("The provided hazard calculation ID "
+                        "is not a classical calculation")
+        elif not rc.hazard_output.is_hazard_curve():
+            return "The provided hazard output is not an hazard curve"
 
 
 class RequireScenarioHazard(Validator):
@@ -114,7 +121,14 @@ class RequireScenarioHazard(Validator):
     scenario hazard calculation
     """
     def get_error(self):
-        pass
+        rc = self.calc.rc
+
+        if rc.hazard_calculation:
+            if rc.hazard_calculation.calculation_mode != "scenario":
+                return ("The provided hazard calculation ID "
+                        "is not a scenario calculation")
+        elif not rc.hazard_output.output_type == "gmf_scenario":
+            return "The provided hazard is not a gmf scenario collection"
 
 
 class RequireEventBasedHazard(Validator):
@@ -123,7 +137,19 @@ class RequireEventBasedHazard(Validator):
     stochastic event set) got from a event based hazard calculation
     """
     def get_error(self):
-        pass
+        rc = self.calc.rc
+
+        if rc.hazard_calculation:
+            if rc.hazard_calculation.calculation_mode != "event_based":
+                return ("The provided hazard calculation ID "
+                        "is not a event based calculation")
+        elif not rc.hazard_output.output_type in ["gmf", "ses"]:
+            return "The provided hazard is not a gmf or ses collection"
+
+        if rc.hazard_outputs()[0].output_type == "ses":
+            if 'gsim_logic_tree' not in rc.inputs:
+                return ("gsim_logic_tree_file is mandatory "
+                        "when the hazard output is a ses collection")
 
 
 class ExposureHasInsuranceBounds(Validator):
