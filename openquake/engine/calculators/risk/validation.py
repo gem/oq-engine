@@ -106,9 +106,9 @@ class RequireClassicalHazard(Validator):
     """
     def get_error(self):
         rc = self.calc.rc
-
-        if rc.hazard_calculation:
-            if rc.hazard_calculation.calculation_mode != 'classical':
+        hc = rc.get_hazard_calculation()
+        if hc:
+            if hc.calculation_mode != 'classical':
                 return ("The provided hazard calculation ID "
                         "is not a classical calculation")
         elif not rc.hazard_output.is_hazard_curve():
@@ -122,9 +122,9 @@ class RequireScenarioHazard(Validator):
     """
     def get_error(self):
         rc = self.calc.rc
-
-        if rc.hazard_calculation:
-            if rc.hazard_calculation.calculation_mode != "scenario":
+        hc = rc.get_hazard_calculation()
+        if hc:
+            if hc.calculation_mode != "scenario":
                 return ("The provided hazard calculation ID "
                         "is not a scenario calculation")
         elif not rc.hazard_output.output_type == "gmf_scenario":
@@ -138,9 +138,9 @@ class RequireEventBasedHazard(Validator):
     """
     def get_error(self):
         rc = self.calc.rc
-
-        if rc.hazard_calculation:
-            if rc.hazard_calculation.calculation_mode != "event_based":
+        hc = rc.get_hazard_calculation()
+        if hc:
+            if hc.calculation_mode != "event_based":
                 return ("The provided hazard calculation ID "
                         "is not a event based calculation")
         elif not rc.hazard_output.output_type in ["gmf", "ses"]:

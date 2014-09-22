@@ -48,7 +48,7 @@ from openquake.hazardlib.site import (
 
 from openquake.commonlib.general import distinct
 from openquake.commonlib.riskloaders import loss_type_to_cost_type
-from openquake.commonlib.readinput import get_points
+from openquake.commonlib.readinput import get_mesh
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import logictree
 
@@ -468,11 +468,12 @@ class HazardCalculation(object):
             # error message
             coords = sorted(
                 set((asset.site.x, asset.site.y) for asset in assets))
-            points = [geo.Point(*x) for x in coords]
+            lons, lats = zip(*coords)
+            mesh = geo.Mesh(numpy.array(lons), numpy.array(lons))
         else:
-            points = get_points(self.oqjob.get_oqparam())
-        sids = self.save_sites((p.longitude, p.latitude) for p in points)
-        return points, sids
+            mesh = get_mesh(self.oqjob.get_oqparam())
+        sids = self.save_sites((p.longitude, p.latitude) for p in mesh)
+        return mesh, sids
 
     def get_imts(self):
         """
