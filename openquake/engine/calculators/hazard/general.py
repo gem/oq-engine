@@ -532,7 +532,7 @@ class BaseHazardCalculator(base.Calculator):
         """
         Populate the hazard site table and create a sitecollection attribute.
         """
-        logs.LOG.progress("saving sites")
+        logs.LOG.progress("initializing sites")
         points, site_ids = self.hc.save_hazard_sites()
         if not site_ids:
             raise RuntimeError('No sites were imported!')
