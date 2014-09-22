@@ -107,10 +107,11 @@ class RequireClassicalHazard(Validator):
     def get_error(self):
         rc = self.calc.rc
         hc = rc.get_hazard_calculation()
+        hazard_output = rc.hazard_outputs()[0]
         if hc.calculation_mode != 'classical':
             return ("The provided hazard calculation ID "
                     "is not a classical calculation")
-        elif not rc.hazard_output.is_hazard_curve():
+        elif not hazard_output.is_hazard_curve():
             return "The provided hazard output is not an hazard curve"
 
 
@@ -122,10 +123,11 @@ class RequireScenarioHazard(Validator):
     def get_error(self):
         rc = self.calc.rc
         hc = rc.get_hazard_calculation()
+        hazard_output = rc.hazard_outputs()[0]
         if hc.calculation_mode != "scenario":
             return ("The provided hazard calculation ID "
                     "is not a scenario calculation")
-        elif not rc.hazard_output.output_type == "gmf_scenario":
+        elif not hazard_output.output_type == "gmf_scenario":
             return "The provided hazard is not a gmf scenario collection"
 
 
