@@ -123,6 +123,8 @@ class RequireClassicalHazardTestCase(unittest.TestCase):
         calc = mock.Mock()
 
         val = validation.RequireClassicalHazard(calc)
+        output = mock.Mock()
+        calc.rc.hazard_outputs.return_value = [output]
 
         calc.rc.get_hazard_calculation().calculation_mode = 'classical'
         self.assertIsNone(val.get_error())
@@ -133,10 +135,11 @@ class RequireClassicalHazardTestCase(unittest.TestCase):
 
         calc.rc.get_hazard_calculation().return_value = None
         calc.rc.get_hazard_calculation().calculation_mode = 'classical'
-        calc.rc.hazard_output.is_hazard_curve = mock.Mock(return_value=True)
+
+        output.is_hazard_curve = mock.Mock(return_value=True)
         self.assertIsNone(val.get_error())
 
-        calc.rc.hazard_output.is_hazard_curve = mock.Mock(return_value=False)
+        output.is_hazard_curve = mock.Mock(return_value=False)
         self.assertEqual("The provided hazard output is not an hazard curve",
                          val.get_error())
 
@@ -146,9 +149,11 @@ class RequireScenarioHazardTestCase(unittest.TestCase):
         calc = mock.Mock()
 
         val = validation.RequireScenarioHazard(calc)
+        output = mock.Mock()
+        calc.rc.hazard_outputs.return_value = [output]
 
         calc.rc.get_hazard_calculation().calculation_mode = 'scenario'
-        calc.rc.hazard_output.output_type = "gmf_scenario"
+        output.output_type = "gmf_scenario"
         self.assertIsNone(val.get_error())
 
         calc.rc.get_hazard_calculation().calculation_mode = 'event_based'
@@ -157,10 +162,10 @@ class RequireScenarioHazardTestCase(unittest.TestCase):
 
         calc.rc.get_hazard_calculation().calculation_mode = 'scenario'
         calc.rc.get_hazard_calculation().return_value = None
-        calc.rc.hazard_output.output_type = "gmf_scenario"
+        output.output_type = "gmf_scenario"
         self.assertIsNone(val.get_error())
 
-        calc.rc.hazard_output.output_type = "gmf"
+        output.output_type = "gmf"
         self.assertEqual(("The provided hazard is not a "
                           "gmf scenario collection"),
                          val.get_error())
