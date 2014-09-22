@@ -321,6 +321,9 @@ def get_job(cfg, username="openquake", hazard_calculation_id=None,
     oqparam = readini.parse_config(
         open(cfg), hazard_calculation_id, hazard_output_id)
     params = vars(oqparam)
+    if hazard_calculation_id is None:
+        params['hazard_calculation_id'] = models.Output.objects.get(
+            pk=hazard_output_id).oq_job.id
     risk_calc = engine.create_calculation(models.RiskCalculation, params)
     risk_calc = models.RiskCalculation.objects.get(id=risk_calc.id)
     job.risk_calculation = risk_calc
@@ -497,7 +500,7 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
     params = vars(
         readini.parse_config(
             open(risk_cfg), hazard_output_id=hazard_output.output.id))
-
+    params['hazard_calculation_id'] = hazard_job.id
     risk_calc = engine.create_calculation(models.RiskCalculation, params)
     job.risk_calculation = risk_calc
     job.save()
