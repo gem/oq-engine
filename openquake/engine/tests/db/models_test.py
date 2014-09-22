@@ -129,7 +129,7 @@ class GetSiteCollectionTestCase(unittest.TestCase):
         calc.initialize_site_collection()
         calc.initialize_sources()
 
-        site_coll = job.hazard_calculation.site_collection
+        site_coll = calc.site_collection
         # Since we're using a pretty big site model, it's a bit excessive to
         # check each and every value.
         # Instead, we'll just test that the lenth of each site collection attr
@@ -148,7 +148,7 @@ class GetSiteCollectionTestCase(unittest.TestCase):
 
         calc = scen_core.ScenarioHazardCalculator(job)
         calc.initialize_site_collection()
-        site_coll = job.hazard_calculation.site_collection
+        site_coll = calc.site_collection
 
         # all of the parameters should be the same:
         self.assertTrue((site_coll.vs30 == 760).all())
