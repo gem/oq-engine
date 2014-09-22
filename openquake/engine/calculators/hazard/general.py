@@ -533,26 +533,11 @@ class BaseHazardCalculator(base.Calculator):
         Populate the hazard site table and create a sitecollection attribute.
         """
         logs.LOG.progress("saving sites")
-        self.hc.save_hazard_sites()
+        points, site_ids = self.hc.save_hazard_sites()
+        if not site_ids:
+            raise RuntimeError('No sites were imported!')
 
         logs.LOG.progress("initializing site collection")
-        hsites = models.HazardSite.objects.filter(
-            hazard_calculation=self.job).order_by('id')
-        # NB: the sites MUST be ordered. The issue is that the disaggregation
-        # calculator has a for loop of kind
-        # for site in sites:
-        #     bin_edge, disagg_matrix = disaggregation(site, ...)
-        # the generated ruptures are random if the order of the sites
-        # is random, even if the seed is fixed; in particular for some
-        # ordering no ruptures are generated and the test
-        # qa_tests/hazard/disagg/case_1/test.py fails with a bad
-        # error message
-        if not hsites:
-            raise RuntimeError('No sites were imported!')
-        lons = numpy.array([hsite.location.x for hsite in hsites])
-        lats = numpy.array([hsite.location.y for hsite in hsites])
-        site_ids = [hsite.id for hsite in hsites]
-        points = geo.Mesh(lons, lats)
         self.site_collection = get_site_collection(
             self.job.get_oqparam(), points, site_ids)
 
