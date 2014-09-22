@@ -1067,7 +1067,7 @@ class Output(djm.Model):
         investigation_time = self.oq_job\
                                  .risk_calculation\
                                  .get_hazard_calculation()\
-                                 .investigation_time
+                                 .get_param('investigation_time', None)
 
         statistics, quantile = self.statistical_params
         gsim_lt_path, sm_lt_path = self.lt_realization_paths
