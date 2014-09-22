@@ -469,7 +469,7 @@ class HazardCalculation(object):
             coords = sorted(
                 set((asset.site.x, asset.site.y) for asset in assets))
             lons, lats = zip(*coords)
-            mesh = geo.Mesh(numpy.array(lons), numpy.array(lons))
+            mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
         else:
             mesh = get_mesh(self.oqjob.get_oqparam())
         sids = self.save_sites((p.longitude, p.latitude) for p in mesh)
