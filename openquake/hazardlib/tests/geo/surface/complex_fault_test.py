@@ -45,6 +45,78 @@ class ComplexFaultSurfaceCheckFaultDataTestCase(utils.SurfaceTestCase):
         self.assertRaises(ValueError, ComplexFaultSurface.from_fault_data,
                           edges, mesh_spacing=-1)
 
+    def test_dip_left_of_fault_strike_case1(self):
+        # checks that an error is raised when fault surface dips left of
+        # fault strike (i.e. does not obey to Aki & Richards convention)
+        # simple case of planar surface with strike 0 (pointing towards
+        # north) but with surface dipping to the west
+        edges = [Line([Point(0, 0), Point(0, 1)]),
+                 Line([Point(-1, 0, 10), Point(-1, 1, 10)])]
+
+        with self.assertRaises(ValueError) as cm:
+            ComplexFaultSurface.from_fault_data(edges, mesh_spacing=10)
+        self.assertEqual(
+                'Surface does not conform with Aki & Richards convention',
+                str(cm.exception)
+        )
+
+    def test_dip_left_of_fault_strike_case2(self):
+        # real example taken from wrong fault for japan model
+        # ('Kanto earthquake')
+        edges = [
+            Line([
+                Point(139.268, 35.3649682834, 10.6),
+                Point(139.579014512, 35.1780000001, 10.6)
+            ]),
+            Line([
+                Point(139.541937161, 35.378, 19.5999999911),
+                Point(139.867999999, 35.2135133354, 19.6000000095)]
+            )]
+
+        with self.assertRaises(ValueError) as cm:
+            ComplexFaultSurface.from_fault_data(edges, mesh_spacing=10)
+        self.assertEqual(
+                'Surface does not conform with Aki & Richards convention',
+                str(cm.exception)
+        )
+
+    def test_invalid_surface_polygon_case1(self):
+        # vertical complex fault with top and bottom edges inverted
+        edges = [Line([Point(0, 0), Point(0, 2)]),
+                 Line([Point(0, 2, 10), Point(0, 0, 10)])]
+
+        with self.assertRaises(ValueError) as cm:
+            ComplexFaultSurface.from_fault_data(edges, mesh_spacing=10)
+        self.assertEqual(
+                'Edges points are not in the right order',
+                str(cm.exception)
+        )
+
+    def test_invalid_surface_polygon_case2(self):
+        # inclined complex fault with top and bottom edges inverted
+        edges = [Line([Point(0, 0), Point(0, 2)]),
+                 Line([Point(0.2, 2, 10), Point(0.6, 0, 10)])]
+
+        with self.assertRaises(ValueError) as cm:
+            ComplexFaultSurface.from_fault_data(edges, mesh_spacing=10)
+        self.assertEqual(
+                'Edges points are not in the right order',
+                str(cm.exception)
+        )
+
+    def test_invalid_surface_polygon_case3(self):
+        # intermediate edge has opposite strike than top and bottom
+        edges = [Line([Point(0, 0), Point(0, 2)]),
+                 Line([Point(0.1, 2, 10), Point(0.1, 0, 10)]),
+                 Line([Point(0.2, 0, 20), Point(0.2, 2, 20)])]
+
+        with self.assertRaises(ValueError) as cm:
+            ComplexFaultSurface.from_fault_data(edges, mesh_spacing=10)
+        self.assertEqual(
+                'Edges points are not in the right order',
+                str(cm.exception)
+        )
+
 
 class ComplexFaultFromFaultDataTestCase(utils.SurfaceTestCase):
     def test_1(self):
@@ -62,35 +134,37 @@ class ComplexFaultFromFaultDataTestCase(utils.SurfaceTestCase):
         ])
 
     def test_2(self):
+        # this is a regression test. Reference values have been obtained
+        # by extracting mesh from complex surface.
         edge1 = Line([Point(0, 0, 1), Point(0, 0.02, 1)])
-        edge2 = Line([Point(0.02, 0, 0.5), Point(0.02, 0.01, 0.5)])
+        edge2 = Line([Point(0.02, 0, 1.5), Point(0.02, 0.01, 1.5)])
         edge3 = Line([Point(0, 0, 2), Point(0, 0.02, 2)])
         surface = ComplexFaultSurface.from_fault_data([edge1, edge2, edge3],
                                                       mesh_spacing=1)
         self.assert_mesh_is(surface=surface, expected_mesh=[
-            [(0.00000000e+00, 0.00000000e+00, 1.00000000e+00),
-             (0.00000000e+00, 1.00000000e-02, 1.00000000e+00),
-             (0.00000000e+00, 2.00000000e-02, 1.00000000e+00)],
+            [(0.0, 0.0, 1.0),
+             (0.0, 0.01, 1.0),
+             (0.0, 0.02, 1.0)],
 
-            [(8.70732572e-03, 5.33152318e-19, 7.82316857e-01),
-             (8.67044753e-03, 7.83238825e-03, 7.83238813e-01),
-             (8.57984833e-03, 1.57100762e-02, 7.85503798e-01)],
+            [(0.008, 0.0, 1.2),
+             (0.008, 0.008, 1.2),
+             (0.008, 0.016, 1.2)],
 
-            [(1.74146514e-02, 1.06630462e-18, 5.64633714e-01),
-             (1.73408950e-02, 5.66477632e-03, 5.66477626e-01),
-             (1.71596963e-02, 1.14201520e-02, 5.71007595e-01)],
+            [(0.016, 0.0, 1.4),
+             (0.016, 0.006, 1.4),
+             (0.016, 0.012, 1.4)],
 
-            [(1.47979150e-02, 3.18525318e-19, 8.90156376e-01),
-             (1.48515919e-02, 6.28710212e-03, 8.86130608e-01),
-             (1.49871315e-02, 1.25064345e-02, 8.75965152e-01)],
+            [(0.016, 0.0, 1.6),
+             (0.016, 0.006, 1.6),
+             (0.016, 0.012, 1.6)],
 
-            [(7.39895749e-03, 7.71565830e-19, 1.44507819e+00),
-             (7.42579599e-03, 8.14355113e-03, 1.44306530e+00),
-             (7.49356586e-03, 1.62532174e-02, 1.43798258e+00)],
+            [(0.008, 0, 1.8),
+             (0.008, 0.008, 1.8),
+             (0.008, 0.016, 1.8)],
 
-            [(0.00000000e+00, 0.00000000e+00, 2.00000000e+00),
-             (0.00000000e+00, 1.00000000e-02, 2.00000000e+00),
-             (0.00000000e+00, 2.00000000e-02, 2.00000000e+00)],
+            [(0.0, 0.0, 2.0),
+             (0.0, 0.01, 2.0),
+             (0.0, 0.02, 2.0)],
         ])
 
     def test_mesh_spacing_more_than_two_lengths(self):

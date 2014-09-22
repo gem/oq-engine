@@ -21,8 +21,11 @@ import numpy
 import shapely
 
 from openquake.hazardlib.geo.line import Line
+from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.surface.base import BaseQuadrilateralSurface
+from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
+from openquake.hazardlib.geo.utils import spherical_to_cartesian
 
 
 class ComplexFaultSurface(BaseQuadrilateralSurface):
@@ -96,6 +99,112 @@ class ComplexFaultSurface(BaseQuadrilateralSurface):
         return self.strike
 
     @classmethod
+    def _check_aki_richards_convention(cls, edges):
+        """
+        Verify that surface (as defined by corner points) conforms with Aki and
+        Richard convention (i.e. surface dips right of surface strike)
+
+        This method doesn't have to be called by hands before creating the
+        surface object, because it is called from :meth:`from_fault_data`.
+        """
+        # 1) extract 4 corner points of surface mesh
+        # 2) compute cross products between left and right edges and top edge
+        # (these define vectors normal to the surface)
+        # 3) compute dot products between cross product results and
+        # position vectors associated with upper left and right corners (if
+        # both angles are less then 90 degrees then the surface is correctly
+        # defined)
+        ul = edges[0].points[0]
+        ur = edges[0].points[-1]
+        bl = edges[-1].points[0]
+        br = edges[-1].points[-1]
+        ul, ur, bl, br = spherical_to_cartesian(
+            [ul.longitude, ur.longitude, bl.longitude, br.longitude],
+            [ul.latitude, ur.latitude, bl.latitude, br.latitude],
+            [ul.depth, ur.depth, bl.depth, br.depth],
+        )
+
+        top_edge = ur - ul
+        left_edge = bl - ul
+        right_edge = br - ur
+        left_cross_top = numpy.cross(left_edge, top_edge)
+        right_cross_top = numpy.cross(right_edge, top_edge)
+
+        left_cross_top /= numpy.sqrt(numpy.dot(left_cross_top, left_cross_top))
+        right_cross_top /= numpy.sqrt(
+            numpy.dot(right_cross_top, right_cross_top)
+        )
+        ul /= numpy.sqrt(numpy.dot(ul, ul))
+        ur /= numpy.sqrt(numpy.dot(ur, ur))
+
+        # rounding to 1st digit, to avoid ValueError raised for floating point
+        # imprecision
+        angle_ul = round(
+            numpy.degrees(numpy.arccos(numpy.dot(ul, left_cross_top))), 1
+        )
+        angle_ur = round(
+            numpy.degrees(numpy.arccos(numpy.dot(ur, right_cross_top))), 1
+        )
+
+        if (angle_ul > 90) or (angle_ur > 90):
+            raise ValueError(
+                "Surface does not conform with Aki & Richards convention"
+            )
+
+    @classmethod
+    def check_surface_validity(cls, edges):
+        """
+        Check validity of the surface.
+
+        Project edge points to vertical plane anchored to surface upper left
+        edge and with strike equal to top edge strike. Check that resulting
+        polygon is valid.
+
+        This method doesn't have to be called by hands before creating the
+        surface object, because it is called from :meth:`from_fault_data`.
+        """
+        # extract coordinates of surface boundary (as defined from edges)
+        full_boundary = []
+        left_boundary = []
+        right_boundary = []
+
+        for i in range(1, len(edges) - 1):
+            left_boundary.append(edges[i].points[0])
+            right_boundary.append(edges[i].points[-1])
+
+        full_boundary.extend(edges[0].points)
+        full_boundary.extend(right_boundary)
+        full_boundary.extend(edges[-1].points[::-1])
+        full_boundary.extend(left_boundary[::-1])
+
+        lons = [p.longitude for p in full_boundary]
+        lats = [p.latitude for p in full_boundary]
+        depths = [p.depth for p in full_boundary]
+
+        # define reference plane. Corner points are separated by an arbitrary
+        # distance of 10 km. The mesh spacing is set to 2 km. Both corner
+        # distance and mesh spacing valuesdo not affect the algorithm results.
+        ul = edges[0].points[0]
+        strike = ul.azimuth(edges[0].points[-1])
+        dist = 10.
+        mesh_spacing = 2.
+
+        ur = ul.point_at(dist, 0, strike)
+        bl = Point(ul.longitude, ul.latitude, ul.depth + dist)
+        br = bl.point_at(dist, 0, strike)
+
+        # project surface boundary to reference plane and check for
+        # validity.
+        ref_plane = PlanarSurface.from_corner_points(
+            mesh_spacing, ul, ur, br, bl
+        )
+        _, xx, yy = ref_plane._project(lons, lats, depths)
+        coords = [(x, y) for x, y in zip(xx, yy)]
+        p = shapely.geometry.Polygon(coords)
+        if not p.is_valid:
+            raise ValueError('Edges points are not in the right order')
+
+    @classmethod
     def check_fault_data(cls, edges, mesh_spacing):
         """
         Verify the fault data and raise ``ValueError`` if anything is wrong.
@@ -110,6 +219,9 @@ class ComplexFaultSurface(BaseQuadrilateralSurface):
                              "in each edge")
         if not mesh_spacing > 0.0:
             raise ValueError("mesh spacing must be positive")
+
+        cls.check_surface_validity(edges)
+        cls._check_aki_richards_convention(edges)
 
     @classmethod
     def from_fault_data(cls, edges, mesh_spacing):
