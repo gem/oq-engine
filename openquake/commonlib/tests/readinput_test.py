@@ -2,8 +2,9 @@
 import mock
 import unittest
 from StringIO import StringIO
-from openquake.commonlib.readinput import GeographicObjects, SiteParam, \
-    get_site_model
+
+from openquake.hazardlib import geo
+from openquake.commonlib.readinput import SiteParam, get_site_model
 
 
 class ClosestSiteModelTestCase(unittest.TestCase):
@@ -51,7 +52,7 @@ class ClosestSiteModelTestCase(unittest.TestCase):
             measured=False, vs30=0.0000002,
             z1pt0=0.0000002, z2pt5=0.0000002, lon=1, lat=0)
 
-        siteparams = GeographicObjects([sm1, sm2])
+        siteparams = geo.geodetic.GeographicObjects([sm1, sm2])
 
         res1 = siteparams.get_closest(-0.0000001, 0)
         res2 = siteparams.get_closest(0.0000001, 0)

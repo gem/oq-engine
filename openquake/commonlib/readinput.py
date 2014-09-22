@@ -1,10 +1,11 @@
+import logging
 import operator
 import collections
 import decimal
 
 import numpy
 
-from openquake.hazardlib import geo, site
+from openquake.hazardlib import geo, site, imt
 from openquake.nrmllib.node import read_nodes, LiteralNode
 from openquake.commonlib import valid
 from openquake.commonlib.readini import parse_config
@@ -12,62 +13,13 @@ from openquake.commonlib.converter import Converter
 from openquake.commonlib.source import ValidNode, RuptureConverter
 
 
-class GeographicObjects(object):
-    EARTH_DIAMETER = 12742.0
-    """
-    Store a collection of geographic points, i.e. objects with longitudes
-    and latitudes. By default extracts them from the attributes .lon and .lat,
-    but you can provide your own getters.
-
-    NB: lons and lats of the objects are converted into radians at
-    instantiation time, so the computation of distances is faster.
-    """
-    def __init__(self, objects, getlon=operator.attrgetter('lon'),
-                 getlat=operator.attrgetter('lat')):
-        self.objects = collections.OrderedDict()
-        for obj in objects:
-            lon = getlon(obj)
-            lat = getlat(obj)
-            self.objects[lon, lat] = obj
-        lons, lats = zip(*self.objects.keys())
-        self.lons = numpy.radians(lons)
-        self.lats = numpy.radians(lats)
-
-    def get_closest(self, lon, lat):
-        """
-        Get the closest object to the given longitude and latitude.
-
-        :returns: a pair (object, distance)
-
-        A special case is made for objects which are exactly at the
-        given location. In such case the returned distance is zero.
-        """
-        try:
-            return self.objects[lon, lat], 0
-        except KeyError:
-            pass  # search for the closest object
-        obj_dist = zip(self.objects.itervalues(), self.get_distances(lon, lat))
-        obj_dist.sort(key=operator.itemgetter(1))
-        return obj_dist[0]
-
-    def get_distances(self, lon, lat):
-        """
-        Return an array of distances from the given longitude and latitude,
-        with size = len(objects).
-        """
-        lon, lat = numpy.radians(lon), numpy.radians(lat)
-        return self.EARTH_DIAMETER * numpy.arcsin(
-            numpy.sqrt(
-                numpy.sin((lat - self.lats) / 2.0) ** 2.0
-                + numpy.cos(lat) * numpy.cos(self.lats)
-                * numpy.sin((lon - self.lons) / 2.0) ** 2.0
-                ).clip(-1., 1.))
-
-
 def get_points(oqparam):
     """
     Extract the mesh of points to compute from the sites,
     the sites_csv, the region or the exposure.
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     if getattr(oqparam, 'sites', None):
         lons, lats = zip(*oqparam.sites)
@@ -123,6 +75,9 @@ def get_site_model(oqparam):
     """
     Convert the NRML file into an iterator over 6-tuple of the form
     (z1pt0, z2pt5, measured, vs30, lon, lat)
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     for node in read_nodes(oqparam.inputs['site_model'],
                            lambda el: el.tag.endswith('site'),
@@ -134,20 +89,36 @@ def get_site_collection(oqparam, points=None, site_ids=None):
     """
     Returns a SiteCollection instance by looking at the points and the
     site model defined by the configuration parameters.
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param points:
+        a mesh or list of hazardlib points; if None the points are
+        determined by invoking get_points
+    :param site_ids:
+        a list of integers to identify the points; if None, a
+        range(1, len(points) + 1) is used
     """
     points = points or get_points(oqparam)
     site_ids = site_ids or range(1, len(points) + 1)
     if oqparam.inputs.get('site_model'):
         sitecol = []
-        site_model_param = GeographicObjects(
+        exact_matches = 0
+        site_model_param = geo.geodetic.GeographicObjects(
             get_site_model(oqparam),
             getlon=operator.itemgetter(4),
             getlat=operator.itemgetter(5))
         for i, pt in zip(site_ids, points):
-            param, _dist = site_model_param.\
+            param, dist = site_model_param.\
                 get_closest(pt.longitude, pt.latitude)
+            exact_matches += dist is 0
             sitecol.append(site.Site(pt, param.vs30, param.measured,
                                      param.z1pt0, param.z2pt5, i))
+        if exact_matches:
+            msg = ('Found %d site model parameters exactly at the hazard '
+                   'sites, out of %d total sites' %
+                   (exact_matches, len(sitecol)))
+            logging.info(msg)
         return site.SiteCollection(sitecol)
 
     # else use the default site params
@@ -157,7 +128,10 @@ def get_site_collection(oqparam, points=None, site_ids=None):
 
 def get_rupture(oqparam):
     """
-    Returns a hazardlib rupture
+    Returns a hazardlib rupture by reading the `rupture_model` file.
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     conv = RuptureConverter(oqparam.rupture_mesh_spacing)
     rup_model = oqparam.inputs['rupture_model']
@@ -168,7 +142,11 @@ def get_rupture(oqparam):
 
 def get_source_models(oqparam):
     """
-    Read all the source models specified. Yield pairs (fname, sources).
+    Read all the source models specified in oqparam.
+    Yield pairs (fname, sources).
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     for fname in oqparam.inputs['source']:
         srcs = read_nodes(fname, lambda elem: 'Source' in elem.tag, ValidNode)
@@ -190,10 +168,14 @@ Branch = collections.namedtuple('Branch', 'id value weight')
 
 
 def ab_values(value):
+    """
+    a and b values of the GR magniture-scaling relation.
+    a is a positive float, b is just a float.
+    """
     a, b = value.split()
     return valid.positivefloat(a), float(b)
 
-utype2validator = dict(
+uncertaintytype2validator = dict(
     sourceModel=valid.utf8,
     gmpeModel=valid.gsim,
     maxMagGRAbsolute=valid.positivefloat,
@@ -205,7 +187,7 @@ def _branches(branchset, known_attribs):
     attrib = branchset.attrib.copy()
     del attrib['branchSetID']
     utype = attrib.pop('uncertaintyType')
-    validator = utype2validator[utype]
+    validator = uncertaintytype2validator[utype]
     assert set(attrib) <= known_attribs, attrib
 
     weight = 0
@@ -224,6 +206,8 @@ def _branches(branchset, known_attribs):
 
 def get_gsim_lt(oqparam):
     """
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     fname = oqparam.inputs['gsim_logic_tree']
     known_attribs = set(['applyToTectonicRegionType'])
@@ -246,13 +230,16 @@ class SourceModelLtNode(LiteralNode):
     )
 
 
+def is_branchlevel(elem):
+    return elem.tag.endswith('logicTreeBranchingLevel')
+
+
 def get_source_model_lt(oqparam):
     """
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     fname = oqparam.inputs['source_model_logic_tree']
-
-    def is_branchlevel(elem):
-        return elem.tag.endswith('logicTreeBranchingLevel')
     known_attribs = set(['applyToSources', 'applyToTectonicRegionType',
                          'applyToBranch'])
     for branchlevel in read_nodes(fname, is_branchlevel, SourceModelLtNode):
@@ -262,6 +249,9 @@ def get_source_model_lt(oqparam):
 
 
 class VulnerabilityNode(LiteralNode):
+    """
+    Literal Node class used to validate discrete vulnerability functions
+    """
     validators = valid.parameters(
         vulnerabilitySetID=valid.name,
         vulnerabilityFunctionID=valid.name,
@@ -281,12 +271,23 @@ VFunction = collections.namedtuple(
 
 
 def get_vulnerability_sets(oqparam):
+    """
+    Yields VSet namedtuples, each containing imt, imls and
+    vulnerability functions.
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    """
     def filter(elem):
         return elem.tag.endswith('discreteVulnerabilitySet')
 
-    for vset in read_nodes(oqparam.inputs['fragility'],
-                           filter, VulnerabilityNode):
-        imt = vset.imt['IMT']
+    imts = set()
+    fname = oqparam.inputs['fragility']
+    for vset in read_nodes(fname, filter, VulnerabilityNode):
+        imt_str = str(imt.from_string(vset.imt['IMT']))
+        if imt_str in imts:
+            raise ValueError('Duplicated IMT in %s: %s' % (fname, imt_str))
+        imts.add(imt_str)
         imls = ~vset
         vfuns = []
         for vfun in vset:
@@ -316,6 +317,10 @@ class FragilityNode(LiteralNode):
 
 
 def get_fragility_sets(oqparam):
+    """
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    """
     fmodel = read_nodes(oqparam.inputs['fragility'],
                         lambda el: el.tag.endswith('fragilityModel'),
                         FragilityNode).next()
@@ -327,10 +332,14 @@ def get_fragility_sets(oqparam):
 
 def get_imtls(oqparam):
     """
+    Return a dictionary {imt_str: intensity_measure_levels}
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     if hasattr(oqparam, 'intensity_measure_types_and_levels'):
         return oqparam.intensity_measure_types_and_levels
-    if 'vulnerability' in oqparam.inputs:
+    elif 'vulnerability' in oqparam.inputs:
         return {str(vset.imt): vset.imls
                 for vset in get_vulnerability_sets(oqparam)}
     elif 'fragility' in oqparam.inputs:
@@ -341,6 +350,7 @@ def get_imtls(oqparam):
                          'vulnerability file and fragility file')
 
 
+# used for debugging
 if __name__ == '__main__':
     import sys
     with open(sys.argv[1]) as ini:
