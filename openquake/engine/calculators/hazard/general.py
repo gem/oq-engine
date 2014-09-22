@@ -280,7 +280,7 @@ class BaseHazardCalculator(base.Calculator):
                 pnes2 = 1 - acc.get((trt_model_id, gsim), self.zeros)
                 acc[trt_model_id, gsim] = 1 - pnes1 * pnes2
 
-            if hasattr(self.hc, 'poes_disagg'):
+            if getattr(self.hc, 'poes_disagg', None):
                 for bb in bbs:
                     self.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
 
