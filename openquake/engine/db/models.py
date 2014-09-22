@@ -226,21 +226,6 @@ def build_curves(rlz, curves_by_trt_model_gsim):
         curves = 1. - (1. - curves) * pnes
     return curves
 
-## Tables in the 'admin' schema.
-
-
-class RevisionInfo(djm.Model):
-    '''
-    Revision information
-    '''
-    artefact = djm.TextField(unique=True)
-    revision = djm.TextField()
-    step = djm.IntegerField(default=0)
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    class Meta:
-        db_table = 'admin\".\"revision_info'
-
 
 ## Tables in the 'uiapi' schema.
 
