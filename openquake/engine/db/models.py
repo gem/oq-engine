@@ -457,13 +457,22 @@ class HazardCalculation(object):
         """
         if 'exposure' in self.inputs:
             assets = self.oqjob.exposuremodel.exposuredata_set.all()
-            # the coords here must be sorted
+            # the coords here must be sorted; the issue is that the
+            # disaggregation calculator has a for loop of kind
+            # for site in sites:
+            #     bin_edge, disagg_matrix = disaggregation(site, ...)
+            # the generated ruptures are random if the order of the sites
+            # is random, even if the seed is fixed; in particular for some
+            # ordering no ruptures are generated and the test
+            # qa_tests/hazard/disagg/case_1/test.py fails with a bad
+            # error message
             coords = sorted(
                 set((asset.site.x, asset.site.y) for asset in assets))
             points = [geo.Point(*x) for x in coords]
         else:
             points = get_points(self.oqjob.get_oqparam())
-        self.save_sites((p.longitude, p.latitude) for p in points)
+        sids = self.save_sites((p.longitude, p.latitude) for p in points)
+        return points, sids
 
     def get_imts(self):
         """
