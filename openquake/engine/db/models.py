@@ -438,7 +438,7 @@ class HazardCalculation(object):
         else:
             self.oqjob = job
         params = vars(self.oqjob.get_oqparam())
-        collisions = set(params) & set(vars(self))
+        collisions = set(params) & set(dir(self))
         if collisions:
             raise NameError('The parameters %s will override attributes '
                             'of HazardCalculation instances' % collisions)
@@ -1328,11 +1328,8 @@ class SES(object):
     def __init__(self, ses_collection, ordinal=1):
         self.ses_collection = ses_collection
         self.ordinal = ordinal
-
-    @property
-    def investigation_time(self):
-        hc = self.ses_collection.output.oq_job.hazard_calculation
-        return hc.investigation_time
+        self.investigation_time = self.ses_collection.output.oq_job.get_param(
+            'investigation_time', None)
 
     def __cmp__(self, other):
         return cmp(self.ordinal, other.ordinal)

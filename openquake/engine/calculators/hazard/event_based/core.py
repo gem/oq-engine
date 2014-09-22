@@ -249,7 +249,7 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol):
             calc.calc_gmfs(
                 r_sites, rupture, [(r.id, r.seed) for r in group])
 
-    if hasattr(hc, 'hazard_curves_from_gmfs'):
+    if getattr(hc, 'hazard_curves_from_gmfs', None):
         with EnginePerformanceMonitor(
                 'hazard curves from gmfs',
                 job_id, compute_gmfs_and_curves):
@@ -411,12 +411,12 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
             trt_model.num_ruptures = self.num_ruptures.get(trt_model.id, 0)
             trt_model.save()
         if (not getattr(self.hc, 'ground_motion_fields', None) and
-                not getattr(self.hc, 'hazard_curves_from_gmfs')):
+                not getattr(self.hc, 'hazard_curves_from_gmfs', None)):
             return  # do nothing
 
         # create a Gmf output for each realization
         self.initialize_realizations()
-        if hasattr(self.hc, 'ground_motion_fields'):
+        if getattr(self.hc, 'ground_motion_fields', None):
             for rlz in self._get_realizations():
                 output = models.Output.objects.create(
                     oq_job=self.job,
