@@ -430,7 +430,7 @@ def print_outputs_summary(outputs, full=True):
 
 
 def run_job(cfg_file, log_level, log_file, exports=(), hazard_output_id=None,
-            hazard_job_id=None):
+            hazard_calculation_id=None):
     """
     Run a job using the specified config file and other options.
 
@@ -445,19 +445,19 @@ def run_job(cfg_file, log_level, log_file, exports=(), hazard_output_id=None,
         is supported.
     :param str hazard_ouput_id:
         The Hazard Output ID used by the risk calculation (can be None)
-    :param str hazard_job_id:
+    :param str hazard_calculation_id:
         The Hazard Job ID used by the risk calculation (can be None)
     """
     # first of all check the database version and exit if the db is outdated
     upgrader.check_versions(django_db.connections['admin'])
     with CeleryNodeMonitor(openquake.engine.no_distribute(), interval=3):
-        hazard = hazard_output_id is None and hazard_job_id is None
+        hazard = hazard_output_id is None and hazard_calculation_id is None
         if log_file is not None:
             touch_log_file(log_file)
 
         job = job_from_file(
             cfg_file, getpass.getuser(), log_level, exports, hazard_output_id,
-            hazard_job_id)
+            hazard_calculation_id)
 
         # Instantiate the calculator and run the calculation.
         t0 = time.time()
@@ -480,7 +480,7 @@ def run_job(cfg_file, log_level, log_file, exports=(), hazard_output_id=None,
 
 @django_db.transaction.commit_on_success
 def job_from_file(cfg_file_path, username, log_level='info', exports=(),
-                  hazard_output_id=None, hazard_job_id=None, **extras):
+                  hazard_output_id=None, hazard_calculation_id=None, **extras):
     """
     Create a full job profile from a job config file.
 
@@ -495,7 +495,7 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
     :param int hazard_output_id:
         ID of a hazard output to use as input to this calculation. Specify
         this xor ``hazard_calculation_id``.
-    :param int hazard_job_id:
+    :param int hazard_calculation_id:
         ID of a complete hazard job to use as input to this
         calculation. Specify this xor ``hazard_output_id``.
     :params extras:
@@ -506,8 +506,8 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
         `RuntimeError` if the input job configuration is not valid
     """
     # determine the previous hazard job, if any
-    if hazard_job_id:
-        haz_job = models.OqJob.objects.get(pk=hazard_job_id)
+    if hazard_calculation_id:
+        haz_job = models.OqJob.objects.get(pk=hazard_calculation_id)
     elif hazard_output_id:  # extract the hazard job from the hazard_output_id
         haz_job = models.Output.objects.get(pk=hazard_output_id).oq_job
     else:
@@ -527,7 +527,7 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
     params.update(extras)
     job.save_params(params)
 
-    if hazard_output_id is None and hazard_job_id is None:
+    if hazard_output_id is None and hazard_calculation_id is None:
         # this is a hazard calculation, not a risk one
         del params['hazard_calculation_id']
         del params['hazard_output_id']

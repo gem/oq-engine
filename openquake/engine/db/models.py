@@ -433,7 +433,7 @@ class HazardCalculation(object):
     _site_collection = ()  # see the corresponding instance variable
 
     def __init__(self, job):
-        if isinstance(job, (int, long)):  # passed the job_id
+        if isinstance(job, (int, long, str)):  # passed the job_id
             self.oqjob = OqJob.objects.get(pk=job)
         else:
             self.oqjob = job
