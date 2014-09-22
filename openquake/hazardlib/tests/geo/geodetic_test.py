@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
+import collections
 
 import numpy
 
@@ -21,6 +22,7 @@ from openquake.hazardlib.geo import geodetic
 
 from openquake.hazardlib.tests import SpeedupsTestCase
 
+Point = collections.namedtuple("Point",  'lon lat')
 
 # these points and tests that use them are from
 # http://williams.best.vwh.net/avform.htm#Example
@@ -187,6 +189,24 @@ class MinDistanceTest(SpeedupsTestCase):
         self._test(mlons=[[10., 11.]], mlats=[[-40, -41]], mdepths=[[1., 2.]],
                    slons=[9., 9.], slats=[-39, -45], sdepths=[0.1, 0.2],
                    expected_mpoint_indices=[0, 1])
+
+
+class GeographicObjectsTest(unittest.TestCase):
+    def setUp(self):
+        p1 = Point(0.0, 0.1)
+        p2 = Point(0.0, 0.2)
+        p3 = Point(0.0, 0.3)
+        self.points = geodetic.GeographicObjects([p1, p2, p3])
+
+    def test_closest(self):
+        point, dist = self.points.get_closest(0.0, 0.21)
+        self.assertEqual(point, Point(0.0, 0.2))
+        self.assertAlmostEqual(dist, 1.111949266)
+
+    def test_exact_point(self):
+        point, dist = self.points.get_closest(0.0, 0.2)
+        self.assertEqual(point, Point(0.0, 0.2))
+        self.assertIs(dist, 0)
 
 
 class MinDistanceToSegmentTest(unittest.TestCase):

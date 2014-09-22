@@ -17,11 +17,68 @@
 Module :mod:`openquake.hazardlib.geo.geodetic` contains functions for geodetic
 transformations, optimized for massive calculations.
 """
+
+import operator
+import collections
+
 import numpy
 
 
 #: Earth radius in km.
 EARTH_RADIUS = 6371.0
+
+
+class GeographicObjects(object):
+    """
+    Store a collection of geographic objects, i.e. objects with longitudes
+    and latitudes. By default extracts the coordinates from the attributes
+    .lon and .lat, but you can provide your own getters. It is possible
+    to extract the closest object to a given location by calling the
+    method .get_closest(lon, lat).
+
+    NB: lons and lats of the objects are converted into radians at
+    instantiation time, so the computation of distances is faster.
+    """
+    def __init__(self, objects, getlon=operator.attrgetter('lon'),
+                 getlat=operator.attrgetter('lat')):
+        self.objects = collections.OrderedDict()
+        for obj in objects:
+            lon = getlon(obj)
+            lat = getlat(obj)
+            self.objects[lon, lat] = obj
+        lons, lats = zip(*self.objects.keys())
+        self.lons = numpy.radians(lons)
+        self.lats = numpy.radians(lats)
+
+    def get_closest(self, lon, lat):
+        """
+        Get the closest object to the given longitude and latitude.
+
+        :returns: a pair (object, distance)
+
+        A special case is made for objects which are exactly at the
+        given location. In such case the returned distance is exactly zero.
+        """
+        try:
+            return self.objects[lon, lat], 0
+        except KeyError:
+            pass  # search for the closest object
+        obj_dist = zip(self.objects.itervalues(), self.get_distances(lon, lat))
+        obj_dist.sort(key=operator.itemgetter(1))
+        return obj_dist[0]
+
+    def get_distances(self, lon, lat):
+        """
+        Return an array of distances from the given longitude and latitude,
+        with size = len(objects).
+        """
+        lon, lat = numpy.radians(lon), numpy.radians(lat)
+        return EARTH_RADIUS * 2.0 * numpy.arcsin(
+            numpy.sqrt(
+                numpy.sin((lat - self.lats) / 2.0) ** 2.0
+                + numpy.cos(lat) * numpy.cos(self.lats)
+                * numpy.sin((lon - self.lons) / 2.0) ** 2.0
+                ).clip(-1., 1.))
 
 
 def geodetic_distance(lons1, lats1, lons2, lats2):
