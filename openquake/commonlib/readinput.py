@@ -44,31 +44,8 @@ def get_mesh(oqparam):
         return geo.Mesh(numpy.array(lons), numpy.array(lats))
 
 
-vs30_type = valid.Choice('measured', 'inferred')
-
-SiteParam = collections.namedtuple(
-    'SiteParam', 'z1pt0 z2pt5 measured vs30 lon lat'.split())
-
-
-def site_param(value, z1pt0, z2pt5, vs30Type, vs30, lon, lat):
-    """
-    Used to convert a node like
-
-       <site lon="24.7125" lat="42.779167" vs30="462" vs30Type="inferred"
-       z1pt0="100" z2pt5="5" />
-
-    into a 6-tuple (z1pt0, z2pt5, measured, vs30, lon, lat)
-    """
-    return SiteParam(valid.positivefloat(z1pt0),
-                     valid.positivefloat(z2pt5),
-                     vs30_type(vs30Type) == 'measured',
-                     valid.positivefloat(vs30),
-                     valid.longitude(lon),
-                     valid.latitude(lat))
-
-
 class SiteModelNode(LiteralNode):
-    validators = valid.parameters(site=site_param)
+    validators = valid.parameters(site=valid.site_param)
 
 
 def get_site_model(oqparam):
@@ -167,20 +144,12 @@ BranchSet = collections.namedtuple('BranchSet', 'id type attrib branches')
 Branch = collections.namedtuple('Branch', 'id value weight')
 
 
-def ab_values(value):
-    """
-    a and b values of the GR magniture-scaling relation.
-    a is a positive float, b is just a float.
-    """
-    a, b = value.split()
-    return valid.positivefloat(a), float(b)
-
 uncertaintytype2validator = dict(
     sourceModel=valid.utf8,
     gmpeModel=valid.gsim,
     maxMagGRAbsolute=valid.positivefloat,
     bGRRelative=float,
-    abGRAbsolute=ab_values)
+    abGRAbsolute=valid.ab_values)
 
 
 def _branches(branchset, known_attribs):
@@ -204,6 +173,10 @@ def _branches(branchset, known_attribs):
                      attrib, branches)
 
 
+def is_branchset(elem):
+    return elem.tag.endswith('logicTreeBranchSet')
+
+
 def get_gsim_lt(oqparam):
     """
     :param oqparam:
@@ -211,9 +184,6 @@ def get_gsim_lt(oqparam):
     """
     fname = oqparam.inputs['gsim_logic_tree']
     known_attribs = set(['applyToTectonicRegionType'])
-
-    def is_branchset(elem):
-        return elem.tag.endswith('logicTreeBranchSet')
     for branchset in read_nodes(fname, is_branchset, GsimLtNode):
         yield _branches(branchset, known_attribs)
 

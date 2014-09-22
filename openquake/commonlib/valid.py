@@ -23,7 +23,9 @@ Validation library for the engine, the desktop tools, and anything else
 import re
 import ast
 import logging
+import collections
 from decimal import Decimal
+
 from openquake.hazardlib import imt, scalerel, gsim
 from openquake.commonlib.general import distinct
 
@@ -488,6 +490,37 @@ def nodal_plane(value, probability, strike, dip, rake):
     """
     return (range01(probability), strike_range(strike),
             dip_range(dip), rake_range(rake))
+
+
+def ab_values(value):
+    """
+    a and b values of the GR magniture-scaling relation.
+    a is a positive float, b is just a float.
+    """
+    a, b = value.split()
+    return positivefloat(a), float_(b)
+
+
+################################ site model ##################################
+
+vs30_type = Choice('measured', 'inferred')
+
+SiteParam = collections.namedtuple(
+    'SiteParam', 'z1pt0 z2pt5 measured vs30 lon lat'.split())
+
+
+def site_param(value, z1pt0, z2pt5, vs30Type, vs30, lon, lat):
+    """
+    Used to convert a node like
+
+       <site lon="24.7125" lat="42.779167" vs30="462" vs30Type="inferred"
+       z1pt0="100" z2pt5="5" />
+
+    into a 6-tuple (z1pt0, z2pt5, measured, vs30, lon, lat)
+    """
+    return SiteParam(positivefloat(z1pt0), positivefloat(z2pt5),
+                     vs30_type(vs30Type) == 'measured',
+                     positivefloat(vs30), longitude(lon), latitude(lat))
 
 
 ###########################################################################
