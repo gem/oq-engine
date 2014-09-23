@@ -24,6 +24,7 @@ import psutil
 
 from openquake.nrmllib.risk import parsers
 from openquake.risklib.workflows import RiskModel
+from openquake.hazardlib.imt import from_string
 from openquake.commonlib.riskloaders import get_taxonomy_vfs
 
 from openquake.engine import logs, export
@@ -169,6 +170,8 @@ class RiskCalculator(base.Calculator):
             self.loss_types.update(rm.loss_types)
             for imt in rm.imts:
                 imt_taxonomy_set.add((imt, rm.taxonomy))
+                # insert the IMT in the db, if not already there
+                models.Imt.save_new([from_string(imt)])
         for imt, taxonomy in imt_taxonomy_set:
             models.ImtTaxonomy.objects.create(
                 job=self.job, imt=models.Imt.get(imt), taxonomy=taxonomy)
