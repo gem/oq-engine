@@ -5,11 +5,12 @@ import decimal
 import numpy
 
 from openquake.hazardlib import geo, site
-from openquake.nrmllib.node import read_nodes, LiteralNode, context
-from openquake.nrmllib import InvalidFile
+from openquake.nrmllib.node import read_nodes, LiteralNode
 from openquake.commonlib import valid
 from openquake.commonlib.oqvalidation import \
     fragility_files, vulnerability_files
+from openquake.commonlib.riskmodels import \
+    get_fragility_sets, get_imtls_from_vulnerabilities
 from openquake.commonlib.converter import Converter
 from openquake.commonlib.source import ValidNode, RuptureConverter
 
@@ -131,219 +132,6 @@ def get_source_models(oqparam):
         yield fname, srcs
 
 
-class GsimLtNode(LiteralNode):
-    """GSIM Logic Tree Node"""
-
-    validators = valid.parameters(
-        branchSetID=valid.name,
-        uncertaintyType=valid.Choice('gmpeModel'),
-        uncertaintyWeight=decimal.Decimal,
-    )
-
-BranchSet = collections.namedtuple('BranchSet', 'id type attrib branches')
-
-Branch = collections.namedtuple('Branch', 'id value weight')
-
-
-uncertaintytype2validator = dict(
-    sourceModel=valid.utf8,
-    gmpeModel=valid.gsim,
-    maxMagGRAbsolute=valid.positivefloat,
-    bGRRelative=float,
-    abGRAbsolute=valid.ab_values)
-
-
-def _branches(branchset, known_attribs):
-    attrib = branchset.attrib.copy()
-    del attrib['branchSetID']
-    utype = attrib.pop('uncertaintyType')
-    validator = uncertaintytype2validator[utype]
-    assert set(attrib) <= known_attribs, attrib
-
-    weight = 0
-    branches = []
-    for branch in branchset:
-        weight += ~branch.uncertaintyWeight
-        branches.append(
-            Branch(branch['branchID'],
-                   validator(~branch.uncertaintyModel),
-                   float(~branch.uncertaintyWeight)))
-    assert weight == 1, weight
-    return BranchSet(branchset['branchSetID'],
-                     branchset['uncertaintyType'],
-                     attrib, branches)
-
-
-def is_branchset(elem):
-    return elem.tag.endswith('logicTreeBranchSet')
-
-
-def get_gsim_lt(oqparam):
-    """
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    """
-    fname = oqparam.inputs['gsim_logic_tree']
-    known_attribs = set(['applyToTectonicRegionType'])
-    for branchset in read_nodes(fname, is_branchset, GsimLtNode):
-        yield _branches(branchset, known_attribs)
-
-
-class SourceModelLtNode(LiteralNode):
-    """Source Model Logic Tree Node"""
-
-    validators = valid.parameters(
-        branchingLevelID=valid.name,
-        branchSetID=valid.name,
-        uncertaintyType=valid.Choice('sourceModel', 'abGRAbsolute',
-                                     'bGRRelative', 'maxMagGRAbsolute'),
-        uncertaintyWeight=decimal.Decimal,
-    )
-
-
-def is_branchlevel(elem):
-    return elem.tag.endswith('logicTreeBranchingLevel')
-
-
-def get_source_model_lt(oqparam):
-    """
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    """
-    fname = oqparam.inputs['source_model_logic_tree']
-    known_attribs = set(['applyToSources', 'applyToTectonicRegionType',
-                         'applyToBranch'])
-    for branchlevel in read_nodes(fname, is_branchlevel, SourceModelLtNode):
-        yield branchlevel['branchingLevelID'], [
-            _branches(branchset, known_attribs)
-            for branchset in branchlevel]
-
-
-class VulnerabilityNode(LiteralNode):
-    """
-    Literal Node class used to validate discrete vulnerability functions
-    """
-    validators = valid.parameters(
-        vulnerabilitySetID=valid.name,
-        vulnerabilityFunctionID=valid.name_with_dashes,
-        assetCategory=str,
-        lossCategory=valid.name,
-        IML=valid.IML,
-        lossRatio=valid.positivefloats,
-        coefficientsVariation=valid.positivefloats,
-    )
-
-VSet = collections.namedtuple(
-    'VSet', 'imt imls vfunctions'.split())
-
-VFunction = collections.namedtuple(
-    'VFunction', 'id lossRatio coefficientsVariation'.split())
-
-
-def filter_vset(elem):
-    return elem.tag.endswith('discreteVulnerabilitySet')
-
-
-def get_vulnerability_sets(fname):
-    """
-    Yields VSet namedtuples, each containing imt, imls and
-    vulnerability functions.
-
-    :param fname:
-        path of the vulnerability filter
-    """
-    imts = set()
-    for vset in read_nodes(fname, filter_vset, VulnerabilityNode):
-        imt_str, imls, min_iml, max_iml = ~vset.IML
-        if imt_str in imts:
-            raise InvalidFile('Duplicated IMT %s: %s, line %d' %
-                              (imt_str, fname, vset.imt.lineno))
-        imts.add(imt_str)
-        vfuns = []
-        for vfun in vset.getnodes('discreteVulnerability'):
-            with context(fname, vfun):
-                vf = VFunction(vfun['vulnerabilityFunctionID'],
-                               ~vfun.lossRatio, ~vfun.coefficientsVariation)
-            if len(vf.lossRatio) != len(imls):
-                raise InvalidFile(
-                    'There are %d loss ratios, but %d imls: %s, line %d' %
-                    (len(vf.lossRatio), len(imls), fname, vf.lossRatio.lineno))
-            elif len(vf.coefficientsVariation) != len(imls):
-                raise InvalidFile(
-                    'There are %d coefficients, but %d imls: %s, line %d' %
-                    (len(vf.coefficientsVariation), len(imls), fname,
-                     vf.coefficientsVariation.lineno))
-            vfuns.append(vf)
-        yield VSet(imt_str, imls, vfuns)
-
-
-class FragilityNode(LiteralNode):
-    validators = valid.parameters(
-        format=valid.Choice('discrete', 'continuous'),
-        lossCategory=valid.name,
-        IML=valid.IML,
-        params=valid.fragilityparams,
-        limitStates=valid.namelist,
-        description=valid.utf8,
-        type=valid.Choice('lognormal'),
-        poEs=valid.probabilities,
-        noDamageLimit=valid.positivefloat,
-    )
-
-
-FSet = collections.namedtuple(
-    'FSet', ['imt', 'imls', 'min_iml', 'max_iml', 'taxonomy', 'nodamagelimit',
-             'limit_states', 'ffunctions'])
-
-FFunction = collections.namedtuple(
-    'FFunction', 'limit_state params poes'.split())
-
-
-def get_fragility_sets(fname):
-    """
-    :param fname:
-        path of the fragility file
-    """
-    [fmodel] = read_nodes(
-        fname, lambda el: el.tag.endswith('fragilityModel'), FragilityNode)
-    # ~fmodel.description is ignored
-    limit_states = ~fmodel.limitStates
-    tag = 'ffc' if fmodel['format'] == 'continuous' else 'ffd'
-    for ffs in fmodel.getnodes('ffs'):
-        nodamage = ffs.attrib.get('noDamageLimit')
-        taxonomy = ~ffs.taxonomy
-        imt_str, imls, min_iml, max_iml = ~ffs.IML
-        fset = []
-        lstates = []
-        for ff in ffs.getnodes(tag):
-            lstates.append(ff['ls'])
-            if tag == 'ffc':
-                fset.append(FFunction(ff['ls'], ~ff.params, None))
-            else:
-                fset.append(FFunction(ff['ls'], None, ~ff.poEs))
-        if lstates != limit_states:
-            raise InvalidFile("Expected limit states %s, got %s in %s" %
-                             (limit_states, lstates, fname))
-        yield FSet(imt_str, imls, min_iml, max_iml, taxonomy, nodamage,
-                   limit_states, fset)
-
-
-def _get_imtls_from_vulnerabilities(inputs):
-    # return a dictionary imt_str -> imls
-    imtls = {}
-    for loss_type, fname in vulnerability_files(inputs):
-        for vset in get_vulnerability_sets(fname):
-            imt = vset.imt
-            if imt in imtls and imtls[imt] != vset.imls:
-                logging.warn(
-                    'Different levels for IMT %s: got %s, expected %s in %s',
-                    imt, vset.imls, imtls[imt], fname)
-                imtls[imt] = sorted(set(vset.imls + imtls[imt]))
-            else:
-                imtls[imt] = vset.imls
-    return imtls
-
-
 def get_imtls(oqparam):
     """
     Return a dictionary {imt_str: intensity_measure_levels}
@@ -356,7 +144,7 @@ def get_imtls(oqparam):
     elif hasattr(oqparam, 'intensity_measure_types_and_levels'):
         imtls = oqparam.intensity_measure_types_and_levels
     elif vulnerability_files(oqparam.inputs):
-        imtls = _get_imtls_from_vulnerabilities(oqparam.inputs)
+        imtls = get_imtls_from_vulnerabilities(oqparam.inputs)
     elif fragility_files(oqparam.inputs):
         fname = oqparam.inputs['fragility']
         imtls = {str(fset.imt): fset.imls
@@ -365,19 +153,3 @@ def get_imtls(oqparam):
         raise ValueError('Missing intensity_measure_types_and_levels, '
                          'vulnerability file and fragility file')
     return imtls
-
-
-# used for debugging
-if __name__ == '__main__':
-    import sys
-    from openquake.commonlib.readini import parse_config
-    with open(sys.argv[1]) as ini:
-        oqparam = parse_config(ini)
-    #print get_site_collection(oqparam)
-    #site_model = get_site_model(oqparam)
-    #for x in site_model:
-    #    print x
-    #print list(get_gsim_lt(oqparam))
-    #print list(get_source_model_lt(oqparam))
-    for x in get_fragility_sets(oqparam.inputs['fragility']):
-        print x

@@ -85,7 +85,6 @@ class Choice(object):
         self.__name__ = 'Choice%s' % str(choices)
 
     def __call__(self, value):
-        value = value.lower()
         if not value in self.choices:
             raise ValueError('%r is not a valid choice in %s' % (
                              value, self.choices))
@@ -101,6 +100,7 @@ class ChoiceCI(object):
         self.__name__ = 'ChoiceCI%s' % str(choices)
 
     def __call__(self, value):
+        value = value.lower()
         if not value in self.choices:
             raise ValueError('%r is not a valid choice in %s' % (
                              value, self.choices))
