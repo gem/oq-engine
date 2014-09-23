@@ -78,11 +78,27 @@ class NoneOr(object):
 
 class Choice(object):
     """
-    Check if the choice is valid.
+    Check if the choice is valid (case sensitive).
     """
     def __init__(self, *choices):
         self.choices = choices
         self.__name__ = 'Choice%s' % str(choices)
+
+    def __call__(self, value):
+        value = value.lower()
+        if not value in self.choices:
+            raise ValueError('%r is not a valid choice in %s' % (
+                             value, self.choices))
+        return value
+
+
+class ChoiceCI(object):
+    """
+    Check if the choice is valid (case insensitive version).
+    """
+    def __init__(self, *choices):
+        self.choices = choices
+        self.__name__ = 'ChoiceCI%s' % str(choices)
 
     def __call__(self, value):
         if not value in self.choices:
@@ -90,7 +106,7 @@ class Choice(object):
                              value, self.choices))
         return value
 
-category = Choice('population', 'buildings')
+category = ChoiceCI('population', 'buildings')
 
 
 class Regex(object):
@@ -403,8 +419,9 @@ def levels(imls, imt):
     if len(imls) < 2:
         raise ValueError('Not enough imls for %s: %s' % (imt, imls))
     elif imls != sorted(imls):
-        raise ValueError('The imls for %s are not sorted: %s' %
-                         (imt, imls))
+        raise ValueError('The imls for %s are not sorted: %s' % (imt, imls))
+    elif len(distinct(imls)) < len(imls):
+        raise ValueError("Found duplicated levels for %s: %s" % (imt, imls))
     return imls
 
 
@@ -544,7 +561,7 @@ def ab_values(value):
 
 ################################ site model ##################################
 
-vs30_type = Choice('measured', 'inferred')
+vs30_type = ChoiceCI('measured', 'inferred')
 
 SiteParam = collections.namedtuple(
     'SiteParam', 'z1pt0 z2pt5 measured vs30 lon lat'.split())

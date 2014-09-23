@@ -8,7 +8,8 @@ from openquake.hazardlib import geo, site
 from openquake.nrmllib.node import read_nodes, LiteralNode, context
 from openquake.nrmllib import InvalidFile
 from openquake.commonlib import valid
-from openquake.commonlib.oqvalidation import fragility_files, vulnerability_files
+from openquake.commonlib.oqvalidation import \
+    fragility_files, vulnerability_files
 from openquake.commonlib.converter import Converter
 from openquake.commonlib.source import ValidNode, RuptureConverter
 
@@ -225,7 +226,7 @@ class VulnerabilityNode(LiteralNode):
     validators = valid.parameters(
         vulnerabilitySetID=valid.name,
         vulnerabilityFunctionID=valid.name_with_dashes,
-        assetCategory=valid.Choice('buildings', 'population', 'single_asset'),
+        assetCategory=str,
         lossCategory=valid.name,
         IML=valid.IML,
         lossRatio=valid.positivefloats,
@@ -330,14 +331,16 @@ def get_fragility_sets(fname):
 def _get_imtls_from_vulnerabilities(inputs):
     # return a dictionary imt_str -> imls
     imtls = {}
-    for fname in vulnerability_files(inputs):
+    for loss_type, fname in vulnerability_files(inputs):
         for vset in get_vulnerability_sets(fname):
             imt = vset.imt
             if imt in imtls and imtls[imt] != vset.imls:
-                raise RuntimeError(
-                    'Inconsistent levels for IMT %s: got %s, expected %s in %s'
-                    % (imt, vset.imls, imtls[imt], fname))
-            imtls[imt] = vset.imls
+                logging.warn(
+                    'Different levels for IMT %s: got %s, expected %s in %s',
+                    imt, vset.imls, imtls[imt], fname)
+                imtls[imt] = sorted(set(vset.imls + imtls[imt]))
+            else:
+                imtls[imt] = vset.imls
     return imtls
 
 
@@ -355,8 +358,9 @@ def get_imtls(oqparam):
     elif vulnerability_files(oqparam.inputs):
         imtls = _get_imtls_from_vulnerabilities(oqparam.inputs)
     elif fragility_files(oqparam.inputs):
+        fname = oqparam.inputs['fragility']
         imtls = {str(fset.imt): fset.imls
-                 for fset in get_fragility_sets(oqparam.inputs['fragility'])}
+                 for fset in get_fragility_sets(fname)}
     else:
         raise ValueError('Missing intensity_measure_types_and_levels, '
                          'vulnerability file and fragility file')

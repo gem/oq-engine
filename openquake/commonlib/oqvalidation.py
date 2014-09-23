@@ -21,8 +21,7 @@ from openquake.commonlib import valid
 
 GSIMS = get_available_gsims()
 
-GROUND_MOTION_CORRELATION_MODELS = [
-    'JB2009', 'Jayaram-Baker 2009']
+GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
 
 HAZARD_CALCULATORS = [
     'classical', 'disaggregation', 'event_based', 'scenario']
@@ -44,23 +43,24 @@ KNOWN_VULNERABILITIES = (
 
 def vulnerability_files(inputs):
     """
-    Return a list of path names for the known vulnerability keys.
+    Return a list of pairs (loss_type, path) for the known vulnerability keys
 
     :param inputs: a dictionary key -> path name
     """
-    return [inputs[key] for key in inputs if key in KNOWN_VULNERABILITIES]
+    return [(key.rsplit('_', 1)[0], inputs[key])
+            for key in inputs if key in KNOWN_VULNERABILITIES]
 
 
 def fragility_files(inputs):
     """
-    Return a list of path names for the fragility keys.
+    Return a list of the form [('damage', path)]
 
     :param inputs: a dictionary key -> path name
 
     NB: at the moment there is a single fragility key, so the list
     contains at most one element.
     """
-    return [inputs[key] for key in inputs if key == 'fragility']
+    return [('damage', inputs[key]) for key in inputs if key == 'fragility']
 
 
 class OqParam(valid.ParamSet):
