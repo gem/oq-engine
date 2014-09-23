@@ -1,5 +1,4 @@
 import logging
-import operator
 import collections
 import decimal
 
@@ -62,7 +61,8 @@ def get_site_model(oqparam):
         yield ~node
 
 
-def get_site_collection(oqparam, mesh=None, site_ids=None):
+def get_site_collection(oqparam, mesh=None, site_ids=None,
+                        site_model_params=None):
     """
     Returns a SiteCollection instance by looking at the points and the
     site model defined by the configuration parameters.
@@ -75,18 +75,17 @@ def get_site_collection(oqparam, mesh=None, site_ids=None):
     :param site_ids:
         a list of integers to identify the points; if None, a
         range(1, len(points) + 1) is used
+    :param site_model_params:
+        object with a method ,get_closest returning the closest site
+        model parameters and their distance from each point
     """
     mesh = mesh or get_mesh(oqparam)
     site_ids = site_ids or range(1, len(mesh) + 1)
     if oqparam.inputs.get('site_model'):
         sitecol = []
         exact_matches = 0
-        site_model_param = geo.geodetic.GeographicObjects(
-            get_site_model(oqparam),
-            getlon=operator.itemgetter(4),
-            getlat=operator.itemgetter(5))
         for i, pt in zip(site_ids, mesh):
-            param, dist = site_model_param.\
+            param, dist = site_model_params.\
                 get_closest(pt.longitude, pt.latitude)
             exact_matches += dist is 0
             sitecol.append(site.Site(pt, param.vs30, param.measured,
