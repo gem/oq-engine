@@ -157,6 +157,12 @@ SiteParams = collections.namedtuple("SiteParams", 'z1pt0 z2pt5 measured vs30')
 class SiteModelParams(object):
     """
     Wrapper around the SiteModel table with a method .get_closest
+
+    :param job:
+        a :class:`openquake.engine.db.models.OqJob` instance
+    :param site_model_objects:
+        an iterable over objects with attributes
+        vs30, measured, z1pt0, z2pt5, lon, lat
     """
     def __init__(self, job, site_model_objects):
         self.job = job
@@ -171,6 +177,13 @@ class SiteModelParams(object):
         writer.CacheInserter.saveall(data)
 
     def get_closest(self, lon, lat):
+        """
+        :param lon: a given longitude
+        :param lat: a given latitude
+        :returns:
+           a pair (site_params, dist) where `site_params` is the closest
+           set of site model parameters to the given longitude and latitude
+        """
         cursor = models.getcursor('job_init')
         query = """\
         SELECT s.z1pt0, s.z2pt5, s.vs30_type='measured', s.vs30,
@@ -352,7 +365,13 @@ class BaseHazardCalculator(base.Calculator):
 
         self.imtls = getattr(self.hc, 'intensity_measure_types_and_levels', {})
         n_sites = len(self.site_collection)
-        if not None in self.imtls.values():
+
+        # the imtls dictionary has values None when the levels are unknown
+        # (this is a valid case for the event based hazard calculator)
+        if None in self.imtls.values():  # there are no levels
+            n_imts = len(self.hc.intensity_measure_types)
+            n_levels = 0
+        else:  # there are levels
             n_imts = float(len(self.imtls))
             n_levels = sum(len(lvls) for lvls in self.imtls.itervalues()
                            ) / n_imts
@@ -363,9 +382,6 @@ class BaseHazardCalculator(base.Calculator):
                          for imt in sorted(self.imtls)]
             logs.LOG.info('%d IMT, %s level(s) and %d site(s)',
                           n_imts, n_levels, n_sites)
-        else:
-            n_imts = len(self.hc.intensity_measure_types)
-            n_levels = 0
 
         # The output weight is a pure number which is proportional to the size
         # of the expected output of the calculator. For classical and disagg

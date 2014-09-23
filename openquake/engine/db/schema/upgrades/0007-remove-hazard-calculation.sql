@@ -66,9 +66,6 @@ DROP TABLE uiapi.hazard_calculation;
 CREATE INDEX hzrdi_site_model_location_idx
 ON hzrdi.site_model USING GIST(location);
 
-
-GRANT SELECT,INSERT,UPDATE ON uiapi.job_param TO oq_job_init;
-
 -- add a forgotten ON DELETE CASCADE on job_info
 ALTER TABLE uiapi.job_info
 DROP CONSTRAINT job_info_oq_job_id_fkey,
