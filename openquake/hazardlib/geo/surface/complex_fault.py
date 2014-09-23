@@ -99,7 +99,7 @@ class ComplexFaultSurface(BaseQuadrilateralSurface):
         return self.strike
 
     @classmethod
-    def _check_aki_richards_convention(cls, edges):
+    def check_aki_richards_convention(cls, edges):
         """
         Verify that surface (as defined by corner points) conforms with Aki and
         Richard convention (i.e. surface dips right of surface strike)
@@ -183,7 +183,7 @@ class ComplexFaultSurface(BaseQuadrilateralSurface):
 
         # define reference plane. Corner points are separated by an arbitrary
         # distance of 10 km. The mesh spacing is set to 2 km. Both corner
-        # distance and mesh spacing valuesdo not affect the algorithm results.
+        # distance and mesh spacing values do not affect the algorithm results.
         ul = edges[0].points[0]
         strike = ul.azimuth(edges[0].points[-1])
         dist = 10.
@@ -221,7 +221,7 @@ class ComplexFaultSurface(BaseQuadrilateralSurface):
             raise ValueError("mesh spacing must be positive")
 
         cls.check_surface_validity(edges)
-        cls._check_aki_richards_convention(edges)
+        cls.check_aki_richards_convention(edges)
 
     @classmethod
     def from_fault_data(cls, edges, mesh_spacing):
