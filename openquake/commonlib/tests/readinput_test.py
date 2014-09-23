@@ -4,7 +4,8 @@ import unittest
 from StringIO import StringIO
 
 from openquake.hazardlib import geo
-from openquake.commonlib.readinput import SiteParam, get_site_model
+from openquake.commonlib.readinput import get_site_model
+from openquake.commonlib.valid import SiteParam
 
 
 class ClosestSiteModelTestCase(unittest.TestCase):

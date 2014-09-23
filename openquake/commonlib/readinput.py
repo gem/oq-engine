@@ -4,10 +4,11 @@ import decimal
 
 import numpy
 
-from openquake.hazardlib import geo, site, imt
-from openquake.nrmllib.node import read_nodes, LiteralNode
+from openquake.hazardlib import geo, site
+from openquake.nrmllib.node import read_nodes, LiteralNode, context
+from openquake.nrmllib import InvalidFile
 from openquake.commonlib import valid
-from openquake.commonlib.readini import parse_config
+from openquake.commonlib.oqvalidation import fragility_files, vulnerability_files
 from openquake.commonlib.converter import Converter
 from openquake.commonlib.source import ValidNode, RuptureConverter
 
@@ -224,10 +225,9 @@ class VulnerabilityNode(LiteralNode):
     validators = valid.parameters(
         vulnerabilitySetID=valid.name,
         vulnerabilityFunctionID=valid.name,
-        assetCategory=valid.Choice('buildings', 'population'),
+        assetCategory=valid.Choice('buildings', 'population', 'single_asset'),
         lossCategory=valid.name,
-        IML=valid.positivefloats,
-        IMT=valid.intensity_measure_types,
+        IML=valid.IML,
         lossRatio=valid.positivefloats,
         coefficientsVariation=valid.positivefloats,
     )
@@ -239,37 +239,41 @@ VFunction = collections.namedtuple(
     'VFunction', 'id lossRatio coefficientsVariation'.split())
 
 
-def get_vulnerability_sets(oqparam):
+def filter_vset(elem):
+    return elem.tag.endswith('discreteVulnerabilitySet')
+
+
+def get_vulnerability_sets(fname):
     """
     Yields VSet namedtuples, each containing imt, imls and
     vulnerability functions.
 
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param fname:
+        path of the vulnerability filter
     """
-    def filter(elem):
-        return elem.tag.endswith('discreteVulnerabilitySet')
-
     imts = set()
-    fname = oqparam.inputs['fragility']
-    for vset in read_nodes(fname, filter, VulnerabilityNode):
-        imt_str = str(imt.from_string(vset.imt['IMT']))
+    for vset in read_nodes(fname, filter_vset, VulnerabilityNode):
+        imt_str, imls, min_iml, max_iml = ~vset.IML
         if imt_str in imts:
-            raise ValueError('Duplicated IMT in %s: %s' % (fname, imt_str))
+            raise InvalidFile('Duplicated IMT %s: %s, line %d' %
+                              (imt_str, fname, vset.imt.lineno))
         imts.add(imt_str)
-        imls = ~vset
         vfuns = []
-        for vfun in vset:
-            vf = VFunction(vfun['vulnerabilityFunctionID'],
-                           ~vfun.lossRatio, ~vfun.coefficientsVariation)
+        for vfun in vset.getnodes('discreteVulnerability'):
+            with context(fname, vfun):
+                vf = VFunction(vfun['vulnerabilityFunctionID'],
+                               ~vfun.lossRatio, ~vfun.coefficientsVariation)
             if len(vf.lossRatio) != len(imls):
-                raise ValueError('There are %d loss ratios, but %d imls' %
-                                 (len(vf.lossRatio), len(imls)))
+                raise InvalidFile(
+                    'There are %d loss ratios, but %d imls: %s, line %d' %
+                    (len(vf.lossRatio), len(imls), fname, vf.lossRatio.lineno))
             elif len(vf.coefficientsVariation) != len(imls):
-                raise ValueError('There are %d coefficients, but %d imls' %
-                                 (len(vf.coefficientsVariation), len(imls)))
+                raise InvalidFile(
+                    'There are %d coefficients, but %d imls: %s, line %d' %
+                    (len(vf.coefficientsVariation), len(imls), fname,
+                     vf.coefficientsVariation.lineno))
             vfuns.append(vf)
-        yield VSet(imt, imls, vfuns)
+        yield VSet(imt_str, imls, vfuns)
 
 
 class FragilityNode(LiteralNode):
@@ -278,25 +282,67 @@ class FragilityNode(LiteralNode):
         vulnerabilityFunctionID=valid.name,
         format=valid.Choice('discrete', 'continuous'),
         lossCategory=valid.name,
-        IML=valid.positivefloats,
-        IMT=valid.intensity_measure_types,
+        IML=valid.IML,
+        params=valid.fragilityparams,
         lossRatio=valid.positivefloats,
         coefficientsVariation=valid.positivefloats,
+        limitStates=valid.namelist,
+        description=valid.utf8,
+        type=valid.Choice('lognormal'),
+        poEs=valid.probabilities,
+        noDamageLimit=valid.positivefloat,
     )
 
 
-def get_fragility_sets(oqparam):
+FSet = collections.namedtuple(
+    'FSet', ['imt', 'imls', 'min_iml', 'max_iml', 'taxonomy', 'nodamagelimit',
+             'limit_states', 'ffunctions'])
+
+FFunction = collections.namedtuple(
+    'FFunction', 'limit_state params poes'.split())
+
+
+def get_fragility_sets(fname):
     """
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param fname:
+        path of the fragility file
     """
-    fmodel = read_nodes(oqparam.inputs['fragility'],
-                        lambda el: el.tag.endswith('fragilityModel'),
-                        FragilityNode).next()
-    if fmodel['format'] == 'discrete':
-        pass
-    if fmodel['format'] == 'continuous':
-        pass
+    [fmodel] = read_nodes(
+        fname, lambda el: el.tag.endswith('fragilityModel'), FragilityNode)
+    # ~fmodel.description is ignored
+    limit_states = ~fmodel.limitStates
+    tag = 'ffc' if fmodel['format'] == 'continuous' else 'ffd'
+    for ffs in fmodel.getnodes('ffs'):
+        nodamage = ffs.attrib.get('noDamageLimit')
+        taxonomy = ~ffs.taxonomy
+        imt_str, imls, min_iml, max_iml = ~ffs.IML
+        fset = []
+        lstates = []
+        for ff in ffs.getnodes(tag):
+            lstates.append(ff['ls'])
+            if tag == 'ffc':
+                fset.append(FFunction(ff['ls'], ~ff.params, None))
+            else:
+                fset.append(FFunction(ff['ls'], None, ~ff.poEs))
+        if lstates != limit_states:
+            raise InvalidFile("Expected limit states %s, got %s in %s" %
+                             (limit_states, lstates, fname))
+        yield FSet(imt_str, imls, min_iml, max_iml, taxonomy, nodamage,
+                   limit_states, fset)
+
+
+def _get_imtls_from_vulnerabilities(inputs):
+    # return a dictionary imt_str -> imls
+    imtls = {}
+    for fname in vulnerability_files(inputs):
+        for vset in get_vulnerability_sets(fname):
+            imt = vset.imt
+            if imt in imtls and imtls[imt] != vset.imls:
+                raise RuntimeError(
+                    'Inconsistent levels for IMT %s: got %s, expected %s in %s'
+                    % (imt, vset.imls, imtls[imt], fname))
+            imtls[imt] = vset.imls
+    return imtls
 
 
 def get_imtls(oqparam):
@@ -306,28 +352,32 @@ def get_imtls(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    if hasattr(oqparam, 'intensity_measure_types_and_levels'):
-        return oqparam.intensity_measure_types_and_levels
-    elif 'vulnerability' in oqparam.inputs:
-        return {str(vset.imt): vset.imls
-                for vset in get_vulnerability_sets(oqparam)}
-    elif 'fragility' in oqparam.inputs:
-        return {str(fset.imt): fset.imls
-                for fset in get_fragility_sets(oqparam)}
+    if hasattr(oqparam, 'intensity_measure_types'):
+        imtls = dict.fromkeys(oqparam.intensity_measure_types)
+    elif hasattr(oqparam, 'intensity_measure_types_and_levels'):
+        imtls = oqparam.intensity_measure_types_and_levels
+    elif vulnerability_files(oqparam.inputs):
+        imtls = _get_imtls_from_vulnerabilities(oqparam.inputs)
+    elif fragility_files(oqparam.inputs):
+        imtls = {str(fset.imt): fset.imls
+                 for fset in get_fragility_sets(oqparam.inputs['fragility'])}
     else:
         raise ValueError('Missing intensity_measure_types_and_levels, '
                          'vulnerability file and fragility file')
+    return imtls
 
 
 # used for debugging
 if __name__ == '__main__':
     import sys
+    from openquake.commonlib.readini import parse_config
     with open(sys.argv[1]) as ini:
         oqparam = parse_config(ini)
     #print get_site_collection(oqparam)
     #site_model = get_site_model(oqparam)
     #for x in site_model:
     #    print x
-    print list(get_gsim_lt(oqparam))
-
-    print list(get_source_model_lt(oqparam))
+    #print list(get_gsim_lt(oqparam))
+    #print list(get_source_model_lt(oqparam))
+    for x in get_fragility_sets(oqparam.inputs['fragility']):
+        print x

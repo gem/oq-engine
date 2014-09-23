@@ -4,6 +4,7 @@ from lxml import etree
 
 from openquake import nrmllib
 from openquake.commonlib.oqvalidation import OqParam
+from openquake.commonlib.readinput import get_imtls
 
 
 def _collect_source_model_paths(smlt):
@@ -71,9 +72,16 @@ def parse_config(source, hazard_calculation_id=None, hazard_output_id=None):
             os.path.join(base_path, src_path)
             for src_path in _collect_source_model_paths(smlt)]
 
+    # check for obsolete calculation_mode
     is_risk = hazard_calculation_id or hazard_output_id
     cmode = params['calculation_mode']
     if is_risk and cmode in ('classical', 'event_based', 'scenario'):
         raise ValueError('Please change calculation_mode=%s into %s_risk '
                          'in the .ini file' % (cmode, cmode))
-    return OqParam(**params)
+
+    oqparam = OqParam(**params)
+
+    # load intensity measure types and levels
+    oqparam.intensity_measure_types_and_levels = get_imtls(oqparam)
+
+    return oqparam

@@ -36,6 +36,32 @@ EXPERIMENTAL_CALCULATORS = [
 
 CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS + EXPERIMENTAL_CALCULATORS
 
+KNOWN_VULNERABILITIES = (
+    'structural_vulnerability', 'nonstructural_vulnerability',
+    'contents_vulnerability', 'business_interruption_vulnerability',
+    'occupants_vulnerability', 'structural_vulnerability_retrofitted')
+
+
+def vulnerability_files(inputs):
+    """
+    Return a list of path names for the known vulnerability keys.
+
+    :param inputs: a dictionary key -> path name
+    """
+    return [inputs[key] for key in inputs if key in KNOWN_VULNERABILITIES]
+
+
+def fragility_files(inputs):
+    """
+    Return a list of path names for the fragility keys.
+
+    :param inputs: a dictionary key -> path name
+
+    NB: at the moment there is a single fragility key, so the list
+    contains at most one element.
+    """
+    return [inputs[key] for key in inputs if key == 'fragility']
+
 
 class OqParam(valid.ParamSet):
     params = valid.parameters(
@@ -172,18 +198,16 @@ class OqParam(valid.ParamSet):
     def is_valid_imtls(self):
         """
         If the IMTs and levels are extracted from the risk models,
-        they must not be set directly.
+        they must not be set directly. Moreover, if
+        `intensity_measure_types_and_levels` is set directly,
+        `intensity_measure_types` must not be set.
         """
-        if 'fragility' in self.inputs or 'vulnerabily' in self.inputs:
-            return getattr(
-                self, 'intensity_measure_types_and_levels', None) is None
-        return True
-
-    def is_valid_imts(self):
-        """
-        If the IMTs are extracted from the risk models,
-        they must not be set directly.
-        """
-        if 'fragility' in self.inputs or 'vulnerabily' in self.inputs:
+        if fragility_files(self.inputs) or vulnerability_files(self.inputs):
+            return (
+                getattr(self, 'intensity_measure_types', None) is None
+                and getattr(self, 'intensity_measure_types_and_levels', None
+                            ) is None
+                )
+        elif getattr(self, 'intensity_measure_types_and_levels', None):
             return getattr(self, 'intensity_measure_types', None) is None
         return True

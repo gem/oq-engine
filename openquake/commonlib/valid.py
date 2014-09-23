@@ -340,6 +340,33 @@ def probabilities(value):
     return map(probability, value.replace(',', ' ').split())
 
 
+def IML(value, IMT, minIML=None, maxIML=None, imlUnit=None):
+    """
+    Convert a node of the form
+
+    <IML IMT="PGA" imlUnit="g" minIML="0.02" maxIML="1.5"/>
+
+    into ("PGA", None, 0.02, 1.5) and a node
+
+    <IML IMT="MMI" imlUnit="g">7 8 9 10 11</IML>
+
+    into ("MMI", [7., 8., 9., 10., 11.], None, None)
+    """
+    imt_str = str(imt.from_string(IMT))
+    imls = levels(positivefloats(value), imt_str) if value else None
+    min_iml = positivefloat(minIML) if minIML else None
+    max_iml = positivefloat(maxIML) if maxIML else None
+    return (imt_str, imls, min_iml, max_iml)
+
+
+def fragilityparams(value, mean, stddev):
+    """
+    Convert a node of the form <params mean="0.30" stddev="0.16" /> into
+    a pair (0.30, 0.16)
+    """
+    return float_(mean), positivefloat(stddev)
+
+
 def intensity_measure_types(value):
     """
     :param value: input string
@@ -362,6 +389,23 @@ def intensity_measure_types(value):
     return imts
 
 
+def levels(imls, iml):
+    """
+    >>> levels([0.1, 0.2], 'PGA')
+    [0.1, 0.2]
+    >>> levels([0.2, 0.1], 'PGA')
+    Traceback (most recent call last):
+       ...
+    ValueError: The imls for PGA are not sorted: [0.2, 0.1]
+    """
+    if len(imls) < 2:
+        raise ValueError('Not enough imls for %s: %s' % (imt, imls))
+    elif imls != sorted(imls):
+        raise ValueError('The imls for %s are not sorted: %s' %
+                         (imt, imls))
+    return imls
+
+
 def intensity_measure_types_and_levels(value):
     """
     :param value: input string
@@ -377,12 +421,7 @@ def intensity_measure_types_and_levels(value):
     """
     dic = dictionary(value)
     for imt, imls in dic.iteritems():
-        if len(imls) < 2:
-            raise ValueError('Not enough imls for %s: %s' % (imt, imls))
-        map(positivefloat, imls)
-        if imls != sorted(imls):
-            raise ValueError('The imls for %s are not sorted: %s' %
-                             (imt, imls))
+        levels(imls, imt)  # ValueError if the levels are invalid
     return dic
 
 
