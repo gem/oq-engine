@@ -356,18 +356,6 @@ class OqJob(djm.Model):
         for name, value in params.iteritems():
             JobParam.objects.create(job=self, name=name, value=repr(value))
 
-    def save_param(self, **name_vals):
-        """
-        Update parameters in JobParam, or create them, if needed
-        """
-        for name, value in name_vals.iteritems():
-            jplist = list(JobParam.objects.filter(job=self, name=name))
-            if jplist:  # update an existing parameter
-                jplist[0].value = repr(value)
-                jplist[0].save()
-            else:  # add new parameter
-                JobParam.objects.create(job=self, name=name, value=repr(value))
-
     def __repr__(self):
         return '<%s %d, %s>' % (self.__class__.__name__,
                                 self.id, self.job_type)
