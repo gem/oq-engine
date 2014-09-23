@@ -48,7 +48,7 @@ from openquake.hazardlib.site import (
 
 from openquake.commonlib.general import distinct
 from openquake.commonlib.riskloaders import loss_type_to_cost_type
-from openquake.commonlib.readinput import get_mesh
+from openquake.commonlib.readinput import get_mesh, get_imtls
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import logictree
 
@@ -121,10 +121,6 @@ INPUT_TYPE_CHOICES = (
     (u'structural_vulnerability_retrofitted',
      u'Structural Vulnerability Retrofitted'))
 
-
-VULNERABILITY_TYPE_CHOICES = [choice[0]
-                              for choice in INPUT_TYPE_CHOICES
-                              if choice[0].endswith('vulnerability')]
 
 RAISE_EXC = object()  # sentinel used in OqJob.get_param
 
@@ -448,18 +444,13 @@ class HazardCalculation(object):
             self.oqjob = OqJob.objects.get(pk=job)
         else:
             self.oqjob = job
-        params = vars(self.oqjob.get_oqparam())
+        self.oqparam = self.oqjob.get_oqparam()
+        params = vars(self.oqparam)
         collisions = set(params) & set(dir(self))
         if collisions:
             raise NameError('The parameters %s will override attributes '
                             'of HazardCalculation instances' % collisions)
         vars(self).update(params)
-
-    @property
-    def vulnerability_models(self):
-        return [self.inputs[vf_type]
-                for vf_type in VULNERABILITY_TYPE_CHOICES
-                if vf_type in self.inputs]
 
     def save_hazard_sites(self):
         """
@@ -491,9 +482,7 @@ class HazardCalculation(object):
         Returns intensity mesure types or intensity mesure types with levels
         in a fixed order.
         """
-        imts = getattr(self, 'intensity_measure_types', None) or \
-            self.intensity_measure_types_and_levels
-        return sorted(imts)
+        return sorted(get_imtls(self.oqparam))
 
     # this is used in the tests, see helpers.py
     def save_sites(self, coords):

@@ -38,7 +38,8 @@ from openquake.nrmllib.risk import parsers
 
 from openquake.commonlib import logictree, source
 from openquake.commonlib.general import split_in_blocks, distinct
-from openquake.commonlib.readinput import get_site_collection, get_site_model
+from openquake.commonlib.readinput import (
+    get_site_collection, get_site_model, get_imtls)
 
 from openquake.engine.input import exposure
 from openquake.engine import logs
@@ -351,7 +352,7 @@ class BaseHazardCalculator(base.Calculator):
 
         self.imtls = getattr(self.hc, 'intensity_measure_types_and_levels', {})
         n_sites = len(self.site_collection)
-        if self.imtls:
+        if not None in self.imtls.values():
             n_imts = float(len(self.imtls))
             n_levels = sum(len(lvls) for lvls in self.imtls.itervalues()
                            ) / n_imts
@@ -484,82 +485,14 @@ class BaseHazardCalculator(base.Calculator):
         is one) and the imt (and levels) will be extracted from the
         vulnerability model (if there is one)
         """
-        hc = self.hc
-        if hc.vulnerability_models:
-            logs.LOG.progress("parsing risk models")
-
-            hc.intensity_measure_types_and_levels = dict()
-            hc.intensity_measure_types = list()
-
-            for vf in hc.vulnerability_models:
-                intensity_measure_types_and_levels = dict(
-                    (record['IMT'], record['IML']) for record in
-                    parsers.VulnerabilityModelParser(vf))
-
-                for imt, levels in \
-                        intensity_measure_types_and_levels.items():
-                    if (imt in hc.intensity_measure_types_and_levels and
-                        (set(hc.intensity_measure_types_and_levels[imt]) -
-                         set(levels))):
-                        logs.LOG.warning(
-                            "The same IMT %s is associated with "
-                            "different levels" % imt)
-                    else:
-                        hc.intensity_measure_types_and_levels[imt] = levels
-
-                hc.intensity_measure_types.extend(
-                    intensity_measure_types_and_levels)
-
-            # remove possible duplicates
-            if hc.intensity_measure_types is not None:
-                hc.intensity_measure_types = list(set(
-                    hc.intensity_measure_types))
-            self.job.save_param(
-                intensity_measure_types_and_levels=
-                hc.intensity_measure_types_and_levels)
-            logs.LOG.info("Got IMT and levels "
-                          "from vulnerability models: %s - %s" % (
-                              hc.intensity_measure_types_and_levels,
-                              hc.intensity_measure_types))
-
-        if 'fragility' in hc.inputs:
-            hc.intensity_measure_types_and_levels = dict()
-            hc.intensity_measure_types = list()
-
-            parser = iter(parsers.FragilityModelParser(
-                hc.inputs['fragility']))
-
-            fragility_format, _limit_states = parser.next()
-
-            if (fragility_format == "continuous" and
-                    hc.calculation_mode != "scenario"):
-                raise NotImplementedError(
-                    "Getting IMT and levels from "
-                    "a continuous fragility model is not yet supported")
-
-            hc.intensity_measure_types_and_levels = dict(
-                (iml['IMT'], iml['imls'])
-                for _taxonomy, iml, _params, _no_damage_limit in parser)
-            hc.intensity_measure_types.extend(
-                hc.intensity_measure_types_and_levels)
-            self.job.save_param(
-                intensity_measure_types_and_levels=
-                hc.intensity_measure_types_and_levels)
-
-        if 'exposure' in hc.inputs:
+        oqparam = self.job.get_oqparam()
+        imtls = get_imtls(oqparam)
+        if 'exposure' in oqparam.inputs:
             with logs.tracing('storing exposure'):
                 exposure.ExposureDBWriter(
                     self.job).serialize(
-                    parsers.ExposureModelParser(hc.inputs['exposure']))
-
-        # save IMTs
-        imt_strings = hc.get_imts()
-        # distinct is here to make sure that IMTs such as
-        # SA(0.8) and SA(0.80) are considered the same
-        imts = distinct(map(from_string, imt_strings))
-        if len(imt_strings) > imts:
-            logs.LOG.warn('Found duplicated IMTs: %s', imt_strings)
-        models.Imt.save_new(imts)
+                    parsers.ExposureModelParser(oqparam.inputs['exposure']))
+        models.Imt.save_new(map(from_string, imtls))
 
     @EnginePerformanceMonitor.monitor
     def initialize_site_collection(self):
