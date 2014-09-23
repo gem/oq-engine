@@ -227,6 +227,34 @@ def build_curves(rlz, curves_by_trt_model_gsim):
     return curves
 
 
+## Tables in the 'hzrdi' (Hazard Input) schema.
+
+class SiteModel(djm.Model):
+    '''
+    A model for site-specific parameters, used in hazard calculations.
+    '''
+    job = djm.ForeignKey('OqJob')
+    # Average shear wave velocity for top 30 m. Units m/s.
+    vs30 = djm.FloatField()
+    # 'measured' or 'inferred'
+    vs30_type = djm.TextField(choices=VS30_TYPE_CHOICES)
+    # Depth to shear wave velocity of 1.0 km/s. Units m.
+    z1pt0 = djm.FloatField()
+    # Depth to shear wave velocity of 2.5 km/s. Units km.
+    z2pt5 = djm.FloatField()
+    location = djm.PointField(srid=DEFAULT_SRID)
+
+    def __repr__(self):
+        return (
+            'SiteModel(location="%s", vs30=%s, vs30_type=%s, z1pt0=%s, '
+            'z2pt5=%s)'
+            % (self.location.wkt, self.vs30, self.vs30_type, self.z1pt0,
+               self.z2pt5))
+
+    class Meta:
+        db_table = 'hzrdi\".\"site_model'
+
+
 ## Tables in the 'uiapi' schema.
 
 class OqJob(djm.Model):
@@ -415,8 +443,6 @@ class HazardCalculation(object):
     '''
     Small wrapper around oqparam instances
     '''
-    _site_collection = ()  # see the corresponding instance variable
-
     def __init__(self, job):
         if isinstance(job, (int, long, str)):  # passed the job_id
             self.oqjob = OqJob.objects.get(pk=job)
