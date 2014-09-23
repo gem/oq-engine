@@ -78,7 +78,7 @@ CREATE TABLE hzrdi.imt(
 CREATE TABLE uiapi.oq_job (
     id SERIAL PRIMARY KEY,
     user_name VARCHAR NOT NULL,
-    hazard_calculation_id INTEGER,
+    hazard_calculation_id INTEGER,  -- FK to uiapi.hazard_calculation
     risk_calculation_id INTEGER,  -- FK to uiapi.risk_calculation
     log_level VARCHAR NOT NULL DEFAULT 'progress' CONSTRAINT oq_job_log_level_check
         CHECK(log_level IN ('debug', 'info', 'progress', 'warn', 'error', 'critical')),
