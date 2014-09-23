@@ -44,26 +44,6 @@ class OQRouterTestCase(unittest.TestCase):
         for cls in classes:
             self.assertEqual(expected_db, self.router.db_for_write(cls()))
 
-    def test_admin_correct_read_db(self):
-        '''
-        For each model in the 'admin' schema, test for proper db routing
-        for read operations.
-        '''
-        classes = [oq.RevisionInfo]
-        expected_db = 'admin'
-
-        self._db_for_read_helper(classes, expected_db)
-
-    def test_admin_correct_write_db(self):
-        '''
-        For each model in the 'admin' schema, test for proper db routing
-        for write operations.
-        '''
-        classes = [oq.RevisionInfo]
-        expected_db = 'admin'
-
-        self._db_for_write_helper(classes, expected_db)
-
     def test_uiapi_read_schema(self):
         '''
         For each model in the 'uiapi' schema, test for proper db routing
