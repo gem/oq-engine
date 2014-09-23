@@ -389,7 +389,7 @@ def intensity_measure_types(value):
     return imts
 
 
-def levels(imls, iml):
+def levels(imls, imt):
     """
     >>> levels([0.1, 0.2], 'PGA')
     [0.1, 0.2]
