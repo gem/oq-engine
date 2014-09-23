@@ -24,6 +24,8 @@ import itertools
 import collections
 from operator import attrgetter
 
+from django.contrib.gis.geos.point import Point
+
 import numpy
 
 from openquake.hazardlib.imt import from_string
@@ -36,7 +38,7 @@ from openquake.nrmllib.risk import parsers
 
 from openquake.commonlib import logictree, source
 from openquake.commonlib.general import split_in_blocks, distinct
-from openquake.commonlib.readinput import get_site_collection
+from openquake.commonlib.readinput import get_site_collection, get_site_model
 
 from openquake.engine.input import exposure
 from openquake.engine import logs
@@ -146,6 +148,39 @@ class AllSources(object):
         Return the total weight of the sources
         """
         return sum(self.weight.itervalues())
+
+
+SiteParams = collections.namedtuple("SiteParams", 'z1pt0 z2pt5 measured vs30')
+
+
+class SiteModelParams(object):
+    """
+    Wrapper around the SiteModel table with a method .get_closest
+    """
+    def __init__(self, job, site_model_objects):
+        self.job = job
+        data = [models.SiteModel(
+                vs30=obj.vs30,
+                vs30_type='measured' if obj.measured else 'inferred',
+                z1pt0=obj.z1pt0,
+                z2pt5=obj.z2pt5,
+                location=Point(obj.lon, obj.lat),
+                job_id=job.id)
+                for obj in site_model_objects]
+        writer.CacheInserter.saveall(data)
+
+    def get_closest(self, lon, lat):
+        cursor = models.getcursor('job_init')
+        query = """\
+        SELECT s.z1pt0, s.z2pt5, s.vs30_type='measured', s.vs30,
+               min(ST_Distance_Sphere(
+                  location, 'SRID=4326; POINT(%s %s)')) AS min_dist
+        FROM hzrdi.site_model AS s
+        WHERE job_id = %d GROUP BY id
+        ORDER BY min_dist LIMIT 1;""" % (lon, lat, self.job.id)
+        cursor.execute(query)
+        [(z1pt0, z2pt5, measured, vs30, dist)] = cursor.fetchall()
+        return SiteParams(z1pt0, z2pt5, measured, vs30), dist
 
 
 class BaseHazardCalculator(base.Calculator):
@@ -537,8 +572,14 @@ class BaseHazardCalculator(base.Calculator):
             raise RuntimeError('No sites were imported!')
 
         logs.LOG.progress("initializing site collection")
+        oqparam = self.job.get_oqparam()
+        if 'site_model' in oqparam.inputs:
+            sm_params = SiteModelParams(
+                self.job, get_site_model(oqparam))
+        else:
+            sm_params = None
         self.site_collection = get_site_collection(
-            self.job.get_oqparam(), points, site_ids)
+            oqparam, points, site_ids, sm_params)
 
     def get_max_realizations(self):
         """
