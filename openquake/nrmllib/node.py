@@ -201,6 +201,7 @@ import sys
 import pprint as pp
 import cStringIO
 import ConfigParser
+from contextlib import contextmanager
 
 from openquake import nrmllib
 from openquake.nrmllib.writers import StreamingXMLWriter
@@ -705,3 +706,21 @@ def node_copy(node, nodefactory=Node):
     """Make a deep copy of the node"""
     return nodefactory(node.tag, node.attrib.copy(), node.text,
                        [node_copy(n, nodefactory) for n in node])
+
+
+@contextmanager
+def context(fname, node):
+    """
+    Context manager managing exceptions and adding line number of the
+    current node and name of the current file to the error message.
+
+    :param fname: the current file being processed
+    :param node: the current node being processed
+    """
+    try:
+        yield node
+    except:
+        etype, exc, tb = sys.exc_info()
+        msg = 'node %s: %s, line %s of %s' % (
+            node.tag, exc, node.lineno, fname)
+        raise etype, msg, tb
