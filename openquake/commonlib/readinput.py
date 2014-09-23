@@ -224,7 +224,7 @@ class VulnerabilityNode(LiteralNode):
     """
     validators = valid.parameters(
         vulnerabilitySetID=valid.name,
-        vulnerabilityFunctionID=valid.name,
+        vulnerabilityFunctionID=valid.name_with_dashes,
         assetCategory=valid.Choice('buildings', 'population', 'single_asset'),
         lossCategory=valid.name,
         IML=valid.IML,
@@ -278,14 +278,10 @@ def get_vulnerability_sets(fname):
 
 class FragilityNode(LiteralNode):
     validators = valid.parameters(
-        vulnerabilitySetID=valid.name,
-        vulnerabilityFunctionID=valid.name,
         format=valid.Choice('discrete', 'continuous'),
         lossCategory=valid.name,
         IML=valid.IML,
         params=valid.fragilityparams,
-        lossRatio=valid.positivefloats,
-        coefficientsVariation=valid.positivefloats,
         limitStates=valid.namelist,
         description=valid.utf8,
         type=valid.Choice('lognormal'),

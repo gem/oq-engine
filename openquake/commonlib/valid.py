@@ -109,6 +109,8 @@ class Regex(object):
 
 name = Regex(r'^[a-zA-Z_]\w*$')
 
+name_with_dashes = Regex(r'^[a-zA-Z_][\w\-]*$')
+
 
 class FloatRange(object):
     def __init__(self, minrange, maxrange):
