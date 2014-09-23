@@ -62,8 +62,9 @@ ON r.id=o.risk_calculation_id;
 
 DROP TABLE uiapi.hazard_calculation;
 
--- drop the site_model table, now useless
-DROP TABLE hzrdi.site_model;
+-- add a forgotten geospatial index on site_model
+CREATE INDEX hzrdi_site_model_location_idx
+ON hzrdi.site_model USING GIST(location);
 
 
 GRANT SELECT,INSERT,UPDATE ON uiapi.job_param TO oq_job_init;
