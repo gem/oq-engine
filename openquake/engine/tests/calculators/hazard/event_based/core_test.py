@@ -127,8 +127,6 @@ class GmfCalculatorTestCase(unittest.TestCase):
              ])
 
 
-
-
 class EventBasedHazardCalculatorTestCase(unittest.TestCase):
     """
     Tests for the core functionality of the event-based hazard calculator.
