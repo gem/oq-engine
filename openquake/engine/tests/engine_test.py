@@ -76,7 +76,7 @@ class JobFromFileTestCase(unittest.TestCase):
         risk_job = engine.job_from_file(risk_cfg, 'test_user',
                                         hazard_output_id=out.id)
         # make sure the hazard job is associated correctly
-        oqjob = risk_job.risk_calculation.get_hazard_calculation().oqjob
+        oqjob = risk_job.risk_calculation.hazard_calculation
         self.assertEqual(oqjob.id, haz_job.id)
 
 
@@ -86,7 +86,7 @@ class CreateRiskCalculationTestCase(unittest.TestCase):
         # we need an hazard output to create a risk calculation
         hazard_cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
         hazard_job = helpers.get_job(hazard_cfg, 'openquake')
-        hc = hazard_job.hazard_calculation
+        hc = hazard_job.get_oqparam()
         lt_model = models.LtSourceModel.objects.create(
             hazard_calculation=hazard_job,
             ordinal=1, sm_lt_path="test_sm")

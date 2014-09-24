@@ -22,6 +22,7 @@ Custom validation module for risk calculators
 """
 
 from openquake.engine.db import models
+from openquake.commonlib.readinput import get_imtls
 
 
 class Validator(object):
@@ -44,7 +45,7 @@ class HazardIMT(Validator):
         model_imts = set()
         for rm in self.calc.risk_models.values():
             model_imts.update(vf.imt for vf in rm.vulnerability_functions)
-        imts = self.calc.hc.get_imts()
+        imts = get_imtls(self.calc.rc.get_hazard_param())
 
         # check that the hazard data have all the imts needed by the
         # risk calculation
@@ -106,9 +107,8 @@ class RequireClassicalHazard(Validator):
     """
     def get_error(self):
         rc = self.calc.rc
-        hc = rc.get_hazard_calculation()
         hazard_output = rc.hazard_outputs()[0]
-        if hc.calculation_mode != 'classical':
+        if rc.get_hazard_param().calculation_mode != 'classical':
             return ("The provided hazard calculation ID "
                     "is not a classical calculation")
         elif not hazard_output.is_hazard_curve():
@@ -122,9 +122,8 @@ class RequireScenarioHazard(Validator):
     """
     def get_error(self):
         rc = self.calc.rc
-        hc = rc.get_hazard_calculation()
         hazard_output = rc.hazard_outputs()[0]
-        if hc.calculation_mode != "scenario":
+        if rc.get_hazard_param().calculation_mode != 'scenario':
             return ("The provided hazard calculation ID "
                     "is not a scenario calculation")
         elif not hazard_output.output_type == "gmf_scenario":
@@ -138,9 +137,8 @@ class RequireEventBasedHazard(Validator):
     """
     def get_error(self):
         rc = self.calc.rc
-        hc = rc.get_hazard_calculation()
         hazard_output = rc.hazard_outputs()[0]
-        if hc.calculation_mode != "event_based":
+        if rc.get_hazard_param().calculation_mode != "event_based":
             return ("The provided hazard calculation ID "
                     "is not a event based calculation")
         if not hazard_output.output_type in ["gmf", "ses"]:
