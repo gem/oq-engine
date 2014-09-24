@@ -91,8 +91,9 @@ def get_site_collection(oqparam, mesh=None, site_ids=None,
             param, dist = site_model_params.\
                 get_closest(pt.longitude, pt.latitude)
             exact_matches += dist is 0
-            sitecol.append(site.Site(pt, param.vs30, param.measured,
-                                     param.z1pt0, param.z2pt5, i))
+            sitecol.append(
+                site.Site(pt, param.vs30, param.vs30_type == 'measured',
+                          param.z1pt0, param.z2pt5, i))
         if exact_matches:
             msg = ('Found %d site model parameters exactly at the hazard '
                    'sites, out of %d total sites' %

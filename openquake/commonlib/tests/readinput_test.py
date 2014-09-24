@@ -1,9 +1,25 @@
-#-*- encoding: utf-8 -*-
+#  -*- coding: utf-8 -*-
+#  vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+#  Copyright (c) 2014, GEM Foundation
+
+#  OpenQuake is free software: you can redistribute it and/or modify it
+#  under the terms of the GNU Affero General Public License as published
+#  by the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+
+#  OpenQuake is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+
+#  You should have received a copy of the GNU Affero General Public License
+#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
 import mock
 import unittest
 from StringIO import StringIO
 
-from openquake.hazardlib import geo
 from openquake.commonlib.readinput import get_site_model
 from openquake.commonlib.valid import SiteParam
 
@@ -31,37 +47,3 @@ class ClosestSiteModelTestCase(unittest.TestCase):
             SiteParam(z1pt0=100.0, z2pt5=2.0, measured=False, vs30=200.0,
                       lon=0.0, lat=0.2)]
         self.assertEqual(list(get_site_model(oqparam)), expected)
-
-    def test_get_closest_site_model_data(self):
-        # This test scenario is the following:
-        # Site model data nodes arranged 2 degrees apart (longitudinally) along
-        # the same parallel (indicated below by 'd' characters).
-        #
-        # The sites of interest are located at (-0.0000001, 0) and
-        # (0.0000001, 0) (from left to right).
-        # Sites of interest are indicated by 's' characters.
-        #
-        # To illustrate, a super high-tech nethack-style diagram:
-        #
-        # -1.........0.........1
-        #  d        s s        d
-
-        sm1 = SiteParam(
-            measured=True, vs30=0.0000001,
-            z1pt0=0.0000001, z2pt5=0.0000001, lon=-1, lat=0)
-        sm2 = SiteParam(
-            measured=False, vs30=0.0000002,
-            z1pt0=0.0000002, z2pt5=0.0000002, lon=1, lat=0)
-
-        siteparams = geo.geodetic.GeographicObjects([sm1, sm2])
-
-        res1 = siteparams.get_closest(-0.0000001, 0)
-        res2 = siteparams.get_closest(0.0000001, 0)
-
-        self.assertEqual(res1, (sm1, 111.19491552506607))
-        self.assertEqual(res2, (sm2, 111.19491552506607))
-
-        # here the first params are taken, even if both sm1 and sm2
-        # are at the same distance from (0, 0)
-        res0 = siteparams.get_closest(0, 0)
-        self.assertEqual(res0, (sm1, 111.19492664455873))
