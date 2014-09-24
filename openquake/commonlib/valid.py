@@ -371,7 +371,8 @@ def IML(value, IMT, minIML=None, maxIML=None, imlUnit=None):
     into ("MMI", [7., 8., 9., 10., 11.], None, None)
     """
     imt_str = str(imt.from_string(IMT))
-    imls = check_levels(positivefloats(value), imt_str) if value else None
+    imls = positivefloats(value)
+    check_levels(imls, imt_str) if value else None
     min_iml = positivefloat(minIML) if minIML else None
     max_iml = positivefloat(maxIML) if maxIML else None
     return (imt_str, imls, min_iml, max_iml)
