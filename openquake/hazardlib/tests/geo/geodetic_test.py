@@ -199,14 +199,14 @@ class GeographicObjectsTest(unittest.TestCase):
         self.points = geodetic.GeographicObjects([p1, p2, p3])
 
     def test_closest(self):
-        point, dist = self.points.get_closest(0.0, 0.21)
+        point = self.points.get_closest(0.0, 0.21)
         self.assertEqual(point, Point(0.0, 0.2))
-        self.assertAlmostEqual(dist, 1.111949266)
+        point = self.points.get_closest(0.0, 0.29)
+        self.assertEqual(point, Point(0.0, 0.3))
 
     def test_exact_point(self):
-        point, dist = self.points.get_closest(0.0, 0.2)
+        point = self.points.get_closest(0.0, 0.2)
         self.assertEqual(point, Point(0.0, 0.2))
-        self.assertIs(dist, 0)
 
 
 class MinDistanceToSegmentTest(unittest.TestCase):
