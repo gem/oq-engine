@@ -153,8 +153,8 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         job = models.OqJob.objects.create(user_name="openquake")
         siteparams = general.SiteModelParams(job, [sm1, sm2])
 
-        res1, _dist1 = siteparams.get_closest(-0.0000001, 0)
-        res2, _dist2 = siteparams.get_closest(0.0000001, 0)
+        res1 = siteparams.get_closest(-0.0000001, 0)
+        res2 = siteparams.get_closest(0.0000001, 0)
 
         self.assertEqual((res1.location.x, res1.location.y),
                          (sm1.lon, sm1.lat))
