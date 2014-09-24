@@ -207,7 +207,7 @@ def compute_disagg(job_id, sitecol, sources, trt_model_id,
         (site.id, rlz.id, poe, imt, iml, trt_names).
     """
     mon = LightMonitor('disagg', job_id, compute_disagg)
-    hc = models.OqJob.objects.get(id=job_id).hazard_calculation
+    hc = models.oqparam(job_id)
     trt_model = models.TrtModel.objects.get(pk=trt_model_id)
     gsims = trt_model.get_gsim_instances()
     lt_model_id = trt_model.lt_model.id
