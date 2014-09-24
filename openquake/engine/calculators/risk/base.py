@@ -36,9 +36,6 @@ from openquake.engine.utils import config, tasks
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.input.exposure import ExposureDBWriter
 
-
-BLOCK_SIZE = 100  # number of assets per block
-
 MEMORY_ERROR = '''Running the calculation will require approximately
 %dM, i.e. more than the memory which is available right now (%dM).
 Please increase the free memory or apply a stringent region
@@ -49,15 +46,16 @@ correlation matrix.'''
 
 
 @tasks.oqtask
-def build_getters(job_id, counts_taxonomy, calc):
+def make_getter_builders(job_id, counts_taxonomy, calc):
     """
+    Initializes the epsilon matrices and save them on the database.
+
     :param job_id:
         ID of the current risk job
     :param counts_taxonomy:
         a sorted list of pairs (counts, taxonomy) for each bunch of assets
-    :param calc:
-        :class:`openquake.engine.calculators.risk.base.RiskCalculator` instance
     """
+    builders = {}  # taxonomy -> builder
     for counts, taxonomy in counts_taxonomy:
         logs.LOG.info('taxonomy=%s, assets=%d', taxonomy, counts)
 
@@ -77,38 +75,54 @@ def build_getters(job_id, counts_taxonomy, calc):
             available_memory = (1 - phymem.percent / 100) * phymem.total
             available_mb = available_memory / 1024 / 1024
             if nbytes * 3 > available_memory:
-                raise MemoryError(MEMORY_ERROR % (estimate_mb, available_mb))
+                raise MemoryError(
+                    MEMORY_ERROR % (estimate_mb, available_mb))
 
         # initializing the epsilons
         builder.init_epsilons(haz_outs)
 
-        # building the tasks
-        task_no = 0
-        name = calc.core_calc_task.__name__ + '[%s]' % taxonomy
-        otm = tasks.OqTaskManager(calc.core_calc_task, logs.LOG.progress, name)
+    builders[builder.taxonomy] = builder
+    return builders
 
-        for offset in range(0, counts, BLOCK_SIZE):
-            with calc.monitor("getting asset chunks"):
-                assets = models.ExposureData.objects.get_asset_chunk(
-                    calc.rc, taxonomy, offset, BLOCK_SIZE)
-            with calc.monitor("building getters"):
-                try:
-                    getters = builder.make_getters(
-                        calc.getter_class, haz_outs, assets)
-                except hazard_getters.AssetSiteAssociationError as err:
-                    # TODO: add a test for this corner case
-                    # https://bugs.launchpad.net/oq-engine/+bug/1317796
-                    logs.LOG.warn('Taxonomy %s: %s', taxonomy, err)
-                    continue
 
-            # submitting task
-            task_no += 1
-            logs.LOG.info('Built task #%d for taxonomy %s', task_no, taxonomy)
-            risk_model = calc.risk_models[taxonomy]
-            otm.submit(job_id, risk_model, getters,
-                       calc.outputdict, calc.calculator_parameters)
+@tasks.oqtask
+def run_risk(job_id, assets, builders, calc):
+    """
+    Run the risk calculation on the given assets by using the given
+    hazard builders and risk calculator.
 
-    return otm
+    :param job_id:
+        ID of the current risk job
+    :param assets:
+        annotated assets
+    :param dict builders:
+        hazard getter builders for each taxonomy
+    :param calc:
+        the risk calculator to use
+    """
+    taxonomy = assets[0].taxonomy
+    haz_outs = calc.rc.hazard_outputs()
+    builder = builders[taxonomy]
+    with calc.monitor("building getters"):
+        try:
+            getters = builder.make_getters(
+                calc.getter_class, haz_outs, assets)
+        except hazard_getters.AssetSiteAssociationError as err:
+            # TODO: add a test for this corner case
+            # https://bugs.launchpad.net/oq-engine/+bug/1317796
+            logs.LOG.warn('Taxonomy %s: %s', builder.taxonomy, err)
+            return {}
+    logs.LOG.info('Processing %d assets of taxonomy %s', len(assets), taxonomy)
+    res = calc.core_calc_task.task_func(
+        job_id, calc.risk_models[taxonomy], getters,
+        calc.outputdict, calc.calculator_parameters)
+    return res
+
+
+def updatedict(acc, dic):
+    a = acc.copy()
+    a.update(dic)
+    return a
 
 
 class RiskCalculator(base.Calculator):
@@ -207,10 +221,21 @@ class RiskCalculator(base.Calculator):
             [ob(self) for ob in self.output_builders])
         ct = sorted((counts, taxonomy) for taxonomy, counts
                     in self.taxonomies_asset_count.iteritems())
+        getter_builders = tasks.apply_reduce(
+            make_getter_builders, (self.job.id, ct, self),
+            updatedict, {}, self.concurrent_tasks)
+        assets = []
+        with self.monitor("getting assets"):
+            # the assets here are annotated and ordered by taxonomy
+            for _counts, taxonomy in ct:
+                annotated = models.ExposureData.objects.get_asset_chunk(
+                    self.rc, taxonomy)
+                assets.extend(annotated)
         self.acc = tasks.apply_reduce(
-            build_getters, (self.job.id, ct, self),
-            lambda acc, otm: otm.aggregate_results(self.agg_result, acc),
-            self.acc, self.concurrent_tasks)
+            run_risk, (self.job.id, assets, getter_builders, self),
+            self.agg_result, self.acc, self.concurrent_tasks,
+            key=lambda asset: asset.taxonomy,
+            name=self.core_calc_task.__name__)
 
     def _get_outputs_for_export(self):
         """

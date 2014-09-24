@@ -120,10 +120,12 @@ def map_reduce(task, task_args, agg, acc, name=None):
 
 
 def apply_reduce(task, task_args,
-                 agg=lambda a, x: x, acc=None,
+                 agg=lambda a, x: x,
+                 acc=None,
                  concurrent_tasks=CONCURRENT_TASKS,
                  weight=lambda item: 1,
-                 key=lambda item: 'Unspecified'):
+                 key=lambda item: 'Unspecified',
+                 name=None):
     """
     Apply a task to a tuple of the form (job_id, data, *args)
     by splitting the data in chunks and reduce the results with an
@@ -146,7 +148,7 @@ def apply_reduce(task, task_args,
         return agg(acc, task.task_func(job_id, data, *args))
     blocks = split_in_blocks(data, concurrent_tasks, weight, key)
     alldata = [(job_id, block) + args for block in blocks]
-    return map_reduce(task, alldata, agg, acc)
+    return map_reduce(task, alldata, agg, acc, name)
 
 
 # used to implement BaseCalculator.parallelize, which takes in account
