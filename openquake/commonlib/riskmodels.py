@@ -17,8 +17,9 @@ class VulnerabilityNode(LiteralNode):
     validators = valid.parameters(
         vulnerabilitySetID=valid.name,
         vulnerabilityFunctionID=valid.name_with_dashes,
-        assetCategory=valid.ChoiceCI(
-            'population', 'buildings', 'single_asset'),
+        assetCategory=str,
+        # the assetCategory here has nothing to do with the category
+        # in the exposure model and it is not used by the engine
         lossCategory=valid.name,
         IML=valid.IML,
         lossRatio=valid.positivefloats,
