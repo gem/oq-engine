@@ -211,7 +211,7 @@ class BaseHazardCalculator(base.Calculator):
         A shorter and more convenient way of accessing the oqparam object
         """
         if self._hc is None:
-            self._hc = models.oqparam(self.job)
+            self._hc = models.oqparam(self.job.id)
         return self._hc
 
     @EnginePerformanceMonitor.monitor
