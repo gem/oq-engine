@@ -26,6 +26,8 @@ from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import SiteCollection
 
+from openquake.commonlib.calc import gen_ruptures_for_site
+
 from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
@@ -222,7 +224,8 @@ def compute_disagg(job_id, sitecol, sources, trt_model_id,
             continue
 
         # generate source, rupture, sites once per site
-        source_ruptures = list(hc.gen_ruptures_for_site(site, sources, mon))
+        source_ruptures = list(
+            gen_ruptures_for_site(site, sources, hc.maximum_distance, mon))
         if not source_ruptures:
             continue
         logs.LOG.info('Collecting bins from %d ruptures close to %s',

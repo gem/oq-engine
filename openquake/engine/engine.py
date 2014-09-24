@@ -192,7 +192,7 @@ def create_calculation(model, params):
     :param dict params:
         Dictionary of parameter names and values. Parameter names should match
         exactly the field names of
-        :class:`openquake.engine.db.model.HazardCalculation`.
+        :class:`openquake.engine.db.model.RiskCalculation`.
     :returns:
         an instance of a newly created `model`
     """
@@ -212,9 +212,7 @@ def run_calc(job, log_level, log_file, exports, job_type):
     Run a calculation.
 
     :param job:
-        :class:`openquake.engine.db.model.OqJob` instance which references a
-        valid :class:`openquake.engine.db.models.RiskCalculation` or
-        :class:`openquake.engine.db.models.HazardCalculation`.
+        :class:`openquake.engine.db.model.OqJob` instance
     :param str log_level:
         The desired logging level. Valid choices are 'debug', 'info',
         'progress', 'warn', 'error', and 'critical'.
@@ -307,7 +305,7 @@ def del_haz_calc(job_id):
     Delete a hazard calculation and all associated outputs.
 
     :param job_id:
-        ID of a :class:`~openquake.engine.db.models.HazardCalculation`.
+        ID of a :class:`~openquake.engine.db.models.OqJob`.
     """
     try:
         job = models.OqJob.objects.get(id=job_id)
@@ -383,7 +381,7 @@ def list_hazard_outputs(hc_id, full=True):
         If True produce a full listing, otherwise a short version
     """
     outputs = get_outputs('hazard', hc_id)
-    hc = models.HazardCalculation(hc_id)
+    hc = models.oqparam(hc_id)
     if hc.calculation_mode == 'scenario':  # ignore SES output
         outputs = outputs.filter(output_type='gmf_scenario')
     print_outputs_summary(outputs, full)

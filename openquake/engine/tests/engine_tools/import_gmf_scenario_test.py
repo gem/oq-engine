@@ -14,7 +14,7 @@ class ImportGMFScenarioTestCase(unittest.TestCase):
         repodir = os.path.dirname(os.path.dirname(nrmllib.__path__[0]))
         fileobj = open(os.path.join(repodir, 'examples', 'gmf-scenario.xml'))
         out = import_gmf_scenario.import_gmf_scenario(fileobj)
-        hc = out.oq_job.hazard_calculation
+        hc = out.oq_job.get_oqparam()
         n = models.GmfData.objects.filter(gmf__output=out).count()
         assert_equal(hc.calculation_mode, 'scenario')
         assert_equal(hc.number_of_ground_motion_fields, n)

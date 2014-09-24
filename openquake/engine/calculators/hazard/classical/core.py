@@ -61,6 +61,8 @@ from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
 
+from openquake.commonlib.calc import gen_ruptures
+
 from openquake.engine import writer
 from openquake.engine.calculators.hazard import general
 from openquake.engine.db import models
@@ -195,7 +197,7 @@ def compute_hazard_curves(
     :param trt_model:
         a :class:`openquake.engine.db.TrtModel` instance
     """
-    hc = models.HazardCalculation(job_id)
+    hc = models.oqparam(job_id)
     total_sites = len(sitecol)
     sitemesh = sitecol.mesh
     sorted_imts = sorted(hc.intensity_measure_types_and_levels)
@@ -221,7 +223,7 @@ def compute_hazard_curves(
     num_sites = 0
     # NB: rows are namedtuples with fields (source, rupture, rupture_sites)
     for source, rows in itertools.groupby(
-            hc.gen_ruptures(sources, mon, sitecol),
+            gen_ruptures(sources, sitecol, hc.maximum_distance, mon),
             key=operator.attrgetter('source')):
         t0 = time.time()
         num_ruptures = 0
