@@ -178,8 +178,7 @@ class SiteModelParams(object):
         :param lon: a given longitude
         :param lat: a given latitude
         :returns:
-           a pair (site_params, dist) where `site_params` is the closest
-           set of site model parameters to the given longitude and latitude
+           the SiteMode record closest to the given longitude and latitude
         """
         query = """\
         SELECT s.*, min(ST_Distance_Sphere(
@@ -188,7 +187,7 @@ class SiteModelParams(object):
         WHERE job_id = %d GROUP BY id
         ORDER BY min_dist LIMIT 1;""" % (lon, lat, self.job.id)
         [sm] = models.SiteModel.objects.raw(query)
-        return sm, sm.min_dist
+        return sm
 
 
 class BaseHazardCalculator(base.Calculator):
