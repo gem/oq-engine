@@ -2926,6 +2926,7 @@ class AssetManager(djm.GeoManager):
 
         query, args = self._get_asset_chunk_query_args(
             rc, taxonomy, offset, size, asset_ids)
+        # print getcursor('job_init').mogrify(query, args)
         with transaction.commit_on_success('job_init'):
             return list(self.raw(query, args))
 
@@ -2935,7 +2936,7 @@ class AssetManager(djm.GeoManager):
         Build a parametric query string and the corresponding args for
         #get_asset_chunk
         """
-        args = (rc.exposure_model.id, taxonomy)
+        args = (rc.oqjob.id, rc.exposure_model.id, taxonomy)
 
         people_field, occupants_cond, occupancy_join, occupants_args = (
             self._get_people_query_helper(
@@ -2960,7 +2961,7 @@ class AssetManager(djm.GeoManager):
             ON riski.exposure_data.id = riski.occupancy.exposure_data_id
             {costs_join}
             INNER JOIN riskr.asset_site
-            ON riskr.asset_site.asset_id=riski.exposure_data.id
+            ON riskr.asset_site.asset_id=riski.exposure_data.id AND job_id=%s
             WHERE exposure_model_id = %s AND
                   taxonomy = %s AND
                   {occupants_cond} AND {assets_cond}
