@@ -535,6 +535,8 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
         return job
 
     del params['intensity_measure_types_and_levels']
+    if params['hazard_calculation_id'] is None:
+        params['hazard_calculation_id'] = haz_job.id
     calculation = create_calculation(models.RiskCalculation, params)
     job.risk_calculation = calculation
     job.save()

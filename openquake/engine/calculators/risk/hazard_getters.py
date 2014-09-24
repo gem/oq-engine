@@ -273,11 +273,14 @@ class GetterBuilder(object):
         self.taxonomy = taxonomy
         self.rc = rc
         self.epsilon_sampling = epsilon_sampling
-        self.hc = rc.get_hazard_calculation()
+        self.hc = rc.hazard_calculation
+        self.calculation_mode = self.hc.get_param('calculation_mode')
+        self.number_of_ground_motion_fields = self.hc.get_param(
+            'number_of_ground_motion_fields', 0)
         max_dist = rc.best_maximum_distance * 1000  # km to meters
         cursor = models.getcursor('job_init')
 
-        hazard_exposure = models.extract_from([self.hc.oqjob], 'exposuremodel')
+        hazard_exposure = models.extract_from([self.hc], 'exposuremodel')
         if self.rc.exposure_model is hazard_exposure:
             # no need of geospatial queries, just join on the location
             self.assoc_query = cursor.mogrify("""\
@@ -291,7 +294,7 @@ WITH assocs AS (
   AND ST_COVERS(ST_GeographyFromText(%s), exp.site)
 )
 INSERT INTO riskr.asset_site (job_id, asset_id, site_id)
-SELECT * FROM assocs""", (rc.oqjob.id, self.hc.oqjob.id,
+SELECT * FROM assocs""", (rc.oqjob.id, self.hc.id,
                           rc.exposure_model.id, taxonomy,
                           rc.region_constraint.wkt))
         else:
@@ -308,7 +311,7 @@ WITH assocs AS (
   ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
 )
 INSERT INTO riskr.asset_site (job_id, asset_id, site_id)
-SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.oqjob.id,
+SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
                           rc.exposure_model.id, taxonomy,
                           rc.region_constraint.wkt))
 
@@ -341,7 +344,7 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.oqjob.id,
         populate the .epsilons_shape dictionary.
         """
         num_assets = len(self.asset_ids)
-        if self.hc.calculation_mode == 'event_based':
+        if self.calculation_mode == 'event_based':
             lt_model_ids = set(ho.output_container.lt_realization.lt_model.id
                                for ho in hazard_outputs)
             for lt_model_id in lt_model_ids:
@@ -351,9 +354,9 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.oqjob.id,
                 samples = min(self.epsilon_sampling, num_ruptures) \
                     if self.epsilon_sampling else num_ruptures
                 self.epsilons_shape[ses_coll.id] = (num_assets, samples)
-        elif self.hc.calculation_mode == 'scenario':
-            [out] = self.hc.oqjob.output_set.filter(output_type='ses')
-            samples = self.hc.number_of_ground_motion_fields
+        elif self.calculation_mode == 'scenario':
+            [out] = self.hc.output_set.filter(output_type='ses')
+            samples = self.number_of_ground_motion_fields
             self.epsilons_shape[out.ses.id] = (num_assets, samples)
         nbytes = 0
         for (n, r) in self.epsilons_shape.values():
@@ -371,14 +374,14 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.oqjob.id,
         """
         if not self.epsilons_shape:
             self.calc_nbytes(hazard_outputs)
-        if self.hc.calculation_mode == 'event_based':
+        if self.calculation_mode == 'event_based':
             lt_model_ids = set(ho.output_container.lt_realization.lt_model.id
                                for ho in hazard_outputs)
             ses_collections = [
                 models.SESCollection.objects.get(lt_model=lt_model_id)
                 for lt_model_id in lt_model_ids]
-        elif self.hc.calculation_mode == 'scenario':
-            [out] = self.hc.oqjob.output_set.filter(output_type='ses')
+        elif self.calculation_mode == 'scenario':
+            [out] = self.hc.output_set.filter(output_type='ses')
             ses_collections = [out.ses]
         else:
             ses_collections = []
@@ -387,7 +390,7 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.oqjob.id,
             num_assets, num_samples = self.epsilons_shape[scid]
             self.rupture_ids[scid] = ses_coll.get_ruptures(
                 ).values_list('id', flat=True) or range(
-                self.hc.number_of_ground_motion_fields)
+                self.number_of_ground_motion_fields)
             logs.LOG.info('Building (%d, %d) epsilons for taxonomy %s',
                           num_assets, num_samples, self.taxonomy)
             eps = make_epsilons(
@@ -448,11 +451,11 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.oqjob.id,
         for ho in hazard_outputs:
             getter = gettercls(ho, annotated, site_ids)
             getter.builder = self
-            if self.hc.calculation_mode == 'event_based':
+            if self.calculation_mode == 'event_based':
                 getter.sescoll = models.SESCollection.objects.get(
                     lt_model=ho.output_container.lt_realization.lt_model)
                 getter.asset_site_ids = [a.id for a in asset_sites]
-            elif self.hc.calculation_mode == 'scenario':
+            elif self.calculation_mode == 'scenario':
                 [out] = ho.oq_job.output_set.filter(output_type='ses')
                 getter.sescoll = out.ses
                 getter.asset_site_ids = [a.id for a in asset_sites]
