@@ -356,6 +356,33 @@ class OqJob(djm.Model):
         for name, value in params.iteritems():
             JobParam.objects.create(job=self, name=name, value=repr(value))
 
+    def save_hazard_sites(self):
+        """
+        Populate the table HazardSite by inferring the points from
+        the sites, region, or exposure.
+        """
+        assert self.job_type == 'hazard', self.job_type
+        oqparam = self.get_oqparam()
+        if 'exposure' in oqparam.inputs:
+            assets = self.exposuremodel.exposuredata_set.all()
+            # the coords here must be sorted; the issue is that the
+            # disaggregation calculator has a for loop of kind
+            # for site in sites:
+            #     bin_edge, disagg_matrix = disaggregation(site, ...)
+            # the generated ruptures are random if the order of the sites
+            # is random, even if the seed is fixed; in particular for some
+            # ordering no ruptures are generated and the test
+            # qa_tests/hazard/disagg/case_1/test.py fails with a bad
+            # error message
+            coords = sorted(
+                set((asset.site.x, asset.site.y) for asset in assets))
+            lons, lats = zip(*coords)
+            mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
+        else:
+            mesh = get_mesh(oqparam)
+        sids = save_sites(self, ((p.longitude, p.latitude) for p in mesh))
+        return mesh, sids
+
     def __repr__(self):
         return '<%s %d, %s>' % (self.__class__.__name__,
                                 self.id, self.job_type)
@@ -423,6 +450,19 @@ class Performance(djm.Model):
         db_table = 'uiapi\".\"performance'
 
 
+# this is used in the tests, see helpers.py
+def save_sites(job, coords):
+    """
+    Save all the gives sites on the hzrdi.hazard_site table.
+    :param coordinates: a sequence of (lon, lat) pairs
+    :returns: the ids of the inserted HazardSite instances
+    """
+    sites = [HazardSite(hazard_calculation=job,
+                        location='POINT(%s %s)' % (lon, lat))
+             for lon, lat in coords]
+    return writer.CacheInserter.saveall(sites)
+
+
 class HazardCalculation(object):
     '''
     Small wrapper around oqparam instances
@@ -440,73 +480,12 @@ class HazardCalculation(object):
                             'of HazardCalculation instances' % collisions)
         vars(self).update(params)
 
-    def save_hazard_sites(self):
-        """
-        Populate the table HazardSite by inferring the points from
-        the sites, region, or exposure.
-        """
-        if 'exposure' in self.inputs:
-            assets = self.oqjob.exposuremodel.exposuredata_set.all()
-            # the coords here must be sorted; the issue is that the
-            # disaggregation calculator has a for loop of kind
-            # for site in sites:
-            #     bin_edge, disagg_matrix = disaggregation(site, ...)
-            # the generated ruptures are random if the order of the sites
-            # is random, even if the seed is fixed; in particular for some
-            # ordering no ruptures are generated and the test
-            # qa_tests/hazard/disagg/case_1/test.py fails with a bad
-            # error message
-            coords = sorted(
-                set((asset.site.x, asset.site.y) for asset in assets))
-            lons, lats = zip(*coords)
-            mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
-        else:
-            mesh = get_mesh(self.oqjob.get_oqparam())
-        sids = self.save_sites((p.longitude, p.latitude) for p in mesh)
-        return mesh, sids
-
     def get_imts(self):
         """
         Returns intensity mesure types or intensity mesure types with levels
         in a fixed order.
         """
         return sorted(get_imtls(self.oqparam))
-
-    # this is used in the tests, see helpers.py
-    def save_sites(self, coords):
-        """
-        Save all the gives sites on the hzrdi.hazard_site table.
-        :param coordinates: a sequence of (lon, lat) pairs
-        :returns: the ids of the inserted HazardSite instances
-        """
-        sites = [HazardSite(hazard_calculation=self.oqjob,
-                            location='POINT(%s %s)' % (lon, lat))
-                 for lon, lat in coords]
-        return writer.CacheInserter.saveall(sites)
-
-    def total_investigation_time(self):
-        """
-        Helper method to compute the total investigation time for a
-        complete set of stochastic event sets for all realizations.
-        """
-        if self.number_of_logic_tree_samples > 0:
-            # The calculation is set to do Monte-Carlo sampling of logic trees
-            # The number of logic tree realizations is specified explicitly in
-            # job configuration.
-            n_lt_realizations = self.number_of_logic_tree_samples
-        else:
-            # The calculation is set do end-branch enumeration of all logic
-            # tree paths
-            # We can get the number of logic tree realizations by counting
-            # initialized lt_realization records.
-            n_lt_realizations = LtRealization.objects.filter(
-                lt_model__hazard_calculation=self).count()
-
-        investigation_time = (self.investigation_time
-                              * self.ses_per_logic_tree_path
-                              * n_lt_realizations)
-
-        return investigation_time
 
     def gen_ruptures(self, sources, monitor, site_coll):
         """

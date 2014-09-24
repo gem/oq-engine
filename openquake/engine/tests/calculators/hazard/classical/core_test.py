@@ -86,7 +86,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
     def test_initialize_realizations_enumeration(self):
         self.calc.initialize_site_collection()
         # enumeration is triggered by zero value used as number of realizations
-        self.calc._hc.number_of_logic_tree_samples = 0
+        self.calc.hc.number_of_logic_tree_samples = 0
 
         self.calc.initialize_sources()
         self.calc.process_sources()
