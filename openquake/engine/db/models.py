@@ -35,7 +35,7 @@ from datetime import datetime
 import numpy
 from scipy import interpolate
 
-from django.db import connections
+from django.db import connections, transaction
 from django.core.exceptions import ObjectDoesNotExist
 
 from django.contrib.gis.db import models as djm
@@ -2926,7 +2926,8 @@ class AssetManager(djm.GeoManager):
 
         query, args = self._get_asset_chunk_query_args(
             rc, taxonomy, offset, size, asset_ids)
-        return list(self.raw(query, args))
+        with transaction.commit_on_success('job_init'):
+            return list(self.raw(query, args))
 
     def _get_asset_chunk_query_args(
             self, rc, taxonomy, offset, size, asset_ids):
@@ -2934,8 +2935,7 @@ class AssetManager(djm.GeoManager):
         Build a parametric query string and the corresponding args for
         #get_asset_chunk
         """
-        args = (rc.exposure_model.id, taxonomy,
-                "SRID=4326; %s" % rc.region_constraint.wkt)
+        args = (rc.exposure_model.id, taxonomy)
 
         people_field, occupants_cond, occupancy_join, occupants_args = (
             self._get_people_query_helper(
@@ -2954,16 +2954,17 @@ class AssetManager(djm.GeoManager):
         query = """
             SELECT riski.exposure_data.*,
                    {people_field} AS people,
-                   {costs}
+                   {costs}, riskr.asset_site.id AS asset_site_id
             FROM riski.exposure_data
             {occupancy_join}
             ON riski.exposure_data.id = riski.occupancy.exposure_data_id
             {costs_join}
+            INNER JOIN riskr.asset_site
+            ON riskr.asset_site.asset_id=riski.exposure_data.id
             WHERE exposure_model_id = %s AND
                   taxonomy = %s AND
-                  ST_COVERS(ST_GeographyFromText(%s), site) AND
                   {occupants_cond} AND {assets_cond}
-            GROUP BY riski.exposure_data.id
+            GROUP BY riski.exposure_data.id, asset_site_id
             ORDER BY ST_X(geometry(site)), ST_Y(geometry(site))
             """.format(people_field=people_field,
                        occupants_cond=occupants_cond,
