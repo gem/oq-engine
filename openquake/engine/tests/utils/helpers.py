@@ -382,7 +382,7 @@ def create_gmf_from_csv(job, fname, output_type="gmf"):
     Populate the gmf_data table for an event_based (default)
     or scenario calculation (output_type="gmf_scenario").
     """
-    hc = job.hazard_calculation
+    hc = job.get_oqparam()
     if output_type == "gmf":  # event based
         hc.investigation_time = 50
         hc.ses_per_logic_tree_path = 1
@@ -436,7 +436,7 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
     """
 
     hazard_job = get_job(hazard_cfg, username)
-    hc = hazard_job.hazard_calculation
+    hc = hazard_job.get_oqparam()
 
     lt_model = models.LtSourceModel.objects.create(
         hazard_calculation=hazard_job,

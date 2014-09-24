@@ -188,7 +188,7 @@ def _get_calc_info(job_type, calc_id):
         job = oqe_models.OqJob.objects\
             .select_related()\
             .get(hazard_calculation=calc_id)
-        calc = job.hazard_calculation
+        calc = job.get_oqparam()
     else:  # risk
         job = oqe_models.OqJob.objects\
             .select_related()\

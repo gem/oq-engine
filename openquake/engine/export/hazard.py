@@ -74,7 +74,7 @@ def _get_result_export_dest(calc_id, target, result, file_ext='xml'):
 
     :param int calc_id:
         ID of the associated
-        :class:`openquake.engine.db.models.HazardCalculation`.
+        :class:`openquake.engine.db.models.OqJob`.
     :param target:
         Destination directory location for exported files OR a file-like
         object. If file-like, we just simply return it.

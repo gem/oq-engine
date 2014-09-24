@@ -28,7 +28,7 @@ from openquake.hazardlib.imt import from_string
 
 
 def extract(hc_id, a_writer):
-    hc = models.HazardCalculation(hc_id)
+    hc = models.oqparam(hc_id)
 
     for lt in models.LtRealization.objects.filter(
             lt_model__hazard_calculation=hc.oqjob):

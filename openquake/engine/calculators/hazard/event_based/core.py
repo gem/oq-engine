@@ -121,7 +121,7 @@ def compute_ruptures(
     trt_model = models.TrtModel.objects.get(pk=trt_model_id)
     ses_coll = models.SESCollection.objects.get(lt_model=trt_model.lt_model)
 
-    hc = models.HazardCalculation(job_id)
+    hc = models.oqparam(job_id)
     all_ses = range(1, hc.ses_per_logic_tree_path + 1)
     tot_ruptures = 0
 
@@ -227,8 +227,8 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol):
         a SiteCollection instance
     """
     job = models.OqJob.objects.get(pk=job_id)
-    hc = job.hazard_calculation
-    imts = map(from_string, hc.get_imts())
+    hc = job.get_oqparam()
+    imts = map(from_string, sorted(hc.intensity_measure_types_and_levels))
 
     result = {}  # trt_model_id -> (curves_by_gsim, [])
     # NB: by construction each block is a non-empty list with

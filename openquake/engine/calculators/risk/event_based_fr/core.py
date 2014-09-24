@@ -177,8 +177,7 @@ class EventBasedFRRiskCalculator(core.EventBasedRiskCalculator):
             # TODO: think about how to remove the need for .delete()
             # one should retrieve only the latest realizations
             # for a given hazard calculation; alternatively, the
-            # realizations should be associated to RiskCalculation,
-            # not to HazardCalculation
+            # realizations should be associated to RiskCalculation
             models.LtRealization.objects.filter(
                 lt_model__hazard_calculation=self.job).delete()
             self.hcalc.initialize_realizations()

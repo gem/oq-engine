@@ -136,7 +136,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         self.cfg = helpers.get_data_path('event_based_hazard/job_2.ini')
         self.job = helpers.get_job(self.cfg, username=getpass.getuser())
         self.calc = core.EventBasedHazardCalculator(self.job)
-        hc = self.job.hazard_calculation
+        hc = self.job.get_oqparam()
         hc._site_collection = make_site_coll(0, 0, n=5)
         models.JobStats.objects.create(oq_job=self.job)
 
@@ -171,7 +171,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             self.assertEqual(1, m.add.call_count)
 
     def test_initialize_ses_db_records(self):
-        hc = self.job.hazard_calculation
+        hc = self.job.get_oqparam()
         self.calc.pre_execute()
 
         outputs = models.Output.objects.filter(
@@ -192,7 +192,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         # and check the outputs
         with mock.patch.dict(os.environ, {'OQ_NO_DISTRIBUTE': '1'}):
             job = helpers.run_job(self.cfg)
-        hc = job.hazard_calculation
+        hc = job.get_oqparam()
         [rlz1, rlz2] = models.LtRealization.objects.filter(
             lt_model__hazard_calculation=job)
 

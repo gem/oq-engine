@@ -50,9 +50,10 @@ def gmfs(job_id, ses_ruptures, sitecol, imts, gmf_id):
     :param imts: a list of hazardlib IMT instances
     :param int gmf_id: the ID of a `Gmf` instance
     """
-    hc = models.HazardCalculation(job_id)
+    hc = models.oqparam(job_id)
     gsim = AVAILABLE_GSIMS[hc.gsim]()  # instantiate the GSIM class
-    correlation_model = models.get_correl_model(hc.oqjob)
+    correlation_model = models.get_correl_model(
+        models.OqJob.objects.get(pk=job_id))
 
     cache = collections.defaultdict(list)  # {site_id, imt -> gmvs}
     inserter = writer.CacheInserter(models.GmfData, 1000)
@@ -136,9 +137,10 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         with transaction.commit_on_success(using='job_init'):
             self.initialize_sources()
         self.create_ruptures()
-        hc = models.HazardCalculation(self.job)
+        hc = self.job.get_oqparam()
 
-        self.imts = imts = map(from_string, hc.get_imts())
+        self.imts = imts = map(
+            from_string, sorted(hc.intensity_measure_types_and_levels))
         n_sites = len(self.site_collection)
         n_gmf = hc.number_of_ground_motion_fields
         output_weight = n_sites * len(imts) * n_gmf

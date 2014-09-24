@@ -60,7 +60,7 @@ def import_gmf_scenario(fileobj):
     Works both with XML files and tab-separated files with format
     (imt, gmvs, location).
     :returns: the generated :class:`openquake.engine.db.models.Output` object
-    and the generated :class:`openquake.engine.db.models.HazardCalculation`
+    and the generated :class:`openquake.engine.db.models.OqJob`
     object.
     """
     t0 = time.time()
