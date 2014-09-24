@@ -1,6 +1,4 @@
 import logging
-import collections
-import decimal
 
 import numpy
 
@@ -80,25 +78,18 @@ def get_site_collection(oqparam, mesh=None, site_ids=None,
         range(1, len(points) + 1) is used
     :param site_model_params:
         object with a method ,get_closest returning the closest site
-        model parameters and their distance from each point
+        model parameters
     """
     mesh = mesh or get_mesh(oqparam)
     site_ids = site_ids or range(1, len(mesh) + 1)
     if oqparam.inputs.get('site_model'):
         sitecol = []
-        exact_matches = 0
         for i, pt in zip(site_ids, mesh):
-            param, dist = site_model_params.\
+            param = site_model_params.\
                 get_closest(pt.longitude, pt.latitude)
-            exact_matches += dist is 0
             sitecol.append(
                 site.Site(pt, param.vs30, param.vs30_type == 'measured',
                           param.z1pt0, param.z2pt5, i))
-        if exact_matches:
-            msg = ('Found %d site model parameters exactly at the hazard '
-                   'sites, out of %d total sites' %
-                   (exact_matches, len(sitecol)))
-            logging.info(msg)
         return site.SiteCollection(sitecol)
 
     # else use the default site params
