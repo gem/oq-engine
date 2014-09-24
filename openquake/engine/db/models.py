@@ -289,17 +289,6 @@ class OqJob(djm.Model):
         """
         return 'hazard' if self.risk_calculation is None else 'risk'
 
-    @property
-    def calculation(self):
-        """
-        :returns: a calculation object (hazard or risk) depending on
-        the type of calculation. Useful in situations (e.g. core
-        engine, stats, kvs, progress) where you do not have enough
-        context about which kind of calculation is but still you want
-        to access the common feature of a Calculation object.
-        """
-        return self.hazard_calculation or self.risk_calculation
-
     def get_param(self, name, missing=RAISE_EXC):
         """
         `job.get_param(name)` returns the value of the requested parameter
