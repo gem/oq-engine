@@ -17,7 +17,8 @@ class VulnerabilityNode(LiteralNode):
     validators = valid.parameters(
         vulnerabilitySetID=valid.name,
         vulnerabilityFunctionID=valid.name_with_dashes,
-        assetCategory=str,
+        assetCategory=valid.ChoiceCI(
+            'population', 'buildings', 'single_asset'),
         lossCategory=valid.name,
         IML=valid.IML,
         lossRatio=valid.positivefloats,
