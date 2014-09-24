@@ -433,12 +433,18 @@ class GroundShakingIntensityModel(object):
         for param in self.REQUIRES_RUPTURE_PARAMETERS:
             if param == 'mag':
                 value = rupture.mag
+            elif param == 'strike':
+                value = rupture.surface.get_strike()
             elif param == 'dip':
                 value = rupture.surface.get_dip()
             elif param == 'rake':
                 value = rupture.rake
             elif param == 'ztor':
                 value = rupture.surface.get_top_edge_depth()
+            elif param == 'hypo_lon':
+                value = rupture.hypocenter.longitude
+            elif param == 'hypo_lat':
+                value = rupture.hypocenter.latitude
             elif param == 'hypo_depth':
                 value = rupture.hypocenter.depth
             elif param == 'width':
@@ -627,7 +633,10 @@ class RuptureContext(object):
     Only those required parameters are made available in a result context
     object.
     """
-    __slots__ = ('mag', 'dip', 'rake', 'ztor', 'hypo_depth', 'width')
+    __slots__ = (
+        'mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
+        'hypo_depth', 'width'
+    )
 
 
 class CoeffsTable(object):
