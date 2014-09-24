@@ -236,11 +236,12 @@ class RiskCalculator(base.Calculator):
         """
         return self.job.risk_calculation
 
+    # TODO: try to remove this
     @property
     def hc(self):
         """
         A shorter and more convenient way of accessing the
-        :class:`~openquake.engine.db.models.HazardCalculation`.
+        hazard parameters
         """
         return self.rc.get_hazard_param()
 

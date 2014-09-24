@@ -31,7 +31,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         # this is an example with number_of_logic_tree_samples = 1
         cfg = helpers.get_data_path('classical_job.ini')
         job = helpers.get_job(cfg)
-        hc = job.hazard_calculation
+        hc = job.get_oqparam()
         self.rnd = random.Random(hc.random_seed)
         self.source_model_lt = logictree.SourceModelLogicTree.from_hc(hc)
         sm = models.LtSourceModel(
@@ -68,7 +68,7 @@ class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
         self.original_apply_uncertainty = logictree.BranchSet.apply_uncertainty
         logictree.BranchSet.apply_uncertainty = apply_uncertainty
 
-        hc = job.hazard_calculation
+        hc = job.get_oqparam()
         self.source_model_lt = logictree.SourceModelLogicTree.from_hc(hc)
         sm = models.LtSourceModel(
             hazard_calculation=job, ordinal=0, sm_lt_path=[],

@@ -103,7 +103,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
     @attr('slow')
     def test_complete_calculation_workflow(self):
         # Test the calculation workflow, from pre_execute through clean_up
-        hc = self.job.hazard_calculation
+        hc = self.job.get_oqparam()
 
         self.calc.pre_execute()
 

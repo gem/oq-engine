@@ -100,7 +100,7 @@ def filter_and_split_sources(job_id, sources, sitecol):
     :param list sources: the original sources
     :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
     """
-    hc = models.HazardCalculation(job_id)
+    hc = models.oqparam(job_id)
     discr = hc.area_source_discretization
     maxdist = hc.maximum_distance
     srcs = []
@@ -211,7 +211,7 @@ class BaseHazardCalculator(base.Calculator):
         A shorter and more convenient way of accessing the oqparam object
         """
         if self._hc is None:
-            self._hc = models.HazardCalculation(self.job)
+            self._hc = models.oqparam(self.job)
         return self._hc
 
     @EnginePerformanceMonitor.monitor

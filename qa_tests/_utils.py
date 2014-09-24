@@ -174,8 +174,8 @@ class DisaggHazardTestCase(BaseQATestCase):
         cfg = os.path.join(self.working_dir, 'job.ini')
         expected = os.path.join(self.working_dir, 'expected_output')
         job = self.run_hazard(cfg, exports=['xml'])
-        hc = job.hazard_calculation
-        export_dir = os.path.join(hc.export_dir, 'calc_%d' % job.id)
+        export_dir = os.path.join(
+            job.get_param('export_dir'), 'calc_%d' % job.id)
 
         # compare the directories and print a report
         dc = filecmp.dircmp(expected, export_dir)
