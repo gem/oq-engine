@@ -18,6 +18,8 @@
 import unittest
 import mock
 
+from openquake.commonlib.valid import SiteParam
+
 from openquake.engine import engine
 from openquake.engine.calculators.hazard import general
 from openquake.engine.utils import get_calculator_class
@@ -122,3 +124,38 @@ class NonEmptyQuantileTestCase(unittest.TestCase):
         self.assertEqual(
             msg, 'There is only one realization, the configuration'
             ' parameter quantile_hazard_curves should not be set')
+
+
+class ClosestSiteModelTestCase(unittest.TestCase):
+
+    def test_closest_site_model(self):
+        # This test scenario is the following:
+        # Site model data nodes arranged 2 degrees apart (longitudinally) along
+        # the same parallel (indicated below by 'd' characters).
+        #
+        # The sites of interest are located at (-0.0000001, 0) and
+        # (0.0000001, 0) (from left to right).
+        # Sites of interest are indicated by 's' characters.
+        #
+        # To illustrate, a super high-tech nethack-style diagram:
+        #
+        # -1.........0.........1
+        #  d        s s        d
+
+        sm1 = SiteParam(
+            measured=True, vs30=0.0000001,
+            z1pt0=0.0000001, z2pt5=0.0000001, lon=-1, lat=0)
+        sm2 = SiteParam(
+            measured=False, vs30=0.0000002,
+            z1pt0=0.0000002, z2pt5=0.0000002, lon=1, lat=0)
+
+        job = models.OqJob.objects.create(user_name="openquake")
+        siteparams = general.SiteModelParams(job, [sm1, sm2])
+
+        res1, _dist1 = siteparams.get_closest(-0.0000001, 0)
+        res2, _dist2 = siteparams.get_closest(0.0000001, 0)
+
+        self.assertEqual((res1.location.x, res1.location.y),
+                         (sm1.lon, sm1.lat))
+        self.assertEqual((res2.location.x, res2.location.y),
+                         (sm2.lon, sm2.lat))

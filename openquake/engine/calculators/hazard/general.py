@@ -151,9 +151,6 @@ class AllSources(object):
         return sum(self.weight.itervalues())
 
 
-SiteParams = collections.namedtuple("SiteParams", 'z1pt0 z2pt5 measured vs30')
-
-
 class SiteModelParams(object):
     """
     Wrapper around the SiteModel table with a method .get_closest
@@ -184,17 +181,14 @@ class SiteModelParams(object):
            a pair (site_params, dist) where `site_params` is the closest
            set of site model parameters to the given longitude and latitude
         """
-        cursor = models.getcursor('job_init')
         query = """\
-        SELECT s.z1pt0, s.z2pt5, s.vs30_type='measured', s.vs30,
-               min(ST_Distance_Sphere(
-                  location, 'SRID=4326; POINT(%s %s)')) AS min_dist
+        SELECT s.*, min(ST_Distance_Sphere(
+                        location, 'SRID=4326; POINT(%s %s)')) AS min_dist
         FROM hzrdi.site_model AS s
         WHERE job_id = %d GROUP BY id
         ORDER BY min_dist LIMIT 1;""" % (lon, lat, self.job.id)
-        cursor.execute(query)
-        [(z1pt0, z2pt5, measured, vs30, dist)] = cursor.fetchall()
-        return SiteParams(z1pt0, z2pt5, measured, vs30), dist
+        [sm] = models.SiteModel.objects.raw(query)
+        return sm, sm.min_dist
 
 
 class BaseHazardCalculator(base.Calculator):
@@ -516,7 +510,7 @@ class BaseHazardCalculator(base.Calculator):
         Populate the hazard site table and create a sitecollection attribute.
         """
         logs.LOG.progress("initializing sites")
-        points, site_ids = self.hc.save_hazard_sites()
+        points, site_ids = self.job.save_hazard_sites()
         if not site_ids:
             raise RuntimeError('No sites were imported!')
 
