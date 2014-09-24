@@ -17,11 +17,42 @@
 Module :mod:`openquake.hazardlib.geo.geodetic` contains functions for geodetic
 transformations, optimized for massive calculations.
 """
+
+import operator
+import collections
+
 import numpy
 
 
 #: Earth radius in km.
 EARTH_RADIUS = 6371.0
+
+
+class GeographicObjects(object):
+    """
+    Store a collection of geographic objects, i.e. objects with longitudes
+    and latitudes. By default extracts the coordinates from the attributes
+    .lon and .lat, but you can provide your own getters. It is possible
+    to extract the closest object to a given location by calling the
+    method .get_closest(lon, lat).
+    """
+    def __init__(self, objects, getlon=operator.attrgetter('lon'),
+                 getlat=operator.attrgetter('lat')):
+        self.objects = list(objects)
+        lons, lats = [], []
+        for obj in self.objects:
+            lons.append(getlon(obj))
+            lats.append(getlat(obj))
+        self.lons, self.lats = numpy.array(lons), numpy.array(lats)
+
+    def get_closest(self, lon, lat):
+        """
+        Get the closest object to the given longitude and latitude.
+        """
+        index = min_distance(
+            self.lons, self.lats, numpy.zeros_like(self.lons), lon, lat, 0.,
+            indices=True)
+        return self.objects[index]
 
 
 def geodetic_distance(lons1, lats1, lons2, lats2):
