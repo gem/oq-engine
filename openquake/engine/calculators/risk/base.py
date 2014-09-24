@@ -80,8 +80,7 @@ def make_getter_builders(job_id, counts_taxonomy, calc):
 
         # initializing the epsilons
         builder.init_epsilons(haz_outs)
-
-    builders[builder.taxonomy] = builder
+        builders[builder.taxonomy] = builder
     return builders
 
 
