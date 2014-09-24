@@ -45,7 +45,7 @@ class HazardIMT(Validator):
         model_imts = set()
         for rm in self.calc.risk_models.values():
             model_imts.update(vf.imt for vf in rm.vulnerability_functions)
-        imts = get_imtls(self.calc.rc.get_hazard_param())
+        imts = sorted(get_imtls(self.calc.rc.get_hazard_param()))
 
         # check that the hazard data have all the imts needed by the
         # risk calculation
