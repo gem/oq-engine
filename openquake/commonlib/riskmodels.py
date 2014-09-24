@@ -96,13 +96,13 @@ def get_imtls_from_vulnerabilities(inputs):
 
 class FragilityNode(LiteralNode):
     validators = valid.parameters(
-        format=valid.Choice('discrete', 'continuous'),
+        format=valid.ChoiceCI('discrete', 'continuous'),
         lossCategory=valid.name,
         IML=valid.IML,
         params=valid.fragilityparams,
         limitStates=valid.namelist,
         description=valid.utf8,
-        type=valid.Choice('lognormal'),
+        type=valid.ChoiceCI('lognormal'),
         poEs=valid.probabilities,
         noDamageLimit=valid.positivefloat,
     )
