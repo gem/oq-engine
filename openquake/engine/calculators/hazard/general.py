@@ -34,6 +34,7 @@ from django.db import transaction
 
 from openquake.nrmllib import parsers as nrml_parsers
 from openquake.nrmllib.risk import parsers
+from openquake.nrmllib import InvalidFile
 
 from openquake.commonlib import logictree, source
 from openquake.commonlib.general import split_in_blocks, distinct
@@ -433,8 +434,19 @@ class BaseHazardCalculator(base.Calculator):
         for i, (sm, weight, smpath) in enumerate(sm_paths):
             fname = os.path.join(self.hc.base_path, sm)
             apply_unc = self.source_model_lt.make_apply_uncertainties(smpath)
-            source_collectors = source.parse_source_model(
-                fname, nrml_to_hazardlib, apply_unc)
+            try:
+                source_collectors = source.parse_source_model(
+                    fname, nrml_to_hazardlib, apply_unc)
+            except ValueError as e:
+                if str(e) == ('Surface does not conform with Aki & '
+                              'Richards convention'):
+                    raise InvalidFile('''\
+%s: %s. Probably you are using an obsolete model.
+In that case you can fix the file with the command
+python -m openquake.engine.tools.correct_complex_sources %s
+''' % (fname, e, fname))
+                else:
+                    raise
             trts = [sc.trt for sc in source_collectors]
 
             self.source_model_lt.tectonic_region_types.update(trts)
