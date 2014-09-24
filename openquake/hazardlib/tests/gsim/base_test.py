@@ -431,7 +431,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
             'rjb rx rrup repi rhypo'.split()
         )
         self.gsim_class.REQUIRES_RUPTURE_PARAMETERS = set(
-            'mag rake dip ztor hypo_depth width'.split()
+            'mag rake dip ztor hypo_lon hypo_lat hypo_depth width'.split()
         )
         self.gsim_class.REQUIRES_SITES_PARAMETERS = set(
             'vs30 vs30measured z1pt0 z2pt5 lons lats'.split()
@@ -445,6 +445,8 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.assertEqual(rctx.rake, 123.56)
         self.assertEqual(rctx.dip, 45.4545)
         self.assertEqual(rctx.ztor, 30)
+        self.assertEqual(rctx.hypo_lon, 2)
+        self.assertEqual(rctx.hypo_lat, 3)
         self.assertEqual(rctx.hypo_depth, 40)
         self.assertEqual(rctx.width, 15)
         self.assertTrue((sctx.vs30 == [456, 1456]).all())
@@ -467,17 +469,22 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
 
     def test_some_values(self):
         self.gsim_class.REQUIRES_DISTANCES = set('rjb rx'.split())
-        self.gsim_class.REQUIRES_RUPTURE_PARAMETERS = set('mag rake'.split())
+        self.gsim_class.REQUIRES_RUPTURE_PARAMETERS = \
+            set('mag rake hypo_lon'.split())
         self.gsim_class.REQUIRES_SITES_PARAMETERS = \
             set('vs30 z1pt0 lons'.split())
         sites = SiteCollection([self.site1, self.site2])
         sctx, rctx, dctx = self.gsim.make_contexts(sites, self.rupture)
-        self.assertEqual((rctx.mag, rctx.rake), (123.45, 123.56))
+        self.assertEqual(
+            (rctx.mag, rctx.rake, rctx.hypo_lon), (123.45, 123.56, 2)
+        )
         self.assertTrue((sctx.vs30 == (456, 1456)).all())
         self.assertTrue((sctx.z1pt0 == (12.1, 112.1)).all())
         self.assertTrue((sctx.lons == [1, -2]).all())
         self.assertTrue((dctx.rx == (4, 5)).all())
         self.assertFalse(hasattr(rctx, 'dip'))
+        self.assertFalse(hasattr(rctx, 'hypo_lat'))
+        self.assertFalse(hasattr(rctx, 'hypo_depth'))
         self.assertFalse(hasattr(sctx, 'vs30measured'))
         self.assertFalse(hasattr(sctx, 'z2pt0'))
         self.assertFalse(hasattr(dctx, 'rrup'))
