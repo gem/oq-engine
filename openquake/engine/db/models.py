@@ -352,7 +352,7 @@ class OqJob(djm.Model):
             coords = sorted(
                 set((asset.site.x, asset.site.y) for asset in assets))
             lons, lats = zip(*coords)
-            mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
+            mesh = geo.Mesh(numpy.array(lons), numpy.array(lats), None)
         else:
             mesh = get_mesh(oqparam)
         sids = save_sites(self, ((p.longitude, p.latitude) for p in mesh))

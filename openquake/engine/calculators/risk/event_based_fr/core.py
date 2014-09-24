@@ -337,7 +337,7 @@ class GetterBuilder(object):
     WHERE hsite.hazard_calculation_id = %s
     AND exposure_model_id = %s AND taxonomy=%s
     AND ST_COVERS(ST_GeographyFromText(%s), exp.site)'''
-        args = (rc.hazard_calculation.oqjob.id, rc.exposure_model.id, taxonomy,
+        args = (rc.hazard_calculation.id, rc.exposure_model.id, taxonomy,
                 rc.region_constraint.wkt)
         # print cursor.mogrify(query, args) useful when debugging
         cursor.execute(query, args)
