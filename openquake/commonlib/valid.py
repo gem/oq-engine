@@ -371,7 +371,7 @@ def IML(value, IMT, minIML=None, maxIML=None, imlUnit=None):
     into ("MMI", [7., 8., 9., 10., 11.], None, None)
     """
     imt_str = str(imt.from_string(IMT))
-    imls = levels(positivefloats(value), imt_str) if value else None
+    imls = check_levels(positivefloats(value), imt_str) if value else None
     min_iml = positivefloat(minIML) if minIML else None
     max_iml = positivefloat(maxIML) if maxIML else None
     return (imt_str, imls, min_iml, max_iml)
@@ -407,14 +407,26 @@ def intensity_measure_types(value):
     return imts
 
 
-def levels(imls, imt):
+def check_levels(imls, imt):
     """
-    >>> levels([0.1, 0.2], 'PGA')
-    [0.1, 0.2]
-    >>> levels([0.2, 0.1], 'PGA')
+    Raise a ValueError if the given levels are invalid.
+
+    :param imls: a list of intensity measure and levels
+    :param imt: the intensity measure type
+
+    >>> check_levels([0.1, 0.2], 'PGA')  # ok
+    >>> check_levels([0.1], 'PGA')
+    Traceback (most recent call last):
+       ...
+    ValueError: Not enough imls for PGA: [0.1]
+    >>> check_levels([0.2, 0.1], 'PGA')
     Traceback (most recent call last):
        ...
     ValueError: The imls for PGA are not sorted: [0.2, 0.1]
+    >>> check_levels([0.2, 0.2], 'PGA')
+    Traceback (most recent call last):
+       ...
+    ValueError: Found duplicated levels for PGA: [0.2, 0.2]
     """
     if len(imls) < 2:
         raise ValueError('Not enough imls for %s: %s' % (imt, imls))
@@ -422,7 +434,6 @@ def levels(imls, imt):
         raise ValueError('The imls for %s are not sorted: %s' % (imt, imls))
     elif len(distinct(imls)) < len(imls):
         raise ValueError("Found duplicated levels for %s: %s" % (imt, imls))
-    return imls
 
 
 def intensity_measure_types_and_levels(value):
@@ -432,15 +443,10 @@ def intensity_measure_types_and_levels(value):
 
     >>> intensity_measure_types_and_levels('{"PGA": [0.1, 0.2]}')
     {'PGA': [0.1, 0.2]}
-
-    >>> intensity_measure_types_and_levels('{"PGA": [0.1]}')
-    Traceback (most recent call last):
-       ...
-    ValueError: Not enough imls for PGA: [0.1]
     """
     dic = dictionary(value)
     for imt, imls in dic.iteritems():
-        levels(imls, imt)  # ValueError if the levels are invalid
+        check_levels(imls, imt)  # ValueError if the levels are invalid
     return dic
 
 
