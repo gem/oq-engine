@@ -35,7 +35,7 @@ def pre_execute(job_ini):
     """
     job = job_from_file(job_ini, getpass.getuser(), 'info', [])
 
-    calc_mode = job.hazard_calculation.calculation_mode
+    calc_mode = job.get_param('calculation_mode')
     calculator = get_calculator_class('hazard', calc_mode)(job)
 
     handler = LogStreamHandler(job)

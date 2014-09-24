@@ -303,7 +303,7 @@ def _save_uhs(job, uhs_results, poe, rlz=None, statistics=None, quantile=None):
     )
     uhs = models.UHS(
         poe=poe,
-        investigation_time=job.hazard_calculation.investigation_time,
+        investigation_time=job.get_param('investigation_time'),
         periods=uhs_results['periods'],
     )
     if rlz is not None:

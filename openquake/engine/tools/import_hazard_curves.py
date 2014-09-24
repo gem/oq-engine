@@ -19,8 +19,7 @@ def import_hazard_curves(fileobj):
         a file-like object associated to an XML file
     :returns:
         the generated :class:`openquake.engine.db.models.Output` object
-        and the generated :class:`openquake.engine.db.models.HazardCalculation`
-        object.
+        and the generated :class:`openquake.engine.db.models.OqJob` object.
     """
     fname = fileobj.name
     curs = connections['job_init'].cursor().cursor.cursor  # DB API cursor
@@ -31,7 +30,6 @@ def import_hazard_curves(fileobj):
         calculation_mode='classical', maximum_distance=100))
     # XXX: what about the maximum_distance?
 
-    hc = models.HazardCalculation(job)
     out = models.Output.objects.create(
         display_name='Imported from %r' % fname, output_type='hazard_curve',
         oq_job=job)

@@ -37,11 +37,12 @@ class ParseRiskModelsTestCase(unittest.TestCase):
         job.is_running = True
         job.save()
 
-        haz_calc = job.hazard_calculation
+        haz_calc = job.get_oqparam()
         calc = get_calculator_class('hazard', haz_calc.calculation_mode)(job)
         calc.parse_risk_models()
 
-        self.assertEqual(['PGA'], calc.hc.get_imts())
+        self.assertEqual(['PGA'],
+                         list(calc.hc.intensity_measure_types_and_levels))
 
         self.assertEqual(3, calc.job.exposuremodel.exposuredata_set.count())
 
@@ -56,7 +57,7 @@ class InitializeSourcesTestCase(unittest.TestCase):
             'calculators/hazard/classical/haz_map_test_job.ini')
         job = helpers.get_job(cfg)
         models.JobStats.objects.create(oq_job=job)
-        hc = job.hazard_calculation
+        hc = job.get_oqparam()
         cls.calc = get_calculator_class('hazard', hc.calculation_mode)(job)
         cls.calc.initialize_site_collection()
         num_sites = len(cls.calc.site_collection)
@@ -82,7 +83,7 @@ class CalculationLimitsTestCase(unittest.TestCase):
             'calculators/hazard/classical/haz_map_test_job.ini')
         job = helpers.get_job(cfg)
         models.JobStats.objects.create(oq_job=job)
-        hc = job.hazard_calculation
+        hc = job.get_oqparam()
         calc = get_calculator_class('hazard', hc.calculation_mode)(job)
         input_weight, output_weight = calc.pre_execute()
         self.assertEqual(input_weight, 225)
@@ -104,7 +105,7 @@ class CalculationLimitsTestCase(unittest.TestCase):
             'event_based_hazard/job.ini')
         job = helpers.get_job(cfg)
         models.JobStats.objects.create(oq_job=job)
-        hc = job.hazard_calculation
+        hc = job.get_oqparam()
         calc = get_calculator_class('hazard', hc.calculation_mode)(job)
         input_weight, output_weight = calc.pre_execute()
         self.assertEqual(input_weight, 1352.75)
