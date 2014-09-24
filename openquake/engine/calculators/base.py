@@ -161,7 +161,7 @@ class Calculator(object):
                                           % (output.output_type, export_type)):
                             fname = self._do_export(
                                 output.id,
-                                self.job.calculation.export_dir,
+                                self.job.get_param('export_dir'),
                                 export_type
                             )
                             logs.LOG.info('exported %s', fname)
