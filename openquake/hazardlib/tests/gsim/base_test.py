@@ -355,9 +355,14 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         jb_distance = numpy.array([6, 7])
         top_edge_depth = 30
         width = 15
+        strike = 60.123
 
         class FakeSurface(object):
             call_counts = collections.Counter()
+
+            def get_strike(self):
+                self.call_counts['get_strike'] += 1
+                return strike
 
             def get_dip(self):
                 self.call_counts['get_dip'] += 1
@@ -431,7 +436,8 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
             'rjb rx rrup repi rhypo'.split()
         )
         self.gsim_class.REQUIRES_RUPTURE_PARAMETERS = set(
-            'mag rake dip ztor hypo_lon hypo_lat hypo_depth width'.split()
+            'mag rake strike dip ztor hypo_lon hypo_lat hypo_depth width'. \
+            split()
         )
         self.gsim_class.REQUIRES_SITES_PARAMETERS = set(
             'vs30 vs30measured z1pt0 z2pt5 lons lats'.split()
@@ -443,6 +449,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.assertIsInstance(dctx, DistancesContext)
         self.assertEqual(rctx.mag, 123.45)
         self.assertEqual(rctx.rake, 123.56)
+        self.assertEqual(rctx.strike, 60.123)
         self.assertEqual(rctx.dip, 45.4545)
         self.assertEqual(rctx.ztor, 30)
         self.assertEqual(rctx.hypo_lon, 2)
@@ -465,18 +472,20 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.assertEqual(self.fake_surface.call_counts,
                          {'get_top_edge_depth': 1, 'get_rx_distance': 1,
                           'get_joyner_boore_distance': 1, 'get_dip': 1,
-                          'get_min_distance': 1, 'get_width': 1})
+                          'get_min_distance': 1, 'get_width': 1,
+                          'get_strike': 1})
 
     def test_some_values(self):
         self.gsim_class.REQUIRES_DISTANCES = set('rjb rx'.split())
         self.gsim_class.REQUIRES_RUPTURE_PARAMETERS = \
-            set('mag rake hypo_lon'.split())
+            set('mag strike rake hypo_lon'.split())
         self.gsim_class.REQUIRES_SITES_PARAMETERS = \
             set('vs30 z1pt0 lons'.split())
         sites = SiteCollection([self.site1, self.site2])
         sctx, rctx, dctx = self.gsim.make_contexts(sites, self.rupture)
         self.assertEqual(
-            (rctx.mag, rctx.rake, rctx.hypo_lon), (123.45, 123.56, 2)
+            (rctx.mag, rctx.rake, rctx.strike, rctx.hypo_lon),
+            (123.45, 123.56, 60.123, 2)
         )
         self.assertTrue((sctx.vs30 == (456, 1456)).all())
         self.assertTrue((sctx.z1pt0 == (12.1, 112.1)).all())
@@ -492,7 +501,8 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.assertFalse(hasattr(dctx, 'width'))
         self.assertEqual(self.fake_surface.call_counts,
                          {'get_rx_distance': 1,
-                          'get_joyner_boore_distance': 1})
+                          'get_joyner_boore_distance': 1,
+                          'get_strike': 1})
 
 
 class GsimWarningTestCase(unittest.TestCase):

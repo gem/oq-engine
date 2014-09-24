@@ -433,6 +433,8 @@ class GroundShakingIntensityModel(object):
         for param in self.REQUIRES_RUPTURE_PARAMETERS:
             if param == 'mag':
                 value = rupture.mag
+            elif param == 'strike':
+                value = rupture.surface.get_strike()
             elif param == 'dip':
                 value = rupture.surface.get_dip()
             elif param == 'rake':
@@ -632,8 +634,8 @@ class RuptureContext(object):
     object.
     """
     __slots__ = (
-        'mag', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat', 'hypo_depth',
-        'width'
+        'mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
+        'hypo_depth', 'width'
     )
 
 
