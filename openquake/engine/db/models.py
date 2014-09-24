@@ -653,7 +653,7 @@ class RiskCalculation(djm.Model):
         help_text=('Width of distance bins'),
         null=True,
         blank=True,
-    )
+        )
     coordinate_bin_width = djm.FloatField(
         help_text=('Width of coordinate bins'),
         null=True,
@@ -674,20 +674,15 @@ class RiskCalculation(djm.Model):
     class Meta:
         db_table = 'uiapi\".\"risk_calculation'
 
-    def get_hazard_calculation(self):
+    def get_hazard_param(self):
         """
-        Get the hazard calculation associated with the hazard output used as an
+        Get the hazard parameter associated with the hazard output used as an
         input to this risk calculation.
 
         :returns:
-            :class:`HazardCalculation` instance.
+            :class:`openquake.commonlib.oqvalidation.OqParam` instance.
         """
-        try:
-            hcalc = HazardCalculation(self.hazard_calculation or
-                                      self.hazard_output.oq_job)
-        except ObjectDoesNotExist:
-            raise RuntimeError("The provided hazard does not exist")
-        return hcalc
+        return self.hazard_calculation.get_oqparam()
 
     def hazard_outputs(self):
         """
@@ -734,7 +729,7 @@ class RiskCalculation(djm.Model):
         if dist is None:
             dist = self.DEFAULT_MAXIMUM_DISTANCE
 
-        hc = self.get_hazard_calculation()
+        hc = self.get_hazard_param()
         if getattr(hc, 'region_grid_spacing', None) is not None:
             dist = min(dist, hc.region_grid_spacing * numpy.sqrt(2) / 2)
 
@@ -759,14 +754,14 @@ class RiskCalculation(djm.Model):
         3. if an exposure was used in the hazard job, use it
         4. if no exposure is found, return None
         """
-        haz_job = self.get_hazard_calculation().oqjob
         return (self.preloaded_exposure_model or
-                extract_from([self.oqjob, haz_job], 'exposuremodel'))
+                extract_from(
+                    [self.oqjob, self.hazard_calculation], 'exposuremodel'))
 
     @property
     def investigation_time(self):
         return (self.risk_investigation_time or
-                self.get_hazard_calculation().investigation_time)
+                self.get_hazard_param().investigation_time)
 
 
 def extract_from(objlist, attr):
@@ -1241,9 +1236,8 @@ class SESCollection(djm.Model):
         """
         Iterator for walking through all child :class:`SES` objects.
         """
-        hc = self.output.oq_job.hazard_calculation
-        n = getattr(hc, 'ses_per_logic_tree_path', 1)  # 1 for scenario
-        for ordinal in xrange(1, n + 1):
+        n = self.output.oq_job.get_param('ses_per_logic_tree_path', 1)
+        for ordinal in xrange(1, n + 1):  # 1 for scenario
             yield SES(self, ordinal)
 
     def __len__(self):
@@ -1618,14 +1612,16 @@ class Gmf(djm.Model):
         Yields triples (ses_rupture, sites, gmf_dict)
         """
         job = self.output.oq_job
-        hc = job.hazard_calculation
+        imtls = job.get_param('intensity_measure_types_and_levels')
+        truncation_level = job.get_param('truncation_level', None)
         correl_model = get_correl_model(job)
         gsims = self.lt_realization.get_gsim_instances()
         assert gsims, 'No GSIMs found for realization %d!' % \
             self.lt_realization.id  # look into hzdr.assoc_lt_rlz_trt_model
+
         # NB: the IMTs must be sorted for consistency with the classical
         # calculator when computing the hazard curves from the GMFs
-        imts = map(from_string, sorted(hc.intensity_measure_types))
+        imts = map(from_string, sorted(imtls))
         for ses_coll in SESCollection.objects.filter(
                 output__oq_job=self.output.oq_job):
             # filter by ses_collection
@@ -1642,7 +1638,7 @@ class Gmf(djm.Model):
                             rupture.site_indices, sitecol)
                     computer = calc.gmf.GmfComputer(
                         rupture, sites, imts, gsims,
-                        getattr(hc, 'truncation_level', None), correl_model)
+                        truncation_level, correl_model)
                     for ses_rup in ses_ruptures:
                         yield ses_rup, sites, computer.compute(ses_rup.seed)
 
@@ -1901,9 +1897,9 @@ def get_gmfs_scenario(output, imt=None):
     :returns: an iterator over
               :class:`openquake.engine.db.models._GroundMotionField` instances
     """
-    hc = output.oq_job.hazard_calculation
     if imt is None:
-        imts = distinct(from_string(x) for x in hc.get_imts())
+        imtls = output.oq_job.get_param('intensity_measure_types_and_levels')
+        imts = map(from_string, sorted(imtls))
     else:
         imts = [from_string(imt)]
     curs = getcursor('job_init')
@@ -2052,7 +2048,7 @@ class LtSourceModel(djm.Model):
         """
         Helper to instantiate a GsimLogicTree object from the logic tree file.
         """
-        hc = HazardCalculation(self.hazard_calculation)
+        hc = self.hazard_calculation.get_oqparam()
         trts = trts or self.get_tectonic_region_types()
         fname = os.path.join(hc.base_path, hc.inputs['gsim_logic_tree'])
         gsim_lt = logictree.GsimLogicTree(

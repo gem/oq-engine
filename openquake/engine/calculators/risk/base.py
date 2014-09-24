@@ -242,7 +242,7 @@ class RiskCalculator(base.Calculator):
         A shorter and more convenient way of accessing the
         :class:`~openquake.engine.db.models.HazardCalculation`.
         """
-        return self.rc.get_hazard_calculation()
+        return self.rc.get_hazard_param()
 
     @property
     def calculator_parameters(self):
