@@ -358,7 +358,7 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
                 samples = min(self.epsilon_sampling, num_ruptures) \
                     if self.epsilon_sampling else num_ruptures
                 self.epsilons_shape[ses_coll.id] = (num_assets, samples)
-        elif self.calculation_mode == 'scenario_risk':
+        elif self.calculation_mode.startswith('scenario'):
             [out] = self.hc.output_set.filter(output_type='ses')
             samples = self.number_of_ground_motion_fields
             self.epsilons_shape[out.ses.id] = (num_assets, samples)
@@ -384,7 +384,7 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
             ses_collections = [
                 models.SESCollection.objects.get(lt_model=lt_model_id)
                 for lt_model_id in lt_model_ids]
-        elif self.calculation_mode == 'scenario_risk':
+        elif self.calculation_mode.startswith('scenario'):
             [out] = self.hc.output_set.filter(output_type='ses')
             ses_collections = [out.ses]
         else:
@@ -395,12 +395,14 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
             self.rupture_ids[scid] = ses_coll.get_ruptures(
                 ).values_list('id', flat=True) or range(
                 self.number_of_ground_motion_fields)
-            logs.LOG.info('Building (%d, %d) epsilons for taxonomy %s',
-                          num_assets, num_samples, self.taxonomy)
-            eps = make_epsilons(
-                num_assets, num_samples,
-                self.rc.master_seed, self.rc.asset_correlation)
-            models.Epsilon.saveall(ses_coll, self.asset_sites, eps)
+            # do not build the epsilons for scenario_damage
+            if self.calculation_mode != 'scenario_damage':
+                logs.LOG.info('Building (%d, %d) epsilons for taxonomy %s',
+                              num_assets, num_samples, self.taxonomy)
+                eps = make_epsilons(
+                    num_assets, num_samples,
+                    self.rc.master_seed, self.rc.asset_correlation)
+                models.Epsilon.saveall(ses_coll, self.asset_sites, eps)
 
     def make_getters(self, gettercls, hazard_outputs, annotated_assets):
         """
@@ -428,7 +430,7 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
             if self.calculation_mode.startswith('event_based'):
                 getter.sescoll = models.SESCollection.objects.get(
                     lt_model=ho.output_container.lt_realization.lt_model)
-            elif self.calculation_mode == 'scenario_risk':
+            elif self.calculation_mode.startswith('scenario'):
                 [out] = ho.oq_job.output_set.filter(output_type='ses')
                 getter.sescoll = out.ses
             getters.append(getter)

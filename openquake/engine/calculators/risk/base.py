@@ -98,7 +98,7 @@ def run_risk(job_id, sorted_assocs, builders, calc):
     :param calc:
         the risk calculator to use
     """
-    acc = calc.acc.copy()
+    acc = calc.acc
     for taxonomy, assocs_by_taxonomy in itertools.groupby(
             sorted_assocs, lambda a: a.asset.taxonomy):
         assets = models.ExposureData.objects.get_asset_chunk(
