@@ -2949,23 +2949,23 @@ class AssetManager(djm.GeoManager):
             rc.exposure_model.costtype_set.all())
 
         query = """\
-            SELECT riski.exposure_data.*,
-                   {people_field} AS people,
-                   {costs}
-            FROM riski.exposure_data
-            {occupancy_join}
-            ON riski.exposure_data.id = riski.occupancy.exposure_data_id
-            {costs_join}
-            WHERE exposure_model_id = %s
-            AND riski.exposure_data.id IN %s
-            AND {occupants_cond}
-            GROUP BY riski.exposure_data.id
-            ORDER BY riski.exposure_data.id
-            """.format(people_field=people_field,
-                       occupants_cond=occupants_cond,
-                       costs=cost_type_fields,
-                       costs_join=cost_type_joins,
-                       occupancy_join=occupancy_join)
+        SELECT riski.exposure_data.*,
+               {people_field} AS people,
+               {costs}
+        FROM riski.exposure_data
+        {occupancy_join}
+        ON riski.exposure_data.id = riski.occupancy.exposure_data_id
+        {costs_join}
+        WHERE exposure_model_id = %s
+        AND riski.exposure_data.id IN %s
+        AND {occupants_cond}
+        GROUP BY riski.exposure_data.id
+        ORDER BY riski.exposure_data.id
+         """.format(people_field=people_field,
+                    occupants_cond=occupants_cond,
+                    costs=cost_type_fields,
+                    costs_join=cost_type_joins,
+                    occupancy_join=occupancy_join)
         return query, args
 
     def _get_people_query_helper(self, category, time_event):
