@@ -51,6 +51,7 @@ class FakeRiskCalculator(base.RiskCalculator):
     def calculation_parameters(self):
         return base.make_calc_params()
 
+    # NB: fake_risk_task returns {job.id: 1}
     def agg_result(self, acc, res):
         newacc = dict((key, acc.get(key, 0) + res[key]) for key in res)
         return newacc
@@ -71,9 +72,8 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
 
     def test(self):
         self.calculator.pre_execute()
-        # there are 2 assets and 1 taxonomy; will generate a supertask
-        # for the taxonomy and 1 subtask, for the two assets
+        # there are 2 assets and 1 taxonomy, two tasks are generated
         self.assertEqual(self.calculator.taxonomies_asset_count, {'VF': 2})
 
         self.calculator.execute()
-        self.assertEqual(self.calculator.acc, {self.job.id: 1})
+        self.assertEqual(self.calculator.acc, {self.job.id: 2})
