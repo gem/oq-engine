@@ -417,10 +417,6 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
         :returns: a list of HazardGetter instances
         """
         # NB: the annotations to the assets are added by models.AssetManager
-        if not self.epsilons_shape:
-            self.init_epsilons(hazard_outputs)
-
-        # build the getters
         getters = []
         for ho in hazard_outputs:
             getter = gettercls(ho, annotated_assets)

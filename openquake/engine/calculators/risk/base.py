@@ -19,6 +19,7 @@
 Base RiskCalculator class.
 """
 
+import itertools
 import collections
 import psutil
 
@@ -57,8 +58,6 @@ def make_getter_builders(job_id, counts_taxonomy, calc):
     """
     builders = {}  # taxonomy -> builder
     for counts, taxonomy in counts_taxonomy:
-        logs.LOG.info('taxonomy=%s, assets=%d', taxonomy, counts)
-
         # building the GetterBuilder
         with calc.monitor("associating asset->site"):
             builder = hazard_getters.GetterBuilder(
@@ -85,37 +84,47 @@ def make_getter_builders(job_id, counts_taxonomy, calc):
 
 
 @tasks.oqtask
-def run_risk(job_id, assets, builders, calc):
+def run_risk(job_id, sorted_assocs, builders, calc):
     """
     Run the risk calculation on the given assets by using the given
     hazard builders and risk calculator.
 
     :param job_id:
         ID of the current risk job
-    :param assets:
-        annotated assets
+    :param sorted_assocs:
+        asset_site associations, sorted by taxonomy
     :param dict builders:
         hazard getter builders for each taxonomy
     :param calc:
         the risk calculator to use
     """
-    taxonomy = assets[0].taxonomy
-    haz_outs = calc.rc.hazard_outputs()
-    builder = builders[taxonomy]
-    with calc.monitor("building getters"):
-        try:
-            getters = builder.make_getters(
-                calc.getter_class, haz_outs, assets)
-        except hazard_getters.AssetSiteAssociationError as err:
-            # TODO: add a test for this corner case
-            # https://bugs.launchpad.net/oq-engine/+bug/1317796
-            logs.LOG.warn('Taxonomy %s: %s', builder.taxonomy, err)
-            return {}
-    logs.LOG.info('Processing %d assets of taxonomy %s', len(assets), taxonomy)
-    res = calc.core_calc_task.task_func(
-        job_id, calc.risk_models[taxonomy], getters,
-        calc.outputdict, calc.calculator_parameters)
-    return res
+    acc = {}
+    for taxonomy, assocs_by_taxonomy in itertools.groupby(
+            sorted_assocs, lambda a: a.asset.taxonomy):
+        assocs = list(assocs_by_taxonomy)
+        assets = models.ExposureData.objects.get_asset_chunk(
+            calc.rc, asset_ids=tuple(a.asset.id for a in assocs))
+        # add .asset_site_id attribute to all annotated assets
+        for a1, a2 in zip(assets, assocs):
+            a1.asset_site_id = a2.id
+        haz_outs = calc.rc.hazard_outputs()
+        builder = builders[taxonomy]
+        with calc.monitor("building getters"):
+            try:
+                getters = builder.make_getters(
+                    calc.getter_class, haz_outs, assets)
+            except hazard_getters.AssetSiteAssociationError as err:
+                # TODO: add a test for this corner case
+                # https://bugs.launchpad.net/oq-engine/+bug/1317796
+                logs.LOG.warn('Taxonomy %s: %s', builder.taxonomy, err)
+                return {}
+        logs.LOG.info('Processing %d assets of taxonomy %s',
+                      len(assets), taxonomy)
+        res = calc.core_calc_task.task_func(
+            job_id, calc.risk_models[taxonomy], getters,
+            calc.outputdict, calc.calculator_parameters)
+        acc.update(res)
+    return acc
 
 
 def updatedict(acc, dic):
@@ -166,13 +175,14 @@ class RiskCalculator(base.Calculator):
             2. Parse the available risk models
             3. Validate exposure and risk models
         """
-        with self.monitor('get exposure'):
-            exposure = self.rc.exposure_model
-            if exposure is None:
+
+        exposure = self.rc.exposure_model
+        if exposure is None:
+            with self.monitor('import exposure'):
                 ExposureDBWriter(self.job).serialize(
                     parsers.ExposureModelParser(self.rc.inputs['exposure']))
-            self.taxonomies_asset_count = \
-                self.rc.exposure_model.taxonomies_in(self.rc.region_constraint)
+        self.taxonomies_asset_count = \
+            self.rc.exposure_model.taxonomies_in(self.rc.region_constraint)
 
         with self.monitor('parse risk models'):
             self.risk_models = self.get_risk_models()
@@ -223,17 +233,11 @@ class RiskCalculator(base.Calculator):
         getter_builders = tasks.apply_reduce(
             make_getter_builders, (self.job.id, ct, self),
             updatedict, {}, self.concurrent_tasks)
-        assets = []
-        with self.monitor("getting assets"):
-            # the assets here are annotated and ordered by taxonomy
-            for _counts, taxonomy in ct:
-                annotated = models.ExposureData.objects.get_asset_chunk(
-                    self.rc, taxonomy)
-                assets.extend(annotated)
+        assocs = models.AssetSite.objects.filter(job=self.job).order_by(
+            'asset__taxonomy')
         self.acc = tasks.apply_reduce(
-            run_risk, (self.job.id, assets, getter_builders, self),
-            self.agg_result, self.acc, self.concurrent_tasks,
-            key=lambda asset: asset.taxonomy,
+            run_risk, (self.job.id, assocs, getter_builders, self),
+            self.agg_result, {}, self.concurrent_tasks,
             name=self.core_calc_task.__name__)
 
     def _get_outputs_for_export(self):
