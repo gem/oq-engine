@@ -348,7 +348,7 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
         populate the .epsilons_shape dictionary.
         """
         num_assets = len(self.asset_sites)
-        if self.calculation_mode == 'event_based_risk':
+        if self.calculation_mode.startswith('event_based'):
             lt_model_ids = set(ho.output_container.lt_realization.lt_model.id
                                for ho in hazard_outputs)
             for lt_model_id in lt_model_ids:
@@ -378,7 +378,7 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
         """
         if not self.epsilons_shape:
             self.calc_nbytes(hazard_outputs)
-        if self.calculation_mode == 'event_based_risk':
+        if self.calculation_mode.startswith('event_based'):
             lt_model_ids = set(ho.output_container.lt_realization.lt_model.id
                                for ho in hazard_outputs)
             ses_collections = [
@@ -425,7 +425,7 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
         for ho in hazard_outputs:
             getter = gettercls(ho, annotated_assets)
             getter.builder = self
-            if self.calculation_mode == 'event_based_risk':
+            if self.calculation_mode.startswith('event_based'):
                 getter.sescoll = models.SESCollection.objects.get(
                     lt_model=ho.output_container.lt_realization.lt_model)
             elif self.calculation_mode == 'scenario_risk':
