@@ -250,12 +250,16 @@ class GroundMotionValuesGetter(HazardGetter):
         imt_type, sa_period, sa_damping = from_string(imt)
         gmv_dict = self._get_gmv_dict(imt_type, sa_period, sa_damping)
         all_gmvs = []
+        no_data = 0
         for site_id in self.site_ids:
             gmv = gmv_dict.get(site_id, {})
             if not gmv:
-                logs.LOG.info('No data for site_id=%d, imt=%s', site_id, imt)
+                no_data += 1
             array = numpy.array([gmv.get(r, 0.) for r in self.rupture_ids])
             all_gmvs.append(array)
+        if no_data:
+            logs.LOG.info('No data for %d sites out of %d, IMT=%s',
+                          no_data, len(self.site_ids), imt)
         return all_gmvs
 
 
