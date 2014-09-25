@@ -95,35 +95,6 @@ class ExposureContainedInTestCase(unittest.TestCase):
                                     **common_fake_args)
         asset.save()
 
-    def test_simple_inclusion(self):
-        self.rc.region_constraint = Polygon(
-            ((0, 0), (0, 1), (1, 1), (1, 0), (0, 0)))
-
-        results = models.ExposureData.objects.get_asset_chunk(
-            self.rc, "test", 0, 10)
-
-        self.assertEqual(1, len(list(results)))
-        self.assertEqual("test1", results[0].asset_ref)
-
-    def test_inclusion_of_a_pole(self):
-        self.rc.region_constraint = Polygon(
-            ((-1, 0), (-1, 1), (1, 1), (1, 0), (-1, 0)))
-
-        results = models.ExposureData.objects.get_asset_chunk(
-            self.rc, "test", 0, 10)
-
-        self.assertEqual(1, len(results))
-        self.assertEqual("test1", results[0].asset_ref)
-
-        self.rc.region_constraint = Polygon(
-            ((179, 10), (-179, 10), (-179, -10), (179, -10), (179, 10)))
-
-        results = models.ExposureData.objects.get_asset_chunk(
-            self.rc, "test",  0, 10)
-
-        self.assertEqual(1, len(list(results)))
-        self.assertEqual("test2", results[0].asset_ref)
-
 
 class AssetManagerTestCase(unittest.TestCase):
     base = 'openquake.engine.db.models.AssetManager.'
@@ -145,29 +116,26 @@ class AssetManagerTestCase(unittest.TestCase):
         m2.return_value = ("cost_type_fields", "cost_type_joins")
 
         asset_ids = [13, 14]
+        expected_query = """\
+        SELECT riski.exposure_data.*,
+               occupants_fields AS people,
+               cost_type_fields
+        FROM riski.exposure_data
+        occupancy_join
+        ON riski.exposure_data.id = riski.occupancy.exposure_data_id
+        cost_type_joins
+        WHERE exposure_model_id = %s
+        AND riski.exposure_data.id IN %s
+        AND occupants_cond
+        GROUP BY riski.exposure_data.id
+        ORDER BY riski.exposure_data.id"""
         try:
             query, args = self.manager._get_asset_chunk_query_args(
-                rc, "taxonomy", 0, 1, asset_ids)
-            self.assertEqual("""
-            SELECT riski.exposure_data.*,
-                   occupants_fields AS people,
-                   cost_type_fields
-            FROM riski.exposure_data
-            occupancy_join
-            ON riski.exposure_data.id = riski.occupancy.exposure_data_id
-            cost_type_joins
-            WHERE exposure_model_id = %s AND
-                  taxonomy = %s AND
-                  ST_COVERS(ST_GeographyFromText(%s), site) AND
-                  occupants_cond AND riski.exposure_data.id IN (13, 14)
-            GROUP BY riski.exposure_data.id
-            ORDER BY ST_X(geometry(site)), ST_Y(geometry(site))
-            LIMIT 1""", query)
-
-            self.assertEqual(args,
-                             (0, 'taxonomy',
-                              'SRID=4326; REGION CONSTRAINT',
-                              'occ_arg1', 'occ_arg2'))
+                rc, asset_ids)
+            print >> open('/tmp/exp.sql', 'w'), expected_query
+            print >> open('/tmp/got.sql', 'w'), query.rstrip()
+            self.assertEqual(expected_query, query.rstrip())
+            self.assertEqual(args, (0, asset_ids, 'occ_arg1', 'occ_arg2'))
         finally:
             p1.stop()
             p2.stop()
