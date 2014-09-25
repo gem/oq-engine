@@ -49,10 +49,9 @@ class HazardCurveGetterTestCase(unittest.TestCase):
         self.builder = hazard_getters.GetterBuilder(
             self.taxonomy, self.job.risk_calculation)
 
-        self.assets = models.ExposureData.objects.filter(
-            exposure_model=self.job.risk_calculation.exposure_model).order_by(
-            'asset_ref').filter(taxonomy=self.taxonomy)
-
+        assocs = models.AssetSite.objects.filter(job=self.job)
+        self.assets = models.ExposureData.objects.get_asset_chunk(
+            calc.rc, assocs)
         ho = self.job.risk_calculation.hazard_output
         self.nbytes = self.builder.calc_nbytes([ho])
         self.builder.init_epsilons([ho])
@@ -68,7 +67,7 @@ class HazardCurveGetterTestCase(unittest.TestCase):
     def test_call(self):
         # the exposure model in this example has three assets of taxonomy VF
         # called a1, a2 and a3; only a2 and a3 are within the maximum distance
-        [a1, a2, a3] = self.assets
+        [a2, a3] = self.assets
         self.assertEqual(self.getter.assets, [a2, a3])
 
         values = self.getter.get_data(self.imt)
@@ -93,8 +92,9 @@ class GroundMotionValuesGetterTestCase(HazardCurveGetterTestCase):
     def test_call(self):
         # the exposure model in this example has two assets of taxonomy RM
         # (a1 and a3); the asset a3 has no hazard data within the
-        # maximum distance; there is one realization and three ruptures
-        a1, a3 = self.assets
+        # maximum distance, so it is excluded;
+        # there is one realization and three ruptures
+        a1, = self.assets
         self.assertEqual(self.getter.assets, [a1])
         rupture_ids = self.getter.rupture_ids
         self.assertEqual(len(rupture_ids), 3)
@@ -121,7 +121,7 @@ class ScenarioTestCase(GroundMotionValuesGetterTestCase):
         # the exposure model in this example has two assets of taxonomy RM
         # (a1 and a3) but the asset a3 has no hazard data within the
         # maximum distance; there are 10 realizations
-        a1, a3 = self.assets
+        a1, = self.assets
         self.assertEqual(self.getter.assets, [a1])
 
         [gmvs] = self.getter.get_data(self.imt)
