@@ -2819,7 +2819,6 @@ class ExposureModel(djm.Model):
             A dictionary mapping each taxonomy with the number of assets
             contained in `region_constraint`
         """
-
         return ExposureData.objects.taxonomies_contained_in(
             self.id, region_constraint)
 
@@ -2907,8 +2906,10 @@ class AssetManager(djm.GeoManager):
     Asset manager
     """
 
-    def get_asset_chunk(self, rc, asset_ids):
+    def get_asset_chunk(self, rc, assocs):
         """
+        :param assocs:
+           a list of :class:`openquake.engine.db.models.AssetSite` objects
         :returns:
 
            a list of instances of
@@ -2921,11 +2922,15 @@ class AssetManager(djm.GeoManager):
            occupants value for the risk calculation given in input and the cost
            for each cost type considered in `rc`
         """
-
+        asset_ids = tuple(assoc.asset.id for assoc in assocs)
         query, args = self._get_asset_chunk_query_args(rc, asset_ids)
         # print getcursor('job_init').mogrify(query, args)
         with transaction.commit_on_success('job_init'):
-            return list(self.raw(query, args))
+            annotated_assets = list(self.raw(query, args))
+        # add asset_site_id attribute to each asset
+        for ass, assoc in zip(annotated_assets, assocs):
+            ass.asset_site_id = assoc.id
+        return annotated_assets
 
     def _get_asset_chunk_query_args(self, rc, asset_ids):
         """
