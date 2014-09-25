@@ -98,15 +98,11 @@ def run_risk(job_id, sorted_assocs, builders, calc):
     :param calc:
         the risk calculator to use
     """
-    acc = {}
+    acc = calc.acc.copy()
     for taxonomy, assocs_by_taxonomy in itertools.groupby(
             sorted_assocs, lambda a: a.asset.taxonomy):
-        assocs = list(assocs_by_taxonomy)
         assets = models.ExposureData.objects.get_asset_chunk(
-            calc.rc, asset_ids=tuple(a.asset.id for a in assocs))
-        # add .asset_site_id attribute to all annotated assets
-        for a1, a2 in zip(assets, assocs):
-            a1.asset_site_id = a2.id
+            calc.rc, list(assocs_by_taxonomy))
         haz_outs = calc.rc.hazard_outputs()
         builder = builders[taxonomy]
         with calc.monitor("building getters"):
@@ -123,7 +119,7 @@ def run_risk(job_id, sorted_assocs, builders, calc):
         res = calc.core_calc_task.task_func(
             job_id, calc.risk_models[taxonomy], getters,
             calc.outputdict, calc.calculator_parameters)
-        acc.update(res)
+        acc = calc.agg_result(acc, res)
     return acc
 
 
@@ -237,7 +233,7 @@ class RiskCalculator(base.Calculator):
             'asset__taxonomy')
         self.acc = tasks.apply_reduce(
             run_risk, (self.job.id, assocs, getter_builders, self),
-            self.agg_result, {}, self.concurrent_tasks,
+            self.agg_result, self.acc, self.concurrent_tasks,
             name=self.core_calc_task.__name__)
 
     def _get_outputs_for_export(self):
