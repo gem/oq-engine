@@ -34,31 +34,16 @@ DROP CONSTRAINT uiapi_oq_job_hazard_calculation;
 DROP VIEW uiapi.performance_view;
 
 CREATE VIEW uiapi.performance_view AS
-SELECT o.id AS calculation_id, value, 'hazard' AS job_type, p.* FROM (
-     SELECT oq_job_id, operation,
-     sum(duration) AS tot_duration,
+SELECT j.value, p.* FROM (
+     SELECT oq_job_id, operation, sum(duration) AS tot_duration,
      sum(duration)/maxint(count(distinct task_id)::int, 1) AS duration,
      max(pymemory)/1048576. AS pymemory, max(pgmemory)/1048576. AS pgmemory,
      count(*) AS counts
      FROM uiapi.performance
      GROUP BY oq_job_id, operation) AS p
-INNER JOIN uiapi.oq_job AS o
-ON p.oq_job_id=o.id
-INNER JOIN uiapi.job_param AS h
-ON h.job_id=o.id WHERE name='description'
-UNION ALL
-SELECT r.id AS calculation_id, description, 'risk' AS job_type, p.* FROM (
-     SELECT oq_job_id, operation,
-     sum(duration) AS tot_duration,
-     sum(duration)/maxint(count(distinct task_id)::int, 1) AS duration,
-     max(pymemory)/1048576. AS pymemory, max(pgmemory)/1048576. AS pgmemory,
-     count(*) AS counts
-     FROM uiapi.performance
-     GROUP BY oq_job_id, operation) AS p
-INNER JOIN uiapi.oq_job AS o
-ON p.oq_job_id=o.id
-INNER JOIN uiapi.risk_calculation AS r
-ON r.id=o.risk_calculation_id;
+INNER JOIN uiapi.job_param AS j
+ON p.oq_job_id=j.job_id
+WHERE name='description';
 
 DROP TABLE uiapi.hazard_calculation;
 
