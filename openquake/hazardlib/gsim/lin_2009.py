@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2013 GEM Foundation & Chung-Han Chan
+# Copyright (C) 2013-2014, GEM Foundation & Chung-Han Chan
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -136,7 +136,7 @@ class Lin2009(GMPE):
         return stddevs
 
     #: Coefficient table for rock sites, see table 3 page 227.
-    COEFFS = CoeffsTable(sa_damping=0.05, table="""\
+    COEFFS = CoeffsTable(sa_damping=5.0, table="""\
     IMT       C1      C2       C3       C4      C5       H       C6      C7       C8  sigma
     pga   1.0109  0.3822   0.0000  -1.1634  0.1722  1.5184  -0.1907  0.1322  -0.4741  0.5363
     0.01  1.0209  0.3822  -0.0003  -1.1633  0.1722  1.5184  -0.1922  0.1314  -0.4738  0.5360
@@ -181,7 +181,7 @@ class Lin2009AdjustedSigma(Lin2009):
     Probability Seismic Hazard Mapping of Taiwan
     """
     #: Coefficient table for rock sites, see table 3 page 227.
-    COEFFS = CoeffsTable(sa_damping=0.05, table="""\
+    COEFFS = CoeffsTable(sa_damping=5.0, table="""\
     IMT       C1      C2       C3       C4      C5       H       C6      C7       C8  sigma
     pga   1.0109  0.3822   0.0000  -1.1634  0.1722  1.5184  -0.1907  0.1322  -0.4741  0.627
     0.01  1.0209  0.3822  -0.0003  -1.1633  0.1722  1.5184  -0.1922  0.1314  -0.4738  0.627

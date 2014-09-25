@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2012-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -22,6 +22,8 @@ from __future__ import division
 
 import abc
 import math
+import warnings
+import functools
 
 import scipy.stats
 from scipy.special import ndtr
@@ -31,6 +33,32 @@ from openquake.hazardlib import const
 from openquake.hazardlib import imt as imt_module
 
 
+class NotVerifiedWarning(UserWarning):
+    """
+    Raised when a non verified GSIM is instantiated
+    """
+
+
+class MetaGSIM(abc.ABCMeta):
+    """
+    Metaclass providing a warning on instantiation mechanism. A
+    GroundShakingIntensityModel subclass with an attribute deprecated=True
+    will print a deprecation warning when instantiated. Moreover, as
+    subclass with an attribute non_verified=True will print a UserWarning.
+    """
+    def __call__(cls, *args, **kw):
+        if getattr(cls, 'deprecated', False):
+            msg = '%s is deprecated - use %s instead' % (
+                cls.__name__, cls.__base__.__name__)
+            warnings.warn(msg, DeprecationWarning)
+        if getattr(cls, 'non_verified', False):
+            msg = ('%s is not independently verified - the user is liable '
+                   'for their application') % cls.__name__
+            warnings.warn(msg, NotVerifiedWarning)
+        return super(MetaGSIM, cls).__call__(*args, **kw)
+
+
+@functools.total_ordering
 class GroundShakingIntensityModel(object):
     """
     Base class for all the ground shaking intensity models.
@@ -47,7 +75,7 @@ class GroundShakingIntensityModel(object):
     and all the class attributes with names starting from ``DEFINED_FOR``
     and ``REQUIRES``.
     """
-    __metaclass__ = abc.ABCMeta
+    __metaclass__ = MetaGSIM
 
     #: Reference to a
     #: :class:`tectonic region type <openquake.hazardlib.const.TRT>` this GSIM
@@ -405,12 +433,18 @@ class GroundShakingIntensityModel(object):
         for param in self.REQUIRES_RUPTURE_PARAMETERS:
             if param == 'mag':
                 value = rupture.mag
+            elif param == 'strike':
+                value = rupture.surface.get_strike()
             elif param == 'dip':
                 value = rupture.surface.get_dip()
             elif param == 'rake':
                 value = rupture.rake
             elif param == 'ztor':
                 value = rupture.surface.get_top_edge_depth()
+            elif param == 'hypo_lon':
+                value = rupture.hypocenter.longitude
+            elif param == 'hypo_lat':
+                value = rupture.hypocenter.latitude
             elif param == 'hypo_depth':
                 value = rupture.hypocenter.depth
             elif param == 'width':
@@ -431,6 +465,18 @@ class GroundShakingIntensityModel(object):
         if not type(imt) in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
             raise ValueError('imt %s is not supported by %s' %
                              (type(imt).__name__, type(self).__name__))
+
+    def __lt__(self, other):
+        """
+        The GSIMs are ordered according to their name
+        """
+        return self.__class__.__name__ < other.__class__.__name__
+
+    def __eq__(self, other):
+        """
+        The GSIMs are equal if their names are equal
+        """
+        return self.__class__.__name__ == other.__class__.__name__
 
 
 def _truncnorm_sf(truncation_level, values):
@@ -580,7 +626,7 @@ class SitesContext(BaseContext):
     Only those required parameters are made available in a result context
     object.
     """
-    __slots__ = ('vs30', 'vs30measured', 'z1pt0', 'z2pt5')
+    __slots__ = ('vs30', 'vs30measured', 'z1pt0', 'z2pt5', 'lons', 'lats')
 
 
 class DistancesContext(BaseContext):
@@ -610,7 +656,10 @@ class RuptureContext(BaseContext):
     Only those required parameters are made available in a result context
     object.
     """
-    __slots__ = ('mag', 'dip', 'rake', 'ztor', 'hypo_depth', 'width')
+    __slots__ = (
+        'mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
+        'hypo_depth', 'width'
+    )
 
 
 class CoeffsTable(object):

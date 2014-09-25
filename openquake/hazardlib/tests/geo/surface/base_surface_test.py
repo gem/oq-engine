@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2012-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -21,7 +21,7 @@ from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo.surface.base import BaseQuadrilateralSurface
 
-from openquake.hazardlib.tests.geo.surface import _planar_test_data as test_data
+from openquake.hazardlib.tests.geo.surface import _planar_test_data
 
 
 class DummySurface(BaseQuadrilateralSurface):
@@ -46,33 +46,33 @@ class DummySurface(BaseQuadrilateralSurface):
 
 class GetMinDistanceTestCase(unittest.TestCase):
     def test_1(self):
-        surface = DummySurface(test_data.TEST_7_RUPTURE_6_MESH)
+        surface = DummySurface(_planar_test_data.TEST_7_RUPTURE_6_MESH)
         sites = Mesh.from_points_list([Point(0, 0)])
         self.assertAlmostEqual(8.01185807319,
                                surface.get_min_distance(sites)[0])
 
     def test_2(self):
-        surface = DummySurface(test_data.TEST_7_RUPTURE_6_MESH)
+        surface = DummySurface(_planar_test_data.TEST_7_RUPTURE_6_MESH)
         sites = Mesh.from_points_list([Point(-0.25, 0.25)])
         self.assertAlmostEqual(40.1213468,
                                surface.get_min_distance(sites)[0],
                                places=4)
 
     def test_3(self):
-        surface = DummySurface(test_data.TEST_7_RUPTURE_2_MESH)
+        surface = DummySurface(_planar_test_data.TEST_7_RUPTURE_2_MESH)
         sites = Mesh.from_points_list([Point(0, 0)])
         self.assertAlmostEqual(7.01186304977,
                                surface.get_min_distance(sites)[0])
 
     def test_4(self):
-        surface = DummySurface(test_data.TEST_7_RUPTURE_2_MESH)
+        surface = DummySurface(_planar_test_data.TEST_7_RUPTURE_2_MESH)
         sites = Mesh.from_points_list([Point(-0.3, 0.4)])
         self.assertAlmostEqual(55.6159556,
                                surface.get_min_distance(sites)[0],
                                places=4)
 
     def test_several_sites(self):
-        surface = DummySurface(test_data.TEST_7_RUPTURE_2_MESH)
+        surface = DummySurface(_planar_test_data.TEST_7_RUPTURE_2_MESH)
         sites = Mesh.from_points_list([Point(0, 0), Point(-0.3, 0.4)])
         dists = surface.get_min_distance(sites)
         expected_dists = [7.01186304977, 55.6159556]
@@ -119,8 +119,8 @@ class GetJoynerBooreDistanceTestCase(unittest.TestCase):
 
 class GetRXDistanceTestCase(unittest.TestCase):
     def _test1to7surface(self):
-        corners = [[(0, 0, 8), (-0.1, 0, 8)],
-                   [(0, 0, 9), (-0.1, 0, 9)]]
+        corners = [[(0, 0, 8), (-0.05, 0, 8), (-0.1, 0, 8)],
+                   [(0, 0, 9), (-0.05, 0, 9), (-0.1, 0, 9)]]
         surface = DummySurface(corners)
         return surface
 
@@ -180,6 +180,77 @@ class GetRXDistanceTestCase(unittest.TestCase):
         sites = Mesh.from_points_list([Point(0.05, 0)])
         self.assertAlmostEqual(surface.get_rx_distance(sites)[0],
                                -3.9313415355436705, places=4)
+
+    def test9_non_planar_surface_case1(self):
+        # vertical, non-planar surface made of two segments, both of 40 km
+        # length. The first segment has an azimuth of 80 degrees while the
+        # second has an azimuth of 30 degrees. The surface presents therefore
+        # a kink pointing towards south-east
+        corners = [
+            [(0., 0., 0.), (0.354264, 0.062466, 0), (0.534131, 0.373999, 0)],
+            [(0., 0., 10.), (0.354264, 0.062466, 10), (0.534131, 0.373999, 10)]
+        ]
+        surface = DummySurface(corners)
+
+        # distances are tested on 4 points. The first two are on the hanging-
+        # wall and foot-wall of the first segment (10 km distance), while
+        # the third and fourth are on the hanging-wall and foot-wall of the
+        # second segment (20 km distance)
+        sites = Mesh.from_points_list([
+            Point(0.192748, -0.057333), Point(0.161515, 0.119799),
+            Point(0.599964, 0.128300), Point(0.288427, 0.308164)
+        ])
+        numpy.testing.assert_allclose(
+            surface.get_rx_distance(sites),
+            [10., -10., 20., -20], rtol=1e-5
+        )
+
+    def test10_non_planar_surface_case2(self):
+        # vertical, non-planar surface made of two segments, both of 40 km
+        # length. The first segment has an azimuth of 30 degrees while the
+        # second has an azimuth of 80 degrees. The surface presents therefore
+        # a kink pointing towards north-west
+        corners = [
+            [(0., 0., 0.), (0.179866, 0.311534, 0), (0.534137, 0.373994, 0)],
+            [(0., 0., 10.), (0.179866, 0.311534, 10), (0.534137, 0.373994, 10)]
+        ]
+        surface = DummySurface(corners)
+
+        # distances are tested on 4 points. The first two are on the hanging-
+        # wall and foot-wall of the first segment (10 km distance), while
+        # the third and fourth are on the hanging-wall and foot-wall of the
+        # second segment (20 km distance)
+        sites = Mesh.from_points_list([
+            Point(0.167816, 0.110801), Point(0.012048, 0.200733),
+            Point(0.388234, 0.165633), Point(0.325767, 0.519897)
+        ])
+        numpy.testing.assert_allclose(
+            surface.get_rx_distance(sites),
+            [10., -10., 20., -20], rtol=1e-5
+        )
+
+    def test11_non_planar_surface_case3(self):
+        # same geometry as 'test10_non_planar_surface_case2' but with reversed
+        # strike (edges specified in the opposite direction)
+        corners = [
+            [(0.534137, 0.373994, 0), (0.179866, 0.311534, 0), (0., 0., 0.)],
+            [(0.534137, 0.373994, 10), (0.179866, 0.311534, 10), (0., 0., 10.)]
+        ]
+        surface = DummySurface(corners)
+
+        # distances are tested on 4 points. The first two are on the foot-
+        # wall and hanging-wall of the first segment (10 km distance), while
+        # the third and fourth are on the foot-wall and hanging-wall of the
+        # second segment (20 km distance)
+        sites = Mesh.from_points_list([
+            Point(0.167816, 0.110801), Point(0.012048, 0.200733),
+            Point(0.388234, 0.165633), Point(0.325767, 0.519897)
+        ])
+        # distances remain the same, but signs are reversed
+        numpy.testing.assert_allclose(
+            surface.get_rx_distance(sites),
+            [-10., 10., -20., 20], rtol=1e-5
+        )
 
 
 class GetTopEdgeDepthTestCase(unittest.TestCase):

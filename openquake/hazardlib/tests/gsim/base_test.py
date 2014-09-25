@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2012-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -15,12 +15,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 import collections
+import mock
 
 import numpy
 
 from openquake.hazardlib import const
-from openquake.hazardlib.gsim.base import (GMPE, IPE, SitesContext,
-                                           RuptureContext, DistancesContext)
+from openquake.hazardlib.gsim.base import (
+    GMPE, IPE, SitesContext, RuptureContext, DistancesContext,
+    NotVerifiedWarning)
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.imt import PGA, PGV
@@ -153,7 +155,7 @@ class GetPoEsTestCase(_FakeGSIMTestCase):
 
         def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types):
             return numpy.array([-0.7872268528578843]), \
-                   [numpy.array([0.5962393527251486])]
+                [numpy.array([0.5962393527251486])]
 
         self.gsim.get_mean_and_stddevs = get_mean_and_stddevs
         imls = [-2.995732273553991, -0.6931471805599453, 0.6931471805599453]
@@ -170,6 +172,7 @@ class GetPoEsTestCase(_FakeGSIMTestCase):
             const.StdDev.TOTAL
         )
         mean_stddev = numpy.array([[3, 4], [5, 6]])
+
         def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types):
             mean, stddev = mean_stddev
             mean_stddev[0] += 1
@@ -295,35 +298,39 @@ class DisaggregatePoETestCase(_FakeGSIMTestCase):
         aaae(poes, epoes)
 
 
+class TGMPE(GMPE):
+    DEFINED_FOR_TECTONIC_REGION_TYPE = None
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = None
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = None
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = None
+    REQUIRES_SITES_PARAMETERS = None
+    REQUIRES_RUPTURE_PARAMETERS = None
+    REQUIRES_DISTANCES = None
+    get_mean_and_stddevs = None
+
+
+class TIPE(IPE):
+    DEFINED_FOR_TECTONIC_REGION_TYPE = None
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = None
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = None
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = None
+    REQUIRES_SITES_PARAMETERS = None
+    REQUIRES_RUPTURE_PARAMETERS = None
+    REQUIRES_DISTANCES = None
+    get_mean_and_stddevs = None
+
+
 class ToIMTUnitsToDistributionTestCase(unittest.TestCase):
     def test_gmpe(self):
-        class TGMPE(GMPE):
-            DEFINED_FOR_TECTONIC_REGION_TYPE = None
-            DEFINED_FOR_INTENSITY_MEASURE_TYPES = None
-            DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = None
-            DEFINED_FOR_STANDARD_DEVIATION_TYPES = None
-            REQUIRES_SITES_PARAMETERS = None
-            REQUIRES_RUPTURE_PARAMETERS = None
-            REQUIRES_DISTANCES = None
-            get_mean_and_stddevs = None
         gmpe = TGMPE()
         lin_intensity = [0.001, 0.1, 0.7, 1.4]
         log_intensity = [-6.90775528, -2.30258509, -0.35667494, 0.33647224]
-        numpy.testing.assert_allclose(gmpe.to_distribution_values(lin_intensity),
-                                      log_intensity)
+        numpy.testing.assert_allclose(
+            gmpe.to_distribution_values(lin_intensity), log_intensity)
         numpy.testing.assert_allclose(gmpe.to_imt_unit_values(log_intensity),
                                       lin_intensity)
 
     def test_ipe(self):
-        class TIPE(IPE):
-            DEFINED_FOR_TECTONIC_REGION_TYPE = None
-            DEFINED_FOR_INTENSITY_MEASURE_TYPES = None
-            DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = None
-            DEFINED_FOR_STANDARD_DEVIATION_TYPES = None
-            REQUIRES_SITES_PARAMETERS = None
-            REQUIRES_RUPTURE_PARAMETERS = None
-            REQUIRES_DISTANCES = None
-            get_mean_and_stddevs = None
         ipe = TIPE()
         intensity = [0.001, 0.1, 0.7, 1.4]
         numpy.testing.assert_equal(ipe.to_distribution_values(intensity),
@@ -348,9 +355,14 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         jb_distance = numpy.array([6, 7])
         top_edge_depth = 30
         width = 15
+        strike = 60.123
 
         class FakeSurface(object):
             call_counts = collections.Counter()
+
+            def get_strike(self):
+                self.call_counts['get_strike'] += 1
+                return strike
 
             def get_dip(self):
                 self.call_counts['get_dip'] += 1
@@ -424,10 +436,11 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
             'rjb rx rrup repi rhypo'.split()
         )
         self.gsim_class.REQUIRES_RUPTURE_PARAMETERS = set(
-            'mag rake dip ztor hypo_depth width'.split()
+            'mag rake strike dip ztor hypo_lon hypo_lat hypo_depth width'. \
+            split()
         )
         self.gsim_class.REQUIRES_SITES_PARAMETERS = set(
-            'vs30 vs30measured z1pt0 z2pt5'.split()
+            'vs30 vs30measured z1pt0 z2pt5 lons lats'.split()
         )
         sites = SiteCollection([self.site1, self.site2])
         sctx, rctx, dctx = self.gsim.make_contexts(sites, self.rupture)
@@ -436,14 +449,19 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.assertIsInstance(dctx, DistancesContext)
         self.assertEqual(rctx.mag, 123.45)
         self.assertEqual(rctx.rake, 123.56)
+        self.assertEqual(rctx.strike, 60.123)
         self.assertEqual(rctx.dip, 45.4545)
         self.assertEqual(rctx.ztor, 30)
+        self.assertEqual(rctx.hypo_lon, 2)
+        self.assertEqual(rctx.hypo_lat, 3)
         self.assertEqual(rctx.hypo_depth, 40)
         self.assertEqual(rctx.width, 15)
         self.assertTrue((sctx.vs30 == [456, 1456]).all())
         self.assertTrue((sctx.vs30measured == [False, True]).all())
         self.assertTrue((sctx.z1pt0 == [12.1, 112.1]).all())
         self.assertTrue((sctx.z2pt5 == [15.1, 115.1]).all())
+        self.assertTrue((sctx.lons == [1, -2]).all())
+        self.assertTrue((sctx.lats == [2, -3]).all())
         self.assertTrue((dctx.rjb == [6, 7]).all())
         self.assertTrue((dctx.rx == [4, 5]).all())
         self.assertTrue((dctx.rrup == [10, 11]).all())
@@ -454,19 +472,28 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.assertEqual(self.fake_surface.call_counts,
                          {'get_top_edge_depth': 1, 'get_rx_distance': 1,
                           'get_joyner_boore_distance': 1, 'get_dip': 1,
-                          'get_min_distance': 1, 'get_width': 1})
+                          'get_min_distance': 1, 'get_width': 1,
+                          'get_strike': 1})
 
     def test_some_values(self):
         self.gsim_class.REQUIRES_DISTANCES = set('rjb rx'.split())
-        self.gsim_class.REQUIRES_RUPTURE_PARAMETERS = set('mag rake'.split())
-        self.gsim_class.REQUIRES_SITES_PARAMETERS = set('vs30 z1pt0'.split())
+        self.gsim_class.REQUIRES_RUPTURE_PARAMETERS = \
+            set('mag strike rake hypo_lon'.split())
+        self.gsim_class.REQUIRES_SITES_PARAMETERS = \
+            set('vs30 z1pt0 lons'.split())
         sites = SiteCollection([self.site1, self.site2])
         sctx, rctx, dctx = self.gsim.make_contexts(sites, self.rupture)
-        self.assertEqual((rctx.mag, rctx.rake), (123.45, 123.56))
+        self.assertEqual(
+            (rctx.mag, rctx.rake, rctx.strike, rctx.hypo_lon),
+            (123.45, 123.56, 60.123, 2)
+        )
         self.assertTrue((sctx.vs30 == (456, 1456)).all())
         self.assertTrue((sctx.z1pt0 == (12.1, 112.1)).all())
+        self.assertTrue((sctx.lons == [1, -2]).all())
         self.assertTrue((dctx.rx == (4, 5)).all())
         self.assertFalse(hasattr(rctx, 'dip'))
+        self.assertFalse(hasattr(rctx, 'hypo_lat'))
+        self.assertFalse(hasattr(rctx, 'hypo_depth'))
         self.assertFalse(hasattr(sctx, 'vs30measured'))
         self.assertFalse(hasattr(sctx, 'z2pt0'))
         self.assertFalse(hasattr(dctx, 'rrup'))
@@ -474,8 +501,8 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.assertFalse(hasattr(dctx, 'width'))
         self.assertEqual(self.fake_surface.call_counts,
                          {'get_rx_distance': 1,
-                          'get_joyner_boore_distance': 1})
-
+                          'get_joyner_boore_distance': 1,
+                          'get_strike': 1})
 
 class ContextTestCase(unittest.TestCase):
     def test_equality(self):
@@ -519,3 +546,54 @@ class ContextTestCase(unittest.TestCase):
         rctx = RuptureContext()
         rctx.mag = 5.
         self.assertTrue(sctx1 != rctx)
+
+
+class GsimWarningTestCase(unittest.TestCase):
+    def test_deprecated(self):
+        # check that a deprecation warning is raised when a deprecated
+        # GSIM is instantiated
+
+        class NewGMPE(TGMPE):
+            'The version which is not deprecated'
+
+        class OldGMPE(NewGMPE):
+            'The version which is deprecated'
+            deprecated = True
+
+        with mock.patch('warnings.warn') as warn:
+            OldGMPE()  # instantiating this class will call warnings.warn
+
+        warning_msg, warning_type = warn.call_args[0]
+        self.assertIs(warning_type, DeprecationWarning)
+        self.assertEqual(
+            warning_msg, 'OldGMPE is deprecated - use NewGMPE instead')
+
+    def test_non_verified(self):
+        # check that a NonVerifiedWarning is raised when a non-verified
+        # GSIM is instantiated
+
+        class MyGMPE(TGMPE):
+            non_verified = True
+
+        with mock.patch('warnings.warn') as warn:
+            MyGMPE()  # instantiating this class will call warnings.warn
+
+        warning_msg, warning_type = warn.call_args[0]
+        self.assertIs(warning_type, NotVerifiedWarning)
+        self.assertEqual(
+            warning_msg, 'MyGMPE is not independently verified - '
+            'the user is liable for their application')
+
+
+class GsimOrderingTestCase(unittest.TestCase):
+    def test_ordering_and_equality(self):
+        a = TGMPE()
+        b = TIPE()
+        self.assertLess(a, b)  # 'TGMPE' < 'TIPE'
+        self.assertGreater(b, a)
+        self.assertNotEqual(a, b)
+        a1 = TGMPE()
+        b1 = TIPE()
+        self.assertEqual(a, a1)
+        self.assertEqual(b, b1)
+        self.assertNotEqual(a, b1)

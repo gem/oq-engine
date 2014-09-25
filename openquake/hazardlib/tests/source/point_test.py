@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2012-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -27,8 +27,9 @@ from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.geo import Point, PlanarSurface, NodalPlane, Polygon
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.site import Site, SiteCollection
-from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.calc import filters
+from openquake.hazardlib.site import \
+    Site, SiteCollection, FilteredSiteCollection
 
 from openquake.hazardlib.tests.geo.surface import \
     _planar_test_data as planar_surface_test_data
@@ -545,7 +546,7 @@ class PointSourceSourceFilterTestCase(unittest.TestCase):
         filtered = self.source1.filter_sites_by_distance_to_source(
             integration_distance=0, sites=self.sitecol
         )
-        self.assertIsInstance(filtered, SiteCollection)
+        self.assertIsInstance(filtered, FilteredSiteCollection)
         self.assertIsNot(filtered, self.sitecol)
         numpy.testing.assert_array_equal(filtered.indices, [0])
         numpy.testing.assert_array_equal(filtered.vs30, [0.1])
@@ -575,8 +576,7 @@ class PointSourceSourceFilterTestCase(unittest.TestCase):
         filtered = self.source2.filter_sites_by_distance_to_source(
             integration_distance=495, sites=self.sitecol
         )
-        self.assertIs(filtered, self.sitecol)
-        numpy.testing.assert_array_equal(filtered.indices, None)
+        self.assertIs(filtered, self.sitecol)  # nothing filtered
 
     def test_filter_all_out(self):
         self.source1.location.latitude = 13.6
@@ -619,7 +619,7 @@ class PointSourceRuptureFilterTestCase(unittest.TestCase):
         # the JB distances are [8.29156163, 5.05971598, 15.13297135,
         # 495.78630103, 496.89812309], so given that the integration
         # distance is 0 all sites are filtered out
-        filtered = PointSource.filter_sites_by_distance_to_rupture(
+        filtered = filters.filter_sites_by_distance_to_rupture(
             rup, integration_distance=0, sites=self.sitecol
         )
         self.assertIs(filtered, None)
@@ -629,7 +629,7 @@ class PointSourceRuptureFilterTestCase(unittest.TestCase):
         # the JB distance area [5.84700762, 6.8290327, 14.53519629,
         # 496.25926891, 497.37116174] so given that the integration
         # distance is 495 only the first 3 sites are kept
-        filtered = PointSource.filter_sites_by_distance_to_rupture(
+        filtered = filters.filter_sites_by_distance_to_rupture(
             rup, integration_distance=495, sites=self.sitecol
         )
         expected_filtered = SiteCollection(self.SITES[:3])
@@ -661,7 +661,7 @@ class PointSourceRuptureFilterTestCase(unittest.TestCase):
         # the JB distances are [47.0074159, 37.99716685, 40.7944923,
         #  476.2521365, 477.36015879]
         for int_dist in (0, 1, 10, 20, 37.99):
-            filtered = PointSource.filter_sites_by_distance_to_rupture(
+            filtered = filters.filter_sites_by_distance_to_rupture(
                 rup, integration_distance=int_dist, sites=self.sitecol
             )
             self.assertIs(filtered, None)

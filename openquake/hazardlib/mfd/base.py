@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2012-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -83,9 +83,9 @@ class BaseMFD(object):
         """
 
     @abc.abstractmethod
-    def get_min_mag(self):
+    def get_min_max_mag(self):
         """
-        Return the minimum magnitude this MFD is defined for.
+        Return the minimum and maximum magnitudes this MFD is defined for.
 
         This method must be implemented by subclasses.
 

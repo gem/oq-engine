@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2012-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
+import collections
 
 import numpy
 
@@ -21,6 +22,7 @@ from openquake.hazardlib.geo import geodetic
 
 from openquake.hazardlib.tests import SpeedupsTestCase
 
+Point = collections.namedtuple("Point",  'lon lat')
 
 # these points and tests that use them are from
 # http://williams.best.vwh.net/avform.htm#Example
@@ -189,12 +191,99 @@ class MinDistanceTest(SpeedupsTestCase):
                    expected_mpoint_indices=[0, 1])
 
 
+class GeographicObjectsTest(unittest.TestCase):
+    def setUp(self):
+        p1 = Point(0.0, 0.1)
+        p2 = Point(0.0, 0.2)
+        p3 = Point(0.0, 0.3)
+        self.points = geodetic.GeographicObjects([p1, p2, p3])
+
+    def test_closest(self):
+        point = self.points.get_closest(0.0, 0.21)
+        self.assertEqual(point, Point(0.0, 0.2))
+        point = self.points.get_closest(0.0, 0.29)
+        self.assertEqual(point, Point(0.0, 0.3))
+
+    def test_exact_point(self):
+        point = self.points.get_closest(0.0, 0.2)
+        self.assertEqual(point, Point(0.0, 0.2))
+
+
+class MinDistanceToSegmentTest(unittest.TestCase):
+
+    def setUp(self):
+        self.slons = [-1.2, 1.4]
+        self.slats = [-0.3, 0.5]
+
+    def test_one(self):
+        # Positive distance halfspace - within segment
+        dist = geodetic.min_distance_to_segment(self.slons, self.slats,
+                                                lons=numpy.array([0.0]),
+                                                lats=numpy.array([-2.0]))
+        self.assertAlmostEqual(dist, 219.90986712)
+
+    def test_two(self):
+        # Negative distance halfspace - within segment
+        dist = geodetic.min_distance_to_segment(self.slons, self.slats,
+                                                lons=numpy.array([0.0]),
+                                                lats=numpy.array([2.0]))
+        self.assertAlmostEqual(dist, -205.18959626)
+
+    def test_three(self):
+        # Positive distance halfspace - outside segment
+        dist = geodetic.min_distance_to_segment(self.slons, self.slats,
+                                                lons=numpy.array([3.0]),
+                                                lats=numpy.array([0.0]))
+        self.assertAlmostEqual(dist, 186.394507344)
+
+    def test_four(self):
+        # Negative distance halfspace - outside segment
+        dist = geodetic.min_distance_to_segment(self.slons, self.slats,
+                                                lons=numpy.array([-2.0]),
+                                                lats=numpy.array([0.5]))
+        self.assertAlmostEqual(dist, -125.802091893)
+
+    def test_five(self):
+        # Seglons with three elements
+        self.assertRaises(AssertionError,
+                          geodetic.min_distance_to_segment,
+                          numpy.array([0., 0., 0.]),
+                          self.slats,
+                          lons=numpy.array([-2.0]),
+                          lats=numpy.array([0.5]))
+
+
+class DistanceToSemiArcTest(unittest.TestCase):
+    # values in this test are based on the tests used for the
+    # DistanceToArcTest
+    def test_one_point(self):
+        dist = geodetic.distance_to_semi_arc(12.3, 44.5, 39.4,
+                                             plons=13.4, plats=46.9)
+        self.assertAlmostEqual(dist, -105.12464364)
+        dist = geodetic.distance_to_arc(12.3, 44.5, 219.4,
+                                        plons=13.4, plats=46.9)
+        self.assertAlmostEqual(dist, +105.12464364)
+        dist = geodetic.distance_to_semi_arc(12.3, 44.5, 39.4,
+                                             plons=13.4, plats=44.9)
+        self.assertAlmostEqual(dist, 38.34459954)
+        # This tests the distance to a point in the y-negative halfspace in a
+        # reference system which uses as the origin the reference point
+        # (i.e. (12.3; 44.5)) and the y direction as the direction with
+        # azimuth = 39.4)
+        dist = geodetic.distance_to_semi_arc(12.3, 44.5, 39.4,
+                                             plons=11.3, plats=44.5)
+        self.assertAlmostEqual(dist, -79.3093368)
+
+
 class DistanceToArcTest(unittest.TestCase):
     # values in this test have not been checked by hand
     def test_one_point(self):
         dist = geodetic.distance_to_arc(12.3, 44.5, 39.4,
                                         plons=13.4, plats=46.9)
         self.assertAlmostEqual(dist, -105.12464364)
+        dist = geodetic.distance_to_arc(12.3, 44.5, 219.4,
+                                        plons=13.4, plats=46.9)
+        self.assertAlmostEqual(dist, +105.12464364)
         dist = geodetic.distance_to_arc(12.3, 44.5, 39.4,
                                         plons=13.4, plats=44.9)
         self.assertAlmostEqual(dist, 38.34459954)

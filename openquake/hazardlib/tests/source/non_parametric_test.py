@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2013 GEM Foundation
+# Copyright (C) 2013-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -16,14 +16,14 @@
 import unittest
 import numpy
 from decimal import Decimal
-from shapely.geometry import Polygon as shapePoly
 
-from openquake.hazardlib.source.non_parametric import NonParametricSeismicSource
+from openquake.hazardlib.source.non_parametric import \
+    NonParametricSeismicSource
 from openquake.hazardlib.source.rupture import Rupture, \
-NonParametricProbabilisticRupture
+    NonParametricProbabilisticRupture
 from openquake.hazardlib.geo import Point, Polygon
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
-from openquake.hazardlib.pmf import PMF 
+from openquake.hazardlib.pmf import PMF
 
 from openquake.hazardlib.tests import assert_pickleable
 
@@ -89,7 +89,7 @@ class NonParametricSourceTestCase(unittest.TestCase):
         # almost zero
         # in this case the area of the difference is ~ 8 km**2, with
         # respect to area of the computed polygon (~ 352795 km**2) and the area
-        # of the predicted polygon (~ 352803 km**2) 
+        # of the predicted polygon (~ 352803 km**2)
         diff = 100 * poly._polygon2d.\
             symmetric_difference(expected_poly._polygon2d).area
         diff /= expected_poly._polygon2d.area

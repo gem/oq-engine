@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2012-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -29,7 +29,7 @@ class BaseMFDTestCase(unittest.TestCase):
         def get_annual_occurrence_rates(self):
             pass
 
-        def get_min_mag(self):
+        def get_min_max_mag(self):
             pass
 
     def assert_mfd_error(self, func, *args, **kwargs):

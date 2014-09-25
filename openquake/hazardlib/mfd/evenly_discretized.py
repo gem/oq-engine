@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2012-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -77,8 +77,9 @@ class EvenlyDiscretizedMFD(BaseMFD):
         return [(self.min_mag + i * self.bin_width, occurrence_rate)
                 for i, occurrence_rate in enumerate(self.occurrence_rates)]
 
-    def get_min_mag(self):
+    def get_min_max_mag(self):
         """
-        Returns the ``min_mag`` parameter.
+        Returns the minumun and maximum magnitudes
         """
-        return self.min_mag
+        return self.min_mag, self.min_mag + self. bin_width * (
+            len(self.occurrence_rates) - 1)
