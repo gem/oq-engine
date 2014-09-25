@@ -2303,6 +2303,13 @@ class LossFractionData(djm.Model):
         return risk_almost_equal(
             self, data, operator.attrgetter('absolute_loss'))
 
+    def to_csv_str(self):
+        """
+        Convert LossFraction into a CSV string
+        """
+        return '%.5f,%.5f,%s,%s' % (
+            self.location.x, self.location.y, self.value, self.absolute_loss)
+
 
 class LossMap(djm.Model):
     '''
