@@ -258,7 +258,7 @@ class GroundMotionValuesGetter(HazardGetter):
             array = numpy.array([gmv.get(r, 0.) for r in self.rupture_ids])
             all_gmvs.append(array)
         if no_data:
-            logs.LOG.info('No data for %d sites out of %d, IMT=%s',
+            logs.LOG.info('No data for %d assets out of %d, IMT=%s',
                           no_data, len(self.site_ids), imt)
         return all_gmvs
 
@@ -281,7 +281,7 @@ class GetterBuilder(object):
         self.rc = rc
         self.epsilon_sampling = epsilon_sampling
         self.hc = rc.hazard_calculation
-        self.calculation_mode = self.hc.get_param('calculation_mode')
+        self.calculation_mode = self.rc.oqjob.get_param('calculation_mode')
         self.number_of_ground_motion_fields = self.hc.get_param(
             'number_of_ground_motion_fields', 0)
         max_dist = rc.best_maximum_distance * 1000  # km to meters
@@ -348,7 +348,7 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
         populate the .epsilons_shape dictionary.
         """
         num_assets = len(self.asset_sites)
-        if self.calculation_mode == 'event_based':
+        if self.calculation_mode == 'event_based_risk':
             lt_model_ids = set(ho.output_container.lt_realization.lt_model.id
                                for ho in hazard_outputs)
             for lt_model_id in lt_model_ids:
@@ -358,7 +358,7 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
                 samples = min(self.epsilon_sampling, num_ruptures) \
                     if self.epsilon_sampling else num_ruptures
                 self.epsilons_shape[ses_coll.id] = (num_assets, samples)
-        elif self.calculation_mode == 'scenario':
+        elif self.calculation_mode == 'scenario_risk':
             [out] = self.hc.output_set.filter(output_type='ses')
             samples = self.number_of_ground_motion_fields
             self.epsilons_shape[out.ses.id] = (num_assets, samples)
@@ -378,13 +378,13 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
         """
         if not self.epsilons_shape:
             self.calc_nbytes(hazard_outputs)
-        if self.calculation_mode == 'event_based':
+        if self.calculation_mode == 'event_based_risk':
             lt_model_ids = set(ho.output_container.lt_realization.lt_model.id
                                for ho in hazard_outputs)
             ses_collections = [
                 models.SESCollection.objects.get(lt_model=lt_model_id)
                 for lt_model_id in lt_model_ids]
-        elif self.calculation_mode == 'scenario':
+        elif self.calculation_mode == 'scenario_risk':
             [out] = self.hc.output_set.filter(output_type='ses')
             ses_collections = [out.ses]
         else:
@@ -425,10 +425,10 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
         for ho in hazard_outputs:
             getter = gettercls(ho, annotated_assets)
             getter.builder = self
-            if self.calculation_mode == 'event_based':
+            if self.calculation_mode == 'event_based_risk':
                 getter.sescoll = models.SESCollection.objects.get(
                     lt_model=ho.output_container.lt_realization.lt_model)
-            elif self.calculation_mode == 'scenario':
+            elif self.calculation_mode == 'scenario_risk':
                 [out] = ho.oq_job.output_set.filter(output_type='ses')
                 getter.sescoll = out.ses
             getters.append(getter)
