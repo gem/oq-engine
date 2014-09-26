@@ -10,6 +10,9 @@ from openquake.nrmllib.models import ComplexFaultSource, SourceModel
 
 from openquake.commonlib.source import NrmlHazardlibConverter
 
+AKI_RICH_ERR_MSG = 'Surface does not conform with Aki & Richards convention'
+WRONG_ORDER_ERR_MSG = 'Edges points are not in the right order'
+
 
 def _revert_edge(edge_wkt):
     """
@@ -46,14 +49,27 @@ if __name__ == '__main__':
             try:
                 hazlib_src = converter(src)
             except ValueError, excp:
-                print str(excp)
-                print 'Reverting edges ...'
-                top_edge = _revert_edge(src.geometry.top_edge_wkt)
-                bottom_edge = _revert_edge(src.geometry.bottom_edge_wkt)
+                if AKI_RICH_ERR_MSG in str(excp):
+                    print str(excp)
+                    print 'Reverting edges ...'
+                    top_edge = _revert_edge(src.geometry.top_edge_wkt)
+                    bottom_edge = _revert_edge(src.geometry.bottom_edge_wkt)
 
-                # replace old edges with reverted edges
-                src.geometry.top_edge_wkt = top_edge
-                src.geometry.bottom_edge_wkt = bottom_edge
+                    # replace old edges with reverted edges
+                    src.geometry.top_edge_wkt = top_edge
+                    src.geometry.bottom_edge_wkt = bottom_edge
+
+                elif WRONG_ORDER_ERR_MSG in str(excp):
+                    print str(excp)
+                    print 'reverting bottom edge ...'
+
+                    assert len(src.geometry.int_edges) == 0
+                    # revert just the bottom edge
+                    bottom_edge = _revert_edge(src.geometry.bottom_edge_wkt)
+                    src.geometry.bottom_edge_wkt = bottom_edge
+
+                else:
+                    raise excp
             finally:
                 srcs.append(src)
         else:
