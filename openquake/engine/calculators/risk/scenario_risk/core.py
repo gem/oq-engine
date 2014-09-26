@@ -47,7 +47,6 @@ def scenario(job_id, risk_model, getters, outputdict, _params):
       An instance of :class:`..base.CalcParams` used to compute
       derived outputs
     """
-    assert len(getters) == 1, 'Found more than one getter for scenario!'
     monitor = EnginePerformanceMonitor(None, job_id, scenario, tracing=True)
     with db.transaction.commit_on_success(using='job_init'):
         return do_scenario(risk_model, getters, outputdict, monitor)
@@ -73,7 +72,7 @@ def do_scenario(risk_model, getters, outputdict, monitor):
                 assets,
                 loss_ratio_matrix.mean(axis=1),
                 loss_ratio_matrix.std(ddof=1, axis=1),
-                hazard_output_id=getters[0].hid,
+                hazard_output_id=getters.hid,
                 insured=False)
 
             if insured_loss_matrix is not None:
@@ -82,7 +81,7 @@ def do_scenario(risk_model, getters, outputdict, monitor):
                     insured_loss_matrix.mean(axis=1),
                     insured_loss_matrix.std(ddof=1, axis=1),
                     itertools.cycle([True]),
-                    hazard_output_id=getters[0].hid,
+                    hazard_output_id=getters.hid,
                     insured=True)
 
     return agg, ins

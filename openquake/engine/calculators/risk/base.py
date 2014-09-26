@@ -59,13 +59,13 @@ def make_getter_builders(job_id, counts_taxonomy, calc):
     builders = {}  # taxonomy -> builder
     for counts, taxonomy in counts_taxonomy:
         # building the GetterBuilder
+        haz_outs = calc.rc.hazard_outputs()
         with calc.monitor("associating asset->site"):
             builder = hazard_getters.GetterBuilder(
-                taxonomy, calc.rc, calc.eps_sampling)
+                haz_outs, taxonomy, calc.rc, calc.eps_sampling)
 
         # estimating the needed memory
-        haz_outs = calc.rc.hazard_outputs()
-        nbytes = builder.calc_nbytes(haz_outs)
+        nbytes = builder.calc_nbytes()
         if nbytes:
             # TODO: the estimate should be revised by taking into account
             # the number of realizations
@@ -78,7 +78,7 @@ def make_getter_builders(job_id, counts_taxonomy, calc):
                     MEMORY_ERROR % (estimate_mb, available_mb))
 
         # initializing the epsilons
-        builder.init_epsilons(haz_outs)
+        builder.init_epsilons()
         builders[builder.taxonomy] = builder
     return builders
 
@@ -103,21 +103,21 @@ def run_risk(job_id, sorted_assocs, builders, calc):
             sorted_assocs, lambda a: a.asset.taxonomy):
         assets = models.ExposureData.objects.get_asset_chunk(
             calc.rc, assocs_by_taxonomy)
-        haz_outs = calc.rc.hazard_outputs()
         builder = builders[taxonomy]
         with calc.monitor("building getters"):
             try:
-                getters = builder.make_getters(
-                    calc.getter_class, haz_outs, assets)
+                getter = calc.getter_class(builder, assets)
             except hazard_getters.AssetSiteAssociationError as err:
                 # TODO: add a test for this corner case
                 # https://bugs.launchpad.net/oq-engine/+bug/1317796
                 logs.LOG.warn('Taxonomy %s: %s', builder.taxonomy, err)
-                return {}
+                return acc
+        with calc.monitor("getting hazard"):
+            getter.init()
         logs.LOG.info('Processing %d assets of taxonomy %s',
                       len(assets), taxonomy)
         res = calc.core_calc_task.task_func(
-            job_id, calc.risk_models[taxonomy], getters,
+            job_id, calc.risk_models[taxonomy], getter,
             calc.outputdict, calc.calculator_parameters)
         acc = calc.agg_result(acc, res)
     return acc
