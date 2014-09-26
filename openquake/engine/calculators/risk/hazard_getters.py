@@ -16,10 +16,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Hazard getters for Risk calculators.
-
-A HazardGetter is responsible fo getting hazard outputs needed by a risk
-calculation.
+Hazard input management for Risk calculators.
 """
 import itertools
 import operator
@@ -73,17 +70,17 @@ def make_epsilons(asset_count, num_samples, seed, correlation):
     return scientific.make_epsilons(zeros, seed, correlation)
 
 
-class HazardGetter(object):
+class RiskInput(object):
     """
-    A Hazard Getter is used to query for the closest hazard data for
-    each given asset. A Hazard Getter must be pickable such that it
+    A RiskInput objects stores a chunk of assets and their associated
+    hazard data. In case of scenario and event based calculators it
+    also stores the ruptures and the epsilons.
+    The RiskInput must be pickable such that it
     should be possible to use different strategies (e.g. distributed
     or not, using postgis or not).
-    A Hazard Getter should be instantiated by a GetterBuilder and
-    not directly.
 
-    :attr hazard_output:
-        A :class:`openquake.engine.db.models.Output` instance
+    :attr builder:
+        A :class:`GetterBuilder` instance
 
     :attr assets:
         The assets for which we want to extract the hazard
@@ -139,11 +136,11 @@ class HazardGetter(object):
         return ho.id
 
 
-class HazardCurveGetter(HazardGetter):
+class HazardCurveInput(RiskInput):
     """
     Simple HazardCurve Getter that performs a spatial query for each
     asset.
-    """ + HazardGetter.__doc__
+    """ + RiskInput.__doc__
 
     def _get_data(self, ho, imt):
         """
@@ -202,10 +199,10 @@ def expand(array, N):
     return numpy.array([array[i % n] for i in xrange(N)])
 
 
-class GroundMotionValuesGetter(HazardGetter):
+class GroundMotionInput(RiskInput):
     """
     Hazard getter for loading ground motion values.
-    """ + HazardGetter.__doc__
+    """ + RiskInput.__doc__
 
     @property
     def rupture_ids(self):
@@ -279,7 +276,7 @@ class GroundMotionValuesGetter(HazardGetter):
 
 class GetterBuilder(object):
     """
-    A facility to build hazard getters. When instantiated, populates
+    A facility to build hazard inputs. When instantiated, populates
     the `asset_site` table with the associations between
     the assets in the current exposure model and the sites in the
     previous hazard calculation.

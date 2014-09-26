@@ -29,7 +29,7 @@ from openquake.engine.utils import tasks
 
 
 @tasks.oqtask
-def event_based_bcr(job_id, risk_model, getters, outputdict, _params):
+def event_based_bcr(job_id, risk_model, risk_input, outputdict, _params):
     """
     Celery task for the BCR risk calculator based on the event based
     calculator.
@@ -41,8 +41,8 @@ def event_based_bcr(job_id, risk_model, getters, outputdict, _params):
       ID of the currently running job
     :param risk_model:
       A :class:`openquake.risklib.workflows.RiskModel` instance
-    :param getters:
-      A list of callable hazard getters
+    :param risk_input:
+      A RiskInput instance
     :param outputdict:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (in this case only `BCRDistribution`)
@@ -56,14 +56,14 @@ def event_based_bcr(job_id, risk_model, getters, outputdict, _params):
     # Do the job in other functions, such that it can be unit tested
     # without the celery machinery
     with transaction.commit_on_success(using='job_init'):
-            do_event_based_bcr(risk_model, getters, outputdict, monitor)
+            do_event_based_bcr(risk_model, risk_input, outputdict, monitor)
 
 
-def do_event_based_bcr(risk_model, getters, outputdict, monitor):
+def do_event_based_bcr(risk_model, risk_input, outputdict, monitor):
     """
     See `event_based_bcr` for docstring
     """
-    out = risk_model.compute_outputs(getters, monitor.copy('getting hazard'))
+    out = risk_model.compute_outputs(risk_input, monitor.copy('getting hazard'))
     for loss_type, outputs in out.iteritems():
         outputdict = outputdict.with_args(loss_type=loss_type)
         with monitor.copy('writing results'):
@@ -86,8 +86,6 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         validation.ExposureHasRetrofittedCosts]
 
     output_builders = [writers.BCRMapBuilder]
-
-    getter_cls = hazard_getters.GroundMotionValuesGetter
 
     bcr = True
 

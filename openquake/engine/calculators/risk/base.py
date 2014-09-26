@@ -104,9 +104,9 @@ def run_risk(job_id, sorted_assocs, builders, calc):
         assets = models.ExposureData.objects.get_asset_chunk(
             calc.rc, assocs_by_taxonomy)
         builder = builders[taxonomy]
-        with calc.monitor("building getters"):
+        with calc.monitor("building risk inputs"):
             try:
-                getter = calc.getter_class(builder, assets)
+                getter = calc.risk_input_class(builder, assets)
             except hazard_getters.AssetSiteAssociationError as err:
                 # TODO: add a test for this corner case
                 # https://bugs.launchpad.net/oq-engine/+bug/1317796
@@ -164,26 +164,7 @@ class RiskCalculator(base.Calculator):
         """
         return acc
 
-    def pre_execute(self):
-        """
-        In this phase, the general workflow is:
-            1. Parse the exposure to get the taxonomies
-            2. Parse the available risk models
-            3. Validate exposure and risk models
-        """
-
-        exposure = self.rc.exposure_model
-        if exposure is None:
-            with self.monitor('import exposure'):
-                ExposureDBWriter(self.job).serialize(
-                    parsers.ExposureModelParser(self.rc.inputs['exposure']))
-        self.taxonomies_asset_count = \
-            self.rc.exposure_model.taxonomies_in(self.rc.region_constraint)
-
-        with self.monitor('parse risk models'):
-            self.risk_models = self.get_risk_models()
-
-        # populate ImtTaxonomy
+    def populate_imt_taxonomy(self):
         imt_taxonomy_set = set()
         for rm in self.risk_models.itervalues():
             self.loss_types.update(rm.loss_types)
@@ -203,6 +184,27 @@ class RiskCalculator(base.Calculator):
                     (t, count)
                     for t, count in self.taxonomies_asset_count.items()
                     if t in self.risk_models)
+
+    def pre_execute(self):
+        """
+        In this phase, the general workflow is:
+            1. Parse the exposure to get the taxonomies
+            2. Parse the available risk models
+            3. Validate exposure and risk models
+        """
+
+        exposure = self.rc.exposure_model
+        if exposure is None:
+            with self.monitor('import exposure'):
+                ExposureDBWriter(self.job).serialize(
+                    parsers.ExposureModelParser(self.rc.inputs['exposure']))
+        self.taxonomies_asset_count = \
+            self.rc.exposure_model.taxonomies_in(self.rc.region_constraint)
+
+        with self.monitor('parse risk models'):
+            self.risk_models = self.get_risk_models()
+
+        self.populate_imt_taxonomy()
 
         for validator_class in self.validators:
             validator = validator_class(self)
