@@ -30,7 +30,7 @@ from openquake.engine.utils import tasks
 
 
 @tasks.oqtask
-def scenario(job_id, risk_model, getters, outputdict, _params):
+def scenario(job_id, risk_model, risk_input, outputdict, _params):
     """
     Celery task for the scenario risk calculator.
 
@@ -38,8 +38,8 @@ def scenario(job_id, risk_model, getters, outputdict, _params):
       ID of the currently running job
     :param list risk_model:
       A :class:`openquake.risklib.workflows.RiskModel` instance
-    :param getters:
-      A list of callable hazard getters
+    :param risk_input:
+      A RiskInput instance
     :param outputdict:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (in this case only `LossMap`)
@@ -49,14 +49,14 @@ def scenario(job_id, risk_model, getters, outputdict, _params):
     """
     monitor = EnginePerformanceMonitor(None, job_id, scenario, tracing=True)
     with db.transaction.commit_on_success(using='job_init'):
-        return do_scenario(risk_model, getters, outputdict, monitor)
+        return do_scenario(risk_model, risk_input, outputdict, monitor)
 
 
-def do_scenario(risk_model, getters, outputdict, monitor):
+def do_scenario(risk_model, risk_input, outputdict, monitor):
     """
     See `scenario` for a description of the input parameters
     """
-    out = risk_model.compute_outputs(getters, monitor.copy('getting data'))
+    out = risk_model.compute_outputs(risk_input, monitor.copy('getting data'))
     agg, ins = {}, {}
     for loss_type, [output] in out.iteritems():
         outputdict = outputdict.with_args(
@@ -72,7 +72,7 @@ def do_scenario(risk_model, getters, outputdict, monitor):
                 assets,
                 loss_ratio_matrix.mean(axis=1),
                 loss_ratio_matrix.std(ddof=1, axis=1),
-                hazard_output_id=getters.hid,
+                hazard_output_id=risk_input.hid,
                 insured=False)
 
             if insured_loss_matrix is not None:
@@ -81,7 +81,7 @@ def do_scenario(risk_model, getters, outputdict, monitor):
                     insured_loss_matrix.mean(axis=1),
                     insured_loss_matrix.std(ddof=1, axis=1),
                     itertools.cycle([True]),
-                    hazard_output_id=getters.hid,
+                    hazard_output_id=risk_input.hid,
                     insured=True)
 
     return agg, ins
@@ -102,7 +102,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
 
     output_builders = [writers.LossMapBuilder]
 
-    getter_class = hazard_getters.GroundMotionValuesGetter
+    risk_input_class = hazard_getters.GroundMotionInput
 
     def __init__(self, job):
         super(ScenarioRiskCalculator, self).__init__(job)
