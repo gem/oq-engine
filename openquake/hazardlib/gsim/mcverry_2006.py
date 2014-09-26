@@ -81,7 +81,7 @@ class McVerry2006Asc(GMPE):
     #: Required rupture parameters are magnitude, and rake and hypocentral
     # depth rake is for determining fault style flags. Hypo depth is for
     # subduction GMPEs
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake',))
+    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake', 'hypo_depth'))
 
     #: Required distance measure is RRup (paragraphy 3, page 26) which is
     # defined as nearest distance to the source.
@@ -120,36 +120,20 @@ class McVerry2006Asc(GMPE):
         # Get delta_C and delta_D terms for site class
         delta_C, delta_D = self._get_deltas(sites.vs30)
 
-        # Stage 1: compute PGA_ABCD and PGA'_ABCD which are then used in
-        # equation 6
-        # Equation 1 PGA unprimed version
-        lnPGA_AB = self._compute_mean_on_rock(C_PGA_unprimed, rup.mag,
-                                              dists.rrup, rvol, CN, CR, f4HW)
+        # Compute lnPGA_ABCD primed
+        lnPGAp_ABCD = self._compute_mean(C_PGA, S, rup.mag, dists.rrup, rvol,
+                                          rup.hypo_depth, CN, CR, f4HW,
+                                          delta_C, delta_D)
 
-        # Equation 4 PGA unprimed version
-        lnPGA_ABCD = lnPGA_AB + S *\
-            self._compute_nonlinear_soil_term(C_PGA_unprimed,
-                                              lnPGA_AB, delta_C, delta_D)
-
-        # Equation 1 PGA primed version
-        lnPGAp_AB = self._compute_mean_on_rock(C_PGA, rup.mag, dists.rrup,
-                                               rvol, CN, CR, f4HW)
-
-        # Equation 4 PGA primed version
-        lnPGAp_ABCD = lnPGAp_AB + S *\
-            self._compute_nonlinear_soil_term(C_PGA, lnPGAp_AB, delta_C,
-                                              delta_D)
-
-        # Stage 2: compute lnSA(T)
-        # compute intensity on rock (used then to compute site amplification
-        # factor)
-        lnSAp_AB = self._compute_mean_on_rock(C, rup.mag, dists.rrup, rvol,
-                                              CN, CR, f4HW)
-
-        # Compute mean, if site class is CD then apply soil term (equation 4)
-        # If rock, S=0
-        lnSAp_ABCD = lnSAp_AB + S *\
-            self._compute_nonlinear_soil_term(C, lnSAp_AB, delta_C, delta_D)
+        # Compute lnPGA_ABCD unprimed
+        lnPGA_ABCD = self._compute_mean(C_PGA_unprimed, S, rup.mag, dists.rrup,
+                                        rvol, rup.hypo_depth, CN, CR, f4HW,
+                                        delta_C, delta_D)
+                                         
+        # Compute lnSA_ABCD
+        lnSAp_ABCD = self._compute_mean(C, S, rup.mag, dists.rrup, rvol,
+                                          rup.hypo_depth, CN, CR, f4HW,
+                                          delta_C, delta_D)
 
         # Stage 3: Equation 6 SA_ABCD(T). This is lnSA_ABCD
         # need to calculate final lnSA_ABCD from non-log values but return log
@@ -163,8 +147,29 @@ class McVerry2006Asc(GMPE):
         )
 
         return mean, stddevs
+        
+    def _compute_mean(self, C, S, mag, rrup, rvol, hypo_depth, CN, CR, f4HW,
+                      delta_C, delta_D):
+        """
+        Compute mean value on site class A,B,C,D (equation 4)
+        returns lnSA_ABCD
+        """
+        
+        # Stage 1: compute PGA_ABCD and PGA'_ABCD which are then used in
+        # equation 6
+        # Equation 1 PGA unprimed version
+        lnSA_AB = self._compute_mean_on_rock(C, mag, rrup, rvol, hypo_depth, 
+                                             CN, CR, f4HW)
+                                              
+        # Equation 4 PGA unprimed version
+        lnSA_ABCD = lnSA_AB + S *\
+            self._compute_nonlinear_soil_term(C, lnSA_AB, delta_C, delta_D)
+                                              
+        return lnSA_ABCD
+        
 
-    def _compute_mean_on_rock(self, C, mag, rrup, rvol, CN, CR, f4HW):
+    def _compute_mean_on_rock(self, C, mag, rrup, rvol, hypo_depth, CN, CR,
+                               f4HW):
         """
         Compute mean value on site class A/B (equation 1 on page 22)
         """
@@ -258,7 +263,7 @@ class McVerry2006Asc(GMPE):
         the crustal model of McVerry2006Asc rvol is always equal to 0
         """
 
-        return rrup * 0
+        return 0
 
     def _get_fault_mechanism_flags(self, rake):
         """
@@ -327,9 +332,9 @@ class McVerry2006Asc(GMPE):
         f4 = fhw_m * fhw_r
 
         # Not used in current implementation of McVerry 2006, but keep here
-        # for future use
+        # for future use (return f4)
 
-        return f4 * 0
+        return 0
 
     #: Coefficient table (table 3, page 108)
     COEFFS_PRIMED = CoeffsTable(sa_damping=5, table="""\
@@ -407,81 +412,8 @@ class McVerry2006SInter(McVerry2006Asc):
 
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
-    #: Required rupture parameters are magnitude, and rake and hypocentral
-    # depth rake is for determining fault style flags. Hypo depth is for
-    # subduction GMPEs
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth', ))
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            for stddev_type in stddev_types)
-
-        # Compute SA with primed coeffs and PGA with both unprimed and
-        # primed coeffs
-        C = self.COEFFS_PRIMED[imt]
-        C_PGA = self.COEFFS_PRIMED[PGA()]
-        C_PGA_unprimed = self.COEFFS_UNPRIMED[PGA()]
-
-        # Get S term to determine if consider site terms
-        S = self._get_site_class(sites.vs30)
-
-        # Get volcanic path distance (not used)
-        rvol = self._get_volcanic_path_distance(dists.rrup)
-
-        # Get delta_C and delta_D terms for site Class
-        delta_C, delta_D = self._get_deltas(sites.vs30)
-
-        # Stage 1: compute PGA_ABCD and PGA'_ABCD which are used in
-        # equation 6
-        # Equation 1 PGA unprimed version
-        lnPGA_AB = self._compute_SInter_mean_on_rock(C_PGA_unprimed,
-                                                     rup.mag, dists.rrup,
-                                                     rvol, rup.hypo_depth)
-
-        # Equation 4 PGA unprimed version
-        lnPGA_ABCD = lnPGA_AB + S *\
-            self._compute_nonlinear_soil_term(C_PGA_unprimed, lnPGA_AB,
-                                              delta_C, delta_D)
-
-        # Equation 1 PGA primed version
-        lnPGAp_AB = self._compute_SInter_mean_on_rock(C_PGA, rup.mag,
-                                                      dists.rrup, rvol,
-                                                      rup.hypo_depth)
-
-        # Equation 4 PGA primed version
-        lnPGAp_ABCD = lnPGAp_AB + S *\
-            self._compute_nonlinear_soil_term(C_PGA, lnPGAp_AB, delta_C,
-                                              delta_D)
-
-        # Stage 2: compute lnSA(T)
-        # compute intensity on rock (used then to compute site amplification
-        # factor)
-        lnSAp_AB = self._compute_SInter_mean_on_rock(C, rup.mag, dists.rrup,
-                                                     rvol, rup.hypo_depth)
-
-        # Compute mean, if site class is CD then add soil term (equation 4)
-        # If rock, S=0
-        lnSAp_ABCD = lnSAp_AB + S *\
-            self._compute_nonlinear_soil_term(C, lnSAp_AB, delta_C, delta_D)
-
-        # Stage 3: Equation 6 SA_ABCD(T). This is lnSA_ABCD
-        mean = np.log(np.exp(lnSAp_ABCD) *
-            (np.exp(lnPGA_ABCD) / np.exp(lnPGAp_ABCD)))
-
-        # Compute standard deviations
-        C_STD = self.COEFFS_STD[imt]
-        stddevs = self._get_stddevs(
-            C_STD, rup.mag, stddev_types, sites.vs30.size
-        )
-
-        return mean, stddevs
-
-    def _compute_SInter_mean_on_rock(self, C, mag, rrup, rvol, Hc):
+    def _compute_mean_on_rock(self, C, mag, rrup, rvol, hypo_depth, CN, CR,
+                               f4HW):
         """
         Compute mean value on site class A/B (equation 2 on page 22)
         """
@@ -502,7 +434,7 @@ class McVerry2006SInter(McVerry2006Asc):
             # line 4
             C['c17'] * np.log(rrup + C['c18y'] * np.exp(C['c19y'] * mag)) +
             # line 5
-            C['c20'] * Hc + C['c24'] * SI +
+            C['c20'] * hypo_depth + C['c24'] * SI +
             # line 6
             C['c46'] * rvol * (1 - DS)
         )
@@ -535,87 +467,15 @@ class McVerry2006SSlab(McVerry2006Asc):
 
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
-    #: Required rupture parameters are magnitude, and rake and hypocentral
-    # depth rake is for determining fault style flags. Hypo depth is for
-    # subduction GMPEs
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth', ))
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            for stddev_type in stddev_types)
-
-        # Compute SA with primed coeffs and PGA with both unprimed and
-        # primed coeffs
-        C = self.COEFFS_PRIMED[imt]
-        C_PGA = self.COEFFS_PRIMED[PGA()]
-        C_PGA_unprimed = self.COEFFS_UNPRIMED[PGA()]
-
-        # Get S term to determine if consider site terms
-        S = self._get_site_class(sites.vs30)
-
-        # Get volcanic path distance (not used)
-        rvol = self._get_volcanic_path_distance(dists.rrup)
-
-        # Get delta_C and delta_D terms for site Class
-        delta_C, delta_D = self._get_deltas(sites.vs30)
-
-        # Stage 1: compute PGA_ABCD and PGA'_ABCD which are used in
-        # equation 6
-        # Equation 1 PGA unprimed version
-        lnPGA_AB = self._compute_SSlab_mean_on_rock(C_PGA_unprimed, rup.mag,
-                                                    dists.rrup, rvol,
-                                                    rup.hypo_depth)
-
-        # Equation 4 PGA unprimed version
-        lnPGA_ABCD = lnPGA_AB + S *\
-            self._compute_nonlinear_soil_term(C_PGA_unprimed, lnPGA_AB,
-                                              delta_C, delta_D)
-
-        # Equation 1 PGA primed version
-        lnPGAp_AB = self._compute_SSlab_mean_on_rock(C_PGA, rup.mag,
-                                                     dists.rrup, rvol,
-                                                     rup.hypo_depth)
-
-        # Equation 4 PGA primed version
-        lnPGAp_ABCD = lnPGAp_AB + S *\
-            self._compute_nonlinear_soil_term(C_PGA, lnPGAp_AB, delta_C, delta_D)
-
-        # Stage 2: compute lnSA(T)
-        # compute intensity on rock (used then to compute site amplification
-        # factor)
-        lnSAp_AB = self._compute_SSlab_mean_on_rock(C, rup.mag, dists.rrup,
-                                                    rvol, rup.hypo_depth)
-
-        # Compute mean, if site class is CD then add soil term (equation 4)
-        # This is actually median! If rock, S=0
-        lnSAp_ABCD = lnSAp_AB + S *\
-            self._compute_nonlinear_soil_term(C, lnSAp_AB, delta_C, delta_D)
-
-        # Stage 3: Equation 6 SA_ABCD(T). This is lnSA_ABCD
-        mean = np.log(np.exp(lnSAp_ABCD) *
-            (np.exp(lnPGA_ABCD) / np.exp(lnPGAp_ABCD)))
-
-        # Compute standard deviations
-        C_STD = self.COEFFS_STD[imt]
-        stddevs = self._get_stddevs(
-            C_STD, rup.mag, stddev_types, sites.vs30.size
-        )
-
-        return mean, stddevs
-
-    def _compute_SSlab_mean_on_rock(self, C, mag, rrup, rvol, Hc):
+    def _compute_mean_on_rock(self, C, mag, rrup, rvol, hypo_depth, CN, CR,
+                               f4HW):
         """
         Compute mean value on site class A/B (equation 2 on page 22)
         """
 
         # Define subduction flag (page 23)
         # SI=1 for subduction interface, 0 otherwise
-        # DS=0 for subduction intraslab, 0 otherwise
+        # DS=1 for subduction intraslab, 0 otherwise
         SI = 0
         DS = 1
 
@@ -629,7 +489,7 @@ class McVerry2006SSlab(McVerry2006Asc):
             # line 4
             C['c17'] * np.log(rrup + C['c18y'] * np.exp(C['c19y'] * mag)) +
             # line 5
-            C['c20'] * Hc + C['c24'] * SI +
+            C['c20'] * hypo_depth + C['c24'] * SI +
             # line 6
             C['c46'] * rvol * (1 - DS)
         )
@@ -662,108 +522,6 @@ class McVerry2006Volc(McVerry2006Asc):
     """
 
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.VOLCANIC
-
-    #: Required rupture parameters are magnitude, and rake.
-    # Rake is for determining fault style flags.
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake', ))
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            for stddev_type in stddev_types)
-
-        # Compute SA with primed coeffs and PGA with both unprimed and
-        # primed coeffs
-        C = self.COEFFS_PRIMED[imt]
-        C_PGA = self.COEFFS_PRIMED[PGA()]
-        C_PGA_unprimed = self.COEFFS_UNPRIMED[PGA()]
-
-        # Get S term to determine if consider site terms
-        S = self._get_site_class(sites.vs30)
-
-        # Abrahamson and Silva (1997) hanging wall term
-        f4HW = self._compute_f4(C, rup.mag, dists.rrup)
-
-        # Flags for rake angles
-        CN, CR = self._get_fault_mechanism_flags(rup.rake)
-
-        # Get volcanic path distance
-        rvol = self._get_volcanic_path_distance(dists.rrup)
-
-        # Get delta_C and delta_D terms for site Class
-        delta_C, delta_D = self._get_deltas(sites.vs30)
-
-        # Stage 1: compute PGA_ABCD and PGA'_ABCD which are used in
-        # equation 6
-        # Equation 1 PGA unprimed version
-        lnPGA_AB = self._compute_Volc_mean_on_rock(C_PGA_unprimed,
-                                                   rup.mag, dists.rrup,
-                                                   rvol, CN, CR, f4HW)
-
-        # Equation 4 PGA unprimed version
-        lnPGA_ABCD = lnPGA_AB + S *\
-            self._compute_nonlinear_soil_term(C_PGA_unprimed, lnPGA_AB,
-                                              delta_C, delta_D)
-
-        # Equation 1 PGA primed version
-        lnPGAp_AB = self._compute_Volc_mean_on_rock(C_PGA, rup.mag,
-                                                    dists.rrup, rvol,
-                                                    CN, CR, f4HW)
-
-        # Equation 4 PGA primed version
-        lnPGAp_ABCD = lnPGAp_AB + S *\
-            self._compute_nonlinear_soil_term(C_PGA, lnPGAp_AB, delta_C,
-                                              delta_D)
-
-        # Stage 2: compute lnSA(T)
-        # compute intensity on rock (used then to compute site amplification
-        # factor)
-        lnSAp_AB = self._compute_Volc_mean_on_rock(C, rup.mag, dists.rrup,
-                                                   rvol, CN, CR, f4HW)
-
-        # Compute mean, if site class is CD then add soil term (equation 4)
-        # This is actually median! If rock, S=0
-        lnSAp_ABCD = lnSAp_AB + S *\
-            self._compute_nonlinear_soil_term(C, lnSAp_AB, delta_C, delta_D)
-
-        # Stage 3: Equation 6 SA_ABCD(T). This is lnSA_ABCD
-        mean = np.log(np.exp(lnSAp_ABCD) *
-            (np.exp(lnPGA_ABCD) / np.exp(lnPGAp_ABCD)))
-
-        # Compute standard deviations
-        C_STD = self.COEFFS_STD[imt]
-        stddevs = self._get_stddevs(
-            C_STD, rup.mag, stddev_types, sites.vs30.size
-        )
-
-        return mean, stddevs
-
-    def _compute_Volc_mean_on_rock(self, C, mag, rrup, rvol, CN, CR, f4HW):
-        """
-        Compute mean value on site class A/B (equation 2 on page 22)
-        """
-
-        lnSA_AB = (
-            # line 1 of equation 1
-            C['c1'] + C['c4as'] * (mag - 6) +
-            # line 2
-            C['c3as'] * (8.5 - mag) ** 2 +
-            # line 3
-            C['c5'] * rrup + (C['c8'] +
-            # line 4
-            C['c6as'] * (mag - 6)) * np.log((rrup ** 2 +
-                C['c10as'] ** 2) ** 0.5) +
-            # line 5
-            C['c46'] * rvol +
-            # line 6
-            C['c32'] * CN + C['c33as'] * CR + f4HW
-        )
-
-        return lnSA_AB
 
     def _get_volcanic_path_distance(self, rrup):
         """

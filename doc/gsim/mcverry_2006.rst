@@ -1,6 +1,6 @@
-================
+===================
 McVerry et al. 2006
-================
+===================
 
 .. module:: openquake.hazardlib.gsim.mcverry_2006
 
