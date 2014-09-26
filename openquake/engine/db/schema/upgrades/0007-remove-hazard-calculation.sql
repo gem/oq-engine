@@ -1,3 +1,13 @@
+/*
+This script removes one of the core tables of the engine, the
+hazard_calculation table, which has been there from day one. If you
+have scripts or queries relying on that table (something that users
+should not do, since the tables of the openquake database are to be
+considered as private, implementation details subject to change all the
+time) you will have to change them. The info of the hazard_calculation
+table is now in the job_info table.
+*/
+
 ALTER TABLE hzrdi.hazard_site
 DROP CONSTRAINT hzrdi_hazard_site_hazard_calculation_fk;
 
@@ -31,35 +41,21 @@ WHERE y.hazard_calculation_id=x.hazard_calculation_id;
 ALTER TABLE uiapi.oq_job
 DROP CONSTRAINT uiapi_oq_job_hazard_calculation;
 
+-- updating the performance_view
 DROP VIEW uiapi.performance_view;
-
 CREATE VIEW uiapi.performance_view AS
-SELECT o.id AS calculation_id, value, 'hazard' AS job_type, p.* FROM (
-     SELECT oq_job_id, operation,
-     sum(duration) AS tot_duration,
+SELECT j.value, p.* FROM (
+     SELECT oq_job_id, operation, sum(duration) AS tot_duration,
      sum(duration)/maxint(count(distinct task_id)::int, 1) AS duration,
      max(pymemory)/1048576. AS pymemory, max(pgmemory)/1048576. AS pgmemory,
      count(*) AS counts
      FROM uiapi.performance
      GROUP BY oq_job_id, operation) AS p
-INNER JOIN uiapi.oq_job AS o
-ON p.oq_job_id=o.id
-INNER JOIN uiapi.job_param AS h
-ON h.job_id=o.id WHERE name='description'
-UNION ALL
-SELECT r.id AS calculation_id, description, 'risk' AS job_type, p.* FROM (
-     SELECT oq_job_id, operation,
-     sum(duration) AS tot_duration,
-     sum(duration)/maxint(count(distinct task_id)::int, 1) AS duration,
-     max(pymemory)/1048576. AS pymemory, max(pgmemory)/1048576. AS pgmemory,
-     count(*) AS counts
-     FROM uiapi.performance
-     GROUP BY oq_job_id, operation) AS p
-INNER JOIN uiapi.oq_job AS o
-ON p.oq_job_id=o.id
-INNER JOIN uiapi.risk_calculation AS r
-ON r.id=o.risk_calculation_id;
+INNER JOIN uiapi.job_param AS j
+ON p.oq_job_id=j.job_id
+WHERE name='description';
 
+-- dropping the table
 DROP TABLE uiapi.hazard_calculation;
 
 -- add a forgotten geospatial index on site_model
