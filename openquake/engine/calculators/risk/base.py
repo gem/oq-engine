@@ -102,7 +102,7 @@ def run_risk(job_id, sorted_assocs, builders, calc):
     for taxonomy, assocs_by_taxonomy in itertools.groupby(
             sorted_assocs, lambda a: a.asset.taxonomy):
         assets = models.ExposureData.objects.get_asset_chunk(
-            calc.rc, list(assocs_by_taxonomy))
+            calc.rc, assocs_by_taxonomy)
         haz_outs = calc.rc.hazard_outputs()
         builder = builders[taxonomy]
         with calc.monitor("building getters"):
