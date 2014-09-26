@@ -56,7 +56,6 @@ def scenario_damage(job_id, risk_model, getters, outputdict, params):
     monitor = EnginePerformanceMonitor(
         None, job_id, scenario_damage, tracing=True)
     # in scenario damage calculation the only loss_type is 'damage'
-    [getter] = getters
     [ffs] = risk_model.vulnerability_functions
 
     # and NO containes
@@ -64,16 +63,15 @@ def scenario_damage(job_id, risk_model, getters, outputdict, params):
     with db.transaction.commit_on_success(using='job_init'):
 
         with monitor.copy('getting hazard'):
-            ground_motion_values = getter.get_data(ffs.imt)
-
+            [hazard] = getters[ffs.imt]  # there is only one realization
         with monitor.copy('computing risk'):
-            fractions = risk_model.workflow(ground_motion_values)
+            fractions = risk_model.workflow(hazard.data)
             aggfractions = sum(fractions[i] * asset.number_of_units
-                               for i, asset in enumerate(getter.assets))
+                               for i, asset in enumerate(getters.assets))
 
         with monitor.copy('saving damage per assets'):
             writers.damage_distribution(
-                getter.assets, fractions, params.damage_state_ids)
+                getters.assets, fractions, params.damage_state_ids)
 
         return {risk_model.taxonomy: aggfractions}
 
