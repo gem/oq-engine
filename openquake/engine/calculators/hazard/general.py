@@ -438,8 +438,9 @@ class BaseHazardCalculator(base.Calculator):
                 source_collectors = source.parse_source_model(
                     fname, nrml_to_hazardlib, apply_unc)
             except ValueError as e:
-                if str(e) == ('Surface does not conform with Aki & '
-                              'Richards convention'):
+                if str(e) in ('Surface does not conform with Aki & '
+                              'Richards convention',
+                              'Edges points are not in the right order'):
                     raise InvalidFile('''\
 %s: %s. Probably you are using an obsolete model.
 In that case you can fix the file with the command
