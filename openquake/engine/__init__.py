@@ -65,6 +65,7 @@ def git_suffix():
     py_dir = os.path.dirname(__file__)
     os.chdir(py_dir)
     try:
+        FNULL = open(os.devnull, 'w')
         # with this fix we are missing the case where we are really in git
         # installation scenario but, for some reason, git not works properly
         # and not return the hash but it is an acceptable compromise
