@@ -1,6 +1,6 @@
-==================
-Garcia et al. 2005
-==================
+=========================
+Fukushima and Tanaka 1990
+=========================
 
 .. module:: openquake.hazardlib.gsim.fukushima_tanaka_1990
 
