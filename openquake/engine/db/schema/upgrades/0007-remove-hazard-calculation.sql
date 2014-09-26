@@ -1,3 +1,13 @@
+/*
+This script removes one of the core tables of the engine, the
+hazard_calculation table, which has been there from day one. If you
+have scripts or queries relying on that table (something that users
+should not do, since the tables of the openquake database are to be
+considered as private, implementation details subject to change all the
+time) you will have to change them. The info of the hazard_calculation
+table is now in the job_info table.
+*/
+
 ALTER TABLE hzrdi.hazard_site
 DROP CONSTRAINT hzrdi_hazard_site_hazard_calculation_fk;
 
@@ -31,8 +41,8 @@ WHERE y.hazard_calculation_id=x.hazard_calculation_id;
 ALTER TABLE uiapi.oq_job
 DROP CONSTRAINT uiapi_oq_job_hazard_calculation;
 
+-- updating the performance_view
 DROP VIEW uiapi.performance_view;
-
 CREATE VIEW uiapi.performance_view AS
 SELECT j.value, p.* FROM (
      SELECT oq_job_id, operation, sum(duration) AS tot_duration,
@@ -45,6 +55,7 @@ INNER JOIN uiapi.job_param AS j
 ON p.oq_job_id=j.job_id
 WHERE name='description';
 
+-- dropping the table
 DROP TABLE uiapi.hazard_calculation;
 
 -- add a forgotten geospatial index on site_model
