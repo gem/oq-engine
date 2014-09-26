@@ -30,7 +30,7 @@ from openquake.engine.utils import tasks
 
 
 @tasks.oqtask
-def classical(job_id, risk_model, getters, outputdict, params):
+def classical(job_id, risk_model, risk_input, outputdict, params):
     """
     Celery task for the classical risk calculator.
 
@@ -38,8 +38,8 @@ def classical(job_id, risk_model, getters, outputdict, params):
       ID of the currently running job
     :param risk_model:
       A :class:`openquake.risklib.workflows.RiskModel` instance
-    :param getters:
-      A list of callable hazard getters
+    :param risk_input:
+      A RiskInput instance
     :param outputdict:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (e.g. a LossCurve)
@@ -52,10 +52,10 @@ def classical(job_id, risk_model, getters, outputdict, params):
     # Do the job in other functions, such that they can be unit tested
     # without the celery machinery
     with transaction.commit_on_success(using='job_init'):
-        do_classical(risk_model, getters, outputdict, params, monitor)
+        do_classical(risk_model, risk_input, outputdict, params, monitor)
 
 
-def do_classical(risk_model, getters, outputdict, params, monitor):
+def do_classical(risk_model, risk_input, outputdict, params, monitor):
     """
     See `classical` for a description of the parameters.
     :param monitor:
@@ -66,7 +66,7 @@ def do_classical(risk_model, getters, outputdict, params, monitor):
     compute mean and quantile artifacts.
     """
     outputs_per_loss_type = risk_model.compute_outputs(
-        getters, monitor.copy('getting data'))
+        risk_input, monitor.copy('getting data'))
     stats_per_loss_type = risk_model.compute_stats(
         outputs_per_loss_type, params.quantiles, post_processing)
 
@@ -210,7 +210,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
     output_builders = [writers.LossCurveMapBuilder,
                        writers.ConditionalLossFractionBuilder]
 
-    getter_class = hazard_getters.HazardCurveGetter
+    risk_input_class = hazard_getters.HazardCurveInput
 
     def get_workflow(self, vulnerability_functions):
         return workflows.Classical(
