@@ -34,7 +34,7 @@ from openquake.engine.db import models
 
 
 @tasks.oqtask
-def scenario_damage(job_id, risk_model, getters, outputdict, params):
+def scenario_damage(job_id, risk_model, risk_input, outputdict, params):
     """
     Celery task for the scenario damage risk calculator.
 
@@ -42,8 +42,8 @@ def scenario_damage(job_id, risk_model, getters, outputdict, params):
       ID of the currently running job
     :param risk_model:
       A :class:`openquake.risklib.workflows.RiskModel` instance
-    :param getters:
-      A list of callable hazard getters
+    :param risk_input:
+      A RiskInput instance
     :param outputdict:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (in this case only `LossMap`)
@@ -63,15 +63,15 @@ def scenario_damage(job_id, risk_model, getters, outputdict, params):
     with db.transaction.commit_on_success(using='job_init'):
 
         with monitor.copy('getting hazard'):
-            [hazard] = getters[ffs.imt]  # there is only one realization
+            [hazard] = risk_input[ffs.imt]  # there is only one realization
         with monitor.copy('computing risk'):
             fractions = risk_model.workflow(hazard.data)
             aggfractions = sum(fractions[i] * asset.number_of_units
-                               for i, asset in enumerate(getters.assets))
+                               for i, asset in enumerate(risk_input.assets))
 
         with monitor.copy('saving damage per assets'):
             writers.damage_distribution(
-                getters.assets, fractions, params.damage_state_ids)
+                risk_input.assets, fractions, params.damage_state_ids)
 
         return {risk_model.taxonomy: aggfractions}
 
@@ -97,7 +97,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
 
     # FIXME. scenario damage calculator does not use output builders
     output_builders = []
-    getter_class = hazard_getters.GroundMotionValuesGetter
+    risk_input_class = hazard_getters.GroundMotionInput
 
     def __init__(self, job):
         super(ScenarioDamageRiskCalculator, self).__init__(job)

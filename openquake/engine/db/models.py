@@ -626,8 +626,7 @@ class RiskCalculation(djm.Model):
     @property
     def best_maximum_distance(self):
         """
-        Get the asset-hazard maximum distance (in km) to be used in
-        hazard getters.
+        Get the asset-hazard maximum distance (in km)
 
         :returns:
             The minimum between the maximum distance provided by the user (if

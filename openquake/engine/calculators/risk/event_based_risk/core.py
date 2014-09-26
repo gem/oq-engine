@@ -36,7 +36,7 @@ from openquake.engine.utils import tasks
 
 
 @tasks.oqtask
-def event_based(job_id, risk_model, getters, outputdict, params):
+def event_based(job_id, risk_model, risk_input, outputdict, params):
     """
     Celery task for the event based risk calculator.
 
@@ -44,8 +44,8 @@ def event_based(job_id, risk_model, getters, outputdict, params):
         :class:`openquake.engine.db.models.OqJob`
     :param risk_model:
       A :class:`openquake.risklib.workflows.RiskModel` instance
-    :param getters:
-      A list of callable hazard getters
+    :param risk_input:
+      A :class:`RiskInput` instance
     :param outputdict:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (e.g. a LossCurve)
@@ -61,10 +61,11 @@ def event_based(job_id, risk_model, getters, outputdict, params):
     # Do the job in other functions, such that they can be unit tested
     # without the celery machinery
     with db.transaction.commit_on_success(using='job_init'):
-        return do_event_based(risk_model, getters, outputdict, params, monitor)
+        return do_event_based(
+            risk_model, risk_input, outputdict, params, monitor)
 
 
-def do_event_based(risk_model, getters, outputdict, params, monitor):
+def do_event_based(risk_model, risk_input, outputdict, params, monitor):
     """
     See `event_based` for a description of the params
 
@@ -75,7 +76,7 @@ def do_event_based(risk_model, getters, outputdict, params, monitor):
     event_loss_table = {}
     # keep in memory the loss_matrix only when doing disaggregation
     risk_model.workflow.return_loss_matrix = bool(params.sites_disagg)
-    outputs_per_loss_type = risk_model.compute_outputs(getters, monitor)
+    outputs_per_loss_type = risk_model.compute_outputs(risk_input, monitor)
     stats_per_loss_type = risk_model.compute_stats(
         outputs_per_loss_type, params.quantiles, post_processing)
 
@@ -87,7 +88,7 @@ def do_event_based(risk_model, getters, outputdict, params, monitor):
             if params.sites_disagg:
                 with monitor.copy('disaggregating results'):
                     ruptures = [models.SESRupture.objects.get(pk=rid)
-                                for rid in getters.rupture_ids]
+                                for rid in risk_input.rupture_ids]
                     disagg_outputs = disaggregate(
                         out.output, [r.rupture for r in ruptures], params)
             else:
@@ -299,7 +300,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
     output_builders = [writers.EventLossCurveMapBuilder,
                        writers.LossFractionBuilder]
-    getter_class = hazard_getters.GroundMotionValuesGetter
+    risk_input_class = hazard_getters.GroundMotionInput
 
     def __init__(self, job):
         super(EventBasedRiskCalculator, self).__init__(job)

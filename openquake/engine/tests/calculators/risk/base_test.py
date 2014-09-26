@@ -44,7 +44,7 @@ class FakeRiskCalculator(base.RiskCalculator):
     Fake Risk Calculator. Used to test the base class
     """
     output_builders = []
-    getter_class = hazard_getters.GroundMotionValuesGetter
+    risk_input_class = hazard_getters.GroundMotionInput
     core_calc_task = fake_risk_task
 
     @property
