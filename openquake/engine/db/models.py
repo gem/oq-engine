@@ -2929,6 +2929,7 @@ class AssetManager(djm.GeoManager):
            occupants value for the risk calculation given in input and the cost
            for each cost type considered in `rc`
         """
+        assocs = sorted(assocs, key=lambda assoc: assoc.asset.id)
         asset_ids = tuple(assoc.asset.id for assoc in assocs)
         query, args = self._get_asset_chunk_query_args(rc, asset_ids)
         # print getcursor('job_init').mogrify(query, args)
