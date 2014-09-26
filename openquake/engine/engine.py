@@ -20,7 +20,6 @@ import os
 import sys
 import time
 import getpass
-import logging
 import itertools
 import operator
 from contextlib import contextmanager
@@ -54,9 +53,6 @@ INPUT_TYPES = set(dict(models.INPUT_TYPE_CHOICES))
 UNABLE_TO_DEL_HC_FMT = 'Unable to delete hazard calculation: %s'
 UNABLE_TO_DEL_RC_FMT = 'Unable to delete risk calculation: %s'
 
-LOG_FORMAT = ('[%(asctime)s %(job_type)s job #%(job_id)s %(hostname)s '
-              '%(levelname)s %(processName)s/%(process)s] %(message)s')
-
 TERMINATE = valid.boolean(config.get('celery', 'terminate_workers_on_revoke'))
 
 
@@ -80,50 +76,6 @@ def cleanup_after_job(job, terminate):
     for tid in task_ids:
         celery.task.control.revoke(tid, terminate=terminate)
         logs.LOG.debug('Revoked task %s', tid)
-
-
-def _update_log_record(self, record):
-    """
-    Massage a log record before emitting it. Intended to be used by the
-    custom log handlers defined in this module.
-    """
-    if not hasattr(record, 'hostname'):
-        record.hostname = '-'
-    if not hasattr(record, 'job_type'):
-        record.job_type = self.job_type
-    if not hasattr(record, 'job_id'):
-        record.job_id = self.job.id
-
-
-class LogStreamHandler(logging.StreamHandler):
-    """
-    Log stream handler
-    """
-    def __init__(self, job):
-        super(LogStreamHandler, self).__init__()
-        self.setFormatter(logging.Formatter(LOG_FORMAT))
-        self.job_type = job.job_type
-        self.job = job
-
-    def emit(self, record):  # pylint: disable=E0202
-        _update_log_record(self, record)
-        super(LogStreamHandler, self).emit(record)
-
-
-class LogFileHandler(logging.FileHandler):
-    """
-    Log file handler
-    """
-    def __init__(self, job, log_file):
-        super(LogFileHandler, self).__init__(log_file)
-        self.setFormatter(logging.Formatter(LOG_FORMAT))
-        self.job_type = job.job_type
-        self.job = job
-        self.log_file = log_file
-
-    def emit(self, record):  # pylint: disable=E0202
-        _update_log_record(self, record)
-        super(LogFileHandler, self).emit(record)
 
 
 @contextmanager
@@ -230,17 +182,8 @@ def run_calc(job, log_level, log_file, exports, job_type):
 
     calc_mode = job.get_param('calculation_mode')
     calculator = get_calculator_class(job_type, calc_mode)(job)
-
-    # initialize log handlers
-    handler = (LogFileHandler(job, log_file) if log_file
-               else LogStreamHandler(job))
-    logging.root.addHandler(handler)
-    logs.set_level(log_level)
-    try:
-        with job_stats(job):  # run the job
-            _do_run_calc(calculator, exports, job_type)
-    finally:
-        logging.root.removeHandler(handler)
+    with logs.handle(job, log_level, log_file), job_stats(job):  # run the job
+        _do_run_calc(calculator, exports, job_type)
     return calculator
 
 
@@ -516,10 +459,11 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
     # create the current job
     job = prepare_job(user_name=username, log_level=log_level)
     # read calculation params and create the calculation profile
-    oqparam = readini.parse_config(
-        open(cfg_file_path),
-        haz_job.id if haz_job and not hazard_output_id else None,
-        hazard_output_id)
+    with logs.handle(job, log_level):
+        oqparam = readini.parse_config(
+            open(cfg_file_path),
+            haz_job.id if haz_job and not hazard_output_id else None,
+            hazard_output_id)
 
     params = vars(oqparam).copy()
     params.update(extras)

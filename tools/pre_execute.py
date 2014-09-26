@@ -20,9 +20,8 @@
 
 import sys
 import time
-import logging
 from openquake.engine.engine import (
-    job_from_file, getpass, get_calculator_class, LogStreamHandler)
+    job_from_file, getpass, get_calculator_class)
 from openquake.engine import logs
 
 
@@ -38,17 +37,11 @@ def pre_execute(job_ini):
     calc_mode = job.get_param('calculation_mode')
     calculator = get_calculator_class('hazard', calc_mode)(job)
 
-    handler = LogStreamHandler(job)
-    logging.root.addHandler(handler)
-    logs.set_level('info')
-
     t0 = time.time()
-    try:
+    with logs.handle(job):
         calculator.pre_execute()
-    finally:
         duration = time.time() - t0
         logs.LOG.info('Pre_execute time: %s s', duration)
-        logging.root.removeHandler(handler)
 
 if __name__ == '__main__':
     pre_execute(sys.argv[1])
