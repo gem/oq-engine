@@ -274,16 +274,13 @@ class BaseHazardCalculator(base.Calculator):
                 yield args
             return
         sitecol = self.site_collection
-        task_no = 0
         tot_sources = 0
         for trt_model, block in self.all_sources.split(self.concurrent_tasks):
             args = (self.job.id, sitecol, block, trt_model.id)
             self._task_args.append(args)
             yield args
             tot_sources += len(block)
-            task_no += 1
-            logs.LOG.info('Submitting task #%d, %d source(s), weight=%d',
-                          task_no, len(block), block.weight)
+            logs.LOG.info('%d source(s), weight=%d', len(block), block.weight)
         logs.LOG.info('Processed %d sources for %d TRTs',
                       tot_sources, len(self.source_collector))
 
