@@ -58,7 +58,7 @@ class HazardCurveInputTestCase(unittest.TestCase):
         self.nbytes = self.builder.calc_nbytes()
         self.builder.init_epsilons()
         self.risk_input = self.risk_input_class(self.builder, self.assets)
-        self.risk_input.init()
+        self.risk_input.__enter__()
 
     def test_nbytes(self):
         self.assertEqual(self.nbytes, 0)
