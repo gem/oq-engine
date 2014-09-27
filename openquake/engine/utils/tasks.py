@@ -114,7 +114,7 @@ def map_reduce(task, task_args, agg, acc, name=None):
     :returns: the final value of the accumulator
     """
     oqm = OqTaskManager(task, logs.LOG.progress, name)
-    for i, args in enumerate(task_args):
+    for i, args in enumerate(task_args, 1):
         logs.LOG.info('Submitting task %s #%d', oqm.name, i)
         oqm.submit(*args)
     return oqm.aggregate_results(agg, acc)
