@@ -58,14 +58,12 @@ def scenario_damage(job_id, risk_model, risk_input, outputdict, params):
     # in scenario damage calculation the only loss_type is 'damage'
     [ffs] = risk_model.vulnerability_functions
 
-    # and NO containes
-    assert len(outputdict) == 0
+    # and no output containers
+    assert len(outputdict) == 0, outputdict
     with db.transaction.commit_on_success(using='job_init'):
 
-        with monitor.copy('getting hazard'):
-            [hazard] = risk_input[ffs.imt]  # there is only one realization
         with monitor.copy('computing risk'):
-            fractions = risk_model.workflow(hazard.data)
+            fractions = risk_model.workflow(risk_input.get_data(ffs.imt))
             aggfractions = sum(fractions[i] * asset.number_of_units
                                for i, asset in enumerate(risk_input.assets))
 
