@@ -31,7 +31,24 @@ from openquake.engine.db import models
 from django.db import transaction
 
 
+BYTES_PER_FLOAT = numpy.zeros(1, dtype=float).nbytes
+
+NRUPTURES = 1  # constant for readability
+
+
+class AssetSiteAssociationError(Exception):
+    pass
+
+
 class Hazard(object):
+    """
+    Hazard objects have attributes .hazard_output, .data and .imt.
+    Moreover you can extract the .hid (hazard_output.id) and the
+    .weight associated to the underlying realization.
+    The hazard .data is a numpy array of shape (N, R) where N is the
+    number of assets and R the number of seismic events (ruptures)
+    or the resolution of the hazard curve, depending on the calculator.
+    """
     def __init__(self, hazard_output, data, imt):
         self.hazard_output = hazard_output
         self.data = data
@@ -48,15 +65,6 @@ class Hazard(object):
         h = self.hazard_output.output_container
         if hasattr(h, 'lt_realization') and h.lt_realization:
             return h.lt_realization.weight
-
-
-BYTES_PER_FLOAT = numpy.zeros(1, dtype=float).nbytes
-
-NRUPTURES = 1  # constant for readability
-
-
-class AssetSiteAssociationError(Exception):
-    pass
 
 
 def make_epsilons(asset_count, num_samples, seed, correlation):
@@ -79,8 +87,8 @@ class RiskInput(object):
     should be possible to use different strategies (e.g. distributed
     or not, using postgis or not).
 
-    :attr builder:
-        A :class:`GetterBuilder` instance
+    :attr bridge:
+        A :class:`HazardRiskBridge` instance
 
     :attr assets:
         The assets for which we want to extract the hazard
@@ -88,52 +96,57 @@ class RiskInput(object):
    :attr site_ids:
         The ids of the sites associated to the hazards
     """
-    def __init__(self, builder, assets):
-        self.builder = builder
+    def __init__(self, bridge, assets):
+        self.bridge = bridge
         self.assets = assets
         self.site_ids = []
         self.asset_site_ids = []
-        for asset in assets:
+
+    def init(self):
+        """
+        Call this right after installation to read hazards and epsilons
+        from the database, as well as asset_site associations.
+        """
+        # asset_site associations
+        for asset in self.assets:
             asset_site_id = asset.asset_site_id
             assoc = models.AssetSite.objects.get(pk=asset_site_id)
             self.site_ids.append(assoc.site.id)
             self.asset_site_ids.append(asset_site_id)
 
-    def init(self):
+    def get_hazards(self, imt):
         """
-        Call this right after installation to read hazard and epsilons
-        from the database.
+        Return a list of Hazard instances for the given IMT.
         """
-        self._dic = {imt: self.get_data(imt) for imt in self.builder.imts}
-        if hasattr(self, '_get_epsilons'):
-            self.epsilons = self._get_epsilons()
+        return [Hazard(ho, self._get_data(ho, imt), imt)
+                for ho in self.bridge.hazard_outputs]
+
+    def get_data(self, imt):
+        """
+        Shortcut returning the hazard data when there is a single realization
+        """
+        [hazard] = self.get_hazards(imt)
+        return hazard.data
+
+    @property
+    def hid(self):
+        """
+        Return the id of the hazard output, when there is a single realization
+        """
+        [ho] = self.bridge.hazard_outputs
+        return ho.id
+
+    @property
+    def taxonomy(self):
+        """The underlying taxonomy of the assets"""
+        return self.bridge.taxonomy
 
     def __repr__(self):
         shape = getattr(self.epsilons, 'shape', None)
         eps = ', %s epsilons' % str(shape) if shape else ''
         return "<%s %d assets%s, taxonomy=%s>" % (
             self.__class__.__name__, len(self.assets), eps,
-            self.builder.taxonomy)
-
-    def __getitem__(self, imt):
-        return self._dic[imt]
-
-    def keys(self):
-        return self.builder.imts
-
-    def get_data(self, imt):
-        """
-        Return a list of Hazard instances for the given IMT.
-        """
-        return [self._get_data(ho, imt) for ho in self.builder.hazard_outputs]
-
-    @property
-    def hid(self):
-        """
-        Return the id of the hazard output, when there is only one of them
-        """
-        [ho] = self.builder.hazard_outputs
-        return ho.id
+            self.bridge.taxonomy)
 
 
 class HazardCurveInput(RiskInput):
@@ -176,7 +189,7 @@ class HazardCurveInput(RiskInput):
             cursor.execute(query, (oc.id, 'SRID=4326; ' + location.wkt))
             poes = cursor.fetchall()[0][0]
             all_curves.append(zip(imls, poes))
-        return Hazard(ho, all_curves, imt)
+        return all_curves
 
 
 def expand(array, N):
@@ -204,19 +217,36 @@ class GroundMotionInput(RiskInput):
     Hazard getter for loading ground motion values.
     """ + RiskInput.__doc__
 
-    @property
-    def rupture_ids(self):
-        return self.builder.rupture_ids
+    def init(self):
+        """
+        Perform the needed queries on the database to populate
+        hazards and epsilons.
+        """
+        RiskInput.init(self)  # assoc asset -> site
 
-    def _get_epsilons(self):
+        self.hazards = {}  # dict ho, imt -> {site_id: {rup_id: gmv}}
+        for ho in self.bridge.hazard_outputs:
+            for imt in self.bridge.imts:
+                self.hazards[ho, imt] = self._get_gmv_dict(ho, imt)
+
         epsilon_rows = []  # ordered by asset_site_id
         for eps in models.Epsilon.objects.filter(
-                ses_collection__in=self.builder.ses_coll_ids,
+                ses_collection__in=self.bridge.ses_coll_ids,
                 asset_site__in=self.asset_site_ids):
             epsilon_rows.append(eps.epsilons)
-        if not epsilon_rows:  # for scenario_damage
-            return []
-        eps = numpy.array(epsilon_rows)
+        if epsilon_rows:
+            self.epsilons = numpy.array(epsilon_rows)
+
+    @property
+    def rupture_ids(self):
+        """The rupture_ids of the underlying bridge"""
+        return self.bridge.rupture_ids
+
+    def get_epsilons(self):
+        """
+        Expand the underlying epsilons
+        """
+        eps = self.epsilons
         # expand the inner epsilons to the right number, if needed
         _n, m = eps.shape
         e = len(self.rupture_ids)
@@ -226,16 +256,17 @@ class GroundMotionInput(RiskInput):
             return expand(eps.T, e).T
         return eps
 
-    def _get_gmv_dict(self, ho, imt_type, sa_period, sa_damping):
+    def _get_gmv_dict(self, ho, imt):
         """
         :returns: a dictionary {rupture_id: gmv} for the given site and IMT
         """
+        imt_type, sa_period, sa_damping = from_string(imt)
         gmf_id = ho.output_container.id
         if sa_period:
             imt_query = 'imt=%s and sa_period=%s and sa_damping=%s'
         else:
             imt_query = 'imt=%s and sa_period is %s and sa_damping is %s'
-        gmv_dict = {}
+        gmv_dict = {}  # dict site_id -> {rup_id: gmv}
         cursor = models.getcursor('job_init')
         cursor.execute('select site_id, rupture_ids, gmvs from '
                        'hzrdr.gmf_data where gmf_id=%s and site_id in %s '
@@ -258,10 +289,9 @@ class GroundMotionInput(RiskInput):
         :param str imt: Intensity Measure Type
         :returns: a list of N arrays with R elements each.
         """
-        imt_type, sa_period, sa_damping = from_string(imt)
-        gmv_dict = self._get_gmv_dict(ho, imt_type, sa_period, sa_damping)
         all_gmvs = []
         no_data = 0
+        gmv_dict = self.hazards[ho, imt]
         for site_id in self.site_ids:
             gmv = gmv_dict.get(site_id, {})
             if not gmv:
@@ -271,27 +301,31 @@ class GroundMotionInput(RiskInput):
         if no_data:
             logs.LOG.info('No data for %d assets out of %d, IMT=%s',
                           no_data, len(self.site_ids), imt)
-        return Hazard(ho, all_gmvs, imt)
+        return all_gmvs
 
 
-class GetterBuilder(object):
+class HazardRiskBridge(object):
     """
-    A facility to build hazard inputs. When instantiated, populates
-    the `asset_site` table with the associations between
-    the assets in the current exposure model and the sites in the
-    previous hazard calculation.
+    A facility providing the brigde between the hazard (sites and outputs)
+    and the risk (assets and risk models). When instantiated, populates
+    the `asset_site` table with the associations between the assets in
+    the current exposure model and the sites in the previous hazard
+    calculation.
 
-    :param str taxonomy: the taxonomy we are interested in
-    :param rc: a :class:`openquake.engine.db.models.RiskCalculation` instance
+    :param hazard_outputs:
+        outputs of the previous hazard calculation
+    :param taxonomy:
+        the taxonomy of the assets we are interested in
+    :param rc:
+        a :class:`openquake.engine.db.models.RiskCalculation` instance
 
-    Warning: instantiating a GetterBuilder performs a potentially
+    Warning: instantiating a HazardRiskBridge may perform a potentially
     expensive geospatial query.
     """
-    def __init__(self, hazard_outputs, taxonomy, rc, epsilon_sampling=0):
+    def __init__(self, hazard_outputs, taxonomy, rc):
         self.hazard_outputs = hazard_outputs
         self.taxonomy = taxonomy
         self.rc = rc
-        self.epsilon_sampling = epsilon_sampling
         self.hc = rc.hazard_calculation
         self.calculation_mode = self.rc.oqjob.get_param('calculation_mode')
         self.number_of_ground_motion_fields = self.hc.get_param(
@@ -352,12 +386,12 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
         self._rupture_ids = {}
         self.epsilons_shape = {}
 
-    def calc_nbytes(self):
+    def calc_nbytes(self, epsilon_sampling=None):
         """
-        :param hazard_outputs: the outputs of a hazard calculation
-        :returns: the number of bytes to be allocated (can be
-                  much less if there is no correlation and the 'fast'
-                  epsilons management is enabled).
+        :param epsilon_sampling:
+             flag saying if the epsilon_sampling feature is enabled
+        :returns:
+            the number of bytes to be allocated (a guess)
 
         If the hazard_outputs come from an event based or scenario computation,
         populate the .epsilons_shape dictionary.
@@ -370,8 +404,8 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
                 ses_coll = models.SESCollection.objects.get(
                     lt_model=lt_model_id)
                 num_ruptures = ses_coll.get_ruptures().count()
-                samples = min(self.epsilon_sampling, num_ruptures) \
-                    if self.epsilon_sampling else num_ruptures
+                samples = min(epsilon_sampling, num_ruptures) \
+                    if epsilon_sampling else num_ruptures
                 self.epsilons_shape[ses_coll.id] = (num_assets, samples)
         elif self.calculation_mode.startswith('scenario'):
             [out] = self.hc.output_set.filter(output_type='ses')
@@ -384,15 +418,17 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
             nbytes += max(n, r) * n * BYTES_PER_FLOAT
         return nbytes
 
-    def init_epsilons(self):
+    def init_epsilons(self, epsilon_sampling=None):
         """
-        :param hazard_outputs: the outputs of a hazard calculation
+        :param epsilon_sampling:
+             flag saying if the epsilon_sampling feature is enabled
 
-        If the hazard_outputs come from an event based or scenario computation,
-        populate the .epsilons and the ._rupture_ids dictionaries.
+        Populate the .epsilons_shape and the ._rupture_ids dictionaries.
+        For the calculators `event_based_risk` and `scenario_risk` also
+        stores the epsilons in the database for each asset_site association.
         """
         if not self.epsilons_shape:
-            self.calc_nbytes()
+            self.calc_nbytes(epsilon_sampling)
         if self.calculation_mode.startswith('event_based'):
             lt_model_ids = set(ho.output_container.lt_realization.lt_model.id
                                for ho in self.hazard_outputs)

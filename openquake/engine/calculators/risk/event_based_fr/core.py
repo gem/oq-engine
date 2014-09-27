@@ -77,7 +77,7 @@ def event_based_fr(job_id, sites, rc, risk_models,
     :param risk_models:
         a list of RiskModel instances corresponding to the taxonomy
     :param getter_builders:
-        a list of GetterBuilder instances associated to the risk models
+        a list of HazardRiskBridge instances associated to the risk models
     :param outputdict:
         an instance of :class:`..writers.OutputDict` containing
         output container instances (e.g. a LossCurve)
@@ -202,7 +202,7 @@ class EventBasedFRRiskCalculator(core.EventBasedRiskCalculator):
                               risk_model.taxonomy)
                 try:
                     with db.transaction.commit_on_success(using='job_init'):
-                        gbuilder = GetterBuilder(self.rc, risk_model.taxonomy)
+                        gbuilder = HazardRiskBridge(self.rc, risk_model.taxonomy)
                         getter_builders.append(gbuilder)
                         risk_models.append(risk_model)
                 except AssetSiteAssociationError as e:
@@ -320,7 +320,7 @@ class GmfGetter(object):
                            rupids, self.rlz.id, num_gmvs)
 
 
-class GetterBuilder(object):
+class HazardRiskBridge(object):
     """
     A class used to instantiate GmfGetter objects.
     """
@@ -360,7 +360,7 @@ class GetterBuilder(object):
     def init_getters(self, sorted_imts, rlz2gsims):
         """
         Build the risk_input for the given realizations by using the
-        given rupid_seed_pairs and the parameters in the GetterBuilder.
+        given rupid_seed_pairs and the parameters in the HazardRiskBridge.
         """
         self.risk_input = []
         for rlz, pairs in rlz2gsims.iteritems():
