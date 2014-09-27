@@ -289,10 +289,10 @@ class Classical(object):
             mean_insured_curves, mean_average_insured_losses,
             quantile_insured_curves, quantile_average_insured_losses)
 
-    def compute_all_outputs(self, getters, loss_type, getter_monitor):
+    def compute_all_outputs(self, risk_input, loss_type, getter_monitor):
         """
-        :param getters:
-            a list of hazard getters, i.e. objects with a .get_data(imt) method
+        :param risk_input:
+            a risk_input object
         :param str loss_type:
             a string identifying the loss type we are considering
         :getter_monitor:
@@ -303,13 +303,11 @@ class Classical(object):
         """
         all_outputs = []
         imt = self.vulnerability_functions[loss_type].imt
-        for getter in getters:
-            with getter_monitor.copy('getting hazard'):
-                hazard_curves = getter.get_data(imt)
+        for hazard in risk_input.get_hazards(imt):  # for each realization
             with getter_monitor.copy('computing individual risk'):
                 all_outputs.append(
-                    Output(getter.hid, getter.weight, loss_type,
-                           self(loss_type, getter.assets, hazard_curves)))
+                    Output(hazard.hid, hazard.weight, loss_type,
+                           self(loss_type, risk_input.assets, hazard.data)))
         return all_outputs
 
 
@@ -467,10 +465,10 @@ class ProbabilisticEventBased(object):
             insured_curves, average_insured_losses, stddev_insured_losses,
             maps, elt)
 
-    def compute_all_outputs(self, getters, loss_type, getter_monitor):
+    def compute_all_outputs(self, risk_input, loss_type, getter_monitor):
         """
-        :param getters:
-            a list of hazard getters, i.e. objects with a .get_data(imt) method
+        :param risk_input:
+            a risk_input object
         :param str loss_type:
             a string identifying the loss type we are considering
         :param getter_monitor:
@@ -481,14 +479,12 @@ class ProbabilisticEventBased(object):
         """
         all_outputs = []
         imt = self.vulnerability_functions[loss_type].imt
-        for getter in getters:
-            with getter_monitor.copy('getting hazard'):
-                gmvs = numpy.array(getter.get_data(imt))
+        for hazard in risk_input.get_hazards(imt):  # for each realization
             with getter_monitor.copy('computing individual risk'):
-                out = self(loss_type, getter.assets, gmvs,
-                           getter.get_epsilons(), getter.rupture_ids)
+                out = self(loss_type, risk_input.assets, hazard.data,
+                           risk_input.get_epsilons(), risk_input.rupture_ids)
                 all_outputs.append(
-                    Output(getter.hid, getter.weight, loss_type, out))
+                    Output(hazard.hid, hazard.weight, loss_type, out))
         return all_outputs
 
     def statistics(self, all_outputs, quantiles, post_processing):
@@ -705,9 +701,10 @@ class Damage(object):
         and D the number of damage states.
         """
         ffs = self.vulnerability_functions['damage']
-        return numpy.array(
+        out = numpy.array(
             [[scientific.scenario_damage(ffs, gmv) for gmv in gmvs]
              for gmvs in gmfs])
+        return out
 
 
 class RiskModel(object):
@@ -741,10 +738,10 @@ class RiskModel(object):
         """
         return set(vf.imt for vf in self.vulnerability_functions)
 
-    def compute_outputs(self, getters, getter_monitor):
+    def compute_outputs(self, risk_input, getter_monitor):
         """
-        :param getters:
-            a list of callable hazard getters
+        :param risk_input:
+            a list of callable hazard risk_input
         :param getter_monitor:
             a context manager monitoring the time and resources
             spent the in the computation
@@ -753,22 +750,7 @@ class RiskModel(object):
             hazard realizations, keyed by the loss type
         """
         return dict((loss_type, self.workflow.compute_all_outputs(
-                    getters, loss_type, getter_monitor))
-                    for loss_type in self.loss_types)
-
-    def compute_output(self, getter, getter_monitor):
-        """
-        :param getter:
-            a callable hazard getter
-        :param getter_monitor:
-            a context manager monitoring the time and resources
-            spent the in the computation
-        :returns:
-            a dictionary with the output corresponding to the
-            getter, keyed by the loss type
-        """
-        return dict((loss_type, self.workflow.compute_all_outputs(
-                    [getter], loss_type, getter_monitor)[0])
+                    risk_input, loss_type, getter_monitor))
                     for loss_type in self.loss_types)
 
     def compute_stats(self, outputs, quantiles, post_processing):
