@@ -102,7 +102,7 @@ class RiskInput(object):
         self.site_ids = []
         self.asset_site_ids = []
 
-    def init(self):
+    def __enter__(self):
         """
         Call this right after installation to read hazards and epsilons
         from the database, as well as asset_site associations.
@@ -113,6 +113,13 @@ class RiskInput(object):
             assoc = models.AssetSite.objects.get(pk=asset_site_id)
             self.site_ids.append(assoc.site.id)
             self.asset_site_ids.append(asset_site_id)
+        return self
+
+    def __exit__(self, etype, exc, tb):
+        """Clear caches after usage"""
+        self.assets = []
+        self.site_ids = []
+        self.asset_site_ids = []
 
     def get_hazards(self, imt):
         """
@@ -217,12 +224,12 @@ class GroundMotionInput(RiskInput):
     Hazard getter for loading ground motion values.
     """ + RiskInput.__doc__
 
-    def init(self):
+    def __enter__(self):
         """
         Perform the needed queries on the database to populate
         hazards and epsilons.
         """
-        RiskInput.init(self)  # assoc asset -> site
+        RiskInput.__enter__(self)  # assoc asset -> site
 
         self.hazards = {}  # dict ho, imt -> {site_id: {rup_id: gmv}}
         for ho in self.bridge.hazard_outputs:
@@ -236,6 +243,15 @@ class GroundMotionInput(RiskInput):
             epsilon_rows.append(eps.epsilons)
         if epsilon_rows:
             self.epsilons = numpy.array(epsilon_rows)
+
+    def __exit__(self, etype, exc, tb):
+        """Clear caches after usage"""
+        self.assets = []
+        self.site_ids = []
+        self.asset_site_ids = []
+        self.hazards.clear()
+        if hasattr(self, 'epsilons'):
+            self.epsilons = None
 
     @property
     def rupture_ids(self):

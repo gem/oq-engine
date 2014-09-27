@@ -102,7 +102,7 @@ def run_risk(job_id, sorted_assocs, bridges, calc):
     :param sorted_assocs:
         asset_site associations, sorted by taxonomy
     :param dict bridges:
-        hazard getter bridges for each taxonomy
+        hazard-risk bridges for each taxonomy
     :param calc:
         the risk calculator to use
     """
@@ -115,19 +115,20 @@ def run_risk(job_id, sorted_assocs, bridges, calc):
         bridge = bridges[taxonomy]
         with calc.monitor("building risk inputs"):
             try:
-                getter = calc.risk_input_class(bridge, assets)
+                risk_input = calc.risk_input_class(bridge, assets)
             except hazard_getters.AssetSiteAssociationError as err:
                 # TODO: add a test for this corner case
                 # https://bugs.launchpad.net/oq-engine/+bug/1317796
                 logs.LOG.warn('Taxonomy %s: %s', bridge.taxonomy, err)
                 return acc
         with calc.monitor("getting hazard"):
-            getter.init()
+            risk_input.__enter__()
         logs.LOG.info('Processing %d assets of taxonomy %s',
                       len(assets), taxonomy)
         res = calc.core_calc_task.task_func(
-            job_id, calc.risk_models[taxonomy], getter,
+            job_id, calc.risk_models[taxonomy], risk_input,
             calc.outputdict, calc.calculator_parameters)
+        risk_input.__exit__(None, None, None)
         acc = calc.agg_result(acc, res)
     return acc
 
