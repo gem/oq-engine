@@ -391,9 +391,9 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
             cursor.execute(self.assoc_query)
 
         # now read the associations just inserted
-        self.asset_sites = models.AssetSite.objects.filter(
-            job=rc.oqjob, asset__taxonomy=taxonomy)
-        if not self.asset_sites:
+        self.num_assets = models.AssetSite.objects.filter(
+            job=rc.oqjob, asset__taxonomy=taxonomy).count()
+        if self.num_assets == 0:
             raise AssetSiteAssociationError(
                 'Could not associated any asset of taxonomy %s to '
                 'hazard sites within the distance of %s km'
@@ -412,7 +412,6 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
         If the hazard_outputs come from an event based or scenario computation,
         populate the .epsilons_shape dictionary.
         """
-        num_assets = len(self.asset_sites)
         if self.calculation_mode.startswith('event_based'):
             lt_model_ids = set(ho.output_container.lt_realization.lt_model.id
                                for ho in self.hazard_outputs)
@@ -422,11 +421,11 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
                 num_ruptures = ses_coll.get_ruptures().count()
                 samples = min(epsilon_sampling, num_ruptures) \
                     if epsilon_sampling else num_ruptures
-                self.epsilons_shape[ses_coll.id] = (num_assets, samples)
+                self.epsilons_shape[ses_coll.id] = (self.num_assets, samples)
         elif self.calculation_mode.startswith('scenario'):
             [out] = self.hc.output_set.filter(output_type='ses')
             samples = self.number_of_ground_motion_fields
-            self.epsilons_shape[out.ses.id] = (num_assets, samples)
+            self.epsilons_shape[out.ses.id] = (self.num_assets, samples)
         nbytes = 0
         for (n, r) in self.epsilons_shape.values():
             # the max(n, r) is taken because if n > r then the limiting
@@ -467,10 +466,12 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
             if self.calculation_mode != 'scenario_damage':
                 logs.LOG.info('Building (%d, %d) epsilons for taxonomy %s',
                               num_assets, num_samples, self.taxonomy)
+                asset_sites = models.AssetSite.objects.filter(
+                    job=self.rc.oqjob, asset__taxonomy=self.taxonomy)
                 eps = make_epsilons(
                     num_assets, num_samples,
                     self.rc.master_seed, self.rc.asset_correlation)
-                models.Epsilon.saveall(ses_coll, self.asset_sites, eps)
+                models.Epsilon.saveall(ses_coll, asset_sites, eps)
 
     @property
     def ses_coll_ids(self):
