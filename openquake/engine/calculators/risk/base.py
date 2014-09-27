@@ -116,7 +116,8 @@ def run_risk(job_id, sorted_assocs, bridges, calc):
         risk_input = calc.risk_input_class(bridge, assets)
         with calc.monitor("getting hazard"):
             risk_input.__enter__()
-        logs.LOG.info('Processing %d assets of taxonomy %s',
+        logs.LOG.info('Read data from %d hazard sites for %d assets '
+                      'of taxonomy %s', len(set(risk_input.site_ids)),
                       len(assets), taxonomy)
         res = calc.core_calc_task.task_func(
             job_id, calc.risk_models[taxonomy], risk_input,
