@@ -45,9 +45,11 @@ epsilon_sampling in openquake.cfg. It the correlation is
 nonzero, consider setting asset_correlation=0 to avoid building the
 correlation matrix.'''
 
+eps_sampling = int(config.get('risk', 'epsilon_sampling'))
+
 
 @tasks.oqtask
-def make_getter_builders(job_id, counts_taxonomy, calc):
+def build_bridges(job_id, counts_taxonomy, rc):
     """
     Initializes the epsilon matrices and save them on the database.
 
@@ -55,17 +57,21 @@ def make_getter_builders(job_id, counts_taxonomy, calc):
         ID of the current risk job
     :param counts_taxonomy:
         a sorted list of pairs (counts, taxonomy) for each bunch of assets
+    :param rc:
+        the current risk calculation
     """
-    builders = {}  # taxonomy -> builder
+    haz_outs = rc.hazard_outputs()
+    bridges = {}  # taxonomy -> bridge
     for counts, taxonomy in counts_taxonomy:
-        # building the GetterBuilder
-        haz_outs = calc.rc.hazard_outputs()
-        with calc.monitor("associating asset->site"):
-            builder = hazard_getters.GetterBuilder(
-                haz_outs, taxonomy, calc.rc, calc.eps_sampling)
+
+        # building the HazardRiskBridges
+        with EnginePerformanceMonitor(
+                "associating asset->site", job_id, build_bridges):
+            bridge = hazard_getters.HazardRiskBridge(
+                haz_outs, taxonomy, rc)
 
         # estimating the needed memory
-        nbytes = builder.calc_nbytes()
+        nbytes = bridge.calc_nbytes(eps_sampling)
         if nbytes:
             # TODO: the estimate should be revised by taking into account
             # the number of realizations
@@ -77,40 +83,43 @@ def make_getter_builders(job_id, counts_taxonomy, calc):
                 raise MemoryError(
                     MEMORY_ERROR % (estimate_mb, available_mb))
 
-        # initializing the epsilons
-        builder.init_epsilons()
-        builders[builder.taxonomy] = builder
-    return builders
+        # initializing epsilons
+        with EnginePerformanceMonitor(
+                "initializing epsilons", job_id, build_bridges):
+            bridge.init_epsilons(eps_sampling)
+        bridges[bridge.taxonomy] = bridge
+    return bridges
 
 
 @tasks.oqtask
-def run_risk(job_id, sorted_assocs, builders, calc):
+def run_risk(job_id, sorted_assocs, bridges, calc):
     """
     Run the risk calculation on the given assets by using the given
-    hazard builders and risk calculator.
+    hazard bridges and risk calculator.
 
     :param job_id:
         ID of the current risk job
     :param sorted_assocs:
         asset_site associations, sorted by taxonomy
-    :param dict builders:
-        hazard getter builders for each taxonomy
+    :param dict bridges:
+        hazard getter bridges for each taxonomy
     :param calc:
         the risk calculator to use
     """
     acc = calc.acc
     for taxonomy, assocs_by_taxonomy in itertools.groupby(
             sorted_assocs, lambda a: a.asset.taxonomy):
-        assets = models.ExposureData.objects.get_asset_chunk(
-            calc.rc, assocs_by_taxonomy)
-        builder = builders[taxonomy]
+        with calc.monitor("getting assets"):
+            assets = models.ExposureData.objects.get_asset_chunk(
+                calc.rc, assocs_by_taxonomy)
+        bridge = bridges[taxonomy]
         with calc.monitor("building risk inputs"):
             try:
-                getter = calc.risk_input_class(builder, assets)
+                getter = calc.risk_input_class(bridge, assets)
             except hazard_getters.AssetSiteAssociationError as err:
                 # TODO: add a test for this corner case
                 # https://bugs.launchpad.net/oq-engine/+bug/1317796
-                logs.LOG.warn('Taxonomy %s: %s', builder.taxonomy, err)
+                logs.LOG.warn('Taxonomy %s: %s', bridge.taxonomy, err)
                 return acc
         with calc.monitor("getting hazard"):
             getter.init()
@@ -165,6 +174,11 @@ class RiskCalculator(base.Calculator):
         return acc
 
     def populate_imt_taxonomy(self):
+        """
+        Populate the table `imt_taxonomy` by inserting the associations
+        coming from the risk model files. For fragility functions there
+        is a single IMT for each taxonomy.
+        """
         imt_taxonomy_set = set()
         for rm in self.risk_models.itervalues():
             self.loss_types.update(rm.loss_types)
@@ -192,7 +206,6 @@ class RiskCalculator(base.Calculator):
             2. Parse the available risk models
             3. Validate exposure and risk models
         """
-
         exposure = self.rc.exposure_model
         if exposure is None:
             with self.monitor('import exposure'):
@@ -217,24 +230,31 @@ class RiskCalculator(base.Calculator):
         num_taxonomies = len(self.taxonomies_asset_count)
         logs.LOG.info('Considering %d assets of %d distinct taxonomies',
                       num_assets, num_taxonomies)
-        self.eps_sampling = int(config.get('risk', 'epsilon_sampling'))
+
+        self.outputdict = writers.combine_builders(
+            [ob(self) for ob in self.output_builders])
 
     @EnginePerformanceMonitor.monitor
     def execute(self):
         """
-        Method responsible for the distribution strategy.
+        Method responsible for the distribution strategy. The risk
+        calculators share a two phase distribution logic: in phase 1
+        the bridge objects are build, by distributing per taxonomy;
+        in phase 2 the real computation is run, by distributing in chunks
+        of asset_site associations.
         """
-        self.outputdict = writers.combine_builders(
-            [ob(self) for ob in self.output_builders])
+        # build the bridges hazard -> risk
         ct = sorted((counts, taxonomy) for taxonomy, counts
                     in self.taxonomies_asset_count.iteritems())
-        getter_builders = tasks.apply_reduce(
-            make_getter_builders, (self.job.id, ct, self),
+        bridges = tasks.apply_reduce(
+            build_bridges, (self.job.id, ct, self.rc),
             updatedict, {}, self.concurrent_tasks)
+
+        # run the real computation
         assocs = models.AssetSite.objects.filter(job=self.job).order_by(
             'asset__taxonomy')
         self.acc = tasks.apply_reduce(
-            run_risk, (self.job.id, assocs, getter_builders, self),
+            run_risk, (self.job.id, assocs, bridges, self),
             self.agg_result, self.acc, self.concurrent_tasks,
             name=self.core_calc_task.__name__)
 
