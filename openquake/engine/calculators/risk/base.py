@@ -232,9 +232,6 @@ class RiskCalculator(base.Calculator):
         logs.LOG.info('Considering %d assets of %d distinct taxonomies',
                       num_assets, num_taxonomies)
 
-        self.outputdict = writers.combine_builders(
-            [ob(self) for ob in self.output_builders])
-
     @EnginePerformanceMonitor.monitor
     def execute(self):
         """
@@ -244,6 +241,9 @@ class RiskCalculator(base.Calculator):
         in phase 2 the real computation is run, by distributing in chunks
         of asset_site associations.
         """
+        self.outputdict = writers.combine_builders(
+            [ob(self) for ob in self.output_builders])
+
         # build the bridges hazard -> risk
         ct = sorted((counts, taxonomy) for taxonomy, counts
                     in self.taxonomies_asset_count.iteritems())
