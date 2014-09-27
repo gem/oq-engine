@@ -229,7 +229,7 @@ class GroundMotionInput(RiskInput):
         Perform the needed queries on the database to populate
         hazards and epsilons.
         """
-        RiskInput.__enter__(self)  # assoc asset -> site
+        RiskInput.__enter__(self)  # populate .site_ids
 
         self.hazards = {}  # dict ho, imt -> {site_id: {rup_id: gmv}}
         for ho in self.bridge.hazard_outputs:
