@@ -46,7 +46,7 @@ from openquake.hazardlib.site import FilteredSiteCollection
 
 from openquake.commonlib import logictree
 
-from openquake.engine import writer
+from openquake.engine import writer, logs
 from openquake.engine.calculators.hazard import general
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
@@ -437,6 +437,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         """
         sitecol = self.site_collection
         sesruptures = []  # collect the ruptures in a fixed order
+        logs.LOG.info('reading ruptures')
         with self.monitor('reading ruptures'):
             for trt_model in models.TrtModel.objects.filter(
                     lt_model__hazard_calculation=self.job):

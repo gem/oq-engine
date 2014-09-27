@@ -113,14 +113,7 @@ def run_risk(job_id, sorted_assocs, bridges, calc):
             assets = models.ExposureData.objects.get_asset_chunk(
                 calc.rc, assocs_by_taxonomy)
         bridge = bridges[taxonomy]
-        with calc.monitor("building risk inputs"):
-            try:
-                risk_input = calc.risk_input_class(bridge, assets)
-            except hazard_getters.AssetSiteAssociationError as err:
-                # TODO: add a test for this corner case
-                # https://bugs.launchpad.net/oq-engine/+bug/1317796
-                logs.LOG.warn('Taxonomy %s: %s', bridge.taxonomy, err)
-                return acc
+        risk_input = calc.risk_input_class(bridge, assets)
         with calc.monitor("getting hazard"):
             risk_input.__enter__()
         logs.LOG.info('Processing %d assets of taxonomy %s',
