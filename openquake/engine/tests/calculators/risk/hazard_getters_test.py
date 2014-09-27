@@ -48,7 +48,7 @@ class HazardCurveInputTestCase(unittest.TestCase):
         self.job.save()
         calc.pre_execute()
 
-        self.builder = hazard_getters.GetterBuilder(
+        self.builder = hazard_getters.HazardRiskBridge(
             calc.rc.hazard_outputs(), self.taxonomy, self.job.risk_calculation)
         self.builder.imts = [self.imt]
 
@@ -71,10 +71,10 @@ class HazardCurveInputTestCase(unittest.TestCase):
         # called a1, a2 and a3; only a2 and a3 are within the maximum distance
         [a2, a3] = self.assets
         self.assertEqual(self.risk_input.assets, [a2, a3])
-        [hazard] = self.risk_input[self.imt]
+        data = self.risk_input.get_data(self.imt)
         numpy.testing.assert_allclose(
             [[(0.1, 0.1), (0.2, 0.2), (0.3, 0.3)],
-             [(0.1, 0.1), (0.2, 0.2), (0.3, 0.3)]], hazard.data)
+             [(0.1, 0.1), (0.2, 0.2), (0.3, 0.3)]], data)
 
 
 class GroundMotionInputTestCase(HazardCurveInputTestCase):
@@ -100,8 +100,8 @@ class GroundMotionInputTestCase(HazardCurveInputTestCase):
         rupture_ids = self.risk_input.rupture_ids
         self.assertEqual(len(rupture_ids), 3)
 
-        [hazard] = self.risk_input[self.imt]
-        numpy.testing.assert_allclose([[0.1, 0.2, 0.3]], hazard.data)
+        data = self.risk_input.get_data(self.imt)
+        numpy.testing.assert_allclose([[0.1, 0.2, 0.3]], data)
         numpy.testing.assert_allclose(
             numpy.array([[0.49671415, -0.1382643, 0.64768854]]),
             self.risk_input.epsilons)  # shape (1, 3)
@@ -125,6 +125,6 @@ class ScenarioTestCase(GroundMotionInputTestCase):
         # maximum distance; there are 10 realizations
         a1, = self.assets
         self.assertEqual(self.risk_input.assets, [a1])
-        [hazard] = self.risk_input[self.imt]
+        data = self.risk_input.get_data(self.imt)
         expected = [[0.1, 0.2, 0.3] + [0] * 7]
-        numpy.testing.assert_allclose(expected, hazard.data)
+        numpy.testing.assert_allclose(expected, data)
