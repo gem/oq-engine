@@ -156,11 +156,14 @@ def get_pickled_sizes(obj):
     Return the pickled sizes of an object and its direct attributes,
     ordered by decreasing size. Here is an example:
 
-    >>> total_size, partial_sizes = get_pickled_sizes(PerformanceMonitor())
-    >>> total_size
+    >> total_size, partial_sizes = get_pickled_sizes(PerformanceMonitor())
+    >> total_size
     345
-    >>> partial_sizes
-    [('_procs', 214), ('exc', 4), ('mem', 4), ('start_time', 4), ('_start_time', 4), ('duration', 4)]
+    >> partial_sizes
+    [('_procs', 214), ('exc', 4), ('mem', 4), ('start_time', 4),
+     ('_start_time', 4), ('duration', 4)]
+
+    Notice that the sizes depend on the operating system and the machine.
     """
     sizes = []
     attrs = getattr(obj, '__dict__',  {})
