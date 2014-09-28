@@ -200,7 +200,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
             )
         expected_error = (
             'It is not valid to define a loss ratio = 0.0 with a corresponding'
-            ' coeff. of varation > 0.0'
+            ' coeff. of variation > 0.0'
         )
         self.assertEqual(expected_error, ar.exception.message)
 
