@@ -162,7 +162,7 @@ def get_pickled_sizes(obj):
     >>> partial_sizes
     [('_procs', 214), ('exc', 4), ('mem', 4), ('start_time', 4), ('_start_time', 4), ('duration', 4)]
     """
-    sizes= []
+    sizes = []
     attrs = getattr(obj, '__dict__',  {})
     for name, value in attrs.iteritems():
         sizes.append((name, len(Pickled(value))))

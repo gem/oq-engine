@@ -1,5 +1,3 @@
-import logging
-
 import numpy
 
 from openquake.hazardlib import geo, site
@@ -8,7 +6,7 @@ from openquake.commonlib import valid
 from openquake.commonlib.oqvalidation import \
     fragility_files, vulnerability_files
 from openquake.commonlib.riskmodels import \
-    get_fragility_sets, get_imtls_from_vulnerabilities
+    get_fragility_functions, get_imtls_from_vulnerabilities
 from openquake.commonlib.converter import Converter
 from openquake.commonlib.source import ValidNode, RuptureConverter
 
@@ -139,8 +137,8 @@ def get_imtls(oqparam):
         imtls = get_imtls_from_vulnerabilities(oqparam.inputs)
     elif fragility_files(oqparam.inputs):
         fname = oqparam.inputs['fragility']
-        imtls = {str(fset.imt): fset.imls
-                 for fset in get_fragility_sets(fname)}
+        _damage_states, ffs = get_fragility_functions(fname)
+        imtls = {fset.imt: fset.imls for fset in ffs.values()}
     else:
         raise ValueError('Missing intensity_measure_types_and_levels, '
                          'vulnerability file and fragility file')

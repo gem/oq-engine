@@ -4,6 +4,7 @@ import collections
 from openquake.nrmllib.node import read_nodes, LiteralNode, context
 from openquake.nrmllib import InvalidFile
 from openquake.commonlib import valid
+from openquake.risklib import scientific
 
 from openquake.commonlib.oqvalidation import vulnerability_files
 
@@ -24,50 +25,55 @@ class VulnerabilityNode(LiteralNode):
         IML=valid.IML,
         lossRatio=valid.positivefloats,
         coefficientsVariation=valid.positivefloats,
+        probabilisticDistribution=valid.Choice('LN', 'BT'),
     )
-
-VSet = collections.namedtuple(
-    'VSet', 'imt imls vfunctions'.split())
-
-VFunction = collections.namedtuple(
-    'VFunction', 'id lossRatio coefficientsVariation'.split())
 
 
 def filter_vset(elem):
     return elem.tag.endswith('discreteVulnerabilitySet')
 
 
-def get_vulnerability_sets(fname):
+def get_vulnerability_functions(fname):
     """
-    Yields VSet namedtuples, each containing imt, imls and
-    vulnerability functions.
-
     :param fname:
         path of the vulnerability filter
+    :returns:
+        a dictionary imt, taxonomy -> vulnerability function
     """
     imts = set()
+    taxonomies = set()
+    vf_dict = {}  # imt, taxonomy -> vulnerability function
     for vset in read_nodes(fname, filter_vset, VulnerabilityNode):
         imt_str, imls, min_iml, max_iml = ~vset.IML
         if imt_str in imts:
             raise InvalidFile('Duplicated IMT %s: %s, line %d' %
                               (imt_str, fname, vset.imt.lineno))
         imts.add(imt_str)
-        vfuns = []
         for vfun in vset.getnodes('discreteVulnerability'):
+            taxonomy = vfun['vulnerabilityFunctionID']
+            if taxonomy in taxonomies:
+                raise InvalidFile(
+                    'Duplicated vulnerabilityFunctionID: %s: %s, line %d' %
+                    (taxonomy, fname, vfun.lineno))
+            taxonomies.add(taxonomy)
             with context(fname, vfun):
-                vf = VFunction(vfun['vulnerabilityFunctionID'],
-                               ~vfun.lossRatio, ~vfun.coefficientsVariation)
-            if len(vf.lossRatio) != len(imls):
+                loss_ratios = ~vfun.lossRatio
+                coefficients = ~vfun.coefficientsVariation
+            if len(loss_ratios) != len(imls):
                 raise InvalidFile(
                     'There are %d loss ratios, but %d imls: %s, line %d' %
-                    (len(vf.lossRatio), len(imls), fname, vf.lossRatio.lineno))
-            elif len(vf.coefficientsVariation) != len(imls):
+                    (len(loss_ratios), len(imls), fname,
+                     vfun.lossRatio.lineno))
+            if len(coefficients) != len(imls):
                 raise InvalidFile(
                     'There are %d coefficients, but %d imls: %s, line %d' %
-                    (len(vf.coefficientsVariation), len(imls), fname,
-                     vf.coefficientsVariation.lineno))
-            vfuns.append(vf)
-        yield VSet(imt_str, imls, vfuns)
+                    (len(coefficients), len(imls), fname,
+                     vfun.coefficientsVariation.lineno))
+            with context(fname, vfun):
+                vf_dict[imt_str, taxonomy] = scientific.VulnerabilityFunction(
+                    imt_str, imls, loss_ratios, coefficients,
+                    vfun['probabilisticDistribution'])
+    return vf_dict
 
 
 def get_imtls_from_vulnerabilities(inputs):
@@ -81,15 +87,15 @@ def get_imtls_from_vulnerabilities(inputs):
     # in that case we merge the IMLs
     imtls = {}
     for loss_type, fname in vulnerability_files(inputs):
-        for vset in get_vulnerability_sets(fname):
-            imt = vset.imt
-            if imt in imtls and imtls[imt] != vset.imls:
+        for (imt, taxonomy), vf in get_vulnerability_functions(fname).items():
+            imls = list(vf.imls)
+            if imt in imtls and imtls[imt] != imls:
                 logging.warn(
-                    'Different levels for IMT %s: got %s, expected %s in %s',
-                    imt, vset.imls, imtls[imt], fname)
-                imtls[imt] = sorted(set(vset.imls + imtls[imt]))
+                    'Different levels for IMT %s: got %s, expected %s '
+                    'in %s', imt, vf.imls, imtls[imt], fname)
+                imtls[imt] = sorted(set(imls + imtls[imt]))
             else:
-                imtls[imt] = vset.imls
+                imtls[imt] = imls
     return imtls
 
 
@@ -109,38 +115,54 @@ class FragilityNode(LiteralNode):
     )
 
 
-FSet = collections.namedtuple(
-    'FSet', ['imt', 'imls', 'min_iml', 'max_iml', 'taxonomy', 'nodamagelimit',
-             'limit_states', 'ffunctions'])
+class List(list):
+    """
+    Class to store lists of objects with common attributes
+    """
+    def __init__(self, elements, **attrs):
+        list.__init__(self, elements)
+        vars(self).update(attrs)
 
-FFunction = collections.namedtuple(
-    'FFunction', 'limit_state params poes'.split())
 
-
-def get_fragility_sets(fname):
+def get_fragility_functions(fname):
     """
     :param fname:
         path of the fragility file
+    :returns:
+        damage_states list and dictionary taxonomy -> functions
     """
     [fmodel] = read_nodes(
         fname, lambda el: el.tag.endswith('fragilityModel'), FragilityNode)
     # ~fmodel.description is ignored
     limit_states = ~fmodel.limitStates
     tag = 'ffc' if fmodel['format'] == 'continuous' else 'ffd'
+    fragility_functions = {}  # taxonomy -> functions
     for ffs in fmodel.getnodes('ffs'):
         nodamage = ffs.attrib.get('noDamageLimit')
         taxonomy = ~ffs.taxonomy
         imt_str, imls, min_iml, max_iml = ~ffs.IML
-        fset = []
+        fragility_functions[taxonomy] = List([], imt=imt_str, imls=imls)
         lstates = []
         for ff in ffs.getnodes(tag):
             lstates.append(ff['ls'])
             if tag == 'ffc':
-                fset.append(FFunction(ff['ls'], ~ff.params, None))
-            else:
-                fset.append(FFunction(ff['ls'], None, ~ff.poEs))
+                with context(fname, ff):
+                    mean_stddev = ~ff.params
+                fragility_functions[taxonomy].append(
+                    scientific.FragilityFunctionContinuous(*mean_stddev))
+            else:  # discrete
+                with context(fname, ff):
+                    poes = ~ff.poEs
+                if nodamage is None:
+                    fragility_functions[taxonomy].append(
+                        scientific.FragilityFunctionDiscrete(
+                            imls, poes, imls[0]))
+                else:
+                    fragility_functions[taxonomy].append(
+                        scientific.FragilityFunctionDiscrete(
+                            [nodamage] + imls, [0.0] + poes, nodamage))
         if lstates != limit_states:
             raise InvalidFile("Expected limit states %s, got %s in %s" %
                              (limit_states, lstates, fname))
-        yield FSet(imt_str, imls, min_iml, max_iml, taxonomy, nodamage,
-                   limit_states, fset)
+
+    return ['no_damage'] + limit_states, fragility_functions
