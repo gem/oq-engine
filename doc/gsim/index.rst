@@ -35,6 +35,7 @@ Built-in GSIMs
     douglas_stochastic_2013
     faccioli_2010
     frankel_1996
+    fukushima_tanaka_1990
     garcia_2005
     geomatrix_1993
     lin_lee_2008
