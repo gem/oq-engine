@@ -203,7 +203,7 @@ class RiskCalculator(base.Calculator):
                 self.taxonomies_asset_count = dict(
                     (t, count)
                     for t, count in self.taxonomies_asset_count.items()
-                    if t in self.risk_models)
+                    if (imt, t) in self.risk_models)
 
         for validator_class in self.validators:
             validator = validator_class(self)
