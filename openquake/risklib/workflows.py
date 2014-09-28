@@ -302,8 +302,7 @@ class Classical(object):
             a number of outputs equal to the number of realizations
         """
         all_outputs = []
-        imt = self.vulnerability_functions[loss_type].imt
-        for hazard in risk_input.get_hazards(imt):  # for each realization
+        for hazard in risk_input.get_hazards():  # for each realization
             with getter_monitor.copy('computing individual risk'):
                 all_outputs.append(
                     Output(hazard.hid, hazard.weight, loss_type,
@@ -478,8 +477,7 @@ class ProbabilisticEventBased(object):
             a number of outputs equal to the number of realizations
         """
         all_outputs = []
-        imt = self.vulnerability_functions[loss_type].imt
-        for hazard in risk_input.get_hazards(imt):  # for each realization
+        for hazard in risk_input.get_hazards():  # for each realization
             with getter_monitor.copy('computing individual risk'):
                 out = self(loss_type, risk_input.assets, hazard.data,
                            risk_input.get_epsilons(), risk_input.rupture_ids)
