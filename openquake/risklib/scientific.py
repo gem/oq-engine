@@ -84,7 +84,7 @@ class VulnerabilityFunction(object):
         for lr, cov in itertools.izip(self.mean_loss_ratios, self.covs):
             if lr == 0.0 and cov > 0.0:
                 msg = ("It is not valid to define a loss ratio = 0.0 with a "
-                       "corresponding coeff. of varation > 0.0")
+                       "corresponding coeff. of variation > 0.0")
                 raise ValueError(msg)
 
         self.distribution_name = distribution
