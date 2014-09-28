@@ -43,20 +43,19 @@ def get_taxonomy_vfs(inputs, loss_types, retrofitted=False):
     """
     Given a dictionary {key: pathname} and a list of loss_types (for instance
     ['structural', 'nonstructural', ...]) look for keys with name
-    <cost_type>__vulnerability, parse them and yield pairs
-    (taxonomy, vf_by_loss_type)
+    <cost_type>__vulnerability, parse them and yield triples
+    (imt, taxonomy, vf_by_loss_type)
     """
     retro = '_retrofitted' if retrofitted else ''
-    vulnerability_functions = collections.defaultdict(list)
+    vulnerability_functions = collections.defaultdict(dict)
     for loss_type in loss_types:
         key = '%s_vulnerability%s' % (loss_type_to_cost_type(loss_type), retro)
         if key not in inputs:
             continue
         vf_dict = get_vulnerability_functions(inputs[key])
         for (imt, tax), vf in vf_dict.iteritems():
-            vulnerability_functions[tax].append((loss_type, vf))
-    for taxonomy in vulnerability_functions:
-        yield taxonomy, dict(vulnerability_functions[taxonomy])
+            vulnerability_functions[imt, tax][loss_type] = vf
+    return vulnerability_functions.iteritems()
 
 
 def get_risk_models(inputs, loss_types, insured_losses=False,
@@ -68,10 +67,11 @@ def get_risk_models(inputs, loss_types, insured_losses=False,
     dictionary {taxonomy: risk_model}.
     """
     risk_models = {}
-    for taxonomy, vf_by_loss_type in get_taxonomy_vfs(
+    for (imt, taxonomy), vf_by_loss_type in get_taxonomy_vfs(
             inputs, loss_types, retrofitted):
         workflow = workflows.Scenario(vf_by_loss_type, insured_losses)
-        risk_models[taxonomy] = workflows.RiskModel(taxonomy, workflow)
+        risk_models[imt, taxonomy] = workflows.RiskModel(
+            imt, taxonomy, workflow)
     return risk_models
 
 
@@ -92,7 +92,7 @@ def get_damage_states_and_risk_models(fname):
     risk_models = {}
     damage_states, fragility_functions = get_fragility_functions(fname)
     for taxonomy, ffs in fragility_functions.iteritems():
-        risk_models[taxonomy] = workflows.RiskModel(
-            taxonomy, workflows.Damage(dict(damage=ffs)))
+        risk_models[ffs.imt, taxonomy] = workflows.RiskModel(
+            ffs.imt, taxonomy, workflows.Damage(dict(damage=ffs)))
 
     return damage_states, risk_models
