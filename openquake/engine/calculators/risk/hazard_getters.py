@@ -96,7 +96,8 @@ class RiskInput(object):
    :attr site_ids:
         The ids of the sites associated to the hazards
     """
-    def __init__(self, bridge, assets):
+    def __init__(self, imt, bridge, assets):
+        self.imt = imt
         self.bridge = bridge
         self.assets = assets
         self.site_ids = []
@@ -121,18 +122,18 @@ class RiskInput(object):
         self.site_ids = []
         self.asset_site_ids = []
 
-    def get_hazards(self, imt):
+    def get_hazards(self):
         """
         Return a list of Hazard instances for the given IMT.
         """
-        return [Hazard(ho, self._get_data(ho, imt), imt)
+        return [Hazard(ho, self._get_data(ho), self.imt)
                 for ho in self.bridge.hazard_outputs]
 
-    def get_data(self, imt):
+    def get_data(self):
         """
         Shortcut returning the hazard data when there is a single realization
         """
-        [hazard] = self.get_hazards(imt)
+        [hazard] = self.get_hazards()
         return hazard.data
 
     @property
@@ -162,14 +163,14 @@ class HazardCurveInput(RiskInput):
     asset.
     """ + RiskInput.__doc__
 
-    def _get_data(self, ho, imt):
+    def _get_data(self, ho):
         """
         Extracts the hazard curves for the given `imt` from the hazard output.
 
         :param str imt: Intensity Measure Type
         :returns: a list of N curves, each one being a list of pairs (iml, poe)
         """
-        imt_type, sa_period, sa_damping = from_string(imt)
+        imt_type, sa_period, sa_damping = from_string(self.imt)
         oc = ho.output_container
         if oc.output.output_type == 'hazard_curve':
             imls = oc.imls
@@ -233,8 +234,7 @@ class GroundMotionInput(RiskInput):
 
         self.hazards = {}  # dict ho, imt -> {site_id: {rup_id: gmv}}
         for ho in self.bridge.hazard_outputs:
-            for imt in self.bridge.imts:
-                self.hazards[ho, imt] = self._get_gmv_dict(ho, imt)
+            self.hazards[ho] = self._get_gmv_dict(ho)
 
         epsilon_rows = []  # ordered by asset_site_id
         for eps in models.Epsilon.objects.filter(
@@ -272,11 +272,11 @@ class GroundMotionInput(RiskInput):
             return expand(eps.T, e).T
         return eps
 
-    def _get_gmv_dict(self, ho, imt):
+    def _get_gmv_dict(self, ho):
         """
         :returns: a dictionary {rupture_id: gmv} for the given site and IMT
         """
-        imt_type, sa_period, sa_damping = from_string(imt)
+        imt_type, sa_period, sa_damping = from_string(self.imt)
         gmf_id = ho.output_container.id
         if sa_period:
             imt_query = 'imt=%s and sa_period=%s and sa_damping=%s'
@@ -298,16 +298,15 @@ class GroundMotionInput(RiskInput):
             gmv_dict[sid] = dict(itertools.izip(ruptures, gmvs))
         return gmv_dict
 
-    def _get_data(self, ho, imt):
+    def _get_data(self, ho):
         """
         Extracts the GMFs for the given `imt` from the hazard output.
 
-        :param str imt: Intensity Measure Type
         :returns: a list of N arrays with R elements each.
         """
         all_gmvs = []
         no_data = 0
-        gmv_dict = self.hazards[ho, imt]
+        gmv_dict = self.hazards[ho]
         for site_id in self.site_ids:
             gmv = gmv_dict.get(site_id, {})
             if not gmv:
@@ -316,7 +315,7 @@ class GroundMotionInput(RiskInput):
             all_gmvs.append(array)
         if no_data:
             logs.LOG.info('No data for %d assets out of %d, IMT=%s',
-                          no_data, len(self.site_ids), imt)
+                          no_data, len(self.site_ids), self.imt)
         return all_gmvs
 
 
@@ -348,9 +347,7 @@ class HazardRiskBridge(object):
             'number_of_ground_motion_fields', 0)
         max_dist = rc.best_maximum_distance * 1000  # km to meters
         cursor = models.getcursor('job_init')
-        self.imts = sorted(
-            i.imt.imt_str for i in models.ImtTaxonomy.objects.filter(
-                job=rc.oqjob, taxonomy=taxonomy))
+
         hazard_exposure = models.extract_from([self.hc], 'exposuremodel')
         if self.rc.exposure_model is hazard_exposure:
             # no need of geospatial queries, just join on the location
