@@ -116,10 +116,12 @@ def run_risk(job_id, sorted_assocs, builders, calc):
                 return {}
         logs.LOG.info('Processing %d assets of taxonomy %s',
                       len(assets), taxonomy)
-        res = calc.core_calc_task.task_func(
-            job_id, calc.risk_models[taxonomy], getters,
-            calc.outputdict, calc.calculator_parameters)
-        acc = calc.agg_result(acc, res)
+        for it in models.ImtTaxonomy.objects.filter(
+                job=calc.job, taxonomy=taxonomy):
+            res = calc.core_calc_task.task_func(
+                job_id, calc.risk_models[it.imt.imt_str, taxonomy], getters,
+                calc.outputdict, calc.calculator_parameters)
+            acc = calc.agg_result(acc, res)
     return acc
 
 
@@ -187,10 +189,9 @@ class RiskCalculator(base.Calculator):
         imt_taxonomy_set = set()
         for rm in self.risk_models.itervalues():
             self.loss_types.update(rm.loss_types)
-            for imt in rm.imts:
-                imt_taxonomy_set.add((imt, rm.taxonomy))
-                # insert the IMT in the db, if not already there
-                models.Imt.save_new([from_string(imt)])
+            imt_taxonomy_set.add((rm.imt, rm.taxonomy))
+            # insert the IMT in the db, if not already there
+            models.Imt.save_new([from_string(rm.imt)])
         for imt, taxonomy in imt_taxonomy_set:
             models.ImtTaxonomy.objects.create(
                 job=self.job, imt=models.Imt.get(imt), taxonomy=taxonomy)
@@ -281,10 +282,12 @@ class RiskCalculator(base.Calculator):
     def get_risk_models(self):
         # regular risk models
         if self.bcr is False:
-            return dict(
-                (taxonomy, RiskModel(taxonomy, self.get_workflow(vfs)))
-                for taxonomy, vfs in get_taxonomy_vfs(
-                    self.rc.inputs, models.LOSS_TYPES))
+            return {
+                imt_taxo: RiskModel(
+                    imt_taxo[0], imt_taxo[1], self.get_workflow(vfs))
+                for imt_taxo, vfs in get_taxonomy_vfs(
+                    self.rc.inputs, models.LOSS_TYPES)
+                }
 
         # BCR risk models
         orig_data = get_taxonomy_vfs(
@@ -293,10 +296,10 @@ class RiskCalculator(base.Calculator):
             self.rc.inputs, models.LOSS_TYPES, retrofitted=True)
 
         risk_models = {}
-        for (taxonomy, vfs), (taxonomy_, vfs_) in zip(orig_data, retro_data):
-            assert taxonomy_ == taxonomy_  # same taxonomy
-            risk_models[taxonomy] = RiskModel(
-                taxonomy, self.get_workflow(vfs, vfs_))
+        for (imt_taxo, vfs), (imt_taxo_, vfs_) in zip(orig_data, retro_data):
+            assert imt_taxo == imt_taxo_  # same imt and taxonomy
+            risk_models[imt_taxo] = RiskModel(
+                imt_taxo[0], imt_taxo[1], self.get_workflow(vfs, vfs_))
         return risk_models
 
     def get_workflow(self, vulnerability_functions):
