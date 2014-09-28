@@ -712,9 +712,10 @@ class Damage(object):
 
 class RiskModel(object):
     """
-    Container for the attributes taxonomy and workflow.
+    Container for the attributes imt, taxonomy and workflow.
     """
-    def __init__(self, taxonomy, workflow):
+    def __init__(self, imt, taxonomy, workflow):
+        self.imt = imt
         self.taxonomy = taxonomy
         self.workflow = workflow
 
@@ -733,13 +734,6 @@ class RiskModel(object):
         """
         return [self.workflow.vulnerability_functions[lt]
                 for lt in self.loss_types]
-
-    @property
-    def imts(self):
-        """
-        The set of underlying IMTs, as strings
-        """
-        return set(vf.imt for vf in self.vulnerability_functions)
 
     def compute_outputs(self, getters, getter_monitor):
         """
