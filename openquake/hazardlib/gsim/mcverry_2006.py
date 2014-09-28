@@ -64,7 +64,8 @@ class McVerry2006Asc(GMPE):
 
     #: Supported intensity measure component is the stronger of two
     #: horizontal components (see Section 6 paragraph 2, page 21)
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GREATER_OF_TWO_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = \
+        const.IMC.GREATER_OF_TWO_HORIZONTAL
 
     #: Supported standard deviation types are Inter, Intra and Total
     # (see equations 8-9 page 29)
@@ -122,18 +123,18 @@ class McVerry2006Asc(GMPE):
 
         # Compute lnPGA_ABCD primed
         lnPGAp_ABCD = self._compute_mean(C_PGA, S, rup.mag, dists.rrup, rvol,
-                                          rup.hypo_depth, CN, CR, f4HW,
-                                          delta_C, delta_D)
+                                         rup.hypo_depth, CN, CR, f4HW,
+                                         delta_C, delta_D)
 
         # Compute lnPGA_ABCD unprimed
         lnPGA_ABCD = self._compute_mean(C_PGA_unprimed, S, rup.mag, dists.rrup,
                                         rvol, rup.hypo_depth, CN, CR, f4HW,
                                         delta_C, delta_D)
-                                         
+
         # Compute lnSA_ABCD
         lnSAp_ABCD = self._compute_mean(C, S, rup.mag, dists.rrup, rvol,
-                                          rup.hypo_depth, CN, CR, f4HW,
-                                          delta_C, delta_D)
+                                        rup.hypo_depth, CN, CR, f4HW,
+                                        delta_C, delta_D)
 
         # Stage 3: Equation 6 SA_ABCD(T). This is lnSA_ABCD
         # need to calculate final lnSA_ABCD from non-log values but return log
@@ -147,29 +148,28 @@ class McVerry2006Asc(GMPE):
         )
 
         return mean, stddevs
-        
+
     def _compute_mean(self, C, S, mag, rrup, rvol, hypo_depth, CN, CR, f4HW,
                       delta_C, delta_D):
         """
         Compute mean value on site class A,B,C,D (equation 4)
         returns lnSA_ABCD
         """
-        
+
         # Stage 1: compute PGA_ABCD and PGA'_ABCD which are then used in
         # equation 6
         # Equation 1 PGA unprimed version
-        lnSA_AB = self._compute_mean_on_rock(C, mag, rrup, rvol, hypo_depth, 
+        lnSA_AB = self._compute_mean_on_rock(C, mag, rrup, rvol, hypo_depth,
                                              CN, CR, f4HW)
-                                              
+
         # Equation 4 PGA unprimed version
         lnSA_ABCD = lnSA_AB + S *\
             self._compute_nonlinear_soil_term(C, lnSA_AB, delta_C, delta_D)
-                                              
+
         return lnSA_ABCD
-        
 
     def _compute_mean_on_rock(self, C, mag, rrup, rvol, hypo_depth, CN, CR,
-                               f4HW):
+                              f4HW):
         """
         Compute mean value on site class A/B (equation 1 on page 22)
         """
@@ -180,10 +180,10 @@ class McVerry2006Asc(GMPE):
             # line 2
             C['c3as'] * (8.5 - mag) ** 2 +
             # line 3
-            C['c5'] * rrup + (C['c8'] +
-            # line 4
-            C['c6as'] * (mag - 6)) * np.log((rrup ** 2 +
-                C['c10as'] ** 2) ** 0.5) +
+            C['c5'] * rrup +
+            # line 3 and 4
+            (C['c8'] + C['c6as'] * (mag - 6)) *
+            np.log((rrup ** 2 + C['c10as'] ** 2) ** 0.5) +
             # line 5
             C['c46'] * rvol +
             # line 6
@@ -201,10 +201,8 @@ class McVerry2006Asc(GMPE):
         lnSA_CD = (
             # line 1 equation 4 without first term (lnSA_AB)
             C['c29'] * delta_C +
-            # line 2
-            (C['c30as'] * np.log(np.exp(lnSA_AB) + 0.03) +
-            # line 3
-            C['c43']) * delta_D
+            # line 2 and 3
+            (C['c30as'] * np.log(np.exp(lnSA_AB) + 0.03) + C['c43']) * delta_D
             )
 
         return lnSA_CD
@@ -231,7 +229,6 @@ class McVerry2006Asc(GMPE):
         std = []
 
         for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
                 # equation 9 page 29
                 std += [np.sqrt(sigma_intra**2 + tau**2)]
@@ -338,7 +335,7 @@ class McVerry2006Asc(GMPE):
 
     #: Coefficient table (table 3, page 108)
     COEFFS_PRIMED = CoeffsTable(sa_damping=5, table="""\
-    imt	 c1	    c3as     c4as	    c5      c6as    c8      ca9     c10as   c11     c12y     c13y     c15      c17     c18y    c19y      c20      c24     c29      c30as    c32      c33as    c43      c46
+    imt	c1	   c3as     c4as     c5      c6as     c8      ca9     c10as   c11     c12y     c13y     c15      c17     c18y    c19y     c20      c24      c29      c30as    c32      c33as    c43      c46
     pga     0.18130  0.00000 -0.14400 -0.00846 0.17000 -0.75519 0.37000 5.60000 8.10697 1.41400  0.00000 -2.55200 -2.48795 1.78180 0.55400  0.01622 -0.41369	0.44307 -0.23000 -0.20000  0.26000 -0.29648 -0.03301
     0.075   1.36561  0.03000 -0.14400 -0.00889 0.17000 -0.94568 0.37000 5.58000 8.68782 1.41400  0.00000 -2.70700 -2.54215 1.78180 0.55400  0.01850 -0.48652	0.31139 -0.28000 -0.20000  0.26000 -0.48366 -0.03452
     0.10    1.77717  0.02800 -0.14400 -0.00837 0.17000 -1.01852 0.37000 5.50000 9.37929 1.41400 -0.00110 -2.65500 -2.60945 1.78180 0.55400  0.01740 -0.61973	0.34059 -0.28000 -0.20000  0.26000 -0.43854 -0.03595
@@ -413,7 +410,7 @@ class McVerry2006SInter(McVerry2006Asc):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
     def _compute_mean_on_rock(self, C, mag, rrup, rvol, hypo_depth, CN, CR,
-                               f4HW):
+                              f4HW):
         """
         Compute mean value on site class A/B (equation 2 on page 22)
         """
@@ -425,10 +422,9 @@ class McVerry2006SInter(McVerry2006Asc):
         DS = 0
 
         lnSA_AB = (
-            # line 1 of equation 2
-            C['c11'] + (C['c12y'] + (C['c15'] -
-            # line 2
-            C['c17']) * C['c19y']) * (mag - 6) +
+            # line 1 and 2 of equation 2
+            C['c11'] + (C['c12y'] + (C['c15'] - C['c17']) * C['c19y']) *
+            (mag - 6) +
             # line 3
             C['c13y'] * (10 - mag) ** 3 +
             # line 4
@@ -468,7 +464,7 @@ class McVerry2006SSlab(McVerry2006Asc):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
     def _compute_mean_on_rock(self, C, mag, rrup, rvol, hypo_depth, CN, CR,
-                               f4HW):
+                              f4HW):
         """
         Compute mean value on site class A/B (equation 2 on page 22)
         """
@@ -480,10 +476,9 @@ class McVerry2006SSlab(McVerry2006Asc):
         DS = 1
 
         lnSA_AB = (
-            # line 1 of equation 2
-            C['c11'] + (C['c12y'] + (C['c15'] -
-            # line 2
-            C['c17']) * C['c19y']) * (mag - 6) +
+            # line 1 and 2 of equation 2
+            C['c11'] + (C['c12y'] + (C['c15'] - C['c17']) * C['c19y']) *
+            (mag - 6) +
             # line 3
             C['c13y'] * (10 - mag) ** 3 +
             # line 4
