@@ -113,17 +113,21 @@ def run_risk(job_id, sorted_assocs, bridges, calc):
             assets = models.ExposureData.objects.get_asset_chunk(
                 calc.rc, assocs_by_taxonomy)
         bridge = bridges[taxonomy]
-        risk_input = calc.risk_input_class(bridge, assets)
-        with calc.monitor("getting hazard"):
-            risk_input.__enter__()
-        logs.LOG.info('Read data from %d hazard sites for %d assets '
-                      'of taxonomy %s', len(set(risk_input.site_ids)),
-                      len(assets), taxonomy)
-        res = calc.core_calc_task.task_func(
-            job_id, calc.risk_models[taxonomy], risk_input,
-            calc.outputdict, calc.calculator_parameters)
-        risk_input.__exit__(None, None, None)
-        acc = calc.agg_result(acc, res)
+        for it in models.ImtTaxonomy.objects.filter(
+                job=calc.job, taxonomy=taxonomy):
+            imt = it.imt.imt_str
+            risk_input = calc.risk_input_class(imt, bridge, assets)
+            with calc.monitor("getting hazard"):
+                risk_input.__enter__()
+            logs.LOG.info(
+                'Read data from %d hazard sites for %d assets '
+                'of taxonomy %s, imt=%s', len(set(risk_input.site_ids)),
+                len(assets), taxonomy, imt)
+            res = calc.core_calc_task.task_func(
+                job_id, calc.risk_models[imt, taxonomy],
+                risk_input, calc.outputdict, calc.calculator_parameters)
+            acc = calc.agg_result(acc, res)
+            risk_input.__exit__(None, None, None)
     return acc
 
 
@@ -177,10 +181,9 @@ class RiskCalculator(base.Calculator):
         imt_taxonomy_set = set()
         for rm in self.risk_models.itervalues():
             self.loss_types.update(rm.loss_types)
-            for imt in rm.imts:
-                imt_taxonomy_set.add((imt, rm.taxonomy))
-                # insert the IMT in the db, if not already there
-                models.Imt.save_new([from_string(imt)])
+            imt_taxonomy_set.add((rm.imt, rm.taxonomy))
+            # insert the IMT in the db, if not already there
+            models.Imt.save_new([from_string(rm.imt)])
         for imt, taxonomy in imt_taxonomy_set:
             models.ImtTaxonomy.objects.create(
                 job=self.job, imt=models.Imt.get(imt), taxonomy=taxonomy)
@@ -192,7 +195,7 @@ class RiskCalculator(base.Calculator):
                 self.taxonomies_asset_count = dict(
                     (t, count)
                     for t, count in self.taxonomies_asset_count.items()
-                    if t in self.risk_models)
+                    if (imt, t) in self.risk_models)
 
     def pre_execute(self):
         """
@@ -298,10 +301,12 @@ class RiskCalculator(base.Calculator):
     def get_risk_models(self):
         # regular risk models
         if self.bcr is False:
-            return dict(
-                (taxonomy, RiskModel(taxonomy, self.get_workflow(vfs)))
-                for taxonomy, vfs in get_taxonomy_vfs(
-                    self.rc.inputs, models.LOSS_TYPES))
+            return {
+                imt_taxo: RiskModel(
+                    imt_taxo[0], imt_taxo[1], self.get_workflow(vfs))
+                for imt_taxo, vfs in get_taxonomy_vfs(
+                    self.rc.inputs, models.LOSS_TYPES)
+                }
 
         # BCR risk models
         orig_data = get_taxonomy_vfs(
@@ -310,10 +315,10 @@ class RiskCalculator(base.Calculator):
             self.rc.inputs, models.LOSS_TYPES, retrofitted=True)
 
         risk_models = {}
-        for (taxonomy, vfs), (taxonomy_, vfs_) in zip(orig_data, retro_data):
-            assert taxonomy_ == taxonomy_  # same taxonomy
-            risk_models[taxonomy] = RiskModel(
-                taxonomy, self.get_workflow(vfs, vfs_))
+        for (imt_taxo, vfs), (imt_taxo_, vfs_) in zip(orig_data, retro_data):
+            assert imt_taxo == imt_taxo_  # same imt and taxonomy
+            risk_models[imt_taxo] = RiskModel(
+                imt_taxo[0], imt_taxo[1], self.get_workflow(vfs, vfs_))
         return risk_models
 
     def get_workflow(self, vulnerability_functions):

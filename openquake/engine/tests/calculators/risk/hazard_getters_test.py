@@ -50,14 +50,14 @@ class HazardCurveInputTestCase(unittest.TestCase):
 
         self.builder = hazard_getters.HazardRiskBridge(
             calc.rc.hazard_outputs(), self.taxonomy, self.job.risk_calculation)
-        self.builder.imts = [self.imt]
 
         assocs = models.AssetSite.objects.filter(job=self.job)
         self.assets = models.ExposureData.objects.get_asset_chunk(
             calc.rc, assocs)
         self.nbytes = self.builder.calc_nbytes()
         self.builder.init_epsilons()
-        self.risk_input = self.risk_input_class(self.builder, self.assets)
+        self.risk_input = self.risk_input_class(
+            self.imt, self.builder, self.assets)
         self.risk_input.__enter__()
 
     def test_nbytes(self):
@@ -71,7 +71,7 @@ class HazardCurveInputTestCase(unittest.TestCase):
         # called a1, a2 and a3; only a2 and a3 are within the maximum distance
         [a2, a3] = self.assets
         self.assertEqual(self.risk_input.assets, [a2, a3])
-        data = self.risk_input.get_data(self.imt)
+        data = self.risk_input.get_data()
         numpy.testing.assert_allclose(
             [[(0.1, 0.1), (0.2, 0.2), (0.3, 0.3)],
              [(0.1, 0.1), (0.2, 0.2), (0.3, 0.3)]], data)
@@ -100,7 +100,7 @@ class GroundMotionInputTestCase(HazardCurveInputTestCase):
         rupture_ids = self.risk_input.rupture_ids
         self.assertEqual(len(rupture_ids), 3)
 
-        data = self.risk_input.get_data(self.imt)
+        data = self.risk_input.get_data()
         numpy.testing.assert_allclose([[0.1, 0.2, 0.3]], data)
         numpy.testing.assert_allclose(
             numpy.array([[0.49671415, -0.1382643, 0.64768854]]),
@@ -125,6 +125,6 @@ class ScenarioTestCase(GroundMotionInputTestCase):
         # maximum distance; there are 10 realizations
         a1, = self.assets
         self.assertEqual(self.risk_input.assets, [a1])
-        data = self.risk_input.get_data(self.imt)
+        data = self.risk_input.get_data()
         expected = [[0.1, 0.2, 0.3] + [0] * 7]
         numpy.testing.assert_allclose(expected, data)
