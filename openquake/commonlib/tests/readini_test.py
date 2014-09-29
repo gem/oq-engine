@@ -31,7 +31,6 @@ intensity_measure_types = PGA
             'hazard_output_id': 42,
             'region': [(1.0, 1.0), (2.0, 2.0), (3.0, 3.0)],
             'inputs': {},
-            'intensity_measure_types': ['PGA'],
             'intensity_measure_types_and_levels': {'PGA': None},
         }
 
@@ -67,7 +66,6 @@ intensity_measure_types = PGA
                 'maximum_distance': 1.0,
                 'inputs': {'site_model': site_model_input},
                 'sites': [(0.0, 0.0)],
-                'intensity_measure_types': ['PGA'],
                 'intensity_measure_types_and_levels': {'PGA': None},
             }
 
@@ -114,7 +112,6 @@ intensity_measure_types = PGA
                 'reference_depth_to_2pt5km_per_sec': 5.0,
                 'reference_vs30_type': 'measured',
                 'reference_vs30_value': 600.0,
-                'intensity_measure_types': ['PGA'],
                 'intensity_measure_types_and_levels': {'PGA': None},
             }
 
