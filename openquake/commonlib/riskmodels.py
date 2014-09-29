@@ -1,5 +1,4 @@
 import logging
-import collections
 
 from openquake.nrmllib.node import read_nodes, LiteralNode, context
 from openquake.nrmllib import InvalidFile

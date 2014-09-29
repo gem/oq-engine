@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import re
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.commonlib import valid
 
@@ -35,10 +36,8 @@ EXPERIMENTAL_CALCULATORS = [
 
 CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS + EXPERIMENTAL_CALCULATORS
 
-KNOWN_VULNERABILITIES = (
-    'structural_vulnerability', 'nonstructural_vulnerability',
-    'contents_vulnerability', 'business_interruption_vulnerability',
-    'occupants_vulnerability', 'structural_vulnerability_retrofitted')
+VULNERABILITY_KEY = re.compile('(structural|nonstructural|contents|'
+                               'business_interruption|occupants)_([\w_]+)')
 
 
 def vulnerability_files(inputs):
@@ -47,8 +46,12 @@ def vulnerability_files(inputs):
 
     :param inputs: a dictionary key -> path name
     """
-    return [(key.rsplit('_', 1)[0], inputs[key])
-            for key in inputs if key in KNOWN_VULNERABILITIES]
+    vfs = []
+    for key in inputs:
+        match = VULNERABILITY_KEY.match(key)
+        if match:
+            vfs.append((match.group(0), inputs[key]))
+    return vfs
 
 
 def fragility_files(inputs):
