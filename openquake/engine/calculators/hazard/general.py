@@ -363,7 +363,7 @@ class BaseHazardCalculator(base.Calculator):
         # the imtls dictionary has values None when the levels are unknown
         # (this is a valid case for the event based hazard calculator)
         if None in self.imtls.values():  # there are no levels
-            n_imts = len(self.hc.intensity_measure_types)
+            n_imts = len(self.hc.intensity_measure_types_and_levels)
             n_levels = 0
         else:  # there are levels
             n_imts = float(len(self.imtls))
