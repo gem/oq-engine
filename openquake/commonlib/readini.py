@@ -81,7 +81,11 @@ def parse_config(source, hazard_calculation_id=None, hazard_output_id=None):
 
     oqparam = OqParam(**params)
 
-    # load intensity measure types and levels
+    # define the parameter `intensity measure types and levels` always
     oqparam.intensity_measure_types_and_levels = get_imtls(oqparam)
+
+    # remove the redundant parameter `intensity_measure_types`
+    if hasattr(oqparam, 'intensity_measure_types'):
+        delattr(oqparam, 'intensity_measure_types')
 
     return oqparam
