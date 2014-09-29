@@ -90,7 +90,7 @@ def get_imtls_from_vulnerabilities(inputs):
         for (imt, taxonomy), vf in get_vulnerability_functions(fname).items():
             imls = list(vf.imls)
             if imt in imtls and imtls[imt] != imls:
-                logging.warn(
+                logging.info(
                     'Different levels for IMT %s: got %s, expected %s '
                     'in %s', imt, vf.imls, imtls[imt], fname)
                 imtls[imt] = sorted(set(imls + imtls[imt]))

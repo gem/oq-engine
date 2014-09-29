@@ -386,7 +386,7 @@ def fragilityparams(value, mean, stddev):
     Convert a node of the form <params mean="0.30" stddev="0.16" /> into
     a pair (0.30, 0.16)
     """
-    return float_(mean), positivefloat(stddev)
+    return positivefloat(mean), positivefloat(stddev)
 
 
 def intensity_measure_types(value):
