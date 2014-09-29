@@ -285,7 +285,6 @@ def list_calculations(job_manager):
                '        description')
         for job in jobs:
             descr = job.get_param('description', None)
-            assert descr, descr
             latest_job = job
             if latest_job.is_running:
                 status = 'pending'
