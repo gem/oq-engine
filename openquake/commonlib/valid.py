@@ -1,4 +1,4 @@
-#  -*- coding: latin-1 -*-
+#  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 #  Copyright (c) 2013, GEM Foundation
@@ -154,16 +154,19 @@ def not_empty(value):
 
 def utf8(value):
     r"""
-    Check that the string is UTF-8. Returns a unicode object.
+    Check that the string is UTF-8. Returns an encode bytestring.
 
-    >>> utf8('à')
+    >>> utf8('\xe0')
     Traceback (most recent call last):
     ...
     ValueError: Not UTF-8: '\xe0'
     """
     try:
-        return value.decode('utf-8')
-    except UnicodeDecodeError:
+        if isinstance(value, unicode):
+            return value.encode('utf-8')
+        else:
+            return value.decode('utf-8').encode('utf-8')
+    except:
         raise ValueError('Not UTF-8: %r' % value)
 
 
