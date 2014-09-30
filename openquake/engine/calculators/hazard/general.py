@@ -363,7 +363,7 @@ class BaseHazardCalculator(base.Calculator):
         # the imtls dictionary has values None when the levels are unknown
         # (this is a valid case for the event based hazard calculator)
         if None in self.imtls.values():  # there are no levels
-            n_imts = len(self.hc.intensity_measure_types)
+            n_imts = len(self.hc.intensity_measure_types_and_levels)
             n_levels = 0
         else:  # there are levels
             n_imts = float(len(self.imtls))
@@ -463,8 +463,9 @@ class BaseHazardCalculator(base.Calculator):
                 source_collectors = source.parse_source_model(
                     fname, nrml_to_hazardlib, apply_unc)
             except ValueError as e:
-                if str(e) == ('Surface does not conform with Aki & '
-                              'Richards convention'):
+                if str(e) in ('Surface does not conform with Aki & '
+                              'Richards convention',
+                              'Edges points are not in the right order'):
                     raise InvalidFile('''\
 %s: %s. Probably you are using an obsolete model.
 In that case you can fix the file with the command
