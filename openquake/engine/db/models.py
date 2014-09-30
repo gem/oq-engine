@@ -586,8 +586,8 @@ class RiskCalculation(djm.Model):
 
     def get_hazard_param(self):
         """
-        Get the hazard parameter associated with the hazard output used as an
-        input to this risk calculation.
+        Get the hazard parameters associated with the hazard job that generated
+        the output used as an input for the current risk calculation.
 
         :returns:
             :class:`openquake.commonlib.oqvalidation.OqParam` instance.
