@@ -41,13 +41,14 @@ def import_rows(job, gmf_coll, rows):
     gmfs = []
     site_id = {}  # dictionary wkt -> site id
     for imt_type, sa_period, sa_damping, gmvs, wkt in rows:
+        num_gmvs = gmvs.count(',') + 1  # gmvs is a comma-separated string
         if wkt not in site_id:  # create a new site
             site_id[wkt] = models.HazardSite.objects.create(
                 hazard_calculation=job, location=wkt).id
         gmfs.append(
             models.GmfData(
                 imt=imt_type, sa_period=sa_period, sa_damping=sa_damping,
-                gmvs=gmvs, rupture_ids=range(len(gmvs)),
+                gmvs=gmvs, rupture_ids=range(num_gmvs),
                 site_id=site_id[wkt], gmf=gmf_coll, task_no=0))
     del site_id
     writer.CacheInserter.saveall(gmfs)
