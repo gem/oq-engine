@@ -337,33 +337,31 @@ def get_job(cfg, username="openquake", hazard_calculation_id=None,
     return job
 
 
-def create_gmf(hazard_job, rlz=None, output_type="gmf"):
+def create_gmf_sescoll(output, rlz=None, output_type='gmf'):
     """
-    Returns the created Gmf object.
+    Returns Gmf and SESCollection instances
     """
+    sescoll = models.SESCollection.create(output)
+
     rlz = rlz or models.LtRealization.objects.create(
-        lt_model=models.LtSourceModel.objects.create(
-            hazard_calculation=hazard_job, ordinal=0, sm_lt_path="test_sm"),
-        ordinal=0, weight=1, gsim_lt_path="test_gsim")
+        lt_model=sescoll.trt_model.lt_model, ordinal=0, weight=1,
+        gsim_lt_path="test_gsim")
 
     gmf = models.Gmf.objects.create(
         output=models.Output.objects.create_output(
-            hazard_job, "Test Hazard output", output_type),
+            output.oq_job, "Test Hazard output", output_type),
         lt_realization=rlz)
 
-    return gmf
+    return gmf, sescoll
 
 
-def create_gmf_data_records(hazard_job, rlz=None, ses_coll=None, points=None):
+def create_gmf_data_records(hazard_job, rlz=None, points=None):
     """
     Returns the created records.
     """
-    gmf = create_gmf(hazard_job, rlz)
-    ses_coll = ses_coll or models.SESCollection.objects.create(
-        output=models.Output.objects.create_output(
-            hazard_job, "Test SES Collection", "ses"),
-        lt_model=gmf.lt_realization.lt_model,
-        ordinal=0)
+    output = models.Output.objects.create_output(
+        hazard_job, "Test SES Collection", "ses")
+    gmf, ses_coll = create_gmf_sescoll(output, rlz)
     ruptures = create_ses_ruptures(hazard_job, ses_coll, 3)
     records = []
     if points is None:
@@ -382,7 +380,7 @@ def create_gmf_data_records(hazard_job, rlz=None, ses_coll=None, points=None):
     return records
 
 
-def create_gmf_from_csv(job, fname, output_type="gmf"):
+def create_gmf_from_csv(job, fname, output_type):
     """
     Populate the gmf_data table for an event_based (default)
     or scenario calculation (output_type="gmf_scenario").
@@ -397,13 +395,10 @@ def create_gmf_from_csv(job, fname, output_type="gmf"):
     job.status = 'post_processing'
     job.save()
 
-    gmf = create_gmf(job, output_type=output_type)
+    output = models.Output.objects.create_output(
+        job, "Test SES Collection", "ses")
+    gmf, ses_coll = create_gmf_sescoll(output, output_type=output_type)
 
-    ses_coll = models.SESCollection.objects.create(
-        output=models.Output.objects.create_output(
-            job, "Test SES Collection", "ses"),
-        lt_model=gmf.lt_realization.lt_model,
-        ordinal=0)
     with open(fname, 'rb') as csvfile:
         gmfreader = csv.reader(csvfile, delimiter=',')
         locations = gmfreader.next()
@@ -568,7 +563,7 @@ def create_ses_ruptures(job, ses_collection, num):
         source_typology=object())
     ses_ordinal = 1
     seed = 42
-    pr = models.ProbabilisticRupture.create(rupture, ses_collection, trt_model)
+    pr = models.ProbabilisticRupture.create(rupture, ses_collection)
     return [models.SESRupture.create(pr, ses_ordinal, 'test', 1, i, seed + i)
             for i in range(num)]
 
