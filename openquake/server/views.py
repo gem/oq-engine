@@ -28,7 +28,7 @@ NOT_IMPLEMENTED = 501
 JSON = 'application/json'
 
 IGNORE_FIELDS = ('base_path', 'export_dir')
-GEOM_FIELDS = ('region', 'sites', 'region_constraint', 'sites_disagg')
+GEOM_FIELDS = ('region', 'region_constraint')
 RISK_INPUTS = ('hazard_calculation', 'hazard_output')
 
 DEFAULT_LOG_LEVEL = 'progress'
@@ -188,7 +188,7 @@ def _get_calc_info(job_type, calc_id):
         job = oqe_models.OqJob.objects\
             .select_related()\
             .get(hazard_calculation=calc_id)
-        calc = job.hazard_calculation
+        calc = job.get_oqparam()
     else:  # risk
         job = oqe_models.OqJob.objects\
             .select_related()\
@@ -278,9 +278,8 @@ def submit_job(job_file, temp_dir, dbname,
         tasks.update_calculation(callback_url, status="failed", einfo=job)
         raise exctype(job)
 
-    calc = job.calculation
     future = executor.submit(
-        tasks.safely_call, tasks.run_calc, job.job_type, calc.id, temp_dir,
+        tasks.safely_call, tasks.run_calc, job.job_type, job.id, temp_dir,
         callback_url, foreign_calc_id, dbname, logfile)
     return job, future
 
@@ -319,17 +318,17 @@ def calc_results(request, job_type, calc_id):
         * type (hazard_curve, hazard_map, etc.)
         * url (the exact url where the full result can be accessed)
     """
-    calc_class = oqe_models.RiskCalculation if job_type == 'risk' \
-        else oqe_models.HazardCalculation
     # If the specified calculation doesn't exist OR is not yet complete,
     # throw back a 404.
     try:
-        calc = calc_class.objects.get(id=calc_id)
-        if not calc.oqjob.status == 'complete':
+        if job_type == 'risk':
+            oqjob = oqe_models.RiskCalculation.objects.get(id=calc_id).oqjob
+        else:
+            oqjob = oqe_models.OqJob.objects.get(id=calc_id)
+        if not oqjob.status == 'complete':
             return HttpResponseNotFound()
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
-
     base_url = _get_base_url(request)
 
     results = oq_engine.get_outputs(job_type, calc_id)
