@@ -22,6 +22,27 @@ class ImportGMFScenarioTestCase(unittest.TestCase):
         assert_equal(hc.description,
                      'Scenario importer, file gmf-scenario.xml')
 
+        # now test that exporting the imported data gives back the
+        # original data
+        [gmfset] = list(out.gmf)
+        self.assertEqual(str(gmfset), '''\
+GMFsPerSES(investigation_time=0.000000, stochastic_event_set_id=1,
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=scenario-0000000000
+<X=  0.00000, Y=  0.00000, GMV=0.2000000>
+<X=  0.00000, Y=  0.00000, GMV=0.3000000>
+<X=  0.00000, Y=  1.00000, GMV=0.6000000>
+<X=  0.00000, Y=  1.00000, GMV=0.7000000>
+<X=  1.00000, Y=  0.00000, GMV=1.4000000>
+<X=  1.00000, Y=  0.00000, GMV=1.5000000>)
+GMF(imt=PGV sa_period=None sa_damping=None rupture_id=scenario-0000000000
+<X=  0.00000, Y=  0.00000, GMV=0.2000000>
+<X=  0.00000, Y=  1.00000, GMV=0.6000000>
+<X=  1.00000, Y=  0.00000, GMV=1.4000000>)
+GMF(imt=SA sa_period=0.025 sa_damping=5.0 rupture_id=scenario-0000000000
+<X=  0.00000, Y=  0.00000, GMV=0.2000000>
+<X=  0.00000, Y=  1.00000, GMV=0.6000000>
+<X=  1.00000, Y=  0.00000, GMV=1.4000000>))''')
+
     # test that a tab-separated file can be imported
     def test_import_gmf_scenario_csv(self):
         test_data = StringIO(unicode('''\
