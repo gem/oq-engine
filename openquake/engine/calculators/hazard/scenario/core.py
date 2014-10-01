@@ -171,8 +171,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
             oq_job=self.job,
             display_name='SES Collection',
             output_type='ses')
-        self.ses_coll = models.SESCollection.objects.create(
-            output=output, lt_model=None, ordinal=0)
+        self.ses_coll = models.SESCollection.create(output=output)
 
         # create gmf output
         output = models.Output.objects.create(
@@ -201,7 +200,8 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
                 gsims=[self.hc.gsim])
             prob_rup = models.ProbabilisticRupture.create(
                 self.rupture, self.ses_coll, trt_model)
-            inserter = writer.CacheInserter(models.SESRupture, 100000)
+            inserter = writer.CacheInserter(
+                models.SESRupture, max_cache_size=100000)
             for ses_idx, seed in enumerate(all_seeds):
                 inserter.add(
                     models.SESRupture(
