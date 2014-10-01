@@ -1,10 +1,58 @@
 import os
 import time
 import argparse
-from openquake.nrmllib.hazard.parsers import GMFScenarioParser
 from openquake.hazardlib.imt import from_string
 from openquake.engine.db import models
 from openquake.engine import writer, engine
+from openquake.nrmllib.node import LiteralNode, read_nodes
+from openquake.commonlib import valid
+
+
+class GmfNode(LiteralNode):
+    validators = valid.parameters(
+        gmv=valid.positivefloat,
+        lon=valid.longitude,
+        lat=valid.latitude)
+
+
+class Tag2Id(object):
+    """
+    Callable object converting strings into incremental numbers.
+
+    >>> map(Tag2Id, 'abac')
+    [1, 2, 1, 3]
+    """
+    def __init__(self):
+        self.counter = 0
+        self.tag2id = {}
+
+    def __call__(self, tag):
+        try:
+            return self.tag2id[tag]
+        except KeyError:
+            self.counter += 1
+            self.tag2id[tag] = self.counter
+            return self.counter
+
+
+def read_rows(fileobj):
+    """
+    Convert a file into a generator over rows.
+
+    :param fileobj: the XML files containing the GMFs
+    :yields: tuples (imt, location, [gmv], [rupid])
+    """
+    tag2id = Tag2Id()
+    for gmf in read_nodes(
+            fileobj, lambda n: n.tag.endswith('gmf'), GmfNode):
+        rupid = tag2id(gmf.attrib.get('ruptureId'))
+        imt = gmf['IMT']
+        if imt == 'SA':
+            imt = 'SA(%s)' % gmf['saPeriod']
+        for node in gmf:
+            location = 'POINT(%(lon)s %(lat)s)' % node
+            gmv = node['gmv']
+            yield imt, location, [gmv], [rupid]
 
 
 def create_ses_gmf(job, fname):
@@ -18,8 +66,7 @@ def create_ses_gmf(job, fname):
         oq_job=job,
         display_name='SES Collection',
         output_type='ses')
-    ses_coll = models.SESCollection.objects.create(
-        output=output, lt_model=None, ordinal=0)
+    ses_coll = models.SESCollection.create(output=output)
 
     # create gmf output
     output = models.Output.objects.create(
@@ -40,15 +87,14 @@ def import_rows(job, gmf_coll, rows):
     """
     gmfs = []
     site_id = {}  # dictionary wkt -> site id
-    for imt_type, sa_period, sa_damping, gmvs, wkt in rows:
-        num_gmvs = gmvs.count(',') + 1  # gmvs is a comma-separated string
+    for imt_type, sa_period, sa_damping, gmvs, rups, wkt in rows:
         if wkt not in site_id:  # create a new site
             site_id[wkt] = models.HazardSite.objects.create(
                 hazard_calculation=job, location=wkt).id
         gmfs.append(
             models.GmfData(
                 imt=imt_type, sa_period=sa_period, sa_damping=sa_damping,
-                gmvs=gmvs, rupture_ids=range(num_gmvs),
+                gmvs=gmvs, rupture_ids=rups,
                 site_id=site_id[wkt], gmf=gmf_coll, task_no=0))
     del site_id
     writer.CacheInserter.saveall(gmfs)
@@ -77,13 +123,12 @@ def import_gmf_scenario(fileobj):
     imts = set()
     if fname.endswith('.xml'):
         # convert the XML into a tab-separated StringIO
-        for imt, gmvs, loc in GMFScenarioParser(fileobj).parse():
+        for imt, loc, gmvs, rups in read_rows(fileobj):
             imts.add(imt)
             imt_type, sa_period, sa_damping = from_string(imt)
             sa_period = '\N' if sa_period is None else str(sa_period)
             sa_damping = '\N' if sa_damping is None else str(sa_damping)
-            gmvs = '{%s}' % str(gmvs)[1:-1]
-            rows.append([imt_type, sa_period, sa_damping, gmvs, loc])
+            rows.append([imt_type, sa_period, sa_damping, gmvs, rups, loc])
     else:  # assume a tab-separated file
         for line in fileobj:
             rows.append(line.split('\t'))
