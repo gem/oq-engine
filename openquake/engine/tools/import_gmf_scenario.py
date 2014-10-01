@@ -1,11 +1,19 @@
 import os
 import time
 import argparse
+
+import numpy
+
 from openquake.hazardlib.imt import from_string
 from openquake.engine.db import models
 from openquake.engine import writer, engine
 from openquake.nrmllib.node import LiteralNode, read_nodes
 from openquake.commonlib import valid
+
+from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
+from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
+from openquake.hazardlib.geo.mesh import Mesh
 
 
 class GmfNode(LiteralNode):
@@ -13,6 +21,16 @@ class GmfNode(LiteralNode):
         gmv=valid.positivefloat,
         lon=valid.longitude,
         lat=valid.latitude)
+
+
+def fake_rupture():
+    mesh = Mesh(numpy.array([0, 1]), numpy.array([0, 1]))
+    rupt = ParametricProbabilisticRupture(
+        mag=0, rake=0, tectonic_region_type=None, hypocenter=Point(0, 0, 0),
+        surface=SimpleFaultSurface(mesh),
+        source_typology='rupture', occurrence_rate=0,
+        temporal_occurrence_model=None)
+    return rupt
 
 
 class Tag2Id(object):

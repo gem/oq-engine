@@ -180,7 +180,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         self.assertEqual(1, len(outputs))
 
         ses_coll = models.SESCollection.objects.get(
-            lt_model__hazard_calculation=self.job)
+            trt_model__lt_model__hazard_calculation=self.job)
         self.assertEqual(hc.ses_per_logic_tree_path, len(ses_coll))
         for ses in ses_coll:
             # The only metadata in in the SES is investigation time.

@@ -599,7 +599,6 @@ class RiskCalculation(djm.Model):
         Returns the list of hazard outputs to be considered. Apply
         `filters` to the default queryset
         """
-
         if self.hazard_output:
             return [self.hazard_output]
         elif self.hazard_calculation:
@@ -1121,8 +1120,8 @@ class SESCollection(djm.Model):
     See also :class:`SES` and :class:`SESRupture`.
     """
     output = djm.OneToOneField('Output', related_name="ses")
-    lt_model = djm.OneToOneField(
-        'LtSourceModel', related_name='ses_collection', null=False)
+    trt_model = djm.OneToOneField(
+        'TrtModel', related_name='ses_collection', null=False)
     ordinal = djm.IntegerField(null=False)
 
     class Meta:
@@ -1132,22 +1131,26 @@ class SESCollection(djm.Model):
     @classmethod
     def create(cls, output):
         """
-        Create an LtSourceModel and a SESCollection associated to it
-        and to the given output.
+        Create an LtSourceModel, a TrtModel and a SESCollection associated
+        to it and to the given output.
 
         :param output: an output of type GMF
         """
         lt_model = LtSourceModel.objects.create(
             hazard_calculation=output.oq_job, ordinal=0,
             sm_lt_path=[], sm_name='fake-from-rupture', weight=1)
-        return cls.objects.create(output=output, lt_model=lt_model, ordinal=0)
+        trt_model = TrtModel.objects.create(
+            lt_model=lt_model, tectonic_region_type='NA', num_sources=0,
+            num_ruptures=1, min_mag=0, max_mag=0, gsims=[])
+        return cls.objects.create(
+            output=output, trt_model=trt_model, ordinal=0)
 
     @property
     def sm_lt_path(self):
         """
         The source model logic tree path corresponding to the collection
         """
-        return tuple(self.lt_model.sm_lt_path)
+        return tuple(self.trt_model.lt_model.sm_lt_path)
 
     def get_ruptures(self):
         """Return the SESRuptures associated to self"""
@@ -1168,8 +1171,8 @@ class SESCollection(djm.Model):
         return self.output.oq_job.get_param('ses_per_logic_tree_path', 1)
 
     def __repr__(self):
-        return '<%s=%d, lt_model=%s, ordinal=%d>' % (
-            self.__class__.__name__, self.id, self.lt_model.id, self.ordinal)
+        return '<%s=%d, trt_model=%s, ordinal=%d>' % (
+            self.__class__.__name__, self.id, self.trt_model.id, self.ordinal)
 
 
 class SES(object):
@@ -1307,7 +1310,6 @@ class ProbabilisticRupture(djm.Model):
     magnitude = djm.FloatField(null=False)
     _hypocenter = fields.FloatArrayField(null=False)
     rake = djm.FloatField(null=False)
-    trt_model = djm.ForeignKey('TrtModel')
     is_from_fault_source = djm.NullBooleanField(null=False)
     is_multi_surface = djm.NullBooleanField(null=False)
     surface = fields.PickleField(null=False)
@@ -1330,7 +1332,7 @@ class ProbabilisticRupture(djm.Model):
         db_table = 'hzrdr\".\"probabilistic_rupture'
 
     @classmethod
-    def create(cls, rupture, ses_collection, trt_model, site_indices=None):
+    def create(cls, rupture, ses_collection, site_indices=None):
         """
         Create a ProbabilisticRupture row on the database.
 
@@ -1338,8 +1340,6 @@ class ProbabilisticRupture(djm.Model):
             a hazardlib rupture
         :param ses_collection:
             a Stochastic Event Set Collection object
-        :param trt_model:
-            the TRTModel generating the rupture
         :param site_indices:
             an array of indices for the site_collection
         """
@@ -1351,7 +1351,6 @@ class ProbabilisticRupture(djm.Model):
             ses_collection=ses_collection,
             magnitude=rupture.mag,
             rake=rupture.rake,
-            trt_model=trt_model,
             is_from_fault_source=iffs,
             is_multi_surface=ims,
             surface=rupture.surface,
@@ -1361,7 +1360,7 @@ class ProbabilisticRupture(djm.Model):
     @property
     def tectonic_region_type(self):
         """The TRT associated to the underlying trt_model"""
-        return self.trt_model.tectonic_region_type
+        return self.ses_collection.trt_model.tectonic_region_type
 
     _geom = None
 
@@ -1476,7 +1475,7 @@ class SESRupture(djm.Model):
         :param int seed:
             a seed that will be used when computing the GMF from the rupture
         """
-        tag = 'smlt=%02d|ses=%04d|src=%s|rup=%03d-%02d' % (
+        tag = 'trt=%02d|ses=%04d|src=%s|rup=%03d-%02d' % (
             prob_rupture.ses_collection.ordinal, ses_ordinal,
             source_id, rupt_no, rupt_occ)
         return cls.objects.create(
@@ -1639,49 +1638,28 @@ class Gmf(djm.Model):
         """
         job = self.output.oq_job
         for ses_coll in SESCollection.objects.filter(output__oq_job=job):
-            if ProbabilisticRupture.objects.filter(
-                    ses_collection=ses_coll).count() == 0:  # scenario
+            for ses in ses_coll:
                 query = """\
         SELECT imt, sa_period, sa_damping, tag,
                array_agg(gmv) AS gmvs,
                array_agg(ST_X(location::geometry)) AS xs,
                array_agg(ST_Y(location::geometry)) AS ys
         FROM (SELECT imt, sa_period, sa_damping,
-             unnest(rupture_ids) as rupture_id, location, unnest(gmvs) AS gmv
+             unnest(rupture_ids) as rupture_id, location,
+             unnest(gmvs) AS gmv
            FROM hzrdr.gmf_data, hzrdi.hazard_site
-            WHERE site_id = hzrdi.hazard_site.id AND hazard_calculation_id=%s
-           AND gmf_id=%d) AS x, hzrdr.ses_rupture AS y
-           WHERE y.id=x.rupture_id
+             WHERE site_id = hzrdi.hazard_site.id
+             AND hazard_calculation_id=%s
+             AND gmf_id=%d) AS x, hzrdr.ses_rupture AS y,
+           hzrdr.probabilistic_rupture AS z
+        WHERE x.rupture_id = y.id AND y.rupture_id=z.id
+        AND y.ses_id=%d AND z.ses_collection_id=%d
         GROUP BY imt, sa_period, sa_damping, tag
         ORDER BY imt, sa_period, sa_damping, tag;
-        """ % (job.id, self.id)
-                [ses] = ses_coll
+        """ % (job.id, self.id, ses.ordinal, ses_coll.id)
                 gmfset = self.gmfset(ses, query)
                 if gmfset:
                     yield gmfset
-            else:  # event based
-                for ses in ses_coll:
-                    query = """\
-            SELECT imt, sa_period, sa_damping, tag,
-                   array_agg(gmv) AS gmvs,
-                   array_agg(ST_X(location::geometry)) AS xs,
-                   array_agg(ST_Y(location::geometry)) AS ys
-            FROM (SELECT imt, sa_period, sa_damping,
-                 unnest(rupture_ids) as rupture_id, location,
-                 unnest(gmvs) AS gmv
-               FROM hzrdr.gmf_data, hzrdi.hazard_site
-                 WHERE site_id = hzrdi.hazard_site.id
-                 AND hazard_calculation_id=%s
-                 AND gmf_id=%d) AS x, hzrdr.ses_rupture AS y,
-               hzrdr.probabilistic_rupture AS z
-            WHERE x.rupture_id = y.id AND y.rupture_id=z.id
-            AND y.ses_id=%d AND z.ses_collection_id=%d
-            GROUP BY imt, sa_period, sa_damping, tag
-            ORDER BY imt, sa_period, sa_damping, tag;
-            """ % (job.id, self.id, ses.ordinal, ses_coll.id)
-                    gmfset = self.gmfset(ses, query)
-                    if gmfset:
-                        yield gmfset
 
     def gmfset(self, ses, query):
         """
@@ -1804,10 +1782,21 @@ class GmfData(djm.Model):
         ordering = ['gmf', 'task_no']
 
 
-# XXX: we should order the gmvs consistently
-# currently the scenario export test works by accident
-def _get_gmf(curs, gmf_id, imtype, sa_period, sa_damping):
-    # returns site_id, gmvs for the given gmf_id and imt
+# used in the scenario QA tests
+def get_gmvs_per_site(output, imt):
+    """
+    Iterator for walking through all :class:`GmfData` objects associated
+    to a given output. Notice that values for the same site are
+    displayed together and ordered according to the rupture ids, so that
+    it is possible to get consistent outputs in the test cases.
+
+    :param output: instance of :class:`openquake.engine.db.models.Output`
+    :param string imt: a string with the IMT to extract
+    :returns: a list of ground motion values per each site
+    """
+    imtype, sa_period, sa_damping = from_string(imt)
+    gmf_id = output.gmf.id
+    curs = getcursor('job_init')
     query = '''\
     SELECT site_id, array_concat(gmvs), array_concat(rupture_ids)
     FROM hzrdr.gmf_data WHERE gmf_id=%s AND imt=%s {}
@@ -1818,66 +1807,8 @@ def _get_gmf(curs, gmf_id, imtype, sa_period, sa_damping):
     else:
         curs.execute(query.format(''), (gmf_id, imtype))
     for site_id, gmvs, rup_ids in curs:
-        rupture_ids = sorted(rup_ids)
-        gmv = dict(zip(rupture_ids, gmvs))
-        yield site_id, [gmv[r] for r in rupture_ids], rupture_ids
-
-
-# used in the scenario QA tests
-def get_gmvs_per_site(output, imt):
-    """
-    Iterator for walking through all :class:`GmfData` objects associated
-    to a given output. Notice that values for the same site are
-    displayed together and ordered according to the rupture ids, so that
-    it is possible to get consistent outputs in the test cases.
-
-    :param output: instance of :class:`openquake.engine.db.models.Output`
-
-    :param string imt: a string with the IMT to extract
-
-    :returns: a list of ground motion values per each site
-    """
-    curs = getcursor('job_init')
-    for site_id, gmvs, rups in _get_gmf(
-            curs, output.gmf.id, *from_string(imt)):
-        yield gmvs
-
-
-# used in the scenario export
-def get_gmfs_scenario(output, imt=None):
-    """
-    Iterator for walking through all :class:`GmfData` objects associated
-    to a given output. Notice that the fields are ordered according to the
-    location, so it is possible to get reproducible outputs in the test cases.
-
-    :param output: instance of :class:`openquake.engine.db.models.Output`
-
-    :param string imt: a string with the IMT to extract; the default
-                       is None, all the IMT in the job.ini file are extracted
-
-    :returns: an iterator over
-              :class:`openquake.engine.db.models._GroundMotionField` instances
-    """
-    if imt is None:
-        imtls = output.oq_job.get_param('intensity_measure_types_and_levels')
-        imts = map(from_string, sorted(imtls))
-    else:
-        imts = [from_string(imt)]
-    curs = getcursor('job_init')
-    for imt, sa_period, sa_damping in imts:
-        nodes = collections.defaultdict(list)  # realization -> gmf_nodes
-        for site_id, gmvs, rups in _get_gmf(
-                curs, output.gmf.id, imt, sa_period, sa_damping):
-            for i, gmv in enumerate(gmvs):  # i is the realization index
-                site = HazardSite.objects.get(pk=site_id)
-                nodes[i].append(_GroundMotionFieldNode(gmv, site.location))
-        for gmf_nodes in nodes.itervalues():
-            yield _GroundMotionField(
-                imt=imt,
-                sa_period=sa_period,
-                sa_damping=sa_damping,
-                rupture_id=None,
-                gmf_nodes=sorted(gmf_nodes, key=operator.attrgetter('gmv')))
+        gmv = dict(zip(rup_ids, gmvs))
+        yield [gmv[r] for r in sorted(rup_ids)]
 
 
 class DisaggResult(djm.Model):
