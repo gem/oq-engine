@@ -55,6 +55,8 @@ def make_getter_builders(job_id, counts_taxonomy, calc):
         ID of the current risk job
     :param counts_taxonomy:
         a sorted list of pairs (counts, taxonomy) for each bunch of assets
+    :param calc:
+        :class:`openquake.engine.calculators.risk.base.RiskCalculator` instance
     """
     builders = {}  # taxonomy -> builder
     for counts, taxonomy in counts_taxonomy:
