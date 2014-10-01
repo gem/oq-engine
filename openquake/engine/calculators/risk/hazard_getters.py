@@ -174,7 +174,7 @@ class GroundMotionValuesGetter(HazardGetter):
     """
     Hazard getter for loading ground motion values.
     """ + HazardGetter.__doc__
-    sescoll = None  # set by the GetterBuilder
+    sescolls = ()  # set by the GetterBuilder
     asset_site_ids = None  # set by the GetterBuilder
 
     @property
@@ -182,7 +182,10 @@ class GroundMotionValuesGetter(HazardGetter):
         """
         Rupture_ids for the current getter
         """
-        return self.builder.rupture_ids[self.sescoll.id]
+        rupids = []
+        for sc in self.sescolls:
+            rupids.extend(self.builder.rupture_ids[sc.id])
+        return rupids
 
     @property
     def epsilons(self):
@@ -191,11 +194,11 @@ class GroundMotionValuesGetter(HazardGetter):
         """
         epsilon_rows = []  # ordered by asset_site_id
         for eps in models.Epsilon.objects.filter(
-                ses_collection=self.sescoll.id,
+                ses_collection__in=self.sescolls,
                 asset_site__in=self.asset_site_ids):
             epsilon_rows.append(eps.epsilons)
-        assert epsilon_rows, ('No epsilons for ses_collection_id=%s' %
-                              self.sescoll.id)
+        assert epsilon_rows, ('No epsilons for ses_collection_ids=%s' %
+                              [sc.id for sc in self.sescolls])
         return numpy.array(epsilon_rows)
 
     def get_epsilons(self):
@@ -347,9 +350,10 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
         if self.calculation_mode == 'event_based':
             lt_model_ids = set(ho.output_container.lt_realization.lt_model.id
                                for ho in hazard_outputs)
-            for lt_model_id in lt_model_ids:
+            for trt_model in models.TrtModel.objects.filter(
+                    lt_model__in=lt_model_ids):
                 ses_coll = models.SESCollection.objects.get(
-                    lt_model=lt_model_id)
+                    trt_model=trt_model)
                 num_ruptures = ses_coll.get_ruptures().count()
                 samples = min(self.epsilon_sampling, num_ruptures) \
                     if self.epsilon_sampling else num_ruptures
@@ -377,9 +381,8 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
         if self.calculation_mode == 'event_based':
             lt_model_ids = set(ho.output_container.lt_realization.lt_model.id
                                for ho in hazard_outputs)
-            ses_collections = [
-                models.SESCollection.objects.get(lt_model=lt_model_id)
-                for lt_model_id in lt_model_ids]
+            ses_collections = models.SESCollection.objects.filter(
+                trt_model__lt_model__in=lt_model_ids)
         elif self.calculation_mode == 'scenario':
             [out] = self.hc.output_set.filter(output_type='ses')
             ses_collections = [out.ses]
@@ -452,12 +455,13 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
             getter = gettercls(ho, annotated, site_ids)
             getter.builder = self
             if self.calculation_mode == 'event_based':
-                getter.sescoll = models.SESCollection.objects.get(
-                    lt_model=ho.output_container.lt_realization.lt_model)
+                getter.sescolls = models.SESCollection.objects.filter(
+                    trt_model__lt_model=
+                    ho.output_container.lt_realization.lt_model)
                 getter.asset_site_ids = [a.id for a in asset_sites]
             elif self.calculation_mode == 'scenario':
                 [out] = ho.oq_job.output_set.filter(output_type='ses')
-                getter.sescoll = out.ses
+                getter.sescolls = [out.ses]
                 getter.asset_site_ids = [a.id for a in asset_sites]
             getters.append(getter)
         return getters
