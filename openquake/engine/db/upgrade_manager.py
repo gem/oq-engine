@@ -1,6 +1,5 @@
 import os
 import re
-import runpy
 import urllib
 import importlib
 from openquake.engine import logs
@@ -128,7 +127,9 @@ class UpgradeManager(object):
             fullname = os.path.join(self.upgrade_dir, script['fname'])
             logs.LOG.info('Executing %s', fullname)
             if script['ext'] == 'py':  # Python script with a upgrade(conn)
-                runpy.run_path(fullname)['upgrade'](conn)
+                globs = {}
+                execfile(fullname, globs)
+                globs['upgrade'](conn)
                 self._insert_script(script, conn)
             else:  # SQL script
                 # notice that this prints the file name in case of error
