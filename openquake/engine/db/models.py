@@ -939,7 +939,7 @@ class Output(djm.Model):
         investigation_time = self.oq_job\
                                  .risk_calculation\
                                  .hazard_calculation\
-                                 .get_param('investigation_time', None)
+                                 .get_param('investigation_time', 0)
 
         statistics, quantile = self.statistical_params
         gsim_lt_path, sm_lt_path = self.lt_realization_paths
@@ -1184,7 +1184,7 @@ class SES(object):
         self.ses_collection = ses_collection
         self.ordinal = ordinal
         self.investigation_time = self.ses_collection.output.oq_job.get_param(
-            'investigation_time', None)
+            'investigation_time', 0)
 
     def __cmp__(self, other):
         return cmp(self.ordinal, other.ordinal)
