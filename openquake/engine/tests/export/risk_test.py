@@ -167,8 +167,7 @@ class ClassicalExportTestCase(BaseExportTestCase):
             haz_job = helpers.run_job(haz_cfg)
             # Run the risk on all outputs produced by the haz calc:
             risk_job = helpers.run_job(
-                risk_cfg, hazard_calculation_id=haz_job.hazard_calculation.id
-            )
+                risk_cfg, hazard_calculation_id=haz_job.id)
 
             risk_outputs = models.Output.objects.filter(oq_job=risk_job)
 
@@ -254,8 +253,7 @@ class EventBasedExportTestCase(BaseExportTestCase):
             haz_job = helpers.run_job(haz_cfg)
             # Run the risk on all outputs produced by the haz calc:
             risk_job = helpers.run_job(
-                risk_cfg, hazard_calculation_id=haz_job.hazard_calculation.id
-            )
+                risk_cfg, hazard_calculation_id=haz_job.id)
 
             risk_outputs = models.Output.objects.filter(oq_job=risk_job)
 

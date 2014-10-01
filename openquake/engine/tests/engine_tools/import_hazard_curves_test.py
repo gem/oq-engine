@@ -16,7 +16,7 @@ class ImportHazardCurvesTestCase(unittest.TestCase):
         [hc] = HazardCurve.objects.filter(output=out)
         data = HazardCurveData.objects.filter(hazard_curve=hc)
         self.assertEqual(len(data), 2)  # 2 rows entered
-        self.assertEqual(out.oq_job.hazard_calculation.description,
+        self.assertEqual(out.oq_job.get_param('description'),
                          'HazardCurve importer, file hazard-curves-pga.xml')
 
     def test_import_hazard_curves_sa(self):
@@ -27,5 +27,5 @@ class ImportHazardCurvesTestCase(unittest.TestCase):
         [hc] = HazardCurve.objects.filter(output=out)
         data = HazardCurveData.objects.filter(hazard_curve=hc)
         self.assertEqual(len(data), 2)  # 2 rows entered
-        self.assertEqual(out.oq_job.hazard_calculation.description,
+        self.assertEqual(out.oq_job.get_param('description'),
                          'HazardCurve importer, file hazard-curves-sa.xml')

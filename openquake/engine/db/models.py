@@ -42,12 +42,11 @@ from django.contrib.gis.db import models as djm
 
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import source, geo, calc, correlation
-from openquake.hazardlib.calc import filters
-from openquake.hazardlib.site import (
-    Site, SiteCollection, FilteredSiteCollection)
+from openquake.hazardlib.site import FilteredSiteCollection
 
-from openquake.commonlib.general import distinct
 from openquake.commonlib.riskloaders import loss_type_to_cost_type
+from openquake.commonlib.readinput import get_mesh
+from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import logictree
 
 from openquake.engine.db import fields
@@ -120,21 +119,11 @@ INPUT_TYPE_CHOICES = (
      u'Structural Vulnerability Retrofitted'))
 
 
-VULNERABILITY_TYPE_CHOICES = [choice[0]
-                              for choice in INPUT_TYPE_CHOICES
-                              if choice[0].endswith('vulnerability')]
-
 RAISE_EXC = object()  # sentinel used in OqJob.get_param
 
 
 class MissingParameter(KeyError):
     """Raised by OqJob.get_param when a parameter is missing in the database"""
-
-
-#: The output of HazardCalculation.gen_ruptures
-SourceRuptureSites = collections.namedtuple(
-    'SourceRuptureSites',
-    'source rupture sites')
 
 
 ############## Fix FloatField underflow error ##################
@@ -224,36 +213,17 @@ def build_curves(rlz, curves_by_trt_model_gsim):
         curves = 1. - (1. - curves) * pnes
     return curves
 
-## Tables in the 'admin' schema.
-
-
-class RevisionInfo(djm.Model):
-    '''
-    Revision information
-    '''
-    artefact = djm.TextField(unique=True)
-    revision = djm.TextField()
-    step = djm.IntegerField(default=0)
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    class Meta:
-        db_table = 'admin\".\"revision_info'
-
 
 ## Tables in the 'hzrdi' (Hazard Input) schema.
 
 class SiteModel(djm.Model):
     '''
-     A model for site-specific parameters.
-
-    Used in Hazard calculations.
+    A model for site-specific parameters, used in hazard calculations.
     '''
-
     job = djm.ForeignKey('OqJob')
     # Average shear wave velocity for top 30 m. Units m/s.
     vs30 = djm.FloatField()
-    # 'measured' or 'inferred'. Identifies if vs30 value has been measured or
-    # inferred.
+    # 'measured' or 'inferred'
     vs30_type = djm.TextField(choices=VS30_TYPE_CHOICES)
     # Depth to shear wave velocity of 1.0 km/s. Units m.
     z1pt0 = djm.FloatField()
@@ -279,7 +249,6 @@ class OqJob(djm.Model):
     An OpenQuake engine run started by the user
     '''
     user_name = djm.TextField()
-    hazard_calculation = djm.OneToOneField('HazardCalculation', null=True)
     risk_calculation = djm.OneToOneField('RiskCalculation', null=True)
     LOG_LEVEL_CHOICES = (
         (u'debug', u'Debug'),
@@ -320,17 +289,6 @@ class OqJob(djm.Model):
         """
         return 'hazard' if self.risk_calculation is None else 'risk'
 
-    @property
-    def calculation(self):
-        """
-        :returns: a calculation object (hazard or risk) depending on
-        the type of calculation. Useful in situations (e.g. core
-        engine, stats, kvs, progress) where you do not have enough
-        context about which kind of calculation is but still you want
-        to access the common feature of a Calculation object.
-        """
-        return self.hazard_calculation or self.risk_calculation
-
     def get_param(self, name, missing=RAISE_EXC):
         """
         `job.get_param(name)` returns the value of the requested parameter
@@ -354,6 +312,15 @@ class OqJob(djm.Model):
                 raise MissingParameter(name)
             return missing
 
+    def get_oqparam(self):
+        """
+        Return an OqParam object as read from the database
+        """
+        oqparam = object.__new__(OqParam)
+        for row in JobParam.objects.filter(job=self):
+            setattr(oqparam, row.name, row.value)
+        return oqparam
+
     def save_params(self, params):
         """
         Save on the database table job_params the given parameters.
@@ -364,9 +331,44 @@ class OqJob(djm.Model):
         for name, value in params.iteritems():
             JobParam.objects.create(job=self, name=name, value=repr(value))
 
+    def save_hazard_sites(self):
+        """
+        Populate the table HazardSite by inferring the points from
+        the sites, region, or exposure.
+        """
+        assert self.job_type == 'hazard', self.job_type
+        oqparam = self.get_oqparam()
+        if 'exposure' in oqparam.inputs:
+            assets = self.exposuremodel.exposuredata_set.all()
+            # the coords here must be sorted; the issue is that the
+            # disaggregation calculator has a for loop of kind
+            # for site in sites:
+            #     bin_edge, disagg_matrix = disaggregation(site, ...)
+            # the generated ruptures are random if the order of the sites
+            # is random, even if the seed is fixed; in particular for some
+            # ordering no ruptures are generated and the test
+            # qa_tests/hazard/disagg/case_1/test.py fails with a bad
+            # error message
+            coords = sorted(
+                set((asset.site.x, asset.site.y) for asset in assets))
+            lons, lats = zip(*coords)
+            mesh = geo.Mesh(numpy.array(lons), numpy.array(lats), None)
+        else:
+            mesh = get_mesh(oqparam)
+        sids = save_sites(self, ((p.longitude, p.latitude) for p in mesh))
+        return mesh, sids
+
     def __repr__(self):
         return '<%s %d, %s>' % (self.__class__.__name__,
                                 self.id, self.job_type)
+
+
+def oqparam(job_id):
+    """
+    :param job_id: ID of :class:`openquake.engine.db.models.OqJob`
+    :returns: instance of :class:`openquake.commonlib.oqvalidation.OqParam`
+    """
+    return OqJob.objects.get(pk=job_id).get_oqparam()
 
 
 class JobStats(djm.Model):
@@ -431,498 +433,17 @@ class Performance(djm.Model):
         db_table = 'uiapi\".\"performance'
 
 
-class HazardCalculation(djm.Model):
-    '''
-    Parameters needed to run a Hazard job.
-    '''
-    _site_collection = ()  # see the corresponding instance variable
-
-    @classmethod
-    def create(cls, **kw):
-        return cls(**_prep_geometry(kw))
-
-    # Contains the absolute path to the directory containing the job config
-    # file.
-    base_path = djm.TextField()
-    export_dir = djm.TextField(null=True, blank=True)
-
-    #####################
-    # General parameters:
-    #####################
-
-    # A description for this config profile which is meaningful to a user.
-    description = djm.TextField(default='', blank=True)
-
-    CALC_MODE_CHOICES = (
-        (u'classical', u'Classical PSHA'),
-        (u'event_based', u'Probabilistic Event-Based'),
-        (u'disaggregation', u'Disaggregation'),
-        (u'scenario', u'Scenario'),
-    )
-    calculation_mode = djm.TextField(choices=CALC_MODE_CHOICES)
-    inputs = fields.PickleField(blank=True)
-
-    # For the calculation geometry, choose either `region` (with
-    # `region_grid_spacing`) or `sites`.
-    region = djm.PolygonField(srid=DEFAULT_SRID, null=True, blank=True)
-    # Discretization parameter for a `region`. Units in degrees.
-    region_grid_spacing = djm.FloatField(null=True, blank=True)
-    # The points of interest for a calculation.
-    sites = djm.MultiPointField(srid=DEFAULT_SRID, null=True, blank=True)
-
-    ########################
-    # Logic Tree parameters:
-    ########################
-    random_seed = djm.IntegerField(null=False, default=42)
-    number_of_logic_tree_samples = djm.IntegerField(null=True, blank=True)
-
-    ###############################################
-    # ERF (Earthquake Rupture Forecast) parameters:
-    ###############################################
-    rupture_mesh_spacing = djm.FloatField(
-        help_text=('Rupture mesh spacing (in kilometers) for simple/complex '
-                   'fault sources rupture discretization'),
-        null=True,
-        blank=True,
-
-    )
-    width_of_mfd_bin = djm.FloatField(
-        help_text=('Truncated Gutenberg-Richter MFD (Magnitude Frequency'
-                   'Distribution) bin width'),
-        null=True,
-        blank=True,
-    )
-    area_source_discretization = djm.FloatField(
-        help_text='Area Source Disretization, in kilometers',
-        null=True,
-        blank=True,
-    )
-
-    ##################
-    # Site parameters:
-    ##################
-    # If there is no `site_model`, these 4 parameters must be specified:
-    reference_vs30_value = djm.FloatField(
-        help_text='Shear wave velocity in the uppermost 30 m. In m/s.',
-        null=True,
-        blank=True,
-    )
-    VS30_TYPE_CHOICES = (
-        (u'measured', u'Measured'),
-        (u'inferred', u'Inferred'),
-    )
-    reference_vs30_type = djm.TextField(
-        choices=VS30_TYPE_CHOICES,
-        null=True,
-        blank=True,
-    )
-    reference_depth_to_2pt5km_per_sec = djm.FloatField(
-        help_text='Depth to where shear-wave velocity = 2.5 km/sec. In km.',
-        null=True,
-        blank=True,
-    )
-    reference_depth_to_1pt0km_per_sec = djm.FloatField(
-        help_text='Depth to where shear-wave velocity = 1.0 km/sec. In m.',
-        null=True,
-        blank=True,
-    )
-
-    #########################
-    # Calculation parameters:
-    #########################
-    investigation_time = djm.FloatField(
-        help_text=('Time span (in years) for probability of exceedance '
-                   'calculation'),
-        null=True,
-        blank=True,
-    )
-    intensity_measure_types_and_levels = fields.DictField(
-        help_text=(
-            'Dictionary containing for each intensity measure type ("PGA", '
-            '"PGV", "PGD", "SA", "IA", "RSD", "MMI"), the list of intensity '
-            'measure levels for calculating probability of exceedence'),
-        null=True,
-        blank=True,
-    )
-    truncation_level = fields.NullFloatField(
-        help_text='Level for ground motion distribution truncation',
-        null=True,
-        blank=True,
-    )
-    maximum_distance = djm.FloatField(
-        help_text=('Maximum distance (in km) of sources to be considered in '
-                   'the probability of exceedance calculation. Sources more '
-                   'than this distance away (from the sites of interest) are '
-                   'ignored.'),
-    )
-
-    ################################
-    # Event-Based Calculator params:
-    ################################
-    intensity_measure_types = fields.CharArrayField(
-        help_text=(
-            'List of intensity measure types (input for GMF calculation)'),
-        null=True,
-        blank=True,
-    )
-    ses_per_logic_tree_path = djm.IntegerField(
-        help_text=('Number of Stochastic Event Sets to compute per logic tree'
-                   ' branch (enumerated or randomly sampled'),
-        null=True,
-        blank=True,
-    )
-
-    ###################################
-    # Disaggregation Calculator params:
-    ###################################
-    mag_bin_width = djm.FloatField(
-        help_text=('Width of magnitude bins, which ultimately defines the size'
-                   ' of the magnitude dimension of a disaggregation matrix'),
-        null=True,
-        blank=True,
-    )
-    distance_bin_width = djm.FloatField(
-        help_text=('Width of distance bins, which ultimately defines the size'
-                   ' of the distance dimension of a disaggregation matrix'),
-        null=True,
-        blank=True,
-    )
-    coordinate_bin_width = djm.FloatField(
-        help_text=('Width of coordinate bins, which ultimately defines the'
-                   ' size of the longitude and latitude dimensions of a'
-                   ' disaggregation matrix'),
-        null=True,
-        blank=True,
-    )
-    num_epsilon_bins = djm.IntegerField(
-        help_text=('Number of epsilon bins, which defines the size of the'
-                   ' epsilon dimension of a disaggregation matrix'),
-        null=True,
-        blank=True,
-    )
-    ################################
-    # Scenario Calculator params:
-    ################################
-    gsim = djm.TextField(
-        help_text=('Name of the ground shaking intensity model to use in the '
-                   'calculation'),
-        null=True,
-        blank=True,
-    )
-    number_of_ground_motion_fields = djm.IntegerField(
-        null=True,
-        blank=True,
-    )
-    poes_disagg = fields.FloatArrayField(
-        help_text=('The probabilities of exceedance for which we interpolate'
-                   ' grond motion values from hazard curves. This GMV is used'
-                   ' as input for computing disaggregation histograms'),
-        null=True,
-        blank=True,
-    )
-
-    ################################
-    # Output/post-processing params:
-    ################################
-    # Classical params:
-    ###################
-    mean_hazard_curves = fields.OqNullBooleanField(
-        help_text='Compute mean hazard curves',
-        null=True,
-        blank=True,
-    )
-    quantile_hazard_curves = fields.FloatArrayField(
-        help_text='Compute quantile hazard curves',
-        null=True,
-        blank=True,
-    )
-    poes = fields.FloatArrayField(
-        help_text=('PoEs (probabilities of exceedence) to be used for '
-                   'computing hazard maps and uniform hazard spectra'),
-        null=True,
-        blank=True,
-    )
-    hazard_maps = fields.OqNullBooleanField(
-        help_text='Compute hazard maps',
-        null=True,
-        blank=True,
-    )
-    uniform_hazard_spectra = fields.OqNullBooleanField(
-        help_text=('Compute uniform hazard spectra; if true, hazard maps will'
-                   ' be computed as well'),
-        null=True,
-        blank=True,
-    )
-    export_multi_curves = fields.OqNullBooleanField(
-        help_text=('If true hazard curve outputs that groups multiple curves '
-                   'in multiple imt will be exported when asked in export '
-                   'phase.'))
-    # Event-Based params:
-    #####################
-    ground_motion_fields = fields.OqNullBooleanField(
-        help_text=('If true, ground motion fields will be computed (in '
-                   'addition to stochastic event sets)'),
-        null=True,
-        blank=True,
-    )
-    hazard_curves_from_gmfs = fields.OqNullBooleanField(
-        help_text=('If true, ground motion fields will be post-processed into '
-                   'hazard curves.'),
-        null=True,
-        blank=True,
-    )
-
-    class Meta:
-        db_table = 'uiapi\".\"hazard_calculation'
-
-    # class attributes used as defaults; I am avoiding `__init__`
-    # to avoid issues with Django caching mechanism (MS)
-    _points_to_compute = None
-
-    @property
-    def vulnerability_models(self):
-        return [self.inputs[vf_type]
-                for vf_type in VULNERABILITY_TYPE_CHOICES
-                if vf_type in self.inputs]
-
-    @property
-    def site_model(self):
-        """
-        Get the site model filename for this calculation
-        """
-        return self.inputs.get('site_model')
-
-    ## TODO: this could be implemented with a view, now that there is
-    ## a site table
-    def get_closest_site_model_data(self, point):
-        """Get the closest available site model data from the database
-        for a given site model and :class:`openquake.hazardlib.geo.point.Point`
-
-        :param site:
-            :class:`openquake.hazardlib.geo.point.Point` instance.
-
-        :returns:
-            The closest :class:`openquake.engine.db.models.SiteModel`
-            for the given ``point`` of interest.
-
-            This function uses the PostGIS `ST_Distance_Sphere
-            <http://postgis.refractions.net/docs/ST_Distance_Sphere.html>`_
-            function to calculate distance.
-
-            If there is no site model data, return `None`.
-        """
-        query = """
-        SELECT
-            hzrdi.site_model.*,
-            min(ST_Distance_Sphere(location, %s))
-                AS min_distance
-        FROM hzrdi.site_model
-        WHERE job_id = %s
-        GROUP BY id
-        ORDER BY min_distance
-        LIMIT 1;"""
-
-        raw_query_set = SiteModel.objects.raw(
-            query, ['SRID=4326; %s' % point.wkt2d, self.oqjob.id]
-        )
-
-        site_model_data = list(raw_query_set)
-
-        assert len(site_model_data) <= 1, (
-            "This query should return at most 1 record.")
-
-        if len(site_model_data) == 1:
-            return site_model_data[0]
-
-    def points_to_compute(self, save_sites=True):
-        """
-        Generate a :class:`~openquake.hazardlib.geo.mesh.Mesh` of points.
-        These points indicate the locations of interest in a hazard
-        calculation.
-
-        The mesh can be calculated given a `region` polygon and
-        `region_grid_spacing` (the discretization parameter), or from a list of
-        `sites`.
-
-        .. note::
-            This mesh is cached for efficiency when dealing with large numbers
-            of calculation points. If you need to clear the cache and
-            recompute, set `_points_to_compute` to `None` and call this method
-            again.
-        """
-        if self._points_to_compute is None:
-            if self.pk and 'exposure' in self.inputs:
-                assets = self.oqjob.exposuremodel.exposuredata_set.all(
-                    ).order_by('asset_ref')
-
-                # the points here must be sorted
-                lons, lats = zip(*sorted(set((asset.site.x, asset.site.y)
-                                             for asset in assets)))
-                # Cache the mesh:
-                self._points_to_compute = geo.Mesh(
-                    numpy.array(lons), numpy.array(lats), depths=None
-                )
-            elif self.region and self.region_grid_spacing:
-                # assume that the polygon is a single linear ring
-                coords = self.region.coords[0]
-                points = [geo.Point(*x) for x in coords]
-                poly = geo.Polygon(points)
-                # Cache the mesh:
-                self._points_to_compute = poly.discretize(
-                    self.region_grid_spacing
-                )
-            elif self.sites is not None:
-                lons, lats = zip(*self.sites.coords)
-                # Cache the mesh:
-                self._points_to_compute = geo.Mesh(
-                    numpy.array(lons), numpy.array(lats), depths=None
-                )
-            # store the sites
-            if save_sites and self._points_to_compute:
-                self.save_sites([(pt.longitude, pt.latitude)
-                                 for pt in self._points_to_compute])
-
-        return self._points_to_compute
-
-    @property
-    def site_collection(self):
-        """
-        Create a SiteCollection from a HazardCalculation object.
-        First, take all of the points/locations of interest defined by the
-        calculation geometry. For each point, do distance queries on the site
-        model and get the site parameters which are closest to the point of
-        interest. This aggregation of points to the closest site parameters
-        is what we store in the `site_collection` field.
-        If the computation does not specify a site model the same 4 reference
-        site parameters are used for all sites. The sites are ordered by id,
-        to ensure reproducibility in tests.
-        """
-        if len(self._site_collection):
-            return self._site_collection
-
-        hsites = HazardSite.objects.filter(
-            hazard_calculation=self).order_by('id')
-        if not hsites:
-            raise RuntimeError('No sites were imported!')
-        # NB: the sites MUST be ordered. The issue is that the disaggregation
-        # calculator has a for loop of kind
-        # for site in sites:
-        #     bin_edge, disagg_matrix = disaggregation(site, ...)
-        # the generated ruptures are random if the order of the sites
-        # is random, even if the seed is fixed; in particular for some
-        # ordering no ruptures are generated and the test
-        # qa_tests/hazard/disagg/case_1/test.py fails with a bad
-        # error message
-        if self.site_model:
-            sites = []
-            for hsite in hsites:
-                pt = geo.point.Point(hsite.location.x, hsite.location.y)
-                smd = self.get_closest_site_model_data(pt)
-                measured = smd.vs30_type == 'measured'
-                vs30 = smd.vs30
-                z1pt0 = smd.z1pt0
-                z2pt5 = smd.z2pt5
-                sites.append(Site(pt, vs30, measured, z1pt0, z2pt5, hsite.id))
-            sc = SiteCollection(sites)
-        else:
-            lons = [hsite.location.x for hsite in hsites]
-            lats = [hsite.location.y for hsite in hsites]
-            site_ids = [hsite.id for hsite in hsites]
-            sc = SiteCollection.from_points(lons, lats, site_ids, self)
-        self._site_collection = sc
-        return sc
-
-    def get_imts(self):
-        """
-        Returns intensity mesure types or intensity mesure types with levels
-        in a fixed order.
-        """
-
-        return sorted(self.intensity_measure_types or
-                      self.intensity_measure_types_and_levels)
-
-    def save_sites(self, coordinates):
-        """
-        Save all the gives sites on the hzrdi.hazard_site table.
-        :param coordinates: a sequence of (lon, lat) pairs
-        :returns: the ids of the inserted HazardSite instances
-        """
-        sites = [HazardSite(hazard_calculation=self,
-                            location='POINT(%s %s)' % coord)
-                 for coord in coordinates]
-        return writer.CacheInserter.saveall(sites)
-
-    def total_investigation_time(self):
-        """
-        Helper method to compute the total investigation time for a
-        complete set of stochastic event sets for all realizations.
-        """
-        if self.number_of_logic_tree_samples > 0:
-            # The calculation is set to do Monte-Carlo sampling of logic trees
-            # The number of logic tree realizations is specified explicitly in
-            # job configuration.
-            n_lt_realizations = self.number_of_logic_tree_samples
-        else:
-            # The calculation is set do end-branch enumeration of all logic
-            # tree paths
-            # We can get the number of logic tree realizations by counting
-            # initialized lt_realization records.
-            n_lt_realizations = LtRealization.objects.filter(
-                lt_model__hazard_calculation=self).count()
-
-        investigation_time = (self.investigation_time
-                              * self.ses_per_logic_tree_path
-                              * n_lt_realizations)
-
-        return investigation_time
-
-    def gen_ruptures(self, sources, monitor, site_coll):
-        """
-        Yield (source, rupture, affected_sites) for each rupture
-        generated by the given sources.
-
-        :param sources: a sequence of sources
-        :param monitor: a Monitor object
-        """
-        filtsources_mon = monitor.copy('filtering sources')
-        genruptures_mon = monitor.copy('generating ruptures')
-        filtruptures_mon = monitor.copy('filtering ruptures')
-        for src in sources:
-            with filtsources_mon:
-                s_sites = src.filter_sites_by_distance_to_source(
-                    self.maximum_distance, site_coll)
-                if s_sites is None:
-                    continue
-
-            with genruptures_mon:
-                ruptures = list(src.iter_ruptures())
-            if not ruptures:
-                continue
-
-            for rupture in ruptures:
-                with filtruptures_mon:
-                    r_sites = filters.filter_sites_by_distance_to_rupture(
-                        rupture, self.maximum_distance, s_sites)
-                    if r_sites is None:
-                        continue
-                yield SourceRuptureSites(src, rupture, r_sites)
-        filtsources_mon.flush()
-        genruptures_mon.flush()
-        filtruptures_mon.flush()
-
-    def gen_ruptures_for_site(self, site, sources, monitor):
-        """
-        Yield source, <ruptures close to site>
-
-        :param site: a Site object
-        :param sources: a sequence of sources
-        :param monitor: a Monitor object
-        """
-        source_rupture_sites = self.gen_ruptures(
-            sources, monitor, SiteCollection([site]))
-        for src, rows in itertools.groupby(
-                source_rupture_sites, key=operator.attrgetter('source')):
-            yield src, [row.rupture for row in rows]
+# this is used in the tests, see helpers.py
+def save_sites(job, coords):
+    """
+    Save all the gives sites on the hzrdi.hazard_site table.
+    :param coordinates: a sequence of (lon, lat) pairs
+    :returns: the ids of the inserted HazardSite instances
+    """
+    sites = [HazardSite(hazard_calculation=job,
+                        location='POINT(%s %s)' % (lon, lat))
+             for lon, lat in coords]
+    return writer.CacheInserter.saveall(sites)
 
 
 class RiskCalculation(djm.Model):
@@ -973,11 +494,10 @@ class RiskCalculation(djm.Model):
     # Gmf or to a SES collection) used by the risk calculation
     hazard_output = djm.ForeignKey("Output", null=True, blank=True)
 
-    # the HazardCalculation object used by the risk calculation when
+    # the hazard OqJob object used by the risk calculation when
     # each individual Output (i.e. each hazard logic tree realization)
     # is considered
-    hazard_calculation = djm.ForeignKey("HazardCalculation",
-                                        null=True, blank=True)
+    hazard_calculation = djm.ForeignKey("OqJob", null=True, blank=True)
 
     risk_investigation_time = djm.FloatField(
         help_text=('Override the time span (in years) with which the '
@@ -1043,7 +563,7 @@ class RiskCalculation(djm.Model):
         help_text=('Width of distance bins'),
         null=True,
         blank=True,
-    )
+        )
     coordinate_bin_width = djm.FloatField(
         help_text=('Width of coordinate bins'),
         null=True,
@@ -1064,20 +584,15 @@ class RiskCalculation(djm.Model):
     class Meta:
         db_table = 'uiapi\".\"risk_calculation'
 
-    def get_hazard_calculation(self):
+    def get_hazard_param(self):
         """
-        Get the hazard calculation associated with the hazard output used as an
-        input to this risk calculation.
+        Get the hazard parameters associated with the hazard job that generated
+        the output used as an input for the current risk calculation.
 
         :returns:
-            :class:`HazardCalculation` instance.
+            :class:`openquake.commonlib.oqvalidation.OqParam` instance.
         """
-        try:
-            hcalc = (self.hazard_calculation or
-                     self.hazard_output.oq_job.hazard_calculation)
-        except ObjectDoesNotExist:
-            raise RuntimeError("The provided hazard does not exist")
-        return hcalc
+        return self.hazard_calculation.get_oqparam()
 
     def hazard_outputs(self):
         """
@@ -1102,7 +617,7 @@ class RiskCalculation(djm.Model):
             else:
                 raise NotImplementedError
 
-            return self.hazard_calculation.oqjob.output_set.filter(
+            return self.hazard_calculation.output_set.filter(
                 **filters).order_by('id')
         else:
             raise RuntimeError("Neither hazard calculation "
@@ -1124,8 +639,8 @@ class RiskCalculation(djm.Model):
         if dist is None:
             dist = self.DEFAULT_MAXIMUM_DISTANCE
 
-        hc = self.get_hazard_calculation()
-        if hc.sites is None and hc.region_grid_spacing is not None:
+        hc = self.get_hazard_param()
+        if getattr(hc, 'region_grid_spacing', None) is not None:
             dist = min(dist, hc.region_grid_spacing * numpy.sqrt(2) / 2)
 
         # if we are computing hazard at exact location we set the
@@ -1149,14 +664,14 @@ class RiskCalculation(djm.Model):
         3. if an exposure was used in the hazard job, use it
         4. if no exposure is found, return None
         """
-        haz_job = self.get_hazard_calculation().oqjob
         return (self.preloaded_exposure_model or
-                extract_from([self.oqjob, haz_job], 'exposuremodel'))
+                extract_from(
+                    [self.oqjob, self.hazard_calculation], 'exposuremodel'))
 
     @property
     def investigation_time(self):
         return (self.risk_investigation_time or
-                self.get_hazard_calculation().investigation_time)
+                self.get_hazard_param().investigation_time)
 
 
 def extract_from(objlist, attr):
@@ -1423,8 +938,8 @@ class Output(djm.Model):
         """
         investigation_time = self.oq_job\
                                  .risk_calculation\
-                                 .get_hazard_calculation()\
-                                 .investigation_time
+                                 .hazard_calculation\
+                                 .get_param('investigation_time', None)
 
         statistics, quantile = self.statistical_params
         gsim_lt_path, sm_lt_path = self.lt_realization_paths
@@ -1631,16 +1146,15 @@ class SESCollection(djm.Model):
         """
         Iterator for walking through all child :class:`SES` objects.
         """
-        hc = self.output.oq_job.hazard_calculation
-        n = hc.ses_per_logic_tree_path or 1  # scenario
-        for ordinal in xrange(1, n + 1):
+        n = self.output.oq_job.get_param('ses_per_logic_tree_path', 1)
+        for ordinal in xrange(1, n + 1):  # 1 for scenario
             yield SES(self, ordinal)
 
     def __len__(self):
         """
         Return the ses_per_logic_tree_path parameter
         """
-        return self.output.oq_job.hazard_calculation.ses_per_logic_tree_path
+        return self.output.oq_job.get_param('ses_per_logic_tree_path')
 
     def __repr__(self):
         return '<%s=%d, lt_model=%s, ordinal=%d>' % (
@@ -1658,11 +1172,8 @@ class SES(object):
     def __init__(self, ses_collection, ordinal=1):
         self.ses_collection = ses_collection
         self.ordinal = ordinal
-
-    @property
-    def investigation_time(self):
-        hc = self.ses_collection.output.oq_job.hazard_calculation
-        return hc.investigation_time
+        self.investigation_time = self.ses_collection.output.oq_job.get_param(
+            'investigation_time', None)
 
     def __cmp__(self, other):
         return cmp(self.ordinal, other.ordinal)
@@ -2006,19 +1517,21 @@ class Gmf(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"gmf'
 
-    def by_rupture(self, ses_collection_id=None, ses_ordinal=None):
+    def by_rupture(self, sitecol, ses_collection_id=None, ses_ordinal=None):
         """
         Yields triples (ses_rupture, sites, gmf_dict)
         """
         job = self.output.oq_job
-        hc = job.hazard_calculation
+        imtls = job.get_param('intensity_measure_types_and_levels')
+        truncation_level = job.get_param('truncation_level', None)
         correl_model = get_correl_model(job)
         gsims = self.lt_realization.get_gsim_instances()
         assert gsims, 'No GSIMs found for realization %d!' % \
             self.lt_realization.id  # look into hzdr.assoc_lt_rlz_trt_model
+
         # NB: the IMTs must be sorted for consistency with the classical
         # calculator when computing the hazard curves from the GMFs
-        imts = map(from_string, sorted(hc.intensity_measure_types))
+        imts = map(from_string, sorted(imtls))
         for ses_coll in SESCollection.objects.filter(
                 output__oq_job=self.output.oq_job):
             # filter by ses_collection
@@ -2030,12 +1543,12 @@ class Gmf(djm.Model):
                     continue
                 for rupture, ses_ruptures in itertools.groupby(
                         ses, operator.attrgetter('rupture')):
-                    sites = hc.site_collection if rupture.site_indices is None\
+                    sites = sitecol if rupture.site_indices is None\
                         else FilteredSiteCollection(
-                            rupture.site_indices, hc.site_collection)
+                            rupture.site_indices, sitecol)
                     computer = calc.gmf.GmfComputer(
                         rupture, sites, imts, gsims,
-                        hc.truncation_level, correl_model)
+                        truncation_level, correl_model)
                     for ses_rup in ses_ruptures:
                         yield ses_rup, sites, computer.compute(ses_rup.seed)
 
@@ -2113,9 +1626,8 @@ class Gmf(djm.Model):
 
         If a SES does not generate any GMF, it is ignored.
         """
-        hc = self.output.oq_job.hazard_calculation
-        for ses_coll in SESCollection.objects.filter(
-                output__oq_job=self.output.oq_job):
+        job = self.output.oq_job
+        for ses_coll in SESCollection.objects.filter(output__oq_job=job):
             for ses in ses_coll:
                 query = """\
         SELECT imt, sa_period, sa_damping, tag,
@@ -2132,7 +1644,7 @@ class Gmf(djm.Model):
         AND y.ses_id=%d AND z.ses_collection_id=%d
         GROUP BY imt, sa_period, sa_damping, tag
         ORDER BY imt, sa_period, sa_damping, tag;
-        """ % (hc.id, self.id, ses.ordinal, ses_coll.id)
+        """ % (job.id, self.id, ses.ordinal, ses_coll.id)
                 curs = getcursor('job_init')
                 curs.execute(query)
                 # a set of GMFs generate by the same SES, one per rupture
@@ -2295,9 +1807,9 @@ def get_gmfs_scenario(output, imt=None):
     :returns: an iterator over
               :class:`openquake.engine.db.models._GroundMotionField` instances
     """
-    hc = output.oq_job.hazard_calculation
     if imt is None:
-        imts = distinct(from_string(x) for x in hc.intensity_measure_types)
+        imtls = output.oq_job.get_param('intensity_measure_types_and_levels')
+        imts = map(from_string, sorted(imtls))
     else:
         imts = [from_string(imt)]
     curs = getcursor('job_init')
@@ -2417,7 +1929,7 @@ class LtSourceModel(djm.Model):
     """
     Identify a logic tree source model.
     """
-    hazard_calculation = djm.ForeignKey('HazardCalculation')
+    hazard_calculation = djm.ForeignKey('OqJob')
     ordinal = djm.IntegerField()
     sm_lt_path = fields.CharArrayField()
     sm_name = djm.TextField(null=False)
@@ -2446,7 +1958,7 @@ class LtSourceModel(djm.Model):
         """
         Helper to instantiate a GsimLogicTree object from the logic tree file.
         """
-        hc = self.hazard_calculation
+        hc = self.hazard_calculation.get_oqparam()
         trts = trts or self.get_tectonic_region_types()
         fname = os.path.join(hc.base_path, hc.inputs['gsim_logic_tree'])
         gsim_lt = logictree.GsimLogicTree(
@@ -3689,7 +3201,7 @@ class HazardSite(djm.Model):
     parameters are use for all points of interest).
     """
 
-    hazard_calculation = djm.ForeignKey('HazardCalculation')
+    hazard_calculation = djm.ForeignKey('OqJob')
     location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:

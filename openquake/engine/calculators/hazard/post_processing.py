@@ -193,7 +193,7 @@ def do_uhs_post_proc(job):
     quantile_hazard_curves = job.get_param('quantile_hazard_curves', [])
 
     rlzs = models.LtRealization.objects.filter(
-        lt_model__hazard_calculation=job.hazard_calculation)
+        lt_model__hazard_calculation=job)
 
     for poe in poes:
         maps_for_poe = models.HazardMap.objects.filter(
@@ -303,7 +303,7 @@ def _save_uhs(job, uhs_results, poe, rlz=None, statistics=None, quantile=None):
     )
     uhs = models.UHS(
         poe=poe,
-        investigation_time=job.hazard_calculation.investigation_time,
+        investigation_time=job.get_param('investigation_time'),
         periods=uhs_results['periods'],
     )
     if rlz is not None:
