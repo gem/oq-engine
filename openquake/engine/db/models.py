@@ -1139,6 +1139,9 @@ class SESCollection(djm.Model):
         lt_model = LtSourceModel.objects.create(
             hazard_calculation=output.oq_job, ordinal=0,
             sm_lt_path=[], sm_name='fake-from-rupture', weight=1)
+        # in order to save a ProbabilisticRupture, a TrtModel is needed;
+        # here we generate a fake one, corresponding to the tectonic
+        # region type NA i.e. Not Available
         trt_model = TrtModel.objects.create(
             lt_model=lt_model, tectonic_region_type='NA', num_sources=0,
             num_ruptures=1, min_mag=0, max_mag=0, gsims=[])
