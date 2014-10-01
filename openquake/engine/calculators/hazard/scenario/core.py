@@ -188,18 +188,8 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
             for _ in xrange(self.hc.number_of_ground_motion_fields)]
 
         with self.monitor('saving ruptures'):
-            # in order to save a ProbabilisticRupture, a TrtModel is needed;
-            # here we generate a fake one, corresponding to the tectonic
-            # region type NA i.e. Not Available
-            trt_model = models.TrtModel.objects.create(
-                tectonic_region_type='NA',
-                num_sources=0,
-                num_ruptures=len(all_seeds),
-                min_mag=self.rupture.mag,
-                max_mag=self.rupture.mag,
-                gsims=[self.hc.gsim])
             prob_rup = models.ProbabilisticRupture.create(
-                self.rupture, self.ses_coll, trt_model)
+                self.rupture, self.ses_coll)
             inserter = writer.CacheInserter(
                 models.SESRupture, max_cache_size=100000)
             for ses_idx, seed in enumerate(all_seeds):
