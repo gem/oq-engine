@@ -28,7 +28,6 @@ class ClassicalHazardCase15TestCase(BaseQATestCase):
     def test(self):
         cfg = os.path.join(CURRENTDIR, 'job.ini')
         job = self.run_hazard(cfg)
-        hc = job.hazard_calculation
 
         lt_paths = [
             [['SM1'], ['BA2008', 'C2003']],
@@ -48,11 +47,11 @@ class ClassicalHazardCase15TestCase(BaseQATestCase):
             fname = 'PGA/hazard_curve-smltp_%s-gsimltp_%s.csv' % (
                 j(sm_path), j(gsim_path))
             compare_hazard_curve_with_csv(
-                hc, sm_path, gsim_path, 'PGA', None, None,
+                job, sm_path, gsim_path, 'PGA', None, None,
                 os.path.join(csvdir, fname), ' ', rtol=1e-7)
 
             fname = 'SA-0.1/hazard_curve-smltp_%s-gsimltp_%s.csv' % (
                 j(sm_path), j(gsim_path))
             compare_hazard_curve_with_csv(
-                hc, sm_path, gsim_path, 'SA', 0.1, 5.0,
+                job, sm_path, gsim_path, 'SA', 0.1, 5.0,
                 os.path.join(csvdir, fname), ' ', rtol=1e-7)

@@ -26,6 +26,8 @@ from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import SiteCollection
 
+from openquake.commonlib.calc import gen_ruptures_for_site
+
 from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
@@ -205,7 +207,7 @@ def compute_disagg(job_id, sitecol, sources, trt_model_id,
         (site.id, rlz.id, poe, imt, iml, trt_names).
     """
     mon = LightMonitor('disagg', job_id, compute_disagg)
-    hc = models.OqJob.objects.get(id=job_id).hazard_calculation
+    hc = models.oqparam(job_id)
     trt_model = models.TrtModel.objects.get(pk=trt_model_id)
     gsims = trt_model.get_gsim_instances()
     lt_model_id = trt_model.lt_model.id
@@ -222,7 +224,8 @@ def compute_disagg(job_id, sitecol, sources, trt_model_id,
             continue
 
         # generate source, rupture, sites once per site
-        source_ruptures = list(hc.gen_ruptures_for_site(site, sources, mon))
+        source_ruptures = list(
+            gen_ruptures_for_site(site, sources, hc.maximum_distance, mon))
         if not source_ruptures:
             continue
         logs.LOG.info('Collecting bins from %d ruptures close to %s',
@@ -234,7 +237,7 @@ def compute_disagg(job_id, sitecol, sources, trt_model_id,
             bdata = _collect_bins_data(
                 mon, trt_num, source_ruptures, site, curves_dict[site.id],
                 trt_model_id, gsims, hc.intensity_measure_types_and_levels,
-                hc.poes_disagg, hc.truncation_level,
+                hc.poes_disagg, getattr(hc, 'truncation_level', None),
                 hc.num_epsilon_bins)
 
         if not bdata.pnes:  # no contributions for this site
@@ -307,7 +310,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         Run the disaggregation phase after hazard curve finalization.
         """
         hc = self.hc
-        tl = self.hc.truncation_level
+        tl = getattr(self.hc, 'truncation_level', None)
         mag_bin_width = self.hc.mag_bin_width
         eps_edges = numpy.linspace(-tl, tl, self.hc.num_epsilon_bins + 1)
         logs.LOG.info('%d epsilon bins from %s to %s', len(eps_edges) - 1,
@@ -315,7 +318,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
 
         self.bin_edges = {}
         curves_dict = dict((site.id, self.get_curves(site))
-                           for site in self.hc.site_collection)
+                           for site in self.site_collection)
 
         oqm = tasks.OqTaskManager(compute_disagg, logs.LOG.progress)
         for job_id, sitecol, srcs, trt_model_id in self.task_arg_gen():
@@ -334,7 +337,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
             logs.LOG.info('%d mag bins from %s to %s', len(mag_edges) - 1,
                           min_mag, max_mag)
 
-            for site in self.hc.site_collection:
+            for site in self.site_collection:
                 curves = curves_dict[site.id]
                 if not curves:
                     continue  # skip zero-valued hazard curves
