@@ -21,8 +21,9 @@
 Reading risk models for risk calculators
 """
 import collections
-from openquake.risklib import scientific, workflows
-from openquake.nrmllib.risk import parsers
+from openquake.risklib import workflows
+from openquake.commonlib.riskmodels import \
+    get_vulnerability_functions, get_fragility_functions
 
 # loss types (in the risk models) and cost types (in the exposure)
 # are the sames except for fatalities -> occupants
@@ -38,39 +39,6 @@ def cost_type_to_loss_type(ct):
     return 'fatalities' if ct == 'occupants' else ct
 
 
-def _get_vulnerability_functions(vulnerability_file):
-    """
-    :param vulnerability_file:
-        the pathname to a vulnerability file
-    :returns:
-        a dictionary {taxonomy: vulnerability_function}
-    :raises:
-        * `ValueError` if validation of any vulnerability function fails
-    """
-    vfs = {}
-    for record in parsers.VulnerabilityModelParser(vulnerability_file):
-        taxonomy = record['ID']
-        imt = record['IMT']
-        loss_ratios = record['lossRatio']
-        covs = record['coefficientsVariation']
-        distribution = record['probabilisticDistribution']
-
-        if taxonomy in vfs:
-            raise ValueError("Error creating vulnerability function for "
-                             "taxonomy %s. A taxonomy can not "
-                             "be associated with "
-                             "different vulnerability functions" % taxonomy)
-        try:
-            vfs[taxonomy] = scientific.VulnerabilityFunction(
-                imt, record['IML'], loss_ratios, covs, distribution)
-        except ValueError, err:
-            msg = "Invalid vulnerability function with ID '%s': %s" % (
-                taxonomy, err.message)
-            raise ValueError(msg)
-
-    return vfs
-
-
 def get_taxonomy_vfs(inputs, loss_types, retrofitted=False):
     """
     Given a dictionary {key: pathname} and a list of loss_types (for instance
@@ -84,7 +52,8 @@ def get_taxonomy_vfs(inputs, loss_types, retrofitted=False):
         key = '%s_vulnerability%s' % (loss_type_to_cost_type(loss_type), retro)
         if key not in inputs:
             continue
-        for tax, vf in _get_vulnerability_functions(inputs[key]).iteritems():
+        vf_dict = get_vulnerability_functions(inputs[key])
+        for (imt, tax), vf in vf_dict.iteritems():
             vulnerability_functions[tax].append((loss_type, vf))
     for taxonomy in vulnerability_functions:
         yield taxonomy, dict(vulnerability_functions[taxonomy])
@@ -115,42 +84,15 @@ class List(list):
         vars(self).update(attrs)
 
 
-def get_damage_states_and_risk_models(content):
+def get_damage_states_and_risk_models(fname):
     """
     Parse the fragility XML file and return a list of
     damage_states and a dictionary {taxonomy: risk model}
     """
-    iterparse = iter(parsers.FragilityModelParser(content))
-    fmt, limit_states = iterparse.next()
-
-    damage_states = ['no_damage'] + limit_states
-    fragility_functions = collections.defaultdict(dict)
-
-    tax_imt = dict()
-    for taxonomy, iml, params, no_damage_limit in iterparse:
-        tax_imt[taxonomy] = iml['IMT']
-
-        if fmt == "discrete":
-            if no_damage_limit is None:
-                fragility_functions[taxonomy] = [
-                    scientific.FragilityFunctionDiscrete(
-                        iml['imls'], poes, iml['imls'][0])
-                    for poes in params]
-            else:
-                fragility_functions[taxonomy] = [
-                    scientific.FragilityFunctionDiscrete(
-                        [no_damage_limit] + iml['imls'], [0.0] + poes,
-                        no_damage_limit)
-                    for poes in params]
-        else:
-            fragility_functions[taxonomy] = [
-                scientific.FragilityFunctionContinuous(*mean_stddev)
-                for mean_stddev in params]
-
     risk_models = {}
-    for taxonomy, ffs in fragility_functions.items():
-        dic = dict(damage=List(ffs, imt=tax_imt[taxonomy]))
+    damage_states, fragility_functions = get_fragility_functions(fname)
+    for taxonomy, ffs in fragility_functions.iteritems():
         risk_models[taxonomy] = workflows.RiskModel(
-            taxonomy, workflows.Damage(dic))
+            taxonomy, workflows.Damage(dict(damage=ffs)))
 
     return damage_states, risk_models

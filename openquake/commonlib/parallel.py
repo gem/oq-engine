@@ -151,6 +151,28 @@ class Pickled(object):
         return cPickle.loads(self.pik)
 
 
+def get_pickled_sizes(obj):
+    """
+    Return the pickled sizes of an object and its direct attributes,
+    ordered by decreasing size. Here is an example:
+
+    >> total_size, partial_sizes = get_pickled_sizes(PerformanceMonitor())
+    >> total_size
+    345
+    >> partial_sizes
+    [('_procs', 214), ('exc', 4), ('mem', 4), ('start_time', 4),
+     ('_start_time', 4), ('duration', 4)]
+
+    Notice that the sizes depend on the operating system and the machine.
+    """
+    sizes = []
+    attrs = getattr(obj, '__dict__',  {})
+    for name, value in attrs.iteritems():
+        sizes.append((name, len(Pickled(value))))
+    return len(Pickled(obj)), sorted(
+        sizes, key=lambda pair: pair[1], reverse=True)
+
+
 def pickle_sequence(objects):
     """
     Convert an iterable of objects into a list of pickled objects.

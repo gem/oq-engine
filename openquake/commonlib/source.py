@@ -17,11 +17,10 @@ import sys
 import math
 import copy
 from itertools import izip
-from contextlib import contextmanager
 
 from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.nrmllib.node import read_nodes, LiteralNode
+from openquake.nrmllib.node import read_nodes, LiteralNode, context
 from openquake.commonlib import valid
 
 
@@ -319,23 +318,6 @@ class RuptureConverter(object):
     def __init__(self, rupture_mesh_spacing):
         self.rupture_mesh_spacing = rupture_mesh_spacing
 
-    @contextmanager
-    def context(self, node):
-        """
-        Context manager managing exceptions and adding line number
-        of the current node and name of the current file being processed
-        to the error message.
-
-        :param node: the current node being processed
-        """
-        try:
-            yield node
-        except:
-            etype, exc, tb = sys.exc_info()
-            msg = 'node %s: %s, line %s of %s' % (
-                node.tag, exc, node.lineno, self.fname)
-            raise etype, msg, tb
-
     def convert_node(self, node):
         """
         Convert the given rupture node into a hazardlib rupture, depending
@@ -343,7 +325,7 @@ class RuptureConverter(object):
 
         :param node: a node representing a rupture
         """
-        with self.context(node):
+        with context(self.fname, node):
             convert_rupture = getattr(self, 'convert_' + node.tag)
             mag = ~node.magnitude
             rake = ~node.rake
@@ -357,7 +339,7 @@ class RuptureConverter(object):
 
         :param edge: a node describing an edge
         """
-        with self.context(edge.LineString.posList) as plist:
+        with context(self.fname, edge.LineString.posList) as plist:
             coords = split_coords_2d(~plist)
         return geo.Line([geo.Point(*p) for p in coords])
 
@@ -370,7 +352,7 @@ class RuptureConverter(object):
         """
         lines = []
         for edge in edges:
-            with self.context(edge):
+            with context(self.fname, edge):
                 coords = split_coords_3d(~edge.LineString.posList)
             lines.append(geo.Line([geo.Point(*p) for p in coords]))
         return lines
@@ -383,7 +365,7 @@ class RuptureConverter(object):
 
         :param surface: PlanarSurface node
         """
-        with self.context(surface):
+        with context(self.fname, surface):
             top_left = geo.Point(*~surface.topLeft)
             top_right = geo.Point(*~surface.topRight)
             bottom_left = geo.Point(*~surface.bottomLeft)
@@ -432,7 +414,7 @@ class RuptureConverter(object):
         :param rake: the rupture rake angle
         :param hypocenter: the rupture hypocenter
         """
-        with self.context(node):
+        with context(self.fname, node):
             surfaces = [node.simpleFaultGeometry]
         rupt = source.rupture.Rupture(
             mag=mag, rake=rake, tectonic_region_type=None,
@@ -450,7 +432,7 @@ class RuptureConverter(object):
         :param rake: the rupture rake angle
         :param hypocenter: the rupture hypocenter
         """
-        with self.context(node):
+        with context(self.fname, node):
             surfaces = [node.complexFaultGeometry]
         rupt = source.rupture.Rupture(
             mag=mag, rake=rake, tectonic_region_type=None,
@@ -468,7 +450,7 @@ class RuptureConverter(object):
         :param rake: the rupture rake angle
         :param hypocenter: the rupture hypocenter
         """
-        with self.context(node):
+        with context(self.fname, node):
             surfaces = [node.planarSurface]
         hrupt = source.rupture.Rupture(
             mag=mag, rake=rake,
@@ -487,7 +469,7 @@ class RuptureConverter(object):
         :param rake: the rupture rake angle
         :param hypocenter: the rupture hypocenter
         """
-        with self.context(node):
+        with context(self.fname, node):
             surfaces = list(node.getnodes('planarSurface'))
         hrupt = source.rupture.Rupture(
             mag=mag, rake=rake,
@@ -516,7 +498,7 @@ class SourceConverter(RuptureConverter):
 
         :param node: a node representing a source
         """
-        with self.context(node):
+        with context(self.fname, node):
             convert_source = getattr(self, 'convert_' + node.tag)
         return convert_source(node)
 
@@ -529,7 +511,7 @@ class SourceConverter(RuptureConverter):
         :returns: a :class:`openquake.hazardlib.mdf.EvenlyDiscretizedMFD.` or
                   :class:`openquake.hazardlib.mdf.TruncatedGRMFD` instance
         """
-        with self.context(node):
+        with context(self.fname, node):
             [mfd_node] = [subnode for subnode in node if subnode.tag in (
                 'incrementalMFD', 'truncGutenbergRichterMFD')]
             if mfd_node.tag == 'incrementalMFD':
@@ -549,7 +531,7 @@ class SourceConverter(RuptureConverter):
         :param node: a nodalPlaneDist node
         :returns: a :class:`openquake.hazardlib.geo.NodalPlane` instance
         """
-        with self.context(node):
+        with context(self.fname, node):
             npdist = []
             for np in node.nodalPlaneDist:
                 prob, strike, dip, rake = ~np
@@ -564,7 +546,7 @@ class SourceConverter(RuptureConverter):
         :param node: a hypoDepthDist node
         :returns: a :class:`openquake.hazardlib.pmf.PMF` instance
         """
-        with self.context(node):
+        with context(self.fname, node):
             return pmf.PMF([~hd for hd in node.hypoDepthDist])
 
     def convert_areaSource(self, node):
@@ -710,7 +692,7 @@ class SourceConverter(RuptureConverter):
 from openquake.nrmllib import models as nrml_models
 from shapely import wkt
 from openquake.hazardlib import scalerel
-
+from openquake.hazardlib.source.rupture import Rupture as HazardlibRupture
 
 class NrmlHazardlibConverter(object):
     """
