@@ -23,8 +23,13 @@ UPDATE hzrdr.ses_collection
 SET lt_model_id=%s WHERE id=%s;
 """
 
-SET_NOT_NULL = """\
-ALTER TABLE hzrdr.ses_collection ALTER COLUMN lt_model_id SET NOT NULL;
+FIX_SES_COLL = """\
+TRUNCATE TABLE hzrdr.ses_collection CASCADE;  -- to fix
+
+ALTER TABLE hzrdr.ses_collection ADD COLUMN trt_model_id INTEGER NOT NULL
+REFERENCES hzrdr.trt_model (id);
+
+ALTER TABLE hzrdr.ses_collection DROP COLUMN lt_model;
 """
 
 
@@ -35,4 +40,4 @@ def upgrade(conn):
         curs.execute(CREATE_LT_MODEL, (oq_job_id, []))
         [[lt_model_id]] = curs.fetchall()
         curs.execute(UPDATE_SES_COLL, (lt_model_id, ses_coll_id))
-    curs.execute(SET_NOT_NULL)
+    curs.execute(FIX_SES_COLL)
