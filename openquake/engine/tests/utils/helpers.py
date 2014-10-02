@@ -380,7 +380,7 @@ def create_gmf_data_records(hazard_job, rlz=None, points=None):
     return records
 
 
-def create_gmf_from_csv(job, fname, output_type):
+def create_gmf_from_csv(job, fname, output_type='gmf'):
     """
     Populate the gmf_data table for an event_based (default)
     or scenario calculation (output_type="gmf_scenario").
