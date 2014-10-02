@@ -1,17 +1,8 @@
-"""
-Change the ses_collection table by replacing the field lt_model_id
-with a field trt_model_id.
-Upgrades the table probabilistic_rupture
-
-
-Fix the SES collections with NULL source model (the ones associated to
-scenario calculations) by creating fake source models for them.
-Then add a NOT NULL constraint on lt_model_id.
-
-Fix the SES collections with NULL source model (the ones associated to
-scenario calculations) by creating fake source models for them.
-Then add a NOT NULL constraint on lt_model_id.
-"""
+##########################################################################
+# This script is slow only if your table hzrdr.probabilistic_rupture     #
+# contains million of rows, i.e. only if you ran very large event based  #
+# calculations. If this is not the case, don't worry.                    #
+##########################################################################
 
 
 GET_SESCOLL_AND_JOBS = """\
@@ -89,18 +80,13 @@ def create_ses_collections(conn):
     return assocs, old_ids
 
 
-def fix_null_lt_models(conn):
-    """
-    Fix the case ses_collection.lt_model_id IS NULL
-    """
+def upgrade(conn):
+    # fix the records ses_collection.lt_model_id IS NULL
     for ses_coll_id, oq_job_id in conn.run(GET_SESCOLL_AND_JOBS):
         [[lt_model_id]] = conn.run(CREATE_LT_MODEL, oq_job_id)
         conn.run(UPDATE_SES_COLL, lt_model_id, ses_coll_id)
 
-
-def upgrade(conn):
-    fix_null_lt_models(conn)
-
+    # now all the records are NOT NULL; fix them all
     conn.run(ADD_TRT_MODEL_ID)
     assocs, old_ids = create_ses_collections(conn)
     sc_ids = set()
@@ -111,5 +97,5 @@ def upgrade(conn):
     conn.run(DROP_COLUMNS)
 
 if __name__ == '__main__':
-    from openquake.engine.db.upgrade_manager import runscript
-    runscript(upgrade, rollback=True)
+    from openquake.engine.db.upgrade_manager import run_script
+    run_script(upgrade, rollback=True)
