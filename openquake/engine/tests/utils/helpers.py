@@ -337,13 +337,13 @@ def get_job(cfg, username="openquake", hazard_calculation_id=None,
     return job
 
 
-def create_gmf_sescoll(output, rlz=None, output_type='gmf'):
+def create_gmf_sescoll(output, output_type='gmf'):
     """
     Returns Gmf and SESCollection instances
     """
     sescoll = models.SESCollection.create(output)
 
-    rlz = rlz or models.LtRealization.objects.create(
+    rlz = models.LtRealization.objects.create(
         lt_model=sescoll.trt_model.lt_model, ordinal=0, weight=1,
         gsim_lt_path="test_gsim")
 
@@ -355,13 +355,13 @@ def create_gmf_sescoll(output, rlz=None, output_type='gmf'):
     return gmf, sescoll
 
 
-def create_gmf_data_records(hazard_job, rlz=None, points=None):
+def create_gmf_data_records(hazard_job, points=None):
     """
     Returns the created records.
     """
     output = models.Output.objects.create_output(
         hazard_job, "Test SES Collection", "ses")
-    gmf, ses_coll = create_gmf_sescoll(output, rlz)
+    gmf, ses_coll = create_gmf_sescoll(output)
     ruptures = create_ses_ruptures(hazard_job, ses_coll, 3)
     records = []
     if points is None:
@@ -490,7 +490,7 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
                 rupture_ids=[0, 1, 2])
 
     elif output_type in ("ses", "gmf"):
-        hazard_output = create_gmf_data_records(hazard_job, rlz)[0].gmf
+        hazard_output = create_gmf_data_records(hazard_job)[0].gmf
 
     else:
         raise RuntimeError('Unexpected output_type: %s' % output_type)
@@ -534,26 +534,9 @@ def create_ses_ruptures(job, ses_collection, num):
     Each rupture has a magnitude ranging from 0 to 10 and no geographic
     information.
     """
-    lt_model = models.LtSourceModel.objects.create(
-        hazard_calculation=job,
-        ordinal=0,
-        sm_lt_path=['b1'],
-        sm_name='test source model',
-        weight=1,
-    )
-    trt = "test region type"
-    trt_model = models.TrtModel.objects.create(
-        lt_model=lt_model,
-        tectonic_region_type=trt,
-        num_sources=1,
-        num_ruptures=1,
-        min_mag=4,
-        max_mag=6,
-        gsims=[],
-    )
     rupture = ParametricProbabilisticRupture(
         mag=1 + 10. / float(num), rake=0,
-        tectonic_region_type=trt,
+        tectonic_region_type="test region type",
         hypocenter=Point(0, 0, 0.1),
         surface=PlanarSurface(
             10, 11, 12, Point(0, 0, 1), Point(1, 0, 1),
