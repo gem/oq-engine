@@ -193,10 +193,13 @@ class GroundMotionValuesGetter(HazardGetter):
         Epsilon matrix for the current getter
         """
         epsilon_rows = []  # ordered by asset_site_id
-        for eps in models.Epsilon.objects.filter(
-                ses_collection__in=self.sescolls,
-                asset_site__in=self.asset_site_ids):
-            epsilon_rows.append(eps.epsilons)
+        for asset_site_id in self.asset_site_ids:
+            row = []
+            for eps in models.Epsilon.objects.filter(
+                    ses_collection__in=self.sescolls,
+                    asset_site=asset_site_id):
+                row.extend(eps.epsilons)
+            epsilon_rows.append(row)
         assert epsilon_rows, ('No epsilons for ses_collection_ids=%s' %
                               [sc.id for sc in self.sescolls])
         return numpy.array(epsilon_rows)
