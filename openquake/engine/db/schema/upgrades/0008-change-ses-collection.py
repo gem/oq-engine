@@ -1,4 +1,13 @@
 """
+Change the ses_collection table by replacing the field lt_model_id
+with a field trt_model_id.
+Upgrades the table probabilistic_rupture
+
+
+Fix the SES collections with NULL source model (the ones associated to
+scenario calculations) by creating fake source models for them.
+Then add a NOT NULL constraint on lt_model_id.
+
 Fix the SES collections with NULL source model (the ones associated to
 scenario calculations) by creating fake source models for them.
 Then add a NOT NULL constraint on lt_model_id.
@@ -14,32 +23,93 @@ WHERE output_id=b.id AND lt_model_id IS NULL;
 CREATE_LT_MODEL = """\
 INSERT INTO hzrdr.lt_source_model
 (hazard_calculation_id, ordinal, sm_lt_path, sm_name)
-VALUES (%s, 0, %s, 'fake-from-rupture')
+VALUES (%s, 0, '{}', 'fake-from-rupture')
 RETURNING id;
 """
 
 UPDATE_SES_COLL = """\
-UPDATE hzrdr.ses_collection
+UPDATE hzrdr.ses_collection AS x
 SET lt_model_id=%s WHERE id=%s;
 """
 
-FIX_SES_COLL = """\
-TRUNCATE TABLE hzrdr.ses_collection CASCADE;  -- to fix
+FIND_SES_COLLECTION_TRT_MODELS = '''\
+SELECT hazard_calculation_id, a.id, array_agg(b.id) AS trt_model_ids
+FROM hzrdr.ses_collection AS a,
+hzrdr.trt_model AS b,
+hzrdr.lt_source_model AS c
+WHERE a.lt_model_id=b.lt_model_id
+AND b.lt_model_id=c.id
+GROUP BY hazard_calculation_id, a.id
+ORDER BY hazard_calculation_id, a.id;
+'''
 
-ALTER TABLE hzrdr.ses_collection ADD COLUMN trt_model_id INTEGER NOT NULL
-REFERENCES hzrdr.trt_model (id);
+CREATE_OUTPUT = '''\
+INSERT INTO uiapi.output (oq_job_id, display_name, output_type)
+VALUES (%s, 'SES Collection {}', 'ses')
+RETURNING id
+'''
+CREATE_SES_COLL = '''\
+INSERT INTO hzrdr.ses_collection (output_id, ordinal, trt_model_id)
+VALUES (%s, %s, %s)
+RETURNING id
+'''
 
+ADD_TRT_MODEL_ID = '''\
+ALTER TABLE hzrdr.ses_collection
+ADD COLUMN trt_model_id INTEGER
+REFERENCES hzrdr.trt_model (id)
+'''
+
+UPDATE_PROB_RUPTURE = '''\
+UPDATE hzrdr.probabilistic_rupture
+SET ses_collection_id=%s WHERE trt_model_id=%s
+'''
+
+DROP_COLUMNS = '''\
 ALTER TABLE hzrdr.ses_collection DROP COLUMN lt_model_id;
-
 ALTER TABLE hzrdr.probabilistic_rupture DROP COLUMN trt_model_id;
-"""
+'''
+
+DELETE_OLD_SES = '''\
+DELETE FROM hzrdr.ses_collection WHERE id IN %s
+'''
+
+
+def create_ses_collections(conn):
+    assocs, old_ids = [], []
+    st = conn.run(FIND_SES_COLLECTION_TRT_MODELS)
+    for oq_job_id, ses_coll_id, trt_model_ids in st:
+        old_ids.append(ses_coll_id)
+        for ordinal, trt_model_id in enumerate(trt_model_ids, 1):
+            [[output_id]] = conn.run(
+                CREATE_OUTPUT.format(ordinal), oq_job_id)
+            [[sc_id]] = conn.run(
+                CREATE_SES_COLL, output_id, ordinal, trt_model_id)
+            assocs.append((sc_id, trt_model_id))
+    return assocs, old_ids
+
+
+def fix_null_lt_models(conn):
+    """
+    Fix the case ses_collection.lt_model_id IS NULL
+    """
+    for ses_coll_id, oq_job_id in conn.run(GET_SESCOLL_AND_JOBS):
+        [[lt_model_id]] = conn.run(CREATE_LT_MODEL, oq_job_id)
+        conn.run(UPDATE_SES_COLL, lt_model_id, ses_coll_id)
 
 
 def upgrade(conn):
-    curs = conn.cursor()
-    curs.execute(GET_SESCOLL_AND_JOBS)
-    for ses_coll_id, oq_job_id in curs.fetchall():
-        curs.execute(CREATE_LT_MODEL, (oq_job_id, []))
-        [[lt_model_id]] = curs.fetchall()
-        curs.execute(UPDATE_SES_COLL, (lt_model_id, ses_coll_id))
-    curs.execute(FIX_SES_COLL)
+    fix_null_lt_models(conn)
+
+    conn.run(ADD_TRT_MODEL_ID)
+    assocs, old_ids = create_ses_collections(conn)
+    sc_ids = set()
+    for sc_id, trt_model_id in assocs:
+        conn.run(UPDATE_PROB_RUPTURE, sc_id, trt_model_id)
+        sc_ids.add(sc_id)
+    conn.run(DELETE_OLD_SES, tuple(old_ids))
+    conn.run(DROP_COLUMNS)
+
+if __name__ == '__main__':
+    from openquake.engine.db.upgrade_manager import runscript
+    runscript(upgrade, rollback=True)
