@@ -252,6 +252,19 @@ class SimpleFaultSurfaceProjectionTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(polygon.lons, elons)
         numpy.testing.assert_allclose(polygon.lats, elats)
 
+    def test_get_fault_vertexes_3d(self):
+        lons, lats, deps = SimpleFaultSurface.get_fault_vertexes_3d(
+            Line([Point(10, -20), Point(11, -20.2), Point(12, -19.7)]),
+            dip=30,
+            upper_seismogenic_depth=25.3, lower_seismogenic_depth=53.6,
+        )
+        elons = [10, 11, 12, 12.13515987, 11.13560807, 10.1354272]
+        elats = [-20, -20.2, -19.7, -20.52520878, -21.02520738, -20.82520794]
+        edeps = [25.3, 25.3, 25.3, 53.6, 53.6, 53.6]
+
+        numpy.testing.assert_allclose(lons, elons)
+        numpy.testing.assert_allclose(lats, elats)
+        numpy.testing.assert_allclose(deps, edeps)
 
 class SimpleFaultSurfaceGetWidthTestCase(unittest.TestCase):
     def test_vertical_planar_surface(self):
