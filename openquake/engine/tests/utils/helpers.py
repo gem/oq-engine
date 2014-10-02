@@ -479,10 +479,9 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
             output=models.Output.objects.create_output(
                 hazard_job, "Test gmf scenario output", "gmf_scenario"))
 
-        models.SESCollection.objects.create(
+        models.SESCollection.create(
             output=models.Output.objects.create_output(
-                hazard_job, "Test SES Collection", "ses"),
-            lt_model=None, ordinal=0)
+                hazard_job, "Test SES Collection", "ses"))
         site_ids = models.save_sites(
             hazard_job,
             [(15.48, 38.0900001), (15.565, 38.17), (15.481, 38.25)])
