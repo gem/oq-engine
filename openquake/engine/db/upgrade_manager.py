@@ -25,6 +25,47 @@ executed TIMESTAMP NOT NULL DEFAULT now()
 '''
 
 
+class WrappedConnection(object):
+    """
+    :param conn: a DBAPI2-compatible connection
+    """
+    def __init__(self, conn, debug=False):
+        self._conn = conn
+        self.debug = debug
+
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
+
+    def run(self, templ, *args):
+        """
+        A simple utility to run SQL queries.
+
+        :param templ: a query or query template
+        :param args: the arguments (or the empty tuple)
+        """
+        curs = self._conn.cursor()
+        query = curs.mogrify(templ, args)
+        if self.debug:
+            print query
+        curs.execute(query)
+        return curs
+
+
+def runscript(upgrade, rollback=True, debug=True):
+    from openquake.engine.db.models import getcursor
+    conn = WrappedConnection(getcursor('admin').connection, debug=debug)
+    try:
+        upgrade(conn)
+    except:
+        conn.rollback()
+        raise
+    else:
+        if rollback:
+            conn.rollback()
+        else:
+            conn.commit()
+
+
 def apply_sql_script(conn, fname):
     """
     Apply the given SQL script to the database
@@ -122,6 +163,7 @@ class UpgradeManager(object):
         return self._upgrade(conn, scripts)
 
     def _upgrade(self, conn, scripts):
+        conn = WrappedConnection(conn)
         versions_applied = []
         for script in scripts:  # script is a dictionary
             fullname = os.path.join(self.upgrade_dir, script['fname'])
