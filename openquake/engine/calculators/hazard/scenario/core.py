@@ -89,6 +89,29 @@ def gmfs(job_id, ses_ruptures, sitecol, imts, gmf_id):
         inserter.flush()
 
 
+def create_db_ruptures(rupture, ses_coll, tags, seed):
+    """
+    Insert the SESRuptures associated to the given rupture and
+    SESCollection.
+
+    :param rupture: hazardlib rupture
+    :param ses_coll: SESCollection instance
+    :param tags: tags of the ruptures to insert
+    :seed: a random seed
+    :returns: the IDs of the inserted ProbabilisticRupture and SESRuptures
+    """
+    prob_rup = models.ProbabilisticRupture.create(rupture, ses_coll)
+    inserter = writer.CacheInserter(models.SESRupture, max_cache_size=100000)
+    rnd = random.Random()
+    rnd.seed(seed)
+    sesrupts = [
+        models.SESRupture(
+            ses_id=1, rupture=prob_rup, tag=tag,
+            seed=rnd.randint(0, models.MAX_SINT_32))
+        for tag in tags]
+    return prob_rup.id, inserter.saveall(sesrupts)
+
+
 class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
     """
     Scenario hazard calculator. Computes ground motion fields.
@@ -180,24 +203,11 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
             output_type="gmf_scenario")
         self.gmf = models.Gmf.objects.create(output=output)
 
-        # creating seeds
-        rnd = random.Random()
-        rnd.seed(self.hc.random_seed)
-        all_seeds = [
-            rnd.randint(0, models.MAX_SINT_32)
-            for _ in xrange(self.hc.number_of_ground_motion_fields)]
-
         with self.monitor('saving ruptures'):
-            prob_rup = models.ProbabilisticRupture.create(
-                self.rupture, self.ses_coll)
-            inserter = writer.CacheInserter(
-                models.SESRupture, max_cache_size=100000)
-            for ses_idx, seed in enumerate(all_seeds):
-                inserter.add(
-                    models.SESRupture(
-                        ses_id=1, rupture=prob_rup,
-                        tag='scenario-%010d' % ses_idx,  seed=seed))
-            inserter.flush()
+            tags = ['scenario-%010d' % i for i in xrange(
+                    self.hc.number_of_ground_motion_fields)]
+            create_db_ruptures(self.rupture, self.ses_coll, tags,
+                               self.hc.random_seed)
 
     def task_arg_gen(self):
         """
