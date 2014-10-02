@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2012-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -19,15 +19,15 @@ defines :class:`ComplexFaultSource`.
 """
 import numpy
 
-from openquake.hazardlib.source.base import SeismicSource
+from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
-from openquake.hazardlib.source.rupture import ProbabilisticRupture
+from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.slots import with_slots
 
 
 @with_slots
-class ComplexFaultSource(SeismicSource):
+class ComplexFaultSource(ParametricSeismicSource):
     """
     Complex fault source typology represents seismicity occurring on a fault
     surface with an arbitrarily complex geometry.
@@ -39,7 +39,7 @@ class ComplexFaultSource(SeismicSource):
     :param rake:
         Angle describing rupture propagation direction in decimal degrees.
 
-    See also :class:`openquake.hazardlib.source.base.SeismicSource`
+    See also :class:`openquake.hazardlib.source.base.ParametricSeismicSource`
     for description of other parameters.
 
     :raises ValueError:
@@ -47,18 +47,17 @@ class ComplexFaultSource(SeismicSource):
         fails or if rake value is invalid.
     """
 
-    __slots__ = SeismicSource.__slots__ + '''rupture_mesh_spacing
-    magnitude_scaling_relationship rupture_aspect_ratio
-    edges rake'''.split()
+    __slots__ = ParametricSeismicSource.__slots__ + '''edges rake'''.split()
 
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  rupture_mesh_spacing, magnitude_scaling_relationship,
-                 rupture_aspect_ratio,
+                 rupture_aspect_ratio, temporal_occurrence_model,
                  # complex fault specific parameters
                  edges, rake):
         super(ComplexFaultSource, self).__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
-            magnitude_scaling_relationship, rupture_aspect_ratio
+            magnitude_scaling_relationship, rupture_aspect_ratio,
+            temporal_occurrence_model
         )
 
         NodalPlane.check_rake(rake)
@@ -74,7 +73,7 @@ class ComplexFaultSource(SeismicSource):
         method passing in ``dilation`` parameter.
 
         See :meth:`superclass method
-        <openquake.hazardlib.source.base.SeismicSource.get_rupture_enclosing_polygon>`
+        <openquake.hazardlib.source.base.BaseSeismicSource.get_rupture_enclosing_polygon>`
         for parameter and return value definition.
         """
         polygon = ComplexFaultSurface.surface_projection_from_fault_data(
@@ -85,10 +84,10 @@ class ComplexFaultSource(SeismicSource):
         else:
             return polygon
 
-    def iter_ruptures(self, temporal_occurrence_model):
+    def iter_ruptures(self):
         """
         See :meth:
-        `openquake.hazardlib.source.base.SeismicSource.iter_ruptures`.
+        `openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`.
 
         Uses :func:`_float_ruptures` for finding possible rupture locations
         on the whole fault surface.
@@ -122,11 +121,35 @@ class ComplexFaultSource(SeismicSource):
                 except ValueError as e:
                     raise ValueError("Invalid source with id=%s. %s" % (
                         self.source_id, str(e)))
-                yield ProbabilisticRupture(
+                yield ParametricProbabilisticRupture(
                     mag, self.rake, self.tectonic_region_type, hypocenter,
                     surface, type(self),
-                    occurrence_rate, temporal_occurrence_model
+                    occurrence_rate, self.temporal_occurrence_model
                 )
+
+    def count_ruptures(self):
+        """
+        See :meth:
+        `openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`.
+        """
+        whole_fault_surface = ComplexFaultSurface.from_fault_data(
+            self.edges, self.rupture_mesh_spacing
+        )
+        whole_fault_mesh = whole_fault_surface.get_mesh()
+        cell_center, cell_length, cell_width, cell_area = (
+            whole_fault_mesh.get_cell_dimensions()
+        )
+        counts = 0
+        for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
+            rupture_area = self.magnitude_scaling_relationship.get_median_area(
+                mag, self.rake
+            )
+            rupture_length = numpy.sqrt(rupture_area
+                                        * self.rupture_aspect_ratio)
+            rupture_slices = _float_ruptures(rupture_area, rupture_length,
+                                             cell_area, cell_length)
+            counts += len(rupture_slices)
+        return counts
 
 
 def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):

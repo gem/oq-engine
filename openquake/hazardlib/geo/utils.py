@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2012-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -393,3 +393,33 @@ else:
 
     speedups.register(point_to_polygon_distance, _c_point_to_polygon_distance)
     del _c_point_to_polygon_distance
+
+
+def cross_idl(lon1, lon2):
+    """
+    Return True if two longitude values define line crossing international date
+    line.
+
+    >>> cross_idl(-45, 45)
+    False
+    >>> cross_idl(-180, -179)
+    False
+    >>> cross_idl(180, 179)
+    False
+    >>> cross_idl(45, -45)
+    False
+    >>> cross_idl(0, 0)
+    False
+    >>> cross_idl(-170, 170)
+    True
+    >>> cross_idl(170, -170)
+    True
+    >>> cross_idl(-180, 180)
+    True
+    """
+    # a line crosses the international date line if the end positions
+    # have different sign and they are more than 180 degrees longitude apart
+    if lon1 * lon2 < 0 and ((lon2 - lon1) > 180 or (lon1 - lon2) > 180):
+        return True
+    else:
+        return False

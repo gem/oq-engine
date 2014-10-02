@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2012-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -17,12 +17,38 @@
 Module :mod:`openquake.hazardlib.imt` defines different intensity measure
 types.
 """
+import re
 import operator
+import functools
 
+# NB: (MS) the management of the IMTs implemented here is horrible and will
+# be thrown away when we will need to introduce a new IMT.
 
 __all__ = ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'CAV', 'RSD', 'MMI')
 
+DEFAULT_SA_DAMPING = 5.0
 
+
+def from_string(imt):
+    """
+    Convert an IMT string into a hazardlib object.
+
+    :param str imt:
+        Intensity Measure Type.
+    """
+    if 'SA' in imt:
+        match = re.match(r'^SA\(([^)]+?)\)$', imt)
+        period = float(match.group(1))
+        return SA(period, DEFAULT_SA_DAMPING)
+    else:
+        try:
+            imt_class = globals()[imt]
+        except KeyError:
+            raise ValueError('Unknown IMT: %s' % imt)
+        return imt_class(None, None)
+
+
+@functools.total_ordering
 class _IMT(tuple):
     """
     Base class for intensity measure type.
@@ -38,12 +64,22 @@ class _IMT(tuple):
             dct['__slots__'] = ()
             cls = type.__new__(mcs, name, bases, dct)
             for index, field in enumerate(cls._fields):
-                setattr(cls, field, property(operator.itemgetter(index)))
+                setattr(cls, field, property(operator.itemgetter(index + 1)))
             return cls
 
-    def __new__(cls, *args):
-        salt = hash(('IMT', cls.__name__))
-        return tuple.__new__(cls, args + (salt, ))
+    def __new__(cls, sa_period=None, sa_damping=None):
+        return tuple.__new__(cls, (cls.__name__, sa_period, sa_damping))
+
+    def __getnewargs__(self):
+        return tuple(getattr(self, field) for field in self._fields)
+
+    def __str__(self):
+        if self[0] == 'SA':
+            return 'SA(%s)' % self[1]
+        return self[0]
+
+    def __lt__(self, other):
+        return str(self) < str(other)
 
     def __repr__(self):
         return '%s(%s)' % (type(self).__name__,
@@ -86,7 +122,7 @@ class SA(_IMT):
     """
     _fields = ('period', 'damping')
 
-    def __new__(cls, period, damping):
+    def __new__(cls, period, damping=DEFAULT_SA_DAMPING):
         if not period > 0:
             raise ValueError('period must be positive')
         if not damping > 0:
@@ -106,6 +142,7 @@ class CAV(_IMT):
     Cumulative Absolute Velocity. Defins the integral of the absolute
     acceleration time series. Units are "g-sec"
     """
+
 
 class RSD(_IMT):
     """

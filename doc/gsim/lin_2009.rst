@@ -1,0 +1,11 @@
+================
+Lin 2009
+================
+
+.. module:: openquake.hazardlib.gsim.lin_2009
+
+.. autoclass:: Lin2009
+    :members:
+
+.. autoclass:: Lin2009AdjustedSigma
+    :members:

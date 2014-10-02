@@ -55,6 +55,15 @@ Characteristic source
     :private-members:
 
 
+---------------------
+Non Parametric source
+---------------------
+
+.. automodule:: openquake.hazardlib.source.non_parametric
+    :members:
+    :private-members:
+
+
 ----------------------------
 Abstract base seismic source
 ----------------------------

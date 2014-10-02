@@ -39,3 +39,12 @@ Complex fault surface
 .. automodule:: openquake.hazardlib.geo.surface.complex_fault
     :members:
     :private-members:
+
+
+-------------
+Multi surface
+-------------
+
+.. automodule:: openquake.hazardlib.geo.surface.multi
+    :members:
+    :private-members:

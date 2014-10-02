@@ -40,6 +40,27 @@ To install type as usual::
 
  python setup.py install
 
+Running Tests (in a development environment)
+--------------------------------------------
+
+1. Install dependencies::
+
+    # Ubuntu 12.04 LTS:
+    apt-get install python-numpy python-scipy python-shapely
+    # Other platforms, or if you are using a virtualenv:
+    pip install numpy scipy shapely
+
+2. Install test dependencies::
+
+    # Ubuntu 12.04 LTS:
+    apt-get install python-nose python-coverage python-mock
+    # Other platforms, or if you are using a virtualenv:
+    pip install nose coverage mock
+
+3. Run tests::
+
+    nosetests --with-doctest --with-coverage --cover-package=openquake.hazardlib
+
 License
 -------
 hazardlib is licensed under terms of GNU Affero General Public License 3.0, see

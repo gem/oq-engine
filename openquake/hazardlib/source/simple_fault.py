@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2012-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -19,15 +19,15 @@ Module :mod:`openquake.hazardlib.source.simple_fault` defines
 """
 import math
 
-from openquake.hazardlib.source.base import SeismicSource
+from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
-from openquake.hazardlib.source.rupture import ProbabilisticRupture
+from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.slots import with_slots
 
 
 @with_slots
-class SimpleFaultSource(SeismicSource):
+class SimpleFaultSource(ParametricSeismicSource):
     """
     Simple fault source typology represents seismicity occurring on a fault
     surface with simple geometry.
@@ -45,7 +45,7 @@ class SimpleFaultSource(SeismicSource):
     :param rake:
         Angle describing rupture propagation direction in decimal degrees.
 
-    See also :class:`openquake.hazardlib.source.base.SeismicSource`
+    See also :class:`openquake.hazardlib.source.base.ParametricSeismicSource`
     for description of other parameters.
 
     :raises ValueError:
@@ -53,20 +53,20 @@ class SimpleFaultSource(SeismicSource):
         fails, if rake value is invalid and if rupture mesh spacing is too high
         for the lowest magnitude value.
     """
-    __slots__ = SeismicSource.__slots__ + '''rupture_mesh_spacing
-    magnitude_scaling_relationship rupture_aspect_ratio
-    upper_seismogenic_depth lower_seismogenic_depth
-    fault_trace dip rake'''.split()
+    __slots__ = ParametricSeismicSource.__slots__ + '''upper_seismogenic_depth
+    lower_seismogenic_depth fault_trace dip rake'''.split()
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
                  magnitude_scaling_relationship, rupture_aspect_ratio,
+                 temporal_occurrence_model,
                  # simple fault specific parameters
                  upper_seismogenic_depth, lower_seismogenic_depth,
                  fault_trace, dip, rake):
         super(SimpleFaultSource, self).__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
-            magnitude_scaling_relationship, rupture_aspect_ratio
+            magnitude_scaling_relationship, rupture_aspect_ratio,
+            temporal_occurrence_model
         )
 
         NodalPlane.check_rake(rake)
@@ -80,7 +80,7 @@ class SimpleFaultSource(SeismicSource):
         self.dip = dip
         self.rake = rake
 
-        min_mag = self.mfd.get_min_mag()
+        min_mag, max_mag = self.mfd.get_min_max_mag()
         cols_rows = self._get_rupture_dimensions(float('inf'), float('inf'),
                                                  min_mag)
         if 1 in cols_rows:
@@ -96,7 +96,7 @@ class SimpleFaultSource(SeismicSource):
         method passing in ``dilation`` parameter.
 
         See :meth:`superclass method
-        <openquake.hazardlib.source.base.SeismicSource.get_rupture_enclosing_polygon>`
+        <openquake.hazardlib.source.base.BaseSeismicSource.get_rupture_enclosing_polygon>`
         for parameter and return value definition.
         """
         polygon = SimpleFaultSurface.surface_projection_from_fault_data(
@@ -108,10 +108,10 @@ class SimpleFaultSource(SeismicSource):
         else:
             return polygon
 
-    def iter_ruptures(self, temporal_occurrence_model):
+    def iter_ruptures(self):
         """
         See :meth:
-        `openquake.hazardlib.source.base.SeismicSource.iter_ruptures`.
+        `openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`.
 
         Generates a ruptures using the "floating" algorithm: for all the
         magnitude values of assigned MFD calculates the rupture size with
@@ -145,11 +145,34 @@ class SimpleFaultSource(SeismicSource):
                                             first_col: first_col + rup_cols]
                     hypocenter = mesh.get_middle_point()
                     surface = SimpleFaultSurface(mesh)
-                    yield ProbabilisticRupture(
+                    yield ParametricProbabilisticRupture(
                         mag, self.rake, self.tectonic_region_type, hypocenter,
                         surface, type(self),
-                        occurrence_rate, temporal_occurrence_model
+                        occurrence_rate, self.temporal_occurrence_model
                     )
+
+    def count_ruptures(self):
+        """
+        See :meth:
+        `openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`.
+        """
+        whole_fault_surface = SimpleFaultSurface.from_fault_data(
+            self.fault_trace, self.upper_seismogenic_depth,
+            self.lower_seismogenic_depth, self.dip, self.rupture_mesh_spacing
+        )
+        whole_fault_mesh = whole_fault_surface.get_mesh()
+        mesh_rows, mesh_cols = whole_fault_mesh.shape
+        fault_length = float((mesh_cols - 1) * self.rupture_mesh_spacing)
+        fault_width = float((mesh_rows - 1) * self.rupture_mesh_spacing)
+        counts = 0
+        for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
+            rup_cols, rup_rows = self._get_rupture_dimensions(
+                fault_length, fault_width, mag
+            )
+            num_rup_along_length = mesh_cols - rup_cols + 1
+            num_rup_along_width = mesh_rows - rup_rows + 1
+            counts += num_rup_along_length * num_rup_along_width
+        return counts
 
     def _get_rupture_dimensions(self, fault_length, fault_width, mag):
         """

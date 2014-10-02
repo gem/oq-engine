@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2012-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -45,6 +45,7 @@ class TRT(ConstantContainer):
     SUBDUCTION_INTERFACE = 'Subduction Interface'
     SUBDUCTION_INTRASLAB = 'Subduction IntraSlab'
     VOLCANIC = 'Volcanic'
+    GEOTHERMAL = 'Geothermal'
 
 
 class IMC(ConstantContainer):

@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2012-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -15,22 +15,24 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 :mod:`openquake.hazardlib.calc.disagg` contains
-:func:`disaggregation_poissonian` as well as several aggregation functions for
-extracting a specific PMF from the result of :func:`disaggregation_poissonian`.
+:func:`disaggregation` as well as several aggregation functions for
+extracting a specific PMF from the result of :func:`disaggregation`.
 """
+import sys
 import numpy
 import warnings
+import collections
+from itertools import izip
 
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
-from openquake.hazardlib.geo.utils import get_spherical_bounding_box
+from openquake.hazardlib.geo.utils import get_spherical_bounding_box, cross_idl
 from openquake.hazardlib.site import SiteCollection
-from openquake.hazardlib.tom import PoissonTOM
 
 
-def disaggregation_poissonian(
-        sources, site, imt, iml, gsims, time_span, truncation_level,
+def disaggregation(
+        sources, site, imt, iml, gsims, truncation_level,
         n_epsilons, mag_bin_width, dist_bin_width, coord_bin_width,
         source_site_filter=filters.source_site_noop_filter,
         rupture_site_filter=filters.rupture_site_noop_filter):
@@ -38,7 +40,7 @@ def disaggregation_poissonian(
     Compute "Disaggregation" matrix representing conditional probability of an
     intensity mesaure type ``imt`` exceeding, at least once, an intensity
     measure level ``iml`` at a geographical location ``site``, given rupture
-    scenarios (belonging to a Poissonian source model) classified in terms of:
+    scenarios classified in terms of:
 
     - rupture magnitude
     - Joyner-Boore distance from rupture surface to site
@@ -73,8 +75,6 @@ def disaggregation_poissonian(
         Intensity measure level. A float value in units of ``imt``.
     :param gsims:
         Tectonic region type to GSIM objects mapping.
-    :param time_span:
-        Investigation time span, in years.
     :param truncation_level:
         Float, number of standard deviations for truncation of the intensity
         distribution.
@@ -104,9 +104,7 @@ def disaggregation_poissonian(
         of the result tuple. The matrix can be used directly by pmf-extractor
         functions.
     """
-    tom = PoissonTOM(time_span)
-
-    bins_data = _collect_bins_data(sources, site, imt, iml, gsims, tom,
+    bins_data = _collect_bins_data(sources, site, imt, iml, gsims,
                                    truncation_level, n_epsilons,
                                    source_site_filter, rupture_site_filter)
     if all([len(x) == 0 for x in bins_data]):
@@ -124,33 +122,7 @@ def disaggregation_poissonian(
     return bin_edges, diss_matrix
 
 
-# DEPRECATED
-def disaggregation(sources, site, imt, iml, gsims, tom,
-                   truncation_level, n_epsilons,
-                   mag_bin_width, dist_bin_width, coord_bin_width,
-                   source_site_filter=filters.source_site_noop_filter,
-                   rupture_site_filter=filters.rupture_site_noop_filter):
-    """
-    An implementation of the now-deprecated disaggregation calculation
-    interface. Please use :func:`disaggregation_poissonian` instead.
-    """
-    warnings.warn(
-        '`openquake.hazardlib.calc.disagg.disaggregation` is deprecated. '
-        'Please use '
-        '`openquake.hazardlib.calc.disagg.disaggregation_poissonian` instead',
-        RuntimeWarning
-    )
-
-    time_span = tom.time_span
-    return disaggregation_poissonian(
-        sources, site, imt, iml, gsims, time_span, truncation_level,
-        n_epsilons, mag_bin_width, dist_bin_width, coord_bin_width,
-        source_site_filter=filters.source_site_noop_filter,
-        rupture_site_filter=filters.rupture_site_noop_filter
-    )
-
-
-def _collect_bins_data(sources, site, imt, iml, gsims, tom,
+def _collect_bins_data(sources, site, imt, iml, gsims,
                        truncation_level, n_epsilons,
                        source_site_filter, rupture_site_filter):
     """
@@ -166,9 +138,7 @@ def _collect_bins_data(sources, site, imt, iml, gsims, tom,
     lons = []
     lats = []
     tect_reg_types = []
-    probs_one_or_more = []
-    probs_exceed_given_rup = []
-    src_idxs = []
+    probs_no_exceed = []
     sitecol = SiteCollection([site])
     sitemesh = sitecol.mesh
 
@@ -191,7 +161,7 @@ def _collect_bins_data(sources, site, imt, iml, gsims, tom,
             tect_reg = trt_nums[tect_reg]
 
             ruptures_sites = ((rupture, s_sites)
-                              for rupture in source.iter_ruptures(tom))
+                              for rupture in source.iter_ruptures())
             for rupture, r_sites in rupture_site_filter(ruptures_sites):
                 # extract rupture parameters of interest
                 mags.append(rupture.mag)
@@ -210,38 +180,29 @@ def _collect_bins_data(sources, site, imt, iml, gsims, tom,
                     sctx, rctx, dctx, imt, iml, truncation_level, n_epsilons
                 )
 
-                # compute probability of one or more rupture occurrences
-                probs_one_or_more.append(
-                    rupture.get_probability_one_or_more_occurrences()
+                # collect probability of a rupture causing no exceedances
+                probs_no_exceed.append(
+                    rupture.get_probability_no_exceedance(poes_given_rup_eps)
                 )
-
-                # collect probability of exceedance given the rupture
-                probs_exceed_given_rup.append(poes_given_rup_eps)
-
-                # keep track of the source index, so that the probabilities can
-                # be associated to each source
-                src_idxs.append(src_idx)
         except Exception, err:
+            etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
             msg %= (source.source_id, err.message)
-            raise RuntimeError(msg)
+            raise etype, msg, tb
 
     mags = numpy.array(mags, float)
     dists = numpy.array(dists, float)
     lons = numpy.array(lons, float)
     lats = numpy.array(lats, float)
     tect_reg_types = numpy.array(tect_reg_types, int)
-    probs_one_or_more = numpy.array(probs_one_or_more, float)
-    probs_exceed_given_rup = numpy.array(probs_exceed_given_rup, float)
-    src_idxs = numpy.array(src_idxs, int)
+    probs_no_exceed = numpy.array(probs_no_exceed, float)
 
     trt_bins = [
         trt for (num, trt) in sorted((num, trt)
                                      for (trt, num) in trt_nums.items())
     ]
 
-    return (mags, dists, lons, lats, tect_reg_types, trt_bins,
-            probs_one_or_more, probs_exceed_given_rup, src_idxs)
+    return (mags, dists, lons, lats, tect_reg_types, trt_bins, probs_no_exceed)
 
 
 def _define_bins(bins_data, mag_bin_width, dist_bin_width,
@@ -254,7 +215,7 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
     of magnitude, distance and coordinates as well as requested sizes/numbers
     of bins.
     """
-    mags, dists, lons, lats, tect_reg_types, trt_bins, _, _, _ = bins_data
+    mags, dists, lons, lats, tect_reg_types, trt_bins, _ = bins_data
 
     mag_bins = mag_bin_width * numpy.arange(
         int(numpy.floor(mags.min() / mag_bin_width)),
@@ -291,57 +252,65 @@ def _arrange_data_in_bins(bins_data, bin_edges):
     Given bins data, as it comes from :func:`_collect_bins_data`, and bin edges
     from :func:`_define_bins`, create a normalized 6d disaggregation matrix.
     """
-    (mags, dists, lons, lats, tect_reg_types, trt_bins, probs_one_or_more,
-     probs_exceed_given_rup, src_idxs) = bins_data
+    (mags, dists, lons, lats, tect_reg_types, trt_bins, probs_no_exceed) = \
+        bins_data
     mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
-    shape = (len(mag_bins) - 1, len(dist_bins) - 1, len(lon_bins) - 1,
-             len(lat_bins) - 1, len(eps_bins) - 1, len(trt_bins))
-    diss_matrix = numpy.zeros(shape)
 
-    src_indices = numpy.unique(src_idxs)
+    dim1 = len(mag_bins) - 1
+    dim2 = len(dist_bins) - 1
+    dim3 = len(lon_bins) - 1
+    dim4 = len(lat_bins) - 1
+    shape = (dim1, dim2, dim3, dim4, len(eps_bins) - 1, len(trt_bins))
+    diss_matrix = numpy.ones(shape)
 
-    for i_mag in xrange(len(mag_bins) - 1):
-        mag_idx = mags <= mag_bins[i_mag + 1]
-        if i_mag != 0:
-            mag_idx &= mags > mag_bins[i_mag]
+    # find bin indexes of rupture attributes; bins are assumed closed
+    # on the lower bound, and open on the upper bound, that is [ )
+    # longitude values need an ad-hoc method to take into account
+    # the 'international date line' issue
+    # the 'minus 1' is needed because the digitize method returns the index
+    # of the upper bound of the bin
+    mags_idx = numpy.digitize(mags, mag_bins) - 1
+    dists_idx = numpy.digitize(dists, dist_bins) - 1
+    lons_idx = _digitize_lons(lons, lon_bins)
+    lats_idx = numpy.digitize(lats, lat_bins) - 1
 
-        for i_dist in xrange(len(dist_bins) - 1):
-            dist_idx = dists <= dist_bins[i_dist + 1]
-            if i_dist != 0:
-                dist_idx &= dists > dist_bins[i_dist]
+    # because of the way numpy.digitize works, values equal to the last bin
+    # edge are associated to an index equal to len(bins) which is not a valid
+    # index for the disaggregation matrix. Such values are assumed to fall
+    # in the last bin.
+    mags_idx[mags_idx == dim1] = dim1 - 1
+    dists_idx[dists_idx == dim2] = dim2 - 1
+    lons_idx[lons_idx == dim3] = dim3 - 1
+    lats_idx[lats_idx == dim4] = dim4 - 1
 
-            for i_lon in xrange(len(lon_bins) - 1):
-                extents = get_longitudinal_extent(lons, lon_bins[i_lon + 1])
-                lon_idx = extents >= 0
-                if i_lon != 0:
-                    extents = get_longitudinal_extent(lon_bins[i_lon], lons)
-                    lon_idx &= extents > 0
+    for i, (i_mag, i_dist, i_lon, i_lat, i_trt) in \
+        enumerate(
+            izip(mags_idx, dists_idx, lons_idx, lats_idx, tect_reg_types)):
 
-                for i_lat in xrange(len(lat_bins) - 1):
-                    lat_idx = lats <= lat_bins[i_lat + 1]
-                    if i_lat != 0:
-                        lat_idx &= lats > lat_bins[i_lat]
+        diss_matrix[i_mag, i_dist, i_lon, i_lat, :, i_trt] *= \
+            probs_no_exceed[i, :]
 
-                    for i_eps in xrange(len(eps_bins) - 1):
+    return 1 - diss_matrix
 
-                        for i_trt in xrange(len(trt_bins)):
-                            trt_idx = tect_reg_types == i_trt
 
-                            diss_idx = (i_mag, i_dist, i_lon,
-                                        i_lat, i_eps, i_trt)
-
-                            prob_idx = (mag_idx & dist_idx & lon_idx
-                                        & lat_idx & trt_idx)
-
-                            poe = numpy.prod(
-                                (1 - probs_one_or_more[prob_idx]) **
-                                probs_exceed_given_rup[prob_idx, i_eps]
-                            )
-                            poe = 1 - poe
-
-                            diss_matrix[diss_idx] = poe
-
-    return diss_matrix
+def _digitize_lons(lons, lon_bins):
+    """
+    Return indices of the bins to which each value in lons belongs.
+    Takes into account the case in which longitude values cross the
+    international date line.
+    """
+    if cross_idl(lon_bins[0], lon_bins[-1]):
+        idx = []
+        for i_lon in xrange(len(lon_bins) - 1):
+            extents = get_longitudinal_extent(lons, lon_bins[i_lon + 1])
+            lon_idx = extents > 0
+            if i_lon != 0:
+                extents = get_longitudinal_extent(lon_bins[i_lon], lons)
+                lon_idx &= extents >= 0
+            idx.append(lon_idx)
+        return numpy.array(idx)
+    else:
+        return numpy.digitize(lons, lon_bins) - 1
 
 
 def mag_pmf(matrix):
@@ -518,3 +487,17 @@ def lon_lat_trt_pmf(matrix):
                      for m in xrange(neps)]
                 )
     return 1 - lon_lat_trt_pmf
+
+
+# this dictionary is useful to extract a fixed set of
+# submatrices from the full disaggregation matrix
+pmf_map = collections.OrderedDict([
+    (('Mag', ), mag_pmf),
+    (('Dist', ), dist_pmf),
+    (('TRT', ), trt_pmf),
+    (('Mag', 'Dist'), mag_dist_pmf),
+    (('Mag', 'Dist', 'Eps'), mag_dist_eps_pmf),
+    (('Lon', 'Lat'), lon_lat_pmf),
+    (('Mag', 'Lon', 'Lat'), mag_lon_lat_pmf),
+    (('Lon', 'Lat', 'TRT'), lon_lat_trt_pmf),
+])
