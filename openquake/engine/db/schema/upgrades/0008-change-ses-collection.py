@@ -29,7 +29,7 @@ TRUNCATE TABLE hzrdr.ses_collection CASCADE;  -- to fix
 ALTER TABLE hzrdr.ses_collection ADD COLUMN trt_model_id INTEGER NOT NULL
 REFERENCES hzrdr.trt_model (id);
 
-ALTER TABLE hzrdr.ses_collection DROP COLUMN lt_model;
+ALTER TABLE hzrdr.ses_collection DROP COLUMN lt_model_id;
 """
 
 
