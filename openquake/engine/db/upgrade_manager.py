@@ -1,5 +1,6 @@
 import os
 import re
+import time
 import urllib
 import importlib
 from openquake.engine import logs
@@ -51,7 +52,10 @@ class WrappedConnection(object):
         return curs
 
 
-def runscript(upgrade, rollback=True, debug=True):
+def run_script(upgrade, rollback=True, debug=True):
+    """
+    An utility to debug upgrade scripts written in Python
+    """
     from openquake.engine.db.models import getcursor
     conn = WrappedConnection(getcursor('admin').connection, debug=debug)
     try:
@@ -307,6 +311,7 @@ def upgrade_db(conn, pkg_name='openquake.engine.db.schema.upgrades',
     :returns: the version numbers of the new scripts applied the database
     """
     upgrader = UpgradeManager.instance(conn, pkg_name)
+    t0 = time.time()
     # run the upgrade scripts
     try:
         versions_applied = upgrader.upgrade(conn, skip_versions)
@@ -315,6 +320,8 @@ def upgrade_db(conn, pkg_name='openquake.engine.db.schema.upgrades',
         raise
     else:
         conn.commit()
+    dt = time.time() - t0
+    logs.LOG.info('Upgrade completed in %s seconds', dt)
     return versions_applied
 
 
