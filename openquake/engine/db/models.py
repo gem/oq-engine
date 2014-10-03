@@ -44,7 +44,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import source, geo, calc, correlation
 from openquake.hazardlib.site import FilteredSiteCollection
 
-from openquake.commonlib.riskloaders import loss_type_to_cost_type
+from openquake.commonlib.riskmodels import loss_type_to_cost_type
 from openquake.commonlib.readinput import get_mesh
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import logictree
