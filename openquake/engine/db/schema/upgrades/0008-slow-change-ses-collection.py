@@ -85,6 +85,10 @@ UPDATE hzrdr.probabilistic_rupture
 SET ses_collection_id=%s WHERE trt_model_id=%s""", ses_coll_id, trt_model_id)
         ses_coll_ids.add(ses_coll_id)
     if old_ids:
+        # remove the old outputs
+        conn.run("""\
+DELETE FROM hzrdr.output WHERE id IN (
+SELECT output_id FROM hzrdr.ses_collection WHERE id IN %s)""", tuple(old_ids))
         # remove the old ses_collections
         conn.run("DELETE FROM hzrdr.ses_collection WHERE id IN %s",
                  tuple(old_ids))
