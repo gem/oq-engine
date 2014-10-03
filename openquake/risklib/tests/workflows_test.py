@@ -26,6 +26,14 @@ import numpy
 from openquake.risklib import workflows
 
 
+def asset(values, deductibles=None,
+          insurance_limits=None,
+          retrofitting_values=None):
+    return workflows.Asset('a1', 'taxonomy', 1, (0, 0), values,
+                           deductibles, insurance_limits,
+                           retrofitting_values)
+
+
 class ClassicalTest(unittest.TestCase):
     loss_type = 'structural'
 
@@ -55,7 +63,7 @@ class ClassicalTest(unittest.TestCase):
         self.patch2.stop()
 
     def test_call(self):
-        assets = [workflows.Asset({self.loss_type: 10})]
+        assets = [asset({self.loss_type: 10})]
         curves = [mock.Mock()]
         output = self.workflow(self.loss_type, assets, curves)
 
@@ -123,9 +131,9 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
         self.patch3.stop()
 
     def test_call(self):
-        assets = [workflows.Asset(dict(structural=10),
-                                  dict(structural=0.1),
-                                  dict(structural=0.8))]
+        assets = [asset(dict(structural=10),
+                        dict(structural=0.1),
+                        dict(structural=0.8))]
         gmf = mock.Mock()
         vf = self.workflow.vulnerability_functions[self.loss_type]
         vf.apply_to.return_value = numpy.empty((1, 1))
@@ -211,8 +219,8 @@ class ClassicalBCRTest(unittest.TestCase):
         self.patch.stop()
 
     def test_call(self):
-        assets = [workflows.Asset(dict(structural=10),
-                                  retrofitting_values=dict(structural=10))]
+        assets = [asset(dict(structural=10),
+                        retrofitting_values=dict(structural=10))]
         curves = [mock.Mock()]
         curves_retro = [mock.Mock()]
         self.workflow(self.loss_type, assets, (curves, curves_retro))
@@ -230,7 +238,7 @@ class ScenarioTestCase(unittest.TestCase):
         vf = mock.MagicMock()
         calc = workflows.Scenario(vf, True)
 
-        assets = [workflows.Asset(
+        assets = [asset(
             dict(structural=10),
             deductibles=dict(structural=0.1),
             insurance_limits=dict(structural=0.8))] * 4
@@ -251,7 +259,7 @@ class ScenarioTestCase(unittest.TestCase):
         vf = mock.MagicMock()
         calc = workflows.Scenario(vf, False)
 
-        assets = [workflows.Asset(dict(structural=10))] * 4
+        assets = [asset(dict(structural=10))] * 4
         vf = calc.vulnerability_functions[self.loss_type]
         vf.apply_to = mock.Mock(return_value=numpy.empty((4, 2)))
 

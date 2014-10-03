@@ -289,6 +289,9 @@ class VulnerabilityFunction(object):
                 [numpy.mean(pair) for pair in utils.pairwise(self.imls)] +
                 [self.imls[-1] + ((self.imls[-1] - self.imls[-2]) / 2)])
 
+    def __repr__(self):
+        return '<VulnerabilityFunction(%s)>' % self.imt
+
 
 class FragilityFunctionContinuous(object):
     # FIXME (lp). Should be re-factored with LogNormalDistribution

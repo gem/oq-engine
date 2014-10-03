@@ -37,11 +37,23 @@ class Asset(object):
     calculations.
     """
     def __init__(self,
+                 asset_id,
+                 taxonomy,
+                 number,
+                 location,
                  values,
                  deductibles=None,
                  insurance_limits=None,
                  retrofitting_values=None):
         """
+        :param asset_id:
+            an unique identifier of the assets within the given exposure
+        :param taxonomy:
+            asset taxonomy
+        :param number:
+            number of apartments of number of people in the given asset
+        :param location:
+            geographic location of the asset
         :param dict values:
             asset values keyed by loss types
         :param dict deductible:
@@ -53,6 +65,10 @@ class Asset(object):
         :param dict retrofitting_values:
             asset retrofitting values keyed by loss types
         """
+        self.id = asset_id
+        self.taxonomy = taxonomy
+        self.number = number
+        self.location = location
         self.values = values
         self.retrofitting_values = retrofitting_values
         self.deductibles = deductibles
@@ -82,6 +98,9 @@ class Asset(object):
         :returns: the asset retrofitted value for `loss_type`
         """
         return self.retrofitting_values[loss_type]
+
+    def __repr__(self):
+        return '<Asset %s>' % self.id
 
 
 class Classical(object):
