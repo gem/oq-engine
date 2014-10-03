@@ -26,7 +26,7 @@ import psutil
 from openquake.nrmllib.risk import parsers
 from openquake.risklib.workflows import RiskModel
 from openquake.hazardlib.imt import from_string
-from openquake.commonlib.riskloaders import get_taxonomy_vfs
+from openquake.commonlib.riskmodels import get_taxonomy_vfs
 
 from openquake.engine import logs, export
 from openquake.engine.db import models
