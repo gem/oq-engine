@@ -442,7 +442,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                     lt_model__hazard_calculation=self.job):
                 sesruptures.extend(
                     models.SESRupture.objects.filter(
-                    rupture__ses_collection__trt_model=trt_model))
+                        rupture__ses_collection__trt_model=trt_model))
         self.curves = tasks.apply_reduce(
             compute_gmfs_and_curves,
             (self.job.id, sesruptures, sitecol),
