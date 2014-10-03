@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 
-from tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
 class ChiouYoungs2014TestCase(BaseGSIMTestCase):
