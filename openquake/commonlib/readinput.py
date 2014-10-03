@@ -154,13 +154,9 @@ def get_vulnerability_functions(oqparam):
 ############################ exposure #############################
 
 
-def occupancy(value, occupants, period):
-    return {period: valid.positivefloat(occupants)}
-
-
 class ExposureNode(LiteralNode):
     validators = valid.parameters(
-        occupancy=occupancy,
+        occupants=valid.positivefloat,
         value=valid.positivefloat,
         deductible=valid.positivefloat,
         insuranceLimit=valid.positivefloat,
@@ -175,6 +171,7 @@ def get_exposure(oqparam):
     """
     relevant_cost_types = set(vulnerability_files(oqparam.inputs))
     fname = oqparam.inputs['exposure']
+    time_event = getattr(oqparam, 'time_event')
     for asset in read_nodes(fname,
                             lambda node: node.tag.endswith('asset'),
                             ExposureNode):
@@ -182,6 +179,7 @@ def get_exposure(oqparam):
         deductibles = {}
         insurance_limits = {}
         retrofitting_values = {}
+
         with context(fname, asset):
             asset_id = asset['id']
             taxonomy = asset['taxonomy']
@@ -197,8 +195,13 @@ def get_exposure(oqparam):
                 insurance_limits[cost_type] = cost.attrib.get('insuranceLimit')
             # check we are not missing a cost type
             assert set(values) == relevant_cost_types
-        with context(fname, asset):
-            for occupancy in asset.getnodes('occupancies'):
-                pass
+
+        if time_event:
+            for occupancy in asset.occupancies:
+                with context(fname, occupancy):
+                    if occupancy['period'] == time_event:
+                        values['fatalities'] = occupancy['occupants']
+                        break
+
         yield Asset(asset_id, taxonomy, number, location,
                     values, deductibles, insurance_limits, retrofitting_values)
