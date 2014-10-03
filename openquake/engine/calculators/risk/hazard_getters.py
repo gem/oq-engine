@@ -85,18 +85,16 @@ class RiskInput(object):
     should be possible to use different strategies (e.g. distributed
     or not, using postgis or not).
 
-    :attr bridge:
-        A :class:`HazardRiskBridge` instance
-
     :attr assets:
         The assets for which we want to extract the hazard
 
    :attr site_ids:
         The ids of the sites associated to the hazards
     """
-    def __init__(self, imt, bridge, assets):
+    def __init__(self, imt, taxonomy, hazard_outputs, assets):
         self.imt = imt
-        self.bridge = bridge
+        self.taxonomy = taxonomy
+        self.hazard_outputs = hazard_outputs
         self.assets = assets
         self.site_ids = []
         self.asset_site_ids = []
@@ -125,7 +123,7 @@ class RiskInput(object):
         Return a list of Hazard instances for the given IMT.
         """
         return [Hazard(ho, self._get_data(ho), self.imt)
-                for ho in self.bridge.hazard_outputs]
+                for ho in self.hazard_outputs]
 
     def get_data(self):
         """
@@ -139,20 +137,15 @@ class RiskInput(object):
         """
         Return the id of the hazard output, when there is a single realization
         """
-        [ho] = self.bridge.hazard_outputs
+        [ho] = self.hazard_outputs
         return ho.id
 
-    @property
-    def taxonomy(self):
-        """The underlying taxonomy of the assets"""
-        return self.bridge.taxonomy
-
     def __repr__(self):
-        shape = getattr(self.epsilons, 'shape', None)
-        eps = ', %s epsilons' % str(shape) if shape else ''
+        eps = getattr(self, 'epsilons', None)
+        eps = ', %s epsilons' % str(eps.shape) if eps else ''
         return "<%s %d assets%s, taxonomy=%s>" % (
             self.__class__.__name__, len(self.assets), eps,
-            self.bridge.taxonomy)
+            self.taxonomy)
 
 
 class HazardCurveInput(RiskInput):
@@ -240,12 +233,16 @@ class GroundMotionInput(RiskInput):
         RiskInput.__enter__(self)  # populate .site_ids
 
         self.hazards = {}  # dict ho, imt -> {site_id: {rup_id: gmv}}
+        self.rupture_ids = []
         sescolls = set()
-        for ho in self.bridge.hazard_outputs:
+        for ho in self.hazard_outputs:
             self.hazards[ho] = self._get_gmv_dict(ho)
             for sc in haz_out_to_ses_coll(ho):
-                sescolls.add(sc.id)
+                sescolls.add(sc)
         sescolls = sorted(sescolls)
+        for sc in sescolls:
+            self.rupture_ids.extend(
+                sc.get_ruptures().values_list('id', flat=True))
 
         epsilon_rows = []  # ordered by asset_site_id
         for asset_site_id in self.asset_site_ids:
@@ -266,11 +263,6 @@ class GroundMotionInput(RiskInput):
         self.hazards.clear()
         if hasattr(self, 'epsilons'):
             self.epsilons = None
-
-    @property
-    def rupture_ids(self):
-        """The rupture_ids of the underlying bridge"""
-        return self.bridge.rupture_ids
 
     def get_epsilons(self):
         """
@@ -351,8 +343,8 @@ class HazardRiskBridge(object):
     Warning: instantiating a HazardRiskBridge may perform a potentially
     expensive geospatial query.
     """
-    def __init__(self, hazard_outputs, taxonomy, rc):
-        self.hazard_outputs = hazard_outputs
+    def __init__(self, taxonomy, rc):
+        self.hazard_outputs = rc.hazard_outputs()
         self.taxonomy = taxonomy
         self.rc = rc
         self.hc = rc.hazard_calculation
@@ -409,7 +401,6 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
                 'Could not associate any asset of taxonomy %s to '
                 'hazard sites within the distance of %s km'
                 % (taxonomy, self.rc.best_maximum_distance))
-        self.rupture_ids = []
         self._rupture_ids = {}
         self.epsilons_shape = {}
 
@@ -470,9 +461,7 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
             scid = ses_coll.id  # ses collection id
             num_assets, num_samples = self.epsilons_shape[scid]
             self._rupture_ids[scid] = ses_coll.get_ruptures(
-                ).values_list('id', flat=True) or range(
-                self.number_of_ground_motion_fields)
-            self.rupture_ids.extend(self._rupture_ids[scid])
+                ).values_list('id', flat=True)
             # do not build the epsilons for scenario_damage
             if self.calculation_mode != 'scenario_damage':
                 logs.LOG.info('Building (%d, %d) epsilons for taxonomy %s',
@@ -483,10 +472,3 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
                     num_assets, num_samples,
                     self.rc.master_seed, self.rc.asset_correlation)
                 models.Epsilon.saveall(ses_coll, asset_sites, eps)
-
-    @property
-    def ses_coll_ids(self):
-        """
-        SESCollection IDs in a fixed order (sorted by ID)
-        """
-        return sorted(self._rupture_ids)
