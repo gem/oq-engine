@@ -49,7 +49,7 @@ eps_sampling = int(config.get('risk', 'epsilon_sampling'))
 
 
 @tasks.oqtask
-def build_bridges(job_id, counts_taxonomy, rc):
+def prepare_risk(job_id, counts_taxonomy, rc):
     """
     Initializes the epsilon matrices and save them on the database.
 
@@ -60,15 +60,12 @@ def build_bridges(job_id, counts_taxonomy, rc):
     :param rc:
         the current risk calculation
     """
-    haz_outs = rc.hazard_outputs()
-    bridges = {}  # taxonomy -> bridge
     for counts, taxonomy in counts_taxonomy:
 
         # building the HazardRiskBridges
         with EnginePerformanceMonitor(
-                "associating asset->site", job_id, build_bridges):
-            bridge = hazard_getters.HazardRiskBridge(
-                haz_outs, taxonomy, rc)
+                "associating asset->site", job_id, prepare_risk):
+            bridge = hazard_getters.HazardRiskBridge(taxonomy, rc)
 
         # estimating the needed memory
         nbytes = bridge.calc_nbytes(eps_sampling)
@@ -85,14 +82,12 @@ def build_bridges(job_id, counts_taxonomy, rc):
 
         # initializing epsilons
         with EnginePerformanceMonitor(
-                "initializing epsilons", job_id, build_bridges):
+                "initializing epsilons", job_id, prepare_risk):
             bridge.init_epsilons(eps_sampling)
-        bridges[bridge.taxonomy] = bridge
-    return bridges
 
 
 @tasks.oqtask
-def run_risk(job_id, sorted_assocs, bridges, calc):
+def run_risk(job_id, sorted_assocs, calc):
     """
     Run the risk calculation on the given assets by using the given
     hazard bridges and risk calculator.
@@ -101,22 +96,21 @@ def run_risk(job_id, sorted_assocs, bridges, calc):
         ID of the current risk job
     :param sorted_assocs:
         asset_site associations, sorted by taxonomy
-    :param dict bridges:
-        hazard-risk bridges for each taxonomy
     :param calc:
         the risk calculator to use
     """
     acc = calc.acc
+    hazard_outputs = calc.rc.hazard_outputs()
     for taxonomy, assocs_by_taxonomy in itertools.groupby(
             sorted_assocs, lambda a: a.asset.taxonomy):
         with calc.monitor("getting assets"):
             assets = models.ExposureData.objects.get_asset_chunk(
                 calc.rc, assocs_by_taxonomy)
-        bridge = bridges[taxonomy]
         for it in models.ImtTaxonomy.objects.filter(
                 job=calc.job, taxonomy=taxonomy):
             imt = it.imt.imt_str
-            risk_input = calc.risk_input_class(imt, bridge, assets)
+            risk_input = calc.risk_input_class(
+                imt, taxonomy, hazard_outputs, assets)
             with calc.monitor("getting hazard"):
                 risk_input.__enter__()
             logs.LOG.info(
@@ -243,15 +237,14 @@ class RiskCalculator(base.Calculator):
         # build the bridges hazard -> risk
         ct = sorted((counts, taxonomy) for taxonomy, counts
                     in self.taxonomies_asset_count.iteritems())
-        bridges = tasks.apply_reduce(
-            build_bridges, (self.job.id, ct, self.rc),
-            updatedict, {}, self.concurrent_tasks)
+        tasks.apply_reduce(prepare_risk, (self.job.id, ct, self.rc),
+                           concurrent_tasks=self.concurrent_tasks)
 
         # run the real computation
         assocs = models.AssetSite.objects.filter(job=self.job).order_by(
             'asset__taxonomy')
         self.acc = tasks.apply_reduce(
-            run_risk, (self.job.id, assocs, bridges, self),
+            run_risk, (self.job.id, assocs, self),
             self.agg_result, self.acc, self.concurrent_tasks,
             name=self.core_calc_task.__name__)
 
