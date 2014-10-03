@@ -271,9 +271,12 @@ def list_calculations(job_manager):
     # without a OqJob instance (e.g. when the user imports outputs
     # directly from files) we filter out the calculation without the
     # corresponding job
-
-    jobs = job_manager.filter(
-        user_name=getpass.getuser()).order_by('last_update')
+    if job_manager.model is models.RiskCalculation:
+        jobs = [calc.oqjob for calc in job_manager.filter(
+            oqjob__user_name=getpass.getuser()).order_by('oqjob__last_update')]
+    else:
+        jobs = job_manager.filter(
+            user_name=getpass.getuser()).order_by('last_update')
 
     if len(jobs) == 0:
         print 'None'
@@ -282,8 +285,6 @@ def list_calculations(job_manager):
                '        description')
         for job in jobs:
             descr = job.get_param('description', None)
-            if descr is None:
-                continue
             latest_job = job
             if latest_job.is_running:
                 status = 'pending'

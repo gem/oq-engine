@@ -24,7 +24,7 @@ import numpy
 
 from django import db
 
-from openquake.commonlib.riskloaders import get_damage_states_and_risk_models
+from openquake.commonlib.riskmodels import get_damage_states_and_risk_models
 
 from openquake.engine.calculators.risk import (
     base, hazard_getters, writers, validation)

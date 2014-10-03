@@ -29,7 +29,6 @@ import unittest
 from collections import namedtuple
 
 from django.contrib.gis.geos.point import Point
-from django.contrib.gis.geos.polygon import Polygon
 
 from openquake.engine.db import models
 from openquake.engine.calculators.risk import base
@@ -132,8 +131,6 @@ class AssetManagerTestCase(unittest.TestCase):
         try:
             query, args = self.manager._get_asset_chunk_query_args(
                 rc, asset_ids)
-            print >> open('/tmp/exp.sql', 'w'), expected_query
-            print >> open('/tmp/got.sql', 'w'), query.rstrip()
             self.assertEqual(expected_query, query.rstrip())
             self.assertEqual(args, (0, asset_ids, 'occ_arg1', 'occ_arg2'))
         finally:
