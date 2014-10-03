@@ -4,6 +4,7 @@
 # calculations. If this is not the case, don't worry.                    #
 ##########################################################################
 
+
 def fix_null_lt_models(conn):
     # find the records where ses_collection.lt_model_id is NULL
     for ses_coll_id, oq_job_id in conn.run("""\
@@ -36,7 +37,7 @@ def create_ses_collections(conn):
     # create new ses_collections for each trt_model
     assocs, old_ids = [], []
     # find the associations ses_coll_id -> trt_model_ids
-    assocs = conn.run("""\
+    cursor = conn.run("""\
 SELECT hazard_calculation_id, a.id, array_agg(b.id) AS trt_model_ids
 FROM hzrdr.ses_collection AS a,
 hzrdr.trt_model AS b,
@@ -45,7 +46,7 @@ WHERE a.lt_model_id=b.lt_model_id
 AND b.lt_model_id=c.id
 GROUP BY hazard_calculation_id, a.id
 ORDER BY hazard_calculation_id, a.id""")
-    for oq_job_id, ses_coll_id, trt_model_ids in assocs:
+    for oq_job_id, ses_coll_id, trt_model_ids in cursor:
         old_ids.append(ses_coll_id)
         for ordinal, trt_model_id in enumerate(trt_model_ids, 1):
 
@@ -84,6 +85,10 @@ UPDATE hzrdr.probabilistic_rupture
 SET ses_collection_id=%s WHERE trt_model_id=%s""", ses_coll_id, trt_model_id)
         ses_coll_ids.add(ses_coll_id)
     if old_ids:
+        # remove the old outputs
+        conn.run("""\
+DELETE FROM hzrdr.output WHERE id IN (
+SELECT output_id FROM hzrdr.ses_collection WHERE id IN %s)""", tuple(old_ids))
         # remove the old ses_collections
         conn.run("DELETE FROM hzrdr.ses_collection WHERE id IN %s",
                  tuple(old_ids))
