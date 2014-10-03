@@ -167,12 +167,11 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
             " Possible cause: Mesh spacing could be too large with respect to"
             " the fault length and width."
         )
-        return cls(mesh)
-        
-    @classmethod        
-    def get_fault_vertexes_3d(cls, fault_trace,
-                                upper_seismogenic_depth,
-                                lower_seismogenic_depth, dip):
+        return cls(mesh) 
+
+    @classmethod
+    def get_fault_vertexes_3d(cls, fault_trace, upper_seismogenic_depth,
+                              lower_seismogenic_depth, dip):
         """
         Get surface main vertexes.
 

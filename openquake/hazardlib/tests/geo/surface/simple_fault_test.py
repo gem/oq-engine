@@ -253,7 +253,6 @@ class SimpleFaultSurfaceProjectionTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(polygon.lats, elats)
 
     def test_get_fault_vertexes_3d(self):
-        
         lons, lats, deps = SimpleFaultSurface.get_fault_vertexes_3d(
             Line([Point(10, -20), Point(11, -20.2), Point(12, -19.7)]),
             upper_seismogenic_depth=25.3, lower_seismogenic_depth=53.6,
