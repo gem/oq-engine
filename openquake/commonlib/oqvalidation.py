@@ -42,7 +42,7 @@ VULNERABILITY_KEY = re.compile('(structural|nonstructural|contents|'
 
 def vulnerability_files(inputs):
     """
-    Return a dict loss_type -> path for the known vulnerability keys
+    Return a dict cost_type -> path for the known vulnerability keys
 
     :param inputs: a dictionary key -> path name
     """
@@ -50,7 +50,7 @@ def vulnerability_files(inputs):
     for key in inputs:
         match = VULNERABILITY_KEY.match(key)
         if match:
-            vfs[match.group(0)] = inputs[key]
+            vfs[match.group(1)] = inputs[key]
     return vfs
 
 

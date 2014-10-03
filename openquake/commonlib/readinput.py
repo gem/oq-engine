@@ -1,12 +1,14 @@
 import numpy
 
 from openquake.hazardlib import geo, site
-from openquake.nrmllib.node import read_nodes, LiteralNode
+from openquake.nrmllib.node import read_nodes, LiteralNode, context
+from openquake.risklib.workflows import Asset
+
 from openquake.commonlib import valid
 from openquake.commonlib.oqvalidation import \
     fragility_files, vulnerability_files
 from openquake.commonlib.riskmodels import \
-    get_fragility_functions, get_imtls_from_vulnerabilities
+    get_fragility_functions, get_imtls_from_vulnerabilities, get_vfs
 from openquake.commonlib.converter import Converter
 from openquake.commonlib.source import ValidNode, RuptureConverter
 
@@ -143,3 +145,60 @@ def get_imtls(oqparam):
         raise ValueError('Missing intensity_measure_types_and_levels, '
                          'vulnerability file and fragility file')
     return imtls
+
+
+def get_vulnerability_functions(oqparam):
+    """Return a dict (imt, taxonomy) -> vf"""
+    return get_vfs(oqparam.inputs)
+
+############################ exposure #############################
+
+
+def occupancy(value, occupants, period):
+    return {period: valid.positivefloat(occupants)}
+
+
+class ExposureNode(LiteralNode):
+    validators = valid.parameters(
+        occupancy=occupancy,
+        value=valid.positivefloat,
+        deductible=valid.positivefloat,
+        insuranceLimit=valid.positivefloat,
+        location=valid.point2d,
+    )
+
+
+def get_exposure(oqparam):
+    """
+    Read the exposure and yields :class:`openquake.risklib.workflows.Asset`
+    instances.
+    """
+    relevant_cost_types = set(vulnerability_files(oqparam.inputs))
+    fname = oqparam.inputs['exposure']
+    for asset in read_nodes(fname,
+                            lambda node: node.tag.endswith('asset'),
+                            ExposureNode):
+        values = {}
+        deductibles = {}
+        insurance_limits = {}
+        retrofitting_values = {}
+        with context(fname, asset):
+            asset_id = asset['id']
+            taxonomy = asset['taxonomy']
+            number = asset['number']
+            location = ~asset.location
+        with context(fname, asset.costs):
+            for cost in asset.costs:
+                cost_type = cost['type']
+                if cost_type not in relevant_cost_types:
+                    continue
+                values[cost_type] = cost['value']
+                deductibles[cost_type] = cost.attrib.get('deductible')
+                insurance_limits[cost_type] = cost.attrib.get('insuranceLimit')
+            # check we are not missing a cost type
+            assert set(values) == relevant_cost_types
+        with context(fname, asset):
+            for occupancy in asset.getnodes('occupancies'):
+                pass
+        yield Asset(asset_id, taxonomy, number, location,
+                    values, deductibles, insurance_limits, retrofitting_values)

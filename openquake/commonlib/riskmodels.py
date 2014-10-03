@@ -44,23 +44,23 @@ def cost_type_to_loss_type(ct):
     return 'fatalities' if ct == 'occupants' else ct
 
 
-def get_taxonomy_vfs(inputs, loss_types, retrofitted=False):
+def get_vfs(inputs, retrofitted=False):
     """
-    Given a dictionary {key: pathname} and a list of loss_types (for instance
-    ['structural', 'nonstructural', ...]) look for keys with name
-    <cost_type>__vulnerability, parse them and yield triples
-    (imt, taxonomy, vf_by_loss_type)
+    Given a dictionary {key: pathname}, look for keys with name
+    <cost_type>__vulnerability, parse them and returns a dictionary
+    imt, taxonomy -> vf_by_loss_type
     """
     retro = '_retrofitted' if retrofitted else ''
     vulnerability_functions = collections.defaultdict(dict)
-    for loss_type in loss_types:
-        key = '%s_vulnerability%s' % (loss_type_to_cost_type(loss_type), retro)
+    for cost_type in vulnerability_files(inputs):
+        key = '%s_vulnerability%s' % (cost_type, retro)
         if key not in inputs:
             continue
         vf_dict = get_vulnerability_functions(inputs[key])
         for (imt, tax), vf in vf_dict.iteritems():
-            vulnerability_functions[imt, tax][loss_type] = vf
-    return vulnerability_functions.iteritems()
+            vulnerability_functions[imt, tax][
+                cost_type_to_loss_type(cost_type)] = vf
+    return vulnerability_functions
 
 
 ############################ vulnerability ##################################
@@ -220,3 +220,17 @@ def get_fragility_functions(fname):
                              (limit_states, lstates, fname))
 
     return ['no_damage'] + limit_states, fragility_functions
+
+
+def get_damage_states_and_risk_models(fname):
+    """
+    Parse the fragility XML file and return a list of
+    damage_states and a dictionary {taxonomy: risk model}
+    """
+    risk_models = {}
+    damage_states, fragility_functions = get_fragility_functions(fname)
+    for taxonomy, ffs in fragility_functions.iteritems():
+        risk_models[ffs.imt, taxonomy] = workflows.RiskModel(
+            ffs.imt, taxonomy, workflows.Damage(dict(damage=ffs)))
+
+    return damage_states, risk_models
