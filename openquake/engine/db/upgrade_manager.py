@@ -1,6 +1,6 @@
 import os
 import re
-import runpy
+import time
 import urllib
 import importlib
 from openquake.engine import logs
@@ -24,6 +24,50 @@ scriptname TEXT NOT NULL,
 executed TIMESTAMP NOT NULL DEFAULT now()
 );
 '''
+
+
+class WrappedConnection(object):
+    """
+    :param conn: a DBAPI2-compatible connection
+    """
+    def __init__(self, conn, debug=False):
+        self._conn = conn
+        self.debug = debug
+
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
+
+    def run(self, templ, *args):
+        """
+        A simple utility to run SQL queries.
+
+        :param templ: a query or query template
+        :param args: the arguments (or the empty tuple)
+        """
+        curs = self._conn.cursor()
+        query = curs.mogrify(templ, args)
+        if self.debug:
+            print query
+        curs.execute(query)
+        return curs
+
+
+def run_script(upgrade, rollback=True, debug=True):
+    """
+    An utility to debug upgrade scripts written in Python
+    """
+    from openquake.engine.db.models import getcursor
+    conn = WrappedConnection(getcursor('admin').connection, debug=debug)
+    try:
+        upgrade(conn)
+    except:
+        conn.rollback()
+        raise
+    else:
+        if rollback:
+            conn.rollback()
+        else:
+            conn.commit()
 
 
 def apply_sql_script(conn, fname):
@@ -123,12 +167,15 @@ class UpgradeManager(object):
         return self._upgrade(conn, scripts)
 
     def _upgrade(self, conn, scripts):
+        conn = WrappedConnection(conn)
         versions_applied = []
         for script in scripts:  # script is a dictionary
             fullname = os.path.join(self.upgrade_dir, script['fname'])
             logs.LOG.info('Executing %s', fullname)
             if script['ext'] == 'py':  # Python script with a upgrade(conn)
-                runpy.run_path(fullname)['upgrade'](conn)
+                globs = {}
+                execfile(fullname, globs)
+                globs['upgrade'](conn)
                 self._insert_script(script, conn)
             else:  # SQL script
                 # notice that this prints the file name in case of error
@@ -264,6 +311,7 @@ def upgrade_db(conn, pkg_name='openquake.engine.db.schema.upgrades',
     :returns: the version numbers of the new scripts applied the database
     """
     upgrader = UpgradeManager.instance(conn, pkg_name)
+    t0 = time.time()
     # run the upgrade scripts
     try:
         versions_applied = upgrader.upgrade(conn, skip_versions)
@@ -272,6 +320,8 @@ def upgrade_db(conn, pkg_name='openquake.engine.db.schema.upgrades',
         raise
     else:
         conn.commit()
+    dt = time.time() - t0
+    logs.LOG.info('Upgrade completed in %s seconds', dt)
     return versions_applied
 
 
