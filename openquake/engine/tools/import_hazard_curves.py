@@ -22,10 +22,12 @@ def import_hazard_curves(fileobj):
         and the generated :class:`openquake.engine.db.models.OqJob` object.
     """
     fname = fileobj.name
+    hazcurve = HazardCurveXMLParser(fileobj).parse()
     curs = connections['job_init'].cursor().cursor.cursor  # DB API cursor
     job = engine.prepare_job()
     job.save_params(dict(
         base_path=os.path.dirname(fname),
+        intensity_measure_types_and_levels={hazcurve.imt: hazcurve.imls},
         description='HazardCurve importer, file %s' % os.path.basename(fname),
         calculation_mode='classical', maximum_distance=100))
     # XXX: what about the maximum_distance?
@@ -34,9 +36,6 @@ def import_hazard_curves(fileobj):
         display_name='Imported from %r' % fname, output_type='hazard_curve',
         oq_job=job)
 
-    f = StringIO()
-    # convert the XML into a tab-separated StringIO
-    hazcurve = HazardCurveXMLParser(fileobj).parse()
     haz_curve = models.HazardCurve.objects.create(
         investigation_time=hazcurve.investigation_time,
         imt=hazcurve.imt,
@@ -47,6 +46,9 @@ def import_hazard_curves(fileobj):
         sa_period=hazcurve.sa_period,
         output=out)
     hazard_curve_id = str(haz_curve.id)
+
+    # convert the XML into a tab-separated StringIO
+    f = StringIO()
     for node in hazcurve:
         loc = node.location
         poes = node.poes

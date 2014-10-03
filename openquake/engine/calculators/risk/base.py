@@ -26,7 +26,7 @@ import psutil
 from openquake.nrmllib.risk import parsers
 from openquake.risklib.workflows import RiskModel
 from openquake.hazardlib.imt import from_string
-from openquake.commonlib.riskloaders import get_taxonomy_vfs
+from openquake.commonlib.riskmodels import get_vfs
 
 from openquake.engine import logs, export
 from openquake.engine.db import models
@@ -303,15 +303,12 @@ class RiskCalculator(base.Calculator):
             return {
                 imt_taxo: RiskModel(
                     imt_taxo[0], imt_taxo[1], self.get_workflow(vfs))
-                for imt_taxo, vfs in get_taxonomy_vfs(
-                    self.rc.inputs, models.LOSS_TYPES)
+                for imt_taxo, vfs in get_vfs(self.rc.inputs).iteritems()
                 }
 
         # BCR risk models
-        orig_data = get_taxonomy_vfs(
-            self.rc.inputs, models.LOSS_TYPES, retrofitted=False)
-        retro_data = get_taxonomy_vfs(
-            self.rc.inputs, models.LOSS_TYPES, retrofitted=True)
+        orig_data = get_vfs(self.rc.inputs, retrofitted=False).items()
+        retro_data = get_vfs(self.rc.inputs, retrofitted=True).items()
 
         risk_models = {}
         for (imt_taxo, vfs), (imt_taxo_, vfs_) in zip(orig_data, retro_data):
