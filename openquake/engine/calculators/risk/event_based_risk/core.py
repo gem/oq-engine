@@ -345,12 +345,14 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     if isinstance(hazard_output.output_container,
                                   models.SESCollection):
                         ses_coll = hazard_output.output_container
+                        rupture_ids = ses_coll.get_ruptures().values_list(
+                            'id', flat=True)
                     else:  # extract the SES collection from the Gmf
-                        ses_coll = models.SESCollection.objects.get(
-                            lt_model=hazard_output.output_container.
-                            lt_realization.lt_model)
-                    rupture_ids = ses_coll.get_ruptures().values_list(
-                        'id', flat=True)
+                        rupture_ids = models.SESRupture.objects.filter(
+                            rupture__ses_collection__trt_model__lt_model=
+                            hazard_output.output_container.
+                            lt_realization.lt_model).values_list(
+                            'id', flat=True)
                     for rupture_id in rupture_ids:
                         if rupture_id in event_loss_table:
                             inserter.add(

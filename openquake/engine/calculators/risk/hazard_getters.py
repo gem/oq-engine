@@ -33,8 +33,6 @@ from django.db import transaction
 
 BYTES_PER_FLOAT = numpy.zeros(1, dtype=float).nbytes
 
-NRUPTURES = 1  # constant for readability
-
 
 class AssetSiteAssociationError(Exception):
     pass
@@ -220,6 +218,15 @@ def expand(array, N):
     return numpy.array([array[i % n] for i in xrange(N)])
 
 
+def haz_out_to_ses_coll(ho):
+    if ho.output_type == 'gmf_scenario':
+        out = models.Output.objects.get(output_type='ses', oq_job=ho.oq_job)
+        return [out.ses]
+
+    return models.SESCollection.objects.filter(
+        trt_model__lt_model=ho.output_container.lt_realization.lt_model)
+
+
 class GroundMotionInput(RiskInput):
     """
     Hazard getter for loading ground motion values.
@@ -233,14 +240,21 @@ class GroundMotionInput(RiskInput):
         RiskInput.__enter__(self)  # populate .site_ids
 
         self.hazards = {}  # dict ho, imt -> {site_id: {rup_id: gmv}}
+        sescolls = set()
         for ho in self.bridge.hazard_outputs:
             self.hazards[ho] = self._get_gmv_dict(ho)
+            for sc in haz_out_to_ses_coll(ho):
+                sescolls.add(sc.id)
+        sescolls = sorted(sescolls)
 
         epsilon_rows = []  # ordered by asset_site_id
-        for eps in models.Epsilon.objects.filter(
-                ses_collection__in=self.bridge.ses_coll_ids,
-                asset_site__in=self.asset_site_ids):
-            epsilon_rows.append(eps.epsilons)
+        for asset_site_id in self.asset_site_ids:
+            row = []
+            for eps in models.Epsilon.objects.filter(
+                    ses_collection__in=sescolls,
+                    asset_site=asset_site_id):
+                row.extend(eps.epsilons)
+            epsilon_rows.append(row)
         if epsilon_rows:
             self.epsilons = numpy.array(epsilon_rows)
 
@@ -412,9 +426,10 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
         if self.calculation_mode.startswith('event_based'):
             lt_model_ids = set(ho.output_container.lt_realization.lt_model.id
                                for ho in self.hazard_outputs)
-            for lt_model_id in lt_model_ids:
+            for trt_model in models.TrtModel.objects.filter(
+                    lt_model__in=lt_model_ids):
                 ses_coll = models.SESCollection.objects.get(
-                    lt_model=lt_model_id)
+                    trt_model=trt_model)
                 num_ruptures = ses_coll.get_ruptures().count()
                 samples = min(epsilon_sampling, num_ruptures) \
                     if epsilon_sampling else num_ruptures
@@ -444,9 +459,8 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
         if self.calculation_mode.startswith('event_based'):
             lt_model_ids = set(ho.output_container.lt_realization.lt_model.id
                                for ho in self.hazard_outputs)
-            ses_collections = [
-                models.SESCollection.objects.get(lt_model=lt_model_id)
-                for lt_model_id in lt_model_ids]
+            ses_collections = models.SESCollection.objects.filter(
+                trt_model__lt_model__in=lt_model_ids)
         elif self.calculation_mode.startswith('scenario'):
             [out] = self.hc.output_set.filter(output_type='ses')
             ses_collections = [out.ses]
