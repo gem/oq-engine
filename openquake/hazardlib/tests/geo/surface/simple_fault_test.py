@@ -104,8 +104,9 @@ class SimpleFaultSurfaceGetMeshTestCase(utils.SurfaceTestCase):
         p3 = Point(0.0190775080917, 0.0550503815182, 0.0)
         p4 = Point(0.03974514139, 0.0723925718856, 0.0)
 
-        fault = SimpleFaultSurface.from_fault_data(Line([p1, p2, p3, p4]),
-                2.12132034356, 4.2426406871192848, 45.0, 1.0)
+        fault = SimpleFaultSurface.from_fault_data(
+            Line([p1, p2, p3, p4]), 2.12132034356,
+            4.2426406871192848, 45.0, 1.0)
 
         self.assert_mesh_is(fault, test_data.TEST_2_MESH)
 
@@ -116,7 +117,7 @@ class SimpleFaultSurfaceGetMeshTestCase(utils.SurfaceTestCase):
         p4 = Point(0.03974514139, 0.0723925718856, 0.0)
 
         fault = SimpleFaultSurface.from_fault_data(Line([p1, p2, p3, p4]),
-                0.0, 4.0, 90.0, 1.0)
+                                                   0.0, 4.0, 90.0, 1.0)
 
         self.assert_mesh_is(fault, test_data.TEST_4_MESH)
 
@@ -125,8 +126,8 @@ class SimpleFaultSurfaceGetMeshTestCase(utils.SurfaceTestCase):
         p2 = Point(180.0, 0.0)
         p3 = Point(-179.9, 0.0)
 
-        fault = SimpleFaultSurface.from_fault_data(Line([p1, p2, p3]),
-                1.0, 6.0, 90.0, 1.0)
+        fault = SimpleFaultSurface.from_fault_data(Line([p1, p2, p3]), 1.0,
+                                                   6.0, 90.0, 1.0)
 
         self.assert_mesh_is(fault, test_data.TEST_5_MESH)
 
@@ -136,8 +137,8 @@ class SimpleFaultSurfaceGetStrikeTestCase(utils.SurfaceTestCase):
         p1 = Point(0.0, 0.0)
         p2 = Point(0.0635916966572, 0.0635916574897)
 
-        surface = SimpleFaultSurface.from_fault_data(Line([p1, p2]),
-                1.0, 6.0, 89.9, 1.0)
+        surface = SimpleFaultSurface.from_fault_data(Line([p1, p2]), 1.0, 6.0,
+                                                     89.9, 1.0)
 
         self.assertAlmostEquals(45.0, surface.get_strike(), delta=1e-4)
 
@@ -146,8 +147,8 @@ class SimpleFaultSurfaceGetStrikeTestCase(utils.SurfaceTestCase):
         p2 = Point(0.0635916966572, 0.0635916574897)
         p3 = Point(0.0860747816618, 0.102533437776)
 
-        surface = SimpleFaultSurface.from_fault_data(Line([p1, p2, p3]),
-                1.0, 6.0, 89.9, 1.0)
+        surface = SimpleFaultSurface.from_fault_data(Line([p1, p2, p3]), 1.0,
+                                                     6.0, 89.9, 1.0)
 
         self.assertAlmostEquals(40.0, surface.get_strike(), delta=0.02)
 
@@ -163,8 +164,8 @@ class SimpleFaultSurfaceGetDipTestCase(utils.SurfaceTestCase):
         p2 = Point(0.0635916966572, 0.0635916574897)
         p3 = Point(0.0860747816618, 0.102533437776)
 
-        surface = SimpleFaultSurface.from_fault_data(Line([p1, p2, p3]),
-                1.0, 6.0, 90.0, 1.0)
+        surface = SimpleFaultSurface.from_fault_data(Line([p1, p2, p3]), 1.0,
+                                                     6.0, 90.0, 1.0)
 
         self.assertAlmostEquals(90.0, surface.get_dip(), delta=1e-6)
 
@@ -172,8 +173,8 @@ class SimpleFaultSurfaceGetDipTestCase(utils.SurfaceTestCase):
         p1 = Point(0.0, 0.0)
         p2 = Point(0.0635916966572, 0.0635916574897)
 
-        surface = SimpleFaultSurface.from_fault_data(Line([p1, p2]),
-                1.0, 6.0, 30.0, 1.0)
+        surface = SimpleFaultSurface.from_fault_data(Line([p1, p2]), 1.0, 6.0,
+                                                     30.0, 1.0)
 
         self.assertAlmostEquals(30.0, surface.get_dip(), 1)
 
@@ -265,6 +266,7 @@ class SimpleFaultSurfaceProjectionTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(lons, elons)
         numpy.testing.assert_allclose(lats, elats)
         numpy.testing.assert_allclose(deps, edeps)
+
 
 class SimpleFaultSurfaceGetWidthTestCase(unittest.TestCase):
     def test_vertical_planar_surface(self):
