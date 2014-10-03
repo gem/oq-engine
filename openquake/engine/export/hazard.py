@@ -347,11 +347,15 @@ def export_gmf_scenario_xml(output, target):
     :returns:
         The same return value as defined by :func:`export`.
     """
+    gmf = models.Gmf.objects.get(output=output.id)
     haz_calc = output.oq_job
+
     dest = _get_result_export_dest(haz_calc.id, target, output.gmf)
-    gmfs = models.get_gmfs_scenario(output)
-    writer = writers.ScenarioGMFXMLWriter(dest)
-    writer.serialize(gmfs)
+
+    writer = writers.EventBasedGMFXMLWriter(
+        dest, sm_lt_path='', gsim_lt_path='')
+    writer.serialize(gmf)
+
     return dest
 
 

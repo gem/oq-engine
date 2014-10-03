@@ -119,7 +119,7 @@ def compute_ruptures(
     """
     # NB: all realizations in gsims correspond to the same source model
     trt_model = models.TrtModel.objects.get(pk=trt_model_id)
-    ses_coll = models.SESCollection.objects.get(lt_model=trt_model.lt_model)
+    ses_coll = models.SESCollection.objects.get(trt_model=trt_model)
 
     hc = models.oqparam(job_id)
     all_ses = range(1, hc.ses_per_logic_tree_path + 1)
@@ -142,8 +142,7 @@ def compute_ruptures(
 
         with filter_sites_mon:  # filtering sources
             s_sites = src.filter_sites_by_distance_to_source(
-                hc.maximum_distance, sitecol
-            ) if hc.maximum_distance else sitecol
+                hc.maximum_distance, sitecol)
             if s_sites is None:
                 continue
 
@@ -179,7 +178,7 @@ def compute_ruptures(
                     indices = r_sites.indices if len(r_sites) < len(sitecol) \
                         else None  # None means that nothing was filtered
                     prob_rup = models.ProbabilisticRupture.create(
-                        rup, ses_coll, trt_model, indices)
+                        rup, ses_coll, indices)
                     for ses_idx, num_occurrences in ses_num_occ[rup]:
                         for occ_no in range(1, num_occurrences + 1):
                             rup_seed = rnd.randint(0, models.MAX_SINT_32)
@@ -233,7 +232,7 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol):
     result = {}  # trt_model_id -> (curves_by_gsim, [])
     # NB: by construction each block is a non-empty list with
     # ruptures of homogeneous trt_model
-    trt_model = ses_ruptures[0].rupture.trt_model
+    trt_model = ses_ruptures[0].rupture.ses_collection.trt_model
     rlzs_by_gsim = trt_model.get_rlzs_by_gsim()
     gsims = [logictree.GSIM[gsim]() for gsim in rlzs_by_gsim]
     calc = GmfCalculator(
@@ -443,13 +442,14 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                     lt_model__hazard_calculation=self.job):
                 sesruptures.extend(
                     models.SESRupture.objects.filter(
-                        rupture__trt_model=trt_model))
+                    rupture__ses_collection__trt_model=trt_model))
         self.curves = tasks.apply_reduce(
             compute_gmfs_and_curves,
             (self.job.id, sesruptures, sitecol),
-            self.agg_curves, {}, key=lambda sr: sr.rupture.trt_model.id)
+            self.agg_curves, {},
+            key=lambda sr: sr.rupture.ses_collection.trt_model.id)
 
-    def initialize_ses_db_records(self, lt_model):
+    def initialize_ses_db_records(self, trt_model, i):
         """
         Create :class:`~openquake.engine.db.models.Output`,
         :class:`~openquake.engine.db.models.SESCollection` and
@@ -463,11 +463,11 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         """
         output = models.Output.objects.create(
             oq_job=self.job,
-            display_name='SES Collection smlt-%d' % lt_model.ordinal,
+            display_name='SES Collection %d' % i,
             output_type='ses')
 
         ses_coll = models.SESCollection.objects.create(
-            output=output, lt_model=lt_model, ordinal=lt_model.ordinal)
+            output=output, trt_model=trt_model, ordinal=i)
 
         return ses_coll
 
@@ -481,7 +481,8 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         `execute` phase.)
         """
         weights = super(EventBasedHazardCalculator, self).pre_execute()
-        for lt_model in models.LtSourceModel.objects.filter(
-                hazard_calculation=self.job):
-            self.initialize_ses_db_records(lt_model)
+        for i, trt_model in enumerate(models.TrtModel.objects.filter(
+                lt_model__hazard_calculation=self.job), 1):
+            with transaction.commit_on_success(using='job_init'):
+                self.initialize_ses_db_records(trt_model, i)
         return weights
