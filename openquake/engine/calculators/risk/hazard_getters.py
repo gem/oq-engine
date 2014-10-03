@@ -392,7 +392,7 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
             job=rc.oqjob, asset__taxonomy=taxonomy).count()
         if self.num_assets == 0:
             raise AssetSiteAssociationError(
-                'Could not associated any asset of taxonomy %s to '
+                'Could not associate any asset of taxonomy %s to '
                 'hazard sites within the distance of %s km'
                 % (taxonomy, self.rc.best_maximum_distance))
         self.rupture_ids = []

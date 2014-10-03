@@ -53,15 +53,7 @@ class OQRouter(object):
         Get the name of the correct db configuration to use for read operations
         on the given model.
         '''
-        schema = self._schema_table_from_model(model)[0]
-
-        if schema in ("admin",):
-            # The db name for these is the same as the schema
-            return schema
-        elif schema in ("hzrdr", "riskr", "htemp", "hzrdi", "riski", "uiapi"):
-            return "job_init"
-        else:
-            return '%s_read' % schema
+        return "job_init"
 
     def db_for_write(self, model, **_hints):
         '''
@@ -69,16 +61,10 @@ class OQRouter(object):
         operations on the given model.
         '''
         schema, table = self._schema_table_from_model(model)
-
-        if schema in ('admin',):
-            # The db name for these is the same as the schema
-            return schema
-        elif schema == "uiapi" and table == "output":
-            return "job_init"
-        elif schema in ("hzrdi", "riski", "uiapi", "hzrdr", "riskr", "htemp"):
+        if schema == "uiapi" and table == "output":
             return "job_init"
         else:
-            return '%s_write' % schema
+            return "job_init"
 
     def allow_relation(self, _obj1, _obj2, **_hints):  # pylint: disable=R0201
         '''

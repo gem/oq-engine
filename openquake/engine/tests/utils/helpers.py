@@ -324,6 +324,10 @@ def get_job(cfg, username="openquake", hazard_calculation_id=None,
     if hazard_calculation_id is None:
         params['hazard_calculation_id'] = models.Output.objects.get(
             pk=hazard_output_id).oq_job.id
+
+    # we are removing intensity_measure_types_and_levels because it is not
+    # a field of RiskCalculation; this ugliness will disappear when
+    # RiskCalculation will be removed
     del params['intensity_measure_types_and_levels']
     job.save_params(params)
     risk_calc = engine.create_calculation(models.RiskCalculation, params)
@@ -504,6 +508,10 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
         readini.parse_config(
             open(risk_cfg), hazard_output_id=hazard_output.output.id))
     params['hazard_calculation_id'] = hazard_job.id
+
+    # we are removing intensity_measure_types_and_levels because it is not
+    # a field of RiskCalculation; this ugliness will disappear when
+    # RiskCalculation will be removed
     del params['intensity_measure_types_and_levels']
     job.save_params(params)
     risk_calc = engine.create_calculation(models.RiskCalculation, params)
