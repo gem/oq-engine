@@ -437,11 +437,12 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         """
         sitecol = self.site_collection
         sesruptures = []  # collect the ruptures in a fixed order
-        for trt_model in models.TrtModel.objects.filter(
-                lt_model__hazard_calculation=self.job):
-            sesruptures.extend(
-                models.SESRupture.objects.filter(
-                    rupture__trt_model=trt_model))
+        with self.monitor('reading ruptures'):
+            for trt_model in models.TrtModel.objects.filter(
+                    lt_model__hazard_calculation=self.job):
+                sesruptures.extend(
+                    models.SESRupture.objects.filter(
+                        rupture__trt_model=trt_model))
         self.curves = tasks.apply_reduce(
             compute_gmfs_and_curves,
             (self.job.id, sesruptures, sitecol),
