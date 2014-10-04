@@ -752,7 +752,7 @@ class RiskModel(object):
     def compute_outputs(self, risk_input, getter_monitor):
         """
         :param risk_input:
-            a list of callable hazard risk_input
+            a risk_input object
         :param getter_monitor:
             a context manager monitoring the time and resources
             spent the in the computation
