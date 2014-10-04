@@ -310,7 +310,8 @@ def list_imported_outputs():
     List outputs which were imported from a file, not calculated from a job
     """
     jobs = [jp.job.id for jp in models.JobParam.objects.filter(
-            value__contains=' importer, file ', name='description')]
+            value__contains=' importer, file ', name='description',
+            job__user_name=getpass.getuser())]
     outputs = models.Output.objects.filter(oq_job__in=jobs)
     engine.print_outputs_summary(outputs)
 
