@@ -23,6 +23,8 @@ from collections import namedtuple
 from lxml import etree
 from nose.plugins.attrib import attr
 
+from openquake import nrmllib
+
 from openquake.engine.db import models
 from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard
@@ -38,8 +40,7 @@ def check_export(output_id, target):
     according to our XML schema.
     """
     out_file = hazard.export(output_id, target, 'xml')
-    # from openquake import nrmllib
-    # nrmllib.assert_valid(out_file)
+    nrmllib.assert_valid(out_file)
     return out_file
 
 
