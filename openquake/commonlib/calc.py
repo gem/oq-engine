@@ -20,6 +20,7 @@ import collections
 import itertools
 import operator
 
+from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.site import SiteCollection
 
@@ -79,3 +80,67 @@ def gen_ruptures_for_site(site, sources, maximum_distance, monitor):
     for src, rows in itertools.groupby(
             source_rupture_sites, key=operator.attrgetter('source')):
         yield src, [row.rupture for row in rows]
+
+
+class RiskInput(object):
+    def __init__(self, imt, taxonomy, assets, gmvs, epsilons=None):
+        self.imt = imt
+        self.taxonomy = taxonomy
+        self.assets = assets
+        self.gmvs = gmvs
+        self.epsilons = epsilons
+
+    def get_hazards(self):
+        return [Hazard(self.imt, self.gmvs)]
+
+    def get_data(self):
+        return self.gmvs
+
+    def get_epsilons(self):
+        return self.epsilons
+
+
+def calc_gmfs(oqparam, sitecol, rupture=None, seed=None, realizations=None):
+    max_dist = oqparam.maximum_distance
+    correl_model = oqparam.correlation_model
+    seed = oqparam.random_seed
+    imts = map(from_string, sorted(oqparam.intensity_measure_and_types))
+    gsim = oqparam.gsim()
+    trunc_level = getattr(oqparam, 'truncation_level', None)
+    n_gmfs = getattr(oqparam, 'number_of_ground_motion_fields', 1)
+    rupture = get_rupture(oqparam)
+    res = ground_motion_fields(
+        rupture, sitecol, imts, gsim,
+        trunc_level, realizations or n_gmfs, correl_model,
+        filters.rupture_site_distance_filter(max_dist), seed)
+    return {str(imt): matrix for imt, matrix in res.iteritems()}
+
+
+def make_epsilons(asset_count, num_samples, seed, correlation):
+    pass
+
+
+def compute_risk(oqparam, assets_by_site, seeds_by_site, risk_models, rupture,
+                 epsilons):
+    trunc_level = getattr(oqparam, 'truncation_level', None)
+    sites = []
+    assets_by_taxonomy = collections.defaultdict(list)
+    for site, assets in assets_by_site:
+        sites.append(site)
+        for asset in assets:
+            assets_by_taxonomy[asset.taxonomy].append(asset)
+
+    sitecol = SiteCollection(sites)
+    imts = sorted(map(from_string, oqparam.intensity_measure_types_and_levels))
+    gsim = oqparam.gsim()
+    gmf = GmfComputer(rupture, sitecol, imts, [gsim], trunc_level)
+    gmvs_by_imt = [gmf.compute(seed) for seed in seeds_by_site]
+    for taxonomy in assets_by_taxonomy:
+        for imt in imts:
+            gmvs = map(operator.itemgetter(imt), gmvs_by_imt)
+            inp = RiskInput(
+                str(imt), taxonomy, assets_by_taxonomy[taxonomy], gmvs)
+            outs_by_loss_type = risk_models[imt, taxonomy].compute_outputs(
+                inp, monitor)
+
+    n = oqparam.number_of_ground_motion_fields
