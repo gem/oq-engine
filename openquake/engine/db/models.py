@@ -1187,39 +1187,6 @@ class SES(object):
             ses_id=self.ordinal).order_by('tag').iterator()
 
 
-def is_from_fault_source(rupture):
-    """
-    If True, this rupture was generated from a simple/complex fault
-    source. If False, this rupture was generated from a point/area source.
-
-    :param rupture: an instance of :class:
-    `openquake.hazardlib.source.rupture.BaseProbabilisticRupture`
-    """
-    typology = rupture.source_typology
-    is_char = typology is source.CharacteristicFaultSource
-    is_complex_or_simple = typology in (
-        source.ComplexFaultSource,
-        source.SimpleFaultSource)
-    is_complex_or_simple_surface = isinstance(
-        rupture.surface, (geo.ComplexFaultSurface,
-                          geo.SimpleFaultSurface))
-    return is_complex_or_simple or (
-        is_char and is_complex_or_simple_surface)
-
-
-def is_multi_surface(rupture):
-    """
-    :param rupture: an instance of :class:
-    `openquake.hazardlib.source.rupture.BaseProbabilisticRupture`
-
-    :returns: a boolean
-    """
-    typology = rupture.source_typology
-    is_char = typology is source.CharacteristicFaultSource
-    is_multi_sur = isinstance(rupture.surface, geo.MultiSurface)
-    return is_char and is_multi_sur
-
-
 def get_geom(surface, is_from_fault_source, is_multi_surface):
     """
     The following fields can be interpreted different ways,
@@ -1332,8 +1299,9 @@ class ProbabilisticRupture(djm.Model):
         :param site_indices:
             an array of indices for the site_collection
         """
-        iffs = is_from_fault_source(rupture)
-        ims = is_multi_surface(rupture)
+        iffs = isinstance(rupture.surface,
+                          (geo.ComplexFaultSurface, geo.SimpleFaultSurface))
+        ims = isinstance(rupture.surface, geo.MultiSurface)
         lons, lats, depths = get_geom(rupture.surface, iffs, ims)
         hp = rupture.hypocenter
         return cls.objects.create(
