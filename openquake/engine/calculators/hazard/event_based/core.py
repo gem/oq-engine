@@ -440,13 +440,14 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         with self.monitor('reading ruptures'):
             for trt_model in models.TrtModel.objects.filter(
                     lt_model__hazard_calculation=self.job):
-                sesruptures.extend(
-                    models.SESRupture.objects.filter(
-                        rupture__trt_model=trt_model))
+                for sr in models.SESRupture.objects.filter(
+                        rupture__trt_model=trt_model):
+                    sr.trt_id = trt_model.id
+                    sesruptures.append(sr)
         self.curves = tasks.apply_reduce(
             compute_gmfs_and_curves,
             (self.job.id, sesruptures, sitecol),
-            self.agg_curves, {}, key=lambda sr: sr.rupture.trt_model.id)
+            self.agg_curves, {}, key=lambda sr: sr.trt_id)
 
     def initialize_ses_db_records(self, lt_model):
         """
