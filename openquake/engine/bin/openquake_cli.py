@@ -284,6 +284,10 @@ def list_calculations(job_manager):
         print ('job_id | calc_id |     status |         last_update | '
                '        description')
         for job in jobs:
+            if job_manager.model is models.RiskCalculation:
+                calc_id = job.risk_calculation.id
+            else:
+                calc_id = job.id
             descr = job.get_param('description', None)
             latest_job = job
             if latest_job.is_running:
@@ -297,7 +301,7 @@ def list_calculations(job_manager):
                 '%Y-%m-%d %H:%M:%S %Z'
             )
             print '%6d | %7d | %10s | %s| %s' % (
-                job.id, job.id, status, last_update, descr)
+                job.id, calc_id, status, last_update, descr)
 
 
 # TODO: the command-line switches are not tested, included this one
