@@ -137,8 +137,6 @@ def import_gmf_scenario(fileobj):
 
     job = engine.prepare_job()
 
-    # XXX: probably the maximum_distance should be entered by the user
-
     ses_coll, gmf_coll = create_ses_gmf(job, fname)
     imts, tags, rows = read_data(fileobj)
     import_rows(job, ses_coll, gmf_coll, tags, rows)
@@ -147,7 +145,7 @@ def import_gmf_scenario(fileobj):
             base_path=os.path.dirname(fname),
             description='Scenario importer, file %s' % os.path.basename(fname),
             calculation_mode='scenario',
-            maximum_distance=100,
+            region_grid_spacing=0.0001,  # faking GMFs computed at exact sites
             intensity_measure_types_and_levels=dict.fromkeys(imts),
             inputs={},
             number_of_ground_motion_fields=len(rows)
