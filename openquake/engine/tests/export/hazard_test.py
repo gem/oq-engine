@@ -368,7 +368,7 @@ class EventBasedExportTestCase(BaseExportTestCase):
             # run the calculation in process to create something to export
             with mock.patch.dict(os.environ, {'OQ_NO_DISTRIBUTE': '1'}):
                 job = helpers.run_job(cfg, maximum_distance=1,
-                                      ses_per_logic_tree_path=1)
+                                      ses_per_logic_tree_path=1).job
             self.assertEqual(job.status, 'complete')
 
             outputs = export_core.get_outputs(job.id)
