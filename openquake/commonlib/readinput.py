@@ -1,3 +1,4 @@
+import collections
 import numpy
 
 from openquake.hazardlib import geo, site
@@ -9,14 +10,13 @@ from openquake.commonlib.oqvalidation import \
     fragility_files, vulnerability_files
 from openquake.commonlib.riskmodels import \
     get_fragility_functions, get_imtls_from_vulnerabilities, get_vfs
-from openquake.commonlib.converter import Converter
 from openquake.commonlib.source import ValidNode, RuptureConverter
 
 
 def get_mesh(oqparam):
     """
     Extract the mesh of points to compute from the sites,
-    the sites_csv, the region or the exposure.
+    the sites_csv, or the region.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -36,12 +36,6 @@ def get_mesh(oqparam):
         firstpoint = geo.Point(*oqparam.region[0])
         points = [geo.Point(*xy) for xy in oqparam.region] + [firstpoint]
         return geo.Polygon(points).discretize(oqparam.region_grid_spacing)
-    elif 'exposure' in oqparam.inputs:
-        exposure = Converter.from_nrml(oqparam.inputs['exposure'])
-        coords = sorted(set((s.lon, s.lat)
-                            for s in exposure.tableset.tableLocation))
-        lons, lats = zip(*coords)
-        return geo.Mesh(numpy.array(lons), numpy.array(lats))
 
 
 class SiteModelNode(LiteralNode):
@@ -205,3 +199,19 @@ def get_exposure(oqparam):
 
         yield Asset(asset_id, taxonomy, number, location,
                     values, deductibles, insurance_limits, retrofitting_values)
+
+
+def get_sitecol_assets(oqparam):
+    """
+    Returns two sequences of the same length: a list with the assets
+    per each site and the site collection.
+    """
+    assets_by_loc = collections.defaultdict(list)
+    for asset in get_exposure(oqparam):
+        assets_by_loc[asset.location].append(asset)
+    coords = sorted((s.lon, s.lat) for s in assets_by_loc)
+    lons, lats = zip(*coords)
+    mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
+    sitecol = get_site_collection(oqparam, mesh)
+    return [(site, assets_by_loc[site.location.x, site.location.y])
+            for site in sitecol]

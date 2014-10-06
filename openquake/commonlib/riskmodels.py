@@ -222,15 +222,49 @@ def get_fragility_functions(fname):
     return ['no_damage'] + limit_states, fragility_functions
 
 
-def get_damage_states_and_risk_models(fname):
+class RiskModelDict(dict):
     """
-    Parse the fragility XML file and return a list of
-    damage_states and a dictionary {taxonomy: risk model}
+    A dictionary containing the risk models, one for each pair
+    (imt, taxonomy).
     """
-    risk_models = {}
-    damage_states, fragility_functions = get_fragility_functions(fname)
-    for taxonomy, ffs in fragility_functions.iteritems():
-        risk_models[ffs.imt, taxonomy] = workflows.RiskModel(
-            ffs.imt, taxonomy, workflows.Damage(dict(damage=ffs)))
 
-    return damage_states, risk_models
+
+def get_risk_models(oqparam):
+    """
+    Return a RiskModels dictionary.
+    """
+    risk_models = RiskModelDict()
+
+    rit = getattr(oqparam, 'risk_investigation_time', None)
+    if rit:  # defined for event based calculations
+        oqparam.time_span = oqparam.tses = rit
+
+    if oqparam.calculation_mode == 'scenario_damage':
+        # scenario damage calculator
+        damage_states, fragility_functions = get_fragility_functions(
+            oqparam.inputs['fragility'])
+        risk_models.damage_states = damage_states
+        for taxonomy, ffs in fragility_functions.iteritems():
+            risk_models[ffs.imt, taxonomy] = workflows.RiskModel(
+                ffs.imt, taxonomy, workflows.Damage(dict(damage=ffs)))
+    elif oqparam.calculation_mode.endswith('_bcr'):
+        # bcr calculators
+        vf_orig = get_vfs(oqparam.inputs, retrofitted=False).items()
+        vf_retro = get_vfs(oqparam.inputs, retrofitted=True).items()
+        for (imt_taxo, vfs), (imt_taxo_, vfs_) in zip(vf_orig, vf_retro):
+            assert imt_taxo == imt_taxo_  # same imt and taxonomy
+            workflow = workflows.get_workflow(
+                oqparam,
+                vulnerability_functions_orig=vfs,
+                vulnerability_functions_retro=vfs_)
+            risk_models[imt_taxo] = workflows.RiskModel(
+                imt_taxo[0], imt_taxo[1], workflow)
+    else:
+        # classical, event based and scenario calculators
+        for imt_taxo, vfs in get_vfs(oqparam.inputs).iteritems():
+            workflow = workflows.get_workflow(
+                oqparam, vulnerability_functions=vfs)
+            risk_models[imt_taxo] = workflows.RiskModel(
+                imt_taxo[0], imt_taxo[1], workflow)
+
+    return risk_models
