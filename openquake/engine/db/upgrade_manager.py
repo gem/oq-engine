@@ -52,9 +52,13 @@ class WrappedConnection(object):
         return curs
 
 
-def run_script(upgrade, rollback=True, debug=True):
+def run_script(upgrade, dry_run=True, debug=True):
     """
     An utility to debug upgrade scripts written in Python
+
+    :param upgrade: upgrade procedure
+    :param dry_run: if True, do not change the database
+    :param debug: if True, print the query which are execute.
     """
     from openquake.engine.db.models import getcursor
     conn = WrappedConnection(getcursor('admin').connection, debug=debug)
@@ -64,7 +68,7 @@ def run_script(upgrade, rollback=True, debug=True):
         conn.rollback()
         raise
     else:
-        if rollback:
+        if dry_run:
             conn.rollback()
         else:
             conn.commit()
