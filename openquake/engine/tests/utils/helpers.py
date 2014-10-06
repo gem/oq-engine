@@ -118,6 +118,8 @@ def run_job(cfg, exports=None, hazard_calculation_id=None,
     """
     Given the path to a job config file and a hazard_calculation_id
     or a output, run the job.
+
+    :returns: a calculator object
     """
     if exports is None:
         exports = []
@@ -129,8 +131,7 @@ def run_job(cfg, exports=None, hazard_calculation_id=None,
 
     logfile = os.path.join(tempfile.gettempdir(), 'qatest.log')
 
-    engine.run_calc(job, 'error', logfile, exports, job.job_type)
-    return job
+    return engine.run_calc(job, 'error', logfile, exports, job.job_type)
 
 
 def timeit(method):

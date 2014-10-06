@@ -336,8 +336,8 @@ def what_if_I_upgrade(conn, pkg_name='openquake.engine.db.schema.upgrades',
             'scripts are doing.')
     if slow:
         msg += ('\nEven slow script can be fast if your database is small or'
-                ' touch tables that are empty.')
+                ' the upgrade affects tables that are empty.')
     if danger:
         msg += ('\nEven dangerous scripts are fine if they '
-                'touch empty tables or data you are not interested in.')
+                'affect empty tables or data you are not interested in.')
     return msg
