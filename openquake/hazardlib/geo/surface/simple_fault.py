@@ -170,7 +170,7 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
         return cls(mesh)
 
     @classmethod
-    def get_fault_vertexes_3d(cls, fault_trace, upper_seismogenic_depth,
+    def get_fault_vertices_3d(cls, fault_trace, upper_seismogenic_depth,
                               lower_seismogenic_depth, dip):
         """
         Get surface main vertexes.
@@ -179,9 +179,9 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
         mesh spacing.
 
         :returns:
-        Coordinates of fault surface vertexes in Longitude, Latitude, and
-        Depth.
-        The order of vertexs is given clockwisely
+            Coordinates of fault surface vertexes in Longitude, Latitude, and
+            Depth.
+            The order of vertexs is given clockwisely
         """
         # Similar to :meth:`from_fault_data`, we just don't resample edges
         dip_tan = math.tan(math.radians(dip))
@@ -210,16 +210,11 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
             t_lat.append(bottom_edge_point.latitude)
             t_dep.append(lower_seismogenic_depth)
 
-        for lon, lat, dep in zip(t_lon[::-1], t_lat[::-1], t_dep[::-1]):
-            lons.append(lon)
-            lats.append(lat)
-            deps.append(dep)
+        all_lons = numpy.array(lons + list(reversed(t_lon)), float)
+        all_lats = numpy.array(lats + list(reversed(t_lat)), float)
+        all_deps = numpy.array(deps + list(reversed(t_dep)), float)
 
-        lons = numpy.array(lons, float)
-        lats = numpy.array(lats, float)
-        deps = numpy.array(deps, float)
-
-        return lons, lats, deps
+        return all_lons, all_lats, all_deps
 
     @classmethod
     def get_surface_vertexes(cls, fault_trace,
