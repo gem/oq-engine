@@ -64,7 +64,7 @@ def scenario_damage(job_id, risk_model, risk_input, outputdict, params):
 
         with monitor.copy('computing risk'):
             fractions = risk_model.workflow(
-                'damage', risk_input.assets, risk_input.get_data(), None, None)
+                'damage', risk_input.assets, risk_input.get_data(), None)
             aggfractions = sum(fractions[i] * asset.number_of_units
                                for i, asset in enumerate(risk_input.assets))
 
