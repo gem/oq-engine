@@ -440,7 +440,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
             for trt_model in models.TrtModel.objects.filter(
                     lt_model__hazard_calculation=self.job):
                 for sr in models.SESRupture.objects.filter(
-                        rupture__trt_model=trt_model):
+                        rupture__ses_collection__trt_model=trt_model):
                     # adding the annotation below saves a LOT of memory
                     # otherwise one would need as key in apply_reduce
                     # lambda sr: sr.rupture.trt_model.id which would
