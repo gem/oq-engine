@@ -231,7 +231,7 @@ class RiskModelDict(dict):
 
 def get_risk_models(oqparam):
     """
-    Return a RiskModels dictionary.
+    Return a :class:`RiskModelDict` instance
     """
     risk_models = RiskModelDict()
 
