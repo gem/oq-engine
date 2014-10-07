@@ -16,6 +16,7 @@
 # License along with OpenQuake Risklib. If not, see
 # <http://www.gnu.org/licenses/>.
 
+import inspect
 import collections
 import numpy
 from scipy import interpolate
@@ -23,6 +24,8 @@ from scipy import interpolate
 from openquake.risklib import calculators, utils, scientific
 
 Output = collections.namedtuple('Output', 'hid weight loss_type output')
+
+registry = utils.Register()
 
 
 class Asset(object):
@@ -103,6 +106,7 @@ class Asset(object):
         return '<Asset %s>' % self.id
 
 
+@registry.add('classical_risk')
 class Classical(object):
     """
     Classical PSHA-Based Workflow.
@@ -329,6 +333,7 @@ class Classical(object):
         return all_outputs
 
 
+@registry.add('event_based_risk')
 class ProbabilisticEventBased(object):
     """
     Implements the Probabilistic Event Based workflow
@@ -576,6 +581,7 @@ class ProbabilisticEventBased(object):
         return loss_ratios, curves_poes
 
 
+@registry.add('classical_bcr')
 class ClassicalBCR(object):
     def __init__(self,
                  vulnerability_functions_orig,
@@ -621,6 +627,7 @@ class ClassicalBCR(object):
     compute_all_outputs = Classical.compute_all_outputs.im_func
 
 
+@registry.add('event_based_bcr')
 class ProbabilisticEventBasedBCR(object):
     def __init__(self,
                  vulnerability_functions_orig,
@@ -663,6 +670,7 @@ class ProbabilisticEventBasedBCR(object):
     compute_all_outputs = ProbabilisticEventBased.compute_all_outputs.im_func
 
 
+@registry.add('scenario_risk')
 class Scenario(object):
     """
     Implements the Scenario workflow
@@ -703,6 +711,7 @@ class Scenario(object):
     compute_all_outputs = ProbabilisticEventBased.compute_all_outputs.im_func
 
 
+@registry.add('scenario_damage')
 class Damage(object):
     def __init__(self, fragility_functions):
         # NB: we call the fragility_functions vulnerability_functions
@@ -722,6 +731,29 @@ class Damage(object):
             [[scientific.scenario_damage(ffs, gmv) for gmv in gmvs]
              for gmvs in gmfs])
         return out
+
+
+def get_workflow(oqparam, **extra):
+    """
+    Return an instance of the correct workflow class, depending on the
+    attribute `calculation_mode` of the object `oqparam`.
+
+    :param oqparam:
+        an object containing the parameters needed by the workflow class
+    :param extra:
+        extra parameters to pass to the workflow class
+    """
+    workflow_class = registry[oqparam.calculation_mode]
+    # arguments needed to instantiate the workflow class
+    argnames = inspect.getargspec(workflow_class.__init__).args[1:]
+    # arguments extracted from oqparam
+    known_args = vars(oqparam)
+    all_args = {}
+    for argname in argnames:
+        if argname in known_args:
+            all_args[argname] = known_args[argname]
+    all_args.update(extra)
+    return workflow_class(**all_args)
 
 
 class RiskModel(object):
