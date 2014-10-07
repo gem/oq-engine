@@ -726,10 +726,10 @@ class Damage(object):
         and D the number of damage states.
         """
         ffs = self.vulnerability_functions['damage']
-        out = numpy.array(
+        outs = numpy.array(
             [[scientific.scenario_damage(ffs, gmv) for gmv in gmvs]
              for gmvs in gmfs])
-        return out
+        return assets, outs
 
 
 def get_workflow(oqparam, **extra):
@@ -782,36 +782,25 @@ class RiskInput(object):
                              'taxonomy: %s' % self.assets_by_taxo.keys())
         return self.assets_by_taxo.values()[0][0].taxonomy
 
-    @property
-    def assets(self):
+    def get_assets(self, taxonomy=None):
         """Return the assets, if there is a single taxonomy"""
-        return self.assets_by_taxo[self.taxonomy]
+        return self.assets_by_taxo[taxonomy or self.taxonomy]
 
-    def split_by_taxonomy(self):
-        """
-        Split a risk input object with multiple taxonomies in sub objects
-        with a single taxonomy each
-        """
-        for taxonomy, assets in self.assets_by_taxo.iteritems():
-            yield self.__class__(self.imt, self.site_id, self.hazard, assets)
-
-    def get_hazard(self):
+    def get_hazard(self, taxonomy=None):
         """
         Return the underlying hazard as a list of N repeated arrays,
         where N is the number of assets
         """
-        return [self.hazard] * len(self.assets_by_taxo[self.taxonomy])
+        return [self.hazard] * len(self.get_assets(taxonomy))
 
-    def get_epsilons(self):
+    def get_epsilons(self, taxonomy=None):
         """
         Return the epsilons associated to the underlying assets as
         a numpy array of N x E elements, where N is the number of assets
         and E the number of events.
         """
-        data = []
-        for asset in self.assets_by_taxo[self.taxonomy]:
-            data.append(asset.epsilons)
-        return numpy.array(data)
+        return numpy.array([asset.epsilons
+                            for asset in self.get_assets(taxonomy)])
 
 
 class RiskModel(object):
