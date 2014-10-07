@@ -679,8 +679,7 @@ class Scenario(object):
         self.vulnerability_functions = vulnerability_functions
         self.insured_losses = insured_losses
 
-    def __call__(self, loss_type, assets, ground_motion_values,
-                 epsilons, _rupture_ids):
+    def __call__(self, loss_type, assets, ground_motion_values, epsilons):
         values = numpy.array([a.value(loss_type) for a in assets])
 
         loss_ratio_matrix = self.vulnerability_functions[loss_type].apply_to(
@@ -716,8 +715,10 @@ class Damage(object):
         # for API compatibility
         self.vulnerability_functions = fragility_functions
 
-    def __call__(self, loss_type, assets, gmfs, _epsilons, _rupture_ids):
+    def __call__(self, loss_type, assets, gmfs, _epsilons=None):
         """
+        :param loss_type: the string 'damage'
+        :param assets: a list of N assets of the same taxonomy
         :param gmfs: an array of N x R elements
         :returns: an array of N x R x D elements
 

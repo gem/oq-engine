@@ -246,9 +246,9 @@ class ScenarioTestCase(unittest.TestCase):
         calc.vulnerability_functions[self.loss_type].apply_to = mock.Mock(
             return_value=numpy.empty((4, 2)))
 
-        (_assets, loss_ratio_matrix, aggregate_losses,
+        (loss_ratio_matrix, aggregate_losses,
          insured_loss_matrix, insured_losses) = \
-            calc(self.loss_type, assets, mock.Mock(), mock.Mock(), None)
+            calc(self.loss_type, assets, mock.Mock(), mock.Mock())
 
         self.assertEqual((4, 2), loss_ratio_matrix.shape)
         self.assertEqual((2,), aggregate_losses.shape)
@@ -263,9 +263,9 @@ class ScenarioTestCase(unittest.TestCase):
         vf = calc.vulnerability_functions[self.loss_type]
         vf.apply_to = mock.Mock(return_value=numpy.empty((4, 2)))
 
-        (assets, loss_ratio_matrix, aggregate_losses,
+        (loss_ratio_matrix, aggregate_losses,
          insured_loss_matrix, insured_losses) = (
-            calc(self.loss_type, assets, mock.Mock(), mock.Mock(), None))
+            calc(self.loss_type, assets, mock.Mock(), mock.Mock()))
 
         self.assertEqual((4, 2), loss_ratio_matrix.shape)
         self.assertEqual((2,), aggregate_losses.shape)
@@ -278,5 +278,5 @@ class DamageTest(unittest.TestCase):
         with mock.patch('openquake.risklib.scientific.scenario_damage') as m:
             fragility_functions = mock.Mock()
             calc = workflows.Damage(dict(damage=fragility_functions))
-            calc([[1, 1], [2, 2], [3, 3]])
+            calc('damage', 'assets', 'hazard', None)
             self.assertEqual(m.call_count, 6)  # called 3 x 2 times
