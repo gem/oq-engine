@@ -20,6 +20,7 @@ import collections
 import itertools
 import operator
 import logging
+import random
 import os
 
 import numpy
@@ -106,7 +107,7 @@ def add_dicts(acc, dic):
     return new
 
 
-def calc_gmfs(oqparam, sitecol):
+def calc_gmfs_fast(oqparam, sitecol):
     """
     Build all the ground motion fields for the whole site collection in
     a single step.
@@ -126,6 +127,29 @@ def calc_gmfs(oqparam, sitecol):
     return {str(imt): matrix for imt, matrix in res.iteritems()}
 
 
+def calc_gmfs(oqparam, sitecol):
+    """
+    Build all the ground motion fields for the whole site collection
+    """
+    correl_model = get_correl_model(oqparam)
+    rnd = random.Random()
+    rnd.seed(getattr(oqparam, 'random_seed', 42))
+    imts = map(from_string, sorted(oqparam.intensity_measure_types_and_levels))
+    gsim = get_gsim(oqparam)
+    trunc_level = getattr(oqparam, 'truncation_level', None)
+    n_gmfs = getattr(oqparam, 'number_of_ground_motion_fields', 1)
+    rupture = get_rupture(oqparam)
+    computer = gmf.GmfComputer(rupture, sitecol, imts, [gsim], trunc_level,
+                               correl_model)
+    seeds = [rnd.randint(0, 2 ** 31 - 1) for _ in xrange(n_gmfs)]
+    res = collections.defaultdict(list)
+    for seed in seeds:
+        for (_gname, imt), gmvs in computer.compute(seed):
+            print seed, imt, gmvs
+            res[imt].append(gmvs)
+    return {imt: numpy.array(matrix).T for imt, matrix in res.iteritems()}
+
+
 def add_epsilons(assets_by_site, num_samples, seed, correlation):
     """
     Add and .epsilons attribute to each asset in the assets_by_site
@@ -136,6 +160,8 @@ def add_epsilons(assets_by_site, num_samples, seed, correlation):
         for asset in assets:
             assets_by_taxonomy[asset.taxonomy].append(asset)
     for taxonomy, assets in assets_by_taxonomy.iteritems():
+        logging.info('Building (%d, %d) epsilons for taxonomy %s',
+                     len(assets), num_samples, taxonomy)
         eps_matrix = scientific.make_epsilons(
             numpy.zeros((len(assets), num_samples)),
             seed, correlation)
@@ -155,14 +181,16 @@ def run_scenario(oqparam):
     gmfs_by_imt = calc_gmfs(oqparam, sitecol)
 
     logging.info('Preparing the risk input')
+    risk_models = get_risk_models(oqparam)
     risk_inputs = []
     for imt in gmfs_by_imt:
         for site, assets, gmvs in zip(
                 sitecol, assets_by_site, gmfs_by_imt[imt]):
             risk_inputs.append(
                 workflows.RiskInput(imt, site.id, gmvs, assets))
+            for asset in assets:
+                asset.epsilons = None
 
-    risk_models = get_risk_models(oqparam)
     if oqparam.calculation_mode == 'scenario_risk':
         # build the epsilon matrix and add the epsilons to the assets
         num_samples = oqparam.number_of_ground_motion_fields
@@ -175,9 +203,23 @@ def run_scenario(oqparam):
     else:
         raise NotImplementedError
     return apply_reduce(calc, (risk_inputs, risk_models),
+                        concurrent_tasks=0,
                         agg=add_dicts, acc={},
                         key=lambda ri: ri.imt,
                         weight=lambda ri: ri.weight)
+
+
+def gen_outputs(riskinputs, risk_models):
+    for (imt, taxonomy), risk_model in risk_models.iteritems():
+        for ri in riskinputs:
+            if ri.imt != imt or taxonomy not in ri.assets_by_taxo:
+                continue
+            assets = ri.get_assets(taxonomy)
+            hazards = ri.get_hazard(taxonomy)
+            epsilons = ri.get_epsilons(taxonomy)
+            for loss_type in risk_model.loss_types:
+                yield loss_type, risk_model.workflow(
+                    loss_type, assets, hazards, epsilons)
 
 
 def calc_damage(riskinputs, risk_models):
@@ -185,14 +227,10 @@ def calc_damage(riskinputs, risk_models):
                  os.getpid(), len(riskinputs),
                  sum(ri.weight for ri in riskinputs))
     aggfractions = {}  # taxonomy -> aggfractions
-    for riskinput in riskinputs:
-        for ri in riskinput.split_by_taxonomy():
-            risk_model = risk_models[ri.imt, ri.taxonomy]
-            barefractions = risk_model.workflow(
-                'damage', ri.assets, ri.get_hazard())
-            for fraction, asset in zip(barefractions, ri.assets):
-                aggfractions = add_dicts(
-                    aggfractions, {ri.taxonomy: fraction * asset.number})
+    for loss_type, outs in gen_outputs(riskinputs, risk_models):
+        for asset, fraction in zip(*outs):
+            aggfractions = add_dicts(
+                aggfractions, {asset.taxonomy: fraction * asset.number})
     return aggfractions
 
 
@@ -202,15 +240,10 @@ def calc_scenario(riskinputs, risk_models):
                  sum(ri.weight for ri in riskinputs))
 
     result = {}  # agg_type, loss_type -> losses
-    for riskinput in riskinputs:
-        for ri in riskinput.split_by_taxonomy():
-            assets = ri.assets
-            risk_model = risk_models[ri.imt, ri.taxonomy]
-            for loss_type in risk_model.loss_types:
-                (loss_ratio_matrix, aggregate_losses,
-                 insured_loss_matrix, insured_losses) = risk_model.workflow(
-                    loss_type, assets, ri.get_hazard(), ri.get_epsilons())
-                result = add_dicts(result,
-                                   {('agg', loss_type): aggregate_losses,
-                                    ('ins', loss_type): insured_losses})
+    for loss_type, outs in gen_outputs(riskinputs, risk_models):
+        (_loss_ratio_matrix, aggregate_losses,
+         _insured_loss_matrix, insured_losses) = outs
+        result = add_dicts(result,
+                           {('agg', loss_type): aggregate_losses,
+                            ('ins', loss_type): insured_losses})
     return result
