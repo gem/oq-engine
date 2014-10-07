@@ -1,7 +1,7 @@
 import collections
 import numpy
 
-from openquake.hazardlib import geo, site, gsim
+from openquake.hazardlib import geo, site, gsim, correlation
 from openquake.nrmllib.node import read_nodes, LiteralNode, context
 from openquake.risklib.workflows import Asset
 
@@ -101,6 +101,18 @@ def get_gsim(oqparam):
     return GSIM[oqparam.gsim]()
 
 
+def get_correl_model(oqparam):
+    """
+    Return a correlation object. See :mod:`openquake.hazardlib.correlation`
+    for more info.
+    """
+    correl_name = getattr(oqparam, 'ground_motion_correlation_model', None)
+    if correl_name is None:  # no correlation model
+        return
+    correl_model_cls = getattr(correlation, '%sCorrelationModel' % correl_name)
+    return correl_model_cls(**oqparam.ground_motion_correlation_params)
+
+
 def get_rupture(oqparam):
     """
     Returns a hazardlib rupture by reading the `rupture_model` file.
@@ -164,6 +176,7 @@ class ExposureNode(LiteralNode):
         value=valid.positivefloat,
         deductible=valid.positivefloat,
         insuranceLimit=valid.positivefloat,
+        number=valid.positivefloat,
         location=valid.point2d,
     )
 
@@ -175,7 +188,7 @@ def get_exposure(oqparam):
     """
     relevant_cost_types = set(vulnerability_files(oqparam.inputs))
     fname = oqparam.inputs['exposure']
-    time_event = getattr(oqparam, 'time_event')
+    time_event = getattr(oqparam, 'time_event', None)
     for asset in read_nodes(fname,
                             lambda node: node.tag.endswith('asset'),
                             ExposureNode):
@@ -219,9 +232,9 @@ def get_sitecol_assets(oqparam):
     assets_by_loc = collections.defaultdict(list)
     for asset in get_exposure(oqparam):
         assets_by_loc[asset.location].append(asset)
-    coords = sorted((s.lon, s.lat) for s in assets_by_loc)
-    lons, lats = zip(*coords)
+    lons, lats = zip(*sorted(assets_by_loc))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
     sitecol = get_site_collection(oqparam, mesh)
-    return [(site, assets_by_loc[site.location.x, site.location.y])
-            for site in sitecol]
+    return sitecol, [
+        assets_by_loc[site.location.longitude, site.location.latitude]
+        for site in sitecol]

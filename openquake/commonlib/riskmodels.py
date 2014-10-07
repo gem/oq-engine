@@ -234,6 +234,9 @@ def get_risk_models(oqparam):
     Return a :class:`RiskModelDict` instance
     """
     risk_models = RiskModelDict()
+    if hasattr(oqparam, 'number_of_ground_motion_fields'):
+        risk_models.number_of_ground_motion_fields = \
+            oqparam.number_of_ground_motion_fields
 
     rit = getattr(oqparam, 'risk_investigation_time', None)
     if rit:  # defined for event based calculations
@@ -261,6 +264,7 @@ def get_risk_models(oqparam):
                 imt_taxo[0], imt_taxo[1], workflow)
     else:
         # classical, event based and scenario calculators
+        oqparam.__dict__.setdefault('insured_losses', False)
         for imt_taxo, vfs in get_vfs(oqparam.inputs).iteritems():
             workflow = workflows.get_workflow(
                 oqparam, vulnerability_functions=vfs)
