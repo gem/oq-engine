@@ -705,10 +705,8 @@ class Scenario(object):
             insured_loss_matrix = None
             insured_losses = None
 
-        return (assets, loss_ratio_matrix, aggregate_losses,
+        return (loss_ratio_matrix, aggregate_losses,
                 insured_loss_matrix, insured_losses)
-
-    compute_all_outputs = ProbabilisticEventBased.compute_all_outputs.im_func
 
 
 @registry.add('scenario_damage')
@@ -718,7 +716,7 @@ class Damage(object):
         # for API compatibility
         self.vulnerability_functions = fragility_functions
 
-    def __call__(self, gmfs):
+    def __call__(self, loss_type, assets, gmfs, _epsilons, _rupture_ids):
         """
         :param gmfs: an array of N x R elements
         :returns: an array of N x R x D elements
@@ -754,6 +752,65 @@ def get_workflow(oqparam, **extra):
             all_args[argname] = known_args[argname]
     all_args.update(extra)
     return workflow_class(**all_args)
+
+
+class RiskInput(object):
+    """
+    All the assets and hazard values associated to a given imt and site
+    """
+    def __init__(self, imt, site_id, hazard, assets):
+        self.imt = imt
+        self.site_id = site_id
+        self.hazard = hazard
+        self.assets_by_taxo = collections.defaultdict(list)
+        for asset in assets:
+            self.assets_by_taxo[asset.taxonomy].append(asset)
+        self.weight = len(assets)
+
+    @property
+    def taxonomy(self):
+        """
+        Return the taxonomy associated to the assets in the risk input
+        object, if it is unique; raise a ValueError otherwise.
+        """
+        num_taxonomies = len(self.assets_by_taxo)
+        if num_taxonomies == 0:
+            raise ValueError('The risk input object has no assets!')
+        elif num_taxonomies > 1:
+            raise ValueError('The risk input object has more than one '
+                             'taxonomy: %s' % self.assets_by_taxo.keys())
+        return self.assets_by_taxo.values()[0][0].taxonomy
+
+    @property
+    def assets(self):
+        """Return the assets, if there is a single taxonomy"""
+        return self.assets_by_taxo[self.taxonomy]
+
+    def split_by_taxonomy(self):
+        """
+        Split a risk input object with multiple taxonomies in sub objects
+        with a single taxonomy each
+        """
+        for taxonomy, assets in self.assets_by_taxo.iteritems():
+            yield self.__class__(self.imt, self.site_id, self.hazard, assets)
+
+    def get_hazard(self):
+        """
+        Return the underlying hazard as a list of N repeated arrays,
+        where N is the number of assets
+        """
+        return [self.hazard] * len(self.assets_by_taxo[self.taxonomy])
+
+    def get_epsilons(self):
+        """
+        Return the epsilons associated to the underlying assets as
+        a numpy array of N x E elements, where N is the number of assets
+        and E the number of events.
+        """
+        data = []
+        for asset in self.assets_by_taxo[self.taxonomy]:
+            data.append(asset.epsilons)
+        return numpy.array(data)
 
 
 class RiskModel(object):
