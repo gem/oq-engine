@@ -20,9 +20,16 @@ import collections
 import itertools
 import operator
 
+import numpy
+
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.calc import filters
+from openquake.hazardlib.calc import gmf, filters
 from openquake.hazardlib.site import SiteCollection
+from openquake.risklib import scientific, workflows
+
+from openquake.commonlib.parallel import apply_reduce
+from openquake.commonlib.readinput import get_gsim, get_rupture, \
+    get_sitecol_assets, get_risk_models
 
 
 SourceRuptureSites = collections.namedtuple(
@@ -82,65 +89,65 @@ def gen_ruptures_for_site(site, sources, maximum_distance, monitor):
         yield src, [row.rupture for row in rows]
 
 
-class RiskInput(object):
-    def __init__(self, imt, taxonomy, assets, gmvs, epsilons=None):
-        self.imt = imt
-        self.taxonomy = taxonomy
-        self.assets = assets
-        self.gmvs = gmvs
-        self.epsilons = epsilons
-
-    def get_hazards(self):
-        return [Hazard(self.imt, self.gmvs)]
-
-    def get_data(self):
-        return self.gmvs
-
-    def get_epsilons(self):
-        return self.epsilons
-
-
 def calc_gmfs(oqparam, sitecol, rupture=None, seed=None, realizations=None):
+    """
+    Build all the ground motion fields for the whole site collection in
+    a single step.
+    """
     max_dist = oqparam.maximum_distance
     correl_model = oqparam.correlation_model
     seed = oqparam.random_seed
     imts = map(from_string, sorted(oqparam.intensity_measure_and_types))
-    gsim = oqparam.gsim()
+    gsim = get_gsim(oqparam)
     trunc_level = getattr(oqparam, 'truncation_level', None)
     n_gmfs = getattr(oqparam, 'number_of_ground_motion_fields', 1)
     rupture = get_rupture(oqparam)
-    res = ground_motion_fields(
+    res = gmf.ground_motion_fields(
         rupture, sitecol, imts, gsim,
         trunc_level, realizations or n_gmfs, correl_model,
         filters.rupture_site_distance_filter(max_dist), seed)
     return {str(imt): matrix for imt, matrix in res.iteritems()}
 
 
-def make_epsilons(asset_count, num_samples, seed, correlation):
-    pass
+def make_epsilons(oqparam, asset_count):
+    """
+    Build all the epsilons for the asset of a given taxonomy in
+    a single step
+    """
+    num_samples = oqparam.number_of_ground_motion_fields
+    seed = oqparam.master_seed
+    correlation = getattr(oqparam, 'asset_correlation', 0)
+    return scientific.make_epsilons(
+        numpy.zeros(asset_count, num_samples),
+        seed, correlation)
 
 
-def compute_risk(oqparam, assets_by_site, seeds_by_site, risk_models, rupture,
-                 epsilons):
-    trunc_level = getattr(oqparam, 'truncation_level', None)
-    sites = []
-    assets_by_taxonomy = collections.defaultdict(list)
-    for site, assets in assets_by_site:
-        sites.append(site)
-        for asset in assets:
-            assets_by_taxonomy[asset.taxonomy].append(asset)
+def run_scenario(oqparam):
+    """
+    Run a scenario damage or scenario risk computation
+    """
+    sitecol, assets_by_site = get_sitecol_assets(oqparam)
+    gmfs_by_imt = calc_gmfs(oqparam, sitecol)
+    risk_inputs = []
+    for imt in gmfs_by_imt:
+        for site, assets, gmvs in zip(
+                sitecol, assets_by_site, gmfs_by_imt[imt]):
+            risk_inputs.append(workflows.RiskInput(imt, assets, gmvs))
 
-    sitecol = SiteCollection(sites)
-    imts = sorted(map(from_string, oqparam.intensity_measure_types_and_levels))
-    gsim = oqparam.gsim()
-    gmf = GmfComputer(rupture, sitecol, imts, [gsim], trunc_level)
-    gmvs_by_imt = [gmf.compute(seed) for seed in seeds_by_site]
-    for taxonomy in assets_by_taxonomy:
-        for imt in imts:
-            gmvs = map(operator.itemgetter(imt), gmvs_by_imt)
-            inp = RiskInput(
-                str(imt), taxonomy, assets_by_taxonomy[taxonomy], gmvs)
-            outs_by_loss_type = risk_models[imt, taxonomy].compute_outputs(
-                inp, monitor)
+    risk_models = get_risk_models(oqparam)
+    aggfractions = apply_reduce(calc_damage, (riskinputs, risk_models),
+                                key=lambda ri: ri.imt,
+                                weight=lambda ri: ri.weight)
+    print aggfractions
 
-    n = oqparam.number_of_ground_motion_fields
+
+def calc_damage(riskinputs, risk_models):
+    aggfractions = {}  # taxonomy -> aggfractions
+    for riskinput in riskinputs:
+        for ri in riskinput.split_by_taxonomy():
+            risk_model = risk_models[ri.imt, ri.taxonomy]
+            fractions = risk_model.workflow(ri.get_hazard())
+            aggfractions[ri.taxonomy] += sum(
+                fraction * asset.number_of_units
+                for fraction, asset in zip(fractions, ri.assets))
+    return aggfractions

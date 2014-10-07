@@ -1,7 +1,7 @@
 import collections
 import numpy
 
-from openquake.hazardlib import geo, site
+from openquake.hazardlib import geo, site, gsim
 from openquake.nrmllib.node import read_nodes, LiteralNode, context
 from openquake.risklib.workflows import Asset
 
@@ -11,6 +11,8 @@ from openquake.commonlib.oqvalidation import \
 from openquake.commonlib.riskmodels import \
     get_fragility_functions, get_imtls_from_vulnerabilities, get_vfs
 from openquake.commonlib.source import ValidNode, RuptureConverter
+
+GSIM = gsim.get_available_gsims()
 
 
 def get_mesh(oqparam):
@@ -91,6 +93,14 @@ def get_site_collection(oqparam, mesh=None, site_ids=None,
         mesh.lons, mesh.lats, site_ids, oqparam)
 
 
+def get_gsim(oqparam):
+    """
+    Return a GSIM instance from the gsim name in the configuration
+    file (defined for scenario computations).
+    """
+    return GSIM[oqparam.gsim]()
+
+
 def get_rupture(oqparam):
     """
     Returns a hazardlib rupture by reading the `rupture_model` file.
@@ -98,10 +108,10 @@ def get_rupture(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    conv = RuptureConverter(oqparam.rupture_mesh_spacing)
     rup_model = oqparam.inputs['rupture_model']
     rup_node, = read_nodes(rup_model, lambda el: 'Rupture' in el.tag,
                            ValidNode)
+    conv = RuptureConverter(oqparam.rupture_mesh_spacing)
     return conv.convert_node(rup_node)
 
 
