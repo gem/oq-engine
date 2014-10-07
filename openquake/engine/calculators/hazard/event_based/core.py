@@ -436,18 +436,21 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         """
         sitecol = self.site_collection
         sesruptures = []  # collect the ruptures in a fixed order
-        logs.LOG.info('reading ruptures')
         with self.monitor('reading ruptures'):
             for trt_model in models.TrtModel.objects.filter(
                     lt_model__hazard_calculation=self.job):
-                sesruptures.extend(
-                    models.SESRupture.objects.filter(
-                        rupture__ses_collection__trt_model=trt_model))
+                for sr in models.SESRupture.objects.filter(
+                        rupture__trt_model=trt_model):
+                    # adding the annotation below saves a LOT of memory
+                    # otherwise one would need as key in apply_reduce
+                    # lambda sr: sr.rupture.trt_model.id which would
+                    # read the world from the database
+                    sr.trt_id = trt_model.id
+                    sesruptures.append(sr)
         self.curves = tasks.apply_reduce(
             compute_gmfs_and_curves,
             (self.job.id, sesruptures, sitecol),
-            self.agg_curves, {},
-            key=lambda sr: sr.rupture.ses_collection.trt_model.id)
+            self.agg_curves, {}, key=lambda sr: sr.trt_id)
 
     def initialize_ses_db_records(self, trt_model, i):
         """
