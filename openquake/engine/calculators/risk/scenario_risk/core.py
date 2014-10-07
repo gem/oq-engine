@@ -56,14 +56,16 @@ def do_scenario(risk_model, risk_input, outputdict, monitor):
     """
     See `scenario` for a description of the input parameters
     """
-    out = risk_model.compute_outputs(risk_input, monitor.copy('getting data'))
+    assets = risk_input.assets
     agg, ins = {}, {}
-    for loss_type, [output] in out.iteritems():
+    for loss_type in risk_model.loss_types:
         outputdict = outputdict.with_args(
             loss_type=loss_type, output_type="loss_map")
 
-        (assets, loss_ratio_matrix, aggregate_losses,
-         insured_loss_matrix, insured_losses) = output.output
+        (loss_ratio_matrix, aggregate_losses,
+         insured_loss_matrix, insured_losses) = risk_model.workflow(
+            loss_type, assets, risk_input.get_data(),
+            risk_input.get_epsilons())
         agg[loss_type] = aggregate_losses
         ins[loss_type] = insured_losses
 
