@@ -704,7 +704,7 @@ class Scenario(object):
             insured_loss_matrix = None
             insured_losses = None
 
-        return (loss_ratio_matrix, aggregate_losses,
+        return (assets, loss_ratio_matrix, aggregate_losses,
                 insured_loss_matrix, insured_losses)
 
 

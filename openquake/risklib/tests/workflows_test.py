@@ -246,7 +246,7 @@ class ScenarioTestCase(unittest.TestCase):
         calc.vulnerability_functions[self.loss_type].apply_to = mock.Mock(
             return_value=numpy.empty((4, 2)))
 
-        (loss_ratio_matrix, aggregate_losses,
+        (_assets, loss_ratio_matrix, aggregate_losses,
          insured_loss_matrix, insured_losses) = \
             calc(self.loss_type, assets, mock.Mock(), mock.Mock())
 
@@ -263,7 +263,7 @@ class ScenarioTestCase(unittest.TestCase):
         vf = calc.vulnerability_functions[self.loss_type]
         vf.apply_to = mock.Mock(return_value=numpy.empty((4, 2)))
 
-        (loss_ratio_matrix, aggregate_losses,
+        (_assets, loss_ratio_matrix, aggregate_losses,
          insured_loss_matrix, insured_losses) = (
             calc(self.loss_type, assets, mock.Mock(), mock.Mock()))
 
