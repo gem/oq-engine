@@ -145,7 +145,6 @@ def calc_gmfs(oqparam, sitecol):
     res = collections.defaultdict(list)
     for seed in seeds:
         for (_gname, imt), gmvs in computer.compute(seed):
-            print seed, imt, gmvs
             res[imt].append(gmvs)
     return {imt: numpy.array(matrix).T for imt, matrix in res.iteritems()}
 
@@ -203,7 +202,6 @@ def run_scenario(oqparam):
     else:
         raise NotImplementedError
     return apply_reduce(calc, (risk_inputs, risk_models),
-                        concurrent_tasks=0,
                         agg=add_dicts, acc={},
                         key=lambda ri: ri.imt,
                         weight=lambda ri: ri.weight)
