@@ -65,7 +65,7 @@ def do_scenario(risk_model, risk_input, outputdict, monitor):
         (loss_ratio_matrix, aggregate_losses,
          insured_loss_matrix, insured_losses) = risk_model.workflow(
             loss_type, assets, risk_input.get_data(),
-            risk_input.get_epsilons())
+            risk_input.get_epsilons(), None)
         agg[loss_type] = aggregate_losses
         ins[loss_type] = insured_losses
 

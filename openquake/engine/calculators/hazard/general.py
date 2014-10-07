@@ -203,16 +203,11 @@ class BaseHazardCalculator(base.Calculator):
         self.num_ruptures = collections.defaultdict(int)
         # now a dictionary (trt_model_id, gsim) -> poes
         self.curves = {}
-        self._hc = None
-
-    @property
-    def hc(self):
-        """
-        A shorter and more convenient way of accessing the oqparam object
-        """
-        if self._hc is None:
-            self._hc = models.oqparam(self.job.id)
-        return self._hc
+        self.hc = models.oqparam(self.job.id)
+        self.mean_hazard_curves = getattr(
+            self.hc, 'mean_hazard_curves', None)
+        self.quantile_hazard_curves = getattr(
+            self.hc, 'quantile_hazard_curves', ())
 
     @EnginePerformanceMonitor.monitor
     def process_sources(self):
@@ -672,8 +667,7 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
                 curves_by_imt[imt].append(curves)
 
         self.curves = {}  # save memory for the post-processing phase
-        if getattr(self.hc, 'mean_hazard_curves', None) or \
-                getattr(self.hc, 'quantile_hazard_curves', None):
+        if self.mean_hazard_curves or self.quantile_hazard_curves:
             self.curves_by_imt = curves_by_imt
 
     def save_curves_for_rlz_imt(self, rlz, imt, imls, points, curves):
@@ -735,7 +729,7 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
             logs.LOG.warn('No realizations for hazard_calculation_id=%d',
                           self.job.id)
             return
-        elif num_rlzs == 1 and self.hc.quantile_hazard_curves:
+        elif num_rlzs == 1 and self.quantile_hazard_curves:
             logs.LOG.warn(
                 'There is only one realization, the configuration parameter '
                 'quantile_hazard_curves should not be set')
@@ -752,18 +746,17 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
                 imt=None,
                 investigation_time=self.hc.investigation_time)
 
-        if self.hc.quantile_hazard_curves:
-            for quantile in self.hc.quantile_hazard_curves:
-                # create a new `HazardCurve` 'container' record for quantile
-                # curves (virtual container for multiple imts)
-                models.HazardCurve.objects.create(
-                    output=models.Output.objects.create_output(
-                        self.job, 'quantile(%s)-curves' % quantile,
-                        "hazard_curve_multi"),
-                    statistics="quantile",
-                    imt=None,
-                    quantile=quantile,
-                    investigation_time=self.hc.investigation_time)
+        for quantile in self.quantile_hazard_curves:
+            # create a new `HazardCurve` 'container' record for quantile
+            # curves (virtual container for multiple imts)
+            models.HazardCurve.objects.create(
+                output=models.Output.objects.create_output(
+                    self.job, 'quantile(%s)-curves' % quantile,
+                    "hazard_curve_multi"),
+                statistics="quantile",
+                imt=None,
+                quantile=quantile,
+                investigation_time=self.hc.investigation_time)
 
         for imt, imls in self.hc.intensity_measure_types_and_levels.items():
             im_type, sa_period, sa_damping = from_string(imt)
@@ -787,26 +780,25 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
                 )
                 container_ids['mean'] = mean_hc.id
 
-            if self.hc.quantile_hazard_curves:
-                for quantile in self.hc.quantile_hazard_curves:
-                    q_output = models.Output.objects.create_output(
-                        job=self.job,
-                        display_name=(
-                            '%s quantile Hazard Curves %s' % (quantile, imt)
-                        ),
-                        output_type='hazard_curve'
-                    )
-                    q_hc = models.HazardCurve.objects.create(
-                        output=q_output,
-                        investigation_time=self.hc.investigation_time,
-                        imt=im_type,
-                        imls=imls,
-                        sa_period=sa_period,
-                        sa_damping=sa_damping,
-                        statistics='quantile',
-                        quantile=quantile
-                    )
-                    container_ids['q%s' % quantile] = q_hc.id
+            for quantile in self.quantile_hazard_curves:
+                q_output = models.Output.objects.create_output(
+                    job=self.job,
+                    display_name=(
+                        '%s quantile Hazard Curves %s' % (quantile, imt)
+                    ),
+                    output_type='hazard_curve'
+                )
+                q_hc = models.HazardCurve.objects.create(
+                    output=q_output,
+                    investigation_time=self.hc.investigation_time,
+                    imt=im_type,
+                    imls=imls,
+                    sa_period=sa_period,
+                    sa_damping=sa_damping,
+                    statistics='quantile',
+                    quantile=quantile
+                )
+                container_ids['q%s' % quantile] = q_hc.id
 
             # num_rlzs * num_sites * num_levels
             # NB: different IMTs can have different num_levels
@@ -823,26 +815,25 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
                     [c_by_rlz[i] for c_by_rlz in all_curves_for_imt])
                 # do means and quantiles
                 # quantiles first:
-                if self.hc.quantile_hazard_curves:
-                    for quantile in self.hc.quantile_hazard_curves:
-                        if self.hc.number_of_logic_tree_samples == 0:
-                            # explicitly weighted quantiles
-                            q_curve = weighted_quantile_curve(
-                                curve_poes, weights, quantile)
-                        else:
-                            # implicitly weighted quantiles
-                            q_curve = quantile_curve(
-                                curve_poes, quantile)
-                        inserter.add(
-                            models.HazardCurveData(
-                                hazard_curve_id=(
-                                    container_ids['q%s' % quantile]),
-                                poes=q_curve.tolist(),
-                                location=wkt)
-                        )
+                for quantile in self.quantile_hazard_curves:
+                    if self.hc.number_of_logic_tree_samples == 0:
+                        # explicitly weighted quantiles
+                        q_curve = weighted_quantile_curve(
+                            curve_poes, weights, quantile)
+                    else:
+                        # implicitly weighted quantiles
+                        q_curve = quantile_curve(
+                            curve_poes, quantile)
+                    inserter.add(
+                        models.HazardCurveData(
+                            hazard_curve_id=(
+                                container_ids['q%s' % quantile]),
+                            poes=q_curve.tolist(),
+                            location=wkt)
+                    )
 
                 # then means
-                if self.hc.mean_hazard_curves:
+                if self.mean_hazard_curves:
                     m_curve = mean_curve(curve_poes, weights=weights)
                     inserter.add(
                         models.HazardCurveData(
@@ -858,8 +849,7 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
         uniform_hazard_spectra.
         """
         # means/quantiles:
-        if getattr(self.hc, 'mean_hazard_curves', None) or \
-                getattr(self.hc, 'quantile_hazard_curves', None):
+        if self.mean_hazard_curves or self.quantile_hazard_curves:
             self.do_aggregate_post_proc()
 
         # hazard maps:
