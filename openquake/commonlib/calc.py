@@ -101,8 +101,9 @@ def add_dicts(acc, dic):
     Add two dictionaries
     """
     new = acc.copy()
-    return {k: new.get(k, 0) + (0 if v is None else v)
-            for k, v in dic.iteritems()}
+    for k, v in dic.iteritems():
+        new[k] = new.get(k, 0) + 0 if v is None else v
+    return new
 
 
 def calc_gmfs(oqparam, sitecol):
@@ -144,7 +145,8 @@ def add_epsilons(assets_by_site, num_samples, seed, correlation):
 
 def run_scenario(oqparam):
     """
-    Run a scenario damage or scenario risk computation
+    Run a scenario damage or scenario risk computation and returns
+    the result dictionary.
     """
     logging.info('Reading the exposure')
     sitecol, assets_by_site = get_sitecol_assets(oqparam)
@@ -162,11 +164,12 @@ def run_scenario(oqparam):
 
     risk_models = get_risk_models(oqparam)
     if oqparam.calculation_mode == 'scenario_risk':
-        calc = calc_scenario
+        # build the epsilon matrix and add the epsilons to the assets
         num_samples = oqparam.number_of_ground_motion_fields
         seed = getattr(oqparam, 'master_seed', 42)
         correlation = getattr(oqparam, 'asset_correlation', 0)
         add_epsilons(assets_by_site, num_samples, seed, correlation)
+        calc = calc_scenario
     elif oqparam.calculation_mode == 'scenario_damage':
         calc = calc_damage
     else:
@@ -181,18 +184,15 @@ def calc_damage(riskinputs, risk_models):
     logging.info('Process %d, considering %d risk input(s) of weight %d',
                  os.getpid(), len(riskinputs),
                  sum(ri.weight for ri in riskinputs))
-    n = risk_models.number_of_ground_motion_fields
-    d = len(risk_models.damage_states)
     aggfractions = {}  # taxonomy -> aggfractions
     for riskinput in riskinputs:
         for ri in riskinput.split_by_taxonomy():
-            if ri.taxonomy not in aggfractions:
-                aggfractions[ri.taxonomy] = numpy.zeros((n, d))
             risk_model = risk_models[ri.imt, ri.taxonomy]
             barefractions = risk_model.workflow(
-                'damage', ri.assets, ri.get_hazard(), None, None)
+                'damage', ri.assets, ri.get_hazard())
             for fraction, asset in zip(barefractions, ri.assets):
-                aggfractions[ri.taxonomy] += fraction * asset.number
+                aggfractions = add_dicts(
+                    aggfractions, {ri.taxonomy: fraction * asset.number})
     return aggfractions
 
 

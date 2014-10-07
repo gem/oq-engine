@@ -234,9 +234,6 @@ def get_risk_models(oqparam):
     Return a :class:`RiskModelDict` instance
     """
     risk_models = RiskModelDict()
-    if hasattr(oqparam, 'number_of_ground_motion_fields'):
-        risk_models.number_of_ground_motion_fields = \
-            oqparam.number_of_ground_motion_fields
 
     rit = getattr(oqparam, 'risk_investigation_time', None)
     if rit:  # defined for event based calculations
