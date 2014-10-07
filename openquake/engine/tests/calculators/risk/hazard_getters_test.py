@@ -20,6 +20,8 @@ import unittest
 import cPickle as pickle
 
 from openquake.engine.db import models
+from openquake.engine.calculators.hazard.scenario.core import \
+    create_db_ruptures
 from openquake.engine.calculators.risk import hazard_getters
 from openquake.engine.calculators.risk.base import RiskCalculator
 
@@ -49,7 +51,7 @@ class HazardCurveInputTestCase(unittest.TestCase):
         calc.pre_execute()
 
         self.builder = hazard_getters.HazardRiskBridge(
-            calc.rc.hazard_outputs(), self.taxonomy, self.job.risk_calculation)
+            self.taxonomy, calc.rc)
 
         assocs = models.AssetSite.objects.filter(job=self.job)
         self.assets = models.ExposureData.objects.get_asset_chunk(
@@ -57,7 +59,7 @@ class HazardCurveInputTestCase(unittest.TestCase):
         self.nbytes = self.builder.calc_nbytes()
         self.builder.init_epsilons()
         self.risk_input = self.risk_input_class(
-            self.imt, self.builder, self.assets)
+            self.imt, self.taxonomy, calc.rc.hazard_outputs(), self.assets)
         self.risk_input.__enter__()
 
     def test_nbytes(self):
@@ -115,8 +117,8 @@ class ScenarioTestCase(GroundMotionInputTestCase):
     taxonomy = 'RM'
 
     def test_nbytes(self):
-        # 10 realizations * 1 asset
-        self.assertEqual(len(self.risk_input.rupture_ids), 10)
+        # I am not populating the table ses_rupture
+        self.assertEqual(len(self.risk_input.rupture_ids), 0)
         self.assertEqual(self.nbytes, 80)
 
     def test_call(self):
@@ -125,6 +127,8 @@ class ScenarioTestCase(GroundMotionInputTestCase):
         # maximum distance; there are 10 realizations
         a1, = self.assets
         self.assertEqual(self.risk_input.assets, [a1])
-        data = self.risk_input.get_data()
-        expected = [[0.1, 0.2, 0.3] + [0] * 7]
-        numpy.testing.assert_allclose(expected, data)
+        [hazard] = self.risk_input.hazards.values()
+        self.assertEqual(hazard.values()[0], {0: 0.1, 1: 0.2, 2: 0.3})
+
+        # NB: since I am not populating the table ses_rupture,
+        # self.risk_input.get_data() is empty

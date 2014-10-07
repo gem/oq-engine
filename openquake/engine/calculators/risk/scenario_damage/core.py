@@ -63,10 +63,10 @@ def scenario_damage(job_id, risk_model, risk_input, outputdict, params):
     with db.transaction.commit_on_success(using='job_init'):
 
         with monitor.copy('computing risk'):
-            fractions = risk_model.workflow(
+            assets, fractions = risk_model.workflow(
                 'damage', risk_input.assets, risk_input.get_data(), None)
             aggfractions = sum(fractions[i] * asset.number_of_units
-                               for i, asset in enumerate(risk_input.assets))
+                               for i, asset in enumerate(assets))
 
         with monitor.copy('saving damage per assets'):
             writers.damage_distribution(

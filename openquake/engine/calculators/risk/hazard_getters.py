@@ -142,7 +142,7 @@ class RiskInput(object):
 
     def __repr__(self):
         eps = getattr(self, 'epsilons', None)
-        eps = ', %s epsilons' % str(eps.shape) if eps else ''
+        eps = '' if eps is None else ', %s epsilons' % str(eps.shape)
         return "<%s %d assets%s, taxonomy=%s>" % (
             self.__class__.__name__, len(self.assets), eps,
             self.taxonomy)
@@ -243,7 +243,6 @@ class GroundMotionInput(RiskInput):
         for sc in sescolls:
             self.rupture_ids.extend(
                 sc.get_ruptures().values_list('id', flat=True))
-
         epsilon_rows = []  # ordered by asset_site_id
         for asset_site_id in self.asset_site_ids:
             row = []
