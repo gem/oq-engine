@@ -53,12 +53,15 @@ def _compute_small_mag_correction_term(C, mag, imt, rhypo):
         return 1
 
 
-def _compute_phi_ss(C, rup, c1_rrup, imt, log_phi_ss):
+def _compute_phi_ss(C, mag, c1_rrup, log_phi_ss, mean_phi_ss):
     """
-    Return phi_ss coeffs as function of magnitude as
-    proposed by Rodriguez-Marek et al (2013)
-    The phi_ss coeff are used to compute the single station sigma
-    phi_ss natural logarithm units
+    Returns the embeded logic tree for single station sigma
+    as defined to be used in the Swiss Hazard Model 2014:
+    the single station sigma branching levels combines with equal
+    weights: the phi_ss reported as function of magnitude
+    as proposed by Rodriguez-Marek et al (2013) with the mean
+    (mean_phi_ss) single station value;
+    the resulted phi_ss is in natural logarithm units
     """
 
     phi_ss = 0
@@ -73,7 +76,7 @@ def _compute_phi_ss(C, rup, c1_rrup, imt, log_phi_ss):
     elif rup.mag > C['Mc2']:
         phi_ss = C['C2']
 
-    return (phi_ss / log_phi_ss)
+    return (phi_ss * 0.50 + mean_phi_ss * 0.50) / log_phi_ss
 
 
 def _get_corr_stddevs(C, tau_ss, stddev_types, num_sites, phi_ss):
@@ -97,14 +100,15 @@ def _apply_adjustments(COEFFS, C_ADJ, tau_ss, mean, stddevs, sites, rup, dists,
                        imt, stddev_types, log_phi_ss):
     """
     This method applies adjustments to the mean and standard deviation.
-    The small-magnitude adjustments are applied to mean, whereas the single
-    station sigma is applied to the standard deviation.
+    The small-magnitude adjustments are applied to mean, whereas the 
+    embeded single station sigma logic tree is applied to the
+    total standard deviation.
     """
-    c1_rrup = _compute_C1_term(C_ADJ, imt, dists)
-    phi_ss = _compute_phi_ss(C_ADJ, rup, c1_rrup, imt, log_phi_ss)
+    c1_rrup = _compute_C1_term(C_ADJ, dists)
+    phi_ss = _compute_phi_ss(C_ADJ, rup.mag, c1_rrup, log_phi_ss, C_ADJ['mean_phi_ss'])
 
     mean_corr = np.exp(mean) * C_ADJ['k_adj'] * \
-        _compute_small_mag_correction_term(C_ADJ, rup.mag, imt, dists)
+        _compute_small_mag_correction_term(C_ADJ, rup.mag, dists)
 
     mean_corr = np.log(mean_corr)
 

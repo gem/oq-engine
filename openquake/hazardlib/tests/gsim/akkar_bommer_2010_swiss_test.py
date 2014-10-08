@@ -30,8 +30,8 @@ class AkkarBommer2010SWISS01TestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.50)
 
     def test_std_total(self):
-        self.check('AKBO10Swiss/AK10_STD_TOTAL_SigmaSS-TMR.csv',
-                   max_discrep_percentage=0.10)
+        self.check('AKBO10Swiss/ak2010_phi_ss_embeded.csv',
+                   max_discrep_percentage=0.50)
 
 
 class AkkarBommer2010SWISS04TestCase(BaseGSIMTestCase):
@@ -42,8 +42,8 @@ class AkkarBommer2010SWISS04TestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.50)
 
     def test_std_total(self):
-        self.check('AKBO10Swiss/AK10_STD_TOTAL_SigmaSS-TMR.csv',
-                   max_discrep_percentage=0.10)
+        self.check('AKBO10Swiss/ak2010_phi_ss_embeded.csv',
+                   max_discrep_percentage=0.50)
 
 
 class AkkarBommer2010SWISS08TestCase(BaseGSIMTestCase):
@@ -54,5 +54,5 @@ class AkkarBommer2010SWISS08TestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.50)
 
     def test_std_total(self):
-        self.check('AKBO10Swiss/AK10_STD_TOTAL_SigmaSS-TMR.csv',
-                   max_discrep_percentage=0.10)
+        self.check('AKBO10Swiss/ak2010_phi_ss_embeded.csv',
+                   max_discrep_percentage=0.50)
