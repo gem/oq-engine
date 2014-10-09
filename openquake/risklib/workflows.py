@@ -47,7 +47,8 @@ class Asset(object):
                  values,
                  deductibles=None,
                  insurance_limits=None,
-                 retrofitting_values=None):
+                 retrofitting_values=None,
+                 epsilons=None):
         """
         :param asset_id:
             an unique identifier of the assets within the given exposure
@@ -76,6 +77,7 @@ class Asset(object):
         self.retrofitting_values = retrofitting_values
         self.deductibles = deductibles
         self.insurance_limits = insurance_limits
+        self.epsilons = epsilons
 
     def value(self, loss_type):
         """
