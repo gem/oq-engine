@@ -38,7 +38,7 @@ def _compute_C1_term(C, dists):
     return c1_dists
 
 
-def _compute_small_mag_correction_term(C, mag, imt, rhypo):
+def _compute_small_mag_correction_term(C, mag, rhypo):
     """
     small magnitude correction applied to the median values
     """
