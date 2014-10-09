@@ -338,7 +338,7 @@ class BaseHazardCalculator(base.Calculator):
         # without rollback, see
         # https://docs.djangoproject.com/en/1.3/topics/db/transactions/
         with transaction.commit_on_success(using='job_init'):
-            self.parse_risk_models()
+            self.parse_risk_model()
         with transaction.commit_on_success(using='job_init'):
             self.initialize_site_collection()
         with transaction.commit_on_success(using='job_init'):
@@ -491,7 +491,7 @@ python -m openquake.engine.tools.correct_complex_sources %s
                 self.source_collector[trt_model_id] = sc
 
     @EnginePerformanceMonitor.monitor
-    def parse_risk_models(self):
+    def parse_risk_model(self):
         """
         If any risk model is given in the hazard calculation, the
         computation will be driven by risk data. In this case the

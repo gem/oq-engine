@@ -154,7 +154,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         # without rollback, see
         # https://docs.djangoproject.com/en/1.3/topics/db/transactions/
         with transaction.commit_on_success(using='job_init'):
-            self.parse_risk_models()
+            self.parse_risk_model()
         with transaction.commit_on_success(using='job_init'):
             self.initialize_site_collection()
         with transaction.commit_on_success(using='job_init'):

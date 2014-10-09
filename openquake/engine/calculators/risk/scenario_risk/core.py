@@ -30,13 +30,13 @@ from openquake.engine.utils import tasks
 
 
 @tasks.oqtask
-def scenario(job_id, risk_model, risk_input, outputdict, _params):
+def scenario(job_id, workflow, risk_input, outputdict, _params):
     """
     Celery task for the scenario risk calculator.
 
     :param int job_id:
       ID of the currently running job
-    :param list risk_model:
+    :param list workflow:
       A :class:`openquake.risklib.workflows.RiskModel` instance
     :param risk_input:
       A RiskInput instance
@@ -49,10 +49,10 @@ def scenario(job_id, risk_model, risk_input, outputdict, _params):
     """
     monitor = EnginePerformanceMonitor(None, job_id, scenario, tracing=True)
     with db.transaction.commit_on_success(using='job_init'):
-        return do_scenario(risk_model, risk_input, outputdict, monitor)
+        return do_scenario(workflow, risk_input, outputdict, monitor)
 
 
-def do_scenario(risk_model, risk_input, outputdict, monitor):
+def do_scenario(workflow, risk_input, outputdict, monitor):
     """
     See `scenario` for a description of the input parameters
     """
@@ -60,12 +60,12 @@ def do_scenario(risk_model, risk_input, outputdict, monitor):
     hazards = risk_input.get_data()
     epsilons = risk_input.get_epsilons()
     agg, ins = {}, {}
-    for loss_type in risk_model.loss_types:
+    for loss_type in workflow.loss_types:
         outputdict = outputdict.with_args(
             loss_type=loss_type, output_type="loss_map")
 
         (assets, loss_ratio_matrix, aggregate_losses,
-         insured_loss_matrix, insured_losses) = risk_model.workflow(
+         insured_loss_matrix, insured_losses) = workflow(
             loss_type, assets, hazards, epsilons)
         agg[loss_type] = aggregate_losses
         ins[loss_type] = insured_losses

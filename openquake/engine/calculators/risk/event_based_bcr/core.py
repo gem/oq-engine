@@ -20,8 +20,7 @@ from django.db import transaction
 
 from openquake.risklib import workflows
 
-from openquake.engine.calculators.risk import (
-    hazard_getters, writers, validation)
+from openquake.engine.calculators.risk import writers, validation
 from openquake.engine.calculators.risk.event_based_risk \
     import core as event_based
 from openquake.engine.performance import EnginePerformanceMonitor
@@ -29,7 +28,7 @@ from openquake.engine.utils import tasks
 
 
 @tasks.oqtask
-def event_based_bcr(job_id, risk_model, risk_input, outputdict, _params):
+def event_based_bcr(job_id, workflow, risk_input, outputdict, _params):
     """
     Celery task for the BCR risk calculator based on the event based
     calculator.
@@ -39,7 +38,7 @@ def event_based_bcr(job_id, risk_model, risk_input, outputdict, _params):
 
     :param int job_id:
       ID of the currently running job
-    :param risk_model:
+    :param workflow:
       A :class:`openquake.risklib.workflows.RiskModel` instance
     :param risk_input:
       A RiskInput instance
@@ -56,20 +55,21 @@ def event_based_bcr(job_id, risk_model, risk_input, outputdict, _params):
     # Do the job in other functions, such that it can be unit tested
     # without the celery machinery
     with transaction.commit_on_success(using='job_init'):
-            do_event_based_bcr(risk_model, risk_input, outputdict, monitor)
+            do_event_based_bcr(workflow, risk_input, outputdict, monitor)
 
 
-def do_event_based_bcr(risk_model, risk_input, outputdict, monitor):
+def do_event_based_bcr(workflow, risk_input, outputdict, monitor):
     """
     See `event_based_bcr` for docstring
     """
-    out = risk_model.compute_outputs(risk_input, monitor.copy('getting hazard'))
-    for loss_type, outputs in out.iteritems():
+    for loss_type in workflow.loss_types:
+        outputs = workflow.compute_all_outputs(
+            risk_input, loss_type, monitor.copy('getting hazard'))
         outputdict = outputdict.with_args(loss_type=loss_type)
         with monitor.copy('writing results'):
             for out in outputs:
                 outputdict.write(
-                    risk_model.workflow.assets,
+                    workflow.assets,
                     out.output,
                     output_type="bcr_distribution",
                     hazard_output_id=out.hid)
