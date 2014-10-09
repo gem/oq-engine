@@ -108,8 +108,21 @@ class Asset(object):
         return '<Asset %s>' % self.id
 
 
+class Workflow(object):
+    """
+    Abstract base class
+    """
+    @property
+    def loss_types(self):
+        """
+        The list of loss types in the underlying vulnerability functions,
+        in lexicographic order
+        """
+        return sorted(self.vulnerability_functions)
+
+
 @registry.add('classical_risk')
-class Classical(object):
+class Classical(Workflow):
     """
     Classical PSHA-Based Workflow.
 
@@ -336,7 +349,7 @@ class Classical(object):
 
 
 @registry.add('event_based_risk')
-class ProbabilisticEventBased(object):
+class ProbabilisticEventBased(Workflow):
     """
     Implements the Probabilistic Event Based workflow
 
@@ -584,7 +597,7 @@ class ProbabilisticEventBased(object):
 
 
 @registry.add('classical_bcr')
-class ClassicalBCR(object):
+class ClassicalBCR(Workflow):
     def __init__(self,
                  vulnerability_functions_orig,
                  vulnerability_functions_retro,
@@ -630,7 +643,7 @@ class ClassicalBCR(object):
 
 
 @registry.add('event_based_bcr')
-class ProbabilisticEventBasedBCR(object):
+class ProbabilisticEventBasedBCR(Workflow):
     def __init__(self,
                  vulnerability_functions_orig,
                  vulnerability_functions_retro,
@@ -673,7 +686,7 @@ class ProbabilisticEventBasedBCR(object):
 
 
 @registry.add('scenario_risk')
-class Scenario(object):
+class Scenario(Workflow):
     """
     Implements the Scenario workflow
     """
@@ -711,7 +724,7 @@ class Scenario(object):
 
 
 @registry.add('scenario_damage')
-class Damage(object):
+class Damage(Workflow):
     def __init__(self, fragility_functions):
         # NB: we call the fragility_functions vulnerability_functions
         # for API compatibility
@@ -734,6 +747,11 @@ class Damage(object):
         return assets, outs
 
 
+# NB: the approach used here relies on the convention of having the
+# names of the arguments of the workflow class to be equal to the
+# names of the parameter in the oqparam object. This is view as a
+# feature, since it forces people to be consistent with the names,
+# in the spirit of the 'convention over configuration' philosophy
 def get_workflow(oqparam, **extra):
     """
     Return an instance of the correct workflow class, depending on the
@@ -759,7 +777,8 @@ def get_workflow(oqparam, **extra):
 
 class RiskInput(object):
     """
-    All the assets and hazard values associated to a given imt and site
+    Contains all the assets and hazard values associated to a given
+    imt and site.
     """
     def __init__(self, imt, site_id, hazard, assets):
         self.imt = imt
@@ -788,7 +807,7 @@ class RiskInput(object):
         """Return the assets, if there is a single taxonomy"""
         return self.assets_by_taxo[taxonomy or self.taxonomy]
 
-    def get_hazard(self, taxonomy=None):
+    def get_hazards(self, taxonomy=None):
         """
         Return the underlying hazard as a list of N repeated arrays,
         where N is the number of assets
@@ -805,62 +824,33 @@ class RiskInput(object):
                             for asset in self.get_assets(taxonomy)])
 
 
-class RiskModel(object):
+class RiskModel(collections.Mapping):
     """
-    Container for the attributes imt, taxonomy and workflow.
+    A container (imt, taxonomy) -> workflow
     """
-    def __init__(self, imt, taxonomy, workflow):
-        self.imt = imt
-        self.taxonomy = taxonomy
-        self.workflow = workflow
+    def __init__(self, workflows, damage_states=None):
+        self.damage_states = damage_states  # not None for damage calculations
+        self._workflows = workflows
 
-    @property
-    def loss_types(self):
-        """
-        The list of loss types in the underlying vulnerability functions,
-        in lexicographic order
-        """
-        return sorted(self.workflow.vulnerability_functions)
+    def __getitem__(self, imt_taxo):
+        return self._workflows[imt_taxo]
 
-    @property
-    def vulnerability_functions(self):
-        """
-        The list of the underlying vulnerability functions, in order
-        """
-        return [self.workflow.vulnerability_functions[lt]
-                for lt in self.loss_types]
+    def __iter__(self):
+        return iter(sorted(self._workflows))
 
-    def compute_outputs(self, risk_input, getter_monitor):
-        """
-        :param risk_input:
-            a risk_input object
-        :param getter_monitor:
-            a context manager monitoring the time and resources
-            spent the in the computation
-        :returns:
-            a dictionary with the outputs corresponding to the
-            hazard realizations, keyed by the loss type
-        """
-        return dict((loss_type, self.workflow.compute_all_outputs(
-                    risk_input, loss_type, getter_monitor))
-                    for loss_type in self.loss_types)
+    def __len__(self):
+        return len(self._workflows)
 
-    def compute_stats(self, outputs, quantiles, post_processing):
+    def gen_outputs(self, riskinputs):
         """
-        :param outputs:
-            output returned by compute_outputs for a given loss type
-        :param quantiles:
-            quantile levels used to compute quantile outputs
-        :param post_processing:
-            an object implementing the following protocol:
-            #mean_curve(curves, weights)
-            #weighted_quantile_curve(curves, weights, quantile)
-            #quantile_curve(curves, quantile)
-        :returns:
-            a dictionary with the stats corresponding to the
-            hazard realizations, keyed by the loss type.
-            If there is a single realization, the stats are None.
+        Yield the output generated by each risk input and loss type
         """
-        return dict((loss_type, self.workflow.statistics(
-                    outputs[loss_type], quantiles, post_processing))
-                    for loss_type in outputs)
+        for (imt, taxonomy), workflow in self.iteritems():
+            for ri in riskinputs:
+                if imt == ri.imt and taxonomy in ri.assets_by_taxo:
+                    assets = ri.get_assets(taxonomy)
+                    hazards = ri.get_hazards(taxonomy)
+                    epsilons = ri.get_epsilons(taxonomy)
+                    for loss_type in workflow.loss_types:
+                        yield loss_type, workflow(
+                            loss_type, assets, hazards, epsilons)
