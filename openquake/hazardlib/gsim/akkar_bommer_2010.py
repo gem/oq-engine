@@ -140,7 +140,7 @@ class AkkarBommer2010(GMPE):
             elif stddev_type == const.StdDev.INTRA_EVENT:
                 stddevs.append(C['Sigma1'] + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(C['Sigma2'] + np.zeros(num_sites))
+                stddevs.append(C['tau'] + np.zeros(num_sites))
         return stddevs
 
     def _compute_magnitude(self, rup, C):
