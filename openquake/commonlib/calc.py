@@ -208,16 +208,17 @@ def run_scenario(oqparam):
 
 
 def gen_outputs(riskinputs, risk_models):
+    """
+    """
     for (imt, taxonomy), risk_model in risk_models.iteritems():
         for ri in riskinputs:
-            if ri.imt != imt or taxonomy not in ri.assets_by_taxo:
-                continue
-            assets = ri.get_assets(taxonomy)
-            hazards = ri.get_hazard(taxonomy)
-            epsilons = ri.get_epsilons(taxonomy)
-            for loss_type in risk_model.loss_types:
-                yield loss_type, risk_model.workflow(
-                    loss_type, assets, hazards, epsilons)
+            if ri.imt == imt and taxonomy in ri.assets_by_taxo:
+                assets = ri.get_assets(taxonomy)
+                hazards = ri.get_hazard(taxonomy)
+                epsilons = ri.get_epsilons(taxonomy)
+                for loss_type in risk_model.loss_types:
+                    yield loss_type, risk_model.workflow(
+                        loss_type, assets, hazards, epsilons)
 
 
 def calc_damage(riskinputs, risk_models):
@@ -239,7 +240,7 @@ def calc_scenario(riskinputs, risk_models):
 
     result = {}  # agg_type, loss_type -> losses
     for loss_type, outs in gen_outputs(riskinputs, risk_models):
-        (_loss_ratio_matrix, aggregate_losses,
+        (_assets, _loss_ratio_matrix, aggregate_losses,
          _insured_loss_matrix, insured_losses) = outs
         result = add_dicts(result,
                            {('agg', loss_type): aggregate_losses,
