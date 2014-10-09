@@ -110,8 +110,11 @@ class Asset(object):
 
 class Workflow(object):
     """
-    Abstract base class
+    Base class. Can be used in the tests as a mock.
     """
+    def __init__(self, vulnerability_functions):
+        self.vulnerability_functions = vulnerability_functions
+
     @property
     def loss_types(self):
         """
