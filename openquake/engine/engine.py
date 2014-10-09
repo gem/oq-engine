@@ -45,7 +45,7 @@ from openquake import hazardlib
 from openquake import risklib
 from openquake import nrmllib
 
-from openquake.commonlib import readini, valid
+from openquake.commonlib import readinput, valid
 
 
 INPUT_TYPES = set(dict(models.INPUT_TYPE_CHOICES))
@@ -460,7 +460,7 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
     job = prepare_job(user_name=username, log_level=log_level)
     # read calculation params and create the calculation profile
     with logs.handle(job, log_level):
-        oqparam = readini.parse_config(
+        oqparam = readinput.get_oqparam(
             open(cfg_file_path),
             haz_job.id if haz_job and not hazard_output_id else None,
             hazard_output_id)
