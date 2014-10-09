@@ -106,11 +106,11 @@ def _apply_adjustments(COEFFS, C_ADJ, tau_ss, mean, stddevs, sites, rup, dists,
     """
     c1_dists = _compute_C1_term(C_ADJ, dists)
     phi_ss = _compute_phi_ss(
-        C_ADJ, mag, c1_dists, log_phi_ss, C_ADJ['mean_phi_ss']
+        C_ADJ, rup.mag, c1_dists, log_phi_ss, C_ADJ['mean_phi_ss']
     )
 
     mean_corr = np.exp(mean) * C_ADJ['k_adj'] * \
-        _compute_small_mag_correction_term(C_ADJ, mag, dists)
+        _compute_small_mag_correction_term(C_ADJ, rup.mag, dists)
 
     mean_corr = np.log(mean_corr)
 
