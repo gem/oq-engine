@@ -31,7 +31,7 @@ from openquake.risklib import scientific, workflows
 
 from openquake.commonlib.parallel import apply_reduce
 from openquake.commonlib.readinput import get_sitecol_assets, \
-    get_gsim, get_rupture, get_correl_model
+    get_gsim, get_rupture, get_correl_model, get_imts
 from openquake.commonlib.riskmodels import get_risk_model
 
 ############### facilities for the classical calculator ################
