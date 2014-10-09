@@ -33,7 +33,7 @@ class ZhaoEtAl2006AscSWISS05TestCase(BaseGSIMTestCase):
 
     def test_std_total(self):
         self.check('ZHAO06Swiss/zh_2006_phis_ss_embeded.csv',
-        max_discrep_percentage=0.50)
+                max_discrep_percentage=0.50)
 
 class ZhaoEtAl2006AscSWISS03TestCase(BaseGSIMTestCase):
     GSIM_CLASS = ZhaoEtAl2006AscSWISS03
