@@ -42,17 +42,10 @@ class ProbabilisticRuptureTestCase(unittest.TestCase):
     def setUpClass(self):
         cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
         job = helpers.get_job(cfg)
-
-        lt_model = models.LtSourceModel.objects.create(
-            hazard_calculation=job, ordinal=0,
-            sm_lt_path='foo')
-        lt_rlz = models.LtRealization.objects.create(
-            lt_model=lt_model, ordinal=0, gsim_lt_path='bar', weight=1)
         output = models.Output.objects.create(
             oq_job=job, display_name='test', output_type='ses')
-        ses_coll = models.SESCollection.objects.create(
-            output=output, lt_model=lt_rlz.lt_model, ordinal=0)
-
+        ses_coll = models.SESCollection.create(
+            output=output)
         self.mesh_lons = numpy.array(
             [0.1 * x for x in range(16)]).reshape((4, 4))
         self.mesh_lats = numpy.array(
@@ -67,24 +60,12 @@ class ProbabilisticRuptureTestCase(unittest.TestCase):
             10, 20, 30,
             Point(3.9, 2.2, 10), Point(4.90402718, 3.19634248, 10),
             Point(5.9, 2.2, 90), Point(4.89746275, 1.20365263, 90))
-
-        trt = 'Active Shallow Crust'
-        trt_model = models.TrtModel.objects.create(
-            lt_model=lt_model,
-            tectonic_region_type=trt,
-            num_sources=0,
-            num_ruptures=1,
-            min_mag=5,
-            max_mag=5,
-            gsims=['testGSIM'])
         self.fault_rupture = models.ProbabilisticRupture.objects.create(
             ses_collection=ses_coll, magnitude=5, rake=0, surface=sfs,
-            trt_model=trt_model, is_from_fault_source=True,
-            is_multi_surface=False)
+            is_from_fault_source=True, is_multi_surface=False)
         self.source_rupture = models.ProbabilisticRupture.objects.create(
             ses_collection=ses_coll, magnitude=5, rake=0, surface=ps,
-            trt_model=trt_model, is_from_fault_source=False,
-            is_multi_surface=False)
+            is_from_fault_source=False, is_multi_surface=False)
 
     def test_fault_rupture(self):
         # Test loading a fault rupture from the DB, just to illustrate a use
