@@ -1,5 +1,6 @@
+# coding: utf-8
 # The Hazard Library
-# Copyright (C) 2012-2014 GEM Foundation
+# Copyright (C) 2012-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -12,7 +13,7 @@
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from openquake.hazardlib.gsim.zhao_2006 import (
     ZhaoEtAl2006AscSWISS05,
     ZhaoEtAl2006AscSWISS03,
