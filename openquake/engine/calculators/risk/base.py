@@ -26,6 +26,7 @@ import psutil
 from openquake.nrmllib.risk import parsers
 from openquake.hazardlib.imt import from_string
 from openquake.commonlib.riskmodels import get_vfs
+from openquake.risklib.workflows import Workflow
 
 from openquake.engine import logs, export
 from openquake.engine.db import models
@@ -292,10 +293,8 @@ class RiskCalculator(base.Calculator):
     def get_risk_model(self):
         # regular risk models
         if self.bcr is False:
-            return {
-                imt_taxo: self.get_workflow(vfs)
-                for imt_taxo, vfs in get_vfs(self.rc.inputs).iteritems()
-                }
+            return {imt_taxo: self.get_workflow(vfs)
+                    for imt_taxo, vfs in get_vfs(self.rc.inputs).iteritems()}
 
         # BCR risk models
         orig_data = get_vfs(self.rc.inputs, retrofitted=False).items()
@@ -311,9 +310,7 @@ class RiskCalculator(base.Calculator):
         """
         To be overridden in subclasses. Must return a workflow instance.
         """
-        class Workflow():
-            vulnerability_functions = {}
-        return Workflow()
+        return Workflow(vulnerability_functions)
 
 #: Calculator parameters are used to compute derived outputs like loss
 #: maps, disaggregation plots, quantile/mean curves. See

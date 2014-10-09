@@ -20,8 +20,6 @@ import unittest
 import cPickle as pickle
 
 from openquake.engine.db import models
-from openquake.engine.calculators.hazard.scenario.core import \
-    create_db_ruptures
 from openquake.engine.calculators.risk import hazard_getters
 from openquake.engine.calculators.risk.base import RiskCalculator
 
