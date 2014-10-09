@@ -12,11 +12,11 @@
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from openquake.hazardlib.gsim.zhao_2006  import (ZhaoEtAl2006AscSWISS05, 
-                                                 ZhaoEtAl2006AscSWISS03,
-                                                 ZhaoEtAl2006AscSWISS08)
-
+# along with this program.  If not, see <http://www.gnu.org/licenses/>
+from openquake.hazardlib.gsim.zhao_2006 import (
+    ZhaoEtAl2006AscSWISS05,
+    ZhaoEtAl2006AscSWISS03,
+    ZhaoEtAl2006AscSWISS08)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 import numpy
@@ -30,6 +30,7 @@ class ZhaoEtAl2006AscSWISS05TestCase(BaseGSIMTestCase):
     def test_mean(self):
         self.check('ZHAO06Swiss/ZETAL06_MEAN_VsK-5.csv',
                    max_discrep_percentage=0.4)
+
     def test_std_total(self):
         self.check('ZHAO06Swiss/zh_2006_phis_ss_embeded.csv',
         max_discrep_percentage=0.50)
