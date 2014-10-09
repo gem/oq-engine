@@ -77,7 +77,7 @@ def do_event_based(workflow, risk_input, outputdict, params, monitor):
     # keep in memory the loss_matrix only when doing disaggregation
     workflow.return_loss_matrix = bool(params.sites_disagg)
 
-    for loss_type in workflow.loss_type:
+    for loss_type in workflow.loss_types:
         outputs = workflow.compute_all_outputs(risk_input, loss_type, monitor)
         for out in outputs:
             event_loss_table[loss_type, out.hid] = \
