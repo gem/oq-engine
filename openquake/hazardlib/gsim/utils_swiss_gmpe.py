@@ -19,23 +19,23 @@ from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import CoeffsTable
 
 
-def _compute_C1_term(C, imt, dists):
+def _compute_C1_term(C, dists):
     """
     Return C1 coeffs as function of Rrup as proposed by
     Rodriguez-Marek et al (2013)
     The C1 coeff are used to compute the single station sigma
     """
 
-    c1_rrup = np.zeros_like(dists)
+    c1_dists = np.zeros_like(dists)
     idx = dists < C['Rc11']
-    c1_rrup[idx] = C['phi_11']
+    c1_dists[idx] = C['phi_11']
     idx = (dists >= C['Rc11']) & (dists <= C['Rc21'])
     idx = (dists >= C['Rc11']) & (dists <= C['Rc21'])
-    c1_rrup[idx] = C['phi_11'] + (C['phi_21'] - C['phi_11']) * \
+    c1_dists[idx] = C['phi_11'] + (C['phi_21'] - C['phi_11']) * \
         ((dists[idx] - C['Rc11']) / (C['Rc21'] - C['Rc11']))
     idx = dists > C['Rc21']
-    c1_rrup[idx] = C['phi_21']
-    return c1_rrup
+    c1_dists[idx] = C['phi_21']
+    return c1_dists
 
 
 def _compute_small_mag_correction_term(C, mag, imt, rhypo):
@@ -53,7 +53,7 @@ def _compute_small_mag_correction_term(C, mag, imt, rhypo):
         return 1
 
 
-def _compute_phi_ss(C, mag, c1_rrup, log_phi_ss, mean_phi_ss):
+def _compute_phi_ss(C, mag, c1_dists, log_phi_ss, mean_phi_ss):
     """
     Returns the embeded logic tree for single station sigma
     as defined to be used in the Swiss Hazard Model 2014:
@@ -67,11 +67,11 @@ def _compute_phi_ss(C, mag, c1_rrup, log_phi_ss, mean_phi_ss):
     phi_ss = 0
 
     if rup.mag < C['Mc1']:
-        phi_ss = c1_rrup
+        phi_ss = c1_dists
 
     elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
-        phi_ss = c1_rrup + \
-            (C['C2'] - c1_rrup) * \
+        phi_ss = c1_dists + \
+            (C['C2'] - c1_dists) * \
             ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
     elif rup.mag > C['Mc2']:
         phi_ss = C['C2']
@@ -100,12 +100,14 @@ def _apply_adjustments(COEFFS, C_ADJ, tau_ss, mean, stddevs, sites, rup, dists,
                        imt, stddev_types, log_phi_ss):
     """
     This method applies adjustments to the mean and standard deviation.
-    The small-magnitude adjustments are applied to mean, whereas the 
+    The small-magnitude adjustments are applied to mean, whereas the
     embeded single station sigma logic tree is applied to the
     total standard deviation.
     """
-    c1_rrup = _compute_C1_term(C_ADJ, dists)
-    phi_ss = _compute_phi_ss(C_ADJ, rup.mag, c1_rrup, log_phi_ss, C_ADJ['mean_phi_ss'])
+    c1_dists = _compute_C1_term(C_ADJ, dists)
+    phi_ss = _compute_phi_ss(
+        C_ADJ, rup.mag, c1_dists, log_phi_ss, C_ADJ['mean_phi_ss']
+    )
 
     mean_corr = np.exp(mean) * C_ADJ['k_adj'] * \
         _compute_small_mag_correction_term(C_ADJ, rup.mag, dists)

@@ -32,7 +32,7 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.akkar_bommer_2010_swiss_coeffs import (
     COEFFS_FS_ROCK_SWISS01,
     COEFFS_FS_ROCK_SWISS04,
-    COEFFS_FS_ROCK_SWISS08,
+    COEFFS_FS_ROCK_SWISS08
 )
 from openquake.hazardlib.gsim.utils_swiss_gmpe import _apply_adjustments
 
@@ -217,7 +217,7 @@ class AkkarBommer2010(GMPE):
     #: and Spectral Accelerations in Europe, the Mediterranean Region, and
     #: the Middle East'
     COEFFS = CoeffsTable(sa_damping=5, table="""\
-    IMT      b1         b2          b3          b4         b5         b6         b7          b8          b9          b10        Sigma1    Sigma2    SigmaTot
+    IMT      b1         b2          b3          b4         b5         b6         b7          b8          b9          b10        Sigma1    tau       SigmaTot
     pga      1.43525    0.74866    -0.06520    -2.72950    0.25139    7.74959    0.08320     0.00766    -0.05823     0.07087    0.2611    0.1056    0.281646179
     0.01     1.43153    0.75258    -0.06557    -2.73290    0.25170    7.73304    0.08105     0.00745    -0.05886     0.07169    0.2616    0.1051    0.281922986
     0.02     1.48690    0.75966    -0.06767    -2.82146    0.26510    7.20661    0.07825     0.00618    -0.06111     0.06756    0.2635    0.1114    0.286080775
@@ -291,7 +291,7 @@ class AkkarBommer2010(GMPE):
 class AkkarBommer2010SWISS01(AkkarBommer2010):
 
     """
-    This class extends :class:AkkarBommer2010:
+    This class extends :class:`AkkarBommer2010`
     adjusted to be used for the Swiss Hazard Model [2014].
     1) kappa value
     K-adjustments corresponding to model 01 - as prepared by Ben Edwards
@@ -317,7 +317,7 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
         mean, stddevs = super(AkkarBommer2010SWISS01, self).\
             get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
 
-        tau_ss = 'Sigma2'
+        tau_ss = 'tau'
         log_phi_ss = np.log(10)
         mean, stddevs = _apply_adjustments(
             AkkarBommer2010.COEFFS, self.COEFFS_FS_ROCK[imt], tau_ss,
@@ -331,8 +331,8 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
 
 class AkkarBommer2010SWISS04(AkkarBommer2010SWISS01):
     """
-    This class extends :class:AkkarBommer2010:following same strategy
-    as for :class:AkkarBommer2010SWISS01
+    This class extends :class:`AkkarBommer2010` following same strategy
+    as for :class:`AkkarBommer2010SWISS01`
     """
 
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS04
@@ -340,8 +340,8 @@ class AkkarBommer2010SWISS04(AkkarBommer2010SWISS01):
 
 class AkkarBommer2010SWISS08(AkkarBommer2010SWISS01):
     """
-    This class extends :class:AkkarBommer2010:following same strategy
-    as for :class:AkkarBommer2010SWISS01 to be used for the
+    This class extends :class:`AkkarBommer2010` following same strategy
+    as for :class:`AkkarBommer2010SWISS01` to be used for the
     Swiss Hazard Model [2014].
     """
 
