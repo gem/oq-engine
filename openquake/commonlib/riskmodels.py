@@ -171,11 +171,17 @@ class FragilityNode(LiteralNode):
 
 class List(list):
     """
-    Class to store lists of objects with common attributes
+    A list of objects with common attributes
     """
     def __init__(self, elements, **attrs):
         list.__init__(self, elements)
         vars(self).update(attrs)
+
+
+class Dict(dict):
+    """
+    A dict where you can set common attributes
+    """
 
 
 def get_fragility_functions(fname):
@@ -190,7 +196,7 @@ def get_fragility_functions(fname):
     # ~fmodel.description is ignored
     limit_states = ~fmodel.limitStates
     tag = 'ffc' if fmodel['format'] == 'continuous' else 'ffd'
-    fragility_functions = {}  # taxonomy -> functions
+    fragility_functions = Dict()  # taxonomy -> functions
     for ffs in fmodel.getnodes('ffs'):
         nodamage = ffs.attrib.get('noDamageLimit')
         taxonomy = ~ffs.taxonomy
@@ -219,21 +225,16 @@ def get_fragility_functions(fname):
             raise InvalidFile("Expected limit states %s, got %s in %s" %
                              (limit_states, lstates, fname))
 
-    return ['no_damage'] + limit_states, fragility_functions
+    fragility_functions.damage_states = ['no_damage'] + limit_states
+    return fragility_functions
 
 
-class RiskModelDict(dict):
+def get_risk_model(oqparam):
     """
-    A dictionary containing the risk models, one for each pair
-    (imt, taxonomy).
+    Return a :class:`openquake.risklib.workflows.RiskModel` instance
     """
-
-
-def get_risk_models(oqparam):
-    """
-    Return a :class:`RiskModelDict` instance
-    """
-    risk_models = RiskModelDict()
+    risk_models = {}
+    riskmodel = workflows.RiskModel(risk_models)
 
     rit = getattr(oqparam, 'risk_investigation_time', None)
     if rit:  # defined for event based calculations
@@ -241,31 +242,27 @@ def get_risk_models(oqparam):
 
     if oqparam.calculation_mode == 'scenario_damage':
         # scenario damage calculator
-        damage_states, fragility_functions = get_fragility_functions(
+        fragility_functions = get_fragility_functions(
             oqparam.inputs['fragility'])
-        risk_models.damage_states = damage_states
+        riskmodel.damage_states = fragility_functions.damage_states
         for taxonomy, ffs in fragility_functions.iteritems():
-            risk_models[ffs.imt, taxonomy] = workflows.RiskModel(
-                ffs.imt, taxonomy, workflows.Damage(dict(damage=ffs)))
+            risk_models[ffs.imt, taxonomy] = workflows.get_workflow(
+                oqparam, fragility_functions=dict(damage=ffs))
     elif oqparam.calculation_mode.endswith('_bcr'):
         # bcr calculators
-        vf_orig = get_vfs(oqparam.inputs, retrofitted=False).items()
-        vf_retro = get_vfs(oqparam.inputs, retrofitted=True).items()
-        for (imt_taxo, vfs), (imt_taxo_, vfs_) in zip(vf_orig, vf_retro):
+        vfs_orig = get_vfs(oqparam.inputs, retrofitted=False).items()
+        vfs_retro = get_vfs(oqparam.inputs, retrofitted=True).items()
+        for (imt_taxo, vfs), (imt_taxo_, vfs_) in zip(vfs_orig, vfs_retro):
             assert imt_taxo == imt_taxo_  # same imt and taxonomy
-            workflow = workflows.get_workflow(
+            risk_models[imt_taxo] = workflows.get_workflow(
                 oqparam,
                 vulnerability_functions_orig=vfs,
                 vulnerability_functions_retro=vfs_)
-            risk_models[imt_taxo] = workflows.RiskModel(
-                imt_taxo[0], imt_taxo[1], workflow)
     else:
         # classical, event based and scenario calculators
         oqparam.__dict__.setdefault('insured_losses', False)
         for imt_taxo, vfs in get_vfs(oqparam.inputs).iteritems():
-            workflow = workflows.get_workflow(
+            risk_models[imt_taxo] = workflows.get_workflow(
                 oqparam, vulnerability_functions=vfs)
-            risk_models[imt_taxo] = workflows.RiskModel(
-                imt_taxo[0], imt_taxo[1], workflow)
 
-    return risk_models
+    return riskmodel
