@@ -433,7 +433,6 @@ class Performance(djm.Model):
         db_table = 'uiapi\".\"performance'
 
 
-# this is used in the tests, see helpers.py
 def save_sites(job, coords):
     """
     Save all the gives sites on the hzrdi.hazard_site table.
@@ -1777,7 +1776,6 @@ class GmfData(djm.Model):
         ordering = ['gmf', 'task_no']
 
 
-# used in the scenario QA tests
 def get_gmvs_per_site(output, imt):
     """
     Iterator for walking through all :class:`GmfData` objects associated
