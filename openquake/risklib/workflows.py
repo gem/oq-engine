@@ -738,7 +738,7 @@ class Damage(Workflow):
         :param loss_type: the string 'damage'
         :param assets: a list of N assets of the same taxonomy
         :param gmfs: an array of N x R elements
-        :returns: an array of N x R x D elements
+        :returns: an array of N assets and an array of N x R x D elements
 
         where N is the number of points, R the number of realizations
         and D the number of damage states.
@@ -823,8 +823,7 @@ class RiskInput(object):
         a numpy array of N x E elements, where N is the number of assets
         and E the number of events.
         """
-        return numpy.array([asset.epsilons
-                            for asset in self.get_assets(taxonomy)])
+        return [asset.epsilons for asset in self.get_assets(taxonomy)]
 
 
 class RiskModel(collections.Mapping):
