@@ -58,6 +58,7 @@ class FakeRiskCalculator(base.RiskCalculator):
 
     def get_workflow(self, vulnerability_functions):
         FakeWorkflow.vulnerability_functions = vulnerability_functions
+        FakeWorkflow.loss_types = ('structural',)
         return FakeWorkflow()
 
 
