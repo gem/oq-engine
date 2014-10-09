@@ -60,7 +60,7 @@ def classical_bcr(job_id, workflow, risk_input, outputdict, _params):
 
 def do_classical_bcr(workflow, risk_input, outputdict, monitor):
     for loss_type in workflow.loss_types:
-        outputs = workflow.compute_outputs(risk_input, loss_type, monitor)
+        outputs = workflow.compute_all_outputs(risk_input, loss_type, monitor)
         outputdict = outputdict.with_args(loss_type=loss_type)
         with monitor.copy('writing results'):
             for out in outputs:

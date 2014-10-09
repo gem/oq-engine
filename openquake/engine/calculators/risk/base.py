@@ -24,7 +24,6 @@ import collections
 import psutil
 
 from openquake.nrmllib.risk import parsers
-from openquake.risklib.workflows import RiskModel
 from openquake.hazardlib.imt import from_string
 from openquake.commonlib.riskmodels import get_vfs
 
@@ -142,7 +141,7 @@ class RiskCalculator(base.Calculator):
         and filtered according to the `RiskCalculation.region_constraint`.
 
     :attribute dict risk_model:
-        A nested dict taxonomy -> loss type -> instances of `RiskModel`.
+        A nested dict taxonomy -> loss type -> instances of `Workflow`.
     """
 
     # a list of :class:`openquake.engine.calculators.risk.validation` classes
@@ -294,8 +293,7 @@ class RiskCalculator(base.Calculator):
         # regular risk models
         if self.bcr is False:
             return {
-                imt_taxo: RiskModel(
-                    imt_taxo[0], imt_taxo[1], self.get_workflow(vfs))
+                imt_taxo: self.get_workflow(vfs)
                 for imt_taxo, vfs in get_vfs(self.rc.inputs).iteritems()
                 }
 
@@ -306,8 +304,7 @@ class RiskCalculator(base.Calculator):
         risk_model = {}
         for (imt_taxo, vfs), (imt_taxo_, vfs_) in zip(orig_data, retro_data):
             assert imt_taxo == imt_taxo_  # same imt and taxonomy
-            risk_model[imt_taxo] = RiskModel(
-                imt_taxo[0], imt_taxo[1], self.get_workflow(vfs, vfs_))
+            risk_model[imt_taxo] = self.get_workflow(vfs, vfs_)
         return risk_model
 
     def get_workflow(self, vulnerability_functions):
