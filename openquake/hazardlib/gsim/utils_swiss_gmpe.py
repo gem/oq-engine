@@ -66,14 +66,14 @@ def _compute_phi_ss(C, mag, c1_dists, log_phi_ss, mean_phi_ss):
 
     phi_ss = 0
 
-    if rup.mag < C['Mc1']:
+    if mag < C['Mc1']:
         phi_ss = c1_dists
 
-    elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
+    elif mag >= C['Mc1'] and mag <= C['Mc2']:
         phi_ss = c1_dists + \
             (C['C2'] - c1_dists) * \
-            ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
-    elif rup.mag > C['Mc2']:
+            ((mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
+    elif mag > C['Mc2']:
         phi_ss = C['C2']
 
     return (phi_ss * 0.50 + mean_phi_ss * 0.50) / log_phi_ss
@@ -106,11 +106,11 @@ def _apply_adjustments(COEFFS, C_ADJ, tau_ss, mean, stddevs, sites, rup, dists,
     """
     c1_dists = _compute_C1_term(C_ADJ, dists)
     phi_ss = _compute_phi_ss(
-        C_ADJ, rup.mag, c1_dists, log_phi_ss, C_ADJ['mean_phi_ss']
+        C_ADJ, mag, c1_dists, log_phi_ss, C_ADJ['mean_phi_ss']
     )
 
     mean_corr = np.exp(mean) * C_ADJ['k_adj'] * \
-        _compute_small_mag_correction_term(C_ADJ, rup.mag, dists)
+        _compute_small_mag_correction_term(C_ADJ, mag, dists)
 
     mean_corr = np.log(mean_corr)
 
