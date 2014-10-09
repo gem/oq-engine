@@ -94,16 +94,16 @@ class Bradley2013(GMPE):
         # exp1 and exp2 are parts of eq. 7
         exp1 = np.exp(C['phi3'] * (sites.vs30.clip(-np.inf, 1130) - 360))
         exp2 = np.exp(C['phi3'] * (1130 - 360))
-        # V1 is the period dependent site term. The Vs30 above which, the
+        # v1 is the period dependent site term. The Vs30 above which, the
         # amplification is constant
-        V1 = self._get_V1(imt)
+        v1 = self._get_v1(imt)
 
-        mean = self._get_mean(sites, C, ln_y_ref, exp1, exp2, V1)
+        mean = self._get_mean(sites, C, ln_y_ref, exp1, exp2, v1)
         stddevs = self._get_stddevs(sites, rup, C, stddev_types,
                                     ln_y_ref, exp1, exp2)
         return mean, stddevs
 
-    def _get_mean(self, sites, C, ln_y_ref, exp1, exp2, V1):
+    def _get_mean(self, sites, C, ln_y_ref, exp1, exp2, v1):
         """
         Add site effects to an intensity.
 
@@ -120,7 +120,7 @@ class Bradley2013(GMPE):
         ln_y = (
             # first line of eq. 13b
             ln_y_ref + C['phi1'] *
-            np.log(np.clip(sites.vs30, -np.inf, V1) / 1130)
+            np.log(np.clip(sites.vs30, -np.inf, v1) / 1130)
             # second line
             + C['phi2'] * (exp1 - exp2)
             * np.log((np.exp(ln_y_ref) + C['phi4']) / C['phi4'])
@@ -193,7 +193,7 @@ class Bradley2013(GMPE):
         (i.e. no TVZ attenuation)
         """
         # Taupo Volcanic Zone Path Distance. Set to zero.
-        rtvz = self._get_TVZ_path_distance(dists.rrup)
+        rtvz = self._get_tvz_path_distance(dists.rrup)
 
         # reverse faulting flag
         Frv = 1 if 30 <= rup.rake <= 150 else 0
@@ -239,25 +239,25 @@ class Bradley2013(GMPE):
 
         return ln_y_ref
 
-    def _get_V1(self, imt):
+    def _get_v1(self, imt):
         """
         Calculates Bradley's V1 term. Equation 2 (page 1814) and 6 (page 1816)
         based on SA period
         """
 
         if imt == PGA():
-            V1 = 1800.
+            v1 = 1800.
 
         else:
             T = imt.period
-            V1a = np.clip((1130 * (T / 0.75)**-0.11), 1130, np.inf)
-            V1 = np.clip(V1a, -np.inf, 1800.)
+            v1a = np.clip((1130 * (T / 0.75)**-0.11), 1130, np.inf)
+            v1 = np.clip(v1a, -np.inf, 1800.)
 
-        return V1
+        return v1
 
-    def _get_TVZ_path_distance(self, rrup):
+    def _get_tvz_path_distance(self, rrup):
         """
-        Returns Taupo Volcanic Zone path distance.
+        Returns Taupo Volcanic Zone (TVZ) path distance.
         Set to zero.
         """
 
@@ -319,9 +319,9 @@ class Bradley2013Volc(Bradley2013):
 
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.VOLCANIC
 
-    def _get_TVZ_path_distance(self, rrup):
+    def _get_tvz_path_distance(self, rrup):
         """
-        Returns Taupo Volcanic Zone path distance.
+        Returns Taupo Volcanic Zone (TVZ) path distance.
         rtvz = rrup as implemented for New Zealand seismic hazard model
         """
 
