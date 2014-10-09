@@ -23,8 +23,6 @@ import mock
 from openquake.engine.calculators.risk import validation
 from openquake.engine.db import models
 
-from openquake.risklib.workflows import RiskModel
-
 
 class HazardIMTTestCase(unittest.TestCase):
     def test_get_error(self):
@@ -37,8 +35,8 @@ class HazardIMTTestCase(unittest.TestCase):
         workflow.vulnerability_functions = dict(
             structural=vf1, nonstructural=vf2)
         calc.risk_model = {
-            ('PGA', 'tax1'): RiskModel('PGA', 'tax1', workflow),
-            ('PGV', 'tax2'): RiskModel('PGV', 'tax2', workflow)}
+            ('PGA', 'tax1'): workflow,
+            ('PGV', 'tax2'): workflow}
         calc.rc.get_hazard_param().intensity_measure_types = ['PGA', 'PGV']
         val = validation.HazardIMT(calc)
 
