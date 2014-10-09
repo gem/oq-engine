@@ -192,10 +192,10 @@ class CauzziFaccioli2008(GMPE):
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.log(10 ** C['Sigma']) + np.zeros(num_sites))
+                stddevs.append(np.log(10 ** C['sigma']) + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTRA_EVENT:
                 stddevs.append(
-                    np.log(10 ** C['Sigma1']) + np.zeros(num_sites))
+                    np.log(10 ** C['phi']) + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTER_EVENT:
                 stddevs.append(
                     np.log(10 ** C['tau']) + np.zeros(num_sites))
@@ -204,7 +204,7 @@ class CauzziFaccioli2008(GMPE):
     #: Coefficient table constructed from the electronic suplements of the
     #: original paper.
     COEFFS = CoeffsTable(sa_damping=5, table="""\
-    IMT       a1          a2         aN          aR          aS          a3          aB         aC         aD        Sigma1   tau    Sigma
+    IMT       a1          a2         aN          aR          aS          a3          aB         aC         aD        phi      tau    sigma
     pgv       -2.0500000  0.7710000  -0.0300000  0.0100000   0.0100000   -1.4190000  0.1600000  0.3600000  0.4800000 0.2200   0.2000 0.3090000
     pga       -1.2960000  0.5560000  -0.0600000  0.0940000   -0.0130000  -1.5820000  0.2200000  0.3040000  0.3320000 0.2620   0.2230 0.3410000
     0.05      -2.8853436  0.5241770  -0.1002050  0.1323607   -0.0104223  -1.7131617  0.1590351  0.1913741  0.1662669 0.2715   0.2426 0.3569631
