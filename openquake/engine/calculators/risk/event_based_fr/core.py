@@ -67,14 +67,14 @@ def split_site_collection(sitecol, num_chunks):
 
 
 @tasks.oqtask
-def event_based_fr(job_id, sites, rc, risk_models,
+def event_based_fr(job_id, sites, rc, risk_model,
                    getter_builders, outputdict, params):
     """
     :param int job_id:
         ID of the currently running job
     :param rc:
         a :class:`openquake.engine.db.models.RiskCalculation` instance
-    :param risk_models:
+    :param risk_model:
         a list of RiskModel instances corresponding to the taxonomy
     :param getter_builders:
         a list of HazardRiskBridge instances associated to the risk models
@@ -143,7 +143,7 @@ def event_based_fr(job_id, sites, rc, risk_models,
         # computing risk
         elt = {}  # event loss table
         with db.transaction.commit_on_success(using='job_init'):
-            for risk_model, builder in zip(risk_models, getter_builders):
+            for risk_model, builder in zip(risk_model, getter_builders):
                 elt.update(
                     core.do_event_based(
                         risk_model, builder.risk_input,
@@ -195,16 +195,16 @@ class EventBasedFRRiskCalculator(core.EventBasedRiskCalculator):
         compute the risk.
         """
         getter_builders = []
-        risk_models = []
+        risk_model = []
         with self.monitor('associating assets<->sites'):
-            for risk_model in self.risk_models.itervalues():
+            for risk_model in self.risk_model.itervalues():
                 logs.LOG.info('associating assets<->sites for taxonomy %s',
                               risk_model.taxonomy)
                 try:
                     with db.transaction.commit_on_success(using='job_init'):
                         gbuilder = HazardRiskBridge(self.rc, risk_model.taxonomy)
                         getter_builders.append(gbuilder)
-                        risk_models.append(risk_model)
+                        risk_model.append(risk_model)
                 except AssetSiteAssociationError as e:
                     logs.LOG.warn(str(e))
                     continue
@@ -220,7 +220,7 @@ class EventBasedFRRiskCalculator(core.EventBasedRiskCalculator):
         for sites in split_site_collection(
                 self.site_collection, self.concurrent_tasks):
             args.append((self.job.id, sites, self.rc,
-                         risk_models, getter_builders, outputdict,
+                         risk_model, getter_builders, outputdict,
                          self.calculator_parameters))
         self.acc = tasks.map_reduce(event_based_fr, args, self.agg_result, {})
 

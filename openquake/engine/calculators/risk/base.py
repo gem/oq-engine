@@ -117,7 +117,7 @@ def run_risk(job_id, sorted_assocs, calc):
                 'Read %d data for %d assets of taxonomy %s, imt=%s',
                 len(set(risk_input.site_ids)), len(assets), taxonomy, imt)
             res = calc.core_calc_task.task_func(
-                job_id, calc.risk_models[imt, taxonomy],
+                job_id, calc.risk_model[imt, taxonomy],
                 risk_input, calc.outputdict, calc.calculator_parameters)
             acc = calc.agg_result(acc, res)
             risk_input.__exit__(None, None, None)
@@ -141,7 +141,7 @@ class RiskCalculator(base.Calculator):
         calculator will work on. Assets are extracted from the exposure input
         and filtered according to the `RiskCalculation.region_constraint`.
 
-    :attribute dict risk_models:
+    :attribute dict risk_model:
         A nested dict taxonomy -> loss type -> instances of `RiskModel`.
     """
 
@@ -155,7 +155,7 @@ class RiskCalculator(base.Calculator):
     def __init__(self, job):
         super(RiskCalculator, self).__init__(job)
         self.taxonomies_asset_count = None
-        self.risk_models = None
+        self.risk_model = None
         self.loss_types = set()
         self.acc = {}
 
@@ -172,11 +172,11 @@ class RiskCalculator(base.Calculator):
         is a single IMT for each taxonomy.
         """
         imt_taxonomy_set = set()
-        for rm in self.risk_models.itervalues():
-            self.loss_types.update(rm.loss_types)
-            imt_taxonomy_set.add((rm.imt, rm.taxonomy))
+        for (imt, taxonomy), workflow in self.risk_model.iteritems():
+            self.loss_types.update(workflow.loss_types)
+            imt_taxonomy_set.add((imt, taxonomy))
             # insert the IMT in the db, if not already there
-            models.Imt.save_new([from_string(rm.imt)])
+            models.Imt.save_new([from_string(imt)])
         for imt, taxonomy in imt_taxonomy_set:
             models.ImtTaxonomy.objects.create(
                 job=self.job, imt=models.Imt.get(imt), taxonomy=taxonomy)
@@ -188,7 +188,7 @@ class RiskCalculator(base.Calculator):
                 self.taxonomies_asset_count = dict(
                     (t, count)
                     for t, count in self.taxonomies_asset_count.items()
-                    if (imt, t) in self.risk_models)
+                    if (imt, t) in self.risk_model)
 
     def pre_execute(self):
         """
@@ -206,7 +206,7 @@ class RiskCalculator(base.Calculator):
             self.rc.exposure_model.taxonomies_in(self.rc.region_constraint)
 
         with self.monitor('parse risk models'):
-            self.risk_models = self.get_risk_models()
+            self.risk_model = self.get_risk_model()
 
         self.populate_imt_taxonomy()
 
@@ -290,7 +290,7 @@ class RiskCalculator(base.Calculator):
         """
         return []
 
-    def get_risk_models(self):
+    def get_risk_model(self):
         # regular risk models
         if self.bcr is False:
             return {
@@ -303,12 +303,12 @@ class RiskCalculator(base.Calculator):
         orig_data = get_vfs(self.rc.inputs, retrofitted=False).items()
         retro_data = get_vfs(self.rc.inputs, retrofitted=True).items()
 
-        risk_models = {}
+        risk_model = {}
         for (imt_taxo, vfs), (imt_taxo_, vfs_) in zip(orig_data, retro_data):
             assert imt_taxo == imt_taxo_  # same imt and taxonomy
-            risk_models[imt_taxo] = RiskModel(
+            risk_model[imt_taxo] = RiskModel(
                 imt_taxo[0], imt_taxo[1], self.get_workflow(vfs, vfs_))
-        return risk_models
+        return risk_model
 
     def get_workflow(self, vulnerability_functions):
         """

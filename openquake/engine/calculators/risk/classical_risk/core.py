@@ -30,13 +30,13 @@ from openquake.engine.utils import tasks
 
 
 @tasks.oqtask
-def classical(job_id, risk_model, risk_input, outputdict, params):
+def classical(job_id, workflow, risk_input, outputdict, params):
     """
     Celery task for the classical risk calculator.
 
     :param int job_id:
       ID of the currently running job
-    :param risk_model:
+    :param workflow:
       A :class:`openquake.risklib.workflows.RiskModel` instance
     :param risk_input:
       A RiskInput instance
@@ -52,10 +52,10 @@ def classical(job_id, risk_model, risk_input, outputdict, params):
     # Do the job in other functions, such that they can be unit tested
     # without the celery machinery
     with transaction.commit_on_success(using='job_init'):
-        do_classical(risk_model, risk_input, outputdict, params, monitor)
+        do_classical(workflow, risk_input, outputdict, params, monitor)
 
 
-def do_classical(risk_model, risk_input, outputdict, params, monitor):
+def do_classical(workflow, risk_input, outputdict, params, monitor):
     """
     See `classical` for a description of the parameters.
     :param monitor:
@@ -65,13 +65,10 @@ def do_classical(risk_model, risk_input, outputdict, params, monitor):
     loss fractions. Then if the number of units are bigger than 1, we
     compute mean and quantile artifacts.
     """
-    outputs_per_loss_type = risk_model.compute_outputs(
-        risk_input, monitor.copy('getting data'))
-    stats_per_loss_type = risk_model.compute_stats(
-        outputs_per_loss_type, params.quantiles, post_processing)
-
-    for loss_type, outputs in outputs_per_loss_type.iteritems():
-        stats = stats_per_loss_type[loss_type]
+    for loss_type in workflow.loss_types:
+        outputs = workflow.compute_all_outputs(
+            risk_input, loss_type, monitor.copy('getting data'))
+        stats = workflow.statistics(outputs, params.quantiles, post_processing)
         with monitor.copy('saving risk'):
             for out in outputs:
                 save_individual_outputs(
