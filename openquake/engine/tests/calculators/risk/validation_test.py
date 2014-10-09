@@ -36,7 +36,7 @@ class HazardIMTTestCase(unittest.TestCase):
         workflow = mock.Mock()
         workflow.vulnerability_functions = dict(
             structural=vf1, nonstructural=vf2)
-        calc.risk_models = {
+        calc.risk_model = {
             ('PGA', 'tax1'): RiskModel('PGA', 'tax1', workflow),
             ('PGV', 'tax2'): RiskModel('PGV', 'tax2', workflow)}
         calc.rc.get_hazard_param().intensity_measure_types = ['PGA', 'PGV']
@@ -70,7 +70,7 @@ class OrphanTaxonomiesTestCase(unittest.TestCase):
         val = validation.OrphanTaxonomies(calc)
 
         calc.rc.taxonomies_from_model = True
-        calc.risk_models = {('PGA', 'RM'): mock.Mock()}
+        calc.risk_model = {('PGA', 'RM'): mock.Mock()}
         calc.taxonomies_asset_count = {'RC': 1, 'RM': 2}
 
         self.assertIsNone(val.get_error())
@@ -80,7 +80,7 @@ class OrphanTaxonomiesTestCase(unittest.TestCase):
                          "but not in the risk model: set(['RC'])",
                          val.get_error())
 
-        calc.risk_models = {('PGA', 'RM'): mock.Mock(),
+        calc.risk_model = {('PGA', 'RM'): mock.Mock(),
                             ('PGV', 'RC'): mock.Mock()}
         self.assertIsNone(val.get_error())
 
@@ -91,7 +91,7 @@ class ExposureLossTypesTestCase(unittest.TestCase):
         val = validation.ExposureLossTypes(calc)
 
         calc.loss_types = models.LOSS_TYPES
-        calc.risk_models = {('PGA', 'RM'): mock.Mock()}
+        calc.risk_model = {('PGA', 'RM'): mock.Mock()}
 
         calc.rc.exposure_model.supports_loss_type = mock.Mock(
             return_value=False)
@@ -108,14 +108,14 @@ class ExposureLossTypesTestCase(unittest.TestCase):
 class NoRiskModelsTestCase(unittest.TestCase):
     def test_get_error(self):
         calc = mock.Mock()
-        calc.risk_models = None
+        calc.risk_model = None
 
         val = validation.NoRiskModels(calc)
         self.assertEqual(
             'At least one risk model of type %s must be defined' % (
                 models.LOSS_TYPES), val.get_error())
 
-        calc.risk_models = {'RM': mock.Mock()}
+        calc.risk_model = {'RM': mock.Mock()}
         self.assertIsNone(val.get_error())
 
 

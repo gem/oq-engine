@@ -24,7 +24,7 @@ import numpy
 
 from django import db
 
-from openquake.commonlib.riskmodels import get_risk_models
+from openquake.commonlib.riskmodels import get_risk_model
 
 from openquake.engine.calculators.risk import (
     base, hazard_getters, writers, validation)
@@ -34,13 +34,13 @@ from openquake.engine.db import models
 
 
 @tasks.oqtask
-def scenario_damage(job_id, risk_model, risk_input, outputdict, params):
+def scenario_damage(job_id, workflow, risk_input, outputdict, params):
     """
     Celery task for the scenario damage risk calculator.
 
     :param int job_id:
       ID of the currently running job
-    :param risk_model:
+    :param workflow:
       A :class:`openquake.risklib.workflows.RiskModel` instance
     :param risk_input:
       A RiskInput instance
@@ -56,14 +56,14 @@ def scenario_damage(job_id, risk_model, risk_input, outputdict, params):
     monitor = EnginePerformanceMonitor(
         None, job_id, scenario_damage, tracing=True)
     # in scenario damage calculation the only loss_type is 'damage'
-    [ffs] = risk_model.vulnerability_functions
+    [ffs] = workflow.vulnerability_functions
 
     # and no output containers
     assert len(outputdict) == 0, outputdict
     with db.transaction.commit_on_success(using='job_init'):
 
         with monitor.copy('computing risk'):
-            assets, fractions = risk_model.workflow(
+            assets, fractions = workflow(
                 'damage', risk_input.assets, risk_input.get_data(), None)
             aggfractions = sum(fractions[i] * asset.number_of_units
                                for i, asset in enumerate(assets))
@@ -72,7 +72,7 @@ def scenario_damage(job_id, risk_model, risk_input, outputdict, params):
             writers.damage_distribution(
                 risk_input.assets, fractions, params.damage_state_ids)
 
-        return {risk_model.taxonomy: aggfractions}
+        return {assets[0].taxonomy: aggfractions}
 
 
 class ScenarioDamageRiskCalculator(base.RiskCalculator):
@@ -156,13 +156,13 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
                 "dmg_dist_total")
             writers.total_damage_distribution(tot, self.damage_state_ids)
 
-    def get_risk_models(self):
+    def get_risk_model(self):
         """
         Load fragility model and store damage states
         """
-        risk_models = get_risk_models(models.oqparam(self.job.id))
+        risk_model = get_risk_model(models.oqparam(self.job.id))
 
-        for lsi, dstate in enumerate(risk_models.damage_states):
+        for lsi, dstate in enumerate(risk_model.damage_states):
             models.DmgState.objects.get_or_create(
                 risk_calculation=self.rc, dmg_state=dstate, lsi=lsi)
 
@@ -170,7 +170,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
             risk_calculation=self.rc).order_by('lsi')]
 
         self.loss_types.add('damage')  # single loss_type
-        return risk_models
+        return risk_model
 
     @property
     def calculator_parameters(self):
