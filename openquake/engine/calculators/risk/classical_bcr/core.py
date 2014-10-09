@@ -28,7 +28,7 @@ from openquake.engine.utils import tasks
 
 
 @tasks.oqtask
-def classical_bcr(job_id, risk_model, risk_input, outputdict, _params):
+def classical_bcr(job_id, workflow, risk_input, outputdict, _params):
     """
     Celery task for the BCR risk calculator based on the classical
     calculator.
@@ -38,7 +38,7 @@ def classical_bcr(job_id, risk_model, risk_input, outputdict, _params):
 
     :param int job_id:
       ID of the currently running job
-    :param risk_model:
+    :param workflow:
       A :class:`openquake.risklib.workflows.RiskModel` instance
     :param risk_input:
       A RiskInput instance
@@ -55,17 +55,17 @@ def classical_bcr(job_id, risk_model, risk_input, outputdict, _params):
     # Do the job in other functions, such that it can be unit tested
     # without the celery machinery
     with transaction.commit_on_success(using='job_init'):
-        do_classical_bcr(risk_model, risk_input, outputdict, monitor)
+        do_classical_bcr(workflow, risk_input, outputdict, monitor)
 
 
-def do_classical_bcr(risk_model, risk_input, outputdict, monitor):
-    out = risk_model.compute_outputs(risk_input, monitor)
-    for loss_type, outputs in out.iteritems():
+def do_classical_bcr(workflow, risk_input, outputdict, monitor):
+    for loss_type in workflow.loss_types:
+        outputs = workflow.compute_outputs(risk_input, loss_type, monitor)
         outputdict = outputdict.with_args(loss_type=loss_type)
         with monitor.copy('writing results'):
             for out in outputs:
                 outputdict.write(
-                    risk_model.workflow.assets,
+                    workflow.assets,
                     out.output,
                     output_type="bcr_distribution",
                     hazard_output_id=out.hid)
