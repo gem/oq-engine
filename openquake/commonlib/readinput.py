@@ -5,7 +5,7 @@ from lxml import etree
 
 import numpy
 
-from openquake.hazardlib import geo, site, gsim, correlation
+from openquake.hazardlib import geo, site, gsim, correlation, imt
 from openquake.nrmllib.node import read_nodes, LiteralNode, context
 from openquake.risklib.workflows import Asset
 from openquake import nrmllib
@@ -97,10 +97,6 @@ def get_oqparam(source, hazard_calculation_id=None, hazard_output_id=None):
 
     # define the parameter `intensity measure types and levels` always
     oqparam.intensity_measure_types_and_levels = get_imtls(oqparam)
-
-    # remove the redundant parameter `intensity_measure_types`
-    if hasattr(oqparam, 'intensity_measure_types'):
-        delattr(oqparam, 'intensity_measure_types')
 
     return oqparam
 
@@ -239,23 +235,34 @@ def get_imtls(oqparam):
     """
     if hasattr(oqparam, 'intensity_measure_types'):
         imtls = dict.fromkeys(oqparam.intensity_measure_types)
+        # remove the now redundant parameter
+        delattr(oqparam, 'intensity_measure_types')
     elif hasattr(oqparam, 'intensity_measure_types_and_levels'):
         imtls = oqparam.intensity_measure_types_and_levels
     elif vulnerability_files(oqparam.inputs):
         imtls = get_imtls_from_vulnerabilities(oqparam.inputs)
     elif fragility_files(oqparam.inputs):
         fname = oqparam.inputs['fragility']
-        _damage_states, ffs = get_fragility_functions(fname)
-        imtls = {fset.imt: fset.imls for fset in ffs.values()}
+        ffs = get_fragility_functions(fname)
+        imtls = {fset.imt: fset.imls for fset in ffs.itervalues()}
     else:
         raise ValueError('Missing intensity_measure_types_and_levels, '
                          'vulnerability file and fragility file')
     return imtls
 
 
+def get_imts(oqparam):
+    """
+    Return a sorted list of IMTs as hazardlib objects
+    """
+    return map(imt.from_string,
+               sorted(oqparam.intensity_measure_types_and_levels))
+
+
 def get_vulnerability_functions(oqparam):
     """Return a dict (imt, taxonomy) -> vf"""
     return get_vfs(oqparam.inputs)
+
 
 ############################ exposure #############################
 
