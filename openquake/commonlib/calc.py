@@ -221,12 +221,12 @@ def calc_damage(riskinputs, riskmodel):
     logging.info('Process %d, considering %d risk input(s) of weight %d',
                  os.getpid(), len(riskinputs),
                  sum(ri.weight for ri in riskinputs))
-    aggfractions = {}  # taxonomy -> aggfractions
+    result = {}  # taxonomy -> aggfractions
     for loss_type, (assets, fractions) in riskmodel.gen_outputs(riskinputs):
         for asset, fraction in zip(assets, fractions):
-            aggfractions = add_dicts(
-                aggfractions, {asset.taxonomy: fraction * asset.number})
-    return aggfractions
+            result = add_dicts(
+                result, {asset.taxonomy: fraction * asset.number})
+    return result
 
 
 def calc_scenario(riskinputs, riskmodel):

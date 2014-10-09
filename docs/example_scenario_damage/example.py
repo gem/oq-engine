@@ -1,14 +1,14 @@
 import sys
 import logging
 from openquake.risklib import scientific
-from openquake.commonlib.readini import parse_config
+from openquake.commonlib.readinput import get_oqparam
 from openquake.commonlib.riskmodels import get_risk_model
 from openquake.commonlib.calc import run_scenario
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     with open(sys.argv[1]) as job_ini:
-        oqparam = parse_config(job_ini, hazard_output_id=1)
+        oqparam = get_oqparam(job_ini, hazard_output_id=1)
         damage_states = get_risk_model(oqparam).damage_states
         aggfractions = run_scenario(oqparam)
 
