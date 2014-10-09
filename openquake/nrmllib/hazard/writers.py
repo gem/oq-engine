@@ -387,7 +387,9 @@ class EventBasedGMFXMLWriter(object):
         gmf_set_nodes = []
         for gmf_set in data:
             gmf_set_node = node.Node('gmfSet')
-            gmf_set_node['investigationTime'] = str(gmf_set.investigation_time)
+            if gmf_set.investigation_time:
+                gmf_set_node['investigationTime'] = str(
+                    gmf_set.investigation_time)
             gmf_set_node['stochasticEventSetId'] = str(
                 gmf_set.stochastic_event_set_id)
             gmf_set_node.nodes = gen_gmfs(gmf_set)
