@@ -41,7 +41,7 @@ from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.commonlib.general import writetmp as touch
-from openquake.commonlib import readini
+from openquake.commonlib import readinput
 
 from openquake.engine.db import models
 from openquake.engine import engine
@@ -318,7 +318,7 @@ def get_job(cfg, username="openquake", hazard_calculation_id=None,
         return engine.job_from_file(cfg, username, 'error', [], **extras)
 
     job = engine.prepare_job(username)
-    oqparam = readini.parse_config(
+    oqparam = readinput.get_oqparam(
         open(cfg), hazard_calculation_id, hazard_output_id)
     params = vars(oqparam)
     if hazard_calculation_id is None:
@@ -499,7 +499,7 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
     hazard_job.save()
     job = engine.prepare_job(username)
     params = vars(
-        readini.parse_config(
+        readinput.get_oqparam(
             open(risk_cfg), hazard_output_id=hazard_output.output.id))
     params['hazard_calculation_id'] = hazard_job.id
 
