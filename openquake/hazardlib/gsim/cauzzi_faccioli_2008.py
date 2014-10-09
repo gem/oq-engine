@@ -1,6 +1,6 @@
-# coding: utf-8
+# -*- coding: utf-8 -*-
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2012-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 Module exports :class:`CauzziFaccioli2008`,
-class:`CauzziFaccioli2008SWISS01`, 
+class:`CauzziFaccioli2008SWISS01`,
 class:`CauzziFaccioli2008SWISS04`
 class:`CauzziFaccioli2008SWISS08`
 """
@@ -28,7 +28,7 @@ from scipy.constants import g
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
-from openquake.hazardlib.gsim.cauzzi_faccioli_2008_coeffs import (
+from openquake.hazardlib.gsim.cauzzi_faccioli_2008_swiss_coeffs import (
     COEFFS_FS_ROCK_SWISS01,
     COEFFS_FS_ROCK_SWISS04,
     COEFFS_FS_ROCK_SWISS08)
@@ -198,13 +198,13 @@ class CauzziFaccioli2008(GMPE):
                     np.log(10 ** C['Sigma1']) + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTER_EVENT:
                 stddevs.append(
-                    np.log(10 ** C['Sigma2']) + np.zeros(num_sites))
+                    np.log(10 ** C['tau']) + np.zeros(num_sites))
         return stddevs
 
     #: Coefficient table constructed from the electronic suplements of the
     #: original paper.
     COEFFS = CoeffsTable(sa_damping=5, table="""\
-    IMT       a1          a2         aN          aR          aS          a3          aB         aC         aD        Sigma1   Sigma2 Sigma
+    IMT       a1          a2         aN          aR          aS          a3          aB         aC         aD        Sigma1   tau    Sigma
     pgv       -2.0500000  0.7710000  -0.0300000  0.0100000   0.0100000   -1.4190000  0.1600000  0.3600000  0.4800000 0.2200   0.2000 0.3090000
     pga       -1.2960000  0.5560000  -0.0600000  0.0940000   -0.0130000  -1.5820000  0.2200000  0.3040000  0.3320000 0.2620   0.2230 0.3410000
     0.05      -2.8853436  0.5241770  -0.1002050  0.1323607   -0.0104223  -1.7131617  0.1590351  0.1913741  0.1662669 0.2715   0.2426 0.3569631
@@ -612,7 +612,7 @@ class CauzziFaccioli2008(GMPE):
 
 class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
     """
-    This class extends :class:CauzziFaccioli2008,
+    This class extends :class:`CauzziFaccioli2008`
     adjusted to be used for the Swiss Hazard Model [2014].
     1) kappa value
        K-adjustments corresponding to model 01 - as prepared by Ben Edwards
@@ -637,13 +637,12 @@ class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
         mean, stddevs = super(CauzziFaccioli2008SWISS01, self).\
             get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
 
-        tau_ss = 'Sigma2'
+        tau_ss = 'tau'
         log_phi_ss = np.log(10)
         mean, stddevs = _apply_adjustments(
             CauzziFaccioli2008.COEFFS, self.COEFFS_FS_ROCK[imt], tau_ss,
             mean, stddevs, sites, rup, dists.rhypo, imt, stddev_types,
-            log_phi_ss, mean_phi_ss=False
-        )
+            log_phi_ss)
 
         return mean, np.log(10 ** np.array(stddevs))
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS01
@@ -652,15 +651,15 @@ class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
 class CauzziFaccioli2008SWISS04(CauzziFaccioli2008SWISS01):
 
     """
-    This class extends :class:CauzziFaccioli2008,following same strategy
-    as for :class:CauzziFaccioli2008SWISS01
+    This class extends :class:`CauzziFaccioli2008`following same strategy
+    as for :class:`CauzziFaccioli2008SWISS01`
     """
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS04
 
 
 class CauzziFaccioli2008SWISS08(CauzziFaccioli2008SWISS01):
     """
-    This class extends :class:CauzziFaccioli2008,following same strategy
-    as for :class:CauzziFaccioli2008SWISS01
+    This class extends :class:`CauzziFaccioli2008`,following same strategy
+    as for :class:`CauzziFaccioli2008SWISS01`
     """
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS08

@@ -22,7 +22,7 @@ from openquake.hazardlib.gsim.cauzzi_faccioli_2008 import (
     CauzziFaccioli2008SWISS04,
     CauzziFaccioli2008SWISS08
 )
-# Test data was prepared and provided by B. Edwards
+# Test data was prepared and provided by L. Danciu/B. Edwards
 
 
 class CauzziFaccioli2008SWISS01TestCase(BaseGSIMTestCase):
@@ -33,7 +33,7 @@ class CauzziFaccioli2008SWISS01TestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.50)
 
     def test_std_total(self):
-        self.check('CF08Swiss/CF08_STD_TOTAL_SigmaSS_TMR.csv',
+        self.check('CF08Swiss/cf_2008_phis_ss_embeded.csv',
                    max_discrep_percentage=0.50)
 
 
@@ -45,7 +45,7 @@ class CauzziFaccioli2008SWISS04TestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.50)
 
     def test_std_total(self):
-        self.check('CF08Swiss/CF08_STD_TOTAL_SigmaSS_TMR.csv',
+        self.check('CF08Swiss/cf_2008_phis_ss_embeded.csv',
                    max_discrep_percentage=0.50)
 
 
@@ -57,6 +57,6 @@ class CauzziFaccioli2008SWISS08TestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.50)
 
     def test_std_total(self):
-        self.check('CF08Swiss/CF08_STD_TOTAL_SigmaSS_TMR.csv',
+        self.check('CF08Swiss/cf_2008_phis_ss_embeded.csv',
                    max_discrep_percentage=0.50)
 
