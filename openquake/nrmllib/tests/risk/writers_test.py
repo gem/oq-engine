@@ -17,13 +17,10 @@
 import json
 import os
 import unittest
-from lxml import etree
 import StringIO
 import collections
 
-from openquake import nrmllib
 from openquake.nrmllib.risk import writers
-
 from openquake.nrmllib.tests import _utils
 
 

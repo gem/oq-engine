@@ -97,7 +97,5 @@ def assert_xml_equal(a, b):
     content_a = tostring(parse(a).getroot())
     content_b = tostring(parse(b).getroot())
     if content_a != content_b:
-        print 'meld', path_a, path_b
-        import pdb; pdb.set_trace()
         raise AssertionError('The files %s and %s are different!' %
                              (path_a, path_b))

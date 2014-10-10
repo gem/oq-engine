@@ -769,19 +769,19 @@ class HazardMapWriterTestCase(unittest.TestCase):
                 {'type': 'Feature',
                  'geometry': {'type': 'Point', 'coordinates': [-1.0, 1.0]},
                  'properties': {'iml': 0.01},
-                },
+                 },
                 {'type': 'Feature',
                  'geometry': {'type': 'Point', 'coordinates': [1.0, 1.0]},
                  'properties': {'iml': 0.02},
-                },
+                 },
                 {'type': 'Feature',
                  'geometry': {'type': 'Point', 'coordinates': [1.0, -1.0]},
                  'properties': {'iml': 0.03},
-                },
+                 },
                 {'type': 'Feature',
                  'geometry': {'type': 'Point', 'coordinates': [-1.0, -1.0]},
                  'properties': {'iml': 0.04},
-                },
+                 },
             ],
         }
 
@@ -835,19 +835,19 @@ class HazardMapWriterTestCase(unittest.TestCase):
                 {'type': 'Feature',
                  'geometry': {'type': 'Point', 'coordinates': [-1.0, 1.0]},
                  'properties': {'iml': 0.01},
-                },
+                 },
                 {'type': 'Feature',
                  'geometry': {'type': 'Point', 'coordinates': [1.0, 1.0]},
                  'properties': {'iml': 0.02},
-                },
+                 },
                 {'type': 'Feature',
                  'geometry': {'type': 'Point', 'coordinates': [1.0, -1.0]},
                  'properties': {'iml': 0.03},
-                },
+                 },
                 {'type': 'Feature',
                  'geometry': {'type': 'Point', 'coordinates': [-1.0, -1.0]},
                  'properties': {'iml': 0.04},
-                },
+                 },
             ],
         }
 
@@ -860,7 +860,6 @@ class HazardMapWriterTestCase(unittest.TestCase):
 
         actual = json.load(open(self.path))
         self.assertEqual(expected, actual)
-
 
 
 class DisaggXMLWriterTestCase(unittest.TestCase):
