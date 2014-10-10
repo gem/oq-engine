@@ -19,13 +19,14 @@
 Base RiskCalculator class.
 """
 
+import itertools
 import collections
 import psutil
 
 from openquake.nrmllib.risk import parsers
 from openquake.risklib.workflows import RiskModel
 from openquake.hazardlib.imt import from_string
-from openquake.commonlib.riskloaders import get_taxonomy_vfs
+from openquake.commonlib.riskmodels import get_vfs
 
 from openquake.engine import logs, export
 from openquake.engine.db import models
@@ -35,9 +36,6 @@ from openquake.engine.calculators.risk import \
 from openquake.engine.utils import config, tasks
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.input.exposure import ExposureDBWriter
-
-
-BLOCK_SIZE = 100  # number of assets per block
 
 MEMORY_ERROR = '''Running the calculation will require approximately
 %dM, i.e. more than the memory which is available right now (%dM).
@@ -49,8 +47,10 @@ correlation matrix.'''
 
 
 @tasks.oqtask
-def build_getters(job_id, counts_taxonomy, calc):
+def make_getter_builders(job_id, counts_taxonomy, calc):
     """
+    Initializes the epsilon matrices and save them on the database.
+
     :param job_id:
         ID of the current risk job
     :param counts_taxonomy:
@@ -58,9 +58,8 @@ def build_getters(job_id, counts_taxonomy, calc):
     :param calc:
         :class:`openquake.engine.calculators.risk.base.RiskCalculator` instance
     """
+    builders = {}  # taxonomy -> builder
     for counts, taxonomy in counts_taxonomy:
-        logs.LOG.info('taxonomy=%s, assets=%d', taxonomy, counts)
-
         # building the GetterBuilder
         with calc.monitor("associating asset->site"):
             builder = hazard_getters.GetterBuilder(
@@ -77,38 +76,61 @@ def build_getters(job_id, counts_taxonomy, calc):
             available_memory = (1 - phymem.percent / 100) * phymem.total
             available_mb = available_memory / 1024 / 1024
             if nbytes * 3 > available_memory:
-                raise MemoryError(MEMORY_ERROR % (estimate_mb, available_mb))
+                raise MemoryError(
+                    MEMORY_ERROR % (estimate_mb, available_mb))
 
         # initializing the epsilons
         builder.init_epsilons(haz_outs)
+        builders[builder.taxonomy] = builder
+    return builders
 
-        # building the tasks
-        task_no = 0
-        name = calc.core_calc_task.__name__ + '[%s]' % taxonomy
-        otm = tasks.OqTaskManager(calc.core_calc_task, logs.LOG.progress, name)
 
-        for offset in range(0, counts, BLOCK_SIZE):
-            with calc.monitor("getting asset chunks"):
-                assets = models.ExposureData.objects.get_asset_chunk(
-                    calc.rc, taxonomy, offset, BLOCK_SIZE)
-            with calc.monitor("building getters"):
-                try:
-                    getters = builder.make_getters(
-                        calc.getter_class, haz_outs, assets)
-                except hazard_getters.AssetSiteAssociationError as err:
-                    # TODO: add a test for this corner case
-                    # https://bugs.launchpad.net/oq-engine/+bug/1317796
-                    logs.LOG.warn('Taxonomy %s: %s', taxonomy, err)
-                    continue
+@tasks.oqtask
+def run_risk(job_id, sorted_assocs, builders, calc):
+    """
+    Run the risk calculation on the given assets by using the given
+    hazard builders and risk calculator.
 
-            # submitting task
-            task_no += 1
-            logs.LOG.info('Built task #%d for taxonomy %s', task_no, taxonomy)
-            risk_model = calc.risk_models[taxonomy]
-            otm.submit(job_id, risk_model, getters,
-                       calc.outputdict, calc.calculator_parameters)
+    :param job_id:
+        ID of the current risk job
+    :param sorted_assocs:
+        asset_site associations, sorted by taxonomy
+    :param dict builders:
+        hazard getter builders for each taxonomy
+    :param calc:
+        the risk calculator to use
+    """
+    acc = calc.acc
+    for taxonomy, assocs_by_taxonomy in itertools.groupby(
+            sorted_assocs, lambda a: a.asset.taxonomy):
+        assets = models.ExposureData.objects.get_asset_chunk(
+            calc.rc, assocs_by_taxonomy)
+        haz_outs = calc.rc.hazard_outputs()
+        builder = builders[taxonomy]
+        with calc.monitor("building getters"):
+            try:
+                getters = builder.make_getters(
+                    calc.getter_class, haz_outs, assets)
+            except hazard_getters.AssetSiteAssociationError as err:
+                # TODO: add a test for this corner case
+                # https://bugs.launchpad.net/oq-engine/+bug/1317796
+                logs.LOG.warn('Taxonomy %s: %s', builder.taxonomy, err)
+                return {}
+        logs.LOG.info('Processing %d assets of taxonomy %s',
+                      len(assets), taxonomy)
+        for it in models.ImtTaxonomy.objects.filter(
+                job=calc.job, taxonomy=taxonomy):
+            res = calc.core_calc_task.task_func(
+                job_id, calc.risk_models[it.imt.imt_str, taxonomy], getters,
+                calc.outputdict, calc.calculator_parameters)
+            acc = calc.agg_result(acc, res)
+    return acc
 
-    return otm
+
+def updatedict(acc, dic):
+    a = acc.copy()
+    a.update(dic)
+    return a
 
 
 class RiskCalculator(base.Calculator):
@@ -153,13 +175,14 @@ class RiskCalculator(base.Calculator):
             2. Parse the available risk models
             3. Validate exposure and risk models
         """
-        with self.monitor('get exposure'):
-            exposure = self.rc.exposure_model
-            if exposure is None:
+
+        exposure = self.rc.exposure_model
+        if exposure is None:
+            with self.monitor('import exposure'):
                 ExposureDBWriter(self.job).serialize(
                     parsers.ExposureModelParser(self.rc.inputs['exposure']))
-            self.taxonomies_asset_count = \
-                self.rc.exposure_model.taxonomies_in(self.rc.region_constraint)
+        self.taxonomies_asset_count = \
+            self.rc.exposure_model.taxonomies_in(self.rc.region_constraint)
 
         with self.monitor('parse risk models'):
             self.risk_models = self.get_risk_models()
@@ -168,10 +191,9 @@ class RiskCalculator(base.Calculator):
         imt_taxonomy_set = set()
         for rm in self.risk_models.itervalues():
             self.loss_types.update(rm.loss_types)
-            for imt in rm.imts:
-                imt_taxonomy_set.add((imt, rm.taxonomy))
-                # insert the IMT in the db, if not already there
-                models.Imt.save_new([from_string(imt)])
+            imt_taxonomy_set.add((rm.imt, rm.taxonomy))
+            # insert the IMT in the db, if not already there
+            models.Imt.save_new([from_string(rm.imt)])
         for imt, taxonomy in imt_taxonomy_set:
             models.ImtTaxonomy.objects.create(
                 job=self.job, imt=models.Imt.get(imt), taxonomy=taxonomy)
@@ -183,7 +205,7 @@ class RiskCalculator(base.Calculator):
                 self.taxonomies_asset_count = dict(
                     (t, count)
                     for t, count in self.taxonomies_asset_count.items()
-                    if t in self.risk_models)
+                    if (imt, t) in self.risk_models)
 
         for validator_class in self.validators:
             validator = validator_class(self)
@@ -207,10 +229,15 @@ class RiskCalculator(base.Calculator):
             [ob(self) for ob in self.output_builders])
         ct = sorted((counts, taxonomy) for taxonomy, counts
                     in self.taxonomies_asset_count.iteritems())
+        getter_builders = tasks.apply_reduce(
+            make_getter_builders, (self.job.id, ct, self),
+            updatedict, {}, self.concurrent_tasks)
+        assocs = models.AssetSite.objects.filter(job=self.job).order_by(
+            'asset__taxonomy')
         self.acc = tasks.apply_reduce(
-            build_getters, (self.job.id, ct, self),
-            lambda acc, otm: otm.aggregate_results(self.agg_result, acc),
-            self.acc, self.concurrent_tasks)
+            run_risk, (self.job.id, assocs, getter_builders, self),
+            self.agg_result, self.acc, self.concurrent_tasks,
+            name=self.core_calc_task.__name__)
 
     def _get_outputs_for_export(self):
         """
@@ -257,22 +284,21 @@ class RiskCalculator(base.Calculator):
     def get_risk_models(self):
         # regular risk models
         if self.bcr is False:
-            return dict(
-                (taxonomy, RiskModel(taxonomy, self.get_workflow(vfs)))
-                for taxonomy, vfs in get_taxonomy_vfs(
-                    self.rc.inputs, models.LOSS_TYPES))
+            return {
+                imt_taxo: RiskModel(
+                    imt_taxo[0], imt_taxo[1], self.get_workflow(vfs))
+                for imt_taxo, vfs in get_vfs(self.rc.inputs).iteritems()
+                }
 
         # BCR risk models
-        orig_data = get_taxonomy_vfs(
-            self.rc.inputs, models.LOSS_TYPES, retrofitted=False)
-        retro_data = get_taxonomy_vfs(
-            self.rc.inputs, models.LOSS_TYPES, retrofitted=True)
+        orig_data = get_vfs(self.rc.inputs, retrofitted=False).items()
+        retro_data = get_vfs(self.rc.inputs, retrofitted=True).items()
 
         risk_models = {}
-        for (taxonomy, vfs), (taxonomy_, vfs_) in zip(orig_data, retro_data):
-            assert taxonomy_ == taxonomy_  # same taxonomy
-            risk_models[taxonomy] = RiskModel(
-                taxonomy, self.get_workflow(vfs, vfs_))
+        for (imt_taxo, vfs), (imt_taxo_, vfs_) in zip(orig_data, retro_data):
+            assert imt_taxo == imt_taxo_  # same imt and taxonomy
+            risk_models[imt_taxo] = RiskModel(
+                imt_taxo[0], imt_taxo[1], self.get_workflow(vfs, vfs_))
         return risk_models
 
     def get_workflow(self, vulnerability_functions):
