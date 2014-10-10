@@ -338,40 +338,46 @@ def get_job(cfg, username="openquake", hazard_calculation_id=None,
     return job
 
 
-def create_gmf(hazard_job, rlz=None, output_type="gmf"):
+def create_gmf_sescoll(output, output_type='gmf'):
     """
-    Returns the created Gmf object.
+    Returns Gmf and SESCollection instances.
+
+    :param output: a :class:`openquake.engine.db.models.Ouput` instance
+    :param output_type: a string with the output type
     """
-    rlz = rlz or models.LtRealization.objects.create(
-        lt_model=models.LtSourceModel.objects.create(
-            hazard_calculation=hazard_job, ordinal=0, sm_lt_path="test_sm"),
-        ordinal=0, weight=1, gsim_lt_path="test_gsim")
+    sescoll = models.SESCollection.create(output)
+
+    rlz = models.LtRealization.objects.create(
+        lt_model=sescoll.trt_model.lt_model, ordinal=0, weight=1,
+        gsim_lt_path="test_gsim")
 
     gmf = models.Gmf.objects.create(
         output=models.Output.objects.create_output(
-            hazard_job, "Test Hazard output", output_type),
+            output.oq_job, "Test Hazard output", output_type),
         lt_realization=rlz)
 
-    return gmf
+    return gmf, sescoll
 
 
-def create_gmf_data_records(hazard_job, rlz=None, ses_coll=None, points=None):
+def create_gmf_data_records(hazard_job, coordinates=None):
     """
     Returns the created records.
+
+    :param hazard_joint: a :class:`openquake.engine.db.models.OqJob` instance
+    :param coordinates: a list of (lon, lat) pairs
+
+    If the coordinates are not set, a list of 5 predefined locations is used
     """
-    gmf = create_gmf(hazard_job, rlz)
-    ses_coll = ses_coll or models.SESCollection.objects.create(
-        output=models.Output.objects.create_output(
-            hazard_job, "Test SES Collection", "ses"),
-        lt_model=gmf.lt_realization.lt_model,
-        ordinal=0)
+    output = models.Output.objects.create_output(
+        hazard_job, "Test SES Collection", "ses")
+    gmf, ses_coll = create_gmf_sescoll(output)
     ruptures = create_ses_ruptures(hazard_job, ses_coll, 3)
     records = []
-    if points is None:
-        points = [(15.310, 38.225), (15.71, 37.225),
-                  (15.48, 38.091), (15.565, 38.17),
-                  (15.481, 38.25)]
-    for site_id in models.save_sites(hazard_job, points):
+    if coordinates is None:
+        coordinates = [(15.310, 38.225), (15.71, 37.225),
+                       (15.48, 38.091), (15.565, 38.17),
+                       (15.481, 38.25)]
+    for site_id in models.save_sites(hazard_job, coordinates):
         records.append(models.GmfData.objects.create(
             gmf=gmf,
             task_no=0,
@@ -383,10 +389,13 @@ def create_gmf_data_records(hazard_job, rlz=None, ses_coll=None, points=None):
     return records
 
 
-def create_gmf_from_csv(job, fname, output_type="gmf"):
+def create_gmf_from_csv(job, fname, output_type='gmf'):
     """
     Populate the gmf_data table for an event_based (default)
     or scenario calculation (output_type="gmf_scenario").
+
+    :param job: an :class:`openquake.engine.db.models.OqJob` instance
+    :param output_type: a string with the output type
     """
     hc = job.get_oqparam()
     if output_type == "gmf":  # event based
@@ -398,13 +407,10 @@ def create_gmf_from_csv(job, fname, output_type="gmf"):
     job.status = 'post_processing'
     job.save()
 
-    gmf = create_gmf(job, output_type=output_type)
+    output = models.Output.objects.create_output(
+        job, "Test SES Collection", "ses")
+    gmf, ses_coll = create_gmf_sescoll(output, output_type=output_type)
 
-    ses_coll = models.SESCollection.objects.create(
-        output=models.Output.objects.create_output(
-            job, "Test SES Collection", "ses"),
-        lt_model=gmf.lt_realization.lt_model,
-        ordinal=0)
     with open(fname, 'rb') as csvfile:
         gmfreader = csv.reader(csvfile, delimiter=',')
         locations = gmfreader.next()
@@ -480,10 +486,9 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
             output=models.Output.objects.create_output(
                 hazard_job, "Test gmf scenario output", "gmf_scenario"))
 
-        models.SESCollection.objects.create(
+        models.SESCollection.create(
             output=models.Output.objects.create_output(
-                hazard_job, "Test SES Collection", "ses"),
-            lt_model=None, ordinal=0)
+                hazard_job, "Test SES Collection", "ses"))
         site_ids = models.save_sites(
             hazard_job,
             [(15.48, 38.0900001), (15.565, 38.17), (15.481, 38.25)])
@@ -497,7 +502,7 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
                 rupture_ids=[0, 1, 2])
 
     elif output_type in ("ses", "gmf"):
-        hazard_output = create_gmf_data_records(hazard_job, rlz)[0].gmf
+        hazard_output = create_gmf_data_records(hazard_job)[0].gmf
 
     else:
         raise RuntimeError('Unexpected output_type: %s' % output_type)
@@ -541,26 +546,9 @@ def create_ses_ruptures(job, ses_collection, num):
     Each rupture has a magnitude ranging from 0 to 10 and no geographic
     information.
     """
-    lt_model = models.LtSourceModel.objects.create(
-        hazard_calculation=job,
-        ordinal=0,
-        sm_lt_path=['b1'],
-        sm_name='test source model',
-        weight=1,
-    )
-    trt = "test region type"
-    trt_model = models.TrtModel.objects.create(
-        lt_model=lt_model,
-        tectonic_region_type=trt,
-        num_sources=1,
-        num_ruptures=1,
-        min_mag=4,
-        max_mag=6,
-        gsims=[],
-    )
     rupture = ParametricProbabilisticRupture(
         mag=1 + 10. / float(num), rake=0,
-        tectonic_region_type=trt,
+        tectonic_region_type="test region type",
         hypocenter=Point(0, 0, 0.1),
         surface=PlanarSurface(
             10, 11, 12, Point(0, 0, 1), Point(1, 0, 1),
@@ -570,7 +558,7 @@ def create_ses_ruptures(job, ses_collection, num):
         source_typology=object())
     ses_ordinal = 1
     seed = 42
-    pr = models.ProbabilisticRupture.create(rupture, ses_collection, trt_model)
+    pr = models.ProbabilisticRupture.create(rupture, ses_collection)
     return [models.SESRupture.create(pr, ses_ordinal, 'test', 1, i, seed + i)
             for i in range(num)]
 
