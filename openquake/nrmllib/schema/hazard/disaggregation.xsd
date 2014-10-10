@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:gml="http://www.opengis.net/gml"
+           xmlns="http://openquake.org/xmlns/nrml/0.4"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.4"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
+
+    <xs:element name="disaggMatrices" type="DisaggMatrices" />
+    <xs:complexType name="DisaggMatrices">
+        <xs:sequence>
+            <xs:element name="disaggMatrix" type="DisaggMatrix" minOccurs="1" maxOccurs="unbounded" />
+        </xs:sequence>
+
+        <xs:attribute name="IMT" type="IMTType" use="required" />
+        <!-- saPeriod and saDamping are only relevant when IMT == 'SA' -->
+        <xs:attribute name="saPeriod" type="PositiveDoubleType" use="optional" />
+        <xs:attribute name="saDamping" type="PositiveDoubleType" use="optional" />
+
+        <xs:attribute name="investigationTime" type="PositiveNonZeroDoubleType" use="required" />
+
+        <xs:attribute name="sourceModelTreePath" type="xs:string" use="optional" />
+        <xs:attribute name="gsimTreePath" type="xs:string" use="optional" />
+
+        <xs:attribute name="lon" type="xs:double" use="required" />
+        <xs:attribute name="lat" type="xs:double" use="required" />
+
+        <xs:attribute name="magBinEdges" type="xs:string" use="optional" />
+        <xs:attribute name="distBinEdges" type="xs:string" use="optional" />
+        <xs:attribute name="lonBinEdges" type="xs:string" use="optional" />
+        <xs:attribute name="latBinEdges" type="xs:string" use="optional" />
+        <xs:attribute name="epsBinEdges" type="xs:string" use="optional" />
+        <xs:attribute name="tectonicRegionTypes" type="xs:string" use="optional" />
+    </xs:complexType>
+
+    <xs:complexType name="DisaggMatrix">
+        <xs:sequence>
+            <xs:element name="prob" type="DisaggProb" minOccurs="1" maxOccurs="unbounded" />
+        </xs:sequence>
+
+        <xs:attribute name="type" type="PMFType" use="required" />
+        <xs:attribute name="dims" type="xs:string" use="required" />
+        <xs:attribute name="poE" type="NormalizedDoubleType" use="required" />
+        <xs:attribute name="iml" type="xs:double" use="required" />
+    </xs:complexType>
+
+    <xs:complexType name="DisaggProb">
+        <xs:attribute name="index" type="xs:string" />
+        <xs:attribute name="value" type="NormalizedDoubleType" />
+    </xs:complexType>
+
+    <xs:simpleType name="PMFType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="Mag" />
+            <xs:enumeration value="Dist" />
+            <xs:enumeration value="TRT" />
+            <xs:enumeration value="Mag,Dist" />
+            <xs:enumeration value="Mag,Dist,Eps" />
+            <xs:enumeration value="Lon,Lat" />
+            <xs:enumeration value="Mag,Lon,Lat" />
+            <xs:enumeration value="Lon,Lat,TRT" />
+        </xs:restriction>
+    </xs:simpleType>
+</xs:schema>

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:gml="http://www.opengis.net/gml"
+           xmlns="http://openquake.org/xmlns/nrml/0.4"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.4"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
+
+    <xs:simpleType name="AssetCategory">
+        <xs:restriction base="xs:string" />
+    </xs:simpleType>
+
+    <xs:simpleType name="LossCategory">
+        <xs:restriction base="xs:string" />
+    </xs:simpleType>
+
+    <xs:simpleType name="AssetValueUnit">
+        <xs:restriction base="xs:string" />
+    </xs:simpleType>
+
+    <xs:simpleType name="Taxonomy">
+        <xs:restriction base="xs:string">
+            <xs:minLength value="1" />
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:complexType name="Location">
+      <xs:attribute name="lon" type="Longitude"/>
+      <xs:attribute name="lat" type="Latitude"/>
+    </xs:complexType>
+
+</xs:schema>

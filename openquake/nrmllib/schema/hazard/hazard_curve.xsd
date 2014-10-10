@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:gml="http://www.opengis.net/gml"
+           xmlns="http://openquake.org/xmlns/nrml/0.4"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.4"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
+
+    <!-- hazardCurves: A container for hazard curves. -->
+    <xs:element name="hazardCurves" type="HazardCurves" />
+    <xs:complexType name="HazardCurves">
+        <xs:sequence>
+            <xs:element name="IMLs" type="gml:doubleList" minOccurs="1" maxOccurs="1" />
+            <xs:element ref="hazardCurve" minOccurs="1" maxOccurs="unbounded" />
+        </xs:sequence>
+        <xs:attribute name="investigationTime" type="PositiveNonZeroDoubleType" use="required" />
+        <xs:attribute name="IMT" type="IMTType" use="required" />
+
+        <xs:attribute name="statistics" type="HazardCurveStats" use="optional" />
+        <!-- quantileValue is only used when statistics == 'quantile' -->
+        <xs:attribute name="quantileValue" type="PositiveDoubleType" use="optional" />
+
+        <!-- Both tree paths are only used for representing curves for a single realization.
+             In other words, the paths are not relevent for statistical results (mean or quantile). -->
+        <xs:attribute name="sourceModelTreePath" type="xs:string" use="optional" />
+        <xs:attribute name="gsimTreePath" type="xs:string" use="optional" />
+
+        <!-- saPeriod and saDamping are only relevant when IMT == 'SA' -->
+        <xs:attribute name="saPeriod" type="PositiveDoubleType" use="optional" />
+        <xs:attribute name="saDamping" type="PositiveDoubleType" use="optional" />
+    </xs:complexType>
+
+    <!-- hazardCurve: A hazard curve for a single location. -->
+    <xs:element name="hazardCurve" type="HazardCurve" />
+    <xs:complexType name="HazardCurve">
+        <xs:sequence>
+            <xs:element ref="gml:Point" minOccurs="1" maxOccurs="1" />
+            <xs:element name="poEs" type="NormalizedDoubleList" minOccurs="1" maxOccurs="1" />
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:simpleType name="HazardCurveStats">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="mean" />
+            <xs:enumeration value="quantile" />
+        </xs:restriction>
+    </xs:simpleType>
+
+</xs:schema>

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns="http://openquake.org/xmlns/nrml/0.4"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.4"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+
+    <!-- Top-level container for sources. -->
+    <xs:element name="sourceModel" type="SourceModel" />
+    <xs:complexType name="SourceModel">
+        <xs:sequence>
+            <xs:element ref="_abstractSource"  minOccurs="1" maxOccurs="unbounded" />
+        </xs:sequence>
+        <xs:attribute name="name" type="xs:string" />
+    </xs:complexType>
+
+    <xs:element name="_abstractSource" type="AbstractSeismicSource" />
+    <xs:complexType name="AbstractSeismicSource" abstract="true">
+        <xs:attribute name="id" type="xs:string" />
+        <xs:attribute name="name" type="xs:string" />
+        <xs:attribute name="tectonicRegion" type="xs:string" />
+    </xs:complexType>
+
+    <xs:element name="upperSeismoDepth" type="PositiveDoubleType" />
+    <xs:element name="lowerSeismoDepth" type="PositiveNonZeroDoubleType" />
+
+    <xs:element name="magScaleRel" type="xs:string" />
+    <xs:element name="ruptAspectRatio" type="PositiveNonZeroDoubleType" />
+
+    <!-- Magnitude Frequency Distributions -->
+    <xs:element name="incrementalMFD" type="IncrementalMFD" />
+    <xs:complexType name="IncrementalMFD">
+        <xs:sequence>
+            <xs:element name="occurRates" type="PositiveDoubleList" />
+        </xs:sequence>
+        <xs:attribute name="minMag" type="PositiveNonZeroDoubleType" />
+        <xs:attribute name="binWidth" type="PositiveNonZeroDoubleType" />
+    </xs:complexType>
+
+    <xs:element name="truncGutenbergRichterMFD" type="TruncatedGutenbergRichterMFD" />
+    <xs:complexType name="TruncatedGutenbergRichterMFD">
+        <xs:attribute name="aValue" type="xs:double" />
+        <xs:attribute name="bValue" type="PositiveNonZeroDoubleType" />
+        <xs:attribute name="minMag" type="PositiveNonZeroDoubleType" />
+        <xs:attribute name="maxMag" type="PositiveNonZeroDoubleType" />
+    </xs:complexType>
+
+    <!-- Nodal Plane Distribution -->
+    <xs:element name="nodalPlaneDist" type="NodalPlaneDistribution" />
+    <xs:complexType name="NodalPlaneDistribution">
+        <xs:sequence>
+            <xs:element ref="nodalPlane" minOccurs="1" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:element name="nodalPlane" type="NodalPlane" />
+    <xs:complexType name="NodalPlane">
+        <xs:attribute name="probability" type="NormalizedDoubleType" />
+        <xs:attribute name="strike" type="Strike" />
+        <xs:attribute name="dip" type="Dip" />
+        <xs:attribute name="rake" type="Rake" />
+    </xs:complexType>
+
+    <!-- Hypocentral Depth Distribution -->
+    <xs:element name="hypoDepthDist" type="HypocentralDepthDistribution" />
+    <xs:complexType name="HypocentralDepthDistribution">
+        <xs:sequence>
+            <xs:element ref="hypoDepth" minOccurs="1" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:element name="hypoDepth" type="HypocentralDepth" />
+    <xs:complexType name="HypocentralDepth">
+        <xs:attribute name="probability" type="NormalizedDoubleType" />
+        <xs:attribute name="depth" type="PositiveDoubleType" />
+    </xs:complexType>
+
+</xs:schema>

@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <dmgDistPerTaxonomy>
+        <damageStates>
+            no_damage
+            slight
+            moderate
+            extensive
+            complete
+        </damageStates>
+
+        <!-- Note that, although this element has the same name ("DDNode") as dmgDistPerAsset, the contents are different. -->
+        <DDNode>
+            <taxonomy>RC</taxonomy>
+            <!-- 'mean' and 'stddev' are mean and standard deviation over all ground motion fields -->
+            <damage ds="no_damage" mean="1.1" stddev="1.7" />
+            <damage ds="slight" mean="34.9" stddev="18.4" />
+            <damage ds="moderate" mean="64.3"  stddev="19.7" />
+            <damage ds="extensive" mean="64.3"  stddev="19.7" />
+            <damage ds="complete" mean="64.3"  stddev="19.7" />
+        </DDNode>
+        <DDNode>
+            <taxonomy>RM</taxonomy>
+            <damage ds="no_damage" mean="1.2" stddev="1.6" />
+            <damage ds="slight" mean="35.0" stddev="18.5" />
+            <damage ds="moderate" mean="64.4"  stddev="19.8" />
+            <damage ds="extensive" mean="64.3"  stddev="19.7" />
+            <damage ds="complete" mean="64.3"  stddev="19.7" />
+        </DDNode>
+    </dmgDistPerTaxonomy>
+</nrml>

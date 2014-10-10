@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:gml="http://www.opengis.net/gml"
+           xmlns="http://openquake.org/xmlns/nrml/0.4"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.4"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+    <xs:element name="gmfCollection" type="GMFCollection" />
+    <xs:complexType name="GMFCollection">
+        <xs:sequence>
+            <xs:element name="gmfSet" type="GMFSet" minOccurs="1" maxOccurs="unbounded" />
+        </xs:sequence>
+        <xs:attribute name="sourceModelTreePath" type="xs:string" use="required" />
+        <xs:attribute name="gsimTreePath" type="xs:string" use="required" />
+    </xs:complexType>
+
+    <xs:complexType name="GMFSet">
+        <xs:sequence>
+            <xs:element ref="gmf" minOccurs="1" maxOccurs="unbounded" />
+        </xs:sequence>
+        <!--
+            Optional; used only for 'Event-Based' calculations.
+            Not used for 'Scenario' calculations.
+        -->
+        <xs:attribute name="investigationTime" type="PositiveNonZeroDoubleType" use="optional" />
+        <xs:attribute name="stochasticEventSetId" type="PositiveNonZeroDoubleType" use="optional" />
+    </xs:complexType>
+
+    <xs:element name="gmf" type="GMF" />
+    <xs:complexType name="GMF">
+        <xs:sequence>
+            <xs:element name="node" type="GMFNode" minOccurs="1" maxOccurs="unbounded" />
+        </xs:sequence>
+        <!--
+            Optional; used only for 'Event-Based' calculations.
+            Not used for 'Scenario' calculations.
+        -->
+        <xs:attribute name="ruptureId" type="xs:string" use="optional" />
+        <xs:attribute name="IMT" type="IMTType" use="required" />
+        <!-- saPeriod and saDamping are only relevant when IMT == 'SA' -->
+        <xs:attribute name="saPeriod" type="PositiveDoubleType" use="optional" />
+        <xs:attribute name="saDamping" type="PositiveDoubleType" use="optional" />
+    </xs:complexType>
+
+    <xs:complexType name="GMFNode">
+        <xs:attribute name="gmv" type="xs:float" use="required" />
+        <xs:attribute name="lon" type="xs:float" use="required" />
+        <xs:attribute name="lat" type="xs:float" use="required" />
+    </xs:complexType>
+
+
+</xs:schema>

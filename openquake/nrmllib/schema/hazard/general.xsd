@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:gml="http://www.opengis.net/gml"
+           xmlns="http://openquake.org/xmlns/nrml/0.4"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.4"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
+
+    <xs:complexType name="HazardProcessing">
+        <!-- NOTE: renamed timeSpanDuration (OpenSHA name) to investigationTimeSpan.
+             This parameter should be given in the unit years, since the base
+             SI unit (seconds) would yield values that are not instructive.
+             We use a simple non-negative float here, not the xs:duration type,
+             because xs:duration could be hard to match with a database type -->
+        <xs:attribute name="investigationTimeSpan" type="PositiveDoubleType"/>
+        <xs:attribute name="IDmodel" type="xs:string"/>
+        <xs:attribute name="saPeriod" type="PositiveDoubleType"/>
+        <xs:attribute name="saDamping" type="PositiveDoubleType"/>
+    </xs:complexType>
+
+    <xs:simpleType name="Vs30Method">
+        <xs:annotation>
+            <xs:documentation>Method used to define the vs30 value.</xs:documentation>
+        </xs:annotation>
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="Wald and Allen Topographic proxy"/>
+            <xs:enumeration value="fixed value"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="GroundMotionComponent">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="average"/>
+            <xs:enumeration value="GMRotI50"/>
+            <xs:enumeration value="random"/>
+            <xs:enumeration value="greater"/>
+            <xs:enumeration value="vertical"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="TruncationType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="none"/>
+
+            <!-- NOTE: removed the whitespace in enum values -->
+            <xs:enumeration value="one_sided"/>
+            <xs:enumeration value="two_sided"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="StdDevType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="none"/>
+            <xs:enumeration value="total"/>
+            <xs:enumeration value="inter"/>
+            <xs:enumeration value="intra"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+	<xs:complexType name="GMPEParametersType">
+        <xs:annotation>
+            <xs:documentation>Describe the IMR (GMPE) related information</xs:documentation>
+        </xs:annotation>
+        <xs:attribute name="IMT" type="IMTType"/>
+        <xs:attribute name="vs30method" type="Vs30Method"/>
+        <xs:attribute name="groundMotionComponent" type="GroundMotionComponent"/>
+
+        <xs:attribute name="period" type="PositiveDoubleType"/>
+        <xs:attribute name="damping" type="PositiveDoubleType"/>
+
+        <xs:attribute name="truncationType" type="TruncationType"/>
+        <xs:attribute name="truncationLevel" type="PositiveDoubleType"/>
+        <xs:attribute name="stdDevType" type="StdDevType"/>
+    </xs:complexType>
+
+    <!-- Geometry defintions. Used by rupture and source models. -->
+
+    <xs:complexType name="Hypocenter">
+      <xs:attribute name="lon" type="Longitude"/>
+      <xs:attribute name="lat" type="Latitude"/>
+      <xs:attribute name="depth" type="PositiveNonZeroDoubleType"/>
+    </xs:complexType>
+
+    <xs:complexType name="SimpleFaultGeometry">
+                <xs:sequence>
+                    <xs:element ref="gml:LineString"/>
+                    <xs:element name="dip" type="Dip"/>
+                    <xs:element name="upperSeismoDepth" type="PositiveDoubleType"/>
+                    <xs:element name="lowerSeismoDepth" type="PositiveDoubleType"/>
+                </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="ComplexFaultGeometry">
+        <xs:complexContent>
+            <xs:restriction base="gml:MultiGeometryPropertyType">
+                <xs:sequence>
+                    <xs:element ref="faultTopEdge"/>
+                    <xs:element ref="intermediateEdge" minOccurs="0" maxOccurs="unbounded" />
+                    <xs:element ref="faultBottomEdge"/>
+                </xs:sequence>
+            </xs:restriction>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:element name="faultEdges" type="FaultEdges" substitutionGroup="gml:MultiCurve"/>
+    <xs:complexType name="FaultEdges">
+        <xs:complexContent>
+            <xs:restriction base="gml:MultiCurveType">
+                <xs:sequence>
+                    <xs:element ref="faultTopEdge"/>
+                    <xs:element ref="faultBottomEdge"/>
+                </xs:sequence>
+            </xs:restriction>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:element name="faultTopEdge" type="FaultEdge" substitutionGroup="gml:curveMember"/>
+    <xs:element name="intermediateEdge" type="FaultEdge" substitutionGroup="gml:curveMember"/>
+    <xs:element name="faultBottomEdge" type="FaultEdge" substitutionGroup="gml:curveMember"/>
+    <xs:complexType name="FaultEdge">
+        <xs:complexContent>
+            <xs:restriction base="gml:CurvePropertyType">
+                <xs:sequence>
+                    <xs:element ref="gml:LineString"/>
+                </xs:sequence>
+            </xs:restriction>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:simpleType name="Strike">
+        <xs:restriction base="xs:double">
+            <xs:minInclusive value="0.0"/>
+            <xs:maxInclusive value="360.0"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="Dip">
+        <xs:restriction base="xs:double">
+            <xs:minInclusive value="0.0"/>
+            <xs:maxInclusive value="90.0"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="Rake">
+        <xs:restriction base="xs:double">
+            <xs:minInclusive value="-180.0"/>
+            <xs:maxInclusive value="+180.0"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:complexType name="AreaBoundary">
+        <xs:complexContent>
+            <xs:restriction base="gml:SurfacePropertyType">
+                <xs:sequence>
+                    <xs:element ref="gml:Polygon"/>
+                </xs:sequence>
+            </xs:restriction>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="PlanarSurface">
+        <xs:sequence>
+            <xs:element name="topLeft" type="PlanarSurfaceVertex" />
+            <xs:element name="topRight" type="PlanarSurfaceVertex" />
+            <xs:element name="bottomLeft" type="PlanarSurfaceVertex" />
+            <xs:element name="bottomRight" type="PlanarSurfaceVertex" />
+        </xs:sequence>
+        <xs:attribute name="strike" type="Strike" />
+        <xs:attribute name="dip" type="Dip" />
+    </xs:complexType>
+
+    <xs:complexType name="PlanarSurfaceVertex">
+        <xs:attribute name="lon" type="Longitude" />
+        <xs:attribute name="lat" type="Latitude" />
+        <xs:attribute name="depth" type="PositiveDoubleType" />
+    </xs:complexType>
+
+</xs:schema>

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:gml="http://www.opengis.net/gml"
+           xmlns="http://openquake.org/xmlns/nrml/0.4"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.4"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
+    <xs:include schemaLocation="../nrml_common.xsd"/>
+
+    <xs:element name="rupture" type="Rupture" abstract="true"/>
+    <xs:complexType name="Rupture">
+      <xs:sequence>
+        <xs:element name="magnitude" type="Magnitude"/>
+      </xs:sequence>
+    </xs:complexType>
+
+    <xs:element name="pointRupture" type="PointRupture" substitutionGroup="rupture"/>
+    <xs:complexType name="PointRupture">
+        <xs:complexContent>
+            <xs:extension base="Rupture">
+                <xs:sequence>
+                    <xs:element name="strike" type="Strike"/>
+                    <xs:element name="dip" type="Dip"/>
+                    <xs:element name="rake" type="Rake"/>
+                    <xs:element name="hypocenterLocation" type="gml:PointPropertyType"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:element name="simpleFaultRupture" type="SimpleFaultRupture" substitutionGroup="rupture"/>
+    <xs:complexType name="SimpleFaultRupture">
+        <xs:complexContent>
+            <xs:extension base="Rupture">
+                <xs:sequence>
+                    <xs:element name="rake" type="Rake"/>
+                    <xs:element name="hypocenter" type="Hypocenter"/>
+                    <xs:element name="simpleFaultGeometry" type="SimpleFaultGeometry"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:element name="complexFaultRupture" type="ComplexFaultRupture" substitutionGroup="rupture"/>
+    <xs:complexType name="ComplexFaultRupture">
+        <xs:complexContent>
+            <xs:extension base="Rupture">
+                <xs:sequence>
+                    <xs:element name="rake" type="Rake"/>
+                    <xs:element name="hypocenter" type="Hypocenter"/>
+                    <xs:element name="complexFaultGeometry" type="ComplexFaultGeometry"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:element name="arbitrarilyComplexRupture" type="ArbitrarilyComplexRupture" substitutionGroup="rupture"/>
+    <xs:complexType name="ArbitrarilyComplexRupture">
+        <xs:complexContent>
+            <xs:extension base="Rupture">
+                <xs:sequence>
+                    <xs:element name="rake" type="Rake"/>
+                    <xs:element name="ruptureSurface" type="gml:SurfacePropertyType"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+</xs:schema>

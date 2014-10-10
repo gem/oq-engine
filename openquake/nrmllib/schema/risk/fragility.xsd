@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns="http://openquake.org/xmlns/nrml/0.4"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.4"
+           elementFormDefault="qualified"
+           xml:lang="en">
+    <!--
+         Abbreviations used:
+            - ffs: fragility function set
+            - ffc: fragility function (continuous)
+            - ffd: fragility function (discrete)
+    -->
+
+    <!-- Top-level element for Fragility model definitions. -->
+    <xs:element name="fragilityModel" type="FragilityModel" />
+    <xs:complexType name="FragilityModel">
+                <xs:sequence>
+                    <xs:element name="description" type="xs:string"/>
+                    <xs:element name="limitStates" type="LimitStates" minOccurs="1" maxOccurs="1" />
+                    <xs:element ref="ffs" minOccurs="1" maxOccurs="unbounded" />
+                </xs:sequence>
+                <xs:attribute name="format" type="Fmformat" use="required"/>
+    </xs:complexType>
+
+    <xs:simpleType name="LimitStates">
+        <xs:restriction base="StringList">
+            <xs:minLength value="1" />
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:element name="ffs" type="Ffs"/>
+    <xs:complexType name="Ffs">
+                <xs:sequence>
+                    <xs:element name="taxonomy" minOccurs="1" maxOccurs="1" type="xs:string"/>
+                    <xs:element name="IML" type="IMLType" minOccurs="1" maxOccurs="1" />
+                    <!-- continuous and discrete fragility functions are
+                         mutually exclusive i.e.
+                            - cannot mix types inside a particular ffs
+                            - the type must match the format defined in the
+                              fragility model tag. -->
+                    <xs:element name="ffc" type="Ffc" minOccurs="0" maxOccurs="unbounded" />
+                    <xs:element name="ffd" type="Ffd" minOccurs="0" maxOccurs="unbounded" />
+                </xs:sequence>
+
+                <!-- optional attribute for both continuous and discrete ffs -->
+                <xs:attribute name="noDamageLimit" type="PositiveDoubleType" use="optional"/>
+                <!-- optional function type for a continuous ffs -->
+                <xs:attribute name="type" type="xs:string" use="optional"/>
+    </xs:complexType>
+
+    <xs:complexType name="Ffc">
+        <xs:sequence>
+            <xs:element name="params" minOccurs="1" maxOccurs="1" type="FfcParams"/>
+        </xs:sequence>
+        <xs:attribute name="ls" type="xs:string" use="required"/>
+    </xs:complexType>
+
+    <xs:complexType name="FfcParams">
+        <xs:simpleContent>
+            <xs:extension base="xs:string">
+            <xs:attribute name="mean" type="PositiveDoubleType" use="required" />
+            <xs:attribute name="stddev" type="PositiveDoubleType" use="required" />
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+
+    <xs:complexType name="Ffd">
+        <xs:sequence>
+            <xs:element name="poEs" type="NormalizedDoubleList" minOccurs="1" maxOccurs="1"/>
+        </xs:sequence>
+        <xs:attribute name="ls" type="xs:string" use="required"/>
+    </xs:complexType>
+
+    <xs:simpleType name="Fmformat">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="continuous" />
+            <xs:enumeration value="discrete" />
+        </xs:restriction>
+    </xs:simpleType>
+</xs:schema>

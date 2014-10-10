@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:gml="http://www.opengis.net/gml"
+           xmlns="http://openquake.org/xmlns/nrml/0.4"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.4"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
+
+    <xs:element name="bcrMap" type="BCRMap" />
+    <xs:complexType name="BCRMap">
+        <xs:sequence>
+            <xs:element name="node" type="BCRMapNode" minOccurs="1" maxOccurs="unbounded" />
+        </xs:sequence>
+
+        <xs:attribute name="statistics" type="HazardCurveStats" use="optional" />
+        <!-- quantileValue is only used when statistics == 'quantile' -->
+        <xs:attribute name="quantileValue" type="PositiveDoubleType" use="optional" />
+
+        <!-- Both tree paths are only used for representing curves for a single realization.
+             In other words, the paths are not relevent for statistical results (mean or quantile). -->
+        <xs:attribute name="sourceModelTreePath" type="xs:string" use="optional" />
+        <xs:attribute name="gsimTreePath" type="xs:string" use="optional" />
+
+        <xs:attribute name="lossCategory" type="xs:string" use="optional" />
+
+        <!-- Same as `stcoUnit` in exposure. -->
+        <xs:attribute name="unit" type="xs:string" use="optional" />
+
+        <xs:attribute name="interestRate" type="xs:double" use="required" />
+        <xs:attribute name="assetLifeExpectancy" type="xs:double" use="required" />
+        <xs:attribute name="lossType" type="xs:string" use="required" />
+    </xs:complexType>
+
+    <xs:complexType name="BCRMapNode">
+        <xs:sequence>
+            <xs:element ref="gml:Point" minOccurs="1" maxOccurs="1" />
+            <xs:element name="bcr" type="BCR" minOccurs="1" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="BCR">
+        <xs:attribute name="assetRef" type="xs:ID" use="required" />
+        <xs:attribute name="aalOrig" type="PositiveDoubleType" use="required" />
+        <xs:attribute name="aalRetr" type="PositiveDoubleType" use="required" />
+        <xs:attribute name="ratio" type="PositiveDoubleType" use="required" />
+    </xs:complexType>
+
+</xs:schema>

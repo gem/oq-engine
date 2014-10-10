@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns="http://openquake.org/xmlns/nrml/0.4"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.4"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+    <xs:complexType name="BinFraction">
+        <xs:attribute name="value" type="xs:string" use="required" />
+        <xs:attribute name="absoluteLoss" type="xs:float" use="required" />
+        <xs:attribute name="fraction" type="xs:float" use="required" />
+    </xs:complexType>
+
+    <xs:complexType name="FractionMapNode">
+        <xs:sequence>
+            <xs:element name="bin"
+                        type="BinFraction"
+                        minOccurs="1" maxOccurs="unbounded" />
+        </xs:sequence>
+        <xs:attribute name="lon" type="xs:float" use="required" />
+        <xs:attribute name="lat" type="xs:float" use="required" />
+    </xs:complexType>
+
+    <xs:complexType name="FractionTotal">
+        <xs:sequence>
+            <xs:element name="bin"
+                        type="BinFraction"
+                        minOccurs="1" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="FractionMap">
+        <xs:sequence>
+            <xs:element name="node" type="FractionMapNode" minOccurs="1" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:element name="lossFraction" type="LossFraction" />
+    <xs:complexType name="LossFraction">
+        <xs:sequence>
+            <xs:element name="total" type="FractionTotal" minOccurs="1" maxOccurs="1" />
+            <xs:element name="map" type="FractionMap" minOccurs="1" maxOccurs="1" />
+        </xs:sequence>
+
+        <!-- Hazard Metadata  -->
+        <xs:attribute name="investigationTime" type="PositiveNonZeroDoubleType" use="required" />
+        <xs:attribute name="lossType" type="xs:string" use="required" />
+        <xs:attribute name="statistics" type="HazardCurveStats" use="optional" />
+        <xs:attribute name="quantileValue" type="PositiveDoubleType" use="optional" />
+        <xs:attribute name="sourceModelTreePath" type="xs:string" use="optional" />
+        <xs:attribute name="gsimTreePath" type="xs:string" use="optional" />
+
+        <!-- Risk Metadata  -->
+        <xs:attribute name="lossCategory" type="xs:string" use="optional" />
+        <xs:attribute name="unit" type="xs:string" use="optional" />
+
+        <!-- Probability of Exceedence for the disaggregation. This
+             was the PoE for loss curve interpolation to produce this
+             disaggregation. Required only for disaggregations
+             computed with the classical calculators. -->
+        <xs:attribute name="poE" type="NormalizedDoubleType" use="optional" />
+
+
+        <!-- Variable on which losses are disaggregated, e.g.
+             taxonomy, ruptures, location -->
+        <xs:attribute name="variable" type="xs:string" use="required" />
+    </xs:complexType>
+
+</xs:schema>

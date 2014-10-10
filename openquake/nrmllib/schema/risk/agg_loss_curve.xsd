@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:gml="http://www.opengis.net/gml"
+           xmlns="http://openquake.org/xmlns/nrml/0.4"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.4"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
+
+    <xs:element name="aggregateLossCurve" type="AggregateLossCurve"/>
+
+    <xs:complexType name="AggregateLossCurve">
+      <xs:sequence>
+        <xs:element name="poEs" type="NormalizedDoubleList" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="losses" type="PositiveDoubleList" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="averageLoss" type="PositiveDoubleType" minOccurs="1" maxOccurs="1" />
+        <xs:element name="stdDevLoss" type="PositiveDoubleType" minOccurs="0" maxOccurs="1" />
+      </xs:sequence>
+
+      <xs:attribute name="investigationTime" type="PositiveNonZeroDoubleType" use="required" />
+      <xs:attribute name="lossType" type="xs:string" use="required" />
+      <xs:attribute name="sourceModelTreePath" type="xs:string" use="optional" />
+      <xs:attribute name="gsimTreePath" type="xs:string" use="optional" />
+
+      <xs:attribute name="statistics" type="HazardCurveStats" use="optional" />
+      <!-- quantileValue is only used when statistics == 'quantile' -->
+      <xs:attribute name="quantileValue" type="PositiveDoubleType" use="optional" />
+
+      <!-- same as `stcoUnit` in exposure. -->
+      <xs:attribute name="unit" type="xs:string" use="optional" />
+    </xs:complexType>
+</xs:schema>

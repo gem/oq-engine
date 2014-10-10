@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:gml="http://www.opengis.net/gml"
+           xmlns="http://openquake.org/xmlns/nrml/0.4"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.4"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+    <xs:import namespace="http://www.opengis.net/gml" />
+
+    <xs:include schemaLocation="./general.xsd" />
+
+
+    <xs:element name="complexFaultSource" type="ComplexFaultSource" substitutionGroup="_abstractSource" />
+    <xs:complexType name="ComplexFaultSource">
+        <xs:complexContent>
+            <xs:extension base="AbstractSeismicSource">
+                <xs:sequence>
+                    <xs:element name="complexFaultGeometry" type="ComplexFaultGeometry" minOccurs="1" maxOccurs="1" />
+                    <xs:element ref="magScaleRel" minOccurs="1" maxOccurs="1" />
+                    <xs:element ref="ruptAspectRatio" minOccurs="1" maxOccurs="1" />
+                    <xs:choice>
+                        <xs:element ref="incrementalMFD" minOccurs="1" maxOccurs="1" />
+                        <xs:element ref="truncGutenbergRichterMFD" minOccurs="1" maxOccurs="1" />
+                    </xs:choice>
+                    <xs:element name="rake" type="Rake" minOccurs="1" maxOccurs="1" />
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="ComplexFaultEdge">
+        <xs:sequence>
+            <xs:element ref="gml:LineString" minOccurs="1" maxOccurs="1" />
+        </xs:sequence>
+    </xs:complexType>
+
+</xs:schema>

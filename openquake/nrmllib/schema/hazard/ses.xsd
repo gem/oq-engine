@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns="http://openquake.org/xmlns/nrml/0.4"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.4"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+    <xs:include schemaLocation="./general.xsd" />
+
+    <xs:complexType name="StochasticEventSetCollection">
+        <xs:sequence>
+            <xs:element name="stochasticEventSet" type="StochasticEventSet"
+                        minOccurs="1" maxOccurs="unbounded" />
+        </xs:sequence>
+        <xs:attribute name="sourceModelTreePath" type="xs:string" use="required" />
+    </xs:complexType>
+
+    <xs:complexType name="StochasticEventSet">
+        <xs:sequence>
+            <xs:element name="rupture" type="SESRupture" minOccurs="1" maxOccurs="unbounded" />
+        </xs:sequence>
+        <xs:attribute name="investigationTime" type="PositiveNonZeroDoubleType" use="required" />
+        <xs:attribute name="id" type="PositiveNonZeroDoubleType" use="required" />
+    </xs:complexType>
+
+
+    <xs:complexType name="SESRupture">
+        <xs:choice>
+            <xs:element name="planarSurface" type="PlanarSurface" minOccurs="1" maxOccurs="unbounded" />
+            <xs:element name="mesh" type="SESMesh" />
+        </xs:choice>
+        <xs:attribute name="id" type="xs:string" use="required" />
+        <xs:attribute name="magnitude" type="PositiveDoubleType" use="required" />
+        <xs:attribute name="strike" type="Strike" use="required" />
+        <xs:attribute name="dip" type="Dip" use="required" />
+        <xs:attribute name="rake" type="Rake" use="required" />
+        <xs:attribute name="tectonicRegion" type="xs:string" use="required" />
+    </xs:complexType>
+
+    <!-- For ruptures generated from a simple or complex fault source -->
+    <xs:complexType name="SESMesh">
+        <xs:sequence>
+            <xs:element name="node" type="SESMeshNode" minOccurs="1" maxOccurs="unbounded" />
+        </xs:sequence>
+        <xs:attribute name="rows" type="PositiveIntegerType" use="required" />
+        <xs:attribute name="cols" type="PositiveIntegerType" use="required" />
+    </xs:complexType>
+
+    <xs:complexType name="SESMeshNode">
+        <xs:attribute name="lon" type="xs:float" use="required" />
+        <xs:attribute name="lat" type="xs:float" use="required" />
+        <xs:attribute name="depth" type="xs:float" use="required" />
+        <xs:attribute name="row" type="PositiveIntegerType" use="required" />
+        <xs:attribute name="col" type="PositiveIntegerType" use="required" />
+    </xs:complexType>
+
+
+</xs:schema>

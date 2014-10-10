@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns="http://openquake.org/xmlns/nrml/0.4"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.4"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+    <!-- Exposure model definitions. -->
+    <xs:element name="exposureModel" type="ExposureModel"/>
+
+    <xs:complexType name="ExposureModel">
+        <xs:all>
+            <xs:element name="description" minOccurs="0" type="xs:string"/>
+            <xs:element name="conversions" type="Conversions" minOccurs="0" />
+            <xs:element name="assets" type="Assets" />
+        </xs:all>
+
+        <xs:attribute name="id" type="xs:string" use="required"/>
+        <xs:attribute name="category" type="AssetCategory" use="required"/>
+        <xs:attribute name="taxonomySource" type="xs:string" use="optional"/>
+    </xs:complexType>
+
+    <xs:complexType name="Conversions">
+        <xs:all>
+            <xs:element name="area" minOccurs="0" type="ExposureModelArea"/>
+            <xs:element name="costTypes" minOccurs="0" type="CostTypes"/>
+            <xs:element name="deductible" type="AbsoluteType" minOccurs="0"/>
+            <xs:element name="insuranceLimit" type="AbsoluteType" minOccurs="0"/>
+        </xs:all>
+    </xs:complexType>
+
+    <xs:complexType name="CostTypes">
+        <xs:sequence>
+            <xs:element name="costType" type="CostType" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="ExposureModelArea">
+         <xs:attribute name="type" type="AreaType" use="required"/>
+         <xs:attribute name="unit" type="xs:string" use="required"/>
+    </xs:complexType>
+
+    <xs:complexType name="CostType">
+         <xs:attribute name="name" type="xs:string" use="required"/>
+         <xs:attribute name="type" type="ExposureModelCostType" use="required"/>
+         <xs:attribute name="unit" type="AssetValueUnit" use="required"/>
+         <xs:attribute name="retrofittedType" type="ExposureModelCostType" use="optional"/>
+         <xs:attribute name="retrofittedUnit" type="AssetValueUnit" use="optional"/>
+    </xs:complexType>
+
+    <xs:complexType name="AbsoluteType">
+         <xs:attribute name="isAbsolute" type="xs:boolean" />
+    </xs:complexType>
+
+    <xs:complexType name="Assets">
+         <xs:sequence>
+              <xs:element name="asset" type="Asset" maxOccurs="unbounded"/>
+         </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="Asset">
+         <xs:sequence minOccurs="0" maxOccurs="unbounded">
+             <xs:element name="location" type="Location"/>
+             <xs:element name="costs" type="Costs" minOccurs="0"/>
+             <xs:element name="occupancies" type="Occupancies" minOccurs="0"/>
+         </xs:sequence>
+         <xs:attribute name="id" type="xs:string" use="required"/>
+         <xs:attribute name="area" type="PositiveDoubleType" use="optional"/>
+         <xs:attribute name="number" type="PositiveDoubleType" use="optional"/>
+         <xs:attribute name="taxonomy" type="xs:string" use="required"/>
+    </xs:complexType>
+
+
+    <xs:complexType name="Costs">
+         <xs:sequence>
+            <xs:element name="cost"
+                        minOccurs="0"
+                        maxOccurs="unbounded"
+                        type="Cost"/>
+          </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="Occupancies">
+         <xs:sequence>
+            <xs:element name="occupancy"
+                        minOccurs="0"
+                        maxOccurs="unbounded"
+                        type="Occupancy"/>
+         </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="Cost">
+         <xs:attribute name="type"
+                       use="required"
+                       type="xs:string"/>
+         <xs:attribute name="value"
+                       use="required"
+                       type="PositiveDoubleType"/>
+         <xs:attribute name="retrofitted"
+                       use="optional"
+                       type="PositiveDoubleType"/>
+         <xs:attribute name="deductible"
+                       use="optional"
+                       type="PositiveDoubleType"/>
+         <xs:attribute name="insuranceLimit"
+                       use="optional"
+                       type="PositiveDoubleType"/>
+     </xs:complexType>
+
+     <xs:complexType name="Occupancy">
+         <xs:attribute name="period"
+                       type="xs:string"
+                       use="required"/>
+         <xs:attribute name="occupants"
+                       type="PositiveDoubleType"
+                       use="required"/>
+     </xs:complexType>
+
+    <xs:simpleType name="ExposureModelCostType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="aggregated"/>
+            <xs:enumeration value="per_area"/>
+            <xs:enumeration value="per_asset"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="AreaType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="aggregated"/>
+            <xs:enumeration value="per_asset"/>
+        </xs:restriction>
+    </xs:simpleType>
+</xs:schema>

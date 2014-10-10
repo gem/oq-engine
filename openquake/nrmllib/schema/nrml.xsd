@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns="http://openquake.org/xmlns/nrml/0.4"
+           xmlns:nrml="http://openquake.org/xmlns/nrml/0.4"
+           xmlns:gmlsf="http://www.opengis.net/gmlsf"
+           xmlns:gml="http://www.opengis.net/gml"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.4"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+    <xs:import namespace="http://www.opengis.net/gmlsf" schemaLocation="./gml/gmlsfLevels.xsd"/>
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="./gml/gmlsf.xsd"/>
+
+    <xs:include schemaLocation="./nrml_common.xsd"/>
+    <xs:include schemaLocation="./hazard/disaggregation.xsd"/>
+    <xs:include schemaLocation="./hazard/general.xsd"/>
+    <xs:include schemaLocation="./hazard/gmf.xsd"/>
+    <xs:include schemaLocation="./hazard/hazard_curve.xsd"/>
+    <xs:include schemaLocation="./hazard/hazard_map.xsd"/>
+    <xs:include schemaLocation="./hazard/logic_tree.xsd"/>
+    <xs:include schemaLocation="./hazard/raw_source_model.xsd"/>
+    <xs:include schemaLocation="./hazard/rupture.xsd"/>
+    <xs:include schemaLocation="./hazard/ses.xsd"/>
+    <xs:include schemaLocation="./hazard/site_model.xsd"/>
+    <xs:include schemaLocation="./hazard/source_model/general.xsd"/>
+    <xs:include schemaLocation="./hazard/source_model/area_source.xsd"/>
+    <xs:include schemaLocation="./hazard/source_model/characteristic_source.xsd"/>
+    <xs:include schemaLocation="./hazard/source_model/complex_fault.xsd"/>
+    <xs:include schemaLocation="./hazard/source_model/point_source.xsd"/>
+    <xs:include schemaLocation="./hazard/source_model/simple_fault.xsd"/>
+    <xs:include schemaLocation="./hazard/uhs.xsd"/>
+    <xs:include schemaLocation="./risk/agg_loss_curve.xsd"/>
+    <xs:include schemaLocation="./risk/bcr_map.xsd"/>
+    <xs:include schemaLocation="./risk/dmg_dist.xsd"/>
+    <xs:include schemaLocation="./risk/exposure.xsd"/>
+    <xs:include schemaLocation="./risk/fragility.xsd"/>
+    <xs:include schemaLocation="./risk/general.xsd"/>
+    <xs:include schemaLocation="./risk/loss_curve.xsd"/>
+    <xs:include schemaLocation="./risk/agg_loss_curve.xsd"/>
+    <xs:include schemaLocation="./risk/loss_map.xsd"/>
+    <xs:include schemaLocation="./risk/loss_fraction.xsd"/>
+    <xs:include schemaLocation="./risk/vulnerability.xsd"/>
+    <xs:include schemaLocation="./risk/collapse_map.xsd"/>
+
+    <xs:annotation>
+        <xs:appinfo>
+            <gmlsf:ComplianceLevel>1</gmlsf:ComplianceLevel>
+            <gmlsf:GMLProfileSchema>http://schemas.opengis.net/gml/3.1.1/profiles/gmlSimpleFeatureProfile/1.0.0/gmlsf.xsd</gmlsf:GMLProfileSchema>
+        </xs:appinfo>
+   </xs:annotation>
+
+    <xs:element name="nrml" type="NRML" />
+    <xs:complexType name="NRML">
+        <xs:choice minOccurs="1" maxOccurs="1">
+            <xs:element ref="aggregateLossCurve" />
+            <xs:element ref="bcrMap" />
+            <xs:element ref="collapseMap" />
+            <xs:element ref="disaggMatrices" />
+            <xs:element ref="dmgDistPerAsset" />
+            <xs:element ref="dmgDistPerTaxonomy" />
+            <xs:element ref="exposureModel" />
+            <xs:element ref="fragilityModel" />
+            <!-- For Event-Based GMFs, applies to a specific logic tree branch -->
+            <xs:element ref="gmfCollection" />
+            <!-- For Scenario GMFs, or 'complete logic tree' GMF sets for Event-Based calculations -->
+            <!-- In the case of Scenario results, the `investigationTime` is omitted -->
+            <xs:element name="gmfSet" type="GMFSet" />
+            <xs:element ref="hazardCurves" maxOccurs="unbounded" />
+            <xs:element ref="hazardMap" />
+            <xs:element ref="logicTree" />
+            <xs:element ref="lossCurves" />
+            <xs:element ref="lossFraction" />
+            <xs:element ref="lossMap" />
+            <xs:element ref="rawSourceModel" />
+            <xs:element ref="rupture" />
+            <xs:element ref="siteModel" />
+            <xs:element ref="sourceModel" />
+            <!-- For the case of a 'complete logic tree' SES; there is just a single SES in the entire file. -->
+            <xs:element name="stochasticEventSet" type="StochasticEventSet" />
+            <!-- For Event-Based calculations, applies to a specific logic tree branch -->
+            <xs:element name="stochasticEventSetCollection" type="StochasticEventSetCollection" />
+            <xs:element ref="totalDmgDist" />
+            <xs:element ref="uniformHazardSpectra" />
+            <xs:element ref="vulnerabilityModel" />
+        </xs:choice>
+    </xs:complexType>
+</xs:schema>

@@ -13,7 +13,7 @@ fi
 set -e
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-commonlib"
-GEM_GIT_DEPS="oq-nrmllib oq-risklib oq-hazardlib"
+GEM_GIT_DEPS="oq-hazardlib"
 GEM_DEB_PACKAGE="python-${GEM_GIT_PACKAGE}"
 GEM_DEB_SERIE="master"
 if [ -z "$GEM_DEB_REPO" ]; then
@@ -206,7 +206,7 @@ _devtest_innervm_run () {
     # TODO: version check
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
-    ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-nrmllib:\$PWD/oq-risklib:\$PWD/oq-hazardlib\" ;
+    ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-risklib:\$PWD/oq-hazardlib\" ;
                  cd $GEM_GIT_PACKAGE ;
                  nosetests -v --with-doctest --with-coverage --cover-package=openquake.commonlib --with-xunit"
     scp "$lxc_ip:$GEM_GIT_PACKAGE/nosetests.xml" .
