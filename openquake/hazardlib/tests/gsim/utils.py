@@ -16,6 +16,7 @@
 import unittest
 import os
 import inspect
+import numpy
 
 from openquake.hazardlib.tests.gsim.check_gsim import check_gsim
 
@@ -27,7 +28,8 @@ class BaseGSIMTestCase(unittest.TestCase):
     def get_context_attributes(self, ctx):
         att = inspect.getmembers(ctx, lambda a: not(inspect.isroutine(a)))
         att = [
-            k for k, v in att if not (k.startswith('__') and k.endswith('__'))
+            k for k, v in att if not ('_abc' in k)
+            and not ((k.startswith('__') and k.endswith('__')))
         ]
 
         return set(att)
@@ -35,7 +37,7 @@ class BaseGSIMTestCase(unittest.TestCase):
     def check(self, filename, max_discrep_percentage):
         assert self.GSIM_CLASS is not None
         filename = os.path.join(self.BASE_DATA_PATH, filename)
-        errors, stats, sctx, rctx, dctx = check_gsim(
+        errors, stats, sctx, rctx, dctx, ctxs = check_gsim(
             self.GSIM_CLASS, open(filename),
             max_discrep_percentage
         )
@@ -45,6 +47,11 @@ class BaseGSIMTestCase(unittest.TestCase):
         self.assertEqual(self.GSIM_CLASS.REQUIRES_SITES_PARAMETERS, s_att)
         self.assertEqual(self.GSIM_CLASS.REQUIRES_RUPTURE_PARAMETERS, r_att)
         self.assertEqual(self.GSIM_CLASS.REQUIRES_DISTANCES, d_att)
+        self.assertTrue(
+            numpy.all(ctxs),
+            msg='Contexts objects have been changed by method '\
+                'get_mean_and_stddevs'
+        )
         if errors:
             raise AssertionError(stats)
         print

@@ -504,6 +504,49 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
                           'get_joyner_boore_distance': 1,
                           'get_strike': 1})
 
+class ContextTestCase(unittest.TestCase):
+    def test_equality(self):
+        sctx1 = SitesContext()
+        sctx1.vs30 = numpy.array([500., 600., 700.])
+        sctx1.vs30measured = True
+        sctx1.z1pt0 = numpy.array([40., 50., 60.])
+        sctx1.z2pt5 = numpy.array([1, 2, 3])
+
+        sctx2 = SitesContext()
+        sctx2.vs30 = numpy.array([500., 600., 700.])
+        sctx2.vs30measured = True
+        sctx2.z1pt0 = numpy.array([40., 50., 60.])
+        sctx2.z2pt5 = numpy.array([1, 2, 3])
+
+        self.assertTrue(sctx1 == sctx2)
+
+        sctx2 = SitesContext()
+        sctx2.vs30 = numpy.array([500., 600.])
+        sctx2.vs30measured = True
+        sctx2.z1pt0 = numpy.array([40., 50., 60.])
+        sctx2.z2pt5 = numpy.array([1, 2, 3])
+
+        self.assertTrue(sctx1 != sctx2)
+
+        sctx2 = SitesContext()
+        sctx2.vs30 = numpy.array([500., 600., 700.])
+        sctx2.vs30measured = False
+        sctx2.z1pt0 = numpy.array([40., 50., 60.])
+        sctx2.z2pt5 = numpy.array([1, 2, 3])
+
+        self.assertTrue(sctx1 != sctx2)
+
+        sctx2 = SitesContext()
+        sctx2.vs30 = numpy.array([500., 600., 700.])
+        sctx2.vs30measured = True
+        sctx2.z1pt0 = numpy.array([40., 50., 60.])
+
+        self.assertTrue(sctx1 != sctx2)
+
+        rctx = RuptureContext()
+        rctx.mag = 5.
+        self.assertTrue(sctx1 != rctx)
+
 
 class GsimWarningTestCase(unittest.TestCase):
     def test_deprecated(self):
