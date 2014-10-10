@@ -75,7 +75,7 @@ class VulnerabilityNode(LiteralNode):
         assetCategory=str,
         # the assetCategory here has nothing to do with the category
         # in the exposure model and it is not used by the engine
-        lossCategory=valid.name,
+        lossCategory=valid.utf8,  # a description field
         IML=valid.IML,
         lossRatio=valid.positivefloats,
         coefficientsVariation=valid.positivefloats,
@@ -158,7 +158,7 @@ def get_imtls_from_vulnerabilities(inputs):
 class FragilityNode(LiteralNode):
     validators = valid.parameters(
         format=valid.ChoiceCI('discrete', 'continuous'),
-        lossCategory=valid.name,
+        lossCategory=valid.utf8,  # a description field
         IML=valid.IML,
         params=valid.fragilityparams,
         limitStates=valid.namelist,
