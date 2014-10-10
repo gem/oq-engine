@@ -370,27 +370,13 @@ class BaseLogicTree(object):
 
     __metaclass__ = abc.ABCMeta
 
-    @classmethod
-    def get_xmlschema(cls):
-        """
-        Create (if needed) and return ``etree.XMLSchema`` object
-        for verifying nrml-files correctness.
-
-        Once created schema object is cached in ``_xmlschema``
-        class attribute.
-        """
-        if not cls._xmlschema:
-            cls._xmlschema = etree.XMLSchema(
-                file=openquake.nrmllib.nrml_schema_file())
-        return cls._xmlschema
-
     def __init__(self, content, basepath, filename, validate=True,
                  seed=0, num_samples=0):
         self.basepath = basepath
         self.filename = filename
         self.seed = seed
         self.num_samples = num_samples
-        parser = etree.XMLParser(schema=self.get_xmlschema())
+        parser = etree.XMLParser()
         self.branches = {}
         self.open_ends = set()
         if isinstance(content, unicode):
@@ -925,8 +911,7 @@ class SourceModelLogicTree(BaseLogicTree):
         sourcetype_slice = slice(len('{%s}' % self.NRML), - len('Source'))
 
         fh = self._get_source_model(source_model)
-        eventstream = etree.iterparse(fh, tag='{%s}*' % self.NRML,
-                                      schema=self.get_xmlschema())
+        eventstream = etree.iterparse(fh, tag='{%s}*' % self.NRML)
         while True:
             try:
                 _, node = next(eventstream)

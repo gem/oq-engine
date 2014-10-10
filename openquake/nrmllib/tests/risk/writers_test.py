@@ -156,7 +156,6 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
         writer.serialize(data)
 
         _utils.assert_xml_equal(expected, self.filename)
-        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
     def test_serialize_an_insured_loss_curve(self):
         expected = StringIO.StringIO("""\
@@ -208,7 +207,6 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
         writer.serialize(data)
 
         _utils.assert_xml_equal(expected, self.filename)
-        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
     def test_serialize_statistics_metadata(self):
         expected = StringIO.StringIO("""\
@@ -244,7 +242,6 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
         writer.serialize(data)
 
         _utils.assert_xml_equal(expected, self.filename)
-        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
 
 class AggregateLossCurveXMLWriterTestCase(unittest.TestCase):
@@ -292,7 +289,6 @@ class AggregateLossCurveXMLWriterTestCase(unittest.TestCase):
         writer.serialize(data)
 
         _utils.assert_xml_equal(expected, self.filename)
-        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
     def test_serialize_statistics_metadata(self):
         expected = StringIO.StringIO("""\
@@ -325,7 +321,6 @@ class AggregateLossCurveXMLWriterTestCase(unittest.TestCase):
         writer.serialize(data)
 
         _utils.assert_xml_equal(expected, self.filename)
-        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
 
 class LossMapWriterTestCase(unittest.TestCase):
@@ -396,9 +391,9 @@ class LossMapWriterTestCase(unittest.TestCase):
         writer.serialize(self.data)
 
         _utils.assert_xml_equal(expected, self.filename)
-        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
     maxDiff = None
+
     def test_serialize_a_model_geojson(self):
         expected = {
             u'features': [
@@ -459,7 +454,6 @@ class LossMapWriterTestCase(unittest.TestCase):
         writer.serialize(data)
 
         _utils.assert_xml_equal(expected, self.filename)
-        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
     def test_serialize_optional_metadata_geojson(self):
         expected = {
@@ -525,7 +519,6 @@ class LossMapWriterTestCase(unittest.TestCase):
         writer.serialize(data)
 
         _utils.assert_xml_equal(expected, self.filename)
-        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
     def test_serialize_using_hazard_realization_geojson(self):
         expected = {
@@ -534,7 +527,7 @@ class LossMapWriterTestCase(unittest.TestCase):
                  u'properties': {u'asset_ref': u'asset_1',
                                  u'loss': 15.23,
                                  u'std_dev': 2.0},
-                                 u'type': u'Feature'}],
+                 u'type': u'Feature'}],
             u'oqmetadata': {u'gsimTreePath': u'b3|b4',
                             u'investigationTime': u'10.0',
                             u'lossCategory': u'economic',
@@ -582,13 +575,10 @@ class LossFractionsWriterTestCase(unittest.TestCase):
                 quantile=None,
                 sm_path="b1_b2_b4",
                 gsim_path="b1_b2"), poe=0.1, loss_type="structural").serialize(
-                    dict(RC=(400, 0.2), RM=(1600, 0.8)),
-                    {(0., 0.): dict(RC=(200, 0.5), RM=(200, 0.5)),
-                     (1., 1.): dict(RC=(200, 0.25), RM=(1400, 0.75))})
+            dict(RC=(400, 0.2), RM=(1600, 0.8)),
+            {(0., 0.): dict(RC=(200, 0.5), RM=(200, 0.5)),
+             (1., 1.): dict(RC=(200, 0.25), RM=(1400, 0.75))})
 
-        etree.XMLSchema(
-            etree.parse(nrmllib.nrml_schema_file())).assert_(
-                etree.parse(self.filename))
         _utils.assert_xml_equal(expected, self.filename)
 
     def test_serialize_taxonomies_from_statistics(self):
@@ -602,12 +592,9 @@ class LossFractionsWriterTestCase(unittest.TestCase):
                 quantile=0.3,
                 sm_path=None,
                 gsim_path=None), poe=None, loss_type="structural").serialize(
-                    dict(RC=(400, 0.2), RM=(1600, 0.8)),
-                    {(0., 0.): dict(RC=(200, 0.5), RM=(200, 0.5)),
-                     (1., 1.): dict(RC=(200, 0.25), RM=(1400, 0.75))})
-        etree.XMLSchema(
-            etree.parse(nrmllib.nrml_schema_file())).assert_(
-                etree.parse(self.filename))
+            dict(RC=(400, 0.2), RM=(1600, 0.8)),
+            {(0., 0.): dict(RC=(200, 0.5), RM=(200, 0.5)),
+             (1., 1.): dict(RC=(200, 0.25), RM=(1400, 0.75))})
 
 
 class BCRMapXMLWriterTestCase(unittest.TestCase):
@@ -670,7 +657,6 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
         writer.serialize(data)
 
         _utils.assert_xml_equal(expected, self.filename)
-        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
     def test_serialize_optional_metadata(self):
         expected = StringIO.StringIO("""\
@@ -701,7 +687,6 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
         writer.serialize(data)
 
         _utils.assert_xml_equal(expected, self.filename)
-        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
     def test_serialize_using_hazard_realization(self):
         expected = StringIO.StringIO("""\
@@ -732,7 +717,6 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
         writer.serialize(data)
 
         _utils.assert_xml_equal(expected, self.filename)
-        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
 
 ######################## Scenario Damage Writers #########################
@@ -812,7 +796,6 @@ class DmgDistPerAssetXMLWriterTestCase(unittest.TestCase):
         writer.serialize(_starmap(DMG_DIST_PER_ASSET, data))
 
         _utils.assert_xml_equal(expected, self.filename)
-        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
 
 class DmgDistPerTaxonomyXMLWriterTestCase(unittest.TestCase):
@@ -862,7 +845,6 @@ class DmgDistPerTaxonomyXMLWriterTestCase(unittest.TestCase):
         writer.serialize(_starmap(DMG_DIST_PER_TAXONOMY, data))
 
         _utils.assert_xml_equal(expected, self.filename)
-        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
 
 class DmgDistTotalXMLWriterTestCase(unittest.TestCase):
@@ -896,7 +878,6 @@ class DmgDistTotalXMLWriterTestCase(unittest.TestCase):
         writer.serialize(_starmap(DMG_DIST_TOTAL, data))
 
         _utils.assert_xml_equal(expected, self.filename)
-        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
 
 class CollapseMapXMLWriterTestCase(unittest.TestCase):
@@ -943,7 +924,6 @@ class CollapseMapXMLWriterTestCase(unittest.TestCase):
         ]
         writer.serialize(_starmap(COLLAPSE_MAP, data))
         _utils.assert_xml_equal(expected, self.filename)
-        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
 
 ######################## Hazard Metadata Validation ########################

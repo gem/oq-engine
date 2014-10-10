@@ -15,10 +15,9 @@
 
 import collections
 from nose import tools
-from lxml import etree
 from xml.etree.ElementTree import parse
 
-import openquake.nrmllib
+from openquake.commonlib.general import writetmp
 from openquake.nrmllib.writers import tostring
 
 
@@ -74,6 +73,17 @@ def _test_seq(a, b):
         _deep_eq(item, b[i])
 
 
+def get_path(fname_or_fileobject):
+    if isinstance(fname_or_fileobject, basestring):
+        return fname_or_fileobject
+    elif hasattr(fname_or_fileobject, 'getvalue'):
+        return writetmp(fname_or_fileobject.getvalue())
+    elif hasattr(fname_or_fileobject, 'name'):
+        return fname_or_fileobject.name
+    else:
+        return TypeError(fname_or_fileobject)
+
+
 def assert_xml_equal(a, b):
     """
     Compare two XML artifacts for equality.
@@ -82,17 +92,12 @@ def assert_xml_equal(a, b):
         Paths to XML files, or a file-like object containing the XML
         contents.
     """
-    tools.assert_equal(tostring(parse(a).getroot()),
-                       tostring(parse(b).getroot()))
-
-
-def validates_against_xml_schema(
-        xml_instance_path,
-        schema_path=openquake.nrmllib.nrml_schema_file()):
-    """
-    Check whether an XML file validates against an XML schema.
-    """
-
-    xml_doc = etree.parse(xml_instance_path)
-    xmlschema = etree.XMLSchema(etree.parse(schema_path))
-    return xmlschema.validate(xml_doc)
+    path_a = get_path(a)
+    path_b = get_path(b)
+    content_a = tostring(parse(a).getroot())
+    content_b = tostring(parse(b).getroot())
+    if content_a != content_b:
+        print 'meld', path_a, path_b
+        import pdb; pdb.set_trace()
+        raise AssertionError('The files %s and %s are different!' %
+                             (path_a, path_b))

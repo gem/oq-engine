@@ -178,7 +178,7 @@ For instance an exposure file like the following::
 
 can be converted as follows:
 
->> from openquake.nrmllib.utils import node_from_nrml
+>> from openquake.nrmllib.node import node_from_nrml
 >> nrml = node_from_nrml(<path_to_the_exposure_file.xml>)
 
 Then subnodes and attributes can be conveniently accessed:
@@ -205,10 +205,29 @@ from contextlib import contextmanager
 
 from openquake import nrmllib
 from openquake.nrmllib.writers import StreamingXMLWriter
+
 try:
     from lxml import etree
+    COMPATPARSER = etree.ETCompatXMLParser()
+
+    def parse(source, **kw):
+        """Thin wrapper around etree.parse"""
+        return etree.parse(source, parser=COMPATPARSER, **kw)
+
+    def iterparse(source, events=('end',), **kw):
+        """Thin wrapper around etree.iterparse"""
+        return etree.iterparse(source, events, **kw)
+
 except ImportError:
-    from xml import etree
+    from xml.etree import ElementTree
+
+    def parse(source, remove_comments=True, **kw):
+        """Thin wrapper around ElementTree.parse"""
+        return ElementTree.parse(source, **kw)
+
+    def iterparse(source, events=('end',), remove_comments=True, **kw):
+        """Thin wrapper around ElementTree.iterparse"""
+        return ElementTree.iterparse(source, events, **kw)
 
 
 ## this is duplicated from hazardlib to avoid a dependency
@@ -548,13 +567,14 @@ def node_from_elem(elem, nodefactory=Node):
     Convert (recursively) an ElementTree object into a Node object.
     """
     children = list(elem)
+    lineno = getattr(elem, 'sourceline', None)
     if not children:
         return nodefactory(elem.tag, dict(elem.attrib), elem.text,
-                           lineno=elem.sourceline)
+                           lineno=lineno)
     return nodefactory(elem.tag,
                        dict(elem.attrib),
                        nodes=[node_from_elem(ch, nodefactory)
-                              for ch in children], lineno=elem.sourceline)
+                              for ch in children], lineno=lineno)
 
 
 # taken from https://gist.github.com/651801, which comes for the effbot
@@ -583,7 +603,7 @@ def node_to_elem(root):
     return namespace["e1"]
 
 
-def read_nodes(fname, filter_elem, nodefactory=Node):
+def read_nodes(fname, filter_elem, nodefactory=Node, remove_comments=True):
     """
     Convert an XML file into a lazy iterator over Node objects
     satifying the given specification, i.e. a function element -> boolean.
@@ -594,7 +614,7 @@ def read_nodes(fname, filter_elem, nodefactory=Node):
     In case of errors, add the file name to the error message.
     """
     try:
-        for _, el in etree.iterparse(fname, remove_comments=True):
+        for _, el in iterparse(fname, remove_comments=remove_comments):
             if filter_elem(el):
                 yield node_from_elem(el, nodefactory)
                 el.clear()  # save memory
@@ -606,13 +626,13 @@ def read_nodes(fname, filter_elem, nodefactory=Node):
         raise etype, msg, tb
 
 
-def node_from_xml(xmlfile, nodefactory=Node, parser=nrmllib.COMPATPARSER):
+def node_from_xml(xmlfile, nodefactory=Node):
     """
     Convert a .xml file into a Node object.
 
     :param xmlfile: a file name or file object open for reading
     """
-    root = etree.parse(xmlfile, parser).getroot()
+    root = parse(xmlfile).getroot()
     return node_from_elem(root, nodefactory)
 
 
@@ -630,23 +650,20 @@ def node_to_xml(node, output=sys.stdout):
         w.serialize(node)
 
 
-def node_from_nrml(xmlfile, nodefactory=Node):
+def node_from_nrml(source):
     """
     Convert a NRML file into a Node object.
 
-    :param xmlfile: a file name or file object open for reading
+    :param source: a file name or file object open for reading
     """
-    root = nrmllib.assert_valid(xmlfile).getroot()
-    node = node_from_elem(root, nodefactory)
-    for nsname, nsvalue in root.nsmap.iteritems():
-        if nsname is None:
-            node['xmlns'] = nsvalue
-        else:
-            node['xmlns:%s' % nsname] = nsvalue
+    [node] = read_nodes(source, lambda node: node.tag.endswith('nrml'),
+                        LiteralNode)
+    node['xmlns'] = nrmllib.NAMESPACE
+    node['xmlns:gml'] = nrmllib.GML_NAMESPACE
     return node
 
 
-def node_to_nrml(node, output=sys.stdout, nsmap=None):
+def node_to_nrml(node, output=sys.stdout):
     """
     Convert a node into a NRML file. output must be a file
     object open in write mode. If you want to perform a
@@ -655,20 +672,15 @@ def node_to_nrml(node, output=sys.stdout, nsmap=None):
 
     :params node: a Node object
     :params output: a file-like object in write or read-write mode
-    :params nsmap: a dictionary with the XML namespaces (default the NRML ones)
     """
     assert isinstance(node, Node), node  # better safe than sorry
-    nsmap = nsmap or nrmllib.SERIALIZE_NS_MAP
     root = Node('nrml', nodes=[node])
-    for nsname, nsvalue in nsmap.iteritems():
-        if nsname is None:
-            root['xmlns'] = nsvalue
-        else:
-            root['xmlns:%s' % nsname] = nsvalue
+    root['xmlns'] = nrmllib.NAMESPACE
+    root['xmlns:gml'] = nrmllib.GML_NAMESPACE
     node_to_xml(root, output)
     if hasattr(output, 'mode') and '+' in output.mode:  # read-write mode
         output.seek(0)
-        nrmllib.assert_valid(output)
+        #node_from_nrml(output)  # validate the written file
 
 
 def node_from_ini(ini_file, nodefactory=Node, root_name='ini'):

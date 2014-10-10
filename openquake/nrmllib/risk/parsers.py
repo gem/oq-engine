@@ -76,7 +76,6 @@ class ExposureModelParser(object):
 
     def __init__(self, source):
         self._source = source
-        openquake.nrmllib.assert_valid(self._source)
 
         # contains the data of the node currently parsed.
         self._meta = None
@@ -85,12 +84,8 @@ class ExposureModelParser(object):
         """
         Parse the document iteratively.
         """
-
-        schema = etree.XMLSchema(etree.parse(
-            openquake.nrmllib.nrml_schema_file()))
-
         for event, element in etree.iterparse(
-                self._source, events=('start', 'end'), schema=schema):
+                self._source, events=('start', 'end')):
 
             # exposure metadata
             if event == 'start' and element.tag == '%sexposureModel' % NRML:
@@ -201,159 +196,3 @@ def _to_costs(element):
             retrofitted, deductible, limit))
 
     return costs
-
-
-class VulnerabilityModelParser(object):
-    """
-    Vulnerability model parser. This class is implemented as a generator.
-
-    For each `discreteVulnerability` element in the parsed document,
-    it yields a dictionary containing the function attributes.
-
-    :param source:
-        Filename or file-like object containing the XML data.
-    """
-
-    def __init__(self, source):
-        self._source = source
-        openquake.nrmllib.assert_valid(self._source)
-
-        self._vulnerability_model = etree.parse(self._source).getroot()
-
-    def __iter__(self):
-        """
-        Parse the vulnerability model.
-        """
-
-        for vulnerability_set in self._vulnerability_model.findall(
-                ".//%sdiscreteVulnerabilitySet" % NRML):
-
-            vulnerability_function = self._parse_set_attributes(
-                vulnerability_set)
-
-            for vf in vulnerability_set.findall(
-                    ".//%sdiscreteVulnerability" % NRML):
-
-                loss_ratios = [float(x) for x in vf.find(
-                    "%slossRatio" % NRML).text.strip().split()]
-
-                coefficients_variation = [float(x) for x in vf.find(
-                    "%scoefficientsVariation" % NRML).text.strip().split()]
-
-                vulnerability_function["ID"] = vf.attrib[
-                    "vulnerabilityFunctionID"]
-
-                vulnerability_function["probabilisticDistribution"] = \
-                    vf.attrib["probabilisticDistribution"]
-
-                vulnerability_function["lossRatio"] = loss_ratios
-                vulnerability_function["coefficientsVariation"] = \
-                    coefficients_variation
-
-                yield dict(vulnerability_function)
-
-    @staticmethod
-    def _parse_set_attributes(vset):
-        """
-        Extract the attributes common to all the vulnerability functions
-        belonging to the given set.
-        """
-
-        attrs = dict()
-        imls = vset.find(".//%sIML" % NRML)
-
-        attrs["IMT"] = imls.attrib["IMT"]
-        attrs["IML"] = [float(x) for x in imls.text.strip().split()]
-
-        attrs["lossCategory"] = vset.attrib["lossCategory"]
-        attrs["assetCategory"] = vset.attrib["assetCategory"]
-        attrs["vulnerabilitySetID"] = vset.attrib["vulnerabilitySetID"]
-
-        return attrs
-
-
-def find(tag, elem):
-    "Find all the subelements matching the given tag"
-    return elem.findall(NRML + tag, elem)
-
-
-def findone(tag, elem, default=None):
-    """
-    Find the unique subelement matching the given tag. Raise ValueError
-    if there are too many elements and returns the default if there is
-    no match.
-    """
-    elems = elem.findall(NRML + tag, elem)
-    n = len(elems)
-    if n == 0:  # not found
-        return default
-    if n > 1:
-        raise ValueError('Found %d elements of kind %s, expected one'
-                         % (n, tag))
-    return elems[0]
-
-
-class FragilityModelParser(object):
-    """
-    Fragility model parser. This class is implemented as a generator.
-    It yields a triple (format, iml, limit_states), associated to a
-    fragility model, followed by a sequence of triples of the form
-    (taxonomy, params, no_damage_limit), associated each to a
-    different fragility function sequence.
-
-    :param source:
-        Filename or file-like object containing the XML data.
-    """
-
-    def __init__(self, source):
-        self._source = source
-        openquake.nrmllib.assert_valid(self._source)
-        self._fragility_model = etree.parse(self._source).getroot()
-        self.limit_states = None
-
-    def __iter__(self):
-        """
-        Parse the fragility model. The first iteration yields the
-        format and the limit states, then the fragility function
-        params
-        """
-        fragilityModel = findone('fragilityModel', self._fragility_model)
-        fmt = fragilityModel.attrib['format']
-        self.limit_states = findone('limitStates', fragilityModel).text.split()
-        yield fmt, self.limit_states
-
-        for ffs in find('ffs', fragilityModel):
-            taxonomy = findone('taxonomy', ffs).text
-            iml_element = findone('IML', ffs)
-            iml = dict(IMT=iml_element.attrib['IMT'])
-
-            # in discrete case we expect to find the levels in the text of IML
-            # element.
-            if fmt == 'discrete':
-                iml['imls'] = map(float, iml_element.text.split())
-            else:
-                iml['imls'] = None
-
-            no_damage_limit = ffs.attrib.get('noDamageLimit')
-            if no_damage_limit:
-                no_damage_limit = float(no_damage_limit)
-            if fmt == 'discrete':
-                all_params = [(ffd.attrib['ls'],
-                               map(float, findone('poEs', ffd).text.split()))
-                              for ffd in find('ffd', ffs)]
-            else:  # continuous
-                all_params = [(ffc.attrib['ls'],
-                               (float(findone('params', ffc).attrib['mean']),
-                                float(
-                                    findone('params', ffc).attrib['stddev'])))
-                              for ffc in find('ffc', ffs)]
-            all_params = map(
-                lambda x: x[1],
-                sorted(all_params,
-                       key=lambda x: self.limit_states.index(x[0])))
-            yield taxonomy, iml, all_params, no_damage_limit
-
-    def _check_limit_state(self, lsi, ls):
-        if ls != self.limit_states[lsi]:
-            raise ValueError('Expected limitState %s, got %s' %
-                             (self.limit_states[lsi], ls))

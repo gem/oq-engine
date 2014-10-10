@@ -189,6 +189,7 @@ class LossCurveXMLWriter(object):
 
         self._loss_curves.set("lossType", self._loss_type)
 
+
 class AggregateLossCurveXMLWriter(object):
     """
     :param dest:

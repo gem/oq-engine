@@ -17,61 +17,13 @@
 NRML base path
 """
 
-import os
-from lxml import etree
-
-__version__ = "0.4.5"
-
 NAMESPACE = 'http://openquake.org/xmlns/nrml/0.4'
 GML_NAMESPACE = 'http://www.opengis.net/gml'
-
-PARSE_NS_MAP = {'nrml': NAMESPACE, 'gml': GML_NAMESPACE}
-#: Default namespace is nrml, so we can be implicit about nrml elements we
-#: write
 SERIALIZE_NS_MAP = {None: NAMESPACE, 'gml': GML_NAMESPACE}
-
-_NRML_SCHEMA_FILE = 'nrml.xsd'
-
-_NRML_SCHEMA = None  # defined in assert_valid
 
 
 class InvalidFile(Exception):
     pass
-
-
-def nrml_schema_file():
-    """
-    Returns the absolute path to the NRML schema file
-    """
-    return os.path.join(
-        os.path.abspath(os.path.dirname(__file__)),
-        'schema', _NRML_SCHEMA_FILE)
-
-COMPATPARSER = etree.ETCompatXMLParser()
-
-
-def assert_valid(source, parser=COMPATPARSER):
-    """
-    Raises a `lxml.etree.DocumentInvalid` error for invalid files.
-    NB: it works by keeping the whole tree in memory.
-
-    :param source: a filename or a file-like object.
-    """
-    global _NRML_SCHEMA
-    if isinstance(source, basestring):
-        fname = source
-        if not os.path.exists(fname):
-            raise IOError('[Errno 2] No such file or directory: %r' % fname)
-    else:
-        fname = getattr(source, 'name', '<%s>' % source.__class__.__name__)
-    if _NRML_SCHEMA is None:  # the nrml schema is parsed only once
-        _NRML_SCHEMA = etree.XMLSchema(etree.parse(nrml_schema_file()))
-    try:
-        parsed = etree.parse(source, parser)
-        _NRML_SCHEMA.assertValid(parsed)
-    except Exception as e:
-        raise InvalidFile('%s:%s' % (fname, e))
-    return parsed
 
 
 class NRMLFile(object):
@@ -97,10 +49,3 @@ class NRMLFile(object):
 
     def __exit__(self, *args):
         self._file.close()
-
-
-def iterparse_tree(source, events=('start', 'end')):
-    schema = etree.XMLSchema(etree.parse(nrml_schema_file()))
-
-    tree = etree.iterparse(source, events=events, schema=schema)
-    return tree
