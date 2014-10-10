@@ -2,39 +2,49 @@ import os
 import unittest
 from openquake.engine.db import models
 from openquake.engine.tools import import_gmf_scenario
-from openquake import nrmllib
 from nose.tools import assert_equal
-from io import StringIO
+
+THISDIR = os.path.dirname(__file__)
 
 
 class ImportGMFScenarioTestCase(unittest.TestCase):
 
-    # test that the example file gmf-scenario.xml can be imported
     def test_import_gmf_scenario(self):
-        repodir = os.path.dirname(os.path.dirname(nrmllib.__path__[0]))
-        fileobj = open(os.path.join(repodir, 'examples', 'gmf-scenario.xml'))
+        # gmfdata.xml is a file containing 1 IMT, 5 ruptures and 3 sites
+        fileobj = open(os.path.join(THISDIR, 'gmfdata.xml'))
         out = import_gmf_scenario.import_gmf_scenario(fileobj)
         hc = out.oq_job.get_oqparam()
+        imts = sorted(hc.intensity_measure_types_and_levels)
+        self.assertEqual(imts, ['PGA'])
         n = models.GmfData.objects.filter(gmf__output=out).count()
         assert_equal(hc.calculation_mode, 'scenario')
-        assert_equal(hc.number_of_ground_motion_fields, n)
-        assert_equal(n, 9)  # 9 rows entered
+        assert_equal(hc.number_of_ground_motion_fields, 5)
+        assert_equal(n, 15)  # 15 rows entered
         assert_equal(hc.description,
-                     'Scenario importer, file gmf-scenario.xml')
+                     'Scenario importer, file gmfdata.xml')
 
-    # test that a tab-separated file can be imported
-    def test_import_gmf_scenario_csv(self):
-        test_data = StringIO(unicode('''\
-SA	0.025	5.0	{0.2}	POINT(0.0 0.0)
-SA	0.025	5.0	{1.4}	POINT(1.0 0.0)
-SA	0.025	5.0	{0.6}	POINT(0.0 1.0)
-PGA	\N	\N	{0.2,0.3}	POINT(0.0 0.0)
-PGA	\N	\N	{1.4,1.5}	POINT(1.0 0.0)
-PGA	\N	\N	{0.6,0.7}	POINT(0.0 1.0)
-PGV	\N	\N	{0.2}	POINT(0.0 0.0)
-PGV	\N	\N	{1.4}	POINT(1.0 0.0)
-'''))
-        test_data.name = 'test_data'
-        out = import_gmf_scenario.import_gmf_scenario(test_data)
-        n = models.GmfData.objects.filter(gmf__output=out).count()
-        assert_equal(n, 8)  # 8 rows entered
+        # now test that exporting the imported data gives back the
+        # original data
+        [gmfset] = list(out.gmf)
+        self.assertEqual(str(gmfset), '''\
+GMFsPerSES(investigation_time=0.000000, stochastic_event_set_id=1,
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=scenario-0000000000
+<X=  0.00000, Y=  0.00000, GMV=0.6824957>
+<X=  0.00000, Y=  0.10000, GMV=0.1270898>
+<X=  0.00000, Y=  0.20000, GMV=0.1603097>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=scenario-0000000001
+<X=  0.00000, Y=  0.00000, GMV=0.3656627>
+<X=  0.00000, Y=  0.10000, GMV=0.2561813>
+<X=  0.00000, Y=  0.20000, GMV=0.1106853>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=scenario-0000000002
+<X=  0.00000, Y=  0.00000, GMV=0.8700834>
+<X=  0.00000, Y=  0.10000, GMV=0.2106384>
+<X=  0.00000, Y=  0.20000, GMV=0.2232175>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=scenario-0000000003
+<X=  0.00000, Y=  0.00000, GMV=0.3279292>
+<X=  0.00000, Y=  0.10000, GMV=0.2357552>
+<X=  0.00000, Y=  0.20000, GMV=0.1781143>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=scenario-0000000004
+<X=  0.00000, Y=  0.00000, GMV=0.6968686>
+<X=  0.00000, Y=  0.10000, GMV=0.2581405>
+<X=  0.00000, Y=  0.20000, GMV=0.1351649>))''')
