@@ -23,10 +23,11 @@ from collections import namedtuple
 from lxml import etree
 from nose.plugins.attrib import attr
 
+from openquake import nrmllib
+
 from openquake.engine.db import models
 from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard
-from openquake import nrmllib
 
 from openquake.engine.tests.export.core_test import \
     BaseExportTestCase, number_of
