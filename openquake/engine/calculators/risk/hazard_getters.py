@@ -399,8 +399,7 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
             scid = ses_coll.id  # ses collection id
             num_assets, num_samples = self.epsilons_shape[scid]
             self.rupture_ids[scid] = ses_coll.get_ruptures(
-                ).values_list('id', flat=True) or range(
-                self.number_of_ground_motion_fields)
+                ).values_list('id', flat=True)
             # do not build the epsilons for scenario_damage
             if self.calculation_mode != 'scenario_damage':
                 logs.LOG.info('Building (%d, %d) epsilons for taxonomy %s',
@@ -437,7 +436,9 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
                 getter.sescolls = models.SESCollection.objects.filter(
                     trt_model__lt_model=
                     ho.output_container.lt_realization.lt_model)
-                [out] = ho.oq_job.output_set.filter(output_type='ses')
-                getter.sescolls = [out.ses]
+            elif self.calculation_mode.startswith('scenario'):
+                outputs = ho.oq_job.output_set.filter(output_type='ses')
+                getter.sescolls = sorted([out.ses for out in outputs],
+                                         lambda x: x.ordinal)
             getters.append(getter)
         return getters
