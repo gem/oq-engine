@@ -19,7 +19,7 @@ from itertools import izip
 
 from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.nrmllib.node import read_nodes, LiteralNode, context
+from openquake.commonlib.node import read_nodes, LiteralNode, context
 from openquake.commonlib import valid
 
 try:

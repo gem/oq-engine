@@ -34,8 +34,8 @@ from collections import namedtuple
 from decimal import Decimal
 from lxml import etree
 
-import openquake.nrmllib
-from openquake.nrmllib.node import node_from_xml
+from openquake.commonlib import nrml
+from openquake.commonlib.node import node_from_xml
 
 import openquake.hazardlib
 
@@ -361,7 +361,7 @@ class BaseLogicTree(object):
         If logic tree file has a logic error, which can not be prevented
         by xml schema rules (like referencing sources with missing id).
     """
-    NRML = openquake.nrmllib.NAMESPACE
+    NRML = nrml.NAMESPACE
     FILTERS = ('applyToTectonicRegionType',
                'applyToSources',
                'applyToSourceType')

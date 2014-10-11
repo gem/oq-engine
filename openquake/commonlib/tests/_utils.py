@@ -14,11 +14,10 @@
 # along with NRML.  If not, see <http://www.gnu.org/licenses/>.
 
 import collections
-from nose import tools
 from xml.etree.ElementTree import parse
 
 from openquake.commonlib.general import writetmp
-from openquake.nrmllib.writers import tostring
+from openquake.commonlib.writers import tostring
 
 
 def deep_eq(a, b):

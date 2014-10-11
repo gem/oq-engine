@@ -57,7 +57,7 @@ For instance an exposure file like the following::
 
 can be converted as follows:
 
->> from openquake.nrmllib.node import node_from_nrml
+>> from openquake.commonlib.node import node_from_nrml
 >> nrml = node_from_nrml(<path_to_the_exposure_file.xml>)
 
 Then subnodes and attributes can be conveniently accessed:
@@ -77,8 +77,40 @@ supplemented by a dictionary of validators.
 """
 
 import sys
-from openquake.nrmllib.node import read_nodes, node_to_xml, Node, LiteralNode
-from openquake import nrmllib
+from openquake.commonlib.node import read_nodes, node_to_xml, Node, LiteralNode
+
+NAMESPACE = 'http://openquake.org/xmlns/nrml/0.4'
+GML_NAMESPACE = 'http://www.opengis.net/gml'
+SERIALIZE_NS_MAP = {None: NAMESPACE, 'gml': GML_NAMESPACE}
+
+
+class InvalidFile(Exception):
+    pass
+
+
+class NRMLFile(object):
+    """
+    Context-managed output object which accepts either a path or a file-like
+    object.
+
+    Behaves like a file.
+    """
+
+    def __init__(self, dest, mode='r'):
+        self._dest = dest
+        self._mode = mode
+        self._file = None
+
+    def __enter__(self):
+        if isinstance(self._dest, (basestring, buffer)):
+            self._file = open(self._dest, self._mode)
+        else:
+            # assume it is a file-like; don't change anything
+            self._file = self._dest
+        return self._file
+
+    def __exit__(self, *args):
+        self._file.close()
 
 
 def node_from_nrml(source):
@@ -89,8 +121,8 @@ def node_from_nrml(source):
     """
     [node] = read_nodes(source, lambda node: node.tag.endswith('nrml'),
                         LiteralNode)
-    node['xmlns'] = nrmllib.NAMESPACE
-    node['xmlns:gml'] = nrmllib.GML_NAMESPACE
+    node['xmlns'] = NAMESPACE
+    node['xmlns:gml'] = GML_NAMESPACE
     return node
 
 
@@ -106,8 +138,8 @@ def node_to_nrml(node, output=sys.stdout):
     """
     assert isinstance(node, Node), node  # better safe than sorry
     root = Node('nrml', nodes=[node])
-    root['xmlns'] = nrmllib.NAMESPACE
-    root['xmlns:gml'] = nrmllib.GML_NAMESPACE
+    root['xmlns'] = NAMESPACE
+    root['xmlns:gml'] = GML_NAMESPACE
     node_to_xml(root, output)
     if hasattr(output, 'mode') and '+' in output.mode:  # read-write mode
         output.seek(0)

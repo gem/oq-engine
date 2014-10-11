@@ -1,6 +1,6 @@
 import os
 import unittest
-from openquake.nrmllib.writers import tostring, StreamingXMLWriter
+from openquake.commonlib.writers import tostring, StreamingXMLWriter
 from lxml import etree
 
 

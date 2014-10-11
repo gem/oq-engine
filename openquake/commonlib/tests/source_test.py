@@ -27,17 +27,16 @@ from openquake.hazardlib import scalerel
 from openquake.hazardlib import source
 from openquake.hazardlib.tom import PoissonTOM
 
+from openquake import nrml_examples
 from openquake.commonlib import source as s
-
-from openquake import nrmllib
-from openquake.nrmllib.node import read_nodes
+from openquake.commonlib.node import read_nodes
 from openquake.commonlib.general import deep_eq
 
 # directory where the example files are
-NRML_DIR = os.path.dirname(os.path.dirname(os.path.dirname(nrmllib.__file__)))
+NRML_DIR = os.path.dirname(nrml_examples.__file__)
 
 # Test NRML to use (contains 1 of each source type).
-MIXED_SRC_MODEL = os.path.join(NRML_DIR, 'examples/source_model/mixed.xml')
+MIXED_SRC_MODEL = os.path.join(NRML_DIR, 'source_model/mixed.xml')
 
 DUPLICATE_ID_SRC_MODEL = os.path.join(
     os.path.dirname(__file__), 'data', 'invalid_source_model.xml')

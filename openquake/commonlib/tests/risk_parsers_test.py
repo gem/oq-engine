@@ -18,8 +18,8 @@ import os
 import unittest
 import StringIO
 
-from openquake.nrmllib.risk import parsers
-from openquake.nrmllib import InvalidFile
+from openquake.commonlib import risk_parsers as parsers
+from openquake.commonlib.nrml import InvalidFile
 
 d = os.path.dirname
 EXAMPLES_DIR = os.path.join(d(d(d(d(d(__file__))))), 'examples')

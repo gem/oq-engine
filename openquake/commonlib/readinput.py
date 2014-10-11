@@ -1,7 +1,7 @@
 import numpy
 
 from openquake.hazardlib import geo, site
-from openquake.nrmllib.node import read_nodes, LiteralNode
+from openquake.commonlib.node import read_nodes, LiteralNode
 from openquake.commonlib import valid
 from openquake.commonlib.oqvalidation import \
     fragility_files, vulnerability_files

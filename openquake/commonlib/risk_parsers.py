@@ -21,10 +21,10 @@ Module containing parsers for risk input artifacts.
 from lxml import etree
 from collections import namedtuple
 
-import openquake.nrmllib
+from openquake.commonlib import nrml
 
-NRML = "{%s}" % openquake.nrmllib.NAMESPACE
-GML = "{%s}" % openquake.nrmllib.GML_NAMESPACE
+NRML = "{%s}" % nrml.NAMESPACE
+GML = "{%s}" % nrml.GML_NAMESPACE
 
 AssetData = namedtuple(
     "AssetData",

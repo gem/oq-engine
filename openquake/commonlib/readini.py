@@ -2,7 +2,7 @@ import ConfigParser
 import os
 from lxml import etree
 
-from openquake import nrmllib
+from openquake.commonlib import nrml
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.readinput import get_imtls
 
@@ -16,12 +16,12 @@ def _collect_source_model_paths(smlt):
     src_paths = []
     tree = etree.parse(smlt)
     for branch_set in tree.xpath('//nrml:logicTreeBranchSet',
-                                 namespaces=nrmllib.PARSE_NS_MAP):
+                                 namespaces=nrml.PARSE_NS_MAP):
 
         if branch_set.get('uncertaintyType') == 'sourceModel':
             for branch in branch_set.xpath(
                     './nrml:logicTreeBranch/nrml:uncertaintyModel',
-                    namespaces=nrmllib.PARSE_NS_MAP):
+                    namespaces=nrml.PARSE_NS_MAP):
                 src_paths.append(branch.text)
     return sorted(set(src_paths))
 

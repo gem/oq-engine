@@ -24,8 +24,7 @@ import StringIO
 import tempfile
 from abc import ABCMeta, abstractmethod
 
-from openquake.nrmllib import InvalidFile
-from openquake.commonlib.nrml import node_to_nrml, node_from_nrml
+from openquake.commonlib.nrml import node_to_nrml, node_from_nrml, InvalidFile
 from openquake.commonlib.record import Table
 from openquake.commonlib import record, records, converter
 

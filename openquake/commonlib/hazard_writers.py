@@ -1,18 +1,20 @@
-# Copyright (c) 2012-2014, GEM Foundation.
-#
-# NRML is free software: you can redistribute it and/or modify it
-# under the terms of the GNU Affero General Public License as published
-# by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# NRML is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with NRML.  If not, see <http://www.gnu.org/licenses/>.
+#  -*- coding: utf-8 -*-
+#  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+#  Copyright (c) 2014, GEM Foundation
+
+#  OpenQuake is free software: you can redistribute it and/or modify it
+#  under the terms of the GNU Affero General Public License as published
+#  by the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+
+#  OpenQuake is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+
+#  You should have received a copy of the GNU Affero General Public License
+#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
 Classes for serializing various NRML XML artifacts.
 """
@@ -24,9 +26,8 @@ from lxml import etree
 from collections import OrderedDict
 from itertools import izip
 
-import openquake.nrmllib
-from openquake.nrmllib import NRMLFile
-from openquake.nrmllib import node
+from openquake.commonlib import node
+from openquake.commonlib import nrml
 
 
 SM_TREE_PATH = 'sourceModelTreePath'
@@ -47,7 +48,7 @@ _ATTR_MAP = OrderedDict([
     ('lat', 'lat'),
 ])
 
-GML_NS = openquake.nrmllib.SERIALIZE_NS_MAP['gml']
+GML_NS = nrml.SERIALIZE_NS_MAP['gml']
 
 
 def _validate_hazard_metadata(md):
@@ -185,9 +186,9 @@ class HazardCurveXMLWriter(BaseCurveWriter):
             * location: An object representing the location of the curve; must
               have `x` and `y` to represent lon and lat, respectively.
         """
-        with NRMLFile(self.dest, 'w') as fh:
+        with nrml.NRMLFile(self.dest, 'w') as fh:
             root = etree.Element('nrml',
-                                 nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
+                                 nsmap=nrml.SERIALIZE_NS_MAP)
             self.add_hazard_curves(root, self.metadata, data)
 
             fh.write(etree.tostring(
@@ -207,7 +208,7 @@ class HazardCurveXMLWriter(BaseCurveWriter):
 
         imls_elem = etree.SubElement(hazard_curves, 'IMLs')
         imls_elem.text = ' '.join([str(x) for x in metadata['imls']])
-        gml_ns = openquake.nrmllib.SERIALIZE_NS_MAP['gml']
+        gml_ns = nrml.SERIALIZE_NS_MAP['gml']
 
         for hc in data:
             hc_elem = etree.SubElement(hazard_curves, 'hazardCurve')
@@ -264,7 +265,7 @@ class HazardCurveGeoJSONWriter(BaseCurveWriter):
             }
             features.append(feature)
 
-        with NRMLFile(self.dest, 'w') as fh:
+        with nrml.NRMLFile(self.dest, 'w') as fh:
             json.dump(feature_coll, fh, sort_keys=True, indent=4,
                       separators=(',', ': '))
 
@@ -273,14 +274,14 @@ class MultiHazardCurveXMLWriter(object):
     """
     A serializer of multiple hazard curve set having multiple
     metadata. It uses
-    :class:`openquake.nrmllib.hazard.writers.HazardCurveXMLWriter` to
+    :class:`openquake.commonlib.hazard_writers.HazardCurveXMLWriter` to
     actually serialize the single set of curves.
 
     :attr str dest:
          The path of the filename to be written, or a file-like object
     :attr metadata_set:
          Iterable over metadata suitable to create instances of
-         :class:`openquake.nrmllib.hazard.writers.HazardCurveXMLWriter`
+         :class:`openquake.commonlib.hazard_writers.HazardCurveXMLWriter`
     """
     def __init__(self, dest, metadata_set):
         self.dest = dest
@@ -297,11 +298,11 @@ class MultiHazardCurveXMLWriter(object):
            Iterable over sequence of curves. Each element returned by
            the iterable is an iterable suitable to be used by the
            :meth:`serialize` of the class
-           :class:`openquake.nrmllib.hazard.writers.HazardCurveXMLWriter`
+           :class:`openquake.commonlib.hazard_writers.HazardCurveXMLWriter`
         """
-        with NRMLFile(self.dest, 'w') as fh:
+        with nrml.NRMLFile(self.dest, 'w') as fh:
             root = etree.Element('nrml',
-                                 nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
+                                 nsmap=nrml.SERIALIZE_NS_MAP)
             for metadata, curve_data in zip(self.metadata_set, curve_set):
                 writer = HazardCurveXMLWriter(self.dest, **metadata)
                 writer.add_hazard_curves(root, metadata, curve_data)
@@ -399,7 +400,7 @@ class EventBasedGMFXMLWriter(object):
         gmf_container.nodes = gmf_set_nodes
 
         with open(self.dest, 'w') as dest:
-            node.node_to_nrml(gmf_container, dest)
+            nrml.node_to_nrml(gmf_container, dest)
 
 
 def rupture_to_element(rupture, parent=None):
@@ -585,9 +586,9 @@ class SESXMLWriter(object):
 
             Each of these should be a triple of `lon`, `lat`, `depth`.
         """
-        with NRMLFile(self.dest, 'w') as fh:
+        with nrml.NRMLFile(self.dest, 'w') as fh:
             root = etree.Element('nrml',
-                                 nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
+                                 nsmap=nrml.SERIALIZE_NS_MAP)
             ses_container = etree.SubElement(
                 root, 'stochasticEventSetCollection')
             ses_container.set(SM_TREE_PATH, self.sm_lt_path)
@@ -664,9 +665,9 @@ class HazardMapXMLWriter(HazardMapWriter):
         See :meth:`HazardMapWriter.serialize` for details about the expected
         input.
         """
-        with NRMLFile(self.dest, 'w') as fh:
+        with nrml.NRMLFile(self.dest, 'w') as fh:
             root = etree.Element('nrml',
-                                 nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
+                                 nsmap=nrml.SERIALIZE_NS_MAP)
 
             hazard_map = etree.SubElement(root, 'hazardMap')
 
@@ -723,7 +724,7 @@ class HazardMapGeoJSONWriter(HazardMapWriter):
             }
             features.append(feature)
 
-        with NRMLFile(self.dest, 'w') as fh:
+        with nrml.NRMLFile(self.dest, 'w') as fh:
             json.dump(feature_coll, fh, sort_keys=True, indent=4,
                       separators=(',', ': '))
 
@@ -805,9 +806,9 @@ class DisaggXMLWriter(object):
               curve at the given ``poe``.
         """
 
-        with NRMLFile(self.dest, 'w') as fh:
+        with nrml.NRMLFile(self.dest, 'w') as fh:
             root = etree.Element('nrml',
-                                 nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
+                                 nsmap=nrml.SERIALIZE_NS_MAP)
 
             diss_matrices = etree.SubElement(root, 'disaggMatrices')
 
@@ -891,12 +892,10 @@ class UHSXMLWriter(BaseCurveWriter):
             * location: An object representing the location of the curve; must
               have `x` and `y` to represent lon and lat, respectively.
         """
-        gml_ns = openquake.nrmllib.SERIALIZE_NS_MAP['gml']
+        gml_ns = nrml.SERIALIZE_NS_MAP['gml']
 
-        with NRMLFile(self.dest, 'w') as fh:
-            root = etree.Element(
-                'nrml', nsmap=openquake.nrmllib.SERIALIZE_NS_MAP
-            )
+        with nrml.NRMLFile(self.dest, 'w') as fh:
+            root = etree.Element('nrml', nsmap=nrml.SERIALIZE_NS_MAP)
 
             uh_spectra = etree.SubElement(root, 'uniformHazardSpectra')
 

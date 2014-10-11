@@ -23,9 +23,7 @@ import json
 
 from lxml import etree
 
-import openquake.nrmllib
-
-from openquake.nrmllib import NRMLFile
+from openquake.commonlib.nrml import NRMLFile, SERIALIZE_NS_MAP
 
 
 class LossCurveXMLWriter(object):
@@ -120,8 +118,7 @@ class LossCurveXMLWriter(object):
         _assert_valid_input(data)
 
         with NRMLFile(self._dest, 'w') as output:
-            root = etree.Element("nrml",
-                                 nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
+            root = etree.Element("nrml", nsmap=SERIALIZE_NS_MAP)
 
             for curve in data:
                 if self._loss_curves is None:
@@ -263,8 +260,7 @@ class AggregateLossCurveXMLWriter(object):
             raise ValueError("You can not serialize an empty document")
 
         with NRMLFile(self._dest, 'w') as output:
-            root = etree.Element("nrml",
-                                 nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
+            root = etree.Element("nrml", nsmap=SERIALIZE_NS_MAP)
 
             aggregate_loss_curve = etree.SubElement(root, "aggregateLossCurve")
 
@@ -408,8 +404,7 @@ class LossMapXMLWriter(LossMapWriter):
         _assert_valid_input(data)
 
         with NRMLFile(self._dest, 'w') as output:
-            root = etree.Element("nrml",
-                                 nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
+            root = etree.Element("nrml", nsmap=SERIALIZE_NS_MAP)
 
             loss_map_el = self._create_loss_map_elem(root)
 
@@ -418,7 +413,7 @@ class LossMapXMLWriter(LossMapWriter):
             for loss in data:
 
                 if (current_location is None or
-                    loss.location.wkt != current_location):
+                        loss.location.wkt != current_location):
                     current_node = etree.SubElement(loss_map_el, "node")
                     current_location = _append_location(
                         current_node, loss.location)
@@ -489,8 +484,7 @@ class LossMapGeoJSONWriter(LossMapWriter):
             'type': 'FeatureCollection',
             'features': [],
             'oqtype': 'LossMap',
-            # TODO(LB): should we instead use the
-            # openquake.nrmllib.__version__?
+            # TODO: oqnrmlversion has little meaning now
             'oqnrmlversion': '0.4',
             'oqmetadata': self._create_oqmetadata(),
         }
@@ -612,8 +606,7 @@ class LossFractionsWriter(object):
                 bin_element.set("fraction", "%.5f" % fraction)
 
         with NRMLFile(self.dest, 'w') as output:
-            root = etree.Element(
-                "nrml", nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
+            root = etree.Element("nrml", nsmap=SERIALIZE_NS_MAP)
 
             # container element
             container = etree.SubElement(root, "lossFraction")
@@ -743,8 +736,7 @@ class BCRMapXMLWriter(object):
         _assert_valid_input(data)
 
         with open(self._path, "w") as output:
-            root = etree.Element("nrml",
-                                 nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
+            root = etree.Element("nrml", nsmap=SERIALIZE_NS_MAP)
 
             for bcr in data:
                 if self._bcr_map is None:
@@ -963,7 +955,7 @@ class CollapseMapXMLWriter(object):
         """
         Create the <nrml /> and <collapseMap /> elements.
         """
-        root = etree.Element("nrml", nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
+        root = etree.Element("nrml", nsmap=SERIALIZE_NS_MAP)
         cm_el = etree.SubElement(root, "collapseMap")
         return root, cm_el
 
@@ -1102,7 +1094,7 @@ def _create_root_elems(damage_states, distribution):
     Create the <nrml /> and <dmgDistPer{Taxonomy,Asset} /> elements.
     """
 
-    root = etree.Element("nrml", nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
+    root = etree.Element("nrml", nsmap=SERIALIZE_NS_MAP)
 
     dmg_dist_el = etree.SubElement(root, distribution)
     dmg_states = etree.SubElement(dmg_dist_el, "damageStates")
@@ -1134,7 +1126,7 @@ def _append_location(element, location):
     """
     Append the geographical location to the given element.
     """
-    gml_ns = openquake.nrmllib.SERIALIZE_NS_MAP["gml"]
+    gml_ns = SERIALIZE_NS_MAP["gml"]
     gml_point = etree.SubElement(element, "{%s}Point" % gml_ns)
     gml_pos = etree.SubElement(gml_point, "{%s}pos" % gml_ns)
     gml_pos.text = "%s %s" % (location.x, location.y)

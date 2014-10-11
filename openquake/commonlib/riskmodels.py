@@ -1,7 +1,7 @@
 import logging
 
-from openquake.nrmllib.node import read_nodes, LiteralNode, context
-from openquake.nrmllib import InvalidFile
+from openquake.commonlib.node import read_nodes, LiteralNode, context
+from openquake.commonlib.nrml import InvalidFile
 from openquake.commonlib import valid
 from openquake.risklib import scientific
 

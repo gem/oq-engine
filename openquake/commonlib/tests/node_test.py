@@ -17,7 +17,7 @@ import cStringIO
 import cPickle
 import unittest
 
-from openquake.nrmllib import node as n
+from openquake.commonlib import node as n
 
 
 class NodeTestCase(unittest.TestCase):

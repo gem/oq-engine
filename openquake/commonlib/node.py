@@ -39,7 +39,7 @@ If a node has subnodes, its value should be None.
 For instance, here is an example of instantiating a root node
 with two subnodes a and b:
 
->>> from openquake.nrmllib.node import Node
+>>> from openquake.commonlib.node import Node
 >>> a = Node('a', {}, 'A1')
 >>> b = Node('b', {'attrb': 'B'}, 'B1')
 >>> root = Node('root', nodes=[a, b])
@@ -129,7 +129,7 @@ list(lazytree) will generated all of them. If your goal is to
 store the tree on the filesystem in XML format you should use
 a writing routine converting a subnode at the time, without
 requiring the full list of them. The routines provided by lxml
-and ElementTree are no good, however nrmllib.writers
+and ElementTree are no good, however commonlib.writers
 provide an StreamingXMLWriter just for that purpose.
 
 Lazy trees should *not* be used unless it is absolutely necessary in
@@ -147,7 +147,7 @@ import cStringIO
 import ConfigParser
 from contextlib import contextmanager
 
-from openquake.nrmllib.writers import StreamingXMLWriter
+from openquake.commonlib.writers import StreamingXMLWriter
 
 try:
     from lxml import etree

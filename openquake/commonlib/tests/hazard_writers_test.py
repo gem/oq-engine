@@ -23,8 +23,8 @@ import unittest
 
 from collections import namedtuple
 
-from openquake.nrmllib.hazard import writers
-from openquake.nrmllib.tests import _utils as utils
+from openquake.commonlib import hazard_writers as writers
+from openquake.commonlib.tests import _utils as utils
 
 HazardCurveData = namedtuple('HazardCurveData', 'location, poes')
 UHSData = namedtuple('UHSData', 'location, imls')
