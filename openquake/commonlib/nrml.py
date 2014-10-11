@@ -20,12 +20,12 @@ From Node objects to NRML files and viceversa
 ------------------------------------------------------
 
 It is possible to save a Node object into a NRML file by using the
-function ``node_to_nrml(node, output)`` where output is a file
+function ``write(node, output)`` where output is a file
 object. If you want to make sure that the generated file is valid
 according to the NRML schema just open it in 'w+' mode: immediately
 after writing it will be read and validated. It is also possible to
 convert a NRML file into a Node object with the routine
-``node_from_nrml(node, input)`` where input is the path name of the
+``read(node, input)`` where input is the path name of the
 NRML file or a file object opened for reading. The file will be
 validated as soon as opened.
 
@@ -57,8 +57,7 @@ For instance an exposure file like the following::
 
 can be converted as follows:
 
->> from openquake.commonlib.node import node_from_nrml
->> nrml = node_from_nrml(<path_to_the_exposure_file.xml>)
+>> nrml = read(<path_to_the_exposure_file.xml>)
 
 Then subnodes and attributes can be conveniently accessed:
 
@@ -112,7 +111,7 @@ class NRMLFile(object):
         self._file.close()
 
 
-def node_from_nrml(source):
+def read(source):
     """
     Convert a NRML file into a validated LiteralNode object.
 
@@ -131,7 +130,7 @@ def node_from_nrml(source):
         nodes=[subnode])
 
 
-def node_to_nrml(node, output=sys.stdout):
+def write(node, output=sys.stdout):
     """
     Convert a node into a NRML file. output must be a file
     object open in write mode. If you want to perform a
@@ -148,12 +147,12 @@ def node_to_nrml(node, output=sys.stdout):
     node_to_xml(root, output)
     if hasattr(output, 'mode') and '+' in output.mode:  # read-write mode
         output.seek(0)
-        node_from_nrml(output)  # validate the written file
+        read(output)  # validate the written file
 
 
 if __name__ == '__main__':
     import sys
     for fname in sys.argv[1:]:
         print '****** %s ******' % fname
-        print node_from_nrml(fname).to_str()
+        print read(fname).to_str()
         print

@@ -1,6 +1,6 @@
 import unittest
 import cStringIO
-from openquake.commonlib.nrml import node_from_nrml, node_to_xml
+from openquake.commonlib.nrml import read, node_to_xml
 
 
 class NrmlTestCase(unittest.TestCase):
@@ -32,7 +32,7 @@ class NrmlTestCase(unittest.TestCase):
   </exposureModel>
 </nrml>
 """)
-        root = node_from_nrml(xmlfile)
+        root = read(xmlfile)
         outfile = cStringIO.StringIO()
         node_to_xml(root, outfile)
         self.assertEqual(outfile.getvalue(), """\

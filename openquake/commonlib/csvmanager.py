@@ -25,7 +25,7 @@ import tempfile
 from abc import ABCMeta, abstractmethod
 
 from openquake.commonlib import InvalidFile
-from openquake.commonlib.nrml import node_to_nrml, node_from_nrml
+from openquake.commonlib import nrml
 from openquake.commonlib.record import Table
 from openquake.commonlib import record, records, converter
 
@@ -373,7 +373,7 @@ class CSVManager(object):
                     out = out_archive.open(outname, 'w+')
                 with out:
                     node = man.get_tableset().to_node()
-                    node_to_nrml(node, out)
+                    nrml.write(node, out)
                 fnames.append(out.name)
         return fnames
 
@@ -384,7 +384,7 @@ class CSVManager(object):
         """
         assert fname.endswith('.xml'), fname
         prefix = os.path.basename(fname)[:-4]
-        return self.convert_from_node(node_from_nrml(fname)[0], prefix)
+        return self.convert_from_node(nrml.read(fname)[0], prefix)
 
     def convert_from_node(self, node, prefix=None):
         """
