@@ -76,10 +76,10 @@ supplemented by a dictionary of validators.
 """
 
 import sys
+import collections
+from openquake.commonlib import valid
 from openquake.commonlib.node import node_to_xml, \
     Node, LiteralNode, iterparse, node_from_elem
-from openquake.commonlib.nrml_registry import registry
-
 
 NAMESPACE = 'http://openquake.org/xmlns/nrml/0.4'
 GML_NAMESPACE = 'http://www.opengis.net/gml'
@@ -109,6 +109,170 @@ class NRMLFile(object):
 
     def __exit__(self, *args):
         self._file.close()
+
+
+class Register(collections.OrderedDict):
+    def add(self, *tags):
+        def dec(obj):
+            for tag in tags:
+                self[tag] = obj
+            return obj
+        return dec
+
+registry = Register()
+
+
+@registry.add('sourceModel', 'simpleFaultRupture', 'complexFaultRupture',
+              'singlePlaneRupture', 'multiPlanesRupture')
+class ValidNode(LiteralNode):
+    """
+    A subclass of LiteralNode to be used when parsing sources and
+    ruptures from NRML files.
+    """
+    validators = valid.parameters(
+        strike=valid.strike_range,  # needed for the moment
+        dip=valid.dip_range,  # needed for the moment
+        rake=valid.rake_range,  # needed for the moment
+        magnitude=valid.positivefloat,
+        lon=valid.longitude,
+        lat=valid.latitude,
+        depth=valid.positivefloat,
+        upperSeismoDepth=valid.positivefloat,
+        lowerSeismoDepth=valid.positivefloat,
+        posList=valid.posList,
+        pos=valid.lonlat,
+        aValue=float,
+        bValue=valid.positivefloat,
+        magScaleRel=valid.mag_scale_rel,
+        tectonicRegion=str,
+        ruptAspectRatio=valid.positivefloat,
+        maxMag=valid.positivefloat,
+        minMag=valid.positivefloat,
+        binWidth=valid.positivefloat,
+        probability=valid.probability,
+        hypocenter=valid.point3d,
+        topLeft=valid.point3d,
+        topRight=valid.point3d,
+        bottomLeft=valid.point3d,
+        bottomRight=valid.point3d,
+        hypoDepth=valid.probability_depth,
+        nodalPlane=valid.nodal_plane,
+        occurRates=valid.positivefloats,
+        probs_occur=valid.pmf,
+        )
+
+
+@registry.add('siteModel')
+class SiteModelNode(LiteralNode):
+    validators = valid.parameters(site=valid.site_param)
+
+
+@registry.add('vulnerabilityModel')
+class VulnerabilityNode(LiteralNode):
+    """
+    Literal Node class used to validate discrete vulnerability functions
+    """
+    validators = valid.parameters(
+        vulnerabilitySetID=valid.name,
+        vulnerabilityFunctionID=valid.name_with_dashes,
+        assetCategory=str,
+        # the assetCategory here has nothing to do with the category
+        # in the exposure model and it is not used by the engine
+        lossCategory=valid.name,
+        IML=valid.IML,
+        lossRatio=valid.positivefloats,
+        coefficientsVariation=valid.positivefloats,
+        probabilisticDistribution=valid.Choice('LN', 'BT'),
+    )
+
+
+@registry.add('fragilityModel')
+class FragilityNode(LiteralNode):
+    validators = valid.parameters(
+        format=valid.ChoiceCI('discrete', 'continuous'),
+        lossCategory=valid.name,
+        IML=valid.IML,
+        params=valid.fragilityparams,
+        limitStates=valid.namelist,
+        description=valid.utf8,
+        type=valid.ChoiceCI('lognormal'),
+        poEs=valid.probabilities,
+        noDamageLimit=valid.positivefloat,
+    )
+
+valid_loss_types = valid.Choice('structural', 'nonstructural', 'contents',
+                                'business_interruption', 'occupants')
+
+
+@registry.add('aggregateLossCurve')
+class LossCurveNode(LiteralNode):
+    validators = valid.parameters(
+        investigationTime=valid.positivefloat,
+        loss_type=valid_loss_types,
+        unit=str,
+        poEs=valid.probabilities,
+        gsimTreePath=lambda v: v.split('_'),
+        sourceModelTreePath=lambda v: v.split('_'),
+        losses=valid.positivefloats,
+        averageLoss=valid.positivefloat,
+        stdDevLoss=valid.positivefloat,
+    )
+
+
+@registry.add('bcrMap')
+class BcrNode(LiteralNode):
+    validators = valid.parameters(
+        assetLifeExpectancy=valid.positivefloat,
+        interestRate=valid.positivefloat,
+        lossCategory=str,
+        lossType=valid_loss_types,
+        quantileValue=valid.positivefloat,
+        statistics=valid.Choice('quantile'),
+        unit=str,
+        pos=valid.lon_lat,
+        aalOrig=valid.positivefloat,
+        aalRetr=valid.positivefloat,
+        ratio=valid.positivefloat)
+
+
+def asset_mean_stddev(value, assetRef, mean, stdDev):
+    return assetRef, valid.positivefloat(mean), valid.positivefloat(stdDev)
+
+
+@registry.add('collapseMap')
+class CollapseNode(LiteralNode):
+    validators = valid.parameters(
+        pos=valid.lon_lat,
+        cf=asset_mean_stddev,
+    )
+
+
+def damage_triple(value, ds, mean, stddev):
+    return ds, valid.positivefloat(mean), valid.positivefloat(stddev)
+
+
+@registry.add('totalDmgDist', 'dmgDistPerAsset', 'dmgDistPerTaxonomy')
+class DamageNode(LiteralNode):
+    validators = valid.parameters(
+        damage=damage_triple,
+        pos=valid.lon_lat,
+        damageStates=valid.namelist,
+    )
+
+registry.add('disaggMatrices',
+             'exposureModel',
+             'gmfCollection',
+             'gmfSet',
+             'hazardCurves',
+             'hazardMap',
+             'logicTree',
+             'lossCurves',
+             'lossFraction',
+             'lossMap',
+             'stochasticEventSet',
+             'stochasticEventSetCollection',
+             'uniformHazardSpectra',
+             )(LiteralNode)
 
 
 def read(source):

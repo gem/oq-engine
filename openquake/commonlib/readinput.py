@@ -9,7 +9,7 @@ from openquake.commonlib.riskmodels import \
     get_fragility_functions, get_imtls_from_vulnerabilities
 from openquake.commonlib.converter import Converter
 from openquake.commonlib.source import RuptureConverter
-from openquake.commonlib.nrml_registry import registry
+from openquake.commonlib.nrml import registry
 
 
 def get_mesh(oqparam):

@@ -527,6 +527,17 @@ def posList(value):
         raise ValueError('Found a non-float in %s: %s' % (value, exc))
 
 
+def lon_lat(value):
+    """
+    This is used to convert nodes of the form
+    <pos>LON LAT</pos>
+
+    :returns: a validated pair (lon, lat)
+    """
+    lon, lat = value.split()
+    return longitude(lon), latitude(lat)
+
+
 def point3d(value, lon, lat, depth):
     """
     This is used to convert nodes of the form

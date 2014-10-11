@@ -29,7 +29,7 @@ from openquake.hazardlib.tom import PoissonTOM
 
 from openquake import nrml_examples
 from openquake.commonlib import source as s
-from openquake.commonlib.nrml_registry import registry
+from openquake.commonlib.nrml import registry
 from openquake.commonlib.node import read_nodes
 from openquake.commonlib.general import deep_eq
 

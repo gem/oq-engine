@@ -1,12 +1,11 @@
 import logging
 
-from openquake.commonlib.node import read_nodes, LiteralNode, context
+from openquake.commonlib.node import read_nodes, context
 from openquake.commonlib import InvalidFile
-from openquake.commonlib import valid
 from openquake.risklib import scientific
 
 from openquake.commonlib.oqvalidation import vulnerability_files
-from openquake.commonlib.nrml_registry import registry
+from openquake.commonlib.nrml import registry
 
 ############################ vulnerability ##################################
 
