@@ -38,7 +38,7 @@ class HazardIMTTestCase(unittest.TestCase):
             structural=vf1, nonstructural=vf2)
         calc.risk_models = {
             ('PGA', 'tax1'): RiskModel('PGA', 'tax1', workflow),
-            ('PGA', 'tax2'): RiskModel('PGA', 'tax2', workflow)}
+            ('PGV', 'tax2'): RiskModel('PGV', 'tax2', workflow)}
         calc.rc.get_hazard_param().intensity_measure_types = ['PGA', 'PGV']
         val = validation.HazardIMT(calc)
 
