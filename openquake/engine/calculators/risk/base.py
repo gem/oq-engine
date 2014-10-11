@@ -104,9 +104,11 @@ def build_getters(job_id, counts_taxonomy, calc):
             # submitting task
             task_no += 1
             logs.LOG.info('Built task #%d for taxonomy %s', task_no, taxonomy)
-            risk_model = calc.risk_models[taxonomy]
-            otm.submit(job_id, risk_model, getters,
-                       calc.outputdict, calc.calculator_parameters)
+            for imt, taxo in calc.risk_models:
+                if taxo == taxonomy:
+                    risk_model = calc.risk_models[imt, taxonomy]
+                    otm.submit(job_id, risk_model, getters,
+                               calc.outputdict, calc.calculator_parameters)
 
     return otm
 
