@@ -1,14 +1,15 @@
 import numpy
 
 from openquake.hazardlib import geo, site
-from openquake.commonlib.node import read_nodes, LiteralNode
+from openquake.commonlib.node import read_nodes
 from openquake.commonlib import valid
 from openquake.commonlib.oqvalidation import \
     fragility_files, vulnerability_files
 from openquake.commonlib.riskmodels import \
     get_fragility_functions, get_imtls_from_vulnerabilities
 from openquake.commonlib.converter import Converter
-from openquake.commonlib.source import ValidNode, RuptureConverter
+from openquake.commonlib.source import RuptureConverter
+from openquake.commonlib.nrml_registry import registry
 
 
 def get_mesh(oqparam):
@@ -42,10 +43,6 @@ def get_mesh(oqparam):
         return geo.Mesh(numpy.array(lons), numpy.array(lats))
 
 
-class SiteModelNode(LiteralNode):
-    validators = valid.parameters(site=valid.site_param)
-
-
 def get_site_model(oqparam):
     """
     Convert the NRML file into an iterator over 6-tuple of the form
@@ -56,7 +53,7 @@ def get_site_model(oqparam):
     """
     for node in read_nodes(oqparam.inputs['site_model'],
                            lambda el: el.tag.endswith('site'),
-                           SiteModelNode):
+                           registry['siteModel']):
         yield ~node
 
 
@@ -105,7 +102,7 @@ def get_rupture(oqparam):
     conv = RuptureConverter(oqparam.rupture_mesh_spacing)
     rup_model = oqparam.inputs['rupture_model']
     rup_node, = read_nodes(rup_model, lambda el: 'Rupture' in el.tag,
-                           ValidNode)
+                           registry['sourceModel'])
     return conv.convert_node(rup_node)
 
 
@@ -118,7 +115,8 @@ def get_source_models(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     for fname in oqparam.inputs['source']:
-        srcs = read_nodes(fname, lambda elem: 'Source' in elem.tag, ValidNode)
+        srcs = read_nodes(fname, lambda elem: 'Source' in elem.tag,
+                          registry['sourceModel'])
         yield fname, srcs
 
 

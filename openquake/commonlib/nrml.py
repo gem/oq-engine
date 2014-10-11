@@ -77,18 +77,14 @@ supplemented by a dictionary of validators.
 """
 
 import sys
-from openquake.commonlib.node import read_nodes, node_to_xml, \
-    Node, context
-from openquake.commonlib.source import RuptureConverter, SourceConverter
+from openquake.commonlib.node import node_to_xml, \
+    Node, LiteralNode, iterparse, node_from_elem
+from openquake.commonlib.nrml_registry import registry
 
 
 NAMESPACE = 'http://openquake.org/xmlns/nrml/0.4'
 GML_NAMESPACE = 'http://www.opengis.net/gml'
 SERIALIZE_NS_MAP = {None: NAMESPACE, 'gml': GML_NAMESPACE}
-
-
-class InvalidFile(Exception):
-    pass
 
 
 class NRMLFile(object):
@@ -116,112 +112,23 @@ class NRMLFile(object):
         self._file.close()
 
 
-class NrmlConverter(object):
-    """
-    Convert a NRML file into a Python object. The file must contain a single
-    node with one of the known tags of the NRML format.
-    """
-    def __init__(self, **kw):
-        vars(self).update(kw)
-
-    def convert(self, fname):
-        self.fname = fname
-        [node] = read_nodes(self.fname, lambda node: node.tag.endswith('nrml'))
-        assert len(node) == 1, 'Found %d nodes!' % len(node)
-        subnode = node[0]
-        with context(self.fname, subnode):
-            node[0] = getattr(self, 'convert_' + subnode.tag)(subnode)
-        return node
-
-    def convert_aggregateLossCurve(self, node):
-        return node
-
-    def convert_bcrMap(self, node):
-        return node
-
-    def convert_collapseMap(self, node):
-        return node
-
-    def convert_disaggMatrices(self, node):
-        return node
-
-    def convert_dmgDistPerAsset(self, node):
-        return node
-
-    def convert_dmgDistPerTaxonomy(self, node):
-        return node
-
-    def convert_exposureModel(self, node):
-        return node
-
-    def convert_fragilityModel(self, node):
-        return node
-
-    def convert_gmfCollection(self, node):
-        return node
-
-    def convert_hazardCurves(self, node):
-        return node
-
-    def convert_hazardMap(self, node):
-        return node
-
-    def convert_logicTree(self, node):
-        return node
-
-    def convert_lossCurves(self, node):
-        return node
-
-    def convert_lossFraction(self, node):
-        return node
-
-    def convert_lossMap(self, node):
-        return node
-
-    def convert_rupture(self, node):
-        rc = RuptureConverter(self.rupture_mesh_spacing)
-        return rc.convert_node(node)
-
-    def convert_siteModel(self, node):
-        return node
-
-    def convert_sourceModel(self, node):
-        sc = SourceConverter(
-            self.investigation_time, self.rupture_mesh_spacing,
-            self.width_of_mfd_bin, self.area_source_discretization)
-        for i, subnode in enumerate(node):
-            node[i] = sc.convert_node(node)
-        return node
-
-    def convert_stochasticEventSet(self, node):
-        return node
-
-    def convert_stochasticEventSetCollection(self, node):
-        return node
-
-    def convert_totalDmgDist(self, node):
-        return node
-
-    def convert_uniformHazardSpectra(self, node):
-        return node
-
-    def convert_vulnerabilityModel(self, node):
-        return node
-
-
-def node_from_nrml(source, **extra_params):
+def node_from_nrml(source):
     """
     Convert a NRML file into a validated LiteralNode object.
 
     :param source:
         a file name or file object open for reading
-    :param extra_params:
-        additional keyword arguments that may be needed for the conversion
     """
-    node = NrmlConverter(**extra_params).convert(source)
-    node['xmlns'] = NAMESPACE
-    node['xmlns:gml'] = GML_NAMESPACE
-    return node
+    elements = iterparse(source, ('start',), remove_comments=True)
+    _event, nrml = elements.next()
+    assert LiteralNode.strip_fqtag(nrml.tag) == 'nrml', nrml.tag
+    _event, content = elements.next()
+    tag = LiteralNode.strip_fqtag(content.tag)
+    nodecls = registry[tag]
+    subnode = node_from_elem(content, nodecls)
+    return LiteralNode(
+        'nrml', {'xmlns': NAMESPACE, 'xmlns:gml': GML_NAMESPACE},
+        nodes=[subnode])
 
 
 def node_to_nrml(node, output=sys.stdout):
@@ -246,4 +153,7 @@ def node_to_nrml(node, output=sys.stdout):
 
 if __name__ == '__main__':
     import sys
-    print node_from_nrml(sys.argv[1]).to_str()
+    for fname in sys.argv[1:]:
+        print '****** %s ******' % fname
+        print node_from_nrml(fname).to_str()
+        print

@@ -21,6 +21,7 @@ from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.commonlib.node import read_nodes, LiteralNode, context
 from openquake.commonlib import valid
+from openquake.commonlib.nrml_registry import registry
 
 try:
     from openquake.commonlib.obsolete import NrmlHazardlibConverter
@@ -129,7 +130,8 @@ def parse_source_model(fname, converter, apply_uncertainties=lambda src: None):
     converter.fname = fname
     source_stats_dict = {}
     source_ids = set()
-    src_nodes = read_nodes(fname, lambda elem: 'Source' in elem.tag, ValidNode)
+    src_nodes = read_nodes(fname, lambda elem: 'Source' in elem.tag,
+                           registry['sourceModel'])
     for src_node in src_nodes:
         src = converter.convert_node(src_node)
         if src.source_id in source_ids:
@@ -237,44 +239,6 @@ def split_source(src, area_source_discretization):
             yield s
     else:  # characteristic sources are not split since they are small
         yield src
-
-
-class ValidNode(LiteralNode):
-    """
-    A subclass of LiteralNode to be used when parsing sources and
-    ruptures from NRML files.
-    """
-    validators = valid.parameters(
-        strike=valid.strike_range,  # needed for the moment
-        dip=valid.dip_range,  # needed for the moment
-        rake=valid.rake_range,  # needed for the moment
-        magnitude=valid.positivefloat,
-        lon=valid.longitude,
-        lat=valid.latitude,
-        depth=valid.positivefloat,
-        upperSeismoDepth=valid.positivefloat,
-        lowerSeismoDepth=valid.positivefloat,
-        posList=valid.posList,
-        pos=valid.lonlat,
-        aValue=float,
-        bValue=valid.positivefloat,
-        magScaleRel=valid.mag_scale_rel,
-        tectonicRegion=str,
-        ruptAspectRatio=valid.positivefloat,
-        maxMag=valid.positivefloat,
-        minMag=valid.positivefloat,
-        binWidth=valid.positivefloat,
-        probability=valid.probability,
-        hypocenter=valid.point3d,
-        topLeft=valid.point3d,
-        topRight=valid.point3d,
-        bottomLeft=valid.point3d,
-        bottomRight=valid.point3d,
-        hypoDepth=valid.probability_depth,
-        nodalPlane=valid.nodal_plane,
-        occurRates=valid.positivefloats,
-        probs_occur=valid.pmf,
-        )
 
 
 def split_coords_2d(seq):

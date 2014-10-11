@@ -107,17 +107,17 @@ class Vulnerability(Converter):
         """Convert the node into a sequence of Vulnerability records"""
         for vset in node.getnodes('discreteVulnerabilitySet'):
             set_id = vset['vulnerabilitySetID']
+            imt, imls, _, _ = ~vset.IML
             dvs = records.DiscreteVulnerabilitySet(
                 set_id,
                 vset['assetCategory'],
                 vset['lossCategory'],
-                vset.IML['IMT'])
+                imt)
             yield dvs
-            imls = vset.IML.text.split()
             for vf in vset.getnodes('discreteVulnerability'):
                 fun_id = vf['vulnerabilityFunctionID']
-                ratios = vf.lossRatio.text.split()
-                coeffs = vf.coefficientsVariation.text.split()
+                ratios = ~vf.lossRatio
+                coeffs = ~vf.coefficientsVariation
                 dv = records.DiscreteVulnerability(
                     set_id,
                     fun_id,

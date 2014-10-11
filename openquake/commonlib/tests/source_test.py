@@ -29,6 +29,7 @@ from openquake.hazardlib.tom import PoissonTOM
 
 from openquake import nrml_examples
 from openquake.commonlib import source as s
+from openquake.commonlib.nrml_registry import registry
 from openquake.commonlib.node import read_nodes
 from openquake.commonlib.general import deep_eq
 
@@ -59,6 +60,8 @@ NONPARAMETRIC_SOURCE = os.path.join(
 filter_sources = lambda el: 'Source' in el.tag
 filter_ruptures = lambda el: 'Rupture' in el.tag
 
+ValidNode = registry['sourceModel']
+
 
 class NrmlSourceToHazardlibTestCase(unittest.TestCase):
     """Tests for converting NRML source model objects to the hazardlib
@@ -73,7 +76,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
             area_source_discretization=1.,  # km
         )
-        source_nodes = read_nodes(MIXED_SRC_MODEL, filter_sources, s.ValidNode)
+        source_nodes = read_nodes(MIXED_SRC_MODEL, filter_sources, ValidNode)
         (cls.area, cls.point, cls.simple, cls.cmplx, cls.char_simple,
          cls.char_complex, cls.char_multi) = map(
             converter.convert_node, source_nodes)
@@ -423,7 +426,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         msg = ('Could not convert occurRates->positivefloats: '
                'float -0.0010614989 < 0, line 25')
         with self.assertRaises(ValueError) as ctx:
-            read_nodes(area_file, filter_sources, s.ValidNode).next()
+            read_nodes(area_file, filter_sources, ValidNode).next()
         self.assertIn(msg, str(ctx.exception))
 
     def test_raises_useful_error_2(self):
@@ -469,7 +472,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
     </sourceModel>
 </nrml>
 """)
-        [area] = read_nodes(area_file, filter_sources, s.ValidNode)
+        [area] = read_nodes(area_file, filter_sources, ValidNode)
         with self.assertRaises(NameError) as ctx:
             self.converter.convert_node(area)
         self.assertIn(
@@ -482,7 +485,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             rupture_mesh_spacing=1,  # km
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
             area_source_discretization=1.)
-        np, = read_nodes(NONPARAMETRIC_SOURCE, filter_sources, s.ValidNode)
+        np, = read_nodes(NONPARAMETRIC_SOURCE, filter_sources, ValidNode)
         converter.convert_node(np)
 
 
@@ -634,7 +637,7 @@ class RuptureConverterTestCase(unittest.TestCase):
         converter = s.RuptureConverter(rupture_mesh_spacing=1.5)
         for fname in (SIMPLE_FAULT_RUPTURE, COMPLEX_FAULT_RUPTURE,
                       SINGLE_PLANE_RUPTURE, MULTI_PLANES_RUPTURE):
-            node, = read_nodes(fname, filter_ruptures, s.ValidNode)
+            node, = read_nodes(fname, filter_ruptures, ValidNode)
             converter.convert_node(node)
 
     def test_ill_formed_rupture(self):
@@ -664,5 +667,5 @@ class RuptureConverterTestCase(unittest.TestCase):
 
         # at line 7 there is an invalid depth="-5.0"
         with self.assertRaises(ValueError) as ctx:
-            read_nodes(rup_file, filter_ruptures, s.ValidNode).next()
+            read_nodes(rup_file, filter_ruptures, ValidNode).next()
         self.assertIn('line 7', str(ctx.exception))

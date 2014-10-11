@@ -19,10 +19,10 @@ import unittest
 import StringIO
 
 from openquake.commonlib import risk_parsers as parsers
-from openquake.commonlib.nrml import InvalidFile
+from openquake.commonlib import InvalidFile
+from openquake import nrml_examples
 
-d = os.path.dirname
-EXAMPLES_DIR = os.path.join(d(d(d(d(d(__file__))))), 'examples')
+EXAMPLES_DIR = os.path.dirname(nrml_examples.__file__)
 
 
 def get_example(fname):

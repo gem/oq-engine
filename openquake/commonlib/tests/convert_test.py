@@ -18,7 +18,7 @@
 import os
 import unittest
 import tempfile
-from openquake.commonlib.nrml import InvalidFile
+from openquake.commonlib import InvalidFile
 from openquake.commonlib import record, records
 from openquake.commonlib.csvmanager import (
     MemArchive, CSVManager, NotInArchive, mkarchive)

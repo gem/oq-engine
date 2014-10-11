@@ -1,31 +1,14 @@
 import logging
 
 from openquake.commonlib.node import read_nodes, LiteralNode, context
-from openquake.commonlib.nrml import InvalidFile
+from openquake.commonlib import InvalidFile
 from openquake.commonlib import valid
 from openquake.risklib import scientific
 
 from openquake.commonlib.oqvalidation import vulnerability_files
-
+from openquake.commonlib.nrml_registry import registry
 
 ############################ vulnerability ##################################
-
-class VulnerabilityNode(LiteralNode):
-    """
-    Literal Node class used to validate discrete vulnerability functions
-    """
-    validators = valid.parameters(
-        vulnerabilitySetID=valid.name,
-        vulnerabilityFunctionID=valid.name_with_dashes,
-        assetCategory=str,
-        # the assetCategory here has nothing to do with the category
-        # in the exposure model and it is not used by the engine
-        lossCategory=valid.name,
-        IML=valid.IML,
-        lossRatio=valid.positivefloats,
-        coefficientsVariation=valid.positivefloats,
-        probabilisticDistribution=valid.Choice('LN', 'BT'),
-    )
 
 
 def filter_vset(elem):
@@ -42,7 +25,7 @@ def get_vulnerability_functions(fname):
     imts = set()
     taxonomies = set()
     vf_dict = {}  # imt, taxonomy -> vulnerability function
-    for vset in read_nodes(fname, filter_vset, VulnerabilityNode):
+    for vset in read_nodes(fname, filter_vset, registry['vulnerabilityModel']):
         imt_str, imls, min_iml, max_iml = ~vset.IML
         if imt_str in imts:
             raise InvalidFile('Duplicated IMT %s: %s, line %d' %
@@ -100,20 +83,6 @@ def get_imtls_from_vulnerabilities(inputs):
 
 ############################ fragility ##################################
 
-class FragilityNode(LiteralNode):
-    validators = valid.parameters(
-        format=valid.ChoiceCI('discrete', 'continuous'),
-        lossCategory=valid.name,
-        IML=valid.IML,
-        params=valid.fragilityparams,
-        limitStates=valid.namelist,
-        description=valid.utf8,
-        type=valid.ChoiceCI('lognormal'),
-        poEs=valid.probabilities,
-        noDamageLimit=valid.positivefloat,
-    )
-
-
 class List(list):
     """
     Class to store lists of objects with common attributes
@@ -131,7 +100,8 @@ def get_fragility_functions(fname):
         damage_states list and dictionary taxonomy -> functions
     """
     [fmodel] = read_nodes(
-        fname, lambda el: el.tag.endswith('fragilityModel'), FragilityNode)
+        fname, lambda el: el.tag.endswith('fragilityModel'),
+        registry['fragilityModel'])
     # ~fmodel.description is ignored
     limit_states = ~fmodel.limitStates
     tag = 'ffc' if fmodel['format'] == 'continuous' else 'ffd'
