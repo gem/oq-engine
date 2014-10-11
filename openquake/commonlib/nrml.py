@@ -136,7 +136,7 @@ def node_to_nrml(node, output=sys.stdout):
     Convert a node into a NRML file. output must be a file
     object open in write mode. If you want to perform a
     consistency check, open it in read-write mode, then it will
-    be read after creation and checked against the NRML schema.
+    be read after creation and validated.
 
     :params node: a Node object
     :params output: a file-like object in write or read-write mode
@@ -148,7 +148,7 @@ def node_to_nrml(node, output=sys.stdout):
     node_to_xml(root, output)
     if hasattr(output, 'mode') and '+' in output.mode:  # read-write mode
         output.seek(0)
-        # node_from_nrml(output)  # validate the written file
+        node_from_nrml(output)  # validate the written file
 
 
 if __name__ == '__main__':
