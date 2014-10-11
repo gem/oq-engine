@@ -50,8 +50,8 @@ Node objects can be converted into nicely indented strings:
 
 >>> print root.to_str()
 root
-  a A1
-  b{attrb='B'} B1
+  a 'A1'
+  b{attrb='B'} 'B1'
 <BLANKLINE>
 
 The subnodes can be retrieved with the dot notation:
