@@ -83,9 +83,6 @@ class ConvertGoodFilesTestCase(unittest.TestCase):
     def test_exposure_buildings(self):
         self.check_round_trip('exposure-buildings.xml')
 
-    def test_gmf_scenario(self):
-        self.check_round_trip('gmf-scenario.xml')
-
     def test_gmf_event_based(self):
         self.check_round_trip('gmf-event-based.xml')
 

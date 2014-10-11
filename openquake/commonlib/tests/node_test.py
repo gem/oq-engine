@@ -51,7 +51,7 @@ root
         self.assertEqual(
             root.to_str(expandvals=True, expandattrs=False), '''\
 root
-  a{zz} A
+  a{zz} 'A'
     x1
     x2
   b
@@ -59,7 +59,7 @@ root
 
         self.assertEqual(root.to_str(), '''\
 root
-  a{zz='ZZ'} A
+  a{zz='ZZ'} 'A'
     x1
     x2
   b
