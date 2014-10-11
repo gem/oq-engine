@@ -37,8 +37,8 @@ class HazardIMTTestCase(unittest.TestCase):
         workflow.vulnerability_functions = dict(
             structural=vf1, nonstructural=vf2)
         calc.risk_models = {
-            'tax1': RiskModel('tax1', workflow),
-            'tax2': RiskModel('tax2', workflow)}
+            ('PGA', 'tax1'): RiskModel('PGA', 'tax1', workflow),
+            ('PGA', 'tax2'): RiskModel('PGA', 'tax2', workflow)}
         calc.rc.get_hazard_param().intensity_measure_types = ['PGA', 'PGV']
         val = validation.HazardIMT(calc)
 
@@ -70,7 +70,7 @@ class OrphanTaxonomiesTestCase(unittest.TestCase):
         val = validation.OrphanTaxonomies(calc)
 
         calc.rc.taxonomies_from_model = True
-        calc.risk_models = {'RM': mock.Mock()}
+        calc.risk_models = {('PGA', 'RM'): mock.Mock()}
         calc.taxonomies_asset_count = {'RC': 1, 'RM': 2}
 
         self.assertIsNone(val.get_error())
@@ -80,7 +80,8 @@ class OrphanTaxonomiesTestCase(unittest.TestCase):
                          "but not in the risk model: set(['RC'])",
                          val.get_error())
 
-        calc.risk_models = {'RM': mock.Mock(), 'RC': mock.Mock()}
+        calc.risk_models = {('PGA', 'RM'): mock.Mock(),
+                            ('PGA', 'RC'): mock.Mock()}
         self.assertIsNone(val.get_error())
 
 
