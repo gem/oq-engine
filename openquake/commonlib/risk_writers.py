@@ -638,10 +638,10 @@ class LossFractionsWriter(object):
             # map
             map_element = etree.SubElement(container, "map")
 
-            for lonlat, bin_data in locations_fractions.iteritems():
+            for lon_lat, bin_data in locations_fractions.iteritems():
                 node_element = etree.SubElement(map_element, "node")
-                node_element.set("lon", str(lonlat[0]))
-                node_element.set("lat", str(lonlat[1]))
+                node_element.set("lon", str(lon_lat[0]))
+                node_element.set("lat", str(lon_lat[1]))
                 write_bins(node_element, bin_data)
 
             output.write(etree.tostring(

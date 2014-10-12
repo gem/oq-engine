@@ -248,16 +248,23 @@ def depth(value):
     return dep
 
 
-def lonlat(value):
+def lon_lat(value):
     """
     :param value: a pair of coordinates
     :returns: a tuple (longitude, latitude)
 
-    >>> lonlat('12 14')
+    >>> lon_lat('12 14')
     (12.0, 14.0)
     """
     lon, lat = value.split()
     return longitude(lon), latitude(lat)
+
+
+def lon_lat_iml(value, lon, lat, iml):
+    """
+    Used to convert nodes of the form <node lon="LON" lat="LAT" iml="IML" />
+    """
+    return longitude(lon), latitude(lat), positivefloat(iml)
 
 
 def coordinates(value):
@@ -274,7 +281,7 @@ def coordinates(value):
     """
     if not value.strip():
         raise ValueError('Empty list of coordinates: %r' % value)
-    return map(lonlat, value.split(','))
+    return map(lon_lat, value.split(','))
 
 
 def positiveint(value):
@@ -381,7 +388,7 @@ def IML(value, IMT, minIML=None, maxIML=None, imlUnit=None):
         imls = None
     min_iml = positivefloat(minIML) if minIML else None
     max_iml = positivefloat(maxIML) if maxIML else None
-    return (imt_str, imls, min_iml, max_iml)
+    return (imt_str, imls, min_iml, max_iml, imlUnit)
 
 
 def fragilityparams(value, mean, stddev):
@@ -525,17 +532,6 @@ def posList(value):
         return map(float_, values)
     except Exception as exc:
         raise ValueError('Found a non-float in %s: %s' % (value, exc))
-
-
-def lon_lat(value):
-    """
-    This is used to convert nodes of the form
-    <pos>LON LAT</pos>
-
-    :returns: a validated pair (lon, lat)
-    """
-    lon, lat = value.split()
-    return longitude(lon), latitude(lat)
 
 
 def point3d(value, lon, lat, depth):

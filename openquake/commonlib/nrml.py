@@ -140,7 +140,7 @@ class ValidNode(LiteralNode):
         upperSeismoDepth=valid.positivefloat,
         lowerSeismoDepth=valid.positivefloat,
         posList=valid.posList,
-        pos=valid.lonlat,
+        pos=valid.lon_lat,
         aValue=float,
         bValue=valid.positivefloat,
         magScaleRel=valid.mag_scale_rel,
@@ -204,8 +204,8 @@ valid_loss_types = valid.Choice('structural', 'nonstructural', 'contents',
                                 'business_interruption', 'occupants')
 
 
-@registry.add('aggregateLossCurve')
-class LossCurveNode(LiteralNode):
+@registry.add('aggregateLossCurve', 'hazardCurves', 'hazardMap')
+class CurveNode(LiteralNode):
     validators = valid.parameters(
         investigationTime=valid.positivefloat,
         loss_type=valid_loss_types,
@@ -216,6 +216,14 @@ class LossCurveNode(LiteralNode):
         losses=valid.positivefloats,
         averageLoss=valid.positivefloat,
         stdDevLoss=valid.positivefloat,
+        poE=valid.positivefloat,
+        IMLs=valid.positivefloats,
+        pos=valid.lon_lat,
+        IMT=str,
+        saPeriod=valid.positivefloat,
+        saDamping=valid.positivefloat,
+        node=valid.lon_lat_iml,
+        quantileValue=valid.positivefloat,
     )
 
 
@@ -259,12 +267,11 @@ class DamageNode(LiteralNode):
         damageStates=valid.namelist,
     )
 
+
 registry.add('disaggMatrices',
              'exposureModel',
              'gmfCollection',
              'gmfSet',
-             'hazardCurves',
-             'hazardMap',
              'logicTree',
              'lossCurves',
              'lossFraction',
