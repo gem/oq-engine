@@ -4,7 +4,7 @@ from cStringIO import StringIO
 
 from django.db import connections
 
-from openquake.nrmllib.hazard.parsers import HazardCurveXMLParser
+from openquake.commonlib import nrml
 from openquake.engine.db import models
 from openquake.engine import engine
 
@@ -22,12 +22,18 @@ def import_hazard_curves(fileobj):
         and the generated :class:`openquake.engine.db.models.OqJob` object.
     """
     fname = fileobj.name
-    hazcurve = HazardCurveXMLParser(fileobj).parse()
+    hazcurves = nrml.read(fileobj).hazardCurves
+    imt = imt_str = hazcurves['IMT']
+    if imt == 'SA':
+        imt_str += '(%s)' % hazcurves['saPeriod']
+    imls = ~hazcurves.IMLs
+    hc_nodes = hazcurves[1:]
+
     curs = connections['job_init'].cursor().cursor.cursor  # DB API cursor
     job = engine.prepare_job()
     job.save_params(dict(
         base_path=os.path.dirname(fname),
-        intensity_measure_types_and_levels={hazcurve.imt: hazcurve.imls},
+        intensity_measure_types_and_levels={imt_str: imls},
         description='HazardCurve importer, file %s' % os.path.basename(fname),
         calculation_mode='classical', maximum_distance=100))
     # XXX: what about the maximum_distance?
@@ -37,24 +43,24 @@ def import_hazard_curves(fileobj):
         oq_job=job)
 
     haz_curve = models.HazardCurve.objects.create(
-        investigation_time=hazcurve.investigation_time,
-        imt=hazcurve.imt,
-        imls=hazcurve.imls,
-        quantile=hazcurve.quantile_value,
-        statistics=hazcurve.statistics,
-        sa_damping=hazcurve.sa_damping,
-        sa_period=hazcurve.sa_period,
+        investigation_time=hazcurves['investigationTime'],
+        imt=imt,
+        imls=imls,
+        quantile=hazcurves.attrib.get('quantileValue'),
+        statistics=hazcurves.attrib.get('statistics'),
+        sa_damping=hazcurves.attrib.get('saDamping'),
+        sa_period=hazcurves.attrib.get('saPeriod'),
         output=out)
     hazard_curve_id = str(haz_curve.id)
 
     # convert the XML into a tab-separated StringIO
     f = StringIO()
-    for node in hazcurve:
-        loc = node.location
-        poes = node.poes
+    for node in hc_nodes:
+        x, y = ~node.Point.pos
+        poes = ~node.poEs
         poes = '{%s}' % str(poes)[1:-1]
         print >> f, '\t'.join([hazard_curve_id, poes,
-                               'SRID=4326;POINT(%s %s)' % (loc.x, loc.y)])
+                               'SRID=4326;POINT(%s %s)' % (x, y)])
     f.reset()
     ## import the file-like object with a COPY FROM
     try:

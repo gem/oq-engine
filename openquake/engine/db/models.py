@@ -1746,7 +1746,7 @@ class _GroundMotionFieldNode(object):
     def __lt__(self, other):
         """
         A reproducible ordering by lon and lat; used in
-        :function:`openquake.nrmllib.hazard.writers.gen_gmfs`
+        :function:`openquake.commonlib.hazard_writers.gen_gmfs`
         """
         return self.location < other.location
 
