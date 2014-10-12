@@ -26,7 +26,7 @@ from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.imt import from_string
 import openquake.hazardlib.gsim
 
-from openquake.nrmllib.node import read_nodes
+from openquake.commonlib.node import read_nodes
 from openquake.commonlib.general import split_in_blocks
 from openquake.commonlib.source import ValidNode, RuptureConverter
 
