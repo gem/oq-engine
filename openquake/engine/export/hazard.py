@@ -25,7 +25,7 @@ import functools
 from collections import namedtuple
 
 from openquake.hazardlib.calc import disagg
-from openquake.nrmllib.hazard import writers
+from openquake.commonlib import hazard_writers
 
 from openquake.engine.db import models
 from openquake.engine.export import core
@@ -211,8 +211,8 @@ def _export_hazard_curve(output, target, export_type):
     haz_calc = output.oq_job
     dest = _get_result_export_dest(
         haz_calc.id, target, hc, file_ext=export_type)
-    writercls = writers.HazardCurveGeoJSONWriter \
-        if export_type == 'geojson' else writers.HazardCurveXMLWriter
+    writercls = hazard_writers.HazardCurveGeoJSONWriter \
+        if export_type == 'geojson' else hazard_writers.HazardCurveXMLWriter
     writercls(dest, **metadata).serialize(hcd)
 
     return dest
@@ -259,7 +259,7 @@ def export_hazard_curve_multi_xml(output, target):
     haz_calc = output.oq_job
     dest = _get_result_export_dest(haz_calc.id, target, hcs)
 
-    writer = writers.MultiHazardCurveXMLWriter(dest, metadata_set)
+    writer = hazard_writers.MultiHazardCurveXMLWriter(dest, metadata_set)
     writer.serialize(data)
 
     return dest
@@ -325,7 +325,7 @@ def export_gmf_xml(output, target):
 
     dest = _get_result_export_dest(haz_calc.id, target, output.gmf)
 
-    writer = writers.EventBasedGMFXMLWriter(
+    writer = hazard_writers.EventBasedGMFXMLWriter(
         dest, sm_lt_path, gsim_lt_path)
 
     writer.serialize(gmf)
@@ -352,7 +352,7 @@ def export_gmf_scenario_xml(output, target):
 
     dest = _get_result_export_dest(haz_calc.id, target, output.gmf)
 
-    writer = writers.EventBasedGMFXMLWriter(
+    writer = hazard_writers.EventBasedGMFXMLWriter(
         dest, sm_lt_path='', gsim_lt_path='')
     writer.serialize(gmf)
 
@@ -382,7 +382,7 @@ def export_ses_xml(output, target):
     dest = _get_result_export_dest(haz_calc.id, target,
                                    output.ses)
 
-    writer = writers.SESXMLWriter(dest, sm_lt_path)
+    writer = hazard_writers.SESXMLWriter(dest, sm_lt_path)
     writer.serialize(ses_coll)
 
     return dest
@@ -441,8 +441,8 @@ def export_hazard_map_xml(output, target):
         A list of exported file name (including the absolute path to each
         file).
     """
-    return _export_hazard_map(output, target, writers.HazardMapXMLWriter,
-                              'xml')
+    return _export_hazard_map(
+        output, target, hazard_writers.HazardMapXMLWriter, 'xml')
 
 
 def export_hazard_map_geojson(output, target):
@@ -451,13 +451,13 @@ def export_hazard_map_geojson(output, target):
     in GeoJSON format.
     """
     return _export_hazard_map(output, target,
-                              writers.HazardMapGeoJSONWriter, 'geojson')
+                              hazard_writers.HazardMapGeoJSONWriter, 'geojson')
 
 
 class _DisaggMatrix(object):
     """
     A simple data model into which disaggregation matrix information can be
-    packed. The :class:`openquake.nrmllib.hazard.writers.DisaggXMLWriter`
+    packed. The :class:`openquake.commonlib.hazard_writers.DisaggXMLWriter`
     expects a sequence of objects which match this interface.
 
     :param matrix:
@@ -534,7 +534,7 @@ def export_disagg_matrix_xml(output, target):
         gsimlt_path=core.LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path),
     )
 
-    writer = writers.DisaggXMLWriter(dest, **writer_kwargs)
+    writer = hazard_writers.DisaggXMLWriter(dest, **writer_kwargs)
 
     data = (_DisaggMatrix(disagg_result.matrix[i], dim_labels,
                           disagg_result.poe, disagg_result.iml)
@@ -582,7 +582,7 @@ def export_uh_spectra_xml(output, target):
         'investigation_time': uhs.investigation_time,
     }
 
-    writer = writers.UHSXMLWriter(dest, **metadata)
+    writer = hazard_writers.UHSXMLWriter(dest, **metadata)
     writer.serialize(uhs)
 
     return dest
