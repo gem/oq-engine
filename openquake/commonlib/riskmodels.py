@@ -108,7 +108,7 @@ def get_fragility_functions(fname):
     for ffs in fmodel.getnodes('ffs'):
         nodamage = ffs.attrib.get('noDamageLimit')
         taxonomy = ~ffs.taxonomy
-        imt_str, imls, min_iml, max_iml = ~ffs.IML
+        imt_str, imls, min_iml, max_iml, imlUnit = ~ffs.IML
         fragility_functions[taxonomy] = List([], imt=imt_str, imls=imls)
         lstates = []
         for ff in ffs.getnodes(tag):
