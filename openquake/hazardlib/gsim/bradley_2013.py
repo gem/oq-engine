@@ -37,11 +37,11 @@ class Bradley2013(GMPE):
     for New Zealand conditions. Specifically, the modifications are related to:
     1) small magnitude scaling;
     2) scaling of short period ground motion from normal faulting events in
-       volcanic crust;
+    volcanic crust;
     3) scaling of ground motions on very hard rock sites;
     4) anelastic attenuation in the New Zealand crust;
     5) consideration of the increates anelastic attenuation in the Taupo
-       Volcanic Zone (not implemented in this model, use Bradley2013Volc)
+    Volcanic Zone (not implemented in this model, use Bradley2013Volc)
     """
     #: Supported tectonic region type is active shallow crust, see page 1801
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
@@ -310,11 +310,11 @@ class Bradley2013Volc(Bradley2013):
     for New Zealand conditions. Specifically, the modifications are related to:
     1) small magnitude scaling;
     2) scaling of short period ground motion from normal faulting events in
-       volcanic crust;
+    volcanic crust;
     3) scaling of ground motions on very hard rock sites;
     4) anelastic attenuation in the New Zealand crust;
     5) consideration of the increates anelastic attenuation in the Taupo
-       Volcanic Zone (rtvz is equal to rrup)
+    Volcanic Zone (rtvz is equal to rrup)
     """
 
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.VOLCANIC
