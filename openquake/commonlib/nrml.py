@@ -84,6 +84,7 @@ from openquake.commonlib.node import node_to_xml, \
 NAMESPACE = 'http://openquake.org/xmlns/nrml/0.4'
 GML_NAMESPACE = 'http://www.opengis.net/gml'
 SERIALIZE_NS_MAP = {None: NAMESPACE, 'gml': GML_NAMESPACE}
+PARSE_NS_MAP = {'nrml': NAMESPACE, 'gml': GML_NAMESPACE}
 
 
 class NRMLFile(object):
