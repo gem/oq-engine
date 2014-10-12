@@ -107,7 +107,7 @@ class Vulnerability(Converter):
         """Convert the node into a sequence of Vulnerability records"""
         for vset in node.getnodes('discreteVulnerabilitySet'):
             set_id = vset['vulnerabilitySetID']
-            imt, imls, _, _ = ~vset.IML
+            imt, imls, _min, _max, _imlUnit = ~vset.IML
             dvs = records.DiscreteVulnerabilitySet(
                 set_id,
                 vset['assetCategory'],
@@ -172,12 +172,13 @@ class FragilityDiscrete(Converter):
             yield records.FFLimitStateDiscrete(ls)
         for i, ffs in enumerate(node.getnodes('ffs'), 1):
             ffs_ordinal = str(i)  # there is a ffs for each taxonomy
-            imt, imls, _, _ = ~ffs.IML
+            imt, imls, _, _, imlUnit = ~ffs.IML
             yield records.FFSetDiscrete(
                 ffs_ordinal,
                 ffs.taxonomy.text.strip(),
                 ffs.attrib.get('noDamageLimit', ''),
-                imt, 'g')  # imlUnit
+                imt,
+                imlUnit)
             for ls, ffd in zip(limitStates, ffs.getnodes('ffd')):
                 assert ls == ffd['ls'], 'Expected %s, got %s' % (
                     ls, ffd['ls'])
@@ -233,14 +234,14 @@ class FragilityContinuous(Converter):
             yield records.FFLimitStateContinuous(ls)
         for i, ffs in enumerate(node.getnodes('ffs'), 1):
             ffs_ordinal = str(i)
-            imt, imls, min_iml, max_iml = ~ffs.IML
+            imt, imls, min_iml, max_iml, imlUnit = ~ffs.IML
             yield records.FFSetContinuous(
                 ffs_ordinal,
                 ffs.taxonomy.text.strip(),
                 ffs.attrib.get('noDamageLimit', ''),
                 ffs.attrib.get('type', ''),
                 imt,
-                'g',  # imlUnit
+                imlUnit,
                 min_iml,
                 max_iml)
             for ls, ffc in zip(limitStates, ffs.getnodes('ffc')):
