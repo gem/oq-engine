@@ -24,7 +24,7 @@ import csv
 from openquake.engine.db import models
 from openquake.engine.export import core
 from openquake.engine.utils import FileWrapper
-from openquake.nrmllib.risk import writers
+from openquake.commonlib import risk_writers
 
 
 LOSS_CURVE_FILENAME_FMT = 'loss-curves-%(loss_curve_id)s.xml'
@@ -154,7 +154,7 @@ def export_agg_loss_curve_xml(output, target):
     """
     args = _export_common(output, output.loss_curve.loss_type)
     dest = _get_result_export_dest(target, output)
-    writers.AggregateLossCurveXMLWriter(dest, **args).serialize(
+    risk_writers.AggregateLossCurveXMLWriter(dest, **args).serialize(
         output.loss_curve.aggregatelosscurvedata)
     return dest
 
@@ -171,7 +171,7 @@ def export_loss_curve_xml(output, target):
 
     data = output.loss_curve.losscurvedata_set.all().order_by('asset_ref')
 
-    writers.LossCurveXMLWriter(dest, **args).serialize(data)
+    risk_writers.LossCurveXMLWriter(dest, **args).serialize(data)
     return dest
 
 
@@ -199,7 +199,7 @@ def export_loss_map_xml(output, target):
     """
     Serialize a loss map to NRML/XML.
     """
-    return _export_loss_map(output, target, writers.LossMapXMLWriter,
+    return _export_loss_map(output, target, risk_writers.LossMapXMLWriter,
                             'xml')
 
 
@@ -208,7 +208,7 @@ def export_loss_map_geojson(output, target):
     """
     Serialize a loss map to geojson.
     """
-    return _export_loss_map(output, target, writers.LossMapGeoJSONWriter,
+    return _export_loss_map(output, target, risk_writers.LossMapGeoJSONWriter,
                             'geojson')
 
 
@@ -230,7 +230,7 @@ def export_loss_fraction_xml(output, target):
     poe = output.loss_fraction.poe
     variable = output.loss_fraction.variable
     loss_category = risk_calculation.exposure_model.category
-    writers.LossFractionsWriter(
+    risk_writers.LossFractionsWriter(
         dest, variable, args['unit'], args['loss_type'],
         loss_category, hazard_metadata, poe).serialize(
         output.loss_fraction.total_fractions(),
@@ -253,7 +253,7 @@ def export_bcr_distribution_xml(output, target):
              asset_life_expectancy=risk_calculation.asset_life_expectancy))
     del args['investigation_time']
 
-    writers.BCRMapXMLWriter(dest, **args).serialize(
+    risk_writers.BCRMapXMLWriter(dest, **args).serialize(
         output.bcr_distribution.bcrdistributiondata_set.all().order_by(
             'asset_ref'))
     return dest
@@ -280,7 +280,7 @@ def make_dmg_dist_export(damagecls, writercls):
 
         dmg_states = list(models.DmgState.objects.filter(
             risk_calculation__id=rc_id).order_by('lsi'))
-        if writercls is writers.CollapseMapXMLWriter:  # special case
+        if writercls is risk_writers.CollapseMapXMLWriter:  # special case
             writer = writercls(dest)
             data = damagecls.objects.filter(dmg_state=dmg_states[-1])
         else:
@@ -294,22 +294,22 @@ def make_dmg_dist_export(damagecls, writercls):
 
 
 export_dmg_dist_per_asset_xml = make_dmg_dist_export(
-    models.DmgDistPerAsset, writers.DmgDistPerAssetXMLWriter
+    models.DmgDistPerAsset, risk_writers.DmgDistPerAssetXMLWriter
 )
 
 
 export_dmg_dist_per_taxonomy_xml = make_dmg_dist_export(
-    models.DmgDistPerTaxonomy, writers.DmgDistPerTaxonomyXMLWriter
+    models.DmgDistPerTaxonomy, risk_writers.DmgDistPerTaxonomyXMLWriter
 )
 
 
 export_dmg_dist_total_xml = make_dmg_dist_export(
-    models.DmgDistTotal, writers.DmgDistTotalXMLWriter
+    models.DmgDistTotal, risk_writers.DmgDistTotalXMLWriter
 )
 
 
 export_collapse_map_xml = make_dmg_dist_export(
-    models.DmgDistPerAsset, writers.CollapseMapXMLWriter
+    models.DmgDistPerAsset, risk_writers.CollapseMapXMLWriter
 )
 
 
