@@ -466,7 +466,7 @@ _pkgtest_innervm_run () {
             cd \$demo_dir
             echo \"Running \$demo_dir/job_hazard.ini\"
             oq-engine --run-hazard job_hazard.ini -l info
-            job_id=\$(openquake --list-hazard-calculations | tail -1 | awk '{print \$1}')
+            job_id=\$(oq-engine --list-hazard-calculations | tail -1 | awk '{print \$1}')
             echo \"Running \$demo_dir/job_risk.ini\"
             oq-engine --run-risk job_risk.ini --exports xml --hazard-calculation-id \$job_id -l info
             cd -
