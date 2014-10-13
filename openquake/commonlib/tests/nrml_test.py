@@ -34,7 +34,7 @@ class NrmlTestCase(unittest.TestCase):
 """)
         root = read(xmlfile)
         outfile = cStringIO.StringIO()
-        node_to_xml(root, outfile)
+        node_to_xml(root, outfile, {})
         self.assertEqual(outfile.getvalue(), """\
 <?xml version="1.0" encoding="utf-8"?>
 <nrml

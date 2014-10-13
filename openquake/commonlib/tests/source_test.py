@@ -411,8 +411,8 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
                 </occurRates>
             </incrementalMFD>
             <nodalPlaneDist>
-                <nodalPlane probability="0.3" strike="0.0" dip="90.0" rake="0.0" />
-                <nodalPlane probability="0.7" strike="90.0" dip="45.0" rake="90.0" />
+         <nodalPlane probability="0.3" strike="0.0" dip="90.0" rake="0.0" />
+         <nodalPlane probability="0.7" strike="90.0" dip="45.0" rake="90.0" />
             </nodalPlaneDist>
             <hypoDepthDist>
                 <hypoDepth probability="0.5" depth="4.0" />
@@ -460,8 +460,8 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
                 </occurRates>
             </incrementalMFD>
             <nodalPlanedist>
-                <nodalPlane probability="0.3" strike="0.0" dip="90.0" rake="0.0" />
-                <nodalPlane probability="0.7" strike="90.0" dip="45.0" rake="90.0" />
+         <nodalPlane probability="0.3" strike="0.0" dip="90.0" rake="0.0" />
+         <nodalPlane probability="0.7" strike="90.0" dip="45.0" rake="90.0" />
             </nodalPlanedist>
             <hypoDepthDist>
                 <hypoDepth probability="0.5" depth="4.0" />

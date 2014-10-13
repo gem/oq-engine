@@ -187,8 +187,7 @@ class HazardCurveXMLWriter(BaseCurveWriter):
               have `x` and `y` to represent lon and lat, respectively.
         """
         with nrml.NRMLFile(self.dest, 'w') as fh:
-            root = etree.Element('nrml',
-                                 nsmap=nrml.SERIALIZE_NS_MAP)
+            root = etree.Element('nrml', nsmap=nrml.SERIALIZE_NS_MAP)
             self.add_hazard_curves(root, self.metadata, data)
 
             fh.write(etree.tostring(
@@ -400,7 +399,7 @@ class EventBasedGMFXMLWriter(object):
         gmf_container.nodes = gmf_set_nodes
 
         with open(self.dest, 'w') as dest:
-            nrml.write(gmf_container, dest)
+            nrml.write([gmf_container], dest)
 
 
 def rupture_to_element(rupture, parent=None):

@@ -19,7 +19,7 @@ from itertools import izip
 
 from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.commonlib.node import read_nodes, LiteralNode, context
+from openquake.commonlib.node import read_nodes, context, striptag
 from openquake.commonlib import valid
 from openquake.commonlib.nrml import registry
 
@@ -294,7 +294,7 @@ class RuptureConverter(object):
         :param node: a node representing a rupture
         """
         with context(self.fname, node):
-            convert_rupture = getattr(self, 'convert_' + node.tag)
+            convert_rupture = getattr(self, 'convert_' + striptag(node.tag))
             mag = ~node.magnitude
             rake = ~node.rake
             hypocenter = ~node.hypocenter
@@ -357,14 +357,14 @@ class RuptureConverter(object):
         :param surface_nodes: surface nodes as just described
         """
         surface_node = surface_nodes[0]
-        if surface_node.tag == 'simpleFaultGeometry':
+        if surface_node.tag.endswith('simpleFaultGeometry'):
             surface = geo.SimpleFaultSurface.from_fault_data(
                 self.geo_line(surface_node),
                 ~surface_node.upperSeismoDepth,
                 ~surface_node.lowerSeismoDepth,
                 ~surface_node.dip,
                 self.rupture_mesh_spacing)
-        elif surface_node.tag == 'complexFaultGeometry':
+        elif surface_node.tag.endswith('complexFaultGeometry'):
             surface = geo.ComplexFaultSurface.from_fault_data(
                 self.geo_lines(surface_node),
                 self.rupture_mesh_spacing)
@@ -467,7 +467,7 @@ class SourceConverter(RuptureConverter):
         :param node: a node representing a source
         """
         with context(self.fname, node):
-            convert_source = getattr(self, 'convert_' + node.tag)
+            convert_source = getattr(self, 'convert_' + striptag(node.tag))
         return convert_source(node)
 
     def convert_mfdist(self, node):
@@ -480,13 +480,14 @@ class SourceConverter(RuptureConverter):
                   :class:`openquake.hazardlib.mdf.TruncatedGRMFD` instance
         """
         with context(self.fname, node):
-            [mfd_node] = [subnode for subnode in node if subnode.tag in (
-                'incrementalMFD', 'truncGutenbergRichterMFD')]
-            if mfd_node.tag == 'incrementalMFD':
+            [mfd_node] = [subnode for subnode in node
+                          if subnode.tag.endswith(
+                              ('incrementalMFD', 'truncGutenbergRichterMFD'))]
+            if mfd_node.tag.endswith('incrementalMFD'):
                 return mfd.EvenlyDiscretizedMFD(
                     min_mag=mfd_node['minMag'], bin_width=mfd_node['binWidth'],
                     occurrence_rates=~mfd_node.occurRates)
-            elif mfd_node.tag == 'truncGutenbergRichterMFD':
+            elif mfd_node.tag.endswith('truncGutenbergRichterMFD'):
                 return mfd.TruncatedGRMFD(
                     a_val=mfd_node['aValue'], b_val=mfd_node['bValue'],
                     min_mag=mfd_node['minMag'], max_mag=mfd_node['maxMag'],

@@ -373,7 +373,7 @@ class CSVManager(object):
                     out = out_archive.open(outname, 'w+')
                 with out:
                     node = man.get_tableset().to_node()
-                    nrml.write(node, out)
+                    nrml.write([node], out)
                 fnames.append(out.name)
         return fnames
 

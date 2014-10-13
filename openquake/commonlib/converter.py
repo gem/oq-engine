@@ -27,7 +27,7 @@ This module contains converter classes working on nodes of kind
 """
 import itertools
 from openquake.risklib import scientific
-from openquake.commonlib.node import Node, node_from_xml
+from openquake.commonlib.node import Node, node_from_xml, striptag
 from openquake.commonlib import record, records
 
 
@@ -49,7 +49,7 @@ class Converter(object):
         """
         Return a specialized Converter instance
         """
-        tag = node.tag
+        tag = striptag(node.tag)
         name = tag[0].upper() + tag[1:]
         clsname = name[:-5] if name.endswith('Model') else name
         if 'format' in node.attrib:  # for fragility functions

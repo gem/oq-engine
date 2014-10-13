@@ -75,11 +75,12 @@ this is a job for the LiteralNode class which can be subclassed and
 supplemented by a dictionary of validators.
 """
 
+import re
 import sys
 import collections
 from openquake.commonlib import valid
 from openquake.commonlib.node import node_to_xml, \
-    Node, LiteralNode, iterparse, node_from_elem
+    Node, LiteralNode, iterparse, node_from_elem, striptag, parse
 
 NAMESPACE = 'http://openquake.org/xmlns/nrml/0.4'
 GML_NAMESPACE = 'http://www.opengis.net/gml'
@@ -290,21 +291,20 @@ def read(source):
     :param source:
         a file name or file object open for reading
     """
-    elements = iterparse(source, ('start',), remove_comments=True)
-    _event, nrml = elements.next()
-    assert LiteralNode.strip_fqtag(nrml.tag) == 'nrml', nrml.tag
-    _event, content = elements.next()
-    tag = LiteralNode.strip_fqtag(content.tag)
-    nodecls = registry[tag]
-    subnode = node_from_elem(content, nodecls)
+    nrml = parse(source).getroot()
+    assert striptag(nrml.tag) == 'nrml', nrml.tag
+    subnodes = []
+    for elem in nrml:
+        nodecls = registry[striptag(elem.tag)]
+        subnodes.append(node_from_elem(elem, nodecls))
     return LiteralNode(
         'nrml', {'xmlns': NAMESPACE, 'xmlns:gml': GML_NAMESPACE},
-        nodes=[subnode])
+        nodes=subnodes)
 
 
-def write(node, output=sys.stdout):
+def write(nodes, output=sys.stdout):
     """
-    Convert a node into a NRML file. output must be a file
+    Convert nodes into a NRML file. output must be a file
     object open in write mode. If you want to perform a
     consistency check, open it in read-write mode, then it will
     be read after creation and validated.
@@ -312,11 +312,8 @@ def write(node, output=sys.stdout):
     :params node: a Node object
     :params output: a file-like object in write or read-write mode
     """
-    assert isinstance(node, Node), node  # better safe than sorry
-    root = Node('nrml', nodes=[node])
-    root['xmlns'] = NAMESPACE
-    root['xmlns:gml'] = GML_NAMESPACE
-    node_to_xml(root, output)
+    root = Node('nrml', nodes=nodes)
+    node_to_xml(root, output, {NAMESPACE: '', GML_NAMESPACE: 'gml:'})
     if hasattr(output, 'mode') and '+' in output.mode:  # read-write mode
         output.seek(0)
         read(output)  # validate the written file

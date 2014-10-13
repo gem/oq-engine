@@ -244,7 +244,7 @@ def _display(node, indent, expandattrs, expandvals, output):
     attrs = _displayattrs(node.attrib, expandattrs)
     val = ' %s' % repr(node.text) \
         if expandvals and node.text is not None else ''
-    output.write(indent + node.tag + attrs + val + '\n')
+    output.write(indent + striptag(node.tag) + attrs + val + '\n')
     for sub_node in node:
         _display(sub_node, indent + '  ', expandattrs, expandvals, output)
 
@@ -262,6 +262,17 @@ def node_display(root, expandattrs=False, expandvals=False, output=sys.stdout):
     :param output: stream where to write the string representation of the node
     """
     _display(root, '', expandattrs, expandvals, output)
+
+
+def striptag(tag):
+    """
+    Get the short representation of a fully qualified tag
+
+    :param str tag: a (fully qualified or not) XML tag
+    """
+    if tag.startswith('{'):
+        return tag.rsplit('}')[1]
+    return tag
 
 
 @with_slots
@@ -284,7 +295,7 @@ class Node(object):
         :param unicode text: the Node text (default None)
         :param nodes: an iterable of subnodes (default empty list)
         """
-        self.tag = self.strip_fqtag(fulltag)
+        self.tag = fulltag
         self.attrib = {} if attrib is None else attrib
         self.text = text
         self.nodes = [] if nodes is None else nodes
@@ -293,30 +304,17 @@ class Node(object):
             raise ValueError(
                 'A branch node cannot have a value, got %r' % self.text)
 
-    @staticmethod
-    def strip_fqtag(tag):
-        """
-        Get the short representation of a fully qualified tag
-
-        :param str tag: a (fully qualified or not) XML tag
-        """
-        s = str(tag)
-        pieces = s.rsplit('}', 1)  # split on '}', to remove the namespace part
-        if len(pieces) == 2:
-            s = pieces[1]
-        return s
-
     def __getattr__(self, name):
         for node in self.nodes:
-            if node.tag == name:
+            if striptag(node.tag) == name:
                 return node
         raise NameError('No subnode named %r found in %r' %
-                        (name, self.tag))
+                        (name, striptag(self.tag)))
 
     def getnodes(self, name):
         "Return the direct subnodes with name 'name'"
         for node in self.nodes:
-            if node.tag == name:
+            if striptag(node.tag) == name:
                 yield node
 
     def append(self, node):
@@ -398,22 +396,6 @@ class Node(object):
         return bool(self.nodes)
 
 
-class NodeNoStrip(Node):
-    """
-    A Node class not stripping the tag qualification
-    """
-    def strip_fqtag(self, tag):
-        s = str(tag)
-        pieces = s.rsplit('}', 1)  # split on '}', to remove the namespace part
-        if len(pieces) == 2:
-            if pieces[0] == '{http://www.opengis.net/gml':
-                # FIXME: horrible special case
-                s = 'gml:' + pieces[1]
-            else:
-                s = pieces[1]
-        return s
-
-
 class MetaLiteralNode(type):
     """
     Metaclass adding __slots__ and extending the docstring with a note
@@ -439,12 +421,13 @@ class LiteralNode(Node):
     def __init__(self, fulltag, attrib=None, text=None,
                  nodes=None, lineno=None):
         validators = self.__class__.validators
-        tag = self.strip_fqtag(fulltag)
+        tag = striptag(fulltag)
         if tag in validators:
             # try to cast the node, if the tag is known
             assert not nodes, 'You cannot cast a composite node: %s' % nodes
             try:
                 text = validators[tag](text, **attrib)
+                assert text is not None
                 attrib = {}
             except Exception as exc:
                 raise ValueError('Could not convert %s->%s: %s, line %s' %
@@ -459,7 +442,7 @@ class LiteralNode(Node):
                         raise ValueError(
                             'Could not convert %s->%s: %s, line %s' %
                             (n, validators[n].__name__, exc, lineno))
-        super(LiteralNode, self).__init__(tag, attrib, text, nodes, lineno)
+        super(LiteralNode, self).__init__(fulltag, attrib, text, nodes, lineno)
 
 
 def to_literal(self):
@@ -580,17 +563,24 @@ def node_from_xml(xmlfile, nodefactory=Node):
     return node_from_elem(root, nodefactory)
 
 
-def node_to_xml(node, output=sys.stdout):
+def node_to_xml(node, output=sys.stdout, nsmap=None):
     """
     Convert a Node object into a pretty .xml file without keeping
     everything in memory. If you just want the string representation
-    use nrml.writers.tostring(node).
+    use commonlib.writers.tostring(node).
 
     :param node: a Node-compatible object
                  (lxml nodes and ElementTree nodes are fine)
+    :param nsmap: if given, shorten the tags with aliases
 
     """
-    with StreamingXMLWriter(output) as w:
+    if nsmap:
+        for ns, prefix in nsmap.iteritems():
+            if prefix:
+                node['xmlns:' + prefix[:-1]] = ns
+            else:
+                node['xmlns'] = ns
+    with StreamingXMLWriter(output, nsmap=nsmap) as w:
         w.serialize(node)
 
 
@@ -645,5 +635,5 @@ def context(fname, node):
     except:
         etype, exc, tb = sys.exc_info()
         msg = 'node %s: %s, line %s of %s' % (
-            node.tag, exc, node.lineno, fname)
+            striptag(node.tag), exc, node.lineno, fname)
         raise etype, msg, tb

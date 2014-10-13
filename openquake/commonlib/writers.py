@@ -27,7 +27,7 @@ class StreamingXMLWriter(object):
                 writer.serialize(node)
             writer.end_tag('root')
     """
-    def __init__(self, stream, indent=4, encoding='utf-8'):
+    def __init__(self, stream, indent=4, encoding='utf-8', nsmap=None):
         """
         :param stream: the stream or a file where to write the XML
         :param int indent: the indentation to use in the XML (default 4 spaces)
@@ -36,6 +36,18 @@ class StreamingXMLWriter(object):
         self.indent = indent
         self.encoding = encoding
         self.indentlevel = 0
+        self.nsmap = nsmap
+
+    def shorten(self, tag):
+        """
+        Get the short representation of a fully qualified tag
+
+        :param str tag: a (fully qualified or not) XML tag
+        """
+        if tag.startswith('{'):
+            ns, _tag = tag.rsplit('}')
+            tag = self.nsmap.get(ns[1:], '') + _tag
+        return tag
 
     def _write(self, text):
         """Write text by respecting the current indentlevel"""
@@ -66,24 +78,21 @@ class StreamingXMLWriter(object):
         self.indentlevel -= 1
         self._write('</%s>' % name)
 
-    def tag(self, name, attr=None, value=None):
-        """Add a complete XML tag"""
-        self.start_tag(name, attr)
-        if value:
-            self._write(escape(value.strip()))
-        self.end_tag(name)
-
     def serialize(self, node):
         """Serialize a node object (typically an ElementTree object)"""
+        if self.nsmap is not None:
+            tag = self.shorten(node.tag)
+        else:
+            tag = node.tag
         if not node and not node.text:
-            self.emptyElement(node.tag, node.attrib)
+            self.emptyElement(tag, node.attrib)
             return
-        self.start_tag(node.tag, node.attrib)
+        self.start_tag(tag, node.attrib)
         if node.text:
             self._write(escape(node.text.strip()))
         for subnode in node:
             self.serialize(subnode)
-        self.end_tag(node.tag)
+        self.end_tag(tag)
 
     def __enter__(self):
         """Write the XML declaration"""
