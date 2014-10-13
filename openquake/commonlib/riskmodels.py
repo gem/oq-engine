@@ -35,12 +35,20 @@ from openquake.commonlib.oqvalidation import vulnerability_files
 
 
 def loss_type_to_cost_type(lt):
-    """Convert a loss_type string into a cost_type string"""
+    """
+    Convert a loss_type string into a cost_type string.
+
+    :param lt: loss type
+    """
     return 'occupants' if lt == 'fatalities' else lt
 
 
 def cost_type_to_loss_type(ct):
-    """Convert a cost_type string into a loss_type string"""
+    """
+    Convert a cost_type string into a loss_type string
+
+    :param ct: loss type
+    """
     return 'fatalities' if ct == 'occupants' else ct
 
 
@@ -48,7 +56,10 @@ def get_vfs(inputs, retrofitted=False):
     """
     Given a dictionary {key: pathname}, look for keys with name
     <cost_type>__vulnerability, parse them and returns a dictionary
-    imt, taxonomy -> vf_by_loss_type
+    imt, taxonomy -> vf_by_loss_type.
+
+    :param inputs: a dictionary key -> pathname
+    :param retrofitted: a flag (default False)
     """
     retro = '_retrofitted' if retrofitted else ''
     vulnerability_functions = collections.defaultdict(dict)
@@ -75,7 +86,7 @@ class VulnerabilityNode(LiteralNode):
         assetCategory=str,
         # the assetCategory here has nothing to do with the category
         # in the exposure model and it is not used by the engine
-        lossCategory=valid.name,
+        lossCategory=valid.utf8,  # a description field
         IML=valid.IML,
         lossRatio=valid.positivefloats,
         coefficientsVariation=valid.positivefloats,
@@ -158,7 +169,7 @@ def get_imtls_from_vulnerabilities(inputs):
 class FragilityNode(LiteralNode):
     validators = valid.parameters(
         format=valid.ChoiceCI('discrete', 'continuous'),
-        lossCategory=valid.name,
+        lossCategory=valid.utf8,  # a description field
         IML=valid.IML,
         params=valid.fragilityparams,
         limitStates=valid.namelist,
@@ -232,6 +243,9 @@ def get_fragility_functions(fname):
 def get_risk_model(oqparam):
     """
     Return a :class:`openquake.risklib.workflows.RiskModel` instance
+
+   :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     risk_models = {}
     riskmodel = workflows.RiskModel(risk_models)
@@ -252,12 +266,12 @@ def get_risk_model(oqparam):
         # bcr calculators
         vfs_orig = get_vfs(oqparam.inputs, retrofitted=False).items()
         vfs_retro = get_vfs(oqparam.inputs, retrofitted=True).items()
-        for (imt_taxo, vfs), (imt_taxo_, vfs_) in zip(vfs_orig, vfs_retro):
+        for (imt_taxo, vfs), (imt_taxo_, vfs_retro) in zip(vf_orig, vf_retro):
             assert imt_taxo == imt_taxo_  # same imt and taxonomy
             risk_models[imt_taxo] = workflows.get_workflow(
                 oqparam,
                 vulnerability_functions_orig=vfs,
-                vulnerability_functions_retro=vfs_)
+                vulnerability_functions_retro=vfs_retro)
     else:
         # classical, event based and scenario calculators
         oqparam.__dict__.setdefault('insured_losses', False)
