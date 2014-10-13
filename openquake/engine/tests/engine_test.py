@@ -130,8 +130,7 @@ class CreateRiskCalculationTestCase(unittest.TestCase):
 
 class OpenquakeCliTestCase(unittest.TestCase):
     """
-    Run "openquake --version" as a separate
-    process using `subprocess`.
+    Run "oq-engine --version" as a separate process using `subprocess`.
     """
 
     def test_run_version(self):
