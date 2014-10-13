@@ -147,7 +147,6 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         with transaction.commit_on_success(using='job_init'):
             self.initialize_site_collection()
 
-        self.rupture = get_rupture(models.oqparam(self.job.id))
         self.create_ruptures()
         hc = self.job.get_oqparam()
 
@@ -169,6 +168,8 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         return 0, output_weight
 
     def create_ruptures(self):
+        self.rupture = get_rupture(models.oqparam(self.job.id))
+
         # check filtering
         hc = self.hc
         self.sites = filters.filter_sites_by_distance_to_rupture(
