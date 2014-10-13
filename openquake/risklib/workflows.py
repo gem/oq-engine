@@ -16,6 +16,7 @@
 # License along with OpenQuake Risklib. If not, see
 # <http://www.gnu.org/licenses/>.
 
+import inspect
 import collections
 import numpy
 from scipy import interpolate
@@ -23,6 +24,8 @@ from scipy import interpolate
 from openquake.risklib import calculators, utils, scientific
 
 Output = collections.namedtuple('Output', 'hid weight loss_type output')
+
+registry = utils.Register()
 
 
 class Asset(object):
@@ -37,11 +40,23 @@ class Asset(object):
     calculations.
     """
     def __init__(self,
+                 asset_id,
+                 taxonomy,
+                 number,
+                 location,
                  values,
                  deductibles=None,
                  insurance_limits=None,
                  retrofitting_values=None):
         """
+        :param asset_id:
+            an unique identifier of the assets within the given exposure
+        :param taxonomy:
+            asset taxonomy
+        :param number:
+            number of apartments of number of people in the given asset
+        :param location:
+            geographic location of the asset
         :param dict values:
             asset values keyed by loss types
         :param dict deductible:
@@ -53,6 +68,10 @@ class Asset(object):
         :param dict retrofitting_values:
             asset retrofitting values keyed by loss types
         """
+        self.id = asset_id
+        self.taxonomy = taxonomy
+        self.number = number
+        self.location = location
         self.values = values
         self.retrofitting_values = retrofitting_values
         self.deductibles = deductibles
@@ -83,7 +102,11 @@ class Asset(object):
         """
         return self.retrofitting_values[loss_type]
 
+    def __repr__(self):
+        return '<Asset %s>' % self.id
 
+
+@registry.add('classical_risk')
 class Classical(object):
     """
     Classical PSHA-Based Workflow.
@@ -313,6 +336,7 @@ class Classical(object):
         return all_outputs
 
 
+@registry.add('event_based_risk')
 class ProbabilisticEventBased(object):
     """
     Implements the Probabilistic Event Based workflow
@@ -563,6 +587,7 @@ class ProbabilisticEventBased(object):
         return loss_ratios, curves_poes
 
 
+@registry.add('classical_bcr')
 class ClassicalBCR(object):
     def __init__(self,
                  vulnerability_functions_orig,
@@ -608,6 +633,7 @@ class ClassicalBCR(object):
     compute_all_outputs = Classical.compute_all_outputs.im_func
 
 
+@registry.add('event_based_bcr')
 class ProbabilisticEventBasedBCR(object):
     def __init__(self,
                  vulnerability_functions_orig,
@@ -650,6 +676,7 @@ class ProbabilisticEventBasedBCR(object):
     compute_all_outputs = ProbabilisticEventBased.compute_all_outputs.im_func
 
 
+@registry.add('scenario_risk')
 class Scenario(object):
     """
     Implements the Scenario workflow
@@ -690,6 +717,7 @@ class Scenario(object):
     compute_all_outputs = ProbabilisticEventBased.compute_all_outputs.im_func
 
 
+@registry.add('scenario_damage')
 class Damage(object):
     def __init__(self, fragility_functions):
         # NB: we call the fragility_functions vulnerability_functions
@@ -710,11 +738,35 @@ class Damage(object):
              for gmvs in gmfs])
 
 
+def get_workflow(oqparam, **extra):
+    """
+    Return an instance of the correct workflow class, depending on the
+    attribute `calculation_mode` of the object `oqparam`.
+
+    :param oqparam:
+        an object containing the parameters needed by the workflow class
+    :param extra:
+        extra parameters to pass to the workflow class
+    """
+    workflow_class = registry[oqparam.calculation_mode]
+    # arguments needed to instantiate the workflow class
+    argnames = inspect.getargspec(workflow_class.__init__).args[1:]
+    # arguments extracted from oqparam
+    known_args = vars(oqparam)
+    all_args = {}
+    for argname in argnames:
+        if argname in known_args:
+            all_args[argname] = known_args[argname]
+    all_args.update(extra)
+    return workflow_class(**all_args)
+
+
 class RiskModel(object):
     """
-    Container for the attributes taxonomy and workflow.
+    Container for the attributes imt, taxonomy and workflow.
     """
-    def __init__(self, taxonomy, workflow):
+    def __init__(self, imt, taxonomy, workflow):
+        self.imt = imt
         self.taxonomy = taxonomy
         self.workflow = workflow
 
@@ -733,13 +785,6 @@ class RiskModel(object):
         """
         return [self.workflow.vulnerability_functions[lt]
                 for lt in self.loss_types]
-
-    @property
-    def imts(self):
-        """
-        The set of underlying IMTs, as strings
-        """
-        return set(vf.imt for vf in self.vulnerability_functions)
 
     def compute_outputs(self, getters, getter_monitor):
         """
