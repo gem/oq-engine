@@ -140,7 +140,12 @@ def get_imtls(oqparam):
 
 
 def get_vulnerability_functions(oqparam):
-    """Return a dict (imt, taxonomy) -> vf"""
+    """
+    Return a dict (imt, taxonomy) -> vf
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    """
     return get_vfs(oqparam.inputs)
 
 ############################ exposure #############################
@@ -160,6 +165,9 @@ def get_exposure(oqparam):
     """
     Read the exposure and yields :class:`openquake.risklib.workflows.Asset`
     instances.
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     relevant_cost_types = set(vulnerability_files(oqparam.inputs))
     fname = oqparam.inputs['exposure']
@@ -203,6 +211,9 @@ def get_sitecol_assets(oqparam):
     """
     Returns two sequences of the same length: a list with the assets
     per each site and the site collection.
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     assets_by_loc = collections.defaultdict(list)
     for asset in get_exposure(oqparam):

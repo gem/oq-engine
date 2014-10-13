@@ -466,8 +466,10 @@ def intensity_measure_types_and_levels(value):
 
 def dictionary(value):
     """
-    :param value: input string corresponding to a literal Python object
-    :returns: the Python object
+    :param value:
+        input string corresponding to a literal Python object
+    :returns:
+        the Python object
 
     >>> dictionary('')
     {}
@@ -488,8 +490,10 @@ def dictionary(value):
 
 def mag_scale_rel(value):
     """
-    :param value: name of a Magnitude-Scale relationship in hazardlib
-    :returns: the corresponding hazardlib object
+    :param value:
+        name of a Magnitude-Scale relationship in hazardlib
+    :returns:
+        the corresponding hazardlib object
     """
     value = value.strip()
     if value not in SCALEREL:
@@ -518,11 +522,11 @@ def pmf(value):
 
 def posList(value):
     """
-    The value is a string with the form
-    `lon1 lat1 [depth1] ...  lonN latN [depthN]`
-    without commas, where the depts are optional.
-
-    :returns: a list of floats without other validations
+    :param value:
+        a string with the form `lon1 lat1 [depth1] ...  lonN latN [depthN]`
+        without commas, where the depts are optional.
+    :returns:
+        a list of floats without other validations
     """
     values = value.split()
     num_values = len(values)
@@ -539,6 +543,9 @@ def point2d(value, lon, lat):
     This is used to convert nodes of the form
     <location lon="LON" lat="LAT" />
 
+    :param value: None
+    :param lon: longitude string
+    :param lat: latitude string
     :returns: a validated pair (lon, lat)
     """
     return longitude(lon), latitude(lat)
@@ -549,6 +556,9 @@ def point3d(value, lon, lat, depth):
     This is used to convert nodes of the form
     <hypocenter lon="LON" lat="LAT" depth="DEPTH"/>
 
+    :param value: None
+    :param lon: longitude string
+    :param lat: latitude string
     :returns: a validated triple (lon, lat, depth)
     """
     return longitude(lon), latitude(lat), positivefloat(depth)
@@ -559,7 +569,10 @@ def probability_depth(value, probability, depth):
     This is used to convert nodes of the form
     <hypoDepth probability="PROB" depth="DEPTH" />
 
-    :returns a validated pair (probability, depth)
+    :param value: None
+    :param probability: a probability
+    :param depth: a depth
+    :returns: a validated pair (probability, depth)
     """
     return (range01(probability), positivefloat(depth))
 
@@ -574,7 +587,12 @@ def nodal_plane(value, probability, strike, dip, rake):
     This is used to convert nodes of the form
      <nodalPlane probability="0.3" strike="0.0" dip="90.0" rake="0.0" />
 
-    :returns a validated pair (probability, depth)
+    :param value: None
+    :param probability: a probability
+    :param strike: strike angle
+    :param dip: dip parameter
+    :param rake: rake angle
+    :returns: a validated pair (probability, depth)
     """
     return (range01(probability), strike_range(strike),
             dip_range(dip), rake_range(rake))
@@ -617,6 +635,9 @@ def parameters(**names_vals):
     """
     Returns a dictionary {name: validator} by making sure
     that the validators are callable objects with a `__name__`.
+
+    :param names_vals:
+        keyword arguments parameter_name -> parameter_validator
     """
     for name, val in names_vals.iteritems():
         if not callable(val):
