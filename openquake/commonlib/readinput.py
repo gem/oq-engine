@@ -142,7 +142,12 @@ def get_imtls(oqparam):
 
 
 def get_vulnerability_functions(oqparam):
-    """Return a dict (imt, taxonomy) -> vf"""
+    """
+    Return a dict (imt, taxonomy) -> vf
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    """
     return get_vfs(oqparam.inputs)
 
 ############################ exposure #############################
