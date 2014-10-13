@@ -35,12 +35,20 @@ from openquake.commonlib.oqvalidation import vulnerability_files
 
 
 def loss_type_to_cost_type(lt):
-    """Convert a loss_type string into a cost_type string"""
+    """
+    Convert a loss_type string into a cost_type string.
+
+    :param lt: loss type
+    """
     return 'occupants' if lt == 'fatalities' else lt
 
 
 def cost_type_to_loss_type(ct):
-    """Convert a cost_type string into a loss_type string"""
+    """
+    Convert a cost_type string into a loss_type string
+
+    :param ct: loss type
+    """
     return 'fatalities' if ct == 'occupants' else ct
 
 
