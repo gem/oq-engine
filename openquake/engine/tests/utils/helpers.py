@@ -50,7 +50,7 @@ from openquake.engine.utils import config
 
 CD = os.path.dirname(__file__)  # current directory
 
-RUNNER = os.path.abspath(os.path.join(CD, '../../../../bin/openquake'))
+RUNNER = os.path.abspath(os.path.join(CD, '../../../../bin/oq-engine'))
 
 DATA_DIR = os.path.abspath(os.path.join(CD, '../data'))
 
