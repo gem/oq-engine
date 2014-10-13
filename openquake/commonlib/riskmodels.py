@@ -48,7 +48,10 @@ def get_vfs(inputs, retrofitted=False):
     """
     Given a dictionary {key: pathname}, look for keys with name
     <cost_type>__vulnerability, parse them and returns a dictionary
-    imt, taxonomy -> vf_by_loss_type
+    imt, taxonomy -> vf_by_loss_type.
+
+    :param inputs: a dictionary key -> pathname
+    :param retrofitted: a flag (default False)
     """
     retro = '_retrofitted' if retrofitted else ''
     vulnerability_functions = collections.defaultdict(dict)
@@ -232,6 +235,9 @@ class RiskModelDict(dict):
 def get_risk_models(oqparam):
     """
     Return a :class:`RiskModelDict` instance
+
+   :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     risk_models = RiskModelDict()
 
@@ -251,12 +257,12 @@ def get_risk_models(oqparam):
         # bcr calculators
         vf_orig = get_vfs(oqparam.inputs, retrofitted=False).items()
         vf_retro = get_vfs(oqparam.inputs, retrofitted=True).items()
-        for (imt_taxo, vfs), (imt_taxo_, vfs_) in zip(vf_orig, vf_retro):
+        for (imt_taxo, vfs), (imt_taxo_, vfs_retro) in zip(vf_orig, vf_retro):
             assert imt_taxo == imt_taxo_  # same imt and taxonomy
             workflow = workflows.get_workflow(
                 oqparam,
                 vulnerability_functions_orig=vfs,
-                vulnerability_functions_retro=vfs_)
+                vulnerability_functions_retro=vfs_retro)
             risk_models[imt_taxo] = workflows.RiskModel(
                 imt_taxo[0], imt_taxo[1], workflow)
     else:
