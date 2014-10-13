@@ -11,9 +11,14 @@ table is now in the job_info table.
 ALTER TABLE hzrdi.hazard_site
 DROP CONSTRAINT hzrdi_hazard_site_hazard_calculation_fk;
 
+DROP INDEX hzrdi.hzrdi_hazard_site_location_hazard_calculation_uniq_idx;
+
 UPDATE hzrdi.hazard_site AS y
 SET hazard_calculation_id=x.id FROM uiapi.oq_job AS x
 WHERE y.hazard_calculation_id=x.hazard_calculation_id;
+
+CREATE UNIQUE INDEX hzrdi_hazard_site_location_hazard_calculation_uniq_idx
+ON hzrdi.hazard_site(location, hazard_calculation_id);
 
 ALTER TABLE hzrdi.hazard_site 
 ADD CONSTRAINT hzrdi_hazard_site_oq_job_fk

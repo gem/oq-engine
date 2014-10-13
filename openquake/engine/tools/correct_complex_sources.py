@@ -4,78 +4,56 @@ Correct complex fault sources to comply with Aki and Richards convention.
 import sys
 import numpy
 
-from openquake.nrmllib.hazard.parsers import SourceModelParser
-from openquake.nrmllib.hazard.writers import SourceModelXMLWriter
-from openquake.nrmllib.models import ComplexFaultSource, SourceModel
+from openquake.commonlib import nrml
+from openquake.commonlib.node import node_from_xml
 
-from openquake.commonlib.source import NrmlHazardlibConverter
+from openquake.hazardlib.geo.line import Line
+from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.geo.surface import ComplexFaultSurface
 
 AKI_RICH_ERR_MSG = 'Surface does not conform with Aki & Richards convention'
 WRONG_ORDER_ERR_MSG = 'Edges points are not in the right order'
 
 
-def _revert_edge(edge_wkt):
-    """
-    Revert edge in WKT format
-    """
-    edge = edge_wkt.replace('LINESTRING(', '')
-    edge = edge.replace(')', '')
-    edge = edge.replace(',', '')
+def make_edge(edge):
+    ls = edge.LineString.posList.text.split()
+    coords = numpy.array(map(float, ls)).reshape(-1, 3)
+    return Line([Point(*coord) for coord in coords])
 
-    edge = numpy.array(edge.split(), dtype=float)
-    edge = edge.reshape(-1, 3)
 
-    # revert
-    edge = edge[::-1]
+def reverse(edge):
+    poslist = map(float, edge.LineString.posList.text.split())
+    coords = numpy.array(poslist).reshape(-1, 3)[::-1]  # reversing
+    text = '\n'.join('%s %s %s' % tuple(coord) for coord in coords)
+    edge.LineString.posList.text = text
 
-    # place reverted edge in WKT format
-    edge = ','.join('%s %s %s' % (lon, lat, depth) for lon, lat, depth in edge)
-    edge = 'LINESTRING(%s)' % edge
 
-    return edge
-
+def fix_source_node(node):
+    if node.tag.endswith('complexFaultSource'):
+        geom = node.complexFaultGeometry
+        top = geom.faultTopEdge
+        intermediate = [edge for edge in geom.getnodes('intermediateEdge')]
+        bottom = geom.faultBottomEdge
+        edges = map(make_edge, [top] + intermediate + [bottom])
+        try:
+            ComplexFaultSurface.from_fault_data(edges, mesh_spacing=4.)
+        except ValueError as excp:
+            if AKI_RICH_ERR_MSG in str(excp):
+                print str(excp)
+                print 'Reverting edges ...'
+                reverse(geom.faultTopEdge)
+                reverse(geom.faultBottomEdge)
+            elif WRONG_ORDER_ERR_MSG in str(excp):
+                print str(excp)
+                print 'reverting bottom edge ...'
+                reverse(geom.faultBottomEdge)
+            else:
+                raise
 
 if __name__ == '__main__':
-
-    converter = NrmlHazardlibConverter(
-        investigation_time=50, rupture_mesh_spacing=4,
-        width_of_mfd_bin=0.2, area_source_discretization=10)
-
-    srcm = SourceModelParser(sys.argv[1]).parse()
-
-    srcs = []
-    for src in srcm:
-        if isinstance(src, ComplexFaultSource):
-            try:
-                hazlib_src = converter(src)
-            except ValueError, excp:
-                if AKI_RICH_ERR_MSG in str(excp):
-                    print str(excp)
-                    print 'Reverting edges ...'
-                    top_edge = _revert_edge(src.geometry.top_edge_wkt)
-                    bottom_edge = _revert_edge(src.geometry.bottom_edge_wkt)
-
-                    # replace old edges with reverted edges
-                    src.geometry.top_edge_wkt = top_edge
-                    src.geometry.bottom_edge_wkt = bottom_edge
-
-                elif WRONG_ORDER_ERR_MSG in str(excp):
-                    print str(excp)
-                    print 'reverting bottom edge ...'
-
-                    assert len(src.geometry.int_edges) == 0
-                    # revert just the bottom edge
-                    bottom_edge = _revert_edge(src.geometry.bottom_edge_wkt)
-                    src.geometry.bottom_edge_wkt = bottom_edge
-
-                else:
-                    raise excp
-            finally:
-                srcs.append(src)
-        else:
-            srcs.append(src)
-
-    new_srcm = SourceModel(srcm.name, srcs)
-
-    w = SourceModelXMLWriter(sys.argv[1])
-    w.serialize(new_srcm)
+    fname = sys.argv[1]
+    src_model = node_from_xml(fname).sourceModel
+    for node in src_model:
+        fix_source_node(node)
+    with open(fname, 'w') as f:
+        nrml.write([src_model], f)

@@ -15,7 +15,7 @@ from django.http import HttpResponseNotFound
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from openquake import nrmllib
+from openquake.commonlib import nrml
 from openquake.engine import engine as oq_engine
 from openquake.engine.db import models as oqe_models
 from openquake.engine.export import hazard as hazard_export
@@ -156,11 +156,11 @@ def _is_source_model(tempfile):
     _, nrml_elem = tree.next()
     _, model_elem = tree.next()
 
-    assert nrml_elem.tag == '{%s}nrml' % nrmllib.NAMESPACE, (
+    assert nrml_elem.tag == '{%s}nrml' % nrml.NAMESPACE, (
         "Input file is not a NRML artifact"
     )
 
-    if model_elem.tag == '{%s}sourceModel' % nrmllib.NAMESPACE:
+    if model_elem.tag == '{%s}sourceModel' % nrml.NAMESPACE:
         return True
     return False
 
