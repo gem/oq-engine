@@ -16,7 +16,8 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.nrmllib.node import Node
+from openquake.commonlib.node import Node
+from openquake.hazardlib import imt
 from openquake.commonlib.record import Record, Field, Unique, ForeignKey
 from openquake.commonlib import valid
 
@@ -30,7 +31,7 @@ class DiscreteVulnerabilitySet(Record):
     vulnerabilitySetID = Field(str)
     assetCategory = Field(valid.category)
     lossCategory = Field(str)
-    IMT = Field(valid.IMTstr)
+    IMT = Field(imt.from_string)
 
     def to_node(self):
         node = Node('discreteVulnerabilitySet', dict(
@@ -79,7 +80,7 @@ class FragilityDiscrete(Record):
     convertername = 'FragilityDiscrete'
     pkey = Unique('format')
 
-    format = Field(valid.Choice('discrete'))
+    format = Field(valid.ChoiceCI('discrete'))
     description = Field(str)
     limitStates = Field(valid.namelist)
 
@@ -103,7 +104,7 @@ class FFSetDiscrete(Record):
     ordinal = Field(int)
     taxonomy = Field(valid.not_empty)
     noDamageLimit = Field(valid.NoneOr(valid.positivefloat))
-    IMT = Field(valid.IMTstr)
+    IMT = Field(imt.from_string)
     imlUnit = Field(str)
 
     def to_node(self):
@@ -133,7 +134,7 @@ class FragilityContinuous(Record):
     convertername = 'FragilityContinuous'
     pkey = Unique('format')
 
-    format = Field(valid.Choice('continuous'))
+    format = Field(valid.ChoiceCI('continuous'))
     description = Field(str)
     limitStates = Field(valid.namelist)
 
@@ -213,7 +214,7 @@ class Exposure(Record):
     category = Field(valid.category)
     taxonomySource = Field(str)
     description = Field(str)
-    area_type = Field(valid.NoneOr(valid.Choice('aggregated', 'per_asset')))
+    area_type = Field(valid.NoneOr(valid.ChoiceCI('aggregated', 'per_asset')))
     area_unit = Field(valid.NoneOr(str))
     deductible_is_absolute = Field(valid.NoneOr(valid.boolean))
     insurance_limit_is_absolute = Field(valid.NoneOr(valid.boolean))
@@ -249,10 +250,10 @@ class CostType(Record):
     pkey = Unique('name')
 
     name = Field(str)
-    type = Field(valid.Choice('aggregated', 'per_asset', 'per_area'))
+    type = Field(valid.ChoiceCI('aggregated', 'per_asset', 'per_area'))
     unit = Field(str)
     retrofittedType = Field(valid.NoneOr(
-        valid.Choice('aggregated', 'per_asset', 'per_area')))
+        valid.ChoiceCI('aggregated', 'per_asset', 'per_area')))
     retrofittedUnit = Field(str)
 
     def to_node(self):
@@ -362,7 +363,7 @@ class Gmf(Record):
     pkey = Unique('stochasticEventSetId', 'imtStr', 'ruptureId')
 
     stochasticEventSetId = Field(int)
-    imtStr = Field(valid.IMTstr)
+    imtStr = Field(imt.from_string)
     ruptureId = Field(str)
 
     def to_node(self):

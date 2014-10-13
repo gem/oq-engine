@@ -16,3 +16,7 @@
 # <http://www.gnu.org/licenses/>.
 
 __version__ = '0.1.0'
+
+
+class InvalidFile(Exception):
+    pass

@@ -1,8 +1,10 @@
 import unittest
+from openquake.hazardlib import imt
 from openquake.commonlib import valid
 
 
 class ValidationTestCase(unittest.TestCase):
+    # more is done in the doctests inside commonlib.valid
 
     def test_name(self):
         self.assertEqual(valid.name('x'), 'x')
@@ -59,12 +61,12 @@ class ValidationTestCase(unittest.TestCase):
             valid.probability('-0.1')
 
     def test_IMTstr(self):
-        self.assertEqual(valid.IMTstr('SA(1)'), ('SA', 1, 5))
-        self.assertEqual(valid.IMTstr('SA(1.)'), ('SA', 1, 5))
-        self.assertEqual(valid.IMTstr('SA(0.5)'), ('SA', 0.5, 5))
-        self.assertEqual(valid.IMTstr('PGV'), ('PGV', None, None))
+        self.assertEqual(imt.from_string('SA(1)'), ('SA', 1, 5))
+        self.assertEqual(imt.from_string('SA(1.)'), ('SA', 1, 5))
+        self.assertEqual(imt.from_string('SA(0.5)'), ('SA', 0.5, 5))
+        self.assertEqual(imt.from_string('PGV'), ('PGV', None, None))
         with self.assertRaises(ValueError):
-            valid.IMTstr('S(1)')
+            imt.from_string('S(1)')
 
     def test_choice(self):
         validator = valid.Choice('aggregated', 'per_asset')
@@ -78,22 +80,7 @@ class ValidationTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             valid.not_empty("")
 
-    def test_boolean(self):
-        self.assertEqual(valid.boolean('0'), False)
-        self.assertEqual(valid.boolean('1'), True)
-        self.assertEqual(valid.boolean('false'), False)
-        self.assertEqual(valid.boolean('true'), True)
-        with self.assertRaises(ValueError):
-            valid.boolean('')
-        with self.assertRaises(ValueError):
-            valid.boolean('xxx')
-        with self.assertRaises(ValueError):
-            valid.boolean('True')
-        with self.assertRaises(ValueError):
-            valid.boolean('False')
-
     def test_none_or(self):
-        validator = valid.NoneOr(valid.boolean)
+        validator = valid.NoneOr(valid.positiveint)
         self.assertEqual(validator(''), None)
-        with self.assertRaises(ValueError):
-            validator('xxx')
+        self.assertEqual(validator('1'), 1)

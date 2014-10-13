@@ -15,7 +15,8 @@
 
 import unittest
 import StringIO
-from openquake.commonlib.riskloaders import _get_vulnerability_functions
+from openquake.commonlib.riskloaders import get_vulnerability_functions
+from openquake.commonlib import InvalidFile
 
 
 class ParseVulnerabilityModelTestCase(unittest.TestCase):
@@ -55,12 +56,10 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
     </vulnerabilityModel>
 </nrml>
 """)
-        with self.assertRaises(ValueError) as ar:
-            _get_vulnerability_functions(vuln_content)
-        expected_error = ('Error creating vulnerability function for taxonomy '
-                          'A. A taxonomy can not be associated with different '
-                          'vulnerability functions')
-        self.assertEqual(expected_error, ar.exception.message)
+        with self.assertRaises(InvalidFile) as ar:
+            get_vulnerability_functions(vuln_content)
+        self.assertIn('Duplicated vulnerabilityFunctionID: A',
+                      ar.exception.message)
 
     def test_lr_eq_0_cov_gt_0(self):
         # If a vulnerability function loss ratio is 0 and its corresponding CoV
@@ -85,8 +84,7 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
 </nrml>
 """)
         with self.assertRaises(ValueError) as ar:
-            _get_vulnerability_functions(vuln_content)
-        expected_error = ("Invalid vulnerability function with ID 'A': It is "
-                          "not valid to define a loss ratio = 0.0 with a "
-                          "corresponding coeff. of varation > 0.0")
-        self.assertEqual(expected_error, ar.exception.message)
+            get_vulnerability_functions(vuln_content)
+        self.assertIn('It is not valid to define a loss ratio = 0.0 with a '
+                      'corresponding coeff. of variation > 0.0',
+                      ar.exception.message)

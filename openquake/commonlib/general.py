@@ -130,11 +130,6 @@ def distinct(keys):
     return outlist
 
 
-def str2bool(value):
-    """Convert a string representation of a boolean value to a bool."""
-    return value.lower() in ("true", "yes", "t", "1")
-
-
 def ceil(a, b):
     """
     Divide a / b and return the biggest integer close to the quotient.

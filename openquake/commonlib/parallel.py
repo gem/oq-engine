@@ -151,6 +151,28 @@ class Pickled(object):
         return cPickle.loads(self.pik)
 
 
+def get_pickled_sizes(obj):
+    """
+    Return the pickled sizes of an object and its direct attributes,
+    ordered by decreasing size. Here is an example:
+
+    >> total_size, partial_sizes = get_pickled_sizes(PerformanceMonitor())
+    >> total_size
+    345
+    >> partial_sizes
+    [('_procs', 214), ('exc', 4), ('mem', 4), ('start_time', 4),
+     ('_start_time', 4), ('duration', 4)]
+
+    Notice that the sizes depend on the operating system and the machine.
+    """
+    sizes = []
+    attrs = getattr(obj, '__dict__',  {})
+    for name, value in attrs.iteritems():
+        sizes.append((name, len(Pickled(value))))
+    return len(Pickled(obj)), sorted(
+        sizes, key=lambda pair: pair[1], reverse=True)
+
+
 def pickle_sequence(objects):
     """
     Convert an iterable of objects into a list of pickled objects.
@@ -193,6 +215,7 @@ class TaskManager(object):
         self.name = name or oqtask.__name__
         self.results = []
         self.sent = 0
+        self.received = 0
 
     def submit(self, *args):
         """
@@ -232,8 +255,8 @@ class TaskManager(object):
         :param acc: the initial value of the accumulator
         :returns: the final value of the accumulator
         """
-        if self.sent / ONE_MB:
-            logging.info('Sent %dM of data', self.sent / ONE_MB)
+        if self.sent // ONE_MB:
+            logging.info('Sent %dM of data', self.sent // ONE_MB)
         log_percent = log_percent_gen(
             self.name, len(self.results), self.progress)
         log_percent.next()
@@ -250,6 +273,8 @@ class TaskManager(object):
         else:
             agg_result = self.aggregate_result_set(agg_and_percent, acc)
 
+        if self.received // ONE_MB:
+            logging.info('Received %dM of data', self.received // ONE_MB)
         self.results = []
         return agg_result
 
@@ -298,7 +323,7 @@ class PerformanceMonitor(object):
     the execution of a block of code. Should be used as a context manager,
     as follows::
 
-     with PerformanceMonitor([os.getpid()]) as mm:
+     with PerformanceMonitor() as mm:
          do_something()
      deltamemory, = mm.mem
 
