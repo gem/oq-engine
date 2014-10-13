@@ -138,7 +138,6 @@ class GetSiteCollectionTestCase(unittest.TestCase):
         self.assertTrue((site_coll.z2pt5 == 5).all())
 
         # test SESCollection
-        calc.initialize_sources()
         calc.create_ruptures()
         ses_coll = models.SESCollection.objects.get(
             output__oq_job=job, output__output_type='ses')
