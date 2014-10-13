@@ -42,28 +42,28 @@ VULNERABILITY_KEY = re.compile('(structural|nonstructural|contents|'
 
 def vulnerability_files(inputs):
     """
-    Return a list of pairs (loss_type, path) for the known vulnerability keys
+    Return a dict cost_type -> path for the known vulnerability keys
 
     :param inputs: a dictionary key -> path name
     """
-    vfs = []
+    vfs = {}
     for key in inputs:
         match = VULNERABILITY_KEY.match(key)
         if match:
-            vfs.append((match.group(0), inputs[key]))
+            vfs[match.group(1)] = inputs[key]
     return vfs
 
 
 def fragility_files(inputs):
     """
-    Return a list of the form [('damage', path)]
+    Return a dict of the form {} or {'damage': path}.
 
     :param inputs: a dictionary key -> path name
 
-    NB: at the moment there is a single fragility key, so the list
+    NB: at the moment there is a single fragility key, so the output
     contains at most one element.
     """
-    return [('damage', inputs[key]) for key in inputs if key == 'fragility']
+    return {'damage': inputs[key] for key in inputs if key == 'fragility'}
 
 
 class OqParam(valid.ParamSet):

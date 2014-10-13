@@ -180,7 +180,7 @@ class VulnerabilityNode(LiteralNode):
         assetCategory=str,
         # the assetCategory here has nothing to do with the category
         # in the exposure model and it is not used by the engine
-        lossCategory=valid.name,
+        lossCategory=valid.utf8,  # a description field
         IML=valid.IML,
         lossRatio=valid.positivefloats,
         coefficientsVariation=valid.positivefloats,
