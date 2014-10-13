@@ -20,7 +20,7 @@ PY_MODULES = ['openquake.engine.bin.openquake_cli']
 setup(
     entry_points={
         "console_scripts": [
-            "openquake = openquake.engine.bin.openquake_cli:main"
+            "oq-engine = openquake.engine.bin.openquake_cli:main"
         ]
     },
     name="openquake.engine",
