@@ -1,20 +1,22 @@
+import collections
 import numpy
 
 from openquake.hazardlib import geo, site
-from openquake.nrmllib.node import read_nodes, LiteralNode
+from openquake.nrmllib.node import read_nodes, LiteralNode, context
+from openquake.risklib.workflows import Asset
+
 from openquake.commonlib import valid
 from openquake.commonlib.oqvalidation import \
     fragility_files, vulnerability_files
 from openquake.commonlib.riskmodels import \
-    get_fragility_functions, get_imtls_from_vulnerabilities
-from openquake.commonlib.converter import Converter
+    get_fragility_functions, get_imtls_from_vulnerabilities, get_vfs
 from openquake.commonlib.source import ValidNode, RuptureConverter
 
 
 def get_mesh(oqparam):
     """
     Extract the mesh of points to compute from the sites,
-    the sites_csv, the region or the exposure.
+    the sites_csv, or the region.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -34,12 +36,6 @@ def get_mesh(oqparam):
         firstpoint = geo.Point(*oqparam.region[0])
         points = [geo.Point(*xy) for xy in oqparam.region] + [firstpoint]
         return geo.Polygon(points).discretize(oqparam.region_grid_spacing)
-    elif 'exposure' in oqparam.inputs:
-        exposure = Converter.from_nrml(oqparam.inputs['exposure'])
-        coords = sorted(set((s.lon, s.lat)
-                            for s in exposure.tableset.tableLocation))
-        lons, lats = zip(*coords)
-        return geo.Mesh(numpy.array(lons), numpy.array(lats))
 
 
 class SiteModelNode(LiteralNode):
@@ -143,3 +139,90 @@ def get_imtls(oqparam):
         raise ValueError('Missing intensity_measure_types_and_levels, '
                          'vulnerability file and fragility file')
     return imtls
+
+
+def get_vulnerability_functions(oqparam):
+    """
+    Return a dict (imt, taxonomy) -> vf
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    """
+    return get_vfs(oqparam.inputs)
+
+############################ exposure #############################
+
+
+class ExposureNode(LiteralNode):
+    validators = valid.parameters(
+        occupants=valid.positivefloat,
+        value=valid.positivefloat,
+        deductible=valid.positivefloat,
+        insuranceLimit=valid.positivefloat,
+        location=valid.point2d,
+    )
+
+
+def get_exposure(oqparam):
+    """
+    Read the exposure and yields :class:`openquake.risklib.workflows.Asset`
+    instances.
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    """
+    relevant_cost_types = set(vulnerability_files(oqparam.inputs))
+    fname = oqparam.inputs['exposure']
+    time_event = getattr(oqparam, 'time_event')
+    for asset in read_nodes(fname,
+                            lambda node: node.tag.endswith('asset'),
+                            ExposureNode):
+        values = {}
+        deductibles = {}
+        insurance_limits = {}
+        retrofitting_values = {}
+
+        with context(fname, asset):
+            asset_id = asset['id']
+            taxonomy = asset['taxonomy']
+            number = asset['number']
+            location = ~asset.location
+        with context(fname, asset.costs):
+            for cost in asset.costs:
+                cost_type = cost['type']
+                if cost_type not in relevant_cost_types:
+                    continue
+                values[cost_type] = cost['value']
+                deductibles[cost_type] = cost.attrib.get('deductible')
+                insurance_limits[cost_type] = cost.attrib.get('insuranceLimit')
+            # check we are not missing a cost type
+            assert set(values) == relevant_cost_types
+
+        if time_event:
+            for occupancy in asset.occupancies:
+                with context(fname, occupancy):
+                    if occupancy['period'] == time_event:
+                        values['fatalities'] = occupancy['occupants']
+                        break
+
+        yield Asset(asset_id, taxonomy, number, location,
+                    values, deductibles, insurance_limits, retrofitting_values)
+
+
+def get_sitecol_assets(oqparam):
+    """
+    Returns two sequences of the same length: a list with the assets
+    per each site and the site collection.
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    """
+    assets_by_loc = collections.defaultdict(list)
+    for asset in get_exposure(oqparam):
+        assets_by_loc[asset.location].append(asset)
+    coords = sorted((s.lon, s.lat) for s in assets_by_loc)
+    lons, lats = zip(*coords)
+    mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
+    sitecol = get_site_collection(oqparam, mesh)
+    return [(site, assets_by_loc[site.location.x, site.location.y])
+            for site in sitecol]

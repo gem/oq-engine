@@ -15,7 +15,7 @@
 
 import unittest
 import StringIO
-from openquake.commonlib.riskloaders import get_vulnerability_functions
+from openquake.commonlib.riskmodels import get_vulnerability_functions
 from openquake.nrmllib import InvalidFile
 
 
