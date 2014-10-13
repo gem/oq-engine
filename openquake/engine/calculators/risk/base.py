@@ -25,7 +25,7 @@ import psutil
 from openquake.nrmllib.risk import parsers
 from openquake.risklib.workflows import RiskModel
 from openquake.hazardlib.imt import from_string
-from openquake.commonlib.riskloaders import get_taxonomy_vfs
+from openquake.commonlib.riskmodels import get_vfs
 
 from openquake.engine import logs, export
 from openquake.engine.db import models
@@ -104,9 +104,11 @@ def build_getters(job_id, counts_taxonomy, calc):
             # submitting task
             task_no += 1
             logs.LOG.info('Built task #%d for taxonomy %s', task_no, taxonomy)
-            risk_model = calc.risk_models[taxonomy]
-            otm.submit(job_id, risk_model, getters,
-                       calc.outputdict, calc.calculator_parameters)
+            for imt, taxo in calc.risk_models:
+                if taxo == taxonomy:
+                    risk_model = calc.risk_models[imt, taxonomy]
+                    otm.submit(job_id, risk_model, getters,
+                               calc.outputdict, calc.calculator_parameters)
 
     return otm
 
@@ -168,10 +170,9 @@ class RiskCalculator(base.Calculator):
         imt_taxonomy_set = set()
         for rm in self.risk_models.itervalues():
             self.loss_types.update(rm.loss_types)
-            for imt in rm.imts:
-                imt_taxonomy_set.add((imt, rm.taxonomy))
-                # insert the IMT in the db, if not already there
-                models.Imt.save_new([from_string(imt)])
+            imt_taxonomy_set.add((rm.imt, rm.taxonomy))
+            # insert the IMT in the db, if not already there
+            models.Imt.save_new([from_string(rm.imt)])
         for imt, taxonomy in imt_taxonomy_set:
             models.ImtTaxonomy.objects.create(
                 job=self.job, imt=models.Imt.get(imt), taxonomy=taxonomy)
@@ -183,7 +184,7 @@ class RiskCalculator(base.Calculator):
                 self.taxonomies_asset_count = dict(
                     (t, count)
                     for t, count in self.taxonomies_asset_count.items()
-                    if t in self.risk_models)
+                    if (imt, t) in self.risk_models)
 
         for validator_class in self.validators:
             validator = validator_class(self)
@@ -258,21 +259,19 @@ class RiskCalculator(base.Calculator):
         # regular risk models
         if self.bcr is False:
             return dict(
-                (taxonomy, RiskModel(taxonomy, self.get_workflow(vfs)))
-                for taxonomy, vfs in get_taxonomy_vfs(
-                    self.rc.inputs, models.LOSS_TYPES))
+                (imt_taxo, RiskModel(imt_taxo[0], imt_taxo[1],
+                                     self.get_workflow(vfs)))
+                for imt_taxo, vfs in get_vfs(self.rc.inputs).iteritems())
 
         # BCR risk models
-        orig_data = get_taxonomy_vfs(
-            self.rc.inputs, models.LOSS_TYPES, retrofitted=False)
-        retro_data = get_taxonomy_vfs(
-            self.rc.inputs, models.LOSS_TYPES, retrofitted=True)
+        orig_data = get_vfs(self.rc.inputs, retrofitted=False).items()
+        retro_data = get_vfs(self.rc.inputs, retrofitted=True).items()
 
         risk_models = {}
-        for (taxonomy, vfs), (taxonomy_, vfs_) in zip(orig_data, retro_data):
-            assert taxonomy_ == taxonomy_  # same taxonomy
-            risk_models[taxonomy] = RiskModel(
-                taxonomy, self.get_workflow(vfs, vfs_))
+        for (imt_taxo, vfs), (imt_taxo_, vfs_) in zip(orig_data, retro_data):
+            assert imt_taxo_ == imt_taxo_  # same imt and taxonomy
+            risk_models[imt_taxo] = RiskModel(
+                imt_taxo[0], imt_taxo[1], self.get_workflow(vfs, vfs_))
         return risk_models
 
     def get_workflow(self, vulnerability_functions):
