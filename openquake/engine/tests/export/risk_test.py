@@ -51,7 +51,7 @@ class ExportTestCase(unittest.TestCase):
         self.output_patch.stop()
 
     def test_export_agg_loss_curve(self):
-        writer = 'openquake.nrmllib.risk.writers.AggregateLossCurveXMLWriter'
+        writer = 'openquake.commonlib.risk_writers.AggregateLossCurveXMLWriter'
 
         self.output_mock.loss_curve.id = 0
         self.output_mock.loss_curve.loss_type = "structural"
@@ -70,7 +70,7 @@ class ExportTestCase(unittest.TestCase):
             self.assertEqual('/tmp/loss-curves-0.xml', ret)
 
     def test_export_loss_curve(self):
-        writer = 'openquake.nrmllib.risk.writers.LossCurveXMLWriter'
+        writer = 'openquake.commonlib.risk_writers.LossCurveXMLWriter'
 
         self.output_mock.loss_curve.id = 0
         self.output_mock.loss_curve.insured = False
@@ -92,7 +92,7 @@ class ExportTestCase(unittest.TestCase):
             self.assertEqual('/tmp/loss-curves-0.xml', ret)
 
     def test_export_loss_map(self):
-        writer = 'openquake.nrmllib.risk.writers.LossMapXMLWriter'
+        writer = 'openquake.commonlib.risk_writers.LossMapXMLWriter'
 
         self.output_mock.loss_map.id = 0
         self.output_mock.loss_map.poe = 0.1
@@ -115,7 +115,7 @@ class ExportTestCase(unittest.TestCase):
             self.assertEqual('/tmp/loss-maps-0.xml', ret)
 
     def test_export_bcr_distribution(self):
-        writer = 'openquake.nrmllib.risk.writers.BCRMapXMLWriter'
+        writer = 'openquake.commonlib.risk_writers.BCRMapXMLWriter'
 
         self.output_mock.bcr_distribution.id = 0
         self.output_mock.bcr_distribution.loss_type = "structural"
@@ -164,10 +164,10 @@ class ClassicalExportTestCase(BaseExportTestCase):
                 'end-to-end-hazard-risk/job_risk_classical.ini'
             )
 
-            haz_job = helpers.run_job(haz_cfg)
+            haz_job = helpers.run_job(haz_cfg).job
             # Run the risk on all outputs produced by the haz calc:
             risk_job = helpers.run_job(
-                risk_cfg, hazard_calculation_id=haz_job.id)
+                risk_cfg, hazard_calculation_id=haz_job.id).job
 
             risk_outputs = models.Output.objects.filter(oq_job=risk_job)
 
@@ -250,10 +250,10 @@ class EventBasedExportTestCase(BaseExportTestCase):
                 'end-to-end-hazard-risk/job_risk_event_based.ini'
             )
 
-            haz_job = helpers.run_job(haz_cfg)
+            haz_job = helpers.run_job(haz_cfg).job
             # Run the risk on all outputs produced by the haz calc:
             risk_job = helpers.run_job(
-                risk_cfg, hazard_calculation_id=haz_job.id)
+                risk_cfg, hazard_calculation_id=haz_job.id).job
 
             risk_outputs = models.Output.objects.filter(oq_job=risk_job)
 
