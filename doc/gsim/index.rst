@@ -32,6 +32,7 @@ Built-in GSIMs
     campbell_bozorgnia_2008
     cauzzi_faccioli_2008
     chiou_youngs_2008
+    chiou_youngs_2014
     climent_1994
     douglas_stochastic_2013
     faccioli_2010
