@@ -270,12 +270,12 @@ class BooreEtAl2014CaliforniaBasinNoSOFTestCase(BooreEtAl2014TestCase):
     INTRA_FILE = "BSSA2014/BSSA_2014_CALIFORNIA_NOSOF_INTRA_STD.csv"
 
 
-class BooreEtAl2014CaliforniaBasinNoSOFHighQTestCase(BooreEtAl2014TestCase):
+class BooreEtAl2014HighQCaliforniaBasinNoSOFTestCase(BooreEtAl2014TestCase):
     """
     Tests the Boore et al. (2014) GMPE for the conditions:
     No style of faulting - High Q model - California basin term
     """
-    GSIM_CLASS = bssa.BooreEtAlCaliforniaBasinHighQNoSOF2014
+    GSIM_CLASS = bssa.BooreEtAlHighQCaliforniaBasinNoSOF2014
 
     # File containing results for the mean
     MEAN_FILE = "BSSA2014/BSSA_2014_HIGHQ_CALIFORNIA_NOSOF_MEAN.csv"
@@ -287,12 +287,12 @@ class BooreEtAl2014CaliforniaBasinNoSOFHighQTestCase(BooreEtAl2014TestCase):
     INTRA_FILE = "BSSA2014/BSSA_2014_HIGHQ_CALIFORNIA_NOSOF_INTRA_STD.csv"
 
 
-class BooreEtAl2014CaliforniaBasinNoSOFLowQTestCase(BooreEtAl2014TestCase):
+class BooreEtAl2014LowQCaliforniaBasinNoSOFTestCase(BooreEtAl2014TestCase):
     """
     Tests the Boore et al. (2014) GMPE for the conditions:
     No style of faulting - Low Q model - California basin term
     """
-    GSIM_CLASS = bssa.BooreEtAlCaliforniaBasinLowQNoSOF2014
+    GSIM_CLASS = bssa.BooreEtAlLowQCaliforniaBasinNoSOF2014
 
     # File containing results for the mean
     MEAN_FILE = "BSSA2014/BSSA_2014_LOWQ_CALIFORNIA_NOSOF_MEAN.csv"
@@ -321,12 +321,12 @@ class BooreEtAl2014JapanBasinNoSOFTestCase(BooreEtAl2014TestCase):
     INTRA_FILE = "BSSA2014/BSSA_2014_JAPAN_NOSOF_INTRA_STD.csv"
 
 
-class BooreEtAl2014JapanBasinNoSOFHighQTestCase(BooreEtAl2014TestCase):
+class BooreEtAl2014HighQJapanBasinNoSOFTestCase(BooreEtAl2014TestCase):
     """
     Tests the Boore et al. (2014) GMPE for the conditions:
     No style of faulting - High Q model - Japan basin term
     """
-    GSIM_CLASS = bssa.BooreEtAlJapanBasinHighQNoSOF2014
+    GSIM_CLASS = bssa.BooreEtAlHighQJapanBasinNoSOF2014
 
     # File containing results for the mean
     MEAN_FILE = "BSSA2014/BSSA_2014_HIGHQ_JAPAN_NOSOF_MEAN.csv"
@@ -338,12 +338,12 @@ class BooreEtAl2014JapanBasinNoSOFHighQTestCase(BooreEtAl2014TestCase):
     INTRA_FILE = "BSSA2014/BSSA_2014_HIGHQ_JAPAN_NOSOF_INTRA_STD.csv"
 
 
-class BooreEtAl2014JapanBasinNoSOFLowQTestCase(BooreEtAl2014TestCase):
+class BooreEtAl2014LowQJapanBasinNoSOFTestCase(BooreEtAl2014TestCase):
     """
     Tests the Boore et al. (2014) GMPE for the conditions:
     No style of faulting - Low Q model - Japan basin term
     """
-    GSIM_CLASS = bssa.BooreEtAlJapanBasinLowQNoSOF2014
+    GSIM_CLASS = bssa.BooreEtAlLowQJapanBasinNoSOF2014
 
     # File containing results for the mean
     MEAN_FILE = "BSSA2014/BSSA_2014_LOWQ_JAPAN_NOSOF_MEAN.csv"

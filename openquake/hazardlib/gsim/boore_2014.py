@@ -865,7 +865,7 @@ class BooreEtAlCaliforniaBasinNoSOF2014(BooreEtAlNoSOF2014):
         return f_dz1
 
 
-class BooreEtAlCaliforniaBasinHighQNoSOF2014(BooreEtAlHighQNoSOF2014):
+class BooreEtAlHighQCaliforniaBasinNoSOF2014(BooreEtAlHighQNoSOF2014):
     """
     The Boore et al. (2014) GMPE, implemented for high Q regions,
     for the case when style of faulting is unspecficied and the California
@@ -891,7 +891,7 @@ class BooreEtAlCaliforniaBasinHighQNoSOF2014(BooreEtAlHighQNoSOF2014):
         return f_dz1
 
 
-class BooreEtAlCaliforniaBasinLowQNoSOF2014(BooreEtAlLowQNoSOF2014):
+class BooreEtAlLowQCaliforniaBasinNoSOF2014(BooreEtAlLowQNoSOF2014):
     """
     The Boore et al. (2014) GMPE, implemented for high Q regions,
     for the case when style of faulting is unspecficied and the California
@@ -943,7 +943,7 @@ class BooreEtAlJapanBasinNoSOF2014(BooreEtAlNoSOF2014):
         return f_dz1
 
 
-class BooreEtAlJapanBasinHighQNoSOF2014(BooreEtAlHighQNoSOF2014):
+class BooreEtAlHighQJapanBasinNoSOF2014(BooreEtAlHighQNoSOF2014):
     """
     The Boore et al. (2014) GMPE, implemented for high Q regions,
     for the case when style of faulting is unspecficied and the California
@@ -969,7 +969,7 @@ class BooreEtAlJapanBasinHighQNoSOF2014(BooreEtAlHighQNoSOF2014):
         return f_dz1
 
 
-class BooreEtAlJapanBasinLowQNoSOF2014(BooreEtAlLowQNoSOF2014):
+class BooreEtAlLowQJapanBasinNoSOF2014(BooreEtAlLowQNoSOF2014):
     """
     The Boore et al. (2014) GMPE, implemented for high Q regions,
     for the case when style of faulting is unspecficied and the California
