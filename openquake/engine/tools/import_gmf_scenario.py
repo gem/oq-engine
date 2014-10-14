@@ -1,10 +1,90 @@
 import os
 import time
 import argparse
-from openquake.nrmllib.hazard.parsers import GMFScenarioParser
+
 from openquake.hazardlib.imt import from_string
+from openquake.nrmllib.node import LiteralNode, read_nodes
+from openquake.commonlib import valid
+
 from openquake.engine.db import models
 from openquake.engine import writer, engine
+from openquake.engine.calculators.hazard.scenario.core \
+    import create_db_ruptures
+
+from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.geo.surface.planar import PlanarSurface
+from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
+
+
+class DuplicatedTag(Exception):
+    """
+    Raised when reading a GMF XML file containing a duplicated ruptureId
+    attribute.
+    """
+
+
+class GmfNode(LiteralNode):
+    """
+    Class used to convert nodes such as
+
+    <gmf IMT="PGA" ruptureId="scenario-0000000001" >
+       <node gmv="0.365662734506" lat="0.0" lon="0.0"/>
+       <node gmv="0.256181251586" lat="0.1" lon="0.0"/>
+       <node gmv="0.110685275111" lat="0.2" lon="0.0"/>
+    </gmf>
+
+    into LiteralNode objects.
+    """
+    validators = valid.parameters(
+        gmv=valid.positivefloat,
+        lon=valid.longitude,
+        lat=valid.latitude)
+
+
+def fake_rupture():
+    """
+    Generate a fake rupture from which a models.ProbabilisticRupture
+    record is generated. This is needed to satisfy the foreign key
+    constraints at the database level.
+    """
+    rupture = ParametricProbabilisticRupture(
+        mag=1., rake=0,
+        tectonic_region_type="NA",
+        hypocenter=Point(0, 0, 0.1),
+        surface=PlanarSurface(
+            10, 11, 12, Point(0, 0, 1), Point(1, 0, 1),
+            Point(1, 0, 2), Point(0, 0, 2)),
+        occurrence_rate=1.0,
+        source_typology='rupture',
+        temporal_occurrence_model=None)
+    return rupture
+
+
+def read_data(fileobj):
+    """
+    Convert a file into a generator over rows.
+
+    :param fileobj: the XML files containing the GMFs
+    :returns: (imts, rupture_tags, rows)
+    """
+    imts = set()
+    tags = set()
+    rows = []
+    for gmf in read_nodes(
+            fileobj, lambda n: n.tag.endswith('gmf'), GmfNode):
+        tag = gmf['ruptureId']
+        imt = gmf['IMT']
+        if imt == 'SA':
+            imt = 'SA(%s)' % gmf['saPeriod']
+        data = []
+        for node in gmf:
+            data.append(('POINT(%(lon)s %(lat)s)' % node, node['gmv']))
+        if tag in tags:
+            raise DuplicatedTag(tag)
+        tags.add(tag)
+        imts.add(imt)
+        rows.append((imt, tag, data))
+    return imts, sorted(tags), rows
 
 
 def create_ses_gmf(job, fname):
@@ -18,8 +98,7 @@ def create_ses_gmf(job, fname):
         oq_job=job,
         display_name='SES Collection',
         output_type='ses')
-    ses_coll = models.SESCollection.objects.create(
-        output=output, lt_model=None, ordinal=0)
+    ses_coll = models.SESCollection.create(output=output)
 
     # create gmf output
     output = models.Output.objects.create(
@@ -30,26 +109,36 @@ def create_ses_gmf(job, fname):
     return ses_coll, gmf
 
 
-def import_rows(hc, gmf_coll, rows):
+def import_rows(job, ses_coll, gmf_coll, sorted_tags, rows):
     """
     Import a list of records into the gmf_data and hazard_site tables.
 
-    :param hc: :class:`openquake.engine.db.models.HazardCalculation` instance
-    :param gmf_coll: :class:`openquake.engine.db.models.Gmf` instance
-    :param rows: a list of records (imt_type, sa_period, sa_damping, gmvs, wkt)
+    :param job:
+        :class:`openquake.engine.db.models.OqJob` instance
+    :param gmf_coll:
+        :class:`openquake.engine.db.models.Gmf` instance
+    :param rows:
+        a list of records (imt_type, sa_period, sa_damping, gmvs, wkt)
     """
-    gmfs = []
+    gmfs = []  # list of GmfData instance
     site_id = {}  # dictionary wkt -> site id
-    for imt_type, sa_period, sa_damping, gmvs, wkt in rows:
-        if wkt not in site_id:  # create a new site
-            site_id[wkt] = models.HazardSite.objects.create(
-                hazard_calculation=hc, location=wkt).id
-        gmfs.append(
-            models.GmfData(
-                imt=imt_type, sa_period=sa_period, sa_damping=sa_damping,
-                gmvs=gmvs, rupture_ids=range(len(gmvs)),
-                site_id=site_id[wkt], gmf=gmf_coll, task_no=0))
-    del site_id
+    rupture = fake_rupture()
+    prob_rup_id, ses_rup_ids = create_db_ruptures(
+        rupture, ses_coll, sorted_tags, seed=42)
+    tag2id = dict(zip(sorted_tags, ses_rup_ids))
+
+    for imt_str, tag, data in rows:
+        imt = from_string(imt_str)
+        rup_id = tag2id[tag]
+        for wkt, gmv in data:
+            if wkt not in site_id:  # create a new site
+                site_id[wkt] = models.HazardSite.objects.create(
+                    hazard_calculation=job, location=wkt).id
+            gmfs.append(
+                models.GmfData(
+                    imt=imt[0], sa_period=imt[1], sa_damping=imt[2],
+                    gmvs=[gmv], rupture_ids=[rup_id],
+                    site_id=site_id[wkt], gmf=gmf_coll, task_no=0))
     writer.CacheInserter.saveall(gmfs)
 
 
@@ -60,42 +149,27 @@ def import_gmf_scenario(fileobj):
     Works both with XML files and tab-separated files with format
     (imt, gmvs, location).
     :returns: the generated :class:`openquake.engine.db.models.Output` object
-    and the generated :class:`openquake.engine.db.models.HazardCalculation`
+    and the generated :class:`openquake.engine.db.models.OqJob`
     object.
     """
     t0 = time.time()
     fname = fileobj.name
 
     job = engine.prepare_job()
-    hc = models.HazardCalculation.objects.create(
-        base_path=os.path.dirname(fname),
-        description='Scenario importer, file %s' % os.path.basename(fname),
-        calculation_mode='scenario',
-        maximum_distance=100,
-        intensity_measure_types_and_levels={},
-        inputs={},
-    )
-    # XXX: probably the maximum_distance should be entered by the user
 
     ses_coll, gmf_coll = create_ses_gmf(job, fname)
+    imts, tags, rows = read_data(fileobj)
+    import_rows(job, ses_coll, gmf_coll, tags, rows)
+    job.save_params(
+        dict(
+            base_path=os.path.dirname(fname),
+            description='Scenario importer, file %s' % os.path.basename(fname),
+            calculation_mode='scenario',
+            intensity_measure_types_and_levels=dict.fromkeys(imts),
+            inputs={},
+            number_of_ground_motion_fields=len(rows)
+            ))
 
-    rows = []
-    if fname.endswith('.xml'):
-        # convert the XML into a tab-separated StringIO
-        for imt, gmvs, loc in GMFScenarioParser(fileobj).parse():
-            hc.intensity_measure_types_and_levels[imt] = []
-            imt_type, sa_period, sa_damping = from_string(imt)
-            sa_period = '\N' if sa_period is None else str(sa_period)
-            sa_damping = '\N' if sa_damping is None else str(sa_damping)
-            gmvs = '{%s}' % str(gmvs)[1:-1]
-            rows.append([imt_type, sa_period, sa_damping, gmvs, loc])
-    else:  # assume a tab-separated file
-        for line in fileobj:
-            rows.append(line.split('\t'))
-    import_rows(hc, gmf_coll, rows)
-    hc.number_of_ground_motion_fields = len(rows)
-    hc.save()  # update intensity_measure_types_and_levels
-    job.hazard_calculation = hc
     job.duration = time.time() - t0
     job.status = 'complete'
     job.save()

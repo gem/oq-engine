@@ -23,10 +23,11 @@ from collections import namedtuple
 from lxml import etree
 from nose.plugins.attrib import attr
 
+from openquake import nrmllib
+
 from openquake.engine.db import models
 from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard
-from openquake import nrmllib
 
 from openquake.engine.tests.export.core_test import \
     BaseExportTestCase, number_of
@@ -368,7 +369,7 @@ class EventBasedExportTestCase(BaseExportTestCase):
             # run the calculation in process to create something to export
             with mock.patch.dict(os.environ, {'OQ_NO_DISTRIBUTE': '1'}):
                 job = helpers.run_job(cfg, maximum_distance=1,
-                                      ses_per_logic_tree_path=1)
+                                      ses_per_logic_tree_path=1).job
             self.assertEqual(job.status, 'complete')
 
             outputs = export_core.get_outputs(job.id)
@@ -520,7 +521,7 @@ class Bug1202290TestCase(unittest.TestCase):
 
     def test(self):
         output = mock.Mock()
-        output.oq_job.hazard_calculation.id = 1202290
+        output.oq_job.id = 1202290
         output.hazard_curve = mock.Mock()
         output.hazard_curve.__iter__ = lambda x: iter([])
         target = mock.Mock()

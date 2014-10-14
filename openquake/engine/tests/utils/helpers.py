@@ -50,7 +50,7 @@ from openquake.engine.utils import config
 
 CD = os.path.dirname(__file__)  # current directory
 
-RUNNER = os.path.abspath(os.path.join(CD, '../../../../bin/openquake'))
+RUNNER = os.path.abspath(os.path.join(CD, '../../../../bin/oq-engine'))
 
 DATA_DIR = os.path.abspath(os.path.join(CD, '../data'))
 
@@ -118,24 +118,20 @@ def run_job(cfg, exports=None, hazard_calculation_id=None,
     """
     Given the path to a job config file and a hazard_calculation_id
     or a output, run the job.
+
+    :returns: a calculator object
     """
     if exports is None:
         exports = []
 
     job = get_job(cfg, hazard_calculation_id=hazard_calculation_id,
-                  hazard_output_id=hazard_output_id)
+                  hazard_output_id=hazard_output_id, **params)
     job.is_running = True
     job.save()
 
     logfile = os.path.join(tempfile.gettempdir(), 'qatest.log')
 
-    # update calculation parameters
-    for name, value in params.iteritems():
-        setattr(job.calculation, name, value)
-    job.calculation.save()
-
-    engine.run_calc(job, 'error', logfile, exports, job.job_type)
-    return job
+    return engine.run_calc(job, 'error', logfile, exports, job.job_type)
 
 
 def timeit(method):
@@ -313,18 +309,28 @@ def random_string(length=16):
 
 
 def get_job(cfg, username="openquake", hazard_calculation_id=None,
-            hazard_output_id=None):
+            hazard_output_id=None, **extras):
     """
     Given a path to a config file and a hazard_calculation_id
     (or, alternatively, a hazard_output_id, create a
     :class:`openquake.engine.db.models.OqJob` object for a risk calculation.
     """
     if hazard_calculation_id is None and hazard_output_id is None:
-        return engine.job_from_file(cfg, username, 'error', [])
+        return engine.job_from_file(cfg, username, 'error', [], **extras)
 
     job = engine.prepare_job(username)
-    params = vars(readini.parse_config(
-            open(cfg), hazard_calculation_id, hazard_output_id))
+    oqparam = readini.parse_config(
+        open(cfg), hazard_calculation_id, hazard_output_id)
+    params = vars(oqparam)
+    if hazard_calculation_id is None:
+        params['hazard_calculation_id'] = models.Output.objects.get(
+            pk=hazard_output_id).oq_job.id
+
+    # we are removing intensity_measure_types_and_levels because it is not
+    # a field of RiskCalculation; this ugliness will disappear when
+    # RiskCalculation will be removed
+    del params['intensity_measure_types_and_levels']
+    job.save_params(params)
     risk_calc = engine.create_calculation(models.RiskCalculation, params)
     risk_calc = models.RiskCalculation.objects.get(id=risk_calc.id)
     job.risk_calculation = risk_calc
@@ -332,42 +338,46 @@ def get_job(cfg, username="openquake", hazard_calculation_id=None,
     return job
 
 
-def create_gmf(hazard_job, rlz=None, output_type="gmf"):
+def create_gmf_sescoll(output, output_type='gmf'):
     """
-    Returns the created Gmf object.
-    """
-    hc = hazard_job.hazard_calculation
+    Returns Gmf and SESCollection instances.
 
-    rlz = rlz or models.LtRealization.objects.create(
-        lt_model=models.LtSourceModel.objects.create(
-            hazard_calculation=hc, ordinal=0, sm_lt_path="test_sm"),
-        ordinal=0, weight=1, gsim_lt_path="test_gsim")
+    :param output: a :class:`openquake.engine.db.models.Ouput` instance
+    :param output_type: a string with the output type
+    """
+    sescoll = models.SESCollection.create(output)
+
+    rlz = models.LtRealization.objects.create(
+        lt_model=sescoll.trt_model.lt_model, ordinal=0, weight=1,
+        gsim_lt_path="test_gsim")
 
     gmf = models.Gmf.objects.create(
         output=models.Output.objects.create_output(
-            hazard_job, "Test Hazard output", output_type),
+            output.oq_job, "Test Hazard output", output_type),
         lt_realization=rlz)
 
-    return gmf
+    return gmf, sescoll
 
 
-def create_gmf_data_records(hazard_job, rlz=None, ses_coll=None, points=None):
+def create_gmf_data_records(hazard_job, coordinates=None):
     """
     Returns the created records.
+
+    :param hazard_joint: a :class:`openquake.engine.db.models.OqJob` instance
+    :param coordinates: a list of (lon, lat) pairs
+
+    If the coordinates are not set, a list of 5 predefined locations is used
     """
-    gmf = create_gmf(hazard_job, rlz)
-    ses_coll = ses_coll or models.SESCollection.objects.create(
-        output=models.Output.objects.create_output(
-            hazard_job, "Test SES Collection", "ses"),
-        lt_model=gmf.lt_realization.lt_model,
-        ordinal=0)
+    output = models.Output.objects.create_output(
+        hazard_job, "Test SES Collection", "ses")
+    gmf, ses_coll = create_gmf_sescoll(output)
     ruptures = create_ses_ruptures(hazard_job, ses_coll, 3)
     records = []
-    if points is None:
-        points = [(15.310, 38.225), (15.71, 37.225),
-                  (15.48, 38.091), (15.565, 38.17),
-                  (15.481, 38.25)]
-    for site_id in hazard_job.hazard_calculation.save_sites(points):
+    if coordinates is None:
+        coordinates = [(15.310, 38.225), (15.71, 37.225),
+                       (15.48, 38.091), (15.565, 38.17),
+                       (15.481, 38.25)]
+    for site_id in models.save_sites(hazard_job, coordinates):
         records.append(models.GmfData.objects.create(
             gmf=gmf,
             task_no=0,
@@ -379,29 +389,28 @@ def create_gmf_data_records(hazard_job, rlz=None, ses_coll=None, points=None):
     return records
 
 
-def create_gmf_from_csv(job, fname, output_type="gmf"):
+def create_gmf_from_csv(job, fname, output_type='gmf'):
     """
     Populate the gmf_data table for an event_based (default)
     or scenario calculation (output_type="gmf_scenario").
+
+    :param job: an :class:`openquake.engine.db.models.OqJob` instance
+    :param output_type: a string with the output type
     """
-    hc = job.hazard_calculation
+    hc = job.get_oqparam()
     if output_type == "gmf":  # event based
         hc.investigation_time = 50
         hc.ses_per_logic_tree_path = 1
-        hc.save()
 
     # tricks to fool the oqtask decorator
     job.is_running = True
     job.status = 'post_processing'
     job.save()
 
-    gmf = create_gmf(job, output_type=output_type)
+    output = models.Output.objects.create_output(
+        job, "Test SES Collection", "ses")
+    gmf, ses_coll = create_gmf_sescoll(output, output_type=output_type)
 
-    ses_coll = models.SESCollection.objects.create(
-        output=models.Output.objects.create_output(
-            job, "Test SES Collection", "ses"),
-        lt_model=gmf.lt_realization.lt_model,
-        ordinal=0)
     with open(fname, 'rb') as csvfile:
         gmfreader = csv.reader(csvfile, delimiter=',')
         locations = gmfreader.next()
@@ -413,7 +422,7 @@ def create_gmf_from_csv(job, fname, output_type="gmf"):
 
         for i, gmvs in enumerate(gmv_matrix):
             point = tuple(map(float, locations[i].split()))
-            [site_id] = job.hazard_calculation.save_sites([point])
+            [site_id] = models.save_sites(job, [point])
             models.GmfData.objects.create(
                 gmf=gmf,
                 task_no=0,
@@ -439,10 +448,10 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
     """
 
     hazard_job = get_job(hazard_cfg, username)
-    hc = hazard_job.hazard_calculation
+    hc = hazard_job.get_oqparam()
 
     lt_model = models.LtSourceModel.objects.create(
-        hazard_calculation=hazard_job.hazard_calculation,
+        hazard_calculation=hazard_job,
         ordinal=1, sm_lt_path="test_sm")
 
     rlz = models.LtRealization.objects.create(
@@ -466,7 +475,7 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
         for point in ["POINT(-1.01 1.01)", "POINT(0.9 1.01)",
                       "POINT(0.01 0.01)", "POINT(0.9 0.9)"]:
             models.HazardSite.objects.create(
-                hazard_calculation=hc, location=point)
+                hazard_calculation=hazard_job, location=point)
             models.HazardCurveData.objects.create(
                 hazard_curve=hazard_output,
                 poes=[0.1, 0.2, 0.3],
@@ -477,11 +486,11 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
             output=models.Output.objects.create_output(
                 hazard_job, "Test gmf scenario output", "gmf_scenario"))
 
-        models.SESCollection.objects.create(
+        models.SESCollection.create(
             output=models.Output.objects.create_output(
-                hazard_job, "Test SES Collection", "ses"),
-            lt_model=None, ordinal=0)
-        site_ids = hazard_job.hazard_calculation.save_sites(
+                hazard_job, "Test SES Collection", "ses"))
+        site_ids = models.save_sites(
+            hazard_job,
             [(15.48, 38.0900001), (15.565, 38.17), (15.481, 38.25)])
         for site_id in site_ids:
             models.GmfData.objects.create(
@@ -493,7 +502,7 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
                 rupture_ids=[0, 1, 2])
 
     elif output_type in ("ses", "gmf"):
-        hazard_output = create_gmf_data_records(hazard_job, rlz)[0].gmf
+        hazard_output = create_gmf_data_records(hazard_job)[0].gmf
 
     else:
         raise RuntimeError('Unexpected output_type: %s' % output_type)
@@ -501,9 +510,16 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
     hazard_job.status = "complete"
     hazard_job.save()
     job = engine.prepare_job(username)
-    params = vars(readini.parse_config(open(risk_cfg),
-                                       hazard_output_id=hazard_output.output.id))
+    params = vars(
+        readini.parse_config(
+            open(risk_cfg), hazard_output_id=hazard_output.output.id))
+    params['hazard_calculation_id'] = hazard_job.id
 
+    # we are removing intensity_measure_types_and_levels because it is not
+    # a field of RiskCalculation; this ugliness will disappear when
+    # RiskCalculation will be removed
+    del params['intensity_measure_types_and_levels']
+    job.save_params(params)
     risk_calc = engine.create_calculation(models.RiskCalculation, params)
     job.risk_calculation = risk_calc
     job.save()
@@ -530,26 +546,9 @@ def create_ses_ruptures(job, ses_collection, num):
     Each rupture has a magnitude ranging from 0 to 10 and no geographic
     information.
     """
-    lt_model = models.LtSourceModel.objects.create(
-        hazard_calculation=job.hazard_calculation,
-        ordinal=0,
-        sm_lt_path=['b1'],
-        sm_name='test source model',
-        weight=1,
-    )
-    trt = "test region type"
-    trt_model = models.TrtModel.objects.create(
-        lt_model=lt_model,
-        tectonic_region_type=trt,
-        num_sources=1,
-        num_ruptures=1,
-        min_mag=4,
-        max_mag=6,
-        gsims=[],
-    )
     rupture = ParametricProbabilisticRupture(
         mag=1 + 10. / float(num), rake=0,
-        tectonic_region_type=trt,
+        tectonic_region_type="test region type",
         hypocenter=Point(0, 0, 0.1),
         surface=PlanarSurface(
             10, 11, 12, Point(0, 0, 1), Point(1, 0, 1),
@@ -559,7 +558,7 @@ def create_ses_ruptures(job, ses_collection, num):
         source_typology=object())
     ses_ordinal = 1
     seed = 42
-    pr = models.ProbabilisticRupture.create(rupture, ses_collection, trt_model)
+    pr = models.ProbabilisticRupture.create(rupture, ses_collection)
     return [models.SESRupture.create(pr, ses_ordinal, 'test', 1, i, seed + i)
             for i in range(num)]
 

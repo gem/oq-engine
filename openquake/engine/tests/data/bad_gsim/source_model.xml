@@ -7,12 +7,12 @@
 	            <complexFaultGeometry>
 	                <faultTopEdge>
 	                    <gml:LineString>
-	                        <gml:posList> -77.18 17.75 5.00 -77.10 18.92 5.00  </gml:posList>
+	                        <gml:posList> -77.10 18.92 5.00 -77.18 17.75 5.00  </gml:posList>
 	                    </gml:LineString>
 	                </faultTopEdge>
 	                <faultBottomEdge>
 	                    <gml:LineString>
-	                        <gml:posList> -77.86 17.69 50.00 -77.70 18.96 50.00  </gml:posList>
+	                        <gml:posList> -77.70 18.96 50.00 -77.86 17.69 50.00  </gml:posList>
 	                    </gml:LineString>
 	                </faultBottomEdge>
 	            </complexFaultGeometry>
@@ -27,20 +27,20 @@
 		<faultTopEdge>
 		  <gml:LineString>
 		    <gml:posList>
-		      -79.27 17.85 5
-		      -78.96 16.74 5 
+		      -78.79 14.76 5
 		      -78.95 16.13 5
-		      -78.79 14.76 5                  
+		      -78.96 16.74 5
+		      -79.27 17.85 5
 		    </gml:posList>
 		  </gml:LineString>
 		</faultTopEdge>
 		<faultBottomEdge>
 		  <gml:LineString>
 		    <gml:posList>
-		      -79.19 17.88 60
-		      -78.86 16.75 60
+		      -78.71 14.76 60
 		      -78.86 16.15 60
-		      -78.71 14.76 60 
+		      -78.86 16.75 60
+		      -79.19 17.88 60
 		    </gml:posList>
 		  </gml:LineString>
 		</faultBottomEdge>
