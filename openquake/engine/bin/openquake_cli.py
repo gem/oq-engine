@@ -45,10 +45,10 @@ from openquake.engine.tools.import_hazard_curves import import_hazard_curves
 from openquake.engine.tools import save_hazards, load_hazards
 
 HAZARD_OUTPUT_ARG = "--hazard-output-id"
-HAZARD_JOB_ARG = "--hazard-job-id"
+HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
 MISSING_HAZARD_MSG = ("Please specify the ID of the hazard output (or "
                       "job) to be used by using '%s (or %s) <id>'" %
-                      (HAZARD_OUTPUT_ARG, HAZARD_JOB_ARG))
+                      (HAZARD_OUTPUT_ARG, HAZARD_CALCULATION_ARG))
 
 
 def set_up_arg_parser():
@@ -153,10 +153,10 @@ def set_up_arg_parser():
         help='Use the desired hazard output as input for the risk job',
         metavar='HAZARD_OUTPUT')
     risk_grp.add_argument(
-        HAZARD_JOB_ARG,
-        '--hj',
+        HAZARD_CALCULATION_ARG,
+        '--hc',
         help='Use the desired hazard job as input for the risk job',
-        metavar='HAZARD_JOB_ID')
+        metavar='HAZARD_CALCULATION_ID')
     risk_grp.add_argument(
         '--list-risk-calculations',
         '--lrc',
@@ -256,11 +256,11 @@ def list_inputs(input_type):
         print "%9d|%s" % (inp.id, inp.name)
 
 
-def list_calculations(calc_manager):
+def list_calculations(job_manager):
     """
     Print a summary of past calculations.
 
-    :param calc_manager:
+    :param job_manager:
 
        a django manager (e.g.
        :class:`openquake.engine.db.models.RiskCalculation.objects`)
@@ -271,18 +271,25 @@ def list_calculations(calc_manager):
     # without a OqJob instance (e.g. when the user imports outputs
     # directly from files) we filter out the calculation without the
     # corresponding job
+    if job_manager.model is models.RiskCalculation:
+        jobs = [calc.oqjob for calc in job_manager.filter(
+            oqjob__user_name=getpass.getuser()).order_by('oqjob__last_update')]
+    else:
+        jobs = job_manager.filter(
+            user_name=getpass.getuser()).order_by('last_update')
 
-    calcs = calc_manager.filter(
-        oqjob__user_name=getpass.getuser(),
-        oqjob__isnull=False).order_by('oqjob__last_update')
-
-    if len(calcs) == 0:
+    if len(jobs) == 0:
         print 'None'
     else:
         print ('job_id | calc_id |     status |         last_update | '
                '        description')
-        for calc in calcs:
-            latest_job = calc.oqjob
+        for job in jobs:
+            if job_manager.model is models.RiskCalculation:
+                calc_id = job.risk_calculation.id
+            else:
+                calc_id = job.id
+            descr = job.get_param('description', None)
+            latest_job = job
             if latest_job.is_running:
                 status = 'pending'
             else:
@@ -293,10 +300,8 @@ def list_calculations(calc_manager):
             last_update = latest_job.last_update.strftime(
                 '%Y-%m-%d %H:%M:%S %Z'
             )
-
             print '%6d | %7d | %10s | %s| %s' % (
-                calc.oqjob.id, calc.id, status, last_update, calc.description
-            )
+                job.id, calc_id, status, last_update, descr)
 
 
 # TODO: the command-line switches are not tested, included this one
@@ -304,8 +309,10 @@ def list_imported_outputs():
     """
     List outputs which were imported from a file, not calculated from a job
     """
-    outputs = models.Output.objects.filter(
-        oq_job__hazard_calculation__description__contains=' importer, file ')
+    jobs = [jp.job.id for jp in models.JobParam.objects.filter(
+            value__contains=' importer, file ', name='description',
+            job__user_name=getpass.getuser())]
+    outputs = models.Output.objects.filter(oq_job__in=jobs)
     engine.print_outputs_summary(outputs)
 
 
@@ -314,8 +321,7 @@ def export_hazard(haz_output_id, target_dir, export_type):
 
 
 def export_hazard_outputs(hc_id, target_dir, export_type):
-    for output in models.Output.objects.filter(
-            oq_job__hazard_calculation=hc_id):
+    for output in models.Output.objects.filter(oq_job=hc_id):
         print 'Exporting %s...' % output
         export(hazard_export.export, output.id, target_dir, export_type)
 
@@ -368,7 +374,7 @@ def delete_uncompleted_calculations():
             oqjob__status="successful"):
         del_risk_calc(rc.id, True)
 
-    for hc in models.HazardCalculation.objects.filter(
+    for hc in models.OqJob.objects.filter(
             oqjob__user_name=getpass.getuser()).exclude(
             oqjob__status="successful"):
         del_haz_calc(hc.id, True)
@@ -464,7 +470,7 @@ def main():
 
     # hazard
     elif args.list_hazard_calculations:
-        list_calculations(models.HazardCalculation.objects)
+        list_calculations(models.OqJob.objects)
     elif args.list_hazard_outputs is not None:
         engine.list_hazard_outputs(args.list_hazard_outputs)
     elif args.export_hazard is not None:
@@ -496,13 +502,13 @@ def main():
                             args.export_type)
     elif args.run_risk is not None:
         if (args.hazard_output_id is None
-                and args.hazard_job_id is None):
+                and args.hazard_calculation_id is None):
             sys.exit(MISSING_HAZARD_MSG)
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
         engine.run_job(expanduser(args.run_risk), args.log_level, log_file,
                        args.exports, hazard_output_id=args.hazard_output_id,
-                       hazard_job_id=args.hazard_job_id)
+                       hazard_calculation_id=args.hazard_calculation_id)
     elif args.delete_risk_calculation is not None:
         del_risk_calc(args.delete_risk_calculation, args.yes)
     # import
@@ -510,12 +516,12 @@ def main():
         with open(args.load_gmf) as f:
             out = import_gmf_scenario(f)
             print 'Added output id=%d of type %s; hazard_calculation_id=%d'\
-                % (out.id, out.output_type, out.oq_job.hazard_calculation.id)
+                % (out.id, out.output_type, out.oq_job.id)
     elif args.load_curve is not None:
         with open(args.load_curve) as f:
             out = import_hazard_curves(f)
             print 'Added output id=%d of type %s; hazard_calculation_id=%d'\
-                % (out.id, out.output_type, out.oq_job.hazard_calculation.id)
+                % (out.id, out.output_type, out.oq_job.id)
     elif args.list_imported_outputs:
         list_imported_outputs()
     elif args.delete_uncompleted_calculations:

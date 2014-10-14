@@ -36,89 +36,16 @@ from openquake.engine.db import models
 from openquake.engine.tests.utils import helpers
 
 
-class HazardCalculationGeometryTestCase(unittest.TestCase):
-    """Test special geometry handling in the HazardCalculation constructor."""
-
-    def test_points_to_compute_none(self):
-        hc = models.HazardCalculation.create()
-        self.assertIsNone(hc.points_to_compute())
-
-        hc = models.HazardCalculation.create(region=[(1, 2), (3, 4), (5, 6)])
-        # There's no region grid spacing
-        self.assertIsNone(hc.points_to_compute())
-
-    def test_points_to_compute_region(self):
-        lons = [
-            6.761295081695822, 7.022590163391642,
-            7.28388524508746, 7.54518032678328,
-            7.806475408479099, 8.067770490174919,
-            8.329065571870737, 6.760434846130313,
-            7.020869692260623, 7.281304538390934,
-            7.541739384521245, 7.802174230651555,
-            8.062609076781865, 8.323043922912175,
-            6.759582805761787, 7.019165611523571,
-            7.278748417285356, 7.53833122304714,
-            7.797914028808925, 8.057496834570708,
-            8.317079640332492, 6.758738863707749,
-            7.017477727415495, 7.276216591123242,
-            7.534955454830988, 7.793694318538734,
-            8.05243318224648, 8.311172045954226,
-        ]
-
-        lats = [
-            46.5, 46.5,
-            46.5, 46.5,
-            46.5, 46.5,
-            46.5, 46.320135678816236,
-            46.320135678816236, 46.320135678816236,
-            46.320135678816236, 46.320135678816236,
-            46.320135678816236, 46.320135678816236,
-            46.140271357632486, 46.140271357632486,
-            46.140271357632486, 46.140271357632486,
-            46.140271357632486, 46.140271357632486,
-            46.140271357632486, 45.96040703644873,
-            45.96040703644873, 45.96040703644873,
-            45.96040703644873, 45.96040703644873,
-            45.96040703644873, 45.96040703644873,
-        ]
-
-        hc = models.HazardCalculation.create(
-            region=[(6.5, 45.8), (6.5, 46.5), (8.5, 46.5), (8.5, 45.8)],
-            region_grid_spacing=20)
-        mesh = hc.points_to_compute(save_sites=False)
-
-        numpy.testing.assert_array_almost_equal(lons, mesh.lons)
-        numpy.testing.assert_array_almost_equal(lats, mesh.lats)
-
-    def test_points_to_compute_sites(self):
-        lons = [6.5, 6.5, 8.5, 8.5]
-        lats = [45.8, 46.5, 46.5, 45.8]
-        hc = models.HazardCalculation.create(
-            sites=[(6.5, 45.8), (6.5, 46.5), (8.5, 46.5), (8.5, 45.8)])
-
-        mesh = hc.points_to_compute(save_sites=False)
-
-        numpy.testing.assert_array_equal(lons, mesh.lons)
-        numpy.testing.assert_array_equal(lats, mesh.lats)
-
-
 class ProbabilisticRuptureTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(self):
         cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
         job = helpers.get_job(cfg)
-
-        lt_model = models.LtSourceModel.objects.create(
-            hazard_calculation=job.hazard_calculation, ordinal=0,
-            sm_lt_path='foo')
-        lt_rlz = models.LtRealization.objects.create(
-            lt_model=lt_model, ordinal=0, gsim_lt_path='bar', weight=1)
         output = models.Output.objects.create(
             oq_job=job, display_name='test', output_type='ses')
-        ses_coll = models.SESCollection.objects.create(
-            output=output, lt_model=lt_rlz.lt_model, ordinal=0)
-
+        ses_coll = models.SESCollection.create(
+            output=output)
         self.mesh_lons = numpy.array(
             [0.1 * x for x in range(16)]).reshape((4, 4))
         self.mesh_lats = numpy.array(
@@ -133,24 +60,12 @@ class ProbabilisticRuptureTestCase(unittest.TestCase):
             10, 20, 30,
             Point(3.9, 2.2, 10), Point(4.90402718, 3.19634248, 10),
             Point(5.9, 2.2, 90), Point(4.89746275, 1.20365263, 90))
-
-        trt = 'Active Shallow Crust'
-        trt_model = models.TrtModel.objects.create(
-            lt_model=lt_model,
-            tectonic_region_type=trt,
-            num_sources=0,
-            num_ruptures=1,
-            min_mag=5,
-            max_mag=5,
-            gsims=['testGSIM'])
         self.fault_rupture = models.ProbabilisticRupture.objects.create(
             ses_collection=ses_coll, magnitude=5, rake=0, surface=sfs,
-            trt_model=trt_model, is_from_fault_source=True,
-            is_multi_surface=False)
+            is_from_fault_source=True, is_multi_surface=False)
         self.source_rupture = models.ProbabilisticRupture.objects.create(
             ses_collection=ses_coll, magnitude=5, rake=0, surface=ps,
-            trt_model=trt_model, is_from_fault_source=False,
-            is_multi_surface=False)
+            is_from_fault_source=False, is_multi_surface=False)
 
     def test_fault_rupture(self):
         # Test loading a fault rupture from the DB, just to illustrate a use
@@ -192,17 +107,16 @@ class GetSiteCollectionTestCase(unittest.TestCase):
         calc = cls_core.ClassicalHazardCalculator(job)
 
         # Bootstrap the `hazard_site` table:
-        calc.initialize_site_model()
+        calc.initialize_site_collection()
         calc.initialize_sources()
 
-        site_coll = job.hazard_calculation.site_collection
+        site_coll = calc.site_collection
         # Since we're using a pretty big site model, it's a bit excessive to
         # check each and every value.
         # Instead, we'll just test that the lenth of each site collection attr
         # is equal to the number of points of interest in the calculation.
-        expected_len = len(job.hazard_calculation.points_to_compute())
+        expected_len = len(site_coll)
 
-        self.assertEqual(expected_len, len(site_coll))
         self.assertEqual(expected_len, len(site_coll.vs30))
         self.assertEqual(expected_len, len(site_coll.vs30measured))
         self.assertEqual(expected_len, len(site_coll.z1pt0))
@@ -214,19 +128,14 @@ class GetSiteCollectionTestCase(unittest.TestCase):
         models.JobStats.objects.create(oq_job=job)
 
         calc = scen_core.ScenarioHazardCalculator(job)
-        calc.initialize_site_model()
-        site_coll = job.hazard_calculation.site_collection
+        calc.initialize_site_collection()
+        site_coll = calc.site_collection
 
         # all of the parameters should be the same:
         self.assertTrue((site_coll.vs30 == 760).all())
         self.assertTrue((site_coll.vs30measured).all())
         self.assertTrue((site_coll.z1pt0 == 100).all())
         self.assertTrue((site_coll.z2pt5 == 5).all())
-
-        # just for sanity, make sure the meshes are correct (the locations)
-        job_mesh = job.hazard_calculation.points_to_compute()
-        self.assertTrue((job_mesh.lons == site_coll.mesh.lons).all())
-        self.assertTrue((job_mesh.lats == site_coll.mesh.lats).all())
 
         # test SESCollection
         calc.initialize_sources()

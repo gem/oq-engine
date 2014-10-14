@@ -137,8 +137,8 @@ https://github.com/gem/oq-engine/tree/master/openquake/engine/db/schema/upgrades
 Please note that the following scripts are potentially dangerous and could destroy your data:
 https://github.com/gem/oq-engine/tree/master/openquake/engine/db/schema/upgrades/0002-danger-drop-gmf.sql
 Click on the links if you want to know what exactly the scripts are doing.
-Even slow script can be fast if your database is small or touch tables that are empty.
-Even dangerous scripts are fine if they touch empty tables or data you are not interested in.'''
+Even slow script can be fast if your database is small or the upgrade affects tables that are empty.
+Even dangerous scripts are fine if they affect empty tables or data you are not interested in.'''
         self.check_message('''
 >0000-base_schema.sql<
 >0001-slow-uniq-ruptures.sql<

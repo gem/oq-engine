@@ -38,7 +38,7 @@ def quote_unwrap(name):
 
 def load_tablename(original_tablename):
     _schema, tname = map(quote_unwrap, original_tablename.split('.'))
-    return "htemp.load_%s" % tname
+    return "load_%s" % tname
 
 
 def transfer_data(curs, model, **foreign_keys):
@@ -130,8 +130,8 @@ def safe_load(curs, filename, original_tablename):
                 tablename, original_tablename))
         curs.copy_expert(
             """COPY %s FROM stdin
-               WITH (FORMAT 'csv', HEADER true, ENCODING 'utf8')""" % (
-                       tablename), gzip.GzipFile(os.path.abspath(filename)))
+               WITH (FORMAT 'csv', HEADER true, ENCODING 'utf8')""" %
+            tablename, gzip.GzipFile(os.path.abspath(filename)))
     except Exception as e:
         conn.rollback()
         log.error(str(e))
@@ -159,21 +159,23 @@ def hazard_load(conn, directory):
         log.info('Importing %s...', fname)
         created.append(tname)
         safe_load(curs, fullname, tname)
-    hc_ids = transfer_data(curs, models.HazardCalculation)
+
+    job_ids = transfer_data(curs, models.OqJob)
+    sm_ids = transfer_data(
+        curs, models.LtSourceModel, hazard_calculation_id=job_ids)
     lt_ids = transfer_data(
-        curs, models.LtRealization, hazard_calculation_id=hc_ids)
+        curs, models.LtRealization, lt_model_id=sm_ids)
     transfer_data(
-        curs, models.HazardSite, hazard_calculation_id=hc_ids)
-    job_ids = transfer_data(
-        curs, models.OqJob, hazard_calculation_id=hc_ids)
+        curs, models.HazardSite, hazard_calculation_id=job_ids)
     out_ids = transfer_data(
         curs, models.Output, oq_job_id=job_ids)
     ses_collection_ids = transfer_data(
         curs, models.SESCollection,
         output_id=out_ids, lt_realization_id=lt_ids)
-    ses_ids = transfer_data(
-        curs, models.SES, ses_collection_id=ses_collection_ids)
-    transfer_data(curs, models.SESRupture, ses_id=ses_ids)
+    rup_ids = transfer_data(
+        curs, models.ProbabilisticRupture,
+        ses_collection_id=ses_collection_ids)
+    transfer_data(curs, models.SESRupture, rupture_id=rup_ids)
 
     curs = conn.cursor()
     try:

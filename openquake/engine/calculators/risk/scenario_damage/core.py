@@ -24,7 +24,7 @@ import numpy
 
 from django import db
 
-from openquake.commonlib.riskloaders import get_damage_states_and_risk_models
+from openquake.commonlib.riskmodels import get_risk_models
 
 from openquake.engine.calculators.risk import (
     base, hazard_getters, writers, validation)
@@ -163,10 +163,9 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         """
         Load fragility model and store damage states
         """
-        damage_states, risk_models = get_damage_states_and_risk_models(
-            self.rc.inputs['fragility'])
+        risk_models = get_risk_models(models.oqparam(self.job.id))
 
-        for lsi, dstate in enumerate(damage_states):
+        for lsi, dstate in enumerate(risk_models.damage_states):
             models.DmgState.objects.get_or_create(
                 risk_calculation=self.rc, dmg_state=dstate, lsi=lsi)
 
