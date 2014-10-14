@@ -163,7 +163,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         """
         Load fragility model and store damage states
         """
-        risk_models = get_risk_models(self.rc.inputs['fragility'])
+        risk_models = get_risk_models(models.oqparam(self.job.id))
 
         for lsi, dstate in enumerate(risk_models.damage_states):
             models.DmgState.objects.get_or_create(
