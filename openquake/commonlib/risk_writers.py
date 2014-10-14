@@ -352,7 +352,7 @@ class LossMapWriter(object):
                  statistics=None, quantile_value=None, unit=None,
                  loss_category=None):
 
-        # FIXME Relaxed constraint for scenario risk calculator
+        # Relaxed constraint for scenario risk calculator
         # which doesn't have hazard metadata.
         if gsim_tree_path and source_model_tree_path:
             validate_hazard_metadata(gsim_tree_path, source_model_tree_path,

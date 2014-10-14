@@ -11,7 +11,7 @@ from openquake.commonlib.oqvalidation import \
 from openquake.commonlib.riskmodels import \
     get_fragility_functions, get_imtls_from_vulnerabilities, get_vfs
 from openquake.commonlib.source import RuptureConverter
-from openquake.commonlib.nrml import registry
+from openquake.commonlib.nrml import nodefactory
 
 
 def get_mesh(oqparam):
@@ -49,7 +49,7 @@ def get_site_model(oqparam):
     """
     for node in read_nodes(oqparam.inputs['site_model'],
                            lambda el: el.tag.endswith('site'),
-                           registry['siteModel']):
+                           nodefactory['siteModel']):
         yield ~node
 
 
@@ -98,7 +98,7 @@ def get_rupture(oqparam):
     conv = RuptureConverter(oqparam.rupture_mesh_spacing)
     rup_model = oqparam.inputs['rupture_model']
     rup_node, = read_nodes(rup_model, lambda el: 'Rupture' in el.tag,
-                           registry['sourceModel'])
+                           nodefactory['sourceModel'])
     return conv.convert_node(rup_node)
 
 
@@ -112,7 +112,7 @@ def get_source_models(oqparam):
     """
     for fname in oqparam.inputs['source']:
         srcs = read_nodes(fname, lambda elem: 'Source' in elem.tag,
-                          registry['sourceModel'])
+                          nodefactory['sourceModel'])
         yield fname, srcs
 
 

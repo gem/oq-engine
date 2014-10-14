@@ -63,6 +63,8 @@ Cost = namedtuple("Cost", "cost_type value retrofitted deductible limit")
 Occupancy = namedtuple("Occupancy", "occupants period")
 
 
+# TODO: this class will disappear soon, see
+# https://bugs.launchpad.net/oq-engine/+bug/1380465
 class ExposureModelParser(object):
     """
     Exposure model parser. This class is implemented as a generator.
@@ -155,13 +157,14 @@ class ExposureModelParser(object):
 
 def _to_occupancy(element):
     """
-    Convert the 'occupants' tags to named tuples.
+    Convert the 'occupancy' tags to named tuples.
 
-    We want to extract the value of <occupants>. We expect the input
-    element to be an 'assetDefinition' and have a child element
-    structured like this:
+    We want to extract the values of <occupancies>. We expect the node
+    to have child elements structured like this:
 
-    <occupants description="day">245</occupants>
+    <occupancy occupants="100" period="day"/>
+    <occupancy occupants="50" period="night"/>
+    ...
     """
 
     occupancy_data = []

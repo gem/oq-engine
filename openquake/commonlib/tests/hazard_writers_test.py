@@ -112,7 +112,7 @@ class SESRupture(object):
 
 class HazardCurveWriterTestCase(unittest.TestCase):
 
-    FAKE_PATH = 'TODO'  # use a place in /tmp
+    FAKE_PATH = 'fake.xml'  # used when the writer raises ValueError
     TIME = 50.0
     IMLS = [0.005, 0.007, 0.0098]
 
