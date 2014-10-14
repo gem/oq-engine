@@ -124,8 +124,6 @@ def run_risk(job_id, sorted_assocs, calc):
             risk_input.__exit__(None, None, None)
     return acc
 
-                if taxo == taxonomy:
-                    risk_model = calc.risk_models[imt, taxonomy]
 
 def updatedict(acc, dic):
     a = acc.copy()
