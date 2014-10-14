@@ -118,6 +118,8 @@ def run_job(cfg, exports=None, hazard_calculation_id=None,
     """
     Given the path to a job config file and a hazard_calculation_id
     or a output, run the job.
+
+    :returns: a calculator object
     """
     if exports is None:
         exports = []
@@ -129,8 +131,7 @@ def run_job(cfg, exports=None, hazard_calculation_id=None,
 
     logfile = os.path.join(tempfile.gettempdir(), 'qatest.log')
 
-    engine.run_calc(job, 'error', logfile, exports, job.job_type)
-    return job
+    return engine.run_calc(job, 'error', logfile, exports, job.job_type)
 
 
 def timeit(method):
@@ -339,7 +340,10 @@ def get_job(cfg, username="openquake", hazard_calculation_id=None,
 
 def create_gmf_sescoll(output, output_type='gmf'):
     """
-    Returns Gmf and SESCollection instances
+    Returns Gmf and SESCollection instances.
+
+    :param output: a :class:`openquake.engine.db.models.Ouput` instance
+    :param output_type: a string with the output type
     """
     sescoll = models.SESCollection.create(output)
 
@@ -355,20 +359,25 @@ def create_gmf_sescoll(output, output_type='gmf'):
     return gmf, sescoll
 
 
-def create_gmf_data_records(hazard_job, points=None):
+def create_gmf_data_records(hazard_job, coordinates=None):
     """
     Returns the created records.
+
+    :param hazard_joint: a :class:`openquake.engine.db.models.OqJob` instance
+    :param coordinates: a list of (lon, lat) pairs
+
+    If the coordinates are not set, a list of 5 predefined locations is used
     """
     output = models.Output.objects.create_output(
         hazard_job, "Test SES Collection", "ses")
     gmf, ses_coll = create_gmf_sescoll(output)
     ruptures = create_ses_ruptures(hazard_job, ses_coll, 3)
     records = []
-    if points is None:
-        points = [(15.310, 38.225), (15.71, 37.225),
-                  (15.48, 38.091), (15.565, 38.17),
-                  (15.481, 38.25)]
-    for site_id in models.save_sites(hazard_job, points):
+    if coordinates is None:
+        coordinates = [(15.310, 38.225), (15.71, 37.225),
+                       (15.48, 38.091), (15.565, 38.17),
+                       (15.481, 38.25)]
+    for site_id in models.save_sites(hazard_job, coordinates):
         records.append(models.GmfData.objects.create(
             gmf=gmf,
             task_no=0,
@@ -384,6 +393,9 @@ def create_gmf_from_csv(job, fname, output_type='gmf'):
     """
     Populate the gmf_data table for an event_based (default)
     or scenario calculation (output_type="gmf_scenario").
+
+    :param job: an :class:`openquake.engine.db.models.OqJob` instance
+    :param output_type: a string with the output type
     """
     hc = job.get_oqparam()
     if output_type == "gmf":  # event based

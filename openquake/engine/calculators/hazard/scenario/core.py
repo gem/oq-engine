@@ -26,9 +26,9 @@ from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.imt import from_string
 import openquake.hazardlib.gsim
 
-from openquake.nrmllib.node import read_nodes
+from openquake.commonlib.node import read_nodes
 from openquake.commonlib.general import split_in_blocks
-from openquake.commonlib.source import ValidNode, RuptureConverter
+from openquake.commonlib.readinput import get_rupture
 
 from openquake.engine.calculators.hazard import general as haz_general
 from openquake.engine.utils import tasks
@@ -125,17 +125,6 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         self.gmf = None
         self.rupture = None
 
-    def initialize_sources(self):
-        """
-        Get the rupture_model file from the job.ini file, and set the
-        attribute self.rupture.
-        """
-        rup_spacing = self.hc.rupture_mesh_spacing
-        rup_model = self.hc.inputs['rupture_model']
-        rup_node, = read_nodes(rup_model, lambda el: 'Rupture' in el.tag,
-                               ValidNode)
-        self.rupture = RuptureConverter(rup_spacing).convert_node(rup_node)
-
     def initialize_realizations(self):
         """There are no realizations for the scenario calculator"""
         pass
@@ -157,8 +146,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
             self.parse_risk_model()
         with transaction.commit_on_success(using='job_init'):
             self.initialize_site_collection()
-        with transaction.commit_on_success(using='job_init'):
-            self.initialize_sources()
+
         self.create_ruptures()
         hc = self.job.get_oqparam()
 
@@ -180,6 +168,8 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         return 0, output_weight
 
     def create_ruptures(self):
+        self.rupture = get_rupture(models.oqparam(self.job.id))
+
         # check filtering
         hc = self.hc
         self.sites = filters.filter_sites_by_distance_to_rupture(

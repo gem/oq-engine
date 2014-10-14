@@ -41,7 +41,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.gis.db import models as djm
 
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import source, geo, calc, correlation
+from openquake.hazardlib import geo, calc, correlation
 from openquake.hazardlib.site import FilteredSiteCollection
 
 from openquake.commonlib.riskmodels import loss_type_to_cost_type
@@ -433,7 +433,6 @@ class Performance(djm.Model):
         db_table = 'uiapi\".\"performance'
 
 
-# this is used in the tests, see helpers.py
 def save_sites(job, coords):
     """
     Save all the gives sites on the hzrdi.hazard_site table.
@@ -632,20 +631,13 @@ class RiskCalculation(djm.Model):
             not given, `DEFAULT_MAXIMUM_DISTANCE` is used as default) and the
             step (if exists) used by the hazard calculation.
         """
-        dist = self.maximum_distance
+        dist = self.maximum_distance or self.DEFAULT_MAXIMUM_DISTANCE
 
-        if dist is None:
-            dist = self.DEFAULT_MAXIMUM_DISTANCE
+        grid_spacing = self.hazard_calculation.get_param(
+            'region_grid_spacing', None)
+        if grid_spacing:
+            dist = min(dist, grid_spacing * numpy.sqrt(2) / 2)
 
-        hc = self.get_hazard_param()
-        if getattr(hc, 'region_grid_spacing', None) is not None:
-            dist = min(dist, hc.region_grid_spacing * numpy.sqrt(2) / 2)
-
-        # if we are computing hazard at exact location we set the
-        # maximum_distance to a very small number in order to help the
-        # query to find the results.
-        if 'exposure' in hc.inputs:
-            dist = 0.001
         return dist
 
     @property
@@ -937,7 +929,7 @@ class Output(djm.Model):
         investigation_time = self.oq_job\
                                  .risk_calculation\
                                  .hazard_calculation\
-                                 .get_param('investigation_time', 0)
+                                 .get_param('investigation_time', None)
 
         statistics, quantile = self.statistical_params
         gsim_lt_path, sm_lt_path = self.lt_realization_paths
@@ -1189,7 +1181,7 @@ class SES(object):
         self.ses_collection = ses_collection
         self.ordinal = ordinal
         self.investigation_time = self.ses_collection.output.oq_job.get_param(
-            'investigation_time', 0)
+            'investigation_time', None)
 
     def __cmp__(self, other):
         return cmp(self.ordinal, other.ordinal)
@@ -1661,9 +1653,8 @@ class GmfSet(object):
     Small wrapper around the list of Gmf objects associated to the given SES.
     """
     def __init__(self, ses, gmfset):
-        self.ses = ses
         self.gmfset = gmfset
-        self.investigation_time = ses.investigation_time
+        self.investigation_time = ses.investigation_time or 0
         self.stochastic_event_set_id = ses.ordinal
 
     def __iter__(self):
@@ -1676,8 +1667,8 @@ class GmfSet(object):
         return (
             'GMFsPerSES(investigation_time=%f, '
             'stochastic_event_set_id=%s,\n%s)' % (
-                self.ses.investigation_time,
-                self.ses.ordinal, '\n'.join(
+                self.investigation_time,
+                self.stochastic_event_set_id, '\n'.join(
                     sorted(str(g) for g in self.gmfset))))
 
 
@@ -1722,7 +1713,7 @@ class _GroundMotionFieldNode(object):
     def __lt__(self, other):
         """
         A reproducible ordering by lon and lat; used in
-        :function:`openquake.nrmllib.hazard.writers.gen_gmfs`
+        :function:`openquake.commonlib.hazard_writers.gen_gmfs`
         """
         return self.location < other.location
 
@@ -1752,7 +1743,6 @@ class GmfData(djm.Model):
         ordering = ['gmf', 'task_no']
 
 
-# used in the scenario QA tests
 def get_gmvs_per_site(output, imt):
     """
     Iterator for walking through all :class:`GmfData` objects associated

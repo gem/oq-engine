@@ -28,7 +28,15 @@ executed TIMESTAMP NOT NULL DEFAULT now()
 
 class WrappedConnection(object):
     """
-    :param conn: a DBAPI2-compatible connection
+    This is an utility class that wraps a DB API-2 connection
+    providing a couple of convenient features.
+
+    1) it is possible to set a debug flag to print on stdout
+       the executed queries;
+    2) there is a .run method to run a query with a dedicated
+       cursor; it returns the cursor, which can be iterated over
+
+    :param conn: a DB API2-compatible connection
     """
     def __init__(self, conn, debug=False):
         self._conn = conn
@@ -43,6 +51,7 @@ class WrappedConnection(object):
 
         :param templ: a query or query template
         :param args: the arguments (or the empty tuple)
+        :returns: the DB API 2 cursor used to run the query
         """
         curs = self._conn.cursor()
         query = curs.mogrify(templ, args)
@@ -52,9 +61,13 @@ class WrappedConnection(object):
         return curs
 
 
-def run_script(upgrade, rollback=True, debug=True):
+def check_script(upgrade, dry_run=True, debug=True):
     """
     An utility to debug upgrade scripts written in Python
+
+    :param upgrade: upgrade procedure
+    :param dry_run: if True, do not change the database
+    :param debug: if True, print the queries which are executed
     """
     from openquake.engine.db.models import getcursor
     conn = WrappedConnection(getcursor('admin').connection, debug=debug)
@@ -64,7 +77,7 @@ def run_script(upgrade, rollback=True, debug=True):
         conn.rollback()
         raise
     else:
-        if rollback:
+        if dry_run:
             conn.rollback()
         else:
             conn.commit()
@@ -386,8 +399,8 @@ def what_if_I_upgrade(conn, pkg_name='openquake.engine.db.schema.upgrades',
             'scripts are doing.')
     if slow:
         msg += ('\nEven slow script can be fast if your database is small or'
-                ' touch tables that are empty.')
+                ' the upgrade affects tables that are empty.')
     if danger:
         msg += ('\nEven dangerous scripts are fine if they '
-                'touch empty tables or data you are not interested in.')
+                'affect empty tables or data you are not interested in.')
     return msg
