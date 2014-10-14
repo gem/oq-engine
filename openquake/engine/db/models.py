@@ -2247,6 +2247,13 @@ class LossFractionData(djm.Model):
 
     def to_csv_str(self):
         """
+        Convert LossFractionData into a CSV string
+        """
+        return '%.5f,%.5f,%s,%s' % (
+            self.location.x, self.location.y, self.value, self.absolute_loss)
+
+    def to_csv_str(self):
+        """
         Convert LossFraction into a CSV string
         """
         return '%.5f,%.5f,%s,%s' % (
