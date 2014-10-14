@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <stochasticEventSetCollection sourceModelTreePath="foo">
+        <stochasticEventSet id="1" investigationTime="50.0">
+            <rupture id="rlz=00,ses=0001,src=231,i=1" magnitude="5.5" strike="0.0" dip="45.0" rake="0.0" tectonicRegion="Active Shallow Crust">
+                <!-- in case the rupture is generated from a point or area source -->
+                <planarSurface>
+                    <topLeft lon="1.1" lat="1.1" depth="1.1" />
+                    <topRight lon="1.2" lat="1.2" depth="1.2" />
+                    <bottomLeft lon="1.3" lat="1.3" depth="1.4" />
+                    <bottomRight lon="1.3" lat="1.3" depth="1.3" />
+                </planarSurface>
+            </rupture>
+            <rupture id="rlz=00,ses=0001,src=231,i=1" magnitude="6.5" strike="0.0" dip="45.0" rake="0.0" tectonicRegion="Active Shallow Crust">
+                <!-- in case the rupture is generated from a fault source, simple or complex -->
+                <mesh rows="2" cols="2">
+                    <node row="0" col="0" lon="0.0" lat="0.0" depth="0.0" />
+                    <node row="0" col="1" lon="0.1" lat="0.1" depth="0.1" />
+                    <node row="1" col="0" lon="-0.1" lat="-0.1" depth="0.2" />
+                    <node row="1" col="1" lon="-0.2" lat="-0.2" depth="0.3" />
+                </mesh>
+            </rupture>
+        </stochasticEventSet>
+        <stochasticEventSet id="2" investigationTime="40.0">
+            <rupture id="rlz=00,ses=0002,src=231,i=0" magnitude="5.5" strike="0.0" dip="45.0" rake="0.0" tectonicRegion="Stable Shallow Crust">
+                <planarSurface>
+                    <topLeft lon="1.1" lat="1.1" depth="1.1" />
+                    <topRight lon="1.2" lat="1.2" depth="1.2" />
+                    <bottomLeft lon="1.3" lat="1.3" depth="1.4" />
+                    <bottomRight lon="1.3" lat="1.3" depth="1.3" />
+                </planarSurface>
+            </rupture>
+            <rupture id="rlz=00,ses=0002,src=231,i=1" magnitude="6.5" strike="0.0" dip="45.0" rake="0.0" tectonicRegion="Stable Shallow Crust">
+                <mesh rows="2" cols="2">
+                    <node row="0" col="0" lon="0.0" lat="0.0" depth="0.0" />
+                    <node row="0" col="1" lon="0.1" lat="0.1" depth="0.1" />
+                    <node row="1" col="0" lon="-0.1" lat="-0.1" depth="0.2" />
+                    <node row="1" col="1" lon="-0.2" lat="-0.2" depth="0.3" />
+                </mesh>
+            </rupture>
+        </stochasticEventSet>
+    </stochasticEventSetCollection>
+</nrml>

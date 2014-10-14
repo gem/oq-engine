@@ -18,7 +18,7 @@
 import os
 import unittest
 import tempfile
-from openquake.nrmllib import InvalidFile
+from openquake.commonlib import InvalidFile
 from openquake.commonlib import record, records
 from openquake.commonlib.csvmanager import (
     MemArchive, CSVManager, NotInArchive, mkarchive)
@@ -82,9 +82,6 @@ class ConvertGoodFilesTestCase(unittest.TestCase):
 
     def test_exposure_buildings(self):
         self.check_round_trip('exposure-buildings.xml')
-
-    def test_gmf_scenario(self):
-        self.check_round_trip('gmf-scenario.xml')
 
     def test_gmf_event_based(self):
         self.check_round_trip('gmf-event-based.xml')

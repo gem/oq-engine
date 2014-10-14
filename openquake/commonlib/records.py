@@ -16,7 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.nrmllib.node import Node
+from openquake.commonlib.node import Node
 from openquake.hazardlib import imt
 from openquake.commonlib.record import Record, Field, Unique, ForeignKey
 from openquake.commonlib import valid
