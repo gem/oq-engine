@@ -87,7 +87,7 @@ def event_based_fr(job_id, sites, rc, risk_models,
     """
     hc = rc.hazard_calculation
     site_ids = set(sites.complete.sids)
-    truncation_level = hc.truncation_level
+    truncation_level = getattr(hc, 'truncation_level', None)
     sorted_imts = sorted(map(from_string, hc.intensity_measure_types))
 
     # init the Epsilon Provider only once
@@ -101,7 +101,7 @@ def event_based_fr(job_id, sites, rc, risk_models,
     getters_mon = getdata_mon.copy('building getters')
 
     assocs = models.AssocLtRlzTrtModel.objects.filter(
-        trt_model__lt_model__hazard_calculation=hc).order_by('rlz')
+        trt_model__lt_model__hazard_calculation=hc.oqjob).order_by('rlz')
 
     # mapping realization -> [(trt_model, gsim)]
     rlz2gsims = {
@@ -177,10 +177,9 @@ class EventBasedFRRiskCalculator(core.EventBasedRiskCalculator):
             # TODO: think about how to remove the need for .delete()
             # one should retrieve only the latest realizations
             # for a given hazard calculation; alternatively, the
-            # realizations should be associated to RiskCalculation,
-            # not to HazardCalculation
+            # realizations should be associated to RiskCalculation
             models.LtRealization.objects.filter(
-                lt_model__hazard_calculation=self.hc).delete()
+                lt_model__hazard_calculation=self.job).delete()
             self.hcalc.initialize_realizations()
             for rlz in self.hcalc._get_realizations():
                 output = models.Output.objects.create(
@@ -219,7 +218,7 @@ class EventBasedFRRiskCalculator(core.EventBasedRiskCalculator):
         args = []
         # compute the risk by splitting by sites
         for sites in split_site_collection(
-                self.hc.site_collection, self.concurrent_tasks):
+                self.site_collection, self.concurrent_tasks):
             args.append((self.job.id, sites, self.rc,
                          risk_models, getter_builders, outputdict,
                          self.calculator_parameters))

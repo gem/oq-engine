@@ -43,57 +43,22 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         return job, calc
 
     def test_initialize_sources(self):
-        self.calc.initialize_site_model()
+        self.calc.initialize_site_collection()
         self.calc.initialize_sources()
         # there is a single model
         [collector] = self.calc.source_collector.values()
         # before filtering and splitting there are 118 sources
         self.assertEqual(118, len(collector.sources))
 
-    @attr('slow')
-    def test_initialize_site_model(self):
-        # we need a slightly different config file for this test
-        cfg = helpers.get_data_path(
-            'simple_fault_demo_hazard/job_with_site_model.ini')
-        self.job = helpers.get_job(cfg)
-        self.calc = core.ClassicalHazardCalculator(self.job)
-
-        self.calc.initialize_site_model()
-        # If the site model isn't valid for the calculation geometry, a
-        # `RuntimeError` should be raised here
-
-        # Okay, it's all good. Now check the count of the site model records.
-        sm_nodes = models.SiteModel.objects.filter(job=self.job)
-
-        self.assertEqual(2601, len(sm_nodes))
-
-        num_pts_to_compute = len(
-            self.job.hazard_calculation.points_to_compute())
-
-        hazard_site = models.HazardSite.objects.filter(
-            hazard_calculation=self.job.hazard_calculation)
-
-        # The site model is good. Now test that `hazard_site` was computed.
-        # For now, just test the length.
-        self.assertEqual(num_pts_to_compute, len(hazard_site))
-
-    def test_initialize_site_model_no_site_model(self):
-        patch_path = 'openquake.engine.calculators.hazard.general.\
-store_site_model'
-        with helpers.patch(patch_path) as store_sm_patch:
-            self.calc.initialize_site_model()
-            # We should never try to store a site model in this case.
-            self.assertEqual(0, store_sm_patch.call_count)
-
     def test_initialize_realizations_montecarlo(self):
         # We need initialize sources first (read logic trees, parse sources,
         # etc.)
-        self.calc.initialize_site_model()
+        self.calc.initialize_site_collection()
         self.calc.initialize_sources()
 
         # No realizations yet:
         ltrs = models.LtRealization.objects.filter(
-            lt_model__hazard_calculation=self.job.hazard_calculation.id)
+            lt_model__hazard_calculation=self.job)
         self.assertEqual(0, len(ltrs))
 
         self.calc.process_sources()
@@ -107,8 +72,7 @@ store_site_model'
 
         # We expect 2 logic tree realizations
         ltr1, ltr2 = models.LtRealization.objects.filter(
-            lt_model__hazard_calculation=self.job.hazard_calculation.id
-        ).order_by("id")
+            lt_model__hazard_calculation=self.job).order_by("id")
 
         # Check each ltr contents, just to be thorough.
         self.assertEqual(0, ltr1.ordinal)
@@ -120,17 +84,16 @@ store_site_model'
         self.assertEqual(['b1'], ltr2.gsim_lt_path)
 
     def test_initialize_realizations_enumeration(self):
-        self.calc.initialize_site_model()
+        self.calc.initialize_site_collection()
         # enumeration is triggered by zero value used as number of realizations
-        self.calc.job.hazard_calculation.number_of_logic_tree_samples = 0
-        self.calc.job.hazard_calculation.save()
+        self.calc.hc.number_of_logic_tree_samples = 0
+
         self.calc.initialize_sources()
         self.calc.process_sources()
-
         self.calc.initialize_realizations()
 
         [ltr] = models.LtRealization.objects.filter(
-            lt_model__hazard_calculation=self.job.hazard_calculation.id)
+            lt_model__hazard_calculation=self.job)
 
         # Check each ltr contents, just to be thorough.
         self.assertEqual(0, ltr.ordinal)
@@ -140,7 +103,7 @@ store_site_model'
     @attr('slow')
     def test_complete_calculation_workflow(self):
         # Test the calculation workflow, from pre_execute through clean_up
-        hc = self.job.hazard_calculation
+        hc = self.job.get_oqparam()
 
         self.calc.pre_execute()
 
@@ -160,7 +123,7 @@ store_site_model'
         self.calc.post_execute()
 
         lt_rlzs = models.LtRealization.objects.filter(
-            lt_model__hazard_calculation=self.job.hazard_calculation.id)
+            lt_model__hazard_calculation=self.job)
 
         self.assertEqual(2, len(lt_rlzs))
 
@@ -265,7 +228,8 @@ store_site_model'
         self.job.save()
 
         # now test the hazard calculation can be removed
-        self.job.hazard_calculation.delete(using='admin')
+        self.job.delete(using='admin')
+
 
 def update_result_matrix(current, new):
     return 1 - (1 - current) * (1 - new)
@@ -305,8 +269,12 @@ class NoSourcesTestCase(unittest.TestCase):
         cfg = helpers.get_data_path('classical_job.ini')
         with mock.patch.dict(os.environ, {'OQ_NO_DISTRIBUTE': '1'}), \
                 mock.patch('openquake.engine.logs.LOG.warn') as warn:
+
             # using a small maximum distance of 1 km, so that no sources
             # are found, and checking that no realizations are generated
-            helpers.run_job(cfg, maximum_distance=1)
+            calc = helpers.run_job(cfg, maximum_distance=1)
             self.assertEqual(warn.call_args[0][0],
                              'No realizations for hazard_calculation_id=%d')
+
+            # check that the attribute quantile_hazard_curves is empty
+            self.assertEqual(calc.quantile_hazard_curves, ())

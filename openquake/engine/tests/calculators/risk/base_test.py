@@ -34,11 +34,6 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
         self.job.is_running = True
         self.job.save()
 
-    @property
-    def hazard_calculation(self):
-        "A shortcut to a the corresponding hazard calculation"
-        return self.job.risk_calculation.get_hazard_calculation()
-
 
 class FakeWorkflow:
     """Fake Workflow class used in FakeRiskCalculator"""

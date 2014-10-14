@@ -119,9 +119,9 @@ def compute_ruptures(
     """
     # NB: all realizations in gsims correspond to the same source model
     trt_model = models.TrtModel.objects.get(pk=trt_model_id)
-    ses_coll = models.SESCollection.objects.get(lt_model=trt_model.lt_model)
+    ses_coll = models.SESCollection.objects.get(trt_model=trt_model)
 
-    hc = models.HazardCalculation.objects.get(oqjob=job_id)
+    hc = models.oqparam(job_id)
     all_ses = range(1, hc.ses_per_logic_tree_path + 1)
     tot_ruptures = 0
 
@@ -142,8 +142,7 @@ def compute_ruptures(
 
         with filter_sites_mon:  # filtering sources
             s_sites = src.filter_sites_by_distance_to_source(
-                hc.maximum_distance, sitecol
-            ) if hc.maximum_distance else sitecol
+                hc.maximum_distance, sitecol)
             if s_sites is None:
                 continue
 
@@ -179,7 +178,7 @@ def compute_ruptures(
                     indices = r_sites.indices if len(r_sites) < len(sitecol) \
                         else None  # None means that nothing was filtered
                     prob_rup = models.ProbabilisticRupture.create(
-                        rup, ses_coll, trt_model, indices)
+                        rup, ses_coll, indices)
                     for ses_idx, num_occurrences in ses_num_occ[rup]:
                         for occ_no in range(1, num_occurrences + 1):
                             rup_seed = rnd.randint(0, models.MAX_SINT_32)
@@ -227,18 +226,18 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol):
         a SiteCollection instance
     """
     job = models.OqJob.objects.get(pk=job_id)
-    hc = job.hazard_calculation
-    imts = map(from_string, hc.intensity_measure_types)
+    hc = job.get_oqparam()
+    imts = map(from_string, sorted(hc.intensity_measure_types_and_levels))
 
     result = {}  # trt_model_id -> (curves_by_gsim, [])
     # NB: by construction each block is a non-empty list with
     # ruptures of homogeneous trt_model
-    trt_model = ses_ruptures[0].rupture.trt_model
+    trt_model = ses_ruptures[0].rupture.ses_collection.trt_model
     rlzs_by_gsim = trt_model.get_rlzs_by_gsim()
     gsims = [logictree.GSIM[gsim]() for gsim in rlzs_by_gsim]
     calc = GmfCalculator(
         sorted(imts), sorted(gsims), trt_model.id,
-        hc.truncation_level, models.get_correl_model(job))
+        getattr(hc, 'truncation_level', None), models.get_correl_model(job))
 
     with EnginePerformanceMonitor(
             'computing gmfs', job_id, compute_gmfs_and_curves):
@@ -249,7 +248,7 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol):
             calc.calc_gmfs(
                 r_sites, rupture, [(r.id, r.seed) for r in group])
 
-    if hc.hazard_curves_from_gmfs:
+    if getattr(hc, 'hazard_curves_from_gmfs', None):
         with EnginePerformanceMonitor(
                 'hazard curves from gmfs',
                 job_id, compute_gmfs_and_curves):
@@ -405,18 +404,18 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
 
     def post_execute(self):
         trt_models = models.TrtModel.objects.filter(
-            lt_model__hazard_calculation=self.hc)
+            lt_model__hazard_calculation=self.job)
         # save the right number of occurring ruptures
         for trt_model in trt_models:
             trt_model.num_ruptures = self.num_ruptures.get(trt_model.id, 0)
             trt_model.save()
-        if (not self.hc.ground_motion_fields and
-                not self.hc.hazard_curves_from_gmfs):
+        if (not getattr(self.hc, 'ground_motion_fields', None) and
+                not getattr(self.hc, 'hazard_curves_from_gmfs', None)):
             return  # do nothing
 
         # create a Gmf output for each realization
         self.initialize_realizations()
-        if self.hc.ground_motion_fields:
+        if getattr(self.hc, 'ground_motion_fields', None):
             for rlz in self._get_realizations():
                 output = models.Output.objects.create(
                     oq_job=self.job,
@@ -435,37 +434,42 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         """
         Generate the GMFs and optionally the hazard curves too
         """
-        sitecol = self.hc.site_collection
+        sitecol = self.site_collection
         sesruptures = []  # collect the ruptures in a fixed order
-        for trt_model in models.TrtModel.objects.filter(
-                lt_model__hazard_calculation=self.hc):
-            sesruptures.extend(
-                models.SESRupture.objects.filter(
-                    rupture__trt_model=trt_model))
+        with self.monitor('reading ruptures'):
+            for trt_model in models.TrtModel.objects.filter(
+                    lt_model__hazard_calculation=self.job):
+                for sr in models.SESRupture.objects.filter(
+                        rupture__ses_collection__trt_model=trt_model):
+                    # adding the annotation below saves a LOT of memory
+                    # otherwise one would need as key in apply_reduce
+                    # lambda sr: sr.rupture.tsrt_model.id which would
+                    # read the world from the database
+                    sr.trt_id = trt_model.id
+                    sesruptures.append(sr)
         self.curves = tasks.apply_reduce(
             compute_gmfs_and_curves,
             (self.job.id, sesruptures, sitecol),
-            self.agg_curves, {}, key=lambda sr: sr.rupture.trt_model.id)
+            self.agg_curves, {}, key=lambda sr: sr.trt_id)
 
-    def initialize_ses_db_records(self, lt_model):
+    def initialize_ses_db_records(self, trt_model, i):
         """
-        Create :class:`~openquake.engine.db.models.Output`,
-        :class:`~openquake.engine.db.models.SESCollection` and
-        :class:`~openquake.engine.db.models.SES` "container" records for
-        a single realization.
+        Create :class:`~openquake.engine.db.models.Output` and
+        :class:`~openquake.engine.db.models.SESCollection` records for
+        each tectonic region type.
 
-        Stochastic event set ruptures computed for this realization will be
-        associated to these containers.
-
-        NOTE: Many tasks can contribute ruptures to the same SES.
+        :param trt_model:
+            :class:`openquake.engine.db.models.TrtModel` instance
+        :param i:
+            an ordinal number starting from 1
         """
         output = models.Output.objects.create(
             oq_job=self.job,
-            display_name='SES Collection smlt-%d' % lt_model.ordinal,
+            display_name='SES Collection %d' % i,
             output_type='ses')
 
         ses_coll = models.SESCollection.objects.create(
-            output=output, lt_model=lt_model, ordinal=lt_model.ordinal)
+            output=output, trt_model=trt_model, ordinal=i)
 
         return ses_coll
 
@@ -479,7 +483,8 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         `execute` phase.)
         """
         weights = super(EventBasedHazardCalculator, self).pre_execute()
-        for lt_model in models.LtSourceModel.objects.filter(
-                hazard_calculation=self.hc):
-            self.initialize_ses_db_records(lt_model)
+        for i, trt_model in enumerate(models.TrtModel.objects.filter(
+                lt_model__hazard_calculation=self.job), 1):
+            with transaction.commit_on_success(using='job_init'):
+                self.initialize_ses_db_records(trt_model, i)
         return weights
