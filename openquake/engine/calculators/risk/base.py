@@ -62,13 +62,14 @@ def prepare_risk(job_id, counts_taxonomy, rc):
     """
     for counts, taxonomy in counts_taxonomy:
 
-        # building the HazardRiskBridges
+        # building the RiskInitializers
         with EnginePerformanceMonitor(
                 "associating asset->site", job_id, prepare_risk):
-            bridge = hazard_getters.HazardRiskBridge(taxonomy, rc)
+            initializer = hazard_getters.RiskInitializer(taxonomy, rc)
+            initializer.init_assocs()
 
         # estimating the needed memory
-        nbytes = bridge.calc_nbytes(eps_sampling)
+        nbytes = initializer.calc_nbytes(eps_sampling)
         if nbytes:
             # TODO: the estimate should be revised by taking into account
             # the number of realizations
@@ -83,14 +84,14 @@ def prepare_risk(job_id, counts_taxonomy, rc):
         # initializing epsilons
         with EnginePerformanceMonitor(
                 "initializing epsilons", job_id, prepare_risk):
-            bridge.init_epsilons(eps_sampling)
+            initializer.init_epsilons(eps_sampling)
 
 
 @tasks.oqtask
 def run_risk(job_id, sorted_assocs, calc):
     """
     Run the risk calculation on the given assets by using the given
-    hazard bridges and risk calculator.
+    hazard initializers and risk calculator.
 
     :param job_id:
         ID of the current risk job
@@ -227,14 +228,14 @@ class RiskCalculator(base.Calculator):
         """
         Method responsible for the distribution strategy. The risk
         calculators share a two phase distribution logic: in phase 1
-        the bridge objects are build, by distributing per taxonomy;
+        the initializer objects are build, by distributing per taxonomy;
         in phase 2 the real computation is run, by distributing in chunks
         of asset_site associations.
         """
         self.outputdict = writers.combine_builders(
             [ob(self) for ob in self.output_builders])
 
-        # build the bridges hazard -> risk
+        # build the initializers hazard -> risk
         ct = sorted((counts, taxonomy) for taxonomy, counts
                     in self.taxonomies_asset_count.iteritems())
         tasks.apply_reduce(prepare_risk, (self.job.id, ct, self.rc),
