@@ -41,7 +41,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.gis.db import models as djm
 
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import source, geo, calc, correlation
+from openquake.hazardlib import geo, calc, correlation
 from openquake.hazardlib.site import FilteredSiteCollection
 
 from openquake.commonlib.riskmodels import loss_type_to_cost_type
