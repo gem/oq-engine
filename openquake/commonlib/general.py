@@ -380,20 +380,21 @@ def import_all(module_or_package):
     return set(sys.modules) - already_imported
 
 
-def assert_independent(module, *packages):
+def assert_independent(package, *packages):
     """
-    Make sure that the given module does not depend from the given
-    packages. For instance
+    :param package: Python name of a module/package
+    :param packages: Python names of modules/packages
 
-    >>> assert_independent('openquake.hazardlib.imt', 'openquake.nrmllib')
+    Make sure the `package` does not depend from the `packages`.
+    For instance
+
+    >>> assert_independent('openquake.hazardlib', 'openquake.risklib')
     """
     assert packages, 'At least one package must be specified'
-    get_imported_modules = """\
+    imported_modules = run_in_process("""\
 from openquake.commonlib.general import import_all
-print import_all(%r)
-""" % module
-    imported_modules = run_in_process(get_imported_modules)
+print import_all('%s')""" % package)
     for mod in imported_modules:
         if mod.startswith(packages):
             raise CodeDependencyError('%s depends on %s' % (
-                module, mod))
+                package, mod))
