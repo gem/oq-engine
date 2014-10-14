@@ -16,13 +16,13 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import re
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.commonlib import valid
 
 GSIMS = get_available_gsims()
 
-GROUND_MOTION_CORRELATION_MODELS = [
-    'JB2009', 'Jayaram-Baker 2009']
+GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
 
 HAZARD_CALCULATORS = [
     'classical', 'disaggregation', 'event_based', 'scenario']
@@ -35,6 +35,35 @@ EXPERIMENTAL_CALCULATORS = [
     'event_based_fr']
 
 CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS + EXPERIMENTAL_CALCULATORS
+
+VULNERABILITY_KEY = re.compile('(structural|nonstructural|contents|'
+                               'business_interruption|occupants)_([\w_]+)')
+
+
+def vulnerability_files(inputs):
+    """
+    Return a dict cost_type -> path for the known vulnerability keys
+
+    :param inputs: a dictionary key -> path name
+    """
+    vfs = {}
+    for key in inputs:
+        match = VULNERABILITY_KEY.match(key)
+        if match:
+            vfs[match.group(1)] = inputs[key]
+    return vfs
+
+
+def fragility_files(inputs):
+    """
+    Return a dict of the form {} or {'damage': path}.
+
+    :param inputs: a dictionary key -> path name
+
+    NB: at the moment there is a single fragility key, so the output
+    contains at most one element.
+    """
+    return {'damage': inputs[key] for key in inputs if key == 'fragility'}
 
 
 class OqParam(valid.ParamSet):
@@ -101,7 +130,7 @@ class OqParam(valid.ParamSet):
         width_of_mfd_bin=valid.positivefloat,
         )
 
-    def constrain_hazard_calculation_and_output(self):
+    def is_valid_hazard_calculation_and_output(self):
         """
         The parameters `hazard_calculation_id` and `hazard_output_id`
         are not correct for this calculator.
@@ -114,7 +143,7 @@ class OqParam(valid.ParamSet):
             (self.hazard_calculation_id is not None and
              self.hazard_output_id is None)
 
-    def constrain_truncation_level_disaggregation(self):
+    def is_valid_truncation_level_disaggregation(self):
         """
         Truncation level must be set for disaggregation calculations
         """
@@ -123,13 +152,13 @@ class OqParam(valid.ParamSet):
         else:
             return True
 
-    def constrain_geometry(self):
+    def is_valid_geometry(self):
         """
         Must specify either region, sites or exposure_file.
         """
         if self.calculation_mode not in HAZARD_CALCULATORS:
             return True  # no check on the sites for risk
-        sites = getattr(self, 'sites', None)
+        sites = getattr(self, 'sites', self.inputs.get('site'))
         if getattr(self, 'region', None):
             return sites is None and not 'exposure' in self.inputs
         elif 'exposure' in self.inputs:
@@ -137,7 +166,7 @@ class OqParam(valid.ParamSet):
         else:
             return sites is not None
 
-    def constrain_poes(self):
+    def is_valid_poes(self):
         """
         When computing hazard maps and/or uniform hazard spectra,
         the poes list must be non-empty.
@@ -148,7 +177,7 @@ class OqParam(valid.ParamSet):
         else:
             return True
 
-    def constrain_site_model(self):
+    def is_valid_site_model(self):
         """
         In absence of a site_model file the site model parameters
         must be all set.
@@ -162,5 +191,26 @@ class OqParam(valid.ParamSet):
         else:
             return True
 
-    #'`intensity_measure_types_and_levels` is ignored when '
-    #    'a `vulnerability_file` is specified'
+    def is_valid_maximum_distance(self):
+        """
+        The maximum_distance must be set for all hazard calculators
+        """
+        return self.calculation_mode in RISK_CALCULATORS or (
+            getattr(self, 'maximum_distance', None))
+
+    def is_valid_imtls(self):
+        """
+        If the IMTs and levels are extracted from the risk models,
+        they must not be set directly. Moreover, if
+        `intensity_measure_types_and_levels` is set directly,
+        `intensity_measure_types` must not be set.
+        """
+        if fragility_files(self.inputs) or vulnerability_files(self.inputs):
+            return (
+                getattr(self, 'intensity_measure_types', None) is None
+                and getattr(self, 'intensity_measure_types_and_levels', None
+                            ) is None
+                )
+        elif getattr(self, 'intensity_measure_types_and_levels', None):
+            return getattr(self, 'intensity_measure_types', None) is None
+        return True

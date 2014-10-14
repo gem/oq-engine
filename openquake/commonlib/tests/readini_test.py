@@ -17,6 +17,7 @@ CALCULATION_MODE = classical_risk
 region = 1 1, 2 2, 3 3
 [foo]
 bar = baz
+intensity_measure_types = PGA
 """)
         # Add a 'name' to make this look like a real file:
         source.name = 'path/to/some/job.ini'
@@ -30,6 +31,7 @@ bar = baz
             'hazard_output_id': 42,
             'region': [(1.0, 1.0), (2.0, 2.0), (3.0, 3.0)],
             'inputs': {},
+            'intensity_measure_types_and_levels': {'PGA': None},
         }
 
         params = vars(readini.parse_config(source, hazard_output_id=42))
@@ -45,9 +47,10 @@ calculation_mode = classical
 [site]
 sites = 0 0
 site_model_file = %s
-maximum_distance=0
+maximum_distance=1
 truncation_level=0
 random_seed=0
+intensity_measure_types = PGA
     """ % site_model_input)
 
         try:
@@ -60,9 +63,10 @@ random_seed=0
                 'hazard_output_id': None,
                 'truncation_level': 0.0,
                 'random_seed': 0,
-                'maximum_distance': 0.0,
+                'maximum_distance': 1.0,
                 'inputs': {'site_model': site_model_input},
                 'sites': [(0.0, 0.0)],
+                'intensity_measure_types_and_levels': {'PGA': None},
             }
 
             params = vars(readini.parse_config(open(job_config)))
@@ -81,7 +85,7 @@ calculation_mode = classical
 [geometry]
 sites_csv = %s
 [misc]
-maximum_distance=0
+maximum_distance=1
 truncation_level=3
 random_seed=5
 [site_params]
@@ -89,6 +93,7 @@ reference_vs30_type = measured
 reference_vs30_value = 600.0
 reference_depth_to_2pt5km_per_sec = 5.0
 reference_depth_to_1pt0km_per_sec = 100.0
+intensity_measure_types = PGA
 """ % sites_csv)
             source.name = 'path/to/some/job.ini'
             exp_base_path = os.path.dirname(
@@ -96,18 +101,18 @@ reference_depth_to_1pt0km_per_sec = 100.0
 
             expected_params = {
                 'base_path': exp_base_path,
-                'sites': [(1.0, 2.1), (3.0, 4.1), (5.0, 6.1)],
                 'calculation_mode': 'classical',
                 'hazard_calculation_id': None,
                 'hazard_output_id': None,
                 'truncation_level': 3.0,
                 'random_seed': 5,
-                'maximum_distance': 0.0,
-                'inputs': {},
+                'maximum_distance': 1.0,
+                'inputs': {'site': sites_csv},
                 'reference_depth_to_1pt0km_per_sec': 100.0,
                 'reference_depth_to_2pt5km_per_sec': 5.0,
                 'reference_vs30_type': 'measured',
                 'reference_vs30_value': 600.0,
+                'intensity_measure_types_and_levels': {'PGA': None},
             }
 
             params = vars(readini.parse_config(source))

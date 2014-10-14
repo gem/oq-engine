@@ -1,4 +1,4 @@
-#  -*- coding: latin-1 -*-
+#  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 #  Copyright (c) 2013, GEM Foundation
@@ -23,11 +23,25 @@ Validation library for the engine, the desktop tools, and anything else
 import re
 import ast
 import logging
+import collections
 from decimal import Decimal
-from openquake.hazardlib import imt, scalerel
+
+from openquake.hazardlib import imt, scalerel, gsim
 from openquake.commonlib.general import distinct
 
 SCALEREL = scalerel.get_available_magnitude_scalerel()
+
+GSIM = gsim.get_available_gsims()
+
+
+def gsim(value):
+    """
+    Make sure the given value is the name of an available GSIM class.
+    """
+    try:
+        return GSIM[value]
+    except KeyError:
+        raise ValueError('Unknown GSIM: %s' % value)
 
 
 def compose(*validators):
@@ -64,7 +78,7 @@ class NoneOr(object):
 
 class Choice(object):
     """
-    Check if the choice is valid.
+    Check if the choice is valid (case sensitive).
     """
     def __init__(self, *choices):
         self.choices = choices
@@ -76,7 +90,23 @@ class Choice(object):
                              value, self.choices))
         return value
 
-category = Choice('population', 'buildings')
+
+class ChoiceCI(object):
+    """
+    Check if the choice is valid (case insensitive version).
+    """
+    def __init__(self, *choices):
+        self.choices = choices
+        self.__name__ = 'ChoiceCI%s' % str(choices)
+
+    def __call__(self, value):
+        value = value.lower()
+        if not value in self.choices:
+            raise ValueError('%r is not a valid choice in %s' % (
+                             value, self.choices))
+        return value
+
+category = ChoiceCI('population', 'buildings')
 
 
 class Regex(object):
@@ -94,6 +124,8 @@ class Regex(object):
         return value
 
 name = Regex(r'^[a-zA-Z_]\w*$')
+
+name_with_dashes = Regex(r'^[a-zA-Z_][\w\-]*$')
 
 
 class FloatRange(object):
@@ -122,16 +154,19 @@ def not_empty(value):
 
 def utf8(value):
     r"""
-    Check that the string is UTF-8. Returns a unicode object.
+    Check that the string is UTF-8. Returns an encode bytestring.
 
-    >>> utf8('à')
+    >>> utf8('\xe0')
     Traceback (most recent call last):
     ...
     ValueError: Not UTF-8: '\xe0'
     """
     try:
-        return value.decode('utf-8')
-    except UnicodeDecodeError:
+        if isinstance(value, unicode):
+            return value.encode('utf-8')
+        else:
+            return value.decode('utf-8').encode('utf-8')
+    except:
         raise ValueError('Not UTF-8: %r' % value)
 
 
@@ -326,6 +361,37 @@ def probabilities(value):
     return map(probability, value.replace(',', ' ').split())
 
 
+def IML(value, IMT, minIML=None, maxIML=None, imlUnit=None):
+    """
+    Convert a node of the form
+
+    <IML IMT="PGA" imlUnit="g" minIML="0.02" maxIML="1.5"/>
+
+    into ("PGA", None, 0.02, 1.5) and a node
+
+    <IML IMT="MMI" imlUnit="g">7 8 9 10 11</IML>
+
+    into ("MMI", [7., 8., 9., 10., 11.], None, None)
+    """
+    imt_str = str(imt.from_string(IMT))
+    if value:
+        imls = positivefloats(value)
+        check_levels(imls, imt_str)
+    else:
+        imls = None
+    min_iml = positivefloat(minIML) if minIML else None
+    max_iml = positivefloat(maxIML) if maxIML else None
+    return (imt_str, imls, min_iml, max_iml)
+
+
+def fragilityparams(value, mean, stddev):
+    """
+    Convert a node of the form <params mean="0.30" stddev="0.16" /> into
+    a pair (0.30, 0.16)
+    """
+    return positivefloat(mean), positivefloat(stddev)
+
+
 def intensity_measure_types(value):
     """
     :param value: input string
@@ -348,6 +414,35 @@ def intensity_measure_types(value):
     return imts
 
 
+def check_levels(imls, imt):
+    """
+    Raise a ValueError if the given levels are invalid.
+
+    :param imls: a list of intensity measure and levels
+    :param imt: the intensity measure type
+
+    >>> check_levels([0.1, 0.2], 'PGA')  # ok
+    >>> check_levels([0.1], 'PGA')
+    Traceback (most recent call last):
+       ...
+    ValueError: Not enough imls for PGA: [0.1]
+    >>> check_levels([0.2, 0.1], 'PGA')
+    Traceback (most recent call last):
+       ...
+    ValueError: The imls for PGA are not sorted: [0.2, 0.1]
+    >>> check_levels([0.2, 0.2], 'PGA')
+    Traceback (most recent call last):
+       ...
+    ValueError: Found duplicated levels for PGA: [0.2, 0.2]
+    """
+    if len(imls) < 2:
+        raise ValueError('Not enough imls for %s: %s' % (imt, imls))
+    elif imls != sorted(imls):
+        raise ValueError('The imls for %s are not sorted: %s' % (imt, imls))
+    elif len(distinct(imls)) < len(imls):
+        raise ValueError("Found duplicated levels for %s: %s" % (imt, imls))
+
+
 def intensity_measure_types_and_levels(value):
     """
     :param value: input string
@@ -355,27 +450,19 @@ def intensity_measure_types_and_levels(value):
 
     >>> intensity_measure_types_and_levels('{"PGA": [0.1, 0.2]}')
     {'PGA': [0.1, 0.2]}
-
-    >>> intensity_measure_types_and_levels('{"PGA": [0.1]}')
-    Traceback (most recent call last):
-       ...
-    ValueError: Not enough imls for PGA: [0.1]
     """
     dic = dictionary(value)
     for imt, imls in dic.iteritems():
-        if len(imls) < 2:
-            raise ValueError('Not enough imls for %s: %s' % (imt, imls))
-        map(positivefloat, imls)
-        if imls != sorted(imls):
-            raise ValueError('The imls for %s are not sorted: %s' %
-                             (imt, imls))
+        check_levels(imls, imt)  # ValueError if the levels are invalid
     return dic
 
 
 def dictionary(value):
     """
-    :param value: input string corresponding to a literal Python object
-    :returns: the Python object
+    :param value:
+        input string corresponding to a literal Python object
+    :returns:
+        the Python object
 
     >>> dictionary('')
     {}
@@ -396,8 +483,10 @@ def dictionary(value):
 
 def mag_scale_rel(value):
     """
-    :param value: name of a Magnitude-Scale relationship in hazardlib
-    :returns: the corresponding hazardlib object
+    :param value:
+        name of a Magnitude-Scale relationship in hazardlib
+    :returns:
+        the corresponding hazardlib object
     """
     value = value.strip()
     if value not in SCALEREL:
@@ -426,11 +515,11 @@ def pmf(value):
 
 def posList(value):
     """
-    The value is a string with the form
-    `lon1 lat1 [depth1] ...  lonN latN [depthN]`
-    without commas, where the depts are optional.
-
-    :returns: a list of floats without other validations
+    :param value:
+        a string with the form `lon1 lat1 [depth1] ...  lonN latN [depthN]`
+        without commas, where the depts are optional.
+    :returns:
+        a list of floats without other validations
     """
     values = value.split()
     num_values = len(values)
@@ -442,11 +531,27 @@ def posList(value):
         raise ValueError('Found a non-float in %s: %s' % (value, exc))
 
 
+def point2d(value, lon, lat):
+    """
+    This is used to convert nodes of the form
+    <location lon="LON" lat="LAT" />
+
+    :param value: None
+    :param lon: longitude string
+    :param lat: latitude string
+    :returns: a validated pair (lon, lat)
+    """
+    return longitude(lon), latitude(lat)
+
+
 def point3d(value, lon, lat, depth):
     """
     This is used to convert nodes of the form
     <hypocenter lon="LON" lat="LAT" depth="DEPTH"/>
 
+    :param value: None
+    :param lon: longitude string
+    :param lat: latitude string
     :returns: a validated triple (lon, lat, depth)
     """
     return longitude(lon), latitude(lat), positivefloat(depth)
@@ -457,7 +562,10 @@ def probability_depth(value, probability, depth):
     This is used to convert nodes of the form
     <hypoDepth probability="PROB" depth="DEPTH" />
 
-    :returns a validated pair (probability, depth)
+    :param value: None
+    :param probability: a probability
+    :param depth: a depth
+    :returns: a validated pair (probability, depth)
     """
     return (range01(probability), positivefloat(depth))
 
@@ -472,10 +580,46 @@ def nodal_plane(value, probability, strike, dip, rake):
     This is used to convert nodes of the form
      <nodalPlane probability="0.3" strike="0.0" dip="90.0" rake="0.0" />
 
-    :returns a validated pair (probability, depth)
+    :param value: None
+    :param probability: a probability
+    :param strike: strike angle
+    :param dip: dip parameter
+    :param rake: rake angle
+    :returns: a validated pair (probability, depth)
     """
     return (range01(probability), strike_range(strike),
             dip_range(dip), rake_range(rake))
+
+
+def ab_values(value):
+    """
+    a and b values of the GR magniture-scaling relation.
+    a is a positive float, b is just a float.
+    """
+    a, b = value.split()
+    return positivefloat(a), float_(b)
+
+
+################################ site model ##################################
+
+vs30_type = ChoiceCI('measured', 'inferred')
+
+SiteParam = collections.namedtuple(
+    'SiteParam', 'z1pt0 z2pt5 measured vs30 lon lat'.split())
+
+
+def site_param(value, z1pt0, z2pt5, vs30Type, vs30, lon, lat):
+    """
+    Used to convert a node like
+
+       <site lon="24.7125" lat="42.779167" vs30="462" vs30Type="inferred"
+       z1pt0="100" z2pt5="5" />
+
+    into a 6-tuple (z1pt0, z2pt5, measured, vs30, lon, lat)
+    """
+    return SiteParam(positivefloat(z1pt0), positivefloat(z2pt5),
+                     vs30_type(vs30Type) == 'measured',
+                     positivefloat(vs30), longitude(lon), latitude(lat))
 
 
 ###########################################################################
@@ -484,6 +628,9 @@ def parameters(**names_vals):
     """
     Returns a dictionary {name: validator} by making sure
     that the validators are callable objects with a `__name__`.
+
+    :param names_vals:
+        keyword arguments parameter_name -> parameter_validator
     """
     for name, val in names_vals.iteritems():
         if not callable(val):
@@ -506,7 +653,7 @@ class ParamSet(object):
     >>> class MyParams(ParamSet):
     ...     params = parameters(a=positiveint, b=positivefloat)
     ...
-    ...     def constrain_not_too_big(self):
+    ...     def is_valid_not_too_big(self):
     ...         "The sum of a and b must be under 10. "
     ...         return self.a + self.b < 10
 
@@ -526,7 +673,7 @@ class ParamSet(object):
 
     def __init__(self, **names_vals):
         for name, val in names_vals.iteritems():
-            if name.startswith(('_', 'constrain_')):
+            if name.startswith(('_', 'is_valid_')):
                 raise NameError('The parameter name %s is not acceptable'
                                 % name)
             try:
@@ -541,14 +688,14 @@ class ParamSet(object):
                                  % (convert.__name__, name, val))
             setattr(self, name, value)
 
-        constrains = sorted(getattr(self, constrain)
-                            for constrain in dir(self.__class__)
-                            if constrain.startswith('constrain_'))
-        for constrain in constrains:
-            if not constrain():
+        valids = sorted(getattr(self, valid)
+                        for valid in dir(self.__class__)
+                        if valid.startswith('is_valid_'))
+        for is_valid in valids:
+            if not is_valid():
                 dump = '\n'.join('%s=%s' % (n, v)
                                  for n, v in sorted(self.__dict__.items()))
-                raise ValueError(constrain.__doc__ + 'Got:\n' + dump)
+                raise ValueError(is_valid.__doc__ + 'Got:\n' + dump)
 
     def __repr__(self):
         names = sorted(n for n in vars(self) if not n.startswith('_'))

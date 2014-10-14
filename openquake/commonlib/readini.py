@@ -1,10 +1,10 @@
 import ConfigParser
-import csv
 import os
 from lxml import etree
 
 from openquake import nrmllib
 from openquake.commonlib.oqvalidation import OqParam
+from openquake.commonlib.readinput import get_imtls
 
 
 def _collect_source_model_paths(smlt):
@@ -57,14 +57,7 @@ def parse_config(source, hazard_calculation_id=None, hazard_output_id=None):
 
     for sect in cp.sections():
         for key, value in cp.items(sect):
-            if key == 'sites_csv':
-                # Parse site coordinates from the csv file,
-                # return a string 'lon1 lat1, lon2 lat2, ... , lonN latN'
-                path = value if os.path.isabs(value) else os.path.join(
-                    base_path, value)
-                sites = open(path, 'U').read().strip().replace(',', ' ')
-                params['sites'] = sites.replace('\n', ',')
-            elif key.endswith('_file'):
+            if key == 'sites_csv' or key.endswith('_file'):
                 input_type = key[:-5]
                 path = value if os.path.isabs(value) else os.path.join(
                     base_path, value)
@@ -79,9 +72,20 @@ def parse_config(source, hazard_calculation_id=None, hazard_output_id=None):
             os.path.join(base_path, src_path)
             for src_path in _collect_source_model_paths(smlt)]
 
+    # check for obsolete calculation_mode
     is_risk = hazard_calculation_id or hazard_output_id
     cmode = params['calculation_mode']
     if is_risk and cmode in ('classical', 'event_based', 'scenario'):
         raise ValueError('Please change calculation_mode=%s into %s_risk '
                          'in the .ini file' % (cmode, cmode))
-    return OqParam(**params)
+
+    oqparam = OqParam(**params)
+
+    # define the parameter `intensity measure types and levels` always
+    oqparam.intensity_measure_types_and_levels = get_imtls(oqparam)
+
+    # remove the redundant parameter `intensity_measure_types`
+    if hasattr(oqparam, 'intensity_measure_types'):
+        delattr(oqparam, 'intensity_measure_types')
+
+    return oqparam
