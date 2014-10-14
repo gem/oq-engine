@@ -213,9 +213,6 @@ class CompleteTestCase(object):
             assert data_hash in outputs, \
                 "The output with hash %s is missing" % str(data_hash)
             actual_output = outputs[data_hash]
-            if actual_file:
-                label = data_hash[-1]  # the asset_ref for LossCurveData
-                actual_file.write(actual_output.to_csv_str(label) + '\n')
             if actual_file and data_hash[0] == 'loss_fraction':
                 actual_file.write(actual_output.to_csv_str() + '\n')
             elif actual_file:
