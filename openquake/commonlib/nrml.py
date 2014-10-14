@@ -128,8 +128,8 @@ registry = Register()
               'singlePlaneRupture', 'multiPlanesRupture')
 class ValidNode(LiteralNode):
     """
-    A subclass of LiteralNode to be used when parsing sources and
-    ruptures from NRML files.
+    A subclass of :class:`LiteralNode` to be used when parsing sources
+    and ruptures from NRML files.
     """
     validators = valid.parameters(
         strike=valid.strike_range,  # needed for the moment
@@ -190,6 +190,9 @@ class VulnerabilityNode(LiteralNode):
 
 @registry.add('fragilityModel')
 class FragilityNode(LiteralNode):
+    """
+    Literal Node class used to validate fragility functions
+    """
     validators = valid.parameters(
         format=valid.ChoiceCI('discrete', 'continuous'),
         lossCategory=valid.name,
