@@ -3,7 +3,7 @@ import time
 import argparse
 
 from openquake.hazardlib.imt import from_string
-from openquake.nrmllib.node import LiteralNode, read_nodes
+from openquake.commonlib.node import LiteralNode, read_nodes
 from openquake.commonlib import valid
 
 from openquake.engine.db import models
@@ -16,7 +16,25 @@ from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 
 
+class DuplicatedTag(Exception):
+    """
+    Raised when reading a GMF XML file containing a duplicated ruptureId
+    attribute.
+    """
+
+
 class GmfNode(LiteralNode):
+    """
+    Class used to convert nodes such as
+
+    <gmf IMT="PGA" ruptureId="scenario-0000000001" >
+       <node gmv="0.365662734506" lat="0.0" lon="0.0"/>
+       <node gmv="0.256181251586" lat="0.1" lon="0.0"/>
+       <node gmv="0.110685275111" lat="0.2" lon="0.0"/>
+    </gmf>
+
+    into LiteralNode objects.
+    """
     validators = valid.parameters(
         gmv=valid.positivefloat,
         lon=valid.longitude,
@@ -61,6 +79,8 @@ def read_data(fileobj):
         data = []
         for node in gmf:
             data.append(('POINT(%(lon)s %(lat)s)' % node, node['gmv']))
+        if tag in tags:
+            raise DuplicatedTag(tag)
         tags.add(tag)
         imts.add(imt)
         rows.append((imt, tag, data))
@@ -137,8 +157,6 @@ def import_gmf_scenario(fileobj):
 
     job = engine.prepare_job()
 
-    # XXX: probably the maximum_distance should be entered by the user
-
     ses_coll, gmf_coll = create_ses_gmf(job, fname)
     imts, tags, rows = read_data(fileobj)
     import_rows(job, ses_coll, gmf_coll, tags, rows)
@@ -147,7 +165,6 @@ def import_gmf_scenario(fileobj):
             base_path=os.path.dirname(fname),
             description='Scenario importer, file %s' % os.path.basename(fname),
             calculation_mode='scenario',
-            maximum_distance=100,
             intensity_measure_types_and_levels=dict.fromkeys(imts),
             inputs={},
             number_of_ground_motion_fields=len(rows)

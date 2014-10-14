@@ -43,7 +43,6 @@ from openquake.engine.db.schema.upgrades import upgrader
 
 from openquake import hazardlib
 from openquake import risklib
-from openquake import nrmllib
 
 from openquake.commonlib import readinput, valid
 
@@ -128,7 +127,6 @@ def prepare_job(user_name="openquake", log_level='progress'):
         user_name=user_name,
         log_level=log_level,
         oq_version=openquake.engine.__version__,
-        nrml_version=nrmllib.__version__,
         hazardlib_version=hazardlib.__version__,
         risklib_version=risklib.__version__,
     )
