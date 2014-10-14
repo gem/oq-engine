@@ -269,8 +269,12 @@ class NoSourcesTestCase(unittest.TestCase):
         cfg = helpers.get_data_path('classical_job.ini')
         with mock.patch.dict(os.environ, {'OQ_NO_DISTRIBUTE': '1'}), \
                 mock.patch('openquake.engine.logs.LOG.warn') as warn:
+
             # using a small maximum distance of 1 km, so that no sources
             # are found, and checking that no realizations are generated
-            helpers.run_job(cfg, maximum_distance=1)
+            calc = helpers.run_job(cfg, maximum_distance=1)
             self.assertEqual(warn.call_args[0][0],
                              'No realizations for hazard_calculation_id=%d')
+
+            # check that the attribute quantile_hazard_curves is empty
+            self.assertEqual(calc.quantile_hazard_curves, ())

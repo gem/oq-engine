@@ -22,9 +22,7 @@ import filecmp
 
 from nose.plugins.attrib import attr
 
-import openquake.engine
-import openquake.nrmllib
-from openquake.nrmllib import PARSE_NS_MAP
+from openquake.commonlib.nrml import PARSE_NS_MAP
 from openquake.engine.db import models
 
 from lxml import etree
@@ -52,7 +50,7 @@ class BaseQATestCase(unittest.TestCase):
         :raises:
             :exc:`AssertionError` if the job was not successfully run.
         """
-        completed_job = helpers.run_job(cfg, exports=exports)
+        completed_job = helpers.run_job(cfg, exports=exports).job
         self.assertEqual('complete', completed_job.status)
 
         return completed_job
@@ -84,16 +82,6 @@ class BaseQATestCase(unittest.TestCase):
             else:
                 tolerance = 2
             numpy.testing.assert_almost_equal(act, exp, decimal=tolerance)
-
-
-def validates_against_xml_schema(
-        xml_instance_path, schema_path=openquake.nrmllib.nrml_schema_file()):
-    """
-    Check whether an XML file validates against an XML schema.
-    """
-    xml_doc = etree.parse(xml_instance_path)
-    xmlschema = etree.XMLSchema(etree.parse(schema_path))
-    return xmlschema.validate(xml_doc)
 
 
 def count(gmf_value, gmfs_site_one, gmfs_site_two,
