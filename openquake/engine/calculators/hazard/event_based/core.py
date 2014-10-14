@@ -443,7 +443,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                         rupture__ses_collection__trt_model=trt_model):
                     # adding the annotation below saves a LOT of memory
                     # otherwise one would need as key in apply_reduce
-                    # lambda sr: sr.rupture.trt_model.id which would
+                    # lambda sr: sr.rupture.tsrt_model.id which would
                     # read the world from the database
                     sr.trt_id = trt_model.id
                     sesruptures.append(sr)
@@ -454,15 +454,14 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
 
     def initialize_ses_db_records(self, trt_model, i):
         """
-        Create :class:`~openquake.engine.db.models.Output`,
-        :class:`~openquake.engine.db.models.SESCollection` and
-        :class:`~openquake.engine.db.models.SES` "container" records for
-        a single realization.
+        Create :class:`~openquake.engine.db.models.Output` and
+        :class:`~openquake.engine.db.models.SESCollection` records for
+        each tectonic region type.
 
-        Stochastic event set ruptures computed for this realization will be
-        associated to these containers.
-
-        NOTE: Many tasks can contribute ruptures to the same SES.
+        :param trt_model:
+            :class:`openquake.engine.db.models.TrtModel` instance
+        :param i:
+            an ordinal number starting from 1
         """
         output = models.Output.objects.create(
             oq_job=self.job,

@@ -59,7 +59,7 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
         :raises:
             :exc:`AssertionError` if the job was not successfully run.
         """
-        completed_job = helpers.run_job(cfg, hazard_output_id=hazard_id)
+        completed_job = helpers.run_job(cfg, hazard_output_id=hazard_id).job
         self.assertEqual('complete', completed_job.status)
 
         return completed_job
@@ -166,7 +166,7 @@ class LogicTreeBasedTestCase(object):
             :exc:`AssertionError` if the job was not successfully run.
         """
         completed_job = helpers.run_job(
-            cfg, hazard_calculation_id=hazard_id)
+            cfg, hazard_calculation_id=hazard_id).job
         self.assertEqual('complete', completed_job.status)
 
         return completed_job
@@ -263,7 +263,7 @@ class FixtureBasedQATestCase(LogicTreeBasedTestCase, BaseRiskQATestCase):
         except ObjectDoesNotExist:
             warnings.warn("Computing Hazard input from scratch")
             job = helpers.run_job(
-                self._test_path('job_haz.ini'))
+                self._test_path('job_haz.ini')).job
             self.assertEqual('complete', job.status)
         else:
             warnings.warn("Using existing Hazard input")

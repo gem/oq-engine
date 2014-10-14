@@ -87,7 +87,7 @@ SET ses_collection_id=%s WHERE trt_model_id=%s""", ses_coll_id, trt_model_id)
     if old_ids:
         # remove the old outputs
         conn.run("""\
-DELETE FROM hzrdr.output WHERE id IN (
+DELETE FROM uiapi.output WHERE id IN (
 SELECT output_id FROM hzrdr.ses_collection WHERE id IN %s)""", tuple(old_ids))
         # remove the old ses_collections
         conn.run("DELETE FROM hzrdr.ses_collection WHERE id IN %s",
@@ -99,5 +99,5 @@ ALTER TABLE hzrdr.ses_collection DROP COLUMN lt_model_id;
 ALTER TABLE hzrdr.probabilistic_rupture DROP COLUMN trt_model_id;""")
 
 if __name__ == '__main__':
-    from openquake.engine.db.upgrade_manager import run_script
-    run_script(upgrade, rollback=True)
+    from openquake.engine.db.upgrade_manager import check_script
+    check_script(upgrade, rollback=True)
