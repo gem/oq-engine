@@ -324,7 +324,7 @@ class GroundMotionInput(RiskInput):
         return all_gmvs
 
 
-class HazardRiskBridge(object):
+class RiskInitializer(object):
     """
     A facility providing the brigde between the hazard (sites and outputs)
     and the risk (assets and risk models). When instantiated, populates
@@ -339,7 +339,7 @@ class HazardRiskBridge(object):
     :param rc:
         a :class:`openquake.engine.db.models.RiskCalculation` instance
 
-    Warning: instantiating a HazardRiskBridge may perform a potentially
+    Warning: instantiating a RiskInitializer may perform a potentially
     expensive geospatial query.
     """
     def __init__(self, taxonomy, rc):
@@ -351,12 +351,12 @@ class HazardRiskBridge(object):
         self.number_of_ground_motion_fields = self.hc.get_param(
             'number_of_ground_motion_fields', 0)
         max_dist = rc.best_maximum_distance * 1000  # km to meters
-        cursor = models.getcursor('job_init')
+        self.cursor = models.getcursor('job_init')
 
         hazard_exposure = models.extract_from([self.hc], 'exposuremodel')
         if self.rc.exposure_model is hazard_exposure:
             # no need of geospatial queries, just join on the location
-            self.assoc_query = cursor.mogrify("""\
+            self.assoc_query = self.cursor.mogrify("""\
 WITH assocs AS (
   SELECT %s, exp.id, hsite.id
   FROM riski.exposure_data AS exp
@@ -372,7 +372,7 @@ SELECT * FROM assocs""", (rc.oqjob.id, self.hc.id,
                           rc.region_constraint.wkt))
         else:
             # associate each asset to the closest hazard site
-            self.assoc_query = cursor.mogrify("""\
+            self.assoc_query = self.cursor.mogrify("""\
 WITH assocs AS (
   SELECT DISTINCT ON (exp.id) %s, exp.id, hsite.id
   FROM riski.exposure_data AS exp
@@ -388,20 +388,28 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
                           rc.exposure_model.id, taxonomy,
                           rc.region_constraint.wkt))
 
+        self.num_assets = 0
+        self._rupture_ids = {}
+        self.epsilons_shape = {}
+
+    def init_assocs(self):
+        """
+        Stores the associations asset <-> site into the database
+        """
         # insert the associations for the current taxonomy
         with transaction.commit_on_success(using='job_init'):
-            cursor.execute(self.assoc_query)
+            self.cursor.execute(self.assoc_query)
 
         # now read the associations just inserted
         self.num_assets = models.AssetSite.objects.filter(
-            job=rc.oqjob, asset__taxonomy=taxonomy).count()
+            job=self.rc.oqjob, asset__taxonomy=self.taxonomy).count()
+
+        # check if there are no associations
         if self.num_assets == 0:
             raise AssetSiteAssociationError(
                 'Could not associate any asset of taxonomy %s to '
                 'hazard sites within the distance of %s km'
-                % (taxonomy, self.rc.best_maximum_distance))
-        self._rupture_ids = {}
-        self.epsilons_shape = {}
+                % (self.taxonomy, self.rc.best_maximum_distance))
 
     def calc_nbytes(self, epsilon_sampling=None):
         """

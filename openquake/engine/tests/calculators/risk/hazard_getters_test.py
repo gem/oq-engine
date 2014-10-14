@@ -48,8 +48,9 @@ class HazardCurveInputTestCase(unittest.TestCase):
         self.job.save()
         calc.pre_execute()
 
-        self.builder = hazard_getters.HazardRiskBridge(
+        self.builder = hazard_getters.RiskInitializer(
             self.taxonomy, calc.rc)
+        self.builder.init_assocs()
 
         assocs = models.AssetSite.objects.filter(job=self.job)
         self.assets = models.ExposureData.objects.get_asset_chunk(
