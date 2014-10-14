@@ -61,6 +61,8 @@ from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
 
+from openquake.commonlib.calc import gen_ruptures
+
 from openquake.engine import writer
 from openquake.engine.calculators.hazard import general
 from openquake.engine.db import models
@@ -195,7 +197,7 @@ def compute_hazard_curves(
     :param trt_model:
         a :class:`openquake.engine.db.TrtModel` instance
     """
-    hc = models.HazardCalculation.objects.get(oqjob=job_id)
+    hc = models.oqparam(job_id)
     total_sites = len(sitecol)
     sitemesh = sitecol.mesh
     sorted_imts = sorted(hc.intensity_measure_types_and_levels)
@@ -206,7 +208,7 @@ def compute_hazard_curves(
     gsims = trt_model.get_gsim_instances()
     curves = [[numpy.ones([total_sites, len(ls)]) for ls in sorted_imls]
               for gsim in gsims]
-    if hc.poes_disagg:  # doing disaggregation
+    if getattr(hc, 'poes_disagg', None):  # doing disaggregation
         lt_model_id = trt_model.lt_model.id
         bbs = [BoundingBox(lt_model_id, site_id) for site_id in sitecol.sids]
     else:
@@ -221,14 +223,14 @@ def compute_hazard_curves(
     num_sites = 0
     # NB: rows are namedtuples with fields (source, rupture, rupture_sites)
     for source, rows in itertools.groupby(
-            hc.gen_ruptures(sources, mon, sitecol),
+            gen_ruptures(sources, sitecol, hc.maximum_distance, mon),
             key=operator.attrgetter('source')):
         t0 = time.time()
         num_ruptures = 0
         for _source, rupture, r_sites in rows:
             num_sites = max(num_sites, len(r_sites))
             num_ruptures += 1
-            if hc.poes_disagg:  # doing disaggregation
+            if getattr(hc, 'poes_disagg', None):  # doing disaggregation
                 jb_dists = rupture.surface.get_joyner_boore_distance(sitemesh)
                 closest_points = rupture.surface.get_closest_points(sitemesh)
                 for bb, dist, point in itertools.izip(
@@ -241,7 +243,8 @@ def compute_hazard_curves(
             for gsim, curv in itertools.izip(gsims, curves):
                 for i, pnes in enumerate(_calc_pnes(
                         gsim, r_sites, rupture, sorted_imts, sorted_imls,
-                        hc.truncation_level, make_ctxt_mon, calc_poes_mon)):
+                        getattr(hc, 'truncation_level', None),
+                        make_ctxt_mon, calc_poes_mon)):
                     curv[i] *= pnes
 
         inserter.add(
@@ -290,11 +293,11 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         # a dictionary with the bounding boxes for earch source
         # model and each site, defined only for disaggregation
         # calculations:
-        if self.hc.poes_disagg:
+        if getattr(self.hc, 'poes_disagg', None):
             lt_models = models.LtSourceModel.objects.filter(
-                hazard_calculation=self.hc)
+                hazard_calculation=self.job)
             self.bb_dict = dict(
                 ((lt_model.id, site.id), BoundingBox(lt_model.id, site.id))
-                for site in self.hc.site_collection
+                for site in self.site_collection
                 for lt_model in lt_models)
         return weights
