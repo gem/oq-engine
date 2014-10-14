@@ -168,8 +168,8 @@ param=yyy
 
         self.assertEqual(ValidNode.__doc__, '''\
 ValidNode test implementation. Known validators:
-a: float
-b: int''')
+    a: `float`
+    b: `int`''')
         xmlfile = cStringIO.StringIO("""\
 <root>
 <general>
