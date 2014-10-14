@@ -1,0 +1,22 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <exposureModel
+      id="my_exposure_model_for_population"
+      category="population"
+      taxonomySource="fake population datasource">
+
+    <description>
+      Sample population
+    </description>
+
+    <assets>
+      <asset id="asset_01" number="7" taxonomy="IT-PV">
+          <location lon="9.15000" lat="45.16667" />
+      </asset>
+
+      <asset id="asset_02" number="7" taxonomy="IT-CE">
+          <location lon="9.15333" lat="45.12200" />
+      </asset>
+    </assets>
+  </exposureModel>
+</nrml>

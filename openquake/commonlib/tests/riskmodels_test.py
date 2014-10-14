@@ -16,7 +16,7 @@
 import unittest
 import StringIO
 from openquake.commonlib.riskmodels import get_vulnerability_functions
-from openquake.nrmllib import InvalidFile
+from openquake.commonlib import InvalidFile
 
 
 class ParseVulnerabilityModelTestCase(unittest.TestCase):

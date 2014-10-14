@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+
+    <!-- `statistics` could also be `mean`. -->
+    <lossCurves statistics="quantile" quantileValue="0.50"
+                investigationTime="50.0" unit="USD" lossType="structural">
+
+        <lossCurve assetRef="asset_1">
+            <gml:Point>
+                <gml:pos>-122.5000 37.5000</gml:pos>
+            </gml:Point>
+
+            <poEs>9.8728e-01 9.8266e-01 9.4957e-01</poEs>
+            <losses>10.2354 21.324321 28.032432</losses>
+
+            <!-- loss ratios are optional. -->
+            <lossRatios>0.1298 0.97123 0.32456</lossRatios>
+
+            <averageLoss>1E+0</averageLoss>
+        </lossCurve>
+
+        <lossCurve assetRef="asset_2">
+            <gml:Point>
+                <gml:pos>-123.5000 37.5000</gml:pos>
+            </gml:Point>
+
+            <poEs>9.8728e-01 9.8266e-01 9.4957e-01</poEs>
+            <losses>10.2354 21.324321 28.032432</losses>
+
+            <!-- loss ratios are optional. -->
+            <lossRatios>0.1298 0.97123 0.32456</lossRatios>
+
+            <averageLoss>1E+0</averageLoss>
+        </lossCurve>
+    </lossCurves>
+</nrml>

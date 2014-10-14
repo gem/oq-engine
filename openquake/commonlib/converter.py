@@ -27,7 +27,7 @@ This module contains converter classes working on nodes of kind
 """
 import itertools
 from openquake.risklib import scientific
-from openquake.nrmllib.node import Node, node_from_xml
+from openquake.commonlib.node import Node, node_from_xml, striptag
 from openquake.commonlib import record, records
 
 
@@ -49,7 +49,7 @@ class Converter(object):
         """
         Return a specialized Converter instance
         """
-        tag = node.tag
+        tag = striptag(node.tag)
         name = tag[0].upper() + tag[1:]
         clsname = name[:-5] if name.endswith('Model') else name
         if 'format' in node.attrib:  # for fragility functions
@@ -107,17 +107,17 @@ class Vulnerability(Converter):
         """Convert the node into a sequence of Vulnerability records"""
         for vset in node.getnodes('discreteVulnerabilitySet'):
             set_id = vset['vulnerabilitySetID']
+            imt, imls, _min, _max, _imlUnit = ~vset.IML
             dvs = records.DiscreteVulnerabilitySet(
                 set_id,
                 vset['assetCategory'],
                 vset['lossCategory'],
-                vset.IML['IMT'])
+                imt)
             yield dvs
-            imls = vset.IML.text.split()
             for vf in vset.getnodes('discreteVulnerability'):
                 fun_id = vf['vulnerabilityFunctionID']
-                ratios = vf.lossRatio.text.split()
-                coeffs = vf.coefficientsVariation.text.split()
+                ratios = ~vf.lossRatio
+                coeffs = ~vf.coefficientsVariation
                 dv = records.DiscreteVulnerability(
                     set_id,
                     fun_id,
@@ -165,24 +165,24 @@ class FragilityDiscrete(Converter):
         """Convert the node into a sequence of Fragility records"""
         fmt = node['format']
         assert fmt == 'discrete'
-        limitStates = node.limitStates.text.split()
+        limitStates = ~node.limitStates
         yield records.FragilityDiscrete(
-            fmt, node.description.text.strip(), node.limitStates.text.strip())
+            fmt, node.description.text.strip(), ' '.join(limitStates))
         for ls in limitStates:
             yield records.FFLimitStateDiscrete(ls)
         for i, ffs in enumerate(node.getnodes('ffs'), 1):
             ffs_ordinal = str(i)  # there is a ffs for each taxonomy
-            imls = ffs.IML.text.split()
+            imt, imls, _, _, imlUnit = ~ffs.IML
             yield records.FFSetDiscrete(
                 ffs_ordinal,
                 ffs.taxonomy.text.strip(),
                 ffs.attrib.get('noDamageLimit', ''),
-                ffs.IML['IMT'],
-                ffs.IML['imlUnit'])
+                imt,
+                imlUnit)
             for ls, ffd in zip(limitStates, ffs.getnodes('ffd')):
                 assert ls == ffd['ls'], 'Expected %s, got %s' % (
                     ls, ffd['ls'])
-                poEs = ffd.poEs.text.split()
+                poEs = ~ffd.poEs
                 for iml, poe in zip(imls, poEs):
                     yield records.FFDataDiscrete(ls, ffs_ordinal, iml, poe)
 
@@ -227,29 +227,31 @@ class FragilityContinuous(Converter):
         """Convert the node into a sequence of Fragility records"""
         fmt = node['format']
         assert fmt == 'continuous', fmt
-        limitStates = node.limitStates.text.split()
+        limitStates = ~node.limitStates
         yield records.FragilityContinuous(
-            fmt, node.description.text.strip(), node.limitStates.text.strip())
+            fmt, node.description.text.strip(), ' '.join(limitStates))
         for ls in limitStates:
             yield records.FFLimitStateContinuous(ls)
         for i, ffs in enumerate(node.getnodes('ffs'), 1):
             ffs_ordinal = str(i)
+            imt, imls, min_iml, max_iml, imlUnit = ~ffs.IML
             yield records.FFSetContinuous(
                 ffs_ordinal,
                 ffs.taxonomy.text.strip(),
                 ffs.attrib.get('noDamageLimit', ''),
                 ffs.attrib.get('type', ''),
-                ffs.IML['IMT'],
-                ffs.IML['imlUnit'],
-                ffs.IML['minIML'],
-                ffs.IML['maxIML'])
+                imt,
+                imlUnit,
+                min_iml,
+                max_iml)
             for ls, ffc in zip(limitStates, ffs.getnodes('ffc')):
                 assert ls == ffc['ls'], 'Expected %s, got %s' % (
                     ls, ffc['ls'])
+                mean, stddev = ~ffc.params
                 yield records.FFDataContinuous(
-                    ls, ffs_ordinal, 'mean', ffc.params['mean'])
+                    ls, ffs_ordinal, 'mean', mean)
                 yield records.FFDataContinuous(
-                    ls, ffs_ordinal, 'stddev', ffc.params['stddev'])
+                    ls, ffs_ordinal, 'stddev', stddev)
 
     def to_node(self):
         """
