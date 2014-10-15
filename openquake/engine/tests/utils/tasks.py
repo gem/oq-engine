@@ -84,12 +84,6 @@ def reflect_data_to_be_processed(data):
     return data
 
 
-@oqtask
-def fake_risk_task(job_id, risk_model, risk_input, outputdict, params):
-    """Used in tests.calculators.risk.base"""
-    return {job_id: 1}
-
-
 @test_task
 def get_even(job_id, numbers):
     return [n for n in numbers if n % 2 == 0]
