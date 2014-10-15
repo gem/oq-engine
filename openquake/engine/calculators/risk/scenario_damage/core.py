@@ -28,6 +28,7 @@ from openquake.engine.calculators.risk import (
     base, hazard_getters, writers, validation)
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.db import models
+from openquake.engine.utils import calculators
 
 
 def scenario_damage(workflow, risk_input, outputdict, params, monitor):
@@ -66,6 +67,7 @@ def scenario_damage(workflow, risk_input, outputdict, params, monitor):
     return {assets[0].taxonomy: aggfractions}
 
 
+@calculators.add('scenario_damage')
 class ScenarioDamageRiskCalculator(base.RiskCalculator):
     """
     Scenario Damage Risk Calculator. Computes four kinds of damage

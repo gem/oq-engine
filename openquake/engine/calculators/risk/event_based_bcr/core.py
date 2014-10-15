@@ -21,6 +21,7 @@ from openquake.risklib import workflows
 from openquake.engine.calculators.risk import writers, validation
 from openquake.engine.calculators.risk.event_based_risk \
     import core as event_based
+from openquake.engine.utils import calculators
 
 
 def event_based_bcr(workflow, risk_input, outputdict, params, monitor):
@@ -60,6 +61,7 @@ def event_based_bcr(workflow, risk_input, outputdict, params, monitor):
                     hazard_output_id=out.hid)
 
 
+@calculators.add('event_based_bcr')
 class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
     """
     Event based BCR risk calculator. Computes BCR distributions for a
