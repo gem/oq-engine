@@ -39,18 +39,19 @@ def classical(workflow, risk_input, outputdict, params, monitor):
     :param params:
       An instance of :class:`..base.CalcParams` used to compute
       derived outputs
-
+    :param monitor:
+      A monitor factory
     For each calculation unit we compute loss curves, loss maps and
     loss fractions. Then if the number of units are bigger than 1, we
     compute mean and quantile artifacts.
     """
     for loss_type in workflow.loss_types:
-        with monitor.copy('computing risk'):
+        with monitor('computing risk'):
             outputs = workflow.compute_all_outputs(
-                risk_input, loss_type, monitor.copy('getting data'))
+                risk_input, loss_type, monitor('getting data'))
             stats = workflow.statistics(
                 outputs, params.quantiles, post_processing)
-        with monitor.copy('saving risk'):
+        with monitor('saving risk'):
             for out in outputs:
                 save_individual_outputs(
                     outputdict.with_args(
