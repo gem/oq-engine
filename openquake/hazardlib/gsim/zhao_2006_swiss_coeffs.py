@@ -1,4 +1,4 @@
-# coding: utf-8
+# -*- coding: utf-8 -*-
 # The Hazard Library
 # Copyright (C) 2012-2014, GEM Foundation
 #
