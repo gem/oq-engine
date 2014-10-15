@@ -29,6 +29,7 @@ from openquake.engine.calculators.risk import (
     base, hazard_getters, validation, writers)
 from openquake.engine.db import models
 from openquake.engine import writer
+from openquake.engine.utils import calculators
 from openquake.engine.performance import EnginePerformanceMonitor
 
 
@@ -264,6 +265,7 @@ def disaggregate(outputs, ruptures, params):
         assets_disagg, magnitudes, coordinates, fractions)
 
 
+@calculators.add('classical')
 class EventBasedRiskCalculator(base.RiskCalculator):
     """
     Probabilistic Event Based PSHA risk calculator. Computes loss
@@ -306,7 +308,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
           Compute aggregate loss curves and event loss tables
         """
-        with EnginePerformanceMonitor('post processing', self.job.id):
+        with self.monitor('post processing'):
 
             time_span, tses = self.hazard_times()
             for (loss_type, out_id), event_loss_table in self.acc.items():
