@@ -22,26 +22,20 @@ Core functionality for the scenario_damage risk calculator.
 
 import numpy
 
-from django import db
-
 from openquake.commonlib.riskmodels import get_risk_model
 
 from openquake.engine.calculators.risk import (
     base, hazard_getters, writers, validation)
 from openquake.engine.performance import EnginePerformanceMonitor
-from openquake.engine.utils import tasks
 from openquake.engine.db import models
 
 
-@tasks.oqtask
-def scenario_damage(job_id, workflow, risk_input, outputdict, params):
+def scenario_damage(workflow, risk_input, outputdict, params, monitor):
     """
     Celery task for the scenario damage risk calculator.
 
-    :param int job_id:
-      ID of the currently running job
     :param workflow:
-      A :class:`openquake.risklib.workflows.RiskModel` instance
+      A :class:`openquake.risklib.workflows.Workflow` instance
     :param risk_input:
       A RiskInput instance
     :param outputdict:
@@ -50,29 +44,27 @@ def scenario_damage(job_id, workflow, risk_input, outputdict, params):
     :param params:
       An instance of :class:`..base.CalcParams` used to compute
       derived outputs
+    :param monitor:
+      An instance of :class:
+      `openquake.engine.db.models.EnginePerformanceMonitor`
    :returns:
       A matrix of fractions and a taxonomy string
     """
-    monitor = EnginePerformanceMonitor(
-        None, job_id, scenario_damage, tracing=True)
-    # in scenario damage calculation the only loss_type is 'damage'
     [ffs] = workflow.vulnerability_functions
 
     # and no output containers
     assert len(outputdict) == 0, outputdict
-    with db.transaction.commit_on_success(using='job_init'):
+    with monitor.copy('computing risk'):
+        assets, fractions = workflow(
+            'damage', risk_input.assets, risk_input.get_data(), None)
+        aggfractions = sum(fractions[i] * asset.number_of_units
+                           for i, asset in enumerate(assets))
 
-        with monitor.copy('computing risk'):
-            assets, fractions = workflow(
-                'damage', risk_input.assets, risk_input.get_data(), None)
-            aggfractions = sum(fractions[i] * asset.number_of_units
-                               for i, asset in enumerate(assets))
+    with monitor.copy('saving damage per assets'):
+        writers.damage_distribution(
+            risk_input.assets, fractions, params.damage_state_ids)
 
-        with monitor.copy('saving damage per assets'):
-            writers.damage_distribution(
-                risk_input.assets, fractions, params.damage_state_ids)
-
-        return {assets[0].taxonomy: aggfractions}
+    return {assets[0].taxonomy: aggfractions}
 
 
 class ScenarioDamageRiskCalculator(base.RiskCalculator):
@@ -89,7 +81,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
     """
 
     #: The core calculation celery task function
-    core_calc_task = scenario_damage
+    core = staticmethod(scenario_damage)
     validators = [validation.HazardIMT, validation.EmptyExposure,
                   validation.OrphanTaxonomies,
                   validation.NoRiskModels, validation.RequireScenarioHazard]
