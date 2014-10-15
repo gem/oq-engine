@@ -3,7 +3,7 @@ import time
 import argparse
 
 from openquake.hazardlib.imt import from_string
-from openquake.nrmllib.node import LiteralNode, read_nodes
+from openquake.commonlib.node import LiteralNode, read_nodes
 from openquake.commonlib import valid
 
 from openquake.engine.db import models

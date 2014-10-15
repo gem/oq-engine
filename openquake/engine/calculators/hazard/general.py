@@ -34,8 +34,8 @@ from openquake.hazardlib.imt import from_string
 from openquake.engine.db import models
 from django.db import transaction
 
-from openquake.nrmllib.risk import parsers
-from openquake.nrmllib import InvalidFile
+from openquake.commonlib import risk_parsers
+from openquake.commonlib import InvalidFile
 
 from openquake.commonlib import logictree, source
 from openquake.commonlib.general import split_in_blocks, distinct
@@ -508,7 +508,8 @@ python -m openquake.engine.tools.correct_complex_sources %s
             with logs.tracing('storing exposure'):
                 exposure.ExposureDBWriter(
                     self.job).serialize(
-                    parsers.ExposureModelParser(oqparam.inputs['exposure']))
+                    risk_parsers.ExposureModelParser(
+                        oqparam.inputs['exposure']))
         models.Imt.save_new(map(from_string, imtls))
 
     @EnginePerformanceMonitor.monitor
