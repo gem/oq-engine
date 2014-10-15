@@ -71,6 +71,20 @@ class BaseSurface(object):
         """
 
     @abc.abstractmethod
+    def get_ry0_distance(self, mesh):
+        """
+        Compute the minimum distance between each point of a mesh and the great
+        circle arcs perpendicular to the fault trace and passing through the
+        end-points of the trace.
+
+        :param mesh:
+            :class:`~openquake.hazardlib.geo.mesh.Mesh` of points to calculate
+            Ry0-distance to.
+        :returns:
+            Numpy array of distances in km.
+        """
+
+    @abc.abstractmethod
     def get_rx_distance(self, mesh):
         """
         Compute distance between each point of mesh and surface's great circle
@@ -236,25 +250,25 @@ class BaseQuadrilateralSurface(BaseSurface):
         """
         top_edge = self.get_mesh()[0:1]
 
-        p1 = Point(top_edge.lons[0, 0], top_edge.lats[0, 0],
-                   top_edge.depths[0, 0])
-        p2 = Point(top_edge.lons[0, 1], top_edge.lats[0, 1],
-                   top_edge.depths[0, 1])
-        azimuth = p1.azimuth(p2)
+        p_1 = Point(top_edge.lons[0, 0], top_edge.lats[0, 0],
+                    top_edge.depths[0, 0])
+        p_2 = Point(top_edge.lons[0, 1], top_edge.lats[0, 1],
+                    top_edge.depths[0, 1])
+        azimuth = p_1.azimuth(p_2)
 
-        dst1 = geodetic.distance_to_arc(p1.longitude,
-                                        p1.latitude,
+        dst1 = geodetic.distance_to_arc(p_1.longitude,
+                                        p_1.latitude,
                                         (azimuth+90.) % 360,
                                         mesh.lons, mesh.lats)
 
-        p1 = Point(top_edge.lons[0, -1], top_edge.lats[0, -1],
-                   top_edge.depths[0, -1])
-        p2 = Point(top_edge.lons[0, -2], top_edge.lats[0, -2],
-                   top_edge.depths[0, -2])
-        azimuth = p1.azimuth(p2)
+        p_1 = Point(top_edge.lons[0, -1], top_edge.lats[0, -1],
+                    top_edge.depths[0, -1])
+        p_2 = Point(top_edge.lons[0, -2], top_edge.lats[0, -2],
+                    top_edge.depths[0, -2])
+        azimuth = p_1.azimuth(p_2)
 
-        dst2 = geodetic.distance_to_arc(p1.longitude,
-                                        p1.latitude,
+        dst2 = geodetic.distance_to_arc(p_1.longitude,
+                                        p_1.latitude,
                                         (azimuth+90.) % 360,
                                         mesh.lons, mesh.lats)
 
