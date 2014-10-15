@@ -1,0 +1,56 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+
+    <!-- The fragility function format applies to the entire fragility model -->
+    <fragilityModel format="discrete">
+        <description>Fragility model for Pavia (discrete)</description>
+
+        <!-- limit states apply to the entire fragility model -->
+        <limitStates>
+            minor
+            moderate
+            severe
+            collapse
+        </limitStates>
+
+        <!-- fragility function set, each with its own, distinct taxonomy -->
+        <ffs noDamageLimit="5">
+            <taxonomy>RC/DMRF-D/LR</taxonomy>
+            <IML IMT="MMI" imlUnit="g">7 8 9 10 11</IML>
+
+            <!-- fragility function in discrete format, one per limit state -->
+            <ffd ls="minor">
+                <poEs>0.0 0.09 0.56 0.91 0.98</poEs>
+            </ffd>
+            <ffd ls="moderate">
+                <poEs>0.0 0.00 0.04 0.78 0.96</poEs>
+            </ffd>
+            <ffd ls="severe">
+                <poEs>0.0 0.00 0.00 0.29 0.88</poEs>
+            </ffd>
+            <ffd ls="collapse">
+                <poEs>0.0 0.00 0.00 0.03 0.63</poEs>
+            </ffd>
+        </ffs>
+
+        <!-- fragility function set, with different IMLs -->
+        <ffs>
+            <taxonomy>RC/DMRF-D/HR</taxonomy>
+            <IML IMT="MMI" imlUnit="g">7 8 9 10 11</IML>
+
+            <!-- fragility function in discrete format, one per limit state -->
+            <ffd ls="minor">
+                <poEs>0.0 0.09 0.56 0.92 0.99</poEs>
+            </ffd>
+            <ffd ls="moderate">
+                <poEs>0.0 0.00 0.04 0.79 0.97</poEs>
+            </ffd>
+            <ffd ls="severe">
+                <poEs>0.0 0.00 0.00 0.30 0.89</poEs>
+            </ffd>
+            <ffd ls="collapse">
+                <poEs>0.0 0.00 0.00 0.04 0.64</poEs>
+            </ffd>
+        </ffs>
+    </fragilityModel>
+</nrml>

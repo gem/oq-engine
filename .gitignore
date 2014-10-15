@@ -1,0 +1,8 @@
+*.pyc
+*.DS_store
+build
+dist
+.ropeproject
+.coverage
+\#*\#
+.\#*

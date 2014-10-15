@@ -19,18 +19,18 @@
 """
 TODO: write documentation.
 
-For the moment I give just an example:
+For the moment I give just an example::
 
-import logging
-import operator
-from openquake.commonlib.parallel import map_reduce
-logging.basicConfig(level=logging.INFO)
+  import logging
+  import operator
+  from openquake.commonlib.parallel import map_reduce
+  logging.basicConfig(level=logging.INFO)
 
-def sum_all(*numbers):
-    return sum(numbers)
+  def sum_all(*numbers):
+      return sum(numbers)
 
-print map_reduce(sum_all, [(1, 2, 3), (4, 5), (6,)], operator.add, 0)
-# => 21
+  print map_reduce(sum_all, [(1, 2, 3), (4, 5), (6,)], operator.add, 0)
+  # => 21
 """
 
 import os
@@ -161,7 +161,7 @@ def get_pickled_sizes(obj):
     345
     >> partial_sizes
     [('_procs', 214), ('exc', 4), ('mem', 4), ('start_time', 4),
-     ('_start_time', 4), ('duration', 4)]
+    ('_start_time', 4), ('duration', 4)]
 
     Notice that the sizes depend on the operating system and the machine.
     """

@@ -1,0 +1,57 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <dmgDistPerAsset>
+        <!-- NOTE: These are the damage states we would define if the following 'limit states'
+             are defined in the fragility model:
+                - slight
+                - moderate
+                - extensive
+                - complete
+
+             For N limit states in the fragility model, we always define N+1 damage states.
+             The first damage state should always be 'no_damage'.
+        -->
+        <damageStates>
+            no_damage
+            slight
+            moderate
+            extensive
+            complete
+        </damageStates>
+
+        <DDNode>
+                <gml:Point srsName="epsg:4326">
+                    <gml:pos>-116.0 41.0</gml:pos>
+                </gml:Point>
+            <asset assetRef="asset_1">  <!-- This corresponds to a single asset defined in the exposure model -->
+                <!-- 'mean' and 'stddev' are mean and standard deviation over all ground motion fields -->
+                <!-- 'ds' means 'damage state' -->
+                <damage ds="no_damage" mean="1.0" stddev="1.6" />
+                <damage ds="slight" mean="34.8" stddev="18.3" />
+                <damage ds="moderate" mean="64.2"  stddev="19.8" />
+                <damage ds="extensive" mean="64.3"  stddev="19.7" />
+                <damage ds="complete" mean="64.3"  stddev="19.7" />
+            </asset>
+        </DDNode>
+        <DDNode>
+                <gml:Point srsName="epsg:4326">
+                    <gml:pos>-117.0 42.0</gml:pos>
+                </gml:Point>
+            <asset assetRef="asset_2">
+                <damage ds="no_damage" mean="1.0" stddev="1.6" />
+                <damage ds="slight" mean="34.8" stddev="18.3" />
+                <damage ds="moderate" mean="64.2"  stddev="19.8" />
+                <damage ds="extensive" mean="64.3"  stddev="19.7" />
+                <damage ds="complete" mean="64.3"  stddev="19.7" />
+            </asset>
+            <asset assetRef="asset_3">
+                <damage ds="no_damage" mean="1.1" stddev="1.7" />
+                <damage ds="slight" mean="34.9" stddev="18.4" />
+                <damage ds="moderate" mean="64.3"  stddev="19.7" />
+                <damage ds="extensive" mean="64.3"  stddev="19.7" />
+                <damage ds="complete" mean="64.3"  stddev="19.7" />
+            </asset>
+        </DDNode>
+    </dmgDistPerAsset>
+</nrml>

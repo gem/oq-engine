@@ -178,6 +178,9 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             logictree.ParsingError
         )
 
+    # FIXME: the logic tree validation must be rewritten
+    # see https://bugs.launchpad.net/oq-engine/+bug/1323916
+    @unittest.skip
     def test_logictree_schema_violation(self):
         source = _make_nrml("""\
             <logicTreeSet>
@@ -492,6 +495,9 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             'lt', {'lt': lt, 'sm': sm}, 'base',
             logictree.ParsingError, exc_filename='sm')
 
+    # FIXME: the logic tree validation must be rewritten
+    # see https://bugs.launchpad.net/oq-engine/+bug/1323916
+    @unittest.skip
     def test_source_model_schema_violation(self):
         lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
