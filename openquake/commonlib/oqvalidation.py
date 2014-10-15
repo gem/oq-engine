@@ -29,7 +29,8 @@ HAZARD_CALCULATORS = [
 
 RISK_CALCULATORS = [
     'classical_risk', 'event_based_risk', 'scenario_risk',
-    'classical_bcr', 'event_based_bcr', 'scenario_damage']
+    'classical_bcr', 'event_based_bcr', 'scenario_damage',
+    'event_loss']
 
 EXPERIMENTAL_CALCULATORS = [
     'event_based_fr']
@@ -123,6 +124,7 @@ class OqParam(valid.ParamSet):
         ses_per_logic_tree_path=valid.positiveint,
         sites=valid.NoneOr(valid.coordinates),
         sites_disagg=valid.NoneOr(valid.coordinates),
+        special_assets=valid.namelist,
         taxonomies_from_model=valid.boolean,
         time_event=str,
         truncation_level=valid.NoneOr(valid.positivefloat),
@@ -214,3 +216,17 @@ class OqParam(valid.ParamSet):
         elif getattr(self, 'intensity_measure_types_and_levels', None):
             return getattr(self, 'intensity_measure_types', None) is None
         return True
+
+    def is_valid_special_assets(self):
+        """
+        Read the special assets from the parameters `special_assets` or
+        `special_assets_csv`, if present. You cannot have both. The
+        concept is meaninful only for risk calculators.
+        """
+        special_assets = getattr(self, 'special_assets', None)
+        if special_assets and 'special_assets' in self.inputs:
+            return False
+        elif special_assets or 'special_assets' in self.inputs:
+            return self.calculation_mode in RISK_CALCULATORS
+        else:
+            return True

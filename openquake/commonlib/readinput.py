@@ -72,8 +72,8 @@ def get_oqparam(source, hazard_calculation_id=None, hazard_output_id=None):
 
     for sect in cp.sections():
         for key, value in cp.items(sect):
-            if key == 'sites_csv' or key.endswith('_file'):
-                input_type = key[:-5]
+            if key.endswith(('_file', '_csv')):
+                input_type, _ext = key.rsplit('_', 1)
                 path = value if os.path.isabs(value) else os.path.join(
                     base_path, value)
                 params['inputs'][input_type] = path
@@ -113,8 +113,8 @@ def get_mesh(oqparam):
     if getattr(oqparam, 'sites', None):
         lons, lats = zip(*oqparam.sites)
         return geo.Mesh(numpy.array(lons), numpy.array(lats))
-    elif 'site' in oqparam.inputs:
-        csv_data = open(oqparam.inputs['site'], 'U').read()
+    elif 'sites' in oqparam.inputs:
+        csv_data = open(oqparam.inputs['sites'], 'U').read()
         coords = valid.coordinates(
             csv_data.strip().replace(',', ' ').replace('\n', ','))
         lons, lats = zip(*coords)
@@ -325,6 +325,19 @@ def get_exposure(oqparam):
 
         yield Asset(asset_id, taxonomy, number, location,
                     values, deductibles, insurance_limits, retrofitting_values)
+
+
+def get_special_assets(oqparam):
+    """
+    Get the assets from the parameters special_assets or special_assets_csv
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    """
+    try:
+        return oqparam.special_assets.split()
+    except AttributeError:
+        return open(oqparam.inputs['special_assets']).read().split()
 
 
 def get_sitecol_assets(oqparam):
