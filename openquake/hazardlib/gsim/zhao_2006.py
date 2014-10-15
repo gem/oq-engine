@@ -25,6 +25,8 @@ from __future__ import division
 import numpy as np
 # standard acceleration of gravity in m/s**2
 from scipy.constants import g
+import copy
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -37,7 +39,6 @@ from openquake.hazardlib.gsim.utils_swiss_gmpe import _apply_adjustments
 
 
 class ZhaoEtAl2006Asc(GMPE):
-
     """
     Implements GMPE developed by John X. Zhao et al. and published as
     "Attenuation Relations of Strong Ground Motion in Japan Using Site
@@ -231,7 +232,6 @@ class ZhaoEtAl2006Asc(GMPE):
 
 
 class ZhaoEtAl2006SInter(ZhaoEtAl2006Asc):
-
     """
     Implements GMPE developed by John X. Zhao et al and published as
     "Attenuation Relations of Strong Ground Motion in Japan Using Site
@@ -248,6 +248,9 @@ class ZhaoEtAl2006SInter(ZhaoEtAl2006Asc):
     #: Supported tectonic region type is subduction interface, this means
     #: that factors FR, SS and SSL are assumed 0 in equation 1, p. 901.
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
+
+    #: Required rupture parameters are magnitude and focal depth.
+    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -279,6 +282,7 @@ class ZhaoEtAl2006SInter(ZhaoEtAl2006Asc):
 
         stddevs = self._get_stddevs(C['sigma'], C_SINTER['tauI'], stddev_types,
                                     num_sites=len(sites.vs30))
+
         return mean, stddevs
 
     #: Coefficient table containing subduction interface coefficients,
@@ -311,7 +315,6 @@ class ZhaoEtAl2006SInter(ZhaoEtAl2006Asc):
 
 
 class ZhaoEtAl2006SSlab(ZhaoEtAl2006Asc):
-
     """
     Implements GMPE developed by John X. Zhao et al and published as
     "Attenuation Relations of Strong Ground Motion in Japan Using Site
@@ -328,6 +331,9 @@ class ZhaoEtAl2006SSlab(ZhaoEtAl2006Asc):
     #: Supported tectonic region type is subduction interface, this means
     #: that factors FR, SS and SSL are assumed 0 in equation 1, p. 901.
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
+
+    #: Required rupture parameters are magnitude and focal depth.
+    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -406,7 +412,6 @@ class ZhaoEtAl2006SSlab(ZhaoEtAl2006Asc):
 
 
 class ZhaoEtAl2006SInterNSHMP2008(ZhaoEtAl2006SInter):
-
     """
     Extend :class:`ZhaoEtAl2006SInter` and fix hypocentral depth at 20 km
     as defined the by National Seismic Hazard Mapping Project for the 2008 US
@@ -428,9 +433,12 @@ class ZhaoEtAl2006SInterNSHMP2008(ZhaoEtAl2006SInter):
 
         Call super class method with hypocentral depth fixed at 20 km
         """
-        rup.hypo_depth = 20.
+        # create new rupture context to avoid changing the original one
+        new_rup = copy.deepcopy(rup)
+        new_rup.hypo_depth = 20.
+
         mean, stddevs = super(ZhaoEtAl2006SInterNSHMP2008, self). \
-            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+            get_mean_and_stddevs(sites, new_rup, dists, imt, stddev_types)
 
         return mean, stddevs
 
