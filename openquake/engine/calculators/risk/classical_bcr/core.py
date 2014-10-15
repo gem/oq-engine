@@ -17,18 +17,14 @@
 Core functionality for the classical PSHA risk calculator.
 """
 
-from django.db import transaction
 from openquake.risklib import workflows
 
 from openquake.engine.calculators.risk import (
     hazard_getters, writers, validation)
 from openquake.engine.calculators.risk.classical_risk import core as classical
-from openquake.engine.performance import EnginePerformanceMonitor
-from openquake.engine.utils import tasks
 
 
-@tasks.oqtask
-def classical_bcr(job_id, workflow, risk_input, outputdict, _params):
+def classical_bcr(workflow, risk_input, outputdict, params, monitor):
     """
     Celery task for the BCR risk calculator based on the classical
     calculator.
@@ -48,21 +44,15 @@ def classical_bcr(job_id, workflow, risk_input, outputdict, _params):
     :param params:
       An instance of :class:`..base.CalcParams` used to compute
       derived outputs
+    :param monitor:
+      An instance of :class:
+      `openquake.engine.db.models.EnginePerformanceMonitor`
     """
-    monitor = EnginePerformanceMonitor(
-        None, job_id, classical_bcr, tracing=True)
-
-    # Do the job in other functions, such that it can be unit tested
-    # without the celery machinery
-    with transaction.commit_on_success(using='job_init'):
-        do_classical_bcr(workflow, risk_input, outputdict, monitor)
-
-
-def do_classical_bcr(workflow, risk_input, outputdict, monitor):
     for loss_type in workflow.loss_types:
-        outputs = workflow.compute_all_outputs(risk_input, loss_type, monitor)
+        with monitor.copy('computing risk'):
+            outputs = workflow.compute_all_outputs(risk_input, loss_type, monitor)
         outputdict = outputdict.with_args(loss_type=loss_type)
-        with monitor.copy('writing results'):
+        with monitor.copy('saving risk'):
             for out in outputs:
                 outputdict.write(
                     workflow.assets,
@@ -80,7 +70,7 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         A dictionary mapping each taxonomy to a vulnerability functions for the
         retrofitted losses computation
     """
-    core_calc_task = classical_bcr
+    core = staticmethod(classical_bcr)
 
     validators = classical.ClassicalRiskCalculator.validators + [
         validation.ExposureHasRetrofittedCosts]
