@@ -19,7 +19,7 @@ import os
 import shutil
 import tempfile
 import unittest
-import openquake.nrmllib
+from openquake.commonlib import nrml
 
 from openquake.engine.export import core as export
 
@@ -30,7 +30,7 @@ def number_of(elem_name, tree):
     return the number of occurrences of the element in a given XML document.
     """
     expr = '//%s' % elem_name
-    return len(tree.xpath(expr, namespaces=openquake.nrmllib.PARSE_NS_MAP))
+    return len(tree.xpath(expr, namespaces=nrml.PARSE_NS_MAP))
 
 
 class BaseExportTestCase(unittest.TestCase):
