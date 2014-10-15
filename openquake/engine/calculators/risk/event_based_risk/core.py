@@ -265,7 +265,7 @@ def disaggregate(outputs, ruptures, params):
         assets_disagg, magnitudes, coordinates, fractions)
 
 
-@calculators.add('classical')
+@calculators.add('event_based_risk')
 class EventBasedRiskCalculator(base.RiskCalculator):
     """
     Probabilistic Event Based PSHA risk calculator. Computes loss
