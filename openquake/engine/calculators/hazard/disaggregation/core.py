@@ -30,7 +30,7 @@ from openquake.commonlib.calc import gen_ruptures_for_site
 
 from openquake.engine import logs
 from openquake.engine.db import models
-from openquake.engine.utils import tasks
+from openquake.engine.utils import tasks, calculators
 from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
 from openquake.engine.calculators.hazard.classical.core import \
     ClassicalHazardCalculator
@@ -271,6 +271,7 @@ def compute_disagg(job_id, sitecol, sources, trt_model_id,
     return result
 
 
+@calculators.add('disaggregation')
 class DisaggHazardCalculator(ClassicalHazardCalculator):
     """
     A calculator which performs disaggregation calculations in a distributed /

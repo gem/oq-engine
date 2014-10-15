@@ -66,7 +66,7 @@ from openquake.commonlib.calc import gen_ruptures
 from openquake.engine import writer
 from openquake.engine.calculators.hazard import general
 from openquake.engine.db import models
-from openquake.engine.utils import tasks
+from openquake.engine.utils import tasks, calculators
 from openquake.engine.performance import LightMonitor
 
 
@@ -269,6 +269,7 @@ def compute_hazard_curves(
     return {trt_model_id: (curves_by_gsim, bbs)}
 
 
+@calculators.add('classical')
 class ClassicalHazardCalculator(general.BaseHazardCalculator):
     """
     Classical PSHA hazard calculator. Computes hazard curves for a given set of
