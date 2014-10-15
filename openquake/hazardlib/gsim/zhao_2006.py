@@ -16,8 +16,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 Module exports :class:`ZhaoEtAl2006Asc`, class:`ZhaoEtAl2006SInter`,
-class:`ZhaoEtAl2006SSlab`, class:`ZhaoEtAl2006AscSWISS05`,
-class:`ZhaoEtAl2006AscSWISS03`, class:`ZhaoEtAl2006AscSWISS08`
+class:`ZhaoEtAl2006SInterNSHMP2008`, class:`ZhaoEtAl2006SSlab`,
+class:`ZhaoEtAl2006AscSWISS05`, class:`ZhaoEtAl2006AscSWISS03`,
+class:`ZhaoEtAl2006AscSWISS08`
 """
 from __future__ import division
 
