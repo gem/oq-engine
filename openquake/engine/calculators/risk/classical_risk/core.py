@@ -46,12 +46,12 @@ def classical(workflow, risk_input, outputdict, params, monitor):
     compute mean and quantile artifacts.
     """
     for loss_type in workflow.loss_types:
-        with monitor('computing risk'):
+        with monitor.copy('computing risk'):
             outputs = workflow.compute_all_outputs(
-                risk_input, loss_type, monitor('getting data'))
+                risk_input, loss_type, monitor.copy('getting data'))
             stats = workflow.statistics(
                 outputs, params.quantiles, post_processing)
-        with monitor('saving risk'):
+        with monitor.copy('saving risk'):
             for out in outputs:
                 save_individual_outputs(
                     outputdict.with_args(

@@ -47,11 +47,11 @@ def event_based_bcr(workflow, risk_input, outputdict, params, monitor):
       A monitor factory
     """
     for loss_type in workflow.loss_types:
-        with monitor('computing risk'):
+        with monitor.copy('computing risk'):
             outputs = workflow.compute_all_outputs(
-                risk_input, loss_type, monitor('getting hazard'))
+                risk_input, loss_type, monitor.copy('getting hazard'))
         outputdict = outputdict.with_args(loss_type=loss_type)
-        with monitor('saving risk'):
+        with monitor.copy('saving risk'):
             for out in outputs:
                 outputdict.write(
                     workflow.assets,
