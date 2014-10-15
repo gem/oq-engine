@@ -98,25 +98,12 @@ class RiskInput(object):
         self.assets = assets
         self.site_ids = []
         self.asset_site_ids = []
-
-    def __enter__(self):
-        """
-        Call this right after installation to read hazards and epsilons
-        from the database, as well as asset_site associations.
-        """
         # asset_site associations
         for asset in self.assets:
             asset_site_id = asset.asset_site_id
             assoc = models.AssetSite.objects.get(pk=asset_site_id)
             self.site_ids.append(assoc.site.id)
             self.asset_site_ids.append(asset_site_id)
-        return self
-
-    def __exit__(self, etype, exc, tb):
-        """Clear caches after usage"""
-        self.assets = []
-        self.site_ids = []
-        self.asset_site_ids = []
 
     def get_hazards(self):
         """
