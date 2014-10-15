@@ -24,16 +24,6 @@ from openquake.hazardlib.gsim.edwards_fah_2013f import (
                             EdwardsFah2013Foreland90MPa,
                             EdwardsFah2013Foreland120MPa)
 
-from openquake.hazardlib.gsim.edwards_fah_2013f import (
-                            EdwardsFah2013Foreland10MPaMR,
-                            EdwardsFah2013Foreland20MPaMR,
-                            EdwardsFah2013Foreland30MPaMR,
-                            EdwardsFah2013Foreland50MPaMR,
-                            EdwardsFah2013Foreland60MPaMR,
-                            EdwardsFah2013Foreland75MPaMR,
-                            EdwardsFah2013Foreland90MPaMR,
-                            EdwardsFah2013Foreland120MPaMR)
-
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
@@ -47,8 +37,8 @@ class EdwardsFah2013Foreland10MPaTestCase(BaseGSIMTestCase):
         self.check('EF13f/for_sd10_table.csv',
                     max_discrep_percentage=0.55)
     def test_std_total(self):
-        self.check('EF13f/EF13_STD_TOTAL_SigmaSS_T.csv',
-                    max_discrep_percentage=0.65) 
+        self.check('EF13f/ef_2013_phis_ss_embeded.csv',
+                    max_discrep_percentage=0.80) 
                     
 class EdwardsFah2013Foreland20MPaTestCase(BaseGSIMTestCase):
     GSIM_CLASS = EdwardsFah2013Foreland20MPa
@@ -60,8 +50,8 @@ class EdwardsFah2013Foreland20MPaTestCase(BaseGSIMTestCase):
         self.check('EF13f/for_sd20_table.csv',
                     max_discrep_percentage=0.55)
     def test_std_total(self):
-        self.check('EF13f/EF13_STD_TOTAL_SigmaSS_T.csv',
-                    max_discrep_percentage=0.65) 
+        self.check('EF13f/ef_2013_phis_ss_embeded.csv',
+                    max_discrep_percentage=0.80) 
                     
 class EdwardsFah2013Foreland30MPaTestCase(BaseGSIMTestCase):
     GSIM_CLASS = EdwardsFah2013Foreland30MPa
@@ -73,8 +63,8 @@ class EdwardsFah2013Foreland30MPaTestCase(BaseGSIMTestCase):
         self.check('EF13f/for_sd30_table.csv',
                     max_discrep_percentage=0.55)
     def test_std_total(self):
-        self.check('EF13f/EF13_STD_TOTAL_SigmaSS_T.csv',
-                    max_discrep_percentage=0.65) 
+        self.check('EF13f/ef_2013_phis_ss_embeded.csv',
+                    max_discrep_percentage=0.80) 
                     
 class EdwardsFah2013Foreland50MPaTestCase(BaseGSIMTestCase):
     GSIM_CLASS = EdwardsFah2013Foreland50MPa
@@ -86,8 +76,8 @@ class EdwardsFah2013Foreland50MPaTestCase(BaseGSIMTestCase):
         self.check('EF13f/for_sd50_table.csv',
                     max_discrep_percentage=0.55)
     def test_std_total(self):
-        self.check('EF13f/EF13_STD_TOTAL_SigmaSS_T.csv',
-                    max_discrep_percentage=0.65) 
+        self.check('EF13f/ef_2013_phis_ss_embeded.csv',
+                    max_discrep_percentage=0.80) 
                     #~ 
 class EdwardsFah2013Foreland60MPaTestCase(BaseGSIMTestCase):
     GSIM_CLASS = EdwardsFah2013Foreland60MPa
@@ -99,8 +89,8 @@ class EdwardsFah2013Foreland60MPaTestCase(BaseGSIMTestCase):
         self.check('EF13f/for_sd60_table.csv',
                     max_discrep_percentage=0.55)
     def test_std_total(self):
-        self.check('EF13f/EF13_STD_TOTAL_SigmaSS_T.csv',
-                    max_discrep_percentage=0.65) 
+        self.check('EF13f/ef_2013_phis_ss_embeded.csv',
+                    max_discrep_percentage=0.80) 
 
 class EdwardsFah2013Foreland75MPaTestCase(BaseGSIMTestCase):
     GSIM_CLASS = EdwardsFah2013Foreland75MPa
@@ -112,8 +102,8 @@ class EdwardsFah2013Foreland75MPaTestCase(BaseGSIMTestCase):
         self.check('EF13f/for_sd75_table.csv',
                     max_discrep_percentage=0.55)
     def test_std_total(self):
-        self.check('EF13f/EF13_STD_TOTAL_SigmaSS_T.csv',
-                    max_discrep_percentage=0.65) 
+        self.check('EF13f/ef_2013_phis_ss_embeded.csv',
+                    max_discrep_percentage=0.80) 
                     
 class EdwardsFah2013Foreland90MPaTestCase(BaseGSIMTestCase):
     GSIM_CLASS = EdwardsFah2013Foreland90MPa
@@ -125,8 +115,8 @@ class EdwardsFah2013Foreland90MPaTestCase(BaseGSIMTestCase):
         self.check('EF13f/for_sd90_table.csv',
                     max_discrep_percentage=0.55)  
     def test_std_total(self):
-        self.check('EF13f/EF13_STD_TOTAL_SigmaSS_T.csv',
-                    max_discrep_percentage=0.65) 
+        self.check('EF13f/ef_2013_phis_ss_embeded.csv',
+                    max_discrep_percentage=0.80) 
 
 class EdwardsFah2013Foreland120MPaTestCase(BaseGSIMTestCase):
     GSIM_CLASS = EdwardsFah2013Foreland120MPa
@@ -138,110 +128,6 @@ class EdwardsFah2013Foreland120MPaTestCase(BaseGSIMTestCase):
         self.check('EF13f/for_sd120_table.csv',
                     max_discrep_percentage=0.55)                                     
     def test_std_total(self):
-        self.check('EF13f/EF13_STD_TOTAL_SigmaSS_T.csv',
-                    max_discrep_percentage=0.65) 
-                                      
+        self.check('EF13f/ef_2013_phis_ss_embeded.csv',
+                    max_discrep_percentage=0.80) 
 
-class EdwardsFah2013Foreland10MPaTestCaseMR(BaseGSIMTestCase):
-    GSIM_CLASS = EdwardsFah2013Foreland10MPaMR
-
-    # Test data were obtained from a tool given by the authors
-    # The data of the values of the mean PGA and SA are in cm/s2.
-
-    def test_mean(self):
-        self.check('EF13f/for_sd10_table.csv',
-                    max_discrep_percentage=0.55)
-    def test_std_total(self):
-        self.check('EF13f/EF13_STD_TOTAL_SigmaSS_TMR.csv',
-                    max_discrep_percentage=0.65) 
-                    
-class EdwardsFah2013Foreland20MPaTestCaseMR(BaseGSIMTestCase):
-    GSIM_CLASS = EdwardsFah2013Foreland20MPaMR
-
-    # Test data were obtained from a tool given by the authors
-    # The data of the values of the mean PGA and SA are in cm/s2.
-
-    def test_mean(self):
-        self.check('EF13f/for_sd20_table.csv',
-                    max_discrep_percentage=0.55)
-    def test_std_total(self):
-        self.check('EF13f/EF13_STD_TOTAL_SigmaSS_TMR.csv',
-                    max_discrep_percentage=0.65) 
-                    
-class EdwardsFah2013Foreland30MPaTestCaseMR(BaseGSIMTestCase):
-    GSIM_CLASS = EdwardsFah2013Foreland30MPaMR
-
-    # Test data were obtained from a tool given by the authors
-    # The data of the values of the mean PGA and SA are in cm/s2.
-
-    def test_mean(self):
-        self.check('EF13f/for_sd30_table.csv',
-                    max_discrep_percentage=0.55)
-    def test_std_total(self):
-        self.check('EF13f/EF13_STD_TOTAL_SigmaSS_TMR.csv',
-                    max_discrep_percentage=0.65) 
-                    
-class EdwardsFah2013Foreland50MPaTestCaseMR(BaseGSIMTestCase):
-    GSIM_CLASS = EdwardsFah2013Foreland50MPaMR
-
-    # Test data were obtained from a tool given by the authors
-    # The data of the values of the mean PGA and SA are in cm/s2.
-
-    def test_mean(self):
-        self.check('EF13f/for_sd50_table.csv',
-                    max_discrep_percentage=0.55)
-    def test_std_total(self):
-        self.check('EF13f/EF13_STD_TOTAL_SigmaSS_TMR.csv',
-                    max_discrep_percentage=0.65) 
-                    
-class EdwardsFah2013Foreland60MPaTestCaseMR(BaseGSIMTestCase):
-    GSIM_CLASS = EdwardsFah2013Foreland60MPaMR
-
-    # Test data were obtained from a tool given by the authors
-    # The data of the values of the mean PGA and SA are in cm/s2.
-
-    def test_mean(self):
-        self.check('EF13f/for_sd60_table.csv',
-                    max_discrep_percentage=0.55)
-    def test_std_total(self):
-        self.check('EF13f/EF13_STD_TOTAL_SigmaSS_TMR.csv',
-                    max_discrep_percentage=0.65) 
-
-class EdwardsFah2013Foreland75MPaTestCaseMR(BaseGSIMTestCase):
-    GSIM_CLASS = EdwardsFah2013Foreland75MPaMR
-
-    # Test data were obtained from a tool given by the authors
-    # The data of the values of the mean PGA and SA are in cm/s2.
-
-    def test_mean(self):
-        self.check('EF13f/for_sd75_table.csv',
-                    max_discrep_percentage=0.55)
-    def test_std_total(self):
-        self.check('EF13f/EF13_STD_TOTAL_SigmaSS_TMR.csv',
-                    max_discrep_percentage=0.65) 
-                    
-class EdwardsFah2013Foreland90MPaTestCaseMR(BaseGSIMTestCase):
-    GSIM_CLASS = EdwardsFah2013Foreland90MPaMR
-
-    # Test data were obtained from a tool given by the authors
-    # The data of the values of the mean PGA and SA are in cm/s2.
-
-    def test_mean(self):
-        self.check('EF13f/for_sd90_table.csv',
-                    max_discrep_percentage=0.55)  
-    def test_std_total(self):
-        self.check('EF13f/EF13_STD_TOTAL_SigmaSS_TMR.csv',
-                    max_discrep_percentage=0.65) 
-
-class EdwardsFah2013Foreland120MPaTestCaseMR(BaseGSIMTestCase):
-    GSIM_CLASS = EdwardsFah2013Foreland120MPaMR
-
-    # Test data were obtained from a tool given by the authors
-    # The data of the values of the mean PGA and SA are in cm/s2.
-
-    def test_mean(self):
-        self.check('EF13f/for_sd120_table.csv',
-                    max_discrep_percentage=0.55)         
-    def test_std_total(self):
-        self.check('EF13f/EF13_STD_TOTAL_SigmaSS_TMR.csv',
-                    max_discrep_percentage=0.65) 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2013-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -14,6 +14,13 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+Module exports :class:`EdwardsFah2013Alpine`,
+class:`EdwardsFah2013Alpine10MPa`,class:`EdwardsFah2013Alpine20MPa`,
+class:`EdwardsFah2013Alpine30MPa`,class:`EdwardsFah2013Alpine50MPa`,
+class:`EdwardsFah2013Alpine60MPa`,class:`EdwardsFah2013Alpine75MPa`,
+class:`EdwardsFah2013Alpine90MPa`,class:`EdwardsFah2013Alpine120MPa`,
+"""
 from __future__ import division
 import numpy as np
 from scipy.constants import g
@@ -31,14 +38,12 @@ from openquake.hazardlib.gsim.edwards_fah_2013a_coeffs import (
     COEFFS_ALPINE_120Bars
 )
 from openquake.hazardlib.gsim.utils_swiss_gmpe import (
-    _apply_adjustments,
     _compute_phi_ss,
-    _compute_C1_term,
-    _get_corr_stddevs
+    _compute_C1_term
 )
 
 
-class EdwardsFah2013Alpine60MPa(GMPE):
+class EdwardsFah2013Alpine(GMPE):
     """
     This function implements the GMPE developed by Ben Edwars and Donath Fah
     and published as "A Stochastic Ground-Motion Model for Switzerland"
@@ -73,7 +78,7 @@ class EdwardsFah2013Alpine60MPa(GMPE):
     #: and deep soil).
     REQUIRES_SITES_PARAMETERS = set(('vs30', ))
     #: Required rupture parameters: magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
+    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
 
     #: Required distance measure is Rrup
     REQUIRES_DISTANCES = set(('rrup', ))
@@ -90,10 +95,15 @@ class EdwardsFah2013Alpine60MPa(GMPE):
         for spec of input and result values.
         """
 
-        C = self.COEFFS[imt]
-        R = self._compute_term_r(C, rup.mag, dists.rrup)
+        COEFFS = self.get_coeffs()[imt]
+        R = self._compute_term_r(COEFFS, rup.mag, dists.rrup)
+        c1_rrup = _compute_C1_term(COEFFS, dists.rrup)
+        log_phi_ss = 1.00
+        phi_ss = _compute_phi_ss(
+            COEFFS, rup.mag, c1_rrup, log_phi_ss, COEFFS['mean_phi_ss']
+        )
 
-        mean = 10 ** (self._compute_mean(C, rup.mag, R))
+        mean = 10 ** (self._compute_mean(COEFFS, rup.mag, R))
 
         # Convert units to g,
         # but only for PGA and SA (not PGV):
@@ -103,22 +113,29 @@ class EdwardsFah2013Alpine60MPa(GMPE):
             # PGV:
             mean = np.log(mean)
 
-        stddevs = self._get_stddevs(C, stddev_types, sites.vs30.shape[0])
+        stddevs = self._get_stddevs(
+            COEFFS, stddev_types, sites.vs30.shape[0], phi_ss
+        )
 
         return mean, stddevs
 
-        # return stddevs
-    def _get_stddevs(self, C, stddev_types, num_sites):
+    def _get_stddevs(self, C, stddev_types, num_sites, phi_ss):
         """
         Return standard deviations
         """
         stddevs = []
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(C['sigma_tot'] + np.zeros(num_sites))
+                stddevs.append(np.sqrt(
+                               C['tau'] * C['tau'] +
+                               phi_ss * phi_ss) +
+                               np.zeros(num_sites))
+
             elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(C['phi_SS'] + np.zeros(num_sites))
+                stddevs.append(phi_ss + np.zeros(num_sites))
+
             elif stddev_type == const.StdDev.INTER_EVENT:
                 stddevs.append(C['tau'] + np.zeros(num_sites))
         return stddevs
@@ -137,7 +154,7 @@ class EdwardsFah2013Alpine60MPa(GMPE):
         else:
             rrup_min = -0.295 * mag + 2.65
 
-        R = np.maximum(rrup_min, rrup)
+        R = np.maximum(rrup, rrup_min)
 
         return np.log10(R)
 
@@ -205,104 +222,78 @@ class EdwardsFah2013Alpine60MPa(GMPE):
     M1 = 5.00
     M2 = 4.70
 
-    COEFFS = COEFFS_ALPINE_60Bars
+
+def get_coeffs(self):
+    return COEFFS_ALPINE_10Bars
 
 
-class EdwardsFah2013Alpine10MPa(EdwardsFah2013Alpine60MPa):
-
-    COEFFS = COEFFS_ALPINE_10Bars
-
-
-class EdwardsFah2013Alpine20MPa(EdwardsFah2013Alpine60MPa):
-
-    COEFFS = COEFFS_ALPINE_20Bars
-
-
-class EdwardsFah2013Alpine30MPa(EdwardsFah2013Alpine60MPa):
-
-    COEFFS = COEFFS_ALPINE_30Bars
-
-
-class EdwardsFah2013Alpine50MPa(EdwardsFah2013Alpine60MPa):
-
-    COEFFS = COEFFS_ALPINE_50Bars
-
-
-class EdwardsFah2013Alpine75MPa(EdwardsFah2013Alpine60MPa):
-
-    COEFFS = COEFFS_ALPINE_75Bars
-
-
-class EdwardsFah2013Alpine90MPa(EdwardsFah2013Alpine60MPa):
-
-    COEFFS = COEFFS_ALPINE_90Bars
-
-
-class EdwardsFah2013Alpine120MPa(EdwardsFah2013Alpine60MPa):
-
-    COEFFS = COEFFS_ALPINE_120Bars
-
-
-class EdwardsFah2013Alpine60MPaMR(EdwardsFah2013Alpine60MPa):
+class EdwardsFah2013Alpine10MPa(EdwardsFah2013Alpine):
     """
-    Adjustment of a single station sigma for magnitude and distance dependance
+    This class extends :class:`EdwardsFah2013Alpine`
+    and implements the 10Bars Model :class:`EdwardsFah2013Alpine10MPa`
     """
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-
-        mean, stddevs = super(EdwardsFah2013Alpine60MPaMR, self).\
-            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
-
-        c1_rrup = _compute_C1_term(EdwardsFah2013Alpine60MPa.COEFFS[imt], imt,
-                                   dists.rrup)
-
-        log_phi_ss = 1.00
-        tau_ss = 'tau'
-        phi_ss_mr = _compute_phi_ss(
-            EdwardsFah2013Alpine60MPa.COEFFS[imt], rup, c1_rrup, imt,
-            log_phi_ss, mean_phi_ss=False
-        )
-
-        std_corr = _get_corr_stddevs(
-            EdwardsFah2013Alpine60MPa.COEFFS[imt],
-            tau_ss, stddev_types, len(sites.vs30), phi_ss_mr
-        )
-
-        stddevs = np.array(std_corr)
-
-        return mean, stddevs
+    def get_coeffs(self):
+        return COEFFS_ALPINE_10Bars
 
 
-class EdwardsFah2013Alpine10MPaMR(EdwardsFah2013Alpine60MPaMR):
-
-    COEFFS = COEFFS_ALPINE_10Bars
-
-
-class EdwardsFah2013Alpine20MPaMR(EdwardsFah2013Alpine60MPaMR):
-
-    COEFFS = COEFFS_ALPINE_20Bars
-
-
-class EdwardsFah2013Alpine30MPaMR(EdwardsFah2013Alpine60MPaMR):
-
-    COEFFS = COEFFS_ALPINE_30Bars
+class EdwardsFah2013Alpine20MPa(EdwardsFah2013Alpine):
+    """
+    This class extends :class:`EdwardsFah2013Alpine`
+    and implements the 20Bars Model :class:`EdwardsFah2013Alpine20MPa`
+    """
+    def get_coeffs(self):
+        return COEFFS_ALPINE_20Bars
 
 
-class EdwardsFah2013Alpine50MPaMR(EdwardsFah2013Alpine60MPaMR):
-
-    COEFFS = COEFFS_ALPINE_50Bars
-
-
-class EdwardsFah2013Alpine75MPaMR(EdwardsFah2013Alpine60MPaMR):
-
-    COEFFS = COEFFS_ALPINE_75Bars
-
-
-class EdwardsFah2013Alpine90MPaMR(EdwardsFah2013Alpine60MPaMR):
-
-    COEFFS = COEFFS_ALPINE_90Bars
+class EdwardsFah2013Alpine30MPa(EdwardsFah2013Alpine):
+    """
+    This class extends :class:`EdwardsFah2013Alpine`
+    and implements the 30Bars Model :class:`EdwardsFah2013Alpine30MPa`
+    """
+    def get_coeffs(self):
+        return COEFFS_ALPINE_30Bars
 
 
-class EdwardsFah2013Alpine120MPaMR(EdwardsFah2013Alpine60MPaMR):
+class EdwardsFah2013Alpine50MPa(EdwardsFah2013Alpine):
+    """
+    This class extends :class:`EdwardsFah2013Alpine`
+    and implements the 50Bars Model :class:`EdwardsFah2013Alpine50MPa`
+    """
+    def get_coeffs(self):
+        return COEFFS_ALPINE_50Bars
 
-    COEFFS = COEFFS_ALPINE_120Bars
+
+class EdwardsFah2013Alpine60MPa(EdwardsFah2013Alpine):
+    """
+    This class extends :class:`EdwardsFah2013Alpine`
+    and implements the 60Bars Model :class:`EdwardsFah2013Alpine60MPa`
+    """
+    def get_coeffs(self):
+        return COEFFS_ALPINE_60Bars
+
+
+class EdwardsFah2013Alpine75MPa(EdwardsFah2013Alpine):
+    """
+    This class extends :class:`EdwardsFah2013Alpine`
+    and implements the 75Bars Model :class:`EdwardsFah2013Alpine75MPa`
+    """
+    def get_coeffs(self):
+        return COEFFS_ALPINE_75Bars
+
+
+class EdwardsFah2013Alpine90MPa(EdwardsFah2013Alpine):
+    """
+    This class extends :class:`EdwardsFah2013Alpine`
+    and implements the 90Bars Model :class:`EdwardsFah2013Alpine90MPa`
+    """
+    def get_coeffs(self):
+        return COEFFS_ALPINE_90Bars
+
+
+class EdwardsFah2013Alpine120MPa(EdwardsFah2013Alpine):
+    """
+    This class extends :class:`EdwardsFah2013Alpine`
+    and implements the 120Bars Model :class:`EdwardsFah2013Alpine120MPa`
+    """
+    def get_coeffs(self):
+        return COEFFS_ALPINE_120Bars
