@@ -44,15 +44,14 @@ def event_based_bcr(workflow, risk_input, outputdict, params, monitor):
       An instance of :class:`..base.CalcParams` used to compute
       derived outputs
     :param monitor:
-      An instance of :class:
-      `openquake.engine.db.models.EnginePerformanceMonitor`
+      A monitor factory
     """
     for loss_type in workflow.loss_types:
-        with monitor.copy('computing risk'):
+        with monitor('computing risk'):
             outputs = workflow.compute_all_outputs(
-                risk_input, loss_type, monitor.copy('getting hazard'))
+                risk_input, loss_type, monitor('getting hazard'))
         outputdict = outputdict.with_args(loss_type=loss_type)
-        with monitor.copy('saving risk'):
+        with monitor('saving risk'):
             for out in outputs:
                 outputdict.write(
                     workflow.assets,
