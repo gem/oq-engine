@@ -26,18 +26,14 @@ from openquake.engine.calculators.risk import (
     base, hazard_getters, validation, writers)
 from openquake.engine.db import models
 from openquake.engine.performance import EnginePerformanceMonitor
-from openquake.engine.utils import tasks
 
 
-@tasks.oqtask
-def scenario(job_id, workflow, risk_input, outputdict, _params):
+def scenario(workflow, risk_input, outputdict, params, monitor):
     """
     Celery task for the scenario risk calculator.
 
-    :param int job_id:
-      ID of the currently running job
     :param list workflow:
-      A :class:`openquake.risklib.workflows.RiskModel` instance
+      A :class:`openquake.risklib.workflows.Workflow` instance
     :param risk_input:
       A RiskInput instance
     :param outputdict:
@@ -46,31 +42,26 @@ def scenario(job_id, workflow, risk_input, outputdict, _params):
     :param params:
       An instance of :class:`..base.CalcParams` used to compute
       derived outputs
-    """
-    monitor = EnginePerformanceMonitor(None, job_id, scenario, tracing=True)
-    with db.transaction.commit_on_success(using='job_init'):
-        return do_scenario(workflow, risk_input, outputdict, monitor)
-
-
-def do_scenario(workflow, risk_input, outputdict, monitor):
-    """
-    See `scenario` for a description of the input parameters
+    :param monitor:
+      An instance of :class:
+      `openquake.engine.db.models.EnginePerformanceMonitor`
     """
     assets = risk_input.assets
     hazards = risk_input.get_data()
     epsilons = risk_input.get_epsilons()
     agg, ins = {}, {}
     for loss_type in workflow.loss_types:
-        outputdict = outputdict.with_args(
-            loss_type=loss_type, output_type="loss_map")
+        with monitor.copy('computing risk'):
+            outputdict = outputdict.with_args(
+                loss_type=loss_type, output_type="loss_map")
 
-        (assets, loss_ratio_matrix, aggregate_losses,
-         insured_loss_matrix, insured_losses) = workflow(
-            loss_type, assets, hazards, epsilons)
-        agg[loss_type] = aggregate_losses
+            (assets, loss_ratio_matrix, aggregate_losses,
+             insured_loss_matrix, insured_losses) = workflow(
+                loss_type, assets, hazards, epsilons)
+            agg[loss_type] = aggregate_losses
         ins[loss_type] = insured_losses
 
-        with monitor.copy('saving risk outputs'):
+        with monitor.copy('saving risk'):
             outputdict.write(
                 assets,
                 loss_ratio_matrix.mean(axis=1),
@@ -96,7 +87,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
     for a given set of assets.
     """
 
-    core_calc_task = scenario
+    core = staticmethod(scenario)
 
     validators = base.RiskCalculator.validators + [
         validation.RequireScenarioHazard,
