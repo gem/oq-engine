@@ -104,6 +104,7 @@ def run_risk(job_id, sorted_assocs, calc):
     """
     acc = calc.acc
     hazard_outputs = calc.rc.hazard_outputs()
+    monitor = EnginePerformanceMonitor(job_id, None, run_risk)
     for taxonomy, assocs_by_taxonomy in itertools.groupby(
             sorted_assocs, lambda a: a.asset.taxonomy):
         with calc.monitor("getting assets"):
@@ -119,10 +120,11 @@ def run_risk(job_id, sorted_assocs, calc):
                 'Read %d data for %d assets of taxonomy %s, imt=%s',
                 len(set(risk_input.site_ids)), len(assets), taxonomy, imt)
             with transaction.commit_on_success(using='job_init'):
-                res = calc.core_func(
+                res = calc.core(
                     calc.risk_model[imt, taxonomy],
-                    risk_input, calc.outputdict, calc.calculator_parameters,
-                    calc.monitor)
+                    risk_input, calc.outputdict,
+                    calc.calculator_parameters,
+                    monitor.copy)
             acc = calc.agg_result(acc, res)
     return acc
 
@@ -256,7 +258,7 @@ class RiskCalculator(base.Calculator):
         self.acc = tasks.apply_reduce(
             run_risk, (self.job.id, assocs, self),
             self.agg_result, self.acc, self.concurrent_tasks,
-            name=self.core_calc_task.__name__)
+            name=self.core.__name__)
 
     def _get_outputs_for_export(self):
         """

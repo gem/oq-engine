@@ -45,8 +45,7 @@ def scenario_damage(workflow, risk_input, outputdict, params, monitor):
       An instance of :class:`..base.CalcParams` used to compute
       derived outputs
     :param monitor:
-      An instance of :class:
-      `openquake.engine.db.models.EnginePerformanceMonitor`
+      A monitor factory
    :returns:
       A matrix of fractions and a taxonomy string
     """
@@ -54,13 +53,13 @@ def scenario_damage(workflow, risk_input, outputdict, params, monitor):
 
     # and no output containers
     assert len(outputdict) == 0, outputdict
-    with monitor.copy('computing risk'):
+    with monitor('computing risk'):
         assets, fractions = workflow(
             'damage', risk_input.assets, risk_input.get_data(), None)
         aggfractions = sum(fractions[i] * asset.number_of_units
                            for i, asset in enumerate(assets))
 
-    with monitor.copy('saving damage per assets'):
+    with monitor('saving damage per assets'):
         writers.damage_distribution(
             risk_input.assets, fractions, params.damage_state_ids)
 
