@@ -60,14 +60,14 @@ def event_based(workflow, risk_input, outputdict, params, monitor):
     workflow.return_loss_matrix = bool(params.sites_disagg)
 
     for loss_type in workflow.loss_types:
-        with monitor('computing individual risk'):
+        with monitor.copy('computing individual risk'):
             outputs = workflow.compute_all_outputs(
                 risk_input, loss_type, monitor)
         for out in outputs:
             event_loss_table[loss_type, out.hid] = out.output.event_loss_table
 
             if params.sites_disagg:
-                with monitor('disaggregating results'):
+                with monitor.copy('disaggregating results'):
                     ruptures = [models.SESRupture.objects.get(pk=rid)
                                 for rid in risk_input.rupture_ids]
                     disagg_outputs = disaggregate(
@@ -75,7 +75,7 @@ def event_based(workflow, risk_input, outputdict, params, monitor):
             else:
                 disagg_outputs = None
 
-            with monitor('saving individual risk'):
+            with monitor.copy('saving individual risk'):
                 save_individual_outputs(
                     outputdict.with_args(hazard_output_id=out.hid,
                                          loss_type=loss_type),
@@ -83,7 +83,7 @@ def event_based(workflow, risk_input, outputdict, params, monitor):
 
         stats = workflow.statistics(outputs, params.quantiles, post_processing)
         if stats is not None:
-            with monitor('saving risk statistics'):
+            with monitor.copy('saving risk statistics'):
                 save_statistical_output(
                     outputdict.with_args(
                         hazard_output_id=None, loss_type=loss_type),

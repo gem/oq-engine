@@ -104,7 +104,7 @@ def run_risk(job_id, sorted_assocs, calc):
     """
     acc = calc.acc
     hazard_outputs = calc.rc.hazard_outputs()
-    monitor = EnginePerformanceMonitor(job_id, None, run_risk)
+    monitor = EnginePerformanceMonitor(None, job_id, run_risk)
     for taxonomy, assocs_by_taxonomy in itertools.groupby(
             sorted_assocs, lambda a: a.asset.taxonomy):
         with calc.monitor("getting assets"):
@@ -124,7 +124,7 @@ def run_risk(job_id, sorted_assocs, calc):
                     calc.risk_model[imt, taxonomy],
                     risk_input, calc.outputdict,
                     calc.calculator_parameters,
-                    monitor.copy)
+                    monitor)
             acc = calc.agg_result(acc, res)
     return acc
 
