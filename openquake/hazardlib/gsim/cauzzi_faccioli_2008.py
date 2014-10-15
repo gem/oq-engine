@@ -611,6 +611,7 @@ class CauzziFaccioli2008(GMPE):
 
 
 class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
+
     """
     This class extends :class:`CauzziFaccioli2008`
     adjusted to be used for the Swiss Hazard Model [2014].
@@ -658,6 +659,7 @@ class CauzziFaccioli2008SWISS04(CauzziFaccioli2008SWISS01):
 
 
 class CauzziFaccioli2008SWISS08(CauzziFaccioli2008SWISS01):
+
     """
     This class extends :class:`CauzziFaccioli2008`,following same strategy
     as for :class:`CauzziFaccioli2008SWISS01`
