@@ -94,7 +94,8 @@ def job_stats(job):
     job.is_running = True
     job.save()
     try:
-        yield
+        with django_db.transaction.commit_on_success('job_init'):
+            yield
     finally:
         job.is_running = False
         job.save()
@@ -477,6 +478,8 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
     del params['intensity_measure_types_and_levels']
     if params['hazard_calculation_id'] is None:
         params['hazard_calculation_id'] = haz_job.id
+    elif 'special_assets' in params:
+        del params['special_assets']
     calculation = create_calculation(models.RiskCalculation, params)
     job.risk_calculation = calculation
     job.save()

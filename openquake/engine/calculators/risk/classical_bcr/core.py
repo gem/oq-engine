@@ -23,6 +23,8 @@ from openquake.engine.calculators.risk import (
     hazard_getters, writers, validation)
 from openquake.engine.calculators.risk.classical_risk import core as classical
 
+from openquake.engine.utils import calculators
+
 
 def classical_bcr(workflow, risk_input, outputdict, params, monitor):
     """
@@ -61,6 +63,7 @@ def classical_bcr(workflow, risk_input, outputdict, params, monitor):
                     hazard_output_id=out.hid)
 
 
+@calculators.add('classical_bcr')
 class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
     """
     Classical BCR risk calculator. Computes BCR distributions for a
