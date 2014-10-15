@@ -8,7 +8,6 @@ import numpy
 from openquake.hazardlib import geo, site, gsim, correlation, imt
 from openquake.commonlib.node import read_nodes, LiteralNode, context
 from openquake.risklib.workflows import Asset
-from openquake import nrmllib
 from openquake.commonlib.oqvalidation import OqParam
 
 from openquake.commonlib import valid
@@ -17,7 +16,7 @@ from openquake.commonlib.oqvalidation import \
 from openquake.commonlib.riskmodels import \
     get_fragility_functions, get_imtls_from_vulnerabilities, get_vfs
 from openquake.commonlib.source import RuptureConverter
-from openquake.commonlib.nrml import nodefactory
+from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
 
 GSIM = gsim.get_available_gsims()
 
@@ -31,12 +30,12 @@ def _collect_source_model_paths(smlt):
     src_paths = []
     tree = etree.parse(smlt)
     for branch_set in tree.xpath('//nrml:logicTreeBranchSet',
-                                 namespaces=nrmllib.PARSE_NS_MAP):
+                                 namespaces=PARSE_NS_MAP):
 
         if branch_set.get('uncertaintyType') == 'sourceModel':
             for branch in branch_set.xpath(
                     './nrml:logicTreeBranch/nrml:uncertaintyModel',
-                    namespaces=nrmllib.PARSE_NS_MAP):
+                    namespaces=PARSE_NS_MAP):
                 src_paths.append(branch.text)
     return sorted(set(src_paths))
 
