@@ -335,5 +335,5 @@ class PrintSummaryTestCase(unittest.TestCase):
   10 | gmf10 | gmf
  ... | gmf11 | 1 additional output(s)
 Some outputs where not shown. You can see the full list with the commands
-`openquake --list-hazard-outputs` or `openquake --list-risk-outputs`
+`oq-engine --list-hazard-outputs` or `oq-engine --list-risk-outputs`
 ''')
