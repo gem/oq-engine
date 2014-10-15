@@ -21,7 +21,7 @@ from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.commonlib.node import read_nodes, context, striptag
 from openquake.commonlib import valid
-from openquake.commonlib.nrml import registry
+from openquake.commonlib.nrml import nodefactory
 
 try:
     from openquake.commonlib.obsolete import NrmlHazardlibConverter
@@ -131,7 +131,7 @@ def parse_source_model(fname, converter, apply_uncertainties=lambda src: None):
     source_stats_dict = {}
     source_ids = set()
     src_nodes = read_nodes(fname, lambda elem: 'Source' in elem.tag,
-                           registry['sourceModel'])
+                           nodefactory['sourceModel'])
     for src_node in src_nodes:
         src = converter.convert_node(src_node)
         if src.source_id in source_ids:

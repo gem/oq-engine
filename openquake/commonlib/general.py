@@ -223,8 +223,8 @@ def deep_eq(a, b, decimal=7, exclude=None):
         Desired precision (digits after the decimal point) for numerical
         comparisons.
 
-    :param exclude: a list of attributes that will be excluded when
-    traversing objects
+    :param exclude:
+        A list of attributes that will be excluded when traversing objects
 
     :returns:
         Return `True` or `False` (to indicate if objects are equal) and a `str`

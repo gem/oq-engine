@@ -27,7 +27,7 @@ from openquake.commonlib.node import read_nodes, context
 from openquake.commonlib import InvalidFile
 from openquake.risklib import scientific, workflows
 from openquake.commonlib.oqvalidation import vulnerability_files
-from openquake.commonlib.nrml import registry
+from openquake.commonlib.nrml import nodefactory
 
 # loss types (in the risk models) and cost types (in the exposure)
 # are the sames except for fatalities -> occupants
@@ -90,7 +90,7 @@ def get_vulnerability_functions(fname):
     imts = set()
     taxonomies = set()
     vf_dict = {}  # imt, taxonomy -> vulnerability function
-    for vset in read_nodes(fname, filter_vset, registry['vulnerabilityModel']):
+    for vset in read_nodes(fname, filter_vset, nodefactory['vulnerabilityModel']):
         imt_str, imls, min_iml, max_iml, imlUnit = ~vset.IML
         if imt_str in imts:
             raise InvalidFile('Duplicated IMT %s: %s, line %d' %
@@ -172,7 +172,7 @@ def get_fragility_functions(fname):
     """
     [fmodel] = read_nodes(
         fname, lambda el: el.tag.endswith('fragilityModel'),
-        registry['fragilityModel'])
+        nodefactory['fragilityModel'])
     # ~fmodel.description is ignored
     limit_states = ~fmodel.limitStates
     tag = 'ffc' if fmodel['format'] == 'continuous' else 'ffd'

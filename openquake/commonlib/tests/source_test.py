@@ -27,14 +27,14 @@ from openquake.hazardlib import scalerel
 from openquake.hazardlib import source
 from openquake.hazardlib.tom import PoissonTOM
 
-from openquake import nrml_examples
+from openquake.commonlib import examples
 from openquake.commonlib import source as s
-from openquake.commonlib.nrml import registry
+from openquake.commonlib.nrml import nodefactory
 from openquake.commonlib.node import read_nodes
 from openquake.commonlib.general import deep_eq
 
 # directory where the example files are
-NRML_DIR = os.path.dirname(nrml_examples.__file__)
+NRML_DIR = os.path.dirname(examples.__file__)
 
 # Test NRML to use (contains 1 of each source type).
 MIXED_SRC_MODEL = os.path.join(NRML_DIR, 'source_model/mixed.xml')
@@ -60,7 +60,7 @@ NONPARAMETRIC_SOURCE = os.path.join(
 filter_sources = lambda el: 'Source' in el.tag
 filter_ruptures = lambda el: 'Rupture' in el.tag
 
-ValidNode = registry['sourceModel']
+ValidNode = nodefactory['sourceModel']
 
 
 class NrmlSourceToHazardlibTestCase(unittest.TestCase):
