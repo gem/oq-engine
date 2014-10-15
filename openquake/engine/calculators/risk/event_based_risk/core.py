@@ -271,8 +271,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
     set of assets.
     """
 
-    #: The core calculation celery task function
-    core_calc_task = event_based
+    core = staticmethod(event_based)
 
     # FIXME(lp). Validate sites_disagg to ensure non-empty outputs
     validators = base.RiskCalculator.validators + [
