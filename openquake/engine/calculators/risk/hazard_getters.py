@@ -212,13 +212,12 @@ class GroundMotionInput(RiskInput):
     Hazard getter for loading ground motion values.
     """ + RiskInput.__doc__
 
-    def __enter__(self):
+    def __init__(self, imt, taxonomy, hazard_outputs, assets):
         """
         Perform the needed queries on the database to populate
         hazards and epsilons.
         """
-        RiskInput.__enter__(self)  # populate .site_ids
-
+        RiskInput.__init__(self, imt, taxonomy, hazard_outputs, assets)
         self.hazards = {}  # dict ho, imt -> {site_id: {rup_id: gmv}}
         self.rupture_ids = []
         sescolls = set()
@@ -240,15 +239,6 @@ class GroundMotionInput(RiskInput):
             epsilon_rows.append(row)
         if epsilon_rows:
             self.epsilons = numpy.array(epsilon_rows)
-
-    def __exit__(self, etype, exc, tb):
-        """Clear caches after usage"""
-        self.assets = []
-        self.site_ids = []
-        self.asset_site_ids = []
-        self.hazards.clear()
-        if hasattr(self, 'epsilons'):
-            self.epsilons = None
 
     def get_epsilons(self):
         """
