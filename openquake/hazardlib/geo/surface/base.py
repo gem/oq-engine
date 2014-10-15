@@ -225,6 +225,44 @@ class BaseQuadrilateralSurface(BaseSurface):
         """
         return self.get_mesh().get_joyner_boore_distance(mesh)
 
+    def get_ry0_distance(self, mesh):
+        """
+        See :meth:`superclass method
+        <.base.BaseSurface.get_ry0_distance>`
+        for spec of input and result values.
+
+        The method computes the two
+
+        """
+        top_edge = self.get_mesh()[0:1]
+
+        p1 = Point(top_edge.lons[0, 0], top_edge.lats[0, 0],
+                   top_edge.depths[0, 0])
+        p2 = Point(top_edge.lons[0, 1], top_edge.lats[0, 1],
+                   top_edge.depths[0, 1])
+        azimuth = p1.azimuth(p2)
+
+        dst1 = geodetic.distance_to_arc(p1.longitude,
+                                        p1.latitude,
+                                        (azimuth+90.) % 360,
+                                        mesh.lons, mesh.lats)
+
+        p1 = Point(top_edge.lons[0, -1], top_edge.lats[0, -1],
+                   top_edge.depths[0, -1])
+        p2 = Point(top_edge.lons[0, -2], top_edge.lats[0, -2],
+                   top_edge.depths[0, -2])
+        azimuth = p1.azimuth(p2)
+
+        dst2 = geodetic.distance_to_arc(p1.longitude,
+                                        p1.latitude,
+                                        (azimuth+90.) % 360,
+                                        mesh.lons, mesh.lats)
+
+        # This covers the most classical case
+        dst = numpy.fmin(numpy.abs(dst1), numpy.abs(dst2))
+
+        return dst
+
     def get_rx_distance(self, mesh):
         """
         See :meth:`superclass method
