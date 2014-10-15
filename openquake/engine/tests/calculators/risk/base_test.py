@@ -18,7 +18,6 @@ import unittest
 from openquake.engine.tests.utils import helpers
 from openquake.engine.tests.utils.helpers import get_data_path
 from openquake.engine.calculators.risk import base, hazard_getters
-from openquake.engine.tests.utils.tasks import fake_risk_task
 from openquake.engine.db import models
 
 
@@ -45,7 +44,10 @@ class FakeRiskCalculator(base.RiskCalculator):
     """
     output_builders = []
     risk_input_class = hazard_getters.GroundMotionInput
-    core_calc_task = fake_risk_task
+
+    @staticmethod
+    def core(workflow, risk_input, outputdict, params, monitor):
+        return dict(result=1)
 
     @property
     def calculation_parameters(self):
@@ -77,4 +79,4 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
         self.assertEqual(self.calculator.taxonomies_asset_count, {'VF': 2})
 
         self.calculator.execute()
-        self.assertEqual(self.calculator.acc, {self.job.id: 2})
+        self.assertEqual(self.calculator.acc, {'result': 2})

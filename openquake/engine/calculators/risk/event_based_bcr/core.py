@@ -65,7 +65,7 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
     Event based BCR risk calculator. Computes BCR distributions for a
     given set of assets.
     """
-    core = event_based_bcr
+    core = staticmethod(event_based_bcr)
 
     validators = event_based.EventBasedRiskCalculator.validators + [
         validation.ExposureHasRetrofittedCosts]
