@@ -209,7 +209,7 @@ _wait_ssh () {
 #
 #  _devtest_innervm_run <branch_id> <lxc_ip> - part of source test performed on lxc
 #                     the following activities are performed:
-#                     - extracts dependencies from oq-{engine,nrmlib, ..} debian/control
+#                     - extracts dependencies from oq-{engine,hazardlib, ..} debian/control
 #                       files and install them
 #                     - builds oq-hazardlib speedups
 #                     - installs oq-engine sources on lxc
