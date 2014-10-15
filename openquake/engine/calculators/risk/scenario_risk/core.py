@@ -50,7 +50,7 @@ def scenario(workflow, risk_input, outputdict, params, monitor):
     epsilons = risk_input.get_epsilons()
     agg, ins = {}, {}
     for loss_type in workflow.loss_types:
-        with monitor('computing risk'):
+        with monitor.copy('computing risk'):
             outputdict = outputdict.with_args(
                 loss_type=loss_type, output_type="loss_map")
 
@@ -60,7 +60,7 @@ def scenario(workflow, risk_input, outputdict, params, monitor):
             agg[loss_type] = aggregate_losses
         ins[loss_type] = insured_losses
 
-        with monitor('saving risk'):
+        with monitor.copy('saving risk'):
             outputdict.write(
                 assets,
                 loss_ratio_matrix.mean(axis=1),

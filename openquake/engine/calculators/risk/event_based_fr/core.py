@@ -196,7 +196,7 @@ class EventBasedFRRiskCalculator(core.EventBasedRiskCalculator):
         """
         getter_builders = []
         risk_model = []
-        with self.monitor('associating assets<->sites'):
+        with self.monitor.copy('associating assets<->sites'):
             for risk_model in self.risk_model.itervalues():
                 logs.LOG.info('associating assets<->sites for taxonomy %s',
                               risk_model.taxonomy)
