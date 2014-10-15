@@ -16,19 +16,14 @@
 """
 Core functionality for the Event Based BCR Risk calculator.
 """
-from django.db import transaction
-
 from openquake.risklib import workflows
 
 from openquake.engine.calculators.risk import writers, validation
 from openquake.engine.calculators.risk.event_based_risk \
     import core as event_based
-from openquake.engine.performance import EnginePerformanceMonitor
-from openquake.engine.utils import tasks
 
 
-@tasks.oqtask
-def event_based_bcr(job_id, workflow, risk_input, outputdict, _params):
+def event_based_bcr(workflow, risk_input, outputdict, params, monitor):
     """
     Celery task for the BCR risk calculator based on the event based
     calculator.
@@ -48,25 +43,16 @@ def event_based_bcr(job_id, workflow, risk_input, outputdict, _params):
     :param params:
       An instance of :class:`..base.CalcParams` used to compute
       derived outputs
-    """
-    monitor = EnginePerformanceMonitor(
-        None, job_id, event_based_bcr, tracing=True)
-
-    # Do the job in other functions, such that it can be unit tested
-    # without the celery machinery
-    with transaction.commit_on_success(using='job_init'):
-            do_event_based_bcr(workflow, risk_input, outputdict, monitor)
-
-
-def do_event_based_bcr(workflow, risk_input, outputdict, monitor):
-    """
-    See `event_based_bcr` for docstring
+    :param monitor:
+      An instance of :class:
+      `openquake.engine.db.models.EnginePerformanceMonitor`
     """
     for loss_type in workflow.loss_types:
-        outputs = workflow.compute_all_outputs(
-            risk_input, loss_type, monitor.copy('getting hazard'))
+        with monitor.copy('computing risk'):
+            outputs = workflow.compute_all_outputs(
+                risk_input, loss_type, monitor.copy('getting hazard'))
         outputdict = outputdict.with_args(loss_type=loss_type)
-        with monitor.copy('writing results'):
+        with monitor.copy('saving risk'):
             for out in outputs:
                 outputdict.write(
                     workflow.assets,
@@ -80,7 +66,7 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
     Event based BCR risk calculator. Computes BCR distributions for a
     given set of assets.
     """
-    core_calc_task = event_based_bcr
+    core = event_based_bcr
 
     validators = event_based.EventBasedRiskCalculator.validators + [
         validation.ExposureHasRetrofittedCosts]

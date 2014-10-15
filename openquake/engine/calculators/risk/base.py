@@ -23,6 +23,8 @@ import itertools
 import collections
 import psutil
 
+from django.db import transaction
+
 from openquake.commonlib import risk_parsers
 from openquake.hazardlib.imt import from_string
 from openquake.commonlib.riskmodels import get_vfs
@@ -116,9 +118,11 @@ def run_risk(job_id, sorted_assocs, calc):
             logs.LOG.info(
                 'Read %d data for %d assets of taxonomy %s, imt=%s',
                 len(set(risk_input.site_ids)), len(assets), taxonomy, imt)
-            res = calc.core_calc_task.task_func(
-                job_id, calc.risk_model[imt, taxonomy],
-                risk_input, calc.outputdict, calc.calculator_parameters)
+            with transaction.commit_on_success(using='job_init'):
+                res = calc.core_func(
+                    calc.risk_model[imt, taxonomy],
+                    risk_input, calc.outputdict, calc.calculator_parameters,
+                    calc.monitor)
             acc = calc.agg_result(acc, res)
     return acc
 

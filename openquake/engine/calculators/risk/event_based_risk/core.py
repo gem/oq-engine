@@ -43,7 +43,7 @@ def event_based(job_id, workflow, risk_input, outputdict, params):
     :param job_id: the id of the current
         :class:`openquake.engine.db.models.OqJob`
     :param workflow:
-      A :class:`openquake.risklib.workflows.RiskModel` instance
+      A :class:`openquake.risklib.workflows.Workflow` instance
     :param risk_input:
       A :class:`RiskInput` instance
     :param outputdict:
@@ -78,7 +78,8 @@ def do_event_based(workflow, risk_input, outputdict, params, monitor):
     workflow.return_loss_matrix = bool(params.sites_disagg)
 
     for loss_type in workflow.loss_types:
-        outputs = workflow.compute_all_outputs(risk_input, loss_type, monitor)
+        with monitor.copy('computing individual risk'):
+            outputs = workflow.compute_all_outputs(risk_input, loss_type, monitor)
         for out in outputs:
             event_loss_table[loss_type, out.hid] = \
                 out.output.event_loss_table
