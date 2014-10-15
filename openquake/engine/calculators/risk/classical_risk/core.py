@@ -23,6 +23,7 @@ from openquake.risklib import workflows
 from openquake.engine.calculators import post_processing
 from openquake.engine.calculators.risk import (
     base, hazard_getters, validation, writers)
+from openquake.engine.utils import calculators
 
 
 def classical(workflow, risk_input, outputdict, params, monitor):
@@ -173,6 +174,7 @@ def save_statistical_output(outputdict, stats, params):
             output_type="loss_curve", statistics="quantile", insured=True)
 
 
+@calculators.add('classical_risk')
 class ClassicalRiskCalculator(base.RiskCalculator):
     """
     Classical PSHA risk calculator. Computes loss curves and loss maps
