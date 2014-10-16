@@ -30,6 +30,7 @@ from openquake.engine.calculators.risk import (
 from openquake.engine.db import models
 from openquake.engine import writer
 from openquake.engine.utils import calculators
+from openquake.engine.performance import EnginePerformanceMonitor
 
 
 def event_based(workflow, risk_input, outputdict, params, monitor):
@@ -287,7 +288,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         # accumulator for the event loss tables
         self.acc = collections.defaultdict(collections.Counter)
 
-    #@EnginePerformanceMonitor.monitor  # temporarily removed for performance sake
+    @EnginePerformanceMonitor.monitor
     def agg_result(self, acc, event_loss_table):
         """
         Updates the event loss table
