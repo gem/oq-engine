@@ -482,6 +482,8 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
         params['hazard_calculation_id'] = haz_job.id
     elif 'special_assets' in params:
         del params['special_assets']
+    elif 'statistics' in params:
+        del params['statistics']
     calculation = create_calculation(models.RiskCalculation, params)
     job.risk_calculation = calculation
     job.save()
