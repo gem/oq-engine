@@ -18,9 +18,6 @@
 """
 Hazard input management for Risk calculators.
 """
-import itertools
-import operator
-
 import numpy
 
 from openquake.hazardlib.imt import from_string
@@ -91,6 +88,10 @@ class RiskInput(object):
    :attr site_id:
         The id of the site associated to the hazards
     """
+    @classmethod
+    def get_hazard_data(cls, hazard_outputs):
+        return hazard_outputs
+
     def __init__(self, imt, taxonomy, site_id, hazard_outputs, assets):
         self.imt = imt
         self.taxonomy = taxonomy

@@ -30,7 +30,6 @@ from openquake.engine.calculators.risk import (
 from openquake.engine.db import models
 from openquake.engine import writer
 from openquake.engine.utils import calculators
-from openquake.engine.performance import EnginePerformanceMonitor
 
 
 def event_based(workflow, risk_input, outputdict, params, monitor):
