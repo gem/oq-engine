@@ -473,16 +473,20 @@ class ZhaoEtAl2006AscSWISS05(ZhaoEtAl2006Asc):
     """
     This class extends :class:ZhaoEtAl2006Asc,
     adjusted to be used for the Swiss Hazard Model [2014].
-    1) kappa value
+
+    #. kappa value
        K-adjustments corresponding to model 01 - as prepared by Ben Edwards
        K-value for PGA were not provided but infered from SA[0.01s]
        the model considers a fixed value of vs30=1100m/s
-    2) small-magnitude correction
-    3) single station sigma - inter-event magnitude/distance adjustment
+
+    #. small-magnitude correction
+
+    #. single station sigma - inter-event magnitude/distance adjustment
 
     Disclaimer: these equations are modified to be used for the
     Swiss Seismic Hazard Model [2014].
-    The use of these models is the soly responsability of the hazard modeler.
+    The hazard modeller is solely responsible for the use of this GMPE
+    in a different tectonic context.
 
     Model implmented by laurentiu.danciu@gmail.com
 
