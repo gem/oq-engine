@@ -62,8 +62,7 @@ def event_based(workflow, risk_input, outputdict, params, monitor):
 
     for loss_type in workflow.loss_types:
         with monitor.copy('computing individual risk'):
-            outputs = workflow.compute_all_outputs(
-                risk_input, loss_type, monitor)
+            outputs = workflow.compute_all_outputs(risk_input, loss_type)
         for out in outputs:
             event_loss_table[loss_type, out.hid] = out.output.event_loss_table
 
