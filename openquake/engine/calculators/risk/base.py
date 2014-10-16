@@ -119,7 +119,7 @@ def run_risk(job_id, sorted_assocs, calc):
             imt = it.imt.imt_str
             workflow = calc.risk_model[imt, taxonomy]
             for site_id, asset_group in itertools.groupby(
-                    assets, key=lambda a: a.site.id):
+                    assets, key=lambda a: a.site_id):
                 with calc.monitor("getting hazard"):
                     risk_input = calc.risk_input_class(
                         imt, taxonomy, site_id, hazard_data, list(asset_group))
