@@ -2887,6 +2887,7 @@ class AssetManager(djm.GeoManager):
         # add asset_site_id attribute to each asset
         for ass, assoc in zip(annotated_assets, assocs):
             ass.asset_site_id = assoc.id
+            ass.site_id = assoc.site.id
         return annotated_assets
 
     def _get_asset_chunk_query_args(self, rc, asset_ids):
