@@ -340,7 +340,8 @@ CalcParams = collections.namedtuple(
         'mag_bin_width',
         'distance_bin_width',
         'coordinate_bin_width',
-        'damage_state_ids'
+        'damage_state_ids',
+        'statistics',
     ])
 
 
@@ -354,7 +355,8 @@ def make_calc_params(conditional_loss_poes=None,
                      mag_bin_width=None,
                      distance_bin_width=None,
                      coordinate_bin_width=None,
-                     damage_state_ids=None):
+                     damage_state_ids=None,
+                     statistics=True):
     """
     Constructor of CalculatorParameters
     """
@@ -368,4 +370,5 @@ def make_calc_params(conditional_loss_poes=None,
                       mag_bin_width,
                       distance_bin_width,
                       coordinate_bin_width,
-                      damage_state_ids)
+                      damage_state_ids,
+                      statistics)
