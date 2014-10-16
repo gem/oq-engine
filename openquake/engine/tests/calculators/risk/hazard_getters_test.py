@@ -57,24 +57,32 @@ class HazardCurveInputTestCase(unittest.TestCase):
             calc.rc, assocs)
         self.nbytes = self.builder.calc_nbytes()
         self.builder.init_epsilons()
-        self.risk_input = self.risk_input_class(
-            self.imt, self.taxonomy, calc.rc.hazard_outputs(), self.assets)
+        hazard_data = self.risk_input_class.get_hazard_data(
+            calc.rc.hazard_outputs())
+        self.risk_inputs = [
+            self.risk_input_class(
+                self.imt, self.taxonomy, asset.site_id,
+                hazard_data, [asset])
+            for asset in self.assets]
 
     def test_nbytes(self):
         self.assertEqual(self.nbytes, 0)
 
     def test_is_pickleable(self):
-        pickle.dumps(self.risk_input)  # raises an error if not
+        pickle.dumps(self.risk_inputs[0])  # raises an error if not
 
     def test_call(self):
         # the exposure model in this example has three assets of taxonomy VF
         # called a1, a2 and a3; only a2 and a3 are within the maximum distance
         [a2, a3] = self.assets
-        self.assertEqual(self.risk_input.assets, [a2, a3])
-        data = self.risk_input.get_data()
+        self.assertEqual(self.risk_inputs[0].assets, [a2])
+        self.assertEqual(self.risk_inputs[1].assets, [a3])
+        data2 = self.risk_inputs[0].get_data()
+        data3 = self.risk_inputs[1].get_data()
         numpy.testing.assert_allclose(
-            [[(0.1, 0.1), (0.2, 0.2), (0.3, 0.3)],
-             [(0.1, 0.1), (0.2, 0.2), (0.3, 0.3)]], data)
+            [[(0.1, 0.1), (0.2, 0.2), (0.3, 0.3)]], data2)
+        numpy.testing.assert_allclose(
+            [[(0.1, 0.1), (0.2, 0.2), (0.3, 0.3)]], data3)
 
 
 class GroundMotionInputTestCase(HazardCurveInputTestCase):
@@ -96,15 +104,15 @@ class GroundMotionInputTestCase(HazardCurveInputTestCase):
         # maximum distance, so it is excluded;
         # there is one realization and three ruptures
         a1, = self.assets
-        self.assertEqual(self.risk_input.assets, [a1])
-        rupture_ids = self.risk_input.rupture_ids
+        self.assertEqual(self.risk_inputs[0].assets, [a1])
+        rupture_ids = self.risk_inputs[0].rupture_ids
         self.assertEqual(len(rupture_ids), 3)
 
-        data = self.risk_input.get_data()
+        data = self.risk_inputs[0].get_data()
         numpy.testing.assert_allclose([[0.1, 0.2, 0.3]], data)
         numpy.testing.assert_allclose(
             numpy.array([[0.49671415, -0.1382643, 0.64768854]]),
-            self.risk_input.epsilons)  # shape (1, 3)
+            self.risk_inputs[0].epsilons)  # shape (1, 3)
 
 
 class ScenarioTestCase(GroundMotionInputTestCase):
@@ -116,7 +124,7 @@ class ScenarioTestCase(GroundMotionInputTestCase):
 
     def test_nbytes(self):
         # I am not populating the table ses_rupture
-        self.assertEqual(len(self.risk_input.rupture_ids), 0)
+        self.assertEqual(len(self.risk_inputs[0].rupture_ids), 0)
         self.assertEqual(self.nbytes, 80)
 
     def test_call(self):
@@ -124,9 +132,9 @@ class ScenarioTestCase(GroundMotionInputTestCase):
         # (a1 and a3) but the asset a3 has no hazard data within the
         # maximum distance; there are 10 realizations
         a1, = self.assets
-        self.assertEqual(self.risk_input.assets, [a1])
-        [hazard] = self.risk_input.hazards.values()
-        self.assertEqual(hazard.values()[0], {0: 0.1, 1: 0.2, 2: 0.3})
+        self.assertEqual(self.risk_inputs[0].assets, [a1])
+        [hazard] = self.risk_inputs[0].hazards.values()
+        self.assertEqual(hazard, {0: 0.1, 1: 0.2, 2: 0.3})
 
         # NB: since I am not populating the table ses_rupture,
         # self.risk_input.get_data() is empty
