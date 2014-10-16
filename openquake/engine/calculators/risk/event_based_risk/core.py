@@ -63,6 +63,8 @@ def event_based(workflow, risk_input, outputdict, params, monitor):
     for loss_type in workflow.loss_types:
         with monitor.copy('computing individual risk'):
             outputs = workflow.compute_all_outputs(risk_input, loss_type)
+        if params.statistics:
+            outputs = list(outputs)  # expand the generator
         for out in outputs:
             event_loss_table[loss_type, out.hid] = out.output.event_loss_table
 
@@ -81,8 +83,9 @@ def event_based(workflow, risk_input, outputdict, params, monitor):
                                          loss_type=loss_type),
                     out.output, disagg_outputs, params)
 
-        stats = workflow.statistics(outputs, params.quantiles, post_processing)
-        if stats is not None:
+        if params.statistics and len(outputs) > 1:
+            stats = workflow.statistics(
+                outputs, params.quantiles, post_processing)
             with monitor.copy('saving risk statistics'):
                 save_statistical_output(
                     outputdict.with_args(
@@ -404,4 +407,5 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             sites_disagg=self.rc.sites_disagg or [],
             mag_bin_width=self.rc.mag_bin_width,
             distance_bin_width=self.rc.distance_bin_width,
-            coordinate_bin_width=self.rc.coordinate_bin_width)
+            coordinate_bin_width=self.rc.coordinate_bin_width,
+            statistics=self.job.get_param('statistics', True))
