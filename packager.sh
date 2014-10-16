@@ -433,8 +433,6 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "sudo service postgresql restart"
     # XXX: should the --upgrade-db command go in the postint script?
     ssh $lxc_ip "set -e; oq-engine --upgrade-db --yes"
-    # FIXME test for openquake
-    ssh $lxc_ip "openquake"
 
     # run celeryd daemon
     ssh $lxc_ip "cd /usr/openquake/engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
