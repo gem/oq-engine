@@ -49,8 +49,7 @@ def event_based_bcr(workflow, risk_input, outputdict, params, monitor):
     """
     for loss_type in workflow.loss_types:
         with monitor.copy('computing risk'):
-            outputs = workflow.compute_all_outputs(
-                risk_input, loss_type, monitor.copy('getting hazard'))
+            outputs = workflow.compute_all_outputs(risk_input, loss_type)
         outputdict = outputdict.with_args(loss_type=loss_type)
         with monitor.copy('saving risk'):
             for out in outputs:
