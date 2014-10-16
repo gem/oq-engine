@@ -18,6 +18,9 @@
 """
 Hazard input management for Risk calculators.
 """
+import itertools
+import operator
+
 import numpy
 
 from openquake.hazardlib.imt import from_string
@@ -85,20 +88,22 @@ class RiskInput(object):
     :attr assets:
         The assets for which we want to extract the hazard
 
-   :attr site_id:
-        The id of the site associated to the hazards
+   :attr site_ids:
+        The ids of the sites associated to the hazards
     """
-    @classmethod
-    def get_hazard_data(cls, hazard_outputs):
-        return hazard_outputs
-
-    def __init__(self, imt, taxonomy, site_id, hazard_outputs, assets):
+    def __init__(self, imt, taxonomy, hazard_outputs, assets):
         self.imt = imt
         self.taxonomy = taxonomy
         self.hazard_outputs = hazard_outputs
         self.assets = assets
-        self.site_id = site_id
-        self.asset_site_ids = [a.asset_site_id for a in assets]
+        self.site_ids = []
+        self.asset_site_ids = []
+        # asset_site associations
+        for asset in self.assets:
+            asset_site_id = asset.asset_site_id
+            assoc = models.AssetSite.objects.get(pk=asset_site_id)
+            self.site_ids.append(assoc.site.id)
+            self.asset_site_ids.append(asset_site_id)
 
     def get_hazards(self):
         """
@@ -164,10 +169,13 @@ class HazardCurveInput(RiskInput):
         FROM hzrdr.hazard_curve_data
         WHERE hazard_curve_id = %s AND location = %s
         """
-        location = models.HazardSite.objects.get(pk=self.site_id).location
-        cursor.execute(query, (oc.id, 'SRID=4326; ' + location.wkt))
-        poes = cursor.fetchall()[0][0]
-        return [zip(imls, poes)] * len(self.assets)
+        all_curves = []
+        for site_id in self.site_ids:
+            location = models.HazardSite.objects.get(pk=site_id).location
+            cursor.execute(query, (oc.id, 'SRID=4326; ' + location.wkt))
+            poes = cursor.fetchall()[0][0]
+            all_curves.append(zip(imls, poes))
+        return all_curves
 
 
 def expand(array, N):
@@ -191,10 +199,6 @@ def expand(array, N):
 
 
 def haz_out_to_ses_coll(ho):
-    """
-    :param ho: hazard output associated to a Gmf
-    :returns: the associated :class:`SESCollection` instance
-    """
     if ho.output_type == 'gmf_scenario':
         out = models.Output.objects.get(output_type='ses', oq_job=ho.oq_job)
         return [out.ses]
@@ -208,36 +212,23 @@ class GroundMotionInput(RiskInput):
     Hazard getter for loading ground motion values.
     """ + RiskInput.__doc__
 
-    @classmethod
-    def get_hazard_data(cls, hazard_outputs):
-        """
-        Returns a triple with
-
-        1. the given hazard outputs (associated to Gmf instances)
-        2. the associated SESCollection instances
-        3. the IDs of the corresponding ruptures
-        """
-        rupture_ids = []
-        sescolls = set()
-        for ho in hazard_outputs:
-            for sc in haz_out_to_ses_coll(ho):
-                sescolls.add(sc)
-        sescolls = sorted(sescolls)
-        for sc in sescolls:
-            rupture_ids.extend(
-                sc.get_ruptures().values_list('id', flat=True))
-        return hazard_outputs, sescolls, rupture_ids
-
-    def __init__(self, imt, taxonomy, site_id, hazard_data, assets):
+    def __init__(self, imt, taxonomy, hazard_outputs, assets):
         """
         Perform the needed queries on the database to populate
         hazards and epsilons.
         """
-        hazard_outputs, sescolls, self.rupture_ids = hazard_data
-        RiskInput.__init__(
-            self, imt, taxonomy, site_id, hazard_outputs, assets)
-        # dict ho -> {site_id: {rup_id: gmv}}
-        self.hazards = {ho: self._get_gmv_dict(ho) for ho in hazard_outputs}
+        RiskInput.__init__(self, imt, taxonomy, hazard_outputs, assets)
+        self.hazards = {}  # dict ho, imt -> {site_id: {rup_id: gmv}}
+        self.rupture_ids = []
+        sescolls = set()
+        for ho in self.hazard_outputs:
+            self.hazards[ho] = self._get_gmv_dict(ho)
+            for sc in haz_out_to_ses_coll(ho):
+                sescolls.add(sc)
+        sescolls = sorted(sescolls)
+        for sc in sescolls:
+            self.rupture_ids.extend(
+                sc.get_ruptures().values_list('id', flat=True))
         epsilon_rows = []  # ordered by asset_site_id
         for asset_site_id in self.asset_site_ids:
             row = []
@@ -273,16 +264,20 @@ class GroundMotionInput(RiskInput):
             imt_query = 'imt=%s and sa_period=%s and sa_damping=%s'
         else:
             imt_query = 'imt=%s and sa_period is %s and sa_damping is %s'
+        gmv_dict = {}  # dict site_id -> {rup_id: gmv}
         cursor = models.getcursor('job_init')
-        cursor.execute('select rupture_ids, gmvs from '
-                       'hzrdr.gmf_data where gmf_id=%s and site_id=%s '
-                       'and {}'.format(imt_query),
-                       (gmf_id, self.site_id,
+        cursor.execute('select site_id, rupture_ids, gmvs from '
+                       'hzrdr.gmf_data where gmf_id=%s and site_id in %s '
+                       'and {} order by site_id'.format(imt_query),
+                       (gmf_id, tuple(set(self.site_ids)),
                         imt_type, sa_period, sa_damping))
-        gmv_dict = {}   #rup_id -> gmv
-        for rupture_ids, gmvs in cursor:
-            for rup_id, gmv in zip(rupture_ids, gmvs):
-                gmv_dict[rup_id] = gmv
+        for sid, group in itertools.groupby(cursor, operator.itemgetter(0)):
+            gmvs = []
+            ruptures = []
+            for site_id, rupture_ids, gmvs_chunk in group:
+                gmvs.extend(gmvs_chunk)
+                ruptures.extend(rupture_ids)
+            gmv_dict[sid] = dict(itertools.izip(ruptures, gmvs))
         return gmv_dict
 
     def _get_data(self, ho):
@@ -291,12 +286,19 @@ class GroundMotionInput(RiskInput):
 
         :returns: a list of N arrays with R elements each.
         """
-        gmv = self.hazards[ho]
-        array = numpy.array([gmv.get(r, 0.) for r in self.rupture_ids])
-        if not gmv:
+        all_gmvs = []
+        no_data = 0
+        gmv_dict = self.hazards[ho]
+        for site_id in self.site_ids:
+            gmv = gmv_dict.get(site_id, {})
+            if not gmv:
+                no_data += 1
+            array = numpy.array([gmv.get(r, 0.) for r in self.rupture_ids])
+            all_gmvs.append(array)
+        if no_data:
             logs.LOG.info('No data for %d assets out of %d, IMT=%s',
-                          no_data, len(self.assets), self.imt)
-        return [array] * len(self.assets)
+                          no_data, len(self.site_ids), self.imt)
+        return all_gmvs
 
 
 class RiskInitializer(object):
