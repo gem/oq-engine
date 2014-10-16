@@ -473,8 +473,8 @@ FakeUser = namedtuple('FakeUser', 'id')
 FakeJob = namedtuple(
     'FakeJob', 'id, status, owner, hazard_calculation, risk_calculation'
 )
-FakeJob.calculation = property(
-    lambda self: self.risk_calculation or self.hazard_calculation)
+FakeJob.calc_id = property(
+    lambda self: (self.risk_calculation or self).id)
 FakeJob.job_type = property(
     lambda self: 'risk' if self.risk_calculation else 'hazard')
 
