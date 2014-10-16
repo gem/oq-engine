@@ -256,7 +256,7 @@ def run_calc(request, job_type):
                            callback_url, foreign_calc_id,
                            hazard_output_id, hazard_job_id)
     try:
-        response_data = _get_calc_info(job_type, job.calculation.id)
+        response_data = _get_calc_info(job_type, job.calc_id)
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
 
