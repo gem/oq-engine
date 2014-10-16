@@ -289,6 +289,15 @@ class OqJob(djm.Model):
         """
         return 'hazard' if self.risk_calculation is None else 'risk'
 
+    # TODO: this property will disappear when RiskCalculation will disappear
+    @property
+    def calc_id(self):
+        """Return the calculation id"""
+        if self.risk_calculation:
+            return self.risk_calculation.id
+        else:
+            return self.id
+
     def get_param(self, name, missing=RAISE_EXC):
         """
         `job.get_param(name)` returns the value of the requested parameter

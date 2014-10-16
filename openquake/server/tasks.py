@@ -354,7 +354,7 @@ def copy_output(platform_connection, output, foreign_calculation_id):
                          ENCODING 'utf8', DELIMITER '|')""" % (
                 iface.export_query % {
                     'output_id': output.id,
-                    'calculation_id': output.oq_job.calculation.id}),
+                    'calculation_id': output.oq_job.calc_id}),
                 temporary_file)
 
             temporary_file.seek(0)
