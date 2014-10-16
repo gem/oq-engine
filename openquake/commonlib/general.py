@@ -342,7 +342,11 @@ def run_in_process(code, *args):
     """
     if args:
         code %= args
-    out = subprocess.check_output([sys.executable, '-c', code])
+    try:
+        out = subprocess.check_output([sys.executable, '-c', code])
+    except subprocess.CalledProcessError as exc:
+        print >> sys.stderr, exc.cmd[-1]
+        raise
     if out:
         return eval(out, {}, {})
 
@@ -388,13 +392,19 @@ def assert_independent(package, *packages):
     Make sure the `package` does not depend from the `packages`.
     For instance
 
-    >>> assert_independent('openquake.hazardlib', 'openquake.risklib')
+    >>> assert_independent('openquake.hazardlib',
+    ...                    'openquake.risklib', 'openquake.commonlib')
+    >>> assert_independent('openquake.risklib',
+    ...                    'openquake.hazardlib', 'openquake.commonlib')
     """
     assert packages, 'At least one package must be specified'
     imported_modules = run_in_process("""\
+import sys
 from openquake.commonlib.general import import_all
-print import_all('%s')""" % package)
+del sys.modules['openquake.commonlib']
+print import_all('%s')
+""" % package)
     for mod in imported_modules:
         if mod.startswith(packages):
             raise CodeDependencyError('%s depends on %s' % (
-                package, mod))
+                package, '|'.join(packages)))
