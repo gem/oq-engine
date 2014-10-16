@@ -174,7 +174,6 @@ class LightMonitor(object):
         self.t0 = time.time()
         self.start_time = datetime.fromtimestamp(self.t0)
         self.duration = 0
-        self.children = []
 
     def __enter__(self):
         self.t0 = time.time()
@@ -184,19 +183,14 @@ class LightMonitor(object):
         self.duration += time.time() - self.t0
 
     def copy(self, operation):
-        child = self.__class__(operation, self.job_id, self.task)
-        self.children.append(child)
-        return child
+        return self.__class__(operation, self.job_id, self.task)
 
     def flush(self):
-        for child in self.children:
-            child.flush()
-        if self.operation:
-            models.Performance.objects.create(
-                oq_job_id=self.job_id,
-                task_id=self.task_id,
-                task=getattr(self.task, '__name__', None),
-                operation=self.operation,
-                start_time=self.start_time,
-                duration=self.duration)
-            self.__init__(self.operation, self.job_id, self.task)
+        models.Performance.objects.create(
+            oq_job_id=self.job_id,
+            task_id=self.task_id,
+            task=getattr(self.task, '__name__', None),
+            operation=self.operation,
+            start_time=self.start_time,
+            duration=self.duration)
+        self.__init__(self.operation, self.job_id, self.task)
