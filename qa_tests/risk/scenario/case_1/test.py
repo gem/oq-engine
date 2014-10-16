@@ -51,10 +51,11 @@ class ScenarioRiskCase1TestCase(risk.BaseRiskQATestCase):
             output__oq_job=job,
             insured=True)
 
-        return [[[m.value, m.std_dev] for m in maps],
+        data = [[[m.value, m.std_dev] for m in maps],
                 [agg.mean, agg.std_dev],
                 [[m.value, m.std_dev] for m in insured_maps],
                 [insured_agg.mean, insured_agg.std_dev]]
+        return data
 
     def expected_data(self):
         return [[[440.14707, 182.6159],
