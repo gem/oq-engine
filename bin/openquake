@@ -5,6 +5,11 @@
 bold=`tput bold`
 normal=`tput sgr0`
 
+command -v oq-engine &> /dev/null || {
+    echo -e "!! Can't find oq-engine in your path. Aborting." >&2
+    exit 1
+}
+
 echo ''
 echo "!! ${bold}Command 'openquake' has been replaced by 'oq-engine'${normal}"
 echo '!!'
@@ -13,8 +18,8 @@ echo -e "!! \t*  https://github.com/gem/oq-engine/wiki/Incompatible-changes-betw
 echo -e "!! \t*  https://github.com/gem/oq-engine/wiki/What's-new-in-OpenQuake-1.2"
 echo ''
 for i in {5..1}; do
-    echo -ne "\rI will run ${bold}oq-engine ${*}${normal} in $i seconds"
+    echo -ne "\rI will run ${bold}oq-engine ${*}${normal} in ${i} seconds"
     sleep 1
 done
 echo -ne "\r"
-oq-engine $*
+oq-engine ${*}
