@@ -114,12 +114,13 @@ def run_risk(job_id, sorted_assocs, calc):
         with monitor.copy("getting assets"):
             assets = models.ExposureData.objects.get_asset_chunk(
                 calc.rc, assocs_by_taxonomy)
+            sorted_assets = sorted(assets, key=lambda a: a.site_id)
         for it in models.ImtTaxonomy.objects.filter(
                 job=calc.job, taxonomy=taxonomy):
             imt = it.imt.imt_str
             workflow = calc.risk_model[imt, taxonomy]
             for site_id, asset_group in itertools.groupby(
-                    assets, key=lambda a: a.site_id):
+                    sorted_assets, key=lambda a: a.site_id):
                 with monitor.copy("getting hazard"):
                     risk_input = calc.risk_input_class(
                         imt, taxonomy, site_id, hazard_data, list(asset_group))
