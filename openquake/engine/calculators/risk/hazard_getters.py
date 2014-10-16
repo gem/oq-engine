@@ -88,8 +88,8 @@ class RiskInput(object):
     :attr assets:
         The assets for which we want to extract the hazard
 
-   :attr site_ids:
-        The ids of the sites associated to the hazards
+   :attr site_id:
+        The id of the site associated to the hazards
     """
     def __init__(self, imt, taxonomy, site_id, hazard_outputs, assets):
         self.imt = imt
@@ -272,20 +272,16 @@ class GroundMotionInput(RiskInput):
             imt_query = 'imt=%s and sa_period=%s and sa_damping=%s'
         else:
             imt_query = 'imt=%s and sa_period is %s and sa_damping is %s'
-        gmv_dict = {}  # dict site_id -> {rup_id: gmv}
         cursor = models.getcursor('job_init')
-        cursor.execute('select site_id, rupture_ids, gmvs from '
-                       'hzrdr.gmf_data where gmf_id=%s and site_id in %s '
-                       'and {} order by site_id'.format(imt_query),
-                       (gmf_id, tuple(set(self.site_ids)),
+        cursor.execute('select rupture_ids, gmvs from '
+                       'hzrdr.gmf_data where gmf_id=%s and site_id=%s '
+                       'and {}'.format(imt_query),
+                       (gmf_id, self.site_id,
                         imt_type, sa_period, sa_damping))
-        for sid, group in itertools.groupby(cursor, operator.itemgetter(0)):
-            gmvs = []
-            ruptures = []
-            for site_id, rupture_ids, gmvs_chunk in group:
-                gmvs.extend(gmvs_chunk)
-                ruptures.extend(rupture_ids)
-            gmv_dict[sid] = dict(itertools.izip(ruptures, gmvs))
+        gmv_dict = {}   #rup_id -> gmv
+        for rupture_ids, gmvs in cursor:
+            for rup_id, gmv in zip(rupture_ids, gmvs):
+                gmv_dict[rup_id] = gmv
         return gmv_dict
 
     def _get_data(self, ho):
@@ -294,13 +290,9 @@ class GroundMotionInput(RiskInput):
 
         :returns: a list of N arrays with R elements each.
         """
-        no_data = 0
-        gmv_dict = self.hazards[ho]
-        gmv = gmv_dict.get(self.site_id, {})
-        if not gmv:
-            no_data += 1
+        gmv = self.hazards[ho]
         array = numpy.array([gmv.get(r, 0.) for r in self.rupture_ids])
-        if no_data:
+        if not gmv:
             logs.LOG.info('No data for %d assets out of %d, IMT=%s',
                           no_data, len(self.assets), self.imt)
         return [array] * len(self.assets)
