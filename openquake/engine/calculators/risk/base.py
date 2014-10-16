@@ -36,7 +36,7 @@ from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import \
     writers, validation, hazard_getters
 from openquake.engine.utils import config, tasks
-from openquake.engine.performance import EnginePerformanceMonitor
+from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
 from openquake.engine.input.exposure import ExposureDBWriter
 
 MEMORY_ERROR = '''Running the calculation will require approximately
@@ -108,7 +108,7 @@ def run_risk(job_id, sorted_assocs, calc):
         hazard_data = calc.risk_input_class.get_hazard_data(hazard_outputs)
     else:
         hazard_data = hazard_outputs
-    monitor = EnginePerformanceMonitor(None, job_id, run_risk)
+    monitor = LightMonitor(None, job_id, run_risk)
     for taxonomy, assocs_by_taxonomy in itertools.groupby(
             sorted_assocs, lambda a: a.asset.taxonomy):
         with calc.monitor("getting assets"):
@@ -128,6 +128,7 @@ def run_risk(job_id, sorted_assocs, calc):
                         workflow, risk_input, calc.outputdict,
                         calc.calculator_parameters, monitor)
                 acc = calc.agg_result(acc, res)
+        monitor.flush()
         return acc
 
 
