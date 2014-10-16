@@ -330,24 +330,20 @@ class Classical(Workflow):
             mean_insured_curves, mean_average_insured_losses,
             quantile_insured_curves, quantile_average_insured_losses)
 
-    def compute_all_outputs(self, risk_input, loss_type, getter_monitor):
+    def compute_all_outputs(self, risk_input, loss_type):
         """
         :param risk_input:
             a risk_input object
         :param str loss_type:
             a string identifying the loss type we are considering
-        :getter_monitor:
-            a context manager monitoring the time and resources
-            spent the in the computation
         :returns:
             a number of outputs equal to the number of realizations
         """
         all_outputs = []
         for hazard in risk_input.get_hazards():  # for each realization
-            with getter_monitor.copy('computing individual risk'):
-                all_outputs.append(
-                    Output(hazard.hid, hazard.weight, loss_type,
-                           self(loss_type, risk_input.assets, hazard.data)))
+            all_outputs.append(
+                Output(hazard.hid, hazard.weight, loss_type,
+                       self(loss_type, risk_input.assets, hazard.data)))
         return all_outputs
 
 
@@ -506,25 +502,21 @@ class ProbabilisticEventBased(Workflow):
             insured_curves, average_insured_losses, stddev_insured_losses,
             maps, elt)
 
-    def compute_all_outputs(self, risk_input, loss_type, getter_monitor):
+    def compute_all_outputs(self, risk_input, loss_type):
         """
         :param risk_input:
             a risk_input object
         :param str loss_type:
             a string identifying the loss type we are considering
-        :param getter_monitor:
-            a context manager monitoring the time and resources
-            spent the in the computation
         :returns:
             a number of outputs equal to the number of realizations
         """
         all_outputs = []
         for hazard in risk_input.get_hazards():  # for each realization
-            with getter_monitor.copy('computing individual risk'):
-                out = self(loss_type, risk_input.assets, hazard.data,
-                           risk_input.get_epsilons(), risk_input.rupture_ids)
-                all_outputs.append(
-                    Output(hazard.hid, hazard.weight, loss_type, out))
+            out = self(loss_type, risk_input.assets, hazard.data,
+                       risk_input.get_epsilons(), risk_input.rupture_ids)
+            all_outputs.append(
+                Output(hazard.hid, hazard.weight, loss_type, out))
         return all_outputs
 
     def statistics(self, all_outputs, quantiles, post_processing):
@@ -782,14 +774,22 @@ class RiskInput(object):
     """
     Contains all the assets and hazard values associated to a given
     imt and site.
+
+    :param imt: Intensity Measure Type string
+    :param site_id: ID of a hazard site
+    :param hazard: hazard data on that site
+    :param assets: assets on that site
     """
     def __init__(self, imt, site_id, hazard, assets):
         self.imt = imt
         self.site_id = site_id
         self.hazard = hazard
-        self.assets_by_taxo = collections.defaultdict(list)
+        self.assets_by_taxo = {}  # taxonomy -> assets
         for asset in assets:
-            self.assets_by_taxo[asset.taxonomy].append(asset)
+            if asset.taxonomy not in self.assets_by_taxo:
+                self.assets_by_taxo[asset.taxonomy] = [asset]
+            else:
+                self.assets_by_taxo[asset.taxonomy].append(asset)
         self.weight = len(assets)
 
     @property
