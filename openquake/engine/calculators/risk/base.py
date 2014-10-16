@@ -36,7 +36,7 @@ from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import \
     writers, validation, hazard_getters
 from openquake.engine.utils import config, tasks
-from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
+from openquake.engine.performance import EnginePerformanceMonitor, DummyMonitor
 from openquake.engine.input.exposure import ExposureDBWriter
 
 MEMORY_ERROR = '''Running the calculation will require approximately
@@ -108,10 +108,10 @@ def run_risk(job_id, sorted_assocs, calc):
         hazard_data = calc.risk_input_class.get_hazard_data(hazard_outputs)
     else:
         hazard_data = hazard_outputs
-    monitor = LightMonitor(None, job_id, run_risk)
+    monitor = DummyMonitor(None, job_id, run_risk)
     for taxonomy, assocs_by_taxonomy in itertools.groupby(
             sorted_assocs, lambda a: a.asset.taxonomy):
-        with calc.monitor("getting assets"):
+        with monitor.copy("getting assets"):
             assets = models.ExposureData.objects.get_asset_chunk(
                 calc.rc, assocs_by_taxonomy)
         for it in models.ImtTaxonomy.objects.filter(
@@ -120,7 +120,7 @@ def run_risk(job_id, sorted_assocs, calc):
             workflow = calc.risk_model[imt, taxonomy]
             for site_id, asset_group in itertools.groupby(
                     assets, key=lambda a: a.site_id):
-                with calc.monitor("getting hazard"):
+                with monitor.copy("getting hazard"):
                     risk_input = calc.risk_input_class(
                         imt, taxonomy, site_id, hazard_data, list(asset_group))
                 with transaction.commit_on_success(using='job_init'):
@@ -128,7 +128,6 @@ def run_risk(job_id, sorted_assocs, calc):
                         workflow, risk_input, calc.outputdict,
                         calc.calculator_parameters, monitor)
                 acc = calc.agg_result(acc, res)
-        monitor.flush()
         return acc
 
 
