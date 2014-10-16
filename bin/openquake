@@ -8,12 +8,13 @@ normal=`tput sgr0`
 echo ''
 echo "!! ${bold}Command 'openquake' has been replaced by 'oq-engine'${normal}"
 echo '!!'
-echo '!! For an exhaustive list of changes see:'
-echo -e "!! \t*  https://github.com/gem/oq-engine/wiki/Incompatible-changes-between-OpenQuake-1.0-and-2.0"
-echo -e "!! \t*  https://github.com/gem/oq-engine/wiki/What's-new-in-OpenQuake-2.0"
+echo "!! For an exhaustive list of changes see:"
+echo -e "!! \t*  https://github.com/gem/oq-engine/wiki/Incompatible-changes-between-OpenQuake-1.0-and-1.2"
+echo -e "!! \t*  https://github.com/gem/oq-engine/wiki/What's-new-in-OpenQuake-1.2"
 echo ''
-echo 'Please run: oq-engine '$*
-echo ''
-
-# FIXME exit for test purpose
-exit 1
+for i in {5..1}; do
+    echo -ne "\rI will run ${bold}oq-engine ${*}${normal} in $i seconds"
+    sleep 1
+done
+echo -ne "\r"
+oq-engine $*
