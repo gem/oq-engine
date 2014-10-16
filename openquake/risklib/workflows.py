@@ -511,13 +511,10 @@ class ProbabilisticEventBased(Workflow):
         :returns:
             a number of outputs equal to the number of realizations
         """
-        all_outputs = []
         for hazard in risk_input.get_hazards():  # for each realization
             out = self(loss_type, risk_input.assets, hazard.data,
                        risk_input.get_epsilons(), risk_input.rupture_ids)
-            all_outputs.append(
-                Output(hazard.hid, hazard.weight, loss_type, out))
-        return all_outputs
+            yield Output(hazard.hid, hazard.weight, loss_type, out)
 
     def statistics(self, all_outputs, quantiles, post_processing):
         """
