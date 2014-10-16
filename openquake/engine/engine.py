@@ -94,8 +94,10 @@ def job_stats(job):
     job.is_running = True
     job.save()
     try:
-        with django_db.transaction.commit_on_success('job_init'):
-            yield
+        yield
+    except:
+        django_db.connections['job_init'].rollback()
+        raise
     finally:
         job.is_running = False
         job.save()
