@@ -22,8 +22,11 @@ Utility functions of general interest.
 """
 
 import os
+import sys
 import math
 import tempfile
+import importlib
+import subprocess
 import collections
 
 import numpy
@@ -325,3 +328,83 @@ def writetmp(content=None, dir=None, prefix="tmp", suffix="tmp"):
         fh.write(content)
         fh.close()
     return path
+
+
+def run_in_process(code, *args):
+    """
+    Run in an external process the given Python code and return the
+    output as a Python object. If there are arguments, then code is
+    taken as a template and traditional string interpolation is performed.
+
+    :param code: string or template describing Python code
+    :param args: arguments to be used for interpolation
+    :returns: the output of the process, as a Python object
+    """
+    if args:
+        code %= args
+    try:
+        out = subprocess.check_output([sys.executable, '-c', code])
+    except subprocess.CalledProcessError as exc:
+        print >> sys.stderr, exc.cmd[-1]
+        raise
+    if out:
+        return eval(out, {}, {})
+
+
+class CodeDependencyError(Exception):
+    pass
+
+
+def import_all(module_or_package):
+    """
+    If `module_or_package` is a module, just import it; if it is a package,
+    recursively imports all the modules it contains. Returns the name of
+    the modules that were imported as a set. The set can be empty if
+    the modules were already in sys.modules.
+    """
+    already_imported = set(sys.modules)
+    mod_or_pkg = importlib.import_module(module_or_package)
+    if not hasattr(mod_or_pkg, '__path__'):  # is a simple module
+        return set(sys.modules) - already_imported
+    # else import all modules contained in the package
+    [pkg_path] = mod_or_pkg.__path__
+    n = len(pkg_path)
+    for cwd, dirs, files in os.walk(pkg_path):
+        if all(os.path.basename(f) != '__init__.py' for f in files):
+            # the current working directory is not a subpackage
+            continue
+        for f in files:
+            if f.endswith('.py'):
+                modname = (module_or_package + cwd[n:].replace('/', '.') +
+                           '.' + os.path.basename(f[:-3]))
+                try:
+                    importlib.import_module(modname)
+                except:
+                    print >> sys.stderr, 'Could not import', modname
+    return set(sys.modules) - already_imported
+
+
+def assert_independent(package, *packages):
+    """
+    :param package: Python name of a module/package
+    :param packages: Python names of modules/packages
+
+    Make sure the `package` does not depend from the `packages`.
+    For instance
+
+    >>> assert_independent('openquake.hazardlib',
+    ...                    'openquake.risklib', 'openquake.commonlib')
+    >>> assert_independent('openquake.risklib',
+    ...                    'openquake.hazardlib', 'openquake.commonlib')
+    """
+    assert packages, 'At least one package must be specified'
+    imported_modules = run_in_process("""\
+import sys
+from openquake.commonlib.general import import_all
+del sys.modules['openquake.commonlib']
+print import_all('%s')
+""" % package)
+    for mod in imported_modules:
+        if mod.startswith(packages):
+            raise CodeDependencyError('%s depends on %s' % (
+                package, '|'.join(packages)))
