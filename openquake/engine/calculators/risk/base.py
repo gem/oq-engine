@@ -104,6 +104,10 @@ def run_risk(job_id, sorted_assocs, calc):
     """
     acc = calc.acc
     hazard_outputs = calc.rc.hazard_outputs()
+    if hasattr(calc.risk_input_class, 'get_hazard_data'):
+        hazard_data = calc.risk_input_class.get_hazard_data(hazard_outputs)
+    else:
+        hazard_data = hazard_outputs
     monitor = EnginePerformanceMonitor(None, job_id, run_risk)
     for taxonomy, assocs_by_taxonomy in itertools.groupby(
             sorted_assocs, lambda a: a.asset.taxonomy):
@@ -113,20 +117,18 @@ def run_risk(job_id, sorted_assocs, calc):
         for it in models.ImtTaxonomy.objects.filter(
                 job=calc.job, taxonomy=taxonomy):
             imt = it.imt.imt_str
-            with calc.monitor("getting hazard"):
-                risk_input = calc.risk_input_class(
-                    imt, taxonomy, hazard_outputs, assets)
-            logs.LOG.info(
-                'Read %d data for %d assets of taxonomy %s, imt=%s',
-                len(set(risk_input.site_ids)), len(assets), taxonomy, imt)
-            with transaction.commit_on_success(using='job_init'):
-                res = calc.core(
-                    calc.risk_model[imt, taxonomy],
-                    risk_input, calc.outputdict,
-                    calc.calculator_parameters,
-                    monitor)
-            acc = calc.agg_result(acc, res)
-    return acc
+            workflow = calc.risk_model[imt, taxonomy]
+            for site_id, asset_group in itertools.groupby(
+                    assets, key=lambda a: a.site.id):
+                with calc.monitor("getting hazard"):
+                    risk_input = calc.risk_input_class(
+                        imt, taxonomy, site_id, hazard_data, list(asset_group))
+                with transaction.commit_on_success(using='job_init'):
+                    res = calc.core(
+                        workflow, risk_input, calc.outputdict,
+                        calc.calculator_parameters, monitor)
+                acc = calc.agg_result(acc, res)
+        return acc
 
 
 def updatedict(acc, dic):
