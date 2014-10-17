@@ -31,8 +31,11 @@ from openquake.risklib import scientific, workflows
 
 from openquake.commonlib.parallel import apply_reduce
 from openquake.commonlib.readinput import get_sitecol_assets, \
-    get_gsim, get_rupture, get_correl_model, get_imts
+    get_gsim, get_rupture, get_correl_model, get_imts, get_site_collection
 from openquake.commonlib.riskmodels import get_risk_model
+
+from openquake.lite.calculators import calculate
+from openquake.lite.export import export
 
 ############### facilities for the classical calculator ################
 
@@ -176,6 +179,23 @@ def add_epsilons(assets_by_site, num_samples, seed, correlation):
             seed, correlation)
         for asset, epsilons in zip(assets, eps_matrix):
             asset.epsilons = epsilons
+
+
+@calculate.add('scenario')
+def run_scenario_hazard(oqparam):
+    """
+    Run a scenario hazard computation and returns the file with the GMFs.
+    """
+    logging.info('Reading the site collection')
+    sitecol = get_site_collection(oqparam)
+    ruptags = ['scenario-%04d' % i for i in xrange(
+               oqparam.number_of_ground_motion_fields)]
+    logging.info('Computing the GMFs')
+    gmfs_by_imt = calc_gmfs(oqparam, sitecol)
+
+    logging.info('Exporting the result')
+    out = export('gmf_xml', oqparam.export_dir, sitecol, ruptags, gmfs_by_imt)
+    return [out]
 
 
 def run_scenario(oqparam):

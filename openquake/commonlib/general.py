@@ -408,3 +408,33 @@ print import_all('%s')
         if mod.startswith(packages):
             raise CodeDependencyError('%s depends on %s' % (
                 package, '|'.join(packages)))
+
+
+class MultiFunction(collections.OrderedDict):
+    """
+    A callable object built on top of a dictionary of functions,
+    dispatching on the first argument according to the given keyfunc.
+    The default keyfunc is the identity function, i.e. the first
+    argument is assumed to be the key.
+    """
+    def __init__(self, keyfunc=lambda key: key):
+        super(MultiFunction, self).__init__()
+        self.keyfunc = keyfunc
+
+    def add(self, *keys):
+        """
+        Return a decorator registering a new implementation for the
+        MultiFunction for the given keys.
+        """
+        def decorator(func):
+            for key in keys:
+                self[key] = func
+            return func
+        return decorator
+
+    def __call__(self, obj, *args, **kw):
+        key = self.keyfunc(obj)
+        if not key in self:
+            raise KeyError(
+                'There is nothing registered for %r' % key)
+        return self[key](obj, *args, **kw)

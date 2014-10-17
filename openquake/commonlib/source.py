@@ -653,3 +653,11 @@ class SourceConverter(RuptureConverter):
         nps = source.NonParametricSeismicSource(
             node['id'], node['name'], trt, rup_pmf_data)
         return nps
+
+
+def parse_ses_ruptures(fname):
+    """
+    Convert a stochasticEventSetCollection file into a set of SES,
+    each one containing ruptures with a tag and a seed.
+    """
+    raise NotImplemented
