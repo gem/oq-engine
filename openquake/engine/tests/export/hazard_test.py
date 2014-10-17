@@ -23,7 +23,7 @@ from collections import namedtuple
 from lxml import etree
 from nose.plugins.attrib import attr
 
-from openquake import nrmllib
+from openquake.commonlib import nrml
 
 from openquake.engine.db import models
 from openquake.engine.export import core as export_core
@@ -37,10 +37,9 @@ from openquake.engine.tests.utils import helpers
 def check_export(output_id, target):
     """
     Call hazard.export by checking that the exported file is valid
-    according to our XML schema.
     """
     out_file = hazard.export(output_id, target, 'xml')
-    nrmllib.assert_valid(out_file)
+    nrml.read(out_file)
     return out_file
 
 
@@ -358,7 +357,7 @@ class EventBasedExportTestCase(BaseExportTestCase):
         # Run an event-based hazard calculation to compute SESs and GMFs
         # Call the exporters for both SES and GMF results  and verify that
         # files were created
-        # Since the XML writers (in `openquake.nrmllib.writers`) are concerned
+        # Since the XML writers (in `openquake.commonlib`) are concerned
         # with correctly generating the XML, we don't test that here...
         # but we should still have an end-to-end QA test.
         target_dir = tempfile.mkdtemp()
@@ -528,7 +527,7 @@ class Bug1202290TestCase(unittest.TestCase):
 
         with mock.patch('openquake.engine.export.hazard'
                         '._get_result_export_dest') as gred:
-            with mock.patch('openquake.nrmllib.hazard.writers'
+            with mock.patch('openquake.commonlib.hazard_writers'
                             '.MultiHazardCurveXMLWriter') as mhcxw:
                 mhcxw.return_value
                 mhcxw.serialize = mock.Mock()

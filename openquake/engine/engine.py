@@ -41,9 +41,7 @@ from openquake.engine.settings import DATABASES
 from openquake.engine.db.models import Performance
 from openquake.engine.db.schema.upgrades import upgrader
 
-from openquake import hazardlib
-from openquake import risklib
-from openquake import nrmllib
+from openquake import hazardlib, risklib, commonlib
 
 from openquake.commonlib import readini, valid
 
@@ -128,9 +126,9 @@ def prepare_job(user_name="openquake", log_level='progress'):
         user_name=user_name,
         log_level=log_level,
         oq_version=openquake.engine.__version__,
-        nrml_version=nrmllib.__version__,
         hazardlib_version=hazardlib.__version__,
         risklib_version=risklib.__version__,
+        commonlib_version=commonlib.__version__,
     )
 
 
@@ -366,8 +364,8 @@ def print_outputs_summary(outputs, full=True):
                     o.id, o.get_output_type_display(), o.display_name)
         if truncated:
             print ('Some outputs where not shown. You can see the full list '
-                   'with the commands\n`openquake --list-hazard-outputs` or '
-                   '`openquake --list-risk-outputs`')
+                   'with the commands\n`oq-engine --list-hazard-outputs` or '
+                   '`oq-engine --list-risk-outputs`')
 
 
 def run_job(cfg_file, log_level, log_file, exports=(), hazard_output_id=None,

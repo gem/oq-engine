@@ -41,7 +41,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.gis.db import models as djm
 
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import source, geo, calc, correlation
+from openquake.hazardlib import geo, calc, correlation
 from openquake.hazardlib.site import FilteredSiteCollection
 
 from openquake.commonlib.riskmodels import loss_type_to_cost_type
@@ -271,7 +271,7 @@ class OqJob(djm.Model):
     status = djm.TextField(choices=STATUS_CHOICES, default='pre_executing')
     oq_version = djm.TextField(null=True, blank=True)
     hazardlib_version = djm.TextField(null=True, blank=True)
-    nrml_version = djm.TextField(null=True, blank=True)
+    commonlib_version = djm.TextField(null=True, blank=True)
     risklib_version = djm.TextField(null=True, blank=True)
     is_running = djm.BooleanField(default=False)
     duration = djm.IntegerField(default=0)
@@ -288,6 +288,15 @@ class OqJob(djm.Model):
         'hazard' or 'risk'
         """
         return 'hazard' if self.risk_calculation is None else 'risk'
+
+    # TODO: this property will disappear when RiskCalculation will disappear
+    @property
+    def calc_id(self):
+        """Return the calculation id"""
+        if self.risk_calculation:
+            return self.risk_calculation.id
+        else:
+            return self.id
 
     def get_param(self, name, missing=RAISE_EXC):
         """
@@ -1714,7 +1723,7 @@ class _GroundMotionFieldNode(object):
     def __lt__(self, other):
         """
         A reproducible ordering by lon and lat; used in
-        :function:`openquake.nrmllib.hazard.writers.gen_gmfs`
+        :function:`openquake.commonlib.hazard_writers.gen_gmfs`
         """
         return self.location < other.location
 
