@@ -22,7 +22,7 @@ Base RiskCalculator class.
 import collections
 import psutil
 
-from openquake.nrmllib.risk import parsers
+from openquake.commonlib import risk_parsers
 from openquake.risklib.workflows import RiskModel
 from openquake.hazardlib.imt import from_string
 from openquake.commonlib.riskmodels import get_vfs
@@ -159,7 +159,8 @@ class RiskCalculator(base.Calculator):
             exposure = self.rc.exposure_model
             if exposure is None:
                 ExposureDBWriter(self.job).serialize(
-                    parsers.ExposureModelParser(self.rc.inputs['exposure']))
+                    risk_parsers.ExposureModelParser(
+                        self.rc.inputs['exposure']))
             self.taxonomies_asset_count = \
                 self.rc.exposure_model.taxonomies_in(self.rc.region_constraint)
 
