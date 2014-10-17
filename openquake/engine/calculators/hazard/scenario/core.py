@@ -69,7 +69,6 @@ def gmfs(job_id, ses_ruptures, sitecol, imts, gmf_id):
         for ses_rup in ses_ruptures:
             for (gname, imt), gmvs in gmf.compute(ses_rup.seed):
                 for site_id, gmv in zip(sitecol.sids, gmvs):
-                    # float may be needed below to convert 1x1 matrices
                     cache[site_id, imt].append((gmv, ses_rup.id))
 
     with EnginePerformanceMonitor('saving gmfs', job_id, gmfs):
