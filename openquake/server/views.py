@@ -241,9 +241,14 @@ def run_calc(request, job_type):
     hazard_output_id = request.POST.get('hazard_output_id')
     hazard_job_id = request.POST.get('hazard_job_id')
 
+    is_risk = hazard_output_id or hazard_job_id
+    if is_risk:
+        detect_job_file = create_detect_job_file("job_risk.ini")
+    else:
+        detect_job_file = create_detect_job_file("job_hazard.ini", "job.ini")
     einfo, exctype = safely_call(
         _prepare_job, (request, hazard_output_id, hazard_job_id,
-                       create_detect_job_file("job.ini", "job_risk.ini")))
+                       detect_job_file))
     if exctype:
         tasks.update_calculation(callback_url, status="failed", einfo=einfo)
         raise exctype(einfo)
