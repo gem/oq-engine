@@ -845,14 +845,6 @@ cd "$GEM_BUILD_SRC"
 # date
 dt="$(date +%s)"
 
-# version from setup.py
-stp_vers="$(cat setup.py | sed -n "s/^version[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")"
-stp_maj="$(echo "$stp_vers" | sed -n 's/^\([0-9]\+\).*/\1/gp')"
-stp_min="$(echo "$stp_vers" | sed -n 's/^[0-9]\+\.\([0-9]\+\).*/\1/gp')"
-stp_bfx="$(echo "$stp_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.\([0-9]\+\).*/\1/gp')"
-stp_suf="$(echo "$stp_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.[0-9]\+\(.*\)/\1/gp')"
-# echo "stp [$stp_vers] [$stp_maj] [$stp_min] [$stp_bfx] [$stp_suf]"
-
 # version info from openquake/engine/__init__.py
 ini_vers="$(cat openquake/engine/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")"
 ini_maj="$(echo "$ini_vers" | sed -n 's/^\([0-9]\+\).*/\1/gp')"
@@ -902,13 +894,12 @@ if [ $BUILD_DEVEL -eq 1 ]; then
     sed -i "s/^__version__[  ]*=.*/__version__ = '${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}+dev${dt}-${hash}'/g" openquake/engine/__init__.py
 fi
 
-if [  "$ini_maj" != "$pkg_maj" -o "$ini_maj" != "$stp_maj" -o \
-      "$ini_min" != "$pkg_min" -o "$ini_min" != "$stp_min" -o \
-      "$ini_bfx" != "$pkg_bfx" -o "$ini_bfx" != "$stp_bfx" ]; then
+if [  "$ini_maj" != "$pkg_maj" -o \
+      "$ini_min" != "$pkg_min" -o \
+      "$ini_bfx" != "$pkg_bfx" ]; then
     echo
     echo "Versions are not aligned"
     echo "    init:  ${ini_maj}.${ini_min}.${ini_bfx}"
-    echo "    setup: ${stp_maj}.${stp_min}.${stp_bfx}"
     echo "    pkg:   ${pkg_maj}.${pkg_min}.${pkg_bfx}"
     echo
     echo "press [enter] to continue, [ctrl+c] to abort"
