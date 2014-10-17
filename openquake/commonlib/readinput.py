@@ -124,6 +124,9 @@ def get_mesh(oqparam):
         firstpoint = geo.Point(*oqparam.region[0])
         points = [geo.Point(*xy) for xy in oqparam.region] + [firstpoint]
         return geo.Polygon(points).discretize(oqparam.region_grid_spacing)
+    elif 'exposure' in oqparam.inputs:
+        raise RuntimeError('You can extract the site collection from the '
+                           'exposure with get_sitecol_assets')
 
 
 def get_site_model(oqparam):

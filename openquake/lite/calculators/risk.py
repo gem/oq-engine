@@ -18,14 +18,19 @@
 
 import os
 import logging
+import operator
 import collections
 
 import numpy
 
 from openquake.risklib import scientific, workflows
-from openquake.commonlib import readinput
-from openquake.lite.calculators import calculate, calc
+from openquake.commonlib import readinput, riskmodels
 from openquake.commonlib.parallel import apply_reduce
+from openquake.lite.calculators import calculate, calc, BaseCalculator
+from openquake.lite.export import export
+
+DmgDistPerTaxonomy = collections.namedtuple(
+    'DmgDistPerTaxonomy', 'taxonomy dmg_state mean stddev')
 
 
 def add_epsilons(assets_by_site, num_samples, seed, correlation):
@@ -47,85 +52,102 @@ def add_epsilons(assets_by_site, num_samples, seed, correlation):
             asset.epsilons = epsilons
 
 
-@calculate.add('scenario_damage', 'scenario_risk')
-def run_scenario(oqparam):
-    """
-    Run a scenario damage or scenario risk computation and returns
-    the named of the generated files.
-    """
-    logging.info('Reading the exposure')
-    sitecol, assets_by_site = readinput.get_sitecol_assets(oqparam)
+class BaseScenarioCalculator(BaseCalculator):
+    def pre_execute(self):
+        logging.info('Reading the exposure')
+        sitecol, self.assets_by_site = readinput.get_sitecol_assets(
+            self.oqparam)
 
-    logging.info('Computing the GMFs')
-    gmfs_by_imt = calc.calc_gmfs(oqparam, sitecol)
+        logging.info('Computing the GMFs')
+        gmfs_by_imt = calc.calc_gmfs(self.oqparam, sitecol)
 
-    logging.info('Preparing the risk input')
-    risk_model = readinput.get_risk_model(oqparam)
-    risk_inputs = []
-    for imt in gmfs_by_imt:
-        for site, assets, gmvs in zip(
-                sitecol, assets_by_site, gmfs_by_imt[imt]):
-            risk_inputs.append(
-                workflows.RiskInput(imt, site.id, gmvs, assets))
+        logging.info('Preparing the risk input')
+        self.riskmodel = riskmodels.get_risk_model(self.oqparam)
+        self.riskinputs = []
+        for imt in gmfs_by_imt:
+            for site, assets, gmvs in zip(
+                    sitecol, self.assets_by_site, gmfs_by_imt[imt]):
+                self.riskinputs.append(
+                    workflows.RiskInput(imt, site.id, gmvs, assets))
 
-    if oqparam.calculation_mode == 'scenario_risk':
+    def execute(self):
+        return apply_reduce(self.core, (self.riskinputs, self.riskmodel),
+                            agg=calc.add_dicts, acc={},
+                            concurrent_tasks=self.oqparam.concurrent_tasks,
+                            key=operator.attrgetter('imt'),
+                            weight=operator.attrgetter('weight'))
+
+
+@calculate.add('scenario_risk')
+class ScenarioRiskCalculator(BaseScenarioCalculator):
+
+    def pre_execute(self):
+        super(ScenarioRiskCalculator, self).pre_execute()
         # build the epsilon matrix and add the epsilons to the assets
-        num_samples = oqparam.number_of_ground_motion_fields
-        seed = getattr(oqparam, 'master_seed', 42)
-        correlation = getattr(oqparam, 'asset_correlation', 0)
-        add_epsilons(assets_by_site, num_samples, seed, correlation)
-        taskfunc = core_scenario
-    elif oqparam.calculation_mode == 'scenario_damage':
-        taskfunc = core_damage
-    result = apply_reduce(taskfunc, (risk_inputs, risk_model),
-                          agg=calc.add_dicts, acc={},
-                          key=lambda ri: ri.imt,
-                          weight=lambda ri: ri.weight)
-    if oqparam.calculation_mode == 'scenario_risk':
-        export()
-    elif oqparam.calculation_mode == 'scenario_damage':
-        export()
+        num_samples = self.oqparam.number_of_ground_motion_fields
+        seed = getattr(self.oqparam, 'master_seed', 42)
+        correlation = getattr(self.oqparam, 'asset_correlation', 0)
+        add_epsilons(self.assets_by_site, num_samples, seed, correlation)
 
+    @staticmethod
+    def core(riskinputs, riskmodel):
+        """
+        Core function for a scenario computation.
+        :returns:
+            a dictionary ("agg"|"ins", loss_type) -> losses
+        """
+        logging.info('Process %d, considering %d risk input(s) of weight %d',
+                     os.getpid(), len(riskinputs),
+                     sum(ri.weight for ri in riskinputs))
 
-
-def core_damage(riskinputs, riskmodel):
-    """
-    Core function for a damage computation.
-
-    :param riskinputs:
-        a sequence of :class:`openquake.risklib.workflows.RiskInput` objects
-    :param riskmodel:
-        a :class:`openquake.risklib.workflows.RiskModel` object
-    """
-    logging.info('Process %d, considering %d risk input(s) of weight %d',
-                 os.getpid(), len(riskinputs),
-                 sum(ri.weight for ri in riskinputs))
-    result = {}  # taxonomy -> aggfractions
-    for loss_type, (assets, fractions) in riskmodel.gen_outputs(riskinputs):
-        for asset, fraction in zip(assets, fractions):
+        result = {}  # agg_type, loss_type -> losses
+        for loss_type, outs in riskmodel.gen_outputs(riskinputs):
+            (_assets, _loss_ratio_matrix, aggregate_losses,
+             _insured_loss_matrix, insured_losses) = outs
             result = calc.add_dicts(
-                result, {asset.taxonomy: fraction * asset.number})
-    return result
+                result, {('agg', loss_type): aggregate_losses,
+                         ('ins', loss_type): insured_losses})
+        return result
 
 
-def core_scenario(riskinputs, riskmodel):
+@calculate.add('scenario_damage')
+class ScenarioDamageCalculator(BaseScenarioCalculator):
     """
-    Core function for a scenario computation.
-
-    :param riskinputs:
-        a sequence of :class:`openquake.risklib.workflows.RiskInput` objects
-    :param riskmodel:
-        a :class:`openquake.risklib.workflows.RiskModel` object
     """
-    logging.info('Process %d, considering %d risk input(s) of weight %d',
-                 os.getpid(), len(riskinputs),
-                 sum(ri.weight for ri in riskinputs))
+    @staticmethod
+    def core(riskinputs, riskmodel):
+        """
+        Core function for a damage computation.
+        :returns:
+            a dictionary (taxonomy, damage_state) -> fractions
+        """
+        logging.info('Process %d, considering %d risk input(s) of weight %d',
+                     os.getpid(), len(riskinputs),
+                     sum(ri.weight for ri in riskinputs))
+        result = {}  # taxonomy -> aggfractions
+        for loss_type, (assets, fractions) in \
+                riskmodel.gen_outputs(riskinputs):
+            for asset, fraction in zip(assets, fractions):
+                result = calc.add_dicts(
+                    result, {asset.taxonomy: fraction * asset.number})
+        return result
 
-    result = collections.Counter()  # agg_type, loss_type -> losses
-    for loss_type, outs in riskmodel.gen_outputs(riskinputs):
-        (_assets, _loss_ratio_matrix, aggregate_losses,
-         _insured_loss_matrix, insured_losses) = outs
-        result += collections.Counter(
-            {('agg', loss_type): aggregate_losses,
-             ('ins', loss_type): insured_losses})
-    return result
+    def post_execute(self, result):
+        """
+        Export the result as a dmg_per_taxonomy.xml file
+        """
+        data = []
+        dmg_states = map(DmgState, self.riskmodel.damage_states)
+        for taxonomy, fractions in result.iteritems():
+            means, stds = scientific.mean_std(fractions)
+            for dmg_state, mean, std in zip(dmg_states, means, stds):
+                data.append(
+                    DmgDistPerTaxonomy(taxonomy, dmg_state, mean, std))
+        fname = export('dmg_per_taxonomy_xml', self.oqparam.export_dir,
+                       self.riskmodel.damage_states, data)
+        return [fname]
+
+
+class DmgState(object):
+    def __init__(self, dmg_state):
+        self.dmg_state = dmg_state

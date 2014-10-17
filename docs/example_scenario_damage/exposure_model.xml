@@ -124,7 +124,7 @@
 	       <occupancy occupants="24" period="night" />
 	      </occupancies>
 	    </asset>
-	   <asset id="a152" number="5"  taxonomy="W" >
+	   <asset id="a152" number="5"  taxonomy="A" >
 	    <location lon="81.363823" lat="29.836172" />
 	    <costs>
 	      <cost type="structural" value="11340"  deductible="0.1"  insuranceLimit="0.8"  />

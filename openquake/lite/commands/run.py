@@ -20,6 +20,7 @@ def run(job_ini, concurrent_tasks=executor._max_workers, loglevel='INFO'):
 
 parser = sap.Parser(run)
 parser.arg('job_ini', 'calculation configuration')
-parser.opt('concurrent_tasks', 'hint for the number of tasks to spawn')
+parser.opt('concurrent_tasks', 'hint for the number of tasks to spawn',
+           type=int)
 parser.opt('loglevel', 'logging level', choices=
            'DEBUG INFO WARN ERROR CRITICAL'.split())

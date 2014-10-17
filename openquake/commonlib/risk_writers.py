@@ -795,6 +795,7 @@ class BCRMapXMLWriter(object):
 
         self._bcr_map.set("lossType", self._loss_type)
 
+
 class DmgDistPerAssetXMLWriter(object):
     """
     Write the damage distribution per asset artifact

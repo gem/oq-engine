@@ -21,12 +21,29 @@ from openquake.lite.export import export
 from openquake.commonlib import risk_writers
 
 
-@export.add('agg_loss_xml')
-def export_agg_loss_xml():
-    """
+class AggLossCurve(object):
+    def __init__(self, data):
+        self.data = data
 
+    def __iter__(self):
+        for row in self.data:
+            yield row
+
+
+@export.add('dmg_per_taxonomy_xml')
+def export_dmg_per_taxonomy_xml(key, export_dir, damage_states,
+                                dmg_by_taxonomy):
+    dest = os.path.join(export_dir, 'dmg_dist_per_taxonomy.xml')
+    writer = risk_writers.DmgDistPerTaxonomyXMLWriter(dest, damage_states)
+    writer.serialize(dmg_by_taxonomy)
+    return dest
+
+
+@export.add('agg_loss_xml')
+def export_agg_loss_xml(key, export_dir, sitecol, rupture_tags, gmfs):
+    """
     """
     dest = os.path.join(export_dir, 'agg_loss_curves.xml')
     risk_writers.AggregateLossCurveXMLWriter(dest, **args).serialize(
-        output.loss_curve.aggregatelosscurvedata)
+        data)
     return dest

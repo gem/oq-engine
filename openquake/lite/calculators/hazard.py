@@ -18,42 +18,55 @@
 
 import logging
 
-from openquake.commonlib.readinput import get_site_collection
+from openquake.commonlib.readinput import (
+    get_site_collection, get_sitecol_assets)
 
-from openquake.lite.calculators import calculate, calc
+from openquake.lite.calculators import calculate, calc, BaseCalculator
 from openquake.lite.export import export
 
 
 @calculate.add('classical')
-def run_classical(oqparam):
+class ClassicalCalculator(BaseCalculator):
     """
-    Run a classical PSHA calculation and returns the generated files.
+    Run a classical PSHA calculation
     """
-    raise NotImplemented
 
 
 @calculate.add('event_based')
-def run_event_based(oqparam):
+class EventBasedCalculator(BaseCalculator):
     """
-    Run an event based PSHA calculation and returns the generated files.
+    Run an event based PSHA calculation
     """
-    raise NotImplemented
+
+
+@calculate.add('disaggregation')
+class DisaggregationCalculator(BaseCalculator):
+    """
+    Run a disaggregation PSHA calculation
+    """
 
 
 @calculate.add('scenario')
-def run_scenario(oqparam):
+class ScenarioCalculator(BaseCalculator):
     """
-    Run a scenario hazard computation and returns the file with the GMFs.
+    Run a scenario hazard computation
     """
-    logging.info('Reading the site collection')
-    sitecol = get_site_collection(oqparam)
+    def pre_execute(self):
+        logging.info('Reading the site collection')
+        if 'exposure' in self.oqparam.inputs:
+            self.sitecol, _assets = get_sitecol_assets(self.oqparam)
+        else:
+            self.sitecol = get_site_collection(self.oqparam)
 
-    logging.info('Computing the GMFs')
-    gmfs_by_imt = calc.calc_gmfs(oqparam, sitecol)
+    def execute(self):
+        logging.info('Computing the GMFs')
+        return calc.calc_gmfs(self.oqparam, self.sitecol)
 
-    logging.info('Exporting the result')
-    scenario_tags = ['scenario-%010d' % i for i in xrange(
-                     oqparam.number_of_ground_motion_fields)]
-    out = export(
-        'gmf_xml', oqparam.export_dir, sitecol, scenario_tags, gmfs_by_imt)
-    return [out]
+    def post_execute(self, gmfs_by_imt):
+        logging.info('Exporting the result')
+        scenario_tags = ['scenario-%010d' % i for i in xrange(
+                         self.oqparam.number_of_ground_motion_fields)]
+        out = export(
+            'gmf_xml', self.oqparam.export_dir,
+            self.sitecol, scenario_tags, gmfs_by_imt)
+        return [out]
