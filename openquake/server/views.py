@@ -185,13 +185,10 @@ def calc_info(request, job_type, calc_id):
 # oq-engine DB, as a dictionary
 def _get_calc_info(job_type, calc_id):
     if job_type == 'hazard':
-        job = oqe_models.OqJob.objects\
-            .select_related()\
-            .get(hazard_calculation=calc_id)
+        job = oqe_models.OqJob.objects.select_related().get(pk=calc_id)
         calc = job.get_oqparam()
     else:  # risk
-        job = oqe_models.OqJob.objects\
-            .select_related()\
+        job = oqe_models.OqJob.objects.select_related()\
             .get(risk_calculation=calc_id)
         calc = job.risk_calculation
 
@@ -290,20 +287,14 @@ def _get_calcs(job_type):
 
     Gets all calculation records available.
     """
+    job_params = oqe_models.JobParam.objects.filter(
+        name='description', job__risk_calculation__isnull=job_type == 'hazard',
+        job__user_name='platform')
     if job_type == 'risk':
-        return oqe_models.OqJob.objects\
-            .select_related()\
-            .filter(risk_calculation__isnull=False)\
-            .values_list('risk_calculation',
-                         'status',
-                         'risk_calculation__description')
-    else:
-        return oqe_models.OqJob.objects\
-            .select_related()\
-            .filter(hazard_calculation__isnull=False)\
-            .values_list('hazard_calculation',
-                         'status',
-                         'hazard_calculation__description')
+        return [(jp.job.risk_calculation, jp.job.status, jp.value)
+                for jp in job_params]
+    else:  # hazard
+        return [(jp.job, jp.job.status, jp.value) for jp in job_params]
 
 
 @require_http_methods(['GET'])
