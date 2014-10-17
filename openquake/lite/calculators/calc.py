@@ -159,6 +159,7 @@ def calc_gmfs(oqparam, sitecol):
     for seed in seeds:
         for (_gname, imt), gmvs in computer.compute(seed):
             res[imt].append(gmvs)
+    # res[imt] is a matrix R x N
     return {imt: numpy.array(matrix).T for imt, matrix in res.iteritems()}
 
 
@@ -188,7 +189,7 @@ def run_scenario_hazard(oqparam):
     """
     logging.info('Reading the site collection')
     sitecol = get_site_collection(oqparam)
-    ruptags = ['scenario-%04d' % i for i in xrange(
+    ruptags = ['scenario-%010d' % i for i in xrange(
                oqparam.number_of_ground_motion_fields)]
     logging.info('Computing the GMFs')
     gmfs_by_imt = calc_gmfs(oqparam, sitecol)
