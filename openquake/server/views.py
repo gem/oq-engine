@@ -84,6 +84,8 @@ def _calc_to_response_data(calc):
     """
     Extract the calculation parameters into a dictionary.
     """
+    if isinstance(calc, oqe_models.OqJob):
+        return vars(calc.get_oqparam())
     fields = [x.name for x in calc._meta.fields if x.name not in IGNORE_FIELDS]
     response_data = {}
     for field_name in fields:
@@ -186,7 +188,7 @@ def calc_info(request, job_type, calc_id):
 def _get_calc_info(job_type, calc_id):
     if job_type == 'hazard':
         job = oqe_models.OqJob.objects.select_related().get(pk=calc_id)
-        calc = job.get_oqparam()
+        calc = job
     else:  # risk
         job = oqe_models.OqJob.objects.select_related()\
             .get(risk_calculation=calc_id)
