@@ -243,7 +243,7 @@ def run_calc(request, job_type):
 
     is_risk = hazard_output_id or hazard_job_id
     if is_risk:
-        detect_job_file = create_detect_job_file("job_risk.ini")
+        detect_job_file = create_detect_job_file("job_risk.ini", "job.ini")
     else:
         detect_job_file = create_detect_job_file("job_hazard.ini", "job.ini")
     einfo, exctype = safely_call(
