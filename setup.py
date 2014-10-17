@@ -66,7 +66,8 @@ setup(
     package_data={"openquake.engine": [
         "db/schema/upgrades/*.sql",
         "openquake.cfg", "openquake_worker.cfg", "README", "LICENSE"]},
-    scripts=["openquake/engine/bin/oq_create_db"],
+    scripts=["openquake/engine/bin/oq_create_db",
+             "openquake/engine/bin/openquake"],
 
     namespace_packages=['openquake'],
 
