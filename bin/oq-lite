@@ -7,4 +7,7 @@ from openquake.lite.commands import run, info, check
 if __name__ == '__main__':
     parser = sap.compose([check.parser, run.parser, info.parser],
                          version=__version__)
-    parser.callfunc()
+    try:
+        parser.callfunc()
+    except NotImplemented:
+        print 'Sorry, not implemented yet'

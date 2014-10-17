@@ -155,18 +155,22 @@ def get_site_collection(oqparam, mesh=None, site_ids=None,
         a list of integers to identify the points; if None, a
         range(1, len(points) + 1) is used
     :param site_model_params:
-        object with a method ,get_closest returning the closest site
+        object with a method .get_closest returning the closest site
         model parameters
     """
     mesh = mesh or get_mesh(oqparam)
     site_ids = site_ids or range(1, len(mesh) + 1)
     if oqparam.inputs.get('site_model'):
+        if site_model_params is None:
+            # read the parameters directly from their file
+            site_model_params = geo.geodetic.GeographicObjects(
+                get_site_model(oqparam))
         sitecol = []
         for i, pt in zip(site_ids, mesh):
             param = site_model_params.\
                 get_closest(pt.longitude, pt.latitude)
             sitecol.append(
-                site.Site(pt, param.vs30, param.vs30_type == 'measured',
+                site.Site(pt, param.vs30, param.measured,
                           param.z1pt0, param.z2pt5, i))
         return site.SiteCollection(sitecol)
 
