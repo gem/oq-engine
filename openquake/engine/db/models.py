@@ -271,7 +271,7 @@ class OqJob(djm.Model):
     status = djm.TextField(choices=STATUS_CHOICES, default='pre_executing')
     oq_version = djm.TextField(null=True, blank=True)
     hazardlib_version = djm.TextField(null=True, blank=True)
-    nrml_version = djm.TextField(null=True, blank=True)
+    commonlib_version = djm.TextField(null=True, blank=True)
     risklib_version = djm.TextField(null=True, blank=True)
     is_running = djm.BooleanField(default=False)
     duration = djm.IntegerField(default=0)
