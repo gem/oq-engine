@@ -41,8 +41,7 @@ from openquake.engine.settings import DATABASES
 from openquake.engine.db.models import Performance
 from openquake.engine.db.schema.upgrades import upgrader
 
-from openquake import hazardlib
-from openquake import risklib
+from openquake import hazardlib, risklib, commonlib
 
 from openquake.commonlib import readini, valid
 
@@ -129,6 +128,7 @@ def prepare_job(user_name="openquake", log_level='progress'):
         oq_version=openquake.engine.__version__,
         hazardlib_version=hazardlib.__version__,
         risklib_version=risklib.__version__,
+        commonlib_version=commonlib.__version__,
     )
 
 
