@@ -16,8 +16,8 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.commonlib.general import import_all, MultiFunction
+from openquake.commonlib.general import import_all, CallableDict
 
-export = MultiFunction()
+export = CallableDict()
 
 import_all('openquake.lite.export')

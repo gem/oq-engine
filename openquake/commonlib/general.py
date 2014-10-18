@@ -410,7 +410,7 @@ print import_all('%s')
                 package, '|'.join(packages)))
 
 
-class MultiFunction(collections.OrderedDict):
+class CallableDict(collections.OrderedDict):
     """
     A callable object built on top of a dictionary of functions,
     dispatching on the first argument according to the given keyfunc.
@@ -418,13 +418,13 @@ class MultiFunction(collections.OrderedDict):
     argument is assumed to be the key.
     """
     def __init__(self, keyfunc=lambda key: key):
-        super(MultiFunction, self).__init__()
+        super(CallableDict, self).__init__()
         self.keyfunc = keyfunc
 
     def add(self, *keys):
         """
         Return a decorator registering a new implementation for the
-        MultiFunction for the given keys.
+        CallableDict for the given keys.
         """
         def decorator(func):
             for key in keys:
@@ -438,3 +438,31 @@ class MultiFunction(collections.OrderedDict):
             raise KeyError(
                 'There is nothing registered for %r' % key)
         return self[key](obj, *args, **kw)
+
+
+class AccumDict(dict):
+    """
+    An accumulating dictionary, useful in apply_reduce jobs.
+
+    >>> acc = AccumDict()
+    >>> acc += {'a': 1}
+    >>> acc += {'a': 1, 'b': 1}
+    >>> acc
+    {'a': 2, 'b': 1}
+    >>> {'a': 1} + acc
+    {'a': 3, 'b': 1}
+    """
+    def __iadd__(self, dic):
+        for k, v in dic.iteritems():
+            try:
+                self[k] = self[k] + v
+            except KeyError:
+                self[k] = v
+        return self
+
+    def __add__(self, dic):
+        new = self.__class__(self)
+        new += dic
+        return new
+
+    __radd__ = __add__

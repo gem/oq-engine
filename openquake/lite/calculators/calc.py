@@ -92,30 +92,6 @@ def gen_ruptures_for_site(site, sources, maximum_distance, monitor):
 ############### utilities for the scenario calculators ################
 
 
-def add_dicts(acc, dic):
-    """
-    Add two dictionaries containing summable objects. For instance:
-
-    >>> a = dict(x=1, y=2)
-    >>> b = dict(x=1, z=0)
-    >>> sorted(add_dicts(a, b).iteritems())
-    [('x', 2), ('y', 2), ('z', 0)]
-
-    As a special case, None values are ignored in the sum:
-
-    >>> add_dicts({'x': 1}, {'x': None})
-    {'x': 1}
-
-    Notice that this functionality is built-in in Python if you
-    use `collection.Counter` instances instead of dictionaries.
-    """
-    new = acc.copy()
-    for k, v in dic.iteritems():
-        if v is not None:
-            new[k] = new.get(k, 0) + v
-    return new
-
-
 def calc_gmfs_fast(oqparam, sitecol):
     """
     Build all the ground motion fields for the whole site collection in

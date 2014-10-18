@@ -17,6 +17,8 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import csv
+
 from openquake.lite.export import export
 from openquake.commonlib import risk_writers
 
@@ -33,10 +35,14 @@ def export_dmg_xml(key, export_dir, damage_states, dmg_data):
     return dest
 
 
-@export.add('agg_loss_xml')
-def export_agg_loss_xml(key, export_dir, loss_type, unit, agg_loss_curve):
-    dest = os.path.join(export_dir, key=key.replace('_xml', '.xml'))
-    risk_writers.AggregateLossCurveXMLWriter(
-        dest, investigation_time=0, loss_type=loss_type, unit=unit,
-    ).serialize(agg_loss_curve)
+@export.add('agg_loss_csv')
+def export_agg_loss_csv(key, export_dir, aggcurves):
+    """
+    Export aggregate losses in CSV
+    """
+    dest = os.path.join(export_dir, key.replace('_csv', '.csv'))
+    with open(dest, 'w') as csvfile:
+        writer = csv.writer(csvfile, delimiter='|')
+        writer.writerow(['LossType', 'Unit', 'Mean', 'Standard Deviation'])
+        writer.writerows(aggcurves)
     return dest

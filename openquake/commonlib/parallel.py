@@ -44,7 +44,7 @@ from concurrent.futures import as_completed, ProcessPoolExecutor
 
 import psutil
 
-from openquake.commonlib.general import split_in_blocks
+from openquake.commonlib.general import split_in_blocks, AccumDict
 
 
 executor = ProcessPoolExecutor()
@@ -349,34 +349,6 @@ def apply_reduce(task_func, task_args,
     blocks = split_in_blocks(data, concurrent_tasks, weight, key)
     all_args = [(block,) + args for block in blocks]
     return map_reduce(task_func, all_args, agg, acc, name)
-
-
-class AccumDict(dict):
-    """
-    An accumulating dictionary, useful in apply_reduce jobs.
-
-    >>> acc = AccumDict()
-    >>> acc += {'a': 1}
-    >>> acc += {'a': 1, 'b': 1}
-    >>> acc
-    {'a': 2, 'b': 1}
-    >>> {'a': 1} + acc
-    {'a': 3, 'b': 1}
-    """
-    def __iadd__(self, dic):
-        for k, v in dic.iteritems():
-            try:
-                self[k] = self[k] + v
-            except KeyError:
-                self[k] = v
-        return self
-
-    def __add__(self, dic):
-        new = self.__class__(self)
-        new += dic
-        return new
-
-    __radd__ = __add__
 
 
 # this is not thread-safe

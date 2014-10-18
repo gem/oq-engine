@@ -20,12 +20,12 @@ import operator
 import logging
 
 from openquake.risklib import workflows
-from openquake.commonlib.general import import_all, MultiFunction
-from openquake.commonlib import readinput, riskmodels
+from openquake.commonlib.general import import_all, CallableDict
+from openquake.commonlib import readinput
 from openquake.commonlib.parallel import apply_reduce
 from openquake.lite.calculators import calc
 
-calculator = MultiFunction(operator.attrgetter('calculation_mode'))
+calculator = CallableDict(operator.attrgetter('calculation_mode'))
 
 
 def core(cls):
@@ -97,7 +97,7 @@ class BaseScenarioCalculator(BaseCalculator):
         gmfs_by_imt = calc.calc_gmfs(self.oqparam, sitecol)
 
         logging.info('Preparing the risk input')
-        self.riskmodel = riskmodels.get_risk_model(self.oqparam)
+        self.riskmodel = readinput.get_risk_model(self.oqparam)
         self.riskinputs = []
         for imt in gmfs_by_imt:
             for site, gmvs, assets in zip(
@@ -110,7 +110,7 @@ class BaseScenarioCalculator(BaseCalculator):
         Parallelize on the riskinputs and returns a dictionary of results.
         """
         return apply_reduce(self.core, (self.riskinputs, self.riskmodel),
-                            agg=calc.add_dicts, acc={},
+                            agg=operator.add,
                             concurrent_tasks=self.oqparam.concurrent_tasks,
                             key=operator.attrgetter('imt'),
                             weight=operator.attrgetter('weight'))

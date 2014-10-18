@@ -23,8 +23,8 @@ import collections
 import numpy
 
 from openquake.risklib import scientific
-from openquake.lite.calculators import calculator, calc, \
-    BaseScenarioCalculator, core
+from openquake.commonlib.general import AccumDict
+from openquake.lite.calculators import calculator, core, BaseScenarioCalculator
 from openquake.lite.export import export
 
 
@@ -109,21 +109,14 @@ def scenario_damage(riskinputs, riskmodel):
     logging.info('Process %d, considering %d risk input(s) of weight %d',
                  os.getpid(), len(riskinputs),
                  sum(ri.weight for ri in riskinputs))
-    result = {}  # (key_type, key) -> result
+    result = AccumDict()  # (key_type, key) -> result
     for loss_type, (assets, fractions) in \
             riskmodel.gen_outputs(riskinputs):
-        fracts_by_taxo = {}
+        fracts_by_taxo = AccumDict()  # taxonomy -> fracts
         for asset, fraction in zip(assets, fractions):
             fracts = fraction * asset.number
-            mean_std = numpy.array(scientific.mean_std(fracts))
-            result = calc.add_dicts(result, {('asset', asset): mean_std})
-
-            taxo = asset.taxonomy
-            try:
-                fracts_by_taxo[taxo] = fracts_by_taxo[taxo] + fracts
-            except KeyError:
-                fracts_by_taxo[taxo] = fracts
-        result = calc.add_dicts(
-            result, {('taxonomy', taxo): fracts
-                     for taxo, fracts in fracts_by_taxo.iteritems()})
+            fracts_by_taxo += {asset.taxonomy: fracts}
+            result += {('asset', asset): scientific.mean_std(fracts)}
+        result += {('taxonomy', taxo): fracts
+                   for taxo, fracts in fracts_by_taxo.iteritems()}
     return result

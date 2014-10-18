@@ -22,8 +22,8 @@ import collections
 
 import numpy
 from openquake.risklib import scientific
-from openquake.commonlib import readinput, riskmodels
-from openquake.lite.calculators import calculator, calc, \
+from openquake.commonlib import readinput, riskmodels, general
+from openquake.lite.calculators import calculator, \
     BaseScenarioCalculator, core
 from openquake.lite.export import export
 
@@ -46,9 +46,8 @@ def add_epsilons(assets_by_site, num_samples, seed, correlation):
         for asset, epsilons in zip(assets, eps_matrix):
             asset.epsilons = epsilons
 
-
-AggLossCurveData = collections.namedtuple(
-    'AggLossCurveData', 'poes losses average_loss stddev_loss')
+AggLossCurve = collections.namedtuple(
+    'AggLossCurve', 'loss_type unit mean stddev')
 
 
 @calculator.add('scenario_risk')
@@ -70,11 +69,14 @@ class ScenarioRiskCalculator(BaseScenarioCalculator):
 
     def post_execute(self, result):
         fnames = []  # exported files
+        aggcurves = general.AccumDict()  # key_type -> AggLossCurves
         for (key_type, loss_type), values in result.iteritems():
             mean, std = scientific.mean_std(values)
-            curve = AggLossCurve(poes, losses, mean, std)
-            fname = export('%s_loss_xml' % key_type, self.oqparam.export_dir,
-                           loss_type, self.unit[loss_type], curve)
+            curve = AggLossCurve(loss_type, self.unit[loss_type], mean, std)
+            aggcurves += {key_type: [curve]}
+        for key_type in aggcurves:
+            fname = export('%s_loss_csv' % key_type, self.oqparam.export_dir,
+                           aggcurves[key_type])
             fnames.append(fname)
         return fnames
 
@@ -90,11 +92,11 @@ def scenario_risk(riskinputs, riskmodel):
                  os.getpid(), len(riskinputs),
                  sum(ri.weight for ri in riskinputs))
 
-    result = {}  # agg_type, loss_type -> losses
+    result = parallel.AccumDict()  # agg_type, loss_type -> losses
     for loss_type, outs in riskmodel.gen_outputs(riskinputs):
         (_assets, _loss_ratio_matrix, aggregate_losses,
          _insured_loss_matrix, insured_losses) = outs
-        result = calc.add_dicts(
-            result, {('agg', loss_type): aggregate_losses,
-                     ('ins', loss_type): insured_losses})
+        result += {('agg', loss_type): aggregate_losses}
+        if insured_losses is not None:
+            result += {('ins', loss_type): insured_losses}
     return result
