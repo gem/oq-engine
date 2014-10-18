@@ -777,17 +777,20 @@ class RiskInput(object):
     :param hazard: hazard data on that site
     :param assets: assets on that site
     """
-    def __init__(self, imt, site_id, hazard, assets):
+    def __init__(self, imt, site_ids, hazard_by_site, assets_by_site):
         self.imt = imt
-        self.site_id = site_id
-        self.hazard = hazard
-        self.assets_by_taxo = {}  # taxonomy -> assets
-        for asset in assets:
-            if asset.taxonomy not in self.assets_by_taxo:
-                self.assets_by_taxo[asset.taxonomy] = [asset]
-            else:
-                self.assets_by_taxo[asset.taxonomy].append(asset)
-        self.weight = len(assets)
+        self.site_ids = site_ids
+        self.hazards = []
+        self.assets = []
+        self.taxonomies = set()
+        for site_id, hazard, assets in zip(
+                site_ids, hazard_by_site, assets_by_site):
+            for asset in assets:
+                asset.site_id = site_id
+                self.hazards.append(hazard)
+                self.assets.append(asset)
+                self.taxonomies.add(asset.taxonomy)
+        self.weight = len(self.assets)
 
     @property
     def taxonomy(self):
@@ -795,30 +798,35 @@ class RiskInput(object):
         Return the taxonomy associated to the assets in the risk input
         object, if it is unique; raise a ValueError otherwise.
         """
-        num_taxonomies = len(self.assets_by_taxo)
+        num_taxonomies = len(self.taxonomies)
         if num_taxonomies == 0:
             raise ValueError('The risk input object has no assets!')
         elif num_taxonomies > 1:
             raise ValueError('The risk input object has more than one '
                              'taxonomy: %s' % self.assets_by_taxo.keys())
-        return self.assets_by_taxo.values()[0][0].taxonomy
+        return list(self.taxonomies)[0]  # there is a single taxonomy
 
     def get_assets(self, taxonomy=None):
-        """Return the assets, if there is a single taxonomy"""
-        return self.assets_by_taxo[taxonomy or self.taxonomy]
+        """Return the assets, optionally filtering on the taxonomy"""
+        if taxonomy:
+            return [a for a in self.assets if a.taxonomy == taxonomy]
+        return self.assets
 
     def get_hazards(self, taxonomy=None):
         """
-        Return the underlying hazard as a list of N repeated arrays,
-        where N is the number of assets
+        Return the underlying hazards, one per asset,
+        optionally filtering on the taxonomy
         """
-        return [self.hazard] * len(self.get_assets(taxonomy))
+        if taxonomy:
+            return [h for a, h in zip(self.assets, self.hazards)
+                    if a.taxonomy == taxonomy]
+        return [h for a, h in zip(self.assets, self.hazards)]
 
     def get_epsilons(self, taxonomy=None):
         """
         Return the epsilons associated to the underlying assets as
         a numpy array of N x E elements, where N is the number of assets
-        and E the number of events.
+        and E the number of events. Filter on the taxonomy if given.
         """
         return [asset.epsilons for asset in self.get_assets(taxonomy)]
 
@@ -830,6 +838,12 @@ class RiskModel(collections.Mapping):
     def __init__(self, workflows, damage_states=None):
         self.damage_states = damage_states  # not None for damage calculations
         self._workflows = workflows
+
+    def get_taxonomies(self):
+        """
+        Return the set of taxonomies which are part of the RiskModel
+        """
+        return set(taxonomy for imt, taxonomy in self)
 
     def __getitem__(self, imt_taxo):
         return self._workflows[imt_taxo]
@@ -846,7 +860,7 @@ class RiskModel(collections.Mapping):
         """
         for (imt, taxonomy), workflow in self.iteritems():
             for ri in riskinputs:
-                if imt == ri.imt and taxonomy in ri.assets_by_taxo:
+                if imt == ri.imt and taxonomy in ri.taxonomies:
                     assets = ri.get_assets(taxonomy)
                     hazards = ri.get_hazards(taxonomy)
                     epsilons = ri.get_epsilons(taxonomy)
