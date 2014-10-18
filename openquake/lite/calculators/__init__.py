@@ -17,36 +17,52 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import operator
-from openquake.commonlib.general import import_all, MultiFunction
+import logging
 
-calculate = MultiFunction(operator.attrgetter('calculation_mode'))
+from openquake.risklib import workflows
+from openquake.commonlib.general import import_all, MultiFunction
+from openquake.commonlib import readinput, riskmodels
+from openquake.commonlib.parallel import apply_reduce
+from openquake.lite.calculators import calc
+
+calculator = MultiFunction(operator.attrgetter('calculation_mode'))
+
+
+def core(cls):
+    """
+    Return a decorator attaching the decorated function to the given
+    class. Used to associated the tasks to the calculators.
+    """
+    def decorator(func):
+        cls.core = staticmethod(func)
+        return func
+    return decorator
 
 
 class BaseCalculator(object):
     """
-    To be subclassed. Instantiating a calculator performs some initialization,
-    run the execute method, post process the results and populate a list
-    of exported files.
+    To be subclassed.
     """
     def __init__(self, oqparam):
         self.oqparam = oqparam
+        self.exported = []
+
+    def run(self):
+        """
+        Run the calculation and return the exported files
+        """
         self.pre_execute()
         result = self.execute()
         self.exported = self.post_execute(result)
-
-    def __iter__(self):
-        """
-        You can iterate on the set of the exported files
-        """
-        return iter(self.exported)
+        return self.exported
 
     @staticmethod
     def core(*args):
         """
-        Core staticmethod running on the workers.
-        Usually returns a collections.Counter instance.
+        Core routine running on the workers, usually set by the
+        @core decorator.
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     def pre_execute(self):
         """
@@ -56,15 +72,49 @@ class BaseCalculator(object):
     def execute(self):
         """
         Execution phase. Usually will run in parallel the core
-        staticmethod and result a Counter with the results.
+        function and return a dictionary with the results.
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     def post_execute(self, result):
         """
         Post-processing phase of the aggregated output. It must be
         overridden with the export code.
         """
-        raise NotImplemented
+        raise NotImplementedError
 
+
+class BaseScenarioCalculator(BaseCalculator):
+    """
+    Base class for all risk scenario calculators
+    """
+    def pre_execute(self):
+        logging.info('Reading the exposure')
+        sitecol, self.assets_by_site = readinput.get_sitecol_assets(
+            self.oqparam)
+
+        logging.info('Computing the GMFs')
+        gmfs_by_imt = calc.calc_gmfs(self.oqparam, sitecol)
+
+        logging.info('Preparing the risk input')
+        self.riskmodel = riskmodels.get_risk_model(self.oqparam)
+        self.riskinputs = []
+        for imt in gmfs_by_imt:
+            for site, gmvs, assets in zip(
+                    sitecol, gmfs_by_imt[imt], self.assets_by_site):
+                self.riskinputs.append(
+                    workflows.RiskInput(imt, [site.id], [gmvs], [assets]))
+
+    def execute(self):
+        """
+        Parallelize on the riskinputs and returns a dictionary of results.
+        """
+        return apply_reduce(self.core, (self.riskinputs, self.riskmodel),
+                            agg=calc.add_dicts, acc={},
+                            concurrent_tasks=self.oqparam.concurrent_tasks,
+                            key=operator.attrgetter('imt'),
+                            weight=operator.attrgetter('weight'))
+
+
+## now make sure the `calculator` dictionary is populated
 import_all('openquake.lite.calculators')

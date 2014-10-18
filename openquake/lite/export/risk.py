@@ -20,30 +20,23 @@ import os
 from openquake.lite.export import export
 from openquake.commonlib import risk_writers
 
-
-class AggLossCurve(object):
-    def __init__(self, data):
-        self.data = data
-
-    def __iter__(self):
-        for row in self.data:
-            yield row
+writercls = dict(
+    dmg_per_asset_xml=risk_writers.DmgDistPerAssetXMLWriter,
+    dmg_per_taxonomy_xml=risk_writers.DmgDistPerTaxonomyXMLWriter,
+    dmg_total_xml=risk_writers.DmgDistTotalXMLWriter)
 
 
-@export.add('dmg_per_taxonomy_xml')
-def export_dmg_per_taxonomy_xml(key, export_dir, damage_states,
-                                dmg_by_taxonomy):
-    dest = os.path.join(export_dir, 'dmg_dist_per_taxonomy.xml')
-    writer = risk_writers.DmgDistPerTaxonomyXMLWriter(dest, damage_states)
-    writer.serialize(dmg_by_taxonomy)
+@export.add('dmg_per_asset_xml', 'dmg_per_taxonomy_xml', 'dmg_total_xml')
+def export_dmg_xml(key, export_dir, damage_states, dmg_data):
+    dest = os.path.join(export_dir, key.replace('_xml', '.xml'))
+    writercls[key](dest, damage_states).serialize(dmg_data)
     return dest
 
 
 @export.add('agg_loss_xml')
-def export_agg_loss_xml(key, export_dir, sitecol, rupture_tags, gmfs):
-    """
-    """
-    dest = os.path.join(export_dir, 'agg_loss_curves.xml')
-    risk_writers.AggregateLossCurveXMLWriter(dest, **args).serialize(
-        data)
+def export_agg_loss_xml(key, export_dir, loss_type, unit, agg_loss_curve):
+    dest = os.path.join(export_dir, key=key.replace('_xml', '.xml'))
+    risk_writers.AggregateLossCurveXMLWriter(
+        dest, investigation_time=0, loss_type=loss_type, unit=unit,
+    ).serialize(agg_loss_curve)
     return dest

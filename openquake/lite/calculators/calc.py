@@ -19,14 +19,12 @@
 import collections
 import itertools
 import operator
-import logging
 import random
 
 import numpy
 
 from openquake.hazardlib.calc import gmf, filters
 from openquake.hazardlib.site import SiteCollection
-from openquake.risklib import scientific
 
 from openquake.commonlib.readinput import \
     get_gsim, get_rupture, get_correl_model, get_imts

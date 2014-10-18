@@ -90,7 +90,8 @@ def get_vulnerability_functions(fname):
     imts = set()
     taxonomies = set()
     vf_dict = {}  # imt, taxonomy -> vulnerability function
-    for vset in read_nodes(fname, filter_vset, nodefactory['vulnerabilityModel']):
+    for vset in read_nodes(fname, filter_vset,
+                           nodefactory['vulnerabilityModel']):
         imt_str, imls, min_iml, max_iml, imlUnit = ~vset.IML
         if imt_str in imts:
             raise InvalidFile('Duplicated IMT %s: %s, line %d' %
@@ -235,12 +236,13 @@ def get_risk_model(oqparam):
         # bcr calculators
         vfs_orig = get_vfs(oqparam.inputs, retrofitted=False).items()
         vfs_retro = get_vfs(oqparam.inputs, retrofitted=True).items()
-        for (imt_taxo, vfs), (imt_taxo_, vfs_retro) in zip(vf_orig, vf_retro):
+        for (imt_taxo, vf_orig), (imt_taxo_, vf_retro) in \
+                zip(vfs_orig, vfs_retro):
             assert imt_taxo == imt_taxo_  # same imt and taxonomy
             risk_models[imt_taxo] = workflows.get_workflow(
                 oqparam,
-                vulnerability_functions_orig=vfs,
-                vulnerability_functions_retro=vfs_retro)
+                vulnerability_functions_orig=vf_orig,
+                vulnerability_functions_retro=vf_retro)
     else:
         # classical, event based and scenario calculators
         oqparam.__dict__.setdefault('insured_losses', False)

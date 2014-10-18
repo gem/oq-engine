@@ -332,14 +332,16 @@ def apply_reduce(task_func, task_args,
 
     :param task_func: a function to run in parallel
     :param task_args: the arguments to be passed to the task function
-    :param agg: the aggregation function
-    :param acc: initial value of the accumulator
+    :param agg: the aggregation function (default do not aggregate)
+    :param acc: initial value of the accumulator (default empty AccumDict)
     :param concurrent_tasks: hint about how many tasks to generate
     :param weight: function to extract the weight of an item in data
     :param key: function to extract the kind of an item in data
     """
     data = task_args[0]
     args = task_args[1:]
+    if acc is None:
+        acc = AccumDict()
     if not data:
         return acc
     elif len(data) == 1 or not concurrent_tasks:
@@ -347,6 +349,34 @@ def apply_reduce(task_func, task_args,
     blocks = split_in_blocks(data, concurrent_tasks, weight, key)
     all_args = [(block,) + args for block in blocks]
     return map_reduce(task_func, all_args, agg, acc, name)
+
+
+class AccumDict(dict):
+    """
+    An accumulating dictionary, useful in apply_reduce jobs.
+
+    >>> acc = AccumDict()
+    >>> acc += {'a': 1}
+    >>> acc += {'a': 1, 'b': 1}
+    >>> acc
+    {'a': 2, 'b': 1}
+    >>> {'a': 1} + acc
+    {'a': 3, 'b': 1}
+    """
+    def __iadd__(self, dic):
+        for k, v in dic.iteritems():
+            try:
+                self[k] = self[k] + v
+            except KeyError:
+                self[k] = v
+        return self
+
+    def __add__(self, dic):
+        new = self.__class__(self)
+        new += dic
+        return new
+
+    __radd__ = __add__
 
 
 # this is not thread-safe

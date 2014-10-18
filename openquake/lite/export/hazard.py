@@ -66,11 +66,9 @@ class GroundMotionField(object):
         return self.gmf_nodes[key]
 
     def __str__(self):
-        """
-        String representation of a _GroundMotionField object showing the
-        content of the nodes (lon, lat an gmv). This is useful for debugging
-        and testing.
-        """
+        # string representation of a _GroundMotionField object showing the
+        # content of the nodes (lon, lat an gmv). This is useful for debugging
+        # and testing.
         mdata = ('imt=%(imt)s sa_period=%(sa_period)s '
                  'sa_damping=%(sa_damping)s rupture_id=%(rupture_id)s' %
                  vars(self))

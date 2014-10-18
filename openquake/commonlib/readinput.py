@@ -333,6 +333,40 @@ def get_exposure(oqparam):
                     values, deductibles, insurance_limits, retrofitting_values)
 
 
+ExposureMetadata = collections.namedtuple(
+    'ExposureMetadata', ['description', 'cost_types',
+                         'insurance_limit_is_absolute',
+                         'deductible_is_absolute'])
+
+
+class ExposureMetadataNode(LiteralNode):
+    validators = valid.parameters(
+        description=valid.utf8,
+        name=valid.name,
+        type=valid.name,
+        unit=valid.name,
+        insuranceLimit=lambda val, isAbsolute: valid.boolean(isAbsolute),
+        deductible=lambda val, isAbsolute: valid.boolean(isAbsolute),
+    )
+
+
+def get_exposure_metadata(fname):
+    """
+    Read the exposure metadata
+    """
+    description = read_nodes(
+        fname, lambda node: node.tag.endswith('description'),
+        ExposureMetadataNode).next()
+    conversions = read_nodes(
+        fname, lambda node: node.tag.endswith('conversions'),
+        ExposureMetadataNode).next()
+    return ExposureMetadata(
+        ~description,
+        list(conversions.costTypes),
+        ~conversions.insuranceLimit,
+        ~conversions.deductible)
+
+
 def get_special_assets(oqparam):
     """
     Get the assets from the parameters special_assets or special_assets_csv

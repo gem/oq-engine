@@ -21,35 +21,35 @@ import logging
 from openquake.commonlib.readinput import (
     get_site_collection, get_sitecol_assets)
 
-from openquake.lite.calculators import calculate, calc, BaseCalculator
+from openquake.lite.calculators import calculator, calc, BaseCalculator
 from openquake.lite.export import export
 
 
-@calculate.add('classical')
+@calculator.add('classical')
 class ClassicalCalculator(BaseCalculator):
     """
-    Run a classical PSHA calculation
+    Classical PSHA calculator
     """
 
 
-@calculate.add('event_based')
+@calculator.add('event_based')
 class EventBasedCalculator(BaseCalculator):
     """
-    Run an event based PSHA calculation
+    Event based PSHA calculator
     """
 
 
-@calculate.add('disaggregation')
+@calculator.add('disaggregation')
 class DisaggregationCalculator(BaseCalculator):
     """
-    Run a disaggregation PSHA calculation
+    Classical disaggregation PSHA calculator
     """
 
 
-@calculate.add('scenario')
+@calculator.add('scenario')
 class ScenarioCalculator(BaseCalculator):
     """
-    Run a scenario hazard computation
+    Scenario hazard calculator
     """
     def pre_execute(self):
         logging.info('Reading the site collection')

@@ -660,4 +660,4 @@ def parse_ses_ruptures(fname):
     Convert a stochasticEventSetCollection file into a set of SES,
     each one containing ruptures with a tag and a seed.
     """
-    raise NotImplemented
+    raise NotImplementedError
