@@ -16,12 +16,18 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import random
 import logging
+import operator
+import collections
 
-from openquake.commonlib.readinput import (
-    get_site_collection, get_sitecol_assets)
+import numpy
 
-from openquake.lite.calculators import calculator, calc, BaseCalculator
+from openquake.hazardlib.calc.gmf import GmfComputer
+from openquake.commonlib import readinput, parallel
+from openquake.commonlib.general import AccumDict
+
+from openquake.lite.calculators import calculator, core, BaseCalculator
 from openquake.lite.export import export
 
 
@@ -45,6 +51,9 @@ class DisaggregationCalculator(BaseCalculator):
     Classical disaggregation PSHA calculator
     """
 
+SESRupture = collections.namedtuple(
+    'SESRupture', 'tag seed rupture')
+
 
 @calculator.add('scenario')
 class ScenarioCalculator(BaseCalculator):
@@ -54,19 +63,53 @@ class ScenarioCalculator(BaseCalculator):
     def pre_execute(self):
         logging.info('Reading the site collection')
         if 'exposure' in self.oqparam.inputs:
-            self.sitecol, _assets = get_sitecol_assets(self.oqparam)
+            self.sitecol, _assets = readinput.get_sitecol_assets(self.oqparam)
         else:
-            self.sitecol = get_site_collection(self.oqparam)
+            self.sitecol = readinput.get_site_collection(self.oqparam)
+
+        correl_model = readinput.get_correl_model(self.oqparam)
+        rnd = random.Random(getattr(self.oqparam, 'random_seed', 42))
+        imts = readinput.get_imts(self.oqparam)
+        gsim = readinput.get_gsim(self.oqparam)
+        trunc_level = getattr(self.oqparam, 'truncation_level', None)
+        n_gmfs = getattr(self.oqparam, 'number_of_ground_motion_fields', 1)
+        rupture = readinput.get_rupture(self.oqparam)
+
+        self.tags = ['scenario-%010d' % i for i in xrange(
+                     self.oqparam.number_of_ground_motion_fields)]
+        self.sesruptures = [
+            SESRupture(tag, rnd.randint(0, 2 ** 31 - 1), rupture)
+            for tag in self.tags]
+        computer = GmfComputer(rupture, self.sitecol, imts, [gsim],
+                               trunc_level, correl_model)
+        self.computer_seeds = [(computer, rnd.randint(0, 2 ** 31 - 1))
+                               for _ in xrange(n_gmfs)]
 
     def execute(self):
         logging.info('Computing the GMFs')
-        return calc.calc_gmfs(self.oqparam, self.sitecol)
+        return parallel.apply_reduce(
+            self.core, (self.sesruptures, self.sitecol), operator.add)
 
-    def post_execute(self, gmfs_by_imt):
+    def post_execute(self, result):
+        gmfs_by_imt = {  # build N x R matrices
+            imt: numpy.array([result[tag][imt] for tag in self.tags]).T
+            for imt in self.imts}
+
         logging.info('Exporting the result')
-        scenario_tags = ['scenario-%010d' % i for i in xrange(
-                         self.oqparam.number_of_ground_motion_fields)]
         out = export(
             'gmf_xml', self.oqparam.export_dir,
-            self.sitecol, scenario_tags, gmfs_by_imt)
+            self.sitecol, self.tags, gmfs_by_imt)
         return [out]
+
+
+@core(ScenarioCalculator)
+def calc_gmfs(sesruptures, sitecol, imts, gsim, trunc_level, correl_model):
+    """
+    Computer several GMFs in parallel, one for each computer and seed.
+    """
+    res = AccumDict()  # imt -> gmf
+    for sesrupture in sesruptures:
+        computer = GmfComputer(sesrupture.rupture, sitecol, imts, [gsim],
+                               trunc_level, correl_model)
+        res += {sesrupture.tag: computer.compute(sesrupture.seed)}
+    return res

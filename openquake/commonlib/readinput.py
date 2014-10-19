@@ -1,24 +1,50 @@
+#  -*- coding: utf-8 -*-
+#  vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+#  Copyright (c) 2014, GEM Foundation
+
+#  OpenQuake is free software: you can redistribute it and/or modify it
+#  under the terms of the GNU Affero General Public License as published
+#  by the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+
+#  OpenQuake is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+
+#  You should have received a copy of the GNU Affero General Public License
+#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+import os
+import csv
 import collections
 import ConfigParser
-import os
 from lxml import etree
 
 import numpy
 
 from openquake.hazardlib import geo, site, gsim, correlation, imt
-from openquake.commonlib.node import read_nodes, LiteralNode, context
 from openquake.risklib import workflows
-from openquake.commonlib.oqvalidation import OqParam
 
+from openquake.commonlib.oqvalidation import OqParam
+from openquake.commonlib.node import read_nodes, LiteralNode, context
 from openquake.commonlib import valid
 from openquake.commonlib.oqvalidation import \
     fragility_files, vulnerability_files
 from openquake.commonlib.riskmodels import \
     get_fragility_functions, get_imtls_from_vulnerabilities, get_vfs
+from openquake.commonlib.general import AccumDict
 from openquake.commonlib.source import RuptureConverter
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
 
 GSIM = gsim.get_available_gsims()
+
+
+class DuplicatedPoint(Exception):
+    """
+    Raised when reading a CSV file with duplicated (lon, lat) pairs
+    """
 
 
 def _collect_source_model_paths(smlt):
@@ -415,8 +441,8 @@ def get_special_assets(oqparam):
 
 def get_sitecol_assets(oqparam):
     """
-    Returns two sequences of the same length: a list with the assets
-    per each site and the site collection.
+    Returns two sequences of the same length: the site collection and a
+    list with the assets per each site.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -430,3 +456,71 @@ def get_sitecol_assets(oqparam):
     return sitecol, [
         assets_by_loc[site.location.longitude, site.location.latitude]
         for site in sitecol]
+
+
+def get_mesh_csvdata(csvfile, imts, num_values, validvalue):
+    """
+    Read CSV data in the format `IMT lon lat value1 ... valueN`.
+    Return the mesh of points and the data as a dictionary
+    imt -> list of arrays.
+    """
+    number_of_values = dict(zip(imts, num_values))
+    lon_lats = {imt: set() for imt in imts}
+    data = AccumDict()  # imt -> list of arrays
+    check_imt = valid.Choice(*imts)
+    for line, row in enumerate(csv.reader(csvfile, delimiter=' '), 1):
+        try:
+            imt = check_imt(row[0])
+            lon_lat = valid.longitude(row[1]), valid.latitude(row[2])
+            if lon_lat in lon_lats[imt]:
+                raise DuplicatedPoint(lon_lat)
+            lon_lats[imt].add(lon_lat)
+            values = map(validvalue, row[3:])
+            if len(values) != number_of_values[imt]:
+                raise ValueError('Found %d values, expected %d' %
+                                 (len(values), number_of_values[imt]))
+        except (ValueError, DuplicatedPoint) as err:
+            raise err.__class__('%s: file %s, line %d' % (err, csvfile, line))
+        data += {imt: [numpy.array(values)]}
+    points = lon_lats.pop(imts[0])
+    for other_points in lon_lats.values():
+        if points != other_points:
+            raise ValueError('Inconsistent locations between %s and %s' %
+                             (imts[0], ', '.join(imts[1:])))
+    lons, lats = zip(*sorted(points))
+    mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
+    return mesh, data
+
+
+def get_sitecol_hcurves(oqparam):
+    """
+    Returns the site collection and the hazard curves, by reading
+    a CSV file with format `IMT lon lat poe1 ... poeN`
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    """
+    imts = oqparam.intensity_measure_types_and_levels.keys()
+    num_values = map(len, oqparam.intensity_measure_types_and_levels.values())
+    with open(oqparam.inputs['hazard_curves']) as csvfile:
+        mesh, data = get_mesh_csvdata(
+            csvfile, imts, num_values, valid.probability)
+    sitecol = get_site_collection(oqparam, mesh)
+    return sitecol, data
+
+
+def get_sitecol_gmfs(oqparam):
+    """
+    Returns the site collection and the GMFs as a dictionary, by reading
+    a CSV file with format `IMT lon lat gmv1 ... gmvN`
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    """
+    imts = oqparam.intensity_measure_types_and_levels.keys()
+    num_values = [oqparam.number_of_ground_motion_fields] * len(imts)
+    with open(oqparam.inputs['gmfs']) as csvfile:
+        mesh, data = get_mesh_csvdata(
+            csvfile, imts, num_values, valid.positivefloat)
+    sitecol = get_site_collection(oqparam, mesh)
+    return sitecol, data

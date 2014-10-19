@@ -86,8 +86,8 @@ class Choice(object):
 
     def __call__(self, value):
         if not value in self.choices:
-            raise ValueError('%r is not a valid choice in %s' % (
-                             value, self.choices))
+            raise ValueError('Got %r, expected %s' % (
+                             value, '|'.join(self.choices)))
         return value
 
 

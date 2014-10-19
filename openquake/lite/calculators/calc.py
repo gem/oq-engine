@@ -25,7 +25,7 @@ import numpy
 
 from openquake.hazardlib.calc import gmf, filters
 from openquake.hazardlib.site import SiteCollection
-
+from openquake.commonlib.general import AccumDict
 from openquake.commonlib.readinput import \
     get_gsim, get_rupture, get_correl_model, get_imts
 
@@ -127,9 +127,9 @@ def calc_gmfs(oqparam, sitecol):
     computer = gmf.GmfComputer(rupture, sitecol, imts, [gsim], trunc_level,
                                correl_model)
     seeds = [rnd.randint(0, 2 ** 31 - 1) for _ in xrange(n_gmfs)]
-    res = collections.defaultdict(list)
+    res = AccumDict()  # imt -> gmf
     for seed in seeds:
-        for (_gname, imt), gmvs in computer.compute(seed):
-            res[imt].append(gmvs)
+        for (_gname, imt), gmfield in computer.compute(seed):
+            res += {imt: [gmfield]}
     # res[imt] is a matrix R x N
     return {imt: numpy.array(matrix).T for imt, matrix in res.iteritems()}

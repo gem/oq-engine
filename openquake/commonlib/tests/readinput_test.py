@@ -23,9 +23,10 @@ import mock
 import unittest
 from StringIO import StringIO
 
-from openquake.commonlib.readinput import get_site_model, get_oqparam
-from openquake.commonlib.valid import SiteParam
+from openquake.commonlib import readinput, valid
 from openquake.commonlib import general
+
+from numpy.testing import assert_allclose
 
 
 class ParseConfigTestCase(unittest.TestCase):
@@ -56,7 +57,7 @@ intensity_measure_types = PGA
             'intensity_measure_types_and_levels': {'PGA': None},
         }
 
-        params = vars(get_oqparam(source, hazard_output_id=42))
+        params = vars(readinput.get_oqparam(source, hazard_output_id=42))
 
         self.assertEqual(expected_params, params)
 
@@ -91,7 +92,7 @@ intensity_measure_types = PGA
                 'intensity_measure_types_and_levels': {'PGA': None},
             }
 
-            params = vars(get_oqparam(open(job_config)))
+            params = vars(readinput.get_oqparam(open(job_config)))
             self.assertEqual(expected_params, params)
             self.assertEqual(['site_model'], params['inputs'].keys())
             self.assertEqual([site_model_input], params['inputs'].values())
@@ -137,7 +138,7 @@ intensity_measure_types = PGA
                 'intensity_measure_types_and_levels': {'PGA': None},
             }
 
-            params = vars(get_oqparam(source))
+            params = vars(readinput.get_oqparam(source))
             self.assertEqual(expected_params, params)
         finally:
             os.unlink(sites_csv)
@@ -159,10 +160,120 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         oqparam = mock.Mock()
         oqparam.inputs = dict(site_model=data)
         expected = [
-            SiteParam(z1pt0=100.0, z2pt5=2.0, measured=False, vs30=1200.0,
-                      lon=0.0, lat=0.0),
-            SiteParam(z1pt0=100.0, z2pt5=2.0, measured=False, vs30=600.0,
-                      lon=0.0, lat=0.1),
-            SiteParam(z1pt0=100.0, z2pt5=2.0, measured=False, vs30=200.0,
-                      lon=0.0, lat=0.2)]
-        self.assertEqual(list(get_site_model(oqparam)), expected)
+            valid.SiteParam(z1pt0=100.0, z2pt5=2.0, measured=False,
+                            vs30=1200.0, lon=0.0, lat=0.0),
+            valid.SiteParam(z1pt0=100.0, z2pt5=2.0, measured=False,
+                            vs30=600.0, lon=0.0, lat=0.1),
+            valid.SiteParam(z1pt0=100.0, z2pt5=2.0, measured=False,
+                            vs30=200.0, lon=0.0, lat=0.2)]
+        self.assertEqual(list(readinput.get_site_model(oqparam)), expected)
+
+
+class ReadCsvTestCase(unittest.TestCase):
+    def test_get_mesh_csvdata_ok(self):
+        fakecsv = StringIO("""\
+PGA 12.0 42.0 0.14 0.15 0.16
+PGA 12.0 42.1 0.44 0.45 0.46
+PGA 12.0 42.2 0.64 0.65 0.66
+PGV 12.0 42.0 0.24 0.25 0.26
+PGV 12.0 42.1 0.34 0.35 0.36
+PGV 12.0 42.2 0.54 0.55 0.56
+""")
+        mesh, data = readinput.get_mesh_csvdata(
+            fakecsv, ['PGA', 'PGV'], [3, 3], valid.probability)
+        assert_allclose(mesh.lons, [12., 12., 12.])
+        assert_allclose(mesh.lats, [42., 42.1, 42.2])
+        assert_allclose(data['PGA'], [[0.14, 0.15, 0.16],
+                                      [0.44, 0.45, 0.46],
+                                      [0.64, 0.65, 0.66]])
+        assert_allclose(data['PGV'], [[0.24, 0.25, 0.26],
+                                      [0.34, 0.35, 0.36],
+                                      [0.54, 0.55, 0.56]])
+
+    def test_get_mesh_csvdata_different_levels(self):
+        fakecsv = StringIO("""\
+PGA 12.0 42.0 0.14 0.15 0.16
+PGA 12.0 42.1 0.44 0.45 0.46
+PGA 12.0 42.2 0.64 0.65 0.66
+PGV 12.0 42.0 0.24 0.25
+PGV 12.0 42.1 0.34 0.35
+PGV 12.0 42.2 0.54 0.55
+""")
+        mesh, data = readinput.get_mesh_csvdata(
+            fakecsv, ['PGA', 'PGV'], [3, 2], valid.probability)
+        assert_allclose(mesh.lons, [12., 12., 12.])
+        assert_allclose(mesh.lats, [42., 42.1, 42.2])
+        assert_allclose(data['PGA'], [[0.14, 0.15, 0.16],
+                                      [0.44, 0.45, 0.46],
+                                      [0.64, 0.65, 0.66]])
+        assert_allclose(data['PGV'], [[0.24, 0.25],
+                                      [0.34, 0.35],
+                                      [0.54, 0.55]])
+
+    def test_get_mesh_csvdata_err1(self):
+        # a negative probability
+        fakecsv = StringIO("""\
+PGA 12.0 42.0 0.14 0.15 0.16
+PGA 12.0 42.1 0.44 0.45 0.46
+PGA 12.0 42.2 0.64 0.65 0.66
+PGV 12.0 42.0 0.24 0.25 -0.26
+PGV 12.0 42.1 0.34 0.35 0.36
+PGV 12.0 42.2 0.54 0.55 0.56
+""")
+        with self.assertRaises(ValueError) as ctx:
+            readinput.get_mesh_csvdata(
+                fakecsv, ['PGA', 'PGV'], [3, 3], valid.probability)
+        self.assertIn('line 4', str(ctx.exception))
+
+    def test_get_mesh_csvdata_err2(self):
+        # a duplicated point
+        fakecsv = StringIO("""\
+PGA 12.0 42.0 0.14 0.15 0.16
+PGA 12.0 42.1 0.44 0.45 0.46
+PGA 12.0 42.2 0.64 0.65 0.66
+PGV 12.0 42.1 0.24 0.25 0.26
+PGV 12.0 42.1 0.34 0.35 0.36
+""")
+        with self.assertRaises(readinput.DuplicatedPoint) as ctx:
+            readinput.get_mesh_csvdata(
+                fakecsv, ['PGA', 'PGV'], [3, 3], valid.probability)
+        self.assertIn('line 5', str(ctx.exception))
+
+    def test_get_mesh_csvdata_err3(self):
+        # a missing location for PGV
+        fakecsv = StringIO("""\
+PGA 12.0 42.0 0.14 0.15 0.16
+PGA 12.0 42.1 0.44 0.45 0.46
+PGA 12.0 42.2 0.64 0.65 0.66
+PGV 12.0 42.0 0.24 0.25 0.26
+PGV 12.0 42.1 0.34 0.35 0.36
+""")
+        with self.assertRaises(ValueError) as ctx:
+            readinput.get_mesh_csvdata(
+                fakecsv, ['PGA', 'PGV'], [3, 3], valid.probability)
+        self.assertEqual(str(ctx.exception),
+                         'Inconsistent locations between PGA and PGV')
+
+    def test_get_mesh_csvdata_err4(self):
+        # inconsistent number of levels
+        fakecsv = StringIO("""\
+PGA 12.0 42.0 0.14 0.15
+PGA 12.0 42.1 0.44 0.45 0.46
+PGA 12.0 42.2 0.64
+""")
+        with self.assertRaises(ValueError) as ctx:
+            readinput.get_mesh_csvdata(
+                fakecsv, ['PGA'], [2], valid.probability)
+        self.assertIn('Found 3 values, expected 2', str(ctx.exception))
+
+    def test_get_mesh_csvdata_err5(self):
+        # unexpected IMT
+        fakecsv = StringIO("""\
+PGA 12.0 42.0 0.14 0.15
+PGA 12.0 42.1 0.44 0.45
+PGA 12.0 42.2 0.64 0.65
+""")
+        with self.assertRaises(ValueError) as ctx:
+            readinput.get_mesh_csvdata(
+                fakecsv, ['PGV'], [2], valid.probability)
+        self.assertIn("Got 'PGA', expected PGV", str(ctx.exception))
