@@ -26,6 +26,7 @@ from django import db
 from openquake.hazardlib.geo import mesh
 from openquake.risklib import scientific, workflows
 from openquake.risklib.utils import numpy_map
+from openquake.commonlib import readinput
 
 from openquake.engine.calculators import post_processing
 from openquake.engine.calculators.risk import (
@@ -341,7 +342,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         # accumulator for the event loss tables
         self.acc = collections.defaultdict(collections.Counter)
         self.sites_disagg = self.job.get_param('sites_disagg')
-        self.specific_assets = self.job.get_param('specific_assets', None)
 
     def pre_execute(self):
         """
