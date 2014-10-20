@@ -477,6 +477,11 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
     del params['intensity_measure_types_and_levels']
     if params['hazard_calculation_id'] is None:
         params['hazard_calculation_id'] = haz_job.id
+    # ugliness that will disappear when RiskCalculation will be removed
+    if 'specific_assets' in params:
+        del params['specific_assets']
+    if 'sites_disagg' in params:
+        del params['sites_disagg']
     calculation = create_calculation(models.RiskCalculation, params)
     job.risk_calculation = calculation
     job.save()
