@@ -159,7 +159,7 @@ class OqParam(valid.ParamSet):
         """
         if self.calculation_mode not in HAZARD_CALCULATORS:
             return True  # no check on the sites for risk
-        sites = getattr(self, 'sites', self.inputs.get('site'))
+        sites = getattr(self, 'sites', self.inputs.get('sites'))
         if getattr(self, 'region', None):
             return sites is None and not 'exposure' in self.inputs
         elif 'exposure' in self.inputs:

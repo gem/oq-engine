@@ -117,7 +117,7 @@ intensity_measure_types = PGA
                 'truncation_level': 3.0,
                 'random_seed': 5,
                 'maximum_distance': 1.0,
-                'inputs': {'site': sites_csv},
+                'inputs': {'sites': sites_csv},
                 'sites_disagg': [],
                 'poes_disagg': [],
                 'specific_assets': [],

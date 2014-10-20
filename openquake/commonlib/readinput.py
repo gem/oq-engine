@@ -25,8 +25,8 @@ def get_mesh(oqparam):
     if getattr(oqparam, 'sites', None):
         lons, lats = zip(*oqparam.sites)
         return geo.Mesh(numpy.array(lons), numpy.array(lats))
-    elif 'site' in oqparam.inputs:
-        csv_data = open(oqparam.inputs['site'], 'U').read()
+    elif 'sites' in oqparam.inputs:
+        csv_data = open(oqparam.inputs['sites'], 'U').read()
         coords = valid.coordinates(
             csv_data.strip().replace(',', ' ').replace('\n', ','))
         lons, lats = zip(*coords)

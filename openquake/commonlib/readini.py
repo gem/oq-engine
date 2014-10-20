@@ -57,8 +57,8 @@ def parse_config(source, hazard_calculation_id=None, hazard_output_id=None):
 
     for sect in cp.sections():
         for key, value in cp.items(sect):
-            if key == 'sites_csv' or key.endswith('_file'):
-                input_type = key[:-5]
+            if key.endswith(('_file', '_csv')):
+                input_type, _ext = key.rsplit('_', 1)
                 path = value if os.path.isabs(value) else os.path.join(
                     base_path, value)
                 params['inputs'][input_type] = path
