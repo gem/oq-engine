@@ -51,7 +51,6 @@ class EventBasedBCRRiskCalculatorTestCase(
         self.job.status = 'executing'
         self.job.save()
         self.calculator.execute()
-
         self.assertEqual(1, models.Output.objects.filter(
             oq_job=self.job).count())
 

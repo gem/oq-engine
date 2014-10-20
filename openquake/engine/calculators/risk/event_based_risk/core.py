@@ -108,23 +108,23 @@ def do_event_based(risk_model, getters, outputdict, params, monitor):
         output = get_output(risk_model, getter, outputdict, params, monitor)
         for loss_type, out in output.iteritems():
             if params.specific_assets:
+                # compute the loss per rupture per asset
+                assets = out.output.assets
                 event_loss = models.EventLoss.objects.get(
                     output__oq_job=monitor.job_id,
                     loss_type=loss_type, hazard_output=getter.hazard_output)
-            assets = out.output.assets
-            values = numpy_map(lambda a: a.value(loss_type), assets)
-
-            # losses is E x N matrix, where E is the number of ruptures
-            # and N the number of assets
-            losses = out.output.loss_matrix.transpose() * values
-            # save an EventLossAsset record for each specific assets
-            for rup_id, losses_per_rup in zip(getter.rupture_ids, losses):
-                for asset, loss_per_rup in zip(assets, losses_per_rup):
-                    if asset.asset_ref in params.specific_assets:
-                        ela = models.EventLossAsset(
-                            event_loss=event_loss, rupture_id=rup_id,
-                            asset=asset, loss=loss_per_rup)
-                        inserter.add(ela)
+                # losses is E x N matrix, where E is the number of ruptures
+                # and N the number of assets
+                losses = (out.output.loss_matrix.transpose() *
+                          numpy_map(lambda a: a.value(loss_type), assets))
+                # save an EventLossAsset record for each specific assets
+                for rup_id, losses_per_rup in zip(getter.rupture_ids, losses):
+                    for asset, loss_per_rup in zip(assets, losses_per_rup):
+                        if asset.asset_ref in params.specific_assets:
+                            ela = models.EventLossAsset(
+                                event_loss=event_loss, rupture_id=rup_id,
+                                asset=asset, loss=loss_per_rup)
+                            inserter.add(ela)
             event_loss_table[loss_type, out.hid] = out.output.event_loss_table
         outputs.append(output)
     inserter.flush()
@@ -348,17 +348,16 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         Base pre_execute + build Event Loss Asset outputs if needed
         """
         super(EventBasedRiskCalculator, self).pre_execute()
-        if self.specific_assets:
-            for hazard_output in self.rc.hazard_outputs():
-                for loss_type in self.loss_types:
-                    models.EventLoss.objects.create(
-                        output=models.Output.objects.create_output(
-                            self.job,
-                            "Event Loss Asset. type=%s, hazard=%s" % (
-                                loss_type, hazard_output.id),
-                            "event_loss"),
-                        loss_type=loss_type,
-                        hazard_output=hazard_output)
+        for hazard_output in self.rc.hazard_outputs():
+            for loss_type in self.loss_types:
+                models.EventLoss.objects.create(
+                    output=models.Output.objects.create_output(
+                        self.job,
+                        "Event Loss type=%s, hazard=%s" % (
+                            loss_type, hazard_output.id),
+                        "event_loss"),
+                    loss_type=loss_type,
+                    hazard_output=hazard_output)
 
     @EnginePerformanceMonitor.monitor
     def agg_result(self, acc, event_loss_table):
