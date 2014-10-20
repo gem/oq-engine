@@ -25,7 +25,7 @@ from openquake.engine.db import models
 from openquake.engine.export import core
 from openquake.engine.utils import FileWrapper
 from openquake.commonlib import risk_writers
-
+EVENT_LOSS_ASSET_FILENAME_FMT = 'event-loss-asset-%s.csv'
 
 LOSS_CURVE_FILENAME_FMT = 'loss-curves-%(loss_curve_id)s.xml'
 LOSS_MAP_FILENAME_FMT = 'loss-maps-%(loss_map_id)s.%(file_ext)s'
@@ -349,6 +349,25 @@ def export_event_loss_csv(output, target):
     return dest
 
 
+def export_event_loss_asset_csv(output, target):
+    """
+    Export Event Loss Per Asset in CSV format
+    """
+    dest = _get_result_export_dest(target, output)
+
+    with FileWrapper(dest, mode='wb') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(['Rupture', 'Asset', 'Magnitude', 'Loss'])
+
+        for event_loss in models.EventLossAsset.objects.filter(
+                event_loss__output=output).select_related().order_by(
+                '-loss'):
+            writer.writerow([event_loss.rupture.tag,
+                             event_loss.asset.asset_ref,
+                             "%.07f" % event_loss.rupture.rupture.magnitude,
+                             "%.07f" % event_loss.loss])
+    return dest
+
 XML_EXPORTERS = {
     'agg_loss_curve': export_agg_loss_curve_xml,
     'bcr_distribution': export_bcr_distribution_xml,
@@ -366,6 +385,7 @@ XML_EXPORTERS = {
     # We should re-think the way we're handling the export cases.
     'aggregate_loss': export_aggregate_loss_csv,
     'event_loss': export_event_loss_csv,
+    'event_loss_asset': export_event_loss_asset_csv,
 }
 GEOJSON_EXPORTERS = {
     'loss_map': export_loss_map_geojson,
