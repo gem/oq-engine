@@ -80,6 +80,16 @@ def parse_config(source, hazard_calculation_id=None, hazard_output_id=None):
                          'in the .ini file' % (cmode, cmode))
 
     oqparam = OqParam(**params)
+    if 'quantile_loss_curves' not in params:
+        oqparam.quantile_loss_curves = []
+    if 'poes_disagg' not in params:
+        oqparam.poes_disagg = []
+    if 'sites_disagg' not in params:
+        oqparam.sites_disagg = []
+    if 'specific_assets' not in params:
+        oqparam.specific_assets = []
+    if 'conditional_loss_poes' not in params:
+        oqparam.conditional_loss_poes = []
 
     # define the parameter `intensity measure types and levels` always
     oqparam.intensity_measure_types_and_levels = get_imtls(oqparam)
