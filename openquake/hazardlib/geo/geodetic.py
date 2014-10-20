@@ -19,7 +19,6 @@ transformations, optimized for massive calculations.
 """
 
 import operator
-import collections
 
 import numpy
 
