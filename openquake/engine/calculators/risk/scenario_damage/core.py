@@ -174,3 +174,14 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
 
         self.loss_types.add('damage')  # single loss_type
         return risk_models
+
+    @property
+    def calculator_parameters(self):
+        """
+        The specific calculation parameters passed as args to the
+        celery task function. A calculator must override this to
+        provide custom arguments to its celery task
+        """
+        oqparam = self.job.get_oqparam()
+        oqparam.damage_state_ids = self.damage_state_ids
+        return oqparam

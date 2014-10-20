@@ -464,6 +464,16 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
             hazard_output_id)
 
     params = vars(oqparam).copy()
+    if 'quantile_loss_curves' not in params:
+        params['quantile_loss_curves'] = []
+    if 'poes_disagg' not in params:
+        params['poes_disagg'] = []
+    if 'sites_disagg' not in params:
+        params['sites_disagg'] = []
+    if 'specific_assets' not in params:
+        params['specific_assets'] = []
+    if 'conditional_loss_poes' not in params:
+        params['conditional_loss_poes'] = []
     params.update(extras)
     job.save_params(params)
 
