@@ -174,11 +174,3 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
 
         self.loss_types.add('damage')  # single loss_type
         return risk_models
-
-    @property
-    def calculator_parameters(self):
-        """
-        Provides calculator specific params coming from
-        :class:`openquake.engine.db.RiskCalculation`
-        """
-        return base.make_calc_params(damage_state_ids=self.damage_state_ids)

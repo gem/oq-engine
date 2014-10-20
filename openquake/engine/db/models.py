@@ -558,10 +558,6 @@ class RiskCalculation(djm.Model):
         null=False, blank=True, default=DEFAULT_LOSS_CURVE_RESOLUTION)
     insured_losses = djm.NullBooleanField(null=True, blank=True, default=False)
 
-    # The points of interest for disaggregation
-    sites_disagg = djm.MultiPointField(
-        srid=DEFAULT_SRID, null=True, blank=True)
-
     mag_bin_width = djm.FloatField(
         help_text=('Width of magnitude bins'),
         null=True,
@@ -2560,6 +2556,33 @@ class EventLossData(djm.Model):
         """
         return '%s,%s,%s' % (self.rupture.tag, self.rupture.rupture.mag,
                              self.aggregate_loss)
+
+
+class EventLossAsset(djm.Model):
+    event_loss = djm.ForeignKey(EventLoss)
+    rupture = djm.ForeignKey('SESRupture')
+    asset = djm.ForeignKey('ExposureData')
+    loss = djm.FloatField(null=False)
+
+    @property
+    def data_hash(self):
+        """
+        A db-sequence independent tuple that identifies this output
+        """
+        return self.event_loss.output_hash + (self.rupture_id, self.asset_id)
+
+    def assertAlmostEqual(self, data):
+        return risk_almost_equal(self, data, operator.attrgetter('loss'))
+
+    class Meta:
+        db_table = 'riskr\".\"event_loss_asset'
+
+    def to_csv_str(self):
+        """
+        Convert EventLossAsset into a CSV string
+        """
+        return '%s,%s,%s,%s' % (self.rupture.tag, self.rupture.rupture.mag,
+                                self.asset.asset_ref, self.loss)
 
 
 class BCRDistribution(djm.Model):
