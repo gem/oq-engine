@@ -215,8 +215,10 @@ def get_specific_assets(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     try:
-        return oqparam.specific_assets.split()
+        return oqparam.specific_assets
     except AttributeError:
+        if 'specific_assets' not in oqparam.inputs:
+            return []
         return open(oqparam.inputs['specific_assets']).read().split()
 
 

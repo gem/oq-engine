@@ -223,3 +223,17 @@ class OqParam(valid.ParamSet):
         if getattr(self, 'sites_disagg', None):
             return getattr(self, 'specific_assets', None)
         return True
+
+    def is_valid_specific_assets(self):
+        """
+        Read the special assets from the parameters `specific_assets` or
+        `specific_assets_csv`, if present. You cannot have both. The
+        concept is meaninful only for risk calculators.
+        """
+        specific_assets = getattr(self, 'specific_assets', None)
+        if specific_assets and 'specific_assets' in self.inputs:
+            return False
+        elif specific_assets or 'specific_assets' in self.inputs:
+            return self.calculation_mode in RISK_CALCULATORS
+        else:
+            return True
