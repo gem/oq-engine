@@ -33,6 +33,7 @@ LOSS_FRACTION_FILENAME_FMT = 'loss-fractions-%(loss_fraction_id)s.xml'
 AGGREGATE_LOSS_FILENAME_FMT = 'aggregate-loss-%s.csv'
 BCR_FILENAME_FMT = 'bcr-distribution-%(bcr_distribution_id)s.xml'
 EVENT_LOSS_FILENAME_FMT = 'event-loss-%s.csv'
+EVENT_LOSS_ASSET_FILENAME_FMT = 'event-loss-asset-%s.csv'
 
 
 # for each output_type there must be a function
@@ -106,7 +107,9 @@ def _get_result_export_dest(target, output, file_ext='xml'):
             bcr_distribution_id=output.bcr_distribution.id,
         )
     elif output_type == 'event_loss':
-        filename = EVENT_LOSS_FILENAME_FMT % (output.id)
+        filename = EVENT_LOSS_FILENAME_FMT % output.id
+    elif output_type == 'event_loss_asset':
+        filename = EVENT_LOSS_ASSET_FILENAME_FMT % output.id
     elif output_type == 'aggregate_loss':
         filename = AGGREGATE_LOSS_FILENAME_FMT % (output.aggregate_loss.id)
     elif output_type in ('dmg_dist_per_asset', 'dmg_dist_per_taxonomy',

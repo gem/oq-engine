@@ -835,6 +835,7 @@ class Output(djm.Model):
         (u'dmg_dist_per_taxonomy', u'Damage Distribution Per Taxonomy'),
         (u'dmg_dist_total', u'Total Damage Distribution'),
         (u'event_loss', u'Event Loss Table'),
+        (u'event_loss_asset', u'Event Loss Asset'),
         (u'loss_curve', u'Loss Curve'),
         (u'event_loss_curve', u'Loss Curve'),
         (u'loss_fraction', u'Loss fractions'),
