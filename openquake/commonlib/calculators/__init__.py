@@ -74,14 +74,14 @@ class BaseCalculator(object):
         Execution phase. Usually will run in parallel the core
         function and return a dictionary with the results.
         """
-        raise NotImplementedError
+        raise NotImplementedError(self.oqparam.calculation_mode)
 
     def post_execute(self, result):
         """
         Post-processing phase of the aggregated output. It must be
         overridden with the export code.
         """
-        raise NotImplementedError
+        raise NotImplementedError(self.oqparam.calculation_mode)
 
 
 class BaseScenarioCalculator(BaseCalculator):
