@@ -320,7 +320,8 @@ def get_job(cfg, username="openquake", hazard_calculation_id=None,
             pk=hazard_output_id).oq_job.id
     return engine.job_from_file(
         cfg, username, 'error', [],
-        hazard_calculation_id=hazard_calculation_id, **extras)
+        hazard_calculation_id=hazard_calculation_id,
+        hazard_output_id=hazard_output_id, **extras)
 
 
 def create_gmf_sescoll(output, output_type='gmf'):
