@@ -20,7 +20,7 @@ import unittest
 import StringIO
 import collections
 
-from openquake.commonlib import examples
+from openquake.commonlib import nrml_examples
 from openquake.commonlib import risk_writers as writers
 from openquake.commonlib.tests import _utils
 
@@ -560,7 +560,7 @@ class LossFractionsWriterTestCase(unittest.TestCase):
     def test_serialize_taxonomies(self):
         expected = file(
             os.path.join(
-                os.path.dirname(examples.__file__),
+                os.path.dirname(nrml_examples.__file__),
                 "loss-fractions-taxonomies.xml"))
 
         writers.LossFractionsWriter(
