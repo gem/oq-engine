@@ -345,6 +345,10 @@ class ExposureNode(LiteralNode):
     )
 
 
+class DuplicateID(Exception):
+    """Raised when two assets with the same ID are found in an exposure model"""
+
+
 def get_exposure(oqparam):
     """
     Read the exposure and yields :class:`openquake.risklib.workflows.Asset`
@@ -356,6 +360,7 @@ def get_exposure(oqparam):
     relevant_cost_types = set(vulnerability_files(oqparam.inputs))
     fname = oqparam.inputs['exposure']
     time_event = getattr(oqparam, 'time_event', None)
+    asset_refs = set()
     for asset in read_nodes(fname,
                             lambda node: node.tag.endswith('asset'),
                             ExposureNode):
@@ -366,6 +371,9 @@ def get_exposure(oqparam):
 
         with context(fname, asset):
             asset_id = asset['id']
+            if asset_id in asset_refs:
+                raise DuplicateID(asset_id)
+            asset_refs.add(asset_id)
             taxonomy = asset['taxonomy']
             number = asset['number']
             location = ~asset.location
