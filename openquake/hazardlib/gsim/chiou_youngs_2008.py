@@ -1,5 +1,6 @@
+# -*- coding: utf-8 -*-
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2012-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -14,7 +15,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`ChiouYoungs2008`.
+Module exports :class:`ChiouYoungs2008`,
+class:`ChiouYoungs2008SWISS01`,
+class:`ChiouYoungs2008SWISS06`,
+class:`ChiouYoungs2008SWISS04`,
 """
 from __future__ import division
 
@@ -71,7 +75,7 @@ class ChiouYoungs2008(GMPE):
     REQUIRES_RUPTURE_PARAMETERS = set(('dip', 'rake', 'mag', 'ztor'))
 
     #: Required distance measures are RRup, rrup and Rx (all are in eq. 13a).
-    REQUIRES_DISTANCES = set(('rrup', 'rrup', 'rx'))
+    REQUIRES_DISTANCES = set(('rrup', 'rjb', 'rx'))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -268,6 +272,7 @@ class ChiouYoungs2008(GMPE):
     10.0   1.06 3.45 -2.1 -0.5 50.0 3.0 4.0 -5.5872 -0.1000 -0.1000 1.502 6.1930 5.2000 0.4500 0.0000 0.0000 0.0000 2.7180  1.1856 -0.00094 -0.00091 -0.7332  0.0000 -0.001361 0.000515 0.4800 0.005517 320.1  0.2682 0.5542 0.5542 0.4414 0.4213 0.7000 0.0014
     """)
 
+
 class ChiouYoungs2008SWISS01(ChiouYoungs2008):
 
     """
@@ -285,7 +290,7 @@ class ChiouYoungs2008SWISS01(ChiouYoungs2008):
 
     Disclaimer: these equations are modified to be used for the
     Swiss Seismic Hazard Model [2014].
-    The use of these models in other models
+    The use of these models in other tectonic environments
     is the soly responsability of the hazard modeler.
 
     Model implmented by laurentiu.danciu@gmail.com
@@ -317,14 +322,21 @@ class ChiouYoungs2008SWISS01(ChiouYoungs2008):
 
     COEFFS_FS_ROCK=COEFFS_FS_ROCK_SWISS01
 
+
 class ChiouYoungs2008SWISS06(ChiouYoungs2008SWISS01):
 
     """
     This class extends :class:ChiouYoungs2008,following same strategy 
     as for :class:ChiouYoungs2008SWISS01 to be used for the 
     Swiss Hazard Model [2014].
+
+    Disclaimer: these equations are modified to be used for the
+    Swiss Seismic Hazard Model [2014].
+    The use of these models in other tectonic environments
+    is the soly responsability of the hazard modeler.
     """
     COEFFS_FS_ROCK=COEFFS_FS_ROCK_SWISS06
+
 
 class ChiouYoungs2008SWISS04(ChiouYoungs2008SWISS01):
 
@@ -332,5 +344,10 @@ class ChiouYoungs2008SWISS04(ChiouYoungs2008SWISS01):
     This class extends :class:ChiouYoungs2008,following same strategy 
     as for :class:ChiouYoungs2008SWISS01 to be used for the 
     Swiss Hazard Model [2014].
+
+    Disclaimer: these equations are modified to be used for the
+    Swiss Seismic Hazard Model [2014].
+    The use of these models in other tectonic environments
+    is the soly responsability of the hazard modeler.
     """
     COEFFS_FS_ROCK=COEFFS_FS_ROCK_SWISS04
