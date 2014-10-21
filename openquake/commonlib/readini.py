@@ -59,11 +59,11 @@ def parse_config(source, hazard_calculation_id=None, hazard_output_id=None):
     for sect in cp.sections():
         for key, value in cp.items(sect):
             # we parse the .ini file and we build a dictionary key -> value
-            # with all the parameters defined there; the parameters with key
-            # ending in `_file`, `_csv` (i.e. the input types) are treated
+            # with all the parameters defined there; the parameters with
+            # suffix `_file`, `_csv` (i.e. the input types) are treated
             # specially; they are assumed to correspond to file names; the
-            # names are stored in the sub dictionary 'inputs', by stripping
-            # the extension; for instance, if the .ini file has a line
+            # input types are stored in the sub dictionary 'inputs', by
+            # stripping the suffix; for instance, if the .ini file has a line
             # sites_csv = file_with_the_sites.csv then the dictionary
             # input with have the form
             # params['inputs'] = {'sites': 'BASEPATH/file_with_the_sites.csv'}
