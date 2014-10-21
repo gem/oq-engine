@@ -159,15 +159,15 @@ class ChiouYoungs2008(GMPE):
 
         # eq. 19 to calculate inter-event standard error
         mag_test = min(max(rup.mag, 5.0), 7.0) - 5.0
-        #tau = C['tau1'] + (C['tau2'] - C['tau1']) / 2 * mag_test
+        # tau = C['tau1'] + (C['tau2'] - C['tau1']) / 2 * mag_test
         tau = self.get_tau(C, rup)
 
-        ## b and c coeffs from eq. 10
-        #b = C['phi2'] * (exp1 - exp2)
-        #c = C['phi4']
-        #y_ref = np.exp(ln_y_ref)
-        ## eq. 20
-        #NL = b * y_ref / (y_ref + c)
+        # b and c coeffs from eq. 10
+        # b = C['phi2'] * (exp1 - exp2)
+        # c = C['phi4']
+        # y_ref = np.exp(ln_y_ref)
+        # eq. 20
+        # NL = b * y_ref / (y_ref + c)
         NL = self.get_nl(C, ln_y_ref, exp1, exp2)
         sigma = (
             # first line of eq. 20
@@ -190,7 +190,6 @@ class ChiouYoungs2008(GMPE):
             elif stddev_type == const.StdDev.INTER_EVENT:
                 # this is implied in eq. 21
                 ret.append(np.abs((1 + NL) * tau))
-                #~ print (1 + NL)
         return ret
 
     def _get_ln_y_ref(self, rup, dists, C):
@@ -301,33 +300,34 @@ class ChiouYoungs2008SWISS01(ChiouYoungs2008):
         mean, stddevs = super(ChiouYoungs2008SWISS01, self).\
             get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
 
+        COEFF = ChiouYoungs2008.COEFFS[imt]
         log_phi_ss = 1
-        tau = super(ChiouYoungs2008SWISS01, self).get_tau(ChiouYoungs2008.COEFFS[imt], rup)
-        ln_y_ref = super(ChiouYoungs2008SWISS01, self)._get_ln_y_ref(rup, dists, ChiouYoungs2008.COEFFS[imt])
-        exp1 = np.exp(ChiouYoungs2008.COEFFS[imt]['phi3'] * (sites.vs30.clip(-np.inf, 1130) - 360))
-        exp2 = np.exp(ChiouYoungs2008.COEFFS[imt]['phi3'] * (1130 - 360))
-        nl =  super(ChiouYoungs2008SWISS01, self).get_nl(
-            ChiouYoungs2008.COEFFS[imt], ln_y_ref, exp1, exp2)
+        tau = super(ChiouYoungs2008SWISS01, self).\
+            get_tau(COEFF, rup)
 
-        mean, stddevs= _apply_adjustments(
-            ChiouYoungs2008.COEFFS, self.COEFFS_FS_ROCK[imt], 1,
+        ln_y_ref = super(ChiouYoungs2008SWISS01, self).\
+            _get_ln_y_ref(rup, dists, COEFF)
+
+        exp1 = np.exp(COEFF['phi3'] * (sites.vs30.clip(-np.inf, 1130) - 360))
+        exp2 = np.exp(COEFF['phi3'] * (1130 - 360))
+        nl = super(ChiouYoungs2008SWISS01, self).\
+            get_nl(COEFF, ln_y_ref, exp1, exp2)
+
+        mean, stddevs = _apply_adjustments(
+            COEFF, self.COEFFS_FS_ROCK[imt], 1,
             mean, stddevs, sites, rup, dists.rjb, imt, stddev_types,
-            log_phi_ss, NL = nl, tau_value = tau)
-
-
+            log_phi_ss, NL=nl, tau_value=tau)
 
         return mean, stddevs
 
-
-
-    COEFFS_FS_ROCK=COEFFS_FS_ROCK_SWISS01
+    COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS01
 
 
 class ChiouYoungs2008SWISS06(ChiouYoungs2008SWISS01):
 
     """
-    This class extends :class:ChiouYoungs2008,following same strategy 
-    as for :class:ChiouYoungs2008SWISS01 to be used for the 
+    This class extends :class:ChiouYoungs2008,following same strategy
+    as for :class:ChiouYoungs2008SWISS01 to be used for the
     Swiss Hazard Model [2014].
 
     Disclaimer: these equations are modified to be used for the
@@ -335,14 +335,14 @@ class ChiouYoungs2008SWISS06(ChiouYoungs2008SWISS01):
     The use of these models in other tectonic environments
     is the soly responsability of the hazard modeler.
     """
-    COEFFS_FS_ROCK=COEFFS_FS_ROCK_SWISS06
+    COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS06
 
 
 class ChiouYoungs2008SWISS04(ChiouYoungs2008SWISS01):
 
     """
-    This class extends :class:ChiouYoungs2008,following same strategy 
-    as for :class:ChiouYoungs2008SWISS01 to be used for the 
+    This class extends :class:ChiouYoungs2008,following same strategy
+    as for :class:ChiouYoungs2008SWISS01 to be used for the
     Swiss Hazard Model [2014].
 
     Disclaimer: these equations are modified to be used for the
@@ -350,4 +350,4 @@ class ChiouYoungs2008SWISS04(ChiouYoungs2008SWISS01):
     The use of these models in other tectonic environments
     is the soly responsability of the hazard modeler.
     """
-    COEFFS_FS_ROCK=COEFFS_FS_ROCK_SWISS04
+    COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS04

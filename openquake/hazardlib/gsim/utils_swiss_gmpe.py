@@ -79,7 +79,8 @@ def _compute_phi_ss(C, mag, c1_dists, log_phi_ss, mean_phi_ss):
     return (phi_ss * 0.50 + mean_phi_ss * 0.50) / log_phi_ss
 
 
-def _get_corr_stddevs(C, tau_ss, stddev_types, num_sites, phi_ss, NL = None, tau_value = None):
+def _get_corr_stddevs(C, tau_ss, stddev_types, num_sites, phi_ss, NL=None,
+                      tau_value=None):
     """
     Return standard deviations adjusted for single station sigma
     as the total standard deviation - as proposed to be used in
@@ -88,11 +89,11 @@ def _get_corr_stddevs(C, tau_ss, stddev_types, num_sites, phi_ss, NL = None, tau
     stddevs = []
     temp_stddev = phi_ss * phi_ss
 
-    if tau_value != None and NL != None:
+    if tau_value is not None and NL is not None:
         temp_stddev = temp_stddev + tau_value * tau_value * ((1 + NL) ** 2)
     else:
         temp_stddev = temp_stddev + C[tau_ss] * C[tau_ss]
-    
+
     for stddev_type in stddev_types:
         if stddev_type == const.StdDev.TOTAL:
             stddevs.append(np.sqrt(temp_stddev) + np.zeros(num_sites))
@@ -100,7 +101,7 @@ def _get_corr_stddevs(C, tau_ss, stddev_types, num_sites, phi_ss, NL = None, tau
 
 
 def _apply_adjustments(COEFFS, C_ADJ, tau_ss, mean, stddevs, sites, rup, dists,
-                       imt, stddev_types, log_phi_ss, NL = None, tau_value = None):
+                       imt, stddev_types, log_phi_ss, NL=None, tau_value=None):
     """
     This method applies adjustments to the mean and standard deviation.
     The small-magnitude adjustments are applied to mean, whereas the
