@@ -19,7 +19,7 @@
 import os
 import csv
 
-from openquake.lite.export import export
+from openquake.commonlib.export import export
 from openquake.commonlib import risk_writers
 
 writercls = dict(

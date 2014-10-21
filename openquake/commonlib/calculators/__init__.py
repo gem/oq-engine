@@ -23,7 +23,7 @@ from openquake.risklib import workflows
 from openquake.commonlib.general import import_all, CallableDict
 from openquake.commonlib import readinput
 from openquake.commonlib.parallel import apply_reduce
-from openquake.lite.calculators import calc
+from openquake.commonlib.calculators import calc
 
 calculator = CallableDict(operator.attrgetter('calculation_mode'))
 
@@ -117,4 +117,4 @@ class BaseScenarioCalculator(BaseCalculator):
 
 
 ## now make sure the `calculator` dictionary is populated
-import_all('openquake.lite.calculators')
+import_all('openquake.commonlib.calculators')

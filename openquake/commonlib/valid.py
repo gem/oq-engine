@@ -482,7 +482,7 @@ def dictionary(value):
     if not value:
         return {}
     try:
-        return ast.literal_eval(value)
+        return ast.commonlibral_eval(value)
     except:
         raise ValueError('%r is not a valid Python dictionary' % value)
 

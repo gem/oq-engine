@@ -19,7 +19,7 @@
 import os
 import collections
 
-from openquake.lite.export import export
+from openquake.commonlib.export import export
 from openquake.commonlib import hazard_writers
 from openquake.hazardlib.imt import from_string
 

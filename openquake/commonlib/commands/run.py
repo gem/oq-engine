@@ -2,7 +2,7 @@ import logging
 
 from openquake.commonlib import sap, readinput
 from openquake.commonlib.parallel import executor
-from openquake.lite.calculators import calculator
+from openquake.commonlib.calculators import calculator
 
 
 def run(job_ini, concurrent_tasks=executor._max_workers, loglevel='INFO'):

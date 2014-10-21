@@ -1,6 +1,6 @@
 import textwrap
 from openquake.commonlib import sap
-from openquake.lite.calculators import calculator
+from openquake.commonlib.calculators import calculator
 
 
 def info(name):

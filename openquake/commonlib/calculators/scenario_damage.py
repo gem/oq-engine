@@ -24,8 +24,8 @@ import numpy
 
 from openquake.risklib import scientific
 from openquake.commonlib.general import AccumDict
-from openquake.lite.calculators import calculator, core, BaseScenarioCalculator
-from openquake.lite.export import export
+from openquake.commonlib.calculators import calculator, core, BaseScenarioCalculator
+from openquake.commonlib.export import export
 
 
 class DmgState(object):

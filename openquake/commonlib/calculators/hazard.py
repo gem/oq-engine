@@ -27,8 +27,8 @@ from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.commonlib import readinput, parallel
 from openquake.commonlib.general import AccumDict
 
-from openquake.lite.calculators import calculator, core, BaseCalculator
-from openquake.lite.export import export
+from openquake.commonlib.calculators import calculator, core, BaseCalculator
+from openquake.commonlib.export import export
 
 
 @calculator.add('classical')

@@ -23,9 +23,9 @@ import collections
 import numpy
 from openquake.risklib import scientific
 from openquake.commonlib import readinput, riskmodels, general
-from openquake.lite.calculators import calculator, \
+from openquake.commonlib.calculators import calculator, \
     BaseScenarioCalculator, core
-from openquake.lite.export import export
+from openquake.commonlib.export import export
 
 
 def add_epsilons(assets_by_site, num_samples, seed, correlation):
