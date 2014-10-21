@@ -505,8 +505,10 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
     # disappear when RiskCalculation will be removed
     del params['intensity_measure_types_and_levels']
     job.save_params(params)
-    del params['sites_disagg']
-    del params['specific_assets']
+    if 'sites_disagg' in params:
+        del params['sites_disagg']
+    if 'specific_assets' in params:
+        del params['specific_assets']
     risk_calc = engine.create_calculation(models.RiskCalculation, params)
     job.risk_calculation = risk_calc
     job.save()
