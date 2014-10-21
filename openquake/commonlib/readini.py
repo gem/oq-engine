@@ -52,8 +52,9 @@ def parse_config(source, hazard_calculation_id=None, hazard_output_id=None):
                   hazard_calculation_id=hazard_calculation_id,
                   hazard_output_id=hazard_output_id)
 
+    inifile = os.path.abspath(source.name)
     # Directory containing the config file we're parsing.
-    base_path = os.path.dirname(os.path.abspath(source.name))
+    base_path = os.path.dirname(inifile)
 
     for sect in cp.sections():
         for key, value in cp.items(sect):
@@ -77,9 +78,11 @@ def parse_config(source, hazard_calculation_id=None, hazard_output_id=None):
     cmode = params['calculation_mode']
     if is_risk and cmode in ('classical', 'event_based', 'scenario'):
         raise ValueError('Please change calculation_mode=%s into %s_risk '
-                         'in the .ini file' % (cmode, cmode))
-
-    oqparam = OqParam(**params)
+                         'in the file %s' % (cmode, cmode, inifile))
+    try:
+        oqparam = OqParam(**params)
+    except Exception as exc:
+        raise exc.__class__('%s\nFile: %s' % (exc, inifile))
 
     # define the parameter `intensity measure types and levels` always
     oqparam.intensity_measure_types_and_levels = get_imtls(oqparam)

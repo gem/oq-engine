@@ -215,11 +215,11 @@ def get_specific_assets(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     try:
-        return oqparam.specific_assets
+        return set(oqparam.specific_assets)
     except AttributeError:
         if 'specific_assets' not in oqparam.inputs:
-            return []
-        return open(oqparam.inputs['specific_assets']).read().split()
+            return set()
+        return set(open(oqparam.inputs['specific_assets']).read().split())
 
 
 def get_sitecol_assets(oqparam):

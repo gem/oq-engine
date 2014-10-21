@@ -123,7 +123,7 @@ class OqParam(valid.ParamSet):
         ses_per_logic_tree_path=valid.positiveint,
         sites=valid.NoneOr(valid.coordinates),
         sites_disagg=valid.NoneOr(valid.coordinates),
-        specific_assets=valid.namelist,
+        specific_assets=str.split,
         taxonomies_from_model=valid.boolean,
         time_event=str,
         truncation_level=valid.NoneOr(valid.positivefloat),
@@ -221,7 +221,8 @@ class OqParam(valid.ParamSet):
         The option sites_disagg require specific_assets to be set
         """
         if getattr(self, 'sites_disagg', None):
-            return getattr(self, 'specific_assets', None)
+            return getattr(self, 'specific_assets', None) or \
+                'specific_assets' in self.inputs
         return True
 
     def is_valid_specific_assets(self):
