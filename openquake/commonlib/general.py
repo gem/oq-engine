@@ -358,7 +358,7 @@ class CodeDependencyError(Exception):
 def import_all(module_or_package):
     """
     If `module_or_package` is a module, just import it; if it is a package,
-    recursively imports all the modules it contains. Returns the name of
+    recursively imports all the modules it contains. Returns the names of
     the modules that were imported as a set. The set can be empty if
     the modules were already in sys.modules.
     """
@@ -375,6 +375,8 @@ def import_all(module_or_package):
             continue
         for f in files:
             if f.endswith('.py'):
+                # convert PKGPATH/subpackage/module.py -> subpackage.module
+                # works at any level of nesting
                 modname = (module_or_package + cwd[n:].replace('/', '.') +
                            '.' + os.path.basename(f[:-3]))
                 try:
@@ -401,7 +403,9 @@ def assert_independent(package, *packages):
     imported_modules = run_in_process("""\
 import sys
 from openquake.commonlib.general import import_all
+# remove openquake.commonlib from the imported modules
 del sys.modules['openquake.commonlib']
+# in this way if it is imported again by `import_all` it is seen
 print import_all('%s')
 """ % package)
     for mod in imported_modules:
