@@ -671,7 +671,8 @@ class ParamSet(object):
     >>> MyParams(a='1', b='9.2')
     Traceback (most recent call last):
     ...
-    ValueError: The sum of a and b must be under 10. Got:
+    ValueError: The sum of a and b must be under 10.
+    Got:
     a=1
     b=9.2
 
