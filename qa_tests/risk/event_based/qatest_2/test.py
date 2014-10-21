@@ -16,6 +16,7 @@
 """
 This is a fast test of the event_loss_table, which is quite stringent
 """
+import os
 import collections
 from nose.plugins.attrib import attr as noseattr
 from qa_tests import risk
@@ -71,7 +72,7 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
 
     def check_event_loss_asset(self, job):
         el = models.EventLoss.objects.get(
-            output__output_type='event_loss', output__oq_job=job)
+            output__output_type='event_loss_asset', output__oq_job=job)
         path = self._test_path("expected/event_loss_asset.csv")
         expectedlines = open(path).read().split()
         gotlines = [
@@ -79,7 +80,10 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
             for row in el.eventlossasset_set.order_by(
                 'asset__asset_ref', 'rupture__tag')]
         if gotlines != expectedlines:
-            open(self._test_path("actual/event_loss_asset.csv"), 'w').write(
+            actual_dir = self._test_path("actual")
+            if not os.path.exists(actual_dir):
+                os.mkdir(actual_dir)
+            open(os.path.join(actual_dir, "event_loss_asset.csv"), 'w').write(
                 '\n'.join(gotlines))
         self.assertEqual(expectedlines, gotlines)
 
