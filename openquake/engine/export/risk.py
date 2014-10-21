@@ -25,7 +25,6 @@ from openquake.engine.db import models
 from openquake.engine.export import core
 from openquake.engine.utils import FileWrapper
 from openquake.commonlib import risk_writers
-EVENT_LOSS_ASSET_FILENAME_FMT = 'event-loss-asset-%s.csv'
 
 LOSS_CURVE_FILENAME_FMT = 'loss-curves-%(loss_curve_id)s.xml'
 LOSS_MAP_FILENAME_FMT = 'loss-maps-%(loss_map_id)s.%(file_ext)s'
