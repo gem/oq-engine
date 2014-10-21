@@ -124,7 +124,7 @@ class OqParam(valid.ParamSet):
         ses_per_logic_tree_path=valid.positiveint,
         sites=valid.NoneOr(valid.coordinates),
         sites_disagg=valid.NoneOr(valid.coordinates),
-        special_assets=valid.namelist,
+        specific_assets=str.split,
         statistics=valid.boolean,
         taxonomies_from_model=valid.boolean,
         time_event=str,
@@ -218,16 +218,25 @@ class OqParam(valid.ParamSet):
             return getattr(self, 'intensity_measure_types', None) is None
         return True
 
-    def is_valid_special_assets(self):
+    def is_valid_sites_disagg(self):
         """
-        Read the special assets from the parameters `special_assets` or
-        `special_assets_csv`, if present. You cannot have both. The
+        The option sites_disagg require specific_assets to be set
+        """
+        if getattr(self, 'sites_disagg', None):
+            return getattr(self, 'specific_assets', None) or \
+                'specific_assets' in self.inputs
+        return True
+
+    def is_valid_specific_assets(self):
+        """
+        Read the special assets from the parameters `specific_assets` or
+        `specific_assets_csv`, if present. You cannot have both. The
         concept is meaninful only for risk calculators.
         """
-        special_assets = getattr(self, 'special_assets', None)
-        if special_assets and 'special_assets' in self.inputs:
+        specific_assets = getattr(self, 'specific_assets', None)
+        if specific_assets and 'specific_assets' in self.inputs:
             return False
-        elif special_assets or 'special_assets' in self.inputs:
+        elif specific_assets or 'specific_assets' in self.inputs:
             return self.calculation_mode in RISK_CALCULATORS
         else:
             return True
