@@ -124,6 +124,7 @@ def do_event_based(risk_model, getters, outputdict, params, monitor):
                 # compute the loss per rupture per asset
                 event_loss = models.EventLoss.objects.get(
                     output__oq_job=monitor.job_id,
+                    output__output_type='event_loss_asset',
                     loss_type=loss_type, hazard_output=getter.hazard_output)
                 # losses is E x n matrix, where E is the number of ruptures
                 # and n the number of assets in the specific_assets set
@@ -350,6 +351,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         # accumulator for the event loss tables
         self.acc = collections.defaultdict(collections.Counter)
         self.sites_disagg = self.job.get_param('sites_disagg')
+        self.specific_assets = self.job.get_param('specific_assets')
 
     def pre_execute(self):
         """
@@ -361,11 +363,20 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 models.EventLoss.objects.create(
                     output=models.Output.objects.create_output(
                         self.job,
-                        "Event Loss type=%s, hazard=%s" % (
+                        "Event Loss Table type=%s, hazard=%s" % (
                             loss_type, hazard_output.id),
                         "event_loss"),
                     loss_type=loss_type,
                     hazard_output=hazard_output)
+                if self.specific_assets:
+                    models.EventLoss.objects.create(
+                        output=models.Output.objects.create_output(
+                            self.job,
+                            "Event Loss Asset type=%s, hazard=%s" % (
+                                loss_type, hazard_output.id),
+                            "event_loss_asset"),
+                        loss_type=loss_type,
+                        hazard_output=hazard_output)
 
     @EnginePerformanceMonitor.monitor
     def agg_result(self, acc, event_loss_table):
@@ -395,6 +406,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     hazard_output = models.Output.objects.get(pk=out_id)
                     event_loss = models.EventLoss.objects.get(
                         output__oq_job=self.job,
+                        output__output_type='event_loss',
                         loss_type=loss_type, hazard_output=hazard_output)
                     if isinstance(hazard_output.output_container,
                                   models.SESCollection):
