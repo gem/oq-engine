@@ -442,7 +442,7 @@ class CallableDict(collections.OrderedDict):
 
 class AccumDict(dict):
     """
-    An accumulating dictionary, useful in apply_reduce jobs.
+    An accumulating dictionary, useful to accumulate variables.
 
     >>> acc = AccumDict()
     >>> acc += {'a': 1}
@@ -451,18 +451,81 @@ class AccumDict(dict):
     {'a': 2, 'b': 1}
     >>> {'a': 1} + acc
     {'a': 3, 'b': 1}
+    >>> acc + 1
+    {'a': 3, 'b': 2}
+    >>> 1 - acc
+    {'a': -1, 'b': 0}
+    >>> acc - 1
+    {'a': 1, 'b': 0}
+
+    Also the multiplication has been defined:
+
+    >>> prob1 = AccumDict(a=0.4, b=0.5)
+    >>> prob2 = AccumDict(b=0.5)
+    >>> prob1 * prob2
+    {'a': 0.4, 'b': 0.25}
+    >>> prob1 * 1.2
+    {'a': 0.48, 'b': 0.6}
+    >>> 1.2 * prob1
+    {'a': 0.48, 'b': 0.6}
     """
-    def __iadd__(self, dic):
-        for k, v in dic.iteritems():
-            try:
-                self[k] = self[k] + v
-            except KeyError:
-                self[k] = v
+    def __iadd__(self, other):
+        if hasattr(other, 'iteritems'):
+            for k, v in other.iteritems():
+                try:
+                    self[k] = self[k] + v
+                except KeyError:
+                    self[k] = v
+        else:  # add other to all elements
+            for k in self:
+                self[k] = self[k] + other
         return self
 
-    def __add__(self, dic):
+    def __add__(self, other):
         new = self.__class__(self)
-        new += dic
+        new += other
         return new
 
     __radd__ = __add__
+
+    def __isub__(self, other):
+        if hasattr(other, 'iteritems'):
+            for k, v in other.iteritems():
+                try:
+                    self[k] = self[k] - v
+                except KeyError:
+                    self[k] = v
+        else:  # subtract other to all elements
+            for k in self:
+                self[k] = self[k] - other
+        return self
+
+    def __sub__(self, other):
+        new = self.__class__(self)
+        new -= other
+        return new
+
+    def __rsub__(self, other):
+        return - self.__sub__(other)
+
+    def __neg__(self):
+        return self.__class__({k: -v for k, v in self.iteritems()})
+
+    def __imul__(self, other):
+        if hasattr(other, 'iteritems'):
+            for k, v in other.iteritems():
+                try:
+                    self[k] = self[k] * v
+                except KeyError:
+                    self[k] = v
+        else:  # add other to all elements
+            for k in self:
+                self[k] = self[k] * other
+        return self
+
+    def __mul__(self, other):
+        new = self.__class__(self)
+        new *= other
+        return new
+
+    __rmul__ = __mul__
