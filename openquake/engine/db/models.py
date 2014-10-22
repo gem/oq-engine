@@ -271,7 +271,7 @@ class OqJob(djm.Model):
     status = djm.TextField(choices=STATUS_CHOICES, default='pre_executing')
     oq_version = djm.TextField(null=True, blank=True)
     hazardlib_version = djm.TextField(null=True, blank=True)
-    nrml_version = djm.TextField(null=True, blank=True)
+    commonlib_version = djm.TextField(null=True, blank=True)
     risklib_version = djm.TextField(null=True, blank=True)
     is_running = djm.BooleanField(default=False)
     duration = djm.IntegerField(default=0)
@@ -288,6 +288,15 @@ class OqJob(djm.Model):
         'hazard' or 'risk'
         """
         return 'hazard' if self.risk_calculation is None else 'risk'
+
+    # TODO: this property will disappear when RiskCalculation will disappear
+    @property
+    def calc_id(self):
+        """Return the calculation id"""
+        if self.risk_calculation:
+            return self.risk_calculation.id
+        else:
+            return self.id
 
     def get_param(self, name, missing=RAISE_EXC):
         """
@@ -548,10 +557,6 @@ class RiskCalculation(djm.Model):
     loss_curve_resolution = djm.IntegerField(
         null=False, blank=True, default=DEFAULT_LOSS_CURVE_RESOLUTION)
     insured_losses = djm.NullBooleanField(null=True, blank=True, default=False)
-
-    # The points of interest for disaggregation
-    sites_disagg = djm.MultiPointField(
-        srid=DEFAULT_SRID, null=True, blank=True)
 
     mag_bin_width = djm.FloatField(
         help_text=('Width of magnitude bins'),
@@ -829,6 +834,7 @@ class Output(djm.Model):
         (u'dmg_dist_per_taxonomy', u'Damage Distribution Per Taxonomy'),
         (u'dmg_dist_total', u'Total Damage Distribution'),
         (u'event_loss', u'Event Loss Table'),
+        (u'event_loss_asset', u'Event Loss Asset'),
         (u'loss_curve', u'Loss Curve'),
         (u'event_loss_curve', u'Loss Curve'),
         (u'loss_fraction', u'Loss fractions'),
@@ -864,6 +870,8 @@ class Output(djm.Model):
             return self.hazard_curve
         elif self.output_type == 'gmf_scenario':
             return self.gmf
+        elif self.output_type == 'event_loss_asset':
+            return self.event_loss
         return getattr(self, self.output_type)
 
     @property
@@ -2557,6 +2565,33 @@ class EventLossData(djm.Model):
         """
         return '%s,%s,%s' % (self.rupture.tag, self.rupture.rupture.mag,
                              self.aggregate_loss)
+
+
+class EventLossAsset(djm.Model):
+    event_loss = djm.ForeignKey(EventLoss)
+    rupture = djm.ForeignKey('SESRupture')
+    asset = djm.ForeignKey('ExposureData')
+    loss = djm.FloatField(null=False)
+
+    @property
+    def data_hash(self):
+        """
+        A db-sequence independent tuple that identifies this output
+        """
+        return self.event_loss.output_hash + (self.rupture_id, self.asset_id)
+
+    def assertAlmostEqual(self, data):
+        return risk_almost_equal(self, data, operator.attrgetter('loss'))
+
+    class Meta:
+        db_table = 'riskr\".\"event_loss_asset'
+
+    def to_csv_str(self):
+        """
+        Convert EventLossAsset into a CSV string
+        """
+        return '%s,%s,%s,%s' % (self.rupture.tag, self.rupture.rupture.mag,
+                                self.asset.asset_ref, self.loss)
 
 
 class BCRDistribution(djm.Model):

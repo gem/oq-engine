@@ -315,27 +315,13 @@ def get_job(cfg, username="openquake", hazard_calculation_id=None,
     (or, alternatively, a hazard_output_id, create a
     :class:`openquake.engine.db.models.OqJob` object for a risk calculation.
     """
-    if hazard_calculation_id is None and hazard_output_id is None:
-        return engine.job_from_file(cfg, username, 'error', [], **extras)
-
-    job = engine.prepare_job(username)
-    oqparam = readinput.get_oqparam(
-        open(cfg), hazard_calculation_id, hazard_output_id)
-    params = vars(oqparam)
-    if hazard_calculation_id is None:
-        params['hazard_calculation_id'] = models.Output.objects.get(
+    if hazard_output_id and not hazard_calculation_id:
+        hazard_calculation_id = models.Output.objects.get(
             pk=hazard_output_id).oq_job.id
-
-    # we are removing intensity_measure_types_and_levels because it is not
-    # a field of RiskCalculation; this ugliness will disappear when
-    # RiskCalculation will be removed
-    del params['intensity_measure_types_and_levels']
-    job.save_params(params)
-    risk_calc = engine.create_calculation(models.RiskCalculation, params)
-    risk_calc = models.RiskCalculation.objects.get(id=risk_calc.id)
-    job.risk_calculation = risk_calc
-    job.save()
-    return job
+    return engine.job_from_file(
+        cfg, username, 'error', [],
+        hazard_calculation_id=hazard_calculation_id,
+        hazard_output_id=hazard_output_id, **extras)
 
 
 def create_gmf_sescoll(output, output_type='gmf'):
@@ -515,11 +501,14 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
             open(risk_cfg), hazard_output_id=hazard_output.output.id))
     params['hazard_calculation_id'] = hazard_job.id
 
-    # we are removing intensity_measure_types_and_levels because it is not
-    # a field of RiskCalculation; this ugliness will disappear when
-    # RiskCalculation will be removed
+    # we are removing missing fields of RiskCalculation; this ugliness will
+    # disappear when RiskCalculation will be removed
     del params['intensity_measure_types_and_levels']
     job.save_params(params)
+    if 'sites_disagg' in params:
+        del params['sites_disagg']
+    if 'specific_assets' in params:
+        del params['specific_assets']
     risk_calc = engine.create_calculation(models.RiskCalculation, params)
     job.risk_calculation = risk_calc
     job.save()

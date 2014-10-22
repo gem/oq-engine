@@ -566,7 +566,7 @@ class LossFractionBuilder(OutputBuilder):
         variables = ["magnitude_distance", "coordinate"]
 
         loss_fractions = []
-        if self.calc.rc.sites_disagg:
+        if self.calc.sites_disagg:
             for variable in variables:
                 name = ("loss fractions. type=%s variable=%s "
                         "hazard=%s" % (loss_type, hazard_output, variable))
