@@ -98,7 +98,7 @@ def event_based_fr(job_id, sites, rc, risk_model,
     # since they write a lot on the database, once per asset
     getdata_mon = EnginePerformanceMonitor(
         'getting hazard', job_id, event_based_fr)
-    getters_mon = getdata_mon.copy('building risk_input')
+    getters_mon = getdata_mon.copy('building getter')
 
     assocs = models.AssocLtRlzTrtModel.objects.filter(
         trt_model__lt_model__hazard_calculation=hc.oqjob).order_by('rlz')
@@ -115,7 +115,7 @@ def event_based_fr(job_id, sites, rc, risk_model,
             builder.init_getters(sorted_imts, rlz2gsims)
 
     for builder in getter_builders:
-        for getter in builder.risk_input:
+        for getter in builder.getter:
             for gsim, trt_model in zip(getter.gsims, getter.trt_models):
                 # read the ruptures from the db
                 with getdata_mon.copy('reading ruptures'):
@@ -146,7 +146,7 @@ def event_based_fr(job_id, sites, rc, risk_model,
             for risk_model, builder in zip(risk_model, getter_builders):
                 elt.update(
                     core.do_event_based(
-                        risk_model, builder.risk_input,
+                        risk_model, builder.getter,
                         outputdict, params, getdata_mon))
     return elt
 
@@ -359,14 +359,14 @@ class RiskInitializer(object):
 
     def init_getters(self, sorted_imts, rlz2gsims):
         """
-        Build the risk_input for the given realizations by using the
+        Build the getter for the given realizations by using the
         given rupid_seed_pairs and the parameters in the RiskInitializer.
         """
-        self.risk_input = []
+        self.getter = []
         for rlz, pairs in rlz2gsims.iteritems():
             gmv_dict = dict(
                 (str(imt), collections.defaultdict(dict))
                 for imt in sorted_imts)
             trt_models, gsims = zip(*sorted(pairs))
-            self.risk_input.append(
+            self.getter.append(
                 GmfGetter(self, rlz, gmv_dict, sorted_imts, trt_models, gsims))

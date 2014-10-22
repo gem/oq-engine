@@ -26,12 +26,12 @@ from openquake.engine.calculators.risk.base import RiskCalculator
 from openquake.engine.tests.utils.helpers import get_data_path
 
 
-class HazardCurveInputTestCase(unittest.TestCase):
+class HazardCurveGetterTestCase(unittest.TestCase):
 
     hazard_demo = get_data_path('simple_fault_demo_hazard/job.ini')
     risk_demo = get_data_path('classical_psha_based_risk/job.ini')
     hazard_output_type = 'curve'
-    risk_input_class = hazard_getters.HazardCurveInput
+    getter_class = hazard_getters.HazardCurveGetter
     taxonomy = 'VF'
     imt = 'PGA'
 
@@ -57,32 +57,32 @@ class HazardCurveInputTestCase(unittest.TestCase):
             calc.rc, assocs)
         self.nbytes = self.builder.calc_nbytes()
         self.builder.init_epsilons()
-        self.risk_input = self.risk_input_class(
+        self.getter = self.getter_class(
             self.imt, self.taxonomy, calc.rc.hazard_outputs(), self.assets)
 
     def test_nbytes(self):
         self.assertEqual(self.nbytes, 0)
 
     def test_is_pickleable(self):
-        pickle.dumps(self.risk_input)  # raises an error if not
+        pickle.dumps(self.getter)  # raises an error if not
 
     def test_call(self):
         # the exposure model in this example has three assets of taxonomy VF
         # called a1, a2 and a3; only a2 and a3 are within the maximum distance
         [a2, a3] = self.assets
-        self.assertEqual(self.risk_input.assets, [a2, a3])
-        data = self.risk_input.get_data()
+        self.assertEqual(self.getter.assets, [a2, a3])
+        data = self.getter.get_data()
         numpy.testing.assert_allclose(
             [[(0.1, 0.1), (0.2, 0.2), (0.3, 0.3)],
              [(0.1, 0.1), (0.2, 0.2), (0.3, 0.3)]], data)
 
 
-class GroundMotionInputTestCase(HazardCurveInputTestCase):
+class GroundMotionGetterTestCase(HazardCurveGetterTestCase):
 
     hazard_demo = get_data_path('event_based_hazard/job.ini')
     risk_demo = get_data_path('event_based_risk/job.ini')
     hazard_output_type = 'gmf'
-    risk_input_class = hazard_getters.GroundMotionInput
+    getter_class = hazard_getters.GroundMotionGetter
     taxonomy = 'RM'
 
     def test_nbytes(self):
@@ -96,18 +96,18 @@ class GroundMotionInputTestCase(HazardCurveInputTestCase):
         # maximum distance, so it is excluded;
         # there is one realization and three ruptures
         a1, = self.assets
-        self.assertEqual(self.risk_input.assets, [a1])
-        rupture_ids = self.risk_input.rupture_ids
+        self.assertEqual(self.getter.assets, [a1])
+        rupture_ids = self.getter.rupture_ids
         self.assertEqual(len(rupture_ids), 3)
 
-        data = self.risk_input.get_data()
+        data = self.getter.get_data()
         numpy.testing.assert_allclose([[0.1, 0.2, 0.3]], data)
         numpy.testing.assert_allclose(
             numpy.array([[0.49671415, -0.1382643, 0.64768854]]),
-            self.risk_input.epsilons)  # shape (1, 3)
+            self.getter.epsilons)  # shape (1, 3)
 
 
-class ScenarioTestCase(GroundMotionInputTestCase):
+class ScenarioTestCase(GroundMotionGetterTestCase):
 
     hazard_demo = get_data_path('scenario_hazard/job.ini')
     risk_demo = get_data_path('scenario_risk/job.ini')
@@ -116,7 +116,7 @@ class ScenarioTestCase(GroundMotionInputTestCase):
 
     def test_nbytes(self):
         # I am not populating the table ses_rupture
-        self.assertEqual(len(self.risk_input.rupture_ids), 0)
+        self.assertEqual(len(self.getter.rupture_ids), 0)
         self.assertEqual(self.nbytes, 80)
 
     def test_call(self):
@@ -124,9 +124,9 @@ class ScenarioTestCase(GroundMotionInputTestCase):
         # (a1 and a3) but the asset a3 has no hazard data within the
         # maximum distance; there are 10 realizations
         a1, = self.assets
-        self.assertEqual(self.risk_input.assets, [a1])
-        [hazard] = self.risk_input.hazards.values()
+        self.assertEqual(self.getter.assets, [a1])
+        [hazard] = self.getter.hazards.values()
         self.assertEqual(hazard.values()[0], {0: 0.1, 1: 0.2, 2: 0.3})
 
         # NB: since I am not populating the table ses_rupture,
-        # self.risk_input.get_data() is empty
+        # self.getter.get_data() is empty
