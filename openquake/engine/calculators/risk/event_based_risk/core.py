@@ -75,8 +75,8 @@ def event_based(workflow, getter, outputdict, params, monitor):
     for loss_type in workflow.loss_types:
         with monitor.copy('computing individual risk'):
             outputs = workflow.compute_all_outputs(getter, loss_type)
-        if statistics:
-            outputs = list(outputs)  # expand the generator
+            if statistics:
+                outputs = list(outputs)  # expand the generator
         for out in outputs:
             event_loss_table[loss_type, out.hid] = out.output.event_loss_table
             disagg_outputs = None  # changed if params.sites_disagg is set
