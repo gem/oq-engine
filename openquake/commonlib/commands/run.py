@@ -1,7 +1,7 @@
 import logging
 
 from openquake.commonlib import sap, readinput
-from openquake.commonlib.parallel import executor
+from openquake.commonlib.parallel import executor, PerformanceMonitor
 from openquake.commonlib.calculators import calculator
 
 
@@ -11,12 +11,12 @@ def run(job_ini, concurrent_tasks=executor._max_workers, loglevel='INFO'):
     (0 to disable the parallelization).
     """
     logging.basicConfig(level=getattr(logging, loglevel))
-    with open(job_ini) as f:
+    with open(job_ini) as f, PerformanceMonitor():
         oqparam = readinput.get_oqparam(f)
         oqparam.concurrent_tasks = concurrent_tasks
         calc = calculator(oqparam)
         for fname in calc.run():
-            print 'exported %s' % fname
+            logging.info('exported %s', fname)
 
 
 parser = sap.Parser(run)

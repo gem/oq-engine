@@ -416,8 +416,7 @@ class PerformanceMonitor(object):
 
     def on_exit(self):
         "Save the results: to be overridden in subclasses"
-        print 'start_time =', self.start_time
-        print 'duration =', self.duration
-        print 'mem =', self.mem
+        logging.info('Time spent=%s', self.duration)
+        logging.info('Memory allocated=%d M', self.mem[0] / 1024. / 1024.)
         if self.exc:
-            print 'exc = %s(%s)' % (self.exc.__class__.__name__, self.exc)
+            logging.info('exc=%s(%s)', self.exc.__class__.__name__, self.exc)
