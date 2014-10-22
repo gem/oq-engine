@@ -29,8 +29,7 @@ HAZARD_CALCULATORS = [
 
 RISK_CALCULATORS = [
     'classical_risk', 'event_based_risk', 'scenario_risk',
-    'classical_bcr', 'event_based_bcr', 'scenario_damage',
-    'event_loss']
+    'classical_bcr', 'event_based_bcr', 'scenario_damage']
 
 EXPERIMENTAL_CALCULATORS = [
     'event_based_fr']
@@ -220,12 +219,13 @@ class OqParam(valid.ParamSet):
 
     def is_valid_sites_disagg(self):
         """
-        The option sites_disagg require specific_assets to be set
+        The option `sites_disagg` (when given) requires `specific_assets` to
+        be set.
         """
         if getattr(self, 'sites_disagg', None):
             return getattr(self, 'specific_assets', None) or \
                 'specific_assets' in self.inputs
-        return True
+        return True  # a missing sites_disagg is valid
 
     def is_valid_specific_assets(self):
         """
