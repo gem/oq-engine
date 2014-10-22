@@ -26,14 +26,14 @@ from openquake.engine.calculators.risk import (
 from openquake.engine.utils import calculators
 
 
-def classical(workflow, risk_input, outputdict, params, monitor):
+def classical(workflow, getter, outputdict, params, monitor):
     """
     Celery task for the classical risk calculator.
 
     :param workflow:
       A :class:`openquake.risklib.workflows.RiskModel` instance
-    :param risk_input:
-      A RiskInput instance
+    :param getter:
+      A HazardGetter instance
     :param outputdict:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (e.g. a LossCurve)
@@ -48,7 +48,7 @@ def classical(workflow, risk_input, outputdict, params, monitor):
     """
     for loss_type in workflow.loss_types:
         with monitor.copy('computing risk'):
-            outputs = workflow.compute_all_outputs(risk_input, loss_type)
+            outputs = workflow.compute_all_outputs(getter, loss_type)
             stats = workflow.statistics(
                 outputs, params.quantile_loss_curves, post_processing)
         with monitor.copy('saving risk'):
@@ -191,7 +191,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
     output_builders = [writers.LossCurveMapBuilder,
                        writers.ConditionalLossFractionBuilder]
 
-    risk_input_class = hazard_getters.HazardCurveInput
+    getter_class = hazard_getters.HazardCurveGetter
 
     def get_workflow(self, vulnerability_functions):
         return workflows.Classical(

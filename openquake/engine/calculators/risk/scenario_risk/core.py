@@ -29,14 +29,14 @@ from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.utils import calculators
 
 
-def scenario(workflow, risk_input, outputdict, params, monitor):
+def scenario(workflow, getter, outputdict, params, monitor):
     """
     Celery task for the scenario risk calculator.
 
     :param list workflow:
       A :class:`openquake.risklib.workflows.Workflow` instance
-    :param risk_input:
-      A RiskInput instance
+    :param getter:
+      A HazardGetter instance
     :param outputdict:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (in this case only `LossMap`)
@@ -46,9 +46,9 @@ def scenario(workflow, risk_input, outputdict, params, monitor):
     :param monitor:
       A monitor factory
     """
-    assets = risk_input.assets
-    hazards = risk_input.get_data()
-    epsilons = risk_input.get_epsilons()
+    assets = getter.assets
+    hazards = getter.get_data()
+    epsilons = getter.get_epsilons()
     agg, ins = {}, {}
     for loss_type in workflow.loss_types:
         with monitor.copy('computing risk'):
@@ -66,7 +66,7 @@ def scenario(workflow, risk_input, outputdict, params, monitor):
                 assets,
                 loss_ratio_matrix.mean(axis=1),
                 loss_ratio_matrix.std(ddof=1, axis=1),
-                hazard_output_id=risk_input.hid,
+                hazard_output_id=getter.hid,
                 insured=False)
 
             if insured_loss_matrix is not None:
@@ -75,7 +75,7 @@ def scenario(workflow, risk_input, outputdict, params, monitor):
                     insured_loss_matrix.mean(axis=1),
                     insured_loss_matrix.std(ddof=1, axis=1),
                     itertools.cycle([True]),
-                    hazard_output_id=risk_input.hid,
+                    hazard_output_id=getter.hid,
                     insured=True)
 
     return agg, ins
@@ -97,7 +97,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
 
     output_builders = [writers.LossMapBuilder]
 
-    risk_input_class = hazard_getters.GroundMotionInput
+    getter_class = hazard_getters.GroundMotionGetter
 
     def __init__(self, job):
         super(ScenarioRiskCalculator, self).__init__(job)

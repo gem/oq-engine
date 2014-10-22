@@ -43,10 +43,10 @@ class FakeRiskCalculator(base.RiskCalculator):
     Fake Risk Calculator. Used to test the base class
     """
     output_builders = []
-    risk_input_class = hazard_getters.GroundMotionInput
+    getter_class = hazard_getters.GroundMotionGetter
 
     @staticmethod
-    def core(workflow, risk_input, outputdict, params, monitor):
+    def core(workflow, getter, outputdict, params, monitor):
         return dict(result=1)
 
     # NB: fake_risk_task returns {job.id: 1}
