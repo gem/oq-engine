@@ -51,9 +51,6 @@ class DisaggregationCalculator(BaseCalculator):
     Classical disaggregation PSHA calculators
     """
 
-SESRupture = collections.namedtuple(
-    'SESRupture', 'tag seed rupture')
-
 
 @calculators.add('scenario')
 class ScenarioCalculator(BaseCalculator):
@@ -69,32 +66,29 @@ class ScenarioCalculator(BaseCalculator):
 
         correl_model = readinput.get_correl_model(self.oqparam)
         rnd = random.Random(getattr(self.oqparam, 'random_seed', 42))
-        imts = readinput.get_imts(self.oqparam)
+        self.imts = readinput.get_imts(self.oqparam)
         gsim = readinput.get_gsim(self.oqparam)
         trunc_level = getattr(self.oqparam, 'truncation_level', None)
-        n_gmfs = getattr(self.oqparam, 'number_of_ground_motion_fields', 1)
+        n_gmfs = self.oqparam.number_of_ground_motion_fields
         rupture = readinput.get_rupture(self.oqparam)
 
-        self.tags = ['scenario-%010d' % i for i in xrange(
-                     self.oqparam.number_of_ground_motion_fields)]
-        self.sesruptures = [
-            SESRupture(tag, rnd.randint(0, 2 ** 31 - 1), rupture)
-            for tag in self.tags]
-        computer = GmfComputer(rupture, self.sitecol, imts, [gsim],
-                               trunc_level, correl_model)
-        self.computer_seeds = [(computer, rnd.randint(0, 2 ** 31 - 1))
-                               for _ in xrange(n_gmfs)]
+        self.tags = ['scenario-%010d' % i for i in xrange(n_gmfs)]
+        self.computer = GmfComputer(rupture, self.sitecol, self.imts, [gsim],
+                                    trunc_level, correl_model)
+        self.tag_seed_pairs = [(tag, rnd.randint(0, 2 ** 31 - 1))
+                               for tag in self.tags]
 
     def execute(self):
         logging.info('Computing the GMFs')
         return parallel.apply_reduce(
-            self.core, (self.sesruptures, self.sitecol), operator.add)
+            self.core, (self.tag_seed_pairs, self.computer), operator.add)
 
     def post_execute(self, result):
+        imt2idx = {imt: i for i, imt in enumerate(self.imts)}
         gmfs_by_imt = {  # build N x R matrices
-            imt: numpy.array([result[tag][imt] for tag in self.tags]).T
+            str(imt): numpy.array(
+                [result[tag][imt2idx[imt]][1] for tag in self.tags]).T
             for imt in self.imts}
-
         logging.info('Exporting the result')
         out = export(
             'gmf_xml', self.oqparam.export_dir,
@@ -103,13 +97,11 @@ class ScenarioCalculator(BaseCalculator):
 
 
 @core(ScenarioCalculator)
-def calc_gmfs(sesruptures, sitecol, imts, gsim, trunc_level, correl_model):
+def calc_gmfs(tag_seed_pairs, computer):
     """
-    Computer several GMFs in parallel, one for each computer and seed.
+    Computer several GMFs in parallel, one for each tag and seed.
     """
-    res = AccumDict()  # imt -> gmf
-    for sesrupture in sesruptures:
-        computer = GmfComputer(sesrupture.rupture, sitecol, imts, [gsim],
-                               trunc_level, correl_model)
-        res += {sesrupture.tag: computer.compute(sesrupture.seed)}
+    res = AccumDict()  # tag -> gmf
+    for tag, seed in tag_seed_pairs:
+        res += {tag: computer.compute(seed)}
     return res

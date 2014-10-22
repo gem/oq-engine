@@ -12,3 +12,13 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+
+from openquake.commonlib.tests.calculators import CalculatorTestCase
+
+
+class ScenarioCase1(CalculatorTestCase):
+
+    def test(self):
+        with self.run_calc(__file__):
+            self.assertEqualContent('expected.xml', 'gmf.xml')
