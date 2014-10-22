@@ -29,8 +29,7 @@ HAZARD_CALCULATORS = [
 
 RISK_CALCULATORS = [
     'classical_risk', 'event_based_risk', 'scenario_risk',
-    'classical_bcr', 'event_based_bcr', 'scenario_damage',
-    'event_loss']
+    'classical_bcr', 'event_based_bcr', 'scenario_damage']
 
 EXPERIMENTAL_CALCULATORS = [
     'event_based_fr']
