@@ -47,10 +47,6 @@ class FakeRiskCalculator(base.RiskCalculator):
     getter_class = hazard_getters.GroundMotionValuesGetter
     core_calc_task = fake_risk_task
 
-    @property
-    def calculation_parameters(self):
-        return base.make_calc_params()
-
     def agg_result(self, acc, res):
         newacc = dict((key, acc.get(key, 0) + res[key]) for key in res)
         return newacc
