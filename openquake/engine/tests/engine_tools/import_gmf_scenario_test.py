@@ -10,7 +10,7 @@ THISDIR = os.path.dirname(__file__)
 class ImportGMFScenarioTestCase(unittest.TestCase):
 
     def test_import_gmf_scenario(self):
-        # gmfdata.xml is a file containing 1 IMT, 5 ruptures and 3 sites
+        # gmfdata.xml is a file containing 2 IMTs, 5 ruptures and 3 sites
         fileobj = open(os.path.join(THISDIR, 'gmfdata.xml'))
         out = import_gmf_scenario.import_gmf_scenario(fileobj)
         hc = out.oq_job.get_oqparam()
@@ -18,8 +18,8 @@ class ImportGMFScenarioTestCase(unittest.TestCase):
         self.assertEqual(imts, ['PGA', 'PGV'])
         n = models.GmfData.objects.filter(gmf__output=out).count()
         assert_equal(hc.calculation_mode, 'scenario')
-        assert_equal(hc.number_of_ground_motion_fields, 10)
-        assert_equal(n, 30)  # 30 rows entered
+        assert_equal(hc.number_of_ground_motion_fields, 5)
+        assert_equal(n, 30)  # 30 rows entered, 2 x 5 x 3
         assert_equal(hc.description,
                      'Scenario importer, file gmfdata.xml')
 
@@ -69,7 +69,7 @@ GMF(imt=PGV sa_period=None sa_damping=None rupture_id=scenario-0000000004
 <X=  0.00000, Y=  0.10000, GMV=0.2581405>
 <X=  0.00000, Y=  0.20000, GMV=0.1351649>))''')
 
-    def test_duplicate_rupture_tag(self):
+    def test_duplicated_rupture_tag(self):
         fileobj = open(os.path.join(THISDIR, 'gmfdata-wrong.xml'))
         with self.assertRaises(import_gmf_scenario.DuplicatedTag) as ctx:
             import_gmf_scenario.import_gmf_scenario(fileobj)
