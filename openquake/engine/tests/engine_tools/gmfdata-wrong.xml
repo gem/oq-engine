@@ -20,7 +20,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </gmf>
             <gmf
             IMT="PGA"
-            ruptureId="scenario-0000000001"
+            ruptureId="scenario-0000000002"
             >
                 <node gmv="0.365662734506" lat="0.0" lon="0.0"/>
                 <node gmv="0.256181251586" lat="0.1" lon="0.0"/>
