@@ -25,8 +25,8 @@ def get_mesh(oqparam):
     if getattr(oqparam, 'sites', None):
         lons, lats = zip(*oqparam.sites)
         return geo.Mesh(numpy.array(lons), numpy.array(lats))
-    elif 'site' in oqparam.inputs:
-        csv_data = open(oqparam.inputs['site'], 'U').read()
+    elif 'sites' in oqparam.inputs:
+        csv_data = open(oqparam.inputs['sites'], 'U').read()
         coords = valid.coordinates(
             csv_data.strip().replace(',', ' ').replace('\n', ','))
         lons, lats = zip(*coords)
@@ -205,6 +205,21 @@ def get_exposure(oqparam):
 
         yield Asset(asset_id, taxonomy, number, location,
                     values, deductibles, insurance_limits, retrofitting_values)
+
+
+def get_specific_assets(oqparam):
+    """
+    Get the assets from the parameters specific_assets or specific_assets_csv
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    """
+    try:
+        return set(oqparam.specific_assets)
+    except AttributeError:
+        if 'specific_assets' not in oqparam.inputs:
+            return set()
+        return set(open(oqparam.inputs['specific_assets']).read().split())
 
 
 def get_sitecol_assets(oqparam):

@@ -52,13 +52,23 @@ def parse_config(source, hazard_calculation_id=None, hazard_output_id=None):
                   hazard_calculation_id=hazard_calculation_id,
                   hazard_output_id=hazard_output_id)
 
+    inifile = os.path.abspath(source.name)
     # Directory containing the config file we're parsing.
-    base_path = os.path.dirname(os.path.abspath(source.name))
+    base_path = os.path.dirname(inifile)
 
     for sect in cp.sections():
         for key, value in cp.items(sect):
-            if key == 'sites_csv' or key.endswith('_file'):
-                input_type = key[:-5]
+            # we parse the .ini file and we build a dictionary key -> value
+            # with all the parameters defined there; the parameters with
+            # suffix `_file`, `_csv` (i.e. the input types) are treated
+            # specially; they are assumed to correspond to file names; the
+            # input types are stored in the sub dictionary 'inputs', by
+            # stripping the suffix; for instance, if the .ini file has a line
+            # sites_csv = file_with_the_sites.csv then the dictionary
+            # input with have the form
+            # params['inputs'] = {'sites': 'BASEPATH/file_with_the_sites.csv'}
+            if key.endswith(('_file', '_csv')):
+                input_type, _ext = key.rsplit('_', 1)
                 path = value if os.path.isabs(value) else os.path.join(
                     base_path, value)
                 params['inputs'][input_type] = path
@@ -77,9 +87,11 @@ def parse_config(source, hazard_calculation_id=None, hazard_output_id=None):
     cmode = params['calculation_mode']
     if is_risk and cmode in ('classical', 'event_based', 'scenario'):
         raise ValueError('Please change calculation_mode=%s into %s_risk '
-                         'in the .ini file' % (cmode, cmode))
-
-    oqparam = OqParam(**params)
+                         'in the file %s' % (cmode, cmode, inifile))
+    try:
+        oqparam = OqParam(**params)
+    except Exception as exc:
+        raise exc.__class__('%s\nFile: %s' % (exc, inifile))
 
     # define the parameter `intensity measure types and levels` always
     oqparam.intensity_measure_types_and_levels = get_imtls(oqparam)

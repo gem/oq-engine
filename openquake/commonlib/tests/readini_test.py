@@ -107,7 +107,7 @@ intensity_measure_types = PGA
                 'truncation_level': 3.0,
                 'random_seed': 5,
                 'maximum_distance': 1.0,
-                'inputs': {'site': sites_csv},
+                'inputs': {'sites': sites_csv},
                 'reference_depth_to_1pt0km_per_sec': 100.0,
                 'reference_depth_to_2pt5km_per_sec': 5.0,
                 'reference_vs30_type': 'measured',
