@@ -18,19 +18,6 @@
 
 """
 TODO: write documentation.
-
-For the moment I give just an example::
-
-  import logging
-  import operator
-  from openquake.commonlib.parallel import map_reduce
-  logging.basicConfig(level=logging.INFO)
-
-  def sum_all(*numbers):
-      return sum(numbers)
-
-  print map_reduce(sum_all, [(1, 2, 3), (4, 5), (6,)], operator.add, 0)
-  # => 21
 """
 
 import os
@@ -326,9 +313,22 @@ def apply_reduce(task_func, task_args,
                  key=lambda item: 'Unspecified',
                  name=None):
     """
-    Apply a task to a tuple of the form (data, *args)
-    by splitting the data in chunks and reduce the results with an
-    aggregation function.
+    Apply a function to a tuple of the form (sequence, *other_args)
+    by first splitting the sequence in chunks, according to the weight
+    of the elements and possibly to a key (see :function:
+    `openquake.commonlib.general.split_in_blocks`).
+    Then reduce the results with an aggregation function. Here is an example:
+
+    >>> apply_reduce(sum, ([1, 2, 3, 4, 5],), lambda acc, x: acc + x,
+    ...             acc=0, concurrent_tasks=2)
+    15
+
+    The chunks which are generated internally can be seen directly (
+    useful for debugging purposes) by looking at the attribute `._chunks`,
+    right after the `apply_reduce` function has been called:
+
+    >>> apply_reduce._chunks
+    [<WeightedSequence [1, 2, 3], weight=3>, <WeightedSequence [4, 5], weight=2>]
 
     :param task_func: a function to run in parallel
     :param task_args: the arguments to be passed to the task function
@@ -344,8 +344,9 @@ def apply_reduce(task_func, task_args,
         return acc
     elif len(data) == 1 or not concurrent_tasks:
         return agg(acc, task_func(data, *args))
-    blocks = split_in_blocks(data, concurrent_tasks, weight, key)
-    all_args = [(block,) + args for block in blocks]
+    chunks = list(split_in_blocks(data, concurrent_tasks, weight, key))
+    all_args = [(chunk,) + args for chunk in chunks]
+    apply_reduce._chunks = chunks
     return map_reduce(task_func, all_args, agg, acc, name)
 
 
