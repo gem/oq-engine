@@ -330,20 +330,20 @@ class Classical(Workflow):
             mean_insured_curves, mean_average_insured_losses,
             quantile_insured_curves, quantile_average_insured_losses)
 
-    def compute_all_outputs(self, risk_input, loss_type):
+    def compute_all_outputs(self, getter, loss_type):
         """
-        :param risk_input:
-            a risk_input object
+        :param getter:
+            a getter object
         :param str loss_type:
             a string identifying the loss type we are considering
         :returns:
             a number of outputs equal to the number of realizations
         """
         all_outputs = []
-        for hazard in risk_input.get_hazards():  # for each realization
+        for hazard in getter.get_hazards():  # for each realization
             all_outputs.append(
                 Output(hazard.hid, hazard.weight, loss_type,
-                       self(loss_type, risk_input.assets, hazard.data)))
+                       self(loss_type, getter.assets, hazard.data)))
         return all_outputs
 
 
@@ -502,18 +502,18 @@ class ProbabilisticEventBased(Workflow):
             insured_curves, average_insured_losses, stddev_insured_losses,
             maps, elt)
 
-    def compute_all_outputs(self, risk_input, loss_type):
+    def compute_all_outputs(self, getter, loss_type):
         """
-        :param risk_input:
-            a risk_input object
+        :param getter:
+            a getter object
         :param str loss_type:
             a string identifying the loss type we are considering
         :returns:
             a number of outputs equal to the number of realizations
         """
-        for hazard in risk_input.get_hazards():  # for each realization
-            out = self(loss_type, risk_input.assets, hazard.data,
-                       risk_input.get_epsilons(), risk_input.rupture_ids)
+        for hazard in getter.get_hazards():  # for each realization
+            out = self(loss_type, getter.assets, hazard.data,
+                       getter.get_epsilons(), getter.rupture_ids)
             yield Output(hazard.hid, hazard.weight, loss_type, out)
 
     def statistics(self, all_outputs, quantiles, post_processing):
