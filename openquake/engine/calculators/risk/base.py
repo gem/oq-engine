@@ -20,7 +20,6 @@ Base RiskCalculator class.
 """
 
 import itertools
-import collections
 import psutil
 
 from django.db import transaction
@@ -300,7 +299,7 @@ class RiskCalculator(base.Calculator):
         celery task function. A calculator must override this to
         provide custom arguments to its celery task
         """
-        return []
+        return self.job.get_oqparam()
 
     def get_risk_model(self):
         # regular risk models
@@ -323,52 +322,3 @@ class RiskCalculator(base.Calculator):
         To be overridden in subclasses. Must return a workflow instance.
         """
         return Workflow(vulnerability_functions)
-
-#: Calculator parameters are used to compute derived outputs like loss
-#: maps, disaggregation plots, quantile/mean curves. See
-#: :class:`openquake.engine.db.models.RiskCalculation` for a description
-
-CalcParams = collections.namedtuple(
-    'CalcParams', [
-        'conditional_loss_poes',
-        'poes_disagg',
-        'sites_disagg',
-        'insured_losses',
-        'quantiles',
-        'asset_life_expectancy',
-        'interest_rate',
-        'mag_bin_width',
-        'distance_bin_width',
-        'coordinate_bin_width',
-        'damage_state_ids',
-        'statistics',
-    ])
-
-
-def make_calc_params(conditional_loss_poes=None,
-                     poes_disagg=None,
-                     sites_disagg=None,
-                     insured_losses=None,
-                     quantiles=None,
-                     asset_life_expectancy=None,
-                     interest_rate=None,
-                     mag_bin_width=None,
-                     distance_bin_width=None,
-                     coordinate_bin_width=None,
-                     damage_state_ids=None,
-                     statistics=True):
-    """
-    Constructor of CalculatorParameters
-    """
-    return CalcParams(conditional_loss_poes,
-                      poes_disagg,
-                      sites_disagg,
-                      insured_losses,
-                      quantiles,
-                      asset_life_expectancy,
-                      interest_rate,
-                      mag_bin_width,
-                      distance_bin_width,
-                      coordinate_bin_width,
-                      damage_state_ids,
-                      statistics)
