@@ -341,19 +341,6 @@ def get_specific_assets(oqparam):
         return set(open(oqparam.inputs['specific_assets']).read().split())
 
 
-def get_special_assets(oqparam):
-    """
-    Get the assets from the parameters special_assets or special_assets_csv
-
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    """
-    try:
-        return oqparam.special_assets.split()
-    except AttributeError:
-        return open(oqparam.inputs['special_assets']).read().split()
-
-
 def get_sitecol_assets(oqparam):
     """
     Returns two sequences of the same length: a list with the assets
