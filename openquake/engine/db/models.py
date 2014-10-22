@@ -2562,9 +2562,9 @@ class EventLossData(djm.Model):
 
 
 class EventLossAsset(djm.Model):
-    event_loss = djm.ForeignKey(EventLoss)
-    rupture = djm.ForeignKey('SESRupture')
-    asset = djm.ForeignKey('ExposureData')
+    event_loss = djm.ForeignKey('EventLoss', null=False)
+    rupture = djm.ForeignKey('SESRupture', null=False)
+    asset = djm.ForeignKey('ExposureData', null=False)
     loss = djm.FloatField(null=False)
 
     @property
