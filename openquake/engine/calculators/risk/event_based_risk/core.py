@@ -23,6 +23,7 @@ import numpy
 
 from openquake.hazardlib.geo import mesh
 from openquake.risklib import scientific, workflows
+from openquake.risklib.utils import numpy_map
 
 from openquake.engine.calculators import post_processing
 from openquake.engine.calculators.risk import (
@@ -31,6 +32,12 @@ from openquake.engine.db import models
 from openquake.engine import writer
 from openquake.engine.utils import calculators
 from openquake.engine.performance import EnginePerformanceMonitor
+
+
+def _filter_loss_matrix_assets(loss_matrix, assets, specific_assets):
+    # reduce loss_matrix and assets to the specific_assets
+    mask = numpy.array([a.asset_ref in specific_assets for a in assets])
+    return loss_matrix[mask], numpy.array(assets)[mask]
 
 
 def event_based(workflow, risk_input, outputdict, params, monitor):
@@ -57,17 +64,44 @@ def event_based(workflow, risk_input, outputdict, params, monitor):
     # NB: event_loss_table is a dictionary (loss_type, out_id) -> loss,
     # out_id can be None, and it that case it stores the statistics
     event_loss_table = {}
-    # keep in memory the loss_matrix only when doing disaggregation
-    workflow.return_loss_matrix = bool(params.sites_disagg)
+    specific_assets = set(params.specific_assets)
+    statistics = getattr(params, 'statistics', True)  # enabled by default
+    # keep in memory the loss_matrix only when specific_assets are set
+    workflow.return_loss_matrix = bool(specific_assets)
 
+    # the insert here will work only if specific_assets is set
+    inserter = writer.CacheInserter(
+        models.EventLossAsset, max_cache_size=10000)
     for loss_type in workflow.loss_types:
         with monitor.copy('computing individual risk'):
             outputs = workflow.compute_all_outputs(risk_input, loss_type)
-        if params.statistics:
+        if statistics:
             outputs = list(outputs)  # expand the generator
         for out in outputs:
             event_loss_table[loss_type, out.hid] = out.output.event_loss_table
 
+            if specific_assets:
+                loss_matrix, assets = _filter_loss_matrix_assets(
+                    out.output.loss_matrix, out.output.assets, specific_assets)
+                if len(assets) == 0:  # no specific_assets
+                    continue
+                # compute the loss per rupture per asset
+                event_loss = models.EventLoss.objects.get(
+                    output__oq_job=monitor.job_id,
+                    output__output_type='event_loss_asset',
+                    loss_type=loss_type, hazard_output=out.hid)
+                # losses is E x n matrix, where E is the number of ruptures
+                # and n the number of assets in the specific_assets set
+                losses = (loss_matrix.transpose() *
+                          numpy_map(lambda a: a.value(loss_type), assets))
+                # save an EventLossAsset record for each specific asset
+                for rup_id, losses_per_rup in zip(
+                        risk_input.rupture_ids, losses):
+                    for asset, loss_per_rup in zip(assets, losses_per_rup):
+                        ela = models.EventLossAsset(
+                            event_loss=event_loss, rupture_id=rup_id,
+                            asset=asset, loss=loss_per_rup)
+                        inserter.add(ela)
             if params.sites_disagg:
                 with monitor.copy('disaggregating results'):
                     ruptures = [models.SESRupture.objects.get(pk=rid)
@@ -83,9 +117,10 @@ def event_based(workflow, risk_input, outputdict, params, monitor):
                                          loss_type=loss_type),
                     out.output, disagg_outputs, params)
 
-        if params.statistics and len(outputs) > 1:
+        if statistics and len(outputs) > 1:
             stats = workflow.statistics(
-                outputs, params.quantiles, post_processing)
+                outputs, params.quantile_loss_curves, post_processing)
+
             with monitor.copy('saving risk statistics'):
                 save_statistical_output(
                     outputdict.with_args(
@@ -93,6 +128,7 @@ def event_based(workflow, risk_input, outputdict, params, monitor):
                     stats, params)
             event_loss_table[loss_type, None] = stats.event_loss_table
 
+    inserter.flush()
     return event_loss_table
 
 
@@ -176,13 +212,14 @@ def save_statistical_output(outputdict, stats, params):
 
     # quantile curves and maps
     outputdict.write_all(
-        "quantile", params.quantiles,
+        "quantile", params.quantile_loss_curves,
         [(c, a) for c, a in itertools.izip(stats.quantile_curves,
                                            stats.quantile_average_losses)],
         stats.assets, output_type="loss_curve", statistics="quantile")
 
-    if params.quantiles:
-        for quantile, maps in zip(params.quantiles, stats.quantile_maps):
+    if params.quantile_loss_curves:
+        for quantile, maps in zip(
+                params.quantile_loss_curves, stats.quantile_maps):
             outputdict.write_all(
                 "poe", params.conditional_loss_poes, maps,
                 stats.assets, output_type="loss_map",
@@ -196,7 +233,7 @@ def save_statistical_output(outputdict, stats, params):
             output_type="loss_curve", statistics="mean", insured=True)
 
         outputdict.write_all(
-            "quantile", params.quantiles,
+            "quantile", params.quantile_loss_curves,
             [(c, a) for c, a in itertools.izip(
                 stats.quantile_insured_curves,
                 stats.quantile_average_insured_losses)],
@@ -244,9 +281,8 @@ def disaggregate(outputs, ruptures, params):
 
     assets_disagg = []
     disagg_matrix = []
-
     for asset, losses in zip(outputs.assets, outputs.loss_matrix):
-        if asset.site in params.sites_disagg:
+        if (asset.site.x, asset.site.y) in params.sites_disagg:
             disagg_matrix.extend(list(disaggregate_site(asset.site, losses)))
 
             # FIXME. the functions in
@@ -290,6 +326,33 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         super(EventBasedRiskCalculator, self).__init__(job)
         # accumulator for the event loss tables
         self.acc = collections.defaultdict(collections.Counter)
+        self.sites_disagg = self.job.get_param('sites_disagg')
+        self.specific_assets = self.job.get_param('specific_assets')
+
+    def pre_execute(self):
+        """
+        Base pre_execute + build Event Loss Asset outputs if needed
+        """
+        super(EventBasedRiskCalculator, self).pre_execute()
+        for hazard_output in self.rc.hazard_outputs():
+            for loss_type in self.loss_types:
+                models.EventLoss.objects.create(
+                    output=models.Output.objects.create_output(
+                        self.job,
+                        "Event Loss Table type=%s, hazard=%s" % (
+                            loss_type, hazard_output.id),
+                        "event_loss"),
+                    loss_type=loss_type,
+                    hazard_output=hazard_output)
+                if self.specific_assets:
+                    models.EventLoss.objects.create(
+                        output=models.Output.objects.create_output(
+                            self.job,
+                            "Event Loss Asset type=%s, hazard=%s" % (
+                                loss_type, hazard_output.id),
+                            "event_loss_asset"),
+                        loss_type=loss_type,
+                        hazard_output=hazard_output)
 
     @EnginePerformanceMonitor.monitor
     def agg_result(self, acc, event_loss_table):
@@ -311,21 +374,16 @@ class EventBasedRiskCalculator(base.RiskCalculator):
           Compute aggregate loss curves and event loss tables
         """
         with self.monitor('post processing'):
-
+            inserter = writer.CacheInserter(models.EventLossData,
+                                            max_cache_size=10000)
             time_span, tses = self.hazard_times()
             for (loss_type, out_id), event_loss_table in self.acc.items():
                 if out_id:  # values for individual realizations
                     hazard_output = models.Output.objects.get(pk=out_id)
-
-                    event_loss = models.EventLoss.objects.create(
-                        output=models.Output.objects.create_output(
-                            self.job,
-                            "Event Loss Table. type=%s, hazard=%s" % (
-                                loss_type, hazard_output.id),
-                            "event_loss"),
-                        loss_type=loss_type,
-                        hazard_output=hazard_output)
-                    inserter = writer.CacheInserter(models.EventLossData, 9999)
+                    event_loss = models.EventLoss.objects.get(
+                        output__oq_job=self.job,
+                        output__output_type='event_loss',
+                        loss_type=loss_type, hazard_output=hazard_output)
                     if isinstance(hazard_output.output_container,
                                   models.SESCollection):
                         ses_coll = hazard_output.output_container
@@ -395,17 +453,3 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         return (self.rc.investigation_time,
                 self.hc.ses_per_logic_tree_path * self.hc.investigation_time)
 
-    @property
-    def calculator_parameters(self):
-        """
-        Calculator specific parameters
-        """
-        return base.make_calc_params(
-            conditional_loss_poes=self.rc.conditional_loss_poes or [],
-            quantiles=self.rc.quantile_loss_curves or [],
-            insured_losses=self.rc.insured_losses,
-            sites_disagg=self.rc.sites_disagg or [],
-            mag_bin_width=self.rc.mag_bin_width,
-            distance_bin_width=self.rc.distance_bin_width,
-            coordinate_bin_width=self.rc.coordinate_bin_width,
-            statistics=self.job.get_param('statistics', True))

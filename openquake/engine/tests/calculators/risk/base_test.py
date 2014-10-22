@@ -49,10 +49,6 @@ class FakeRiskCalculator(base.RiskCalculator):
     def core(workflow, risk_input, outputdict, params, monitor):
         return dict(result=1)
 
-    @property
-    def calculation_parameters(self):
-        return base.make_calc_params()
-
     # NB: fake_risk_task returns {job.id: 1}
     def agg_result(self, acc, res):
         newacc = dict((key, acc.get(key, 0) + res[key]) for key in res)
