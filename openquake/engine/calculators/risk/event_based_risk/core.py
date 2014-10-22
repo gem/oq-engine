@@ -79,7 +79,7 @@ def event_based(workflow, risk_input, outputdict, params, monitor):
             outputs = list(outputs)  # expand the generator
         for out in outputs:
             event_loss_table[loss_type, out.hid] = out.output.event_loss_table
-
+            disagg_outputs = None  # changed if params.sites_disagg is set
             if specific_assets:
                 loss_matrix, assets = _filter_loss_matrix_assets(
                     out.output.loss_matrix, out.output.assets, specific_assets)
@@ -102,14 +102,12 @@ def event_based(workflow, risk_input, outputdict, params, monitor):
                             event_loss=event_loss, rupture_id=rup_id,
                             asset=asset, loss=loss_per_rup)
                         inserter.add(ela)
-            if params.sites_disagg:
-                with monitor.copy('disaggregating results'):
-                    ruptures = [models.SESRupture.objects.get(pk=rid)
-                                for rid in risk_input.rupture_ids]
-                    disagg_outputs = disaggregate(
-                        out.output, [r.rupture for r in ruptures], params)
-            else:
-                disagg_outputs = None
+                if params.sites_disagg:
+                    with monitor.copy('disaggregating results'):
+                        ruptures = [models.SESRupture.objects.get(pk=rid)
+                                    for rid in risk_input.rupture_ids]
+                        disagg_outputs = disaggregate(
+                            out.output, [r.rupture for r in ruptures], params)
 
             with monitor.copy('saving individual risk'):
                 save_individual_outputs(
