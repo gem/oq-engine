@@ -41,8 +41,7 @@ from openquake.engine.settings import DATABASES
 from openquake.engine.db.models import Performance
 from openquake.engine.db.schema.upgrades import upgrader
 
-from openquake import hazardlib
-from openquake import risklib
+from openquake import hazardlib, risklib, commonlib
 
 from openquake.commonlib import readinput, valid
 
@@ -132,6 +131,7 @@ def prepare_job(user_name="openquake", log_level='progress'):
         oq_version=openquake.engine.__version__,
         hazardlib_version=hazardlib.__version__,
         risklib_version=risklib.__version__,
+        commonlib_version=commonlib.__version__,
     )
 
 
@@ -467,6 +467,16 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
             hazard_output_id)
 
     params = vars(oqparam).copy()
+    if 'quantile_loss_curves' not in params:
+        params['quantile_loss_curves'] = []
+    if 'poes_disagg' not in params:
+        params['poes_disagg'] = []
+    if 'sites_disagg' not in params:
+        params['sites_disagg'] = []
+    if 'specific_assets' not in params:
+        params['specific_assets'] = []
+    if 'conditional_loss_poes' not in params:
+        params['conditional_loss_poes'] = []
     params.update(extras)
     job.save_params(params)
 
@@ -480,10 +490,13 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
     del params['intensity_measure_types_and_levels']
     if params['hazard_calculation_id'] is None:
         params['hazard_calculation_id'] = haz_job.id
-    elif 'special_assets' in params:
-        del params['special_assets']
-    elif 'statistics' in params:
+    if 'statistics' in params:
         del params['statistics']
+    # ugliness that will disappear when RiskCalculation will be removed
+    if 'specific_assets' in params:
+        del params['specific_assets']
+    if 'sites_disagg' in params:
+        del params['sites_disagg']
     calculation = create_calculation(models.RiskCalculation, params)
     job.risk_calculation = calculation
     job.save()

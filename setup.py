@@ -1,6 +1,25 @@
+import re
+import sys
 from setuptools import setup, find_packages
 
-version = "1.0.0"
+
+def get_version():
+    version_re = r"^__version__\s+=\s+['\"]([^'\"]*)['\"]"
+    version = None
+
+    package_init = 'openquake/engine/__init__.py'
+    for line in open(package_init, 'r'):
+        version_match = re.search(version_re, line, re.M)
+        if version_match:
+            version = version_match.group(1)
+            break
+    else:
+        sys.exit('__version__ variable not found in %s' % package_init)
+
+    return version
+
+version = get_version()
+
 url = "http://openquake.org/"
 
 README = """
@@ -47,7 +66,8 @@ setup(
     package_data={"openquake.engine": [
         "db/schema/upgrades/*.sql",
         "openquake.cfg", "openquake_worker.cfg", "README", "LICENSE"]},
-    scripts=["openquake/engine/bin/oq_create_db"],
+    scripts=["openquake/engine/bin/oq_create_db",
+             "openquake/engine/bin/openquake"],
 
     namespace_packages=['openquake'],
 
