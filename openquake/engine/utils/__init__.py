@@ -4,10 +4,17 @@
 import decimal
 import os
 import importlib
+import collections
 
-from openquake.risklib.utils import Register
 
-calculators = Register()  # an ordered dictionary of calculator classes
+class _Register(collections.OrderedDict):
+    def add(self, tag):
+        def dec(obj):
+            self[tag] = obj
+            return obj
+        return dec
+
+calculators = _Register()  # an ordered dictionary of calculator classes
 
 
 def round_float(value):
