@@ -23,7 +23,7 @@ import collections
 import numpy
 from openquake.risklib import scientific
 from openquake.commonlib import readinput, riskmodels, general
-from openquake.commonlib.calculators import calculator, \
+from openquake.commonlib.calculators import calculators, \
     BaseScenarioCalculator, core
 from openquake.commonlib.export import export
 
@@ -50,7 +50,7 @@ AggLossCurve = collections.namedtuple(
     'AggLossCurve', 'loss_type unit mean stddev')
 
 
-@calculator.add('scenario_risk')
+@calculators.add('scenario_risk')
 class ScenarioRiskCalculator(BaseScenarioCalculator):
     """
     Run a scenario risk calculation

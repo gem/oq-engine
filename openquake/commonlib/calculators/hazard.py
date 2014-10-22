@@ -27,35 +27,35 @@ from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.commonlib import readinput, parallel
 from openquake.commonlib.general import AccumDict
 
-from openquake.commonlib.calculators import calculator, core, BaseCalculator
+from openquake.commonlib.calculators import calculators, core, BaseCalculator
 from openquake.commonlib.export import export
 
 
-@calculator.add('classical')
+@calculators.add('classical')
 class ClassicalCalculator(BaseCalculator):
     """
-    Classical PSHA calculator
+    Classical PSHA calculators
     """
 
 
-@calculator.add('event_based')
+@calculators.add('event_based')
 class EventBasedCalculator(BaseCalculator):
     """
-    Event based PSHA calculator
+    Event based PSHA calculators
     """
 
 
-@calculator.add('disaggregation')
+@calculators.add('disaggregation')
 class DisaggregationCalculator(BaseCalculator):
     """
-    Classical disaggregation PSHA calculator
+    Classical disaggregation PSHA calculators
     """
 
 SESRupture = collections.namedtuple(
     'SESRupture', 'tag seed rupture')
 
 
-@calculator.add('scenario')
+@calculators.add('scenario')
 class ScenarioCalculator(BaseCalculator):
     """
     Scenario hazard calculator

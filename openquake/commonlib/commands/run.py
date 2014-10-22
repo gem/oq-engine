@@ -2,7 +2,7 @@ import logging
 
 from openquake.commonlib import sap, readinput
 from openquake.commonlib.parallel import executor, PerformanceMonitor
-from openquake.commonlib.calculators import calculator
+from openquake.commonlib.calculators import calculators
 
 
 def run(job_ini, concurrent_tasks=executor._max_workers, loglevel='INFO'):
@@ -14,7 +14,7 @@ def run(job_ini, concurrent_tasks=executor._max_workers, loglevel='INFO'):
     with open(job_ini) as f, PerformanceMonitor():
         oqparam = readinput.get_oqparam(f)
         oqparam.concurrent_tasks = concurrent_tasks
-        calc = calculator(oqparam)
+        calc = calculators(oqparam)
         for fname in calc.run():
             logging.info('exported %s', fname)
 

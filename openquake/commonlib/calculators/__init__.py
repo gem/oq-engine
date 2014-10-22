@@ -25,7 +25,7 @@ from openquake.commonlib import readinput
 from openquake.commonlib.parallel import apply_reduce
 from openquake.commonlib.calculators import calc
 
-calculator = CallableDict(operator.attrgetter('calculation_mode'))
+calculators = CallableDict(operator.attrgetter('calculation_mode'))
 
 
 def core(cls):
@@ -116,5 +116,5 @@ class BaseScenarioCalculator(BaseCalculator):
                             weight=operator.attrgetter('weight'))
 
 
-## now make sure the `calculator` dictionary is populated
+## now make sure the `calculators` dictionary is populated
 import_all('openquake.commonlib.calculators')

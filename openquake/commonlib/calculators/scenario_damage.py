@@ -24,7 +24,7 @@ import numpy
 
 from openquake.risklib import scientific
 from openquake.commonlib.general import AccumDict
-from openquake.commonlib.calculators import calculator, core, BaseScenarioCalculator
+from openquake.commonlib.calculators import calculators, core, BaseScenarioCalculator
 from openquake.commonlib.export import export
 
 
@@ -52,7 +52,7 @@ class Site(object):
         self.wkt = 'POINT(%s %s)' % xy
 
 
-@calculator.add('scenario_damage')
+@calculators.add('scenario_damage')
 class ScenarioDamageCalculator(BaseScenarioCalculator):
     """
     Scenario damage calculator
