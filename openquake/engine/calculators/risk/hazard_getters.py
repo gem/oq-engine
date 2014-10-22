@@ -76,12 +76,12 @@ def make_epsilons(asset_count, num_samples, seed, correlation):
     return scientific.make_epsilons(zeros, seed, correlation)
 
 
-class RiskInput(object):
+class HazardGetter(object):
     """
-    A RiskInput objects stores a chunk of assets and their associated
+    A HazardGetter objects stores a chunk of assets and their associated
     hazard data. In case of scenario and event based calculators it
     also stores the ruptures and the epsilons.
-    The RiskInput must be pickable such that it
+    The HazardGetter must be pickable such that it
     should be possible to use different strategies (e.g. distributed
     or not, using postgis or not).
 
@@ -135,11 +135,11 @@ class RiskInput(object):
             self.taxonomy)
 
 
-class HazardCurveInput(RiskInput):
+class HazardCurveGetter(HazardGetter):
     """
     Simple HazardCurve Getter that performs a spatial query for each
     asset.
-    """ + RiskInput.__doc__
+    """ + HazardGetter.__doc__
 
     def _get_data(self, ho):
         """
@@ -207,17 +207,17 @@ def haz_out_to_ses_coll(ho):
         trt_model__lt_model=ho.output_container.lt_realization.lt_model)
 
 
-class GroundMotionInput(RiskInput):
+class GroundMotionGetter(HazardGetter):
     """
     Hazard getter for loading ground motion values.
-    """ + RiskInput.__doc__
+    """ + HazardGetter.__doc__
 
     def __init__(self, imt, taxonomy, hazard_outputs, assets):
         """
         Perform the needed queries on the database to populate
         hazards and epsilons.
         """
-        RiskInput.__init__(self, imt, taxonomy, hazard_outputs, assets)
+        HazardGetter.__init__(self, imt, taxonomy, hazard_outputs, assets)
         self.hazards = {}  # dict ho, imt -> {site_id: {rup_id: gmv}}
         self.rupture_ids = []
         sescolls = set()
