@@ -23,6 +23,7 @@ Validation library for the engine, the desktop tools, and anything else
 import re
 import ast
 import logging
+import textwrap
 import collections
 from decimal import Decimal
 
@@ -670,7 +671,8 @@ class ParamSet(object):
     >>> MyParams(a='1', b='9.2')
     Traceback (most recent call last):
     ...
-    ValueError: The sum of a and b must be under 10. Got:
+    ValueError: The sum of a and b must be under 10.
+    Got:
     a=1
     b=9.2
 
@@ -702,7 +704,8 @@ class ParamSet(object):
             if not is_valid():
                 dump = '\n'.join('%s=%s' % (n, v)
                                  for n, v in sorted(self.__dict__.items()))
-                raise ValueError(is_valid.__doc__ + 'Got:\n' + dump)
+                doc = textwrap.dedent(is_valid.__doc__.strip())
+                raise ValueError(doc + '\nGot:\n' + dump)
 
     def __repr__(self):
         names = sorted(n for n in vars(self) if not n.startswith('_'))

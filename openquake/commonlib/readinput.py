@@ -326,6 +326,21 @@ def get_exposure(oqparam):
                     values, deductibles, insurance_limits, retrofitting_values)
 
 
+def get_specific_assets(oqparam):
+    """
+    Get the assets from the parameters specific_assets or specific_assets_csv
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    """
+    try:
+        return set(oqparam.specific_assets)
+    except AttributeError:
+        if 'specific_assets' not in oqparam.inputs:
+            return set()
+        return set(open(oqparam.inputs['specific_assets']).read().split())
+
+
 def get_special_assets(oqparam):
     """
     Get the assets from the parameters special_assets or special_assets_csv
