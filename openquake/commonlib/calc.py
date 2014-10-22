@@ -19,15 +19,9 @@
 import collections
 import itertools
 import operator
-import random
 
-import numpy
-
-from openquake.hazardlib.calc import gmf, filters
+from openquake.hazardlib.calc import filters
 from openquake.hazardlib.site import SiteCollection
-
-from openquake.commonlib.readinput import \
-    get_gsim, get_rupture, get_correl_model, get_imts
 
 ############### facilities for the classical calculator ################
 
@@ -86,47 +80,3 @@ def gen_ruptures_for_site(site, sources, maximum_distance, monitor):
     for src, rows in itertools.groupby(
             source_rupture_sites, key=operator.attrgetter('source')):
         yield src, [row.rupture for row in rows]
-
-
-############### facilities for the scenario calculators ################
-
-def calc_gmfs_fast(oqparam, sitecol):
-    """
-    Build all the ground motion fields for the whole site collection in
-    a single step.
-    """
-    max_dist = oqparam.maximum_distance
-    correl_model = get_correl_model(oqparam)
-    seed = getattr(oqparam, 'random_seed', 42)
-    imts = get_imts(oqparam)
-    gsim = get_gsim(oqparam)
-    trunc_level = getattr(oqparam, 'truncation_level', None)
-    n_gmfs = getattr(oqparam, 'number_of_ground_motion_fields', 1)
-    rupture = get_rupture(oqparam)
-    res = gmf.ground_motion_fields(
-        rupture, sitecol, imts, gsim,
-        trunc_level, n_gmfs, correl_model,
-        filters.rupture_site_distance_filter(max_dist), seed)
-    return {str(imt): matrix for imt, matrix in res.iteritems()}
-
-
-def calc_gmfs(oqparam, sitecol):
-    """
-    Build all the ground motion fields for the whole site collection
-    """
-    correl_model = get_correl_model(oqparam)
-    rnd = random.Random()
-    rnd.seed(getattr(oqparam, 'random_seed', 42))
-    imts = get_imts(oqparam)
-    gsim = get_gsim(oqparam)
-    trunc_level = getattr(oqparam, 'truncation_level', None)
-    n_gmfs = getattr(oqparam, 'number_of_ground_motion_fields', 1)
-    rupture = get_rupture(oqparam)
-    computer = gmf.GmfComputer(rupture, sitecol, imts, [gsim], trunc_level,
-                               correl_model)
-    seeds = [rnd.randint(0, 2 ** 31 - 1) for _ in xrange(n_gmfs)]
-    res = collections.defaultdict(list)
-    for seed in seeds:
-        for (_gname, imt), gmvs in computer.compute(seed):
-            res[imt].append(gmvs)
-    return {imt: numpy.array(matrix).T for imt, matrix in res.iteritems()}
