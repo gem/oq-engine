@@ -35,7 +35,7 @@ def event_based_bcr(workflow, getter, outputdict, params, monitor):
     :param int job_id:
       ID of the currently running job
     :param workflow:
-      A :class:`openquake.risklib.workflows.RiskModel` instance
+      A :class:`openquake.risklib.workflows.Workflow` instance
     :param getter:
       A HazardGetter instance
     :param outputdict:
