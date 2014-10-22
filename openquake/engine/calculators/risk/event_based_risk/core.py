@@ -40,7 +40,7 @@ def _filter_loss_matrix_assets(loss_matrix, assets, specific_assets):
     return loss_matrix[mask], numpy.array(assets)[mask]
 
 
-def event_based(workflow, risk_input, outputdict, params, monitor):
+def event_based(workflow, getter, outputdict, params, monitor):
     """
     Celery task for the event based risk calculator.
 
@@ -48,8 +48,8 @@ def event_based(workflow, risk_input, outputdict, params, monitor):
         :class:`openquake.engine.db.models.OqJob`
     :param workflow:
       A :class:`openquake.risklib.workflows.Workflow` instance
-    :param risk_input:
-      A :class:`RiskInput` instance
+    :param getter:
+      A :class:`HazardGetter` instance
     :param outputdict:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (e.g. a LossCurve)
@@ -74,7 +74,7 @@ def event_based(workflow, risk_input, outputdict, params, monitor):
         models.EventLossAsset, max_cache_size=10000)
     for loss_type in workflow.loss_types:
         with monitor.copy('computing individual risk'):
-            outputs = workflow.compute_all_outputs(risk_input, loss_type)
+            outputs = workflow.compute_all_outputs(getter, loss_type)
         if statistics:
             outputs = list(outputs)  # expand the generator
         for out in outputs:
@@ -96,7 +96,7 @@ def event_based(workflow, risk_input, outputdict, params, monitor):
                           numpy_map(lambda a: a.value(loss_type), assets))
                 # save an EventLossAsset record for each specific asset
                 for rup_id, losses_per_rup in zip(
-                        risk_input.rupture_ids, losses):
+                        getter.rupture_ids, losses):
                     for asset, loss_per_rup in zip(assets, losses_per_rup):
                         ela = models.EventLossAsset(
                             event_loss=event_loss, rupture_id=rup_id,
@@ -105,7 +105,7 @@ def event_based(workflow, risk_input, outputdict, params, monitor):
                 if params.sites_disagg:
                     with monitor.copy('disaggregating results'):
                         ruptures = [models.SESRupture.objects.get(pk=rid)
-                                    for rid in risk_input.rupture_ids]
+                                    for rid in getter.rupture_ids]
                         disagg_outputs = disaggregate(
                             out.output, [r.rupture for r in ruptures], params)
 
@@ -318,7 +318,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
     output_builders = [writers.EventLossCurveMapBuilder,
                        writers.LossFractionBuilder]
-    risk_input_class = hazard_getters.GroundMotionInput
+    getter_class = hazard_getters.GroundMotionGetter
 
     def __init__(self, job):
         super(EventBasedRiskCalculator, self).__init__(job)

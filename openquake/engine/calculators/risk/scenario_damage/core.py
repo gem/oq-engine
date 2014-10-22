@@ -31,14 +31,14 @@ from openquake.engine.db import models
 from openquake.engine.utils import calculators
 
 
-def scenario_damage(workflow, risk_input, outputdict, params, monitor):
+def scenario_damage(workflow, getter, outputdict, params, monitor):
     """
     Celery task for the scenario damage risk calculator.
 
     :param workflow:
       A :class:`openquake.risklib.workflows.Workflow` instance
-    :param risk_input:
-      A RiskInput instance
+    :param getter:
+      A HazardGetter instance
     :param outputdict:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (in this case only `LossMap`)
@@ -56,13 +56,13 @@ def scenario_damage(workflow, risk_input, outputdict, params, monitor):
     assert len(outputdict) == 0, outputdict
     with monitor.copy('computing risk'):
         assets, fractions = workflow(
-            'damage', risk_input.assets, risk_input.get_data(), None)
+            'damage', getter.assets, getter.get_data(), None)
         aggfractions = sum(fractions[i] * asset.number_of_units
                            for i, asset in enumerate(assets))
 
     with monitor.copy('saving damage per assets'):
         writers.damage_distribution(
-            risk_input.assets, fractions, params.damage_state_ids)
+            getter.assets, fractions, params.damage_state_ids)
 
     return {assets[0].taxonomy: aggfractions}
 
@@ -89,7 +89,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
 
     # FIXME. scenario damage calculator does not use output builders
     output_builders = []
-    risk_input_class = hazard_getters.GroundMotionInput
+    getter_class = hazard_getters.GroundMotionGetter
 
     def __init__(self, job):
         super(ScenarioDamageRiskCalculator, self).__init__(job)

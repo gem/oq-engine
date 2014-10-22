@@ -24,7 +24,7 @@ from openquake.engine.calculators.risk.event_based_risk \
 from openquake.engine.utils import calculators
 
 
-def event_based_bcr(workflow, risk_input, outputdict, params, monitor):
+def event_based_bcr(workflow, getter, outputdict, params, monitor):
     """
     Celery task for the BCR risk calculator based on the event based
     calculator.
@@ -36,8 +36,8 @@ def event_based_bcr(workflow, risk_input, outputdict, params, monitor):
       ID of the currently running job
     :param workflow:
       A :class:`openquake.risklib.workflows.RiskModel` instance
-    :param risk_input:
-      A RiskInput instance
+    :param getter:
+      A HazardGetter instance
     :param outputdict:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (in this case only `BCRDistribution`)
@@ -49,7 +49,7 @@ def event_based_bcr(workflow, risk_input, outputdict, params, monitor):
     """
     for loss_type in workflow.loss_types:
         with monitor.copy('computing risk'):
-            outputs = workflow.compute_all_outputs(risk_input, loss_type)
+            outputs = workflow.compute_all_outputs(getter, loss_type)
         outputdict = outputdict.with_args(loss_type=loss_type)
         with monitor.copy('saving risk'):
             for out in outputs:
