@@ -1,6 +1,7 @@
 import os
 import time
 import argparse
+import collections
 
 from openquake.hazardlib.imt import from_string
 from openquake.commonlib.node import LiteralNode, read_nodes
@@ -67,8 +68,7 @@ def read_data(fileobj):
     :param fileobj: the XML files containing the GMFs
     :returns: (imts, rupture_tags, rows)
     """
-    imts = set()
-    tags = set()
+    tags = collections.defaultdict(set)
     rows = []
     for gmf in read_nodes(
             fileobj, lambda n: n.tag.endswith('gmf'), GmfNode):
@@ -79,12 +79,15 @@ def read_data(fileobj):
         data = []
         for node in gmf:
             data.append(('POINT(%(lon)s %(lat)s)' % node, node['gmv']))
-        if tag in tags:
+        if tag in tags[imt]:
             raise DuplicatedTag(tag)
-        tags.add(tag)
-        imts.add(imt)
+        tags[imt].add(tag)
         rows.append((imt, tag, data))
-    return imts, sorted(tags), rows
+    # check consistency of the tags
+    expected_tags = tags[imt]
+    for tagvalues in tags.values():
+        assert tagvalues == expected_tags, (expected_tags, tagvalues)
+    return set(tags), sorted(expected_tags), rows
 
 
 def create_ses_gmf(job, fname):
