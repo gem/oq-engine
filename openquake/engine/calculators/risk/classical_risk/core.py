@@ -68,7 +68,7 @@ def do_classical(risk_model, getters, outputdict, params, monitor):
     outputs_per_loss_type = risk_model.compute_outputs(
         getters, monitor.copy('getting data'))
     stats_per_loss_type = risk_model.compute_stats(
-        outputs_per_loss_type, params.quantiles, post_processing)
+        outputs_per_loss_type, params.quantile_loss_curves, post_processing)
 
     for loss_type, outputs in outputs_per_loss_type.iteritems():
         stats = stats_per_loss_type[loss_type]
@@ -161,17 +161,19 @@ def save_statistical_output(outputdict, stats, params):
 
     # quantile curves, maps and fractions
     outputdict.write_all(
-        "quantile", params.quantiles,
+        "quantile", params.quantile_loss_curves,
         [(c, a) for c, a in itertools.izip(
             stats.quantile_curves, stats.quantile_average_losses)],
         stats.assets, output_type="loss_curve", statistics="quantile")
 
-    for quantile, maps in zip(params.quantiles, stats.quantile_maps):
+    for quantile, maps in zip(
+            params.quantile_loss_curves, stats.quantile_maps):
         outputdict.write_all("poe", params.conditional_loss_poes, maps,
                              stats.assets, output_type="loss_map",
                              statistics="quantile", quantile=quantile)
 
-    for quantile, fractions in zip(params.quantiles, stats.quantile_fractions):
+    for quantile, fractions in zip(
+            params.quantile_loss_curves, stats.quantile_fractions):
         outputdict.write_all("poe", params.poes_disagg, fractions,
                              stats.assets, [a.taxonomy for a in stats.assets],
                              output_type="loss_fraction",
@@ -186,7 +188,7 @@ def save_statistical_output(outputdict, stats, params):
             output_type="loss_curve", statistics="mean", insured=True)
 
         outputdict.write_all(
-            "quantile", params.quantiles,
+            "quantile", params.quantile_loss_curves,
             [(c, a) for c, a in itertools.izip(
                 stats.quantile_insured_curves,
                 stats.quantile_average_insured_losses)],
@@ -219,15 +221,3 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             self.rc.conditional_loss_poes,
             self.rc.poes_disagg,
             self.rc.insured_losses)
-
-    @property
-    def calculator_parameters(self):
-        """
-        Specific calculator parameters returned as list suitable to be
-        passed in task_arg_gen
-        """
-
-        return base.make_calc_params(
-            conditional_loss_poes=self.rc.conditional_loss_poes or [],
-            quantiles=self.rc.quantile_loss_curves or [],
-            poes_disagg=self.rc.poes_disagg or [])

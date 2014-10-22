@@ -178,7 +178,10 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
     @property
     def calculator_parameters(self):
         """
-        Provides calculator specific params coming from
-        :class:`openquake.engine.db.RiskCalculation`
+        The specific calculation parameters passed as args to the
+        celery task function. A calculator must override this to
+        provide custom arguments to its celery task
         """
-        return base.make_calc_params(damage_state_ids=self.damage_state_ids)
+        oqparam = self.job.get_oqparam()
+        oqparam.damage_state_ids = self.damage_state_ids
+        return oqparam
