@@ -55,10 +55,12 @@ intensity_measure_types = PGA
             'inputs': {},
             'intensity_measure_types_and_levels': {'PGA': None},
         }
-
-        params = vars(get_oqparam(source, hazard_output_id=42))
-
-        self.assertEqual(expected_params, params)
+        # checking that warnings work
+        with mock.patch('logging.warn') as warn:
+            oqparam = get_oqparam(source, hazard_output_id=42)
+        self.assertEqual(warn.call_args[0][0],
+                         "The parameter 'bar' is unknown, ignoring")
+        self.assertEqual(expected_params, vars(oqparam))
 
     def test_get_oqparam_with_files(self):
         temp_dir = tempfile.mkdtemp()
