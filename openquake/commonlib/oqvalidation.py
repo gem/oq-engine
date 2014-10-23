@@ -124,6 +124,7 @@ class OqParam(valid.ParamSet):
         sites=valid.NoneOr(valid.coordinates),
         sites_disagg=valid.NoneOr(valid.coordinates),
         specific_assets=str.split,
+        statistics=valid.boolean,
         taxonomies_from_model=valid.boolean,
         time_event=str,
         truncation_level=valid.NoneOr(valid.positivefloat),

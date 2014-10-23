@@ -23,6 +23,7 @@ import operator
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.site import SiteCollection
 
+############### facilities for the classical calculator ################
 
 SourceRuptureSites = collections.namedtuple(
     'SourceRuptureSites',
