@@ -52,7 +52,9 @@ eps_sampling = int(config.get('risk', 'epsilon_sampling'))
 @tasks.oqtask
 def prepare_risk(job_id, counts_taxonomy, rc):
     """
-    Initializes the epsilon matrices and save them on the database.
+    Associates the assets to the closest hazard sites and populate
+    the table asset_site. For some calculators also initializes the
+    epsilon matrices and save them on the database.
 
     :param job_id:
         ID of the current risk job
@@ -126,12 +128,6 @@ def run_risk(job_id, sorted_assocs, calc):
                     monitor)
             acc = calc.agg_result(acc, res)
     return acc
-
-
-def updatedict(acc, dic):
-    a = acc.copy()
-    a.update(dic)
-    return a
 
 
 class RiskCalculator(base.Calculator):
