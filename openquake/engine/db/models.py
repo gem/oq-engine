@@ -28,14 +28,13 @@ Model representations of the OpenQuake DB tables.
 import os
 import collections
 import operator
-import itertools
 from datetime import datetime
 
 
 import numpy
 from scipy import interpolate
 
-from django.db import connections
+from django.db import connections, transaction
 from django.core.exceptions import ObjectDoesNotExist
 
 from django.contrib.gis.db import models as djm
@@ -629,8 +628,7 @@ class RiskCalculation(djm.Model):
     @property
     def best_maximum_distance(self):
         """
-        Get the asset-hazard maximum distance (in km) to be used in
-        hazard getters.
+        Get the asset-hazard maximum distance (in km)
 
         :returns:
             The minimum between the maximum distance provided by the user (if
@@ -2178,6 +2176,13 @@ class LossFractionData(djm.Model):
         return '%.5f,%.5f,%s,%s' % (
             self.location.x, self.location.y, self.value, self.absolute_loss)
 
+    def to_csv_str(self):
+        """
+        Convert LossFraction into a CSV string
+        """
+        return '%.5f,%.5f,%s,%s' % (
+            self.location.x, self.location.y, self.value, self.absolute_loss)
+
 
 class LossMap(djm.Model):
     '''
@@ -2721,7 +2726,6 @@ class ExposureModel(djm.Model):
             A dictionary mapping each taxonomy with the number of assets
             contained in `region_constraint`
         """
-
         return ExposureData.objects.taxonomies_contained_in(
             self.id, region_constraint)
 
@@ -2809,15 +2813,15 @@ class AssetManager(djm.GeoManager):
     Asset manager
     """
 
-    def get_asset_chunk(self, rc, taxonomy, offset=0, size=None,
-                        asset_ids=None):
+    def get_asset_chunk(self, rc, assocs):
         """
+        :param assocs:
+           a list of :class:`openquake.engine.db.models.AssetSite` objects
         :returns:
 
            a list of instances of
            :class:`openquake.engine.db.models.ExposureData` (ordered
-           by location) contained in `region_constraint`(embedded in
-           the risk calculation `rc`) of `taxonomy` associated with
+           by location) associated with
            the `openquake.engine.db.models.ExposureModel` associated
            with `rc`.
 
@@ -2825,19 +2829,22 @@ class AssetManager(djm.GeoManager):
            occupants value for the risk calculation given in input and the cost
            for each cost type considered in `rc`
         """
+        assocs = sorted(assocs, key=lambda assoc: assoc.asset.id)
+        asset_ids = tuple(assoc.asset.id for assoc in assocs)
+        query, args = self._get_asset_chunk_query_args(rc, asset_ids)
+        with transaction.commit_on_success('job_init'):
+            annotated_assets = list(self.raw(query, args))
+        # add asset_site_id attribute to each asset
+        for ass, assoc in zip(annotated_assets, assocs):
+            ass.asset_site_id = assoc.id
+        return annotated_assets
 
-        query, args = self._get_asset_chunk_query_args(
-            rc, taxonomy, offset, size, asset_ids)
-        return list(self.raw(query, args))
-
-    def _get_asset_chunk_query_args(
-            self, rc, taxonomy, offset, size, asset_ids):
+    def _get_asset_chunk_query_args(self, rc, asset_ids):
         """
         Build a parametric query string and the corresponding args for
         #get_asset_chunk
         """
-        args = (rc.exposure_model.id, taxonomy,
-                "SRID=4326; %s" % rc.region_constraint.wkt)
+        args = (rc.exposure_model.id, asset_ids)
 
         people_field, occupants_cond, occupancy_join, occupants_args = (
             self._get_people_query_helper(
@@ -2845,38 +2852,27 @@ class AssetManager(djm.GeoManager):
 
         args += occupants_args
 
-        if asset_ids is None:
-            assets_cond = 'true'
-        else:
-            assets_cond = 'riski.exposure_data.id IN (%s)' % ', '.join(
-                map(str, asset_ids))
         cost_type_fields, cost_type_joins = self._get_cost_types_query_helper(
             rc.exposure_model.costtype_set.all())
 
-        query = """
-            SELECT riski.exposure_data.*,
-                   {people_field} AS people,
-                   {costs}
-            FROM riski.exposure_data
-            {occupancy_join}
-            ON riski.exposure_data.id = riski.occupancy.exposure_data_id
-            {costs_join}
-            WHERE exposure_model_id = %s AND
-                  taxonomy = %s AND
-                  ST_COVERS(ST_GeographyFromText(%s), site) AND
-                  {occupants_cond} AND {assets_cond}
-            GROUP BY riski.exposure_data.id
-            ORDER BY ST_X(geometry(site)), ST_Y(geometry(site))
-            """.format(people_field=people_field,
-                       occupants_cond=occupants_cond,
-                       assets_cond=assets_cond,
-                       costs=cost_type_fields,
-                       costs_join=cost_type_joins,
-                       occupancy_join=occupancy_join)
-        if offset:
-            query += 'OFFSET %d ' % offset
-        if size is not None:
-            query += 'LIMIT %d' % size
+        query = """\
+        SELECT riski.exposure_data.*,
+               {people_field} AS people,
+               {costs}
+        FROM riski.exposure_data
+        {occupancy_join}
+        ON riski.exposure_data.id = riski.occupancy.exposure_data_id
+        {costs_join}
+        WHERE exposure_model_id = %s
+        AND riski.exposure_data.id IN %s
+        AND {occupants_cond}
+        GROUP BY riski.exposure_data.id
+        ORDER BY riski.exposure_data.id
+         """.format(people_field=people_field,
+                    occupants_cond=occupants_cond,
+                    costs=cost_type_fields,
+                    costs_join=cost_type_joins,
+                    occupancy_join=occupancy_join)
         return query, args
 
     def _get_people_query_helper(self, category, time_event):

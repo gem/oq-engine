@@ -18,6 +18,7 @@ from nose.plugins.attrib import attr
 from qa_tests import risk
 from openquake.engine.tests.utils import helpers
 from openquake.engine.db import models
+from openquake.engine.utils import config
 
 
 class ScenarioRiskCase1TestCase(risk.BaseRiskQATestCase):
@@ -25,7 +26,10 @@ class ScenarioRiskCase1TestCase(risk.BaseRiskQATestCase):
 
     @attr('qa', 'risk', 'scenario')
     def test(self):
-        self._run_test()
+        with config.context('celery', concurrent_tasks=1):
+            self._run_test()
+        with config.context('celery', concurrent_tasks=10):
+            self._run_test()
 
     def get_hazard_job(self):
         job = helpers.get_job(
@@ -47,10 +51,11 @@ class ScenarioRiskCase1TestCase(risk.BaseRiskQATestCase):
             output__oq_job=job,
             insured=True)
 
-        return [[[m.value, m.std_dev] for m in maps],
+        data = [[[m.value, m.std_dev] for m in maps],
                 [agg.mean, agg.std_dev],
                 [[m.value, m.std_dev] for m in insured_maps],
                 [insured_agg.mean, insured_agg.std_dev]]
+        return data
 
     def expected_data(self):
         return [[[440.14707, 182.6159],

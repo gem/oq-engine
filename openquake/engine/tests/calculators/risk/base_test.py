@@ -18,7 +18,6 @@ import unittest
 from openquake.engine.tests.utils import helpers
 from openquake.engine.tests.utils.helpers import get_data_path
 from openquake.engine.calculators.risk import base, hazard_getters
-from openquake.engine.tests.utils.tasks import fake_risk_task
 from openquake.engine.db import models
 
 
@@ -44,15 +43,20 @@ class FakeRiskCalculator(base.RiskCalculator):
     Fake Risk Calculator. Used to test the base class
     """
     output_builders = []
-    getter_class = hazard_getters.GroundMotionValuesGetter
-    core_calc_task = fake_risk_task
+    getter_class = hazard_getters.GroundMotionGetter
 
+    @staticmethod
+    def core(workflow, getter, outputdict, params, monitor):
+        return dict(result=1)
+
+    # NB: fake_risk_task returns {job.id: 1}
     def agg_result(self, acc, res):
         newacc = dict((key, acc.get(key, 0) + res[key]) for key in res)
         return newacc
 
     def get_workflow(self, vulnerability_functions):
         FakeWorkflow.vulnerability_functions = vulnerability_functions
+        FakeWorkflow.loss_types = ('structural',)
         return FakeWorkflow()
 
 
@@ -67,9 +71,8 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
 
     def test(self):
         self.calculator.pre_execute()
-        # there are 2 assets and 1 taxonomy; will generate a supertask
-        # for the taxonomy and 1 subtask, for the two assets
+        # there are 2 assets and 1 taxonomy, two tasks are generated
         self.assertEqual(self.calculator.taxonomies_asset_count, {'VF': 2})
 
         self.calculator.execute()
-        self.assertEqual(self.calculator.acc, {self.job.id: 1})
+        self.assertEqual(self.calculator.acc, {'result': 2})

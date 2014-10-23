@@ -20,58 +20,37 @@ Core functionality for the classical PSHA risk calculator.
 import itertools
 from openquake.risklib import workflows
 
-from django.db import transaction
-
-from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.calculators import post_processing
 from openquake.engine.calculators.risk import (
     base, hazard_getters, validation, writers)
-from openquake.engine.utils import tasks
+from openquake.engine.utils import calculators
 
 
-@tasks.oqtask
-def classical(job_id, risk_model, getters, outputdict, params):
+def classical(workflow, getter, outputdict, params, monitor):
     """
     Celery task for the classical risk calculator.
 
-    :param int job_id:
-      ID of the currently running job
-    :param risk_model:
+    :param workflow:
       A :class:`openquake.risklib.workflows.RiskModel` instance
-    :param getters:
-      A list of callable hazard getters
+    :param getter:
+      A HazardGetter instance
     :param outputdict:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (e.g. a LossCurve)
     :param params:
       An instance of :class:`..base.CalcParams` used to compute
       derived outputs
-    """
-    monitor = EnginePerformanceMonitor(None, job_id, classical, tracing=True)
-
-    # Do the job in other functions, such that they can be unit tested
-    # without the celery machinery
-    with transaction.commit_on_success(using='job_init'):
-        do_classical(risk_model, getters, outputdict, params, monitor)
-
-
-def do_classical(risk_model, getters, outputdict, params, monitor):
-    """
-    See `classical` for a description of the parameters.
     :param monitor:
-      a context manager for logging/profiling purposes
-
+      A monitor instance
     For each calculation unit we compute loss curves, loss maps and
     loss fractions. Then if the number of units are bigger than 1, we
     compute mean and quantile artifacts.
     """
-    outputs_per_loss_type = risk_model.compute_outputs(
-        getters, monitor.copy('getting data'))
-    stats_per_loss_type = risk_model.compute_stats(
-        outputs_per_loss_type, params.quantile_loss_curves, post_processing)
-
-    for loss_type, outputs in outputs_per_loss_type.iteritems():
-        stats = stats_per_loss_type[loss_type]
+    for loss_type in workflow.loss_types:
+        with monitor.copy('computing risk'):
+            outputs = workflow.compute_all_outputs(getter, loss_type)
+            stats = workflow.statistics(
+                outputs, params.quantile_loss_curves, post_processing)
         with monitor.copy('saving risk'):
             for out in outputs:
                 save_individual_outputs(
@@ -196,14 +175,14 @@ def save_statistical_output(outputdict, stats, params):
             output_type="loss_curve", statistics="quantile", insured=True)
 
 
+@calculators.add('classical_risk')
 class ClassicalRiskCalculator(base.RiskCalculator):
     """
     Classical PSHA risk calculator. Computes loss curves and loss maps
     for a given set of assets.
     """
 
-    #: celery task
-    core_calc_task = classical
+    core = staticmethod(classical)
 
     validators = base.RiskCalculator.validators + [
         validation.RequireClassicalHazard,
@@ -215,6 +194,13 @@ class ClassicalRiskCalculator(base.RiskCalculator):
     getter_class = hazard_getters.HazardCurveGetter
 
     def get_workflow(self, vulnerability_functions):
+        """
+        :param vulnerability_functions:
+            a dictionary of vulnerability functions
+        :returns:
+            an instance of
+            :class:`openquake.risklib.workflows.Classical`
+        """
         return workflows.Classical(
             vulnerability_functions,
             self.rc.lrem_steps_per_interval,
