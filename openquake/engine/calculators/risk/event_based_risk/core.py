@@ -434,6 +434,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                             stddev_loss=numpy.std(aggregate_losses))
 
     def get_workflow(self, vulnerability_functions):
+        """
+        :param vulnerability_functions:
+            a dictionary of vulnerability functions
+        :returns:
+            an instance of
+            :class:`openquake.risklib.workflows.ProbabilisticEventBased`
+        """
         time_span, tses = self.hazard_times()
         return workflows.ProbabilisticEventBased(
             vulnerability_functions,
@@ -450,4 +457,3 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
         return (self.rc.investigation_time,
                 self.hc.ses_per_logic_tree_path * self.hc.investigation_time)
-

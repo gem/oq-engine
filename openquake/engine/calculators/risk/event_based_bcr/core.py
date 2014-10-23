@@ -76,6 +76,15 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
     bcr = True
 
     def get_workflow(self, vf_orig, vf_retro):
+        """
+        :param vf_orig:
+            original vulnerability function
+        :param vf_orig:
+            retrofitted vulnerability functions
+        :returns:
+            an instance of
+            :class:`openquake.risklib.workflows.ProbabilisticEventBasedBCR`
+        """
         time_span, tses = self.hazard_times()
         return workflows.ProbabilisticEventBasedBCR(
             vf_orig, vf_retro,
