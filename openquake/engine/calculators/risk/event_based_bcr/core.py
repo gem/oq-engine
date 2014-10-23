@@ -45,7 +45,7 @@ def event_based_bcr(workflow, getter, outputdict, params, monitor):
       An instance of :class:`..base.CalcParams` used to compute
       derived outputs
     :param monitor:
-      A monitor factory
+      A monitor instance
     """
     for loss_type in workflow.loss_types:
         with monitor.copy('computing risk'):

@@ -41,7 +41,7 @@ def classical(workflow, getter, outputdict, params, monitor):
       An instance of :class:`..base.CalcParams` used to compute
       derived outputs
     :param monitor:
-      A monitor factory
+      A monitor instance
     For each calculation unit we compute loss curves, loss maps and
     loss fractions. Then if the number of units are bigger than 1, we
     compute mean and quantile artifacts.

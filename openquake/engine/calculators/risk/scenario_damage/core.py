@@ -46,7 +46,7 @@ def scenario_damage(workflow, getter, outputdict, params, monitor):
       An instance of :class:`..base.CalcParams` used to compute
       derived outputs
     :param monitor:
-      A monitor factory
+      A monitor instance
    :returns:
       A matrix of fractions and a taxonomy string
     """
