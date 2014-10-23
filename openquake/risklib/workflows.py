@@ -47,7 +47,8 @@ class Asset(object):
                  values,
                  deductibles=None,
                  insurance_limits=None,
-                 retrofitting_values=None):
+                 retrofitting_values=None,
+                 epsilons=None):
         """
         :param asset_id:
             an unique identifier of the assets within the given exposure
@@ -76,6 +77,7 @@ class Asset(object):
         self.retrofitting_values = retrofitting_values
         self.deductibles = deductibles
         self.insurance_limits = insurance_limits
+        self.epsilons = epsilons
 
     def value(self, loss_type):
         """
@@ -106,8 +108,24 @@ class Asset(object):
         return '<Asset %s>' % self.id
 
 
+class Workflow(object):
+    """
+    Base class. Can be used in the tests as a mock.
+    """
+    def __init__(self, vulnerability_functions):
+        self.vulnerability_functions = vulnerability_functions
+
+    @property
+    def loss_types(self):
+        """
+        The list of loss types in the underlying vulnerability functions,
+        in lexicographic order
+        """
+        return sorted(self.vulnerability_functions)
+
+
 @registry.add('classical_risk')
-class Classical(object):
+class Classical(Workflow):
     """
     Classical PSHA-Based Workflow.
 
@@ -312,32 +330,25 @@ class Classical(object):
             mean_insured_curves, mean_average_insured_losses,
             quantile_insured_curves, quantile_average_insured_losses)
 
-    def compute_all_outputs(self, getters, loss_type, getter_monitor):
+    def compute_all_outputs(self, getter, loss_type):
         """
-        :param getters:
-            a list of hazard getters, i.e. objects with a .get_data(imt) method
+        :param getter:
+            a getter object
         :param str loss_type:
             a string identifying the loss type we are considering
-        :getter_monitor:
-            a context manager monitoring the time and resources
-            spent the in the computation
         :returns:
             a number of outputs equal to the number of realizations
         """
         all_outputs = []
-        imt = self.vulnerability_functions[loss_type].imt
-        for getter in getters:
-            with getter_monitor.copy('getting hazard'):
-                hazard_curves = getter.get_data(imt)
-            with getter_monitor.copy('computing individual risk'):
-                all_outputs.append(
-                    Output(getter.hid, getter.weight, loss_type,
-                           self(loss_type, getter.assets, hazard_curves)))
+        for hazard in getter.get_hazards():  # for each realization
+            all_outputs.append(
+                Output(hazard.hid, hazard.weight, loss_type,
+                       self(loss_type, getter.assets, hazard.data)))
         return all_outputs
 
 
 @registry.add('event_based_risk')
-class ProbabilisticEventBased(object):
+class ProbabilisticEventBased(Workflow):
     """
     Implements the Probabilistic Event Based workflow
 
@@ -491,29 +502,19 @@ class ProbabilisticEventBased(object):
             insured_curves, average_insured_losses, stddev_insured_losses,
             maps, elt)
 
-    def compute_all_outputs(self, getters, loss_type, getter_monitor):
+    def compute_all_outputs(self, getter, loss_type):
         """
-        :param getters:
-            a list of hazard getters, i.e. objects with a .get_data(imt) method
+        :param getter:
+            a getter object
         :param str loss_type:
             a string identifying the loss type we are considering
-        :param getter_monitor:
-            a context manager monitoring the time and resources
-            spent the in the computation
         :returns:
             a number of outputs equal to the number of realizations
         """
-        all_outputs = []
-        imt = self.vulnerability_functions[loss_type].imt
-        for getter in getters:
-            with getter_monitor.copy('getting hazard'):
-                gmvs = numpy.array(getter.get_data(imt))
-            with getter_monitor.copy('computing individual risk'):
-                out = self(loss_type, getter.assets, gmvs,
-                           getter.get_epsilons(), getter.rupture_ids)
-                all_outputs.append(
-                    Output(getter.hid, getter.weight, loss_type, out))
-        return all_outputs
+        for hazard in getter.get_hazards():  # for each realization
+            out = self(loss_type, getter.assets, hazard.data,
+                       getter.get_epsilons(), getter.rupture_ids)
+            yield Output(hazard.hid, hazard.weight, loss_type, out)
 
     def statistics(self, all_outputs, quantiles, post_processing):
         """
@@ -588,7 +589,7 @@ class ProbabilisticEventBased(object):
 
 
 @registry.add('classical_bcr')
-class ClassicalBCR(object):
+class ClassicalBCR(Workflow):
     def __init__(self,
                  vulnerability_functions_orig,
                  vulnerability_functions_retro,
@@ -634,7 +635,7 @@ class ClassicalBCR(object):
 
 
 @registry.add('event_based_bcr')
-class ProbabilisticEventBasedBCR(object):
+class ProbabilisticEventBasedBCR(Workflow):
     def __init__(self,
                  vulnerability_functions_orig,
                  vulnerability_functions_retro,
@@ -677,7 +678,7 @@ class ProbabilisticEventBasedBCR(object):
 
 
 @registry.add('scenario_risk')
-class Scenario(object):
+class Scenario(Workflow):
     """
     Implements the Scenario workflow
     """
@@ -685,8 +686,7 @@ class Scenario(object):
         self.vulnerability_functions = vulnerability_functions
         self.insured_losses = insured_losses
 
-    def __call__(self, loss_type, assets, ground_motion_values,
-                 epsilons, _rupture_ids):
+    def __call__(self, loss_type, assets, ground_motion_values, epsilons):
         values = numpy.array([a.value(loss_type) for a in assets])
 
         loss_ratio_matrix = self.vulnerability_functions[loss_type].apply_to(
@@ -714,30 +714,36 @@ class Scenario(object):
         return (assets, loss_ratio_matrix, aggregate_losses,
                 insured_loss_matrix, insured_losses)
 
-    compute_all_outputs = ProbabilisticEventBased.compute_all_outputs.im_func
-
 
 @registry.add('scenario_damage')
-class Damage(object):
+class Damage(Workflow):
     def __init__(self, fragility_functions):
         # NB: we call the fragility_functions vulnerability_functions
         # for API compatibility
         self.vulnerability_functions = fragility_functions
 
-    def __call__(self, gmfs):
+    def __call__(self, loss_type, assets, gmfs, _epsilons=None):
         """
+        :param loss_type: the string 'damage'
+        :param assets: a list of N assets of the same taxonomy
         :param gmfs: an array of N x R elements
-        :returns: an array of N x R x D elements
+        :returns: an array of N assets and an array of N x R x D elements
 
         where N is the number of points, R the number of realizations
         and D the number of damage states.
         """
         ffs = self.vulnerability_functions['damage']
-        return numpy.array(
+        outs = numpy.array(
             [[scientific.scenario_damage(ffs, gmv) for gmv in gmvs]
              for gmvs in gmfs])
+        return assets, outs
 
 
+# NB: the approach used here relies on the convention of having the
+# names of the arguments of the workflow class to be equal to the
+# names of the parameter in the oqparam object. This is view as a
+# feature, since it forces people to be consistent with the names,
+# in the spirit of the 'convention over configuration' philosophy
 def get_workflow(oqparam, **extra):
     """
     Return an instance of the correct workflow class, depending on the
@@ -761,77 +767,25 @@ def get_workflow(oqparam, **extra):
     return workflow_class(**all_args)
 
 
-class RiskModel(object):
+class RiskModel(collections.Mapping):
     """
-    Container for the attributes imt, taxonomy and workflow.
+    A container (imt, taxonomy) -> workflow
     """
-    def __init__(self, imt, taxonomy, workflow):
-        self.imt = imt
-        self.taxonomy = taxonomy
-        self.workflow = workflow
+    def __init__(self, workflows, damage_states=None):
+        self.damage_states = damage_states  # not None for damage calculations
+        self._workflows = workflows
 
-    @property
-    def loss_types(self):
+    def get_taxonomies(self):
         """
-        The list of loss types in the underlying vulnerability functions,
-        in lexicographic order
+        Return the set of taxonomies which are part of the RiskModel
         """
-        return sorted(self.workflow.vulnerability_functions)
+        return set(taxonomy for imt, taxonomy in self)
 
-    @property
-    def vulnerability_functions(self):
-        """
-        The list of the underlying vulnerability functions, in order
-        """
-        return [self.workflow.vulnerability_functions[lt]
-                for lt in self.loss_types]
+    def __getitem__(self, imt_taxo):
+        return self._workflows[imt_taxo]
 
-    def compute_outputs(self, getters, getter_monitor):
-        """
-        :param getters:
-            a list of callable hazard getters
-        :param getter_monitor:
-            a context manager monitoring the time and resources
-            spent the in the computation
-        :returns:
-            a dictionary with the outputs corresponding to the
-            hazard realizations, keyed by the loss type
-        """
-        return dict((loss_type, self.workflow.compute_all_outputs(
-                    getters, loss_type, getter_monitor))
-                    for loss_type in self.loss_types)
+    def __iter__(self):
+        return iter(sorted(self._workflows))
 
-    def compute_output(self, getter, getter_monitor):
-        """
-        :param getter:
-            a callable hazard getter
-        :param getter_monitor:
-            a context manager monitoring the time and resources
-            spent the in the computation
-        :returns:
-            a dictionary with the output corresponding to the
-            getter, keyed by the loss type
-        """
-        return dict((loss_type, self.workflow.compute_all_outputs(
-                    [getter], loss_type, getter_monitor)[0])
-                    for loss_type in self.loss_types)
-
-    def compute_stats(self, outputs, quantiles, post_processing):
-        """
-        :param outputs:
-            output returned by compute_outputs for a given loss type
-        :param quantiles:
-            quantile levels used to compute quantile outputs
-        :param post_processing:
-            an object implementing the following protocol:
-            #mean_curve(curves, weights)
-            #weighted_quantile_curve(curves, weights, quantile)
-            #quantile_curve(curves, quantile)
-        :returns:
-            a dictionary with the stats corresponding to the
-            hazard realizations, keyed by the loss type.
-            If there is a single realization, the stats are None.
-        """
-        return dict((loss_type, self.workflow.statistics(
-                    outputs[loss_type], quantiles, post_processing))
-                    for loss_type in outputs)
+    def __len__(self):
+        return len(self._workflows)
