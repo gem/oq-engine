@@ -28,7 +28,6 @@ Model representations of the OpenQuake DB tables.
 import os
 import collections
 import operator
-import itertools
 from datetime import datetime
 
 
@@ -2833,7 +2832,6 @@ class AssetManager(djm.GeoManager):
         assocs = sorted(assocs, key=lambda assoc: assoc.asset.id)
         asset_ids = tuple(assoc.asset.id for assoc in assocs)
         query, args = self._get_asset_chunk_query_args(rc, asset_ids)
-        # print getcursor('job_init').mogrify(query, args)
         with transaction.commit_on_success('job_init'):
             annotated_assets = list(self.raw(query, args))
         # add asset_site_id attribute to each asset

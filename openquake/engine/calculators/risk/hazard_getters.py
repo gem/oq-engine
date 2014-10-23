@@ -78,8 +78,8 @@ def make_epsilons(asset_count, num_samples, seed, correlation):
 
 class HazardGetter(object):
     """
-    A HazardGetter objects stores a chunk of assets and their associated
-    hazard data. In case of scenario and event based calculators it
+    A HazardGetter instance stores a chunk of assets and their associated
+    hazard data. In the case of scenario and event based calculators it
     also stores the ruptures and the epsilons.
     The HazardGetter must be pickable such that it
     should be possible to use different strategies (e.g. distributed
@@ -142,12 +142,7 @@ class HazardCurveGetter(HazardGetter):
     """ + HazardGetter.__doc__
 
     def _get_data(self, ho):
-        """
-        Extracts the hazard curves for the given `imt` from the hazard output.
-
-        :param str imt: Intensity Measure Type
-        :returns: a list of N curves, each one being a list of pairs (iml, poe)
-        """
+        # extract the poes for each site from the given hazard output
         imt_type, sa_period, sa_damping = from_string(self.imt)
         oc = ho.output_container
         if oc.output.output_type == 'hazard_curve':
@@ -255,9 +250,7 @@ class GroundMotionGetter(HazardGetter):
         return eps
 
     def _get_gmv_dict(self, ho):
-        """
-        :returns: a dictionary {rupture_id: gmv} for the given site and IMT
-        """
+        # return a nested dictionary site_id -> {rupture_id: gmv}
         imt_type, sa_period, sa_damping = from_string(self.imt)
         gmf_id = ho.output_container.id
         if sa_period:
@@ -281,11 +274,7 @@ class GroundMotionGetter(HazardGetter):
         return gmv_dict
 
     def _get_data(self, ho):
-        """
-        Extracts the GMFs for the given `imt` from the hazard output.
-
-        :returns: a list of N arrays with R elements each.
-        """
+        # return a list of N arrays with R elements each
         all_gmvs = []
         no_data = 0
         gmv_dict = self.hazards[ho]
@@ -304,9 +293,9 @@ class GroundMotionGetter(HazardGetter):
 class RiskInitializer(object):
     """
     A facility providing the brigde between the hazard (sites and outputs)
-    and the risk (assets and risk models). When instantiated, populates
-    the `asset_site` table with the associations between the assets in
-    the current exposure model and the sites in the previous hazard
+    and the risk (assets and risk models). When .init_assocs is called,
+    populates the `asset_site` table with the associations between the assets
+    in the current exposure model and the sites in the previous hazard
     calculation.
 
     :param hazard_outputs:
@@ -446,7 +435,7 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
             num_assets, num_samples = self.epsilons_shape[scid]
             self._rupture_ids[scid] = ses_coll.get_ruptures(
                 ).values_list('id', flat=True)
-            # do not build the epsilons for scenario_damage
+            # build the epsilons, except for scenario_damage
             if self.calculation_mode != 'scenario_damage':
                 logs.LOG.info('Building (%d, %d) epsilons for taxonomy %s',
                               num_assets, num_samples, self.taxonomy)
