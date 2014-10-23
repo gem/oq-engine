@@ -3,9 +3,18 @@
 
 import decimal
 import os
-import inspect
 import importlib
 import collections
+
+
+class _Register(collections.OrderedDict):
+    def add(self, tag):
+        def dec(obj):
+            self[tag] = obj
+            return obj
+        return dec
+
+calculators = _Register()  # an ordered dictionary of calculator classes
 
 
 def round_float(value):
@@ -50,22 +59,16 @@ def get_core_modules(pkg):
     return sorted(modules)
 
 
-def get_available_calculators(pkg, job_type):
+def get_available_calculators(pkg):
     """
-    :param pkg: a Python package
-    :param str job_type: "hazard" or "risk"
+    :param pkg: a package such as calculators.risk or calculators.hazard
     :returns: an OrderedDict {calc_mode: calc_class} built by looking
-    at all the calculators in the package.
+              at all the calculators in the package.
     """
-    clsname = job_type.capitalize() + 'Calculator'
-    calc = {}  # calc_mode -> calc_class
+    # import all the core modules and populate the calculators dictionary
     for modname in get_core_modules(pkg):
-        name = modname.split('.')[-2]  # openquake...<name>.core
-        mod = importlib.import_module(modname)
-        for cls in mod.__dict__.itervalues():
-            if inspect.isclass(cls) and clsname in cls.__name__:
-                calc[name] = cls
-    return collections.OrderedDict((k, calc[k]) for k in sorted(calc))
+        importlib.import_module(modname)
+    return calculators
 
 
 def get_calculator_class(job_type, calc_mode):
@@ -76,7 +79,7 @@ def get_calculator_class(job_type, calc_mode):
     """
     assert job_type in ("hazard", "risk"), job_type
     pkg = importlib.import_module('openquake.engine.calculators.%s' % job_type)
-    return get_available_calculators(pkg, job_type)[calc_mode]
+    return get_available_calculators(pkg)[calc_mode]
 
 
 class FileWrapper(object):

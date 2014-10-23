@@ -16,10 +16,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Hazard getters for Risk calculators.
-
-A HazardGetter is responsible fo getting hazard outputs needed by a risk
-calculation.
+Hazard input management for Risk calculators.
 """
 import itertools
 import operator
@@ -36,11 +33,36 @@ from django.db import transaction
 
 BYTES_PER_FLOAT = numpy.zeros(1, dtype=float).nbytes
 
-NRUPTURES = 1  # constant for readability
-
 
 class AssetSiteAssociationError(Exception):
     pass
+
+
+class Hazard(object):
+    """
+    Hazard objects have attributes .hazard_output, .data and .imt.
+    Moreover you can extract the .hid (hazard_output.id) and the
+    .weight associated to the underlying realization.
+    The hazard .data is a numpy array of shape (N, R) where N is the
+    number of assets and R the number of seismic events (ruptures)
+    or the resolution of the hazard curve, depending on the calculator.
+    """
+    def __init__(self, hazard_output, data, imt):
+        self.hazard_output = hazard_output
+        self.data = data
+        self.imt = imt
+
+    @property
+    def hid(self):
+        """Return the id of the given hazard output"""
+        return self.hazard_output.id
+
+    @property
+    def weight(self):
+        """Return the realization weight of the hazard output"""
+        h = self.hazard_output.output_container
+        if hasattr(h, 'lt_realization') and h.lt_realization:
+            return h.lt_realization.weight
 
 
 def make_epsilons(asset_count, num_samples, seed, correlation):
@@ -56,15 +78,12 @@ def make_epsilons(asset_count, num_samples, seed, correlation):
 
 class HazardGetter(object):
     """
-    A Hazard Getter is used to query for the closest hazard data for
-    each given asset. A Hazard Getter must be pickable such that it
+    A HazardGetter instance stores a chunk of assets and their associated
+    hazard data. In the case of scenario and event based calculators it
+    also stores the ruptures and the epsilons.
+    The HazardGetter must be pickable such that it
     should be possible to use different strategies (e.g. distributed
     or not, using postgis or not).
-    A Hazard Getter should be instantiated by a GetterBuilder and
-    not directly.
-
-    :attr hazard_output:
-        A :class:`openquake.engine.db.models.Output` instance
 
     :attr assets:
         The assets for which we want to extract the hazard
@@ -72,38 +91,48 @@ class HazardGetter(object):
    :attr site_ids:
         The ids of the sites associated to the hazards
     """
-    builder = None  # set by the GetterBuilder
-    epsilons = None  # overridden in the GroundMotionValuesGetter
-
-    def __init__(self, hazard_output, assets, site_ids):
-        self.hazard_output = hazard_output
+    def __init__(self, imt, taxonomy, hazard_outputs, assets):
+        self.imt = imt
+        self.taxonomy = taxonomy
+        self.hazard_outputs = hazard_outputs
         self.assets = assets
-        self.site_ids = site_ids
+        self.site_ids = []
+        self.asset_site_ids = []
+        # asset_site associations
+        for asset in self.assets:
+            asset_site_id = asset.asset_site_id
+            assoc = models.AssetSite.objects.get(pk=asset_site_id)
+            self.site_ids.append(assoc.site.id)
+            self.asset_site_ids.append(asset_site_id)
 
-    def __repr__(self):
-        shape = getattr(self.epsilons, 'shape', None)
-        eps = ', %s epsilons' % str(shape) if shape else ''
-        return "<%s %d assets%s, taxonomy=%s>" % (
-            self.__class__.__name__, len(self.assets), eps,
-            self.builder.taxonomy)
+    def get_hazards(self):
+        """
+        Return a list of Hazard instances for the given IMT.
+        """
+        return [Hazard(ho, self._get_data(ho), self.imt)
+                for ho in self.hazard_outputs]
 
     def get_data(self):
         """
-        Subclasses must implement this.
+        Shortcut returning the hazard data when there is a single realization
         """
-        raise NotImplementedError
+        [hazard] = self.get_hazards()
+        return hazard.data
 
     @property
     def hid(self):
-        """Return the id of the given hazard output"""
-        return self.hazard_output.id
+        """
+        Return the id of the hazard output, when there is a single realization
+        """
+        [ho] = self.hazard_outputs
+        return ho.id
 
-    @property
-    def weight(self):
-        """Return the weight of the realization of the hazard output"""
-        h = self.hazard_output.output_container
-        if hasattr(h, 'lt_realization') and h.lt_realization:
-            return h.lt_realization.weight
+    def __repr__(self):
+        eps = getattr(self, 'epsilons', None)
+        eps = '' if eps is None else ', %s epsilons' % str(eps.shape)
+        return "<%s %d assets%s, taxonomy=%s>" % (
+            self.__class__.__name__, len(self.assets), eps,
+            self.taxonomy)
 
 
 class HazardCurveGetter(HazardGetter):
@@ -112,16 +141,10 @@ class HazardCurveGetter(HazardGetter):
     asset.
     """ + HazardGetter.__doc__
 
-    def get_data(self, imt):
-        """
-        Extracts the hazard curves for the given `imt` from the hazard output.
-
-        :param str imt: Intensity Measure Type
-        :returns: a list of N curves, each one being a list of pairs (iml, poe)
-        """
-        imt_type, sa_period, sa_damping = from_string(imt)
-
-        oc = self.hazard_output.output_container
+    def _get_data(self, ho):
+        # extract the poes for each site from the given hazard output
+        imt_type, sa_period, sa_damping = from_string(self.imt)
+        oc = ho.output_container
         if oc.output.output_type == 'hazard_curve':
             imls = oc.imls
         elif oc.output.output_type == 'hazard_curve_multi':
@@ -170,45 +193,54 @@ def expand(array, N):
     return numpy.array([array[i % n] for i in xrange(N)])
 
 
-class GroundMotionValuesGetter(HazardGetter):
+def haz_out_to_ses_coll(ho):
+    if ho.output_type == 'gmf_scenario':
+        out = models.Output.objects.get(output_type='ses', oq_job=ho.oq_job)
+        return [out.ses]
+
+    return models.SESCollection.objects.filter(
+        trt_model__lt_model=ho.output_container.lt_realization.lt_model)
+
+
+class GroundMotionGetter(HazardGetter):
     """
     Hazard getter for loading ground motion values.
     """ + HazardGetter.__doc__
-    sescolls = ()  # set by the GetterBuilder
-    asset_site_ids = None  # set by the GetterBuilder
 
-    @property
-    def rupture_ids(self):
+    def __init__(self, imt, taxonomy, hazard_outputs, assets):
         """
-        Rupture_ids for the current getter
+        Perform the needed queries on the database to populate
+        hazards and epsilons.
         """
-        rupids = []
-        for sc in self.sescolls:
-            rupids.extend(self.builder.rupture_ids[sc.id])
-        return rupids
-
-    @property
-    def epsilons(self):
-        """
-        Epsilon matrix for the current getter
-        """
+        HazardGetter.__init__(self, imt, taxonomy, hazard_outputs, assets)
+        self.hazards = {}  # dict ho, imt -> {site_id: {rup_id: gmv}}
+        self.rupture_ids = []
+        sescolls = set()
+        for ho in self.hazard_outputs:
+            self.hazards[ho] = self._get_gmv_dict(ho)
+            for sc in haz_out_to_ses_coll(ho):
+                sescolls.add(sc)
+        sescolls = sorted(sescolls)
+        for sc in sescolls:
+            self.rupture_ids.extend(
+                sc.get_ruptures().values_list('id', flat=True))
         epsilon_rows = []  # ordered by asset_site_id
         for asset_site_id in self.asset_site_ids:
             row = []
             for eps in models.Epsilon.objects.filter(
-                    ses_collection__in=self.sescolls,
+                    ses_collection__in=sescolls,
                     asset_site=asset_site_id):
                 row.extend(eps.epsilons)
             epsilon_rows.append(row)
-        assert epsilon_rows, ('No epsilons for ses_collection_ids=%s' %
-                              [sc.id for sc in self.sescolls])
-        return numpy.array(epsilon_rows)
+        if epsilon_rows:
+            self.epsilons = numpy.array(epsilon_rows)
 
     def get_epsilons(self):
         """
-        Expand the inner epsilons to the right number, if needed
+        Expand the underlying epsilons
         """
         eps = self.epsilons
+        # expand the inner epsilons to the right number, if needed
         _n, m = eps.shape
         e = len(self.rupture_ids)
         if e > m:  # there are more ruptures than epsilons
@@ -217,16 +249,15 @@ class GroundMotionValuesGetter(HazardGetter):
             return expand(eps.T, e).T
         return eps
 
-    def _get_gmv_dict(self, imt_type, sa_period, sa_damping):
-        """
-        :returns: a dictionary {rupture_id: gmv} for the given site and IMT
-        """
-        gmf_id = self.hazard_output.output_container.id
+    def _get_gmv_dict(self, ho):
+        # return a nested dictionary site_id -> {rupture_id: gmv}
+        imt_type, sa_period, sa_damping = from_string(self.imt)
+        gmf_id = ho.output_container.id
         if sa_period:
             imt_query = 'imt=%s and sa_period=%s and sa_damping=%s'
         else:
             imt_query = 'imt=%s and sa_period is %s and sa_damping is %s'
-        gmv_dict = {}
+        gmv_dict = {}  # dict site_id -> {rup_id: gmv}
         cursor = models.getcursor('job_init')
         cursor.execute('select site_id, rupture_ids, gmvs from '
                        'hzrdr.gmf_data where gmf_id=%s and site_id in %s '
@@ -242,54 +273,56 @@ class GroundMotionValuesGetter(HazardGetter):
             gmv_dict[sid] = dict(itertools.izip(ruptures, gmvs))
         return gmv_dict
 
-    def get_data(self, imt):
-        """
-        Extracts the GMFs for the given `imt` from the hazard output.
-
-        :param str imt: Intensity Measure Type
-        :returns: a list of N arrays with R elements each.
-        """
-        imt_type, sa_period, sa_damping = from_string(imt)
-        gmv_dict = self._get_gmv_dict(imt_type, sa_period, sa_damping)
+    def _get_data(self, ho):
+        # return a list of N arrays with R elements each
         all_gmvs = []
+        no_data = 0
+        gmv_dict = self.hazards[ho]
         for site_id in self.site_ids:
             gmv = gmv_dict.get(site_id, {})
             if not gmv:
-                logs.LOG.info('No data for site_id=%d, imt=%s', site_id, imt)
+                no_data += 1
             array = numpy.array([gmv.get(r, 0.) for r in self.rupture_ids])
             all_gmvs.append(array)
+        if no_data:
+            logs.LOG.info('No data for %d assets out of %d, IMT=%s',
+                          no_data, len(self.site_ids), self.imt)
         return all_gmvs
 
 
-class GetterBuilder(object):
+class RiskInitializer(object):
     """
-    A facility to build hazard getters. When instantiated, populates
-    the lists .asset_ids and .site_ids with the associations between
-    the assets in the current exposure model and the sites in the
-    previous hazard calculation. It also populate the `asset_site`
-    table in the database.
+    A facility providing the brigde between the hazard (sites and outputs)
+    and the risk (assets and risk models). When .init_assocs is called,
+    populates the `asset_site` table with the associations between the assets
+    in the current exposure model and the sites in the previous hazard
+    calculation.
 
-    :param str taxonomy: the taxonomy we are interested in
-    :param rc: a :class:`openquake.engine.db.models.RiskCalculation` instance
+    :param hazard_outputs:
+        outputs of the previous hazard calculation
+    :param taxonomy:
+        the taxonomy of the assets we are interested in
+    :param rc:
+        a :class:`openquake.engine.db.models.RiskCalculation` instance
 
-    Warning: instantiating a GetterBuilder performs a potentially
+    Warning: instantiating a RiskInitializer may perform a potentially
     expensive geospatial query.
     """
-    def __init__(self, taxonomy, rc, epsilon_sampling=0):
+    def __init__(self, taxonomy, rc):
+        self.hazard_outputs = rc.hazard_outputs()
         self.taxonomy = taxonomy
         self.rc = rc
-        self.epsilon_sampling = epsilon_sampling
         self.hc = rc.hazard_calculation
-        self.calculation_mode = self.hc.get_param('calculation_mode')
+        self.calculation_mode = self.rc.oqjob.get_param('calculation_mode')
         self.number_of_ground_motion_fields = self.hc.get_param(
             'number_of_ground_motion_fields', 0)
         max_dist = rc.best_maximum_distance * 1000  # km to meters
-        cursor = models.getcursor('job_init')
+        self.cursor = models.getcursor('job_init')
 
         hazard_exposure = models.extract_from([self.hc], 'exposuremodel')
         if self.rc.exposure_model is hazard_exposure:
             # no need of geospatial queries, just join on the location
-            self.assoc_query = cursor.mogrify("""\
+            self.assoc_query = self.cursor.mogrify("""\
 WITH assocs AS (
   SELECT %s, exp.id, hsite.id
   FROM riski.exposure_data AS exp
@@ -305,7 +338,7 @@ SELECT * FROM assocs""", (rc.oqjob.id, self.hc.id,
                           rc.region_constraint.wkt))
         else:
             # associate each asset to the closest hazard site
-            self.assoc_query = cursor.mogrify("""\
+            self.assoc_query = self.cursor.mogrify("""\
 WITH assocs AS (
   SELECT DISTINCT ON (exp.id) %s, exp.id, hsite.id
   FROM riski.exposure_data AS exp
@@ -321,50 +354,54 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
                           rc.exposure_model.id, taxonomy,
                           rc.region_constraint.wkt))
 
+        self.num_assets = 0
+        self._rupture_ids = {}
+        self.epsilons_shape = {}
+
+    def init_assocs(self):
+        """
+        Stores the associations asset <-> site into the database
+        """
         # insert the associations for the current taxonomy
         with transaction.commit_on_success(using='job_init'):
-            cursor.execute(self.assoc_query)
+            self.cursor.execute(self.assoc_query)
 
         # now read the associations just inserted
-        self.asset_sites = models.AssetSite.objects.filter(
-            job=rc.oqjob, asset__taxonomy=taxonomy)
-        if not self.asset_sites:
+        self.num_assets = models.AssetSite.objects.filter(
+            job=self.rc.oqjob, asset__taxonomy=self.taxonomy).count()
+
+        # check if there are no associations
+        if self.num_assets == 0:
             raise AssetSiteAssociationError(
                 'Could not associate any asset of taxonomy %s to '
                 'hazard sites within the distance of %s km'
-                % (taxonomy, self.rc.best_maximum_distance))
+                % (self.taxonomy, self.rc.best_maximum_distance))
 
-        self.asset_ids = [a.asset_id for a in self.asset_sites]
-        self.site_ids = [a.site_id for a in self.asset_sites]
-        self.rupture_ids = {}
-        self.epsilons_shape = {}
-
-    def calc_nbytes(self, hazard_outputs):
+    def calc_nbytes(self, epsilon_sampling=None):
         """
-        :param hazard_outputs: the outputs of a hazard calculation
-        :returns: the number of bytes to be allocated (can be
-                  much less if there is no correlation and the 'fast'
-                  epsilons management is enabled).
+        :param epsilon_sampling:
+             flag saying if the epsilon_sampling feature is enabled
+        :returns:
+            the number of bytes to be allocated (a guess)
 
         If the hazard_outputs come from an event based or scenario computation,
         populate the .epsilons_shape dictionary.
         """
-        num_assets = len(self.asset_ids)
-        if self.calculation_mode == 'event_based':
+        if self.calculation_mode.startswith('event_based'):
             lt_model_ids = set(ho.output_container.lt_realization.lt_model.id
-                               for ho in hazard_outputs)
+                               for ho in self.hazard_outputs)
             for trt_model in models.TrtModel.objects.filter(
                     lt_model__in=lt_model_ids):
                 ses_coll = models.SESCollection.objects.get(
                     trt_model=trt_model)
                 num_ruptures = ses_coll.get_ruptures().count()
-                samples = min(self.epsilon_sampling, num_ruptures) \
-                    if self.epsilon_sampling else num_ruptures
-                self.epsilons_shape[ses_coll.id] = (num_assets, samples)
-        elif self.calculation_mode == 'scenario':
+                samples = min(epsilon_sampling, num_ruptures) \
+                    if epsilon_sampling else num_ruptures
+                self.epsilons_shape[ses_coll.id] = (self.num_assets, samples)
+        elif self.calculation_mode.startswith('scenario'):
             [out] = self.hc.output_set.filter(output_type='ses')
             samples = self.number_of_ground_motion_fields
-            self.epsilons_shape[out.ses.id] = (num_assets, samples)
+            self.epsilons_shape[out.ses.id] = (self.num_assets, samples)
         nbytes = 0
         for (n, r) in self.epsilons_shape.values():
             # the max(n, r) is taken because if n > r then the limiting
@@ -372,21 +409,23 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
             nbytes += max(n, r) * n * BYTES_PER_FLOAT
         return nbytes
 
-    def init_epsilons(self, hazard_outputs):
+    def init_epsilons(self, epsilon_sampling=None):
         """
-        :param hazard_outputs: the outputs of a hazard calculation
+        :param epsilon_sampling:
+             flag saying if the epsilon_sampling feature is enabled
 
-        If the hazard_outputs come from an event based or scenario computation,
-        populate the .epsilons and the .rupture_ids dictionaries.
+        Populate the .epsilons_shape and the ._rupture_ids dictionaries.
+        For the calculators `event_based_risk` and `scenario_risk` also
+        stores the epsilons in the database for each asset_site association.
         """
         if not self.epsilons_shape:
-            self.calc_nbytes(hazard_outputs)
-        if self.calculation_mode == 'event_based':
+            self.calc_nbytes(epsilon_sampling)
+        if self.calculation_mode.startswith('event_based'):
             lt_model_ids = set(ho.output_container.lt_realization.lt_model.id
-                               for ho in hazard_outputs)
+                               for ho in self.hazard_outputs)
             ses_collections = models.SESCollection.objects.filter(
                 trt_model__lt_model__in=lt_model_ids)
-        elif self.calculation_mode == 'scenario':
+        elif self.calculation_mode.startswith('scenario'):
             [out] = self.hc.output_set.filter(output_type='ses')
             ses_collections = [out.ses]
         else:
@@ -394,77 +433,15 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
         for ses_coll in ses_collections:
             scid = ses_coll.id  # ses collection id
             num_assets, num_samples = self.epsilons_shape[scid]
-            self.rupture_ids[scid] = ses_coll.get_ruptures(
-                ).values_list('id', flat=True) or range(
-                self.number_of_ground_motion_fields)
-            logs.LOG.info('Building (%d, %d) epsilons for taxonomy %s',
-                          num_assets, num_samples, self.taxonomy)
-            eps = make_epsilons(
-                num_assets, num_samples,
-                self.rc.master_seed, self.rc.asset_correlation)
-            models.Epsilon.saveall(ses_coll, self.asset_sites, eps)
-
-    def make_getters(self, gettercls, hazard_outputs, annotated_assets):
-        """
-        Build the appropriate hazard getters from the given hazard
-        outputs. The assets which have no corresponding hazard site
-        within the maximum distance are discarded. An AssetSiteAssociationError
-        is raised if all assets are discarded. From outputs coming from
-        an event based or a scenario calculation the right epsilons
-        corresponding to the assets are stored in the database
-
-        :param gettercls:
-            the HazardGetter subclass to use
-        :param hazard_outputs:
-            the outputs of a hazard calculation
-        :param annotated_assets:
-            a block of assets with additional attributes
-
-        :returns: a list of HazardGetter instances
-        """
-        # NB: the annotations to the assets are added by models.AssetManager
-        asset_sites = models.AssetSite.objects.filter(
-            job=self.rc.oqjob, asset__in=annotated_assets)
-        if not asset_sites:
-            raise AssetSiteAssociationError(
-                'Could not associate any asset in %s to '
-                'hazard sites within the distance of %s km'
-                % (annotated_assets, self.rc.best_maximum_distance))
-        if not self.epsilons_shape:
-            self.init_epsilons(hazard_outputs)
-
-        # skip the annotated assets without hazard
-        asset_site_dict = {a.asset.id: a.site.id for a in asset_sites}
-        annotated = []
-        site_ids = []
-        skipped = []
-        for asset in annotated_assets:
-            try:
-                site_id = asset_site_dict[asset.id]
-            except KeyError:
-                # skipping assets without hazard
-                skipped.append(asset.asset_ref)
-                continue
-            annotated.append(asset)
-            site_ids.append(site_id)
-        if skipped:
-            logs.LOG.warn('Could not associate %d assets to hazard sites '
-                          'within the distance of %s km', len(skipped),
-                          self.rc.best_maximum_distance)
-
-        # build the getters
-        getters = []
-        for ho in hazard_outputs:
-            getter = gettercls(ho, annotated, site_ids)
-            getter.builder = self
-            if self.calculation_mode == 'event_based':
-                getter.sescolls = models.SESCollection.objects.filter(
-                    trt_model__lt_model=
-                    ho.output_container.lt_realization.lt_model)
-                getter.asset_site_ids = [a.id for a in asset_sites]
-            elif self.calculation_mode == 'scenario':
-                [out] = ho.oq_job.output_set.filter(output_type='ses')
-                getter.sescolls = [out.ses]
-                getter.asset_site_ids = [a.id for a in asset_sites]
-            getters.append(getter)
-        return getters
+            self._rupture_ids[scid] = ses_coll.get_ruptures(
+                ).values_list('id', flat=True)
+            # build the epsilons, except for scenario_damage
+            if self.calculation_mode != 'scenario_damage':
+                logs.LOG.info('Building (%d, %d) epsilons for taxonomy %s',
+                              num_assets, num_samples, self.taxonomy)
+                asset_sites = models.AssetSite.objects.filter(
+                    job=self.rc.oqjob, asset__taxonomy=self.taxonomy)
+                eps = make_epsilons(
+                    num_assets, num_samples,
+                    self.rc.master_seed, self.rc.asset_correlation)
+                models.Epsilon.saveall(ses_coll, asset_sites, eps)

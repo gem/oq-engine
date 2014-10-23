@@ -114,16 +114,19 @@ def map_reduce(task, task_args, agg, acc, name=None):
     :returns: the final value of the accumulator
     """
     oqm = OqTaskManager(task, logs.LOG.progress, name)
-    for args in task_args:
+    for i, args in enumerate(task_args, 1):
+        logs.LOG.info('Submitting task %s #%d', oqm.name, i)
         oqm.submit(*args)
     return oqm.aggregate_results(agg, acc)
 
 
 def apply_reduce(task, task_args,
-                 agg=lambda a, x: x, acc=None,
+                 agg=lambda a, x: x,
+                 acc=None,
                  concurrent_tasks=CONCURRENT_TASKS,
                  weight=lambda item: 1,
-                 key=lambda item: 'Unspecified'):
+                 key=lambda item: 'Unspecified',
+                 name=None):
     """
     Apply a task to a tuple of the form (job_id, data, *args)
     by splitting the data in chunks and reduce the results with an
@@ -145,8 +148,8 @@ def apply_reduce(task, task_args,
     elif len(data) == 1 or not concurrent_tasks:
         return agg(acc, task.task_func(job_id, data, *args))
     blocks = split_in_blocks(data, concurrent_tasks, weight, key)
-    alldata = [(job_id, block) + args for block in blocks]
-    return map_reduce(task, alldata, agg, acc)
+    all_args = [(job_id, block) + args for block in blocks]
+    return map_reduce(task, all_args, agg, acc, name)
 
 
 # used to implement BaseCalculator.parallelize, which takes in account

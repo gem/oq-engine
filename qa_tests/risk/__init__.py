@@ -210,6 +210,7 @@ class CompleteTestCase(object):
             elif data_hash[0] == 'loss_fraction':
                 actual_path = self._test_path("actual/fractions.csv")
                 actual_file = open(actual_path, 'w')
+
             assert data_hash in outputs, \
                 "The output with hash %s is missing" % str(data_hash)
             actual_output = outputs[data_hash]

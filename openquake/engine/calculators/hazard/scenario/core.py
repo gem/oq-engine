@@ -30,7 +30,7 @@ from openquake.commonlib.general import split_in_blocks
 from openquake.commonlib.readinput import get_rupture
 
 from openquake.engine.calculators.hazard import general as haz_general
-from openquake.engine.utils import tasks
+from openquake.engine.utils import tasks, calculators
 from openquake.engine.db import models
 from openquake.engine import logs, writer
 from openquake.engine.performance import EnginePerformanceMonitor
@@ -109,6 +109,7 @@ def create_db_ruptures(rupture, ses_coll, tags, seed):
     return prob_rup.id, inserter.saveall(sesrupts)
 
 
+@calculators.add('scenario')
 class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
     """
     Scenario hazard calculator. Computes ground motion fields.
@@ -140,7 +141,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         # without rollback, see
         # https://docs.djangoproject.com/en/1.3/topics/db/transactions/
         with transaction.commit_on_success(using='job_init'):
-            self.parse_risk_models()
+            self.parse_risk_model()
         with transaction.commit_on_success(using='job_init'):
             self.initialize_site_collection()
 

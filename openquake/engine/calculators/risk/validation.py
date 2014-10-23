@@ -42,13 +42,12 @@ class HazardIMT(Validator):
     intensity measure types given in the risk models
     """
     def get_error(self):
-        model_imts = set(imt for (imt, taxo) in self.calc.risk_models)
+        model_imts = set(imt for imt, taxo in self.calc.risk_model)
         imts = sorted(get_imtls(self.calc.rc.get_hazard_param()))
 
         # check that the hazard data have all the imts needed by the
         # risk calculation
         missing = set(model_imts) - set(imts)
-
         if missing:
             return ("There is no hazard output for: %s. "
                     "The available IMTs are: %s." % (", ".join(missing),
@@ -74,8 +73,8 @@ class OrphanTaxonomies(Validator):
     """
     def get_error(self):
         taxonomies = self.calc.taxonomies_asset_count
-        orphans = set(taxonomies) - set(
-            taxo for imt, taxo in self.calc.risk_models)
+        rm_taxonomies = set(imt_taxo[1] for imt_taxo in self.calc.risk_model)
+        orphans = set(taxonomies) - rm_taxonomies
         if orphans and not self.calc.rc.taxonomies_from_model:
             return ('The following taxonomies are in the exposure model '
                     'but not in the risk model: %s' % orphans)
@@ -95,7 +94,7 @@ class ExposureLossTypes(Validator):
 
 class NoRiskModels(Validator):
     def get_error(self):
-        if not self.calc.risk_models:
+        if not self.calc.risk_model:
             return 'At least one risk model of type %s must be defined' % (
                 models.LOSS_TYPES)
 
