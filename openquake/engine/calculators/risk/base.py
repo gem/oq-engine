@@ -242,7 +242,7 @@ class RiskCalculator(base.Calculator):
         """
         Method responsible for the distribution strategy. The risk
         calculators share a two phase distribution logic: in phase 1
-        the initializer objects are build, by distributing per taxonomy;
+        the initializer objects are built, by distributing per taxonomy;
         in phase 2 the real computation is run, by distributing in chunks
         of asset_site associations.
         """
