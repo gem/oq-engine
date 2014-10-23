@@ -26,7 +26,6 @@ from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.imt import from_string
 import openquake.hazardlib.gsim
 
-from openquake.commonlib.node import read_nodes
 from openquake.commonlib.general import split_in_blocks
 from openquake.commonlib.readinput import get_rupture
 
@@ -62,12 +61,11 @@ def gmfs(job_id, ses_ruptures, sitecol, imts, gmf_id):
     # NB: ses_ruptures a non-empty list produced by the block_splitter
     rupture = ses_ruptures[0].rupture  # ProbabilisticRupture instance
     with EnginePerformanceMonitor('computing gmfs', job_id, gmfs):
-        gmf = GmfComputer(rupture, sitecol, imts, [gsim],
+        gmf = GmfComputer(rupture, sitecol, imts, gsim,
                           getattr(hc, 'truncation_level', None),
                           correlation_model)
-        gname = gsim.__class__.__name__
         for ses_rup in ses_ruptures:
-            for (gname, imt), gmvs in gmf.compute(ses_rup.seed):
+            for imt, gmvs in gmf.compute(ses_rup.seed):
                 for site_id, gmv in zip(sitecol.sids, gmvs):
                     cache[site_id, imt].append((gmv, ses_rup.id))
 
