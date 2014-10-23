@@ -44,7 +44,7 @@ def scenario(workflow, getter, outputdict, params, monitor):
       An instance of :class:`..base.CalcParams` used to compute
       derived outputs
     :param monitor:
-      A monitor factory
+      A monitor instance
     """
     assets = getter.assets
     hazards = getter.get_data()

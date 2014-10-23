@@ -57,7 +57,7 @@ def event_based(workflow, getter, outputdict, params, monitor):
       An instance of :class:`..base.CalcParams` used to compute
       derived outputs
     :param monitor:
-      A monitor factory
+      A monitor instance
     :returns:
       A dictionary {loss_type: event_loss_table}
     """
@@ -77,6 +77,10 @@ def event_based(workflow, getter, outputdict, params, monitor):
             outputs = workflow.compute_all_outputs(getter, loss_type)
             if statistics:
                 outputs = list(outputs)  # expand the generator
+                # this is needed, otherwise the call to workflow.statistics
+                # below will find an empty iterable; notice that by disabling
+                # the statistics we can save memory by keeping only one
+                # hazard realization at the time
         for out in outputs:
             event_loss_table[loss_type, out.hid] = out.output.event_loss_table
             disagg_outputs = None  # changed if params.sites_disagg is set
