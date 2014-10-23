@@ -238,7 +238,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
                     for imt in imts)
     [(rupture, sites)] = ruptures_sites
 
-    gc = GmfComputer(rupture, sites, imts, [gsim], truncation_level,
+    gc = GmfComputer(rupture, sites, imts, gsim, truncation_level,
                      correlation_model)
     result = gc._compute(seed, gsim, realizations)
     for imt, gmf in result.iteritems():
