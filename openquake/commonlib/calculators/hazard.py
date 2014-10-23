@@ -57,7 +57,7 @@ def calc_gmfs(tag_seed_pairs, computer):
     """
     res = AccumDict()  # tag -> gmf
     for tag, seed in tag_seed_pairs:
-        res += {tag: computer.compute(seed)}
+        res += {tag: dict(computer.compute(seed))}
     return res
 
 
@@ -84,7 +84,7 @@ class ScenarioCalculator(BaseCalculator):
         rupture = readinput.get_rupture(self.oqparam)
 
         self.tags = ['scenario-%010d' % i for i in xrange(n_gmfs)]
-        self.computer = GmfComputer(rupture, self.sitecol, self.imts, [gsim],
+        self.computer = GmfComputer(rupture, self.sitecol, self.imts, gsim,
                                     trunc_level, correl_model)
         self.tag_seed_pairs = [(tag, rnd.randint(0, 2 ** 31 - 1))
                                for tag in self.tags]
@@ -98,11 +98,10 @@ class ScenarioCalculator(BaseCalculator):
 
     def post_execute(self, result):
         logging.info('Exporting the result')
-        imt2idx = {imt: i for i, imt in enumerate(self.imts)}
         gmfs_by_imt = {  # build N x R matrices
-            str(imt): numpy.array(
-                [result[tag][imt2idx[imt]][1] for tag in self.tags]).T
-            for imt in self.imts}
+            imt: numpy.array(
+                [result[tag][imt] for tag in self.tags]).T
+            for imt in map(str, self.imts)}
         out = export(
             'gmf_xml', self.oqparam.export_dir,
             self.sitecol, self.tags, gmfs_by_imt)
