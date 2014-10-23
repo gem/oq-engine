@@ -270,16 +270,13 @@ class BaseHazardCalculator(base.Calculator):
                 yield args
             return
         sitecol = self.site_collection
-        task_no = 0
         tot_sources = 0
         for trt_model, block in self.all_sources.split(self.concurrent_tasks):
             args = (self.job.id, sitecol, block, trt_model.id)
             self._task_args.append(args)
             yield args
             tot_sources += len(block)
-            task_no += 1
-            logs.LOG.info('Submitting task #%d, %d source(s), weight=%d',
-                          task_no, len(block), block.weight)
+            logs.LOG.info('%d source(s), weight=%d', len(block), block.weight)
         logs.LOG.info('Processed %d sources for %d TRTs',
                       tot_sources, len(self.source_collector))
 
@@ -341,7 +338,7 @@ class BaseHazardCalculator(base.Calculator):
         # without rollback, see
         # https://docs.djangoproject.com/en/1.3/topics/db/transactions/
         with transaction.commit_on_success(using='job_init'):
-            self.parse_risk_models()
+            self.parse_risk_model()
         with transaction.commit_on_success(using='job_init'):
             self.initialize_site_collection()
         with transaction.commit_on_success(using='job_init'):
@@ -494,7 +491,7 @@ python -m openquake.engine.tools.correct_complex_sources %s
                 self.source_collector[trt_model_id] = sc
 
     @EnginePerformanceMonitor.monitor
-    def parse_risk_models(self):
+    def parse_risk_model(self):
         """
         If any risk model is given in the hazard calculation, the
         computation will be driven by risk data. In this case the

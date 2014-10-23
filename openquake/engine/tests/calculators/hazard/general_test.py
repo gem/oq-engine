@@ -39,7 +39,7 @@ class ParseRiskModelsTestCase(unittest.TestCase):
 
         haz_calc = job.get_oqparam()
         calc = get_calculator_class('hazard', haz_calc.calculation_mode)(job)
-        calc.parse_risk_models()
+        calc.parse_risk_model()
 
         self.assertEqual(['PGA'],
                          list(calc.hc.intensity_measure_types_and_levels))

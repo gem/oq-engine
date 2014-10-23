@@ -26,54 +26,47 @@ from openquake.engine.calculators.risk import (
     base, hazard_getters, validation, writers)
 from openquake.engine.db import models
 from openquake.engine.performance import EnginePerformanceMonitor
-from openquake.engine.utils import tasks
+from openquake.engine.utils import calculators
 
 
-@tasks.oqtask
-def scenario(job_id, risk_model, getters, outputdict, _params):
+def scenario(workflow, getter, outputdict, params, monitor):
     """
     Celery task for the scenario risk calculator.
 
-    :param int job_id:
-      ID of the currently running job
-    :param list risk_model:
-      A :class:`openquake.risklib.workflows.RiskModel` instance
-    :param getters:
-      A list of callable hazard getters
+    :param list workflow:
+      A :class:`openquake.risklib.workflows.Workflow` instance
+    :param getter:
+      A HazardGetter instance
     :param outputdict:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (in this case only `LossMap`)
     :param params:
       An instance of :class:`..base.CalcParams` used to compute
       derived outputs
+    :param monitor:
+      A monitor instance
     """
-    assert len(getters) == 1, 'Found more than one getter for scenario!'
-    monitor = EnginePerformanceMonitor(None, job_id, scenario, tracing=True)
-    with db.transaction.commit_on_success(using='job_init'):
-        return do_scenario(risk_model, getters, outputdict, monitor)
-
-
-def do_scenario(risk_model, getters, outputdict, monitor):
-    """
-    See `scenario` for a description of the input parameters
-    """
-    out = risk_model.compute_outputs(getters, monitor.copy('getting data'))
+    assets = getter.assets
+    hazards = getter.get_data()
+    epsilons = getter.get_epsilons()
     agg, ins = {}, {}
-    for loss_type, [output] in out.iteritems():
-        outputdict = outputdict.with_args(
-            loss_type=loss_type, output_type="loss_map")
+    for loss_type in workflow.loss_types:
+        with monitor.copy('computing risk'):
+            outputdict = outputdict.with_args(
+                loss_type=loss_type, output_type="loss_map")
 
-        (assets, loss_ratio_matrix, aggregate_losses,
-         insured_loss_matrix, insured_losses) = output.output
-        agg[loss_type] = aggregate_losses
+            (assets, loss_ratio_matrix, aggregate_losses,
+             insured_loss_matrix, insured_losses) = workflow(
+                loss_type, assets, hazards, epsilons)
+            agg[loss_type] = aggregate_losses
         ins[loss_type] = insured_losses
 
-        with monitor.copy('saving risk outputs'):
+        with monitor.copy('saving risk'):
             outputdict.write(
                 assets,
                 loss_ratio_matrix.mean(axis=1),
                 loss_ratio_matrix.std(ddof=1, axis=1),
-                hazard_output_id=getters[0].hid,
+                hazard_output_id=getter.hid,
                 insured=False)
 
             if insured_loss_matrix is not None:
@@ -82,19 +75,20 @@ def do_scenario(risk_model, getters, outputdict, monitor):
                     insured_loss_matrix.mean(axis=1),
                     insured_loss_matrix.std(ddof=1, axis=1),
                     itertools.cycle([True]),
-                    hazard_output_id=getters[0].hid,
+                    hazard_output_id=getter.hid,
                     insured=True)
 
     return agg, ins
 
 
+@calculators.add('scenario_risk')
 class ScenarioRiskCalculator(base.RiskCalculator):
     """
     Scenario Risk Calculator. Computes a Loss Map,
     for a given set of assets.
     """
 
-    core_calc_task = scenario
+    core = staticmethod(scenario)
 
     validators = base.RiskCalculator.validators + [
         validation.RequireScenarioHazard,
@@ -103,7 +97,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
 
     output_builders = [writers.LossMapBuilder]
 
-    getter_class = hazard_getters.GroundMotionValuesGetter
+    getter_class = hazard_getters.GroundMotionGetter
 
     def __init__(self, job):
         super(ScenarioRiskCalculator, self).__init__(job)
@@ -160,5 +154,12 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                         std_dev=numpy.std(insured_losses, ddof=1))
 
     def get_workflow(self, vulnerability_functions):
+        """
+        :param vulnerability_functions:
+            a dictionary of vulnerability functions
+        :returns:
+            an instance of
+            :class:`openquake.risklib.workflows.Scenario`
+        """
         return workflows.Scenario(
             vulnerability_functions, self.rc.insured_losses)

@@ -17,18 +17,16 @@
 Core functionality for the classical PSHA risk calculator.
 """
 
-from django.db import transaction
 from openquake.risklib import workflows
 
 from openquake.engine.calculators.risk import (
     hazard_getters, writers, validation)
 from openquake.engine.calculators.risk.classical_risk import core as classical
-from openquake.engine.performance import EnginePerformanceMonitor
-from openquake.engine.utils import tasks
+
+from openquake.engine.utils import calculators
 
 
-@tasks.oqtask
-def classical_bcr(job_id, risk_model, getters, outputdict, _params):
+def classical_bcr(workflow, getter, outputdict, params, monitor):
     """
     Celery task for the BCR risk calculator based on the classical
     calculator.
@@ -38,39 +36,33 @@ def classical_bcr(job_id, risk_model, getters, outputdict, _params):
 
     :param int job_id:
       ID of the currently running job
-    :param risk_model:
-      A :class:`openquake.risklib.workflows.RiskModel` instance
-    :param getters:
-      A list of callable hazard getters
+    :param workflow:
+      A :class:`openquake.risklib.workflows.Workflow` instance
+    :param getter:
+      A HazardGetter instance
     :param outputdict:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (in this case only `BCRDistribution`)
     :param params:
       An instance of :class:`..base.CalcParams` used to compute
       derived outputs
+    :param monitor:
+      A monitor instance
     """
-    monitor = EnginePerformanceMonitor(
-        None, job_id, classical_bcr, tracing=True)
-
-    # Do the job in other functions, such that it can be unit tested
-    # without the celery machinery
-    with transaction.commit_on_success(using='job_init'):
-        do_classical_bcr(risk_model, getters, outputdict, monitor)
-
-
-def do_classical_bcr(risk_model, getters, outputdict, monitor):
-    out = risk_model.compute_outputs(getters, monitor.copy('getting hazard'))
-    for loss_type, outputs in out.iteritems():
+    for loss_type in workflow.loss_types:
+        with monitor.copy('computing risk'):
+            outputs = workflow.compute_all_outputs(getter, loss_type)
         outputdict = outputdict.with_args(loss_type=loss_type)
-        with monitor.copy('writing results'):
+        with monitor.copy('saving risk'):
             for out in outputs:
                 outputdict.write(
-                    risk_model.workflow.assets,
+                    workflow.assets,
                     out.output,
                     output_type="bcr_distribution",
                     hazard_output_id=out.hid)
 
 
+@calculators.add('classical_bcr')
 class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
     """
     Classical BCR risk calculator. Computes BCR distributions for a
@@ -80,7 +72,7 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         A dictionary mapping each taxonomy to a vulnerability functions for the
         retrofitted losses computation
     """
-    core_calc_task = classical_bcr
+    core = staticmethod(classical_bcr)
 
     validators = classical.ClassicalRiskCalculator.validators + [
         validation.ExposureHasRetrofittedCosts]
@@ -93,7 +85,13 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
 
     def get_workflow(self, vf_orig, vf_retro):
         """
-        Set the attributes .workflow and .getters
+        :param vf_orig:
+            original vulnerability function
+        :param vf_orig:
+            retrofitted vulnerability functions
+        :returns:
+            an instance of
+            :class:`openquake.risklib.workflows.ClassicalBCR`
         """
         return workflows.ClassicalBCR(
             vf_orig, vf_retro,

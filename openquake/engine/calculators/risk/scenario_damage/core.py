@@ -22,62 +22,52 @@ Core functionality for the scenario_damage risk calculator.
 
 import numpy
 
-from django import db
-
-from openquake.commonlib.riskmodels import get_risk_models
+from openquake.commonlib.riskmodels import get_risk_model
 
 from openquake.engine.calculators.risk import (
     base, hazard_getters, writers, validation)
 from openquake.engine.performance import EnginePerformanceMonitor
-from openquake.engine.utils import tasks
 from openquake.engine.db import models
+from openquake.engine.utils import calculators
 
 
-@tasks.oqtask
-def scenario_damage(job_id, risk_model, getters, outputdict, params):
+def scenario_damage(workflow, getter, outputdict, params, monitor):
     """
     Celery task for the scenario damage risk calculator.
 
-    :param int job_id:
-      ID of the currently running job
-    :param risk_model:
-      A :class:`openquake.risklib.workflows.RiskModel` instance
-    :param getters:
-      A list of callable hazard getters
+    :param workflow:
+      A :class:`openquake.risklib.workflows.Workflow` instance
+    :param getter:
+      A HazardGetter instance
     :param outputdict:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (in this case only `LossMap`)
     :param params:
       An instance of :class:`..base.CalcParams` used to compute
       derived outputs
+    :param monitor:
+      A monitor instance
    :returns:
       A matrix of fractions and a taxonomy string
     """
-    monitor = EnginePerformanceMonitor(
-        None, job_id, scenario_damage, tracing=True)
-    # in scenario damage calculation the only loss_type is 'damage'
-    [getter] = getters
-    [ffs] = risk_model.vulnerability_functions
+    [ffs] = workflow.vulnerability_functions
 
-    # and NO containes
-    assert len(outputdict) == 0
-    with db.transaction.commit_on_success(using='job_init'):
+    # and no output containers
+    assert len(outputdict) == 0, outputdict
+    with monitor.copy('computing risk'):
+        assets, fractions = workflow(
+            'damage', getter.assets, getter.get_data(), None)
+        aggfractions = sum(fractions[i] * asset.number_of_units
+                           for i, asset in enumerate(assets))
 
-        with monitor.copy('getting hazard'):
-            ground_motion_values = getter.get_data(ffs.imt)
+    with monitor.copy('saving damage per assets'):
+        writers.damage_distribution(
+            getter.assets, fractions, params.damage_state_ids)
 
-        with monitor.copy('computing risk'):
-            fractions = risk_model.workflow(ground_motion_values)
-            aggfractions = sum(fractions[i] * asset.number_of_units
-                               for i, asset in enumerate(getter.assets))
-
-        with monitor.copy('saving damage per assets'):
-            writers.damage_distribution(
-                getter.assets, fractions, params.damage_state_ids)
-
-        return {risk_model.taxonomy: aggfractions}
+    return {assets[0].taxonomy: aggfractions}
 
 
+@calculators.add('scenario_damage')
 class ScenarioDamageRiskCalculator(base.RiskCalculator):
     """
     Scenario Damage Risk Calculator. Computes four kinds of damage
@@ -92,14 +82,14 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
     """
 
     #: The core calculation celery task function
-    core_calc_task = scenario_damage
+    core = staticmethod(scenario_damage)
     validators = [validation.HazardIMT, validation.EmptyExposure,
                   validation.OrphanTaxonomies,
                   validation.NoRiskModels, validation.RequireScenarioHazard]
 
     # FIXME. scenario damage calculator does not use output builders
     output_builders = []
-    getter_class = hazard_getters.GroundMotionValuesGetter
+    getter_class = hazard_getters.GroundMotionGetter
 
     def __init__(self, job):
         super(ScenarioDamageRiskCalculator, self).__init__(job)
@@ -159,13 +149,13 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
                 "dmg_dist_total")
             writers.total_damage_distribution(tot, self.damage_state_ids)
 
-    def get_risk_models(self):
+    def get_risk_model(self):
         """
         Load fragility model and store damage states
         """
-        risk_models = get_risk_models(models.oqparam(self.job.id))
+        risk_model = get_risk_model(models.oqparam(self.job.id))
 
-        for lsi, dstate in enumerate(risk_models.damage_states):
+        for lsi, dstate in enumerate(risk_model.damage_states):
             models.DmgState.objects.get_or_create(
                 risk_calculation=self.rc, dmg_state=dstate, lsi=lsi)
 
@@ -173,7 +163,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
             risk_calculation=self.rc).order_by('lsi')]
 
         self.loss_types.add('damage')  # single loss_type
-        return risk_models
+        return risk_model
 
     @property
     def calculator_parameters(self):
