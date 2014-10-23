@@ -43,7 +43,7 @@ from openquake.engine.db.schema.upgrades import upgrader
 
 from openquake import hazardlib, risklib, commonlib
 
-from openquake.commonlib import readini, valid
+from openquake.commonlib import readinput, valid
 
 
 INPUT_TYPES = set(dict(models.INPUT_TYPE_CHOICES))
@@ -94,6 +94,9 @@ def job_stats(job):
     job.save()
     try:
         yield
+    except:
+        django_db.connections['job_init'].rollback()
+        raise
     finally:
         job.is_running = False
         job.save()
@@ -458,7 +461,7 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
     job = prepare_job(user_name=username, log_level=log_level)
     # read calculation params and create the calculation profile
     with logs.handle(job, log_level):
-        oqparam = readini.parse_config(
+        oqparam = readinput.get_oqparam(
             open(cfg_file_path),
             haz_job.id if haz_job and not hazard_output_id else None,
             hazard_output_id)
@@ -487,6 +490,8 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
     del params['intensity_measure_types_and_levels']
     if params['hazard_calculation_id'] is None:
         params['hazard_calculation_id'] = haz_job.id
+    if 'statistics' in params:
+        del params['statistics']
     # ugliness that will disappear when RiskCalculation will be removed
     if 'specific_assets' in params:
         del params['specific_assets']

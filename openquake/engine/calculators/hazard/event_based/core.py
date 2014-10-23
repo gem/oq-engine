@@ -49,7 +49,7 @@ from openquake.commonlib import logictree
 from openquake.engine import writer
 from openquake.engine.calculators.hazard import general
 from openquake.engine.db import models
-from openquake.engine.utils import tasks
+from openquake.engine.utils import tasks, calculators
 from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
 
 # NB: beware of large caches
@@ -369,6 +369,7 @@ class GmfCalculator(object):
         return curves_by_gsim
 
 
+@calculators.add('event_based')
 class EventBasedHazardCalculator(general.BaseHazardCalculator):
     """
     Probabilistic Event-Based hazard calculator. Computes stochastic event sets

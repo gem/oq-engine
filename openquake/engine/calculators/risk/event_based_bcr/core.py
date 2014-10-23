@@ -16,20 +16,15 @@
 """
 Core functionality for the Event Based BCR Risk calculator.
 """
-from django.db import transaction
-
 from openquake.risklib import workflows
 
-from openquake.engine.calculators.risk import (
-    hazard_getters, writers, validation)
+from openquake.engine.calculators.risk import writers, validation
 from openquake.engine.calculators.risk.event_based_risk \
     import core as event_based
-from openquake.engine.performance import EnginePerformanceMonitor
-from openquake.engine.utils import tasks
+from openquake.engine.utils import calculators
 
 
-@tasks.oqtask
-def event_based_bcr(job_id, risk_model, getters, outputdict, _params):
+def event_based_bcr(workflow, getter, outputdict, params, monitor):
     """
     Celery task for the BCR risk calculator based on the event based
     calculator.
@@ -39,59 +34,57 @@ def event_based_bcr(job_id, risk_model, getters, outputdict, _params):
 
     :param int job_id:
       ID of the currently running job
-    :param risk_model:
-      A :class:`openquake.risklib.workflows.RiskModel` instance
-    :param getters:
-      A list of callable hazard getters
+    :param workflow:
+      A :class:`openquake.risklib.workflows.Workflow` instance
+    :param getter:
+      A HazardGetter instance
     :param outputdict:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (in this case only `BCRDistribution`)
     :param params:
       An instance of :class:`..base.CalcParams` used to compute
       derived outputs
+    :param monitor:
+      A monitor instance
     """
-    monitor = EnginePerformanceMonitor(
-        None, job_id, event_based_bcr, tracing=True)
-
-    # Do the job in other functions, such that it can be unit tested
-    # without the celery machinery
-    with transaction.commit_on_success(using='job_init'):
-            do_event_based_bcr(risk_model, getters, outputdict, monitor)
-
-
-def do_event_based_bcr(risk_model, getters, outputdict, monitor):
-    """
-    See `event_based_bcr` for docstring
-    """
-    out = risk_model.compute_outputs(getters, monitor.copy('getting hazard'))
-    for loss_type, outputs in out.iteritems():
+    for loss_type in workflow.loss_types:
+        with monitor.copy('computing risk'):
+            outputs = workflow.compute_all_outputs(getter, loss_type)
         outputdict = outputdict.with_args(loss_type=loss_type)
-        with monitor.copy('writing results'):
+        with monitor.copy('saving risk'):
             for out in outputs:
                 outputdict.write(
-                    risk_model.workflow.assets,
+                    workflow.assets,
                     out.output,
                     output_type="bcr_distribution",
                     hazard_output_id=out.hid)
 
 
+@calculators.add('event_based_bcr')
 class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
     """
     Event based BCR risk calculator. Computes BCR distributions for a
     given set of assets.
     """
-    core_calc_task = event_based_bcr
+    core = staticmethod(event_based_bcr)
 
     validators = event_based.EventBasedRiskCalculator.validators + [
         validation.ExposureHasRetrofittedCosts]
 
     output_builders = [writers.BCRMapBuilder]
 
-    getter_cls = hazard_getters.GroundMotionValuesGetter
-
     bcr = True
 
     def get_workflow(self, vf_orig, vf_retro):
+        """
+        :param vf_orig:
+            original vulnerability function
+        :param vf_orig:
+            retrofitted vulnerability functions
+        :returns:
+            an instance of
+            :class:`openquake.risklib.workflows.ProbabilisticEventBasedBCR`
+        """
         time_span, tses = self.hazard_times()
         return workflows.ProbabilisticEventBasedBCR(
             vf_orig, vf_retro,
