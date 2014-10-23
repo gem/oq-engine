@@ -19,6 +19,10 @@ from openquake.commonlib.tests.calculators import CalculatorTestCase
 
 class ScenarioCase1(CalculatorTestCase):
 
-    def test(self):
-        with self.run_calc(__file__):
-            self.assertEqualContent('expected.xml', 'gmf.xml')
+    def test_hazard(self):
+        with self.run_calc(__file__, 'job.ini') as out:
+            self.assertEqualContent('expected.xml', out['gmf_xml'])
+
+    def _test_risk(self):
+        with self.run_calc(__file__, 'job_risk.ini'):
+            import pdb; pdb.set_trace()

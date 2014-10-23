@@ -24,7 +24,7 @@ import numpy
 
 from openquake.risklib import scientific
 from openquake.commonlib.general import AccumDict
-from openquake.commonlib.calculators import calculators, core, BaseScenarioCalculator
+from openquake.commonlib.calculators import calculators, BaseScenarioCalculator
 from openquake.commonlib.export import export
 
 
@@ -52,11 +52,33 @@ class Site(object):
         self.wkt = 'POINT(%s %s)' % xy
 
 
+def scenario_damage(riskinputs, riskmodel):
+    """
+    Core function for a damage computation.
+    """
+    logging.info('Process %d, considering %d risk input(s) of weight %d',
+                 os.getpid(), len(riskinputs),
+                 sum(ri.weight for ri in riskinputs))
+    result = AccumDict()  # (key_type, key) -> result
+    for loss_type, (assets, fractions) in \
+            riskmodel.gen_outputs(riskinputs):
+        fracts_by_taxo = AccumDict()  # taxonomy -> fracts
+        for asset, fraction in zip(assets, fractions):
+            fracts = fraction * asset.number
+            fracts_by_taxo += {asset.taxonomy: fracts}
+            result += {('asset', asset): scientific.mean_std(fracts)}
+        result += {('taxonomy', taxo): fracts
+                   for taxo, fracts in fracts_by_taxo.iteritems()}
+    return result
+
+
 @calculators.add('scenario_damage')
 class ScenarioDamageCalculator(BaseScenarioCalculator):
     """
     Scenario damage calculator
     """
+    core_func = scenario_damage
+
     def post_execute(self, result):
         """
         Process the result dictionary and export three files:
@@ -99,24 +121,3 @@ class ScenarioDamageCalculator(BaseScenarioCalculator):
         f3 = export('dmg_total_xml', self.oqparam.export_dir,
                     self.riskmodel.damage_states, dd_total)
         return [f1, f2, f3]
-
-
-@core(ScenarioDamageCalculator)
-def scenario_damage(riskinputs, riskmodel):
-    """
-    Core function for a damage computation.
-    """
-    logging.info('Process %d, considering %d risk input(s) of weight %d',
-                 os.getpid(), len(riskinputs),
-                 sum(ri.weight for ri in riskinputs))
-    result = AccumDict()  # (key_type, key) -> result
-    for loss_type, (assets, fractions) in \
-            riskmodel.gen_outputs(riskinputs):
-        fracts_by_taxo = AccumDict()  # taxonomy -> fracts
-        for asset, fraction in zip(assets, fractions):
-            fracts = fraction * asset.number
-            fracts_by_taxo += {asset.taxonomy: fracts}
-            result += {('asset', asset): scientific.mean_std(fracts)}
-        result += {('taxonomy', taxo): fracts
-                   for taxo, fracts in fracts_by_taxo.iteritems()}
-    return result

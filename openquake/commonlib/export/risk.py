@@ -32,7 +32,7 @@ writercls = dict(
 def export_dmg_xml(key, export_dir, damage_states, dmg_data):
     dest = os.path.join(export_dir, key.replace('_xml', '.xml'))
     writercls[key](dest, damage_states).serialize(dmg_data)
-    return dest
+    return {key: dest}
 
 
 @export.add('agg_loss_csv')
@@ -45,4 +45,4 @@ def export_agg_loss_csv(key, export_dir, aggcurves):
         writer = csv.writer(csvfile, delimiter='|')
         writer.writerow(['LossType', 'Unit', 'Mean', 'Standard Deviation'])
         writer.writerows(aggcurves)
-    return dest
+    return {key: dest}

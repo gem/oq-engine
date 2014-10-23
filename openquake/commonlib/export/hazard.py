@@ -136,4 +136,4 @@ def export_gmf_xml(key, export_dir, sitecol, rupture_tags, gmfs):
     writer = hazard_writers.EventBasedGMFXMLWriter(
         dest, sm_lt_path='', gsim_lt_path='')
     writer.serialize(GmfCollection(sitecol, rupture_tags, gmfs))
-    return dest
+    return {key: dest}

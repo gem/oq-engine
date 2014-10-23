@@ -19,7 +19,6 @@
 import random
 import logging
 import operator
-import collections
 
 import numpy
 
@@ -27,7 +26,7 @@ from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.commonlib import readinput, parallel
 from openquake.commonlib.general import AccumDict
 
-from openquake.commonlib.calculators import calculators, core, BaseCalculator
+from openquake.commonlib.calculators import calculators, BaseCalculator
 from openquake.commonlib.export import export
 
 
@@ -52,11 +51,23 @@ class DisaggregationCalculator(BaseCalculator):
     """
 
 
+def calc_gmfs(tag_seed_pairs, computer):
+    """
+    Computer several GMFs in parallel, one for each tag and seed.
+    """
+    res = AccumDict()  # tag -> gmf
+    for tag, seed in tag_seed_pairs:
+        res += {tag: computer.compute(seed)}
+    return res
+
+
 @calculators.add('scenario')
 class ScenarioCalculator(BaseCalculator):
     """
     Scenario hazard calculator
     """
+    core_func = calc_gmfs
+
     def pre_execute(self):
         logging.info('Reading the site collection')
         if 'exposure' in self.oqparam.inputs:
@@ -81,27 +92,18 @@ class ScenarioCalculator(BaseCalculator):
     def execute(self):
         logging.info('Computing the GMFs')
         return parallel.apply_reduce(
-            self.core, (self.tag_seed_pairs, self.computer), operator.add)
+            self.core_func.__func__,
+            (self.tag_seed_pairs, self.computer),
+            operator.add, concurrent_tasks=self.oqparam.concurrent_tasks)
 
     def post_execute(self, result):
+        logging.info('Exporting the result')
         imt2idx = {imt: i for i, imt in enumerate(self.imts)}
         gmfs_by_imt = {  # build N x R matrices
             str(imt): numpy.array(
                 [result[tag][imt2idx[imt]][1] for tag in self.tags]).T
             for imt in self.imts}
-        logging.info('Exporting the result')
         out = export(
             'gmf_xml', self.oqparam.export_dir,
             self.sitecol, self.tags, gmfs_by_imt)
-        return [out]
-
-
-@core(ScenarioCalculator)
-def calc_gmfs(tag_seed_pairs, computer):
-    """
-    Computer several GMFs in parallel, one for each tag and seed.
-    """
-    res = AccumDict()  # tag -> gmf
-    for tag, seed in tag_seed_pairs:
-        res += {tag: computer.compute(seed)}
-    return res
+        return out

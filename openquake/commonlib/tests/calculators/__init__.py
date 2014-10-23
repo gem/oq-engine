@@ -30,22 +30,15 @@ class DifferentFiles(Exception):
 class CalculatorTestCase(unittest.TestCase):
 
     @contextmanager
-    def run_calc(self, testfile):
+    def run_calc(self, testfile, job_ini):
         """
-        Example of usage:
-
-        def test_calc1(self):
-            with self.run_calc(__file__) as calc:
-                self.assertOk('pippo.xml')
-
+        Return the outputs of the calculation as a dictionary
         """
         self.testdir = os.path.dirname(testfile)
-        with open(os.path.join(self.testdir, 'job.ini')) as job_ini:
-            self.oqparam = readinput.get_oqparam(job_ini)
+        with open(os.path.join(self.testdir, job_ini)) as ini:
+            self.oqparam = readinput.get_oqparam(ini)
             self.oqparam.concurrent_tasks = 0  # to make the test debuggable
-            calc = calculators(self.oqparam)
-            calc.run()
-            yield calc
+            yield calculators(self.oqparam).run()
 
     def assertEqualContent(self, fname1, fname2):
         """

@@ -24,7 +24,7 @@ import numpy
 from openquake.risklib import scientific
 from openquake.commonlib import readinput, riskmodels, general
 from openquake.commonlib.calculators import calculators, \
-    BaseScenarioCalculator, core
+    BaseScenarioCalculator
 from openquake.commonlib.export import export
 
 
@@ -81,7 +81,6 @@ class ScenarioRiskCalculator(BaseScenarioCalculator):
         return fnames
 
 
-@core(ScenarioRiskCalculator)
 def scenario_risk(riskinputs, riskmodel):
     """
     Core function for a scenario computation.
@@ -92,7 +91,7 @@ def scenario_risk(riskinputs, riskmodel):
                  os.getpid(), len(riskinputs),
                  sum(ri.weight for ri in riskinputs))
 
-    result = parallel.AccumDict()  # agg_type, loss_type -> losses
+    result = general.AccumDict()  # agg_type, loss_type -> losses
     for loss_type, outs in riskmodel.gen_outputs(riskinputs):
         (_assets, _loss_ratio_matrix, aggregate_losses,
          _insured_loss_matrix, insured_losses) = outs

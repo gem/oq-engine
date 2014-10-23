@@ -28,24 +28,12 @@ from openquake.commonlib.calculators import calc
 calculators = CallableDict(operator.attrgetter('calculation_mode'))
 
 
-def core(cls):
-    """
-    Return a decorator attaching the decorated function to the given
-    class. Used to associated the tasks to the calculators.
-    """
-    def decorator(func):
-        cls.core = staticmethod(func)
-        return func
-    return decorator
-
-
 class BaseCalculator(object):
     """
     To be subclassed.
     """
     def __init__(self, oqparam):
         self.oqparam = oqparam
-        self.exported = []
 
     def run(self):
         """
@@ -53,11 +41,9 @@ class BaseCalculator(object):
         """
         self.pre_execute()
         result = self.execute()
-        self.exported = self.post_execute(result)
-        return self.exported
+        return self.post_execute(result)
 
-    @staticmethod
-    def core(*args):
+    def core_func(*args):
         """
         Core routine running on the workers, usually set by the
         @core decorator.
@@ -79,7 +65,8 @@ class BaseCalculator(object):
     def post_execute(self, result):
         """
         Post-processing phase of the aggregated output. It must be
-        overridden with the export code.
+        overridden with the export code. It will return a dictionary
+        of output files.
         """
         raise NotImplementedError(self.oqparam.calculation_mode)
 
@@ -109,11 +96,13 @@ class BaseScenarioCalculator(BaseCalculator):
         """
         Parallelize on the riskinputs and returns a dictionary of results.
         """
-        return apply_reduce(self.core, (self.riskinputs, self.riskmodel),
-                            agg=operator.add,
-                            concurrent_tasks=self.oqparam.concurrent_tasks,
-                            key=operator.attrgetter('imt'),
-                            weight=operator.attrgetter('weight'))
+        return apply_reduce(
+            self.core_func.__func__,
+            (self.riskinputs, self.riskmodel),
+            agg=operator.add,
+            concurrent_tasks=self.oqparam.concurrent_tasks,
+            key=operator.attrgetter('imt'),
+            weight=operator.attrgetter('weight'))
 
 
 ## now make sure the `calculators` dictionary is populated
