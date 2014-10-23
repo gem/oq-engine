@@ -305,8 +305,7 @@ def map_reduce(function, function_args, agg, acc, name=None):
     return tm.aggregate_results(agg, acc)
 
 
-def apply_reduce(task_func, task_args,
-                 agg=lambda a, x: x,
+def apply_reduce(task_func, task_args, agg,
                  acc=None,
                  concurrent_tasks=executor._max_workers,
                  weight=lambda item: 1,
@@ -332,7 +331,7 @@ def apply_reduce(task_func, task_args,
 
     :param task_func: a function to run in parallel
     :param task_args: the arguments to be passed to the task function
-    :param agg: the aggregation function (default do not aggregate)
+    :param agg: the aggregation function
     :param acc: initial value of the accumulator (default empty AccumDict)
     :param concurrent_tasks: hint about how many tasks to generate
     :param weight: function to extract the weight of an item in data
