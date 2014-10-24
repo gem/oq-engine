@@ -243,8 +243,7 @@ def del_calc(job_id):
             'The following risk calculations are referencing this hazard'
             ' calculation: %s')
 
-        assoc_outputs = models.OqJob.objects.filter(
-            hazard_calculation_id=job_id)
+        assoc_outputs = models.OqJob.objects.filter(hazard_calculation=job)
         if assoc_outputs.count() > 0:
             raise RuntimeError(
                 msg % ', '.join(str(x.id) for x in assoc_outputs))
