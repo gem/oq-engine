@@ -20,10 +20,11 @@
 #####   this is not used by the engine, only by the GEMScienceTools    #####
 ############################################################################
 
+import sys
 try:
     from openquake.nrmllib import models as nrml_models
 except ImportError:
-    class NotImported():
+    class NotImported(object):
         def __getattr__(self, name):
             raise ImportError('openquake.nrmllib.%s' % name)
     nrml_models = NotImported()
