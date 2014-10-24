@@ -285,6 +285,17 @@ def coordinates(value):
     return map(lon_lat, value.split(','))
 
 
+def wkt_polygon(value):
+    """
+    Convert a string with a comma separated list of coordinates into
+    a WKT polygon, by closing the ring.
+    """
+    points = ['%s %s' % lon_lat for lon_lat in coordinates(value)]
+    # close the linear polygon ring by appending the first coord to the end
+    points.append(points[0])
+    return 'POLYGON((%s))' % ', '.join(points)
+
+
 def positiveint(value):
     """
     :param value: input string
