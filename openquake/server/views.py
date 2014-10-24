@@ -186,16 +186,9 @@ def calc_info(request, job_type, calc_id):
 # helper function to get job info and calculation params from the
 # oq-engine DB, as a dictionary
 def _get_calc_info(job_type, calc_id):
-    if job_type == 'hazard':
-        job = oqe_models.OqJob.objects.select_related().get(pk=calc_id)
-        calc = job
-    else:  # risk
-        job = oqe_models.OqJob.objects.select_related()\
-            .get(risk_calculation=calc_id)
-        calc = job.risk_calculation
-
+    calc = oqe_models.OqJob.objects.select_related().get(pk=calc_id)
     response_data = _calc_to_response_data(calc)
-    response_data['status'] = job.status
+    response_data['status'] = calc.status
     return response_data
 
 
@@ -260,7 +253,7 @@ def run_calc(request, job_type):
                            callback_url, foreign_calc_id,
                            hazard_output_id, hazard_job_id)
     try:
-        response_data = _get_calc_info(job_type, job.calc_id)
+        response_data = _get_calc_info(job_type, job.id)
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
 
@@ -319,10 +312,7 @@ def calc_results(request, job_type, calc_id):
     # If the specified calculation doesn't exist OR is not yet complete,
     # throw back a 404.
     try:
-        if job_type == 'risk':
-            oqjob = oqe_models.RiskCalculation.objects.get(id=calc_id).oqjob
-        else:
-            oqjob = oqe_models.OqJob.objects.get(id=calc_id)
+        oqjob = oqe_models.OqJob.objects.get(id=calc_id)
         if not oqjob.status == 'complete':
             return HttpResponseNotFound()
     except ObjectDoesNotExist:
