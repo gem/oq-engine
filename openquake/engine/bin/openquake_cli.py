@@ -256,27 +256,19 @@ def list_inputs(input_type):
         print "%9d|%s" % (inp.id, inp.name)
 
 
-def list_calculations(job_manager):
+def list_calculations(job_type):
     """
     Print a summary of past calculations.
 
-    :param job_manager:
-
-       a django manager (e.g.
-       :class:`openquake.engine.db.models.RiskCalculation.objects`)
-       which provides calculation instances
+    :param job_type: 'hazard' or 'risk'
     """
-
-    # FIXME(lp). As it might happen to have a calculation instance
-    # without a OqJob instance (e.g. when the user imports outputs
-    # directly from files) we filter out the calculation without the
-    # corresponding job
-    if job_manager.model is models.RiskCalculation:
-        jobs = [calc.oqjob for calc in job_manager.filter(
-            oqjob__user_name=getpass.getuser()).order_by('oqjob__last_update')]
-    else:
-        jobs = job_manager.filter(
-            user_name=getpass.getuser()).order_by('last_update')
+    jobs = models.OqJob.objects.filter(
+        user_name=getpass.getuser())
+    if job_type == 'hazard':
+        jobs = jobs.filter(hazard_calculation_id__is_null=True)
+    else:  # risk
+        jobs = jobs.filter(hazard_calculation_id__is_null=False)
+    jobs = jobs.order_by('last_update')
 
     if len(jobs) == 0:
         print 'None'
@@ -284,10 +276,7 @@ def list_calculations(job_manager):
         print ('job_id | calc_id |     status |         last_update | '
                '        description')
         for job in jobs:
-            if job_manager.model is models.RiskCalculation:
-                calc_id = job.risk_calculation.id
-            else:
-                calc_id = job.id
+            calc_id = job.id
             descr = job.get_param('description', None)
             latest_job = job
             if latest_job.is_running:
@@ -369,39 +358,21 @@ def _touch_log_file(log_file):
 
 
 def delete_uncompleted_calculations():
-    for rc in models.RiskCalculation.objects.filter(
-            oqjob__user_name=getpass.getuser()).exclude(
-            oqjob__status="successful"):
-        del_risk_calc(rc.id, True)
-
     for hc in models.OqJob.objects.filter(
             oqjob__user_name=getpass.getuser()).exclude(
             oqjob__status="successful"):
-        del_haz_calc(hc.id, True)
+        del_calc(hc.id, True)
 
 
-def del_haz_calc(hc_id, confirmed=False):
+def del_calc(hc_id, confirmed=False):
     """
     Delete a hazard calculation and all associated outputs.
     """
     if confirmed or confirm(
-            'Are you sure you want to delete this hazard calculation and all '
+            'Are you sure you want to delete this calculation and all '
             'associated outputs?\nThis action cannot be undone. (y/n): '):
         try:
-            engine.del_haz_calc(hc_id)
-        except RuntimeError, err:
-            print err.message
-
-
-def del_risk_calc(rc_id, confirmed=False):
-    """
-    Delete a risk calculation and all associated outputs.
-    """
-    if confirmed or confirm(
-            'Are you sure you want to delete this risk calculation and all '
-            'associated outputs?\nThis action cannot be undone. (y/n): '):
-        try:
-            engine.del_risk_calc(rc_id)
+            engine.del_calc(hc_id)
         except RuntimeError, err:
             print err.message
 
@@ -470,7 +441,7 @@ def main():
 
     # hazard
     elif args.list_hazard_calculations:
-        list_calculations(models.OqJob.objects)
+        list_calculations('hazard')
     elif args.list_hazard_outputs is not None:
         engine.list_hazard_outputs(args.list_hazard_outputs)
     elif args.export_hazard is not None:
@@ -487,10 +458,10 @@ def main():
         engine.run_job(expanduser(args.run_hazard), args.log_level,
                        log_file, args.exports)
     elif args.delete_hazard_calculation is not None:
-        del_haz_calc(args.delete_hazard_calculation, args.yes)
+        del_calc(args.delete_hazard_calculation, args.yes)
     # risk
     elif args.list_risk_calculations:
-        list_calculations(models.RiskCalculation.objects)
+        list_calculations('risk')
     elif args.list_risk_outputs is not None:
         engine.list_risk_outputs(args.list_risk_outputs)
     elif args.export_risk is not None:
@@ -510,7 +481,7 @@ def main():
                        args.exports, hazard_output_id=args.hazard_output_id,
                        hazard_calculation_id=args.hazard_calculation_id)
     elif args.delete_risk_calculation is not None:
-        del_risk_calc(args.delete_risk_calculation, args.yes)
+        del_calc(args.delete_risk_calculation, args.yes)
     # import
     elif args.load_gmf is not None:
         with open(args.load_gmf) as f:
