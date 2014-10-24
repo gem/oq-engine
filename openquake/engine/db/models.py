@@ -248,7 +248,7 @@ class OqJob(djm.Model):
     An OpenQuake engine run started by the user
     '''
     user_name = djm.TextField()
-    hazard_calculation = djm.ForeignKey('OqJob'),
+    hazard_calculation = djm.ForeignKey('OqJob', null=True)
     LOG_LEVEL_CHOICES = (
         (u'debug', u'Debug'),
         (u'info', u'Info'),
@@ -290,7 +290,7 @@ class OqJob(djm.Model):
         """
         'hazard' or 'risk'
         """
-        return 'risk' if self.hazard_calculation is None else 'hazard'
+        return 'hazard' if self.hazard_calculation is None else 'risk'
 
     def get_param(self, name, missing=RAISE_EXC):
         """
@@ -461,6 +461,18 @@ class RiskCalculation(object):
             if self.hazard_output_id else None
         self.hazard_calculation = OqJob.objects.get(
             pk=self.hazard_calculation_id)
+        if not hasattr(self, 'taxonomies_from_model'):
+            self.taxonomies_from_model = None
+        if not hasattr(self, 'time_event'):
+            self.time_event = None
+        if not hasattr(self, 'asset_correlation'):
+            self.asset_correlation = 0
+        if not hasattr(self, 'master_seed'):
+            self.master_seed = 42
+        if not hasattr(self, 'insured_losses'):
+            self.insured_losses = False
+        if not hasattr(self, 'risk_investigation_time'):
+            self.risk_investigation_time = None
 
     def get_hazard_param(self):
         """
@@ -510,7 +522,7 @@ class RiskCalculation(object):
             not given, `DEFAULT_MAXIMUM_DISTANCE` is used as default) and the
             step (if exists) used by the hazard calculation.
         """
-        dist = self.maximum_distance or self.DEFAULT_MAXIMUM_DISTANCE
+        dist = getattr(self, 'maximum_distance', self.DEFAULT_MAXIMUM_DISTANCE)
 
         grid_spacing = self.hazard_calculation.get_param(
             'region_grid_spacing', None)
