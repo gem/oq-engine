@@ -1,3 +1,9 @@
+UPDATE uiapi.oq_job AS x
+SET hazard_calculation_id=y.hazard_calculation_id
+FROM uiapi.risk_calculation AS y
+WHERE x.risk_calculation_id=y.id
+AND x.hazard_calculation_id IS NULL;
+
 ALTER TABLE uiapi.oq_job
 DROP COLUMN risk_calculation_id;
 
