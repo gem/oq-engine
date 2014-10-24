@@ -135,30 +135,6 @@ def prepare_job(user_name="openquake", log_level='progress'):
     )
 
 
-def create_calculation(model, params):
-    """
-    Given a params `dict` parsed from the config file, create a
-    :class:`~openquake.engine.db.models.RiskCalculation`.
-
-    :param model:
-        a Calculation class object
-    :param dict params:
-        Dictionary of parameter names and values. Parameter names should match
-        exactly the field names of
-        :class:`openquake.engine.db.model.RiskCalculation`.
-    :returns:
-        an instance of a newly created `model`
-    """
-    if "export_dir" in params:
-        params["export_dir"] = os.path.abspath(params["export_dir"])
-
-    calc = model.create(**params)
-    calc.full_clean()
-    calc.save()
-
-    return calc
-
-
 # used by bin/openquake and openquake.server.views
 def run_calc(job, log_level, log_file, exports, job_type):
     """
@@ -244,9 +220,9 @@ def _do_run_calc(calc, exports, job_type):
     logs.LOG.debug("*> complete")
 
 
-def del_haz_calc(job_id):
+def del_calc(job_id):
     """
-    Delete a hazard calculation and all associated outputs.
+    Delete a calculation and all associated outputs.
 
     :param job_id:
         ID of a :class:`~openquake.engine.db.models.OqJob`.
@@ -265,24 +241,13 @@ def del_haz_calc(job_id):
         # outputs, or the hazard calculation itself
         msg = UNABLE_TO_DEL_HC_FMT % (
             'The following risk calculations are referencing this hazard'
-            ' calculation: %s'
-        )
+            ' calculation: %s')
 
-        # check for a reference to hazard outputs
-        assoc_outputs = models.RiskCalculation.objects.filter(
-            hazard_output__oq_job=job_id
-        )
+        assoc_outputs = models.OqJob.objects.filter(
+            hazard_calculation_id=job_id)
         if assoc_outputs.count() > 0:
-            raise RuntimeError(msg % ', '.join([str(x.id)
-                                                for x in assoc_outputs]))
-
-        # check for a reference to the hazard calculation itself
-        assoc_calcs = models.RiskCalculation.objects.filter(
-            hazard_calculation=job_id
-        )
-        if assoc_calcs.count() > 0:
-            raise RuntimeError(msg % ', '.join([str(x.id)
-                                                for x in assoc_calcs]))
+            raise RuntimeError(
+                msg % ', '.join(str(x.id) for x in assoc_outputs))
 
         # No risk calculation are referencing what we want to delete.
         # Carry on with the deletion.
@@ -290,28 +255,6 @@ def del_haz_calc(job_id):
     else:
         # this doesn't belong to the current user
         raise RuntimeError(UNABLE_TO_DEL_HC_FMT % 'Access denied')
-
-
-def del_risk_calc(rc_id):
-    """
-    Delete a risk calculation and all associated outputs.
-
-    :param hc_id:
-        ID of a :class:`~openquake.engine.db.models.RiskCalculation`.
-    """
-    try:
-        rc = models.RiskCalculation.objects.get(id=rc_id)
-    except exceptions.ObjectDoesNotExist:
-        raise RuntimeError('Unable to delete risk calculation: '
-                           'ID=%s does not exist' % rc_id)
-
-    if rc.oqjob.user_name == getpass.getuser():
-        # we are allowed to delete this
-        rc.delete(using='admin')
-    else:
-        # this doesn't belong to the current user
-        raise RuntimeError('Unable to delete risk calculation: '
-                           'Access denied')
 
 
 def list_hazard_outputs(hc_id, full=True):
@@ -477,6 +420,8 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
         params['specific_assets'] = []
     if 'conditional_loss_poes' not in params:
         params['conditional_loss_poes'] = []
+    if haz_job:
+        params['hazard_calculation_id'] = haz_job.id
     params.update(extras)
     job.save_params(params)
 
@@ -484,30 +429,17 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
         # this is a hazard calculation, not a risk one
         del params['hazard_calculation_id']
         del params['hazard_output_id']
-        job.save()
-        return job
+    else:  # this is a risk calculation
+        job.hazard_calculation = haz_job
 
-    del params['intensity_measure_types_and_levels']
-    if params['hazard_calculation_id'] is None:
-        params['hazard_calculation_id'] = haz_job.id
-    if 'statistics' in params:
-        del params['statistics']
-    # ugliness that will disappear when RiskCalculation will be removed
-    if 'specific_assets' in params:
-        del params['specific_assets']
-    if 'sites_disagg' in params:
-        del params['sites_disagg']
-    calculation = create_calculation(models.RiskCalculation, params)
-    job.risk_calculation = calculation
     job.save()
-
     return job
 
 
 def list_risk_outputs(rc_id, full=True):
     """
     List the outputs for a given
-    :class:`~openquake.engine.db.models.RiskCalculation`.
+    :class:`~openquake.engine.db.models.OqJob` of kind risk.
 
     :param rc_id:
         ID of a risk calculation.
