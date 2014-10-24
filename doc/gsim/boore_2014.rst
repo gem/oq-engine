@@ -7,53 +7,53 @@ Boore, Stewart, Seyhan & Atkinson 2014
 .. autoclass:: BooreEtAl2014
     :members:
 
-.. autoclass:: BooreEtAlHighQ2014
+.. autoclass:: BooreEtAl2014HighQ
     :members:
 
-.. autoclass:: BooreEtAlLowQ2014
+.. autoclass:: BooreEtAl2014LowQ
     :members:
 
-.. autoclass:: BooreEtAlCaliforniaBasin2014
+.. autoclass:: BooreEtAl2014CaliforniaBasin
     :members:
 
-.. autoclass:: BooreEtAlHighQCaliforniaBasin2014
+.. autoclass:: BooreEtAl2014HighQCaliforniaBasin
     :members:
 
-.. autoclass:: BooreEtAlLowQCaliforniaBasin2014
+.. autoclass:: BooreEtAl2014LowQCaliforniaBasin
     :members:
 
-.. autoclass:: BooreEtAlJapanBasin2014
+.. autoclass:: BooreEtAl2014JapanBasin
     :members:
 
-.. autoclass:: BooreEtAlHighQJapanBasin2014
+.. autoclass:: BooreEtAl2014HighQJapanBasin
     :members:
 
-.. autoclass:: BooreEtAlLowQJapanBasin2014
+.. autoclass:: BooreEtAl2014LowQJapanBasin
     :members:
 
-.. autoclass:: BooreEtAlNoSOF2014
+.. autoclass:: BooreEtAl2014NoSOF
     :members:
 
-.. autoclass:: BooreEtAlHighQNoSOF2014
+.. autoclass:: BooreEtAl2014HighQNoSOF
     :members:
 
-.. autoclass:: BooreEtAlLowQNoSOF2014
+.. autoclass:: BooreEtAl2014LowQNoSOF
     :members:
 
-.. autoclass:: BooreEtAlCaliforniaBasinNoSOF2014
+.. autoclass:: BooreEtAl2014CaliforniaBasinNoSOF
     :members:
 
-.. autoclass:: BooreEtAlHighQCaliforniaBasinNoSOF2014
+.. autoclass:: BooreEtAl2014HighQCaliforniaBasinNoSOF
     :members:
 
-.. autoclass:: BooreEtAlLowQCaliforniaBasinNoSOF2014
+.. autoclass:: BooreEtAl2014LowQCaliforniaBasinNoSOF
     :members:
 
-.. autoclass:: BooreEtAlJapanBasinNoSOF2014
+.. autoclass:: BooreEtAl2014JapanBasinNoSOF
     :members:
 
-.. autoclass:: BooreEtAlHighQJapanBasinNoSOF2014
+.. autoclass:: BooreEtAl2014HighQJapanBasinNoSOF
     :members:
 
-.. autoclass:: BooreEtAlLowQJapanBasinNoSOF2014
+.. autoclass:: BooreEtAl2014LowQJapanBasinNoSOF
     :members:

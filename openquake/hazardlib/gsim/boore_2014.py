@@ -15,23 +15,23 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 Module exports :class:`BooreEtAl2014`,
-               :class:`BooreEtAlHighQ2014`,
-               :class:`BooreEtAlLowQ2014`,
-               :class:`BooreEtAlCaliforniaBasin2014`,
-               :class:`BooreEtAlHighQCaliforniaBasin2014`,
-               :class:`BooreEtAlLowQCaliforniaBasin2014`,
-               :class:`BooreEtAlJapanBasin2014`,
-               :class:`BooreEtAlHighQJapanBasin2014`,
-               :class:`BooreEtAlLowQJapanBasin2014`,
-               :class:`BooreEtAlNoSOF2014`,
-               :class:`BooreEtAlHighQNoSOF2014`,
-               :class:`BooreEtAlLowQNoSOF2014`,
-               :class:`BooreEtAlCaliforniaBasinNoSOF2014`,
-               :class:`BooreEtAlHighQCaliforniaBasinNoSOF2014`,
-               :class:`BooreEtAlLowQCaliforniaBasinNoSOF2014`,
-               :class:`BooreEtAlJapanBasinNoSOF2014`,
-               :class:`BooreEtAlHighQJapanBasinNoSOF2014`,
-               :class:`BooreEtAlLowQJapanBasinNoSOF2014`
+               :class:`BooreEtAl2014HighQ`,
+               :class:`BooreEtAl2014LowQ`,
+               :class:`BooreEtAl2014CaliforniaBasin`,
+               :class:`BooreEtAl2014HighQCaliforniaBasin`,
+               :class:`BooreEtAl2014LowQCaliforniaBasin`,
+               :class:`BooreEtAl2014JapanBasin`,
+               :class:`BooreEtAl2014HighQJapanBasin`,
+               :class:`BooreEtAl2014LowQJapanBasin`,
+               :class:`BooreEtAl2014NoSOF`,
+               :class:`BooreEtAl2014HighQNoSOF`,
+               :class:`BooreEtAl2014LowQNoSOF`,
+               :class:`BooreEtAl2014CaliforniaBasinNoSOF`,
+               :class:`BooreEtAl2014HighQCaliforniaBasinNoSOF`,
+               :class:`BooreEtAl2014LowQCaliforniaBasinNoSOF`,
+               :class:`BooreEtAlJ2014apanBasinNoSOF`,
+               :class:`BooreEtAl2014HighQJapanBasinNoSOF`,
+               :class:`BooreEtAl2014LowQJapanBasinNoSOF`
 """
 from __future__ import division
 
@@ -375,7 +375,7 @@ class BooreEtAl2014(GMPE):
         "v2": 300.0}
 
 
-class BooreEtAlHighQ2014(BooreEtAl2014):
+class BooreEtAl2014HighQ(BooreEtAl2014):
     """
     This class implements the Boore et al. (2014) model considering the
     correction to the path scaling term for High Q regions (e.g. China and
@@ -494,7 +494,7 @@ class BooreEtAlHighQ2014(BooreEtAl2014):
     """)
 
 
-class BooreEtAlLowQ2014(BooreEtAl2014):
+class BooreEtAl2014LowQ(BooreEtAl2014):
     """
     This class implements the Boore et al. (2014) model considering the
     correction to the path scaling term for Low Q regions (e.g. Italy and
@@ -625,7 +625,7 @@ def california_basin_model(vs30):
     return np.exp(model)
 
 
-class BooreEtAlCaliforniaBasin2014(BooreEtAl2014):
+class BooreEtAl2014CaliforniaBasin(BooreEtAl2014):
     """
     Implements the Boore et al. (2014) GMPE under the conditions that the
     global (average Q) attenuation model is preferred and the basin model is
@@ -651,7 +651,7 @@ class BooreEtAlCaliforniaBasin2014(BooreEtAl2014):
         return f_dz1
 
 
-class BooreEtAlHighQCaliforniaBasin2014(BooreEtAlHighQ2014):
+class BooreEtAl2014HighQCaliforniaBasin(BooreEtAl2014HighQ):
     """
     Implements the Boore et al. (2014) GMPE under the conditions that the
     high Q attenuation model is preferred and the basin model is
@@ -677,7 +677,7 @@ class BooreEtAlHighQCaliforniaBasin2014(BooreEtAlHighQ2014):
         return f_dz1
 
 
-class BooreEtAlLowQCaliforniaBasin2014(BooreEtAlLowQ2014):
+class BooreEtAl2014LowQCaliforniaBasin(BooreEtAl2014LowQ):
     """
     Implements the Boore et al. (2014) GMPE under the conditions that the
     high Q attenuation model is preferred and the basin model is
@@ -715,7 +715,7 @@ def japan_basin_model(vs30):
     return np.exp(model)
 
 
-class BooreEtAlJapanBasin2014(BooreEtAl2014):
+class BooreEtAl2014JapanBasin(BooreEtAl2014):
     """
     Implements the Boore et al. (2014) GMPE under the conditions that the
     global (average Q) attenuation model is preferred and the basin model is
@@ -741,7 +741,7 @@ class BooreEtAlJapanBasin2014(BooreEtAl2014):
         return f_dz1
 
 
-class BooreEtAlHighQJapanBasin2014(BooreEtAlHighQ2014):
+class BooreEtAl2014HighQJapanBasin(BooreEtAl2014HighQ):
     """
     Implements the Boore et al. (2014) GMPE under the conditions that the
     high Q attenuation model is preferred and the basin model is
@@ -767,7 +767,7 @@ class BooreEtAlHighQJapanBasin2014(BooreEtAlHighQ2014):
         return f_dz1
 
 
-class BooreEtAlLowQJapanBasin2014(BooreEtAlLowQ2014):
+class BooreEtAl2014LowQJapanBasin(BooreEtAl2014LowQ):
     """
     Implements the Boore et al. (2014) GMPE under the conditions that the
     low Q attenuation model is preferred and the basin model is
@@ -793,7 +793,7 @@ class BooreEtAlLowQJapanBasin2014(BooreEtAlLowQ2014):
         return f_dz1
 
 
-class BooreEtAlNoSOF2014(BooreEtAl2014):
+class BooreEtAl2014NoSOF(BooreEtAl2014):
     """
     The Boore et al. (2014) GMPE can consider the case in which the
     style-of-faulting is unspecified. In this case the GMPE is no longer
@@ -809,7 +809,7 @@ class BooreEtAlNoSOF2014(BooreEtAl2014):
         return C["e0"]
 
 
-class BooreEtAlHighQNoSOF2014(BooreEtAlHighQ2014):
+class BooreEtAl2014HighQNoSOF(BooreEtAl2014HighQ):
     """
     The Boore et al. (2014) GMPE, implemented for the High Q regions, for the
     case in which the style-of-faulting is unspecified.
@@ -824,7 +824,7 @@ class BooreEtAlHighQNoSOF2014(BooreEtAlHighQ2014):
         return C["e0"]
 
 
-class BooreEtAlLowQNoSOF2014(BooreEtAlLowQ2014):
+class BooreEtAl2014LowQNoSOF(BooreEtAl2014LowQ):
     """
     The Boore et al. (2014) GMPE, implemented for the Low Q regions, for the
     case in which the style-of-faulting is unspecified.
@@ -839,7 +839,7 @@ class BooreEtAlLowQNoSOF2014(BooreEtAlLowQ2014):
         return C["e0"]
 
 
-class BooreEtAlCaliforniaBasinNoSOF2014(BooreEtAlNoSOF2014):
+class BooreEtAl2014CaliforniaBasinNoSOF(BooreEtAl2014NoSOF):
     """
     The Boore et al. (2014) GMPE, implemented for global (average Q) regions,
     for the case when style of faulting is unspecficied and the California
@@ -865,7 +865,7 @@ class BooreEtAlCaliforniaBasinNoSOF2014(BooreEtAlNoSOF2014):
         return f_dz1
 
 
-class BooreEtAlHighQCaliforniaBasinNoSOF2014(BooreEtAlHighQNoSOF2014):
+class BooreEtAl2014HighQCaliforniaBasinNoSOF(BooreEtAl2014HighQNoSOF):
     """
     The Boore et al. (2014) GMPE, implemented for high Q regions,
     for the case when style of faulting is unspecficied and the California
@@ -891,7 +891,7 @@ class BooreEtAlHighQCaliforniaBasinNoSOF2014(BooreEtAlHighQNoSOF2014):
         return f_dz1
 
 
-class BooreEtAlLowQCaliforniaBasinNoSOF2014(BooreEtAlLowQNoSOF2014):
+class BooreEtAl2014LowQCaliforniaBasinNoSOF(BooreEtAl2014LowQNoSOF):
     """
     The Boore et al. (2014) GMPE, implemented for high Q regions,
     for the case when style of faulting is unspecficied and the California
@@ -917,7 +917,7 @@ class BooreEtAlLowQCaliforniaBasinNoSOF2014(BooreEtAlLowQNoSOF2014):
         return f_dz1
 
 
-class BooreEtAlJapanBasinNoSOF2014(BooreEtAlNoSOF2014):
+class BooreEtAl2014JapanBasinNoSOF(BooreEtAl2014NoSOF):
     """
     The Boore et al. (2014) GMPE, implemented for global (average Q) regions,
     for the case when style of faulting is unspecficied and the California
@@ -943,7 +943,7 @@ class BooreEtAlJapanBasinNoSOF2014(BooreEtAlNoSOF2014):
         return f_dz1
 
 
-class BooreEtAlHighQJapanBasinNoSOF2014(BooreEtAlHighQNoSOF2014):
+class BooreEtAl2014HighQJapanBasinNoSOF(BooreEtAl2014HighQNoSOF):
     """
     The Boore et al. (2014) GMPE, implemented for high Q regions,
     for the case when style of faulting is unspecficied and the California
@@ -969,7 +969,7 @@ class BooreEtAlHighQJapanBasinNoSOF2014(BooreEtAlHighQNoSOF2014):
         return f_dz1
 
 
-class BooreEtAlLowQJapanBasinNoSOF2014(BooreEtAlLowQNoSOF2014):
+class BooreEtAl2014LowQJapanBasinNoSOF(BooreEtAl2014LowQNoSOF):
     """
     The Boore et al. (2014) GMPE, implemented for high Q regions,
     for the case when style of faulting is unspecficied and the California
