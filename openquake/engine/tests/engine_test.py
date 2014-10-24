@@ -149,14 +149,7 @@ class DeleteHazCalcTestCase(unittest.TestCase):
             self.risk_cfg, self.hazard_cfg,
             output_type='curve', username=getpass.getuser()
         )
-        risk_calc = risk_job.risk_calculation
-
         hazard_job = risk_job.risk_calculation.hazard_output.oq_job
-
-        risk_calc.hazard_output = None
-        risk_calc.hazard_calculation = hazard_job
-        risk_calc.save(using='admin')
-
         self.assertRaises(RuntimeError, engine.del_calc, hazard_job.id)
 
     def test_del_calc_output_referenced_by_risk_calc(self):
@@ -196,24 +189,20 @@ class DeleteRiskCalcTestCase(unittest.TestCase):
 
         # Sanity check: make sure the risk calculation and outputs exist in
         # the database:
-        risk_calcs = models.OqJob.objects.filter(
-            id=risk_calc.id
-        )
+        risk_calcs = models.OqJob.objects.filter(id=risk_job.id)
         self.assertEqual(1, risk_calcs.count())
 
         outputs = models.Output.objects.filter(oq_job=risk_job.id)
         self.assertEqual(2, outputs.count())
 
         # Delete the calculation
-        engine.del_calc(risk_calc.id)
+        engine.del_calc(risk_job.id)
 
         # Check that the risk calculation and its outputs were deleted:
         outputs = models.Output.objects.filter(oq_job=risk_job.id)
         self.assertEqual(0, outputs.count())
 
-        risk_calcs = models.OqJob.objects.filter(
-            id=risk_calc.id
-        )
+        risk_calcs = models.OqJob.objects.filter(id=risk_job.id)
         self.assertEqual(0, risk_calcs.count())
 
     def test_del_calc_does_not_exist(self):
@@ -227,9 +216,7 @@ class DeleteRiskCalcTestCase(unittest.TestCase):
             self.risk_cfg, self.hazard_cfg,
             output_type='curve', username=helpers.random_string()
         )
-        risk_calc = risk_job.risk_calculation
-
-        self.assertRaises(RuntimeError, engine.del_calc, risk_calc.id)
+        self.assertRaises(RuntimeError, engine.del_calc, risk_job.id)
 
 
 class FakeOutput(object):
