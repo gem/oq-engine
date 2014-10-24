@@ -473,6 +473,8 @@ class RiskCalculation(object):
             self.insured_losses = False
         if not hasattr(self, 'risk_investigation_time'):
             self.risk_investigation_time = None
+        if not hasattr(self, 'loss_curve_resolution'):
+            self.loss_curve_resolution = None
 
     def get_hazard_param(self):
         """
