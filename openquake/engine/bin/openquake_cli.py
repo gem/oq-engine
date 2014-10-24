@@ -265,9 +265,9 @@ def list_calculations(job_type):
     jobs = models.OqJob.objects.filter(
         user_name=getpass.getuser())
     if job_type == 'hazard':
-        jobs = jobs.filter(hazard_calculation_id__isnull=True)
+        jobs = jobs.filter(hazard_calculation__isnull=True)
     else:  # risk
-        jobs = jobs.filter(hazard_calculation_id__isnull=False)
+        jobs = jobs.filter(hazard_calculation__isnull=False)
     jobs = jobs.order_by('last_update')
 
     if len(jobs) == 0:
