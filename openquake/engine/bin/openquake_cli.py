@@ -273,10 +273,9 @@ def list_calculations(job_type):
     if len(jobs) == 0:
         print 'None'
     else:
-        print ('job_id | calc_id |     status |         last_update | '
+        print ('job_id |     status |         last_update | '
                '        description')
         for job in jobs:
-            calc_id = job.id
             descr = job.get_param('description', None)
             latest_job = job
             if latest_job.is_running:
@@ -289,8 +288,8 @@ def list_calculations(job_type):
             last_update = latest_job.last_update.strftime(
                 '%Y-%m-%d %H:%M:%S %Z'
             )
-            print '%6d | %7d | %10s | %s| %s' % (
-                job.id, calc_id, status, last_update, descr)
+            print '%6d | %10s | %s| %s' % (
+                job.id, status, last_update, descr)
 
 
 # TODO: the command-line switches are not tested, included this one
