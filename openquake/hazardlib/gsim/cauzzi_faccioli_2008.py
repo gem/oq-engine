@@ -36,7 +36,6 @@ from openquake.hazardlib.gsim.utils_swiss_gmpe import _apply_adjustments
 
 
 class CauzziFaccioli2008(GMPE):
-
     """
     Implements GMPE developed by Carlo Cauzzi and Ezio Faccioli and published
     as "Broadband (0.05 to 20s) prediction of displacement response spectra
@@ -611,17 +610,15 @@ class CauzziFaccioli2008(GMPE):
 
 
 class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
-
     """
-    This class extends :class:`CauzziFaccioli2008`
-    adjusted to be used for the Swiss Hazard Model [2014].
-    1) kappa value
-       K-adjustments corresponding to model 01 - as prepared by Ben Edwards
-       K-value for PGA were not provided but infered from SA[0.01s]
-       the model considers a fixed value of vs30=1100m/s
-    2) small-magnitude correction
-    3) single station sigma - inter-event magnitude/distance adjustment
-
+    This class extends :class:`CauzziFaccioli2008` adjusted to be used for the 
+    Swiss Hazard Model [2014].
+    #. kappa value K-adjustments corresponding to model 01 - as prepared by 
+    Ben Edwards K-value for PGA were not provided but infered 
+    from SA[0.01s] the model considers a fixed value of vs30=1100m/s
+    #. small-magnitude correction
+    #. single station sigma - inter-event magnitude/distance adjustment
+        
     Disclaimer: these equations are modified to be used for the
     Swiss Seismic Hazard Model [2014].
     The use of these models is the soly responsability of the hazard modeler.
@@ -652,7 +649,7 @@ class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
 class CauzziFaccioli2008SWISS04(CauzziFaccioli2008SWISS01):
 
     """
-    This class extends :class:`CauzziFaccioli2008`following same strategy
+    This class extends :class:`CauzziFaccioli2008`, following same strategy
     as for :class:`CauzziFaccioli2008SWISS01`
     """
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS04
@@ -661,7 +658,7 @@ class CauzziFaccioli2008SWISS04(CauzziFaccioli2008SWISS01):
 class CauzziFaccioli2008SWISS08(CauzziFaccioli2008SWISS01):
 
     """
-    This class extends :class:`CauzziFaccioli2008`,following same strategy
+    This class extends :class:`CauzziFaccioli2008`, following same strategy
     as for :class:`CauzziFaccioli2008SWISS01`
     """
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS08
