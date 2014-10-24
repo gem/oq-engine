@@ -626,7 +626,7 @@ class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
     Model implmented by laurentiu.danciu@gmail.com
     """
 
-    # Supported standard deviations
+    #: Supported standard deviation type is only total
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
