@@ -34,6 +34,7 @@ Built-in GSIMs
     chiou_youngs_2008
     chiou_youngs_2014
     climent_1994
+    convertito_2012
     douglas_stochastic_2013
     faccioli_2010
     frankel_1996
