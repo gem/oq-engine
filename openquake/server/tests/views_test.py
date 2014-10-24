@@ -257,7 +257,7 @@ class CalcRiskResultsTestCase(BaseViewTestCase):
         ]
         with mock.patch('openquake.engine.engine.get_outputs') as gro:
             with mock.patch('openquake.engine.db.models'
-                            '.RiskCalculation.objects.get') as rc_get:
+                            '.OqJob.objects.get') as rc_get:
                 rc_get.return_value.oqjob.status = 'complete'
 
                 gro.return_value = [
@@ -273,7 +273,7 @@ class CalcRiskResultsTestCase(BaseViewTestCase):
     def test_404_no_outputs(self):
         with mock.patch('openquake.engine.engine.get_outputs') as gro:
             with mock.patch('openquake.engine.db.models'
-                            '.RiskCalculation.objects.get') as rc_get:
+                            '.OqJob.objects.get') as rc_get:
                 rc_get.return_value.oqjob.status = 'complete'
                 gro.return_value = []
                 response = views.calc_results(self.request, 'risk', 1)
@@ -282,7 +282,7 @@ class CalcRiskResultsTestCase(BaseViewTestCase):
 
     def test_404_calc_not_exists(self):
         with mock.patch('openquake.engine.db.models'
-                        '.RiskCalculation.objects.get') as rc_get:
+                        '.OqJob.objects.get') as rc_get:
             rc_get.side_effect = ObjectDoesNotExist
             response = views.calc_results(self.request, 'risk', 1)
 
@@ -290,7 +290,7 @@ class CalcRiskResultsTestCase(BaseViewTestCase):
 
     def test_404_calc_not_complete(self):
         with mock.patch('openquake.engine.db.models'
-                        '.RiskCalculation.objects.get') as rc_get:
+                        '.OqJob.objects.get') as rc_get:
             rc_get.return_value.oqjob.status = 'pre_executing'
             response = views.calc_results(self.request, 'risk', 1)
 
@@ -473,8 +473,7 @@ FakeUser = namedtuple('FakeUser', 'id')
 FakeJob = namedtuple(
     'FakeJob', 'id, status, owner, hazard_calculation, risk_calculation'
 )
-FakeJob.calc_id = property(
-    lambda self: (self.risk_calculation or self).id)
+
 FakeJob.job_type = property(
     lambda self: 'risk' if self.risk_calculation else 'hazard')
 
