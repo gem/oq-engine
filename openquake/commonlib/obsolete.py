@@ -20,7 +20,14 @@
 #####   this is not used by the engine, only by the GEMScienceTools    #####
 ############################################################################
 
-from openquake.nrmllib import models as nrml_models
+try:
+    from openquake.nrmllib import models as nrml_models
+except ImportError:
+    class NotImported():
+        def __getattr__(self, name):
+            raise ImportError('openquake.nrmllib.%s' % name)
+    nrml_models = NotImported()
+
 from shapely import wkt
 from openquake.hazardlib import scalerel
 from openquake.hazardlib.source.rupture import Rupture as HazardlibRupture
