@@ -33,10 +33,10 @@ class ScenarioDamageRiskCase4TestCase(risk.FixtureBasedQATestCase):
 
     def actual_data(self, job):
         per_asset = models.DmgDistPerAsset.objects.filter(
-            dmg_state__risk_calculation=job.risk_calculation).order_by(
+            dmg_state__risk_calculation=job).order_by(
             'exposure_data', 'dmg_state')
         totals = models.DmgDistTotal.objects.filter(
-            dmg_state__risk_calculation=job.risk_calculation).order_by(
+            dmg_state__risk_calculation=job).order_by(
             'dmg_state')
         data = [[[m.mean, m.stddev] for m in per_asset],
                 [[total.mean, total.stddev] for total in totals]]
@@ -44,12 +44,10 @@ class ScenarioDamageRiskCase4TestCase(risk.FixtureBasedQATestCase):
 
     def expected_data(self):
         return [
-            [[2665.92514738795, 385.408846601969], [320.924965874035, 363.274973366753],
-             [13.1498867380187, 23.8620047204362], [208.269578176731, 307.396726473713],
-             [533.674469271356, 177.190914484958], [258.055952551913, 251.576066029219],
-             [638.702514496033, 757.994603683792], [670.416600459505, 539.363527776893],
-             [690.880885044462, 883.18277798177]],
-            [[3512.89724006071, 1239.14198904676], [1525.0160356049, 685.895079593009],
-             [962.086724334393, 1051.8785015279]]]
-
-
+            [[2665.9251, 385.4088], [320.9249, 363.2749],
+             [13.1498, 23.8620], [208.2695, 307.3967],
+             [533.6744, 177.1909], [258.0559, 251.5760],
+             [638.7025, 757.9946], [670.4166, 539.3635],
+             [690.8808, 883.1827]],
+            [[3512.8972, 1239.1419], [1525.0160, 685.8950],
+             [962.0867, 1051.8785]]]

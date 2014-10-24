@@ -157,10 +157,10 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
 
         for lsi, dstate in enumerate(risk_model.damage_states):
             models.DmgState.objects.get_or_create(
-                risk_calculation=self.rc, dmg_state=dstate, lsi=lsi)
+                risk_calculation=self.job, dmg_state=dstate, lsi=lsi)
 
         self.damage_state_ids = [d.id for d in models.DmgState.objects.filter(
-            risk_calculation=self.rc).order_by('lsi')]
+            risk_calculation=self.job).order_by('lsi')]
 
         self.loss_types.add('damage')  # single loss_type
         return risk_model
