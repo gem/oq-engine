@@ -474,7 +474,7 @@ class RiskCalculation(object):
         if not hasattr(self, 'risk_investigation_time'):
             self.risk_investigation_time = None
         if not hasattr(self, 'loss_curve_resolution'):
-            self.loss_curve_resolution = None
+            self.loss_curve_resolution = 50  # default
 
     def get_hazard_param(self):
         """

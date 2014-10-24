@@ -355,11 +355,9 @@ def run_job(cfg_file, log_level, log_file, exports=(), hazard_output_id=None,
                 sys.exit('Calculation %s failed' % job.id)
         else:
             if job.status == 'complete':
-                print_results(job.risk_calculation.id,
-                              duration, list_risk_outputs)
+                print_results(job.id, duration, list_risk_outputs)
             else:
-                sys.exit('Calculation %s failed' %
-                         job.risk_calculation.id)
+                sys.exit('Calculation %s failed' % job.id)
 
 
 @django_db.transaction.commit_on_success
@@ -448,6 +446,7 @@ def list_risk_outputs(rc_id, full=True):
     print_outputs_summary(get_outputs('risk', rc_id), full)
 
 
+# this is patched in the tests
 def get_outputs(job_type, calc_id):
     """
     :param job_type:
@@ -457,7 +456,4 @@ def get_outputs(job_type, calc_id):
     :returns:
         A sequence of :class:`openquake.engine.db.models.Output` objects
     """
-    if job_type == 'risk':
-        return models.Output.objects.filter(oq_job__risk_calculation=calc_id)
-    else:
-        return models.Output.objects.filter(oq_job=calc_id)
+    return models.Output.objects.filter(oq_job=calc_id)
