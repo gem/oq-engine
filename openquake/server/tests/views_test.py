@@ -177,7 +177,6 @@ class CalcToResponseDataTestCase(unittest.TestCase):
         }
 
         response_data = views._calc_to_response_data(self.calc)
-
         self.assertEqual(expected, response_data)
 
 
@@ -258,7 +257,7 @@ class CalcRiskResultsTestCase(BaseViewTestCase):
         with mock.patch('openquake.engine.engine.get_outputs') as gro:
             with mock.patch('openquake.engine.db.models'
                             '.OqJob.objects.get') as rc_get:
-                rc_get.return_value.oqjob.status = 'complete'
+                rc_get.return_value.status = 'complete'
 
                 gro.return_value = [
                     FakeOutput(1, 'output1', 'loss_curve'),
@@ -274,7 +273,7 @@ class CalcRiskResultsTestCase(BaseViewTestCase):
         with mock.patch('openquake.engine.engine.get_outputs') as gro:
             with mock.patch('openquake.engine.db.models'
                             '.OqJob.objects.get') as rc_get:
-                rc_get.return_value.oqjob.status = 'complete'
+                rc_get.return_value.status = 'complete'
                 gro.return_value = []
                 response = views.calc_results(self.request, 'risk', 1)
 
@@ -291,7 +290,7 @@ class CalcRiskResultsTestCase(BaseViewTestCase):
     def test_404_calc_not_complete(self):
         with mock.patch('openquake.engine.db.models'
                         '.OqJob.objects.get') as rc_get:
-            rc_get.return_value.oqjob.status = 'pre_executing'
+            rc_get.return_value.status = 'pre_executing'
             response = views.calc_results(self.request, 'risk', 1)
 
         self.assertEqual(404, response.status_code)

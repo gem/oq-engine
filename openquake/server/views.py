@@ -288,13 +288,9 @@ def _get_calcs(job_type):
     Gets all calculation records available.
     """
     job_params = oqe_models.JobParam.objects.filter(
-        name='description', job__risk_calculation__isnull=job_type == 'hazard',
-        job__user_name='platform')
-    if job_type == 'risk':
-        return [(jp.job.risk_calculation, jp.job.status, jp.value)
-                for jp in job_params]
-    else:  # hazard
-        return [(jp.job, jp.job.status, jp.value) for jp in job_params]
+        name='description', job__user_name='platform',
+        job__hazard_calculation__isnull=job_type == 'hazard')
+    return [(jp.job, jp.job.status, jp.value) for jp in job_params]
 
 
 @require_http_methods(['GET'])
