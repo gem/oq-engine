@@ -175,7 +175,7 @@ class OqParam(valid.ParamSet):
         """
         if getattr(self, 'hazard_maps', None) or getattr(
                 self, 'uniform_hazard_spectra', None):
-            return bool(self.poes)
+            return bool(getattr(self, 'poes', None))
         else:
             return True
 
