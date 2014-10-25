@@ -461,10 +461,10 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
     job = prepare_job(user_name=username, log_level=log_level)
     # read calculation params and create the calculation profile
     with logs.handle(job, log_level):
-        oqparam = readinput.get_oqparam(
-            open(cfg_file_path),
-            haz_job.id if haz_job and not hazard_output_id else None,
-            hazard_output_id)
+        oqparam = readinput.get_oqparam(open(cfg_file_path))
+        oqparam.hazard_calculation_id = \
+            haz_job.id if haz_job and not hazard_output_id else None
+        oqparam.hazard_output_id = hazard_output_id
 
     params = vars(oqparam).copy()
     if 'quantile_loss_curves' not in params:
