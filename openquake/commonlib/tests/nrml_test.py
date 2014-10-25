@@ -52,14 +52,14 @@ xmlns:gml="http://www.opengis.net/gml"
         <assets>
             <asset
             id="asset_01"
-            number="7"
+            number="7.0"
             taxonomy="IT-PV"
             >
                 <location lat="45.16667" lon="9.15000"/>
             </asset>
             <asset
             id="asset_02"
-            number="7"
+            number="7.0"
             taxonomy="IT-CE"
             >
                 <location lat="45.12200" lon="9.15333"/>

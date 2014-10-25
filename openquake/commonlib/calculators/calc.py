@@ -124,12 +124,12 @@ def calc_gmfs(oqparam, sitecol):
     trunc_level = getattr(oqparam, 'truncation_level', None)
     n_gmfs = getattr(oqparam, 'number_of_ground_motion_fields', 1)
     rupture = get_rupture(oqparam)
-    computer = gmf.GmfComputer(rupture, sitecol, imts, [gsim], trunc_level,
+    computer = gmf.GmfComputer(rupture, sitecol, imts, gsim, trunc_level,
                                correl_model)
     seeds = [rnd.randint(0, 2 ** 31 - 1) for _ in xrange(n_gmfs)]
     res = AccumDict()  # imt -> gmf
     for seed in seeds:
-        for (_gname, imt), gmfield in computer.compute(seed):
+        for imt, gmfield in computer.compute(seed):
             res += {imt: [gmfield]}
     # res[imt] is a matrix R x N
     return {imt: numpy.array(matrix).T for imt, matrix in res.iteritems()}

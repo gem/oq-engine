@@ -302,11 +302,11 @@ class Exposure(Converter):
                 area_type = ''
                 area_unit = ''
             try:
-                deductible_is_abs = conv.deductible['isAbsolute']
+                deductible_is_abs = ~conv.deductible
             except NameError:  # no <deductible> node
                 deductible_is_abs = ''
             try:
-                ins_limit_is_abs = conv.insuranceLimit['isAbsolute']
+                ins_limit_is_abs = ~conv.insuranceLimit
             except NameError:  # no <insuranceLimit> node
                 ins_limit_is_abs = ''
             yield records.Exposure(

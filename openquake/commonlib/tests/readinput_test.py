@@ -36,7 +36,7 @@ class ParseConfigTestCase(unittest.TestCase):
         # when we parse the file, we ignore these
         source = StringIO("""
 [general]
-CALCULATION_MODE = classical_risk
+calculation_mode = classical_risk
 region = 1 1, 2 2, 3 3
 [foo]
 bar = baz
@@ -163,6 +163,50 @@ class ClosestSiteModelTestCase(unittest.TestCase):
             valid.SiteParam(z1pt0=100.0, z2pt5=2.0, measured=False,
                             vs30=200.0, lon=0.0, lat=0.2)]
         self.assertEqual(list(readinput.get_site_model(oqparam)), expected)
+
+
+class ExposureTestCase(unittest.TestCase):
+    exposure = StringIO('''\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <exposureModel id="ep" category="buildings">
+    <description>Exposure model for buildings</description>
+    <conversions>
+      <costTypes>
+        <costType name="structural" unit="USD" type="per_asset"/>
+      </costTypes>
+    </conversions>
+    <assets>
+      <asset id="a1" taxonomy="RM" number="3000">
+        <location lon="81.2985" lat="29.1098"/>
+        <costs>
+          <cost type="structural" value="1000"/>
+        </costs>
+      </asset>
+      <asset id="a2" taxonomy="RC" number="1000">
+        <location lon="83.082298" lat="27.9006"/>
+        <costs>
+          <cost type="structural" value="500"/>
+        </costs>
+      </asset>
+      <asset id="a3" taxonomy="W" number="2000">
+        <location lon="85.747703" lat="27.9015"/>
+        <costs>
+          <cost type="structural" value="1000"/>
+        </costs>
+      </asset>
+    </assets>
+  </exposureModel>
+</nrml>''')
+    exposure.name = 'fake-exposure.xml'
+
+    def test_get_exposure_metadata(self):
+        exp, _assets = readinput.get_exposure_lazy(self.exposure)
+        self.assertEqual(exp.description, 'Exposure model for buildings')
+        self.assertEqual(exp.insurance_limit_is_absolute, None)
+        self.assertEqual(exp.deductible_is_absolute, None)
+        self.assertEqual(exp.cost_types, [
+            {'type': 'per_asset', 'name': 'structural', 'unit': 'USD'}])
 
 
 class ReadCsvTestCase(unittest.TestCase):

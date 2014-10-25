@@ -29,7 +29,7 @@ from openquake.risklib import workflows
 
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.node import read_nodes, LiteralNode, context
-from openquake.commonlib import valid
+from openquake.commonlib import nrml, valid
 from openquake.commonlib.oqvalidation import \
     fragility_files, vulnerability_files
 from openquake.commonlib.riskmodels import \
@@ -106,6 +106,8 @@ def get_oqparam(source):
             os.path.join(base_path, src_path)
             for src_path in _collect_source_model_paths(smlt)]
 
+    #from openquake.commonlib.calculators import calculators
+    #OqParam.params['calculation_mode'].choices = tuple(calculators)
     oqparam = OqParam(**params)
 
     # define the parameter `intensity measure types and levels` always
@@ -321,41 +323,50 @@ def get_risk_model(oqparam):
 ############################ exposure #############################
 
 
-class ExposureNode(LiteralNode):
-    validators = valid.parameters(
-        occupants=valid.positivefloat,
-        value=valid.positivefloat,
-        deductible=valid.positivefloat,
-        insuranceLimit=valid.positivefloat,
-        number=valid.positivefloat,
-        location=valid.point2d,
-    )
-
-
 class DuplicateID(Exception):
-    """Raised when two assets with the same ID are found in an exposure model"""
+    """
+    Raised when two assets with the same ID are found in an exposure model
+    """
+
+
+def get_exposure_lazy(fname):
+    """
+    :returns: a pair (Exposure instance, list of asset nodes)
+    """
+    [exposure] = nrml.read_lazy(fname, ['assets'])
+    description = exposure.description
+    conversions = exposure.conversions
+    inslimit = list(conversions.getnodes('insuranceLimit')) or \
+        LiteralNode('insuranceLimit')
+    deductible = list(conversions.getnodes('deductible')) or \
+        LiteralNode('deductible')
+    return Exposure(
+        ~description, [ct.attrib for ct in conversions.costTypes],
+        ~inslimit, ~deductible, []), exposure.assets
 
 
 def get_exposure(oqparam):
     """
-    Read the exposure and yields :class:`openquake.risklib.workflows.Asset`
-    instances.
+    Read the full exposure in memory and build a list of
+    :class:`openquake.risklib.workflows.Asset` instances.
+    If you don't want to keep everything in memory, use
+    get_exposure_lazy instead (for experts only).
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :returns:
+        an :class:`Exposure` instance
     """
     relevant_cost_types = set(vulnerability_files(oqparam.inputs))
     fname = oqparam.inputs['exposure']
-    time_event = getattr(oqparam, 'time_event', None)
+    exposure, assets_node = get_exposure_lazy(fname)
     asset_refs = set()
-    for asset in read_nodes(fname,
-                            lambda node: node.tag.endswith('asset'),
-                            ExposureNode):
+    time_event = getattr(oqparam, 'time_event', None)
+    for asset in assets_node:
         values = {}
         deductibles = {}
         insurance_limits = {}
         retrofitting_values = {}
-
         with context(fname, asset):
             asset_id = asset['id']
             if asset_id in asset_refs:
@@ -382,56 +393,17 @@ def get_exposure(oqparam):
                         values['fatalities'] = occupancy['occupants']
                         break
 
-        yield workflows.Asset(
+        ass = workflows.Asset(
             asset_id, taxonomy, number, location, values, deductibles,
             insurance_limits, retrofitting_values)
+        exposure.assets.append(ass)
+    return exposure
 
 
-ExposureMetadata = collections.namedtuple(
-    'ExposureMetadata', ['description', 'cost_types',
-                         'insurance_limit_is_absolute',
-                         'deductible_is_absolute'])
-
-
-class ExposureMetadataNode(LiteralNode):
-    validators = valid.parameters(
-        description=valid.utf8,
-        name=valid.name,
-        type=valid.name,
-        unit=valid.name,
-        insuranceLimit=lambda val, isAbsolute: valid.boolean(isAbsolute),
-        deductible=lambda val, isAbsolute: valid.boolean(isAbsolute),
-    )
-
-
-def get_exposure_metadata(fname):
-    """
-    Read the exposure metadata
-    """
-    description = read_nodes(
-        fname, lambda node: node.tag.endswith('description'),
-        ExposureMetadataNode).next()
-    conversions = read_nodes(
-        fname, lambda node: node.tag.endswith('conversions'),
-        ExposureMetadataNode).next()
-    return ExposureMetadata(
-        ~description,
-        list(conversions.costTypes),
-        ~conversions.insuranceLimit,
-        ~conversions.deductible)
-
-
-def get_special_assets(oqparam):
-    """
-    Get the assets from the parameters special_assets or special_assets_csv
-
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    """
-    try:
-        return oqparam.special_assets.split()
-    except AttributeError:
-        return open(oqparam.inputs['special_assets']).read().split()
+Exposure = collections.namedtuple(
+    'Exposure', ['description', 'cost_types',
+                 'insurance_limit_is_absolute',
+                 'deductible_is_absolute', 'assets'])
 
 
 def get_specific_assets(oqparam):
@@ -458,7 +430,7 @@ def get_sitecol_assets(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     assets_by_loc = collections.defaultdict(list)
-    for asset in get_exposure(oqparam):
+    for asset in get_exposure(oqparam).assets:
         assets_by_loc[asset.location].append(asset)
     lons, lats = zip(*sorted(assets_by_loc))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))

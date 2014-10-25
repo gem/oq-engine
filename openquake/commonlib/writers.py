@@ -69,7 +69,7 @@ class StreamingXMLWriter(object):
         else:
             self._write('<' + name)
             for (name, value) in sorted(attrs.items()):
-                self._write(' %s=%s' % (name, quoteattr(value)))
+                self._write(' %s=%s' % (name, quoteattr(str(value))))
             self._write('>')
         self.indentlevel += 1
 
@@ -89,7 +89,7 @@ class StreamingXMLWriter(object):
             return
         self.start_tag(tag, node.attrib)
         if node.text:
-            self._write(escape(node.text.strip()))
+            self._write(escape(str(node.text).strip()))
         for subnode in node:
             self.serialize(subnode)
         self.end_tag(tag)
