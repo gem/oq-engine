@@ -66,16 +66,12 @@ def _collect_source_model_paths(smlt):
     return sorted(set(src_paths))
 
 
-def get_oqparam(source, hazard_calculation_id=None, hazard_output_id=None):
+def get_oqparam(source):
     """
     Parse a dictionary of parameters from an INI-style config file.
 
     :param source:
         File-like object containing the config parameters.
-    :param hazard_job_id:
-        The ID of a previous calculation (or None)
-    :param hazard_ouput_id:
-        The output of a previous job (or None)
     :returns:
         An :class:`openquake.commonlib.oqvalidation.OqParam` instance
         containing the validate and casted parameters/values parsed from
@@ -88,9 +84,7 @@ def get_oqparam(source, hazard_calculation_id=None, hazard_output_id=None):
 
     base_path = os.path.dirname(
         os.path.join(os.path.abspath('.'), source.name))
-    params = dict(base_path=base_path, inputs={},
-                  hazard_calculation_id=hazard_calculation_id,
-                  hazard_output_id=hazard_output_id)
+    params = dict(base_path=base_path, inputs={})
 
     # Directory containing the config file we're parsing.
     base_path = os.path.dirname(os.path.abspath(source.name))
@@ -111,13 +105,6 @@ def get_oqparam(source, hazard_calculation_id=None, hazard_output_id=None):
         params['inputs']['source'] = [
             os.path.join(base_path, src_path)
             for src_path in _collect_source_model_paths(smlt)]
-
-    # check for obsolete calculation_mode
-    is_risk = hazard_calculation_id or hazard_output_id
-    cmode = params['calculation_mode']
-    if is_risk and cmode in ('classical', 'event_based', 'scenario'):
-        raise ValueError('Please change calculation_mode=%s into %s_risk '
-                         'in the .ini file' % (cmode, cmode))
 
     oqparam = OqParam(**params)
 

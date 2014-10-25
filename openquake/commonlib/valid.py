@@ -707,6 +707,10 @@ class ParamSet(object):
                 doc = textwrap.dedent(is_valid.__doc__.strip())
                 raise ValueError(doc + '\nGot:\n' + dump)
 
+    def __iter__(self):
+        for item in sorted(vars(self).iteritems()):
+            yield item
+
     def __repr__(self):
         names = sorted(n for n in vars(self) if not n.startswith('_'))
         nameval = ', '.join('%s=%s' % (n, getattr(self, n)) for n in names)
