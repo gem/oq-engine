@@ -116,7 +116,7 @@ class OqParam(valid.ParamSet):
         reference_vs30_type=valid.Choice('measured', 'inferred'),
         reference_vs30_value=valid.positivefloat,
         region=valid.coordinates,
-        region_constraint=valid.coordinates,
+        region_constraint=valid.wkt_polygon,
         region_grid_spacing=valid.positivefloat,
         risk_investigation_time=valid.positivefloat,
         rupture_mesh_spacing=valid.positivefloat,
@@ -162,7 +162,7 @@ class OqParam(valid.ParamSet):
         """
         if getattr(self, 'hazard_maps', None) or getattr(
                 self, 'uniform_hazard_spectra', None):
-            return bool(self.poes)
+            return bool(getattr(self, 'poes', None))
         else:
             return True
 

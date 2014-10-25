@@ -50,16 +50,16 @@ intensity_measure_types = PGA
         expected_params = {
             'base_path': exp_base_path,
             'calculation_mode': 'classical_risk',
-            'hazard_calculation_id': None,
-            'hazard_output_id': 42,
             'region': [(1.0, 1.0), (2.0, 2.0), (3.0, 3.0)],
             'inputs': {},
             'intensity_measure_types_and_levels': {'PGA': None},
         }
-
-        params = vars(readinput.get_oqparam(source, hazard_output_id=42))
-
-        self.assertEqual(expected_params, params)
+        # checking that warnings work
+        with mock.patch('logging.warn') as warn:
+            oqparam = readinput.get_oqparam(source)
+        self.assertEqual(warn.call_args[0][0],
+                         "The parameter 'bar' is unknown, ignoring")
+        self.assertEqual(expected_params, vars(oqparam))
 
     def test_get_oqparam_with_files(self):
         temp_dir = tempfile.mkdtemp()
@@ -82,8 +82,6 @@ intensity_measure_types = PGA
             expected_params = {
                 'base_path': exp_base_path,
                 'calculation_mode': 'classical',
-                'hazard_calculation_id': None,
-                'hazard_output_id': None,
                 'truncation_level': 0.0,
                 'random_seed': 0,
                 'maximum_distance': 1.0,
@@ -125,8 +123,6 @@ intensity_measure_types = PGA
             expected_params = {
                 'base_path': exp_base_path,
                 'calculation_mode': 'classical',
-                'hazard_calculation_id': None,
-                'hazard_output_id': None,
                 'truncation_level': 3.0,
                 'random_seed': 5,
                 'maximum_distance': 1.0,
