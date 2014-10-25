@@ -466,6 +466,13 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
             haz_job.id if haz_job and not hazard_output_id else None
         oqparam.hazard_output_id = hazard_output_id
 
+    # check for obsolete calculation_mode
+    is_risk = hazard_calculation_id or hazard_output_id
+    cmode = oqparam.calculation_mode
+    if is_risk and cmode in ('classical', 'event_based', 'scenario'):
+        raise ValueError('Please change calculation_mode=%s into %s_risk '
+                         'in the .ini file' % (cmode, cmode))
+
     params = vars(oqparam).copy()
     if 'quantile_loss_curves' not in params:
         params['quantile_loss_curves'] = []
