@@ -132,19 +132,6 @@ class OqParam(valid.ParamSet):
         width_of_mfd_bin=valid.positivefloat,
         )
 
-    def is_valid_hazard_calculation_and_output(self):
-        """
-        The parameters `hazard_calculation_id` and `hazard_output_id`
-        are not correct for this calculator.
-        """
-        if self.calculation_mode in HAZARD_CALCULATORS:
-            return (self.hazard_calculation_id is None and
-                    self.hazard_output_id is None)
-        return (self.hazard_calculation_id is None and
-                self.hazard_output_id is not None) or \
-            (self.hazard_calculation_id is not None and
-             self.hazard_output_id is None)
-
     def is_valid_truncation_level_disaggregation(self):
         """
         Truncation level must be set for disaggregation calculations

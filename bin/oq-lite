@@ -6,10 +6,6 @@ from openquake.commonlib.commands import run, info, check
 
 
 if __name__ == '__main__':
-    # hack: disable a check that does not make sense for the engine lite
-    oqvalidation.OqParam.is_valid_hazard_calculation_and_output = \
-        lambda self: True
-
     parser = sap.compose([check.parser, run.parser, info.parser],
                          version=__version__)
     try:
