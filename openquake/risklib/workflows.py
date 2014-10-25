@@ -112,8 +112,8 @@ class Workflow(object):
     """
     Base class. Can be used in the tests as a mock.
     """
-    def __init__(self, vulnerability_functions):
-        self.vulnerability_functions = vulnerability_functions
+    def __init__(self, risk_functions):
+        self.risk_functions = risk_functions
 
     @property
     def loss_types(self):
@@ -121,7 +121,7 @@ class Workflow(object):
         The list of loss types in the underlying vulnerability functions,
         in lexicographic order
         """
-        return sorted(self.vulnerability_functions)
+        return sorted(self.risk_functions)
 
 
 @registry.add('classical_risk')
@@ -222,7 +222,7 @@ class Classical(Workflow):
         See :func:`openquake.risklib.scientific.classical` for a description
         of the other parameters.
         """
-        self.vulnerability_functions = vulnerability_functions
+        self.risk_functions = vulnerability_functions
         self.curves = dict(
             (loss_type,
              calculators.ClassicalLossCurve(vf, lrem_steps_per_interval))
@@ -424,7 +424,7 @@ class ProbabilisticEventBased(Workflow):
             if False the loss_matrix is not saved in the Output tuple
             (a trick to save memory in the case of no disaggregation)
         """
-        self.vulnerability_functions = vulnerability_functions
+        self.risk_functions = vulnerability_functions
         self.curves = calculators.EventBasedLossCurve(
             time_span, tses, loss_curve_resolution)
         self.maps = calculators.LossMap(conditional_loss_poes)
@@ -470,7 +470,7 @@ class ProbabilisticEventBased(Workflow):
             :class:`openquake.risklib.workflows.ProbabilisticEventBased.Output`
             instance.
         """
-        loss_matrix = self.vulnerability_functions[loss_type].apply_to(
+        loss_matrix = self.risk_functions[loss_type].apply_to(
             ground_motion_values, epsilons)
 
         curves = self.curves(loss_matrix)
@@ -595,7 +595,7 @@ class ClassicalBCR(Workflow):
                  vulnerability_functions_retro,
                  lrem_steps_per_interval,
                  interest_rate, asset_life_expectancy):
-        self.vulnerability_functions = vulnerability_functions_orig
+        self.risk_functions = vulnerability_functions_orig
         self.assets = None  # set a __call__ time
         self.interest_rate = interest_rate
         self.asset_life_expectancy = asset_life_expectancy
@@ -641,7 +641,7 @@ class ProbabilisticEventBasedBCR(Workflow):
                  vulnerability_functions_retro,
                  time_span, tses, loss_curve_resolution,
                  interest_rate, asset_life_expectancy):
-        self.vulnerability_functions = vulnerability_functions_orig
+        self.risk_functions = vulnerability_functions_orig
         self.assets = None  # set a __call__ time
         self.interest_rate = interest_rate
         self.asset_life_expectancy = asset_life_expectancy
@@ -683,13 +683,13 @@ class Scenario(Workflow):
     Implements the Scenario workflow
     """
     def __init__(self, vulnerability_functions, insured_losses):
-        self.vulnerability_functions = vulnerability_functions
+        self.risk_functions = vulnerability_functions
         self.insured_losses = insured_losses
 
     def __call__(self, loss_type, assets, ground_motion_values, epsilons):
         values = numpy.array([a.value(loss_type) for a in assets])
 
-        loss_ratio_matrix = self.vulnerability_functions[loss_type].apply_to(
+        loss_ratio_matrix = self.risk_functions[loss_type].apply_to(
             ground_motion_values, epsilons)
 
         # aggregating per asset, getting a vector of R elements
@@ -718,9 +718,7 @@ class Scenario(Workflow):
 @registry.add('scenario_damage')
 class Damage(Workflow):
     def __init__(self, fragility_functions):
-        # NB: we call the fragility_functions vulnerability_functions
-        # for API compatibility
-        self.vulnerability_functions = fragility_functions
+        self.risk_functions = fragility_functions
 
     def __call__(self, loss_type, assets, gmfs, _epsilons=None):
         """
@@ -732,7 +730,7 @@ class Damage(Workflow):
         where N is the number of points, R the number of realizations
         and D the number of damage states.
         """
-        ffs = self.vulnerability_functions['damage']
+        ffs = self.risk_functions['damage']
         outs = numpy.array(
             [[scientific.scenario_damage(ffs, gmv) for gmv in gmvs]
              for gmvs in gmfs])
