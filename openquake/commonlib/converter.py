@@ -203,11 +203,11 @@ class FragilityDiscrete(Converter):
             # check that we can instantiate a FragilityFunction in risklib
             if nodamage:
                 scientific.FragilityFunctionDiscrete(
-                    [nodamage] + [rec.iml for rec in data],
+                    ls, [nodamage] + [rec.iml for rec in data],
                     [0.0] + [rec.poe for rec in data], nodamage)
             else:
                 scientific.FragilityFunctionDiscrete(
-                    [rec.iml for rec in data],
+                    ls, [rec.iml for rec in data],
                     [rec.poe for rec in data], nodamage)
 
             imls = ' '.join(rec['iml'] for rec in data)
@@ -269,7 +269,7 @@ class FragilityContinuous(Converter):
 
             # check that we can instantiate a FragilityFunction in risklib
             scientific.FragilityFunctionContinuous(
-                float(param['mean']), float(param['stddev']))
+                ls, float(param['mean']), float(param['stddev']))
 
             n.append(Node('params', param))
             ffs_node[(ordinal,)].append(n)

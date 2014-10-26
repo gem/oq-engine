@@ -81,9 +81,12 @@ class Choice(object):
     """
     Check if the choice is valid (case sensitive).
     """
+    @property
+    def __name__(self):
+        return 'Choice%s' % str(self.choices)
+
     def __init__(self, *choices):
         self.choices = choices
-        self.__name__ = 'Choice%s' % str(choices)
 
     def __call__(self, value):
         if not value in self.choices:

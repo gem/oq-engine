@@ -15,8 +15,8 @@ def run(job_ini, concurrent_tasks=executor._max_workers, loglevel='INFO'):
         oqparam = readinput.get_oqparam(f)
         oqparam.concurrent_tasks = concurrent_tasks
         calc = calculators(oqparam)
-        for fname in calc.run():
-            logging.info('exported %s', fname)
+        for item in calc.run().items():
+            logging.info('exported %s: %s', *item)
 
 
 parser = sap.Parser(run)

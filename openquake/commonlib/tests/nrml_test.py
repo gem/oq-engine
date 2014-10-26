@@ -55,14 +55,14 @@ xmlns:gml="http://www.opengis.net/gml"
             number="7.0"
             taxonomy="IT-PV"
             >
-                <location lat="45.16667" lon="9.15000"/>
+                <location lat="45.16667" lon="9.15"/>
             </asset>
             <asset
             id="asset_02"
             number="7.0"
             taxonomy="IT-CE"
             >
-                <location lat="45.12200" lon="9.15333"/>
+                <location lat="45.122" lon="9.15333"/>
             </asset>
         </assets>
     </exposureModel>

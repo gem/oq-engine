@@ -58,7 +58,7 @@ class StreamingXMLWriter(object):
 
     def emptyElement(self, name, attrs):
         """Add an empty element (may have attributes)"""
-        attr = ' '.join('%s=%s' % (n, quoteattr(v))
+        attr = ' '.join('%s=%s' % (n, quoteattr(str(v)))
                         for n, v in sorted(attrs.iteritems()))
         self._write('<%s %s/>' % (name, attr))
 

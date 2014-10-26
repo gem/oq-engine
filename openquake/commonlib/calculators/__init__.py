@@ -81,16 +81,15 @@ class BaseScenarioCalculator(BaseCalculator):
             self.oqparam)
 
         logging.info('Computing the GMFs')
-        gmfs_by_imt = calc.calc_gmfs(self.oqparam, sitecol)
+        gmvdict_by_site = calc.calc_gmvdict_by_site(self.oqparam, sitecol)
 
         logging.info('Preparing the risk input')
         self.riskmodel = readinput.get_risk_model(self.oqparam)
         self.riskinputs = []
-        for imt in gmfs_by_imt:
-            for site, gmvs, assets in zip(
-                    sitecol, gmfs_by_imt[imt], self.assets_by_site):
-                self.riskinputs.append(
-                    workflows.RiskInput(imt, [site.id], [gmvs], [assets]))
+        for site, gmvdict, assets in zip(
+                sitecol, gmvdict_by_site, self.assets_by_site):
+            self.riskinputs.append(
+                workflows.HazardGetter([site.id], [gmvdict], [assets]))
 
     def execute(self):
         """
@@ -101,7 +100,6 @@ class BaseScenarioCalculator(BaseCalculator):
             (self.riskinputs, self.riskmodel),
             agg=operator.add,
             concurrent_tasks=self.oqparam.concurrent_tasks,
-            key=operator.attrgetter('imt'),
             weight=operator.attrgetter('weight'))
 
 

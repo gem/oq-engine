@@ -195,8 +195,8 @@ class ExposureDataNode(LiteralNode):
         occupants=valid.positivefloat,
         value=valid.positivefloat,
         number=valid.positivefloat,
-        longitude=valid.longitude,
-        latitude=valid.latitude,
+        lon=valid.longitude,
+        lat=valid.latitude,
     )
 
 

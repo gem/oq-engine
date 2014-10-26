@@ -25,7 +25,7 @@ import collections
 
 from openquake.commonlib.node import read_nodes, context
 from openquake.commonlib import InvalidFile
-from openquake.risklib import scientific, workflows
+from openquake.risklib import scientific
 from openquake.commonlib.oqvalidation import vulnerability_files
 from openquake.commonlib.general import AccumDict
 from openquake.commonlib.nrml import nodefactory
@@ -150,13 +150,17 @@ def get_imtls_from_vulnerabilities(inputs):
 
 ############################ fragility ##################################
 
-class List(list):
+class FragilityFunctionList(list):
     """
-    A list of objects with common attributes
+    A list of fragility functions with common attributes
     """
     def __init__(self, elements, **attrs):
         list.__init__(self, elements)
         vars(self).update(attrs)
+
+    def __repr__(self):
+        kvs = ['%s=%s' % item for item in vars(self).iteritems()]
+        return '<FragilityFunctionList %s>' % ', '.join(kvs)
 
 
 def get_fragility_functions(fname):
@@ -177,26 +181,28 @@ def get_fragility_functions(fname):
         nodamage = ffs.attrib.get('noDamageLimit')
         taxonomy = ~ffs.taxonomy
         imt_str, imls, min_iml, max_iml, imlUnit = ~ffs.IML
-        fragility_functions[taxonomy] = List([], imt=imt_str, imls=imls)
+        fragility_functions[taxonomy] = FragilityFunctionList(
+            [], imt=imt_str, imls=imls)
         lstates = []
         for ff in ffs.getnodes(tag):
-            lstates.append(ff['ls'])
+            ls = ff['ls']  # limit state
+            lstates.append(ls)
             if tag == 'ffc':
                 with context(fname, ff):
                     mean_stddev = ~ff.params
                 fragility_functions[taxonomy].append(
-                    scientific.FragilityFunctionContinuous(*mean_stddev))
+                    scientific.FragilityFunctionContinuous(ls, *mean_stddev))
             else:  # discrete
                 with context(fname, ff):
                     poes = ~ff.poEs
                 if nodamage is None:
                     fragility_functions[taxonomy].append(
                         scientific.FragilityFunctionDiscrete(
-                            imls, poes, imls[0]))
+                            ls, imls, poes, imls[0]))
                 else:
                     fragility_functions[taxonomy].append(
                         scientific.FragilityFunctionDiscrete(
-                            [nodamage] + imls, [0.0] + poes, nodamage))
+                            ls, [nodamage] + imls, [0.0] + poes, nodamage))
         if lstates != limit_states:
             raise InvalidFile("Expected limit states %s, got %s in %s" %
                              (limit_states, lstates, fname))

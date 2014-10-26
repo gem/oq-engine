@@ -120,4 +120,4 @@ class ScenarioDamageCalculator(BaseScenarioCalculator):
                     self.riskmodel.damage_states, dd_taxo)
         f3 = export('dmg_total_xml', self.oqparam.export_dir,
                     self.riskmodel.damage_states, dd_total)
-        return [f1, f2, f3]
+        return f1 + f2 + f3

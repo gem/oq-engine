@@ -106,8 +106,8 @@ def get_oqparam(source):
             os.path.join(base_path, src_path)
             for src_path in _collect_source_model_paths(smlt)]
 
-    #from openquake.commonlib.calculators import calculators
-    #OqParam.params['calculation_mode'].choices = tuple(calculators)
+    from openquake.commonlib.calculators import calculators
+    OqParam.params['calculation_mode'].choices = tuple(calculators)
     oqparam = OqParam(**params)
 
     # define the parameter `intensity measure types and levels` always
@@ -374,7 +374,7 @@ def get_exposure(oqparam):
             asset_refs.add(asset_id)
             taxonomy = asset['taxonomy']
             number = asset['number']
-            location = ~asset.location
+            location = asset.location['lon'], asset.location['lat']
         with context(fname, asset.costs):
             for cost in asset.costs:
                 cost_type = cost['type']

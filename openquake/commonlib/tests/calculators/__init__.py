@@ -52,3 +52,10 @@ class CalculatorTestCase(unittest.TestCase):
             self.assertEqual(expected_content, actual_content)
         except:
             raise DifferentFiles('%s %s' % (expected, actual))
+
+    def assertGot(self, expected_content, fname):
+        """
+        Make sure the content of the exported file is the expected one
+        """
+        with open(os.path.join(self.oqparam.export_dir, fname)) as actual:
+            self.assertEqual(expected_content, actual.read())

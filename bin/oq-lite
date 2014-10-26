@@ -11,4 +11,4 @@ if __name__ == '__main__':
     try:
         parser.callfunc()
     except NotImplementedError as exc:
-        print 'Sorry, not implemented yet %s' % exc
+        print 'Sorry, not implemented yet: %s' % exc
