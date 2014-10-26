@@ -31,16 +31,16 @@ from scipy import interpolate, stats
 
 from openquake.risklib import utils
 
-###
-### Constants & Defaults
-###
+#
+# Constants & Defaults
+#
 
 DEFAULT_CURVE_RESOLUTION = 50
 
 
-##
-## Input models
-##
+#
+# Input models
+#
 
 
 class VulnerabilityFunction(object):
@@ -368,9 +368,10 @@ class FragilityFunctionDiscrete(object):
         return '<%s(%s, %s, %s)>' % (
             self.__class__.__name__, self.limit_state, self.imls, self.poes)
 
-##
-## Distribution & Sampling
-##
+#
+# Distribution & Sampling
+#
+
 DISTRIBUTIONS = utils.Register()
 
 
@@ -561,10 +562,9 @@ class BetaDistribution(Distribution):
         return ((1 - mean) / stddev ** 2 - 1 / mean) * (mean - mean ** 2)
 
 
-##
-## Event Based
-##
-
+#
+# Event Based
+#
 
 def event_based(loss_values, tses, time_span,
                 curve_resolution=DEFAULT_CURVE_RESOLUTION):
@@ -595,10 +595,9 @@ def event_based(loss_values, tses, time_span,
     return reference_losses, poes
 
 
-##
-## Scenario Damage
-##
-
+#
+# Scenario Damage
+#
 
 def scenario_damage(fragility_functions, gmv):
     """
@@ -608,10 +607,10 @@ def scenario_damage(fragility_functions, gmv):
     return pairwise_diff(
         [1] + [ff(gmv) for ff in fragility_functions] + [0])
 
+#
+# Classical
+#
 
-##
-## Classical
-##
 
 def classical(vulnerability_function, hazard_curve_values, steps=10):
     """
@@ -722,9 +721,9 @@ def conditional_loss_ratio(loss_ratios, poes, probability):
         return (y2 - y1) / (x2 - x1) * (probability - x1) + y1
 
 
-##
-## Insured Losses
-##
+#
+# Insured Losses
+#
 
 def insured_losses(losses, deductible, insured_limit):
     """
@@ -757,9 +756,9 @@ def insured_loss_curve(curve, deductible, insured_limit):
         numpy.piecewise(poes, [poes > limit_poe], [limit_poe, lambda x: x])])
 
 
-##
-## Benefit Cost Ratio Analysis
-##
+#
+# Benefit Cost Ratio Analysis
+#
 
 
 def bcr(eal_original, eal_retrofitted, interest_rate,
