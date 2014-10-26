@@ -295,7 +295,8 @@ class VulnerabilityFunction(object):
 
 class FragilityFunctionContinuous(object):
     # FIXME (lp). Should be re-factored with LogNormalDistribution
-    def __init__(self, mean, stddev):
+    def __init__(self, limit_state, mean, stddev):
+        self.limit_state = limit_state
         self.mean = mean
         self.stddev = stddev
 
@@ -314,15 +315,21 @@ class FragilityFunctionContinuous(object):
         return stats.lognorm.cdf(iml, sigma, scale=mu)
 
     def __getstate__(self):
-        return dict(mean=self.mean, stddev=self.stddev)
+        return dict(limit_state=self.limit_state,
+                    mean=self.mean, stddev=self.stddev)
+
+    def __repr__(self):
+        return '<%s(%s, %s, %s)>' % (
+            self.__class__.__name__, self.limit_state, self.mean, self.stddev)
 
 
 class FragilityFunctionDiscrete(object):
 
-    def __init__(self, imls, poes, no_damage_limit=None):
+    def __init__(self, limit_state, imls, poes, no_damage_limit=None):
+        self.limit_state = limit_state
+        self.imls = imls
         self.poes = poes
         self._interp = None
-        self.imls = imls
         self.no_damage_limit = no_damage_limit
 
     @property
@@ -347,7 +354,8 @@ class FragilityFunctionDiscrete(object):
 
     # so that the curve is pickeable
     def __getstate__(self):
-        return dict(poes=self.poes, imls=self.imls, _interp=None,
+        return dict(limit_state=self.limit_state,
+                    poes=self.poes, imls=self.imls, _interp=None,
                     no_damage_limit=self.no_damage_limit)
 
     def __eq__(self, other):
@@ -356,6 +364,9 @@ class FragilityFunctionDiscrete(object):
     def __ne__(self, other):
         return not self == other
 
+    def __repr__(self):
+        return '<%s(%s, %s, %s)>' % (
+            self.__class__.__name__, self.limit_state, self.imls, self.poes)
 
 ##
 ## Distribution & Sampling

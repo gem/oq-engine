@@ -52,10 +52,10 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
 
     def test_continuous_ff(self):
         fragility_model = {
-            'RC': [scientific.FragilityFunctionContinuous(0.2, 0.05),
-                   scientific.FragilityFunctionContinuous(0.35, 0.10)],
-            'RM': [scientific.FragilityFunctionContinuous(0.25, 0.08),
-                   scientific.FragilityFunctionContinuous(0.40, 0.12)]}
+            'RC': [scientific.FragilityFunctionContinuous('LS1', 0.2, 0.05),
+                   scientific.FragilityFunctionContinuous('LS2', 0.35, 0.10)],
+            'RM': [scientific.FragilityFunctionContinuous('LS1', 0.25, 0.08),
+                   scientific.FragilityFunctionContinuous('LS2', 0.40, 0.12)]}
 
         calculator_rm = workflows.Damage(dict(damage=fragility_model['RM']))
 
@@ -100,14 +100,14 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
         fragility_model = {
             'RC': [
                 scientific.FragilityFunctionDiscrete(
-                    [0.1, 0.2, 0.3, 0.5], [0.0073, 0.35, 0.74, 0.99]),
+                    'LS1', [0.1, 0.2, 0.3, 0.5], [0.0073, 0.35, 0.74, 0.99]),
                 scientific.FragilityFunctionDiscrete(
-                    [0.1, 0.2, 0.3, 0.5], [0.001, 0.02, 0.25, 0.72])],
+                    'LS2', [0.1, 0.2, 0.3, 0.5], [0.001, 0.02, 0.25, 0.72])],
             'RM': [
                 scientific.FragilityFunctionDiscrete(
-                    [0.1, 0.2, 0.3, 0.5], [0.01, 0.64, 0.95, 1.0]),
+                    'LS1', [0.1, 0.2, 0.3, 0.5], [0.01, 0.64, 0.95, 1.0]),
                 scientific.FragilityFunctionDiscrete(
-                    [0.1, 0.2, 0.3, 0.5], [0.0003, 0.05, 0.40, 0.86])]}
+                    'LS2', [0.1, 0.2, 0.3, 0.5], [0.0003, 0.05, 0.40, 0.86])]}
 
         calculator_rm = workflows.Damage(dict(damage=fragility_model['RM']))
 
