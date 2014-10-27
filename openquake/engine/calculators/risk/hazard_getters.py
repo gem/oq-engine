@@ -335,7 +335,7 @@ WITH assocs AS (
 INSERT INTO riskr.asset_site (job_id, asset_id, site_id)
 SELECT * FROM assocs""", (rc.oqjob.id, self.hc.id,
                           rc.exposure_model.id, taxonomy,
-                          rc.region_constraint.wkt))
+                          rc.region_constraint))
         else:
             # associate each asset to the closest hazard site
             self.assoc_query = self.cursor.mogrify("""\
@@ -352,7 +352,7 @@ WITH assocs AS (
 INSERT INTO riskr.asset_site (job_id, asset_id, site_id)
 SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
                           rc.exposure_model.id, taxonomy,
-                          rc.region_constraint.wkt))
+                          rc.region_constraint))
 
         self.num_assets = 0
         self._rupture_ids = {}

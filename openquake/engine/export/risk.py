@@ -276,7 +276,7 @@ def make_dmg_dist_export(damagecls, writercls):
             Destination directory of the exported file, or a file-like object
         """
         job = output.oq_job
-        rc_id = job.risk_calculation.id
+        rc_id = job.id
 
         dest = _get_result_export_dest(target, output)
 
