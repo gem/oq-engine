@@ -495,28 +495,9 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
 
     hazard_job.status = "complete"
     hazard_job.save()
-    job = engine.prepare_job(username)
-    params = vars(
-        readinput.get_oqparam(
-            open(risk_cfg), hazard_output_id=hazard_output.output.id))
-    params['hazard_calculation_id'] = hazard_job.id
-
-    # we are removing missing fields of RiskCalculation; this ugliness will
-    # disappear when RiskCalculation will be removed
-    del params['intensity_measure_types_and_levels']
-    job.save_params(params)
-    if 'sites_disagg' in params:
-        del params['sites_disagg']
-    if 'specific_assets' in params:
-        del params['specific_assets']
-    risk_calc = engine.create_calculation(models.RiskCalculation, params)
-    job.risk_calculation = risk_calc
-    job.save()
-
-    # reload risk calculation to have all the types converted properly
-    job.risk_calculation = models.RiskCalculation.objects.get(id=risk_calc.id)
-
-    return job, set(params['inputs'])
+    risk_job = get_job(risk_cfg, username,
+                       hazard_output_id=hazard_output.output.id)
+    return risk_job, set(risk_job.get_param('inputs'))
 
 
 def create_ses_ruptures(job, ses_collection, num):
