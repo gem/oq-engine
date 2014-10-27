@@ -143,17 +143,19 @@ class OqParam(valid.ParamSet):
 
     def is_valid_geometry(self):
         """
-        Must specify either region, sites or exposure_file.
+        Must specify one of sites, sites_csv, hazard_curves_csv, gmfs_csv,
+        region or exposure_file.
         """
         if self.calculation_mode not in HAZARD_CALCULATORS:
             return True  # no check on the sites for risk
-        sites = getattr(self, 'sites', self.inputs.get('sites'))
-        if getattr(self, 'region', None):
-            return sites is None and not 'exposure' in self.inputs
-        elif 'exposure' in self.inputs:
-            return sites is None
-        else:
-            return sites is not None
+        flags = dict(
+            sites=getattr(self, 'sites', 0),
+            sites_csv=self.inputs.get('sites', 0),
+            hazard_curves_csv=self.inputs.get('hazard_curves', 0),
+            gmfs_csv=self.inputs.get('gmfs', 0),
+            region=getattr(self, 'region', 0),
+            exposure=self.inputs.get('exposure', 0))
+        return sum(bool(v) for v in flags.values()) == 1
 
     def is_valid_poes(self):
         """

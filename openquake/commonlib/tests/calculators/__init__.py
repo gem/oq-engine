@@ -18,7 +18,6 @@
 
 import os
 import unittest
-from contextlib import contextmanager
 from openquake.commonlib.calculators import calculators
 from openquake.commonlib import readinput
 
@@ -29,8 +28,7 @@ class DifferentFiles(Exception):
 
 class CalculatorTestCase(unittest.TestCase):
 
-    @contextmanager
-    def run_calc(self, testfile, job_ini):
+    def get_calc(self, testfile, job_ini):
         """
         Return the outputs of the calculation as a dictionary
         """
@@ -38,9 +36,18 @@ class CalculatorTestCase(unittest.TestCase):
         with open(os.path.join(self.testdir, job_ini)) as ini:
             self.oqparam = readinput.get_oqparam(ini)
             self.oqparam.concurrent_tasks = 0  # to make the test debuggable
-            yield calculators(self.oqparam).run()
+            return calculators(self.oqparam)
 
-    def assertEqualContent(self, fname1, fname2):
+    def run_calc(self, testfile, job_ini):
+        """
+        Return the outputs of the calculation as a dictionary
+        """
+        self.calc = self.get_calc(testfile, job_ini)
+        self.calc_pre_execute()
+        self.result = self.calc.execute()
+        return self.calc.post_execute(self.result)
+
+    def assertEqualFiles(self, fname1, fname2):
         """
         Make sure the expected and actual files have the same content
         """
