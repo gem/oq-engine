@@ -50,7 +50,7 @@ class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
 
     The use of these models is the soly responsability of the hazard modeler.
 
-    Model implmented by laurentiu.danciu@gmail.com
+    Model implemented by laurentiu.danciu@gmail.com
     """
 
     #: Supported standard deviation type is only total
