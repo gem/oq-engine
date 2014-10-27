@@ -357,21 +357,21 @@ def _touch_log_file(log_file):
 
 
 def delete_uncompleted_calculations():
-    for hc in models.OqJob.objects.filter(
+    for job in models.OqJob.objects.filter(
             oqjob__user_name=getpass.getuser()).exclude(
             oqjob__status="successful"):
-        del_calc(hc.id, True)
+        del_calc(job.id, True)
 
 
-def del_calc(hc_id, confirmed=False):
+def del_calc(job_id, confirmed=False):
     """
-    Delete a hazard calculation and all associated outputs.
+    Delete a calculation and all associated outputs.
     """
     if confirmed or confirm(
             'Are you sure you want to delete this calculation and all '
             'associated outputs?\nThis action cannot be undone. (y/n): '):
         try:
-            engine.del_calc(hc_id)
+            engine.del_calc(job_id)
         except RuntimeError, err:
             print err.message
 
@@ -448,8 +448,8 @@ def main():
         output_id = int(output_id)
         export_hazard(output_id, expanduser(target_dir), args.export_type)
     elif args.export_hazard_outputs is not None:
-        hc_id, target_dir = args.export_hazard_outputs
-        export_hazard_outputs(int(hc_id), expanduser(target_dir),
+        job_id, target_dir = args.export_hazard_outputs
+        export_hazard_outputs(int(job_id), expanduser(target_dir),
                               args.export_type)
     elif args.run_hazard is not None:
         log_file = expanduser(args.log_file) \
@@ -499,9 +499,9 @@ def main():
     elif args.save_hazard_calculation:
         save_hazards.main(*args.save_hazard_calculation)
     elif args.load_hazard_calculation:
-        hc_ids = load_hazards.hazard_load(
+        job_ids = load_hazards.hazard_load(
             models.getcursor('admin').connection, args.load_hazard_calculation)
-        print "Load hazard calculation with IDs: %s" % hc_ids
+        print "Load hazard calculation with IDs: %s" % job_ids
     else:
         arg_parser.print_usage()
 
