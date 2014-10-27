@@ -18,7 +18,7 @@
 """
 Module exports
 :class:`CauzziFaccioli2008SWISS01`,
-:class:`CauzziFaccioli2008SWISS04`
+:class:`CauzziFaccioli2008SWISS04`,
 :class:`CauzziFaccioli2008SWISS08`
 """
 from __future__ import division
