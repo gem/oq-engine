@@ -33,6 +33,7 @@ from openquake.hazardlib.gsim.cauzzi_faccioli_2008_swiss_coeffs import (
     COEFFS_FS_ROCK_SWISS04,
     COEFFS_FS_ROCK_SWISS08)
 from openquake.hazardlib.gsim.utils_swiss_gmpe import _apply_adjustments
+from openquake.hazardlib.imt import PGA, SA
 
 
 class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
@@ -56,6 +57,15 @@ class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
     #: Supported standard deviation type is only total
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
 
+    #: Supported intensity measure types are spectral acceleration, peak
+    #: ground acceleration and peak ground velocity.
+    #: The original paper provides coefficients for PGA and PGV, while SA
+    #: is obtained from displacement response spectrum values.
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
+        PGA,
+        SA
+    ])
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -66,7 +76,7 @@ class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
         mean, stddevs = super(CauzziFaccioli2008SWISS01, self).\
             get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
 
-        C = CauzziFaccioli2008SWISS01.COEFFS[imt]
+        C = CauzziFaccioli2008SWISS01.COEFFS
 
         tau_ss = 'tau'
         log_phi_ss = np.log(10)
