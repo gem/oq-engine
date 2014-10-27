@@ -35,7 +35,7 @@ from openquake.commonlib.oqvalidation import \
 from openquake.commonlib.riskmodels import \
     get_fragility_functions, get_imtls_from_vulnerabilities, get_vfs
 from openquake.commonlib.general import AccumDict
-from openquake.commonlib.source import RuptureConverter
+from openquake.commonlib import source
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
 
 GSIM = gsim.get_available_gsims()
@@ -227,22 +227,25 @@ def get_rupture(oqparam):
     rup_model = oqparam.inputs['rupture_model']
     rup_node, = read_nodes(rup_model, lambda el: 'Rupture' in el.tag,
                            nodefactory['sourceModel'])
-    conv = RuptureConverter(oqparam.rupture_mesh_spacing)
+    conv = source.RuptureConverter(oqparam.rupture_mesh_spacing)
     return conv.convert_node(rup_node)
 
 
-def get_source_models(oqparam):
+def get_trt_models(oqparam, fname):
     """
-    Read all the source models specified in oqparam.
-    Yield pairs (fname, sources).
+    Read all the source models specified in oqparam and yield
+    :class:`openquake.commonlib.source.TrtModel` instances
+    ordered by tectonic region type.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    for fname in oqparam.inputs['source']:
-        srcs = read_nodes(fname, lambda elem: 'Source' in elem.tag,
-                          nodefactory['sourceModel'])
-        yield fname, srcs
+    converter = source.SourceConverter(
+        oqparam.investigation_time,
+        oqparam.rupture_mesh_spacing,
+        oqparam.width_of_mfd_bin,
+        oqparam.area_source_discretization)
+    return source.parse_source_model(fname, converter)
 
 
 def get_imtls(oqparam):

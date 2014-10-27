@@ -43,7 +43,7 @@ class CalculatorTestCase(unittest.TestCase):
         Return the outputs of the calculation as a dictionary
         """
         self.calc = self.get_calc(testfile, job_ini)
-        self.calc_pre_execute()
+        self.calc.pre_execute()
         self.result = self.calc.execute()
         return self.calc.post_execute(self.result)
 
