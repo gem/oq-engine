@@ -14,13 +14,19 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 """
-Module exports :class:`EdwardsFah2013Foreland10MPa`,
-class:`EdwardsFah2013Foreland20MPa`,class:`EdwardsFah2013Foreland30MPa`,
-class:`EdwardsFah2013Foreland50MPa`,class:`EdwardsFah2013Foreland60MPa`,
-class:`EdwardsFah2013Foreland75MPa`,class:`EdwardsFah2013Foreland90MPa`,
-class:`EdwardsFah2013Foreland120MPa`
+Module exports 
+:class:`EdwardsFah2013Foreland10MPa`,
+:class:`EdwardsFah2013Foreland20MPa`,
+:class:`EdwardsFah2013Foreland30MPa`,
+:class:`EdwardsFah2013Foreland50MPa`,
+:class:`EdwardsFah2013Foreland60MPa`,
+:class:`EdwardsFah2013Foreland75MPa`,
+:class:`EdwardsFah2013Foreland90MPa`,
+:class:`EdwardsFah2013Foreland120MPa`
 """
+
 from __future__ import division
 import numpy as np
 from scipy.constants import g

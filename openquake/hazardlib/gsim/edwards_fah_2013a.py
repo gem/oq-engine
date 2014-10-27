@@ -15,11 +15,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`EdwardsFah2013Alpine10MPa`,
-class:`EdwardsFah2013Alpine20MPa`,class:`EdwardsFah2013Alpine30MPa`,
-class:`EdwardsFah2013Alpine50MPa`,class:`EdwardsFah2013Alpine60MPa`,
-class:`EdwardsFah2013Alpine75MPa`,class:`EdwardsFah2013Alpine90MPa`,
-class:`EdwardsFah2013Alpine120MPa`,
+Module exports 
+:class:`EdwardsFah2013Alpine10MPa`,
+:class:`EdwardsFah2013Alpine20MPa`,
+:class:`EdwardsFah2013Alpine30MPa`,
+:class:`EdwardsFah2013Alpine50MPa`,
+:class:`EdwardsFah2013Alpine60MPa`,
+:class:`EdwardsFah2013Alpine75MPa`,
+:class:`EdwardsFah2013Alpine90MPa`,
+:class:`EdwardsFah2013Alpine120MPa`,
 """
 from __future__ import division
 import numpy as np
