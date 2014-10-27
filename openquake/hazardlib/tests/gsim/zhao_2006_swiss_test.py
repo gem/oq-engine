@@ -14,8 +14,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from openquake.hazardlib.gsim.zhao_2006 import (ZhaoEtAl2006Asc)
-from openquake.hazardlib.gsim.zhao_2006 import (
+from openquake.hazardlib.gsim.zhao_2006_swiss import (
     ZhaoEtAl2006AscSWISS05,
     ZhaoEtAl2006AscSWISS03,
     ZhaoEtAl2006AscSWISS08)

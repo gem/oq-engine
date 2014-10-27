@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # The Hazard Library
 # Copyright (C) 2012-2014, GEM Foundation
 #
@@ -15,10 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`ZhaoEtAl2006Asc`, class:`ZhaoEtAl2006SInter`,
-class:`ZhaoEtAl2006SInterNSHMP2008`, class:`ZhaoEtAl2006SSlab`,
-class:`ZhaoEtAl2006AscSWISS05`, class:`ZhaoEtAl2006AscSWISS03`,
-class:`ZhaoEtAl2006AscSWISS08`
+Module exports :class:`ZhaoEtAl2006Asc`, :class:`ZhaoEtAl2006SInter`,
+:class:`ZhaoEtAl2006SSlab`, and :class:`ZhaoEtAl2006SInterNSHMP2008`.
 """
 from __future__ import division
 
@@ -30,12 +27,6 @@ import copy
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
-from openquake.hazardlib.gsim.zhao_2006_swiss_coeffs import (
-    COEFFS_FS_ROCK_SWISS05,
-    COEFFS_FS_ROCK_SWISS03,
-    COEFFS_FS_ROCK_SWISS08
-)
-from openquake.hazardlib.gsim.utils_swiss_gmpe import _apply_adjustments
 
 
 class ZhaoEtAl2006Asc(GMPE):
@@ -204,7 +195,7 @@ class ZhaoEtAl2006Asc(GMPE):
 
     #: Coefficient table obtained by joining table 4 (except columns for
     #: SI, SS, SSL), table 5 (both at p. 903) and table 6 (only columns for
-    #: QC WC tauC), p. 907.
+    #: QC WC TauC), p. 907.
     COEFFS_ASC = CoeffsTable(sa_damping=5, table="""\
     IMT    a     b         c       d      e        FR     CH     C1     C2     C3     C4     sigma   QC      WC      tauC
     pga    1.101 -0.00564  0.0055  1.080  0.01412  0.251  0.293  1.111  1.344  1.355  1.420  0.604   0.0     0.0     0.303
@@ -466,65 +457,3 @@ class ZhaoEtAl2006SInterNSHMP2008(ZhaoEtAl2006SInter):
         4.00  -0.390 -0.1486  0.1038  0.3821
         5.00  -0.498 -0.1578  0.1090  0.3766
         """)
-
-
-class ZhaoEtAl2006AscSWISS05(ZhaoEtAl2006Asc):
-
-    """
-    This class extends :class:ZhaoEtAl2006Asc,
-    adjusted to be used for the Swiss Hazard Model [2014].
-
-    #. kappa value
-       K-adjustments corresponding to model 01 - as prepared by Ben Edwards
-       K-value for PGA were not provided but infered from SA[0.01s]
-       the model considers a fixed value of vs30=1100m/s
-
-    #. small-magnitude correction
-
-    #. single station sigma - inter-event magnitude/distance adjustment
-
-    Disclaimer: these equations are modified to be used for the
-    Swiss Seismic Hazard Model [2014].
-    The hazard modeller is solely responsible for the use of this GMPE
-    in a different tectonic context.
-
-    Model implmented by laurentiu.danciu@gmail.com
-
-    """
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        mean, stddevs = super(ZhaoEtAl2006AscSWISS05, self).\
-            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
-
-        tau_ss = 'tauC'
-        log_phi_ss = 1.00
-        mean, stddevs = _apply_adjustments(
-            ZhaoEtAl2006Asc.COEFFS_ASC, self.COEFFS_FS_ROCK[imt], tau_ss,
-            mean, stddevs, sites, rup, dists.rrup, imt, stddev_types,
-            log_phi_ss)
-
-        return mean, stddevs
-    COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS05
-
-
-class ZhaoEtAl2006AscSWISS03(ZhaoEtAl2006AscSWISS05):
-
-    """
-    This class extends :class:ZhaoEtAl2006Asc,following same strategy
-    as for :class:ZhaoEtAl2006AscSWISS05
-    """
-    COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS03
-
-
-class ZhaoEtAl2006AscSWISS08(ZhaoEtAl2006AscSWISS05):
-
-    """
-    This class extends :class:ZhaoEtAl2006Asc,following same strategy
-    as for :class:ZhaoEtAl2006AscSWISS05 to be used for the
-    Swiss Hazard Model [2014].
-    """
-    COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS08

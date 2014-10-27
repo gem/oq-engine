@@ -55,6 +55,7 @@ Built-in GSIMs
     toro_2002
     youngs_1997
     zhao_2006
+    zhao_2006_swiss
 
 
 -----------------------------------
