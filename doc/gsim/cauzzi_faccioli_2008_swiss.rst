@@ -12,4 +12,3 @@ Cauzzi and Faccioli 2008 - Switzerland
 
 .. autoclass:: CauzziFaccioli2008SWISS08
     :members:
-

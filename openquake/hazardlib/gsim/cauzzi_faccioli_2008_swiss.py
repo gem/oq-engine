@@ -14,18 +14,17 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 """
-Module exports
-:class:`CauzziFaccioli2008SWISS01`,
-:class:`CauzziFaccioli2008SWISS04`,
-:class:`CauzziFaccioli2008SWISS08`
+Module exports :class:`CauzziFaccioli2008SWISS01`
+               :class:`CauzziFaccioli2008SWISS04`
+               :class:`CauzziFaccioli2008SWISS08`.
 """
 from __future__ import division
 
 import numpy as np
 # standard acceleration of gravity in m/s**2
 from openquake.hazardlib import const
+from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.cauzzi_faccioli_2008 import CauzziFaccioli2008
 from openquake.hazardlib.gsim.cauzzi_faccioli_2008_swiss_coeffs import (
@@ -33,13 +32,13 @@ from openquake.hazardlib.gsim.cauzzi_faccioli_2008_swiss_coeffs import (
     COEFFS_FS_ROCK_SWISS04,
     COEFFS_FS_ROCK_SWISS08)
 from openquake.hazardlib.gsim.utils_swiss_gmpe import _apply_adjustments
-from openquake.hazardlib.imt import PGA, SA
 
 
 class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
     """
-    This class extends :class:`CauzziFaccioli2008` adjusted to be used for the
-    Swiss Hazard Model [2014].
+    This class extends
+    :class:`openquake.hazardlib.gsim.cauzzi_faccioli_2008.CauzziFaccioli2008`
+    adjusted to be used for the Swiss Hazard Model [2014].
     #. kappa value K-adjustments corresponding to model 01 - as prepared by
     Ben Edwards K-value for PGA were not provided but infered
     from SA[0.01s] the model considers a fixed value of vs30=1100m/s
@@ -499,8 +498,11 @@ class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
 class CauzziFaccioli2008SWISS04(CauzziFaccioli2008SWISS01):
 
     """
-    This class extends :class:`CauzziFaccioli2008`, following same strategy
-    as for :class:`CauzziFaccioli2008SWISS01`
+    This class extends 
+    :class:`openquake.hazardlib.gsim.cauzzi_faccioli_2008.CauzziFaccioli2008`, 
+    following same strategy
+    as for 
+    :class:`openquake.hazardlib.gsim.cauzzi_faccioli_2008_swiss.CauzziFaccioli2008SWISS01`
     """
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS04
 
@@ -508,7 +510,9 @@ class CauzziFaccioli2008SWISS04(CauzziFaccioli2008SWISS01):
 class CauzziFaccioli2008SWISS08(CauzziFaccioli2008SWISS01):
 
     """
-    This class extends :class:`CauzziFaccioli2008`, following same strategy
-    as for :class:`CauzziFaccioli2008SWISS01`
+    This class extends 
+    :class:`openquake.hazardlib.gsim.cauzzi_faccioli_2008.CauzziFaccioli2008`, 
+    following same strategy
+    as for :class:`openquake.hazardlib.gsim.cauzzi_faccioli_2008_swiss.CauzziFaccioli2008SWISS01`
     """
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS08
