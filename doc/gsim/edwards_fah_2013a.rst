@@ -4,9 +4,6 @@ Edwars and Fah 2013 Alpine
 
 .. module:: openquake.hazardlib.gsim.edwards_fah_2013a
 
-.. autoclass:: EdwardsFah2013Alpine
-    :members:
-
 .. autoclass:: EdwardsFah2013Alpine10MPa
     :members:
 

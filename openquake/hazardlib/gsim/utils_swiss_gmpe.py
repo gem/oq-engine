@@ -26,10 +26,7 @@ def _compute_C1_term(C, dists):
     The C1 coeff are used to compute the single station sigma
     """
 
-    c1_dists = np.zeros_like(dists)
-    idx = dists < C['Rc11']
-    c1_dists[idx] = C['phi_11']
-    idx = (dists >= C['Rc11']) & (dists <= C['Rc21'])
+    c1_dists = C['phi_11'] * np.ones_like(dists)
     idx = (dists >= C['Rc11']) & (dists <= C['Rc21'])
     c1_dists[idx] = C['phi_11'] + (C['phi_21'] - C['phi_11']) * \
         ((dists[idx] - C['Rc11']) / (C['Rc21'] - C['Rc11']))
@@ -79,25 +76,29 @@ def _compute_phi_ss(C, mag, c1_dists, log_phi_ss, mean_phi_ss):
     return (phi_ss * 0.50 + mean_phi_ss * 0.50) / log_phi_ss
 
 
-def _get_corr_stddevs(C, tau_ss, stddev_types, num_sites, phi_ss):
+def _get_corr_stddevs(C, tau_ss, stddev_types, num_sites, phi_ss, NL=None,
+                      tau_value=None):
     """
     Return standard deviations adjusted for single station sigma
     as the total standard deviation - as proposed to be used in
     the Swiss Hazard Model [2014].
     """
     stddevs = []
+    temp_stddev = phi_ss * phi_ss
+
+    if tau_value is not None and NL is not None:
+        temp_stddev = temp_stddev + tau_value * tau_value * ((1 + NL) ** 2)
+    else:
+        temp_stddev = temp_stddev + C[tau_ss] * C[tau_ss]
+
     for stddev_type in stddev_types:
         if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(
-                np.sqrt(
-                    C[tau_ss] * C[tau_ss] +
-                    phi_ss * phi_ss) +
-                np.zeros(num_sites))
+            stddevs.append(np.sqrt(temp_stddev) + np.zeros(num_sites))
     return stddevs
 
 
 def _apply_adjustments(COEFFS, C_ADJ, tau_ss, mean, stddevs, sites, rup, dists,
-                       imt, stddev_types, log_phi_ss):
+                       imt, stddev_types, log_phi_ss, NL=None, tau_value=None):
     """
     This method applies adjustments to the mean and standard deviation.
     The small-magnitude adjustments are applied to mean, whereas the
@@ -115,7 +116,7 @@ def _apply_adjustments(COEFFS, C_ADJ, tau_ss, mean, stddevs, sites, rup, dists,
     mean_corr = np.log(mean_corr)
 
     std_corr = _get_corr_stddevs(COEFFS[imt], tau_ss, stddev_types,
-                                 len(sites.vs30), phi_ss)
+                                 len(sites.vs30), phi_ss, NL, tau_value)
 
     stddevs = np.array(std_corr)
 

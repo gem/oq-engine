@@ -4,9 +4,6 @@ Edwars and Fah 2013 Foreland
 
 .. module:: openquake.hazardlib.gsim.edwards_fah_2013f
 
-.. autoclass:: EdwardsFah2013Foreland
-    :members:
-
 .. autoclass:: EdwardsFah2013Foreland10MPa
     :members:
 

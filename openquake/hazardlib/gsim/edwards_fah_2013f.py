@@ -28,7 +28,7 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGV, PGA, SA
 from openquake.hazardlib.gsim.edwards_fah_2013a import (
-    EdwardsFah2013Alpine
+    EdwardsFah2013Alpine10MPa
 )
 from openquake.hazardlib.gsim.edwards_fah_2013f_coeffs import (
     COEFFS_FORELAND_10Bars,
@@ -46,7 +46,7 @@ from openquake.hazardlib.gsim.utils_swiss_gmpe import (
 )
 
 
-class EdwardsFah2013Foreland(EdwardsFah2013Alpine):
+class EdwardsFah2013Foreland10MPa(EdwardsFah2013Alpine10MPa):
 
     """
     This function implements the GMPE developed by Ben Edwards and
@@ -62,14 +62,8 @@ class EdwardsFah2013Foreland(EdwardsFah2013Alpine):
         """
         compute mean for Foreland
         """
-        COEFFS = self.get_coeffs()[imt]
-
+        COEFFS = self.COEFFS[imt]
         R = self._compute_term_d(COEFFS, rup.mag, dists.rrup)
-        c1_rrup = _compute_C1_term(COEFFS, dists.rrup)
-        log_phi_ss = 1.00
-        phi_ss = _compute_phi_ss(
-            COEFFS, rup.mag, c1_rrup, log_phi_ss, COEFFS['mean_phi_ss']
-        )
 
         mean = 10 ** (self._compute_mean(COEFFS, rup.mag, R))
 
@@ -81,9 +75,11 @@ class EdwardsFah2013Foreland(EdwardsFah2013Alpine):
             # PGV:
             mean = np.log(mean)
 
-        stddevs = self._get_stddevs(
-            COEFFS, stddev_types, sites.vs30.shape[0], phi_ss
-        )
+        c1_rrup = _compute_C1_term(COEFFS, dists.rrup)
+        log_phi_ss = 1.00
+        stddevs = self._get_stddevs(COEFFS, stddev_types, sites.vs30.shape[0],
+                                    rup.mag, c1_rrup, log_phi_ss,
+                                    COEFFS['mean_phi_ss'])
 
         return mean, stddevs
 
@@ -111,75 +107,60 @@ class EdwardsFah2013Foreland(EdwardsFah2013Alpine):
 
     M1 = 5.00
     M2 = 4.70
+    COEFFS = COEFFS_FORELAND_10Bars
 
 
-class EdwardsFah2013Foreland10MPa(EdwardsFah2013Foreland):
-    """
-    This class extends :class:`EdwardsFah2013Foreland`
-    and implements the 10Bars Model :class:`EdwardsFah2013Foreland10MPa`
-    """
-    def get_coeffs(self):
-        return COEFFS_FORELAND_10Bars
-
-
-class EdwardsFah2013Foreland20MPa(EdwardsFah2013Foreland):
+class EdwardsFah2013Foreland20MPa(EdwardsFah2013Foreland10MPa):
     """
     This class extends :class:`EdwardsFah2013Foreland`
     and implements the 20Bars Model :class:`EdwardsFah2013Foreland20MPa`
     """
-    def get_coeffs(self):
-        return COEFFS_FORELAND_20Bars
+    COEFFS = COEFFS_FORELAND_20Bars
 
 
-class EdwardsFah2013Foreland30MPa(EdwardsFah2013Foreland):
+class EdwardsFah2013Foreland30MPa(EdwardsFah2013Foreland10MPa):
     """
     This class extends :class:`EdwardsFah2013Foreland`
     and implements the 30Bars Model :class:`EdwardsFah2013Foreland30MPa`
     """
-    def get_coeffs(self):
-        return COEFFS_FORELAND_30Bars
+    COEFFS = COEFFS_FORELAND_30Bars
 
 
-class EdwardsFah2013Foreland50MPa(EdwardsFah2013Foreland):
+class EdwardsFah2013Foreland50MPa(EdwardsFah2013Foreland10MPa):
     """
     This class extends :class:`EdwardsFah2013Foreland`
     and implements the 50Bars Model :class:`EdwardsFah2013Foreland50MPa`
     """
-    def get_coeffs(self):
-        return COEFFS_FORELAND_50Bars
+    COEFFS = COEFFS_FORELAND_50Bars
 
 
-class EdwardsFah2013Foreland60MPa(EdwardsFah2013Foreland):
+class EdwardsFah2013Foreland60MPa(EdwardsFah2013Foreland10MPa):
     """
     This class extends :class:`EdwardsFah2013Foreland`
     and implements the 60Bars Model :class:`EdwardsFah2013Foreland60MPa`
     """
-    def get_coeffs(self):
-        return COEFFS_FORELAND_60Bars
+    COEFFS = COEFFS_FORELAND_60Bars
 
 
-class EdwardsFah2013Foreland75MPa(EdwardsFah2013Foreland):
+class EdwardsFah2013Foreland75MPa(EdwardsFah2013Foreland10MPa):
     """
     This class extends :class:`EdwardsFah2013Foreland`
     and implements the 75Bars Model :class:`EdwardsFah2013Foreland75MPa`
     """
-    def get_coeffs(self):
-        return COEFFS_FORELAND_75Bars
+    COEFFS = COEFFS_FORELAND_75Bars
 
 
-class EdwardsFah2013Foreland90MPa(EdwardsFah2013Foreland):
+class EdwardsFah2013Foreland90MPa(EdwardsFah2013Foreland10MPa):
     """
     This class extends :class:`EdwardsFah2013Foreland`
     and implements the 90Bars Model :class:`EdwardsFah2013Foreland90MPa`
     """
-    def get_coeffs(self):
-        return COEFFS_FORELAND_90Bars
+    COEFFS = COEFFS_FORELAND_90Bars
 
 
-class EdwardsFah2013Foreland120MPa(EdwardsFah2013Foreland):
+class EdwardsFah2013Foreland120MPa(EdwardsFah2013Foreland10MPa):
     """
     This class extends :class:`EdwardsFah2013Foreland`
     and implements the 120Bars Model :class:`EdwardsFah2013Foreland120MPa`
     """
-    def get_coeffs(self):
-        return COEFFS_FORELAND_120Bars
+    COEFFS = COEFFS_FORELAND_120Bars
