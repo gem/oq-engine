@@ -230,6 +230,7 @@ class EdwardsFah2013Alpine10MPa(GMPE):
 
 
 class EdwardsFah2013Alpine20MPa(EdwardsFah2013Alpine10MPa):
+
     """
     This class extends :class:`EdwardsFah2013Alpine`
     and implements the 20Bars Model :class:`EdwardsFah2013Alpine20MPa`
@@ -238,6 +239,7 @@ class EdwardsFah2013Alpine20MPa(EdwardsFah2013Alpine10MPa):
 
 
 class EdwardsFah2013Alpine30MPa(EdwardsFah2013Alpine10MPa):
+
     """
     This class extends :class:`EdwardsFah2013Alpine`
     and implements the 30Bars Model :class:`EdwardsFah2013Alpine30MPa`
@@ -246,6 +248,7 @@ class EdwardsFah2013Alpine30MPa(EdwardsFah2013Alpine10MPa):
 
 
 class EdwardsFah2013Alpine50MPa(EdwardsFah2013Alpine10MPa):
+
     """
     This class extends :class:`EdwardsFah2013Alpine`
     and implements the 50Bars Model :class:`EdwardsFah2013Alpine50MPa`
@@ -254,6 +257,7 @@ class EdwardsFah2013Alpine50MPa(EdwardsFah2013Alpine10MPa):
 
 
 class EdwardsFah2013Alpine60MPa(EdwardsFah2013Alpine10MPa):
+
     """
     This class extends :class:`EdwardsFah2013Alpine`
     and implements the 60Bars Model :class:`EdwardsFah2013Alpine60MPa`
@@ -262,6 +266,7 @@ class EdwardsFah2013Alpine60MPa(EdwardsFah2013Alpine10MPa):
 
 
 class EdwardsFah2013Alpine75MPa(EdwardsFah2013Alpine10MPa):
+
     """
     This class extends :class:`EdwardsFah2013Alpine`
     and implements the 75Bars Model :class:`EdwardsFah2013Alpine75MPa`
@@ -270,6 +275,7 @@ class EdwardsFah2013Alpine75MPa(EdwardsFah2013Alpine10MPa):
 
 
 class EdwardsFah2013Alpine90MPa(EdwardsFah2013Alpine10MPa):
+
     """
     This class extends :class:`EdwardsFah2013Alpine`
     and implements the 90Bars Model :class:`EdwardsFah2013Alpine90MPa`
@@ -278,6 +284,7 @@ class EdwardsFah2013Alpine90MPa(EdwardsFah2013Alpine10MPa):
 
 
 class EdwardsFah2013Alpine120MPa(EdwardsFah2013Alpine10MPa):
+
     """
     This class extends :class:`EdwardsFah2013Alpine`
     and implements the 120Bars Model :class:`EdwardsFah2013Alpine120MPa`

@@ -117,6 +117,7 @@ class EdwardsFah2013Foreland10MPa(EdwardsFah2013Alpine10MPa):
 
 
 class EdwardsFah2013Foreland20MPa(EdwardsFah2013Foreland10MPa):
+
     """
     This class extends :class:`EdwardsFah2013Foreland`
     and implements the 20Bars Model :class:`EdwardsFah2013Foreland20MPa`
@@ -125,6 +126,7 @@ class EdwardsFah2013Foreland20MPa(EdwardsFah2013Foreland10MPa):
 
 
 class EdwardsFah2013Foreland30MPa(EdwardsFah2013Foreland10MPa):
+
     """
     This class extends :class:`EdwardsFah2013Foreland`
     and implements the 30Bars Model :class:`EdwardsFah2013Foreland30MPa`
@@ -133,6 +135,7 @@ class EdwardsFah2013Foreland30MPa(EdwardsFah2013Foreland10MPa):
 
 
 class EdwardsFah2013Foreland50MPa(EdwardsFah2013Foreland10MPa):
+
     """
     This class extends :class:`EdwardsFah2013Foreland`
     and implements the 50Bars Model :class:`EdwardsFah2013Foreland50MPa`
@@ -141,6 +144,7 @@ class EdwardsFah2013Foreland50MPa(EdwardsFah2013Foreland10MPa):
 
 
 class EdwardsFah2013Foreland60MPa(EdwardsFah2013Foreland10MPa):
+
     """
     This class extends :class:`EdwardsFah2013Foreland`
     and implements the 60Bars Model :class:`EdwardsFah2013Foreland60MPa`
@@ -149,6 +153,7 @@ class EdwardsFah2013Foreland60MPa(EdwardsFah2013Foreland10MPa):
 
 
 class EdwardsFah2013Foreland75MPa(EdwardsFah2013Foreland10MPa):
+
     """
     This class extends :class:`EdwardsFah2013Foreland`
     and implements the 75Bars Model :class:`EdwardsFah2013Foreland75MPa`
@@ -157,6 +162,7 @@ class EdwardsFah2013Foreland75MPa(EdwardsFah2013Foreland10MPa):
 
 
 class EdwardsFah2013Foreland90MPa(EdwardsFah2013Foreland10MPa):
+
     """
     This class extends :class:`EdwardsFah2013Foreland`
     and implements the 90Bars Model :class:`EdwardsFah2013Foreland90MPa`
@@ -165,6 +171,7 @@ class EdwardsFah2013Foreland90MPa(EdwardsFah2013Foreland10MPa):
 
 
 class EdwardsFah2013Foreland120MPa(EdwardsFah2013Foreland10MPa):
+
     """
     This class extends :class:`EdwardsFah2013Foreland`
     and implements the 120Bars Model :class:`EdwardsFah2013Foreland120MPa`
