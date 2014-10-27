@@ -290,6 +290,8 @@ class OqJob(djm.Model):
         """
         'hazard' or 'risk'
         """
+        # only if the job is of kind 'risk' the field hazard_calculation_id
+        # is not null and contains a reference to the previous hazard job
         return 'hazard' if self.hazard_calculation is None else 'risk'
 
     def get_param(self, name, missing=RAISE_EXC):
