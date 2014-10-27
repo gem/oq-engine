@@ -25,7 +25,6 @@ import numpy
 
 # Test data generated from OpenSHA implementation.
 
-
 class CauzziFaccioli2008TestCase(BaseGSIMTestCase):
     GSIM_CLASS = CauzziFaccioli2008
 
