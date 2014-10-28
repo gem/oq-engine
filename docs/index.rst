@@ -88,14 +88,6 @@
     :show-inheritance:
 
 
-:mod:`openquake.commonlib.readini` Module
------------------------------------------
-
-.. automodule:: openquake.commonlib.readini
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 :mod:`openquake.commonlib.readinput` Module
 ------------------------------------------------
 
