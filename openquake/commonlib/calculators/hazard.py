@@ -55,7 +55,7 @@ def calc_gmfs(tag_seed_pairs, computer):
     """
     Computer several GMFs in parallel, one for each tag and seed.
     """
-    res = AccumDict()  # tag -> gmf
+    res = AccumDict()  # tag -> {imt: gmvs}
     for tag, seed in tag_seed_pairs:
         res += {tag: dict(computer.compute(seed))}
     return res

@@ -504,7 +504,7 @@ def get_sitecol_gmfs(oqparam):
     """
     imts = oqparam.intensity_measure_types_and_levels.keys()
     num_values = [oqparam.number_of_ground_motion_fields] * len(imts)
-    with open(oqparam.inputs['gmfs']) as csvfile:
+    with open(oqparam.inputs['gmvs']) as csvfile:
         mesh, data = get_mesh_csvdata(
             csvfile, imts, num_values, valid.positivefloat)
     sitecol = get_site_collection(oqparam, mesh)

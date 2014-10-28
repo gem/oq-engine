@@ -137,7 +137,7 @@ def calc_gmfs(oqparam, sitecol):
 
 def calc_gmvdict_by_site(oqparam, sitecol):
     """
-    Build all the ground motion fields for the whole site collection
+    Build the ground motion fields for the whole site collection
     """
     correl_model = get_correl_model(oqparam)
     rnd = random.Random()
@@ -150,7 +150,7 @@ def calc_gmvdict_by_site(oqparam, sitecol):
     computer = gmf.GmfComputer(rupture, sitecol, imts, gsim, trunc_level,
                                correl_model)
     seeds = [rnd.randint(0, 2 ** 31 - 1) for _ in xrange(n_gmfs)]
-    res = AccumDict()  # site_id -> gmf
+    res = AccumDict()  # site_id -> gmvdict
     for seed in seeds:
         for imt, gmfield in computer.compute(seed):
             for site_id, gmv in zip(sitecol.sids, gmfield):

@@ -50,37 +50,6 @@ AggLossCurve = collections.namedtuple(
     'AggLossCurve', 'loss_type unit mean stddev')
 
 
-@calculators.add('scenario_risk')
-class ScenarioRiskCalculator(BaseScenarioCalculator):
-    """
-    Run a scenario risk calculation
-    """
-    def pre_execute(self):
-        super(ScenarioRiskCalculator, self).pre_execute()
-        # build the epsilon matrix and add the epsilons to the assets
-        num_samples = self.oqparam.number_of_ground_motion_fields
-        seed = getattr(self.oqparam, 'master_seed', 42)
-        correlation = getattr(self.oqparam, 'asset_correlation', 0)
-        add_epsilons(self.assets_by_site, num_samples, seed, correlation)
-        exposure_metadata = readinput.get_exposure_metadata(
-            self.oqparam.inputs['exposure'])
-        self.unit = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
-                     for ct in exposure_metadata.cost_types}
-
-    def post_execute(self, result):
-        fnames = []  # exported files
-        aggcurves = general.AccumDict()  # key_type -> AggLossCurves
-        for (key_type, loss_type), values in result.iteritems():
-            mean, std = scientific.mean_std(values)
-            curve = AggLossCurve(loss_type, self.unit[loss_type], mean, std)
-            aggcurves += {key_type: [curve]}
-        for key_type in aggcurves:
-            fname = export('%s_loss_csv' % key_type, self.oqparam.export_dir,
-                           aggcurves[key_type])
-            fnames.append(fname)
-        return fnames
-
-
 def scenario_risk(riskinputs, riskmodel):
     """
     Core function for a scenario computation.
@@ -99,3 +68,35 @@ def scenario_risk(riskinputs, riskmodel):
         if insured_losses is not None:
             result += {('ins', loss_type): insured_losses}
     return result
+
+
+@calculators.add('scenario_risk')
+class ScenarioRiskCalculator(BaseScenarioCalculator):
+    """
+    Run a scenario risk calculation
+    """
+    core_func = scenario_risk
+
+    def pre_execute(self):
+        super(ScenarioRiskCalculator, self).pre_execute()
+        # build the epsilon matrix and add the epsilons to the assets
+        num_samples = self.oqparam.number_of_ground_motion_fields
+        seed = getattr(self.oqparam, 'master_seed', 42)
+        correlation = getattr(self.oqparam, 'asset_correlation', 0)
+        add_epsilons(self.assets_by_site, num_samples, seed, correlation)
+        exposure = readinput.get_exposure(self.oqparam)
+        self.unit = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
+                     for ct in exposure.cost_types}
+
+    def post_execute(self, result):
+        aggcurves = general.AccumDict()  # key_type -> AggLossCurves
+        for (key_type, loss_type), values in result.iteritems():
+            mean, std = scientific.mean_std(values)
+            curve = AggLossCurve(loss_type, self.unit[loss_type], mean, std)
+            aggcurves += {key_type: [curve]}
+        out = {}
+        for key_type in aggcurves:
+            fname = export('%s_loss_csv' % key_type, self.oqparam.export_dir,
+                           aggcurves[key_type])
+            out[key_type] = fname
+        return out
