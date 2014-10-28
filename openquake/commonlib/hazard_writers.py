@@ -791,6 +791,7 @@ class DisaggXMLWriter(object):
     def serialize(self, data):
         """
         :param data:
+
             A sequence of data where each datum has the following attributes:
 
             * matrix: N-dimensional numpy array containing the disaggregation

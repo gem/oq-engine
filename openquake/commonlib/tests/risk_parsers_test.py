@@ -20,9 +20,9 @@ import StringIO
 
 from openquake.commonlib import risk_parsers as parsers
 from openquake.commonlib import InvalidFile
-from openquake import nrml_examples
+from openquake.commonlib import examples
 
-EXAMPLES_DIR = os.path.dirname(nrml_examples.__file__)
+EXAMPLES_DIR = os.path.dirname(examples.__file__)
 
 
 def get_example(fname):

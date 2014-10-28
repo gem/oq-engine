@@ -23,6 +23,7 @@ Validation library for the engine, the desktop tools, and anything else
 import re
 import ast
 import logging
+import textwrap
 import collections
 from decimal import Decimal
 
@@ -284,6 +285,17 @@ def coordinates(value):
     return map(lon_lat, value.split(','))
 
 
+def wkt_polygon(value):
+    """
+    Convert a string with a comma separated list of coordinates into
+    a WKT polygon, by closing the ring.
+    """
+    points = ['%s %s' % lon_lat for lon_lat in coordinates(value)]
+    # close the linear polygon ring by appending the first coord to the end
+    points.append(points[0])
+    return 'POLYGON((%s))' % ', '.join(points)
+
+
 def positiveint(value):
     """
     :param value: input string
@@ -466,8 +478,10 @@ def intensity_measure_types_and_levels(value):
 
 def dictionary(value):
     """
-    :param value: input string corresponding to a literal Python object
-    :returns: the Python object
+    :param value:
+        input string corresponding to a literal Python object
+    :returns:
+        the Python object
 
     >>> dictionary('')
     {}
@@ -488,8 +502,10 @@ def dictionary(value):
 
 def mag_scale_rel(value):
     """
-    :param value: name of a Magnitude-Scale relationship in hazardlib
-    :returns: the corresponding hazardlib object
+    :param value:
+        name of a Magnitude-Scale relationship in hazardlib
+    :returns:
+        the corresponding hazardlib object
     """
     value = value.strip()
     if value not in SCALEREL:
@@ -518,11 +534,11 @@ def pmf(value):
 
 def posList(value):
     """
-    The value is a string with the form
-    `lon1 lat1 [depth1] ...  lonN latN [depthN]`
-    without commas, where the depts are optional.
-
-    :returns: a list of floats without other validations
+    :param value:
+        a string with the form `lon1 lat1 [depth1] ...  lonN latN [depthN]`
+        without commas, where the depts are optional.
+    :returns:
+        a list of floats without other validations
     """
     values = value.split()
     num_values = len(values)
@@ -534,11 +550,27 @@ def posList(value):
         raise ValueError('Found a non-float in %s: %s' % (value, exc))
 
 
+def point2d(value, lon, lat):
+    """
+    This is used to convert nodes of the form
+    <location lon="LON" lat="LAT" />
+
+    :param value: None
+    :param lon: longitude string
+    :param lat: latitude string
+    :returns: a validated pair (lon, lat)
+    """
+    return longitude(lon), latitude(lat)
+
+
 def point3d(value, lon, lat, depth):
     """
     This is used to convert nodes of the form
     <hypocenter lon="LON" lat="LAT" depth="DEPTH"/>
 
+    :param value: None
+    :param lon: longitude string
+    :param lat: latitude string
     :returns: a validated triple (lon, lat, depth)
     """
     return longitude(lon), latitude(lat), positivefloat(depth)
@@ -549,7 +581,10 @@ def probability_depth(value, probability, depth):
     This is used to convert nodes of the form
     <hypoDepth probability="PROB" depth="DEPTH" />
 
-    :returns a validated pair (probability, depth)
+    :param value: None
+    :param probability: a probability
+    :param depth: a depth
+    :returns: a validated pair (probability, depth)
     """
     return (range01(probability), positivefloat(depth))
 
@@ -564,7 +599,12 @@ def nodal_plane(value, probability, strike, dip, rake):
     This is used to convert nodes of the form
      <nodalPlane probability="0.3" strike="0.0" dip="90.0" rake="0.0" />
 
-    :returns a validated pair (probability, depth)
+    :param value: None
+    :param probability: a probability
+    :param strike: strike angle
+    :param dip: dip parameter
+    :param rake: rake angle
+    :returns: a validated pair (probability, depth)
     """
     return (range01(probability), strike_range(strike),
             dip_range(dip), rake_range(rake))
@@ -607,6 +647,9 @@ def parameters(**names_vals):
     """
     Returns a dictionary {name: validator} by making sure
     that the validators are callable objects with a `__name__`.
+
+    :param names_vals:
+        keyword arguments parameter_name -> parameter_validator
     """
     for name, val in names_vals.iteritems():
         if not callable(val):
@@ -639,7 +682,8 @@ class ParamSet(object):
     >>> MyParams(a='1', b='9.2')
     Traceback (most recent call last):
     ...
-    ValueError: The sum of a and b must be under 10. Got:
+    ValueError: The sum of a and b must be under 10.
+    Got:
     a=1
     b=9.2
 
@@ -671,7 +715,8 @@ class ParamSet(object):
             if not is_valid():
                 dump = '\n'.join('%s=%s' % (n, v)
                                  for n, v in sorted(self.__dict__.items()))
-                raise ValueError(is_valid.__doc__ + 'Got:\n' + dump)
+                doc = textwrap.dedent(is_valid.__doc__.strip())
+                raise ValueError(doc + '\nGot:\n' + dump)
 
     def __repr__(self):
         names = sorted(n for n in vars(self) if not n.startswith('_'))

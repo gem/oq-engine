@@ -404,7 +404,7 @@ class MetaLiteralNode(type):
     """
     def __new__(meta, name, bases, dic):
         doc = "Known validators:\n%s" % '\n'.join(
-            '%s: %s' % (n, v.__name__)
+            '    %s: `%s`' % (n, v.__name__)
             for n, v in dic['validators'].iteritems())
         dic['__doc__'] = dic.get('__doc__', '') + doc
         dic['__slots__'] = dic.get('__slots__', [])

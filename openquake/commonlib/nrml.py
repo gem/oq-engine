@@ -20,7 +20,7 @@ From Node objects to NRML files and viceversa
 ------------------------------------------------------
 
 It is possible to save a Node object into a NRML file by using the
-function ``write(node, output)`` where output is a file
+function ``write(nodes, output)`` where output is a file
 object. If you want to make sure that the generated file is valid
 according to the NRML schema just open it in 'w+' mode: immediately
 after writing it will be read and validated. It is also possible to
@@ -75,12 +75,11 @@ this is a job for the LiteralNode class which can be subclassed and
 supplemented by a dictionary of validators.
 """
 
-import re
 import sys
 import collections
 from openquake.commonlib import valid
 from openquake.commonlib.node import node_to_xml, \
-    Node, LiteralNode, iterparse, node_from_elem, striptag, parse
+    Node, LiteralNode, node_from_elem, striptag, parse
 
 NAMESPACE = 'http://openquake.org/xmlns/nrml/0.4'
 GML_NAMESPACE = 'http://www.opengis.net/gml'
@@ -114,6 +113,10 @@ class NRMLFile(object):
 
 
 class Register(collections.OrderedDict):
+    """
+    An ordered dictionary tag -> callable, used to register functions
+    or classes.
+    """
     def add(self, *tags):
         def dec(obj):
             for tag in tags:
@@ -121,15 +124,15 @@ class Register(collections.OrderedDict):
             return obj
         return dec
 
-registry = Register()
+nodefactory = Register()
 
 
-@registry.add('sourceModel', 'simpleFaultRupture', 'complexFaultRupture',
+@nodefactory.add('sourceModel', 'simpleFaultRupture', 'complexFaultRupture',
               'singlePlaneRupture', 'multiPlanesRupture')
 class ValidNode(LiteralNode):
     """
-    A subclass of LiteralNode to be used when parsing sources and
-    ruptures from NRML files.
+    A subclass of :class:`LiteralNode` to be used when parsing sources
+    and ruptures from NRML files.
     """
     validators = valid.parameters(
         strike=valid.strike_range,  # needed for the moment
@@ -164,12 +167,12 @@ class ValidNode(LiteralNode):
         )
 
 
-@registry.add('siteModel')
+@nodefactory.add('siteModel')
 class SiteModelNode(LiteralNode):
     validators = valid.parameters(site=valid.site_param)
 
 
-@registry.add('vulnerabilityModel')
+@nodefactory.add('vulnerabilityModel')
 class VulnerabilityNode(LiteralNode):
     """
     Literal Node class used to validate discrete vulnerability functions
@@ -180,7 +183,7 @@ class VulnerabilityNode(LiteralNode):
         assetCategory=str,
         # the assetCategory here has nothing to do with the category
         # in the exposure model and it is not used by the engine
-        lossCategory=valid.name,
+        lossCategory=valid.utf8,  # a description field
         IML=valid.IML,
         lossRatio=valid.positivefloats,
         coefficientsVariation=valid.positivefloats,
@@ -188,8 +191,11 @@ class VulnerabilityNode(LiteralNode):
     )
 
 
-@registry.add('fragilityModel')
+@nodefactory.add('fragilityModel')
 class FragilityNode(LiteralNode):
+    """
+    Literal Node class used to validate fragility functions
+    """
     validators = valid.parameters(
         format=valid.ChoiceCI('discrete', 'continuous'),
         lossCategory=valid.name,
@@ -206,7 +212,7 @@ valid_loss_types = valid.Choice('structural', 'nonstructural', 'contents',
                                 'business_interruption', 'occupants')
 
 
-@registry.add('aggregateLossCurve', 'hazardCurves', 'hazardMap')
+@nodefactory.add('aggregateLossCurve', 'hazardCurves', 'hazardMap')
 class CurveNode(LiteralNode):
     validators = valid.parameters(
         investigationTime=valid.positivefloat,
@@ -229,7 +235,7 @@ class CurveNode(LiteralNode):
     )
 
 
-@registry.add('bcrMap')
+@nodefactory.add('bcrMap')
 class BcrNode(LiteralNode):
     validators = valid.parameters(
         assetLifeExpectancy=valid.positivefloat,
@@ -249,7 +255,7 @@ def asset_mean_stddev(value, assetRef, mean, stdDev):
     return assetRef, valid.positivefloat(mean), valid.positivefloat(stdDev)
 
 
-@registry.add('collapseMap')
+@nodefactory.add('collapseMap')
 class CollapseNode(LiteralNode):
     validators = valid.parameters(
         pos=valid.lon_lat,
@@ -261,7 +267,7 @@ def damage_triple(value, ds, mean, stddev):
     return ds, valid.positivefloat(mean), valid.positivefloat(stddev)
 
 
-@registry.add('totalDmgDist', 'dmgDistPerAsset', 'dmgDistPerTaxonomy')
+@nodefactory.add('totalDmgDist', 'dmgDistPerAsset', 'dmgDistPerTaxonomy')
 class DamageNode(LiteralNode):
     validators = valid.parameters(
         damage=damage_triple,
@@ -270,18 +276,21 @@ class DamageNode(LiteralNode):
     )
 
 
-registry.add('disaggMatrices',
-             'exposureModel',
-             'gmfCollection',
-             'gmfSet',
-             'logicTree',
-             'lossCurves',
-             'lossFraction',
-             'lossMap',
-             'stochasticEventSet',
-             'stochasticEventSetCollection',
-             'uniformHazardSpectra',
-             )(LiteralNode)
+# TODO: extend the validation to the following nodes
+# see https://bugs.launchpad.net/oq-engine/+bug/1381066
+nodefactory.add(
+    'disaggMatrices',
+    'exposureModel',
+    'gmfCollection',
+    'gmfSet',
+    'logicTree',
+    'lossCurves',
+    'lossFraction',
+    'lossMap',
+    'stochasticEventSet',
+    'stochasticEventSetCollection',
+    'uniformHazardSpectra',
+    )(LiteralNode)
 
 
 def read(source):
@@ -295,7 +304,7 @@ def read(source):
     assert striptag(nrml.tag) == 'nrml', nrml.tag
     subnodes = []
     for elem in nrml:
-        nodecls = registry[striptag(elem.tag)]
+        nodecls = nodefactory[striptag(elem.tag)]
         subnodes.append(node_from_elem(elem, nodecls))
     return LiteralNode(
         'nrml', {'xmlns': NAMESPACE, 'xmlns:gml': GML_NAMESPACE},
@@ -309,7 +318,7 @@ def write(nodes, output=sys.stdout):
     consistency check, open it in read-write mode, then it will
     be read after creation and validated.
 
-    :params node: a Node object
+    :params nodes: an iterable over Node objects
     :params output: a file-like object in write or read-write mode
     """
     root = Node('nrml', nodes=nodes)

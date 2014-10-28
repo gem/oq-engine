@@ -42,28 +42,28 @@ VULNERABILITY_KEY = re.compile('(structural|nonstructural|contents|'
 
 def vulnerability_files(inputs):
     """
-    Return a list of pairs (loss_type, path) for the known vulnerability keys
+    Return a dict cost_type -> path for the known vulnerability keys
 
     :param inputs: a dictionary key -> path name
     """
-    vfs = []
+    vfs = {}
     for key in inputs:
         match = VULNERABILITY_KEY.match(key)
         if match:
-            vfs.append((match.group(0), inputs[key]))
+            vfs[match.group(1)] = inputs[key]
     return vfs
 
 
 def fragility_files(inputs):
     """
-    Return a list of the form [('damage', path)]
+    Return a dict of the form {} or {'damage': path}.
 
     :param inputs: a dictionary key -> path name
 
-    NB: at the moment there is a single fragility key, so the list
+    NB: at the moment there is a single fragility key, so the output
     contains at most one element.
     """
-    return [('damage', inputs[key]) for key in inputs if key == 'fragility']
+    return {'damage': inputs[key] for key in inputs if key == 'fragility'}
 
 
 class OqParam(valid.ParamSet):
@@ -116,13 +116,15 @@ class OqParam(valid.ParamSet):
         reference_vs30_type=valid.Choice('measured', 'inferred'),
         reference_vs30_value=valid.positivefloat,
         region=valid.coordinates,
-        region_constraint=valid.coordinates,
+        region_constraint=valid.wkt_polygon,
         region_grid_spacing=valid.positivefloat,
         risk_investigation_time=valid.positivefloat,
         rupture_mesh_spacing=valid.positivefloat,
         ses_per_logic_tree_path=valid.positiveint,
         sites=valid.NoneOr(valid.coordinates),
         sites_disagg=valid.NoneOr(valid.coordinates),
+        specific_assets=str.split,
+        statistics=valid.boolean,
         taxonomies_from_model=valid.boolean,
         time_event=str,
         truncation_level=valid.NoneOr(valid.positivefloat),
@@ -158,7 +160,7 @@ class OqParam(valid.ParamSet):
         """
         if self.calculation_mode not in HAZARD_CALCULATORS:
             return True  # no check on the sites for risk
-        sites = getattr(self, 'sites', self.inputs.get('site'))
+        sites = getattr(self, 'sites', self.inputs.get('sites'))
         if getattr(self, 'region', None):
             return sites is None and not 'exposure' in self.inputs
         elif 'exposure' in self.inputs:
@@ -173,7 +175,7 @@ class OqParam(valid.ParamSet):
         """
         if getattr(self, 'hazard_maps', None) or getattr(
                 self, 'uniform_hazard_spectra', None):
-            return bool(self.poes)
+            return bool(getattr(self, 'poes', None))
         else:
             return True
 
@@ -214,3 +216,27 @@ class OqParam(valid.ParamSet):
         elif getattr(self, 'intensity_measure_types_and_levels', None):
             return getattr(self, 'intensity_measure_types', None) is None
         return True
+
+    def is_valid_sites_disagg(self):
+        """
+        The option `sites_disagg` (when given) requires `specific_assets` to
+        be set.
+        """
+        if getattr(self, 'sites_disagg', None):
+            return getattr(self, 'specific_assets', None) or \
+                'specific_assets' in self.inputs
+        return True  # a missing sites_disagg is valid
+
+    def is_valid_specific_assets(self):
+        """
+        Read the special assets from the parameters `specific_assets` or
+        `specific_assets_csv`, if present. You cannot have both. The
+        concept is meaninful only for risk calculators.
+        """
+        specific_assets = getattr(self, 'specific_assets', None)
+        if specific_assets and 'specific_assets' in self.inputs:
+            return False
+        elif specific_assets or 'specific_assets' in self.inputs:
+            return self.calculation_mode in RISK_CALCULATORS
+        else:
+            return True
