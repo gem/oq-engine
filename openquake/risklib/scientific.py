@@ -156,13 +156,14 @@ class VulnerabilityFunction(object):
         Split the mean loss ratios, producing a new set of loss ratios. The new
         set of loss ratios always includes 0.0 and 1.0
 
-        :param int steps: the number of steps we make to go from one loss
-            ratio to the next. For example, if we have [0.5, 0.7]:
+        :param int steps:
+            the number of steps we make to go from one loss
+            ratio to the next. For example, if we have [0.5, 0.7]::
 
-            steps = 1 produces [0.0,  0.5, 0.7, 1]
-            steps = 2 produces [0.0, 0.25, 0.5, 0.6, 0.7, 0.85, 1]
-            steps = 3 produces [0.0, 0.17, 0.33, 0.5, 0.57, 0.63,
-                                0.7, 0.8, 0.9, 1]
+             steps = 1 produces [0.0,  0.5, 0.7, 1]
+             steps = 2 produces [0.0, 0.25, 0.5, 0.6, 0.7, 0.85, 1]
+             steps = 3 produces [0.0, 0.17, 0.33, 0.5, 0.57, 0.63,
+                                 0.7, 0.8, 0.9, 1]
         """
         loss_ratios = self.mean_loss_ratios
 
@@ -503,11 +504,10 @@ class LogNormalDistribution(Distribution):
     normally distributed.
 
     :attr epsilons: A matrix of random numbers generated with
-    :func:`numpy.random.multivariate_normal` with dimensions
-    assets_num x samples_num.
-
+                    :func:`numpy.random.multivariate_normal` with dimensions
+                    assets_num x samples_num.
     :attr asset_idx: a counter used in sampling to iterate over the
-    attribute `epsilons`
+                     attribute `epsilons`
     """
     def __init__(self, epsilons=None):
         self.epsilons = epsilons
@@ -572,14 +572,14 @@ def event_based(loss_values, tses, time_span,
     Compute a loss (or loss ratio) curve.
 
     :param loss_values: The loss ratios (or the losses) computed by
-    applying the vulnerability function
+                        applying the vulnerability function
 
     :param tses: Time representative of the stochastic event set
 
     :param time_span: Investigation Time spanned by the hazard input
 
     :param curve_resolution: The number of points the output curve is
-    defined by
+                             defined by
     """
     reference_losses = numpy.linspace(0, max(loss_values), curve_resolution)
 
@@ -614,13 +614,14 @@ def scenario_damage(fragility_functions, gmv):
 
 def classical(vulnerability_function, hazard_curve_values, steps=10):
     """
-    :param vulnerability_function: an instance of
+    :param vulnerability_function:
+        an instance of
         :py:class:`openquake.risklib.scientific.VulnerabilityFunction`
-        representing the vulnerability function used to compute the
-        curve.
-    :param hazard_curve_values: the hazard curve used to compute the curve.
-    :type hazard_curve_values: an association list with the
-    imls/values of the hazard curve
+        representing the vulnerability function used to compute the curve.
+    :param hazard_curve_values:
+        the hazard curve used to compute the curve.
+    :type hazard_curve_values:
+        an association list with the imls/values of the hazard curve
     :param int steps:
         Number of steps between loss ratios.
     """
@@ -675,25 +676,25 @@ def conditional_loss_ratio(loss_ratios, poes, probability):
     Return the loss ratio corresponding to the given PoE (Probability
     of Exceendance). We can have four cases:
 
-      1) If `probability` is in `poes` it takes the bigger
-      corresponding loss_ratios.
+      1. If `probability` is in `poes` it takes the bigger
+         corresponding loss_ratios.
 
-      2) If it is in `(poe1, poe2)` where both `poe1` and `poe2` are
-      in `poes`, then we perform a linear interpolation on the
-      corresponding losses
+      2. If it is in `(poe1, poe2)` where both `poe1` and `poe2` are
+         in `poes`, then we perform a linear interpolation on the
+         corresponding losses
 
-      3) if the given probability is smaller than the
-      lowest PoE defined, it returns the max loss ratio .
+      3. if the given probability is smaller than the
+         lowest PoE defined, it returns the max loss ratio .
 
-      4) if the given probability is greater than the highest PoE
-      defined it returns zero.
+      4. if the given probability is greater than the highest PoE
+         defined it returns zero.
 
     :param loss_ratios: an iterable over non-decreasing loss ratio
-    values (float)
+                        values (float)
     :param poes: an iterable over non-increasing probability of
-    exceedance values (float)
+                 exceedance values (float)
     :param float probability: the probability value used to
-    interpolate the loss curve
+                              interpolate the loss curve
     """
 
     rpoes = poes[::-1]
@@ -788,9 +789,9 @@ def average_loss(losses, poes):
     time span it computes the average loss on this period of time.
 
     :note: As the loss curve is supposed to be piecewise linear as it
-    is a result of a linear interpolation, we compute an exact
-    integral by using the trapeizodal rule with the width given by the
-    loss bin width.
+           is a result of a linear interpolation, we compute an exact
+           integral by using the trapeizodal rule with the width given by the
+           loss bin width.
     """
 
     return numpy.dot(-pairwise_diff(losses), pairwise_mean(poes))
