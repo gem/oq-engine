@@ -446,7 +446,7 @@ class BaseHazardCalculator(base.Calculator):
             self.hc.width_of_mfd_bin,
             self.hc.area_source_discretization,
         )
-        # define an ordered dictionary trt_model_id -> SourceCollector
+        # define an ordered dictionary trt_model_id -> TrtModel
         self.source_collector = collections.OrderedDict()
         for i, (sm, weight, smpath) in enumerate(sm_paths):
             fname = os.path.join(self.hc.base_path, sm)
