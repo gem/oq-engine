@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
+# Copyright (C) 2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -23,14 +23,9 @@ Module exports
 """
 from __future__ import division
 
-import numpy as np
-# standard acceleration of gravity in m/s**2
-from scipy.constants import g
-import copy
-
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.zhao_2006 import ZhaoEtAl2006Asc
 
 from openquake.hazardlib.gsim.zhao_2006_swiss_coeffs import (
@@ -61,15 +56,11 @@ class ZhaoEtAl2006AscSWISS05(ZhaoEtAl2006Asc):
     The hazard modeller is solely responsible for the use of this GMPE
     in a different tectonic context.
 
-    Model implmented by laurentiu.danciu@gmail.com
-
+    Model implemented by laurentiu.danciu@gmail.com
     """
 
-    """
-    Supported standard deviation type is only total, but reported as a
-    combination of mean and magnitude/distance single station sigma
-    """
-
+    # Supported standard deviation type is only total, but reported as a
+    # combination of mean and magnitude/distance single station sigma
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
 
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
@@ -134,7 +125,6 @@ class ZhaoEtAl2006AscSWISS03(ZhaoEtAl2006AscSWISS05):
 
 
 class ZhaoEtAl2006AscSWISS08(ZhaoEtAl2006AscSWISS05):
-
     """
     This class extends :class:ZhaoEtAl2006Asc,following same strategy
     as for :class:ZhaoEtAl2006AscSWISS05 to be used for the

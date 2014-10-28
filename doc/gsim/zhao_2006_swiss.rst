@@ -1,6 +1,6 @@
-================
-Zhao et al. 2006
-================
+==============================
+Zhao et al. 2006 - Switzerland
+==============================
 
 .. module:: openquake.hazardlib.gsim.zhao_2006_swiss
 
