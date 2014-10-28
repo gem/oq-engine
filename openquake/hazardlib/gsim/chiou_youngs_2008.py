@@ -15,10 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`ChiouYoungs2008`,
-class:`ChiouYoungs2008SWISS01`,
-class:`ChiouYoungs2008SWISS06`,
-class:`ChiouYoungs2008SWISS04`,
+Module exports :class:`ChiouYoungs2008`
 """
 from __future__ import division
 
@@ -27,11 +24,6 @@ import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
-from openquake.hazardlib.gsim.chiou_youngs_2008_swiss_coeffs import (
-    COEFFS_FS_ROCK_SWISS01,
-    COEFFS_FS_ROCK_SWISS06,
-    COEFFS_FS_ROCK_SWISS04)
-from openquake.hazardlib.gsim.utils_swiss_gmpe import _apply_adjustments
 
 
 class ChiouYoungs2008(GMPE):
@@ -270,84 +262,3 @@ class ChiouYoungs2008(GMPE):
     7.5    1.06 3.45 -2.1 -0.5 50.0 3.0 4.0 -5.1224 -0.0999 -0.1010 1.498 5.9891 5.2000 0.4500 0.0000 0.0000 0.0000 2.7177  0.7514 -0.00096 -0.00094 -0.8346  0.0000 -0.001369 0.001134 0.4800 0.005517 320.3  0.2660 0.5328 0.5328 0.4416 0.4213 0.7000 0.0018
     10.0   1.06 3.45 -2.1 -0.5 50.0 3.0 4.0 -5.5872 -0.1000 -0.1000 1.502 6.1930 5.2000 0.4500 0.0000 0.0000 0.0000 2.7180  1.1856 -0.00094 -0.00091 -0.7332  0.0000 -0.001361 0.000515 0.4800 0.005517 320.1  0.2682 0.5542 0.5542 0.4414 0.4213 0.7000 0.0014
     """)
-
-
-class ChiouYoungs2008SWISS01(ChiouYoungs2008):
-
-    """
-    This class extends :class:ChiouYoungs2008,
-    adjusted to be used for the Swiss Hazard Model [2014].
-
-    1) kappa value
-       K-adjustments corresponding to model 01 - as prepared by Ben Edwards
-       K-value for PGA were not provided but infered from SA[0.01s]
-       the model considers a fixed value of vs30=1100m/s
-
-    2) small-magnitude correction
-
-    3) single station sigma - inter-event magnitude/distance adjustment
-
-    Disclaimer: these equations are modified to be used for the
-    Swiss Seismic Hazard Model [2014].
-    The use of these models in other tectonic environments
-    is the soly responsability of the hazard modeler.
-
-    Model implmented by laurentiu.danciu@gmail.com
-    """
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-
-        mean, stddevs = super(ChiouYoungs2008SWISS01, self).\
-            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
-
-        COEFF = ChiouYoungs2008.COEFFS[imt]
-        log_phi_ss = 1
-        tau = super(ChiouYoungs2008SWISS01, self).\
-            get_tau(COEFF, rup)
-
-        ln_y_ref = super(ChiouYoungs2008SWISS01, self).\
-            _get_ln_y_ref(rup, dists, COEFF)
-
-        exp1 = np.exp(COEFF['phi3'] * (sites.vs30.clip(-np.inf, 1130) - 360))
-        exp2 = np.exp(COEFF['phi3'] * (1130 - 360))
-        nl = super(ChiouYoungs2008SWISS01, self).\
-            get_nl(COEFF, ln_y_ref, exp1, exp2)
-
-        mean, stddevs = _apply_adjustments(
-            COEFF, self.COEFFS_FS_ROCK[imt], 1,
-            mean, stddevs, sites, rup, dists.rjb, imt, stddev_types,
-            log_phi_ss, NL=nl, tau_value=tau)
-
-        return mean, stddevs
-
-    COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS01
-
-
-class ChiouYoungs2008SWISS06(ChiouYoungs2008SWISS01):
-
-    """
-    This class extends :class:ChiouYoungs2008,following same strategy
-    as for :class:ChiouYoungs2008SWISS01 to be used for the
-    Swiss Hazard Model [2014].
-
-    Disclaimer: these equations are modified to be used for the
-    Swiss Seismic Hazard Model [2014].
-    The use of these models in other tectonic environments
-    is the soly responsability of the hazard modeler.
-    """
-    COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS06
-
-
-class ChiouYoungs2008SWISS04(ChiouYoungs2008SWISS01):
-
-    """
-    This class extends :class:ChiouYoungs2008,following same strategy
-    as for :class:ChiouYoungs2008SWISS01 to be used for the
-    Swiss Hazard Model [2014].
-
-    Disclaimer: these equations are modified to be used for the
-    Swiss Seismic Hazard Model [2014].
-    The use of these models in other tectonic environments
-    is the soly responsability of the hazard modeler.
-    """
-    COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS04

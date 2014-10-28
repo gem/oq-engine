@@ -13,7 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from openquake.hazardlib.gsim.chiou_youngs_2008 import (
+from openquake.hazardlib.gsim.chiou_youngs_2008_swiss import (
     ChiouYoungs2008SWISS01,
     ChiouYoungs2008SWISS06,
     ChiouYoungs2008SWISS04)
