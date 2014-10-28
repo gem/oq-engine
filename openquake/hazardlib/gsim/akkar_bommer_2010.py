@@ -306,6 +306,9 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
 
     Model implmented by laurentiu.danciu@gmail.com
     """
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
+        const.StdDev.TOTAL
+    ])
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -334,6 +337,9 @@ class AkkarBommer2010SWISS04(AkkarBommer2010SWISS01):
     This class extends :class:`AkkarBommer2010` following same strategy
     as for :class:`AkkarBommer2010SWISS01`
     """
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
+        const.StdDev.TOTAL
+    ])
 
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS04
 
@@ -344,5 +350,8 @@ class AkkarBommer2010SWISS08(AkkarBommer2010SWISS01):
     as for :class:`AkkarBommer2010SWISS01` to be used for the
     Swiss Hazard Model [2014].
     """
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
+        const.StdDev.TOTAL
+    ])
 
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS08
