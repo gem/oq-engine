@@ -1,6 +1,6 @@
-==================================
-Chiou and Youngs 2008 Swiss Models
-==================================
+===================================
+Chiou and Youngs 2008 - Switzerland
+===================================
 
 .. module:: openquake.hazardlib.gsim.chiou_youngs_2008_swiss
 

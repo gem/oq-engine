@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # The Hazard Library
 # Copyright (C) 2012-2014, GEM Foundation
 #
@@ -15,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`ChiouYoungs2008`
+Module exports :class:`ChiouYoungs2008`.
 """
 from __future__ import division
 
@@ -27,7 +26,6 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 
 
 class ChiouYoungs2008(GMPE):
-
     """
     Implements GMPE developed by Brian S.-J. Chiou and Robert R. Youngs
     and published as "An NGA Model for the Average Horizontal Component
@@ -66,7 +64,7 @@ class ChiouYoungs2008(GMPE):
     #: dip (eq. 13a) and ztor (eq. 13a).
     REQUIRES_RUPTURE_PARAMETERS = set(('dip', 'rake', 'mag', 'ztor'))
 
-    #: Required distance measures are RRup, rrup and Rx (all are in eq. 13a).
+    #: Required distance measures are RRup, Rjb and Rx (all are in eq. 13a).
     REQUIRES_DISTANCES = set(('rrup', 'rjb', 'rx'))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
@@ -121,22 +119,6 @@ class ChiouYoungs2008(GMPE):
         )
         return ln_y
 
-    def get_tau(self, C, rup):
-        # eq. 19 to calculate inter-event standard error
-        mag_test = min(max(rup.mag, 5.0), 7.0) - 5.0
-        tau = C['tau1'] + (C['tau2'] - C['tau1']) / 2 * mag_test
-        return tau
-
-    def get_nl(self, C, ln_y_ref, exp1, exp2):
-        # b and c coeffs from eq. 10
-        b = C['phi2'] * (exp1 - exp2)
-        c = C['phi4']
-
-        y_ref = np.exp(ln_y_ref)
-        # eq. 20
-        NL = b * y_ref / (y_ref + c)
-        return NL
-
     def _get_stddevs(self, sites, rup, C, stddev_types, ln_y_ref, exp1, exp2):
         """
         Get standard deviation for a given intensity on reference soil.
@@ -151,21 +133,20 @@ class ChiouYoungs2008(GMPE):
 
         # eq. 19 to calculate inter-event standard error
         mag_test = min(max(rup.mag, 5.0), 7.0) - 5.0
-        # tau = C['tau1'] + (C['tau2'] - C['tau1']) / 2 * mag_test
-        tau = self.get_tau(C, rup)
+        tau = C['tau1'] + (C['tau2'] - C['tau1']) / 2 * mag_test
 
         # b and c coeffs from eq. 10
-        # b = C['phi2'] * (exp1 - exp2)
-        # c = C['phi4']
-        # y_ref = np.exp(ln_y_ref)
+        b = C['phi2'] * (exp1 - exp2)
+        c = C['phi4']
+
+        y_ref = np.exp(ln_y_ref)
         # eq. 20
-        # NL = b * y_ref / (y_ref + c)
-        NL = self.get_nl(C, ln_y_ref, exp1, exp2)
+        NL = b * y_ref / (y_ref + c)
         sigma = (
             # first line of eq. 20
             (C['sig1']
-             + 0.5 * (C['sig2'] - C['sig1']) * mag_test
-             + C['sig4'] * AS)
+            + 0.5 * (C['sig2'] - C['sig1']) * mag_test
+            + C['sig4'] * AS)
             # second line
             * np.sqrt((C['sig3'] * Finferred + 0.7 * Fmeasured)
                       + (1 + NL) ** 2)
@@ -227,7 +208,7 @@ class ChiouYoungs2008(GMPE):
             * np.tanh(dists.rx
                       * (np.cos(np.radians(rup.dip)) ** 2)
                       / C['c9a'])
-            * (1 - np.sqrt(dists.rrup ** 2 + rup.ztor ** 2)
+            * (1 - np.sqrt(dists.rjb ** 2 + rup.ztor ** 2)
                / (dists.rrup + 0.001))
         )
         return ln_y_ref

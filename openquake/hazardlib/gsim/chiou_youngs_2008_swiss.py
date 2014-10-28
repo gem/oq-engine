@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2014 GEM Foundation
+# Copyright (C) 2014 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -23,14 +23,11 @@ from __future__ import division
 
 import numpy as np
 
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
-from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.chiou_youngs_2008_swiss_coeffs import (
     COEFFS_FS_ROCK_SWISS01,
     COEFFS_FS_ROCK_SWISS06,
     COEFFS_FS_ROCK_SWISS04)
-from openquake.hazardlib.gsim.chiou_youngs_2008 import (ChiouYoungs2008)
+from openquake.hazardlib.gsim.chiou_youngs_2008 import ChiouYoungs2008
 from openquake.hazardlib.gsim.utils_swiss_gmpe import _apply_adjustments
 
 
@@ -54,7 +51,7 @@ class ChiouYoungs2008SWISS01(ChiouYoungs2008):
     The use of these models in other models
     is the soly responsability of the hazard modeler.
 
-    Model implmented by laurentiu.danciu@gmail.com
+    Model implemented by laurentiu.danciu@gmail.com
     """
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
@@ -63,8 +60,7 @@ class ChiouYoungs2008SWISS01(ChiouYoungs2008):
             get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
 
         log_phi_ss = 1
-        tau = super(ChiouYoungs2008SWISS01, self).\
-            get_tau(ChiouYoungs2008.COEFFS[imt], rup)
+        tau = self.get_tau(ChiouYoungs2008.COEFFS[imt], rup)
 
         ln_y_ref = super(ChiouYoungs2008SWISS01, self).\
             _get_ln_y_ref(rup, dists, ChiouYoungs2008.COEFFS[imt])
@@ -74,8 +70,7 @@ class ChiouYoungs2008SWISS01(ChiouYoungs2008):
 
         exp2 = np.exp(ChiouYoungs2008.COEFFS[imt]['phi3'] * (1130 - 360))
 
-        nl = super(ChiouYoungs2008SWISS01, self).\
-            get_nl(ChiouYoungs2008.COEFFS[imt], ln_y_ref, exp1, exp2)
+        nl = self.get_nl(ChiouYoungs2008.COEFFS[imt], ln_y_ref, exp1, exp2)
 
         mean, stddevs = _apply_adjustments(
             ChiouYoungs2008.COEFFS, self.COEFFS_FS_ROCK[imt], 1,
@@ -83,6 +78,22 @@ class ChiouYoungs2008SWISS01(ChiouYoungs2008):
             log_phi_ss, NL=nl, tau_value=tau)
 
         return mean, stddevs
+
+    def get_tau(self, C, rup):
+        # eq. 19 to calculate inter-event standard error
+        mag_test = min(max(rup.mag, 5.0), 7.0) - 5.0
+        tau = C['tau1'] + (C['tau2'] - C['tau1']) / 2 * mag_test
+        return tau
+
+    def get_nl(self, C, ln_y_ref, exp1, exp2):
+        # b and c coeffs from eq. 10
+        b = C['phi2'] * (exp1 - exp2)
+        c = C['phi4']
+
+        y_ref = np.exp(ln_y_ref)
+        # eq. 20
+        NL = b * y_ref / (y_ref + c)
+        return NL
 
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS01
 
