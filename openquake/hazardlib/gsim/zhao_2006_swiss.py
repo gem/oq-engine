@@ -19,7 +19,7 @@
 Module exports
 :class:`ZhaoEtAl2006AscSWISS05`,
 :class:`ZhaoEtAl2006AscSWISS03`,
-:class:`ZhaoEtAl2006AscSWISS08`
+:class:`ZhaoEtAl2006AscSWISS08`.
 """
 from __future__ import division
 
