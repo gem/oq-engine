@@ -351,6 +351,17 @@ def apply_reduce(task_func, task_args, agg,
     return map_reduce(task_func, all_args, agg, acc, name)
 
 
+def do_not_aggregate(acc, value):
+    """
+    Do nothing aggregation function, use it in
+    :class:`openquake.commonlib.parallel.apply_reduce` calls
+    when no aggregation is required.
+
+    :param acc: the accumulator
+    :param value: the value to accumulate
+    """
+
+
 # this is not thread-safe
 class PerformanceMonitor(object):
     """
