@@ -19,7 +19,7 @@ from openquake.engine import logs
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.utils import tasks, config
 
-from openquake.commonlib.source import SourceCollector
+from openquake.commonlib.source import TrtModel
 
 
 class Calculator(object):
@@ -44,7 +44,7 @@ class Calculator(object):
             config.get('hazard', 'max_input_weight'))
         self.max_output_weight = float(
             config.get('hazard', 'max_output_weight'))
-        SourceCollector.POINT_SOURCE_WEIGHT = float(
+        TrtModel.POINT_SOURCE_WEIGHT = float(
             config.get('hazard', 'point_source_weight'))
 
     def monitor(self, operation=None):
