@@ -45,7 +45,7 @@ class ChiouYoungs2014(GMPE):
     ])
 
     #: Supported intensity measure component is orientation-independent
-    #: measure :attr:`~openquake.hazardlib.const.IMC.RotI50`,
+    #: measure :attr:`~openquake.hazardlib.const.IMC.RotD50`,
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
 
     #: Supported standard deviation types are inter-event, intra-event

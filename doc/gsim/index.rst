@@ -24,6 +24,7 @@ Built-in GSIMs
     berge_thierry_2003
     boore_1993
     boore_1997
+    boore_2014
     boore_atkinson_2008
     boore_atkinson_2011
     bradley_2013
@@ -31,9 +32,11 @@ Built-in GSIMs
     campbell_bozorgnia_2003
     campbell_bozorgnia_2008
     cauzzi_faccioli_2008
+    cauzzi_faccioli_2008_swiss
     chiou_youngs_2008
     chiou_youngs_2014
     climent_1994
+    convertito_2012
     douglas_stochastic_2013
     faccioli_2010
     frankel_1996
