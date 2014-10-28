@@ -1,6 +1,6 @@
-==========================
-Edwars and Fah 2013 Alpine
-==========================
+===========================
+Edwards and Fah 2013 Alpine
+===========================
 
 .. module:: openquake.hazardlib.gsim.edwards_fah_2013a
 

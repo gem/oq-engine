@@ -1,6 +1,6 @@
-============================
-Edwars and Fah 2013 Foreland
-============================
+=============================
+Edwards and Fah 2013 Foreland
+=============================
 
 .. module:: openquake.hazardlib.gsim.edwards_fah_2013f
 
