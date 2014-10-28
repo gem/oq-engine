@@ -32,9 +32,11 @@ Built-in GSIMs
     campbell_bozorgnia_2003
     campbell_bozorgnia_2008
     cauzzi_faccioli_2008
+    cauzzi_faccioli_2008_swiss
     chiou_youngs_2008
     chiou_youngs_2014
     climent_1994
+    convertito_2012
     douglas_stochastic_2013
     edwards_fah_2013a
     edwards_fah_2013f
