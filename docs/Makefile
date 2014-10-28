@@ -2,10 +2,10 @@
 #
 
 # You can set these variables from the command line.
-SPHINXOPTS    = -n -W
-SPHINXBUILD   = python $(shell which sphinx-build)
+SPHINXOPTS    =
+SPHINXBUILD   = sphinx-build
 PAPER         =
-BUILDDIR      = build
+BUILDDIR      = _build
 
 # Internal variables.
 PAPEROPT_a4     = -D latex_paper_size=a4
@@ -77,17 +77,17 @@ qthelp:
 	@echo
 	@echo "Build finished; now you can run "qcollectiongenerator" with the" \
 	      ".qhcp project file in $(BUILDDIR)/qthelp, like this:"
-	@echo "# qcollectiongenerator $(BUILDDIR)/qthelp/commonlib.qhcp"
+	@echo "# qcollectiongenerator $(BUILDDIR)/qthelp/openquake.qhcp"
 	@echo "To view the help file:"
-	@echo "# assistant -collectionFile $(BUILDDIR)/qthelp/commonlib.qhc"
+	@echo "# assistant -collectionFile $(BUILDDIR)/qthelp/openquake.qhc"
 
 devhelp:
 	$(SPHINXBUILD) -b devhelp $(ALLSPHINXOPTS) $(BUILDDIR)/devhelp
 	@echo
 	@echo "Build finished."
 	@echo "To view the help file:"
-	@echo "# mkdir -p $$HOME/.local/share/devhelp/commonlib"
-	@echo "# ln -s $(BUILDDIR)/devhelp $$HOME/.local/share/devhelp/commonlib"
+	@echo "# mkdir -p $$HOME/.local/share/devhelp/openquake"
+	@echo "# ln -s $(BUILDDIR)/devhelp $$HOME/.local/share/devhelp/openquake"
 	@echo "# devhelp"
 
 epub:
