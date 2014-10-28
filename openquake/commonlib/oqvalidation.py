@@ -123,6 +123,8 @@ class OqParam(valid.ParamSet):
         ses_per_logic_tree_path=valid.positiveint,
         sites=valid.NoneOr(valid.coordinates),
         sites_disagg=valid.NoneOr(valid.coordinates),
+        specific_assets=str.split,
+        statistics=valid.boolean,
         taxonomies_from_model=valid.boolean,
         time_event=str,
         truncation_level=valid.NoneOr(valid.positivefloat),
@@ -158,7 +160,7 @@ class OqParam(valid.ParamSet):
         """
         if self.calculation_mode not in HAZARD_CALCULATORS:
             return True  # no check on the sites for risk
-        sites = getattr(self, 'sites', self.inputs.get('site'))
+        sites = getattr(self, 'sites', self.inputs.get('sites'))
         if getattr(self, 'region', None):
             return sites is None and not 'exposure' in self.inputs
         elif 'exposure' in self.inputs:
@@ -214,3 +216,27 @@ class OqParam(valid.ParamSet):
         elif getattr(self, 'intensity_measure_types_and_levels', None):
             return getattr(self, 'intensity_measure_types', None) is None
         return True
+
+    def is_valid_sites_disagg(self):
+        """
+        The option `sites_disagg` (when given) requires `specific_assets` to
+        be set.
+        """
+        if getattr(self, 'sites_disagg', None):
+            return getattr(self, 'specific_assets', None) or \
+                'specific_assets' in self.inputs
+        return True  # a missing sites_disagg is valid
+
+    def is_valid_specific_assets(self):
+        """
+        Read the special assets from the parameters `specific_assets` or
+        `specific_assets_csv`, if present. You cannot have both. The
+        concept is meaninful only for risk calculators.
+        """
+        specific_assets = getattr(self, 'specific_assets', None)
+        if specific_assets and 'specific_assets' in self.inputs:
+            return False
+        elif specific_assets or 'specific_assets' in self.inputs:
+            return self.calculation_mode in RISK_CALCULATORS
+        else:
+            return True
