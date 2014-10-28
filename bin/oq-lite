@@ -1,45 +1,15 @@
 #!/usr/bin/env python
 
 import logging
-from openquake.commonlib import sap, nrml, __version__, readinput
-#from openquake.commonlib.calc import run_scenario
-from openquake.commonlib.parallel import executor
+from openquake.commonlib import oqvalidation, sap, __version__, commands
+from openquake.commonlib.commands import run, info, check
 
-################################# NRML ######################################
-
-def check(nrmlfile, pprint):
-    """
-    Check the validity of NRML files. Optionally, displays them in indented
-    format.
-    """
-    node = nrml.read(nrmlfile)
-    if pprint:
-        print node.to_str()
-
-check_parser = sap.Parser(check)
-check_parser.arg('nrmlfile', 'file in NRML format')
-check_parser.flg('pprint', 'display in indented format')
-
-
-############################ calculation ####################################
-
-def run(job_ini, concurrent_tasks=executor._max_workers, loglevel='INFO'):
-    """
-    Run a calculation. Optionally, set the number of concurrent_tasks
-    (0 to disable the parallelization).
-    """
-    logging.basicConfig(level=getattr(logging, loglevel))
-    with open(job_ini) as f:
-        oqparam = readinput.get_oqparam(job_ini, hazard_output_id=1)
-        run_scenario(oqparam, concurrent_tasks)
-        
-
-run_parser = sap.Parser(run)
-run_parser.arg('job_ini', 'calculation configuration')
-run_parser.opt('concurrent_tasks', 'hint for the number of tasks to spawn')
-run_parser.opt('loglevel', 'logging level', choices=
-               'DEBUG INFO WARN ERROR CRITICAL'.split())
 
 if __name__ == '__main__':
-    parser = sap.compose([check_parser, run_parser], version=__version__)
-    parser.callfunc()
+    parser = sap.compose([check.parser, run.parser, info.parser],
+                         version=__version__)
+    try:
+        parser.callfunc()
+    except NotImplementedError as exc:
+        print 'Sorry, not implemented yet: %s' % exc
+        raise
