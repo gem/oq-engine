@@ -31,7 +31,7 @@ from concurrent.futures import as_completed, ProcessPoolExecutor
 
 import psutil
 
-from openquake.commonlib.general import split_in_blocks
+from openquake.commonlib.general import split_in_blocks, AccumDict
 
 
 executor = ProcessPoolExecutor()
@@ -305,8 +305,7 @@ def map_reduce(function, function_args, agg, acc, name=None):
     return tm.aggregate_results(agg, acc)
 
 
-def apply_reduce(task_func, task_args,
-                 agg=lambda a, x: x,
+def apply_reduce(task_func, task_args, agg,
                  acc=None,
                  concurrent_tasks=executor._max_workers,
                  weight=lambda item: 1,
@@ -333,13 +332,15 @@ def apply_reduce(task_func, task_args,
     :param task_func: a function to run in parallel
     :param task_args: the arguments to be passed to the task function
     :param agg: the aggregation function
-    :param acc: initial value of the accumulator
+    :param acc: initial value of the accumulator (default empty AccumDict)
     :param concurrent_tasks: hint about how many tasks to generate
     :param weight: function to extract the weight of an item in data
     :param key: function to extract the kind of an item in data
     """
     data = task_args[0]
     args = task_args[1:]
+    if acc is None:
+        acc = AccumDict()
     if not data:
         return acc
     elif len(data) == 1 or not concurrent_tasks:
@@ -348,6 +349,17 @@ def apply_reduce(task_func, task_args,
     all_args = [(chunk,) + args for chunk in chunks]
     apply_reduce._chunks = chunks
     return map_reduce(task_func, all_args, agg, acc, name)
+
+
+def do_not_aggregate(acc, value):
+    """
+    Do nothing aggregation function, use it in
+    :class:`openquake.commonlib.parallel.apply_reduce` calls
+    when no aggregation is required.
+
+    :param acc: the accumulator
+    :param value: the value to accumulate
+    """
 
 
 # this is not thread-safe
@@ -415,8 +427,7 @@ class PerformanceMonitor(object):
 
     def on_exit(self):
         "Save the results: to be overridden in subclasses"
-        print 'start_time =', self.start_time
-        print 'duration =', self.duration
-        print 'mem =', self.mem
+        logging.info('Time spent=%s', self.duration)
+        logging.info('Memory allocated=%d M', self.mem[0] / 1024. / 1024.)
         if self.exc:
-            print 'exc = %s(%s)' % (self.exc.__class__.__name__, self.exc)
+            logging.info('exc=%s(%s)', self.exc.__class__.__name__, self.exc)

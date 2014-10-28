@@ -1,0 +1,15 @@
+#!/usr/bin/env python
+
+import logging
+from openquake.commonlib import oqvalidation, sap, __version__, commands
+from openquake.commonlib.commands import run, info, check
+
+
+if __name__ == '__main__':
+    parser = sap.compose([check.parser, run.parser, info.parser],
+                         version=__version__)
+    try:
+        parser.callfunc()
+    except NotImplementedError as exc:
+        print 'Sorry, not implemented yet: %s' % exc
+        raise
