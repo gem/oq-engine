@@ -381,8 +381,9 @@ def import_all(module_or_package):
                            '.' + os.path.basename(f[:-3]))
                 try:
                     importlib.import_module(modname)
-                except:
-                    print >> sys.stderr, 'Could not import', modname
+                except Exception as exc:
+                    print >> sys.stderr, 'Could not import %s: %s: %s' % (
+                        modname, exc.__class__.__name__, exc)
     return set(sys.modules) - already_imported
 
 
