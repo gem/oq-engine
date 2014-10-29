@@ -489,10 +489,10 @@ def get_sitecol_hcurves(oqparam):
     imts = oqparam.intensity_measure_types_and_levels.keys()
     num_values = map(len, oqparam.intensity_measure_types_and_levels.values())
     with open(oqparam.inputs['hazard_curves']) as csvfile:
-        mesh, data = get_mesh_csvdata(
+        mesh, hcurves_by_imt = get_mesh_csvdata(
             csvfile, imts, num_values, valid.probability)
     sitecol = get_site_collection(oqparam, mesh)
-    return sitecol, data
+    return sitecol, hcurves_by_imt
 
 
 def get_sitecol_gmfs(oqparam):
@@ -506,7 +506,7 @@ def get_sitecol_gmfs(oqparam):
     imts = oqparam.intensity_measure_types_and_levels.keys()
     num_values = [oqparam.number_of_ground_motion_fields] * len(imts)
     with open(oqparam.inputs['gmvs']) as csvfile:
-        mesh, data = get_mesh_csvdata(
+        mesh, gmfs_by_imt = get_mesh_csvdata(
             csvfile, imts, num_values, valid.positivefloat)
     sitecol = get_site_collection(oqparam, mesh)
-    return sitecol, data
+    return sitecol, gmfs_by_imt
