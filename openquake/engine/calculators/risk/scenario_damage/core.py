@@ -50,7 +50,7 @@ def scenario_damage(workflow, getter, outputdict, params, monitor):
    :returns:
       A matrix of fractions and a taxonomy string
     """
-    [ffs] = workflow.vulnerability_functions
+    [ffs] = workflow.risk_functions
 
     # and no output containers
     assert len(outputdict) == 0, outputdict
