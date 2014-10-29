@@ -32,7 +32,7 @@ class HazardIMTTestCase(unittest.TestCase):
         vf2.imt = 'PGV'
         calc = mock.Mock()
         workflow = mock.Mock()
-        workflow.vulnerability_functions = dict(
+        workflow.risk_functions = dict(
             structural=vf1, nonstructural=vf2)
         calc.risk_model = {
             ('PGA', 'tax1'): workflow,
