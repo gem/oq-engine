@@ -29,6 +29,10 @@ from openquake.commonlib.general import AccumDict
 from openquake.commonlib.readinput import \
     get_gsim, get_rupture, get_correl_model, get_imts
 
+MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
+# in this way even on 32 bit machines Python will not have to convert
+# the generated seen into a long integer
+
 
 ############### utilities for the classical calculator ################
 
@@ -126,7 +130,7 @@ def calc_gmfs(oqparam, sitecol):
     rupture = get_rupture(oqparam)
     computer = gmf.GmfComputer(rupture, sitecol, imts, gsim, trunc_level,
                                correl_model)
-    seeds = [rnd.randint(0, 2 ** 31 - 1) for _ in xrange(n_gmfs)]
+    seeds = [rnd.randint(0, MAX_INT) for _ in xrange(n_gmfs)]
     res = AccumDict()  # imt -> gmf
     for seed in seeds:
         for imt, gmfield in computer.compute(seed):

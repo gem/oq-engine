@@ -32,4 +32,4 @@ def info(name):
         print "No info for '%s'" % name
 
 parser = sap.Parser(info)
-parser.arg('name', 'calculators name', choices=calculators)
+parser.arg('name', 'calculator name', choices=calculators)
