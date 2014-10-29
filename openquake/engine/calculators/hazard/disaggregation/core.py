@@ -26,7 +26,7 @@ from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import SiteCollection
 
-from openquake.commonlib.calc import gen_ruptures_for_site
+from openquake.commonlib.calculators.calc import gen_ruptures_for_site
 
 from openquake.engine import logs
 from openquake.engine.db import models
