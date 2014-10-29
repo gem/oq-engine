@@ -66,7 +66,7 @@ def _collect_source_model_paths(smlt):
     return sorted(set(src_paths))
 
 
-def get_oqparam(source):
+def get_oqparam(source, calculators=None):
     """
     Parse a dictionary of parameters from an INI-style config file.
 
@@ -79,6 +79,10 @@ def get_oqparam(source):
         absolute paths to all of the files referenced in the job.ini, keyed by
         the parameter name.
     """
+    if calculators is None:
+        from openquake.commonlib.calculators import calculators
+        OqParam.params['calculation_mode'].choices = tuple(calculators)
+
     cp = ConfigParser.ConfigParser()
     cp.readfp(source)
 
@@ -105,9 +109,6 @@ def get_oqparam(source):
         params['inputs']['source'] = [
             os.path.join(base_path, src_path)
             for src_path in _collect_source_model_paths(smlt)]
-
-    from openquake.commonlib.calculators import calculators
-    OqParam.params['calculation_mode'].choices = tuple(calculators)
     oqparam = OqParam(**params)
 
     # define the parameter `intensity measure types and levels` always

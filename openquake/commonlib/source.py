@@ -23,10 +23,8 @@ from openquake.commonlib.node import read_nodes, context, striptag
 from openquake.commonlib import valid
 from openquake.commonlib.nrml import nodefactory
 
-try:
-    from openquake.commonlib.obsolete import NrmlHazardlibConverter
-except ImportError:  # possible if you do not have the old nrmllib installed
-    pass
+# this must stay here for the nrml_converters: don't remove it!
+from openquake.commonlib.obsolete import NrmlHazardlibConverter
 
 
 class DuplicateID(Exception):
