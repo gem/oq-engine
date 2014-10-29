@@ -34,7 +34,7 @@ from django import db as django_db
 
 from openquake.engine import logs
 from openquake.engine.db import models
-from openquake.engine.utils import config, calculators
+from openquake.engine.utils import config
 from openquake.engine.celery_node_monitor import CeleryNodeMonitor
 from openquake.engine.writer import CacheInserter
 from openquake.engine.settings import DATABASES
@@ -154,11 +154,16 @@ def run_calc(job, log_level, log_file, exports, job_type):
     :param str job_type:
         'hazard' or 'risk'
     """
+    # let's import the calculator classes here, when they are needed
+    # the reason is that the command `$ oq-engine --upgrade-db`
+    # does not need them and would raise strange errors during installation
+    # time if the PYTHONPATH is not set and commonlib is not visible
+    from openquake.engine.calculators import calculators
+
     # first of all check the database version and exit if the db is outdated
     upgrader.check_versions(django_db.connections['admin'])
 
-    calc_mode = job.get_param('calculation_mode')
-    calculator = calculators(calc_mode)(job)
+    calculator = calculators(job)
     with logs.handle(job, log_level, log_file), job_stats(job):  # run the job
         _do_run_calc(calculator, exports, job_type)
     return calculator
@@ -387,6 +392,8 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
     :raises:
         `RuntimeError` if the input job configuration is not valid
     """
+    from openquake.engine.calculators import calculators
+
     # determine the previous hazard job, if any
     if hazard_calculation_id:
         haz_job = models.OqJob.objects.get(pk=hazard_calculation_id)

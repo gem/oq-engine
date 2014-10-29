@@ -30,7 +30,7 @@ from openquake.engine.calculators.risk import (
     base, hazard_getters, validation, writers)
 from openquake.engine.db import models
 from openquake.engine import writer
-from openquake.engine.utils import calculators
+from openquake.engine.calculators import calculators
 from openquake.engine.performance import EnginePerformanceMonitor
 
 

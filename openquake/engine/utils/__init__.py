@@ -1,45 +1,25 @@
-"""This is needed for imports to work."""
+#  -*- coding: utf-8 -*-
+#  vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+#  Copyright (c) 2012-2014, GEM Foundation
+
+#  OpenQuake is free software: you can redistribute it and/or modify it
+#  under the terms of the GNU Affero General Public License as published
+#  by the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+
+#  OpenQuake is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+
+#  You should have received a copy of the GNU Affero General Public License
+#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import decimal
-import operator
-
-from openquake.commonlib.general import CallableDict, import_all
 
 
-# an ordered dictionary of calculator classes
-calculators = CallableDict(operator.attrgetter('calculation_mode'))
-
-import_all('openquake.engine.calculators.hazard')
-import_all('openquake.engine.calculators.risk')
-
-
-def round_float(value):
-    """
-    Takes a float and rounds it to a fixed number of decimal places.
-
-    This function makes uses of the built-in
-    :py:method:`decimal.Decimal.quantize` to limit the precision.
-
-    The 'round-half-even' algorithm is used for rounding.
-
-    This should give us what can be considered 'safe' float values for
-    geographical coordinates (to side-step precision and rounding errors).
-
-    :type value: float
-
-    :returns: the input value rounded to a hard-coded fixed number of decimal
-    places
-    """
-    float_decimal_places = 7
-    quantize_str = '0.' + '0' * float_decimal_places
-
-    return float(
-        decimal.Decimal(str(value)).quantize(
-            decimal.Decimal(quantize_str),
-            rounding=decimal.ROUND_HALF_EVEN))
-
-
+# this is used in celeryconfig.py
 def get_core_modules(pkg):
     """
     :param pkg: a Python package

@@ -22,7 +22,7 @@ from openquake.commonlib.valid import SiteParam
 
 from openquake.engine import engine
 from openquake.engine.calculators.hazard import general
-from openquake.engine.utils import calculators
+from openquake.engine.calculators import calculators
 from openquake.engine.db import models
 
 from openquake.engine.tests.utils import helpers
@@ -37,8 +37,7 @@ class ParseRiskModelsTestCase(unittest.TestCase):
         job.is_running = True
         job.save()
 
-        haz_calc = job.get_oqparam()
-        calc = calculators(haz_calc.calculation_mode)(job)
+        calc = calculators(job)
         calc.parse_risk_model()
 
         self.assertEqual(['PGA'],
@@ -57,8 +56,7 @@ class InitializeSourcesTestCase(unittest.TestCase):
             'calculators/hazard/classical/haz_map_test_job.ini')
         job = helpers.get_job(cfg)
         models.JobStats.objects.create(oq_job=job)
-        hc = job.get_oqparam()
-        cls.calc = calculators(hc.calculation_mode)(job)
+        cls.calc = calculators(job)
         cls.calc.initialize_site_collection()
         num_sites = len(cls.calc.site_collection)
         assert num_sites == 2, num_sites
@@ -83,8 +81,7 @@ class CalculationLimitsTestCase(unittest.TestCase):
             'calculators/hazard/classical/haz_map_test_job.ini')
         job = helpers.get_job(cfg)
         models.JobStats.objects.create(oq_job=job)
-        hc = job.get_oqparam()
-        calc = calculators(hc.calculation_mode)(job)
+        calc = calculators(job)
         input_weight, output_weight = calc.pre_execute()
         self.assertEqual(input_weight, 225)
         self.assertEqual(output_weight, 24)
@@ -105,8 +102,7 @@ class CalculationLimitsTestCase(unittest.TestCase):
             'event_based_hazard/job.ini')
         job = helpers.get_job(cfg)
         models.JobStats.objects.create(oq_job=job)
-        hc = job.get_oqparam()
-        calc = calculators(hc.calculation_mode)(job)
+        calc = calculators(job)
         input_weight, output_weight = calc.pre_execute()
         self.assertEqual(input_weight, 1352.75)
         self.assertAlmostEqual(output_weight, 12.1)
