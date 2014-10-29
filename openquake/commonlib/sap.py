@@ -21,17 +21,29 @@ Here is a minimal example of usage:
 
 .. code-block:: python
 
-    from openquake.commonlib import sap
-    def fun(input, inplace, output=None, x='X', out='/tmp'):
-        'Example'
-        print locals()
+    >>> from openquake.commonlib import sap
+    >>> def fun(input, inplace, output=None, out='/tmp'):
+    ...     'Example'
+    ...     for argname, argvalue in sorted(locals().iteritems()):
+    ...         print argname, '=', argvalue
 
-    p = sap.Parser(fun)
-    p.arg('input', 'input file or archive')
-    p.arg('output', 'output archive')
-    p.opt('out', 'optional output file')
-    p.flg('inplace', 'convert inplace')
-    p.callfunc()
+    >>> p = sap.Parser(fun)
+    >>> p.arg('input', 'input file or archive')
+    >>> p.flg('inplace', 'convert inplace')
+    >>> p.arg('output', 'output archive')
+    >>> p.opt('out', 'optional output file')
+
+    >>> p.callfunc(['a'])
+    inplace = False
+    input = a
+    out = /tmp
+    output = None
+
+    >>> p.callfunc(['a', 'b', '-i', '-o', 'OUT'])
+    inplace = True
+    input = a
+    out = OUT
+    output = b
 
 Parsers can be composed too.
 """
@@ -47,6 +59,11 @@ NODEFAULT = object()
 
 def get_parentparser(parser, description=None, help=True, version='0.0'):
     """
+    :param parser: :class:`argparse.ArgumentParser` instance or None
+    :param description: string used to build a new parser if parser is None
+    :param help: flag used to build a new parser if parser is None
+    :returns: if parser is None the new parser; otherwise the `.parentparser`
+              attribute (if set) or the parser itself (if not set)
     """
     if parser is None:
         return argparse.ArgumentParser(
@@ -83,6 +100,7 @@ class Parser(object):
         self.checked = False  # used in the check_arguments method
 
     def group(self, descr):
+        """Added a new group of arguments with the given description"""
         self._group = self.parentparser.add_argument_group(descr)
 
     def _add(self, name, *args, **kw):

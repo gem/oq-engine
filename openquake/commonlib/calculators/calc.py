@@ -29,6 +29,10 @@ from openquake.commonlib.general import AccumDict
 from openquake.commonlib.readinput import \
     get_gsim, get_rupture, get_correl_model, get_imts
 
+MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
+# in this way even on 32 bit machines Python will not have to convert
+# the generated seen into a long integer
+
 
 ############### utilities for the classical calculator ################
 
@@ -126,33 +130,10 @@ def calc_gmfs(oqparam, sitecol):
     rupture = get_rupture(oqparam)
     computer = gmf.GmfComputer(rupture, sitecol, imts, gsim, trunc_level,
                                correl_model)
-    seeds = [rnd.randint(0, 2 ** 31 - 1) for _ in xrange(n_gmfs)]
+    seeds = [rnd.randint(0, MAX_INT) for _ in xrange(n_gmfs)]
     res = AccumDict()  # imt -> gmf
     for seed in seeds:
         for imt, gmfield in computer.compute(seed):
             res += {imt: [gmfield]}
     # res[imt] is a matrix R x N
     return {imt: numpy.array(matrix).T for imt, matrix in res.iteritems()}
-
-
-def calc_gmvdict_by_site(oqparam, sitecol):
-    """
-    Build the ground motion fields for the whole site collection
-    """
-    correl_model = get_correl_model(oqparam)
-    rnd = random.Random()
-    rnd.seed(getattr(oqparam, 'random_seed', 42))
-    imts = get_imts(oqparam)
-    gsim = get_gsim(oqparam)
-    trunc_level = getattr(oqparam, 'truncation_level', None)
-    n_gmfs = getattr(oqparam, 'number_of_ground_motion_fields', 1)
-    rupture = get_rupture(oqparam)
-    computer = gmf.GmfComputer(rupture, sitecol, imts, gsim, trunc_level,
-                               correl_model)
-    seeds = [rnd.randint(0, 2 ** 31 - 1) for _ in xrange(n_gmfs)]
-    res = AccumDict()  # site_id -> gmvdict
-    for seed in seeds:
-        for imt, gmfield in computer.compute(seed):
-            for site_id, gmv in zip(sitecol.sids, gmfield):
-                res += {site_id: AccumDict({imt: [gmv]})}
-    return [res[site_id] for site_id in sitecol.sids]

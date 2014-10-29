@@ -52,8 +52,9 @@ class BaseCalculator(object):
 
     def pre_execute(self):
         """
-        Initialization phase. Doing nothing by default.
+        Initialization phase.
         """
+        raise NotImplementedError(self.oqparam.calculation_mode)
 
     def execute(self):
         """

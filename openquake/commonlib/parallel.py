@@ -359,7 +359,9 @@ def do_not_aggregate(acc, value):
 
     :param acc: the accumulator
     :param value: the value to accumulate
+    :returns: the accumulator unchanged
     """
+    return acc
 
 
 # this is not thread-safe
