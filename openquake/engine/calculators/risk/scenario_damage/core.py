@@ -22,7 +22,7 @@ Core functionality for the scenario_damage risk calculator.
 
 import numpy
 
-from openquake.commonlib.riskmodels import get_risk_model
+from openquake.commonlib.readinput import get_risk_model
 
 from openquake.engine.calculators.risk import (
     base, hazard_getters, writers, validation)
