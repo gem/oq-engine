@@ -20,8 +20,7 @@
 
 import sys
 import time
-from openquake.engine.engine import (
-    job_from_file, getpass, get_calculator_class)
+from openquake.engine.engine import job_from_file, getpass, calculators
 from openquake.engine import logs
 
 
@@ -35,7 +34,7 @@ def pre_execute(job_ini):
     job = job_from_file(job_ini, getpass.getuser(), 'info', [])
 
     calc_mode = job.get_param('calculation_mode')
-    calculator = get_calculator_class('hazard', calc_mode)(job)
+    calculator = calculators(calc_mode)(job)
 
     t0 = time.time()
     with logs.handle(job):
