@@ -248,7 +248,7 @@ class OqJob(djm.Model):
     An OpenQuake engine run started by the user
     '''
     user_name = djm.TextField()
-    risk_calculation = djm.OneToOneField('RiskCalculation', null=True)
+    hazard_calculation = djm.ForeignKey('OqJob', null=True)
     LOG_LEVEL_CHOICES = (
         (u'debug', u'Debug'),
         (u'info', u'Info'),
@@ -282,20 +282,17 @@ class OqJob(djm.Model):
         db_table = 'uiapi\".\"oq_job'
 
     @property
+    def risk_calculation(self):
+        return RiskCalculation(self)
+
+    @property
     def job_type(self):
         """
         'hazard' or 'risk'
         """
-        return 'hazard' if self.risk_calculation is None else 'risk'
-
-    # TODO: this property will disappear when RiskCalculation will disappear
-    @property
-    def calc_id(self):
-        """Return the calculation id"""
-        if self.risk_calculation:
-            return self.risk_calculation.id
-        else:
-            return self.id
+        # only if the job is of kind 'risk' the field hazard_calculation_id
+        # is not null and contains a reference to the previous hazard job
+        return 'hazard' if self.hazard_calculation is None else 'risk'
 
     def get_param(self, name, missing=RAISE_EXC):
         """
@@ -453,139 +450,33 @@ def save_sites(job, coords):
     return writer.CacheInserter.saveall(sites)
 
 
-class RiskCalculation(djm.Model):
-    '''
-    Parameters needed to run a Risk job.
-    '''
-    @classmethod
-    def create(cls, **kw):
-        return cls(**_prep_geometry(kw))
+class RiskCalculation(object):
 
     #: Default maximum asset-hazard distance in km
     DEFAULT_MAXIMUM_DISTANCE = 5
 
-    # Contains the absolute path to the directory containing the job config
-    # file.
-    base_path = djm.TextField()
-    export_dir = djm.TextField(null=True, blank=True)
+    def __init__(self, job):
+        self.oqjob = job
+        vars(self).update(vars(job.get_oqparam()))
 
-    #####################
-    # General parameters:
-    #####################
-
-    # A description for this config profile which is meaningful to a user.
-    description = djm.TextField(default='', blank=True)
-
-    CALC_MODE_CHOICES = (
-        (u'classical_risk', u'Classical PSHA'),
-        (u'classical_bcr', u'Classical BCR'),
-        (u'event_based_risk', u'Probabilistic Event-Based'),
-        (u'event_based_fr', u'Event-Based From Ruptures'),
-        (u'scenario_risk', u'Scenario'),
-        (u'scenario_damage', u'Scenario Damage'),
-        (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
-    )
-    calculation_mode = djm.TextField(choices=CALC_MODE_CHOICES)
-    inputs = fields.PickleField(blank=True)
-    region_constraint = djm.PolygonField(
-        srid=DEFAULT_SRID, null=True, blank=True)
-
-    preloaded_exposure_model = djm.ForeignKey(
-        'ExposureModel', null=True, blank=True)
-
-    # the maximum distance for an hazard value with the corresponding
-    # asset. Expressed in kilometers
-    maximum_distance = djm.FloatField(
-        null=False, blank=True, default=DEFAULT_MAXIMUM_DISTANCE)
-    # the hazard output (it can point to an HazardCurvem, to a
-    # Gmf or to a SES collection) used by the risk calculation
-    hazard_output = djm.ForeignKey("Output", null=True, blank=True)
-
-    # the hazard OqJob object used by the risk calculation when
-    # each individual Output (i.e. each hazard logic tree realization)
-    # is considered
-    hazard_calculation = djm.ForeignKey("OqJob", null=True, blank=True)
-
-    risk_investigation_time = djm.FloatField(
-        help_text=('Override the time span (in years) with which the '
-                   'hazard has been computed.'),
-        null=True,
-        blank=True,
-    )
-
-    # A seed used to generate random values to be applied to
-    # vulnerability functions
-    master_seed = djm.IntegerField(null=False, default=42)
-
-    ####################################################
-    # For calculators that output (conditional) loss map
-    ####################################################
-    conditional_loss_poes = fields.FloatArrayField(null=True, blank=True)
-
-    ####################################################
-    # For calculators that output statistical results
-    ####################################################
-    quantile_loss_curves = fields.FloatArrayField(
-        help_text='List of quantiles for computing quantile outputs',
-        null=True,
-        blank=True)
-
-    taxonomies_from_model = fields.OqNullBooleanField(
-        help_text='if true calculation only consider the taxonomies in '
-        'the fragility model', null=True, blank=True)
-
-    ##################################
-    # Probabilistic shared parameters
-    ##################################
-    # 0 == uncorrelated, 1 == perfect correlation by taxonomy
-    asset_correlation = djm.FloatField(null=True, blank=True, default=0)
-
-    #######################
-    # Classical parameters:
-    #######################
-    lrem_steps_per_interval = djm.IntegerField(null=True, blank=True)
-
-    poes_disagg = fields.FloatArrayField(
-        null=True, blank=True,
-        help_text='The probability of exceedance used to interpolate '
-                  'loss curves for disaggregation purposes')
-
-    #########################
-    # Event-Based parameters:
-    #########################
-    loss_curve_resolution = djm.IntegerField(
-        null=False, blank=True, default=DEFAULT_LOSS_CURVE_RESOLUTION)
-    insured_losses = djm.NullBooleanField(null=True, blank=True, default=False)
-
-    mag_bin_width = djm.FloatField(
-        help_text=('Width of magnitude bins'),
-        null=True,
-        blank=True,
-    )
-    distance_bin_width = djm.FloatField(
-        help_text=('Width of distance bins'),
-        null=True,
-        blank=True,
-        )
-    coordinate_bin_width = djm.FloatField(
-        help_text=('Width of coordinate bins'),
-        null=True,
-        blank=True,
-    )
-
-    ######################################
-    # BCR (Benefit-Cost Ratio) parameters:
-    ######################################
-    interest_rate = djm.FloatField(null=True, blank=True)
-    asset_life_expectancy = djm.FloatField(null=True, blank=True)
-
-    ######################################
-    # Scenario parameters:
-    ######################################
-    time_event = fields.NullTextField()
-
-    class Meta:
-        db_table = 'uiapi\".\"risk_calculation'
+        self.hazard_output = Output.objects.get(pk=self.hazard_output_id) \
+            if self.hazard_output_id else None
+        self.hazard_calculation = OqJob.objects.get(
+            pk=self.hazard_calculation_id)
+        if not hasattr(self, 'taxonomies_from_model'):
+            self.taxonomies_from_model = None
+        if not hasattr(self, 'time_event'):
+            self.time_event = None
+        if not hasattr(self, 'asset_correlation'):
+            self.asset_correlation = 0
+        if not hasattr(self, 'master_seed'):
+            self.master_seed = 42
+        if not hasattr(self, 'insured_losses'):
+            self.insured_losses = False
+        if not hasattr(self, 'risk_investigation_time'):
+            self.risk_investigation_time = None
+        if not hasattr(self, 'loss_curve_resolution'):
+            self.loss_curve_resolution = 50  # default
 
     def get_hazard_param(self):
         """
@@ -635,7 +526,7 @@ class RiskCalculation(djm.Model):
             not given, `DEFAULT_MAXIMUM_DISTANCE` is used as default) and the
             step (if exists) used by the hazard calculation.
         """
-        dist = self.maximum_distance or self.DEFAULT_MAXIMUM_DISTANCE
+        dist = getattr(self, 'maximum_distance', self.DEFAULT_MAXIMUM_DISTANCE)
 
         grid_spacing = self.hazard_calculation.get_param(
             'region_grid_spacing', None)
@@ -645,8 +536,9 @@ class RiskCalculation(djm.Model):
         return dist
 
     @property
-    def is_bcr(self):
-        return self.calculation_mode in ['classical_bcr', 'event_based_bcr']
+    def preloaded_exposure_model(self):
+        pem_id = getattr(self, 'preloaded_exposure_model_id', None)
+        return ExposureModel.objects.get(pk=pem_id) if pem_id else None
 
     @property
     def exposure_model(self):
@@ -684,36 +576,6 @@ def extract_from(objlist, attr):
             value = None
         if value is not None:
             return value
-
-
-def _prep_geometry(kwargs):
-    """
-    Helper function to convert geometry specified in a job config file to WKT,
-    so that it can save to the database in a geometry field.
-
-    :param dict kwargs:
-        keyword arguments, which may contain geometry definitions in
-        a list form
-    :returns:
-        a dictionary with the geometries converted into WKT
-    """
-    kw = kwargs.copy()
-    # If geometries were specified as string lists of coords,
-    # convert them to WKT before doing anything else.
-    for field, wkt_fmt in (('sites', 'MULTIPOINT(%s)'),
-                           ('sites_disagg', 'MULTIPOINT(%s)'),
-                           ('region', 'POLYGON((%s))'),
-                           ('region_constraint', 'POLYGON((%s))')):
-        coords = kwargs.get(field)
-        if coords:  # construct WKT from the coords
-            points = ['%s %s' % lon_lat for lon_lat in coords]
-            # if this is the region, close the linear polygon
-            # ring by appending the first coord to the end
-            if field in ('region', 'region_constraint'):
-                points.append(points[0])
-            # update the field
-            kw[field] = wkt_fmt % ', '.join(points)
-    return kw
 
 
 class Imt(djm.Model):
@@ -2568,7 +2430,7 @@ class BCRDistributionData(djm.Model):
 class DmgState(djm.Model):
     """Holds the damage_states associated to a given output"""
     # they actually come from the fragility model xml input
-    risk_calculation = djm.ForeignKey("RiskCalculation")
+    risk_calculation = djm.ForeignKey("OqJob")
     dmg_state = djm.TextField(
         help_text="The name of the damage state")
     lsi = djm.PositiveSmallIntegerField(
@@ -2941,7 +2803,10 @@ class AssetManager(djm.GeoManager):
 
     def taxonomies_contained_in(self, exposure_model_id, region_constraint):
         """
-
+        :param exposure_model_id:
+            ID of an ExposureModel
+        :param region_constraint:
+            A string describing a region in WKT format
         :returns:
             A dictionary which map each taxonomy associated with
             `exposure_model` and contained in `region_constraint` with the
@@ -2954,7 +2819,7 @@ class AssetManager(djm.GeoManager):
         FROM riski.exposure_data WHERE
         exposure_model_id = %s AND ST_COVERS(ST_GeographyFromText(%s), site)
         group by riski.exposure_data.taxonomy
-        """, [exposure_model_id, "SRID=4326; %s" % region_constraint.wkt])
+        """, [exposure_model_id, "SRID=4326; %s" % region_constraint])
 
         return dict(cursor)
 
