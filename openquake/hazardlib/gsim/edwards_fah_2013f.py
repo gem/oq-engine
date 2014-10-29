@@ -29,6 +29,7 @@ Module exports
 
 from __future__ import division
 import numpy as np
+from scipy.constants import g
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.edwards_fah_2013a import (
     EdwardsFah2013Alpine10MPa
@@ -70,7 +71,7 @@ class EdwardsFah2013Foreland10MPa(EdwardsFah2013Alpine10MPa):
         # Convert units to g,
         # but only for PGA and SA (not PGV):
         if isinstance(imt, (PGA, SA)):
-            mean = np.log(mean / 981)
+            mean = np.log(mean / (g*100.))
         else:
             # PGV:
             mean = np.log(mean)

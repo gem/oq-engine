@@ -27,6 +27,7 @@ Module exports
 """
 from __future__ import division
 import numpy as np
+from scipy.constants import g
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGV, PGA, SA
@@ -61,6 +62,7 @@ class EdwardsFah2013Alpine10MPa(GMPE):
     #: Supported tectonic region type is ALPINE which
     #: is a sub-region of Active Shallow Crust.
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
+
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration, see tables 3 and 4, pages 227 and 228.
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
@@ -68,11 +70,13 @@ class EdwardsFah2013Alpine10MPa(GMPE):
         PGA,
         SA
     ])
-    #: Supported intensity measure component is ?
-    #: ask Carlo Cauzzi
+    #: Supported intensity measure component is the geometric mean of two
+    #: horizontal components
+    #: :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
-    #: Supported standard deviation types is total,
-    #: Carlo Cauzzi - Personal Communications
+
+    #: Supported standard deviation type is total,
+    #: Carlo Cauzzi - Personal Communication
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
         const.StdDev.TOTAL
     ])
@@ -80,6 +84,7 @@ class EdwardsFah2013Alpine10MPa(GMPE):
     #: Required site parameter is only Vs30 (used to distinguish rock
     #: and deep soil).
     REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+
     #: Required rupture parameters: magnitude
     REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
 
@@ -89,7 +94,6 @@ class EdwardsFah2013Alpine10MPa(GMPE):
     #: Vs30 value representing typical rock conditions in Switzerland.
     #: confirmed by the Swiss GMPE group
     ROCK_VS30 = 1105
-    #: [g] = 9.81 m/s
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -106,7 +110,7 @@ class EdwardsFah2013Alpine10MPa(GMPE):
         # Convert units to g,
         # but only for PGA and SA (not PGV):
         if isinstance(imt, (PGA, SA)):
-            mean = np.log(mean / 981)
+            mean = np.log(mean / (g*100.))
         else:
             # PGV:
             mean = np.log(mean)
