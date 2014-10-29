@@ -19,11 +19,22 @@
 import collections
 import itertools
 import operator
+import random
 
-from openquake.hazardlib.calc import filters
+import numpy
+
+from openquake.hazardlib.calc import gmf, filters
 from openquake.hazardlib.site import SiteCollection
+from openquake.commonlib.general import AccumDict
+from openquake.commonlib.readinput import \
+    get_gsim, get_rupture, get_correl_model, get_imts
 
-############### facilities for the classical calculator ################
+MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
+# in this way even on 32 bit machines Python will not have to convert
+# the generated seen into a long integer
+
+
+############### utilities for the classical calculator ################
 
 SourceRuptureSites = collections.namedtuple(
     'SourceRuptureSites',
@@ -80,3 +91,49 @@ def gen_ruptures_for_site(site, sources, maximum_distance, monitor):
     for src, rows in itertools.groupby(
             source_rupture_sites, key=operator.attrgetter('source')):
         yield src, [row.rupture for row in rows]
+
+
+############### utilities for the scenario calculators ################
+
+
+def calc_gmfs_fast(oqparam, sitecol):
+    """
+    Build all the ground motion fields for the whole site collection in
+    a single step.
+    """
+    max_dist = oqparam.maximum_distance
+    correl_model = get_correl_model(oqparam)
+    seed = getattr(oqparam, 'random_seed', 42)
+    imts = get_imts(oqparam)
+    gsim = get_gsim(oqparam)
+    trunc_level = getattr(oqparam, 'truncation_level', None)
+    n_gmfs = getattr(oqparam, 'number_of_ground_motion_fields', 1)
+    rupture = get_rupture(oqparam)
+    res = gmf.ground_motion_fields(
+        rupture, sitecol, imts, gsim,
+        trunc_level, n_gmfs, correl_model,
+        filters.rupture_site_distance_filter(max_dist), seed)
+    return {str(imt): matrix for imt, matrix in res.iteritems()}
+
+
+def calc_gmfs(oqparam, sitecol):
+    """
+    Build all the ground motion fields for the whole site collection
+    """
+    correl_model = get_correl_model(oqparam)
+    rnd = random.Random()
+    rnd.seed(getattr(oqparam, 'random_seed', 42))
+    imts = get_imts(oqparam)
+    gsim = get_gsim(oqparam)
+    trunc_level = getattr(oqparam, 'truncation_level', None)
+    n_gmfs = getattr(oqparam, 'number_of_ground_motion_fields', 1)
+    rupture = get_rupture(oqparam)
+    computer = gmf.GmfComputer(rupture, sitecol, imts, gsim, trunc_level,
+                               correl_model)
+    seeds = [rnd.randint(0, MAX_INT) for _ in xrange(n_gmfs)]
+    res = AccumDict()  # imt -> gmf
+    for seed in seeds:
+        for imt, gmfield in computer.compute(seed):
+            res += {imt: [gmfield]}
+    # res[imt] is a matrix R x N
+    return {imt: numpy.array(matrix).T for imt, matrix in res.iteritems()}

@@ -412,3 +412,124 @@ print import_all('%s')
         if mod.startswith(packages):
             raise CodeDependencyError('%s depends on %s' % (
                 package, '|'.join(packages)))
+
+
+class CallableDict(collections.OrderedDict):
+    """
+    A callable object built on top of a dictionary of functions,
+    dispatching on the first argument according to the given keyfunc.
+    The default keyfunc is the identity function, i.e. the first
+    argument is assumed to be the key.
+    """
+    def __init__(self, keyfunc=lambda key: key):
+        super(CallableDict, self).__init__()
+        self.keyfunc = keyfunc
+
+    def add(self, *keys):
+        """
+        Return a decorator registering a new implementation for the
+        CallableDict for the given keys.
+        """
+        def decorator(func):
+            for key in keys:
+                self[key] = func
+            return func
+        return decorator
+
+    def __call__(self, obj, *args, **kw):
+        key = self.keyfunc(obj)
+        if not key in self:
+            raise KeyError(
+                'There is nothing registered for %r' % key)
+        return self[key](obj, *args, **kw)
+
+
+class AccumDict(dict):
+    """
+    An accumulating dictionary, useful to accumulate variables.
+
+    >>> acc = AccumDict()
+    >>> acc += {'a': 1}
+    >>> acc += {'a': 1, 'b': 1}
+    >>> acc
+    {'a': 2, 'b': 1}
+    >>> {'a': 1} + acc
+    {'a': 3, 'b': 1}
+    >>> acc + 1
+    {'a': 3, 'b': 2}
+    >>> 1 - acc
+    {'a': -1, 'b': 0}
+    >>> acc - 1
+    {'a': 1, 'b': 0}
+
+    Also the multiplication has been defined:
+
+    >>> prob1 = AccumDict(a=0.4, b=0.5)
+    >>> prob2 = AccumDict(b=0.5)
+    >>> prob1 * prob2
+    {'a': 0.4, 'b': 0.25}
+    >>> prob1 * 1.2
+    {'a': 0.48, 'b': 0.6}
+    >>> 1.2 * prob1
+    {'a': 0.48, 'b': 0.6}
+    """
+    def __iadd__(self, other):
+        if hasattr(other, 'iteritems'):
+            for k, v in other.iteritems():
+                try:
+                    self[k] = self[k] + v
+                except KeyError:
+                    self[k] = v
+        else:  # add other to all elements
+            for k in self:
+                self[k] = self[k] + other
+        return self
+
+    def __add__(self, other):
+        new = self.__class__(self)
+        new += other
+        return new
+
+    __radd__ = __add__
+
+    def __isub__(self, other):
+        if hasattr(other, 'iteritems'):
+            for k, v in other.iteritems():
+                try:
+                    self[k] = self[k] - v
+                except KeyError:
+                    self[k] = v
+        else:  # subtract other to all elements
+            for k in self:
+                self[k] = self[k] - other
+        return self
+
+    def __sub__(self, other):
+        new = self.__class__(self)
+        new -= other
+        return new
+
+    def __rsub__(self, other):
+        return - self.__sub__(other)
+
+    def __neg__(self):
+        return self.__class__({k: -v for k, v in self.iteritems()})
+
+    def __imul__(self, other):
+        if hasattr(other, 'iteritems'):
+            for k, v in other.iteritems():
+                try:
+                    self[k] = self[k] * v
+                except KeyError:
+                    self[k] = v
+        else:  # add other to all elements
+            for k in self:
+                self[k] = self[k] * other
+        return self
+
+    def __mul__(self, other):
+        new = self.__class__(self)
+        new *= other
+        return new
+
+    __rmul__ = __mul__
