@@ -29,6 +29,10 @@ import urllib2
 
 from openquake.engine import engine
 from openquake.engine.db import models as oqe_models
+#from openquake.engine.calculators import import_all
+
+#import_all('openquake.engine.calculators.hazard')
+#import_all('openquake.engine.calculators.risk')
 
 from openquake.server.dbsettings import PLATFORM_DATABASES as DATABASES
 
