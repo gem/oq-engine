@@ -23,7 +23,7 @@ from openquake.risklib import workflows
 from openquake.engine.calculators import post_processing
 from openquake.engine.calculators.risk import (
     base, hazard_getters, validation, writers)
-from openquake.engine.utils import calculators
+from openquake.engine.calculators import calculators
 
 
 def classical(workflow, getter, outputdict, params, monitor):
