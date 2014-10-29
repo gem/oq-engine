@@ -28,7 +28,7 @@ from openquake.engine.calculators.risk import (
     base, hazard_getters, writers, validation)
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.db import models
-from openquake.engine.utils import calculators
+from openquake.engine.calculators import calculators
 
 
 def scenario_damage(workflow, getter, outputdict, params, monitor):

@@ -32,9 +32,7 @@ def pre_execute(job_ini):
     running it.
     """
     job = job_from_file(job_ini, getpass.getuser(), 'info', [])
-
-    calc_mode = job.get_param('calculation_mode')
-    calculator = calculators(calc_mode)(job)
+    calculator = calculators(job)
 
     t0 = time.time()
     with logs.handle(job):
