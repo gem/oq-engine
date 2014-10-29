@@ -21,5 +21,4 @@ from openquake.commonlib.general import CallableDict, import_all
 # an ordered dictionary of calculator classes
 calculators = CallableDict(lambda job: job.get_param('calculation_mode'))
 
-import_all('openquake.engine.calculators.hazard')
-import_all('openquake.engine.calculators.risk')
+import_all('openquake.engine.calculators')
