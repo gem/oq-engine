@@ -40,8 +40,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.gis.db import models as djm
 
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import geo, calc, correlation
-from openquake.hazardlib.site import FilteredSiteCollection
+from openquake.hazardlib import geo, correlation
 
 from openquake.commonlib.riskmodels import loss_type_to_cost_type
 from openquake.commonlib.readinput import get_mesh
@@ -229,6 +228,11 @@ class SiteModel(djm.Model):
     # Depth to shear wave velocity of 2.5 km/s. Units km.
     z2pt5 = djm.FloatField()
     location = djm.PointField(srid=DEFAULT_SRID)
+
+    @property
+    def measured(self):
+        """True or False depending on the field vs30_type"""
+        return self.vs30_type == 'measured'
 
     def __repr__(self):
         return (
