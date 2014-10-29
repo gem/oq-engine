@@ -30,7 +30,8 @@ from openquake.commonlib.general import split_in_blocks
 from openquake.commonlib.readinput import get_rupture
 
 from openquake.engine.calculators.hazard import general as haz_general
-from openquake.engine.utils import tasks, calculators
+from openquake.engine.calculators import calculators
+from openquake.engine.utils import tasks
 from openquake.engine.db import models
 from openquake.engine import logs, writer
 from openquake.engine.performance import EnginePerformanceMonitor

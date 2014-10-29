@@ -21,7 +21,7 @@ from openquake.risklib import workflows
 from openquake.engine.calculators.risk import writers, validation
 from openquake.engine.calculators.risk.event_based_risk \
     import core as event_based
-from openquake.engine.utils import calculators
+from openquake.engine.calculators import calculators
 
 
 def event_based_bcr(workflow, getter, outputdict, params, monitor):

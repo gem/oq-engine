@@ -30,7 +30,8 @@ from openquake.commonlib.calculators.calc import gen_ruptures_for_site
 
 from openquake.engine import logs
 from openquake.engine.db import models
-from openquake.engine.utils import tasks, calculators
+from openquake.engine.calculators import calculators
+from openquake.engine.utils import tasks
 from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
 from openquake.engine.calculators.hazard.classical.core import \
     ClassicalHazardCalculator
