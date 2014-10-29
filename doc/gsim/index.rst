@@ -39,6 +39,8 @@ Built-in GSIMs
     climent_1994
     convertito_2012
     douglas_stochastic_2013
+    edwards_fah_2013a
+    edwards_fah_2013f
     faccioli_2010
     frankel_1996
     fukushima_tanaka_1990
