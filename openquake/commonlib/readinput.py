@@ -18,6 +18,7 @@
 
 import os
 import csv
+import logging
 import collections
 import ConfigParser
 from lxml import etree
@@ -435,7 +436,8 @@ def get_sitecol_assets(oqparam):
     """
     assets_by_loc = collections.defaultdict(AccumDict)
     for asset in get_exposure(oqparam).assets:
-        assets_by_loc[asset.location] += {asset.taxonomy: asset}
+        acc = assets_by_loc[asset.location]
+        acc += {asset.taxonomy: [asset]}
     lons, lats = zip(*sorted(assets_by_loc))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
     sitecol = get_site_collection(oqparam, mesh)
