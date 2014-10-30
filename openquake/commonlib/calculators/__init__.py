@@ -77,7 +77,8 @@ class BaseScenarioCalculator(BaseCalculator):
     """
     def pre_execute(self):
         logging.info('Reading the exposure')
-        sitecol, assets_by_site = readinput.get_sitecol_assets(
+        # self.assets_by_site will be used in the ScenarioRiskCalculator
+        sitecol, self.assets_by_site = readinput.get_sitecol_assets(
             self.oqparam)
 
         logging.info('Computing the GMFs')
@@ -86,7 +87,8 @@ class BaseScenarioCalculator(BaseCalculator):
         logging.info('Preparing the risk input')
         self.riskmodel = readinput.get_risk_model(self.oqparam)
         self.riskinputs = calc.build_riskinputs(
-            assets_by_site, gmfs_by_imt, self.oqparam.concurrent_tasks + 1)
+            self.assets_by_site, gmfs_by_imt,
+            self.oqparam.concurrent_tasks + 1)
 
     def execute(self):
         """

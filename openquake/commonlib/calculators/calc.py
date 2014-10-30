@@ -23,6 +23,7 @@ import random
 
 import numpy
 
+from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.calc import gmf, filters
 from openquake.hazardlib.site import SiteCollection
 from openquake.commonlib.general import AccumDict, split_in_blocks
@@ -157,3 +158,27 @@ def build_riskinputs(assets_by_site, hazards_by_imt, num_blocks):
         for imt, hazards_by_site in hazards_by_imt.iteritems():
             riskinputs.append(RiskInput(imt, hazards_by_site[idx], assets))
     return sorted(riskinputs, key=operator.attrgetter('imt'))
+
+
+def assoc_assets_sites(assets, sitecol, maximum_distance):
+    """
+    :params assets: a sequence of assets
+    :param sitecol: a sequence of sites
+    :param maximum_distance: the maximum acceptable distance in km
+    :returns: a pair (sitecollection, assets_by_site)
+
+    The new site collection is different from the original one
+    if some assets are discarded because of the maximum_distance
+    or if there are missing assets for some sites.
+    """
+    siteobjects = geodetic.GeographicObjects(sitecol)
+    dic = collections.defaultdict(list)
+    for asset in assets:
+        site = siteobjects.get_closest(asset.location)
+        if site:
+            dic[site.id].append(asset)
+
+    mask = numpy.array([sid in dic for sid in sitecol.sids])
+    assets_by_site = [dic[sid] for sid in sitecol.sids if sid in dic]
+    filteredcol = sitecol.filter(mask)
+    return filteredcol, assets_by_site
