@@ -427,21 +427,21 @@ def get_specific_assets(oqparam):
 
 def get_sitecol_assets(oqparam):
     """
-    Returns two sequences of the same length: the site collection and a
-    list with the assets per each site.
+    Returns two sequences of the same length: the site collection and an
+    array with the assets per each site, collected by taxonomy.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    assets_by_loc = collections.defaultdict(list)
+    assets_by_loc = collections.defaultdict(AccumDict)
     for asset in get_exposure(oqparam).assets:
-        assets_by_loc[asset.location].append(asset)
+        assets_by_loc[asset.location] += {asset.taxonomy: asset}
     lons, lats = zip(*sorted(assets_by_loc))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
     sitecol = get_site_collection(oqparam, mesh)
-    return sitecol, [
+    return sitecol, numpy.array([
         assets_by_loc[site.location.longitude, site.location.latitude]
-        for site in sitecol]
+        for site in sitecol])
 
 
 def get_mesh_csvdata(csvfile, imts, num_values, validvalue):

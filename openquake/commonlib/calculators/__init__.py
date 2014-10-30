@@ -72,6 +72,26 @@ class BaseCalculator(object):
         raise NotImplementedError(self.oqparam.calculation_mode)
 
 
+from openquake.commonlib.general import split_in_blocks
+
+def build_getters(assets_by_site, gmfs_by_imt, concurrent_tasks):
+    """
+    Returns a dictionary of HazardGetters, keyed by IMT. Each value
+    is a list of getters
+    """
+    getters = AccumDict()  # imt -> getters
+    data = [(i, sum(len(v) for v in assets.itervalues()))
+            for i, assets in enumerate(assets_by_site)]
+    blocks = split_in_blocks(data, concurrent_tasks,
+                             weight=lambda pair: len(pair[1]))
+    for block in blocks:
+        idx = numpy.array([idx for idx, _weight in block]) 
+        assets =  assets_by_site[idx]
+        for imt, gmfs in gmfs_by_imt.iteritems():
+            hg = HazardGetter(imt, gmfs[idx], assets)
+            getters += {imt: [hg]}
+    return getters
+
 class BaseScenarioCalculator(BaseCalculator):
     """
     Base class for all risk scenario calculators
