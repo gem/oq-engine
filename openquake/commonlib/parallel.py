@@ -312,7 +312,7 @@ def apply_reduce(task_func, task_args, agg,
                  key=lambda item: 'Unspecified',
                  name=None):
     """
-    Apply a function to a tuple of the form (sequence, *other_args)
+    Apply a function to a tuple of the form (sequence, \*other_args)
     by first splitting the sequence in chunks, according to the weight
     of the elements and possibly to a key (see :function:
     `openquake.commonlib.general.split_in_blocks`).
