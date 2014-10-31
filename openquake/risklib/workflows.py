@@ -17,7 +17,6 @@
 # <http://www.gnu.org/licenses/>.
 
 import inspect
-import logging
 import itertools
 import operator
 import collections
@@ -735,10 +734,10 @@ class Damage(Workflow):
         and D the number of damage states.
         """
         ffs = self.risk_functions['damage']
-        outs = numpy.array(
+        damages = numpy.array(
             [[scientific.scenario_damage(ffs, gmv) for gmv in gmvs]
              for gmvs in gmfs])
-        return assets, outs
+        return assets, damages
 
 
 # NB: the approach used here relies on the convention of having the
