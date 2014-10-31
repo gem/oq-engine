@@ -1,5 +1,6 @@
 from openquake.commonlib.calculators import calculators, base
 
+
 @calculators.add('classical')
 class ClassicalCalculator(base.BaseCalculator):
     """
@@ -16,7 +17,7 @@ class ClassicalCalculator(base.BaseCalculator):
 
 
 @calculators.add('classical_risk')
-class ClassicalCalculator(base.BaseRiskCalculator):
+class ClassicalRiskCalculator(base.BaseRiskCalculator):
     """
     Classical Risk calculator
     """
