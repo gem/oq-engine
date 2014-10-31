@@ -37,6 +37,9 @@ MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
 # the generated seen into a long integer
 
 
+class AssetSiteAssociationError(Exception):
+    pass
+
 ############### utilities for the classical calculator ################
 
 SourceRuptureSites = collections.namedtuple(
@@ -142,24 +145,6 @@ def calc_gmfs(oqparam, sitecol):
     return {imt: numpy.array(matrix).T for imt, matrix in res.iteritems()}
 
 
-def build_riskinputs(assets_by_site, hazards_by_imt, num_blocks):
-    """
-    Returns a list of RiskInputs objects, sorted by IMT.
-    """
-    riskinputs = []
-    idx_weight_pairs = [
-        (i, sum(len(v) for v in assets_by_taxo.itervalues()))
-        for i, assets_by_taxo in enumerate(assets_by_site)]
-    blocks = split_in_blocks(
-        idx_weight_pairs, num_blocks, weight=operator.itemgetter(1))
-    for block in blocks:
-        idx = numpy.array([idx for idx, _weight in block])
-        assets = assets_by_site[idx]
-        for imt, hazards_by_site in hazards_by_imt.iteritems():
-            riskinputs.append(RiskInput(imt, hazards_by_site[idx], assets))
-    return sorted(riskinputs, key=operator.attrgetter('imt'))
-
-
 def assoc_assets_sites(assets, sitecol, maximum_distance):
     """
     :params assets: a sequence of assets
@@ -171,14 +156,24 @@ def assoc_assets_sites(assets, sitecol, maximum_distance):
     if some assets are discarded because of the maximum_distance
     or if there are missing assets for some sites.
     """
-    siteobjects = geodetic.GeographicObjects(sitecol)
-    dic = collections.defaultdict(list)
-    for asset in assets:
-        site = siteobjects.get_closest(asset.location)
-        if site:
-            dic[site.id].append(asset)
+    def getlon(site):
+        return site.location.longitude
 
-    mask = numpy.array([sid in dic for sid in sitecol.sids])
-    assets_by_site = [dic[sid] for sid in sitecol.sids if sid in dic]
+    def getlat(site):
+        return site.location.latitude
+    siteobjects = geodetic.GeographicObjects(sitecol, getlon, getlat)
+    assets_by_sid = collections.defaultdict(list)
+    for asset in assets:
+        lon, lat = asset.location
+        site = siteobjects.get_closest(lon, lat, maximum_distance)
+        if site:
+            assets_by_sid[site.id].append(asset)
+    if not assets_by_sid:
+        raise AssetSiteAssociationError(
+            'Could not associated any site to any assets within the maximum '
+            'distance of %s km' % maximum_distance)
+    mask = numpy.array([sid in assets_by_sid for sid in sitecol.sids])
+    assets_by_site = [assets_by_sid[sid] for sid in sitecol.sids
+                      if sid in assets_by_sid]
     filteredcol = sitecol.filter(mask)
-    return filteredcol, assets_by_site
+    return filteredcol, numpy.array(assets_by_site)

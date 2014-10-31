@@ -75,6 +75,7 @@ class OqParam(valid.ParamSet):
         calculation_mode=valid.Choice(*CALCULATORS),
         coordinate_bin_width=valid.positivefloat,
         conditional_loss_poes=valid.probabilities,
+        continuous_fragility_discretization=valid.positiveint,
         description=valid.utf8_not_empty,
         distance_bin_width=valid.positivefloat,
         mag_bin_width=valid.positivefloat,

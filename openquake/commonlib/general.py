@@ -26,6 +26,7 @@ import sys
 import math
 import tempfile
 import importlib
+import itertools
 import subprocess
 import collections
 
@@ -474,6 +475,17 @@ class AccumDict(dict):
     >>> 1.2 * prob1
     {'a': 0.48, 'b': 0.6}
     """
+
+    def groupby(self, objects, key):
+        """
+        :param objects: a sequence of objects with a key value
+        :param key: the key function to use to extract the key value
+        :returns: an AccumDict key value -> list of objects
+        """
+        return self + {k: list(group)
+                       for k, group in itertools.groupby(
+                           sorted(objects, key=key), key)}
+
     def __iadd__(self, other):
         if hasattr(other, 'iteritems'):
             for k, v in other.iteritems():

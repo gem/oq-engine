@@ -266,7 +266,8 @@ def get_imtls(oqparam):
         imtls = get_imtls_from_vulnerabilities(oqparam.inputs)
     elif fragility_files(oqparam.inputs):
         fname = oqparam.inputs['fragility']
-        ffs = get_fragility_functions(fname)
+        ffs = get_fragility_functions(
+            fname, oqparam.continuous_fragility_discretization)
         imtls = {fset.imt: fset.imls for fset in ffs.itervalues()}
     else:
         raise ValueError('Missing intensity_measure_types_and_levels, '
@@ -296,10 +297,11 @@ def get_risk_model(oqparam):
     if rit:  # defined for event based calculations
         oqparam.time_span = oqparam.tses = rit
 
-    if oqparam.calculation_mode == 'scenario_damage':
+    if oqparam.calculation_mode.endswith('_damage'):
         # scenario damage calculator
         fragility_functions = get_fragility_functions(
-            oqparam.inputs['fragility'])
+            oqparam.inputs['fragility'],
+            getattr(oqparam, 'continuous_fragility_discretization', None))
         riskmodel.damage_states = fragility_functions.damage_states
         for taxonomy, ffs in fragility_functions.iteritems():
             risk_models[ffs.imt, taxonomy] = workflows.get_workflow(
@@ -433,10 +435,9 @@ def get_sitecol_assets(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    assets_by_loc = collections.defaultdict(AccumDict)
+    assets_by_loc = collections.defaultdict(list)
     for asset in get_exposure(oqparam).assets:
-        acc = assets_by_loc[asset.location]
-        acc += {asset.taxonomy: [asset]}
+        assets_by_loc[asset.location].append(asset)
     lons, lats = zip(*sorted(assets_by_loc))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
     sitecol = get_site_collection(oqparam, mesh)
@@ -476,7 +477,7 @@ def get_mesh_csvdata(csvfile, imts, num_values, validvalue):
                              (imts[0], ', '.join(imts[1:])))
     lons, lats = zip(*sorted(points))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
-    return mesh, data
+    return mesh, {imt: numpy.array(lst) for imt, lst in data.iteritems()}
 
 
 def get_sitecol_hcurves(oqparam):

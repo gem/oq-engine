@@ -16,11 +16,11 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.commonlib.calculators import calculators, BaseCalculator
+from openquake.commonlib.calculators import calculators, base
 
 
 @calculators.add('classical_risk')
-class ClassicalRiskCalculator(BaseCalculator):
+class ClassicalRiskCalculator(base.BaseCalculator):
     """
     Classical Risk calculator
     """

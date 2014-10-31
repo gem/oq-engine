@@ -24,7 +24,7 @@ import numpy
 
 from openquake.risklib import scientific
 from openquake.commonlib.general import AccumDict
-from openquake.commonlib.calculators import calculators, BaseScenarioCalculator
+from openquake.commonlib.calculators import base, calc, calculators
 from openquake.commonlib.export import export
 
 
@@ -73,11 +73,22 @@ def scenario_damage(riskinputs, riskmodel):
 
 
 @calculators.add('scenario_damage')
-class ScenarioDamageCalculator(BaseScenarioCalculator):
+class ScenarioDamageCalculator(base.BaseRiskCalculator):
     """
     Scenario damage calculator
     """
     core_func = scenario_damage
+
+    def pre_execute(self):
+        base.BaseRiskCalculator.pre_execute(self)
+
+        logging.info('Computing the GMFs')
+        gmfs_by_imt = calc.calc_gmfs(self.oqparam, self.sitecol)
+
+        logging.info('Preparing the risk input')
+        self.riskinputs = calc.build_riskinputs(
+            self.assets_by_site, gmfs_by_imt,
+            self.oqparam.concurrent_tasks + 1)
 
     def post_execute(self, result):
         """

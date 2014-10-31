@@ -26,29 +26,53 @@ from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.commonlib import readinput, parallel
 from openquake.commonlib.general import AccumDict
 
-from openquake.commonlib.calculators import calculators, BaseCalculator
+from openquake.commonlib.calculators import calculators, base
 from openquake.commonlib.export import export
 
 
 @calculators.add('classical')
-class ClassicalCalculator(BaseCalculator):
+class ClassicalCalculator(base.BaseCalculator):
     """
     Classical PSHA calculators
     """
+    def pre_execute(self):
+        pass
+
+    def execute(self):
+        pass
+
+    def post_execute(self, result):
+        pass
 
 
 @calculators.add('event_based')
-class EventBasedCalculator(BaseCalculator):
+class EventBasedCalculator(base.BaseCalculator):
     """
     Event based PSHA calculators
     """
+    def pre_execute(self):
+        pass
+
+    def execute(self):
+        pass
+
+    def post_execute(self, result):
+        pass
 
 
 @calculators.add('disaggregation')
-class DisaggregationCalculator(BaseCalculator):
+class DisaggregationCalculator(base.BaseCalculator):
     """
     Classical disaggregation PSHA calculators
     """
+    def pre_execute(self):
+        pass
+
+    def execute(self):
+        pass
+
+    def post_execute(self, result):
+        pass
 
 
 def calc_gmfs(tag_seed_pairs, computer):
@@ -62,7 +86,7 @@ def calc_gmfs(tag_seed_pairs, computer):
 
 
 @calculators.add('scenario')
-class ScenarioCalculator(BaseCalculator):
+class ScenarioCalculator(base.BaseCalculator):
     """
     Scenario hazard calculator
     """

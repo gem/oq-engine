@@ -23,6 +23,8 @@ Reading risk models for risk calculators
 import logging
 import collections
 
+import numpy
+
 from openquake.commonlib.node import read_nodes, context
 from openquake.commonlib import InvalidFile
 from openquake.risklib import scientific
@@ -163,7 +165,7 @@ class FragilityFunctionList(list):
         return '<FragilityFunctionList %s>' % ', '.join(kvs)
 
 
-def get_fragility_functions(fname):
+def get_fragility_functions(fname, continuous_fragility_discretization):
     """
     :param fname:
         path of the fragility file
@@ -181,6 +183,11 @@ def get_fragility_functions(fname):
         nodamage = ffs.attrib.get('noDamageLimit')
         taxonomy = ~ffs.taxonomy
         imt_str, imls, min_iml, max_iml, imlUnit = ~ffs.IML
+        if imls is None:  # continuous functions
+            assert continuous_fragility_discretization > 0, \
+                continuous_fragility_discretization
+            imls = numpy.linspace(min_iml, max_iml,
+                                  continuous_fragility_discretization + 1)
         fragility_functions[taxonomy] = FragilityFunctionList(
             [], imt=imt_str, imls=imls)
         lstates = []
