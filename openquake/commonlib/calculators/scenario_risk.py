@@ -23,7 +23,7 @@ import collections
 import numpy
 from openquake.risklib import scientific
 from openquake.commonlib import readinput, riskmodels, general
-from openquake.commonlib.calculators import calculators, base
+from openquake.commonlib.calculators import calculators, base, calc
 from openquake.commonlib.export import export
 
 
@@ -32,10 +32,10 @@ def add_epsilons(assets_by_site, num_samples, seed, correlation):
     Add an attribute named .epsilons to each asset in the assets_by_site
     container.
     """
-    assets_by_taxonomy = collections.defaultdict(list)
-    for assets in assets_by_site:
-        for asset in assets:
-            assets_by_taxonomy[asset.taxonomy].append(asset)
+    assets_by_taxonomy = sum(
+        (general.group(assets, key=lambda a: a.taxonomy)
+         for assets in assets_by_site), {})
+
     for taxonomy, assets in assets_by_taxonomy.iteritems():
         logging.info('Building (%d, %d) epsilons for taxonomy %s',
                      len(assets), num_samples, taxonomy)
@@ -49,7 +49,7 @@ AggLossCurve = collections.namedtuple(
     'AggLossCurve', 'loss_type unit mean stddev')
 
 
-def scenario_risk(riskinputs, riskmodel):
+def scenario_risk(riskinputs, riskmodel, monitor):
     """
     Core function for a scenario computation.
     :returns:
@@ -58,14 +58,14 @@ def scenario_risk(riskinputs, riskmodel):
     logging.info('Process %d, considering %d risk input(s) of weight %d',
                  os.getpid(), len(riskinputs),
                  sum(ri.weight for ri in riskinputs))
-
-    result = general.AccumDict()  # agg_type, loss_type -> losses
-    for loss_type, outs in riskmodel.gen_outputs(riskinputs):
-        (_assets, _loss_ratio_matrix, aggregate_losses,
-         _insured_loss_matrix, insured_losses) = outs
-        result += {('agg', loss_type): aggregate_losses}
-        if insured_losses is not None:
-            result += {('ins', loss_type): insured_losses}
+    with monitor:
+        result = general.AccumDict()  # agg_type, loss_type -> losses
+        for loss_type, outs in riskmodel.gen_outputs(riskinputs):
+            (_assets, _loss_ratio_matrix, aggregate_losses,
+             _insured_loss_matrix, insured_losses) = outs
+            result += {('agg', loss_type): aggregate_losses}
+            if insured_losses is not None:
+                result += {('ins', loss_type): insured_losses}
     return result
 
 
@@ -78,14 +78,20 @@ class ScenarioRiskCalculator(base.BaseRiskCalculator):
 
     def pre_execute(self):
         super(ScenarioRiskCalculator, self).pre_execute()
+
+        logging.info('Computing the GMFs')
+        gmfs_by_imt = calc.calc_gmfs(self.oqparam, self.sitecol)
+
+        logging.info('Preparing the risk input')
+        self.riskinputs = self.build_riskinputs(gmfs_by_imt)
+
         # build the epsilon matrix and add the epsilons to the assets
         num_samples = self.oqparam.number_of_ground_motion_fields
         seed = getattr(self.oqparam, 'master_seed', 42)
         correlation = getattr(self.oqparam, 'asset_correlation', 0)
         add_epsilons(self.assets_by_site, num_samples, seed, correlation)
-        exposure = readinput.get_exposure(self.oqparam)
         self.unit = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
-                     for ct in exposure.cost_types}
+                     for ct in self.exposure.cost_types}
 
     def post_execute(self, result):
         aggcurves = general.AccumDict()  # key_type -> AggLossCurves

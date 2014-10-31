@@ -145,7 +145,7 @@ def get_pickled_sizes(obj):
     Return the pickled sizes of an object and its direct attributes,
     ordered by decreasing size. Here is an example:
 
-    >> total_size, partial_sizes = get_pickled_sizes(PerformanceMonitor())
+    >> total_size, partial_sizes = get_pickled_sizes(PerformanceMonitor(''))
     >> total_size
     345
     >> partial_sizes
@@ -371,7 +371,7 @@ class PerformanceMonitor(object):
     the execution of a block of code. Should be used as a context manager,
     as follows::
 
-     with PerformanceMonitor() as mm:
+     with PerformanceMonitor('do_something') as mm:
          do_something()
      deltamemory, = mm.mem
 
@@ -388,17 +388,26 @@ class PerformanceMonitor(object):
     and by overriding the method on_exit(), called at end and used to display
     or store the results of the analysis.
     """
-    def __init__(self, pids=None):
-        pids = pids or [os.getpid()]
-        self._procs = [psutil.Process(pid) for pid in pids if pid]
-        self._start_time = None  # seconds from the epoch
-        self.start_time = None  # datetime object
-        self.duration = None  # seconds
-        self.mem = None  # bytes
-        self.exc = None  # exception
+    def __init__(self, operation, pids=None, monitor_csv='performance_csv'):
+        self.operation = operation
+        self.pids = pids
+        self.monitor_csv = monitor_csv
+        if pids:
+            # NB: this logic is for the sake of the engine; we may think
+            # about removing it since we are very rarely interested
+            # in the memory occupation in postgres and it can be treated
+            # as a special case, if really needed
+            self._procs = [psutil.Process(pid) for pid in pids if pid]
+            self.pid_str = str(pids[0])
+        else:
+            self._procs = None
+
+    def write(self, row):
+        """Write a row on the performance file"""
+        open(self.monitor_csv, 'a').write('\t'.join(row) + '\n')
 
     def measure_mem(self):
-        "An array of memory measurements (in bytes), one per process"
+        """An array of memory measurements (in bytes), one per process"""
         mem = []
         for proc in list(self._procs):
             try:
@@ -412,8 +421,17 @@ class PerformanceMonitor(object):
         return mem
 
     def __enter__(self):
-        "Call .start"
-        self.exc = None
+        """Call .start"""
+        if self._procs is None:
+            pid = os.getpid()
+            self.pids = [pid]
+            self.pid_str = str(pid)
+            self._procs = [psutil.Process(pid)]
+        self._start_time = None  # seconds from the epoch
+        self.start_time = None  # datetime object
+        self.duration = None  # seconds
+        self.mem = None  # bytes
+        self.exc = None  # exception
         self._start_time = time.time()
         self.start_time = datetime.fromtimestamp(self._start_time)
         self.start_mem = self.measure_mem()
@@ -429,7 +447,13 @@ class PerformanceMonitor(object):
 
     def on_exit(self):
         "Save the results: to be overridden in subclasses"
-        logging.info('Time spent=%s', self.duration)
-        logging.info('Memory allocated=%d M', self.mem[0] / 1024. / 1024.)
-        if self.exc:
-            logging.info('exc=%s(%s)', self.exc.__class__.__name__, self.exc)
+        time_sec = str(self.duration)
+        memory_mb = str(self.mem[0] / 1024. / 1024.)
+        self.write([self.operation, self.pid_str, time_sec, memory_mb])
+
+    def copy(self, operation):
+        """
+        Return a copy of the monitor usable for a different operation
+        in the same task.
+        """
+        return self.__class__(operation, self.pids, self.monitor_csv)

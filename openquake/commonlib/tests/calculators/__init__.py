@@ -19,6 +19,7 @@
 import os
 import unittest
 from openquake.commonlib.calculators import calculators
+from openquake.commonlib.parallel import PerformanceMonitor
 from openquake.commonlib import readinput
 
 
@@ -34,9 +35,12 @@ class CalculatorTestCase(unittest.TestCase):
         """
         self.testdir = os.path.dirname(testfile)
         with open(os.path.join(self.testdir, job_ini)) as ini:
-            self.oqparam = readinput.get_oqparam(ini)
-            self.oqparam.concurrent_tasks = 0  # to make the test debuggable
-            return calculators(self.oqparam)
+            oq = self.oqparam = readinput.get_oqparam(ini)
+            oq.concurrent_tasks = 0  # to make the test debuggable
+            monitor = PerformanceMonitor(
+                self.testdir,
+                monitor_csv=os.path.join(oq.export_dir, 'performance_csv'))
+            return calculators(self.oqparam, monitor)
 
     def run_calc(self, testfile, job_ini):
         """

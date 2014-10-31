@@ -34,7 +34,7 @@ from openquake.commonlib.oqvalidation import \
     fragility_files, vulnerability_files
 from openquake.commonlib.riskmodels import \
     get_fragility_functions, get_imtls_from_vulnerabilities, get_vfs
-from openquake.commonlib.general import AccumDict
+from openquake.commonlib.general import group, AccumDict
 from openquake.commonlib import source
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
 
@@ -266,8 +266,8 @@ def get_imtls(oqparam):
         imtls = get_imtls_from_vulnerabilities(oqparam.inputs)
     elif fragility_files(oqparam.inputs):
         fname = oqparam.inputs['fragility']
-        ffs = get_fragility_functions(
-            fname, oqparam.continuous_fragility_discretization)
+        cfd = getattr(oqparam, 'continuous_fragility_discretization', None)
+        ffs = get_fragility_functions(fname, cfd)
         imtls = {fset.imt: fset.imls for fset in ffs.itervalues()}
     else:
         raise ValueError('Missing intensity_measure_types_and_levels, '
@@ -427,7 +427,7 @@ def get_specific_assets(oqparam):
         return set(open(oqparam.inputs['specific_assets']).read().split())
 
 
-def get_sitecol_assets(oqparam):
+def get_sitecol_assets(oqparam, exposure):
     """
     Returns two sequences of the same length: the site collection and an
     array with the assets per each site, collected by taxonomy.
@@ -435,9 +435,7 @@ def get_sitecol_assets(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    assets_by_loc = collections.defaultdict(list)
-    for asset in get_exposure(oqparam).assets:
-        assets_by_loc[asset.location].append(asset)
+    assets_by_loc = group(exposure.assets, key=lambda a: a.location)
     lons, lats = zip(*sorted(assets_by_loc))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
     sitecol = get_site_collection(oqparam, mesh)

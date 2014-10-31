@@ -183,9 +183,7 @@ def get_fragility_functions(fname, continuous_fragility_discretization):
         nodamage = ffs.attrib.get('noDamageLimit')
         taxonomy = ~ffs.taxonomy
         imt_str, imls, min_iml, max_iml, imlUnit = ~ffs.IML
-        if imls is None:  # continuous functions
-            assert continuous_fragility_discretization > 0, \
-                continuous_fragility_discretization
+        if continuous_fragility_discretization and not imls:
             imls = numpy.linspace(min_iml, max_iml,
                                   continuous_fragility_discretization + 1)
         fragility_functions[taxonomy] = FragilityFunctionList(

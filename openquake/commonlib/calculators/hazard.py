@@ -75,13 +75,14 @@ class DisaggregationCalculator(base.BaseCalculator):
         pass
 
 
-def calc_gmfs(tag_seed_pairs, computer):
+def calc_gmfs(tag_seed_pairs, computer, monitor):
     """
     Computer several GMFs in parallel, one for each tag and seed.
     """
-    res = AccumDict()  # tag -> {imt: gmvs}
-    for tag, seed in tag_seed_pairs:
-        res += {tag: dict(computer.compute(seed))}
+    with monitor:
+        res = AccumDict()  # tag -> {imt: gmvs}
+        for tag, seed in tag_seed_pairs:
+            res += {tag: dict(computer.compute(seed))}
     return res
 
 
@@ -115,9 +116,10 @@ class ScenarioCalculator(base.BaseCalculator):
 
     def execute(self):
         logging.info('Computing the GMFs')
+        monitor = self.monitor.copy('calc_gmfs')
         return parallel.apply_reduce(
             self.core_func.__func__,
-            (self.tag_seed_pairs, self.computer),
+            (self.tag_seed_pairs, self.computer, monitor),
             operator.add, concurrent_tasks=self.oqparam.concurrent_tasks)
 
     def post_execute(self, result):

@@ -476,16 +476,6 @@ class AccumDict(dict):
     {'a': 0.48, 'b': 0.6}
     """
 
-    def groupby(self, objects, key):
-        """
-        :param objects: a sequence of objects with a key value
-        :param key: the key function to use to extract the key value
-        :returns: an AccumDict key value -> list of objects
-        """
-        return self + {k: list(group)
-                       for k, group in itertools.groupby(
-                           sorted(objects, key=key), key)}
-
     def __iadd__(self, other):
         if hasattr(other, 'iteritems'):
             for k, v in other.iteritems():
@@ -546,3 +536,13 @@ class AccumDict(dict):
         return new
 
     __rmul__ = __mul__
+
+
+def group(objects, key):
+    """
+    :param objects: a sequence of objects with a key value
+    :param key: the key function to use to extract the key value
+    :returns: an AccumDict key value -> list of objects
+    """
+    kgroups = itertools.groupby(sorted(objects, key=key), key)
+    return AccumDict((k, list(group)) for k, group in kgroups)

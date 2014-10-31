@@ -52,23 +52,24 @@ class Site(object):
         self.wkt = 'POINT(%s %s)' % xy
 
 
-def scenario_damage(riskinputs, riskmodel):
+def scenario_damage(riskinputs, riskmodel, monitor):
     """
     Core function for a damage computation.
     """
     logging.info('Process %d, considering %d risk input(s) of weight %d',
                  os.getpid(), len(riskinputs),
                  sum(ri.weight for ri in riskinputs))
-    result = AccumDict()  # (key_type, key) -> result
-    for loss_type, (assets, fractions) in \
-            riskmodel.gen_outputs(riskinputs):
-        fracts_by_taxo = AccumDict()  # taxonomy -> fracts
-        for asset, fraction in zip(assets, fractions):
-            fracts = fraction * asset.number
-            fracts_by_taxo += {asset.taxonomy: fracts}
-            result += {('asset', asset): scientific.mean_std(fracts)}
-        result += {('taxonomy', taxo): fracts
-                   for taxo, fracts in fracts_by_taxo.iteritems()}
+    with monitor:
+        result = AccumDict()  # (key_type, key) -> result
+        for loss_type, (assets, fractions) in \
+                riskmodel.gen_outputs(riskinputs):
+            fracts_by_taxo = AccumDict()  # taxonomy -> fracts
+            for asset, fraction in zip(assets, fractions):
+                fracts = fraction * asset.number
+                fracts_by_taxo += {asset.taxonomy: fracts}
+                result += {('asset', asset): scientific.mean_std(fracts)}
+            result += {('taxonomy', taxo): fracts
+                       for taxo, fracts in fracts_by_taxo.iteritems()}
     return result
 
 
@@ -80,15 +81,13 @@ class ScenarioDamageCalculator(base.BaseRiskCalculator):
     core_func = scenario_damage
 
     def pre_execute(self):
-        base.BaseRiskCalculator.pre_execute(self)
+        super(ScenarioDamageCalculator, self).pre_execute()
 
         logging.info('Computing the GMFs')
         gmfs_by_imt = calc.calc_gmfs(self.oqparam, self.sitecol)
 
         logging.info('Preparing the risk input')
-        self.riskinputs = calc.build_riskinputs(
-            self.assets_by_site, gmfs_by_imt,
-            self.oqparam.concurrent_tasks + 1)
+        self.riskinputs = self.build_riskinputs(gmfs_by_imt)
 
     def post_execute(self, result):
         """
