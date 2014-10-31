@@ -120,7 +120,8 @@ class BaseRiskCalculator(BaseCalculator):
                         get_taxonomy)
                     if group:
                         hazard_per_asset_group.append((hazard, group))
-                riskinputs.append(RiskInput(imt, hazard_per_asset_group))
+                if hazard_per_asset_group:
+                    riskinputs.append(RiskInput(imt, hazard_per_asset_group))
         logging.info('Built %d risk inputs', len(riskinputs))
         return sorted(riskinputs, key=get_imt)
 
