@@ -79,7 +79,7 @@ import sys
 import collections
 from openquake.commonlib import valid
 from openquake.commonlib.node import node_to_xml, \
-    Node, LiteralNode, node_from_elem, striptag, parse
+    Node, LiteralNode, node_from_elem, striptag, parse, iterparse
 
 NAMESPACE = 'http://openquake.org/xmlns/nrml/0.4'
 GML_NAMESPACE = 'http://www.opengis.net/gml'
@@ -128,7 +128,7 @@ nodefactory = Register()
 
 
 @nodefactory.add('sourceModel', 'simpleFaultRupture', 'complexFaultRupture',
-              'singlePlaneRupture', 'multiPlanesRupture')
+                 'singlePlaneRupture', 'multiPlanesRupture')
 class ValidNode(LiteralNode):
     """
     A subclass of :class:`LiteralNode` to be used when parsing sources
@@ -170,6 +170,34 @@ class ValidNode(LiteralNode):
 @nodefactory.add('siteModel')
 class SiteModelNode(LiteralNode):
     validators = valid.parameters(site=valid.site_param)
+
+
+# insuranceLimit and deductible can be both tags and attributes!
+def float_or_flag(value, isAbsolute=None):
+    """
+    Validate the attributes/tags insuranceLimit and deductible
+    """
+    if isAbsolute is None:  # considering the insuranceLimit attribute
+        return valid.positivefloat(value)
+    else:
+        return valid.boolean(isAbsolute)
+
+
+@nodefactory.add('exposureModel')
+class ExposureDataNode(LiteralNode):
+    # TODO: should we add a validation on the 'unit' attribute?
+    validators = valid.parameters(
+        description=valid.utf8,
+        name=valid.name,
+        type=valid.name,
+        insuranceLimit=float_or_flag,
+        deductible=float_or_flag,
+        occupants=valid.positivefloat,
+        value=valid.positivefloat,
+        number=valid.positivefloat,
+        lon=valid.longitude,
+        lat=valid.latitude,
+    )
 
 
 @nodefactory.add('vulnerabilityModel')
@@ -280,7 +308,6 @@ class DamageNode(LiteralNode):
 # see https://bugs.launchpad.net/oq-engine/+bug/1381066
 nodefactory.add(
     'disaggMatrices',
-    'exposureModel',
     'gmfCollection',
     'gmfSet',
     'logicTree',
@@ -295,7 +322,8 @@ nodefactory.add(
 
 def read(source):
     """
-    Convert a NRML file into a validated LiteralNode object.
+    Convert a NRML file into a validated LiteralNode object. Keeps
+    the entire tree in memory.
 
     :param source:
         a file name or file object open for reading
@@ -309,6 +337,33 @@ def read(source):
     return LiteralNode(
         'nrml', {'xmlns': NAMESPACE, 'xmlns:gml': GML_NAMESPACE},
         nodes=subnodes)
+
+
+def read_lazy(source, lazytags):
+    """
+    Convert a NRML file into a validated LiteralNode object. The
+    tree is lazy, i.e. you access nodes by iterating on them.
+
+    :param source:
+        a file name or file object open for reading
+    :param lazytags:
+       the name of nodes which subnodes must be read lazily
+    """
+    nodes = []
+    try:
+        for _, el in iterparse(source, remove_comments=True):
+            tag = striptag(el.tag)
+            if tag in nodefactory:  # NRML tag
+                nodes.append(
+                    node_from_elem(el, nodefactory[tag], lazy=lazytags))
+                el.clear()  # save memory
+    except:
+        etype, exc, tb = sys.exc_info()
+        msg = str(exc)
+        if unicode(source) not in msg:
+            msg = '%s in %s' % (msg, source)
+        raise etype, msg, tb
+    return nodes
 
 
 def write(nodes, output=sys.stdout):

@@ -27,14 +27,14 @@ from openquake.hazardlib import scalerel
 from openquake.hazardlib import source
 from openquake.hazardlib.tom import PoissonTOM
 
-from openquake.commonlib import examples
+from openquake.commonlib import nrml_examples
 from openquake.commonlib import source as s
 from openquake.commonlib.nrml import nodefactory
 from openquake.commonlib.node import read_nodes
 from openquake.commonlib.general import deep_eq
 
 # directory where the example files are
-NRML_DIR = os.path.dirname(examples.__file__)
+NRML_DIR = os.path.dirname(nrml_examples.__file__)
 
 # Test NRML to use (contains 1 of each source type).
 MIXED_SRC_MODEL = os.path.join(NRML_DIR, 'source_model/mixed.xml')
@@ -569,7 +569,7 @@ class AreaToPointsTestCase(unittest.TestCase):
              6.3627999999999995e-06, 5.292346875e-06])
 
 
-class SourceCollectorTestCase(unittest.TestCase):
+class TrtModelTestCase(unittest.TestCase):
     SITES = [
         site.Site(geo.Point(-121.0, 37.0), 0.1, True, 3, 4),
         site.Site(geo.Point(-121.1, 37.0), 1, True, 3, 4),
@@ -619,16 +619,16 @@ class SourceCollectorTestCase(unittest.TestCase):
     def test_repr(self):
         self.assertEqual(
             repr(self.source_collector['Volcanic']),
-            '<SourceCollector TRT=Volcanic, 3 source(s)>')
+            '<TrtModel Volcanic, 3 source(s)>')
         self.assertEqual(
             repr(self.source_collector['Stable Continental Crust']),
-            '<SourceCollector TRT=Stable Continental Crust, 1 source(s)>')
+            '<TrtModel Stable Continental Crust, 1 source(s)>')
         self.assertEqual(
             repr(self.source_collector['Subduction Interface']),
-            '<SourceCollector TRT=Subduction Interface, 1 source(s)>')
+            '<TrtModel Subduction Interface, 1 source(s)>')
         self.assertEqual(
             repr(self.source_collector['Active Shallow Crust']),
-            '<SourceCollector TRT=Active Shallow Crust, 2 source(s)>')
+            '<TrtModel Active Shallow Crust, 2 source(s)>')
 
 
 class RuptureConverterTestCase(unittest.TestCase):

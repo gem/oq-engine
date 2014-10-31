@@ -75,6 +75,7 @@ class OqParam(valid.ParamSet):
         calculation_mode=valid.Choice(*CALCULATORS),
         coordinate_bin_width=valid.positivefloat,
         conditional_loss_poes=valid.probabilities,
+        continuous_fragility_discretization=valid.positiveint,
         description=valid.utf8_not_empty,
         distance_bin_width=valid.positivefloat,
         mag_bin_width=valid.positivefloat,
@@ -132,19 +133,6 @@ class OqParam(valid.ParamSet):
         width_of_mfd_bin=valid.positivefloat,
         )
 
-    def is_valid_hazard_calculation_and_output(self):
-        """
-        The parameters `hazard_calculation_id` and `hazard_output_id`
-        are not correct for this calculator.
-        """
-        if self.calculation_mode in HAZARD_CALCULATORS:
-            return (self.hazard_calculation_id is None and
-                    self.hazard_output_id is None)
-        return (self.hazard_calculation_id is None and
-                self.hazard_output_id is not None) or \
-            (self.hazard_calculation_id is not None and
-             self.hazard_output_id is None)
-
     def is_valid_truncation_level_disaggregation(self):
         """
         Truncation level must be set for disaggregation calculations
@@ -156,17 +144,19 @@ class OqParam(valid.ParamSet):
 
     def is_valid_geometry(self):
         """
-        Must specify either region, sites or exposure_file.
+        Must specify one of sites, sites_csv, hazard_curves_csv, gmvs_csv,
+        region or exposure_file.
         """
         if self.calculation_mode not in HAZARD_CALCULATORS:
             return True  # no check on the sites for risk
-        sites = getattr(self, 'sites', self.inputs.get('sites'))
-        if getattr(self, 'region', None):
-            return sites is None and not 'exposure' in self.inputs
-        elif 'exposure' in self.inputs:
-            return sites is None
-        else:
-            return sites is not None
+        flags = dict(
+            sites=getattr(self, 'sites', 0),
+            sites_csv=self.inputs.get('sites', 0),
+            hazard_curves_csv=self.inputs.get('hazard_curves', 0),
+            gmvs_csv=self.inputs.get('gmvs', 0),
+            region=getattr(self, 'region', 0),
+            exposure=self.inputs.get('exposure', 0))
+        return sum(bool(v) for v in flags.values()) == 1
 
     def is_valid_poes(self):
         """
