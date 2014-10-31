@@ -646,14 +646,13 @@ def _loss_ratio_exceedance_matrix_per_poos(
     :py:class:`openquake.risklib.scientific.VulnerabilityFunction`
     :param hazard_curve: the hazard curve used to compute the matrix.
     :type hazard_curve_values: an association list with the hazard
-    curve imls/values
+                               curve imls/values
     :param lrem: the LREM used to compute the matrix.
     :type lrem: 2-dimensional :py:class:`numpy.ndarray`
     """
     lrem = numpy.array(lrem)
     lrem_po = numpy.empty(lrem.shape)
     imls = numpy.array(vuln_function.mean_imls())
-
     hazard_imls, hazard_poes = zip(*hazard_curves)
 
     # saturate imls to hazard imls

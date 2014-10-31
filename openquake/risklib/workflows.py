@@ -233,7 +233,7 @@ class Classical(Workflow):
         self.fractions = calculators.LossMap(poes_disagg)
         self.insured_losses = insured_losses
 
-    def __call__(self, loss_type, assets, hazard_curves):
+    def __call__(self, loss_type, assets, hazard_curves, _epsilons=None):
         """
         :param str loss_type:
             the loss type considered
@@ -242,6 +242,8 @@ class Classical(Workflow):
             :class:`openquake.risklib.workflows.Asset` instances
         :param hazard_curves:
             curves is an iterator over hazard curves (numpy array shaped 2xR).
+        :param _epsilons:
+            ignored, here only for API compatibility with other calculators
         :returns:
             a :class:`openquake.risklib.workflows.Classical.Output` instance.
         """
@@ -776,11 +778,13 @@ class RiskModel(collections.Mapping):
         self.damage_states = damage_states  # not None for damage calculations
         self._workflows = workflows
 
-    def get_taxonomies(self):
+    def get_taxonomies(self, imt=None):
         """
         Return the set of taxonomies which are part of the RiskModel
         """
-        return set(taxonomy for imt, taxonomy in self)
+        if imt is None:
+            return set(taxonomy for imt, taxonomy in self)
+        return set(taxonomy for imt_str, taxonomy in self if imt_str == imt)
 
     def get_imt_taxonomies(self):
         by_imt = operator.itemgetter(0)
