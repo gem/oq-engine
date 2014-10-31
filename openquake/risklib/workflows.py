@@ -827,17 +827,15 @@ class RiskInput(object):
     imt and site.
 
     :param imt: Intensity Measure Type string
-    :param hazard_by_site: hazard data on that sites
-    :param assets_by_site: assets on that sites, grouped by taxonomy
+    :param hazard_per_asset_group: pairs (hazard, {imt: assets}) for each site
     """
-    def __init__(self, imt, hazard_by_site, assets_by_site):
+    def __init__(self, imt, hazard_per_asset_group):
         self.imt = imt
-        self.hazard_by_site = hazard_by_site
-        self.assets_by_site = assets_by_site
+        self.hazard_per_asset_group = hazard_per_asset_group
         taxonomies = set()
         self.weight = 0
-        for assets_by_taxo in assets_by_site:
-            for taxo, assets in assets_by_taxo.iteritems():
+        for hazard, asset_group in hazard_per_asset_group:
+            for taxo, assets in asset_group.iteritems():
                 taxonomies.add(taxo)
                 self.weight += len(assets)
         self.taxonomies = sorted(taxonomies)
@@ -850,9 +848,8 @@ class RiskInput(object):
             assets = []
             hazards = []
             epsilons = []
-            for hazard, assets_by_taxo in zip(
-                    self.hazard_by_site, self.assets_by_site):
-                for asset in assets_by_taxo.get(taxonomy, []):
+            for hazard, asset_group in self.hazard_per_asset_group:
+                for asset in asset_group.get(taxonomy, []):
                     assets.append(asset)
                     hazards.append(hazard)
                     epsilons.append(asset.epsilons)
