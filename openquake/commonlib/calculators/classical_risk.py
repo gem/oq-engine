@@ -16,12 +16,57 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import logging
+
+import numpy
+from openquake.commonlib import readinput, general
 from openquake.commonlib.calculators import calculators, base
 
 
-@calculators.add('classical_risk')
-class ClassicalRiskCalculator(base.BaseCalculator):
+def classical_risk(riskinputs, riskmodel, monitor):
+    """
+    Compute and returns the average losses for each asset
+    """
+    with monitor:
+        result = general.AccumDict()
+        for loss_type, out in riskmodel.gen_outputs(riskinputs):
+            for asset, average_losses in zip(out.assets, out.average_losses):
+                result += {('avg_loss', asset.id): average_losses}
+    return result
+
+
+@calculators.add('classical_risk')  # from CSV
+class ClassicalRiskCalculator(base.BaseRiskCalculator):
     """
     Classical Risk calculator
     """
-    pass
+    core_func = classical_risk
+
+    def filter_hcurves(self, hcurves_by_imt, indices):
+        """
+        Reduce the hazard curves to the sites where there are assets
+        and add the intensity measure levels to the poes.
+        """
+        h = {}
+        imtls = self.oqparam.intensity_measure_types_and_levels
+        for imt, hcurves in hcurves_by_imt.iteritems():
+            curves = [zip(imtls[imt], hcurve) for hcurve in hcurves[indices]]
+            h[imt] = numpy.array(curves, float)
+        return h
+
+    def pre_execute(self):
+        super(ClassicalRiskCalculator, self).pre_execute()
+        sites, hcurves_by_imt = readinput.get_sitecol_hcurves(self.oqparam)
+        logging.info('Associating assets -> sites')
+        with self.monitor.copy('assoc_assets_sites'):
+            sitecol, assets_by_site = self.assoc_assets_sites(sites)
+        num_assets = sum(len(assets) for assets in assets_by_site)
+        num_sites = len(sitecol)
+        logging.info('Associated %d assets to %d sites', num_assets, num_sites)
+        hcurves_by_imt = self.filter_hcurves(hcurves_by_imt, sitecol.indices)
+        self.riskinputs = self.build_riskinputs(hcurves_by_imt)
+
+    def post_execute(self, result):
+        for k, v in result.iteritems():
+            print k, v
+        return {}

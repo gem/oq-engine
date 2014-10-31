@@ -25,6 +25,7 @@ import sys
 import cPickle
 import logging
 import traceback
+import itertools
 import time
 from datetime import datetime
 from concurrent.futures import as_completed, ProcessPoolExecutor
@@ -343,11 +344,13 @@ def apply_reduce(task_func, task_args, agg,
         acc = AccumDict()
     if not data:
         return acc
-    elif len(data) == 1 or not concurrent_tasks:
+    elif len(data) == 1:
         return agg(acc, task_func(data, *args))
-    chunks = list(split_in_blocks(data, concurrent_tasks, weight, key))
+    chunks = list(split_in_blocks(data, concurrent_tasks or 1, weight, key))
     all_args = [(chunk,) + args for chunk in chunks]
     apply_reduce._chunks = chunks
+    if not concurrent_tasks:
+        return reduce(agg, itertools.starmap(task_func, all_args), acc)
     return map_reduce(task_func, all_args, agg, acc, name)
 
 

@@ -348,7 +348,7 @@ def get_exposure_lazy(fname):
         LiteralNode('deductible')
     return Exposure(
         ~description, [ct.attrib for ct in conversions.costTypes],
-        ~inslimit, ~deductible, []), exposure.assets
+        ~inslimit, ~deductible, [], set()), exposure.assets
 
 
 def get_exposure(oqparam):
@@ -403,13 +403,14 @@ def get_exposure(oqparam):
             asset_id, taxonomy, number, location, values, deductibles,
             insurance_limits, retrofitting_values)
         exposure.assets.append(ass)
+        exposure.taxonomies.add(taxonomy)
     return exposure
 
 
 Exposure = collections.namedtuple(
     'Exposure', ['description', 'cost_types',
                  'insurance_limit_is_absolute',
-                 'deductible_is_absolute', 'assets'])
+                 'deductible_is_absolute', 'assets', 'taxonomies'])
 
 
 def get_specific_assets(oqparam):

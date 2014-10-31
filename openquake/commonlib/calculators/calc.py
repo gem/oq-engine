@@ -23,22 +23,16 @@ import random
 
 import numpy
 
-from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.calc import gmf, filters
 from openquake.hazardlib.site import SiteCollection
-from openquake.commonlib.general import AccumDict, split_in_blocks
+from openquake.commonlib.general import AccumDict
 from openquake.commonlib.readinput import \
     get_gsim, get_rupture, get_correl_model, get_imts
-from openquake.risklib.workflows import RiskInput
 
 
 MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
 # in this way even on 32 bit machines Python will not have to convert
-# the generated seen into a long integer
-
-
-class AssetSiteAssociationError(Exception):
-    pass
+# the generated seed into a long integer
 
 ############### utilities for the classical calculator ################
 
@@ -143,37 +137,3 @@ def calc_gmfs(oqparam, sitecol):
             res += {imt: [gmfield]}
     # res[imt] is a matrix R x N
     return {imt: numpy.array(matrix).T for imt, matrix in res.iteritems()}
-
-
-def assoc_assets_sites(assets, sitecol, maximum_distance):
-    """
-    :params assets: a sequence of assets
-    :param sitecol: a sequence of sites
-    :param maximum_distance: the maximum acceptable distance in km
-    :returns: a pair (sitecollection, assets_by_site)
-
-    The new site collection is different from the original one
-    if some assets are discarded because of the maximum_distance
-    or if there are missing assets for some sites.
-    """
-    def getlon(site):
-        return site.location.longitude
-
-    def getlat(site):
-        return site.location.latitude
-    siteobjects = geodetic.GeographicObjects(sitecol, getlon, getlat)
-    assets_by_sid = collections.defaultdict(list)
-    for asset in assets:
-        lon, lat = asset.location
-        site = siteobjects.get_closest(lon, lat, maximum_distance)
-        if site:
-            assets_by_sid[site.id].append(asset)
-    if not assets_by_sid:
-        raise AssetSiteAssociationError(
-            'Could not associated any site to any assets within the maximum '
-            'distance of %s km' % maximum_distance)
-    mask = numpy.array([sid in assets_by_sid for sid in sitecol.sids])
-    assets_by_site = [assets_by_sid[sid] for sid in sitecol.sids
-                      if sid in assets_by_sid]
-    filteredcol = sitecol.filter(mask)
-    return filteredcol, numpy.array(assets_by_site)

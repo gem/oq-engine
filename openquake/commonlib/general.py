@@ -194,16 +194,16 @@ def block_splitter(items, max_weight, weight=lambda item: 1,
 
 
 def split_in_blocks(sequence, hint, weight=lambda item: 1,
-                    kind=lambda item: 'Unspecified'):
+                    key=lambda item: 'Unspecified'):
     """
     Split the `sequence` in a number of WeightedSequences close to `hint`.
 
     :param sequence: a finite sequence of items
     :param hint: an integer suggesting the number of subsequences to generate
     :param weight: a function returning the weigth of a given item
-    :param kind: a function returning the kind of a given item
+    :param key: a function returning the key of a given item
 
-    The WeightedSequences are of homogeneous kind and they try to be
+    The WeightedSequences are of homogeneous key and they try to be
     balanced in weight. For instance
 
      >>> items = 'ABCDE'
@@ -214,7 +214,7 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1,
     assert hint > 0, hint
     items = list(sequence)
     total_weight = float(sum(weight(item) for item in items))
-    return block_splitter(items, math.ceil(total_weight / hint), weight, kind)
+    return block_splitter(items, math.ceil(total_weight / hint), weight, key)
 
 
 def deep_eq(a, b, decimal=7, exclude=None):

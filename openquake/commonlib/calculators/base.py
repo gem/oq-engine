@@ -17,17 +17,24 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import abc
+import logging
 import operator
 
 import numpy
 
+from openquake.hazardlib.geo import geodetic
 from openquake.risklib.workflows import RiskInput
+
 from openquake.commonlib import readinput, general
 from openquake.commonlib.parallel import apply_reduce
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
 get_imt = operator.attrgetter('imt')
+
+
+class AssetSiteAssociationError(Exception):
+    """Raised when there are no hazard sites close enough to any asset"""
 
 
 class BaseCalculator(object):
@@ -91,8 +98,17 @@ class BaseRiskCalculator(BaseCalculator):
         """
         self.riskmodel = readinput.get_risk_model(self.oqparam)
         self.exposure = readinput.get_exposure(self.oqparam)
+        logging.info('Read an exposure with %d assets of %d taxonomies',
+                     len(self.exposure.assets), len(self.exposure.taxonomies))
+        missing = self.exposure.taxonomies - set(
+            self.riskmodel.get_taxonomies())
+        if missing:
+            raise RuntimeError('The exposure contains the taxonomies %s '
+                               'which are not in the risk model' % missing)
         self.sitecol, self.assets_by_site = readinput.get_sitecol_assets(
             self.oqparam, self.exposure)
+        logging.info('Extracted %d unique sites from the exposure',
+                     len(self.sitecol))
 
     def build_riskinputs(self, hazards_by_imt):
         """
@@ -111,11 +127,51 @@ class BaseRiskCalculator(BaseCalculator):
             weight=operator.itemgetter(1))
         for block in blocks:
             idx = numpy.array([idx for idx, _weight in block])
-            groups = [general.group(assets, key=get_taxonomy)
-                      for assets in self.assets_by_site[idx]]
             for imt, hazards_by_site in hazards_by_imt.iteritems():
+                rm_taxonomies = self.riskmodel.get_taxonomies(imt)
+                groups = [
+                    general.group(
+                        (a for a in assets if a.taxonomy in rm_taxonomies),
+                        get_taxonomy)
+                    for assets in self.assets_by_site[idx]]
                 riskinputs.append(RiskInput(imt, hazards_by_site[idx], groups))
+        logging.info('Built %d risk inputs', len(riskinputs))
         return sorted(riskinputs, key=get_imt)
+
+    def assoc_assets_sites(self, sitecol):
+        """
+        :params assets: a sequence of assets
+        :param sitecol: a sequence of sites
+        :param maximum_distance: the maximum acceptable distance in km
+        :returns: a pair (sitecollection, assets_by_site)
+
+        The new site collection is different from the original one
+        if some assets are discarded because of the maximum_distance
+        or if there are missing assets for some sites.
+        """
+        maximum_distance = self.oqparam.maximum_distance
+
+        def getlon(site):
+            return site.location.longitude
+
+        def getlat(site):
+            return site.location.latitude
+        siteobjects = geodetic.GeographicObjects(sitecol, getlon, getlat)
+        assets_by_sid = general.AccumDict()
+        for asset in self.exposure.assets:
+            lon, lat = asset.location
+            site = siteobjects.get_closest(lon, lat, maximum_distance)
+            if site:
+                assets_by_sid += {site.id: [asset]}
+        if not assets_by_sid:
+            raise AssetSiteAssociationError(
+                'Could not associated any site to any assets within the '
+                'maximum distance of %s km' % maximum_distance)
+        mask = numpy.array([sid in assets_by_sid for sid in sitecol.sids])
+        assets_by_site = [assets_by_sid[sid] for sid in sitecol.sids
+                          if sid in assets_by_sid]
+        filteredcol = sitecol.filter(mask)
+        return filteredcol, numpy.array(assets_by_site)
 
     def execute(self):
         """
