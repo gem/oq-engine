@@ -23,15 +23,6 @@ class TestCase(unittest.TestCase):
         self.assertGreaterEqual(pmon.duration, 0)
         self.assertGreaterEqual(pmon.mem[0], 0)
 
-    # the base monitor does not save on the engine db
-    @attr('slow')
-    def test_performance_monitor(self):
-        ls = []
-        with PerformanceMonitor([os.getpid()]) as pmon:
-            for _ in range(1000 * 1000):
-                ls.append(range(50))  # 50 million of integers
-        self._check_result(pmon)
-
     def test_light_monitor(self):
         mon = LightMonitor('test', 1)
         with mon:
