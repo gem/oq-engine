@@ -246,7 +246,10 @@ def get_trt_models(oqparam, fname):
         oqparam.rupture_mesh_spacing,
         oqparam.width_of_mfd_bin,
         oqparam.area_source_discretization)
-    return source.parse_source_model(fname, converter)
+    for trt_model in source.parse_source_model(fname, converter):
+        for src in trt_model.sources:
+            trt_model.update_num_ruptures(src)
+        yield trt_model
 
 
 def get_imtls(oqparam):
