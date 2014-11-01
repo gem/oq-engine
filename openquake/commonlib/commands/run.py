@@ -24,35 +24,32 @@ from openquake.commonlib.parallel import executor, PerformanceMonitor
 from openquake.commonlib.calculators import calculators
 
 
-def run(job_ini, concurrent_tasks=executor._max_workers, loglevel='INFO'):
+def run(job_ini, concurrent_tasks=executor._max_workers, loglevel='info'):
     """
     Run a calculation. Optionally, set the number of concurrent_tasks
     (0 to disable the parallelization).
     """
-    logging.basicConfig(level=getattr(logging, loglevel))
-    with open(job_ini) as f:
+    logging.basicConfig(level=getattr(logging, loglevel.upper()))
+    with open(job_ini) as f, PerformanceMonitor('total') as monitor:
         oqparam = readinput.get_oqparam(f)
         oqparam.concurrent_tasks = concurrent_tasks
-        monitor = PerformanceMonitor(
-            oqparam.calculation_mode, monitor_csv=os.path.join(
-                oqparam.export_dir, 'performance_csv'))
+        monitor.monitor_csv = os.path.join(
+            oqparam.export_dir, 'performance_csv')
         calc = calculators(oqparam, monitor)
-        with monitor('pre_execute') as m1:
+        with monitor('pre_execute'):
             calc.pre_execute()
-        with monitor('execute') as m2:
+        with monitor('execute'):
             result = calc.execute()
-        with monitor('post_execute') as m3:
+        with monitor('post_execute'):
             out = calc.post_execute(result)
-        for item in out.iteritems():
-            logging.info('exported %s: %s', *item)
-    logging.info('Total time spent: %s s',
-                 m1.duration + m2.duration + m3.duration)
-    max_mem = max(m1.mem[0], m2.mem[0], m3.mem[0])
-    logging.info('Max memory allocated: %s M', max_mem / 1024. / 1024.)
+    for item in out.iteritems():
+        logging.info('exported %s: %s', *item)
+    logging.info('Total time spent: %s s', monitor.duration)
+    logging.info('Memory allocated: %s M', monitor.mem[0] / 1024. / 1024.)
 
 parser = sap.Parser(run)
 parser.arg('job_ini', 'calculation configuration file')
 parser.opt('concurrent_tasks', 'hint for the number of tasks to spawn',
            type=int)
 parser.opt('loglevel', 'logging level', choices=
-           'DEBUG INFO WARN ERROR CRITICAL'.split())
+           'debug info warn error critical'.split())
