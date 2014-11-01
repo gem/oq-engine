@@ -17,12 +17,13 @@
 from openquake.commonlib.tests.calculators import CalculatorTestCase
 
 
-class ScenarioCase1(CalculatorTestCase):
+class ScenarioTestCase(CalculatorTestCase):
 
-    def test_hazard(self):
+    def test_my_scenario(self):
         out = self.run_calc(__file__, 'job.ini')
         self.assertEqualFiles('expected.xml', out['gmf_xml'])
 
-    def _test_risk(self):
-        with self.run_calc(__file__, 'job_risk.ini'):
-            import pdb; pdb.set_trace()
+    def test_risk(self):
+        out = self.run_calc(__file__, 'job_risk.ini')
+        self.assertEqualFiles('expected_agg_loss.csv',
+                              out['agg']['agg_loss_csv'])
