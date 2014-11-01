@@ -101,7 +101,6 @@ class ScenarioCalculator(base.BaseCalculator):
             self.sitecol = readinput.get_site_collection(self.oqparam)
 
         correl_model = readinput.get_correl_model(self.oqparam)
-        rnd = random.Random(getattr(self.oqparam, 'random_seed', 42))
         self.imts = readinput.get_imts(self.oqparam)
         gsim = readinput.get_gsim(self.oqparam)
         trunc_level = getattr(self.oqparam, 'truncation_level', None)
@@ -111,6 +110,7 @@ class ScenarioCalculator(base.BaseCalculator):
         self.tags = ['scenario-%010d' % i for i in xrange(n_gmfs)]
         self.computer = GmfComputer(rupture, self.sitecol, self.imts, gsim,
                                     trunc_level, correl_model)
+        rnd = random.Random(getattr(self.oqparam, 'random_seed', 42))
         self.tag_seed_pairs = [(tag, rnd.randint(0, 2 ** 31 - 1))
                                for tag in self.tags]
 

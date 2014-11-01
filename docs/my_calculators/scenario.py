@@ -11,7 +11,7 @@ class MyScenarioCalculator(base.BaseCalculator):
         self.gsim = readinput.get_gsim(self.oqparam)
         self.imts = readinput.get_imts(self.oqparam)
         self.rupture = readinput.get_rupture(self.oqparam)
-        self.rupture_tags = [
+        self.rupture_tags = [  # used in the export phase
             'tag%d' % i
             for i in range(self.oqparam.number_of_ground_motion_fields)]
 
