@@ -144,11 +144,12 @@ class BaseRiskCalculator(BaseCalculator):
 
         siteobjects = geodetic.GeographicObjects(sitecol, getlon, getlat)
         assets_by_sid = general.AccumDict()
-        for asset in self.exposure.assets:
-            lon, lat = asset.location
+        for assets in self.assets_by_site:
+            # assets is a non-empty list of assets on the same location
+            lon, lat = assets[0].location
             site = siteobjects.get_closest(lon, lat, maximum_distance)
             if site:
-                assets_by_sid += {site.id: [asset]}
+                assets_by_sid += {site.id: assets}
         if not assets_by_sid:
             raise AssetSiteAssociationError(
                 'Could not associated any site to any assets within the '
@@ -184,6 +185,7 @@ class BaseRiskCalculator(BaseCalculator):
         (riskinputs, riskmodel, monitor).
         """
         monitor = self.monitor.copy(self.core_func.__name__)
+        monitor._procs = None
         return apply_reduce(
             self.core_func.__func__,
             (self.riskinputs, self.riskmodel, monitor),
