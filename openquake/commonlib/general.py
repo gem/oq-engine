@@ -402,18 +402,21 @@ def assert_independent(package, *packages):
     ...                    'openquake.hazardlib', 'openquake.commonlib')
     """
     assert packages, 'At least one package must be specified'
-    imported_modules = run_in_process("""\
+    code = """\
 import sys
 from openquake.commonlib.general import import_all
 # remove openquake.commonlib from the imported modules
 del sys.modules['openquake.commonlib']
 # in this way if it is imported again by `import_all` it is seen
-print import_all('%s')
-""" % package)
+modules = import_all('%s')
+""" % package
+    globs = {}
+    exec code in globs
+    imported_modules = globs['modules']
     for mod in imported_modules:
-        if mod.startswith(packages):
-            raise CodeDependencyError('%s depends on %s' % (
-                package, '|'.join(packages)))
+        for pkg in packages:
+            if mod.startswith(pkg):
+                raise CodeDependencyError('%s depends on %s' % (package, pkg))
 
 
 class CallableDict(collections.OrderedDict):
