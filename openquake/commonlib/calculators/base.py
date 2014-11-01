@@ -184,8 +184,7 @@ class BaseRiskCalculator(BaseCalculator):
         Require a `.core_func` to be defined with signature
         (riskinputs, riskmodel, monitor).
         """
-        monitor = self.monitor.copy(self.core_func.__name__)
-        monitor._procs = None
+        monitor = self.monitor(self.core_func.__name__)
         return apply_reduce(
             self.core_func.__func__,
             (self.riskinputs, self.riskmodel, monitor),

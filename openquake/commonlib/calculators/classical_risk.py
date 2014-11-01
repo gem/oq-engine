@@ -46,6 +46,9 @@ class ClassicalRiskCalculator(base.BaseRiskCalculator):
         """
         Reduce the hazard curves to the sites where there are assets
         and add the intensity measure levels to the poes.
+
+        :param hcurves_by_imt: a dictionary imt -> poes
+        :param indices: an array of indices
         """
         h = {}
         imtls = self.oqparam.intensity_measure_types_and_levels
@@ -58,7 +61,7 @@ class ClassicalRiskCalculator(base.BaseRiskCalculator):
         super(ClassicalRiskCalculator, self).pre_execute()
         sites, hcurves_by_imt = readinput.get_sitecol_hcurves(self.oqparam)
         logging.info('Associating assets -> sites')
-        with self.monitor.copy('assoc_assets_sites'):
+        with self.monitor('assoc_assets_sites'):
             sitecol, assets_by_site = self.assoc_assets_sites(sites)
         num_assets = sum(len(assets) for assets in assets_by_site)
         num_sites = len(sitecol)

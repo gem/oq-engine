@@ -454,9 +454,9 @@ class PerformanceMonitor(object):
         memory_mb = str(self.mem[0] / 1024. / 1024.)
         self.write([self.operation, self.pid_str, time_sec, memory_mb])
 
-    def copy(self, operation):
+    def __call__(self, operation):
         """
         Return a copy of the monitor usable for a different operation
         in the same task.
         """
-        return self.__class__(operation, self.pids, self.monitor_csv)
+        return self.__class__(operation, monitor_csv=self.monitor_csv)
