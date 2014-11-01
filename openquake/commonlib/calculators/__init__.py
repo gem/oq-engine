@@ -28,7 +28,7 @@ calculators = CallableDict(operator.attrgetter('calculation_mode'))
 import_all('openquake.commonlib.calculators')
 
 # import the development packages if any
-extras = os.environ.get('OQLITEDEVPACKAGES', '')
+extras = os.environ.get('OQLITEIMPORT', '')
 for extra_pkg in extras.split(':'):
     if extra_pkg:
         import_all(extra_pkg)
