@@ -219,6 +219,7 @@ class TaskManager(object):
             res = safely_call(self.oqtask, args)
         else:
             res = self.executor.submit(safely_call, self.oqtask, args)
+        self.sent += len(Pickled(args))
         self.results.append(res)
 
     def aggregate_result_set(self, agg, acc):

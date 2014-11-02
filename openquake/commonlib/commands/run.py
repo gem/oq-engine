@@ -30,11 +30,10 @@ def run(job_ini, concurrent_tasks=executor._max_workers, loglevel='info'):
     (0 to disable the parallelization).
     """
     logging.basicConfig(level=getattr(logging, loglevel.upper()))
-    with open(job_ini) as f, PerformanceMonitor('total') as monitor:
-        oqparam = readinput.get_oqparam(f)
-        oqparam.concurrent_tasks = concurrent_tasks
-        monitor.monitor_csv = os.path.join(
-            oqparam.export_dir, 'performance_csv')
+    oqparam = readinput.get_oqparam(job_ini)
+    oqparam.concurrent_tasks = concurrent_tasks
+    with PerformanceMonitor('total', monitor_csv=os.path.join(
+            oqparam.export_dir, 'performance_csv')) as monitor:
         calc = calculators(oqparam, monitor)
         with monitor('pre_execute'):
             calc.pre_execute()

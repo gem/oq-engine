@@ -17,17 +17,15 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import abc
-import itertools
 import logging
 import operator
 
 import numpy
 
 from openquake.hazardlib.geo import geodetic
-from openquake.risklib.workflows import RiskInput
 
 from openquake.commonlib import readinput, general
-from openquake.commonlib.parallel import apply_reduce
+from openquake.commonlib.parallel import apply_reduce, Pickled
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')

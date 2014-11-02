@@ -3,7 +3,7 @@ from openquake.commonlib import readinput
 from openquake.commonlib.calculators.calc import calc_gmfs
 
 if __name__ == '__main__':
-    job_ini = sys.argv[1]
+    job_ini = sys.argv[1:]
     o = readinput.get_oqparam(job_ini)
     exposure = readinput.get_exposure(o)
     sitecol, assets_by_site = readinput.get_sitecol_assets(o, exposure)
@@ -12,6 +12,6 @@ if __name__ == '__main__':
 
     for imt in gmfs_by_imt:
         ri = risk_model.build_input(imt, gmfs_by_imt[imt], assets_by_site)
-        print ri, ri.get_all()
+        print ri
         for out in risk_model.gen_outputs([ri]):
-            print out
+            import pdb; pdb.set_trace()

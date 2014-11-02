@@ -353,6 +353,7 @@ def get_exposure_lazy(fname):
     except NameError:
         deductible = LiteralNode('deductible')
     return Exposure(
+        exposure['id'], exposure['category'],
         ~description, [ct.attrib for ct in conversions.costTypes],
         ~inslimit, ~deductible, [], set()), exposure.assets
 
@@ -369,9 +370,10 @@ def get_exposure(oqparam):
     :returns:
         an :class:`Exposure` instance
     """
-    relevant_cost_types = set(vulnerability_files(oqparam.inputs))
     fname = oqparam.inputs['exposure']
     exposure, assets_node = get_exposure_lazy(fname)
+    relevant_cost_types = set(vulnerability_files(oqparam.inputs)) - \
+        set(['occupants'])
     asset_refs = set()
     time_event = getattr(oqparam, 'time_event', None)
     for asset in assets_node:
@@ -395,6 +397,8 @@ def get_exposure(oqparam):
                 values[cost_type] = cost['value']
                 deductibles[cost_type] = cost.attrib.get('deductible')
                 insurance_limits[cost_type] = cost.attrib.get('insuranceLimit')
+            if exposure.category == 'population':
+                values['fatalities'] = number
             # check we are not missing a cost type
             missing = relevant_cost_types - set(values)
             if missing:
@@ -417,7 +421,7 @@ def get_exposure(oqparam):
 
 
 Exposure = collections.namedtuple(
-    'Exposure', ['description', 'cost_types',
+    'Exposure', ['id', 'category', 'description', 'cost_types',
                  'insurance_limit_is_absolute',
                  'deductible_is_absolute', 'assets', 'taxonomies'])
 

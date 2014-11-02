@@ -22,7 +22,7 @@ import collections
 
 import numpy
 from openquake.risklib import scientific
-from openquake.commonlib import readinput, riskmodels, general
+from openquake.commonlib import riskmodels, general
 from openquake.commonlib.calculators import calculators, base, calc
 from openquake.commonlib.export import export
 
@@ -92,6 +92,7 @@ class ScenarioRiskCalculator(base.BaseRiskCalculator):
         add_epsilons(self.assets_by_site, num_samples, seed, correlation)
         self.unit = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
                      for ct in self.exposure.cost_types}
+        self.unit['fatalities'] = 'people'
 
     def post_execute(self, result):
         aggcurves = general.AccumDict()  # key_type -> AggLossCurves
