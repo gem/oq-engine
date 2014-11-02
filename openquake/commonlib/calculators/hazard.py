@@ -78,6 +78,13 @@ class DisaggregationCalculator(base.BaseCalculator):
 def calc_gmfs(tag_seed_pairs, computer, monitor):
     """
     Computer several GMFs in parallel, one for each tag and seed.
+
+    :param tag_seed_pairs:
+        list of pairs (rupture tag, rupture seed)
+    :param computer:
+        :class:`openquake.hazardlib.calc.gmf.GMFComputer` instance
+    :param monitor:
+        :class:`openquake.commonlib.parallel.PerformanceMonitor` instance
     """
     with monitor:
         res = AccumDict()  # tag -> {imt: gmvs}
@@ -93,17 +100,11 @@ class ScenarioCalculator(base.BaseCalculator):
     """
     core_func = calc_gmfs
 
-    def pre_execute(self):
-        logging.info('Reading the site collection')
-        if 'exposure' in self.oqparam.inputs:
-            self.sitecol, _assets = readinput.get_sitecol_assets(self.oqparam)
-        else:
-            self.sitecol = readinput.get_site_collection(self.oqparam)
-
-        correl_model = readinput.get_correl_model(self.oqparam)
+    def init_tags(self):
         self.imts = readinput.get_imts(self.oqparam)
         gsim = readinput.get_gsim(self.oqparam)
         trunc_level = getattr(self.oqparam, 'truncation_level', None)
+        correl_model = readinput.get_correl_model(self.oqparam)
         n_gmfs = self.oqparam.number_of_ground_motion_fields
         rupture = readinput.get_rupture(self.oqparam)
 
@@ -113,6 +114,14 @@ class ScenarioCalculator(base.BaseCalculator):
         rnd = random.Random(getattr(self.oqparam, 'random_seed', 42))
         self.tag_seed_pairs = [(tag, rnd.randint(0, 2 ** 31 - 1))
                                for tag in self.tags]
+
+    def pre_execute(self):
+        logging.info('Reading the site collection')
+        if 'exposure' in self.oqparam.inputs:
+            self.sitecol, _assets = readinput.get_sitecol_assets(self.oqparam)
+        else:
+            self.sitecol = readinput.get_site_collection(self.oqparam)
+        self.init_tags()
 
     def execute(self):
         logging.info('Computing the GMFs')

@@ -34,13 +34,13 @@ class CalculatorTestCase(unittest.TestCase):
         Return the outputs of the calculation as a dictionary
         """
         self.testdir = os.path.dirname(testfile)
-        with open(os.path.join(self.testdir, job_ini)) as ini:
-            oq = self.oqparam = readinput.get_oqparam(ini)
-            oq.concurrent_tasks = 0  # to make the test debuggable
-            monitor = PerformanceMonitor(
-                self.testdir,
-                monitor_csv=os.path.join(oq.export_dir, 'performance_csv'))
-            return calculators(self.oqparam, monitor)
+        ini = os.path.join(self.testdir, job_ini)
+        oq = self.oqparam = readinput.get_oqparam(ini)
+        oq.concurrent_tasks = 0  # to make the test debuggable
+        monitor = PerformanceMonitor(
+            self.testdir,
+            monitor_csv=os.path.join(oq.export_dir, 'performance_csv'))
+        return calculators(self.oqparam, monitor)
 
     def run_calc(self, testfile, job_ini):
         """

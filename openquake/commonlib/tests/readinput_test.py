@@ -23,10 +23,9 @@ import mock
 import unittest
 from StringIO import StringIO
 
-from openquake.commonlib import readinput, valid
-from openquake.commonlib import general
-
 from numpy.testing import assert_allclose
+
+from openquake.commonlib import readinput, valid, general
 
 
 class ParseConfigTestCase(unittest.TestCase):
@@ -34,7 +33,7 @@ class ParseConfigTestCase(unittest.TestCase):
     def test_get_oqparam_no_files(self):
         # sections are there just for documentation
         # when we parse the file, we ignore these
-        source = StringIO("""
+        source = general.writetmp("""
 [general]
 calculation_mode = classical_risk
 region = 1 1, 2 2, 3 3
@@ -42,10 +41,7 @@ region = 1 1, 2 2, 3 3
 bar = baz
 intensity_measure_types = PGA
 """)
-        # Add a 'name' to make this look like a real file:
-        source.name = 'path/to/some/job.ini'
-        exp_base_path = os.path.dirname(
-            os.path.join(os.path.abspath('.'), source.name))
+        exp_base_path = os.path.dirname(source)
 
         expected_params = {
             'base_path': exp_base_path,
@@ -90,7 +86,7 @@ intensity_measure_types = PGA
                 'intensity_measure_types_and_levels': {'PGA': None},
             }
 
-            params = vars(readinput.get_oqparam(open(job_config)))
+            params = vars(readinput.get_oqparam(job_config))
             self.assertEqual(expected_params, params)
             self.assertEqual(['site_model'], params['inputs'].keys())
             self.assertEqual([site_model_input], params['inputs'].values())
@@ -98,9 +94,9 @@ intensity_measure_types = PGA
             shutil.rmtree(temp_dir)
 
     def test_get_oqparam_with_sites_csv(self):
-        sites_csv = general.writetmp(content='1.0,2.1\n3.0,4.1\n5.0,6.1')
+        sites_csv = general.writetmp('1.0,2.1\n3.0,4.1\n5.0,6.1')
         try:
-            source = StringIO("""
+            source = general.writetmp("""
 [general]
 calculation_mode = classical
 [geometry]
@@ -116,9 +112,8 @@ reference_depth_to_2pt5km_per_sec = 5.0
 reference_depth_to_1pt0km_per_sec = 100.0
 intensity_measure_types = PGA
 """ % sites_csv)
-            source.name = 'path/to/some/job.ini'
             exp_base_path = os.path.dirname(
-                os.path.join(os.path.abspath('.'), source.name))
+                os.path.join(os.path.abspath('.'), source))
 
             expected_params = {
                 'base_path': exp_base_path,

@@ -111,17 +111,10 @@ class BaseRiskCalculator(BaseCalculator):
         for block in blocks:
             idx = numpy.array([idx for idx, _weight in block])
             for imt, hazards_by_site in hazards_by_imt.iteritems():
-                taxonomies = self.riskmodel.get_taxonomies(imt)
-                hazard_per_asset_group = []
-                for hazard, assets in itertools.izip(
-                        hazards_by_site[idx], self.assets_by_site[idx]):
-                    group = general.group(
-                        (a for a in assets if a.taxonomy in taxonomies),
-                        get_taxonomy)
-                    if group:
-                        hazard_per_asset_group.append((hazard, group))
-                if hazard_per_asset_group:
-                    riskinputs.append(RiskInput(imt, hazard_per_asset_group))
+                ri = self.riskmodel.build_input(
+                    imt, hazards_by_site[idx], self.assets_by_site[idx])
+                if ri.weight > 0:
+                    riskinputs.append(ri)
         logging.info('Built %d risk inputs', len(riskinputs))
         return sorted(riskinputs, key=get_imt)
 

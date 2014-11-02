@@ -28,10 +28,7 @@ from openquake.commonlib.calculators import base, calc, calculators
 from openquake.commonlib.export import export
 
 
-class DmgState(object):
-    def __init__(self, dmg_state, lsi):
-        self.dmg_state = dmg_state
-        self.lsi = lsi
+DmgState = collections.namedtuple('DmgState', 'dmg_state lsi')
 
 DmgDistPerTaxonomy = collections.namedtuple(
     'DmgDistPerTaxonomy', 'taxonomy dmg_state mean stddev')
@@ -42,8 +39,7 @@ DmgDistPerAsset = collections.namedtuple(
 DmgDistTotal = collections.namedtuple(
     'DmgDistTotal', 'dmg_state mean stddev')
 
-ExposureData = collections.namedtuple(
-    'ExposureData', 'asset_ref site')
+ExposureData = collections.namedtuple('ExposureData', 'asset_ref site')
 
 
 class Site(object):
@@ -63,13 +59,10 @@ def scenario_damage(riskinputs, riskmodel, monitor):
         result = AccumDict()  # (key_type, key) -> result
         for loss_type, (assets, fractions) in \
                 riskmodel.gen_outputs(riskinputs):
-            fracts_by_taxo = AccumDict()  # taxonomy -> fracts
             for asset, fraction in zip(assets, fractions):
-                fracts = fraction * asset.number
-                fracts_by_taxo += {asset.taxonomy: fracts}
-                result += {('asset', asset): scientific.mean_std(fracts)}
-            result += {('taxonomy', taxo): fracts
-                       for taxo, fracts in fracts_by_taxo.iteritems()}
+                damages = fraction * asset.number
+                result += {('asset', asset): scientific.mean_std(damages)}
+                result += {('taxonomy', asset.taxonomy): damages}
     return result
 
 

@@ -66,12 +66,12 @@ def _collect_source_model_paths(smlt):
     return sorted(set(src_paths))
 
 
-def get_oqparam(source, calculators=None):
+def get_oqparam(job_ini, calculators=None):
     """
-    Parse a dictionary of parameters from an INI-style config file.
+    Parse a dictionary of parameters from one or more INI-style config file.
 
-    :param source:
-        File-like object containing the config parameters.
+    :param job_ini:
+        Configuration file or list of configuration files
     :returns:
         An :class:`openquake.commonlib.oqvalidation.OqParam` instance
         containing the validate and casted parameters/values parsed from
@@ -83,15 +83,14 @@ def get_oqparam(source, calculators=None):
         from openquake.commonlib.calculators import calculators
         OqParam.params['calculation_mode'].choices = tuple(calculators)
 
+    job_inis = [job_ini] if isinstance(job_ini, basestring) else job_ini
     cp = ConfigParser.ConfigParser()
-    cp.readfp(source)
+    cp.read(job_inis)
 
+    # Directory containing the config files we're parsing
     base_path = os.path.dirname(
-        os.path.join(os.path.abspath('.'), source.name))
+        os.path.join(os.path.abspath('.'), job_inis[0]))
     params = dict(base_path=base_path, inputs={})
-
-    # Directory containing the config file we're parsing.
-    base_path = os.path.dirname(os.path.abspath(source.name))
 
     for sect in cp.sections():
         for key, value in cp.items(sect):
@@ -103,7 +102,7 @@ def get_oqparam(source, calculators=None):
             else:
                 params[key] = value
 
-    # load source inputs (the paths are the source_model_logic_tree)
+    # load job_ini inputs (the paths are the job_ini_model_logic_tree)
     smlt = params['inputs'].get('source_model_logic_tree')
     if smlt:
         params['inputs']['source'] = [
@@ -345,10 +344,14 @@ def get_exposure_lazy(fname):
     [exposure] = nrml.read_lazy(fname, ['assets'])
     description = exposure.description
     conversions = exposure.conversions
-    inslimit = list(conversions.getnodes('insuranceLimit')) or \
-        LiteralNode('insuranceLimit')
-    deductible = list(conversions.getnodes('deductible')) or \
-        LiteralNode('deductible')
+    try:
+        inslimit = conversions.insuranceLimit
+    except NameError:
+        inslimit = LiteralNode('insuranceLimit')
+    try:
+        deductible = conversions.deductible
+    except NameError:
+        deductible = LiteralNode('deductible')
     return Exposure(
         ~description, [ct.attrib for ct in conversions.costTypes],
         ~inslimit, ~deductible, [], set()), exposure.assets
@@ -393,7 +396,10 @@ def get_exposure(oqparam):
                 deductibles[cost_type] = cost.attrib.get('deductible')
                 insurance_limits[cost_type] = cost.attrib.get('insuranceLimit')
             # check we are not missing a cost type
-            assert set(values) == relevant_cost_types
+            missing = relevant_cost_types - set(values)
+            if missing:
+                raise RuntimeError(
+                    'Missing cost types: %s' % ', '.join(missing))
 
         if time_event:
             for occupancy in asset.occupancies:
