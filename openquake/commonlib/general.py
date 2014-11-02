@@ -400,6 +400,10 @@ def assert_independent(package, *packages):
     ...                    'openquake.risklib', 'openquake.commonlib')
     >>> assert_independent('openquake.risklib',
     ...                    'openquake.hazardlib', 'openquake.commonlib')
+    >>> assert_independent('openquake.risklib.tests', 'openquake.risklib')
+    Traceback (most recent call last):
+    ...
+    CodeDependencyError: openquake.risklib.tests depends on openquake.risklib
     """
     assert packages, 'At least one package must be specified'
     code = """\
@@ -408,11 +412,9 @@ from openquake.commonlib.general import import_all
 # remove openquake.commonlib from the imported modules
 del sys.modules['openquake.commonlib']
 # in this way if it is imported again by `import_all` it is seen
-modules = import_all('%s')
+print import_all('%s')
 """ % package
-    globs = {}
-    exec code in globs
-    imported_modules = globs['modules']
+    imported_modules = run_in_process(code)
     for mod in imported_modules:
         for pkg in packages:
             if mod.startswith(pkg):
