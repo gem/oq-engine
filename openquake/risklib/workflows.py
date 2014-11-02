@@ -882,7 +882,7 @@ class RiskInput(object):
         epsilons = {taxonomy: [] for taxonomy in self.taxonomies}
         for hazard, assets_by_taxo in self.hazard_assets_by_taxo:
             for taxonomy in self.taxonomies:
-                for asset in assets_by_taxo[taxonomy]:
+                for asset in assets_by_taxo.get(taxonomy, []):
                     assets[taxonomy].append(asset)
                     hazards[taxonomy].append(hazard)
                     epsilons[taxonomy].append(asset.epsilons)
