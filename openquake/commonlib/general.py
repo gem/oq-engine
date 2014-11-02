@@ -24,6 +24,7 @@ Utility functions of general interest.
 import os
 import sys
 import math
+import inspect
 import tempfile
 import importlib
 import itertools
@@ -388,6 +389,13 @@ def import_all(module_or_package):
     return set(sys.modules) - already_imported
 
 
+IMPORT_ALL = """\
+import os, sys, importlib, subprocess\n
+%s
+print import_all('{}')
+""" % inspect.getsource(import_all)
+
+
 def assert_independent(package, *packages):
     """
     :param package: Python name of a module/package
@@ -406,15 +414,7 @@ def assert_independent(package, *packages):
     CodeDependencyError: openquake.risklib.tests depends on openquake.risklib
     """
     assert packages, 'At least one package must be specified'
-    code = """\
-import sys
-from openquake.commonlib.general import import_all
-# remove openquake.commonlib from the imported modules
-del sys.modules['openquake.commonlib']
-# in this way if it is imported again by `import_all` it is seen
-print import_all('%s')
-""" % package
-    imported_modules = run_in_process(code)
+    imported_modules = run_in_process(IMPORT_ALL.format(package))
     for mod in imported_modules:
         for pkg in packages:
             if mod.startswith(pkg):
