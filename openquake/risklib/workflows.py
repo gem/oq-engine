@@ -787,6 +787,11 @@ class RiskModel(collections.Mapping):
         return set(taxonomy for imt_str, taxonomy in self if imt_str == imt)
 
     def get_imt_taxonomies(self):
+        """
+        For each IMT in the risk model, yield pairs (imt, taxonomies)
+        with the taxonomies associated to that IMT. For fragility functions,
+        there is a single taxonomy for each IMT.
+        """
         by_imt = operator.itemgetter(0)
         by_taxo = operator.itemgetter(1)
         for imt, group in itertools.groupby(sorted(self), key=by_imt):
