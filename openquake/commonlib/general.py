@@ -543,10 +543,10 @@ class AccumDict(dict):
     __rmul__ = __mul__
 
 
-def group(objects, key):
+def groupby(objects, key):
     """
     :param objects: a sequence of objects with a key value
-    :param key: the key function to use to extract the key value
+    :param key: the key function to extract the key value
     :returns: an AccumDict key value -> list of objects
     """
     kgroups = itertools.groupby(sorted(objects, key=key), key)

@@ -14,11 +14,3 @@ class HelloCalculator(base.BaseCalculator):
         fname = os.path.join(self.oqparam.export_dir, 'hello.txt')
         open(fname, 'w').write(result)
         return dict(hello=fname)
-
-if __name__ == '__main__':
-    import sys
-    from openquake.commonlib import readinput
-    with open(sys.argv[1]) as job_ini:
-        oqparam = readinput.get_oqparam(job_ini)
-        calc = HelloCalculator(oqparam)
-        print calc.run()

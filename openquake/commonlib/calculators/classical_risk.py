@@ -44,8 +44,8 @@ class ClassicalRiskCalculator(base.BaseRiskCalculator):
 
     def filter_hcurves(self, hcurves_by_imt, indices):
         """
-        Reduce the hazard curves to the sites where there are assets
-        and add the intensity measure levels to the poes.
+        Reduce the hazard curves to the sites where there are assets.
+        Add the intensity measure levels to the poes.
 
         :param hcurves_by_imt: a dictionary imt -> poes
         :param indices: an array of indices

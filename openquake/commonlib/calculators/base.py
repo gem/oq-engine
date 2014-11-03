@@ -94,8 +94,7 @@ class BaseRiskCalculator(BaseCalculator):
     def build_riskinputs(self, hazards_by_imt):
         """
         :param hazards_by_imt:
-            a dictionary IMT -> numpy array of length equal to the
-            number of hazard sites associated to the given assets
+            a dictionary IMT -> array of length equal to the  number of sites
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """

@@ -34,7 +34,7 @@ from openquake.commonlib.oqvalidation import \
     fragility_files, vulnerability_files
 from openquake.commonlib.riskmodels import \
     get_fragility_functions, get_imtls_from_vulnerabilities, get_vfs
-from openquake.commonlib.general import group, AccumDict
+from openquake.commonlib.general import groupby, AccumDict
 from openquake.commonlib import source
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
 
@@ -449,7 +449,7 @@ def get_sitecol_assets(oqparam, exposure):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    assets_by_loc = group(exposure.assets, key=lambda a: a.location)
+    assets_by_loc = groupby(exposure.assets, key=lambda a: a.location)
     lons, lats = zip(*sorted(assets_by_loc))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
     sitecol = get_site_collection(oqparam, mesh)

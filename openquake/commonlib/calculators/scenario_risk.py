@@ -33,7 +33,7 @@ def add_epsilons(assets_by_site, num_samples, seed, correlation):
     container.
     """
     assets_by_taxonomy = sum(
-        (general.group(assets, key=lambda a: a.taxonomy)
+        (general.groupby(assets, key=lambda a: a.taxonomy)
          for assets in assets_by_site), {})
 
     for taxonomy, assets in assets_by_taxonomy.iteritems():
