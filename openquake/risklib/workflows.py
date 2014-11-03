@@ -840,13 +840,13 @@ class RiskModel(collections.Mapping):
         """
         imt = riskinputs[0].imt
         for riskinput in riskinputs:
-            data = riskinput.get_all()
+            assets_, hazards_, epsilons_ = riskinput.get_all()
             for taxonomy in riskinput.taxonomies:
-                assets = data['assets'][taxonomy]
-                hazards = data['hazards'][taxonomy]
-                epsilons = data['epsilons'][taxonomy]
+                assets = assets_[taxonomy]
                 if not assets:
                     continue
+                hazards = hazards_[taxonomy]
+                epsilons = epsilons_[taxonomy]
                 workflow = self[imt, taxonomy]
                 for loss_type in workflow.loss_types:
                     yield loss_type, workflow(
@@ -874,7 +874,7 @@ class RiskInput(object):
 
     def get_all(self):
         """
-        Return a dictionary of dictionaries with
+        Return dictionaries with
         assets, hazards and epsilons for each taxonomy.
         """
         assets = {taxonomy: [] for taxonomy in self.taxonomies}
@@ -886,7 +886,7 @@ class RiskInput(object):
                     assets[taxonomy].append(asset)
                     hazards[taxonomy].append(hazard)
                     epsilons[taxonomy].append(asset.epsilons)
-        return dict(assets=assets, hazards=hazards, epsilons=epsilons)
+        return assets, hazards, epsilons
 
     def __repr__(self):
         return '<%s IMT=%s, taxonomy=%s, weight=%d>' % (
