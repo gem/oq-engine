@@ -64,7 +64,7 @@ POES_PARAM_NAME = "POES"
 # Dilation in decimal degrees (http://en.wikipedia.org/wiki/Decimal_degrees)
 # 1e-5 represents the approximate distance of one meter at the equator.
 DILATION_ONE_METER = 1E-5
- # the following is quite arbitrary, it gives output weights that I like (MS)
+# the following is quite arbitrary, it gives output weights that I like (MS)
 NORMALIZATION_FACTOR = 1E-2
 # the following is also arbitrary, it is used to decide when to parallelize
 # the filtering (MS)
