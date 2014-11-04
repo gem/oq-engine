@@ -162,7 +162,7 @@ def _get_result_export_dest(calc_id, target, result, file_ext='xml'):
     elif output_type == 'ses':
         sm_ltp = core.LT_PATH_JOIN_TOKEN.join(result.sm_lt_path)
         filename = '%s-%s-smltp_%s.%s' % (
-            output_type, output.ses.ordinal, sm_ltp, file_ext
+            output_type, result.ordinal, sm_ltp, file_ext
         )
     elif output_type == 'disagg_matrix':
         # only logic trees, no stats
