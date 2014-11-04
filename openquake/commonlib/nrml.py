@@ -172,7 +172,7 @@ class SiteModelNode(LiteralNode):
     validators = valid.parameters(site=valid.site_param)
 
 
-# insuranceLimit and deductible can be both tags and attributes!
+# insuranceLimit and deductible can be either tags or attributes!
 def float_or_flag(value, isAbsolute=None):
     """
     Validate the attributes/tags insuranceLimit and deductible
