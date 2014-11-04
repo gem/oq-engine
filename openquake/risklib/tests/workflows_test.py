@@ -135,7 +135,7 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
                         dict(structural=0.1),
                         dict(structural=0.8))]
         gmf = mock.Mock()
-        vf = self.workflow.vulnerability_functions[self.loss_type]
+        vf = self.workflow.risk_functions[self.loss_type]
         vf.apply_to.return_value = numpy.empty((1, 1))
 
         output = self.workflow(self.loss_type, assets, gmf, mock.Mock(), [1])
@@ -243,7 +243,7 @@ class ScenarioTestCase(unittest.TestCase):
             deductibles=dict(structural=0.1),
             insurance_limits=dict(structural=0.8))] * 4
 
-        calc.vulnerability_functions[self.loss_type].apply_to = mock.Mock(
+        calc.risk_functions[self.loss_type].apply_to = mock.Mock(
             return_value=numpy.empty((4, 2)))
 
         (_assets, loss_ratio_matrix, aggregate_losses,
@@ -260,7 +260,7 @@ class ScenarioTestCase(unittest.TestCase):
         calc = workflows.Scenario(vf, False)
 
         assets = [asset(dict(structural=10))] * 4
-        vf = calc.vulnerability_functions[self.loss_type]
+        vf = calc.risk_functions[self.loss_type]
         vf.apply_to = mock.Mock(return_value=numpy.empty((4, 2)))
 
         (_assets, loss_ratio_matrix, aggregate_losses,

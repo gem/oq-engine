@@ -403,8 +403,12 @@ class FragilityFunctionTestCase(unittest.TestCase):
         # the fractions of buildings we use the highest intensity
         # measure level defined in the model (0.7 in this case)
 
-        ffns = [scientific.FragilityFunctionDiscrete(
-            [0.1, 0.1, 0.3, 0.5, 0.7], [0, 0.05, 0.20, 0.50, 1.00])] * 2
+        ffns = [
+            scientific.FragilityFunctionDiscrete(
+                'LS1', [0.1, 0.1, 0.3, 0.5, 0.7], [0, 0.05, 0.20, 0.50, 1.00]),
+            scientific.FragilityFunctionDiscrete(
+                'LS2', [0.1, 0.1, 0.3, 0.5, 0.7], [0, 0.05, 0.20, 0.50, 1.00])
+            ]
 
         self._close_to(scientific.scenario_damage(ffns, 0.7),
                        scientific.scenario_damage(ffns, 0.8))
@@ -419,8 +423,14 @@ class FragilityFunctionTestCase(unittest.TestCase):
         # fractions of buildings is 100% no_damage and 0% for the
         # remaining limit states defined in the model.
 
-        ffns = [scientific.FragilityFunctionDiscrete(
-            [0.05, 0.1, 0.3, 0.5, 0.7], [0, 0.05, 0.20, 0.50, 1.00], 0.5)] * 2
+        ffns = [
+            scientific.FragilityFunctionDiscrete(
+                'LS1', [0.05, 0.1, 0.3, 0.5, 0.7],
+                [0, 0.05, 0.20, 0.50, 1.00], 0.5),
+            scientific.FragilityFunctionDiscrete(
+                'LS2', [0.05, 0.1, 0.3, 0.5, 0.7],
+                [0, 0.05, 0.20, 0.50, 1.00], 0.5),
+            ]
         self._close_to([1.0, 0.0, 0.0],
                        scientific.scenario_damage(ffns, 0.02))
 
@@ -436,9 +446,11 @@ class FragilityFunctionTestCase(unittest.TestCase):
 
         ffs = [
             scientific.FragilityFunctionDiscrete(
-                [0.05, 0.1, 0.3, 0.5, 0.7], [0, 0.05, 0.20, 0.50, 1.00], 0.05),
+                'LS1', [0.05, 0.1, 0.3, 0.5, 0.7],
+                [0, 0.05, 0.20, 0.50, 1.00], 0.05),
             scientific.FragilityFunctionDiscrete(
-                [0.05, 0.1, 0.3, 0.5, 0.7], [0, 0.00, 0.05, 0.20, 0.50], 0.05)]
+                'LS2', [0.05, 0.1, 0.3, 0.5, 0.7],
+                [0, 0.00, 0.05, 0.20, 0.50], 0.05)]
 
         self._close_to([0.975, 0.025, 0.],
                        scientific.scenario_damage(ffs, 0.075))
@@ -448,21 +460,21 @@ class FragilityFunctionTestCase(unittest.TestCase):
 
     def test_can_pickle(self):
         ffd = scientific.FragilityFunctionDiscrete(
-            [0, .1, .2, .3], [0.05, 0.20, 0.50, 1.00])
+            'LS1', [0, .1, .2, .3], [0.05, 0.20, 0.50, 1.00])
         self.assertEqual(pickle.loads(pickle.dumps(ffd)), ffd)
 
     def test_continuous_pickle(self):
-        ffs = scientific.FragilityFunctionContinuous(0, 1)
+        ffs = scientific.FragilityFunctionContinuous('LS1', 0, 1)
 
         pickle.loads(pickle.dumps(ffs))
 
     def test_call(self):
-        ffs = scientific.FragilityFunctionContinuous(0.5, 1)
+        ffs = scientific.FragilityFunctionContinuous('LS1', 0.5, 1)
         self._close_to(0.26293, ffs(0.1))
 
     def test_discrete_ne(self):
-        ffd1 = scientific.FragilityFunctionDiscrete([], [])
-        ffd2 = scientific.FragilityFunctionDiscrete([0.1], [0.1])
+        ffd1 = scientific.FragilityFunctionDiscrete('LS1', [], [])
+        ffd2 = scientific.FragilityFunctionDiscrete('LS1', [0.1], [0.1])
 
         self.assertTrue(ffd1 != ffd2)
 

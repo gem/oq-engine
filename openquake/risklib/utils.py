@@ -24,9 +24,10 @@ import numpy
 
 
 class Register(collections.OrderedDict):
-    def add(self, tag):
+    def add(self, *tags):
         def dec(obj):
-            self[tag] = obj
+            for tag in tags:
+                self[tag] = obj
             return obj
         return dec
 

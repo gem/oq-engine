@@ -17,6 +17,8 @@
 # <http://www.gnu.org/licenses/>.
 
 import inspect
+import itertools
+import operator
 import collections
 import numpy
 from scipy import interpolate
@@ -112,8 +114,8 @@ class Workflow(object):
     """
     Base class. Can be used in the tests as a mock.
     """
-    def __init__(self, vulnerability_functions):
-        self.vulnerability_functions = vulnerability_functions
+    def __init__(self, risk_functions):
+        self.risk_functions = risk_functions
 
     @property
     def loss_types(self):
@@ -121,7 +123,7 @@ class Workflow(object):
         The list of loss types in the underlying vulnerability functions,
         in lexicographic order
         """
-        return sorted(self.vulnerability_functions)
+        return sorted(self.risk_functions)
 
 
 @registry.add('classical_risk')
@@ -222,7 +224,7 @@ class Classical(Workflow):
         See :func:`openquake.risklib.scientific.classical` for a description
         of the other parameters.
         """
-        self.vulnerability_functions = vulnerability_functions
+        self.risk_functions = vulnerability_functions
         self.curves = dict(
             (loss_type,
              calculators.ClassicalLossCurve(vf, lrem_steps_per_interval))
@@ -231,7 +233,7 @@ class Classical(Workflow):
         self.fractions = calculators.LossMap(poes_disagg)
         self.insured_losses = insured_losses
 
-    def __call__(self, loss_type, assets, hazard_curves):
+    def __call__(self, loss_type, assets, hazard_curves, _epsilons=None):
         """
         :param str loss_type:
             the loss type considered
@@ -240,6 +242,8 @@ class Classical(Workflow):
             :class:`openquake.risklib.workflows.Asset` instances
         :param hazard_curves:
             curves is an iterator over hazard curves (numpy array shaped 2xR).
+        :param _epsilons:
+            ignored, here only for API compatibility with other calculators
         :returns:
             a :class:`openquake.risklib.workflows.Classical.Output` instance.
         """
@@ -424,7 +428,7 @@ class ProbabilisticEventBased(Workflow):
             if False the loss_matrix is not saved in the Output tuple
             (a trick to save memory in the case of no disaggregation)
         """
-        self.vulnerability_functions = vulnerability_functions
+        self.risk_functions = vulnerability_functions
         self.curves = calculators.EventBasedLossCurve(
             time_span, tses, loss_curve_resolution)
         self.maps = calculators.LossMap(conditional_loss_poes)
@@ -470,7 +474,7 @@ class ProbabilisticEventBased(Workflow):
             :class:`openquake.risklib.workflows.ProbabilisticEventBased.Output`
             instance.
         """
-        loss_matrix = self.vulnerability_functions[loss_type].apply_to(
+        loss_matrix = self.risk_functions[loss_type].apply_to(
             ground_motion_values, epsilons)
 
         curves = self.curves(loss_matrix)
@@ -595,7 +599,7 @@ class ClassicalBCR(Workflow):
                  vulnerability_functions_retro,
                  lrem_steps_per_interval,
                  interest_rate, asset_life_expectancy):
-        self.vulnerability_functions = vulnerability_functions_orig
+        self.risk_functions = vulnerability_functions_orig
         self.assets = None  # set a __call__ time
         self.interest_rate = interest_rate
         self.asset_life_expectancy = asset_life_expectancy
@@ -641,7 +645,7 @@ class ProbabilisticEventBasedBCR(Workflow):
                  vulnerability_functions_retro,
                  time_span, tses, loss_curve_resolution,
                  interest_rate, asset_life_expectancy):
-        self.vulnerability_functions = vulnerability_functions_orig
+        self.risk_functions = vulnerability_functions_orig
         self.assets = None  # set a __call__ time
         self.interest_rate = interest_rate
         self.asset_life_expectancy = asset_life_expectancy
@@ -683,13 +687,14 @@ class Scenario(Workflow):
     Implements the Scenario workflow
     """
     def __init__(self, vulnerability_functions, insured_losses):
-        self.vulnerability_functions = vulnerability_functions
+        self.risk_functions = vulnerability_functions
         self.insured_losses = insured_losses
 
     def __call__(self, loss_type, assets, ground_motion_values, epsilons):
         values = numpy.array([a.value(loss_type) for a in assets])
 
-        loss_ratio_matrix = self.vulnerability_functions[loss_type].apply_to(
+        # a matrix of N x R elements
+        loss_ratio_matrix = self.risk_functions[loss_type].apply_to(
             ground_motion_values, epsilons)
 
         # aggregating per asset, getting a vector of R elements
@@ -718,9 +723,7 @@ class Scenario(Workflow):
 @registry.add('scenario_damage')
 class Damage(Workflow):
     def __init__(self, fragility_functions):
-        # NB: we call the fragility_functions vulnerability_functions
-        # for API compatibility
-        self.vulnerability_functions = fragility_functions
+        self.risk_functions = fragility_functions
 
     def __call__(self, loss_type, assets, gmfs, _epsilons=None):
         """
@@ -732,11 +735,11 @@ class Damage(Workflow):
         where N is the number of points, R the number of realizations
         and D the number of damage states.
         """
-        ffs = self.vulnerability_functions['damage']
-        outs = numpy.array(
+        ffs = self.risk_functions['damage']
+        damages = numpy.array(
             [[scientific.scenario_damage(ffs, gmv) for gmv in gmvs]
              for gmvs in gmfs])
-        return assets, outs
+        return assets, damages
 
 
 # NB: the approach used here relies on the convention of having the
@@ -775,11 +778,24 @@ class RiskModel(collections.Mapping):
         self.damage_states = damage_states  # not None for damage calculations
         self._workflows = workflows
 
-    def get_taxonomies(self):
+    def get_taxonomies(self, imt=None):
         """
         Return the set of taxonomies which are part of the RiskModel
         """
-        return set(taxonomy for imt, taxonomy in self)
+        if imt is None:
+            return set(taxonomy for imt, taxonomy in self)
+        return set(taxonomy for imt_str, taxonomy in self if imt_str == imt)
+
+    def get_imt_taxonomies(self):
+        """
+        For each IMT in the risk model, yield pairs (imt, taxonomies)
+        with the taxonomies associated to that IMT. For fragility functions,
+        there is a single taxonomy for each IMT.
+        """
+        by_imt = operator.itemgetter(0)
+        by_taxo = operator.itemgetter(1)
+        for imt, group in itertools.groupby(sorted(self), key=by_imt):
+            yield imt, map(by_taxo, group)
 
     def __getitem__(self, imt_taxo):
         return self._workflows[imt_taxo]
@@ -789,3 +805,58 @@ class RiskModel(collections.Mapping):
 
     def __len__(self):
         return len(self._workflows)
+
+    def gen_outputs(self, riskinputs):
+        """
+        Yield the output generated by each getter and loss type for each
+        workflow.
+
+        :param riskinputs: a list of riskinputs with consistent IMT
+        """
+        imt = riskinputs[0].imt
+        for riskinput in riskinputs:
+            for taxonomy, assets, hazards, epsilons in riskinput:
+                try:
+                    workflow = self[imt, taxonomy]
+                except KeyError:
+                    # ignore taxonomies not associated to the current imt
+                    continue
+                for loss_type in workflow.loss_types:
+                    yield loss_type, workflow(
+                        loss_type, assets, hazards, epsilons)
+
+
+class RiskInput(object):
+    """
+    Contains all the assets and hazard values associated to a given
+    imt and site.
+
+    :param imt: Intensity Measure Type string
+    :param hazard_per_asset_group: pairs (hazard, {imt: assets}) for each site
+    """
+    def __init__(self, imt, hazard_per_asset_group):
+        self.imt = imt
+        self.hazard_per_asset_group = hazard_per_asset_group
+        taxonomies = set()
+        self.weight = 0
+        for hazard, asset_group in hazard_per_asset_group:
+            for taxo, assets in asset_group.iteritems():
+                taxonomies.add(taxo)
+                self.weight += len(assets)
+        self.taxonomies = sorted(taxonomies)
+
+    def __iter__(self):
+        """
+        Yield taxonomy, assets, hazards and epsilons, ordered by taxonomy.
+        """
+        for taxonomy in self.taxonomies:
+            assets = []
+            hazards = []
+            epsilons = []
+            for hazard, asset_group in self.hazard_per_asset_group:
+                for asset in asset_group.get(taxonomy, []):
+                    assets.append(asset)
+                    hazards.append(hazard)
+                    epsilons.append(asset.epsilons)
+            if assets:
+                yield taxonomy, assets, hazards, epsilons

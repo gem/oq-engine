@@ -105,12 +105,12 @@ def exposure_statistics(
 
     :returns:
         a tuple with six elements:
-            *) a numpy array with N mean loss curves
-            *) a numpy array with N mean average losses
-            *) a numpy array with P x N mean map values
-            *) a numpy array with Q x N quantile loss curves
-            *) a numpy array with Q x N quantile average loss values
-            *) a numpy array with Q x P quantile map values
+            1. a numpy array with N mean loss curves
+            2. a numpy array with N mean average losses
+            3. a numpy array with P x N mean map values
+            4. a numpy array with Q x N quantile loss curves
+            5. a numpy array with Q x N quantile average loss values
+            6. a numpy array with Q x P quantile map values
     """
     curve_resolution = len(loss_curves[0][0])
     map_nr = len(map_poes)
