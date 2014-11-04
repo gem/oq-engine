@@ -105,8 +105,8 @@ class CalculationLimitsTestCase(unittest.TestCase):
         calc = calculators(job)
         input_weight, output_weight = calc.pre_execute()
         self.assertEqual(input_weight, 1352.75)
-        self.assertAlmostEqual(output_weight, 12.1)
-        # NB: 12.1 = 121 sites * 2 IMT * 2 rlzs * 5 SES * 50/10000 years
+        self.assertAlmostEqual(output_weight, 1210.0)
+        # NB: 12.1 = 121 sites * 2 IMT * 2 rlzs * 5 SES * 50/100
 
 
 class NonEmptyQuantileTestCase(unittest.TestCase):
