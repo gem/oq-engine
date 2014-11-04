@@ -103,7 +103,7 @@ class BaseRiskCalculator(BaseCalculator):
                             for i, assets in enumerate(self.assets_by_site)]
         blocks = general.split_in_blocks(
             idx_weight_pairs,
-            self.oqparam.concurrent_tasks + 1,
+            self.oqparam.concurrent_tasks or 1,
             weight=operator.itemgetter(1))
         for block in blocks:
             idx = numpy.array([idx for idx, _weight in block])
@@ -142,7 +142,7 @@ class BaseRiskCalculator(BaseCalculator):
                 assets_by_sid += {site.id: assets}
         if not assets_by_sid:
             raise AssetSiteAssociationError(
-                'Could not associated any site to any assets within the '
+                'Could not associate any site to any assets within the '
                 'maximum distance of %s km' % maximum_distance)
         mask = numpy.array([sid in assets_by_sid for sid in sitecol.sids])
         assets_by_site = [assets_by_sid[sid] for sid in sitecol.sids
@@ -170,8 +170,8 @@ class BaseRiskCalculator(BaseCalculator):
 
     def execute(self):
         """
-        Parallelize on the riskinputs and returns a dictionary of results.
-        Require a `.core_func` to be defined with signature
+        Parallelizes on the riskinputs and returns a dictionary of results.
+        Requires a `.core_func` to be defined with signature
         (riskinputs, riskmodel, monitor).
         """
         monitor = self.monitor(self.core_func.__name__)

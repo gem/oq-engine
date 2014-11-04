@@ -215,7 +215,7 @@ PGV 12.0 42.1 0.34 0.35 0.36
 PGV 12.0 42.2 0.54 0.55 0.56
 """)
         mesh, data = readinput.get_mesh_csvdata(
-            fakecsv, ['PGA', 'PGV'], [3, 3], valid.probability)
+            fakecsv, ['PGA', 'PGV'], [3, 3], valid.probabilities)
         assert_allclose(mesh.lons, [12., 12., 12.])
         assert_allclose(mesh.lats, [42., 42.1, 42.2])
         assert_allclose(data['PGA'], [[0.14, 0.15, 0.16],
@@ -235,7 +235,7 @@ PGV 12.0 42.1 0.34 0.35
 PGV 12.0 42.2 0.54 0.55
 """)
         mesh, data = readinput.get_mesh_csvdata(
-            fakecsv, ['PGA', 'PGV'], [3, 2], valid.probability)
+            fakecsv, ['PGA', 'PGV'], [3, 2], valid.probabilities)
         assert_allclose(mesh.lons, [12., 12., 12.])
         assert_allclose(mesh.lats, [42., 42.1, 42.2])
         assert_allclose(data['PGA'], [[0.14, 0.15, 0.16],
@@ -257,7 +257,7 @@ PGV 12.0 42.2 0.54 0.55 0.56
 """)
         with self.assertRaises(ValueError) as ctx:
             readinput.get_mesh_csvdata(
-                fakecsv, ['PGA', 'PGV'], [3, 3], valid.probability)
+                fakecsv, ['PGA', 'PGV'], [3, 3], valid.probabilities)
         self.assertIn('line 4', str(ctx.exception))
 
     def test_get_mesh_csvdata_err2(self):
@@ -271,7 +271,7 @@ PGV 12.0 42.1 0.34 0.35 0.36
 """)
         with self.assertRaises(readinput.DuplicatedPoint) as ctx:
             readinput.get_mesh_csvdata(
-                fakecsv, ['PGA', 'PGV'], [3, 3], valid.probability)
+                fakecsv, ['PGA', 'PGV'], [3, 3], valid.probabilities)
         self.assertIn('line 5', str(ctx.exception))
 
     def test_get_mesh_csvdata_err3(self):
@@ -285,7 +285,7 @@ PGV 12.0 42.1 0.34 0.35 0.36
 """)
         with self.assertRaises(ValueError) as ctx:
             readinput.get_mesh_csvdata(
-                fakecsv, ['PGA', 'PGV'], [3, 3], valid.probability)
+                fakecsv, ['PGA', 'PGV'], [3, 3], valid.probabilities)
         self.assertEqual(str(ctx.exception),
                          'Inconsistent locations between PGA and PGV')
 
@@ -298,7 +298,7 @@ PGA 12.0 42.2 0.64
 """)
         with self.assertRaises(ValueError) as ctx:
             readinput.get_mesh_csvdata(
-                fakecsv, ['PGA'], [2], valid.probability)
+                fakecsv, ['PGA'], [2], valid.probabilities)
         self.assertIn('Found 3 values, expected 2', str(ctx.exception))
 
     def test_get_mesh_csvdata_err5(self):
@@ -310,5 +310,5 @@ PGA 12.0 42.2 0.64 0.65
 """)
         with self.assertRaises(ValueError) as ctx:
             readinput.get_mesh_csvdata(
-                fakecsv, ['PGV'], [2], valid.probability)
+                fakecsv, ['PGV'], [3], valid.probabilities)
         self.assertIn("Got 'PGA', expected PGV", str(ctx.exception))

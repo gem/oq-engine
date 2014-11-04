@@ -185,7 +185,6 @@ def float_or_flag(value, isAbsolute=None):
 
 @nodefactory.add('exposureModel')
 class ExposureDataNode(LiteralNode):
-    # TODO: should we add a validation on the 'unit' attribute?
     validators = valid.parameters(
         description=valid.utf8,
         name=valid.name,
@@ -348,6 +347,8 @@ def read_lazy(source, lazytags):
         a file name or file object open for reading
     :param lazytags:
        the name of nodes which subnodes must be read lazily
+    :returns:
+       a list of nodes; some of them will contain lazy subnodes
     """
     nodes = []
     try:

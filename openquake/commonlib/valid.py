@@ -383,6 +383,31 @@ def probabilities(value):
     return map(probability, value.replace(',', ' ').split())
 
 
+def decreasing_probabilities(value):
+    """
+    :param value: input string, comma separated or space separated
+    :returns: a list of decreasing probabilities
+
+    >>> decreasing_probabilities('1')
+    Traceback (most recent call last):
+    ...
+    ValueError: Not enough probabilities, found '1'
+    >>> decreasing_probabilities('0.2 0.1')
+    [0.2, 0.1]
+    >>> decreasing_probabilities('0.1 0.2')
+    Traceback (most recent call last):
+    ...
+    ValueError: The probabilities 0.1 0.2 are not in decreasing order
+    """
+    probs = probabilities(value)
+    if len(probs) < 2:
+        raise ValueError('Not enough probabilities, found %r' % value)
+    elif sorted(probs, reverse=True) != probs:
+        raise ValueError('The probabilities %s are not in decreasing order'
+                         % value)
+    return probs
+
+
 def IML(value, IMT, minIML=None, maxIML=None, imlUnit=None):
     """
     Convert a node of the form

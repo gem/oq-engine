@@ -27,7 +27,7 @@ from openquake.commonlib.nrml import nodefactory
 from openquake.commonlib.obsolete import NrmlHazardlibConverter
 
 
-class DuplicateID(Exception):
+class DuplicatedID(Exception):
     """Raised when two sources with the same ID are found in a source model"""
 
 
@@ -136,7 +136,7 @@ def parse_source_model(fname, converter, apply_uncertainties=lambda src: None):
     for src_node in src_nodes:
         src = converter.convert_node(src_node)
         if src.source_id in source_ids:
-            raise DuplicateID(
+            raise DuplicatedID(
                 'The source ID %s is duplicated!' % src.source_id)
         apply_uncertainties(src)
         trt = src.tectonic_region_type

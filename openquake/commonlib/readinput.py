@@ -331,7 +331,7 @@ def get_risk_model(oqparam):
 ############################ exposure #############################
 
 
-class DuplicateID(Exception):
+class DuplicatedID(Exception):
     """
     Raised when two assets with the same ID are found in an exposure model
     """
@@ -339,7 +339,10 @@ class DuplicateID(Exception):
 
 def get_exposure_lazy(fname):
     """
-    :returns: a pair (Exposure instance, list of asset nodes)
+    :param fname:
+        path of the XML file containing the exposure
+    :returns:
+        a pair (Exposure instance, list of asset nodes)
     """
     [exposure] = nrml.read_lazy(fname, ['assets'])
     description = exposure.description
@@ -384,7 +387,7 @@ def get_exposure(oqparam):
         with context(fname, asset):
             asset_id = asset['id']
             if asset_id in asset_refs:
-                raise DuplicateID(asset_id)
+                raise DuplicatedID(asset_id)
             asset_refs.add(asset_id)
             taxonomy = asset['taxonomy']
             number = asset['number']
@@ -443,11 +446,11 @@ def get_specific_assets(oqparam):
 
 def get_sitecol_assets(oqparam, exposure):
     """
-    Returns two sequences of the same length: the site collection and an
-    array with the assets per each site, collected by taxonomy.
-
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    : returns:
+        two sequences of the same length: the site collection and an
+        array with the assets per each site, collected by taxonomy
     """
     assets_by_loc = groupby(exposure.assets, key=lambda a: a.location)
     lons, lats = zip(*sorted(assets_by_loc))
@@ -458,11 +461,21 @@ def get_sitecol_assets(oqparam, exposure):
         for site in sitecol])
 
 
-def get_mesh_csvdata(csvfile, imts, num_values, validvalue):
+def get_mesh_csvdata(csvfile, imts, num_values, validvalues):
     """
     Read CSV data in the format `IMT lon lat value1 ... valueN`.
-    Return the mesh of points and the data as a dictionary
-    imt -> list of arrays.
+
+    :param csvfile:
+        a file or file-like object with the CSV data
+    :param imts:
+        a list of intensity measure types
+    :param num_values:
+        dictionary with the number of expected values per IMT
+    :param validvalues:
+        validation function for the values
+    :returns:
+        the mesh of points and the data as a dictionary
+        imt -> list of arrays.
     """
     number_of_values = dict(zip(imts, num_values))
     lon_lats = {imt: set() for imt in imts}
@@ -475,7 +488,7 @@ def get_mesh_csvdata(csvfile, imts, num_values, validvalue):
             if lon_lat in lon_lats[imt]:
                 raise DuplicatedPoint(lon_lat)
             lon_lats[imt].add(lon_lat)
-            values = map(validvalue, row[3:])
+            values = validvalues(' '.join(row[3:]))
             if len(values) != number_of_values[imt]:
                 raise ValueError('Found %d values, expected %d' %
                                  (len(values), number_of_values[imt]))
@@ -483,10 +496,10 @@ def get_mesh_csvdata(csvfile, imts, num_values, validvalue):
             raise err.__class__('%s: file %s, line %d' % (err, csvfile, line))
         data += {imt: [numpy.array(values)]}
     points = lon_lats.pop(imts[0])
-    for other_points in lon_lats.values():
+    for other_imt, other_points in lon_lats.iteritems():
         if points != other_points:
             raise ValueError('Inconsistent locations between %s and %s' %
-                             (imts[0], ', '.join(imts[1:])))
+                             (imts[0], other_imt))
     lons, lats = zip(*sorted(points))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
     return mesh, {imt: numpy.array(lst) for imt, lst in data.iteritems()}
@@ -494,33 +507,33 @@ def get_mesh_csvdata(csvfile, imts, num_values, validvalue):
 
 def get_sitecol_hcurves(oqparam):
     """
-    Returns the site collection and the hazard curves, by reading
-    a CSV file with format `IMT lon lat poe1 ... poeN`
-
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :returns:
+        the site collection and the hazard curves, by reading
+        a CSV file with format `IMT lon lat poe1 ... poeN`
     """
     imts = oqparam.intensity_measure_types_and_levels.keys()
     num_values = map(len, oqparam.intensity_measure_types_and_levels.values())
     with open(oqparam.inputs['hazard_curves']) as csvfile:
         mesh, hcurves_by_imt = get_mesh_csvdata(
-            csvfile, imts, num_values, valid.probability)
+            csvfile, imts, num_values, valid.decreasing_probabilities)
     sitecol = get_site_collection(oqparam, mesh)
     return sitecol, hcurves_by_imt
 
 
 def get_sitecol_gmfs(oqparam):
     """
-    Returns the site collection and the GMFs as a dictionary, by reading
-    a CSV file with format `IMT lon lat gmv1 ... gmvN`
-
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :returns:
+        the site collection and the GMFs as a dictionary, by reading
+        a CSV file with format `IMT lon lat gmv1 ... gmvN`
     """
     imts = oqparam.intensity_measure_types_and_levels.keys()
     num_values = [oqparam.number_of_ground_motion_fields] * len(imts)
     with open(oqparam.inputs['gmvs']) as csvfile:
         mesh, gmfs_by_imt = get_mesh_csvdata(
-            csvfile, imts, num_values, valid.positivefloat)
+            csvfile, imts, num_values, valid.positivefloats)
     sitecol = get_site_collection(oqparam, mesh)
     return sitecol, gmfs_by_imt
