@@ -259,8 +259,10 @@ class SimpleFaultSurfaceProjectionTestCase(unittest.TestCase):
             upper_seismogenic_depth=25.3, lower_seismogenic_depth=53.6,
             dip=30,
         )
-        elons = [10, 11, 12, 12.13515987, 11.13560807, 10.1354272]
-        elats = [-20, -20.2, -19.7, -20.52520878, -21.02520738, -20.82520794]
+        elons = [10.06374285, 11.06382605, 12.06361991,
+                 12.13515987, 11.13560807, 10.1354272]
+        elats = [-20.3895235, -20.58952337, -20.08952368, -
+                 20.52520878, -21.02520738, -20.82520794]
         edeps = [25.3, 25.3, 25.3, 53.6, 53.6, 53.6]
 
         numpy.testing.assert_allclose(lons, elons)
