@@ -18,11 +18,13 @@
 
 import os
 import csv
+import logging
 import collections
 import ConfigParser
 from lxml import etree
 
 import numpy
+from shapely import wkt, geometry
 
 from openquake.hazardlib import geo, site, gsim, correlation, imt
 from openquake.risklib import workflows
@@ -373,6 +375,8 @@ def get_exposure(oqparam):
     :returns:
         an :class:`Exposure` instance
     """
+    out_of_region = 0
+    region = wkt.loads(oqparam.region_constraint)
     fname = oqparam.inputs['exposure']
     exposure, assets_node = get_exposure_lazy(fname)
     relevant_cost_types = set(vulnerability_files(oqparam.inputs)) - \
@@ -392,6 +396,9 @@ def get_exposure(oqparam):
             taxonomy = asset['taxonomy']
             number = asset['number']
             location = asset.location['lon'], asset.location['lat']
+            if not geometry.Point(*location).within(region):
+                out_of_region += 1
+                continue
         with context(fname, asset.costs):
             for cost in asset.costs:
                 cost_type = cost['type']
@@ -420,6 +427,9 @@ def get_exposure(oqparam):
             insurance_limits, retrofitting_values)
         exposure.assets.append(ass)
         exposure.taxonomies.add(taxonomy)
+    logging.info('Read %d assets within the region_constraint and discarded '
+                 '%d assets outside the region', len(exposure.assets),
+                 out_of_region)
     return exposure
 
 
