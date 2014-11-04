@@ -15,3 +15,10 @@
 
 
 """This package contains Hazard and Risk calculator classes."""
+
+from openquake.commonlib.general import CallableDict, import_all
+
+# an ordered dictionary of calculator classes
+calculators = CallableDict(lambda job: job.get_param('calculation_mode'))
+
+import_all('openquake.engine.calculators')

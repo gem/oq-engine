@@ -64,9 +64,10 @@ from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.commonlib.calculators.calc import gen_ruptures
 
 from openquake.engine import writer
+from openquake.engine.calculators import calculators
 from openquake.engine.calculators.hazard import general
 from openquake.engine.db import models
-from openquake.engine.utils import tasks, calculators
+from openquake.engine.utils import tasks
 from openquake.engine.performance import LightMonitor
 
 
