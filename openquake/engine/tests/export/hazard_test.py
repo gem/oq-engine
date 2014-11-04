@@ -243,7 +243,7 @@ class GetResultExportDestTestCase(unittest.TestCase):
 
         ses = self.FakeSES(output, 1, self.ltr_mc.sm_lt_path)
         expected_path = (
-            '%s/calc_8/ses/ses-smltp_B1_B3.xml'
+            '%s/calc_8/ses/ses-1-smltp_B1_B3.xml'
             % self.target_dir
         )
         self.assertEqual(
