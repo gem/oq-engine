@@ -70,6 +70,8 @@ class ValidationTestCase(unittest.TestCase):
 
     def test_choice(self):
         validator = valid.Choice('aggregated', 'per_asset')
+        self.assertEqual(validator.__name__,
+                         "Choice('aggregated', 'per_asset')")
         self.assertEqual(validator('aggregated'), 'aggregated')
         self.assertEqual(validator('per_asset'), 'per_asset')
         with self.assertRaises(ValueError):

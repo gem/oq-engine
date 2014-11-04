@@ -81,14 +81,17 @@ class Choice(object):
     """
     Check if the choice is valid (case sensitive).
     """
+    @property
+    def __name__(self):
+        return 'Choice%s' % str(self.choices)
+
     def __init__(self, *choices):
         self.choices = choices
-        self.__name__ = 'Choice%s' % str(choices)
 
     def __call__(self, value):
         if not value in self.choices:
-            raise ValueError('%r is not a valid choice in %s' % (
-                             value, self.choices))
+            raise ValueError('Got %r, expected %s' % (
+                             value, '|'.join(self.choices)))
         return value
 
 
@@ -378,6 +381,31 @@ def probabilities(value):
     [0.1, 0.2]
     """
     return map(probability, value.replace(',', ' ').split())
+
+
+def decreasing_probabilities(value):
+    """
+    :param value: input string, comma separated or space separated
+    :returns: a list of decreasing probabilities
+
+    >>> decreasing_probabilities('1')
+    Traceback (most recent call last):
+    ...
+    ValueError: Not enough probabilities, found '1'
+    >>> decreasing_probabilities('0.2 0.1')
+    [0.2, 0.1]
+    >>> decreasing_probabilities('0.1 0.2')
+    Traceback (most recent call last):
+    ...
+    ValueError: The probabilities 0.1 0.2 are not in decreasing order
+    """
+    probs = probabilities(value)
+    if len(probs) < 2:
+        raise ValueError('Not enough probabilities, found %r' % value)
+    elif sorted(probs, reverse=True) != probs:
+        raise ValueError('The probabilities %s are not in decreasing order'
+                         % value)
+    return probs
 
 
 def IML(value, IMT, minIML=None, maxIML=None, imlUnit=None):
@@ -717,6 +745,10 @@ class ParamSet(object):
                                  for n, v in sorted(self.__dict__.items()))
                 doc = textwrap.dedent(is_valid.__doc__.strip())
                 raise ValueError(doc + '\nGot:\n' + dump)
+
+    def __iter__(self):
+        for item in sorted(vars(self).iteritems()):
+            yield item
 
     def __repr__(self):
         names = sorted(n for n in vars(self) if not n.startswith('_'))

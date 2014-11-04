@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import logging
 
 from openquake.commonlib import sap, readinput
@@ -29,13 +30,16 @@ def run(job_ini, concurrent_tasks=executor._max_workers, loglevel='INFO'):
     (0 to disable the parallelization).
     """
     logging.basicConfig(level=getattr(logging, loglevel))
-    with open(job_ini) as f, PerformanceMonitor():
+    with open(job_ini) as f, PerformanceMonitor(job_ini) as monitor:
         oqparam = readinput.get_oqparam(f)
         oqparam.concurrent_tasks = concurrent_tasks
-        calc = calculators(oqparam)
+        monitor.monitor_csv = os.path.join(
+            oqparam.export_dir, 'performance_csv')
+        calc = calculators(oqparam, monitor)
         for item in calc.run().items():
             logging.info('exported %s: %s', *item)
-
+    logging.info('Total time spent: %s s', monitor.duration)
+    logging.info('Memory allocated: %s M', monitor.mem[0] / 1024. / 1024.)
 
 parser = sap.Parser(run)
 parser.arg('job_ini', 'calculation configuration file')

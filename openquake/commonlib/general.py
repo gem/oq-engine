@@ -24,8 +24,10 @@ Utility functions of general interest.
 import os
 import sys
 import math
+import inspect
 import tempfile
 import importlib
+import itertools
 import subprocess
 import collections
 
@@ -193,16 +195,16 @@ def block_splitter(items, max_weight, weight=lambda item: 1,
 
 
 def split_in_blocks(sequence, hint, weight=lambda item: 1,
-                    kind=lambda item: 'Unspecified'):
+                    key=lambda item: 'Unspecified'):
     """
     Split the `sequence` in a number of WeightedSequences close to `hint`.
 
     :param sequence: a finite sequence of items
     :param hint: an integer suggesting the number of subsequences to generate
     :param weight: a function returning the weigth of a given item
-    :param kind: a function returning the kind of a given item
+    :param key: a function returning the key of a given item
 
-    The WeightedSequences are of homogeneous kind and they try to be
+    The WeightedSequences are of homogeneous key and they try to be
     balanced in weight. For instance
 
      >>> items = 'ABCDE'
@@ -213,7 +215,7 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1,
     assert hint > 0, hint
     items = list(sequence)
     total_weight = float(sum(weight(item) for item in items))
-    return block_splitter(items, math.ceil(total_weight / hint), weight, kind)
+    return block_splitter(items, math.ceil(total_weight / hint), weight, key)
 
 
 def deep_eq(a, b, decimal=7, exclude=None):
@@ -381,9 +383,28 @@ def import_all(module_or_package):
                            '.' + os.path.basename(f[:-3]))
                 try:
                     importlib.import_module(modname)
-                except:
-                    print >> sys.stderr, 'Could not import', modname
+                except Exception as exc:
+                    print >> sys.stderr, 'Could not import %s: %s: %s' % (
+                        modname, exc.__class__.__name__, exc)
     return set(sys.modules) - already_imported
+
+# NB: this is a ugly hack; we are using the source code below in
+# the call `run_in_process(IMPORT_ALL.format(package))`, with the
+# goal of figuring out the dependencies of the given package. We want
+# to avoid a `from openquake.commonlib.general import import_all`,
+# otherwise the sys.modules would contain `openquake.commonlib`
+# and testing say that risklib is independent from commonlib would
+# be difficult (I tried removing `openquake.commonlib` from sys.modules
+# manually, but then one gets errors in the tests mocking modules).
+# the clean solution would be to move `import_all` in another module,
+# external to commonlib; however at the moment we do not have a place
+# where to put it; the plan is to introduce in the future a baselib
+# with the really basic functionality, but this has to be thought
+IMPORT_ALL = """\
+import os, sys, importlib, subprocess\n
+%s
+print import_all('{}')
+""" % inspect.getsource(import_all)
 
 
 def assert_independent(package, *packages):
@@ -398,20 +419,17 @@ def assert_independent(package, *packages):
     ...                    'openquake.risklib', 'openquake.commonlib')
     >>> assert_independent('openquake.risklib',
     ...                    'openquake.hazardlib', 'openquake.commonlib')
+    >>> assert_independent('openquake.risklib.tests', 'openquake.risklib')
+    Traceback (most recent call last):
+    ...
+    CodeDependencyError: openquake.risklib.tests depends on openquake.risklib
     """
     assert packages, 'At least one package must be specified'
-    imported_modules = run_in_process("""\
-import sys
-from openquake.commonlib.general import import_all
-# remove openquake.commonlib from the imported modules
-del sys.modules['openquake.commonlib']
-# in this way if it is imported again by `import_all` it is seen
-print import_all('%s')
-""" % package)
+    imported_modules = run_in_process(IMPORT_ALL.format(package))
     for mod in imported_modules:
-        if mod.startswith(packages):
-            raise CodeDependencyError('%s depends on %s' % (
-                package, '|'.join(packages)))
+        for pkg in packages:
+            if mod.startswith(pkg):
+                raise CodeDependencyError('%s depends on %s' % (package, pkg))
 
 
 class CallableDict(collections.OrderedDict):
@@ -473,6 +491,7 @@ class AccumDict(dict):
     >>> 1.2 * prob1
     {'a': 0.48, 'b': 0.6}
     """
+
     def __iadd__(self, other):
         if hasattr(other, 'iteritems'):
             for k, v in other.iteritems():
@@ -533,3 +552,13 @@ class AccumDict(dict):
         return new
 
     __rmul__ = __mul__
+
+
+def group(objects, key):
+    """
+    :param objects: a sequence of objects with a key value
+    :param key: the key function to use to extract the key value
+    :returns: an AccumDict key value -> list of objects
+    """
+    kgroups = itertools.groupby(sorted(objects, key=key), key)
+    return AccumDict((k, list(group)) for k, group in kgroups)

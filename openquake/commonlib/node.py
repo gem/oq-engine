@@ -342,7 +342,7 @@ class Node(object):
 
     def __repr__(self):
         """A condensed representation for debugging purposes"""
-        return '<%s %s %s %s>' % (self.tag, self.attrib, self.text,
+        return '<%s %s %s %s>' % (striptag(self.tag), self.attrib, self.text,
                                   '' if not self.nodes else '...')
 
     def __getitem__(self, i):
@@ -489,7 +489,7 @@ def node_to_dict(node):
     return dic
 
 
-def node_from_elem(elem, nodefactory=Node):
+def node_from_elem(elem, nodefactory=Node, lazy=()):
     """
     Convert (recursively) an ElementTree object into a Node object.
     """
@@ -498,10 +498,11 @@ def node_from_elem(elem, nodefactory=Node):
     if not children:
         return nodefactory(elem.tag, dict(elem.attrib), elem.text,
                            lineno=lineno)
-    return nodefactory(elem.tag,
-                       dict(elem.attrib),
-                       nodes=[node_from_elem(ch, nodefactory)
-                              for ch in children], lineno=lineno)
+    if striptag(elem.tag) in lazy:
+        nodes = (node_from_elem(ch, nodefactory, lazy) for ch in children)
+    else:
+        nodes = [node_from_elem(ch, nodefactory, lazy) for ch in children]
+    return nodefactory(elem.tag, dict(elem.attrib), nodes=nodes, lineno=lineno)
 
 
 # taken from https://gist.github.com/651801, which comes for the effbot

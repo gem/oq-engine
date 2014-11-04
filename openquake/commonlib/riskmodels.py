@@ -23,10 +23,13 @@ Reading risk models for risk calculators
 import logging
 import collections
 
+import numpy
+
 from openquake.commonlib.node import read_nodes, context
 from openquake.commonlib import InvalidFile
-from openquake.risklib import scientific, workflows
+from openquake.risklib import scientific
 from openquake.commonlib.oqvalidation import vulnerability_files
+from openquake.commonlib.general import AccumDict
 from openquake.commonlib.nrml import nodefactory
 
 # loss types (in the risk models) and cost types (in the exposure)
@@ -90,7 +93,8 @@ def get_vulnerability_functions(fname):
     imts = set()
     taxonomies = set()
     vf_dict = {}  # imt, taxonomy -> vulnerability function
-    for vset in read_nodes(fname, filter_vset, nodefactory['vulnerabilityModel']):
+    for vset in read_nodes(fname, filter_vset,
+                           nodefactory['vulnerabilityModel']):
         imt_str, imls, min_iml, max_iml, imlUnit = ~vset.IML
         if imt_str in imts:
             raise InvalidFile('Duplicated IMT %s: %s, line %d' %
@@ -148,22 +152,20 @@ def get_imtls_from_vulnerabilities(inputs):
 
 ############################ fragility ##################################
 
-class List(list):
+class FragilityFunctionList(list):
     """
-    A list of objects with common attributes
+    A list of fragility functions with common attributes
     """
     def __init__(self, elements, **attrs):
         list.__init__(self, elements)
         vars(self).update(attrs)
 
-
-class Dict(dict):
-    """
-    A dict where you can set common attributes
-    """
+    def __repr__(self):
+        kvs = ['%s=%s' % item for item in vars(self).iteritems()]
+        return '<FragilityFunctionList %s>' % ', '.join(kvs)
 
 
-def get_fragility_functions(fname):
+def get_fragility_functions(fname, continuous_fragility_discretization):
     """
     :param fname:
         path of the fragility file
@@ -176,76 +178,39 @@ def get_fragility_functions(fname):
     # ~fmodel.description is ignored
     limit_states = ~fmodel.limitStates
     tag = 'ffc' if fmodel['format'] == 'continuous' else 'ffd'
-    fragility_functions = Dict()  # taxonomy -> functions
+    fragility_functions = AccumDict()  # taxonomy -> functions
     for ffs in fmodel.getnodes('ffs'):
         nodamage = ffs.attrib.get('noDamageLimit')
         taxonomy = ~ffs.taxonomy
         imt_str, imls, min_iml, max_iml, imlUnit = ~ffs.IML
-        fragility_functions[taxonomy] = List([], imt=imt_str, imls=imls)
+        if continuous_fragility_discretization and not imls:
+            imls = numpy.linspace(min_iml, max_iml,
+                                  continuous_fragility_discretization + 1)
+        fragility_functions[taxonomy] = FragilityFunctionList(
+            [], imt=imt_str, imls=imls)
         lstates = []
         for ff in ffs.getnodes(tag):
-            lstates.append(ff['ls'])
+            ls = ff['ls']  # limit state
+            lstates.append(ls)
             if tag == 'ffc':
                 with context(fname, ff):
                     mean_stddev = ~ff.params
                 fragility_functions[taxonomy].append(
-                    scientific.FragilityFunctionContinuous(*mean_stddev))
+                    scientific.FragilityFunctionContinuous(ls, *mean_stddev))
             else:  # discrete
                 with context(fname, ff):
                     poes = ~ff.poEs
                 if nodamage is None:
                     fragility_functions[taxonomy].append(
                         scientific.FragilityFunctionDiscrete(
-                            imls, poes, imls[0]))
+                            ls, imls, poes, imls[0]))
                 else:
                     fragility_functions[taxonomy].append(
                         scientific.FragilityFunctionDiscrete(
-                            [nodamage] + imls, [0.0] + poes, nodamage))
+                            ls, [nodamage] + imls, [0.0] + poes, nodamage))
         if lstates != limit_states:
             raise InvalidFile("Expected limit states %s, got %s in %s" %
                              (limit_states, lstates, fname))
 
     fragility_functions.damage_states = ['no_damage'] + limit_states
     return fragility_functions
-
-
-def get_risk_model(oqparam):
-    """
-    Return a :class:`openquake.risklib.workflows.RiskModel` instance
-
-   :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    """
-    risk_models = {}
-    riskmodel = workflows.RiskModel(risk_models)
-
-    rit = getattr(oqparam, 'risk_investigation_time', None)
-    if rit:  # defined for event based calculations
-        oqparam.time_span = oqparam.tses = rit
-
-    if oqparam.calculation_mode == 'scenario_damage':
-        # scenario damage calculator
-        fragility_functions = get_fragility_functions(
-            oqparam.inputs['fragility'])
-        riskmodel.damage_states = fragility_functions.damage_states
-        for taxonomy, ffs in fragility_functions.iteritems():
-            risk_models[ffs.imt, taxonomy] = workflows.get_workflow(
-                oqparam, fragility_functions=dict(damage=ffs))
-    elif oqparam.calculation_mode.endswith('_bcr'):
-        # bcr calculators
-        vfs_orig = get_vfs(oqparam.inputs, retrofitted=False).items()
-        vfs_retro = get_vfs(oqparam.inputs, retrofitted=True).items()
-        for (imt_taxo, vfs), (imt_taxo_, vfs_retro) in zip(vf_orig, vf_retro):
-            assert imt_taxo == imt_taxo_  # same imt and taxonomy
-            risk_models[imt_taxo] = workflows.get_workflow(
-                oqparam,
-                vulnerability_functions_orig=vfs,
-                vulnerability_functions_retro=vfs_retro)
-    else:
-        # classical, event based and scenario calculators
-        oqparam.__dict__.setdefault('insured_losses', False)
-        for imt_taxo, vfs in get_vfs(oqparam.inputs).iteritems():
-            risk_models[imt_taxo] = workflows.get_workflow(
-                oqparam, vulnerability_functions=vfs)
-
-    return riskmodel

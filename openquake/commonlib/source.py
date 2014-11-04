@@ -27,11 +27,11 @@ from openquake.commonlib.nrml import nodefactory
 from openquake.commonlib.obsolete import NrmlHazardlibConverter
 
 
-class DuplicateID(Exception):
+class DuplicatedID(Exception):
     """Raised when two sources with the same ID are found in a source model"""
 
 
-class SourceCollector(object):
+class TrtModel(object):
     """
     A container for the following parameters:
 
@@ -97,12 +97,12 @@ class SourceCollector(object):
         return weight
 
     def __repr__(self):
-        return '<%s TRT=%s, %d source(s)>' % (self.__class__.__name__,
-                                              self.trt, len(self.sources))
+        return '<%s %s, %d source(s)>' % (self.__class__.__name__,
+                                          self.trt, len(self.sources))
 
     def __lt__(self, other):
         """
-        Make sure there is a precise ordering of SourceCollector objects.
+        Make sure there is a precise ordering of TrtModel objects.
         Objects with less sources are put first; in case the number
         of sources is the same, use lexicographic ordering on the trts
         """
@@ -112,10 +112,13 @@ class SourceCollector(object):
             return self.trt < other.trt
         return num_sources < other_sources
 
+    def __iter__(self):
+        return iter(self.sources)
+
 
 def parse_source_model(fname, converter, apply_uncertainties=lambda src: None):
     """
-    Parse a NRML source model and return an ordered list of SourceCollector
+    Parse a NRML source model and return an ordered list of TrtModel
     instances.
 
     :param str fname:
@@ -133,16 +136,16 @@ def parse_source_model(fname, converter, apply_uncertainties=lambda src: None):
     for src_node in src_nodes:
         src = converter.convert_node(src_node)
         if src.source_id in source_ids:
-            raise DuplicateID(
+            raise DuplicatedID(
                 'The source ID %s is duplicated!' % src.source_id)
         apply_uncertainties(src)
         trt = src.tectonic_region_type
         if trt not in source_stats_dict:
-            source_stats_dict[trt] = SourceCollector(trt)
+            source_stats_dict[trt] = TrtModel(trt)
         source_stats_dict[trt].update(src)
         source_ids.add(src.source_id)
 
-    # return ordered SourceCollectors
+    # return ordered TrtModels
     return sorted(source_stats_dict.itervalues())
 
 
@@ -621,8 +624,11 @@ class SourceConverter(RuptureConverter):
         """
         Convert the given node into a characteristic fault object.
 
-        :param node: a node with tag areaGeometry
-        :returns: a :class:`openquake.hazardlib.source.CharacteristicFaultSource` instance
+        :param node:
+            a node with tag areaGeometry
+        :returns:
+            a :class:`openquake.hazardlib.source.CharacteristicFaultSource`
+            instance
         """
         char = source.CharacteristicFaultSource(
             source_id=node['id'],
@@ -638,8 +644,11 @@ class SourceConverter(RuptureConverter):
         """
         Convert the given node into a non parametric source object.
 
-        :param node: a node with tag areaGeometry
-        :returns: a :class:`openquake.hazardlib.source.NonParametricSeismicSource` instance
+        :param node:
+            a node with tag areaGeometry
+        :returns:
+            a :class:`openquake.hazardlib.source.NonParametricSeismicSource`
+            instance
         """
         trt = node['tectonicRegion']
         rup_pmf_data = []
@@ -651,3 +660,11 @@ class SourceConverter(RuptureConverter):
         nps = source.NonParametricSeismicSource(
             node['id'], node['name'], trt, rup_pmf_data)
         return nps
+
+
+def parse_ses_ruptures(fname):
+    """
+    Convert a stochasticEventSetCollection file into a set of SES,
+    each one containing ruptures with a tag and a seed.
+    """
+    raise NotImplementedError('parse_ses_ruptures')
