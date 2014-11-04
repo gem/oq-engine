@@ -376,7 +376,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             width_of_mfd_bin=0.1,
             area_source_discretization=10,
         )
-        with self.assertRaises(s.DuplicateID):
+        with self.assertRaises(s.DuplicatedID):
             s.parse_source_model(
                 DUPLICATE_ID_SRC_MODEL, converter)
 

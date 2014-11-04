@@ -423,6 +423,13 @@ class PerformanceMonitor(object):
                 mem.append(rss)
         return mem
 
+    @property
+    def start_time(self):
+        """
+        Datetime instance recording when the monitoring started
+        """
+        return datetime.fromtimestamp(self._start_time)
+
     def __enter__(self):
         """Call .start"""
         if self._procs is None:
@@ -430,13 +437,10 @@ class PerformanceMonitor(object):
             self.pids = [pid]
             self.pid_str = str(pid)
             self._procs = [psutil.Process(pid)]
-        self._start_time = None  # seconds from the epoch
-        self.start_time = None  # datetime object
         self.duration = None  # seconds
         self.mem = None  # bytes
         self.exc = None  # exception
         self._start_time = time.time()
-        self.start_time = datetime.fromtimestamp(self._start_time)
         self.start_mem = self.measure_mem()
         return self
 

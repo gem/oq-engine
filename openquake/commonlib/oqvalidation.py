@@ -144,8 +144,10 @@ class OqParam(valid.ParamSet):
 
     def is_valid_geometry(self):
         """
-        Must specify one of sites, sites_csv, hazard_curves_csv, gmvs_csv,
-        region or exposure_file.
+        It is possible to infer the geometry only if exactly
+        one of sites, sites_csv, hazard_curves_csv, gmvs_csv,
+        region and exposure_file is set. You did set more than
+        one, or nothing.
         """
         if self.calculation_mode not in HAZARD_CALCULATORS:
             return True  # no check on the sites for risk
@@ -156,6 +158,8 @@ class OqParam(valid.ParamSet):
             gmvs_csv=self.inputs.get('gmvs', 0),
             region=getattr(self, 'region', 0),
             exposure=self.inputs.get('exposure', 0))
+        # NB: below we check that all the flags
+        # are mutually exclusive
         return sum(bool(v) for v in flags.values()) == 1
 
     def is_valid_poes(self):

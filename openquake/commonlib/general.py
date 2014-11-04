@@ -388,7 +388,18 @@ def import_all(module_or_package):
                         modname, exc.__class__.__name__, exc)
     return set(sys.modules) - already_imported
 
-
+# NB: this is a ugly hack; we are using the source code below in
+# the call `run_in_process(IMPORT_ALL.format(package))`, with the
+# goal of figuring out the dependencies of the given package. We want
+# to avoid a `from openquake.commonlib.general import import_all`,
+# otherwise the sys.modules would contain `openquake.commonlib`
+# and testing say that risklib is independent from commonlib would
+# be difficult (I tried removing `openquake.commonlib` from sys.modules
+# manually, but then one gets errors in the tests mocking modules).
+# the clean solution would be to move `import_all` in another module,
+# external to commonlib; however at the moment we do not have a place
+# where to put it; the plan is to introduce in the future a baselib
+# with the really basic functionality, but this has to be thought
 IMPORT_ALL = """\
 import os, sys, importlib, subprocess\n
 %s
