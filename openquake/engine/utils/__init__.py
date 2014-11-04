@@ -1,48 +1,25 @@
-"""This is needed for imports to work."""
+#  -*- coding: utf-8 -*-
+#  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+#  Copyright (c) 2012-2014, GEM Foundation
 
-import decimal
+#  OpenQuake is free software: you can redistribute it and/or modify it
+#  under the terms of the GNU Affero General Public License as published
+#  by the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+
+#  OpenQuake is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+
+#  You should have received a copy of the GNU Affero General Public License
+#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
 import os
-import importlib
-import collections
 
 
-class _Register(collections.OrderedDict):
-    def add(self, tag):
-        def dec(obj):
-            self[tag] = obj
-            return obj
-        return dec
-
-calculators = _Register()  # an ordered dictionary of calculator classes
-
-
-def round_float(value):
-    """
-    Takes a float and rounds it to a fixed number of decimal places.
-
-    This function makes uses of the built-in
-    :py:method:`decimal.Decimal.quantize` to limit the precision.
-
-    The 'round-half-even' algorithm is used for rounding.
-
-    This should give us what can be considered 'safe' float values for
-    geographical coordinates (to side-step precision and rounding errors).
-
-    :type value: float
-
-    :returns: the input value rounded to a hard-coded fixed number of decimal
-    places
-    """
-    float_decimal_places = 7
-    quantize_str = '0.' + '0' * float_decimal_places
-
-    return float(
-        decimal.Decimal(str(value)).quantize(
-            decimal.Decimal(quantize_str),
-            rounding=decimal.ROUND_HALF_EVEN))
-
-
+# this is used in celeryconfig.py
 def get_core_modules(pkg):
     """
     :param pkg: a Python package
@@ -57,29 +34,6 @@ def get_core_modules(pkg):
             if os.path.exists(os.path.join(fullname, 'core.py')):
                 modules.append('%s.%s.core' % (pkg.__name__, name))
     return sorted(modules)
-
-
-def get_available_calculators(pkg):
-    """
-    :param pkg: a package such as calculators.risk or calculators.hazard
-    :returns: an OrderedDict {calc_mode: calc_class} built by looking
-              at all the calculators in the package.
-    """
-    # import all the core modules and populate the calculators dictionary
-    for modname in get_core_modules(pkg):
-        importlib.import_module(modname)
-    return calculators
-
-
-def get_calculator_class(job_type, calc_mode):
-    """
-    :param str job_type: "hazard" or "risk"
-    :param str calc_mode: a calculator identifier
-    :returns: a Calculator class
-    """
-    assert job_type in ("hazard", "risk"), job_type
-    pkg = importlib.import_module('openquake.engine.calculators.%s' % job_type)
-    return get_available_calculators(pkg)[calc_mode]
 
 
 class FileWrapper(object):

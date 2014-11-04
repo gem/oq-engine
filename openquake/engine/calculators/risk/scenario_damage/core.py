@@ -22,13 +22,13 @@ Core functionality for the scenario_damage risk calculator.
 
 import numpy
 
-from openquake.commonlib.riskmodels import get_risk_model
+from openquake.commonlib.readinput import get_risk_model
 
 from openquake.engine.calculators.risk import (
     base, hazard_getters, writers, validation)
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.db import models
-from openquake.engine.utils import calculators
+from openquake.engine.calculators import calculators
 
 
 def scenario_damage(workflow, getter, outputdict, params, monitor):
@@ -50,7 +50,7 @@ def scenario_damage(workflow, getter, outputdict, params, monitor):
    :returns:
       A matrix of fractions and a taxonomy string
     """
-    [ffs] = workflow.vulnerability_functions
+    [ffs] = workflow.risk_functions
 
     # and no output containers
     assert len(outputdict) == 0, outputdict

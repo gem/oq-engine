@@ -23,7 +23,7 @@ from openquake.engine.calculators.risk import (
     hazard_getters, writers, validation)
 from openquake.engine.calculators.risk.classical_risk import core as classical
 
-from openquake.engine.utils import calculators
+from openquake.engine.calculators import calculators
 
 
 def classical_bcr(workflow, getter, outputdict, params, monitor):

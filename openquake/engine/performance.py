@@ -79,7 +79,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
             self.tracer = logs.tracing(operation)
 
         super(EnginePerformanceMonitor, self).__init__(
-            [self.pypid, self.pgpid])
+            operation, [self.pypid, self.pgpid])
 
     def copy(self, operation):
         """
