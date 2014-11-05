@@ -18,7 +18,6 @@
 
 """Common code for the hazard calculators."""
 
-import os
 import random
 import itertools
 import collections
@@ -340,7 +339,7 @@ class BaseHazardCalculator(base.Calculator):
             self.initialize_site_collection()
         with transaction.commit_on_success(using='job_init'):
             self.initialize_sources()
-
+        self.source_model_lt = logictree.SourceModelLogicTree.from_hc(self.hc)
         # The input weight is given by the number of ruptures generated
         # by the sources; for point sources however a corrective factor
         # given by the parameter `point_source_weight` is applied
@@ -433,7 +432,8 @@ class BaseHazardCalculator(base.Calculator):
         logs.LOG.progress("initializing sources")
         self.source_collector = collections.OrderedDict()
         for sm in readinput.get_source_models(self.hc):
-            # createan LtSourceModel for each distinct source model
+
+            # create an LtSourceModel for each distinct source model
             lt_model = models.LtSourceModel.objects.create(
                 hazard_calculation=self.job, sm_lt_path=sm.path,
                 ordinal=sm.ordinal, sm_name=sm.name, weight=sm.weight)
@@ -447,7 +447,7 @@ class BaseHazardCalculator(base.Calculator):
                     num_ruptures=mod.num_ruptures,
                     min_mag=mod.min_mag,
                     max_mag=mod.max_mag,
-                    gsims=sm.gsims_by_trt.get(mod.trt, [])).id
+                    gsims=mod.gsims).id
                 self.source_collector[trt_model_id] = mod
 
     @EnginePerformanceMonitor.monitor
