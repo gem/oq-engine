@@ -385,7 +385,7 @@ class LossMapWriter(object):
               identifier of the asset related to the loss curve.
             * define an attribute `value`, which is the value of the loss.
         """
-        raise NotImplementedError()
+        raise NotImplementedError('LossMapWriter.serialize')
 
 
 class LossMapXMLWriter(LossMapWriter):
@@ -794,6 +794,7 @@ class BCRMapXMLWriter(object):
             self._bcr_map.set("unit", str(self._unit))
 
         self._bcr_map.set("lossType", self._loss_type)
+
 
 class DmgDistPerAssetXMLWriter(object):
     """

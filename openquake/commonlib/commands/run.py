@@ -24,26 +24,32 @@ from openquake.commonlib.parallel import executor, PerformanceMonitor
 from openquake.commonlib.calculators import calculators
 
 
-def run(job_ini, concurrent_tasks=executor._max_workers, loglevel='INFO'):
+def run(job_ini, concurrent_tasks=executor._max_workers, loglevel='info'):
     """
     Run a calculation. Optionally, set the number of concurrent_tasks
     (0 to disable the parallelization).
     """
-    logging.basicConfig(level=getattr(logging, loglevel))
-    with open(job_ini) as f, PerformanceMonitor(job_ini) as monitor:
-        oqparam = readinput.get_oqparam(f)
-        oqparam.concurrent_tasks = concurrent_tasks
-        monitor.monitor_csv = os.path.join(
-            oqparam.export_dir, 'performance_csv')
+    logging.basicConfig(level=getattr(logging, loglevel.upper()))
+    oqparam = readinput.get_oqparam(job_ini.split(','))
+    oqparam.concurrent_tasks = concurrent_tasks
+    with PerformanceMonitor('total', monitor_csv=os.path.join(
+            oqparam.export_dir, 'performance_csv')) as monitor:
         calc = calculators(oqparam, monitor)
-        for item in calc.run().items():
-            logging.info('exported %s: %s', *item)
+        with monitor('pre_execute'):
+            calc.pre_execute()
+        with monitor('execute'):
+            result = calc.execute()
+        with monitor('post_execute'):
+            out = calc.post_execute(result)
+    for item in out.iteritems():
+        logging.info('exported %s: %s', *item)
     logging.info('Total time spent: %s s', monitor.duration)
     logging.info('Memory allocated: %s M', monitor.mem[0] / 1024. / 1024.)
 
 parser = sap.Parser(run)
-parser.arg('job_ini', 'calculation configuration file')
+parser.arg('job_ini', 'calculation configuration file '
+           '(or files, comma-separated)')
 parser.opt('concurrent_tasks', 'hint for the number of tasks to spawn',
            type=int)
 parser.opt('loglevel', 'logging level', choices=
-           'DEBUG INFO WARN ERROR CRITICAL'.split())
+           'debug info warn error critical'.split())

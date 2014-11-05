@@ -18,11 +18,13 @@
 
 import os
 import csv
+import logging
 import collections
 import ConfigParser
 from lxml import etree
 
 import numpy
+from shapely import wkt, geometry
 
 from openquake.hazardlib import geo, site, gsim, correlation, imt
 from openquake.risklib import workflows
@@ -34,7 +36,7 @@ from openquake.commonlib.oqvalidation import \
     fragility_files, vulnerability_files
 from openquake.commonlib.riskmodels import \
     get_fragility_functions, get_imtls_from_vulnerabilities, get_vfs
-from openquake.commonlib.general import group, AccumDict
+from openquake.commonlib.general import groupby, AccumDict
 from openquake.commonlib import source
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
 
@@ -66,12 +68,12 @@ def _collect_source_model_paths(smlt):
     return sorted(set(src_paths))
 
 
-def get_oqparam(source, calculators=None):
+def get_oqparam(job_ini, calculators=None):
     """
-    Parse a dictionary of parameters from an INI-style config file.
+    Parse a dictionary of parameters from one or more INI-style config file.
 
-    :param source:
-        File-like object containing the config parameters.
+    :param job_ini:
+        Configuration file or list of configuration files
     :returns:
         An :class:`openquake.commonlib.oqvalidation.OqParam` instance
         containing the validate and casted parameters/values parsed from
@@ -83,15 +85,14 @@ def get_oqparam(source, calculators=None):
         from openquake.commonlib.calculators import calculators
         OqParam.params['calculation_mode'].choices = tuple(calculators)
 
+    job_inis = [job_ini] if isinstance(job_ini, basestring) else job_ini
     cp = ConfigParser.ConfigParser()
-    cp.readfp(source)
+    cp.read(job_inis)
 
+    # Directory containing the config files we're parsing
     base_path = os.path.dirname(
-        os.path.join(os.path.abspath('.'), source.name))
+        os.path.join(os.path.abspath('.'), job_inis[0]))
     params = dict(base_path=base_path, inputs={})
-
-    # Directory containing the config file we're parsing.
-    base_path = os.path.dirname(os.path.abspath(source.name))
 
     for sect in cp.sections():
         for key, value in cp.items(sect):
@@ -103,7 +104,7 @@ def get_oqparam(source, calculators=None):
             else:
                 params[key] = value
 
-    # load source inputs (the paths are the source_model_logic_tree)
+    # load job_ini inputs (the paths are the job_ini_model_logic_tree)
     smlt = params['inputs'].get('source_model_logic_tree')
     if smlt:
         params['inputs']['source'] = [
@@ -246,7 +247,10 @@ def get_trt_models(oqparam, fname):
         oqparam.rupture_mesh_spacing,
         oqparam.width_of_mfd_bin,
         oqparam.area_source_discretization)
-    return source.parse_source_model(fname, converter)
+    for trt_model in source.parse_source_model(fname, converter):
+        for src in trt_model.sources:
+            trt_model.update_num_ruptures(src)
+        yield trt_model
 
 
 def get_imtls(oqparam):
@@ -345,11 +349,16 @@ def get_exposure_lazy(fname):
     [exposure] = nrml.read_lazy(fname, ['assets'])
     description = exposure.description
     conversions = exposure.conversions
-    inslimit = list(conversions.getnodes('insuranceLimit')) or \
-        LiteralNode('insuranceLimit')
-    deductible = list(conversions.getnodes('deductible')) or \
-        LiteralNode('deductible')
+    try:
+        inslimit = conversions.insuranceLimit
+    except NameError:
+        inslimit = LiteralNode('insuranceLimit')
+    try:
+        deductible = conversions.deductible
+    except NameError:
+        deductible = LiteralNode('deductible')
     return Exposure(
+        exposure['id'], exposure['category'],
         ~description, [ct.attrib for ct in conversions.costTypes],
         ~inslimit, ~deductible, [], set()), exposure.assets
 
@@ -366,9 +375,12 @@ def get_exposure(oqparam):
     :returns:
         an :class:`Exposure` instance
     """
-    relevant_cost_types = set(vulnerability_files(oqparam.inputs))
+    out_of_region = 0
+    region = wkt.loads(oqparam.region_constraint)
     fname = oqparam.inputs['exposure']
     exposure, assets_node = get_exposure_lazy(fname)
+    relevant_cost_types = set(vulnerability_files(oqparam.inputs)) - \
+        set(['occupants'])
     asset_refs = set()
     time_event = getattr(oqparam, 'time_event', None)
     for asset in assets_node:
@@ -384,6 +396,9 @@ def get_exposure(oqparam):
             taxonomy = asset['taxonomy']
             number = asset['number']
             location = asset.location['lon'], asset.location['lat']
+            if not geometry.Point(*location).within(region):
+                out_of_region += 1
+                continue
         with context(fname, asset.costs):
             for cost in asset.costs:
                 cost_type = cost['type']
@@ -392,8 +407,13 @@ def get_exposure(oqparam):
                 values[cost_type] = cost['value']
                 deductibles[cost_type] = cost.attrib.get('deductible')
                 insurance_limits[cost_type] = cost.attrib.get('insuranceLimit')
+            if exposure.category == 'population':
+                values['fatalities'] = number
             # check we are not missing a cost type
-            assert set(values) == relevant_cost_types
+            missing = relevant_cost_types - set(values)
+            if missing:
+                raise RuntimeError(
+                    'Missing cost types: %s' % ', '.join(missing))
 
         if time_event:
             for occupancy in asset.occupancies:
@@ -407,11 +427,14 @@ def get_exposure(oqparam):
             insurance_limits, retrofitting_values)
         exposure.assets.append(ass)
         exposure.taxonomies.add(taxonomy)
+    logging.info('Read %d assets within the region_constraint and discarded '
+                 '%d assets outside the region', len(exposure.assets),
+                 out_of_region)
     return exposure
 
 
 Exposure = collections.namedtuple(
-    'Exposure', ['description', 'cost_types',
+    'Exposure', ['id', 'category', 'description', 'cost_types',
                  'insurance_limit_is_absolute',
                  'deductible_is_absolute', 'assets', 'taxonomies'])
 
@@ -439,7 +462,7 @@ def get_sitecol_assets(oqparam, exposure):
         two sequences of the same length: the site collection and an
         array with the assets per each site, collected by taxonomy
     """
-    assets_by_loc = group(exposure.assets, key=lambda a: a.location)
+    assets_by_loc = groupby(exposure.assets, key=lambda a: a.location)
     lons, lats = zip(*sorted(assets_by_loc))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
     sitecol = get_site_collection(oqparam, mesh)

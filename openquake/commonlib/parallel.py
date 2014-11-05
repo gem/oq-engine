@@ -219,6 +219,7 @@ class TaskManager(object):
             res = safely_call(self.oqtask, args)
         else:
             res = self.executor.submit(safely_call, self.oqtask, args)
+        self.sent += len(Pickled(args))
         self.results.append(res)
 
     def aggregate_result_set(self, agg, acc):
@@ -245,8 +246,7 @@ class TaskManager(object):
         :param acc: the initial value of the accumulator
         :returns: the final value of the accumulator
         """
-        if self.sent // ONE_MB:
-            logging.info('Sent %dM of data', self.sent // ONE_MB)
+        logging.info('Sent %dM of data', self.sent // ONE_MB)
         log_percent = log_percent_gen(
             self.name, len(self.results), self.progress)
         log_percent.next()
@@ -263,8 +263,7 @@ class TaskManager(object):
         else:
             agg_result = self.aggregate_result_set(agg_and_percent, acc)
 
-        if self.received // ONE_MB:
-            logging.info('Received %dM of data', self.received // ONE_MB)
+        logging.info('Received %dM of data', self.received // ONE_MB)
         self.results = []
         return agg_result
 
@@ -458,9 +457,9 @@ class PerformanceMonitor(object):
         memory_mb = str(self.mem[0] / 1024. / 1024.)
         self.write([self.operation, self.pid_str, time_sec, memory_mb])
 
-    def copy(self, operation):
+    def __call__(self, operation):
         """
         Return a copy of the monitor usable for a different operation
         in the same task.
         """
-        return self.__class__(operation, self.pids, self.monitor_csv)
+        return self.__class__(operation, monitor_csv=self.monitor_csv)

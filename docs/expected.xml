@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <gmfCollection
+    gsimTreePath=""
+    sourceModelTreePath=""
+    >
+        <gmfSet
+        stochasticEventSetId="1"
+        >
+            <gmf
+            IMT="PGA"
+            ruptureId="tag0"
+            >
+                <node gmv="0.523902938815" lat="0.0" lon="0.0"/>
+                <node gmv="0.31904892258" lat="0.1" lon="0.0"/>
+                <node gmv="0.0951001981624" lat="0.2" lon="0.0"/>
+            </gmf>
+            <gmf
+            IMT="PGA"
+            ruptureId="tag1"
+            >
+                <node gmv="0.45342235633" lat="0.0" lon="0.0"/>
+                <node gmv="0.117035397324" lat="0.1" lon="0.0"/>
+                <node gmv="0.109463267597" lat="0.2" lon="0.0"/>
+            </gmf>
+            <gmf
+            IMT="PGA"
+            ruptureId="tag2"
+            >
+                <node gmv="0.411420098409" lat="0.0" lon="0.0"/>
+                <node gmv="0.166689039419" lat="0.1" lon="0.0"/>
+                <node gmv="0.169261698123" lat="0.2" lon="0.0"/>
+            </gmf>
+            <gmf
+            IMT="PGA"
+            ruptureId="tag3"
+            >
+                <node gmv="0.435278116842" lat="0.0" lon="0.0"/>
+                <node gmv="0.122594049271" lat="0.1" lon="0.0"/>
+                <node gmv="0.106723392123" lat="0.2" lon="0.0"/>
+            </gmf>
+            <gmf
+            IMT="PGA"
+            ruptureId="tag4"
+            >
+                <node gmv="0.669912096578" lat="0.0" lon="0.0"/>
+                <node gmv="0.193273887474" lat="0.1" lon="0.0"/>
+                <node gmv="0.162641149702" lat="0.2" lon="0.0"/>
+            </gmf>
+        </gmfSet>
+    </gmfCollection>
+</nrml>

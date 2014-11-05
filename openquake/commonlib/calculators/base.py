@@ -17,14 +17,12 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import abc
-import itertools
 import logging
 import operator
 
 import numpy
 
 from openquake.hazardlib.geo import geodetic
-from openquake.risklib.workflows import RiskInput
 
 from openquake.commonlib import readinput, general
 from openquake.commonlib.parallel import apply_reduce
@@ -96,8 +94,7 @@ class BaseRiskCalculator(BaseCalculator):
     def build_riskinputs(self, hazards_by_imt):
         """
         :param hazards_by_imt:
-            a dictionary IMT -> numpy array of length equal to the
-            number of hazard sites associated to the given assets
+            a dictionary IMT -> array of length equal to the  number of sites
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
@@ -111,17 +108,10 @@ class BaseRiskCalculator(BaseCalculator):
         for block in blocks:
             idx = numpy.array([idx for idx, _weight in block])
             for imt, hazards_by_site in hazards_by_imt.iteritems():
-                taxonomies = self.riskmodel.get_taxonomies(imt)
-                hazard_per_asset_group = []
-                for hazard, assets in itertools.izip(
-                        hazards_by_site[idx], self.assets_by_site[idx]):
-                    group = general.group(
-                        (a for a in assets if a.taxonomy in taxonomies),
-                        get_taxonomy)
-                    if group:
-                        hazard_per_asset_group.append((hazard, group))
-                if hazard_per_asset_group:
-                    riskinputs.append(RiskInput(imt, hazard_per_asset_group))
+                ri = self.riskmodel.build_input(
+                    imt, hazards_by_site[idx], self.assets_by_site[idx])
+                if ri.weight > 0:
+                    riskinputs.append(ri)
         logging.info('Built %d risk inputs', len(riskinputs))
         return sorted(riskinputs, key=get_imt)
 
@@ -184,8 +174,7 @@ class BaseRiskCalculator(BaseCalculator):
         Requires a `.core_func` to be defined with signature
         (riskinputs, riskmodel, monitor).
         """
-        monitor = self.monitor.copy(self.core_func.__name__)
-        monitor._procs = None
+        monitor = self.monitor(self.core_func.__name__)
         return apply_reduce(
             self.core_func.__func__,
             (self.riskinputs, self.riskmodel, monitor),

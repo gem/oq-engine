@@ -29,10 +29,10 @@ from openquake.commonlib.general import AccumDict
 from openquake.commonlib.readinput import \
     get_gsim, get_rupture, get_correl_model, get_imts
 
+
 MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
 # in this way even on 32 bit machines Python will not have to convert
-# the generated seen into a long integer
-
+# the generated seed into a long integer
 
 ############### utilities for the classical calculator ################
 
