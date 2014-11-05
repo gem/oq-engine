@@ -52,8 +52,16 @@ AggLossCurve = collections.namedtuple(
 def scenario_risk(riskinputs, riskmodel, monitor):
     """
     Core function for a scenario computation.
+
+    :param riskinputs:
+        a list of :class:`openquake.risklib.workflows.RiskInput` objects
+    :param riskmodel:
+        a :class:`openquake.risklib.workflows.RiskModel` instance
+    :param monitor:
+        :class:`openquake.commonlib.parallel.PerformanceMonitor` instance
     :returns:
-        a dictionary ("agg"|"ins", loss_type) -> losses
+        a dictionary (key_type, loss_type) -> losses where the `key_type` can
+        be "agg" (for the aggregate losses) or "ins" (for the insured losses).
     """
     logging.info('Process %d, considering %d risk input(s) of weight %d',
                  os.getpid(), len(riskinputs),
@@ -77,6 +85,10 @@ class ScenarioRiskCalculator(base.BaseRiskCalculator):
     core_func = scenario_risk
 
     def pre_execute(self):
+        """
+        Compute the GMFs, build the epsilons, the riskinputs, and a dictionary
+        with the unit of measure, used in the export phase.
+        """
         super(ScenarioRiskCalculator, self).pre_execute()
 
         logging.info('Computing the GMFs')
@@ -95,6 +107,9 @@ class ScenarioRiskCalculator(base.BaseRiskCalculator):
         self.unit['fatalities'] = 'people'
 
     def post_execute(self, result):
+        """
+        Export the aggregate loss curves in CSV format.
+        """
         aggcurves = general.AccumDict()  # key_type -> AggLossCurves
         for (key_type, loss_type), values in result.iteritems():
             mean, std = scientific.mean_std(values)

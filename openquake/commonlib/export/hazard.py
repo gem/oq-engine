@@ -80,8 +80,8 @@ Location = collections.namedtuple('Location', 'x y')
 
 
 class GroundMotionFieldNode(object):
-    # the signature is not (gmv, x, y) because the XML writer expect a location
-    # object
+    # the signature is not (gmv, x, y) because the XML writer expects
+    # a location object
     def __init__(self, gmv, loc):
         self.gmv = gmv
         self.location = loc

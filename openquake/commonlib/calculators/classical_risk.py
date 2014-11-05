@@ -25,7 +25,14 @@ from openquake.commonlib.calculators import calculators, base
 
 def classical_risk(riskinputs, riskmodel, monitor):
     """
-    Compute and returns the average losses for each asset
+    Compute and return the average losses for each asset.
+
+    :param riskinputs:
+        a list of :class:`openquake.risklib.workflows.RiskInput` objects
+    :param riskmodel:
+        a :class:`openquake.risklib.workflows.RiskModel` instance
+    :param monitor:
+        :class:`openquake.commonlib.parallel.PerformanceMonitor` instance
     """
     with monitor:
         result = general.AccumDict()
@@ -49,6 +56,7 @@ class ClassicalRiskCalculator(base.BaseRiskCalculator):
 
         :param hcurves_by_imt: a dictionary imt -> poes
         :param indices: an array of indices
+        :returns:  a dictionary imt -> [(iml, poes), ...]
         """
         h = {}
         imtls = self.oqparam.intensity_measure_types_and_levels
@@ -58,6 +66,9 @@ class ClassicalRiskCalculator(base.BaseRiskCalculator):
         return h
 
     def pre_execute(self):
+        """
+        Associate the assets to the sites and build the riskinputs.
+        """
         super(ClassicalRiskCalculator, self).pre_execute()
         sites, hcurves_by_imt = readinput.get_sitecol_hcurves(self.oqparam)
         logging.info('Associating assets -> sites')
@@ -70,6 +81,9 @@ class ClassicalRiskCalculator(base.BaseRiskCalculator):
         self.riskinputs = self.build_riskinputs(hcurves_by_imt)
 
     def post_execute(self, result):
+        """
+        Export the results. TO BE IMPLEMENTED.
+        """
         for k, v in result.iteritems():
             print k, v
         return {}

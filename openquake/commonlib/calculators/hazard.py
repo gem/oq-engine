@@ -26,7 +26,7 @@ from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.commonlib import readinput, parallel
 from openquake.commonlib.general import AccumDict
 
-from openquake.commonlib.calculators import calculators, base
+from openquake.commonlib.calculators import calculators, base, calc
 from openquake.commonlib.export import export
 
 
@@ -77,7 +77,7 @@ class DisaggregationCalculator(base.BaseCalculator):
 
 def calc_gmfs(tag_seed_pairs, computer, monitor):
     """
-    Computer several GMFs in parallel, one for each tag and seed.
+    Computes several GMFs in parallel, one for each tag and seed.
 
     :param tag_seed_pairs:
         list of pairs (rupture tag, rupture seed)
@@ -85,6 +85,8 @@ def calc_gmfs(tag_seed_pairs, computer, monitor):
         :class:`openquake.hazardlib.calc.gmf.GMFComputer` instance
     :param monitor:
         :class:`openquake.commonlib.parallel.PerformanceMonitor` instance
+    :returns:
+        a dictionary tag -> {imt: gmf}
     """
     with monitor:
         res = AccumDict()  # tag -> {imt: gmvs}
@@ -100,7 +102,7 @@ class ScenarioCalculator(base.BaseCalculator):
     """
     core_func = calc_gmfs
 
-    def init_tags(self):
+    def _init_tags(self):
         self.imts = readinput.get_imts(self.oqparam)
         gsim = readinput.get_gsim(self.oqparam)
         trunc_level = getattr(self.oqparam, 'truncation_level', None)
@@ -112,18 +114,24 @@ class ScenarioCalculator(base.BaseCalculator):
         self.computer = GmfComputer(rupture, self.sitecol, self.imts, gsim,
                                     trunc_level, correl_model)
         rnd = random.Random(getattr(self.oqparam, 'random_seed', 42))
-        self.tag_seed_pairs = [(tag, rnd.randint(0, 2 ** 31 - 1))
+        self.tag_seed_pairs = [(tag, rnd.randint(calc.MAX_INT))
                                for tag in self.tags]
 
     def pre_execute(self):
+        """
+        Read the site collection and initialize GmfComputer, tags and seeds
+        """
         logging.info('Reading the site collection')
         if 'exposure' in self.oqparam.inputs:
             self.sitecol, _assets = readinput.get_sitecol_assets(self.oqparam)
         else:
             self.sitecol = readinput.get_site_collection(self.oqparam)
-        self.init_tags()
+        self._init_tags()
 
     def execute(self):
+        """
+        Compute the GMFs in parallel
+        """
         logging.info('Computing the GMFs')
         return parallel.apply_reduce(
             self.core_func.__func__,
@@ -131,6 +139,10 @@ class ScenarioCalculator(base.BaseCalculator):
             operator.add, concurrent_tasks=self.oqparam.concurrent_tasks)
 
     def post_execute(self, result):
+        """
+        :param result: a dictionary imt -> gmfs
+        :returns: a dictionary {'gmf_xml': <gmf.xml filename>}
+        """
         logging.info('Exporting the result')
         gmfs_by_imt = {  # build N x R matrices
             imt: numpy.array(
