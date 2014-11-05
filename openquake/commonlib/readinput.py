@@ -31,12 +31,12 @@ from openquake.risklib import workflows
 
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.node import read_nodes, LiteralNode, context
-from openquake.commonlib import nrml, valid
+from openquake.commonlib import nrml, valid, logictree, InvalidFile
 from openquake.commonlib.oqvalidation import \
     fragility_files, vulnerability_files
 from openquake.commonlib.riskmodels import \
     get_fragility_functions, get_imtls_from_vulnerabilities, get_vfs
-from openquake.commonlib.general import groupby, AccumDict
+from openquake.commonlib.general import groupby, AccumDict, distinct
 from openquake.commonlib import source
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
 
@@ -47,6 +47,9 @@ class DuplicatedPoint(Exception):
     """
     Raised when reading a CSV file with duplicated (lon, lat) pairs
     """
+
+SourceModel = collections.namedtuple(
+    'SourceModel', 'name weight path trt_models gsims_by_trt ordinal')
 
 
 def _collect_source_model_paths(smlt):
@@ -233,24 +236,62 @@ def get_rupture(oqparam):
     return conv.convert_node(rup_node)
 
 
-def get_trt_models(oqparam, fname):
+def get_source_models(oqparam):
     """
     Read all the source models specified in oqparam and yield
-    :class:`openquake.commonlib.source.TrtModel` instances
-    ordered by tectonic region type.
+    :class:`openquake.commonlib.readinput.SourceModel` tuples.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
+    source_model_lt = logictree.SourceModelLogicTree.from_hc(oqparam)
+    sm_paths = distinct(source_model_lt)
     converter = source.SourceConverter(
         oqparam.investigation_time,
         oqparam.rupture_mesh_spacing,
         oqparam.width_of_mfd_bin,
         oqparam.area_source_discretization)
-    for trt_model in source.parse_source_model(fname, converter):
-        for src in trt_model.sources:
-            trt_model.update_num_ruptures(src)
-        yield trt_model
+
+    for i, (sm, weight, smpath) in enumerate(sm_paths):
+        fname = os.path.join(oqparam.base_path, sm)
+        apply_unc = source_model_lt.make_apply_uncertainties(smpath)
+        try:
+            trt_models = source.parse_source_model(
+                fname, converter, apply_unc)
+        except ValueError as e:
+            if str(e) in ('Surface does not conform with Aki & '
+                          'Richards convention',
+                          'Edges points are not in the right order'):
+                raise InvalidFile('''\
+%s: %s. Probably you are using an obsolete model.
+In that case you can fix the file with the command
+python -m openquake.engine.tools.correct_complex_sources %s
+''' % (fname, e, fname))
+            else:
+                raise
+        trts = [mod.trt for mod in trt_models]
+        source_model_lt.tectonic_region_types.update(trts)
+
+        if oqparam.inputs.get('gsim_logic_tree'):  # check TRTs
+            gsim_file = os.path.join(
+                oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
+            gsim_lt = logictree.GsimLogicTree(
+                gsim_file, 'applyToTectonicRegionType', trts)
+            for trt in trts:
+                if not trt in gsim_lt.values:
+                    raise ValueError(
+                        "Found in %r a tectonic region type %r inconsistent "
+                        "with the ones in %r" % (sm, trt, fname))
+
+            gsims_by_trt = gsim_lt.values
+        else:
+            gsims_by_trt = {}
+        yield SourceModel(sm, weight, smpath, trt_models, gsims_by_trt, i)
+
+    #for trt_model in source.parse_source_model(fname, converter):
+    #    for src in trt_model.sources:
+    #        trt_model.update_num_ruptures(src)
+    #    yield trt_model
 
 
 def get_imtls(oqparam):
