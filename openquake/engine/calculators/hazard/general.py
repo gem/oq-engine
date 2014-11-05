@@ -34,11 +34,8 @@ from openquake.hazardlib.imt import from_string
 from openquake.engine.db import models
 from django.db import transaction
 
-from openquake.commonlib import risk_parsers
-from openquake.commonlib import InvalidFile
-
-from openquake.commonlib import logictree, source
-from openquake.commonlib.general import split_in_blocks, distinct
+from openquake.commonlib import logictree, source, readinput, risk_parsers
+from openquake.commonlib.general import split_in_blocks
 from openquake.commonlib.readinput import (
     get_site_collection, get_site_model, get_imtls)
 
@@ -430,65 +427,28 @@ class BaseHazardCalculator(base.Calculator):
     @EnginePerformanceMonitor.monitor
     def initialize_sources(self):
         """
-        Parse source models and validate source logic trees. It also
-        filters the sources far away and apply uncertainties to the
-        relevant ones. Notice that sources are automatically split.
-
-        :returns:
-            a list with the number of sources for each source model
+        Parse source models, apply uncertainties and validate source logic
+        trees. Save in the database LtSourceModel and TrtModel objects.
         """
         logs.LOG.progress("initializing sources")
-        self.source_model_lt = logictree.SourceModelLogicTree.from_hc(self.hc)
-        sm_paths = distinct(self.source_model_lt)
-        nrml_to_hazardlib = source.SourceConverter(
-            self.hc.investigation_time,
-            self.hc.rupture_mesh_spacing,
-            self.hc.width_of_mfd_bin,
-            self.hc.area_source_discretization,
-        )
-        # define an ordered dictionary trt_model_id -> TrtModel
         self.source_collector = collections.OrderedDict()
-        for i, (sm, weight, smpath) in enumerate(sm_paths):
-            fname = os.path.join(self.hc.base_path, sm)
-            apply_unc = self.source_model_lt.make_apply_uncertainties(smpath)
-            try:
-                source_collectors = source.parse_source_model(
-                    fname, nrml_to_hazardlib, apply_unc)
-            except ValueError as e:
-                if str(e) in ('Surface does not conform with Aki & '
-                              'Richards convention',
-                              'Edges points are not in the right order'):
-                    raise InvalidFile('''\
-%s: %s. Probably you are using an obsolete model.
-In that case you can fix the file with the command
-python -m openquake.engine.tools.correct_complex_sources %s
-''' % (fname, e, fname))
-                else:
-                    raise
-            trts = [sc.trt for sc in source_collectors]
-
-            self.source_model_lt.tectonic_region_types.update(trts)
+        for sm in readinput.get_source_models(self.hc):
+            # createan LtSourceModel for each distinct source model
             lt_model = models.LtSourceModel.objects.create(
-                hazard_calculation=self.job, sm_lt_path=smpath, ordinal=i,
-                sm_name=sm, weight=weight)
-            if self.hc.inputs.get('gsim_logic_tree'):  # check TRTs
-                gsims_by_trt = lt_model.make_gsim_lt(trts).values
-            else:
-                gsims_by_trt = {}
+                hazard_calculation=self.job, sm_lt_path=sm.path,
+                ordinal=sm.ordinal, sm_name=sm.name, weight=sm.weight)
 
             # save TrtModels for each tectonic region type
-            for sc in source_collectors:
-                # NB: the source_collectors are ordered by number of sources
-                # and lexicographically, so the models are in the right order
+            for mod in sm.trt_models:
                 trt_model_id = models.TrtModel.objects.create(
                     lt_model=lt_model,
-                    tectonic_region_type=sc.trt,
-                    num_sources=len(sc.sources),
-                    num_ruptures=sc.num_ruptures,
-                    min_mag=sc.min_mag,
-                    max_mag=sc.max_mag,
-                    gsims=gsims_by_trt.get(sc.trt, [])).id
-                self.source_collector[trt_model_id] = sc
+                    tectonic_region_type=mod.trt,
+                    num_sources=len(mod.sources),
+                    num_ruptures=mod.num_ruptures,
+                    min_mag=mod.min_mag,
+                    max_mag=mod.max_mag,
+                    gsims=sm.gsims_by_trt.get(mod.trt, [])).id
+                self.source_collector[trt_model_id] = mod
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_model(self):
