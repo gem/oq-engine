@@ -45,16 +45,19 @@ class TrtModel(object):
         the minimum magnitude among the given sources
     :param max_mag:
         the maximum magnitude among the given sources
+    :param gsims:
+        the GSIMs associated to tectonic region type
     """
     POINT_SOURCE_WEIGHT = 1 / 40.
 
     def __init__(self, trt, sources=None, num_ruptures=0,
-                 min_mag=None, max_mag=None):
+                 min_mag=None, max_mag=None, gsims=None):
         self.trt = trt
         self.sources = sources or []
         self.num_ruptures = num_ruptures
         self.min_mag = min_mag
         self.max_mag = max_mag
+        self.gsims = gsims or []
         for src in self.sources:
             self.update(src)
 
