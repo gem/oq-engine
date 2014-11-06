@@ -108,53 +108,50 @@ class HtmlTable(object):
 
 
 PERFORMANCE = '''
-select operation,
--- tot_duration/(case when counts > 256 then 256 else counts end) as duration,
-tot_duration, pymemory, counts from uiapi.performance_view
-where oq_job_id=%s order by tot_duration desc limit 15
+SELECT operation, tot_duration, pymemory, counts FROM uiapi.performance_view
+WHERE oq_job_id=%s ORDER BY tot_duration DESC LIMIT 15
 '''
 
 CALCULATION = '''
-select distinct job_type, calculation_id, description
-from uiapi.performance_view where oq_job_id=%s
+SELECT distinct job_type, calculation_id, description
+FROM uiapi.performance_view WHERE oq_job_id=%s
 '''
 
 NUM_REALIZATIONS = '''
-select b.id, count(*) from hzrdr.lt_realization as a,
-hzrdr.lt_source_model as b
-where a.lt_model_id=b.id
-and hazard_calculation_id=%s group by b.id
+SELECT b.id, count(*) FROM hzrdr.lt_realization AS a,
+hzrdr.lt_source_model AS b
+WHERE a.lt_model_id=b.id AND hazard_calculation_id=%s group by b.id
 '''
 
 NUM_SITES = '''
-select count(a.id) from hzrdi.hazard_site
-where hazard_calculation_id=%s
+SELECT count(a.id) FROM hzrdi.hazard_site
+WHERE hazard_calculation_id=%s
 '''
 
 NUM_MODELS = '''
-select count(id) from hzrdr.lt_source_model where hazard_calculation_id=%s
+SELECT count(id) FROM hzrdr.lt_source_model WHERE hazard_calculation_id=%s
 '''
 
 MODEL_INFO = '''
-select a.id, lt_model_id, tectonic_region_type, num_sources, num_ruptures,
-min_mag, max_mag, case when num_ruptures > 0 then array_length(gsims, 1) else 0
-end as num_gsim, array_to_string(gsims, ',') as gsims
-from hzrdr.trt_model as a, hzrdr.lt_source_model as b
-where a.lt_model_id=b.id and b.hazard_calculation_id=%s
-order by a.id, num_sources
+SELECT a.id, lt_model_id, tectonic_region_type, num_sources, num_ruptures,
+min_mag, max_mag, CASE WHEN num_ruptures > 0 THEN array_length(gsims, 1) ELSE 0
+END as num_gsim, array_to_string(gsims, ',') AS gsims
+FROM hzrdr.trt_model AS a, hzrdr.lt_source_model AS b
+WHERE a.lt_model_id=b.id AND b.hazard_calculation_id=%s
+ORDER BY a.id, num_sources
 '''
 
 MODEL_SUMMARY = '''
-select x.*, y.num_rlzs from (
-select b.id, b.sm_name, array_to_string(sm_lt_path, ',') as sm_lt_path,
+SELECT x.*, y.num_rlzs FROM (
+SELECT b.id, b.sm_name, array_to_string(sm_lt_path, ',') AS sm_lt_path,
        count(tectonic_region_type) as num_trts,
-       sum(num_sources) as num_sources, sum(num_ruptures) as num_ruptures
-from hzrdr.trt_model as a, hzrdr.lt_source_model as b
-where a.lt_model_id=b.id and b.hazard_calculation_id=%s group by b.id) as x,
-(select lt_model_id, count(*) as num_rlzs from hzrdr.lt_realization
-group by lt_model_id) as y
-where x.id=y.lt_model_id
-order by num_rlzs * num_ruptures desc
+       sum(num_sources) as num_sources, sum(num_ruptures) AS num_ruptures
+FROM hzrdr.trt_model AS a, hzrdr.lt_source_model AS b
+WHERE a.lt_model_id=b.id and b.hazard_calculation_id=%s group by b.id) AS x,
+(SELECT lt_model_id, count(*) AS num_rlzs FROM hzrdr.lt_realization
+GROUP by lt_model_id) as y
+WHERE x.id=y.lt_model_id
+ORDER BY num_rlzs * num_ruptures DESC
 '''
 
 JOB_STATS = '''
@@ -180,37 +177,37 @@ SELECT name, value FROM uiapi.job_param where job_id=%s ORDER BY name;
 '''
 
 GMF_STATS = '''
-with gmf_stats as (
-select count(*) as nrows_per_rlz, avg(array_length(gmvs, 1)) as gmvs_len,
-       stddev(array_length(gmvs, 1)) as stddev
-       from hzrdr.gmf_data as a, hzrdr.gmf as b, uiapi.output as c
-       where a.gmf_id=b.id and b.output_id=c.id
-       and c.id=(select max(x.id) from uiapi.output as x, hzrdr.gmf as y
-                 where x.id=y.output_id and oq_job_id=%s))
-select nrows_per_rlz, gmvs_len, stddev from gmf_stats;
+WITH gmf_stats AS (
+SELECT count(*) AS nrows_per_rlz, avg(array_length(gmvs, 1)) AS gmvs_len,
+       stddev(array_length(gmvs, 1)) AS stddev
+       FROM hzrdr.gmf_data AS a, hzrdr.gmf AS b, uiapi.output AS c
+       WHERE a.gmf_id=b.id AND b.output_id=c.id
+       AND c.id=(select max(x.id) FROM uiapi.output AS x, hzrdr.gmf AS y
+                 WHERE x.id=y.output_id AND oq_job_id=%s))
+SELECT nrows_per_rlz, gmvs_len, stddev FROM gmf_stats;
 '''
 
 SES_STATS = '''
-select c.lt_model_id, e.sm_name, count(*) as n_ruptures,
-(select count(*) from hzrdr.lt_realization
-where lt_model_id=c.lt_model_id) as n_realizations
-from hzrdr.ses_rupture as a,
-hzrdr.probabilistic_rupture as b, hzrdr.ses_collection as c, uiapi.output as d,
-hzrdr.lt_source_model as e
-where a.rupture_id=b.id and b.ses_collection_id=c.id and c.output_id=d.id
-and c.lt_model_id=e.id
-and oq_job_id=%s and output_type='ses'
-group by c.lt_model_id, e.sm_name
-order by c.lt_model_id;
+SELECT c.lt_model_id, e.sm_name, count(*) AS n_ruptures,
+(SELECT count(*) FROM hzrdr.lt_realization
+WHERE lt_model_id=c.lt_model_id) AS n_realizations
+FROM hzrdr.ses_rupture AS a,
+hzrdr.probabilistic_rupture AS b, hzrdr.ses_collection AS c, uiapi.output AS d,
+hzrdr.lt_source_model AS e
+WHERE a.rupture_id=b.id AND b.ses_collection_id=c.id AND c.output_id=d.id
+AND c.lt_model_id=e.id
+AND oq_job_id=%s AND output_type='ses'
+GROUP BY c.lt_model_id, e.sm_name
+ORDER BY c.lt_model_id;
 '''
 
 ALL_JOBS = '''
-select s.oq_job_id, 'hazard ' || coalesce(o.hazard_calculation_id::text, ''),
-o.user_name from uiapi.job_stats as s
-inner join uiapi.oq_job as o
-on o.id=s.oq_job_id
-where stop_time::date=%s or stop_time is null
-order by stop_time
+SELECT s.oq_job_id, 'hazard ' || COALESCE(o.hazard_calculation_id::text, ''),
+o.user_name from uiapi.job_stats AS s
+INNER JOIN uiapi.oq_job AS o
+ON o.id=s.oq_job_id
+WHERE stop_time::date=%s OR stop_time IS NULL
+ORDER BY stop_time
 '''
 
 PAGE_TEMPLATE = '''\
@@ -254,8 +251,7 @@ def make_tabs(tag_ids, tag_contents):
 def make_report(conn, isodate='today'):
     """
     Build a HTML report with the computations performed at the given isodate.
-    Return the name of the report, which
-    is saved in the current directory.
+    Return the name of the report, which is saved in the current directory.
     """
     if isodate == 'today':
         isodate = datetime.date.today().isoformat()
@@ -300,10 +296,12 @@ def make_report(conn, isodate='today'):
             fetcher.query(PERFORMANCE, job_id))
         page += slowest
 
-        ##data = fetcher.query(GMF_STATS, job_id)
-        ##if data[1][0]:  # nrows nonzero
-        ##    gmf_rows = '<h3>GMF stats</h3>' + html(data)
-        ##    page += gmf_rows
+        # the following is slow, so uncomment it only when you really
+        # want to compute the GMF statistics
+        # data = fetcher.query(GMF_STATS, job_id)
+        # if data[1][0]:  # nrows nonzero
+        #     gmf_rows = '<h3>GMF stats</h3>' + html(data)
+        #    page += gmf_rows
 
         data = fetcher.query(MODEL_INFO, job_id)
         if data[1:]:
