@@ -205,9 +205,9 @@ class VulnerabilityNode(LiteralNode):
     Literal Node class used to validate discrete vulnerability functions
     """
     validators = valid.parameters(
-        vulnerabilitySetID=valid.name,
-        vulnerabilityFunctionID=valid.name_with_dashes,
-        assetCategory=str,
+        vulnerabilitySetID=str,  # any ASCII string is fine
+        vulnerabilityFunctionID=str,  # any ASCII string is fine
+        assetCategory=str,  # any ASCII string is fine
         # the assetCategory here has nothing to do with the category
         # in the exposure model and it is not used by the engine
         lossCategory=valid.utf8,  # a description field
