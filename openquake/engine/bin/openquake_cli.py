@@ -94,7 +94,7 @@ def set_up_arg_parser():
     general_grp.add_argument(
         '--make-html-report', '-r',
         help='Build an HTML report of the computation at the given date',
-        required=False, metavar='YYYY-MM-DD', default=None)
+        required=False, nargs="?", metavar='YYYY-MM-DD', const='today')
 
     db_grp = parser.add_argument_group('Database')
     db_grp.add_argument(

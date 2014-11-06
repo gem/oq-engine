@@ -7,7 +7,7 @@ def html(header_rows):
     """
     Convert a list of tuples describing a table into a HTML string
     """
-    return HtmlTable(map(fmt, row) for row in header_rows).render(None)
+    return HtmlTable([map(fmt, row) for row in header_rows]).render(None)
 
 
 def truncate(text, n=600):
@@ -218,20 +218,21 @@ order by start_time
 '''
 
 
-def make_report(conn, isodate=None):
+def make_report(conn, isodate='today'):
     """
-    Build a HTML report with the computations performed at the given isodate
-    (if not given, today date is used).  Return the name of the report, which
+    Build a HTML report with the computations performed at the given isodate.
+    Return the name of the report, which
     is saved in the current directory.
     """
-    today = isodate or datetime.date.today().isoformat()
+    if isodate == 'today':
+        isodate = datetime.date.today().isoformat()
     curs = conn.cursor()
     fetcher = Fetcher(curs)
     page = 'Report last updated: %s' % datetime.datetime.now()
     for query in (FINISHED_JOBS, ):
-        jobs = fetcher.query(query, today)[1:]
+        jobs = fetcher.query(query, isodate)[1:]
         page = '<h2>%d job(s) finished before midnight of %s</h2>' % (
-            len(jobs), today)
+            len(jobs), isodate)
         for job_id, prev_job, user in jobs:
             stats = fetcher.query(JOB_STATS, job_id)[1:]
             if not stats:
@@ -285,7 +286,7 @@ def make_report(conn, isodate=None):
             data = fetcher.query(JOB_PARAM, job_id)
             page += html((n, truncate(v)) for n, v in data)
 
-        fname = 'jobs-%s.html' % today
+        fname = 'jobs-%s.html' % isodate
         with open(fname, 'w') as f:
             f.write(page)
         return fname
