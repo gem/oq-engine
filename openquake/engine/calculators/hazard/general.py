@@ -34,7 +34,6 @@ from openquake.engine.db import models
 from django.db import transaction
 
 from openquake.commonlib import logictree, source, readinput, risk_parsers
-from openquake.commonlib.general import split_in_blocks
 from openquake.commonlib.readinput import (
     get_site_collection, get_site_model, get_imtls)
 
@@ -94,58 +93,12 @@ def filter_and_split_sources(job_id, sources, sitecol):
     Filter and split a list of hazardlib sources.
 
     :param int job_id: ID of the current job
-    :param list sources: the original sources
+    :param sources: the original sources
     :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
     """
     hc = models.oqparam(job_id)
-    discr = hc.area_source_discretization
-    maxdist = hc.maximum_distance
-    srcs = []
-    for src in sources:
-        sites = src.filter_sites_by_distance_to_source(maxdist, sitecol)
-        if sites is not None:
-            for ss in source.split_source(src, discr):
-                srcs.append(ss)
-    return srcs
-
-
-class AllSources(object):
-    """
-    A container for sources of different tectonic region types.
-    The `split` method yields pairs (trt_model, block-of-sources).
-    """
-    def __init__(self):
-        self.sources = []
-        self.weight = {}
-        self.trt_model = {}
-
-    def append(self, src, weight, trt_model):
-        """
-        Collect a source, together with its weight and trt_model.
-        """
-        self.sources.append(src)
-        self.weight[src] = weight
-        self.trt_model[src] = trt_model
-
-    def split(self, hint):
-        """
-        Split the sources in a number of blocks close to the given `hint`.
-
-        :param int hint: hint for the number of blocks
-        """
-        if self.sources:
-            for block in split_in_blocks(
-                    self.sources, hint,
-                    self.weight.__getitem__,
-                    self.trt_model.__getitem__):
-                trt_model = self.trt_model[block[0]]
-                yield trt_model, block
-
-    def get_total_weight(self):
-        """
-        Return the total weight of the sources
-        """
-        return sum(self.weight.itervalues())
+    return source.filter_and_split_sources(
+        sources, sitecol, hc.maximum_distance, hc.area_source_discretization)
 
 
 class SiteModelParams(object):
@@ -211,46 +164,16 @@ class BaseHazardCalculator(base.Calculator):
         Filter and split the sources in parallel.
         Return the list of processed sources.
         """
-        self.all_sources = AllSources()
+        self.all_sources = readinput.get_effective_sources(
+            self.hc, self.site_collection)
+        import pdb; pdb.set_trace()
         self.job.is_running = True
         self.job.save()
-        num_models = len(self.source_collector)
-        num_sites = len(self.site_collection)
-        for i, trt_model_id in enumerate(sorted(self.source_collector), 1):
-            trt_model = models.TrtModel.objects.get(pk=trt_model_id)
-            sc = self.source_collector[trt_model_id]
-            # NB: the filtering of the sources by site is slow, so it is
-            # done in parallel
-            sm_lt_path = tuple(trt_model.lt_model.sm_lt_path)
-            logs.LOG.progress(
-                '[%d of %d] Filtering/splitting %d source(s) for '
-                'sm_lt_path=%s, TRT=%s, model=%s', i, num_models,
-                len(sc.sources), sm_lt_path, trt_model.tectonic_region_type,
-                trt_model.lt_model.sm_name)
-            if len(sc.sources) * num_sites > LOTS_OF_SOURCES_SITES:
-                # filter in parallel
-                sc.sources = tasks.apply_reduce(
-                    filter_and_split_sources,
-                    (self.job.id, sc.sources, self.site_collection),
-                    list.__add__, [])
-            else:  # few sources and sites
-                # filter sequentially on a single core
-                sc.sources = filter_and_split_sources.task_func(
-                    self.job.id, sc.sources, self.site_collection)
-            sc.sources.sort(key=attrgetter('source_id'))
-            if not sc.sources:
-                logs.LOG.warn(
-                    'Could not find sources close to the sites in %s '
-                    'sm_lt_path=%s, maximum_distance=%s km',
-                    trt_model.lt_model.sm_name, sm_lt_path,
-                    self.hc.maximum_distance)
-                continue
-            for src in sc.sources:
-                self.all_sources.append(
-                    src, sc.update_num_ruptures(src), trt_model)
-            trt_model.num_sources = len(sc.sources)
-            trt_model.num_ruptures = sc.num_ruptures
-            trt_model.save()
+        #num_models = len(self.source_collector)
+        #num_sites = len(self.site_collection)
+        #for i, trt_model_id in enumerate(sorted(self.source_collector), 1):
+        #    trt_model.num_ruptures = sc.num_ruptures
+        #    trt_model.save()
         return self.all_sources.get_total_weight()
 
     def task_arg_gen(self):
