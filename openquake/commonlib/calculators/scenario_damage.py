@@ -51,6 +51,16 @@ class Site(object):
 def scenario_damage(riskinputs, riskmodel, monitor):
     """
     Core function for a damage computation.
+
+    :param riskinputs:
+        a list of :class:`openquake.risklib.workflows.RiskInput` objects
+    :param riskmodel:
+        a :class:`openquake.risklib.workflows.RiskModel` instance
+    :param monitor:
+        :class:`openquake.commonlib.parallel.PerformanceMonitor` instance
+    :returns:
+        a dictionary {('asset', asset): <mean stddev>,
+                      ('taxonomy', asset.taxonomy): <damage array>}
     """
     logging.info('Process %d, considering %d risk input(s) of weight %d',
                  os.getpid(), len(riskinputs),
@@ -74,6 +84,9 @@ class ScenarioDamageCalculator(base.BaseRiskCalculator):
     core_func = scenario_damage
 
     def pre_execute(self):
+        """
+        Compute the GMFs and build the riskinputs.
+        """
         super(ScenarioDamageCalculator, self).pre_execute()
 
         logging.info('Computing the GMFs')
@@ -84,11 +97,13 @@ class ScenarioDamageCalculator(base.BaseRiskCalculator):
 
     def post_execute(self, result):
         """
-        Process the result dictionary and export three files:
-
-        - dmg_per_asset.xml
-        - dmg_per_taxonomy.xml
-        - dmg_total.xml
+        :param result: a dictionary {
+             ('asset', asset): <mean stddev>,
+             ('taxonomy', asset.taxonomy): <damage array>}
+        :returns: a dictionary {
+             'dmg_per_asset': /path/to/dmg_per_asset.xml,
+             'dmg_per_taxonomy': /path/to/dmg_per_taxonomy.xml,
+             'dmg_total': /path/to/dmg_total.xml}
         """
         dmg_states = [DmgState(s, i)
                       for i, s in enumerate(self.riskmodel.damage_states)]

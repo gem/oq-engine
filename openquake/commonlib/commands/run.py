@@ -30,7 +30,7 @@ def run(job_ini, concurrent_tasks=executor._max_workers, loglevel='info'):
     (0 to disable the parallelization).
     """
     logging.basicConfig(level=getattr(logging, loglevel.upper()))
-    oqparam = readinput.get_oqparam(job_ini)
+    oqparam = readinput.get_oqparam(job_ini.split(','))
     oqparam.concurrent_tasks = concurrent_tasks
     with PerformanceMonitor('total', monitor_csv=os.path.join(
             oqparam.export_dir, 'performance_csv')) as monitor:
@@ -47,7 +47,8 @@ def run(job_ini, concurrent_tasks=executor._max_workers, loglevel='info'):
     logging.info('Memory allocated: %s M', monitor.mem[0] / 1024. / 1024.)
 
 parser = sap.Parser(run)
-parser.arg('job_ini', 'calculation configuration file')
+parser.arg('job_ini', 'calculation configuration file '
+           '(or files, comma-separated)')
 parser.opt('concurrent_tasks', 'hint for the number of tasks to spawn',
            type=int)
 parser.opt('loglevel', 'logging level', choices=
