@@ -233,6 +233,9 @@ $("#tabs").tabs();
 
 
 def make_tabs(tag_ids, tag_contents):
+    """
+    Return a HTML string containing all the tabs we want to display
+    """
     templ = '''
 <div id="tabs">
 <ul>
