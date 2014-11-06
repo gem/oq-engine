@@ -43,6 +43,7 @@ from openquake.engine.export import risk as risk_export
 from openquake.engine.tools.import_gmf_scenario import import_gmf_scenario
 from openquake.engine.tools.import_hazard_curves import import_hazard_curves
 from openquake.engine.tools import save_hazards, load_hazards
+from openquake.engine.tools.make_html_report import make_report
 
 HAZARD_OUTPUT_ARG = "--hazard-output-id"
 HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
@@ -91,14 +92,20 @@ def set_up_arg_parser():
         metavar='CONFIG_FILE'
     )
     general_grp.add_argument(
+        '--make-html-report', '-r',
+        help='Build an HTML report of the computation at the given date',
+        metavar='YYYY-MM-DD|today')
+
+    db_grp = parser.add_argument_group('Database')
+    db_grp.add_argument(
         '--upgrade-db', action='store_true',
         help='Upgrade the openquake database',
     )
-    general_grp.add_argument(
+    db_grp.add_argument(
         '--version-db', action='store_true',
         help='Show the current version of the openquake database',
     )
-    general_grp.add_argument(
+    db_grp.add_argument(
         '--what-if-I-upgrade', action='store_true',
         help='Show what will happen to the openquake database if you upgrade',
     )
@@ -411,6 +418,11 @@ def main():
 
     if args.no_distribute:
         os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'
+
+    if args.make_html_report:
+        conn = models.getcursor('admin').connection
+        print 'Written', make_report(conn, args.make_html_report)
+        sys.exit(0)
 
     if args.upgrade_db:
         logging.basicConfig(level=logging.INFO)
