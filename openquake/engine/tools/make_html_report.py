@@ -204,22 +204,13 @@ group by c.lt_model_id, e.sm_name
 order by c.lt_model_id;
 '''
 
-FINISHED_JOBS = '''
-select s.oq_job_id, coalesce(o.hazard_calculation_id::text, 'hazard'),
+ALL_JOBS = '''
+select s.oq_job_id, 'hazard ' || coalesce(o.hazard_calculation_id::text, ''),
 o.user_name from uiapi.job_stats as s
 inner join uiapi.oq_job as o
 on o.id=s.oq_job_id
-where stop_time::date=%s
+where stop_time::date=%s or stop_time is null
 order by stop_time
-'''
-
-UNFINISHED_JOBS = '''
-select s.oq_job_id, coalesce(o.hazard_calculation_id::text, 'hazard'),
-o.user_name from uiapi.job_stats as s
-inner join uiapi.oq_job as o
-on o.id=s.oq_job_id
-where start_time::date=%s and stop_time is null
-order by start_time
 '''
 
 PAGE_TEMPLATE = '''\
@@ -269,69 +260,69 @@ def make_report(conn, isodate='today'):
     fetcher = Fetcher(curs)
     tag_ids = []
     tag_contents = []
-    for query in (FINISHED_JOBS, ):
-        jobs = fetcher.query(query, isodate)[1:]
-        page = '<h2>%d job(s) finished before midnight of %s</h2>' % (
-            len(jobs), isodate)
-        for job_id, prev_job, user in jobs:
-            page = ''
-            tag_ids.append(job_id)
-            stats = fetcher.query(JOB_STATS, job_id)[1:]
-            if not stats:
-                continue
-            (description, job_id, stop_time, status, disk_space,
-             duration) = stats[0]
-            num_rlzs = fetcher.query(NUM_REALIZATIONS, (job_id,))[1:]
-            if num_rlzs:
-                source_models, rlzs = zip(*num_rlzs)
-                tot_rlzs = sum(rlzs)
-            else:
-                tot_rlzs = 0
 
-            data = fetcher.query(JOB_INFO, job_id)
-            if data[1:]:
-                info_rows = (
-                    '<h3>Job Info for calculation=%s, %s</h3>'
-                    '<h3>owner: %s, realizations: %d </h3>' % (
-                        job_id, description, user, tot_rlzs,
-                    )) + html(data)
+    jobs = fetcher.query(ALL_JOBS, isodate)[1:]
+    page = '<h2>%d job(s) finished before midnight of %s</h2>' % (
+        len(jobs), isodate)
+    for job_id, prev_job, user in jobs:
+        page = ''
+        tag_ids.append(job_id)
+        stats = fetcher.query(JOB_STATS, job_id)[1:]
+        if not stats:
+            continue
+        (description, job_id, stop_time, status, disk_space,
+         duration) = stats[0]
+        num_rlzs = fetcher.query(NUM_REALIZATIONS, (job_id,))[1:]
+        if num_rlzs:
+            source_models, rlzs = zip(*num_rlzs)
+            tot_rlzs = sum(rlzs)
+        else:
+            tot_rlzs = 0
+
+        data = fetcher.query(JOB_INFO, job_id)
+        if data[1:]:
+            info_rows = (
+                '<h3>Job Info for calculation=%s, %s</h3>'
+                '<h3>owner: %s, realizations: %d </h3>' % (
+                    job_id, description, user, tot_rlzs,
+                )) + html(data)
+            page += info_rows
+
+        job_stats = '<h3>Job Stats for job %d [%s, %s]</h3>' % (
+            job_id, user, prev_job) + html(
+            fetcher.query(JOB_STATS, job_id))
+        page += job_stats
+
+        slowest = '<h3>Slowest operations</h3>' + html(
+            fetcher.query(PERFORMANCE, job_id))
+        page += slowest
+
+        ##data = fetcher.query(GMF_STATS, job_id)
+        ##if data[1][0]:  # nrows nonzero
+        ##    gmf_rows = '<h3>GMF stats</h3>' + html(data)
+        ##    page += gmf_rows
+
+        data = fetcher.query(MODEL_INFO, job_id)
+        if data[1:]:
+            info_rows = '<h3>TRT Model Info</h3>' + html(data)
+            page += info_rows
+
+        if data[2:]:
+            dat = fetcher.query(MODEL_SUMMARY, job_id)
+            if dat[1:]:
+                num_models, = fetcher.query(NUM_MODELS, job_id)[1]
+                info_rows = ('<h3>Model Summary: %s model(s)</h3>' %
+                             num_models) + html(dat)
                 page += info_rows
 
-            job_stats = '<h3>Job Stats for job %d [%s, %s]</h3>' % (
-                job_id, user, prev_job) + html(
-                fetcher.query(JOB_STATS, job_id))
-            page += job_stats
+        page += '<h3>Job parameters</h3>'
+        data = fetcher.query(JOB_PARAM, job_id)
+        page += html((n, truncate(v)) for n, v in data)
+        tag_contents.append(page)
 
-            slowest = '<h3>Slowest operations</h3>' + html(
-                fetcher.query(PERFORMANCE, job_id))
-            page += slowest
-
-            ##data = fetcher.query(GMF_STATS, job_id)
-            ##if data[1][0]:  # nrows nonzero
-            ##    gmf_rows = '<h3>GMF stats</h3>' + html(data)
-            ##    page += gmf_rows
-
-            data = fetcher.query(MODEL_INFO, job_id)
-            if data[1:]:
-                info_rows = '<h3>TRT Model Info</h3>' + html(data)
-                page += info_rows
-
-            if data[2:]:
-                dat = fetcher.query(MODEL_SUMMARY, job_id)
-                if dat[1:]:
-                    num_models, = fetcher.query(NUM_MODELS, job_id)[1]
-                    info_rows = ('<h3>Model Summary: %s model(s)</h3>' %
-                                 num_models) + html(dat)
-                    page += info_rows
-
-            page += '<h3>Job parameters</h3>'
-            data = fetcher.query(JOB_PARAM, job_id)
-            page += html((n, truncate(v)) for n, v in data)
-            tag_contents.append(page)
-
-        page = make_tabs(tag_ids, tag_contents) + (
-            'Report last updated: %s' % datetime.datetime.now())
-        fname = 'jobs-%s.html' % isodate
-        with open(fname, 'w') as f:
-            f.write(PAGE_TEMPLATE % page)
-        return fname
+    page = make_tabs(tag_ids, tag_contents) + (
+        'Report last updated: %s' % datetime.datetime.now())
+    fname = 'jobs-%s.html' % isodate
+    with open(fname, 'w') as f:
+        f.write(PAGE_TEMPLATE % page)
+    return fname
