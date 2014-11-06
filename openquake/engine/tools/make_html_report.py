@@ -1,13 +1,17 @@
 import cgi
 import datetime
 import decimal
+import itertools
+
+tablecounter = itertools.count(0)
 
 
 def html(header_rows):
     """
     Convert a list of tuples describing a table into a HTML string
     """
-    return HtmlTable([map(fmt, row) for row in header_rows]).render(None)
+    name = 'table%d' % next(tablecounter)
+    return HtmlTable([map(fmt, row) for row in header_rows], name).render()
 
 
 def truncate(text, n=600):
@@ -61,13 +65,14 @@ class HtmlTable(object):
     tr.oddRow { }
     th { background-color: lightblue }
     """
-    name = "noname"
     maxrows = 5000
     border = "1"
     summary = ""
 
-    def __init__(self, header_plus_body, empty_table='Empty table'):
+    def __init__(self, header_plus_body, name='noname',
+                 empty_table='Empty table'):
         header, body = header_plus_body[0], header_plus_body[1:]
+        self.name = name
         self.empty_table = empty_table
         rows = []  # rows is a finite sequence of tuples
         for i, row in enumerate(body):
@@ -217,6 +222,40 @@ where start_time::date=%s and stop_time is null
 order by start_time
 '''
 
+PAGE_TEMPLATE = '''\
+<html>
+<head>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/themes/smoothness/jquery-ui.css" />
+<script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js"></script>
+<script>
+$(function() {
+$("#tabs").tabs();
+});
+</script>
+</head>
+<body>
+%s
+</body>
+</html>
+'''
+
+
+def make_tabs(tag_ids, tag_contents):
+    templ = '''
+<div id="tabs">
+<ul>
+%s
+</ul>
+%s
+</div>'''
+    lis = []
+    contents = []
+    for i, (tag_id, tag_content) in enumerate(zip(tag_ids, tag_contents), 1):
+        lis.append('<li><a href="#tabs-%d">%s</a></li>' % (i, tag_id))
+        contents.append('<div id="tabs-%d">%s</div>' % (i, tag_content))
+    return templ % ('\n'.join(lis), '\n'.join(contents))
+
 
 def make_report(conn, isodate='today'):
     """
@@ -228,12 +267,15 @@ def make_report(conn, isodate='today'):
         isodate = datetime.date.today().isoformat()
     curs = conn.cursor()
     fetcher = Fetcher(curs)
-    page = 'Report last updated: %s' % datetime.datetime.now()
+    tag_ids = []
+    tag_contents = []
     for query in (FINISHED_JOBS, ):
         jobs = fetcher.query(query, isodate)[1:]
         page = '<h2>%d job(s) finished before midnight of %s</h2>' % (
             len(jobs), isodate)
         for job_id, prev_job, user in jobs:
+            page = ''
+            tag_ids.append(job_id)
             stats = fetcher.query(JOB_STATS, job_id)[1:]
             if not stats:
                 continue
@@ -285,8 +327,11 @@ def make_report(conn, isodate='today'):
             page += '<h3>Job parameters</h3>'
             data = fetcher.query(JOB_PARAM, job_id)
             page += html((n, truncate(v)) for n, v in data)
+            tag_contents.append(page)
 
+        page = make_tabs(tag_ids, tag_contents) + (
+            'Report last updated: %s' % datetime.datetime.now())
         fname = 'jobs-%s.html' % isodate
         with open(fname, 'w') as f:
-            f.write(page)
+            f.write(PAGE_TEMPLATE % page)
         return fname
