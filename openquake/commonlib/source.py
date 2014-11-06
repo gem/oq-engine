@@ -17,12 +17,13 @@ import math
 import copy
 import logging
 import operator
+import collections
 from itertools import izip
 
 from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.commonlib.node import read_nodes, context, striptag
-from openquake.commonlib import valid, general
+from openquake.commonlib import valid
 from openquake.commonlib.nrml import nodefactory
 from openquake.commonlib.parallel import apply_reduce
 
@@ -32,6 +33,9 @@ from openquake.commonlib.obsolete import NrmlHazardlibConverter
 # the following is arbitrary, it is used to decide when to parallelize
 # the filtering (MS)
 LOTS_OF_SOURCES_SITES = 1E5
+
+
+Source = collections.namedtuple("Source", "source weight trt_id seed")
 
 
 class DuplicatedID(Exception):
@@ -54,17 +58,21 @@ class TrtModel(object):
         the maximum magnitude among the given sources
     :param gsims:
         the GSIMs associated to tectonic region type
+    :param id:
+        an optional numeric ID (default None) useful to associate
+        the model to a database object
     """
     POINT_SOURCE_WEIGHT = 1 / 40.
 
     def __init__(self, trt, sources=None, num_ruptures=0,
-                 min_mag=None, max_mag=None, gsims=None):
+                 min_mag=None, max_mag=None, gsims=None, id=None):
         self.trt = trt
         self.sources = sources or []
         self.num_ruptures = num_ruptures
         self.min_mag = min_mag
         self.max_mag = max_mag
         self.gsims = gsims or []
+        self.id = id
         for src in self.sources:
             self.update(src)
 
@@ -683,45 +691,6 @@ def parse_ses_ruptures(fname):
     raise NotImplementedError('parse_ses_ruptures')
 
 
-class AllSources(object):
-    """
-    A container for sources of different tectonic region types.
-    The `split` method yields pairs (trt_model, block-of-sources).
-    """
-    def __init__(self):
-        self.sources = []
-        self.weight = {}
-        self.trt_model = {}
-
-    def append(self, src, weight, trt_model):
-        """
-        Collect a source, together with its weight and trt_model.
-        """
-        self.sources.append(src)
-        self.weight[src] = weight
-        self.trt_model[src] = trt_model
-
-    def split(self, hint):
-        """
-        Split the sources in a number of blocks close to the given `hint`.
-
-        :param int hint: hint for the number of blocks
-        """
-        if self.sources:
-            for block in general.split_in_blocks(
-                    self.sources, hint,
-                    self.weight.__getitem__,
-                    self.trt_model.__getitem__):
-                trt_model = self.trt_model[block[0]]
-                yield trt_model, block
-
-    def get_total_weight(self):
-        """
-        Return the total weight of the sources
-        """
-        return sum(self.weight.itervalues())
-
-
 def _filter_sources(sources, sitecol, maxdist):
     # called by filter_sources
     srcs = []
@@ -755,7 +724,7 @@ def split_source_models(source_models, area_source_discretization):
     Split the sources in the source models.
     Return the list of processed sources, as an AllSources instance.
     """
-    all_sources = AllSources()
+    all_sources = []
     num_models = len(source_models)
     for i, sm in enumerate(sorted(source_models), 1):
         sm_lt_path = tuple(sm.path)
@@ -767,6 +736,9 @@ def split_source_models(source_models, area_source_discretization):
                 sm.name)
             for src in trt_model:
                 for ss in split_source(src, area_source_discretization):
-                    all_sources.append(
-                        ss, trt_model.update_num_ruptures(src), trt_model)
+                    s = Source(ss, trt_model.update_num_ruptures(src),
+                               trt_model.id, seed=None)
+                    # the seed will be set later on and only for the
+                    # event based calculator
+                    all_sources.append(s)
     return all_sources

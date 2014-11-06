@@ -19,7 +19,6 @@
 import os
 import csv
 import logging
-import operator
 import collections
 import ConfigParser
 from lxml import etree
