@@ -15,16 +15,23 @@
 
 import math
 import copy
+import logging
+import operator
 from itertools import izip
 
 from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.commonlib.node import read_nodes, context, striptag
-from openquake.commonlib import valid
+from openquake.commonlib import valid, general
 from openquake.commonlib.nrml import nodefactory
+from openquake.commonlib.parallel import apply_reduce
 
 # this must stay here for the nrml_converters: don't remove it!
 from openquake.commonlib.obsolete import NrmlHazardlibConverter
+
+# the following is arbitrary, it is used to decide when to parallelize
+# the filtering (MS)
+LOTS_OF_SOURCES_SITES = 1E5
 
 
 class DuplicatedID(Exception):
@@ -117,6 +124,9 @@ class TrtModel(object):
 
     def __iter__(self):
         return iter(self.sources)
+
+    def __len__(self):
+        return len(self.sources)
 
 
 def parse_source_model(fname, converter, apply_uncertainties=lambda src: None):
@@ -671,3 +681,92 @@ def parse_ses_ruptures(fname):
     each one containing ruptures with a tag and a seed.
     """
     raise NotImplementedError('parse_ses_ruptures')
+
+
+class AllSources(object):
+    """
+    A container for sources of different tectonic region types.
+    The `split` method yields pairs (trt_model, block-of-sources).
+    """
+    def __init__(self):
+        self.sources = []
+        self.weight = {}
+        self.trt_model = {}
+
+    def append(self, src, weight, trt_model):
+        """
+        Collect a source, together with its weight and trt_model.
+        """
+        self.sources.append(src)
+        self.weight[src] = weight
+        self.trt_model[src] = trt_model
+
+    def split(self, hint):
+        """
+        Split the sources in a number of blocks close to the given `hint`.
+
+        :param int hint: hint for the number of blocks
+        """
+        if self.sources:
+            for block in general.split_in_blocks(
+                    self.sources, hint,
+                    self.weight.__getitem__,
+                    self.trt_model.__getitem__):
+                trt_model = self.trt_model[block[0]]
+                yield trt_model, block
+
+    def get_total_weight(self):
+        """
+        Return the total weight of the sources
+        """
+        return sum(self.weight.itervalues())
+
+
+def _filter_sources(sources, sitecol, maxdist):
+    # called by filter_sources
+    srcs = []
+    for src in sources:
+        sites = src.filter_sites_by_distance_to_source(maxdist, sitecol)
+        if sites is not None:
+            srcs.append(src)
+    return srcs
+
+
+def filter_sources(sources, sitecol, maxdist):
+    """
+    Filter a list of hazardlib sources accoding to the maximum distance.
+
+    :param sources: the original sources
+    :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
+    :param maxdist: maximum distance
+    """
+    if len(sources) * len(sitecol) > LOTS_OF_SOURCES_SITES:
+        # filter in parallel on all available cores
+        sources = apply_reduce(
+            _filter_sources, (sources, sitecol, maxdist), list.__add__, [])
+    else:
+        # few sources and sites, filter sequentially on a single core
+        sources = _filter_sources(sources, sitecol, maxdist)
+    return sorted(sources, key=operator.attrgetter('source_id'))
+
+
+def split_source_models(source_models, area_source_discretization):
+    """
+    Split the sources in the source models.
+    Return the list of processed sources, as an AllSources instance.
+    """
+    all_sources = AllSources()
+    num_models = len(source_models)
+    for i, sm in enumerate(sorted(source_models), 1):
+        sm_lt_path = tuple(sm.path)
+        for trt_model in sm.trt_models:
+            logging.info(
+                '[%d of %d] Processing %d source(s) for '
+                'sm_lt_path=%s, TRT=%s, model=%s', i, num_models,
+                len(trt_model), sm_lt_path, trt_model.trt,
+                sm.name)
+            for src in trt_model:
+                for ss in split_source(src, area_source_discretization):
+                    all_sources.append(
+                        ss, trt_model.update_num_ruptures(src), trt_model)
+    return all_sources
