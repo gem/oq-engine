@@ -90,22 +90,19 @@ def get_vulnerability_functions(fname):
     :returns:
         a dictionary imt, taxonomy -> vulnerability function
     """
+    # NB: the vulnerabilitySetID is not and ID!
+    # it is right to have several vulnerability sets with the same ID
+    # the IMTs must be unique globally, not in each set
+    imts = set()
     taxonomies = set()
     vf_dict = {}  # imt, taxonomy -> vulnerability function
-    imts = {}  # vset_id -> imts
     for vset in read_nodes(fname, filter_vset,
                            nodefactory['vulnerabilityModel']):
-        vset_id = vset['vulnerabilitySetID']
-        if vset_id in imts:
-            raise InvalidFile('Duplicated vulnerabilitySetID %s: %s, line %d' %
-                              (vset_id, fname, vset.lineno))
-        else:
-            imts[vset_id] = set()
         imt_str, imls, min_iml, max_iml, imlUnit = ~vset.IML
-        if imt_str in imts[vset_id]:
+        if imt_str in imts:
             raise InvalidFile('Duplicated IMT %s: %s, line %d' %
                               (imt_str, fname, vset.IML.lineno))
-        imts[vset_id].add(imt_str)
+        imts.add(imt_str)
         for vfun in vset.getnodes('discreteVulnerability'):
             taxonomy = vfun['vulnerabilityFunctionID']
             if taxonomy in taxonomies:
