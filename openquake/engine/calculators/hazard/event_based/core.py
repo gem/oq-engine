@@ -97,8 +97,7 @@ def gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
 
 
 @tasks.oqtask
-def compute_ruptures(
-        job_id, sitecol, src_seeds, trt_model_id):
+def compute_ruptures(job_id, sources, sitecol):
     """
     Celery task for the stochastic event set calculator.
 
@@ -115,10 +114,11 @@ def compute_ruptures(
         ID of the currently running job.
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param src_seeds:
-        List of pairs (source, seed)
+    :param sources:
+        List of commonlib.source.Source tuples
     """
     # NB: all realizations in gsims correspond to the same source model
+    trt_model_id = sources[0].trt_model_id
     trt_model = models.TrtModel.objects.get(pk=trt_model_id)
     ses_coll = models.SESCollection.objects.get(trt_model=trt_model)
 
@@ -137,12 +137,12 @@ def compute_ruptures(
 
     # Compute and save stochastic event sets
     rnd = random.Random()
-    for src, seed in src_seeds:
+    for src in sources:
         t0 = time.time()
-        rnd.seed(seed)
+        rnd.seed(src.seed)
 
         with filter_sites_mon:  # filtering sources
-            s_sites = src.filter_sites_by_distance_to_source(
+            s_sites = src.source.filter_sites_by_distance_to_source(
                 hc.maximum_distance, sitecol)
             if s_sites is None:
                 continue
@@ -151,7 +151,7 @@ def compute_ruptures(
         # for each occurring rupture for each ses in the ses collection
         ses_num_occ = collections.defaultdict(list)
         with generate_ruptures_mon:  # generating ruptures for the given source
-            for rup_no, rup in enumerate(src.iter_ruptures(), 1):
+            for rup_no, rup in enumerate(src.source.iter_ruptures(), 1):
                 rup.rup_no = rup_no
                 for ses_idx in all_ses:
                     numpy.random.seed(rnd.randint(0, models.MAX_SINT_32))
@@ -184,7 +184,7 @@ def compute_ruptures(
                         for occ_no in range(1, num_occurrences + 1):
                             rup_seed = rnd.randint(0, models.MAX_SINT_32)
                             models.SESRupture.create(
-                                prob_rup, ses_idx, src.source_id,
+                                prob_rup, ses_idx, src.source.source_id,
                                 rup.rup_no, occ_no, rup_seed)
 
         if ses_num_occ:
@@ -199,8 +199,8 @@ def compute_ruptures(
         # save SourceInfo
         source_inserter.add(
             models.SourceInfo(trt_model_id=trt_model_id,
-                              source_id=src.source_id,
-                              source_class=src.__class__.__name__,
+                              source_id=src.source.source_id,
+                              source_class=src.source.__class__.__name__,
                               num_sites=len(s_sites),
                               num_ruptures=rup_no,
                               occ_ruptures=occ_ruptures,
@@ -378,22 +378,6 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
     """
     core_calc_task = compute_ruptures
 
-    def task_arg_gen(self, _block_size=None):
-        """
-        Loop through realizations and sources to generate a sequence of
-        task arg tuples. Each tuple of args applies to a single task.
-        Yielded results are tuples of the form job_id, sources, ses, seeds
-        (seeds will be used to seed numpy for temporal occurence sampling).
-        """
-        hc = self.hc
-        rnd = random.Random()
-        rnd.seed(hc.random_seed)
-        for job_id, sitecol, block, trt_model_id in \
-                super(EventBasedHazardCalculator, self).task_arg_gen():
-            ss = [(src, rnd.randint(0, models.MAX_SINT_32))
-                  for src in block]  # source, seed pairs
-            yield job_id, sitecol, ss, trt_model_id
-
     def task_completed(self, task_result):
         """
         :param task_result:
@@ -487,6 +471,14 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         `execute` phase.)
         """
         weights = super(EventBasedHazardCalculator, self).pre_execute()
+        hc = self.hc
+        rnd = random.Random()
+        rnd.seed(hc.random_seed)
+        all_sources = []
+        for src in self.all_sources:
+            src.seed = rnd.randint(0, models.MAX_SINT_32)
+            all_sources.append(src)
+        self.all_sources = all_sources
         for i, trt_model in enumerate(models.TrtModel.objects.filter(
                 lt_model__hazard_calculation=self.job), 1):
             with transaction.commit_on_success(using='job_init'):
