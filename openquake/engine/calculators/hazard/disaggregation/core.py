@@ -323,8 +323,8 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                            for site in self.site_collection)
 
         oqm = tasks.OqTaskManager(compute_disagg, logs.LOG.progress)
-        for job_id, sitecol, srcs, trt_model_id in self.task_arg_gen():
-
+        for job_id, srcs, sitecol in self.all_sources:
+            trt_model_id = srcs[0].trt_model_id
             lt_model = models.TrtModel.objects.get(pk=trt_model_id).lt_model
             trt_num = dict((trt, i) for i, trt in enumerate(
                            lt_model.get_tectonic_region_types()))

@@ -87,7 +87,6 @@ def all_equal(obj, value):
         return eq
 
 
-@tasks.oqtask
 def filter_and_split_sources(job_id, sources, sitecol):
     """
     Filter and split a list of hazardlib sources.
@@ -159,45 +158,17 @@ class BaseHazardCalculator(base.Calculator):
             self.hc, 'quantile_hazard_curves', ())
 
     @EnginePerformanceMonitor.monitor
-    def process_sources(self):
+    def execute(self):
         """
-        Filter and split the sources in parallel.
-        Return the list of processed sources.
+        Run the core_calc_task in parallel, by passing the arguments
+        provided by the .task_arg_gen method. By default it uses the
+        parallelize distribution, but it can be overridden is subclasses.
         """
-        self.all_sources = readinput.get_effective_sources(
-            self.hc, self.site_collection)
-        import pdb; pdb.set_trace()
-        self.job.is_running = True
-        self.job.save()
-        #num_models = len(self.source_collector)
-        #num_sites = len(self.site_collection)
-        #for i, trt_model_id in enumerate(sorted(self.source_collector), 1):
-        #    trt_model.num_ruptures = sc.num_ruptures
-        #    trt_model.save()
-        return self.all_sources.get_total_weight()
-
-    def task_arg_gen(self):
-        """
-        Loop through realizations and sources to generate a sequence of
-        task arg tuples. Each tuple of args applies to a single task.
-        Yielded results are of the form
-        (job_id, site_collection, sources, trt_model_id, gsims).
-        """
-        if self._task_args:
-            # the method was already called and the arguments generated
-            for args in self._task_args:
-                yield args
-            return
-        sitecol = self.site_collection
-        tot_sources = 0
-        for trt_model, block in self.all_sources.split(self.concurrent_tasks):
-            args = (self.job.id, sitecol, block, trt_model.id)
-            self._task_args.append(args)
-            yield args
-            tot_sources += len(block)
-            logs.LOG.info('%d source(s), weight=%d', len(block), block.weight)
-        logs.LOG.info('Processed %d sources for %d TRTs',
-                      tot_sources, len(self.source_collector))
+        return tasks.apply_reduce(
+            self.core_calc_task,
+            (self.job.id, self.all_sources, self.site_collection),
+            agg=lambda acc, res: self.task_completed(res), acc=None,
+            weight=attrgetter('weight'), key=attrgetter('trt_model_id'))
 
     def task_completed(self, result):
         """
@@ -266,7 +237,7 @@ class BaseHazardCalculator(base.Calculator):
         # The input weight is given by the number of ruptures generated
         # by the sources; for point sources however a corrective factor
         # given by the parameter `point_source_weight` is applied
-        input_weight = self.process_sources()
+        input_weight = sum(src.weight for src in self.all_sources)
 
         self.imtls = getattr(self.hc, 'intensity_measure_types_and_levels', {})
         n_sites = len(self.site_collection)
@@ -353,8 +324,9 @@ class BaseHazardCalculator(base.Calculator):
         trees. Save in the database LtSourceModel and TrtModel objects.
         """
         logs.LOG.progress("initializing sources")
-        self.source_collector = collections.OrderedDict()
-        for sm in readinput.get_source_models(self.hc):
+        source_models = []
+        for sm in readinput.get_filtered_source_models(
+                self.hc, self.site_collection):
 
             # create an LtSourceModel for each distinct source model
             lt_model = models.LtSourceModel.objects.create(
@@ -362,16 +334,19 @@ class BaseHazardCalculator(base.Calculator):
                 ordinal=sm.ordinal, sm_name=sm.name, weight=sm.weight)
 
             # save TrtModels for each tectonic region type
-            for mod in sm.trt_models:
-                trt_model_id = models.TrtModel.objects.create(
+            for trt_mod in sm.trt_models:
+                trt_mod.id = models.TrtModel.objects.create(
                     lt_model=lt_model,
-                    tectonic_region_type=mod.trt,
-                    num_sources=len(mod.sources),
-                    num_ruptures=mod.num_ruptures,
-                    min_mag=mod.min_mag,
-                    max_mag=mod.max_mag,
-                    gsims=mod.gsims).id
-                self.source_collector[trt_model_id] = mod
+                    tectonic_region_type=trt_mod.trt,
+                    num_sources=len(trt_mod.sources),
+                    num_ruptures=trt_mod.num_ruptures,
+                    min_mag=trt_mod.min_mag,
+                    max_mag=trt_mod.max_mag,
+                    gsims=trt_mod.gsims).id
+            source_models.append(sm)
+
+        self.all_sources = source.split_source_models(
+            source_models, self.hc.area_source_discretization)
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_model(self):
