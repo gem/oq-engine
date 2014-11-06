@@ -20,6 +20,7 @@ import os
 import collections
 
 from openquake.commonlib.export import export
+from openquake.commonlib.writers import float2str
 from openquake.commonlib import hazard_writers
 from openquake.hazardlib.imt import from_string
 
@@ -147,7 +148,7 @@ def export_gmf_csv(key, export_dir, sitecol, rupture_tags, gmfs):
             for site, gmvs in zip(sitecol, gmf):
                 row = [imt, site.location.longitude,
                        site.location.latitude] + list(gmvs)
-                f.write(' '.join(map(str, row)) + '\n')
+                f.write(' '.join(map(float2str, row)) + '\n')
     return {key: dest}
 
 
@@ -159,5 +160,5 @@ def export_hazard_curves_csv(key, export_dir, sitecol, curves_by_imt):
             for site, curve in zip(sitecol, curves):
                 row = [imt, site.location.longitude,
                        site.location.latitude] + list(curve)
-                f.write(' '.join(map(str, row)) + '\n')
+                f.write(' '.join(map(float2str, row)) + '\n')
     return {key: dest}
