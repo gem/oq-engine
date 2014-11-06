@@ -120,7 +120,8 @@ FROM uiapi.performance_view WHERE oq_job_id=%s
 NUM_REALIZATIONS = '''
 SELECT b.id, count(*) FROM hzrdr.lt_realization AS a,
 hzrdr.lt_source_model AS b
-WHERE a.lt_model_id=b.id AND hazard_calculation_id=%s group by b.id
+WHERE a.lt_model_id=b.id AND hazard_calculation_id=%s
+GROUP BY b.id
 '''
 
 NUM_SITES = '''
@@ -147,9 +148,9 @@ SELECT b.id, b.sm_name, array_to_string(sm_lt_path, ',') AS sm_lt_path,
        count(tectonic_region_type) as num_trts,
        sum(num_sources) as num_sources, sum(num_ruptures) AS num_ruptures
 FROM hzrdr.trt_model AS a, hzrdr.lt_source_model AS b
-WHERE a.lt_model_id=b.id and b.hazard_calculation_id=%s group by b.id) AS x,
+WHERE a.lt_model_id=b.id AND b.hazard_calculation_id=%s GROUP BY b.id) AS x,
 (SELECT lt_model_id, count(*) AS num_rlzs FROM hzrdr.lt_realization
-GROUP by lt_model_id) as y
+GROUP by lt_model_id) AS y
 WHERE x.id=y.lt_model_id
 ORDER BY num_rlzs * num_ruptures DESC
 '''
@@ -169,11 +170,11 @@ WHERE oq_job_id=%s;
 '''
 
 JOB_INFO = '''
-SELECT * FROM uiapi.job_info where oq_job_id=%s;
+SELECT * FROM uiapi.job_info WHERE oq_job_id=%s;
 '''
 
 JOB_PARAM = '''
-SELECT name, value FROM uiapi.job_param where job_id=%s ORDER BY name;
+SELECT name, value FROM uiapi.job_param WHERE job_id=%s ORDER BY name;
 '''
 
 GMF_STATS = '''
@@ -182,7 +183,7 @@ SELECT count(*) AS nrows_per_rlz, avg(array_length(gmvs, 1)) AS gmvs_len,
        stddev(array_length(gmvs, 1)) AS stddev
        FROM hzrdr.gmf_data AS a, hzrdr.gmf AS b, uiapi.output AS c
        WHERE a.gmf_id=b.id AND b.output_id=c.id
-       AND c.id=(select max(x.id) FROM uiapi.output AS x, hzrdr.gmf AS y
+       AND c.id=(SELECT max(x.id) FROM uiapi.output AS x, hzrdr.gmf AS y
                  WHERE x.id=y.output_id AND oq_job_id=%s))
 SELECT nrows_per_rlz, gmvs_len, stddev FROM gmf_stats;
 '''
