@@ -111,14 +111,15 @@ class TrtModel(object):
 
     def split_sources(self, area_source_discretization):
         """
-        Update .num_ruptures and .sources as a side effect
+        Update .num_ruptures and .sources as a side effect.
+        Make sure the sources are ordered.
         """
         sources = []
         for src in self:
             for ss in split_source(src, area_source_discretization):
                 ss.weight = self.update_num_ruptures(ss)
                 sources.append(ss)
-        self.sources = sources
+        self.sources = sorted(sources, key=operator.attrgetter('source_id'))
 
     def __repr__(self):
         return '<%s %s, %d source(s)>' % (self.__class__.__name__,
