@@ -408,7 +408,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         latter piece basically defines the work to be done in the
         `execute` phase.)
         """
-        super(EventBasedHazardCalculator, self).pre_execute()
+        weights = super(EventBasedHazardCalculator, self).pre_execute()
         hc = self.hc
         rnd = random.Random()
         rnd.seed(hc.random_seed)
@@ -418,6 +418,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                 lt_model__hazard_calculation=self.job), 1):
             with transaction.commit_on_success(using='job_init'):
                 self.initialize_ses_db_records(trt_model, i)
+        return weights
 
     def agg_curves(self, acc, result):
         """

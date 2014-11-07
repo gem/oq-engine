@@ -35,7 +35,7 @@ from openquake.engine.db import models
 from django.db import transaction
 
 from openquake.commonlib import logictree, source, readinput, \
-    risk_parsers, general
+    risk_parsers, general, parallel
 from openquake.commonlib.readinput import (
     get_site_collection, get_site_model, get_imtls)
 
@@ -227,6 +227,9 @@ class BaseHazardCalculator(base.Calculator):
             self.initialize_site_collection()
         with transaction.commit_on_success(using='job_init'):
             self.initialize_sources()
+
+        parallel.executor.shutdown()  # hack to save memory
+
         # The input weight is given by the number of ruptures generated
         # by the sources; for point sources however a corrective factor
         # given by the parameter `point_source_weight` is applied
