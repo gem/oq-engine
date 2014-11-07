@@ -24,6 +24,7 @@ import collections
 from operator import attrgetter
 
 from django.contrib.gis.geos.point import Point
+from django.core.exceptions import ObjectDoesNotExist
 
 import numpy
 
@@ -417,8 +418,14 @@ class BaseHazardCalculator(base.Calculator):
         num_samples = self.hc.number_of_logic_tree_samples
         gsim_lt_dict = {}  # gsim_lt per source model logic tree path
         for idx, (sm, weight, sm_lt_path) in enumerate(self.source_model_lt):
-            lt_model = models.LtSourceModel.objects.get(
-                hazard_calculation=self.job, sm_lt_path=sm_lt_path)
+            try:
+                lt_model = models.LtSourceModel.objects.get(
+                    hazard_calculation=self.job, sm_lt_path=sm_lt_path)
+            except ObjectDoesNotExist:
+                # this happens if there are no sources for the source
+                # model at the given path
+                logs.LOG.warn('No sources for sm_lt_path %s', sm_lt_path)
+                continue
             if not sm_lt_path in gsim_lt_dict:
                 gsim_lt_dict[sm_lt_path] = lt_model.make_gsim_lt()
             gsim_lt = gsim_lt_dict[sm_lt_path]
