@@ -27,6 +27,7 @@ from openquake.hazardlib.imt import from_string
 import openquake.hazardlib.gsim
 
 from openquake.commonlib.readinput import get_rupture
+from openquake.commonlib.parallel import do_not_aggregate
 
 from openquake.engine.calculators.hazard import general as haz_general
 from openquake.engine.calculators import calculators
@@ -198,9 +199,14 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
                                self.hc.random_seed)
 
     def execute(self):
+        """
+        Run :function:`openquake.engine.calculators.hazard.scenario.core.gmfs`
+        in parallel.
+        """
         ses_ruptures = models.SESRupture.objects.filter(
             rupture__ses_collection=self.ses_coll.id)
         self.acc = tasks.apply_reduce(
             self.core_calc_task,
             (self.job.id, ses_ruptures, self.site_collection,
-             self.imts, self.gmf.id), lambda a, x: None)
+             self.imts, self.gmf.id),
+            do_not_aggregate)
