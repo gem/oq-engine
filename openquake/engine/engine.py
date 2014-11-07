@@ -95,7 +95,9 @@ def job_stats(job):
     try:
         yield
     except:
-        django_db.connections['job_init'].rollback()
+        conn = django_db.connections['job_init']
+        if conn.is_dirty():
+            conn.rollback()
         raise
     finally:
         job.is_running = False
