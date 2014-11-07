@@ -207,7 +207,7 @@ SELECT s.oq_job_id, 'hazard ' || COALESCE(o.hazard_calculation_id::text, ''),
 o.user_name from uiapi.job_stats AS s
 INNER JOIN uiapi.oq_job AS o
 ON o.id=s.oq_job_id
-WHERE stop_time::date=%s OR stop_time IS NULL
+WHERE stop_time::date = %s OR stop_time IS NULL AND start_time >= %s
 ORDER BY stop_time
 '''
 
@@ -261,7 +261,7 @@ def make_report(conn, isodate='today'):
     tag_ids = []
     tag_contents = []
 
-    jobs = fetcher.query(ALL_JOBS, isodate)[1:]
+    jobs = fetcher.query(ALL_JOBS, isodate, isodate)[1:]
     page = '<h2>%d job(s) finished before midnight of %s</h2>' % (
         len(jobs), isodate)
     for job_id, prev_job, user in jobs:
