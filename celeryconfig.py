@@ -70,6 +70,7 @@ CELERYD_PREFETCH_MULTIPLIER = 1
 CELERY_MAX_CACHED_RESULTS = 1
 
 CELERY_IMPORTS = get_core_modules(engine) + [
+    "openquake.engine.calculators.hazard.general",
     "openquake.engine.tests.utils.tasks"]
 
 os.environ["DJANGO_SETTINGS_MODULE"] = "openquake.engine.settings"
