@@ -15,7 +15,6 @@
 
 import math
 import copy
-import logging
 import operator
 import collections
 from itertools import izip
@@ -33,9 +32,6 @@ from openquake.commonlib.obsolete import NrmlHazardlibConverter
 # the following is arbitrary, it is used to decide when to parallelize
 # the filtering (MS)
 LOTS_OF_SOURCES_SITES = 1E5
-
-
-Source = collections.namedtuple("Source", "source weight trt_id seed")
 
 
 class DuplicatedID(Exception):
@@ -113,6 +109,17 @@ class TrtModel(object):
                   if src.__class__.__name__ == 'PointSource'
                   else num_ruptures)
         return weight
+
+    def split_sources(self, area_source_discretization):
+        """
+        Update .num_ruptures and .sources as a side effect
+        """
+        sources = []
+        for src in self:
+            for ss in split_source(src, area_source_discretization):
+                ss.weight = self.update_num_ruptures(ss)
+                sources.append(ss)
+        self.sources = sources
 
     def __repr__(self):
         return '<%s %s, %d source(s)>' % (self.__class__.__name__,
@@ -717,28 +724,3 @@ def filter_sources(sources, sitecol, maxdist):
         # few sources and sites, filter sequentially on a single core
         sources = _filter_sources(sources, sitecol, maxdist)
     return sorted(sources, key=operator.attrgetter('source_id'))
-
-
-def split_source_models(source_models, area_source_discretization):
-    """
-    Split the sources in the source models.
-    Return the list of processed sources, as an AllSources instance.
-    """
-    all_sources = []
-    num_models = len(source_models)
-    for i, sm in enumerate(sorted(source_models), 1):
-        sm_lt_path = tuple(sm.path)
-        for trt_model in sm.trt_models:
-            logging.info(
-                '[%d of %d] Processing %d source(s) for '
-                'sm_lt_path=%s, TRT=%s, model=%s', i, num_models,
-                len(trt_model), sm_lt_path, trt_model.trt,
-                sm.name)
-            for src in trt_model:
-                for ss in split_source(src, area_source_discretization):
-                    s = Source(ss, trt_model.update_num_ruptures(src),
-                               trt_model.id, seed=None)
-                    # the seed will be set later on and only for the
-                    # event based calculator
-                    all_sources.append(s)
-    return all_sources
