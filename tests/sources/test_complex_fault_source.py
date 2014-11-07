@@ -214,10 +214,9 @@ class TestComplexFaultSource(unittest.TestCase):
         Tests the conversion of a point source to an instance of the :class:
         oqnrmllib.models.AreaSource
         '''
-        # Define a complete source
         complex_edges = [
-            line.Line([point.Point(10., 10., 0.), point.Point(11., 10., 0.)]),
-            line.Line([point.Point(10., 10., 20.), point.Point(11.5, 10., 21.)])
+            line.Line([point.Point(11., 10., 0.), point.Point(10., 10., 0.)]),
+            line.Line([point.Point(11.5, 10., 21.), point.Point(10.0, 10., 21.)])
             ]
         self.fault_source = mtkComplexFaultSource('001',
             'A Fault Source',
@@ -257,11 +256,9 @@ class TestComplexFaultSource(unittest.TestCase):
         Tests the conversion of a point source to an instance of the :class:
         openquake.hazardlib.source.complex_fault.ComplexFaultSource
         """
-
-        # Define a complete source
         complex_edges = [
-            line.Line([point.Point(10., 10., 0.), point.Point(11., 10., 0.)]),
-            line.Line([point.Point(10., 10., 20.), point.Point(11.5, 10., 21.)])
+            line.Line([point.Point(11., 10., 0.), point.Point(10., 10., 0.)]),
+            line.Line([point.Point(11.5, 10., 21.), point.Point(10.0, 10., 21.)])
             ]
         self.fault_source = mtkComplexFaultSource('001',
             'A Fault Source',
