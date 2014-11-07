@@ -329,7 +329,7 @@ class BaseHazardCalculator(base.Calculator):
             for trt_mod in sm.trt_models:
                 # this also update .num_ruptures
                 trt_mod.split_sources(self.hc.area_source_discretization)
-                trt_mod.id = models.TrtModel.objects.create(
+                trt_id = models.TrtModel.objects.create(
                     lt_model=lt_model,
                     tectonic_region_type=trt_mod.trt,
                     num_sources=len(trt_mod),
@@ -338,7 +338,7 @@ class BaseHazardCalculator(base.Calculator):
                     max_mag=trt_mod.max_mag,
                     gsims=trt_mod.gsims).id
                 for src in trt_mod:
-                    src.trt_model_id = trt_mod.id
+                    src.trt_model_id = trt_id
                     self.all_sources.append(src)
         # to be used later on
         self.source_model_lt = logictree.SourceModelLogicTree.from_hc(self.hc)
