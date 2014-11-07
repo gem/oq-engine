@@ -25,7 +25,7 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
 
     def test_different_levels_ok(self):
         # the same IMT can appear with different levels in different
-        # vulnerability sets
+        # vulnerability functions
         vuln_content = StringIO.StringIO("""\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
