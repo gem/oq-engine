@@ -335,7 +335,7 @@ def get_effective_source_models(oqparam, sitecol):
         for trt_model in source_model.trt_models:
             trt_model.split_sources_and_count_ruptures(
                 oqparam.area_source_discretization)
-            logging.info('Split into %d sources', len(trt_model))
+            logging.info('Processed %s', trt_model)
         yield source_model
 
 
