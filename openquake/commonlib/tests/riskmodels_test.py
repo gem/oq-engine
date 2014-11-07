@@ -15,11 +15,52 @@
 
 import unittest
 import StringIO
+import numpy
+from numpy.testing import assert_almost_equal
 from openquake.commonlib.riskmodels import get_vulnerability_functions
 from openquake.commonlib import InvalidFile
 
 
 class ParseVulnerabilityModelTestCase(unittest.TestCase):
+
+    def test_different_levels_ok(self):
+        # the same IMT can appear with different levels in different
+        # vulnerability functions
+        vuln_content = StringIO.StringIO("""\
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
+      xmlns:gml="http://www.opengis.net/gml">
+    <vulnerabilityModel>
+        <discreteVulnerabilitySet vulnerabilitySetID="PAGER"
+                                  assetCategory="population"
+                                  lossCategory="fatalities">
+            <IML IMT="PGA">0.005 0.007 0.0098 0.0137</IML>
+            <discreteVulnerability vulnerabilityFunctionID="RC/A"
+                                   probabilisticDistribution="LN">
+                <lossRatio>0.01 0.06 0.18 0.36</lossRatio>
+                <coefficientsVariation>0.30 0.30 0.30 0.30
+         </coefficientsVariation>
+            </discreteVulnerability>
+        </discreteVulnerabilitySet>
+        <discreteVulnerabilitySet vulnerabilitySetID="PAGER"
+                                  assetCategory="population"
+                                  lossCategory="fatalities">
+            <IML IMT="PGA">0.004 0.008 0.037</IML>
+            <discreteVulnerability vulnerabilityFunctionID="RC/B"
+                                   probabilisticDistribution="LN">
+                <lossRatio>0.01 0.06 0.18</lossRatio>
+                <coefficientsVariation>0.30 0.30 0.30
+         </coefficientsVariation>
+            </discreteVulnerability>
+        </discreteVulnerabilitySet>
+    </vulnerabilityModel>
+</nrml>
+""")
+        vfs = get_vulnerability_functions(vuln_content)
+        assert_almost_equal(vfs['PGA', 'A'].imls,
+                            numpy.array([0.005, 0.007, 0.0098, 0.0137]))
+        assert_almost_equal(vfs['PGA', 'B'].imls,
+                            numpy.array([0.004, 0.008, 0.037]))
 
     def test_one_taxonomy_many_imts(self):
         # Should raise a ValueError if a vulnerabilityFunctionID is used for
