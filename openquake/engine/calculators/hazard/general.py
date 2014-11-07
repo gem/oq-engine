@@ -33,7 +33,8 @@ from openquake.hazardlib.imt import from_string
 from openquake.engine.db import models
 from django.db import transaction
 
-from openquake.commonlib import logictree, source, readinput, risk_parsers
+from openquake.commonlib import logictree, source, readinput, \
+    risk_parsers, general
 from openquake.commonlib.readinput import (
     get_site_collection, get_site_model, get_imtls)
 
@@ -150,7 +151,7 @@ class BaseHazardCalculator(base.Calculator):
         # a dictionary trt_model_id -> num_ruptures
         self.num_ruptures = collections.defaultdict(int)
         # now a dictionary (trt_model_id, gsim) -> poes
-        self.curves = {}
+        self.acc = general.AccumDict()
         self.hc = models.oqparam(self.job.id)
         self.mean_hazard_curves = getattr(
             self.hc, 'mean_hazard_curves', None)
@@ -164,19 +165,11 @@ class BaseHazardCalculator(base.Calculator):
         provided by the .task_arg_gen method. By default it uses the
         parallelize distribution, but it can be overridden is subclasses.
         """
-        return tasks.apply_reduce(
+        self.acc = tasks.apply_reduce(
             self.core_calc_task,
             (self.job.id, self.all_sources, self.site_collection),
-            agg=lambda acc, res: self.task_completed(res), acc=None,
+            agg=self.agg_curves, acc=self.acc,
             weight=attrgetter('weight'), key=attrgetter('trt_model_id'))
-
-    def task_completed(self, result):
-        """
-        Simply call the method `agg_curves`.
-
-        :param result: the result of the .core_calc_task
-        """
-        self.agg_curves(self.curves, result)
 
     @EnginePerformanceMonitor.monitor
     def agg_curves(self, acc, result):
@@ -233,7 +226,6 @@ class BaseHazardCalculator(base.Calculator):
             self.initialize_site_collection()
         with transaction.commit_on_success(using='job_init'):
             self.initialize_sources()
-        self.source_model_lt = logictree.SourceModelLogicTree.from_hc(self.hc)
         # The input weight is given by the number of ruptures generated
         # by the sources; for point sources however a corrective factor
         # given by the parameter `point_source_weight` is applied
@@ -313,7 +305,7 @@ class BaseHazardCalculator(base.Calculator):
     def post_execute(self):
         """Inizialize realizations"""
         self.initialize_realizations()
-        if self.curves:
+        if self.acc:
             # must be called after the realizations are known
             self.save_hazard_curves()
 
@@ -324,7 +316,7 @@ class BaseHazardCalculator(base.Calculator):
         trees. Save in the database LtSourceModel and TrtModel objects.
         """
         logs.LOG.progress("initializing sources")
-        source_models = []
+        self.all_sources = []  # list of SourceWrapper objects
         for sm in readinput.get_filtered_source_models(
                 self.hc, self.site_collection):
 
@@ -335,18 +327,21 @@ class BaseHazardCalculator(base.Calculator):
 
             # save TrtModels for each tectonic region type
             for trt_mod in sm.trt_models:
+                # this also update .num_ruptures
+                trt_mod.split_sources(self.hc.area_source_discretization)
                 trt_mod.id = models.TrtModel.objects.create(
                     lt_model=lt_model,
                     tectonic_region_type=trt_mod.trt,
-                    num_sources=len(trt_mod.sources),
+                    num_sources=len(trt_mod),
                     num_ruptures=trt_mod.num_ruptures,
                     min_mag=trt_mod.min_mag,
                     max_mag=trt_mod.max_mag,
                     gsims=trt_mod.gsims).id
-            source_models.append(sm)
-
-        self.all_sources = source.split_source_models(
-            source_models, self.hc.area_source_discretization)
+                for src in trt_mod:
+                    src.trt_model_id = trt_mod.id
+                    self.all_sources.append(src)
+        # to be used later on
+        self.source_model_lt = logictree.SourceModelLogicTree.from_hc(self.hc)
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_model(self):
@@ -505,7 +500,6 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
         curves_by_imt = dict((imt, []) for imt in sorted_imts)
         individual_curves = self.job.get_param(
             'individual_curves', missing=True)
-
         for rlz in self._get_realizations():
             if individual_curves:
                 # create a multi-imt curve
@@ -518,14 +512,14 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
 
             with self.monitor('building curves per realization'):
                 imt_curves = zip(
-                    sorted_imts, models.build_curves(rlz, self.curves))
+                    sorted_imts, models.build_curves(rlz, self.acc))
             for imt, curves in imt_curves:
                 if individual_curves:
                     self.save_curves_for_rlz_imt(
                         rlz, imt, imtls[imt], points, curves)
                 curves_by_imt[imt].append(curves)
 
-        self.curves = {}  # save memory for the post-processing phase
+        self.acc = {}  # save memory for the post-processing phase
         if self.mean_hazard_curves or self.quantile_hazard_curves:
             self.curves_by_imt = curves_by_imt
 
@@ -580,7 +574,6 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
 
         Post-processing results will be stored directly into the database.
         """
-        del self.source_collector  # save memory
         weights = [rlz.weight for rlz in models.LtRealization.objects.filter(
             lt_model__hazard_calculation=self.job)]
         num_rlzs = len(weights)

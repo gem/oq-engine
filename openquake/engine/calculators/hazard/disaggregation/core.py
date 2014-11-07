@@ -19,6 +19,7 @@ Disaggregation calculator core functionality
 """
 
 import sys
+from operator import attrgetter
 from collections import namedtuple
 import numpy
 
@@ -26,6 +27,7 @@ from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import SiteCollection
 
+from openquake.commonlib.general import groupby
 from openquake.commonlib.calculators.calc import gen_ruptures_for_site
 
 from openquake.engine import logs
@@ -313,6 +315,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         """
         hc = self.hc
         tl = getattr(self.hc, 'truncation_level', None)
+        sitecol = self.site_collection
         mag_bin_width = self.hc.mag_bin_width
         eps_edges = numpy.linspace(-tl, tl, self.hc.num_epsilon_bins + 1)
         logs.LOG.info('%d epsilon bins from %s to %s', len(eps_edges) - 1,
@@ -323,8 +326,8 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                            for site in self.site_collection)
 
         oqm = tasks.OqTaskManager(compute_disagg, logs.LOG.progress)
-        for job_id, srcs, sitecol in self.all_sources:
-            trt_model_id = srcs[0].trt_model_id
+        for trt_model_id, srcs in groupby(
+                self.all_sources, attrgetter('trt_model_id')).iteritems():
             lt_model = models.TrtModel.objects.get(pk=trt_model_id).lt_model
             trt_num = dict((trt, i) for i, trt in enumerate(
                            lt_model.get_tectonic_region_types()))
