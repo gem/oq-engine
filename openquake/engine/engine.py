@@ -96,7 +96,7 @@ def job_stats(job):
         yield
     except:
         conn = django_db.connections['job_init']
-        if conn.transaction_state:
+        if conn.is_dirty():
             conn.rollback()
         raise
     finally:
