@@ -110,7 +110,7 @@ class TrtModel(object):
                   else num_ruptures)
         return weight
 
-    def split_sources(self, area_source_discretization):
+    def split_sources_and_count_ruptures(self, area_source_discretization):
         """
         Update .num_ruptures and .sources as a side effect.
         Make sure the sources are ordered.
