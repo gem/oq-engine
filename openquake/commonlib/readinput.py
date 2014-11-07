@@ -306,9 +306,9 @@ def get_filtered_source_models(oqparam, sitecol):
             if not trt_model.sources:
                 logging.warn(
                     'Could not find sources close to the sites in %s '
-                    'sm_lt_path=%s, maximum_distance=%s km',
+                    'sm_lt_path=%s, maximum_distance=%s km, TRT=%s',
                     source_model.name, source_model.path,
-                    oqparam.maximum_distance)
+                    oqparam.maximum_distance, trt_model.trt)
         yield source_model
 
 
