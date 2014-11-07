@@ -72,3 +72,17 @@ class OqParamTestCase(unittest.TestCase):
                 calculation_mode='classical', inputs=dict(site_model=''),
                 hazard_calculation_id=None, hazard_output_id=None,
                 sites='0.1 0.2', maximum_distance=0)
+
+    def test_missing_hazard_curves_from_gmfs(self):
+        with self.assertRaises(ValueError) as ctx:
+            OqParam(
+                calculation_mode='event_based', inputs={},
+                mean_hazard_curves='true', sites='0.1 0.2',
+                reference_vs30_type='measured',
+                reference_vs30_value=200,
+                reference_depth_to_2pt5km_per_sec=100,
+                reference_depth_to_1pt0km_per_sec=150,
+                maximum_distance=400,
+            )
+        self.assertIn('You must set `hazard_curves_from_gmfs`',
+                      str(ctx.exception))
