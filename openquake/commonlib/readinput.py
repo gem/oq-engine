@@ -312,13 +312,19 @@ def get_filtered_source_models(oqparam, sitecol):
         yield source_model
 
 
-def get_effective_sources(oqparam, sitecol):
+def get_effective_source_models(oqparam, sitecol):
     """
-    The filtered and split sources
+    The site_models with filtered and split sources.
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param sitecol:
+        a SiteCollection
     """
-    return source.split_source_models(
-        list(get_filtered_source_models(oqparam, sitecol)),
-        oqparam.area_source_discretization)
+    for source_model in get_filtered_source_models(oqparam, sitecol):
+        for trt_model in source_model.trt_models:
+            trt_model.split_sources(oqparam.area_source_discretization)
+        yield source_model
 
 
 def get_imtls(oqparam):
