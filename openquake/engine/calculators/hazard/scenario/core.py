@@ -40,6 +40,8 @@ from django.db import transaction
 
 AVAILABLE_GSIMS = openquake.hazardlib.gsim.get_available_gsims()
 
+## XXX: use the oq-lite calculator
+
 
 @tasks.oqtask
 def gmfs(job_id, ses_ruptures, sitecol, imts, gmf_id):
@@ -210,6 +212,3 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
             rupture__ses_collection=self.ses_coll.id)
         for ruptures in split_in_blocks(ses_ruptures, self.concurrent_tasks):
             yield self.job.id, ruptures, self.sites, self.imts, self.gmf.id
-
-    def task_completed(self, result):
-        """Do nothing"""
