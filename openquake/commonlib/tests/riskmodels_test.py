@@ -35,7 +35,7 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
                                   assetCategory="population"
                                   lossCategory="fatalities">
             <IML IMT="PGA">0.005 0.007 0.0098 0.0137</IML>
-            <discreteVulnerability vulnerabilityFunctionID="A"
+            <discreteVulnerability vulnerabilityFunctionID="RC/A"
                                    probabilisticDistribution="LN">
                 <lossRatio>0.01 0.06 0.18 0.36</lossRatio>
                 <coefficientsVariation>0.30 0.30 0.30 0.30
@@ -46,7 +46,7 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
                                   assetCategory="population"
                                   lossCategory="fatalities">
             <IML IMT="PGA">0.004 0.008 0.037</IML>
-            <discreteVulnerability vulnerabilityFunctionID="B"
+            <discreteVulnerability vulnerabilityFunctionID="RC/B"
                                    probabilisticDistribution="LN">
                 <lossRatio>0.01 0.06 0.18</lossRatio>
                 <coefficientsVariation>0.30 0.30 0.30
