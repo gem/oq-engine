@@ -31,7 +31,7 @@ from openquake.engine.tests.utils.tasks import \
 
 class MapReduceTestCase(unittest.TestCase):
     """
-    Tests the behaviour of utils.tasks.map_reduce and utils.tasks.parallelize
+    Tests the behaviour of utils.tasks.map_reduce and apply_reduce
     """
 
     def test_single_item(self):
@@ -58,13 +58,6 @@ class MapReduceTestCase(unittest.TestCase):
             self.assertIn('NotImplementedError: 42', str(exc))
         else:
             raise Exception("Exception not raised.")
-
-    def test_parallelize(self):
-        lst = []
-        res = tasks.parallelize(just_say_hello, [(i, ) for i in range(5)],
-                                lst.append)
-        self.assertEqual(res, None)
-        self.assertEqual(lst, ['hello'] * 5)
 
     def test_apply_reduce(self):
         got = tasks.apply_reduce(
