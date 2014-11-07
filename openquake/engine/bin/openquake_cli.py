@@ -326,8 +326,7 @@ def export_risk(risk_output_id, target_dir, export_type):
 
 
 def export_risk_outputs(rc_id, target_dir, export_type):
-    for output in models.Output.objects.filter(
-            oq_job__risk_calculation=rc_id):
+    for output in models.Output.objects.filter(oq_job=rc_id):
         print 'Exporting %s...' % output
         export(risk_export.export, output.id, target_dir, export_type)
 
