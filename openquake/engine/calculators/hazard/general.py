@@ -305,9 +305,8 @@ class BaseHazardCalculator(base.Calculator):
     def post_execute(self):
         """Inizialize realizations"""
         self.initialize_realizations()
-        if self.acc:
-            # must be called after the realizations are known
-            self.save_hazard_curves()
+        # must be called after the realizations are known
+        self.save_hazard_curves()
 
     @EnginePerformanceMonitor.monitor
     def initialize_sources(self):
@@ -340,6 +339,9 @@ class BaseHazardCalculator(base.Calculator):
                 for src in trt_mod:
                     src.trt_model_id = trt_id
                     self.all_sources.append(src)
+        # sort by ID for consistency with the past
+        self.all_sources.sort(key=attrgetter('source_id'))
+
         # to be used later on
         self.source_model_lt = logictree.SourceModelLogicTree.from_hc(self.hc)
 
@@ -493,6 +495,8 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
         Post-execution actions. At the moment, all we do is finalize the hazard
         curve results.
         """
+        if not self.acc:
+            return
         imtls = self.hc.intensity_measure_types_and_levels
         points = models.HazardSite.objects.filter(
             hazard_calculation=self.job).order_by('id')
