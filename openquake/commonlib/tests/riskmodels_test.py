@@ -57,9 +57,9 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
 </nrml>
 """)
         vfs = get_vulnerability_functions(vuln_content)
-        assert_almost_equal(vfs['PGA', 'A'].imls,
+        assert_almost_equal(vfs['PGA', 'RC/A'].imls,
                             numpy.array([0.005, 0.007, 0.0098, 0.0137]))
-        assert_almost_equal(vfs['PGA', 'B'].imls,
+        assert_almost_equal(vfs['PGA', 'RC/B'].imls,
                             numpy.array([0.004, 0.008, 0.037]))
 
     def test_one_taxonomy_many_imts(self):
