@@ -339,9 +339,6 @@ class BaseHazardCalculator(base.Calculator):
                     src.trt_model_id = trt_id
                     self.all_sources.append(src)
 
-        # sort by ID for consistency with the past
-        self.all_sources.sort(key=attrgetter('source_id'))
-
         # to be used later on
         self.source_model_lt = logictree.SourceModelLogicTree.from_hc(self.hc)
 
