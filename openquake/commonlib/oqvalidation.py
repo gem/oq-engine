@@ -234,3 +234,14 @@ class OqParam(valid.ParamSet):
             return self.calculation_mode in RISK_CALCULATORS
         else:
             return True
+
+    def is_valid_hazard_curves(self):
+        """
+        You must set `hazard_curves_from_gmfs` if `mean_hazard_curves`
+        or `quantile_hazard_curves` are set.
+        """
+        if self.calculation_mode == 'event_based' and (
+           getattr(self, 'mean_hazard_curves', False) or
+           getattr(self, 'quantile_hazard_curves', False)):
+            return getattr(self, 'hazard_curves_from_gmfs', False)
+        return True
