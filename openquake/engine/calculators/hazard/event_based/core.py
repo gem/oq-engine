@@ -450,11 +450,9 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                     output_type='gmf')
                 models.Gmf.objects.create(output=output, lt_realization=rlz)
 
-        self.generate_gmfs_and_curves()
-
+        self.acc = self.generate_gmfs_and_curves()
         # now save the curves, if any
-        if self.curves:
-            self.save_hazard_curves()
+        self.save_hazard_curves()
 
     @EnginePerformanceMonitor.monitor
     def generate_gmfs_and_curves(self):
@@ -475,7 +473,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                     sr.trt_id = trt_model.id
                     sesruptures.append(sr)
         base_agg = super(EventBasedHazardCalculator, self).agg_curves
-        self.curves = tasks.apply_reduce(
+        return tasks.apply_reduce(
             compute_gmfs_and_curves,
             (self.job.id, sesruptures, sitecol),
             base_agg, {}, key=lambda sr: sr.trt_id)
