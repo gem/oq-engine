@@ -34,7 +34,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.engine.db import models
 from django.db import transaction
 
-from openquake.commonlib import logictree, source, readinput, \
+from openquake.commonlib import logictree, readinput, \
     risk_parsers, general, parallel
 from openquake.commonlib.readinput import (
     get_site_collection, get_site_model, get_imtls)
@@ -87,19 +87,6 @@ def all_equal(obj, value):
         return eq.all()
     else:
         return eq
-
-
-def filter_and_split_sources(job_id, sources, sitecol):
-    """
-    Filter and split a list of hazardlib sources.
-
-    :param int job_id: ID of the current job
-    :param sources: the original sources
-    :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
-    """
-    hc = models.oqparam(job_id)
-    return source.filter_and_split_sources(
-        sources, sitecol, hc.maximum_distance, hc.area_source_discretization)
 
 
 class SiteModelParams(object):
