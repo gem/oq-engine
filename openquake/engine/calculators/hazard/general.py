@@ -315,8 +315,8 @@ class BaseHazardCalculator(base.Calculator):
         trees. Save in the database LtSourceModel and TrtModel objects.
         """
         logs.LOG.progress("initializing sources")
-        self.all_sources = []  # list of SourceWrapper objects
-        for sm in readinput.get_filtered_source_models(
+        self.all_sources = []
+        for sm in readinput.get_effective_source_models(
                 self.hc, self.site_collection):
 
             # create an LtSourceModel for each distinct source model
@@ -326,8 +326,6 @@ class BaseHazardCalculator(base.Calculator):
 
             # save TrtModels for each tectonic region type
             for trt_mod in sm.trt_models:
-                # this also update .num_ruptures
-                trt_mod.split_sources(self.hc.area_source_discretization)
                 trt_id = models.TrtModel.objects.create(
                     lt_model=lt_model,
                     tectonic_region_type=trt_mod.trt,
@@ -339,6 +337,7 @@ class BaseHazardCalculator(base.Calculator):
                 for src in trt_mod:
                     src.trt_model_id = trt_id
                     self.all_sources.append(src)
+
         # sort by ID for consistency with the past
         self.all_sources.sort(key=attrgetter('source_id'))
 
