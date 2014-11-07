@@ -152,26 +152,6 @@ def apply_reduce(task, task_args,
     return map_reduce(task, all_args, agg, acc, name)
 
 
-# used to implement BaseCalculator.parallelize, which takes in account
-# the `concurrent_task` concept to avoid filling the Celery queue
-def parallelize(task, task_args, side_effect=lambda val: None):
-    """
-    Given a celery task and an iterable of positional arguments, apply the
-    callable to the arguments in parallel. It is possible to pass a
-    function side_effect(val) which takes the return value of the
-    callable and does something with it (such as saving or printing
-    it). Notice that the order is not preserved. parallelize returns None.
-
-    NB: if the environment variable OQ_NO_DISTRIBUTE is set the
-    tasks are run sequentially in the current process.
-
-    :param task: a celery task
-    :param task_args: an iterable over positional arguments
-    :param side_effect: a function val -> None
-    """
-    map_reduce(task, task_args, lambda acc, val: side_effect(val), None)
-
-
 def oqtask(task_func):
     """
     Task function decorator which sets up logging and catches (and logs) any

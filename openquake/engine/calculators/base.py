@@ -66,51 +66,17 @@ class Calculator(object):
         """
         raise NotImplementedError
 
-    def parallelize(self, task_func, task_arg_gen, task_completed):
-        """
-        Given a callable and a task arg generator, build an argument list and
-        apply the callable to the arguments in parallel. The order is not
-        preserved.
-
-        Every time a task completes the method .task_completed() is called.
-
-        :param task_func: a `celery` task callable
-        :param task_args: an iterable over positional arguments
-
-        NB: if the environment variable OQ_NO_DISTRIBUTE is set the
-        tasks are run sequentially in the current process.
-        """
-        oqm = tasks.OqTaskManager(task_func, logs.LOG.progress)
-        with self.monitor('submitting %s' % task_func.__name__):
-            for args in task_arg_gen:
-                oqm.submit(*args)
-        oqm.aggregate_results(lambda acc, val: task_completed(val), None)
-
-    def task_completed(self, task_result):
-        """
-        Method called when a task is completed. It can be overridden
-        to aggregate the partial results of a computation.
-
-        :param task_result: the result of the task
-        """
-        pass
-
     def pre_execute(self):
         """
         Override this method in subclasses to record pre-execution stats,
         initialize result records, perform detailed parsing of input data, etc.
         """
 
-    @EnginePerformanceMonitor.monitor
     def execute(self):
         """
-        Run the core_calc_task in parallel, by passing the arguments
-        provided by the .task_arg_gen method. By default it uses the
-        parallelize distribution, but it can be overridden is subclasses.
+        Run the core_calc_task in parallel
         """
-        self.parallelize(self.core_calc_task,
-                         self.task_arg_gen(),
-                         self.task_completed)
+        raise NotImplementedError
 
     def post_execute(self):
         """
