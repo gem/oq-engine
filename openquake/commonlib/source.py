@@ -710,16 +710,17 @@ def _filter_sources(sources, sitecol, maxdist):
 
 def filter_sources(sources, sitecol, maxdist):
     """
-    Filter a list of hazardlib sources accoding to the maximum distance.
+    Filter a list of hazardlib sources according to the maximum distance.
 
     :param sources: the original sources
     :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param maxdist: maximum distance
+    :returns: the filtered sources ordered by source_id
     """
     if len(sources) * len(sitecol) > LOTS_OF_SOURCES_SITES:
         # filter in parallel on all available cores
         sources = apply_reduce(
-            _filter_sources, (sources, sitecol, maxdist), list.__add__, [])
+            _filter_sources, (sources, sitecol, maxdist), operator.add, [])
     else:
         # few sources and sites, filter sequentially on a single core
         sources = _filter_sources(sources, sitecol, maxdist)
