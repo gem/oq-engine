@@ -67,10 +67,6 @@ class InitializeSourcesTestCase(unittest.TestCase):
             hazard_calculation=self.calc.job)
         self.assertEqual(
             [m1.get_num_sources(), m2.get_num_sources(), m3.get_num_sources()],
-            [2, 2, 2])
-        self.calc.process_sources()
-        self.assertEqual(
-            [m1.get_num_sources(), m2.get_num_sources(), m3.get_num_sources()],
             [1, 1, 1])
 
 
