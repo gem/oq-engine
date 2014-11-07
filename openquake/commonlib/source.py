@@ -15,6 +15,7 @@
 
 import math
 import copy
+import logging
 import operator
 from itertools import izip
 
@@ -23,7 +24,7 @@ from openquake.hazardlib.tom import PoissonTOM
 from openquake.commonlib.node import read_nodes, context, striptag
 from openquake.commonlib import valid
 from openquake.commonlib.nrml import nodefactory
-from openquake.commonlib.parallel import apply_reduce
+from openquake.commonlib import parallel
 
 # this must stay here for the nrml_converters: don't remove it!
 from openquake.commonlib.obsolete import NrmlHazardlibConverter
@@ -161,7 +162,7 @@ def parse_source_model(fname, converter, apply_uncertainties=lambda src: None):
     source_ids = set()
     src_nodes = read_nodes(fname, lambda elem: 'Source' in elem.tag,
                            nodefactory['sourceModel'])
-    for src_node in src_nodes:
+    for no, src_node in enumerate(src_nodes, 1):
         src = converter.convert_node(src_node)
         if src.source_id in source_ids:
             raise DuplicatedID(
@@ -172,6 +173,8 @@ def parse_source_model(fname, converter, apply_uncertainties=lambda src: None):
             source_stats_dict[trt] = TrtModel(trt)
         source_stats_dict[trt].update(src)
         source_ids.add(src.source_id)
+        if no % 10000 == 0:
+            logging.info('Parsed %d sources from %s', no, fname)
 
     # return ordered TrtModels
     return sorted(source_stats_dict.itervalues())
@@ -719,7 +722,7 @@ def filter_sources(sources, sitecol, maxdist):
     """
     if len(sources) * len(sitecol) > LOTS_OF_SOURCES_SITES:
         # filter in parallel on all available cores
-        sources = apply_reduce(
+        sources = parallel.apply_reduce(
             _filter_sources, (sources, sitecol, maxdist), operator.add, [])
     else:
         # few sources and sites, filter sequentially on a single core

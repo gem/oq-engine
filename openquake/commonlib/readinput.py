@@ -301,8 +301,13 @@ def get_filtered_source_models(oqparam, sitecol):
     """
     for source_model in get_source_models(oqparam):
         for trt_model in list(source_model.trt_models):
+            logging.info(
+                'Considering %d sources for model %s%s, TRT=%s',
+                len(trt_model), source_model.name, source_model.path,
+                trt_model.trt)
             trt_model.sources = source.filter_sources(
                 trt_model, sitecol, oqparam.maximum_distance)
+            logging.info('Extracted %d sources', len(trt_model))
             if not trt_model.sources:
                 logging.warn(
                     'Could not find sources close to the sites in %s '
