@@ -16,7 +16,6 @@
 import math
 import copy
 import operator
-import collections
 from itertools import izip
 
 from openquake.hazardlib import geo, mfd, pmf, source
