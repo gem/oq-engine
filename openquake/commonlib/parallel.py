@@ -199,6 +199,11 @@ class TaskManager(object):
     """
     executor = executor
 
+    @classmethod
+    def restart(cls):
+        cls.executor.shutdown()
+        cls.executor = ProcessPoolExecutor()
+
     def __init__(self, oqtask, progress, name=None):
         self.oqtask = oqtask
         self.progress = progress
