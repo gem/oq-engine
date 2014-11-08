@@ -204,7 +204,7 @@ ORDER BY c.lt_model_id;
 
 ALL_JOBS = '''
 SELECT s.oq_job_id, 'hazard ' || COALESCE(o.hazard_calculation_id::text, ''),
-o.user_name from uiapi.job_stats AS s
+o.user_name, status FROM uiapi.job_stats AS s
 INNER JOIN uiapi.oq_job AS o
 ON o.id=s.oq_job_id
 WHERE stop_time::date = %s OR stop_time IS NULL AND start_time >= %s
@@ -230,7 +230,7 @@ $("#tabs").tabs();
 '''
 
 
-def make_tabs(tag_ids, tag_contents):
+def make_tabs(tag_ids, tag_status, tag_contents):
     """
     Return a HTML string containing all the tabs we want to display
     """
@@ -243,9 +243,12 @@ def make_tabs(tag_ids, tag_contents):
 </div>'''
     lis = []
     contents = []
-    for i, (tag_id, tag_content) in enumerate(zip(tag_ids, tag_contents), 1):
-        lis.append('<li><a href="#tabs-%d">%s</a></li>' % (i, tag_id))
-        contents.append('<div id="tabs-%d">%s</div>' % (i, tag_content))
+    for i, (tag_id, status, tag_content) in enumerate(
+            zip(tag_ids, tag_status, tag_contents), 1):
+        mark = '.' if status == 'complete' else '!'
+        lis.append('<li><a href="#tabs-%d">%s%s</a></li>' % (i, tag_id, mark))
+        contents.append('<div id="tabs-%d">%s</div>' % (
+            i, tag_content))
     return templ % ('\n'.join(lis), '\n'.join(contents))
 
 
@@ -259,14 +262,16 @@ def make_report(conn, isodate='today'):
     curs = conn.cursor()
     fetcher = Fetcher(curs)
     tag_ids = []
+    tag_status = []
     tag_contents = []
 
     jobs = fetcher.query(ALL_JOBS, isodate, isodate)[1:]
     page = '<h2>%d job(s) finished before midnight of %s</h2>' % (
         len(jobs), isodate)
-    for job_id, prev_job, user in jobs:
+    for job_id, prev_job, user, status in jobs:
         page = ''
         tag_ids.append(job_id)
+        tag_status.append(status)
         stats = fetcher.query(JOB_STATS, job_id)[1:]
         if not stats:
             continue
@@ -322,7 +327,7 @@ def make_report(conn, isodate='today'):
         page += html((n, truncate(v)) for n, v in data)
         tag_contents.append(page)
 
-    page = make_tabs(tag_ids, tag_contents) + (
+    page = make_tabs(tag_ids, tag_status, tag_contents) + (
         'Report last updated: %s' % datetime.datetime.now())
     fname = 'jobs-%s.html' % isodate
     with open(fname, 'w') as f:
