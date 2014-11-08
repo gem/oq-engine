@@ -215,7 +215,7 @@ class BaseHazardCalculator(base.Calculator):
         with transaction.commit_on_success(using='job_init'):
             self.initialize_sources()
 
-        parallel.executor.shutdown()  # hack to save memory
+        parallel.TaskManager.restart()  # hack to save memory
 
         # The input weight is given by the number of ruptures generated
         # by the sources; for point sources however a corrective factor
