@@ -26,8 +26,8 @@ from lxml import etree
 from collections import OrderedDict
 from itertools import izip
 
-from openquake.commonlib import node
-from openquake.commonlib import nrml
+from openquake.commonlib import node, nrml
+from openquake.commonlib.writers import float2str
 
 
 SM_TREE_PATH = 'sourceModelTreePath'
@@ -206,7 +206,7 @@ class HazardCurveXMLWriter(BaseCurveWriter):
         _set_metadata(hazard_curves, metadata, _ATTR_MAP)
 
         imls_elem = etree.SubElement(hazard_curves, 'IMLs')
-        imls_elem.text = ' '.join([str(x) for x in metadata['imls']])
+        imls_elem.text = ' '.join(map(float2str, metadata['imls']))
         gml_ns = nrml.SERIALIZE_NS_MAP['gml']
 
         for hc in data:
@@ -215,7 +215,7 @@ class HazardCurveXMLWriter(BaseCurveWriter):
             gml_pos = etree.SubElement(gml_point, '{%s}pos' % gml_ns)
             gml_pos.text = '%s %s' % (hc.location.x, hc.location.y)
             poes_elem = etree.SubElement(hc_elem, 'poEs')
-            poes_elem.text = ' '.join([str(x) for x in hc.poes])
+            poes_elem.text = ' '.join(map(float2str, hc.poes))
 
 
 class HazardCurveGeoJSONWriter(BaseCurveWriter):
@@ -239,7 +239,7 @@ class HazardCurveGeoJSONWriter(BaseCurveWriter):
                 if key == 'imls':
                     oqmetadata['IMLs'] = value
                 else:
-                    oqmetadata[_ATTR_MAP.get(key)] = str(value)
+                    oqmetadata[_ATTR_MAP.get(key)] = float2str(value)
 
         features = []
         feature_coll = {
@@ -813,7 +813,7 @@ class DisaggXMLWriter(object):
 
             _set_metadata(diss_matrices, self.metadata, _ATTR_MAP)
 
-            transform = lambda val: ', '.join([str(x) for x in val])
+            transform = lambda val: ', '.join(map(float2str, val))
             _set_metadata(diss_matrices, self.metadata, self.BIN_EDGE_ATTR_MAP,
                           transform=transform)
 
@@ -831,18 +831,18 @@ class DisaggXMLWriter(object):
                 result_type = ','.join(result.dim_labels)
                 diss_matrix.set('type', result_type)
 
-                dims = ','.join([str(x) for x in result.matrix.shape])
+                dims = ','.join(str(x) for x in result.matrix.shape)
                 diss_matrix.set('dims', dims)
 
-                diss_matrix.set('poE', str(result.poe))
-                diss_matrix.set('iml', str(result.iml))
+                diss_matrix.set('poE', float2str(result.poe))
+                diss_matrix.set('iml', float2str(result.iml))
 
                 for idxs, value in numpy.ndenumerate(result.matrix):
                     prob = etree.SubElement(diss_matrix, 'prob')
 
                     index = ','.join([str(x) for x in idxs])
                     prob.set('index', index)
-                    prob.set('value', str(value))
+                    prob.set('value', float2str(value))
 
             fh.write(etree.tostring(
                 root, pretty_print=True, xml_declaration=True,
