@@ -17,6 +17,7 @@ import math
 import copy
 import logging
 import operator
+import collections
 from itertools import izip
 
 from openquake.hazardlib import geo, mfd, pmf, source
@@ -38,7 +39,7 @@ class DuplicatedID(Exception):
     """Raised when two sources with the same ID are found in a source model"""
 
 
-class TrtModel(object):
+class TrtModel(collections.Sequence):
     """
     A container for the following parameters:
 
@@ -112,8 +113,11 @@ class TrtModel(object):
 
     def split_sources_and_count_ruptures(self, area_source_discretization):
         """
-        Update .num_ruptures and .sources as a side effect.
-        Make sure the sources are ordered.
+        Split the current .sources and replace them with new ones.
+        Also, update the total .num_ruptures and the .weigth of each
+        source. Finally, make sure the sources are ordered.
+
+        :param area_source_discretization: parameter from the job.ini
         """
         sources = []
         for src in self:
@@ -137,6 +141,9 @@ class TrtModel(object):
         if num_sources == other_sources:
             return self.trt < other.trt
         return num_sources < other_sources
+
+    def __getitem__(self, i):
+        return self.sources[i]
 
     def __iter__(self):
         return iter(self.sources)
@@ -173,7 +180,7 @@ def parse_source_model(fname, converter, apply_uncertainties=lambda src: None):
             source_stats_dict[trt] = TrtModel(trt)
         source_stats_dict[trt].update(src)
         source_ids.add(src.source_id)
-        if no % 10000 == 0:
+        if no % 10000 == 0:  # log every 10,000 sources parsed
             logging.info('Parsed %d sources from %s', no, fname)
 
     # return ordered TrtModels
