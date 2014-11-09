@@ -324,8 +324,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         self.bin_edges = {}
         curves_dict = dict((site.id, self.get_curves(site))
                            for site in self.site_collection)
-
-        oqm = tasks.OqTaskManager(compute_disagg, logs.LOG.progress)
+        all_args = []
         for trt_model_id, srcs in groupby(
                 self.all_sources, attrgetter('trt_model_id')).iteritems():
             lt_model = models.TrtModel.objects.get(pk=trt_model_id).lt_model
@@ -366,11 +365,11 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                 self.bin_edges[lt_model.id, site.id] = (
                     mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
 
-            oqm.submit(self.job.id, sitecol, srcs, trt_model_id,
-                       trt_num, curves_dict, self.bin_edges)
+            all_args.append((self.job.id, sitecol, srcs, trt_model_id,
+                             trt_num, curves_dict, self.bin_edges))
 
-        res = oqm.result(self.agg_result, {})
-        self.save_disagg_results(res)  # dictionary key -> probability array
+        res = tasks.starmap(compute_disagg, all_args, logs.LOG.progress)
+        self.save_disagg_results(res.result(self.agg_result))
 
     def post_execute(self):
         super(DisaggHazardCalculator, self).post_execute()
