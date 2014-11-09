@@ -29,24 +29,24 @@ from openquake.engine.tests.utils.tasks import \
     failing_task, just_say_hello, get_even
 
 
-class MapReduceTestCase(unittest.TestCase):
+class TaskManagerTestCase(unittest.TestCase):
     """
     Tests the behaviour of utils.tasks.map_reduce and apply_reduce
     """
 
     def test_single_item(self):
         expected = ["hello"] * 5
-        result = tasks.map_reduce(
-            just_say_hello, [(i, ) for i in range(5)],
-            lambda lst, val: lst + [val], [])
+        tm = tasks.OqTaskManager.starmap(
+            just_say_hello, [(i, ) for i in range(5)])
+        result = tm.result(lambda lst, val: lst + [val], [])
         self.assertEqual(expected, result)
 
     def test_type_error(self):
         try:
-            tasks.map_reduce(just_say_hello, range(5),
-                             lambda lst, val: lst + [val], [])
+            tasks.OqTaskManager.starmap(just_say_hello, range(5))
         except TypeError as exc:
             # the message depend on the OQ_NO_DISTRIBUTE flag
+            # "submit() argument after * must be a sequence, not int"
             self.assertIn('int', str(exc))
         else:
             raise Exception("Exception not raised.")
