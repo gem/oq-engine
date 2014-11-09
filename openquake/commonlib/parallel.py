@@ -24,8 +24,8 @@ import os
 import sys
 import cPickle
 import logging
+import operator
 import traceback
-import itertools
 import time
 from datetime import datetime
 from concurrent.futures import as_completed, ProcessPoolExecutor
@@ -193,7 +193,7 @@ class TaskManager(object):
       tm = TaskManager(do_something, logging.info)
       tm.send(arg1, arg2)
       tm.send(arg3, arg4)
-      print tm.aggregate_results(agg, acc)
+      print tm.result()
 
     Progress report is built-in.
     """
@@ -204,7 +204,20 @@ class TaskManager(object):
         cls.executor.shutdown()
         cls.executor = ProcessPoolExecutor()
 
-    def __init__(self, oqtask, progress, name=None):
+    @classmethod
+    def starmap(cls, task_func, task_args, progress=logging.info, name=None):
+        """
+        Spawn a bunch of tasks with the given list of arguments
+
+        :returns: a TaskManager object with a .result method.
+        """
+        self = cls(task_func, progress, name)
+        for i, a in enumerate(task_args, 1):
+            progress('Submitting task %s #%d', self.name, i)
+            self.submit(*a)
+        return self
+
+    def __init__(self, oqtask, progress=logging.info, name=None):
         self.oqtask = oqtask
         self.progress = progress
         self.name = name or oqtask.__name__
@@ -241,17 +254,18 @@ class TaskManager(object):
             acc = agg(acc, future.result())
         return acc
 
-    def aggregate_results(self, agg, acc):
+    def result(self, agg=operator.add, acc=None):
         """
         Loop on a set of results and update the accumulator
         by using the aggregation function.
 
-        :param results: a list of results
         :param agg: the aggregation function, (acc, val) -> new acc
         :param acc: the initial value of the accumulator
         :returns: the final value of the accumulator
         """
-        logging.info('Sent %dM of data', self.sent // ONE_MB)
+        if acc is None:
+            acc = AccumDict()
+        self.progress('Sent %dM of data', self.sent // ONE_MB)
         log_percent = log_percent_gen(
             self.name, len(self.results), self.progress)
         log_percent.next()
@@ -268,7 +282,7 @@ class TaskManager(object):
         else:
             agg_result = self.aggregate_result_set(agg_and_percent, acc)
 
-        logging.info('Received %dM of data', self.received // ONE_MB)
+        self.progress('Received %dM of data', self.received // ONE_MB)
         self.results = []
         return agg_result
 
@@ -278,40 +292,19 @@ class TaskManager(object):
 
         :returns: the total number of tasks that were spawned
         """
-        return self.aggregate_results(self, lambda acc, res: acc + 1, 0)
+        return self.result(self, lambda acc, res: acc + 1, 0)
+
+    def __iter__(self):
+        """
+        An iterator over the results
+        """
+        return iter(self.results)
+
+# a convenient alias
+starmap = TaskManager.starmap
 
 
-def map_reduce(function, function_args, agg, acc, name=None):
-    """
-    Given a function and an iterable of positional arguments, apply the
-    function to the arguments in parallel and return an aggregate
-    result depending on the initial value of the accumulator
-    and on the aggregation function. To save memory, the order is
-    not preserved and there is no list with the intermediated results:
-    the accumulator is incremented as soon as a result comes.
-
-    NB: if the environment variable OQ_NO_DISTRIBUTE is set the
-    functions are run sequentially in the current process and then
-    `map_reduce(function, function_args, agg, acc)` is the same as
-    `reduce(agg, itertools.starmap(function, function_args), acc)`.
-    Users of `map_reduce` should be aware of the fact that when
-    thousands of functions are spawned and large arguments are passed
-    or large results are returned they may incur in memory issues.
-
-    :param function: a top level Python function
-    :param function_args: an iterable over positional arguments
-    :param agg: the aggregation function, (acc, val) -> new acc
-    :param acc: the initial value of the accumulator
-    :returns: the final value of the accumulator
-    """
-    tm = TaskManager(function, logging.info, name)
-    for args in function_args:
-        tm.submit(*args)
-    return tm.aggregate_results(agg, acc)
-
-
-def apply_reduce(task_func, task_args, agg,
-                 acc=None,
+def apply_reduce(task_func, task_args, agg=operator.add, acc=None,
                  concurrent_tasks=executor._max_workers,
                  weight=lambda item: 1,
                  key=lambda item: 'Unspecified',
@@ -339,23 +332,23 @@ def apply_reduce(task_func, task_args, agg,
     :param agg: the aggregation function
     :param acc: initial value of the accumulator (default empty AccumDict)
     :param concurrent_tasks: hint about how many tasks to generate
-    :param weight: function to extract the weight of an item in data
-    :param key: function to extract the kind of an item in data
+    :param weight: function to extract the weight of an item in arg0
+    :param key: function to extract the kind of an item in arg0
     """
-    data = task_args[0]
+    arg0 = task_args[0]
     args = task_args[1:]
     if acc is None:
         acc = AccumDict()
-    if not data:
+    if not arg0:
         return acc
-    elif len(data) == 1:
-        return agg(acc, task_func(data, *args))
-    chunks = list(split_in_blocks(data, concurrent_tasks or 1, weight, key))
-    all_args = [(chunk,) + args for chunk in chunks]
+    elif len(arg0) == 1 or not concurrent_tasks:
+        return agg(acc, task_func(arg0, *args))
+    chunks = list(
+        split_in_blocks(arg0, concurrent_tasks, weight, key))
+    tm = TaskManager.starmap(task_func, [(chunk,) + args for chunk in chunks],
+                             logging.info, name)
     apply_reduce._chunks = chunks
-    if not concurrent_tasks:
-        return reduce(agg, itertools.starmap(task_func, all_args), acc)
-    return map_reduce(task_func, all_args, agg, acc, name)
+    return tm.result(agg, acc)
 
 
 def do_not_aggregate(acc, value):

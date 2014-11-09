@@ -31,7 +31,7 @@ from openquake.risklib import workflows
 
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.node import read_nodes, LiteralNode, context
-from openquake.commonlib import nrml, valid, logictree, InvalidFile
+from openquake.commonlib import nrml, valid, logictree, InvalidFile, parallel
 from openquake.commonlib.oqvalidation import \
     fragility_files, vulnerability_files
 from openquake.commonlib.riskmodels import \
@@ -309,7 +309,7 @@ def get_filtered_source_models(oqparam, sitecol):
                 trt_model, sitecol, oqparam.maximum_distance)
             if num_original_sources > 1:
                 logging.info(
-                    'Filtering %d of %d sources for model %s%s, TRT=%s',
+                    'Considering %d of %d sources for model %s%s, TRT=%s',
                     len(trt_model), num_original_sources, source_model.name,
                     source_model.path, trt_model.trt)
             if not trt_model.sources:
@@ -321,6 +321,7 @@ def get_filtered_source_models(oqparam, sitecol):
                 source_model.trt_models.remove(trt_model)
         if source_model.trt_models:
             yield source_model
+            parallel.TaskManager.restart()  # hack to save memory
 
 
 def get_effective_source_models(oqparam, sitecol):
@@ -339,7 +340,7 @@ def get_effective_source_models(oqparam, sitecol):
         for trt_model in source_model.trt_models:
             trt_model.split_sources_and_count_ruptures(
                 oqparam.area_source_discretization)
-            logging.info('Processed %s', trt_model)
+            logging.info(repr(trt_model))
         yield source_model
 
 
