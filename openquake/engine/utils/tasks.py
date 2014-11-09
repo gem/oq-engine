@@ -87,6 +87,9 @@ class OqTaskManager(TaskManager):
             del backend._cache[task_id]  # work around a celery bug
         return acc
 
+# a convenient alias
+starmap = OqTaskManager.starmap
+
 
 def apply_reduce(task, task_args,
                  agg=lambda a, x: x,
