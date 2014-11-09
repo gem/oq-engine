@@ -369,7 +369,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
             oqm.submit(self.job.id, sitecol, srcs, trt_model_id,
                        trt_num, curves_dict, self.bin_edges)
 
-        res = oqm.aggregate_results(self.agg_result, {})
+        res = oqm.result(self.agg_result, {})
         self.save_disagg_results(res)  # dictionary key -> probability array
 
     def post_execute(self):
