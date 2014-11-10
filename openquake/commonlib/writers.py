@@ -24,9 +24,9 @@ def float2str(value, fmt='%13.9E'):
     If the value is not a float, convert it into a string.
 
     >>> float2str(-0.004)
-    '-4.000000000000E-03'
+    '-4.000000000E-03'
     >>> float2str(0.004)
-    '4.000000000000E-03'
+    '4.000000000E-03'
     """
     if isinstance(value, float):
         return fmt % value
