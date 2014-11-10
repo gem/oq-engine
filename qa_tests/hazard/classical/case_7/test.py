@@ -21,7 +21,7 @@ import tempfile
 from nose.plugins.attrib import attr
 from openquake.engine.db import models
 from openquake.engine.export import hazard as hazard_export
-from openquake.commonlib.tests import check_expected
+from openquake.commonlib.tests import check_equal
 from qa_tests import _utils as qa_utils
 
 
@@ -69,16 +69,16 @@ class ClassicalHazardCase7TestCase(qa_utils.BaseQATestCase):
             # Test the exports as well:
             exported_file_b1 = hazard_export.export(
                 actual_curve_b1.hazard_curve.output.id, result_dir)
-            check_expected(__file__, 'expected_b1.xml', exported_file_b1)
+            check_equal(__file__, 'expected_b1.xml', exported_file_b1)
 
             exported_file_b2 = hazard_export.export(
                 actual_curve_b2.hazard_curve.output.id, result_dir)
-            check_expected(__file__, 'expected_b2.xml', exported_file_b2)
+            check_equal(__file__, 'expected_b2.xml', exported_file_b2)
 
             # mean:
             exported_file_mean = hazard_export.export(
                 mean_curve.hazard_curve.output.id, result_dir)
-            check_expected(__file__, 'expected_mean.xml',
+            check_equal(__file__, 'expected_mean.xml',
                            exported_file_mean)
         except:
             raise
