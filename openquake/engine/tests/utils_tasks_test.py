@@ -38,7 +38,7 @@ class TaskManagerTestCase(unittest.TestCase):
         expected = ["hello"] * 5
         tm = tasks.OqTaskManager.starmap(
             just_say_hello, [(i, ) for i in range(5)])
-        result = tm.result(lambda lst, val: lst + [val], [])
+        result = tm.reduce(lambda lst, val: lst + [val], [])
         self.assertEqual(expected, result)
 
     def test_type_error(self):
