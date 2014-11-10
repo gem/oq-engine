@@ -119,9 +119,8 @@ def apply_reduce(task, task_args,
     elif len(data) == 1 or not concurrent_tasks:
         return agg(acc, task.task_func(job_id, data, *args))
     blocks = split_in_blocks(data, concurrent_tasks, weight, key)
-    all_args = [(job_id, block) + args for block in blocks]
-    return OqTaskManager.starmap(
-        task, all_args, logs.LOG.progress, name).result(agg, acc)
+    task_args = [(job_id, block) + args for block in blocks]
+    return starmap(task, task_args, logs.LOG.progress, name).reduce(agg, acc)
 
 
 def oqtask(task_func):

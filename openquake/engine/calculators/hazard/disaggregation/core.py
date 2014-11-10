@@ -369,7 +369,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                              trt_num, curves_dict, self.bin_edges))
 
         res = tasks.starmap(compute_disagg, all_args, logs.LOG.progress)
-        self.save_disagg_results(res.result(self.agg_result))
+        self.save_disagg_results(res.reduce(self.agg_result))
 
     def post_execute(self):
         super(DisaggHazardCalculator, self).post_execute()
