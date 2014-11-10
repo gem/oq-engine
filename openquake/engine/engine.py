@@ -381,7 +381,7 @@ def run_job(cfg_file, log_level, log_file, exports=(), hazard_output_id=None,
 
 def check_hazard_risk_consistency(haz_job, risk_mode):
     """
-    Make sure that the retrieve hazard job is the right one for the
+    Make sure that the provided hazard job is the right one for the
     current risk calculator.
 
     :param job:
