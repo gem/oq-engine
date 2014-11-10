@@ -20,18 +20,17 @@ import os
 
 
 class DifferentFiles(Exception):
-    def __str__(self):
-        return '%s %s' % self.args
+    """Raised for different files"""
 
 
-def check_expected(filepath, expected, actual_path):
+def check_equal(filepath, expected, actual_path):
     """
     Compare two files for equality of content. Usage:
 
-    >> check_expected(__file__, 'expected.xml', 'actual.xml')
+    >> check_equal(__file__, 'expected.xml', 'actual.xml')
     """
     expected_path = os.path.join(os.path.dirname(filepath), expected)
     expected_content = open(expected_path).read()
     actual_content = open(actual_path).read()
     if expected_content != actual_content:
-        raise DifferentFiles(expected_path, actual_path)
+        raise DifferentFiles('%s %s' % (expected_path, actual_path))

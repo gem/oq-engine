@@ -24,7 +24,7 @@ import unittest
 from collections import namedtuple
 
 from openquake.commonlib import hazard_writers as writers
-from openquake.commonlib.tests import _utils as utils, check_expected
+from openquake.commonlib.tests import _utils as utils, check_equal
 
 HazardCurveData = namedtuple('HazardCurveData', 'location, poes')
 UHSData = namedtuple('UHSData', 'location, imls')
@@ -257,7 +257,7 @@ class HazardCurveWriterSerializeTestCase(HazardCurveWriterTestCase):
         )
         writer = writers.HazardCurveXMLWriter(self.path, **metadata)
         writer.serialize(self.data)
-        check_expected(__file__, 'expected_hazard_curves.xml', self.path)
+        check_equal(__file__, 'expected_hazard_curves.xml', self.path)
 
     def test_serialize_geojson(self):
         expected = {
@@ -306,7 +306,7 @@ class HazardCurveWriterSerializeTestCase(HazardCurveWriterTestCase):
         )
         writer = writers.HazardCurveXMLWriter(self.path, **metadata)
         writer.serialize(self.data)
-        check_expected(__file__, 'expected_quantile_curves.xml', self.path)
+        check_equal(__file__, 'expected_quantile_curves.xml', self.path)
 
     def test_serialize_quantile_geojson(self):
         expected = {
@@ -390,7 +390,7 @@ class MultiHazardCurveXMLWriterSerializeTestCase(HazardWriterTestCase):
         writer = writers.MultiHazardCurveXMLWriter(
             self.path, [metadata1, metadata2])
         writer.serialize([self.data1, self.data2])
-        check_expected(__file__, 'expected_multicurves.xml', self.path)
+        check_equal(__file__, 'expected_multicurves.xml', self.path)
 
 
 class EventBasedGMFXMLWriterTestCase(HazardWriterTestCase):
@@ -429,7 +429,7 @@ class EventBasedGMFXMLWriterTestCase(HazardWriterTestCase):
         writer = writers.EventBasedGMFXMLWriter(
             self.path, sm_lt_path, gsim_lt_path)
         writer.serialize(gmf_collection)
-        check_expected(__file__, 'expected_gmf.xml', self.path)
+        check_equal(__file__, 'expected_gmf.xml', self.path)
 
 
 class SESXMLWriterTestCase(HazardWriterTestCase):
@@ -501,7 +501,7 @@ class SESXMLWriterTestCase(HazardWriterTestCase):
         _, self.path = tempfile.mkstemp()
         writer = writers.SESXMLWriter(self.path, sm_lt_path)
         writer.serialize([ses1, ses2])
-        check_expected(__file__, 'expected_ses_collection.xml', self.path)
+        check_equal(__file__, 'expected_ses_collection.xml', self.path)
 
 
 class HazardMapWriterTestCase(HazardWriterTestCase):
@@ -523,7 +523,7 @@ class HazardMapWriterTestCase(HazardWriterTestCase):
         )
         writer = writers.HazardMapXMLWriter(self.path, **metadata)
         writer.serialize(self.data)
-        check_expected(__file__, 'expected_hazard_map.xml',  self.path)
+        check_equal(__file__, 'expected_hazard_map.xml',  self.path)
 
     def test_serialize_geojson(self):
         expected = {
@@ -577,7 +577,7 @@ class HazardMapWriterTestCase(HazardWriterTestCase):
         writer = writers.HazardMapXMLWriter(self.path, **metadata)
         writer.serialize(self.data)
 
-        check_expected(__file__, 'expected_quantile.xml', self.path)
+        check_equal(__file__, 'expected_quantile.xml', self.path)
 
     def test_serialize_quantile_geojson(self):
         expected = {
@@ -698,7 +698,7 @@ class DisaggXMLWriterTestCase(HazardWriterTestCase):
     def test_serialize(self):
         writer = writers.DisaggXMLWriter(self.path, **self.metadata)
         writer.serialize(self.data)
-        check_expected(__file__, 'expected_disagg.xml', self.path)
+        check_equal(__file__, 'expected_disagg.xml', self.path)
 
 
 class UHSXMLWriterTestCase(unittest.TestCase):
