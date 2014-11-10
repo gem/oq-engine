@@ -112,10 +112,12 @@ def compute_ruptures(job_id, sources, sitecol):
 
     :param int job_id:
         ID of the currently running job.
-    :param sitecol:
-        a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param sources:
         List of commonlib.source.Source tuples
+    :param sitecol:
+        a :class:`openquake.hazardlib.site.SiteCollection` instance
+    :returns:
+        a dictionary trt_model_id -> tot_ruptures
     """
     # NB: all realizations in gsims correspond to the same source model
     trt_model_id = sources[0].trt_model_id
@@ -224,7 +226,10 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol):
     :param ses_ruptures:
         a list of blocks of SESRuptures with homogeneous TrtModel
     :param sitecol:
-        a SiteCollection instance
+        a :class:`openquake.hazardlib.site.SiteCollection` instance
+    :returns:
+        a dictionary trt_model_id -> (curves_by_gsim, bounding_boxes)
+        where the list of bounding boxes is empty
     """
     job = models.OqJob.objects.get(pk=job_id)
     hc = job.get_oqparam()
@@ -381,13 +386,15 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
     def initialize_ses_db_records(self, trt_model, i):
         """
         Create :class:`~openquake.engine.db.models.Output` and
-        :class:`~openquake.engine.db.models.SESCollection` records for
+        :class:`openquake.engine.db.models.SESCollection` records for
         each tectonic region type.
 
         :param trt_model:
             :class:`openquake.engine.db.models.TrtModel` instance
         :param i:
             an ordinal number starting from 1
+        :returns:
+            a :class:`openquake.engine.db.models.SESCollection` instance
         """
         output = models.Output.objects.create(
             oq_job=self.job,
@@ -404,9 +411,8 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         Do pre-execution work. At the moment, this work entails:
         parsing and initializing sources, parsing and initializing the
         site model (if there is one), parsing vulnerability and
-        exposure files, and generating logic tree realizations. (The
-        latter piece basically defines the work to be done in the
-        `execute` phase.)
+        exposure files, generating the seeds for the sourcesand building
+        SESCollection records for each TrtModel.
         """
         weights = super(EventBasedHazardCalculator, self).pre_execute()
         hc = self.hc

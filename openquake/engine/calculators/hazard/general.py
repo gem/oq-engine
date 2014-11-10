@@ -149,9 +149,8 @@ class BaseHazardCalculator(base.Calculator):
     @EnginePerformanceMonitor.monitor
     def execute(self):
         """
-        Run the core_calc_task in parallel, by passing the arguments
-        provided by the .task_arg_gen method. By default it uses the
-        parallelize distribution, but it can be overridden is subclasses.
+        Run the `.core_calc_task` in parallel, by using the apply_reduce
+        distribution, but it can be overridden in subclasses.
         """
         self.acc = tasks.apply_reduce(
             self.core_calc_task,
