@@ -58,10 +58,9 @@ def check_mem_usage(soft_percent=80, hard_percent=100):
     if used_mem_percent > soft_percent:
         logging.warn('Using over %d%% of the memory!', used_mem_percent)
     if used_mem_percent > hard_percent:
-        logging.warn('Using over %d%% of the memory! Shutting down',
-                     used_mem_percent)
-        raise RuntimeError("Out of memory")
-
+        raise RuntimeError('Using more memory than allowed by configuration '
+                           '(Used: %d%% / Allowed: %d%%)! Shutting down.' %
+                           (used_mem_percent, hard_percent))
 
 
 def safely_call(func, args, pickle=False):
