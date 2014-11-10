@@ -206,9 +206,9 @@ def oqtask(task_func):
                 'total ' + task_func.__name__, job_id, tsk, flush=True):
             # tasks write on the celery log file
             logs.set_level(job.log_level)
-            # log a warning if too much memory is used
-            check_mem_usage(SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
             try:
+                # log a warning if too much memory is used
+                check_mem_usage(SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
                 # run the task
                 return task_func(*args)
             finally:
