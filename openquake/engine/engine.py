@@ -383,9 +383,15 @@ def check_hazard_risk_consistency(haz_job, risk_mode):
     """
     Make sure that the retrieve hazard job is the right one for the
     current risk calculator.
+
+    :param job:
+        an OqJob instance referring to the previous hazard calculation
+    :param risk_mode:
+        the `calculation_mode` string of the current risk calculation
     """
     if haz_job.job_type == 'risk':
-        raise ValueError('You provided a risk job instead of a hazard job!')
+        raise InvalidHazardCalculationID(
+            'You provided a risk calculation instead of a hazard calculation!')
 
     # check for obsolete calculation_mode
     if risk_mode in ('classical', 'event_based', 'scenario'):
@@ -396,11 +402,11 @@ def check_hazard_risk_consistency(haz_job, risk_mode):
     hazard_mode = haz_job.get_param('calculation_mode')
     expected_mode = RISK_HAZARD_MAP[risk_mode]
     if hazard_mode != expected_mode:
-        raise ValueError(
+        raise InvalidHazardCalculationID(
             'In order to run a risk calculation of kind %r, '
             'you need to provide a hazard calculation of kind %r, '
             'but you provided a %r instead' %
-            (risk_mode, expected_mode,  hazard_mode))
+            (risk_mode, expected_mode, hazard_mode))
 
 
 @django_db.transaction.commit_on_success
