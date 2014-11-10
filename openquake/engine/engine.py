@@ -54,6 +54,18 @@ UNABLE_TO_DEL_RC_FMT = 'Unable to delete risk calculation: %s'
 TERMINATE = valid.boolean(config.get('celery', 'terminate_workers_on_revoke'))
 
 
+class InvalidHazardCalculationID(Exception):
+    pass
+
+RISK_HAZARD_MAP = dict(
+    scenario_risk='scenario',
+    scenario_damage='scenario',
+    classical_risk='classical',
+    classical_bcr='classical',
+    event_based_risk='event_based',
+    event_based_bcr='event_based')
+
+
 def cleanup_after_job(job, terminate):
     """
     Release the resources used by an openquake job.
@@ -367,26 +379,28 @@ def run_job(cfg_file, log_level, log_file, exports=(), hazard_output_id=None,
                 sys.exit('Calculation %s failed' % job.id)
 
 
-def assert_hazard_risk_consistency(haz_job, risk_mode):
+def check_hazard_risk_consistency(haz_job, risk_mode):
     """
     Make sure that the retrieve hazard job is the right one for the
     current risk calculator.
     """
-    assert haz_job.job_type == 'hazard', haz_job
+    if haz_job.job_type == 'risk':
+        raise ValueError('You provided a risk job instead of a hazard job!')
 
     # check for obsolete calculation_mode
-    assert risk_mode not in ('classical', 'event_based', 'scenario'), (
-        'Please change calculation_mode=%s into %s_risk '
-        'in the .ini file' % (risk_mode, risk_mode))
+    if risk_mode in ('classical', 'event_based', 'scenario'):
+        raise ValueError('Please change calculation_mode=%s into %s_risk '
+                         'in the .ini file' % (risk_mode, risk_mode))
 
-    # check consistency of the hazard calculation_mode
+    # check hazard calculation_mode consistency
     hazard_mode = haz_job.get_param('calculation_mode')
-    if risk_mode in ('classical_risk', 'classical_bcr'):
-        assert hazard_mode == 'classical', hazard_mode
-    elif risk_mode in ('event_based_risk', 'event_based_bcr'):
-        assert hazard_mode == 'event_based', hazard_mode
-    elif risk_mode in ('scenario_risk', 'scenario_damage'):
-        assert hazard_mode == 'scenario', hazard_mode
+    expected_mode = RISK_HAZARD_MAP[risk_mode]
+    if hazard_mode != expected_mode:
+        raise ValueError(
+            'In order to run a risk calculation of kind %r, '
+            'you need to provide a hazard calculation of kind %r, '
+            'but you provided a %r instead' %
+            (risk_mode, expected_mode,  hazard_mode))
 
 
 @django_db.transaction.commit_on_success
@@ -436,7 +450,7 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
         oqparam.hazard_output_id = hazard_output_id
 
     if haz_job:  # for risk calculations
-        assert_hazard_risk_consistency(haz_job, oqparam.calculation_mode)
+        check_hazard_risk_consistency(haz_job, oqparam.calculation_mode)
 
     params = vars(oqparam).copy()
     if 'quantile_loss_curves' not in params:
