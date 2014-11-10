@@ -17,7 +17,7 @@ import cStringIO
 from xml.sax.saxutils import escape, quoteattr
 
 
-def float2str(value, fmt='%13.10E'):
+def float2str(value, fmt='%13.9E'):
     """
     Convert a float into a string by using the scientific notation
     and a fixed precision (by default 10 decimal digits).
