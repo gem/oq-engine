@@ -190,10 +190,12 @@ def compute_hazard_curves(job_id, sources, sitecol):
 
     :param job_id:
         ID of the currently running job
-    :param sitecol:
-        a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param sources:
         a block of source objects
+    :param sitecol:
+        a :class:`openquake.hazardlib.site.SiteCollection` instance
+    :returns:
+        a dictionary trt_model_id -> (curves_by_gsim, bounding_boxes)
     """
     hc = models.oqparam(job_id)
     trt_model_id = sources[0].trt_model_id
