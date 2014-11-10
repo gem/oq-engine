@@ -430,6 +430,8 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
     :raises:
         `RuntimeError` if the input job configuration is not valid
     """
+    assert os.path.exists(cfg_file_path), cfg_file_path
+
     from openquake.engine.calculators import calculators
 
     # determine the previous hazard job, if any
