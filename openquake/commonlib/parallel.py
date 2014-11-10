@@ -48,15 +48,20 @@ def no_distribute():
     return nd in ('1', 'true', 'yes')
 
 
-def check_mem_usage(mem_percent=80):
+def check_mem_usage(soft_percent=80, hard_percent=100):
     """
     Display a warning if we are running out of memory
 
     :param int mem_percent: the memory limit as a percentage
     """
     used_mem_percent = psutil.phymem_usage().percent
-    if used_mem_percent > mem_percent:
+    if used_mem_percent > soft_percent:
         logging.warn('Using over %d%% of the memory!', used_mem_percent)
+    if used_mem_percent > hard_percent:
+        logging.warn('Using over %d%% of the memory! Shutting down',
+                     used_mem_percent)
+        raise RuntimeError("Out of memory")
+
 
 
 def safely_call(func, args, pickle=False):
