@@ -19,6 +19,6 @@ class TaskManagerTestCase(unittest.TestCase):
         res = {key: parallel.starmap(get_length, [(data,)])
                for key, data in all_data}
         for key, val in res.iteritems():
-            res[key] = val.result()
+            res[key] = val.reduce()
         parallel.TaskManager.restart()
         self.assertEqual(res, {'a': {'n': 10}, 'c': {'n': 15}, 'b': {'n': 20}})
