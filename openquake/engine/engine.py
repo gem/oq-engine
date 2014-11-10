@@ -367,6 +367,28 @@ def run_job(cfg_file, log_level, log_file, exports=(), hazard_output_id=None,
                 sys.exit('Calculation %s failed' % job.id)
 
 
+def assert_hazard_risk_consistency(haz_job, risk_mode):
+    """
+    Make sure that the retrieve hazard job is the right one for the
+    current risk calculator.
+    """
+    assert haz_job.job_type == 'hazard', haz_job
+
+    # check for obsolete calculation_mode
+    assert risk_mode not in ('classical', 'event_based', 'scenario'), (
+        'Please change calculation_mode=%s into %s_risk '
+        'in the .ini file' % (risk_mode, risk_mode))
+
+    # check consistency of the hazard calculation_mode
+    hazard_mode = haz_job.get_param('calculation_mode')
+    if risk_mode in ('classical_risk', 'classical_bcr'):
+        assert hazard_mode == 'classical', hazard_mode
+    elif risk_mode in ('event_based_risk', 'event_based_bcr'):
+        assert hazard_mode == 'event_based', hazard_mode
+    elif risk_mode in ('scenario_risk', 'scenario_damage'):
+        assert hazard_mode == 'scenario', hazard_mode
+
+
 @django_db.transaction.commit_on_success
 def job_from_file(cfg_file_path, username, log_level='info', exports=(),
                   hazard_output_id=None, hazard_calculation_id=None, **extras):
@@ -403,8 +425,6 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
         haz_job = models.Output.objects.get(pk=hazard_output_id).oq_job
     else:
         haz_job = None  # no previous hazard job
-    if haz_job:
-        assert haz_job.job_type == 'hazard', haz_job
 
     # create the current job
     job = prepare_job(user_name=username, log_level=log_level)
@@ -415,12 +435,8 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
             haz_job.id if haz_job and not hazard_output_id else None
         oqparam.hazard_output_id = hazard_output_id
 
-    # check for obsolete calculation_mode
-    is_risk = hazard_calculation_id or hazard_output_id
-    cmode = oqparam.calculation_mode
-    if is_risk and cmode in ('classical', 'event_based', 'scenario'):
-        raise ValueError('Please change calculation_mode=%s into %s_risk '
-                         'in the .ini file' % (cmode, cmode))
+    if haz_job:  # for risk calculations
+        assert_hazard_risk_consistency(haz_job, oqparam.calculation_mode)
 
     params = vars(oqparam).copy()
     if 'quantile_loss_curves' not in params:
