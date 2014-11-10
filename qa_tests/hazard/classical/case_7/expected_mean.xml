@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <hazardCurves statistics="mean" IMT="PGA" investigationTime="1.0">
+    <IMLs>0.1 0.12 0.2</IMLs>
+    <hazardCurve>
+      <gml:Point>
+        <gml:pos>0.0 0.0</gml:pos>
+      </gml:Point>
+      <poEs>0.794901469383 0.76026772458 0.332084317184</poEs>
+    </hazardCurve>
+  </hazardCurves>
+</nrml>

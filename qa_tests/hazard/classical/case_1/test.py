@@ -30,12 +30,12 @@ class ClassicalHazardCase1TestCase(qa_utils.BaseQATestCase):
     EXPECTED_PGA_XML = """<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
   <hazardCurves sourceModelTreePath="b1" gsimTreePath="b1" IMT="PGA" investigationTime="1.0">
-    <IMLs>0.1 0.4 0.6</IMLs>
+    <IMLs>1.000000000E-01 4.000000000E-01 6.000000000E-01</IMLs>
     <hazardCurve>
       <gml:Point>
         <gml:pos>0.0 0.0</gml:pos>
       </gml:Point>
-      <poEs>0.45701348633 0.0586267877384 0.00686616439666</poEs>
+      <poEs>4.570134863E-01 5.862678774E-02 6.866164397E-03</poEs>
     </hazardCurve>
   </hazardCurves>
 </nrml>
@@ -44,12 +44,12 @@ class ClassicalHazardCase1TestCase(qa_utils.BaseQATestCase):
     EXPECTED_SA_XML = """<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
   <hazardCurves sourceModelTreePath="b1" gsimTreePath="b1" IMT="SA" investigationTime="1.0" saPeriod="0.1" saDamping="5.0">
-    <IMLs>0.1 0.4 0.6</IMLs>
+    <IMLs>1.000000000E-01 4.000000000E-01 6.000000000E-01</IMLs>
     <hazardCurve>
       <gml:Point>
         <gml:pos>0.0 0.0</gml:pos>
       </gml:Point>
-      <poEs>0.608674764713 0.330830463746 0.201471216873</poEs>
+      <poEs>6.086747647E-01 3.308304637E-01 2.014712169E-01</poEs>
     </hazardCurve>
   </hazardCurves>
 </nrml>

@@ -22,24 +22,11 @@ import tempfile
 from nose.plugins.attrib import attr
 from openquake.engine.db import models
 from openquake.engine.export import hazard as hazard_export
+from openquake.commonlib.tests import check_expected
 from qa_tests import _utils as qa_utils
 
 
 class ClassicalHazardCase6TestCase(qa_utils.BaseQATestCase):
-
-    EXPECTED_XML = """<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves sourceModelTreePath="b1" gsimTreePath="b1" IMT="PGA" investigationTime="1.0">
-    <IMLs>0.1 0.12 0.2</IMLs>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>0.0 0.0</gml:pos>
-      </gml:Point>
-      <poEs>0.864664716763 0.824184571746 0.366622358502</poEs>
-    </hazardCurve>
-  </hazardCurves>
-</nrml>
-"""
 
     @attr('qa', 'hazard', 'classical')
     def test(self):
@@ -61,7 +48,9 @@ class ClassicalHazardCase6TestCase(qa_utils.BaseQATestCase):
             # Test the export as well:
             exported_file = hazard_export.export(
                 actual_curve.hazard_curve.output.id, result_dir)
-            self.assert_xml_equal(
-                StringIO.StringIO(self.EXPECTED_XML), exported_file)
-        finally:
+            check_expected(__file__, 'expected_hazard_curves.xml',
+                           exported_file)
+        except:
+            raise
+        else:
             shutil.rmtree(result_dir)
