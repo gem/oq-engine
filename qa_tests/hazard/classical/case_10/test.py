@@ -22,38 +22,11 @@ import tempfile
 from nose.plugins.attrib import attr
 from openquake.engine.db import models
 from openquake.engine.export import hazard as hazard_export
+from openquake.commonlib.tests import check_expected
 from qa_tests import _utils as qa_utils
 
 
 class ClassicalHazardCase10TestCase(qa_utils.BaseQATestCase):
-
-    EXPECTED_XML_B1_B2 = """<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves sourceModelTreePath="b1_b2" gsimTreePath="b1" IMT="PGA" investigationTime="1.0">
-    <IMLs>0.1 0.4 0.6 1.0</IMLs>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>0.0 0.0</gml:pos>
-      </gml:Point>
-      <poEs>0.00994026570298 0.000753551720765 9.69007927378e-05 0.0</poEs>
-    </hazardCurve>
-  </hazardCurves>
-</nrml>
-"""
-
-    EXPECTED_XML_B1_B3 = """<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves sourceModelTreePath="b1_b3" gsimTreePath="b1" IMT="PGA" investigationTime="1.0">
-    <IMLs>0.1 0.4 0.6 1.0</IMLs>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>0.0 0.0</gml:pos>
-      </gml:Point>
-      <poEs>0.0430003905349 0.0011965867367 7.37146638196e-05 0.0</poEs>
-    </hazardCurve>
-  </hazardCurves>
-</nrml>
-"""
 
     @attr('qa', 'hazard', 'classical')
     def test(self):
@@ -87,14 +60,14 @@ class ClassicalHazardCase10TestCase(qa_utils.BaseQATestCase):
             # Test the exports as well:
             exported_file_b1_b2 = hazard_export.export(
                 curve_b1_b2.hazard_curve.output.id, result_dir)
-            self.assert_xml_equal(
-                StringIO.StringIO(self.EXPECTED_XML_B1_B2),
-                exported_file_b1_b2)
+            check_expected(__file__, 'expected_b1_b2.xml',
+                           exported_file_b1_b2)
 
             exported_file_b1_b3 = hazard_export.export(
                 curve_b1_b3.hazard_curve.output.id, result_dir)
-            self.assert_xml_equal(
-                StringIO.StringIO(self.EXPECTED_XML_B1_B3),
-                exported_file_b1_b3)
-        finally:
+            check_expected(__file__, 'expected_b1_b3.xml',
+                           exported_file_b1_b3)
+        except:
+            raise
+        else:
             shutil.rmtree(result_dir)
