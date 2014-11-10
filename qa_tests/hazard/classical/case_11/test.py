@@ -22,7 +22,7 @@ import tempfile
 from nose.plugins.attrib import attr
 from openquake.engine.db import models
 from openquake.engine.export import hazard as hazard_export
-from openquake.commonlib.tests import check_expected
+from openquake.commonlib.tests import check_equal
 from qa_tests import _utils as qa_utils
 
 
@@ -87,32 +87,32 @@ class ClassicalHazardCase11TestCase(qa_utils.BaseQATestCase):
             # Test the exports as well:
             exported_file_b1_b2 = hazard_export.export(
                 curve_b1_b2.hazard_curve.output.id, result_dir)
-            check_expected(__file__, 'expected_b1_b2.xml',
+            check_equal(__file__, 'expected_b1_b2.xml',
                            exported_file_b1_b2)
 
             exported_file_b1_b3 = hazard_export.export(
                 curve_b1_b3.hazard_curve.output.id, result_dir)
-            check_expected(__file__, 'expected_b1_b3.xml',
+            check_equal(__file__, 'expected_b1_b3.xml',
                            exported_file_b1_b3)
 
             exported_file_b1_b4 = hazard_export.export(
                 curve_b1_b4.hazard_curve.output.id, result_dir)
-            check_expected(__file__, 'expected_b1_b4.xml',
+            check_equal(__file__, 'expected_b1_b4.xml',
                            exported_file_b1_b4)
 
             exported_file_mean = hazard_export.export(
                 mean_curve.hazard_curve.output.id, result_dir)
-            check_expected(__file__, 'expected_mean.xml',
+            check_equal(__file__, 'expected_mean.xml',
                            exported_file_mean)
 
             q01_file = hazard_export.export(
                 quantile_0_1_curve.hazard_curve.output.id, result_dir)
-            check_expected(__file__, 'expected_quantile_0_1.xml',
+            check_equal(__file__, 'expected_quantile_0_1.xml',
                            q01_file)
 
             q09_file = hazard_export.export(
                 quantile_0_9_curve.hazard_curve.output.id, result_dir)
-            check_expected(__file__, 'expected_quantile_0_9.xml',
+            check_equal(__file__, 'expected_quantile_0_9.xml',
                            q09_file)
         except:
             raise
