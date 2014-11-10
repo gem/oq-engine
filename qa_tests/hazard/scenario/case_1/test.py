@@ -22,7 +22,7 @@ from numpy.testing import assert_almost_equal
 
 from openquake.engine import export
 from openquake.engine.db import models
-from openquake.commonlib.tests import check_expected
+from openquake.commonlib.tests import check_equal
 from qa_tests import _utils as qa_utils
 
 
@@ -46,5 +46,5 @@ class ScenarioHazardCase1TestCase(qa_utils.BaseQATestCase):
         job = self.run_hazard(cfg)
         [output] = export.core.get_outputs(job.id, 'gmf_scenario')
         exported_file = export.hazard.export(output.id, result_dir)
-        check_expected(__file__, 'expected.xml', exported_file)
+        check_equal(__file__, 'expected.xml', exported_file)
         shutil.rmtree(result_dir)
