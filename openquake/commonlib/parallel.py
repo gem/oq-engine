@@ -193,7 +193,7 @@ class TaskManager(object):
       tm = TaskManager(do_something, logging.info)
       tm.send(arg1, arg2)
       tm.send(arg3, arg4)
-      print tm.result()
+      print tm.reduce()
 
     Progress report is built-in.
     """
@@ -254,7 +254,7 @@ class TaskManager(object):
             acc = agg(acc, future.result())
         return acc
 
-    def result(self, agg=operator.add, acc=None):
+    def reduce(self, agg=operator.add, acc=None):
         """
         Loop on a set of results and update the accumulator
         by using the aggregation function.
@@ -292,7 +292,7 @@ class TaskManager(object):
 
         :returns: the total number of tasks that were spawned
         """
-        return self.result(self, lambda acc, res: acc + 1, 0)
+        return self.reduce(self, lambda acc, res: acc + 1, 0)
 
     def __iter__(self):
         """
@@ -343,12 +343,11 @@ def apply_reduce(task_func, task_args, agg=operator.add, acc=None,
         return acc
     elif len(arg0) == 1 or not concurrent_tasks:
         return agg(acc, task_func(arg0, *args))
-    chunks = list(
-        split_in_blocks(arg0, concurrent_tasks, weight, key))
-    tm = TaskManager.starmap(task_func, [(chunk,) + args for chunk in chunks],
-                             logging.info, name)
+    chunks = list(split_in_blocks(arg0, concurrent_tasks, weight, key))
+    tm = starmap(task_func, [(chunk,) + args for chunk in chunks],
+                 logging.info, name)
     apply_reduce._chunks = chunks
-    return tm.result(agg, acc)
+    return tm.reduce(agg, acc)
 
 
 def do_not_aggregate(acc, value):
