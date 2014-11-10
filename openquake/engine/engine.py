@@ -54,6 +54,18 @@ UNABLE_TO_DEL_RC_FMT = 'Unable to delete risk calculation: %s'
 TERMINATE = valid.boolean(config.get('celery', 'terminate_workers_on_revoke'))
 
 
+class InvalidHazardCalculationID(Exception):
+    pass
+
+RISK_HAZARD_MAP = dict(
+    scenario_risk='scenario',
+    scenario_damage='scenario',
+    classical_risk='classical',
+    classical_bcr='classical',
+    event_based_risk='event_based',
+    event_based_bcr='event_based')
+
+
 def cleanup_after_job(job, terminate):
     """
     Release the resources used by an openquake job.
@@ -367,6 +379,36 @@ def run_job(cfg_file, log_level, log_file, exports=(), hazard_output_id=None,
                 sys.exit('Calculation %s failed' % job.id)
 
 
+def check_hazard_risk_consistency(haz_job, risk_mode):
+    """
+    Make sure that the provided hazard job is the right one for the
+    current risk calculator.
+
+    :param job:
+        an OqJob instance referring to the previous hazard calculation
+    :param risk_mode:
+        the `calculation_mode` string of the current risk calculation
+    """
+    if haz_job.job_type == 'risk':
+        raise InvalidHazardCalculationID(
+            'You provided a risk calculation instead of a hazard calculation!')
+
+    # check for obsolete calculation_mode
+    if risk_mode in ('classical', 'event_based', 'scenario'):
+        raise ValueError('Please change calculation_mode=%s into %s_risk '
+                         'in the .ini file' % (risk_mode, risk_mode))
+
+    # check hazard calculation_mode consistency
+    hazard_mode = haz_job.get_param('calculation_mode')
+    expected_mode = RISK_HAZARD_MAP[risk_mode]
+    if hazard_mode != expected_mode:
+        raise InvalidHazardCalculationID(
+            'In order to run a risk calculation of kind %r, '
+            'you need to provide a hazard calculation of kind %r, '
+            'but you provided a %r instead' %
+            (risk_mode, expected_mode, hazard_mode))
+
+
 @django_db.transaction.commit_on_success
 def job_from_file(cfg_file_path, username, log_level='info', exports=(),
                   hazard_output_id=None, hazard_calculation_id=None, **extras):
@@ -394,6 +436,8 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
     :raises:
         `RuntimeError` if the input job configuration is not valid
     """
+    assert os.path.exists(cfg_file_path), cfg_file_path
+
     from openquake.engine.calculators import calculators
 
     # determine the previous hazard job, if any
@@ -403,8 +447,6 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
         haz_job = models.Output.objects.get(pk=hazard_output_id).oq_job
     else:
         haz_job = None  # no previous hazard job
-    if haz_job:
-        assert haz_job.job_type == 'hazard', haz_job
 
     # create the current job
     job = prepare_job(user_name=username, log_level=log_level)
@@ -415,12 +457,8 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
             haz_job.id if haz_job and not hazard_output_id else None
         oqparam.hazard_output_id = hazard_output_id
 
-    # check for obsolete calculation_mode
-    is_risk = hazard_calculation_id or hazard_output_id
-    cmode = oqparam.calculation_mode
-    if is_risk and cmode in ('classical', 'event_based', 'scenario'):
-        raise ValueError('Please change calculation_mode=%s into %s_risk '
-                         'in the .ini file' % (cmode, cmode))
+    if haz_job:  # for risk calculations
+        check_hazard_risk_consistency(haz_job, oqparam.calculation_mode)
 
     params = vars(oqparam).copy()
     if 'quantile_loss_curves' not in params:
