@@ -18,7 +18,7 @@ Outputs: Hazard Curves, Hazard Maps
 
 Risk
 ----
-Expected runtime: 1 minute
+Expected runtime: 3 minutes
 Loss types: Structural, Nonstructural, Occupants
 Number of taxonomies: 5
 Outputs: Loss Curves, Loss Maps

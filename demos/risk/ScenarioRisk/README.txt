@@ -9,7 +9,7 @@ Note: This calculation demo consists of two parts: hazard and risk. The hazard a
 
 Hazard
 ------
-Expected runtime: 2 minutes
+Expected runtime: 5 minutes
 Number of sites: 9144
 Number of GMFs: 1000
 GMPEs: ChiouYoungs2008
@@ -18,7 +18,7 @@ Outputs: Ground Motion Fields
 
 Risk
 ----
-Expected runtime: 1 minute
+Expected runtime: 3 minutes
 Loss types: Structural, Nonstructural, Occupants
 Number of taxonomies: 5
 Outputs: Loss Maps, Aggregate Losses
