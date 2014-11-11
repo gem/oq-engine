@@ -143,7 +143,12 @@ def get_mesh(oqparam):
         # point to the end
         firstpoint = geo.Point(*oqparam.region[0])
         points = [geo.Point(*xy) for xy in oqparam.region] + [firstpoint]
-        return geo.Polygon(points).discretize(oqparam.region_grid_spacing)
+        try:
+            return geo.Polygon(points).discretize(oqparam.region_grid_spacing)
+        except:
+            raise ValueError(
+                'Could not discretize region %(region)s with grid spacing '
+                '%(region_grid_spacing)s' % vars(oqparam))
     elif 'exposure' in oqparam.inputs:
         raise RuntimeError('You can extract the site collection from the '
                            'exposure with get_sitecol_assets')
