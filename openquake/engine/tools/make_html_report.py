@@ -164,7 +164,7 @@ SELECT description, oq_job_id,
   FROM uiapi.job_stats AS s
   INNER JOIN uiapi.oq_job AS o
   ON s.oq_job_id=o.id
-  INNER JOIN uiapi.job_param AS p
+  LEFT JOIN uiapi.job_param AS p
   ON o.id=p.job_id AND name='description') AS x
 WHERE oq_job_id=%s;
 '''
