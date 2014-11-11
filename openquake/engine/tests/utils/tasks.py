@@ -27,7 +27,6 @@ import traceback
 from celery.task import task
 
 from openquake.commonlib.parallel import Pickled
-from openquake.engine.utils.tasks import oqtask
 
 
 # mimic the behavior of oqtask
@@ -42,7 +41,9 @@ def test_task(func):
             tb_str = ''.join(traceback.format_tb(tb))
             err_msg = '\n%s%s: %s' % (tb_str, exctype.__name__, exc)
             return Pickled((err_msg, exctype))
-    return task(wrapper)
+    tsk = task(wrapper)
+    tsk.task_func = func
+    return tsk
 
 
 @test_task
@@ -70,18 +71,12 @@ def single_arg_called_a(a):
 
 
 @test_task
-def failing_task(data):
+def failing_task(job_id, data):
     """
     Takes a single argument called `data` and raises a `NotImplementedError`
     exception throwing it back.
     """
     raise NotImplementedError(data)
-
-
-@test_task
-def reflect_data_to_be_processed(data):
-    """Merely returns the data received."""
-    return data
 
 
 @test_task

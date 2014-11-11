@@ -42,14 +42,6 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         calc = core.ClassicalHazardCalculator(job)
         return job, calc
 
-    def test_initialize_sources(self):
-        self.calc.initialize_site_collection()
-        self.calc.initialize_sources()
-        # there is a single model
-        [collector] = self.calc.source_collector.values()
-        # before filtering and splitting there are 118 sources
-        self.assertEqual(118, len(collector.sources))
-
     def test_initialize_realizations_montecarlo(self):
         # We need initialize sources first (read logic trees, parse sources,
         # etc.)
@@ -60,8 +52,6 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         ltrs = models.LtRealization.objects.filter(
             lt_model__hazard_calculation=self.job)
         self.assertEqual(0, len(ltrs))
-
-        self.calc.process_sources()
 
         with mock.patch('openquake.engine.logs.LOG.warn') as warn:
             self.calc.initialize_realizations()
@@ -89,7 +79,6 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         self.calc.hc.number_of_logic_tree_samples = 0
 
         self.calc.initialize_sources()
-        self.calc.process_sources()
         self.calc.initialize_realizations()
 
         [ltr] = models.LtRealization.objects.filter(
@@ -113,10 +102,8 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         self.job.save()
         self.calc.execute()
 
-        # there is a single model
-        [collector] = self.calc.source_collector.values()
         # after filtering there are 74 sources
-        self.assertEqual(74, len(collector.sources))
+        self.assertEqual(len(self.calc.all_sources), 74)
 
         self.job.status = 'post_executing'
         self.job.save()

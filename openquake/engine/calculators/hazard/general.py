@@ -18,13 +18,13 @@
 
 """Common code for the hazard calculators."""
 
-import os
 import random
 import itertools
 import collections
 from operator import attrgetter
 
 from django.contrib.gis.geos.point import Point
+from django.core.exceptions import ObjectDoesNotExist
 
 import numpy
 
@@ -34,11 +34,8 @@ from openquake.hazardlib.imt import from_string
 from openquake.engine.db import models
 from django.db import transaction
 
-from openquake.commonlib import risk_parsers
-from openquake.commonlib import InvalidFile
-
-from openquake.commonlib import logictree, source
-from openquake.commonlib.general import split_in_blocks, distinct
+from openquake.commonlib import logictree, readinput, \
+    risk_parsers, general
 from openquake.commonlib.readinput import (
     get_site_collection, get_site_model, get_imtls)
 
@@ -92,66 +89,6 @@ def all_equal(obj, value):
         return eq
 
 
-@tasks.oqtask
-def filter_and_split_sources(job_id, sources, sitecol):
-    """
-    Filter and split a list of hazardlib sources.
-
-    :param int job_id: ID of the current job
-    :param list sources: the original sources
-    :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
-    """
-    hc = models.oqparam(job_id)
-    discr = hc.area_source_discretization
-    maxdist = hc.maximum_distance
-    srcs = []
-    for src in sources:
-        sites = src.filter_sites_by_distance_to_source(maxdist, sitecol)
-        if sites is not None:
-            for ss in source.split_source(src, discr):
-                srcs.append(ss)
-    return srcs
-
-
-class AllSources(object):
-    """
-    A container for sources of different tectonic region types.
-    The `split` method yields pairs (trt_model, block-of-sources).
-    """
-    def __init__(self):
-        self.sources = []
-        self.weight = {}
-        self.trt_model = {}
-
-    def append(self, src, weight, trt_model):
-        """
-        Collect a source, together with its weight and trt_model.
-        """
-        self.sources.append(src)
-        self.weight[src] = weight
-        self.trt_model[src] = trt_model
-
-    def split(self, hint):
-        """
-        Split the sources in a number of blocks close to the given `hint`.
-
-        :param int hint: hint for the number of blocks
-        """
-        if self.sources:
-            for block in split_in_blocks(
-                    self.sources, hint,
-                    self.weight.__getitem__,
-                    self.trt_model.__getitem__):
-                trt_model = self.trt_model[block[0]]
-                yield trt_model, block
-
-    def get_total_weight(self):
-        """
-        Return the total weight of the sources
-        """
-        return sum(self.weight.itervalues())
-
-
 class SiteModelParams(object):
     """
     Wrapper around the SiteModel table with a method .get_closest
@@ -202,7 +139,7 @@ class BaseHazardCalculator(base.Calculator):
         # a dictionary trt_model_id -> num_ruptures
         self.num_ruptures = collections.defaultdict(int)
         # now a dictionary (trt_model_id, gsim) -> poes
-        self.curves = {}
+        self.acc = general.AccumDict()
         self.hc = models.oqparam(self.job.id)
         self.mean_hazard_curves = getattr(
             self.hc, 'mean_hazard_curves', None)
@@ -210,83 +147,16 @@ class BaseHazardCalculator(base.Calculator):
             self.hc, 'quantile_hazard_curves', ())
 
     @EnginePerformanceMonitor.monitor
-    def process_sources(self):
+    def execute(self):
         """
-        Filter and split the sources in parallel.
-        Return the list of processed sources.
+        Run the `.core_calc_task` in parallel, by using the apply_reduce
+        distribution, but it can be overridden in subclasses.
         """
-        self.all_sources = AllSources()
-        self.job.is_running = True
-        self.job.save()
-        num_models = len(self.source_collector)
-        num_sites = len(self.site_collection)
-        for i, trt_model_id in enumerate(sorted(self.source_collector), 1):
-            trt_model = models.TrtModel.objects.get(pk=trt_model_id)
-            sc = self.source_collector[trt_model_id]
-            # NB: the filtering of the sources by site is slow, so it is
-            # done in parallel
-            sm_lt_path = tuple(trt_model.lt_model.sm_lt_path)
-            logs.LOG.progress(
-                '[%d of %d] Filtering/splitting %d source(s) for '
-                'sm_lt_path=%s, TRT=%s, model=%s', i, num_models,
-                len(sc.sources), sm_lt_path, trt_model.tectonic_region_type,
-                trt_model.lt_model.sm_name)
-            if len(sc.sources) * num_sites > LOTS_OF_SOURCES_SITES:
-                # filter in parallel
-                sc.sources = tasks.apply_reduce(
-                    filter_and_split_sources,
-                    (self.job.id, sc.sources, self.site_collection),
-                    list.__add__, [])
-            else:  # few sources and sites
-                # filter sequentially on a single core
-                sc.sources = filter_and_split_sources.task_func(
-                    self.job.id, sc.sources, self.site_collection)
-            sc.sources.sort(key=attrgetter('source_id'))
-            if not sc.sources:
-                logs.LOG.warn(
-                    'Could not find sources close to the sites in %s '
-                    'sm_lt_path=%s, maximum_distance=%s km',
-                    trt_model.lt_model.sm_name, sm_lt_path,
-                    self.hc.maximum_distance)
-                continue
-            for src in sc.sources:
-                self.all_sources.append(
-                    src, sc.update_num_ruptures(src), trt_model)
-            trt_model.num_sources = len(sc.sources)
-            trt_model.num_ruptures = sc.num_ruptures
-            trt_model.save()
-        return self.all_sources.get_total_weight()
-
-    def task_arg_gen(self):
-        """
-        Loop through realizations and sources to generate a sequence of
-        task arg tuples. Each tuple of args applies to a single task.
-        Yielded results are of the form
-        (job_id, site_collection, sources, trt_model_id, gsims).
-        """
-        if self._task_args:
-            # the method was already called and the arguments generated
-            for args in self._task_args:
-                yield args
-            return
-        sitecol = self.site_collection
-        tot_sources = 0
-        for trt_model, block in self.all_sources.split(self.concurrent_tasks):
-            args = (self.job.id, sitecol, block, trt_model.id)
-            self._task_args.append(args)
-            yield args
-            tot_sources += len(block)
-            logs.LOG.info('%d source(s), weight=%d', len(block), block.weight)
-        logs.LOG.info('Processed %d sources for %d TRTs',
-                      tot_sources, len(self.source_collector))
-
-    def task_completed(self, result):
-        """
-        Simply call the method `agg_curves`.
-
-        :param result: the result of the .core_calc_task
-        """
-        self.agg_curves(self.curves, result)
+        self.acc = tasks.apply_reduce(
+            self.core_calc_task,
+            (self.job.id, self.all_sources, self.site_collection),
+            agg=self.agg_curves, acc=self.acc,
+            weight=attrgetter('weight'), key=attrgetter('trt_model_id'))
 
     @EnginePerformanceMonitor.monitor
     def agg_curves(self, acc, result):
@@ -347,7 +217,7 @@ class BaseHazardCalculator(base.Calculator):
         # The input weight is given by the number of ruptures generated
         # by the sources; for point sources however a corrective factor
         # given by the parameter `point_source_weight` is applied
-        input_weight = self.process_sources()
+        input_weight = sum(src.weight for src in self.all_sources)
 
         self.imtls = getattr(self.hc, 'intensity_measure_types_and_levels', {})
         n_sites = len(self.site_collection)
@@ -423,72 +293,41 @@ class BaseHazardCalculator(base.Calculator):
     def post_execute(self):
         """Inizialize realizations"""
         self.initialize_realizations()
-        if self.curves:
-            # must be called after the realizations are known
-            self.save_hazard_curves()
+        # must be called after the realizations are known
+        self.save_hazard_curves()
 
     @EnginePerformanceMonitor.monitor
     def initialize_sources(self):
         """
-        Parse source models and validate source logic trees. It also
-        filters the sources far away and apply uncertainties to the
-        relevant ones. Notice that sources are automatically split.
-
-        :returns:
-            a list with the number of sources for each source model
+        Parse source models, apply uncertainties and validate source logic
+        trees. Save in the database LtSourceModel and TrtModel objects.
         """
         logs.LOG.progress("initializing sources")
-        self.source_model_lt = logictree.SourceModelLogicTree.from_hc(self.hc)
-        sm_paths = distinct(self.source_model_lt)
-        nrml_to_hazardlib = source.SourceConverter(
-            self.hc.investigation_time,
-            self.hc.rupture_mesh_spacing,
-            self.hc.width_of_mfd_bin,
-            self.hc.area_source_discretization,
-        )
-        # define an ordered dictionary trt_model_id -> TrtModel
-        self.source_collector = collections.OrderedDict()
-        for i, (sm, weight, smpath) in enumerate(sm_paths):
-            fname = os.path.join(self.hc.base_path, sm)
-            apply_unc = self.source_model_lt.make_apply_uncertainties(smpath)
-            try:
-                source_collectors = source.parse_source_model(
-                    fname, nrml_to_hazardlib, apply_unc)
-            except ValueError as e:
-                if str(e) in ('Surface does not conform with Aki & '
-                              'Richards convention',
-                              'Edges points are not in the right order'):
-                    raise InvalidFile('''\
-%s: %s. Probably you are using an obsolete model.
-In that case you can fix the file with the command
-python -m openquake.engine.tools.correct_complex_sources %s
-''' % (fname, e, fname))
-                else:
-                    raise
-            trts = [sc.trt for sc in source_collectors]
+        self.all_sources = []
+        for sm in readinput.get_effective_source_models(
+                self.hc, self.site_collection):
 
-            self.source_model_lt.tectonic_region_types.update(trts)
+            # create an LtSourceModel for each distinct source model
             lt_model = models.LtSourceModel.objects.create(
-                hazard_calculation=self.job, sm_lt_path=smpath, ordinal=i,
-                sm_name=sm, weight=weight)
-            if self.hc.inputs.get('gsim_logic_tree'):  # check TRTs
-                gsims_by_trt = lt_model.make_gsim_lt(trts).values
-            else:
-                gsims_by_trt = {}
+                hazard_calculation=self.job, sm_lt_path=sm.path,
+                ordinal=sm.ordinal, sm_name=sm.name, weight=sm.weight)
 
             # save TrtModels for each tectonic region type
-            for sc in source_collectors:
-                # NB: the source_collectors are ordered by number of sources
-                # and lexicographically, so the models are in the right order
-                trt_model_id = models.TrtModel.objects.create(
+            for trt_mod in sm.trt_models:
+                trt_id = models.TrtModel.objects.create(
                     lt_model=lt_model,
-                    tectonic_region_type=sc.trt,
-                    num_sources=len(sc.sources),
-                    num_ruptures=sc.num_ruptures,
-                    min_mag=sc.min_mag,
-                    max_mag=sc.max_mag,
-                    gsims=gsims_by_trt.get(sc.trt, [])).id
-                self.source_collector[trt_model_id] = sc
+                    tectonic_region_type=trt_mod.trt,
+                    num_sources=len(trt_mod),
+                    num_ruptures=trt_mod.num_ruptures,
+                    min_mag=trt_mod.min_mag,
+                    max_mag=trt_mod.max_mag,
+                    gsims=trt_mod.gsims).id
+                for src in trt_mod:
+                    src.trt_model_id = trt_id
+                    self.all_sources.append(src)
+
+        # to be used later on
+        self.source_model_lt = logictree.SourceModelLogicTree.from_hc(self.hc)
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_model(self):
@@ -563,8 +402,14 @@ python -m openquake.engine.tools.correct_complex_sources %s
         num_samples = self.hc.number_of_logic_tree_samples
         gsim_lt_dict = {}  # gsim_lt per source model logic tree path
         for idx, (sm, weight, sm_lt_path) in enumerate(self.source_model_lt):
-            lt_model = models.LtSourceModel.objects.get(
-                hazard_calculation=self.job, sm_lt_path=sm_lt_path)
+            try:
+                lt_model = models.LtSourceModel.objects.get(
+                    hazard_calculation=self.job, sm_lt_path=sm_lt_path)
+            except ObjectDoesNotExist:
+                # this happens if there are no sources for the source
+                # model at the given path
+                logs.LOG.warn('No sources for sm_lt_path %s', sm_lt_path)
+                continue
             if not sm_lt_path in gsim_lt_dict:
                 gsim_lt_dict[sm_lt_path] = lt_model.make_gsim_lt()
             gsim_lt = gsim_lt_dict[sm_lt_path]
@@ -640,6 +485,8 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
         Post-execution actions. At the moment, all we do is finalize the hazard
         curve results.
         """
+        if not self.acc:
+            return
         imtls = self.hc.intensity_measure_types_and_levels
         points = models.HazardSite.objects.filter(
             hazard_calculation=self.job).order_by('id')
@@ -647,7 +494,6 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
         curves_by_imt = dict((imt, []) for imt in sorted_imts)
         individual_curves = self.job.get_param(
             'individual_curves', missing=True)
-
         for rlz in self._get_realizations():
             if individual_curves:
                 # create a multi-imt curve
@@ -660,14 +506,14 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
 
             with self.monitor('building curves per realization'):
                 imt_curves = zip(
-                    sorted_imts, models.build_curves(rlz, self.curves))
+                    sorted_imts, models.build_curves(rlz, self.acc))
             for imt, curves in imt_curves:
                 if individual_curves:
                     self.save_curves_for_rlz_imt(
                         rlz, imt, imtls[imt], points, curves)
                 curves_by_imt[imt].append(curves)
 
-        self.curves = {}  # save memory for the post-processing phase
+        self.acc = {}  # save memory for the post-processing phase
         if self.mean_hazard_curves or self.quantile_hazard_curves:
             self.curves_by_imt = curves_by_imt
 
@@ -722,7 +568,6 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
 
         Post-processing results will be stored directly into the database.
         """
-        del self.source_collector  # save memory
         weights = [rlz.weight for rlz in models.LtRealization.objects.filter(
             lt_model__hazard_calculation=self.job)]
         num_rlzs = len(weights)
