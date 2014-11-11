@@ -14,16 +14,35 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`CampbellBozorgnia2014`, and 
-               :class:'
+Module exports :class:`CampbellBozorgnia2014`
+               :class:`CampbellBozorgnia2014HighQ`
+               :class:`CampbellBozorgnia2014LowQ`
+               :class:`CampbellBozorgnia2014JapanSite`
+               :class:`CampbellBozorgnia2014HighQJapanSite`
+               :class:`CampbellBozorgnia2014LowQJapanSite`
 """
 from __future__ import division
 
 import numpy as np
-from math import log, exp, radians, cos
+from math import exp, radians, cos
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+
+NON_JAPAN_CONSTS = {"c8": 0.0,
+                    "h4": 1.0,
+                    "c": 1.88,
+                    "n": 1.18,
+                    "philnAF": 0.3,
+                    "SJ": 0}
+
+JAPAN_CONSTS = {"c8": 0.0,
+                "h4": 1.0,
+                "c": 1.88,
+                "n": 1.18,
+                "philnAF": 0.3,
+                "SJ": 1}
+
 
 class CampbellBozorgnia2014(GMPE):
     """
@@ -88,6 +107,36 @@ class CampbellBozorgnia2014(GMPE):
         C = self.COEFFS[imt]
         C_PGA = self.COEFFS[PGA()]
 
+        # Get mean and standard deviation of PGA on rock (Vs30 1100 m/s^2)
+        pga1100 = self.get_mean_values(C_PGA, sites, rup, dists, None)
+        tau_lnpga, phi_lnpga = self._get_stddevs_pga(C_PGA,
+                                                     rup,
+                                                     sites,
+                                                     pga1100)
+        # Get mean and standard deviations for IMT
+        mean = self.get_mean_values(C, sites, rup, dists, pga1100)
+        stddevs = self._get_stddevs(C, rup, sites, pga1100, tau_lnpga,
+                                    phi_lnpga, stddev_types)
+        return mean, stddevs
+
+    def get_mean_values(self, C, sites, rup, dists, a1100):
+        """
+        Returns the mean values for a specific IMT
+        """
+        if a1100:
+            temp_vs30 = sites.vs30
+        else:
+            temp_vs30 = 1100.0 * np.ones(len(sites.vs30))
+
+        return (self._get_magnitude_term(C, rup.mag) +
+                self._get_geometric_attenuation_term(C, rup.mag, rup.rrup) +
+                self._get_style_of_faulting_term(C, rup) +
+                self._get_hanging_wall_term(C, rup, dists) +
+                self._get_shallow_site_response_term(C, temp_vs30, a1100) +
+                self._get_basin_response_term(C, dists.z2pt5) +
+                self._get_hypocentral_depth_term(C, rup) +
+                self._get_fault_dip_term(C, rup) +
+                self._get_anelastic_attenuation_term(C, dists.rrup))
 
     def _get_magnitude_term(self, C, mag):
         """
@@ -108,17 +157,17 @@ class CampbellBozorgnia2014(GMPE):
         """
         Returns the geometric attenuation term defined in equation 3
         """
-        return (C["c5"] + C["c6"] * mag) * np.log(np.sqrt((rrup ** 2.) + 
+        return (C["c5"] + C["c6"] * mag) * np.log(np.sqrt((rrup ** 2.) +
                                                           (C["c7"] ** 2.)))
 
     def _get_style_of_faulting_term(self, C, rup):
         """
         Returns the style-of-faulting scaling term defined in equations 4 to 6
         """
-        if (rake > 30.0) and (rake < 150.):
+        if (rup.rake > 30.0) and (rup.rake < 150.):
             frv = 1.0
             fnm = 0.0
-        elif (rake > -150.0) and (rake < -30.0):
+        elif (rup.rake > -150.0) and (rup.rake < -30.0):
             fnm = 1.0
             frv = 0.0
         else:
@@ -131,7 +180,7 @@ class CampbellBozorgnia2014(GMPE):
         elif rup.mag > 5.5:
             fflt_m = 1.0
         else:
-            fflt_m = mag - 4.5
+            fflt_m = rup.mag - 4.5
         return fflt_f * fflt_m
 
     def _get_hanging_wall_term(self, C, rup, dists):
@@ -139,11 +188,11 @@ class CampbellBozorgnia2014(GMPE):
         Returns the hanging wall scaling term defined in equations 7 to 16
         """
         return (C["c10"] *
-            self._get_hanging_wall_coeffs_rx(C, rup, dists.rx) *
-            self._get_hanging_wall_coeffs_rrup(C, dists) *
-            self._get_hanging_wall_coeffs_mag(C, rup.mag) *
-            self._get_hanging_wall_coeffs_ztor(rup.ztor) *
-            self._get_hanging_wall_coeffs_dip(rup.dip))
+                self._get_hanging_wall_coeffs_rx(C, rup, dists.rx) *
+                self._get_hanging_wall_coeffs_rrup(dists) *
+                self._get_hanging_wall_coeffs_mag(C, rup.mag) *
+                self._get_hanging_wall_coeffs_ztor(rup.ztor) *
+                self._get_hanging_wall_coeffs_dip(rup.dip))
 
     def _get_hanging_wall_coeffs_rx(self, C, rup, r_x):
         """
@@ -173,8 +222,7 @@ class CampbellBozorgnia2014(GMPE):
         drx = (r_x - r_1) / (r_2 - r_1)
         return self.CONSTS["h4"] + (C["h5"] * drx) + (C["h6"] * (drx ** 2.))
 
-
-    def _get_hanging_wall_coeffs_rrup(self, C, dists):
+    def _get_hanging_wall_coeffs_rrup(self, dists):
         """
         Returns the hanging wall rrup term defined in equation 13
         """
@@ -183,7 +231,7 @@ class CampbellBozorgnia2014(GMPE):
         fhngrrup[idx] = (dists.rrup[idx] - dists.rjb[idx]) / dists.rrup[idx]
         return fhngrrup
 
-    def _get_hanging_wall_coeffs_mag(self, C, mag)
+    def _get_hanging_wall_coeffs_mag(self, C, mag):
         """
         Returns the hanging wall magnitude term defined in equation 14
         """
@@ -203,7 +251,6 @@ class CampbellBozorgnia2014(GMPE):
         else:
             return 0.0
 
-
     def _get_hanging_wall_coeffs_dip(self, dip):
         """
         Returns the hanging wall dip term defined in equation 16
@@ -220,7 +267,7 @@ class CampbellBozorgnia2014(GMPE):
             fhyp_h = 13.0
         else:
             fhyp_h = rup.hypo_depth - 7.0
-        
+
         if rup.mag < 5.5:
             fhyp_m = C["c17"]
         elif rup.mag > 6.5:
@@ -263,28 +310,26 @@ class CampbellBozorgnia2014(GMPE):
         return f_sed
 
     def _get_shallow_site_response_term(self, C, vs30, pga_rock):
-        """ 
+        """
         Returns the shallow site response term defined in equations 17, 18 and
         19
-
-        Note that the 
         """
         vs_mod = vs30 / C["k1"]
         # Get linear global site response term
-        fsite_g = (C["c11"] + C["k2"] * self.CONSTS["n"] * np.log(vs_mod)
+        fsite_g = C["c11"] + C["k2"] * self.CONSTS["n"] * np.log(vs_mod)
         idx = vs30 <= C["k1"]
 
         if np.any(idx):
             # Get nonlinear site response term
             fsite_g[idx] = (C["c11"] * np.log(vs_mod[idx])) + C["k2"] * (
-                np.log(pga_rock[idx] + 
+                np.log(pga_rock[idx] +
                        self.CONSTS["c"] * (vs_mod[idx] ** self.CONSTS["n"])) -
                 np.log(pga_rock[idx] - self.CONSTS["c"]))
         # For Japan sites (SJ = 1) further scaling is needed (equation 19)
         if self.CONSTS["SJ"]:
             j_coeff1 = (C["c13"] + C["k2"] * self.CONSTS["n"])
             fsite_j = j_coeff1 * np.log(vs_mod)
-            idx = vs30 <= 200.0:
+            idx = vs30 <= 200.0
             if np.any(idx):
                 fsite_j[idx] = j_coeff1 * (np.log(vs_mod[idx]) -
                                            np.log(200.0 / C["k1"]))
@@ -292,31 +337,61 @@ class CampbellBozorgnia2014(GMPE):
         else:
             return fsite_g
 
-    def _get_stddevs(self, C, rup, sites, pga1100, tau_pga, phi_pga, stddev
+    def _get_stddevs(self, C, rup, sites, pga1100, tau_lnpga, phi_lnpga,
+            stddev_types):
+        """
+        Returns the inter- and intra-event and total standard deviations
+        """
+        num_sites = len(sites.vs30)
+        tau_lnyb = self._get_taulny(C, rup.mag)
+        phi_lnyb = np.sqrt(self._get_philny(C, rup.mag) ** 2. -
+                              self.CONSTS["philnAF"] ** 2.)
+        alpha = self._get_alpha(C, sites.vs30, pga1100)
+        tau = np.sqrt(
+            (tau_lnyb ** 2.) +
+            ((alpha ** 2.) * (tau_lnpga ** 2.)) +
+            (2.0 * alpha * C["rholny"] * tau_lnyb * tau_lnpga))
+
+        phi = np.sqrt(
+            (phi_lnyb ** 2.) +
+            (self.CONSTS["philnAF"] ** 2.) +
+            ((alpha ** 2.) * (phi_lnpga ** 2.)) +
+            (2.0 * alpha * C["rholny"] * phi_lnyb * phi_lnpga))
+        stddevs = []
+        for stddev_type in stddev_types:
+            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+            if stddev_type == const.StdDev.TOTAL:
+                stddevs.append(np.sqrt((tau ** 2.) + (phi ** 2.)) +
+                               np.zeros(num_sites))
+            elif stddev_type == const.StdDev.INTRA_EVENT:
+                stddevs.append(phi + np.zeros(num_sites))
+            elif stddev_type == const.StdDev.INTER_EVENT:
+                stddevs.append(tau + np.zeros(num_sites))
+        return stddevs
 
     def _get_stddevs_pga(self, C, rup, sites, pga1100):
         """
-
+        Returns the inter- and intra-event coefficients for PGA
         """
         tau_lnpga_b = self._get_taulny(C, rup.mag)
         phi_lnpga_b = np.sqrt(self._get_philny(C, rup.mag) ** 2. -
                             self.CONSTS["philnAF"] ** 2.)
         alpha_pga = self._get_alpha(C, sites.vs30, pga1100)
         tau_lnpga = np.sqrt(
-            (tau_lnpga_b ** 2.) + 
-            (alpha ** 2.0 + tau_lnpga_b ** 2.) +
-            (2.0 * alpha * C["rholny"] * (tau_lnpga_b ** 2.0)))
+            (tau_lnpga_b ** 2.) +
+            (alpha_pga ** 2.0 + tau_lnpga_b ** 2.) +
+            (2.0 * alpha_pga * C["rholny"] * (tau_lnpga_b ** 2.0)))
         phi_lnpga = np.sqrt(
             (phi_lnpga_b ** 2.) +
             (self.CONSTS["philnAF"] ** 2.0) +
-            (alpha ** 2.0 + phi_lnpga_b ** 2.) +
-            (2.0 * alpha * C["rholny"] * (phi_lnpga_b ** 2.0)))
+            (alpha_pga ** 2.0 + phi_lnpga_b ** 2.) +
+            (2.0 * alpha_pga * C["rholny"] * (phi_lnpga_b ** 2.0)))
         return tau_lnpga, phi_lnpga
-
 
     def _get_taulny(self, C, mag):
         """
-
+        Returns the inter-event random effects coefficient (tau)
+        Equation 28.
         """
         if mag <= 4.5:
             return C["tau1"]
@@ -327,7 +402,8 @@ class CampbellBozorgnia2014(GMPE):
 
     def _get_philny(self, C, mag):
         """
-
+        Returns the intra-event random effects coefficient (phi)
+        Equation 28.
         """
         if mag <= 4.5:
             return C["phi1"]
@@ -338,7 +414,8 @@ class CampbellBozorgnia2014(GMPE):
 
     def _get_alpha(self, C, vs30, pga_rock):
         """
-
+        Returns the alpha, the linearised functional relationship between the
+        site amplification and the PGA on rock. Equation 31.
         """
         alpha = np.zeros(len(pga_rock))
         idx = vs30 < C["k1"]
@@ -346,7 +423,6 @@ class CampbellBozorgnia2014(GMPE):
             ((vs30[idx] / C["k1"]) ** self.CONSTS["n"]))) - (1.0 / (pga_rock +
             self.CONSTS["c"])))
         return alpha
-
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT         c0      c1       c2       c3       c4       c5      c6      c7       c9     c10      c11      c12     c13       c14      c15     c16       c17      c18       c19       c20     Dc20      a2      h1      h2       h3       h5       h6     k1       k2      k3    phi1    phi2    tau1    tau2    phiC   rholny
@@ -375,10 +451,96 @@ class CampbellBozorgnia2014(GMPE):
     10.0   -15.975   2.132    0.367   -0.800   -1.282   -2.244   0.180   6.564    0.000   0.000   -0.576   -0.027   0.297    0.3506    0.174   0.621    0.0009   0.0099   0.00458    0.0000   0.0000   0.596   0.117   1.616   -0.733   -0.128   -0.756    400    0.000   2.744   0.441   0.543   0.466   0.438   0.290    0.154
     """)
 
+    CONSTS = NON_JAPAN_CONSTS
 
-    CONSTS = {"c8": 0.0,
-              "h4": 1.0,
-              "c": 1.88,
-              "n": 1.18,
-              "philnAF": 0.3,
-              "SJ": 0}
+
+class CampbellBozorgnia2014HighQ(CampbellBozorgnia2014):
+    """
+    Implements the Campbell & Bozorgnia (2014) GMPE for regions with low
+    attenuation (high quality factor, Q)
+    """
+    COEFFS = CoeffsTable(sa_damping=5, table="""\
+    IMT         c0      c1       c2       c3       c4       c5      c6      c7       c9     c10      c11      c12     c13       c14      c15     c16       c17      c18       c19       c20     Dc20      a2      h1      h2       h3       h5       h6     k1       k2      k3    phi1    phi2    tau1    tau2    phiC   rholny
+    pgv     -2.895   1.510    0.270   -1.299   -0.453   -2.466   0.204   5.837   -0.168   0.305    1.713    2.602   2.457    0.1060    0.332   0.585    0.0517   0.0327   0.00613   -0.0017   0.0017   0.596   0.117   1.616   -0.733   -0.128   -0.756    400   -1.955   1.929   0.655   0.494   0.317   0.297   0.190   0.684
+    pga     -4.416   0.984    0.537   -1.499   -0.496   -2.773   0.248   6.768   -0.212   0.720    1.090    2.186   1.420   -0.0064   -0.202   0.393    0.0977   0.0333   0.00757   -0.0055   0.0036   0.167   0.241   1.474   -0.715   -0.337   -0.270    865   -1.186   1.839   0.734   0.492   0.409   0.322   0.166   1.000
+    0.01    -4.365   0.977    0.533   -1.485   -0.499   -2.773   0.248   6.753   -0.214   0.720    1.094    2.191   1.416   -0.0070   -0.207   0.390    0.0981   0.0334   0.00755   -0.0055   0.0036   0.168   0.242   1.471   -0.714   -0.336   -0.270    865   -1.186   1.839   0.734   0.492   0.404   0.325   0.166   1.000
+    0.02    -4.348   0.976    0.549   -1.488   -0.501   -2.772   0.247   6.502   -0.208   0.730    1.149    2.189   1.453   -0.0167   -0.199   0.387    0.1009   0.0327   0.00759   -0.0055   0.0036   0.166   0.244   1.467   -0.711   -0.339   -0.263    865   -1.219   1.840   0.738   0.496   0.417   0.326   0.166   0.998
+    0.03    -4.024   0.931    0.628   -1.494   -0.517   -2.782   0.246   6.291   -0.213   0.759    1.290    2.164   1.476   -0.0422   -0.202   0.378    0.1095   0.0331   0.00790   -0.0057   0.0037   0.167   0.246   1.467   -0.713   -0.338   -0.259    908   -1.273   1.841   0.747   0.503   0.446   0.344   0.165   0.986
+    0.05    -3.479   0.887    0.674   -1.388   -0.615   -2.791   0.240   6.317   -0.244   0.826    1.449    2.138   1.549   -0.0663   -0.339   0.295    0.1226   0.0270   0.00803   -0.0063   0.0040   0.173   0.251   1.449   -0.701   -0.338   -0.263   1054   -1.346   1.843   0.777   0.520   0.508   0.377   0.162   0.938
+    0.08    -3.293   0.902    0.726   -1.469   -0.596   -2.745   0.227   6.861   -0.266   0.815    1.535    2.446   1.772   -0.0794   -0.404   0.322    0.1165   0.0288   0.00811   -0.0070   0.0039   0.198   0.260   1.435   -0.695   -0.347   -0.219   1086   -1.471   1.845   0.782   0.535   0.504   0.418   0.158   0.887
+    0.10    -3.666   0.993    0.698   -1.572   -0.536   -2.633   0.210   7.294   -0.229   0.831    1.615    2.969   1.916   -0.0294   -0.416   0.384    0.0998   0.0325   0.00744   -0.0073   0.0042   0.174   0.259   1.449   -0.708   -0.391   -0.201   1032   -1.624   1.847   0.769   0.543   0.445   0.426   0.170   0.870
+    0.15    -4.866   1.267    0.510   -1.669   -0.490   -2.458   0.183   8.031   -0.211   0.749    1.877    3.544   2.161    0.0642   -0.407   0.417    0.0760   0.0388   0.00716   -0.0069   0.0042   0.198   0.254   1.461   -0.715   -0.449   -0.099    878   -1.931   1.852   0.769   0.543   0.382   0.387   0.180   0.876
+    0.20    -5.411   1.366    0.447   -1.750   -0.451   -2.421   0.182   8.385   -0.163   0.764    2.069    3.707   2.465    0.0968   -0.311   0.404    0.0571   0.0437   0.00688   -0.0060   0.0041   0.204   0.237   1.484   -0.721   -0.393   -0.198    748   -2.188   1.856   0.761   0.552   0.339   0.338   0.186   0.870
+    0.25    -5.962   1.458    0.274   -1.711   -0.404   -2.392   0.189   7.534   -0.150   0.716    2.205    3.343   2.766    0.1441   -0.172   0.466    0.0437   0.0463   0.00556   -0.0055   0.0036   0.185   0.206   1.581   -0.787   -0.339   -0.210    654   -2.381   1.861   0.744   0.545   0.340   0.316   0.191   0.850
+    0.30    -6.403   1.528    0.193   -1.770   -0.321   -2.376   0.195   6.990   -0.131   0.737    2.306    3.334   3.011    0.1597   -0.084   0.528    0.0323   0.0508   0.00458   -0.0049   0.0031   0.164   0.210   1.586   -0.795   -0.447   -0.121    587   -2.518   1.865   0.727   0.568   0.340   0.300   0.198   0.819
+    0.40    -7.566   1.739   -0.020   -1.594   -0.426   -2.303   0.185   7.012   -0.159   0.738    2.398    3.544   3.203    0.1410    0.085   0.540    0.0209   0.0432   0.00401   -0.0037   0.0028   0.160   0.226   1.544   -0.770   -0.525   -0.086    503   -2.657   1.874   0.690   0.593   0.356   0.264   0.206   0.743
+    0.50    -8.379   1.872   -0.121   -1.577   -0.440   -2.296   0.186   6.902   -0.153   0.718    2.355    3.016   3.333    0.1474    0.233   0.638    0.0092   0.0405   0.00388   -0.0027   0.0025   0.184   0.217   1.554   -0.770   -0.407   -0.281    457   -2.669   1.883   0.663   0.611   0.379   0.263   0.208   0.684
+    0.75    -9.841   2.021   -0.042   -1.757   -0.443   -2.232   0.186   5.522   -0.090   0.795    1.995    2.616   3.054    0.1764    0.411   0.776   -0.0082   0.0420   0.00420   -0.0016   0.0016   0.216   0.154   1.626   -0.780   -0.371   -0.285    410   -2.401   1.906   0.606   0.633   0.430   0.326   0.221   0.562
+    1.00   -11.011   2.180   -0.069   -1.707   -0.527   -2.158   0.169   5.650   -0.105   0.556    1.447    2.470   2.562    0.2593    0.479   0.771   -0.0131   0.0426   0.00409   -0.0006   0.0006   0.596   0.117   1.616   -0.733   -0.128   -0.756    400   -1.955   1.929   0.579   0.628   0.470   0.353   0.225   0.467
+    1.50   -12.469   2.270    0.047   -1.621   -0.630   -2.063   0.158   5.795   -0.058   0.480    0.330    2.108   1.453    0.2881    0.566   0.748   -0.0187   0.0380   0.00424    0.0000   0.0000   0.596   0.117   1.616   -0.733   -0.128   -0.756    400   -1.025   1.974   0.541   0.603   0.497   0.399   0.222   0.364
+    2.00   -12.969   2.271    0.149   -1.512   -0.768   -2.104   0.158   6.632   -0.028   0.401   -0.514    1.327   0.657    0.3112    0.562   0.763   -0.0258   0.0252   0.00448    0.0000   0.0000   0.596   0.117   1.616   -0.733   -0.128   -0.756    400   -0.299   2.019   0.529   0.588   0.499   0.400   0.226   0.298
+    3.00   -13.306   2.150    0.368   -1.315   -0.890   -2.051   0.148   6.759    0.000   0.206   -0.848    0.601   0.367    0.3478    0.534   0.686   -0.0311   0.0236   0.00345    0.0000   0.0000   0.596   0.117   1.616   -0.733   -0.128   -0.756    400    0.000   2.110   0.527   0.578   0.500   0.417   0.229   0.234
+    4.00   -14.020   2.132    0.726   -1.506   -0.885   -1.986   0.135   7.978    0.000   0.105   -0.793    0.568   0.306    0.3747    0.522   0.691   -0.0413   0.0102   0.00603    0.0000   0.0000   0.596   0.117   1.616   -0.733   -0.128   -0.756    400    0.000   2.200   0.521   0.559   0.543   0.393   0.237   0.202
+    5.00   -14.558   2.116    1.027   -1.721   -0.878   -2.021   0.135   8.538    0.000   0.000   -0.748    0.356   0.268    0.3382    0.477   0.670   -0.0281   0.0034   0.00805    0.0000   0.0000   0.596   0.117   1.616   -0.733   -0.128   -0.756    400    0.000   2.291   0.502   0.551   0.534   0.421   0.237   0.184
+    7.50   -15.509   2.223    0.169   -0.756   -1.077   -2.179   0.165   8.468    0.000   0.000   -0.664    0.075   0.374    0.3754    0.321   0.757   -0.0205   0.0050   0.00280    0.0000   0.0000   0.596   0.117   1.616   -0.733   -0.128   -0.756    400    0.000   2.517   0.457   0.546   0.523   0.438   0.271   0.176
+    10.0   -15.975   2.132    0.367   -0.800   -1.282   -2.244   0.180   6.564    0.000   0.000   -0.576   -0.027   0.297    0.3506    0.174   0.621    0.0009   0.0099   0.00458    0.0000   0.0000   0.596   0.117   1.616   -0.733   -0.128   -0.756    400    0.000   2.744   0.441   0.543   0.466   0.438   0.290   0.154
+    """)
+
+
+class CampbellBozorgnia2014LowQ(CampbellBozorgnia2014):
+    """
+    Implements the Campbell & Bozorgnia (2014) GMPE for regions with high
+    attenuation (low quality factor, Q)
+    """
+    COEFFS = CoeffsTable(sa_damping=5, table="""\
+    IMT         c0      c1       c2       c3       c4       c5      c6      c7       c9     c10      c11      c12     c13       c14      c15     c16       c17      c18       c19       c20      Dc20      a2      h1      h2       h3       h5       h6     k1       k2      k3    phi1    phi2    tau1    tau2    phiC  rholny
+    pgv     -2.895   1.510    0.270   -1.299   -0.453   -2.466   0.204   5.837   -0.168   0.305    1.713    2.602   2.457    0.1060    0.332   0.585    0.0517   0.0327   0.00613   -0.0017   -0.0006   0.596   0.117   1.616   -0.733   -0.128   -0.756    400   -1.955   1.929   0.655   0.494   0.317   0.297   0.190   0.684
+    pga     -4.416   0.984    0.537   -1.499   -0.496   -2.773   0.248   6.768   -0.212   0.720    1.090    2.186   1.420   -0.0064   -0.202   0.393    0.0977   0.0333   0.00757   -0.0055   -0.0035   0.167   0.241   1.474   -0.715   -0.337   -0.270    865   -1.186   1.839   0.734   0.492   0.409   0.322   0.166   1.000
+    0.01    -4.365   0.977    0.533   -1.485   -0.499   -2.773   0.248   6.753   -0.214   0.720    1.094    2.191   1.416   -0.0070   -0.207   0.390    0.0981   0.0334   0.00755   -0.0055   -0.0035   0.168   0.242   1.471   -0.714   -0.336   -0.270    865   -1.186   1.839   0.734   0.492   0.404   0.325   0.166   1.000
+    0.02    -4.348   0.976    0.549   -1.488   -0.501   -2.772   0.247   6.502   -0.208   0.730    1.149    2.189   1.453   -0.0167   -0.199   0.387    0.1009   0.0327   0.00759   -0.0055   -0.0035   0.166   0.244   1.467   -0.711   -0.339   -0.263    865   -1.219   1.840   0.738   0.496   0.417   0.326   0.166   0.998
+    0.03    -4.024   0.931    0.628   -1.494   -0.517   -2.782   0.246   6.291   -0.213   0.759    1.290    2.164   1.476   -0.0422   -0.202   0.378    0.1095   0.0331   0.00790   -0.0057   -0.0034   0.167   0.246   1.467   -0.713   -0.338   -0.259    908   -1.273   1.841   0.747   0.503   0.446   0.344   0.165   0.986
+    0.05    -3.479   0.887    0.674   -1.388   -0.615   -2.791   0.240   6.317   -0.244   0.826    1.449    2.138   1.549   -0.0663   -0.339   0.295    0.1226   0.0270   0.00803   -0.0063   -0.0037   0.173   0.251   1.449   -0.701   -0.338   -0.263   1054   -1.346   1.843   0.777   0.520   0.508   0.377   0.162   0.938
+    0.08    -3.293   0.902    0.726   -1.469   -0.596   -2.745   0.227   6.861   -0.266   0.815    1.535    2.446   1.772   -0.0794   -0.404   0.322    0.1165   0.0288   0.00811   -0.0070   -0.0037   0.198   0.260   1.435   -0.695   -0.347   -0.219   1086   -1.471   1.845   0.782   0.535   0.504   0.418   0.158   0.887
+    0.10    -3.666   0.993    0.698   -1.572   -0.536   -2.633   0.210   7.294   -0.229   0.831    1.615    2.969   1.916   -0.0294   -0.416   0.384    0.0998   0.0325   0.00744   -0.0073   -0.0034   0.174   0.259   1.449   -0.708   -0.391   -0.201   1032   -1.624   1.847   0.769   0.543   0.445   0.426   0.170   0.870
+    0.15    -4.866   1.267    0.510   -1.669   -0.490   -2.458   0.183   8.031   -0.211   0.749    1.877    3.544   2.161    0.0642   -0.407   0.417    0.0760   0.0388   0.00716   -0.0069   -0.0030   0.198   0.254   1.461   -0.715   -0.449   -0.099    878   -1.931   1.852   0.769   0.543   0.382   0.387   0.180   0.876
+    0.20    -5.411   1.366    0.447   -1.750   -0.451   -2.421   0.182   8.385   -0.163   0.764    2.069    3.707   2.465    0.0968   -0.311   0.404    0.0571   0.0437   0.00688   -0.0060   -0.0031   0.204   0.237   1.484   -0.721   -0.393   -0.198    748   -2.188   1.856   0.761   0.552   0.339   0.338   0.186   0.870
+    0.25    -5.962   1.458    0.274   -1.711   -0.404   -2.392   0.189   7.534   -0.150   0.716    2.205    3.343   2.766    0.1441   -0.172   0.466    0.0437   0.0463   0.00556   -0.0055   -0.0033   0.185   0.206   1.581   -0.787   -0.339   -0.210    654   -2.381   1.861   0.744   0.545   0.340   0.316   0.191   0.850
+    0.30    -6.403   1.528    0.193   -1.770   -0.321   -2.376   0.195   6.990   -0.131   0.737    2.306    3.334   3.011    0.1597   -0.084   0.528    0.0323   0.0508   0.00458   -0.0049   -0.0035   0.164   0.210   1.586   -0.795   -0.447   -0.121    587   -2.518   1.865   0.727   0.568   0.340   0.300   0.198   0.819
+    0.40    -7.566   1.739   -0.020   -1.594   -0.426   -2.303   0.185   7.012   -0.159   0.738    2.398    3.544   3.203    0.1410    0.085   0.540    0.0209   0.0432   0.00401   -0.0037   -0.0034   0.160   0.226   1.544   -0.770   -0.525   -0.086    503   -2.657   1.874   0.690   0.593   0.356   0.264   0.206   0.743
+    0.50    -8.379   1.872   -0.121   -1.577   -0.440   -2.296   0.186   6.902   -0.153   0.718    2.355    3.016   3.333    0.1474    0.233   0.638    0.0092   0.0405   0.00388   -0.0027   -0.0034   0.184   0.217   1.554   -0.770   -0.407   -0.281    457   -2.669   1.883   0.663   0.611   0.379   0.263   0.208   0.684
+    0.75    -9.841   2.021   -0.042   -1.757   -0.443   -2.232   0.186   5.522   -0.090   0.795    1.995    2.616   3.054    0.1764    0.411   0.776   -0.0082   0.0420   0.00420   -0.0016   -0.0032   0.216   0.154   1.626   -0.780   -0.371   -0.285    410   -2.401   1.906   0.606   0.633   0.430   0.326   0.221   0.562
+    1.00   -11.011   2.180   -0.069   -1.707   -0.527   -2.158   0.169   5.650   -0.105   0.556    1.447    2.470   2.562    0.2593    0.479   0.771   -0.0131   0.0426   0.00409   -0.0006   -0.0030   0.596   0.117   1.616   -0.733   -0.128   -0.756    400   -1.955   1.929   0.579   0.628   0.470   0.353   0.225   0.467
+    1.50   -12.469   2.270    0.047   -1.621   -0.630   -2.063   0.158   5.795   -0.058   0.480    0.330    2.108   1.453    0.2881    0.566   0.748   -0.0187   0.0380   0.00424    0.0000   -0.0019   0.596   0.117   1.616   -0.733   -0.128   -0.756    400   -1.025   1.974   0.541   0.603   0.497   0.399   0.222   0.364
+    2.00   -12.969   2.271    0.149   -1.512   -0.768   -2.104   0.158   6.632   -0.028   0.401   -0.514    1.327   0.657    0.3112    0.562   0.763   -0.0258   0.0252   0.00448    0.0000   -0.0005   0.596   0.117   1.616   -0.733   -0.128   -0.756    400   -0.299   2.019   0.529   0.588   0.499   0.400   0.226   0.298
+    3.00   -13.306   2.150    0.368   -1.315   -0.890   -2.051   0.148   6.759    0.000   0.206   -0.848    0.601   0.367    0.3478    0.534   0.686   -0.0311   0.0236   0.00345    0.0000    0.0000   0.596   0.117   1.616   -0.733   -0.128   -0.756    400    0.000   2.110   0.527   0.578   0.500   0.417   0.229   0.234
+    4.00   -14.020   2.132    0.726   -1.506   -0.885   -1.986   0.135   7.978    0.000   0.105   -0.793    0.568   0.306    0.3747    0.522   0.691   -0.0413   0.0102   0.00603    0.0000    0.0000   0.596   0.117   1.616   -0.733   -0.128   -0.756    400    0.000   2.200   0.521   0.559   0.543   0.393   0.237   0.202
+    5.00   -14.558   2.116    1.027   -1.721   -0.878   -2.021   0.135   8.538    0.000   0.000   -0.748    0.356   0.268    0.3382    0.477   0.670   -0.0281   0.0034   0.00805    0.0000    0.0000   0.596   0.117   1.616   -0.733   -0.128   -0.756    400    0.000   2.291   0.502   0.551   0.534   0.421   0.237   0.184
+    7.50   -15.509   2.223    0.169   -0.756   -1.077   -2.179   0.165   8.468    0.000   0.000   -0.664    0.075   0.374    0.3754    0.321   0.757   -0.0205   0.0050   0.00280    0.0000    0.0000   0.596   0.117   1.616   -0.733   -0.128   -0.756    400    0.000   2.517   0.457   0.546   0.523   0.438   0.271   0.176
+    10.0   -15.975   2.132    0.367   -0.800   -1.282   -2.244   0.180   6.564    0.000   0.000   -0.576   -0.027   0.297    0.3506    0.174   0.621    0.0009   0.0099   0.00458    0.0000    0.0000   0.596   0.117   1.616   -0.733   -0.128   -0.756    400    0.000   2.744   0.441   0.543   0.466   0.438   0.290   0.154
+    """)
+
+
+class CampbellBozorgnia2014JapanSite(CampbellBozorgnia2014):
+    """
+    Implements the Campbell & Bozorgnia (2014) GMPE for the case in which
+    the "Japan" shallow site response term is activited
+    """
+    CONSTS = JAPAN_CONSTS
+
+
+class CampbellBozorgnia2014HighQJapanSite(CampbellBozorgnia2014HighQ):
+    """
+    Implements the Campbell & Bozorgnia (2014) GMPE, for the low attenuation
+    (high quality factor) coefficients, for the case in which
+    the "Japan" shallow site response term is activited
+    """
+    CONSTS = JAPAN_CONSTS
+
+
+class CampbellBozorgnia2014LowQJapanSite(CampbellBozorgnia2014LowQ):
+    """
+    Implements the Campbell & Bozorgnia (2014) GMPE, for the high attenuation
+    (low quality factor) coefficients, for the case in which
+    the "Japan" shallow site response term is activited
+    """
+    CONSTS = JAPAN_CONSTS
