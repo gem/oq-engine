@@ -472,7 +472,8 @@ _pkgtest_innervm_run () {
             cd -
         done"
     fi
-
+    ssh $lxc_ip "oq-engine --make-html-report today"
+    scp "${lxc_ip}:jobs-*.html" .
     trap ERR
 
     return
