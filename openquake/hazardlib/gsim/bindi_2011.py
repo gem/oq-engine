@@ -262,20 +262,3 @@ class BindiEtAl2011(GMPE):
     1.75    2.584    -1.0060    0.2050     4.505    0.000427     0.5740    -0.03710    0.0    0.2520    0.357    0.593    0.220    0.00154    0.0370    -0.0385    0.0    0.219    0.305     0.376
     2.00    2.537    -1.0090    0.1930     4.373    0.000164     0.5970    -0.03670    0.0    0.2450    0.352    0.540    0.226    0.00512    0.0350    -0.0401    0.0    0.211    0.308     0.373
     """)
-
-
-class Bindietal2011NoRake(BindiEtAl2011):
-    """
-    Implements the Bindi et al. (2011) GMPE for the case when the mechanism
-    type is unspecfied
-    """
-    #: Required rupture parameters are magnitude (equation 1)
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
-
-    def _get_mechanism(self, rup, C):
-        """
-        Returns the ''unspecified'' style-of-faulting coefficient
-        """
-        return C['f4']
-        
-        

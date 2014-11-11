@@ -19,7 +19,7 @@
 # Test tables elaboratated from data provided directly from the authors.
 #
 
-from openquake.hazardlib.gsim.bindi_et_al_2011 import BindiEtAl2011
+from openquake.hazardlib.gsim.bindi_2011 import BindiEtAl2011
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
@@ -43,7 +43,3 @@ class BindiEtAl2011TestCase(BaseGSIMTestCase):
     def test_std_total(self):
         self.check('BINDI2011/BINDI2011_STD_TOTAL.csv',
                     max_discrep_percentage=0.1)
-
-
-
-
