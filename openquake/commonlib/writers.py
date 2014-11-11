@@ -17,6 +17,22 @@ import cStringIO
 from xml.sax.saxutils import escape, quoteattr
 
 
+def scientificformat(value, fmt='%13.9E'):
+    """
+    Convert a float into a string by using the scientific notation
+    and a fixed precision (by default 10 decimal digits).
+    If the value is not a float, convert it into a string.
+
+    >>> scientificformat(-0.004)
+    '-4.000000000E-03'
+    >>> scientificformat(0.004)
+    '4.000000000E-03'
+    """
+    if isinstance(value, float):
+        return fmt % value
+    return str(value)
+
+
 class StreamingXMLWriter(object):
     """
     A stream-based XML writer. The typical usage is something like this::
@@ -58,7 +74,7 @@ class StreamingXMLWriter(object):
 
     def emptyElement(self, name, attrs):
         """Add an empty element (may have attributes)"""
-        attr = ' '.join('%s=%s' % (n, quoteattr(str(v)))
+        attr = ' '.join('%s=%s' % (n, quoteattr(scientificformat(v)))
                         for n, v in sorted(attrs.iteritems()))
         self._write('<%s %s/>' % (name, attr))
 
@@ -69,7 +85,7 @@ class StreamingXMLWriter(object):
         else:
             self._write('<' + name)
             for (name, value) in sorted(attrs.items()):
-                self._write(' %s=%s' % (name, quoteattr(str(value))))
+                self._write(' %s=%s' % (name, quoteattr(scientificformat(value))))
             self._write('>')
         self.indentlevel += 1
 
@@ -89,7 +105,7 @@ class StreamingXMLWriter(object):
             return
         self.start_tag(tag, node.attrib)
         if node.text:
-            self._write(escape(str(node.text).strip()))
+            self._write(escape(scientificformat(node.text).strip()))
         for subnode in node:
             self.serialize(subnode)
         self.end_tag(tag)

@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-
+import sys
 import json
 import numpy
 import os
@@ -24,7 +24,7 @@ import unittest
 from collections import namedtuple
 
 from openquake.commonlib import hazard_writers as writers
-from openquake.commonlib.tests import _utils as utils
+from openquake.commonlib.tests import _utils as utils, check_equal
 
 HazardCurveData = namedtuple('HazardCurveData', 'location, poes')
 UHSData = namedtuple('UHSData', 'location, imls')
@@ -108,6 +108,12 @@ class SESRupture(object):
         self.ses = ses
         self.seed = seed
         self.tag = tag
+
+
+class HazardWriterTestCase(unittest.TestCase):
+    def tearDown(self):
+        if sys.exc_info()[0] is None:  # remove the temporary file
+            os.unlink(self.path)
 
 
 class HazardCurveWriterTestCase(unittest.TestCase):
@@ -242,38 +248,8 @@ class HazardCurveWriterSerializeTestCase(HazardCurveWriterTestCase):
 
         _, self.path = tempfile.mkstemp()
 
-    def tearDown(self):
-        os.unlink(self.path)
-
     def test_serialize(self):
-        # Just a basic serialization test.
-        expected = StringIO.StringIO("""\
-<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves sourceModelTreePath="b1_b2_b4" gsimTreePath="b1_b4_b5" IMT="SA" investigationTime="50.0" saPeriod="0.025" saDamping="5.0">
-    <IMLs>0.005 0.007 0.0098</IMLs>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>38.0 -20.1</gml:pos>
-      </gml:Point>
-      <poEs>0.1 0.2 0.3</poEs>
-    </hazardCurve>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>38.1 -20.2</gml:pos>
-      </gml:Point>
-      <poEs>0.4 0.5 0.6</poEs>
-    </hazardCurve>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>38.2 -20.3</gml:pos>
-      </gml:Point>
-      <poEs>0.7 0.8 0.8</poEs>
-    </hazardCurve>
-  </hazardCurves>
-</nrml>
-""")
-
+        # Just a basic serialization test
         metadata = dict(
             investigation_time=self.TIME, imt='SA', imls=self.IMLS,
             sa_period=0.025, sa_damping=5.0, smlt_path='b1_b2_b4',
@@ -281,7 +257,7 @@ class HazardCurveWriterSerializeTestCase(HazardCurveWriterTestCase):
         )
         writer = writers.HazardCurveXMLWriter(self.path, **metadata)
         writer.serialize(self.data)
-        utils.assert_xml_equal(expected, self.path)
+        check_equal(__file__, 'expected_hazard_curves.xml', self.path)
 
     def test_serialize_geojson(self):
         expected = {
@@ -300,10 +276,10 @@ class HazardCurveWriterSerializeTestCase(HazardCurveWriterTestCase):
                  u'type': u'Feature'}],
             u'oqmetadata': {u'IMT': u'SA',
                             u'gsimTreePath': u'b1_b4_b5',
-                            u'investigationTime': u'50.0',
+                            u'investigationTime': u'5.000000000E+01',
                             u'IMLs': [0.005, 0.007, 0.0098],
-                            u'saDamping': u'5.0',
-                            u'saPeriod': u'0.025',
+                            u'saDamping': u'5.000000000E+00',
+                            u'saPeriod': u'2.500000000E-02',
                             u'sourceModelTreePath': u'b1_b2_b4'},
             u'oqnrmlversion': u'0.4',
             u'oqtype': u'HazardCurve',
@@ -323,33 +299,6 @@ class HazardCurveWriterSerializeTestCase(HazardCurveWriterTestCase):
 
     def test_serialize_quantile(self):
         # Test serialization of qunatile curves.
-        expected = StringIO.StringIO("""\
-<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves statistics="quantile" quantileValue="0.15" IMT="SA" investigationTime="50.0" saPeriod="0.025" saDamping="5.0">
-    <IMLs>0.005 0.007 0.0098</IMLs>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>38.0 -20.1</gml:pos>
-      </gml:Point>
-      <poEs>0.1 0.2 0.3</poEs>
-    </hazardCurve>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>38.1 -20.2</gml:pos>
-      </gml:Point>
-      <poEs>0.4 0.5 0.6</poEs>
-    </hazardCurve>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>38.2 -20.3</gml:pos>
-      </gml:Point>
-      <poEs>0.7 0.8 0.8</poEs>
-    </hazardCurve>
-  </hazardCurves>
-</nrml>
-""")
-
         metadata = dict(
             investigation_time=self.TIME, imt='SA', imls=self.IMLS,
             sa_period=0.025, sa_damping=5.0, statistics='quantile',
@@ -357,8 +306,7 @@ class HazardCurveWriterSerializeTestCase(HazardCurveWriterTestCase):
         )
         writer = writers.HazardCurveXMLWriter(self.path, **metadata)
         writer.serialize(self.data)
-
-        utils.assert_xml_equal(expected, self.path)
+        check_equal(__file__, 'expected_quantile_curves.xml', self.path)
 
     def test_serialize_quantile_geojson(self):
         expected = {
@@ -376,12 +324,12 @@ class HazardCurveWriterSerializeTestCase(HazardCurveWriterTestCase):
                  u'properties': {u'poEs': [0.7, 0.8, 0.8]},
                  u'type': u'Feature'}],
             u'oqmetadata': {u'IMT': u'SA',
-                            u'investigationTime': u'50.0',
+                            u'investigationTime': u'5.000000000E+01',
                             u'IMLs': [0.005, 0.007, 0.0098],
-                            u'saDamping': u'5.0',
-                            u'saPeriod': u'0.025',
+                            u'saDamping': u'5.000000000E+00',
+                            u'saPeriod': u'2.500000000E-02',
                             u'statistics': u'quantile',
-                            u'quantileValue': u'0.15'},
+                            u'quantileValue': u'1.500000000E-01'},
             u'oqnrmlversion': u'0.4',
             u'oqtype': u'HazardCurve',
             u'type': u'FeatureCollection'
@@ -399,7 +347,7 @@ class HazardCurveWriterSerializeTestCase(HazardCurveWriterTestCase):
         self.assertEqual(expected, actual)
 
 
-class MultiHazardCurveXMLWriterSerializeTestCase(unittest.TestCase):
+class MultiHazardCurveXMLWriterSerializeTestCase(HazardWriterTestCase):
     """
     Tests for the `serialize` method of the hazard curve XML writer.
     """
@@ -425,62 +373,8 @@ class MultiHazardCurveXMLWriterSerializeTestCase(unittest.TestCase):
 
         _, self.path = tempfile.mkstemp()
 
-    def tearDown(self):
-        os.unlink(self.path)
-
     def test_serialize(self):
-        # Just a basic serialization test.
-        expected = StringIO.StringIO("""\
-<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves sourceModelTreePath="b1_b2_b4"
-                gsimTreePath="b1_b4_b5" IMT="SA" investigationTime="50"
-                saPeriod="0.025" saDamping="5.0">
-    <IMLs>0.005 0.007 0.0098</IMLs>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>38.0 -20.1</gml:pos>
-      </gml:Point>
-      <poEs>0.1 0.2 0.3</poEs>
-    </hazardCurve>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>38.1 -20.2</gml:pos>
-      </gml:Point>
-      <poEs>0.4 0.5 0.6</poEs>
-    </hazardCurve>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>38.2 -20.3</gml:pos>
-      </gml:Point>
-      <poEs>0.7 0.8 0.8</poEs>
-    </hazardCurve>
-  </hazardCurves>
-  <hazardCurves sourceModelTreePath="b1_b2_b4" gsimTreePath="b1_b4_b5" IMT="PGA"
-                investigationTime="30">
-    <IMLs>0.05 0.07 0.8</IMLs>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>38.0 -20.1</gml:pos>
-      </gml:Point>
-      <poEs>0.01 0.02 0.03</poEs>
-    </hazardCurve>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>38.1 -20.2</gml:pos>
-      </gml:Point>
-      <poEs>0.04 0.05 0.06</poEs>
-    </hazardCurve>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>38.2 -20.3</gml:pos>
-      </gml:Point>
-      <poEs>0.07 0.08 0.08</poEs>
-    </hazardCurve>
-  </hazardCurves>
-</nrml>
-""")
+        # Just a basic serialization test
 
         metadata1 = dict(
             investigation_time=50, imt='SA', imls=[0.005, 0.007, 0.0098],
@@ -496,11 +390,10 @@ class MultiHazardCurveXMLWriterSerializeTestCase(unittest.TestCase):
         writer = writers.MultiHazardCurveXMLWriter(
             self.path, [metadata1, metadata2])
         writer.serialize([self.data1, self.data2])
+        check_equal(__file__, 'expected_multicurves.xml', self.path)
 
-        utils.assert_xml_equal(expected, self.path)
 
-
-class EventBasedGMFXMLWriterTestCase(unittest.TestCase):
+class EventBasedGMFXMLWriterTestCase(HazardWriterTestCase):
 
     def test_serialize(self):
         # Test data is:
@@ -528,60 +421,18 @@ class EventBasedGMFXMLWriterTestCase(unittest.TestCase):
         ]
         gmf_collection = GmfCollection(gmf_sets)
 
-        expected = StringIO.StringIO("""\
-<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <gmfCollection sourceModelTreePath="b1_b2_b3" gsimTreePath="b1_b7_b15">
-    <gmfSet investigationTime="50.0" stochasticEventSetId="1">
-      <gmf IMT="SA" saPeriod="0.1" saDamping="5.0" ruptureId="i=1">
-        <node gmv="0.0" lon="0.0" lat="0.0"/>
-        <node gmv="0.2" lon="0.1" lat="0.1"/>
-      </gmf>
-      <gmf IMT="SA" saPeriod="0.2" saDamping="5.0" ruptureId="i=2">
-        <node gmv="0.4" lon="0.2" lat="0.2"/>
-        <node gmv="0.6" lon="0.3" lat="0.3"/>
-      </gmf>
-    </gmfSet>
-    <gmfSet investigationTime="40.0" stochasticEventSetId="2">
-      <gmf IMT="SA" saPeriod="0.3" saDamping="5.0" ruptureId="i=3">
-        <node gmv="0.8" lon="0.4" lat="0.4"/>
-        <node gmv="1.0" lon="0.5" lat="0.5"/>
-      </gmf>
-      <gmf IMT="PGA" ruptureId="i=4">
-        <node gmv="1.2" lon="0.6" lat="0.6"/>
-        <node gmv="1.4" lon="0.7" lat="0.7"/>
-      </gmf>
-    </gmfSet>
-    <gmfSet investigationTime="30.0" stochasticEventSetId="3">
-      <gmf IMT="PGA" ruptureId="i=5">
-        <node gmv="1.6" lon="0.8" lat="0.8"/>
-        <node gmv="1.8" lon="0.9" lat="0.9"/>
-      </gmf>
-      <gmf IMT="PGA" ruptureId="i=6">
-        <node gmv="2.0" lon="1.0" lat="1.0"/>
-        <node gmv="2.2" lon="1.1" lat="1.1"/>
-      </gmf>
-    </gmfSet>
-  </gmfCollection>
-</nrml>
-""")
-
         sm_lt_path = 'b1_b2_b3'
         gsim_lt_path = 'b1_b7_b15'
 
-        try:
-            # Make a temp file to save the results to:
-            _, path = tempfile.mkstemp()
-            writer = writers.EventBasedGMFXMLWriter(
-                path, sm_lt_path, gsim_lt_path)
-            writer.serialize(gmf_collection)
-
-            utils.assert_xml_equal(expected, path)
-        finally:
-            os.unlink(path)
+        # Make a temp file to save the results to:
+        _, self.path = tempfile.mkstemp()
+        writer = writers.EventBasedGMFXMLWriter(
+            self.path, sm_lt_path, gsim_lt_path)
+        writer.serialize(gmf_collection)
+        check_equal(__file__, 'expected_gmf.xml', self.path)
 
 
-class SESXMLWriterTestCase(unittest.TestCase):
+class SESXMLWriterTestCase(HazardWriterTestCase):
 
     def test_serialize(self):
         pr1 = ProbabilisticRupture(
@@ -647,74 +498,13 @@ class SESXMLWriterTestCase(unittest.TestCase):
 
         sm_lt_path = 'b8_b9_b10'
 
-        expected = StringIO.StringIO("""\
-<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <stochasticEventSetCollection sourceModelTreePath="b8_b9_b10">
-    <stochasticEventSet id="1" investigationTime="50.0">
-      <rupture id="TAG" magnitude="5.5" strike="1.0" dip="40.0" rake="10.0" tectonicRegion="Active Shallow Crust">
-        <planarSurface>
-          <topLeft lon="1.1" lat="1.01" depth="10.0"/>
-          <topRight lon="2.1" lat="2.01" depth="20.0"/>
-          <bottomLeft lon="4.1" lat="4.01" depth="40.0"/>
-          <bottomRight lon="3.1" lat="3.01" depth="30.0"/>
-        </planarSurface>
-      </rupture>
-      <rupture id="TAG" magnitude="6.5" strike="0.0" dip="41.0" rake="0.0" tectonicRegion="Active Shallow Crust">
-        <mesh rows="2" cols="2">
-          <node row="0" col="0" lon="5.1" lat="5.01" depth="10.5"/>
-          <node row="0" col="1" lon="6.1" lat="6.01" depth="10.6"/>
-          <node row="1" col="0" lon="7.1" lat="7.01" depth="10.7"/>
-          <node row="1" col="1" lon="8.1" lat="8.01" depth="10.8"/>
-        </mesh>
-      </rupture>
-    </stochasticEventSet>
-    <stochasticEventSet id="2" investigationTime="40.0">
-      <rupture id="TAG" magnitude="5.4" strike="2.0" dip="42.0" rake="12.0" tectonicRegion="Stable Shallow Crust">
-        <planarSurface>
-          <topLeft lon="1.1" lat="1.01" depth="10.0"/>
-          <topRight lon="2.1" lat="2.01" depth="20.0"/>
-          <bottomLeft lon="4.1" lat="4.01" depth="40.0"/>
-          <bottomRight lon="3.1" lat="3.01" depth="30.0"/>
-        </planarSurface>
-      </rupture>
-      <rupture id="TAG" magnitude="6.4" strike="3.0" dip="43.0" rake="13.0" tectonicRegion="Stable Shallow Crust">
-        <mesh rows="2" cols="2">
-          <node row="0" col="0" lon="5.2" lat="5.02" depth="10.1"/>
-          <node row="0" col="1" lon="6.2" lat="6.02" depth="10.2"/>
-          <node row="1" col="0" lon="7.2" lat="7.02" depth="10.3"/>
-          <node row="1" col="1" lon="8.2" lat="8.02" depth="10.4"/>
-        </mesh>
-      </rupture>
-      <rupture id="TAG" magnitude="7.4" strike="4.0" dip="44.0" rake="14.0" tectonicRegion="Stable Shallow Crust">
-        <planarSurface>
-          <topLeft lon="-1.0" lat="1.0" depth="21.0"/>
-          <topRight lon="1.0" lat="1.0" depth="21.0"/>
-          <bottomLeft lon="-1.0" lat="-1.0" depth="59.0"/>
-          <bottomRight lon="1.0" lat="-1.0" depth="59.0"/>
-        </planarSurface>
-        <planarSurface>
-          <topLeft lon="0.0" lat="1.1" depth="20.0"/>
-          <topRight lon="1.1" lat="2.0" depth="20.0"/>
-          <bottomLeft lon="0.9" lat="0.0" depth="80.0"/>
-          <bottomRight lon="2.0" lat="0.9" depth="80.0"/>
-        </planarSurface>
-      </rupture>
-    </stochasticEventSet>
-  </stochasticEventSetCollection>
-</nrml>
-""")
-
-        try:
-            _, path = tempfile.mkstemp()
-            writer = writers.SESXMLWriter(path, sm_lt_path)
-            writer.serialize([ses1, ses2])
-            utils.assert_xml_equal(expected, path)
-        finally:
-            os.unlink(path)
+        _, self.path = tempfile.mkstemp()
+        writer = writers.SESXMLWriter(self.path, sm_lt_path)
+        writer.serialize([ses1, ses2])
+        check_equal(__file__, 'expected_ses_collection.xml', self.path)
 
 
-class HazardMapWriterTestCase(unittest.TestCase):
+class HazardMapWriterTestCase(HazardWriterTestCase):
 
     def setUp(self):
         self.data = [
@@ -726,30 +516,14 @@ class HazardMapWriterTestCase(unittest.TestCase):
 
         _, self.path = tempfile.mkstemp()
 
-    def tearDown(self):
-        os.unlink(self.path)
-
     def test_serialize_xml(self):
-        expected = StringIO.StringIO("""\
-<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardMap sourceModelTreePath="b1_b2_b4" gsimTreePath="b1_b4_b5" IMT="SA" investigationTime="50.0" saPeriod="0.025" saDamping="5.0" poE="0.1">
-    <node lon="-1.0" lat="1.0" iml="0.01"/>
-    <node lon="1.0" lat="1.0" iml="0.02"/>
-    <node lon="1.0" lat="-1.0" iml="0.03"/>
-    <node lon="-1.0" lat="-1.0" iml="0.04"/>
-  </hazardMap>
-</nrml>
-""")
-
         metadata = dict(
             investigation_time=50.0, imt='SA', poe=0.1, sa_period=0.025,
             sa_damping=5.0, smlt_path='b1_b2_b4', gsimlt_path='b1_b4_b5'
         )
         writer = writers.HazardMapXMLWriter(self.path, **metadata)
         writer.serialize(self.data)
-
-        utils.assert_xml_equal(expected, self.path)
+        check_equal(__file__, 'expected_hazard_map.xml',  self.path)
 
     def test_serialize_geojson(self):
         expected = {
@@ -796,18 +570,6 @@ class HazardMapWriterTestCase(unittest.TestCase):
         self.assertEqual(expected, actual)
 
     def test_serialize_quantile_xml(self):
-        expected = StringIO.StringIO("""\
-<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardMap statistics="quantile" quantileValue="0.85" IMT="SA" investigationTime="50.0" saPeriod="0.025" saDamping="5.0" poE="0.1">
-    <node lon="-1.0" lat="1.0" iml="0.01"/>
-    <node lon="1.0" lat="1.0" iml="0.02"/>
-    <node lon="1.0" lat="-1.0" iml="0.03"/>
-    <node lon="-1.0" lat="-1.0" iml="0.04"/>
-  </hazardMap>
-</nrml>
-""")
-
         metadata = dict(
             investigation_time=50.0, imt='SA', poe=0.1, sa_period=0.025,
             sa_damping=5.0, statistics='quantile', quantile_value=0.85
@@ -815,7 +577,7 @@ class HazardMapWriterTestCase(unittest.TestCase):
         writer = writers.HazardMapXMLWriter(self.path, **metadata)
         writer.serialize(self.data)
 
-        utils.assert_xml_equal(expected, self.path)
+        check_equal(__file__, 'expected_quantile.xml', self.path)
 
     def test_serialize_quantile_geojson(self):
         expected = {
@@ -862,194 +624,9 @@ class HazardMapWriterTestCase(unittest.TestCase):
         self.assertEqual(expected, actual)
 
 
-class DisaggXMLWriterTestCase(unittest.TestCase):
+class DisaggXMLWriterTestCase(HazardWriterTestCase):
 
     def setUp(self):
-        self.expected_xml = """\
-<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  %(metaelem)s
-    <disaggMatrix type="Mag" dims="2" poE="0.021" iml="2.129">
-      <prob index="0" value="0.0"/>
-      <prob index="1" value="0.01"/>
-    </disaggMatrix>
-    <disaggMatrix type="Dist" dims="3" poE="0.022" iml="2.128">
-      <prob index="0" value="0.0"/>
-      <prob index="1" value="0.01"/>
-      <prob index="2" value="0.02"/>
-    </disaggMatrix>
-    <disaggMatrix type="TRT" dims="2" poE="0.023" iml="2.127">
-      <prob index="0" value="0.0"/>
-      <prob index="1" value="0.01"/>
-    </disaggMatrix>
-    <disaggMatrix type="Mag,Dist" dims="2,3" poE="0.024" iml="2.126">
-      <prob index="0,0" value="0.0"/>
-      <prob index="0,1" value="0.01"/>
-      <prob index="0,2" value="0.02"/>
-      <prob index="1,0" value="0.03"/>
-      <prob index="1,1" value="0.04"/>
-      <prob index="1,2" value="0.05"/>
-    </disaggMatrix>
-    <disaggMatrix type="Mag,Dist,Eps" dims="2,3,4" poE="0.025" iml="2.125">
-      <prob index="0,0,0" value="0.0"/>
-      <prob index="0,0,1" value="0.01"/>
-      <prob index="0,0,2" value="0.02"/>
-      <prob index="0,0,3" value="0.03"/>
-      <prob index="0,1,0" value="0.04"/>
-      <prob index="0,1,1" value="0.05"/>
-      <prob index="0,1,2" value="0.06"/>
-      <prob index="0,1,3" value="0.07"/>
-      <prob index="0,2,0" value="0.08"/>
-      <prob index="0,2,1" value="0.09"/>
-      <prob index="0,2,2" value="0.1"/>
-      <prob index="0,2,3" value="0.11"/>
-      <prob index="1,0,0" value="0.12"/>
-      <prob index="1,0,1" value="0.13"/>
-      <prob index="1,0,2" value="0.14"/>
-      <prob index="1,0,3" value="0.15"/>
-      <prob index="1,1,0" value="0.16"/>
-      <prob index="1,1,1" value="0.17"/>
-      <prob index="1,1,2" value="0.18"/>
-      <prob index="1,1,3" value="0.19"/>
-      <prob index="1,2,0" value="0.2"/>
-      <prob index="1,2,1" value="0.21"/>
-      <prob index="1,2,2" value="0.22"/>
-      <prob index="1,2,3" value="0.23"/>
-    </disaggMatrix>
-    <disaggMatrix type="Lon,Lat" dims="5,5" poE="0.026" iml="2.124">
-      <prob index="0,0" value="0.0"/>
-      <prob index="0,1" value="0.01"/>
-      <prob index="0,2" value="0.02"/>
-      <prob index="0,3" value="0.03"/>
-      <prob index="0,4" value="0.04"/>
-      <prob index="1,0" value="0.05"/>
-      <prob index="1,1" value="0.06"/>
-      <prob index="1,2" value="0.07"/>
-      <prob index="1,3" value="0.08"/>
-      <prob index="1,4" value="0.09"/>
-      <prob index="2,0" value="0.1"/>
-      <prob index="2,1" value="0.11"/>
-      <prob index="2,2" value="0.12"/>
-      <prob index="2,3" value="0.13"/>
-      <prob index="2,4" value="0.14"/>
-      <prob index="3,0" value="0.15"/>
-      <prob index="3,1" value="0.16"/>
-      <prob index="3,2" value="0.17"/>
-      <prob index="3,3" value="0.18"/>
-      <prob index="3,4" value="0.19"/>
-      <prob index="4,0" value="0.2"/>
-      <prob index="4,1" value="0.21"/>
-      <prob index="4,2" value="0.22"/>
-      <prob index="4,3" value="0.23"/>
-      <prob index="4,4" value="0.24"/>
-    </disaggMatrix>
-    <disaggMatrix type="Mag,Lon,Lat" dims="2,5,5" poE="0.027" iml="2.123">
-      <prob index="0,0,0" value="0.0"/>
-      <prob index="0,0,1" value="0.01"/>
-      <prob index="0,0,2" value="0.02"/>
-      <prob index="0,0,3" value="0.03"/>
-      <prob index="0,0,4" value="0.04"/>
-      <prob index="0,1,0" value="0.05"/>
-      <prob index="0,1,1" value="0.06"/>
-      <prob index="0,1,2" value="0.07"/>
-      <prob index="0,1,3" value="0.08"/>
-      <prob index="0,1,4" value="0.09"/>
-      <prob index="0,2,0" value="0.1"/>
-      <prob index="0,2,1" value="0.11"/>
-      <prob index="0,2,2" value="0.12"/>
-      <prob index="0,2,3" value="0.13"/>
-      <prob index="0,2,4" value="0.14"/>
-      <prob index="0,3,0" value="0.15"/>
-      <prob index="0,3,1" value="0.16"/>
-      <prob index="0,3,2" value="0.17"/>
-      <prob index="0,3,3" value="0.18"/>
-      <prob index="0,3,4" value="0.19"/>
-      <prob index="0,4,0" value="0.2"/>
-      <prob index="0,4,1" value="0.21"/>
-      <prob index="0,4,2" value="0.22"/>
-      <prob index="0,4,3" value="0.23"/>
-      <prob index="0,4,4" value="0.24"/>
-      <prob index="1,0,0" value="0.25"/>
-      <prob index="1,0,1" value="0.26"/>
-      <prob index="1,0,2" value="0.27"/>
-      <prob index="1,0,3" value="0.28"/>
-      <prob index="1,0,4" value="0.29"/>
-      <prob index="1,1,0" value="0.3"/>
-      <prob index="1,1,1" value="0.31"/>
-      <prob index="1,1,2" value="0.32"/>
-      <prob index="1,1,3" value="0.33"/>
-      <prob index="1,1,4" value="0.34"/>
-      <prob index="1,2,0" value="0.35"/>
-      <prob index="1,2,1" value="0.36"/>
-      <prob index="1,2,2" value="0.37"/>
-      <prob index="1,2,3" value="0.38"/>
-      <prob index="1,2,4" value="0.39"/>
-      <prob index="1,3,0" value="0.4"/>
-      <prob index="1,3,1" value="0.41"/>
-      <prob index="1,3,2" value="0.42"/>
-      <prob index="1,3,3" value="0.43"/>
-      <prob index="1,3,4" value="0.44"/>
-      <prob index="1,4,0" value="0.45"/>
-      <prob index="1,4,1" value="0.46"/>
-      <prob index="1,4,2" value="0.47"/>
-      <prob index="1,4,3" value="0.48"/>
-      <prob index="1,4,4" value="0.49"/>
-    </disaggMatrix>
-    <disaggMatrix type="Lon,Lat,TRT" dims="5,5,2" poE="0.028" iml="2.122">
-      <prob index="0,0,0" value="0.0"/>
-      <prob index="0,0,1" value="0.01"/>
-      <prob index="0,1,0" value="0.02"/>
-      <prob index="0,1,1" value="0.03"/>
-      <prob index="0,2,0" value="0.04"/>
-      <prob index="0,2,1" value="0.05"/>
-      <prob index="0,3,0" value="0.06"/>
-      <prob index="0,3,1" value="0.07"/>
-      <prob index="0,4,0" value="0.08"/>
-      <prob index="0,4,1" value="0.09"/>
-      <prob index="1,0,0" value="0.1"/>
-      <prob index="1,0,1" value="0.11"/>
-      <prob index="1,1,0" value="0.12"/>
-      <prob index="1,1,1" value="0.13"/>
-      <prob index="1,2,0" value="0.14"/>
-      <prob index="1,2,1" value="0.15"/>
-      <prob index="1,3,0" value="0.16"/>
-      <prob index="1,3,1" value="0.17"/>
-      <prob index="1,4,0" value="0.18"/>
-      <prob index="1,4,1" value="0.19"/>
-      <prob index="2,0,0" value="0.2"/>
-      <prob index="2,0,1" value="0.21"/>
-      <prob index="2,1,0" value="0.22"/>
-      <prob index="2,1,1" value="0.23"/>
-      <prob index="2,2,0" value="0.24"/>
-      <prob index="2,2,1" value="0.25"/>
-      <prob index="2,3,0" value="0.26"/>
-      <prob index="2,3,1" value="0.27"/>
-      <prob index="2,4,0" value="0.28"/>
-      <prob index="2,4,1" value="0.29"/>
-      <prob index="3,0,0" value="0.3"/>
-      <prob index="3,0,1" value="0.31"/>
-      <prob index="3,1,0" value="0.32"/>
-      <prob index="3,1,1" value="0.33"/>
-      <prob index="3,2,0" value="0.34"/>
-      <prob index="3,2,1" value="0.35"/>
-      <prob index="3,3,0" value="0.36"/>
-      <prob index="3,3,1" value="0.37"/>
-      <prob index="3,4,0" value="0.38"/>
-      <prob index="3,4,1" value="0.39"/>
-      <prob index="4,0,0" value="0.4"/>
-      <prob index="4,0,1" value="0.41"/>
-      <prob index="4,1,0" value="0.42"/>
-      <prob index="4,1,1" value="0.43"/>
-      <prob index="4,2,0" value="0.44"/>
-      <prob index="4,2,1" value="0.45"/>
-      <prob index="4,3,0" value="0.46"/>
-      <prob index="4,3,1" value="0.47"/>
-      <prob index="4,4,0" value="0.48"/>
-      <prob index="4,4,1" value="0.49"/>
-    </disaggMatrix>
-  </disaggMatrices>
-</nrml>
-"""
         self.metadata = dict(
             investigation_time=50.0,
             imt='SA',
@@ -1118,26 +695,10 @@ class DisaggXMLWriterTestCase(unittest.TestCase):
                        poe + 0.008, iml - 0.008),
         ]
 
-    def tearDown(self):
-        os.unlink(self.path)
-
     def test_serialize(self):
-        metaelem = (
-            '<disaggMatrices sourceModelTreePath="b1_b2_b3" '
-            'gsimTreePath="b1_b7_b15" IMT="SA" investigationTime="50.0" '
-            'saPeriod="0.1" saDamping="5.0" lon="8.33" lat="47.22" '
-            'magBinEdges="5, 6" distBinEdges="0, 20, 40" '
-            'lonBinEdges="6, 7, 8, 9, 10" latBinEdges="46, 47, 48, 49, 50" '
-            'epsBinEdges="-0.5, 0.5, 1.5, 2.5" '
-            'tectonicRegionTypes="active shallow crust, stable continental">'
-        )
-        self.expected_xml %= dict(metaelem=metaelem)
-
         writer = writers.DisaggXMLWriter(self.path, **self.metadata)
         writer.serialize(self.data)
-
-        expected = StringIO.StringIO(self.expected_xml)
-        utils.assert_xml_equal(expected, self.path)
+        check_equal(__file__, 'expected_disagg.xml', self.path)
 
 
 class UHSXMLWriterTestCase(unittest.TestCase):
