@@ -22,93 +22,11 @@ import tempfile
 from nose.plugins.attrib import attr
 from openquake.engine.db import models
 from openquake.engine.export import hazard as hazard_export
+from openquake.commonlib.tests import check_equal
 from qa_tests import _utils as qa_utils
 
 
 class ClassicalHazardCase11TestCase(qa_utils.BaseQATestCase):
-
-    EXPECTED_XML_B1_B2 = """<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves sourceModelTreePath="b1_b2" gsimTreePath="b1" IMT="PGA" investigationTime="1.0">
-    <IMLs>0.1 0.4 0.6 1.0</IMLs>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>0.0 0.0</gml:pos>
-      </gml:Point>
-      <poEs>0.0055270921432 0.000421641883053 5.75154102291e-05 0.0</poEs>
-    </hazardCurve>
-  </hazardCurves>
-</nrml>
-"""
-
-    EXPECTED_XML_B1_B3 = """<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves sourceModelTreePath="b1_b3" gsimTreePath="b1" IMT="PGA" investigationTime="1.0">
-    <IMLs>0.1 0.4 0.6 1.0</IMLs>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>0.0 0.0</gml:pos>
-      </gml:Point>
-      <poEs>0.00994026570298 0.000753551720765 9.69007927378e-05 0.0</poEs>
-    </hazardCurve>
-  </hazardCurves>
-</nrml>
-"""
-
-    EXPECTED_XML_B1_B4 = """<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves sourceModelTreePath="b1_b4" gsimTreePath="b1" IMT="PGA" investigationTime="1.0">
-    <IMLs>0.1 0.4 0.6 1.0</IMLs>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>0.0 0.0</gml:pos>
-      </gml:Point>
-      <poEs>0.0180244115988 0.00133514260633 0.00013735539542 0.0</poEs>
-    </hazardCurve>
-  </hazardCurves>
-</nrml>
-"""
-
-    EXPECTED_XML_MEAN = """<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves statistics="mean" IMT="PGA" investigationTime="1.0">
-    <IMLs>0.1 0.4 0.6 1.0</IMLs>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>0.0 0.0</gml:pos>
-      </gml:Point>
-      <poEs>0.0106744601702 0.000803487930335 9.71146367726e-05 0.0</poEs>
-    </hazardCurve>
-  </hazardCurves>
-</nrml>"""
-
-    EXPECTED_XML_QUANTILE_0_9 = """<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves statistics="quantile" quantileValue="0.9" IMT="PGA" investigationTime="1.0">
-    <IMLs>0.1 0.4 0.6 1.0</IMLs>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>0.0 0.0</gml:pos>
-      </gml:Point>
-      <poEs>0.0139823386509 0.00104434716355 0.000117128094079 0.0</poEs>
-    </hazardCurve>
-  </hazardCurves>
-</nrml>
-"""
-
-    EXPECTED_XML_QUANTILE_0_1 = """<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves statistics="quantile" quantileValue="0.1" IMT="PGA" investigationTime="1.0">
-    <IMLs>0.1 0.4 0.6 1.0</IMLs>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>0.0 0.0</gml:pos>
-      </gml:Point>
-      <poEs>0.0055270921432 0.000421641883053 5.75154102291e-05 0.0</poEs>
-    </hazardCurve>
-  </hazardCurves>
-</nrml>
-"""
 
     @attr('qa', 'hazard', 'classical')
     def test(self):
@@ -159,48 +77,44 @@ class ClassicalHazardCase11TestCase(qa_utils.BaseQATestCase):
 
             # Test the quantile curves:
             quantile_0_1_curve, quantile_0_9_curve = \
-                models.HazardCurveData.objects\
-                    .filter(hazard_curve__output__oq_job=job.id,
-                            hazard_curve__statistics='quantile')\
-                    .order_by('hazard_curve__quantile')
+                models.HazardCurveData.objects.filter(
+                    hazard_curve__output__oq_job=job.id,
+                    hazard_curve__statistics='quantile'
+                ).order_by('hazard_curve__quantile')
             aaae(expected_q0_1_poes, quantile_0_1_curve.poes, decimal=4)
             aaae(expected_q0_9_poes, quantile_0_9_curve.poes, decimal=4)
 
             # Test the exports as well:
             exported_file_b1_b2 = hazard_export.export(
                 curve_b1_b2.hazard_curve.output.id, result_dir)
-            self.assert_xml_equal(
-                StringIO.StringIO(self.EXPECTED_XML_B1_B2),
-                exported_file_b1_b2)
+            check_equal(__file__, 'expected_b1_b2.xml',
+                           exported_file_b1_b2)
 
             exported_file_b1_b3 = hazard_export.export(
                 curve_b1_b3.hazard_curve.output.id, result_dir)
-            self.assert_xml_equal(
-                StringIO.StringIO(self.EXPECTED_XML_B1_B3),
-                exported_file_b1_b3)
+            check_equal(__file__, 'expected_b1_b3.xml',
+                           exported_file_b1_b3)
 
             exported_file_b1_b4 = hazard_export.export(
                 curve_b1_b4.hazard_curve.output.id, result_dir)
-            self.assert_xml_equal(
-                StringIO.StringIO(self.EXPECTED_XML_B1_B4),
-                exported_file_b1_b4)
+            check_equal(__file__, 'expected_b1_b4.xml',
+                           exported_file_b1_b4)
 
             exported_file_mean = hazard_export.export(
                 mean_curve.hazard_curve.output.id, result_dir)
-            self.assert_xml_equal(
-                StringIO.StringIO(self.EXPECTED_XML_MEAN),
-                exported_file_mean)
+            check_equal(__file__, 'expected_mean.xml',
+                           exported_file_mean)
 
             q01_file = hazard_export.export(
                 quantile_0_1_curve.hazard_curve.output.id, result_dir)
-            self.assert_xml_equal(
-                StringIO.StringIO(self.EXPECTED_XML_QUANTILE_0_1),
-                q01_file)
+            check_equal(__file__, 'expected_quantile_0_1.xml',
+                           q01_file)
 
             q09_file = hazard_export.export(
                 quantile_0_9_curve.hazard_curve.output.id, result_dir)
-            self.assert_xml_equal(
-                StringIO.StringIO(self.EXPECTED_XML_QUANTILE_0_9),
-                q09_file)
-        finally:
+            check_equal(__file__, 'expected_quantile_0_9.xml',
+                           q09_file)
+        except:
+            raise
+        else:
             shutil.rmtree(result_dir)

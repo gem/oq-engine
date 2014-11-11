@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import StringIO
 import numpy
 import os
 import shutil
@@ -22,52 +21,11 @@ import tempfile
 from nose.plugins.attrib import attr
 from openquake.engine.db import models
 from openquake.engine.export import hazard as hazard_export
+from openquake.commonlib.tests import check_equal
 from qa_tests import _utils as qa_utils
 
 
 class ClassicalHazardCase7TestCase(qa_utils.BaseQATestCase):
-
-    EXPECTED_XML_B1 = """<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves sourceModelTreePath="b1" gsimTreePath="b1" IMT="PGA" investigationTime="1.0">
-    <IMLs>0.1 0.12 0.2</IMLs>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>0.0 0.0</gml:pos>
-      </gml:Point>
-      <poEs>0.864664716763 0.824184571746 0.366622358502</poEs>
-    </hazardCurve>
-  </hazardCurves>
-</nrml>
-"""
-
-    EXPECTED_XML_B2 = """<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves sourceModelTreePath="b2" gsimTreePath="b1" IMT="PGA" investigationTime="1.0">
-    <IMLs>0.1 0.12 0.2</IMLs>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>0.0 0.0</gml:pos>
-      </gml:Point>
-      <poEs>0.632120558829 0.611128414527 0.251495554108</poEs>
-    </hazardCurve>
-  </hazardCurves>
-</nrml>
-"""
-
-    EXPECTED_XML_MEAN = """<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves statistics="mean" IMT="PGA" investigationTime="1.0">
-    <IMLs>0.1 0.12 0.2</IMLs>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>0.0 0.0</gml:pos>
-      </gml:Point>
-      <poEs>0.794901469383 0.76026772458 0.332084317184</poEs>
-    </hazardCurve>
-  </hazardCurves>
-</nrml>
-"""
 
     @attr('qa', 'hazard', 'classical')
     def test(self):
@@ -111,18 +69,18 @@ class ClassicalHazardCase7TestCase(qa_utils.BaseQATestCase):
             # Test the exports as well:
             exported_file_b1 = hazard_export.export(
                 actual_curve_b1.hazard_curve.output.id, result_dir)
-            self.assert_xml_equal(
-                StringIO.StringIO(self.EXPECTED_XML_B1), exported_file_b1)
+            check_equal(__file__, 'expected_b1.xml', exported_file_b1)
 
             exported_file_b2 = hazard_export.export(
                 actual_curve_b2.hazard_curve.output.id, result_dir)
-            self.assert_xml_equal(
-                StringIO.StringIO(self.EXPECTED_XML_B2), exported_file_b2)
+            check_equal(__file__, 'expected_b2.xml', exported_file_b2)
 
             # mean:
             exported_file_mean = hazard_export.export(
                 mean_curve.hazard_curve.output.id, result_dir)
-            self.assert_xml_equal(
-                StringIO.StringIO(self.EXPECTED_XML_MEAN), exported_file_mean)
-        finally:
+            check_equal(__file__, 'expected_mean.xml',
+                           exported_file_mean)
+        except:
+            raise
+        else:
             shutil.rmtree(result_dir)

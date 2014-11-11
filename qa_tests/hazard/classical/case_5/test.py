@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import StringIO
 import numpy
 import os
 import shutil
@@ -22,24 +21,11 @@ import tempfile
 from nose.plugins.attrib import attr
 from openquake.engine.db import models
 from openquake.engine.export import hazard as hazard_export
+from openquake.commonlib.tests import check_equal
 from qa_tests import _utils as qa_utils
 
 
 class ClassicalHazardCase5TestCase(qa_utils.BaseQATestCase):
-
-    EXPECTED_XML = """<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves sourceModelTreePath="b1" gsimTreePath="b1" IMT="PGA" investigationTime="1.0">
-    <IMLs>0.1 0.12 0.2</IMLs>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>0.0 0.0</gml:pos>
-      </gml:Point>
-      <poEs>0.632120558829 0.547883067773 0.153809112325</poEs>
-    </hazardCurve>
-  </hazardCurves>
-</nrml>
-"""
 
     @attr('qa', 'hazard', 'classical')
     def test(self):
@@ -61,7 +47,9 @@ class ClassicalHazardCase5TestCase(qa_utils.BaseQATestCase):
             # Test the export as well:
             exported_file = hazard_export.export(
                 actual_curve.hazard_curve.output.id, result_dir)
-            self.assert_xml_equal(
-                StringIO.StringIO(self.EXPECTED_XML), exported_file)
-        finally:
+            check_equal(__file__, 'expected_hazard_curves.xml',
+                           exported_file)
+        except:
+            raise
+        else:
             shutil.rmtree(result_dir)

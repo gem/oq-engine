@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import StringIO
 import numpy
 import os
 import shutil
@@ -22,52 +21,11 @@ import tempfile
 from nose.plugins.attrib import attr
 from openquake.engine.db import models
 from openquake.engine.export import hazard as hazard_export
+from openquake.commonlib.tests import check_equal
 from qa_tests import _utils as qa_utils
 
 
 class ClassicalHazardCase8TestCase(qa_utils.BaseQATestCase):
-
-    EXPECTED_XML_B1_B2 = """<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves sourceModelTreePath="b1_b2" gsimTreePath="b1" IMT="PGA" investigationTime="1.0">
-    <IMLs>0.1 0.4 0.6 1.0</IMLs>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>0.0 0.0</gml:pos>
-      </gml:Point>
-      <poEs>0.0948022879866 0.0123017499076 0.00224907994938 0.0</poEs>
-    </hazardCurve>
-  </hazardCurves>
-</nrml>
-"""
-
-    EXPECTED_XML_B1_B3 = """<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves sourceModelTreePath="b1_b3" gsimTreePath="b1" IMT="PGA" investigationTime="1.0">
-    <IMLs>0.1 0.4 0.6 1.0</IMLs>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>0.0 0.0</gml:pos>
-      </gml:Point>
-      <poEs>0.00994026570298 0.000753551720765 9.69007927378e-05 0.0</poEs>
-    </hazardCurve>
-  </hazardCurves>
-</nrml>
-"""
-
-    EXPECTED_XML_B1_B4 = """<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves sourceModelTreePath="b1_b4" gsimTreePath="b1" IMT="PGA" investigationTime="1.0">
-    <IMLs>0.1 0.4 0.6 1.0</IMLs>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>0.0 0.0</gml:pos>
-      </gml:Point>
-      <poEs>0.000999249229013 4.54145190526e-05 4.06200711345e-06 0.0</poEs>
-    </hazardCurve>
-  </hazardCurves>
-</nrml>
-"""
 
     @attr('qa', 'hazard', 'classical')
     def test(self):
@@ -109,20 +67,16 @@ class ClassicalHazardCase8TestCase(qa_utils.BaseQATestCase):
             # Test the exports as well:
             exported_file_b1_b2 = hazard_export.export(
                 curve_b1_b2.hazard_curve.output.id, result_dir)
-            self.assert_xml_equal(
-                StringIO.StringIO(self.EXPECTED_XML_B1_B2),
-                exported_file_b1_b2)
+            check_equal(__file__, 'expected_b1_b2.xml', exported_file_b1_b2)
 
             exported_file_b1_b3 = hazard_export.export(
                 curve_b1_b3.hazard_curve.output.id, result_dir)
-            self.assert_xml_equal(
-                StringIO.StringIO(self.EXPECTED_XML_B1_B3),
-                exported_file_b1_b3)
+            check_equal(__file__, 'expected_b1_b3.xml', exported_file_b1_b3)
 
             exported_file_b1_b4 = hazard_export.export(
                 curve_b1_b4.hazard_curve.output.id, result_dir)
-            self.assert_xml_equal(
-                StringIO.StringIO(self.EXPECTED_XML_B1_B4),
-                exported_file_b1_b4)
-        finally:
+            check_equal(__file__, 'expected_b1_b4.xml', exported_file_b1_b4)
+        except:
+            raise
+        else:
             shutil.rmtree(result_dir)
