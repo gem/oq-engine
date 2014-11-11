@@ -1,10 +1,6 @@
 # -*- coding: utf-8 -*-
-# <nbformat>3.0</nbformat>
-
-# <codecell>
-
 # The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
+# Copyright (C) 2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -20,7 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 Module exports :class:`Bindietal2011`.
-Module exports :class:`Bindietal2011NoRake`.
 """
 from __future__ import division
 
@@ -35,8 +30,8 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 
 class BindiEtAl2011(GMPE):
     """
-    Implements GMPE developed by D.Bindi · F.Pacor · L.Luzi · R.Puglia ·
-    M.Massa · G. Ameri · R. Paolucci and published as "Ground motion
+    Implements GMPE developed by D.Bindi, F.Pacor, L.Luzi, R.Puglia,
+    M.Massa, G. Ameri, R. Paolucci and published as "Ground motion
     prediction equations derived from the Italian strong motion data",
     Bull Earthquake Eng, DOI 10.1007/s10518-011-9313-z.
     SA are given up to 2 s.
@@ -132,11 +127,11 @@ class BindiEtAl2011(GMPE):
         ``c1 + c2 * (M-Mref) * log(sqrt(Rjb ** 2 + h ** 2)/Rref) -
              c3*(sqrt(Rjb ** 2 + h ** 2)-Rref)``
         """
-        Mref = 5.0
-        Rref = 1.0
-        R = np.sqrt(dists.rjb ** 2 + C['h'] ** 2)
-        return (C['c1'] + C['c2'] * (rup.mag - Mref)) * np.log10(R / Rref) - \
-            C['c3'] * (R - Rref)
+        mref = 5.0
+        rref = 1.0
+        rval = np.sqrt(dists.rjb ** 2 + C['h'] ** 2)
+        return (C['c1'] + C['c2'] * (rup.mag - mref)) *\
+            np.log10(rval / rref) - C['c3'] * (rval - rref)
 
     def _compute_magnitude(self, rup, C):
         """
@@ -145,13 +140,13 @@ class BindiEtAl2011(GMPE):
         ``b1* (M-Mh) + b2 * (M-Mh)**2 for M<=Mh
         b3*(M-Mh) otherwise``
         """
-        Mh = 6.75
-        b3 = 0.0
-        if rup.mag <= Mh:
-            return C["e1"] + (C['b1'] * (rup.mag - Mh)) +\
-                (C['b2'] * (rup.mag - Mh) ** 2)
+        m_h = 6.75
+        b_3 = 0.0
+        if rup.mag <= m_h:
+            return C["e1"] + (C['b1'] * (rup.mag - m_h)) +\
+                (C['b2'] * (rup.mag - m_h) ** 2)
         else:
-            return C["e1"] + (b3 * (rup.mag - Mh))
+            return C["e1"] + (b_3 * (rup.mag - m_h))
 
     def _get_site_amplification(self, sites, C):
         """
@@ -162,10 +157,10 @@ class BindiEtAl2011(GMPE):
         while Cj are dummy variables used to denote the five different EC8
         site classes
         """
-        SsA, SsB, SsC, SsD, SsE = self._get_site_type_dummy_variables(sites)
+        ssa, ssb, ssc, ssd, sse = self._get_site_type_dummy_variables(sites)
 
-        return (C['sA'] * SsA) + (C['sB'] * SsB) + (C['sC'] * SsC) + \
-            (C['sD'] * SsD) + (C['sE'] * SsE)
+        return (C['sA'] * ssa) + (C['sB'] * ssb) + (C['sC'] * ssc) + \
+            (C['sD'] * ssd) + (C['sE'] * sse)
 
     def _get_site_type_dummy_variables(self, sites):
         """
@@ -173,35 +168,35 @@ class BindiEtAl2011(GMPE):
         he recording sites are classified into 5 classes,
         based on the shear wave velocity intervals in the uppermost 30 m, Vs30,
         according to the EC8 (CEN 2003):
-        class A: Vs30 > 800 m/s;
-        class B: Vs30 = 360 − 800 m/s;
-        class C: Vs30 = 180 − 360 m/s;
-        class D: Vs30 < 180 m/s;
+        class A: Vs30 > 800 m/s
+        class B: Vs30 = 360 − 800 m/s
+        class C: Vs30 = 180 - 360 m/s
+        class D: Vs30 < 180 m/s
         class E: 5 to 20 m of C- or D-type alluvium underlain by
         stiffer material with Vs30 > 800 m/s.
         """
-        SsA = np.zeros(len(sites.vs30))
-        SsB = np.zeros(len(sites.vs30))
-        SsC = np.zeros(len(sites.vs30))
-        SsD = np.zeros(len(sites.vs30))
-        SsE = np.zeros(len(sites.vs30))
+        ssa = np.zeros(len(sites.vs30))
+        ssb = np.zeros(len(sites.vs30))
+        ssc = np.zeros(len(sites.vs30))
+        ssd = np.zeros(len(sites.vs30))
+        sse = np.zeros(len(sites.vs30))
 
         # Class E Vs30 = 0 m/s. We fixed this value to define class E
         idx = (np.fabs(sites.vs30) < 1E-10)
-        SsE[idx] = 1.0
+        sse[idx] = 1.0
         # Class D;  Vs30 < 180 m/s.
         idx = (sites.vs30 >= 1E-10) & (sites.vs30 < 180.0)
-        SsD[idx] = 1.0
+        ssd[idx] = 1.0
         # SClass C; 360 m/s <= Vs30 <= 750 m/s.
         idx = (sites.vs30 >= 180.0) & (sites.vs30 < 360.0)
-        SsC[idx] = 1.0
+        ssc[idx] = 1.0
         # Class B; 360 m/s <= Vs30 <= 750 m/s.
         idx = (sites.vs30 >= 360.0) & (sites.vs30 < 800)
-        SsB[idx] = 1.0
+        ssb[idx] = 1.0
         # Class A; 360 m/s <= Vs30 <= 750 m/s.
         idx = (sites.vs30 >= 800.0)
-        SsA[idx] = 1.0
-        return SsA, SsB, SsC, SsD, SsE
+        ssa[idx] = 1.0
+        return ssa, ssb, ssc, ssd, sse
 
     def _get_mechanism(self, rup, C):
         """
