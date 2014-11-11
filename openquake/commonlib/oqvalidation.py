@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import re
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.commonlib import valid
@@ -245,3 +246,11 @@ class OqParam(valid.ParamSet):
            getattr(self, 'quantile_hazard_curves', False)):
             return getattr(self, 'hazard_curves_from_gmfs', False)
         return True
+
+    def is_valid_export_dir(self):
+        """
+        The `export_dir` parameter must refer to an existing directory,
+        and the user must have the permission to write on it.
+        """
+        return os.path.isdir(self.export_dir) and os.access(
+            self.export_dir, os.W_OK)
