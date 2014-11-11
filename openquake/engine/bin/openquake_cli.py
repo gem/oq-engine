@@ -68,9 +68,9 @@ def set_up_arg_parser():
         required=False, metavar='LOG_FILE')
     general_grp.add_argument(
         '--log-level', '-l',
-        help='Defaults to "progress"', required=False,
+        help='Defaults to "info"', required=False,
         choices=['debug', 'info', 'progress', 'warn', 'error', 'critical'],
-        default='progress')
+        default='info')
     general_grp.add_argument(
         '--no-distribute', '--nd', action='store_true',
         help=('Disable calculation task distribution and run the computation'
