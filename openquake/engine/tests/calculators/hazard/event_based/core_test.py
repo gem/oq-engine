@@ -156,6 +156,7 @@ class UnknownGsimTestCase(unittest.TestCase):
         job = helpers.get_job(cfg, username=getpass.getuser())
         calc = core.EventBasedHazardCalculator(job)
         with self.assertRaises(ValueError) as ctxt:
+            calc.initialize_site_collection()
             calc.initialize_sources()
         errmsg = str(ctxt.exception)
         assert errmsg.startswith(

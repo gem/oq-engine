@@ -93,10 +93,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
 
     def __init__(self, job):
         super(ScenarioDamageRiskCalculator, self).__init__(job)
-        # let's define a dictionary taxonomy -> fractions
-        # updated in task_completed method when the fractions per taxonomy
-        # becomes available, as computed by the workers
-        self.acc = {}
+        self.acc = {}  # taxonomy -> fractions
         self.damage_state_ids = None
 
     @EnginePerformanceMonitor.monitor
