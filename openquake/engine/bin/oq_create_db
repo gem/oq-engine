@@ -163,9 +163,9 @@ set -e
 
 # Create the OpenQuake database
 
-db_present=`psql -p $db_port -U $db_admin_user -d postgres $psql_batch_options -A -t -c "SELECT COUNT(*) FROM pg_database WHERE datname='openquake2';"`
+db_present=`psql -p $db_port -U $db_admin_user -d postgres $psql_batch_options -A -t -c "SELECT COUNT(*) FROM pg_database WHERE datname='"$db_name"';"`
 if [ $db_present -eq 1 ]; then
-    echo "WARNING: there is already an openquake2 database."
+    echo "WARNING: there is already a $db_name database."
     exit 0
 fi
 
