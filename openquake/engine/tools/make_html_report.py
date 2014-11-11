@@ -274,7 +274,6 @@ def make_report(conn, isodate='today'):
         tag_status.append(status)
         stats = fetcher.query(JOB_STATS, job_id)[1:]
         if not stats:
-            import pdb; pdb.set_trace()
             continue
         (description, job_id, stop_time, status, disk_space,
          duration) = stats[0]
