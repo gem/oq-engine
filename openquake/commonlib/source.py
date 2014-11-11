@@ -15,6 +15,9 @@
 
 import math
 import copy
+import logging
+import operator
+import collections
 from itertools import izip
 
 from openquake.hazardlib import geo, mfd, pmf, source
@@ -22,16 +25,21 @@ from openquake.hazardlib.tom import PoissonTOM
 from openquake.commonlib.node import read_nodes, context, striptag
 from openquake.commonlib import valid
 from openquake.commonlib.nrml import nodefactory
+from openquake.commonlib import parallel
 
 # this must stay here for the nrml_converters: don't remove it!
 from openquake.commonlib.obsolete import NrmlHazardlibConverter
+
+# the following is arbitrary, it is used to decide when to parallelize
+# the filtering (MS)
+LOTS_OF_SOURCES_SITES = 1E5
 
 
 class DuplicatedID(Exception):
     """Raised when two sources with the same ID are found in a source model"""
 
 
-class TrtModel(object):
+class TrtModel(collections.Sequence):
     """
     A container for the following parameters:
 
@@ -45,16 +53,23 @@ class TrtModel(object):
         the minimum magnitude among the given sources
     :param max_mag:
         the maximum magnitude among the given sources
+    :param gsims:
+        the GSIMs associated to tectonic region type
+    :param id:
+        an optional numeric ID (default None) useful to associate
+        the model to a database object
     """
     POINT_SOURCE_WEIGHT = 1 / 40.
 
     def __init__(self, trt, sources=None, num_ruptures=0,
-                 min_mag=None, max_mag=None):
+                 min_mag=None, max_mag=None, gsims=None, id=None):
         self.trt = trt
         self.sources = sources or []
         self.num_ruptures = num_ruptures
         self.min_mag = min_mag
         self.max_mag = max_mag
+        self.gsims = gsims or []
+        self.id = id
         for src in self.sources:
             self.update(src)
 
@@ -96,6 +111,21 @@ class TrtModel(object):
                   else num_ruptures)
         return weight
 
+    def split_sources_and_count_ruptures(self, area_source_discretization):
+        """
+        Split the current .sources and replace them with new ones.
+        Also, update the total .num_ruptures and the .weigth of each
+        source. Finally, make sure the sources are ordered.
+
+        :param area_source_discretization: parameter from the job.ini
+        """
+        sources = []
+        for src in self:
+            for ss in split_source(src, area_source_discretization):
+                ss.weight = self.update_num_ruptures(ss)
+                sources.append(ss)
+        self.sources = sorted(sources, key=operator.attrgetter('source_id'))
+
     def __repr__(self):
         return '<%s %s, %d source(s)>' % (self.__class__.__name__,
                                           self.trt, len(self.sources))
@@ -112,8 +142,14 @@ class TrtModel(object):
             return self.trt < other.trt
         return num_sources < other_sources
 
+    def __getitem__(self, i):
+        return self.sources[i]
+
     def __iter__(self):
         return iter(self.sources)
+
+    def __len__(self):
+        return len(self.sources)
 
 
 def parse_source_model(fname, converter, apply_uncertainties=lambda src: None):
@@ -133,7 +169,7 @@ def parse_source_model(fname, converter, apply_uncertainties=lambda src: None):
     source_ids = set()
     src_nodes = read_nodes(fname, lambda elem: 'Source' in elem.tag,
                            nodefactory['sourceModel'])
-    for src_node in src_nodes:
+    for no, src_node in enumerate(src_nodes, 1):
         src = converter.convert_node(src_node)
         if src.source_id in source_ids:
             raise DuplicatedID(
@@ -144,6 +180,8 @@ def parse_source_model(fname, converter, apply_uncertainties=lambda src: None):
             source_stats_dict[trt] = TrtModel(trt)
         source_stats_dict[trt].update(src)
         source_ids.add(src.source_id)
+        if no % 10000 == 0:  # log every 10,000 sources parsed
+            logging.info('Parsed %d sources from %s', no, fname)
 
     # return ordered TrtModels
     return sorted(source_stats_dict.itervalues())
@@ -668,3 +706,32 @@ def parse_ses_ruptures(fname):
     each one containing ruptures with a tag and a seed.
     """
     raise NotImplementedError('parse_ses_ruptures')
+
+
+def _filter_sources(sources, sitecol, maxdist):
+    # called by filter_sources
+    srcs = []
+    for src in sources:
+        sites = src.filter_sites_by_distance_to_source(maxdist, sitecol)
+        if sites is not None:
+            srcs.append(src)
+    return srcs
+
+
+def filter_sources(sources, sitecol, maxdist):
+    """
+    Filter a list of hazardlib sources according to the maximum distance.
+
+    :param sources: the original sources
+    :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
+    :param maxdist: maximum distance
+    :returns: the filtered sources ordered by source_id
+    """
+    if len(sources) * len(sitecol) > LOTS_OF_SOURCES_SITES:
+        # filter in parallel on all available cores
+        sources = parallel.apply_reduce(
+            _filter_sources, (sources, sitecol, maxdist), operator.add, [])
+    else:
+        # few sources and sites, filter sequentially on a single core
+        sources = _filter_sources(sources, sitecol, maxdist)
+    return sorted(sources, key=operator.attrgetter('source_id'))
