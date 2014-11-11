@@ -100,8 +100,7 @@ def job_stats(job):
     curs.execute("select pg_database_size(%s)", (dbname,))
     dbsize = curs.fetchall()[0][0]
 
-    # create job stats, which implicitly records the start time for the job
-    js = models.JobStats.objects.create(oq_job=job)
+    js = job.jobstats
     job.is_running = True
     job.save()
     try:
@@ -450,6 +449,8 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
 
     # create the current job
     job = prepare_job(user_name=username, log_level=log_level)
+    models.JobStats.objects.create(oq_job=job)
+
     # read calculation params and create the calculation profile
     with logs.handle(job, log_level):
         oqparam = readinput.get_oqparam(cfg_file_path, calculators)
