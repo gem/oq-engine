@@ -9,15 +9,15 @@ Note: This calculation demo consists of two parts: hazard and risk. The hazard a
 
 Hazard
 ------
-Expected runtime: 2 minutes
-Number of sites: 9144
-Number of logic tree realizations: 1
-GMPEs: ChiouYoungs2008
-IMTs: PGA
-Outputs: Hazard Curves
+* Expected runtime: 2 minutes
+* Number of sites: 9144
+* Number of logic tree realizations: 1
+* GMPEs: ChiouYoungs2008
+* IMTs: PGA
+* Outputs: Hazard Curves
 
 Risk
 ----
-Expected runtime: 1 minute
-Number of taxonomies: 5
-Outputs: Benefit Cost Ratio Maps
+* Expected runtime: 1 minute
+* Number of taxonomies: 5
+* Outputs: Benefit Cost Ratio Maps

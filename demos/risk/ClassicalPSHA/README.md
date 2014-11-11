@@ -9,16 +9,16 @@ Note: This calculation demo consists of two parts: hazard and risk. The hazard a
 
 Hazard
 ------
-Expected runtime: 2 minutes
-Number of sites: 9144
-Number of logic tree realizations: 1
-GMPEs: ChiouYoungs2008
-IMTs: PGA
-Outputs: Hazard Curves, Hazard Maps
+* Expected runtime: 2 minutes
+* Number of sites: 9144
+* Number of logic tree realizations: 1
+* GMPEs: ChiouYoungs2008
+* IMTs: PGA
+* Outputs: Hazard Curves, Hazard Maps
 
 Risk
 ----
-Expected runtime: 3 minutes
-Loss types: Structural, Nonstructural, Occupants
-Number of taxonomies: 5
-Outputs: Loss Curves, Loss Maps
+* Expected runtime: 3 minutes
+* Loss types: Structural, Nonstructural, Occupants
+* Number of taxonomies: 5
+* Outputs: Loss Curves, Loss Maps

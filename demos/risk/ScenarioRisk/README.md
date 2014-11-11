@@ -9,16 +9,16 @@ Note: This calculation demo consists of two parts: hazard and risk. The hazard a
 
 Hazard
 ------
-Expected runtime: 5 minutes
-Number of sites: 9144
-Number of GMFs: 1000
-GMPEs: ChiouYoungs2008
-IMTs: PGA
-Outputs: Ground Motion Fields
+* Expected runtime: 5 minutes
+* Number of sites: 9144
+* Number of GMFs: 1000
+* GMPEs: ChiouYoungs2008
+* IMTs: PGA
+* Outputs: Ground Motion Fields
 
 Risk
 ----
-Expected runtime: 3 minutes
-Loss types: Structural, Nonstructural, Occupants
-Number of taxonomies: 5
-Outputs: Loss Maps, Aggregate Losses
+* Expected runtime: 3 minutes
+* Loss types: Structural, Nonstructural, Occupants
+* Number of taxonomies: 5
+* Outputs: Loss Maps, Aggregate Losses
