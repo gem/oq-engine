@@ -18,6 +18,8 @@
 
 import os
 import re
+import logging
+import tempfile
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.commonlib import valid
 
@@ -252,5 +254,9 @@ class OqParam(valid.ParamSet):
         The `export_dir` parameter must refer to an existing directory,
         and the user must have the permission to write on it.
         """
+        if not hasattr(self, 'export_dir'):
+            self.export_dir = tempfile.gettempdir()
+            logging.warn('export_dir not specified. The outputs will be '
+                         'written in export_dir=%s' % self.export_dir)
         return os.path.isdir(self.export_dir) and os.access(
             self.export_dir, os.W_OK)
