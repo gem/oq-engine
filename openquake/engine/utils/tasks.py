@@ -32,6 +32,8 @@ from openquake.engine.writer import CacheInserter
 from openquake.engine.performance import EnginePerformanceMonitor
 
 CONCURRENT_TASKS = int(config.get('celery', 'concurrent_tasks'))
+SOFT_MEM_LIMIT = int(config.get('memory', 'soft_mem_limit'))
+HARD_MEM_LIMIT = int(config.get('memory', 'hard_mem_limit'))
 
 
 class JobNotRunning(Exception):
@@ -55,7 +57,8 @@ class OqTaskManager(TaskManager):
         an AsyncResult. If the variable OQ_NO_DISTRIBUTE is set, the
         task function is run in process and the result is returned.
         """
-        check_mem_usage()  # log a warning if too much memory is used
+        # log a warning if too much memory is used
+        check_mem_usage(SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
         if no_distribute():
             res = safely_call(self.oqtask.task_func, args)
         else:
@@ -78,7 +81,8 @@ class OqTaskManager(TaskManager):
         backend = current_app().backend
         rset = ResultSet(self.results)
         for task_id, result_dict in rset.iter_native():
-            check_mem_usage()  # log a warning if too much memory is used
+            # log a warning if too much memory is used
+            check_mem_usage(SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
             result = result_dict['result']
             if isinstance(result, BaseException):
                 raise result
@@ -153,8 +157,9 @@ def oqtask(task_func):
                 'total ' + task_func.__name__, job_id, tsk, flush=True):
             # tasks write on the celery log file
             logs.set_level(job.log_level)
-            check_mem_usage()  # log a warning if too much memory is used
             try:
+                # log a warning if too much memory is used
+                check_mem_usage(SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
                 # run the task
                 return task_func(*args)
             finally:
