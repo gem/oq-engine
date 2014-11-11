@@ -26,8 +26,8 @@ from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.imt import from_string
 import openquake.hazardlib.gsim
 
-from openquake.commonlib.general import split_in_blocks
 from openquake.commonlib.readinput import get_rupture
+from openquake.commonlib.parallel import do_not_aggregate
 
 from openquake.engine.calculators.hazard import general as haz_general
 from openquake.engine.calculators import calculators
@@ -48,7 +48,7 @@ def gmfs(job_id, ses_ruptures, sitecol, imts, gmf_id):
     :param ses_ruptures: a set of `SESRupture` instances
     :param sitecol: a `SiteCollection` instance
     :param imts: a list of hazardlib IMT instances
-    :param int gmf_id: the ID of a `Gmf` instance
+    :param int gmf_id: the ID of the `Gmf` instance
     """
     hc = models.oqparam(job_id)
     gsim = AVAILABLE_GSIMS[hc.gsim]()  # instantiate the GSIM class
@@ -198,18 +198,15 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
             create_db_ruptures(self.rupture, self.ses_coll, tags,
                                self.hc.random_seed)
 
-    def task_arg_gen(self):
+    def execute(self):
         """
-        Yield a tuple of the form (job_id, sitecol, rupture_id, gmf_id,
-        task_seed, num_realizations). `task_seed` will be used to seed
-        numpy for temporal occurence sampling. Only a single task
-        will be generated which is fine since the computation is fast
-        anyway.
+        Run :function:`openquake.engine.calculators.hazard.scenario.core.gmfs`
+        in parallel.
         """
         ses_ruptures = models.SESRupture.objects.filter(
             rupture__ses_collection=self.ses_coll.id)
-        for ruptures in split_in_blocks(ses_ruptures, self.concurrent_tasks):
-            yield self.job.id, ruptures, self.sites, self.imts, self.gmf.id
-
-    def task_completed(self, result):
-        """Do nothing"""
+        self.acc = tasks.apply_reduce(
+            self.core_calc_task,
+            (self.job.id, ses_ruptures, self.site_collection,
+             self.imts, self.gmf.id),
+            do_not_aggregate)
