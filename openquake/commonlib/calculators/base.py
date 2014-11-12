@@ -25,7 +25,7 @@ import numpy
 from openquake.hazardlib.geo import geodetic
 
 from openquake.commonlib import readinput, general
-from openquake.commonlib.parallel import apply_reduce
+from openquake.commonlib.parallel import apply_reduce, DummyMonitor
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
@@ -42,7 +42,7 @@ class BaseCalculator(object):
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, oqparam, monitor):
+    def __init__(self, oqparam, monitor=DummyMonitor()):
         self.oqparam = oqparam
         self.monitor = monitor
         self.monitor.write('operation pid time_sec memory_mb'.split())

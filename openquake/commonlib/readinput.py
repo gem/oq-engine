@@ -363,7 +363,8 @@ def get_job_info(oqparam, source_models, sitecol):
     # The input weight is given by the number of ruptures generated
     # by the sources; for point sources however a corrective factor
     # given by the parameter `point_source_weight` is applied
-    input_weight = sum(src.weight for trt_model in source_models
+    input_weight = sum(src.weight for src_model in source_models
+                       for trt_model in src_model.trt_models
                        for src in trt_model)
 
     imtls = oqparam.intensity_measure_types_and_levels
@@ -401,7 +402,8 @@ def get_job_info(oqparam, source_models, sitecol):
     logging.info('Total weight of the sources=%s', input_weight)
     logging.info('Expected output size=%s', output_weight)
     return dict(input_weight=input_weight, output_weight=output_weight,
-                n_imts=n_imts, n_levels=n_levels, n_sites=n_sites)
+                n_imts=n_imts, n_levels=n_levels, n_sites=n_sites,
+                max_realizations=max_realizations)
 
 
 def get_imtls(oqparam):
