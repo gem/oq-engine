@@ -381,8 +381,8 @@ def get_job_info(oqparam, source_models, sitecol):
         n_imts = len(imtls)
         n_levels = 0
     else:  # there are levels
-        n_imts = float(len(imtls))
-        n_levels = sum(len(lvls) for lvls in imtls.itervalues()) / n_imts
+        n_imts = len(imtls)
+        n_levels = sum(len(ls) for ls in imtls.itervalues()) / float(n_imts)
 
     max_realizations = oqparam.number_of_logic_tree_samples or sum(
         sm.num_gsim_rlzs for sm in source_models)
@@ -395,7 +395,7 @@ def get_job_info(oqparam, source_models, sitecol):
     # calculators it is given by
     # n_sites * n_realizations * n_imts * n_levels;
     # for the event based calculator is given by n_sites * n_realizations
-    # * n_levels * n_imts * (n_ses * investigation_time) / 10000
+    # * n_levels * n_imts * (n_ses * investigation_time) * NORMALIZATION_FACTOR
     output_weight = n_sites * n_imts * max_realizations
     if oqparam.calculation_mode == 'event_based':
         total_time = (oqparam.investigation_time *
