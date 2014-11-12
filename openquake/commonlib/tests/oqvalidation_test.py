@@ -102,5 +102,5 @@ class OqParamTestCase(unittest.TestCase):
                 maximum_distance=400,
                 export_dir='/non-existing',
             )
-        self.assertIn('The `export_dir` parameter must refer to an existing '
+        self.assertIn('The `export_dir` parameter must refer to a '
                       'directory', str(ctx.exception))
