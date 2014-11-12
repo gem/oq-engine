@@ -18,7 +18,6 @@
 
 import random
 import logging
-import operator
 
 import numpy
 
@@ -54,7 +53,7 @@ class DisaggregationCalculator(base.BaseHazardCalculator):
     Classical disaggregation PSHA calculators
     """
     def post_execute(self, result):
-        pass
+        return {}
 
 
 def calc_gmfs(tag_seed_pairs, computer, monitor):
