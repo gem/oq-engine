@@ -40,6 +40,9 @@ from openquake.commonlib.general import groupby, AccumDict, distinct
 from openquake.commonlib import source
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
 
+# the following is quite arbitrary, it gives output weights that I like (MS)
+NORMALIZATION_FACTOR = 1E-2
+
 GSIM = gsim.get_available_gsims()
 
 
@@ -49,7 +52,7 @@ class DuplicatedPoint(Exception):
     """
 
 SourceModel = collections.namedtuple(
-    'SourceModel', 'name weight path trt_models ordinal')
+    'SourceModel', 'name weight path trt_models num_gsim_rlzs ordinal')
 
 
 def _collect_source_model_paths(smlt):
@@ -286,7 +289,8 @@ python -m openquake.engine.tools.correct_complex_sources %s
                 trt_model.gsims = gsim_lt.values[trt_model.trt]
         # the num_ruptures is not updated; it will be updated in the
         # engine, after filtering of the sources
-        yield SourceModel(sm, weight, smpath, trt_models, i)
+        num_gsim_rlzs = gsim_lt.get_num_paths()
+        yield SourceModel(sm, weight, smpath, trt_models, num_gsim_rlzs, i)
 
 
 def get_filtered_source_models(oqparam, sitecol):
@@ -342,6 +346,62 @@ def get_effective_source_models(oqparam, sitecol):
                 oqparam.area_source_discretization)
             logging.info(repr(trt_model))
         yield source_model
+
+
+def get_job_info(oqparam, source_models, sitecol):
+    """
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param source_models:
+        a list of :class:`openquake.commonlib.readinput.SourceModel` tuples
+    :param sitecol:
+        a :class:`openquake.hazardlib.site.SiteCollection` instance
+    :returns:
+        a dictionary with same parameters of the computation, in particular
+        the input and output weights
+    """
+    # The input weight is given by the number of ruptures generated
+    # by the sources; for point sources however a corrective factor
+    # given by the parameter `point_source_weight` is applied
+    input_weight = sum(src.weight for trt_model in source_models
+                       for src in trt_model)
+
+    imtls = oqparam.intensity_measure_types_and_levels
+    n_sites = len(sitecol)
+
+    # the imtls dictionary has values None when the levels are unknown
+    # (this is a valid case for the event based hazard calculator)
+    if None in imtls.values():  # there are no levels
+        n_imts = len(imtls)
+        n_levels = 0
+    else:  # there are levels
+        n_imts = float(len(imtls))
+        n_levels = sum(len(lvls) for lvls in imtls.itervalues()) / n_imts
+
+    max_realizations = oqparam.number_of_logic_tree_samples or sum(
+        sm.num_gsim_rlzs for sm in source_models)
+    # NB: in the event based case `max_realizations` can be over-estimated,
+    # if the method is called in the pre_execute phase, because
+    # some tectonic region types may have no occurrencies.
+
+    # The output weight is a pure number which is proportional to the size
+    # of the expected output of the calculator. For classical and disagg
+    # calculators it is given by
+    # n_sites * n_realizations * n_imts * n_levels;
+    # for the event based calculator is given by n_sites * n_realizations
+    # * n_levels * n_imts * (n_ses * investigation_time) / 10000
+    output_weight = n_sites * n_imts * max_realizations
+    if oqparam.calculation_mode == 'event_based':
+        total_time = (oqparam.investigation_time *
+                      oqparam.ses_per_logic_tree_path)
+        output_weight *= total_time * NORMALIZATION_FACTOR
+    else:
+        output_weight *= n_levels
+
+    logging.info('Total weight of the sources=%s', input_weight)
+    logging.info('Expected output size=%s', output_weight)
+    return dict(input_weight=input_weight, output_weight=output_weight,
+                n_imts=n_imts, n_levels=n_levels, n_sites=n_sites)
 
 
 def get_imtls(oqparam):
