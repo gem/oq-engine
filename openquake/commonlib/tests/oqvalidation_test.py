@@ -100,7 +100,7 @@ class OqParamTestCase(unittest.TestCase):
                 reference_depth_to_2pt5km_per_sec=100,
                 reference_depth_to_1pt0km_per_sec=150,
                 maximum_distance=400,
-                export_dir='/non-existing',
+                export_dir='/non/existing',
             )
         self.assertIn('The `export_dir` parameter must refer to a '
                       'directory', str(ctx.exception))
