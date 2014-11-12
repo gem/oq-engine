@@ -61,11 +61,6 @@ POES_PARAM_NAME = "POES"
 # Dilation in decimal degrees (http://en.wikipedia.org/wiki/Decimal_degrees)
 # 1e-5 represents the approximate distance of one meter at the equator.
 DILATION_ONE_METER = 1E-5
-# the following is quite arbitrary, it gives output weights that I like (MS)
-NORMALIZATION_FACTOR = 1E-2
-# the following is also arbitrary, it is used to decide when to parallelize
-# the filtering (MS)
-LOTS_OF_SOURCES_SITES = 1E5
 
 
 class InputWeightLimit(Exception):
@@ -212,61 +207,30 @@ class BaseHazardCalculator(base.Calculator):
         with transaction.commit_on_success(using='job_init'):
             self.initialize_site_collection()
         with transaction.commit_on_success(using='job_init'):
-            self.initialize_sources()
-
-        # The input weight is given by the number of ruptures generated
-        # by the sources; for point sources however a corrective factor
-        # given by the parameter `point_source_weight` is applied
-        input_weight = sum(src.weight for src in self.all_sources)
-
-        self.imtls = getattr(self.hc, 'intensity_measure_types_and_levels', {})
-        n_sites = len(self.site_collection)
-
-        # the imtls dictionary has values None when the levels are unknown
-        # (this is a valid case for the event based hazard calculator)
-        if None in self.imtls.values():  # there are no levels
-            n_imts = len(self.hc.intensity_measure_types_and_levels)
-            n_levels = 0
-        else:  # there are levels
-            n_imts = float(len(self.imtls))
-            n_levels = sum(len(lvls) for lvls in self.imtls.itervalues()
-                           ) / n_imts
-            self.zeros = numpy.array(
-                [numpy.zeros((n_sites, len(self.imtls[imt])))
-                 for imt in sorted(self.imtls)])
-            self.ones = [numpy.zeros(len(self.imtls[imt]), dtype=float)
-                         for imt in sorted(self.imtls)]
-            logs.LOG.info('%d IMT, %s level(s) and %d site(s)',
-                          n_imts, n_levels, n_sites)
-
-        # The output weight is a pure number which is proportional to the size
-        # of the expected output of the calculator. For classical and disagg
-        # calculators it is given by
-        # n_sites * n_realizations * n_imts * n_levels;
-        # for the event based calculator is given by n_sites * n_realizations
-        # * n_levels * n_imts * (n_ses * investigation_time) / 10000
-        max_realizations = self.get_max_realizations()
-        output_weight = n_sites * n_imts * max_realizations
-        if 'EventBased' in self.__class__.__name__:
-            total_time = (self.hc.investigation_time *
-                          self.hc.ses_per_logic_tree_path)
-            output_weight *= total_time * NORMALIZATION_FACTOR
-        else:
-            output_weight *= n_levels
-
-        logs.LOG.info('Total weight of the sources=%s', input_weight)
-        logs.LOG.info('Expected output size=%s', output_weight)
+            source_models = self.initialize_sources()
+        info = readinput.get_job_info(
+            self.hc, source_models, self.site_collection)
         with transaction.commit_on_success(using='job_init'):
             models.JobInfo.objects.create(
                 oq_job=self.job,
-                num_sites=n_sites,
-                num_realizations=max_realizations,
-                num_imts=n_imts,
-                num_levels=n_levels,
-                input_weight=input_weight,
-                output_weight=output_weight)
-        self.check_limits(input_weight, output_weight)
-        return input_weight, output_weight
+                num_sites=info['n_sites'],
+                num_realizations=info['max_realizations'],
+                num_imts=info['n_imts'],
+                num_levels=info['n_levels'],
+                input_weight=info['input_weight'],
+                output_weight=info['output_weight'])
+        self.check_limits(info['input_weight'], info['output_weight'])
+
+        self.all_sources = [src for sm in source_models
+                            for trt_model in sm.trt_models
+                            for src in trt_model]
+        self.imtls = self.hc.intensity_measure_types_and_levels
+        self.zeros = numpy.array(
+            [numpy.zeros((info['n_sites'], len(self.imtls[imt])))
+             for imt in sorted(self.imtls)])
+        self.ones = [numpy.zeros(len(self.imtls[imt]), dtype=float)
+                     for imt in sorted(self.imtls)]
+        return info['input_weight'], info['output_weight']
 
     def check_limits(self, input_weight, output_weight):
         """
@@ -303,7 +267,7 @@ class BaseHazardCalculator(base.Calculator):
         trees. Save in the database LtSourceModel and TrtModel objects.
         """
         logs.LOG.progress("initializing sources")
-        self.all_sources = []
+        source_models = []
         for sm in readinput.get_effective_source_models(
                 self.hc, self.site_collection):
 
@@ -324,10 +288,12 @@ class BaseHazardCalculator(base.Calculator):
                     gsims=trt_mod.gsims).id
                 for src in trt_mod:
                     src.trt_model_id = trt_id
-                    self.all_sources.append(src)
+
+            source_models.append(sm)
 
         # to be used later on
         self.source_model_lt = logictree.SourceModelLogicTree.from_hc(self.hc)
+        return source_models
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_model(self):
@@ -367,26 +333,6 @@ class BaseHazardCalculator(base.Calculator):
             sm_params = None
         self.site_collection = get_site_collection(
             oqparam, points, site_ids, sm_params)
-
-    def get_max_realizations(self):
-        """
-        Return the number of realizations that will be generated.
-        In the event based case such number can be over-estimated,
-        if the method is called in the pre_execute phase, because
-        some tectonic region types may have no occurrencies. The
-        number is correct if the method is called in the post_execute
-        phase.
-        """
-        if self.hc.number_of_logic_tree_samples:
-            return self.hc.number_of_logic_tree_samples
-        gsim_lt_dict = {}  # gsim_lt per source model logic tree path
-        for sm, weight, sm_lt_path in self.source_model_lt:
-            lt_model = models.LtSourceModel.objects.get(
-                hazard_calculation=self.job, sm_lt_path=sm_lt_path)
-            if not sm_lt_path in gsim_lt_dict:
-                gsim_lt_dict[sm_lt_path] = lt_model.make_gsim_lt()
-        return sum(gsim_lt.get_num_paths()
-                   for gsim_lt in gsim_lt_dict.itervalues())
 
     def initialize_realizations(self):
         """
