@@ -208,7 +208,7 @@ _devtest_innervm_run () {
 
     ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-risklib:\$PWD/oq-hazardlib\" ;
                  cd $GEM_GIT_PACKAGE ;
-                 nosetests -v --with-doctest --with-coverage --cover-package=openquake.commonlib --with-xunit"
+                 nosetests -v --with-doctest --with-coverage --cover-package=openquake.risklib --with-xunit"
     scp "$lxc_ip:$GEM_GIT_PACKAGE/nosetests.xml" .
 
     trap ERR
@@ -590,8 +590,8 @@ cd "$GEM_BUILD_SRC"
 # date
 dt="$(date +%s)"
 
-# version info from openquake/commonlib/__init__.py
-ini_vers="$(sed 's/^[ 	]*__version__[ 	]*=[ 	]*["'"'"']\([^"'"'"']*\)/\1/g' openquake/commonlib/__init__.py)"
+# version info from openquake/risklib/__init__.py
+ini_vers="$(sed 's/^[ 	]*__version__[ 	]*=[ 	]*["'"'"']\([^"'"'"']*\)/\1/g' openquake/risklib/__init__.py)"
 ini_maj="$(echo "$ini_vers" | sed -n 's/^\([0-9]\+\).*/\1/gp')"
 ini_min="$(echo "$ini_vers" | sed -n 's/^[0-9]\+\.\([0-9]\+\).*/\1/gp')"
 ini_bfx="$(echo "$ini_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.\([0-9]\+\).*/\1/gp')"
