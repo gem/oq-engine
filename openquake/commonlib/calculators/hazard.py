@@ -18,7 +18,6 @@
 
 import random
 import logging
-import operator
 
 import numpy
 
@@ -114,7 +113,7 @@ class ScenarioCalculator(base.BaseCalculator):
         self.computer = GmfComputer(rupture, self.sitecol, self.imts, gsim,
                                     trunc_level, correl_model)
         rnd = random.Random(getattr(self.oqparam, 'random_seed', 42))
-        self.tag_seed_pairs = [(tag, rnd.randint(calc.MAX_INT))
+        self.tag_seed_pairs = [(tag, rnd.randint(0, calc.MAX_INT))
                                for tag in self.tags]
 
     def pre_execute(self):
@@ -123,7 +122,9 @@ class ScenarioCalculator(base.BaseCalculator):
         """
         logging.info('Reading the site collection')
         if 'exposure' in self.oqparam.inputs:
-            self.sitecol, _assets = readinput.get_sitecol_assets(self.oqparam)
+            exposure = readinput.get_exposure(self.oqparam)
+            self.sitecol, _assets = readinput.get_sitecol_assets(
+                self.oqparam, exposure)
         else:
             self.sitecol = readinput.get_site_collection(self.oqparam)
         self._init_tags()
@@ -136,7 +137,7 @@ class ScenarioCalculator(base.BaseCalculator):
         return parallel.apply_reduce(
             self.core_func.__func__,
             (self.tag_seed_pairs, self.computer, self.monitor('calc_gmfs')),
-            operator.add, concurrent_tasks=self.oqparam.concurrent_tasks)
+            concurrent_tasks=self.oqparam.concurrent_tasks)
 
     def post_execute(self, result):
         """

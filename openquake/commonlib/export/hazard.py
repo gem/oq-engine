@@ -117,8 +117,8 @@ class GmfCollection(object):
         self.gmfs_by_imt = gmfs_by_imt
 
     def __iter__(self):
+        gmfset = []
         for imt_str, gmfs in sorted(self.gmfs_by_imt.iteritems()):
-            gmfset = []
             imt, sa_period, sa_damping = from_string(imt_str)
             for rupture_tag, gmf in zip(self.rupture_tags, gmfs.transpose()):
                 nodes = (GroundMotionFieldNode(
@@ -128,7 +128,7 @@ class GmfCollection(object):
                 gmfset.append(
                     GroundMotionField(
                         imt, sa_period, sa_damping, rupture_tag, nodes))
-            yield GmfSet(gmfset)
+        yield GmfSet(gmfset)
 
 
 @export.add('gmf_xml')
