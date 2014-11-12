@@ -251,12 +251,17 @@ class OqParam(valid.ParamSet):
 
     def is_valid_export_dir(self):
         """
-        The `export_dir` parameter must refer to an existing directory,
+        The `export_dir` parameter must refer to a directory,
         and the user must have the permission to write on it.
         """
         if not hasattr(self, 'export_dir'):
             self.export_dir = tempfile.gettempdir()
             logging.warn('export_dir not specified. The outputs will be '
                          'written in export_dir=%s' % self.export_dir)
+            return True
+        elif not os.path.exists(self.export_dir):
+            # check that we can write on the parent directory
+            pdir = os.path.dirname(self.export_dir)
+            return os.path.exists(pdir) and os.access(pdir, os.W_OK)
         return os.path.isdir(self.export_dir) and os.access(
             self.export_dir, os.W_OK)
