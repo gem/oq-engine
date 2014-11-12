@@ -16,7 +16,10 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import re
+import logging
+import tempfile
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.commonlib import valid
 
@@ -245,3 +248,20 @@ class OqParam(valid.ParamSet):
            getattr(self, 'quantile_hazard_curves', False)):
             return getattr(self, 'hazard_curves_from_gmfs', False)
         return True
+
+    def is_valid_export_dir(self):
+        """
+        The `export_dir` parameter must refer to a directory,
+        and the user must have the permission to write on it.
+        """
+        if not hasattr(self, 'export_dir'):
+            self.export_dir = tempfile.gettempdir()
+            logging.warn('export_dir not specified. The outputs will be '
+                         'written in export_dir=%s' % self.export_dir)
+            return True
+        elif not os.path.exists(self.export_dir):
+            # check that we can write on the parent directory
+            pdir = os.path.dirname(self.export_dir)
+            return os.path.exists(pdir) and os.access(pdir, os.W_OK)
+        return os.path.isdir(self.export_dir) and os.access(
+            self.export_dir, os.W_OK)
