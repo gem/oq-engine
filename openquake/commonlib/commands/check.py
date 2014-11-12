@@ -16,7 +16,8 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.commonlib import nrml, readinput, sap
+import logging
+from openquake.commonlib import nrml, readinput, sap, calculators
 
 
 def check(fname, pprint):
@@ -29,7 +30,9 @@ def check(fname, pprint):
         if pprint:
             print node.to_str()
     elif fname.endswith('.ini'):
-        oqparam = readinput.getoqparam(fname)
+        logging.basicConfig(level=logging.INFO)
+        oqparam = readinput.get_oqparam(fname)
+        calculators.calculators(oqparam).pre_execute()
         if pprint:
             print oqparam
 

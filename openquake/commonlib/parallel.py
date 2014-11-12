@@ -464,3 +464,24 @@ class PerformanceMonitor(object):
         in the same task.
         """
         return self.__class__(operation, monitor_csv=self.monitor_csv)
+
+
+class DummyMonitor(PerformanceMonitor):
+    """
+    This class makes it easy to disable the monitoring in client code.
+    Disabling the monitor can improve the performance.
+    """
+    def __init__(self, operation='', *args, **kw):
+        self.operation = operation
+
+    def write(self, row):
+        """Do nothing"""
+
+    def __call__(self, operation):
+        return self.__class__(operation)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, etype, exc, tb):
+        pass
