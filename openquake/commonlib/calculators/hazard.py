@@ -54,7 +54,7 @@ class DisaggregationCalculator(base.BaseHazardCalculator):
     Classical disaggregation PSHA calculators
     """
     def post_execute(self, result):
-        return {}
+        pass
 
 
 def calc_gmfs(tag_seed_pairs, computer, monitor):
@@ -110,7 +110,6 @@ class ScenarioCalculator(base.BaseCalculator):
             self.sitecol, _assets = readinput.get_sitecol_assets(
                 self.oqparam, exposure)
         else:
-            logging.info('Reading the site collection')
             self.sitecol = readinput.get_site_collection(self.oqparam)
         self._init_tags()
 
@@ -122,7 +121,7 @@ class ScenarioCalculator(base.BaseCalculator):
         return parallel.apply_reduce(
             self.core_func.__func__,
             (self.tag_seed_pairs, self.computer, self.monitor('calc_gmfs')),
-            operator.add, concurrent_tasks=self.oqparam.concurrent_tasks)
+            concurrent_tasks=self.oqparam.concurrent_tasks)
 
     def post_execute(self, result):
         """

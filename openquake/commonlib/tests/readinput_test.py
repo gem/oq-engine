@@ -27,6 +27,8 @@ from numpy.testing import assert_allclose
 
 from openquake.commonlib import readinput, valid, general
 
+TMP = tempfile.gettempdir()
+
 
 class ParseConfigTestCase(unittest.TestCase):
 
@@ -40,10 +42,12 @@ region = 1 1, 2 2, 3 3
 [foo]
 bar = baz
 intensity_measure_types = PGA
-""")
+export_dir = %s
+        """ % TMP)
         exp_base_path = os.path.dirname(source)
 
         expected_params = {
+            'export_dir': TMP,
             'base_path': exp_base_path,
             'calculation_mode': 'classical_risk',
             'region': [(1.0, 1.0), (2.0, 2.0), (3.0, 3.0)],
@@ -70,12 +74,14 @@ maximum_distance=1
 truncation_level=0
 random_seed=0
 intensity_measure_types = PGA
-    """ % site_model_input)
+export_dir = %s
+        """ % (site_model_input, TMP))
 
         try:
             exp_base_path = os.path.dirname(job_config)
 
             expected_params = {
+                'export_dir': TMP,
                 'base_path': exp_base_path,
                 'calculation_mode': 'classical',
                 'truncation_level': 0.0,
@@ -111,11 +117,13 @@ reference_vs30_value = 600.0
 reference_depth_to_2pt5km_per_sec = 5.0
 reference_depth_to_1pt0km_per_sec = 100.0
 intensity_measure_types = PGA
-""" % sites_csv)
+export_dir = %s
+            """ % (sites_csv, TMP))
             exp_base_path = os.path.dirname(
                 os.path.join(os.path.abspath('.'), source))
 
             expected_params = {
+                'export_dir': TMP,
                 'base_path': exp_base_path,
                 'calculation_mode': 'classical',
                 'truncation_level': 3.0,
@@ -134,6 +142,25 @@ intensity_measure_types = PGA
         finally:
             os.unlink(sites_csv)
 
+    def test_wrong_discretization(self):
+        source = general.writetmp("""
+[general]
+calculation_mode = classical
+region = 27.685048 85.280857, 27.736719 85.280857, 27.733376 85.355358, 27.675015 85.355358
+region_grid_spacing = 5.0
+maximum_distance=1
+truncation_level=3
+random_seed=5
+reference_vs30_type = measured
+reference_vs30_value = 600.0
+reference_depth_to_2pt5km_per_sec = 5.0
+reference_depth_to_1pt0km_per_sec = 100.0
+intensity_measure_types = PGA
+""")
+        oqparam = readinput.get_oqparam(source)
+        with self.assertRaises(ValueError) as ctx:
+            readinput.get_site_collection(oqparam)
+        self.assertIn('Could not discretize region', str(ctx.exception))
 
 class ClosestSiteModelTestCase(unittest.TestCase):
 

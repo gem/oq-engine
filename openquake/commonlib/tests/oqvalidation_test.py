@@ -1,6 +1,9 @@
 import mock
 import unittest
+import tempfile
 from openquake.commonlib.oqvalidation import OqParam
+
+TMP = tempfile.gettempdir()
 
 
 class OqParamTestCase(unittest.TestCase):
@@ -11,7 +14,8 @@ class OqParamTestCase(unittest.TestCase):
             OqParam(
                 calculation_mode='classical', inputs=dict(site_model=''),
                 hazard_calculation_id=None, hazard_output_id=None,
-                maximum_distance=10, sites='0.1 0.2', not_existing_param='XXX')
+                maximum_distance=10, sites='0.1 0.2',
+                not_existing_param='XXX', export_dir=TMP)
         self.assertEqual(
             w.call_args[0][0],
             "The parameter 'not_existing_param' is unknown, ignoring")
@@ -82,7 +86,21 @@ class OqParamTestCase(unittest.TestCase):
                 reference_vs30_value=200,
                 reference_depth_to_2pt5km_per_sec=100,
                 reference_depth_to_1pt0km_per_sec=150,
-                maximum_distance=400,
-            )
+                maximum_distance=400)
         self.assertIn('You must set `hazard_curves_from_gmfs`',
                       str(ctx.exception))
+
+    def test_invalid_export_dir(self):
+        with self.assertRaises(ValueError) as ctx:
+            OqParam(
+                calculation_mode='event_based', inputs={},
+                sites='0.1 0.2',
+                reference_vs30_type='measured',
+                reference_vs30_value=200,
+                reference_depth_to_2pt5km_per_sec=100,
+                reference_depth_to_1pt0km_per_sec=150,
+                maximum_distance=400,
+                export_dir='/non/existing',
+            )
+        self.assertIn('The `export_dir` parameter must refer to a '
+                      'directory', str(ctx.exception))

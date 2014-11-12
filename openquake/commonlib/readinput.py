@@ -146,7 +146,12 @@ def get_mesh(oqparam):
         # point to the end
         firstpoint = geo.Point(*oqparam.region[0])
         points = [geo.Point(*xy) for xy in oqparam.region] + [firstpoint]
-        return geo.Polygon(points).discretize(oqparam.region_grid_spacing)
+        try:
+            return geo.Polygon(points).discretize(oqparam.region_grid_spacing)
+        except:
+            raise ValueError(
+                'Could not discretize region %(region)s with grid spacing '
+                '%(region_grid_spacing)s' % vars(oqparam))
     elif 'exposure' in oqparam.inputs:
         raise RuntimeError('You can extract the site collection from the '
                            'exposure with get_sitecol_assets')
@@ -344,7 +349,7 @@ def get_effective_source_models(oqparam, sitecol):
         for trt_model in source_model.trt_models:
             trt_model.split_sources_and_count_ruptures(
                 oqparam.area_source_discretization)
-            logging.info(repr(trt_model))
+            logging.info('splitting %s', trt_model)
         yield source_model
 
 
