@@ -31,48 +31,30 @@ from openquake.commonlib.export import export
 
 
 @calculators.add('classical')
-class ClassicalCalculator(base.BaseCalculator):
+class ClassicalCalculator(base.BaseHazardCalculator):
     """
     Classical PSHA calculators
     """
-    def pre_execute(self):
-        pass
-
-    def execute(self):
-        pass
-
     def post_execute(self, result):
-        pass
+        return {}
 
 
 @calculators.add('event_based')
-class EventBasedCalculator(base.BaseCalculator):
+class EventBasedCalculator(base.BaseHazardCalculator):
     """
     Event based PSHA calculators
     """
-    def pre_execute(self):
-        pass
-
-    def execute(self):
-        pass
-
     def post_execute(self, result):
-        pass
+        return {}
 
 
 @calculators.add('disaggregation')
-class DisaggregationCalculator(base.BaseCalculator):
+class DisaggregationCalculator(base.BaseHazardCalculator):
     """
     Classical disaggregation PSHA calculators
     """
-    def pre_execute(self):
-        pass
-
-    def execute(self):
-        pass
-
     def post_execute(self, result):
-        pass
+        return {}
 
 
 def calc_gmfs(tag_seed_pairs, computer, monitor):
@@ -114,17 +96,21 @@ class ScenarioCalculator(base.BaseCalculator):
         self.computer = GmfComputer(rupture, self.sitecol, self.imts, gsim,
                                     trunc_level, correl_model)
         rnd = random.Random(getattr(self.oqparam, 'random_seed', 42))
-        self.tag_seed_pairs = [(tag, rnd.randint(calc.MAX_INT))
+        self.tag_seed_pairs = [(tag, rnd.randint(0, calc.MAX_INT))
                                for tag in self.tags]
 
     def pre_execute(self):
         """
         Read the site collection and initialize GmfComputer, tags and seeds
         """
-        logging.info('Reading the site collection')
         if 'exposure' in self.oqparam.inputs:
-            self.sitecol, _assets = readinput.get_sitecol_assets(self.oqparam)
+            logging.info('Reading the exposure')
+            exposure = readinput.get_exposure(self.oqparam)
+            logging.info('Reading the site collection')
+            self.sitecol, _assets = readinput.get_sitecol_assets(
+                self.oqparam, exposure)
         else:
+            logging.info('Reading the site collection')
             self.sitecol = readinput.get_site_collection(self.oqparam)
         self._init_tags()
 

@@ -29,6 +29,7 @@ from openquake.commonlib.parallel import apply_reduce, DummyMonitor
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
+get_trt = operator.attrgetter('trt_model_id')
 get_imt = operator.attrgetter('imt')
 
 
@@ -82,6 +83,47 @@ class BaseCalculator(object):
         overridden with the export code. It will return a dictionary
         of output files.
         """
+
+
+class BaseHazardCalculator(BaseCalculator):
+    """
+    Base class for hazard calculators based on source models
+    """
+    def pre_execute(self):
+        """
+        Read the site collection and the sources.
+        """
+        if 'exposure' in self.oqparam.inputs:
+            logging.info('Reading the exposure')
+            exposure = readinput.get_exposure(self.oqparam)
+            self.sitecol, _assets = readinput.get_sitecol_assets(
+                self.oqparam, exposure)
+        else:
+            logging.info('Reading the site collection')
+            self.sitecol = readinput.get_site_collection(self.oqparam)
+        logging.info('Reading the effective source models')
+        source_models = list(
+            readinput.get_effective_source_models(self.oqparam, self.sitecol))
+        self.all_sources = [src for src_model in source_models
+                            for trt_model in src_model.trt_models
+                            for src in trt_model]
+        self.job_info = readinput.get_job_info(
+            self.oqparam, source_models, self.sitecol)
+        # we could manage limits here
+
+    def execute(self):
+        """
+        Run in parallel `core_func(sources, sitecol, monitor)`, by
+        parallelizing on the sources according to their weight and
+        tectonic region type.
+        """
+        monitor = self.monitor(self.core_func.__name__)
+        return apply_reduce(
+            self.core_func.__func__,
+            (self.all_sources, self.site_collection, monitor),
+            concurrent_tasks=self.oqparam.concurrent_tasks,
+            weight=get_weight,
+            key=get_trt)
 
 
 class BaseRiskCalculator(BaseCalculator):
@@ -170,15 +212,14 @@ class BaseRiskCalculator(BaseCalculator):
 
     def execute(self):
         """
-        Parallelizes on the riskinputs and returns a dictionary of results.
-        Requires a `.core_func` to be defined with signature
+        Parallelize on the riskinputs and returns a dictionary of results.
+        Require a `.core_func` to be defined with signature
         (riskinputs, riskmodel, monitor).
         """
         monitor = self.monitor(self.core_func.__name__)
         return apply_reduce(
             self.core_func.__func__,
             (self.riskinputs, self.riskmodel, monitor),
-            agg=operator.add,
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=get_weight,
             key=get_imt)
