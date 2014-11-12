@@ -30,48 +30,30 @@ from openquake.commonlib.export import export
 
 
 @calculators.add('classical')
-class ClassicalCalculator(base.BaseCalculator):
+class ClassicalCalculator(base.BaseHazardCalculator):
     """
     Classical PSHA calculators
     """
-    def pre_execute(self):
-        pass
-
-    def execute(self):
-        pass
-
     def post_execute(self, result):
-        pass
+        return {}
 
 
 @calculators.add('event_based')
-class EventBasedCalculator(base.BaseCalculator):
+class EventBasedCalculator(base.BaseHazardCalculator):
     """
     Event based PSHA calculators
     """
-    def pre_execute(self):
-        pass
-
-    def execute(self):
-        pass
-
     def post_execute(self, result):
-        pass
+        return {}
 
 
 @calculators.add('disaggregation')
-class DisaggregationCalculator(base.BaseCalculator):
+class DisaggregationCalculator(base.BaseHazardCalculator):
     """
     Classical disaggregation PSHA calculators
     """
-    def pre_execute(self):
-        pass
-
-    def execute(self):
-        pass
-
     def post_execute(self, result):
-        pass
+        return {}
 
 
 def calc_gmfs(tag_seed_pairs, computer, monitor):
@@ -120,9 +102,10 @@ class ScenarioCalculator(base.BaseCalculator):
         """
         Read the site collection and initialize GmfComputer, tags and seeds
         """
-        logging.info('Reading the site collection')
         if 'exposure' in self.oqparam.inputs:
+            logging.info('Reading the exposure')
             exposure = readinput.get_exposure(self.oqparam)
+            logging.info('Reading the site collection')
             self.sitecol, _assets = readinput.get_sitecol_assets(
                 self.oqparam, exposure)
         else:
