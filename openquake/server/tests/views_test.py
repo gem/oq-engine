@@ -140,7 +140,7 @@ class CalcToResponseDataTestCase(unittest.TestCase):
 
         # general stuff
         self.calc.base_path = '/foo/bar/'
-        self.calc.export_dir = '/tmp/outputs/'
+        self.calc.export_dir = TMPDIR
         self.calc.owner = object()
 
         # geometry
