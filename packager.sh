@@ -332,7 +332,6 @@ celeryd_wait $GEM_MAXLOOP"
                  nosetests  -a 'qa,risk,scenario' -v --with-xunit --xunit-file=xunit-qa-risk-scenario.xml
 
                  python-coverage xml --include=\"openquake/*\"
-                "
 
         scp "${lxc_ip}:oq-engine/xunit-*.xml" .
         scp "${lxc_ip}:oq-engine/coverage.xml" .
