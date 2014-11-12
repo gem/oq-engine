@@ -225,11 +225,12 @@ class BaseHazardCalculator(base.Calculator):
                             for trt_model in sm.trt_models
                             for src in trt_model]
         self.imtls = self.hc.intensity_measure_types_and_levels
-        self.zeros = numpy.array(
-            [numpy.zeros((info['n_sites'], len(self.imtls[imt])))
-             for imt in sorted(self.imtls)])
-        self.ones = [numpy.zeros(len(self.imtls[imt]), dtype=float)
-                     for imt in sorted(self.imtls)]
+        if info['n_levels']:  # we can compute hazard curves
+            self.zeros = numpy.array(
+                [numpy.zeros((info['n_sites'], len(self.imtls[imt])))
+                 for imt in sorted(self.imtls)])
+            self.ones = [numpy.zeros(len(self.imtls[imt]), dtype=float)
+                         for imt in sorted(self.imtls)]
         return info['input_weight'], info['output_weight']
 
     def check_limits(self, input_weight, output_weight):
