@@ -22,6 +22,7 @@ Test related to code in openquake/utils/config.py
 
 
 import os
+import getpass
 import textwrap
 import unittest
 
@@ -259,7 +260,8 @@ class IsReadableTestCase(unittest.TestCase):
         # returns `False`
         os.environ["OQ_SITE_CFG_PATH"] = "/etc/sudoers"
         os.environ["OQ_LOCAL_CFG_PATH"] = "/etc/passwd-"
-        self.assertFalse(config.cfg.is_readable())
+        if getpass.getuser() != 'root':
+            self.assertFalse(config.cfg.is_readable())
 
     def test_is_readable_one_plus_files_have_permissions(self):
         # When at least one config file is present and we have permission to
