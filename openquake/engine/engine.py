@@ -457,6 +457,7 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
         oqparam.hazard_calculation_id = \
             haz_job.id if haz_job and not hazard_output_id else None
         oqparam.hazard_output_id = hazard_output_id
+        vars(oqparam).update(extras)
 
     if haz_job:  # for risk calculations
         check_hazard_risk_consistency(haz_job, oqparam.calculation_mode)
@@ -464,6 +465,11 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
             logs.LOG.warn(
                 'You are using a hazard calculation ran by %s',
                 haz_job.user_name)
+        if oqparam.hazard_output_id and getattr(
+                oqparam, 'quantile_loss_curves', False):
+            logs.LOG.warn(
+                'quantile_loss_curves is on, but you passed a single hazard '
+                'output: the statistics will not be computed')
 
     params = vars(oqparam).copy()
     if 'quantile_loss_curves' not in params:
@@ -478,7 +484,6 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
         params['conditional_loss_poes'] = []
     if haz_job:
         params['hazard_calculation_id'] = haz_job.id
-    params.update(extras)
     job.save_params(params)
 
     if hazard_output_id is None and hazard_calculation_id is None:
