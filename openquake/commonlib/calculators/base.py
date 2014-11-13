@@ -102,13 +102,13 @@ class BaseHazardCalculator(BaseCalculator):
             logging.info('Reading the site collection')
             self.sitecol = readinput.get_site_collection(self.oqparam)
         logging.info('Reading the effective source models')
-        source_models = list(
+        self.source_models = list(
             readinput.get_effective_source_models(self.oqparam, self.sitecol))
-        self.all_sources = [src for src_model in source_models
+        self.all_sources = [src for src_model in self.source_models
                             for trt_model in src_model.trt_models
                             for src in trt_model]
         self.job_info = readinput.get_job_info(
-            self.oqparam, source_models, self.sitecol)
+            self.oqparam, self.source_models, self.sitecol)
         # we could manage limits here
 
     def execute(self):
@@ -124,6 +124,31 @@ class BaseHazardCalculator(BaseCalculator):
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=get_weight,
             key=get_trt)
+
+    def get_realizations(self):
+        """
+        Returns a list of LtRealization instances with an .items
+        attribute containing (trt_model_id, gsim) pairs.
+        """
+        rlzs = []
+        for sm in self.source_models:
+            for rlz in sm.gsim_lt:
+                rlz.items = [(trt_model.id, rlz.value[trt_model.trt])
+                             for trt_model in sm.trt_models]
+                rlzs.append(rlz)
+        return rlzs
+
+    def export_stats(self, curves):
+        """
+        """
+        self.realizations = self.get_realizations()
+        all_curves = [build_curves(curves, rlz) * rlz.weight
+                      for rlz in self.realizations]
+        mean_curves = numpy.sum(
+            curves * rlz.weight
+            for curves, rlz in zip(all_curves, realizations))
+        quantile_curves = []
+        # TODO: export
 
 
 class BaseRiskCalculator(BaseCalculator):

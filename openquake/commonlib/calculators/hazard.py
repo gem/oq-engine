@@ -22,11 +22,46 @@ import logging
 import numpy
 
 from openquake.hazardlib.calc.gmf import GmfComputer
+from openquake.hazardlib.calc.hazard_curve import hazard_curves
+from openquake.hazardlib.calc.filters import source_site_distance_filter, \
+    rupture_site_distance_filter
 from openquake.commonlib import readinput, parallel
 from openquake.commonlib.general import AccumDict
 
 from openquake.commonlib.calculators import calculators, base, calc
 from openquake.commonlib.export import export
+
+
+def build_curves(rlz, curves_by_trt_model_gsim):
+    """
+    Build on the fly the hazard curves for the current realization
+    """
+    curves = 0
+    for trt_model_id, gsim in rlz.items:
+        pnes = 1. - curves_by_trt_model_gsim[trt_model_id, gsim]
+        curves = 1. - (1. - curves) * pnes
+    return curves
+
+
+def classical(sources, sitecol, gsims_by_trt, monitor):
+    """
+    :param sources:
+    :param sitecol:
+    :param gsims_by_trt:
+    :param monitor:
+    """
+    max_dist = monitor.oqparam.maximum_distancee
+    truncation_level = monitor.oqparam.truncation_level
+    imts = sorted(monitor.oqparam.intensity_measure_types_and_levels)
+    trt_model_id = sources[0].trt_model_id
+    trt = sources[0].tectonic_region_type
+    result = AccumDict()  # (trt_model_id, gsim.__class__.__name__) -> curves
+    for gsim in gsims_by_trt[trt]:
+        result[trt_model_id, gsim.__class__.__name__] = hazard_curves(
+            sources, sitecol, imts, {trt: gsim}, truncation_level,
+            source_site_filter=source_site_distance_filter(max_dist),
+            rupture_site_filter=rupture_site_distance_filter(max_dist))
+    return result
 
 
 @calculators.add('classical')

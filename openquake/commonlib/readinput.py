@@ -52,7 +52,7 @@ class DuplicatedPoint(Exception):
     """
 
 SourceModel = collections.namedtuple(
-    'SourceModel', 'name weight path trt_models num_gsim_rlzs ordinal')
+    'SourceModel', 'name weight path trt_models gsim_lt ordinal')
 
 
 def _collect_source_model_paths(smlt):
@@ -294,8 +294,7 @@ python -m openquake.engine.tools.correct_complex_sources %s
                 trt_model.gsims = gsim_lt.values[trt_model.trt]
         # the num_ruptures is not updated; it will be updated in the
         # engine, after filtering of the sources
-        num_gsim_rlzs = gsim_lt.get_num_paths()
-        yield SourceModel(sm, weight, smpath, trt_models, num_gsim_rlzs, i)
+        yield SourceModel(sm, weight, smpath, trt_models, gsim_lt, i)
 
 
 def get_filtered_source_models(oqparam, sitecol):
@@ -385,7 +384,7 @@ def get_job_info(oqparam, source_models, sitecol):
         n_levels = sum(len(ls) for ls in imtls.itervalues()) / float(n_imts)
 
     max_realizations = oqparam.number_of_logic_tree_samples or sum(
-        sm.num_gsim_rlzs for sm in source_models)
+        sm.gsim_lt.get_num_paths() for sm in source_models)
     # NB: in the event based case `max_realizations` can be over-estimated,
     # if the method is called in the pre_execute phase, because
     # some tectonic region types may have no occurrencies.
