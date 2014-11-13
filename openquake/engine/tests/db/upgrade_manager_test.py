@@ -66,9 +66,9 @@ class UpgradeManagerTestCase(unittest.TestCase):
         self.assertEqual(count(conn, 'test.hazard_calculation'), 2)
         self.assertEqual(count(conn, 'test.lt_source_model'), 6)
 
-        # a script 0004 can enter when the database is already at version 0005,
-        # but this not officially supported; actually officially this is
-        # impossible and what_if_I_upgrade must raise an exception
+        # a script 0004 can enter when the database is already at version 0005
+        # (this is a convenient feature during development) but officially
+        # this is not supported and what_if_I_upgrade must raise an exception
         with temp_script('0004-do-nothing.sql', 'SELECT 1'):
             applied = upgrade_db(conn, pkg, skip_versions='0002 0003'.split())
             self.assertEqual(applied, ['0004'])
