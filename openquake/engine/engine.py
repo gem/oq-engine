@@ -460,6 +460,10 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
 
     if haz_job:  # for risk calculations
         check_hazard_risk_consistency(haz_job, oqparam.calculation_mode)
+        if haz_job.user_name != username:
+            logs.LOG.warn(
+                'You are using a hazard calculation ran by %s',
+                haz_job.user_name)
 
     params = vars(oqparam).copy()
     if 'quantile_loss_curves' not in params:
