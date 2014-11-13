@@ -66,26 +66,17 @@ class UpgradeManagerTestCase(unittest.TestCase):
         self.assertEqual(count(conn, 'test.hazard_calculation'), 2)
         self.assertEqual(count(conn, 'test.lt_source_model'), 6)
 
-        # we support the use case of people reserving a number for a
-        # a script which is not ready yet: so, if I tell people to start
-        # numbering from 5 because I am working on the script #4,
-        # when I finally merge my upgrade will not be lost even if
-        # higher number scripts entered before it. One can even reserve
-        # a bunch of numbers, say from 0020 to 0029, for upgrades belonging
-        # to the same project.
-        # NB: if the higher number scripts contain incompatible changes
-        # the migration will fail; then you must fix the script and
-        # give it a higher number
-        # here we emulate this use case with a reserved script 04 entering
-        # when the database is already at version 05
+        # a script 0004 can enter when the database is already at version 0005,
+        # but this not officially supported; actually officially this is
+        # impossible and what_if_I_upgrade must raise an exception
         with temp_script('0004-do-nothing.sql', 'SELECT 1'):
             applied = upgrade_db(conn, pkg, skip_versions='0002 0003'.split())
             self.assertEqual(applied, ['0004'])
 
-        # lower version scripts are rejected by what_if_I_upgrade
+        # check that the script 0004 is rejected by what_if_I_upgrade
         with temp_script('0004-do-nothing.sql', 'SELECT 1'):
             with self.assertRaises(VersionTooSmall):
-                what_if_I_upgrade(conn, pkg)
+                what_if_I_upgrade(conn, pkg, 'read_scripts')
 
     def test_syntax_error(self):
         with self.assertRaises(psycopg2.ProgrammingError) as ctx:
