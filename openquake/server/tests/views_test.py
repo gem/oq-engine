@@ -245,7 +245,7 @@ class GetResultTestCase(BaseViewTestCase):
     """
 
     def test_hazard_default_export_type(self):
-        with mock.patch('openquake.engine.export.hazard.export') as export:
+        with mock.patch('openquake.engine.export.core.export') as export:
             with mock.patch('openquake.engine.db.models'
                             '.Output.objects.get') as output_get:
                 output_get.return_value.output_type = 'test_output'
@@ -265,7 +265,7 @@ class GetResultTestCase(BaseViewTestCase):
                 self.assertEqual('xml', export.call_args[1]['export_type'])
 
     def test_hazard(self):
-        with mock.patch('openquake.engine.export.hazard.export') as export:
+        with mock.patch('openquake.engine.export.core.export') as export:
             with mock.patch('openquake.engine.db.models'
                             '.Output.objects.get') as output_get:
                 output_get.return_value.output_type = 'test_output'
@@ -284,7 +284,7 @@ class GetResultTestCase(BaseViewTestCase):
                 self.assertEqual('csv', export.call_args[1]['export_type'])
 
     def test_risk_default_export_type(self):
-        with mock.patch('openquake.engine.export.risk.export') as export:
+        with mock.patch('openquake.engine.export.core.export') as export:
             with mock.patch('openquake.engine.db.models'
                             '.Output.objects.get') as output_get:
                 output_get.return_value.output_type = 'test_output'
@@ -302,7 +302,7 @@ class GetResultTestCase(BaseViewTestCase):
                 self.assertEqual('xml', export.call_args[1]['export_type'])
 
     def test_risk(self):
-        with mock.patch('openquake.engine.export.risk.export') as export:
+        with mock.patch('openquake.engine.export.core.export') as export:
             with mock.patch('openquake.engine.db.models'
                             '.Output.objects.get') as output_get:
                 output_get.return_value.output_type = 'test_output'
