@@ -170,8 +170,12 @@ _devtest_innervm_run () {
 
     # add custom packages
     ssh $lxc_ip mkdir -p "repo"
-    scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
-    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ./\""
+    # FIXME just for test with CI, replace again with custom_pkgs when
+    #       tests pass
+    # scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
+    # ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ./\""
+    scp -r ${GEM_DEB_REPO}/repotest $lxc_ip:repo/repotest
+    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/repotest ./\""
 
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get upgrade -y"
@@ -241,6 +245,10 @@ _pkgtest_innervm_run () {
     # packaging related tests (install, remove, purge, install, reinstall)
     ssh $lxc_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
     ssh $lxc_ip "sudo apt-get remove -y ${GEM_DEB_PACKAGE}"
+
+    # FIXME: test incompatibility between python-oq-commonlib package and the new python-oq-risklib
+    ssh $lxc_ip "sudo apt-get install -y python-oq-commonlib"
+
     ssh $lxc_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
     ssh $lxc_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}"
 
