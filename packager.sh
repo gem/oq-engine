@@ -221,9 +221,6 @@ _devtest_innervm_run () {
 }
 
 _pkgtest_innervm_run () {
-    echo "NO PACKAGE TEST ENABLED"
-    return 0
-
     local lxc_ip="$1"
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
