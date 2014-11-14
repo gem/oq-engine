@@ -126,7 +126,7 @@ def import_rows(job, ses_coll, gmf_coll, sorted_tags, rows):
     gmfs = []  # list of GmfData instance
     site_id = {}  # dictionary wkt -> site id
     rupture = fake_rupture()
-    prob_rup_id, ses_rup_ids = create_db_ruptures(
+    prob_rup_id, ses_rup_ids, seeds = create_db_ruptures(
         rupture, ses_coll, sorted_tags, seed=42)
     tag2id = dict(zip(sorted_tags, ses_rup_ids))
 
