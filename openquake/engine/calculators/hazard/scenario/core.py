@@ -27,7 +27,6 @@ from openquake.hazardlib.imt import from_string
 import openquake.hazardlib.gsim
 
 from openquake.commonlib.readinput import get_rupture
-from openquake.commonlib.general import AccumDict
 
 from openquake.engine.calculators.hazard import general as haz_general
 from openquake.engine.calculators import calculators
@@ -55,10 +54,7 @@ def calc_gmfs(job_id, tag_seed_pairs, computer):
     :returns:
         a dictionary tag -> {imt: gmf}
     """
-    res = AccumDict()  # tag -> {imt: gmvs}
-    for tag, seed in tag_seed_pairs:
-        res += {tag: dict(computer.compute(seed))}
-    return res
+    return {tag: dict(computer.compute(seed)) for tag, seed in tag_seed_pairs}
 
 
 def create_db_ruptures(rupture, ses_coll, tags, seed):
@@ -142,11 +138,12 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         return 0, output_weight
 
     def create_ruptures(self):
-        self.rupture = get_rupture(models.oqparam(self.job.id))
+        oqparam = models.oqparam(self.job.id)
+        self.rupture = get_rupture(oqparam)
 
         # check filtering
-        trunc_level = self.job.get_param('truncation_level', None)
-        maximum_distance = self.job.get_param('maximum_distance')
+        trunc_level = getattr(oqparam, 'truncation_level', None)
+        maximum_distance = oqparam.maximum_distance
         self.sites = filters.filter_sites_by_distance_to_rupture(
             self.rupture, maximum_distance, self.site_collection)
         if self.sites is None:
@@ -170,14 +167,14 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
 
         with self.monitor('saving ruptures'):
             self.tags = ['scenario-%010d' % i for i in xrange(
-                self.hc.number_of_ground_motion_fields)]
+                oqparam.number_of_ground_motion_fields)]
             _, self.rupids, self.seeds = create_db_ruptures(
                 self.rupture, self.ses_coll, self.tags,
                 self.hc.random_seed)
 
         correlation_model = models.get_correl_model(
             models.OqJob.objects.get(pk=self.job.id))
-        gsim = AVAILABLE_GSIMS[self.job.get_param('gsim')]()
+        gsim = AVAILABLE_GSIMS[oqparam.gsim]()
         self.computer = GmfComputer(
             self.rupture, self.site_collection, self.imts, gsim,
             trunc_level, correlation_model)
@@ -200,8 +197,9 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         gmf_id = self.gmf.id
         inserter = writer.CacheInserter(models.GmfData, max_cache_size=1000)
         for imt in self.imts:
-            gmfs = numpy.array([self.acc[tag][imt] for tag in self.tags]).T
-            for site_id, gmvs in zip(self.site_collection, gmfs):
+            gmfs = numpy.array([self.acc[tag][str(imt)]
+                                for tag in self.tags]).transpose()
+            for site_id, gmvs in zip(self.site_collection.sids, gmfs):
                 inserter.add(
                     models.GmfData(
                         gmf_id=gmf_id,
@@ -211,5 +209,5 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
                         sa_damping=imt[2],
                         site_id=site_id,
                         rupture_ids=self.rupids,
-                        gmvs=gmvs))
+                        gmvs=list(gmvs)))
         inserter.flush()
