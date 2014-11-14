@@ -279,7 +279,7 @@ def list_hazard_outputs(hc_id, full=True):
     :param bool full:
         If True produce a full listing, otherwise a short version
     """
-    outputs = get_outputs('hazard', hc_id)
+    outputs = get_outputs(hc_id)
     hc = models.oqparam(hc_id)
     if hc.calculation_mode == 'scenario':  # ignore SES output
         outputs = outputs.filter(output_type='gmf_scenario')
@@ -492,14 +492,12 @@ def list_risk_outputs(rc_id, full=True):
     :param bool full:
         If True produce a full listing, otherwise a short version
     """
-    print_outputs_summary(get_outputs('risk', rc_id), full)
+    print_outputs_summary(get_outputs(rc_id), full)
 
 
 # this is patched in the tests
-def get_outputs(job_type, calc_id):
+def get_outputs(calc_id):
     """
-    :param job_type:
-        'hazard' or 'risk'
     :param calc_id:
         ID of a calculation.
     :returns:
