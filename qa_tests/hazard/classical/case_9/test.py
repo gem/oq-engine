@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import StringIO
 import numpy
 import os
 import shutil
@@ -21,7 +20,7 @@ import tempfile
 
 from nose.plugins.attrib import attr
 from openquake.engine.db import models
-from openquake.engine.export import hazard as hazard_export
+from openquake.engine.export import core as hazard_export
 from openquake.commonlib.tests import check_equal
 from qa_tests import _utils as qa_utils
 

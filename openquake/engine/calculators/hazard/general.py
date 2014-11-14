@@ -51,8 +51,7 @@ from openquake.engine.calculators.post_processing import (
 from openquake.engine.calculators.hazard.post_processing import (
     hazard_curves_to_hazard_map, do_uhs_post_proc)
 
-from openquake.engine.export import core as export_core
-from openquake.engine.export import hazard as hazard_export
+from openquake.engine.export import core
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.utils import tasks
 
@@ -410,7 +409,7 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
         Gathers all outputs for the job, but filters out `hazard_curve_multi`
         outputs if this option was turned off in the calculation profile.
         """
-        outputs = export_core.get_outputs(self.job.id)
+        outputs = core.get_outputs(self.job.id)
         if not getattr(self.hc, 'export_multi_curves', None):
             outputs = outputs.exclude(output_type='hazard_curve_multi')
         return outputs
@@ -422,7 +421,7 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
 
         Calls the hazard exporter.
         """
-        return hazard_export.export(output_id, export_dir, export_type)
+        return core.export(output_id, export_dir, export_type)
 
     # this could be parallelized in the future, however in all the cases
     # I have seen until now, the serialized approach is fast enough (MS)

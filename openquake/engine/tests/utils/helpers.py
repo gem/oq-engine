@@ -131,7 +131,7 @@ def run_job(cfg, exports=None, hazard_calculation_id=None,
 
     logfile = os.path.join(tempfile.gettempdir(), 'qatest.log')
 
-    return engine.run_calc(job, 'error', logfile, exports, job.job_type)
+    return engine.run_calc(job, 'error', logfile, exports)
 
 
 def timeit(method):

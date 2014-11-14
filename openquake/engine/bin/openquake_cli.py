@@ -38,8 +38,7 @@ import openquake.engine
 from openquake.engine import __version__
 from openquake.engine import engine, logs
 from openquake.engine.db import models, upgrade_manager
-from openquake.engine.export import hazard as hazard_export
-from openquake.engine.export import risk as risk_export
+from openquake.engine.export.core import export as core_export
 from openquake.engine.tools.import_gmf_scenario import import_gmf_scenario
 from openquake.engine.tools.import_hazard_curves import import_hazard_curves
 from openquake.engine.tools import save_hazards, load_hazards
@@ -311,30 +310,16 @@ def list_imported_outputs():
     engine.print_outputs_summary(outputs)
 
 
-def export_hazard(haz_output_id, target_dir, export_type):
-    export(hazard_export.export, haz_output_id, target_dir, export_type)
-
-
-def export_hazard_outputs(hc_id, target_dir, export_type):
+def export_outputs(hc_id, target_dir, export_type):
     for output in models.Output.objects.filter(oq_job=hc_id):
         print 'Exporting %s...' % output
-        export(hazard_export.export, output.id, target_dir, export_type)
+        export(output.id, target_dir, export_type)
 
 
-def export_risk(risk_output_id, target_dir, export_type):
-    export(risk_export.export, risk_output_id, target_dir, export_type)
-
-
-def export_risk_outputs(rc_id, target_dir, export_type):
-    for output in models.Output.objects.filter(oq_job=rc_id):
-        print 'Exporting %s...' % output
-        export(risk_export.export, output.id, target_dir, export_type)
-
-
-def export(fn, output_id, target_dir, export_type):
+def export(output_id, target_dir, export_type):
     """
     Simple UI wrapper around
-    :func:`openquake.engine.export.hazard.export` which prints a summary
+    :func:`openquake.engine.export.core.export` which prints a summary
     of files exported, if any.
     """
     queryset = models.Output.objects.filter(pk=output_id)
@@ -347,7 +332,7 @@ def export(fn, output_id, target_dir, export_type):
                "successfully. Results might be uncomplete")
 
     try:
-        the_file = fn(output_id, target_dir, export_type)
+        the_file = core_export(output_id, target_dir, export_type)
         print 'File Exported:'
         print the_file
     except NotImplementedError, err:
@@ -457,11 +442,11 @@ def main():
     elif args.export_hazard is not None:
         output_id, target_dir = args.export_hazard
         output_id = int(output_id)
-        export_hazard(output_id, expanduser(target_dir), args.export_type)
+        export(output_id, expanduser(target_dir), args.export_type)
     elif args.export_hazard_outputs is not None:
         job_id, target_dir = args.export_hazard_outputs
-        export_hazard_outputs(int(job_id), expanduser(target_dir),
-                              args.export_type)
+        export_outputs(int(job_id), expanduser(target_dir),
+                       args.export_type)
     elif args.run_hazard is not None:
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
@@ -476,11 +461,11 @@ def main():
         engine.list_risk_outputs(args.list_risk_outputs)
     elif args.export_risk is not None:
         output_id, target_dir = args.export_risk
-        export_risk(output_id, expanduser(target_dir), args.export_type)
+        export(output_id, expanduser(target_dir), args.export_type)
     elif args.export_risk_outputs is not None:
         rc_id, target_dir = args.export_risk_outputs
-        export_risk_outputs(int(rc_id), expanduser(target_dir),
-                            args.export_type)
+        export_outputs(int(rc_id), expanduser(target_dir),
+                       args.export_type)
     elif args.run_risk is not None:
         if (args.hazard_output_id is None
                 and args.hazard_calculation_id is None):
