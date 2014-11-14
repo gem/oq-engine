@@ -149,7 +149,7 @@ def prepare_job(user_name="openquake", log_level='progress'):
 
 
 # used by bin/openquake and openquake.server.views
-def run_calc(job, log_level, log_file, exports, job_type):
+def run_calc(job, log_level, log_file, exports):
     """
     Run a calculation.
 
@@ -164,8 +164,6 @@ def run_calc(job, log_level, log_file, exports, job_type):
     :param list exports:
         A (potentially empty) list of export targets. Currently only "xml" is
         supported.
-    :param str job_type:
-        'hazard' or 'risk'
     """
     # let's import the calculator classes here, when they are needed
     # the reason is that the command `$ oq-engine --upgrade-db`
@@ -178,11 +176,11 @@ def run_calc(job, log_level, log_file, exports, job_type):
 
     calculator = calculators(job)
     with logs.handle(job, log_level, log_file), job_stats(job):  # run the job
-        _do_run_calc(calculator, exports, job_type)
+        _do_run_calc(calculator, exports)
     return calculator
 
 
-def _switch_to_job_phase(job, job_type, status):
+def log_status(job, status):
     """
     Switch to a particular phase of execution.
 
@@ -196,10 +194,10 @@ def _switch_to_job_phase(job, job_type, status):
     """
     job.status = status
     job.save()
-    logs.LOG.progress("%s (%s)", status, job_type)
+    logs.LOG.progress("%s (%s)", status, job.job_type)
 
 
-def _do_run_calc(calc, exports, job_type):
+def _do_run_calc(calc, exports):
     """
     Step through all of the phases of a calculation, updating the job
     status at each phase.
@@ -209,32 +207,30 @@ def _do_run_calc(calc, exports, job_type):
     :param list exports:
         a (potentially empty) list of export targets, currently only "xml" is
         supported
-    :param str job_type:
-        calculation type (hazard|risk)
     """
     job = calc.job
 
-    _switch_to_job_phase(job, job_type, "pre_executing")
+    log_status(job, "pre_executing")
     calc.pre_execute()
 
-    _switch_to_job_phase(job, job_type, "executing")
+    log_status(job, "executing")
     calc.execute()
 
-    _switch_to_job_phase(job, job_type, "post_executing")
+    log_status(job, "post_executing")
     calc.post_execute()
 
-    _switch_to_job_phase(job, job_type, "post_processing")
+    log_status(job, "post_processing")
     calc.post_process()
 
-    _switch_to_job_phase(job, job_type, "export")
+    log_status(job, "export")
     calc.export(exports=exports)
 
-    _switch_to_job_phase(job, job_type, "clean_up")
+    log_status(job, "clean_up")
     calc.clean_up()
 
     CacheInserter.flushall()  # flush caches into the db
 
-    _switch_to_job_phase(job, job_type, "complete")
+    log_status(job, "complete")
     logs.LOG.debug("*> complete")
 
 

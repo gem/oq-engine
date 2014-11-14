@@ -48,6 +48,7 @@ def export(output_id, target, export_type='xml'):
     try:
         export_fn = EXPORTERS[export_type][output.output_type]
     except KeyError:
+        print EXPORTERS[export_type].keys()
         raise NotImplementedError(
             'No "%(fmt)s" exporter is available for "%(output_type)s"'
             ' outputs' % dict(fmt=export_type, output_type=output.output_type)
