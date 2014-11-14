@@ -17,8 +17,8 @@ from django.views.decorators.http import require_http_methods
 from openquake.commonlib import nrml
 from openquake.engine import engine as oq_engine
 from openquake.engine.db import models as oqe_models
-from openquake.engine.export import hazard as hazard_export
-from openquake.engine.export import risk as risk_export
+from openquake.engine.export import core as hazard_export
+from openquake.engine.export import core as risk_export
 from openquake.engine.utils.tasks import safely_call
 from openquake.server import tasks, executor
 

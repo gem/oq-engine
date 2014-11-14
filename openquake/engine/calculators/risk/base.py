@@ -269,7 +269,7 @@ class RiskCalculator(base.Calculator):
 
         Calls the risk exporter.
         """
-        return export.risk.export(output_id, export_dir, export_type)
+        return export.core.export(output_id, export_dir, export_type)
 
     @property
     def rc(self):
