@@ -231,7 +231,6 @@ def _do_run_calc(calc, exports):
     CacheInserter.flushall()  # flush caches into the db
 
     log_status(job, "complete")
-    logs.LOG.debug("*> complete")
 
 
 def del_calc(job_id):
@@ -359,8 +358,7 @@ def run_job(cfg_file, log_level, log_file, exports=(), hazard_output_id=None,
 
         # Instantiate the calculator and run the calculation.
         t0 = time.time()
-        run_calc(
-            job, log_level, log_file, exports, 'hazard' if hazard else 'risk')
+        run_calc(job, log_level, log_file, exports)
         duration = time.time() - t0
         if hazard:
             if job.status == 'complete':
