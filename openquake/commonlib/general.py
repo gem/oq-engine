@@ -458,7 +458,7 @@ class CallableDict(collections.OrderedDict):
         key = self.keyfunc(obj)
         if not key in self:
             raise KeyError(
-                'There is nothing registered for %r' % key)
+                'There is nothing registered for %s' % repr(key))
         return self[key](obj, *args, **kw)
 
 

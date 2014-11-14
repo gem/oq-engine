@@ -24,6 +24,7 @@ from openquake.commonlib.export import export
 from openquake.commonlib import risk_writers
 
 writercls = dict(
+    collapse_map_xml=risk_writers.CollapseMapXMLWriter,
     dmg_per_asset_xml=risk_writers.DmgDistPerAssetXMLWriter,
     dmg_per_taxonomy_xml=risk_writers.DmgDistPerTaxonomyXMLWriter,
     dmg_total_xml=risk_writers.DmgDistTotalXMLWriter)
