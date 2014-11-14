@@ -17,8 +17,7 @@ from django.views.decorators.http import require_http_methods
 from openquake.commonlib import nrml
 from openquake.engine import engine as oq_engine
 from openquake.engine.db import models as oqe_models
-from openquake.engine.export import core as hazard_export
-from openquake.engine.export import core as risk_export
+from openquake.engine.export import core
 from openquake.engine.utils.tasks import safely_call
 from openquake.server import tasks, executor
 
@@ -304,15 +303,12 @@ def get_result(request, result_id):
     Download a specific result, by ``result_id``.
 
     The common abstracted functionality for getting hazard or risk results.
-    The functionality is the same, except for the hazard/risk specific
-    ``export_fn``.
 
     :param request:
         `django.http.HttpRequest` object. Can contain a `export_type` GET
         param (the default is 'xml' if no param is specified).
     :param result_id:
         The id of the requested artifact.
-
     :returns:
         If the requested ``result_id`` is not available in the format
         designated by the `export_type`.
@@ -334,14 +330,11 @@ def get_result(request, result_id):
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
 
-    export_fn = (risk_export.export if job.job_type == 'risk'
-                 else hazard_export.export)
-
     export_type = request.GET.get('export_type', DEFAULT_EXPORT_TYPE)
 
     tmpdir = tempfile.mkdtemp()
     try:
-        exported = export_fn(result_id, tmpdir, export_type=export_type)
+        exported = core.export(result_id, tmpdir, export_type=export_type)
     except NotImplementedError, err:
         # Throw back a 404 if the exact export parameters are not supported
         return HttpResponseNotFound(err.message)
