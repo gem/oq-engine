@@ -17,8 +17,8 @@
 """
 Scenario calculator core functionality
 """
-import collections
 import random
+import numpy
 
 # HAZARDLIB
 from openquake.hazardlib.calc import filters
@@ -27,7 +27,7 @@ from openquake.hazardlib.imt import from_string
 import openquake.hazardlib.gsim
 
 from openquake.commonlib.readinput import get_rupture
-from openquake.commonlib.parallel import do_not_aggregate
+from openquake.commonlib.general import AccumDict
 
 from openquake.engine.calculators.hazard import general as haz_general
 from openquake.engine.calculators import calculators
@@ -42,49 +42,23 @@ AVAILABLE_GSIMS = openquake.hazardlib.gsim.get_available_gsims()
 
 
 @tasks.oqtask
-def gmfs(job_id, ses_ruptures, sitecol, imts, gmf_id):
+def calc_gmfs(job_id, tag_seed_pairs, computer):
     """
-    :param int job_id: the current job ID
-    :param ses_ruptures: a set of `SESRupture` instances
-    :param sitecol: a `SiteCollection` instance
-    :param imts: a list of hazardlib IMT instances
-    :param int gmf_id: the ID of the `Gmf` instance
+    Computes several GMFs in parallel, one for each tag and seed.
+
+    :param int job_id:
+        the current job ID
+    :param tag_seed_pairs:
+        list of pairs (rupture tag, rupture seed)
+    :param computer:
+        :class:`openquake.hazardlib.calc.gmf.GMFComputer` instance
+    :returns:
+        a dictionary tag -> {imt: gmf}
     """
-    hc = models.oqparam(job_id)
-    gsim = AVAILABLE_GSIMS[hc.gsim]()  # instantiate the GSIM class
-    correlation_model = models.get_correl_model(
-        models.OqJob.objects.get(pk=job_id))
-
-    cache = collections.defaultdict(list)  # {site_id, imt -> gmvs}
-    inserter = writer.CacheInserter(models.GmfData, 1000)
-    # insert GmfData in blocks of 1000 sites
-
-    # NB: ses_ruptures a non-empty list produced by the block_splitter
-    rupture = ses_ruptures[0].rupture  # ProbabilisticRupture instance
-    with EnginePerformanceMonitor('computing gmfs', job_id, gmfs):
-        gmf = GmfComputer(rupture, sitecol, imts, gsim,
-                          getattr(hc, 'truncation_level', None),
-                          correlation_model)
-        for ses_rup in ses_ruptures:
-            for imt, gmvs in gmf.compute(ses_rup.seed):
-                for site_id, gmv in zip(sitecol.sids, gmvs):
-                    cache[site_id, imt].append((gmv, ses_rup.id))
-
-    with EnginePerformanceMonitor('saving gmfs', job_id, gmfs):
-        for (site_id, imt_str), data in cache.iteritems():
-            imt = from_string(imt_str)
-            gmvs, rup_ids = zip(*data)
-            inserter.add(
-                models.GmfData(
-                    gmf_id=gmf_id,
-                    task_no=0,
-                    imt=imt[0],
-                    sa_period=imt[1],
-                    sa_damping=imt[2],
-                    site_id=site_id,
-                    rupture_ids=rup_ids,
-                    gmvs=gmvs))
-        inserter.flush()
+    res = AccumDict()  # tag -> {imt: gmvs}
+    for tag, seed in tag_seed_pairs:
+        res += {tag: dict(computer.compute(seed))}
+    return res
 
 
 def create_db_ruptures(rupture, ses_coll, tags, seed):
@@ -102,12 +76,14 @@ def create_db_ruptures(rupture, ses_coll, tags, seed):
     inserter = writer.CacheInserter(models.SESRupture, max_cache_size=100000)
     rnd = random.Random()
     rnd.seed(seed)
-    sesrupts = [
-        models.SESRupture(
-            ses_id=1, rupture=prob_rup, tag=tag,
-            seed=rnd.randint(0, models.MAX_SINT_32))
-        for tag in tags]
-    return prob_rup.id, inserter.saveall(sesrupts)
+    seeds = []
+    sesrupts = []
+    for tag in tags:
+        s = rnd.randint(0, models.MAX_SINT_32)
+        seeds.append(s)
+        sesrupts.append(
+            models.SESRupture(ses_id=1, rupture=prob_rup, tag=tag, seed=s))
+    return prob_rup.id, inserter.saveall(sesrupts), seeds
 
 
 @calculators.add('scenario')
@@ -116,7 +92,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
     Scenario hazard calculator. Computes ground motion fields.
     """
 
-    core_calc_task = gmfs
+    core_calc_task = calc_gmfs
     output = None  # defined in pre_execute
 
     def __init__(self, *args, **kwargs):
@@ -146,9 +122,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         with transaction.commit_on_success(using='job_init'):
             self.initialize_site_collection()
 
-        self.create_ruptures()
-        hc = self.job.get_oqparam()
-
+        hc = self.hc
         self.imts = imts = map(
             from_string, sorted(hc.intensity_measure_types_and_levels))
         n_sites = len(self.site_collection)
@@ -164,19 +138,21 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
             input_weight=0,
             output_weight=output_weight)
         self.check_limits(input_weight=0, output_weight=output_weight)
+        self.create_ruptures()
         return 0, output_weight
 
     def create_ruptures(self):
         self.rupture = get_rupture(models.oqparam(self.job.id))
 
         # check filtering
-        hc = self.hc
+        trunc_level = self.job.get_param('truncation_level', None)
+        maximum_distance = self.job.get_param('maximum_distance')
         self.sites = filters.filter_sites_by_distance_to_rupture(
-            self.rupture, hc.maximum_distance, self.site_collection)
+            self.rupture, maximum_distance, self.site_collection)
         if self.sites is None:
             raise RuntimeError(
                 'All sites where filtered out! '
-                'maximum_distance=%s km' % hc.maximum_distance)
+                'maximum_distance=%s km' % maximum_distance)
 
         # create ses output
         output = models.Output.objects.create(
@@ -193,20 +169,47 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         self.gmf = models.Gmf.objects.create(output=output)
 
         with self.monitor('saving ruptures'):
-            tags = ['scenario-%010d' % i for i in xrange(
-                    self.hc.number_of_ground_motion_fields)]
-            create_db_ruptures(self.rupture, self.ses_coll, tags,
-                               self.hc.random_seed)
+            self.tags = ['scenario-%010d' % i for i in xrange(
+                self.hc.number_of_ground_motion_fields)]
+            _, self.rupids, self.seeds = create_db_ruptures(
+                self.rupture, self.ses_coll, self.tags,
+                self.hc.random_seed)
 
+        correlation_model = models.get_correl_model(
+            models.OqJob.objects.get(pk=self.job.id))
+        gsim = AVAILABLE_GSIMS[self.job.get_param('gsim')]()
+        self.computer = GmfComputer(
+            self.rupture, self.site_collection, self.imts, gsim,
+            trunc_level, correlation_model)
+
+    @EnginePerformanceMonitor.monitor
     def execute(self):
         """
         Run :function:`openquake.engine.calculators.hazard.scenario.core.gmfs`
         in parallel.
         """
-        ses_ruptures = models.SESRupture.objects.filter(
-            rupture__ses_collection=self.ses_coll.id)
         self.acc = tasks.apply_reduce(
             self.core_calc_task,
-            (self.job.id, ses_ruptures, self.site_collection,
-             self.imts, self.gmf.id),
-            do_not_aggregate)
+            (self.job.id, zip(self.tags, self.seeds), self.computer))
+
+    @EnginePerformanceMonitor.monitor
+    def post_execute(self):
+        """
+        Saving the GMFs in the database
+        """
+        gmf_id = self.gmf.id
+        inserter = writer.CacheInserter(models.GmfData, max_cache_size=1000)
+        for imt in self.imts:
+            gmfs = numpy.array([self.acc[tag][imt] for tag in self.tags]).T
+            for site_id, gmvs in zip(self.site_collection, gmfs):
+                inserter.add(
+                    models.GmfData(
+                        gmf_id=gmf_id,
+                        task_no=0,
+                        imt=imt[0],
+                        sa_period=imt[1],
+                        sa_damping=imt[2],
+                        site_id=site_id,
+                        rupture_ids=self.rupids,
+                        gmvs=gmvs))
+        inserter.flush()
