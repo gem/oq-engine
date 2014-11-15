@@ -203,11 +203,10 @@ def set_up_arg_parser():
     )
     export_grp.add_argument(
         '--export-type', '--et',
-        choices=['xml', 'geojson'],
-        default='xml',
+        default='xml,geojson,csv',
         action='store',
         help=('Use with --export-hazard or --export-risk, specify the '
-              'desired output format. Defaults to "xml".')
+              'desired output formats. Defaults to "xml,geojson,csv".')
     )
 
     save_load_grp = parser.add_argument_group('Save/Load')
