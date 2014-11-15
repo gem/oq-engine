@@ -49,7 +49,7 @@ from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import logictree
 
 from openquake.engine.db import fields
-from openquake.engine import writer
+from openquake.engine import writer, logs
 
 #: Kind of supported curve statistics
 STAT_CHOICES = (
@@ -1403,47 +1403,61 @@ class Gmf(djm.Model):
         If a SES does not generate any GMF, it is ignored.
         """
         job = self.output.oq_job
+        curs = getcursor('job_init')
+
+        # extract all the gmf_data for the current realization
+        logs.LOG.info('reading gmf_data for gmf_id=%s', self.id)
+        curs.execute("""\
+        SELECT site_id, imt, sa_period, sa_damping, gmvs, rupture_ids
+        FROM hzrdr.gmf_data
+        WHERE gmf_id=%d
+        ORDER BY site_id, imt, sa_period, sa_damping""" % self.id)
+        gmfdata = curs.fetchall()
+
+        # find all the locations interested by the hazard calculation
+        logs.LOG.info('reading HazardSite for job_id=%d', job.id)
+        curs.execute("""\
+        SELECT id, ST_X(location::geometry), ST_Y(location::geometry)
+        FROM hzrdi.hazard_site WHERE hazard_calculation_id=%d""" % job.id)
+        loc = {site_id: (x, y) for site_id, x, y in curs}
+
         for ses_coll in SESCollection.objects.filter(output__oq_job=job):
-            query = """\
-        SELECT imt, sa_period, sa_damping, tag,
-               array_agg(gmv) AS gmvs,
-               array_agg(ST_X(location::geometry)) AS xs,
-               array_agg(ST_Y(location::geometry)) AS ys
-        FROM (SELECT imt, sa_period, sa_damping,
-             unnest(rupture_ids) as rupture_id, location,
-             unnest(gmvs) AS gmv
-           FROM hzrdr.gmf_data, hzrdi.hazard_site
-             WHERE site_id = hzrdi.hazard_site.id
-             AND hazard_calculation_id=%s
-             AND gmf_id=%d) AS x, hzrdr.ses_rupture AS y,
-           hzrdr.probabilistic_rupture AS z
-        WHERE x.rupture_id = y.id AND y.rupture_id=z.id
-        AND z.ses_collection_id=%d
-        GROUP BY imt, sa_period, sa_damping, tag
-        ORDER BY imt, sa_period, sa_damping, tag;
-        """ % (job.id, self.id, ses_coll.id)
-            for gmfset in self.gmfsets(ses_coll, query):
+            ruptag = dict(SESRupture.objects.filter(
+                rupture__ses_collection=ses_coll
+            ).values_list('id', 'tag'))
+            gmf_dict = collections.defaultdict(list)  # imt, tag -> [gmv-x-y]
+            for site_id, imt, sa_period, sa_damping, gmvs, rupture_ids \
+                    in gmfdata:
+                x, y = loc[site_id]
+                for gmv, rupid in zip(gmvs, rupture_ids):
+                    try:
+                        tag = ruptag[rupid]
+                        gmf_dict[imt, sa_period, sa_damping, tag].append(
+                            (x, y, gmv))
+                    except KeyError:
+                        pass
+            logs.LOG.info('reordered GMF data for SES collection %d',
+                          ses_coll.ordinal)
+            for gmfset in self.gmfsets(ses_coll, gmf_dict):
                 yield gmfset
 
-    def gmfsets(self, ses_coll, query):
+    def gmfsets(self, ses_coll, gmf_dict):
         """
         :param ses_coll:
             a SESCollection instance
-        :param query:
-            the query to extract the ground motion fields,
-            one per each rupture tag
+        :param gmf_dict:
+            a dictionary (imt, sa_period, sa_damping, rupture_tag)
+                          -> [(x, y, gmv), ...]
         :returns:
             a list of :class:`openquake.engine.db.models.GmfSet` instances
         """
-        curs = getcursor('job_init')
-        curs.execute(query)
         # a set of GMFs generate by the same SES, one per rupture
         gmfset = collections.defaultdict(list)  # ses_ordinal -> GMFs
-        for (imt, sa_period, sa_damping, rupture_tag, gmvs,
-             xs, ys) in curs:
+        for key, value in gmf_dict.iteritems():
+            imt, sa_period, sa_damping, rupture_tag = key
             # using a generator here saves a lot of memory
             nodes = (_GroundMotionFieldNode(gmv, _Point(x, y))
-                     for gmv, x, y in zip(gmvs, xs, ys))
+                     for x, y, gmv in value)
             ses_ordinal = extract_ses_ordinal(rupture_tag)
             gmfset[ses_ordinal].append(
                 _GroundMotionField(
