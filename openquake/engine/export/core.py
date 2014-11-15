@@ -25,7 +25,7 @@ from openquake.commonlib.general import CallableDict
 export_output = CallableDict()
 
 
-def export(output_id, target, export_type='xml'):
+def export(output_id, target, export_type='xml,geojson,csv'):
     """
     Export the given calculation `output_id` from the database to the
     specified `target` directory in the specified `export_type`.
@@ -33,13 +33,13 @@ def export(output_id, target, export_type='xml'):
     output = models.Output.objects.get(id=output_id)
     if isinstance(target, basestring):  # create target directory
         makedirs(target)
-    key = (output.output_type, export_type)
-    try:
-        return export_output(key, output, target)
-    except KeyError:
-        raise NotImplementedError(
-            'No "%(fmt)s" exporter is available for "%(output_type)s"'
-            ' outputs' % dict(fmt=export_type, output_type=output.output_type))
+    for exptype in export_type.split(','):
+        key = (output.output_type, exptype)
+        if key in export_output:
+            return export_output(key, output, target)
+    raise NotImplementedError(
+        'No "%(fmt)s" exporter is available for "%(output_type)s"'
+        ' outputs' % dict(fmt=export_type, output_type=output.output_type))
 
 #: Used to separate node labels in a logic tree path
 LT_PATH_JOIN_TOKEN = '_'
