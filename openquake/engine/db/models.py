@@ -26,6 +26,7 @@ Model representations of the OpenQuake DB tables.
 '''
 
 import os
+import re
 import collections
 import operator
 from datetime import datetime
@@ -122,6 +123,19 @@ RAISE_EXC = object()  # sentinel used in OqJob.get_param
 
 class MissingParameter(KeyError):
     """Raised by OqJob.get_param when a parameter is missing in the database"""
+
+
+def extract_ses_ordinal(tag):
+    """
+    Extract the SES ordinal from a tag. For instance
+
+    >>> extract_ses_ordinal('trt=01|ses=0002|src=A|rup=001-17')
+    2
+    """
+    mo = re.search(r'\|ses=(\d+)\|', tag)
+    if mo is None:  # for scenario tags
+        return 1
+    return int(mo.group(1))
 
 
 ############## Fix FloatField underflow error ##################
@@ -1390,8 +1404,7 @@ class Gmf(djm.Model):
         """
         job = self.output.oq_job
         for ses_coll in SESCollection.objects.filter(output__oq_job=job):
-            for ses in ses_coll:
-                query = """\
+            query = """\
         SELECT imt, sa_period, sa_damping, tag,
                array_agg(gmv) AS gmvs,
                array_agg(ST_X(location::geometry)) AS xs,
@@ -1405,37 +1418,38 @@ class Gmf(djm.Model):
              AND gmf_id=%d) AS x, hzrdr.ses_rupture AS y,
            hzrdr.probabilistic_rupture AS z
         WHERE x.rupture_id = y.id AND y.rupture_id=z.id
-        AND y.ses_id=%d AND z.ses_collection_id=%d
+        AND z.ses_collection_id=%d
         GROUP BY imt, sa_period, sa_damping, tag
         ORDER BY imt, sa_period, sa_damping, tag;
-        """ % (job.id, self.id, ses.ordinal, ses_coll.id)
-                gmfset = self.gmfset(ses, query)
-                if gmfset:
-                    yield gmfset
+        """ % (job.id, self.id, ses_coll.id)
+            for gmfset in self.gmfsets(ses_coll, query):
+                yield gmfset
 
-    def gmfset(self, ses, query):
+    def gmfsets(self, ses_coll, query):
         """
-        :param ses:
-            a :class:`openquake.engine.db.models.SES` instance
+        :param ses_coll:
+            a SESCollection instance
         :param query:
             the query to extract the ground motion fields,
             one per each rupture tag
         :returns:
-            a :class:`openquake.engine.db.models.GmfSet` instance
+            a list of :class:`openquake.engine.db.models.GmfSet` instances
         """
         curs = getcursor('job_init')
         curs.execute(query)
         # a set of GMFs generate by the same SES, one per rupture
-        gmfset = []
+        gmfset = collections.defaultdict(list)  # ses_ordinal -> GMFs
         for (imt, sa_period, sa_damping, rupture_tag, gmvs,
              xs, ys) in curs:
             # using a generator here saves a lot of memory
             nodes = (_GroundMotionFieldNode(gmv, _Point(x, y))
                      for gmv, x, y in zip(gmvs, xs, ys))
-            gmfset.append(
+            ses_ordinal = extract_ses_ordinal(rupture_tag)
+            gmfset[ses_ordinal].append(
                 _GroundMotionField(
                     imt, sa_period, sa_damping, rupture_tag, nodes))
-        return GmfSet(ses, gmfset)
+        return [GmfSet(ses, gmfset[ses.ordinal]) for ses in ses_coll
+                if ses.ordinal in gmfset]
 
 
 class GmfSet(object):
