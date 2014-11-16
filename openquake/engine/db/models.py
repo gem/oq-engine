@@ -1453,11 +1453,11 @@ class Gmf(djm.Model):
         """
         # a set of GMFs generate by the same SES, one per rupture
         gmfset = collections.defaultdict(list)  # ses_ordinal -> GMFs
-        for key, value in gmf_dict.iteritems():
+        for key in sorted(gmf_dict):
             imt, sa_period, sa_damping, rupture_tag = key
             # using a generator here saves a lot of memory
             nodes = (_GroundMotionFieldNode(gmv, _Point(x, y))
-                     for x, y, gmv in value)
+                     for x, y, gmv in gmf_dict[key])
             ses_ordinal = extract_ses_ordinal(rupture_tag)
             gmfset[ses_ordinal].append(
                 _GroundMotionField(
