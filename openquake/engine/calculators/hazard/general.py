@@ -401,28 +401,6 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
                 trt_model.gsims = gsim_lt.values[trt]
                 trt_model.save()
 
-    def _get_outputs_for_export(self):
-        """
-        Util function for getting :class:`openquake.engine.db.models.Output`
-        objects to be exported.
-
-        Gathers all outputs for the job, but filters out `hazard_curve_multi`
-        outputs if this option was turned off in the calculation profile.
-        """
-        outputs = core.get_outputs(self.job.id)
-        if not getattr(self.hc, 'export_multi_curves', None):
-            outputs = outputs.exclude(output_type='hazard_curve_multi')
-        return outputs
-
-    def _do_export(self, output_id, export_dir, export_type):
-        """
-        Hazard-specific implementation of
-        :meth:`openquake.engine.calculators.base.Calculator._do_export`.
-
-        Calls the hazard exporter.
-        """
-        return core.export(output_id, export_dir, export_type)
-
     # this could be parallelized in the future, however in all the cases
     # I have seen until now, the serialized approach is fast enough (MS)
     @EnginePerformanceMonitor.monitor

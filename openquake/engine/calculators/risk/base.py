@@ -29,7 +29,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.commonlib.riskmodels import get_vfs
 from openquake.risklib.workflows import Workflow
 
-from openquake.engine import logs, export
+from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import \
@@ -254,22 +254,6 @@ class RiskCalculator(base.Calculator):
             run_risk, (self.job.id, assocs, self),
             self.agg_result, self.acc, self.concurrent_tasks,
             name=self.core.__name__)
-
-    def _get_outputs_for_export(self):
-        """
-        Util function for getting :class:`openquake.engine.db.models.Output`
-        objects to be exported.
-        """
-        return export.core.get_outputs(self.job.id)
-
-    def _do_export(self, output_id, export_dir, export_type):
-        """
-        Risk-specific implementation of
-        :meth:`openquake.engine.calculators.base.Calculator._do_export`.
-
-        Calls the risk exporter.
-        """
-        return export.core.export(output_id, export_dir, export_type)
 
     @property
     def rc(self):
