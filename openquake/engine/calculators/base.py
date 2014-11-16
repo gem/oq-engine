@@ -119,16 +119,14 @@ class Calculator(object):
         exported_files = []
 
         with logs.tracing('exports'):
-            if 'exports' in kwargs:
+            export_dir = self.job.get_param('export_dir')
+            export_type = kwargs['exports']
+            if export_type:
                 outputs = self._get_outputs_for_export()
-                export_type = kwargs['exports']
                 for output in outputs:
                     with self.monitor('exporting %s to %s'
                                       % (output.output_type, export_type)):
-                        fname = core.export(
-                            output.id,
-                            self.job.get_param('export_dir'),
-                            export_type)
+                        fname = core.export(output.id, export_dir, export_type)
                         logs.LOG.info('exported %s', fname)
                         exported_files.append(fname)
 

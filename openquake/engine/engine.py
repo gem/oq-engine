@@ -203,9 +203,8 @@ def _do_run_calc(calc, exports):
 
     :param calc:
         An :class:`~openquake.engine.calculators.base.Calculator` instance.
-    :param list exports:
-        a (potentially empty) list of export targets, currently only "xml" is
-        supported
+    :param exports:
+        a (potentially empty) comma-separated string of export targets
     """
     job = calc.job
 
@@ -324,7 +323,7 @@ def print_outputs_summary(outputs, full=True):
                    'with the command\n`oq-engine --list-outputs`')
 
 
-def run_job(cfg_file, log_level, log_file, exports=(), hazard_output_id=None,
+def run_job(cfg_file, log_level, log_file, exports='', hazard_output_id=None,
             hazard_calculation_id=None):
     """
     Run a job using the specified config file and other options.
@@ -335,9 +334,9 @@ def run_job(cfg_file, log_level, log_file, exports=(), hazard_output_id=None,
         'debug', 'info', 'warn', 'error', or 'critical'
     :param str log_file:
         Path to log file.
-    :param list exports:
-        A list of export types requested by the user. Currently only 'xml'
-        is supported.
+    :param exports:
+        A comma-separated string of export types requested by the user.
+        Currently only 'xml' is supported.
     :param str hazard_ouput_id:
         The Hazard Output ID used by the risk calculation (can be None)
     :param str hazard_calculation_id:
@@ -401,7 +400,7 @@ def check_hazard_risk_consistency(haz_job, risk_mode):
 
 
 @django_db.transaction.commit_on_success
-def job_from_file(cfg_file_path, username, log_level='info', exports=(),
+def job_from_file(cfg_file_path, username, log_level='info', exports='',
                   hazard_output_id=None, hazard_calculation_id=None, **extras):
     """
     Create a full job profile from a job config file.
@@ -413,7 +412,7 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
     :param str log_level:
         Desired log level.
     :param exports:
-        List of desired export types.
+        Comma-separated sting of desired export types.
     :param int hazard_output_id:
         ID of a hazard output to use as input to this calculation. Specify
         this xor ``hazard_calculation_id``.
