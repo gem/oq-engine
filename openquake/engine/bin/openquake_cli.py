@@ -121,11 +121,6 @@ def set_up_arg_parser():
         help='List hazard calculation information',
         action='store_true')
     hazard_grp.add_argument(
-        '--list-hazard-outputs',
-        '--lho',
-        help='List outputs for the specified hazard calculation',
-        metavar='HAZARD_CALCULATION_ID')
-    hazard_grp.add_argument(
         '--delete-hazard-calculation',
         '--dhc',
         help='Delete a hazard calculation and all associated outputs',
@@ -159,17 +154,17 @@ def set_up_arg_parser():
         help='List risk calculation information',
         action='store_true')
     risk_grp.add_argument(
-        '--list-risk-outputs',
-        '--lro',
-        help='List outputs for the specified risk calculation',
-        metavar='RISK_CALCULATION_ID')
-    risk_grp.add_argument(
         '--delete-risk-calculation',
         '--drc',
         help='Delete a risk calculation and all associated outputs',
         metavar='RISK_CALCULATION_ID')
 
     export_grp = parser.add_argument_group('Export')
+    export_grp.add_argument(
+        '--list-outputs',
+        '--lo',
+        help='List outputs for the specified calculation',
+        metavar='CALCULATION_ID')
     export_grp.add_argument(
         '--exports', action="store_true",
         help=(
@@ -183,7 +178,7 @@ def set_up_arg_parser():
         '--export-type', '--et',
         default='xml,geojson,csv',
         action='store',
-        help=('Use with --exports or --export, specify the '
+        help=('Use with the other export option to specify the '
               'desired output formats. Defaults to "xml,geojson,csv".')
     )
     export_grp.add_argument(
@@ -423,8 +418,6 @@ def main():
     # hazard
     elif args.list_hazard_calculations:
         list_calculations('hazard')
-    elif args.list_hazard_outputs is not None:
-        engine.list_hazard_outputs(args.list_hazard_outputs)
     elif args.run_hazard is not None:
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
@@ -435,8 +428,6 @@ def main():
     # risk
     elif args.list_risk_calculations:
         list_calculations('risk')
-    elif args.list_risk_outputs is not None:
-        engine.list_risk_outputs(args.list_risk_outputs)
     elif args.run_risk is not None:
         if (args.hazard_output_id is None
                 and args.hazard_calculation_id is None):
@@ -450,6 +441,8 @@ def main():
     elif args.delete_risk_calculation is not None:
         del_calc(args.delete_risk_calculation, args.yes)
     # export
+    elif args.list_outputs is not None:
+        engine.list_outputs(args.list_outputs)
     elif args.export_output is not None:
         output_id, target_dir = args.export_output
         output_id = int(output_id)
