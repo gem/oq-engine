@@ -95,11 +95,10 @@ def run_calc(job_id, calc_dir,
     job = oqe_models.OqJob.objects.get(pk=job_id)
     update_calculation(callback_url, status="started", engine_id=job_id)
 
-    exports = []
     progress_handler = ProgressHandler(callback_url, job)
     logging.root.addHandler(progress_handler)
     try:
-        engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, exports)
+        engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, 'xml,geojson,csv')
     except:  # catch the errors before task spawning
         # do not log the errors, since the engine already does that
         exctype, exc, tb = sys.exc_info()
