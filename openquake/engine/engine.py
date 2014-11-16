@@ -161,9 +161,8 @@ def run_calc(job, log_level, log_file, exports):
     :param str log_file:
         Complete path (including file name) to file where logs will be written.
         If `None`, logging will just be printed to standard output.
-    :param list exports:
-        A (potentially empty) list of export targets. Currently only "xml" is
-        supported.
+    :param exports:
+        A comma-separated string of export types.
     """
     # let's import the calculator classes here, when they are needed
     # the reason is that the command `$ oq-engine --upgrade-db`
@@ -269,19 +268,19 @@ def del_calc(job_id):
         raise RuntimeError(UNABLE_TO_DEL_HC_FMT % 'Access denied')
 
 
-def list_hazard_outputs(hc_id, full=True):
+def list_outputs(job_id, full=True):
     """
     List the outputs for a given
     :class:`~openquake.engine.db.models.OqJob`.
 
-    :param hc_id:
-        ID of a hazard calculation.
+    :param job_id:
+        ID of a calculation.
     :param bool full:
         If True produce a full listing, otherwise a short version
     """
-    outputs = get_outputs(hc_id)
-    hc = models.oqparam(hc_id)
-    if hc.calculation_mode == 'scenario':  # ignore SES output
+    outputs = get_outputs(job_id)
+    if models.oqparam(job_id).calculation_mode == 'scenario':
+        # ignore SES output
         outputs = outputs.filter(output_type='gmf_scenario')
     print_outputs_summary(outputs, full)
 
@@ -295,10 +294,10 @@ def touch_log_file(log_file):
     open(os.path.abspath(log_file), 'a').close()
 
 
-def print_results(calc_id, duration, list_outputs):
+def print_results(job_id, duration, list_outputs):
     print 'Calculation %d completed in %d seconds. Results:' % (
-        calc_id, duration)
-    list_outputs(calc_id, full=False)
+        job_id, duration)
+    list_outputs(job_id, full=False)
 
 
 def print_outputs_summary(outputs, full=True):
@@ -362,12 +361,12 @@ def run_job(cfg_file, log_level, log_file, exports=(), hazard_output_id=None,
         duration = time.time() - t0
         if hazard:
             if job.status == 'complete':
-                print_results(job.id, duration, list_hazard_outputs)
+                print_results(job.id, duration, list_outputs)
             else:
                 sys.exit('Calculation %s failed' % job.id)
         else:
             if job.status == 'complete':
-                print_results(job.id, duration, list_risk_outputs)
+                print_results(job.id, duration, list_outputs)
             else:
                 sys.exit('Calculation %s failed' % job.id)
 
@@ -482,25 +481,12 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
     return job
 
 
-def list_risk_outputs(rc_id, full=True):
-    """
-    List the outputs for a given
-    :class:`~openquake.engine.db.models.OqJob` of kind risk.
-
-    :param rc_id:
-        ID of a risk calculation.
-    :param bool full:
-        If True produce a full listing, otherwise a short version
-    """
-    print_outputs_summary(get_outputs(rc_id), full)
-
-
 # this is patched in the tests
-def get_outputs(calc_id):
+def get_outputs(job_id):
     """
-    :param calc_id:
+    :param job_id:
         ID of a calculation.
     :returns:
         A sequence of :class:`openquake.engine.db.models.Output` objects
     """
-    return models.Output.objects.filter(oq_job=calc_id)
+    return models.Output.objects.filter(oq_job=job_id)
