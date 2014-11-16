@@ -422,7 +422,7 @@ def main():
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
         engine.run_job(expanduser(args.run_hazard), args.log_level,
-                       log_file, args.export_type)
+                       log_file, args.export_type if args.exports else '')
     elif args.delete_hazard_calculation is not None:
         del_calc(args.delete_hazard_calculation, args.yes)
     # risk
@@ -436,7 +436,8 @@ def main():
             if args.log_file is not None else None
         engine.run_job(
             expanduser(args.run_risk), args.log_level, log_file,
-            args.export_type, hazard_output_id=args.hazard_output_id,
+            args.export_type if args.exports else '',
+            hazard_output_id=args.hazard_output_id,
             hazard_calculation_id=args.hazard_calculation_id)
     elif args.delete_risk_calculation is not None:
         del_calc(args.delete_risk_calculation, args.yes)
