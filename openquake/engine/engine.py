@@ -321,8 +321,7 @@ def print_outputs_summary(outputs, full=True):
                     o.id, o.get_output_type_display(), o.display_name)
         if truncated:
             print ('Some outputs where not shown. You can see the full list '
-                   'with the commands\n`oq-engine --list-hazard-outputs` or '
-                   '`oq-engine --list-risk-outputs`')
+                   'with the command\n`oq-engine --list-outputs`')
 
 
 def run_job(cfg_file, log_level, log_file, exports=(), hazard_output_id=None,
