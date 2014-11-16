@@ -126,16 +126,6 @@ def set_up_arg_parser():
         help='List outputs for the specified hazard calculation',
         metavar='HAZARD_CALCULATION_ID')
     hazard_grp.add_argument(
-        '--export-hazard',
-        '--eh',
-        help='Export the desired output to the specified directory',
-        nargs=2, metavar=('OUTPUT_ID', 'TARGET_DIR'))
-    hazard_grp.add_argument(
-        '--export-hazard-outputs',
-        '--eho',
-        help='Export all the hazard outputs to the specified directory',
-        nargs=2, metavar=('HAZARD_CALCULATION_ID', 'TARGET_DIR'))
-    hazard_grp.add_argument(
         '--delete-hazard-calculation',
         '--dhc',
         help='Delete a hazard calculation and all associated outputs',
@@ -174,17 +164,6 @@ def set_up_arg_parser():
         help='List outputs for the specified risk calculation',
         metavar='RISK_CALCULATION_ID')
     risk_grp.add_argument(
-        '--export-risk',
-        '--er',
-        help='Export the desired risk output to the specified directory',
-        nargs=2,
-        metavar=('OUTPUT_ID', 'TARGET_DIR'))
-    risk_grp.add_argument(
-        '--export-risk-outputs',
-        '--ero',
-        help='Export all the risk outputs to the specified directory',
-        nargs=2, metavar=('RISK_CALCULATION_ID', 'TARGET_DIR'))
-    risk_grp.add_argument(
         '--delete-risk-calculation',
         '--drc',
         help='Delete a risk calculation and all associated outputs',
@@ -192,23 +171,31 @@ def set_up_arg_parser():
 
     export_grp = parser.add_argument_group('Export')
     export_grp.add_argument(
-        '--exports', choices=['xml'],  default=[], action="append",
+        '--exports', action="store_true",
         help=(
             'Use with --run-hazard and --run-risk to automatically export '
-            'all calculation results to the specified format. Only "xml" is '
-            'fully supported currently. This is optional. If not specified, '
-            'nothing will be exported; results will only be stored in the '
-            'database.'
+            'all calculation results to the specified format. This is '
+            'optional. If not specified, nothing will be exported; results '
+            'will only be stored in the database.'
         )
     )
     export_grp.add_argument(
         '--export-type', '--et',
         default='xml,geojson,csv',
         action='store',
-        help=('Use with --export-hazard or --export-risk, specify the '
+        help=('Use with --exports or --export, specify the '
               'desired output formats. Defaults to "xml,geojson,csv".')
     )
-
+    export_grp.add_argument(
+        '--export-output',
+        '--eo',
+        help='Export the desired output to the specified directory',
+        nargs=2, metavar=('OUTPUT_ID', 'TARGET_DIR'))
+    export_grp.add_argument(
+        '--export-outputs',
+        '--eos',
+        help='Export all the calculation outputs to the specified directory',
+        nargs=2, metavar=('HAZARD_CALCULATION_ID', 'TARGET_DIR'))
     save_load_grp = parser.add_argument_group('Save/Load')
     save_load_grp.add_argument(
         '--save-hazard-calculation', '--shc',
@@ -438,19 +425,11 @@ def main():
         list_calculations('hazard')
     elif args.list_hazard_outputs is not None:
         engine.list_hazard_outputs(args.list_hazard_outputs)
-    elif args.export_hazard is not None:
-        output_id, target_dir = args.export_hazard
-        output_id = int(output_id)
-        export(output_id, expanduser(target_dir), args.export_type)
-    elif args.export_hazard_outputs is not None:
-        job_id, target_dir = args.export_hazard_outputs
-        export_outputs(int(job_id), expanduser(target_dir),
-                       args.export_type)
     elif args.run_hazard is not None:
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
         engine.run_job(expanduser(args.run_hazard), args.log_level,
-                       log_file, args.exports)
+                       log_file, args.export_type)
     elif args.delete_hazard_calculation is not None:
         del_calc(args.delete_hazard_calculation, args.yes)
     # risk
@@ -458,24 +437,27 @@ def main():
         list_calculations('risk')
     elif args.list_risk_outputs is not None:
         engine.list_risk_outputs(args.list_risk_outputs)
-    elif args.export_risk is not None:
-        output_id, target_dir = args.export_risk
-        export(output_id, expanduser(target_dir), args.export_type)
-    elif args.export_risk_outputs is not None:
-        rc_id, target_dir = args.export_risk_outputs
-        export_outputs(int(rc_id), expanduser(target_dir),
-                       args.export_type)
     elif args.run_risk is not None:
         if (args.hazard_output_id is None
                 and args.hazard_calculation_id is None):
             sys.exit(MISSING_HAZARD_MSG)
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
-        engine.run_job(expanduser(args.run_risk), args.log_level, log_file,
-                       args.exports, hazard_output_id=args.hazard_output_id,
-                       hazard_calculation_id=args.hazard_calculation_id)
+        engine.run_job(
+            expanduser(args.run_risk), args.log_level, log_file,
+            args.export_type, hazard_output_id=args.hazard_output_id,
+            hazard_calculation_id=args.hazard_calculation_id)
     elif args.delete_risk_calculation is not None:
         del_calc(args.delete_risk_calculation, args.yes)
+    # export
+    elif args.export_output is not None:
+        output_id, target_dir = args.export_output
+        output_id = int(output_id)
+        export(output_id, expanduser(target_dir), args.export_type)
+    elif args.export_outputs is not None:
+        job_id, target_dir = args.export_outputs
+        export_outputs(int(job_id), expanduser(target_dir),
+                       args.export_type)
     # import
     elif args.load_gmf is not None:
         with open(args.load_gmf) as f:
