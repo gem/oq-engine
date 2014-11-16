@@ -447,7 +447,7 @@ _pkgtest_innervm_run () {
             echo \"Running \$ini\"
             for loop in \$(seq 1 $GEM_MAXLOOP); do
                 set +e
-                oq-engine --run-hazard  \$ini --exports xml,csv -l info
+                oq-engine --run-hazard  \$ini --exports -l info
                 oq_ret=\$?
                 set -e
                 if [ \$oq_ret -eq 0 ]; then
@@ -468,7 +468,7 @@ _pkgtest_innervm_run () {
             oq-engine --run-hazard job_hazard.ini -l info
             job_id=\$(oq-engine --list-hazard-calculations | tail -1 | awk '{print \$1}')
             echo \"Running \$demo_dir/job_risk.ini\"
-            oq-engine --run-risk job_risk.ini --exports xml,csv --hazard-calculation-id \$job_id -l info
+            oq-engine --run-risk job_risk.ini --exports --hazard-calculation-id \$job_id -l info
             cd -
         done"
     fi
