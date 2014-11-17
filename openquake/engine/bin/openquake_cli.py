@@ -166,7 +166,7 @@ def set_up_arg_parser():
         help='List outputs for the specified calculation',
         metavar='CALCULATION_ID')
     export_grp.add_argument(
-        '--exports', action="store_true",
+        '--export-all', action="store_true",
         help=(
             'Use with --run-hazard and --run-risk to automatically export '
             'all calculation results to the specified format. This is '
@@ -422,7 +422,7 @@ def main():
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
         engine.run_job(expanduser(args.run_hazard), args.log_level,
-                       log_file, args.export_type if args.exports else '')
+                       log_file, args.export_type if args.export_all else '')
     elif args.delete_hazard_calculation is not None:
         del_calc(args.delete_hazard_calculation, args.yes)
     # risk
@@ -436,7 +436,7 @@ def main():
             if args.log_file is not None else None
         engine.run_job(
             expanduser(args.run_risk), args.log_level, log_file,
-            args.export_type if args.exports else '',
+            args.export_type if args.export_all else '',
             hazard_output_id=args.hazard_output_id,
             hazard_calculation_id=args.hazard_calculation_id)
     elif args.delete_risk_calculation is not None:

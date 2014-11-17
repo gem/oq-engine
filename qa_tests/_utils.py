@@ -36,7 +36,7 @@ class BaseQATestCase(unittest.TestCase):
     running QA tests.
     """
 
-    def run_hazard(self, cfg):
+    def run_hazard(self, cfg, exports=''):
         """
         Given the path to job config file, run the job and assert that it was
         successful. If this assertion passes, return the completed job.
@@ -48,7 +48,7 @@ class BaseQATestCase(unittest.TestCase):
         :raises:
             :exc:`AssertionError` if the job was not successfully run.
         """
-        completed_job = helpers.run_job(cfg).job
+        completed_job = helpers.run_job(cfg, exports=exports).job
         self.assertEqual('complete', completed_job.status)
 
         return completed_job
