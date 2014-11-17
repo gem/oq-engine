@@ -127,8 +127,9 @@ class Calculator(object):
                     with self.monitor('exporting %s to %s'
                                       % (output.output_type, export_type)):
                         fname = core.export(output.id, export_dir, export_type)
-                        logs.LOG.info('exported %s', fname)
-                        exported_files.append(fname)
+                        if fname:
+                            logs.LOG.info('exported %s', fname)
+                            exported_files.append(fname)
 
         return exported_files
 

@@ -20,6 +20,7 @@ file formats."""
 
 import os
 from openquake.engine.db import models
+from openquake.engine.logs import LOG
 from openquake.commonlib.general import CallableDict
 
 export_output = CallableDict()
@@ -37,7 +38,7 @@ def export(output_id, target, export_type='xml,geojson,csv'):
         key = (output.output_type, exptype)
         if key in export_output:
             return export_output(key, output, target)
-    raise NotImplementedError(
+    LOG.warn(
         'No "%(fmt)s" exporter is available for "%(output_type)s"'
         ' outputs' % dict(fmt=export_type, output_type=output.output_type))
 
