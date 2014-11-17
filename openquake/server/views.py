@@ -234,7 +234,7 @@ def submit_job(job_file, temp_dir, dbname,
     and submit it to the job queue.
     """
     job, exctype = safely_call(
-        oq_engine.job_from_file, (job_file, "platform", DEFAULT_LOG_LEVEL, [],
+        oq_engine.job_from_file, (job_file, "platform", DEFAULT_LOG_LEVEL, '',
                                   hazard_output_id, hazard_job_id))
     if exctype:
         tasks.update_calculation(callback_url, status="failed", einfo=job)
@@ -344,6 +344,9 @@ def get_result(request, result_id):
     content_type = EXPORT_CONTENT_TYPE_MAP.get(
         export_type, DEFAULT_CONTENT_TYPE)
     try:
-        return HttpResponse(open(exported).read(), content_type=content_type)
+        data = open(exported).read()
+        response = HttpResponse(data, content_type=content_type)
+        response['Content-Length'] = len(data)
+        return response
     finally:
         shutil.rmtree(tmpdir)
