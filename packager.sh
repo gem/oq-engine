@@ -225,6 +225,12 @@ _pkgtest_innervm_run () {
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
+    ssh $lxc_ip "sudo apt-get update"
+    ssh $lxc_ip "sudo apt-get -y upgrade"
+    gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
+    # install package to manage repository properly
+    ssh $lxc_ip "sudo apt-get install -y python-software-properties"
+
     # add custom packages
     ssh $lxc_ip mkdir -p "repo"
     # FIXME just for test with CI, replace again with custom_pkgs when
@@ -234,12 +240,6 @@ _pkgtest_innervm_run () {
     scp -r ${GEM_DEB_REPO}/repotest $lxc_ip:repo/repotest
     ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/repotest ./\""
 
-    ssh $lxc_ip "sudo apt-get update"
-    ssh $lxc_ip "sudo apt-get -y upgrade"
-    gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
-    # install package to manage repository properly
-    ssh $lxc_ip "sudo apt-get install -y python-software-properties"
-
     # create a remote "local repo" where place $GEM_DEB_PACKAGE package
     ssh $lxc_ip mkdir -p repo/${GEM_DEB_PACKAGE}
     scp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
@@ -247,6 +247,7 @@ _pkgtest_innervm_run () {
         build-deb/Packages* build-deb/Sources*  build-deb/Release* $lxc_ip:repo/${GEM_DEB_PACKAGE}
     ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/${GEM_DEB_PACKAGE} ./\""
     ssh $lxc_ip "sudo apt-get update"
+    ssh $lxc_ip "sudo apt-get upgrade -y"
 
     # packaging related tests (install, remove, purge, install, reinstall)
     ssh $lxc_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
