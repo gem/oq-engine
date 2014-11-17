@@ -225,6 +225,8 @@ _pkgtest_innervm_run () {
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
+    # add custom packages
+    ssh $lxc_ip mkdir -p "repo"
     # FIXME just for test with CI, replace again with custom_pkgs when
     #       tests pass
     # scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
