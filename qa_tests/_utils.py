@@ -159,7 +159,7 @@ class DisaggHazardTestCase(BaseQATestCase):
     def test(self):
         cfg = os.path.join(self.working_dir, 'job.ini')
         expected = os.path.join(self.working_dir, 'expected_output')
-        job = self.run_hazard(cfg)
+        job = self.run_hazard(cfg, exports='xml')
         export_dir = os.path.join(
             job.get_param('export_dir'), 'calc_%d' % job.id)
 
