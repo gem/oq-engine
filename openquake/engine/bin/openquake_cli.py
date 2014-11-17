@@ -418,6 +418,7 @@ def main():
     # hazard
     elif args.list_hazard_calculations:
         list_calculations('hazard')
+        logging.basicConfig(level=logging.INFO)
     elif args.run_hazard is not None:
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
