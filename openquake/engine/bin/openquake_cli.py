@@ -51,6 +51,14 @@ MISSING_HAZARD_MSG = ("Please specify the ID of the hazard output (or "
                       (HAZARD_OUTPUT_ARG, HAZARD_CALCULATION_ARG))
 
 
+def deprecate(option, newoption):
+    """
+    Print a deprecation warning for obsolete options.
+    """
+    print('The option %s is deprecated and will be removed in the next '
+          'version of the engine.\nUse %s instead.' % (option, newoption))
+
+
 def set_up_arg_parser():
     """Set up and return an :class:`argparse.ArgumentParser` with all of the
     OpenQuake command line options."""
@@ -165,6 +173,19 @@ def set_up_arg_parser():
         '--lo',
         help='List outputs for the specified calculation',
         metavar='CALCULATION_ID')
+
+    # deprecated options
+    export_grp.add_argument(
+        '--list-hazard-outputs',
+        '--lho',
+        help='List outputs for the specified calculation [deprecated]',
+        metavar='CALCULATION_ID')
+    export_grp.add_argument(
+        '--list-risk-outputs',
+        '--lro',
+        help='List outputs for the specified calculation [deprecated]',
+        metavar='CALCULATION_ID')
+
     export_grp.add_argument(
         '--export-all', action="store_true",
         help=(
@@ -187,9 +208,29 @@ def set_up_arg_parser():
         help='Export the desired output to the specified directory',
         nargs=2, metavar=('OUTPUT_ID', 'TARGET_DIR'))
     export_grp.add_argument(
+        '--export-hazard-output',
+        '--eh',
+        help='Export the output to the specified directory [deprecated]',
+        nargs=2, metavar=('OUTPUT_ID', 'TARGET_DIR'))
+    export_grp.add_argument(
+        '--export-risk-output',
+        '--er',
+        help='Export the output to the specified directory [deprecated]',
+        nargs=2, metavar=('OUTPUT_ID', 'TARGET_DIR'))
+    export_grp.add_argument(
         '--export-outputs',
         '--eos',
         help='Export all the calculation outputs to the specified directory',
+        nargs=2, metavar=('HAZARD_CALCULATION_ID', 'TARGET_DIR'))
+    export_grp.add_argument(
+        '--export-hazard-outputs',
+        '--eho',
+        help='Export all the outputs to the specified directory [deprecated]',
+        nargs=2, metavar=('HAZARD_CALCULATION_ID', 'TARGET_DIR'))
+    export_grp.add_argument(
+        '--export-risk-outputs',
+        '--ero',
+        help='Export all the outputs to the specified directory [deprecated]',
         nargs=2, metavar=('HAZARD_CALCULATION_ID', 'TARGET_DIR'))
     save_load_grp = parser.add_argument_group('Save/Load')
     save_load_grp.add_argument(
@@ -417,8 +458,8 @@ def main():
 
     # hazard
     elif args.list_hazard_calculations:
-        list_calculations('hazard')
         logging.basicConfig(level=logging.INFO)
+        list_calculations('hazard')
     elif args.run_hazard is not None:
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
@@ -442,15 +483,44 @@ def main():
             hazard_calculation_id=args.hazard_calculation_id)
     elif args.delete_risk_calculation is not None:
         del_calc(args.delete_risk_calculation, args.yes)
+
     # export
     elif args.list_outputs is not None:
         engine.list_outputs(args.list_outputs)
+    elif args.list_hazard_outputs is not None:
+        deprecate('--list-hazard-outputs', '--list-outputs')
+        engine.list_outputs(args.list_hazard_outputs)
+    elif args.list_risk_outputs is not None:
+        deprecate('--list-risk-outputs', '--list-outputs')
+        engine.list_outputs(args.list_risk_outputs)
+
     elif args.export_output is not None:
         output_id, target_dir = args.export_output
-        output_id = int(output_id)
-        export(output_id, expanduser(target_dir), args.export_type)
+        export(int(output_id), expanduser(target_dir), args.export_type)
+
+    elif args.export_hazard_output is not None:
+        deprecate('--export-hazard-output', '--export-output')
+        output_id, target_dir = args.export_hazard_output
+        export(int(output_id), expanduser(target_dir), args.export_type)
+
+    elif args.export_risk_output is not None:
+        deprecate('--export-hazard-output', '--export-output')
+        output_id, target_dir = args.export_risk_output
+        export(int(output_id), expanduser(target_dir), args.export_type)
+
     elif args.export_outputs is not None:
         job_id, target_dir = args.export_outputs
+        export_outputs(int(job_id), expanduser(target_dir),
+                       args.export_type)
+    # deprecated
+    elif args.export_hazard_outputs is not None:
+        deprecate('--export-hazard-outputs', '--export-outputs')
+        job_id, target_dir = args.export_hazard_outputs
+        export_outputs(int(job_id), expanduser(target_dir),
+                       args.export_type)
+    elif args.export_risk_outputs is not None:
+        deprecate('--export-risk-outputs', '--export-outputs')
+        job_id, target_dir = args.export_risk_outputs
         export_outputs(int(job_id), expanduser(target_dir),
                        args.export_type)
     # import
