@@ -455,6 +455,7 @@ def main():
     elif args.list_hazard_outputs is not None:
         engine.list_hazard_outputs(args.list_hazard_outputs)
     elif args.export_hazard is not None:
+        logging.basicConfig(level=logging.INFO)
         output_id, target_dir = args.export_hazard
         output_id = int(output_id)
         export_hazard(output_id, expanduser(target_dir), args.export_type)
