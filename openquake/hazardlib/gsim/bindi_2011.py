@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`Bindietal2011`.
+Module exports :class:`BindiEtAl2011`.
 """
 from __future__ import division
 
@@ -57,7 +57,7 @@ class BindiEtAl2011(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation types are inter-event, intra-event
-    #: and total, see equation 2, page 199.
+    #: and total, page 1904
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
         const.StdDev.TOTAL,
         const.StdDev.INTER_EVENT,
@@ -135,10 +135,10 @@ class BindiEtAl2011(GMPE):
 
     def _compute_magnitude(self, rup, C):
         """
-        Compute the third term of the equation 1 described on paragraph :
+        Compute the third term of the equation 1:
 
-        ``b1* (M-Mh) + b2 * (M-Mh)**2 for M<=Mh
-        b3*(M-Mh) otherwise``
+        e1 + b1 * (M-Mh) + b2 * (M-Mh)**2 for M<=Mh
+        e1 + b3 * (M-Mh) otherwise
         """
         m_h = 6.75
         b_3 = 0.0
@@ -187,13 +187,13 @@ class BindiEtAl2011(GMPE):
         # Class D;  Vs30 < 180 m/s.
         idx = (sites.vs30 >= 1E-10) & (sites.vs30 < 180.0)
         ssd[idx] = 1.0
-        # SClass C; 360 m/s <= Vs30 <= 750 m/s.
+        # SClass C; 180 m/s <= Vs30 <= 360 m/s.
         idx = (sites.vs30 >= 180.0) & (sites.vs30 < 360.0)
         ssc[idx] = 1.0
-        # Class B; 360 m/s <= Vs30 <= 750 m/s.
+        # Class B; 360 m/s <= Vs30 <= 800 m/s.
         idx = (sites.vs30 >= 360.0) & (sites.vs30 < 800)
         ssb[idx] = 1.0
-        # Class A; 360 m/s <= Vs30 <= 750 m/s.
+        # Class A; Vs30 > 800 m/s.
         idx = (sites.vs30 >= 800.0)
         ssa[idx] = 1.0
         return ssa, ssb, ssc, ssd, sse
