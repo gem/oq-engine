@@ -108,13 +108,22 @@ class CampbellBozorgnia2014(GMPE):
         C_PGA = self.COEFFS[PGA()]
 
         # Get mean and standard deviation of PGA on rock (Vs30 1100 m/s^2)
-        pga1100 = self.get_mean_values(C_PGA, sites, rup, dists, None)
+        pga1100 = np.exp(self.get_mean_values(C_PGA, sites, rup, dists, None))
+        #print pga1100
         tau_lnpga, phi_lnpga = self._get_stddevs_pga(C_PGA,
                                                      rup,
                                                      sites,
                                                      pga1100)
         # Get mean and standard deviations for IMT
         mean = self.get_mean_values(C, sites, rup, dists, pga1100)
+        if isinstance(imt, SA) and (imt.period <= 0.25):
+            # According to Campbell & Bozorgnia (2013) [NGA West 2 Report]
+            # If Sa (T) < PGA for T < 0.25 then set mean Sa(T) to mean PGA
+            # Get PGA on soil
+            pga = self.get_mean_values(C_PGA, sites, rup, dists, pga1100)
+            idx = mean <= pga
+            mean[idx] = pga[idx]
+            
         stddevs = self._get_stddevs(C, rup, sites, pga1100, tau_lnpga,
                                     phi_lnpga, stddev_types)
         return mean, stddevs
@@ -123,17 +132,21 @@ class CampbellBozorgnia2014(GMPE):
         """
         Returns the mean values for a specific IMT
         """
-        if a1100:
+        if isinstance(a1100, np.ndarray):
             temp_vs30 = sites.vs30
+            temp_z2pt5 = sites.z2pt5
         else:
+            # Default site and basin model
             temp_vs30 = 1100.0 * np.ones(len(sites.vs30))
+            temp_z2pt5 = self._select_basin_model(1100.0) *\
+                np.ones_like(temp_vs30)
 
         return (self._get_magnitude_term(C, rup.mag) +
-                self._get_geometric_attenuation_term(C, rup.mag, rup.rrup) +
+                self._get_geometric_attenuation_term(C, rup.mag, dists.rrup) +
                 self._get_style_of_faulting_term(C, rup) +
                 self._get_hanging_wall_term(C, rup, dists) +
                 self._get_shallow_site_response_term(C, temp_vs30, a1100) +
-                self._get_basin_response_term(C, dists.z2pt5) +
+                self._get_basin_response_term(C, temp_z2pt5) +
                 self._get_hypocentral_depth_term(C, rup) +
                 self._get_fault_dip_term(C, rup) +
                 self._get_anelastic_attenuation_term(C, dists.rrup))
@@ -202,10 +215,14 @@ class CampbellBozorgnia2014(GMPE):
         r_1 = rup.width * cos(radians(rup.dip))
         r_2 = 62.0 * rup.mag - 350.0
         fhngrx = np.zeros(len(r_x))
-        idx = np.logical_and(r_x >= 0., r_x < 1.0)
-        fhngrx[idx] = self._get_f1rx(C, r_x, r_1)
+        # Case when 0 <= Rx <= R1
+        idx = np.logical_and(r_x >= 0., r_x < r_1)
+        fhngrx[idx] = self._get_f1rx(C, r_x[idx], r_1)
+        # Case when Rx > R1
         idx = r_x >= r_1
-        fhngrx[idx] = self._get_f2rx(C, r_x, r_1, r_2)
+        f2rx = self._get_f2rx(C, r_x[idx], r_1, r_2)
+        f2rx[f2rx < 0.0] = 0.0
+        fhngrx[idx] = self._get_f2rx(C, r_x[idx], r_1, r_2)
         return fhngrx
 
     def _get_f1rx(self, C, r_x, r_1):
@@ -268,7 +285,7 @@ class CampbellBozorgnia2014(GMPE):
         else:
             fhyp_h = rup.hypo_depth - 7.0
 
-        if rup.mag < 5.5:
+        if rup.mag <= 5.5:
             fhyp_m = C["c17"]
         elif rup.mag > 6.5:
             fhyp_m = C["c18"]
@@ -278,14 +295,14 @@ class CampbellBozorgnia2014(GMPE):
 
     def _get_fault_dip_term(self, C, rup):
         """
-        Returns the fault dip term, define din equation 24
+        Returns the fault dip term, defined in equation 24
         """
         if rup.mag < 4.5:
-            return C["19"] * rup.dip
+            return C["c19"] * rup.dip
         elif rup.mag > 5.5:
             return 0.0
         else:
-            return C["19"] * (5.5 - rup.mag) * rup.dip
+            return C["c19"] * (5.5 - rup.mag) * rup.dip
 
     def _get_anelastic_attenuation_term(self, C, rrup):
         """
@@ -296,6 +313,19 @@ class CampbellBozorgnia2014(GMPE):
         f_atn[idx] = (C["c20"] + C["Dc20"]) * (rrup[idx] - 80.0)
         return f_atn
 
+    def _select_basin_model(self, vs30):
+        """
+        Select the preferred basin model (California or Japan) to scale
+        basin depth with respect to Vs30
+        """
+        if self.CONSTS["SJ"]:
+            # Japan Basin Model - Equation 34 of Campbell & Bozorgnia (2014)
+            return np.exp(5.359 - 1.102 * np.log(vs30))
+        else:
+            # California Basin Model - Equation 33 of 
+            # Campbell & Bozorgnia (2014)
+            return np.exp(7.089 - 1.144 * np.log(vs30))
+
     def _get_basin_response_term(self, C, z2pt5):
         """
         Returns the basin response term defined in equation 20
@@ -304,9 +334,9 @@ class CampbellBozorgnia2014(GMPE):
         idx = z2pt5 < 1.0
         f_sed[idx] = (C["c14"] + C["c15"] * float(self.CONSTS["SJ"])) *\
             (z2pt5[idx] - 1.0)
-        idx = z2pt5 > 3
+        idx = z2pt5 > 3.0
         f_sed[idx] = C["c16"] * C["k3"] * exp(-0.75) *\
-            (1.0 * np.exp(-0.25 * (z2pt5[idx] - 3.0)))
+            (1.0 - np.exp(-0.25 * (z2pt5[idx] - 3.0)))
         return f_sed
 
     def _get_shallow_site_response_term(self, C, vs30, pga_rock):
@@ -316,15 +346,20 @@ class CampbellBozorgnia2014(GMPE):
         """
         vs_mod = vs30 / C["k1"]
         # Get linear global site response term
-        fsite_g = C["c11"] + C["k2"] * self.CONSTS["n"] * np.log(vs_mod)
-        idx = vs30 <= C["k1"]
+        f_site_g = C["c11"] * np.log(vs_mod)
+        idx = vs30 > C["k1"]
+        f_site_g[idx] = f_site_g[idx] + (C["k2"] * self.CONSTS["n"] *
+            np.log(vs_mod[idx]))
 
+        # Get nonlinear site response term
+        idx = np.logical_not(idx)
         if np.any(idx):
-            # Get nonlinear site response term
-            fsite_g[idx] = (C["c11"] * np.log(vs_mod[idx])) + C["k2"] * (
+            f_site_g[idx] = f_site_g[idx] + C["k2"] * (
                 np.log(pga_rock[idx] +
                        self.CONSTS["c"] * (vs_mod[idx] ** self.CONSTS["n"])) -
-                np.log(pga_rock[idx] - self.CONSTS["c"]))
+                np.log(pga_rock[idx] + self.CONSTS["c"])
+                )
+
         # For Japan sites (SJ = 1) further scaling is needed (equation 19)
         if self.CONSTS["SJ"]:
             j_coeff1 = (C["c13"] + C["k2"] * self.CONSTS["n"])
@@ -333,9 +368,9 @@ class CampbellBozorgnia2014(GMPE):
             if np.any(idx):
                 fsite_j[idx] = j_coeff1 * (np.log(vs_mod[idx]) -
                                            np.log(200.0 / C["k1"]))
-            return fsite_g + fsite_j
+            return f_site_g + fsite_j
         else:
-            return fsite_g
+            return f_site_g
 
     def _get_stddevs(self, C, rup, sites, pga1100, tau_lnpga, phi_lnpga,
             stddev_types):
@@ -419,9 +454,9 @@ class CampbellBozorgnia2014(GMPE):
         """
         alpha = np.zeros(len(pga_rock))
         idx = vs30 < C["k1"]
-        alpha[idx] = C["k2"] * pga_rock * ((1. / (pga_rock + self.CONSTS["c"] *
-            ((vs30[idx] / C["k1"]) ** self.CONSTS["n"]))) - (1.0 / (pga_rock +
-            self.CONSTS["c"])))
+        alpha[idx] = C["k2"] * pga_rock[idx] * ((1. / (pga_rock[idx] +
+            self.CONSTS["c"] * ((vs30[idx] / C["k1"]) ** self.CONSTS["n"]))) -\
+            (1.0 / (pga_rock[idx] + self.CONSTS["c"])))
         return alpha
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
