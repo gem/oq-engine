@@ -199,11 +199,16 @@ _devtest_innervm_run () {
     # TODO: version check
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
-    ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-risklib:\$PWD/oq-hazardlib\" ;
+    if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
+        ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-risklib:\$PWD/oq-hazardlib\" ;
                  cd $GEM_GIT_PACKAGE ;
                  nosetests -v --with-doctest --with-coverage --cover-package=openquake.risklib --with-xunit"
-    scp "$lxc_ip:$GEM_GIT_PACKAGE/nosetests.xml" .
-
+        scp "$lxc_ip:$GEM_GIT_PACKAGE/nosetests.xml" .
+    else
+        if [ -d $HOME/fake-data/$GEM_GIT_PACKAGE ]; then
+            cp $HOME/fake-data/$GEM_GIT_PACKAGE/* .
+        fi
+    fi
     trap ERR
 
     return
@@ -272,6 +277,10 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
     ssh $lxc_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}"
 
+    if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
+        # no demos currently available
+        :
+    fi
     trap ERR
 
     return
