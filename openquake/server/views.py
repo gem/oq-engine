@@ -149,6 +149,8 @@ def calc_info(request, calc_id):
         calc = oqe_models.OqJob.objects.get(pk=calc_id)
         response_data = vars(calc.get_oqparam())
         response_data['status'] = calc.status
+        response_data['start_time'] = str(calc.jobstats.start_time)
+        response_data['stop_time'] = str(calc.jobstats.stop_time)
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
 
