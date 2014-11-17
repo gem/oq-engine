@@ -49,7 +49,7 @@ from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import logictree
 
 from openquake.engine.db import fields
-from openquake.engine import writer, logs
+from openquake.engine import writer, logs, utils
 
 #: Kind of supported curve statistics
 STAT_CHOICES = (
@@ -1376,6 +1376,20 @@ class Gmf(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"gmf'
 
+    def check_export_size(self):
+        """
+        Raise an error if the number of rows to export is bigger that
+        the configuration parameter `max_rows_export_gmfs`.
+        """
+        max_rows = int(utils.config.get('hazard', 'max_rows_export_gmfs'))
+        if max_rows:
+            num_rows = GmfData.objects.filter(gmf=self).count()
+            if num_rows > max_rows:
+                raise RuntimeError(
+                    'Cannot export the GMFs: the `max_rows_export_gmf limit` '
+                    'is set to %d rows, but there are %d rows to export' % (
+                        max_rows, num_rows))
+
     def __iter__(self):
         """
         Get the ground motion fields per SES ("GMF set") for
@@ -1402,6 +1416,8 @@ class Gmf(djm.Model):
 
         If a SES does not generate any GMF, it is ignored.
         """
+        self.check_export_size()
+
         job = self.output.oq_job
         curs = getcursor('job_init')
 
