@@ -225,6 +225,13 @@ _pkgtest_innervm_run () {
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
+    # FIXME just for test with CI, replace again with custom_pkgs when
+    #       tests pass
+    # scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
+    # ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ./\""
+    scp -r ${GEM_DEB_REPO}/repotest $lxc_ip:repo/repotest
+    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/repotest ./\""
+
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get -y upgrade"
     gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
