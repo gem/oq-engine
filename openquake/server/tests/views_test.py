@@ -458,7 +458,7 @@ class RunCalcTestCase(BaseViewTestCase):
 
         # Set up expected test values for job_from_file:
         jff_exp_call_args = ((os.path.join(temp_dir, 'job.ini'),
-                              'platform', 'progress',  [], None, 666), {})
+                              'platform', 'progress',  '', None, 666), {})
 
         try:
             with multi_mock:
