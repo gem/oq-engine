@@ -286,7 +286,7 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get remove -y ${GEM_DEB_PACKAGE}"
 
     # FIXME: test incompatibility between python-oq-commonlib package and the new python-oq-risklib
-    ssh $lxc_ip "sudo apt-get install -y python-oq-commonlib"
+#    ssh $lxc_ip "sudo apt-get install -y python-oq-commonlib"
 
     ssh $lxc_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
     ssh $lxc_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}"
