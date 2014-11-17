@@ -23,7 +23,7 @@ from openquake.commonlib.commands import run, info, check
 
 if __name__ == '__main__':
     version = map(int, __version__.split('.'))
-    if version < (0, 2, 0):
+    if version < [0, 2, 0]:
         raise RuntimeError(
             'You have an old version of commonlib: ' + __version__)
 
