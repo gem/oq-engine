@@ -225,20 +225,12 @@ _pkgtest_innervm_run () {
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
+    ssh $lxc_ip "rm -f ssh.log"
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get -y upgrade"
     gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
     # install package to manage repository properly
     ssh $lxc_ip "sudo apt-get install -y python-software-properties"
-
-    # add custom packages
-    ssh $lxc_ip mkdir -p "repo"
-    # FIXME just for test with CI, replace again with custom_pkgs when
-    #       tests pass
-    # scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
-    # ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ./\""
-    scp -r ${GEM_DEB_REPO}/repotest $lxc_ip:repo/repotest
-    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/repotest ./\""
 
     # create a remote "local repo" where place $GEM_DEB_PACKAGE package
     ssh $lxc_ip mkdir -p repo/${GEM_DEB_PACKAGE}
@@ -246,6 +238,46 @@ _pkgtest_innervm_run () {
         build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
         build-deb/Packages* build-deb/Sources*  build-deb/Release* $lxc_ip:repo/${GEM_DEB_PACKAGE}
     ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/${GEM_DEB_PACKAGE} ./\""
+
+    if [ -f _jenkins_deps_info ]; then
+        source _jenkins_deps_info
+    fi
+
+    old_ifs="$IFS"
+    IFS=" $NL"
+    for dep in $GEM_GIT_DEPS; do
+        var_pfx="$(dep2var "$dep")"
+        var_repo="${var_pfx}_REPO"
+        var_branch="${var_pfx}_BRANCH"
+        if [ "${!var_repo}" != "" ]; then
+            repo="${!var_repo}"
+        else
+            repo="$GEM_GIT_REPO"
+        fi
+        if [ "${!var_branch}" != "" ]; then
+            branch="${!var_branch}"
+        else
+            branch="master"
+        fi
+
+        if [ "$repo" = "$GEM_GIT_REPO" -a "$branch" = "master" ]; then
+            GEM_DEB_SERIE="master"
+        else
+            GEM_DEB_SERIE="devel/$(echo "$repo" | sed 's@^.*://@@g;s@/@__@g;s/\./-/g')__${branch}"
+        fi
+        scp -r ${GEM_DEB_REPO}/${GEM_DEB_SERIE}/python-${dep} $lxc_ip:repo/
+        ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-${dep} ./\""
+    done
+    IFS="$old_ifs"
+
+    # add custom packages
+    # FIXME just for test with CI, replace again with custom_pkgs when
+    #       tests pass
+    # scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
+    # ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ./\""
+    scp -r ${GEM_DEB_REPO}/repotest $lxc_ip:repo/repotest
+    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/repotest ./\""
+
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get upgrade -y"
 
