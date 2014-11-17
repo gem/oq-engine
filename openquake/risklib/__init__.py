@@ -15,11 +15,24 @@
 # License along with OpenQuake Risklib. If not, see
 # <http://www.gnu.org/licenses/>.
 
-__version__ = '0.4.0'
-
-
+import re
 from openquake.risklib.scientific import (
     VulnerabilityFunction, DegenerateDistribution, classical)
 
 
 __all__ = ["VulnerabilityFunction", "DegenerateDistribution", "classical"]
+
+__version__ = '0.4.0'
+
+
+def get_commonlib_version():
+    """Read the version of commonlib without importing it"""
+    version_re = r"^__version__\s+=\s+['\"]([^'\"]*)['\"]"
+    package_init = 'openquake/commonlib/__init__.py'
+    for line in open(package_init):
+        version_match = re.search(version_re, line, re.M)
+        if version_match:
+            return version_match.group(1)
+
+assert get_commonlib_version() >= '0.2.0', \
+    'You have an old version of commonlib. Please remove it.'
