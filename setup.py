@@ -71,7 +71,7 @@ setup(
     keywords="seismic risk",
     license="GNU AGPL v3",
     platforms=["any"],
-    scripts=["bin/oq-lite", "bin/check-commonlib"],
+    scripts=["bin/oq-lite"],
     namespace_packages=['openquake'],
 
     zip_safe=False,
