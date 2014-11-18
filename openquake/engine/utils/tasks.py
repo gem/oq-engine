@@ -18,11 +18,13 @@
 
 """Utility functions related to splitting work into tasks."""
 
+import operator
+
 from celery.result import ResultSet
 from celery.app import current_app
 from celery.task import task
 
-from openquake.baselib.general import split_in_blocks
+from openquake.baselib.general import split_in_blocks, AccumDict
 from openquake.commonlib.parallel import \
     TaskManager, safely_call, check_mem_usage, pickle_sequence, no_distribute
 from openquake.engine import logs
@@ -96,7 +98,7 @@ starmap = OqTaskManager.starmap
 
 
 def apply_reduce(task, task_args,
-                 agg=lambda a, x: x,
+                 agg=operator.add,
                  acc=None,
                  concurrent_tasks=CONCURRENT_TASKS,
                  weight=lambda item: 1,
@@ -115,6 +117,8 @@ def apply_reduce(task, task_args,
     :param weight: function to extract the weight of an item in data
     :param key: function to extract the kind of an item in data
     """
+    if acc is None:
+        acc = AccumDict()
     job_id = task_args[0]
     data = task_args[1]
     args = task_args[2:]
