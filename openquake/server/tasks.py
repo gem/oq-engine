@@ -72,7 +72,7 @@ def safely_call(func, *args):
         logger.error(str(e), exc_info=True)
 
 
-def run_calc(job_type, job_id, calc_dir,
+def run_calc(job_id, calc_dir,
              callback_url=None, foreign_calc_id=None,
              dbname="platform", log_file=None):
     """
@@ -81,8 +81,6 @@ def run_calc(job_type, job_id, calc_dir,
     and is ready to execute. This function never fails; errors are trapped
     but not logged since the engine already logs them.
 
-    :param job_type:
-        'hazard' or 'risk'
     :param job_id:
         the ID of the job on the engine
     :param calc_dir:
@@ -97,11 +95,10 @@ def run_calc(job_type, job_id, calc_dir,
     job = oqe_models.OqJob.objects.get(pk=job_id)
     update_calculation(callback_url, status="started", engine_id=job_id)
 
-    exports = []
     progress_handler = ProgressHandler(callback_url, job)
     logging.root.addHandler(progress_handler)
     try:
-        engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, exports, job_type)
+        engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, 'xml,geojson,csv')
     except:  # catch the errors before task spawning
         # do not log the errors, since the engine already does that
         exctype, exc, tb = sys.exc_info()

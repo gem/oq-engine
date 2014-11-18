@@ -16,8 +16,9 @@
 """Base code for calculator classes."""
 
 from openquake.engine import logs
+from openquake.engine.export import core
 from openquake.engine.performance import EnginePerformanceMonitor
-from openquake.engine.utils import tasks, config
+from openquake.engine.utils import config
 
 from openquake.commonlib.source import TrtModel
 
@@ -94,14 +95,14 @@ class Calculator(object):
         """
         Util function for getting :class:`openquake.engine.db.models.Output`
         objects to be exported.
-        """
-        raise NotImplementedError
 
-    def _do_export(self, output_id, export_dir, export_type):
+        Gathers all outputs for the job, but filters out `hazard_curve_multi`
+        outputs if this option was turned off in the calculation profile.
         """
-        Perform a single export.
-        """
-        raise NotImplementedError()
+        outputs = core.get_outputs(self.job.id)
+        if not getattr(self.hc, 'export_multi_curves', None):
+            outputs = outputs.exclude(output_type='hazard_curve_multi')
+        return outputs
 
     def export(self, *args, **kwargs):
         """
@@ -118,18 +119,15 @@ class Calculator(object):
         exported_files = []
 
         with logs.tracing('exports'):
-            if 'exports' in kwargs:
+            export_dir = self.job.get_param('export_dir')
+            export_type = kwargs['exports']
+            if export_type:
                 outputs = self._get_outputs_for_export()
-
-                for export_type in kwargs['exports']:
-                    for output in outputs:
-                        with self.monitor('exporting %s to %s'
-                                          % (output.output_type, export_type)):
-                            fname = self._do_export(
-                                output.id,
-                                self.job.get_param('export_dir'),
-                                export_type
-                            )
+                for output in outputs:
+                    with self.monitor('exporting %s to %s'
+                                      % (output.output_type, export_type)):
+                        fname = core.export(output.id, export_dir, export_type)
+                        if fname:
                             logs.LOG.info('exported %s', fname)
                             exported_files.append(fname)
 
