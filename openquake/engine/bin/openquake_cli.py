@@ -187,21 +187,13 @@ def set_up_arg_parser():
         metavar='CALCULATION_ID')
 
     export_grp.add_argument(
-        '--export-all', action="store_true",
+        '--exports', action="store",
+        default='',
         help=(
             'Use with --run-hazard and --run-risk to automatically export '
             'all calculation results to the specified format. This is '
             'optional. If not specified, nothing will be exported; results '
-            'will only be stored in the database.'
-        )
-    )
-    export_grp.add_argument(
-        '--export-type', '--et',
-        default='xml,geojson,csv',
-        action='store',
-        help=('Use with the other export option to specify the '
-              'desired output formats. Defaults to "xml,geojson,csv".')
-    )
+            'will only be stored in the database.'))
     export_grp.add_argument(
         '--export-output',
         '--eo',
@@ -413,6 +405,8 @@ def main():
 
     args = arg_parser.parse_args()
 
+    exports = arg_parser.exports or 'xml'
+
     if args.version:
         print __version__
         sys.exit(0)
@@ -464,7 +458,7 @@ def main():
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
         engine.run_job(expanduser(args.run_hazard), args.log_level,
-                       log_file, args.export_type if args.export_all else '')
+                       log_file, args.exports)
     elif args.delete_hazard_calculation is not None:
         del_calc(args.delete_hazard_calculation, args.yes)
     # risk
@@ -478,7 +472,7 @@ def main():
             if args.log_file is not None else None
         engine.run_job(
             expanduser(args.run_risk), args.log_level, log_file,
-            args.export_type if args.export_all else '',
+            args.exports,
             hazard_output_id=args.hazard_output_id,
             hazard_calculation_id=args.hazard_calculation_id)
     elif args.delete_risk_calculation is not None:
@@ -496,33 +490,30 @@ def main():
 
     elif args.export_output is not None:
         output_id, target_dir = args.export_output
-        export(int(output_id), expanduser(target_dir), args.export_type)
+        export(int(output_id), expanduser(target_dir), exports)
 
     elif args.export_hazard_output is not None:
         deprecate('--export-hazard-output', '--export-output')
         output_id, target_dir = args.export_hazard_output
-        export(int(output_id), expanduser(target_dir), args.export_type)
+        export(int(output_id), expanduser(target_dir), exports)
 
     elif args.export_risk_output is not None:
         deprecate('--export-hazard-output', '--export-output')
         output_id, target_dir = args.export_risk_output
-        export(int(output_id), expanduser(target_dir), args.export_type)
+        export(int(output_id), expanduser(target_dir), exports)
 
     elif args.export_outputs is not None:
         job_id, target_dir = args.export_outputs
-        export_outputs(int(job_id), expanduser(target_dir),
-                       args.export_type)
+        export_outputs(int(job_id), expanduser(target_dir), exports)
     # deprecated
     elif args.export_hazard_outputs is not None:
         deprecate('--export-hazard-outputs', '--export-outputs')
         job_id, target_dir = args.export_hazard_outputs
-        export_outputs(int(job_id), expanduser(target_dir),
-                       args.export_type)
+        export_outputs(int(job_id), expanduser(target_dir), exports)
     elif args.export_risk_outputs is not None:
         deprecate('--export-risk-outputs', '--export-outputs')
         job_id, target_dir = args.export_risk_outputs
-        export_outputs(int(job_id), expanduser(target_dir),
-                       args.export_type)
+        export_outputs(int(job_id), expanduser(target_dir), exports)
     # import
     elif args.load_gmf is not None:
         with open(args.load_gmf) as f:
