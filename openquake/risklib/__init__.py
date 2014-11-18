@@ -15,9 +15,7 @@
 # License along with OpenQuake Risklib. If not, see
 # <http://www.gnu.org/licenses/>.
 
-import os
 import sys
-import pkgutil
 from openquake.risklib.scientific import (
     VulnerabilityFunction, DegenerateDistribution, classical)
 
@@ -25,10 +23,7 @@ __all__ = ["VulnerabilityFunction", "DegenerateDistribution", "classical"]
 
 __version__ = '0.5.0'
 
-
-loader = pkgutil.find_loader('openquake.commonlib.general')
-if loader:
-    sys.exit(
-        'You have an obsolete version of commonlib interfering with the '
-        'new one, please remove everything in %s' %
-        os.path.dirname(loader.filename))
+for path in sys.path:
+    if 'oq-commonlib' in path:
+        sys.exit('Found an obsolete version of commonlib; '
+                 'please remove %s and/or fix your PYTHONPATH' % path)
