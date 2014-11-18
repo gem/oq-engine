@@ -15,7 +15,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from openquake.commonlib import nrml
-from openquake.engine import engine as oq_engine
+from openquake.engine import engine as oq_engine, __version__ as oqversion
 from openquake.engine.db import models as oqe_models
 from openquake.engine.export import core
 from openquake.engine.utils.tasks import safely_call
@@ -135,6 +135,15 @@ def _is_source_model(tempfile):
     if model_elem.tag == '{%s}sourceModel' % nrml.NAMESPACE:
         return True
     return False
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def get_engine_version(request):
+    """
+    Return a string with the openquake.engine version
+    """
+    return HttpResponse(oqversion)
 
 
 @require_http_methods(['GET'])
