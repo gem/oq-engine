@@ -341,21 +341,26 @@ def get_result(request, result_id):
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
 
-    export_type = request.GET.get('export_type', DEFAULT_EXPORT_TYPE)
+    etype = request.GET.get('export_type')
+    export_type = etype or DEFAULT_EXPORT_TYPE
 
     tmpdir = tempfile.mkdtemp()
-    try:
-        exported = core.export(result_id, tmpdir, export_type=export_type)
-    except NotImplementedError, err:
+    exported = core.export(result_id, tmpdir, export_type=export_type)
+    if exported is None:
         # Throw back a 404 if the exact export parameters are not supported
-        return HttpResponseNotFound(err.message)
+        return HttpResponseNotFound(
+            'export_type=%s is not supported for output_type=%s' %
+            (export_type, output.output_type))
 
     content_type = EXPORT_CONTENT_TYPE_MAP.get(
         export_type, DEFAULT_CONTENT_TYPE)
     try:
+        fname = 'output-%s-%s' % (result_id, os.path.basename(exported))
         data = open(exported).read()
         response = HttpResponse(data, content_type=content_type)
         response['Content-Length'] = len(data)
+        if etype:  # download as a file
+            response['Content-Disposition'] = 'attachment; filename=%s' % fname
         return response
     finally:
         shutil.rmtree(tmpdir)
