@@ -149,7 +149,7 @@ def prepare_job(user_name="openquake", log_level='progress'):
 
 
 # used by bin/openquake and openquake.server.views
-def run_calc(job, log_level, log_file, exports, job_type):
+def run_calc(job, log_level, log_file, exports):
     """
     Run a calculation.
 
@@ -161,11 +161,8 @@ def run_calc(job, log_level, log_file, exports, job_type):
     :param str log_file:
         Complete path (including file name) to file where logs will be written.
         If `None`, logging will just be printed to standard output.
-    :param list exports:
-        A (potentially empty) list of export targets. Currently only "xml" is
-        supported.
-    :param str job_type:
-        'hazard' or 'risk'
+    :param exports:
+        A comma-separated string of export types.
     """
     # let's import the calculator classes here, when they are needed
     # the reason is that the command `$ oq-engine --upgrade-db`
@@ -178,11 +175,11 @@ def run_calc(job, log_level, log_file, exports, job_type):
 
     calculator = calculators(job)
     with logs.handle(job, log_level, log_file), job_stats(job):  # run the job
-        _do_run_calc(calculator, exports, job_type)
+        _do_run_calc(calculator, exports)
     return calculator
 
 
-def _switch_to_job_phase(job, job_type, status):
+def log_status(job, status):
     """
     Switch to a particular phase of execution.
 
@@ -196,46 +193,42 @@ def _switch_to_job_phase(job, job_type, status):
     """
     job.status = status
     job.save()
-    logs.LOG.progress("%s (%s)", status, job_type)
+    logs.LOG.progress("%s (%s)", status, job.job_type)
 
 
-def _do_run_calc(calc, exports, job_type):
+def _do_run_calc(calc, exports):
     """
     Step through all of the phases of a calculation, updating the job
     status at each phase.
 
     :param calc:
         An :class:`~openquake.engine.calculators.base.Calculator` instance.
-    :param list exports:
-        a (potentially empty) list of export targets, currently only "xml" is
-        supported
-    :param str job_type:
-        calculation type (hazard|risk)
+    :param exports:
+        a (potentially empty) comma-separated string of export targets
     """
     job = calc.job
 
-    _switch_to_job_phase(job, job_type, "pre_executing")
+    log_status(job, "pre_executing")
     calc.pre_execute()
 
-    _switch_to_job_phase(job, job_type, "executing")
+    log_status(job, "executing")
     calc.execute()
 
-    _switch_to_job_phase(job, job_type, "post_executing")
+    log_status(job, "post_executing")
     calc.post_execute()
 
-    _switch_to_job_phase(job, job_type, "post_processing")
+    log_status(job, "post_processing")
     calc.post_process()
 
-    _switch_to_job_phase(job, job_type, "export")
+    log_status(job, "export")
     calc.export(exports=exports)
 
-    _switch_to_job_phase(job, job_type, "clean_up")
+    log_status(job, "clean_up")
     calc.clean_up()
 
     CacheInserter.flushall()  # flush caches into the db
 
-    _switch_to_job_phase(job, job_type, "complete")
-    logs.LOG.debug("*> complete")
+    log_status(job, "complete")
 
 
 def del_calc(job_id):
@@ -274,19 +267,19 @@ def del_calc(job_id):
         raise RuntimeError(UNABLE_TO_DEL_HC_FMT % 'Access denied')
 
 
-def list_hazard_outputs(hc_id, full=True):
+def list_outputs(job_id, full=True):
     """
     List the outputs for a given
     :class:`~openquake.engine.db.models.OqJob`.
 
-    :param hc_id:
-        ID of a hazard calculation.
+    :param job_id:
+        ID of a calculation.
     :param bool full:
         If True produce a full listing, otherwise a short version
     """
-    outputs = get_outputs('hazard', hc_id)
-    hc = models.oqparam(hc_id)
-    if hc.calculation_mode == 'scenario':  # ignore SES output
+    outputs = get_outputs(job_id)
+    if models.oqparam(job_id).calculation_mode == 'scenario':
+        # ignore SES output
         outputs = outputs.filter(output_type='gmf_scenario')
     print_outputs_summary(outputs, full)
 
@@ -300,10 +293,10 @@ def touch_log_file(log_file):
     open(os.path.abspath(log_file), 'a').close()
 
 
-def print_results(calc_id, duration, list_outputs):
+def print_results(job_id, duration, list_outputs):
     print 'Calculation %d completed in %d seconds. Results:' % (
-        calc_id, duration)
-    list_outputs(calc_id, full=False)
+        job_id, duration)
+    list_outputs(job_id, full=False)
 
 
 def print_outputs_summary(outputs, full=True):
@@ -327,11 +320,10 @@ def print_outputs_summary(outputs, full=True):
                     o.id, o.get_output_type_display(), o.display_name)
         if truncated:
             print ('Some outputs where not shown. You can see the full list '
-                   'with the commands\n`oq-engine --list-hazard-outputs` or '
-                   '`oq-engine --list-risk-outputs`')
+                   'with the command\n`oq-engine --list-outputs`')
 
 
-def run_job(cfg_file, log_level, log_file, exports=(), hazard_output_id=None,
+def run_job(cfg_file, log_level, log_file, exports='', hazard_output_id=None,
             hazard_calculation_id=None):
     """
     Run a job using the specified config file and other options.
@@ -342,9 +334,9 @@ def run_job(cfg_file, log_level, log_file, exports=(), hazard_output_id=None,
         'debug', 'info', 'warn', 'error', or 'critical'
     :param str log_file:
         Path to log file.
-    :param list exports:
-        A list of export types requested by the user. Currently only 'xml'
-        is supported.
+    :param exports:
+        A comma-separated string of export types requested by the user.
+        Currently only 'xml' is supported.
     :param str hazard_ouput_id:
         The Hazard Output ID used by the risk calculation (can be None)
     :param str hazard_calculation_id:
@@ -363,17 +355,16 @@ def run_job(cfg_file, log_level, log_file, exports=(), hazard_output_id=None,
 
         # Instantiate the calculator and run the calculation.
         t0 = time.time()
-        run_calc(
-            job, log_level, log_file, exports, 'hazard' if hazard else 'risk')
+        run_calc(job, log_level, log_file, exports)
         duration = time.time() - t0
         if hazard:
             if job.status == 'complete':
-                print_results(job.id, duration, list_hazard_outputs)
+                print_results(job.id, duration, list_outputs)
             else:
                 sys.exit('Calculation %s failed' % job.id)
         else:
             if job.status == 'complete':
-                print_results(job.id, duration, list_risk_outputs)
+                print_results(job.id, duration, list_outputs)
             else:
                 sys.exit('Calculation %s failed' % job.id)
 
@@ -409,7 +400,7 @@ def check_hazard_risk_consistency(haz_job, risk_mode):
 
 
 @django_db.transaction.commit_on_success
-def job_from_file(cfg_file_path, username, log_level='info', exports=(),
+def job_from_file(cfg_file_path, username, log_level='info', exports='',
                   hazard_output_id=None, hazard_calculation_id=None, **extras):
     """
     Create a full job profile from a job config file.
@@ -421,7 +412,7 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
     :param str log_level:
         Desired log level.
     :param exports:
-        List of desired export types.
+        Comma-separated sting of desired export types.
     :param int hazard_output_id:
         ID of a hazard output to use as input to this calculation. Specify
         this xor ``hazard_calculation_id``.
@@ -497,27 +488,12 @@ def job_from_file(cfg_file_path, username, log_level='info', exports=(),
     return job
 
 
-def list_risk_outputs(rc_id, full=True):
-    """
-    List the outputs for a given
-    :class:`~openquake.engine.db.models.OqJob` of kind risk.
-
-    :param rc_id:
-        ID of a risk calculation.
-    :param bool full:
-        If True produce a full listing, otherwise a short version
-    """
-    print_outputs_summary(get_outputs('risk', rc_id), full)
-
-
 # this is patched in the tests
-def get_outputs(job_type, calc_id):
+def get_outputs(job_id):
     """
-    :param job_type:
-        'hazard' or 'risk'
-    :param calc_id:
+    :param job_id:
         ID of a calculation.
     :returns:
         A sequence of :class:`openquake.engine.db.models.Output` objects
     """
-    return models.Output.objects.filter(oq_job=calc_id)
+    return models.Output.objects.filter(oq_job=job_id)

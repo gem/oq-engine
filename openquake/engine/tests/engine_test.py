@@ -291,6 +291,6 @@ class PrintSummaryTestCase(unittest.TestCase):
    9 | gmf9 | gmf
   10 | gmf10 | gmf
  ... | gmf11 | 1 additional output(s)
-Some outputs where not shown. You can see the full list with the commands
-`oq-engine --list-hazard-outputs` or `oq-engine --list-risk-outputs`
+Some outputs where not shown. You can see the full list with the command
+`oq-engine --list-outputs`
 ''')
