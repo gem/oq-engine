@@ -202,7 +202,7 @@ _devtest_innervm_run () {
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
         ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-risklib:\$PWD/oq-hazardlib\" ;
                  cd $GEM_GIT_PACKAGE ;
-                 nosetests -v --with-doctest --with-coverage --cover-package=openquake.risklib --with-xunit"
+                 nosetests -v --with-doctest --with-coverage --cover-package=openquake.baselib --cover-package=openquake.risklib --cover-package=openquake.commonlib --with-xunit"
         scp "$lxc_ip:$GEM_GIT_PACKAGE/nosetests.xml" .
     else
         if [ -d $HOME/fake-data/$GEM_GIT_PACKAGE ]; then
