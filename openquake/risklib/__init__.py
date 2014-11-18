@@ -21,17 +21,3 @@ from openquake.risklib.scientific import (
 __all__ = ["VulnerabilityFunction", "DegenerateDistribution", "classical"]
 
 __version__ = '0.5.0'
-
-# the following is a hack to discover conflicts with an old version of
-# commonlib; it is a transitory trick, and it will be removed in a year
-# or so, when the old library will be completely forgotten
-import os
-try:
-    # the module general.py was present in the old library, not in the new one
-    from openquake.commonlib import general
-except ImportError:
-    pass  # you are using the new commonlib, all ok
-else:
-    raise ImportError(
-        'You have an obsolete version of commonlib interfering with the '
-        'new one, remove everything in %s' % os.path.dirname(general.__file__))

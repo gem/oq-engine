@@ -1,0 +1,32 @@
+#!/usr/bin/python
+#  -*- coding: utf-8 -*-
+#  vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+#  Copyright (c) 2014, GEM Foundation
+
+#  OpenQuake is free software: you can redistribute it and/or modify it
+#  under the terms of the GNU Affero General Public License as published
+#  by the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+
+#  OpenQuake is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+
+#  You should have received a copy of the GNU Affero General Public License
+#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+# The following is a hack to discover conflicts with an old version of
+# commonlib; it is a transitory trick, and it will be removed in a year
+# or so, when the old library will be completely forgotten
+import os
+try:
+    # the module general.py was present in the old library, not in the new one
+    from openquake.commonlib import general
+except ImportError:
+    print("You are using the new commonlib, all ok")
+else:
+    print(
+        'You have an obsolete version of commonlib interfering with the '
+        'new one, remove everything in %s' % os.path.dirname(general.__file__))
