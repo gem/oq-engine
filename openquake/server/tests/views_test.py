@@ -13,6 +13,7 @@ from django.test.client import RequestFactory
 from django.utils import unittest
 
 from openquake.commonlib.general import writetmp
+from openquake import engine
 from openquake.engine.utils.tasks import oqtask
 from openquake.server import views, executor, tasks
 from openquake.server._test_utils import MultiMock
@@ -50,6 +51,11 @@ class UtilsTestCase(BaseViewTestCase):
         self.request.META['HTTP_HOST'] = 'www.openquake.org'
         self.assertEqual('https://www.openquake.org',
                          views._get_base_url(self.request))
+
+    def test_engine_version(self):
+        request = self.factory.get('/engine_version')
+        response = views.get_engine_version(request)
+        self.assertEqual(response.content, engine.__version__)
 
 
 class CalcHazardTestCase(BaseViewTestCase):
@@ -576,3 +582,4 @@ class SubmitJobTestCase(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         executor.shutdown()
+        
