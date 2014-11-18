@@ -597,14 +597,14 @@ devtest_run () {
         for repo in $repos; do
             # search of same branch in same repo or in GEM_GIT_REPO repo
             if git ls-remote --heads $repo/${dep}.git | grep -q "refs/heads/$branch" ; then
-                git clone -b $branch $repo/${dep}.git _jenkins_deps/$dep
+                git clone --depth=1 -b $branch $repo/${dep}.git _jenkins_deps/$dep
                 found=1
                 break
             fi
         done
         # if not found it fallback in master branch of GEM_GIT_REPO repo
         if [ $found -eq 0 ]; then
-            git clone $repo/${dep}.git _jenkins_deps/$dep
+            git clone --depth=1 $repo/${dep}.git _jenkins_deps/$dep
             branch="master"
         fi
         cd _jenkins_deps/$dep
