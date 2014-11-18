@@ -50,7 +50,7 @@ along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
 import subprocess
-from openquake import commonlib
+
 
 def git_suffix():
     """
@@ -117,8 +117,3 @@ def set_django_settings_module():
         os.environ['DJANGO_SETTINGS_MODULE'] = 'openquake.engine.settings'
 
 set_django_settings_module()
-
-commonlib_version = map(int, commonlib.__version__.split('.'))
-if commonlib_version < [0, 2, 0]:
-    raise RuntimeError(
-        'You have an old version of commonlib: ' + commonlib.__version__)
