@@ -405,7 +405,7 @@ def main():
 
     args = arg_parser.parse_args()
 
-    exports = arg_parser.exports or 'xml'
+    exports = args.exports or 'xml'
 
     if args.version:
         print __version__
