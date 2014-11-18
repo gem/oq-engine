@@ -16,7 +16,7 @@
 import collections
 from xml.etree.ElementTree import parse
 
-from openquake.commonlib.general import writetmp
+from openquake.baselib.general import writetmp
 from openquake.commonlib.writers import tostring
 
 

@@ -32,7 +32,7 @@ from concurrent.futures import as_completed, ProcessPoolExecutor
 
 import psutil
 
-from openquake.commonlib.general import split_in_blocks, AccumDict
+from openquake.baselib.general import split_in_blocks, AccumDict
 
 
 executor = ProcessPoolExecutor()
@@ -317,7 +317,7 @@ def apply_reduce(task_func, task_args, agg=operator.add, acc=None,
     Apply a function to a tuple of the form (sequence, \*other_args)
     by first splitting the sequence in chunks, according to the weight
     of the elements and possibly to a key (see :function:
-    `openquake.commonlib.general.split_in_blocks`).
+    `openquake.baselib.general.split_in_blocks`).
     Then reduce the results with an aggregation function. Here is an example:
 
     >>> apply_reduce(sum, ([1, 2, 3, 4, 5],), lambda acc, x: acc + x,

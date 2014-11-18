@@ -25,7 +25,8 @@ from StringIO import StringIO
 
 from numpy.testing import assert_allclose
 
-from openquake.commonlib import readinput, valid, general
+from openquake.commonlib import readinput, valid
+from openquake.baselib import general
 
 TMP = tempfile.gettempdir()
 

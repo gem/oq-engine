@@ -29,6 +29,7 @@ import bisect
 import numpy
 from scipy import interpolate, stats
 
+from openquake.baselib.general import CallableDict
 from openquake.risklib import utils
 
 #
@@ -373,7 +374,7 @@ class FragilityFunctionDiscrete(object):
 # Distribution & Sampling
 #
 
-DISTRIBUTIONS = utils.Register()
+DISTRIBUTIONS = CallableDict()
 
 
 class Distribution(object):

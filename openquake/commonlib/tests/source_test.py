@@ -31,7 +31,7 @@ from openquake.commonlib import nrml_examples
 from openquake.commonlib import source as s
 from openquake.commonlib.nrml import nodefactory
 from openquake.commonlib.node import read_nodes
-from openquake.commonlib.general import deep_eq
+from openquake.baselib.general import deep_eq
 
 # directory where the example files are
 NRML_DIR = os.path.dirname(nrml_examples.__file__)

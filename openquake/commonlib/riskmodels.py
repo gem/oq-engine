@@ -29,7 +29,7 @@ from openquake.commonlib.node import read_nodes, context
 from openquake.commonlib import InvalidFile
 from openquake.risklib import scientific
 from openquake.commonlib.oqvalidation import vulnerability_files
-from openquake.commonlib.general import AccumDict
+from openquake.baselib.general import AccumDict
 from openquake.commonlib.nrml import nodefactory
 
 # loss types (in the risk models) and cost types (in the exposure)

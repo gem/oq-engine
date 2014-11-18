@@ -24,12 +24,12 @@ import unittest
 from operator import attrgetter
 from collections import namedtuple
 
-from openquake.commonlib.general import (
+from openquake.baselib.general import (
     block_splitter, split_in_blocks, assert_independent)
 
 
 class BlockSplitterTestCase(unittest.TestCase):
-    """Tests for :function:`openquake.commonlib.general.block_splitter`."""
+    """Tests for :function:`openquake.baselib.general.block_splitter`."""
 
     DATA = range(10)
 

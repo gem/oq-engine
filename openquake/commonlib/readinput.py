@@ -36,7 +36,7 @@ from openquake.commonlib.oqvalidation import \
     fragility_files, vulnerability_files
 from openquake.commonlib.riskmodels import \
     get_fragility_functions, get_imtls_from_vulnerabilities, get_vfs
-from openquake.commonlib.general import groupby, AccumDict, distinct
+from openquake.baselib.general import groupby, AccumDict, distinct
 from openquake.commonlib import source
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
 
