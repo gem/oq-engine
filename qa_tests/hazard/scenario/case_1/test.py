@@ -45,6 +45,6 @@ class ScenarioHazardCase1TestCase(qa_utils.BaseQATestCase):
         cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
         job = self.run_hazard(cfg)
         [output] = export.core.get_outputs(job.id, 'gmf_scenario')
-        exported_file = export.hazard.export(output.id, result_dir)
+        exported_file = export.core.export(output.id, result_dir)
         check_equal(__file__, 'expected.xml', exported_file)
         shutil.rmtree(result_dir)

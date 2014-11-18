@@ -36,15 +36,13 @@ class BaseQATestCase(unittest.TestCase):
     running QA tests.
     """
 
-    def run_hazard(self, cfg, exports=None):
+    def run_hazard(self, cfg, exports=''):
         """
         Given the path to job config file, run the job and assert that it was
         successful. If this assertion passes, return the completed job.
 
         :param str cfg:
             Path to a job config file.
-        :param list exports:
-            A list of export format types. Currently only 'xml' is supported.
         :returns:
             The completed :class:`~openquake.engine.db.models.OqJob`.
         :raises:
@@ -161,7 +159,7 @@ class DisaggHazardTestCase(BaseQATestCase):
     def test(self):
         cfg = os.path.join(self.working_dir, 'job.ini')
         expected = os.path.join(self.working_dir, 'expected_output')
-        job = self.run_hazard(cfg, exports=['xml'])
+        job = self.run_hazard(cfg, exports='xml')
         export_dir = os.path.join(
             job.get_param('export_dir'), 'calc_%d' % job.id)
 
