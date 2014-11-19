@@ -165,7 +165,7 @@ if [ -f /usr/lib/postgresql/9.1/bin/postgres ]; then
         mv $PG_ROOT/pg_hba.conf $PG_ROOT/pg_hba.conf.orig
         for dbu in oq_admin oq_job_init
         do
-            echo "local   openquake   $dbu                   md5" >> $PG_ROOT/pg_hba.conf
+            echo "local   openquake2   $dbu                   md5" >> $PG_ROOT/pg_hba.conf
         done
         cat $PG_ROOT/pg_hba.conf.orig | grep -v 'local..*oq_' >> $PG_ROOT/pg_hba.conf
         /etc/init.d/postgresql reload 9.1
