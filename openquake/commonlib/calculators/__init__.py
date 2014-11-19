@@ -1,0 +1,34 @@
+#  -*- coding: utf-8 -*-
+#  vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+#  Copyright (c) 2014, GEM Foundation
+
+#  OpenQuake is free software: you can redistribute it and/or modify it
+#  under the terms of the GNU Affero General Public License as published
+#  by the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+
+#  OpenQuake is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+
+#  You should have received a copy of the GNU Affero General Public License
+#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+import os
+import operator
+
+from openquake.baselib.general import import_all, CallableDict
+
+# define a `calculators` dictionary
+calculators = CallableDict(operator.attrgetter('calculation_mode'))
+
+# make sure the `calculators` dictionary is populated
+import_all('openquake.commonlib.calculators')
+
+# import the development packages if any
+extras = os.environ.get('OQLITEIMPORT', '')
+for extra_pkg in extras.split(':'):
+    if extra_pkg:
+        import_all(extra_pkg)

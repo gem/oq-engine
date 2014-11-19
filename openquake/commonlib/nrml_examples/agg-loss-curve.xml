@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+
+    <!-- `unit` is optional. If the file has been produced using
+    mean or quantile hazard curves, no `sourceModelTreePath` and `gsimTreePath`
+    attributes will be provided. -->
+    <aggregateLossCurve sourceModelTreePath="b1_b2_b4" gsimTreePath="b1_b2"
+                investigationTime="50.0" unit="USD" lossType="structural">
+
+      <poEs>9.8728e-01 9.8266e-01 9.4957e-01</poEs>
+      <losses>10.2354 21.324321 28.032432</losses>
+      <averageLoss>1E+0</averageLoss>
+      <stdDevLoss>1E+1</stdDevLoss>
+    </aggregateLossCurve>
+</nrml>

@@ -52,8 +52,7 @@ setup(
     description="oq-risklib is a library for performing seismic risk analysis",
     long_description=__doc__,
     url=url,
-    packages=find_packages(exclude=[
-        'tests', 'tests.*', 'qa_tests', 'qa_tests.*']),
+    packages=find_packages(),
     install_requires=[
         'numpy',
         'scipy'
@@ -72,6 +71,7 @@ setup(
     keywords="seismic risk",
     license="GNU AGPL v3",
     platforms=["any"],
+    scripts=["bin/oq-lite"],
     namespace_packages=['openquake'],
 
     zip_safe=False,

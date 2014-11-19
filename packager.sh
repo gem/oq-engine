@@ -6,6 +6,7 @@ fi
 set -e
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-risklib"
+GEM_GIT_DEPS="oq-hazardlib"
 GEM_DEB_PACKAGE="python-${GEM_GIT_PACKAGE}"
 GEM_DEB_SERIE="master"
 if [ -z "$GEM_DEB_REPO" ]; then
@@ -64,10 +65,15 @@ sig_hand () {
 }
 
 #
+#  dep2var <dep> - converts in a proper way the name of a dependency to a variable name
+#      <dep>    the name of the dependency
+#
+dep2var () {
+    echo "$1" | sed 's/[-.]/_/g;s/\(.*\)/\U\1/g'
+}
+
+#
 #  repo_id_get - retry git repo from local git remote command
-
-
-
 repo_id_get () {
     local repo_name repo_line
 
@@ -147,18 +153,62 @@ _devtest_innervm_run () {
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
+    ssh $lxc_ip "rm -f ssh.log"
+
+    ssh $lxc_ip "sudo apt-get update"
+    ssh $lxc_ip "sudo apt-get -y upgrade"
+    gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
+    # install package to manage repository properly
+    ssh $lxc_ip "sudo apt-get install -y python-software-properties"
+
+    # add custom packages
+    ssh $lxc_ip mkdir -p "repo"
+    scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
+    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ./\""
+
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get upgrade -y"
 
-    pkgs_list="$(deps_list debian/control)"
+    old_ifs="$IFS"
+    IFS=" "
+    for dep in $GEM_GIT_DEPS; do
+        # extract dependencies for source dependencies
+        pkgs_list="$(deps_list "deprec" _jenkins_deps/$dep/debian/control)"
+        ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
+
+        # install source dependencies
+        cd _jenkins_deps/$dep
+        git archive --prefix ${dep}/ HEAD | ssh $lxc_ip "tar xv"
+        cd -
+    done
+    IFS="$old_ifs"
+
+    # extract dependencies for this package
+    pkgs_list="$(deps_list "all" debian/control)"
     ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
+
+    # build oq-hazardlib speedups and put in the right place
+    ssh $lxc_ip "set -e
+                 cd oq-hazardlib
+                 python ./setup.py build
+                 for i in \$(find build/ -name *.so); do
+                     o=\"\$(echo \"\$i\" | sed 's@^[^/]\+/[^/]\+/@@g')\"
+                     cp \$i \$o
+                 done"
 
     # TODO: version check
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
-    ssh $lxc_ip "cd $GEM_GIT_PACKAGE ; nosetests -v --with-doctest --with-coverage --cover-package=openquake.risklib --with-xunit"
-    scp "$lxc_ip:$GEM_GIT_PACKAGE/nosetests.xml" .
-
+    if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
+        ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-risklib:\$PWD/oq-hazardlib\" ;
+                 cd $GEM_GIT_PACKAGE ;
+                 nosetests -v --with-doctest --with-coverage --cover-package=openquake.baselib --cover-package=openquake.risklib --cover-package=openquake.commonlib --with-xunit"
+        scp "$lxc_ip:$GEM_GIT_PACKAGE/nosetests.xml" .
+    else
+        if [ -d $HOME/fake-data/$GEM_GIT_PACKAGE ]; then
+            cp $HOME/fake-data/$GEM_GIT_PACKAGE/* .
+        fi
+    fi
     trap ERR
 
     return
@@ -169,6 +219,7 @@ _pkgtest_innervm_run () {
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
+    ssh $lxc_ip "rm -f ssh.log"
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get -y upgrade"
     gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
@@ -181,7 +232,44 @@ _pkgtest_innervm_run () {
         build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
         build-deb/Packages* build-deb/Sources*  build-deb/Release* $lxc_ip:repo/${GEM_DEB_PACKAGE}
     ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/${GEM_DEB_PACKAGE} ./\""
+
+    if [ -f _jenkins_deps_info ]; then
+        source _jenkins_deps_info
+    fi
+
+    old_ifs="$IFS"
+    IFS=" $NL"
+    for dep in $GEM_GIT_DEPS; do
+        var_pfx="$(dep2var "$dep")"
+        var_repo="${var_pfx}_REPO"
+        var_branch="${var_pfx}_BRANCH"
+        if [ "${!var_repo}" != "" ]; then
+            repo="${!var_repo}"
+        else
+            repo="$GEM_GIT_REPO"
+        fi
+        if [ "${!var_branch}" != "" ]; then
+            branch="${!var_branch}"
+        else
+            branch="master"
+        fi
+
+        if [ "$repo" = "$GEM_GIT_REPO" -a "$branch" = "master" ]; then
+            GEM_DEB_SERIE="master"
+        else
+            GEM_DEB_SERIE="devel/$(echo "$repo" | sed 's@^.*://@@g;s@/@__@g;s/\./-/g')__${branch}"
+        fi
+        scp -r ${GEM_DEB_REPO}/${GEM_DEB_SERIE}/python-${dep} $lxc_ip:repo/
+        ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-${dep} ./\""
+    done
+    IFS="$old_ifs"
+
+    # add custom packages
+    scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
+    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ./\""
+
     ssh $lxc_ip "sudo apt-get update"
+    ssh $lxc_ip "sudo apt-get upgrade -y"
 
     # packaging related tests (install, remove, purge, install, reinstall)
     ssh $lxc_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
@@ -189,18 +277,39 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
     ssh $lxc_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}"
 
+    if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
+        # no demos currently available
+        :
+    fi
     trap ERR
 
     return
 }
 
-deps_list() {
-    local oldifs out_list i filename="$1"
 
-    oldifs="$IFS"
-    IFS=','
+#
+#  deps_list <listtype> <filename> - retrieve dependencies list from debian/control
+#                                    to be able to install them without the package
+#      listtype    inform deps_list which control lines use to get dependencies
+#      filename    control file used for input
+#
+deps_list() {
+    local old_ifs out_list skip i d listtype="$1" filename="$2"
+
     out_list=""
-    for i in $(cat "$filename" | grep "^\(Build-\)\?Depends:" | sed 's/^\(Build-\)\?Depends: //g' | tr '\n' ',' ) ; do
+    if [ "$listtype" = "all" ]; then
+        in_list="$(cat "$filename" | egrep '^Depends:|^Recommends:|Build-Depends:' | sed 's/^\(Build-\)\?Depends://g;s/^Recommends://g' | tr '\n' ',')"
+    elif [  "$listtype" = "deprec" ]; then
+        in_list="$(cat "$filename" | egrep '^Depends:|^Recommends:' | sed 's/^Depends://g;s/^Recommends://g' | tr '\n' ',')"
+    elif [  "$listtype" = "build" ]; then
+        in_list="$(cat "$filename" | egrep '^Depends:|^Build-Depends:' | sed 's/^\(Build-\)\?Depends://g' | tr '\n' ',')"
+    else
+        in_list="$(cat "$filename" | egrep "^Depends:" | sed 's/^Depends: //g')"
+    fi
+
+    old_ifs="$IFS"
+    IFS=','
+    for i in $in_list ; do
         item="$(echo "$i" |  sed 's/^ \+//g;s/ \+$//g')"
         pkg_name="$(echo "${item} " | cut -d ' ' -f 1)"
         pkg_vers="$(echo "${item} " | cut -d ' ' -f 2)"
@@ -208,13 +317,24 @@ deps_list() {
         if echo "$pkg_name" | grep -q "^\${" ; then
             continue
         fi
-        if [ "$out_list" == "" ]; then
+        skip=0
+        for d in $(echo "$GEM_GIT_DEPS" | sed 's/ /,/g'); do
+            if [ "$pkg_name" = "python-${d}" ]; then
+                skip=1
+                break
+            fi
+        done
+        if [ $skip -eq 1 ]; then
+            continue
+        fi
+
+        if [ "$out_list" = "" ]; then
             out_list="$pkg_name"
         else
             out_list="$out_list $pkg_name"
         fi
     done
-    IFS="$oldifs"
+    IFS="$old_ifs"
 
     echo "$out_list"
 
@@ -244,12 +364,63 @@ _lxc_name_and_ip_get()
     if [ $i -eq 40 -o $e -eq 40 ]; then
         return 1
     fi
-    echo "SUCCESSFULY RUNNED $lxc_name ($lxc_ip)"
+    echo "SUCCESSFULLY RUNNED $lxc_name ($lxc_ip)"
 
     return 0
 }
 
 devtest_run () {
+    local deps old_ifs branch_id="$1"
+
+    mkdir _jenkins_deps
+
+    #
+    #  dependencies repos
+    #
+    # in test sources different repositories and branches can be tested
+    # consistently: for each openquake dependency it try to use
+    # the same repository and the same branch OR the gem repository
+    # and the same branch OR the gem repository and the "master" branch
+    #
+    repo_id="$(repo_id_get)"
+    if [ "$repo_id" != "$GEM_GIT_REPO" ]; then
+        repos="git://${repo_id} ${GEM_GIT_REPO}"
+    else
+        repos="${GEM_GIT_REPO}"
+    fi
+    old_ifs="$IFS"
+    IFS=" "
+    for dep in $GEM_GIT_DEPS; do
+        found=0
+        branch="$branch_id"
+        for repo in $repos; do
+            # search of same branch in same repo or in GEM_GIT_REPO repo
+            if git ls-remote --heads $repo/${dep}.git | grep -q "refs/heads/$branch" ; then
+                git clone -b $branch $repo/${dep}.git _jenkins_deps/$dep
+                found=1
+                break
+            fi
+        done
+        # if not found it fallback in master branch of GEM_GIT_REPO repo
+        if [ $found -eq 0 ]; then
+            git clone $repo/${dep}.git _jenkins_deps/$dep
+            branch="master"
+        fi
+        cd _jenkins_deps/$dep
+        commit="$(git log -1 | grep '^commit' | sed 's/^commit //g')"
+        cd -
+        echo "dependency: $dep"
+        echo "repo:       $repo"
+        echo "branch:     $branch"
+        echo "commit:     $commit"
+        echo
+        var_pfx="$(dep2var "$dep")"
+        echo "${var_pfx}_COMMIT=$commit" >> _jenkins_deps_info
+        echo "${var_pfx}_REPO=$repo"     >> _jenkins_deps_info
+        echo "${var_pfx}_BRANCH=$branch" >> _jenkins_deps_info
+    done
+    IFS="$old_ifs"
+
     sudo echo
     sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log

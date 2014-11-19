@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+
+    <!-- Note: this is a loss map produced by a classical / probabilistic calculator. -->
+    <lossMap statistics="quantile" quantileValue="0.50"
+             lossCategory="economic_loss" unit="EUR" poE="0.5"
+             investigationTime="50.0" lossType="structural">
+
+        <node>
+            <gml:Point>
+                <gml:pos>-116.0 41.0</gml:pos>
+            </gml:Point>
+
+            <loss assetRef="asset_1" value="15.23" />
+            <loss assetRef="asset_2" value="32.66" />
+        </node>
+
+        <node>
+            <gml:Point>
+                <gml:pos>-116.0 42.0</gml:pos>
+            </gml:Point>
+
+            <loss assetRef="asset_3" value="64.23" />
+        </node>
+    </lossMap>
+</nrml>

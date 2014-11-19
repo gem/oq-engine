@@ -16,20 +16,9 @@
 # License along with OpenQuake Risklib. If not, see
 # <http://www.gnu.org/licenses/>.
 
-
 import functools
-import collections
 import itertools
 import numpy
-
-
-class Register(collections.OrderedDict):
-    def add(self, *tags):
-        def dec(obj):
-            for tag in tags:
-                self[tag] = obj
-            return obj
-        return dec
 
 
 def pairwise(iterable):
