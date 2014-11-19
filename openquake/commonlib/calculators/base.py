@@ -24,7 +24,8 @@ import numpy
 
 from openquake.hazardlib.geo import geodetic
 
-from openquake.commonlib import readinput, general
+from openquake.baselib import general
+from openquake.commonlib import readinput
 from openquake.commonlib.parallel import apply_reduce, DummyMonitor
 
 get_taxonomy = operator.attrgetter('taxonomy')

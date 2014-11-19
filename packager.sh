@@ -1,11 +1,4 @@
 #!/bin/bash
-
-#
-#
-#  THIS SCRIPT IS PARTIALLY WORKING: devtest ONLY
-#
-#
-
 # export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
 if [ $GEM_SET_DEBUG ]; then
     set -x
@@ -206,24 +199,27 @@ _devtest_innervm_run () {
     # TODO: version check
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
-    ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-risklib:\$PWD/oq-hazardlib\" ;
+    if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
+        ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-risklib:\$PWD/oq-hazardlib\" ;
                  cd $GEM_GIT_PACKAGE ;
-                 nosetests -v --with-doctest --with-coverage --cover-package=openquake.risklib --with-xunit"
-    scp "$lxc_ip:$GEM_GIT_PACKAGE/nosetests.xml" .
-
+                 nosetests -v --with-doctest --with-coverage --cover-package=openquake.baselib --cover-package=openquake.risklib --cover-package=openquake.commonlib --with-xunit"
+        scp "$lxc_ip:$GEM_GIT_PACKAGE/nosetests.xml" .
+    else
+        if [ -d $HOME/fake-data/$GEM_GIT_PACKAGE ]; then
+            cp $HOME/fake-data/$GEM_GIT_PACKAGE/* .
+        fi
+    fi
     trap ERR
 
     return
 }
 
 _pkgtest_innervm_run () {
-    echo "NO PACKAGE TEST ENABLED"
-    return 0
-
     local lxc_ip="$1"
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
+    ssh $lxc_ip "rm -f ssh.log"
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get -y upgrade"
     gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
@@ -236,7 +232,44 @@ _pkgtest_innervm_run () {
         build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
         build-deb/Packages* build-deb/Sources*  build-deb/Release* $lxc_ip:repo/${GEM_DEB_PACKAGE}
     ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/${GEM_DEB_PACKAGE} ./\""
+
+    if [ -f _jenkins_deps_info ]; then
+        source _jenkins_deps_info
+    fi
+
+    old_ifs="$IFS"
+    IFS=" $NL"
+    for dep in $GEM_GIT_DEPS; do
+        var_pfx="$(dep2var "$dep")"
+        var_repo="${var_pfx}_REPO"
+        var_branch="${var_pfx}_BRANCH"
+        if [ "${!var_repo}" != "" ]; then
+            repo="${!var_repo}"
+        else
+            repo="$GEM_GIT_REPO"
+        fi
+        if [ "${!var_branch}" != "" ]; then
+            branch="${!var_branch}"
+        else
+            branch="master"
+        fi
+
+        if [ "$repo" = "$GEM_GIT_REPO" -a "$branch" = "master" ]; then
+            GEM_DEB_SERIE="master"
+        else
+            GEM_DEB_SERIE="devel/$(echo "$repo" | sed 's@^.*://@@g;s@/@__@g;s/\./-/g')__${branch}"
+        fi
+        scp -r ${GEM_DEB_REPO}/${GEM_DEB_SERIE}/python-${dep} $lxc_ip:repo/
+        ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-${dep} ./\""
+    done
+    IFS="$old_ifs"
+
+    # add custom packages
+    scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
+    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ./\""
+
     ssh $lxc_ip "sudo apt-get update"
+    ssh $lxc_ip "sudo apt-get upgrade -y"
 
     # packaging related tests (install, remove, purge, install, reinstall)
     ssh $lxc_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
@@ -244,6 +277,10 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
     ssh $lxc_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}"
 
+    if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
+        # no demos currently available
+        :
+    fi
     trap ERR
 
     return
@@ -303,7 +340,6 @@ deps_list() {
 
     return 0
 }
-
 
 _lxc_name_and_ip_get()
 {

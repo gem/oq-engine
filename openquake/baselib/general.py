@@ -23,8 +23,8 @@ Utility functions of general interest.
 
 import os
 import sys
+import imp
 import math
-import inspect
 import tempfile
 import importlib
 import itertools
@@ -46,9 +46,9 @@ class WeightedSequence(collections.MutableSequence):
 
         :param ws_list:
             a sequence of :class:
-            `openquake.commonlib.general.WeightedSequence` instances
+            `openquake.baselib.general.WeightedSequence` instances
         :returns:
-            a `openquake.commonlib.general.WeightedSequence` instance
+            a `openquake.baselib.general.WeightedSequence` instance
         """
         return sum(ws_list, cls())
 
@@ -388,24 +388,6 @@ def import_all(module_or_package):
                         modname, exc.__class__.__name__, exc)
     return set(sys.modules) - already_imported
 
-# NB: this is a ugly hack; we are using the source code below in
-# the call `run_in_process(IMPORT_ALL.format(package))`, with the
-# goal of figuring out the dependencies of the given package. We want
-# to avoid a `from openquake.commonlib.general import import_all`,
-# otherwise the sys.modules would contain `openquake.commonlib`
-# and testing say that risklib is independent from commonlib would
-# be difficult (I tried removing `openquake.commonlib` from sys.modules
-# manually, but then one gets errors in the tests mocking modules).
-# the clean solution would be to move `import_all` in another module,
-# external to commonlib; however at the moment we do not have a place
-# where to put it; the plan is to introduce in the future a baselib
-# with the really basic functionality, but this has to be thought
-IMPORT_ALL = """\
-import os, sys, importlib, subprocess\n
-%s
-print import_all('{}')
-""" % inspect.getsource(import_all)
-
 
 def assert_independent(package, *packages):
     """
@@ -425,11 +407,32 @@ def assert_independent(package, *packages):
     CodeDependencyError: openquake.risklib.tests depends on openquake.risklib
     """
     assert packages, 'At least one package must be specified'
-    imported_modules = run_in_process(IMPORT_ALL.format(package))
+    import_package = 'from openquake.baselib.general import import_all\n' \
+                     'print import_all("%s")' % package
+    imported_modules = run_in_process(import_package)
     for mod in imported_modules:
         for pkg in packages:
             if mod.startswith(pkg):
                 raise CodeDependencyError('%s depends on %s' % (package, pkg))
+
+
+def search_module(module, syspath=sys.path):
+    """
+    Given a module name (possibly with dots) returns the corresponding
+    filepath, or None, if the module cannot be found.
+
+    :param module: (dotted) name of the Python module to look for
+    :param syspath: a list of directories to search (default sys.path)
+    """
+    lst = module.split(".")
+    pkg, submodule = lst[0], ".".join(lst[1:])
+    try:
+        fileobj, filepath, descr = imp.find_module(pkg, syspath)
+    except ImportError:
+        return
+    if submodule:  # recursive search
+        return search_module(submodule, [filepath])
+    return filepath
 
 
 class CallableDict(collections.OrderedDict):

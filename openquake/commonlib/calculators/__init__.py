@@ -19,7 +19,7 @@
 import os
 import operator
 
-from openquake.commonlib.general import import_all, CallableDict
+from openquake.baselib.general import import_all, CallableDict
 
 # define a `calculators` dictionary
 calculators = CallableDict(operator.attrgetter('calculation_mode'))

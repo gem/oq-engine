@@ -52,7 +52,7 @@ setup(
     description="oq-risklib is a library for performing seismic risk analysis",
     long_description=__doc__,
     url=url,
-    packages=find_packages(exclude=[]),
+    packages=find_packages(),
     install_requires=[
         'numpy',
         'scipy'

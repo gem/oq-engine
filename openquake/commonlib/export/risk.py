@@ -19,7 +19,7 @@
 import os
 import csv
 
-from openquake.commonlib.general import AccumDict
+from openquake.baselib.general import AccumDict
 from openquake.commonlib.export import export
 from openquake.commonlib import risk_writers
 

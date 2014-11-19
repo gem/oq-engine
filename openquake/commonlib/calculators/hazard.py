@@ -23,7 +23,7 @@ import numpy
 
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.commonlib import readinput, parallel
-from openquake.commonlib.general import AccumDict
+from openquake.baselib.general import AccumDict
 
 from openquake.commonlib.calculators import calculators, base, calc
 from openquake.commonlib.export import export

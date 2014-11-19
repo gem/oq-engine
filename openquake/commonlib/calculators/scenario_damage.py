@@ -23,7 +23,7 @@ import collections
 import numpy
 
 from openquake.risklib import scientific
-from openquake.commonlib.general import AccumDict
+from openquake.baselib.general import AccumDict
 from openquake.commonlib.calculators import base, calc, calculators
 from openquake.commonlib.export import export
 
