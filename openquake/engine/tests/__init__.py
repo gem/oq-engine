@@ -19,7 +19,7 @@
 # enabling logging for the tests; to see it, use nosetest --nologcapture
 
 import logging
-from openquake.commonlib.general import assert_independent
+from openquake.baselib.general import assert_independent
 
 logging.basicConfig(level=logging.INFO)
 
