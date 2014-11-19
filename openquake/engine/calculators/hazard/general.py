@@ -34,8 +34,8 @@ from openquake.hazardlib.imt import from_string
 from openquake.engine.db import models
 from django.db import transaction
 
-from openquake.commonlib import logictree, readinput, \
-    risk_parsers, general
+from openquake.baselib import general
+from openquake.commonlib import logictree, readinput, risk_parsers
 from openquake.commonlib.readinput import (
     get_site_collection, get_site_model, get_imtls)
 
