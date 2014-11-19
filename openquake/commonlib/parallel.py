@@ -396,12 +396,7 @@ class PerformanceMonitor(object):
         self.pid = pid
         self.monitor_csv = monitor_csv
         if pid:
-            # NB: this logic is for the sake of the engine; we may think
-            # about removing it since we are very rarely interested
-            # in the memory occupation in postgres and it can be treated
-            # as a special case, if really needed
             self._proc = psutil.Process(pid)
-            self.pid_str = str(pid)
         else:
             self._proc = None
 
@@ -431,7 +426,6 @@ class PerformanceMonitor(object):
         if self._proc is None:
             pid = os.getpid()
             self.pid = pid
-            self.pid_str = str(pid)
             self._proc = psutil.Process(pid)
         self.duration = None  # seconds
         self.mem = None  # bytes
@@ -452,7 +446,7 @@ class PerformanceMonitor(object):
         "Save the results: to be overridden in subclasses"
         time_sec = str(self.duration)
         memory_mb = str(self.mem / 1024. / 1024.)
-        self.write([self.operation, self.pid_str, time_sec, memory_mb])
+        self.write([self.operation, str(self.pid), time_sec, memory_mb])
 
     def __call__(self, operation):
         """
