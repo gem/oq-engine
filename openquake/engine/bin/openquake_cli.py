@@ -190,10 +190,8 @@ def set_up_arg_parser():
         '--exports', action="store",
         default='',
         help=(
-            'Use with --run-hazard and --run-risk to automatically export '
-            'all calculation results to the specified format. This is '
-            'optional. If not specified, nothing will be exported; results '
-            'will only be stored in the database.'))
+            'Comma-separated string specifing the export formats, in order '
+            'of priority'), metavar='EXPORT_FORMATS')
     export_grp.add_argument(
         '--export-output',
         '--eo',
