@@ -442,25 +442,27 @@ def job_from_file(cfg_file_path, username, log_level='info', exports='',
     job = prepare_job(user_name=username, log_level=log_level)
     models.JobStats.objects.create(oq_job=job)
 
-    # read calculation params and create the calculation profile
     with logs.handle(job, log_level):
-        oqparam = readinput.get_oqparam(cfg_file_path, calculators)
+        # read calculation params and create the calculation profile
+        params = readinput.get_params(cfg_file_path)
+
+        if haz_job:  # for risk calculations
+            check_hazard_risk_consistency(haz_job, params['calculation_mode'])
+            if haz_job.user_name != username:
+                logs.LOG.warn(
+                    'You are using a hazard calculation ran by %s',
+                    haz_job.user_name)
+            if hazard_output_id and params.get('quantile_loss_curves'):
+                logs.LOG.warn(
+                    'quantile_loss_curves is on, but you passed a single '
+                    'hazard output: the statistics will not be computed')
+
+        # build and validate an OqParam object
+        oqparam = readinput.get_oqparam(params, calculators)
         oqparam.hazard_calculation_id = \
             haz_job.id if haz_job and not hazard_output_id else None
         oqparam.hazard_output_id = hazard_output_id
         vars(oqparam).update(extras)
-
-    if haz_job:  # for risk calculations
-        check_hazard_risk_consistency(haz_job, oqparam.calculation_mode)
-        if haz_job.user_name != username:
-            logs.LOG.warn(
-                'You are using a hazard calculation ran by %s',
-                haz_job.user_name)
-        if oqparam.hazard_output_id and getattr(
-                oqparam, 'quantile_loss_curves', False):
-            logs.LOG.warn(
-                'quantile_loss_curves is on, but you passed a single hazard '
-                'output: the statistics will not be computed')
 
     params = vars(oqparam).copy()
     if 'quantile_loss_curves' not in params:
