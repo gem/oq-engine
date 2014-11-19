@@ -12,7 +12,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.test.client import RequestFactory
 from django.utils import unittest
 
-from openquake.commonlib.general import writetmp
+from openquake.baselib.general import writetmp
 from openquake import engine
 from openquake.engine.utils.tasks import oqtask
 from openquake.server import views, executor, tasks
