@@ -24,7 +24,7 @@ from celery.result import ResultSet
 from celery.app import current_app
 from celery.task import task
 
-from openquake.commonlib.general import split_in_blocks, AccumDict
+from openquake.baselib.general import split_in_blocks, AccumDict
 from openquake.commonlib.parallel import \
     TaskManager, safely_call, check_mem_usage, pickle_sequence, no_distribute
 from openquake.engine import logs
