@@ -623,7 +623,7 @@ def get_sitecol_assets(oqparam, exposure):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    : returns:
+    :returns:
         two sequences of the same length: the site collection and an
         array with the assets per each site, collected by taxonomy
     """
