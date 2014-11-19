@@ -23,8 +23,8 @@ Utility functions of general interest.
 
 import os
 import sys
+import imp
 import math
-import inspect
 import tempfile
 import importlib
 import itertools
@@ -414,6 +414,25 @@ def assert_independent(package, *packages):
         for pkg in packages:
             if mod.startswith(pkg):
                 raise CodeDependencyError('%s depends on %s' % (package, pkg))
+
+
+def search_module(module, syspath=sys.path):
+    """
+    Given a module name (possibly with dots) returns the corresponding
+    filepath, or None, if the module cannot be found.
+
+    :param module: (dotted) name of the Python module to look for
+    :param syspath: a list of directories to search (default sys.path)
+    """
+    lst = module.split(".")
+    pkg, submodule = lst[0], ".".join(lst[1:])
+    try:
+        fileobj, filepath, descr = imp.find_module(pkg, syspath)
+    except ImportError:
+        return
+    if submodule:  # recursive search
+        return search_module(submodule, [filepath])
+    return filepath
 
 
 class CallableDict(collections.OrderedDict):
