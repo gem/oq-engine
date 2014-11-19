@@ -54,13 +54,13 @@ def scenario_damage(workflow, getter, outputdict, params, monitor):
 
     # and no output containers
     assert len(outputdict) == 0, outputdict
-    with monitor.copy('computing risk'):
+    with monitor('computing risk'):
         assets, fractions = workflow(
             'damage', getter.assets, getter.get_data(), None)
         aggfractions = sum(fractions[i] * asset.number_of_units
                            for i, asset in enumerate(assets))
 
-    with monitor.copy('saving damage per assets'):
+    with monitor('saving damage per assets'):
         writers.damage_distribution(
             getter.assets, fractions, params.damage_state_ids)
 
