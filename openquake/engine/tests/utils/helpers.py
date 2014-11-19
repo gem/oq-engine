@@ -40,7 +40,7 @@ from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.commonlib.general import writetmp as touch
+from openquake.baselib.general import writetmp as touch
 from openquake.commonlib import readinput
 
 from openquake.engine.db import models
