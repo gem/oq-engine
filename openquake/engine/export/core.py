@@ -21,7 +21,7 @@ file formats."""
 import os
 from openquake.engine.db import models
 from openquake.engine.logs import LOG
-from openquake.commonlib.general import CallableDict
+from openquake.baselib.general import CallableDict
 
 export_output = CallableDict()
 
