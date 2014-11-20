@@ -277,7 +277,7 @@ def get_source_models(oqparam):
         an iterator over :class:`openquake.commonlib.readinput.SourceModel`
         tuples
     """
-    source_model_lt = logictree.SourceModelLogicTree.from_hc(oqparam)
+    source_model_lt = get_source_model_lt(oqparam)
     converter = source.SourceConverter(
         oqparam.investigation_time,
         oqparam.rupture_mesh_spacing,
