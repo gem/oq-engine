@@ -418,7 +418,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         hc = self.hc
         rnd = random.Random()
         rnd.seed(hc.random_seed)
-        for src in self.all_sources:
+        for src in self.composite_model.sources:
             src.seed = rnd.randint(0, models.MAX_SINT_32)
         for i, trt_model in enumerate(models.TrtModel.objects.filter(
                 lt_model__hazard_calculation=self.job), 1):
