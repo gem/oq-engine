@@ -20,7 +20,7 @@ Logic tree parser, verifier and processor. See specs at
 https://blueprints.launchpad.net/openquake-old/+spec/openquake-logic-tree-module
 
 A logic tree object must be iterable and yielding realizations, i.e. objects
-with attributes `value`, `weight` and `lt_path`.
+with attributes `value`, `weight`, `lt_path` and `ordinal`.
 """
 
 import abc
