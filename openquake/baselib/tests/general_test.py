@@ -24,12 +24,12 @@ import unittest
 from operator import attrgetter
 from collections import namedtuple
 
-from openquake.commonlib.general import (
-    block_splitter, split_in_blocks, assert_independent)
+from openquake.baselib.general import (
+    block_splitter, split_in_blocks, assert_independent, search_module)
 
 
 class BlockSplitterTestCase(unittest.TestCase):
-    """Tests for :function:`openquake.commonlib.general.block_splitter`."""
+    """Tests for :function:`openquake.baselib.general.block_splitter`."""
 
     DATA = range(10)
 
@@ -126,3 +126,17 @@ class BlockSplitterTestCase(unittest.TestCase):
 class CodeDependenciesTestCase(unittest.TestCase):
     def test(self):
         assert_independent('openquake.commonlib', 'openquake.engine')
+
+
+class SearchModuleTestCase(unittest.TestCase):
+    def test_existing_module_simple(self):
+        self.assertIsNotNone(search_module('os'))
+
+    def test_non_existing_module_simple(self):
+        self.assertIsNone(search_module('do_not_exist'))
+
+    def test_non_existing_module_in_package(self):
+        self.assertIsNone(search_module('openquake.do_not_exist'))
+
+    def test_existing_module_in_package(self):
+        self.assertIsNotNone(search_module('openquake.baselib.general'))

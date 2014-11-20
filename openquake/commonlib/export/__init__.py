@@ -16,7 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.commonlib.general import import_all, CallableDict
+from openquake.baselib.general import import_all, CallableDict
 
 export = CallableDict()
 

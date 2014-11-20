@@ -23,11 +23,12 @@ import collections
 import numpy
 from scipy import interpolate
 
+from openquake.baselib.general import CallableDict
 from openquake.risklib import calculators, utils, scientific
 
 Output = collections.namedtuple('Output', 'hid weight loss_type output')
 
-registry = utils.Register()
+registry = CallableDict()
 
 
 class Asset(object):

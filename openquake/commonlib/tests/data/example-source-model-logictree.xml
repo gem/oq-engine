@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+
+    <logicTree logicTreeID="lt1">
+        <logicTreeBranchingLevel branchingLevelID="bl1">
+            <logicTreeBranchSet uncertaintyType="sourceModel" branchSetID="bs1">
+                <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>example-source-model.xml</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+        <logicTreeBranchingLevel branchingLevelID="bl2">
+            <logicTreeBranchSet uncertaintyType="maxMagGRRelative" branchSetID="bs2">
+                <logicTreeBranch branchID="b3">
+                    <uncertaintyModel>0.2</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b4">
+                    <uncertaintyModel>0.0</uncertaintyModel>
+                    <uncertaintyWeight>0.6</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b5">
+                    <uncertaintyModel>-0.2</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+        <logicTreeBranchingLevel branchingLevelID="bl3">
+            <logicTreeBranchSet uncertaintyType="bGRRelative" branchSetID="bs3">
+                <logicTreeBranch branchID="b6">
+                    <uncertaintyModel>0.1</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b7">
+                    <uncertaintyModel>0.0</uncertaintyModel>
+                    <uncertaintyWeight>0.6</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b8">
+                    <uncertaintyModel>-0.1</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+    </logicTree>
+</nrml>

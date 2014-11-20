@@ -25,7 +25,7 @@ import numpy
 
 from openquake.hazardlib.calc import gmf, filters
 from openquake.hazardlib.site import SiteCollection
-from openquake.commonlib.general import AccumDict
+from openquake.baselib.general import AccumDict
 from openquake.commonlib.readinput import \
     get_gsim, get_rupture, get_correl_model, get_imts
 

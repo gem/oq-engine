@@ -22,7 +22,8 @@ import collections
 
 import numpy
 from openquake.risklib import scientific
-from openquake.commonlib import riskmodels, general
+from openquake.baselib import general
+from openquake.commonlib import riskmodels
 from openquake.commonlib.calculators import calculators, base, calc
 from openquake.commonlib.export import export
 

@@ -26,7 +26,7 @@ from openquake.hazardlib.calc.hazard_curve import hazard_curves
 from openquake.hazardlib.calc.filters import source_site_distance_filter, \
     rupture_site_distance_filter
 from openquake.commonlib import readinput, parallel
-from openquake.commonlib.general import AccumDict
+from openquake.baselib.general import AccumDict
 
 from openquake.commonlib.calculators import calculators, base, calc
 from openquake.commonlib.export import export

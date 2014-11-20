@@ -19,7 +19,8 @@
 import logging
 
 import numpy
-from openquake.commonlib import readinput, general
+from openquake.baselib import general
+from openquake.commonlib import readinput
 from openquake.commonlib.calculators import calculators, base
 
 

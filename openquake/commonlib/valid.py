@@ -28,7 +28,7 @@ import collections
 from decimal import Decimal
 
 from openquake.hazardlib import imt, scalerel, gsim
-from openquake.commonlib.general import distinct
+from openquake.baselib.general import distinct
 
 SCALEREL = scalerel.get_available_magnitude_scalerel()
 

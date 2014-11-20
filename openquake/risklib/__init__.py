@@ -15,11 +15,18 @@
 # License along with OpenQuake Risklib. If not, see
 # <http://www.gnu.org/licenses/>.
 
-__version__ = '0.4.0'
-
-
+import os
+import sys
 from openquake.risklib.scientific import (
     VulnerabilityFunction, DegenerateDistribution, classical)
-
+from openquake.baselib.general import search_module
 
 __all__ = ["VulnerabilityFunction", "DegenerateDistribution", "classical"]
+
+__version__ = '0.5.0'
+
+path = search_module('openquake.commonlib.general')
+if path:
+    sys.exit('Found an obsolete version of commonlib; '
+             'please remove %s and/or fix your PYTHONPATH'
+             % os.path.dirname(path))

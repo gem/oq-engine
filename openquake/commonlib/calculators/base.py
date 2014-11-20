@@ -24,7 +24,8 @@ import numpy
 
 from openquake.hazardlib.geo import geodetic
 
-from openquake.commonlib import readinput, general
+from openquake.baselib import general
+from openquake.commonlib import readinput
 from openquake.commonlib.parallel import apply_reduce, DummyMonitor
 
 get_taxonomy = operator.attrgetter('taxonomy')
@@ -96,14 +97,14 @@ class BaseHazardCalculator(BaseCalculator):
         if 'exposure' in self.oqparam.inputs:
             logging.info('Reading the exposure')
             exposure = readinput.get_exposure(self.oqparam)
-            self.sitecol, _assets = readinput.get_sitecol_assets(
+            self.sitecol, self.assets = readinput.get_sitecol_assets(
                 self.oqparam, exposure)
         else:
             logging.info('Reading the site collection')
             self.sitecol = readinput.get_site_collection(self.oqparam)
-        logging.info('Reading the effective source models')
+        logging.info('Reading the composite source models')
         self.source_models = list(
-            readinput.get_effective_source_models(self.oqparam, self.sitecol))
+            readinput.get_composite_source_models(self.oqparam, self.sitecol))
         self.all_sources = [src for src_model in self.source_models
                             for trt_model in src_model.trt_models
                             for src in trt_model]

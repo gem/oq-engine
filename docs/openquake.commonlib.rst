@@ -28,7 +28,7 @@ commonlib Package
 :mod:`general` Module
 ---------------------
 
-.. automodule:: openquake.commonlib.general
+.. automodule:: openquake.baselib.general
     :members:
     :undoc-members:
     :show-inheritance:

@@ -19,12 +19,15 @@ import logging
 import operator
 import collections
 from itertools import izip
+import random
+from lxml import etree
 
+from openquake.baselib.general import AccumDict
 from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.commonlib.node import read_nodes, context, striptag
-from openquake.commonlib import valid
-from openquake.commonlib.nrml import nodefactory
+from openquake.commonlib import valid, logictree
+from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
 from openquake.commonlib import parallel
 
 # this must stay here for the nrml_converters: don't remove it!
@@ -735,3 +738,122 @@ def filter_sources(sources, sitecol, maxdist):
         # few sources and sites, filter sequentially on a single core
         sources = _filter_sources(sources, sitecol, maxdist)
     return sorted(sources, key=operator.attrgetter('source_id'))
+
+
+SourceModel = collections.namedtuple(
+    'SourceModel', 'name weight path trt_models gsim_lt ordinal')
+
+
+class CompositeSourceModel(object):
+    """
+    :param source_model_lt:
+        a :class:`openquake.commonlib.readinput.SourceModelLogicTree` instance
+    :param source_models:
+        a list of :class:`openquake.commonlib.readinput.SourceModel` tuples
+    """
+    def __init__(self, source_model_lt, source_models):
+        self.source_model_lt = source_model_lt
+        self.source_models = list(source_models)
+        self.smdict = {sm.path: sm for sm in source_models}
+        self.assoc = AccumDict()
+
+    @property
+    def trt_models(self):
+        for sm in self.source_models:
+            for trt_model in sm.trt_models:
+                yield trt_model
+
+    @property
+    def sources(self):
+        """
+        Yield the sources contained in the internal source models
+        """
+        for trt_model in self.trt_models:
+            for src in trt_model:
+                yield src
+
+    def __getitem__(self, path):
+        return self.smdict[path]
+
+    def __iter__(self):
+        return iter(self.source_models)
+
+    def __len__(self):
+        return len(self.source_models)
+
+    def get_realizations(self, num_samples, random_seed):
+        """
+        This function works either in random sampling mode (when lt_realization
+        models get the random seed value) or in enumeration mode (when weight
+        values are populated). In both cases we record the logic tree paths
+        for both trees in the `lt_realization` record, as well as ordinal
+        number of the realization (zero-based).
+        """
+        all_rlzs = []
+        for idx, (sm, weight, sm_lt_path, _) in enumerate(
+                self.source_model_lt):
+            try:
+                lt_model = self.smdict[sm_lt_path]
+            except KeyError:
+                # this happens if there are no sources for the source
+                # model at the given path
+                logging.warn('No sources for sm_lt_path %s', sm_lt_path)
+                continue
+            if num_samples:  # sampling, pick just one gsim realization
+                rnd = random.Random(random_seed + idx)
+                rlzs = [logictree.sample_one(lt_model.gsim_lt, rnd)]
+            else:
+                rlzs = list(lt_model.gsim_lt)  # full enumeration
+            logging.info('Creating %d GMPE realization(s) for model %s, %s',
+                         len(rlzs), lt_model.name, lt_model.path)
+            all_rlzs.extend(self._get_realizations(idx, lt_model, rlzs))
+
+        num_ind_rlzs = sum(sm.gsim_lt.get_num_paths()
+                           for sm in self.smdict.itervalues())
+        if num_samples > num_ind_rlzs:
+            logging.warn("""
+The number of independent realizations is %d but you are using %d samplings.
+That means that some GMPEs will be sampled more than once, resulting in
+duplicated data and redundant computation. You should switch to full
+enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
+""", num_ind_rlzs, num_samples)
+        return all_rlzs
+
+    def _get_realizations(self, idx, lt_model, realizations):
+        # create the realizations for the given lt source model
+        trt_models = [tm for tm in lt_model.trt_models if tm.num_ruptures]
+        if not trt_models:
+            return
+        rlz_ordinal = idx * len(realizations)
+        for gsim_by_trt, weight, gsim_path, _ in realizations:
+            if lt_model.weight is not None and weight is not None:
+                weight = lt_model.weight * weight
+            else:
+                weight = None
+            rlz = logictree.LtRealization(
+                gsim_by_trt, weight, (lt_model.path, gsim_path), rlz_ordinal)
+            rlz_ordinal += 1
+            for trt_model in trt_models:
+                trt = trt_model.trt
+                self.assoc[rlz_ordinal] = (trt_model.id, gsim_by_trt[trt])
+                trt_model.gsims = lt_model.gsim_lt.values[trt]
+            yield rlz
+
+
+def _collect_source_model_paths(smlt):
+    """
+    Given a path to a source model logic tree or a file-like, collect all of
+    the soft-linked path names to the source models it contains and return them
+    as a uniquified list (no duplicates).
+    """
+    src_paths = []
+    tree = etree.parse(smlt)
+    for branch_set in tree.xpath('//nrml:logicTreeBranchSet',
+                                 namespaces=PARSE_NS_MAP):
+
+        if branch_set.get('uncertaintyType') == 'sourceModel':
+            for branch in branch_set.xpath(
+                    './nrml:logicTreeBranch/nrml:uncertaintyModel',
+                    namespaces=PARSE_NS_MAP):
+                src_paths.append(branch.text)
+    return sorted(set(src_paths))
