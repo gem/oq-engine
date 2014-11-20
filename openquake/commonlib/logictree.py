@@ -678,17 +678,6 @@ class SourceModelLogicTree(BaseLogicTree):
     SOURCE_TYPES = ('point', 'area', 'complexFault', 'simpleFault',
                     'characteristicFault')
 
-    @classmethod
-    def from_hc(cls, hc):
-        """
-        Returns a SourceModelLogicTree instance from a HazardCalculation
-        """
-        fname = hc.inputs['source_model_logic_tree']
-        content = file(fname).read()
-        return cls(
-            content, hc.base_path, fname, validate=False,
-            seed=hc.random_seed, num_samples=hc.number_of_logic_tree_samples)
-
     def __init__(self, *args, **kwargs):
         self.source_ids = set()
         self.tectonic_region_types = set()

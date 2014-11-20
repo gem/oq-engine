@@ -97,7 +97,7 @@ class BaseHazardCalculator(BaseCalculator):
         if 'exposure' in self.oqparam.inputs:
             logging.info('Reading the exposure')
             exposure = readinput.get_exposure(self.oqparam)
-            self.sitecol, _assets = readinput.get_sitecol_assets(
+            self.sitecol, self.assets = readinput.get_sitecol_assets(
                 self.oqparam, exposure)
         else:
             logging.info('Reading the site collection')
