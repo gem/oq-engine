@@ -292,7 +292,7 @@ class BaseHazardCalculator(base.Calculator):
             source_models.append(sm)
 
         # to be used later on
-        self.source_model_lt = logictree.SourceModelLogicTree.from_hc(self.hc)
+        self.source_model_lt = readinput.get_source_model_lt(self.hc)
         return source_models
 
     @EnginePerformanceMonitor.monitor
