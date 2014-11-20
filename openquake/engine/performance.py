@@ -65,7 +65,8 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         Return a copy of the monitor usable for a different operation
         in the same task.
         """
-        return self.__class__(operation, self.job_id, self.task, self.tracing)
+        return self.__class__(operation, self.job_id, self.task,
+                              self.tracing, self.flush)
 
     def on_exit(self):
         """
@@ -98,26 +99,6 @@ class EnginePerformanceMonitor(PerformanceMonitor):
 
 ## makes sure the performance results are flushed in the db at the end
 atexit.register(EnginePerformanceMonitor.cache.flush)
-
-
-class DummyMonitor(PerformanceMonitor):
-    """
-    This class makes it easy to disable the monitoring
-    in client code. Disabling the monitor can improve the performance.
-    """
-    def __init__(self, operation='', job_id=0, *args, **kw):
-        self.operation = operation
-        self.job_id = job_id
-        self._procs = []
-
-    def copy(self, operation):
-        return self.__class__(operation, self.job_id)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, etype, exc, tb):
-        pass
 
 
 class LightMonitor(object):
