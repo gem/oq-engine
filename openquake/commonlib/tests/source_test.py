@@ -671,12 +671,25 @@ class RuptureConverterTestCase(unittest.TestCase):
         self.assertIn('line 7', str(ctx.exception))
 
 
-class RealizationsTestCase(unittest.TestCase):
-    def test(self):
+class CompositeSourceModelTestCase(unittest.TestCase):
+    def test_one_rlz(self):
         oqparam = tests.get_oqparam('classical_job.ini')
+        # the example has number_of_logic_tree_samples = 1
         sitecol = readinput.get_site_collection(oqparam)
         csm = readinput.get_composite_source_model(oqparam, sitecol)
-        for rlz in csm.get_realizations(
-                oqparam.number_of_logic_tree_samples,
-                oqparam.random_seed):
-            print rlz
+        [rlz] = csm.get_realizations(
+            oqparam.number_of_logic_tree_samples, oqparam.random_seed)
+        gsim_by_trt = {'Subduction Interface': 'SadighEtAl1997',
+                       'Active Shallow Crust': 'ChiouYoungs2008'}
+        self.assertEqual(rlz, (gsim_by_trt, None,
+                               (('b1', 'b5', 'b8'), ('b2', 'b3')), 0))
+
+    def test_many_rlzs(self):
+        oqparam = tests.get_oqparam('classical_job.ini')
+        oqparam.number_of_logic_tree_samples = 0
+        sitecol = readinput.get_site_collection(oqparam)
+        csm = readinput.get_composite_source_model(oqparam, sitecol)
+        self.assertEqual(len(csm), 9)  # the smlt example has 1 x 3 x 3 paths
+        rlzs = csm.get_realizations(
+            oqparam.number_of_logic_tree_samples, oqparam.random_seed)
+        self.assertEqual(len(rlzs), 18)  # the gsimlt has 1 x 2 paths
