@@ -772,6 +772,9 @@ class CompositeSourceModel(object):
             for src in trt_model:
                 yield src
 
+    def __getitem__(self, path):
+        return self.smdict[path]
+
     def __iter__(self):
         return iter(self.source_models)
 
@@ -787,7 +790,6 @@ class CompositeSourceModel(object):
         number of the realization (zero-based).
         """
         all_rlzs = []
-        import pdb; pdb.set_trace()
         for idx, (sm, weight, sm_lt_path) in enumerate(self.source_model_lt):
             try:
                 lt_model = self.smdict[sm_lt_path]
@@ -822,14 +824,13 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
         if not trt_models:
             return
         rlz_ordinal = idx * len(realizations)
-        for gsim_by_trt, weight, lt_path in realizations:
+        for gsim_by_trt, weight, gsim_path in realizations:
             if lt_model.weight is not None and weight is not None:
                 weight = lt_model.weight * weight
             else:
                 weight = None
             rlz = logictree.LtRealization(
-                lt_model=lt_model, gsim_lt_path=lt_path,
-                weight=weight, ordinal=rlz_ordinal)
+                lt_model, weight, (lt_model.path, gsim_path), rlz_ordinal)
             rlz_ordinal += 1
             for trt_model in trt_models:
                 trt = trt_model.tectonic_region_type

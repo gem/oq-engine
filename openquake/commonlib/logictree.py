@@ -34,7 +34,6 @@ from collections import namedtuple
 from decimal import Decimal
 from lxml import etree
 
-from openquake.baselib.general import distinct
 from openquake.commonlib import nrml
 from openquake.commonlib.node import node_from_xml
 
