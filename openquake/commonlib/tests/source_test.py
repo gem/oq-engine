@@ -27,7 +27,7 @@ from openquake.hazardlib import scalerel
 from openquake.hazardlib import source
 from openquake.hazardlib.tom import PoissonTOM
 
-from openquake.commonlib import nrml_examples
+from openquake.commonlib import tests, nrml_examples, readinput
 from openquake.commonlib import source as s
 from openquake.commonlib.nrml import nodefactory
 from openquake.commonlib.node import read_nodes
@@ -669,3 +669,14 @@ class RuptureConverterTestCase(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             read_nodes(rup_file, filter_ruptures, ValidNode).next()
         self.assertIn('line 7', str(ctx.exception))
+
+
+class RealizationsTestCase(unittest.TestCase):
+    def test(self):
+        oqparam = tests.get_oqparam('classical_job.ini')
+        sitecol = readinput.get_site_collection(oqparam)
+        csm = readinput.get_composite_source_model(oqparam, sitecol)
+        for rlz in csm.get_realizations(
+                oqparam.number_of_logic_tree_samples,
+                oqparam.random_seed):
+            print rlz
