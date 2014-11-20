@@ -158,7 +158,7 @@ def import_gmf_scenario(fileobj):
     t0 = time.time()
     fname = fileobj.name
 
-    job = engine.prepare_job()
+    job = engine.create_job()
 
     ses_coll, gmf_coll = create_ses_gmf(job, fname)
     imts, tags, rows = read_data(fileobj)
