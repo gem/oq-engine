@@ -42,53 +42,6 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         calc = core.ClassicalHazardCalculator(job)
         return job, calc
 
-    def test_initialize_realizations_montecarlo(self):
-        # We need initialize sources first (read logic trees, parse sources,
-        # etc.)
-        self.calc.initialize_site_collection()
-        self.calc.initialize_sources()
-
-        # No realizations yet:
-        ltrs = models.LtRealization.objects.filter(
-            lt_model__hazard_calculation=self.job)
-        self.assertEqual(0, len(ltrs))
-
-        with mock.patch('openquake.engine.logs.LOG.warn') as warn:
-            self.calc.initialize_realizations()
-        # check that the warning about too many samples is printed
-        msg, num_rlzs, num_samples = warn.call_args[0]
-        self.assertEqual(num_rlzs, 1)
-        self.assertEqual(num_samples, 2)
-
-        # We expect 2 logic tree realizations
-        ltr1, ltr2 = models.LtRealization.objects.filter(
-            lt_model__hazard_calculation=self.job).order_by("id")
-
-        # Check each ltr contents, just to be thorough.
-        self.assertEqual(0, ltr1.ordinal)
-        self.assertEqual(['b1'], ltr1.sm_lt_path)
-        self.assertEqual(['b1'], ltr1.gsim_lt_path)
-
-        self.assertEqual(1, ltr2.ordinal)
-        self.assertEqual(['b1'], ltr2.sm_lt_path)
-        self.assertEqual(['b1'], ltr2.gsim_lt_path)
-
-    def test_initialize_realizations_enumeration(self):
-        self.calc.initialize_site_collection()
-        # enumeration is triggered by zero value used as number of realizations
-        self.calc.hc.number_of_logic_tree_samples = 0
-
-        self.calc.initialize_sources()
-        self.calc.initialize_realizations()
-
-        [ltr] = models.LtRealization.objects.filter(
-            lt_model__hazard_calculation=self.job)
-
-        # Check each ltr contents, just to be thorough.
-        self.assertEqual(0, ltr.ordinal)
-        self.assertEqual(['b1'], ltr.sm_lt_path)
-        self.assertEqual(['b1'], ltr.gsim_lt_path)
-
     @attr('slow')
     def test_complete_calculation_workflow(self):
         # Test the calculation workflow, from pre_execute through clean_up
