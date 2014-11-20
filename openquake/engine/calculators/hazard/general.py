@@ -335,60 +335,26 @@ class BaseHazardCalculator(base.Calculator):
         number of the realization (zero-based).
         """
         logs.LOG.progress("initializing realizations")
-        num_samples = self.hc.number_of_logic_tree_samples
-        gsim_lt_dict = {}  # gsim_lt per source model logic tree path
-        for idx, (sm, weight, sm_lt_path, _) in enumerate(
-                self.composite_model.source_model_lt):
-            try:
-                lt_model = models.LtSourceModel.objects.get(
-                    hazard_calculation=self.job, sm_lt_path=sm_lt_path)
-            except ObjectDoesNotExist:
-                # this happens if there are no sources for the source
-                # model at the given path
-                logs.LOG.warn('No sources for sm_lt_path %s', sm_lt_path)
+        cm = self.composite_model
+        for rlz in cm.get_realizations(
+                self.hc.number_of_logic_tree_samples,
+                self.hc.random_seed):
+            smlt_path, gsim_path = rlz.lt_path
+            lt_model = models.LtSourceModel.objects.get(
+                hazard_calculation=self.job, sm_lt_path=smlt_path)
+            trt_models = lt_model.trtmodel_set.filter(num_ruptures__gt=0)
+            if not trt_models:
                 continue
-            if not sm_lt_path in gsim_lt_dict:
-                gsim_lt_dict[sm_lt_path] = lt_model.make_gsim_lt()
-            gsim_lt = gsim_lt_dict[sm_lt_path]
-            if num_samples:  # sampling, pick just one gsim realization
-                rnd = random.Random(self.hc.random_seed + idx)
-                rlzs = [logictree.sample_one(gsim_lt, rnd)]
-            else:
-                rlzs = list(gsim_lt)  # full enumeration
-            logs.LOG.info('Creating %d GMPE realization(s) for model %s, %s',
-                          len(rlzs), lt_model.sm_name, lt_model.sm_lt_path)
-            self._initialize_realizations(idx, lt_model, rlzs, gsim_lt)
-        num_ind_rlzs = sum(gsim_lt.get_num_paths()
-                           for gsim_lt in gsim_lt_dict.itervalues())
-        if num_samples > num_ind_rlzs:
-            logs.LOG.warn("""
-The number of independent realizations is %d but you are using %d samplings.
-That means that some GMPEs will be sampled more than once, resulting in
-duplicated data and redundant computation. You should switch to full
-enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
-""", num_ind_rlzs, num_samples)
-
-    @transaction.commit_on_success(using='job_init')
-    def _initialize_realizations(self, idx, lt_model, realizations, gsim_lt):
-        # create the realizations for the given lt source model
-        trt_models = lt_model.trtmodel_set.filter(num_ruptures__gt=0)
-        if not trt_models:
-            return
-        rlz_ordinal = idx * len(realizations)
-        for gsim_by_trt, weight, lt_path, _ordinal in realizations:
-            if lt_model.weight is not None and weight is not None:
-                weight = lt_model.weight * weight
-            else:
-                weight = None
-            rlz = models.LtRealization.objects.create(
-                lt_model=lt_model, gsim_lt_path=lt_path,
-                weight=weight, ordinal=rlz_ordinal)
-            rlz_ordinal += 1
+            gsim_lt = cm[smlt_path].gsim_lt
+            lt_rlz = models.LtRealization.objects.create(
+                lt_model=lt_model, gsim_lt_path=gsim_path,
+                weight=rlz.weight, ordinal=rlz.ordinal)
+            gsim_by_trt = rlz.value
             for trt_model in trt_models:
                 trt = trt_model.tectonic_region_type
                 # populate the association table rlz <-> trt_model
                 models.AssocLtRlzTrtModel.objects.create(
-                    rlz=rlz, trt_model=trt_model, gsim=gsim_by_trt[trt])
+                    rlz=lt_rlz, trt_model=trt_model, gsim=gsim_by_trt[trt])
                 trt_model.gsims = gsim_lt.values[trt]
                 trt_model.save()
 
