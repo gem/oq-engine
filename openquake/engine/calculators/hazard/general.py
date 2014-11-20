@@ -148,7 +148,8 @@ class BaseHazardCalculator(base.Calculator):
         """
         self.acc = tasks.apply_reduce(
             self.core_calc_task,
-            (self.job.id, self.all_sources, self.site_collection),
+            (self.job.id, list(self.composite_model.sources),
+             self.site_collection),
             agg=self.agg_curves, acc=self.acc,
             weight=attrgetter('weight'), key=attrgetter('trt_model_id'))
 
@@ -206,9 +207,9 @@ class BaseHazardCalculator(base.Calculator):
         with transaction.commit_on_success(using='job_init'):
             self.initialize_site_collection()
         with transaction.commit_on_success(using='job_init'):
-            source_models = self.initialize_sources()
+            self.initialize_sources()
         info = readinput.get_job_info(
-            self.hc, source_models, self.site_collection)
+            self.hc, self.composite_model, self.site_collection)
         with transaction.commit_on_success(using='job_init'):
             models.JobInfo.objects.create(
                 oq_job=self.job,
@@ -219,10 +220,6 @@ class BaseHazardCalculator(base.Calculator):
                 input_weight=info['input_weight'],
                 output_weight=info['output_weight'])
         self.check_limits(info['input_weight'], info['output_weight'])
-
-        self.all_sources = [src for sm in source_models
-                            for trt_model in sm.trt_models
-                            for src in trt_model]
         self.imtls = self.hc.intensity_measure_types_and_levels
         if info['n_levels']:  # we can compute hazard curves
             self.zeros = numpy.array(
@@ -267,10 +264,9 @@ class BaseHazardCalculator(base.Calculator):
         trees. Save in the database LtSourceModel and TrtModel objects.
         """
         logs.LOG.progress("initializing sources")
-        source_models = []
-        for sm in readinput.get_effective_source_models(
-                self.hc, self.site_collection):
-
+        self.composite_model = readinput.get_composite_source_model(
+            self.hc, self.site_collection)
+        for sm in self.composite_model:
             # create an LtSourceModel for each distinct source model
             lt_model = models.LtSourceModel.objects.create(
                 hazard_calculation=self.job, sm_lt_path=sm.path,
@@ -288,12 +284,6 @@ class BaseHazardCalculator(base.Calculator):
                     gsims=trt_mod.gsims).id
                 for src in trt_mod:
                     src.trt_model_id = trt_id
-
-            source_models.append(sm)
-
-        # to be used later on
-        self.source_model_lt = readinput.get_source_model_lt(self.hc)
-        return source_models
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_model(self):
@@ -347,7 +337,8 @@ class BaseHazardCalculator(base.Calculator):
         logs.LOG.progress("initializing realizations")
         num_samples = self.hc.number_of_logic_tree_samples
         gsim_lt_dict = {}  # gsim_lt per source model logic tree path
-        for idx, (sm, weight, sm_lt_path) in enumerate(self.source_model_lt):
+        for idx, (sm, weight, sm_lt_path, _) in enumerate(
+                self.composite_model.source_model_lt):
             try:
                 lt_model = models.LtSourceModel.objects.get(
                     hazard_calculation=self.job, sm_lt_path=sm_lt_path)
@@ -384,7 +375,7 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
         if not trt_models:
             return
         rlz_ordinal = idx * len(realizations)
-        for gsim_by_trt, weight, lt_path in realizations:
+        for gsim_by_trt, weight, lt_path, _ordinal in realizations:
             if lt_model.weight is not None and weight is not None:
                 weight = lt_model.weight * weight
             else:
