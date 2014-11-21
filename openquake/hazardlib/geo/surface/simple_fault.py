@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2012-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -168,6 +168,54 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
             " the fault length and width."
         )
         return cls(mesh)
+
+    @classmethod
+    def get_fault_vertices_3d(cls, fault_trace, upper_seismogenic_depth,
+                              lower_seismogenic_depth, dip):
+        """
+        Get surface main vertexes.
+
+        Parameters are the same as for :meth:`from_fault_data`, excluding
+        mesh spacing.
+
+        :returns:
+            Coordinates of fault surface vertexes in Longitude, Latitude, and
+            Depth.
+            The order of vertexs is given clockwisely
+        """
+        # Similar to :meth:`from_fault_data`, we just don't resample edges
+        dip_tan = math.tan(math.radians(dip))
+        hdist_top = upper_seismogenic_depth / dip_tan
+        hdist_bottom = lower_seismogenic_depth / dip_tan
+
+        strike = fault_trace[0].azimuth(fault_trace[-1])
+        azimuth = (strike + 90.0) % 360
+
+        # Collect coordinates of vertices on the top and bottom edge
+        lons = []
+        lats = []
+        deps = []
+
+        t_lon = []
+        t_lat = []
+        t_dep = []
+
+        for point in fault_trace.points:
+            top_edge_point = point.point_at(hdist_top, 0, azimuth)
+            bottom_edge_point = point.point_at(hdist_bottom, 0, azimuth)
+
+            lons.append(top_edge_point.longitude)
+            lats.append(top_edge_point.latitude)
+            deps.append(upper_seismogenic_depth)
+            t_lon.append(bottom_edge_point.longitude)
+            t_lat.append(bottom_edge_point.latitude)
+            t_dep.append(lower_seismogenic_depth)
+
+        all_lons = numpy.array(lons + list(reversed(t_lon)), float)
+        all_lats = numpy.array(lats + list(reversed(t_lat)), float)
+        all_deps = numpy.array(deps + list(reversed(t_dep)), float)
+
+        return all_lons, all_lats, all_deps
 
     @classmethod
     def get_surface_vertexes(cls, fault_trace,

@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2012-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -19,6 +19,7 @@ types.
 """
 import re
 import operator
+import functools
 
 # NB: (MS) the management of the IMTs implemented here is horrible and will
 # be thrown away when we will need to introduce a new IMT.
@@ -40,9 +41,14 @@ def from_string(imt):
         period = float(match.group(1))
         return SA(period, DEFAULT_SA_DAMPING)
     else:
-        return globals()[imt](None, None)
+        try:
+            imt_class = globals()[imt]
+        except KeyError:
+            raise ValueError('Unknown IMT: %s' % imt)
+        return imt_class(None, None)
 
 
+@functools.total_ordering
 class _IMT(tuple):
     """
     Base class for intensity measure type.
@@ -63,6 +69,17 @@ class _IMT(tuple):
 
     def __new__(cls, sa_period=None, sa_damping=None):
         return tuple.__new__(cls, (cls.__name__, sa_period, sa_damping))
+
+    def __getnewargs__(self):
+        return tuple(getattr(self, field) for field in self._fields)
+
+    def __str__(self):
+        if self[0] == 'SA':
+            return 'SA(%s)' % self[1]
+        return self[0]
+
+    def __lt__(self, other):
+        return str(self) < str(other)
 
     def __repr__(self):
         return '%s(%s)' % (type(self).__name__,

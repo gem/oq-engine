@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2012-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -80,7 +80,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         self.dip = dip
         self.rake = rake
 
-        min_mag = self.mfd.get_min_mag()
+        min_mag, max_mag = self.mfd.get_min_max_mag()
         cols_rows = self._get_rupture_dimensions(float('inf'), float('inf'),
                                                  min_mag)
         if 1 in cols_rows:

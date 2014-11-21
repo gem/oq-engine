@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2012-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -27,7 +27,7 @@ the development of the  library by adding the most recent methodologies
 adopted by the seismological/seismic hazard communities. Comments,
 suggestions and criticisms from the community are always very welcome.
 
-Copyright (C) 2012-2013 GEM Foundation.
+Copyright (C) 2012-2014, GEM Foundation.
 """
 import re
 import sys

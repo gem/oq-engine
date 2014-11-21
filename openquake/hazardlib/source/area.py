@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2012-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -33,7 +33,7 @@ class AreaSource(PointSource):
         that defines source's area.
     :param area_discretization:
         Float number, polygon area discretization spacing in kilometers.
-        See :meth:`iter_ruptures`.
+        See :meth:`openquake.hazardlib.source.area.AreaSource.iter_ruptures`.
 
     Other parameters (except ``location``) are the same as for
     :class:`~openquake.hazardlib.source.point.PointSource`.

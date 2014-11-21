@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2012-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -29,7 +29,7 @@ class BaseIMTTestCase(unittest.TestCase):
         self.assertEqual(getattr(self.TestIMT, '__slots__'), ())
         self.assertFalse(hasattr(self.TestIMT(1, 2), '__dict__'))
         imt = self.TestIMT(bar=2, foo=1)
-        self.assertEqual(str(imt), 'TestIMT(foo=1, bar=2)')
+        self.assertEqual(str(imt), 'TestIMT')
 
     def test_equality(self):
         self.assertTrue(self.TestIMT(1, 1) == self.TestIMT(1, 1))
@@ -69,15 +69,22 @@ class BaseIMTTestCase(unittest.TestCase):
         self.assertNotEqual(hash(imt1), hash(imt2))
 
     def test_pickeable(self):
-        imt = imt_module.SA(0.2)
-        self.assertEqual(cPickle.loads(cPickle.dumps(imt)), imt)
+        for imt in (imt_module.PGA(), imt_module.SA(0.2)):
+            imt_pik = cPickle.dumps(imt, cPickle.HIGHEST_PROTOCOL)
+            self.assertEqual(cPickle.loads(imt_pik), imt)
+
+    def test_equivalent(self):
+        sa1 = imt_module.from_string('SA(0.1)')
+        sa2 = imt_module.from_string('SA(0.10)')
+        self.assertEqual(sa1, sa2)
+        self.assertEqual(set([sa1, sa2]), set([sa1]))
 
     def test_from_string(self):
         sa = imt_module.from_string('SA(0.1)')
         self.assertEqual(sa, ('SA', 0.1, 5.0))
         pga = imt_module.from_string('PGA')
         self.assertEqual(pga, ('PGA', None, None))
-        with self.assertRaises(KeyError):
+        with self.assertRaises(ValueError):
             imt_module.from_string('XXX')
 
 
@@ -89,3 +96,13 @@ class SATestCase(unittest.TestCase):
     def test_wrong_damping(self):
         self.assertRaises(ValueError, imt_module.SA, period=0.1, damping=0)
         self.assertRaises(ValueError, imt_module.SA, period=0.1, damping=-1)
+
+
+class ImtOrderingTestCase(unittest.TestCase):
+    def test_ordering_and_equality(self):
+        a = imt_module.from_string('SA(0.1)')
+        b = imt_module.from_string('SA(0.10)')
+        c = imt_module.from_string('SA(0.2)')
+        self.assertLess(a, c)
+        self.assertGreater(c, a)
+        self.assertEqual(a, b)

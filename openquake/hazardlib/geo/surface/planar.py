@@ -1,6 +1,6 @@
 # coding: utf-8
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2012-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -122,6 +122,40 @@ class PlanarSurface(BaseQuadrilateralSurface):
             raise ValueError("top and bottom edges have different lengths")
         if abs(xx[0] - xx[2]) > tolerance:
             raise ValueError("surface's angles are not right")
+
+    @classmethod
+    def from_corner_points(cls, mesh_spacing, top_left, top_right,
+                           bottom_right, bottom_left):
+        """
+        Create and return a planar surface from four corner points.
+
+        The azimuth of the line connecting the top left and the top right
+        corners define the surface strike, while the angle between the line
+        connecting the top left and bottom left corners and a line parallel
+        to the earth surface defines the surface dip.
+
+        :param mesh_spacing:
+            Distance between two subsequent points in the mesh representing
+            the planar surface, in km.
+        :param openquake.hazardlib.geo.point.Point top_left:
+            Upper left corner
+        :param openquake.hazardlib.geo.point.Point top_right:
+            Upper right corner
+        :param openquake.hazardlib.geo.point.Point bottom_right:
+            Lower right corner
+        :param openquake.hazardlib.geo.point.Point bottom_left:
+            Lower left corner
+        :returns:
+            An instance of :class:`PlanarSurface`.
+        """
+        strike = top_left.azimuth(top_right)
+
+        dist = top_left.distance(bottom_left)
+        vert_dist = bottom_left.depth - top_left.depth
+        dip = numpy.degrees(numpy.arcsin(vert_dist / dist))
+
+        return cls(mesh_spacing, strike, dip, top_left, top_right,
+                   bottom_right, bottom_left)
 
     def _init_plane(self):
         """

@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2012-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -104,8 +104,9 @@ class SimpleFaultSurfaceGetMeshTestCase(utils.SurfaceTestCase):
         p3 = Point(0.0190775080917, 0.0550503815182, 0.0)
         p4 = Point(0.03974514139, 0.0723925718856, 0.0)
 
-        fault = SimpleFaultSurface.from_fault_data(Line([p1, p2, p3, p4]),
-                2.12132034356, 4.2426406871192848, 45.0, 1.0)
+        fault = SimpleFaultSurface.from_fault_data(
+            Line([p1, p2, p3, p4]), 2.12132034356,
+            4.2426406871192848, 45.0, 1.0)
 
         self.assert_mesh_is(fault, test_data.TEST_2_MESH)
 
@@ -116,7 +117,7 @@ class SimpleFaultSurfaceGetMeshTestCase(utils.SurfaceTestCase):
         p4 = Point(0.03974514139, 0.0723925718856, 0.0)
 
         fault = SimpleFaultSurface.from_fault_data(Line([p1, p2, p3, p4]),
-                0.0, 4.0, 90.0, 1.0)
+                                                   0.0, 4.0, 90.0, 1.0)
 
         self.assert_mesh_is(fault, test_data.TEST_4_MESH)
 
@@ -125,8 +126,8 @@ class SimpleFaultSurfaceGetMeshTestCase(utils.SurfaceTestCase):
         p2 = Point(180.0, 0.0)
         p3 = Point(-179.9, 0.0)
 
-        fault = SimpleFaultSurface.from_fault_data(Line([p1, p2, p3]),
-                1.0, 6.0, 90.0, 1.0)
+        fault = SimpleFaultSurface.from_fault_data(Line([p1, p2, p3]), 1.0,
+                                                   6.0, 90.0, 1.0)
 
         self.assert_mesh_is(fault, test_data.TEST_5_MESH)
 
@@ -136,8 +137,8 @@ class SimpleFaultSurfaceGetStrikeTestCase(utils.SurfaceTestCase):
         p1 = Point(0.0, 0.0)
         p2 = Point(0.0635916966572, 0.0635916574897)
 
-        surface = SimpleFaultSurface.from_fault_data(Line([p1, p2]),
-                1.0, 6.0, 89.9, 1.0)
+        surface = SimpleFaultSurface.from_fault_data(Line([p1, p2]), 1.0, 6.0,
+                                                     89.9, 1.0)
 
         self.assertAlmostEquals(45.0, surface.get_strike(), delta=1e-4)
 
@@ -146,8 +147,8 @@ class SimpleFaultSurfaceGetStrikeTestCase(utils.SurfaceTestCase):
         p2 = Point(0.0635916966572, 0.0635916574897)
         p3 = Point(0.0860747816618, 0.102533437776)
 
-        surface = SimpleFaultSurface.from_fault_data(Line([p1, p2, p3]),
-                1.0, 6.0, 89.9, 1.0)
+        surface = SimpleFaultSurface.from_fault_data(Line([p1, p2, p3]), 1.0,
+                                                     6.0, 89.9, 1.0)
 
         self.assertAlmostEquals(40.0, surface.get_strike(), delta=0.02)
 
@@ -163,8 +164,8 @@ class SimpleFaultSurfaceGetDipTestCase(utils.SurfaceTestCase):
         p2 = Point(0.0635916966572, 0.0635916574897)
         p3 = Point(0.0860747816618, 0.102533437776)
 
-        surface = SimpleFaultSurface.from_fault_data(Line([p1, p2, p3]),
-                1.0, 6.0, 90.0, 1.0)
+        surface = SimpleFaultSurface.from_fault_data(Line([p1, p2, p3]), 1.0,
+                                                     6.0, 90.0, 1.0)
 
         self.assertAlmostEquals(90.0, surface.get_dip(), delta=1e-6)
 
@@ -172,8 +173,8 @@ class SimpleFaultSurfaceGetDipTestCase(utils.SurfaceTestCase):
         p1 = Point(0.0, 0.0)
         p2 = Point(0.0635916966572, 0.0635916574897)
 
-        surface = SimpleFaultSurface.from_fault_data(Line([p1, p2]),
-                1.0, 6.0, 30.0, 1.0)
+        surface = SimpleFaultSurface.from_fault_data(Line([p1, p2]), 1.0, 6.0,
+                                                     30.0, 1.0)
 
         self.assertAlmostEquals(30.0, surface.get_dip(), 1)
 
@@ -251,6 +252,22 @@ class SimpleFaultSurfaceProjectionTestCase(unittest.TestCase):
         elats = [-2.1, -2., -1.9, -2.]
         numpy.testing.assert_allclose(polygon.lons, elons)
         numpy.testing.assert_allclose(polygon.lats, elats)
+
+    def test_get_fault_vertices_3d(self):
+        lons, lats, deps = SimpleFaultSurface.get_fault_vertices_3d(
+            Line([Point(10, -20), Point(11, -20.2), Point(12, -19.7)]),
+            upper_seismogenic_depth=25.3, lower_seismogenic_depth=53.6,
+            dip=30,
+        )
+        elons = [10.06374285, 11.06382605, 12.06361991,
+                 12.13515987, 11.13560807, 10.1354272]
+        elats = [-20.3895235, -20.58952337, -20.08952368, -
+                 20.52520878, -21.02520738, -20.82520794]
+        edeps = [25.3, 25.3, 25.3, 53.6, 53.6, 53.6]
+
+        numpy.testing.assert_allclose(lons, elons)
+        numpy.testing.assert_allclose(lats, elats)
+        numpy.testing.assert_allclose(deps, edeps)
 
 
 class SimpleFaultSurfaceGetWidthTestCase(unittest.TestCase):

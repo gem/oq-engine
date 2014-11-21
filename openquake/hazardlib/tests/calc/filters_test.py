@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2012-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -13,6 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import mock
 import unittest
 from itertools import izip
 from types import GeneratorType
@@ -26,8 +27,9 @@ class SourceSiteDistanceFilterTestCase(unittest.TestCase):
             def __init__(self, integration_distance, sites_mapping):
                 self.integration_distance = integration_distance
                 self.sites_mapping = sites_mapping
-            def filter_sites_by_distance_to_source(self, integration_distance,
-                                                   sites):
+
+            def filter_sites_by_distance_to_source(
+                    self, integration_distance, sites):
                 assert integration_distance is self.integration_distance
                 return self.sites_mapping[sites]
         sites1 = object()
@@ -54,37 +56,31 @@ class SourceSiteDistanceFilterTestCase(unittest.TestCase):
 
 class RuptureSiteDistanceFilterTestCase(unittest.TestCase):
     def test(self):
-        class FakeRupture(object):
-            def __init__(self, integration_distance, sites_mapping):
-                self.integration_distance = integration_distance
-                self.sites_mapping = sites_mapping
-            @property
-            def source_typology(self):
-                return self
-            def filter_sites_by_distance_to_rupture(self, rupture,
-                                                    integration_distance,
-                                                    sites):
-                assert rupture is self
-                assert integration_distance is self.integration_distance
-                return self.sites_mapping[sites]
+        def fake_filter(rupture, integration_distance, sites):
+            if rupture == 1:
+                return None  # all filtered out
+            elif rupture == 2:  # partial filtering
+                return sites3  # nothing filtered out
+            elif rupture == 3:
+                return sites1
+
         sites1 = object()
         sites2 = object()
         sites3 = object()
-
-        ruptures = [FakeRupture(13, {sites1: None}),  # all filtered out
-                    FakeRupture(13, {sites2: sites3}),  # partial filtering
-                    FakeRupture(13, {sites1: sites1})]  # nothing filtered out
         sites = [sites1, sites2, sites1]
-        filter_func = filters.rupture_site_distance_filter(13)
-        filtered = filter_func(izip(ruptures, sites))
-        self.assertIsInstance(filtered, GeneratorType)
+        ruptures = [1, 2, 3]
+        with mock.patch('openquake.hazardlib.calc.filters.'
+                        'filter_sites_by_distance_to_rupture', fake_filter):
+            filter_func = filters.rupture_site_distance_filter(13)
+            filtered = filter_func(izip(ruptures, sites))
+            self.assertIsInstance(filtered, GeneratorType)
 
-        source, sites = next(filtered)
-        self.assertIs(source, ruptures[1])
-        self.assertIs(sites, sites3)
+            rupt, sites = next(filtered)
+            self.assertIs(rupt, ruptures[1])
+            self.assertIs(sites, sites3)
 
-        source, sites = next(filtered)
-        self.assertIs(source, ruptures[2])
-        self.assertIs(sites, sites1)
+            rupt, sites = next(filtered)
+            self.assertIs(rupt, ruptures[2])
+            self.assertIs(sites, sites1)
 
-        self.assertEqual(list(filtered), [])
+            self.assertEqual(list(filtered), [])

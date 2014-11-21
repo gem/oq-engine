@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2013 GEM Foundation
+# Copyright (C) 2013-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -20,9 +20,7 @@ from openquake.hazardlib.gsim.atkinson_boore_1995 import (
 )
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
-# All test data were generated from the hazardlib implementation.
-# Test data from alternative implementation or from original author
-# would be better for more robust checking
+# Test data provided by Geological Survey of Canada
 
 
 class AtkinsonBoore1995GSCBestTestCase(BaseGSIMTestCase):
@@ -51,7 +49,7 @@ class AtkinsonBoore1995GSCLowerLimitTestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.1)
 
 
-class AtkinsonBoore1995GSCLowerLimitTestCase(BaseGSIMTestCase):
+class AtkinsonBoore1995GSCUpperLimitTestCase(BaseGSIMTestCase):
     GSIM_CLASS = AtkinsonBoore1995GSCUpperLimit
 
 

@@ -6,3 +6,4 @@ Chiou and Youngs 2008
 
 .. autoclass:: ChiouYoungs2008
     :members:
+

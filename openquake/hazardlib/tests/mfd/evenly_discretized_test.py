@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2012-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -62,7 +62,7 @@ class EvenlyDiscretizedMFDTestCase(BaseMFDTestCase):
         mfd = EvenlyDiscretizedMFD(min_mag=0, bin_width=1,
                                    occurrence_rates=[1])
         self.assertEqual(mfd.get_annual_occurrence_rates(), [(0, 1)])
-        self.assertEqual(mfd.get_min_mag(), 0)
+        self.assertEqual(mfd.get_min_max_mag(), (0, 0))
 
     def test_zero_rate(self):
         evenly_discretized = EvenlyDiscretizedMFD(
@@ -77,4 +77,4 @@ class EvenlyDiscretizedMFDTestCase(BaseMFDTestCase):
         )
         self.assertEqual(evenly_discretized.get_annual_occurrence_rates(),
                          [(0.2, 2.1), (0.5, 2.4), (0.8, 5.3)])
-        self.assertEqual(evenly_discretized.get_min_mag(), 0.2)
+        self.assertEqual(evenly_discretized.get_min_max_mag(), (0.2, 0.8))

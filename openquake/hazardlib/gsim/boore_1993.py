@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2013 GEM Foundation
+# Copyright (C) 2013-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -64,10 +64,9 @@ class BooreEtAl1993GSCBest(GMPE):
     #: Required rupture parameter is magnitude
     REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
 
-    #: Required distance measure is epicentral distance
-    #: (used in conjunction with the 'fictitious-depth' coefficient to
-    #: determine hypocentral distance, see page 7 of original manuscript)
-    REQUIRES_DISTANCES = set(('repi', ))
+    #: Required distance measure is Rjb distance
+    #: see paragraph 'Predictor Variables', page 6.
+    REQUIRES_DISTANCES = set(('rjb', ))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -78,7 +77,7 @@ class BooreEtAl1993GSCBest(GMPE):
         C = self.COEFFS[imt]
 
         mag = rup.mag - 6
-        d = np.sqrt(dists.repi ** 2 + C['c7'] ** 2)
+        d = np.sqrt(dists.rjb ** 2 + C['c7'] ** 2)
         mean = np.zeros_like(d)
 
         mean += C['c1'] + C['c2'] * mag + C['c3'] * mag ** 2 + C['c6']
@@ -93,7 +92,7 @@ class BooreEtAl1993GSCBest(GMPE):
         # convert from log10 to ln and from cm/s**2 to g
         mean = np.log((10.0 ** (mean - 2.0)) / g)
 
-        stddevs = self._get_stddevs(C, stddev_types,  dists.repi.shape[0])
+        stddevs = self._get_stddevs(C, stddev_types,  dists.rjb.shape[0])
 
         return mean, stddevs
 

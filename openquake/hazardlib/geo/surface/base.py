@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2012-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -231,8 +231,8 @@ class BaseQuadrilateralSurface(BaseSurface):
         <.base.BaseSurface.get_rx_distance>`
         for spec of input and result values.
 
-        The method extracts the top edge of the surface. For each point in mesh,
-        it then computes the Rx distance to each segment the top edge is made
+        The method extracts the top edge of the surface. For each point in mesh
+        it computes the Rx distance to each segment the top edge is made
         of. The calculation is done by calling the function
         :func:`openquake.hazardlib.geo.geodetic.distance_to_arc`. The final Rx
         distance matrix is then constructed by taking, for each point in mesh,
@@ -241,9 +241,13 @@ class BaseQuadrilateralSurface(BaseSurface):
         top_edge = self.get_mesh()[0:1]
 
         dists = []
-        for i in range(top_edge.lons.shape[1] - 1):
+        if top_edge.lons.shape[1] < 3:
+
+            i = 0
             p1 = Point(
-                top_edge.lons[0, i], top_edge.lats[0, i], top_edge.depths[0, i]
+                top_edge.lons[0, i],
+                top_edge.lats[0, i],
+                top_edge.depths[0, i]
             )
             p2 = Point(
                 top_edge.lons[0, i + 1], top_edge.lats[0, i + 1],
@@ -252,12 +256,55 @@ class BaseQuadrilateralSurface(BaseSurface):
             azimuth = p1.azimuth(p2)
             dists.append(
                 geodetic.distance_to_arc(
-                    p1.longitude, p1.latitude, azimuth, mesh.lons, mesh.lats
+                    p1.longitude, p1.latitude, azimuth,
+                    mesh.lons, mesh.lats
                 )
             )
-        dists = numpy.array(dists)
 
-        return numpy.min(dists, axis=0)
+        else:
+
+            for i in range(top_edge.lons.shape[1] - 1):
+                p1 = Point(
+                    top_edge.lons[0, i],
+                    top_edge.lats[0, i],
+                    top_edge.depths[0, i]
+                )
+                p2 = Point(
+                    top_edge.lons[0, i + 1],
+                    top_edge.lats[0, i + 1],
+                    top_edge.depths[0, i + 1]
+                )
+                # Swapping
+                if i == 0:
+                    pt = p1
+                    p1 = p2
+                    p2 = pt
+
+                # Computing azimuth and distance
+                if i == 0 or i == top_edge.lons.shape[1] - 2:
+                    azimuth = p1.azimuth(p2)
+                    tmp = geodetic.distance_to_semi_arc(p1.longitude,
+                                                        p1.latitude,
+                                                        azimuth,
+                                                        mesh.lons, mesh.lats)
+                else:
+                    tmp = geodetic.min_distance_to_segment([p1.longitude,
+                                                            p2.longitude],
+                                                           [p1.latitude,
+                                                            p2.latitude],
+                                                           mesh.lons,
+                                                           mesh.lats)
+                # Correcting the sign of the distance
+                if i == 0:
+                    tmp *= -1
+                dists.append(tmp)
+
+        # Computing distances
+        dists = numpy.array(dists)
+        iii = abs(dists).argmin(axis=0)
+        dst = dists[iii, range(dists.shape[1])]
+
+        return dst
 
     def get_top_edge_depth(self):
         """

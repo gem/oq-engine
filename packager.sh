@@ -1,6 +1,8 @@
 #!/bin/bash
 # export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
-# set -x
+if [ $GEM_SET_DEBUG ]; then
+    set -x
+fi
 set -e
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-hazardlib"
@@ -9,6 +11,10 @@ GEM_DEB_SERIE="master"
 if [ -z "$GEM_DEB_REPO" ]; then
     GEM_DEB_REPO="$HOME/gem_ubuntu_repo"
 fi
+if [ -z "$GEM_DEB_MONOTONE" ]; then
+    GEM_DEB_MONOTONE="$HOME/monotone"
+fi
+
 GEM_BUILD_ROOT="build-deb"
 GEM_BUILD_SRC="${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}"
 
@@ -107,7 +113,8 @@ usage () {
 
     echo
     echo "USAGE:"
-    echo "    $0 [-D|--development] [-B|--binaries] [-U|--unsigned] [-R|--repository]    build debian source package."
+    echo "    $0 [-D|--development] [-S--sources_copy] [-B|--binaries] [-U|--unsigned] [-R|--repository]    build debian source package."
+    echo "       if -S is present try to copy sources to <GEM_DEB_MONOTONE>/source directory"
     echo "       if -B is present binary package is build too."
     echo "       if -R is present update the local repository to the new current package"
     echo "       if -D is present a package with self-computed version is produced."
@@ -339,6 +346,16 @@ EOF
         fi
         mkdir -p "${GEM_DEB_REPO}/${GEM_DEB_SERIE}"
         repo_tmpdir="$(mktemp -d "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}.XXXXXX")"
+
+        # if the monotone directory exists and is the "gem" repo and is the "master" branch then ...
+        if [ -d "${GEM_DEB_MONOTONE}/binary" ]; then
+            if [ "git://$repo_id" == "$GEM_GIT_REPO" -a "$branch_id" == "master" ]; then
+                cp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
+                    build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
+                    "${GEM_DEB_MONOTONE}/binary"
+            fi
+        fi
+
         cp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
             build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
             build-deb/Packages* build-deb/Sources* build-deb/Release* "${repo_tmpdir}"
@@ -358,6 +375,7 @@ EOF
 #
 #  MAIN
 #
+BUILD_SOURCES_COPY=0
 BUILD_BINARIES=0
 BUILD_REPOSITORY=0
 BUILD_DEVEL=0
@@ -377,6 +395,9 @@ while [ $# -gt 0 ]; do
                 exit 1
             fi
             ;;
+        -S|--sources_copy)
+            BUILD_SOURCES_COPY=1
+            ;;
         -B|--binaries)
             BUILD_BINARIES=1
             ;;
@@ -391,12 +412,14 @@ while [ $# -gt 0 ]; do
             break
             ;;
         devtest)
-            devtest_run $2
+            # Sed removes 'origin/' from the branch name
+            devtest_run $(echo "$2" | sed 's@.*/@@g')
             exit $?
             break
             ;;
         pkgtest)
-            pkgtest_run $2
+            # Sed removes 'origin/' from the branch name
+            pkgtest_run $(echo "$2" | sed 's@.*/@@g')
             exit $?
             break
             ;;
@@ -405,7 +428,7 @@ while [ $# -gt 0 ]; do
             break
             ;;
     esac
-    BUILD_FLAGS="$BUILD_FLAGS $1"    
+    BUILD_FLAGS="$BUILD_FLAGS $1"
     shift
 done
 
@@ -423,7 +446,7 @@ mksafedir "$GEM_BUILD_SRC"
 git archive HEAD | (cd "$GEM_BUILD_SRC" ; tar xv)
 
 # NOTE: if in the future we need modules we need to execute the following commands
-# 
+#
 # git submodule init
 # git submodule update
 ##  "submodule foreach" vars: $name, $path, $sha1 and $toplevel:
@@ -502,15 +525,22 @@ if [ 0 -eq 1 ]; then
     mv README.txt      openquake/README
     mv celeryconfig.py openquake
     mv openquake.cfg   openquake
-    
+
     mv bin/openquake   bin/oqscript.py
     mv bin             openquake/bin
-    
+
     rm -rf $(find demos -mindepth 1 -maxdepth 1 | egrep -v 'demos/simple_fault_demo_hazard|demos/event_based_hazard|demos/_site_model')
 fi
 
 dpkg-buildpackage $DPBP_FLAG
 cd -
+
+# if the monotone directory exists and is the "gem" repo and is the "master" branch then ...
+if [ -d "${GEM_DEB_MONOTONE}/source" -a $BUILD_SOURCES_COPY -eq 1 ]; then
+    cp build-deb/${GEM_DEB_PACKAGE}_*.changes \
+        build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
+        "${GEM_DEB_MONOTONE}/source"
+fi
 
 if [ $BUILD_DEVEL -ne 1 ]; then
     exit 0

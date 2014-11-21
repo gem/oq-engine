@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2014 GEM Foundation
+# Copyright (C) 2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -115,7 +115,7 @@ class FrankelEtAl1996MblgAB1987NSHMP2008(GMPE):
                 'unsupported periods.'
             )
 
-        mean = self._compute_mean(imt, rup.mag, dists.rhypo)
+        mean = self._compute_mean(imt, rup.mag, dists.rhypo.copy())
         mean = clip_mean(imt, mean)
 
         stddevs = self._compute_stddevs(imt, dists.rhypo.shape, stddev_types)
@@ -131,7 +131,7 @@ class FrankelEtAl1996MblgAB1987NSHMP2008(GMPE):
         using Atkinson and Boore 1987 conversion equation. Mean value is
         finally converted from base 10 to base e.
         """
-        mag = self._convert_magnitude(mag)
+        mag = np.zeros_like(rhypo) + self._convert_magnitude(mag)
 
         # to avoid run time warning in case rhypo is zero set minimum distance
         # to 10, which is anyhow the minimum distance allowed by the tables
@@ -142,8 +142,7 @@ class FrankelEtAl1996MblgAB1987NSHMP2008(GMPE):
         table = RectBivariateSpline(
             self.MAGS, self.DISTS, self.IMTS_TABLES[imt].T
         )
-        mean = table(mag, rhypo)
-        mean = mean.flatten()
+        mean = table.ev(mag, rhypo)
 
         # convert mean from base 10 to base e
         return mean * np.log(10)
