@@ -22,6 +22,7 @@ import sys
 import numpy
 
 from openquake.hazardlib.calc import filters
+from openquake.hazardlib.imt import from_string
 
 
 def hazard_curves(
@@ -108,3 +109,20 @@ def hazard_curves(
     for imt in imts:
         curves[imt] = 1 - curves[imt]
     return curves
+
+
+def calc_hazard_curves(
+        sources, sites, imtls, gsims, truncation_level,
+        source_site_filter=filters.source_site_noop_filter,
+        rupture_site_filter=filters.rupture_site_noop_filter):
+    """
+    See the signature of :class:`openquake.hazardlib.calc.hazard_curve.hazard_curves`.
+    This function does the same, except that the dictionary with the intensity measure
+    types and levels is keyed by IMT strings and the result dictionary with the curves
+    is keyed by IMT strings.
+    """
+    imts = {from_string(imt): imls for imt, imls in imtls.iteritems()}
+    curves = hazard_curves(
+        sources, sites, imts, gsims, truncation_level,
+        source_site_filter, rupture_site_filter)
+    return {str(imt): curves[imt] for imt in curves}

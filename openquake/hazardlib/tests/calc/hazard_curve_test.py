@@ -23,7 +23,8 @@ from openquake.hazardlib import imt
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.calc.hazard_curve import hazard_curves
+from openquake.hazardlib.calc.hazard_curve import (
+    hazard_curves, calc_hazard_curves)
 
 
 class HazardCurvesTestCase(unittest.TestCase):
@@ -111,7 +112,15 @@ class HazardCurvesTestCase(unittest.TestCase):
                                self.gsims, self.truncation_level)
 
         self.assertIsInstance(curves, dict)
-        self.assertEqual(set(curves.keys()), set([imt.PGA(), imt.PGD()]))
+        self.assertEqual(set(curves), set([imt.PGA(), imt.PGD()]))
+
+        same_curves = calc_hazard_curves(
+            self.sources, self.sites,
+            {'PGA': self.imts[imt.PGA()], 'PGD': self.imts[imt.PGD()]},
+            self.gsims, self.truncation_level)
+
+        self.assertIsInstance(same_curves, dict)
+        self.assertEqual(set(same_curves), set(['PGA', 'PGD']))
 
         pga_curves = curves[imt.PGA()]
         self.assertIsInstance(pga_curves, numpy.ndarray)
@@ -263,7 +272,7 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         #  548.90356541,   37.40690285,   26.28741018]
         # JB distances for rupture 3 in source 2 are: [ 109.50545819,
         # 55.97463322,    0.        ,    0.        ]
-        # 
+        #
         # Considering that the rupture site filtering distance is set to 30 km,
         # rupture 1 (magnitude 4) is not considered because too far, rupture 2
         # (magnitude 6) affect only the 4th site, rupture 3 (magnitude 8)

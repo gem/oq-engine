@@ -139,8 +139,7 @@ class PointCreationTestCase(unittest.TestCase):
 class PointFromVectorTestCase(unittest.TestCase):
     def test_from_vector(self):
         point = geo.Point(12.34, -56.78, 91.011)
-        vector = spherical_to_cartesian(point.longitude, point.latitude,
-                                        point.depth)
+        vector = spherical_to_cartesian(point.x, point.y, point.z)
         self.assertEqual(point, geo.Point.from_vector(vector))
 
 
@@ -180,8 +179,8 @@ class PointToPolygonTestCase(unittest.TestCase):
                  -35.0998016]
         numpy.testing.assert_allclose(polygon.lons, elons)
         numpy.testing.assert_allclose(polygon.lats, elats)
-        self.assertAlmostEqual(polygon.lons.mean(), point.longitude, delta=1e-2)
-        self.assertAlmostEqual(polygon.lats.mean(), point.latitude, delta=1e-2)
+        self.assertAlmostEqual(polygon.lons.mean(), point.x, delta=1e-2)
+        self.assertAlmostEqual(polygon.lats.mean(), point.y, delta=1e-2)
 
 
 class PointCloserThanTestCase(unittest.TestCase):
