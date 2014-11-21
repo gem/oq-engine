@@ -759,8 +759,11 @@ class CompositeSourceModel(object):
 
     @property
     def trt_models(self):
+        trt_id = 0
         for sm in self.source_models:
             for trt_model in sm.trt_models:
+                if not trt_model.id:  # set only the first time
+                    trt_model.id = trt_id
                 yield trt_model
 
     @property
@@ -770,16 +773,40 @@ class CompositeSourceModel(object):
         """
         for trt_model in self.trt_models:
             for src in trt_model:
+                src.trt_model_id = trt_model.id
                 yield src
 
     def __getitem__(self, path):
         return self.smdict[path]
+
+    def __setitem__(self, path, sm):
+        self.smdict[path] = sm
 
     def __iter__(self):
         return iter(self.source_models)
 
     def __len__(self):
         return len(self.source_models)
+
+    def reduce_trt_models(self):
+        """
+        Remove the tectonic regions without ruptures and reduce the
+        GSIM logic tree.
+        """
+        for sm in self:
+            trts = set(trt_model.trt for trt_model in sm.trt_models
+                       if trt_model.num_ruptures > 0)
+            if trts == set(sm.gsim_lt.filter_keys):
+                # nothing to remove
+                continue
+            gsim_lt = sm.gsim_lt.filter(trts)
+            models = []
+            for trt_model in sm.trt_models:
+                if trt_model.trt in trts:
+                    trt_model.gsims = gsim_lt.values[trt_model.trt]
+                    models.append(trt_model)
+            self[sm.path] = SourceModel(
+                sm.name, sm.weight, sm.path, models, gsim_lt, sm.ordinal)
 
     def get_realizations(self, num_samples, random_seed):
         """
