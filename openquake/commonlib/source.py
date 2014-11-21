@@ -763,7 +763,6 @@ class CompositeSourceModel(object):
     def __init__(self, source_model_lt, source_models):
         self.source_model_lt = source_model_lt
         self.source_models = list(source_models)
-        self.smdict = {sm.path: sm for sm in source_models}
         self.tmdict = {tm.id: tm for tm in self.trt_models}
         # the attribute trt_model_id is now set for each trt_model
 
@@ -790,11 +789,11 @@ class CompositeSourceModel(object):
                 src.trt_model_id = trt_model.id
                 yield src
 
-    def __getitem__(self, path):
-        return self.smdict[path]
+    def __getitem__(self, i):
+        return self.source_models[i]
 
-    def __setitem__(self, path, sm):
-        self.smdict[path] = sm
+    def __setitem__(self, i, sm):
+        self.source_models[i] = sm
 
     def __iter__(self):
         return iter(self.source_models)
@@ -819,10 +818,20 @@ class CompositeSourceModel(object):
                 if trt_model.trt in trts:
                     trt_model.gsims = gsim_lt.values[trt_model.trt]
                     models.append(trt_model)
-            self[sm.path] = SourceModel(
+            self[sm.ordinal] = SourceModel(
                 sm.name, sm.weight, sm.path, models, gsim_lt, sm.ordinal)
 
-    def lt_processor(self, num_samples, random_seed):
+    def get_source_model(self, path):
+        """
+        Extract a specific source model from its logic tree path
+        """
+        for sm in self:
+            if sm.path == path:
+                return sm
+        raise KeyError(
+            'There is no source model with sm_lt_path=%s' % str(path))
+
+    def lt_processor(self):
         """
         This function works either in random sampling mode (when lt_realization
         models get the random seed value) or in enumeration mode (when weight
@@ -831,15 +840,11 @@ class CompositeSourceModel(object):
         number of the realization (zero-based).
         """
         ltp = LtProcessor([], [], {}, {})
-        for idx, (sm, weight, sm_lt_path, _) in enumerate(
+        random_seed = self.source_model_lt.seed
+        num_samples = self.source_model_lt.num_samples
+        for idx, (sm_name, weight, sm_lt_path, _) in enumerate(
                 self.source_model_lt):
-            try:
-                lt_model = self.smdict[sm_lt_path]
-            except KeyError:
-                # this happens if there are no sources for the source
-                # model at the given path
-                logging.warn('No sources for sm_lt_path %s', sm_lt_path)
-                continue
+            lt_model = self.get_source_model(sm_lt_path)
             if num_samples:  # sampling, pick just one gsim realization
                 rnd = random.Random(random_seed + idx)
                 rlzs = [logictree.sample_one(lt_model.gsim_lt, rnd)]
@@ -849,8 +854,7 @@ class CompositeSourceModel(object):
                          len(rlzs), lt_model.name, lt_model.path)
             self._add_realizations(ltp, idx, lt_model, rlzs)
 
-        num_ind_rlzs = sum(sm.gsim_lt.get_num_paths()
-                           for sm in self.smdict.itervalues())
+        num_ind_rlzs = sum(sm.gsim_lt.get_num_paths() for sm in self)
         if num_samples > num_ind_rlzs:
             logging.warn("""
 The number of independent realizations is %d but you are using %d samplings.

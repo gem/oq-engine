@@ -677,12 +677,12 @@ class CompositeSourceModelTestCase(unittest.TestCase):
         # the example has number_of_logic_tree_samples = 1
         sitecol = readinput.get_site_collection(oqparam)
         csm = readinput.get_composite_source_model(oqparam, sitecol)
-        [rlz] = csm.get_realizations(
-            oqparam.number_of_logic_tree_samples, oqparam.random_seed)
-        gsim_by_trt = {'Subduction Interface': 'SadighEtAl1997',
-                       'Active Shallow Crust': 'ChiouYoungs2008'}
-        self.assertEqual(rlz, (gsim_by_trt, None,
-                               (('b1', 'b5', 'b8'), ('b2', 'b3')), 0))
+        ltp = csm.lt_processor()
+        [(rlz, gsim_by_trt)] = zip(ltp.realizations, ltp.gsim_by_trt)
+        self.assertEqual(gsim_by_trt,
+                         {'Subduction Interface': 'SadighEtAl1997',
+                          'Active Shallow Crust': 'ChiouYoungs2008'})
+        self.assertEqual(rlz, (('b1', 'b5', 'b8'), ('b2', 'b3'), None, 0))
 
     def test_many_rlzs(self):
         oqparam = tests.get_oqparam('classical_job.ini')
@@ -690,6 +690,16 @@ class CompositeSourceModelTestCase(unittest.TestCase):
         sitecol = readinput.get_site_collection(oqparam)
         csm = readinput.get_composite_source_model(oqparam, sitecol)
         self.assertEqual(len(csm), 9)  # the smlt example has 1 x 3 x 3 paths
-        rlzs = csm.get_realizations(
-            oqparam.number_of_logic_tree_samples, oqparam.random_seed)
+        rlzs = csm.lt_processor().realizations
         self.assertEqual(len(rlzs), 18)  # the gsimlt has 1 x 2 paths
+        self.assertEqual(
+            map(len, csm.trt_models),
+            [1, 14, 1, 14, 1, 14, 1, 12, 1, 12, 1, 12, 1, 12, 1, 12, 1, 12])
+        # testing reduce_trt_models
+        for trt_model in csm.trt_models:
+            if trt_model.trt == 'Active Shallow Crust':  # no ruptures
+                trt_model.num_ruptures = 0
+        csm.reduce_trt_models()
+        self.assertEqual(map(len, csm.trt_models), [1, 1, 1, 1, 1, 1, 1, 1, 1])
+        rlzs = csm.lt_processor().realizations
+        self.assertEqual(len(rlzs), 9)
