@@ -994,6 +994,15 @@ class GsimLogicTree(object):
                 'Could not find branches with attribute %r in %s' %
                 (self.branchset_filter, set(filter_keys)))
 
+    def filter(self, trts):
+        """
+        Build a reduced GsimLogicTree.
+
+	    :param trts: a subset of tectonic region types
+        """
+        assert set(trts) <= set(self.filter_keys), (trts, self.filter_keys)
+        return self.__class__(self.fname, self.branchset_filter, trts)
+
     def get_num_branches(self):
         """
         Return the number of branches for branchset id, as a dictionary.
