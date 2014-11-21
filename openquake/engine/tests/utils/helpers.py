@@ -41,7 +41,6 @@ from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.baselib.general import writetmp as touch
-from openquake.commonlib import readinput
 
 from openquake.engine.db import models
 from openquake.engine import engine

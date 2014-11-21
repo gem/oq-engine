@@ -29,8 +29,8 @@ from openquake.engine.tests.utils import helpers
 
 class JobFromFileTestCase(unittest.TestCase):
 
-    def test_prepare_job_default_user(self):
-        job = engine.prepare_job()
+    def test_create_job_default_user(self):
+        job = engine.create_job()
 
         self.assertEqual('openquake', job.user_name)
         self.assertEqual('pre_executing', job.status)
@@ -42,9 +42,9 @@ class JobFromFileTestCase(unittest.TestCase):
         except exceptions.ObjectDoesNotExist:
             self.fail('Job was not found in the database')
 
-    def test_prepare_job_specified_user(self):
+    def test_create_job_specified_user(self):
         user_name = helpers.random_string()
-        job = engine.prepare_job(user_name=user_name)
+        job = engine.create_job(user_name=user_name)
 
         self.assertEqual(user_name, job.user_name)
         self.assertEqual('pre_executing', job.status)
@@ -55,11 +55,11 @@ class JobFromFileTestCase(unittest.TestCase):
         except exceptions.ObjectDoesNotExist:
             self.fail('Job was not found in the database')
 
-    def test_prepare_job_explicit_log_level(self):
+    def test_create_job_explicit_log_level(self):
         # By default, a job is created with a log level of 'progress'
         # (just to show calculation progress).
         # In this test, we'll specify 'debug' as the log level.
-        job = engine.prepare_job(log_level='debug')
+        job = engine.create_job(log_level='debug')
 
         self.assertEqual('debug', job.log_level)
 
