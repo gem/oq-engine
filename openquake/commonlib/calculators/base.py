@@ -103,53 +103,16 @@ class BaseHazardCalculator(BaseCalculator):
             logging.info('Reading the site collection')
             self.sitecol = readinput.get_site_collection(self.oqparam)
         logging.info('Reading the composite source models')
-        self.source_models = list(
-            readinput.get_composite_source_models(self.oqparam, self.sitecol))
-        self.all_sources = [src for src_model in self.source_models
-                            for trt_model in src_model.trt_models
-                            for src in trt_model]
+        self.composite_source_model = \
+            readinput.get_composite_source_model(self.oqparam, self.sitecol)
         self.job_info = readinput.get_job_info(
-            self.oqparam, self.source_models, self.sitecol)
+            self.oqparam, self.composite_source_model, self.sitecol)
         # we could manage limits here
 
-    def execute(self):
-        """
-        Run in parallel `core_func(sources, sitecol, monitor)`, by
-        parallelizing on the sources according to their weight and
-        tectonic region type.
-        """
-        monitor = self.monitor(self.core_func.__name__)
-        return apply_reduce(
-            self.core_func.__func__,
-            (self.all_sources, self.site_collection, monitor),
-            concurrent_tasks=self.oqparam.concurrent_tasks,
-            weight=get_weight,
-            key=get_trt)
-
-    def get_realizations(self):
-        """
-        Returns a list of LtRealization instances with an .items
-        attribute containing (trt_model_id, gsim) pairs.
-        """
-        rlzs = []
-        for sm in self.source_models:
-            for rlz in sm.gsim_lt:
-                rlz.items = [(trt_model.id, rlz.value[trt_model.trt])
-                             for trt_model in sm.trt_models]
-                rlzs.append(rlz)
-        return rlzs
-
-    def export_stats(self, curves):
-        """
-        """
-        self.realizations = self.get_realizations()
-        all_curves = [build_curves(curves, rlz) * rlz.weight
-                      for rlz in self.realizations]
-        mean_curves = numpy.sum(
-            curves * rlz.weight
-            for curves, rlz in zip(all_curves, realizations))
-        quantile_curves = []
-        # TODO: export
+        # logic tree processor
+        self.ltp = self.composite_source_model.lt_processor(
+            self.oqparam.number_of_logic_tree_samples,
+            self.oqparam.random_seed)
 
 
 class BaseRiskCalculator(BaseCalculator):
