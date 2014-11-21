@@ -18,13 +18,11 @@
 
 """Common code for the hazard calculators."""
 
-import random
 import itertools
 import collections
 from operator import attrgetter
 
 from django.contrib.gis.geos.point import Point
-from django.core.exceptions import ObjectDoesNotExist
 
 import numpy
 
@@ -35,7 +33,7 @@ from openquake.engine.db import models
 from django.db import transaction
 
 from openquake.baselib import general
-from openquake.commonlib import logictree, readinput, risk_parsers
+from openquake.commonlib import readinput, risk_parsers
 from openquake.commonlib.readinput import (
     get_site_collection, get_site_model, get_imtls)
 
@@ -51,7 +49,6 @@ from openquake.engine.calculators.post_processing import (
 from openquake.engine.calculators.hazard.post_processing import (
     hazard_curves_to_hazard_map, do_uhs_post_proc)
 
-from openquake.engine.export import core
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.utils import tasks
 
@@ -273,8 +270,9 @@ class BaseHazardCalculator(base.Calculator):
                 ordinal=sm.ordinal, sm_name=sm.name, weight=sm.weight)
 
             # save TrtModels for each tectonic region type
+            # and stored the db ID in the in-memory models
             for trt_mod in sm.trt_models:
-                trt_id = models.TrtModel.objects.create(
+                trt_mod.id = models.TrtModel.objects.create(
                     lt_model=lt_model,
                     tectonic_region_type=trt_mod.trt,
                     num_sources=len(trt_mod),
@@ -282,8 +280,6 @@ class BaseHazardCalculator(base.Calculator):
                     min_mag=trt_mod.min_mag,
                     max_mag=trt_mod.max_mag,
                     gsims=trt_mod.gsims).id
-                for src in trt_mod:
-                    src.trt_model_id = trt_id
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_model(self):
@@ -336,20 +332,20 @@ class BaseHazardCalculator(base.Calculator):
         """
         logs.LOG.progress("initializing realizations")
         cm = self.composite_model
-        for rlz in cm.get_realizations(
-                self.hc.number_of_logic_tree_samples,
-                self.hc.random_seed):
-            smlt_path, gsim_path = rlz.lt_path
+        ltp = cm.lt_processor(
+            self.hc.number_of_logic_tree_samples,
+            self.hc.random_seed)
+        for rlz, gsim_by_trt in zip(ltp.realizations, ltp.gsim_by_trt):
             lt_model = models.LtSourceModel.objects.get(
-                hazard_calculation=self.job, sm_lt_path=smlt_path)
+                hazard_calculation=self.job, sm_lt_path=rlz.sm_lt_path)
             trt_models = lt_model.trtmodel_set.filter(num_ruptures__gt=0)
             if not trt_models:
+                logs.LOG.warn('No ruptures for %s: skipping', lt_model)
                 continue
-            gsim_lt = cm[smlt_path].gsim_lt
+            gsim_lt = cm[rlz.sm_lt_path].gsim_lt
             lt_rlz = models.LtRealization.objects.create(
-                lt_model=lt_model, gsim_lt_path=gsim_path,
+                lt_model=lt_model, gsim_lt_path=rlz.gsim_lt_path,
                 weight=rlz.weight, ordinal=rlz.ordinal)
-            gsim_by_trt = rlz.value
             for trt_model in trt_models:
                 trt = trt_model.tectonic_region_type
                 # populate the association table rlz <-> trt_model
