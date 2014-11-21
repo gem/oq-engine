@@ -339,9 +339,7 @@ class BaseHazardCalculator(base.Calculator):
                 pk=trt_model.id).num_ruptures
         cm.reduce_trt_models()
 
-        ltp = cm.lt_processor(
-            self.hc.number_of_logic_tree_samples,
-            self.hc.random_seed)
+        ltp = cm.lt_processor()
         for rlz, gsim_by_trt in zip(ltp.realizations, ltp.gsim_by_trt):
             lt_model = models.LtSourceModel.objects.get(
                 hazard_calculation=self.job, sm_lt_path=rlz.sm_lt_path)
@@ -349,7 +347,7 @@ class BaseHazardCalculator(base.Calculator):
             if not trt_models:
                 logs.LOG.warn('No ruptures for %s: skipping', lt_model)
                 continue
-            gsim_lt = cm[rlz.sm_lt_path].gsim_lt
+            gsim_lt = cm.get_source_model(rlz.sm_lt_path).gsim_lt
             lt_rlz = models.LtRealization.objects.create(
                 lt_model=lt_model, gsim_lt_path=rlz.gsim_lt_path,
                 weight=rlz.weight, ordinal=rlz.ordinal)
