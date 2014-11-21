@@ -332,6 +332,13 @@ class BaseHazardCalculator(base.Calculator):
         """
         logs.LOG.progress("initializing realizations")
         cm = self.composite_model
+
+        # update the attribute num_ruptures, to discard fake realizations
+        for trt_model in cm.trt_models:
+            trt_model.num_ruptures = models.TrtModel.objects.get(
+                pk=trt_model.id).num_ruptures
+        cm.reduce_trt_models()
+
         ltp = cm.lt_processor(
             self.hc.number_of_logic_tree_samples,
             self.hc.random_seed)
