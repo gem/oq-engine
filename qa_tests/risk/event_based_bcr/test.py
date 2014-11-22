@@ -16,6 +16,7 @@
 from nose.plugins.attrib import attr as noseattr
 
 from qa_tests import risk
+from qa_tests.risk.event_based_bcr import case_1
 from openquake.engine.tests.utils import helpers
 
 from openquake.engine.db import models
@@ -26,6 +27,8 @@ from openquake.engine.db import models
 
 
 class EventBasedBCRCase1TestCase(risk.BaseRiskQATestCase):
+    module = case_1
+
     output_type = "gmf"
 
     @noseattr('qa', 'risk', 'event_based_bcr')
