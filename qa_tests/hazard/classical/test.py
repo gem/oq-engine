@@ -26,7 +26,7 @@ from openquake.engine.db import models
 from openquake.engine.export import core as hazard_export
 from qa_tests import _utils as qa_utils
 from qa_tests._utils import BaseQATestCase, compare_hazard_curve_with_csv
-from openquake.qa_tests.classical import (
+from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
     case_10, case_11, case_12, case_13, case_14, case_15, case_16)
 

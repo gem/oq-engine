@@ -24,7 +24,7 @@ from openquake.engine import export
 from openquake.engine.db import models
 from openquake.commonlib.tests import check_equal
 from qa_tests import _utils as qa_utils
-from openquake.qa_tests.scenario import (
+from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8)
 
 
