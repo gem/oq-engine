@@ -16,7 +16,7 @@
 from nose.plugins.attrib import attr
 
 from qa_tests import risk
-from openquake.qa_tests.classical_bcr import case_1
+from openquake.qa_tests_data.classical_bcr import case_1
 from openquake.engine.tests.utils import helpers
 
 from openquake.engine.db import models
