@@ -15,7 +15,7 @@
 
 import os.path
 from qa_tests import _utils
-from qa_tests.hazard.disagg import case_1, case_2
+from openquake.qa_tests.disagg import case_1, case_2
 
 
 class DisaggHazardCase1TestCase(_utils.DisaggHazardTestCase):
