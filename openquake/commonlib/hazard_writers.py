@@ -20,15 +20,18 @@ Classes for serializing various NRML XML artifacts.
 """
 
 import json
+import operator
+from collections import OrderedDict
+from itertools import izip
+
 import numpy
 
 from lxml import etree
-from collections import OrderedDict
-from itertools import izip
 
 from openquake.commonlib import node, nrml
 from openquake.commonlib.writers import scientificformat
 
+by_imt = operator.itemgetter('imt', 'sa_period', 'sa_damping')
 
 SM_TREE_PATH = 'sourceModelTreePath'
 GSIM_TREE_PATH = 'gsimTreePath'
@@ -284,7 +287,7 @@ class MultiHazardCurveXMLWriter(object):
     """
     def __init__(self, dest, metadata_set):
         self.dest = dest
-        self.metadata_set = metadata_set
+        self.metadata_set = sorted(metadata_set, key=by_imt)
 
         for metadata in metadata_set:
             _validate_hazard_metadata(metadata)

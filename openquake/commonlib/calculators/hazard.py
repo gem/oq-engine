@@ -45,7 +45,8 @@ def write_hazard_curves(oqparam, sitecol, rlz, curves):
     gsimlt_path = '_'.join(rlz.gsim_lt_path)
     mdata = []
     hcurves = []
-    for imt, imls in oqparam.intensity_measure_types_and_levels.iteritems():
+    for imt, imls in sorted(
+            oqparam.intensity_measure_types_and_levels.iteritems()):
         hcurves.append(
             [HazardCurve(site.location, poes)
              for site, poes in zip(sitecol, curves[imt])])
@@ -168,10 +169,10 @@ class ClassicalCalculator(base.BaseHazardCalculator):
             acc = agg_prob(acc, AccumDict({idx: curves}))
         for idx in sorted(acc):
             rlz = self.ltp.realizations[idx]
-            saved += self.save(rlz, acc[idx])
+            saved += self.export(rlz, acc[idx])
         return saved
 
-    def save(self, rlz, curves):
+    def export(self, rlz, curves):
         return {rlz.ordinal: write_hazard_curves(
             self.oqparam, self.sitecol, rlz, curves)}
 

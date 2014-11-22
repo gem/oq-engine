@@ -763,6 +763,8 @@ class CompositeSourceModel(object):
     def __init__(self, source_model_lt, source_models):
         self.source_model_lt = source_model_lt
         self.source_models = list(source_models)
+        if not self.source_models:
+            raise RuntimeError('All sources were filtered away')
         self.tmdict = {tm.id: tm for tm in self.trt_models}
         # the attribute trt_model_id is now set for each trt_model
 

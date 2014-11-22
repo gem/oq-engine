@@ -110,9 +110,7 @@ class BaseHazardCalculator(BaseCalculator):
         # we could manage limits here
 
         # logic tree processor
-        self.ltp = self.composite_source_model.lt_processor(
-            self.oqparam.number_of_logic_tree_samples,
-            self.oqparam.random_seed)
+        self.ltp = self.composite_source_model.lt_processor()
 
 
 class BaseRiskCalculator(BaseCalculator):

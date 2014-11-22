@@ -695,7 +695,8 @@ class CompositeSourceModelTestCase(unittest.TestCase):
         self.assertEqual(
             map(len, csm.trt_models),
             [1, 14, 1, 14, 1, 14, 1, 12, 1, 12, 1, 12, 1, 12, 1, 12, 1, 12])
-        # testing reduce_trt_models
+
+        # removing trt_models
         for trt_model in csm.trt_models:
             if trt_model.trt == 'Active Shallow Crust':  # no ruptures
                 trt_model.num_ruptures = 0
@@ -703,3 +704,11 @@ class CompositeSourceModelTestCase(unittest.TestCase):
         self.assertEqual(map(len, csm.trt_models), [1, 1, 1, 1, 1, 1, 1, 1, 1])
         rlzs = csm.lt_processor().realizations
         self.assertEqual(len(rlzs), 9)
+
+        # removing all trt_models
+        for trt_model in csm.trt_models:
+            if trt_model.trt == 'Subduction Interface':  # no ruptures
+                trt_model.num_ruptures = 0
+        csm.reduce_trt_models()
+        self.assertEqual(map(len, csm.trt_models), [])
+        self.assertEqual(csm.lt_processor().realizations, [])
