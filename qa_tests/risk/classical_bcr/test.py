@@ -16,12 +16,15 @@
 from nose.plugins.attrib import attr
 
 from qa_tests import risk
+from qa_tests.risk.classical_bcr import case_1
 from openquake.engine.tests.utils import helpers
 
 from openquake.engine.db import models
 
 
 class ClassicalBCRCase1TestCase(risk.BaseRiskQATestCase):
+    module = case_1
+
     EXPECTED_BCR_DISTRIBUTION = """<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">

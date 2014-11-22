@@ -37,9 +37,8 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
     """
 
     def _test_path(self, relative_path):
-        return os.path.join(os.path.dirname(
-            sys.modules[self.__class__.__module__].__file__),
-            relative_path)
+        return os.path.join(
+            os.path.dirname(self.module.__file__), relative_path)
 
     #: QA test must override this params to feed the risk job with
     #: the proper hazard output
