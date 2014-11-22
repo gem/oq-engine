@@ -16,7 +16,8 @@
 from nose.plugins.attrib import attr
 
 from qa_tests import risk
-from qa_tests.risk.scenario_damage import case_1, case_2, case_3, case_4
+from openquake.qa_tests.scenario_damage import (
+    case_1, case_2, case_3, case_4)
 from openquake.engine.tests.utils import helpers
 from openquake.engine.db import models
 

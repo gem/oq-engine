@@ -23,7 +23,7 @@ from openquake.engine.db import models
 from openquake.engine.utils import config
 from qa_tests import _utils as qa_utils
 from qa_tests.hazard.event_based import sc_utils
-from qa_tests.hazard.event_based import (
+from openquake.qa_tests.event_based import (
     blocksize, spatial_correlation, case_1, case_2, case_4, case_5, case_6,
     case_12, case_13)
 
