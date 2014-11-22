@@ -18,7 +18,7 @@ import collections
 
 from nose.plugins.attrib import attr as noseattr
 from qa_tests import risk
-from openquake.qa_tests.event_based_risk import case_1, case_2
+from openquake.qa_tests_data.event_based_risk import case_1, case_2
 
 from openquake.engine.db import models
 
