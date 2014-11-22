@@ -18,7 +18,7 @@ import collections
 
 from nose.plugins.attrib import attr as noseattr
 from qa_tests import risk
-from qa_tests.risk.event_based import qatest_1, qatest_2
+from qa_tests.risk.event_based_risk import case_1, case_2
 
 from openquake.engine.db import models
 
@@ -26,7 +26,7 @@ from numpy.testing import assert_almost_equal as aae
 
 
 class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
-    module = qatest_1
+    module = case_1
 
     hazard_calculation_fixture = "PEB QA test 1"
 
@@ -161,7 +161,7 @@ class EventBaseQATestCase2(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
     """
     This is a fast test of the event_loss_table, which is quite stringent
     """
-    module = qatest_2
+    module = case_2
     hazard_calculation_fixture = "PEB QA test 2"
 
     @noseattr('qa', 'risk', 'event_based')
