@@ -24,8 +24,9 @@ from openquake.engine.utils import config
 from qa_tests import _utils as qa_utils
 from qa_tests.hazard.event_based import sc_utils
 from openquake.qa_tests.event_based import (
-    blocksize, spatial_correlation, case_1, case_2, case_4, case_5, case_6,
-    case_12, case_13)
+    blocksize, case_1, case_2, case_4, case_5, case_6, case_12, case_13)
+from openquake.qa_tests.event_based.spatial_correlation import (
+    case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
 aaae = numpy.testing.assert_array_almost_equal
 
@@ -98,8 +99,7 @@ class EBHazardSpatialCorrelCase1TestCase(qa_utils.BaseQATestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test(self):
-        cfg = os.path.join(os.path.dirname(
-            spatial_correlation.case_1.__file__), 'job.ini')
+        cfg = os.path.join(os.path.dirname(sc1.__file__), 'job.ini')
 
         job = self.run_hazard(cfg)
         hc = job.get_oqparam()
@@ -127,8 +127,7 @@ class EBHazardSpatialCorrelCase2TestCase(qa_utils.BaseQATestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test(self):
-        cfg = os.path.join(os.path.dirname(
-            spatial_correlation.case_2.__file__), 'job.ini')
+        cfg = os.path.join(os.path.dirname(sc2.__file__), 'job.ini')
 
         job = self.run_hazard(cfg)
         hc = job.get_oqparam()
@@ -156,8 +155,7 @@ class EBHazardSpatialCorrelCase3TestCase(qa_utils.BaseQATestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test(self):
-        cfg = os.path.join(os.path.dirname(
-            spatial_correlation.case_3.__file__), 'job.ini')
+        cfg = os.path.join(os.path.dirname(sc3.__file__), 'job.ini')
 
         job = self.run_hazard(cfg)
         hc = job.get_oqparam()
