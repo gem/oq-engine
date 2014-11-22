@@ -15,10 +15,20 @@
 
 import os.path
 from qa_tests import _utils
+from qa_tests.hazard.disagg import case_1, case_2
+
+
+class DisaggHazardCase1TestCase(_utils.DisaggHazardTestCase):
+    working_dir = os.path.dirname(case_1.__file__)
+    imts = ['PGA', 'SA-0.025']
+    fnames = [
+        'disagg_matrix(0.02)-lon_10.1-lat_40.1-smltp_b1-gsimltp_b1.xml',
+        'disagg_matrix(0.1)-lon_10.1-lat_40.1-smltp_b1-gsimltp_b1.xml',
+    ]
 
 
 class DisaggHazardCase2TestCase(_utils.DisaggHazardTestCase):
-    working_dir = os.path.dirname(__file__)
+    working_dir = os.path.dirname(case_2.__file__)
     imts = ['PGA']
     fnames = '''\
 disagg_matrix(0.02)-lon_0.0-lat_0.0-smltp_source_model_1-gsimltp_ChiouYoungs2008_YoungsEtAl1997SSlab.xml
