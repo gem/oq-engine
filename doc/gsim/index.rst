@@ -32,6 +32,7 @@ Built-in GSIMs
     campbell_2003
     campbell_bozorgnia_2003
     campbell_bozorgnia_2008
+    campbell_bozorgnia_2014
     cauzzi_faccioli_2008
     cauzzi_faccioli_2008_swiss
     chiou_youngs_2008
