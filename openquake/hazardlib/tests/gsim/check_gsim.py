@@ -79,7 +79,7 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
             ctxs.append(
                 (orig_sctx == sctx) and (orig_rctx == rctx) and
                 (orig_dctx == dctx)
-            ) 
+            )
             if not numpy.all(ctxs) and debug:
                 msg = 'file %r line %r imt %r. Context object ' \
                       'has changed after get_mean_and_stddevs has been ' \
