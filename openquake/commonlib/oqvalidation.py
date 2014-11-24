@@ -20,6 +20,7 @@ import os
 import re
 import logging
 import tempfile
+import collections
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.commonlib import valid
 
@@ -265,3 +266,11 @@ class OqParam(valid.ParamSet):
             return os.path.exists(pdir) and os.access(pdir, os.W_OK)
         return os.path.isdir(self.export_dir) and os.access(
             self.export_dir, os.W_OK)
+
+    @property
+    def imtls(self):
+        """
+        Returns an OrderedDict with the intensity measure types and levels
+        """
+        items = sorted(self.intensity_measure_types_and_levels.iteritems())
+        return collections.OrderedDict(items)

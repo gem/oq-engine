@@ -18,8 +18,9 @@
 
 import os
 import unittest
+
 from openquake.commonlib.calculators import calculators
-from openquake.commonlib.parallel import PerformanceMonitor
+from openquake.commonlib.parallel import PerformanceMonitor, executor
 from openquake.commonlib import readinput
 
 
@@ -36,7 +37,8 @@ class CalculatorTestCase(unittest.TestCase):
         self.testdir = os.path.dirname(testfile)
         ini = os.path.join(self.testdir, job_ini)
         oq = self.oqparam = readinput.get_oqparam(ini)
-        oq.concurrent_tasks = 0  # to make the test debuggable
+        oq.concurrent_tasks = executor._max_workers
+        # change this when debugging the test
         monitor = PerformanceMonitor(
             self.testdir,
             monitor_csv=os.path.join(oq.export_dir, 'performance_csv'))
@@ -50,6 +52,14 @@ class CalculatorTestCase(unittest.TestCase):
         self.calc.pre_execute()
         self.result = self.calc.execute()
         return self.calc.post_execute(self.result)
+
+    def execute(self, testfile, job_ini):
+        """
+        Return the result of the calculation without exporting it
+        """
+        self.calc = self.get_calc(testfile, job_ini)
+        self.calc.pre_execute()
+        return self.calc.execute()
 
     def assertEqualFiles(self, fname1, fname2):
         """
