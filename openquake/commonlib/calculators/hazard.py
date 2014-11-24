@@ -38,15 +38,15 @@ from openquake.commonlib.export import export
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
-def write_hazard_curves(oqparam, sitecol, rlz, curves):
+def write_hazard_curves(sitecol, rlz, curves, imtls, investigation_time):
     """
+    Export the curves of the given realization into XML.
     """
     smlt_path = '_'.join(rlz.sm_lt_path)
     gsimlt_path = '_'.join(rlz.gsim_lt_path)
     mdata = []
     hcurves = []
-    for imt, imls in sorted(
-            oqparam.intensity_measure_types_and_levels.iteritems()):
+    for imt, imls in imtls.iteritems():
         hcurves.append(
             [HazardCurve(site.location, poes)
              for site, poes in zip(sitecol, curves[imt])])
@@ -56,13 +56,14 @@ def write_hazard_curves(oqparam, sitecol, rlz, curves):
             'statistics': None,
             'smlt_path': smlt_path,
             'gsimlt_path': gsimlt_path,
-            'investigation_time': oqparam.investigation_time,
+            'investigation_time': investigation_time,
             'imt': imt,
             'sa_period': i[1],
             'sa_damping': i[2],
             'imls': imls,
         })
-    dest = 'rlz%d.xml' % rlz.ordinal
+    dest = 'hazard_curve_multi-smltp_%s-gsimltp_%s.xml' % (
+        smlt_path, gsimlt_path)
     hazard_writers.MultiHazardCurveXMLWriter(dest, mdata).serialize(hcurves)
     return dest
 
@@ -173,8 +174,9 @@ class ClassicalCalculator(base.BaseHazardCalculator):
         return saved
 
     def export(self, rlz, curves):
+        oq = self.oqparam
         return {rlz.ordinal: write_hazard_curves(
-            self.oqparam, self.sitecol, rlz, curves)}
+            self.sitecol, rlz, curves, oq.imtls, oq.investigation_time)}
 
 
 @calculators.add('event_based')
