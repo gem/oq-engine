@@ -46,27 +46,17 @@ JAPAN_CONSTS = {"c8": 0.0,
 
 class CampbellBozorgnia2014(GMPE):
     """
-    Implements GMPE developed by Kenneth W. Campbell and Yousef Bozorgnia,
-    published as "NGA Ground Motion Model for the Geometric Mean Horizontal
-    Component of PGA, PGV, PGD and 5 % Damped Linear Elastic Response Spectra
-    for Periods Ranging from 0.01 to 10s" (2008, Earthquake Spectra,
-    Volume 24, Number 1, pages 139 - 171).
-    This class implements the model for the Geometric Mean of the elastic
-    spectra.
-    Included in the coefficient set are the coefficients for the
-    Campbell & Bozorgnia (2010) GMPE for predicting Cumulative Absolute
-    Velocity (CAV), published as "A Ground Motion Prediction Equation for
-    the Horizontal Component of Cumulative Absolute Velocity (CSV) Based on
-    the PEER-NGA Strong Motion Database" (2010, Earthquake Spectra, Volume 26,
-    Number 3, 635 - 650).
+    Implements NGA-West 2 GMPE developed by Kenneth W. Campbell and Yousef
+    Bozorgnia, published as "NGA-West2 Ground Motion Model for the Average
+    Horizontal Components of PGA, PGV, and 5 % Damped Linear Acceleration
+    Response Spectra" (2014, Earthquake Spectra, Volume 30, Number 3,
+    pages 1087 - 1115).
     """
     #: Supported tectonic region type is active shallow crust
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
     #: Supported intensity measure types are spectral acceleration, peak
-    #: ground velocity, peak ground displacement and peak ground acceleration
-    #: Additional model for cumulative absolute velocity defined in
-    #: Campbell & Bozorgnia (2010)
+    #: ground velocity and peak ground acceleration
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
         PGA,
         PGV,
@@ -78,7 +68,7 @@ class CampbellBozorgnia2014(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
 
     #: Supported standard deviation types are inter-event, intra-event
-    #: and total, see section "Aleatory Uncertainty Model", page 147.
+    #: and total, see section "Aleatory Variability Model", page 1094.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
         const.StdDev.TOTAL,
         const.StdDev.INTER_EVENT,
@@ -89,11 +79,12 @@ class CampbellBozorgnia2014(GMPE):
     #: and depth (km) to the 2.5 km/s shear wave velocity layer (z2pt5)
     REQUIRES_SITES_PARAMETERS = set(('vs30', 'z2pt5'))
 
-    #: Required rupture parameters are magnitude, rake, dip, ztor
+    #: Required rupture parameters are magnitude, rake, dip, ztor, rupture
+    #: width and hypocentral depth
     REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake', 'dip', 'ztor', 'width',
                                        'hypo_depth'))
 
-    #: Required distance measures are Rrup and Rjb.
+    #: Required distance measures are Rrup, Rjb and Rx
     REQUIRES_DISTANCES = set(('rrup', 'rjb', 'rx'))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
@@ -109,11 +100,6 @@ class CampbellBozorgnia2014(GMPE):
 
         # Get mean and standard deviation of PGA on rock (Vs30 1100 m/s^2)
         pga1100 = np.exp(self.get_mean_values(C_PGA, sites, rup, dists, None))
-        #print pga1100
-        tau_lnpga, phi_lnpga = self._get_stddevs_pga(C_PGA,
-                                                     rup,
-                                                     sites,
-                                                     pga1100)
         # Get mean and standard deviations for IMT
         mean = self.get_mean_values(C, sites, rup, dists, pga1100)
         if isinstance(imt, SA) and (imt.period <= 0.25):
@@ -123,9 +109,13 @@ class CampbellBozorgnia2014(GMPE):
             pga = self.get_mean_values(C_PGA, sites, rup, dists, pga1100)
             idx = mean <= pga
             mean[idx] = pga[idx]
-            
-        stddevs = self._get_stddevs(C, rup, sites, pga1100, tau_lnpga,
-                                    phi_lnpga, stddev_types)
+        # Get standard deviations
+        stddevs = self._get_stddevs(C,
+                                    C_PGA,
+                                    rup,
+                                    sites,
+                                    pga1100,
+                                    stddev_types)
         return mean, stddevs
 
     def get_mean_values(self, C, sites, rup, dists, a1100):
@@ -133,6 +123,7 @@ class CampbellBozorgnia2014(GMPE):
         Returns the mean values for a specific IMT
         """
         if isinstance(a1100, np.ndarray):
+            # Site model defined
             temp_vs30 = sites.vs30
             temp_z2pt5 = sites.z2pt5
         else:
@@ -222,7 +213,7 @@ class CampbellBozorgnia2014(GMPE):
         idx = r_x >= r_1
         f2rx = self._get_f2rx(C, r_x[idx], r_1, r_2)
         f2rx[f2rx < 0.0] = 0.0
-        fhngrx[idx] = self._get_f2rx(C, r_x[idx], r_1, r_2)
+        fhngrx[idx] = f2rx
         return fhngrx
 
     def _get_f1rx(self, C, r_x, r_1):
@@ -322,7 +313,7 @@ class CampbellBozorgnia2014(GMPE):
             # Japan Basin Model - Equation 34 of Campbell & Bozorgnia (2014)
             return np.exp(5.359 - 1.102 * np.log(vs30))
         else:
-            # California Basin Model - Equation 33 of 
+            # California Basin Model - Equation 33 of
             # Campbell & Bozorgnia (2014)
             return np.exp(7.089 - 1.144 * np.log(vs30))
 
@@ -349,7 +340,7 @@ class CampbellBozorgnia2014(GMPE):
         f_site_g = C["c11"] * np.log(vs_mod)
         idx = vs30 > C["k1"]
         f_site_g[idx] = f_site_g[idx] + (C["k2"] * self.CONSTS["n"] *
-            np.log(vs_mod[idx]))
+                                         np.log(vs_mod[idx]))
 
         # Get nonlinear site response term
         idx = np.logical_not(idx)
@@ -362,36 +353,46 @@ class CampbellBozorgnia2014(GMPE):
 
         # For Japan sites (SJ = 1) further scaling is needed (equation 19)
         if self.CONSTS["SJ"]:
-            j_coeff1 = (C["c13"] + C["k2"] * self.CONSTS["n"])
-            fsite_j = j_coeff1 * np.log(vs_mod)
-            idx = vs30 <= 200.0
+            fsite_j = np.log(vs_mod)
+            idx = vs30 > 200.0
             if np.any(idx):
-                fsite_j[idx] = j_coeff1 * (np.log(vs_mod[idx]) -
-                                           np.log(200.0 / C["k1"]))
+                fsite_j[idx] = (C["c13"] + C["k2"] * self.CONSTS["n"]) *\
+                    fsite_j[idx]
+            idx = np.logical_not(idx)
+            if np.any(idx):
+                fsite_j[idx] = (C["c12"] + C["k2"] * self.CONSTS["n"]) *\
+                    (fsite_j[idx] - np.log(200.0 / C["k1"]))
+
             return f_site_g + fsite_j
         else:
             return f_site_g
 
-    def _get_stddevs(self, C, rup, sites, pga1100, tau_lnpga, phi_lnpga,
-            stddev_types):
+    def _get_stddevs(self, C, C_PGA, rup, sites, pga1100, stddev_types):
         """
         Returns the inter- and intra-event and total standard deviations
         """
+        # Get stddevs for PGA on basement rock
+        tau_lnpga_b, phi_lnpga_b = self._get_stddevs_pga(C_PGA, rup)
         num_sites = len(sites.vs30)
+        # Get tau_lny on the basement rock
         tau_lnyb = self._get_taulny(C, rup.mag)
+        # Get phi_lny on the basement rock
         phi_lnyb = np.sqrt(self._get_philny(C, rup.mag) ** 2. -
-                              self.CONSTS["philnAF"] ** 2.)
+                           self.CONSTS["philnAF"] ** 2.)
+        # Get site scaling term
         alpha = self._get_alpha(C, sites.vs30, pga1100)
+        # Evaluate tau according to equation 29
         tau = np.sqrt(
             (tau_lnyb ** 2.) +
-            ((alpha ** 2.) * (tau_lnpga ** 2.)) +
-            (2.0 * alpha * C["rholny"] * tau_lnyb * tau_lnpga))
+            ((alpha ** 2.) * (tau_lnpga_b ** 2.)) +
+            (2.0 * alpha * C["rholny"] * tau_lnyb * tau_lnpga_b))
 
+        # Evaluate phi according to equation 30
         phi = np.sqrt(
             (phi_lnyb ** 2.) +
             (self.CONSTS["philnAF"] ** 2.) +
-            ((alpha ** 2.) * (phi_lnpga ** 2.)) +
-            (2.0 * alpha * C["rholny"] * phi_lnyb * phi_lnpga))
+            ((alpha ** 2.) * (phi_lnpga_b ** 2.)) +
+            (2.0 * alpha * C["rholny"] * phi_lnyb * phi_lnpga_b))
         stddevs = []
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
@@ -404,24 +405,14 @@ class CampbellBozorgnia2014(GMPE):
                 stddevs.append(tau + np.zeros(num_sites))
         return stddevs
 
-    def _get_stddevs_pga(self, C, rup, sites, pga1100):
+    def _get_stddevs_pga(self, C, rup):
         """
         Returns the inter- and intra-event coefficients for PGA
         """
         tau_lnpga_b = self._get_taulny(C, rup.mag)
         phi_lnpga_b = np.sqrt(self._get_philny(C, rup.mag) ** 2. -
-                            self.CONSTS["philnAF"] ** 2.)
-        alpha_pga = self._get_alpha(C, sites.vs30, pga1100)
-        tau_lnpga = np.sqrt(
-            (tau_lnpga_b ** 2.) +
-            (alpha_pga ** 2.0 + tau_lnpga_b ** 2.) +
-            (2.0 * alpha_pga * C["rholny"] * (tau_lnpga_b ** 2.0)))
-        phi_lnpga = np.sqrt(
-            (phi_lnpga_b ** 2.) +
-            (self.CONSTS["philnAF"] ** 2.0) +
-            (alpha_pga ** 2.0 + phi_lnpga_b ** 2.) +
-            (2.0 * alpha_pga * C["rholny"] * (phi_lnpga_b ** 2.0)))
-        return tau_lnpga, phi_lnpga
+                              self.CONSTS["philnAF"] ** 2.)
+        return tau_lnpga_b, phi_lnpga_b
 
     def _get_taulny(self, C, mag):
         """
@@ -454,9 +445,11 @@ class CampbellBozorgnia2014(GMPE):
         """
         alpha = np.zeros(len(pga_rock))
         idx = vs30 < C["k1"]
-        alpha[idx] = C["k2"] * pga_rock[idx] * ((1. / (pga_rock[idx] +
-            self.CONSTS["c"] * ((vs30[idx] / C["k1"]) ** self.CONSTS["n"]))) -\
-            (1.0 / (pga_rock[idx] + self.CONSTS["c"])))
+        if np.any(idx):
+            af1 = pga_rock[idx] +\
+                self.CONSTS["c"] * ((vs30[idx] / C["k1"]) ** self.CONSTS["n"])
+            af2 = pga_rock[idx] + self.CONSTS["c"]
+            alpha[idx] = C["k2"] * pga_rock[idx] * ((1.0 / af1) - (1.0 / af2))
         return alpha
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -491,8 +484,8 @@ class CampbellBozorgnia2014(GMPE):
 
 class CampbellBozorgnia2014HighQ(CampbellBozorgnia2014):
     """
-    Implements the Campbell & Bozorgnia (2014) GMPE for regions with low
-    attenuation (high quality factor, Q)
+    Implements the Campbell & Bozorgnia (2014) NGA-West2 GMPE for regions with
+    low attenuation (high quality factor, Q) (i.e. China, Turkey)
     """
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT         c0      c1       c2       c3       c4       c5      c6      c7       c9     c10      c11      c12     c13       c14      c15     c16       c17      c18       c19       c20     Dc20      a2      h1      h2       h3       h5       h6     k1       k2      k3    phi1    phi2    tau1    tau2    phiC   rholny
@@ -524,8 +517,8 @@ class CampbellBozorgnia2014HighQ(CampbellBozorgnia2014):
 
 class CampbellBozorgnia2014LowQ(CampbellBozorgnia2014):
     """
-    Implements the Campbell & Bozorgnia (2014) GMPE for regions with high
-    attenuation (low quality factor, Q)
+    Implements the Campbell & Bozorgnia (2014) NGA-West2 GMPE for regions with
+    high attenuation (low quality factor, Q) (i.e. Japan, Italy)
     """
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT         c0      c1       c2       c3       c4       c5      c6      c7       c9     c10      c11      c12     c13       c14      c15     c16       c17      c18       c19       c20      Dc20      a2      h1      h2       h3       h5       h6     k1       k2      k3    phi1    phi2    tau1    tau2    phiC  rholny
@@ -557,16 +550,16 @@ class CampbellBozorgnia2014LowQ(CampbellBozorgnia2014):
 
 class CampbellBozorgnia2014JapanSite(CampbellBozorgnia2014):
     """
-    Implements the Campbell & Bozorgnia (2014) GMPE for the case in which
-    the "Japan" shallow site response term is activited
+    Implements the Campbell & Bozorgnia (2014) NGA-West2 GMPE for the case in
+    which the "Japan" shallow site response term is activited
     """
     CONSTS = JAPAN_CONSTS
 
 
 class CampbellBozorgnia2014HighQJapanSite(CampbellBozorgnia2014HighQ):
     """
-    Implements the Campbell & Bozorgnia (2014) GMPE, for the low attenuation
-    (high quality factor) coefficients, for the case in which
+    Implements the Campbell & Bozorgnia (2014) NGA-West2 GMPE, for the low
+    attenuation (high quality factor) coefficients, for the case in which
     the "Japan" shallow site response term is activited
     """
     CONSTS = JAPAN_CONSTS
@@ -574,8 +567,8 @@ class CampbellBozorgnia2014HighQJapanSite(CampbellBozorgnia2014HighQ):
 
 class CampbellBozorgnia2014LowQJapanSite(CampbellBozorgnia2014LowQ):
     """
-    Implements the Campbell & Bozorgnia (2014) GMPE, for the high attenuation
-    (low quality factor) coefficients, for the case in which
+    Implements the Campbell & Bozorgnia (2014) NGA-West2 GMPE, for the high
+    attenuation (low quality factor) coefficients, for the case in which
     the "Japan" shallow site response term is activited
     """
     CONSTS = JAPAN_CONSTS

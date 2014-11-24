@@ -79,22 +79,7 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
             ctxs.append(
                 (orig_sctx == sctx) and (orig_rctx == rctx) and
                 (orig_dctx == dctx)
-            )
-
-            checker =  numpy.column_stack([sctx.vs30, dctx.rrup, dctx.rx,
-                                           numpy.exp(mean), 
-                                           expected_result,
-                                           numpy.exp(mean) / expected_result])
-            for row in checker:
-
-                if numpy.fabs(row[5] - 1.) > 1E-5:
-                    print imt, rctx.mag, rctx.rake, rctx.dip, rctx.hypo_depth, rctx.width, rctx.width * numpy.cos(numpy.radians(rctx.dip)), (62.0 * rctx.mag - 350.)
-                    print "{:7.2f} {:6.2f} {:6.2f} {:.6e} {:.6e} {:.5f}".format(
-                        row[0], row[1], row[2], row[3], row[4], row[5])
-                    print row[2] - (rctx.width * numpy.cos(numpy.radians(rctx.dip)))
-                #else:
-                    #print imt, rctx.mag, rctx.rake, rctx.dip, rctx.hypo_depth, rctx.width, rctx.width * numpy.cos(numpy.radians(rctx.dip)), row[1], row[2]
-                    
+            ) 
             if not numpy.all(ctxs) and debug:
                 msg = 'file %r line %r imt %r. Context object ' \
                       'has changed after get_mean_and_stddevs has been ' \
