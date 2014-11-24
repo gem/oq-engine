@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <logicTree logicTreeID='lt1'>
+<!-- 1.0 Logic Tree for Active Shallow Crust -->
+        <logicTreeBranchingLevel branchingLevelID="bl1">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1" applyToTectonicRegionType="Active Shallow Crust">
+
+                <logicTreeBranch branchID="b1_1">
+ <uncertaintyModel>AkkarBommer2010</uncertaintyModel>
+                    <uncertaintyWeight>0.35</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b1_2">
+ <uncertaintyModel>CauzziFaccioli2008</uncertaintyModel>
+                    <uncertaintyWeight>0.35</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b1_3">
+ <uncertaintyModel>ChiouYoungs2008</uncertaintyModel>
+                    <uncertaintyWeight>0.20</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b1_4">
+ <uncertaintyModel>ZhaoEtAl2006Asc</uncertaintyModel>
+                    <uncertaintyWeight>0.10</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+<!-- 2.0 Logic Tree for Stable Shallow Crust -->
+        <logicTreeBranchingLevel branchingLevelID="bl2">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs2" applyToTectonicRegionType="Stable Shallow Crust">
+
+                <logicTreeBranch branchID="b2_1">
+ <uncertaintyModel>AkkarBommer2010</uncertaintyModel>
+                    <uncertaintyWeight>0.20</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b2_2">
+ <uncertaintyModel>CauzziFaccioli2008</uncertaintyModel>
+                    <uncertaintyWeight>0.20</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b2_3">
+ <uncertaintyModel>ChiouYoungs2008</uncertaintyModel>
+                    <uncertaintyWeight>0.20</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b2_4">
+ <uncertaintyModel>ToroEtAl2002SHARE</uncertaintyModel>
+                    <uncertaintyWeight>0.20</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b2_5">
+ <uncertaintyModel>Campbell2003SHARE</uncertaintyModel>
+                    <uncertaintyWeight>0.20</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+<!-- 3.0 Logic Tree for Shield -->
+        <logicTreeBranchingLevel branchingLevelID="bl3"> 
+        <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs3" applyToTectonicRegionType="Shield">
+
+                <logicTreeBranch branchID="b3_1">
+ <uncertaintyModel>ToroEtAl2002SHARE</uncertaintyModel>
+                    <uncertaintyWeight>0.50</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b3_2">
+ <uncertaintyModel>Campbell2003SHARE</uncertaintyModel>
+                    <uncertaintyWeight>0.50</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+<!-- 4.0 Logic Tree for Volcanic -->
+        <logicTreeBranchingLevel branchingLevelID="bl4">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs4" applyToTectonicRegionType="Volcanic">
+                <logicTreeBranch branchID="b4_1">
+                <uncertaintyModel>FaccioliEtAl2010</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>       
+    </logicTree>
+</nrml>
