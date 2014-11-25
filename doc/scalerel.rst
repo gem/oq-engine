@@ -37,6 +37,13 @@ Point
     :members:
 
 
+--------------------
+Strasser et al. 2010
+--------------------
+
+.. automodule:: openquake.hazardlib.scalerel.strasser2010
+    :members:
+
 
 --------------------------
 Abstract base relationship

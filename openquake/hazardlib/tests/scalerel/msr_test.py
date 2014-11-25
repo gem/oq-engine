@@ -26,9 +26,13 @@ class BaseMSRTestCase(unittest.TestCase):
         super(BaseMSRTestCase, self).setUp()
         self.msr = self.MSR_CLASS()
 
-    def _test_get_median_area(self, mag, rake, expected_value):
+    def _test_get_median_area(self, mag, rake, expected_value, places=7):
         self.assertAlmostEqual(self.msr.get_median_area(mag, rake),
-                               expected_value)
+                               expected_value, places=places)
+
+    def _test_get_median_mag(self, area, rake, expected_value, places=7):
+        self.assertAlmostEqual(self.msr.get_median_mag(area, rake),
+                               expected_value, places=places)
 
 
 class PeerMSRMSRTestCase(BaseMSRTestCase):
