@@ -604,10 +604,10 @@ class DeprecatedTestCase(unittest.TestCase):
         @deprecated('Use dummy_new instead.')
         def dummy():
             pass
-        with mock.patch('warnings.warn') as warn:
-            dummy()
 
         # check that a DeprecationWarning is printed
+        with mock.patch('warnings.warn') as warn:
+            dummy()
         warning_msg, warning_type = warn.call_args[0]
         self.assertIs(warning_type, DeprecationWarning)
         self.assertEqual(
