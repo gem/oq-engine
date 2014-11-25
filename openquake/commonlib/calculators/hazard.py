@@ -125,6 +125,7 @@ def classical(sources, sitecol, trt_gsims, monitor):
             sources, sitecol, imtls, {trt: gsim}, truncation_level,
             source_site_filter=source_site_distance_filter(max_dist),
             rupture_site_filter=rupture_site_distance_filter(max_dist))
+        assert sum(v.sum() for v in curves.itervalues()), 'all zero curves!'
         result[trt_model_id, gsim.__class__.__name__] = AccumDict(curves)
     return result
 
