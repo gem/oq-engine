@@ -24,19 +24,19 @@ from openquake.hazardlib.scalerel.base import BaseMSRSigma, BaseASRSigma
 
 class StrasserInterface(BaseMSRSigma, BaseASRSigma):
     """
-    Strasser, Arango and Bommer magnitude -- rupture area relationships for 
+    Strasser, Arango and Bommer magnitude -- rupture area relationships for
     interface events.
 
-    See F. O. Strasser, M. C. Arango, and J. J. Bommer Scaling of the Source 
-    Dimensions of Interface and Intraslab Subduction-zone Earthquakes with 
-    Moment Magnitude Seismological Research Letters, November/December 2010, 
+    See F. O. Strasser, M. C. Arango, and J. J. Bommer Scaling of the Source
+    Dimensions of Interface and Intraslab Subduction-zone Earthquakes with
+    Moment Magnitude Seismological Research Letters, November/December 2010,
     v. 81, p. 941-950, doi:10.1785/gssrl.81.6.941
-    
+
     Implements both magnitude-area and area-magnitude scaling relationships.
     """
     def get_median_area(self, mag, rake):
         """
-        Calculates median areas as `10** (a + b*mag)`. 
+        Calculates median areas as `10** (a + b*mag)`.
         The values are a function of magnitude. Rake is ignored.
 
         """
@@ -46,8 +46,7 @@ class StrasserInterface(BaseMSRSigma, BaseASRSigma):
         """
         Standard deviation for Strasser et al 2010. Magnitude is ignored.
         """
-        return 0.304 
-
+        return 0.304
 
     def get_median_mag(self, area, rake):
         """
@@ -60,7 +59,7 @@ class StrasserInterface(BaseMSRSigma, BaseASRSigma):
 
     def get_std_dev_mag(self, rake):
         """
-        Standard deviation on the magnitude for the Strasser et al. (2010) 
+        Standard deviation on the magnitude for the Strasser et al. (2010)
         area relation.
         """
         return 0.286
@@ -68,19 +67,19 @@ class StrasserInterface(BaseMSRSigma, BaseASRSigma):
 
 class StrasserIntraslab(BaseMSRSigma, BaseASRSigma):
     """
-    Strasser, Arango and Bommer magnitude -- rupture area relationships for 
+    Strasser, Arango and Bommer magnitude -- rupture area relationships for
     intraslab events.
 
-    See F. O. Strasser, M. C. Arango, and J. J. Bommer Scaling of the Source 
-    Dimensions of Interface and Intraslab Subduction-zone Earthquakes with 
-    Moment Magnitude Seismological Research Letters, November/December 2010, 
+    See F. O. Strasser, M. C. Arango, and J. J. Bommer Scaling of the Source
+    Dimensions of Interface and Intraslab Subduction-zone Earthquakes with
+    Moment Magnitude Seismological Research Letters, November/December 2010,
     v. 81, p. 941-950, doi:10.1785/gssrl.81.6.941
-    
+
     Implements both magnitude-area and area-magnitude scaling relationships.
     """
     def get_median_area(self, mag, rake):
         """
-        Calculates median areas as `10** (a + b*mag)`. 
+        Calculates median areas as `10** (a + b*mag)`.
         The values are a function of magnitude. Rake is ignored.
 
         """
@@ -103,8 +102,7 @@ class StrasserIntraslab(BaseMSRSigma, BaseASRSigma):
 
     def get_std_dev_mag(self, rake):
         """
-        Standard deviation on the magnitude for the Strasser et al. (2010) 
+        Standard deviation on the magnitude for the Strasser et al. (2010)
         area relation.
         """
         return 0.193
-

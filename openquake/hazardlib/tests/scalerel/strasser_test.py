@@ -15,14 +15,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # import unittest
 
-from openquake.hazardlib.scalerel.strasser2010 import (StrasserInterface, 
+from openquake.hazardlib.scalerel.strasser2010 import (StrasserInterface,
                                                        StrasserIntraslab)
-from openquake.hazardlib.tests.scalerel.msr_test import BaseMSRTestCase 
+from openquake.hazardlib.tests.scalerel.msr_test import BaseMSRTestCase
+
 
 class StrasserInterfaceTestCase(BaseMSRTestCase):
     '''
-    Tests for the magnitude-scaling relationship Strasser et al. (2010) for 
-    interface events. 
+    Tests for the magnitude-scaling relationship Strasser et al. (2010) for
+    interface events.
 
     '''
 
@@ -51,8 +52,8 @@ class StrasserInterfaceTestCase(BaseMSRTestCase):
 
 class StrasserIntraslabTestCase(BaseMSRTestCase):
     '''
-    Tests for the magnitude-scaling relationship Strasser et al. (2010) for 
-    intraslab events. 
+    Tests for the magnitude-scaling relationship Strasser et al. (2010) for
+    intraslab events.
 
     '''
 
