@@ -34,12 +34,11 @@ class TestCase(unittest.TestCase):
     # Skip the following two tests as they always fail on Mac
     @unittest.skip
     def test_engine_performance_monitor(self):
-        job = engine.prepare_job()
+        job = engine.create_job()
         mock_task = mock.Mock()
         mock_task.__name__ = 'mock_task'
         mock_task.request.id = task_id = str(uuid.uuid1())
-        with EnginePerformanceMonitor(
-                'test', job.id, mock_task, profile_pgmem=True) as pmon:
+        with EnginePerformanceMonitor('test', job.id, mock_task) as pmon:
             pass
         self._check_result(pmon)
         # check that one record was stored on the db, as it should
@@ -48,10 +47,9 @@ class TestCase(unittest.TestCase):
 
     @unittest.skip
     def test_engine_performance_monitor_no_task(self):
-        job = engine.prepare_job()
+        job = engine.create_job()
         operation = str(uuid.uuid1())
-        with EnginePerformanceMonitor(
-                operation, job.id, profile_pgmem=True) as pmon:
+        with EnginePerformanceMonitor(operation, job.id) as pmon:
             pass
         self._check_result(pmon)
         flush()
