@@ -18,13 +18,11 @@ import unittest
 import numpy
 
 import openquake.hazardlib
-from openquake.hazardlib import const
-from openquake.hazardlib import imt
+from openquake.hazardlib import const, imt
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.calc.hazard_curve import (
-    hazard_curves, calc_hazard_curves)
+from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
 
 
 class HazardCurvesTestCase(unittest.TestCase):
@@ -67,7 +65,7 @@ class HazardCurvesTestCase(unittest.TestCase):
 
     def setUp(self):
         self.truncation_level = 3.4
-        self.imts = {imt.PGA(): [1, 2, 3], imt.PGD(): [2, 4]}
+        self.imts = {'PGA': [1, 2, 3], 'PGD': [2, 4]}
         self.time_span = 49.2
 
         rup11 = self.FakeRupture(0.23, const.TRT.ACTIVE_SHALLOW_CRUST)
@@ -108,21 +106,15 @@ class HazardCurvesTestCase(unittest.TestCase):
         site1_pgd_poe_expected = [0.16146619, 0.1336553]
         site2_pgd_poe_expected = [0.15445961, 0.13437589]
 
-        curves = hazard_curves(self.sources, self.sites, self.imts,
-                               self.gsims, self.truncation_level)
-
-        self.assertIsInstance(curves, dict)
-        self.assertEqual(set(curves), set([imt.PGA(), imt.PGD()]))
-
-        same_curves = calc_hazard_curves(
+        curves = calc_hazard_curves(
             self.sources, self.sites,
-            {'PGA': self.imts[imt.PGA()], 'PGD': self.imts[imt.PGD()]},
+            {'PGA': self.imts['PGA'], 'PGD': self.imts['PGD']},
             self.gsims, self.truncation_level)
 
-        self.assertIsInstance(same_curves, dict)
-        self.assertEqual(set(same_curves), set(['PGA', 'PGD']))
+        self.assertIsInstance(curves, dict)
+        self.assertEqual(set(curves), set(['PGA', 'PGD']))
 
-        pga_curves = curves[imt.PGA()]
+        pga_curves = curves['PGA']
         self.assertIsInstance(pga_curves, numpy.ndarray)
         self.assertEqual(pga_curves.shape, (2, 3))  # two sites, three IMLs
         site1_pga_poe, site2_pga_poe = pga_curves
@@ -131,7 +123,7 @@ class HazardCurvesTestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose(site2_pga_poe, site2_pga_poe_expected),
                         str(site2_pga_poe))
 
-        pgd_curves = curves[imt.PGD()]
+        pgd_curves = curves['PGD']
         self.assertIsInstance(pgd_curves, numpy.ndarray)
         self.assertEqual(pgd_curves.shape, (2, 2))  # two sites, two IMLs
         site1_pgd_poe, site2_pgd_poe = pgd_curves
@@ -150,8 +142,8 @@ class HazardCurvesTestCase(unittest.TestCase):
         sources = iter([self.source1, fail_source])
 
         with self.assertRaises(ValueError) as ae:
-            hazard_curves(sources, self.sites, self.imts, self.gsims,
-                          self.truncation_level)
+            calc_hazard_curves(sources, self.sites, self.imts, self.gsims,
+                               self.truncation_level)
         expected_error = (
             'An error occurred with source id=2. Error: Something bad happened'
         )
@@ -233,7 +225,7 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
         gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
         truncation_level = 1
-        imts = {openquake.hazardlib.imt.PGA(): [0.1, 0.5, 1.3]}
+        imts = {'PGA': [0.1, 0.5, 1.3]}
 
         from openquake.hazardlib.calc import filters
         source_site_filter = self.SitesCounterSourceFilter(
@@ -242,7 +234,7 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         rupture_site_filter = self.SitesCounterRuptureFilter(
             filters.rupture_site_distance_filter(30)
         )
-        hazard_curves(
+        calc_hazard_curves(
             iter(sources), sitecol, imts, gsims, truncation_level,
             source_site_filter=source_site_filter,
             rupture_site_filter=rupture_site_filter
