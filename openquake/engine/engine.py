@@ -124,7 +124,7 @@ def job_stats(job):
         cleanup_after_job(job, terminate=TERMINATE)
 
 
-def prepare_job(user_name="openquake", log_level='progress'):
+def create_job(user_name="openquake", log_level='progress'):
     """
     Create job for the given user, return it.
 
@@ -439,7 +439,7 @@ def job_from_file(cfg_file_path, username, log_level='info', exports='',
         haz_job = None  # no previous hazard job
 
     # create the current job
-    job = prepare_job(user_name=username, log_level=log_level)
+    job = create_job(user_name=username, log_level=log_level)
     models.JobStats.objects.create(oq_job=job)
 
     # read calculation params and create the calculation profile
