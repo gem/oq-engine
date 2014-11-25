@@ -33,7 +33,7 @@ def hazard_curves(
         rupture_site_filter=filters.rupture_site_noop_filter):
     """
     Deprecated. It does the same job of
-    :function:`openquake.hazardlib.calc.hazard_curve.calc_hazard_curves`,
+    :func:`openquake.hazardlib.calc.hazard_curve.calc_hazard_curves`,
     with the only difference that the intensity measure types in input
     and output are hazardlib objects instead of simple strings.
     """
