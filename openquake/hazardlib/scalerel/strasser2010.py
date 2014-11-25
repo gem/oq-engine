@@ -14,8 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`openquake.hazardlib.scalerel.strasser2010 implements :
-class: `StrasserInterface`, class: `StrasserIntraslab`.
+Module :mod:`openquake.hazardlib.scalerel.strasser2010` implements
+:class:`StrasserInterface`, :class:`StrasserIntraslab`.
 
 """
 from math import log10
