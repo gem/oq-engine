@@ -27,10 +27,52 @@ from openquake.engine import engine, logs
 from openquake.engine.tests.utils import helpers
 
 
+class FakeJob(object):
+    def __init__(self, job_type, calculation_mode):
+        self.job_type = job_type
+        self.calculation_mode = calculation_mode
+
+    def get_param(self, dummy):
+        return self.calculation_mode
+
+
+class CheckHazardRiskConsistencyTestCase(unittest.TestCase):
+    def test_ok(self):
+        haz_job = FakeJob('hazard', 'scenario')
+        engine.check_hazard_risk_consistency(
+            haz_job, 'scenario_risk')
+
+    def test_no_hazard(self):
+        haz_job = FakeJob('risk', 'scenario')
+        with self.assertRaises(engine.InvalidHazardCalculationID):
+            engine.check_hazard_risk_consistency(
+                haz_job, 'scenario_risk')
+
+    def test_obsolete_mode(self):
+        haz_job = FakeJob('hazard', 'scenario')
+        with self.assertRaises(ValueError) as ctx:
+            engine.check_hazard_risk_consistency(
+                haz_job, 'scenario')
+        msg = str(ctx.exception)
+        self.assertEqual(msg, 'Please change calculation_mode=scenario into '
+                         'scenario_risk in the .ini file')
+
+    def test_inconsistent_mode(self):
+        haz_job = FakeJob('hazard', 'scenario')
+        with self.assertRaises(engine.InvalidHazardCalculationID) as ctx:
+            engine.check_hazard_risk_consistency(
+                haz_job, 'classical_risk')
+        msg = str(ctx.exception)
+        self.assertEqual(msg, "In order to run a risk calculation of kind "
+                         "'classical_risk', you need to provide a hazard "
+                         "calculation of kind 'classical', but you provided "
+                         "a 'scenario' instead")
+
+
 class JobFromFileTestCase(unittest.TestCase):
 
-    def test_prepare_job_default_user(self):
-        job = engine.prepare_job()
+    def test_create_job_default_user(self):
+        job = engine.create_job()
 
         self.assertEqual('openquake', job.user_name)
         self.assertEqual('pre_executing', job.status)
@@ -42,9 +84,9 @@ class JobFromFileTestCase(unittest.TestCase):
         except exceptions.ObjectDoesNotExist:
             self.fail('Job was not found in the database')
 
-    def test_prepare_job_specified_user(self):
+    def test_create_job_specified_user(self):
         user_name = helpers.random_string()
-        job = engine.prepare_job(user_name=user_name)
+        job = engine.create_job(user_name=user_name)
 
         self.assertEqual(user_name, job.user_name)
         self.assertEqual('pre_executing', job.status)
@@ -55,11 +97,11 @@ class JobFromFileTestCase(unittest.TestCase):
         except exceptions.ObjectDoesNotExist:
             self.fail('Job was not found in the database')
 
-    def test_prepare_job_explicit_log_level(self):
+    def test_create_job_explicit_log_level(self):
         # By default, a job is created with a log level of 'progress'
         # (just to show calculation progress).
         # In this test, we'll specify 'debug' as the log level.
-        job = engine.prepare_job(log_level='debug')
+        job = engine.create_job(log_level='debug')
 
         self.assertEqual('debug', job.log_level)
 
