@@ -20,7 +20,7 @@ import os
 import collections
 
 from openquake.commonlib.export import export
-from openquake.commonlib.writers import scientificformat, fmt
+from openquake.commonlib.writers import scientificformat, floatformat
 from openquake.commonlib import hazard_writers
 from openquake.hazardlib.imt import from_string
 
@@ -138,7 +138,7 @@ def export_gmf_xml(key, export_dir, sitecol, rupture_tags, gmfs):
     dest = os.path.join(export_dir, key.replace('_xml', '.xml'))
     writer = hazard_writers.EventBasedGMFXMLWriter(
         dest, sm_lt_path='', gsim_lt_path='')
-    with fmt('%12.8E'):
+    with floatformat('%12.8E'):
         writer.serialize(GmfCollection(sitecol, rupture_tags, gmfs))
     return {key: dest}
 
@@ -146,7 +146,7 @@ def export_gmf_xml(key, export_dir, sitecol, rupture_tags, gmfs):
 @export.add('gmf_csv')
 def export_gmf_csv(key, export_dir, sitecol, rupture_tags, gmfs):
     dest = os.path.join(export_dir, key.replace('_csv', '.csv'))
-    with fmt('%12.8E'), open(dest, 'w') as f:
+    with floatformat('%12.8E'), open(dest, 'w') as f:
         for imt, gmf in gmfs.iteritems():
             for site, gmvs in zip(sitecol, gmf):
                 row = [imt, site.location.longitude,
@@ -171,7 +171,7 @@ def export_hazard_curves_csv(key, export_dir, sitecol, curves_by_imt):
     :param curves_by_imt: dictionary with the curves keyed by IMT
     """
     dest = os.path.join(export_dir, key.replace('_csv', '.csv'))
-    with fmt('%12.8E'), open(dest, 'w') as f:
+    with floatformat('%12.8E'), open(dest, 'w') as f:
         for imt, curves in sorted(curves_by_imt):
             for site, curve in zip(sitecol, curves_by_imt[imt]):
                 row = [imt, site.location.longitude,
@@ -217,6 +217,6 @@ def export_hazard_curves_xml(key, export_dir, sitecol, rlz, curves_by_imt,
     dest = 'hazard_curve_multi-smltp_%s-gsimltp_%s.xml' % (
         smlt_path, gsimlt_path)
     writer = hazard_writers.MultiHazardCurveXMLWriter(dest, mdata)
-    with fmt('%12.8E'):
+    with floatformat('%12.8E'):
         writer.serialize(hcurves)
     return {key: dest}

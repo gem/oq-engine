@@ -19,7 +19,7 @@ from xml.sax.saxutils import escape, quoteattr
 
 
 @contextmanager
-def fmt(fmt_string):
+def floatformat(fmt_string):
     """
     Context manager to change the default format string for the
     function :function:`openquake.commonlib.writers.scientificformat`.
