@@ -73,7 +73,7 @@ def event_based(workflow, getter, outputdict, params, monitor):
     inserter = writer.CacheInserter(
         models.EventLossAsset, max_cache_size=10000)
     for loss_type in workflow.loss_types:
-        with monitor.copy('computing individual risk'):
+        with monitor('computing individual risk'):
             outputs = workflow.compute_all_outputs(getter, loss_type)
             if statistics:
                 outputs = list(outputs)  # expand the generator
@@ -107,13 +107,13 @@ def event_based(workflow, getter, outputdict, params, monitor):
                             asset=asset, loss=loss_per_rup)
                         inserter.add(ela)
                 if params.sites_disagg:
-                    with monitor.copy('disaggregating results'):
+                    with monitor('disaggregating results'):
                         ruptures = [models.SESRupture.objects.get(pk=rid)
                                     for rid in getter.rupture_ids]
                         disagg_outputs = disaggregate(
                             out.output, [r.rupture for r in ruptures], params)
 
-            with monitor.copy('saving individual risk'):
+            with monitor('saving individual risk'):
                 save_individual_outputs(
                     outputdict.with_args(hazard_output_id=out.hid,
                                          loss_type=loss_type),
@@ -123,7 +123,7 @@ def event_based(workflow, getter, outputdict, params, monitor):
             stats = workflow.statistics(
                 outputs, params.quantile_loss_curves, post_processing)
 
-            with monitor.copy('saving risk statistics'):
+            with monitor('saving risk statistics'):
                 save_statistical_output(
                     outputdict.with_args(
                         hazard_output_id=None, loss_type=loss_type),
