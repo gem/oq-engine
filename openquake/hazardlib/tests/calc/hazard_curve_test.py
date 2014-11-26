@@ -107,8 +107,7 @@ class HazardCurvesTestCase(unittest.TestCase):
         site2_pgd_poe_expected = [0.15445961, 0.13437589]
 
         curves = calc_hazard_curves(
-            self.sources, self.sites,
-            {'PGA': self.imts['PGA'], 'PGD': self.imts['PGD']},
+            self.sources, self.sites, self.imts,
             self.gsims, self.truncation_level)
 
         self.assertIsInstance(curves, dict)
