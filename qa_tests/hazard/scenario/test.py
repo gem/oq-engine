@@ -24,6 +24,7 @@ from openquake.engine import export
 from openquake.engine.db import models
 from openquake.commonlib.tests import check_equal
 from qa_tests import _utils as qa_utils
+from openquake.commonlib.tests.calculators.scenario_test import count_close
 from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8)
 
@@ -104,8 +105,8 @@ class ScenarioHazardCase5TestCase(qa_utils.BaseQATestCase):
         realizations = 1e5
         first_value = 0.5
         second_value = 1.0
-        gmfs_within_range_fst = qa_utils.count(first_value, gmfs[0], gmfs[1])
-        gmfs_within_range_snd = qa_utils.count(second_value, gmfs[0], gmfs[1])
+        gmfs_within_range_fst = count_close(first_value, gmfs[0], gmfs[1])
+        gmfs_within_range_snd = count_close(second_value, gmfs[0], gmfs[1])
 
         self.assertAlmostEqual(gmfs_within_range_fst / realizations,
                                0.03, places=2)
@@ -124,8 +125,8 @@ class ScenarioHazardCase6TestCase(qa_utils.BaseQATestCase):
         realizations = 2e4
         first_value = 0.5
         second_value = 1.0
-        gmfs_within_range_fst = qa_utils.count(first_value, gmfs[0], gmfs[1])
-        gmfs_within_range_snd = qa_utils.count(second_value, gmfs[0], gmfs[1])
+        gmfs_within_range_fst = count_close(first_value, gmfs[0], gmfs[1])
+        gmfs_within_range_snd = count_close(second_value, gmfs[0], gmfs[1])
         self.assertAlmostEqual(gmfs_within_range_fst / realizations,
                                0.05, places=2)
         self.assertAlmostEqual(gmfs_within_range_snd / realizations,
@@ -143,8 +144,8 @@ class ScenarioHazardCase7TestCase(qa_utils.BaseQATestCase):
         realizations = 1e5
         first_value = 0.5
         second_value = 1.0
-        gmfs_within_range_fst = qa_utils.count(first_value, gmfs[0], gmfs[1])
-        gmfs_within_range_snd = qa_utils.count(second_value, gmfs[0], gmfs[1])
+        gmfs_within_range_fst = count_close(first_value, gmfs[0], gmfs[1])
+        gmfs_within_range_snd = count_close(second_value, gmfs[0], gmfs[1])
 
         self.assertAlmostEqual(gmfs_within_range_fst / realizations,
                                0.02, places=2)
