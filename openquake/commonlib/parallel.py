@@ -391,37 +391,28 @@ class PerformanceMonitor(object):
     and by overriding the method on_exit(), called at end and used to display
     or store the results of the analysis.
     """
-    def __init__(self, operation, pids=None, monitor_csv='performance_csv'):
+    def __init__(self, operation, pid=None, monitor_csv='performance_csv'):
         self.operation = operation
-        self.pids = pids
+        self.pid = pid
         self.monitor_csv = monitor_csv
-        if pids:
-            # NB: this logic is for the sake of the engine; we may think
-            # about removing it since we are very rarely interested
-            # in the memory occupation in postgres and it can be treated
-            # as a special case, if really needed
-            self._procs = [psutil.Process(pid) for pid in pids if pid]
-            self.pid_str = str(pids[0])
+        if pid:
+            self._proc = psutil.Process(pid)
         else:
-            self._procs = None
+            self._proc = None
 
     def write(self, row):
         """Write a row on the performance file"""
         open(self.monitor_csv, 'a').write('\t'.join(row) + '\n')
 
     def measure_mem(self):
-        """An array of memory measurements (in bytes), one per process"""
-        mem = []
-        for proc in list(self._procs):
-            try:
-                rss = proc.get_memory_info().rss
-            except psutil.AccessDenied:
-                # no access to information about this process
-                # don't not try to check it anymore
-                self._procs.remove(proc)
-            else:
-                mem.append(rss)
-        return mem
+        """A memory measurement (in bytes)"""
+        try:
+            if self._proc:
+                return self._proc.get_memory_info().rss
+        except psutil.AccessDenied:
+            # no access to information about this process
+            # don't not try to check it anymore
+            self._proc = None
 
     @property
     def start_time(self):
@@ -432,11 +423,10 @@ class PerformanceMonitor(object):
 
     def __enter__(self):
         """Call .start"""
-        if self._procs is None:
+        if self._proc is None:
             pid = os.getpid()
-            self.pids = [pid]
-            self.pid_str = str(pid)
-            self._procs = [psutil.Process(pid)]
+            self.pid = pid
+            self._proc = psutil.Process(pid)
         self.duration = None  # seconds
         self.mem = None  # bytes
         self.exc = None  # exception
@@ -448,15 +438,15 @@ class PerformanceMonitor(object):
         "Call .stop"
         self.exc = exc
         self.stop_mem = self.measure_mem()
-        self.mem = [m2 - m1 for m1, m2 in zip(self.start_mem, self.stop_mem)]
+        self.mem = self.stop_mem - self.start_mem
         self.duration = time.time() - self._start_time
         self.on_exit()
 
     def on_exit(self):
         "Save the results: to be overridden in subclasses"
         time_sec = str(self.duration)
-        memory_mb = str(self.mem[0] / 1024. / 1024.)
-        self.write([self.operation, self.pid_str, time_sec, memory_mb])
+        memory_mb = str(self.mem / 1024. / 1024.)
+        self.write([self.operation, str(self.pid), time_sec, memory_mb])
 
     def __call__(self, operation):
         """

@@ -47,12 +47,12 @@ class BaseCalculator(object):
     def __init__(self, oqparam, monitor=DummyMonitor()):
         self.oqparam = oqparam
         self.monitor = monitor
-        self.monitor.write('operation pid time_sec memory_mb'.split())
 
     def run(self):
         """
         Run the calculation and return the exported files
         """
+        self.monitor.write('operation pid time_sec memory_mb'.split())
         self.pre_execute()
         result = self.execute()
         return self.post_execute(result)

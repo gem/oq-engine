@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
+      xmlns:gml="http://www.opengis.net/gml">
+    <sourceModel>
+        <pointSource id="1" name="point" tectonicRegion="Active Shallow Crust">
+          <pointGeometry>
+            <gml:Point>
+              <gml:pos>9.5 39.5</gml:pos>
+            </gml:Point>
+            <upperSeismoDepth>0.0</upperSeismoDepth>
+            <lowerSeismoDepth>20.0</lowerSeismoDepth>
+          </pointGeometry>
+          <magScaleRel>WC1994</magScaleRel>
+          <ruptAspectRatio>2.0</ruptAspectRatio>
+          <truncGutenbergRichterMFD aValue="4.0" bValue="1.0" minMag="5.0000" maxMag="8.0000" />
+          <nodalPlaneDist>
+            <nodalPlane probability="1.0" strike="0.0" dip="90.0" rake="0.0"/>
+          </nodalPlaneDist>
+          <hypoDepthDist>
+            <hypoDepth probability="1.0" depth="10.0"/>
+          </hypoDepthDist>
+        </pointSource>
+
+        <areaSource id="2" name="area" tectonicRegion="Active Shallow Crust">
+          <areaGeometry>
+            <gml:Polygon>
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>9.5 39.5 9.5 40.5 10.5 40.5 10.5 39.5</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+            <upperSeismoDepth>0.0</upperSeismoDepth>
+            <lowerSeismoDepth>20.0</lowerSeismoDepth>
+          </areaGeometry>
+          <magScaleRel>WC1994</magScaleRel>
+          <ruptAspectRatio>2.0</ruptAspectRatio>
+          <truncGutenbergRichterMFD aValue="4.0" bValue="1.0" minMag="5.0000" maxMag="8.0000" />
+          <nodalPlaneDist>
+            <nodalPlane probability="1.0" strike="0.0" dip="90.0" rake="0.0"/>
+          </nodalPlaneDist>
+          <hypoDepthDist>
+            <hypoDepth probability="1.0" depth="10.0"/>
+          </hypoDepthDist>
+        </areaSource>
+
+        <simpleFaultSource id="3" name="simple fault" tectonicRegion="Active Shallow Crust">
+          <simpleFaultGeometry>
+            <gml:LineString>
+              <gml:posList>9.5 39.5 9.5 40.5</gml:posList>
+            </gml:LineString>
+            <dip>90.0</dip>
+            <upperSeismoDepth>1.0</upperSeismoDepth>
+            <lowerSeismoDepth>20.0</lowerSeismoDepth>
+          </simpleFaultGeometry>
+          <magScaleRel>WC1994</magScaleRel>
+          <ruptAspectRatio>1.0</ruptAspectRatio>
+          <truncGutenbergRichterMFD aValue="4.0" bValue="1.0" minMag="5.0000" maxMag="7.0000" />
+          <rake>90.0</rake>
+        </simpleFaultSource>
+
+        <complexFaultSource id="4" name="complex fault" tectonicRegion="Active Shallow Crust">
+          <complexFaultGeometry>
+            <faultTopEdge>
+              <gml:LineString>
+                <gml:posList>10.5 39.5 5.0 10.5 40.5 5.0</gml:posList>
+              </gml:LineString>
+            </faultTopEdge>
+            <faultBottomEdge>
+              <gml:LineString>
+                <gml:posList>10.5 39.5 10.0 10.5 40.5 10.0</gml:posList>
+              </gml:LineString>
+            </faultBottomEdge>
+          </complexFaultGeometry>
+          <magScaleRel>WC1994</magScaleRel>
+          <ruptAspectRatio>1.0</ruptAspectRatio>
+          <truncGutenbergRichterMFD aValue="4.0" bValue="1.0" minMag="5.0000" maxMag="7.0000" />
+          <rake>90.0</rake>
+        </complexFaultSource>
+    </sourceModel>
+</nrml>

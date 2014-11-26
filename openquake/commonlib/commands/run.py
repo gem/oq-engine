@@ -44,7 +44,7 @@ def run(job_ini, concurrent_tasks=executor._max_workers, loglevel='info'):
     for item in out.iteritems():
         logging.info('exported %s: %s', *item)
     logging.info('Total time spent: %s s', monitor.duration)
-    logging.info('Memory allocated: %s M', monitor.mem[0] / 1024. / 1024.)
+    logging.info('Memory allocated: %s M', monitor.mem / 1024. / 1024.)
 
 parser = sap.Parser(run)
 parser.arg('job_ini', 'calculation configuration file '

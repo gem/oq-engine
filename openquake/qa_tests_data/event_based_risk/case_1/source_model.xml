@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4" xmlns:gml="http://www.opengis.net/gml">
+  <sourceModel name="Sample Model">
+        <pointSource id="1" name="Point Source" tectonicRegion="Active Shallow Crust">
+            <pointGeometry>
+                <gml:Point>
+                    <gml:pos>81.2985 29.1098</gml:pos>
+                </gml:Point>
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>10.0</lowerSeismoDepth>
+            </pointGeometry>
+            <magScaleRel>WC1994</magScaleRel>
+            <ruptAspectRatio>1.5</ruptAspectRatio>
+            <truncGutenbergRichterMFD aValue="3.0" bValue="1.0" minMag="5.0" maxMag="7.0" />
+            <nodalPlaneDist>
+                <nodalPlane probability="1" strike="45.0" dip="30.0" rake="0.0" />
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth probability="1" depth="4.0" />
+            </hypoDepthDist>
+        </pointSource>
+
+        <pointSource id="2" name="Point Source" tectonicRegion="Active Shallow Crust">
+            <pointGeometry>
+                <gml:Point>
+                    <gml:pos>83.082298 27.9006</gml:pos>
+                </gml:Point>
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>10.0</lowerSeismoDepth>
+            </pointGeometry>
+            <magScaleRel>WC1994</magScaleRel>
+            <ruptAspectRatio>1.5</ruptAspectRatio>
+            <truncGutenbergRichterMFD aValue="3.0" bValue="1.0" minMag="5.0" maxMag="7.0" />
+            <nodalPlaneDist>
+                <nodalPlane probability="1" strike="45.0" dip="30.0" rake="0.0" />
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth probability="1" depth="8.0" />
+            </hypoDepthDist>
+        </pointSource>
+
+        <pointSource id="3" name="Point Source" tectonicRegion="Active Shallow Crust">
+            <pointGeometry>
+                <gml:Point>
+                    <gml:pos>85.747703 27.9015</gml:pos>
+                </gml:Point>
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>10.0</lowerSeismoDepth>
+            </pointGeometry>
+            <magScaleRel>WC1994</magScaleRel>
+            <ruptAspectRatio>1.5</ruptAspectRatio>
+            <truncGutenbergRichterMFD aValue="3.0" bValue="1.0" minMag="5.0" maxMag="7.0" />
+            <nodalPlaneDist>
+                <nodalPlane probability="1" strike="45.0" dip="30.0" rake="90.0" />
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth probability="1" depth="8.0" />
+            </hypoDepthDist>
+        </pointSource>
+  </sourceModel>
+</nrml>
