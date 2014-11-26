@@ -217,7 +217,7 @@ def do_uhs_post_proc(job):
                 _save_uhs(job, quantile_uhs, poe, statistics='quantile',
                           quantile=quantile)
 
-        if job.get_param('individual_curves'):
+        if job.get_param('individual_curves', True):
             # build a map for each logic tree branch
             for rlz in rlzs:
                 rlz_maps = maps_for_poe.filter(
