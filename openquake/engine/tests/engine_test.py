@@ -129,7 +129,7 @@ class JobFromFileTestCase(unittest.TestCase):
         with mock.patch.object(logs.LOG, 'warn') as warn:
             risk_job = engine.job_from_file(
                 risk_cfg, 'test_user', hazard_output_id=out.id,
-                quantile_loss_curves=[0.1, 0.2])
+                quantile_loss_curves='0.1 0.2')
 
         # make sure a warning is printed because you are using
         # quantile_loss_curves with a single hazard output

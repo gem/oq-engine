@@ -24,8 +24,6 @@ from openquake.engine.db import models
 
 # FIXME(lp). This is a regression test. Data has not been validated
 # by an alternative reliable implemantation
-
-
 class EventBasedBCRCase1TestCase(risk.BaseRiskQATestCase):
     module = case_1
 
@@ -38,8 +36,7 @@ class EventBasedBCRCase1TestCase(risk.BaseRiskQATestCase):
     def get_hazard_job(self):
         job = helpers.get_job(
             helpers.get_data_path("event_based_hazard/job.ini"),
-            region=None, region_grid_spacing=None,
-            ses_per_logic_tree_path=1)
+            region_grid_spacing='0', ses_per_logic_tree_path='1')
         job.save()
 
         helpers.create_gmf_from_csv(job, self._test_path('gmf.csv'))
