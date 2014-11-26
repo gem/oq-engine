@@ -20,7 +20,7 @@ import os
 import collections
 
 from openquake.commonlib.export import export
-from openquake.commonlib.writers import scientificformat
+from openquake.commonlib.writers import scientificformat, floatformat
 from openquake.commonlib import hazard_writers
 from openquake.hazardlib.imt import from_string
 
@@ -136,14 +136,15 @@ def export_gmf_xml(key, export_dir, sitecol, rupture_tags, gmfs):
     dest = os.path.join(export_dir, key.replace('_xml', '.xml'))
     writer = hazard_writers.EventBasedGMFXMLWriter(
         dest, sm_lt_path='', gsim_lt_path='')
-    writer.serialize(GmfCollection(sitecol, rupture_tags, gmfs))
+    with floatformat('%12.8E'):
+        writer.serialize(GmfCollection(sitecol, rupture_tags, gmfs))
     return {key: dest}
 
 
 @export.add('gmf_csv')
 def export_gmf_csv(key, export_dir, sitecol, rupture_tags, gmfs):
     dest = os.path.join(export_dir, key.replace('_csv', '.csv'))
-    with open(dest, 'w') as f:
+    with floatformat('%12.8E'), open(dest, 'w') as f:
         for imt, gmf in gmfs.iteritems():
             for site, gmvs in zip(sitecol, gmf):
                 row = [imt, site.location.longitude,
@@ -155,7 +156,7 @@ def export_gmf_csv(key, export_dir, sitecol, rupture_tags, gmfs):
 @export.add('hazard_curves_csv')
 def export_hazard_curves_csv(key, export_dir, sitecol, curves_by_imt):
     dest = os.path.join(export_dir, key.replace('_csv', '.csv'))
-    with open(dest, 'w') as f:
+    with floatformat('%12.8E'), open(dest, 'w') as f:
         for imt, curves in curves_by_imt.iteritems():
             for site, curve in zip(sitecol, curves):
                 row = [imt, site.location.longitude,

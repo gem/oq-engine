@@ -114,13 +114,18 @@ class ScenarioCalculator(base.BaseCalculator):
 
     def execute(self):
         """
-        Compute the GMFs in parallel
+        Compute the GMFs in parallel and return a dictionary imt -> gmfs
         """
         logging.info('Computing the GMFs')
-        return parallel.apply_reduce(
+        result = parallel.apply_reduce(
             self.core_func.__func__,
             (self.tag_seed_pairs, self.computer, self.monitor('calc_gmfs')),
             concurrent_tasks=self.oqparam.concurrent_tasks)
+        gmfs_by_imt = {  # build N x R matrices
+            imt: numpy.array(
+                [result[tag][imt] for tag in self.tags]).T
+            for imt in map(str, self.imts)}
+        return gmfs_by_imt
 
     def post_execute(self, result):
         """
@@ -128,11 +133,7 @@ class ScenarioCalculator(base.BaseCalculator):
         :returns: a dictionary {'gmf_xml': <gmf.xml filename>}
         """
         logging.info('Exporting the result')
-        gmfs_by_imt = {  # build N x R matrices
-            imt: numpy.array(
-                [result[tag][imt] for tag in self.tags]).T
-            for imt in map(str, self.imts)}
         out = export(
             'gmf_xml', self.oqparam.export_dir,
-            self.sitecol, self.tags, gmfs_by_imt)
+            self.sitecol, self.tags, result)
         return out
