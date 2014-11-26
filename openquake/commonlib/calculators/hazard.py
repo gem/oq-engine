@@ -28,7 +28,8 @@ from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
 from openquake.hazardlib.calc.filters import source_site_distance_filter, \
     rupture_site_distance_filter
-from openquake.commonlib import readinput, parallel, hazard_writers
+from openquake.commonlib import readinput, parallel
+from openquake.commonlib.export import export
 from openquake.baselib.general import AccumDict
 
 from openquake.commonlib.calculators import calculators, base, calc
@@ -36,49 +37,6 @@ from openquake.commonlib.export import export
 
 
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
-
-
-def write_hazard_curves(sitecol, rlz, curves, imtls, investigation_time):
-    """
-    Export the curves of the given realization into XML.
-    """
-    smlt_path = '_'.join(rlz.sm_lt_path)
-    gsimlt_path = '_'.join(rlz.gsim_lt_path)
-    mdata = []
-    hcurves = []
-    for imt, imls in imtls.iteritems():
-        hcurves.append(
-            [HazardCurve(site.location, poes)
-             for site, poes in zip(sitecol, curves[imt])])
-        i = from_string(imt)
-        mdata.append({
-            'quantile_value': None,
-            'statistics': None,
-            'smlt_path': smlt_path,
-            'gsimlt_path': gsimlt_path,
-            'investigation_time': investigation_time,
-            'imt': imt,
-            'sa_period': i[1],
-            'sa_damping': i[2],
-            'imls': imls,
-        })
-    dest = 'hazard_curve_multi-smltp_%s-gsimltp_%s.xml' % (
-        smlt_path, gsimlt_path)
-    hazard_writers.MultiHazardCurveXMLWriter(dest, mdata).serialize(hcurves)
-    return dest
-
-
-def all_equal(obj, value):
-    """
-    :param obj: a numpy array or something else
-    :param value: a numeric value
-    :returns: a boolean
-    """
-    eq = (obj == value)
-    if isinstance(eq, numpy.ndarray):
-        return eq.all()
-    else:
-        return eq
 
 
 def agg_prob(acc, prob):
@@ -169,15 +127,14 @@ class ClassicalCalculator(base.BaseHazardCalculator):
                 assert self.oqparam.number_of_logic_tree_samples > 0
                 continue
             acc = agg_prob(acc, AccumDict({idx: curves}))
+        oq = self.oqparam
         for idx in sorted(acc):
             rlz = self.ltp.realizations[idx]
-            saved += self.export(rlz, acc[idx])
+            saved += export(
+                'hazard_curves_xml',
+                oq.export_dir, self.sitecol, rlz, acc[idx], oq.imtls,
+                oq.investigation_time)
         return saved
-
-    def export(self, rlz, curves):
-        oq = self.oqparam
-        return {rlz.ordinal: write_hazard_curves(
-            self.sitecol, rlz, curves, oq.imtls, oq.investigation_time)}
 
 
 @calculators.add('event_based')

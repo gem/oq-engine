@@ -25,6 +25,8 @@ from openquake.commonlib import hazard_writers
 from openquake.hazardlib.imt import from_string
 
 
+##################### export Ground Motion fields #############################
+
 class GmfSet(object):
     """
     Small wrapper around the list of Gmf objects associated to the given SES.
@@ -152,14 +154,69 @@ def export_gmf_csv(key, export_dir, sitecol, rupture_tags, gmfs):
                 f.write(' '.join(map(scientificformat, row)) + '\n')
     return {key: dest}
 
+######################## export hazard curves ##############################
+
+HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
+
 
 @export.add('hazard_curves_csv')
 def export_hazard_curves_csv(key, export_dir, sitecol, curves_by_imt):
+    """
+    Export the curves of the given realization into XML.
+
+    :param key: output_type and export_type
+    :param export_dir: the directory where to export
+    :param sitecol: site collection
+    :param rlz: realization instance
+    :param curves_by_imt: dictionary with the curves keyed by IMT
+    """
     dest = os.path.join(export_dir, key.replace('_csv', '.csv'))
     with fmt('%12.8E'), open(dest, 'w') as f:
-        for imt, curves in curves_by_imt.iteritems():
-            for site, curve in zip(sitecol, curves):
+        for imt, curves in sorted(curves_by_imt):
+            for site, curve in zip(sitecol, curves_by_imt[imt]):
                 row = [imt, site.location.longitude,
                        site.location.latitude] + list(curve)
                 f.write(' '.join(map(scientificformat, row)) + '\n')
+    return {key: dest}
+
+
+@export.add('hazard_curves_xml')
+def export_hazard_curves_xml(key, export_dir, sitecol, rlz, curves_by_imt,
+                             imtls, investigation_time):
+    """
+    Export the curves of the given realization into XML.
+
+    :param key: output_type and export_type
+    :param export_dir: the directory where to export
+    :param sitecol: site collection
+    :param rlz: realization instance
+    :param curves_by_imt: dictionary with the curves keyed by IMT
+    :param imtls: dictionary with the intensity measure types and levels
+    :param investigation_time: investigation time in years
+    """
+    smlt_path = '_'.join(rlz.sm_lt_path)
+    gsimlt_path = '_'.join(rlz.gsim_lt_path)
+    mdata = []
+    hcurves = []
+    for imt_str, imls in sorted(imtls.iteritems()):
+        hcurves.append(
+            [HazardCurve(site.location, poes)
+             for site, poes in zip(sitecol, curves_by_imt[imt_str])])
+        imt = from_string(imt_str)
+        mdata.append({
+            'quantile_value': None,
+            'statistics': None,
+            'smlt_path': smlt_path,
+            'gsimlt_path': gsimlt_path,
+            'investigation_time': investigation_time,
+            'imt': imt[0],
+            'sa_period': imt[1],
+            'sa_damping': imt[2],
+            'imls': imls,
+        })
+    dest = 'hazard_curve_multi-smltp_%s-gsimltp_%s.xml' % (
+        smlt_path, gsimlt_path)
+    writer = hazard_writers.MultiHazardCurveXMLWriter(dest, mdata)
+    with fmt('%12.8E'):
+        writer.serialize(hcurves)
     return {key: dest}
