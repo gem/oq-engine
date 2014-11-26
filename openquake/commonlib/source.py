@@ -22,8 +22,7 @@ from itertools import izip
 import random
 from lxml import etree
 
-from openquake.baselib.general import AccumDict
-from openquake.hazardlib import geo, mfd, pmf, source
+from openquake.hazardlib import geo, mfd, pmf, source, gsim
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.commonlib.node import read_nodes, context, striptag
 from openquake.commonlib import valid, logictree
@@ -37,9 +36,23 @@ from openquake.commonlib.obsolete import NrmlHazardlibConverter
 # the filtering (MS)
 LOTS_OF_SOURCES_SITES = 1E5
 
+GSIMS = gsim.get_available_gsims()
+
 
 class DuplicatedID(Exception):
     """Raised when two sources with the same ID are found in a source model"""
+
+
+LtRealization = collections.namedtuple(
+    'LtRealization', 'sm_lt_path gsim_lt_path weight ordinal')
+
+
+LtProcessor = collections.namedtuple(
+    'LtProcessor', 'realizations gsim_by_trt rlz_idx trt_gsims')
+
+
+SourceModel = collections.namedtuple(
+    'SourceModel', 'name weight path trt_models gsim_lt ordinal')
 
 
 class TrtModel(collections.Sequence):
@@ -740,10 +753,6 @@ def filter_sources(sources, sitecol, maxdist):
     return sorted(sources, key=operator.attrgetter('source_id'))
 
 
-SourceModel = collections.namedtuple(
-    'SourceModel', 'name weight path trt_models gsim_lt ordinal')
-
-
 class CompositeSourceModel(object):
     """
     :param source_model_lt:
@@ -754,33 +763,39 @@ class CompositeSourceModel(object):
     def __init__(self, source_model_lt, source_models):
         self.source_model_lt = source_model_lt
         self.source_models = list(source_models)
-        self.smdict = {sm.path: sm for sm in source_models}
-        self.assoc = AccumDict()
+        if not self.source_models:
+            raise RuntimeError('All sources were filtered away')
+        self.tmdict = {tm.id: tm for tm in self.trt_models}
+        # the attribute trt_model_id is now set for each trt_model
 
     @property
     def trt_models(self):
+        """
+        Yields the TrtModels inside each source model in order
+        """
         trt_id = 0
         for sm in self.source_models:
             for trt_model in sm.trt_models:
                 if not trt_model.id:  # set only the first time
                     trt_model.id = trt_id
                 yield trt_model
+                trt_id += 1
 
     @property
     def sources(self):
         """
-        Yield the sources contained in the internal source models
+        Yield the sources contained in the internal source models in order
         """
         for trt_model in self.trt_models:
             for src in trt_model:
                 src.trt_model_id = trt_model.id
                 yield src
 
-    def __getitem__(self, path):
-        return self.smdict[path]
+    def __getitem__(self, i):
+        return self.source_models[i]
 
-    def __setitem__(self, path, sm):
-        self.smdict[path] = sm
+    def __setitem__(self, i, sm):
+        self.source_models[i] = sm
 
     def __iter__(self):
         return iter(self.source_models)
@@ -805,10 +820,20 @@ class CompositeSourceModel(object):
                 if trt_model.trt in trts:
                     trt_model.gsims = gsim_lt.values[trt_model.trt]
                     models.append(trt_model)
-            self[sm.path] = SourceModel(
+            self[sm.ordinal] = SourceModel(
                 sm.name, sm.weight, sm.path, models, gsim_lt, sm.ordinal)
 
-    def get_realizations(self, num_samples, random_seed):
+    def get_source_model(self, path):
+        """
+        Extract a specific source model from its logic tree path
+        """
+        for sm in self:
+            if sm.path == path:
+                return sm
+        raise KeyError(
+            'There is no source model with sm_lt_path=%s' % str(path))
+
+    def lt_processor(self):
         """
         This function works either in random sampling mode (when lt_realization
         models get the random seed value) or in enumeration mode (when weight
@@ -816,16 +841,12 @@ class CompositeSourceModel(object):
         for both trees in the `lt_realization` record, as well as ordinal
         number of the realization (zero-based).
         """
-        all_rlzs = []
-        for idx, (sm, weight, sm_lt_path, _) in enumerate(
+        ltp = LtProcessor([], [], {}, {})
+        random_seed = self.source_model_lt.seed
+        num_samples = self.source_model_lt.num_samples
+        for idx, (sm_name, weight, sm_lt_path, _) in enumerate(
                 self.source_model_lt):
-            try:
-                lt_model = self.smdict[sm_lt_path]
-            except KeyError:
-                # this happens if there are no sources for the source
-                # model at the given path
-                logging.warn('No sources for sm_lt_path %s', sm_lt_path)
-                continue
+            lt_model = self.get_source_model(sm_lt_path)
             if num_samples:  # sampling, pick just one gsim realization
                 rnd = random.Random(random_seed + idx)
                 rlzs = [logictree.sample_one(lt_model.gsim_lt, rnd)]
@@ -833,10 +854,9 @@ class CompositeSourceModel(object):
                 rlzs = list(lt_model.gsim_lt)  # full enumeration
             logging.info('Creating %d GMPE realization(s) for model %s, %s',
                          len(rlzs), lt_model.name, lt_model.path)
-            all_rlzs.extend(self._get_realizations(idx, lt_model, rlzs))
+            self._add_realizations(ltp, idx, lt_model, rlzs)
 
-        num_ind_rlzs = sum(sm.gsim_lt.get_num_paths()
-                           for sm in self.smdict.itervalues())
+        num_ind_rlzs = sum(sm.gsim_lt.get_num_paths() for sm in self)
         if num_samples > num_ind_rlzs:
             logging.warn("""
 The number of independent realizations is %d but you are using %d samplings.
@@ -844,27 +864,31 @@ That means that some GMPEs will be sampled more than once, resulting in
 duplicated data and redundant computation. You should switch to full
 enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
 """, num_ind_rlzs, num_samples)
-        return all_rlzs
+        return ltp
 
-    def _get_realizations(self, idx, lt_model, realizations):
+    def _add_realizations(self, ltp, idx, lt_model, realizations):
         # create the realizations for the given lt source model
         trt_models = [tm for tm in lt_model.trt_models if tm.num_ruptures]
         if not trt_models:
             return
+        gsims_by_trt = lt_model.gsim_lt.values
         rlz_ordinal = idx * len(realizations)
         for gsim_by_trt, weight, gsim_path, _ in realizations:
             if lt_model.weight is not None and weight is not None:
                 weight = lt_model.weight * weight
             else:
                 weight = None
-            rlz = logictree.LtRealization(
-                gsim_by_trt, weight, (lt_model.path, gsim_path), rlz_ordinal)
-            rlz_ordinal += 1
+            rlz = LtRealization(lt_model.path, gsim_path, weight, rlz_ordinal)
+            ltp.realizations.append(rlz)
+            ltp.gsim_by_trt.append(gsim_by_trt)
             for trt_model in trt_models:
                 trt = trt_model.trt
-                self.assoc[rlz_ordinal] = (trt_model.id, gsim_by_trt[trt])
-                trt_model.gsims = lt_model.gsim_lt.values[trt]
-            yield rlz
+                gsim = gsim_by_trt[trt]
+                ltp.rlz_idx[trt_model.id, gsim] = rlz_ordinal
+                trt_model.gsims = gsims_by_trt[trt]
+                ltp.trt_gsims[trt_model.id] = (
+                    trt, [GSIMS[gsim]() for gsim in trt_model.gsims])
+            rlz_ordinal += 1
 
 
 def _collect_source_model_paths(smlt):

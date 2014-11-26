@@ -384,6 +384,7 @@ class MultiHazardCurveXMLWriterSerializeTestCase(HazardWriterTestCase):
 
         metadata2 = dict(
             investigation_time=30, imt='PGA', imls=[0.05, 0.07, 0.8],
+            sa_period=None, sa_damping=None,
             smlt_path='b1_b2_b4', gsimlt_path='b1_b4_b5'
         )
 

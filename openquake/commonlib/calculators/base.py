@@ -103,28 +103,14 @@ class BaseHazardCalculator(BaseCalculator):
             logging.info('Reading the site collection')
             self.sitecol = readinput.get_site_collection(self.oqparam)
         logging.info('Reading the composite source models')
-        source_models = list(
-            readinput.get_composite_source_model(self.oqparam, self.sitecol))
-        self.all_sources = [src for src_model in source_models
-                            for trt_model in src_model.trt_models
-                            for src in trt_model]
+        self.composite_source_model = \
+            readinput.get_composite_source_model(self.oqparam, self.sitecol)
         self.job_info = readinput.get_job_info(
-            self.oqparam, source_models, self.sitecol)
+            self.oqparam, self.composite_source_model, self.sitecol)
         # we could manage limits here
 
-    def execute(self):
-        """
-        Run in parallel `core_func(sources, sitecol, monitor)`, by
-        parallelizing on the sources according to their weight and
-        tectonic region type.
-        """
-        monitor = self.monitor(self.core_func.__name__)
-        return apply_reduce(
-            self.core_func.__func__,
-            (self.all_sources, self.site_collection, monitor),
-            concurrent_tasks=self.oqparam.concurrent_tasks,
-            weight=get_weight,
-            key=get_trt)
+        # logic tree processor
+        self.ltp = self.composite_source_model.lt_processor()
 
 
 class BaseRiskCalculator(BaseCalculator):
