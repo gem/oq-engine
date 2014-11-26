@@ -117,7 +117,7 @@ reference_vs30_type = measured
 reference_vs30_value = 600.0
 reference_depth_to_2pt5km_per_sec = 5.0
 reference_depth_to_1pt0km_per_sec = 100.0
-intensity_measure_types = PGA
+intensity_measure_types_and_levels = {'PGA': [0.1, 0.2]}
 export_dir = %s
             """ % (sites_csv, TMP))
             exp_base_path = os.path.dirname(
@@ -135,7 +135,7 @@ export_dir = %s
                 'reference_depth_to_2pt5km_per_sec': 5.0,
                 'reference_vs30_type': 'measured',
                 'reference_vs30_value': 600.0,
-                'intensity_measure_types_and_levels': {'PGA': None},
+                'intensity_measure_types_and_levels': {'PGA': [0.1, 0.2]},
             }
 
             params = vars(readinput.get_oqparam(source))

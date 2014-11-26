@@ -265,3 +265,21 @@ class OqParam(valid.ParamSet):
             return os.path.exists(pdir) and os.access(pdir, os.W_OK)
         return os.path.isdir(self.export_dir) and os.access(
             self.export_dir, os.W_OK)
+
+    def is_valid_damage_ini(self):
+        """
+        "{calculation_mode}" calculations need a 'fragility_file' key in the
+        configuration file.
+        """
+        if 'damage' in self.calculation_mode:
+            return 'fragility' in self.inputs
+        return True
+
+    def is_valid_risk_ini(self):
+        """
+        "{calculation_mode}" calculations need a `_vulnerability_file` key
+        in the configuration file.
+        """
+        if 'risk' in self.calculation_mode:
+            return any(key.endswith('_vulnerability') for key in self.inputs)
+        return True
