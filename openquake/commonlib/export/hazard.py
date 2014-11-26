@@ -79,9 +79,6 @@ class GroundMotionField(object):
         return 'GMF(%s\n%s)' % (mdata, '\n'.join(nodes))
 
 
-Location = collections.namedtuple('Location', 'x y')
-
-
 class GroundMotionFieldNode(object):
     # the signature is not (gmv, x, y) because the XML writer expects
     # a location object
@@ -94,7 +91,8 @@ class GroundMotionFieldNode(object):
         A reproducible ordering by lon and lat; used in
         :function:`openquake.commonlib.hazard_writers.gen_gmfs`
         """
-        return self.location < other.location
+        return (self.location.x, self.location.y) < (
+            other.location.x, other.location.y)
 
     def __str__(self):
         """Return lon, lat and gmv of the node in a compact string form"""
@@ -123,10 +121,8 @@ class GmfCollection(object):
         for imt_str, gmfs in sorted(self.gmfs_by_imt.iteritems()):
             imt, sa_period, sa_damping = from_string(imt_str)
             for rupture_tag, gmf in zip(self.rupture_tags, gmfs.transpose()):
-                nodes = (GroundMotionFieldNode(
-                    gmv,
-                    Location(site.location.longitude, site.location.latitude))
-                    for site, gmv in zip(self.sitecol, gmf))
+                nodes = (GroundMotionFieldNode(gmv, site.location)
+                         for site, gmv in zip(self.sitecol, gmf))
                 gmfset.append(
                     GroundMotionField(
                         imt, sa_period, sa_damping, rupture_tag, nodes))
@@ -135,6 +131,13 @@ class GmfCollection(object):
 
 @export.add('gmf_xml')
 def export_gmf_xml(key, export_dir, sitecol, rupture_tags, gmfs):
+    """
+    :param key: output_type and export_type
+    :param export_dir: the directory where to export
+    :param sitecol: site collection
+    :rupture_tags: a list of rupture tags
+    :gmfs: a dictionary of ground motion fields keyed by IMT
+    """
     dest = os.path.join(export_dir, key.replace('_xml', '.xml'))
     writer = hazard_writers.EventBasedGMFXMLWriter(
         dest, sm_lt_path='', gsim_lt_path='')
@@ -145,12 +148,18 @@ def export_gmf_xml(key, export_dir, sitecol, rupture_tags, gmfs):
 
 @export.add('gmf_csv')
 def export_gmf_csv(key, export_dir, sitecol, rupture_tags, gmfs):
+    """
+    :param key: output_type and export_type
+    :param export_dir: the directory where to export
+    :param sitecol: site collection
+    :rupture_tags: a list of rupture tags
+    :gmfs: a dictionary of ground motion fields keyed by IMT
+    """
     dest = os.path.join(export_dir, key.replace('_csv', '.csv'))
     with floatformat('%12.8E'), open(dest, 'w') as f:
         for imt, gmf in gmfs.iteritems():
             for site, gmvs in zip(sitecol, gmf):
-                row = [imt, site.location.longitude,
-                       site.location.latitude] + list(gmvs)
+                row = [imt, site.location.x, site.location.y] + list(gmvs)
                 f.write(' '.join(map(scientificformat, row)) + '\n')
     return {key: dest}
 
@@ -174,8 +183,7 @@ def export_hazard_curves_csv(key, export_dir, sitecol, curves_by_imt):
     with floatformat('%12.8E'), open(dest, 'w') as f:
         for imt, curves in sorted(curves_by_imt):
             for site, curve in zip(sitecol, curves_by_imt[imt]):
-                row = [imt, site.location.longitude,
-                       site.location.latitude] + list(curve)
+                row = [imt, site.location.x, site.location.y] + list(curve)
                 f.write(' '.join(map(scientificformat, row)) + '\n')
     return {key: dest}
 
