@@ -74,28 +74,20 @@ def _collect_source_model_paths(smlt):
     return sorted(set(src_paths))
 
 
-def get_oqparam(job_ini, calculators=None):
+def get_params(job_ini):
     """
     Parse a dictionary of parameters from one or more INI-style config file.
 
     :param job_ini:
         Configuration file or list of configuration files
     :returns:
-        An :class:`openquake.commonlib.oqvalidation.OqParam` instance
-        containing the validate and casted parameters/values parsed from
-        the job.ini file as well as a subdictionary 'inputs' containing
-        absolute paths to all of the files referenced in the job.ini, keyed by
-        the parameter name.
+        A dictionary of parameters
     """
-    if calculators is None:
-        from openquake.commonlib.calculators import calculators
-        OqParam.params['calculation_mode'].choices = tuple(calculators)
-
     job_inis = [job_ini] if isinstance(job_ini, basestring) else job_ini
     cp = ConfigParser.ConfigParser()
     cp.read(job_inis)
 
-    # Directory containing the config files we're parsing
+    # drectory containing the config files we're parsing
     base_path = os.path.dirname(
         os.path.join(os.path.abspath('.'), job_inis[0]))
     params = dict(base_path=base_path, inputs={})
@@ -116,9 +108,36 @@ def get_oqparam(job_ini, calculators=None):
         params['inputs']['source'] = [
             os.path.join(base_path, src_path)
             for src_path in _collect_source_model_paths(smlt)]
-    oqparam = OqParam(**params)
+    return params
 
-    # define the parameter `intensity measure types and levels` always
+
+def get_oqparam(job_ini, calculators=None):
+    """
+    Parse a dictionary of parameters from one or more INI-style config file.
+
+    :param job_ini:
+        Configuration file or list of configuration files or dictionary
+        of parameters
+    :param calculators:
+        Sequence of calculator names (optional) used to restrict the
+        valid choices for `calculation_mode`
+    :returns:
+        An :class:`openquake.commonlib.oqvalidation.OqParam` instance
+        containing the validate and casted parameters/values parsed from
+        the job.ini file as well as a subdictionary 'inputs' containing
+        absolute paths to all of the files referenced in the job.ini, keyed by
+        the parameter name.
+    """
+    if calculators is None:
+        from openquake.commonlib.calculators import calculators
+        OqParam.params['calculation_mode'].choices = tuple(calculators)
+
+    if isinstance(job_ini, dict):
+        oqparam = OqParam(**job_ini)
+    else:
+        oqparam = OqParam(**get_params(job_ini))
+
+    # define the parameter `intensity measure types and levels`
     oqparam.intensity_measure_types_and_levels = get_imtls(oqparam)
 
     return oqparam
