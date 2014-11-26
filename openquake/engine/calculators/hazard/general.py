@@ -18,13 +18,11 @@
 
 """Common code for the hazard calculators."""
 
-import random
 import itertools
 import collections
 from operator import attrgetter
 
 from django.contrib.gis.geos.point import Point
-from django.core.exceptions import ObjectDoesNotExist
 
 import numpy
 
@@ -35,7 +33,7 @@ from openquake.engine.db import models
 from django.db import transaction
 
 from openquake.baselib import general
-from openquake.commonlib import logictree, readinput, risk_parsers
+from openquake.commonlib import readinput, risk_parsers
 from openquake.commonlib.readinput import (
     get_site_collection, get_site_model, get_imtls)
 
@@ -51,7 +49,6 @@ from openquake.engine.calculators.post_processing import (
 from openquake.engine.calculators.hazard.post_processing import (
     hazard_curves_to_hazard_map, do_uhs_post_proc)
 
-from openquake.engine.export import core
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.utils import tasks
 
@@ -148,7 +145,8 @@ class BaseHazardCalculator(base.Calculator):
         """
         self.acc = tasks.apply_reduce(
             self.core_calc_task,
-            (self.job.id, self.all_sources, self.site_collection),
+            (self.job.id, list(self.composite_model.sources),
+             self.site_collection),
             agg=self.agg_curves, acc=self.acc,
             weight=attrgetter('weight'), key=attrgetter('trt_model_id'))
 
@@ -206,9 +204,9 @@ class BaseHazardCalculator(base.Calculator):
         with transaction.commit_on_success(using='job_init'):
             self.initialize_site_collection()
         with transaction.commit_on_success(using='job_init'):
-            source_models = self.initialize_sources()
+            self.initialize_sources()
         info = readinput.get_job_info(
-            self.hc, source_models, self.site_collection)
+            self.hc, self.composite_model, self.site_collection)
         with transaction.commit_on_success(using='job_init'):
             models.JobInfo.objects.create(
                 oq_job=self.job,
@@ -219,10 +217,6 @@ class BaseHazardCalculator(base.Calculator):
                 input_weight=info['input_weight'],
                 output_weight=info['output_weight'])
         self.check_limits(info['input_weight'], info['output_weight'])
-
-        self.all_sources = [src for sm in source_models
-                            for trt_model in sm.trt_models
-                            for src in trt_model]
         self.imtls = self.hc.intensity_measure_types_and_levels
         if info['n_levels']:  # we can compute hazard curves
             self.zeros = numpy.array(
@@ -267,10 +261,9 @@ class BaseHazardCalculator(base.Calculator):
         trees. Save in the database LtSourceModel and TrtModel objects.
         """
         logs.LOG.progress("initializing sources")
-        source_models = []
-        for sm in readinput.get_effective_source_models(
-                self.hc, self.site_collection):
-
+        self.composite_model = readinput.get_composite_source_model(
+            self.hc, self.site_collection)
+        for sm in self.composite_model:
             # create an LtSourceModel for each distinct source model
             lt_model = models.LtSourceModel.objects.create(
                 hazard_calculation=self.job, sm_lt_path=sm.path,
@@ -278,7 +271,7 @@ class BaseHazardCalculator(base.Calculator):
 
             # save TrtModels for each tectonic region type
             for trt_mod in sm.trt_models:
-                trt_id = models.TrtModel.objects.create(
+                trt_mod.id = models.TrtModel.objects.create(
                     lt_model=lt_model,
                     tectonic_region_type=trt_mod.trt,
                     num_sources=len(trt_mod),
@@ -286,14 +279,6 @@ class BaseHazardCalculator(base.Calculator):
                     min_mag=trt_mod.min_mag,
                     max_mag=trt_mod.max_mag,
                     gsims=trt_mod.gsims).id
-                for src in trt_mod:
-                    src.trt_model_id = trt_id
-
-            source_models.append(sm)
-
-        # to be used later on
-        self.source_model_lt = readinput.get_source_model_lt(self.hc)
-        return source_models
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_model(self):
@@ -345,59 +330,33 @@ class BaseHazardCalculator(base.Calculator):
         number of the realization (zero-based).
         """
         logs.LOG.progress("initializing realizations")
-        num_samples = self.hc.number_of_logic_tree_samples
-        gsim_lt_dict = {}  # gsim_lt per source model logic tree path
-        for idx, (sm, weight, sm_lt_path) in enumerate(self.source_model_lt):
-            try:
-                lt_model = models.LtSourceModel.objects.get(
-                    hazard_calculation=self.job, sm_lt_path=sm_lt_path)
-            except ObjectDoesNotExist:
-                # this happens if there are no sources for the source
-                # model at the given path
-                logs.LOG.warn('No sources for sm_lt_path %s', sm_lt_path)
-                continue
-            if not sm_lt_path in gsim_lt_dict:
-                gsim_lt_dict[sm_lt_path] = lt_model.make_gsim_lt()
-            gsim_lt = gsim_lt_dict[sm_lt_path]
-            if num_samples:  # sampling, pick just one gsim realization
-                rnd = random.Random(self.hc.random_seed + idx)
-                rlzs = [logictree.sample_one(gsim_lt, rnd)]
-            else:
-                rlzs = list(gsim_lt)  # full enumeration
-            logs.LOG.info('Creating %d GMPE realization(s) for model %s, %s',
-                          len(rlzs), lt_model.sm_name, lt_model.sm_lt_path)
-            self._initialize_realizations(idx, lt_model, rlzs, gsim_lt)
-        num_ind_rlzs = sum(gsim_lt.get_num_paths()
-                           for gsim_lt in gsim_lt_dict.itervalues())
-        if num_samples > num_ind_rlzs:
-            logs.LOG.warn("""
-The number of independent realizations is %d but you are using %d samplings.
-That means that some GMPEs will be sampled more than once, resulting in
-duplicated data and redundant computation. You should switch to full
-enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
-""", num_ind_rlzs, num_samples)
+        cm = self.composite_model
 
-    @transaction.commit_on_success(using='job_init')
-    def _initialize_realizations(self, idx, lt_model, realizations, gsim_lt):
-        # create the realizations for the given lt source model
-        trt_models = lt_model.trtmodel_set.filter(num_ruptures__gt=0)
-        if not trt_models:
-            return
-        rlz_ordinal = idx * len(realizations)
-        for gsim_by_trt, weight, lt_path in realizations:
-            if lt_model.weight is not None and weight is not None:
-                weight = lt_model.weight * weight
-            else:
-                weight = None
-            rlz = models.LtRealization.objects.create(
-                lt_model=lt_model, gsim_lt_path=lt_path,
-                weight=weight, ordinal=rlz_ordinal)
-            rlz_ordinal += 1
+        # update the attribute num_ruptures, to discard fake realizations
+        for trt_model in cm.trt_models:
+            trt_model.num_ruptures = models.TrtModel.objects.get(
+                pk=trt_model.id).num_ruptures
+        cm.reduce_trt_models()
+
+        for rlz in cm.get_realizations(
+                self.hc.number_of_logic_tree_samples,
+                self.hc.random_seed):
+            smlt_path, gsim_path = rlz.lt_path
+            lt_model = models.LtSourceModel.objects.get(
+                hazard_calculation=self.job, sm_lt_path=smlt_path)
+            trt_models = lt_model.trtmodel_set.filter(num_ruptures__gt=0)
+            if not trt_models:
+                continue
+            gsim_lt = cm[smlt_path].gsim_lt
+            lt_rlz = models.LtRealization.objects.create(
+                lt_model=lt_model, gsim_lt_path=gsim_path,
+                weight=rlz.weight, ordinal=rlz.ordinal)
+            gsim_by_trt = rlz.value
             for trt_model in trt_models:
                 trt = trt_model.tectonic_region_type
                 # populate the association table rlz <-> trt_model
                 models.AssocLtRlzTrtModel.objects.create(
-                    rlz=rlz, trt_model=trt_model, gsim=gsim_by_trt[trt])
+                    rlz=lt_rlz, trt_model=trt_model, gsim=gsim_by_trt[trt])
                 trt_model.gsims = gsim_lt.values[trt]
                 trt_model.save()
 
