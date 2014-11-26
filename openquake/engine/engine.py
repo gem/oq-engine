@@ -441,11 +441,10 @@ def job_from_file(cfg_file_path, username, log_level='info', exports='',
     # create the current job
     job = create_job(user_name=username, log_level=log_level)
     models.JobStats.objects.create(oq_job=job)
-
     with logs.handle(job, log_level):
         # read calculation params and create the calculation profile
         params = readinput.get_params(cfg_file_path)
-
+        params.update(extras)
         if haz_job:  # for risk calculations
             check_hazard_risk_consistency(haz_job, params['calculation_mode'])
             if haz_job.user_name != username:
@@ -462,7 +461,6 @@ def job_from_file(cfg_file_path, username, log_level='info', exports='',
         oqparam.hazard_calculation_id = \
             haz_job.id if haz_job and not hazard_output_id else None
         oqparam.hazard_output_id = hazard_output_id
-        vars(oqparam).update(extras)
 
     params = vars(oqparam).copy()
     if 'quantile_loss_curves' not in params:
