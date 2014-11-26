@@ -104,7 +104,7 @@ class BaseHazardCalculator(BaseCalculator):
             self.sitecol = readinput.get_site_collection(self.oqparam)
         logging.info('Reading the composite source models')
         source_models = list(
-            readinput.get_composite_source_models(self.oqparam, self.sitecol))
+            readinput.get_composite_source_model(self.oqparam, self.sitecol))
         self.all_sources = [src for src_model in source_models
                             for trt_model in src_model.trt_models
                             for src in trt_model]
