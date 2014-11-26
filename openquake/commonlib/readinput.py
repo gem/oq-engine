@@ -118,6 +118,9 @@ def get_oqparam(job_ini, calculators=None):
     :param job_ini:
         Configuration file or list of configuration files or dictionary
         of parameters
+    :param calculators:
+        Sequence of calculator names (optional) used to restrict the
+        valid choices for `calculation_mode`
     :returns:
         An :class:`openquake.commonlib.oqvalidation.OqParam` instance
         containing the validate and casted parameters/values parsed from
