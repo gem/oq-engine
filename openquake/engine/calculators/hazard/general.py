@@ -51,7 +51,6 @@ from openquake.engine.calculators.post_processing import (
 from openquake.engine.calculators.hazard.post_processing import (
     hazard_curves_to_hazard_map, do_uhs_post_proc)
 
-from openquake.engine.export import core
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.utils import tasks
 
@@ -634,12 +633,5 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
                 tasks.apply_reduce(
                     hazard_curves_to_hazard_map,
                     (self.job.id, hazard_curves, self.hc.poes))
-
         if getattr(self.hc, 'uniform_hazard_spectra', None):
-            individual_curves = self.job.get_param(
-                'individual_curves', missing=True)
-            if individual_curves is False:
-                logs.LOG.warn('The parameter `individual_curves` is false, '
-                              'cannot compute the UHS curves')
-            else:
-                do_uhs_post_proc(self.job)
+            do_uhs_post_proc(self.job)
