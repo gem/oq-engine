@@ -82,26 +82,6 @@ class BaseQATestCase(unittest.TestCase):
             numpy.testing.assert_almost_equal(act, exp, decimal=tolerance)
 
 
-def count(gmf_value, gmfs_site_one, gmfs_site_two,
-          delta_prob=0.1, div_factor=2.0):
-    """
-    Count the number of pairs of gmf values
-    within the specified range.
-    See https://bugs.launchpad.net/openquake/+bug/1097646
-    attached Scenario Hazard script.
-    """
-
-    i = 0
-    lower_bound = gmf_value - delta_prob / div_factor
-    upper_bound = gmf_value + delta_prob / div_factor
-
-    for v1, v2 in zip(gmfs_site_one, gmfs_site_two):
-        if ((lower_bound <= v1 <= upper_bound) and
-                (lower_bound <= v2 <= upper_bound)):
-            i += 1
-    return i
-
-
 def compare_hazard_curve_with_csv(
         job, sm_lt_path, gsim_lt_path, imt, sa_period, sa_damping,
         csv_name, csv_delimiter, rtol):
