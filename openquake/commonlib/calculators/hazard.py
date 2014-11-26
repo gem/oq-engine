@@ -23,7 +23,6 @@ import collections
 
 import numpy
 
-from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
 from openquake.hazardlib.calc.filters import source_site_distance_filter, \
@@ -33,7 +32,6 @@ from openquake.commonlib.export import export
 from openquake.baselib.general import AccumDict
 
 from openquake.commonlib.calculators import calculators, base, calc
-from openquake.commonlib.export import export
 
 
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
@@ -117,8 +115,18 @@ class ClassicalCalculator(base.BaseHazardCalculator):
             key=operator.attrgetter('trt_model_id'))
 
     def post_execute(self, result):
-        saved = AccumDict()
+        """
+        Collect the hazard curves by realization and export them.
+
+        :param:
+            a dictionary of hazard curves dictionaries keyed by
+            trt_model_id, gsim_name
+        """
+        oq = self.oqparam
         acc = AccumDict()  # rlz_idx -> curves
+        saved = AccumDict()
+
+        # accumulate the curves by realization
         for (trt_model_id, gsim_name), curves in result.iteritems():
             try:
                 idx = self.ltp.rlz_idx[trt_model_id, gsim_name]
@@ -127,7 +135,8 @@ class ClassicalCalculator(base.BaseHazardCalculator):
                 assert self.oqparam.number_of_logic_tree_samples > 0
                 continue
             acc = agg_prob(acc, AccumDict({idx: curves}))
-        oq = self.oqparam
+
+        # export the curves
         for idx in sorted(acc):
             rlz = self.ltp.realizations[idx]
             saved += export(

@@ -753,7 +753,7 @@ def filter_sources(sources, sitecol, maxdist):
     return sorted(sources, key=operator.attrgetter('source_id'))
 
 
-class CompositeSourceModel(object):
+class CompositeSourceModel(collections.Sequence):
     """
     :param source_model_lt:
         a :class:`openquake.commonlib.readinput.SourceModelLogicTree` instance
@@ -791,22 +791,10 @@ class CompositeSourceModel(object):
                 src.trt_model_id = trt_model.id
                 yield src
 
-    def __getitem__(self, i):
-        return self.source_models[i]
-
-    def __setitem__(self, i, sm):
-        self.source_models[i] = sm
-
-    def __iter__(self):
-        return iter(self.source_models)
-
-    def __len__(self):
-        return len(self.source_models)
-
     def reduce_trt_models(self):
         """
         Remove the tectonic regions without ruptures and reduce the
-        GSIM logic tree.
+        GSIM logic tree. It works by updating the underlying source models.
         """
         for sm in self:
             trts = set(trt_model.trt for trt_model in sm.trt_models
@@ -814,18 +802,21 @@ class CompositeSourceModel(object):
             if trts == set(sm.gsim_lt.filter_keys):
                 # nothing to remove
                 continue
+            # build the reduced logic tree
             gsim_lt = sm.gsim_lt.filter(trts)
-            models = []
+            tmodels = []  # collect the reduced trt models
             for trt_model in sm.trt_models:
                 if trt_model.trt in trts:
                     trt_model.gsims = gsim_lt.values[trt_model.trt]
-                    models.append(trt_model)
+                    tmodels.append(trt_model)
             self[sm.ordinal] = SourceModel(
-                sm.name, sm.weight, sm.path, models, gsim_lt, sm.ordinal)
+                sm.name, sm.weight, sm.path, tmodels, gsim_lt, sm.ordinal)
 
     def get_source_model(self, path):
         """
-        Extract a specific source model from its logic tree path
+        Extract a specific source model, given its logic tree path.
+
+        :param: the source model logic tree path as a tuple of string
         """
         for sm in self:
             if sm.path == path:
@@ -835,11 +826,8 @@ class CompositeSourceModel(object):
 
     def lt_processor(self):
         """
-        This function works either in random sampling mode (when lt_realization
-        models get the random seed value) or in enumeration mode (when weight
-        values are populated). In both cases we record the logic tree paths
-        for both trees in the `lt_realization` record, as well as ordinal
-        number of the realization (zero-based).
+        Return a LtProcessor tuple with fields realizations, gsim_by_trt,
+        rlz_idx and trt_gsims.
         """
         ltp = LtProcessor([], [], {}, {})
         random_seed = self.source_model_lt.seed
@@ -889,6 +877,22 @@ enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
                 ltp.trt_gsims[trt_model.id] = (
                     trt, [GSIMS[gsim]() for gsim in trt_model.gsims])
             rlz_ordinal += 1
+
+    def __getitem__(self, i):
+        """Return the i-th source model"""
+        return self.source_models[i]
+
+    def __setitem__(self, i, sm):
+        """Update the i-th source model"""
+        self.source_models[i] = sm
+
+    def __iter__(self):
+        """Return an iterator over the underlying source models"""
+        return iter(self.source_models)
+
+    def __len__(self):
+        """Return the number of underlying source models"""
+        return len(self.source_models)
 
 
 def _collect_source_model_paths(smlt):
