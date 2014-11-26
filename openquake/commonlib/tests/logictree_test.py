@@ -38,7 +38,6 @@ from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 
-from openquake.commonlib import logictree
 
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
@@ -1632,13 +1631,13 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         self.rnd = random.Random(oqparam.random_seed)
 
     def test_sample_source_model(self):
-        [(sm_name, weight, branch_ids)] = self.source_model_lt
+        [(sm_name, weight, branch_ids, _)] = self.source_model_lt
         self.assertEqual(sm_name, 'example-source-model.xml')
         self.assertIsNone(weight)
         self.assertEqual(('b1', 'b5', 'b8'), branch_ids)
 
     def test_sample_gmpe(self):
-        (value, weight, branch_ids) = logictree.sample_one(
+        (value, weight, branch_ids, _) = logictree.sample_one(
             self.gmpe_lt, self.rnd)
         self.assertEqual(value,
                          {'Subduction Interface': 'SadighEtAl1997',
