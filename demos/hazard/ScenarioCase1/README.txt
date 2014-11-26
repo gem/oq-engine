@@ -1,6 +1,6 @@
 Scenario Hazard Simple Fault Rupture Demo
 
-This calculation demo exercises the Scenario hazard calculator by simlulating
+This calculation demo exercises the Scenario hazard calculator by simulating
 a single rupture originating from a simple fault source.
 
 In this example, we compute 10 sets of Ground Motion Fields for each IMT. Each
