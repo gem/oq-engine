@@ -84,6 +84,7 @@ class ScenarioHazardTestCase(CalculatorTestCase):
     def test_case_8(self):
         # test for a GMPE requiring hypocentral depth, since it was
         # broken: https://bugs.launchpad.net/oq-engine/+bug/1334524
+        # I am not really checking anything, only that it runs
         f1, f2 = self.frequencies(case_8, 0.5, 1.0)
         self.assertAlmostEqual(f1, 0)
         self.assertAlmostEqual(f2, 0)
