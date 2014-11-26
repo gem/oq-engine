@@ -62,6 +62,21 @@ class Point(object):
         self.longitude = longitude
 
     @property
+    def x(self):
+        """Alias for .longitude"""
+        return self.longitude
+
+    @property
+    def y(self):
+        """Alias for .latitude"""
+        return self.latitude
+
+    @property
+    def z(self):
+        """Alias for .depth"""
+        return self.depth
+
+    @property
     def wkt2d(self):
         """
         Generate WKT (Well-Known Text) to represent this point in 2 dimensions

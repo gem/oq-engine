@@ -44,13 +44,23 @@ class GeographicObjects(object):
             lats.append(getlat(obj))
         self.lons, self.lats = numpy.array(lons), numpy.array(lats)
 
-    def get_closest(self, lon, lat):
+    def get_closest(self, lon, lat, max_distance=None):
         """
         Get the closest object to the given longitude and latitude.
+        If the `max_distance` is given and all points are farther
+        then the maximum distance, returns None.
+
+        :param lon: longitude in degrees
+        :param lat: latitude in degrees
+        :param max_distance: distance in km (or None)
         """
-        index = min_distance(
-            self.lons, self.lats, numpy.zeros_like(self.lons), lon, lat, 0.,
-            indices=True)
+        zeros = numpy.zeros_like(self.lons)
+        index = min_distance(self.lons, self.lats, zeros, lon, lat, 0.,
+                             indices=True)
+        if max_distance is not None:
+            min_dist = min_distance(self.lons, self.lats, zeros, lon, lat, 0.)
+            if min_dist > max_distance:
+                return
         return self.objects[index]
 
 

@@ -28,8 +28,8 @@ class ClimentEtAl1994TestCase(BaseGSIMTestCase):
 
     def test_mean_normal(self):
         self.check('CLI1994/CLI94_MEAN.csv',
-                   max_discrep_percentage=0.02)
+                   max_discrep_percentage=0.015)
 
     def test_std_total(self):
         self.check('CLI1994/CLI94_TOTAL.csv',
-                   max_discrep_percentage=0.02)
+                   max_discrep_percentage=0.010)
