@@ -79,11 +79,13 @@ class EvenlyDiscretizedMFDTestCase(BaseMFDTestCase):
                          [(0.2, 2.1), (0.5, 2.4), (0.8, 5.3)])
         self.assertEqual(evenly_discretized.get_min_max_mag(), (0.2, 0.8))
 
+
 class EvenlyDiscretizedMFDTestCase(BaseMFDTestCase):
     def test_modify_mfd(self):
         mfd = EvenlyDiscretizedMFD(min_mag=4.0, bin_width=0.1,
-                                    occurrence_rates=[1, 2, 3])
-        mfd.modify("set_mfd",
+                                   occurrence_rates=[1, 2, 3])
+        mfd.modify(
+            "set_mfd",
             {"min_mag": 4.5, "bin_width": 0.2, "occurrence_rates": [4, 5, 6]})
         self.assertAlmostEqual(mfd.min_mag, 4.5)
         self.assertAlmostEqual(mfd.bin_width, 0.2)
@@ -91,11 +93,11 @@ class EvenlyDiscretizedMFDTestCase(BaseMFDTestCase):
 
     def test_modify_mfd_constraints(self):
         mfd = EvenlyDiscretizedMFD(min_mag=4.0, bin_width=0.1,
-                                    occurrence_rates=[1, 2, 3])
+                                   occurrence_rates=[1, 2, 3])
         exc = self.assert_mfd_error(
             mfd.modify,
             "set_mfd",
             {"min_mag": 4.0, "bin_width": 0.1, "occurrence_rates": [-1, 2, 3]})
-        
+
         self.assertEqual(exc.message, 'all occurrence rates '
                                       'must not be negative')
