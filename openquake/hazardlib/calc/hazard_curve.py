@@ -22,10 +22,32 @@ import sys
 import numpy
 
 from openquake.hazardlib.calc import filters
+from openquake.hazardlib.imt import from_string
+from openquake.hazardlib.gsim.base import deprecated
 
 
+@deprecated('Use calc_hazard_curves instead')
 def hazard_curves(
         sources, sites, imts, gsims, truncation_level,
+        source_site_filter=filters.source_site_noop_filter,
+        rupture_site_filter=filters.rupture_site_noop_filter):
+    """
+    Deprecated. It does the same job of
+    :func:`openquake.hazardlib.calc.hazard_curve.calc_hazard_curves`,
+    with the only difference that the intensity measure types in input
+    and output are hazardlib objects instead of simple strings.
+    """
+    imtls = {str(imt): imls for imt, imls in imts.iteritems()}
+    curves_by_imt = calc_hazard_curves(
+        sources, sites, imtls, gsims, truncation_level,
+        source_site_filter=filters.source_site_noop_filter,
+        rupture_site_filter=filters.rupture_site_noop_filter)
+    return {from_string(imt): curves
+            for imt, curves in curves_by_imt.iteritems()}
+
+
+def calc_hazard_curves(
+        sources, sites, imtls, gsims, truncation_level,
         source_site_filter=filters.source_site_noop_filter,
         rupture_site_filter=filters.rupture_site_noop_filter):
     """
@@ -58,9 +80,9 @@ def hazard_curves(
     :param sites:
         Instance of :class:`~openquake.hazardlib.site.SiteCollection` object,
         representing sites of interest.
-    :param imts:
-        Dictionary mapping intensity measure type objects (see
-        :mod:`openquake.hazardlib.imt`) to lists of intensity measure levels.
+    :param imtls:
+        Dictionary mapping intensity measure type strings
+        to lists of intensity measure levels.
     :param gsims:
         Dictionary mapping tectonic region types (members
         of :class:`openquake.hazardlib.const.TRT`) to
@@ -77,15 +99,16 @@ def hazard_curves(
         :mod:`openquake.hazardlib.calc.filters`.
 
     :returns:
-        Dictionary mapping intensity measure type objects (same keys
-        as in parameter ``imts``) to 2d numpy arrays of float, where
+        Dictionary mapping intensity measure type strings (same keys
+        as in parameter ``imtls``) to 2d numpy arrays of float, where
         first dimension differentiates sites (the order and length
         are the same as in ``sites`` parameter) and the second one
         differentiates IMLs (the order and length are the same as
         corresponding value in ``imts`` dict).
     """
-    curves = dict((imt, numpy.ones([len(sites), len(imts[imt])]))
-                  for imt in imts)
+    imts = {from_string(imt): imls for imt, imls in imtls.iteritems()}
+    curves = dict((imt, numpy.ones([len(sites), len(imtls[imt])]))
+                  for imt in imtls)
     sources_sites = ((source, sites) for source in sources)
     for source, s_sites in source_site_filter(sources_sites):
         try:
@@ -98,13 +121,13 @@ def hazard_curves(
                     poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
                                          truncation_level)
                     pno = rupture.get_probability_no_exceedance(poes)
-                    curves[imt] *= r_sites.expand(pno, placeholder=1)
+                    curves[str(imt)] *= r_sites.expand(pno, placeholder=1)
         except Exception, err:
             etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
             msg %= (source.source_id, err.message)
             raise etype, msg, tb
 
-    for imt in imts:
+    for imt in imtls:
         curves[imt] = 1 - curves[imt]
     return curves
