@@ -270,6 +270,7 @@ class BaseHazardCalculator(base.Calculator):
                 ordinal=sm.ordinal, sm_name=sm.name, weight=sm.weight)
 
             # save TrtModels for each tectonic region type
+            # and stored the db ID in the in-memory models
             for trt_mod in sm.trt_models:
                 trt_mod.id = models.TrtModel.objects.create(
                     lt_model=lt_model,
@@ -338,20 +339,18 @@ class BaseHazardCalculator(base.Calculator):
                 pk=trt_model.id).num_ruptures
         cm.reduce_trt_models()
 
-        for rlz in cm.get_realizations(
-                self.hc.number_of_logic_tree_samples,
-                self.hc.random_seed):
-            smlt_path, gsim_path = rlz.lt_path
+        ltp = cm.lt_processor()
+        for rlz, gsim_by_trt in zip(ltp.realizations, ltp.gsim_by_trt):
             lt_model = models.LtSourceModel.objects.get(
-                hazard_calculation=self.job, sm_lt_path=smlt_path)
+                hazard_calculation=self.job, sm_lt_path=rlz.sm_lt_path)
             trt_models = lt_model.trtmodel_set.filter(num_ruptures__gt=0)
             if not trt_models:
+                logs.LOG.warn('No ruptures for %s: skipping', lt_model)
                 continue
-            gsim_lt = cm[smlt_path].gsim_lt
+            gsim_lt = cm.get_source_model(rlz.sm_lt_path).gsim_lt
             lt_rlz = models.LtRealization.objects.create(
-                lt_model=lt_model, gsim_lt_path=gsim_path,
+                lt_model=lt_model, gsim_lt_path=rlz.gsim_lt_path,
                 weight=rlz.weight, ordinal=rlz.ordinal)
-            gsim_by_trt = rlz.value
             for trt_model in trt_models:
                 trt = trt_model.tectonic_region_type
                 # populate the association table rlz <-> trt_model
