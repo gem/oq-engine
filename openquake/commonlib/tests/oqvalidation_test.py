@@ -15,7 +15,8 @@ class OqParamTestCase(unittest.TestCase):
                 calculation_mode='classical', inputs=dict(site_model=''),
                 hazard_calculation_id=None, hazard_output_id=None,
                 maximum_distance=10, sites='0.1 0.2',
-                not_existing_param='XXX', export_dir=TMP)
+                not_existing_param='XXX', export_dir=TMP,
+                rupture_mesh_spacing='1.5')
         self.assertEqual(
             w.call_args[0][0],
             "The parameter 'not_existing_param' is unknown, ignoring")
