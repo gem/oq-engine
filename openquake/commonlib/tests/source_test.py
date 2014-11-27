@@ -290,7 +290,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             ]),
         ]
         complex_surface = geo.ComplexFaultSurface.from_fault_data(
-            edges, self.comple_fault_mesh_spacing
+            edges, self.complex_fault_mesh_spacing
         )
 
         char = source.CharacteristicFaultSource(
@@ -486,7 +486,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         converter = s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,  # km
-            complex_fault__mesh_spacing=1,  # km
+            complex_fault_mesh_spacing=1,  # km
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
             area_source_discretization=1.)
         np, = read_nodes(NONPARAMETRIC_SOURCE, filter_sources, ValidNode)
