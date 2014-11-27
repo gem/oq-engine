@@ -135,7 +135,8 @@ class NonParametricProbabilisticRupture(BaseProbabilisticRupture):
         probability ``0.8`` to not occurr, ``0.15`` to occur once, and
         ``0.05`` to occur twice, the ``pmf`` can be defined as ::
 
-            pmf = PMF([(Decimal('0.8'), 0), (Decimal('0.15'), 1), Decimal('0.05', 2)])
+          pmf = PMF([(Decimal('0.8'), 0), (Decimal('0.15'), 1),
+                      Decimal('0.05', 2)])
 
     :raises ValueError:
         If number of ruptures in ``pmf`` do not start from 0, are not defined
@@ -201,6 +202,7 @@ class NonParametricProbabilisticRupture(BaseProbabilisticRupture):
         return n_occ
 
 
+@with_slots
 class ParametricProbabilisticRupture(BaseProbabilisticRupture):
     """
     :class:`Rupture` associated with an occurrence rate and a temporal
@@ -215,9 +217,11 @@ class ParametricProbabilisticRupture(BaseProbabilisticRupture):
     :raises ValueError:
         If occurrence rate is not positive.
     """
+    __slots__ = Rupture.__slots__ + [
+        'occurrence_rate', 'temporal_occurrence_model']
+
     def __init__(self, mag, rake, tectonic_region_type, hypocenter, surface,
-                 source_typology,
-                 occurrence_rate, temporal_occurrence_model):
+                 source_typology, occurrence_rate, temporal_occurrence_model):
         if not occurrence_rate > 0:
             raise ValueError('occurrence rate must be positive')
         super(ParametricProbabilisticRupture, self).__init__(
