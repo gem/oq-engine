@@ -33,7 +33,7 @@ writercls = dict(
 @export.add('dmg_per_asset_xml', 'dmg_per_taxonomy_xml', 'dmg_total_xml')
 def export_dmg_xml(key, export_dir, damage_states, dmg_data):
     dest = os.path.join(export_dir, key.replace('_xml', '.xml'))
-    writercls[key](dest, damage_states).serialize(dmg_data)
+    writercls[key](dest, damage_states).serialize(sorted(dmg_data))
     return AccumDict({key: dest})
 
 
