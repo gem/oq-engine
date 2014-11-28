@@ -17,13 +17,16 @@
 """
 Module containing writers for risk output artifacts.
 """
-
-import itertools
 import json
+import operator
+import collections
 
 from lxml import etree
 
 from openquake.commonlib.nrml import NRMLFile, SERIALIZE_NS_MAP
+from openquake.baselib.general import groupby, writetmp
+from openquake.commonlib.node import Node
+from openquake.commonlib import nrml
 
 
 class LossCurveXMLWriter(object):
@@ -796,333 +799,6 @@ class BCRMapXMLWriter(object):
         self._bcr_map.set("lossType", self._loss_type)
 
 
-class DmgDistPerAssetXMLWriter(object):
-    """
-    Write the damage distribution per asset artifact
-    to the defined NRML format.
-
-    :param path: full path to the resulting XML file (including file name).
-    :type path: string
-    :param damage_states: the damage states considered in this distribution.
-    :type damage_states: list of strings, for example:
-        ["no_damage", "slight", "moderate", "extensive", "complete"]
-    """
-
-    def __init__(self, path, damage_states):
-        self.path = path
-        self.damage_states = damage_states
-        self.root = None
-        self.dmg_dist_el = None
-
-    def serialize(self, assets_data):
-        """
-        Serialize the entire distribution.
-
-        :param assets_data: the distribution to be written.
-        :type assets_data: list of
-            :class:`openquake.db.models.DmgDistPerAsset` instances.
-            The component is able to correctly re-order the elements by
-            site and asset, but the damage states must be ordered in advance.
-
-        :raises: `RuntimeError` in case of list empty or `None`.
-        """
-
-        if assets_data is None or not len(assets_data):
-            raise RuntimeError(
-                "empty damage distributions are not supported by the schema.")
-
-        # contains the set of <DDNode /> elements indexed per site
-        dd_nodes = {}
-
-        # contains the set of <asset /> elements indexed per asset ref
-        asset_nodes = {}
-
-        with open(self.path, "w") as fh:
-            self.root, self.dmg_dist_el = _create_root_elems(
-                self.damage_states, "dmgDistPerAsset")
-
-            assets = []
-            # group by limit state index (lsi)
-            for lsi, rows in itertools.groupby(
-                    assets_data, lambda r: r.dmg_state.lsi):
-                # sort by asset_ref
-                for asset_data in sorted(
-                        rows, key=lambda r: r.exposure_data.asset_ref):
-                    assets.append(asset_data)
-            for asset_data in assets:
-                site = asset_data.exposure_data.site
-                asset_ref = asset_data.exposure_data.asset_ref
-
-                # lookup the correct <DDNode /> element
-                dd_node_el = dd_nodes.get(site.wkt, None)
-
-                # nothing yet related to this site,
-                # creating the <DDNode /> element
-                if dd_node_el is None:
-                    dd_node_el = dd_nodes[site.wkt] = \
-                        self._create_dd_node_elem(site)
-
-                # lookup the correct <asset /> element
-                asset_node_el = asset_nodes.get(asset_ref, None)
-
-                # nothing yet related to this asset,
-                # creating the <asset /> element
-                if asset_node_el is None:
-                    asset_node_el = asset_nodes[asset_ref] = \
-                        _create_asset_elem(dd_node_el, asset_ref)
-
-                _create_damage_elem(
-                    asset_node_el, asset_data.dmg_state.dmg_state,
-                    asset_data.mean, asset_data.stddev)
-
-            fh.write(etree.tostring(
-                self.root, pretty_print=True, xml_declaration=True,
-                encoding="UTF-8"))
-
-    def _create_dd_node_elem(self, site):
-        """
-        Create the <DDNode /> element related to the given site.
-        """
-        dd_node_el = etree.SubElement(self.dmg_dist_el, "DDNode")
-        _append_location(dd_node_el, site)
-        return dd_node_el
-
-
-class CollapseMapXMLWriter(object):
-    """
-    Write the collapse map artifact to the defined NRML format.
-
-    :param path: full path to the resulting XML file (including file name).
-    :type path: string
-    """
-
-    def __init__(self, path):
-        self.path = path
-        self.root = None
-        self.collapse_map_el = None
-
-    def serialize(self, cmap_data):
-        """
-        Serialize the entire distribution.
-
-        :param cmap_data: the distribution to be written.
-        :type cmap_data: list of
-            :py:class:`openquake.db.models.CollapseMapData` instances.
-            There are no restrictions about the ordering of the elements,
-            the component is able to correctly re-order the elements by
-            site and asset.
-        :raises: `RuntimeError` in case of list empty or `None`.
-        """
-
-        if cmap_data is None or not len(cmap_data):
-            raise RuntimeError(
-                "empty maps are not supported by the schema.")
-
-        # contains the set of <CMNode /> elements indexed per site
-        cm_nodes = {}
-
-        with open(self.path, "w") as fh:
-            self.root, self.collapse_map_el = self._create_root_elems()
-
-            # order by asset_ref
-            for cfraction in sorted(
-                    cmap_data, key=lambda r: r.exposure_data.asset_ref):
-                site = cfraction.exposure_data.site
-
-                # lookup the correct <CMNode /> element
-                cm_node_el = cm_nodes.get(site.wkt, None)
-
-                # nothing yet related to this site,
-                # creating the <CMNode /> element
-                if cm_node_el is None:
-                    cm_node_el = cm_nodes[site.wkt] = \
-                        self._create_cm_node_elem(site)
-
-                _create_cf_elem(cfraction, cm_node_el)
-
-            fh.write(etree.tostring(
-                self.root, pretty_print=True, xml_declaration=True,
-                encoding="UTF-8"))
-
-    def _create_cm_node_elem(self, site):
-        """
-        Create the <CMNode /> element related to the given site.
-        """
-        cm_node_el = etree.SubElement(self.collapse_map_el, "CMNode")
-        _append_location(cm_node_el, site)
-        return cm_node_el
-
-    def _create_root_elems(self):
-        """
-        Create the <nrml /> and <collapseMap /> elements.
-        """
-        root = etree.Element("nrml", nsmap=SERIALIZE_NS_MAP)
-        cm_el = etree.SubElement(root, "collapseMap")
-        return root, cm_el
-
-
-def _create_cf_elem(cfraction, cm_node_el):
-    """
-    Create the <cf /> element related to the given site.
-    """
-    cf_el = etree.SubElement(cm_node_el, "cf")
-    cf_el.set("assetRef", cfraction.exposure_data.asset_ref)
-    cf_el.set("mean", str(cfraction.mean))
-    cf_el.set("stdDev", str(cfraction.stddev))
-
-
-class DmgDistPerTaxonomyXMLWriter(object):
-    """
-    Write the damage distribution per taxonomy artifact
-    to the defined NRML format.
-
-    :param path: full path to the resulting XML file (including file name).
-    :type path: string
-    :param damage_states: the damage states considered in this distribution.
-    :type damage_states: list of strings, for example:
-        ["no_damage", "slight", "moderate", "extensive", "complete"]
-    """
-
-    def __init__(self, path, damage_states):
-        self.path = path
-        self.damage_states = damage_states
-        self.root = None
-        self.dmg_dist_el = None
-
-    def serialize(self, taxonomy_data):
-        """
-        Serialize the entire distribution.
-
-        :param taxonomy_data: the distribution to be written.
-        :type taxonomy_data: list of
-            :py:class:`openquake.db.models.DmgDistPerTaxonomy` instances.
-            There are no restrictions about the ordering of the elements,
-            the component is able to correctly re-order the elements by
-            asset taxonomy.
-        :raises: `RuntimeError` in case of list empty or `None`.
-        """
-
-        if taxonomy_data is None or not len(taxonomy_data):
-            raise RuntimeError(
-                "empty damage distributions are not supported by the schema.")
-
-        # contains the set of <DDNode /> elements indexed per taxonomy
-        dd_nodes = {}
-
-        with open(self.path, "w") as fh:
-            self.root, self.dmg_dist_el = _create_root_elems(
-                self.damage_states, "dmgDistPerTaxonomy")
-
-            for tdata in taxonomy_data:
-                # lookup the correct <DDNode /> element
-                dd_node_el = dd_nodes.get(tdata.taxonomy, None)
-
-                # nothing yet related to this taxonomy,
-                # creating the <DDNode /> element
-                if dd_node_el is None:
-                    dd_node_el = dd_nodes[tdata.taxonomy] = \
-                        self._create_dd_node_elem(tdata.taxonomy)
-
-                _create_damage_elem(dd_node_el, tdata.dmg_state.dmg_state,
-                                    tdata.mean, tdata.stddev)
-
-            fh.write(
-                etree.tostring(
-                    self.root, pretty_print=True, xml_declaration=True,
-                    encoding="UTF-8"))
-
-    def _create_dd_node_elem(self, taxonomy):
-        """
-        Create the <DDNode /> element related to the given taxonomy.
-        """
-
-        dd_node_el = etree.SubElement(self.dmg_dist_el, "DDNode")
-
-        # <taxonomy /> node
-        taxonomy_el = etree.SubElement(dd_node_el, "taxonomy")
-        taxonomy_el.text = taxonomy
-
-        return dd_node_el
-
-
-class DmgDistTotalXMLWriter(object):
-    """
-    Write the total damage distribution artifact
-    to the defined NRML format.
-
-    :param path: full path to the resulting XML file (including file name).
-    :type path: string
-    :param damage_states: the damage states considered in this distribution.
-    :type damage_states: list of strings, for example:
-        ["no_damage", "slight", "moderate", "extensive", "complete"]
-    """
-
-    def __init__(self, path, damage_states):
-        self.path = path
-        self.damage_states = damage_states
-        self.root = None
-
-    def serialize(self, total_dist_data):
-        """
-        Serialize the entire distribution.
-
-        :param total_dist_data: the distribution to be written.
-        :type total_dist_data: list of
-            :py:class:`openquake.db.models.DmgDistTotalData` instances.
-        :raises: `RuntimeError` in case of list empty or `None`.
-        """
-
-        if total_dist_data is None or not len(total_dist_data):
-            raise RuntimeError(
-                "empty damage distributions are not supported by the schema.")
-
-        with open(self.path, "w") as fh:
-            self.root, dmg_dist_el = _create_root_elems(
-                self.damage_states, "totalDmgDist")
-
-            for tdata in total_dist_data:
-
-                _create_damage_elem(dmg_dist_el, tdata.dmg_state.dmg_state,
-                                    tdata.mean, tdata.stddev)
-
-            fh.write(
-                etree.tostring(self.root, pretty_print=True,
-                               xml_declaration=True, encoding="UTF-8"))
-
-
-def _create_root_elems(damage_states, distribution):
-    """
-    Create the <nrml /> and <dmgDistPer{Taxonomy,Asset} /> elements.
-    """
-
-    root = etree.Element("nrml", nsmap=SERIALIZE_NS_MAP)
-
-    dmg_dist_el = etree.SubElement(root, distribution)
-    dmg_states = etree.SubElement(dmg_dist_el, "damageStates")
-    dmg_states.text = " ".join(damage_states)
-
-    return root, dmg_dist_el
-
-
-def _create_damage_elem(dd_node, dmg_state, mean, stddev):
-    """
-    Create the <damage /> element.
-    """
-    ds_node = etree.SubElement(dd_node, "damage")
-    ds_node.set("ds", dmg_state)
-    ds_node.set("mean", str(mean))
-    ds_node.set("stddev", str(stddev))
-
-
-def _create_asset_elem(dd_node_el, asset_ref):
-    """
-    Create the <asset /> element.
-    """
-    asset_node_el = etree.SubElement(dd_node_el, "asset")
-    asset_node_el.set("assetRef", asset_ref)
-    return asset_node_el
-
-
 def _append_location(element, location):
     """
     Append the geographical location to the given element.
@@ -1200,3 +876,98 @@ def _assert_valid_input(data):
     if not data or len(data) == 0:
         raise ValueError("At least one element must be present, "
                          "an empty document is not supported by the schema.")
+
+DmgState = collections.namedtuple("DmgState", 'dmg_state lsi')
+
+
+class DamageWriter(object):
+    def __init__(self, damage_states):
+        self.damage_states = [DmgState(ds, i)
+                              for i, ds in enumerate(damage_states)]
+        self.dmg_states = Node('damageStates', text=' '.join(damage_states))
+
+    def damage_nodes(self, means, stddevs):
+        nodes = []
+        for dmg_state, mean, stddev in zip(self.damage_states, means, stddevs):
+            nodes.append(
+                Node('damage', dict(ds=dmg_state.dmg_state,
+                                    mean=mean, stddev=stddev)))
+        return nodes
+
+    def point_node(self, loc):
+        return Node('gml:Point',
+                    nodes=[Node('gml:pos', text='%s %s' % (loc.x, loc.y))])
+
+    def asset_node(self, asset_ref, means, stddevs):
+        return Node('asset', dict(assetRef=asset_ref),
+                    nodes=self.damage_nodes(means, stddevs))
+
+    def cm_node(self, loc, asset_refs, means, stddevs):
+        cm = Node('CMNode', nodes=[self.point_node(loc)])
+        for asset_ref, mean, stddev in zip(asset_refs, means, stddevs):
+            cf = Node('cf', dict(assetRef=asset_ref, mean=mean, stdDev=stddev))
+            cm.append(cf)
+        return cm
+
+    def dd_node_taxo(self, taxonomy, means, stddevs):
+        taxonomy = Node('taxonomy', text=taxonomy)
+        dd = Node('DDNode', nodes=[taxonomy] +
+                  self.damage_nodes(means, stddevs))
+        return dd
+
+    def dmg_per_asset_node(self, data):
+        node = Node('dmgDistPerAsset', nodes=[self.dmg_states])
+        data_by_location = groupby(data, lambda r: r.exposure_data.site)
+        for loc in data_by_location:
+            dd = Node('DDNode', nodes=[self.point_node(loc)])
+            data_by_asset = groupby(data_by_location[loc],
+                                    key=lambda r: r.exposure_data.asset_ref)
+            means = []
+            stddevs = []
+            for asset_ref in data_by_asset:
+                for row in data_by_asset[asset_ref]:
+                    means.append(row.mean)
+                    stddevs.append(row.stddev)
+                dd.append(self.asset_node(asset_ref, means, stddevs))
+            node.append(dd)
+        return node
+
+    def collapse_map_node(self, data):
+        node = Node('collapseMap')
+        data_by_location = groupby(data, lambda r: r.exposure_data.site)
+        for loc in data_by_location:
+            asset_refs = []
+            means = []
+            stddevs = []
+            for row in sorted(data_by_location[loc],
+                              key=lambda r: r.exposure_data.asset_ref):
+                asset_refs.append(row.exposure_data.asset_ref)
+                means.append(row.mean)
+                stddevs.append(row.stddev)
+            node.append(self.cm_node(loc, asset_refs, means, stddevs))
+        return node
+
+    def dmg_per_taxonomy_node(self, data):
+        node = Node('dmgDistPerTaxonomy', nodes=[self.dmg_states])
+        data_by_taxo = groupby(data, operator.attrgetter('taxonomy'))
+        for taxonomy in data_by_taxo:
+            means = [row.mean for row in data_by_taxo[taxonomy]]
+            stddevs = [row.stddev for row in data_by_taxo[taxonomy]]
+            node.append(self.dd_node_taxo(taxonomy, means, stddevs))
+        return node
+
+    def dmg_total_node(self, data):
+        total = Node('totalDmgDist', nodes=[self.dmg_states])
+        for row in sorted(data, key=lambda r: r.dmg_state.lsi):
+            damage = Node('damage',
+                          dict(ds=row.dmg_state.dmg_state, mean=row.mean,
+                               stddev=row.stddev))
+            total.append(damage)
+        return total
+
+    def to_nrml(self, key, data, fname=None):
+        fname = fname or writetmp()
+        node = getattr(self, key + '_node')(data)
+        with open(fname, 'w') as out:
+            nrml.write([node], out)
+        return fname

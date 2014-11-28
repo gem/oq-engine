@@ -23,17 +23,13 @@ from openquake.baselib.general import AccumDict
 from openquake.commonlib.export import export
 from openquake.commonlib import risk_writers
 
-writercls = dict(
-    collapse_map_xml=risk_writers.CollapseMapXMLWriter,
-    dmg_per_asset_xml=risk_writers.DmgDistPerAssetXMLWriter,
-    dmg_per_taxonomy_xml=risk_writers.DmgDistPerTaxonomyXMLWriter,
-    dmg_total_xml=risk_writers.DmgDistTotalXMLWriter)
 
-
-@export.add('dmg_per_asset_xml', 'dmg_per_taxonomy_xml', 'dmg_total_xml')
+@export.add('dmg_per_asset_xml', 'dmg_per_taxonomy_xml', 'dmg_total_xml',
+            'collapse_map_xml')
 def export_dmg_xml(key, export_dir, damage_states, dmg_data):
     dest = os.path.join(export_dir, key.replace('_xml', '.xml'))
-    writercls[key](dest, damage_states).serialize(dmg_data)
+    risk_writers.DamageWriter(damage_states).to_nrml(
+        key.replace('_xml', ''), dmg_data, dest)
     return AccumDict({key: dest})
 
 
