@@ -14,7 +14,24 @@
 # along with NRML.  If not, see <http://www.gnu.org/licenses/>.
 
 import cStringIO
+from contextlib import contextmanager
 from xml.sax.saxutils import escape, quoteattr
+
+
+@contextmanager
+def floatformat(fmt_string):
+    """
+    Context manager to change the default format string for the
+    function :function:`openquake.commonlib.writers.scientificformat`.
+
+    :param fmt_string: the format to use; for instance '%13.9E'
+    """
+    fmt_defaults = scientificformat.__defaults__
+    scientificformat.__defaults__ = (fmt_string,)
+    try:
+        yield
+    finally:
+        scientificformat.__defaults__ = fmt_defaults
 
 
 def scientificformat(value, fmt='%13.9E'):

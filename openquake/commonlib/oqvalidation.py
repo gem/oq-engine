@@ -20,6 +20,7 @@ import os
 import re
 import logging
 import tempfile
+import collections
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.commonlib import valid
 
@@ -124,6 +125,7 @@ class OqParam(valid.ParamSet):
         region_grid_spacing=valid.positivefloat,
         risk_investigation_time=valid.positivefloat,
         rupture_mesh_spacing=valid.positivefloat,
+        complex_fault_mesh_spacing=valid.NoneOr(valid.positivefloat),
         ses_per_logic_tree_path=valid.positiveint,
         sites=valid.NoneOr(valid.coordinates),
         sites_disagg=valid.NoneOr(valid.coordinates),
@@ -283,3 +285,21 @@ class OqParam(valid.ParamSet):
         if 'risk' in self.calculation_mode:
             return any(key.endswith('_vulnerability') for key in self.inputs)
         return True
+
+    def is_valid_complex_fault_mesh_spacing(self):
+        """
+        The `complex_fault_mesh_spacing` parameter can be None only if
+        `rupture_mesh_spacing` is set. In that case it is identified with it.
+        """
+        rms = getattr(self, 'rupture_mesh_spacing', None)
+        if rms and not getattr(self, 'complex_fault_mesh_spacing', None):
+            self.complex_fault_mesh_spacing = self.rupture_mesh_spacing
+        return True
+
+    @property
+    def imtls(self):
+        """
+        Returns an OrderedDict with the intensity measure types and levels
+        """
+        items = sorted(self.intensity_measure_types_and_levels.iteritems())
+        return collections.OrderedDict(items)

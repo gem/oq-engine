@@ -73,6 +73,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         converter = s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,  # km
+            complex_fault_mesh_spacing=1,  # km
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
             area_source_discretization=1.,  # km
         )
@@ -84,6 +85,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         # the parameters here would typically be specified in the job .ini
         cls.investigation_time = 50.
         cls.rupture_mesh_spacing = 1  # km
+        cls.complex_fault_mesh_spacing = 1  # km
         cls.width_of_mfd_bin = 1.  # for Truncated GR MFDs
         cls.area_source_discretization = 1.  # km
         cls.converter = converter
@@ -218,7 +220,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             name="Cascadia Megathrust",
             tectonic_region_type="Subduction Interface",
             mfd=tgr_mfd,
-            rupture_mesh_spacing=self.rupture_mesh_spacing,
+            rupture_mesh_spacing=self.complex_fault_mesh_spacing,
             magnitude_scaling_relationship=scalerel.WC1994(),
             rupture_aspect_ratio=2.0,
             edges=edges,
@@ -288,7 +290,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             ]),
         ]
         complex_surface = geo.ComplexFaultSurface.from_fault_data(
-            edges, self.rupture_mesh_spacing
+            edges, self.complex_fault_mesh_spacing
         )
 
         char = source.CharacteristicFaultSource(
@@ -373,6 +375,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         converter = s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,
+            complex_fault_mesh_spacing=1,
             width_of_mfd_bin=0.1,
             area_source_discretization=10,
         )
@@ -483,6 +486,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         converter = s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,  # km
+            complex_fault_mesh_spacing=1,  # km
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
             area_source_discretization=1.)
         np, = read_nodes(NONPARAMETRIC_SOURCE, filter_sources, ValidNode)
@@ -583,6 +587,7 @@ class TrtModelTestCase(unittest.TestCase):
         cls.converter = s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,  # km
+            complex_fault_mesh_spacing=1,  # km
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
             area_source_discretization=1.)
         cls.source_collector = dict(
@@ -634,7 +639,8 @@ class TrtModelTestCase(unittest.TestCase):
 class RuptureConverterTestCase(unittest.TestCase):
 
     def test_well_formed_ruptures(self):
-        converter = s.RuptureConverter(rupture_mesh_spacing=1.5)
+        converter = s.RuptureConverter(rupture_mesh_spacing=1.5,
+                                       complex_fault_mesh_spacing=1.5)
         for fname in (SIMPLE_FAULT_RUPTURE, COMPLEX_FAULT_RUPTURE,
                       SINGLE_PLANE_RUPTURE, MULTI_PLANES_RUPTURE):
             node, = read_nodes(fname, filter_ruptures, ValidNode)
