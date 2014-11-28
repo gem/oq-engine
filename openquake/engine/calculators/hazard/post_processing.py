@@ -217,14 +217,16 @@ def do_uhs_post_proc(job):
                 _save_uhs(job, quantile_uhs, poe, statistics='quantile',
                           quantile=quantile)
 
-        # for each logic tree branch:
-        for rlz in rlzs:
-            rlz_maps = maps_for_poe.filter(
-                statistics=None, lt_realization=rlz
-            )
-            assert rlz_maps, 'Could not find HazardMaps for rlz=%d' % rlz.id
-            rlz_uhs = make_uhs(rlz_maps)
-            _save_uhs(job, rlz_uhs, poe, rlz=rlz)
+        if job.get_param('individual_curves', True):
+            # build a map for each logic tree branch
+            for rlz in rlzs:
+                rlz_maps = maps_for_poe.filter(
+                    statistics=None, lt_realization=rlz
+                )
+                assert rlz_maps, \
+                    'Could not find HazardMaps for rlz=%d' % rlz.id
+                rlz_uhs = make_uhs(rlz_maps)
+                _save_uhs(job, rlz_uhs, poe, rlz=rlz)
 
 
 def make_uhs(maps):
