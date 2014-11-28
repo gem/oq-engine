@@ -561,7 +561,10 @@ def groupby(objects, key):
     """
     :param objects: a sequence of objects with a key value
     :param key: the key function to extract the key value
-    :returns: an AccumDict key value -> list of objects
+    :returns: an OrderedDict {key value: list of objects}
+
+    >>> groupby('pippo', key=lambda x: x)
+    OrderedDict([('i', ['i']), ('o', ['o']), ('p', ['p', 'p', 'p'])])
     """
     kgroups = itertools.groupby(sorted(objects, key=key), key)
-    return AccumDict((k, list(group)) for k, group in kgroups)
+    return collections.OrderedDict((k, list(group)) for k, group in kgroups)
