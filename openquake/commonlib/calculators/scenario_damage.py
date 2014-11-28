@@ -138,4 +138,8 @@ class ScenarioDamageCalculator(base.BaseRiskCalculator):
                     self.riskmodel.damage_states, dd_taxo)
         f3 = export('dmg_total_xml', self.oqparam.export_dir,
                     self.riskmodel.damage_states, dd_total)
-        return f1 + f2 + f3
+        max_damage = dmg_states[-1]
+        collapse_map = [dda for dda in dd_asset if dda.dmg_state == max_damage]
+        f4 = export('collapse_map_xml', self.oqparam.export_dir,
+                    self.riskmodel.damage_states, collapse_map)
+        return f1 + f2 + f3 + f4

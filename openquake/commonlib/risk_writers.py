@@ -896,7 +896,7 @@ class CollapseMapXMLWriter(object):
     :type path: string
     """
 
-    def __init__(self, path):
+    def __init__(self, path, _dmg_states=None):
         self.path = path
         self.root = None
         self.collapse_map_el = None
