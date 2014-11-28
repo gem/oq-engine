@@ -35,8 +35,8 @@ class CalculatorTestCase(unittest.TestCase):
         Return the outputs of the calculation as a dictionary
         """
         self.testdir = os.path.dirname(testfile)
-        ini = os.path.join(self.testdir, job_ini)
-        oq = self.oqparam = readinput.get_oqparam(ini)
+        inis = [os.path.join(self.testdir, j) for j in job_ini.split(',')]
+        oq = self.oqparam = readinput.get_oqparam(inis)
         oq.concurrent_tasks = executor._max_workers
         # change this when debugging the test
         monitor = PerformanceMonitor(

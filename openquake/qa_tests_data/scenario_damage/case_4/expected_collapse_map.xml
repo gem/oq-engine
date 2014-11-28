@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <collapseMap>
+    <CMNode>
+      <gml:Point>
+        <gml:pos>81.2985 29.1098</gml:pos>
+      </gml:Point>
+      <cf assetRef="a1" mean="1.31498867E+01" stdDev="2.38620047E+01"/>
+    </CMNode>
+    <CMNode>
+      <gml:Point>
+        <gml:pos>83.082298 27.9006</gml:pos>
+      </gml:Point>
+      <cf assetRef="a2" mean="2.58055953E+02" stdDev="2.51576066E+02"/>
+    </CMNode>
+    <CMNode>
+      <gml:Point>
+        <gml:pos>85.747703 27.9015</gml:pos>
+      </gml:Point>
+      <cf assetRef="a3" mean="6.90880885E+02" stdDev="8.83182778E+02"/>
+    </CMNode>
+  </collapseMap>
+</nrml>

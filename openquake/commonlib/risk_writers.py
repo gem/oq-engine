@@ -24,6 +24,7 @@ import json
 from lxml import etree
 
 from openquake.commonlib.nrml import NRMLFile, SERIALIZE_NS_MAP
+from openquake.commonlib.writers import scientificformat
 
 
 class LossCurveXMLWriter(object):
@@ -796,6 +797,10 @@ class BCRMapXMLWriter(object):
         self._bcr_map.set("lossType", self._loss_type)
 
 
+def get_lsi(record):
+    return (record[0], record.dmg_state.lsi)
+
+
 class DmgDistPerAssetXMLWriter(object):
     """
     Write the damage distribution per asset artifact
@@ -831,6 +836,7 @@ class DmgDistPerAssetXMLWriter(object):
             raise RuntimeError(
                 "empty damage distributions are not supported by the schema.")
 
+        assets_data = sorted(assets_data, key=get_lsi)
         # contains the set of <DDNode /> elements indexed per site
         dd_nodes = {}
 
@@ -844,7 +850,7 @@ class DmgDistPerAssetXMLWriter(object):
             assets = []
             # group by limit state index (lsi)
             for lsi, rows in itertools.groupby(
-                    assets_data, lambda r: r.dmg_state.lsi):
+                    assets_data, get_lsi):
                 # sort by asset_ref
                 for asset_data in sorted(
                         rows, key=lambda r: r.exposure_data.asset_ref):
@@ -873,7 +879,8 @@ class DmgDistPerAssetXMLWriter(object):
 
                 _create_damage_elem(
                     asset_node_el, asset_data.dmg_state.dmg_state,
-                    asset_data.mean, asset_data.stddev)
+                    asset_data.mean,
+                    asset_data.stddev)
 
             fh.write(etree.tostring(
                 self.root, pretty_print=True, xml_declaration=True,
@@ -967,8 +974,8 @@ def _create_cf_elem(cfraction, cm_node_el):
     """
     cf_el = etree.SubElement(cm_node_el, "cf")
     cf_el.set("assetRef", cfraction.exposure_data.asset_ref)
-    cf_el.set("mean", str(cfraction.mean))
-    cf_el.set("stdDev", str(cfraction.stddev))
+    cf_el.set("mean", scientificformat(cfraction.mean))
+    cf_el.set("stdDev", scientificformat(cfraction.stddev))
 
 
 class DmgDistPerTaxonomyXMLWriter(object):
@@ -1012,8 +1019,7 @@ class DmgDistPerTaxonomyXMLWriter(object):
         with open(self.path, "w") as fh:
             self.root, self.dmg_dist_el = _create_root_elems(
                 self.damage_states, "dmgDistPerTaxonomy")
-
-            for tdata in taxonomy_data:
+            for tdata in sorted(list(taxonomy_data), key=get_lsi):
                 # lookup the correct <DDNode /> element
                 dd_node_el = dd_nodes.get(tdata.taxonomy, None)
 
@@ -1110,8 +1116,8 @@ def _create_damage_elem(dd_node, dmg_state, mean, stddev):
     """
     ds_node = etree.SubElement(dd_node, "damage")
     ds_node.set("ds", dmg_state)
-    ds_node.set("mean", str(mean))
-    ds_node.set("stddev", str(stddev))
+    ds_node.set("mean", scientificformat(mean))
+    ds_node.set("stddev", scientificformat(stddev))
 
 
 def _create_asset_elem(dd_node_el, asset_ref):
