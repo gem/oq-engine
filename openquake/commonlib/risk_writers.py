@@ -47,6 +47,9 @@ class Site(object):
         self.x, self.y = x, y
         self.wkt = 'POINT(%s %s)' % (x, y)
 
+    def __lt__(self, other):
+        return (self.x, self.y) < (other.x, other.y)
+
 
 class LossCurveXMLWriter(object):
     """
