@@ -104,7 +104,7 @@ class ScenarioDamageCalculator(base.BaseRiskCalculator):
             elif key_type == 'asset':
                 # values are mean and stddev, at D x 2 matrix
                 for dmg_state, mean_std in zip(dmg_states, values):
-                    site = Site(key.location.x, key.location.y)
+                    site = Site(*key.location)
                     dd_asset.append(
                         DmgDistPerAsset(
                             ExposureData(key.id, site),
