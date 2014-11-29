@@ -902,9 +902,10 @@ def _assert_valid_input(data):
 
 class DamageWriter(object):
     def __init__(self, damage_states):
-        self.damage_states = [DmgState(ds, i)
-                              for i, ds in enumerate(damage_states)]
-        self.dmg_states = Node('damageStates', text=' '.join(damage_states))
+        self.damage_states = damage_states
+        self.dmg_states = Node(
+            'damageStates',
+            text=' '.join(ds.dmg_state for ds in damage_states))
 
     def damage_nodes(self, means, stddevs):
         nodes = []

@@ -703,7 +703,7 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
 ######################## Scenario Damage Writers #########################
 
 dw = writers.DamageWriter(
-    'no_damage slight moderate extensive complete'.split())
+    [NO_DAMAGE, SLIGHT, MODERATE, EXTENSIVE, COMPLETE])
 
 
 class DamageWriterTestCase(unittest.TestCase):
