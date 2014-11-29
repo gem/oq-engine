@@ -729,7 +729,7 @@ class DamageWriterTestCase(unittest.TestCase):
             (COMPLETE, 64.3, 19.7),
         ])
         check_equal(__file__, 'expected_dmg_total.xml',
-                    dw.to_nrml('dmg_total', data))
+                    dw.to_nrml('dmg_dist_total', data))
 
     def test_dmg_per_taxonomy_node(self):
         data = itertools.starmap(DMG_DIST_PER_TAXONOMY, [
@@ -745,7 +745,7 @@ class DamageWriterTestCase(unittest.TestCase):
             ('RM', COMPLETE, 64.3, 19.7),
         ])
         check_equal(__file__, 'expected_dmg_per_taxonomy.xml',
-                    dw.to_nrml('dmg_per_taxonomy', data))
+                    dw.to_nrml('dmg_dist_per_taxonomy', data))
 
     def test_dmg_per_asset_node(self):
         point1 = Point(-116., 41.)
@@ -775,7 +775,7 @@ class DamageWriterTestCase(unittest.TestCase):
             (e3, COMPLETE, 64.3, 19.7),
         ])
         check_equal(__file__, 'expected_dmg_per_asset.xml',
-                    dw.to_nrml('dmg_per_asset', data))
+                    dw.to_nrml('dmg_dist_per_asset', data))
 
     def test_collapse_map_node(self):
         point1 = Point(-72.2, 18.)

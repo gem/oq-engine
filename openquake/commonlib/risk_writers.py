@@ -915,7 +915,7 @@ class DamageWriter(object):
                   self.damage_nodes(means, stddevs))
         return dd
 
-    def dmg_per_asset_node(self, data):
+    def dmg_dist_per_asset_node(self, data):
         node = Node('dmgDistPerAsset', nodes=[self.dmg_states])
         data_by_location = groupby(data, lambda r: r.exposure_data.site)
         for loc in data_by_location:
@@ -932,6 +932,24 @@ class DamageWriter(object):
             node.append(dd)
         return node
 
+    def dmg_dist_per_taxonomy_node(self, data):
+        node = Node('dmgDistPerTaxonomy', nodes=[self.dmg_states])
+        data_by_taxo = groupby(data, operator.attrgetter('taxonomy'))
+        for taxonomy in data_by_taxo:
+            means = [row.mean for row in data_by_taxo[taxonomy]]
+            stddevs = [row.stddev for row in data_by_taxo[taxonomy]]
+            node.append(self.dd_node_taxo(taxonomy, means, stddevs))
+        return node
+
+    def dmg_dist_total_node(self, data):
+        total = Node('totalDmgDist', nodes=[self.dmg_states])
+        for row in sorted(data, key=lambda r: r.dmg_state.lsi):
+            damage = Node('damage',
+                          dict(ds=row.dmg_state.dmg_state, mean=row.mean,
+                               stddev=row.stddev))
+            total.append(damage)
+        return total
+
     def collapse_map_node(self, data):
         node = Node('collapseMap')
         data_by_location = groupby(data, lambda r: r.exposure_data.site)
@@ -946,24 +964,6 @@ class DamageWriter(object):
                 stddevs.append(row.stddev)
             node.append(self.cm_node(loc, asset_refs, means, stddevs))
         return node
-
-    def dmg_per_taxonomy_node(self, data):
-        node = Node('dmgDistPerTaxonomy', nodes=[self.dmg_states])
-        data_by_taxo = groupby(data, operator.attrgetter('taxonomy'))
-        for taxonomy in data_by_taxo:
-            means = [row.mean for row in data_by_taxo[taxonomy]]
-            stddevs = [row.stddev for row in data_by_taxo[taxonomy]]
-            node.append(self.dd_node_taxo(taxonomy, means, stddevs))
-        return node
-
-    def dmg_total_node(self, data):
-        total = Node('totalDmgDist', nodes=[self.dmg_states])
-        for row in sorted(data, key=lambda r: r.dmg_state.lsi):
-            damage = Node('damage',
-                          dict(ds=row.dmg_state.dmg_state, mean=row.mean,
-                               stddev=row.stddev))
-            total.append(damage)
-        return total
 
     def to_nrml(self, key, data, fname=None):
         fname = fname or writetmp()

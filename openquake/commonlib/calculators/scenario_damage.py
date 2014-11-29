@@ -132,10 +132,10 @@ class ScenarioDamageCalculator(base.BaseRiskCalculator):
             dd_total.append(DmgDistTotal(dmg_state, mean, std))
 
         # export
-        f1 = export('dmg_per_asset_xml', self.oqparam.export_dir,
+        f1 = export('dmg_dist_per_asset_xml', self.oqparam.export_dir,
                     self.riskmodel.damage_states, dd_asset)
-        f2 = export('dmg_per_taxonomy_xml', self.oqparam.export_dir,
+        f2 = export('dmg_dist_per_taxonomy_xml', self.oqparam.export_dir,
                     self.riskmodel.damage_states, dd_taxo)
-        f3 = export('dmg_total_xml', self.oqparam.export_dir,
+        f3 = export('dmg_dist_total_xml', self.oqparam.export_dir,
                     self.riskmodel.damage_states, dd_total)
         return f1 + f2 + f3
