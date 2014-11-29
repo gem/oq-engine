@@ -22,9 +22,9 @@ import itertools
 import collections
 
 from openquake.commonlib import nrml_examples
-from openquake.commonlib import risk_writers as writers
 from openquake.commonlib.tests import _utils, check_equal
 
+from openquake.commonlib import risk_writers as writers
 
 HazardMetadata = collections.namedtuple(
     'hazard_metadata',
@@ -46,9 +46,6 @@ LOSS_CURVE = collections.namedtuple(
 AGGREGATE_LOSS_CURVE = collections.namedtuple(
     "AggregateLossCurve", "poes losses average_loss stddev_loss")
 
-ExposureData = collections.namedtuple(
-    "ExposureData", 'asset_ref site')
-
 NO_DAMAGE = writers.DmgState("no_damage", 0)
 SLIGHT = writers.DmgState("slight", 1)
 MODERATE = writers.DmgState("moderate", 2)
@@ -66,17 +63,6 @@ DMG_DIST_TOTAL = collections.namedtuple(
 
 COLLAPSE_MAP = collections.namedtuple(
     "CollapseMap", "exposure_data mean stddev")
-
-
-class Point(object):
-
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-
-    @property
-    def wkt(self):
-        return "POINT(%s %s)" % (self.x, self.y)
 
 
 def remove_file(self):
@@ -137,12 +123,12 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
 
         data = [
             LOSS_CURVE(
-                asset_ref="asset_1", location=Point(1.0, 1.5),
+                asset_ref="asset_1", location=writers.Site(1.0, 1.5),
                 poes=[1.0, 0.5, 0.1], losses=[10.0, 20.0, 30.0],
                 loss_ratios=None, average_loss=5., stddev_loss=None),
 
             LOSS_CURVE(
-                asset_ref="asset_2", location=Point(2.0, 2.5),
+                asset_ref="asset_2", location=writers.Site(2.0, 2.5),
                 poes=[1.0, 0.3, 0.2], losses=[20.0, 30.0, 40.0],
                 loss_ratios=None, average_loss=3., stddev_loss=0.25),
         ]
@@ -188,12 +174,12 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
 
         data = [
             LOSS_CURVE(
-                asset_ref="asset_1", location=Point(1.0, 1.5),
+                asset_ref="asset_1", location=writers.Site(1.0, 1.5),
                 poes=[1.0, 0.5, 0.1], losses=[10.0, 20.0, 30.0],
                 loss_ratios=None, average_loss=1., stddev_loss=0.5),
 
             LOSS_CURVE(
-                asset_ref="asset_2", location=Point(2.0, 2.5),
+                asset_ref="asset_2", location=writers.Site(2.0, 2.5),
                 poes=[1.0, 0.3, 0.2], losses=[20.0, 30.0, 40.0],
                 loss_ratios=None, average_loss=2., stddev_loss=0.1),
         ]
@@ -229,7 +215,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
             quantile_value=0.50, loss_type="structural")
 
         data = [LOSS_CURVE(
-                asset_ref="asset_1", location=Point(1.0, 1.5),
+                asset_ref="asset_1", location=writers.Site(1.0, 1.5),
                 poes=[1.0, 0.5, 0.1], losses=[10.0, 20.0, 30.0],
                 loss_ratios=[0.4, 0.6, 1.8], average_loss=0., stddev_loss=0.9)]
 
@@ -326,14 +312,14 @@ class LossMapWriterTestCase(unittest.TestCase):
     tearDown = remove_file
     data = [
         LOSS_NODE(
-            asset_ref="asset_1", location=Point(1.0, 1.5), value=15.23,
-            std_dev=None),
+            asset_ref="asset_1", location=writers.Site(1.0, 1.5),
+            value=15.23, std_dev=None),
         LOSS_NODE(
-            asset_ref="asset_2", location=Point(1.0, 1.5), value=16.23,
-            std_dev=None),
+            asset_ref="asset_2", location=writers.Site(1.0, 1.5),
+            value=16.23, std_dev=None),
         LOSS_NODE(
-            asset_ref="asset_3", location=Point(2.0, 2.5), value=17.23,
-            std_dev=None),
+            asset_ref="asset_3", location=writers.Site(2.0, 2.5),
+            value=17.23, std_dev=None),
     ]
 
     def test_empty_model_not_supported_xml(self):
@@ -442,8 +428,8 @@ class LossMapWriterTestCase(unittest.TestCase):
         )
 
         data = [LOSS_NODE(
-                asset_ref="asset_1", location=Point(1.0, 1.5), value=15.23,
-                std_dev=2)]
+            asset_ref="asset_1", location=writers.Site(1.0, 1.5),
+            value=15.23, std_dev=2)]
 
         writer.serialize(data)
 
@@ -476,8 +462,8 @@ class LossMapWriterTestCase(unittest.TestCase):
         )
 
         data = [LOSS_NODE(
-                asset_ref="asset_1", location=Point(1.0, 1.5), value=15.23,
-                std_dev=2)]
+            asset_ref="asset_1", location=writers.Site(1.0, 1.5),
+            value=15.23, std_dev=2)]
 
         writer.serialize(data)
         actual = json.load(open(self.filename))
@@ -508,7 +494,8 @@ class LossMapWriterTestCase(unittest.TestCase):
             loss_type="structural")
 
         data = [LOSS_NODE(asset_ref="asset_1",
-                          location=Point(1.0, 1.5), value=15.23, std_dev=None)]
+                          location=writers.Site(1.0, 1.5),
+                          value=15.23, std_dev=None)]
 
         writer.serialize(data)
 
@@ -541,8 +528,8 @@ class LossMapWriterTestCase(unittest.TestCase):
         )
 
         data = [LOSS_NODE(
-                asset_ref="asset_1", location=Point(1.0, 1.5), value=15.23,
-                std_dev=2)]
+            asset_ref="asset_1", location=writers.Site(1.0, 1.5),
+            value=15.23, std_dev=2)]
 
         writer.serialize(data)
         actual = json.load(open(self.filename))
@@ -635,15 +622,15 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
 
         data = [
             BCR_NODE(
-                asset_ref="asset_1", location=Point(1.0, 1.5),
+                asset_ref="asset_1", location=writers.Site(1.0, 1.5),
                 bcr=15.23, average_annual_loss_original=10.5,
                 average_annual_loss_retrofitted=20.5),
             BCR_NODE(
-                asset_ref="asset_2", location=Point(1.0, 1.5),
+                asset_ref="asset_2", location=writers.Site(1.0, 1.5),
                 bcr=16.23, average_annual_loss_original=11.5,
                 average_annual_loss_retrofitted=40.5),
             BCR_NODE(
-                asset_ref="asset_3", location=Point(2.0, 2.5),
+                asset_ref="asset_3", location=writers.Site(2.0, 2.5),
                 bcr=17.23, average_annual_loss_original=12.5,
                 average_annual_loss_retrofitted=10.5),
         ]
@@ -674,7 +661,7 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
             loss_category="economic", loss_type="structural")
 
         data = [BCR_NODE(
-                asset_ref="asset_1", location=Point(1.0, 1.5),
+                asset_ref="asset_1", location=writers.Site(1.0, 1.5),
                 bcr=15.23, average_annual_loss_original=10.5,
                 average_annual_loss_retrofitted=20.5)]
 
@@ -704,7 +691,7 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
             unit="USD", loss_category="economic", loss_type="structural")
 
         data = [BCR_NODE(
-                asset_ref="asset_1", location=Point(1.0, 1.5),
+                asset_ref="asset_1", location=writers.Site(1.0, 1.5),
                 bcr=15.23, average_annual_loss_original=10.5,
                 average_annual_loss_retrofitted=20.5)]
 
@@ -715,7 +702,8 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
 
 ######################## Scenario Damage Writers #########################
 
-dw = writers.DamageWriter([NO_DAMAGE, SLIGHT, MODERATE, EXTENSIVE, COMPLETE])
+dw = writers.DamageWriter(
+    'no_damage slight moderate extensive complete'.split())
 
 
 class DamageWriterTestCase(unittest.TestCase):
@@ -748,12 +736,12 @@ class DamageWriterTestCase(unittest.TestCase):
                     dw.to_nrml('dmg_dist_per_taxonomy', data))
 
     def test_dmg_per_asset_node(self):
-        point1 = Point(-116., 41.)
-        point2 = Point(-117., 42.)
+        point1 = writers.Site(-116., 41.)
+        point2 = writers.Site(-117., 42.)
 
-        e1 = ExposureData('asset_1', point1)
-        e2 = ExposureData('asset_2', point2)
-        e3 = ExposureData('asset_3', point2)
+        e1 = writers.ExposureData('asset_1', point1)
+        e2 = writers.ExposureData('asset_2', point2)
+        e3 = writers.ExposureData('asset_3', point2)
 
         data = itertools.starmap(DMG_DIST_PER_ASSET, [
             (e1, NO_DAMAGE, 1.0, 1.6),
@@ -778,13 +766,13 @@ class DamageWriterTestCase(unittest.TestCase):
                     dw.to_nrml('dmg_dist_per_asset', data))
 
     def test_collapse_map_node(self):
-        point1 = Point(-72.2, 18.)
-        point2 = Point(-72.25, 18.)
+        point1 = writers.Site(-72.2, 18.)
+        point2 = writers.Site(-72.25, 18.)
 
-        e1 = ExposureData('a1', point1)
-        e2 = ExposureData('a2', point1)
-        e3 = ExposureData('a3', point1)
-        e4 = ExposureData('a4', point2)
+        e1 = writers.ExposureData('a1', point1)
+        e2 = writers.ExposureData('a2', point1)
+        e3 = writers.ExposureData('a3', point1)
+        e4 = writers.ExposureData('a4', point2)
 
         data = itertools.starmap(COLLAPSE_MAP, [
             (e1, 1.0, 1.6),

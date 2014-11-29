@@ -28,6 +28,25 @@ from openquake.baselib.general import groupby, writetmp
 from openquake.commonlib.node import Node
 from openquake.commonlib import nrml
 
+DmgState = collections.namedtuple("DmgState", 'dmg_state lsi')
+
+DmgDistPerTaxonomy = collections.namedtuple(
+    'DmgDistPerTaxonomy', 'taxonomy dmg_state mean stddev')
+
+DmgDistPerAsset = collections.namedtuple(
+    'DmgDistPerAsset', 'exposure_data dmg_state mean stddev')
+
+DmgDistTotal = collections.namedtuple(
+    'DmgDistTotal', 'dmg_state mean stddev')
+
+ExposureData = collections.namedtuple('ExposureData', 'asset_ref site')
+
+
+class Site(object):
+    def __init__(self, x, y):
+        self.x, self.y = x, y
+        self.wkt = 'POINT(%s %s)' % (x, y)
+
 
 class LossCurveXMLWriter(object):
     """
@@ -876,8 +895,6 @@ def _assert_valid_input(data):
     if not data or len(data) == 0:
         raise ValueError("At least one element must be present, "
                          "an empty document is not supported by the schema.")
-
-DmgState = collections.namedtuple("DmgState", 'dmg_state lsi')
 
 
 class DamageWriter(object):
