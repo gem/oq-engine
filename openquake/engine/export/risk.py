@@ -35,14 +35,10 @@ EVENT_LOSS_ASSET_FILENAME_FMT = 'event-loss-asset-%s.csv'
 
 
 DAMAGE = dict(
-    collapse_map=(models.DmgDistPerAsset,
-                  risk_writers.CollapseMapXMLWriter),
-    dmg_dist_per_asset=(models.DmgDistPerAsset,
-                        risk_writers.DmgDistPerAssetXMLWriter),
-    dmg_dist_per_taxonomy=(models.DmgDistPerTaxonomy,
-                           risk_writers.DmgDistPerTaxonomyXMLWriter),
-    dmg_dist_total=(models.DmgDistTotal,
-                    risk_writers.DmgDistTotalXMLWriter))
+    collapse_map=models.DmgDistPerAsset,
+    dmg_dist_per_asset=models.DmgDistPerAsset,
+    dmg_dist_per_taxonomy=models.DmgDistPerTaxonomy,
+    dmg_dist_total=models.DmgDistTotal)
 
 
 def _get_result_export_dest(target, output, file_ext='xml'):
@@ -231,7 +227,7 @@ def export_bcr_distribution_xml(key, output, target):
     return dest
 
 
-# XXX: clearly this is not a good approach for large exposures
+# clearly this is not a good approach for large exposures
 @core.export_output.add(('collapse_map', 'xml'),
                         ('dmg_dist_per_taxonomy', 'xml'),
                         ('dmg_dist_per_asset', 'xml'),
@@ -249,17 +245,16 @@ def export_dmg_dist(key, output, target):
     """
     job = output.oq_job
     dest = _get_result_export_dest(target, output)
-    dmg_states = list(models.DmgState.objects.filter(
-        risk_calculation__id=job.id).order_by('lsi'))
-    damagecls, writercls = DAMAGE[key[0]]
-    if writercls is risk_writers.CollapseMapXMLWriter:  # special case
-        writer = writercls(dest)
-        data = damagecls.objects.filter(dmg_state=dmg_states[-1])
+    damage_states = [
+        ds.dmg_state for ds in models.DmgState.objects.filter(
+            risk_calculation__id=job.id).order_by('lsi')]
+    writer = risk_writers.DamageWriter(damage_states)
+    damagecls = DAMAGE[key[0]]
+    if key[0] == 'collapse_map':
+        data = damagecls.objects.filter(dmg_state__dmg_state=damage_states[-1])
     else:
-        writer = writercls(dest, [ds.dmg_state for ds in dmg_states])
-        data = damagecls.objects.filter(
-            dmg_state__risk_calculation__id=job.id)
-    writer.serialize(data.order_by('dmg_state__lsi'))
+        data = damagecls.objects.filter(dmg_state__risk_calculation__id=job.id)
+    writer.to_nrml(key[0], data, dest)
     return dest
 
 
