@@ -245,13 +245,12 @@ def export_dmg_dist(key, output, target):
     """
     job = output.oq_job
     dest = _get_result_export_dest(target, output)
-    damage_states = [
-        ds.dmg_state for ds in models.DmgState.objects.filter(
-            risk_calculation__id=job.id).order_by('lsi')]
+    damage_states = list(models.DmgState.objects.filter(
+        risk_calculation__id=job.id).order_by('lsi'))
     writer = risk_writers.DamageWriter(damage_states)
     damagecls = DAMAGE[key[0]]
     if key[0] == 'collapse_map':
-        data = damagecls.objects.filter(dmg_state__dmg_state=damage_states[-1])
+        data = damagecls.objects.filter(dmg_state=damage_states[-1])
     else:
         data = damagecls.objects.filter(dmg_state__risk_calculation__id=job.id)
     writer.to_nrml(key[0], data, dest)
