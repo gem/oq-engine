@@ -259,7 +259,8 @@ def get_rupture(oqparam):
     rup_model = oqparam.inputs['rupture_model']
     rup_node, = read_nodes(rup_model, lambda el: 'Rupture' in el.tag,
                            nodefactory['sourceModel'])
-    conv = source.RuptureConverter(oqparam.rupture_mesh_spacing)
+    conv = source.RuptureConverter(
+        oqparam.rupture_mesh_spacing, oqparam.complex_fault_mesh_spacing)
     return conv.convert_node(rup_node)
 
 
@@ -277,6 +278,7 @@ def get_source_models(oqparam):
     converter = source.SourceConverter(
         oqparam.investigation_time,
         oqparam.rupture_mesh_spacing,
+        oqparam.complex_fault_mesh_spacing,
         oqparam.width_of_mfd_bin,
         oqparam.area_source_discretization)
 
