@@ -51,10 +51,10 @@ SourceModel = collections.namedtuple(
     'SourceModel', 'name weight path trt_models gsim_lt ordinal')
 
 
-class LtProcessor(object):
+class RlzAssoc(object):
     """
     Realization association class. It should not be instantiated directly,
-    but only via `CompositeSourceModel.lt_processor`.
+    but only via the method `CompositeSourceModel.get_rlz_assoc`.
 
     :attr realizations: list of LtRealization objects
     :attr gsim_by_trt: list of dictionaries {trt: gsim}
@@ -872,12 +872,12 @@ class CompositeSourceModel(collections.Sequence):
         raise KeyError(
             'There is no source model with sm_lt_path=%s' % str(path))
 
-    def lt_processor(self):
+    def get_rlz_assoc(self):
         """
-        Return a LtProcessor with fields realizations, gsim_by_trt,
+        Return a RlzAssoc with fields realizations, gsim_by_trt,
         rlz_idx and trt_gsims.
         """
-        ltp = LtProcessor()
+        assoc = RlzAssoc()
         random_seed = self.source_model_lt.seed
         num_samples = self.source_model_lt.num_samples
         idx = 0
@@ -890,7 +890,7 @@ class CompositeSourceModel(collections.Sequence):
                 rlzs = list(lt_model.gsim_lt)  # full enumeration
             logging.info('Creating %d GMPE realization(s) for model %s, %s',
                          len(rlzs), lt_model.name, lt_model.path)
-            idx = ltp._add_realizations(idx, lt_model, rlzs)
+            idx = assoc._add_realizations(idx, lt_model, rlzs)
 
         num_ind_rlzs = sum(sm.gsim_lt.get_num_paths() for sm in self)
         if num_samples > num_ind_rlzs:
@@ -900,7 +900,7 @@ That means that some GMPEs will be sampled more than once, resulting in
 duplicated data and redundant computation. You should switch to full
 enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
 """, num_ind_rlzs, num_samples)
-        return ltp
+        return assoc
 
     def __getitem__(self, i):
         """Return the i-th source model"""

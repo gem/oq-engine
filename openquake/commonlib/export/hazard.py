@@ -222,7 +222,7 @@ def export_hazard_curves_xml(key, export_dir, sitecol, rlz, curves_by_imt,
             'sa_damping': imt[2],
             'imls': imls,
         })
-    dest = 'hazard_curve_multi-smltp_%s-gsimltp_%s.xml' % (
+    dest = 'hazard_curve_multi-smassoc_%s-gsimassoc_%s.xml' % (
         smlt_path, gsimlt_path)
     writer = hazard_writers.MultiHazardCurveXMLWriter(dest, mdata)
     with floatformat('%12.8E'):

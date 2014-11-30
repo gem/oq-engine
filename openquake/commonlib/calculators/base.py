@@ -110,7 +110,7 @@ class BaseHazardCalculator(BaseCalculator):
         # we could manage limits here
 
         # logic tree processor
-        self.ltp = self.composite_source_model.lt_processor()
+        self.assoc = self.composite_source_model.get_rlz_assoc()
 
 
 class BaseRiskCalculator(BaseCalculator):

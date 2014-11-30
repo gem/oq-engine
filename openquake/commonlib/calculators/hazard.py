@@ -57,13 +57,13 @@ def agg_prob(acc, prob):
     return 1 - (1 - prob) * (1 - acc)
 
 
-def classical(sources, sitecol, ltp, monitor):
+def classical(sources, sitecol, assoc, monitor):
     """
     :param sources:
         a non-empty sequence of sources of homogeneous tectonic region type
     :param sitecol:
         a SiteCollection
-    :param ltp:
+    :param assoc:
         associations trt_model_id, gsim -> rlzs
     :param monitor:
         a Monitor instance
@@ -75,7 +75,7 @@ def classical(sources, sitecol, ltp, monitor):
     imtls = monitor.oqparam.intensity_measure_types_and_levels
     trt_model_id = sources[0].trt_model_id
     trt = sources[0].tectonic_region_type
-    gsims = ltp.get_gsims_by(trt_model_id)
+    gsims = assoc.get_gsims_by(trt_model_id)
     result = AccumDict()
     for gsim in gsims:
         curves = calc_hazard_curves(
@@ -83,7 +83,7 @@ def classical(sources, sitecol, ltp, monitor):
             source_site_filter=source_site_distance_filter(max_dist),
             rupture_site_filter=rupture_site_distance_filter(max_dist))
         assert sum(v.sum() for v in curves.itervalues()), 'all zero curves!'
-        for rlz in ltp.rlzs_assoc[trt_model_id, gsim.__class__.__name__]:
+        for rlz in assoc.rlzs_assoc[trt_model_id, gsim.__class__.__name__]:
             result[rlz] = AccumDict(curves)
         # NB: pickle is smart; if different realizations point to the same
         # AccumDict, it is pickled only once
@@ -106,10 +106,10 @@ class ClassicalCalculator(base.BaseHazardCalculator):
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = self.oqparam
         sources = list(self.composite_source_model.sources)
-        zero = AccumDict((rlz, AccumDict()) for rlz in self.ltp.realizations)
+        zero = AccumDict((rlz, AccumDict()) for rlz in self.assoc.realizations)
         return parallel.apply_reduce(
             self.core_func.__func__,
-            (sources, self.sitecol, self.ltp, monitor),
+            (sources, self.sitecol, self.assoc, monitor),
             agg=agg_prob, acc=zero,
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('weight'),
