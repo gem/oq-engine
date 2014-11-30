@@ -57,33 +57,36 @@ def agg_prob(acc, prob):
     return 1 - (1 - prob) * (1 - acc)
 
 
-def classical(sources, sitecol, gsims_by_trt, monitor):
+def classical(sources, sitecol, ltp, monitor):
     """
     :param sources:
         a non-empty sequence of sources of homogeneous tectonic region type
     :param sitecol:
         a SiteCollection
-    :param gsims_by_trt:
-        a dictionary trt_model_id -> gsims
+    :param ltp:
+        associations trt_model_id, gsim -> rlzs
     :param monitor:
         a Monitor instance
     :returns:
-        an AccumDict (trt_model_id, gsim_name) -> curves
+        an AccumDict rlz -> curves
     """
     max_dist = monitor.oqparam.maximum_distance
     truncation_level = monitor.oqparam.truncation_level
     imtls = monitor.oqparam.intensity_measure_types_and_levels
     trt_model_id = sources[0].trt_model_id
     trt = sources[0].tectonic_region_type
-    gsims = gsims_by_trt[trt_model_id]
-    result = AccumDict()  # trt_model_id, gsim_name -> curves
+    gsims = ltp.get_gsims_by(trt_model_id)
+    result = AccumDict()
     for gsim in gsims:
         curves = calc_hazard_curves(
             sources, sitecol, imtls, {trt: gsim}, truncation_level,
             source_site_filter=source_site_distance_filter(max_dist),
             rupture_site_filter=rupture_site_distance_filter(max_dist))
         assert sum(v.sum() for v in curves.itervalues()), 'all zero curves!'
-        result[trt_model_id, gsim.__class__.__name__] = AccumDict(curves)
+        for rlz in ltp.rlzs_assoc[trt_model_id, gsim.__class__.__name__]:
+            result[rlz] = AccumDict(curves)
+        # NB: pickle is smart; if different realizations point to the same
+        # AccumDict, it is pickled only once
     return result
 
 
@@ -103,34 +106,28 @@ class ClassicalCalculator(base.BaseHazardCalculator):
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = self.oqparam
         sources = list(self.composite_source_model.sources)
-        gsims_by_trt = self.ltp.get_gsims_by_trt()
-        zero = AccumDict(
-            ((trt_id, gsim.__class__.__name__), AccumDict())
-            for trt_id, gsims in gsims_by_trt.iteritems()
-            for gsim in gsims)
+        zero = AccumDict((rlz, AccumDict()) for rlz in self.ltp.realizations)
         return parallel.apply_reduce(
             self.core_func.__func__,
-            (sources, self.sitecol, gsims_by_trt, monitor),
+            (sources, self.sitecol, self.ltp, monitor),
             agg=agg_prob, acc=zero,
-            concurrent_tasks=self.oqparam.concurrent_tasks or 1,
+            concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_model_id'))
 
-    def post_execute(self, result):
+    def post_execute(self, curves_by_rlz):
         """
         Collect the hazard curves by realization and export them.
 
-        :param:
-            a dictionary of hazard curves dictionaries keyed by
-            trt_model_id, gsim_name
+        :param curves_by_rlz:
+            a dictionary of hazard curves dictionaries keyed by realization
         """
         oq = self.oqparam
         saved = AccumDict()
-        for (trt_model_id, gsim_name), curves in sorted(result.iteritems()):
-            rlz = self.ltp.get_rlz(trt_model_id, gsim_name)
+        for rlz in sorted(curves_by_rlz):
             saved += export(
                 'hazard_curves_xml',
-                oq.export_dir, self.sitecol, rlz, curves,
+                oq.export_dir, self.sitecol, rlz, curves_by_rlz[rlz],
                 oq.imtls, oq.investigation_time)
         return saved
 

@@ -365,9 +365,12 @@ def get_composite_source_model(oqparam, sitecol):
     """
     source_model_lt = get_source_model_lt(oqparam)
     smodels = []
+    trt_id = 0
     for source_model in get_filtered_source_models(
             oqparam, source_model_lt, sitecol):
         for trt_model in source_model.trt_models:
+            trt_model.id = trt_id
+            trt_id += 1
             trt_model.split_sources_and_count_ruptures(
                 oqparam.area_source_discretization)
             logging.info('splitting %s', trt_model)

@@ -53,13 +53,17 @@ SourceModel = collections.namedtuple(
 
 class LtProcessor(object):
     """
-    Logic Tree Processor class. It should not be instantiated directly,
+    Realization association class. It should not be instantiated directly,
     but only via `CompositeSourceModel.lt_processor`.
+
+    :attr realizations: list of LtRealization objects
+    :attr gsim_by_trt: list of dictionaries {trt: gsim}
+    :attr rlzs_assoc: dictionary {trt_model_id, gsim: rlzs}
     """
     def __init__(self):
         self.realizations = []
         self.gsim_by_trt = []  # [trt -> gsim]
-        self.rlz_idx = {}  # trt_id, gsim -> idx
+        self.rlzs_assoc = collections.defaultdict(list)  # trt_id, gsim -> rlzs
 
     def _add_realizations(self, idx, lt_model, realizations):
         # create the realizations for the given lt source model
@@ -78,28 +82,27 @@ class LtProcessor(object):
             for trt_model in trt_models:
                 trt = trt_model.trt
                 gsim = gsim_by_trt[trt]
-                self.rlz_idx[trt_model.id, gsim] = idx
+                self.rlzs_assoc[trt_model.id, gsim].append(rlz)
                 trt_model.gsims = gsims_by_trt[trt]
             idx += 1
         return idx
-
-    def get_rlz(self, trt_model_id, gsim_name):
-        """
-        Get the realizations associated to the given combination.
-
-        :param trt_model_id: Tectonic Region Type Model ID
-        :param gsim_name: name of a GSIM associated to the given TRT
-        """
-        return self.realizations[self.rlz_idx[trt_model_id, gsim_name]]
 
     def get_gsims_by_trt(self):
         """
         Return a dictionary trt_model_id -> [GSIM instances]
         """
         gsims_by_trt = collections.defaultdict(list)
-        for trt_id, gsim in sorted(self.rlz_idx):
+        for trt_id, gsim in sorted(self.rlzs_assoc):
             gsims_by_trt[trt_id].append(GSIMS[gsim]())
         return gsims_by_trt
+
+    def get_gsims_by(self, trt_model_id):
+        """
+        Return a dictionary trt_model_id -> [GSIM instances]
+        """
+        return [GSIMS[gsim]()
+                for trt_id, gsim in sorted(self.rlzs_assoc)
+                if trt_id == trt_model_id]
 
 
 class TrtModel(collections.Sequence):
@@ -125,7 +128,7 @@ class TrtModel(collections.Sequence):
     POINT_SOURCE_WEIGHT = 1 / 40.
 
     def __init__(self, trt, sources=None, num_ruptures=0,
-                 min_mag=None, max_mag=None, gsims=None, id=None):
+                 min_mag=None, max_mag=None, gsims=None, id=0):
         self.trt = trt
         self.sources = sources or []
         self.num_ruptures = num_ruptures
@@ -190,8 +193,8 @@ class TrtModel(collections.Sequence):
         self.sources = sorted(sources, key=operator.attrgetter('source_id'))
 
     def __repr__(self):
-        return '<%s %s, %d source(s)>' % (self.__class__.__name__,
-                                          self.trt, len(self.sources))
+        return '<%s #%d %s, %d source(s)>' % (
+            self.__class__.__name__, self.id, self.trt, len(self.sources))
 
     def __lt__(self, other):
         """
@@ -319,7 +322,7 @@ def split_fault_source(src):
                 min_mag=mag, bin_width=src.mfd.bin_width,
                 occurrence_rates=[rate])
             i += 1
-        yield new_src
+            yield new_src
 
 
 def split_source(src, area_source_discretization):
@@ -812,21 +815,19 @@ class CompositeSourceModel(collections.Sequence):
         self.source_models = list(source_models)
         if not self.source_models:
             raise RuntimeError('All sources were filtered away')
-        self.tmdict = {tm.id: tm for tm in self.trt_models}
-        # the attribute trt_model_id is now set for each trt_model
+        self.tmdict = {}
+        for i, tm in enumerate(self.trt_models):
+            tm.id = i
+            self.tmdict[i] = tm
 
     @property
     def trt_models(self):
         """
         Yields the TrtModels inside each source model in order
         """
-        trt_id = 0
         for sm in self.source_models:
             for trt_model in sm.trt_models:
-                if not trt_model.id:  # set only the first time
-                    trt_model.id = trt_id
                 yield trt_model
-                trt_id += 1
 
     @property
     def sources(self):
