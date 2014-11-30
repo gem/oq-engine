@@ -339,7 +339,7 @@ class BaseHazardCalculator(base.Calculator):
                 pk=trt_model.id).num_ruptures
         cm.reduce_trt_models()
 
-        ltp = cm.lt_processor()
+        ltp = cm.get_rlz_assoc()
         for rlz, gsim_by_trt in zip(ltp.realizations, ltp.gsim_by_trt):
             lt_model = models.LtSourceModel.objects.get(
                 hazard_calculation=self.job, sm_lt_path=rlz.sm_lt_path)
