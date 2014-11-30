@@ -388,8 +388,9 @@ class RuptureConverter(object):
     """
     fname = None  # should be set externally
 
-    def __init__(self, rupture_mesh_spacing):
+    def __init__(self, rupture_mesh_spacing, complex_fault_mesh_spacing):
         self.rupture_mesh_spacing = rupture_mesh_spacing
+        self.complex_fault_mesh_spacing = complex_fault_mesh_spacing
 
     def convert_node(self, node):
         """
@@ -472,7 +473,7 @@ class RuptureConverter(object):
         elif surface_node.tag.endswith('complexFaultGeometry'):
             surface = geo.ComplexFaultSurface.from_fault_data(
                 self.geo_lines(surface_node),
-                self.rupture_mesh_spacing)
+                self.complex_fault_mesh_spacing)
         else:  # a collection of planar surfaces
             planar_surfaces = map(self.geo_planar, surface_nodes)
             surface = geo.MultiSurface(planar_surfaces)
@@ -558,9 +559,11 @@ class SourceConverter(RuptureConverter):
     Convert sources from valid nodes into Hazardlib objects.
     """
     def __init__(self, investigation_time, rupture_mesh_spacing,
-                 width_of_mfd_bin, area_source_discretization):
+                 complex_fault_mesh_spacing, width_of_mfd_bin,
+                 area_source_discretization):
         self.area_source_discretization = area_source_discretization
         self.rupture_mesh_spacing = rupture_mesh_spacing
+        self.complex_fault_mesh_spacing = complex_fault_mesh_spacing
         self.width_of_mfd_bin = width_of_mfd_bin
         self.tom = PoissonTOM(investigation_time)
 
@@ -716,7 +719,7 @@ class SourceConverter(RuptureConverter):
             name=node['name'],
             tectonic_region_type=node['tectonicRegion'],
             mfd=self.convert_mfdist(node),
-            rupture_mesh_spacing=self.rupture_mesh_spacing,
+            rupture_mesh_spacing=self.complex_fault_mesh_spacing,
             magnitude_scaling_relationship=msr,
             rupture_aspect_ratio=~node.ruptAspectRatio,
             edges=self.geo_lines(geom),
