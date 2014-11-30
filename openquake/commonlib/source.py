@@ -54,11 +54,26 @@ SourceModel = collections.namedtuple(
 class RlzAssoc(object):
     """
     Realization association class. It should not be instantiated directly,
-    but only via the method `CompositeSourceModel.get_rlz_assoc`.
+    but only via the method :meth:
+    `openquake.commonlib.source.CompositeSourceModel.get_rlz_assoc`.
 
     :attr realizations: list of LtRealization objects
     :attr gsim_by_trt: list of dictionaries {trt: gsim}
     :attr rlzs_assoc: dictionary {trt_model_id, gsim: rlzs}
+
+    For instance, for the non-trivial logic tree in
+    :mod:`openquake.qa_tests_data.classical.case_15`, which has 4 tectonic
+    region types and 4 + 2 + 2 realizations, there are the following
+    associations:
+
+    (0, 'BooreAtkinson2008') ['#0-SM1-BA2008_C2003', '#1-SM1-BA2008_T2002']
+    (0, 'CampbellBozorgnia2008') ['#2-SM1-CB2008_C2003', '#3-SM1-CB2008_T2002']
+    (1, 'Campbell2003') ['#0-SM1-BA2008_C2003', '#2-SM1-CB2008_C2003']
+    (1, 'ToroEtAl2002') ['#1-SM1-BA2008_T2002', '#3-SM1-CB2008_T2002']
+    (2, 'BooreAtkinson2008') ['#4-SM2_a3pt2b0pt8-BA2008']
+    (2, 'CampbellBozorgnia2008') ['#5-SM2_a3pt2b0pt8-CB2008']
+    (3, 'BooreAtkinson2008') ['#6-SM2_a3b1-BA2008']
+    (3, 'CampbellBozorgnia2008') ['#7-SM2_a3b1-CB2008']
     """
     def __init__(self):
         self.realizations = []
