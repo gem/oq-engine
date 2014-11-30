@@ -44,15 +44,62 @@ class DuplicatedID(Exception):
 
 
 LtRealization = collections.namedtuple(
-    'LtRealization', 'sm_lt_path gsim_lt_path weight ordinal')
-
-
-LtProcessor = collections.namedtuple(
-    'LtProcessor', 'realizations gsim_by_trt rlz_idx trt_gsims')
+    'LtRealization', 'ordinal sm_lt_path gsim_lt_path weight')
 
 
 SourceModel = collections.namedtuple(
     'SourceModel', 'name weight path trt_models gsim_lt ordinal')
+
+
+class LtProcessor(object):
+    """
+    Logic Tree Processor class. It should not be instantiated directly,
+    but only via `CompositeSourceModel.lt_processor`.
+    """
+    def __init__(self):
+        self.realizations = []
+        self.gsim_by_trt = []  # [trt -> gsim]
+        self.rlz_idx = {}  # trt_id, gsim -> idx
+
+    def _add_realizations(self, idx, lt_model, realizations):
+        # create the realizations for the given lt source model
+        trt_models = [tm for tm in lt_model.trt_models if tm.num_ruptures]
+        if not trt_models:
+            return
+        gsims_by_trt = lt_model.gsim_lt.values
+        for gsim_by_trt, weight, gsim_path, _ in realizations:
+            if lt_model.weight is not None and weight is not None:
+                weight = lt_model.weight * weight
+            else:
+                weight = None
+            rlz = LtRealization(idx, lt_model.path, gsim_path, weight)
+            self.realizations.append(rlz)
+            self.gsim_by_trt.append(gsim_by_trt)
+            for trt_model in trt_models:
+                trt = trt_model.trt
+                gsim = gsim_by_trt[trt]
+                self.rlz_idx[trt_model.id, gsim] = idx
+                trt_model.gsims = gsims_by_trt[trt]
+            idx += 1
+        return idx
+
+    def get_rlz(self, trt_model_id, gsim_name):
+        """
+        Get the realizations associated to the given combination.
+
+        :param trt_model_id: Tectonic Region Type Model ID
+        :param gsim_name: name of a GSIM associated to the given TRT
+        """
+        return self.realizations[self.rlz_idx[trt_model_id, gsim_name]]
+
+    def get_gsims_by_trt(self):
+        """
+        Return a dictionary trt_model_id -> [GSIM instances]
+        """
+        gsims_by_trt = collections.defaultdict(list)
+        for trt_id, gsim in sorted(self.rlz_idx):
+            gsims_by_trt[trt_id].append(GSIMS[gsim]())
+        return gsims_by_trt
 
 
 class TrtModel(collections.Sequence):
@@ -826,14 +873,14 @@ class CompositeSourceModel(collections.Sequence):
 
     def lt_processor(self):
         """
-        Return a LtProcessor tuple with fields realizations, gsim_by_trt,
+        Return a LtProcessor with fields realizations, gsim_by_trt,
         rlz_idx and trt_gsims.
         """
-        ltp = LtProcessor([], [], {}, {})
+        ltp = LtProcessor()
         random_seed = self.source_model_lt.seed
         num_samples = self.source_model_lt.num_samples
-        for idx, (sm_name, weight, sm_lt_path, _) in enumerate(
-                self.source_model_lt):
+        idx = 0
+        for sm_name, weight, sm_lt_path, _ in self.source_model_lt:
             lt_model = self.get_source_model(sm_lt_path)
             if num_samples:  # sampling, pick just one gsim realization
                 rnd = random.Random(random_seed + idx)
@@ -842,7 +889,7 @@ class CompositeSourceModel(collections.Sequence):
                 rlzs = list(lt_model.gsim_lt)  # full enumeration
             logging.info('Creating %d GMPE realization(s) for model %s, %s',
                          len(rlzs), lt_model.name, lt_model.path)
-            self._add_realizations(ltp, idx, lt_model, rlzs)
+            idx = ltp._add_realizations(idx, lt_model, rlzs)
 
         num_ind_rlzs = sum(sm.gsim_lt.get_num_paths() for sm in self)
         if num_samples > num_ind_rlzs:
@@ -853,30 +900,6 @@ duplicated data and redundant computation. You should switch to full
 enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
 """, num_ind_rlzs, num_samples)
         return ltp
-
-    def _add_realizations(self, ltp, idx, lt_model, realizations):
-        # create the realizations for the given lt source model
-        trt_models = [tm for tm in lt_model.trt_models if tm.num_ruptures]
-        if not trt_models:
-            return
-        gsims_by_trt = lt_model.gsim_lt.values
-        rlz_ordinal = idx * len(realizations)
-        for gsim_by_trt, weight, gsim_path, _ in realizations:
-            if lt_model.weight is not None and weight is not None:
-                weight = lt_model.weight * weight
-            else:
-                weight = None
-            rlz = LtRealization(lt_model.path, gsim_path, weight, rlz_ordinal)
-            ltp.realizations.append(rlz)
-            ltp.gsim_by_trt.append(gsim_by_trt)
-            for trt_model in trt_models:
-                trt = trt_model.trt
-                gsim = gsim_by_trt[trt]
-                ltp.rlz_idx[trt_model.id, gsim] = rlz_ordinal
-                trt_model.gsims = gsims_by_trt[trt]
-                ltp.trt_gsims[trt_model.id] = (
-                    trt, [GSIMS[gsim]() for gsim in trt_model.gsims])
-            rlz_ordinal += 1
 
     def __getitem__(self, i):
         """Return the i-th source model"""

@@ -57,14 +57,14 @@ def agg_prob(acc, prob):
     return 1 - (1 - prob) * (1 - acc)
 
 
-def classical(sources, sitecol, trt_gsims, monitor):
+def classical(sources, sitecol, gsims_by_trt, monitor):
     """
     :param sources:
         a non-empty sequence of sources of homogeneous tectonic region type
     :param sitecol:
         a SiteCollection
-    :param trt_gsims:
-        a dictionary trt_model_id -> (trt, gsims)
+    :param gsims_by_trt:
+        a dictionary trt_model_id -> gsims
     :param monitor:
         a Monitor instance
     :returns:
@@ -74,7 +74,8 @@ def classical(sources, sitecol, trt_gsims, monitor):
     truncation_level = monitor.oqparam.truncation_level
     imtls = monitor.oqparam.intensity_measure_types_and_levels
     trt_model_id = sources[0].trt_model_id
-    trt, gsims = trt_gsims[trt_model_id]
+    trt = sources[0].tectonic_region_type
+    gsims = gsims_by_trt[trt_model_id]
     result = AccumDict()  # trt_model_id, gsim_name -> curves
     for gsim in gsims:
         curves = calc_hazard_curves(
@@ -102,13 +103,14 @@ class ClassicalCalculator(base.BaseHazardCalculator):
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = self.oqparam
         sources = list(self.composite_source_model.sources)
+        gsims_by_trt = self.ltp.get_gsims_by_trt()
         zero = AccumDict(
             ((trt_id, gsim.__class__.__name__), AccumDict())
-            for trt_id, (trt, gsims) in self.ltp.trt_gsims.iteritems()
+            for trt_id, gsims in gsims_by_trt.iteritems()
             for gsim in gsims)
         return parallel.apply_reduce(
             self.core_func.__func__,
-            (sources, self.sitecol, self.ltp.trt_gsims, monitor),
+            (sources, self.sitecol, gsims_by_trt, monitor),
             agg=agg_prob, acc=zero,
             concurrent_tasks=self.oqparam.concurrent_tasks or 1,
             weight=operator.attrgetter('weight'),
@@ -123,26 +125,13 @@ class ClassicalCalculator(base.BaseHazardCalculator):
             trt_model_id, gsim_name
         """
         oq = self.oqparam
-        acc = AccumDict()  # rlz_idx -> curves
         saved = AccumDict()
-
-        # accumulate the curves by realization
-        for (trt_model_id, gsim_name), curves in result.iteritems():
-            try:
-                idx = self.ltp.rlz_idx[trt_model_id, gsim_name]
-            except KeyError:
-                # some realizations may be missing when sampling is enabled
-                assert self.oqparam.number_of_logic_tree_samples > 0
-                continue
-            acc = agg_prob(acc, AccumDict({idx: curves}))
-
-        # export the curves
-        for idx in sorted(acc):
-            rlz = self.ltp.realizations[idx]
+        for (trt_model_id, gsim_name), curves in sorted(result.iteritems()):
+            rlz = self.ltp.get_rlz(trt_model_id, gsim_name)
             saved += export(
                 'hazard_curves_xml',
-                oq.export_dir, self.sitecol, rlz, acc[idx], oq.imtls,
-                oq.investigation_time)
+                oq.export_dir, self.sitecol, rlz, curves,
+                oq.imtls, oq.investigation_time)
         return saved
 
 

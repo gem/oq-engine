@@ -682,7 +682,7 @@ class CompositeSourceModelTestCase(unittest.TestCase):
         self.assertEqual(gsim_by_trt,
                          {'Subduction Interface': 'SadighEtAl1997',
                           'Active Shallow Crust': 'ChiouYoungs2008'})
-        self.assertEqual(rlz, (('b1', 'b5', 'b8'), ('b2', 'b3'), None, 0))
+        self.assertEqual(rlz, (0, ('b1', 'b5', 'b8'), ('b2', 'b3'), None))
 
     def test_many_rlzs(self):
         oqparam = tests.get_oqparam('classical_job.ini')
