@@ -84,7 +84,7 @@ class RlzAssoc(object):
         # create the realizations for the given lt source model
         trt_models = [tm for tm in lt_model.trt_models if tm.num_ruptures]
         if not trt_models:
-            return
+            return idx
         gsims_by_trt = lt_model.gsim_lt.values
         for gsim_by_trt, weight, gsim_path, _ in realizations:
             if lt_model.weight is not None and weight is not None:
