@@ -169,7 +169,7 @@ HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
 @export.add('hazard_curves_csv')
-def export_hazard_curves_csv(key, export_dir, sitecol, curves_by_imt):
+def export_hazard_curves_csv(key, export_dir, sitecol, rlz, curves_by_imt):
     """
     Export the curves of the given realization into XML.
 
@@ -179,7 +179,10 @@ def export_hazard_curves_csv(key, export_dir, sitecol, curves_by_imt):
     :param rlz: realization instance
     :param curves_by_imt: dictionary with the curves keyed by IMT
     """
-    dest = os.path.join(export_dir, key.replace('_csv', '.csv'))
+    smlt_path = '_'.join(rlz.sm_lt_path)
+    gsimlt_path = '_'.join(rlz.gsim_lt_path)
+    dest = 'hazard_curve_multi-smltp_%s-gsimltp_%s-ltr_%d.csv' % (
+        smlt_path, gsimlt_path, rlz.ordinal)
     with floatformat('%12.8E'), open(dest, 'w') as f:
         for imt, curves in sorted(curves_by_imt):
             for site, curve in zip(sitecol, curves_by_imt[imt]):
