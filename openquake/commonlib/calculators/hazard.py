@@ -121,13 +121,21 @@ class ClassicalCalculator(base.BaseHazardCalculator):
         :param result:
             a dictionary of hazard curves dictionaries
         """
+        rlzs = self.rlzs_assoc.realizations
         curves_by_rlz = self.rlzs_assoc.reduce(agg_prob, result)
         oq = self.oqparam
+        mean = sum(curves_by_rlz[rlz] for rlz in rlzs) / len(rlzs)
+        print mean
+        mean_maps = calc.compute_hazard_maps_by_imt(mean, oq.imtls, oq.poes)
+        print mean_maps
+
+        # export
         saved = AccumDict()
-        for rlz in self.rlzs_assoc.realizations:
+        for rlz in rlzs:
+            curves = curves_by_rlz[rlz]
             saved += export(
                 'hazard_curves_xml',
-                oq.export_dir, self.sitecol, rlz, curves_by_rlz[rlz],
+                oq.export_dir, self.sitecol, rlz, curves,
                 oq.imtls, oq.investigation_time)
         return saved
 

@@ -556,6 +556,9 @@ class AccumDict(dict):
 
     __rmul__ = __mul__
 
+    def __div__(self, other):
+        return self * (1. / other)
+
 
 def groupby(objects, key):
     """
