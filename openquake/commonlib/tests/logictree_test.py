@@ -33,11 +33,11 @@ from decimal import Decimal
 from mock import Mock
 
 import openquake.hazardlib
+from openquake.commonlib import logictree, readinput, tests
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 
-from openquake.commonlib import logictree
 
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
@@ -1619,3 +1619,60 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             counter[rlz.lt_path] += 1
         # the percentages will be close to 40% and 60%
         self.assertEqual(counter, {('b1',): 414, ('b2',): 586})
+
+
+class LogicTreeProcessorTestCase(unittest.TestCase):
+    def setUp(self):
+        # this is an example with number_of_logic_tree_samples = 1
+        oqparam = tests.get_oqparam('classical_job.ini')
+        self.source_model_lt = readinput.get_source_model_lt(oqparam)
+        self.gmpe_lt = readinput.get_gsim_lt(
+            oqparam, ['Active Shallow Crust', 'Subduction Interface'])
+        self.rnd = random.Random(oqparam.random_seed)
+
+    def test_sample_source_model(self):
+        [(sm_name, weight, branch_ids, _)] = self.source_model_lt
+        self.assertEqual(sm_name, 'example-source-model.xml')
+        self.assertIsNone(weight)
+        self.assertEqual(('b1', 'b5', 'b8'), branch_ids)
+
+    def test_sample_gmpe(self):
+        (value, weight, branch_ids, _) = logictree.sample_one(
+            self.gmpe_lt, self.rnd)
+        self.assertEqual(value,
+                         {'Subduction Interface': 'SadighEtAl1997',
+                          'Active Shallow Crust': 'ChiouYoungs2008'})
+        self.assertEqual(weight, 0.5)
+        self.assertEqual(('b2', 'b3'), branch_ids)
+
+
+class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
+    def setUp(self):
+        oqparam = tests.get_oqparam('classical_job.ini')
+
+        self.uncertainties_applied = []
+
+        def apply_uncertainty(branchset, value, source):
+            fingerprint = (branchset.uncertainty_type, value)
+            self.uncertainties_applied.append(fingerprint)
+        self.original_apply_uncertainty = logictree.BranchSet.apply_uncertainty
+        logictree.BranchSet.apply_uncertainty = apply_uncertainty
+
+        self.source_model_lt = readinput.get_source_model_lt(oqparam)
+        self.gmpe_lt = readinput.get_gsim_lt(
+            oqparam, ['Active Shallow Crust', 'Subduction Interface'])
+
+    def tearDown(self):
+        logictree.BranchSet.apply_uncertainty = self.original_apply_uncertainty
+
+    def test_parse_source_model_logictree_path(self):
+        make_apply_un = self.source_model_lt.make_apply_uncertainties
+        make_apply_un(['b1', 'b5', 'b8'])(None)
+        self.assertEqual(self.uncertainties_applied,
+                         [('maxMagGRRelative', -0.2),
+                          ('bGRRelative', -0.1)])
+        del self.uncertainties_applied[:]
+        make_apply_un(['b1', 'b3', 'b6'])(None)
+        self.assertEqual(self.uncertainties_applied,
+                         [('maxMagGRRelative', 0.2),
+                          ('bGRRelative', 0.1)])

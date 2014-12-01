@@ -97,34 +97,19 @@ class BaseHazardCalculator(BaseCalculator):
         if 'exposure' in self.oqparam.inputs:
             logging.info('Reading the exposure')
             exposure = readinput.get_exposure(self.oqparam)
-            self.sitecol, _assets = readinput.get_sitecol_assets(
+            self.sitecol, self.assets = readinput.get_sitecol_assets(
                 self.oqparam, exposure)
         else:
             logging.info('Reading the site collection')
             self.sitecol = readinput.get_site_collection(self.oqparam)
-        logging.info('Reading the effective source models')
-        source_models = list(
-            readinput.get_effective_source_models(self.oqparam, self.sitecol))
-        self.all_sources = [src for src_model in source_models
-                            for trt_model in src_model.trt_models
-                            for src in trt_model]
+        logging.info('Reading the composite source models')
+        self.composite_source_model = \
+            readinput.get_composite_source_model(self.oqparam, self.sitecol)
         self.job_info = readinput.get_job_info(
-            self.oqparam, source_models, self.sitecol)
+            self.oqparam, self.composite_source_model, self.sitecol)
         # we could manage limits here
 
-    def execute(self):
-        """
-        Run in parallel `core_func(sources, sitecol, monitor)`, by
-        parallelizing on the sources according to their weight and
-        tectonic region type.
-        """
-        monitor = self.monitor(self.core_func.__name__)
-        return apply_reduce(
-            self.core_func.__func__,
-            (self.all_sources, self.site_collection, monitor),
-            concurrent_tasks=self.oqparam.concurrent_tasks,
-            weight=get_weight,
-            key=get_trt)
+        self.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
 
 
 class BaseRiskCalculator(BaseCalculator):

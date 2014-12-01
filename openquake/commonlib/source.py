@@ -19,12 +19,15 @@ import logging
 import operator
 import collections
 from itertools import izip
+import random
+from lxml import etree
 
-from openquake.hazardlib import geo, mfd, pmf, source
+from openquake.baselib.general import AccumDict
+from openquake.hazardlib import geo, mfd, pmf, source, gsim
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.commonlib.node import read_nodes, context, striptag
-from openquake.commonlib import valid
-from openquake.commonlib.nrml import nodefactory
+from openquake.commonlib import valid, logictree
+from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
 from openquake.commonlib import parallel
 
 # this must stay here for the nrml_converters: don't remove it!
@@ -34,9 +37,19 @@ from openquake.commonlib.obsolete import NrmlHazardlibConverter
 # the filtering (MS)
 LOTS_OF_SOURCES_SITES = 1E5
 
+GSIMS = gsim.get_available_gsims()
+
 
 class DuplicatedID(Exception):
     """Raised when two sources with the same ID are found in a source model"""
+
+
+LtRealization = collections.namedtuple(
+    'LtRealization', 'ordinal sm_lt_path gsim_lt_path weight')
+
+
+SourceModel = collections.namedtuple(
+    'SourceModel', 'name weight path trt_models gsim_lt ordinal')
 
 
 class TrtModel(collections.Sequence):
@@ -62,7 +75,7 @@ class TrtModel(collections.Sequence):
     POINT_SOURCE_WEIGHT = 1 / 40.
 
     def __init__(self, trt, sources=None, num_ruptures=0,
-                 min_mag=None, max_mag=None, gsims=None, id=None):
+                 min_mag=None, max_mag=None, gsims=None, id=0):
         self.trt = trt
         self.sources = sources or []
         self.num_ruptures = num_ruptures
@@ -127,8 +140,8 @@ class TrtModel(collections.Sequence):
         self.sources = sorted(sources, key=operator.attrgetter('source_id'))
 
     def __repr__(self):
-        return '<%s %s, %d source(s)>' % (self.__class__.__name__,
-                                          self.trt, len(self.sources))
+        return '<%s #%d %s, %d source(s)>' % (
+            self.__class__.__name__, self.id, self.trt, len(self.sources))
 
     def __lt__(self, other):
         """
@@ -256,7 +269,7 @@ def split_fault_source(src):
                 min_mag=mag, bin_width=src.mfd.bin_width,
                 occurrence_rates=[rate])
             i += 1
-        yield new_src
+            yield new_src
 
 
 def split_source(src, area_source_discretization):
@@ -738,3 +751,252 @@ def filter_sources(sources, sitecol, maxdist):
         # few sources and sites, filter sequentially on a single core
         sources = _filter_sources(sources, sitecol, maxdist)
     return sorted(sources, key=operator.attrgetter('source_id'))
+
+
+class RlzsAssoc(object):
+    """
+    Realization association class. It should not be instantiated directly,
+    but only via the method :meth:
+    `openquake.commonlib.source.CompositeSourceModel.get_rlzs_assoc`.
+
+    :attr realizations: list of LtRealization objects
+    :attr gsim_by_trt: list of dictionaries {trt: gsim}
+    :attr rlzs_assoc: dictionary {trt_model_id, gsim: rlzs}
+
+    For instance, for the non-trivial logic tree in
+    :mod:`openquake.qa_tests_data.classical.case_15`, which has 4 tectonic
+    region types and 4 + 2 + 2 realizations, there are the following
+    associations:
+
+    (0, 'BooreAtkinson2008') ['#0-SM1-BA2008_C2003', '#1-SM1-BA2008_T2002']
+    (0, 'CampbellBozorgnia2008') ['#2-SM1-CB2008_C2003', '#3-SM1-CB2008_T2002']
+    (1, 'Campbell2003') ['#0-SM1-BA2008_C2003', '#2-SM1-CB2008_C2003']
+    (1, 'ToroEtAl2002') ['#1-SM1-BA2008_T2002', '#3-SM1-CB2008_T2002']
+    (2, 'BooreAtkinson2008') ['#4-SM2_a3pt2b0pt8-BA2008']
+    (2, 'CampbellBozorgnia2008') ['#5-SM2_a3pt2b0pt8-CB2008']
+    (3, 'BooreAtkinson2008') ['#6-SM2_a3b1-BA2008']
+    (3, 'CampbellBozorgnia2008') ['#7-SM2_a3b1-CB2008']
+    """
+    def __init__(self):
+        self.realizations = []
+        self.gsim_by_trt = []  # [trt -> gsim]
+        self.rlzs_assoc = collections.defaultdict(list)  # trt_id, gsim -> rlzs
+
+    def _add_realizations(self, idx, lt_model, realizations):
+        # create the realizations for the given lt source model
+        trt_models = [tm for tm in lt_model.trt_models if tm.num_ruptures]
+        if not trt_models:
+            return idx
+        gsims_by_trt = lt_model.gsim_lt.values
+        for gsim_by_trt, weight, gsim_path, _ in realizations:
+            if lt_model.weight is not None and weight is not None:
+                weight = lt_model.weight * weight
+            else:
+                weight = None
+            rlz = LtRealization(idx, lt_model.path, gsim_path, weight)
+            self.realizations.append(rlz)
+            self.gsim_by_trt.append(gsim_by_trt)
+            for trt_model in trt_models:
+                trt = trt_model.trt
+                gsim = gsim_by_trt[trt]
+                self.rlzs_assoc[trt_model.id, gsim].append(rlz)
+                trt_model.gsims = gsims_by_trt[trt]
+            idx += 1
+        return idx
+
+    def get_gsims_by_trt_id(self):
+        """
+        Return a dictionary trt_model_id -> [GSIM instances]
+        """
+        gsims_by_trt = collections.defaultdict(list)
+        for trt_id, gsim in sorted(self.rlzs_assoc):
+            gsims_by_trt[trt_id].append(GSIMS[gsim]())
+        return gsims_by_trt
+
+    def reduce(self, agg, results):
+        """
+        :param agg: aggregation function
+        :param results: dictionary (trt_model_id, gsim_name) -> <AccumDict>
+        :returns: a dictionary rlz -> aggregate <AccumDict>
+
+        Example: a case with tectonic region type T1 with GSIMS A, B, C
+        and tectonic region type T2 with GSIMS D, E.
+
+        >>> assoc = RlzsAssoc()
+        >>> assoc.rlzs_assoc = {
+        ... ('T1', 'A'): ['r0', 'r1'],
+        ... ('T1', 'B'): ['r2', 'r3'],
+        ... ('T1', 'C'): ['r4', 'r5'],
+        ... ('T2', 'D'): ['r0', 'r2', 'r4'],
+        ... ('T2', 'E'): ['r1', 'r3', 'r5']}
+        ...
+        >>> results = {
+        ... ('T1', 'A'): 0.01,
+        ... ('T1', 'B'): 0.02,
+        ... ('T1', 'C'): 0.03,
+        ... ('T2', 'D'): 0.04,
+        ... ('T2', 'E'): 0.05,}
+        ...
+        >>> reduced_dict = assoc.reduce(operator.add, results)
+        >>> for key, value in sorted(reduced_dict.items()): print key, value
+        r0 0.05
+        r1 0.06
+        r2 0.06
+        r3 0.07
+        r4 0.07
+        r5 0.08
+
+        You can check that all the possible sums are performed:
+
+        r0: 0.01 + 0.04 (T1A + T2D)
+        r1: 0.01 + 0.05 (T1A + T2E)
+        r2: 0.02 + 0.04 (T1B + T2D)
+        r3: 0.02 + 0.05 (T1B + T2E)
+        r4: 0.03 + 0.04 (T1C + T2D)
+        r5: 0.03 + 0.05 (T1C + T2E)
+
+        In reality, the reduce function is used with dictionaries with the
+        hazard curves keyed by intensity measure type and the aggregation
+        function is the composition of probability, which however is closer
+        to the sum for small probabilities.
+        """
+        acc = 0
+        for key, value in results.iteritems():
+            for rlz in self.rlzs_assoc[key]:
+                acc = agg(acc, AccumDict({rlz: value}))
+        return acc
+
+
+class CompositeSourceModel(collections.Sequence):
+    """
+    :param source_model_lt:
+        a :class:`openquake.commonlib.readinput.SourceModelLogicTree` instance
+    :param source_models:
+        a list of :class:`openquake.commonlib.readinput.SourceModel` tuples
+    """
+    def __init__(self, source_model_lt, source_models):
+        self.source_model_lt = source_model_lt
+        self.source_models = list(source_models)
+        if not self.source_models:
+            raise RuntimeError('All sources were filtered away')
+        self.tmdict = {}
+        for i, tm in enumerate(self.trt_models):
+            tm.id = i
+            self.tmdict[i] = tm
+
+    @property
+    def trt_models(self):
+        """
+        Yields the TrtModels inside each source model.
+        """
+        for sm in self.source_models:
+            for trt_model in sm.trt_models:
+                yield trt_model
+
+    @property
+    def sources(self):
+        """
+        Yield the sources contained in the internal source models.
+        """
+        for trt_model in self.trt_models:
+            for src in trt_model:
+                src.trt_model_id = trt_model.id
+                yield src
+
+    def reduce_trt_models(self):
+        """
+        Remove the tectonic regions without ruptures and reduce the
+        GSIM logic tree. It works by updating the underlying source models.
+        """
+        for sm in self:
+            trts = set(trt_model.trt for trt_model in sm.trt_models
+                       if trt_model.num_ruptures > 0)
+            if trts == set(sm.gsim_lt.filter_keys):
+                # nothing to remove
+                continue
+            # build the reduced logic tree
+            gsim_lt = sm.gsim_lt.filter(trts)
+            tmodels = []  # collect the reduced trt models
+            for trt_model in sm.trt_models:
+                if trt_model.trt in trts:
+                    trt_model.gsims = gsim_lt.values[trt_model.trt]
+                    tmodels.append(trt_model)
+            self[sm.ordinal] = SourceModel(
+                sm.name, sm.weight, sm.path, tmodels, gsim_lt, sm.ordinal)
+
+    def get_source_model(self, path):
+        """
+        Extract a specific source model, given its logic tree path.
+
+        :param path: the source model logic tree path as a tuple of string
+        """
+        for sm in self:
+            if sm.path == path:
+                return sm
+        raise KeyError(
+            'There is no source model with sm_lt_path=%s' % str(path))
+
+    def get_rlzs_assoc(self):
+        """
+        Return a RlzsAssoc with fields realizations, gsim_by_trt,
+        rlz_idx and trt_gsims.
+        """
+        assoc = RlzsAssoc()
+        random_seed = self.source_model_lt.seed
+        num_samples = self.source_model_lt.num_samples
+        idx = 0
+        for sm_name, weight, sm_lt_path, _ in self.source_model_lt:
+            lt_model = self.get_source_model(sm_lt_path)
+            if num_samples:  # sampling, pick just one gsim realization
+                rnd = random.Random(random_seed + idx)
+                rlzs = [logictree.sample_one(lt_model.gsim_lt, rnd)]
+            else:
+                rlzs = list(lt_model.gsim_lt)  # full enumeration
+            logging.info('Creating %d GMPE realization(s) for model %s, %s',
+                         len(rlzs), lt_model.name, lt_model.path)
+            idx = assoc._add_realizations(idx, lt_model, rlzs)
+
+        num_ind_rlzs = sum(sm.gsim_lt.get_num_paths() for sm in self)
+        if num_samples > num_ind_rlzs:
+            logging.warn("""
+The number of independent realizations is %d but you are using %d samplings.
+That means that some GMPEs will be sampled more than once, resulting in
+duplicated data and redundant computation. You should switch to full
+enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
+""", num_ind_rlzs, num_samples)
+        return assoc
+
+    def __getitem__(self, i):
+        """Return the i-th source model"""
+        return self.source_models[i]
+
+    def __setitem__(self, i, sm):
+        """Update the i-th source model"""
+        self.source_models[i] = sm
+
+    def __iter__(self):
+        """Return an iterator over the underlying source models"""
+        return iter(self.source_models)
+
+    def __len__(self):
+        """Return the number of underlying source models"""
+        return len(self.source_models)
+
+
+def _collect_source_model_paths(smlt):
+    """
+    Given a path to a source model logic tree or a file-like, collect all of
+    the soft-linked path names to the source models it contains and return them
+    as a uniquified list (no duplicates).
+    """
+    src_paths = []
+    tree = etree.parse(smlt)
+    for branch_set in tree.xpath('//nrml:logicTreeBranchSet',
+                                 namespaces=PARSE_NS_MAP):
+
+        if branch_set.get('uncertaintyType') == 'sourceModel':
+            for branch in branch_set.xpath(
+                    './nrml:logicTreeBranch/nrml:uncertaintyModel',
+                    namespaces=PARSE_NS_MAP):
+                src_paths.append(branch.text)
+    return sorted(set(src_paths))

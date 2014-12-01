@@ -20,7 +20,7 @@ Logic tree parser, verifier and processor. See specs at
 https://blueprints.launchpad.net/openquake-old/+spec/openquake-logic-tree-module
 
 A logic tree object must be iterable and yielding realizations, i.e. objects
-with attributes `value`, `weight` and `lt_path`.
+with attributes `value`, `weight`, `lt_path` and `ordinal`.
 """
 
 import abc
@@ -47,7 +47,7 @@ MAX_SINT_32 = (2 ** 31) - 1
 GSIM = openquake.hazardlib.gsim.get_available_gsims()
 
 
-LtRealization = namedtuple('LtRealization', 'value, weight, lt_path')
+LtRealization = namedtuple('LtRealization', 'value weight lt_path ordinal')
 
 
 class LogicTreeError(Exception):
@@ -573,7 +573,7 @@ class BaseLogicTree(object):
 
     def __iter__(self):
         """
-        Yield triples (name, weight, paths). Notice that
+        Yield LtRealization tuples. Notice that
         weight is not None only when the number_of_logic_tree_samples
         is 0. In that case a full enumeration is performed, otherwise
         a random sampling is performed.
@@ -583,12 +583,12 @@ class BaseLogicTree(object):
             rnd = random.Random(self.seed)
             for _ in xrange(self.num_samples):
                 name, sm_lt_path = self.sample_path(rnd)
-                yield name, None, tuple(sm_lt_path)
+                yield LtRealization(name, None, tuple(sm_lt_path), None)
         else:  # full enumeration
             for weight, smlt_path in self.root_branchset.enumerate_paths():
                 name = smlt_path[0].value
                 smlt_branch_ids = [branch.branch_id for branch in smlt_path]
-                yield LtRealization(name, weight, tuple(smlt_branch_ids))
+                yield LtRealization(name, weight, tuple(smlt_branch_ids), None)
 
     @abc.abstractmethod
     def parse_uncertainty_value(self, node, branchset, value):
@@ -677,17 +677,6 @@ class SourceModelLogicTree(BaseLogicTree):
     """
     SOURCE_TYPES = ('point', 'area', 'complexFault', 'simpleFault',
                     'characteristicFault')
-
-    @classmethod
-    def from_hc(cls, hc):
-        """
-        Returns a SourceModelLogicTree instance from a HazardCalculation
-        """
-        fname = hc.inputs['source_model_logic_tree']
-        content = file(fname).read()
-        return cls(
-            content, hc.base_path, fname, validate=False,
-            seed=hc.random_seed, num_samples=hc.number_of_logic_tree_samples)
 
     def __init__(self, *args, **kwargs):
         self.source_ids = set()
@@ -1005,6 +994,15 @@ class GsimLogicTree(object):
                 'Could not find branches with attribute %r in %s' %
                 (self.branchset_filter, set(filter_keys)))
 
+    def filter(self, trts):
+        """
+        Build a reduced GsimLogicTree.
+
+	    :param trts: a subset of tectonic region types
+        """
+        assert set(trts) <= set(self.filter_keys), (trts, self.filter_keys)
+        return self.__class__(self.fname, self.branchset_filter, trts)
+
     def get_num_branches(self):
         """
         Return the number of branches for branchset id, as a dictionary.
@@ -1081,7 +1079,7 @@ class GsimLogicTree(object):
             filter_keys.append(branchset[self.branchset_filter])
             groups.append(list(branches))
         # with T tectonic region types there are T groups and T branches
-        for branches in itertools.product(*groups):
+        for i, branches in enumerate(itertools.product(*groups)):
             weight = 1
             lt_path = []
             value = {}
@@ -1091,4 +1089,4 @@ class GsimLogicTree(object):
                 assert branch.uncertainty in self.values[fkey], \
                     branch.uncertainty  # sanity check
                 value[fkey] = branch.uncertainty
-            yield LtRealization(value, weight, tuple(lt_path))
+            yield LtRealization(value, weight, tuple(lt_path), i)

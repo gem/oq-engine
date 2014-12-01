@@ -17,10 +17,20 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+from openquake.commonlib import readinput
+
+DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
 
 class DifferentFiles(Exception):
     """Raised for different files"""
+
+
+def get_oqparam(ini):
+    """
+    Read OqParam from an ini file in the tests/data directory
+    """
+    return readinput.get_oqparam(os.path.join(DATADIR, ini))
 
 
 def check_equal(filepath, expected, actual_path):

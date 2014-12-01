@@ -27,7 +27,7 @@ from openquake.hazardlib import scalerel
 from openquake.hazardlib import source
 from openquake.hazardlib.tom import PoissonTOM
 
-from openquake.commonlib import nrml_examples
+from openquake.commonlib import tests, nrml_examples, readinput
 from openquake.commonlib import source as s
 from openquake.commonlib.nrml import nodefactory
 from openquake.commonlib.node import read_nodes
@@ -624,16 +624,16 @@ class TrtModelTestCase(unittest.TestCase):
     def test_repr(self):
         self.assertEqual(
             repr(self.source_collector['Volcanic']),
-            '<TrtModel Volcanic, 3 source(s)>')
+            '<TrtModel #0 Volcanic, 3 source(s)>')
         self.assertEqual(
             repr(self.source_collector['Stable Continental Crust']),
-            '<TrtModel Stable Continental Crust, 1 source(s)>')
+            '<TrtModel #0 Stable Continental Crust, 1 source(s)>')
         self.assertEqual(
             repr(self.source_collector['Subduction Interface']),
-            '<TrtModel Subduction Interface, 1 source(s)>')
+            '<TrtModel #0 Subduction Interface, 1 source(s)>')
         self.assertEqual(
             repr(self.source_collector['Active Shallow Crust']),
-            '<TrtModel Active Shallow Crust, 2 source(s)>')
+            '<TrtModel #0 Active Shallow Crust, 2 source(s)>')
 
 
 class RuptureConverterTestCase(unittest.TestCase):
@@ -675,3 +675,46 @@ class RuptureConverterTestCase(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             read_nodes(rup_file, filter_ruptures, ValidNode).next()
         self.assertIn('line 7', str(ctx.exception))
+
+
+class CompositeSourceModelTestCase(unittest.TestCase):
+    def test_one_rlz(self):
+        oqparam = tests.get_oqparam('classical_job.ini')
+        # the example has number_of_logic_tree_samples = 1
+        sitecol = readinput.get_site_collection(oqparam)
+        csm = readinput.get_composite_source_model(oqparam, sitecol)
+        assoc = csm.get_rlzs_assoc()
+        [(rlz, gsim_by_trt)] = zip(assoc.realizations, assoc.gsim_by_trt)
+        self.assertEqual(gsim_by_trt,
+                         {'Subduction Interface': 'SadighEtAl1997',
+                          'Active Shallow Crust': 'ChiouYoungs2008'})
+        self.assertEqual(rlz, (0, ('b1', 'b5', 'b8'), ('b2', 'b3'), None))
+
+    def test_many_rlzs(self):
+        oqparam = tests.get_oqparam('classical_job.ini')
+        oqparam.number_of_logic_tree_samples = 0
+        sitecol = readinput.get_site_collection(oqparam)
+        csm = readinput.get_composite_source_model(oqparam, sitecol)
+        self.assertEqual(len(csm), 9)  # the smlt example has 1 x 3 x 3 paths
+        rlzs = csm.get_rlzs_assoc().realizations
+        self.assertEqual(len(rlzs), 18)  # the gsimlt has 1 x 2 paths
+        self.assertEqual(
+            map(len, csm.trt_models),
+            [1, 14, 1, 14, 1, 14, 1, 12, 1, 12, 1, 12, 1, 12, 1, 12, 1, 12])
+
+        # removing trt_models
+        for trt_model in csm.trt_models:
+            if trt_model.trt == 'Active Shallow Crust':  # no ruptures
+                trt_model.num_ruptures = 0
+        csm.reduce_trt_models()
+        self.assertEqual(map(len, csm.trt_models), [1, 1, 1, 1, 1, 1, 1, 1, 1])
+        rlzs = csm.get_rlzs_assoc().realizations
+        self.assertEqual(len(rlzs), 9)
+
+        # removing all trt_models
+        for trt_model in csm.trt_models:
+            if trt_model.trt == 'Subduction Interface':  # no ruptures
+                trt_model.num_ruptures = 0
+        csm.reduce_trt_models()
+        self.assertEqual(map(len, csm.trt_models), [])
+        self.assertEqual(csm.get_rlzs_assoc().realizations, [])
