@@ -818,6 +818,47 @@ class RlzsAssoc(object):
         :param agg: aggregation function
         :param results: dictionary (trt_model_id, gsim_name) -> <AccumDict>
         :returns: a dictionary rlz -> aggregate <AccumDict>
+
+        Example: a case with tectonic region type T1 with GSIMS A, B, C
+        and tectonic region type T2 with GSIMS D, E.
+
+        >>> assoc = RlzsAssoc()
+        >>> assoc.rlzs_assoc = {
+        ... ('T1', 'A'): ['r0', 'r1'],
+        ... ('T1', 'B'): ['r2', 'r3'],
+        ... ('T1', 'C'): ['r4', 'r5'],
+        ... ('T2', 'D'): ['r0', 'r2', 'r4'],
+        ... ('T2', 'E'): ['r1', 'r3', 'r5']}
+        ...
+        >>> results = {
+        ... ('T1', 'A'): 0.01,
+        ... ('T1', 'B'): 0.02,
+        ... ('T1', 'C'): 0.03,
+        ... ('T2', 'D'): 0.04,
+        ... ('T2', 'E'): 0.05,}
+        ...
+        >>> reduced_dict = assoc.reduce(operator.add, results)
+        >>> for key, value in sorted(reduced_dict.items()): print key, value
+        r0 0.05
+        r1 0.06
+        r2 0.06
+        r3 0.07
+        r4 0.07
+        r5 0.08
+
+        You can check that all the possible sums are performed:
+
+        r0: 0.01 + 0.04 (T1A + T2D)
+        r1: 0.01 + 0.05 (T1A + T2E)
+        r2: 0.02 + 0.04 (T1B + T2D)
+        r3: 0.02 + 0.05 (T1B + T2E)
+        r4: 0.03 + 0.04 (T1C + T2D)
+        r5: 0.03 + 0.05 (T1C + T2E)
+
+        In reality, the reduce function is used with dictionaries with the
+        hazard curves keyed by intensity measure type and the aggregation
+        function is the composition of probability, which however is closer
+        to the sum for small probabilities.
         """
         acc = 0
         for key, value in results.iteritems():
