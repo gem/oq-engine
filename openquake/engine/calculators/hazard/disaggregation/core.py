@@ -326,7 +326,8 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                            for site in self.site_collection)
         all_args = []
         for trt_model_id, srcs in groupby(
-                self.all_sources, attrgetter('trt_model_id')).iteritems():
+                self.composite_model.sources,
+                attrgetter('trt_model_id')).iteritems():
             lt_model = models.TrtModel.objects.get(pk=trt_model_id).lt_model
             trt_num = dict((trt, i) for i, trt in enumerate(
                            lt_model.get_tectonic_region_types()))
