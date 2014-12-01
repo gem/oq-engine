@@ -138,6 +138,14 @@ class OqParam(valid.ParamSet):
         width_of_mfd_bin=valid.positivefloat,
         )
 
+    @property
+    def imtls(self):
+        """
+        Returns an OrderedDict with the intensity measure types and levels
+        """
+        items = sorted(self.intensity_measure_types_and_levels.iteritems())
+        return collections.OrderedDict(items)
+
     def is_valid_truncation_level_disaggregation(self):
         """
         Truncation level must be set for disaggregation calculations
@@ -277,11 +285,3 @@ class OqParam(valid.ParamSet):
         if rms and not getattr(self, 'complex_fault_mesh_spacing', None):
             self.complex_fault_mesh_spacing = self.rupture_mesh_spacing
         return True
-
-    @property
-    def imtls(self):
-        """
-        Returns an OrderedDict with the intensity measure types and levels
-        """
-        items = sorted(self.intensity_measure_types_and_levels.iteritems())
-        return collections.OrderedDict(items)
