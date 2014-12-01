@@ -44,15 +44,15 @@ def agg_prob(acc, prob):
     :param acc: the accumulator
     :param prob: the probability (can be an array or more)
 
-    In particular
+    In particular::
 
-    >> agg_prob(acc, 0) = acc
-    >> agg_prob(acc, 1) = 1
-    >> agg_prob(0, prob) = prob
-    >> agg_prob(1, prob) = 1
-    >> agg_prob(acc, prob) = agg_prob(prob, acc)
+       agg_prob(acc, 0) = acc
+       agg_prob(acc, 1) = 1
+       agg_prob(0, prob) = prob
+       agg_prob(1, prob) = 1
+       agg_prob(acc, prob) = agg_prob(prob, acc)
 
-    >> agg_prob(acc, eps) = ~ acc + eps for eps << 1
+       agg_prob(acc, eps) =~ acc + eps for eps << 1
     """
     return 1. - (1. - prob) * (1. - acc)
 
