@@ -54,17 +54,17 @@ def agg_prob(acc, prob):
 
     >> agg_prob(acc, eps) = ~ acc + eps for eps << 1
     """
-    return 1 - (1 - prob) * (1 - acc)
+    return 1. - (1. - prob) * (1. - acc)
 
 
-def classical(sources, sitecol, assoc, monitor):
+def classical(sources, sitecol, gsims_assoc, monitor):
     """
     :param sources:
         a non-empty sequence of sources of homogeneous tectonic region type
     :param sitecol:
         a SiteCollection
-    :param assoc:
-        associations trt_model_id, gsim -> rlzs
+    :param gsims_assoc:
+        associations trt_model_id -> gsims
     :param monitor:
         a Monitor instance
     :returns:
@@ -75,7 +75,7 @@ def classical(sources, sitecol, assoc, monitor):
     imtls = monitor.oqparam.intensity_measure_types_and_levels
     trt_model_id = sources[0].trt_model_id
     trt = sources[0].tectonic_region_type
-    gsims = assoc.get_gsims_by(trt_model_id)
+    gsims = gsims_assoc[trt_model_id]
     result = AccumDict()
     for gsim in gsims:
         curves = calc_hazard_curves(
@@ -83,10 +83,7 @@ def classical(sources, sitecol, assoc, monitor):
             source_site_filter=source_site_distance_filter(max_dist),
             rupture_site_filter=rupture_site_distance_filter(max_dist))
         assert sum(v.sum() for v in curves.itervalues()), 'all zero curves!'
-        for rlz in assoc.rlzs_assoc[trt_model_id, gsim.__class__.__name__]:
-            result[rlz] = AccumDict(curves)
-        # NB: pickle is smart; if different realizations point to the same
-        # AccumDict, it is pickled only once
+        result[trt_model_id, gsim.__class__.__name__] = AccumDict(curves)
     return result
 
 
@@ -106,25 +103,28 @@ class ClassicalCalculator(base.BaseHazardCalculator):
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = self.oqparam
         sources = list(self.composite_source_model.sources)
-        zero = AccumDict((rlz, AccumDict()) for rlz in self.assoc.realizations)
+        zero = AccumDict((rlz, AccumDict())
+                         for rlz in self.rlzs_assoc.realizations)
+        gsims_assoc = self.rlzs_assoc.get_gsims_by_trt_id()
         return parallel.apply_reduce(
             self.core_func.__func__,
-            (sources, self.sitecol, self.assoc, monitor),
+            (sources, self.sitecol, gsims_assoc, monitor),
             agg=agg_prob, acc=zero,
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_model_id'))
 
-    def post_execute(self, curves_by_rlz):
+    def post_execute(self, result):
         """
         Collect the hazard curves by realization and export them.
 
-        :param curves_by_rlz:
-            a dictionary of hazard curves dictionaries keyed by realization
+        :param result:
+            a dictionary of hazard curves dictionaries
         """
+        curves_by_rlz = self.rlzs_assoc.reduce(agg_prob, result)
         oq = self.oqparam
         saved = AccumDict()
-        for rlz in sorted(curves_by_rlz):
+        for rlz in self.rlzs_assoc.realizations:
             saved += export(
                 'hazard_curves_xml',
                 oq.export_dir, self.sitecol, rlz, curves_by_rlz[rlz],

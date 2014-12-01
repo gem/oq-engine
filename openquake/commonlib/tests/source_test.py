@@ -683,7 +683,7 @@ class CompositeSourceModelTestCase(unittest.TestCase):
         # the example has number_of_logic_tree_samples = 1
         sitecol = readinput.get_site_collection(oqparam)
         csm = readinput.get_composite_source_model(oqparam, sitecol)
-        assoc = csm.get_rlz_assoc()
+        assoc = csm.get_rlzs_assoc()
         [(rlz, gsim_by_trt)] = zip(assoc.realizations, assoc.gsim_by_trt)
         self.assertEqual(gsim_by_trt,
                          {'Subduction Interface': 'SadighEtAl1997',
@@ -696,7 +696,7 @@ class CompositeSourceModelTestCase(unittest.TestCase):
         sitecol = readinput.get_site_collection(oqparam)
         csm = readinput.get_composite_source_model(oqparam, sitecol)
         self.assertEqual(len(csm), 9)  # the smlt example has 1 x 3 x 3 paths
-        rlzs = csm.get_rlz_assoc().realizations
+        rlzs = csm.get_rlzs_assoc().realizations
         self.assertEqual(len(rlzs), 18)  # the gsimlt has 1 x 2 paths
         self.assertEqual(
             map(len, csm.trt_models),
@@ -708,7 +708,7 @@ class CompositeSourceModelTestCase(unittest.TestCase):
                 trt_model.num_ruptures = 0
         csm.reduce_trt_models()
         self.assertEqual(map(len, csm.trt_models), [1, 1, 1, 1, 1, 1, 1, 1, 1])
-        rlzs = csm.get_rlz_assoc().realizations
+        rlzs = csm.get_rlzs_assoc().realizations
         self.assertEqual(len(rlzs), 9)
 
         # removing all trt_models
@@ -717,4 +717,4 @@ class CompositeSourceModelTestCase(unittest.TestCase):
                 trt_model.num_ruptures = 0
         csm.reduce_trt_models()
         self.assertEqual(map(len, csm.trt_models), [])
-        self.assertEqual(csm.get_rlz_assoc().realizations, [])
+        self.assertEqual(csm.get_rlzs_assoc().realizations, [])

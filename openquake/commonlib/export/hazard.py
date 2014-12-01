@@ -222,9 +222,9 @@ def export_hazard_curves_xml(key, export_dir, sitecol, rlz, curves_by_imt,
             'sa_damping': imt[2],
             'imls': imls,
         })
-    dest = 'hazard_curve_multi-smassoc_%s-gsimassoc_%s.xml' % (
-        smlt_path, gsimlt_path)
+    dest = 'hazard_curve_multi-smltp_%s-gsimltp_%s-ltr_%d.xml' % (
+        smlt_path, gsimlt_path, rlz.ordinal)
     writer = hazard_writers.MultiHazardCurveXMLWriter(dest, mdata)
     with floatformat('%12.8E'):
         writer.serialize(hcurves)
-    return {key: dest}
+    return {(key, rlz.ordinal): dest}

@@ -22,6 +22,7 @@ from itertools import izip
 import random
 from lxml import etree
 
+from openquake.baselib.general import AccumDict
 from openquake.hazardlib import geo, mfd, pmf, source, gsim
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.commonlib.node import read_nodes, context, striptag
@@ -49,75 +50,6 @@ LtRealization = collections.namedtuple(
 
 SourceModel = collections.namedtuple(
     'SourceModel', 'name weight path trt_models gsim_lt ordinal')
-
-
-class RlzAssoc(object):
-    """
-    Realization association class. It should not be instantiated directly,
-    but only via the method :meth:
-    `openquake.commonlib.source.CompositeSourceModel.get_rlz_assoc`.
-
-    :attr realizations: list of LtRealization objects
-    :attr gsim_by_trt: list of dictionaries {trt: gsim}
-    :attr rlzs_assoc: dictionary {trt_model_id, gsim: rlzs}
-
-    For instance, for the non-trivial logic tree in
-    :mod:`openquake.qa_tests_data.classical.case_15`, which has 4 tectonic
-    region types and 4 + 2 + 2 realizations, there are the following
-    associations:
-
-    (0, 'BooreAtkinson2008') ['#0-SM1-BA2008_C2003', '#1-SM1-BA2008_T2002']
-    (0, 'CampbellBozorgnia2008') ['#2-SM1-CB2008_C2003', '#3-SM1-CB2008_T2002']
-    (1, 'Campbell2003') ['#0-SM1-BA2008_C2003', '#2-SM1-CB2008_C2003']
-    (1, 'ToroEtAl2002') ['#1-SM1-BA2008_T2002', '#3-SM1-CB2008_T2002']
-    (2, 'BooreAtkinson2008') ['#4-SM2_a3pt2b0pt8-BA2008']
-    (2, 'CampbellBozorgnia2008') ['#5-SM2_a3pt2b0pt8-CB2008']
-    (3, 'BooreAtkinson2008') ['#6-SM2_a3b1-BA2008']
-    (3, 'CampbellBozorgnia2008') ['#7-SM2_a3b1-CB2008']
-    """
-    def __init__(self):
-        self.realizations = []
-        self.gsim_by_trt = []  # [trt -> gsim]
-        self.rlzs_assoc = collections.defaultdict(list)  # trt_id, gsim -> rlzs
-
-    def _add_realizations(self, idx, lt_model, realizations):
-        # create the realizations for the given lt source model
-        trt_models = [tm for tm in lt_model.trt_models if tm.num_ruptures]
-        if not trt_models:
-            return idx
-        gsims_by_trt = lt_model.gsim_lt.values
-        for gsim_by_trt, weight, gsim_path, _ in realizations:
-            if lt_model.weight is not None and weight is not None:
-                weight = lt_model.weight * weight
-            else:
-                weight = None
-            rlz = LtRealization(idx, lt_model.path, gsim_path, weight)
-            self.realizations.append(rlz)
-            self.gsim_by_trt.append(gsim_by_trt)
-            for trt_model in trt_models:
-                trt = trt_model.trt
-                gsim = gsim_by_trt[trt]
-                self.rlzs_assoc[trt_model.id, gsim].append(rlz)
-                trt_model.gsims = gsims_by_trt[trt]
-            idx += 1
-        return idx
-
-    def get_gsims_by_trt(self):
-        """
-        Return a dictionary trt_model_id -> [GSIM instances]
-        """
-        gsims_by_trt = collections.defaultdict(list)
-        for trt_id, gsim in sorted(self.rlzs_assoc):
-            gsims_by_trt[trt_id].append(GSIMS[gsim]())
-        return gsims_by_trt
-
-    def get_gsims_by(self, trt_model_id):
-        """
-        Return a dictionary trt_model_id -> [GSIM instances]
-        """
-        return [GSIMS[gsim]()
-                for trt_id, gsim in sorted(self.rlzs_assoc)
-                if trt_id == trt_model_id]
 
 
 class TrtModel(collections.Sequence):
@@ -821,6 +753,79 @@ def filter_sources(sources, sitecol, maxdist):
     return sorted(sources, key=operator.attrgetter('source_id'))
 
 
+class RlzsAssoc(object):
+    """
+    Realization association class. It should not be instantiated directly,
+    but only via the method :meth:
+    `openquake.commonlib.source.CompositeSourceModel.get_rlzs_assoc`.
+
+    :attr realizations: list of LtRealization objects
+    :attr gsim_by_trt: list of dictionaries {trt: gsim}
+    :attr rlzs_assoc: dictionary {trt_model_id, gsim: rlzs}
+
+    For instance, for the non-trivial logic tree in
+    :mod:`openquake.qa_tests_data.classical.case_15`, which has 4 tectonic
+    region types and 4 + 2 + 2 realizations, there are the following
+    associations:
+
+    (0, 'BooreAtkinson2008') ['#0-SM1-BA2008_C2003', '#1-SM1-BA2008_T2002']
+    (0, 'CampbellBozorgnia2008') ['#2-SM1-CB2008_C2003', '#3-SM1-CB2008_T2002']
+    (1, 'Campbell2003') ['#0-SM1-BA2008_C2003', '#2-SM1-CB2008_C2003']
+    (1, 'ToroEtAl2002') ['#1-SM1-BA2008_T2002', '#3-SM1-CB2008_T2002']
+    (2, 'BooreAtkinson2008') ['#4-SM2_a3pt2b0pt8-BA2008']
+    (2, 'CampbellBozorgnia2008') ['#5-SM2_a3pt2b0pt8-CB2008']
+    (3, 'BooreAtkinson2008') ['#6-SM2_a3b1-BA2008']
+    (3, 'CampbellBozorgnia2008') ['#7-SM2_a3b1-CB2008']
+    """
+    def __init__(self):
+        self.realizations = []
+        self.gsim_by_trt = []  # [trt -> gsim]
+        self.rlzs_assoc = collections.defaultdict(list)  # trt_id, gsim -> rlzs
+
+    def _add_realizations(self, idx, lt_model, realizations):
+        # create the realizations for the given lt source model
+        trt_models = [tm for tm in lt_model.trt_models if tm.num_ruptures]
+        if not trt_models:
+            return idx
+        gsims_by_trt = lt_model.gsim_lt.values
+        for gsim_by_trt, weight, gsim_path, _ in realizations:
+            if lt_model.weight is not None and weight is not None:
+                weight = lt_model.weight * weight
+            else:
+                weight = None
+            rlz = LtRealization(idx, lt_model.path, gsim_path, weight)
+            self.realizations.append(rlz)
+            self.gsim_by_trt.append(gsim_by_trt)
+            for trt_model in trt_models:
+                trt = trt_model.trt
+                gsim = gsim_by_trt[trt]
+                self.rlzs_assoc[trt_model.id, gsim].append(rlz)
+                trt_model.gsims = gsims_by_trt[trt]
+            idx += 1
+        return idx
+
+    def get_gsims_by_trt_id(self):
+        """
+        Return a dictionary trt_model_id -> [GSIM instances]
+        """
+        gsims_by_trt = collections.defaultdict(list)
+        for trt_id, gsim in sorted(self.rlzs_assoc):
+            gsims_by_trt[trt_id].append(GSIMS[gsim]())
+        return gsims_by_trt
+
+    def reduce(self, agg, results):
+        """
+        :param agg: aggregation function
+        :param results: dictionary (trt_model_id, gsim_name) -> <AccumDict>
+        :returns: a dictionary rlz -> aggregate <AccumDict>
+        """
+        acc = 0
+        for key, value in results.iteritems():
+            for rlz in self.rlzs_assoc[key]:
+                acc = agg(acc, AccumDict({rlz: value}))
+        return acc
+
+
 class CompositeSourceModel(collections.Sequence):
     """
     :param source_model_lt:
@@ -890,12 +895,12 @@ class CompositeSourceModel(collections.Sequence):
         raise KeyError(
             'There is no source model with sm_lt_path=%s' % str(path))
 
-    def get_rlz_assoc(self):
+    def get_rlzs_assoc(self):
         """
-        Return a RlzAssoc with fields realizations, gsim_by_trt,
+        Return a RlzsAssoc with fields realizations, gsim_by_trt,
         rlz_idx and trt_gsims.
         """
-        assoc = RlzAssoc()
+        assoc = RlzsAssoc()
         random_seed = self.source_model_lt.seed
         num_samples = self.source_model_lt.num_samples
         idx = 0
