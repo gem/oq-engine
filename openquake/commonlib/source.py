@@ -887,7 +887,7 @@ class CompositeSourceModel(collections.Sequence):
     @property
     def trt_models(self):
         """
-        Yields the TrtModels inside each source model in order
+        Yields the TrtModels inside each source model.
         """
         for sm in self.source_models:
             for trt_model in sm.trt_models:
@@ -896,7 +896,7 @@ class CompositeSourceModel(collections.Sequence):
     @property
     def sources(self):
         """
-        Yield the sources contained in the internal source models in order
+        Yield the sources contained in the internal source models.
         """
         for trt_model in self.trt_models:
             for src in trt_model:
@@ -928,7 +928,7 @@ class CompositeSourceModel(collections.Sequence):
         """
         Extract a specific source model, given its logic tree path.
 
-        :param: the source model logic tree path as a tuple of string
+        :param path: the source model logic tree path as a tuple of string
         """
         for sm in self:
             if sm.path == path:

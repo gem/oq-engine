@@ -242,8 +242,13 @@ def get_rupture(oqparam):
 
 def get_gsim_lt(oqparam, trts):
     """
-    Return a GsimLogicTree instance by filtering on the provided
-    tectonic region types.
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param trts:
+        a sequence of tectonic region types as strings
+    :returns:
+        a GsimLogicTree instance obtained by filtering on the provided
+        tectonic region types.
     """
     gsim_file = os.path.join(
         oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
@@ -253,8 +258,11 @@ def get_gsim_lt(oqparam, trts):
 
 def get_source_model_lt(oqparam):
     """
-    Return a :class:`openquake.commonlib.readinput.SourceModelLogicTree`
-    instance
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :returns:
+        a :class:`openquake.commonlib.readinput.SourceModelLogicTree`
+        instance
     """
     fname = oqparam.inputs['source_model_logic_tree']
     content = file(fname).read()
