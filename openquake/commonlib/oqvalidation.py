@@ -276,6 +276,17 @@ class OqParam(valid.ParamSet):
         return os.path.isdir(self.export_dir) and os.access(
             self.export_dir, os.W_OK)
 
+    def is_valid_inputs(self):
+        """
+        Invalid calculation_mode="{calculation_mode}" or missing
+        fragility_file/vulnerability_file in the .ini file.
+        """
+        if 'damage' in self.calculation_mode:
+            return 'fragility' in self.inputs
+        elif 'risk' in self.calculation_mode:
+            return any(key.endswith('_vulnerability') for key in self.inputs)
+        return True
+
     def is_valid_complex_fault_mesh_spacing(self):
         """
         The `complex_fault_mesh_spacing` parameter can be None only if
