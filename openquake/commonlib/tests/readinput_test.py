@@ -71,7 +71,6 @@ export_dir = %s
                 self.assertEqual(expected_params, params)
                 self.assertEqual(['site_model'], params['inputs'].keys())
                 self.assertEqual([site_model_input], params['inputs'].values())
-                self.assertEqual(expected_params, params)
 
                 # checking that warnings work
                 self.assertEqual(warn.call_args[0][0],
