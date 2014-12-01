@@ -339,15 +339,13 @@ class BaseHazardCalculator(base.Calculator):
                 pk=trt_model.id).num_ruptures
         cm.reduce_trt_models()
 
-        ltp = cm.get_rlz_assoc()
-        for rlz, gsim_by_trt in zip(ltp.realizations, ltp.gsim_by_trt):
+        rlzs_assoc = cm.get_rlzs_assoc()
+        gsims_by_trt_id = rlzs_assoc.get_gsims_by_trt_id()
+        for rlz, gsim_by_trt in zip(
+                rlzs_assoc.realizations, rlzs_assoc.gsim_by_trt):
             lt_model = models.LtSourceModel.objects.get(
                 hazard_calculation=self.job, sm_lt_path=rlz.sm_lt_path)
             trt_models = lt_model.trtmodel_set.filter(num_ruptures__gt=0)
-            if not trt_models:
-                logs.LOG.warn('No ruptures for %s: skipping', lt_model)
-                continue
-            gsim_lt = cm.get_source_model(rlz.sm_lt_path).gsim_lt
             lt_rlz = models.LtRealization.objects.create(
                 lt_model=lt_model, gsim_lt_path=rlz.gsim_lt_path,
                 weight=rlz.weight, ordinal=rlz.ordinal)
@@ -356,7 +354,8 @@ class BaseHazardCalculator(base.Calculator):
                 # populate the association table rlz <-> trt_model
                 models.AssocLtRlzTrtModel.objects.create(
                     rlz=lt_rlz, trt_model=trt_model, gsim=gsim_by_trt[trt])
-                trt_model.gsims = gsim_lt.values[trt]
+                trt_model.gsims = [gsim.__class__.__name__
+                                   for gsim in gsims_by_trt_id[trt_model.id]]
                 trt_model.save()
 
     # this could be parallelized in the future, however in all the cases
