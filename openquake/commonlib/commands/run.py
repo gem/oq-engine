@@ -41,7 +41,7 @@ def run(job_ini, concurrent_tasks=executor._max_workers, loglevel='info'):
             result = calc.execute()
         with monitor('post_execute'):
             out = calc.post_execute(result)
-    for item in out.iteritems():
+    for item in sorted(out.iteritems()):
         logging.info('exported %s: %s', *item)
     logging.info('Total time spent: %s s', monitor.duration)
     logging.info('Memory allocated: %s M', monitor.mem / 1024. / 1024.)

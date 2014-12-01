@@ -17,31 +17,125 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import random
+import operator
 import logging
+import collections
 
 import numpy
 
 from openquake.hazardlib.calc.gmf import GmfComputer
+from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
+from openquake.hazardlib.calc.filters import source_site_distance_filter, \
+    rupture_site_distance_filter
 from openquake.commonlib import readinput, parallel
+from openquake.commonlib.export import export
 from openquake.baselib.general import AccumDict
 
 from openquake.commonlib.calculators import calculators, base, calc
-from openquake.commonlib.export import export
+
+
+HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
+
+
+def agg_prob(acc, prob):
+    """
+    Aggregation function for probabilities.
+
+    :param acc: the accumulator
+    :param prob: the probability (can be an array or more)
+
+    In particular::
+
+       agg_prob(acc, 0) = acc
+       agg_prob(acc, 1) = 1
+       agg_prob(0, prob) = prob
+       agg_prob(1, prob) = 1
+       agg_prob(acc, prob) = agg_prob(prob, acc)
+
+       agg_prob(acc, eps) =~ acc + eps for eps << 1
+    """
+    return 1. - (1. - prob) * (1. - acc)
+
+
+def classical(sources, sitecol, gsims_assoc, monitor):
+    """
+    :param sources:
+        a non-empty sequence of sources of homogeneous tectonic region type
+    :param sitecol:
+        a SiteCollection
+    :param gsims_assoc:
+        associations trt_model_id -> gsims
+    :param monitor:
+        a Monitor instance
+    :returns:
+        an AccumDict rlz -> curves
+    """
+    max_dist = monitor.oqparam.maximum_distance
+    truncation_level = monitor.oqparam.truncation_level
+    imtls = monitor.oqparam.intensity_measure_types_and_levels
+    trt_model_id = sources[0].trt_model_id
+    trt = sources[0].tectonic_region_type
+    gsims = gsims_assoc[trt_model_id]
+    result = AccumDict()
+    for gsim in gsims:
+        curves = calc_hazard_curves(
+            sources, sitecol, imtls, {trt: gsim}, truncation_level,
+            source_site_filter=source_site_distance_filter(max_dist),
+            rupture_site_filter=rupture_site_distance_filter(max_dist))
+        assert sum(v.sum() for v in curves.itervalues()), 'all zero curves!'
+        result[trt_model_id, gsim.__class__.__name__] = AccumDict(curves)
+    return result
 
 
 @calculators.add('classical')
 class ClassicalCalculator(base.BaseHazardCalculator):
     """
-    Classical PSHA calculators
+    Classical PSHA calculator
     """
+    core_func = classical
+
+    def execute(self):
+        """
+        Run in parallel `core_func(sources, sitecol, monitor)`, by
+        parallelizing on the sources according to their weight and
+        tectonic region type.
+        """
+        monitor = self.monitor(self.core_func.__name__)
+        monitor.oqparam = self.oqparam
+        sources = list(self.composite_source_model.sources)
+        zero = AccumDict((rlz, AccumDict())
+                         for rlz in self.rlzs_assoc.realizations)
+        gsims_assoc = self.rlzs_assoc.get_gsims_by_trt_id()
+        return parallel.apply_reduce(
+            self.core_func.__func__,
+            (sources, self.sitecol, gsims_assoc, monitor),
+            agg=agg_prob, acc=zero,
+            concurrent_tasks=self.oqparam.concurrent_tasks,
+            weight=operator.attrgetter('weight'),
+            key=operator.attrgetter('trt_model_id'))
+
     def post_execute(self, result):
-        return {}
+        """
+        Collect the hazard curves by realization and export them.
+
+        :param result:
+            a dictionary of hazard curves dictionaries
+        """
+        curves_by_rlz = self.rlzs_assoc.reduce(agg_prob, result)
+        oq = self.oqparam
+        saved = AccumDict()
+        for rlz in self.rlzs_assoc.realizations:
+            saved += export(
+                'hazard_curves_xml',
+                oq.export_dir, self.sitecol, rlz, curves_by_rlz[rlz],
+                oq.imtls, oq.investigation_time)
+        return saved
 
 
 @calculators.add('event_based')
 class EventBasedCalculator(base.BaseHazardCalculator):
     """
-    Event based PSHA calculators
+    Event based PSHA calculator
     """
     def post_execute(self, result):
         return {}
@@ -50,7 +144,7 @@ class EventBasedCalculator(base.BaseHazardCalculator):
 @calculators.add('disaggregation')
 class DisaggregationCalculator(base.BaseHazardCalculator):
     """
-    Classical disaggregation PSHA calculators
+    Classical disaggregation PSHA calculator
     """
     def post_execute(self, result):
         return {}

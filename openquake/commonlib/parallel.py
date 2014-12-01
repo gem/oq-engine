@@ -26,6 +26,7 @@ import cPickle
 import logging
 import operator
 import traceback
+import itertools
 import time
 from datetime import datetime
 from concurrent.futures import as_completed, ProcessPoolExecutor
@@ -59,8 +60,8 @@ def check_mem_usage(soft_percent=80, hard_percent=100):
         logging.warn('Using over %d%% of the memory!', used_mem_percent)
     if used_mem_percent > hard_percent:
         raise MemoryError('Using more memory than allowed by configuration '
-                           '(Used: %d%% / Allowed: %d%%)! Shutting down.' %
-                           (used_mem_percent, hard_percent))
+                          '(Used: %d%% / Allowed: %d%%)! Shutting down.' %
+                          (used_mem_percent, hard_percent))
 
 
 def safely_call(func, args, pickle=False):
@@ -345,13 +346,19 @@ def apply_reduce(task_func, task_args, agg=operator.add, acc=None,
         acc = AccumDict()
     if not arg0:
         return acc
-    elif len(arg0) == 1 or not concurrent_tasks:
+    elif len(arg0) == 1:
         return agg(acc, task_func(arg0, *args))
     chunks = list(split_in_blocks(arg0, concurrent_tasks, weight, key))
-    tm = starmap(task_func, [(chunk,) + args for chunk in chunks],
-                 logging.info, name)
     apply_reduce._chunks = chunks
-    return tm.reduce(agg, acc)
+    if concurrent_tasks:
+        # map reduce in parallel
+        tm = starmap(task_func, [(chunk,) + args for chunk in chunks],
+                     logging.info, name)
+        return tm.reduce(agg, acc)
+    # else sequential splitting
+    results = itertools.starmap(
+        task_func, [(chunk,) + args for chunk in chunks], logging.info, name)
+    return reduce(agg, results, acc)
 
 
 def do_not_aggregate(acc, value):

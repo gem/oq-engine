@@ -1,0 +1,71 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+
+    <sourceModel>
+        <simpleFaultSource id="src01" name="Mount Diablo Thrust"
+                           tectonicRegion="Active Shallow Crust">
+            <simpleFaultGeometry>
+                <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
+                    <gml:posList>
+                        -121.82290 37.73010
+                        -122.03880 37.87710
+                    </gml:posList>
+                </gml:LineString>
+                <dip>38</dip>
+                <upperSeismoDepth>8.0</upperSeismoDepth>
+                <lowerSeismoDepth>13.0</lowerSeismoDepth>
+            </simpleFaultGeometry>
+            <magScaleRel>WC1994</magScaleRel>
+            <ruptAspectRatio>1.5</ruptAspectRatio>
+            <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0"
+                                      minMag="5.0" maxMag="7.0" />
+            <rake>90.0</rake>
+        </simpleFaultSource>
+
+        <simpleFaultSource id="src02" name="Mount Diablo Thrust"
+                           tectonicRegion="Active Shallow Crust">
+            <simpleFaultGeometry>
+                <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
+                    <gml:posList>
+                        -121.82290 37.73010
+                        -122.03880 37.87710
+                    </gml:posList>
+                </gml:LineString>
+                <dip>38</dip>
+                <upperSeismoDepth>8.0</upperSeismoDepth>
+                <lowerSeismoDepth>13.0</lowerSeismoDepth>
+            </simpleFaultGeometry>
+            <magScaleRel>WC1994</magScaleRel>
+            <ruptAspectRatio>1.5</ruptAspectRatio>
+            <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0"
+                                      minMag="5.0" maxMag="7.0" />
+            <rake>90.0</rake>
+        </simpleFaultSource>
+
+        <pointSource id="src03" name="point"
+                     tectonicRegion="Subduction Interface">
+            <pointGeometry>
+                <gml:Point>
+                    <gml:pos>-122.0 38.0</gml:pos>
+                </gml:Point>
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>10.0</lowerSeismoDepth>
+            </pointGeometry>
+            <magScaleRel>WC1994</magScaleRel>
+            <ruptAspectRatio>0.5</ruptAspectRatio>
+            <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0"
+                                      minMag="5.0" maxMag="6.5" />
+            <nodalPlaneDist>
+                <nodalPlane probability="0.3" strike="0.0"
+                            dip="90.0" rake="0.0" />
+                <nodalPlane probability="0.7" strike="90.0"
+                            dip="45.0" rake="90.0" />
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth probability="0.5" depth="4.0" />
+                <hypoDepth probability="0.5" depth="8.0" />
+            </hypoDepthDist>
+        </pointSource>
+    </sourceModel>
+</nrml>

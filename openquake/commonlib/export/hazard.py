@@ -25,6 +25,8 @@ from openquake.commonlib import hazard_writers
 from openquake.hazardlib.imt import from_string
 
 
+##################### export Ground Motion fields #############################
+
 class GmfSet(object):
     """
     Small wrapper around the list of Gmf objects associated to the given SES.
@@ -77,9 +79,6 @@ class GroundMotionField(object):
         return 'GMF(%s\n%s)' % (mdata, '\n'.join(nodes))
 
 
-Location = collections.namedtuple('Location', 'x y')
-
-
 class GroundMotionFieldNode(object):
     # the signature is not (gmv, x, y) because the XML writer expects
     # a location object
@@ -92,7 +91,8 @@ class GroundMotionFieldNode(object):
         A reproducible ordering by lon and lat; used in
         :function:`openquake.commonlib.hazard_writers.gen_gmfs`
         """
-        return self.location < other.location
+        return (self.location.x, self.location.y) < (
+            other.location.x, other.location.y)
 
     def __str__(self):
         """Return lon, lat and gmv of the node in a compact string form"""
@@ -121,10 +121,8 @@ class GmfCollection(object):
         for imt_str, gmfs in sorted(self.gmfs_by_imt.iteritems()):
             imt, sa_period, sa_damping = from_string(imt_str)
             for rupture_tag, gmf in zip(self.rupture_tags, gmfs.transpose()):
-                nodes = (GroundMotionFieldNode(
-                    gmv,
-                    Location(site.location.longitude, site.location.latitude))
-                    for site, gmv in zip(self.sitecol, gmf))
+                nodes = (GroundMotionFieldNode(gmv, site.location)
+                         for site, gmv in zip(self.sitecol, gmf))
                 gmfset.append(
                     GroundMotionField(
                         imt, sa_period, sa_damping, rupture_tag, nodes))
@@ -133,6 +131,13 @@ class GmfCollection(object):
 
 @export.add('gmf_xml')
 def export_gmf_xml(key, export_dir, sitecol, rupture_tags, gmfs):
+    """
+    :param key: output_type and export_type
+    :param export_dir: the directory where to export
+    :param sitecol: site collection
+    :rupture_tags: a list of rupture tags
+    :gmfs: a dictionary of ground motion fields keyed by IMT
+    """
     dest = os.path.join(export_dir, key.replace('_xml', '.xml'))
     writer = hazard_writers.EventBasedGMFXMLWriter(
         dest, sm_lt_path='', gsim_lt_path='')
@@ -143,23 +148,86 @@ def export_gmf_xml(key, export_dir, sitecol, rupture_tags, gmfs):
 
 @export.add('gmf_csv')
 def export_gmf_csv(key, export_dir, sitecol, rupture_tags, gmfs):
+    """
+    :param key: output_type and export_type
+    :param export_dir: the directory where to export
+    :param sitecol: site collection
+    :rupture_tags: a list of rupture tags
+    :gmfs: a dictionary of ground motion fields keyed by IMT
+    """
     dest = os.path.join(export_dir, key.replace('_csv', '.csv'))
     with floatformat('%12.8E'), open(dest, 'w') as f:
         for imt, gmf in gmfs.iteritems():
             for site, gmvs in zip(sitecol, gmf):
-                row = [imt, site.location.longitude,
-                       site.location.latitude] + list(gmvs)
+                row = [imt, site.location.x, site.location.y] + list(gmvs)
                 f.write(' '.join(map(scientificformat, row)) + '\n')
     return {key: dest}
+
+######################## export hazard curves ##############################
+
+HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
 @export.add('hazard_curves_csv')
-def export_hazard_curves_csv(key, export_dir, sitecol, curves_by_imt):
-    dest = os.path.join(export_dir, key.replace('_csv', '.csv'))
+def export_hazard_curves_csv(key, export_dir, sitecol, rlz, curves_by_imt):
+    """
+    Export the curves of the given realization into XML.
+
+    :param key: output_type and export_type
+    :param export_dir: the directory where to export
+    :param sitecol: site collection
+    :param rlz: realization instance
+    :param curves_by_imt: dictionary with the curves keyed by IMT
+    """
+    smlt_path = '_'.join(rlz.sm_lt_path)
+    gsimlt_path = '_'.join(rlz.gsim_lt_path)
+    dest = 'hazard_curve_multi-smltp_%s-gsimltp_%s-ltr_%d.csv' % (
+        smlt_path, gsimlt_path, rlz.ordinal)
     with floatformat('%12.8E'), open(dest, 'w') as f:
-        for imt, curves in curves_by_imt.iteritems():
-            for site, curve in zip(sitecol, curves):
-                row = [imt, site.location.longitude,
-                       site.location.latitude] + list(curve)
+        for imt, curves in sorted(curves_by_imt):
+            for site, curve in zip(sitecol, curves_by_imt[imt]):
+                row = [imt, site.location.x, site.location.y] + list(curve)
                 f.write(' '.join(map(scientificformat, row)) + '\n')
     return {key: dest}
+
+
+@export.add('hazard_curves_xml')
+def export_hazard_curves_xml(key, export_dir, sitecol, rlz, curves_by_imt,
+                             imtls, investigation_time):
+    """
+    Export the curves of the given realization into XML.
+
+    :param key: output_type and export_type
+    :param export_dir: the directory where to export
+    :param sitecol: site collection
+    :param rlz: realization instance
+    :param curves_by_imt: dictionary with the curves keyed by IMT
+    :param imtls: dictionary with the intensity measure types and levels
+    :param investigation_time: investigation time in years
+    """
+    smlt_path = '_'.join(rlz.sm_lt_path)
+    gsimlt_path = '_'.join(rlz.gsim_lt_path)
+    mdata = []
+    hcurves = []
+    for imt_str, imls in sorted(imtls.iteritems()):
+        hcurves.append(
+            [HazardCurve(site.location, poes)
+             for site, poes in zip(sitecol, curves_by_imt[imt_str])])
+        imt = from_string(imt_str)
+        mdata.append({
+            'quantile_value': None,
+            'statistics': None,
+            'smlt_path': smlt_path,
+            'gsimlt_path': gsimlt_path,
+            'investigation_time': investigation_time,
+            'imt': imt[0],
+            'sa_period': imt[1],
+            'sa_damping': imt[2],
+            'imls': imls,
+        })
+    dest = 'hazard_curve_multi-smltp_%s-gsimltp_%s-ltr_%d.xml' % (
+        smlt_path, gsimlt_path, rlz.ordinal)
+    writer = hazard_writers.MultiHazardCurveXMLWriter(dest, mdata)
+    with floatformat('%12.8E'):
+        writer.serialize(hcurves)
+    return {(key, rlz.ordinal): dest}

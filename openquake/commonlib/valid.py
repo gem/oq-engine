@@ -517,13 +517,18 @@ def dictionary(value):
     {}
     >>> dictionary('{"a": 1}')
     {'a': 1}
+    >>> dictionary('"vs30_clustering: true"')  # an error really done by a user
+    Traceback (most recent call last):
+       ...
+    ValueError: '"vs30_clustering: true"' is not a valid Python dictionary
     """
     if not value:
         return {}
     try:
-        return ast.literal_eval(value)
+        dic = dict(ast.literal_eval(value))
     except:
         raise ValueError('%r is not a valid Python dictionary' % value)
+    return dic
 
 
 ############################# SOURCES/RUPTURES ###############################
