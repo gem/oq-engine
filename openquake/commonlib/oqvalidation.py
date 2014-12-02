@@ -29,7 +29,8 @@ GSIMS = get_available_gsims()
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
 
 HAZARD_CALCULATORS = [
-    'classical', 'disaggregation', 'event_based', 'scenario']
+    'classical', 'disaggregation', 'event_based', 'scenario',
+    'classical_tiling']
 
 RISK_CALCULATORS = [
     'classical_risk', 'event_based_risk', 'scenario_risk',
@@ -107,6 +108,7 @@ class OqParam(valid.ParamSet):
         lrem_steps_per_interval=valid.positiveint,
         master_seed=valid.positiveint,
         maximum_distance=valid.positivefloat,
+        max_tile_weight=valid.positivefloat,
         mean_hazard_curves=valid.boolean,
         number_of_ground_motion_fields=valid.positiveint,
         number_of_logic_tree_samples=valid.positiveint,

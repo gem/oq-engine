@@ -403,7 +403,7 @@ def get_job_info(oqparam, source_models, sitecol):
     # The input weight is given by the number of ruptures generated
     # by the sources; for point sources however a corrective factor
     # given by the parameter `point_source_weight` is applied
-    input_weight = sum(src.weight for src_model in source_models
+    input_weight = sum(src.weight or 0 for src_model in source_models
                        for trt_model in src_model.trt_models
                        for src in trt_model)
 
