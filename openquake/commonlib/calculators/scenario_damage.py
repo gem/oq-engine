@@ -67,7 +67,7 @@ def scenario_damage(riskinputs, riskmodel, monitor):
                  sum(ri.weight for ri in riskinputs))
     with monitor:
         result = AccumDict()  # (key_type, key) -> result
-        for (assets, fractions) in riskmodel.gen_outputs(riskinputs):
+        for [(assets, fractions)] in riskmodel.gen_outputs(riskinputs):
             for asset, fraction in zip(assets, fractions):
                 damages = fraction * asset.number
                 result += {('asset', asset): scientific.mean_std(damages)}
