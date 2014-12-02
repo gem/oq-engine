@@ -18,13 +18,12 @@ Core functionality for the classical tilint PSHA hazard calculator.
 """
 import math
 from openquake.baselib.general import split_in_blocks
+from openquake.commonlib import readinput
 from openquake.hazardlib.site import SiteCollection
 
-from openquake.engine.calculators import base, calculators
+from openquake.engine.calculators import calculators
 from openquake.engine.calculators.hazard.general import BaseHazardCalculator
 from openquake.engine.logs import LOG
-
-MAX_TILE_WEIGHT = 100000
 
 
 @calculators.add('classical_tiling')
@@ -45,14 +44,17 @@ class ClassicalTilingHazardCalculator(BaseHazardCalculator):
 
     def pre_execute(self):
         self.oqparam = self.job.get_oqparam()
+        source_model_lt = readinput.get_source_model_lt(self.oqparam)
+        source_models = list(readinput.get_source_models(
+            self.oqparam, source_model_lt))
         self.parse_risk_model()
         self.initialize_site_collection()
-        imtls = self.oqparam.intensity_measure_types_and_levels
-        num_levels = sum(map(len, imtls.values()))
-        weight = float(len(self.site_collection) * num_levels)
-        self.tiles = list(
-            split_in_blocks(
-                self.site_collection, math.ceil(weight / MAX_TILE_WEIGHT)))
+        info = readinput.get_job_info(
+            self.oqparam, source_models, self.site_collection)
+        self.imtls = self.oqparam.intensity_measure_types_and_levels
+        weight = info['n_sites'] * info['n_levels'] * info['max_realizations']
+        nblocks = math.ceil(weight / self.oqparam.max_tile_weight)
+        self.tiles = list(split_in_blocks(self.site_collection, nblocks))
         self.num_tiles = len(self.tiles)
 
     def execute(self):
