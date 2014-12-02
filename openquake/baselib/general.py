@@ -556,6 +556,15 @@ class AccumDict(dict):
 
     __rmul__ = __mul__
 
+    def apply(self, func, *extras):
+        """
+        >>> a = AccumDict({'a': 1,  'b': 2})
+        >>> a.apply(lambda x, y: 2 * x + y, 1)
+        {'a': 3, 'b': 5}
+        """
+        return self.__class__({key: func(value, *extras)
+                               for key, value in self.iteritems()})
+
 
 def groupby(objects, key):
     """

@@ -43,6 +43,10 @@ ExposureData = collections.namedtuple('ExposureData', 'asset_ref site')
 
 
 class Site(object):
+    """
+    A small wrapper over a lon-lat pair (x, y). It has a .wkt attribute
+    and an ordering. It is used for consistency with the export routines.
+    """
     def __init__(self, x, y):
         self.x, self.y = x, y
         self.wkt = 'POINT(%s %s)' % (x, y)
@@ -901,6 +905,12 @@ def _assert_valid_input(data):
 
 
 class DamageWriter(object):
+    """
+    A class to convert scenario_damage outputs into nodes and then XML.
+
+    :param damage_states:
+        a sequence of DamageState objects with attributes .dmg_state and .lsi
+    """
     def __init__(self, damage_states):
         self.damage_states = damage_states
         self.dmg_states = Node(
@@ -908,6 +918,11 @@ class DamageWriter(object):
             text=' '.join(ds.dmg_state for ds in damage_states))
 
     def damage_nodes(self, means, stddevs):
+        """
+        :param means: array of means, one per damage state
+        :param stddevs: array of stddevs, one per damage state
+        returns: a list of `damage` nodes
+        """
         nodes = []
         for dmg_state, mean, stddev in zip(self.damage_states, means, stddevs):
             nodes.append(
@@ -916,14 +931,31 @@ class DamageWriter(object):
         return nodes
 
     def point_node(self, loc):
+        """
+        :param loc: a location object with attributes x and y
+        :returns: a `gml:Point` node
+        """
         return Node('gml:Point',
                     nodes=[Node('gml:pos', text='%s %s' % (loc.x, loc.y))])
 
     def asset_node(self, asset_ref, means, stddevs):
+        """
+        :param asset_ref: asset reference string
+        :param means: array of means, one per damage state
+        :param stddevs: array of stddevs, one per damage state
+        :returns: an `asset` node
+        """
         return Node('asset', dict(assetRef=asset_ref),
                     nodes=self.damage_nodes(means, stddevs))
 
     def cm_node(self, loc, asset_refs, means, stddevs):
+        """
+        :param loc: a location object with attributes x and y
+        :param asset_refs: asset reference strings
+        :param means: array of means, one per asset
+        :param stddevs: array of stddevs, one per asset
+        :returns: a `CMNode` node
+        """
         cm = Node('CMNode', nodes=[self.point_node(loc)])
         for asset_ref, mean, stddev in zip(asset_refs, means, stddevs):
             cf = Node('cf', dict(assetRef=asset_ref, mean=mean, stdDev=stddev))
@@ -931,12 +963,23 @@ class DamageWriter(object):
         return cm
 
     def dd_node_taxo(self, taxonomy, means, stddevs):
+        """
+        :param taxonomy: taxonomy string
+        :param means: array of means, one per damage state
+        :param stddevs: array of stddevs, one per damage state
+        :returns: a `DDNode` node
+        """
         taxonomy = Node('taxonomy', text=taxonomy)
         dd = Node('DDNode', nodes=[taxonomy] +
                   self.damage_nodes(means, stddevs))
         return dd
 
     def dmg_dist_per_asset_node(self, data):
+        """
+        :param data: a sequence of records with attributes .exposure_data,
+                     .mean and .stddev
+        :returns: a `dmgDistPerAsset` node
+        """
         node = Node('dmgDistPerAsset', nodes=[self.dmg_states])
         data_by_location = groupby(data, lambda r: r.exposure_data.site)
         for loc in data_by_location:
@@ -954,6 +997,11 @@ class DamageWriter(object):
         return node
 
     def dmg_dist_per_taxonomy_node(self, data):
+        """
+        :param data: a sequence of records with attributes .taxonomy,
+                     .mean and .stddev
+        :returns: a `dmgDistPerTaxonomy` node
+        """
         node = Node('dmgDistPerTaxonomy', nodes=[self.dmg_states])
         data_by_taxo = groupby(data, operator.attrgetter('taxonomy'))
         for taxonomy in data_by_taxo:
@@ -963,6 +1011,11 @@ class DamageWriter(object):
         return node
 
     def dmg_dist_total_node(self, data):
+        """
+        :param data: a sequence of records with attributes .dmg_state,
+                     .mean and .stddev
+        :returns: a `totalDmgDist` node
+        """
         total = Node('totalDmgDist', nodes=[self.dmg_states])
         for row in sorted(data, key=lambda r: r.dmg_state.lsi):
             damage = Node('damage',
@@ -972,6 +1025,11 @@ class DamageWriter(object):
         return total
 
     def collapse_map_node(self, data):
+        """
+        :param data: a sequence of records with attributes .exposure_data,
+                     .mean and .stddev
+        :returns: a `dmgDistPerAsset` node
+        """
         node = Node('collapseMap')
         data_by_location = groupby(data, lambda r: r.exposure_data.site)
         for loc in data_by_location:
@@ -987,6 +1045,13 @@ class DamageWriter(object):
         return node
 
     def to_nrml(self, key, data, fname=None):
+        """
+        :param key:
+         `dmg_dist_per_asset|dmg_dist_per_taxonomy|dmg_dist_total|collapse_map`
+        :param data: sequence of rows to serialize
+        :fname: the path name of the output file; if None, build a name
+        :returns: path name of the saved file
+        """
         fname = fname or writetmp()
         node = getattr(self, key + '_node')(data)
         with open(fname, 'w') as out:

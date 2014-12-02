@@ -121,7 +121,7 @@ class ClassicalCalculator(base.BaseHazardCalculator):
         :param result:
             a dictionary of hazard curves dictionaries
         """
-        curves_by_rlz = self.rlzs_assoc.reduce(agg_prob, result)
+        curves_by_rlz = self.rlzs_assoc.combine(agg_prob, result)
         oq = self.oqparam
         saved = AccumDict()
         for rlz in self.rlzs_assoc.realizations:
