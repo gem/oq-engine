@@ -266,7 +266,8 @@ class BaseHazardCalculator(base.Calculator):
         for sm in self.composite_model:
             # create an LtSourceModel for each distinct source model
             lt_model = models.LtSourceModel.objects.create(
-                hazard_calculation=self.job, sm_lt_path=self.tilepath + sm.path,
+                hazard_calculation=self.job,
+                sm_lt_path=self.tilepath + sm.path,
                 ordinal=sm.ordinal, sm_name=sm.name, weight=sm.weight)
 
             # save TrtModels for each tectonic region type
