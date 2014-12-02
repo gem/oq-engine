@@ -849,7 +849,7 @@ class RiskModel(collections.Mapping):
         :param riskinputs: a list of riskinputs with consistent IMT
         """
         for riskinput in riskinputs:
-            out = self.gen_output(riskinput)
+            out = self.gen_output(riskinput, rlzs_assoc)
             for key in sorted(out):
                 yield out[key]
 
