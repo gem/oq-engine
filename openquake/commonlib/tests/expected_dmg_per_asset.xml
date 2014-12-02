@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <dmgDistPerAsset>
+        <damageStates>
+            no_damage slight moderate extensive complete
+        </damageStates>
+        <DDNode>
+            <gml:Point>
+                <gml:pos>
+                    -117.0 42.0
+                </gml:pos>
+            </gml:Point>
+            <asset
+            assetRef="asset_2"
+            >
+                <damage ds="no_damage" mean="1.000000000E+00" stddev="1.600000000E+00"/>
+                <damage ds="slight" mean="3.480000000E+01" stddev="1.830000000E+01"/>
+                <damage ds="moderate" mean="6.420000000E+01" stddev="1.980000000E+01"/>
+                <damage ds="extensive" mean="6.430000000E+01" stddev="1.970000000E+01"/>
+                <damage ds="complete" mean="6.430000000E+01" stddev="1.970000000E+01"/>
+            </asset>
+            <asset
+            assetRef="asset_3"
+            >
+                <damage ds="no_damage" mean="1.000000000E+00" stddev="1.600000000E+00"/>
+                <damage ds="slight" mean="3.480000000E+01" stddev="1.830000000E+01"/>
+                <damage ds="moderate" mean="6.420000000E+01" stddev="1.980000000E+01"/>
+                <damage ds="extensive" mean="6.430000000E+01" stddev="1.970000000E+01"/>
+                <damage ds="complete" mean="6.430000000E+01" stddev="1.970000000E+01"/>
+            </asset>
+        </DDNode>
+        <DDNode>
+            <gml:Point>
+                <gml:pos>
+                    -116.0 41.0
+                </gml:pos>
+            </gml:Point>
+            <asset
+            assetRef="asset_1"
+            >
+                <damage ds="no_damage" mean="1.000000000E+00" stddev="1.600000000E+00"/>
+                <damage ds="slight" mean="3.480000000E+01" stddev="1.830000000E+01"/>
+                <damage ds="moderate" mean="6.420000000E+01" stddev="1.980000000E+01"/>
+                <damage ds="extensive" mean="6.430000000E+01" stddev="1.970000000E+01"/>
+                <damage ds="complete" mean="6.430000000E+01" stddev="1.970000000E+01"/>
+            </asset>
+        </DDNode>
+    </dmgDistPerAsset>
+</nrml>

@@ -556,12 +556,24 @@ class AccumDict(dict):
 
     __rmul__ = __mul__
 
+    def apply(self, func, *extras):
+        """
+        >>> a = AccumDict({'a': 1,  'b': 2})
+        >>> a.apply(lambda x, y: 2 * x + y, 1)
+        {'a': 3, 'b': 5}
+        """
+        return self.__class__({key: func(value, *extras)
+                               for key, value in self.iteritems()})
+
 
 def groupby(objects, key):
     """
     :param objects: a sequence of objects with a key value
     :param key: the key function to extract the key value
-    :returns: an AccumDict key value -> list of objects
+    :returns: an OrderedDict {key value: list of objects}
+
+    >>> groupby('pippo', key=lambda x: x)
+    OrderedDict([('i', ['i']), ('o', ['o']), ('p', ['p', 'p', 'p'])])
     """
     kgroups = itertools.groupby(sorted(objects, key=key), key)
-    return AccumDict((k, list(group)) for k, group in kgroups)
+    return collections.OrderedDict((k, list(group)) for k, group in kgroups)
