@@ -43,8 +43,8 @@ def classical_risk(riskinputs, riskmodel, monitor):
     return result
 
 
-@calculators.add('classical_risk')  # from CSV
-class ClassicalRiskCalculator(base.BaseRiskCalculator):
+@calculators.add('classical_risk_from_csv')
+class ClassicalRiskFromCsvCalculator(base.BaseRiskCalculator):
     """
     Classical Risk calculator
     """
@@ -65,6 +65,37 @@ class ClassicalRiskCalculator(base.BaseRiskCalculator):
             curves = [zip(imtls[imt], hcurve) for hcurve in hcurves[indices]]
             h[imt] = numpy.array(curves, float)
         return h
+
+    def pre_execute(self):
+        """
+        Associate the assets to the sites and build the riskinputs.
+        """
+        super(ClassicalRiskFromCsvCalculator, self).pre_execute()
+        sites, hcurves_by_imt = readinput.get_sitecol_hcurves(self.oqparam)
+        logging.info('Associating assets -> sites')
+        with self.monitor('assoc_assets_sites'):
+            sitecol, assets_by_site = self.assoc_assets_sites(sites)
+        num_assets = sum(len(assets) for assets in assets_by_site)
+        num_sites = len(sitecol)
+        logging.info('Associated %d assets to %d sites', num_assets, num_sites)
+        hcurves_by_imt = self.filter_hcurves(hcurves_by_imt, sitecol.indices)
+        self.riskinputs = self.build_riskinputs(hcurves_by_imt)
+
+    def post_execute(self, result):
+        """
+        Export the results. TO BE IMPLEMENTED.
+        """
+        for k, v in result.iteritems():
+            print k, v
+        return {}
+
+
+@calculators.add('classical_risk')
+class ClassicalRiskCalculator(base.BaseRiskCalculator):
+    """
+    Classical Risk calculator
+    """
+    core_func = classical_risk
 
     def pre_execute(self):
         """

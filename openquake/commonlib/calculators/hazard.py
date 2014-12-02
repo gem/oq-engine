@@ -37,26 +37,6 @@ from openquake.commonlib.calculators import calculators, base, calc
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
-def agg_prob(acc, prob):
-    """
-    Aggregation function for probabilities.
-
-    :param acc: the accumulator
-    :param prob: the probability (can be an array or more)
-
-    In particular::
-
-       agg_prob(acc, 0) = acc
-       agg_prob(acc, 1) = 1
-       agg_prob(0, prob) = prob
-       agg_prob(1, prob) = 1
-       agg_prob(acc, prob) = agg_prob(prob, acc)
-
-       agg_prob(acc, eps) =~ acc + eps for eps << 1
-    """
-    return 1. - (1. - prob) * (1. - acc)
-
-
 def classical(sources, sitecol, gsims_assoc, monitor):
     """
     :param sources:
@@ -109,7 +89,7 @@ class ClassicalCalculator(base.BaseHazardCalculator):
         return parallel.apply_reduce(
             self.core_func.__func__,
             (sources, self.sitecol, gsims_assoc, monitor),
-            agg=agg_prob, acc=zero,
+            agg=calc.agg_prob, acc=zero,
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_model_id'))
@@ -121,7 +101,7 @@ class ClassicalCalculator(base.BaseHazardCalculator):
         :param result:
             a dictionary of hazard curves dictionaries
         """
-        curves_by_rlz = self.rlzs_assoc.combine(agg_prob, result)
+        curves_by_rlz = self.rlzs_assoc.combine(result)
         oq = self.oqparam
         saved = AccumDict()
         for rlz in self.rlzs_assoc.realizations:

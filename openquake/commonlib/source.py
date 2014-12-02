@@ -753,6 +753,11 @@ def filter_sources(sources, sitecol, maxdist):
     return sorted(sources, key=operator.attrgetter('source_id'))
 
 
+def agg_prob(acc, prob):
+    """Aggregation function for probabilities"""
+    return 1. - (1. - acc) * (1. - prob)
+
+
 class RlzsAssoc(object):
     """
     Realization association class. It should not be instantiated directly,
@@ -813,10 +818,10 @@ class RlzsAssoc(object):
             gsims_by_trt[trt_id].append(GSIMS[gsim]())
         return gsims_by_trt
 
-    def combine(self, agg, results):
+    def combine(self, results, agg=agg_prob):
         """
-        :param agg: aggregation function
         :param results: dictionary (trt_model_id, gsim_name) -> <AccumDict>
+        :param agg: aggregation function (default composition of probabilities)
         :returns: a dictionary rlz -> aggregate <AccumDict>
 
         Example: a case with tectonic region type T1 with GSIMS A, B, C
@@ -837,7 +842,7 @@ class RlzsAssoc(object):
         ... ('T2', 'D'): 0.04,
         ... ('T2', 'E'): 0.05,}
         ...
-        >>> combinations = assoc.combine(operator.add, results)
+        >>> combinations = assoc.combine(results, operator.add)
         >>> for key, value in sorted(combinations.items()): print key, value
         r0 0.05
         r1 0.06
