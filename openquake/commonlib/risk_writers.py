@@ -950,6 +950,7 @@ class DamageWriter(object):
 
     def cm_node(self, loc, asset_refs, means, stddevs):
         """
+        :param loc: a location object with attributes x and y
         :param asset_refs: asset reference strings
         :param means: array of means, one per asset
         :param stddevs: array of stddevs, one per asset
