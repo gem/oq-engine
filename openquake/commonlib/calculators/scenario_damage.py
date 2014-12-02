@@ -101,14 +101,14 @@ class ScenarioDamageCalculator(base.BaseRiskCalculator):
                     dd_taxo.append(
                         DmgDistPerTaxonomy(key, dmg_state, mean, std))
             elif key_type == 'asset':
-                # values are mean and stddev, at D x 2 matrix
-                for dmg_state, mean_std in zip(dmg_states, values):
+                means, stddevs = values
+                for dmg_state, mean, std in zip(dmg_states, means, stddevs):
                     dd_asset.append(
                         DmgDistPerAsset(
                             ExposureData(key.id, Site(*key.location)),
-                            dmg_state, mean_std[0], mean_std[1]))
+                            dmg_state, mean, std))
         dd_total = []
-        for dmg_state, total in zip(dmg_states, totals):
+        for dmg_state, total in zip(dmg_states, totals.T):
             mean, std = scientific.mean_std(total)
             dd_total.append(DmgDistTotal(dmg_state, mean, std))
 
@@ -119,4 +119,10 @@ class ScenarioDamageCalculator(base.BaseRiskCalculator):
                     dmg_states, dd_taxo)
         f3 = export('dmg_dist_total_xml', self.oqparam.export_dir,
                     dmg_states, dd_total)
-        return f1 + f2 + f3
+        max_damage = dmg_states[-1]
+        # the collapse map is extracted from the damage distribution per asset
+        # (dda) by taking the value corresponding to the maximum damage
+        collapse_map = [dda for dda in dd_asset if dda.dmg_state == max_damage]
+        f4 = export('collapse_map_xml', self.oqparam.export_dir,
+                    dmg_states, collapse_map)
+        return f1 + f2 + f3 + f4

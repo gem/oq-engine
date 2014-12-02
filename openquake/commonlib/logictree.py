@@ -998,7 +998,7 @@ class GsimLogicTree(object):
         """
         Build a reduced GsimLogicTree.
 
-	    :param trts: a subset of tectonic region types
+        :param trts: a subset of tectonic region types
         """
         assert set(trts) <= set(self.filter_keys), (trts, self.filter_keys)
         return self.__class__(self.fname, self.branchset_filter, trts)
