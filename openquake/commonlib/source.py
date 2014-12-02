@@ -813,7 +813,7 @@ class RlzsAssoc(object):
             gsims_by_trt[trt_id].append(GSIMS[gsim]())
         return gsims_by_trt
 
-    def reduce(self, agg, results):
+    def combine(self, agg, results):
         """
         :param agg: aggregation function
         :param results: dictionary (trt_model_id, gsim_name) -> <AccumDict>
@@ -837,8 +837,8 @@ class RlzsAssoc(object):
         ... ('T2', 'D'): 0.04,
         ... ('T2', 'E'): 0.05,}
         ...
-        >>> reduced_dict = assoc.reduce(operator.add, results)
-        >>> for key, value in sorted(reduced_dict.items()): print key, value
+        >>> combinations = assoc.combine(operator.add, results)
+        >>> for key, value in sorted(combinations.items()): print key, value
         r0 0.05
         r1 0.06
         r2 0.06
@@ -855,7 +855,7 @@ class RlzsAssoc(object):
         r4: 0.03 + 0.04 (T1C + T2D)
         r5: 0.03 + 0.05 (T1C + T2E)
 
-        In reality, the reduce function is used with dictionaries with the
+        In reality, the `combine` method is used with dictionaries with the
         hazard curves keyed by intensity measure type and the aggregation
         function is the composition of probability, which however is closer
         to the sum for small probabilities.
