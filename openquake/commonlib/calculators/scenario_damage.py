@@ -18,7 +18,6 @@
 
 import os
 import logging
-import collections
 
 import numpy
 
@@ -26,26 +25,9 @@ from openquake.risklib import scientific
 from openquake.baselib.general import AccumDict
 from openquake.commonlib.calculators import base, calc, calculators
 from openquake.commonlib.export import export
-
-
-DmgState = collections.namedtuple('DmgState', 'dmg_state lsi')
-
-DmgDistPerTaxonomy = collections.namedtuple(
-    'DmgDistPerTaxonomy', 'taxonomy dmg_state mean stddev')
-
-DmgDistPerAsset = collections.namedtuple(
-    'DmgDistPerAsset', 'exposure_data dmg_state mean stddev')
-
-DmgDistTotal = collections.namedtuple(
-    'DmgDistTotal', 'dmg_state mean stddev')
-
-ExposureData = collections.namedtuple('ExposureData', 'asset_ref site')
-
-
-class Site(object):
-    def __init__(self, xy):
-        self.x, self.y = xy
-        self.wkt = 'POINT(%s %s)' % xy
+from openquake.commonlib.risk_writers import (
+    DmgState, DmgDistPerTaxonomy, DmgDistPerAsset, DmgDistTotal,
+    ExposureData, Site)
 
 
 def scenario_damage(riskinputs, riskmodel, monitor):
@@ -122,9 +104,10 @@ class ScenarioDamageCalculator(base.BaseRiskCalculator):
             elif key_type == 'asset':
                 # values are mean and stddev, at D x 2 matrix
                 for dmg_state, mean_std in zip(dmg_states, values):
+                    site = Site(key.location.x, key.location.y)
                     dd_asset.append(
                         DmgDistPerAsset(
-                            ExposureData(key.id, Site(key.location)),
+                            ExposureData(key.id, site),
                             dmg_state, mean_std[0], mean_std[1]))
         dd_total = []
         for dmg_state, total in zip(dmg_states, totals):
@@ -132,10 +115,10 @@ class ScenarioDamageCalculator(base.BaseRiskCalculator):
             dd_total.append(DmgDistTotal(dmg_state, mean, std))
 
         # export
-        f1 = export('dmg_per_asset_xml', self.oqparam.export_dir,
-                    self.riskmodel.damage_states, dd_asset)
-        f2 = export('dmg_per_taxonomy_xml', self.oqparam.export_dir,
-                    self.riskmodel.damage_states, dd_taxo)
-        f3 = export('dmg_total_xml', self.oqparam.export_dir,
-                    self.riskmodel.damage_states, dd_total)
+        f1 = export('dmg_dist_per_asset_xml', self.oqparam.export_dir,
+                    dmg_states, dd_asset)
+        f2 = export('dmg_dist_per_taxonomy_xml', self.oqparam.export_dir,
+                    dmg_states, dd_taxo)
+        f3 = export('dmg_dist_total_xml', self.oqparam.export_dir,
+                    dmg_states, dd_total)
         return f1 + f2 + f3
