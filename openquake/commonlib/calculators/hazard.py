@@ -124,12 +124,8 @@ class ClassicalCalculator(base.BaseHazardCalculator):
         rlzs = self.rlzs_assoc.realizations
         curves_by_rlz = self.rlzs_assoc.reduce(agg_prob, result)
         oq = self.oqparam
-        mean = sum(curves_by_rlz[rlz] for rlz in rlzs) / len(rlzs)
-        print mean
-        mean_maps = calc.compute_hazard_maps_by_imt(mean, oq.imtls, oq.poes)
-        print mean_maps
 
-        # export
+        # export curves
         saved = AccumDict()
         for rlz in rlzs:
             curves = curves_by_rlz[rlz]

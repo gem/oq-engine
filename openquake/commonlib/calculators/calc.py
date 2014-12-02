@@ -205,19 +205,6 @@ def compute_hazard_maps(curves, imls, poes):
     return numpy.array(result).transpose()
 
 
-def compute_hazard_maps_by_imt(curves_by_imt, imtls, poes):
-    """
-    Compute the hazard maps for all the IMTs.
-
-    :param curves_by_imt: dictionary IMT -> curves
-    :param imtls: dictionary IMT -> intensity measure levels
-    :param poes: list of PoEs for which to compute the maps
-    :returns: an AccumDict IMT -> hazard_maps per site and poes
-    """
-    return AccumDict({imt: compute_hazard_maps(curves_by_imt[imt], imls, poes)
-                      for imt, imls in imtls.iteritems()})
-
-
 def mean_curve(curves, weights=None):
     """
     Compute the mean or weighted average of a set of curves.
