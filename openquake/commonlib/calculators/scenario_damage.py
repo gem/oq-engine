@@ -122,6 +122,8 @@ class ScenarioDamageCalculator(base.BaseRiskCalculator):
         f3 = export('dmg_dist_total_xml', self.oqparam.export_dir,
                     dmg_states, dd_total)
         max_damage = dmg_states[-1]
+        # the collapse map is extracted from the damage distribution per asset
+        # (dda) by taking the value corresponding to the maximum damage
         collapse_map = [dda for dda in dd_asset if dda.dmg_state == max_damage]
         f4 = export('collapse_map_xml', self.oqparam.export_dir,
                     dmg_states, collapse_map)
