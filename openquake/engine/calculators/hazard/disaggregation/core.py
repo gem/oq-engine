@@ -290,7 +290,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         """
         dic = {}
         wkt = site.location.wkt2d
-        for rlz in self._get_realizations():
+        for rlz in self._realizations:
             for imt_str in self.hc.intensity_measure_types_and_levels:
                 imt = from_string(imt_str)
                 [curve] = models.HazardCurveData.objects.filter(
