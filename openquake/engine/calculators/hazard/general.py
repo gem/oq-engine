@@ -125,6 +125,8 @@ class BaseHazardCalculator(base.Calculator):
     functionality, like initialization procedures.
     """
 
+    tilepath = ()  # set only by the tiling calculator
+
     def __init__(self, job):
         super(BaseHazardCalculator, self).__init__(job)
         # a dictionary trt_model_id -> num_ruptures
@@ -183,13 +185,6 @@ class BaseHazardCalculator(base.Calculator):
                     self.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
 
         return acc
-
-    def _get_realizations(self):
-        """
-        Get all of the logic tree realizations for this calculation.
-        """
-        return models.LtRealization.objects\
-            .filter(lt_model__hazard_calculation=self.job).order_by('id')
 
     def pre_execute(self):
         """
@@ -271,7 +266,7 @@ class BaseHazardCalculator(base.Calculator):
         for sm in self.composite_model:
             # create an LtSourceModel for each distinct source model
             lt_model = models.LtSourceModel.objects.create(
-                hazard_calculation=self.job, sm_lt_path=sm.path,
+                hazard_calculation=self.job, sm_lt_path=self.tilepath + sm.path,
                 ordinal=sm.ordinal, sm_name=sm.name, weight=sm.weight)
 
             # save TrtModels for each tectonic region type
@@ -337,7 +332,7 @@ class BaseHazardCalculator(base.Calculator):
         """
         logs.LOG.progress("initializing realizations")
         cm = self.composite_model
-
+        self._realizations = []
         # update the attribute num_ruptures, to discard fake realizations
         for trt_model in cm.trt_models:
             trt_model.num_ruptures = models.TrtModel.objects.get(
@@ -349,11 +344,12 @@ class BaseHazardCalculator(base.Calculator):
         for rlz, gsim_by_trt in zip(
                 rlzs_assoc.realizations, rlzs_assoc.gsim_by_trt):
             lt_model = models.LtSourceModel.objects.get(
-                hazard_calculation=self.job, sm_lt_path=rlz.sm_lt_path)
+                hazard_calculation=self.job, sm_lt_path=self.tilepath + rlz.sm_lt_path)
             trt_models = lt_model.trtmodel_set.filter(num_ruptures__gt=0)
             lt_rlz = models.LtRealization.objects.create(
                 lt_model=lt_model, gsim_lt_path=rlz.gsim_lt_path,
                 weight=rlz.weight, ordinal=rlz.ordinal)
+            self._realizations.append(lt_rlz)
             for trt_model in trt_models:
                 trt = trt_model.tectonic_region_type
                 # populate the association table rlz <-> trt_model
@@ -380,7 +376,7 @@ class BaseHazardCalculator(base.Calculator):
         curves_by_imt = dict((imt, []) for imt in sorted_imts)
         individual_curves = self.job.get_param(
             'individual_curves', missing=True)
-        for rlz in self._get_realizations():
+        for rlz in self._realizations:
             if individual_curves:
                 # create a multi-imt curve
                 multicurve = models.Output.objects.create_output(
