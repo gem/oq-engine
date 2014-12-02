@@ -217,14 +217,19 @@ class BaseHazardCalculator(base.Calculator):
                 input_weight=info['input_weight'],
                 output_weight=info['output_weight'])
         self.check_limits(info['input_weight'], info['output_weight'])
-        self.imtls = self.hc.intensity_measure_types_and_levels
-        if info['n_levels']:  # we can compute hazard curves
-            self.zeros = numpy.array(
-                [numpy.zeros((info['n_sites'], len(self.imtls[imt])))
-                 for imt in sorted(self.imtls)])
-            self.ones = [numpy.zeros(len(self.imtls[imt]), dtype=float)
-                         for imt in sorted(self.imtls)]
+        self.init_zeros_ones()
         return info['input_weight'], info['output_weight']
+
+    def init_zeros_ones(self):
+        self.imtls = self.hc.intensity_measure_types_and_levels
+        if None in self.imtls.values():  # no levels, cannot compute curves
+            return
+        n_sites = len(self.site_collection)
+        self.zeros = numpy.array(
+            [numpy.zeros((n_sites, len(self.imtls[imt])))
+             for imt in sorted(self.imtls)])
+        self.ones = [numpy.zeros(len(self.imtls[imt]), dtype=float)
+                     for imt in sorted(self.imtls)]
 
     def check_limits(self, input_weight, output_weight):
         """
