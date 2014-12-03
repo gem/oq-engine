@@ -758,7 +758,7 @@ def agg_prob(acc, prob):
     return 1. - (1. - acc) * (1. - prob)
 
 
-class RlzsAssoc(object):
+class RlzsAssoc(collections.Mapping):
     """
     Realization association class. It should not be instantiated directly,
     but only via the method :meth:
@@ -870,6 +870,15 @@ class RlzsAssoc(object):
             for rlz in self.rlzs_assoc[key]:
                 acc = agg(acc, AccumDict({rlz: value}))
         return acc
+
+    def __iter__(self):
+        return self.rlzs_assoc.iterkeys()
+
+    def __getitem__(self, key):
+        return self.rlzs_assoc[key]
+
+    def __len__(self):
+        return len(self.rlzs_assoc)
 
 
 class CompositeSourceModel(collections.Sequence):

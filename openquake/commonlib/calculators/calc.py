@@ -159,3 +159,18 @@ def agg_prob(acc, prob):
        agg_prob(acc, eps) =~ acc + eps for eps << 1
     """
     return 1. - (1. - prob) * (1. - acc)
+
+
+def data_by_imt(dict_of_dict_arrays, imtls, n_sites):
+    """
+    Convert a dictionary key -> imt -> [value ...] into a dictionary
+    imt -> array([key -> value ...])
+    """
+    dic = {}
+    for imt in imtls:
+        res = numpy.array([{} for _ in xrange(n_sites)])
+        for k, dic in dict_of_dict_arrays.iteritems():
+            for i, curve in enumerate(dic[imt]):
+                res[i][k] = curve
+        dic[imt] = res
+    return dic

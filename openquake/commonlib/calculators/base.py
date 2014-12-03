@@ -27,6 +27,7 @@ from openquake.hazardlib.geo import geodetic
 from openquake.baselib import general
 from openquake.commonlib import readinput
 from openquake.commonlib.parallel import apply_reduce, DummyMonitor
+from openquake.risklib import workflows
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
@@ -131,7 +132,7 @@ class BaseRiskCalculator(BaseCalculator):
                             for i, assets in enumerate(self.assets_by_site)]
         blocks = general.split_in_blocks(
             idx_weight_pairs,
-            self.oqparam.concurrent_tasks or 1,
+            self.oqparam.concurrent_tasks,
             weight=operator.itemgetter(1))
         for block in blocks:
             idx = numpy.array([idx for idx, _weight in block])
@@ -196,6 +197,9 @@ class BaseRiskCalculator(BaseCalculator):
         logging.info('Extracted %d unique sites from the exposure',
                      len(self.sitecol))
 
+        # overridden for non-scenario calculators
+        self.rlzs_assoc = workflows.FakeRlzsAssoc()
+
     def execute(self):
         """
         Parallelize on the riskinputs and returns a dictionary of results.
@@ -205,7 +209,7 @@ class BaseRiskCalculator(BaseCalculator):
         monitor = self.monitor(self.core_func.__name__)
         return apply_reduce(
             self.core_func.__func__,
-            (self.riskinputs, self.riskmodel, monitor),
+            (self.riskinputs, self.riskmodel, self.rlzs_assoc, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=get_weight,
             key=get_imt)

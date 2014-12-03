@@ -83,8 +83,8 @@ class ClassicalCalculator(base.BaseHazardCalculator):
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = self.oqparam
         sources = list(self.composite_source_model.sources)
-        zero = AccumDict((rlz, AccumDict())
-                         for rlz in self.rlzs_assoc.realizations)
+        zero = AccumDict((key, AccumDict())
+                         for key in self.rlzs_assoc)
         gsims_assoc = self.rlzs_assoc.get_gsims_by_trt_id()
         return parallel.apply_reduce(
             self.core_func.__func__,

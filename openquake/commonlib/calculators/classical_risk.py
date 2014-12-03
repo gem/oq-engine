@@ -21,10 +21,10 @@ import logging
 import numpy
 from openquake.baselib import general
 from openquake.commonlib import readinput
-from openquake.commonlib.calculators import calculators, base
+from openquake.commonlib.calculators import calculators, base, calc
 
 
-def classical_risk(riskinputs, riskmodel, monitor):
+def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     """
     Compute and return the average losses for each asset.
 
@@ -32,12 +32,14 @@ def classical_risk(riskinputs, riskmodel, monitor):
         a list of :class:`openquake.risklib.workflows.RiskInput` objects
     :param riskmodel:
         a :class:`openquake.risklib.workflows.RiskModel` instance
+    :param rlzs_assoc:
+        associations (trt_id, gsim) -> realizations
     :param monitor:
         :class:`openquake.commonlib.parallel.PerformanceMonitor` instance
     """
     with monitor:
         result = general.AccumDict()
-        for loss_type, out in riskmodel.gen_outputs(riskinputs):
+        for out in riskmodel.gen_outputs(riskinputs, rlzs_assoc):
             for asset, average_losses in zip(out.assets, out.average_losses):
                 result += {('avg_loss', asset.id): average_losses}
     return result
@@ -102,14 +104,22 @@ class ClassicalRiskCalculator(base.BaseRiskCalculator):
         Associate the assets to the sites and build the riskinputs.
         """
         super(ClassicalRiskCalculator, self).pre_execute()
-        sites, hcurves_by_imt = readinput.get_sitecol_hcurves(self.oqparam)
+
         logging.info('Associating assets -> sites')
         with self.monitor('assoc_assets_sites'):
-            sitecol, assets_by_site = self.assoc_assets_sites(sites)
+            sitecol, assets_by_site = self.assoc_assets_sites(self.sitecol)
         num_assets = sum(len(assets) for assets in assets_by_site)
         num_sites = len(sitecol)
         logging.info('Associated %d assets to %d sites', num_assets, num_sites)
-        hcurves_by_imt = self.filter_hcurves(hcurves_by_imt, sitecol.indices)
+
+        # running the hazard calculation
+        hc = calculators['classical'](self.oqparam, self.monitor('hazard'))
+        hc.pre_execute()
+        self.rlzs_assoc = hc.rlzs_assoc
+        hcurves_by_imt = calc.data_by_imt(
+            hc.execute(), self.oqparam.imtls, num_sites)
+
+        logging.info('Preparing the risk input')
         self.riskinputs = self.build_riskinputs(hcurves_by_imt)
 
     def post_execute(self, result):
