@@ -153,8 +153,9 @@ class RiskCalculator(base.Calculator):
         self.risk_model = None
         self.loss_types = set()
         self.acc = {}
-        self.oqparam = job.get_oqparam()
+        self.rc = self.job.risk_calculation
         self.hc = self.rc.get_hazard_param()
+        self.oqparam = self.job.get_oqparam()
         # copy the non-conflicting hazard parameters in the risk parameters
         for name, value in self.hc:
             if not hasattr(self.oqparam, name):
@@ -256,16 +257,8 @@ class RiskCalculator(base.Calculator):
             self.agg_result, self.acc, self.concurrent_tasks,
             name=self.core.__name__)
 
-    @property
-    def rc(self):
-        """
-        A shorter and more convenient way of accessing the
-        :class:`~openquake.engine.db.models.RiskCalculation`.
-        """
-        return self.job.risk_calculation
-
     def get_risk_model(self):
         """
         :returns: a :class:`openquake.risklib.workflows.RiskModel` dictionary
         """
-        return get_risk_model(self.job.get_oqparam())
+        return get_risk_model(self.oqparam)
