@@ -798,6 +798,9 @@ def get_workflow(imt, taxonomy, oqparam, **extra):
 
 
 class FakeRlzsAssoc(object):
+    """
+    Used for scenario calculators, when there are no realizations.
+    """
     def __init__(self):
         self.realizations = [0]
 

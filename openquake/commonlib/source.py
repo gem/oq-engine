@@ -873,8 +873,8 @@ class RlzsAssoc(collections.Mapping):
 
     def collect_by_rlz(self, dicts):
         """
-        :param dicts: a list of dicts per site, as dictionaries
-        :returns: a dictionary with the dicts by realization
+        :param dicts: a list of dicts with key (trt_model_id, gsim)
+        :returns: a dictionary of lists keyed by realization
         """
         dicts_by_rlz = AccumDict()  # rlz -> list
         for dic in dicts:
