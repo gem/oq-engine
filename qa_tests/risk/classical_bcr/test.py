@@ -13,9 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-from nose.plugins.attrib import attr
-
-from qa_tests import risk
 from qa_tests.risk.classical_risk.test import ClassicalRiskCase1TestCase
 from openquake.qa_tests_data.classical_bcr import case_1
 from openquake.engine.db import models
@@ -37,10 +34,6 @@ class ClassicalBCRCase1TestCase(ClassicalRiskCase1TestCase):
   </bcrMap>
 </nrml>
     """
-
-    @attr('qa', 'risk', 'classical_bcr')
-    def test(self):
-        self._run_test()
 
     def actual_data(self, job):
         [result] = models.BCRDistributionData.objects.filter(
