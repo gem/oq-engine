@@ -491,8 +491,6 @@ class RiskCalculation(object):
             self.master_seed = 42
         if not hasattr(self, 'insured_losses'):
             self.insured_losses = False
-        if not hasattr(self, 'risk_investigation_time'):
-            self.risk_investigation_time = None
         if not hasattr(self, 'loss_curve_resolution'):
             self.loss_curve_resolution = 50  # default
 
