@@ -17,8 +17,6 @@
 Core functionality for the classical PSHA risk calculator.
 """
 
-from openquake.risklib import workflows
-
 from openquake.engine.calculators.risk import (
     hazard_getters, writers, validation)
 from openquake.engine.calculators.risk.classical_risk import core as classical
@@ -80,21 +78,3 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
     output_builders = [writers.BCRMapBuilder]
 
     getter_class = hazard_getters.HazardCurveGetter
-
-    bcr = True
-
-    def get_workflow(self, vf_orig, vf_retro):
-        """
-        :param vf_orig:
-            original vulnerability function
-        :param vf_orig:
-            retrofitted vulnerability functions
-        :returns:
-            an instance of
-            :class:`openquake.risklib.workflows.ClassicalBCR`
-        """
-        return workflows.ClassicalBCR(
-            vf_orig, vf_retro,
-            self.rc.lrem_steps_per_interval,
-            self.rc.interest_rate,
-            self.rc.asset_life_expectancy)
