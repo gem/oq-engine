@@ -102,8 +102,6 @@ class ClassicalRiskCase1TestCase(risk.BaseRiskQATestCase):
                 0.0, 0.0, 0.]
         job = helpers.get_job(
             helpers.get_data_path("simple_fault_demo_hazard/job.ini"))
-        # hack: override the imtls in the .ini file
-        job.save_params({'hazard_imtls': {'PGA': hazard_imls}})
 
         models.HazardSite.objects.create(
             hazard_calculation=job, location="POINT(1 1)")
