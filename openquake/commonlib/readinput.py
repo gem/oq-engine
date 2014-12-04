@@ -469,7 +469,8 @@ def set_imtls(oqparam):
         oqparam.risk_imtls = {fset.imt: fset.imls for fset in ffs.itervalues()}
 
     if hasattr(oqparam, 'hazard_imtls'):  # is a hazard calculation
-        oqparam.hazard_investigation_time = oqparam.investigation_time
+        oqparam.hazard_investigation_time = getattr(
+            oqparam, 'investigation_time', None)
 
 
 def get_imts(oqparam):
