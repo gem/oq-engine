@@ -16,6 +16,8 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+import cPickle
 import logging
 
 import numpy
@@ -39,9 +41,11 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     """
     with monitor:
         result = general.AccumDict()
-        for out in riskmodel.gen_outputs(riskinputs, rlzs_assoc):
-            for asset, average_losses in zip(out.assets, out.average_losses):
-                result += {('avg_loss', asset.id): average_losses}
+        for outputs in riskmodel.gen_outputs(riskinputs, rlzs_assoc):
+            for i, out in enumerate(outputs):
+                for asset, average_losses in zip(
+                        out.assets, out.average_losses):
+                    result += {('avg_loss', i, asset.id): average_losses}
     return result
 
 
@@ -114,10 +118,18 @@ class ClassicalRiskCalculator(base.BaseRiskCalculator):
 
         # running the hazard calculation
         hc = calculators['classical'](self.oqparam, self.monitor('hazard'))
-        hc.pre_execute()
-        self.rlzs_assoc = hc.rlzs_assoc
+        if os.path.exists('/tmp/hazard.out'):
+            with open('/tmp/hazard.out') as f:
+                haz_out = cPickle.load(f)
+        else:
+            hc.pre_execute()
+            result = hc.execute()
+            haz_out = dict(result=result, rlzs_assoc=hc.rlzs_assoc)
+            with open('/tmp/hazard.out', 'w') as f:
+                cPickle.dump(haz_out, f)
+        self.rlzs_assoc = haz_out['rlzs_assoc']
         hcurves_by_imt = calc.data_by_imt(
-            hc.execute(), self.oqparam.imtls, num_sites)
+            haz_out['result'], self.oqparam.imtls, num_sites)
 
         logging.info('Preparing the risk input')
         self.riskinputs = self.build_riskinputs(hcurves_by_imt)

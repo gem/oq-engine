@@ -472,6 +472,10 @@ def set_imtls(oqparam):
        oqparam.calculation_mode.startswith('scenario'):
         oqparam.hazard_investigation_time = oqparam.investigation_time
 
+    if hasattr(oqparam, 'risk_imtls') and not \
+       hasattr(oqparam, 'hazard_imtls'):
+        oqparam.hazard_imtls = oqparam.risk_imtls
+
 
 def get_imts(oqparam):
     """

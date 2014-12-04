@@ -132,7 +132,7 @@ class BaseRiskCalculator(BaseCalculator):
                             for i, assets in enumerate(self.assets_by_site)]
         blocks = general.split_in_blocks(
             idx_weight_pairs,
-            self.oqparam.concurrent_tasks,
+            self.oqparam.concurrent_tasks or 1,
             weight=operator.itemgetter(1))
         for block in blocks:
             idx = numpy.array([idx for idx, _weight in block])

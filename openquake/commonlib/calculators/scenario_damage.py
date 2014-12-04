@@ -30,7 +30,7 @@ from openquake.commonlib.risk_writers import (
     ExposureData, Site)
 
 
-def scenario_damage(riskinputs, riskmodel, monitor):
+def scenario_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
     """
     Core function for a damage computation.
 

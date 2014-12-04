@@ -26,7 +26,6 @@ import cPickle
 import logging
 import operator
 import traceback
-import itertools
 import time
 from datetime import datetime
 from concurrent.futures import as_completed, ProcessPoolExecutor

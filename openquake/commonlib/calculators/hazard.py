@@ -52,7 +52,7 @@ def classical(sources, sitecol, gsims_assoc, monitor):
     """
     max_dist = monitor.oqparam.maximum_distance
     truncation_level = monitor.oqparam.truncation_level
-    imtls = monitor.oqparam.intensity_measure_types_and_levels
+    imtls = monitor.oqparam.hazard_imtls
     trt_model_id = sources[0].trt_model_id
     trt = sources[0].tectonic_region_type
     gsims = gsims_assoc[trt_model_id]
