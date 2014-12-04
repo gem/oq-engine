@@ -151,12 +151,8 @@ class ClassicalTestCase(unittest.TestCase):
             expected_lrem, lrem, rtol=0.0, atol=0.0005)
 
     def test_lrem_po_computation(self):
-        hazard_curve = [
-            (0.01, 0.99), (0.08, 0.96),
-            (0.17, 0.89), (0.26, 0.82),
-            (0.36, 0.70), (0.55, 0.40),
-            (0.70, 0.01),
-        ]
+        hazard_imls = [0.01, 0.08, 0.17, 0.26, 0.36, 0.55, 0.7]
+        hazard_curve = [0.99, 0.96, 0.89, 0.82, 0.7, 0.4, 0.01]
 
         imls = [0.1, 0.2, 0.4, 0.6]
         covs = [0.5, 0.3, 0.2, 0.1]
@@ -168,7 +164,7 @@ class ClassicalTestCase(unittest.TestCase):
         # values between the imls, so steps=2
         loss_ratios, lrem = vuln_function.loss_ratio_exceedance_matrix(2)
         lrem_po = scientific._loss_ratio_exceedance_matrix_per_poos(
-            vuln_function, lrem, hazard_curve)
+            vuln_function, lrem, hazard_imls, hazard_curve)
 
         numpy.testing.assert_allclose(0.07, lrem_po[0][0], atol=0.005)
         numpy.testing.assert_allclose(0.06, lrem_po[1][0], atol=0.005)
@@ -191,12 +187,8 @@ class ClassicalTestCase(unittest.TestCase):
             expected_steps, vulnerability_function.mean_imls())
 
     def test_compute_loss_ratio_curve(self):
-        hazard_curve = [
-            (0.01, 0.99), (0.08, 0.96),
-            (0.17, 0.89), (0.26, 0.82),
-            (0.36, 0.70), (0.55, 0.40),
-            (0.70, 0.01)]
-
+        hazard_imls = [0.01, 0.08, 0.17, 0.26, 0.36, 0.55, 0.7]
+        hazard_curve = [0.99, 0.96, 0.89, 0.82, 0.7, 0.4, 0.01]
         imls = [0.1, 0.2, 0.4, 0.6]
         covs = [0.5, 0.3, 0.2, 0.1]
         loss_ratios = [0.05, 0.08, 0.2, 0.4]
@@ -205,7 +197,7 @@ class ClassicalTestCase(unittest.TestCase):
             'PGA', imls, loss_ratios, covs, "LN")
 
         loss_ratio_curve = scientific.classical(
-            vulnerability_function, hazard_curve, 2)
+            vulnerability_function, hazard_imls, hazard_curve, 2)
 
         expected_curve = [
             (0.0, 0.96), (0.025, 0.96),

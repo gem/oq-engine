@@ -29,12 +29,14 @@ import numpy
 from openquake.risklib import scientific, utils
 
 
-def ClassicalLossCurve(vulnerability_function, steps):
+def ClassicalLossCurve(vulnerability_function, hazard_imls, steps):
     """
     :param vulnerability_function:
        a :class:`openquake.risklib.scientific.VulnerabilityFunction`
        instance used to compute loss curves by using the Classical PSHA-based
        algorithm
+    :param hazard_imls:
+        the hazard intensity measure type and levels
     :param int steps:
        the number of steps used in the Classical PSHA-based algorithm
     :returns:
@@ -46,6 +48,7 @@ def ClassicalLossCurve(vulnerability_function, steps):
         functools.partial(
             scientific.classical,
             vulnerability_function,
+            hazard_imls,
             steps=steps))
 
 
