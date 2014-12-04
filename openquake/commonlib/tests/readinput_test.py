@@ -63,7 +63,7 @@ export_dir = %s
                 'maximum_distance': 1.0,
                 'inputs': {'site_model': site_model_input},
                 'sites': [(0.0, 0.0)],
-                'intensity_measure_types_and_levels': {'PGA': None},
+                'hazard_imtls': {'PGA': None},
             }
 
             with mock.patch('logging.warn') as warn:
@@ -113,7 +113,7 @@ export_dir = %s
                 'reference_depth_to_2pt5km_per_sec': 5.0,
                 'reference_vs30_type': 'measured',
                 'reference_vs30_value': 600.0,
-                'intensity_measure_types_and_levels': {'PGA': [0.1, 0.2]},
+                'hazard_imtls': {'PGA': [0.1, 0.2]},
             }
 
             params = vars(readinput.get_oqparam(source))

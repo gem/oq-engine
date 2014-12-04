@@ -113,8 +113,7 @@ def get_oqparam(job_ini, calculators=None):
     else:
         oqparam = OqParam(**get_params(job_ini))
 
-    # define the parameter `intensity measure types and levels`
-    oqparam.intensity_measure_types_and_levels = get_imtls(oqparam)
+    set_imtls(oqparam)
 
     return oqparam
 
@@ -446,38 +445,35 @@ def get_job_info(oqparam, source_models, sitecol):
                 max_realizations=max_realizations)
 
 
-def get_imtls(oqparam):
+def set_imtls(oqparam):
     """
-    Return a dictionary {imt_str: intensity_measure_levels}
+    Set the attributes .hazard_imtls and/or .risk_imtls
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     if hasattr(oqparam, 'intensity_measure_types'):
-        imtls = dict.fromkeys(oqparam.intensity_measure_types)
+        oqparam.hazard_imtls = dict.fromkeys(oqparam.intensity_measure_types)
         # remove the now redundant parameter
         delattr(oqparam, 'intensity_measure_types')
-    elif hasattr(oqparam, 'intensity_measure_types_and_levels'):
-        imtls = oqparam.intensity_measure_types_and_levels
-    elif vulnerability_files(oqparam.inputs):
-        imtls = get_imtls_from_vulnerabilities(oqparam.inputs)
-    elif fragility_files(oqparam.inputs):
+    if hasattr(oqparam, 'intensity_measure_types_and_levels'):
+        oqparam.hazard_imtls = oqparam.intensity_measure_types_and_levels
+        # remove the now redundant parameter
+        delattr(oqparam, 'intensity_measure_types_and_levels')
+    if vulnerability_files(oqparam.inputs):
+        oqparam.risk_imtls = get_imtls_from_vulnerabilities(oqparam.inputs)
+    if fragility_files(oqparam.inputs):
         fname = oqparam.inputs['fragility']
         cfd = getattr(oqparam, 'continuous_fragility_discretization', None)
         ffs = get_fragility_functions(fname, cfd)
-        imtls = {fset.imt: fset.imls for fset in ffs.itervalues()}
-    else:
-        raise ValueError('Missing intensity_measure_types_and_levels, '
-                         'vulnerability file and fragility file')
-    return imtls
+        oqparam.risk_imtls = {fset.imt: fset.imls for fset in ffs.itervalues()}
 
 
 def get_imts(oqparam):
     """
     Return a sorted list of IMTs as hazardlib objects
     """
-    return map(imt.from_string,
-               sorted(oqparam.intensity_measure_types_and_levels))
+    return map(imt.from_string, sorted(oqparam.imtls))
 
 
 def get_risk_model(oqparam):
@@ -490,10 +486,6 @@ def get_risk_model(oqparam):
     risk_models = {}  # (imt, taxonomy) -> workflow
     riskmodel = workflows.RiskModel(risk_models)
 
-    rit = getattr(oqparam, 'risk_investigation_time', None)
-    if rit:  # defined for event based calculations
-        oqparam.time_span = oqparam.tses = rit
-
     if oqparam.calculation_mode.endswith('_damage'):
         # scenario damage calculator
         fragility_functions = get_fragility_functions(
@@ -501,8 +493,9 @@ def get_risk_model(oqparam):
             getattr(oqparam, 'continuous_fragility_discretization', None))
         riskmodel.damage_states = fragility_functions.damage_states
         for taxonomy, ffs in fragility_functions.iteritems():
-            risk_models[ffs.imt, taxonomy] = workflows.get_workflow(
-                oqparam, fragility_functions=dict(damage=ffs))
+            imt = ffs.imt
+            risk_models[imt, taxonomy] = workflows.get_workflow(
+                imt, taxonomy, oqparam, fragility_functions=dict(damage=ffs))
     elif oqparam.calculation_mode.endswith('_bcr'):
         # bcr calculators
         vfs_orig = get_vfs(oqparam.inputs, retrofitted=False).items()
@@ -511,15 +504,20 @@ def get_risk_model(oqparam):
                 zip(vfs_orig, vfs_retro):
             assert imt_taxo == imt_taxo_  # same imt and taxonomy
             risk_models[imt_taxo] = workflows.get_workflow(
-                oqparam,
+                imt_taxo[0], imt_taxo[1], oqparam,
                 vulnerability_functions_orig=vf_orig,
                 vulnerability_functions_retro=vf_retro)
     else:
         # classical, event based and scenario calculators
+        extras = {}
         oqparam.__dict__.setdefault('insured_losses', False)
+        if oqparam.calculation_mode.startswith('event_based'):
+            extras['tses'] = (oqparam.ses_per_logic_tree_path *
+                              oqparam.investigation_time)
         for imt_taxo, vfs in get_vfs(oqparam.inputs).iteritems():
             risk_models[imt_taxo] = workflows.get_workflow(
-                oqparam, vulnerability_functions=vfs)
+                imt_taxo[0], imt_taxo[1], oqparam,
+                vulnerability_functions=vfs, **extras)
 
     return riskmodel
 
