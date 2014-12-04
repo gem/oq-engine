@@ -28,7 +28,7 @@ THISDIR = os.path.dirname(__file__)
 gmf = vectors_from_csv('gmf', THISDIR)
 
 assets = [workflows.Asset(
-          'asset_id', 'taxonomy', 1, (0, 0),
+          'asset_id', 'SOME-TAXONOMY', 1, (0, 0),
           dict(structural=10),
           insurance_limits=dict(structural=1250),
           deductibles=dict(structural=40))
@@ -64,8 +64,9 @@ class EventBasedTestCase(unittest.TestCase):
         self.assertAlmostEqual(0.500993631, first_curve_integral)
 
         wf = workflows.ProbabilisticEventBased(
+            'PGA', 'SOME-TAXONOMY',
             vulnerability_functions={self.loss_type: vf},
-            time_span=50,
+            risk_investigation_time=50,
             tses=10000,
             loss_curve_resolution=4,
             conditional_loss_poes=[0.1, 0.5, 0.9],
@@ -100,8 +101,9 @@ class EventBasedTestCase(unittest.TestCase):
         self.assertAlmostEqual(0.48983614471, first_curve_integral)
 
         wf = workflows.ProbabilisticEventBased(
+            'PGA', 'SOMETAXONOMY',
             vulnerability_functions={self.loss_type: vf},
-            time_span=50,
+            risk_investigation_time=50,
             tses=10000,
             loss_curve_resolution=4,
             conditional_loss_poes=[0.1, 0.5, 0.9],
@@ -138,8 +140,9 @@ class EventBasedTestCase(unittest.TestCase):
         self.assertAlmostEqual(0.483041416, first_curve_integral)
 
         wf = workflows.ProbabilisticEventBased(
+            'PGA', 'SOMETAXONOMY',
             vulnerability_functions={self.loss_type: vf},
-            time_span=50,
+            risk_investigation_time=50,
             tses=10000,
             loss_curve_resolution=4,
             conditional_loss_poes=[0.1, 0.5, 0.9],
@@ -225,8 +228,9 @@ class EventBasedTestCase(unittest.TestCase):
             insured_average_losses)
 
         wf = workflows.ProbabilisticEventBased(
+            'PGA', 'SOMETAXONOMY',
             vulnerability_functions={self.loss_type: vf},
-            time_span=50,
+            risk_investigation_time=50,
             tses=10000,
             loss_curve_resolution=4,
             conditional_loss_poes=[0.1, 0.5, 0.9],

@@ -468,9 +468,9 @@ def set_imtls(oqparam):
         ffs = get_fragility_functions(fname, cfd)
         oqparam.risk_imtls = {fset.imt: fset.imls for fset in ffs.itervalues()}
 
-    if hasattr(oqparam, 'hazard_imtls'):  # is a hazard calculation
-        oqparam.hazard_investigation_time = getattr(
-            oqparam, 'investigation_time', None)
+    if hasattr(oqparam, 'hazard_imtls') and not \
+       oqparam.calculation_mode.startswith('scenario'):
+        oqparam.hazard_investigation_time = oqparam.investigation_time
 
 
 def get_imts(oqparam):
