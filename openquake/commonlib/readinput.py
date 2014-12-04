@@ -406,7 +406,7 @@ def get_job_info(oqparam, source_models, sitecol):
                        for trt_model in src_model.trt_models
                        for src in trt_model)
 
-    imtls = oqparam.intensity_measure_types_and_levels
+    imtls = oqparam.imtls
     n_sites = len(sitecol)
 
     # the imtls dictionary has values None when the levels are unknown

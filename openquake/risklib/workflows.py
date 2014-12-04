@@ -421,7 +421,8 @@ class ProbabilisticEventBased(Workflow):
     def __init__(
             self, imt, taxonomy,
             vulnerability_functions,
-            risk_investigation_time, tses,
+            risk_investigation_time,
+            tses,
             loss_curve_resolution,
             conditional_loss_poes,
             insured_losses=False,
@@ -605,6 +606,7 @@ class ClassicalBCR(Workflow):
     def __init__(self, imt, taxonomy,
                  vulnerability_functions_orig,
                  vulnerability_functions_retro,
+                 hazard_imtls,
                  lrem_steps_per_interval,
                  interest_rate, asset_life_expectancy):
         self.imt = imt
@@ -613,13 +615,14 @@ class ClassicalBCR(Workflow):
         self.assets = None  # set a __call__ time
         self.interest_rate = interest_rate
         self.asset_life_expectancy = asset_life_expectancy
+        imls = hazard_imtls[self.imt]
         self.curves_orig = dict(
             (loss_type,
-             calculators.ClassicalLossCurve(vf, lrem_steps_per_interval))
+             calculators.ClassicalLossCurve(vf, imls, lrem_steps_per_interval))
             for loss_type, vf in vulnerability_functions_orig.items())
         self.curves_retro = dict(
             (loss_type,
-             calculators.ClassicalLossCurve(vf, lrem_steps_per_interval))
+             calculators.ClassicalLossCurve(vf, imls, lrem_steps_per_interval))
             for loss_type, vf in vulnerability_functions_retro.items())
 
     def __call__(self, loss_type, assets, hazard):
