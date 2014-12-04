@@ -160,6 +160,9 @@ class RiskCalculator(base.Calculator):
         for name, value in self.hc:
             if not hasattr(self.oqparam, name):
                 setattr(self.oqparam, name, value)
+        if not hasattr(self.oqparam, 'risk_investigation_time') and not \
+           self.oqparam.calculation_mode.startswith('scenario'):
+            self.oqparam.risk_investigation_time = self.hc.investigation_time
 
     def agg_result(self, acc, res):
         """
