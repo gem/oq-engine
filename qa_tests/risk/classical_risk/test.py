@@ -176,6 +176,7 @@ class ClassicalRiskCase2TestCase(ClassicalRiskCase1TestCase):
   </lossMap>
 </nrml>
     """
+
     def actual_data(self, job):
         return ([curve.loss_ratios
                 for curve in models.LossCurveData.objects.filter(
