@@ -468,6 +468,9 @@ def set_imtls(oqparam):
         ffs = get_fragility_functions(fname, cfd)
         oqparam.risk_imtls = {fset.imt: fset.imls for fset in ffs.itervalues()}
 
+    if hasattr(oqparam, 'hazard_imtls'):  # is a hazard calculation
+        oqparam.hazard_investigation_time = oqparam.investigation_time
+
 
 def get_imts(oqparam):
     """
@@ -485,6 +488,12 @@ def get_risk_model(oqparam):
     """
     risk_models = {}  # (imt, taxonomy) -> workflow
     riskmodel = workflows.RiskModel(risk_models)
+
+    oqparam.__dict__.setdefault('insured_losses', False)
+    extras = {}  # extra parameter tses for event based
+    if oqparam.calculation_mode.startswith('event_based'):
+        extras['tses'] = (oqparam.ses_per_logic_tree_path *
+                          oqparam.investigation_time)
 
     if oqparam.calculation_mode.endswith('_damage'):
         # scenario damage calculator
@@ -506,14 +515,9 @@ def get_risk_model(oqparam):
             risk_models[imt_taxo] = workflows.get_workflow(
                 imt_taxo[0], imt_taxo[1], oqparam,
                 vulnerability_functions_orig=vf_orig,
-                vulnerability_functions_retro=vf_retro)
+                vulnerability_functions_retro=vf_retro, **extras)
     else:
         # classical, event based and scenario calculators
-        extras = {}
-        oqparam.__dict__.setdefault('insured_losses', False)
-        if oqparam.calculation_mode.startswith('event_based'):
-            extras['tses'] = (oqparam.ses_per_logic_tree_path *
-                              oqparam.investigation_time)
         for imt_taxo, vfs in get_vfs(oqparam.inputs).iteritems():
             risk_models[imt_taxo] = workflows.get_workflow(
                 imt_taxo[0], imt_taxo[1], oqparam,
