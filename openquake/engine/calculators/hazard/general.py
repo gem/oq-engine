@@ -345,7 +345,8 @@ class BaseHazardCalculator(base.Calculator):
         for rlz, gsim_by_trt in zip(
                 rlzs_assoc.realizations, rlzs_assoc.gsim_by_trt):
             lt_model = models.LtSourceModel.objects.get(
-                hazard_calculation=self.job, sm_lt_path=self.tilepath + rlz.sm_lt_path)
+                hazard_calculation=self.job,
+                sm_lt_path=self.tilepath + rlz.sm_lt_path)
             trt_models = lt_model.trtmodel_set.filter(num_ruptures__gt=0)
             lt_rlz = models.LtRealization.objects.create(
                 lt_model=lt_model, gsim_lt_path=rlz.gsim_lt_path,
@@ -451,8 +452,7 @@ class BaseHazardCalculator(base.Calculator):
 
         Post-processing results will be stored directly into the database.
         """
-        weights = [rlz.weight for rlz in models.LtRealization.objects.filter(
-            lt_model__hazard_calculation=self.job)]
+        weights = [rlz.weight for rlz in self._realizations]
         num_rlzs = len(weights)
         if not num_rlzs:
             logs.LOG.warn('No realizations for hazard_calculation_id=%d',
