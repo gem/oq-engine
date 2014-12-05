@@ -493,8 +493,7 @@ class BaseHazardCalculator(base.Calculator):
             # prepare `output` and `hazard_curve` containers in the DB:
             container_ids = dict()
             if self.hc.mean_hazard_curves:
-                mean_output = models.Output.objects.create_output(
-                    job=self.job,
+                mean_output = self.job.get_or_create_output(
                     display_name='Mean Hazard Curves %s' % imt,
                     output_type='hazard_curve'
                 )
@@ -510,13 +509,10 @@ class BaseHazardCalculator(base.Calculator):
                 container_ids['mean'] = mean_hc.id
 
             for quantile in self.quantile_hazard_curves:
-                q_output = models.Output.objects.create_output(
-                    job=self.job,
+                q_output = self.job.get_or_create_output(
                     display_name=(
-                        '%s quantile Hazard Curves %s' % (quantile, imt)
-                    ),
-                    output_type='hazard_curve'
-                )
+                        '%s quantile Hazard Curves %s' % (quantile, imt)),
+                    output_type='hazard_curve')
                 q_hc = models.HazardCurve.objects.create(
                     output=q_output,
                     investigation_time=self.hc.investigation_time,
