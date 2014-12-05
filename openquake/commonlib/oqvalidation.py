@@ -108,7 +108,7 @@ class OqParam(valid.ParamSet):
         lrem_steps_per_interval=valid.positiveint,
         master_seed=valid.positiveint,
         maximum_distance=valid.positivefloat,
-        max_tile_weight=valid.positivefloat,
+        maximum_tile_weight=valid.positivefloat,
         mean_hazard_curves=valid.boolean,
         number_of_ground_motion_fields=valid.positiveint,
         number_of_logic_tree_samples=valid.positiveint,
@@ -297,4 +297,14 @@ class OqParam(valid.ParamSet):
         rms = getattr(self, 'rupture_mesh_spacing', None)
         if rms and not getattr(self, 'complex_fault_mesh_spacing', None):
             self.complex_fault_mesh_spacing = self.rupture_mesh_spacing
+        return True
+
+    def is_valid_tiling(self):
+        """
+        Currently the classical_tiling calculator does not support
+        sampling.
+        """
+        if self.calculation_mode == 'classical_tiling':
+            return (self.maximum_tile_weight and not
+                    self.number_of_logic_tree_samples)
         return True
