@@ -65,3 +65,6 @@ class ClassicalTilingHazardCalculator(BaseHazardCalculator):
 
     def post_execute(self):
         pass
+
+    def post_process(self):
+        pass
