@@ -55,9 +55,6 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         self.job.save()
         self.calc.execute()
 
-        # after filtering there are 74 sources
-        self.assertEqual(len(list(self.calc.composite_model.sources)), 74)
-
         self.job.status = 'post_executing'
         self.job.save()
         self.calc.post_execute()
