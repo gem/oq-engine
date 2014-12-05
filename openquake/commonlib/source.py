@@ -263,16 +263,17 @@ def split_fault_source(src):
         an instance of :class:`openquake.hazardlib.source.base.SeismicSource`
     """
     i = 0  # split source index
-    for mag, rate in src.mfd.get_annual_occurrence_rates():
-        if not rate:  # ignore zero occurency rate
-            continue
-        if mag > MAGNITUDE_FOR_RUPTURE_SPLITTING:
-            for rupture in src.iter_ruptures():
-                i += 1
-                yield SingleRuptureSource(
-                    rupture, '%s-%s' % (src.source_id, i),
-                    src.tectonic_region_type, src.trt_model_id)
-        else:
+    max_mag = src.get_min_max_mag()[1]
+    if max_mag > MAGNITUDE_FOR_RUPTURE_SPLITTING:
+        for rupture in src.iter_ruptures():
+            i += 1
+            yield SingleRuptureSource(
+                rupture, '%s-%s' % (src.source_id, i),
+                src.tectonic_region_type, src.trt_model_id)
+    else:  # split on the annual occurrence rates
+        for mag, rate in src.mfd.get_annual_occurrence_rates():
+            if not rate:  # ignore zero occurency rate
+                continue
             new_src = copy.copy(src)
             new_src.source_id = '%s-%s' % (src.source_id, i)
             new_src.mfd = mfd.EvenlyDiscretizedMFD(
