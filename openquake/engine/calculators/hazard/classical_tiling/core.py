@@ -53,7 +53,7 @@ class ClassicalTilingHazardCalculator(BaseHazardCalculator):
             self.oqparam, source_models, self.site_collection)
         self.imtls = self.oqparam.intensity_measure_types_and_levels
         weight = info['n_sites'] * info['n_levels'] * info['max_realizations']
-        nblocks = math.ceil(weight / self.oqparam.max_tile_weight)
+        nblocks = math.ceil(weight / self.oqparam.maximum_tile_weight)
         self.tiles = list(split_in_blocks(self.site_collection, nblocks))
         self.num_tiles = len(self.tiles)
 
