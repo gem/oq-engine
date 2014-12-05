@@ -383,7 +383,7 @@ def get_composite_source_model(oqparam, sitecol):
             trt_id += 1
             trt_model.split_sources_and_count_ruptures(
                 oqparam.area_source_discretization)
-            logging.info('splitting %s', trt_model)
+            logging.info(trt_model)
         smodels.append(source_model)
     return source.CompositeSourceModel(source_model_lt, smodels)
 
