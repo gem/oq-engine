@@ -8,6 +8,8 @@ OpenQuake: software for seismic hazard and risk assessment
 import logging
 import argparse
 import getpass
+import operator
+import itertools
 import os
 import sys
 
@@ -38,7 +40,7 @@ import openquake.engine
 from openquake.engine import __version__
 from openquake.engine import engine, logs
 from openquake.engine.db import models, upgrade_manager
-from openquake.engine.export.core import export as core_export
+from openquake.engine.export import core
 from openquake.engine.tools.import_gmf_scenario import import_gmf_scenario
 from openquake.engine.tools.import_hazard_curves import import_hazard_curves
 from openquake.engine.tools import save_hazards, load_hazards
@@ -213,6 +215,12 @@ def set_up_arg_parser():
         help='Export all the calculation outputs to the specified directory',
         nargs=2, metavar=('HAZARD_CALCULATION_ID', 'TARGET_DIR'))
     export_grp.add_argument(
+        '--export-stats',
+        '--es',
+        help='Export the statistical outputs to the specified directory',
+        nargs=3,
+        metavar=('HAZARD_CALCULATION_ID', 'TARGET_DIR', 'OUTPUT_TYPE'))
+    export_grp.add_argument(
         '--export-hazard-outputs',
         '--eho',
         help='Export all the outputs to the specified directory [deprecated]',
@@ -328,6 +336,24 @@ def export_outputs(hc_id, target_dir, export_type):
         export(output.id, target_dir, export_type)
 
 
+def export_stats(job_id, target_dir, output_type, export_type):
+    supported = ('hazard_curve', 'hazard_map', 'uh_spectra')
+    if output_type not in supported:
+        sys.exit('The output type %s is not supported. Choose one of %s' % (
+            output_type, ', '.join(supported)))
+    queryset = models.Output.objects.filter(
+        oq_job=job_id, output_type=output_type).order_by('display_name')
+    if queryset.count() == 0:
+        print 'There are no outputs of kind %s' % output_type
+        return
+    for display_name, outputs in itertools.groupby(
+            queryset, operator.attrgetter('display_name')):
+        for output in outputs:
+            obj = getattr(output, output_type)
+            if obj.statistics:
+                export(output.id, target_dir, 'csv')
+
+
 def export(output_id, target_dir, export_type):
     """
     Simple UI wrapper around
@@ -344,7 +370,7 @@ def export(output_id, target_dir, export_type):
                "successfully. Results might be uncomplete")
 
     try:
-        the_file = core_export(output_id, target_dir, export_type)
+        the_file = core.export(output_id, target_dir, export_type)
         print 'File Exported:'
         print the_file
     except NotImplementedError, err:
@@ -503,6 +529,11 @@ def main():
     elif args.export_outputs is not None:
         job_id, target_dir = args.export_outputs
         export_outputs(int(job_id), expanduser(target_dir), exports)
+
+    elif args.export_stats is not None:
+        job_id, target_dir, output_type = args.export_stats
+        export_stats(int(job_id), expanduser(target_dir), output_type, exports)
+
     # deprecated
     elif args.export_hazard_outputs is not None:
         deprecate('--export-hazard-outputs', '--export-outputs')
