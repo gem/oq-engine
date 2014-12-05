@@ -337,7 +337,9 @@ def export_outputs(hc_id, target_dir, export_type):
 
 
 def export_stats(job_id, target_dir, output_type, export_type):
-    supported = ('hazard_curve', 'hazard_map', 'uh_spectra')
+    supported = {'hazard_curve': models.HazardCurve,
+                 'hazard_map': models.HazardMap,
+                 'uh_spectra': models.UHS}
     if output_type not in supported:
         sys.exit('The output type %s is not supported. Choose one of %s' % (
             output_type, ', '.join(supported)))
@@ -349,9 +351,7 @@ def export_stats(job_id, target_dir, output_type, export_type):
     for display_name, outputs in itertools.groupby(
             queryset, operator.attrgetter('display_name')):
         for output in outputs:
-            obj = getattr(output, output_type)
-            if obj.statistics:
-                export(output.id, target_dir, 'csv')
+            export(output.id, target_dir, 'csv')
 
 
 def export(output_id, target_dir, export_type):
