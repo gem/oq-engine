@@ -356,6 +356,24 @@ def export_hazard_map(key, output, target):
     return dest
 
 
+@core.export_output.add(('hazard_map', 'csv'))
+def export_hazard_map_csv(key, output, target):
+    """
+    General hazard map export code.
+    """
+    file_ext = key[1]
+    hazard_map = models.HazardMap.objects.get(output=output)
+    haz_calc = output.oq_job
+
+    dest = _get_result_export_dest(haz_calc.id, target, output.hazard_map,
+                                   file_ext=file_ext)
+    data = zip(hazard_map.lons, hazard_map.lats, hazard_map.imls)
+    with open(dest, 'w') as f:
+        writer = csv.writer(f, delimiter=' ')
+        writer.writerows(sorted(data))
+    return dest
+
+
 class _DisaggMatrix(object):
     """
     A simple data model into which disaggregation matrix information can be
