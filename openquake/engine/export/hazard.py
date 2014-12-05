@@ -188,15 +188,17 @@ def export_hazard_curve_csv(key, output, target):
     Save a hazard curve (of a given IMT) as a .csv file in the format
     (lon lat poe1 ... poeN), where the fields are space separated.
     """
-    hc = models.HazardCurve.objects.get(output=output.id)
+    hcurves = list(models.HazardCurve.objects.filter(output=output.id))
+    hc = hcurves[0]
     haz_calc_id = output.oq_job.id
     dest = _get_result_export_dest(haz_calc_id, target, hc, file_ext='csv')
-    x_y_poes = models.HazardCurveData.objects.all_curves_simple(
-        filter_args=dict(hazard_curve=hc.id))
     with open(dest, 'wb') as f:
         writer = csv.writer(f, delimiter=' ')
-        for x, y, poes in sorted(x_y_poes):
-            writer.writerow([x, y] + poes)
+        for hc in hcurves:
+            x_y_poes = models.HazardCurveData.objects.all_curves_simple(
+                filter_args=dict(hazard_curve=hc.id))
+            for x, y, poes in sorted(x_y_poes):
+                writer.writerow([x, y] + poes)
     return dest
 
 
@@ -362,15 +364,15 @@ def export_hazard_map_csv(key, output, target):
     General hazard map export code.
     """
     file_ext = key[1]
-    hazard_map = models.HazardMap.objects.get(output=output)
-    haz_calc = output.oq_job
+    data = []
+    for hazard_map in models.HazardMap.objects.filter(output=output):
+        data.extend(zip(hazard_map.lons, hazard_map.lats, hazard_map.imls))
 
-    dest = _get_result_export_dest(haz_calc.id, target, output.hazard_map,
+    haz_calc = output.oq_job
+    dest = _get_result_export_dest(haz_calc.id, target, hazard_map,
                                    file_ext=file_ext)
-    data = zip(hazard_map.lons, hazard_map.lats, hazard_map.imls)
     with open(dest, 'w') as f:
-        writer = csv.writer(f, delimiter=' ')
-        writer.writerows(sorted(data))
+        csv.writer(f, delimiter=' ').writerows(sorted(data))
     return dest
 
 

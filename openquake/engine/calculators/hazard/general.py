@@ -138,6 +138,8 @@ class BaseHazardCalculator(base.Calculator):
             self.hc, 'mean_hazard_curves', None)
         self.quantile_hazard_curves = getattr(
             self.hc, 'quantile_hazard_curves', ())
+        self._hazard_curves = []
+        self._realizations = []
 
     @EnginePerformanceMonitor.monitor
     def execute(self):
@@ -432,6 +434,7 @@ class BaseHazardCalculator(base.Calculator):
             sa_period=sa_period,
             sa_damping=sa_damping,
         )
+        self._hazard_curves.append(haz_curve)
 
         # save hazard_curve_data
         logs.LOG.info('saving %d hazard curves for %s, imt=%s',
@@ -506,6 +509,7 @@ class BaseHazardCalculator(base.Calculator):
                     sa_damping=sa_damping,
                     statistics='mean'
                 )
+                self._hazard_curves.append(mean_hc)
                 container_ids['mean'] = mean_hc.id
 
             for quantile in self.quantile_hazard_curves:
@@ -523,6 +527,7 @@ class BaseHazardCalculator(base.Calculator):
                     statistics='quantile',
                     quantile=quantile
                 )
+                self._hazard_curves.append(q_hc)
                 container_ids['q%s' % quantile] = q_hc.id
 
             # num_rlzs * num_sites * num_levels
@@ -584,10 +589,8 @@ class BaseHazardCalculator(base.Calculator):
         if (getattr(self.hc, 'hazard_maps', None) or
                 getattr(self.hc, 'uniform_hazard_spectra', None)):
             with self.monitor('generating hazard maps'):
-                hazard_curves = models.HazardCurve.objects.filter(
-                    output__oq_job=self.job, imt__isnull=False)
                 tasks.apply_reduce(
                     hazard_curves_to_hazard_map,
-                    (self.job.id, hazard_curves, self.hc.poes))
+                    (self.job.id, self._hazard_curves, self.hc.poes))
         if getattr(self.hc, 'uniform_hazard_spectra', None):
             do_uhs_post_proc(self.job)

@@ -8,8 +8,6 @@ OpenQuake: software for seismic hazard and risk assessment
 import logging
 import argparse
 import getpass
-import operator
-import itertools
 import os
 import sys
 
@@ -339,7 +337,8 @@ def export_outputs(hc_id, target_dir, export_type):
 def export_stats(job_id, target_dir, output_type, export_type):
     supported = {'hazard_curve': models.HazardCurve,
                  'hazard_map': models.HazardMap,
-                 'uh_spectra': models.UHS}
+                 # 'uh_spectra': models.UHS  # not supported yet
+                 }
     if output_type not in supported:
         sys.exit('The output type %s is not supported. Choose one of %s' % (
             output_type, ', '.join(supported)))
@@ -348,10 +347,8 @@ def export_stats(job_id, target_dir, output_type, export_type):
     if queryset.count() == 0:
         print 'There are no outputs of kind %s' % output_type
         return
-    for display_name, outputs in itertools.groupby(
-            queryset, operator.attrgetter('display_name')):
-        for output in outputs:
-            export(output.id, target_dir, 'csv')
+    for output in queryset:
+        export(output.id, target_dir, 'csv')
 
 
 def export(output_id, target_dir, export_type):

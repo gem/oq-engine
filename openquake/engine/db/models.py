@@ -316,7 +316,7 @@ class OqJob(djm.Model):
         """
         :param disp_name: display name of the output
         :param output_type: the output type
-	    :returns: an Output instance
+        :returns: an Output instance
         """
         try:
             output = Output.objects.get(
