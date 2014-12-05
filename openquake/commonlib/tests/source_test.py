@@ -698,9 +698,9 @@ class CompositeSourceModelTestCase(unittest.TestCase):
         self.assertEqual(len(csm), 9)  # the smlt example has 1 x 3 x 3 paths
         rlzs = csm.get_rlzs_assoc().realizations
         self.assertEqual(len(rlzs), 18)  # the gsimlt has 1 x 2 paths
-        self.assertEqual(
-            map(len, csm.trt_models),
-            [1, 14, 1, 14, 1, 14, 1, 12, 1, 12, 1, 12, 1, 12, 1, 12, 1, 12])
+        self.assertEqual([1, 1178, 1, 1178, 1, 1178, 1, 592, 1, 592,
+                          1, 592, 1, 592, 1, 592, 1, 592],
+                         map(len, csm.trt_models))
 
         # removing trt_models
         for trt_model in csm.trt_models:
