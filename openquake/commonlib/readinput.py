@@ -381,10 +381,11 @@ def get_composite_source_model(oqparam, sitecol):
         for trt_model in source_model.trt_models:
             trt_model.id = trt_id
             trt_id += 1
-            logging.info('Splitting sources and counting ruptures...')
+            logging.info('Splitting sources and counting ruptures for %s',
+                         trt_model)
             trt_model.split_sources_and_count_ruptures(
                 oqparam.area_source_discretization)
-            logging.info(trt_model)
+            logging.info('Got %s', trt_model)
         smodels.append(source_model)
     return source.CompositeSourceModel(source_model_lt, smodels)
 
