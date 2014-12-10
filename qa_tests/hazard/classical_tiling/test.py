@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import StringIO
 import numpy
 import os
 import shutil
@@ -22,17 +21,20 @@ import tempfile
 
 from nose.plugins.attrib import attr
 
-from openquake.commonlib.tests import check_equal
-from openquake.engine.db import models
-from openquake.engine.export import core as hazard_export
 from qa_tests import _utils as qa_utils
-from qa_tests._utils import BaseQATestCase, compare_hazard_curve_with_csv
 from openquake.qa_tests_data.classical_tiling import case_1
 
 aaae = numpy.testing.assert_array_almost_equal
 
-   
+
+# TODO: this function can be reused in the disaggregation test
 def assert_equal_files(dcmp):
+    """
+    Compare two directories for equality and raise an AssertionError
+    if different files are found.
+
+    :param dcmp: a :class:`filecmp.dircmp` class
+    """
     for name in dcmp.diff_files:
         raise AssertionError("diff_file %s found in %s and %s" %
                              (name, dcmp.left, dcmp.right))
