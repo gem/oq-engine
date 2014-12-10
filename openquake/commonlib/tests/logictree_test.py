@@ -1432,9 +1432,9 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         if errormessage is not None:
             self.assertEqual(errormessage, str(exc.exception))
 
-    def parse_valid(self, xml, filter_keys=('Shield',)):
+    def parse_valid(self, xml, tectonic_region_types=('Shield',)):
         return logictree.GsimLogicTree(
-            StringIO(xml), 'applyToTectonicRegionType', filter_keys)
+            StringIO(xml), 'applyToTectonicRegionType', tectonic_region_types)
 
     def test_not_xml(self):
         self.parse_invalid('xxx', etree.XMLSyntaxError)
@@ -1534,7 +1534,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         </logicTree>
         """)
         self.parse_invalid(
-            xml, NameError, "Unknown GSIM 'SAdighEtAl1997' in file <StringIO>")
+            xml, NameError, "Unknown GSIM: SAdighEtAl1997 in file <StringIO>")
 
     def test_tectonic_region_type_used_twice(self):
         xml = _make_nrml("""\
