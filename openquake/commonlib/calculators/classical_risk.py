@@ -118,14 +118,15 @@ class ClassicalRiskCalculator(base.BaseRiskCalculator):
 
         # running the hazard calculation
         hc = calculators['classical'](self.oqparam, self.monitor('hazard'))
-        if os.path.exists('/tmp/hazard.out'):
-            with open('/tmp/hazard.out') as f:
+        cache = os.path.join(self.oqparam.export_dir, 'hazard.pik')
+        if self.oqparam.usecache:
+            with open(cache) as f:
                 haz_out = cPickle.load(f)
         else:
             hc.pre_execute()
             result = hc.execute()
             haz_out = dict(result=result, rlzs_assoc=hc.rlzs_assoc)
-            with open('/tmp/hazard.out', 'w') as f:
+            with open(cache, 'w') as f:
                 cPickle.dump(haz_out, f)
         self.rlzs_assoc = haz_out['rlzs_assoc']
         hcurves_by_imt = calc.data_by_imt(
