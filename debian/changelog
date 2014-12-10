@@ -1,3 +1,150 @@
+python-oq-risklib (0.5.0-1) precise; urgency=low
+
+  * Fixed version in the documentation
+  * Removed an incorrect warning
+  * Scenario damage tests
+  * Added a DamageWriter class and the expected outputs for the ScenarioDamage
+    QA tests
+  * Improve the error message when the user sets the wrong calculation_mode
+  * Moved get_realizations from the engine into commonlib
+  * Added more validation to dictionaries
+  * Added a new parameter complex_fault_mesh_spacing
+  * Ported the scenario tests to oq-lite
+  * Added a get_params utility
+  * Simplified the monitoring
+  * Add the QA tests data removed from the engine
+  * Added a forgotten .rst file
+  * Use shallow-clone to improve CI builds speed
+  * Fix documentation
+  * Merged commonlib inside risklib
+  * Move the calculation of input/output weights into commonlib
+  * The export_dir is now always given
+  * Small fixes to commonlib
+  * Better error message for regions that cannot be discretized
+  * Fixed precision
+  * Add a facility to read source models in commonlib
+  * Add an hard limit to check_mem_usage()
+  * Fixed test_different_levels_ok
+  * Removed an excessive validation
+  * Added a validation is_valid_hazard_curves
+  * Reverted the check on duplicated vulnerabilitySetID
+  * Improved the validation of vulnerability models
+  * Examples, tests and notebook for the feature of oq-lite
+  * Some refactoring of the classes RiskModel and RiskInput
+  * Basic support for risk calculators in commonlib
+  * Building the documentation of risklib and some refactoring
+  * Build the documentation of commonlib
+  * Support of the oq-lite command-line tool
+  * Converting the region_constraint into a WKT polygon in commonlib, not in
+    the engine
+  * Fixed a subtle ImportError
+  * Added a forgotten file
+  * Support for the simplification of the risk calculators
+  * Rewritten the RiskModel class and refactored the Workflow classes
+  * Loss per event per asset
+  * Dependency check
+  * Updated version of risklib
+  * Merged nrmllib inside commonlib
+  * Added get_exposure and some refactoring
+  * Changed the RiskModel API
+  * The investigationTime attribute is optional
+  * Use the new validation mechanism for vulnerability/fragility functions
+  * Reflected the change in risklib
+  * Fixed typo in an error message
+  * reversed edges to make complex surface comply with Aki & Richards conven...
+  * Moved the node context manager to the node library
+  * Better debugging representation of a node
+  * The maximum_distance must be mandatory in all hazard calculators
+  * Restored the NrmlHazardlibConverter
+  * Used PlanarSurface.from_corner_points
+  * Improved the validation on PMF
+  * Added a generic SourceConverter class for all sources, including the
+    NonParametric ones
+  * Added a lazy function read_nodes
+  * Added a "node_factory" validation facility to the node library
+  * Rewritten the openquake validation mechanism; now it is done in commonlib
+  * Support validation code for the engine
+  * Added a few validation functions
+  * Added a validation on the GSIM name
+  * Added MeanLossTestCase and some comments/docstrings
+  * Small improvements
+  * Logging the size of received data, to assess the stress on rabbitmq
+  * Parallel filtering
+  * Fixed the branch ordering
+  * Ordering the sources after splitting-filtering them
+  * Added an EpsilonProvider class
+  * Introduced get_epsilons
+  * Improved the splitting mechanism
+  * Fix an ordering on the exported GMF
+  * Moved parse_config from the engine to commonlib
+  * Given a proper ordering to BranchTuples
+  * Decoupled the sampling logic from the GsimLogicTree class
+  * Get more information about the number of realizations in full enumeration
+  * Small refactoring of the block-splitting routines
+  * Fixed the sampling in GsimLogicTree
+  * Small changes to support the refactoring on the engine side
+  * packager.sh: missing update fixed
+  * Risk loaders
+  * Added a property .imts to the RiskModel class
+  * The rupture seed is now visible in the XML file
+  * Made explicit the dependence from the getters
+  * GMPE logic tree fix
+  * Many improvements to make the SourceCollector more usable from the
+    command-line
+  * Fix for the case of empty SES
+  * Add a debug flag to enable set -x in packager.sh
+  * Improved the SourceCollector
+  * Fix gmf duplication
+  * Removed logictree.enumerate_paths
+  * Moved modules to manage sources and logic trees from the engine
+  * Minor refactoring of scientific.scenario_damage
+  * Reflected the API change in risklib
+  * Refactoring of risklib needed to solve the problem of the block size
+    dependence
+  * Remove CalculationUnit
+  * Removed some useless code from risklib
+  * Fix branch var to be compliant within the new CI git plugin
+  * Updates Copyright to 2014
+  * rupture_to_element facility
+  * Ci devtest
+  * Renamed common->commonlib
+  * Add setup.py
+  * Improved validation and some cleanup
+  * Decouple the gsim logic tree from the SES output and remove dead code
+  * Moved the tests directory inside the package
+  * Refactored the conversion library
+  * More work on the conversion/validation library
+  * Add loss type to risk outputs
+  * Pull request for the validation library
+  * Standard Loss map GeoJSON
+  * Exporting the GMF in XML should not require keeping all the tree in memory
+  * No unicode + StringIO in tests
+  * Fix parsing of isAbsolute
+  * Insured loss curves statistics
+  * Csv tools
+  * Fixed the streaming xml writer
+  * Hazard Curve GeoJSON parser
+  * GeoJSON map node values should be floats
+  * Node library
+  * Ruptures now have a tag attribute
+  * Revise insured losses algorithm
+  * Added an InvalidFile exception
+  * Add stdDevLoss field
+  * Compute Curve stats
+  * Implemented a StreamingXMLWriter
+  * Minor optimizations by using memoization
+  * Fix quantile maps computation
+  * Fix Asset statistics
+  * NRML parsers/writers should be able to accept either file paths or
+    file-like objects
+  * Refactoring: added risk workflows
+  * Add '__version__' to package init
+  * Hazard map GeoJSON writer
+  * GeoJSON LossMap Writer
+  * Remove 'ndenumerate'
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 10 Dec 2014 11:17:03 +0100
+
 python-oq-risklib (0.3.0-1) precise; urgency=low
 
   * Lxc sandbox - improved CI with sandboxed source tests (LP: #1177319)
