@@ -782,10 +782,10 @@ class RlzsAssoc(collections.Mapping):
     (3, 'BooreAtkinson2008') ['#6-SM2_a3b1-BA2008']
     (3, 'CampbellBozorgnia2008') ['#7-SM2_a3b1-CB2008']
     """
-    def __init__(self):
+    def __init__(self, rlzs_assoc=None):
         self.realizations = []
         self.gsim_by_trt = []  # [trt -> gsim]
-        self.rlzs_assoc = collections.defaultdict(list)  # trt_id, gsim -> rlzs
+        self.rlzs_assoc = rlzs_assoc or collections.defaultdict(list)
 
     def _add_realizations(self, idx, lt_model, realizations):
         # create the realizations for the given lt source model
@@ -827,13 +827,12 @@ class RlzsAssoc(collections.Mapping):
         Example: a case with tectonic region type T1 with GSIMS A, B, C
         and tectonic region type T2 with GSIMS D, E.
 
-        >>> assoc = RlzsAssoc()
-        >>> assoc.rlzs_assoc = {
+        >>> assoc = RlzsAssoc({
         ... ('T1', 'A'): ['r0', 'r1'],
         ... ('T1', 'B'): ['r2', 'r3'],
         ... ('T1', 'C'): ['r4', 'r5'],
         ... ('T2', 'D'): ['r0', 'r2', 'r4'],
-        ... ('T2', 'E'): ['r1', 'r3', 'r5']}
+        ... ('T2', 'E'): ['r1', 'r3', 'r5']})
         ...
         >>> results = {
         ... ('T1', 'A'): 0.01,
