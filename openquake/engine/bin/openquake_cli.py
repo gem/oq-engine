@@ -72,7 +72,7 @@ def set_up_arg_parser():
         '--log-file', '-L',
         help=('Location to store log messages; if not specified, log messages'
               ' will be printed to the console (to stderr)'),
-        required=False, metavar='LOG_FILE')
+        required=False, metavar='LOG_FILE', default='stderr')
     general_grp.add_argument(
         '--log-level', '-l',
         help='Defaults to "info"', required=False,
@@ -403,11 +403,18 @@ def main():
 
     args = arg_parser.parse_args()
 
-    exports = args.exports or 'xml'
+    exports = args.exports or 'xml,csv'
 
     if args.version:
         print __version__
         sys.exit(0)
+
+    if args.run_hazard or args.run_risk:
+        # the logging will be configured in engine.py
+        pass
+    else:
+        # configure a basic logging
+        logging.basicConfig(level=logging.INFO)
 
     if args.config_file:
         os.environ[config.OQ_CONFIG_FILE_VAR] = \
@@ -423,7 +430,6 @@ def main():
         sys.exit(0)
 
     if args.upgrade_db:
-        logging.basicConfig(level=logging.INFO)
         logs.set_level('info')
         conn = models.getcursor('admin').connection
         msg = upgrade_manager.what_if_I_upgrade(
@@ -450,7 +456,6 @@ def main():
 
     # hazard
     elif args.list_hazard_calculations:
-        logging.basicConfig(level=logging.INFO)
         list_calculations('hazard')
     elif args.run_hazard is not None:
         log_file = expanduser(args.log_file) \
