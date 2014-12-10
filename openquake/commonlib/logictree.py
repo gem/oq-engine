@@ -980,7 +980,8 @@ class GsimLogicTree(object):
         self.branchset_filter = branchset_filter
         self.tectonic_region_types = sorted(tectonic_region_types)
         assert branchset_filter == 'applyToTectonicRegionType'
-        if len(self.tectonic_region_types) > len(set(self.tectonic_region_types)):
+        trts = self.tectonic_region_types
+        if len(trts) > len(set(trts)):
             raise ValueError(
                 'The given tectonic region types are not distinct: %s' %
                 ','.join(self.tectonic_region_types))
@@ -998,7 +999,8 @@ class GsimLogicTree(object):
 
         :param trts: a subset of tectonic region types
         """
-        assert set(trts) <= set(self.tectonic_region_types), (trts, self.tectonic_region_types)
+        assert set(trts) <= set(self.tectonic_region_types), (
+            trts, self.tectonic_region_types)
         return self.__class__(self.fname, self.branchset_filter, trts)
 
     def get_num_branches(self):
