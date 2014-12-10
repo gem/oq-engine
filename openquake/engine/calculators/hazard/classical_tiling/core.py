@@ -33,6 +33,10 @@ class ClassicalTilingHazardCalculator(BaseHazardCalculator):
     """
 
     def run_tile(self, i, tile):
+        """
+        :param i: ordinal number of the tile being processed (from 1)
+        :param tile: list of sites being processed
+        """
         classical = calculators['classical'](self.job)
         classical.tilepath = ('tile%d' % i,)
         classical.site_collection = SiteCollection(tile)
@@ -43,6 +47,9 @@ class ClassicalTilingHazardCalculator(BaseHazardCalculator):
         classical.post_process()
 
     def pre_execute(self):
+        """
+        Read the full source model and sites and build the needed tiles
+        """
         self.oqparam = self.job.get_oqparam()
         source_model_lt = readinput.get_source_model_lt(self.oqparam)
         source_models = list(readinput.get_source_models(
@@ -58,13 +65,16 @@ class ClassicalTilingHazardCalculator(BaseHazardCalculator):
         self.num_tiles = len(self.tiles)
 
     def execute(self):
+        """
+        Executing all tiles sequentially
+        """
         for i, tile in enumerate(self.tiles, 1):
             LOG.progress('Running tile %d of %d, %s sites',
                          i, self.num_tiles, len(tile))
             self.run_tile(i, tile)
 
     def post_execute(self):
-        pass
+        """Do nothing"""
 
     def post_process(self):
-        pass
+        """Do nothing"""
