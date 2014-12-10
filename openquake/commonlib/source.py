@@ -911,7 +911,7 @@ class CompositeSourceModel(collections.Sequence):
         for sm in self:
             trts = set(trt_model.trt for trt_model in sm.trt_models
                        if trt_model.num_ruptures > 0)
-            if trts == set(sm.gsim_lt.filter_keys):
+            if trts == set(sm.gsim_lt.tectonic_region_types):
                 # nothing to remove
                 continue
             # build the reduced logic tree
