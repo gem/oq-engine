@@ -1,3 +1,9 @@
+python-oq-engine (1.2.0-2) precise; urgency=low
+
+  * More precise exception message
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 10 Dec 2014 16:21:06 +0100
+
 python-oq-engine (1.2.0-1) precise; urgency=low
 
   * Bugs fixed in 1.2 release: http://goo.gl/GjbF2r
