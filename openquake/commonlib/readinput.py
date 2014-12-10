@@ -471,6 +471,8 @@ def set_imtls(oqparam):
     if hasattr(oqparam, 'hazard_imtls') and not \
        oqparam.calculation_mode.startswith('scenario'):
         oqparam.hazard_investigation_time = oqparam.investigation_time
+    if not hasattr(oqparam, 'loss_curve_resolution'):
+        oqparam.loss_curve_resolution = 50  # default
 
 
 def get_imts(oqparam):
