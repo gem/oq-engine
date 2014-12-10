@@ -92,19 +92,16 @@ class ClassicalRiskCase1TestCase(risk.BaseRiskQATestCase):
         self._run_test()
 
     def get_hazard_job(self):
+        hazard_imls = [0.001, 0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4,
+                       0.45, 0.5, 0.55, 0.6, 0.7, 0.8, 0.9, 1.0]
+        poes = [0.039861266979, 0.039861266979, 0.0397287574803,
+                0.0296134266256, 0.0198273287565, 0.0130622701615,
+                0.00865538795, 0.00589852059369, 0.00406169858951,
+                0.00281172717953, 0.00199511741778, 0.00135870597285,
+                0.000989667841574, 0.000757544444296, 0.000272824002046,
+                0.0, 0.0, 0.]
         job = helpers.get_job(
             helpers.get_data_path("simple_fault_demo_hazard/job.ini"))
-
-        hazard_curve = [
-            (0.001, 0.0398612669790014),
-            (0.01, 0.039861266979001400), (0.05, 0.039728757480298900),
-            (0.10, 0.029613426625612500), (0.15, 0.019827328756491600),
-            (0.20, 0.013062270161451900), (0.25, 0.008655387950000430),
-            (0.30, 0.005898520593689670), (0.35, 0.004061698589511780),
-            (0.40, 0.002811727179526820), (0.45, 0.001995117417776690),
-            (0.50, 0.001358705972845710), (0.55, 0.000989667841573727),
-            (0.60, 0.000757544444296432), (0.70, 0.000272824002045979),
-            (0.80, 0.00), (0.9, 0.00), (1.0, 0.00)]
 
         models.HazardSite.objects.create(
             hazard_calculation=job, location="POINT(1 1)")
@@ -113,9 +110,9 @@ class ClassicalRiskCase1TestCase(risk.BaseRiskQATestCase):
                 output=models.Output.objects.create_output(
                     job, "Test Hazard curve", "hazard_curve"),
                 investigation_time=50,
-                imt="PGA", imls=[hz[0] for hz in hazard_curve],
+                imt="PGA", imls=hazard_imls,
                 statistics="mean"),
-            poes=[hz[1] for hz in hazard_curve],
+            poes=poes,
             location="POINT(1 1)")
 
         return job
@@ -145,7 +142,7 @@ class ClassicalRiskCase1TestCase(risk.BaseRiskQATestCase):
                 self.EXPECTED_LOSS_MAP_0_05_XML]
 
 
-class ClassicalRiskCase2TestCase(risk.BaseRiskQATestCase):
+class ClassicalRiskCase2TestCase(ClassicalRiskCase1TestCase):
     module = case_2
 
     EXPECTED_LOSS_CURVE_XML = """<?xml version='1.0' encoding='UTF-8'?>
@@ -177,39 +174,6 @@ class ClassicalRiskCase2TestCase(risk.BaseRiskQATestCase):
   </lossMap>
 </nrml>
     """
-
-    @attr('qa', 'risk', 'classical')
-    def test(self):
-        self._run_test()
-
-    def get_hazard_job(self):
-        job = helpers.get_job(
-            helpers.get_data_path("simple_fault_demo_hazard/job.ini"))
-
-        hazard_curve = [
-            (0.001, 0.0398612669790014),
-            (0.01, 0.039861266979001400), (0.05, 0.039728757480298900),
-            (0.10, 0.029613426625612500), (0.15, 0.019827328756491600),
-            (0.20, 0.013062270161451900), (0.25, 0.008655387950000430),
-            (0.30, 0.005898520593689670), (0.35, 0.004061698589511780),
-            (0.40, 0.002811727179526820), (0.45, 0.001995117417776690),
-            (0.50, 0.001358705972845710), (0.55, 0.000989667841573727),
-            (0.60, 0.000757544444296432), (0.70, 0.000272824002045979),
-            (0.80, 0.00), (0.9, 0.00), (1.0, 0.00)]
-
-        models.HazardSite.objects.create(
-            hazard_calculation=job, location="POINT(1 1)")
-        models.HazardCurveData.objects.create(
-            hazard_curve=models.HazardCurve.objects.create(
-                output=models.Output.objects.create_output(
-                    job, "Test Hazard curve", "hazard_curve"),
-                investigation_time=50,
-                imt="PGA", imls=[hz[0] for hz in hazard_curve],
-                statistics="mean"),
-            poes=[hz[1] for hz in hazard_curve],
-            location="POINT(1 1)")
-
-        return job
 
     def actual_data(self, job):
         return ([curve.loss_ratios
