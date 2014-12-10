@@ -34,7 +34,7 @@ from collections import namedtuple
 from decimal import Decimal
 from lxml import etree
 
-from openquake.commonlib import nrml
+from openquake.commonlib import nrml, valid
 from openquake.commonlib.node import node_from_xml
 
 import openquake.hazardlib
@@ -43,8 +43,6 @@ import openquake.hazardlib
 MIN_SINT_32 = -(2 ** 31)
 #: Maximum value for a seed number
 MAX_SINT_32 = (2 ** 31) - 1
-#: dictionary of GSIM classes available in hazardlib
-GSIM = openquake.hazardlib.gsim.get_available_gsims()
 
 
 LtRealization = namedtuple('LtRealization', 'value weight lt_path ordinal')
@@ -1065,9 +1063,9 @@ class GsimLogicTree(object):
         :param str value: the name of an existing GSIM class
         """
         try:
-            GSIM[value]
-        except KeyError:
-            raise NameError('Unknown GSIM %r in file %r' % (value, self.fname))
+            valid.gsim(value)
+        except ValueError as e:
+            raise NameError('%s in file %r' % (e, self.fname))
 
     def __iter__(self):
         # yield realizations for both sampling and full enumeration
