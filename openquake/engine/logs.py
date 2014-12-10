@@ -133,16 +133,12 @@ def handle(job, log_level='info', log_file=None):
     :param log_file:
          log file path (if None, logs on stdout only)
     """
-    handlers = [LogStreamHandler(job)]
-    if log_file:
-        handlers.append(LogFileHandler(job, log_file))
-    for handler in handlers:
-        logging.root.addHandler(handler)
+    handler = LogFileHandler(job, log_file) if log_file else None
     set_level(log_level)
     try:
         yield
     finally:
-        for handler in handlers:
+        if handler:
             logging.root.removeHandler(handler)
 
 
