@@ -72,7 +72,7 @@ def set_up_arg_parser():
         '--log-file', '-L',
         help=('Location to store log messages; if not specified, log messages'
               ' will be printed to the console (to stderr)'),
-        required=False, metavar='LOG_FILE')
+        required=False, metavar='LOG_FILE', default='stderr')
     general_grp.add_argument(
         '--log-level', '-l',
         help='Defaults to "info"', required=False,
