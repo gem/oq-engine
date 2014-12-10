@@ -44,7 +44,7 @@ from openquake.hazardlib.calc import gmf, filters
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import FilteredSiteCollection
 
-from openquake.commonlib import logictree
+from openquake.commonlib import valid
 
 from openquake.engine import writer
 from openquake.engine.calculators import calculators
@@ -240,7 +240,7 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol):
     # ruptures of homogeneous trt_model
     trt_model = ses_ruptures[0].rupture.ses_collection.trt_model
     rlzs_by_gsim = trt_model.get_rlzs_by_gsim()
-    gsims = [logictree.GSIM[gsim]() for gsim in rlzs_by_gsim]
+    gsims = [valid.gsim(gsim) for gsim in rlzs_by_gsim]
     calc = GmfCalculator(
         sorted(imts), sorted(gsims), trt_model.id,
         getattr(hc, 'truncation_level', None), models.get_correl_model(job))

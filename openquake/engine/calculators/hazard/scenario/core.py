@@ -24,9 +24,8 @@ import numpy
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.imt import from_string
-import openquake.hazardlib.gsim
 
-from openquake.commonlib.readinput import get_rupture
+from openquake.commonlib import valid, readinput
 
 from openquake.engine.calculators.hazard import general as haz_general
 from openquake.engine.calculators import calculators
@@ -36,8 +35,6 @@ from openquake.engine import logs, writer
 from openquake.engine.performance import EnginePerformanceMonitor
 
 from django.db import transaction
-
-AVAILABLE_GSIMS = openquake.hazardlib.gsim.get_available_gsims()
 
 
 @tasks.oqtask
@@ -140,7 +137,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         oqparam = models.oqparam(self.job.id)
         self.imts = map(
             from_string, sorted(oqparam.intensity_measure_types_and_levels))
-        self.rupture = get_rupture(oqparam)
+        self.rupture = readinput.get_rupture(oqparam)
 
         # check filtering
         trunc_level = getattr(oqparam, 'truncation_level', None)
@@ -175,7 +172,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
 
         correlation_model = models.get_correl_model(
             models.OqJob.objects.get(pk=self.job.id))
-        gsim = AVAILABLE_GSIMS[oqparam.gsim]()
+        gsim = valid.gsim(oqparam.gsim)
         self.computer = GmfComputer(
             self.rupture, self.site_collection, self.imts, gsim,
             trunc_level, correlation_model)
