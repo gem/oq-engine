@@ -25,7 +25,7 @@ from collections import namedtuple
 
 from openquake.hazardlib.calc import disagg
 from openquake.commonlib import hazard_writers
-from openquake.commonlib.writers import floatformat
+from openquake.commonlib.writers import floatformat, scientificformat
 
 from openquake.engine.db import models
 from openquake.engine.export import core
@@ -188,17 +188,18 @@ def export_hazard_curve_csv(key, output, target):
     Save a hazard curve (of a given IMT) as a .csv file in the format
     (lon lat poe1 ... poeN), where the fields are space separated.
     """
-    hcurves = list(models.HazardCurve.objects.filter(output=output.id))
-    hc = hcurves[0]
+    data = []
+    for hc in models.HazardCurve.objects.filter(output=output.id):
+        x_y_poes = models.HazardCurveData.objects.all_curves_simple(
+            filter_args=dict(hazard_curve=hc.id))
+        data.extend(x_y_poes)
     haz_calc_id = output.oq_job.id
     dest = _get_result_export_dest(haz_calc_id, target, hc, file_ext='csv')
     with open(dest, 'wb') as f:
         writer = csv.writer(f, delimiter=' ')
-        for hc in hcurves:
-            x_y_poes = models.HazardCurveData.objects.all_curves_simple(
-                filter_args=dict(hazard_curve=hc.id))
-            for x, y, poes in sorted(x_y_poes):
-                writer.writerow([x, y] + poes)
+        with floatformat('%12.8E'):
+            for x, y, poes in sorted(data):
+                writer.writerow(map(scientificformat, [x, y] + poes))
     return dest
 
 
@@ -372,7 +373,10 @@ def export_hazard_map_csv(key, output, target):
     dest = _get_result_export_dest(haz_calc.id, target, hazard_map,
                                    file_ext=file_ext)
     with open(dest, 'w') as f:
-        csv.writer(f, delimiter=' ').writerows(sorted(data))
+        writer = csv.writer(f, delimiter=' ')
+        with floatformat('%12.8E'):
+            for row in sorted(data):
+                writer.writerow(map(scientificformat, row))
     return dest
 
 
