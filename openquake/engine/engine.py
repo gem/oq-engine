@@ -21,6 +21,7 @@ import sys
 import time
 import getpass
 import itertools
+import logging
 import operator
 from contextlib import contextmanager
 from datetime import datetime
@@ -349,10 +350,12 @@ def run_job(cfg_file, log_level, log_file, exports='', hazard_output_id=None,
         job = job_from_file(
             cfg_file, getpass.getuser(), log_level, exports, hazard_output_id,
             hazard_calculation_id)
-        if log_file is None:
+        if log_file is 'stderr':
             edir = job.get_param('export_dir')
             log_file = os.path.join(edir, 'calc_%d.log' % job.id)
-        touch_log_file(log_file)  # check if writeable
+            logging.root.addHandler(logs.LogStreamHandler(job))
+        if log_file:
+            touch_log_file(log_file)  # check if writeable
 
         # Instantiate the calculator and run the calculation.
         t0 = time.time()
