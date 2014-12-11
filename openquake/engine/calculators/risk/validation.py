@@ -42,7 +42,7 @@ class HazardIMT(Validator):
     """
     def get_error(self):
         model_imts = set(imt for imt, taxo in self.calc.risk_model)
-        imtls = self.calc.rc.get_hazard_param().imtls
+        imtls = self.calc.oqparam.hazard_imtls
 
         # check that the hazard data have all the imts needed by the
         # risk calculation
