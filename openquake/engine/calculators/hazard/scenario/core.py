@@ -135,8 +135,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
 
     def create_ruptures(self):
         oqparam = models.oqparam(self.job.id)
-        self.imts = map(
-            from_string, sorted(oqparam.imtls))
+        self.imts = map(from_string, oqparam.imtls)
         self.rupture = readinput.get_rupture(oqparam)
 
         # check filtering
