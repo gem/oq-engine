@@ -74,7 +74,7 @@ class OrphanTaxonomies(Validator):
         taxonomies = self.calc.taxonomies_asset_count
         rm_taxonomies = set(imt_taxo[1] for imt_taxo in self.calc.risk_model)
         orphans = set(taxonomies) - rm_taxonomies
-        if orphans and not self.calc.rc.taxonomies_from_model:
+        if orphans and not self.calc.taxonomies_from_model:
             return ('The following taxonomies are in the exposure model '
                     'but not in the risk model: %s' % orphans)
 
@@ -105,7 +105,7 @@ class ExposureHasInsuranceBounds(Validator):
     """
 
     def get_error(self):
-        if (self.calc.rc.insured_losses and
+        if (self.calc.oqparam.insured_losses and
                 not self.calc.exposure_model.has_insurance_bounds()):
             return "Deductible or insured limit missing in exposure"
 
@@ -126,7 +126,7 @@ class ExposureHasTimeEvent(Validator):
     """
 
     def get_error(self):
-        if (self.calc.rc.inputs.get("occupants") is not None and
+        if (self.calc.oqparam.inputs.get("occupants") is not None and
             not self.calc.exposure_model.has_time_event(
                 self.calc.time_event)):
             return ("Some assets are missing an "

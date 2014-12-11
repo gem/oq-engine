@@ -115,7 +115,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                         numpy.zeros(aggregate_losses.shape))
                 aggregate_losses_acc[loss_type] += aggregate_losses
 
-        if self.rc.insured_losses:
+        if self.insured_losses:
             for loss_type in self.loss_types:
                 insured_losses = insured_losses_dict.get(
                     loss_type)
@@ -139,7 +139,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                     mean=numpy.mean(aggregate_losses),
                     std_dev=numpy.std(aggregate_losses, ddof=1))
 
-                if self.rc.insured_losses:
+                if self.insured_losses:
                     insured_losses = insured_losses_acc[loss_type]
                     models.AggregateLoss.objects.create(
                         output=models.Output.objects.create_output(

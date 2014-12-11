@@ -79,10 +79,9 @@ class ExposureContainedInTestCase(unittest.TestCase):
         calculator = base.RiskCalculator(self.job)
         models.JobStats.objects.create(oq_job=self.job)
         calculator.pre_execute()
-        self.rc = self.job.risk_calculation
 
         common_fake_args = dict(
-            exposure_model=self.rc.exposure_model, taxonomy="test")
+            exposure_model=self.job.exposure_model, taxonomy="test")
 
         asset = models.ExposureData(site=Point(0.5, 0.5),
                                     asset_ref="test1",
@@ -104,7 +103,7 @@ class AssetManagerTestCase(unittest.TestCase):
     def test_get_asset_chunk_query_args(self):
         calc = mock.Mock()
         calc.exposure_model.id = 0
-        calc.region_constraint.wkt = "REGION CONSTRAINT"
+        calc.oqparam.region_constraint.wkt = "REGION CONSTRAINT"
 
         p1 = mock.patch(self.base + '_get_people_query_helper')
         m1 = p1.start()
