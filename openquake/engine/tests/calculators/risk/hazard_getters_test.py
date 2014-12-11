@@ -72,9 +72,7 @@ class HazardCurveGetterTestCase(unittest.TestCase):
         [a2, a3] = self.assets
         self.assertEqual(self.getter.assets, [a2, a3])
         data = self.getter.get_data()
-        numpy.testing.assert_allclose(
-            [[(0.1, 0.1), (0.2, 0.2), (0.3, 0.3)],
-             [(0.1, 0.1), (0.2, 0.2), (0.3, 0.3)]], data)
+        numpy.testing.assert_allclose([[0.1, 0.2, 0.3], [0.1, 0.2, 0.3]], data)
 
 
 class GroundMotionGetterTestCase(HazardCurveGetterTestCase):

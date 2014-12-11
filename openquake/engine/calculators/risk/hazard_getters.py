@@ -145,9 +145,7 @@ class HazardCurveGetter(HazardGetter):
         # extract the poes for each site from the given hazard output
         imt_type, sa_period, sa_damping = from_string(self.imt)
         oc = ho.output_container
-        if oc.output.output_type == 'hazard_curve':
-            imls = oc.imls
-        elif oc.output.output_type == 'hazard_curve_multi':
+        if oc.output.output_type == 'hazard_curve_multi':
             oc = models.HazardCurve.objects.get(
                 output__oq_job=oc.output.oq_job,
                 output__output_type='hazard_curve',
@@ -156,7 +154,6 @@ class HazardCurveGetter(HazardGetter):
                 imt=imt_type,
                 sa_period=sa_period,
                 sa_damping=sa_damping)
-            imls = oc.imls
 
         cursor = models.getcursor('job_init')
         query = """\
@@ -169,7 +166,7 @@ class HazardCurveGetter(HazardGetter):
             location = models.HazardSite.objects.get(pk=site_id).location
             cursor.execute(query, (oc.id, 'SRID=4326; ' + location.wkt))
             poes = cursor.fetchall()[0][0]
-            all_curves.append(zip(imls, poes))
+            all_curves.append(poes)
         return all_curves
 
 
