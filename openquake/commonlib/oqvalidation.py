@@ -145,7 +145,9 @@ class OqParam(valid.ParamSet):
         Returns an OrderedDict with the risk intensity measure types and
         levels, if given, or the hazard ones.
         """
-        imtls = getattr(self, 'risk_imtls', None) or self.hazard_imtls
+        imtls = getattr(self, 'risk_imtls', None) or getattr(
+            self, 'hazard_imtls', None) or \
+            self.intensity_measure_types_and_levels
         return collections.OrderedDict(imtls.items())
 
     def is_valid_truncation_level_disaggregation(self):
