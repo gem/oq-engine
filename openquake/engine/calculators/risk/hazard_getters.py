@@ -299,8 +299,8 @@ class RiskInitializer(object):
         outputs of the previous hazard calculation
     :param taxonomy:
         the taxonomy of the assets we are interested in
-    :param rc:
-        a :class:`openquake.engine.db.models.RiskCalculation` instance
+    :param calc:
+        a risk calculator
 
     Warning: instantiating a RiskInitializer may perform a potentially
     expensive geospatial query.
