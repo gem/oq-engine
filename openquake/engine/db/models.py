@@ -554,11 +554,6 @@ class RiskCalculation(object):
         return dist
 
     @property
-    def preloaded_exposure_model(self):
-        pem_id = getattr(self, 'preloaded_exposure_model_id', None)
-        return ExposureModel.objects.get(pk=pem_id) if pem_id else None
-
-    @property
     def exposure_model(self):
         """
         Return the right exposure model by following rules in order:
@@ -568,9 +563,10 @@ class RiskCalculation(object):
         3. if an exposure was used in the hazard job, use it
         4. if no exposure is found, return None
         """
-        return (self.preloaded_exposure_model or
-                extract_from(
-                    [self.oqjob, self.hazard_calculation], 'exposuremodel'))
+        pem_id = getattr(self, 'preloaded_exposure_model_id', None)
+        preloaded = ExposureModel.objects.get(pk=pem_id) if pem_id else None
+        return (preloaded or extract_from(
+            [self.oqjob, self.hazard_calculation], 'exposuremodel'))
 
     @property
     def investigation_time(self):
@@ -2723,7 +2719,7 @@ class AssetManager(djm.GeoManager):
     Asset manager
     """
 
-    def get_asset_chunk(self, rc, assocs):
+    def get_asset_chunk(self, exposure_model, time_event, assocs):
         """
         :param assocs:
            a list of :class:`openquake.engine.db.models.AssetSite` objects
@@ -2741,7 +2737,8 @@ class AssetManager(djm.GeoManager):
         """
         assocs = sorted(assocs, key=lambda assoc: assoc.asset.id)
         asset_ids = tuple(assoc.asset.id for assoc in assocs)
-        query, args = self._get_asset_chunk_query_args(rc, asset_ids)
+        query, args = self._get_asset_chunk_query_args(
+            exposure_model, time_event, asset_ids)
         with transaction.commit_on_success('job_init'):
             annotated_assets = list(self.raw(query, args))
         # add asset_site_id attribute to each asset
@@ -2749,21 +2746,22 @@ class AssetManager(djm.GeoManager):
             ass.asset_site_id = assoc.id
         return annotated_assets
 
-    def _get_asset_chunk_query_args(self, rc, asset_ids):
+    def _get_asset_chunk_query_args(
+            self, exposure_model, time_event, asset_ids):
         """
         Build a parametric query string and the corresponding args for
         #get_asset_chunk
         """
-        args = (rc.exposure_model.id, asset_ids)
+        args = (exposure_model.id, asset_ids)
 
         people_field, occupants_cond, occupancy_join, occupants_args = (
             self._get_people_query_helper(
-                rc.exposure_model.category, rc.time_event))
+                exposure_model.category, time_event))
 
         args += occupants_args
 
         cost_type_fields, cost_type_joins = self._get_cost_types_query_helper(
-            rc.exposure_model.costtype_set.all())
+            exposure_model.costtype_set.all())
 
         query = """\
         SELECT riski.exposure_data.*,

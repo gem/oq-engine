@@ -130,7 +130,7 @@ class AssetManagerTestCase(unittest.TestCase):
         ORDER BY riski.exposure_data.id"""
         try:
             query, args = self.manager._get_asset_chunk_query_args(
-                rc, asset_ids)
+                rc.exposure_model, rc.time_event, asset_ids)
             self.assertEqual(expected_query, query.rstrip())
             self.assertEqual(args, (0, asset_ids, 'occ_arg1', 'occ_arg2'))
         finally:
