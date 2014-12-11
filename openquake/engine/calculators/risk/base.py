@@ -105,7 +105,7 @@ def run_risk(job_id, sorted_assocs, calc):
     acc = calc.acc
     hazard_outputs = calc.get_hazard_outputs()
     monitor = EnginePerformanceMonitor(None, job_id, run_risk)
-    exposure_model = calc.rc.exposure_model
+    exposure_model = calc.exposure_model
     time_event = calc.rc.time_event
     for taxonomy, assocs_by_taxonomy in itertools.groupby(
             sorted_assocs, lambda a: a.asset.taxonomy):
@@ -243,14 +243,16 @@ class RiskCalculator(base.Calculator):
             2. Parse the available risk models
             3. Validate exposure and risk models
         """
-        exposure = self.rc.exposure_model
-        if exposure is None:
+        try:
+            self.exposure_model = self.job.exposure_model
+        except models.ObjectDoesNotExist:
             with self.monitor('import exposure'):
                 ExposureDBWriter(self.job).serialize(
                     risk_parsers.ExposureModelParser(
                         self.oqparam.inputs['exposure']))
+            self.exposure_model = self.job.exposure_model
         self.taxonomies_asset_count = \
-            self.rc.exposure_model.taxonomies_in(
+            self.exposure_model.taxonomies_in(
                 self.oqparam.region_constraint)
 
         with self.monitor('parse risk models'):
