@@ -41,7 +41,7 @@ class ParseRiskModelsTestCase(unittest.TestCase):
         calc.parse_risk_model()
 
         self.assertEqual(['PGA'],
-                         list(calc.hc.intensity_measure_types_and_levels))
+                         list(calc.hc.imtls))
 
         self.assertEqual(3, calc.job.exposuremodel.exposuredata_set.count())
 
