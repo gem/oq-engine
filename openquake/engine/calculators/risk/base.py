@@ -156,7 +156,7 @@ class RiskCalculator(base.Calculator):
         self.loss_types = set()
         self.acc = {}
         self.rc = self.job.risk_calculation
-        self.hc = self.rc.get_hazard_param()
+        self.hc = self.rc.hazard_calculation.get_oqparam()
         self.oqparam = self.job.get_oqparam()
         # copy the non-conflicting hazard parameters in the risk parameters
         for name, value in self.hc:
