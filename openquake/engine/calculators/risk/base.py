@@ -110,7 +110,7 @@ def run_risk(job_id, sorted_assocs, calc):
     hazard_outputs = calc.get_hazard_outputs()
     monitor = EnginePerformanceMonitor(None, job_id, run_risk)
     exposure_model = calc.exposure_model
-    time_event = calc.rc.time_event
+    time_event = calc.time_event
     for taxonomy, assocs_by_taxonomy in itertools.groupby(
             sorted_assocs, lambda a: a.asset.taxonomy):
         with calc.monitor("getting assets"):
@@ -142,7 +142,7 @@ class RiskCalculator(base.Calculator):
     :attribute dict taxonomies_asset_count:
         A dictionary mapping each taxonomy with the number of assets the
         calculator will work on. Assets are extracted from the exposure input
-        and filtered according to the `RiskCalculation.region_constraint`.
+        and filtered according to the `region_constraint`.
 
     :attribute dict risk_model:
         A nested dict taxonomy -> loss type -> instances of `Workflow`.
@@ -184,6 +184,7 @@ class RiskCalculator(base.Calculator):
         if grid_spacing:
             dist = min(dist, grid_spacing * numpy.sqrt(2) / 2)
         self.best_maximum_distance = dist
+        self.time_event = getattr(self.oqparam, 'time_event', None)
 
     def get_hazard_outputs(self):
         """
