@@ -498,34 +498,6 @@ class RiskCalculation(object):
         """
         return self.hazard_calculation.get_oqparam()
 
-    def hazard_outputs(self):
-        """
-        Returns the list of hazard outputs to be considered. Apply
-        `filters` to the default queryset
-        """
-        if self.hazard_output:
-            return [self.hazard_output]
-        elif self.hazard_calculation:
-            if self.calculation_mode in ["classical_risk", "classical_bcr"]:
-                filters = dict(output_type='hazard_curve_multi',
-                               hazard_curve__lt_realization__isnull=False)
-            elif self.calculation_mode in [
-                    "event_based_risk", "event_based_bcr"]:
-                filters = dict(
-                    output_type='gmf', gmf__lt_realization__isnull=False)
-            elif self.calculation_mode == "event_based_fr":
-                filters = dict(output_type='ses')
-            elif self.calculation_mode in ['scenario_risk', 'scenario_damage']:
-                filters = dict(output_type='gmf_scenario')
-            else:
-                raise NotImplementedError
-
-            return self.hazard_calculation.output_set.filter(
-                **filters).order_by('id')
-        else:
-            raise RuntimeError("Neither hazard calculation "
-                               "neither a hazard output has been provided")
-
     @property
     def best_maximum_distance(self):
         """

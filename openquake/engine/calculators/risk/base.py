@@ -49,7 +49,7 @@ eps_sampling = int(config.get('risk', 'epsilon_sampling'))
 
 
 @tasks.oqtask
-def prepare_risk(job_id, counts_taxonomy, rc):
+def prepare_risk(job_id, counts_taxonomy, calc):
     """
     Associates the assets to the closest hazard sites and populate
     the table asset_site. For some calculators also initializes the
@@ -59,15 +59,15 @@ def prepare_risk(job_id, counts_taxonomy, rc):
         ID of the current risk job
     :param counts_taxonomy:
         a sorted list of pairs (counts, taxonomy) for each bunch of assets
-    :param rc:
-        the current risk calculation
+    :param calc:
+        the current risk calculator
     """
     for counts, taxonomy in counts_taxonomy:
 
         # building the RiskInitializers
         with EnginePerformanceMonitor(
                 "associating asset->site", job_id, prepare_risk):
-            initializer = hazard_getters.RiskInitializer(taxonomy, rc)
+            initializer = hazard_getters.RiskInitializer(taxonomy, calc)
             initializer.init_assocs()
 
         # estimating the needed memory
@@ -103,7 +103,7 @@ def run_risk(job_id, sorted_assocs, calc):
         the risk calculator to use
     """
     acc = calc.acc
-    hazard_outputs = calc.rc.hazard_outputs()
+    hazard_outputs = calc.get_hazard_outputs()
     monitor = EnginePerformanceMonitor(None, job_id, run_risk)
     exposure_model = calc.rc.exposure_model
     time_event = calc.rc.time_event
@@ -168,6 +168,43 @@ class RiskCalculator(base.Calculator):
         if not hasattr(self.oqparam, 'hazard_imtls'):
             self.oqparam.hazard_imtls = self.hc.imtls
 
+        self.oqparam.hazard_output = models.Output.objects.get(
+            pk=self.oqparam.hazard_output_id) \
+            if self.oqparam.hazard_output_id else None
+        self.oqparam.hazard_calculation = models.OqJob.objects.get(
+            pk=self.oqparam.hazard_calculation_id)
+
+    def get_hazard_outputs(self):
+        """
+        :param rcparam: OqParams instance for a risk calculation
+
+        Returns the list of hazard outputs to be considered. Apply
+        `filters` to the default queryset.
+        """
+        oq = self.oqparam
+        if oq.hazard_output:
+            return [oq.hazard_output]
+        elif oq.hazard_calculation:
+            if oq.calculation_mode in ["classical_risk", "classical_bcr"]:
+                filters = dict(output_type='hazard_curve_multi',
+                               hazard_curve__lt_realization__isnull=False)
+            elif oq.calculation_mode in [
+                    "event_based_risk", "event_based_bcr"]:
+                filters = dict(
+                    output_type='gmf', gmf__lt_realization__isnull=False)
+            elif oq.calculation_mode == "event_based_fr":
+                filters = dict(output_type='ses')
+            elif oq.calculation_mode in ['scenario_risk', 'scenario_damage']:
+                filters = dict(output_type='gmf_scenario')
+            else:
+                raise NotImplementedError
+
+            return oq.hazard_calculation.output_set.filter(
+                **filters).order_by('id')
+        else:
+            raise RuntimeError("Neither hazard calculation "
+                               "neither a hazard output has been provided")
+
     def agg_result(self, acc, res):
         """
         Aggregation method, to be overridden in subclasses
@@ -211,9 +248,10 @@ class RiskCalculator(base.Calculator):
             with self.monitor('import exposure'):
                 ExposureDBWriter(self.job).serialize(
                     risk_parsers.ExposureModelParser(
-                        self.rc.inputs['exposure']))
+                        self.oqparam.inputs['exposure']))
         self.taxonomies_asset_count = \
-            self.rc.exposure_model.taxonomies_in(self.rc.region_constraint)
+            self.rc.exposure_model.taxonomies_in(
+                self.oqparam.region_constraint)
 
         with self.monitor('parse risk models'):
             self.risk_model = self.get_risk_model()
@@ -243,7 +281,7 @@ class RiskCalculator(base.Calculator):
         # build the initializers hazard -> risk
         ct = sorted((counts, taxonomy) for taxonomy, counts
                     in self.taxonomies_asset_count.iteritems())
-        tasks.apply_reduce(prepare_risk, (self.job.id, ct, self.rc),
+        tasks.apply_reduce(prepare_risk, (self.job.id, ct, self),
                            concurrent_tasks=self.concurrent_tasks)
 
     @EnginePerformanceMonitor.monitor

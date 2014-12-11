@@ -305,15 +305,15 @@ class RiskInitializer(object):
     Warning: instantiating a RiskInitializer may perform a potentially
     expensive geospatial query.
     """
-    def __init__(self, taxonomy, rc):
-        self.hazard_outputs = rc.hazard_outputs()
+    def __init__(self, taxonomy, calc):
+        self.hazard_outputs = calc.get_hazard_outputs()
         self.taxonomy = taxonomy
-        self.rc = rc
-        self.hc = rc.hazard_calculation
+        self.rc = calc.rc
+        self.hc = calc.rc.hazard_calculation
         self.calculation_mode = self.rc.oqjob.get_param('calculation_mode')
         self.number_of_ground_motion_fields = self.hc.get_param(
             'number_of_ground_motion_fields', 0)
-        max_dist = rc.best_maximum_distance * 1000  # km to meters
+        max_dist = calc.rc.best_maximum_distance * 1000  # km to meters
         self.cursor = models.getcursor('job_init')
 
         hazard_exposure = models.extract_from([self.hc], 'exposuremodel')
@@ -330,9 +330,9 @@ WITH assocs AS (
   AND ST_COVERS(ST_GeographyFromText(%s), exp.site)
 )
 INSERT INTO riskr.asset_site (job_id, asset_id, site_id)
-SELECT * FROM assocs""", (rc.oqjob.id, self.hc.id,
-                          rc.exposure_model.id, taxonomy,
-                          rc.region_constraint))
+SELECT * FROM assocs""", (self.rc.oqjob.id, self.hc.id,
+                          self.rc.exposure_model.id, taxonomy,
+                          self.rc.region_constraint))
         else:
             # associate each asset to the closest hazard site
             self.assoc_query = self.cursor.mogrify("""\
@@ -347,9 +347,9 @@ WITH assocs AS (
   ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
 )
 INSERT INTO riskr.asset_site (job_id, asset_id, site_id)
-SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
-                          rc.exposure_model.id, taxonomy,
-                          rc.region_constraint))
+SELECT * FROM assocs""", (self.rc.oqjob.id, max_dist, self.hc.id,
+                          self.rc.exposure_model.id, taxonomy,
+                          self.rc.region_constraint))
 
         self.num_assets = 0
         self._rupture_ids = {}

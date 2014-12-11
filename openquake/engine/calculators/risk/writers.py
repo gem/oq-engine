@@ -388,7 +388,7 @@ def combine_builders(builders):
         return outputs
 
     a_builder = builders[0]
-    hazard_outputs = a_builder.calc.rc.hazard_outputs()
+    hazard_outputs = a_builder.calc.get_hazard_outputs()
     # now a special case for event_based_fr
     if a_builder.calc.rc.calculation_mode == 'event_based_fr':
         hos = []
