@@ -310,9 +310,8 @@ class RiskInitializer(object):
         self.hazard_outputs = calc.get_hazard_outputs()
         self.taxonomy = taxonomy
         self.calc = calc
-        self.rc = calc.rc
-        self.hc = calc.rc.hazard_calculation
-        self.calculation_mode = self.rc.oqjob.get_param('calculation_mode')
+        self.hc = calc.oqparam.hazard_calculation
+        self.calculation_mode = self.calc.oqparam.calculation_mode
         self.number_of_ground_motion_fields = self.hc.get_param(
             'number_of_ground_motion_fields', 0)
         max_dist = calc.best_maximum_distance * 1000  # km to meters
@@ -332,9 +331,9 @@ WITH assocs AS (
   AND ST_COVERS(ST_GeographyFromText(%s), exp.site)
 )
 INSERT INTO riskr.asset_site (job_id, asset_id, site_id)
-SELECT * FROM assocs""", (self.rc.oqjob.id, self.hc.id,
+SELECT * FROM assocs""", (self.calc.job.id, self.hc.id,
                           self.exposure_model.id, taxonomy,
-                          self.rc.region_constraint))
+                          self.calc.oqparam.region_constraint))
         else:
             # associate each asset to the closest hazard site
             self.assoc_query = self.cursor.mogrify("""\
@@ -349,9 +348,9 @@ WITH assocs AS (
   ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
 )
 INSERT INTO riskr.asset_site (job_id, asset_id, site_id)
-SELECT * FROM assocs""", (self.rc.oqjob.id, max_dist, self.hc.id,
+SELECT * FROM assocs""", (self.calc.job.id, max_dist, self.hc.id,
                           self.exposure_model.id, taxonomy,
-                          self.rc.region_constraint))
+                          self.calc.oqparam.region_constraint))
 
         self.num_assets = 0
         self._rupture_ids = {}
@@ -367,7 +366,7 @@ SELECT * FROM assocs""", (self.rc.oqjob.id, max_dist, self.hc.id,
 
         # now read the associations just inserted
         self.num_assets = models.AssetSite.objects.filter(
-            job=self.rc.oqjob, asset__taxonomy=self.taxonomy).count()
+            job=self.calc.job, asset__taxonomy=self.taxonomy).count()
 
         # check if there are no associations
         if self.num_assets == 0:
@@ -417,6 +416,7 @@ SELECT * FROM assocs""", (self.rc.oqjob.id, max_dist, self.hc.id,
         For the calculators `event_based_risk` and `scenario_risk` also
         stores the epsilons in the database for each asset_site association.
         """
+        oq = self.calc.oqparam
         if not self.epsilons_shape:
             self.calc_nbytes(epsilon_sampling)
         if self.calculation_mode.startswith('event_based'):
@@ -439,8 +439,8 @@ SELECT * FROM assocs""", (self.rc.oqjob.id, max_dist, self.hc.id,
                 logs.LOG.info('Building (%d, %d) epsilons for taxonomy %s',
                               num_assets, num_samples, self.taxonomy)
                 asset_sites = models.AssetSite.objects.filter(
-                    job=self.rc.oqjob, asset__taxonomy=self.taxonomy)
+                    job=self.calc.job, asset__taxonomy=self.taxonomy)
                 eps = make_epsilons(
                     num_assets, num_samples,
-                    self.rc.master_seed, self.rc.asset_correlation)
+                    oq.master_seed, oq.asset_correlation)
                 models.Epsilon.saveall(ses_coll, asset_sites, eps)

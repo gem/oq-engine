@@ -67,19 +67,19 @@ class OrphanTaxonomiesTestCase(unittest.TestCase):
         calc = mock.Mock()
         val = validation.OrphanTaxonomies(calc)
 
-        calc.rc.taxonomies_from_model = True
+        calc.taxonomies_from_model = True
         calc.risk_model = {('PGA', 'RM'): mock.Mock()}
         calc.taxonomies_asset_count = {'RC': 1, 'RM': 2}
 
         self.assertIsNone(val.get_error())
 
-        calc.rc.taxonomies_from_model = False
+        calc.taxonomies_from_model = False
         self.assertEqual("The following taxonomies are in the exposure model "
                          "but not in the risk model: set(['RC'])",
                          val.get_error())
 
         calc.risk_model = {('PGA', 'RM'): mock.Mock(),
-                            ('PGV', 'RC'): mock.Mock()}
+                           ('PGV', 'RC'): mock.Mock()}
         self.assertIsNone(val.get_error())
 
 
@@ -123,23 +123,23 @@ class ExposureHasInsuranceBoundsTestCase(unittest.TestCase):
 
         val = validation.ExposureHasInsuranceBounds(calc)
 
-        calc.rc.insured_losses = True
+        calc.insured_losses = True
         calc.exposure_model.has_insurance_bounds = mock.Mock(
             return_value=True)
         self.assertIsNone(val.get_error())
 
-        calc.rc.insured_losses = True
+        calc.insured_losses = True
         calc.exposure_model.has_insurance_bounds = mock.Mock(
             return_value=False)
         self.assertEqual("Deductible or insured limit missing in exposure",
                          val.get_error())
 
-        calc.rc.insured_losses = False
+        calc.insured_losses = False
         calc.exposure_model.has_insurance_bounds = mock.Mock(
             return_value=True)
         self.assertIsNone(val.get_error())
 
-        calc.rc.insured_losses = False
+        calc.insured_losses = False
         calc.exposure_model.has_insurance_bounds = mock.Mock(
             return_value=False)
         self.assertIsNone(val.get_error())
