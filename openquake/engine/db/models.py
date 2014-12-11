@@ -503,8 +503,6 @@ class RiskCalculation(object):
             pk=self.hazard_calculation_id)
         if not hasattr(self, 'taxonomies_from_model'):
             self.taxonomies_from_model = None
-        if not hasattr(self, 'time_event'):
-            self.time_event = None
         if not hasattr(self, 'asset_correlation'):
             self.asset_correlation = 0
         if not hasattr(self, 'master_seed'):
