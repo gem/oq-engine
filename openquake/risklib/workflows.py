@@ -24,7 +24,7 @@ import numpy
 from scipy import interpolate
 
 from openquake.baselib.general import CallableDict
-from openquake.risklib import calculators, utils, scientific
+from openquake.risklib import utils, scientific
 
 Output = collections.namedtuple('Output', 'hid weight loss_type output')
 
@@ -140,7 +140,7 @@ class Classical(Workflow):
        quantiles loss curves, maps and fractions.
 
     Per-realization Output are saved into
-    :class:`openquake.risklib.workflows.Classical.Output` which contains
+    :class:`openquake.risklib.scientific.Classical.Output` which contains
     the several fields:
 
     :attr assets:
@@ -163,7 +163,7 @@ class Classical(Workflow):
       number of `poes_disagg`. Shape: (D, N)
 
     The statistical outputs are stored into
-    :class:`openquake.risklib.workflows.Classical.StatisticalOutput`,
+    :class:`openquake.risklib.scientific.Classical.StatisticalOutput`,
     which holds the following fields:
 
     :attr assets:
@@ -233,10 +233,10 @@ class Classical(Workflow):
         imls = hazard_imtls[self.imt]
         self.curves = dict(
             (loss_type,
-             calculators.ClassicalLossCurve(vf, imls, lrem_steps_per_interval))
+             scientific.ClassicalLossCurve(vf, imls, lrem_steps_per_interval))
             for loss_type, vf in vulnerability_functions.items())
-        self.maps = calculators.LossMap(conditional_loss_poes)
-        self.fractions = calculators.LossMap(poes_disagg)
+        self.maps = scientific.LossMap(conditional_loss_poes)
+        self.fractions = scientific.LossMap(poes_disagg)
         self.insured_losses = insured_losses
 
     def __call__(self, loss_type, assets, hazard_curves, _epsilons=None):
@@ -245,13 +245,13 @@ class Classical(Workflow):
             the loss type considered
         :param assets:
             assets is an iterator over N
-            :class:`openquake.risklib.workflows.Asset` instances
+            :class:`openquake.risklib.scientific.Asset` instances
         :param hazard_curves:
             curves is an iterator over hazard curves (numpy array shaped 2xR).
         :param _epsilons:
             ignored, here only for API compatibility with other calculators
         :returns:
-            a :class:`openquake.risklib.workflows.Classical.Output` instance.
+            a :class:`openquake.risklib.scientific.Classical.Output` instance.
         """
         curves = self.curves[loss_type](hazard_curves)
         average_losses = numpy.array([scientific.average_loss(losses, poes)
@@ -287,7 +287,7 @@ class Classical(Workflow):
             #weighted_quantile_curve(curves, weights, quantile)
             #quantile_curve(curves, quantile)
         :returns:
-            a :class:`openquake.risklib.workflows.Classical.StatisticalOutput`
+            a :class:`openquake.risklib.scientific.Classical.StatisticalOutput`
             instance holding statistical outputs (e.g. mean loss curves).
         """
         if len(all_outputs) == 1:  # single realization
@@ -307,7 +307,7 @@ class Classical(Workflow):
 
         (mean_curves, mean_average_losses, mean_maps,
          quantile_curves, quantile_average_losses, quantile_maps) = (
-            calculators.exposure_statistics(
+            scientific.exposure_statistics(
                 [normalize_curves(curves)
                  for curves
                  in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
@@ -318,7 +318,7 @@ class Classical(Workflow):
             loss_curves = [out.insured_curves for out in outputs]
             (mean_insured_curves, mean_average_insured_losses, _,
              quantile_insured_curves, quantile_average_insured_losses, _) = (
-                calculators.exposure_statistics(
+                scientific.exposure_statistics(
                     [normalize_curves(curves)
                      for curves
                      in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
@@ -363,7 +363,7 @@ class ProbabilisticEventBased(Workflow):
     Implements the Probabilistic Event Based workflow
 
     Per-realization Output are saved into
-    :class:`openquake.risklib.workflows.ProbabilisticEventBased.Output`
+    :class:`openquake.risklib.scientific.ProbabilisticEventBased.Output`
     which contains the several fields:
 
     :attr assets:
@@ -401,7 +401,7 @@ class ProbabilisticEventBased(Workflow):
 
     The statistical outputs are stored into
     :class:`.ProbabilisticEventBased.StatisticalOutput`.
-    See :class:`openquake.risklib.workflows.Classical.StatisticalOutput` for
+    See :class:`openquake.risklib.scientific.Classical.StatisticalOutput` for
     more details.
     """
     Output = collections.namedtuple(
@@ -438,9 +438,9 @@ class ProbabilisticEventBased(Workflow):
         self.imt = imt
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
-        self.curves = calculators.EventBasedLossCurve(
+        self.curves = scientific.EventBasedLossCurve(
             risk_investigation_time, tses, loss_curve_resolution)
-        self.maps = calculators.LossMap(conditional_loss_poes)
+        self.maps = scientific.LossMap(conditional_loss_poes)
         self.insured_losses = insured_losses
         self.return_loss_matrix = return_loss_matrix
 
@@ -467,7 +467,7 @@ class ProbabilisticEventBased(Workflow):
 
         :param assets:
            assets is an iterator over
-           :class:`openquake.risklib.workflows.Asset` instances
+           :class:`openquake.risklib.scientific.Asset` instances
 
         :param ground_motion_values:
            a numpy array with ground_motion_values of shape N x R
@@ -480,7 +480,7 @@ class ProbabilisticEventBased(Workflow):
 
         :returns:
             a
-            :class:`openquake.risklib.workflows.ProbabilisticEventBased.Output`
+            :class:`openquake.risklib.scientific.ProbabilisticEventBased.Output`
             instance.
         """
         loss_matrix = self.risk_functions[loss_type].apply_to(
@@ -557,7 +557,7 @@ class ProbabilisticEventBased(Workflow):
 
         (mean_curves, mean_average_losses, mean_maps,
          quantile_curves, quantile_average_losses, quantile_maps) = (
-            calculators.exposure_statistics(
+            scientific.exposure_statistics(
                 [self._normalize_curves(curves) for curves in curve_matrix],
                 self.maps.poes, weights, quantiles, post_processing))
         elt = sum((out.event_loss_table for out in outputs),
@@ -567,7 +567,7 @@ class ProbabilisticEventBased(Workflow):
             loss_curves = [out.insured_curves for out in outputs]
             (mean_insured_curves, mean_average_insured_losses, _,
              quantile_insured_curves, quantile_average_insured_losses, _) = (
-                calculators.exposure_statistics(
+                scientific.exposure_statistics(
                     [self._normalize_curves(curves)
                      for curves
                      in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
@@ -618,11 +618,11 @@ class ClassicalBCR(Workflow):
         imls = hazard_imtls[self.imt]
         self.curves_orig = dict(
             (loss_type,
-             calculators.ClassicalLossCurve(vf, imls, lrem_steps_per_interval))
+             scientific.ClassicalLossCurve(vf, imls, lrem_steps_per_interval))
             for loss_type, vf in vulnerability_functions_orig.items())
         self.curves_retro = dict(
             (loss_type,
-             calculators.ClassicalLossCurve(vf, imls, lrem_steps_per_interval))
+             scientific.ClassicalLossCurve(vf, imls, lrem_steps_per_interval))
             for loss_type, vf in vulnerability_functions_retro.items())
 
     def __call__(self, loss_type, assets, hazard):
@@ -666,7 +666,7 @@ class ProbabilisticEventBasedBCR(Workflow):
         self.asset_life_expectancy = asset_life_expectancy
         self.vf_orig = vulnerability_functions_orig
         self.vf_retro = vulnerability_functions_retro
-        self.curves = calculators.EventBasedLossCurve(
+        self.curves = scientific.EventBasedLossCurve(
             risk_investigation_time, tses, loss_curve_resolution)
 
     def __call__(self, loss_type, assets, gmfs, epsilons, event_ids):
