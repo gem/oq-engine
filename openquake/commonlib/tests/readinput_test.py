@@ -48,6 +48,7 @@ maximum_distance=1
 truncation_level=0
 random_seed=0
 intensity_measure_types = PGA
+investigation_time = 50
 export_dir = %s
         """ % (site_model_input, TMP))
 
@@ -63,7 +64,9 @@ export_dir = %s
                 'maximum_distance': 1.0,
                 'inputs': {'site_model': site_model_input},
                 'sites': [(0.0, 0.0)],
-                'intensity_measure_types_and_levels': {'PGA': None},
+                'hazard_imtls': {'PGA': None},
+                'investigation_time': 50.0,
+                'hazard_investigation_time': 50.0,
             }
 
             with mock.patch('logging.warn') as warn:
@@ -96,6 +99,7 @@ reference_vs30_value = 600.0
 reference_depth_to_2pt5km_per_sec = 5.0
 reference_depth_to_1pt0km_per_sec = 100.0
 intensity_measure_types_and_levels = {'PGA': [0.1, 0.2]}
+investigation_time = 50.
 export_dir = %s
             """ % (sites_csv, TMP))
             exp_base_path = os.path.dirname(
@@ -113,7 +117,9 @@ export_dir = %s
                 'reference_depth_to_2pt5km_per_sec': 5.0,
                 'reference_vs30_type': 'measured',
                 'reference_vs30_value': 600.0,
-                'intensity_measure_types_and_levels': {'PGA': [0.1, 0.2]},
+                'hazard_imtls': {'PGA': [0.1, 0.2]},
+                'investigation_time': 50.0,
+                'hazard_investigation_time': 50.0,
             }
 
             params = vars(readinput.get_oqparam(source))
@@ -135,6 +141,7 @@ reference_vs30_value = 600.0
 reference_depth_to_2pt5km_per_sec = 5.0
 reference_depth_to_1pt0km_per_sec = 100.0
 intensity_measure_types = PGA
+investigation_time = 50.
 """)
         oqparam = readinput.get_oqparam(source)
         with self.assertRaises(ValueError) as ctx:

@@ -101,6 +101,7 @@ class OqParam(valid.ParamSet):
         intensity_measure_types=valid.intensity_measure_types,
         intensity_measure_types_and_levels=
         valid.intensity_measure_types_and_levels,
+        hazard_imtls=valid.intensity_measure_types_and_levels,
         interest_rate=valid.positivefloat,
         investigation_time=valid.positivefloat,
         loss_curve_resolution=valid.positiveint,
@@ -141,10 +142,13 @@ class OqParam(valid.ParamSet):
     @property
     def imtls(self):
         """
-        Returns an OrderedDict with the intensity measure types and levels
+        Returns an OrderedDict with the risk intensity measure types and
+        levels, if given, or the hazard ones.
         """
-        items = sorted(self.intensity_measure_types_and_levels.iteritems())
-        return collections.OrderedDict(items)
+        imtls = getattr(self, 'risk_imtls', None) or getattr(
+            self, 'hazard_imtls', None) or \
+            self.intensity_measure_types_and_levels
+        return collections.OrderedDict(imtls.items())
 
     def is_valid_truncation_level_disaggregation(self):
         """
