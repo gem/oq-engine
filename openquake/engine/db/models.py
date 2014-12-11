@@ -300,6 +300,30 @@ class OqJob(djm.Model):
         return RiskCalculation(self)
 
     @property
+    def exposure_model(self):
+        """
+        Return the right exposure model by following rules in order:
+
+        1. if the `preloaded_exposure_model_id` is set in job_risk.ini, use it
+        2. if an exposure_file is defined in job_risk.ini, use it
+        3. if an exposure was used in the hazard job, use it
+        4. if no exposure is found, return None
+        """
+        pem_id = self.get_param('preloaded_exposure_model_id', None)
+        preloaded = ExposureModel.objects.get(pk=pem_id) if pem_id else None
+        if preloaded:
+            return preloaded
+        try:
+            # return the exposure associated to the current risk job
+            em = ExposureModel.objects.get(job=self)
+        except ObjectDoesNotExist:
+            # return the exposure associated to the previous hazard job
+            hc_id = self.get_param('hazard_calculation_id')
+            em = ExposureModel.objects.get(
+                job=self.__class__.objects.get(pk=hc_id))
+        return em
+
+    @property
     def job_type(self):
         """
         'hazard' or 'risk'
@@ -506,26 +530,6 @@ class RiskCalculation(object):
             dist = min(dist, grid_spacing * numpy.sqrt(2) / 2)
 
         return dist
-
-    @property
-    def exposure_model(self):
-        """
-        Return the right exposure model by following rules in order:
-
-        1. if the `preloaded_exposure_model_id` is set in job_risk.ini, use it
-        2. if an exposure_file is defined in job_risk.ini, use it
-        3. if an exposure was used in the hazard job, use it
-        4. if no exposure is found, return None
-        """
-        pem_id = getattr(self, 'preloaded_exposure_model_id', None)
-        preloaded = ExposureModel.objects.get(pk=pem_id) if pem_id else None
-        return (preloaded or extract_from(
-            [self.oqjob, self.hazard_calculation], 'exposuremodel'))
-
-    @property
-    def investigation_time(self):
-        return (self.risk_investigation_time or
-                self.get_hazard_param().investigation_time)
 
 
 def extract_from(objlist, attr):
