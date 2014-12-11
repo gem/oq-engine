@@ -295,9 +295,8 @@ class OqJob(djm.Model):
     class Meta:
         db_table = 'uiapi\".\"oq_job'
 
-    @property
     def risk_calculation(self):
-        return RiskCalculation(self)
+        return self.get_oqparam()
 
     @property
     def exposure_model(self):
@@ -486,48 +485,6 @@ def save_sites(job, coords):
                         location='POINT(%s %s)' % (lon, lat))
              for lon, lat in coords]
     return writer.CacheInserter.saveall(sites)
-
-
-class RiskCalculation(object):
-
-    #: Default maximum asset-hazard distance in km
-    DEFAULT_MAXIMUM_DISTANCE = 5
-
-    def __init__(self, job):
-        self.oqjob = job
-        vars(self).update(vars(job.get_oqparam()))
-
-        self.hazard_output = Output.objects.get(pk=self.hazard_output_id) \
-            if self.hazard_output_id else None
-        self.hazard_calculation = OqJob.objects.get(
-            pk=self.hazard_calculation_id)
-        if not hasattr(self, 'taxonomies_from_model'):
-            self.taxonomies_from_model = None
-        if not hasattr(self, 'asset_correlation'):
-            self.asset_correlation = 0
-        if not hasattr(self, 'master_seed'):
-            self.master_seed = 42
-        if not hasattr(self, 'insured_losses'):
-            self.insured_losses = False
-
-    @property
-    def best_maximum_distance(self):
-        """
-        Get the asset-hazard maximum distance (in km)
-
-        :returns:
-            The minimum between the maximum distance provided by the user (if
-            not given, `DEFAULT_MAXIMUM_DISTANCE` is used as default) and the
-            step (if exists) used by the hazard calculation.
-        """
-        dist = getattr(self, 'maximum_distance', self.DEFAULT_MAXIMUM_DISTANCE)
-
-        grid_spacing = self.hazard_calculation.get_param(
-            'region_grid_spacing', None)
-        if grid_spacing:
-            dist = min(dist, grid_spacing * numpy.sqrt(2) / 2)
-
-        return dist
 
 
 def extract_from(objlist, attr):
@@ -765,10 +722,8 @@ class Output(djm.Model):
                 * gsim_path: a list representing the gsim logic tree path
 
         """
-        investigation_time = self.oq_job\
-                                 .risk_calculation\
-                                 .hazard_calculation\
-                                 .get_param('investigation_time', None)
+        oq = self.oq_job.get_oqparam()
+        investigation_time = oq.hazard_investigation_time
 
         statistics, quantile = self.statistical_params
         gsim_lt_path, sm_lt_path = self.lt_realization_paths
@@ -1858,7 +1813,7 @@ class LossFraction(djm.Model):
         displayed.
 
         :param rc:
-           A `RiskCalculation` object used to get the bin width
+           An `OqParam` object used to get the bin width
 
         :returns: `value` if the attribute `variable` is equal to
            taxonomy. if the attribute `variable` is equal to

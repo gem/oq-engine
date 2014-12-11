@@ -159,9 +159,10 @@ class RiskCalculator(base.Calculator):
         self.risk_model = None
         self.loss_types = set()
         self.acc = {}
-        self.rc = self.job.risk_calculation
-        self.hc = self.rc.hazard_calculation.get_oqparam()
         self.oqparam = self.job.get_oqparam()
+        hazard_calculation = models.OqJob.objects.get(
+            pk=self.oqparam.hazard_calculation_id)
+        self.hc = hazard_calculation.get_oqparam()
         # copy the non-conflicting hazard parameters in the risk parameters
         for name, value in self.hc:
             if not hasattr(self.oqparam, name):
@@ -171,12 +172,13 @@ class RiskCalculator(base.Calculator):
             self.oqparam.risk_investigation_time = self.hc.investigation_time
         if not hasattr(self.oqparam, 'hazard_imtls'):
             self.oqparam.hazard_imtls = self.hc.imtls
+        self.oqparam.hazard_investigation_time = getattr(
+            self.hc, 'investigation_time', None)
 
         self.oqparam.hazard_output = models.Output.objects.get(
             pk=self.oqparam.hazard_output_id) \
             if self.oqparam.hazard_output_id else None
-        self.oqparam.hazard_calculation = models.OqJob.objects.get(
-            pk=self.oqparam.hazard_calculation_id)
+        self.oqparam.hazard_calculation = hazard_calculation
 
         dist = getattr(
             self.oqparam, 'maximum_distance', DEFAULT_MAXIMUM_DISTANCE)
@@ -185,6 +187,11 @@ class RiskCalculator(base.Calculator):
             dist = min(dist, grid_spacing * numpy.sqrt(2) / 2)
         self.best_maximum_distance = dist
         self.time_event = getattr(self.oqparam, 'time_event', None)
+
+        self.taxonomies_from_model = getattr(
+            self.oqparam, 'taxonomies_from_model', None)
+        self.oqparam.insured_losses = getattr(
+            self.oqparam, 'insured_losses', False)
 
     def get_hazard_outputs(self):
         """
@@ -242,7 +249,7 @@ class RiskCalculator(base.Calculator):
             # consider only the taxonomies in the risk models if
             # taxonomies_from_model has been set to True in the
             # job.ini
-            if self.rc.taxonomies_from_model:
+            if self.taxonomies_from_model:
                 self.taxonomies_asset_count = dict(
                     (t, count)
                     for t, count in self.taxonomies_asset_count.items()
