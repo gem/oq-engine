@@ -37,11 +37,11 @@ class HazardIMTTestCase(unittest.TestCase):
         calc.risk_model = {
             ('PGA', 'tax1'): workflow,
             ('PGV', 'tax2'): workflow}
-        calc.rc.get_hazard_param().imtls = {'PGA': None, 'PGV': None}
+        calc.oqparam.hazard_imtls = {'PGA': None, 'PGV': None}
         val = validation.HazardIMT(calc)
 
         self.assertIsNone(val.get_error())
-        calc.rc.get_hazard_param().imtls = {'PGA': None}
+        calc.oqparam.hazard_imtls = {'PGA': None}
         self.assertEqual(("There is no hazard output for: PGV. "
                           "The available IMTs are: PGA."), val.get_error())
 
