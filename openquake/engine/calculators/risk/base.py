@@ -106,11 +106,13 @@ def run_risk(job_id, sorted_assocs, calc):
     acc = calc.acc
     hazard_outputs = calc.rc.hazard_outputs()
     monitor = EnginePerformanceMonitor(None, job_id, run_risk)
+    exposure_model = calc.rc.exposure_model
+    time_event = calc.rc.time_event
     for taxonomy, assocs_by_taxonomy in itertools.groupby(
             sorted_assocs, lambda a: a.asset.taxonomy):
         with calc.monitor("getting assets"):
             assets = models.ExposureData.objects.get_asset_chunk(
-                calc.rc, assocs_by_taxonomy)
+                exposure_model, time_event, assocs_by_taxonomy)
         for it in models.ImtTaxonomy.objects.filter(
                 job=calc.job, taxonomy=taxonomy):
             imt = it.imt.imt_str
