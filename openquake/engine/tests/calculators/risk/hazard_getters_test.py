@@ -54,7 +54,7 @@ class HazardCurveGetterTestCase(unittest.TestCase):
 
         assocs = models.AssetSite.objects.filter(job=self.job)
         self.assets = models.ExposureData.objects.get_asset_chunk(
-            calc.rc, assocs)
+            calc.rc.exposure_model, calc.rc.time_event, assocs)
         self.nbytes = self.builder.calc_nbytes()
         self.builder.init_epsilons()
         self.getter = self.getter_class(
