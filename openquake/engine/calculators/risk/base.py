@@ -26,8 +26,7 @@ from django.db import transaction
 
 from openquake.commonlib import risk_parsers
 from openquake.hazardlib.imt import from_string
-from openquake.commonlib.riskmodels import get_vfs
-from openquake.risklib.workflows import Workflow
+from openquake.commonlib.readinput import get_risk_model
 
 from openquake.engine import logs
 from openquake.engine.db import models
@@ -123,9 +122,7 @@ def run_risk(job_id, sorted_assocs, calc):
             with transaction.commit_on_success(using='job_init'):
                 res = calc.core(
                     calc.risk_model[imt, taxonomy],
-                    getter, calc.outputdict,
-                    calc.calculator_parameters,
-                    monitor)
+                    getter, calc.outputdict, calc.oqparam, monitor)
             acc = calc.agg_result(acc, res)
     return acc
 
@@ -150,14 +147,24 @@ class RiskCalculator(base.Calculator):
                   validation.OrphanTaxonomies, validation.ExposureLossTypes,
                   validation.NoRiskModels]
 
-    bcr = False  # flag overridden in BCR calculators
-
     def __init__(self, job):
         super(RiskCalculator, self).__init__(job)
         self.taxonomies_asset_count = None
         self.risk_model = None
         self.loss_types = set()
         self.acc = {}
+        self.rc = self.job.risk_calculation
+        self.hc = self.rc.get_hazard_param()
+        self.oqparam = self.job.get_oqparam()
+        # copy the non-conflicting hazard parameters in the risk parameters
+        for name, value in self.hc:
+            if not hasattr(self.oqparam, name):
+                setattr(self.oqparam, name, value)
+        if not hasattr(self.oqparam, 'risk_investigation_time') and not \
+           self.oqparam.calculation_mode.startswith('scenario'):
+            self.oqparam.risk_investigation_time = self.hc.investigation_time
+        if not hasattr(self.oqparam, 'hazard_imtls'):
+            self.oqparam.hazard_imtls = self.hc.imtls
 
     def agg_result(self, acc, res):
         """
@@ -255,50 +262,8 @@ class RiskCalculator(base.Calculator):
             self.agg_result, self.acc, self.concurrent_tasks,
             name=self.core.__name__)
 
-    @property
-    def rc(self):
-        """
-        A shorter and more convenient way of accessing the
-        :class:`~openquake.engine.db.models.RiskCalculation`.
-        """
-        return self.job.risk_calculation
-
-    # TODO: try to remove this
-    @property
-    def hc(self):
-        """
-        A shorter and more convenient way of accessing the
-        hazard parameters
-        """
-        return self.rc.get_hazard_param()
-
-    @property
-    def calculator_parameters(self):
-        """
-        The specific calculation parameters passed as args to the
-        celery task function. A calculator must override this to
-        provide custom arguments to its celery task
-        """
-        return self.job.get_oqparam()
-
     def get_risk_model(self):
-        # regular risk models
-        if self.bcr is False:
-            return {imt_taxo: self.get_workflow(vfs)
-                    for imt_taxo, vfs in get_vfs(self.rc.inputs).iteritems()}
-
-        # BCR risk models
-        orig_data = get_vfs(self.rc.inputs, retrofitted=False).items()
-        retro_data = get_vfs(self.rc.inputs, retrofitted=True).items()
-
-        risk_model = {}
-        for (imt_taxo, vfs), (imt_taxo_, vfs_) in zip(orig_data, retro_data):
-            assert imt_taxo == imt_taxo_  # same imt and taxonomy
-            risk_model[imt_taxo] = self.get_workflow(vfs, vfs_)
-        return risk_model
-
-    def get_workflow(self, vulnerability_functions):
         """
-        To be overridden in subclasses. Must return a workflow instance.
+        :returns: a :class:`openquake.risklib.workflows.RiskModel` dictionary
         """
-        return Workflow(vulnerability_functions)
+        return get_risk_model(self.oqparam)
