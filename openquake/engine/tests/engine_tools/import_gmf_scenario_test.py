@@ -14,7 +14,7 @@ class ImportGMFScenarioTestCase(unittest.TestCase):
         fileobj = open(os.path.join(THISDIR, 'gmfdata.xml'))
         out = import_gmf_scenario.import_gmf_scenario(fileobj)
         hc = out.oq_job.get_oqparam()
-        imts = sorted(hc.intensity_measure_types_and_levels)
+        imts = sorted(hc.imtls)
         self.assertEqual(imts, ['PGA', 'PGV'])
         n = models.GmfData.objects.filter(gmf__output=out).count()
         assert_equal(hc.calculation_mode, 'scenario')

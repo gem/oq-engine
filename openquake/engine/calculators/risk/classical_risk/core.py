@@ -192,18 +192,3 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                        writers.ConditionalLossFractionBuilder]
 
     getter_class = hazard_getters.HazardCurveGetter
-
-    def get_workflow(self, vulnerability_functions):
-        """
-        :param vulnerability_functions:
-            a dictionary of vulnerability functions
-        :returns:
-            an instance of
-            :class:`openquake.risklib.workflows.Classical`
-        """
-        return workflows.Classical(
-            vulnerability_functions,
-            self.rc.lrem_steps_per_interval,
-            self.rc.conditional_loss_poes,
-            self.rc.poes_disagg,
-            self.rc.insured_losses)
