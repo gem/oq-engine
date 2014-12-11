@@ -813,7 +813,7 @@ class RlzsAssoc(object):
             gsims_by_trt[trt_id].append(GSIMS[gsim]())
         return gsims_by_trt
 
-    def reduce(self, agg, results):
+    def combine(self, agg, results):
         """
         :param agg: aggregation function
         :param results: dictionary (trt_model_id, gsim_name) -> <AccumDict>
@@ -837,8 +837,8 @@ class RlzsAssoc(object):
         ... ('T2', 'D'): 0.04,
         ... ('T2', 'E'): 0.05,}
         ...
-        >>> reduced_dict = assoc.reduce(operator.add, results)
-        >>> for key, value in sorted(reduced_dict.items()): print key, value
+        >>> combinations = assoc.combine(operator.add, results)
+        >>> for key, value in sorted(combinations.items()): print key, value
         r0 0.05
         r1 0.06
         r2 0.06
@@ -855,7 +855,7 @@ class RlzsAssoc(object):
         r4: 0.03 + 0.04 (T1C + T2D)
         r5: 0.03 + 0.05 (T1C + T2E)
 
-        In reality, the reduce function is used with dictionaries with the
+        In reality, the `combine` method is used with dictionaries with the
         hazard curves keyed by intensity measure type and the aggregation
         function is the composition of probability, which however is closer
         to the sum for small probabilities.
@@ -956,14 +956,8 @@ class CompositeSourceModel(collections.Sequence):
                          len(rlzs), lt_model.name, lt_model.path)
             idx = assoc._add_realizations(idx, lt_model, rlzs)
 
-        num_ind_rlzs = sum(sm.gsim_lt.get_num_paths() for sm in self)
-        if num_samples > num_ind_rlzs:
-            logging.warn("""
-The number of independent realizations is %d but you are using %d samplings.
-That means that some GMPEs will be sampled more than once, resulting in
-duplicated data and redundant computation. You should switch to full
-enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
-""", num_ind_rlzs, num_samples)
+        # TODO: if num_samples > total_num_paths we should add a warning here,
+        # see https://bugs.launchpad.net/oq-engine/+bug/1367273
         return assoc
 
     def __getitem__(self, i):

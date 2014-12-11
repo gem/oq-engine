@@ -748,7 +748,8 @@ class ParamSet(object):
             if not is_valid():
                 dump = '\n'.join('%s=%s' % (n, v)
                                  for n, v in sorted(self.__dict__.items()))
-                doc = textwrap.fill(is_valid.__doc__.strip())
+                docstring = is_valid.__doc__.strip()
+                doc = textwrap.fill(docstring.format(**vars(self)))
                 raise ValueError(doc + '\nGot:\n' + dump)
 
     def __iter__(self):

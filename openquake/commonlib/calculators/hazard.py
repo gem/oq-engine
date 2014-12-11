@@ -122,7 +122,7 @@ class ClassicalCalculator(base.BaseHazardCalculator):
             a dictionary of hazard curves dictionaries
         """
         rlzs = self.rlzs_assoc.realizations
-        curves_by_rlz = self.rlzs_assoc.reduce(agg_prob, result)
+	curves_by_rlz = self.rlzs_assoc.reduce(agg_prob, result)
         oq = self.oqparam
 
         # export curves

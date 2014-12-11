@@ -101,6 +101,7 @@ class OqParam(valid.ParamSet):
         intensity_measure_types=valid.intensity_measure_types,
         intensity_measure_types_and_levels=
         valid.intensity_measure_types_and_levels,
+        hazard_imtls=valid.intensity_measure_types_and_levels,
         interest_rate=valid.positivefloat,
         investigation_time=valid.positivefloat,
         loss_curve_resolution=valid.positiveint,
@@ -141,10 +142,13 @@ class OqParam(valid.ParamSet):
     @property
     def imtls(self):
         """
-        Returns an OrderedDict with the intensity measure types and levels
+        Returns an OrderedDict with the risk intensity measure types and
+        levels, if given, or the hazard ones.
         """
-        items = sorted(self.intensity_measure_types_and_levels.iteritems())
-        return collections.OrderedDict(items)
+        imtls = getattr(self, 'risk_imtls', None) or getattr(
+            self, 'hazard_imtls', None) or \
+            self.intensity_measure_types_and_levels
+        return collections.OrderedDict(imtls.items())
 
     def is_valid_truncation_level_disaggregation(self):
         """
@@ -275,6 +279,17 @@ class OqParam(valid.ParamSet):
             return os.path.exists(pdir) and os.access(pdir, os.W_OK)
         return os.path.isdir(self.export_dir) and os.access(
             self.export_dir, os.W_OK)
+
+    def is_valid_inputs(self):
+        """
+        Invalid calculation_mode="{calculation_mode}" or missing
+        fragility_file/vulnerability_file in the .ini file.
+        """
+        if 'damage' in self.calculation_mode:
+            return 'fragility' in self.inputs
+        elif 'risk' in self.calculation_mode:
+            return any(key.endswith('_vulnerability') for key in self.inputs)
+        return True
 
     def is_valid_complex_fault_mesh_spacing(self):
         """
