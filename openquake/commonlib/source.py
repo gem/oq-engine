@@ -956,14 +956,8 @@ class CompositeSourceModel(collections.Sequence):
                          len(rlzs), lt_model.name, lt_model.path)
             idx = assoc._add_realizations(idx, lt_model, rlzs)
 
-        num_ind_rlzs = sum(sm.gsim_lt.get_num_paths() for sm in self)
-        if num_samples > num_ind_rlzs:
-            logging.warn("""
-The number of independent realizations is %d but you are using %d samplings.
-That means that some GMPEs will be sampled more than once, resulting in
-duplicated data and redundant computation. You should switch to full
-enumeration mode, i.e. set number_of_logic_tree_samples=0 in your .ini file.
-""", num_ind_rlzs, num_samples)
+        # TODO: if num_samples > total_num_paths we should add a warning here,
+        # see https://bugs.launchpad.net/oq-engine/+bug/1367273
         return assoc
 
     def __getitem__(self, i):

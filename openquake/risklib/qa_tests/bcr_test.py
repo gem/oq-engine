@@ -42,25 +42,19 @@ class BCRTestCase(unittest.TestCase):
         interest_rate = 0.05
         asset_life_expectancy = 40
 
-        hazard = [
-            (0.001, 0.0398612669790014), (0.01, 0.0398612669790014),
-            (0.05, 0.0397287574802989), (0.1, 0.0296134266256125),
-            (0.15, 0.0198273287564916), (0.2, 0.0130622701614519),
-            (0.25, 0.00865538795000043), (0.3, 0.00589852059368967),
-            (0.35, 0.00406169858951178), (0.4, 0.00281172717952682),
-            (0.45, 0.00199511741777669), (0.5, 0.00135870597284571),
-            (0.55, 0.000989667841573727), (0.6, 0.000757544444296432),
-            (0.7, 0.000272824002045979), (0.8, 0.0),
-            (0.9, 0.0), (1.0, 0.0)]
+        hazard_imls = [0.001, 0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4,
+                       0.45, 0.5, 0.55, 0.6, 0.7, 0.8, 0.9, 1.0]
+        poes = [0.039861266979, 0.039861266979, 0.0397287574803,
+                0.0296134266256, 0.0198273287565, 0.0130622701615,
+                0.00865538795, 0.00589852059369, 0.00406169858951,
+                0.00281172717953, 0.00199511741778, 0.00135870597285,
+                0.000989667841574, 0.000757544444296, 0.000272824002046,
+                0.0, 0.0, 0.]
 
         original_loss_ratio_curve = scientific.classical(
-            vulnerability_function_rm,
-            hazard,
-            steps=5)
+            vulnerability_function_rm, hazard_imls, poes, steps=5)
         retrofitted_loss_ratio_curve = scientific.classical(
-            vulnerability_function_rf,
-            hazard,
-            steps=5)
+            vulnerability_function_rf, hazard_imls, poes, steps=5)
 
         eal_original = scientific.average_loss(*original_loss_ratio_curve)
         eal_retrofitted = scientific.average_loss(
