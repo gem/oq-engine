@@ -306,6 +306,7 @@ class RiskInitializer(object):
     expensive geospatial query.
     """
     def __init__(self, taxonomy, calc):
+        self.exposure_model = calc.exposure_model
         self.hazard_outputs = calc.get_hazard_outputs()
         self.taxonomy = taxonomy
         self.rc = calc.rc
@@ -317,7 +318,7 @@ class RiskInitializer(object):
         self.cursor = models.getcursor('job_init')
 
         hazard_exposure = models.extract_from([self.hc], 'exposuremodel')
-        if self.rc.exposure_model is hazard_exposure:
+        if self.exposure_model is hazard_exposure:
             # no need of geospatial queries, just join on the location
             self.assoc_query = self.cursor.mogrify("""\
 WITH assocs AS (
@@ -331,7 +332,7 @@ WITH assocs AS (
 )
 INSERT INTO riskr.asset_site (job_id, asset_id, site_id)
 SELECT * FROM assocs""", (self.rc.oqjob.id, self.hc.id,
-                          self.rc.exposure_model.id, taxonomy,
+                          self.exposure_model.id, taxonomy,
                           self.rc.region_constraint))
         else:
             # associate each asset to the closest hazard site
@@ -348,7 +349,7 @@ WITH assocs AS (
 )
 INSERT INTO riskr.asset_site (job_id, asset_id, site_id)
 SELECT * FROM assocs""", (self.rc.oqjob.id, max_dist, self.hc.id,
-                          self.rc.exposure_model.id, taxonomy,
+                          self.exposure_model.id, taxonomy,
                           self.rc.region_constraint))
 
         self.num_assets = 0

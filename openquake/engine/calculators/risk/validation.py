@@ -86,7 +86,7 @@ class ExposureLossTypes(Validator):
     """
     def get_error(self):
         for loss_type in self.calc.loss_types:
-            if not self.calc.rc.exposure_model.supports_loss_type(loss_type):
+            if not self.calc.exposure_model.supports_loss_type(loss_type):
                 return ("Invalid exposure "
                         "for computing loss type %s. " % loss_type)
 
@@ -106,7 +106,7 @@ class ExposureHasInsuranceBounds(Validator):
 
     def get_error(self):
         if (self.calc.rc.insured_losses and
-                not self.calc.rc.exposure_model.has_insurance_bounds()):
+                not self.calc.exposure_model.has_insurance_bounds()):
             return "Deductible or insured limit missing in exposure"
 
 
@@ -115,7 +115,7 @@ class ExposureHasRetrofittedCosts(Validator):
     Check that the retrofitted value is present in the exposure
     """
     def get_error(self):
-        if not self.calc.rc.exposure_model.has_retrofitted_costs():
+        if not self.calc.exposure_model.has_retrofitted_costs():
             return "Some assets do not have retrofitted costs"
 
 
@@ -127,7 +127,7 @@ class ExposureHasTimeEvent(Validator):
 
     def get_error(self):
         if (self.calc.rc.inputs.get("occupants") is not None and
-            not self.calc.rc.exposure_model.has_time_event(
+            not self.calc.exposure_model.has_time_event(
                 self.calc.rc.time_event)):
             return ("Some assets are missing an "
                     "occupancy with period=%s" % self.calc.rc.time_event)

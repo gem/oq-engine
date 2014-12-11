@@ -91,14 +91,14 @@ class ExposureLossTypesTestCase(unittest.TestCase):
         calc.loss_types = models.LOSS_TYPES
         calc.risk_model = {('PGA', 'RM'): mock.Mock()}
 
-        calc.rc.exposure_model.supports_loss_type = mock.Mock(
+        calc.exposure_model.supports_loss_type = mock.Mock(
             return_value=False)
 
         self.assertEqual(("Invalid exposure "
                           "for computing loss type structural. "),
                          val.get_error())
 
-        calc.rc.exposure_model.supports_loss_type = mock.Mock(
+        calc.exposure_model.supports_loss_type = mock.Mock(
             return_value=True)
         self.assertIsNone(val.get_error())
 
@@ -124,23 +124,23 @@ class ExposureHasInsuranceBoundsTestCase(unittest.TestCase):
         val = validation.ExposureHasInsuranceBounds(calc)
 
         calc.rc.insured_losses = True
-        calc.rc.exposure_model.has_insurance_bounds = mock.Mock(
+        calc.exposure_model.has_insurance_bounds = mock.Mock(
             return_value=True)
         self.assertIsNone(val.get_error())
 
         calc.rc.insured_losses = True
-        calc.rc.exposure_model.has_insurance_bounds = mock.Mock(
+        calc.exposure_model.has_insurance_bounds = mock.Mock(
             return_value=False)
         self.assertEqual("Deductible or insured limit missing in exposure",
                          val.get_error())
 
         calc.rc.insured_losses = False
-        calc.rc.exposure_model.has_insurance_bounds = mock.Mock(
+        calc.exposure_model.has_insurance_bounds = mock.Mock(
             return_value=True)
         self.assertIsNone(val.get_error())
 
         calc.rc.insured_losses = False
-        calc.rc.exposure_model.has_insurance_bounds = mock.Mock(
+        calc.exposure_model.has_insurance_bounds = mock.Mock(
             return_value=False)
         self.assertIsNone(val.get_error())
 
@@ -151,11 +151,11 @@ class ExposureHasRetrofittedCostsTestCase(unittest.TestCase):
 
         val = validation.ExposureHasRetrofittedCosts(calc)
 
-        calc.rc.exposure_model.has_retrofitted_costs = mock.Mock(
+        calc.exposure_model.has_retrofitted_costs = mock.Mock(
             return_value=True)
         self.assertIsNone(val.get_error())
 
-        calc.rc.exposure_model.has_retrofitted_costs = mock.Mock(
+        calc.exposure_model.has_retrofitted_costs = mock.Mock(
             return_value=False)
         self.assertEqual("Some assets do not have retrofitted costs",
                          val.get_error())
@@ -168,11 +168,11 @@ class ExposureHasTimeEventTestCase(unittest.TestCase):
 
         calc.rc.time_event = "night"
 
-        calc.rc.exposure_model.has_time_event = mock.Mock(
+        calc.exposure_model.has_time_event = mock.Mock(
             return_value=True)
         self.assertIsNone(val.get_error())
 
-        calc.rc.exposure_model.has_time_event = mock.Mock(
+        calc.exposure_model.has_time_event = mock.Mock(
             return_value=False)
         self.assertEqual("Some assets are missing an "
                          "occupancy with period=night", val.get_error())
