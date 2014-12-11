@@ -166,7 +166,7 @@ class ExposureHasTimeEventTestCase(unittest.TestCase):
         calc = mock.Mock()
         val = validation.ExposureHasTimeEvent(calc)
 
-        calc.rc.time_event = "night"
+        calc.time_event = "night"
 
         calc.exposure_model.has_time_event = mock.Mock(
             return_value=True)

@@ -128,6 +128,6 @@ class ExposureHasTimeEvent(Validator):
     def get_error(self):
         if (self.calc.rc.inputs.get("occupants") is not None and
             not self.calc.exposure_model.has_time_event(
-                self.calc.rc.time_event)):
+                self.calc.time_event)):
             return ("Some assets are missing an "
-                    "occupancy with period=%s" % self.calc.rc.time_event)
+                    "occupancy with period=%s" % self.calc.time_event)
