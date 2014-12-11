@@ -170,9 +170,10 @@ def export_hazard_curve(key, output, target):
         The same return value as defined by :func:`export`.
     """
     export_type = key[1]
-    hc = models.HazardCurve.objects.get(output=output.id)
-    hcd = _curve_data(hc)
-    metadata = _curve_metadata(output, target)
+    hcd = []
+    for hc in models.HazardCurve.objects.filter(output=output.id):
+        hcd.extend(_curve_data(hc))
+    metadata = _curve_metadata(hc, target)
     haz_calc = output.oq_job
     dest = _get_result_export_dest(
         haz_calc.id, target, hc, file_ext=export_type)
@@ -211,7 +212,7 @@ def export_hazard_curve_multi_xml(key, output, target):
 
     metadata_set = []
     for hc in hcs:
-        metadata = _curve_metadata(hc.output, target)
+        metadata = _curve_metadata(hc, target)
         metadata_set.append(metadata)
 
     haz_calc = output.oq_job
@@ -223,8 +224,7 @@ def export_hazard_curve_multi_xml(key, output, target):
     return dest
 
 
-def _curve_metadata(output, target):
-    hc = models.HazardCurve.objects.get(output=output.id)
+def _curve_metadata(hc, target):
     if hc.lt_realization is not None:
         # If the curves are for a specified logic tree realization,
         # get the tree paths
@@ -324,7 +324,9 @@ def export_hazard_map(key, output, target):
     General hazard map export code.
     """
     file_ext = key[1]
-    hazard_map = models.HazardMap.objects.get(output=output)
+    data = []
+    for hazard_map in models.HazardMap.objects.filter(output=output):
+        data.extend(zip(hazard_map.lons, hazard_map.lats, hazard_map.imls))
     haz_calc = output.oq_job
 
     if hazard_map.lt_realization is not None:
@@ -338,7 +340,7 @@ def export_hazard_map(key, output, target):
         smlt_path = None
         gsimlt_path = None
 
-    dest = _get_result_export_dest(haz_calc.id, target, output.hazard_map,
+    dest = _get_result_export_dest(haz_calc.id, target, hazard_map,
                                    file_ext=file_ext)
 
     metadata = {
@@ -355,7 +357,7 @@ def export_hazard_map(key, output, target):
     writer_class = (hazard_writers.HazardMapXMLWriter if file_ext == 'xml'
                     else hazard_writers.HazardMapGeoJSONWriter)
     writer = writer_class(dest, **metadata)
-    writer.serialize(zip(hazard_map.lons, hazard_map.lats, hazard_map.imls))
+    writer.serialize(data)
     return dest
 
 
