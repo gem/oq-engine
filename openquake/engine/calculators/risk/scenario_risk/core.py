@@ -152,14 +152,3 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                         loss_type=loss_type,
                         mean=numpy.mean(insured_losses),
                         std_dev=numpy.std(insured_losses, ddof=1))
-
-    def get_workflow(self, vulnerability_functions):
-        """
-        :param vulnerability_functions:
-            a dictionary of vulnerability functions
-        :returns:
-            an instance of
-            :class:`openquake.risklib.workflows.Scenario`
-        """
-        return workflows.Scenario(
-            vulnerability_functions, self.rc.insured_losses)
