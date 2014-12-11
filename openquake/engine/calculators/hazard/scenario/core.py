@@ -118,7 +118,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         hc = self.hc
         n_sites = len(self.site_collection)
         n_gmf = hc.number_of_ground_motion_fields
-        n_imts = len(hc.intensity_measure_types_and_levels)
+        n_imts = len(hc.imtls)
         output_weight = n_sites * n_imts * n_gmf
         logs.LOG.info('Expected output size=%s', output_weight)
         models.JobInfo.objects.create(
@@ -136,7 +136,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
     def create_ruptures(self):
         oqparam = models.oqparam(self.job.id)
         self.imts = map(
-            from_string, sorted(oqparam.intensity_measure_types_and_levels))
+            from_string, sorted(oqparam.imtls))
         self.rupture = readinput.get_rupture(oqparam)
 
         # check filtering

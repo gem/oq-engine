@@ -233,7 +233,7 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol):
     """
     job = models.OqJob.objects.get(pk=job_id)
     hc = job.get_oqparam()
-    imts = map(from_string, sorted(hc.intensity_measure_types_and_levels))
+    imts = map(from_string, sorted(hc.imtls))
 
     result = {}  # trt_model_id -> (curves_by_gsim, [])
     # NB: by construction each block is a non-empty list with
@@ -259,7 +259,7 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol):
                 'hazard curves from gmfs',
                 job_id, compute_gmfs_and_curves):
             result[trt_model.id] = (calc.to_haz_curves(
-                sitecol.sids, hc.intensity_measure_types_and_levels,
+                sitecol.sids, hc.imtls,
                 hc.investigation_time, hc.ses_per_logic_tree_path), [])
     else:
         result[trt_model.id] = ([], [])

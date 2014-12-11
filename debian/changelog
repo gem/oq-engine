@@ -1,3 +1,433 @@
+python-oq-engine (1.2.0-3) precise; urgency=low
+
+  * Add constraint on python-django dependency version
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 11 Dec 2014 10:04:45 +0100
+
+python-oq-engine (1.2.0-2) precise; urgency=low
+
+  * More precise exception message
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 10 Dec 2014 16:21:06 +0100
+
+python-oq-engine (1.2.0-1) precise; urgency=low
+
+  * Bugs fixed in 1.2 release: http://goo.gl/GjbF2r
+  * Replace a reference to the 'openquake' command with 'oq-engine'
+  * Moved the expected outputs of the ScenarioDamage QA tests in qa_tests_data
+  * Moved the logic tree realizations into commonlib
+  * It is now possible to compute the uniform spectra even when
+    individual_curves is false
+  * Reduced the precision when exporting GMFs to XML
+  * Fixed test_job_from_file
+  * Delayed the OqParam validation
+  * Simplified the monitoring
+  * Extract the QA tests data from the engine
+  * Renamed commonlib.general -> baselib.general
+  * Removed the dependency from oq-commonlib
+  * Avoid warning no XML exporter for event_loss
+  * Update packager and postinst to use the openquake2 db (new default one)
+  * Use shallow-clone to improve CI builds speed
+  * Download calculation results as files
+  * Added an API to retrieve the engine version
+  * Unified the export framework for hazard and risk
+  * Fast export of the GMFs
+  * Fast scenario export
+  * Fixed test_is_readable_all_files_lack_permissions when run as root
+  * Now 'test_script_lower_than_current_version' does not require an Internet
+    connection
+  * Warn the user if she asks for statistical outputs but using a single hazard
+    output
+  * Move the calculation of input/output weights into commonlib
+  * Changed the export_dir in several tests
+  * Now the packagers makes a HTML report with the performances of the demos
+  * Remove hardcoded references to openquake2 in oq_create_db
+  * Move JobStats creation inside job_from_file
+  * Fixed precision
+  * Align openquake_worker.cfg with openquake.cfg
+  * Implement memory hard limit control
+  * Using commonlib.readinput.get_source_models
+  * Check that the hazard calculation mode is consistent with risk calculation
+    mode
+  * Rollback only if a transaction is on
+  * Fixed a bug in export_risk
+  * Daily html report
+  * Reflected the API change in commonlib.readinput.get_oqparam
+  * Updated the engine to cope with the changes in risklib and commonlib
+  * Fixed the name of the SES file
+  * Changed some hard-coded weights in general.py
+  * Changed the import of the calc module
+  * Drop risk calculation table
+  * Simplified the risk calculators
+  * Reflected the API change in hazardlib.calc.gmf.GmfComputer
+  * Added a test for duplicated tags in import_gmf_scenario.py
+  * Implemented losses per event per asset
+  * Dependency check
+  * Removed more risk unit tests
+  * Removed another couple of redundant tests
+  * Remove check on setup.py version since now it's taken from init
+  * Fixed _calc_to_response_data
+  * Fixed bug when running risk calculations from the platform
+  * openquake wrapper script
+  * Changed version number in setup.py too
+  * Updated version to 1.2
+  * Renamed nrml_version->commonlib_version
+  * Fixed a bug in the engine server (wrong calculation_id)
+  * Fix oq-engine command name in output list
+  * Removed the dependency from nrmllib
+  * Fixed two merge errors
+  * Important fixes pre-2.0 copied from the better-risk branch
+  * Renamed the command openquake->oq-engine
+  * Change ses collection
+  * Fixed the migration script 0007
+  * Fixed a bug with the quantile_hazard_curves attribute
+  * Removed EventBasedHazardCalculatorTestCase
+  * Remove the hazard_calculation table
+  * correct complex source for wrong order in edges points
+  * missing file open fixed
+  * Removed routing tests
+  * Added the script correct_complex_sources
+  * Complex surf validation
+  * Insert the IMT in the db, if not already there
+  * The intensity measure types are now sorted also in the scenario calculator
+  * Simplified the QA test scenario_damage/case_4
+  * Enable 'set -x' when $GEM_SET_DEBUG is true
+  * Remove a try finally in engine server task.py
+  * Simplification because now the maximum_distance is mandatory
+  * Fixed a wrong source model used in the Event Based export test
+  * Fixed the what_if_I_upgrade check
+  * Added a table imt_taxonomy
+  * Fixed the management of missing db upgrades
+  * Now the engine is using the new validation mechanism for the hazard sources
+  * Fixed the name of a field (risk_job_id->job_id)
+  * Special case when the hazard is known at the exact sites of the assets
+  * Moved the epsilons from the getters to the database
+  * Update the database name in openquake_worker.cfg
+  * Removed the old validation mechanism
+  * The parameter concurrent_tasks must be available to the workers too
+  * Solved the problem with UHS
+  * Fixed master https://ci.openquake.org/job/master_oq-engine/1208
+  * If individual_curves is set, multi-imt curves must not be generated
+  * --what-if-I-upgrade functionality
+  * Stats only
+  * Short output summary
+  * Removed task_no
+  * Hazard curves from gmfs
+  * Fixed a critical bug with --hazard-output-id
+  * Fix the test check_limits_event_based
+  * Changed the output_weight for the event based calculator
+  * Introduced --hazard-job-id and made it possible to reuse exposures imported
+    in the hazard part of the computation
+  * Replaced the ScenarioGetter with the GroundMotionFieldGetter
+  * Return loss matrix
+  * Removed --schema-path from oq_create_db
+  * Calculation limits
+  * Fixed a bug on tablespace permissions
+  * Make the event based calculator more debuggable
+  * Added the column uniq_ruptures to the table source_info
+  * Db migrations
+  * Db migrations 2
+  * Saved more sources in source_info
+  * Perform means and quantiles in memory
+  * Parallel filtering
+  * Reintroduce the 'terminate_job_when_celery_is_down' config option
+  * Fix risk disaggregation
+  * Ordering the sources after filtering-splitting
+  * Source ordering
+  * Gmf from ruptures
+  * Fixed a stupid bug with OQ_TERMINATE_JOB_WHEN_CELERY_IS_DOWN
+  * Introduced a variable OQ_TERMINATE_JOB_WHEN_CELERY_IS_DOWN
+  * The random seeds have now a default value of 42
+  * Added a check for invalid quantile computations
+  * Now hazard calculations can be deleted safely
+  * Add a file openquake_worker.cfg to be read in the workers
+  * Simplified the LOG_FORMAT by removing the name
+  * Avoid an ugly error when no tasks are spawned
+  * Added a view on the event loss table for convenience of analysis
+  * Epsilon sampling feature
+  * Distribute-by-rupture phase 2
+  * Restored distribution-by-rupture in the event based calculator
+  * Provide a good error message when a source model contains GSIMs not in the
+    file gsim_logic_tree
+  * Moved parse_config from the engine to commonlib
+  * Added a test checking the existence of the __init__.py files and fixed the
+    QA test classical/case_15
+  * Refactored initialize_realizations and added a warning when
+    num_samples > num_realizations
+  * Fixed a missing import
+  * Saving the rupture hypocenter fully into the database
+  * Removed an offending ALTER OWNER
+  * Source info table
+  * Added a test for sampling a large source model logic tree
+  * Hazard curves from gmfs
+  * Removed num_sites and num_sources from job_stats
+  * Removed redundant tests
+  * Retrieved the correct output directly, not via an order by
+  * Making use of commonlib.parallel in the engine
+  * Enhanced qatest_1, so that it subsumes regression_1 and regression_2
+  * Taking advantage of the new riskloaders in commonlib
+  * Added a missing integer cast
+  * Changed disagg/case_1 to use full enumeration
+  * Fixed the ordering of the ruptures in the event based calculator
+  * Fixed a bug in the GroundMotionValuesGetter
+  * Reflected the API change in refactor-risk-model
+  * Sent the tectonic region types with less sources first, and fixed
+    an ordering bug in a QA test
+  * Turn AMQPChannelExceptions into warnings
+  * Hide the SES output from a scenario calculator
+  * Add a debug flag to enable set -x in packager.sh
+  * Better task spawning
+  * Reflected the changes to the GmfComputer in hazardlib
+  * Fixed the bug in the risk event based calculator with multiple realizations
+  * Fix gmf duplication
+  * Removed the need for logictree.enumerate_paths
+  * Fixed a small bug
+  * Removed a commonlib dependency breaking the oqcreate script
+  * Now the indices of the filtered sites are stored in the
+    ProbabilisticRupture table
+  * Fixed another import
+  * Fixed a wrong import
+  * Moved logictree to commonlib and fixed all the tests
+  * Removed the obsolete table hzrdr.ses and small refactoring
+  * Tasks with fewer assets are submitted first
+  * Better parallelization of the risk calculators
+  * Reducing the celery timeout from 30s to 3s
+  * Fixed a tricky bug in the scenario calculator with duplicate imts
+  * Fixed the ScenarioExportTestCase by changing the position of the points
+  * The scenario calculator is now block-size independent
+  * Use only the relevant tectonic region types to build the GMPE logic tree
+  * Fixed a broadcasting in the classical calculator
+  * Saving memory on the controller node
+  * Restored the source model sampling feature
+  * Complex logic tree test
+  * Solved the block size dependence in the risk calculators
+  * Fixed a critical ordering bug
+  * Changed the _do_run_calc signature
+  * Avoid returning duplicated data in the classical calculator
+  * Changed the order of the statements in 01-remove-cnode_stats.sql
+  * Added a cache on the GSIMs for the probabilities of no exceedence in the
+    classical calculator
+  * Fix the export of GmfSets in the case of multiple source models
+  * Fixed underflow error in postgres
+  * Fixed a bug with celery ping
+  * Avoid errors on signals when the engine is run through the server
+  * Errors in a task are converted into a RuntimeError
+  * Remove calculation unit
+  * The IML must be extrapolated to zero for large poes
+  * Log a warning when more than 80% of the memory is used
+  * Refactored the hazard getters
+  * Removed the SES table
+  * Added a nice error message for far away sources
+  * Add support in the engine for a local_settings.py
+  * Send the site collection via rabbitmq, not via the database
+  * Improvements to the CeleryNodeMonitor
+  * Minimal tweaks to the risk calculators
+  * Save the number of sites in JobStats as soon as it is available
+  * Fix branch var to be compliant within the new CI git plugin
+  * Restored the lost fine monitoring on the hazard getters
+  * Cluster monitor
+  * Celery check
+  * Removed the obsolete table uiapi.cnode_stats
+  * Make use of the light site collection introduced in hazardlib
+  * Optimize the disaggregation calculator
+  * Fix a memory leak of celery
+  * Remove python-gdal and fix issue with postinst
+  * Manual pickling/unpickling
+  * Updates Copyright to 2014
+  * The rupture tag must be unique
+  * Turn SIGTERM into SIGINT
+  * Remove another engine-server test script from pylint
+  * Removed the dependency on the current working directory from
+    utils_config_test
+  * Replace README.txt with README.md in the packager script
+  * Increase the tolerance in the disaggregation test
+  * Readme merge
+  * Avoid storing copies of the ruptures
+  * Untrapped exceptions in oqtask give ugly error messages
+  * Support for posting zipfiles to the engine-server
+  * Using iter_native in celery
+  * Added test for the loss_fraction exporter
+  * Fixed a missing loss_type in export_loss_fraction_xml
+  * Merging the engine server inside the engine repository
+  * Removing ruptures phase 2
+  * Restored qatest 1
+  * Added tests for failing computations
+  * Removed the progress handler from the engine
+  * Better error and logging management
+  * Exclude tests folder from pylint check
+  * Fixing the build master_oq-engine #790
+  * Ruptures are not read from the database anymore, only written
+  * In development mode celery is automatically started/stopped together with
+    the engine server
+  * Remove common directory from risk demos
+  * Remove duplication hazard risk
+  * Removing the duplication run_hazard/run_risk in engine.py
+  * Renamed directories and packages to be consistent with GEM conventions
+  * Fixed test_initialize_sources
+  * Getting a more uniform distribution of the tasks
+  * Remove celery
+  * Remove time_span from disaggregation calculator
+  * Return the traceback from celery to the controller node
+  * If there are no GMVs within the maximum distance for the given assets, the
+    computation should not fail with an ugly error but print a warning
+  * Better error management
+  * Fixed a stupid error in compute_hazard_curves
+  * Support for non-parametric sources
+  * Fixed the issue of slow sources
+  * Fixed the two upgrade scripts breaking the migration from 1.0 to 1.1
+  * Add --export-hazard-outputs and --export-risk-outputs switches; also add
+    geojson export for hazard curves
+  * Light monitor
+  * Set CELERY_MAX_CACHED_RESULTS = 1
+  * Changed from relative path to full path
+  * Fix the feature "import gmf scenario data from file"
+  * version: remove warning for pkg install + git program installed case
+  * Remove block_size and point_source_block_size
+  * Move the unit tests inside the openquake.engine directory
+  * Version visualization improvement
+  * Added missing CASCADE on a DB migration script
+  * Raised the tolerance in ClassicalHazardCase13TestCase
+  * In the event based calculator split by ruptures, not by SES
+  * BROKER_POOL_LIMIT is causing problem so set it to none
+  * Split area sources
+  * Force BROKER_POOL_LIMIT to 10
+  * Fixed an upgrade script
+  * Prefiltering sources in all calculators
+  * Savaged the easy part of the work on the decouple-logic-trees branch
+  * Changed the way hazard map are interpolated
+  * Fixed a bug with static urls
+  * Remove database related code
+  * Removed hazard curve progress
+  * Improved the IMT management in the engine by leveraging the new
+    functionality in hazardlib
+  * Configuration file for storing oq-platform connection parameters
+  * Add loss type to risk outputs
+  * Remove parsed source
+  * Fix remove demos symlinks
+  * gmf.lt_realization_id can be NULL
+  * Fixed the _prep_geometry feature of Risk and Hazard calculations
+  * Remove a reference to the removed view hzrdr.gmf_family
+  * Engine-Server: support for multiple platform installations
+  * Removed the complete_logic_tree flags
+  * Fixed setup.py
+  * Removed the SourceProgress table
+  * New risk demos
+  * Run a risk calculation
+  * Remove validation on site models
+  * Removed the rest of the stuff related to the supervisor
+  * Removed the supervisor, redis, kombu and related stuff
+  * Removed a wrong import
+  * An import ordering issue is breaking Jenkins
+  * Various small fixes for oq_create_db script
+  * Do not register a progress handler if it is not passed
+  * Engine Unit test fix
+  * Geonode integration
+  * Progress Bar support
+  * Finally fixed the dependency from the blocksize in the event based
+    calculator
+  * A simple fix for engine_test.py
+  * Replace numpy arrays with postgres array fields in output tables
+  * Dump and restore Stochastic Event Set
+  * Removed the old distribution and used parallelize as default distribution
+    mechanism everywhere
+  * Change the distribution in the risk calculators
+  * Save in job_stats how much the database increased during the current
+    computation
+  * Removed calc_num task properly
+  * Change dist classical
+  * Improve the table job_stats
+  * Now the CacheImporter infers the fields from the database, in the right
+    order
+  * Removed parsed_rupture_model from the db
+  * The revoke command should not terminate the workers
+  * Remove JobCompletedError
+  * Override hazard investigation time in risk event based calculator
+  * Companion of https://github.com/gem/oq-engine/pull/1298/
+  * Companion of https://github.com/gem/oq-nrmllib/pull/116
+  * Simplify schema
+  * Filter the sources before storing them in the database
+  * Improve the parallelize distribution
+  * Fix disaggregation
+  * Changed the distance in hazardlib
+  * Improve memory consumption in the GMF calculation
+  * The file with the exported disagg matrix must contain the poe in the name
+  * The multiple sites QA test (classical/case_13) broke
+  * Solve the dependency from the parameter concurrent_tasks
+  * QA test for multiple sites
+  * Cross domain ajax fix for view methods [r=matley] [f=*1234765]
+  * Tweaks to make platform calcs work [r=matley] [f=*1234765]
+  * Create job and calculation objects in a transaction
+  * Make test fixtures optional
+  * Get the list of the available magnitude scaling relationships at runtime
+  * Save memory when exporting the GMF
+  * Fixed a typo in an ordering query
+  * Insured loss curves statistics
+  * When exporting the GMF, we need to export the rupture tags, not the ids
+  * Hazard Curve Parser import update [r=micheles] [f=*trivial]
+  * To save space in the db and to avoid running into the text field size
+    limit, change model_content.raw_content to store gzipped content
+  * Add a tag to the ruptures
+  * Change the dump/restore procedures to work with directories, not tarfiles
+  * Fix risk QA tests fixtures
+  * Documentation for the REST API
+  * Fix hazard_curve_multi export path
+  * Revise insured losses algorithm
+  * Post-calculation migration
+  * Correction of baseline DB revision
+  * Review Risk demos
+  * A couple of fixes to scenario tests
+  * Compute standard deviation of losses
+  * Validate time_event
+  * Add 404 responses in the case of non-existent artifacts
+  * Run calcs, part 2
+  * Minor loss map export fix
+  * Fix for installing source code via pip/git
+  * Remove cache from HazardCurveGetterPerAsset
+  * Changed an import from nrmllib
+  * Pyflakes fixes to the calculators and engine module
+  * Reading logic trees from DB - follow up (fix for a careless refactoring
+    error)
+  * Raise an error when no gmvs are available in a scenario computation
+  * Small fix in dump_hazards.py: the filenames list contained duplicates
+  * Add 'engine' functionality to disable the job supervisor
+  * Read logic trees from DB (instead of the filesystem)
+  * Extend forms.CharField to allow null values
+  * Small fixes to the script restore_hazards.py
+  * Update test fixtures used for risk scenario calculations
+  * Trivial: Some small tweaks/cleanups
+  * File parsing fix
+  * Risk BaseCalculator refactoring
+  * Run calculations via REST API (initial sketch)
+  * Better input loading (update to 'engine' API)
+  * Update Risk Event Based QA test
+  * Fixed a very subtle bug with the ordering of sites
+  * Added index to hzrdi.hazard_site
+  * Updated tests to the new interface
+    of 'openquake.engine.db.models.SiteCollection'
+  * Compute ground motion values from Stochastic Event Set
+    in a risk calculation
+  * "List calc results" views
+  * Misc. engine fixes to stabilize the build
+  * Record all OQ software versions in oq_job
+  * Export to path or file (not just path)
+  * Minor fix to risk QA test collection
+  * Engine API improvements
+  * Hazard map GeoJSON export
+  * Refactoring: moved risk calculation logic to risklib
+  * GeoJSON loss map support
+  * GeoJSON export prep
+  * Include API version in URLs
+  * 'calc info' views
+  * Rough sketch of the 'list calculations' views
+  * Export loss_fraction quantile fix
+  * Fix 'hazard_curve_multi' export
+  * Fix Risk QA test collection (nosetests)
+  * Remove site_collection column from the database
+  * Pack and risk demos LP: #1197737
+  * Added more monitoring to the hazard calculators
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 10 Dec 2014 11:17:03 +0100
+
 python-oq-engine (1.0.0-1) precise; urgency=low
 
   * 'occupants' is now a float

@@ -76,10 +76,6 @@ IMT_CHOICES = (
     (u'MMI', u'Modified Mercalli Intensity'),
 )
 
-#: Default Loss Curve Resolution used for probabilistic risk calculators
-DEFAULT_LOSS_CURVE_RESOLUTION = 50
-
-
 #: Minimum value for a seed number
 MIN_SINT_32 = -(2 ** 31)
 #: Maximum value for a seed number
@@ -491,10 +487,6 @@ class RiskCalculation(object):
             self.master_seed = 42
         if not hasattr(self, 'insured_losses'):
             self.insured_losses = False
-        if not hasattr(self, 'risk_investigation_time'):
-            self.risk_investigation_time = None
-        if not hasattr(self, 'loss_curve_resolution'):
-            self.loss_curve_resolution = 50  # default
 
     def get_hazard_param(self):
         """

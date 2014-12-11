@@ -35,7 +35,7 @@ from django.db import transaction
 from openquake.baselib import general
 from openquake.commonlib import readinput, risk_parsers
 from openquake.commonlib.readinput import (
-    get_site_collection, get_site_model, get_imtls)
+    get_site_collection, get_site_model)
 
 from openquake.engine.input import exposure
 from openquake.engine import logs
@@ -217,7 +217,7 @@ class BaseHazardCalculator(base.Calculator):
                 input_weight=info['input_weight'],
                 output_weight=info['output_weight'])
         self.check_limits(info['input_weight'], info['output_weight'])
-        self.imtls = self.hc.intensity_measure_types_and_levels
+        self.imtls = self.hc.imtls
         if info['n_levels']:  # we can compute hazard curves
             self.zeros = numpy.array(
                 [numpy.zeros((info['n_sites'], len(self.imtls[imt])))
@@ -291,14 +291,13 @@ class BaseHazardCalculator(base.Calculator):
         vulnerability model (if there is one)
         """
         oqparam = self.job.get_oqparam()
-        imtls = get_imtls(oqparam)
         if 'exposure' in oqparam.inputs:
             with logs.tracing('storing exposure'):
                 exposure.ExposureDBWriter(
                     self.job).serialize(
                     risk_parsers.ExposureModelParser(
                         oqparam.inputs['exposure']))
-        models.Imt.save_new(map(from_string, imtls))
+        models.Imt.save_new(map(from_string, oqparam.imtls))
 
     @EnginePerformanceMonitor.monitor
     def initialize_site_collection(self):
@@ -368,7 +367,7 @@ class BaseHazardCalculator(base.Calculator):
         """
         if not self.acc:
             return
-        imtls = self.hc.intensity_measure_types_and_levels
+        imtls = self.hc.imtls
         points = models.HazardSite.objects.filter(
             hazard_calculation=self.job).order_by('id')
         sorted_imts = sorted(imtls)
@@ -485,7 +484,7 @@ class BaseHazardCalculator(base.Calculator):
                 quantile=quantile,
                 investigation_time=self.hc.investigation_time)
 
-        for imt, imls in self.hc.intensity_measure_types_and_levels.items():
+        for imt, imls in self.hc.imtls.items():
             im_type, sa_period, sa_damping = from_string(imt)
 
             # prepare `output` and `hazard_curve` containers in the DB:
