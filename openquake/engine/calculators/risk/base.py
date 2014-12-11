@@ -163,6 +163,8 @@ class RiskCalculator(base.Calculator):
         if not hasattr(self.oqparam, 'risk_investigation_time') and not \
            self.oqparam.calculation_mode.startswith('scenario'):
             self.oqparam.risk_investigation_time = self.hc.investigation_time
+        if not hasattr(self.oqparam, 'hazard_imtls'):
+            self.oqparam.hazard_imtls = self.hc.imtls
 
     def agg_result(self, acc, res):
         """
