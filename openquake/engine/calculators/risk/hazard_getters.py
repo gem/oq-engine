@@ -309,12 +309,13 @@ class RiskInitializer(object):
         self.exposure_model = calc.exposure_model
         self.hazard_outputs = calc.get_hazard_outputs()
         self.taxonomy = taxonomy
+        self.calc = calc
         self.rc = calc.rc
         self.hc = calc.rc.hazard_calculation
         self.calculation_mode = self.rc.oqjob.get_param('calculation_mode')
         self.number_of_ground_motion_fields = self.hc.get_param(
             'number_of_ground_motion_fields', 0)
-        max_dist = calc.rc.best_maximum_distance * 1000  # km to meters
+        max_dist = calc.best_maximum_distance * 1000  # km to meters
         self.cursor = models.getcursor('job_init')
 
         hazard_exposure = models.extract_from([self.hc], 'exposuremodel')
@@ -373,7 +374,7 @@ SELECT * FROM assocs""", (self.rc.oqjob.id, max_dist, self.hc.id,
             raise AssetSiteAssociationError(
                 'Could not associate any asset of taxonomy %s to '
                 'hazard sites within the distance of %s km'
-                % (self.taxonomy, self.rc.best_maximum_distance))
+                % (self.taxonomy, self.calc.best_maximum_distance))
 
     def calc_nbytes(self, epsilon_sampling=None):
         """
