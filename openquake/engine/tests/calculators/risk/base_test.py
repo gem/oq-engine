@@ -14,6 +14,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
+import mock
 
 from openquake.engine.tests.utils import helpers
 from openquake.engine.tests.utils.helpers import get_data_path
@@ -34,8 +35,13 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
         self.job.save()
 
 
-class FakeWorkflow:
-    """Fake Workflow class used in FakeRiskCalculator"""
+class FakeWorkflow(object):
+    @classmethod
+    def get(cls, imt, taxonomy, oqparam, **extra):
+        self = cls()
+        self.risk_functions = extra['vulnerability_functions']
+        self.loss_types = ('structural',)
+        return self
 
 
 class FakeRiskCalculator(base.RiskCalculator):
@@ -54,11 +60,6 @@ class FakeRiskCalculator(base.RiskCalculator):
         newacc = dict((key, acc.get(key, 0) + res[key]) for key in res)
         return newacc
 
-    def get_workflow(self, vulnerability_functions):
-        FakeWorkflow.risk_functions = vulnerability_functions
-        FakeWorkflow.loss_types = ('structural',)
-        return FakeWorkflow()
-
 
 class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
     """
@@ -70,7 +71,9 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
         self.calculator = FakeRiskCalculator(self.job)
 
     def test(self):
-        self.calculator.pre_execute()
+        with mock.patch('openquake.risklib.workflows.get_workflow',
+                        FakeWorkflow.get):
+            self.calculator.pre_execute()
         # there are 2 assets and 1 taxonomy, two tasks are generated
         self.assertEqual(self.calculator.taxonomies_asset_count, {'VF': 2})
 

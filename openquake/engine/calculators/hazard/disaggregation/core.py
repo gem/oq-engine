@@ -239,7 +239,7 @@ def compute_disagg(job_id, sitecol, sources, trt_model_id,
                 'collecting bins', job_id, compute_disagg):
             bdata = _collect_bins_data(
                 mon, trt_num, source_ruptures, site, curves_dict[site.id],
-                trt_model_id, gsims, hc.intensity_measure_types_and_levels,
+                trt_model_id, gsims, hc.imtls,
                 hc.poes_disagg, getattr(hc, 'truncation_level', None),
                 hc.num_epsilon_bins)
 
@@ -247,7 +247,7 @@ def compute_disagg(job_id, sitecol, sources, trt_model_id,
             continue
 
         for poe in hc.poes_disagg:
-            for imt in hc.intensity_measure_types_and_levels:
+            for imt in hc.imtls:
                 for gsim in gsims:
                     for rlz in rlzs[gsim.__class__.__name__]:
                         # extract the probabilities of non-exceedance for the
@@ -291,7 +291,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         dic = {}
         wkt = site.location.wkt2d
         for rlz in self._get_realizations():
-            for imt_str in self.hc.intensity_measure_types_and_levels:
+            for imt_str in self.hc.imtls:
                 imt = from_string(imt_str)
                 [curve] = models.HazardCurveData.objects.filter(
                     location=wkt,
