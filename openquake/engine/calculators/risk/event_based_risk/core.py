@@ -335,7 +335,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         Base pre_execute + build Event Loss Asset outputs if needed
         """
         super(EventBasedRiskCalculator, self).pre_execute()
-        for hazard_output in self.rc.hazard_outputs():
+        for hazard_output in self.get_hazard_outputs():
             for loss_type in self.loss_types:
                 models.EventLoss.objects.create(
                     output=models.Output.objects.create_output(
@@ -417,7 +417,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                             scientific.event_based(
                                 aggregate_losses, tses=tses,
                                 time_span=oq.investigation_time,
-                                curve_resolution=self.rc.loss_curve_resolution
+                                curve_resolution=
+                                oq.loss_curve_resolution
                             ))
 
                         models.AggregateLossCurveData.objects.create(
