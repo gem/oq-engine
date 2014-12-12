@@ -155,6 +155,14 @@ WHERE x.id=y.lt_model_id
 ORDER BY num_rlzs * num_ruptures DESC
 '''
 
+SLOW_SOURCES = '''
+SELECT tectonic_region_type, source_id, source_class, num_sites,
+a.num_ruptures, calc_time FROM hzrdr.source_info AS a, hzrdr.trt_model AS b
+WHERE a.trt_model_id=b.id AND b.lt_model_id IN
+(SELECT id FROM hzrdr.lt_source_model WHERE hazard_calculation_id=%s)
+ORDER BY calc_time DESC LIMIT 10;
+'''
+
 JOB_STATS = '''
 SELECT description, oq_job_id,
        stop_time, status, disk_space / 1024 / 1024 as disk_space_mb,
@@ -321,6 +329,10 @@ def make_report(conn, isodate='today'):
                 info_rows = ('<h3>Model Summary: %s model(s)</h3>' %
                              num_models) + html(dat)
                 page += info_rows
+
+        data = fetcher.query(SLOW_SOURCES, job_id)
+        if data[1:]:
+            page += '<h3>Top 10 slowest sources</h3>' + html(data)
 
         page += '<h3>Job parameters</h3>'
         data = fetcher.query(JOB_PARAM, job_id)
