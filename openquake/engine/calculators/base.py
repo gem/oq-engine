@@ -91,7 +91,7 @@ class Calculator(object):
         outputs if this option was turned off in the calculation profile.
         """
         outputs = core.get_outputs(self.job.id)
-        if not getattr(self.hc, 'export_multi_curves', None):
+        if not getattr(self.oqparam, 'export_multi_curves', None):
             outputs = outputs.exclude(output_type='hazard_curve_multi')
         return outputs
 

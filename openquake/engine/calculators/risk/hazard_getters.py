@@ -310,7 +310,8 @@ class RiskInitializer(object):
         self.hazard_outputs = calc.get_hazard_outputs()
         self.taxonomy = taxonomy
         self.calc = calc
-        self.hc = calc.oqparam.hazard_calculation
+        self.hc = models.OqJob.objects.get(
+            pk=calc.oqparam.hazard_calculation_id)
         self.calculation_mode = self.calc.oqparam.calculation_mode
         self.number_of_ground_motion_fields = self.hc.get_param(
             'number_of_ground_motion_fields', 0)
