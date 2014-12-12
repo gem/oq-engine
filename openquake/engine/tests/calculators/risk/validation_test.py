@@ -123,23 +123,23 @@ class ExposureHasInsuranceBoundsTestCase(unittest.TestCase):
 
         val = validation.ExposureHasInsuranceBounds(calc)
 
-        calc.insured_losses = True
+        calc.oqparam.insured_losses = True
         calc.exposure_model.has_insurance_bounds = mock.Mock(
             return_value=True)
         self.assertIsNone(val.get_error())
 
-        calc.insured_losses = True
+        calc.oqparam.insured_losses = True
         calc.exposure_model.has_insurance_bounds = mock.Mock(
             return_value=False)
         self.assertEqual("Deductible or insured limit missing in exposure",
                          val.get_error())
 
-        calc.insured_losses = False
+        calc.oqparam.insured_losses = False
         calc.exposure_model.has_insurance_bounds = mock.Mock(
             return_value=True)
         self.assertIsNone(val.get_error())
 
-        calc.insured_losses = False
+        calc.oqparam.insured_losses = False
         calc.exposure_model.has_insurance_bounds = mock.Mock(
             return_value=False)
         self.assertIsNone(val.get_error())

@@ -310,15 +310,15 @@ class RiskInitializer(object):
         self.hazard_outputs = calc.get_hazard_outputs()
         self.taxonomy = taxonomy
         self.calc = calc
-        self.hc = models.OqJob.objects.get(
+        self.oqparam = models.OqJob.objects.get(
             pk=calc.oqparam.hazard_calculation_id)
         self.calculation_mode = self.calc.oqparam.calculation_mode
-        self.number_of_ground_motion_fields = self.hc.get_param(
+        self.number_of_ground_motion_fields = self.oqparam.get_param(
             'number_of_ground_motion_fields', 0)
         max_dist = calc.best_maximum_distance * 1000  # km to meters
         self.cursor = models.getcursor('job_init')
 
-        hazard_exposure = models.extract_from([self.hc], 'exposuremodel')
+        hazard_exposure = models.extract_from([self.oqparam], 'exposuremodel')
         if self.exposure_model is hazard_exposure:
             # no need of geospatial queries, just join on the location
             self.assoc_query = self.cursor.mogrify("""\
@@ -332,7 +332,7 @@ WITH assocs AS (
   AND ST_COVERS(ST_GeographyFromText(%s), exp.site)
 )
 INSERT INTO riskr.asset_site (job_id, asset_id, site_id)
-SELECT * FROM assocs""", (self.calc.job.id, self.hc.id,
+SELECT * FROM assocs""", (self.calc.job.id, self.oqparam.id,
                           self.exposure_model.id, taxonomy,
                           self.calc.oqparam.region_constraint))
         else:
@@ -349,7 +349,7 @@ WITH assocs AS (
   ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
 )
 INSERT INTO riskr.asset_site (job_id, asset_id, site_id)
-SELECT * FROM assocs""", (self.calc.job.id, max_dist, self.hc.id,
+SELECT * FROM assocs""", (self.calc.job.id, max_dist, self.oqparam.id,
                           self.exposure_model.id, taxonomy,
                           self.calc.oqparam.region_constraint))
 
@@ -398,7 +398,7 @@ SELECT * FROM assocs""", (self.calc.job.id, max_dist, self.hc.id,
                     if epsilon_sampling else num_ruptures
                 self.epsilons_shape[ses_coll.id] = (self.num_assets, samples)
         elif self.calculation_mode.startswith('scenario'):
-            [out] = self.hc.output_set.filter(output_type='ses')
+            [out] = self.oqparam.output_set.filter(output_type='ses')
             samples = self.number_of_ground_motion_fields
             self.epsilons_shape[out.ses.id] = (self.num_assets, samples)
         nbytes = 0
@@ -426,7 +426,7 @@ SELECT * FROM assocs""", (self.calc.job.id, max_dist, self.hc.id,
             ses_collections = models.SESCollection.objects.filter(
                 trt_model__lt_model__in=lt_model_ids)
         elif self.calculation_mode.startswith('scenario'):
-            [out] = self.hc.output_set.filter(output_type='ses')
+            [out] = self.oqparam.output_set.filter(output_type='ses')
             ses_collections = [out.ses]
         else:
             ses_collections = []

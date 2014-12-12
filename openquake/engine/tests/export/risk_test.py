@@ -44,7 +44,7 @@ class ExportTestCase(unittest.TestCase):
         exposure_model = self.output_mock.oq_job.exposure_model
         exposure_model.category = "air"
         exposure_model.unit = mock.Mock(return_value="bucks")
-        rc = self.output_mock.oq_job.risk_calculation
+        rc = self.output_mock.oq_job.get_oqparam()
         rc.interest_rate = 0.3
         rc.asset_life_expectancy = 10
 

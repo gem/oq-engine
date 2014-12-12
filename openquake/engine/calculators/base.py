@@ -36,6 +36,7 @@ class Calculator(object):
 
     def __init__(self, job, monitor=None):
         self.job = job
+        self.oqparam = self.job.get_oqparam()
         self.monitor = monitor or EnginePerformanceMonitor(
             '', job.id, flush=True)
         self.num_tasks = None
