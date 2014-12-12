@@ -217,7 +217,7 @@ class BaseHazardCalculator(base.Calculator):
         return info['input_weight'], info['output_weight']
 
     def init_zeros_ones(self):
-        imtls = self.hc.imtls
+        imtls = self.oqparam.imtls
         if None in imtls.values():  # no levels, cannot compute curves
             return
         n_sites = len(self.site_collection)
