@@ -211,8 +211,8 @@ class DeleteHazCalcTestCase(unittest.TestCase):
             self.risk_cfg, self.hazard_cfg,
             output_type='curve', username=getpass.getuser()
         )
-        hazard_job = risk_job.risk_calculation.hazard_output.oq_job
-        self.assertRaises(RuntimeError, engine.del_calc, hazard_job.id)
+        hc = risk_job.hazard_calculation
+        self.assertRaises(RuntimeError, engine.del_calc, hc.id)
 
     def test_del_calc_output_referenced_by_risk_calc(self):
         # Test the case where a risk calculation is referencing one of the
@@ -222,8 +222,8 @@ class DeleteHazCalcTestCase(unittest.TestCase):
             self.risk_cfg, self.hazard_cfg,
             output_type='curve', username=getpass.getuser()
         )
-        hazard_job = risk_job.risk_calculation.hazard_output.oq_job
-        self.assertRaises(RuntimeError, engine.del_calc, hazard_job.id)
+        hc = risk_job.hazard_calculation
+        self.assertRaises(RuntimeError, engine.del_calc, hc.id)
 
 
 class DeleteRiskCalcTestCase(unittest.TestCase):
