@@ -36,7 +36,11 @@ from openquake.commonlib.obsolete import NrmlHazardlibConverter
 # the following is arbitrary, it is used to decide when to parallelize
 # the filtering (MS)
 LOTS_OF_SOURCES_SITES = 1E5  # arbitrary, set by Michele Simionato
-MAGNITUDE_FOR_RUPTURE_SPLITTING = 6.5  # given by Marco Pagani, we could tune this
+MAGNITUDE_FOR_RUPTURE_SPLITTING = 6.5  # given by Marco Pagani
+# NB: the parameter MAGNITUDE_FOR_RUPTURE_SPLITTING cannot go in a
+# configuration file, otherwise the tests will break by changing it;
+# reason: the numbers in the event based calculators depend on the
+# splitting: different sources => different seeds => different numbers
 
 GSIMS = gsim.get_available_gsims()
 
