@@ -159,7 +159,6 @@ class RiskCalculator(base.Calculator):
         self.risk_model = None
         self.loss_types = set()
         self.acc = {}
-        self.oqparam = self.job.get_oqparam()
         self.oqparam.hazard_output = models.Output.objects.get(
             pk=self.oqparam.hazard_output_id) \
             if self.oqparam.hazard_output_id else None
