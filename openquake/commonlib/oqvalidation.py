@@ -150,7 +150,7 @@ class OqParam(valid.ParamSet):
         imtls = getattr(self, 'risk_imtls', None) or getattr(
             self, 'hazard_imtls', None) or \
             self.intensity_measure_types_and_levels
-        return collections.OrderedDict(imtls.items())
+        return collections.OrderedDict(sorted(imtls.items()))
 
     def is_valid_truncation_level_disaggregation(self):
         """
