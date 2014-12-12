@@ -22,7 +22,6 @@ Custom validation module for risk calculators
 """
 
 from openquake.engine.db import models
-from openquake.commonlib.readinput import get_imtls
 
 
 class Validator(object):
@@ -43,15 +42,15 @@ class HazardIMT(Validator):
     """
     def get_error(self):
         model_imts = set(imt for imt, taxo in self.calc.risk_model)
-        imts = sorted(get_imtls(self.calc.rc.get_hazard_param()))
+        imtls = self.calc.rc.get_hazard_param().imtls
 
         # check that the hazard data have all the imts needed by the
         # risk calculation
-        missing = set(model_imts) - set(imts)
+        missing = set(model_imts) - set(imtls)
         if missing:
             return ("There is no hazard output for: %s. "
                     "The available IMTs are: %s." % (", ".join(missing),
-                                                     ", ".join(imts)))
+                                                     ", ".join(imtls)))
 
 
 class EmptyExposure(Validator):
