@@ -14,24 +14,19 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import os
 import getpass
 import unittest
 import mock
 import numpy
-
-from nose.plugins.attrib import attr
 
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
-from openquake.hazardlib.gsim import get_available_gsims
 
-from openquake.engine.db import models
+from openquake.commonlib import valid
 from openquake.engine.calculators.hazard.event_based import core
-
 from openquake.engine.tests.calculators.hazard.event_based \
     import _pp_test_data as test_data
 from openquake.engine.tests.utils import helpers
@@ -74,7 +69,7 @@ class GmfCalculatorTestCase(unittest.TestCase):
         hc.maximum_distance = 200.
 
         trt = 'Subduction Interface'
-        gsim = get_available_gsims()['AkkarBommer2010']()
+        gsim = valid.gsim('AkkarBommer2010')
         num_sites = 5
         site_coll = make_site_coll(-78, 15.5, num_sites)
         rup_id, rup_seed = 42, 44
