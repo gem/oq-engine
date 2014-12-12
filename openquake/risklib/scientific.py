@@ -859,18 +859,16 @@ def EventBasedLossCurve(time_span, tses, curve_resolution):
             time_span=time_span, tses=tses))
 
 
-class LossMap(object):
-    def __init__(self, poes):
-        self.poes = poes or []
-
-    def __call__(self, curves):
-        def single_map(curve, poe):
-            losses, poes = curve
-            return conditional_loss_ratio(losses, poes, poe)
-
-        return numpy.array(
-            [[single_map(curve, poe) for curve in curves]
-             for poe in self.poes]).reshape((len(self.poes), len(curves)))
+def loss_map_matrix(poes, curves):
+    """
+    Wrapper around :func:`openquake.risklib.scientific.conditional_loss_ratio`.
+    Return a matrix of shape (num-poes, num-curves). The curves are lists of
+    pairs (loss_ratios, poes).
+    """
+    return numpy.array(
+        [[conditional_loss_ratio(curve[0], curve[1], poe)
+          for curve in curves] for poe in poes]
+    ).reshape((len(poes), len(curves)))
 
 
 def exposure_statistics(
@@ -965,12 +963,12 @@ def asset_statistics(
     """
     mean_curve = numpy.array([losses, post_processing.mean_curve(
         curves_poes, weights)])
-    mean_map = LossMap(poes)([mean_curve]).reshape(len(poes))
+    mean_map = loss_map_matrix(poes, [mean_curve]).reshape(len(poes))
     quantile_curves = numpy.array(
         [[losses, quantile_curve(post_processing, weights)(
           curves_poes, quantile)]
          for quantile in quantiles]).reshape((len(quantiles), 2, len(losses)))
-    quantile_maps = LossMap(poes)(quantile_curves).transpose()
+    quantile_maps = loss_map_matrix(poes, quantile_curves).T
 
     return (mean_curve, mean_map, quantile_curves, quantile_maps)
 

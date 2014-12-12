@@ -235,8 +235,8 @@ class Classical(Workflow):
             (loss_type,
              scientific.ClassicalLossCurve(vf, imls, lrem_steps_per_interval))
             for loss_type, vf in vulnerability_functions.items())
-        self.maps = scientific.LossMap(conditional_loss_poes)
-        self.fractions = scientific.LossMap(poes_disagg)
+        self.conditional_loss_poes = conditional_loss_poes
+        self.poes_disagg = poes_disagg
         self.insured_losses = insured_losses
 
     def __call__(self, loss_type, assets, hazard_curves, _epsilons=None):
@@ -256,8 +256,8 @@ class Classical(Workflow):
         curves = self.curves[loss_type](hazard_curves)
         average_losses = numpy.array([scientific.average_loss(losses, poes)
                                       for losses, poes in curves])
-        maps = self.maps(curves)
-        fractions = self.fractions(curves)
+        maps = scientific.loss_map_matrix(self.conditional_loss_poes, curves)
+        fractions = scientific.loss_map_matrix(self.poes_disagg, curves)
 
         if self.insured_losses and loss_type != 'fatalities':
             deductibles = [a.deductible(loss_type) for a in assets]
@@ -311,7 +311,7 @@ class Classical(Workflow):
                 [normalize_curves(curves)
                  for curves
                  in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
-                self.maps.poes + self.fractions.poes,
+                self.conditional_loss_poes + self.poes_disagg,
                 weights, quantiles, post_processing))
 
         if self.insured_losses:
@@ -332,11 +332,11 @@ class Classical(Workflow):
         return self.StatisticalOutput(
             outputs[0].assets,
             mean_curves, mean_average_losses,
-            mean_maps[0:len(self.maps.poes)],
-            mean_maps[len(self.maps.poes):],
+            mean_maps[0:len(self.conditional_loss_poes)],
+            mean_maps[len(self.conditional_loss_poes):],
             quantile_curves, quantile_average_losses,
-            quantile_maps[:, 0:len(self.maps.poes)],
-            quantile_maps[:, len(self.maps.poes):],
+            quantile_maps[:, 0:len(self.conditional_loss_poes)],
+            quantile_maps[:, len(self.conditional_loss_poes):],
             mean_insured_curves, mean_average_insured_losses,
             quantile_insured_curves, quantile_average_insured_losses)
 
@@ -440,7 +440,7 @@ class ProbabilisticEventBased(Workflow):
         self.risk_functions = vulnerability_functions
         self.curves = scientific.EventBasedLossCurve(
             risk_investigation_time, tses, loss_curve_resolution)
-        self.maps = scientific.LossMap(conditional_loss_poes)
+        self.conditional_loss_poes = conditional_loss_poes
         self.insured_losses = insured_losses
         self.return_loss_matrix = return_loss_matrix
 
@@ -491,7 +491,7 @@ class ProbabilisticEventBased(Workflow):
                                       for losses, poes in curves])
         stddev_losses = numpy.std(loss_matrix, axis=1)
         values = utils.numpy_map(lambda a: a.value(loss_type), assets)
-        maps = self.maps(curves)
+        maps = scientific.loss_map_matrix(self.conditional_loss_poes, curves)
         elt = self.event_loss(loss_matrix.transpose() * values, event_ids)
 
         if self.insured_losses and loss_type != 'fatalities':
@@ -559,7 +559,8 @@ class ProbabilisticEventBased(Workflow):
          quantile_curves, quantile_average_losses, quantile_maps) = (
             scientific.exposure_statistics(
                 [self._normalize_curves(curves) for curves in curve_matrix],
-                self.maps.poes, weights, quantiles, post_processing))
+                self.conditional_loss_poes, weights, quantiles,
+                post_processing))
         elt = sum((out.event_loss_table for out in outputs),
                   collections.Counter())
 
