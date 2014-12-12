@@ -331,6 +331,21 @@ class OqJob(djm.Model):
         # is not null and contains a reference to the previous hazard job
         return 'hazard' if self.hazard_calculation is None else 'risk'
 
+    def get_or_create_output(self, display_name, output_type):
+        """
+        :param disp_name: display name of the output
+        :param output_type: the output type
+        :returns: an Output instance
+        """
+        try:
+            output = Output.objects.get(
+                oq_job=self, display_name=display_name,
+                output_type=output_type)
+        except ObjectDoesNotExist:
+            output = Output.objects.create_output(
+                self, display_name, output_type)
+        return output
+
     def get_param(self, name, missing=RAISE_EXC):
         """
         `job.get_param(name)` returns the value of the requested parameter
