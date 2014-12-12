@@ -46,7 +46,7 @@ from openquake.hazardlib import geo, correlation
 from openquake.commonlib.riskmodels import loss_type_to_cost_type
 from openquake.commonlib.readinput import get_mesh
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import logictree
+from openquake.commonlib import logictree, valid
 
 from openquake.engine.db import fields
 from openquake.engine import writer, logs, utils
@@ -1799,7 +1799,7 @@ class TrtModel(djm.Model):
         """
         Return the GSIM instances associated to the current TrtModel
         """
-        return [logictree.GSIM[gsim]() for gsim in self.gsims]
+        return map(valid.gsim, self.gsims)
 
     class Meta:
         db_table = 'hzrdr\".\"trt_model'
@@ -1867,7 +1867,7 @@ class LtRealization(djm.Model):
         Return the GSIM instances associated to the current realization
         by looking at the association table.
         """
-        return [logictree.GSIM[art.gsim]() for art in
+        return [valid.gsim(art.gsim) for art in
                 AssocLtRlzTrtModel.objects.filter(rlz=self)]
 
 
