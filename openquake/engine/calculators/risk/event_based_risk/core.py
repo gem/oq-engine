@@ -375,7 +375,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
           Compute aggregate loss curves and event loss tables
         """
         oq = self.oqparam
-        tses = self.hc.investigation_time * self.hc.ses_per_logic_tree_path
+        tses = oq.investigation_time * oq.ses_per_logic_tree_path
         with self.monitor('post processing'):
             inserter = writer.CacheInserter(models.EventLossData,
                                             max_cache_size=10000)
