@@ -339,7 +339,7 @@ def split_source(src, area_source_discretization):
         for s in split_fault_source(src):
             yield s
     else:
-        # characteristic and nonparametrix sources are not split
+        # characteristic and nonparametric sources are not split
         # since they are small anyway
         yield src
 
