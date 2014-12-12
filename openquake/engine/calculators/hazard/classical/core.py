@@ -201,8 +201,8 @@ def compute_hazard_curves(job_id, sources, sitecol):
     trt_model_id = sources[0].trt_model_id
     total_sites = len(sitecol)
     sitemesh = sitecol.mesh
-    sorted_imts = sorted(hc.intensity_measure_types_and_levels)
-    sorted_imls = [hc.intensity_measure_types_and_levels[imt]
+    sorted_imts = sorted(hc.imtls)
+    sorted_imls = [hc.imtls[imt]
                    for imt in sorted_imts]
     sorted_imts = map(from_string, sorted_imts)
     trt_model = models.TrtModel.objects.get(pk=trt_model_id)
