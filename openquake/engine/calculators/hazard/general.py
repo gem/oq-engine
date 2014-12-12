@@ -218,14 +218,15 @@ class BaseHazardCalculator(base.Calculator):
         return info['input_weight'], info['output_weight']
 
     def init_zeros_ones(self):
-        if None in self.imtls.values():  # no levels, cannot compute curves
+        imtls = self.hc.imtls
+        if None in imtls.values():  # no levels, cannot compute curves
             return
         n_sites = len(self.site_collection)
         self.zeros = numpy.array(
-            [numpy.zeros((n_sites, len(self.imtls[imt])))
-             for imt in sorted(self.imtls)])
-        self.ones = [numpy.zeros(len(self.imtls[imt]), dtype=float)
-                     for imt in sorted(self.imtls)]
+            [numpy.zeros((n_sites, len(imtls[imt])))
+             for imt in sorted(imtls)])
+        self.ones = [numpy.zeros(len(imtls[imt]), dtype=float)
+                     for imt in sorted(imtls)]
 
     def check_limits(self, input_weight, output_weight):
         """
