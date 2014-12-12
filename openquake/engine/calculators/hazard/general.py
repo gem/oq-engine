@@ -125,6 +125,8 @@ class BaseHazardCalculator(base.Calculator):
     functionality, like initialization procedures.
     """
 
+    tilepath = ()  # set only by the tiling calculator
+
     def __init__(self, job):
         super(BaseHazardCalculator, self).__init__(job)
         # a dictionary trt_model_id -> num_ruptures
@@ -135,6 +137,8 @@ class BaseHazardCalculator(base.Calculator):
             self.oqparam, 'mean_hazard_curves', None)
         self.quantile_hazard_curves = getattr(
             self.oqparam, 'quantile_hazard_curves', ())
+        self._hazard_curves = []
+        self._realizations = []
 
     @EnginePerformanceMonitor.monitor
     def execute(self):
@@ -183,13 +187,6 @@ class BaseHazardCalculator(base.Calculator):
 
         return acc
 
-    def _get_realizations(self):
-        """
-        Get all of the logic tree realizations for this calculation.
-        """
-        return models.LtRealization.objects\
-            .filter(lt_model__hazard_calculation=self.job).order_by('id')
-
     def pre_execute(self):
         """
         Initialize risk models, site model and sources
@@ -216,14 +213,19 @@ class BaseHazardCalculator(base.Calculator):
                 input_weight=info['input_weight'],
                 output_weight=info['output_weight'])
         self.check_limits(info['input_weight'], info['output_weight'])
-        self.imtls = self.oqparam.imtls
-        if info['n_levels']:  # we can compute hazard curves
-            self.zeros = numpy.array(
-                [numpy.zeros((info['n_sites'], len(self.imtls[imt])))
-                 for imt in sorted(self.imtls)])
-            self.ones = [numpy.zeros(len(self.imtls[imt]), dtype=float)
-                         for imt in sorted(self.imtls)]
+        self.init_zeros_ones()
         return info['input_weight'], info['output_weight']
+
+    def init_zeros_ones(self):
+        imtls = self.hc.imtls
+        if None in imtls.values():  # no levels, cannot compute curves
+            return
+        n_sites = len(self.site_collection)
+        self.zeros = numpy.array(
+            [numpy.zeros((n_sites, len(imtls[imt])))
+             for imt in sorted(imtls)])
+        self.ones = [numpy.zeros(len(imtls[imt]), dtype=float)
+                     for imt in sorted(imtls)]
 
     def check_limits(self, input_weight, output_weight):
         """
@@ -265,7 +267,8 @@ class BaseHazardCalculator(base.Calculator):
         for sm in self.composite_model:
             # create an LtSourceModel for each distinct source model
             lt_model = models.LtSourceModel.objects.create(
-                hazard_calculation=self.job, sm_lt_path=sm.path,
+                hazard_calculation=self.job,
+                sm_lt_path=self.tilepath + sm.path,
                 ordinal=sm.ordinal, sm_name=sm.name, weight=sm.weight)
 
             # save TrtModels for each tectonic region type
@@ -330,7 +333,7 @@ class BaseHazardCalculator(base.Calculator):
         """
         logs.LOG.progress("initializing realizations")
         cm = self.composite_model
-
+        self._realizations = []
         # update the attribute num_ruptures, to discard fake realizations
         for trt_model in cm.trt_models:
             trt_model.num_ruptures = models.TrtModel.objects.get(
@@ -342,11 +345,13 @@ class BaseHazardCalculator(base.Calculator):
         for rlz, gsim_by_trt in zip(
                 rlzs_assoc.realizations, rlzs_assoc.gsim_by_trt):
             lt_model = models.LtSourceModel.objects.get(
-                hazard_calculation=self.job, sm_lt_path=rlz.sm_lt_path)
+                hazard_calculation=self.job,
+                sm_lt_path=self.tilepath + rlz.sm_lt_path)
             trt_models = lt_model.trtmodel_set.filter(num_ruptures__gt=0)
             lt_rlz = models.LtRealization.objects.create(
                 lt_model=lt_model, gsim_lt_path=rlz.gsim_lt_path,
                 weight=rlz.weight, ordinal=rlz.ordinal)
+            self._realizations.append(lt_rlz)
             for trt_model in trt_models:
                 trt = trt_model.tectonic_region_type
                 # populate the association table rlz <-> trt_model
@@ -373,7 +378,7 @@ class BaseHazardCalculator(base.Calculator):
         curves_by_imt = dict((imt, []) for imt in sorted_imts)
         individual_curves = self.job.get_param(
             'individual_curves', missing=True)
-        for rlz in self._get_realizations():
+        for rlz in self._realizations:
             if individual_curves:
                 # create a multi-imt curve
                 multicurve = models.Output.objects.create_output(
@@ -427,6 +432,7 @@ class BaseHazardCalculator(base.Calculator):
             sa_period=sa_period,
             sa_damping=sa_damping,
         )
+        self._hazard_curves.append(haz_curve)
 
         # save hazard_curve_data
         logs.LOG.info('saving %d hazard curves for %s, imt=%s',
@@ -447,8 +453,7 @@ class BaseHazardCalculator(base.Calculator):
 
         Post-processing results will be stored directly into the database.
         """
-        weights = [rlz.weight for rlz in models.LtRealization.objects.filter(
-            lt_model__hazard_calculation=self.job)]
+        weights = [rlz.weight for rlz in self._realizations]
         num_rlzs = len(weights)
         if not num_rlzs:
             logs.LOG.warn('No realizations for hazard_calculation_id=%d',
@@ -489,8 +494,7 @@ class BaseHazardCalculator(base.Calculator):
             # prepare `output` and `hazard_curve` containers in the DB:
             container_ids = dict()
             if self.oqparam.mean_hazard_curves:
-                mean_output = models.Output.objects.create_output(
-                    job=self.job,
+                mean_output = self.job.get_or_create_output(
                     display_name='Mean Hazard Curves %s' % imt,
                     output_type='hazard_curve'
                 )
@@ -503,16 +507,14 @@ class BaseHazardCalculator(base.Calculator):
                     sa_damping=sa_damping,
                     statistics='mean'
                 )
+                self._hazard_curves.append(mean_hc)
                 container_ids['mean'] = mean_hc.id
 
             for quantile in self.quantile_hazard_curves:
-                q_output = models.Output.objects.create_output(
-                    job=self.job,
+                q_output = self.job.get_or_create_output(
                     display_name=(
-                        '%s quantile Hazard Curves %s' % (quantile, imt)
-                    ),
-                    output_type='hazard_curve'
-                )
+                        '%s quantile Hazard Curves %s' % (quantile, imt)),
+                    output_type='hazard_curve')
                 q_hc = models.HazardCurve.objects.create(
                     output=q_output,
                     investigation_time=self.oqparam.investigation_time,
@@ -523,6 +525,7 @@ class BaseHazardCalculator(base.Calculator):
                     statistics='quantile',
                     quantile=quantile
                 )
+                self._hazard_curves.append(q_hc)
                 container_ids['q%s' % quantile] = q_hc.id
 
             # num_rlzs * num_sites * num_levels
@@ -584,10 +587,8 @@ class BaseHazardCalculator(base.Calculator):
         if (getattr(self.oqparam, 'hazard_maps', None) or
                 getattr(self.oqparam, 'uniform_hazard_spectra', None)):
             with self.monitor('generating hazard maps'):
-                hazard_curves = models.HazardCurve.objects.filter(
-                    output__oq_job=self.job, imt__isnull=False)
                 tasks.apply_reduce(
                     hazard_curves_to_hazard_map,
-                    (self.job.id, hazard_curves, self.oqparam.poes))
+                    (self.job.id, self._hazard_curves, self.oqparam.poes))
         if getattr(self.oqparam, 'uniform_hazard_spectra', None):
             do_uhs_post_proc(self.job)
