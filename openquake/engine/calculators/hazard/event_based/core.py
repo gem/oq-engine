@@ -450,7 +450,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         # create a Gmf output for each realization
         self.initialize_realizations()
         if getattr(self.oqparam, 'ground_motion_fields', None):
-            for rlz in self._get_realizations():
+            for rlz in self._realizations:
                 output = models.Output.objects.create(
                     oq_job=self.job,
                     display_name='GMF rlz-%s' % rlz.id,
