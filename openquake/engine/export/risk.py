@@ -209,7 +209,7 @@ def export_bcr_distribution_xml(key, output, target):
     Export `output` to `target` by using a nrml bcr distribution
     serializer
     """
-    risk_calculation = output.oq_job.risk_calculation
+    risk_calculation = output.oq_job.get_oqparam()
     args = _export_common(output, output.bcr_distribution.loss_type)
 
     dest = _get_result_export_dest(target, output)

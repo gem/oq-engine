@@ -1807,12 +1807,12 @@ class LossFraction(djm.Model):
                 self.statistics, self.quantile,
                 self.variable, self.poe, self.loss_type)
 
-    def display_value(self, value, rc):
+    def display_value(self, value, oq):
         """
         Converts `value` in a form that is best suited to be
         displayed.
 
-        :param rc:
+        :param oq:
            An `OqParam` object used to get the bin width
 
         :returns: `value` if the attribute `variable` is equal to
@@ -1827,17 +1827,17 @@ class LossFraction(djm.Model):
         elif self.variable == "magnitude_distance":
             magnitude, distance = map(float, value.split(","))
             return "%.4f,%.4f|%.4f,%.4f" % (
-                magnitude * rc.mag_bin_width,
-                (magnitude + 1) * rc.mag_bin_width,
-                distance * rc.distance_bin_width,
-                (distance + 1) * rc.distance_bin_width)
+                magnitude * oq.mag_bin_width,
+                (magnitude + 1) * oq.mag_bin_width,
+                distance * oq.distance_bin_width,
+                (distance + 1) * oq.distance_bin_width)
         elif self.variable == "coordinate":
             lon, lat = map(float, value.split(","))
             return "%.4f,%.4f|%.4f,%.4f" % (
-                lon * rc.coordinate_bin_width,
-                (lon + 1) * rc.coordinate_bin_width,
-                lat * rc.coordinate_bin_width,
-                (lat + 1) * rc.coordinate_bin_width)
+                lon * oq.coordinate_bin_width,
+                (lon + 1) * oq.coordinate_bin_width,
+                lat * oq.coordinate_bin_width,
+                (lat + 1) * oq.coordinate_bin_width)
         else:
             raise RuntimeError(
                 "disaggregation of type %s not supported" % self.variable)
@@ -1865,14 +1865,14 @@ class LossFraction(djm.Model):
         """
         cursor.execute(query, (self.id,))
 
-        rc = self.output.oq_job.risk_calculation
+        oq = self.output.oq_job.get_oqparam()
 
         loss_fraction = collections.namedtuple('loss_fraction', 'bin loss')
 
         return collections.OrderedDict(
             sorted(
                 [loss_fraction(
-                    self.display_value(value, rc),
+                    self.display_value(value, oq),
                     (loss, loss / total))
                  for value, loss in cursor],
                 key=operator.attrgetter('loss'),
@@ -1887,7 +1887,7 @@ class LossFraction(djm.Model):
         corresponding value is a tuple holding the absolute losses and
         the fraction of losses occurring in that location.
         """
-        rc = self.output.oq_job.risk_calculation
+        oq = self.output.oq_job.get_oqparam()
         cursor = connections['job_init'].cursor()
 
         # Partition by lon,lat because partitioning on geometry types
@@ -1909,7 +1909,7 @@ class LossFraction(djm.Model):
         cursor.execute(query, (self.id, ))
 
         def display_value_and_fractions(value, absolute_loss, total_loss):
-            display_value = self.display_value(value, rc)
+            display_value = self.display_value(value, oq)
 
             if total_loss > 0:
                 fraction = absolute_loss / total_loss

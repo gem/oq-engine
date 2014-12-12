@@ -160,25 +160,9 @@ class RiskCalculator(base.Calculator):
         self.loss_types = set()
         self.acc = {}
         self.oqparam = self.job.get_oqparam()
-        hazard_calculation = models.OqJob.objects.get(
-            pk=self.oqparam.hazard_calculation_id)
-        self.hc = hazard_calculation.get_oqparam()
-        # copy the non-conflicting hazard parameters in the risk parameters
-        for name, value in self.hc:
-            if not hasattr(self.oqparam, name):
-                setattr(self.oqparam, name, value)
-        if not hasattr(self.oqparam, 'risk_investigation_time') and not \
-           self.oqparam.calculation_mode.startswith('scenario'):
-            self.oqparam.risk_investigation_time = self.hc.investigation_time
-        if not hasattr(self.oqparam, 'hazard_imtls'):
-            self.oqparam.hazard_imtls = self.hc.imtls
-        self.oqparam.hazard_investigation_time = getattr(
-            self.hc, 'investigation_time', None)
-
         self.oqparam.hazard_output = models.Output.objects.get(
             pk=self.oqparam.hazard_output_id) \
             if self.oqparam.hazard_output_id else None
-        self.oqparam.hazard_calculation = hazard_calculation
 
         dist = getattr(
             self.oqparam, 'maximum_distance', DEFAULT_MAXIMUM_DISTANCE)
@@ -203,7 +187,7 @@ class RiskCalculator(base.Calculator):
         oq = self.oqparam
         if oq.hazard_output:
             return [oq.hazard_output]
-        elif oq.hazard_calculation:
+        elif oq.hazard_calculation_id:
             if oq.calculation_mode in ["classical_risk", "classical_bcr"]:
                 filters = dict(output_type='hazard_curve_multi',
                                hazard_curve__lt_realization__isnull=False)
@@ -218,8 +202,8 @@ class RiskCalculator(base.Calculator):
             else:
                 raise NotImplementedError
 
-            return oq.hazard_calculation.output_set.filter(
-                **filters).order_by('id')
+            return models.Output.objects.filter(
+                oq_job=oq.hazard_calculation_id, **filters).order_by('id')
         else:
             raise RuntimeError("Neither hazard calculation "
                                "neither a hazard output has been provided")

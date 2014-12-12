@@ -346,7 +346,6 @@ def run_job(cfg_file, log_level, log_file, exports='', hazard_output_id=None,
     # first of all check the database version and exit if the db is outdated
     upgrader.check_versions(django_db.connections['admin'])
     with CeleryNodeMonitor(openquake.engine.no_distribute(), interval=3):
-        hazard = hazard_output_id is None and hazard_calculation_id is None
         job = job_from_file(
             cfg_file, getpass.getuser(), log_level, exports, hazard_output_id,
             hazard_calculation_id)
@@ -361,16 +360,10 @@ def run_job(cfg_file, log_level, log_file, exports='', hazard_output_id=None,
         t0 = time.time()
         run_calc(job, log_level, log_file, exports)
         duration = time.time() - t0
-        if hazard:
-            if job.status == 'complete':
-                print_results(job.id, duration, list_outputs)
-            else:
-                sys.exit('Calculation %s failed' % job.id)
+        if job.status == 'complete':
+            print_results(job.id, duration, list_outputs)
         else:
-            if job.status == 'complete':
-                print_results(job.id, duration, list_outputs)
-            else:
-                sys.exit('Calculation %s failed' % job.id)
+            sys.exit('Calculation %s failed' % job.id)
 
 
 def check_hazard_risk_consistency(haz_job, risk_mode):
@@ -467,26 +460,45 @@ def job_from_file(cfg_file_path, username, log_level='info', exports='',
         oqparam.hazard_output_id = hazard_output_id
 
     params = vars(oqparam).copy()
-    if 'quantile_loss_curves' not in params:
-        params['quantile_loss_curves'] = []
-    if 'poes_disagg' not in params:
-        params['poes_disagg'] = []
-    if 'sites_disagg' not in params:
-        params['sites_disagg'] = []
-    if 'specific_assets' not in params:
-        params['specific_assets'] = []
-    if 'conditional_loss_poes' not in params:
-        params['conditional_loss_poes'] = []
     if haz_job:
         params['hazard_calculation_id'] = haz_job.id
-    job.save_params(params)
 
     if hazard_output_id is None and hazard_calculation_id is None:
         # this is a hazard calculation, not a risk one
+        job.save_params(params)
         del params['hazard_calculation_id']
         del params['hazard_output_id']
     else:  # this is a risk calculation
         job.hazard_calculation = haz_job
+        hc = haz_job.get_oqparam()
+        # copy the non-conflicting hazard parameters in the risk parameters
+        for name, value in hc:
+            if not name in params:
+                params[name] = value
+        if 'quantile_loss_curves' not in params:
+            params['quantile_loss_curves'] = []
+        if 'poes_disagg' not in params:
+            params['poes_disagg'] = []
+        if 'sites_disagg' not in params:
+            params['sites_disagg'] = []
+        if 'specific_assets' not in params:
+            params['specific_assets'] = []
+        if 'conditional_loss_poes' not in params:
+            params['conditional_loss_poes'] = []
+        if 'insured_losses' not in params:
+            params['insured_losses'] = False
+        if 'asset_correlation' not in params:
+            params['asset_correlation'] = 0
+        if 'master_seed' not in params:
+            params['master_seed'] = 0
+        if not 'risk_investigation_time' in params and not \
+           params['calculation_mode'].startswith('scenario'):
+            params['risk_investigation_time'] = hc.investigation_time
+        if 'hazard_imtls' not in params:
+            params['hazard_imtls'] = dict(hc.imtls)
+        params['hazard_investigation_time'] = getattr(
+            hc, 'investigation_time', None)
+        job.save_params(params)
 
     job.save()
     return job
