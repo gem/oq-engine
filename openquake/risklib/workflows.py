@@ -115,7 +115,9 @@ class Workflow(object):
     """
     Base class. Can be used in the tests as a mock.
     """
-    def __init__(self, risk_functions):
+    def __init__(self, imt, taxonomy, risk_functions):
+        self.imt = imt
+        self.taxonomy = taxonomy
         self.risk_functions = risk_functions
 
     @property
@@ -209,26 +211,29 @@ class Classical(Workflow):
         'mean_insured_curves mean_average_insured_losses '
         'quantile_insured_curves quantile_average_insured_losses')
 
-    def __init__(self,
-                 vulnerability_functions,
-                 lrem_steps_per_interval,
-                 conditional_loss_poes,
-                 poes_disagg,
+    def __init__(self, imt, taxonomy, vulnerability_functions,
+                 hazard_imtls, lrem_steps_per_interval,
+                 conditional_loss_poes, poes_disagg,
                  insured_losses=False):
         """
         :param float poes_disagg:
             Probability of Exceedance levels used for disaggregate losses by
             taxonomy.
+        :param hazard_imtls:
+            the intensity measure type and levels of the hazard computation
         :param bool insured_losses:
             True if insured loss curves should be computed
 
         See :func:`openquake.risklib.scientific.classical` for a description
         of the other parameters.
         """
+        self.imt = imt
+        self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
+        imls = hazard_imtls[self.imt]
         self.curves = dict(
             (loss_type,
-             calculators.ClassicalLossCurve(vf, lrem_steps_per_interval))
+             calculators.ClassicalLossCurve(vf, imls, lrem_steps_per_interval))
             for loss_type, vf in vulnerability_functions.items())
         self.maps = calculators.LossMap(conditional_loss_poes)
         self.fractions = calculators.LossMap(poes_disagg)
@@ -414,9 +419,10 @@ class ProbabilisticEventBased(Workflow):
         'event_loss_table')
 
     def __init__(
-            self,
+            self, imt, taxonomy,
             vulnerability_functions,
-            time_span, tses,
+            risk_investigation_time,
+            tses,
             loss_curve_resolution,
             conditional_loss_poes,
             insured_losses=False,
@@ -429,9 +435,11 @@ class ProbabilisticEventBased(Workflow):
             if False the loss_matrix is not saved in the Output tuple
             (a trick to save memory in the case of no disaggregation)
         """
+        self.imt = imt
+        self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
         self.curves = calculators.EventBasedLossCurve(
-            time_span, tses, loss_curve_resolution)
+            risk_investigation_time, tses, loss_curve_resolution)
         self.maps = calculators.LossMap(conditional_loss_poes)
         self.insured_losses = insured_losses
         self.return_loss_matrix = return_loss_matrix
@@ -595,22 +603,26 @@ class ProbabilisticEventBased(Workflow):
 
 @registry.add('classical_bcr')
 class ClassicalBCR(Workflow):
-    def __init__(self,
+    def __init__(self, imt, taxonomy,
                  vulnerability_functions_orig,
                  vulnerability_functions_retro,
+                 hazard_imtls,
                  lrem_steps_per_interval,
                  interest_rate, asset_life_expectancy):
+        self.imt = imt
+        self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions_orig
         self.assets = None  # set a __call__ time
         self.interest_rate = interest_rate
         self.asset_life_expectancy = asset_life_expectancy
+        imls = hazard_imtls[self.imt]
         self.curves_orig = dict(
             (loss_type,
-             calculators.ClassicalLossCurve(vf, lrem_steps_per_interval))
+             calculators.ClassicalLossCurve(vf, imls, lrem_steps_per_interval))
             for loss_type, vf in vulnerability_functions_orig.items())
         self.curves_retro = dict(
             (loss_type,
-             calculators.ClassicalLossCurve(vf, lrem_steps_per_interval))
+             calculators.ClassicalLossCurve(vf, imls, lrem_steps_per_interval))
             for loss_type, vf in vulnerability_functions_retro.items())
 
     def __call__(self, loss_type, assets, hazard):
@@ -641,11 +653,13 @@ class ClassicalBCR(Workflow):
 
 @registry.add('event_based_bcr')
 class ProbabilisticEventBasedBCR(Workflow):
-    def __init__(self,
+    def __init__(self, imt, taxonomy,
                  vulnerability_functions_orig,
                  vulnerability_functions_retro,
-                 time_span, tses, loss_curve_resolution,
+                 risk_investigation_time, tses, loss_curve_resolution,
                  interest_rate, asset_life_expectancy):
+        self.imt = imt
+        self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions_orig
         self.assets = None  # set a __call__ time
         self.interest_rate = interest_rate
@@ -653,7 +667,7 @@ class ProbabilisticEventBasedBCR(Workflow):
         self.vf_orig = vulnerability_functions_orig
         self.vf_retro = vulnerability_functions_retro
         self.curves = calculators.EventBasedLossCurve(
-            time_span, tses, loss_curve_resolution)
+            risk_investigation_time, tses, loss_curve_resolution)
 
     def __call__(self, loss_type, assets, gmfs, epsilons, event_ids):
         self.assets = assets
@@ -687,7 +701,9 @@ class Scenario(Workflow):
     """
     Implements the Scenario workflow
     """
-    def __init__(self, vulnerability_functions, insured_losses):
+    def __init__(self, imt, taxonomy, vulnerability_functions, insured_losses):
+        self.imt = imt
+        self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
         self.insured_losses = insured_losses
 
@@ -723,7 +739,9 @@ class Scenario(Workflow):
 
 @registry.add('scenario_damage')
 class Damage(Workflow):
-    def __init__(self, fragility_functions):
+    def __init__(self, imt, taxonomy, fragility_functions):
+        self.imt = imt
+        self.taxonomy = taxonomy
         self.risk_functions = fragility_functions
 
     def __call__(self, loss_type, assets, gmfs, _epsilons=None):
@@ -748,11 +766,15 @@ class Damage(Workflow):
 # names of the parameter in the oqparam object. This is view as a
 # feature, since it forces people to be consistent with the names,
 # in the spirit of the 'convention over configuration' philosophy
-def get_workflow(oqparam, **extra):
+def get_workflow(imt, taxonomy, oqparam, **extra):
     """
     Return an instance of the correct workflow class, depending on the
     attribute `calculation_mode` of the object `oqparam`.
 
+    :param imt:
+        an intensity measure type string
+    :param taxonomy:
+        a taxonomy string
     :param oqparam:
         an object containing the parameters needed by the workflow class
     :param extra:
@@ -760,7 +782,7 @@ def get_workflow(oqparam, **extra):
     """
     workflow_class = registry[oqparam.calculation_mode]
     # arguments needed to instantiate the workflow class
-    argnames = inspect.getargspec(workflow_class.__init__).args[1:]
+    argnames = inspect.getargspec(workflow_class.__init__).args[3:]
     # arguments extracted from oqparam
     known_args = vars(oqparam)
     all_args = {}
@@ -768,7 +790,7 @@ def get_workflow(oqparam, **extra):
         if argname in known_args:
             all_args[argname] = known_args[argname]
     all_args.update(extra)
-    return workflow_class(**all_args)
+    return workflow_class(imt, taxonomy, **all_args)
 
 
 class RiskModel(collections.Mapping):
