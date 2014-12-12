@@ -25,7 +25,7 @@ import ConfigParser
 import numpy
 from shapely import wkt, geometry
 
-from openquake.hazardlib import geo, site, gsim, correlation, imt
+from openquake.hazardlib import geo, site, correlation, imt
 from openquake.risklib import workflows
 
 from openquake.commonlib.oqvalidation import OqParam
@@ -40,8 +40,6 @@ from openquake.commonlib import source
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
 NORMALIZATION_FACTOR = 1E-2
-
-GSIM = gsim.get_available_gsims()
 
 
 class DuplicatedPoint(Exception):
@@ -209,7 +207,7 @@ def get_gsim(oqparam):
     Return a GSIM instance from the gsim name in the configuration
     file (defined for scenario computations).
     """
-    return GSIM[oqparam.gsim]()
+    return valid.gsim(oqparam.gsim)
 
 
 def get_correl_model(oqparam):
