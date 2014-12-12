@@ -152,7 +152,7 @@ WHERE a.lt_model_id=b.id AND b.hazard_calculation_id=%s GROUP BY b.id) AS x,
 (SELECT lt_model_id, count(*) AS num_rlzs FROM hzrdr.lt_realization
 GROUP by lt_model_id) AS y
 WHERE x.id=y.lt_model_id
-ORDER BY num_rlzs * num_ruptures DESC
+ORDER BY num_rlzs * num_ruptures DESC, sm_lt_path
 '''
 
 SLOW_SOURCES = '''
