@@ -378,9 +378,11 @@ def get_composite_source_model(oqparam, sitecol):
         for trt_model in source_model.trt_models:
             trt_model.id = trt_id
             trt_id += 1
+            logging.info('Splitting sources and counting ruptures for %s',
+                         trt_model)
             trt_model.split_sources_and_count_ruptures(
                 oqparam.area_source_discretization)
-            logging.info('splitting %s', trt_model)
+            logging.info('Got %s', trt_model)
         smodels.append(source_model)
     return source.CompositeSourceModel(source_model_lt, smodels)
 
@@ -400,7 +402,7 @@ def get_job_info(oqparam, source_models, sitecol):
     # The input weight is given by the number of ruptures generated
     # by the sources; for point sources however a corrective factor
     # given by the parameter `point_source_weight` is applied
-    input_weight = sum(src.weight for src_model in source_models
+    input_weight = sum(src.weight or 0 for src_model in source_models
                        for trt_model in src_model.trt_models
                        for src in trt_model)
 
@@ -466,9 +468,8 @@ def set_imtls(oqparam):
         ffs = get_fragility_functions(fname, cfd)
         oqparam.risk_imtls = {fset.imt: fset.imls for fset in ffs.itervalues()}
 
-    if not hasattr(oqparam, 'hazard_imtls'):
-        oqparam.hazard_imtls = oqparam.risk_imtls
-    elif not oqparam.calculation_mode.startswith('scenario'):
+    if hasattr(oqparam, 'hazard_imtls') and not (
+            oqparam.calculation_mode.startswith('scenario')):
         oqparam.hazard_investigation_time = oqparam.investigation_time
     if 'event_based' in oqparam.calculation_mode and not hasattr(
             oqparam, 'loss_curve_resolution'):
