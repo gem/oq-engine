@@ -280,9 +280,10 @@ class VulnerabilityFunction(object):
            :py:class:`openquake.risklib.vulnerability_function.\
            VulnerabilityFunction`
         """
-        return ([max(0, self.imls[0] - ((self.imls[1] - self.imls[0]) / 2))] +
-                [numpy.mean(pair) for pair in utils.pairwise(self.imls)] +
-                [self.imls[-1] + ((self.imls[-1] - self.imls[-2]) / 2)])
+        return numpy.array(
+            [max(0, self.imls[0] - ((self.imls[1] - self.imls[0]) / 2))] +
+            [numpy.mean(pair) for pair in utils.pairwise(self.imls)] +
+            [self.imls[-1] + ((self.imls[-1] - self.imls[-2]) / 2)])
 
     def __repr__(self):
         return '<VulnerabilityFunction(%s)>' % self.imt
@@ -622,7 +623,7 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, steps=10):
     loss_ratios, lrem = vf.loss_ratio_exceedance_matrix(steps)
 
     lrem_po = numpy.empty(lrem.shape)
-    imls = numpy.array(vf.mean_imls())
+    imls = vf.mean_imls()
 
     # saturate imls to hazard imls
     min_val, max_val = hazard_imls[0], hazard_imls[-1]
