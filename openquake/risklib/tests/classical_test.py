@@ -150,30 +150,6 @@ class ClassicalTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(
             expected_lrem, lrem, rtol=0.0, atol=0.0005)
 
-    def test_classical(self):
-        hazard_imls = [0.01, 0.08, 0.17, 0.26, 0.36, 0.55, 0.7]
-        hazard_curve = [0.99, 0.96, 0.89, 0.82, 0.7, 0.4, 0.01]
-
-        imls = [0.1, 0.2, 0.4, 0.6]
-        covs = [0.5, 0.3, 0.2, 0.1]
-        loss_ratios = [0.05, 0.08, 0.2, 0.4]
-        vuln_function = scientific.VulnerabilityFunction(
-            'PGA', imls, loss_ratios, covs, "LN")
-
-        # pre computed values just use one intermediate
-        # values between the imls, so steps=2
-        ratios, poes = scientific.classical(
-            vuln_function, hazard_imls, hazard_curve, steps=2)
-
-        numpy.testing.assert_allclose(
-            ratios,
-            [0, 0.025, 0.05, 0.065, 0.08, 0.14, 0.2, 0.3, 0.4, 0.7, 1.])
-        numpy.testing.assert_allclose(
-            poes,  [9.62857143e-01, 9.55503318e-01, 9.13182187e-01,
-                    8.71573173e-01, 8.28329053e-01, 7.52198254e-01,
-                    6.04039357e-01, 4.72537699e-01, 2.25193587e-01,
-                    3.76361046e-09, 1.60493851e-12])
-
     def test_bin_width_from_imls(self):
         imls = [0.1, 0.2, 0.4, 0.6]
         covs = [0.5, 0.5, 0.5, 0.5]
