@@ -793,50 +793,6 @@ def mean_std(fractions):
     return numpy.mean(fractions, axis=0), numpy.std(fractions, axis=0, ddof=1)
 
 
-def ClassicalLossCurve(vulnerability_function, hazard_imls, steps):
-    """
-    :param vulnerability_function:
-       a :class:`openquake.risklib.scientific.VulnerabilityFunction`
-       instance used to compute loss curves by using the Classical PSHA-based
-       algorithm
-    :param hazard_imls:
-        the hazard intensity measure type and levels
-    :param int steps:
-       the number of steps used in the Classical PSHA-based algorithm
-    :returns:
-       a function that can be applied to a set of hazard curves.
-       See :func:`openquake.risklib.scientific.classical` for more details
-    """
-    return functools.partial(
-        utils.numpy_map,
-        functools.partial(
-            classical,
-            vulnerability_function,
-            hazard_imls,
-            steps=steps))
-
-
-def EventBasedLossCurve(time_span, tses, curve_resolution):
-    """
-    :param int time_span:
-       The investigation time considered by the event based algorithm
-    :param int tses:
-       The time of the stochastic event set considered
-    :param int curve_resolution:
-       The resolution (number of values) the loss curve will be built on
-    :returns:
-       a function that can be applied to a set of loss values.
-       See :func:`openquake.risklib.scientific.event_based` for more details
-    """
-
-    return functools.partial(
-        utils.numpy_map,
-        functools.partial(
-            event_based,
-            curve_resolution=curve_resolution,
-            time_span=time_span, tses=tses))
-
-
 def loss_map_matrix(poes, curves):
     """
     Wrapper around :func:`openquake.risklib.scientific.conditional_loss_ratio`.

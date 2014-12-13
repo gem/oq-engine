@@ -19,6 +19,7 @@
 import inspect
 import itertools
 import operator
+import functools
 import collections
 import numpy
 from scipy import interpolate
@@ -233,7 +234,8 @@ class Classical(Workflow):
         imls = hazard_imtls[self.imt]
         self.curves = dict(
             (loss_type,
-             scientific.ClassicalLossCurve(vf, imls, lrem_steps_per_interval))
+             functools.partial(scientific.classical, vf, imls,
+                               steps=lrem_steps_per_interval))
             for loss_type, vf in vulnerability_functions.items())
         self.conditional_loss_poes = conditional_loss_poes
         self.poes_disagg = poes_disagg
@@ -253,7 +255,7 @@ class Classical(Workflow):
         :returns:
             a :class:`openquake.risklib.scientific.Classical.Output` instance.
         """
-        curves = self.curves[loss_type](hazard_curves)
+        curves = utils.numpy_map(self.curves[loss_type], hazard_curves)
         average_losses = numpy.array([scientific.average_loss(losses, poes)
                                       for losses, poes in curves])
         maps = scientific.loss_map_matrix(self.conditional_loss_poes, curves)
@@ -438,8 +440,9 @@ class ProbabilisticEventBased(Workflow):
         self.imt = imt
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
-        self.curves = scientific.EventBasedLossCurve(
-            risk_investigation_time, tses, loss_curve_resolution)
+        self.curves = functools.partial(
+            scientific.event_based, curve_resolution=loss_curve_resolution,
+            time_span=risk_investigation_time, tses=tses)
         self.conditional_loss_poes = conditional_loss_poes
         self.insured_losses = insured_losses
         self.return_loss_matrix = return_loss_matrix
@@ -486,7 +489,7 @@ class ProbabilisticEventBased(Workflow):
         loss_matrix = self.risk_functions[loss_type].apply_to(
             ground_motion_values, epsilons)
 
-        curves = self.curves(loss_matrix)
+        curves = utils.numpy_map(self.curves, loss_matrix)
         average_losses = numpy.array([scientific.average_loss(losses, poes)
                                       for losses, poes in curves])
         stddev_losses = numpy.std(loss_matrix, axis=1)
@@ -619,18 +622,22 @@ class ClassicalBCR(Workflow):
         imls = hazard_imtls[self.imt]
         self.curves_orig = dict(
             (loss_type,
-             scientific.ClassicalLossCurve(vf, imls, lrem_steps_per_interval))
+             functools.partial(scientific.classical, vf, imls,
+                               steps=lrem_steps_per_interval))
             for loss_type, vf in vulnerability_functions_orig.items())
         self.curves_retro = dict(
             (loss_type,
-             scientific.ClassicalLossCurve(vf, imls, lrem_steps_per_interval))
+             functools.partial(scientific.classical, vf, imls,
+                               steps=lrem_steps_per_interval))
             for loss_type, vf in vulnerability_functions_retro.items())
 
     def __call__(self, loss_type, assets, hazard):
         self.assets = assets
 
-        original_loss_curves = self.curves_orig[loss_type](hazard)
-        retrofitted_loss_curves = self.curves_retro[loss_type](hazard)
+        original_loss_curves = utils.numpy_map(
+            self.curves_orig[loss_type], hazard)
+        retrofitted_loss_curves = utils.numpy_map(
+            self.curves_retro[loss_type], hazard)
 
         eal_original = [
             scientific.average_loss(losses, poes)
@@ -667,15 +674,16 @@ class ProbabilisticEventBasedBCR(Workflow):
         self.asset_life_expectancy = asset_life_expectancy
         self.vf_orig = vulnerability_functions_orig
         self.vf_retro = vulnerability_functions_retro
-        self.curves = scientific.EventBasedLossCurve(
-            risk_investigation_time, tses, loss_curve_resolution)
+        self.curves = functools.partial(
+            scientific.event_based, curve_resolution=loss_curve_resolution,
+            time_span=risk_investigation_time, tses=tses)
 
     def __call__(self, loss_type, assets, gmfs, epsilons, event_ids):
         self.assets = assets
-        original_loss_curves = self.curves(
-            self.vf_orig[loss_type].apply_to(gmfs, epsilons))
-        retrofitted_loss_curves = self.curves(
-            self.vf_retro[loss_type].apply_to(gmfs, epsilons))
+        original_loss_curves = utils.numpy_map(
+            self.curves, self.vf_orig[loss_type].apply_to(gmfs, epsilons))
+        retrofitted_loss_curves = utils.numpy_map(
+            self.curves, self.vf_retro[loss_type].apply_to(gmfs, epsilons))
 
         eal_original = [
             scientific.average_loss(losses, poes)
