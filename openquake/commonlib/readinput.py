@@ -25,7 +25,7 @@ import ConfigParser
 import numpy
 from shapely import wkt, geometry
 
-from openquake.hazardlib import geo, site, gsim, correlation, imt
+from openquake.hazardlib import geo, site, correlation, imt
 from openquake.risklib import workflows
 
 from openquake.commonlib.oqvalidation import OqParam
@@ -40,8 +40,6 @@ from openquake.commonlib import source
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
 NORMALIZATION_FACTOR = 1E-2
-
-GSIM = gsim.get_available_gsims()
 
 
 class DuplicatedPoint(Exception):
@@ -209,7 +207,7 @@ def get_gsim(oqparam):
     Return a GSIM instance from the gsim name in the configuration
     file (defined for scenario computations).
     """
-    return GSIM[oqparam.gsim]()
+    return valid.gsim(oqparam.gsim)
 
 
 def get_correl_model(oqparam):
@@ -380,9 +378,11 @@ def get_composite_source_model(oqparam, sitecol):
         for trt_model in source_model.trt_models:
             trt_model.id = trt_id
             trt_id += 1
+            logging.info('Splitting sources and counting ruptures for %s',
+                         trt_model)
             trt_model.split_sources_and_count_ruptures(
                 oqparam.area_source_discretization)
-            logging.info('splitting %s', trt_model)
+            logging.info('Got %s', trt_model)
         smodels.append(source_model)
     return source.CompositeSourceModel(source_model_lt, smodels)
 
@@ -402,7 +402,7 @@ def get_job_info(oqparam, source_models, sitecol):
     # The input weight is given by the number of ruptures generated
     # by the sources; for point sources however a corrective factor
     # given by the parameter `point_source_weight` is applied
-    input_weight = sum(src.weight for src_model in source_models
+    input_weight = sum(src.weight or 0 for src_model in source_models
                        for trt_model in src_model.trt_models
                        for src in trt_model)
 

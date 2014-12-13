@@ -86,3 +86,14 @@ class ValidationTestCase(unittest.TestCase):
         validator = valid.NoneOr(valid.positiveint)
         self.assertEqual(validator(''), None)
         self.assertEqual(validator('1'), 1)
+
+    def test_gsim(self):
+        class FakeGsim(object):
+            def __init__(self, arg):
+                self.arg = arg
+
+            def __repr__(self):
+                return '<FakeGsim(%s)>' % self.arg
+        valid.GSIM['FakeGsim'] = FakeGsim
+        gsim = valid.gsim('FakeGsim(0.1)')
+        self.assertEqual(repr(gsim), '<FakeGsim(0.1)>')

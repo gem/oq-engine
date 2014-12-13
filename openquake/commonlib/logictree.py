@@ -34,7 +34,7 @@ from collections import namedtuple
 from decimal import Decimal
 from lxml import etree
 
-from openquake.commonlib import nrml
+from openquake.commonlib import nrml, valid
 from openquake.commonlib.node import node_from_xml
 
 import openquake.hazardlib
@@ -43,8 +43,6 @@ import openquake.hazardlib
 MIN_SINT_32 = -(2 ** 31)
 #: Maximum value for a seed number
 MAX_SINT_32 = (2 ** 31) - 1
-#: dictionary of GSIM classes available in hazardlib
-GSIM = openquake.hazardlib.gsim.get_available_gsims()
 
 
 LtRealization = namedtuple('LtRealization', 'value weight lt_path ordinal')
@@ -974,25 +972,26 @@ class GsimLogicTree(object):
         full path of the gsim_logic_tree file
     :param str filter_name:
         the string `"applyToTectonicRegionType"`
-    :param filter_keys:
+    :param tectonic_region_types:
         a sequence of distinct tectonic region types
     """
-    def __init__(self, fname, branchset_filter, filter_keys):
+    def __init__(self, fname, branchset_filter, tectonic_region_types):
         self.fname = fname
         self.branchset_filter = branchset_filter
-        self.filter_keys = sorted(filter_keys)
+        self.tectonic_region_types = sorted(tectonic_region_types)
         assert branchset_filter == 'applyToTectonicRegionType'
-        if len(self.filter_keys) > len(set(self.filter_keys)):
+        trts = self.tectonic_region_types
+        if len(trts) > len(set(trts)):
             raise ValueError(
                 'The given tectonic region types are not distinct: %s' %
-                ','.join(self.filter_keys))
+                ','.join(self.tectonic_region_types))
         self.values = collections.defaultdict(list)  # {fkey: uncertainties}
         self.branches = sorted(
             self._parse_lt(), key=lambda b: (b.bset['branchSetID'], b.id))
-        if filter_keys and not self.branches:
+        if tectonic_region_types and not self.branches:
             raise InvalidLogicTree(
                 'Could not find branches with attribute %r in %s' %
-                (self.branchset_filter, set(filter_keys)))
+                (self.branchset_filter, set(tectonic_region_types)))
 
     def filter(self, trts):
         """
@@ -1000,7 +999,8 @@ class GsimLogicTree(object):
 
         :param trts: a subset of tectonic region types
         """
-        assert set(trts) <= set(self.filter_keys), (trts, self.filter_keys)
+        assert set(trts) <= set(self.tectonic_region_types), (
+            trts, self.tectonic_region_types)
         return self.__class__(self.fname, self.branchset_filter, trts)
 
     def get_num_branches(self):
@@ -1041,7 +1041,7 @@ class GsimLogicTree(object):
                 fkey = branchset.attrib.get(self.branchset_filter)
                 if fkey:
                     fkeys.append(fkey)
-                if fkey in self.filter_keys:
+                if fkey in self.tectonic_region_types:
                     weights = []
                     for branch in branchset:
                         weight = Decimal(branch.uncertaintyWeight.text)
@@ -1065,25 +1065,25 @@ class GsimLogicTree(object):
         :param str value: the name of an existing GSIM class
         """
         try:
-            GSIM[value]
-        except KeyError:
-            raise NameError('Unknown GSIM %r in file %r' % (value, self.fname))
+            valid.gsim(value)
+        except ValueError as e:
+            raise NameError('%s in file %r' % (e, self.fname))
 
     def __iter__(self):
         # yield realizations for both sampling and full enumeration
         groups = []
-        filter_keys = []
+        tectonic_region_types = []
         # NB: branches are already sorted
         for branchset, branches in itertools.groupby(
                 self.branches, operator.attrgetter('bset')):
-            filter_keys.append(branchset[self.branchset_filter])
+            tectonic_region_types.append(branchset[self.branchset_filter])
             groups.append(list(branches))
         # with T tectonic region types there are T groups and T branches
         for i, branches in enumerate(itertools.product(*groups)):
             weight = 1
             lt_path = []
             value = {}
-            for fkey, branch in zip(filter_keys, branches):
+            for fkey, branch in zip(tectonic_region_types, branches):
                 lt_path.append(branch.id)
                 weight *= branch.weight
                 assert branch.uncertainty in self.values[fkey], \
