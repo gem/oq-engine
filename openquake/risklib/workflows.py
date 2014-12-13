@@ -502,7 +502,7 @@ class ProbabilisticEventBased(Workflow):
             limits = [a.insurance_limit(loss_type) for a in assets]
             insured_loss_matrix = utils.numpy_map(
                 scientific.insured_losses, loss_matrix, deductibles, limits)
-            insured_curves = self.curves(insured_loss_matrix)
+            insured_curves = utils.numpy_map(self.curves, insured_loss_matrix)
             average_insured_losses = [
                 scientific.average_loss(losses, poes)
                 for losses, poes in insured_curves]

@@ -574,8 +574,8 @@ def event_based(loss_values, tses, time_span, curve_resolution):
     :param curve_resolution: The number of points the output curve is
                              defined by
     """
-    reference_losses = numpy.linspace(0, max(loss_values), curve_resolution)
-
+    reference_losses = numpy.linspace(
+        0, numpy.max(loss_values), curve_resolution)
     # counts how many loss_values are bigger than the reference loss
     times = [(loss_values > loss).sum() for loss in reference_losses]
     # NB: (loss_values > loss).sum() is MUCH more efficient than
