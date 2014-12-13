@@ -24,7 +24,6 @@ This module includes the scientific API of the oq-risklib
 import abc
 import copy
 import itertools
-import functools
 import bisect
 
 import numpy
@@ -32,13 +31,6 @@ from scipy import interpolate, stats
 
 from openquake.baselib.general import CallableDict
 from openquake.risklib import utils
-
-#
-# Constants & Defaults
-#
-
-DEFAULT_CURVE_RESOLUTION = 50
-
 
 #
 # Input models
@@ -568,8 +560,7 @@ class BetaDistribution(Distribution):
 # Event Based
 #
 
-def event_based(loss_values, tses, time_span,
-                curve_resolution=DEFAULT_CURVE_RESOLUTION):
+def event_based(loss_values, tses, time_span, curve_resolution):
     """
     Compute a loss (or loss ratio) curve.
 
@@ -594,7 +585,7 @@ def event_based(loss_values, tses, time_span,
 
     poes = 1. - numpy.exp(-rates_of_exceedance * time_span)
 
-    return reference_losses, poes
+    return numpy.array([reference_losses, poes])
 
 
 #
@@ -646,7 +637,7 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, steps=10):
     for idx, po in enumerate(pos):
         lrem_po[:, idx] = lrem[:, idx] * po  # column * po
 
-    return loss_ratios, lrem_po.sum(axis=1)
+    return numpy.array([loss_ratios, lrem_po.sum(axis=1)])
 
 
 def conditional_loss_ratio(loss_ratios, poes, probability):

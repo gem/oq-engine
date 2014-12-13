@@ -249,7 +249,7 @@ class Classical(Workflow):
             assets is an iterator over N
             :class:`openquake.risklib.scientific.Asset` instances
         :param hazard_curves:
-            curves is an iterator over hazard curves (numpy array shaped 2xR).
+            an iterator over N arrays with the poes
         :param _epsilons:
             ignored, here only for API compatibility with other calculators
         :returns:
