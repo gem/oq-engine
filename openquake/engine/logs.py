@@ -134,6 +134,8 @@ def handle(job, log_level='info', log_file=None):
          log file path (if None, logs on stdout only)
     """
     handler = LogFileHandler(job, log_file) if log_file else None
+    if handler:
+        logging.root.addHandler(handler)
     set_level(log_level)
     try:
         yield
