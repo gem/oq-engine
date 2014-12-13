@@ -6,3 +6,6 @@ Chiou and Youngs 2014
 
 .. autoclass:: ChiouYoungs2014
     :members:
+
+.. autoclass:: ChiouYoungs2014PEER
+    :members:

@@ -280,3 +280,30 @@ pgv    2.3549  0.165  -0.0626 -0.165  0.0626  3.3024  5.423   1.06  2.3152  -2.1
 7.5   -5.0009  0.022  -0.101  -0.022  0.101  1.5737   6.5428  1.06  2.932   -2.1  -0.5  50  7.5818  3.838   0.45    0.0007  -0.0348  0.2154 0.2695  7.4666  0.      0.1     6.5     0.      -0.1       -0.000964  -0.003686  3.6632  -0.8274   0.       -0.001369  0.001134  0.329  300  2.3763  0.      -0.5202  1.46     800.        0.4601  0.3459  0.4471  0.4471  0.7     0.4167
 10    -5.3461  0.0124 -0.1    -0.0124 0.1    1.5265   6.7415  1.06  2.9396  -2.1  -0.5  50  7.5818  3.838   0.45    0.0003  -0.0253  0.2154 0.2695  7.77    0.      0.1     6.5     0.      -0.1       -0.00095   -0.0037    3.623   -0.7053   0.       -0.001361  0.000515  0.33   300  1.7679  0.      -0.4068  1.464    800.        0.4612  0.3474  0.4426  0.4426  0.7     0.3755
 """)
+
+
+class ChiouYoungs2014PEER(ChiouYoungs2014):
+    """
+    This implements the Chiou & Youngs (2014) GMPE for use with the PEER
+    tests. In this version the total standard deviation is fixed at 0.65
+    """
+    #: Only the total standars deviation is defined
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
+        const.StdDev.TOTAL, 
+    ])
+    #: The PEER tests requires only PGA
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
+        PGA,
+    ])
+
+    def _get_stddevs(self, sites, rup, C, stddev_types, ln_y_ref, exp1, exp2):
+        """
+        Returns the standard deviation, which is fixed at 0.65 for every site
+        """
+        ret = []
+        for stddev_type in stddev_types:
+            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+            if stddev_type == const.StdDev.TOTAL:
+                # eq. 13
+                ret.append(0.65 * np.ones_like(sites.vs30))
+        return ret
