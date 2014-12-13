@@ -629,32 +629,9 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, steps=10):
     """
     vf = vulnerability_function.strictly_increasing()
     loss_ratios, lrem = vf.loss_ratio_exceedance_matrix(steps)
-    lrem_po = _loss_ratio_exceedance_matrix_per_poos(
-        vf, lrem, hazard_imls, hazard_poes)
 
-    poes = lrem_po.sum(axis=1)
-
-    return loss_ratios, poes
-
-
-def _loss_ratio_exceedance_matrix_per_poos(
-        vuln_function, lrem, hazard_imls, hazard_poes):
-    """Compute the LREM * PoOs (Probability of Occurence) matrix.
-
-    :param vuln_function: the vulnerability function used
-        to compute the matrix.
-    :type vuln_function: \
-    :py:class:`openquake.risklib.scientific.VulnerabilityFunction`
-
-
-    :param lrem: the LREM used to compute the matrix.
-    :type lrem: 2-dimensional :py:class:`numpy.ndarray`
-    :param hazard_imls: the hazard intensity measure levels
-    :param hazard_poes: the hazard curve used to compute the matrix.
-    """
-    lrem = numpy.array(lrem)
     lrem_po = numpy.empty(lrem.shape)
-    imls = numpy.array(vuln_function.mean_imls())
+    imls = numpy.array(vf.mean_imls())
 
     # saturate imls to hazard imls
     min_val, max_val = hazard_imls[0], hazard_imls[-1]
@@ -668,7 +645,8 @@ def _loss_ratio_exceedance_matrix_per_poos(
     pos = pairwise_diff(poes)
     for idx, po in enumerate(pos):
         lrem_po[:, idx] = lrem[:, idx] * po  # column * po
-    return lrem_po
+
+    return loss_ratios, lrem_po.sum(axis=1)
 
 
 def conditional_loss_ratio(loss_ratios, poes, probability):
