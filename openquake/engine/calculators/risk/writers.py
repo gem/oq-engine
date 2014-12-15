@@ -48,9 +48,10 @@ def loss_map(
             std_dev = None
 
         if not absolute:
-            loss *= asset.value(loss_type)
+            value = asset.value(loss_type) or 0
+            loss *= value
             if std_devs is not None:
-                std_dev *= asset.value(loss_type)
+                std_dev *= value
 
         models.LossMapData.objects.create(
             loss_map_id=loss_map_id,
