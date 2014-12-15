@@ -174,14 +174,18 @@ class EventBasedTestCase(unittest.TestCase):
                 [0.0035, 0.07, 0.14, 0.28, 0.56],
                 [0.0, 0.0, 0.0, 0.0, 0.0]))
 
+        cr = 50  # curve resolution
         curve_rm_1 = scientific.event_based(
-            vulnerability_function_rm.apply_to([gmf[0]], epsilons)[0], 50, 50)
+            vulnerability_function_rm.apply_to(
+                [gmf[0]], epsilons)[0], 50, 50, cr)
 
         curve_rm_2 = scientific.event_based(
-            vulnerability_function_rm.apply_to([gmf[1]], epsilons)[0], 50, 50)
+            vulnerability_function_rm.apply_to(
+                [gmf[1]], epsilons)[0], 50, 50, cr)
 
         curve_rc = scientific.event_based(
-            vulnerability_function_rc.apply_to([gmf[2]], epsilons)[0], 50, 50)
+            vulnerability_function_rc.apply_to(
+                [gmf[2]], epsilons)[0], 50, 50, cr)
 
         for i, curve_rm in enumerate([curve_rm_1, curve_rm_2]):
 

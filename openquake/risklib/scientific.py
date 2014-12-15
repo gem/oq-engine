@@ -33,13 +33,6 @@ from openquake.baselib.general import CallableDict
 from openquake.risklib import utils
 
 #
-# Constants & Defaults
-#
-
-DEFAULT_CURVE_RESOLUTION = 50
-
-
-#
 # Input models
 #
 
@@ -287,9 +280,10 @@ class VulnerabilityFunction(object):
            :py:class:`openquake.risklib.vulnerability_function.\
            VulnerabilityFunction`
         """
-        return ([max(0, self.imls[0] - ((self.imls[1] - self.imls[0]) / 2))] +
-                [numpy.mean(pair) for pair in utils.pairwise(self.imls)] +
-                [self.imls[-1] + ((self.imls[-1] - self.imls[-2]) / 2)])
+        return numpy.array(
+            [max(0, self.imls[0] - ((self.imls[1] - self.imls[0]) / 2))] +
+            [numpy.mean(pair) for pair in utils.pairwise(self.imls)] +
+            [self.imls[-1] + ((self.imls[-1] - self.imls[-2]) / 2)])
 
     def __repr__(self):
         return '<VulnerabilityFunction(%s)>' % self.imt
@@ -567,8 +561,7 @@ class BetaDistribution(Distribution):
 # Event Based
 #
 
-def event_based(loss_values, tses, time_span,
-                curve_resolution=DEFAULT_CURVE_RESOLUTION):
+def event_based(loss_values, tses, time_span, curve_resolution):
     """
     Compute a loss (or loss ratio) curve.
 
@@ -582,8 +575,8 @@ def event_based(loss_values, tses, time_span,
     :param curve_resolution: The number of points the output curve is
                              defined by
     """
-    reference_losses = numpy.linspace(0, max(loss_values), curve_resolution)
-
+    reference_losses = numpy.linspace(
+        0, numpy.max(loss_values), curve_resolution)
     # counts how many loss_values are bigger than the reference loss
     times = [(loss_values > loss).sum() for loss in reference_losses]
     # NB: (loss_values > loss).sum() is MUCH more efficient than
@@ -593,7 +586,7 @@ def event_based(loss_values, tses, time_span,
 
     poes = 1. - numpy.exp(-rates_of_exceedance * time_span)
 
-    return reference_losses, poes
+    return numpy.array([reference_losses, poes])
 
 
 #
@@ -628,32 +621,9 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, steps=10):
     """
     vf = vulnerability_function.strictly_increasing()
     loss_ratios, lrem = vf.loss_ratio_exceedance_matrix(steps)
-    lrem_po = _loss_ratio_exceedance_matrix_per_poos(
-        vf, lrem, hazard_imls, hazard_poes)
 
-    poes = lrem_po.sum(axis=1)
-
-    return loss_ratios, poes
-
-
-def _loss_ratio_exceedance_matrix_per_poos(
-        vuln_function, lrem, hazard_imls, hazard_poes):
-    """Compute the LREM * PoOs (Probability of Occurence) matrix.
-
-    :param vuln_function: the vulnerability function used
-        to compute the matrix.
-    :type vuln_function: \
-    :py:class:`openquake.risklib.scientific.VulnerabilityFunction`
-
-
-    :param lrem: the LREM used to compute the matrix.
-    :type lrem: 2-dimensional :py:class:`numpy.ndarray`
-    :param hazard_imls: the hazard intensity measure levels
-    :param hazard_poes: the hazard curve used to compute the matrix.
-    """
-    lrem = numpy.array(lrem)
     lrem_po = numpy.empty(lrem.shape)
-    imls = numpy.array(vuln_function.mean_imls())
+    imls = vf.mean_imls()
 
     # saturate imls to hazard imls
     min_val, max_val = hazard_imls[0], hazard_imls[-1]
@@ -667,7 +637,8 @@ def _loss_ratio_exceedance_matrix_per_poos(
     pos = pairwise_diff(poes)
     for idx, po in enumerate(pos):
         lrem_po[:, idx] = lrem[:, idx] * po  # column * po
-    return lrem_po
+
+    return numpy.array([loss_ratios, lrem_po.sum(axis=1)])
 
 
 def conditional_loss_ratio(loss_ratios, poes, probability):
@@ -812,3 +783,138 @@ def mean_std(fractions):
     i.e. two M-dimensional vectors.
     """
     return numpy.mean(fractions, axis=0), numpy.std(fractions, axis=0, ddof=1)
+
+
+def loss_map_matrix(poes, curves):
+    """
+    Wrapper around :func:`openquake.risklib.scientific.conditional_loss_ratio`.
+    Return a matrix of shape (num-poes, num-curves). The curves are lists of
+    pairs (loss_ratios, poes).
+    """
+    return numpy.array(
+        [[conditional_loss_ratio(curve[0], curve[1], poe)
+          for curve in curves] for poe in poes]
+    ).reshape((len(poes), len(curves)))
+
+
+def exposure_statistics(
+        loss_curves, map_poes, weights, quantiles, post_processing):
+    """
+    Compute exposure statistics for N assets and R realizations.
+
+    :param loss_curves:
+        a list with N loss curves data. Each item holds a 2-tuple with
+        1) the loss ratios on which the curves have been defined on
+        2) the poes of the R curves
+    :param map_poes:
+        a numpy array with P poes used to compute loss maps
+    :param weights:
+        a list of N weights used to compute mean/quantile weighted statistics
+    :param quantiles:
+        the quantile levels used to compute quantile results
+    :param post_processing:
+       a module providing #weighted_quantile_curve, #quantile_curve,
+       #mean_curve
+
+    :returns:
+        a tuple with six elements:
+            1. a numpy array with N mean loss curves
+            2. a numpy array with N mean average losses
+            3. a numpy array with P x N mean map values
+            4. a numpy array with Q x N quantile loss curves
+            5. a numpy array with Q x N quantile average loss values
+            6. a numpy array with Q x P quantile map values
+    """
+    curve_resolution = len(loss_curves[0][0])
+    map_nr = len(map_poes)
+
+    # Collect per-asset statistic along the last dimension of the
+    # following arrays
+    mean_curves = numpy.zeros((0, 2, curve_resolution))
+    mean_average_losses = numpy.array([])
+    mean_maps = numpy.zeros((map_nr, 0))
+    quantile_curves = numpy.zeros((len(quantiles), 0, 2, curve_resolution))
+    quantile_average_losses = numpy.zeros((len(quantiles), 0,))
+    quantile_maps = numpy.zeros((len(quantiles), map_nr, 0))
+
+    for loss_ratios, curves_poes in loss_curves:
+        _mean_curve, _mean_maps, _quantile_curves, _quantile_maps = (
+            asset_statistics(
+                loss_ratios, curves_poes,
+                quantiles, weights, map_poes, post_processing))
+
+        mean_curves = numpy.vstack(
+            (mean_curves, _mean_curve[numpy.newaxis, :]))
+        mean_average_losses = numpy.append(
+            mean_average_losses, average_loss(*_mean_curve))
+
+        mean_maps = numpy.hstack((mean_maps, _mean_maps[:, numpy.newaxis]))
+        quantile_curves = numpy.hstack(
+            (quantile_curves, _quantile_curves[:, numpy.newaxis]))
+
+        _quantile_average_losses = numpy.array(
+            [average_loss(losses, poes)
+             for losses, poes in _quantile_curves])
+        quantile_average_losses = numpy.hstack(
+            (quantile_average_losses,
+             _quantile_average_losses[:, numpy.newaxis]))
+        quantile_maps = numpy.dstack(
+            (quantile_maps, _quantile_maps[:, :, numpy.newaxis]))
+
+    return (mean_curves, mean_average_losses, mean_maps,
+            quantile_curves, quantile_average_losses, quantile_maps)
+
+
+def asset_statistics(
+        losses, curves_poes, quantiles, weights, poes, post_processing):
+    """
+    Compute output statistics (mean/quantile loss curves and maps)
+    for a single asset
+
+    :param losses:
+       the losses on which the loss curves are defined
+    :param curves_poes:
+       a numpy matrix with the poes of the different curves
+    :param list quantiles:
+       an iterable over the quantile levels to be considered for
+       quantile outputs
+    :param list poes:
+       the poe taken into account for computing loss maps
+    :returns:
+       a tuple with
+       1) mean loss curve
+       2) a list of quantile curves
+       3) mean loss map
+       4) a list of quantile loss maps
+    """
+    mean_curve = numpy.array([losses, post_processing.mean_curve(
+        curves_poes, weights)])
+    mean_map = loss_map_matrix(poes, [mean_curve]).reshape(len(poes))
+    quantile_curves = numpy.array(
+        [[losses, quantile_curve(post_processing, weights)(
+          curves_poes, quantile)]
+         for quantile in quantiles]).reshape((len(quantiles), 2, len(losses)))
+    quantile_maps = loss_map_matrix(poes, quantile_curves).T
+
+    return (mean_curve, mean_map, quantile_curves, quantile_maps)
+
+
+def quantile_curve(post_processing, weights):
+    """
+    Helper functions that wraps the `post_processing` object
+
+    :param post_processing:
+       a module providing #weighted_quantile_curve, #quantile_curve,
+       #mean_curve
+    :param list weights:
+       the weights associated with each realization. If all the elements are
+       `None`, implicit weights are taken into account
+    :returns:
+        a function that a quantile curve given curve poes and
+        the quantile value in input
+    """
+    if weights[0] is None:  # implicit weights
+        return post_processing.quantile_curve
+    else:
+        return lambda poes, quantile: post_processing.weighted_quantile_curve(
+            poes, weights, quantile)
