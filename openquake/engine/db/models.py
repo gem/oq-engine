@@ -46,7 +46,7 @@ from openquake.hazardlib import geo, correlation
 from openquake.commonlib.riskmodels import loss_type_to_cost_type
 from openquake.commonlib.readinput import get_mesh
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import logictree
+from openquake.commonlib import logictree, valid
 
 from openquake.engine.db import fields
 from openquake.engine import writer, logs, utils
@@ -75,10 +75,6 @@ IMT_CHOICES = (
     (u'RSD', u'Relative Significant Duration'),
     (u'MMI', u'Modified Mercalli Intensity'),
 )
-
-#: Default Loss Curve Resolution used for probabilistic risk calculators
-DEFAULT_LOSS_CURVE_RESOLUTION = 50
-
 
 #: Minimum value for a seed number
 MIN_SINT_32 = -(2 ** 31)
@@ -312,6 +308,21 @@ class OqJob(djm.Model):
         # is not null and contains a reference to the previous hazard job
         return 'hazard' if self.hazard_calculation is None else 'risk'
 
+    def get_or_create_output(self, display_name, output_type):
+        """
+        :param disp_name: display name of the output
+        :param output_type: the output type
+        :returns: an Output instance
+        """
+        try:
+            output = Output.objects.get(
+                oq_job=self, display_name=display_name,
+                output_type=output_type)
+        except ObjectDoesNotExist:
+            output = Output.objects.create_output(
+                self, display_name, output_type)
+        return output
+
     def get_param(self, name, missing=RAISE_EXC):
         """
         `job.get_param(name)` returns the value of the requested parameter
@@ -491,10 +502,6 @@ class RiskCalculation(object):
             self.master_seed = 42
         if not hasattr(self, 'insured_losses'):
             self.insured_losses = False
-        if not hasattr(self, 'risk_investigation_time'):
-            self.risk_investigation_time = None
-        if not hasattr(self, 'loss_curve_resolution'):
-            self.loss_curve_resolution = 50  # default
 
     def get_hazard_param(self):
         """
@@ -1792,7 +1799,7 @@ class TrtModel(djm.Model):
         """
         Return the GSIM instances associated to the current TrtModel
         """
-        return [logictree.GSIM[gsim]() for gsim in self.gsims]
+        return map(valid.gsim, self.gsims)
 
     class Meta:
         db_table = 'hzrdr\".\"trt_model'
@@ -1860,7 +1867,7 @@ class LtRealization(djm.Model):
         Return the GSIM instances associated to the current realization
         by looking at the association table.
         """
-        return [logictree.GSIM[art.gsim]() for art in
+        return [valid.gsim(art.gsim) for art in
                 AssocLtRlzTrtModel.objects.filter(rlz=self)]
 
 
