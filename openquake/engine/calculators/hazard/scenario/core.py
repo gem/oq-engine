@@ -115,7 +115,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         with transaction.commit_on_success(using='job_init'):
             self.initialize_site_collection()
 
-        hc = self.hc
+        hc = self.oqparam
         n_sites = len(self.site_collection)
         n_gmf = hc.number_of_ground_motion_fields
         n_imts = len(hc.imtls)
@@ -167,7 +167,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
                 oqparam.number_of_ground_motion_fields)]
             _, self.rupids, self.seeds = create_db_ruptures(
                 self.rupture, self.ses_coll, self.tags,
-                self.hc.random_seed)
+                self.oqparam.random_seed)
 
         correlation_model = models.get_correl_model(
             models.OqJob.objects.get(pk=self.job.id))
