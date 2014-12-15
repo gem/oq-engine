@@ -22,7 +22,7 @@ from openquake.commonlib.valid import SiteParam
 
 from openquake.engine import engine
 from openquake.engine.calculators.hazard import general
-from openquake.engine.utils import get_calculator_class
+from openquake.engine.calculators import calculators
 from openquake.engine.db import models
 
 from openquake.engine.tests.utils import helpers
@@ -37,12 +37,10 @@ class ParseRiskModelsTestCase(unittest.TestCase):
         job.is_running = True
         job.save()
 
-        haz_calc = job.get_oqparam()
-        calc = get_calculator_class('hazard', haz_calc.calculation_mode)(job)
+        calc = calculators(job)
         calc.parse_risk_model()
 
-        self.assertEqual(['PGA'],
-                         list(calc.hc.intensity_measure_types_and_levels))
+        self.assertEqual(['PGA'], list(calc.oqparam.imtls))
 
         self.assertEqual(3, calc.job.exposuremodel.exposuredata_set.count())
 
@@ -57,8 +55,7 @@ class InitializeSourcesTestCase(unittest.TestCase):
             'calculators/hazard/classical/haz_map_test_job.ini')
         job = helpers.get_job(cfg)
         models.JobStats.objects.create(oq_job=job)
-        hc = job.get_oqparam()
-        cls.calc = get_calculator_class('hazard', hc.calculation_mode)(job)
+        cls.calc = calculators(job)
         cls.calc.initialize_site_collection()
         num_sites = len(cls.calc.site_collection)
         assert num_sites == 2, num_sites
@@ -67,10 +64,6 @@ class InitializeSourcesTestCase(unittest.TestCase):
         self.calc.initialize_sources()
         m1, m2, m3 = models.LtSourceModel.objects.filter(
             hazard_calculation=self.calc.job)
-        self.assertEqual(
-            [m1.get_num_sources(), m2.get_num_sources(), m3.get_num_sources()],
-            [2, 2, 2])
-        self.calc.process_sources()
         self.assertEqual(
             [m1.get_num_sources(), m2.get_num_sources(), m3.get_num_sources()],
             [1, 1, 1])
@@ -83,8 +76,7 @@ class CalculationLimitsTestCase(unittest.TestCase):
             'calculators/hazard/classical/haz_map_test_job.ini')
         job = helpers.get_job(cfg)
         models.JobStats.objects.create(oq_job=job)
-        hc = job.get_oqparam()
-        calc = get_calculator_class('hazard', hc.calculation_mode)(job)
+        calc = calculators(job)
         input_weight, output_weight = calc.pre_execute()
         self.assertEqual(input_weight, 225)
         self.assertEqual(output_weight, 24)
@@ -105,8 +97,7 @@ class CalculationLimitsTestCase(unittest.TestCase):
             'event_based_hazard/job.ini')
         job = helpers.get_job(cfg)
         models.JobStats.objects.create(oq_job=job)
-        hc = job.get_oqparam()
-        calc = get_calculator_class('hazard', hc.calculation_mode)(job)
+        calc = calculators(job)
         input_weight, output_weight = calc.pre_execute()
         self.assertEqual(input_weight, 1352.75)
         self.assertAlmostEqual(output_weight, 1210.0)
@@ -120,7 +111,7 @@ class NonEmptyQuantileTestCase(unittest.TestCase):
         with mock.patch('openquake.engine.logs.LOG.warn') as warn:
             helpers.run_job(cfg, number_of_logic_tree_samples=1,
                             quantile_hazard_curves='0.1 0.2',
-                            hazard_maps=None, uniform_hazard_spectra=None)
+                            hazard_maps='', uniform_hazard_spectra='')
         msg = warn.call_args[0][0]
         self.assertEqual(
             msg, 'There is only one realization, the configuration'

@@ -44,9 +44,9 @@ Response:
       "status": "complete",
       "url": "http://localhost:8000/v1/calc/risk/2"}]
 
-#### GET /v1/calc/hazard/:calc_id
+#### GET /v1/calc/:calc_id
 
-Get hazard calculation status and parameter summary for the given `calc_id`.
+Get calculation status and parameter summary for the given `calc_id`.
 
 Parameters: None
 
@@ -76,31 +76,7 @@ Response:
      "uniform_hazard_spectra": false,
      "width_of_mfd_bin": 0.2}
 
-#### GET /v1/calc/risk/:calc_id
-
-Get risk calculation status and parameter summary for the given `calc_id`.
-
-Parameters: None
-
-Response:
-
-    {"hazard_calculation": 3,
-     "status": "complete",
-     "quantile_loss_curves": [0.1, 0.9],
-     "maximum_distance": 100.0,
-     "description": "Risk Calculation for end-to-end hazard+risk",
-     "insured_losses": false,
-     "lrem_steps_per_interval": 2,
-     "loss_curve_resolution": 50,
-     "poes_disagg": [0.2],
-     "calculation_mode": "classical",
-     "no_progress_timeout": 3600,
-     "conditional_loss_poes": [0.1],
-     "region_constraint": {"type": "Polygon", "coordinates": [[[-78.181, 15.614], [-78.153, 15.614], [-78.153, 15.566], [-78.181, 15.566], [-78.181, 15.614]]]},
-     "asset_correlation": 0.0,
-     "id": 2}
-
-#### GET /v1/calc/hazard/:calc_id/results
+#### GET /v1/calc/:calc_id/results
 
 List a summary of results for the given `calc_id`. The [url](#get-v1calchazardresultresult_id) in each response item can be followed to retrieve the full result artifact.
 
@@ -113,23 +89,10 @@ Response:
      {"url": "http://localhost:8000/v1/calc/hazard/result/16", "type": "hazard_curve", "name": "hc-rlz-24", "id": 16},
      {"url": "http://localhost:8000/v1/calc/hazard/result/18", "type": "hazard_curve", "name": "hc-rlz-25", "id": 18}]
 
-#### GET /v1/calc/risk/:calc_id/results
 
-List a summary of results for the given `calc_id`. The [url](#get-v1calcriskresultresult_id) in each response item can be followed to retrieve the full result artifact.
+#### GET /v1/calc/result/:result_id
 
-Parameters: None
-
-Response:
-
-    [{"url": "http://localhost:8000/v1/calc/risk/result/138", "type": "loss_curve", "name": "mean loss curves. type=structural", "id": 138},
-     {"url": "http://localhost:8000/v1/calc/risk/result/139", "type": "loss_curve", "name": "quantile(0.1) loss curves. type=structural", "id": 139},
-     {"url": "http://localhost:8000/v1/calc/risk/result/140", "type": "loss_curve", "name": "quantile(0.9) loss curves. type=structural", "id": 140},
-     {"url": "http://localhost:8000/v1/calc/risk/result/141", "type": "loss_map", "name": "mean loss map type=structural poe=0.1000", "id": 141},
-     {"url": "http://localhost:8000/v1/calc/risk/result/142", "type": "loss_map", "name": "quantile(0.1000) loss map type=structural poe=0.1000", "id": 142}]
-
-#### GET /v1/calc/hazard/result/:result_id
-
-Get the full content of a hazard calculation result for the given `result_id`.
+Get the full content of a calculation result for the given `result_id`.
 
 Parameters:
 
@@ -139,21 +102,10 @@ Response:
 
 The requested result as a blob of text. If the desired `export_type` is not supported, an HTTP 404 error is returned.
 
-#### GET /v1/calc/risk/result/:result_id
 
-Get the full content of a risk calculation result for the given `result_id`.
+#### POST /v1/calc/run
 
-Parameters:
-
-    * export_type: the desired format for the result (`xml`, `geojson`, etc.)
-
-Response:
-
-The requested result as a blob of text. If the desired `export_type` is not supported, an HTTP 404 error is returned.
-
-#### POST /v1/calc/hazard/run
-
-Run a new hazard calculation with the specified job config file, input models, and other parameters.
+Run a new calculation with the specified job config file, input models, and other parameters.
 
 Files:
 
@@ -164,23 +116,7 @@ Parameters:
 
     * migration_callback_url: optional; post to this URL to initiate post-calculation migration of results; see documentation for the oq-platform Icebox (TODO: link) for more information
     * foreign_calculation_id: optional, required with migration_callback_url; specifies the id of the calculation on the icebox side
+    * hazard_calc: the hazard calculation ID upon which to run the risk calculation; specify this or hazard_result (only for risk calculations)
+    * hazard_result: the hazard results ID upon which to run the risk calculation; specify this or hazard_calc (only for risk calculations)
 
-Response: Redirects to [/v1/calc/hazard/:calc_id](#get-v1calchazardcalc_id), where `calc_id` is the ID of the newly created calculation.
-
-#### POST /v1/calc/risk/run
-
-Run a new risk calculation with the specified job config file, input models, and other parameters.
-
-Files:
-
-    * job_config: an oq-engine job config INI-style file
-    * input_model_1 - input_model_N: any number (including zero) of input model files
-
-Parameters:
-
-    * migration_callback_url: optional; post to this URL to initiate post-calculation migration of results; see documentation for the oq-platform Icebox (TODO: link) for more information
-    * foreign_calculation_id: optional, required with migration_callback_url; specifies the id of the calculation on the icebox side
-    * hazard_calc: the hazard calculation ID upon which to run this risk calculation; specify this or hazard_result
-    * hazard_result: the hazard results ID upon which to run this risk calculation; specify this or hazard_calc
-
-Response: Redirects to [/v1/calc/risk/:calc_id](#get-v1calcriskcalc_id), where `calc_id` is the ID of the newly created calculation.
+Response: Redirects to [/v1/calc/:calc_id](#get-v1calchazardcalc_id), where `calc_id` is the ID of the newly created calculation.

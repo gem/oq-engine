@@ -15,7 +15,6 @@
 
 import tempfile
 import os
-import sys
 import warnings
 import numpy
 import StringIO
@@ -23,6 +22,7 @@ import shutil
 
 from django.core.exceptions import ObjectDoesNotExist
 
+from openquake.commonlib.tests import check_equal
 from qa_tests import _utils as qa_utils
 from openquake.engine.tests.utils import helpers
 
@@ -35,11 +35,19 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
     """
     Base abstract class for risk QA tests.
     """
-
     def _test_path(self, relative_path):
-        return os.path.join(os.path.dirname(
-            sys.modules[self.__class__.__module__].__file__),
-            relative_path)
+        return os.path.join(
+            os.path.dirname(self.module.__file__), relative_path)
+
+    def compare_xml_outputs(self, job, expected_fnames):
+        result_dir = tempfile.mkdtemp()
+        for output in self.actual_xml_outputs(job):
+            exported_file = export.core.export(output.id, result_dir)
+            actual = os.path.basename(exported_file)
+            for expected in expected_fnames:
+                if actual.startswith(os.path.basename(expected)[:-4]):
+                    check_equal(self.module.__file__, expected, exported_file)
+        shutil.rmtree(result_dir)
 
     #: QA test must override this params to feed the risk job with
     #: the proper hazard output
@@ -83,35 +91,32 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
     def _run_test(self):
         result_dir = tempfile.mkdtemp()
 
-        try:
-            haz_job = self.get_hazard_job()
-            job = self.run_risk(
-                self._test_path('job_risk.ini'),
-                self.hazard_id(haz_job))
+        haz_job = self.get_hazard_job()
+        job = self.run_risk(
+            self._test_path('job_risk.ini'),
+            self.hazard_id(haz_job))
 
-            for attr in dir(self):
-                if attr.startswith('check_'):
-                    getattr(self, attr)(job)
+        for attr in dir(self):
+            if attr.startswith('check_'):
+                getattr(self, attr)(job)
 
-            if hasattr(self, 'expected_outputs'):
-                expected_outputs = self.expected_outputs()
-                for i, output in enumerate(self.actual_xml_outputs(job)):
-                    try:
-                        exported_file = export.risk.export(
-                            output.id, result_dir)
-                    except:
-                        print "Error in exporting %s" % output
-                        raise
+        if hasattr(self, 'expected_outputs'):
+            expected_outputs = self.expected_outputs()
+            for i, output in enumerate(self.actual_xml_outputs(job)):
+                try:
+                    exported_file = export.core.export(
+                        output.id, result_dir)
+                except:
+                    print "Error in exporting %s" % output
+                    raise
 
-                    msg = "not enough outputs (expected=%d, got=%s)" % (
-                        len(expected_outputs), self.actual_xml_outputs(job))
-                    assert i < len(expected_outputs), msg
+                msg = "not enough outputs (expected=%d, got=%s)" % (
+                    len(expected_outputs), self.actual_xml_outputs(job))
+                assert i < len(expected_outputs), msg
+                self.assert_xml_equal(
+                    StringIO.StringIO(expected_outputs[i]), exported_file)
 
-                    self.assert_xml_equal(
-                        StringIO.StringIO(expected_outputs[i]), exported_file)
-        finally:
-            shutil.rmtree(result_dir)
-
+        shutil.rmtree(result_dir)
         return job
 
     def actual_xml_outputs(self, job):

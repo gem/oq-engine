@@ -1,9 +1,8 @@
 import zipfile
-import StringIO
+import shutil
 import json
 import logging
 import os
-import shutil
 import tempfile
 import urlparse
 
@@ -16,20 +15,15 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from openquake.commonlib import nrml
-from openquake.engine import engine as oq_engine
+from openquake.engine import engine as oq_engine, __version__ as oqversion
 from openquake.engine.db import models as oqe_models
-from openquake.engine.export import hazard as hazard_export
-from openquake.engine.export import risk as risk_export
+from openquake.engine.export import core
 from openquake.engine.utils.tasks import safely_call
 from openquake.server import tasks, executor
 
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
 JSON = 'application/json'
-
-IGNORE_FIELDS = ('base_path', 'export_dir')
-GEOM_FIELDS = ('region', 'region_constraint')
-RISK_INPUTS = ('hazard_calculation', 'hazard_output')
 
 DEFAULT_LOG_LEVEL = 'progress'
 
@@ -78,30 +72,6 @@ def _get_base_url(request):
         base_url = 'http://%s'
     base_url %= request.META['HTTP_HOST']
     return base_url
-
-
-def _calc_to_response_data(calc):
-    """
-    Extract the calculation parameters into a dictionary.
-    """
-    if isinstance(calc, oqe_models.OqJob):
-        return vars(calc.get_oqparam())
-    fields = [x.name for x in calc._meta.fields if x.name not in IGNORE_FIELDS]
-    response_data = {}
-    for field_name in fields:
-        try:
-            value = getattr(calc, field_name)
-            if value is not None:
-                if field_name in GEOM_FIELDS:
-                    response_data[field_name] = json.loads(value.geojson)
-                elif field_name in RISK_INPUTS:
-                    response_data[field_name] = value.id
-                else:
-                    response_data[field_name] = value
-        except AttributeError:
-            # Better that we miss an attribute than crash.
-            pass
-    return response_data
 
 
 def create_detect_job_file(*candidates):
@@ -167,29 +137,33 @@ def _is_source_model(tempfile):
     return False
 
 
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def get_engine_version(request):
+    """
+    Return a string with the openquake.engine version
+    """
+    return HttpResponse(oqversion)
+
+
 @require_http_methods(['GET'])
 @cross_domain_ajax
-def calc_info(request, job_type, calc_id):
+def calc_info(request, calc_id):
     """
     Get a JSON blob containing all of parameters for the given calculation
     (specified by ``calc_id``). Also includes the current job status (
     executing, complete, etc.).
     """
     try:
-        response_data = _get_calc_info(job_type, calc_id)
+        calc = oqe_models.OqJob.objects.get(pk=calc_id)
+        response_data = vars(calc.get_oqparam())
+        response_data['status'] = calc.status
+        response_data['start_time'] = str(calc.jobstats.start_time)
+        response_data['stop_time'] = str(calc.jobstats.stop_time)
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
 
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
-
-
-# helper function to get job info and calculation params from the
-# oq-engine DB, as a dictionary
-def _get_calc_info(job_type, calc_id):
-    calc = oqe_models.OqJob.objects.select_related().get(pk=calc_id)
-    response_data = _calc_to_response_data(calc)
-    response_data['status'] = calc.status
-    return response_data
 
 
 @require_http_methods(['GET'])
@@ -209,7 +183,7 @@ def calc(request, job_type):
 
     response_data = []
     for hc_id, status, desc in calc_data:
-        url = urlparse.urljoin(base_url, 'v1/calc/%s/%d' % (job_type, hc_id))
+        url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
         response_data.append(
             dict(id=hc_id, status=status, description=desc, url=url)
         )
@@ -221,14 +195,12 @@ def calc(request, job_type):
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
-def run_calc(request, job_type):
+def run_calc(request):
     """
     Run a calculation.
 
     :param request:
         a `django.http.HttpRequest` object.
-    :param job_type:
-        string 'hazard' or 'risk'
     """
     callback_url = request.POST.get('callback_url')
     foreign_calc_id = request.POST.get('foreign_calculation_id')
@@ -253,7 +225,9 @@ def run_calc(request, job_type):
                            callback_url, foreign_calc_id,
                            hazard_output_id, hazard_job_id)
     try:
-        response_data = _get_calc_info(job_type, job.id)
+        calc = oqe_models.OqJob.objects.get(pk=job.id)
+        response_data = vars(calc.get_oqparam())
+        response_data['status'] = calc.status
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
 
@@ -269,14 +243,14 @@ def submit_job(job_file, temp_dir, dbname,
     and submit it to the job queue.
     """
     job, exctype = safely_call(
-        oq_engine.job_from_file, (job_file, "platform", DEFAULT_LOG_LEVEL, [],
+        oq_engine.job_from_file, (job_file, "platform", DEFAULT_LOG_LEVEL, '',
                                   hazard_output_id, hazard_job_id))
     if exctype:
         tasks.update_calculation(callback_url, status="failed", einfo=job)
         raise exctype(job)
 
     future = executor.submit(
-        tasks.safely_call, tasks.run_calc, job.job_type, job.id, temp_dir,
+        tasks.safely_call, tasks.run_calc, job.id, temp_dir,
         callback_url, foreign_calc_id, dbname, logfile)
     return job, future
 
@@ -290,12 +264,12 @@ def _get_calcs(job_type):
     job_params = oqe_models.JobParam.objects.filter(
         name='description', job__user_name='platform',
         job__hazard_calculation__isnull=job_type == 'hazard')
-    return [(jp.job, jp.job.status, jp.value) for jp in job_params]
+    return [(jp.job.id, jp.job.status, jp.value) for jp in job_params]
 
 
 @require_http_methods(['GET'])
 @cross_domain_ajax
-def calc_results(request, job_type, calc_id):
+def calc_results(request, calc_id):
     """
     Get a summarized list of calculation results for a given ``calc_id``.
     Result is a JSON array of objects containing the following attributes:
@@ -315,14 +289,13 @@ def calc_results(request, job_type, calc_id):
         return HttpResponseNotFound()
     base_url = _get_base_url(request)
 
-    results = oq_engine.get_outputs(job_type, calc_id)
+    results = oq_engine.get_outputs(calc_id)
     if not results:
         return HttpResponseNotFound()
 
     response_data = []
     for result in results:
-        url = urlparse.urljoin(base_url,
-                               'v1/calc/%s/result/%d' % (job_type, result.id))
+        url = urlparse.urljoin(base_url, 'v1/calc/result/%d' % result.id)
         datum = dict(
             id=result.id,
             name=result.display_name,
@@ -336,42 +309,26 @@ def calc_results(request, job_type, calc_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
-def get_result(request, job_type, result_id):
+def get_result(request, result_id):
     """
     Download a specific result, by ``result_id``.
 
-    Parameters for the GET request can include an `export_type`, such as 'xml',
-    'geojson', 'csv', etc.
-    """
-    return _get_result(
-        request, result_id,
-        risk_export.export if job_type == 'risk' else hazard_export.export)
-
-
-def _get_result(request, result_id, export_fn):
-    """
     The common abstracted functionality for getting hazard or risk results.
-    The functionality is the same, except for the hazard/risk specific
-    ``export_fn``.
 
     :param request:
         `django.http.HttpRequest` object. Can contain a `export_type` GET
         param (the default is 'xml' if no param is specified).
     :param result_id:
         The id of the requested artifact.
-    :param export_fn:
-        Export function, which accepts the following params:
-
-            * result_id (int)
-            * target (a file path or file-like)
-            * export_type (option kwarg)
-
     :returns:
         If the requested ``result_id`` is not available in the format
         designated by the `export_type`.
 
         Otherwise, return a `django.http.HttpResponse` containing the content
         of the requested artifact.
+
+    Parameters for the GET request can include an `export_type`, such as 'xml',
+    'geojson', 'csv', etc.
     """
     # If the result for the requested ID doesn't exist, OR
     # the job which it is related too is not complete,
@@ -384,36 +341,26 @@ def _get_result(request, result_id, export_fn):
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
 
-    export_type = request.GET.get('export_type', DEFAULT_EXPORT_TYPE)
+    etype = request.GET.get('export_type')
+    export_type = etype or DEFAULT_EXPORT_TYPE
 
-    content = StringIO.StringIO()
-    try:
-        content = export_fn(result_id, content, export_type=export_type)
-    except NotImplementedError, err:
+    tmpdir = tempfile.mkdtemp()
+    exported = core.export(result_id, tmpdir, export_type=export_type)
+    if exported is None:
         # Throw back a 404 if the exact export parameters are not supported
-        return HttpResponseNotFound(err.message)
+        return HttpResponseNotFound(
+            'export_type=%s is not supported for output_type=%s' %
+            (export_type, output.output_type))
 
-    # Just in case the original StringIO object was closed:
-    resp_content = StringIO.StringIO()
-    # NOTE(LB): We assume that `content` was written to by using normal
-    # file-like `write` calls; thus, the buflist should be populated with all
-    # of the content. The exporter/writer might have closed the file object (if
-    # so, we cannot read from it normally) so instead we should look at the
-    # buflist.
-    # NOTE(LB): This might be a really stupid implementation, but it's the best
-    # I could come up with so far.
-    resp_content.writelines(content.buflist)
-    del content
-
-    # TODO(LB): A possible necessary optimization--in the future--would be to
-    # iteratively stream large files.
-    # TODO(LB): Large files could pose a memory consumption problem.
-    # TODO(LB): We also may want to limit the maximum file size of results sent
-    # via http.
-    resp_value = resp_content.getvalue()
-    resp_content.close()
-    # TODO: Need to look at `content_type`, otherwise XML gets treated at HTML
-    # in the browser
-    content_type = EXPORT_CONTENT_TYPE_MAP.get(export_type,
-                                               DEFAULT_CONTENT_TYPE)
-    return HttpResponse(resp_value, content_type=content_type)
+    content_type = EXPORT_CONTENT_TYPE_MAP.get(
+        export_type, DEFAULT_CONTENT_TYPE)
+    try:
+        fname = 'output-%s-%s' % (result_id, os.path.basename(exported))
+        data = open(exported).read()
+        response = HttpResponse(data, content_type=content_type)
+        response['Content-Length'] = len(data)
+        if etype:  # download as a file
+            response['Content-Disposition'] = 'attachment; filename=%s' % fname
+        return response
+    finally:
+        shutil.rmtree(tmpdir)
