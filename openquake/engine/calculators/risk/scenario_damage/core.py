@@ -22,13 +22,13 @@ Core functionality for the scenario_damage risk calculator.
 
 import numpy
 
-from openquake.commonlib.riskmodels import get_risk_model
+from openquake.commonlib.readinput import get_risk_model
 
 from openquake.engine.calculators.risk import (
     base, hazard_getters, writers, validation)
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.db import models
-from openquake.engine.utils import calculators
+from openquake.engine.calculators import calculators
 
 
 def scenario_damage(workflow, getter, outputdict, params, monitor):
@@ -50,17 +50,17 @@ def scenario_damage(workflow, getter, outputdict, params, monitor):
    :returns:
       A matrix of fractions and a taxonomy string
     """
-    [ffs] = workflow.vulnerability_functions
+    [ffs] = workflow.risk_functions
 
     # and no output containers
     assert len(outputdict) == 0, outputdict
-    with monitor.copy('computing risk'):
+    with monitor('computing risk'):
         assets, fractions = workflow(
             'damage', getter.assets, getter.get_data(), None)
         aggfractions = sum(fractions[i] * asset.number_of_units
                            for i, asset in enumerate(assets))
 
-    with monitor.copy('saving damage per assets'):
+    with monitor('saving damage per assets'):
         writers.damage_distribution(
             getter.assets, fractions, params.damage_state_ids)
 
@@ -85,7 +85,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
     core = staticmethod(scenario_damage)
     validators = [validation.HazardIMT, validation.EmptyExposure,
                   validation.OrphanTaxonomies,
-                  validation.NoRiskModels, validation.RequireScenarioHazard]
+                  validation.NoRiskModels]
 
     # FIXME. scenario damage calculator does not use output builders
     output_builders = []
@@ -93,11 +93,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
 
     def __init__(self, job):
         super(ScenarioDamageRiskCalculator, self).__init__(job)
-        # let's define a dictionary taxonomy -> fractions
-        # updated in task_completed method when the fractions per taxonomy
-        # becomes available, as computed by the workers
-        self.acc = {}
-        self.damage_state_ids = None
+        self.acc = {}  # taxonomy -> fractions
 
     @EnginePerformanceMonitor.monitor
     def agg_result(self, acc, task_result):
@@ -121,6 +117,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         """
         Save the damage distributions by taxonomy and total on the db.
         """
+        damage_state_ids = self.oqparam.damage_state_ids
 
         models.Output.objects.create_output(
             self.job, "Damage Distribution per Asset",
@@ -138,7 +135,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         tot = None
         for taxonomy, fractions in self.acc.iteritems():
             writers.damage_distribution_per_taxonomy(
-                fractions, self.damage_state_ids, taxonomy)
+                fractions, damage_state_ids, taxonomy)
             if tot is None:  # only the first time
                 tot = numpy.zeros(fractions.shape)
             tot += fractions
@@ -147,31 +144,21 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
             models.Output.objects.create_output(
                 self.job, "Damage Distribution Total",
                 "dmg_dist_total")
-            writers.total_damage_distribution(tot, self.damage_state_ids)
+            writers.total_damage_distribution(tot, damage_state_ids)
 
     def get_risk_model(self):
         """
         Load fragility model and store damage states
         """
-        risk_model = get_risk_model(models.oqparam(self.job.id))
+        risk_model = get_risk_model(self.oqparam)
 
         for lsi, dstate in enumerate(risk_model.damage_states):
             models.DmgState.objects.get_or_create(
                 risk_calculation=self.job, dmg_state=dstate, lsi=lsi)
 
-        self.damage_state_ids = [d.id for d in models.DmgState.objects.filter(
+        damage_state_ids = [d.id for d in models.DmgState.objects.filter(
             risk_calculation=self.job).order_by('lsi')]
+        self.oqparam.damage_state_ids = damage_state_ids
 
         self.loss_types.add('damage')  # single loss_type
         return risk_model
-
-    @property
-    def calculator_parameters(self):
-        """
-        The specific calculation parameters passed as args to the
-        celery task function. A calculator must override this to
-        provide custom arguments to its celery task
-        """
-        oqparam = self.job.get_oqparam()
-        oqparam.damage_state_ids = self.damage_state_ids
-        return oqparam

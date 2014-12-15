@@ -131,14 +131,14 @@ def handle(job, log_level='info', log_file=None):
     :param log_level:
          one of debug, info, warn, progress, error, critical
     :param log_file:
-         log file path (if None, logs on stdout)
+         log file path (if None, logs on stdout only)
     """
     handler = (LogFileHandler(job, log_file) if log_file
                else LogStreamHandler(job))
     logging.root.addHandler(handler)
     set_level(log_level)
     try:
-        yield handler
+        yield
     finally:
         logging.root.removeHandler(handler)
 

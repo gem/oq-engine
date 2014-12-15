@@ -161,9 +161,8 @@ def hazard_curves_to_hazard_map(job_id, hazard_curves, poes):
                     disp_name = _HAZ_MAP_DISP_NAME_FMT % dict(
                         poe=poe, imt=imt, rlz=hc.lt_realization.id)
 
-                output = models.Output.objects.create_output(
-                    job, disp_name, 'hazard_map'
-                )
+                output = job.get_or_create_output(disp_name, 'hazard_map')
+
                 # Save the complete hazard map
                 models.HazardMap.objects.create(
                     output=output,
@@ -217,14 +216,16 @@ def do_uhs_post_proc(job):
                 _save_uhs(job, quantile_uhs, poe, statistics='quantile',
                           quantile=quantile)
 
-        # for each logic tree branch:
-        for rlz in rlzs:
-            rlz_maps = maps_for_poe.filter(
-                statistics=None, lt_realization=rlz
-            )
-            assert rlz_maps, 'Could not find HazardMaps for rlz=%d' % rlz.id
-            rlz_uhs = make_uhs(rlz_maps)
-            _save_uhs(job, rlz_uhs, poe, rlz=rlz)
+        if job.get_param('individual_curves', True):
+            # build a map for each logic tree branch
+            for rlz in rlzs:
+                rlz_maps = maps_for_poe.filter(
+                    statistics=None, lt_realization=rlz
+                )
+                assert rlz_maps, \
+                    'Could not find HazardMaps for rlz=%d' % rlz.id
+                rlz_uhs = make_uhs(rlz_maps)
+                _save_uhs(job, rlz_uhs, poe, rlz=rlz)
 
 
 def make_uhs(maps):
@@ -297,10 +298,6 @@ def _save_uhs(job, uhs_results, poe, rlz=None, statistics=None, quantile=None):
     :param float quantile:
         Specify only if ``statistics`` == 'quantile'.
     """
-    output = models.Output(
-        oq_job=job,
-        output_type='uh_spectra'
-    )
     uhs = models.UHS(
         poe=poe,
         investigation_time=job.get_param('investigation_time'),
@@ -308,17 +305,16 @@ def _save_uhs(job, uhs_results, poe, rlz=None, statistics=None, quantile=None):
     )
     if rlz is not None:
         uhs.lt_realization = rlz
-        output.display_name = _UHS_DISP_NAME_FMT % dict(poe=poe, rlz=rlz.id)
+        display_name = _UHS_DISP_NAME_FMT % dict(poe=poe, rlz=rlz.id)
     elif statistics is not None:
         uhs.statistics = statistics
         if statistics == 'quantile':
             uhs.quantile = quantile
-            output.display_name = (_UHS_DISP_NAME_QUANTILE_FMT
-                                   % dict(poe=poe, quantile=quantile))
-        else:
-            # mean
-            output.display_name = _UHS_DISP_NAME_MEAN_FMT % dict(poe=poe)
-    output.save()
+            display_name = (_UHS_DISP_NAME_QUANTILE_FMT
+                            % dict(poe=poe, quantile=quantile))
+        else:  # mean
+            display_name = _UHS_DISP_NAME_MEAN_FMT % dict(poe=poe)
+    output = job.get_or_create_output(display_name, 'uh_spectra')
     uhs.output = output
     # This should fail if neither `lt_realization` nor `statistics` is defined:
     uhs.save()

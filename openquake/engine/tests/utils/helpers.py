@@ -40,8 +40,7 @@ from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.commonlib.general import writetmp as touch
-from openquake.commonlib import readinput
+from openquake.baselib.general import writetmp as touch
 
 from openquake.engine.db import models
 from openquake.engine import engine
@@ -113,7 +112,7 @@ def demo_file(file_name):
         os.path.dirname(__file__), "../../demos", file_name)
 
 
-def run_job(cfg, exports=None, hazard_calculation_id=None,
+def run_job(cfg, exports='xml,csv', hazard_calculation_id=None,
             hazard_output_id=None, **params):
     """
     Given the path to a job config file and a hazard_calculation_id
@@ -121,9 +120,6 @@ def run_job(cfg, exports=None, hazard_calculation_id=None,
 
     :returns: a calculator object
     """
-    if exports is None:
-        exports = []
-
     job = get_job(cfg, hazard_calculation_id=hazard_calculation_id,
                   hazard_output_id=hazard_output_id, **params)
     job.is_running = True
@@ -131,7 +127,7 @@ def run_job(cfg, exports=None, hazard_calculation_id=None,
 
     logfile = os.path.join(tempfile.gettempdir(), 'qatest.log')
 
-    return engine.run_calc(job, 'error', logfile, exports, job.job_type)
+    return engine.run_calc(job, 'error', logfile, exports)
 
 
 def timeit(method):

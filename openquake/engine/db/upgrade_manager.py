@@ -207,7 +207,7 @@ class UpgradeManager(object):
         if scripts:
             raise SystemExit(
                 'Your database is not updated. You can update it by running '
-                'openquake --upgrade-db which will process the '
+                'oq-engine --upgrade-db which will process the '
                 'following new versions: %s' % versions)
         return versions
 
@@ -223,7 +223,7 @@ class UpgradeManager(object):
             curs.execute(query)
             return set(version for version, in curs.fetchall())
         except:
-            raise VersioningNotInstalled('Run openquake --upgrade-db')
+            raise VersioningNotInstalled('Run oq-engine --upgrade-db')
 
     def parse_script_name(self, script_name):
         '''

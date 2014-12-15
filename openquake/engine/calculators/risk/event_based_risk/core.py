@@ -22,7 +22,7 @@ import itertools
 import numpy
 
 from openquake.hazardlib.geo import mesh
-from openquake.risklib import scientific, workflows
+from openquake.risklib import scientific
 from openquake.risklib.utils import numpy_map
 
 from openquake.engine.calculators import post_processing
@@ -30,7 +30,7 @@ from openquake.engine.calculators.risk import (
     base, hazard_getters, validation, writers)
 from openquake.engine.db import models
 from openquake.engine import writer
-from openquake.engine.utils import calculators
+from openquake.engine.calculators import calculators
 from openquake.engine.performance import EnginePerformanceMonitor
 
 
@@ -73,7 +73,7 @@ def event_based(workflow, getter, outputdict, params, monitor):
     inserter = writer.CacheInserter(
         models.EventLossAsset, max_cache_size=10000)
     for loss_type in workflow.loss_types:
-        with monitor.copy('computing individual risk'):
+        with monitor('computing individual risk'):
             outputs = workflow.compute_all_outputs(getter, loss_type)
             if statistics:
                 outputs = list(outputs)  # expand the generator
@@ -107,13 +107,13 @@ def event_based(workflow, getter, outputdict, params, monitor):
                             asset=asset, loss=loss_per_rup)
                         inserter.add(ela)
                 if params.sites_disagg:
-                    with monitor.copy('disaggregating results'):
+                    with monitor('disaggregating results'):
                         ruptures = [models.SESRupture.objects.get(pk=rid)
                                     for rid in getter.rupture_ids]
                         disagg_outputs = disaggregate(
                             out.output, [r.rupture for r in ruptures], params)
 
-            with monitor.copy('saving individual risk'):
+            with monitor('saving individual risk'):
                 save_individual_outputs(
                     outputdict.with_args(hazard_output_id=out.hid,
                                          loss_type=loss_type),
@@ -123,7 +123,7 @@ def event_based(workflow, getter, outputdict, params, monitor):
             stats = workflow.statistics(
                 outputs, params.quantile_loss_curves, post_processing)
 
-            with monitor.copy('saving risk statistics'):
+            with monitor('saving risk statistics'):
                 save_statistical_output(
                     outputdict.with_args(
                         hazard_output_id=None, loss_type=loss_type),
@@ -317,7 +317,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
     # FIXME(lp). Validate sites_disagg to ensure non-empty outputs
     validators = base.RiskCalculator.validators + [
-        validation.RequireEventBasedHazard,
         validation.ExposureHasInsuranceBounds]
 
     output_builders = [writers.EventLossCurveMapBuilder,
@@ -336,7 +335,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         Base pre_execute + build Event Loss Asset outputs if needed
         """
         super(EventBasedRiskCalculator, self).pre_execute()
-        for hazard_output in self.rc.hazard_outputs():
+        for hazard_output in self.get_hazard_outputs():
             for loss_type in self.loss_types:
                 models.EventLoss.objects.create(
                     output=models.Output.objects.create_output(
@@ -375,10 +374,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
           Compute aggregate loss curves and event loss tables
         """
+        oq = self.oqparam
+        tses = oq.investigation_time * oq.ses_per_logic_tree_path
         with self.monitor('post processing'):
             inserter = writer.CacheInserter(models.EventLossData,
                                             max_cache_size=10000)
-            time_span, tses = self.hazard_times()
             for (loss_type, out_id), event_loss_table in self.acc.items():
                 if out_id:  # values for individual realizations
                     hazard_output = models.Output.objects.get(pk=out_id)
@@ -416,8 +416,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         aggregate_loss_losses, aggregate_loss_poes = (
                             scientific.event_based(
                                 aggregate_losses, tses=tses,
-                                time_span=time_span,
-                                curve_resolution=self.rc.loss_curve_resolution
+                                time_span=oq.investigation_time,
+                                curve_resolution=oq.loss_curve_resolution
                             ))
 
                         models.AggregateLossCurveData.objects.create(
@@ -436,28 +436,3 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                             average_loss=scientific.average_loss(
                                 aggregate_loss_losses, aggregate_loss_poes),
                             stddev_loss=numpy.std(aggregate_losses))
-
-    def get_workflow(self, vulnerability_functions):
-        """
-        :param vulnerability_functions:
-            a dictionary of vulnerability functions
-        :returns:
-            an instance of
-            :class:`openquake.risklib.workflows.ProbabilisticEventBased`
-        """
-        time_span, tses = self.hazard_times()
-        return workflows.ProbabilisticEventBased(
-            vulnerability_functions,
-            time_span, tses,
-            self.rc.loss_curve_resolution,
-            self.rc.conditional_loss_poes,
-            self.rc.insured_losses)
-
-    def hazard_times(self):
-        """
-        Return the hazard investigation time related to the ground
-        motion field and the so-called time representative of the
-        stochastic event set
-        """
-        return (self.rc.investigation_time,
-                self.hc.ses_per_logic_tree_path * self.hc.investigation_time)

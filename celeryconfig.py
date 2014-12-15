@@ -34,7 +34,7 @@ if os.environ.get("OQ_ENGINE_USE_SRCDIR"):
         0, os.path.join(os.path.dirname(__file__), "openquake"))
 
 from openquake.engine.utils import config, get_core_modules
-from openquake.engine.calculators import hazard, risk
+from openquake import engine
 
 config.abort_if_no_config_available()
 
@@ -69,11 +69,8 @@ CELERY_ACKS_LATE = True
 CELERYD_PREFETCH_MULTIPLIER = 1
 CELERY_MAX_CACHED_RESULTS = 1
 
-HAZARD_MODULES = get_core_modules(hazard)
-
-RISK_MODULES = get_core_modules(risk)
-
-CELERY_IMPORTS = HAZARD_MODULES + RISK_MODULES + [
+CELERY_IMPORTS = get_core_modules(engine) + [
+    "openquake.engine.calculators.hazard.general",
     "openquake.engine.tests.utils.tasks"]
 
 os.environ["DJANGO_SETTINGS_MODULE"] = "openquake.engine.settings"

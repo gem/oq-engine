@@ -126,7 +126,7 @@ def import_rows(job, ses_coll, gmf_coll, sorted_tags, rows):
     gmfs = []  # list of GmfData instance
     site_id = {}  # dictionary wkt -> site id
     rupture = fake_rupture()
-    prob_rup_id, ses_rup_ids = create_db_ruptures(
+    prob_rup_id, ses_rup_ids, seeds = create_db_ruptures(
         rupture, ses_coll, sorted_tags, seed=42)
     tag2id = dict(zip(sorted_tags, ses_rup_ids))
 
@@ -158,7 +158,7 @@ def import_gmf_scenario(fileobj):
     t0 = time.time()
     fname = fileobj.name
 
-    job = engine.prepare_job()
+    job = engine.create_job()
 
     ses_coll, gmf_coll = create_ses_gmf(job, fname)
     imts, tags, rows = read_data(fileobj)
@@ -168,7 +168,7 @@ def import_gmf_scenario(fileobj):
             base_path=os.path.dirname(fname),
             description='Scenario importer, file %s' % os.path.basename(fname),
             calculation_mode='scenario',
-            intensity_measure_types_and_levels=dict.fromkeys(imts),
+            hazard_imtls=dict.fromkeys(imts),
             inputs={},
             number_of_ground_motion_fields=len(rows) // len(imts)
             ))

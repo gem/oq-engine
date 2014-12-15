@@ -30,7 +30,7 @@ def import_hazard_curves(fileobj):
     hc_nodes = hazcurves[1:]
 
     curs = connections['job_init'].cursor().cursor.cursor  # DB API cursor
-    job = engine.prepare_job()
+    job = engine.create_job()
     job.save_params(dict(
         base_path=os.path.dirname(fname),
         intensity_measure_types_and_levels={imt_str: imls},

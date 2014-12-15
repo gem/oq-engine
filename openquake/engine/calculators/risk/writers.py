@@ -388,9 +388,9 @@ def combine_builders(builders):
         return outputs
 
     a_builder = builders[0]
-    hazard_outputs = a_builder.calc.rc.hazard_outputs()
+    hazard_outputs = a_builder.calc.get_hazard_outputs()
     # now a special case for event_based_fr
-    if a_builder.calc.rc.calculation_mode == 'event_based_fr':
+    if a_builder.calc.oqparam.calculation_mode == 'event_based_fr':
         hos = []
         for ho in hazard_outputs:
             for rlz in ho.ses.lt_model:
@@ -433,9 +433,9 @@ class LossCurveMapBuilder(OutputBuilder):
                 "loss maps. type=%s poe=%s, hazard=%s" % (
                     loss_type, poe, hazard_output.id),
                 "loss_map"), poe=poe)
-                for poe in self.calc.rc.conditional_loss_poes or []]
+                for poe in self.calc.oqparam.conditional_loss_poes or []]
 
-        if loss_type != "fatalities" and self.calc.rc.insured_losses:
+        if loss_type != "fatalities" and self.calc.oqparam.insured_losses:
             ins = [
                 models.LossCurve.objects.create(
                     insured=True,
@@ -459,7 +459,7 @@ class LossCurveMapBuilder(OutputBuilder):
                 output_type='loss_curve'),
             statistics='mean', loss_type=loss_type)]
 
-        if loss_type != "fatalities" and self.calc.rc.insured_losses:
+        if loss_type != "fatalities" and self.calc.oqparam.insured_losses:
             mean_insured_loss_curve = [models.LossCurve.objects.create(
                 output=models.Output.objects.create_output(
                     job=self.calc.job,
@@ -471,7 +471,7 @@ class LossCurveMapBuilder(OutputBuilder):
 
         quantile_loss_curves = []
         quantile_insured_loss_curves = []
-        for quantile in self.calc.rc.quantile_loss_curves or []:
+        for quantile in self.calc.oqparam.quantile_loss_curves or []:
             quantile_loss_curves.append(models.LossCurve.objects.create(
                 output=models.Output.objects.create_output(
                     job=self.calc.job,
@@ -481,7 +481,7 @@ class LossCurveMapBuilder(OutputBuilder):
                 statistics='quantile',
                 quantile=quantile,
                 loss_type=loss_type))
-            if loss_type != "fatalities" and self.calc.rc.insured_losses:
+            if loss_type != "fatalities" and self.calc.oqparam.insured_losses:
                 quantile_insured_loss_curves.append(
                     models.LossCurve.objects.create(
                         output=models.Output.objects.create_output(
@@ -496,7 +496,7 @@ class LossCurveMapBuilder(OutputBuilder):
                         loss_type=loss_type))
 
         mean_loss_maps = []
-        for poe in self.calc.rc.conditional_loss_poes or []:
+        for poe in self.calc.oqparam.conditional_loss_poes or []:
             mean_loss_maps.append(models.LossMap.objects.create(
                 output=models.Output.objects.create_output(
                     job=self.calc.job,
@@ -508,8 +508,8 @@ class LossCurveMapBuilder(OutputBuilder):
                 poe=poe))
 
         quantile_loss_maps = []
-        for quantile in self.calc.rc.quantile_loss_curves or []:
-            for poe in self.calc.rc.conditional_loss_poes or []:
+        for quantile in self.calc.oqparam.quantile_loss_curves or []:
+            for poe in self.calc.oqparam.conditional_loss_poes or []:
                 name = "%.4f Quantile Loss Map type=%s poe=%.4f" % (
                     quantile, loss_type, poe)
                 quantile_loss_maps.append(models.LossMap.objects.create(
@@ -539,7 +539,7 @@ class LossMapBuilder(OutputBuilder):
             hazard_output=hazard_output,
             loss_type=loss_type)]
 
-        if self.calc.rc.insured_losses:
+        if self.calc.oqparam.insured_losses:
             loss_maps.append(models.LossMap.objects.create(
                 output=models.Output.objects.create_output(
                     self.calc.job, "Insured Loss Map", "loss_map"),
@@ -584,7 +584,7 @@ class LossFractionBuilder(OutputBuilder):
 class ConditionalLossFractionBuilder(OutputBuilder):
     def statistical_outputs(self, loss_type):
         loss_fractions = []
-        for poe in self.calc.rc.poes_disagg or []:
+        for poe in self.calc.oqparam.poes_disagg or []:
             loss_fractions.append(models.LossFraction.objects.create(
                 variable="taxonomy",
                 poe=poe,
@@ -596,8 +596,8 @@ class ConditionalLossFractionBuilder(OutputBuilder):
                     output_type="loss_fraction"),
                 statistics="mean"))
 
-        for quantile in self.calc.rc.quantile_loss_curves or []:
-            for poe in self.calc.rc.poes_disagg or []:
+        for quantile in self.calc.oqparam.quantile_loss_curves or []:
+            for poe in self.calc.oqparam.poes_disagg or []:
                 loss_fractions.append(models.LossFraction.objects.create(
                     variable="taxonomy",
                     poe=poe,
@@ -616,7 +616,7 @@ class ConditionalLossFractionBuilder(OutputBuilder):
     def individual_outputs(self, loss_type, hazard_output):
         loss_fractions = []
 
-        for poe in self.calc.rc.poes_disagg or []:
+        for poe in self.calc.oqparam.poes_disagg or []:
             loss_fractions.append(models.LossFraction.objects.create(
                 hazard_output_id=hazard_output.id,
                 variable="taxonomy",

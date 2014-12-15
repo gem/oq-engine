@@ -19,46 +19,31 @@ file formats."""
 
 
 import os
-
 from openquake.engine.db import models
+from openquake.engine.logs import LOG
+from openquake.baselib.general import CallableDict
 
+export_output = CallableDict()
+
+
+def export(output_id, target, export_type='xml,geojson,csv'):
+    """
+    Export the given calculation `output_id` from the database to the
+    specified `target` directory in the specified `export_type`.
+    """
+    output = models.Output.objects.get(id=output_id)
+    if isinstance(target, basestring):  # create target directory
+        makedirs(target)
+    for exptype in export_type.split(','):
+        key = (output.output_type, exptype)
+        if key in export_output:
+            return export_output(key, output, target)
+    LOG.warn(
+        'No "%(fmt)s" exporter is available for "%(output_type)s"'
+        ' outputs' % dict(fmt=export_type, output_type=output.output_type))
 
 #: Used to separate node labels in a logic tree path
 LT_PATH_JOIN_TOKEN = '_'
-
-
-def _export_fn_not_implemented(output, _target_dir):
-    """This gets called if an export is attempted on an unsupported output
-    type. See :data:`_EXPORT_FN_MAP`."""
-    raise NotImplementedError('Cannot export output of type: %s'
-                              % output.output_type)
-
-
-def makedirsdeco(fn):
-    """Decorator for export functions. Creates intermediate directories (if
-    necessary) to the target export directory.
-
-    This is equivalent to `mkdir -p` and :func:`os.makedirs`.
-    """
-
-    def wrapped(output, target, **kwargs):
-        """
-        If the the ``target`` is a directory path (string), call
-        :func:`os.makedirs` to create intermediate directories to
-        the ``target``.
-
-        Otherwise, the ``target`` could be a file-like object, in which case we
-        don't do anything.
-        """
-        if isinstance(target, basestring):
-            makedirs(target)
-        return fn(output, target, **kwargs)
-
-    # This fixes doc generation problems with decorators
-    wrapped.__doc__ = fn.__doc__
-    wrapped.__repr__ = fn.__repr__
-
-    return wrapped
 
 
 def makedirs(path):

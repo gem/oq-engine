@@ -19,6 +19,7 @@ Disaggregation calculator core functionality
 """
 
 import sys
+from operator import attrgetter
 from collections import namedtuple
 import numpy
 
@@ -26,11 +27,13 @@ from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import SiteCollection
 
+from openquake.baselib.general import groupby
 from openquake.commonlib.calculators.calc import gen_ruptures_for_site
 
 from openquake.engine import logs
 from openquake.engine.db import models
-from openquake.engine.utils import tasks, calculators
+from openquake.engine.calculators import calculators
+from openquake.engine.utils import tasks
 from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
 from openquake.engine.calculators.hazard.classical.core import \
     ClassicalHazardCalculator
@@ -236,7 +239,7 @@ def compute_disagg(job_id, sitecol, sources, trt_model_id,
                 'collecting bins', job_id, compute_disagg):
             bdata = _collect_bins_data(
                 mon, trt_num, source_ruptures, site, curves_dict[site.id],
-                trt_model_id, gsims, hc.intensity_measure_types_and_levels,
+                trt_model_id, gsims, hc.imtls,
                 hc.poes_disagg, getattr(hc, 'truncation_level', None),
                 hc.num_epsilon_bins)
 
@@ -244,7 +247,7 @@ def compute_disagg(job_id, sitecol, sources, trt_model_id,
             continue
 
         for poe in hc.poes_disagg:
-            for imt in hc.intensity_measure_types_and_levels:
+            for imt in hc.imtls:
                 for gsim in gsims:
                     for rlz in rlzs[gsim.__class__.__name__]:
                         # extract the probabilities of non-exceedance for the
@@ -287,8 +290,8 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         """
         dic = {}
         wkt = site.location.wkt2d
-        for rlz in self._get_realizations():
-            for imt_str in self.hc.intensity_measure_types_and_levels:
+        for rlz in self._realizations:
+            for imt_str in self.oqparam.imtls:
                 imt = from_string(imt_str)
                 [curve] = models.HazardCurveData.objects.filter(
                     location=wkt,
@@ -310,20 +313,21 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         """
         Run the disaggregation phase after hazard curve finalization.
         """
-        hc = self.hc
-        tl = getattr(self.hc, 'truncation_level', None)
-        mag_bin_width = self.hc.mag_bin_width
-        eps_edges = numpy.linspace(-tl, tl, self.hc.num_epsilon_bins + 1)
+        hc = self.oqparam
+        tl = getattr(self.oqparam, 'truncation_level', None)
+        sitecol = self.site_collection
+        mag_bin_width = self.oqparam.mag_bin_width
+        eps_edges = numpy.linspace(-tl, tl, self.oqparam.num_epsilon_bins + 1)
         logs.LOG.info('%d epsilon bins from %s to %s', len(eps_edges) - 1,
                       min(eps_edges), max(eps_edges))
 
         self.bin_edges = {}
         curves_dict = dict((site.id, self.get_curves(site))
                            for site in self.site_collection)
-
-        oqm = tasks.OqTaskManager(compute_disagg, logs.LOG.progress)
-        for job_id, sitecol, srcs, trt_model_id in self.task_arg_gen():
-
+        all_args = []
+        for trt_model_id, srcs in groupby(
+                self.composite_model.sources,
+                attrgetter('trt_model_id')).iteritems():
             lt_model = models.TrtModel.objects.get(pk=trt_model_id).lt_model
             trt_num = dict((trt, i) for i, trt in enumerate(
                            lt_model.get_tectonic_region_types()))
@@ -362,11 +366,11 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                 self.bin_edges[lt_model.id, site.id] = (
                     mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
 
-            oqm.submit(self.job.id, sitecol, srcs, trt_model_id,
-                       trt_num, curves_dict, self.bin_edges)
+            all_args.append((self.job.id, sitecol, srcs, trt_model_id,
+                             trt_num, curves_dict, self.bin_edges))
 
-        res = oqm.aggregate_results(self.agg_result, {})
-        self.save_disagg_results(res)  # dictionary key -> probability array
+        res = tasks.starmap(compute_disagg, all_args, logs.LOG.progress)
+        self.save_disagg_results(res.reduce(self.agg_result))
 
     def post_execute(self):
         super(DisaggHazardCalculator, self).post_execute()
@@ -402,4 +406,4 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
             edges = self.bin_edges[lt_model.id, site_id]
             save_disagg_result(
                 self.job.id, site_id, edges, trt_names, probs,
-                rlz_id, self.hc.investigation_time, imt, iml, poe)
+                rlz_id, self.oqparam.investigation_time, imt, iml, poe)
