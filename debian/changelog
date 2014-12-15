@@ -1,3 +1,9 @@
+python-oq-engine (1.2.1-0) precise; urgency=low
+
+  * Fixed the logging handler
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 15 Dec 2014 10:17:30 +0100
+
 python-oq-engine (1.2.0-3) precise; urgency=low
 
   * Add constraint on python-django dependency version
