@@ -103,9 +103,8 @@ class ExposureDBWriter(object):
             if not any(cost_type == cost.cost_type
                        for cost in asset_data.costs):
                 if cost_type in self.ignore_missing_costs:
-                    LOG.warn('Skipping asset %s since its %s cost is missing',
+                    LOG.warn('asset %s, %s cost is missing',
                              asset_data.asset_ref, cost_type)
-                    return
                 else:
                     raise ValueError("Invalid Exposure. "
                                      "Missing cost %s for asset %s" % (
