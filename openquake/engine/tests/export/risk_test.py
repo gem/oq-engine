@@ -41,9 +41,10 @@ class ExportTestCase(unittest.TestCase):
         self.output_mock.hazard_metadata.quantile = None
         self.output_mock.hazard_metadata.sm_path = None
         self.output_mock.hazard_metadata.gsim_path = None
-        rc = self.output_mock.oq_job.risk_calculation
-        rc.exposure_model.category = "air"
-        rc.exposure_model.unit = mock.Mock(return_value="bucks")
+        exposure_model = self.output_mock.oq_job.exposure_model
+        exposure_model.category = "air"
+        exposure_model.unit = mock.Mock(return_value="bucks")
+        rc = self.output_mock.oq_job.get_oqparam()
         rc.interest_rate = 0.3
         rc.asset_life_expectancy = 10
 

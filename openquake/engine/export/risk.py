@@ -126,8 +126,7 @@ def _export_common(output, loss_type):
                 quantile_value=metadata.quantile,
                 source_model_tree_path=source_model_tree_path,
                 gsim_tree_path=gsim_tree_path,
-                unit=output.oq_job.risk_calculation.exposure_model.unit(
-                    loss_type),
+                unit=output.oq_job.exposure_model.unit(loss_type),
                 loss_type=loss_type)
 
 
@@ -165,12 +164,11 @@ def export_loss_map(key, output, target):
     """
     General loss map export code.
     """
-    risk_calculation = output.oq_job.risk_calculation
     args = _export_common(output, output.loss_map.loss_type)
     dest = _get_result_export_dest(target, output, file_ext=key[1])
     args.update(dict(
         poe=output.loss_map.poe,
-        loss_category=risk_calculation.exposure_model.category))
+        loss_category=output.oq_job.exposure_model.category))
 
     writercls = (risk_writers.LossMapXMLWriter if key[1] == 'xml'
                  else risk_writers.LossMapGeoJSONWriter)
@@ -186,7 +184,6 @@ def export_loss_fraction_xml(key, output, target):
     Export `output` to `target` by using a nrml loss fractions
     serializer
     """
-    risk_calculation = output.oq_job.risk_calculation
     args = _export_common(output, output.loss_fraction.loss_type)
     hazard_metadata = models.Output.HazardMetadata(
         investigation_time=args['investigation_time'],
@@ -197,7 +194,7 @@ def export_loss_fraction_xml(key, output, target):
     dest = _get_result_export_dest(target, output)
     poe = output.loss_fraction.poe
     variable = output.loss_fraction.variable
-    loss_category = risk_calculation.exposure_model.category
+    loss_category = output.oq_job.exposure_model.category
     risk_writers.LossFractionsWriter(
         dest, variable, args['unit'], args['loss_type'],
         loss_category, hazard_metadata, poe).serialize(
@@ -212,7 +209,7 @@ def export_bcr_distribution_xml(key, output, target):
     Export `output` to `target` by using a nrml bcr distribution
     serializer
     """
-    risk_calculation = output.oq_job.risk_calculation
+    risk_calculation = output.oq_job.get_oqparam()
     args = _export_common(output, output.bcr_distribution.loss_type)
 
     dest = _get_result_export_dest(target, output)
