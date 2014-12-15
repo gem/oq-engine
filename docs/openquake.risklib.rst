@@ -1,14 +1,6 @@
 risklib Package
 ===============
 
-:mod:`calculators` Module
--------------------------
-
-.. automodule:: openquake.risklib.calculators
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 :mod:`scientific` Module
 ------------------------
 
