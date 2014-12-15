@@ -168,7 +168,7 @@ def import_gmf_scenario(fileobj):
             base_path=os.path.dirname(fname),
             description='Scenario importer, file %s' % os.path.basename(fname),
             calculation_mode='scenario',
-            intensity_measure_types_and_levels=dict.fromkeys(imts),
+            hazard_imtls=dict.fromkeys(imts),
             inputs={},
             number_of_ground_motion_fields=len(rows) // len(imts)
             ))

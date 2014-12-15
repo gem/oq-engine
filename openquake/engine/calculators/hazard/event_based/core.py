@@ -44,7 +44,7 @@ from openquake.hazardlib.calc import gmf, filters
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import FilteredSiteCollection
 
-from openquake.commonlib import logictree
+from openquake.commonlib import valid
 
 from openquake.engine import writer
 from openquake.engine.calculators import calculators
@@ -233,14 +233,14 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol):
     """
     job = models.OqJob.objects.get(pk=job_id)
     hc = job.get_oqparam()
-    imts = map(from_string, sorted(hc.intensity_measure_types_and_levels))
+    imts = map(from_string, sorted(hc.imtls))
 
     result = {}  # trt_model_id -> (curves_by_gsim, [])
     # NB: by construction each block is a non-empty list with
     # ruptures of homogeneous trt_model
     trt_model = ses_ruptures[0].rupture.ses_collection.trt_model
     rlzs_by_gsim = trt_model.get_rlzs_by_gsim()
-    gsims = [logictree.GSIM[gsim]() for gsim in rlzs_by_gsim]
+    gsims = [valid.gsim(gsim) for gsim in rlzs_by_gsim]
     calc = GmfCalculator(
         sorted(imts), sorted(gsims), trt_model.id,
         getattr(hc, 'truncation_level', None), models.get_correl_model(job))
@@ -259,7 +259,7 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol):
                 'hazard curves from gmfs',
                 job_id, compute_gmfs_and_curves):
             result[trt_model.id] = (calc.to_haz_curves(
-                sitecol.sids, hc.intensity_measure_types_and_levels,
+                sitecol.sids, hc.imtls,
                 hc.investigation_time, hc.ses_per_logic_tree_path), [])
     else:
         result[trt_model.id] = ([], [])
@@ -450,7 +450,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         # create a Gmf output for each realization
         self.initialize_realizations()
         if getattr(self.hc, 'ground_motion_fields', None):
-            for rlz in self._get_realizations():
+            for rlz in self._realizations:
                 output = models.Output.objects.create(
                     oq_job=self.job,
                     display_name='GMF rlz-%s' % rlz.id,

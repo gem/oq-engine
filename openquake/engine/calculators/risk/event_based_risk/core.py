@@ -22,7 +22,7 @@ import itertools
 import numpy
 
 from openquake.hazardlib.geo import mesh
-from openquake.risklib import scientific, workflows
+from openquake.risklib import scientific
 from openquake.risklib.utils import numpy_map
 
 from openquake.engine.calculators import post_processing
@@ -375,10 +375,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
           Compute aggregate loss curves and event loss tables
         """
+        oq = self.oqparam
+        tses = self.hc.investigation_time * self.hc.ses_per_logic_tree_path
         with self.monitor('post processing'):
             inserter = writer.CacheInserter(models.EventLossData,
                                             max_cache_size=10000)
-            time_span, tses = self.hazard_times()
             for (loss_type, out_id), event_loss_table in self.acc.items():
                 if out_id:  # values for individual realizations
                     hazard_output = models.Output.objects.get(pk=out_id)
@@ -416,7 +417,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         aggregate_loss_losses, aggregate_loss_poes = (
                             scientific.event_based(
                                 aggregate_losses, tses=tses,
-                                time_span=time_span,
+                                time_span=oq.investigation_time,
                                 curve_resolution=self.rc.loss_curve_resolution
                             ))
 
@@ -436,28 +437,3 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                             average_loss=scientific.average_loss(
                                 aggregate_loss_losses, aggregate_loss_poes),
                             stddev_loss=numpy.std(aggregate_losses))
-
-    def get_workflow(self, vulnerability_functions):
-        """
-        :param vulnerability_functions:
-            a dictionary of vulnerability functions
-        :returns:
-            an instance of
-            :class:`openquake.risklib.workflows.ProbabilisticEventBased`
-        """
-        time_span, tses = self.hazard_times()
-        return workflows.ProbabilisticEventBased(
-            vulnerability_functions,
-            time_span, tses,
-            self.rc.loss_curve_resolution,
-            self.rc.conditional_loss_poes,
-            self.rc.insured_losses)
-
-    def hazard_times(self):
-        """
-        Return the hazard investigation time related to the ground
-        motion field and the so-called time representative of the
-        stochastic event set
-        """
-        return (self.rc.investigation_time,
-                self.hc.ses_per_logic_tree_path * self.hc.investigation_time)
