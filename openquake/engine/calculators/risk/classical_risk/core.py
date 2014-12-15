@@ -18,7 +18,6 @@ Core functionality for the classical PSHA risk calculator.
 """
 
 import itertools
-from openquake.risklib import workflows
 
 from openquake.engine.calculators import post_processing
 from openquake.engine.calculators.risk import (
@@ -185,7 +184,6 @@ class ClassicalRiskCalculator(base.RiskCalculator):
     core = staticmethod(classical)
 
     validators = base.RiskCalculator.validators + [
-        validation.RequireClassicalHazard,
         validation.ExposureHasInsuranceBounds]
 
     output_builders = [writers.LossCurveMapBuilder,

@@ -133,11 +133,10 @@ class BaseHazardCalculator(base.Calculator):
         self.num_ruptures = collections.defaultdict(int)
         # now a dictionary (trt_model_id, gsim) -> poes
         self.acc = general.AccumDict()
-        self.hc = models.oqparam(self.job.id)
         self.mean_hazard_curves = getattr(
-            self.hc, 'mean_hazard_curves', None)
+            self.oqparam, 'mean_hazard_curves', None)
         self.quantile_hazard_curves = getattr(
-            self.hc, 'quantile_hazard_curves', ())
+            self.oqparam, 'quantile_hazard_curves', ())
         self._hazard_curves = []
         self._realizations = []
 
@@ -182,7 +181,7 @@ class BaseHazardCalculator(base.Calculator):
                 pnes2 = 1 - acc.get((trt_model_id, gsim), self.zeros)
                 acc[trt_model_id, gsim] = 1 - pnes1 * pnes2
 
-            if getattr(self.hc, 'poes_disagg', None):
+            if getattr(self.oqparam, 'poes_disagg', None):
                 for bb in bbs:
                     self.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
 
@@ -203,7 +202,7 @@ class BaseHazardCalculator(base.Calculator):
         with transaction.commit_on_success(using='job_init'):
             self.initialize_sources()
         info = readinput.get_job_info(
-            self.hc, self.composite_model, self.site_collection)
+            self.oqparam, self.composite_model, self.site_collection)
         with transaction.commit_on_success(using='job_init'):
             models.JobInfo.objects.create(
                 oq_job=self.job,
@@ -218,7 +217,7 @@ class BaseHazardCalculator(base.Calculator):
         return info['input_weight'], info['output_weight']
 
     def init_zeros_ones(self):
-        imtls = self.hc.imtls
+        imtls = self.oqparam.imtls
         if None in imtls.values():  # no levels, cannot compute curves
             return
         n_sites = len(self.site_collection)
@@ -264,7 +263,7 @@ class BaseHazardCalculator(base.Calculator):
         """
         logs.LOG.progress("initializing sources")
         self.composite_model = readinput.get_composite_source_model(
-            self.hc, self.site_collection)
+            self.oqparam, self.site_collection)
         for sm in self.composite_model:
             # create an LtSourceModel for each distinct source model
             lt_model = models.LtSourceModel.objects.create(
@@ -372,7 +371,7 @@ class BaseHazardCalculator(base.Calculator):
         """
         if not self.acc:
             return
-        imtls = self.hc.imtls
+        imtls = self.oqparam.imtls
         points = models.HazardSite.objects.filter(
             hazard_calculation=self.job).order_by('id')
         sorted_imts = sorted(imtls)
@@ -387,7 +386,7 @@ class BaseHazardCalculator(base.Calculator):
                     "hazard_curve_multi")
                 models.HazardCurve.objects.create(
                     output=multicurve, lt_realization=rlz,
-                    investigation_time=self.hc.investigation_time)
+                    investigation_time=self.oqparam.investigation_time)
 
             with self.monitor('building curves per realization'):
                 imt_curves = zip(
@@ -427,7 +426,7 @@ class BaseHazardCalculator(base.Calculator):
         haz_curve = models.HazardCurve.objects.create(
             output=hco,
             lt_realization=rlz,
-            investigation_time=self.hc.investigation_time,
+            investigation_time=self.oqparam.investigation_time,
             imt=hc_im_type,
             imls=imls,
             sa_period=sa_period,
@@ -466,7 +465,7 @@ class BaseHazardCalculator(base.Calculator):
                 'quantile_hazard_curves should not be set')
             return
 
-        if self.hc.mean_hazard_curves:
+        if self.oqparam.mean_hazard_curves:
             # create a new `HazardCurve` 'container' record for mean
             # curves (virtual container for multiple imts)
             models.HazardCurve.objects.create(
@@ -475,7 +474,7 @@ class BaseHazardCalculator(base.Calculator):
                     "hazard_curve_multi"),
                 statistics="mean",
                 imt=None,
-                investigation_time=self.hc.investigation_time)
+                investigation_time=self.oqparam.investigation_time)
 
         for quantile in self.quantile_hazard_curves:
             # create a new `HazardCurve` 'container' record for quantile
@@ -487,21 +486,21 @@ class BaseHazardCalculator(base.Calculator):
                 statistics="quantile",
                 imt=None,
                 quantile=quantile,
-                investigation_time=self.hc.investigation_time)
+                investigation_time=self.oqparam.investigation_time)
 
-        for imt, imls in self.hc.imtls.items():
+        for imt, imls in self.oqparam.imtls.items():
             im_type, sa_period, sa_damping = from_string(imt)
 
             # prepare `output` and `hazard_curve` containers in the DB:
             container_ids = dict()
-            if self.hc.mean_hazard_curves:
+            if self.oqparam.mean_hazard_curves:
                 mean_output = self.job.get_or_create_output(
                     display_name='Mean Hazard Curves %s' % imt,
                     output_type='hazard_curve'
                 )
                 mean_hc = models.HazardCurve.objects.create(
                     output=mean_output,
-                    investigation_time=self.hc.investigation_time,
+                    investigation_time=self.oqparam.investigation_time,
                     imt=im_type,
                     imls=imls,
                     sa_period=sa_period,
@@ -518,7 +517,7 @@ class BaseHazardCalculator(base.Calculator):
                     output_type='hazard_curve')
                 q_hc = models.HazardCurve.objects.create(
                     output=q_output,
-                    investigation_time=self.hc.investigation_time,
+                    investigation_time=self.oqparam.investigation_time,
                     imt=im_type,
                     imls=imls,
                     sa_period=sa_period,
@@ -545,7 +544,7 @@ class BaseHazardCalculator(base.Calculator):
                 # do means and quantiles
                 # quantiles first:
                 for quantile in self.quantile_hazard_curves:
-                    if self.hc.number_of_logic_tree_samples == 0:
+                    if self.oqparam.number_of_logic_tree_samples == 0:
                         # explicitly weighted quantiles
                         q_curve = weighted_quantile_curve(
                             curve_poes, weights, quantile)
@@ -585,11 +584,11 @@ class BaseHazardCalculator(base.Calculator):
         # required for computing UHS
         # if `hazard_maps` is false but `uniform_hazard_spectra` is true,
         # just don't export the maps
-        if (getattr(self.hc, 'hazard_maps', None) or
-                getattr(self.hc, 'uniform_hazard_spectra', None)):
+        if (getattr(self.oqparam, 'hazard_maps', None) or
+                getattr(self.oqparam, 'uniform_hazard_spectra', None)):
             with self.monitor('generating hazard maps'):
                 tasks.apply_reduce(
                     hazard_curves_to_hazard_map,
-                    (self.job.id, self._hazard_curves, self.hc.poes))
-        if getattr(self.hc, 'uniform_hazard_spectra', None):
+                    (self.job.id, self._hazard_curves, self.oqparam.poes))
+        if getattr(self.oqparam, 'uniform_hazard_spectra', None):
             do_uhs_post_proc(self.job)

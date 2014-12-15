@@ -415,7 +415,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         SESCollection records for each TrtModel.
         """
         weights = super(EventBasedHazardCalculator, self).pre_execute()
-        hc = self.hc
+        hc = self.oqparam
         rnd = random.Random()
         rnd.seed(hc.random_seed)
         for src in self.composite_model.sources:
@@ -443,13 +443,13 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         for trt_model in trt_models:
             trt_model.num_ruptures = self.acc.get(trt_model.id, 0)
             trt_model.save()
-        if (not getattr(self.hc, 'ground_motion_fields', None) and
-                not getattr(self.hc, 'hazard_curves_from_gmfs', None)):
+        if (not getattr(self.oqparam, 'ground_motion_fields', None) and
+                not getattr(self.oqparam, 'hazard_curves_from_gmfs', None)):
             return  # do nothing
 
         # create a Gmf output for each realization
         self.initialize_realizations()
-        if getattr(self.hc, 'ground_motion_fields', None):
+        if getattr(self.oqparam, 'ground_motion_fields', None):
             for rlz in self._realizations:
                 output = models.Output.objects.create(
                     oq_job=self.job,

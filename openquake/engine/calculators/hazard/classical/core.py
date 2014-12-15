@@ -295,7 +295,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         # a dictionary with the bounding boxes for earch source
         # model and each site, defined only for disaggregation
         # calculations:
-        if getattr(self.hc, 'poes_disagg', None):
+        if getattr(self.oqparam, 'poes_disagg', None):
             lt_models = models.LtSourceModel.objects.filter(
                 hazard_calculation=self.job)
             self.bb_dict = dict(
