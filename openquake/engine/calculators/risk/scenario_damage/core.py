@@ -85,7 +85,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
     core = staticmethod(scenario_damage)
     validators = [validation.HazardIMT, validation.EmptyExposure,
                   validation.OrphanTaxonomies,
-                  validation.NoRiskModels, validation.RequireScenarioHazard]
+                  validation.NoRiskModels]
 
     # FIXME. scenario damage calculator does not use output builders
     output_builders = []
