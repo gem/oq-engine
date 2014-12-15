@@ -101,7 +101,8 @@ class ClassicalRiskCase1TestCase(risk.BaseRiskQATestCase):
                 0.000989667841574, 0.000757544444296, 0.000272824002046,
                 0.0, 0.0, 0.]
         job = helpers.get_job(
-            helpers.get_data_path("simple_fault_demo_hazard/job.ini"))
+            helpers.get_data_path("simple_fault_demo_hazard/job.ini"),
+            intensity_measure_types_and_levels=str({'PGA': hazard_imls}))
 
         models.HazardSite.objects.create(
             hazard_calculation=job, location="POINT(1 1)")

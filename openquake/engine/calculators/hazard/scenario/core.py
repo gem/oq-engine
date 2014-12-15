@@ -24,9 +24,8 @@ import numpy
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.imt import from_string
-import openquake.hazardlib.gsim
 
-from openquake.commonlib.readinput import get_rupture
+from openquake.commonlib import valid, readinput
 
 from openquake.engine.calculators.hazard import general as haz_general
 from openquake.engine.calculators import calculators
@@ -36,8 +35,6 @@ from openquake.engine import logs, writer
 from openquake.engine.performance import EnginePerformanceMonitor
 
 from django.db import transaction
-
-AVAILABLE_GSIMS = openquake.hazardlib.gsim.get_available_gsims()
 
 
 @tasks.oqtask
@@ -121,7 +118,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         hc = self.hc
         n_sites = len(self.site_collection)
         n_gmf = hc.number_of_ground_motion_fields
-        n_imts = len(hc.intensity_measure_types_and_levels)
+        n_imts = len(hc.imtls)
         output_weight = n_sites * n_imts * n_gmf
         logs.LOG.info('Expected output size=%s', output_weight)
         models.JobInfo.objects.create(
@@ -138,9 +135,8 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
 
     def create_ruptures(self):
         oqparam = models.oqparam(self.job.id)
-        self.imts = map(
-            from_string, sorted(oqparam.intensity_measure_types_and_levels))
-        self.rupture = get_rupture(oqparam)
+        self.imts = map(from_string, oqparam.imtls)
+        self.rupture = readinput.get_rupture(oqparam)
 
         # check filtering
         trunc_level = getattr(oqparam, 'truncation_level', None)
@@ -175,7 +171,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
 
         correlation_model = models.get_correl_model(
             models.OqJob.objects.get(pk=self.job.id))
-        gsim = AVAILABLE_GSIMS[oqparam.gsim]()
+        gsim = valid.gsim(oqparam.gsim)
         self.computer = GmfComputer(
             self.rupture, self.site_collection, self.imts, gsim,
             trunc_level, correlation_model)
