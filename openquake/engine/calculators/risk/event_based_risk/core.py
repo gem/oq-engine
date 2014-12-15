@@ -417,8 +417,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                             scientific.event_based(
                                 aggregate_losses, tses=tses,
                                 time_span=oq.investigation_time,
-                                curve_resolution=
-                                oq.loss_curve_resolution
+                                curve_resolution=oq.loss_curve_resolution
                             ))
 
                         models.AggregateLossCurveData.objects.create(
