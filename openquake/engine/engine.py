@@ -346,7 +346,6 @@ def run_job(cfg_file, log_level, log_file, exports='', hazard_output_id=None,
     # first of all check the database version and exit if the db is outdated
     upgrader.check_versions(django_db.connections['admin'])
     with CeleryNodeMonitor(openquake.engine.no_distribute(), interval=3):
-        hazard = hazard_output_id is None and hazard_calculation_id is None
         job = job_from_file(
             cfg_file, getpass.getuser(), log_level, exports, hazard_output_id,
             hazard_calculation_id)
@@ -357,20 +356,16 @@ def run_job(cfg_file, log_level, log_file, exports='', hazard_output_id=None,
         if log_file:
             touch_log_file(log_file)  # check if writeable
 
-        # Instantiate the calculator and run the calculation.
+        # instantiate the calculator and run the calculation
         t0 = time.time()
         run_calc(job, log_level, log_file, exports)
         duration = time.time() - t0
-        if hazard:
-            if job.status == 'complete':
-                print_results(job.id, duration, list_outputs)
-            else:
-                sys.exit('Calculation %s failed' % job.id)
+        if job.status == 'complete':
+            print_results(job.id, duration, list_outputs)
+            # sanity check to make sure that the logging is working
+            assert os.path.getsize(log_file) > 0
         else:
-            if job.status == 'complete':
-                print_results(job.id, duration, list_outputs)
-            else:
-                sys.exit('Calculation %s failed' % job.id)
+            sys.exit('Calculation %s failed' % job.id)
 
 
 def check_hazard_risk_consistency(haz_job, risk_mode):
