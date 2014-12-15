@@ -2768,13 +2768,12 @@ class AssetManager(djm.GeoManager):
                 rc.exposure_model.category, rc.time_event))
 
         args += occupants_args
-
-        cost_type_fields, cost_type_joins = self._get_cost_types_query_helper(
-            rc.exposure_model.costtype_set.all())
-
+        cost_types = rc.exposure_model.costtype_set.all()
+        cost_type_fields, cost_type_joins = (
+            self._get_cost_types_query_helper(cost_types))
         query = """\
         SELECT riski.exposure_data.*,
-               {people_field} AS people,
+               {people_field} AS people
                {costs}
         FROM riski.exposure_data
         {occupancy_join}
@@ -2787,7 +2786,7 @@ class AssetManager(djm.GeoManager):
         ORDER BY riski.exposure_data.id
          """.format(people_field=people_field,
                     occupants_cond=occupants_cond,
-                    costs=cost_type_fields,
+                    costs=', ' + cost_type_fields if cost_types else '',
                     costs_join=cost_type_joins,
                     occupancy_join=occupancy_join)
         return query, args
