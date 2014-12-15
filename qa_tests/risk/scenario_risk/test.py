@@ -155,6 +155,37 @@ class ScenarioOccupantsQATestCase1(risk.FixtureBasedQATestCase):
                 (1.12788692684151, 0.698151682472273),
                 (3.08602924036484, 1.97594906538496)]
 
+
+class ScenarioOccupantsQATestCase2(risk.FixtureBasedQATestCase):
+    module = occupants
+    output_type = "gmf_scenario"
+    hazard_calculation_fixture = 'Scenario QA Test for occupants'
+
+    @attr('qa', 'risk', 'scenario')
+    def test(self):
+        self._run_test()
+
+    def actual_data(self, job):
+        latest_loss_map = job.output_set.filter(
+            output_type="loss_map", loss_map__loss_type="fatalities").latest(
+            'last_update').loss_map
+        latest_aggregated = job.output_set.filter(
+            output_type="aggregate_loss",
+            aggregate_loss__loss_type="fatalities").latest(
+            'last_update').aggregate_loss
+
+        data = [(d.value, d.std_dev)
+                for d in latest_loss_map.lossmapdata_set.all().order_by(
+                    'asset_ref')] + [
+            (latest_aggregated.mean, latest_aggregated.std_dev)]
+        return data
+
+    def expected_data(self):
+        return [(0.36863306563175, 0.198942735032192),
+                (1.58950924789158, 1.8570835311939),
+                (1.12788692684151, 0.698151682472273),
+                (3.08602924036484, 1.97594906538496)]
+
 # For NIGHT:
 
 # Asset 1
