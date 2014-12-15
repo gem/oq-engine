@@ -21,6 +21,7 @@ Base RiskCalculator class.
 
 import itertools
 import psutil
+import numpy
 
 from django.db import transaction
 
@@ -45,11 +46,14 @@ epsilon_sampling in openquake.cfg. It the correlation is
 nonzero, consider setting asset_correlation=0 to avoid building the
 correlation matrix.'''
 
+#: Default maximum asset-hazard distance in km
+DEFAULT_MAXIMUM_DISTANCE = 5
+
 eps_sampling = int(config.get('risk', 'epsilon_sampling'))
 
 
 @tasks.oqtask
-def prepare_risk(job_id, counts_taxonomy, rc):
+def prepare_risk(job_id, counts_taxonomy, calc):
     """
     Associates the assets to the closest hazard sites and populate
     the table asset_site. For some calculators also initializes the
@@ -59,15 +63,15 @@ def prepare_risk(job_id, counts_taxonomy, rc):
         ID of the current risk job
     :param counts_taxonomy:
         a sorted list of pairs (counts, taxonomy) for each bunch of assets
-    :param rc:
-        the current risk calculation
+    :param calc:
+        the current risk calculator
     """
     for counts, taxonomy in counts_taxonomy:
 
         # building the RiskInitializers
         with EnginePerformanceMonitor(
                 "associating asset->site", job_id, prepare_risk):
-            initializer = hazard_getters.RiskInitializer(taxonomy, rc)
+            initializer = hazard_getters.RiskInitializer(taxonomy, calc)
             initializer.init_assocs()
 
         # estimating the needed memory
@@ -103,13 +107,15 @@ def run_risk(job_id, sorted_assocs, calc):
         the risk calculator to use
     """
     acc = calc.acc
-    hazard_outputs = calc.rc.hazard_outputs()
+    hazard_outputs = calc.get_hazard_outputs()
     monitor = EnginePerformanceMonitor(None, job_id, run_risk)
+    exposure_model = calc.exposure_model
+    time_event = calc.time_event
     for taxonomy, assocs_by_taxonomy in itertools.groupby(
             sorted_assocs, lambda a: a.asset.taxonomy):
         with calc.monitor("getting assets"):
             assets = models.ExposureData.objects.get_asset_chunk(
-                calc.rc, assocs_by_taxonomy)
+                exposure_model, time_event, assocs_by_taxonomy)
         for it in models.ImtTaxonomy.objects.filter(
                 job=calc.job, taxonomy=taxonomy):
             imt = it.imt.imt_str
@@ -136,7 +142,7 @@ class RiskCalculator(base.Calculator):
     :attribute dict taxonomies_asset_count:
         A dictionary mapping each taxonomy with the number of assets the
         calculator will work on. Assets are extracted from the exposure input
-        and filtered according to the `RiskCalculation.region_constraint`.
+        and filtered according to the `region_constraint`.
 
     :attribute dict risk_model:
         A nested dict taxonomy -> loss type -> instances of `Workflow`.
@@ -153,18 +159,53 @@ class RiskCalculator(base.Calculator):
         self.risk_model = None
         self.loss_types = set()
         self.acc = {}
-        self.rc = self.job.risk_calculation
-        self.hc = self.rc.get_hazard_param()
-        self.oqparam = self.job.get_oqparam()
-        # copy the non-conflicting hazard parameters in the risk parameters
-        for name, value in self.hc:
-            if not hasattr(self.oqparam, name):
-                setattr(self.oqparam, name, value)
-        if not hasattr(self.oqparam, 'risk_investigation_time') and not \
-           self.oqparam.calculation_mode.startswith('scenario'):
-            self.oqparam.risk_investigation_time = self.hc.investigation_time
-        if not hasattr(self.oqparam, 'hazard_imtls'):
-            self.oqparam.hazard_imtls = self.hc.imtls
+        self.oqparam.hazard_output = models.Output.objects.get(
+            pk=self.oqparam.hazard_output_id) \
+            if self.oqparam.hazard_output_id else None
+
+        dist = getattr(
+            self.oqparam, 'maximum_distance', DEFAULT_MAXIMUM_DISTANCE)
+        grid_spacing = getattr(self.oqparam, 'region_grid_spacing', None)
+        if grid_spacing:
+            dist = min(dist, grid_spacing * numpy.sqrt(2) / 2)
+        self.best_maximum_distance = dist
+        self.time_event = getattr(self.oqparam, 'time_event', None)
+
+        self.taxonomies_from_model = getattr(
+            self.oqparam, 'taxonomies_from_model', None)
+        self.oqparam.insured_losses = getattr(
+            self.oqparam, 'insured_losses', False)
+
+    def get_hazard_outputs(self):
+        """
+        :param rcparam: OqParams instance for a risk calculation
+
+        Returns the list of hazard outputs to be considered. Apply
+        `filters` to the default queryset.
+        """
+        oq = self.oqparam
+        if oq.hazard_output:
+            return [oq.hazard_output]
+        elif oq.hazard_calculation_id:
+            if oq.calculation_mode in ["classical_risk", "classical_bcr"]:
+                filters = dict(output_type='hazard_curve_multi',
+                               hazard_curve__lt_realization__isnull=False)
+            elif oq.calculation_mode in [
+                    "event_based_risk", "event_based_bcr"]:
+                filters = dict(
+                    output_type='gmf', gmf__lt_realization__isnull=False)
+            elif oq.calculation_mode == "event_based_fr":
+                filters = dict(output_type='ses')
+            elif oq.calculation_mode in ['scenario_risk', 'scenario_damage']:
+                filters = dict(output_type='gmf_scenario')
+            else:
+                raise NotImplementedError
+
+            return models.Output.objects.filter(
+                oq_job=oq.hazard_calculation_id, **filters).order_by('id')
+        else:
+            raise RuntimeError("Neither hazard calculation "
+                               "neither a hazard output has been provided")
 
     def agg_result(self, acc, res):
         """
@@ -191,7 +232,7 @@ class RiskCalculator(base.Calculator):
             # consider only the taxonomies in the risk models if
             # taxonomies_from_model has been set to True in the
             # job.ini
-            if self.rc.taxonomies_from_model:
+            if self.taxonomies_from_model:
                 self.taxonomies_asset_count = dict(
                     (t, count)
                     for t, count in self.taxonomies_asset_count.items()
@@ -204,14 +245,17 @@ class RiskCalculator(base.Calculator):
             2. Parse the available risk models
             3. Validate exposure and risk models
         """
-        exposure = self.rc.exposure_model
-        if exposure is None:
+        try:
+            self.exposure_model = self.job.exposure_model
+        except models.ObjectDoesNotExist:
             with self.monitor('import exposure'):
                 ExposureDBWriter(self.job).serialize(
                     risk_parsers.ExposureModelParser(
-                        self.rc.inputs['exposure']))
+                        self.oqparam.inputs['exposure']))
+            self.exposure_model = self.job.exposure_model
         self.taxonomies_asset_count = \
-            self.rc.exposure_model.taxonomies_in(self.rc.region_constraint)
+            self.exposure_model.taxonomies_in(
+                self.oqparam.region_constraint)
 
         with self.monitor('parse risk models'):
             self.risk_model = self.get_risk_model()
@@ -241,7 +285,7 @@ class RiskCalculator(base.Calculator):
         # build the initializers hazard -> risk
         ct = sorted((counts, taxonomy) for taxonomy, counts
                     in self.taxonomies_asset_count.iteritems())
-        tasks.apply_reduce(prepare_risk, (self.job.id, ct, self.rc),
+        tasks.apply_reduce(prepare_risk, (self.job.id, ct, self),
                            concurrent_tasks=self.concurrent_tasks)
 
     @EnginePerformanceMonitor.monitor
