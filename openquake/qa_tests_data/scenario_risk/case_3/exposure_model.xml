@@ -26,6 +26,11 @@
           <cost type="structural" value="1"/>
         </costs>
       </asset>
+      <asset id="a4" taxonomy="W" number="800">
+        <location lon="85.747" lat="27.90"/>
+        <costs>
+        </costs>
+      </asset>
     </assets>
   </exposureModel>
 </nrml>
