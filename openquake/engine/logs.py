@@ -133,13 +133,14 @@ def handle(job, log_level='info', log_file=None):
     :param log_file:
          log file path (if None, logs on stdout only)
     """
-    handler = LogFileHandler(job, log_file) if log_file else None
+    handler = (LogFileHandler(job, log_file) if log_file
+               else LogStreamHandler(job))
+    logging.root.addHandler(handler)
     set_level(log_level)
     try:
         yield
     finally:
-        if handler:
-            logging.root.removeHandler(handler)
+        logging.root.removeHandler(handler)
 
 
 class tracing(object):
