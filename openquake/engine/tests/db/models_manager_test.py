@@ -117,8 +117,8 @@ class AssetManagerTestCase(unittest.TestCase):
         asset_ids = [13, 14]
         expected_query = """\
         SELECT riski.exposure_data.*,
-               occupants_fields AS people,
-               cost_type_fields
+               occupants_fields AS people
+               , cost_type_fields
         FROM riski.exposure_data
         occupancy_join
         ON riski.exposure_data.id = riski.occupancy.exposure_data_id
