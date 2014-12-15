@@ -21,7 +21,6 @@ import itertools
 import numpy
 from django import db
 
-from openquake.risklib import workflows
 from openquake.engine.calculators.risk import (
     base, hazard_getters, validation, writers)
 from openquake.engine.db import models
