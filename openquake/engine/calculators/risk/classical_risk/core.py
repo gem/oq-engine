@@ -18,12 +18,11 @@ Core functionality for the classical PSHA risk calculator.
 """
 
 import itertools
-from openquake.risklib import workflows
 
 from openquake.engine.calculators import post_processing
 from openquake.engine.calculators.risk import (
     base, hazard_getters, validation, writers)
-from openquake.engine.utils import calculators
+from openquake.engine.calculators import calculators
 
 
 def classical(workflow, getter, outputdict, params, monitor):
@@ -47,11 +46,11 @@ def classical(workflow, getter, outputdict, params, monitor):
     compute mean and quantile artifacts.
     """
     for loss_type in workflow.loss_types:
-        with monitor.copy('computing risk'):
+        with monitor('computing risk'):
             outputs = workflow.compute_all_outputs(getter, loss_type)
             stats = workflow.statistics(
                 outputs, params.quantile_loss_curves, post_processing)
-        with monitor.copy('saving risk'):
+        with monitor('saving risk'):
             for out in outputs:
                 save_individual_outputs(
                     outputdict.with_args(
@@ -185,25 +184,9 @@ class ClassicalRiskCalculator(base.RiskCalculator):
     core = staticmethod(classical)
 
     validators = base.RiskCalculator.validators + [
-        validation.RequireClassicalHazard,
         validation.ExposureHasInsuranceBounds]
 
     output_builders = [writers.LossCurveMapBuilder,
                        writers.ConditionalLossFractionBuilder]
 
     getter_class = hazard_getters.HazardCurveGetter
-
-    def get_workflow(self, vulnerability_functions):
-        """
-        :param vulnerability_functions:
-            a dictionary of vulnerability functions
-        :returns:
-            an instance of
-            :class:`openquake.risklib.workflows.Classical`
-        """
-        return workflows.Classical(
-            vulnerability_functions,
-            self.rc.lrem_steps_per_interval,
-            self.rc.conditional_loss_poes,
-            self.rc.poes_disagg,
-            self.rc.insured_losses)

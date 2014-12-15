@@ -21,7 +21,7 @@ from openquake.risklib import workflows
 from openquake.engine.calculators.risk import writers, validation
 from openquake.engine.calculators.risk.event_based_risk \
     import core as event_based
-from openquake.engine.utils import calculators
+from openquake.engine.calculators import calculators
 
 
 def event_based_bcr(workflow, getter, outputdict, params, monitor):
@@ -48,10 +48,10 @@ def event_based_bcr(workflow, getter, outputdict, params, monitor):
       A monitor instance
     """
     for loss_type in workflow.loss_types:
-        with monitor.copy('computing risk'):
+        with monitor('computing risk'):
             outputs = workflow.compute_all_outputs(getter, loss_type)
         outputdict = outputdict.with_args(loss_type=loss_type)
-        with monitor.copy('saving risk'):
+        with monitor('saving risk'):
             for out in outputs:
                 outputdict.write(
                     workflow.assets,
@@ -72,25 +72,6 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         validation.ExposureHasRetrofittedCosts]
 
     output_builders = [writers.BCRMapBuilder]
-
-    bcr = True
-
-    def get_workflow(self, vf_orig, vf_retro):
-        """
-        :param vf_orig:
-            original vulnerability function
-        :param vf_orig:
-            retrofitted vulnerability functions
-        :returns:
-            an instance of
-            :class:`openquake.risklib.workflows.ProbabilisticEventBasedBCR`
-        """
-        time_span, tses = self.hazard_times()
-        return workflows.ProbabilisticEventBasedBCR(
-            vf_orig, vf_retro,
-            time_span, tses, self.rc.loss_curve_resolution,
-            self.rc.interest_rate,
-            self.rc.asset_life_expectancy)
 
     def post_process(self):
         """
