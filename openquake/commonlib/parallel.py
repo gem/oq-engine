@@ -270,7 +270,6 @@ class TaskManager(object):
         """
         if acc is None:
             acc = AccumDict()
-        self.progress('Sent %dM of data', self.sent // ONE_MB)
         log_percent = log_percent_gen(
             self.name, len(self.results), self.progress)
         log_percent.next()
@@ -285,9 +284,9 @@ class TaskManager(object):
         if no_distribute():
             agg_result = reduce(agg_and_percent, self.results, acc)
         else:
+            self.progress('Sent %dM of data', self.sent // ONE_MB)
             agg_result = self.aggregate_result_set(agg_and_percent, acc)
-
-        self.progress('Received %dM of data', self.received // ONE_MB)
+            self.progress('Received %dM of data', self.received // ONE_MB)
         self.results = []
         return agg_result
 
