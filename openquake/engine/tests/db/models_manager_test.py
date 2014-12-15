@@ -79,10 +79,9 @@ class ExposureContainedInTestCase(unittest.TestCase):
         calculator = base.RiskCalculator(self.job)
         models.JobStats.objects.create(oq_job=self.job)
         calculator.pre_execute()
-        self.rc = self.job.risk_calculation
 
         common_fake_args = dict(
-            exposure_model=self.rc.exposure_model, taxonomy="test")
+            exposure_model=self.job.exposure_model, taxonomy="test")
 
         asset = models.ExposureData(site=Point(0.5, 0.5),
                                     asset_ref="test1",
@@ -102,9 +101,9 @@ class AssetManagerTestCase(unittest.TestCase):
         self.manager = models.ExposureData.objects
 
     def test_get_asset_chunk_query_args(self):
-        rc = mock.Mock()
-        rc.exposure_model.id = 0
-        rc.region_constraint.wkt = "REGION CONSTRAINT"
+        calc = mock.Mock()
+        calc.exposure_model.id = 0
+        calc.oqparam.region_constraint.wkt = "REGION CONSTRAINT"
 
         p1 = mock.patch(self.base + '_get_people_query_helper')
         m1 = p1.start()
@@ -130,7 +129,7 @@ class AssetManagerTestCase(unittest.TestCase):
         ORDER BY riski.exposure_data.id"""
         try:
             query, args = self.manager._get_asset_chunk_query_args(
-                rc, asset_ids)
+                calc.exposure_model, calc.time_event, asset_ids)
             self.assertEqual(expected_query, query.rstrip())
             self.assertEqual(args, (0, asset_ids, 'occ_arg1', 'occ_arg2'))
         finally:
