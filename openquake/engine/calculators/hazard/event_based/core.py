@@ -44,12 +44,13 @@ from openquake.hazardlib.calc import gmf, filters
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import FilteredSiteCollection
 
-from openquake.commonlib import logictree
+from openquake.commonlib import valid
 
 from openquake.engine import writer
+from openquake.engine.calculators import calculators
 from openquake.engine.calculators.hazard import general
 from openquake.engine.db import models
-from openquake.engine.utils import tasks, calculators
+from openquake.engine.utils import tasks
 from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
 
 # NB: beware of large caches
@@ -96,8 +97,7 @@ def gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
 
 
 @tasks.oqtask
-def compute_ruptures(
-        job_id, sitecol, src_seeds, trt_model_id):
+def compute_ruptures(job_id, sources, sitecol):
     """
     Celery task for the stochastic event set calculator.
 
@@ -112,12 +112,15 @@ def compute_ruptures(
 
     :param int job_id:
         ID of the currently running job.
+    :param sources:
+        List of commonlib.source.Source tuples
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param src_seeds:
-        List of pairs (source, seed)
+    :returns:
+        a dictionary trt_model_id -> tot_ruptures
     """
     # NB: all realizations in gsims correspond to the same source model
+    trt_model_id = sources[0].trt_model_id
     trt_model = models.TrtModel.objects.get(pk=trt_model_id)
     ses_coll = models.SESCollection.objects.get(trt_model=trt_model)
 
@@ -136,9 +139,9 @@ def compute_ruptures(
 
     # Compute and save stochastic event sets
     rnd = random.Random()
-    for src, seed in src_seeds:
+    for src in sources:
         t0 = time.time()
-        rnd.seed(seed)
+        rnd.seed(src.seed)
 
         with filter_sites_mon:  # filtering sources
             s_sites = src.filter_sites_by_distance_to_source(
@@ -212,7 +215,7 @@ def compute_ruptures(
     save_ruptures_mon.flush()
     source_inserter.flush()
 
-    return tot_ruptures, trt_model_id
+    return {trt_model_id: tot_ruptures}
 
 
 @tasks.oqtask
@@ -223,18 +226,21 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol):
     :param ses_ruptures:
         a list of blocks of SESRuptures with homogeneous TrtModel
     :param sitecol:
-        a SiteCollection instance
+        a :class:`openquake.hazardlib.site.SiteCollection` instance
+    :returns:
+        a dictionary trt_model_id -> (curves_by_gsim, bounding_boxes)
+        where the list of bounding boxes is empty
     """
     job = models.OqJob.objects.get(pk=job_id)
     hc = job.get_oqparam()
-    imts = map(from_string, sorted(hc.intensity_measure_types_and_levels))
+    imts = map(from_string, sorted(hc.imtls))
 
     result = {}  # trt_model_id -> (curves_by_gsim, [])
     # NB: by construction each block is a non-empty list with
     # ruptures of homogeneous trt_model
     trt_model = ses_ruptures[0].rupture.ses_collection.trt_model
     rlzs_by_gsim = trt_model.get_rlzs_by_gsim()
-    gsims = [logictree.GSIM[gsim]() for gsim in rlzs_by_gsim]
+    gsims = [valid.gsim(gsim) for gsim in rlzs_by_gsim]
     calc = GmfCalculator(
         sorted(imts), sorted(gsims), trt_model.id,
         getattr(hc, 'truncation_level', None), models.get_correl_model(job))
@@ -253,7 +259,7 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol):
                 'hazard curves from gmfs',
                 job_id, compute_gmfs_and_curves):
             result[trt_model.id] = (calc.to_haz_curves(
-                sitecol.sids, hc.intensity_measure_types_and_levels,
+                sitecol.sids, hc.imtls,
                 hc.investigation_time, hc.ses_per_logic_tree_path), [])
     else:
         result[trt_model.id] = ([], [])
@@ -377,60 +383,83 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
     """
     core_calc_task = compute_ruptures
 
-    def task_arg_gen(self, _block_size=None):
+    def initialize_ses_db_records(self, trt_model, i):
         """
-        Loop through realizations and sources to generate a sequence of
-        task arg tuples. Each tuple of args applies to a single task.
-        Yielded results are tuples of the form job_id, sources, ses, seeds
-        (seeds will be used to seed numpy for temporal occurence sampling).
+        Create :class:`~openquake.engine.db.models.Output` and
+        :class:`openquake.engine.db.models.SESCollection` records for
+        each tectonic region type.
+
+        :param trt_model:
+            :class:`openquake.engine.db.models.TrtModel` instance
+        :param i:
+            an ordinal number starting from 1
+        :returns:
+            a :class:`openquake.engine.db.models.SESCollection` instance
         """
-        hc = self.hc
+        output = models.Output.objects.create(
+            oq_job=self.job,
+            display_name='SES Collection %d' % i,
+            output_type='ses')
+
+        ses_coll = models.SESCollection.objects.create(
+            output=output, trt_model=trt_model, ordinal=i)
+
+        return ses_coll
+
+    def pre_execute(self):
+        """
+        Do pre-execution work. At the moment, this work entails:
+        parsing and initializing sources, parsing and initializing the
+        site model (if there is one), parsing vulnerability and
+        exposure files, generating the seeds for the sourcesand building
+        SESCollection records for each TrtModel.
+        """
+        weights = super(EventBasedHazardCalculator, self).pre_execute()
+        hc = self.oqparam
         rnd = random.Random()
         rnd.seed(hc.random_seed)
-        for job_id, sitecol, block, trt_model_id in \
-                super(EventBasedHazardCalculator, self).task_arg_gen():
-            ss = [(src, rnd.randint(0, models.MAX_SINT_32))
-                  for src in block]  # source, seed pairs
-            yield job_id, sitecol, ss, trt_model_id
+        for src in self.composite_model.sources:
+            src.seed = rnd.randint(0, models.MAX_SINT_32)
+        for i, trt_model in enumerate(models.TrtModel.objects.filter(
+                lt_model__hazard_calculation=self.job), 1):
+            with transaction.commit_on_success(using='job_init'):
+                self.initialize_ses_db_records(trt_model, i)
+        return weights
 
-    def task_completed(self, task_result):
+    def agg_curves(self, acc, result):
         """
-        :param task_result:
-            a pair (num_ruptures, trt_model_id)
+        :param result:
+            a dictionary {trt_model_id: num_ruptures}
 
         If the parameter `ground_motion_fields` is set, compute and save
         the GMFs from the ruptures generated by the given task.
         """
-        num_ruptures, trt_model_id = task_result
-        if num_ruptures:
-            self.num_ruptures[trt_model_id] += num_ruptures
+        return acc + result
 
     def post_execute(self):
         trt_models = models.TrtModel.objects.filter(
             lt_model__hazard_calculation=self.job)
         # save the right number of occurring ruptures
         for trt_model in trt_models:
-            trt_model.num_ruptures = self.num_ruptures.get(trt_model.id, 0)
+            trt_model.num_ruptures = self.acc.get(trt_model.id, 0)
             trt_model.save()
-        if (not getattr(self.hc, 'ground_motion_fields', None) and
-                not getattr(self.hc, 'hazard_curves_from_gmfs', None)):
+        if (not getattr(self.oqparam, 'ground_motion_fields', None) and
+                not getattr(self.oqparam, 'hazard_curves_from_gmfs', None)):
             return  # do nothing
 
         # create a Gmf output for each realization
         self.initialize_realizations()
-        if getattr(self.hc, 'ground_motion_fields', None):
-            for rlz in self._get_realizations():
+        if getattr(self.oqparam, 'ground_motion_fields', None):
+            for rlz in self._realizations:
                 output = models.Output.objects.create(
                     oq_job=self.job,
                     display_name='GMF rlz-%s' % rlz.id,
                     output_type='gmf')
                 models.Gmf.objects.create(output=output, lt_realization=rlz)
 
-        self.generate_gmfs_and_curves()
-
+        self.acc = self.generate_gmfs_and_curves()
         # now save the curves, if any
-        if self.curves:
-            self.save_hazard_curves()
+        self.save_hazard_curves()
 
     @EnginePerformanceMonitor.monitor
     def generate_gmfs_and_curves(self):
@@ -450,44 +479,8 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                     # read the world from the database
                     sr.trt_id = trt_model.id
                     sesruptures.append(sr)
-        self.curves = tasks.apply_reduce(
+        base_agg = super(EventBasedHazardCalculator, self).agg_curves
+        return tasks.apply_reduce(
             compute_gmfs_and_curves,
             (self.job.id, sesruptures, sitecol),
-            self.agg_curves, {}, key=lambda sr: sr.trt_id)
-
-    def initialize_ses_db_records(self, trt_model, i):
-        """
-        Create :class:`~openquake.engine.db.models.Output` and
-        :class:`~openquake.engine.db.models.SESCollection` records for
-        each tectonic region type.
-
-        :param trt_model:
-            :class:`openquake.engine.db.models.TrtModel` instance
-        :param i:
-            an ordinal number starting from 1
-        """
-        output = models.Output.objects.create(
-            oq_job=self.job,
-            display_name='SES Collection %d' % i,
-            output_type='ses')
-
-        ses_coll = models.SESCollection.objects.create(
-            output=output, trt_model=trt_model, ordinal=i)
-
-        return ses_coll
-
-    def pre_execute(self):
-        """
-        Do pre-execution work. At the moment, this work entails:
-        parsing and initializing sources, parsing and initializing the
-        site model (if there is one), parsing vulnerability and
-        exposure files, and generating logic tree realizations. (The
-        latter piece basically defines the work to be done in the
-        `execute` phase.)
-        """
-        weights = super(EventBasedHazardCalculator, self).pre_execute()
-        for i, trt_model in enumerate(models.TrtModel.objects.filter(
-                lt_model__hazard_calculation=self.job), 1):
-            with transaction.commit_on_success(using='job_init'):
-                self.initialize_ses_db_records(trt_model, i)
-        return weights
+            base_agg, {}, key=lambda sr: sr.trt_id)

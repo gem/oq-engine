@@ -26,7 +26,7 @@ from nose.plugins.attrib import attr
 from openquake.commonlib import nrml
 
 from openquake.engine.db import models
-from openquake.engine.export import core as export_core
+from openquake.engine.export import core
 from openquake.engine.export import hazard
 
 from openquake.engine.tests.export.core_test import \
@@ -36,9 +36,9 @@ from openquake.engine.tests.utils import helpers
 
 def check_export(output_id, target):
     """
-    Call hazard.export by checking that the exported file is valid
+    Call export by checking that the exported file is valid
     """
-    out_file = hazard.export(output_id, target, 'xml')
+    out_file = core.export(output_id, target, 'xml')
     nrml.read(out_file)
     return out_file
 
@@ -243,7 +243,7 @@ class GetResultExportDestTestCase(unittest.TestCase):
 
         ses = self.FakeSES(output, 1, self.ltr_mc.sm_lt_path)
         expected_path = (
-            '%s/calc_8/ses/ses-smltp_B1_B3.xml'
+            '%s/calc_8/ses/ses-1-smltp_B1_B3.xml'
             % self.target_dir
         )
         self.assertEqual(
@@ -271,7 +271,7 @@ class ClassicalExportTestCase(BaseExportTestCase):
             job = models.OqJob.objects.latest('id')
             self.assertEqual(job.status, 'complete')
 
-            outputs = export_core.get_outputs(job.id)
+            outputs = core.get_outputs(job.id)
 
             # 10 hazard curves, 20 maps, 10 uhs, 5 multi curves
             expected_outputs = 45
@@ -371,7 +371,7 @@ class EventBasedExportTestCase(BaseExportTestCase):
                                       ses_per_logic_tree_path=1).job
             self.assertEqual(job.status, 'complete')
 
-            outputs = export_core.get_outputs(job.id)
+            outputs = core.get_outputs(job.id)
             # 2 GMFs, 1 SES,
             # ((2 imts * 2 realizations)
             self.assertEqual(45, len(outputs))
@@ -446,7 +446,7 @@ class ScenarioExportTestCase(BaseExportTestCase):
             job = models.OqJob.objects.latest('id')
             self.assertEqual(job.status, 'complete')
 
-            outputs = export_core.get_outputs(job.id)
+            outputs = core.get_outputs(job.id)
 
             self.assertEqual(2, len(outputs))  # 1 GMF, 1 SES
 
@@ -485,7 +485,7 @@ class DisaggExportTestCase(BaseExportTestCase):
             job = models.OqJob.objects.latest('id')
             self.assertEqual(job.status, 'complete')
 
-            outputs = export_core.get_outputs(job.id)
+            outputs = core.get_outputs(job.id)
 
             # Test curve export:
             curves = outputs.filter(output_type='hazard_curve')
@@ -510,38 +510,3 @@ class DisaggExportTestCase(BaseExportTestCase):
                 self._test_exported_file(f)
         finally:
             shutil.rmtree(target_dir)
-
-
-class Bug1202290TestCase(unittest.TestCase):
-    """
-    Tests to specifically address
-    https://bugs.launchpad.net/oq-engine/+bug/1202290.
-    """
-
-    def test(self):
-        output = mock.Mock()
-        output.oq_job.id = 1202290
-        output.hazard_curve = mock.Mock()
-        output.hazard_curve.__iter__ = lambda x: iter([])
-        target = mock.Mock()
-
-        with mock.patch('openquake.engine.export.hazard'
-                        '._get_result_export_dest') as gred:
-            with mock.patch('openquake.commonlib.hazard_writers'
-                            '.MultiHazardCurveXMLWriter') as mhcxw:
-                mhcxw.return_value
-                mhcxw.serialize = mock.Mock()
-                hazard.export_hazard_curve_multi_xml(output, target)
-
-        self.assertEqual(1, gred.call_count)
-        self.assertEqual(
-            ((1202290, target, output.hazard_curve), {}),
-            gred.call_args
-        )
-        self.assertEqual(1, mhcxw.call_count)
-        self.assertEqual(1, mhcxw.return_value.serialize.call_count)
-
-        self.assertEqual(
-            ((gred.return_value, []), {}),
-            mhcxw.call_args
-        )

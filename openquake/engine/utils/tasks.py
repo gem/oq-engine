@@ -18,11 +18,13 @@
 
 """Utility functions related to splitting work into tasks."""
 
+import operator
+
 from celery.result import ResultSet
 from celery.app import current_app
 from celery.task import task
 
-from openquake.commonlib.general import split_in_blocks
+from openquake.baselib.general import split_in_blocks, AccumDict
 from openquake.commonlib.parallel import \
     TaskManager, safely_call, check_mem_usage, pickle_sequence, no_distribute
 from openquake.engine import logs
@@ -32,6 +34,8 @@ from openquake.engine.writer import CacheInserter
 from openquake.engine.performance import EnginePerformanceMonitor
 
 CONCURRENT_TASKS = int(config.get('celery', 'concurrent_tasks'))
+SOFT_MEM_LIMIT = int(config.get('memory', 'soft_mem_limit'))
+HARD_MEM_LIMIT = int(config.get('memory', 'hard_mem_limit'))
 
 
 class JobNotRunning(Exception):
@@ -55,7 +59,8 @@ class OqTaskManager(TaskManager):
         an AsyncResult. If the variable OQ_NO_DISTRIBUTE is set, the
         task function is run in process and the result is returned.
         """
-        check_mem_usage()  # log a warning if too much memory is used
+        # log a warning if too much memory is used
+        check_mem_usage(SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
         if no_distribute():
             res = safely_call(self.oqtask.task_func, args)
         else:
@@ -78,7 +83,8 @@ class OqTaskManager(TaskManager):
         backend = current_app().backend
         rset = ResultSet(self.results)
         for task_id, result_dict in rset.iter_native():
-            check_mem_usage()  # log a warning if too much memory is used
+            # log a warning if too much memory is used
+            check_mem_usage(SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
             result = result_dict['result']
             if isinstance(result, BaseException):
                 raise result
@@ -87,41 +93,12 @@ class OqTaskManager(TaskManager):
             del backend._cache[task_id]  # work around a celery bug
         return acc
 
-
-def map_reduce(task, task_args, agg, acc, name=None):
-    """
-    Given a task and an iterable of positional arguments, apply the
-    task function to the arguments in parallel and return an aggregate
-    result depending on the initial value of the accumulator
-    and on the aggregation function. To save memory, the order is
-    not preserved and there is no list with the intermediated results:
-    the accumulator is incremented as soon as a task result comes.
-
-    NB: if the environment variable OQ_NO_DISTRIBUTE is set the
-    tasks are run sequentially in the current process and then
-    map_reduce(task, task_args, agg, acc) is the same as
-    reduce(agg, itertools.starmap(task, task_args), acc).
-    Users of map_reduce should be aware of the fact that when
-    thousands of tasks are spawned and large arguments are passed
-    or large results are returned they may incur in memory issue:
-    this is way the calculators limit the queue with the
-    `concurrent_task` concept.
-
-    :param task: a `celery` task callable.
-    :param task_args: an iterable over positional arguments
-    :param agg: the aggregation function, (acc, val) -> new acc
-    :param acc: the initial value of the accumulator
-    :returns: the final value of the accumulator
-    """
-    oqm = OqTaskManager(task, logs.LOG.progress, name)
-    for i, args in enumerate(task_args, 1):
-        logs.LOG.info('Submitting task %s #%d', oqm.name, i)
-        oqm.submit(*args)
-    return oqm.aggregate_results(agg, acc)
+# a convenient alias
+starmap = OqTaskManager.starmap
 
 
 def apply_reduce(task, task_args,
-                 agg=lambda a, x: x,
+                 agg=operator.add,
                  acc=None,
                  concurrent_tasks=CONCURRENT_TASKS,
                  weight=lambda item: 1,
@@ -140,6 +117,8 @@ def apply_reduce(task, task_args,
     :param weight: function to extract the weight of an item in data
     :param key: function to extract the kind of an item in data
     """
+    if acc is None:
+        acc = AccumDict()
     job_id = task_args[0]
     data = task_args[1]
     args = task_args[2:]
@@ -148,28 +127,8 @@ def apply_reduce(task, task_args,
     elif len(data) == 1 or not concurrent_tasks:
         return agg(acc, task.task_func(job_id, data, *args))
     blocks = split_in_blocks(data, concurrent_tasks, weight, key)
-    all_args = [(job_id, block) + args for block in blocks]
-    return map_reduce(task, all_args, agg, acc, name)
-
-
-# used to implement BaseCalculator.parallelize, which takes in account
-# the `concurrent_task` concept to avoid filling the Celery queue
-def parallelize(task, task_args, side_effect=lambda val: None):
-    """
-    Given a celery task and an iterable of positional arguments, apply the
-    callable to the arguments in parallel. It is possible to pass a
-    function side_effect(val) which takes the return value of the
-    callable and does something with it (such as saving or printing
-    it). Notice that the order is not preserved. parallelize returns None.
-
-    NB: if the environment variable OQ_NO_DISTRIBUTE is set the
-    tasks are run sequentially in the current process.
-
-    :param task: a celery task
-    :param task_args: an iterable over positional arguments
-    :param side_effect: a function val -> None
-    """
-    map_reduce(task, task_args, lambda acc, val: side_effect(val), None)
+    task_args = [(job_id, block) + args for block in blocks]
+    return starmap(task, task_args, logs.LOG.progress, name).reduce(agg, acc)
 
 
 def oqtask(task_func):
@@ -202,8 +161,9 @@ def oqtask(task_func):
                 'total ' + task_func.__name__, job_id, tsk, flush=True):
             # tasks write on the celery log file
             logs.set_level(job.log_level)
-            check_mem_usage()  # log a warning if too much memory is used
             try:
+                # log a warning if too much memory is used
+                check_mem_usage(SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
                 # run the task
                 return task_func(*args)
             finally:

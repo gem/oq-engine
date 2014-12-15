@@ -17,13 +17,11 @@
 Core functionality for the classical PSHA risk calculator.
 """
 
-from openquake.risklib import workflows
-
 from openquake.engine.calculators.risk import (
     hazard_getters, writers, validation)
 from openquake.engine.calculators.risk.classical_risk import core as classical
 
-from openquake.engine.utils import calculators
+from openquake.engine.calculators import calculators
 
 
 def classical_bcr(workflow, getter, outputdict, params, monitor):
@@ -50,10 +48,10 @@ def classical_bcr(workflow, getter, outputdict, params, monitor):
       A monitor instance
     """
     for loss_type in workflow.loss_types:
-        with monitor.copy('computing risk'):
+        with monitor('computing risk'):
             outputs = workflow.compute_all_outputs(getter, loss_type)
         outputdict = outputdict.with_args(loss_type=loss_type)
-        with monitor.copy('saving risk'):
+        with monitor('saving risk'):
             for out in outputs:
                 outputdict.write(
                     workflow.assets,
@@ -80,21 +78,3 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
     output_builders = [writers.BCRMapBuilder]
 
     getter_class = hazard_getters.HazardCurveGetter
-
-    bcr = True
-
-    def get_workflow(self, vf_orig, vf_retro):
-        """
-        :param vf_orig:
-            original vulnerability function
-        :param vf_orig:
-            retrofitted vulnerability functions
-        :returns:
-            an instance of
-            :class:`openquake.risklib.workflows.ClassicalBCR`
-        """
-        return workflows.ClassicalBCR(
-            vf_orig, vf_retro,
-            self.rc.lrem_steps_per_interval,
-            self.rc.interest_rate,
-            self.rc.asset_life_expectancy)
