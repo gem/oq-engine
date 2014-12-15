@@ -299,25 +299,27 @@ class RiskInitializer(object):
         outputs of the previous hazard calculation
     :param taxonomy:
         the taxonomy of the assets we are interested in
-    :param rc:
-        a :class:`openquake.engine.db.models.RiskCalculation` instance
+    :param calc:
+        a risk calculator
 
     Warning: instantiating a RiskInitializer may perform a potentially
     expensive geospatial query.
     """
-    def __init__(self, taxonomy, rc):
-        self.hazard_outputs = rc.hazard_outputs()
+    def __init__(self, taxonomy, calc):
+        self.exposure_model = calc.exposure_model
+        self.hazard_outputs = calc.get_hazard_outputs()
         self.taxonomy = taxonomy
-        self.rc = rc
-        self.hc = rc.hazard_calculation
-        self.calculation_mode = self.rc.oqjob.get_param('calculation_mode')
-        self.number_of_ground_motion_fields = self.hc.get_param(
+        self.calc = calc
+        self.oqparam = models.OqJob.objects.get(
+            pk=calc.oqparam.hazard_calculation_id)
+        self.calculation_mode = self.calc.oqparam.calculation_mode
+        self.number_of_ground_motion_fields = self.oqparam.get_param(
             'number_of_ground_motion_fields', 0)
-        max_dist = rc.best_maximum_distance * 1000  # km to meters
+        max_dist = calc.best_maximum_distance * 1000  # km to meters
         self.cursor = models.getcursor('job_init')
 
-        hazard_exposure = models.extract_from([self.hc], 'exposuremodel')
-        if self.rc.exposure_model is hazard_exposure:
+        hazard_exposure = models.extract_from([self.oqparam], 'exposuremodel')
+        if self.exposure_model is hazard_exposure:
             # no need of geospatial queries, just join on the location
             self.assoc_query = self.cursor.mogrify("""\
 WITH assocs AS (
@@ -330,9 +332,9 @@ WITH assocs AS (
   AND ST_COVERS(ST_GeographyFromText(%s), exp.site)
 )
 INSERT INTO riskr.asset_site (job_id, asset_id, site_id)
-SELECT * FROM assocs""", (rc.oqjob.id, self.hc.id,
-                          rc.exposure_model.id, taxonomy,
-                          rc.region_constraint))
+SELECT * FROM assocs""", (self.calc.job.id, self.oqparam.id,
+                          self.exposure_model.id, taxonomy,
+                          self.calc.oqparam.region_constraint))
         else:
             # associate each asset to the closest hazard site
             self.assoc_query = self.cursor.mogrify("""\
@@ -347,9 +349,9 @@ WITH assocs AS (
   ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
 )
 INSERT INTO riskr.asset_site (job_id, asset_id, site_id)
-SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
-                          rc.exposure_model.id, taxonomy,
-                          rc.region_constraint))
+SELECT * FROM assocs""", (self.calc.job.id, max_dist, self.oqparam.id,
+                          self.exposure_model.id, taxonomy,
+                          self.calc.oqparam.region_constraint))
 
         self.num_assets = 0
         self._rupture_ids = {}
@@ -365,14 +367,14 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
 
         # now read the associations just inserted
         self.num_assets = models.AssetSite.objects.filter(
-            job=self.rc.oqjob, asset__taxonomy=self.taxonomy).count()
+            job=self.calc.job, asset__taxonomy=self.taxonomy).count()
 
         # check if there are no associations
         if self.num_assets == 0:
             raise AssetSiteAssociationError(
                 'Could not associate any asset of taxonomy %s to '
                 'hazard sites within the distance of %s km'
-                % (self.taxonomy, self.rc.best_maximum_distance))
+                % (self.taxonomy, self.calc.best_maximum_distance))
 
     def calc_nbytes(self, epsilon_sampling=None):
         """
@@ -396,7 +398,7 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
                     if epsilon_sampling else num_ruptures
                 self.epsilons_shape[ses_coll.id] = (self.num_assets, samples)
         elif self.calculation_mode.startswith('scenario'):
-            [out] = self.hc.output_set.filter(output_type='ses')
+            [out] = self.oqparam.output_set.filter(output_type='ses')
             samples = self.number_of_ground_motion_fields
             self.epsilons_shape[out.ses.id] = (self.num_assets, samples)
         nbytes = 0
@@ -415,6 +417,7 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
         For the calculators `event_based_risk` and `scenario_risk` also
         stores the epsilons in the database for each asset_site association.
         """
+        oq = self.calc.oqparam
         if not self.epsilons_shape:
             self.calc_nbytes(epsilon_sampling)
         if self.calculation_mode.startswith('event_based'):
@@ -423,7 +426,7 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
             ses_collections = models.SESCollection.objects.filter(
                 trt_model__lt_model__in=lt_model_ids)
         elif self.calculation_mode.startswith('scenario'):
-            [out] = self.hc.output_set.filter(output_type='ses')
+            [out] = self.oqparam.output_set.filter(output_type='ses')
             ses_collections = [out.ses]
         else:
             ses_collections = []
@@ -437,8 +440,8 @@ SELECT * FROM assocs""", (rc.oqjob.id, max_dist, self.hc.id,
                 logs.LOG.info('Building (%d, %d) epsilons for taxonomy %s',
                               num_assets, num_samples, self.taxonomy)
                 asset_sites = models.AssetSite.objects.filter(
-                    job=self.rc.oqjob, asset__taxonomy=self.taxonomy)
+                    job=self.calc.job, asset__taxonomy=self.taxonomy)
                 eps = make_epsilons(
                     num_assets, num_samples,
-                    self.rc.master_seed, self.rc.asset_correlation)
+                    oq.master_seed, oq.asset_correlation)
                 models.Epsilon.saveall(ses_coll, asset_sites, eps)
