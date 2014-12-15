@@ -21,7 +21,6 @@ import itertools
 import numpy
 from django import db
 
-from openquake.risklib import workflows
 from openquake.engine.calculators.risk import (
     base, hazard_getters, validation, writers)
 from openquake.engine.db import models
@@ -91,7 +90,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
     core = staticmethod(scenario)
 
     validators = base.RiskCalculator.validators + [
-        validation.RequireScenarioHazard,
         validation.ExposureHasInsuranceBounds,
         validation.ExposureHasTimeEvent]
 
@@ -117,7 +115,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                         numpy.zeros(aggregate_losses.shape))
                 aggregate_losses_acc[loss_type] += aggregate_losses
 
-        if self.rc.insured_losses:
+        if self.oqparam.insured_losses:
             for loss_type in self.loss_types:
                 insured_losses = insured_losses_dict.get(
                     loss_type)
@@ -141,7 +139,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                     mean=numpy.mean(aggregate_losses),
                     std_dev=numpy.std(aggregate_losses, ddof=1))
 
-                if self.rc.insured_losses:
+                if self.oqparam.insured_losses:
                     insured_losses = insured_losses_acc[loss_type]
                     models.AggregateLoss.objects.create(
                         output=models.Output.objects.create_output(

@@ -42,7 +42,7 @@ class HazardIMT(Validator):
     """
     def get_error(self):
         model_imts = set(imt for imt, taxo in self.calc.risk_model)
-        imtls = self.calc.rc.get_hazard_param().imtls
+        imtls = self.calc.oqparam.hazard_imtls
 
         # check that the hazard data have all the imts needed by the
         # risk calculation
@@ -74,7 +74,7 @@ class OrphanTaxonomies(Validator):
         taxonomies = self.calc.taxonomies_asset_count
         rm_taxonomies = set(imt_taxo[1] for imt_taxo in self.calc.risk_model)
         orphans = set(taxonomies) - rm_taxonomies
-        if orphans and not self.calc.rc.taxonomies_from_model:
+        if orphans and not self.calc.taxonomies_from_model:
             return ('The following taxonomies are in the exposure model '
                     'but not in the risk model: %s' % orphans)
 
@@ -86,7 +86,7 @@ class ExposureLossTypes(Validator):
     """
     def get_error(self):
         for loss_type in self.calc.loss_types:
-            if not self.calc.rc.exposure_model.supports_loss_type(loss_type):
+            if not self.calc.exposure_model.supports_loss_type(loss_type):
                 return ("Invalid exposure "
                         "for computing loss type %s. " % loss_type)
 
@@ -98,55 +98,6 @@ class NoRiskModels(Validator):
                 models.LOSS_TYPES)
 
 
-class RequireClassicalHazard(Validator):
-    """
-    Checks that the given hazard has hazard curves
-    """
-    def get_error(self):
-        rc = self.calc.rc
-        hazard_output = rc.hazard_outputs()[0]
-        if rc.get_hazard_param().calculation_mode != 'classical':
-            return ("The provided hazard calculation ID "
-                    "is not a classical calculation")
-        elif not hazard_output.is_hazard_curve():
-            return "The provided hazard output is not an hazard curve"
-
-
-class RequireScenarioHazard(Validator):
-    """
-    Checks that the given hazard has ground motion fields got from a
-    scenario hazard calculation
-    """
-    def get_error(self):
-        rc = self.calc.rc
-        hazard_output = rc.hazard_outputs()[0]
-        if rc.get_hazard_param().calculation_mode != 'scenario':
-            return ("The provided hazard calculation ID "
-                    "is not a scenario calculation")
-        elif not hazard_output.output_type == "gmf_scenario":
-            return "The provided hazard is not a gmf scenario collection"
-
-
-class RequireEventBasedHazard(Validator):
-    """
-    Checks that the given hazard has ground motion fields (or
-    stochastic event set) got from a event based hazard calculation
-    """
-    def get_error(self):
-        rc = self.calc.rc
-        hazard_output = rc.hazard_outputs()[0]
-        if rc.get_hazard_param().calculation_mode != "event_based":
-            return ("The provided hazard calculation ID "
-                    "is not a event based calculation")
-        if not hazard_output.output_type in ["gmf", "ses"]:
-            return "The provided hazard is not a gmf or ses collection"
-
-        if hazard_output.output_type == "ses":
-            if 'gsim_logic_tree' not in rc.inputs:
-                return ("gsim_logic_tree_file is mandatory "
-                        "when the hazard output is a ses collection")
-
-
 class ExposureHasInsuranceBounds(Validator):
     """
     If insured losses are required we check for the presence of
@@ -154,8 +105,8 @@ class ExposureHasInsuranceBounds(Validator):
     """
 
     def get_error(self):
-        if (self.calc.rc.insured_losses and
-                not self.calc.rc.exposure_model.has_insurance_bounds()):
+        if (self.calc.oqparam.insured_losses and
+                not self.calc.exposure_model.has_insurance_bounds()):
             return "Deductible or insured limit missing in exposure"
 
 
@@ -164,7 +115,7 @@ class ExposureHasRetrofittedCosts(Validator):
     Check that the retrofitted value is present in the exposure
     """
     def get_error(self):
-        if not self.calc.rc.exposure_model.has_retrofitted_costs():
+        if not self.calc.exposure_model.has_retrofitted_costs():
             return "Some assets do not have retrofitted costs"
 
 
@@ -175,8 +126,8 @@ class ExposureHasTimeEvent(Validator):
     """
 
     def get_error(self):
-        if (self.calc.rc.inputs.get("occupants") is not None and
-            not self.calc.rc.exposure_model.has_time_event(
-                self.calc.rc.time_event)):
+        if (self.calc.oqparam.inputs.get("occupants") is not None and
+            not self.calc.exposure_model.has_time_event(
+                self.calc.time_event)):
             return ("Some assets are missing an "
-                    "occupancy with period=%s" % self.calc.rc.time_event)
+                    "occupancy with period=%s" % self.calc.time_event)
