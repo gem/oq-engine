@@ -317,7 +317,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
     # FIXME(lp). Validate sites_disagg to ensure non-empty outputs
     validators = base.RiskCalculator.validators + [
-        validation.RequireEventBasedHazard,
         validation.ExposureHasInsuranceBounds]
 
     output_builders = [writers.EventLossCurveMapBuilder,
@@ -336,7 +335,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         Base pre_execute + build Event Loss Asset outputs if needed
         """
         super(EventBasedRiskCalculator, self).pre_execute()
-        for hazard_output in self.rc.hazard_outputs():
+        for hazard_output in self.get_hazard_outputs():
             for loss_type in self.loss_types:
                 models.EventLoss.objects.create(
                     output=models.Output.objects.create_output(
@@ -376,7 +375,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
           Compute aggregate loss curves and event loss tables
         """
         oq = self.oqparam
-        tses = self.hc.investigation_time * self.hc.ses_per_logic_tree_path
+        tses = oq.investigation_time * oq.ses_per_logic_tree_path
         with self.monitor('post processing'):
             inserter = writer.CacheInserter(models.EventLossData,
                                             max_cache_size=10000)
@@ -418,7 +417,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                             scientific.event_based(
                                 aggregate_losses, tses=tses,
                                 time_span=oq.investigation_time,
-                                curve_resolution=self.rc.loss_curve_resolution
+                                curve_resolution=oq.loss_curve_resolution
                             ))
 
                         models.AggregateLossCurveData.objects.create(

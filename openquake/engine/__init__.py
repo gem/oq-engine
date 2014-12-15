@@ -87,7 +87,7 @@ def git_suffix():
 #  "-" + <pkg-version> + "+dev" + <secs_since_epoch> + "-" + <commit-id>
 # NB: the next line is managed by packager.sh script (we retrieve the version
 #     using sed and optionally replace it)
-__version__ = '1.2.0'
+__version__ = '1.2.1'
 __version__ += git_suffix()
 
 # The path to the OpenQuake root directory

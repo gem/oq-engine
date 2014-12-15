@@ -291,7 +291,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         dic = {}
         wkt = site.location.wkt2d
         for rlz in self._realizations:
-            for imt_str in self.hc.imtls:
+            for imt_str in self.oqparam.imtls:
                 imt = from_string(imt_str)
                 [curve] = models.HazardCurveData.objects.filter(
                     location=wkt,
@@ -313,11 +313,11 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         """
         Run the disaggregation phase after hazard curve finalization.
         """
-        hc = self.hc
-        tl = getattr(self.hc, 'truncation_level', None)
+        hc = self.oqparam
+        tl = getattr(self.oqparam, 'truncation_level', None)
         sitecol = self.site_collection
-        mag_bin_width = self.hc.mag_bin_width
-        eps_edges = numpy.linspace(-tl, tl, self.hc.num_epsilon_bins + 1)
+        mag_bin_width = self.oqparam.mag_bin_width
+        eps_edges = numpy.linspace(-tl, tl, self.oqparam.num_epsilon_bins + 1)
         logs.LOG.info('%d epsilon bins from %s to %s', len(eps_edges) - 1,
                       min(eps_edges), max(eps_edges))
 
@@ -406,4 +406,4 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
             edges = self.bin_edges[lt_model.id, site_id]
             save_disagg_result(
                 self.job.id, site_id, edges, trt_names, probs,
-                rlz_id, self.hc.investigation_time, imt, iml, poe)
+                rlz_id, self.oqparam.investigation_time, imt, iml, poe)
