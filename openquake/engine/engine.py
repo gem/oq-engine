@@ -353,15 +353,16 @@ def run_job(cfg_file, log_level, log_file, exports='', hazard_output_id=None,
             edir = job.get_param('export_dir')
             log_file = os.path.join(edir, 'calc_%d.log' % job.id)
             logging.root.addHandler(logs.LogStreamHandler(job))
-        if log_file:
-            touch_log_file(log_file)  # check if writeable
+        touch_log_file(log_file)  # check if writeable
 
-        # Instantiate the calculator and run the calculation.
+        # instantiate the calculator and run the calculation
         t0 = time.time()
         run_calc(job, log_level, log_file, exports)
         duration = time.time() - t0
         if job.status == 'complete':
             print_results(job.id, duration, list_outputs)
+            # sanity check to make sure that the logging is working
+            assert os.path.getsize(log_file) > 0
         else:
             sys.exit('Calculation %s failed' % job.id)
 
