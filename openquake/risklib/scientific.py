@@ -620,10 +620,8 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, steps=10):
         Number of steps between loss ratios.
     """
     vf = vulnerability_function.strictly_increasing()
-    loss_ratios, lrem = vf.loss_ratio_exceedance_matrix(steps)
-
-    lrem_po = numpy.empty(lrem.shape)
     imls = vf.mean_imls()
+    loss_ratios, lrem = vf.loss_ratio_exceedance_matrix(steps)
 
     # saturate imls to hazard imls
     min_val, max_val = hazard_imls[0], hazard_imls[-1]
@@ -635,6 +633,7 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, steps=10):
 
     # compute the poos
     pos = pairwise_diff(poes)
+    lrem_po = numpy.empty(lrem.shape)
     for idx, po in enumerate(pos):
         lrem_po[:, idx] = lrem[:, idx] * po  # column * po
 
