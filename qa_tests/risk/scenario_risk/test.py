@@ -125,7 +125,7 @@ class ScenarioRiskCase3TestCase(risk.FixtureBasedQATestCase):
                 [587.96450244, 358.39744028]]
 
 
-class ScenarioOccupantsQATestCase1(risk.FixtureBasedQATestCase):
+class ScenarioOccupantsQATestCase(risk.FixtureBasedQATestCase):
     module = occupants
     output_type = "gmf_scenario"
     hazard_calculation_fixture = 'Scenario QA Test for occupants'
