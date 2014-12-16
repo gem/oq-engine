@@ -748,6 +748,9 @@ class Scenario(Workflow):
 
 @registry.add('scenario_damage')
 class Damage(Workflow):
+    """
+    Implements the ScenarioDamage workflow
+    """
     def __init__(self, imt, taxonomy, fragility_functions):
         self.imt = imt
         self.taxonomy = taxonomy
@@ -768,6 +771,35 @@ class Damage(Workflow):
             [[scientific.scenario_damage(ffs, gmv) for gmv in gmvs]
              for gmvs in gmfs])
         return assets, damages
+
+
+@registry.add('classical_damage')
+class ClassicalDamage(Workflow):
+    """
+    Implements the ClassicalDamage workflow
+    """
+    def __init__(self, imt, taxonomy, fragility_functions,
+                 hazard_imls, hazard_investigation_time,
+                 risk_investigation_time):
+        self.imt = imt
+        self.taxonomy = taxonomy
+        self.risk_functions = fragility_functions
+        self.curves = functools.partial(
+            scientific.classical_damage,
+            fragility_functions, hazard_imls,
+            hazard_investigation_time=hazard_investigation_time,
+            risk_investigation_time=risk_investigation_time)
+
+    def __call__(self, loss_type, assets, hazard_curves, _epsilons=None):
+        """
+        :param loss_type: the string 'damage'
+        :param assets: a list of N assets of the same taxonomy
+        :param hazard_curves: an array of N x R elements
+        :returns: an array of N assets and an array of N x D elements
+
+        where N is the number of points and D the number of damage states.
+        """
+        return assets, utils.numpy_map(self.curves, hazard_curves)
 
 
 # NB: the approach used here relies on the convention of having the

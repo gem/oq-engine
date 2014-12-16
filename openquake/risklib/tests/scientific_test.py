@@ -680,3 +680,39 @@ class AssetStatisticsTestCase(unittest.TestCase):
                                  quantile_average_losses.shape)
                 self.assertEqual((quantile_nr, poe_nr, asset_nr),
                                  quantile_maps.shape)
+
+
+class ClassicalDamageTestCase(unittest.TestCase):
+    def test(self):
+        hazard_imls = [0.05, 0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4]
+        fragility_functions = [
+            scientific.FragilityFunctionDiscrete(
+                'slight', hazard_imls,
+                [0.0, 0.771, 0.95, 0.989, 0.997, 0.999, 1., 1.]),
+            scientific.FragilityFunctionDiscrete(
+                'moderate', hazard_imls,
+                [0, 0.5, 0.861, 0.957, 0.985, 0.994, 0.997, 0.999]),
+            scientific.FragilityFunctionDiscrete(
+                'extreme', hazard_imls,
+                [0.0, 0.231, 0.636, 0.837, 0.924, 0.962, .981, .989]),
+            scientific.FragilityFunctionDiscrete(
+                'complete', hazard_imls,
+                [0, 0.097, 0.414, 0.661, 0.806, 0.887, 0.933, 0.959]),
+            ]
+        hazard_poes = numpy.array([
+            0.999999999997518,
+            0.077404949,
+            0.015530587,
+            0.004201327,
+            0.001284191,
+            0.000389925,
+            0.000127992,
+            0.000030350,
+        ])
+        hazard_investigation_time = 50.
+        risk_investigation_time = 100.
+        poos = scientific.classical_damage(
+            fragility_functions, hazard_imls, hazard_poes,
+            hazard_investigation_time, risk_investigation_time)
+        aaae(poos, [1.0415184E-09, 1.4577245E-06, 1.9585762E-03, 6.9677521E-02,
+                    9.2836244E-01])
