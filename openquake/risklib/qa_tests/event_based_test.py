@@ -56,10 +56,10 @@ class EventBasedTestCase(unittest.TestCase):
 
         epsilons = scientific.make_epsilons(gmvs, seed=1, correlation=0)
         loss_matrix = vf.apply_to(gmvs, epsilons)
-        losses, poes = scientific.event_based(
+        losses_poes = scientific.event_based(
             loss_matrix[0], 120, 30, curve_resolution=4)
 
-        first_curve_integral = scientific.average_loss(losses, poes)
+        first_curve_integral = scientific.average_loss(losses_poes)
 
         self.assertAlmostEqual(0.500993631, first_curve_integral)
 
@@ -95,8 +95,8 @@ class EventBasedTestCase(unittest.TestCase):
         epsilons = scientific.make_epsilons(gmvs, seed=1, correlation=0.5)
         loss_matrix = vf.apply_to(gmvs, epsilons)
 
-        losses, poes = scientific.event_based(loss_matrix[0], 120, 30, 4)
-        first_curve_integral = scientific.average_loss(losses, poes)
+        losses_poes = scientific.event_based(loss_matrix[0], 120, 30, 4)
+        first_curve_integral = scientific.average_loss(losses_poes)
 
         self.assertAlmostEqual(0.48983614471, first_curve_integral)
 
@@ -133,9 +133,9 @@ class EventBasedTestCase(unittest.TestCase):
 
         epsilons = scientific.make_epsilons(gmvs, seed=1, correlation=1)
         loss_matrix = vf.apply_to(gmvs, epsilons)
-        losses, poes = scientific.event_based(loss_matrix[0], 120, 30, 4)
+        losses_poes = scientific.event_based(loss_matrix[0], 120, 30, 4)
 
-        first_curve_integral = scientific.average_loss(losses, poes)
+        first_curve_integral = scientific.average_loss(losses_poes)
 
         self.assertAlmostEqual(0.483041416, first_curve_integral)
 
@@ -195,15 +195,14 @@ class EventBasedTestCase(unittest.TestCase):
 
             self.assertAlmostEqual(
                 [0.070219108, 0.04549904][i],
-                scientific.average_loss(curve_rm[0], curve_rm[1]))
+                scientific.average_loss(curve_rm))
 
         conditional_loss = scientific.conditional_loss_ratio(
             curve_rc[0], curve_rc[1], 0.8)
         self.assertAlmostEqual(0.0152273, conditional_loss)
 
         self.assertAlmostEqual(
-            0.0152393,
-            scientific.average_loss(curve_rc[0], curve_rc[1]))
+            0.0152393, scientific.average_loss(curve_rc))
 
     def test_insured_loss_mean_based(self):
         vf = scientific.VulnerabilityFunction(
@@ -220,7 +219,7 @@ class EventBasedTestCase(unittest.TestCase):
         deductibles = [40, 13]
 
         insured_average_losses = [
-            scientific.average_loss(*scientific.event_based(
+            scientific.average_loss(scientific.event_based(
                 scientific.insured_losses(
                     lrs,
                     deductibles[i] / values[i], insured_limits[i] / values[i]),

@@ -475,10 +475,6 @@ def set_imtls(oqparam):
             oqparam, 'loss_curve_resolution'):
         oqparam.loss_curve_resolution = 50  # default
 
-    if hasattr(oqparam, 'risk_imtls') and not \
-       hasattr(oqparam, 'hazard_imtls'):
-        oqparam.hazard_imtls = oqparam.risk_imtls
-
 
 def get_imts(oqparam):
     """

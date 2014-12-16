@@ -752,7 +752,7 @@ def bcr(eal_original, eal_retrofitted, interest_rate,
             / (interest_rate * retrofitting_cost))
 
 
-def average_loss(losses, poes):
+def average_loss(losses_poes):
     """
     Given a loss curve with `poes` over `losses` defined on a given
     time span it computes the average loss on this period of time.
@@ -762,7 +762,7 @@ def average_loss(losses, poes):
            integral by using the trapeizodal rule with the width given by the
            loss bin width.
     """
-
+    losses, poes = losses_poes
     return numpy.dot(-pairwise_diff(losses), pairwise_mean(poes))
 
 
@@ -845,15 +845,14 @@ def exposure_statistics(
         mean_curves = numpy.vstack(
             (mean_curves, _mean_curve[numpy.newaxis, :]))
         mean_average_losses = numpy.append(
-            mean_average_losses, average_loss(*_mean_curve))
+            mean_average_losses, average_loss(_mean_curve))
 
         mean_maps = numpy.hstack((mean_maps, _mean_maps[:, numpy.newaxis]))
         quantile_curves = numpy.hstack(
             (quantile_curves, _quantile_curves[:, numpy.newaxis]))
 
-        _quantile_average_losses = numpy.array(
-            [average_loss(losses, poes)
-             for losses, poes in _quantile_curves])
+        _quantile_average_losses = utils.numpy_map(
+            average_loss, _quantile_curves)
         quantile_average_losses = numpy.hstack(
             (quantile_average_losses,
              _quantile_average_losses[:, numpy.newaxis]))

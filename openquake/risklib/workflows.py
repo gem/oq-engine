@@ -24,7 +24,7 @@ import collections
 import numpy
 from scipy import interpolate
 
-from openquake.baselib.general import CallableDict, AccumDict
+from openquake.baselib.general import CallableDict
 from openquake.risklib import utils, scientific
 
 Output = collections.namedtuple('Output', 'hid weight loss_type output')
@@ -266,9 +266,8 @@ class Classical(Workflow):
 
             insured_curves = utils.numpy_map(
                 scientific.insured_loss_curve, curves, deductibles, limits)
-            average_insured_losses = [
-                scientific.average_loss(losses, poes)
-                for losses, poes in insured_curves]
+            average_insured_losses = utils.numpy_map(
+                scientific.average_loss, insured_curves)
         else:
             insured_curves = None
             average_insured_losses = None
@@ -309,8 +308,7 @@ class Classical(Workflow):
         (mean_curves, mean_average_losses, mean_maps,
          quantile_curves, quantile_average_losses, quantile_maps) = (
             scientific.exposure_statistics(
-                [normalize_curves(curves)
-                 for curves
+                [normalize_curves(curves) for curves
                  in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
                 self.conditional_loss_poes + self.poes_disagg,
                 weights, quantiles, post_processing))
@@ -320,8 +318,7 @@ class Classical(Workflow):
             (mean_insured_curves, mean_average_insured_losses, _,
              quantile_insured_curves, quantile_average_insured_losses, _) = (
                 scientific.exposure_statistics(
-                    [normalize_curves(curves)
-                     for curves
+                    [normalize_curves(curves) for curves
                      in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
                     [], weights, quantiles, post_processing))
         else:
@@ -426,15 +423,10 @@ class ProbabilisticEventBased(Workflow):
             tses,
             loss_curve_resolution,
             conditional_loss_poes,
-            insured_losses=False,
-            return_loss_matrix=True):
+            insured_losses=False):
         """
         See :func:`openquake.risklib.scientific.event_based` for a description
-        of the input parameters. The last parameter is
-
-        :param bool return_loss_matrix:
-            if False the loss_matrix is not saved in the Output tuple
-            (a trick to save memory in the case of no disaggregation)
+        of the input parameters.
         """
         self.imt = imt
         self.taxonomy = taxonomy
@@ -444,7 +436,7 @@ class ProbabilisticEventBased(Workflow):
             time_span=risk_investigation_time, tses=tses)
         self.conditional_loss_poes = conditional_loss_poes
         self.insured_losses = insured_losses
-        self.return_loss_matrix = return_loss_matrix
+        self.return_loss_matrix = True
 
     def event_loss(self, loss_matrix, event_ids):
         """
@@ -489,8 +481,7 @@ class ProbabilisticEventBased(Workflow):
             ground_motion_values, epsilons)
 
         curves = utils.numpy_map(self.curves, loss_matrix)
-        average_losses = numpy.array([scientific.average_loss(losses, poes)
-                                      for losses, poes in curves])
+        average_losses = utils.numpy_map(scientific.average_loss, curves)
         stddev_losses = numpy.std(loss_matrix, axis=1)
         values = utils.numpy_map(lambda a: a.value(loss_type), assets)
         maps = scientific.loss_map_matrix(self.conditional_loss_poes, curves)
@@ -502,9 +493,8 @@ class ProbabilisticEventBased(Workflow):
             insured_loss_matrix = utils.numpy_map(
                 scientific.insured_losses, loss_matrix, deductibles, limits)
             insured_curves = utils.numpy_map(self.curves, insured_loss_matrix)
-            average_insured_losses = [
-                scientific.average_loss(losses, poes)
-                for losses, poes in insured_curves]
+            average_insured_losses = utils.numpy_map(
+                scientific.average_loss, insured_curves)
             stddev_insured_losses = numpy.std(insured_loss_matrix, axis=1)
         else:
             insured_curves = None
@@ -638,13 +628,11 @@ class ClassicalBCR(Workflow):
         retrofitted_loss_curves = utils.numpy_map(
             self.curves_retro[loss_type], hazard)
 
-        eal_original = [
-            scientific.average_loss(losses, poes)
-            for losses, poes in original_loss_curves]
+        eal_original = utils.numpy_map(
+            scientific.average_loss, original_loss_curves)
 
-        eal_retrofitted = [
-            scientific.average_loss(losses, poes)
-            for losses, poes in retrofitted_loss_curves]
+        eal_retrofitted = utils.numpy_map(
+            scientific.average_loss, retrofitted_loss_curves)
 
         bcr_results = [
             scientific.bcr(
@@ -679,18 +667,16 @@ class ProbabilisticEventBasedBCR(Workflow):
 
     def __call__(self, loss_type, assets, gmfs, epsilons, event_ids):
         self.assets = assets
+
         original_loss_curves = utils.numpy_map(
             self.curves, self.vf_orig[loss_type].apply_to(gmfs, epsilons))
         retrofitted_loss_curves = utils.numpy_map(
             self.curves, self.vf_retro[loss_type].apply_to(gmfs, epsilons))
 
-        eal_original = [
-            scientific.average_loss(losses, poes)
-            for losses, poes in original_loss_curves]
-
-        eal_retrofitted = [
-            scientific.average_loss(losses, poes)
-            for losses, poes in retrofitted_loss_curves]
+        eal_original = utils.numpy_map(
+            scientific.average_loss, original_loss_curves)
+        eal_retrofitted = utils.numpy_map(
+            scientific.average_loss, retrofitted_loss_curves)
 
         bcr_results = [
             scientific.bcr(
