@@ -682,7 +682,6 @@ class AssetStatisticsTestCase(unittest.TestCase):
                                  quantile_maps.shape)
 
 
-# this will be removed once we have a QA test
 class ClassicalDamageTestCase(unittest.TestCase):
     def test(self):
         hazard_imls = [0.05, 0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4]
