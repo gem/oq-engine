@@ -41,7 +41,7 @@ class AssetSiteAssociationError(Exception):
 
 class BaseCalculator(object):
     """
-    Abstract base class for all calculators
+    Abstract base class for all calculators.
     """
     __metaclass__ = abc.ABCMeta
 
@@ -51,7 +51,7 @@ class BaseCalculator(object):
 
     def run(self):
         """
-        Run the calculation and return the exported files
+        Run the calculation and return the exported files.
         """
         self.monitor.write('operation pid time_sec memory_mb'.split())
         self.pre_execute()
@@ -60,8 +60,7 @@ class BaseCalculator(object):
 
     def core_func(*args):
         """
-        Core routine running on the workers, usually set by the
-        @core decorator.
+        Core routine running on the workers.
         """
         raise NotImplementedError
 

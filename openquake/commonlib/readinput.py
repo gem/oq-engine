@@ -695,7 +695,7 @@ def get_mesh_csvdata(csvfile, imts, num_values, validvalues):
         validation function for the values
     :returns:
         the mesh of points and the data as a dictionary
-        imt -> list of arrays.
+        imt -> array of curves for each site
     """
     number_of_values = dict(zip(imts, num_values))
     lon_lats = {imt: set() for imt in imts}

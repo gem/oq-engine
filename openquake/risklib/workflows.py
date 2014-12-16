@@ -256,8 +256,7 @@ class Classical(Workflow):
             a :class:`openquake.risklib.scientific.Classical.Output` instance.
         """
         curves = utils.numpy_map(self.curves[loss_type], hazard_curves)
-        average_losses = numpy.array([scientific.average_loss(losses, poes)
-                                      for losses, poes in curves])
+        average_losses = utils.numpy_map(scientific.average_loss, curves)
         maps = scientific.loss_map_matrix(self.conditional_loss_poes, curves)
         fractions = scientific.loss_map_matrix(self.poes_disagg, curves)
 
@@ -890,16 +889,16 @@ class RiskModel(collections.Mapping):
         for riskinput in riskinputs:
             out = self.gen_output(riskinput, rlzs_assoc)
             for key in sorted(out):
-                yield out[key]
+                yield out[key]  # list of results by realization
 
     def gen_output(self, riskinput, rlzs_assoc):
         """
         :param riskinput: RiskInput instance
         :param rlzs_assoc: a RlzsAssoc instance
-        :returns: an AccumDict taxonomy, loss_type -> result
+        :returns: a map taxonomy, loss_type -> results by realization
         """
         assets_, hazards_, epsilons_ = riskinput.get_all()
-        output = AccumDict()
+        output = {}
         for taxonomy in riskinput.taxonomies:
             assets = assets_[taxonomy]
             if not assets:

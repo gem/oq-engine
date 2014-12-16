@@ -185,8 +185,8 @@ def get_fragility_functions(fname, continuous_fragility_discretization):
         taxonomy = ~ffs.taxonomy
         imt_str, imls, min_iml, max_iml, imlUnit = ~ffs.IML
         if continuous_fragility_discretization and not imls:
-            imls = numpy.linspace(min_iml, max_iml,
-                                  continuous_fragility_discretization + 1)
+            imls = numpy.linspace(
+                min_iml, max_iml, continuous_fragility_discretization)
         fragility_functions[taxonomy] = FragilityFunctionList(
             [], imt=imt_str, imls=imls)
         lstates = []

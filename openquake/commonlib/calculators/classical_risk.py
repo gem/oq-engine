@@ -20,7 +20,6 @@ import os
 import cPickle
 import logging
 
-import numpy
 from openquake.baselib import general
 from openquake.commonlib import readinput
 from openquake.commonlib.calculators import calculators, base, calc
@@ -56,22 +55,6 @@ class ClassicalRiskFromCsvCalculator(base.BaseRiskCalculator):
     """
     core_func = classical_risk
 
-    def filter_hcurves(self, hcurves_by_imt, indices):
-        """
-        Reduce the hazard curves to the sites where there are assets.
-        Add the intensity measure levels to the poes.
-
-        :param hcurves_by_imt: a dictionary imt -> poes
-        :param indices: an array of indices
-        :returns:  a dictionary imt -> [(iml, poes), ...]
-        """
-        h = {}
-        imtls = self.oqparam.intensity_measure_types_and_levels
-        for imt, hcurves in hcurves_by_imt.iteritems():
-            curves = [zip(imtls[imt], hcurve) for hcurve in hcurves[indices]]
-            h[imt] = numpy.array(curves, float)
-        return h
-
     def pre_execute(self):
         """
         Associate the assets to the sites and build the riskinputs.
@@ -84,7 +67,6 @@ class ClassicalRiskFromCsvCalculator(base.BaseRiskCalculator):
         num_assets = sum(len(assets) for assets in assets_by_site)
         num_sites = len(sitecol)
         logging.info('Associated %d assets to %d sites', num_assets, num_sites)
-        hcurves_by_imt = self.filter_hcurves(hcurves_by_imt, sitecol.indices)
         self.riskinputs = self.build_riskinputs(hcurves_by_imt)
 
     def post_execute(self, result):
@@ -129,10 +111,10 @@ class ClassicalRiskCalculator(base.BaseRiskCalculator):
             with open(cache, 'w') as f:
                 cPickle.dump(haz_out, f)
         self.rlzs_assoc = haz_out['rlzs_assoc']
-        hcurves_by_imt = calc.data_by_imt(
-            haz_out['result'], self.oqparam.imtls, num_sites)
 
         logging.info('Preparing the risk input')
+        hcurves_by_imt = calc.data_by_imt(
+            haz_out['result'], self.oqparam.hazard_imtls, num_sites)
         self.riskinputs = self.build_riskinputs(hcurves_by_imt)
 
     def post_execute(self, result):
