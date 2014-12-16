@@ -96,6 +96,7 @@ class OqParam(valid.ParamSet):
         hazard_output_id=valid.NoneOr(valid.positiveint),
         hazard_maps=valid.boolean,
         hypocenter=valid.point3d,
+        ignore_missing_costs=valid.namelist,
         individual_curves=valid.boolean,
         inputs=dict,
         insured_losses=valid.boolean,
