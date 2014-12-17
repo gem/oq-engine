@@ -119,8 +119,10 @@ class ScenarioRiskCase3TestCase(risk.FixtureBasedQATestCase):
         return data
 
     def expected_data(self):
-        return [[[137.4694907, 59.539054], [192.4915728, 209.61370],
-                 [242.257360, 263.45910]], [572.2184, 340.15917]]
+        return [[[137.4694907, 59.539054],
+                 [192.4915728, 209.61370],
+                 [242.257360, 263.45910]],
+                [572.2184, 340.15917]]
 
 
 class ScenarioOccupantsQATestCase(risk.FixtureBasedQATestCase):
