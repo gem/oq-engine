@@ -49,7 +49,7 @@ along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import os
-from openquake.baselib.general import git_suffix
+from openquake.hazardlib.general import git_suffix
 
 # version number follows the syntax <major>.<minor>.<patchlevel>[<suffix>]
 # where major, minor and patchlevel are numbers.
