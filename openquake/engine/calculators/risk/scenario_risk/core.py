@@ -45,8 +45,9 @@ def scenario(workflow, getter, outputdict, params, monitor):
     :param monitor:
       A monitor instance
     """
-    hazards = getter.get_data()
-    epsilons = getter.get_epsilons()
+    assets_ = getter.assets
+    hazards_ = getter.get_data()
+    epsilons_ = getter.get_epsilons()
     agg, ins = {}, {}
     for loss_type in workflow.loss_types:
         with monitor('computing risk'):
@@ -55,10 +56,9 @@ def scenario(workflow, getter, outputdict, params, monitor):
 
             # ignore assets with missing costs
             masked = [a.value(loss_type) is None for a in getter.assets]
-            assets = numpy.ma.masked_values(getter.assets, masked)
-            hazards = numpy.ma.masked_values(hazards, masked)
-            if all(masked):
-                continue
+            assets = numpy.ma.masked_values(assets_, masked)
+            hazards = numpy.ma.masked_values(hazards_, masked)
+            epsilons = numpy.ma.masked_values(epsilons_, masked)
             (assets, loss_ratio_matrix, aggregate_losses,
              insured_loss_matrix, insured_losses) = workflow(
                 loss_type, assets, hazards, epsilons)
