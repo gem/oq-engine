@@ -182,6 +182,9 @@ class BaseRiskCalculator(BaseCalculator):
         """
         Set the attributes .riskmodel, .sitecol, .assets_by_site
         """
+        #oq = self.oqparam
+        #if not hasattr(oq, 'hazard_investigation_time'):
+        #    oq.hazard_investigation_time = oq.risk_investigation_time
         self.riskmodel = readinput.get_risk_model(self.oqparam)
         self.exposure = readinput.get_exposure(self.oqparam)
         logging.info('Read an exposure with %d assets of %d taxonomies',

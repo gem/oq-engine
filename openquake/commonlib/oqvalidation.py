@@ -104,6 +104,7 @@ class OqParam(valid.ParamSet):
         intensity_measure_types_and_levels=
         valid.intensity_measure_types_and_levels,
         hazard_imtls=valid.intensity_measure_types_and_levels,
+        hazard_investigation_time=valid.positivefloat,
         interest_rate=valid.positivefloat,
         investigation_time=valid.positivefloat,
         loss_curve_resolution=valid.positiveint,

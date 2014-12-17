@@ -44,3 +44,19 @@ def export_agg_loss_csv(key, export_dir, aggcurves):
         writer.writerow(['LossType', 'Unit', 'Mean', 'Standard Deviation'])
         writer.writerows(aggcurves)
     return AccumDict({key: dest})
+
+
+@export.add('classical_damage_csv')
+def export_classical_damage_csv(key, export_dir, damage_states,
+                                fractions_by_asset):
+    """
+    Export aggregate losses in CSV
+    """
+    dest = os.path.join(export_dir, key.replace('_csv', '.csv'))
+    with open(dest, 'w') as csvfile:
+        writer = csv.writer(csvfile, delimiter='|')
+        writer.writerow(['asset_ref'] + [ds.dmg_state for ds in damage_states])
+        for asset in sorted(fractions_by_asset):
+            writer.writerow(
+                [asset.id] + list(fractions_by_asset[asset]))
+    return AccumDict({key: dest})

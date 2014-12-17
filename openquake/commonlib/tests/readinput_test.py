@@ -66,7 +66,6 @@ export_dir = %s
                 'sites': [(0.0, 0.0)],
                 'hazard_imtls': {'PGA': None},
                 'investigation_time': 50.0,
-                'hazard_investigation_time': 50.0,
             }
 
             with mock.patch('logging.warn') as warn:
@@ -119,7 +118,6 @@ export_dir = %s
                 'reference_vs30_value': 600.0,
                 'hazard_imtls': {'PGA': [0.1, 0.2]},
                 'investigation_time': 50.0,
-                'hazard_investigation_time': 50.0,
             }
 
             params = vars(readinput.get_oqparam(source))

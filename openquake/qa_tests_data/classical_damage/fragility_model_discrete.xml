@@ -1,0 +1,29 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <fragilityModel format="discrete">
+        <description>Fragility model for Nepal (discrete)</description>
+        <limitStates>
+            slight
+            moderate
+            extreme
+            complete
+        </limitStates>
+        
+        <ffs>
+           <taxonomy>W</taxonomy>
+            <IML IMT="PGA" imlUnit="g">0.05 0.2 0.4 0.6 0.8 1 1.2 1.4</IML>
+            <ffd ls="slight">
+                <poEs> 0.0 0.771 0.95 0.989 0.997 0.999 1. 1. </poEs>
+            </ffd>
+		 <ffd ls="moderate">
+                <poEs> 0 0.5 0.861 0.957 0.985 0.994 0.997 0.999 </poEs>
+            </ffd>
+		 <ffd ls="extreme">
+                <poEs> 0.0 0.231 0.636 0.837 0.924 0.962 .981 .989 </poEs>
+            </ffd>
+		 <ffd ls="complete">
+                <poEs> 0 0.097 0.414 0.661 0.806 0.887 0.933 0.959 </poEs>
+            </ffd>
+           </ffs>
+    </fragilityModel>
+</nrml>

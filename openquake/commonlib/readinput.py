@@ -468,9 +468,9 @@ def set_imtls(oqparam):
         ffs = get_fragility_functions(fname, cfd)
         oqparam.risk_imtls = {fset.imt: fset.imls for fset in ffs.itervalues()}
 
-    if hasattr(oqparam, 'hazard_imtls') and not (
-            oqparam.calculation_mode.startswith('scenario')):
-        oqparam.hazard_investigation_time = oqparam.investigation_time
+    #if hasattr(oqparam, 'hazard_imtls') and not (
+    #        oqparam.calculation_mode.startswith('scenario')):
+    #    oqparam.hazard_investigation_time = oqparam.investigation_time
     if 'event_based' in oqparam.calculation_mode and not hasattr(
             oqparam, 'loss_curve_resolution'):
         oqparam.loss_curve_resolution = 50  # default
@@ -505,6 +505,7 @@ def get_risk_model(oqparam):
             oqparam.inputs['fragility'],
             getattr(oqparam, 'continuous_fragility_discretization', None))
         riskmodel.damage_states = fragility_functions.damage_states
+        oqparam.hazard_imtls = oqparam.imtls
         for taxonomy, ffs in fragility_functions.iteritems():
             imt = ffs.imt
             risk_models[imt, taxonomy] = workflows.get_workflow(
@@ -729,8 +730,8 @@ def get_sitecol_hcurves(oqparam):
         the site collection and the hazard curves, by reading
         a CSV file with format `IMT lon lat poe1 ... poeN`
     """
-    imts = oqparam.intensity_measure_types_and_levels.keys()
-    num_values = map(len, oqparam.intensity_measure_types_and_levels.values())
+    imts = oqparam.imtls.keys()
+    num_values = map(len, oqparam.imtls.values())
     with open(oqparam.inputs['hazard_curves']) as csvfile:
         mesh, hcurves_by_imt = get_mesh_csvdata(
             csvfile, imts, num_values, valid.decreasing_probabilities)
@@ -746,7 +747,7 @@ def get_sitecol_gmfs(oqparam):
         the site collection and the GMFs as a dictionary, by reading
         a CSV file with format `IMT lon lat gmv1 ... gmvN`
     """
-    imts = oqparam.intensity_measure_types_and_levels.keys()
+    imts = oqparam.imtls.keys()
     num_values = [oqparam.number_of_ground_motion_fields] * len(imts)
     with open(oqparam.inputs['gmvs']) as csvfile:
         mesh, gmfs_by_imt = get_mesh_csvdata(
