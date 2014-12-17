@@ -21,11 +21,36 @@ import itertools
 import numpy
 from django import db
 
+from openquake.baselib.general import AccumDict
 from openquake.engine.calculators.risk import (
     base, hazard_getters, validation, writers)
 from openquake.engine.db import models
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.calculators import calculators
+
+
+def workflow_argdict(loss_type, assets, gmfs, epsilons):
+    """
+    :param loss_type:
+        loss type string
+    :param assets:
+        list of N assets
+    :param gmfs:
+        list of N ground motion arrays
+    :param epsilons:
+        list of N epsilon arrays
+    :returns:
+        a dictionary with the loss_type and three lists with N - M elements,
+        where M is the number of assets without value (usually 0).
+    """
+    dic = AccumDict(assets=[], ground_motion_values=[], epsilons=[],
+                    loss_type=loss_type)
+    for asset, gmvs, epsilon in zip(assets, gmfs, epsilons):
+        if asset.value(loss_type) is not None:
+            dic += {'assets': [asset],
+                    'ground_motion_values': [gmvs],
+                    'epsilons': [epsilon]}
+    return dic
 
 
 def scenario(workflow, getter, outputdict, params, monitor):
@@ -45,23 +70,19 @@ def scenario(workflow, getter, outputdict, params, monitor):
     :param monitor:
       A monitor instance
     """
-    assets_ = getter.assets
-    hazards_ = getter.get_data()
-    epsilons_ = getter.get_epsilons()
+    assets = getter.assets
+    gmfs = getter.get_data()
+    epsilons = getter.get_epsilons()
     agg, ins = {}, {}
     for loss_type in workflow.loss_types:
         with monitor('computing risk'):
+            argdict = workflow_argdict(loss_type, assets, gmfs, epsilons)
+            if not argdict['assets']:  # no costs
+                continue
             outputdict = outputdict.with_args(
                 loss_type=loss_type, output_type="loss_map")
-
-            # ignore assets with missing costs
-            masked = [a.value(loss_type) is None for a in getter.assets]
-            assets = numpy.ma.masked_values(assets_, masked)
-            hazards = numpy.ma.masked_values(hazards_, masked)
-            epsilons = numpy.ma.masked_values(epsilons_, masked)
             (assets, loss_ratio_matrix, aggregate_losses,
-             insured_loss_matrix, insured_losses) = workflow(
-                loss_type, assets, hazards, epsilons)
+             insured_loss_matrix, insured_losses) = workflow(**argdict)
             agg[loss_type] = aggregate_losses
         ins[loss_type] = insured_losses
 
