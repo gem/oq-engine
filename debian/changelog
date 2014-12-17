@@ -1,3 +1,21 @@
+python-oq-engine (1.2.1-2) precise; urgency=low
+
+  * Fixed custom dependencies versions (again)
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 16 Dec 2014 10:48:19 +0100
+
+python-oq-engine (1.2.1-1) precise; urgency=low
+
+  * Fixed custom dependencies versions
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 16 Dec 2014 09:48:19 +0100
+
+python-oq-engine (1.2.1-0) precise; urgency=low
+
+  * Fixed the logging handler
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 15 Dec 2014 10:17:30 +0100
+
 python-oq-engine (1.2.0-3) precise; urgency=low
 
   * Add constraint on python-django dependency version
