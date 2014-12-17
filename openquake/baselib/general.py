@@ -399,8 +399,7 @@ def assert_independent(package, *packages):
 
     >>> assert_independent('openquake.hazardlib',
     ...                    'openquake.risklib', 'openquake.commonlib')
-    >>> assert_independent('openquake.risklib',
-    ...                    'openquake.hazardlib', 'openquake.commonlib')
+    >>> assert_independent('openquake.risklib', 'openquake.commonlib')
     >>> assert_independent('openquake.risklib.tests', 'openquake.risklib')
     Traceback (most recent call last):
     ...
