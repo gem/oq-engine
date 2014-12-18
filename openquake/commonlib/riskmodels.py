@@ -153,19 +153,6 @@ def get_imtls_from_vulnerabilities(inputs):
 
 ############################ fragility ##################################
 
-class FragilityFunctionList(list):
-    """
-    A list of fragility functions with common attributes
-    """
-    def __init__(self, elements, **attrs):
-        list.__init__(self, elements)
-        vars(self).update(attrs)
-
-    def __repr__(self):
-        kvs = ['%s=%s' % item for item in vars(self).iteritems()]
-        return '<FragilityFunctionList %s>' % ', '.join(kvs)
-
-
 def get_fragility_functions(fname, continuous_fragility_discretization,
                             steps_per_interval=None):
     """
@@ -196,7 +183,7 @@ def get_fragility_functions(fname, continuous_fragility_discretization,
             gen_imls = scientific.fine_graining(imls, steps_per_interval)
         else:
             gen_imls = imls
-        fragility_functions[taxonomy] = FragilityFunctionList(
+        fragility_functions[taxonomy] = scientific.FragilityFunctionList(
             [], imt=imt_str, imls=gen_imls,
             no_damage_limit=nodamage,
             continuous_fragility_discretization=

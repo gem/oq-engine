@@ -384,6 +384,19 @@ class FragilityFunctionDiscrete(object):
         return '<%s(%s, %s, %s)>' % (
             self.__class__.__name__, self.limit_state, self.imls, self.poes)
 
+
+class FragilityFunctionList(list):
+    """
+    A list of fragility functions with common attributes
+    """
+    def __init__(self, elements, **attrs):
+        list.__init__(self, elements)
+        vars(self).update(attrs)
+
+    def __repr__(self):
+        kvs = ['%s=%s' % item for item in vars(self).iteritems()]
+        return '<FragilityFunctionList %s>' % ', '.join(kvs)
+
 #
 # Distribution & Sampling
 #
@@ -653,8 +666,8 @@ def classical_damage(
         of damage states.
     """
     imls = fragility_functions.imls
-    if imls[0] == 0.:
-        del imls[0]
+    if imls[0] == 0.:  # discard IML=0
+        imls = imls[1:]
     if fragility_functions.steps_per_interval:  # interpolate
         min_val, max_val = hazard_imls[0], hazard_imls[-1]
         numpy.putmask(imls, imls < min_val, min_val)
