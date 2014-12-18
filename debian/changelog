@@ -1,3 +1,10 @@
+python-oq-risklib (0.5.1-0) precise; urgency=low
+
+  * consistency in version management between debian/ubuntu package and
+    library from git sources
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 18 Dec 2014 15:42:53 +0100
+
 python-oq-risklib (0.5.0-1) precise; urgency=low
 
   * Fixed version in the documentation
