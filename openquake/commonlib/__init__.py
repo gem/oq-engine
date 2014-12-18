@@ -15,7 +15,8 @@
 # License along with OpenQuake Risklib. If not, see
 # <http://www.gnu.org/licenses/>.
 
-__version__ = '0.2.0'
+# keep the following line to have a __version__, used in the engine
+from openquake.risklib import __version__
 
 
 class InvalidFile(Exception):
