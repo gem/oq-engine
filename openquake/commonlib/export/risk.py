@@ -22,6 +22,7 @@ import csv
 from openquake.baselib.general import AccumDict
 from openquake.commonlib.export import export
 from openquake.commonlib import risk_writers
+from openquake.commonlib.writers import scientificformat
 
 
 @export.add('dmg_dist_per_asset_xml', 'dmg_dist_per_taxonomy_xml',
@@ -36,11 +37,36 @@ def export_dmg_xml(key, export_dir, damage_states, dmg_data):
 @export.add('agg_loss_csv')
 def export_agg_loss_csv(key, export_dir, aggcurves):
     """
-    Export aggregate losses in CSV
+    Export aggregate losses in CSV.
+
+    :param key: 'agg_loss_csv'
+    :param export_dir: the export directory
+    :param aggcurves: a list [(loss_type, unit, mean, stddev), ...]
     """
     dest = os.path.join(export_dir, key.replace('_csv', '.csv'))
     with open(dest, 'w') as csvfile:
-        writer = csv.writer(csvfile, delimiter='|')
+        writer = csv.writer(csvfile, delimiter='|', lineterminator='\n')
         writer.writerow(['LossType', 'Unit', 'Mean', 'Standard Deviation'])
         writer.writerows(aggcurves)
+    return AccumDict({key: dest})
+
+
+@export.add('classical_damage_csv')
+def export_classical_damage_csv(key, export_dir, damage_states,
+                                fractions_by_asset):
+    """
+    Export damage fractions in CSV.
+
+    :param key: 'classical_damage_csv'
+    :param export_dir: the export directory
+    :param damage_states: the damage states
+    :fractions_by_asset: a dictionary with the fractions by asset
+    """
+    dest = os.path.join(export_dir, key.replace('_csv', '.csv'))
+    with open(dest, 'w') as csvfile:
+        writer = csv.writer(csvfile, delimiter='|', lineterminator='\n')
+        writer.writerow(['asset_ref'] + [ds.dmg_state for ds in damage_states])
+        for asset in sorted(fractions_by_asset):
+            writer.writerow(
+                [asset.id] + map(scientificformat, fractions_by_asset[asset]))
     return AccumDict({key: dest})

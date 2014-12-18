@@ -32,6 +32,31 @@ from scipy import interpolate, stats
 from openquake.baselib.general import CallableDict
 from openquake.risklib import utils
 
+
+def fine_graining(points, steps):
+    """
+    :param points: a list of floats
+    :param int steps: expansion steps (>= 2)
+
+    >>> fine_graining([0, 1], steps=0)
+    [0, 1]
+    >>> fine_graining([0, 1], steps=1)
+    [0, 1]
+    >>> fine_graining([0, 1], steps=2)
+    array([ 0. ,  0.5,  1. ])
+    >>> fine_graining([0, 1], steps=3)
+    array([ 0.        ,  0.33333333,  0.66666667,  1.        ])
+    >>> fine_graining([0, 0.5, 0.7, 1], steps=2)
+    array([ 0.  ,  0.25,  0.5 ,  0.6 ,  0.7 ,  0.85,  1.  ])
+
+    N points become S * (N - 1) + 1 points with S > 0
+    """
+    if steps < 2:
+        return points
+    ls = numpy.concatenate([numpy.linspace(x, y, num=steps + 1)[:-1]
+                            for x, y in utils.pairwise(points)])
+    return numpy.concatenate([ls, [points[-1]]])
+
 #
 # Input models
 #
@@ -161,20 +186,15 @@ class VulnerabilityFunction(object):
         """
         loss_ratios = self.mean_loss_ratios
 
-        min_lr = min(loss_ratios)
-        max_lr = max(loss_ratios)
-
-        if min_lr > 0.0:
+        if min(loss_ratios) > 0.0:
             # prepend with a zero
             loss_ratios = numpy.concatenate([[0.0], loss_ratios])
 
-        if max_lr < 1.0:
+        if max(loss_ratios) < 1.0:
             # append a 1.0
             loss_ratios = numpy.concatenate([loss_ratios, [1.0]])
 
-        ls = numpy.concatenate([numpy.linspace(x, y, num=steps + 1)[:-1]
-                                for x, y in utils.pairwise(loss_ratios)])
-        return numpy.concatenate([ls, [loss_ratios[-1]]])
+        return fine_graining(loss_ratios, steps)
 
     def _cov_for(self, imls):
         """
@@ -363,6 +383,19 @@ class FragilityFunctionDiscrete(object):
     def __repr__(self):
         return '<%s(%s, %s, %s)>' % (
             self.__class__.__name__, self.limit_state, self.imls, self.poes)
+
+
+class FragilityFunctionList(list):
+    """
+    A list of fragility functions with common attributes
+    """
+    def __init__(self, elements, **attrs):
+        list.__init__(self, elements)
+        vars(self).update(attrs)
+
+    def __repr__(self):
+        kvs = ['%s=%s' % item for item in vars(self).iteritems()]
+        return '<FragilityFunctionList %s>' % ', '.join(kvs)
 
 #
 # Distribution & Sampling
@@ -614,8 +647,9 @@ def annual_frequency_of_exceedence(poe, t_haz):
     return - numpy.log(1. - poe) / t_haz
 
 
-def classical_damage(fragility_functions, hazard_imls, hazard_poes,
-                     hazard_investigation_time, risk_investigation_time):
+def classical_damage(
+        fragility_functions, hazard_imls, hazard_poes,
+        hazard_investigation_time, risk_investigation_time):
     """
     :param fragility_functions:
         a list of fragility functions for each damage state
@@ -631,14 +665,23 @@ def classical_damage(fragility_functions, hazard_imls, hazard_poes,
         an array of M probabilities of occurrence where M is the numbers
         of damage states.
     """
-    afe = annual_frequency_of_exceedence(
-        hazard_poes, hazard_investigation_time)
+    imls = fragility_functions.imls
+    if imls[0] == 0.:  # discard IML=0
+        imls = imls[1:]
+    if fragility_functions.steps_per_interval:  # interpolate
+        min_val, max_val = hazard_imls[0], hazard_imls[-1]
+        numpy.putmask(imls, imls < min_val, min_val)
+        numpy.putmask(imls, imls > max_val, max_val)
+        poes = interpolate.interp1d(hazard_imls, hazard_poes)(imls)
+    else:
+        poes = hazard_poes
+    afe = annual_frequency_of_exceedence(poes, hazard_investigation_time)
     annual_frequency_of_occurrence = pairwise_diff(
         pairwise_mean([afe[0]] + list(afe) + [afe[-1]]))
     poes_per_damage_state = []
     for ff in fragility_functions:
         frequency_of_exceedence_per_damage_state = numpy.dot(
-            annual_frequency_of_occurrence, map(ff, hazard_imls))
+            annual_frequency_of_occurrence, map(ff, imls))
         poe_per_damage_state = 1. - numpy.exp(
             - frequency_of_exceedence_per_damage_state
             * risk_investigation_time)
