@@ -49,7 +49,24 @@ along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import os
-from openquake.hazardlib.general import git_suffix
+import subprocess
+
+
+# this is duplicated from hazardlib and will be removed:
+# https://bugs.launchpad.net/oq-engine/+bug/1403720
+def git_suffix(fname):
+    """
+    :returns: `<short git hash>` if Git repository found
+    """
+    try:
+        po = subprocess.Popen(
+            ['git', 'rev-parse', '--short', 'HEAD'], stdout=subprocess.PIPE,
+            stderr=open(os.devnull, 'w'), cwd=os.path.dirname(fname))
+        return "-git" + po.stdout.read().strip()
+    except:
+        # trapping everything on purpose; git may not be installed or it
+        # may not work properly
+        return ''
 
 # version number follows the syntax <major>.<minor>.<patchlevel>[<suffix>]
 # where major, minor and patchlevel are numbers.
