@@ -26,7 +26,7 @@ from openquake.commonlib.export import export
 from openquake.commonlib.risk_writers import DmgState
 
 
-def classical_damage(riskinputs, riskmodel, monitor):
+def classical_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
     """
     Core function for a classical damage computation.
 
@@ -45,8 +45,7 @@ def classical_damage(riskinputs, riskmodel, monitor):
                  sum(ri.weight for ri in riskinputs))
     with monitor:
         result = AccumDict()  # asset -> poos per damage state
-        for loss_type, (assets, fractions) in \
-                riskmodel.gen_outputs(riskinputs):
+        for [(assets, fractions)] in riskmodel.gen_outputs(riskinputs):
             for asset, fraction in zip(assets, fractions):
                 result += {asset: fraction * asset.number}
     return result
