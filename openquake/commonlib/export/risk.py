@@ -37,11 +37,15 @@ def export_dmg_xml(key, export_dir, damage_states, dmg_data):
 @export.add('agg_loss_csv')
 def export_agg_loss_csv(key, export_dir, aggcurves):
     """
-    Export aggregate losses in CSV
+    Export aggregate losses in CSV.
+
+    :param key: 'agg_loss_csv'
+    :param export_dir: the export directory
+    :param aggcurves: a list [(loss_type, unit, mean, stddev), ...]
     """
     dest = os.path.join(export_dir, key.replace('_csv', '.csv'))
     with open(dest, 'w') as csvfile:
-        writer = csv.writer(csvfile, delimiter='|')
+        writer = csv.writer(csvfile, delimiter='|', lineterminator='\n')
         writer.writerow(['LossType', 'Unit', 'Mean', 'Standard Deviation'])
         writer.writerows(aggcurves)
     return AccumDict({key: dest})
@@ -51,11 +55,16 @@ def export_agg_loss_csv(key, export_dir, aggcurves):
 def export_classical_damage_csv(key, export_dir, damage_states,
                                 fractions_by_asset):
     """
-    Export aggregate losses in CSV
+    Export damage fractions in CSV.
+
+    :param key: 'classical_damage_csv'
+    :param export_dir: the export directory
+    :param damage_states: the damage states
+    :fractions_by_asset: a dictionary with the fractions by asset
     """
     dest = os.path.join(export_dir, key.replace('_csv', '.csv'))
     with open(dest, 'w') as csvfile:
-        writer = csv.writer(csvfile, delimiter='|')
+        writer = csv.writer(csvfile, delimiter='|', lineterminator='\n')
         writer.writerow(['asset_ref'] + [ds.dmg_state for ds in damage_states])
         for asset in sorted(fractions_by_asset):
             writer.writerow(

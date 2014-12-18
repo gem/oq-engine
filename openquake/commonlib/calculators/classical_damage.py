@@ -79,6 +79,10 @@ class ClassicalDamageCalculator(base.BaseRiskCalculator):
 
     def post_execute(self, result):
         """
+        Export the result in CSV format.
+
+        :param result:
+            a dictionary asset -> fractions per damage state
         """
         dmg_states = [DmgState(s, i)
                       for i, s in enumerate(self.riskmodel.damage_states)]

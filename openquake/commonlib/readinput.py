@@ -467,10 +467,6 @@ def set_imtls(oqparam):
         cfd = getattr(oqparam, 'continuous_fragility_discretization', None)
         ffs = get_fragility_functions(fname, cfd)
         oqparam.risk_imtls = {fset.imt: fset.imls for fset in ffs.itervalues()}
-
-    #if hasattr(oqparam, 'hazard_imtls') and not (
-    #        oqparam.calculation_mode.startswith('scenario')):
-    #    oqparam.hazard_investigation_time = oqparam.investigation_time
     if 'event_based' in oqparam.calculation_mode and not hasattr(
             oqparam, 'loss_curve_resolution'):
         oqparam.loss_curve_resolution = 50  # default

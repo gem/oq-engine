@@ -26,22 +26,23 @@ class ClassicalDamageCase1TestCase(CalculatorTestCase):
             'expected/damage_interpolation.csv', out['classical_damage_csv'])
 
 
+# tests with no damage limit
 class ClassicalDamageCase2TestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'classical_damage')
-    def test_discrete_no_damage_limit(self):
+    def test_discrete(self):
         out = self.run_calc(case_2.__file__, 'job_discrete.ini')
         self.assertEqualFiles(
             'expected/damage_discrete.csv', out['classical_damage_csv'])
 
     @attr('qa', 'risk', 'classical_damage')
-    def test_continuous_no_damage_limit(self):
+    def test_continuous(self):
         out = self.run_calc(case_2.__file__, 'job_continuous.ini')
         self.assertEqualFiles(
             'expected/damage_continuous.csv', out['classical_damage_csv'])
 
     @attr('qa', 'risk', 'classical_damage')
-    def test_interpolation_no_damage_limit(self):
+    def test_interpolation(self):
         out = self.run_calc(case_2.__file__, 'job_interpolation.ini')
         self.assertEqualFiles(
             'expected/damage_interpolation.csv', out['classical_damage_csv'])
