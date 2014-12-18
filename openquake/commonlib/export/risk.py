@@ -22,6 +22,7 @@ import csv
 from openquake.baselib.general import AccumDict
 from openquake.commonlib.export import export
 from openquake.commonlib import risk_writers
+from openquake.commonlib.writers import scientificformat
 
 
 @export.add('dmg_dist_per_asset_xml', 'dmg_dist_per_taxonomy_xml',
@@ -58,5 +59,5 @@ def export_classical_damage_csv(key, export_dir, damage_states,
         writer.writerow(['asset_ref'] + [ds.dmg_state for ds in damage_states])
         for asset in sorted(fractions_by_asset):
             writer.writerow(
-                [asset.id] + list(fractions_by_asset[asset]))
+                [asset.id] + map(scientificformat, fractions_by_asset[asset]))
     return AccumDict({key: dest})
