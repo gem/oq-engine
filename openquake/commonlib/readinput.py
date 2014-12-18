@@ -503,7 +503,9 @@ def get_risk_model(oqparam):
         # scenario damage calculator
         fragility_functions = get_fragility_functions(
             oqparam.inputs['fragility'],
-            getattr(oqparam, 'continuous_fragility_discretization', None))
+            getattr(oqparam, 'continuous_fragility_discretization', None),
+            getattr(oqparam, 'steps_per_interval', None),
+        )
         riskmodel.damage_states = fragility_functions.damage_states
         oqparam.hazard_imtls = oqparam.imtls
         for taxonomy, ffs in fragility_functions.iteritems():
