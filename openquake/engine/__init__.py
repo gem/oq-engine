@@ -52,32 +52,20 @@ import os
 import subprocess
 
 
-def git_suffix():
+# this is duplicated from hazardlib and will be removed:
+# https://bugs.launchpad.net/oq-engine/+bug/1403720
+def git_suffix(fname):
     """
-    extract short git hash if runned from sources
-
-    :returns:
-        `<short git hash>` if git repository found
-
-        `""` otherwise.
+    :returns: `<short git hash>` if Git repository found
     """
-    old_dir = os.getcwd()
-    py_dir = os.path.dirname(__file__)
-    os.chdir(py_dir)
     try:
-        FNULL = open(os.devnull, 'w')
-        # with this fix we are missing the case where we are really in git
-        # installation scenario but, for some reason, git not works properly
-        # and not return the hash but it is an acceptable compromise
-        process = subprocess.Popen(
-            ['git', 'rev-parse', '--short', 'HEAD'],
-            stdout=subprocess.PIPE, stderr=FNULL)
-        output = process.communicate()[0]
-        os.chdir(old_dir)
-        return "-git" + output
-    except Exception:
-        # trapping everything on purpose
-        os.chdir(old_dir)
+        po = subprocess.Popen(
+            ['git', 'rev-parse', '--short', 'HEAD'], stdout=subprocess.PIPE,
+            stderr=open(os.devnull, 'w'), cwd=os.path.dirname(fname))
+        return "-git" + po.stdout.read().strip()
+    except:
+        # trapping everything on purpose; git may not be installed or it
+        # may not work properly
         return ''
 
 # version number follows the syntax <major>.<minor>.<patchlevel>[<suffix>]
@@ -87,8 +75,8 @@ def git_suffix():
 #  "-" + <pkg-version> + "+dev" + <secs_since_epoch> + "-" + <commit-id>
 # NB: the next line is managed by packager.sh script (we retrieve the version
 #     using sed and optionally replace it)
-__version__ = '1.2.1'
-__version__ += git_suffix()
+__version__ = '1.2.2'
+__version__ += git_suffix(__file__)
 
 # The path to the OpenQuake root directory
 OPENQUAKE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
