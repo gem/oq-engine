@@ -20,10 +20,13 @@ import sys
 from openquake.risklib.scientific import (
     VulnerabilityFunction, DegenerateDistribution, classical)
 from openquake.baselib.general import search_module
+from openquake.hazardlib.general import git_suffix
 
 __all__ = ["VulnerabilityFunction", "DegenerateDistribution", "classical"]
 
-__version__ = '0.5.0'
+# the version is managed by packager.sh with a sed
+__version__ = '0.5.1'
+__version__ += git_suffix(__file__)
 
 path = search_module('openquake.commonlib.general')
 if path:
