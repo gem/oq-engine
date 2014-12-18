@@ -153,23 +153,15 @@ def get_imtls_from_vulnerabilities(inputs):
 
 ############################ fragility ##################################
 
-class FragilityFunctionList(list):
-    """
-    A list of fragility functions with common attributes
-    """
-    def __init__(self, elements, **attrs):
-        list.__init__(self, elements)
-        vars(self).update(attrs)
-
-    def __repr__(self):
-        kvs = ['%s=%s' % item for item in vars(self).iteritems()]
-        return '<FragilityFunctionList %s>' % ', '.join(kvs)
-
-
-def get_fragility_functions(fname, continuous_fragility_discretization):
+def get_fragility_functions(fname, continuous_fragility_discretization,
+                            steps_per_interval=None):
     """
     :param fname:
         path of the fragility file
+    :param continuous_fragility_discretization:
+        continuous_fragility_discretization parameter
+    :param steps_per_interval:
+        steps_per_interval parameter
     :returns:
         damage_states list and dictionary taxonomy -> functions
     """
@@ -185,10 +177,18 @@ def get_fragility_functions(fname, continuous_fragility_discretization):
         taxonomy = ~ffs.taxonomy
         imt_str, imls, min_iml, max_iml, imlUnit = ~ffs.IML
         if continuous_fragility_discretization and not imls:
-            imls = numpy.linspace(min_iml, max_iml,
-                                  continuous_fragility_discretization + 1)
-        fragility_functions[taxonomy] = FragilityFunctionList(
-            [], imt=imt_str, imls=imls)
+            gen_imls = numpy.linspace(min_iml, max_iml,
+                                      continuous_fragility_discretization)
+        elif steps_per_interval:
+            gen_imls = scientific.fine_graining(imls, steps_per_interval)
+        else:
+            gen_imls = imls
+        fragility_functions[taxonomy] = scientific.FragilityFunctionList(
+            [], imt=imt_str, imls=gen_imls,
+            no_damage_limit=nodamage,
+            continuous_fragility_discretization=
+            continuous_fragility_discretization,
+            steps_per_interval=steps_per_interval)
         lstates = []
         for ff in ffs.getnodes(tag):
             ls = ff['ls']  # limit state
@@ -201,14 +201,10 @@ def get_fragility_functions(fname, continuous_fragility_discretization):
             else:  # discrete
                 with context(fname, ff):
                     poes = ~ff.poEs
-                if nodamage is None:
-                    fragility_functions[taxonomy].append(
-                        scientific.FragilityFunctionDiscrete(
-                            ls, imls, poes, imls[0]))
-                else:
-                    fragility_functions[taxonomy].append(
-                        scientific.FragilityFunctionDiscrete(
-                            ls, [nodamage] + imls, [0.0] + poes, nodamage))
+                fragility_functions[taxonomy].append(
+                    scientific.FragilityFunctionDiscrete(
+                        ls, imls, poes, nodamage))
+
         if lstates != limit_states:
             raise InvalidFile("Expected limit states %s, got %s in %s" %
                              (limit_states, lstates, fname))

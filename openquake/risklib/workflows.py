@@ -779,14 +779,14 @@ class ClassicalDamage(Workflow):
     Implements the ClassicalDamage workflow
     """
     def __init__(self, imt, taxonomy, fragility_functions,
-                 hazard_imls, hazard_investigation_time,
+                 hazard_imtls, hazard_investigation_time,
                  risk_investigation_time):
         self.imt = imt
         self.taxonomy = taxonomy
         self.risk_functions = fragility_functions
         self.curves = functools.partial(
             scientific.classical_damage,
-            fragility_functions, hazard_imls,
+            fragility_functions['damage'], hazard_imtls[imt],
             hazard_investigation_time=hazard_investigation_time,
             risk_investigation_time=risk_investigation_time)
 

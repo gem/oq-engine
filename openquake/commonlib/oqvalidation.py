@@ -104,10 +104,12 @@ class OqParam(valid.ParamSet):
         intensity_measure_types_and_levels=
         valid.intensity_measure_types_and_levels,
         hazard_imtls=valid.intensity_measure_types_and_levels,
+        hazard_investigation_time=valid.positivefloat,
         interest_rate=valid.positivefloat,
         investigation_time=valid.positivefloat,
         loss_curve_resolution=valid.positiveint,
-        lrem_steps_per_interval=valid.positiveint,
+        lrem_steps_per_interval=valid.positiveint,  # maybe will be deprecated
+        steps_per_interval=valid.positiveint,
         master_seed=valid.positiveint,
         maximum_distance=valid.positivefloat,
         maximum_tile_weight=valid.positivefloat,
