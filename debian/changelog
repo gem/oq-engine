@@ -1,3 +1,22 @@
+python-oq-engine (1.2.2-0) precise; urgency=low
+
+  * consistency in version management between debian/ubuntu package and
+    library from git sources
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 18 Dec 2014 16:25:05 +0100
+
+python-oq-engine (1.2.1-2) precise; urgency=low
+
+  * Fixed custom dependencies versions (again)
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 16 Dec 2014 10:48:19 +0100
+
+python-oq-engine (1.2.1-1) precise; urgency=low
+
+  * Fixed custom dependencies versions
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 16 Dec 2014 09:48:19 +0100
+
 python-oq-engine (1.2.1-0) precise; urgency=low
 
   * Fixed the logging handler
