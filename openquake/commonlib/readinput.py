@@ -104,7 +104,8 @@ def get_oqparam(job_ini, calculators=None):
     """
     if calculators is None:
         from openquake.commonlib.calculators import base
-    OqParam.params['calculation_mode'].choices = tuple(base.calculators)
+        calculators = base.calculators
+    OqParam.params['calculation_mode'].choices = tuple(calculators)
 
     if isinstance(job_ini, dict):
         oqparam = OqParam(**job_ini)
