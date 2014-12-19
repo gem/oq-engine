@@ -475,7 +475,6 @@ def get_risk_model(oqparam):
             getattr(oqparam, 'steps_per_interval', None),
         )
         riskmodel.damage_states = fragility_functions.damage_states
-        oqparam.hazard_imtls = oqparam.imtls
         for taxonomy, ffs in fragility_functions.iteritems():
             imt = ffs.imt
             risk_models[imt, taxonomy] = workflows.get_workflow(

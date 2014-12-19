@@ -129,14 +129,13 @@ class OqParam(valid.ParamSet):
             # remove the now redundant parameter
             delattr(self, 'intensity_measure_types_and_levels')
         elif vulnerability_files(self.inputs):
-            self.hazard_imtls = self.risk_imtls = (
-                get_imtls_from_vulnerabilities(self.inputs))
+            self.risk_imtls = get_imtls_from_vulnerabilities(self.inputs)
         elif fragility_files(self.inputs):
             fname = self.inputs['fragility']
             cfd = getattr(self, 'continuous_fragility_discretization', None)
             ffs = get_fragility_functions(fname, cfd)
-            self.hazard_imtls = self.risk_imtls = {
-                fset.imt: fset.imls for fset in ffs.itervalues()}
+            self.risk_imtls = {fset.imt: fset.imls
+                               for fset in ffs.itervalues()}
         if 'event_based' in self.calculation_mode and not hasattr(
                 self, 'loss_curve_resolution'):
             self.loss_curve_resolution = 50  # default

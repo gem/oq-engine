@@ -809,12 +809,16 @@ def get_workflow(imt, taxonomy, oqparam, **extra):
     workflow_class = registry[oqparam.calculation_mode]
     # arguments needed to instantiate the workflow class
     argnames = inspect.getargspec(workflow_class.__init__).args[3:]
+
     # arguments extracted from oqparam
     known_args = vars(oqparam)
     all_args = {}
     for argname in argnames:
         if argname in known_args:
             all_args[argname] = known_args[argname]
+
+    if 'hazard_imtls' in argnames:  # special case
+        all_args['hazard_imtls'] = oqparam.imtls
     all_args.update(extra)
     missing = set(argnames) - set(all_args)
     if missing:
