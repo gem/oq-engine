@@ -725,7 +725,7 @@ class ParamSet(object):
     >>> MyParams(a='1', b='7.2')
     <MyParams a=1, b=7.2>
 
-    >>> MyParams(a='1', b='9.2')
+    >>> MyParams(a='1', b='9.2').validate()
     Traceback (most recent call last):
     ...
     ValueError: The sum of a and b must be under 10.
@@ -754,6 +754,10 @@ class ParamSet(object):
                                  % (convert.__name__, name, val))
             setattr(self, name, value)
 
+    def validate(self):
+        """
+        Apply the `is_valid` methods to self and possibly raise a ValueError.
+        """
         valids = sorted(getattr(self, valid)
                         for valid in dir(self.__class__)
                         if valid.startswith('is_valid_'))

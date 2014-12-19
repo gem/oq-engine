@@ -112,6 +112,7 @@ def get_oqparam(job_ini, calculators=None):
     else:
         oqparam = OqParam(**get_params(job_ini))
 
+    oqparam.validate()
     return oqparam
 
 

@@ -61,7 +61,8 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         super(ClassicalRiskCalculator, self).pre_execute()
         hazard_from_csv = 'hazard_curves' in self.oqparam.inputs
         if hazard_from_csv:
-            sites, hcurves_by_imt = readinput.get_sitecol_hcurves(self.oqparam)
+            self.sitecol, hcurves_by_imt = readinput.get_sitecol_hcurves(
+                self.oqparam)
 
         logging.info('Associating assets -> sites')
         with self.monitor('assoc_assets_sites'):
