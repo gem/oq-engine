@@ -19,7 +19,7 @@
 import os
 import unittest
 
-from openquake.commonlib.calculators import calculators
+from openquake.commonlib.calculators import base
 from openquake.commonlib.parallel import PerformanceMonitor, executor
 from openquake.commonlib import readinput
 
@@ -38,11 +38,12 @@ class CalculatorTestCase(unittest.TestCase):
         inis = [os.path.join(self.testdir, ini) for ini in job_ini.split(',')]
         oq = self.oqparam = readinput.get_oqparam(inis)
         oq.concurrent_tasks = executor._max_workers
+        oq.usecache = False
         # change this when debugging the test
         monitor = PerformanceMonitor(
             self.testdir,
             monitor_csv=os.path.join(oq.export_dir, 'performance_csv'))
-        return calculators(self.oqparam, monitor)
+        return base.calculators(self.oqparam, monitor)
 
     def run_calc(self, testfile, job_ini):
         """

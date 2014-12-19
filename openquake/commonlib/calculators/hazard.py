@@ -31,7 +31,7 @@ from openquake.commonlib import readinput, parallel
 from openquake.commonlib.export import export
 from openquake.baselib.general import AccumDict
 
-from openquake.commonlib.calculators import calculators, base, calc
+from openquake.commonlib.calculators import base, calc
 
 
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
@@ -67,8 +67,8 @@ def classical(sources, sitecol, gsims_assoc, monitor):
     return result
 
 
-@calculators.add('classical')
-class ClassicalCalculator(base.BaseHazardCalculator):
+@base.calculators.add('classical')
+class ClassicalCalculator(base.HazardCalculator):
     """
     Classical PSHA calculator
     """
@@ -112,8 +112,8 @@ class ClassicalCalculator(base.BaseHazardCalculator):
         return saved
 
 
-@calculators.add('event_based')
-class EventBasedCalculator(base.BaseHazardCalculator):
+@base.calculators.add('event_based')
+class EventBasedCalculator(base.HazardCalculator):
     """
     Event based PSHA calculator
     """
@@ -121,8 +121,8 @@ class EventBasedCalculator(base.BaseHazardCalculator):
         return {}
 
 
-@calculators.add('disaggregation')
-class DisaggregationCalculator(base.BaseHazardCalculator):
+@base.calculators.add('disaggregation')
+class DisaggregationCalculator(base.HazardCalculator):
     """
     Classical disaggregation PSHA calculator
     """
@@ -150,14 +150,18 @@ def calc_gmfs(tag_seed_pairs, computer, monitor):
     return res
 
 
-@calculators.add('scenario')
-class ScenarioCalculator(base.BaseCalculator):
+@base.calculators.add('scenario')
+class ScenarioCalculator(base.HazardCalculator):
     """
     Scenario hazard calculator
     """
     core_func = calc_gmfs
 
-    def _init_tags(self):
+    def pre_execute(self):
+        """
+        Read the site collection and initialize GmfComputer, tags and seeds
+        """
+        super(ScenarioCalculator, self).pre_execute()
         self.imts = readinput.get_imts(self.oqparam)
         gsim = readinput.get_gsim(self.oqparam)
         trunc_level = getattr(self.oqparam, 'truncation_level', None)
@@ -171,20 +175,6 @@ class ScenarioCalculator(base.BaseCalculator):
         rnd = random.Random(getattr(self.oqparam, 'random_seed', 42))
         self.tag_seed_pairs = [(tag, rnd.randint(0, calc.MAX_INT))
                                for tag in self.tags]
-
-    def pre_execute(self):
-        """
-        Read the site collection and initialize GmfComputer, tags and seeds
-        """
-        if 'exposure' in self.oqparam.inputs:
-            logging.info('Reading the exposure')
-            exposure = readinput.get_exposure(self.oqparam)
-            logging.info('Reading the site collection')
-            self.sitecol, _assets = readinput.get_sitecol_assets(
-                self.oqparam, exposure)
-        else:
-            self.sitecol = readinput.get_site_collection(self.oqparam)
-        self._init_tags()
 
     def execute(self):
         """

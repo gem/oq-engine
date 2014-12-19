@@ -16,9 +16,11 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import abc
 import logging
 import operator
+import cPickle
 
 import numpy
 
@@ -33,6 +35,8 @@ get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
 get_trt = operator.attrgetter('trt_model_id')
 get_imt = operator.attrgetter('imt')
+
+calculators = general.CallableDict(operator.attrgetter('calculation_mode'))
 
 
 class AssetSiteAssociationError(Exception):
@@ -86,7 +90,7 @@ class BaseCalculator(object):
         """
 
 
-class BaseHazardCalculator(BaseCalculator):
+class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
@@ -102,22 +106,26 @@ class BaseHazardCalculator(BaseCalculator):
         else:
             logging.info('Reading the site collection')
             self.sitecol = readinput.get_site_collection(self.oqparam)
-        logging.info('Reading the composite source models')
-        self.composite_source_model = \
-            readinput.get_composite_source_model(self.oqparam, self.sitecol)
-        self.job_info = readinput.get_job_info(
-            self.oqparam, self.composite_source_model, self.sitecol)
-        # we could manage limits here
+        if 'source' in self.oqparam.inputs:
+            logging.info('Reading the composite source models')
+            self.composite_source_model = readinput.get_composite_source_model(
+                self.oqparam, self.sitecol)
+            self.job_info = readinput.get_job_info(
+                self.oqparam, self.composite_source_model, self.sitecol)
+            # we could manage limits here
+            self.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
+        else:  # calculators without sources
+            self.rlzs_assoc = workflows.FakeRlzsAssoc()
 
-        self.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
 
-
-class BaseRiskCalculator(BaseCalculator):
+class RiskCalculator(BaseCalculator):
     """
     Base class for all risk calculators. A risk calculator must set the
     attributes .riskmodel, .sitecol, .assets_by_site, .exposure
     .riskinputs in the pre_execute phase.
     """
+
+    hazard_calculator = None  # to be ovverriden in subclasses
 
     def build_riskinputs(self, hazards_by_imt):
         """
@@ -178,6 +186,25 @@ class BaseRiskCalculator(BaseCalculator):
         filteredcol = sitecol.filter(mask)
         return filteredcol, numpy.array(assets_by_site)
 
+    def get_hazard(self):
+        """
+        Getting the hazard (possibly from the cache).
+        """
+        cache = os.path.join(self.oqparam.export_dir, 'hazard.pik')
+        if self.oqparam.usecache:
+            with open(cache) as f:
+                haz_out = cPickle.load(f)
+        else:
+            hcalc = calculators[self.hazard_calculator](
+                self.oqparam, self.monitor('hazard'))
+            hcalc.pre_execute()
+            result = hcalc.execute()
+            haz_out = dict(result=result, rlzs_assoc=hcalc.rlzs_assoc)
+            logging.info('Saving hazard output on %s', cache)
+            with open(cache, 'w') as f:
+                cPickle.dump(haz_out, f)
+        return haz_out
+
     def pre_execute(self):
         """
         Set the attributes .riskmodel, .sitecol, .assets_by_site
@@ -196,7 +223,7 @@ class BaseRiskCalculator(BaseCalculator):
         logging.info('Extracted %d unique sites from the exposure',
                      len(self.sitecol))
 
-        # overridden for non-scenario calculators
+        # overridde this for calculators with more than one realization
         self.rlzs_assoc = workflows.FakeRlzsAssoc()
 
     def execute(self):

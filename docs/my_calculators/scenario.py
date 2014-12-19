@@ -1,10 +1,10 @@
-from openquake.commonlib.calculators import calculators, base
+from openquake.commonlib.calculators import base
 from openquake.commonlib import readinput
 from openquake.hazardlib.calc.gmf import ground_motion_fields
 from openquake.commonlib.export import export
 
 
-@calculators.add('my_scenario')
+@base.calculators.add('my_scenario')
 class MyScenarioCalculator(base.BaseCalculator):
     def pre_execute(self):
         self.sitecol = readinput.get_site_collection(self.oqparam)

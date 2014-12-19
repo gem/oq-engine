@@ -21,7 +21,7 @@ import logging
 
 from openquake.commonlib import sap, readinput
 from openquake.commonlib.parallel import executor, PerformanceMonitor
-from openquake.commonlib.calculators import calculators
+from openquake.commonlib.calculators import base
 
 
 def run(job_ini, concurrent_tasks=executor._max_workers * 2,
@@ -37,7 +37,7 @@ def run(job_ini, concurrent_tasks=executor._max_workers * 2,
     oqparam.usecache = usecache
     with PerformanceMonitor('total', monitor_csv=os.path.join(
             oqparam.export_dir, 'performance_csv')) as monitor:
-        calc = calculators(oqparam, monitor)
+        calc = base.calculators(oqparam, monitor)
         with monitor('pre_execute'):
             calc.pre_execute()
         with monitor('execute'):

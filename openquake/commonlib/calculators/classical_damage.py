@@ -21,7 +21,7 @@ import logging
 
 from openquake.baselib.general import AccumDict
 from openquake.commonlib import readinput
-from openquake.commonlib.calculators import base, calculators
+from openquake.commonlib.calculators import base
 from openquake.commonlib.export import export
 from openquake.commonlib.risk_writers import DmgState
 
@@ -51,8 +51,8 @@ def classical_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
     return result
 
 
-@calculators.add('classical_damage')
-class ClassicalDamageCalculator(base.BaseRiskCalculator):
+@base.calculators.add('classical_damage')
+class ClassicalDamageCalculator(base.RiskCalculator):
     """
     Scenario damage calculator
     """
