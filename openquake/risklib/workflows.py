@@ -818,7 +818,8 @@ def get_workflow(imt, taxonomy, oqparam, **extra):
             all_args[argname] = known_args[argname]
 
     if 'hazard_imtls' in argnames:  # special case
-        all_args['hazard_imtls'] = oqparam.imtls
+        all_args['hazard_imtls'] = getattr(
+            oqparam, 'hazard_imtls', oqparam.imtls)
     all_args.update(extra)
     missing = set(argnames) - set(all_args)
     if missing:
