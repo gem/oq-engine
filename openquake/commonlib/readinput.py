@@ -63,7 +63,7 @@ def get_params(job_ini):
     # drectory containing the config files we're parsing
     base_path = os.path.dirname(
         os.path.join(os.path.abspath('.'), job_inis[0]))
-    params = dict(base_path=base_path, inputs={})
+    params = dict(base_path=base_path, inputs={'job_ini': job_ini})
 
     for sect in cp.sections():
         for key, value in cp.items(sect):
