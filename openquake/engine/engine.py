@@ -63,6 +63,7 @@ RISK_HAZARD_MAP = dict(
     scenario_damage='scenario',
     classical_risk='classical',
     classical_bcr='classical',
+    classical_damage='classical',
     event_based_risk='event_based',
     event_based_bcr='event_based')
 

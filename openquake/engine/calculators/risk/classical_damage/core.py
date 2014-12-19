@@ -17,7 +17,6 @@
 Core functionality for the classical damage risk calculator.
 """
 
-import itertools
 from openquake.risklib import workflows
 
 from openquake.engine.calculators import post_processing
@@ -111,25 +110,9 @@ class ClassicalDamageCalculator(base.RiskCalculator):
     core = staticmethod(classical_damage)
 
     validators = base.RiskCalculator.validators + [
-        validation.RequireClassicalHazard,
         validation.ExposureHasInsuranceBounds]
 
     output_builders = [writers.LossCurveMapBuilder,
                        writers.ConditionalLossFractionBuilder]
 
     getter_class = hazard_getters.HazardCurveGetter
-
-    def get_workflow(self, vulnerability_functions):
-        """
-        :param vulnerability_functions:
-            a dictionary of vulnerability functions
-        :returns:
-            an instance of
-            :class:`openquake.risklib.workflows.Classical`
-        """
-        return workflows.ClassicalDamage(
-            vulnerability_functions,
-            self.rc.lrem_steps_per_interval,
-            self.rc.conditional_loss_poes,
-            self.rc.poes_disagg,
-            self.rc.insured_losses)
