@@ -24,7 +24,7 @@ from openquake.commonlib.parallel import executor, PerformanceMonitor
 from openquake.commonlib.calculators import base
 
 
-def run(job_ini, concurrent_tasks=executor._max_workers * 2,
+def run(job_ini, concurrent_tasks=executor._max_workers * 4,
         loglevel='info', fromfile='', usecache=False):
     """
     Run a calculation. Optionally, set the number of concurrent_tasks

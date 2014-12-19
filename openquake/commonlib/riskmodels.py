@@ -19,7 +19,7 @@
 """
 Reading risk models for risk calculators
 """
-
+import re
 import logging
 import collections
 
@@ -28,13 +28,41 @@ import numpy
 from openquake.commonlib.node import read_nodes, context
 from openquake.commonlib import InvalidFile
 from openquake.risklib import scientific
-from openquake.commonlib.oqvalidation import vulnerability_files
 from openquake.baselib.general import AccumDict
 from openquake.commonlib.nrml import nodefactory
 
+VULNERABILITY_KEY = re.compile('(structural|nonstructural|contents|'
+                               'business_interruption|occupants)_([\w_]+)')
+
+
+def vulnerability_files(inputs):
+    """
+    Return a dict cost_type -> path for the known vulnerability keys
+
+    :param inputs: a dictionary key -> path name
+    """
+    vfs = {}
+    for key in inputs:
+        match = VULNERABILITY_KEY.match(key)
+        if match:
+            vfs[match.group(1)] = inputs[key]
+    return vfs
+
+
+def fragility_files(inputs):
+    """
+    Return a dict of the form {} or {'damage': path}.
+
+    :param inputs: a dictionary key -> path name
+
+    NB: at the moment there is a single fragility key, so the output
+    contains at most one element.
+    """
+    return {'damage': inputs[key] for key in inputs if key == 'fragility'}
+
+
 # loss types (in the risk models) and cost types (in the exposure)
 # are the sames except for fatalities -> occupants
-
 
 def loss_type_to_cost_type(lt):
     """
