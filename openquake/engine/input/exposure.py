@@ -21,6 +21,7 @@ Serializer and related functions to save exposure data to the database.
 """
 
 from openquake.engine.db import models
+from openquake.engine.logs import LOG
 from django.db import router
 from django.db import transaction
 
@@ -38,6 +39,8 @@ class ExposureDBWriter(object):
         self.job = job
         self.model = None
         self.cost_types = {}
+        self.ignore_missing_costs = self.job.get_param(
+            'ignore_missing_costs', [])
 
     @transaction.commit_on_success(router.db_for_write(models.ExposureModel))
     def serialize(self, iterator):
@@ -96,6 +99,17 @@ class ExposureDBWriter(object):
         :param asset_data:
             an instance of :class:`openquake.commonlib.risk_parsers.AssetData`
         """
+        for cost_type in self.cost_types:
+            if not any(cost_type == cost.cost_type
+                       for cost in asset_data.costs):
+                if cost_type in self.ignore_missing_costs:
+                    LOG.warn('asset %s, %s cost is missing',
+                             asset_data.asset_ref, cost_type)
+                else:
+                    raise ValueError("Invalid Exposure. "
+                                     "Missing cost %s for asset %s" % (
+                                         cost_type, asset_data.asset_ref))
+
         asset = models.ExposureData.objects.create(
             exposure_model=self.model,
             asset_ref=asset_data.asset_ref,
@@ -104,13 +118,6 @@ class ExposureDBWriter(object):
             number_of_units=asset_data.number,
             site="POINT(%s %s)" % (asset_data.site.longitude,
                                    asset_data.site.latitude))
-
-        for cost_type in self.cost_types:
-            if not any([cost_type == cost.cost_type
-                        for cost in asset_data.costs]):
-                raise ValueError("Invalid Exposure. "
-                                 "Missing cost %s for asset %s" % (
-                                     cost_type, asset.asset_ref))
 
         model = asset_data.exposure_metadata
         deductible_is_absolute = model.conversions.deductible_is_absolute
