@@ -183,8 +183,9 @@ def export_hazard_curves_csv(key, export_dir, sitecol, rlz, curves_by_imt,
     """
     smlt_path = '_'.join(rlz.sm_lt_path)
     gsimlt_path = '_'.join(rlz.gsim_lt_path)
-    dest = 'hazard_curve_multi-smltp_%s-gsimltp_%s-ltr_%d.csv' % (
+    fname = 'hazard_curve_multi-smltp_%s-gsimltp_%s-ltr_%d.csv' % (
         smlt_path, gsimlt_path, rlz.ordinal)
+    dest = os.path.join(export_dir, fname)
     rows = []
     for imt in sorted(curves_by_imt):
         row = ['%s:%s' % (imt, concat(imtls[imt], ' '))]
@@ -230,8 +231,9 @@ def export_hazard_curves_xml(key, export_dir, sitecol, rlz, curves_by_imt,
             'sa_damping': imt[2],
             'imls': imls,
         })
-    dest = 'hazard_curve_multi-smltp_%s-gsimltp_%s-ltr_%d.xml' % (
+    fname = 'hazard_curve_multi-smltp_%s-gsimltp_%s-ltr_%d.xml' % (
         smlt_path, gsimlt_path, rlz.ordinal)
+    dest = os.path.join(export_dir, fname)
     writer = hazard_writers.MultiHazardCurveXMLWriter(dest, mdata)
     with floatformat('%12.8E'):
         writer.serialize(hcurves)
