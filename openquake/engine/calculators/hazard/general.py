@@ -42,7 +42,7 @@ from openquake.engine import logs
 from openquake.engine import writer
 from openquake.engine.calculators import base
 from openquake.baselib.general import average
-from openquake.commonlib.calculators import calc
+from openquake.risklib import scientific
 
 from openquake.engine.calculators.hazard.post_processing import (
     hazard_curves_to_hazard_map, do_uhs_post_proc)
@@ -544,7 +544,7 @@ class BaseHazardCalculator(base.Calculator):
 
                 # calc quantiles first
                 for quantile in self.quantile_hazard_curves:
-                    q_curve = calc.quantile_curve(
+                    q_curve = scientific.quantile_curve(
                         curve_poes, quantile, weights)
                     inserter.add(
                         models.HazardCurveData(
