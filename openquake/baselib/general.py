@@ -555,6 +555,9 @@ class AccumDict(dict):
 
     __rmul__ = __mul__
 
+    def __div__(self, other):
+        return self * (1. / other)
+
     def apply(self, func, *extras):
         """
         >>> a = AccumDict({'a': 1,  'b': 2})

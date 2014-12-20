@@ -123,11 +123,13 @@ class ClassicalCalculator(base.BaseHazardCalculator):
             a dictionary of hazard curves dictionaries
         """
         rlzs = self.rlzs_assoc.realizations
-        curves_by_rlz = self.rlzs_assoc.combine(agg_prob, result)
+	curves_by_rlz = self.rlzs_assoc.reduce(agg_prob, result)
         oq = self.oqparam
+
+        # export curves
         saved = AccumDict()
         exports = self.oqparam.exports.split(',')
-        for rlz in self.rlzs_assoc.realizations:
+            curves = curves_by_rlz[rlz]
             smlt_path = '_'.join(rlz.sm_lt_path)
             gsimlt_path = '_'.join(rlz.gsim_lt_path)
             for fmt in exports:
