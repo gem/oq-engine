@@ -150,3 +150,21 @@ def tostring(node, indent=4):
     writer = StreamingXMLWriter(out, indent)
     writer.serialize(node)
     return out.getvalue()
+
+
+def concat(row, sep):
+    """
+    :param row: a list of objects to convert in strings
+    :param sep: the separator
+    """
+    return sep.join(map(scientificformat, row))
+
+
+def save_csv(dest, header_rows, sep=','):
+    """
+    :param dest: destination filename
+    :param header_rows: header + rows to save
+    """
+    with floatformat('%12.8E'), open(dest, 'w') as f:
+        for row in header_rows:
+            f.write(concat(row, sep) + '\n')

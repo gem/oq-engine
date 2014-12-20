@@ -72,7 +72,7 @@ def classical(sources, sitecol, gsims_assoc, monitor):
     """
     max_dist = monitor.oqparam.maximum_distance
     truncation_level = monitor.oqparam.truncation_level
-    imtls = monitor.oqparam.intensity_measure_types_and_levels
+    imtls = monitor.oqparam.imtls
     trt_model_id = sources[0].trt_model_id
     trt = sources[0].tectonic_region_type
     gsims = gsims_assoc[trt_model_id]
@@ -124,11 +124,13 @@ class ClassicalCalculator(base.BaseHazardCalculator):
         curves_by_rlz = self.rlzs_assoc.combine(agg_prob, result)
         oq = self.oqparam
         saved = AccumDict()
+        exports = self.oqparam.exports.split(',')
         for rlz in self.rlzs_assoc.realizations:
-            saved += export(
-                'hazard_curves_xml',
-                oq.export_dir, self.sitecol, rlz, curves_by_rlz[rlz],
-                oq.imtls, oq.investigation_time)
+            for fmt in exports:
+                saved += export(
+                    'hazard_curves_' + fmt,
+                    oq.export_dir, self.sitecol, rlz, curves_by_rlz[rlz],
+                    oq.imtls, oq.investigation_time)
         return saved
 
 

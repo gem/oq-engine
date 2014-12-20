@@ -36,21 +36,22 @@ class CalculatorTestCase(unittest.TestCase):
         """
         self.testdir = os.path.dirname(testfile)
         inis = [os.path.join(self.testdir, ini) for ini in job_ini.split(',')]
-        oq = self.oqparam = readinput.get_oqparam(inis)
-        oq.concurrent_tasks = executor._max_workers
+        oq = readinput.get_oqparam(inis)
+        oq.concurrent_tasks = executor._max_workers * 4
         # change this when debugging the test
         monitor = PerformanceMonitor(
             self.testdir,
             monitor_csv=os.path.join(oq.export_dir, 'performance_csv'))
-        return calculators(self.oqparam, monitor)
+        return calculators(oq, monitor)
 
-    def run_calc(self, testfile, job_ini):
+    def run_calc(self, testfile, job_ini, exports='xml'):
         """
         Return the outputs of the calculation as a dictionary
         """
         self.calc = self.get_calc(testfile, job_ini)
         self.calc.pre_execute()
         self.result = self.calc.execute()
+        self.calc.oqparam.exports = exports
         return self.calc.post_execute(self.result)
 
     def execute(self, testfile, job_ini):
@@ -66,7 +67,7 @@ class CalculatorTestCase(unittest.TestCase):
         Make sure the expected and actual files have the same content
         """
         expected = os.path.join(self.testdir, fname1)
-        actual = os.path.join(self.oqparam.export_dir, fname2)
+        actual = os.path.join(self.calc.oqparam.export_dir, fname2)
         expected_content = open(expected).read()
         actual_content = open(actual).read()
         try:
@@ -78,5 +79,5 @@ class CalculatorTestCase(unittest.TestCase):
         """
         Make sure the content of the exported file is the expected one
         """
-        with open(os.path.join(self.oqparam.export_dir, fname)) as actual:
+        with open(os.path.join(self.calc.oqparam.export_dir, fname)) as actual:
             self.assertEqual(expected_content, actual.read())

@@ -20,7 +20,8 @@ import os
 import collections
 
 from openquake.commonlib.export import export
-from openquake.commonlib.writers import scientificformat, floatformat
+from openquake.commonlib.writers import (
+    scientificformat, floatformat, save_csv, concat)
 from openquake.commonlib import hazard_writers
 from openquake.hazardlib.imt import from_string
 
@@ -169,7 +170,8 @@ HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
 @export.add('hazard_curves_csv')
-def export_hazard_curves_csv(key, export_dir, sitecol, rlz, curves_by_imt):
+def export_hazard_curves_csv(key, export_dir, sitecol, rlz, curves_by_imt,
+                             imtls, investigation_time=None):
     """
     Export the curves of the given realization into XML.
 
@@ -183,11 +185,14 @@ def export_hazard_curves_csv(key, export_dir, sitecol, rlz, curves_by_imt):
     gsimlt_path = '_'.join(rlz.gsim_lt_path)
     dest = 'hazard_curve_multi-smltp_%s-gsimltp_%s-ltr_%d.csv' % (
         smlt_path, gsimlt_path, rlz.ordinal)
-    with floatformat('%12.8E'), open(dest, 'w') as f:
-        for imt, curves in sorted(curves_by_imt):
-            for site, curve in zip(sitecol, curves_by_imt[imt]):
-                row = [imt, site.location.x, site.location.y] + list(curve)
-                f.write(' '.join(map(scientificformat, row)) + '\n')
+    rows = []
+    for imt in sorted(curves_by_imt):
+        row = ['%s:%s' % (imt, concat(imtls[imt], ' '))]
+        for curve in curves_by_imt[imt]:
+            row.append(concat(curve, ' '))
+        rows.append(row)
+    locations = ['%s %s' % (s.location.x, s.location.y) for s in sitecol]
+    save_csv(dest, [['lon_lat'] + locations] + rows)
     return {key: dest}
 
 
