@@ -1026,12 +1026,10 @@ def asset_statistics(
        3) mean loss map
        4) a list of quantile loss maps
     """
-    mean_curve = numpy.array([losses, mean_curve(
-        curves_poes, weights)])
-    mean_map = loss_map_matrix(poes, [mean_curve]).reshape(len(poes))
+    mean_curve_ = numpy.array([losses, mean_curve(curves_poes, weights)])
+    mean_map = loss_map_matrix(poes, [mean_curve_]).reshape(len(poes))
     quantile_curves = numpy.array(
         [[losses, quantile_curve(curves_poes, quantile, weights)]
          for quantile in quantiles]).reshape((len(quantiles), 2, len(losses)))
     quantile_maps = loss_map_matrix(poes, quantile_curves).T
-
-    return (mean_curve, mean_map, quantile_curves, quantile_maps)
+    return (mean_curve_, mean_map, quantile_curves, quantile_maps)
