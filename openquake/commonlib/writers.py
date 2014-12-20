@@ -50,9 +50,11 @@ def scientificformat(value, fmt='%13.9E', sep=' '):
     """
     if isinstance(value, basestring):
         return value
+    elif isinstance(value, (int, long)):
+        return str(value)
     elif hasattr(value, '__len__'):
         return sep.join((scientificformat(f, fmt, sep) for f in value))
-    elif isinstance(value, (float, int, long)):
+    elif isinstance(value, float):
         return fmt % value
     raise ValueError(value)
 
