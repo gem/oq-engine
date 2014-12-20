@@ -121,7 +121,7 @@ def event_based(workflow, getter, outputdict, params, monitor):
 
         if statistics and len(outputs) > 1:
             stats = workflow.statistics(
-                outputs, params.quantile_loss_curves, calc)
+                outputs, params.quantile_loss_curves)
 
             with monitor('saving risk statistics'):
                 save_statistical_output(
