@@ -19,6 +19,8 @@
 import os
 import collections
 
+import numpy
+
 from openquake.commonlib.export import export
 from openquake.commonlib.writers import (
     scientificformat, floatformat, save_csv, concat)
@@ -193,7 +195,7 @@ def export_hazard_curves_csv(key, export_dir, sitecol, rlz, curves_by_imt,
             row.append(concat(curve, ' '))
         rows.append(row)
     locations = ['%s %s' % (s.location.x, s.location.y) for s in sitecol]
-    save_csv(dest, [['lon_lat'] + locations] + rows)
+    save_csv(dest, numpy.array([['lon_lat'] + locations] + rows).T)
     return {key: dest}
 
 
