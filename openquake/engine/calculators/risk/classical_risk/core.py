@@ -19,7 +19,7 @@ Core functionality for the classical PSHA risk calculator.
 
 import itertools
 
-from openquake.engine.calculators import post_processing
+from openquake.commonlib.calculators import calc
 from openquake.engine.calculators.risk import (
     base, hazard_getters, validation, writers)
 from openquake.engine.calculators import calculators
@@ -49,7 +49,7 @@ def classical(workflow, getter, outputdict, params, monitor):
         with monitor('computing risk'):
             outputs = workflow.compute_all_outputs(getter, loss_type)
             stats = workflow.statistics(
-                outputs, params.quantile_loss_curves, post_processing)
+                outputs, params.quantile_loss_curves, calc)
         with monitor('saving risk'):
             for out in outputs:
                 save_individual_outputs(

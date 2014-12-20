@@ -41,11 +41,9 @@ from openquake.engine.input import exposure
 from openquake.engine import logs
 from openquake.engine import writer
 from openquake.engine.calculators import base
-from openquake.engine.calculators.post_processing import mean_curve
-from openquake.engine.calculators.post_processing import quantile_curve
-from openquake.engine.calculators.post_processing import (
-    weighted_quantile_curve
-)
+from openquake.baselib.general import average
+from openquake.commonlib.calculators import calc
+
 from openquake.engine.calculators.hazard.post_processing import (
     hazard_curves_to_hazard_map, do_uhs_post_proc)
 
@@ -453,8 +451,7 @@ class BaseHazardCalculator(base.Calculator):
 
         Post-processing results will be stored directly into the database.
         """
-        weights = [rlz.weight for rlz in self._realizations]
-        num_rlzs = len(weights)
+        num_rlzs = len(self._realizations)
         if not num_rlzs:
             logs.LOG.warn('No realizations for hazard_calculation_id=%d',
                           self.job.id)
@@ -464,6 +461,9 @@ class BaseHazardCalculator(base.Calculator):
                 'There is only one realization, the configuration parameter '
                 'quantile_hazard_curves should not be set')
             return
+
+        weights = (None if self.oqparam.number_of_logic_tree_samples
+                   else [rlz.weight for rlz in self._realizations])
 
         if self.oqparam.mean_hazard_curves:
             # create a new `HazardCurve` 'container' record for mean
@@ -541,34 +541,26 @@ class BaseHazardCalculator(base.Calculator):
                 wkt = site.location.wkt2d
                 curve_poes = numpy.array(
                     [c_by_rlz[i] for c_by_rlz in all_curves_for_imt])
-                # do means and quantiles
-                # quantiles first:
+
+                # calc quantiles first
                 for quantile in self.quantile_hazard_curves:
-                    if self.oqparam.number_of_logic_tree_samples == 0:
-                        # explicitly weighted quantiles
-                        q_curve = weighted_quantile_curve(
-                            curve_poes, weights, quantile)
-                    else:
-                        # implicitly weighted quantiles
-                        q_curve = quantile_curve(
-                            curve_poes, quantile)
+                    q_curve = calc.quantile_curve(
+                        curve_poes, quantile, weights)
                     inserter.add(
                         models.HazardCurveData(
                             hazard_curve_id=(
                                 container_ids['q%s' % quantile]),
                             poes=q_curve.tolist(),
-                            location=wkt)
-                    )
+                            location=wkt))
 
                 # then means
                 if self.mean_hazard_curves:
-                    m_curve = mean_curve(curve_poes, weights=weights)
+                    m_curve = average(curve_poes, weights)
                     inserter.add(
                         models.HazardCurveData(
                             hazard_curve_id=container_ids['mean'],
                             poes=m_curve.tolist(),
-                            location=wkt)
-                    )
+                            location=wkt))
             inserter.flush()
 
     def post_process(self):
