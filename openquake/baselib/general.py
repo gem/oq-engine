@@ -586,7 +586,7 @@ def average(accumdicts, weights=None):
     Compute the weighted average of a set of AccumDicts
     """
     if weights:
-        assert sum(weights) == 1.
+        assert abs(sum(weights) - 1.) < 1E-15
     else:
         weights = [1. / len(accumdicts)] * len(accumdicts)
     return sum(acc * float(weight) for acc, weight in zip(accumdicts, weights))

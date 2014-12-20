@@ -1,7 +1,7 @@
 import unittest
 import numpy
 from scipy.stats import mstats
-from openquake.commonlib.calculators import calc
+from openquake.risklib import scientific
 
 aaae = numpy.testing.assert_array_almost_equal
 
@@ -20,7 +20,7 @@ class HazardMapsTestCase(unittest.TestCase):
         poe = 0.2
 
         expected = [[0.00847798, 0.00664814, 0.0098, 0, 0.007]]
-        actual = calc.compute_hazard_maps(curves, imls, poe)
+        actual = scientific.compute_hazard_maps(curves, imls, poe)
         aaae(expected, actual)
 
     def test_compute_hazard_map_poes_list_of_one(self):
@@ -39,7 +39,7 @@ class HazardMapsTestCase(unittest.TestCase):
         imls = [0.005, 0.007, 0.0098]
         poe = [0.2]
         expected = [[0.00847798, 0.00664814, 0.0098, 0, 0.007]]
-        actual = calc.compute_hazard_maps(curves, imls, poe)
+        actual = scientific.compute_hazard_maps(curves, imls, poe)
         aaae(expected, actual)
 
     def test_compute_hazard_map_multi_poe(self):
@@ -56,7 +56,7 @@ class HazardMapsTestCase(unittest.TestCase):
             [0.0098, 0.00792555, 0.0098, 0.005,  0.0098],
             [0.00847798, 0.00664814, 0.0098, 0, 0.007]
         ]
-        actual = calc.compute_hazard_maps(curves, imls, poes)
+        actual = scientific.compute_hazard_maps(curves, imls, poes)
         aaae(expected, actual)
 
 
@@ -71,7 +71,7 @@ class MeanCurveTestCase(unittest.TestCase):
 
         expected_mean_curve = numpy.array([0.83, 0.67333333, 0.54333333, 0.17])
         numpy.testing.assert_allclose(
-            expected_mean_curve, calc.mean_curve(curves))
+            expected_mean_curve, scientific.mean_curve(curves))
 
     def test_compute_mean_curve_weighted(self):
         curves = [
@@ -84,7 +84,7 @@ class MeanCurveTestCase(unittest.TestCase):
         expected_mean_curve = numpy.array([0.885, 0.735, 0.586, 0.213])
         numpy.testing.assert_allclose(
             expected_mean_curve,
-            calc.mean_curve(curves, weights=weights))
+            scientific.mean_curve(curves, weights=weights))
 
     def test_compute_mean_curve_weights_None(self):
         # If all weight values are None, ignore the weights altogether
@@ -98,7 +98,7 @@ class MeanCurveTestCase(unittest.TestCase):
         expected_mean_curve = numpy.array([0.83, 0.67333333, 0.54333333, 0.17])
         numpy.testing.assert_allclose(
             expected_mean_curve,
-            calc.mean_curve(curves, weights=weights))
+            scientific.mean_curve(curves, weights=weights))
 
     def test_compute_mean_curve_invalid_weights(self):
         curves = [
@@ -108,7 +108,7 @@ class MeanCurveTestCase(unittest.TestCase):
         ]
         weights = [0.6, None, 0.4]
 
-        means = calc.mean_curve(curves, weights)
+        means = scientific.mean_curve(curves, weights)
         self.assertTrue(numpy.isnan(means).all())
 
 
@@ -151,7 +151,7 @@ class QuantileCurveTestCase(unittest.TestCase):
              4.2766000e-02, 1.9643000e-02, 8.1923000e-03, 2.9157000e-03,
              7.9955000e-04, 1.5233000e-04, 1.5582000e-05],
         ]
-        actual_curve = calc.quantile_curve(curves, quantile)
+        actual_curve = scientific.quantile_curve(curves, quantile)
 
         # TODO(LB): Check with our hazard experts to see if this is reasonable
         # tolerance. Better yet, get a fresh set of test data. (This test data
@@ -177,7 +177,7 @@ class QuantileCurveTestCase(unittest.TestCase):
         ]
         weights = [0.5, 0.3, 0.2]
 
-        actual_curve = calc.quantile_curve(curves, quantile, weights)
+        actual_curve = scientific.quantile_curve(curves, quantile, weights)
 
         numpy.testing.assert_allclose(expected_curve, actual_curve)
 
@@ -193,6 +193,6 @@ class QuantileCurveTestCase(unittest.TestCase):
         ]
         weights = [0.2, 0.3, 0.5]
 
-        actual_curve = calc.quantile_curve(curves, quantile, weights)
+        actual_curve = scientific.quantile_curve(curves, quantile, weights)
 
         numpy.testing.assert_allclose(expected_curve, actual_curve)
