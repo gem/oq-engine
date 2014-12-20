@@ -93,7 +93,7 @@ class MeanCurveTestCase(unittest.TestCase):
             [0.87, 0.76, 0.59, 0.21],
             [0.62, 0.41, 0.37, 0.0],
         ]
-        weights = [None, None, None]
+        weights = None
 
         expected_mean_curve = numpy.array([0.83, 0.67333333, 0.54333333, 0.17])
         numpy.testing.assert_allclose(
@@ -108,9 +108,8 @@ class MeanCurveTestCase(unittest.TestCase):
         ]
         weights = [0.6, None, 0.4]
 
-        self.assertRaises(
-            ValueError, calc.mean_curve, curves, weights
-        )
+        means = calc.mean_curve(curves, weights)
+        self.assertTrue(numpy.isnan(means).all())
 
 
 class QuantileCurveTestCase(unittest.TestCase):
@@ -178,8 +177,7 @@ class QuantileCurveTestCase(unittest.TestCase):
         ]
         weights = [0.5, 0.3, 0.2]
 
-        actual_curve = calc.weighted_quantile_curve(
-            curves, weights, quantile)
+        actual_curve = calc.quantile_curve(curves, quantile, weights)
 
         numpy.testing.assert_allclose(expected_curve, actual_curve)
 
@@ -195,7 +193,6 @@ class QuantileCurveTestCase(unittest.TestCase):
         ]
         weights = [0.2, 0.3, 0.5]
 
-        actual_curve = calc.weighted_quantile_curve(
-            curves, weights, quantile)
+        actual_curve = calc.quantile_curve(curves, quantile, weights)
 
         numpy.testing.assert_allclose(expected_curve, actual_curve)

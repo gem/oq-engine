@@ -205,6 +205,11 @@ def compute_hazard_maps(curves, imls, poes):
     return numpy.array(result).transpose()
 
 
+def mean_curve(curves, weights=None):
+    weights = weights or [1. / len(curves)] * len(curves)
+    return numpy.average(curves, axis=0, weights=weights)
+
+
 def quantile_curve(curves, quantile, weights=None):
     """
     Compute the weighted quantile aggregate of a set of curves
