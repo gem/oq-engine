@@ -163,7 +163,7 @@ def export_gmf_csv(key, export_dir, sitecol, rupture_tags, gmfs):
         for imt, gmf in gmfs.iteritems():
             for site, gmvs in zip(sitecol, gmf):
                 row = [imt, site.location.x, site.location.y] + list(gmvs)
-                f.write(' '.join(map(scientificformat, row)) + '\n')
+                f.write(scientificformat(row) + '\n')
     return {key: dest}
 
 ######################## export hazard curves ##############################

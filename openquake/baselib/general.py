@@ -589,7 +589,4 @@ def average(accumdicts, weights=None):
         assert sum(weights) == 1.
     else:
         weights = [1. / len(accumdicts)] * len(accumdicts)
-    result = AccumDict()
-    for acc, weight in zip(accumdicts, weights):
-        result += acc * weight
-    return result
+    return sum(acc * float(weight) for acc, weight in zip(accumdicts, weights))

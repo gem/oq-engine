@@ -123,13 +123,13 @@ class ClassicalCalculator(base.BaseHazardCalculator):
             a dictionary of hazard curves dictionaries
         """
         rlzs = self.rlzs_assoc.realizations
-	curves_by_rlz = self.rlzs_assoc.reduce(agg_prob, result)
+        curves_by_rlz = self.rlzs_assoc.reduce(agg_prob, result)
         oq = self.oqparam
 
         # export curves
         saved = AccumDict()
         exports = self.oqparam.exports.split(',')
-            curves = curves_by_rlz[rlz]
+        for rlz in rlzs:
             smlt_path = '_'.join(rlz.sm_lt_path)
             gsimlt_path = '_'.join(rlz.gsim_lt_path)
             for fmt in exports:
@@ -150,6 +150,12 @@ class ClassicalCalculator(base.BaseHazardCalculator):
                 oq.export_dir, fname, self.sitecol, mean_curves,
                 oq.imtls, oq.investigation_time)
         return saved
+
+    def hazard_maps(self, curves_by_imt):
+        return {imt:
+                calc.compute_hazard_maps(
+                    curves, self.oqparam.imtls[imt], self.oqparam.poes)
+                for imt, curves in curves_by_imt.iteritems()}
 
 
 @calculators.add('event_based')

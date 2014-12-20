@@ -579,9 +579,10 @@ class BaseLogicTree(object):
         if self.num_samples:
             # random sampling of the logic tree
             rnd = random.Random(self.seed)
+            weight = 1. / self.num_samples
             for _ in xrange(self.num_samples):
                 name, sm_lt_path = self.sample_path(rnd)
-                yield LtRealization(name, None, tuple(sm_lt_path), None)
+                yield LtRealization(name, weight, tuple(sm_lt_path), None)
         else:  # full enumeration
             for weight, smlt_path in self.root_branchset.enumerate_paths():
                 name = smlt_path[0].value
