@@ -23,7 +23,7 @@ import numpy
 
 from openquake.commonlib.export import export
 from openquake.commonlib.writers import (
-    scientificformat, floatformat, save_csv, concat)
+    scientificformat, floatformat, save_csv)
 from openquake.commonlib import hazard_writers
 from openquake.hazardlib.imt import from_string
 
@@ -172,7 +172,7 @@ HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
 @export.add('hazard_curves_csv')
-def export_hazard_curves_csv(key, export_dir, sitecol, rlz, curves_by_imt,
+def export_hazard_curves_csv(key, export_dir, fname, sitecol, curves_by_imt,
                              imtls, investigation_time=None):
     """
     Export the curves of the given realization into XML.
@@ -180,23 +180,19 @@ def export_hazard_curves_csv(key, export_dir, sitecol, rlz, curves_by_imt,
     :param key: output_type and export_type
     :param export_dir: the directory where to export
     :param sitecol: site collection
-    :param rlz: realization instance
+    :param fname: file name without extension
     :param curves_by_imt: dictionary with the curves keyed by IMT
     """
-    smlt_path = '_'.join(rlz.sm_lt_path)
-    gsimlt_path = '_'.join(rlz.gsim_lt_path)
-    fname = 'hazard_curve_multi-smltp_%s-gsimltp_%s-ltr_%d.csv' % (
-        smlt_path, gsimlt_path, rlz.ordinal)
     dest = os.path.join(export_dir, fname)
     rows = []
     for imt in sorted(curves_by_imt):
-        row = ['%s:%s' % (imt, concat(imtls[imt], ' '))]
+        row = ['%s:%s' % (imt, scientificformat(imtls[imt]))]
         for curve in curves_by_imt[imt]:
-            row.append(concat(curve, ' '))
+            row.append(scientificformat(curve))
         rows.append(row)
     locations = ['%s %s' % (s.location.x, s.location.y) for s in sitecol]
     save_csv(dest, numpy.array([['lon_lat'] + locations] + rows).T)
-    return {key: dest}
+    return {fname: dest}
 
 
 @export.add('hazard_curves_xml')
@@ -240,3 +236,25 @@ def export_hazard_curves_xml(key, export_dir, sitecol, rlz, curves_by_imt,
     with floatformat('%12.8E'):
         writer.serialize(hcurves)
     return {(key, rlz.ordinal): dest}
+
+
+@export.add('hazard_stats_csv')
+def export_stats_csv(key, export_dir, fname, sitecol, data_by_imt):
+    """
+    Export the scalar outputs.
+
+    :param key: output_type and export_type
+    :param export_dir: the directory where to export
+    :param sitecol: site collection
+    :param data_by_imt: dictionary of floats keyed by IMT
+    """
+    dest = os.path.join(export_dir, fname)
+    rows = []
+    for imt in sorted(data_by_imt):
+        row = [imt]
+        for col in data_by_imt[imt]:
+            row.append(scientificformat(col))
+        rows.append(row)
+    locations = ['%s %s' % (s.location.x, s.location.y) for s in sitecol]
+    save_csv(dest, numpy.array([['lon_lat'] + locations] + rows).T)
+    return {fname: dest}

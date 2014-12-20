@@ -29,7 +29,7 @@ from openquake.hazardlib.calc.filters import source_site_distance_filter, \
     rupture_site_distance_filter
 from openquake.commonlib import readinput, parallel
 from openquake.commonlib.export import export
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, average
 
 from openquake.commonlib.calculators import calculators, base, calc
 
@@ -122,16 +122,31 @@ class ClassicalCalculator(base.BaseHazardCalculator):
         :param result:
             a dictionary of hazard curves dictionaries
         """
+        rlzs = self.rlzs_assoc.realizations
         curves_by_rlz = self.rlzs_assoc.combine(agg_prob, result)
         oq = self.oqparam
         saved = AccumDict()
         exports = self.oqparam.exports.split(',')
         for rlz in self.rlzs_assoc.realizations:
+            smlt_path = '_'.join(rlz.sm_lt_path)
+            gsimlt_path = '_'.join(rlz.gsim_lt_path)
             for fmt in exports:
+                fname = 'hazard_curve_multi-smltp_%s-gsimltp_%s-ltr_%d.%s' % (
+                    smlt_path, gsimlt_path, rlz.ordinal, fmt)
                 saved += export(
                     'hazard_curves_' + fmt,
-                    oq.export_dir, self.sitecol, rlz, curves_by_rlz[rlz],
+                    oq.export_dir, fname, self.sitecol, curves_by_rlz[rlz],
                     oq.imtls, oq.investigation_time)
+        if len(rlzs) == 1:  # cannot compute statistics
+            return saved
+        mean_curves = average(
+            [curves_by_rlz[rlz] for rlz in rlzs], [rlz.weight for rlz in rlzs])
+        for fmt in exports:
+            fname = 'hazard_curve_multi-mean.%s' % fmt
+            saved += export(
+                'hazard_curves_' + fmt,
+                oq.export_dir, fname, self.sitecol, mean_curves,
+                oq.imtls, oq.investigation_time)
         return saved
 
 
