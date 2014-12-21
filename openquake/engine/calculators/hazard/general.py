@@ -41,7 +41,6 @@ from openquake.engine.input import exposure
 from openquake.engine import logs
 from openquake.engine import writer
 from openquake.engine.calculators import base
-from openquake.baselib.general import average
 from openquake.risklib import scientific
 
 from openquake.engine.calculators.hazard.post_processing import (
@@ -555,7 +554,7 @@ class BaseHazardCalculator(base.Calculator):
 
                 # then means
                 if self.mean_hazard_curves:
-                    m_curve = average(curve_poes, weights)
+                    m_curve = scientific.mean_curve(curve_poes, weights)
                     inserter.add(
                         models.HazardCurveData(
                             hazard_curve_id=container_ids['mean'],
