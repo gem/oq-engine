@@ -53,9 +53,9 @@ class MeanCurveTestCase(unittest.TestCase):
             [0.62, 0.41, 0.37, 0.0],
         ]
         weights = [0.6, None, 0.4]
-
-        means = scientific.mean_curve(curves, weights)
-        self.assertTrue(numpy.isnan(means).all())
+        with self.assertRaises(TypeError):
+            # None is not a valid weight
+            scientific.mean_curve(curves, weights)
 
 
 class QuantileCurveTestCase(unittest.TestCase):

@@ -57,4 +57,3 @@ class HazardMapsTestCase(unittest.TestCase):
         ]
         actual = calc.compute_hazard_maps(curves, imls, poes)
         aaae(expected, actual)
-

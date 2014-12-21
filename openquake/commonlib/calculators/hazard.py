@@ -27,9 +27,10 @@ from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
 from openquake.hazardlib.calc.filters import source_site_distance_filter, \
     rupture_site_distance_filter
+from openquake.risklib import scientific
 from openquake.commonlib import readinput, parallel
 from openquake.commonlib.export import export
-from openquake.baselib.general import AccumDict, average
+from openquake.baselib.general import AccumDict
 
 from openquake.commonlib.calculators import calculators, base, calc
 
@@ -141,8 +142,11 @@ class ClassicalCalculator(base.BaseHazardCalculator):
                     oq.imtls, oq.investigation_time)
         if len(rlzs) == 1:  # cannot compute statistics
             return saved
-        mean_curves = average(
-            [curves_by_rlz[rlz] for rlz in rlzs], [rlz.weight for rlz in rlzs])
+
+        weights = (None if oq.number_of_logic_tree_samples
+                   else [rlz.weight for rlz in rlzs])
+        mean_curves = scientific.mean_curve(
+            [curves_by_rlz[rlz] for rlz in rlzs], weights)
         for fmt in exports:
             fname = 'hazard_curve_multi-mean.%s' % fmt
             saved += export(

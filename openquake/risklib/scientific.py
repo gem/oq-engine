@@ -885,12 +885,18 @@ def loss_map_matrix(poes, curves):
     ).reshape((len(poes), len(curves)))
 
 
-def mean_curve(curves, weights=None):
+def mean_curve(values, weights=None):
     """
     Compute the mean by using numpy.average on the first axis.
     """
-    weights = weights or [1. / len(curves)] * len(curves)
-    return numpy.average(curves, axis=0, weights=weights)
+    if weights:
+        weights = map(float, weights)
+        assert abs(sum(weights) - 1.) < 1E-15
+    else:
+        weights = [1. / len(values)] * len(values)
+    if isinstance(values[0], (numpy.ndarray, list, tuple)):  # fast lane
+        return numpy.average(values, axis=0, weights=weights)
+    return sum(value * weight for value, weight in zip(values, weights))
 
 
 def quantile_curve(curves, quantile, weights=None):
@@ -1031,5 +1037,5 @@ def asset_statistics(
     quantile_curves = numpy.array(
         [[losses, quantile_curve(curves_poes, quantile, weights)]
          for quantile in quantiles]).reshape((len(quantiles), 2, len(losses)))
-    quantile_maps = loss_map_matrix(poes, quantile_curves).T
+    quantile_maps = loss_map_matrix(poes, quantile_curves).transpose()
     return (mean_curve_, mean_map, quantile_curves, quantile_maps)

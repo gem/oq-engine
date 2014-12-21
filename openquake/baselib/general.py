@@ -579,14 +579,3 @@ def groupby(objects, key):
     """
     kgroups = itertools.groupby(sorted(objects, key=key), key)
     return collections.OrderedDict((k, list(group)) for k, group in kgroups)
-
-
-def average(accumdicts, weights=None):
-    """
-    Compute the weighted average of a set of AccumDicts
-    """
-    if weights:
-        assert abs(sum(weights) - 1.) < 1E-15
-    else:
-        weights = [1. / len(accumdicts)] * len(accumdicts)
-    return sum(acc * float(weight) for acc, weight in zip(accumdicts, weights))
