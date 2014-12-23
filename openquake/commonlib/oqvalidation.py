@@ -19,7 +19,6 @@
 import os
 import re
 import logging
-import tempfile
 import collections
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.commonlib import valid
@@ -275,8 +274,8 @@ class OqParam(valid.ParamSet):
         """
         if not hasattr(self, 'export_dir'):
             self.export_dir = os.path.expanduser('~')  # home directory
-            logging.warn('export_dir not specified. The outputs will be '
-                         'written in export_dir=%s' % self.export_dir)
+            logging.warn('export_dir not specified. Using export_dir=%s'
+                         % self.export_dir)
             return True
         elif not os.path.exists(self.export_dir):
             # check that we can write on the parent directory
