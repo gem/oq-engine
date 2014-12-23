@@ -34,6 +34,7 @@ tspace_path='/var/lib/postgresql/9.1/main/ts'
 # What table spaces should be created?
 tspace_list="hzrdi hzrdr riski riskr uiapi"
 
+# defaults to be overridden by the arguments given in the command-line
 db_port=5432
 db_name="openquake2"
 user_interaction="on"
