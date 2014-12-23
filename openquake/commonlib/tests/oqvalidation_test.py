@@ -1,3 +1,4 @@
+import os
 import mock
 import unittest
 import tempfile
@@ -105,3 +106,14 @@ class OqParamTestCase(unittest.TestCase):
             )
         self.assertIn('The `export_dir` parameter must refer to a '
                       'directory', str(ctx.exception))
+
+    def test_missing_export_dir(self):
+        oq = OqParam(
+            calculation_mode='event_based', inputs={},
+            sites='0.1 0.2',
+            reference_vs30_type='measured',
+            reference_vs30_value=200,
+            reference_depth_to_2pt5km_per_sec=100,
+            reference_depth_to_1pt0km_per_sec=150,
+            maximum_distance=400)
+        self.assertEqual(oq.export_dir, os.path.expanduser('~'))
