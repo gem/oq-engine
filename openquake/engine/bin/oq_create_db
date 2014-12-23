@@ -25,8 +25,6 @@ HSD
 exit 0
 }
 
-# Openquake version
-oq_version=`python -c "import openquake.engine; print openquake.engine.__version__"`
 
 # Stop at the first error in a batch to give a chance to see the error message
 psql_batch_options='--set ON_ERROR_STOP=1'
@@ -37,7 +35,7 @@ tspace_path='/var/lib/postgresql/9.1/main/ts'
 tspace_list="hzrdi hzrdr riski riskr uiapi"
 
 db_port=5432
-db_name=`python -c "from openquake.engine.settings import DATABASES; print DATABASES['default']['NAME']"`
+db_name="openquake2"
 user_interaction="on"
 check_table_spaces="on"
 table_spaces_only="off"
