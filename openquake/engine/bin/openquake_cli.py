@@ -343,7 +343,8 @@ def export_stats(job_id, target_dir, output_type, export_type):
         sys.exit('The output type %s is not supported. Choose one of %s' % (
             output_type, ', '.join(supported)))
     queryset = models.Output.objects.filter(
-        oq_job=job_id, output_type=output_type).order_by('display_name')
+        oq_job=job_id, output_type=output_type,
+        statistics__isnull=False).order_by('display_name')
     if queryset.count() == 0:
         print 'There are no outputs of kind %s' % output_type
         return
