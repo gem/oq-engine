@@ -405,7 +405,6 @@ class CauzziEtAl2014NoSOF(CauzziEtAl2014):
         # convert from cm/s**2 to g for SA and from m/s**2 to g for PGA (PGV
         # is already in cm/s) and also convert from base 10 to base e.
         if isinstance(imt, PGA):
-            #mean = np.log((10 ** mean) / g)
             mean = np.log((10 ** mean) * ((2 * np.pi / 0.01) ** 2) *
                           1e-2 / g)
         elif isinstance(imt, SA):
