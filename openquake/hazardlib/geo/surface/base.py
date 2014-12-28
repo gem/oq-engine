@@ -239,7 +239,7 @@ class BaseQuadrilateralSurface(BaseSurface):
         """
         return self.get_mesh().get_joyner_boore_distance(mesh)
 
-    def get_ry0_distance(self, mesh):
+    def get_ry0_distance(self, mesh, option=1):
         """
         See :meth:`superclass method
         <.base.BaseSurface.get_ry0_distance>`
@@ -248,31 +248,54 @@ class BaseQuadrilateralSurface(BaseSurface):
         The method computes the two
 
         """
-        top_edge = self.get_mesh()[0:1]
 
-        p_1 = Point(top_edge.lons[0, 0], top_edge.lats[0, 0],
-                    top_edge.depths[0, 0])
-        p_2 = Point(top_edge.lons[0, 1], top_edge.lats[0, 1],
-                    top_edge.depths[0, 1])
-        azimuth = p_1.azimuth(p_2)
+        if option == 1:
 
-        dst1 = geodetic.distance_to_arc(p_1.longitude,
-                                        p_1.latitude,
-                                        (azimuth+90.) % 360,
-                                        mesh.lons, mesh.lats)
+            # This option computes ry0 by using an average strike direction
+            top_edge = self.get_mesh()[0:1]
+            mean_strike = self.get_strike()
 
-        p_1 = Point(top_edge.lons[0, -1], top_edge.lats[0, -1],
-                    top_edge.depths[0, -1])
-        p_2 = Point(top_edge.lons[0, -2], top_edge.lats[0, -2],
-                    top_edge.depths[0, -2])
-        azimuth = p_1.azimuth(p_2)
+            dst1 = geodetic.distance_to_arc(top_edge.lons[0, 0],
+                                            top_edge.lats[0, 0],
+                                            (mean_strike+90.) % 360,
+                                            mesh.lons, mesh.lats)
 
-        dst2 = geodetic.distance_to_arc(p_1.longitude,
-                                        p_1.latitude,
-                                        (azimuth+90.) % 360,
-                                        mesh.lons, mesh.lats)
+            dst2 = geodetic.distance_to_arc(top_edge.lons[0, -1],
+                                            top_edge.lats[0, -1],
+                                            (mean_strike+90.) % 360,
+                                            mesh.lons, mesh.lats)
 
-        # This covers the most classical case
+        elif option == 2:
+
+            # This option computes ry0 using the lines perpendicular to the
+            # segments at the two extremes of the fault trace
+            top_edge = self.get_mesh()[0:1]
+
+            # This computes the azimuth of the first segment of the trace
+            p_1 = Point(top_edge.lons[0, 0], top_edge.lats[0, 0],
+                        top_edge.depths[0, 0])
+            p_2 = Point(top_edge.lons[0, 1], top_edge.lats[0, 1],
+                        top_edge.depths[0, 1])
+            azimuth = p_1.azimuth(p_2)
+
+            dst1 = geodetic.distance_to_arc(p_1.longitude,
+                                            p_1.latitude,
+                                            (azimuth+90.) % 360,
+                                            mesh.lons, mesh.lats)
+
+            # This computes the azimuth of the last segment of the trace
+            p_1 = Point(top_edge.lons[0, -1], top_edge.lats[0, -1],
+                        top_edge.depths[0, -1])
+            p_2 = Point(top_edge.lons[0, -2], top_edge.lats[0, -2],
+                        top_edge.depths[0, -2])
+            azimuth = p_1.azimuth(p_2)
+
+            dst2 = geodetic.distance_to_arc(p_1.longitude,
+                                            p_1.latitude,
+                                            (azimuth+90.) % 360,
+                                            mesh.lons, mesh.lats)
+
+        # Get the shortest distance from two two lines
         dst = numpy.fmin(numpy.abs(dst1), numpy.abs(dst2))
 
         return dst
