@@ -1,3 +1,156 @@
+python-oq-hazardlib (0.12.1-0) precise; urgency=low
+
+  * consistency in version management between debian/ubuntu package and
+    library from git sources
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 18 Dec 2014 15:02:40 +0100
+
+python-oq-hazardlib (0.12.0-0) precise; urgency=low
+
+  * Bugs fixed in 0.12.0 release: http://goo.gl/GjbF2r
+  * Adds "set_mfd" function to modify Evenly Discretized MFD
+  * Implements Campbell & Bozorgnia (2014) NGA-West 2 GMPE
+  * Now ParametricProbabilisticRupture is unpickled correctly
+  * Magnitude scaling for subduction, Strasser et al. (2010)
+  * Added some utilities which are useful when implementing hazard
+    calculators in commonlib
+  * results in terms of g
+  * Implements the Bindi et al. (2011) GMPE (Cleaned up implementation from
+    Francesco Martinelli, INGV: https://github.com/gem/oq-hazardlib/pull/254)
+  * Added to each source the optional attributes trt_model_id, weight, seed
+  * Modify get_fault_vertices_3d in simple_fault.py and the test
+  * Introduced the max_distance concept in the GeographicObjects class
+  * Ef2013ch
+  * This is making sure that the current CY2008 is not modified Small fixes to
+    documentation Small fixes to documentation update utils_swiss_gmpe CY2008
+    added a new class _swiss.py, pep8 pass ZH2006 - added a new
+    class - zh2006_swiss CY2008Swiss - p8p fixes
+    CY2008Swiss - adjusted single_sigma, upgrade of swiss_utils.py to cover
+    these adjustments CY2008 adjusted, without test ZH2006Swiss - intendation
+    error fixed ZH2006Swiss - minor fix -OQ ready ZH2006Swiss - minor fix -OQ
+    ready ZH2006Swiss - single station sigma adjusted -OQ ready CY2008Swiss
+    test and tables clean -up CY2008 extended and adjusted GMPE for use in the
+    new Swiss Hazard Model [2014] ZH2006Swiss copyrights update ZH2006Swiss
+    pep8 fixes ZH2006Swiss - embeded single-station logic-tree no pep8
+    ZH2006Swiss - embeded single-station logic-tree no pep8
+  * Cy2008ch
+  * Zh2006ch
+  * Implements Convertito et al. (2012) GMPE
+  * Modifications of the Cauzzi and Faccioli (2008) for the Swiss Hazard model
+  * Reverted the merge of the branch CF2008
+  * Implements Boore, Stewart, Seyhan and Atkinson (2014) NGA-West 2 GMPE
+  * Defines Swiss AB2010 to update std dev definiton
+  * Cf2008
+  * Changed the API of the GmfComputer
+  * Fixed a link in a comment
+  * add rst file for chiou_youngs_2014 GMPE
+  * AkB2010 extended and adjusted for use in the new Swiss Hazard model [2014]
+  * added Bradley 2013 GMPE
+  * Make sure that context objects are not changed inside 'get_mean_and_stddevs'
+  * Initial implementation of Chiou & Youngs (2014) GMPE
+  * Initial implementation of Megawati & Pan (2010) GMPE
+  * Adding get_fault_vertexes_3d in hazardlib/geo/surface/simple_fault.py
+  * added NZ specific McVerry et al 2006 GMPE for Asc, SInter, SSlab and Volc
+  * Implements Fukushima & Tanaka (1990) GMPE for PGA
+  * Extend rup context
+  * added validation mechanism to ComplexFaultSurface
+  * Added a class to extract the closest object
+  * added class method to construct planar surfaces from corner points
+  * Support for nonparametric sources and a bit of cleanup
+  * Add tox.ini config for easy test running
+  * Implement corrections for Si & Midorikawa 1999 GMPE
+  * imt.from_string now returns a ValueError and can be used as a validator
+  * Rx investigation
+  * Made the GmfComputer more debuggable
+  * Provide a meaningful error message when a correlation model is provided
+    together with a GMPE without inter/intra stddevs
+  * extend SiteContext to accept also sites coordinates (lons and lats)
+  * Add "contributors" file
+  * Add test run instructions to README
+  * Separates correlation model from distance calculation
+  * Add a debug flag to enable set -x in packager.sh
+  * Changed the GmfComputer to work with several GSIMs at the time
+  * Solved a long standing bug with inconsistent unpickling of the IMTs
+  * Introduce a GmfComputer class calling gsim.make_context only once
+  * Cleanup of the filtering and removed unused code
+  * replaced repi with rjb in Boore et al. 1993 GMPE
+  * fixed bug in as1997 and re-arranged data to let the bug showing up
+  * fixed sadigh 1997 GMPE when mag > 8.5
+  * Abrahamson and Silva 1997 GMPE
+  * Garcia et al. 2005 GMPE
+  * Fixes the Lin 2009
+  * Campbell and Bozorgnia 2003 GMPE
+  * Climent94
+  * Implements comprehensive Akkar et al. (2014) GMPE set
+  * Added a SiteCollection.indices property
+  * Deprecation mechanism for GSIM classes
+  * Fix branch var to be compliant within the new CI git plugin
+  * Light weight site collection
+  * Updates Copyright to 2014
+  * Fixed sphinx build
+  * Magnitude conversion equation in Atkinson & Boore 1995 GMPE
+  * Replaced the method mfd.get_min_mag with a method mfd.get_min_max_mag
+  * fix-frankel
+  * Optimize disagg
+  * Expand the result of calc.gmf.ground_motion_fields only if a nontrivial
+    filtering function is passed
+  * Ceus gmpes
+  * Implements the Douglas et al. (2013) GMPE (Stochastic)
+  * fixed doc
+  * Add the Tavakoli and Pezeshk (2005) GMPE
+  * Youngs et al. 1997 for NSHMP 2008 US model
+  * Added a dictionary pmf_map
+  * Zhao et al. 2006 for NSHMP 2008 US model
+  * Atkinson and Boore 2003 GMPEs
+  * geomatrix 1993 GMPE for subduction intraslab
+  * somerville et al. 2001 GMPE
+  * Implement Silva et al. 2002 GMPE
+  * Implement Atkinson and Boore 2006 GMPE for 2008 US model
+  * Frankel et al. 1996 GMPE
+  * Toro et. al. 1997 GMPE as needed for the 2008 NSHMP-US model
+  * Campbell 2003 GMPE for 2008 US hazard model
+  * Add to the SiteCollection an array of site ids
+  * Simplified SiteCollection.expand
+  * We must not lose the traceback of exceptions
+  * Added the method get_surface_vertexes
+  * Remove 'time span' from stochastic event set and disaggregation calculators
+  * Fixed a few links for Sphinx
+  * Implement Non Parametric source and generalized hazard curve calculator
+  * fixed bug with rupture and distance parameters definition
+  * Added a __repr__ to source objects
+  * Implemented count_ruptures method
+  * Boore Atkinson 2011
+  * Atkinson and Boore 1995 GMPE for Canada Model
+  * Modifications to Youngs et al. 1997 GMPE for 2010 Western Canada Model
+  * Berge-Thierry et al. 2003 GMPE
+  * Implement Boore, Joyner and Fumal 1993 GMPE for 2010 Western Canada Model
+  * Make Rx Distance calculation working properly with complex geometries
+  * Atkinson and Boore 1995 GMPE
+  * Implements the Boore, Joyner & Fumal (1997) GMPE
+  * Moved the tests inside the package
+  * IMT objects are now pickleable
+  * Fixes header in Lin (2009) doc
+  * Added the RotD50 horizontal component
+  * Implements Lin (2009) GMPE for Active Shallow Faults in Taiwan
+  * Fix rupture-sites distance filtering for point and area sources
+  * Fix rupture distance filtering in Point and Area Source
+  * better documentation for Akkar Bommer 2010 GMPE
+  * Undo a false optimization in the SiteCollection.
+  * Magniture-Area scaling relationship to mimic point ruptures
+  * Implements GMPE of Pezeshk et al (2011) for Eastern North America
+  * Create abstract classes to represent scaling relationships with
+    uncertainties
+  * Implements Campbell & Bozorgnia (2008) GMPE
+  * Somerville et al. 2009 GMPE for Australia Hazard Model
+  * Allen 2012 GMPE for Australia Hazard Model
+  * Compute ground motion fields given the epsilons in input
+  * Add __version__ to package init [r=matley] [f=*trivial]
+  * CEUS 2011 magnitude scaling relationship [r=larsbutler]
+  * Simple fault surface: better error messages for checking mesh dimensions
+  * Pickeable sources
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 10 Dec 2014 11:17:03 +0100
+
 python-oq-hazardlib (0.11.0-0) precise; urgency=low
 
   * refactor algorithm for calculating planar surface coordinates (LP: #1190569)

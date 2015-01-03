@@ -208,6 +208,12 @@ class GeographicObjectsTest(unittest.TestCase):
         point = self.points.get_closest(0.0, 0.2)
         self.assertEqual(point, Point(0.0, 0.2))
 
+    def test_max_distance(self):
+        point = self.points.get_closest(0.0, 0.21, max_distance=100)  # close
+        self.assertEqual(point, Point(0.0, 0.2))
+        point = self.points.get_closest(0.0, 0.21, max_distance=0.1)  # far
+        self.assertIsNone(point)
+
 
 class MinDistanceToSegmentTest(unittest.TestCase):
 

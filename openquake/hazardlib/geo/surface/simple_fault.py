@@ -185,6 +185,7 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
         """
         # Similar to :meth:`from_fault_data`, we just don't resample edges
         dip_tan = math.tan(math.radians(dip))
+        hdist_top = upper_seismogenic_depth / dip_tan
         hdist_bottom = lower_seismogenic_depth / dip_tan
 
         strike = fault_trace[0].azimuth(fault_trace[-1])
@@ -200,7 +201,7 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
         t_dep = []
 
         for point in fault_trace.points:
-            top_edge_point = point.point_at(0, 0, 0)
+            top_edge_point = point.point_at(hdist_top, 0, azimuth)
             bottom_edge_point = point.point_at(hdist_bottom, 0, azimuth)
 
             lons.append(top_edge_point.longitude)

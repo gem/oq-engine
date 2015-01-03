@@ -36,7 +36,7 @@ class EvenlyDiscretizedMFD(BaseMFD):
         annual occurrence rates. The resulting histogram has as many bins
         as this list length.
     """
-    MODIFICATIONS = set()
+    MODIFICATIONS = set(('set_mfd',))
     __slots__ = 'min_mag bin_width occurrence_rates'.split()
 
     def __init__(self, min_mag, bin_width, occurrence_rates):
@@ -83,3 +83,23 @@ class EvenlyDiscretizedMFD(BaseMFD):
         """
         return self.min_mag, self.min_mag + self. bin_width * (
             len(self.occurrence_rates) - 1)
+
+    def modify_set_mfd(self, min_mag, bin_width, occurrence_rates):
+        """
+        Applies absolute modification of the MFD from the ``min_mag``,
+        ``bin_width`` and ``occurrence_rates`` modification.
+
+        :param min_mag:
+            Positive float value representing the middle point of the first
+            bin in the histogram.
+        :param bin_width:
+            A positive float value -- the width of a single histogram bin.
+        :param occurrence_rates:
+            The list of non-negative float values representing the actual
+            annual occurrence rates. The resulting histogram has as many bins
+            as this list length.
+        """
+        self.min_mag = min_mag
+        self.bin_width = bin_width
+        self.occurrence_rates = occurrence_rates
+        self.check_constraints()

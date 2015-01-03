@@ -22,17 +22,27 @@ Built-in GSIMs
     atkinson_boore_2003
     atkinson_boore_2006
     berge_thierry_2003
+    bindi_2011
     boore_1993
     boore_1997
+    boore_2014
     boore_atkinson_2008
     boore_atkinson_2011
+    bradley_2013
     campbell_2003
     campbell_bozorgnia_2003
     campbell_bozorgnia_2008
+    campbell_bozorgnia_2014
     cauzzi_faccioli_2008
+    cauzzi_faccioli_2008_swiss
     chiou_youngs_2008
+    chiou_youngs_2008_swiss
+    chiou_youngs_2014
     climent_1994
+    convertito_2012
     douglas_stochastic_2013
+    edwards_fah_2013a
+    edwards_fah_2013f
     faccioli_2010
     frankel_1996
     fukushima_tanaka_1990
@@ -53,6 +63,7 @@ Built-in GSIMs
     toro_2002
     youngs_1997
     zhao_2006
+    zhao_2006_swiss
 
 
 -----------------------------------

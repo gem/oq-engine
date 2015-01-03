@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # The Hazard Library
 # Copyright (C) 2012-2014, GEM Foundation
 #
@@ -14,7 +15,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`AkkarBommer2010`.
+Module exports :class:`AkkarBommer2010`,
+class:`AkkarBommer2010SWISS01`,
+class:`AkkarBommer2010SWISS04`,
+class:`AkkarBommer2010SWISS08`,
 """
 from __future__ import division
 
@@ -25,9 +29,16 @@ from scipy.constants import g
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.gsim.akkar_bommer_2010_swiss_coeffs import (
+    COEFFS_FS_ROCK_SWISS01,
+    COEFFS_FS_ROCK_SWISS04,
+    COEFFS_FS_ROCK_SWISS08
+)
+from openquake.hazardlib.gsim.utils_swiss_gmpe import _apply_adjustments
 
 
 class AkkarBommer2010(GMPE):
+
     """
     Implements GMPE developed by Sinan Akkar and Julian J. Bommer
     and published as "Empirical Equations for the Prediction of PGA, PGV,
@@ -37,11 +48,12 @@ class AkkarBommer2010(GMPE):
     context of the SHARE project and assumed to be equal to SA at 3 s but
     scaled with proper factor.
     Equation coefficients for PGA and SA periods up to 0.05 seconds have been
-    taken from updated model as described in 'Extending ground-motion prediction
-    equations for spectral accelerations to higher response frequencies',
-    Julian J. Bommer, Sinan Akkar, Stephane Drouet, Bull. Earthquake Eng. (2012)
-    volume 10, pages 379 - 399. Coefficients for PGV and SA above 0.05 seconds
-    are taken from the original 2010 publication.
+    taken from updated model as described in 'Extending ground-motion
+    prediction equations for spectral accelerations to higher response
+    frequencies',Julian J. Bommer, Sinan Akkar, Stephane Drouet,
+    Bull. Earthquake Eng. (2012) volume 10, pages 379 - 399.
+    Coefficients for PGV and SA above 0.05 seconds are taken from the
+    original 2010 publication.
     """
     #: Supported tectonic region type is 'active shallow crust' because the
     #: equations have been derived from data from Southern Europe, North
@@ -108,8 +120,9 @@ class AkkarBommer2010(GMPE):
         if isinstance(imt, SA) and imt.period == 4.0:
             mean /= 0.8
 
-        istddevs = self._get_stddevs(C, stddev_types,
-                                     num_sites=len(sites.vs30))
+        istddevs = self._get_stddevs(
+            C, stddev_types, num_sites=len(sites.vs30)
+        )
 
         stddevs = np.log(10 ** np.array(istddevs))
 
@@ -127,7 +140,7 @@ class AkkarBommer2010(GMPE):
             elif stddev_type == const.StdDev.INTRA_EVENT:
                 stddevs.append(C['Sigma1'] + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(C['Sigma2'] + np.zeros(num_sites))
+                stddevs.append(C['tau'] + np.zeros(num_sites))
         return stddevs
 
     def _compute_magnitude(self, rup, C):
@@ -145,7 +158,7 @@ class AkkarBommer2010(GMPE):
         ``(b4 + b5 * M) * log(sqrt(Rjb ** 2 + b6 ** 2))``
         """
         return (((C['b4'] + C['b5'] * rup.mag)
-                * np.log10((np.sqrt(dists.rjb ** 2.0 + C['b6'] ** 2.0)))))
+                 * np.log10((np.sqrt(dists.rjb ** 2.0 + C['b6'] ** 2.0)))))
 
     def _get_site_amplification(self, sites, imt, C):
         """
@@ -204,8 +217,8 @@ class AkkarBommer2010(GMPE):
     #: and Spectral Accelerations in Europe, the Mediterranean Region, and
     #: the Middle East'
     COEFFS = CoeffsTable(sa_damping=5, table="""\
-    IMT     b1          b2          b3          b4          b5          b6          b7           b8          b9           b10          Sigma1    Sigma2    SigmaTot
-    pga     1.43525    0.74866    -0.06520    -2.72950    0.25139    7.74959    0.08320     0.00766    -0.05823     0.07087    0.2611    0.1056    0.281646179
+    IMT      b1         b2          b3          b4         b5         b6         b7          b8          b9          b10        Sigma1    tau       SigmaTot
+    pga      1.43525    0.74866    -0.06520    -2.72950    0.25139    7.74959    0.08320     0.00766    -0.05823     0.07087    0.2611    0.1056    0.281646179
     0.01     1.43153    0.75258    -0.06557    -2.73290    0.25170    7.73304    0.08105     0.00745    -0.05886     0.07169    0.2616    0.1051    0.281922986
     0.02     1.48690    0.75966    -0.06767    -2.82146    0.26510    7.20661    0.07825     0.00618    -0.06111     0.06756    0.2635    0.1114    0.286080775
     0.03     1.64821    0.73507    -0.06700    -2.89764    0.27607    6.87179    0.06376    -0.00528    -0.06189     0.06529    0.2675    0.1137    0.290661212
@@ -271,5 +284,74 @@ class AkkarBommer2010(GMPE):
     2.95    -6.95669    2.51006    -0.16142    -1.90132    0.15081    7.60234    0.29987     0.13584    -0.03863    -0.02487    0.2872    0.1783    0.338045456
     3.00    -6.92924    2.45899    -0.15513    -1.76801    0.13314    7.21950    0.29772     0.13198    -0.03855    -0.02469    0.2876    0.1785    0.338490783
     4.00    -6.92924    2.45899    -0.15513    -1.76801    0.13314    7.21950    0.29772     0.13198    -0.03855    -0.02469    0.2876    0.1785    0.338490783
-    pgv    -2.12833    1.21448    -0.08137    -2.46942    0.22349    6.41443    0.20354     0.08484    -0.05856     0.01305    0.2562    0.1083    0.278149834
+    pgv     -2.12833    1.21448    -0.08137    -2.46942    0.22349    6.41443    0.20354     0.08484    -0.05856     0.01305    0.2562    0.1083    0.278149834
     """)
+
+
+class AkkarBommer2010SWISS01(AkkarBommer2010):
+
+    """
+    This class extends :class:`AkkarBommer2010`
+    adjusted to be used for the Swiss Hazard Model [2014].
+    1) kappa value
+    K-adjustments corresponding to model 01 - as prepared by Ben Edwards
+    K-value for PGA were not provided but infered from SA[0.01s]
+    the model considers a fixed value of vs30=1100m/s
+    2) small-magnitude correction
+    3) single station sigma - inter-event magnitude/distance adjustment
+
+    Disclaimer: these equations are modified to be used for the
+    Swiss Seismic Hazard Model [2014].
+    The use of these models is the soly responsability of the hazard modeler.
+
+    Model implmented by laurentiu.danciu@gmail.com
+    """
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
+        const.StdDev.TOTAL
+    ])
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+
+        mean, stddevs = super(AkkarBommer2010SWISS01, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+
+        tau_ss = 'tau'
+        log_phi_ss = np.log(10)
+        mean, stddevs = _apply_adjustments(
+            AkkarBommer2010.COEFFS, self.COEFFS_FS_ROCK[imt], tau_ss,
+            mean, stddevs, sites, rup, dists.rjb, imt, stddev_types,
+            log_phi_ss)
+
+        return mean,  np.log(10 ** np.array(stddevs))
+
+    COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS01
+
+
+class AkkarBommer2010SWISS04(AkkarBommer2010SWISS01):
+    """
+    This class extends :class:`AkkarBommer2010` following same strategy
+    as for :class:`AkkarBommer2010SWISS01`
+    """
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
+        const.StdDev.TOTAL
+    ])
+
+    COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS04
+
+
+class AkkarBommer2010SWISS08(AkkarBommer2010SWISS01):
+    """
+    This class extends :class:`AkkarBommer2010` following same strategy
+    as for :class:`AkkarBommer2010SWISS01` to be used for the
+    Swiss Hazard Model [2014].
+    """
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
+        const.StdDev.TOTAL
+    ])
+
+    COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS08
