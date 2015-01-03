@@ -74,8 +74,8 @@ class BaseSurface(object):
     def get_ry0_distance(self, mesh):
         """
         Compute the minimum distance between each point of a mesh and the great
-        circle arcs perpendicular to the fault trace and passing through the
-        end-points of the trace.
+        circle arcs perpendicular to the average strike direction of the
+        fault trace and passing through the end-points of the trace.
 
         :param mesh:
             :class:`~openquake.hazardlib.geo.mesh.Mesh` of points to calculate
@@ -241,12 +241,24 @@ class BaseQuadrilateralSurface(BaseSurface):
 
     def get_ry0_distance(self, mesh, option=1):
         """
-        See :meth:`superclass method
-        <.base.BaseSurface.get_ry0_distance>`
+        :param mesh:
+            :class:`~openquake.hazardlib.geo.mesh.Mesh` of points to calculate
+            Ry0-distance to.
+        :parameter option:
+            Admitted values for this parameter are 1 and 2. See description
+            below.
+        :returns:
+            Numpy array of distances in km.
+
+        See also :meth:`superclass method <.base.BaseSurface.get_ry0_distance>`
         for spec of input and result values.
 
-        The method computes the two
-
+        This method accepts an option id which determines the method to
+        be used for the calculation of the ry0 parameter. The default
+        method, the one selected with option 1, uses an average strike
+        direction. With option 2 the ry0 if computed using the lines
+        perpendicular to the two end segments of the set used to define
+        the fault trace.
         """
 
         if option == 1:
