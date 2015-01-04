@@ -87,7 +87,7 @@ class AbrahamsonSilva2014(GMPE):
         pga1180 = np.exp(self._compute_imt1180(PGA(), sites, rup, dists))
 
         # get the mean value
-        mean = (self._compute_base_term(C, rup, dists) +
+        mean = (self._compute_basic_term(C, rup, dists) +
                 self._compute_faulting_style_term(C, rup) +
                 self._compute_site_response_term(C, imt, sites, pga1180) +
                 self._compute_hanging_wall_term(C, dists, rup) +
@@ -105,28 +105,51 @@ class AbrahamsonSilva2014(GMPE):
         """
         Compute and return basic form, see page 1030.
         """
-        c1 = self.CONSTS['c1']
-        R = np.sqrt(dists.rrup ** 2 + self.CONSTS['c4'] ** 2)
-
-        base_term = (C['a1'] +
-                     C['a8'] * ((8.5 - rup.mag) ** 2) +
-                     (C['a2'] + self.CONSTS['a3'] * (rup.mag - c1)) *
-                     np.log(R))
-
-        if rup.mag <= c1:
-            return base_term + self.CONSTS['a4'] * (rup.mag - c1)
+        # Fictitious depth calculation
+        if rup.mag > 5.:
+            c4m = C['c4']
+        elif rup.mag > 4.:
+            c4m = C['c4'] - (C['c4']-1.) * (5. - rup.mag)
         else:
-            return base_term + self.CONSTS['a5'] * (rup.mag - c1)
+            c4m = 1.
+        R = np.sqrt(dists.rrup ** 2 + c4m ** 2)
+        # basic form
+        base_term = (C['a1'] + C['a8'] * (8.5 - rup.mag) +
+                     C['a17'] * dists.rrup +
+                     (C['a2'] + C['a3'] * (rup.mag - C['m1'])) * np.log(R))
+        # note that equation 2 at page 1030 do not specify the case for
+        # m == M1
+        if rup.mag > C['m1']:
+            base_term += C['a5'] * (rup.mag - C['m1'])
+        elif rup.mag >= self.CONSTS['m2']:
+            base_term += C['a4'] * (rup.mag - C['m1'])
+        else:
+            base_term += (C['a4'] * (self.CONSTS['m2'] - C['m1']) +
+                          C['a6'] * (rup.mag - self.CONSTS['m2']) +
+                          C['a7'] * (rup.mag - self.CONSTS['m2'])**2.)
+        return base_term
 
     def _compute_faulting_style_term(self, C, rup):
         """
         Compute and return faulting style term, that is the sum of the second
         and third terms in equation 1, page 74.
         """
+        # this implements equations 5 and 6 at page 1032. f7 is the 
+        # coefficient for reverse mechanisms while f8 is the the correction
+        # factor for normal ruptures
+        if rup.mag > 5.0:
+            f7 = C['a11']
+            f8 = C['a12']
+        elif rup.mag >= 4:
+            f7 = C['a11'] * (rup.mag - 4)
+            f8 = C['a12'] * (rup.mag - 4)
+        else:
+            f7 = 0.0
+            f8 = 0.0
         # ranges of rake values for each faulting mechanism are specified in
-        # table 2, page 75
-        return (C['a12'] * float(rup.rake > 30 and rup.rake < 150) +
-                C['a13'] * float(rup.rake > -120 and rup.rake < -60))
+        # table 2, page 1031
+        return (f7 * float(rup.rake > 30 and rup.rake < 150) +
+                f8 * float(rup.rake > -150 and rup.rake < -30))
 
     def _compute_site_response_term(self, C, imt, sites, pga1100):
         """
@@ -479,10 +502,9 @@ class AbrahamsonSilva2014(GMPE):
             else:
                 return 0.0625 * (period - 2.0)
 
-    #: Coefficient tables obtained by joining table 5a page 84, and table 5b
-    #: page 85.
+    #: Coefficient tables as per appendix B of Abrahamson et al. (2014)
     COEFFS = CoeffsTable(sa_damping=5, table="""\
-IMT     M1      Vlin    b       c       c4      a1      a2      a3      a4      a5      a6      a8      a10     a11     a12     a13     a14     a15     a17     a43     a44     a45     a46     a25     a28     a29     a31     a36     a37     a38     a39     a40     a41     a42     s1e     s2e     s3      s4      s1m     s2m     s5      s6
+IMT     m1      vlin    b       c       c4      a1      a2      a3      a4      a5      a6      a8      a10     a11     a12     a13     a14     a15     a17     a43     a44     a45     a46     a25     a28     a29     a31     a36     a37     a38     a39     a40     a41     a42     s1e     s2e     s3      s4      s1m     s2m     s5      s6
 0       6.75    660     -1.47   2.4     4.5     0.587   -0.79   0.275   -0.1    -0.41   2.154   -0.015  1.735   0       -0.1    0.6     -0.3    1.1     -0.0072 0.1     0.05    0       -0.05   -0.0015 0.0025  -0.0034 -0.1503 0.265   0.337   0.188   0       0.088   -0.196  0.044   0.754   0.52    0.47    0.36    0.741   0.501   0.54    0.6300
 -1      6.75    330     -2.02   2400    4.5     5.975   -0.919  0.275   -0.1    -0.41   2.366   -0.094  2.36    0       -0.1    0.25    0.22    0.3     -0.0005 0.28    0.15    0.09    0.07    -0.0001 0.0005  -0.0037 -0.1462 0.377   0.212   0.157   0       0.095   -0.038  0.065   0.662   0.51    0.38    0.38    0.66    0.51    0.58    0.5300
 0.01    6.75    660     -1.47   2.4     4.5     0.587   -0.790  0.275   -0.1    -0.41   2.154   -0.015  1.735   0       -0.1    0.6     -0.3    1.1     -0.0072 0.1     0.05    0       -0.05   -0.0015 0.0025  -0.0034 -0.1503 0.265   0.337   0.188   0       0.088   -0.196  0.044   0.754   0.52    0.47    0.36    0.741   0.501   0.54    0.6300
@@ -511,14 +533,6 @@ IMT     M1      Vlin    b       c       c4      a1      a2      a3      a4      
 
     #: equation constants (that are IMT independent)
     CONSTS = {
-        # coefficients in table 4, page 84
-        'c1': 6.75,
-        'c4': 4.5,
-        'a3': 0.265,
-        'a4': -0.231,
-        'a5': -0.398,
-        'n': 1.18,
-        'c': 1.88,
-        'c2': 50,
-        'sigma_amp': 0.3
+        # m2 specified at page 1032 (top)
+        'm2': 5.00,
     }
