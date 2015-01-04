@@ -24,6 +24,9 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
+# TODO
+# 1- Ask for V1 in case of PGV
+
 
 class AbrahamsonSilva2014(GMPE):
     """
@@ -82,21 +85,21 @@ class AbrahamsonSilva2014(GMPE):
         # this is used to compute the PGA on reference bedrock
         C_PGA = self.COEFFS[PGA()]
 
-        # compute median pga on rock (vs30=1180m/s), used for site response
+        # compute median sa on rock (vs30=1180m/s), used for site response
         # term calculation
-        pga1180 = np.exp(self._compute_imt1180(PGA(), sites, rup, dists))
+        sa1180 = np.exp(self._compute_imt1180(PGA(), sites, rup, dists))
 
         # get the mean value
         mean = (self._compute_basic_term(C, rup, dists) +
                 self._compute_faulting_style_term(C, rup) +
-                self._compute_site_response_term(C, imt, sites, pga1180) +
+                self._compute_site_response_term(C, imt, sites, sa1180) +
                 self._compute_hanging_wall_term(C, dists, rup) +
                 self._compute_top_of_rupture_depth_term(C, rup) +
                 self._compute_large_distance_term(C, dists, rup) +
                 self._compute_soil_depth_term(C, imt, sites.z1pt0, sites.vs30))
 
         # get standard deviation
-        stddevs = self._get_stddevs(C, C_PGA, pga1180, rup, sites,
+        stddevs = self._get_stddevs(C, C_PGA, sa1180, rup, sites,
                                     stddev_types)
 
         return mean, stddevs
@@ -151,26 +154,42 @@ class AbrahamsonSilva2014(GMPE):
         return (f7 * float(rup.rake > 30 and rup.rake < 150) +
                 f8 * float(rup.rake > -150 and rup.rake < -30))
 
-    def _compute_site_response_term(self, C, imt, sites, pga1100):
+    def _compute_site_response_term(self, C, imt, sites, sa1180):
         """
         Compute and return site response model term, that is the fifth term
         in equation 1, page 74.
         """
+        # compute the v1 value (see eq. 9, page 1034)
+        if isinstance(imt, SA):
+            t = imt.period
+            if t <= 0.50:
+                v1 = 1500.0
+            elif t < 3.0:
+                v1 = np.exp(-0.35 * np.log(t / 0.5) + np.log(1500.))
+            else:
+                v1 = 800.0
+        elif isinstance(imt, PGA):
+            v1 = 1500.0
+        else:
+            # This needs to be better checked
+            raise NotImplementedError()
+        # set the vs30 star value (see eq. 8, page 1034)
+        vs30_star = np.ones_like(sites.vs30) * sites.vs30
+        vs30_star[vs30_star >= v1] = v1
+        # compute the site term
         site_resp_term = np.zeros_like(sites.vs30)
-
-        vs30_star, _ = self._compute_vs30_star_factor(imt, sites.vs30)
-        vlin, c, n = C['VLIN'], self.CONSTS['c'], self.CONSTS['n']
-        a10, b = C['a10'], C['b']
-
-        idx = sites.vs30 < vlin
-        arg = vs30_star[idx] / vlin
-        site_resp_term[idx] = (a10 * np.log(arg) -
-                               b * np.log(pga1100[idx] + c) +
-                               b * np.log(pga1100[idx] + c * (arg ** n)))
-
-        idx = sites.vs30 >= vlin
-        site_resp_term[idx] = (a10 + b * n) * np.log(vs30_star[idx] / vlin)
-
+        gt_vlin = sites.vs30 >= C['vlin']
+        lw_vlin = sites.vs30 < C['vlin']
+        # compute site response term for sites with vs30 greater than vlin
+        vs30_rat = vs30_star / C['vlin']
+        site_resp_term[gt_vlin] = ((C['a10'] + C['b'] * C['n']) *
+                                   np.log(vs30_rat[gt_vlin]))
+        # compute site response term for sites with vs30 lower than vlin
+        site_resp_term[lw_vlin] = (C['a10'] * np.log(vs30_rat[lw_vlin]) -
+                                   C['b'] * np.log(sa1180 + C['c']) +
+                                   C['b'] * np.log(sa1180 + C['c'] *
+                                                   vs30_rat[lw_vlin] **
+                                                   C['n']))
         return site_resp_term
 
     def _compute_hanging_wall_term(self, C, dists, rup):
