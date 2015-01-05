@@ -156,8 +156,7 @@ class AbrahamsonSilva2014(GMPE):
 
     def _compute_site_response_term(self, C, imt, sites, sa1180):
         """
-        Compute and return site response model term, that is the fifth term
-        in equation 1, page 74.
+        Compute and return site response model term see page 1033
         """
         # compute the v1 value (see eq. 9, page 1034)
         if isinstance(imt, SA):
@@ -194,49 +193,43 @@ class AbrahamsonSilva2014(GMPE):
 
     def _compute_hanging_wall_term(self, C, dists, rup):
         """
-        Compute and return hanging wall model term, that is the sixth term in
-        equation 1, page 74. The calculation of this term is explained in
-        paragraph 'Hanging-Wall Model', page 77.
+        Compute and return hanging wall model term, see page 1038.
         """
-        if rup.dip == 90.0:
-            return np.zeros_like(dists.rx)
+        # compute t1
+        t1 = 60./45. if rup.dip <= 30. else (90.-rup.dip)/45.0
+        # compute t2 (eq 12 at page 1039) - a2hw set to 0.2 as indicated 
+        # at page 1041
+        a2hw = 0.2
+        if rup.mag > 6.5:
+            t2 = 1 + a2hw * (rup.mag - 6.5)
+        elif rup.mag > 5.5:
+            t2 = 1 + a2hw * (rup.mag - 6.5) - (1 - a2hw) * (rup.mag - 6.5)**2
         else:
-            idx = dists.rx > 0
-            Fhw = np.zeros_like(dists.rx)
-            Fhw[idx] = 1
-
-            # equation 8, page 77
-            T1 = np.zeros_like(dists.rx)
-            idx1 = (dists.rjb < 30.0) & (idx)
-            T1[idx1] = 1.0 - dists.rjb[idx1] / 30.0
-
-            # equation 9, page 77
-            T2 = np.ones_like(dists.rx)
-            idx2 = ((dists.rx <= rup.width * np.cos(np.radians(rup.dip))) &
-                    (idx))
-            T2[idx2] = (0.5 + dists.rx[idx2] /
-                        (2 * rup.width * np.cos(np.radians(rup.dip))))
-
-            # equation 10, page 78
-            T3 = np.ones_like(dists.rx)
-            idx3 = (dists.rx < rup.ztor) & (idx)
-            T3[idx3] = dists.rx[idx3] / rup.ztor
-
-            # equation 11, page 78
-            if rup.mag <= 6.0:
-                T4 = 0.0
-            elif rup.mag > 6 and rup.mag < 7:
-                T4 = rup.mag - 6
-            else:
-                T4 = 1.0
-
-            # equation 5, in AS08_NGA_errata.pdf
-            if rup.dip >= 30:
-                T5 = 1.0 - (rup.dip - 30.0) / 60.0
-            else:
-                T5 = 1.0
-
-            return Fhw * C['a14'] * T1 * T2 * T3 * T4 * T5
+            t2 = 0.0
+        # compute t3 (eq. 13 at page 1039) - r1 and r2 specified at 
+        # page 1040
+        r1 = rup.width * np.cos(np.rad(rup.dip))
+        r2 = 3 * r1
+        if dists.rx < r1:
+            t3 = (self.CONSTS['h1'] + self.CONSTS['h2'] * (rup.rx / r1) +
+                  self.CONSTS['h3'] * (rup.rx / r1)**2)
+        elif dist.rx <= r2:
+            t3 = 1 - (dists.rx - r1) / (r2 -r1)
+        else:
+            t3 = 0
+        # compute t4 (eq. 14 at page 1040)
+        t4 = 0.0 if rup.ztor > 10. else 1 - rup.ztor**2 / 100.
+        # compute t5 (eq 15a at page 1040) - ry1 computed according to 
+        # suggestions provided at page 1040
+        ry1 = rup.rx * np.ran(np.rad(20.))
+        if (rup.ry0 - ry1) <= 0.0:
+            t5 = 1
+        elif (rup.ry0 - ry1) < 5.0:
+            t5 = 1 - (rup.ry0 - ry1) / 5.0
+        else:
+            t5 = 0.0
+        # finally, compute the hanging wall term
+        return C['a13']*t1*t2*t3*t4*t5
 
     def _compute_top_of_rupture_depth_term(self, C, rup):
         """
@@ -554,4 +547,8 @@ IMT     m1      vlin    b       c       c4      a1      a2      a3      a4      
     CONSTS = {
         # m2 specified at page 1032 (top)
         'm2': 5.00,
+        # h1, h2, h3 specified at page 1040 (top)
+        'h1', +0.25,
+        'h2', +1.50,
+        'h3', -0.75,
     }
