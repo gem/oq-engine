@@ -1027,6 +1027,7 @@ class GsimLogicTree(object):
     def _parse_lt(self):
         # do the parsing, called at instantiation time to populate .values
         fkeys = []
+        branchsetids = set()
         nrml = node_from_xml(self.fname)
         for branching_level in nrml.logicTree:
             if len(branching_level) > 1:
@@ -1038,6 +1039,12 @@ class GsimLogicTree(object):
                     raise InvalidLogicTree(
                         'only uncertainties of type '
                         '"gmpeModel" are allowed in gmpe logic tree')
+                bsid = branchset['branchSetID']
+                if bsid in branchsetids:
+                    raise InvalidLogicTree(
+                        'Duplicated branchSetID %s' % bsid)
+                else:
+                    branchsetids.add(bsid)
                 fkey = branchset.attrib.get(self.branchset_filter)
                 if fkey:
                     fkeys.append(fkey)
