@@ -245,6 +245,7 @@ def export_stats_csv(key, export_dir, fname, sitecol, data_by_imt):
 
     :param key: output_type and export_type
     :param export_dir: the directory where to export
+    :param fname: file name
     :param sitecol: site collection
     :param data_by_imt: dictionary of floats keyed by IMT
     """

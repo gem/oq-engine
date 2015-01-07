@@ -37,6 +37,9 @@ class CalculatorTestCase(unittest.TestCase):
         self.testdir = os.path.dirname(testfile)
         inis = [os.path.join(self.testdir, ini) for ini in job_ini.split(',')]
         oq = readinput.get_oqparam(inis)
+        # the number of tasks is chosen to be 4 times bigger than the name of
+        # cores; it is a heuristic number to get a decent distribution of the
+        # load; it has no more significance than that
         oq.concurrent_tasks = executor._max_workers * 4
         # change this when debugging the test
         monitor = PerformanceMonitor(

@@ -36,8 +36,12 @@ def floatformat(fmt_string):
 
 def scientificformat(value, fmt='%13.9E', sep=' '):
     """
+    :param value: the value to convert into a string
+    :param fmt: the formatting string to use for float values
+    :param sep: separator to use for array-like values
+
     Convert a float or an array into a string by using the scientific notation
-    and a fixed precision (by default 10 decimal digits).
+    and a fixed precision (by default 10 decimal digits). For instance:
 
     >>> scientificformat(-0.004)
     '-4.000000000E-03'

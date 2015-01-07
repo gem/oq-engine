@@ -156,7 +156,7 @@ def compute_hazard_maps(curves, imls, poes):
     :param imls:
         Intensity Measure Levels associated with these hazard ``curves``. Type
         should be an array-like of floats.
-    :param float poes:
+    :param poes:
         Value(s) on which to interpolate a hazard map from the input
         ``curves``. Can be an array-like or scalar value (for a single PoE).
 
