@@ -141,7 +141,6 @@ def compute_ruptures(job_id, sources, sitecol):
     rnd = random.Random()
     for src in sources:
         t0 = time.time()
-        rnd.seed(src.seed)
 
         with filter_sites_mon:  # filtering sources
             s_sites = src.filter_sites_by_distance_to_source(
@@ -152,14 +151,21 @@ def compute_ruptures(job_id, sources, sitecol):
         # the dictionary `ses_num_occ` contains [(ses, num_occurrences)]
         # for each occurring rupture for each ses in the ses collection
         ses_num_occ = collections.defaultdict(list)
-        with generate_ruptures_mon:  # generating ruptures for the given source
-            for rup_no, rup in enumerate(src.iter_ruptures(), 1):
-                rup.rup_no = rup_no
-                for ses_idx in all_ses:
-                    numpy.random.seed(rnd.randint(0, models.MAX_SINT_32))
-                    num_occurrences = rup.sample_number_of_occurrences()
-                    if num_occurrences:
-                        ses_num_occ[rup].append((ses_idx, num_occurrences))
+        # generating ruptures for the given source
+        with generate_ruptures_mon:
+            # if sampling is enabled, the source can be sample more than once,
+            # thus it can generate more ruptures
+            rup_no = 1
+            for sample in range(trt_model.samples):
+                rnd.seed(src.seed + sample)
+                for rup in src.iter_ruptures():
+                    rup.rup_no = rup_no
+                    rup_no += 1
+                    for ses_idx in all_ses:
+                        numpy.random.seed(rnd.randint(0, models.MAX_SINT_32))
+                        num_occurrences = rup.sample_number_of_occurrences()
+                        if num_occurrences:
+                            ses_num_occ[rup].append((ses_idx, num_occurrences))
 
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
