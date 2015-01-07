@@ -952,6 +952,12 @@ class SourceModelLogicTree(BaseLogicTree):
                 branchset.apply_uncertainty(value, source)
         return apply_uncertainties
 
+    def samples_by_lt_path(self):
+        """
+        Returns a dictionary lt_path -> how many times that path was sampled
+        """
+        return collections.Counter(rlz.lt_path for rlz in self)
+
 
 BranchTuple = namedtuple('BranchTuple', 'bset, id, uncertainty, weight')
 
