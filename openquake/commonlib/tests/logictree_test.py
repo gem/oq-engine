@@ -1516,6 +1516,42 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         self.parse_invalid(xml, logictree.InvalidLogicTree,
                            'Branching level bl1 has multiple branchsets')
 
+    def test_branchset_id_not_unique(self):
+        xml = _make_nrml("""\
+            <logicTree logicTreeID="lt1">
+              <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                                    branchSetID="bs1"
+                  applyToTectonicRegionType="Shield">
+                  <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>ChiouYoungs2008</uncertaintyModel>
+                    <uncertaintyWeight>0.7</uncertaintyWeight>
+                  </logicTreeBranch>
+                  <logicTreeBranch branchID="b2">
+                    <uncertaintyModel>SadighEtAl1997</uncertaintyModel>
+                    <uncertaintyWeight>0.3</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+              </logicTreeBranchingLevel>
+              <logicTreeBranchingLevel branchingLevelID="bl2">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                                    branchSetID="bs1"
+                  applyToTectonicRegionType="Subduction Interface">
+                  <logicTreeBranch branchID="b3">
+                    <uncertaintyModel>ChiouYoungs2008</uncertaintyModel>
+                    <uncertaintyWeight>0.6</uncertaintyWeight>
+                  </logicTreeBranch>
+                  <logicTreeBranch branchID="b4">
+                    <uncertaintyModel>SadighEtAl1997</uncertaintyModel>
+                    <uncertaintyWeight>0.4</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+              </logicTreeBranchingLevel>
+            </logicTree>
+        """)
+        self.parse_invalid(
+            xml, logictree.InvalidLogicTree, "Duplicated branchSetID bs1")
+
     def test_invalid_gsim(self):
         xml = _make_nrml("""\
         <logicTree logicTreeID="lt1">
@@ -1633,7 +1669,6 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
     def test_sample_source_model(self):
         [(sm_name, weight, branch_ids, _)] = self.source_model_lt
         self.assertEqual(sm_name, 'example-source-model.xml')
-        self.assertIsNone(weight)
         self.assertEqual(('b1', 'b5', 'b8'), branch_ids)
 
     def test_sample_gmpe(self):

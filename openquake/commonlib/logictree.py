@@ -579,9 +579,10 @@ class BaseLogicTree(object):
         if self.num_samples:
             # random sampling of the logic tree
             rnd = random.Random(self.seed)
+            weight = 1. / self.num_samples
             for _ in xrange(self.num_samples):
                 name, sm_lt_path = self.sample_path(rnd)
-                yield Realization(name, None, tuple(sm_lt_path), None)
+                yield Realization(name, weight, tuple(sm_lt_path), None)
         else:  # full enumeration
             for weight, smlt_path in self.root_branchset.enumerate_paths():
                 name = smlt_path[0].value
@@ -1027,6 +1028,7 @@ class GsimLogicTree(object):
     def _parse_lt(self):
         # do the parsing, called at instantiation time to populate .values
         fkeys = []
+        branchsetids = set()
         nrml = node_from_xml(self.fname)
         for branching_level in nrml.logicTree:
             if len(branching_level) > 1:
@@ -1038,6 +1040,12 @@ class GsimLogicTree(object):
                     raise InvalidLogicTree(
                         'only uncertainties of type '
                         '"gmpeModel" are allowed in gmpe logic tree')
+                bsid = branchset['branchSetID']
+                if bsid in branchsetids:
+                    raise InvalidLogicTree(
+                        'Duplicated branchSetID %s' % bsid)
+                else:
+                    branchsetids.add(bsid)
                 fkey = branchset.attrib.get(self.branchset_filter)
                 if fkey:
                     fkeys.append(fkey)

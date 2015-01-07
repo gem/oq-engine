@@ -25,7 +25,7 @@ from openquake.commonlib.calculators import base
 
 
 def run(job_ini, concurrent_tasks=executor._max_workers * 4,
-        loglevel='info', usecache=False):
+        loglevel='info', usecache=False, exports='csv'):
     """
     Run a calculation. Optionally, set the number of concurrent_tasks
     (0 to disable the parallelization).
@@ -34,6 +34,7 @@ def run(job_ini, concurrent_tasks=executor._max_workers * 4,
     oqparam = readinput.get_oqparam(job_ini.split(','))
     oqparam.concurrent_tasks = concurrent_tasks
     oqparam.usecache = usecache
+    oqparam.exports = exports
     with PerformanceMonitor('total', monitor_csv=os.path.join(
             oqparam.export_dir, 'performance_csv')) as monitor:
         calc = base.calculators(oqparam, monitor)

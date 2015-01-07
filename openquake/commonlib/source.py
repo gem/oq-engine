@@ -845,10 +845,7 @@ class RlzsAssoc(collections.Mapping):
             return idx
         gsims_by_trt = lt_model.gsim_lt.values
         for gsim_by_trt, weight, gsim_path, _ in realizations:
-            if lt_model.weight is not None and weight is not None:
-                weight = lt_model.weight * weight
-            else:
-                weight = None
+            weight = float(lt_model.weight) * float(weight)
             rlz = LtRealization(idx, lt_model.path, gsim_path, weight)
             self.realizations.append(rlz)
             self.gsim_by_trt.append(gsim_by_trt)

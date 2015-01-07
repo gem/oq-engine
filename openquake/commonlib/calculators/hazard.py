@@ -27,6 +27,7 @@ from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
 from openquake.hazardlib.calc.filters import source_site_distance_filter, \
     rupture_site_distance_filter
+from openquake.risklib import scientific
 from openquake.commonlib import readinput, parallel
 from openquake.commonlib.export import export
 from openquake.baselib.general import AccumDict
@@ -52,7 +53,7 @@ def classical(sources, sitecol, gsims_assoc, monitor):
     """
     max_dist = monitor.oqparam.maximum_distance
     truncation_level = monitor.oqparam.truncation_level
-    imtls = monitor.oqparam.hazard_imtls
+    imtls = monitor.oqparam.imtls
     trt_model_id = sources[0].trt_model_id
     trt = sources[0].tectonic_region_type
     gsims = gsims_assoc[trt_model_id]
@@ -62,8 +63,9 @@ def classical(sources, sitecol, gsims_assoc, monitor):
             sources, sitecol, imtls, {trt: gsim}, truncation_level,
             source_site_filter=source_site_distance_filter(max_dist),
             rupture_site_filter=rupture_site_distance_filter(max_dist))
-        assert sum(v.sum() for v in curves.itervalues()), 'all zero curves!'
-        result[trt_model_id, gsim.__class__.__name__] = AccumDict(curves)
+        # notice that the rupture filter may remove everything
+        if sum(v.sum() for v in curves.itervalues()):
+            result[trt_model_id, gsim.__class__.__name__] = AccumDict(curves)
     return result
 
 
@@ -102,14 +104,42 @@ class ClassicalCalculator(base.HazardCalculator):
             a dictionary of hazard curves dictionaries
         """
         curves_by_rlz = self.rlzs_assoc.combine(result)
+        rlzs = self.rlzs_assoc.realizations
         oq = self.oqparam
+
+        # export curves
         saved = AccumDict()
-        for rlz in self.rlzs_assoc.realizations:
+        exports = self.oqparam.exports.split(',')
+        for rlz in rlzs:
+            smlt_path = '_'.join(rlz.sm_lt_path)
+            gsimlt_path = '_'.join(rlz.gsim_lt_path)
+            for fmt in exports:
+                fname = 'hazard_curve_multi-smltp_%s-gsimltp_%s-ltr_%d.%s' % (
+                    smlt_path, gsimlt_path, rlz.ordinal, fmt)
+                saved += export(
+                    'hazard_curves_' + fmt,
+                    oq.export_dir, fname, self.sitecol, curves_by_rlz[rlz],
+                    oq.imtls, oq.investigation_time)
+        if len(rlzs) == 1:  # cannot compute statistics
+            return saved
+
+        weights = (None if oq.number_of_logic_tree_samples
+                   else [rlz.weight for rlz in rlzs])
+        mean_curves = scientific.mean_curve(
+            [curves_by_rlz[rlz] for rlz in rlzs], weights)
+        for fmt in exports:
+            fname = 'hazard_curve_multi-mean.%s' % fmt
             saved += export(
-                'hazard_curves_xml',
-                oq.export_dir, self.sitecol, rlz, curves_by_rlz[rlz],
+                'hazard_curves_' + fmt,
+                oq.export_dir, fname, self.sitecol, mean_curves,
                 oq.imtls, oq.investigation_time)
         return saved
+
+    def hazard_maps(self, curves_by_imt):
+        return {imt:
+                calc.compute_hazard_maps(
+                    curves, self.oqparam.imtls[imt], self.oqparam.poes)
+                for imt, curves in curves_by_imt.iteritems()}
 
 
 @base.calculators.add('event_based')

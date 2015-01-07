@@ -277,15 +277,10 @@ class Classical(Workflow):
             curves, average_losses, insured_curves, average_insured_losses,
             maps, fractions)
 
-    def statistics(self, all_outputs, quantiles, post_processing):
+    def statistics(self, all_outputs, quantiles):
         """
         :param quantiles:
             quantile levels used to compute quantile outputs
-        :param post_processing:
-            an object implementing the following protocol:
-            #mean_curve(curves, weights)
-            #weighted_quantile_curve(curves, weights, quantile)
-            #quantile_curve(curves, quantile)
         :returns:
             a :class:`openquake.risklib.scientific.Classical.StatisticalOutput`
             instance holding statistical outputs (e.g. mean loss curves).
@@ -311,7 +306,7 @@ class Classical(Workflow):
                 [normalize_curves(curves) for curves
                  in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
                 self.conditional_loss_poes + self.poes_disagg,
-                weights, quantiles, post_processing))
+                weights, quantiles))
 
         if self.insured_losses:
             loss_curves = [out.insured_curves for out in outputs]
@@ -320,7 +315,7 @@ class Classical(Workflow):
                 scientific.exposure_statistics(
                     [normalize_curves(curves) for curves
                      in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
-                    [], weights, quantiles, post_processing))
+                    [], weights, quantiles))
         else:
             mean_insured_curves = None
             mean_average_insured_losses = None
@@ -521,18 +516,13 @@ class ProbabilisticEventBased(Workflow):
                        getter.get_epsilons(), getter.rupture_ids)
             yield Output(hazard.hid, hazard.weight, loss_type, out)
 
-    def statistics(self, all_outputs, quantiles, post_processing):
+    def statistics(self, all_outputs, quantiles):
         """
         :returns:
             a :class:`.ProbabilisticEventBased.StatisticalOutput`
             instance holding statistical outputs (e.g. mean loss curves).
         :param quantiles:
             quantile levels used to compute quantile outputs
-        :param post_processing:
-            an object implementing the following protocol:
-            #mean_curve(curves, weights)
-            #weighted_quantile_curve(curves, weights, quantile)
-            #quantile_curve(curves, quantile)
         """
         if len(all_outputs) == 1:  # single realization
             return
@@ -551,8 +541,7 @@ class ProbabilisticEventBased(Workflow):
          quantile_curves, quantile_average_losses, quantile_maps) = (
             scientific.exposure_statistics(
                 [self._normalize_curves(curves) for curves in curve_matrix],
-                self.conditional_loss_poes, weights, quantiles,
-                post_processing))
+                self.conditional_loss_poes, weights, quantiles))
         elt = sum((out.event_loss_table for out in outputs),
                   collections.Counter())
 
@@ -564,7 +553,7 @@ class ProbabilisticEventBased(Workflow):
                     [self._normalize_curves(curves)
                      for curves
                      in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
-                    [], weights, quantiles, post_processing))
+                    [], weights, quantiles))
         else:
             mean_insured_curves = None
             mean_average_insured_losses = None
