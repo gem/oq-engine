@@ -22,6 +22,7 @@ class:`AkkarBommer2010SWISS08`,
 """
 from __future__ import division
 
+import copy
 import numpy as np
 
 from scipy.constants import g
@@ -317,14 +318,17 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
         for spec of input and result values.
         """
 
+        ref_sites = copy.deepcopy(sites)
+        ref_sites.vs30 = 620 * np.ones(len(sites.vs30))
+
         mean, stddevs = super(AkkarBommer2010SWISS01, self).\
-            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+            get_mean_and_stddevs(ref_sites, rup, dists, imt, stddev_types)
 
         tau_ss = 'tau'
         log_phi_ss = np.log(10)
         mean, stddevs = _apply_adjustments(
             AkkarBommer2010.COEFFS, self.COEFFS_FS_ROCK[imt], tau_ss,
-            mean, stddevs, sites, rup, dists.rjb, imt, stddev_types,
+            mean, stddevs, ref_sites, rup, dists.rjb, imt, stddev_types,
             log_phi_ss)
 
         return mean,  np.log(10 ** np.array(stddevs))
