@@ -25,7 +25,6 @@ from openquake.hazardlib.geo import mesh
 from openquake.risklib import scientific
 from openquake.risklib.utils import numpy_map
 
-from openquake.engine.calculators import post_processing
 from openquake.engine.calculators.risk import (
     base, hazard_getters, validation, writers)
 from openquake.engine.db import models
@@ -121,7 +120,7 @@ def event_based(workflow, getter, outputdict, params, monitor):
 
         if statistics and len(outputs) > 1:
             stats = workflow.statistics(
-                outputs, params.quantile_loss_curves, post_processing)
+                outputs, params.quantile_loss_curves)
 
             with monitor('saving risk statistics'):
                 save_statistical_output(
