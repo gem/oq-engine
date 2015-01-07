@@ -25,7 +25,6 @@ from openquake.hazardlib.geo import mesh
 from openquake.risklib import scientific
 from openquake.risklib.utils import numpy_map
 
-from openquake.engine.calculators import post_processing
 from openquake.engine.calculators.risk import (
     base, hazard_getters, validation, writers)
 from openquake.engine.db import models
@@ -87,31 +86,31 @@ def event_based(workflow, getter, outputdict, params, monitor):
             if specific_assets:
                 loss_matrix, assets = _filter_loss_matrix_assets(
                     out.output.loss_matrix, out.output.assets, specific_assets)
-                if len(assets) == 0:  # no specific_assets
-                    continue
-                # compute the loss per rupture per asset
-                event_loss = models.EventLoss.objects.get(
-                    output__oq_job=monitor.job_id,
-                    output__output_type='event_loss_asset',
-                    loss_type=loss_type, hazard_output=out.hid)
-                # losses is E x n matrix, where E is the number of ruptures
-                # and n the number of assets in the specific_assets set
-                losses = (loss_matrix.transpose() *
-                          numpy_map(lambda a: a.value(loss_type), assets))
-                # save an EventLossAsset record for each specific asset
-                for rup_id, losses_per_rup in zip(
-                        getter.rupture_ids, losses):
-                    for asset, loss_per_rup in zip(assets, losses_per_rup):
-                        ela = models.EventLossAsset(
-                            event_loss=event_loss, rupture_id=rup_id,
-                            asset=asset, loss=loss_per_rup)
-                        inserter.add(ela)
-                if params.sites_disagg:
-                    with monitor('disaggregating results'):
-                        ruptures = [models.SESRupture.objects.get(pk=rid)
-                                    for rid in getter.rupture_ids]
-                        disagg_outputs = disaggregate(
-                            out.output, [r.rupture for r in ruptures], params)
+                if assets:
+                    # compute the loss per rupture per asset
+                    event_loss = models.EventLoss.objects.get(
+                        output__oq_job=monitor.job_id,
+                        output__output_type='event_loss_asset',
+                        loss_type=loss_type, hazard_output=out.hid)
+                    # losses is E x n matrix, where E is the number of ruptures
+                    # and n the number of assets in the specific_assets set
+                    losses = (loss_matrix.transpose() *
+                              numpy_map(lambda a: a.value(loss_type), assets))
+                    # save an EventLossAsset record for each specific asset
+                    for rup_id, losses_per_rup in zip(
+                            getter.rupture_ids, losses):
+                        for asset, loss_per_rup in zip(assets, losses_per_rup):
+                            ela = models.EventLossAsset(
+                                event_loss=event_loss, rupture_id=rup_id,
+                                asset=asset, loss=loss_per_rup)
+                            inserter.add(ela)
+                    if params.sites_disagg:
+                        with monitor('disaggregating results'):
+                            ruptures = [models.SESRupture.objects.get(pk=rid)
+                                        for rid in getter.rupture_ids]
+                            disagg_outputs = disaggregate(
+                                out.output, [r.rupture for r in ruptures],
+                                params)
 
             with monitor('saving individual risk'):
                 save_individual_outputs(
@@ -121,7 +120,7 @@ def event_based(workflow, getter, outputdict, params, monitor):
 
         if statistics and len(outputs) > 1:
             stats = workflow.statistics(
-                outputs, params.quantile_loss_curves, post_processing)
+                outputs, params.quantile_loss_curves)
 
             with monitor('saving risk statistics'):
                 save_statistical_output(
