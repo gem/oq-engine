@@ -21,6 +21,7 @@ Module exports :class:`CauzziFaccioli2008SWISS01`
 """
 from __future__ import division
 
+import copy
 import numpy as np
 # standard acceleration of gravity in m/s**2
 from openquake.hazardlib import const
@@ -72,8 +73,11 @@ class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
         for spec of input and result values.
         """
 
+        ref_sites = copy.deepcopy(sites)
+        ref_sites.vs30 = 700 * np.ones(len(sites.vs30))
+
         mean, stddevs = super(CauzziFaccioli2008SWISS01, self).\
-            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+            get_mean_and_stddevs(ref_sites, rup, dists, imt, stddev_types)
 
         C = CauzziFaccioli2008SWISS01.COEFFS
 
@@ -81,7 +85,7 @@ class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
         log_phi_ss = np.log(10)
         mean, stddevs = _apply_adjustments(
             C, self.COEFFS_FS_ROCK[imt], tau_ss,
-            mean, stddevs, sites, rup, dists.rhypo, imt, stddev_types,
+            mean, stddevs, ref_sites, rup, dists.rhypo, imt, stddev_types,
             log_phi_ss)
 
         return mean, np.log(10 ** np.array(stddevs))
