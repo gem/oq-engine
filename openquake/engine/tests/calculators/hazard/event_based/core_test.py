@@ -116,8 +116,7 @@ class GmfCalculatorTestCase(unittest.TestCase):
 class GmvsToHazCurveTestCase(unittest.TestCase):
     """
     Tests for
-    :func:`openquake.engine.calculators.hazard.event_based.\
-post_processing.gmvs_to_haz_curve`.
+    :func:`openquake.engine.calculators.hazard.event_based.post_processing.gmvs_to_haz_curve`.
     """
 
     def test_gmvs_to_haz_curve_site_1(self):
