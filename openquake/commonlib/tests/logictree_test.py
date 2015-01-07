@@ -1669,7 +1669,6 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
     def test_sample_source_model(self):
         [(sm_name, weight, branch_ids, _)] = self.source_model_lt
         self.assertEqual(sm_name, 'example-source-model.xml')
-        self.assertIsNone(weight)
         self.assertEqual(('b1', 'b5', 'b8'), branch_ids)
 
     def test_sample_gmpe(self):

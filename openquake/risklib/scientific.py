@@ -885,8 +885,69 @@ def loss_map_matrix(poes, curves):
     ).reshape((len(poes), len(curves)))
 
 
+def mean_curve(values, weights=None):
+    """
+    Compute the mean by using numpy.average on the first axis.
+    """
+    if weights:
+        weights = map(float, weights)
+        assert abs(sum(weights) - 1.) < 1E-15
+    else:
+        weights = [1. / len(values)] * len(values)
+    if isinstance(values[0], (numpy.ndarray, list, tuple)):  # fast lane
+        return numpy.average(values, axis=0, weights=weights)
+    return sum(value * weight for value, weight in zip(values, weights))
+
+
+def quantile_curve(curves, quantile, weights=None):
+    """
+    Compute the weighted quantile aggregate of a set of curves
+    when using the logic tree end-branch enumeration approach, or just the
+    standard quantile when using the sampling approach.
+
+    :param curves:
+        2D array-like of curve PoEs. Each row represents the PoEs for a single
+        curve
+    :param quantile:
+        Quantile value to calculate. Should in the range [0.0, 1.0].
+    :param weights:
+        Array-like of weights, 1 for each input curve, or None
+    :returns:
+        A numpy array representing the quantile aggregate
+    """
+    if weights is None:
+        # this implementation is an alternative to
+        # numpy.array(mstats.mquantiles(curves, prob=quantile, axis=0))[0]
+        # more or less copied from the scipy mquantiles function, just special
+        # cased for what we need (and a lot faster)
+        arr = numpy.array(curves)
+        p = numpy.array(quantile)
+        m = 0.4 + p * 0.2
+        n = len(arr)
+        aleph = n * p + m
+        k = numpy.floor(aleph.clip(1, n - 1)).astype(int)
+        gamma = (aleph - k).clip(0, 1)
+        data = numpy.sort(arr, axis=0).transpose()
+        return (1.0 - gamma) * data[:, k - 1] + gamma * data[:, k]
+
+    # Each curve needs to be associated with a weight
+    assert len(weights) == len(curves)
+    weights = numpy.array(weights, dtype=numpy.float64)
+
+    result_curve = []
+    np_curves = numpy.array(curves)
+    np_weights = numpy.array(weights)
+    for poes in np_curves.transpose():
+        sorted_poe_idxs = numpy.argsort(poes)
+        sorted_weights = np_weights[sorted_poe_idxs]
+        sorted_poes = poes[sorted_poe_idxs]
+        cum_weights = numpy.cumsum(sorted_weights)
+        result_curve.append(numpy.interp(quantile, cum_weights, sorted_poes))
+    return numpy.array(result_curve)
+
+
 def exposure_statistics(
-        loss_curves, map_poes, weights, quantiles, post_processing):
+        loss_curves, map_poes, weights, quantiles):
     """
     Compute exposure statistics for N assets and R realizations.
 
@@ -900,9 +961,6 @@ def exposure_statistics(
         a list of N weights used to compute mean/quantile weighted statistics
     :param quantiles:
         the quantile levels used to compute quantile results
-    :param post_processing:
-       a module providing #weighted_quantile_curve, #quantile_curve,
-       #mean_curve
 
     :returns:
         a tuple with six elements:
@@ -928,8 +986,7 @@ def exposure_statistics(
     for loss_ratios, curves_poes in loss_curves:
         _mean_curve, _mean_maps, _quantile_curves, _quantile_maps = (
             asset_statistics(
-                loss_ratios, curves_poes,
-                quantiles, weights, map_poes, post_processing))
+                loss_ratios, curves_poes, quantiles, weights, map_poes))
 
         mean_curves = numpy.vstack(
             (mean_curves, _mean_curve[numpy.newaxis, :]))
@@ -954,7 +1011,7 @@ def exposure_statistics(
 
 
 def asset_statistics(
-        losses, curves_poes, quantiles, weights, poes, post_processing):
+        losses, curves_poes, quantiles, weights, poes):
     """
     Compute output statistics (mean/quantile loss curves and maps)
     for a single asset
@@ -975,34 +1032,10 @@ def asset_statistics(
        3) mean loss map
        4) a list of quantile loss maps
     """
-    mean_curve = numpy.array([losses, post_processing.mean_curve(
-        curves_poes, weights)])
-    mean_map = loss_map_matrix(poes, [mean_curve]).reshape(len(poes))
+    mean_curve_ = numpy.array([losses, mean_curve(curves_poes, weights)])
+    mean_map = loss_map_matrix(poes, [mean_curve_]).reshape(len(poes))
     quantile_curves = numpy.array(
-        [[losses, quantile_curve(post_processing, weights)(
-          curves_poes, quantile)]
+        [[losses, quantile_curve(curves_poes, quantile, weights)]
          for quantile in quantiles]).reshape((len(quantiles), 2, len(losses)))
-    quantile_maps = loss_map_matrix(poes, quantile_curves).T
-
-    return (mean_curve, mean_map, quantile_curves, quantile_maps)
-
-
-def quantile_curve(post_processing, weights):
-    """
-    Helper functions that wraps the `post_processing` object
-
-    :param post_processing:
-       a module providing #weighted_quantile_curve, #quantile_curve,
-       #mean_curve
-    :param list weights:
-       the weights associated with each realization. If all the elements are
-       `None`, implicit weights are taken into account
-    :returns:
-        a function that a quantile curve given curve poes and
-        the quantile value in input
-    """
-    if weights[0] is None:  # implicit weights
-        return post_processing.quantile_curve
-    else:
-        return lambda poes, quantile: post_processing.weighted_quantile_curve(
-            poes, weights, quantile)
+    quantile_maps = loss_map_matrix(poes, quantile_curves).transpose()
+    return (mean_curve_, mean_map, quantile_curves, quantile_maps)

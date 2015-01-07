@@ -137,3 +137,69 @@ def calc_gmfs(oqparam, sitecol):
             res += {imt: [gmfield]}
     # res[imt] is a matrix R x N
     return {imt: numpy.array(matrix).T for imt, matrix in res.iteritems()}
+
+########################### hazard maps #######################################
+
+# cutoff value for the poe
+EPSILON = 1E-30
+
+
+def compute_hazard_maps(curves, imls, poes):
+    """
+    Given a set of hazard curve poes, interpolate a hazard map at the specified
+    ``poe``.
+
+    :param curves:
+        2D array of floats. Each row represents a curve, where the values
+        in the row are the PoEs (Probabilities of Exceedance) corresponding to
+        ``imls``. Each curve corresponds to a geographical location.
+    :param imls:
+        Intensity Measure Levels associated with these hazard ``curves``. Type
+        should be an array-like of floats.
+    :param poes:
+        Value(s) on which to interpolate a hazard map from the input
+        ``curves``. Can be an array-like or scalar value (for a single PoE).
+
+    :returns:
+        A 2D numpy array of hazard map data. Each element/row in the resulting
+        array represents the interpolated map for each ``poes`` value
+        specified. If ``poes`` is just a single scalar value, the result array
+        will have a length of 1.
+
+        The results are structured this way so that it is easy to iterate over
+        the hazard map results in a consistent way, no matter how many
+        ``poes`` values are specified.
+    """
+    poes = numpy.array(poes)
+
+    if len(poes.shape) == 0:
+        # ``poes`` was passed in as a scalar;
+        # convert it to 1D array of 1 element
+        poes = poes.reshape(1)
+
+    result = []
+    imls = numpy.log(numpy.array(imls[::-1]))
+
+    for curve in curves:
+        # the hazard curve, having replaced the too small poes with EPSILON
+        curve_cutoff = [max(poe, EPSILON) for poe in curve[::-1]]
+        hmap_val = []
+        for poe in poes:
+            # special case when the interpolation poe is bigger than the
+            # maximum, i.e the iml must be smaller than the minumum
+            if poe > curve_cutoff[-1]:  # the greatest poes in the curve
+                # extrapolate the iml to zero as per
+                # https://bugs.launchpad.net/oq-engine/+bug/1292093
+                # a consequence is that if all poes are zero any poe > 0
+                # is big and the hmap goes automatically to zero
+                hmap_val.append(0)
+            else:
+                # exp-log interpolation, to reduce numerical errors
+                # see https://bugs.launchpad.net/oq-engine/+bug/1252770
+                val = numpy.exp(
+                    numpy.interp(
+                        numpy.log(poe), numpy.log(curve_cutoff), imls))
+                hmap_val.append(val)
+
+        result.append(hmap_val)
+    return numpy.array(result).transpose()
