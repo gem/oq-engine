@@ -23,6 +23,9 @@ Module exports
 """
 from __future__ import division
 
+import copy
+import numpy as np
+
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
@@ -75,15 +78,18 @@ class ZhaoEtAl2006AscSWISS05(ZhaoEtAl2006Asc):
         for spec of input and result values.
         """
 
+        ref_sites = copy.deepcopy(sites)
+        ref_sites.vs30 = 700 * np.ones(len(sites.vs30))
+
         mean, stddevs = super(ZhaoEtAl2006AscSWISS05, self).\
-            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+            get_mean_and_stddevs(ref_sites, rup, dists, imt, stddev_types)
 
         tau_ss = 'tauC'
         log_phi_ss = 1.00
         C = ZhaoEtAl2006AscSWISS05.COEFFS_ASC
         mean, stddevs = _apply_adjustments(
             C, self.COEFFS_FS_ROCK[imt], tau_ss,
-            mean, stddevs, sites, rup, dists.rrup, imt, stddev_types,
+            mean, stddevs, ref_sites, rup, dists.rrup, imt, stddev_types,
             log_phi_ss)
 
         return mean, stddevs
