@@ -27,27 +27,40 @@ def floatformat(fmt_string):
     :param fmt_string: the format to use; for instance '%13.9E'
     """
     fmt_defaults = scientificformat.__defaults__
-    scientificformat.__defaults__ = (fmt_string,)
+    scientificformat.__defaults__ = (fmt_string, fmt_defaults[1])
     try:
         yield
     finally:
         scientificformat.__defaults__ = fmt_defaults
 
 
-def scientificformat(value, fmt='%13.9E'):
+def scientificformat(value, fmt='%13.9E', sep=' '):
     """
-    Convert a float into a string by using the scientific notation
-    and a fixed precision (by default 10 decimal digits).
-    If the value is not a float, convert it into a string.
+    :param value: the value to convert into a string
+    :param fmt: the formatting string to use for float values
+    :param sep: separator to use for array-like values
+
+    Convert a float or an array into a string by using the scientific notation
+    and a fixed precision (by default 10 decimal digits). For instance:
 
     >>> scientificformat(-0.004)
     '-4.000000000E-03'
-    >>> scientificformat(0.004)
+    >>> scientificformat([0.004])
     '4.000000000E-03'
+    >>> scientificformat([0.01, 0.02], '%10.6E')
+    '1.000000E-02 2.000000E-02'
+    >>> scientificformat([[0.1, 0.2], [0.3, 0.4]], '%4.1E')
+    '1.0E-01 2.0E-01 3.0E-01 4.0E-01'
     """
-    if isinstance(value, float):
+    if isinstance(value, basestring):
+        return value
+    elif isinstance(value, (int, long)):
+        return str(value)
+    elif hasattr(value, '__len__'):
+        return sep.join((scientificformat(f, fmt, sep) for f in value))
+    elif isinstance(value, float):
         return fmt % value
-    return str(value)
+    raise ValueError(value)
 
 
 class StreamingXMLWriter(object):
@@ -102,7 +115,8 @@ class StreamingXMLWriter(object):
         else:
             self._write('<' + name)
             for (name, value) in sorted(attrs.items()):
-                self._write(' %s=%s' % (name, quoteattr(scientificformat(value))))
+                self._write(
+                    ' %s=%s' % (name, quoteattr(scientificformat(value))))
             self._write('>')
         self.indentlevel += 1
 
@@ -150,3 +164,13 @@ def tostring(node, indent=4):
     writer = StreamingXMLWriter(out, indent)
     writer.serialize(node)
     return out.getvalue()
+
+
+def save_csv(dest, header_rows, sep=',', fmt='%12.8E'):
+    """
+    :param dest: destination filename
+    :param header_rows: header + rows to save
+    """
+    with open(dest, 'w') as f:
+        for row in header_rows:
+            f.write(sep.join(scientificformat(col, fmt) for col in row) + '\n')
