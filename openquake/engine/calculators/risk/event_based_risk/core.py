@@ -412,12 +412,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         if rupture_id in event_loss_table]
 
                     if aggregate_losses:
-                        aggregate_loss_losses, aggregate_loss_poes = (
-                            scientific.event_based(
-                                aggregate_losses, tses=tses,
-                                time_span=oq.investigation_time,
-                                curve_resolution=oq.loss_curve_resolution
-                            ))
+                        aggregate_loss = scientific.event_based(
+                            aggregate_losses, tses=tses,
+                            time_span=oq.investigation_time,
+                            curve_resolution=oq.loss_curve_resolution)
 
                         models.AggregateLossCurveData.objects.create(
                             loss_curve=models.LossCurve.objects.create(
@@ -430,8 +428,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                                     "loss_type=%s hazard=%s" % (
                                         loss_type, hazard_output),
                                     "agg_loss_curve")),
-                            losses=aggregate_loss_losses,
-                            poes=aggregate_loss_poes,
+                            losses=aggregate_loss[0],
+                            poes=aggregate_loss[1],
                             average_loss=scientific.average_loss(
-                                aggregate_loss_losses, aggregate_loss_poes),
+                                aggregate_loss),
                             stddev_loss=numpy.std(aggregate_losses))
