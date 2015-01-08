@@ -46,7 +46,7 @@ class CauzziEtAl2014(GMPE):
     following formula ::
 
         SA = DSR * (2 * π / T) ** 2
-
+    
     """
     #: Supported tectonic region type is active shallow crust,
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
@@ -55,6 +55,9 @@ class CauzziEtAl2014(GMPE):
     #: ground acceleration and peak ground velocity.
     #: The original paper provides coefficients for PGA and PGV, while SA
     #: is obtained from displacement response spectrum values.
+    #: Coefficients for PGA are taken from the SA (0.01 s) spectral
+    #: acceleration, as indicated in Page 11 (at the time of writing)
+    #: of Cauzzi et al. (2014)
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
         PGA,
         PGV,
@@ -110,7 +113,6 @@ class CauzziEtAl2014(GMPE):
         # convert from cm/s**2 to g for SA and from cm/s**2 to g for PGA (PGV
         # is already in cm/s) and also convert from base 10 to base e.
         if isinstance(imt, PGA):
-            #mean = np.log((100 ** mean) / g)
             mean = np.log((10 ** mean) * ((2 * np.pi / 0.01) ** 2) *
                           1e-2 / g)
         elif isinstance(imt, SA):
