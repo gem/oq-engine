@@ -468,8 +468,8 @@ class ProbabilisticEventBased(Workflow):
            a numpy array of R event ID (integer)
 
         :returns:
-            a
-            :class:`openquake.risklib.scientific.ProbabilisticEventBased.Output`
+            a :class:
+            `openquake.risklib.scientific.ProbabilisticEventBased.Output`
             instance.
         """
         loss_matrix = self.risk_functions[loss_type].apply_to(
@@ -774,6 +774,8 @@ class ClassicalDamage(Workflow):
         where N is the number of points and D the number of damage states.
         """
         return assets, utils.numpy_map(self.curves, hazard_curves)
+
+    compute_all_outputs = Classical.compute_all_outputs.im_func
 
 
 # NB: the approach used here relies on the convention of having the
