@@ -17,9 +17,6 @@
 Core functionality for the classical damage risk calculator.
 """
 
-from openquake.risklib import workflows
-
-from openquake.engine.calculators import post_processing
 from openquake.engine.calculators.risk import (
     base, hazard_getters, validation, writers)
 from openquake.engine.utils import calculators
@@ -49,7 +46,7 @@ def classical_damage(workflow, getter, outputdict, params, monitor):
         with monitor.copy('computing risk'):
             outputs = workflow.compute_all_outputs(getter, loss_type)
             stats = workflow.statistics(
-                outputs, params.quantile_loss_curves, post_processing)
+                outputs, params.quantile_loss_curves)
         with monitor.copy('saving risk'):
             for out in outputs:
                 save_individual_outputs(
