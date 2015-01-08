@@ -341,7 +341,6 @@ class ClassicalExportTestCase(BaseExportTestCase):
 
 
 class EventBasedExportTestCase(BaseExportTestCase):
-    expected_gmfs = 'expected_gmfset_1.txt', 'expected_gmfset_2.txt'
 
     def check_file_content(self, fname, content):
         fullname = os.path.join(os.path.dirname(__file__), fname)
@@ -358,8 +357,7 @@ class EventBasedExportTestCase(BaseExportTestCase):
         # Call the exporters for both SES and GMF results  and verify that
         # files were created
         # Since the XML writers (in `openquake.commonlib`) are concerned
-        # with correctly generating the XML, we don't test that here...
-        # but we should still have an end-to-end QA test.
+        # with correctly generating the XML, we don't test that here
         target_dir = tempfile.mkdtemp()
 
         try:
@@ -368,16 +366,16 @@ class EventBasedExportTestCase(BaseExportTestCase):
             # run the calculation in process to create something to export
             with mock.patch.dict(os.environ, {'OQ_NO_DISTRIBUTE': '1'}):
                 job = helpers.run_job(cfg, maximum_distance=1,
-                                      ses_per_logic_tree_path=1).job
+                                      ses_per_logic_tree_path=1,
+                                      number_of_logic_tree_samples=1).job
             self.assertEqual(job.status, 'complete')
 
+            # 1 SES + 1 GMF + 1 hazard_curve_multi + 2 hazard_curve +
+            # 4 hazard maps (with poes 0.1, 0.2 and IMT PGA, SA(0.1))
             outputs = core.get_outputs(job.id)
-            # 2 GMFs, 1 SES,
-            # ((2 imts * 2 realizations)
-            self.assertEqual(45, len(outputs))
+            self.assertEqual(9, len(outputs))
 
-            #######
-            # SESs:
+            # SESs
             ses_outputs = outputs.filter(output_type='ses')
             self.assertEqual(1, len(ses_outputs))
 
@@ -391,17 +389,16 @@ class EventBasedExportTestCase(BaseExportTestCase):
             for f in exported_files:
                 self._test_exported_file(f)
 
-            #######
-            # GMFs:
+            # GMFs
             gmf_outputs = outputs.filter(output_type='gmf')
-            self.assertEqual(2, len(gmf_outputs))
+            self.assertEqual(1, len(gmf_outputs))
 
             exported_files = []
             for gmf_output in gmf_outputs:
                 out_file = check_export(gmf_output.id, target_dir)
                 exported_files.append(out_file)
 
-            self.assertEqual(2, len(exported_files))
+            self.assertEqual(1, len(exported_files))
             # Check the file paths exist, are absolute, and the files aren't
             # empty.
             for f in exported_files:
@@ -409,22 +406,18 @@ class EventBasedExportTestCase(BaseExportTestCase):
 
             # check the exact values of the GMFs
             [gmfset1] = gmf_outputs[0].gmf
-            [gmfset2] = gmf_outputs[1].gmf
             self.check_file_content('expected_gmfset_1.txt', str(gmfset1))
-            self.check_file_content('expected_gmfset_2.txt', str(gmfset2))
 
-            ################
-            # Hazard curves:
+            # Hazard curves
             haz_curves = outputs.filter(output_type='hazard_curve')
-            self.assertEqual(12, haz_curves.count())
+            self.assertEqual(2, haz_curves.count())
             for curve in haz_curves:
                 exported_file = check_export(curve.id, target_dir)
                 self._test_exported_file(exported_file)
 
-            ##############
-            # Hazard maps:
+            # Hazard maps
             haz_maps = outputs.filter(output_type='hazard_map')
-            self.assertEqual(24, haz_maps.count())
+            self.assertEqual(4, haz_maps.count())
             for hmap in haz_maps:
                 exported_file = check_export(hmap.id, target_dir)
                 self._test_exported_file(exported_file)
