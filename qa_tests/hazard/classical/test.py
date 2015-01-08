@@ -28,7 +28,7 @@ from qa_tests import _utils as qa_utils
 from qa_tests._utils import BaseQATestCase, compare_hazard_curve_with_csv
 from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
-    case_10, case_11, case_12, case_13, case_14, case_15, case_16)
+    case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17)
 
 aaae = numpy.testing.assert_array_almost_equal
 
@@ -671,3 +671,22 @@ class ClassicalHazardCase16TestCase(qa_utils.BaseQATestCase):
                 'hazard_curve__quantile')
         aaae(expected_q0_1_poes, quantile_0_1_curve.poes, decimal=7)
         aaae(expected_q0_9_poes, quantile_0_9_curve.poes, decimal=7)
+
+
+# test where a simple point source is sampled twice
+class ClassicalHazardCase17TestCase(qa_utils.BaseQATestCase):
+
+    @attr('qa', 'hazard', 'classical')
+    def test(self):
+        cfg = os.path.join(os.path.dirname(case_17.__file__), 'job.ini')
+        expected_curve_pga = [0.27612144, 0.03543563, 0.01143429]
+
+        job = self.run_hazard(cfg)
+
+        curve1, curve2 = models.HazardCurveData.objects.filter(
+            hazard_curve__output__oq_job=job.id, hazard_curve__imt='PGA')
+
+        numpy.testing.assert_array_almost_equal(
+            expected_curve_pga, curve1.poes, decimal=7)
+        numpy.testing.assert_array_almost_equal(
+            expected_curve_pga, curve2.poes, decimal=7)

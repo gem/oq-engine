@@ -206,8 +206,6 @@ def compute_hazard_curves(job_id, sources, sitecol):
                    for imt in sorted_imts]
     sorted_imts = map(from_string, sorted_imts)
     trt_model = models.TrtModel.objects.get(pk=trt_model_id)
-    # sources sampled multiple times counts more
-    effective_sources = list(sources) * trt_model.samples
 
     gsims = trt_model.get_gsim_instances()
     curves = [[numpy.ones([total_sites, len(ls)]) for ls in sorted_imls]
@@ -227,7 +225,7 @@ def compute_hazard_curves(job_id, sources, sitecol):
     num_sites = 0
     # NB: rows are namedtuples with fields (source, rupture, rupture_sites)
     for source, rows in itertools.groupby(
-            gen_ruptures(effective_sources, sitecol, hc.maximum_distance, mon),
+            gen_ruptures(sources, sitecol, hc.maximum_distance, mon),
             key=operator.attrgetter('source')):
         t0 = time.time()
         num_ruptures = 0
