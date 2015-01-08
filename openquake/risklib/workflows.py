@@ -752,6 +752,8 @@ class ClassicalDamage(Workflow):
     """
     Implements the ClassicalDamage workflow
     """
+    Output = collections.namedtuple('Output', "assets damages")
+
     def __init__(self, imt, taxonomy, fragility_functions,
                  hazard_imtls, hazard_investigation_time,
                  risk_investigation_time):
@@ -773,7 +775,10 @@ class ClassicalDamage(Workflow):
 
         where N is the number of points and D the number of damage states.
         """
-        return assets, utils.numpy_map(self.curves, hazard_curves)
+        fractions = utils.numpy_map(self.curves, hazard_curves)
+        damages = [asset.number * fraction
+                   for asset, fraction in zip(assets, fractions)]
+        return self.Output(assets, damages)
 
     compute_all_outputs = Classical.compute_all_outputs.im_func
 

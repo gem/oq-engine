@@ -45,9 +45,8 @@ def classical_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
                  sum(ri.weight for ri in riskinputs))
     with monitor:
         result = AccumDict()  # asset -> poos per damage state
-        for [(assets, fractions)] in riskmodel.gen_outputs(riskinputs):
-            for asset, fraction in zip(assets, fractions):
-                result += {asset: fraction * asset.number}
+        for [assets_damages] in riskmodel.gen_outputs(riskinputs):
+            result += dict(zip(*assets_damages))
     return result
 
 
