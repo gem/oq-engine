@@ -159,16 +159,6 @@ def compute_hazard_maps(curves, imls, poes):
     :param poes:
         Value(s) on which to interpolate a hazard map from the input
         ``curves``. Can be an array-like or scalar value (for a single PoE).
-
-    :returns:
-        A 2D numpy array of hazard map data. Each element/row in the resulting
-        array represents the interpolated map for each ``poes`` value
-        specified. If ``poes`` is just a single scalar value, the result array
-        will have a length of 1.
-
-        The results are structured this way so that it is easy to iterate over
-        the hazard map results in a consistent way, no matter how many
-        ``poes`` values are specified.
     """
     poes = numpy.array(poes)
 
@@ -203,3 +193,40 @@ def compute_hazard_maps(curves, imls, poes):
 
         result.append(hmap_val)
     return numpy.array(result).transpose()
+
+
+###################### utilities for classical calculators #################
+
+def agg_prob(acc, prob):
+    """
+    Aggregation function for probabilities.
+
+    :param acc: the accumulator
+    :param prob: the probability (can be an array or more)
+
+    In particular::
+
+       agg_prob(acc, 0) = acc
+       agg_prob(acc, 1) = 1
+       agg_prob(0, prob) = prob
+       agg_prob(1, prob) = 1
+       agg_prob(acc, prob) = agg_prob(prob, acc)
+
+       agg_prob(acc, eps) =~ acc + eps for eps << 1
+    """
+    return 1. - (1. - prob) * (1. - acc)
+
+
+def data_by_imt(dict_of_dict_arrays, imtls, n_sites):
+    """
+    Convert a dictionary key -> imt -> [value ...] into a dictionary
+    imt -> array([key -> value ...])
+    """
+    dic = {}
+    for imt in imtls:
+        res = numpy.array([{} for _ in xrange(n_sites)])
+        for k, dic in dict_of_dict_arrays.iteritems():
+            for i, curve in enumerate(dic[imt]):
+                res[i][k] = curve
+        dic[imt] = res
+    return dic

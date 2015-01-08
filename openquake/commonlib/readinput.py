@@ -31,10 +31,9 @@ from openquake.risklib import workflows
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.node import read_nodes, LiteralNode, context
 from openquake.commonlib import nrml, valid, logictree, InvalidFile, parallel
-from openquake.commonlib.oqvalidation import \
-    fragility_files, vulnerability_files
+from openquake.commonlib.oqvalidation import vulnerability_files
 from openquake.commonlib.riskmodels import \
-    get_fragility_functions, get_imtls_from_vulnerabilities, get_vfs
+    get_fragility_functions, get_vfs
 from openquake.baselib.general import groupby, AccumDict, distinct
 from openquake.commonlib import source
 
@@ -64,7 +63,7 @@ def get_params(job_ini):
     # drectory containing the config files we're parsing
     base_path = os.path.dirname(
         os.path.join(os.path.abspath('.'), job_inis[0]))
-    params = dict(base_path=base_path, inputs={})
+    params = dict(base_path=base_path, inputs={'job_ini': job_ini})
 
     for sect in cp.sections():
         for key, value in cp.items(sect):
@@ -102,17 +101,18 @@ def get_oqparam(job_ini, calculators=None):
         absolute paths to all of the files referenced in the job.ini, keyed by
         the parameter name.
     """
-    if calculators is None:
-        from openquake.commonlib.calculators import calculators
-    OqParam.params['calculation_mode'].choices = tuple(calculators)
+    # UGLY: this is here to avoid circular imports
+    from openquake.commonlib.calculators import base
+
+    OqParam.params['calculation_mode'].choices = tuple(
+        calculators or base.calculators)
 
     if isinstance(job_ini, dict):
         oqparam = OqParam(**job_ini)
     else:
         oqparam = OqParam(**get_params(job_ini))
 
-    set_imtls(oqparam)
-
+    oqparam.validate()
     return oqparam
 
 
@@ -445,33 +445,6 @@ def get_job_info(oqparam, source_models, sitecol):
                 max_realizations=max_realizations)
 
 
-def set_imtls(oqparam):
-    """
-    Set the attributes .hazard_imtls and/or .risk_imtls
-
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    """
-    if hasattr(oqparam, 'intensity_measure_types'):
-        oqparam.hazard_imtls = dict.fromkeys(oqparam.intensity_measure_types)
-        # remove the now redundant parameter
-        delattr(oqparam, 'intensity_measure_types')
-    if hasattr(oqparam, 'intensity_measure_types_and_levels'):
-        oqparam.hazard_imtls = oqparam.intensity_measure_types_and_levels
-        # remove the now redundant parameter
-        delattr(oqparam, 'intensity_measure_types_and_levels')
-    if vulnerability_files(oqparam.inputs):
-        oqparam.risk_imtls = get_imtls_from_vulnerabilities(oqparam.inputs)
-    if fragility_files(oqparam.inputs):
-        fname = oqparam.inputs['fragility']
-        cfd = getattr(oqparam, 'continuous_fragility_discretization', None)
-        ffs = get_fragility_functions(fname, cfd)
-        oqparam.risk_imtls = {fset.imt: fset.imls for fset in ffs.itervalues()}
-    if 'event_based' in oqparam.calculation_mode and not hasattr(
-            oqparam, 'loss_curve_resolution'):
-        oqparam.loss_curve_resolution = 50  # default
-
-
 def get_imts(oqparam):
     """
     Return a sorted list of IMTs as hazardlib objects
@@ -503,7 +476,6 @@ def get_risk_model(oqparam):
             getattr(oqparam, 'steps_per_interval', None),
         )
         riskmodel.damage_states = fragility_functions.damage_states
-        oqparam.hazard_imtls = oqparam.imtls
         for taxonomy, ffs in fragility_functions.iteritems():
             imt = ffs.imt
             risk_models[imt, taxonomy] = workflows.get_workflow(
@@ -690,7 +662,7 @@ def get_mesh_csvdata(csvfile, imts, num_values, validvalues):
         validation function for the values
     :returns:
         the mesh of points and the data as a dictionary
-        imt -> list of arrays.
+        imt -> array of curves for each site
     """
     number_of_values = dict(zip(imts, num_values))
     lon_lats = {imt: set() for imt in imts}

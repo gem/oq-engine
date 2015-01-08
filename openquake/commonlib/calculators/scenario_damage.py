@@ -23,14 +23,14 @@ import numpy
 
 from openquake.risklib import scientific
 from openquake.baselib.general import AccumDict
-from openquake.commonlib.calculators import base, calc, calculators
+from openquake.commonlib.calculators import base, calc
 from openquake.commonlib.export import export
 from openquake.commonlib.risk_writers import (
     DmgState, DmgDistPerTaxonomy, DmgDistPerAsset, DmgDistTotal,
     ExposureData, Site)
 
 
-def scenario_damage(riskinputs, riskmodel, monitor):
+def scenario_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
     """
     Core function for a damage computation.
 
@@ -49,8 +49,7 @@ def scenario_damage(riskinputs, riskmodel, monitor):
                  sum(ri.weight for ri in riskinputs))
     with monitor:
         result = AccumDict()  # (key_type, key) -> result
-        for loss_type, (assets, fractions) in \
-                riskmodel.gen_outputs(riskinputs):
+        for [(assets, fractions)] in riskmodel.gen_outputs(riskinputs):
             for asset, fraction in zip(assets, fractions):
                 damages = fraction * asset.number
                 result += {('asset', asset): scientific.mean_std(damages)}
@@ -58,11 +57,12 @@ def scenario_damage(riskinputs, riskmodel, monitor):
     return result
 
 
-@calculators.add('scenario_damage')
-class ScenarioDamageCalculator(base.BaseRiskCalculator):
+@base.calculators.add('scenario_damage')
+class ScenarioDamageCalculator(base.RiskCalculator):
     """
     Scenario damage calculator
     """
+    hazard_calculator = 'scenario'
     core_func = scenario_damage
 
     def pre_execute(self):
@@ -72,7 +72,7 @@ class ScenarioDamageCalculator(base.BaseRiskCalculator):
         super(ScenarioDamageCalculator, self).pre_execute()
 
         logging.info('Computing the GMFs')
-        gmfs_by_imt = calc.calc_gmfs(self.oqparam, self.sitecol)
+        gmfs_by_imt = self.get_hazard()['result']
 
         logging.info('Preparing the risk input')
         self.riskinputs = self.build_riskinputs(gmfs_by_imt)
@@ -104,10 +104,9 @@ class ScenarioDamageCalculator(base.BaseRiskCalculator):
             elif key_type == 'asset':
                 means, stddevs = values
                 for dmg_state, mean, std in zip(dmg_states, means, stddevs):
-                    site = Site(*key.location)
                     dd_asset.append(
                         DmgDistPerAsset(
-                            ExposureData(key.id, site),
+                            ExposureData(key.id, Site(*key.location)),
                             dmg_state, mean, std))
         dd_total = []
         for dmg_state, total in zip(dmg_states, totals.T):

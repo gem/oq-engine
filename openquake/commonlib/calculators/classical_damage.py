@@ -21,12 +21,12 @@ import logging
 
 from openquake.baselib.general import AccumDict
 from openquake.commonlib import readinput
-from openquake.commonlib.calculators import base, calculators
+from openquake.commonlib.calculators import base
 from openquake.commonlib.export import export
 from openquake.commonlib.risk_writers import DmgState
 
 
-def classical_damage(riskinputs, riskmodel, monitor):
+def classical_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
     """
     Core function for a classical damage computation.
 
@@ -45,15 +45,14 @@ def classical_damage(riskinputs, riskmodel, monitor):
                  sum(ri.weight for ri in riskinputs))
     with monitor:
         result = AccumDict()  # asset -> poos per damage state
-        for loss_type, (assets, fractions) in \
-                riskmodel.gen_outputs(riskinputs):
+        for [(assets, fractions)] in riskmodel.gen_outputs(riskinputs):
             for asset, fraction in zip(assets, fractions):
                 result += {asset: fraction * asset.number}
     return result
 
 
-@calculators.add('classical_damage')
-class ClassicalDamageCalculator(base.BaseRiskCalculator):
+@base.calculators.add('classical_damage')
+class ClassicalDamageCalculator(base.RiskCalculator):
     """
     Scenario damage calculator
     """

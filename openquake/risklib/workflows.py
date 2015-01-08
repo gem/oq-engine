@@ -256,8 +256,7 @@ class Classical(Workflow):
             a :class:`openquake.risklib.scientific.Classical.Output` instance.
         """
         curves = utils.numpy_map(self.curves[loss_type], hazard_curves)
-        average_losses = numpy.array([scientific.average_loss(losses, poes)
-                                      for losses, poes in curves])
+        average_losses = utils.numpy_map(scientific.average_loss, curves)
         maps = scientific.loss_map_matrix(self.conditional_loss_poes, curves)
         fractions = scientific.loss_map_matrix(self.poes_disagg, curves)
 
@@ -267,9 +266,8 @@ class Classical(Workflow):
 
             insured_curves = utils.numpy_map(
                 scientific.insured_loss_curve, curves, deductibles, limits)
-            average_insured_losses = [
-                scientific.average_loss(losses, poes)
-                for losses, poes in insured_curves]
+            average_insured_losses = utils.numpy_map(
+                scientific.average_loss, insured_curves)
         else:
             insured_curves = None
             average_insured_losses = None
@@ -305,8 +303,7 @@ class Classical(Workflow):
         (mean_curves, mean_average_losses, mean_maps,
          quantile_curves, quantile_average_losses, quantile_maps) = (
             scientific.exposure_statistics(
-                [normalize_curves(curves)
-                 for curves
+                [normalize_curves(curves) for curves
                  in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
                 self.conditional_loss_poes + self.poes_disagg,
                 weights, quantiles))
@@ -316,8 +313,7 @@ class Classical(Workflow):
             (mean_insured_curves, mean_average_insured_losses, _,
              quantile_insured_curves, quantile_average_insured_losses, _) = (
                 scientific.exposure_statistics(
-                    [normalize_curves(curves)
-                     for curves
+                    [normalize_curves(curves) for curves
                      in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
                     [], weights, quantiles))
         else:
@@ -422,15 +418,10 @@ class ProbabilisticEventBased(Workflow):
             tses,
             loss_curve_resolution,
             conditional_loss_poes,
-            insured_losses=False,
-            return_loss_matrix=True):
+            insured_losses=False):
         """
         See :func:`openquake.risklib.scientific.event_based` for a description
-        of the input parameters. The last parameter is
-
-        :param bool return_loss_matrix:
-            if False the loss_matrix is not saved in the Output tuple
-            (a trick to save memory in the case of no disaggregation)
+        of the input parameters.
         """
         self.imt = imt
         self.taxonomy = taxonomy
@@ -440,7 +431,7 @@ class ProbabilisticEventBased(Workflow):
             time_span=risk_investigation_time, tses=tses)
         self.conditional_loss_poes = conditional_loss_poes
         self.insured_losses = insured_losses
-        self.return_loss_matrix = return_loss_matrix
+        self.return_loss_matrix = True
 
     def event_loss(self, loss_matrix, event_ids):
         """
@@ -485,8 +476,7 @@ class ProbabilisticEventBased(Workflow):
             ground_motion_values, epsilons)
 
         curves = utils.numpy_map(self.curves, loss_matrix)
-        average_losses = numpy.array([scientific.average_loss(losses, poes)
-                                      for losses, poes in curves])
+        average_losses = utils.numpy_map(scientific.average_loss, curves)
         stddev_losses = numpy.std(loss_matrix, axis=1)
         values = utils.numpy_map(lambda a: a.value(loss_type), assets)
         maps = scientific.loss_map_matrix(self.conditional_loss_poes, curves)
@@ -498,9 +488,8 @@ class ProbabilisticEventBased(Workflow):
             insured_loss_matrix = utils.numpy_map(
                 scientific.insured_losses, loss_matrix, deductibles, limits)
             insured_curves = utils.numpy_map(self.curves, insured_loss_matrix)
-            average_insured_losses = [
-                scientific.average_loss(losses, poes)
-                for losses, poes in insured_curves]
+            average_insured_losses = utils.numpy_map(
+                scientific.average_loss, insured_curves)
             stddev_insured_losses = numpy.std(insured_loss_matrix, axis=1)
         else:
             insured_curves = None
@@ -628,13 +617,11 @@ class ClassicalBCR(Workflow):
         retrofitted_loss_curves = utils.numpy_map(
             self.curves_retro[loss_type], hazard)
 
-        eal_original = [
-            scientific.average_loss(losses, poes)
-            for losses, poes in original_loss_curves]
+        eal_original = utils.numpy_map(
+            scientific.average_loss, original_loss_curves)
 
-        eal_retrofitted = [
-            scientific.average_loss(losses, poes)
-            for losses, poes in retrofitted_loss_curves]
+        eal_retrofitted = utils.numpy_map(
+            scientific.average_loss, retrofitted_loss_curves)
 
         bcr_results = [
             scientific.bcr(
@@ -669,18 +656,16 @@ class ProbabilisticEventBasedBCR(Workflow):
 
     def __call__(self, loss_type, assets, gmfs, epsilons, event_ids):
         self.assets = assets
+
         original_loss_curves = utils.numpy_map(
             self.curves, self.vf_orig[loss_type].apply_to(gmfs, epsilons))
         retrofitted_loss_curves = utils.numpy_map(
             self.curves, self.vf_retro[loss_type].apply_to(gmfs, epsilons))
 
-        eal_original = [
-            scientific.average_loss(losses, poes)
-            for losses, poes in original_loss_curves]
-
-        eal_retrofitted = [
-            scientific.average_loss(losses, poes)
-            for losses, poes in retrofitted_loss_curves]
+        eal_original = utils.numpy_map(
+            scientific.average_loss, original_loss_curves)
+        eal_retrofitted = utils.numpy_map(
+            scientific.average_loss, retrofitted_loss_curves)
 
         bcr_results = [
             scientific.bcr(
@@ -813,14 +798,36 @@ def get_workflow(imt, taxonomy, oqparam, **extra):
     workflow_class = registry[oqparam.calculation_mode]
     # arguments needed to instantiate the workflow class
     argnames = inspect.getargspec(workflow_class.__init__).args[3:]
+
     # arguments extracted from oqparam
     known_args = vars(oqparam)
     all_args = {}
     for argname in argnames:
         if argname in known_args:
             all_args[argname] = known_args[argname]
+
+    if 'hazard_imtls' in argnames:  # special case
+        all_args['hazard_imtls'] = getattr(
+            oqparam, 'hazard_imtls', oqparam.imtls)
     all_args.update(extra)
+    missing = set(argnames) - set(all_args)
+    if missing:
+        raise TypeError('Missing parameter: %s' % ', '.join(missing))
     return workflow_class(imt, taxonomy, **all_args)
+
+
+class FakeRlzsAssoc(object):
+    """
+    Used for scenario calculators, when there are no realizations.
+    """
+    def __init__(self):
+        self.realizations = [0]
+
+    def combine(self, result):
+        return {0: result}
+
+    def collect_by_rlz(self, results):
+        return {0: results}
 
 
 class RiskModel(collections.Mapping):
@@ -884,26 +891,38 @@ class RiskModel(collections.Mapping):
                 hazard_per_asset_group.append((hazard, assets_by_taxo))
         return RiskInput(imt, hazard_per_asset_group)
 
-    def gen_outputs(self, riskinputs):
+    def gen_outputs(self, riskinputs, rlzs_assoc=FakeRlzsAssoc()):
         """
-        Yield the output generated by each getter and loss type for each
-        workflow.
+        Yield the outputs generated by each getter and loss type for each
+        workflow, as a list of values, one for each realization.
 
         :param riskinputs: a list of riskinputs with consistent IMT
         """
-        imt = riskinputs[0].imt
         for riskinput in riskinputs:
-            assets_, hazards_, epsilons_ = riskinput.get_all()
-            for taxonomy in riskinput.taxonomies:
-                assets = assets_[taxonomy]
-                if not assets:
-                    continue
-                hazards = hazards_[taxonomy]
-                epsilons = epsilons_[taxonomy]
-                workflow = self[imt, taxonomy]
-                for loss_type in workflow.loss_types:
-                    yield loss_type, workflow(
-                        loss_type, assets, hazards, epsilons)
+            out = self.gen_output(riskinput, rlzs_assoc)
+            for key in sorted(out):
+                yield out[key]  # list of results by realization
+
+    def gen_output(self, riskinput, rlzs_assoc):
+        """
+        :param riskinput: RiskInput instance
+        :param rlzs_assoc: a RlzsAssoc instance
+        :returns: a map taxonomy, loss_type -> results by realization
+        """
+        assets_, hazards_, epsilons_ = riskinput.get_all()
+        output = {}
+        for taxonomy in riskinput.taxonomies:
+            assets = assets_[taxonomy]
+            if not assets:
+                continue
+            hazards_by_rlz = rlzs_assoc.collect_by_rlz(hazards_[taxonomy])
+            epsilons = epsilons_[taxonomy]
+            workflow = self[riskinput.imt, taxonomy]
+            for loss_type in workflow.loss_types:
+                output[taxonomy, loss_type] = [
+                    workflow(loss_type, assets, hazards_by_rlz[rlz], epsilons)
+                    for rlz in rlzs_assoc.realizations]
+        return output
 
 
 class RiskInput(object):

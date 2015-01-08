@@ -45,7 +45,7 @@ MIN_SINT_32 = -(2 ** 31)
 MAX_SINT_32 = (2 ** 31) - 1
 
 
-LtRealization = namedtuple('LtRealization', 'value weight lt_path ordinal')
+Realization = namedtuple('Realization', 'value weight lt_path ordinal')
 
 
 class LogicTreeError(Exception):
@@ -571,7 +571,7 @@ class BaseLogicTree(object):
 
     def __iter__(self):
         """
-        Yield LtRealization tuples. Notice that
+        Yield Realization tuples. Notice that
         weight is not None only when the number_of_logic_tree_samples
         is 0. In that case a full enumeration is performed, otherwise
         a random sampling is performed.
@@ -582,12 +582,12 @@ class BaseLogicTree(object):
             weight = 1. / self.num_samples
             for _ in xrange(self.num_samples):
                 name, sm_lt_path = self.sample_path(rnd)
-                yield LtRealization(name, weight, tuple(sm_lt_path), None)
+                yield Realization(name, weight, tuple(sm_lt_path), None)
         else:  # full enumeration
             for weight, smlt_path in self.root_branchset.enumerate_paths():
                 name = smlt_path[0].value
                 smlt_branch_ids = [branch.branch_id for branch in smlt_path]
-                yield LtRealization(name, weight, tuple(smlt_branch_ids), None)
+                yield Realization(name, weight, tuple(smlt_branch_ids), None)
 
     @abc.abstractmethod
     def parse_uncertainty_value(self, node, branchset, value):
@@ -963,7 +963,7 @@ class InvalidLogicTree(Exception):
 
 class GsimLogicTree(object):
     """
-    A GsimLogicTree instance is an iterable yielding `LtRealization`
+    A GsimLogicTree instance is an iterable yielding `Realization`
     tuples with attributes `value`, `weight` and `lt_path`, where
     `value` is a dictionary {trt: gsim}, `weight` is a number in the
     interval 0..1 and `lt_path` is a tuple with the branch ids of the
@@ -1097,4 +1097,4 @@ class GsimLogicTree(object):
                 assert branch.uncertainty in self.values[fkey], \
                     branch.uncertainty  # sanity check
                 value[fkey] = branch.uncertainty
-            yield LtRealization(value, weight, tuple(lt_path), i)
+            yield Realization(value, weight, tuple(lt_path), i)

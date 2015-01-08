@@ -24,7 +24,7 @@ import numpy
 from openquake.risklib import scientific
 from openquake.baselib import general
 from openquake.commonlib import riskmodels
-from openquake.commonlib.calculators import calculators, base, calc
+from openquake.commonlib.calculators import base, calc
 from openquake.commonlib.export import export
 
 
@@ -78,8 +78,8 @@ def scenario_risk(riskinputs, riskmodel, monitor):
     return result
 
 
-@calculators.add('scenario_risk')
-class ScenarioRiskCalculator(base.BaseRiskCalculator):
+@base.calculators.add('scenario_risk')
+class ScenarioRiskCalculator(base.RiskCalculator):
     """
     Run a scenario risk calculation
     """

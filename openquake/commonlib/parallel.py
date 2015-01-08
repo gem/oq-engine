@@ -26,7 +26,6 @@ import cPickle
 import logging
 import operator
 import traceback
-import itertools
 import time
 from datetime import datetime
 from concurrent.futures import as_completed, ProcessPoolExecutor
@@ -37,6 +36,11 @@ from openquake.baselib.general import split_in_blocks, AccumDict
 
 
 executor = ProcessPoolExecutor()
+# the num_tasks_hint is chosen to be 4 times bigger than the name of
+# cores; it is a heuristic number to get a decent distribution of the
+# load; it has no more significance than that
+executor.num_tasks_hint = executor._max_workers * 4
+
 
 ONE_MB = 1024 * 1024
 
@@ -345,19 +349,13 @@ def apply_reduce(task_func, task_args, agg=operator.add, acc=None,
         acc = AccumDict()
     if not arg0:
         return acc
-    elif len(arg0) == 1:
+    elif len(arg0) == 1 or not concurrent_tasks:
         return agg(acc, task_func(arg0, *args))
     chunks = list(split_in_blocks(arg0, concurrent_tasks, weight, key))
     apply_reduce._chunks = chunks
-    if concurrent_tasks:
-        # map reduce in parallel
-        tm = starmap(task_func, [(chunk,) + args for chunk in chunks],
-                     logging.info, name)
-        return tm.reduce(agg, acc)
-    # else sequential splitting
-    results = itertools.starmap(
-        task_func, [(chunk,) + args for chunk in chunks], logging.info, name)
-    return reduce(agg, results, acc)
+    tm = starmap(task_func, [(chunk,) + args for chunk in chunks],
+                 logging.info, name)
+    return tm.reduce(agg, acc)
 
 
 def do_not_aggregate(acc, value):
