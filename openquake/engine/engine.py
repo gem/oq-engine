@@ -23,6 +23,7 @@ import getpass
 import itertools
 import logging
 import operator
+import tempfile
 from contextlib import contextmanager
 from datetime import datetime
 
@@ -443,6 +444,10 @@ def job_from_file(cfg_file_path, username, log_level='info', exports='',
     with logs.handle(job, log_level):
         # read calculation params and create the calculation profile
         params = readinput.get_params(cfg_file_path)
+        if not exports:  # when called from the engine server
+            # ignore the user-provided export_dir: the engine server will
+            # export on demand with its own mechanism on a temporary directory
+            params['export_dir'] = tempfile.gettempdir()
         params.update(extras)
         if haz_job:  # for risk calculations
             check_hazard_risk_consistency(haz_job, params['calculation_mode'])
@@ -496,10 +501,9 @@ def job_from_file(cfg_file_path, username, log_level='info', exports='',
         if not 'risk_investigation_time' in params and not \
            params['calculation_mode'].startswith('scenario'):
             params['risk_investigation_time'] = hc.investigation_time
-        if 'hazard_imtls' not in params:
-            params['hazard_imtls'] = dict(hc.imtls)
         params['hazard_investigation_time'] = getattr(
             hc, 'investigation_time', None)
+        params['hazard_imtls'] = dict(hc.imtls)
         job.save_params(params)
 
     job.save()
