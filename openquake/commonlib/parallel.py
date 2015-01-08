@@ -36,6 +36,11 @@ from openquake.baselib.general import split_in_blocks, AccumDict
 
 
 executor = ProcessPoolExecutor()
+# the num_tasks_hint is chosen to be 4 times bigger than the name of
+# cores; it is a heuristic number to get a decent distribution of the
+# load; it has no more significance than that
+executor.num_tasks_hint = executor._max_workers * 4
+
 
 ONE_MB = 1024 * 1024
 

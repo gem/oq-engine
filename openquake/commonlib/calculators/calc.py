@@ -230,4 +230,3 @@ def data_by_imt(dict_of_dict_arrays, imtls, n_sites):
                 res[i][k] = curve
         dic[imt] = res
     return dic
-     
