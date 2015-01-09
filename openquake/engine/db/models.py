@@ -2522,10 +2522,15 @@ class Damage(djm.Model):
     """
     The damage curve corresponding to a given hazard output.
     """
+    risk_calculation = djm.ForeignKey("OqJob")
     output = djm.OneToOneField("Output", related_name="damage")
     hazard_output = djm.ForeignKey("Output", related_name="damages")
     statistics = djm.TextField(null=True, choices=STAT_CHOICES)
     quantile = djm.FloatField(null=True)
+
+    @property
+    def loss_type(self):
+        return 'damage'
 
     class Meta:
         db_table = 'riskr\".\"damage'
@@ -2837,6 +2842,12 @@ class ExposureData(djm.Model):
     area = djm.FloatField(null=True)
 
     objects = AssetManager()
+
+    # this is needed for compatibily with oq-lite
+    @property
+    def number(self):
+        """An alias for number_of_units"""
+        return self.number_of_units
 
     class Meta:
         db_table = 'riski\".\"exposure_data'
