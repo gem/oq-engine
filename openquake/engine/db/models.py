@@ -642,6 +642,7 @@ class Output(djm.Model):
         (u'event_loss_curve', u'Loss Curve'),
         (u'loss_fraction', u'Loss fractions'),
         (u'loss_map', u'Loss Map'),
+        (u'dmg_per_asset', 'Damage Per Asset'),
     )
 
     output_type = djm.TextField(
@@ -2008,13 +2009,6 @@ class LossFractionData(djm.Model):
         return '%.5f,%.5f,%s,%s' % (
             self.location.x, self.location.y, self.value, self.absolute_loss)
 
-    def to_csv_str(self):
-        """
-        Convert LossFraction into a CSV string
-        """
-        return '%.5f,%.5f,%s,%s' % (
-            self.location.x, self.location.y, self.value, self.absolute_loss)
-
 
 class LossMap(djm.Model):
     '''
@@ -2522,6 +2516,28 @@ class DmgDistTotal(djm.Model):
     def assertAlmostEqual(self, data):
         return risk_almost_equal(
             self, data, operator.attrgetter('mean', 'stddev'))
+
+
+class Damage(djm.Model):
+    """
+    The damage curve corresponding to a given hazard output.
+    """
+    output = djm.OneToOneField("Output", related_name="damage")
+    hazard_output = djm.ForeignKey("Output", related_name="damages")
+    statistics = djm.TextField(null=True, choices=STAT_CHOICES)
+    quantile = djm.FloatField(null=True)
+
+
+class DamageData(djm.Model):
+    """
+    Holds the actual damage fractions for an entire calculation.
+    There should be N records per realization per damage state,
+    where N is the number of assets.
+    """
+    damage = djm.ForeignKey("Damage")
+    dmg_state = djm.ForeignKey("DmgState")
+    exposure_data = djm.ForeignKey("ExposureData")
+    fraction = djm.FloatField(null=False)
 
 
 ## Tables in the 'riski' schema.
