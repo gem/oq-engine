@@ -187,7 +187,8 @@ class RiskCalculator(base.Calculator):
         if oq.hazard_output:
             return [oq.hazard_output]
         elif oq.hazard_calculation_id:
-            if oq.calculation_mode in ["classical_risk", "classical_bcr"]:
+            if oq.calculation_mode in ["classical_risk", "classical_bcr",
+                                       "classical_damage"]:
                 filters = dict(output_type='hazard_curve_multi',
                                hazard_curve__lt_realization__isnull=False)
             elif oq.calculation_mode in [

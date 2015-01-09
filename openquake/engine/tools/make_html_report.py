@@ -136,7 +136,7 @@ SELECT count(id) FROM hzrdr.lt_source_model WHERE hazard_calculation_id=%s
 MODEL_INFO = '''
 SELECT a.id, lt_model_id, tectonic_region_type, num_sources, num_ruptures,
 min_mag, max_mag, CASE WHEN num_ruptures > 0 THEN array_length(gsims, 1) ELSE 0
-END as num_gsim, array_to_string(gsims, ',') AS gsims
+END as num_gsim, array_to_string(gsims, ',') AS gsims, b.samples
 FROM hzrdr.trt_model AS a, hzrdr.lt_source_model AS b
 WHERE a.lt_model_id=b.id AND b.hazard_calculation_id=%s
 ORDER BY a.id, num_sources
