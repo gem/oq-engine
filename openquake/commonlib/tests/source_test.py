@@ -28,7 +28,8 @@ from openquake.hazardlib import source
 from openquake.hazardlib.tom import PoissonTOM
 
 from openquake.commonlib import tests, nrml_examples, readinput
-from openquake.commonlib import source as s
+from openquake.commonlib import sourceconverter as s
+from openquake.commonlib.source import parse_source_model, DuplicatedID
 from openquake.commonlib.nrml import nodefactory
 from openquake.commonlib.node import read_nodes
 from openquake.baselib.general import deep_eq
@@ -379,8 +380,8 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             width_of_mfd_bin=0.1,
             area_source_discretization=10,
         )
-        with self.assertRaises(s.DuplicatedID):
-            s.parse_source_model(
+        with self.assertRaises(DuplicatedID):
+            parse_source_model(
                 DUPLICATE_ID_SRC_MODEL, converter)
 
     def test_raises_useful_error_1(self):
@@ -591,7 +592,7 @@ class TrtModelTestCase(unittest.TestCase):
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
             area_source_discretization=1.)
         cls.source_collector = dict(
-            (sc.trt, sc) for sc in s.parse_source_model(
+            (sc.trt, sc) for sc in parse_source_model(
                 MIXED_SRC_MODEL, cls.converter, lambda src: None))
         cls.sitecol = site.SiteCollection(cls.SITES)
 

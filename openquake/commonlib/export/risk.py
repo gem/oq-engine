@@ -52,17 +52,18 @@ def export_agg_loss_csv(key, export_dir, aggcurves):
 
 
 @export.add('classical_damage_csv')
-def export_classical_damage_csv(key, export_dir, damage_states,
+def export_classical_damage_csv(key, export_dir, fname, damage_states,
                                 fractions_by_asset):
     """
     Export damage fractions in CSV.
 
     :param key: 'classical_damage_csv'
     :param export_dir: the export directory
+    :param fname: the name of the exported file
     :param damage_states: the damage states
     :fractions_by_asset: a dictionary with the fractions by asset
     """
-    dest = os.path.join(export_dir, key.replace('_csv', '.csv'))
+    dest = os.path.join(export_dir, fname)
     with open(dest, 'w') as csvfile:
         writer = csv.writer(csvfile, delimiter='|', lineterminator='\n')
         writer.writerow(['asset_ref'] + [ds.dmg_state for ds in damage_states])

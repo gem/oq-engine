@@ -40,8 +40,7 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
         result = general.AccumDict()
         for outputs in riskmodel.gen_outputs(riskinputs, rlzs_assoc):
             for i, out in enumerate(outputs):
-                for asset, average_loss in zip(
-                        out.assets, out.average_losses):
+                for asset, average_loss in zip(out.assets, out.average_losses):
                     result += {('avg_loss', i, asset.id): average_loss}
     return result
 

@@ -35,7 +35,7 @@ from openquake.commonlib.oqvalidation import vulnerability_files
 from openquake.commonlib.riskmodels import \
     get_fragility_functions, get_vfs
 from openquake.baselib.general import groupby, AccumDict, distinct
-from openquake.commonlib import source
+from openquake.commonlib import source, sourceconverter
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
 NORMALIZATION_FACTOR = 1E-2
@@ -232,7 +232,7 @@ def get_rupture(oqparam):
     rup_model = oqparam.inputs['rupture_model']
     rup_node, = read_nodes(rup_model, lambda el: 'Rupture' in el.tag,
                            source.nodefactory['sourceModel'])
-    conv = source.RuptureConverter(
+    conv = sourceconverter.RuptureConverter(
         oqparam.rupture_mesh_spacing, oqparam.complex_fault_mesh_spacing)
     return conv.convert_node(rup_node)
 
@@ -281,7 +281,7 @@ def get_source_models(oqparam, source_model_lt):
         an iterator over :class:`openquake.commonlib.readinput.SourceModel`
         tuples
     """
-    converter = source.SourceConverter(
+    converter = sourceconverter.SourceConverter(
         oqparam.investigation_time,
         oqparam.rupture_mesh_spacing,
         oqparam.complex_fault_mesh_spacing,
@@ -339,7 +339,7 @@ def get_filtered_source_models(oqparam, source_model_lt, sitecol):
     for source_model in get_source_models(oqparam, source_model_lt):
         for trt_model in list(source_model.trt_models):
             num_original_sources = len(trt_model)
-            trt_model.sources = source.filter_sources(
+            trt_model.sources = sourceconverter.filter_sources(
                 trt_model, sitecol, oqparam.maximum_distance)
             if num_original_sources > 1:
                 logging.info(

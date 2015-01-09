@@ -823,18 +823,28 @@ def get_workflow(imt, taxonomy, oqparam, **extra):
     return workflow_class(imt, taxonomy, **all_args)
 
 
-class FakeRlzsAssoc(object):
+class FakeRlzsAssoc(collections.Mapping):
     """
     Used for scenario calculators, when there are no realizations.
     """
     def __init__(self):
         self.realizations = [0]
+        self.rlzs_assoc = {0: []}
 
     def combine(self, result):
         return {0: result}
 
     def collect_by_rlz(self, results):
         return {0: results}
+
+    def __iter__(self):
+        return self.rlzs_assoc.iterkeys()
+
+    def __getitem__(self, key):
+        return self.rlzs_assoc[key]
+
+    def __len__(self):
+        return len(self.rlzs_assoc)
 
 
 class RiskModel(collections.Mapping):
