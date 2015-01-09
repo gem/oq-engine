@@ -17,11 +17,13 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import re
 import logging
 import collections
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.commonlib import valid
+from openquake.commonlib.riskmodels import (
+    get_fragility_functions, get_imtls_from_vulnerabilities,
+    vulnerability_files, fragility_files)
 
 GSIMS = get_available_gsims()
 
@@ -33,41 +35,12 @@ HAZARD_CALCULATORS = [
 
 RISK_CALCULATORS = [
     'classical_risk', 'event_based_risk', 'scenario_risk',
-    'classical_bcr', 'event_based_bcr', 'scenario_damage']
+    'classical_bcr', 'event_based_bcr', 'scenario_damage', 'classical_damage']
 
 EXPERIMENTAL_CALCULATORS = [
     'event_based_fr']
 
 CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS + EXPERIMENTAL_CALCULATORS
-
-VULNERABILITY_KEY = re.compile('(structural|nonstructural|contents|'
-                               'business_interruption|occupants)_([\w_]+)')
-
-
-def vulnerability_files(inputs):
-    """
-    Return a dict cost_type -> path for the known vulnerability keys
-
-    :param inputs: a dictionary key -> path name
-    """
-    vfs = {}
-    for key in inputs:
-        match = VULNERABILITY_KEY.match(key)
-        if match:
-            vfs[match.group(1)] = inputs[key]
-    return vfs
-
-
-def fragility_files(inputs):
-    """
-    Return a dict of the form {} or {'damage': path}.
-
-    :param inputs: a dictionary key -> path name
-
-    NB: at the moment there is a single fragility key, so the output
-    contains at most one element.
-    """
-    return {'damage': inputs[key] for key in inputs if key == 'fragility'}
 
 
 class OqParam(valid.ParamSet):
@@ -143,6 +116,28 @@ class OqParam(valid.ParamSet):
         width_of_mfd_bin=valid.positivefloat,
         )
 
+    def __init__(self, **names_vals):
+        super(OqParam, self).__init__(**names_vals)
+        if hasattr(self, 'intensity_measure_types'):
+            self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
+            # remove the now redundant parameter
+            delattr(self, 'intensity_measure_types')
+        elif hasattr(self, 'intensity_measure_types_and_levels'):
+            self.hazard_imtls = self.intensity_measure_types_and_levels
+            # remove the now redundant parameter
+            delattr(self, 'intensity_measure_types_and_levels')
+        elif vulnerability_files(self.inputs):
+            self.risk_imtls = get_imtls_from_vulnerabilities(self.inputs)
+        elif fragility_files(self.inputs):
+            fname = self.inputs['fragility']
+            cfd = getattr(self, 'continuous_fragility_discretization', None)
+            ffs = get_fragility_functions(fname, cfd)
+            self.risk_imtls = {fset.imt: fset.imls
+                               for fset in ffs.itervalues()}
+        if 'event_based' in self.calculation_mode and not hasattr(
+                self, 'loss_curve_resolution'):
+            self.loss_curve_resolution = 50  # default
+
     @property
     def imtls(self):
         """
@@ -150,8 +145,7 @@ class OqParam(valid.ParamSet):
         levels, if given, or the hazard ones.
         """
         imtls = getattr(self, 'risk_imtls', None) or getattr(
-            self, 'hazard_imtls', None) or \
-            self.intensity_measure_types_and_levels
+            self, 'hazard_imtls', None)
         return collections.OrderedDict(sorted(imtls.items()))
 
     def is_valid_truncation_level_disaggregation(self):

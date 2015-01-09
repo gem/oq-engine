@@ -921,7 +921,7 @@ class DamageWriter(object):
         """
         :param means: array of means, one per damage state
         :param stddevs: array of stddevs, one per damage state
-        returns: a list of `damage` nodes
+        :returns: a list of `damage` nodes
         """
         nodes = []
         for dmg_state, mean, stddev in zip(self.damage_states, means, stddevs):

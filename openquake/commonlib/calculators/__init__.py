@@ -17,14 +17,9 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import operator
+from openquake.baselib.general import import_all
 
-from openquake.baselib.general import import_all, CallableDict
-
-# define a `calculators` dictionary
-calculators = CallableDict(operator.attrgetter('calculation_mode'))
-
-# make sure the `calculators` dictionary is populated
+# make sure the `base,calculators` dictionary is populated
 import_all('openquake.commonlib.calculators')
 
 # import the development packages if any

@@ -1,8 +1,8 @@
 import os
-from openquake.commonlib.calculators import calculators, base
+from openquake.commonlib.calculators import base
 
 
-@calculators.add('hello')
+@base.calculators.add('hello')
 class HelloCalculator(base.BaseCalculator):
     def pre_execute(self):
         pass

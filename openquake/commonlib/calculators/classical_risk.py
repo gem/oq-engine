@@ -18,13 +18,12 @@
 
 import logging
 
-import numpy
 from openquake.baselib import general
 from openquake.commonlib import readinput
-from openquake.commonlib.calculators import calculators, base
+from openquake.commonlib.calculators import base, calc
 
 
-def classical_risk(riskinputs, riskmodel, monitor):
+def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     """
     Compute and return the average losses for each asset.
 
@@ -32,53 +31,51 @@ def classical_risk(riskinputs, riskmodel, monitor):
         a list of :class:`openquake.risklib.workflows.RiskInput` objects
     :param riskmodel:
         a :class:`openquake.risklib.workflows.RiskModel` instance
+    :param rlzs_assoc:
+        associations (trt_id, gsim) -> realizations
     :param monitor:
         :class:`openquake.commonlib.parallel.PerformanceMonitor` instance
     """
     with monitor:
         result = general.AccumDict()
-        for loss_type, out in riskmodel.gen_outputs(riskinputs):
-            for asset, average_losses in zip(out.assets, out.average_losses):
-                result += {('avg_loss', asset.id): average_losses}
+        for outputs in riskmodel.gen_outputs(riskinputs, rlzs_assoc):
+            for i, out in enumerate(outputs):
+                for asset, average_loss in zip(
+                        out.assets, out.average_losses):
+                    result += {('avg_loss', i, asset.id): average_loss}
     return result
 
 
-@calculators.add('classical_risk')  # from CSV
-class ClassicalRiskCalculator(base.BaseRiskCalculator):
+@base.calculators.add('classical_risk')
+class ClassicalRiskCalculator(base.RiskCalculator):
     """
     Classical Risk calculator
     """
+    hazard_calculator = 'classical'
     core_func = classical_risk
-
-    def filter_hcurves(self, hcurves_by_imt, indices):
-        """
-        Reduce the hazard curves to the sites where there are assets.
-        Add the intensity measure levels to the poes.
-
-        :param hcurves_by_imt: a dictionary imt -> poes
-        :param indices: an array of indices
-        :returns:  a dictionary imt -> [(iml, poes), ...]
-        """
-        h = {}
-        imtls = self.oqparam.intensity_measure_types_and_levels
-        for imt, hcurves in hcurves_by_imt.iteritems():
-            curves = [zip(imtls[imt], hcurve) for hcurve in hcurves[indices]]
-            h[imt] = numpy.array(curves, float)
-        return h
 
     def pre_execute(self):
         """
         Associate the assets to the sites and build the riskinputs.
         """
         super(ClassicalRiskCalculator, self).pre_execute()
-        sites, hcurves_by_imt = readinput.get_sitecol_hcurves(self.oqparam)
+        hazard_from_csv = 'hazard_curves' in self.oqparam.inputs
+        if hazard_from_csv:
+            self.sitecol, hcurves_by_imt = readinput.get_sitecol_hcurves(
+                self.oqparam)
+
         logging.info('Associating assets -> sites')
         with self.monitor('assoc_assets_sites'):
-            sitecol, assets_by_site = self.assoc_assets_sites(sites)
+            sitecol, assets_by_site = self.assoc_assets_sites(self.sitecol)
         num_assets = sum(len(assets) for assets in assets_by_site)
         num_sites = len(sitecol)
         logging.info('Associated %d assets to %d sites', num_assets, num_sites)
-        hcurves_by_imt = self.filter_hcurves(hcurves_by_imt, sitecol.indices)
+
+        haz_out = self.get_hazard()
+        logging.info('Preparing the risk input')
+        hcurves_by_imt = calc.data_by_imt(
+            haz_out['result'], self.oqparam.hazard_imtls, num_sites)
+        self.rlzs_assoc = haz_out['rlzs_assoc']
         self.riskinputs = self.build_riskinputs(hcurves_by_imt)
 
     def post_execute(self, result):

@@ -32,30 +32,10 @@ from openquake.commonlib import readinput, parallel
 from openquake.commonlib.export import export
 from openquake.baselib.general import AccumDict
 
-from openquake.commonlib.calculators import calculators, base, calc
+from openquake.commonlib.calculators import base, calc
 
 
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
-
-
-def agg_prob(acc, prob):
-    """
-    Aggregation function for probabilities.
-
-    :param acc: the accumulator
-    :param prob: the probability (can be an array or more)
-
-    In particular::
-
-       agg_prob(acc, 0) = acc
-       agg_prob(acc, 1) = 1
-       agg_prob(0, prob) = prob
-       agg_prob(1, prob) = 1
-       agg_prob(acc, prob) = agg_prob(prob, acc)
-
-       agg_prob(acc, eps) =~ acc + eps for eps << 1
-    """
-    return 1. - (1. - prob) * (1. - acc)
 
 
 def classical(sources, sitecol, gsims_assoc, monitor):
@@ -89,8 +69,8 @@ def classical(sources, sitecol, gsims_assoc, monitor):
     return result
 
 
-@calculators.add('classical')
-class ClassicalCalculator(base.BaseHazardCalculator):
+@base.calculators.add('classical')
+class ClassicalCalculator(base.HazardCalculator):
     """
     Classical PSHA calculator
     """
@@ -105,13 +85,13 @@ class ClassicalCalculator(base.BaseHazardCalculator):
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = self.oqparam
         sources = list(self.composite_source_model.sources)
-        zero = AccumDict((rlz, AccumDict())
-                         for rlz in self.rlzs_assoc.realizations)
+        zero = AccumDict((key, AccumDict())
+                         for key in self.rlzs_assoc)
         gsims_assoc = self.rlzs_assoc.get_gsims_by_trt_id()
         return parallel.apply_reduce(
             self.core_func.__func__,
             (sources, self.sitecol, gsims_assoc, monitor),
-            agg=agg_prob, acc=zero,
+            agg=calc.agg_prob, acc=zero,
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_model_id'))
@@ -123,8 +103,8 @@ class ClassicalCalculator(base.BaseHazardCalculator):
         :param result:
             a dictionary of hazard curves dictionaries
         """
+        curves_by_rlz = self.rlzs_assoc.combine(result)
         rlzs = self.rlzs_assoc.realizations
-        curves_by_rlz = self.rlzs_assoc.reduce(agg_prob, result)
         oq = self.oqparam
 
         # export curves
@@ -162,8 +142,8 @@ class ClassicalCalculator(base.BaseHazardCalculator):
                 for imt, curves in curves_by_imt.iteritems()}
 
 
-@calculators.add('event_based')
-class EventBasedCalculator(base.BaseHazardCalculator):
+@base.calculators.add('event_based')
+class EventBasedCalculator(base.HazardCalculator):
     """
     Event based PSHA calculator
     """
@@ -171,8 +151,8 @@ class EventBasedCalculator(base.BaseHazardCalculator):
         return {}
 
 
-@calculators.add('disaggregation')
-class DisaggregationCalculator(base.BaseHazardCalculator):
+@base.calculators.add('disaggregation')
+class DisaggregationCalculator(base.HazardCalculator):
     """
     Classical disaggregation PSHA calculator
     """
@@ -200,14 +180,18 @@ def calc_gmfs(tag_seed_pairs, computer, monitor):
     return res
 
 
-@calculators.add('scenario')
-class ScenarioCalculator(base.BaseCalculator):
+@base.calculators.add('scenario')
+class ScenarioCalculator(base.HazardCalculator):
     """
     Scenario hazard calculator
     """
     core_func = calc_gmfs
 
-    def _init_tags(self):
+    def pre_execute(self):
+        """
+        Read the site collection and initialize GmfComputer, tags and seeds
+        """
+        super(ScenarioCalculator, self).pre_execute()
         self.imts = readinput.get_imts(self.oqparam)
         gsim = readinput.get_gsim(self.oqparam)
         trunc_level = getattr(self.oqparam, 'truncation_level', None)
@@ -221,20 +205,6 @@ class ScenarioCalculator(base.BaseCalculator):
         rnd = random.Random(getattr(self.oqparam, 'random_seed', 42))
         self.tag_seed_pairs = [(tag, rnd.randint(0, calc.MAX_INT))
                                for tag in self.tags]
-
-    def pre_execute(self):
-        """
-        Read the site collection and initialize GmfComputer, tags and seeds
-        """
-        if 'exposure' in self.oqparam.inputs:
-            logging.info('Reading the exposure')
-            exposure = readinput.get_exposure(self.oqparam)
-            logging.info('Reading the site collection')
-            self.sitecol, _assets = readinput.get_sitecol_assets(
-                self.oqparam, exposure)
-        else:
-            self.sitecol = readinput.get_site_collection(self.oqparam)
-        self._init_tags()
 
     def execute(self):
         """

@@ -62,7 +62,8 @@ export_dir = %s
                 'truncation_level': 0.0,
                 'random_seed': 0,
                 'maximum_distance': 1.0,
-                'inputs': {'site_model': site_model_input},
+                'inputs': {'job_ini': job_config,
+                           'site_model': site_model_input},
                 'sites': [(0.0, 0.0)],
                 'hazard_imtls': {'PGA': None},
                 'investigation_time': 50.0,
@@ -71,8 +72,10 @@ export_dir = %s
             with mock.patch('logging.warn') as warn:
                 params = vars(readinput.get_oqparam(job_config))
                 self.assertEqual(expected_params, params)
-                self.assertEqual(['site_model'], params['inputs'].keys())
-                self.assertEqual([site_model_input], params['inputs'].values())
+                self.assertEqual(['site_model', 'job_ini'],
+                                 params['inputs'].keys())
+                self.assertEqual([site_model_input, job_config],
+                                 params['inputs'].values())
 
                 # checking that warnings work
                 self.assertEqual(warn.call_args[0][0],
@@ -111,7 +114,8 @@ export_dir = %s
                 'truncation_level': 3.0,
                 'random_seed': 5,
                 'maximum_distance': 1.0,
-                'inputs': {'sites': sites_csv},
+                'inputs': {'job_ini': source,
+                           'sites': sites_csv},
                 'reference_depth_to_1pt0km_per_sec': 100.0,
                 'reference_depth_to_2pt5km_per_sec': 5.0,
                 'reference_vs30_type': 'measured',

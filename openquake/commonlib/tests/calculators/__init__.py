@@ -19,7 +19,7 @@
 import os
 import unittest
 
-from openquake.commonlib.calculators import calculators
+from openquake.commonlib.calculators import base
 from openquake.commonlib.parallel import PerformanceMonitor, executor
 from openquake.commonlib import readinput
 
@@ -37,15 +37,13 @@ class CalculatorTestCase(unittest.TestCase):
         self.testdir = os.path.dirname(testfile)
         inis = [os.path.join(self.testdir, ini) for ini in job_ini.split(',')]
         oq = readinput.get_oqparam(inis)
-        # the number of tasks is chosen to be 4 times bigger than the name of
-        # cores; it is a heuristic number to get a decent distribution of the
-        # load; it has no more significance than that
-        oq.concurrent_tasks = executor._max_workers * 4
+        oq.concurrent_tasks = executor.num_tasks_hint
+        oq.usecache = False
         # change this when debugging the test
         monitor = PerformanceMonitor(
             self.testdir,
             monitor_csv=os.path.join(oq.export_dir, 'performance_csv'))
-        return calculators(oq, monitor)
+        return base.calculators(oq, monitor)
 
     def run_calc(self, testfile, job_ini, exports='xml'):
         """

@@ -708,10 +708,8 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, steps=10):
         Number of steps between loss ratios.
     """
     vf = vulnerability_function.strictly_increasing()
-    loss_ratios, lrem = vf.loss_ratio_exceedance_matrix(steps)
-
-    lrem_po = numpy.empty(lrem.shape)
     imls = vf.mean_imls()
+    loss_ratios, lrem = vf.loss_ratio_exceedance_matrix(steps)
 
     # saturate imls to hazard imls
     min_val, max_val = hazard_imls[0], hazard_imls[-1]
@@ -723,6 +721,7 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, steps=10):
 
     # compute the poos
     pos = pairwise_diff(poes)
+    lrem_po = numpy.empty(lrem.shape)
     for idx, po in enumerate(pos):
         lrem_po[:, idx] = lrem[:, idx] * po  # column * po
 
@@ -841,7 +840,7 @@ def bcr(eal_original, eal_retrofitted, interest_rate,
             / (interest_rate * retrofitting_cost))
 
 
-def average_loss(losses, poes):
+def average_loss(losses_poes):
     """
     Given a loss curve with `poes` over `losses` defined on a given
     time span it computes the average loss on this period of time.
@@ -851,7 +850,7 @@ def average_loss(losses, poes):
            integral by using the trapeizodal rule with the width given by the
            loss bin width.
     """
-
+    losses, poes = losses_poes
     return numpy.dot(-pairwise_diff(losses), pairwise_mean(poes))
 
 
@@ -991,15 +990,14 @@ def exposure_statistics(
         mean_curves = numpy.vstack(
             (mean_curves, _mean_curve[numpy.newaxis, :]))
         mean_average_losses = numpy.append(
-            mean_average_losses, average_loss(*_mean_curve))
+            mean_average_losses, average_loss(_mean_curve))
 
         mean_maps = numpy.hstack((mean_maps, _mean_maps[:, numpy.newaxis]))
         quantile_curves = numpy.hstack(
             (quantile_curves, _quantile_curves[:, numpy.newaxis]))
 
-        _quantile_average_losses = numpy.array(
-            [average_loss(losses, poes)
-             for losses, poes in _quantile_curves])
+        _quantile_average_losses = utils.numpy_map(
+            average_loss, _quantile_curves)
         quantile_average_losses = numpy.hstack(
             (quantile_average_losses,
              _quantile_average_losses[:, numpy.newaxis]))

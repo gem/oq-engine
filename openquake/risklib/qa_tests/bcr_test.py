@@ -56,9 +56,8 @@ class BCRTestCase(unittest.TestCase):
         retrofitted_loss_ratio_curve = scientific.classical(
             vulnerability_function_rf, hazard_imls, poes, steps=5)
 
-        eal_original = scientific.average_loss(*original_loss_ratio_curve)
-        eal_retrofitted = scientific.average_loss(
-            *retrofitted_loss_ratio_curve)
+        eal_original = scientific.average_loss(original_loss_ratio_curve)
+        eal_retrofitted = scientific.average_loss(retrofitted_loss_ratio_curve)
 
         bcr = scientific.bcr(
             eal_original, eal_retrofitted,

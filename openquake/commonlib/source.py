@@ -804,7 +804,12 @@ def filter_sources(sources, sitecol, maxdist):
     return sorted(sources, key=operator.attrgetter('source_id'))
 
 
-class RlzsAssoc(object):
+def agg_prob(acc, prob):
+    """Aggregation function for probabilities"""
+    return 1. - (1. - acc) * (1. - prob)
+
+
+class RlzsAssoc(collections.Mapping):
     """
     Realization association class. It should not be instantiated directly,
     but only via the method :meth:
@@ -828,10 +833,10 @@ class RlzsAssoc(object):
     (3, 'BooreAtkinson2008') ['#6-SM2_a3b1-BA2008']
     (3, 'CampbellBozorgnia2008') ['#7-SM2_a3b1-CB2008']
     """
-    def __init__(self):
+    def __init__(self, rlzs_assoc=None):
         self.realizations = []
         self.gsim_by_trt = []  # [trt -> gsim]
-        self.rlzs_assoc = collections.defaultdict(list)  # trt_id, gsim -> rlzs
+        self.rlzs_assoc = rlzs_assoc or collections.defaultdict(list)
 
     def _add_realizations(self, idx, lt_model, realizations):
         # create the realizations for the given lt source model
@@ -861,22 +866,21 @@ class RlzsAssoc(object):
             gsims_by_trt[trt_id].append(GSIMS[gsim]())
         return gsims_by_trt
 
-    def combine(self, agg, results):
+    def combine(self, results, agg=agg_prob):
         """
-        :param agg: aggregation function
         :param results: dictionary (trt_model_id, gsim_name) -> <AccumDict>
+        :param agg: aggregation function (default composition of probabilities)
         :returns: a dictionary rlz -> aggregate <AccumDict>
 
         Example: a case with tectonic region type T1 with GSIMS A, B, C
         and tectonic region type T2 with GSIMS D, E.
 
-        >>> assoc = RlzsAssoc()
-        >>> assoc.rlzs_assoc = {
+        >>> assoc = RlzsAssoc({
         ... ('T1', 'A'): ['r0', 'r1'],
         ... ('T1', 'B'): ['r2', 'r3'],
         ... ('T1', 'C'): ['r4', 'r5'],
         ... ('T2', 'D'): ['r0', 'r2', 'r4'],
-        ... ('T2', 'E'): ['r1', 'r3', 'r5']}
+        ... ('T2', 'E'): ['r1', 'r3', 'r5']})
         ...
         >>> results = {
         ... ('T1', 'A'): 0.01,
@@ -885,7 +889,7 @@ class RlzsAssoc(object):
         ... ('T2', 'D'): 0.04,
         ... ('T2', 'E'): 0.05,}
         ...
-        >>> combinations = assoc.combine(operator.add, results)
+        >>> combinations = assoc.combine(results, operator.add)
         >>> for key, value in sorted(combinations.items()): print key, value
         r0 0.05
         r1 0.06
@@ -913,6 +917,26 @@ class RlzsAssoc(object):
             for rlz in self.rlzs_assoc[key]:
                 acc = agg(acc, AccumDict({rlz: value}))
         return acc
+
+    def collect_by_rlz(self, dicts):
+        """
+        :param dicts: a list of dicts with key (trt_model_id, gsim)
+        :returns: a dictionary of lists keyed by realization
+        """
+        dicts_by_rlz = AccumDict()  # rlz -> list
+        for dic in dicts:
+            items = self.combine(dic).iteritems()
+            dicts_by_rlz += {rlz: [val] for rlz, val in items}
+        return dicts_by_rlz
+
+    def __iter__(self):
+        return self.rlzs_assoc.iterkeys()
+
+    def __getitem__(self, key):
+        return self.rlzs_assoc[key]
+
+    def __len__(self):
+        return len(self.rlzs_assoc)
 
 
 class CompositeSourceModel(collections.Sequence):
