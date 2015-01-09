@@ -23,7 +23,7 @@ import numpy
 
 from openquake.risklib import scientific
 from openquake.baselib.general import AccumDict
-from openquake.commonlib.calculators import base, calc
+from openquake.commonlib.calculators import base
 from openquake.commonlib.export import export
 from openquake.commonlib.risk_writers import (
     DmgState, DmgDistPerTaxonomy, DmgDistPerAsset, DmgDistTotal,

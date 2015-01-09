@@ -34,20 +34,21 @@ def classical_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
         a list of :class:`openquake.risklib.workflows.RiskInput` objects
     :param riskmodel:
         a :class:`openquake.risklib.workflows.RiskModel` instance
+    :param rlzs_assoc:
+        associations (trt_id, gsim) -> realizations
     :param monitor:
         :class:`openquake.commonlib.parallel.PerformanceMonitor` instance
     :returns:
-        a dictionary {('asset', asset): <mean stddev>,
-                      ('taxonomy', asset.taxonomy): <damage array>}
+        a nested dictionary rlz_idx -> asset -> <damage array>
     """
     logging.info('Process %d, considering %d risk input(s) of weight %d',
                  os.getpid(), len(riskinputs),
                  sum(ri.weight for ri in riskinputs))
     with monitor:
-        result = AccumDict()  # asset -> poos per damage state
-        for [(assets, fractions)] in riskmodel.gen_outputs(riskinputs):
-            for asset, fraction in zip(assets, fractions):
-                result += {asset: fraction * asset.number}
+        result = {i: AccumDict() for i in range(len(rlzs_assoc))}
+        for outputs in riskmodel.gen_outputs(riskinputs, rlzs_assoc):
+            for i, out in enumerate(outputs):
+                result[i] += dict(zip(out.assets, out.damages))
     return result
 
 
@@ -85,5 +86,9 @@ class ClassicalDamageCalculator(base.RiskCalculator):
         """
         dmg_states = [DmgState(s, i)
                       for i, s in enumerate(self.riskmodel.damage_states)]
-        return export('classical_damage_csv', self.oqparam.export_dir,
-                      dmg_states, result)
+        exported = {}
+        for rlz_idx in sorted(result):
+            fname = 'damage_%d.csv' % rlz_idx
+            exported += export('classical_damage_csv', self.oqparam.export_dir,
+                               fname, dmg_states, result[rlz_idx])
+        return exported

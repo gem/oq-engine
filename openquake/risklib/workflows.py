@@ -752,6 +752,8 @@ class ClassicalDamage(Workflow):
     """
     Implements the ClassicalDamage workflow
     """
+    Output = collections.namedtuple('Output', "assets damages")
+
     def __init__(self, imt, taxonomy, fragility_functions,
                  hazard_imtls, hazard_investigation_time,
                  risk_investigation_time):
@@ -773,7 +775,10 @@ class ClassicalDamage(Workflow):
 
         where N is the number of points and D the number of damage states.
         """
-        return assets, utils.numpy_map(self.curves, hazard_curves)
+        fractions = utils.numpy_map(self.curves, hazard_curves)
+        damages = [asset.number * fraction
+                   for asset, fraction in zip(assets, fractions)]
+        return self.Output(assets, damages)
 
     compute_all_outputs = Classical.compute_all_outputs.im_func
 
@@ -818,18 +823,28 @@ def get_workflow(imt, taxonomy, oqparam, **extra):
     return workflow_class(imt, taxonomy, **all_args)
 
 
-class FakeRlzsAssoc(object):
+class FakeRlzsAssoc(collections.Mapping):
     """
     Used for scenario calculators, when there are no realizations.
     """
     def __init__(self):
         self.realizations = [0]
+        self.rlzs_assoc = {0: []}
 
     def combine(self, result):
         return {0: result}
 
     def collect_by_rlz(self, results):
         return {0: results}
+
+    def __iter__(self):
+        return self.rlzs_assoc.iterkeys()
+
+    def __getitem__(self, key):
+        return self.rlzs_assoc[key]
+
+    def __len__(self):
+        return len(self.rlzs_assoc)
 
 
 class RiskModel(collections.Mapping):
