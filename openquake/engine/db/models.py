@@ -1632,6 +1632,7 @@ class LtSourceModel(djm.Model):
     sm_lt_path = fields.CharArrayField()
     sm_name = djm.TextField(null=False)
     weight = djm.DecimalField(decimal_places=100, max_digits=101, null=True)
+    samples = djm.IntegerField(default=1)
 
     class Meta:
         db_table = 'hzrdr\".\"lt_source_model'
@@ -1686,6 +1687,14 @@ class TrtModel(djm.Model):
     min_mag = djm.FloatField(null=False)
     max_mag = djm.FloatField(null=False)
     gsims = fields.CharArrayField(null=True)
+
+    @property
+    def samples(self):
+        """
+        How many times the TrtModel was sampled (it may be different from 1
+        only when sampling is enabled).
+        """
+        return self.lt_model.samples
 
     def get_realizations(self, gsim_name):
         """

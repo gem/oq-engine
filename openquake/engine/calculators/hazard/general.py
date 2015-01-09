@@ -261,12 +261,14 @@ class BaseHazardCalculator(base.Calculator):
         logs.LOG.progress("initializing sources")
         self.composite_model = readinput.get_composite_source_model(
             self.oqparam, self.site_collection)
+        samples = self.composite_model.source_model_lt.samples_by_lt_path()
         for sm in self.composite_model:
             # create an LtSourceModel for each distinct source model
             lt_model = models.LtSourceModel.objects.create(
                 hazard_calculation=self.job,
                 sm_lt_path=self.tilepath + sm.path,
-                ordinal=sm.ordinal, sm_name=sm.name, weight=sm.weight)
+                ordinal=sm.ordinal, sm_name=sm.name, weight=sm.weight,
+                samples=samples[sm.path])
 
             # save TrtModels for each tectonic region type
             # and stored the db ID in the in-memory models
