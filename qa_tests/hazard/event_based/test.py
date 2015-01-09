@@ -388,7 +388,7 @@ class EventBasedHazardCase17TestCase(qa_utils.BaseQATestCase):
         expected_curve_pga = [0.28347, 0., 0.]
 
         # this is a test where src.iter_ruptures() produces 39 ruptures;
-        # 37 of them never occurs, whereas the ruptures 1 and 13 occur once
+        # 37 of them never occur, whereas the ruptures 1 and 13 occur once
         # within the given investigation time
         expected_tags = ['trt=01|ses=0002|src=1|rup=013-01',
                          'trt=01|ses=0003|src=1|rup=001-01']
