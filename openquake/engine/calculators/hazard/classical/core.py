@@ -206,6 +206,7 @@ def compute_hazard_curves(job_id, sources, sitecol):
                    for imt in sorted_imts]
     sorted_imts = map(from_string, sorted_imts)
     trt_model = models.TrtModel.objects.get(pk=trt_model_id)
+
     gsims = trt_model.get_gsim_instances()
     curves = [[numpy.ones([total_sites, len(ls)]) for ls in sorted_imls]
               for gsim in gsims]

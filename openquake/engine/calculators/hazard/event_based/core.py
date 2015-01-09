@@ -152,7 +152,8 @@ def compute_ruptures(job_id, sources, sitecol):
         # the dictionary `ses_num_occ` contains [(ses, num_occurrences)]
         # for each occurring rupture for each ses in the ses collection
         ses_num_occ = collections.defaultdict(list)
-        with generate_ruptures_mon:  # generating ruptures for the given source
+        # generating ruptures for the given source
+        with generate_ruptures_mon:
             for rup_no, rup in enumerate(src.iter_ruptures(), 1):
                 rup.rup_no = rup_no
                 for ses_idx in all_ses:

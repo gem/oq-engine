@@ -24,7 +24,8 @@ from openquake.engine.utils import config
 from qa_tests import _utils as qa_utils
 from qa_tests.hazard.event_based import sc_utils
 from openquake.qa_tests_data.event_based import (
-    blocksize, case_1, case_2, case_4, case_5, case_6, case_12, case_13)
+    blocksize, case_1, case_2, case_4, case_5, case_6, case_12, case_13,
+    case_17)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
@@ -375,3 +376,35 @@ class EventBasedHazardCase13TestCase(qa_utils.BaseQATestCase):
             hazard_curve__imt__isnull=False)
 
         aaae(expected_curve_poes, curve.poes, decimal=2)
+
+
+# test where a simple point source is sampled twice; twin to
+# the ClassicalHazardCase17TestCase
+class EventBasedHazardCase17TestCase(qa_utils.BaseQATestCase):
+
+    @attr('qa', 'hazard', 'event_based')
+    def test(self):
+        cfg = os.path.join(os.path.dirname(case_17.__file__), 'job.ini')
+        expected_curve_pga = [0.28347, 0., 0.]
+
+        # this is a test where src.iter_ruptures() produces 39 ruptures;
+        # 37 of them never occur, whereas the ruptures 1 and 13 occur once
+        # within the given investigation time
+        expected_tags = ['trt=01|ses=0002|src=1|rup=013-01',
+                         'trt=01|ses=0003|src=1|rup=001-01']
+
+        job = self.run_hazard(cfg)
+
+        tags = models.SESRupture.objects.filter(
+            rupture__ses_collection__trt_model__lt_model__hazard_calculation=
+            job.id).values_list('tag', flat=True)
+
+        self.assertEqual(sorted(tags), expected_tags)
+
+        curve1, curve2 = models.HazardCurveData.objects.filter(
+            hazard_curve__output__oq_job=job.id, hazard_curve__imt='PGA')
+
+        numpy.testing.assert_array_almost_equal(
+            expected_curve_pga, curve1.poes, decimal=5)
+        numpy.testing.assert_array_almost_equal(
+            expected_curve_pga, curve2.poes, decimal=5)
