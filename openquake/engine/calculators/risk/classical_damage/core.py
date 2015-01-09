@@ -18,7 +18,7 @@ Core functionality for the classical damage risk calculator.
 """
 
 from openquake.engine.calculators.risk import (
-    base, hazard_getters, validation, writers)
+    base, hazard_getters, writers)
 from openquake.engine.calculators import calculators
 from openquake.engine.db import models
 
@@ -41,14 +41,15 @@ def classical_damage(workflow, getter, outputdict, params, monitor):
       A monitor instance
     """
     for loss_type in workflow.loss_types:
-        with monitor.copy('computing risk'):
+        with monitor('computing risk'):
             outputs = workflow.compute_all_outputs(getter, loss_type)
-        with monitor.copy('saving risk'):
+        with monitor('saving risk'):
             for out in outputs:
-                damage = models.Damage.objects.get(hazard_output=out.hid)
+                damage = models.Damage.objects.get(
+                    risk_calculation=params.job_id, hazard_output=out.hid)
                 writers.classical_damage(
-                    out.assets, out.damages, params.damage_state_ids,
-                    damage.id)
+                    out.output.assets, out.output.damages,
+                    params.damage_state_ids, damage.id)
         # TODO: statistical outputs
 
 
@@ -61,8 +62,8 @@ class ClassicalDamageCalculator(base.RiskCalculator):
 
     core = staticmethod(classical_damage)
 
-    validators = base.RiskCalculator.validators + [
-        validation.ExposureHasInsuranceBounds]
+    validators = []
+    # TODO: add proper validation
 
     output_builders = [writers.DamageCurveBuilder]
 
@@ -73,7 +74,7 @@ class ClassicalDamageCalculator(base.RiskCalculator):
         Create the DmgState objects associated to the current calculation
         """
         super(ClassicalDamageCalculator, self).pre_execute()
-
+        self.oqparam.job_id = self.job.id
         self.oqparam.damage_state_ids = []
         for lsi, dstate in enumerate(self.risk_model.damage_states):
             ds = models.DmgState.objects.create(
