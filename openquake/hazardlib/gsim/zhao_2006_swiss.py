@@ -23,7 +23,6 @@ Module exports
 """
 from __future__ import division
 
-import copy
 import numpy as np
 
 from openquake.hazardlib.gsim.base import CoeffsTable
@@ -44,11 +43,13 @@ class ZhaoEtAl2006AscSWISS05(ZhaoEtAl2006Asc):
     """
     This class extends :class:ZhaoEtAl2006Asc,
     adjusted to be used for the Swiss Hazard Model [2014].
+    This GMPE is valid for a fixed value of vs30=700m/s
 
     #. kappa value
        K-adjustments corresponding to model 01 - as prepared by Ben Edwards
        K-value for PGA were not provided but infered from SA[0.01s]
-       the model considers a fixed value of vs30=1100m/s
+       the model applies to a fixed value of vs30=700m/s to match the 
+       reference vs30=1100m/s
 
     #. small-magnitude correction
 
@@ -78,18 +79,17 @@ class ZhaoEtAl2006AscSWISS05(ZhaoEtAl2006Asc):
         for spec of input and result values.
         """
 
-        ref_sites = copy.deepcopy(sites)
-        ref_sites.vs30 = 700 * np.ones(len(sites.vs30))
+        sites.vs30 = 700 * np.ones(len(sites.vs30))
 
         mean, stddevs = super(ZhaoEtAl2006AscSWISS05, self).\
-            get_mean_and_stddevs(ref_sites, rup, dists, imt, stddev_types)
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
 
         tau_ss = 'tauC'
         log_phi_ss = 1.00
         C = ZhaoEtAl2006AscSWISS05.COEFFS_ASC
         mean, stddevs = _apply_adjustments(
             C, self.COEFFS_FS_ROCK[imt], tau_ss,
-            mean, stddevs, ref_sites, rup, dists.rrup, imt, stddev_types,
+            mean, stddevs, sites, rup, dists.rrup, imt, stddev_types,
             log_phi_ss)
 
         return mean, stddevs
