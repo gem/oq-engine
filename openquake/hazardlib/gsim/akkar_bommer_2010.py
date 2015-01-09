@@ -22,7 +22,6 @@ class:`AkkarBommer2010SWISS08`,
 """
 from __future__ import division
 
-import copy
 import numpy as np
 
 from scipy.constants import g
@@ -294,12 +293,17 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
     """
     This class extends :class:`AkkarBommer2010`
     adjusted to be used for the Swiss Hazard Model [2014].
-    1) kappa value
+    This GMPE is valid for a fixed value of vs30=600m/s
+
+    # kappa value
     K-adjustments corresponding to model 01 - as prepared by Ben Edwards
     K-value for PGA were not provided but infered from SA[0.01s]
-    the model considers a fixed value of vs30=1100m/s
-    2) small-magnitude correction
-    3) single station sigma - inter-event magnitude/distance adjustment
+    the model considers a fixed value of vs30=600 to match the
+    reference vs30=1100m/s
+
+    # small-magnitude correction
+
+    # single station sigma - inter-event magnitude/distance adjustment
 
     Disclaimer: these equations are modified to be used for the
     Swiss Seismic Hazard Model [2014].
@@ -318,17 +322,16 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
         for spec of input and result values.
         """
 
-        ref_sites = copy.deepcopy(sites)
-        ref_sites.vs30 = 600 * np.ones(len(sites.vs30))
+        sites.vs30 = 600 * np.ones(len(sites.vs30))
 
         mean, stddevs = super(AkkarBommer2010SWISS01, self).\
-            get_mean_and_stddevs(ref_sites, rup, dists, imt, stddev_types)
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
 
         tau_ss = 'tau'
         log_phi_ss = np.log(10)
         mean, stddevs = _apply_adjustments(
             AkkarBommer2010.COEFFS, self.COEFFS_FS_ROCK[imt], tau_ss,
-            mean, stddevs, ref_sites, rup, dists.rjb, imt, stddev_types,
+            mean, stddevs, sites, rup, dists.rjb, imt, stddev_types,
             log_phi_ss)
 
         return mean,  np.log(10 ** np.array(stddevs))
