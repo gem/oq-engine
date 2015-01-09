@@ -21,7 +21,6 @@ Module exports
 """
 from __future__ import division
 
-import copy
 import numpy as np
 
 from openquake.hazardlib.gsim.chiou_youngs_2008_swiss_coeffs import (
@@ -37,11 +36,13 @@ class ChiouYoungs2008SWISS01(ChiouYoungs2008):
     """
     This class extends :class:ChiouYoungs2008,
     adjusted to be used for the Swiss Hazard Model [2014].
+    This GMPE is valid for a fixed value of vs30=620m/s
 
     1) kappa value
        K-adjustments corresponding to model 01 - as prepared by Ben Edwards
        K-value for PGA were not provided but infered from SA[0.01s]
-       the model considers a fixed value of vs30=1100m/s
+       the model considers a fixed value of vs30==620 to match the
+       reference vs30=1100m/s
 
     2) small-magnitude correction
 
@@ -57,11 +58,10 @@ class ChiouYoungs2008SWISS01(ChiouYoungs2008):
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
 
-        ref_sites = copy.deepcopy(sites)
-        ref_sites.vs30 = 620 * np.ones(len(sites.vs30))
+        sites.vs30 = 620 * np.ones(len(sites.vs30))
 
         mean, stddevs = super(ChiouYoungs2008SWISS01, self).\
-            get_mean_and_stddevs(ref_sites, rup, dists, imt, stddev_types)
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
 
         log_phi_ss = 1
         tau = self.get_tau(ChiouYoungs2008.COEFFS[imt], rup)
@@ -78,7 +78,7 @@ class ChiouYoungs2008SWISS01(ChiouYoungs2008):
 
         mean, stddevs = _apply_adjustments(
             ChiouYoungs2008.COEFFS, self.COEFFS_FS_ROCK[imt], 1,
-            mean, stddevs, ref_sites, rup, dists.rjb, imt, stddev_types,
+            mean, stddevs, sites, rup, dists.rjb, imt, stddev_types,
             log_phi_ss, NL=nl, tau_value=tau)
 
         return mean, stddevs
