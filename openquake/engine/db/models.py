@@ -2527,6 +2527,9 @@ class Damage(djm.Model):
     statistics = djm.TextField(null=True, choices=STAT_CHOICES)
     quantile = djm.FloatField(null=True)
 
+    class Meta:
+        db_table = 'riskr\".\"damage'
+
 
 class DamageData(djm.Model):
     """
@@ -2538,6 +2541,9 @@ class DamageData(djm.Model):
     dmg_state = djm.ForeignKey("DmgState")
     exposure_data = djm.ForeignKey("ExposureData")
     fraction = djm.FloatField(null=False)
+
+    class Meta:
+        db_table = 'riskr\".\"damage_data'
 
 
 ## Tables in the 'riski' schema.
