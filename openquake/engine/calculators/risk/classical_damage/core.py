@@ -1,4 +1,4 @@
-# Copyright (c) 2014, GEM Foundation.
+# Copyright (c) 2015, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -39,9 +39,6 @@ def classical_damage(workflow, getter, outputdict, params, monitor):
       derived outputs
     :param monitor:
       A monitor instance
-    For each calculation unit we compute loss curves, loss maps and
-    loss fractions. Then if the number of units are bigger than 1, we
-    compute mean and quantile artifacts.
     """
     for loss_type in workflow.loss_types:
         with monitor.copy('computing risk'):
@@ -76,6 +73,7 @@ class ClassicalDamageCalculator(base.RiskCalculator):
         Create the DmgState objects associated to the current calculation
         """
         super(ClassicalDamageCalculator, self).pre_execute()
+
         self.oqparam.damage_state_ids = []
         for lsi, dstate in enumerate(self.risk_model.damage_states):
             ds = models.DmgState.objects.create(
