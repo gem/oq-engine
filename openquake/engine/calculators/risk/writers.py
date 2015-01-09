@@ -659,12 +659,15 @@ class DamageCurveBuilder(OutputBuilder):
     """
     Create output outputdict for Damage Curves
     """
-    def individual_outputs(self, hazard_output):
-        return [models.Damage.objects.create(
-            hazard_output_id=hazard_output.id,
-            output=models.Output.objects.create_output(
-                self.calc.job,
-                "Damage curve for hazard=%s" % hazard_output.id))]
+    def individual_outputs(self, _damage, hazard_output):
+        output = models.Output.objects.create_output(
+            self.calc.job,
+            "Damage curve for hazard=%s" % hazard_output.id,
+            'dmg_per_asset')
+        outs = [models.Damage.objects.create(
+            risk_calculation=self.calc.job,
+            hazard_output=hazard_output, output=output)]
+        return outs
 
     def statistical_outputs(self):
         # TODO
