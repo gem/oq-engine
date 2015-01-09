@@ -114,11 +114,12 @@ class ClassicalCalculator(base.HazardCalculator):
             smlt_path = '_'.join(rlz.sm_lt_path)
             gsimlt_path = '_'.join(rlz.gsim_lt_path)
             for fmt in exports:
-                fname = 'hazard_curve_multi-smltp_%s-gsimltp_%s-ltr_%d.%s' % (
+                key = 'hazard_curves_' + fmt
+                fname = 'hazard_curve-smltp_%s-gsimltp_%s-ltr_%d.%s' % (
                     smlt_path, gsimlt_path, rlz.ordinal, fmt)
                 saved += export(
-                    'hazard_curves_' + fmt,
-                    oq.export_dir, fname, self.sitecol, curves_by_rlz[rlz],
+                    key, oq.export_dir, fname,
+                    self.sitecol, curves_by_rlz[rlz],
                     oq.imtls, oq.investigation_time)
         if len(rlzs) == 1:  # cannot compute statistics
             return saved
@@ -128,7 +129,7 @@ class ClassicalCalculator(base.HazardCalculator):
         mean_curves = scientific.mean_curve(
             [curves_by_rlz[rlz] for rlz in rlzs], weights)
         for fmt in exports:
-            fname = 'hazard_curve_multi-mean.%s' % fmt
+            fname = 'hazard_curve-mean.%s' % fmt
             saved += export(
                 'hazard_curves_' + fmt,
                 oq.export_dir, fname, self.sitecol, mean_curves,
@@ -136,6 +137,10 @@ class ClassicalCalculator(base.HazardCalculator):
         return saved
 
     def hazard_maps(self, curves_by_imt):
+        """
+        Compute the hazard maps associated to the curves and returns
+        a dictionary of arrays.
+        """
         return {imt:
                 calc.compute_hazard_maps(
                     curves, self.oqparam.imtls[imt], self.oqparam.poes)

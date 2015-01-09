@@ -867,6 +867,9 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         lt = _TestableSourceModelLogicTree(
             'lt', {'lt': source_model_logic_tree, 'sm1': sm, 'sm2': sm},
             'basepath', validate=False)
+        self.assertEqual(lt.samples_by_lt_path(),
+                         collections.Counter({('b1',): 1, ('b2',): 1}))
+
         self.assert_branchset_equal(lt.root_branchset, 'sourceModel', {},
                                     [('b1', '0.6', 'sm1'),
                                      ('b2', '0.4', 'sm2')])
@@ -902,6 +905,9 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         lt = _TestableSourceModelLogicTree(
             'lt', {'lt': source_model_logic_tree, 'sm': sm}, '/base',
             validate=False)
+        self.assertEqual(
+            lt.samples_by_lt_path(),
+            collections.Counter({('b1', 'b2'): 1, ('b1', 'b3'): 1}))
         self.assert_branchset_equal(lt.root_branchset,
                                     'sourceModel', {},
                                     [('b1', '1.0', 'sm',
@@ -1670,6 +1676,17 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         [(sm_name, weight, branch_ids, _)] = self.source_model_lt
         self.assertEqual(sm_name, 'example-source-model.xml')
         self.assertEqual(('b1', 'b5', 'b8'), branch_ids)
+
+    def test_multi_sampling(self):
+        orig_samples = self.source_model_lt.num_samples
+        self.source_model_lt.num_samples = 10
+        samples_dic = self.source_model_lt.samples_by_lt_path()
+        try:
+            self.assertEqual(samples_dic, collections.Counter(
+                {('b1', 'b4', 'b7'): 6, ('b1', 'b3', 'b7'): 2,
+                 ('b1', 'b5', 'b8'): 1, ('b1', 'b3', 'b6'): 1}))
+        finally:
+            self.source_model_lt.num_samples = orig_samples
 
     def test_sample_gmpe(self):
         (value, weight, branch_ids, _) = logictree.sample_one(

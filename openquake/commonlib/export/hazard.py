@@ -179,38 +179,34 @@ def export_hazard_curves_csv(key, export_dir, fname, sitecol, curves_by_imt,
 
     :param key: output_type and export_type
     :param export_dir: the directory where to export
+    :param fname: name of the exported file
     :param sitecol: site collection
-    :param fname: file name without extension
     :param curves_by_imt: dictionary with the curves keyed by IMT
     """
     dest = os.path.join(export_dir, fname)
     rows = []
     for imt in sorted(curves_by_imt):
-        row = ['%s:%s' % (imt, scientificformat(imtls[imt]))]
-        for curve in curves_by_imt[imt]:
-            row.append(scientificformat(curve))
+        row = map(scientificformat, curves_by_imt[imt])
         rows.append(row)
-    locations = ['%s %s' % (s.location.x, s.location.y) for s in sitecol]
-    save_csv(dest, numpy.array([['lon_lat'] + locations] + rows).T)
+    save_csv(dest, numpy.array(rows).T)
     return {fname: dest}
 
 
 @export.add('hazard_curves_xml')
-def export_hazard_curves_xml(key, export_dir, sitecol, rlz, curves_by_imt,
+def export_hazard_curves_xml(key, export_dir, fname, sitecol, curves_by_imt,
                              imtls, investigation_time):
     """
     Export the curves of the given realization into XML.
 
     :param key: output_type and export_type
     :param export_dir: the directory where to export
+    :param fname: name of the exported file
     :param sitecol: site collection
     :param rlz: realization instance
     :param curves_by_imt: dictionary with the curves keyed by IMT
     :param imtls: dictionary with the intensity measure types and levels
     :param investigation_time: investigation time in years
     """
-    smlt_path = '_'.join(rlz.sm_lt_path)
-    gsimlt_path = '_'.join(rlz.gsim_lt_path)
     mdata = []
     hcurves = []
     for imt_str, imls in sorted(imtls.iteritems()):
@@ -221,21 +217,19 @@ def export_hazard_curves_xml(key, export_dir, sitecol, rlz, curves_by_imt,
         mdata.append({
             'quantile_value': None,
             'statistics': None,
-            'smlt_path': smlt_path,
-            'gsimlt_path': gsimlt_path,
+            'smlt_path': '',
+            'gsimlt_path': '',
             'investigation_time': investigation_time,
             'imt': imt[0],
             'sa_period': imt[1],
             'sa_damping': imt[2],
             'imls': imls,
         })
-    fname = 'hazard_curve_multi-smltp_%s-gsimltp_%s-ltr_%d.xml' % (
-        smlt_path, gsimlt_path, rlz.ordinal)
     dest = os.path.join(export_dir, fname)
     writer = hazard_writers.MultiHazardCurveXMLWriter(dest, mdata)
     with floatformat('%12.8E'):
         writer.serialize(hcurves)
-    return {(key, rlz.ordinal): dest}
+    return {fname: dest}
 
 
 @export.add('hazard_stats_csv')
@@ -256,6 +250,5 @@ def export_stats_csv(key, export_dir, fname, sitecol, data_by_imt):
         for col in data_by_imt[imt]:
             row.append(scientificformat(col))
         rows.append(row)
-    locations = ['%s %s' % (s.location.x, s.location.y) for s in sitecol]
-    save_csv(dest, numpy.array([['lon_lat'] + locations] + rows).T)
+    save_csv(dest, numpy.array(rows).T)
     return {fname: dest}
