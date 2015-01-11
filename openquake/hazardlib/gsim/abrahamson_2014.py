@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
+# Copyright (C) 2012-2015, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -28,7 +28,7 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 # 1- Ask for V1 in case of PGV
 
 
-class AbrahamsonSilva2014(GMPE):
+class Abrahamson2014(GMPE):
     """
     Implements GMPE developed by Abrahamson, Silva and Kamal in 2014 as
     part of the PEER West 2 Project. The GMPE is described in a paper
@@ -241,44 +241,15 @@ class AbrahamsonSilva2014(GMPE):
         else:
             return C['a15'] * rup.ztor / 20.0
 
-    def _compute_large_distance_term(self, C, dists, rup):
+    def _compute_soil_depth_term(self, C, rup):
         """
-        Compute and return large distance model term, that is the 8-th term
-        in equation 1, page 74. The calculation of this term is explained in
-        paragraph 'Large Distance Model', page 78.
+        Compute and return soil depth term. Here we put the term = 0 to
+        exclude it. Subclasses of 
+        :class:`openquake.hazardlib.gsim.abrahamson_2014.Abrahamson2014:
+        will implement the soil depth model proposed for different regions.
+        See page 1042.
         """
-        # equation 15, page 79
-        if rup.mag < 5.5:
-            T6 = 1.0
-        elif rup.mag >= 5.5 and rup.mag <= 6.5:
-            T6 = 0.5 * (6.5 - rup.mag) + 0.5
-        else:
-            T6 = 0.5
-
-        # equation 14, page 79
-        large_distance_term = np.zeros_like(dists.rrup)
-        idx = dists.rrup >= 100.0
-        large_distance_term[idx] = C['a18'] * (dists.rrup[idx] - 100.0) * T6
-
-        return large_distance_term
-
-    def _compute_soil_depth_term(self, C, imt, z1pt0, vs30):
-        """
-        Compute and return soil depth model term, that is the 9-th term in
-        equation 1, page 74. The calculation of this term is explained in
-        paragraph 'Soil Depth Model', page 79.
-        """
-        a21 = self._compute_a21_factor(C, imt, z1pt0, vs30)
-        a22 = self._compute_a22_factor(imt)
-        median_z1pt0 = self._compute_median_z1pt0(vs30)
-
-        soil_depth_term = a21 * np.log((z1pt0 + self.CONSTS['c2']) /
-                                       (median_z1pt0 + self.CONSTS['c2']))
-
-        idx = z1pt0 >= 200
-        soil_depth_term[idx] += a22 * np.log(z1pt0[idx] / 200)
-
-        return soil_depth_term
+        return 0.0 
 
     def _compute_imt1100(self, imt, sites, rup, dists):
         """
@@ -303,13 +274,13 @@ class AbrahamsonSilva2014(GMPE):
     def _get_stddevs(self, C, C_PGA, pga1100, rup, sites, stddev_types):
         """
         Return standard deviations as described in paragraph 'Equations for
-        standard deviation', page 81.
+        standard deviation', page 1046.
         """
-        std_intra = self._compute_intra_event_std(C, C_PGA, pga1100, rup.mag,
-                                                  sites.vs30,
-                                                  sites.vs30measured)
-        std_inter = self._compute_inter_event_std(C, C_PGA, pga1100, rup.mag,
-                                                  sites.vs30)
+        std_intra = self._get_intra_event_std(C, C_PGA, pga1100, rup.mag,
+                                              sites.vs30,
+                                              sites.vs30measured)
+        std_inter = self._get_inter_event_std(C, C_PGA, pga1100, rup.mag,
+                                              sites.vs30)
         stddevs = []
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
@@ -386,132 +357,6 @@ class AbrahamsonSilva2014(GMPE):
             return c1 + (c2 - c1) * (mag - 5) / 2
         else:
             return c2
-
-    def _compute_partial_derivative_site_amp(self, C, pga1100, vs30):
-        """
-        Partial derivative of site amplification term with respect to
-        PGA on rock (equation 26), as described in the errata and not
-        in the original paper.
-        """
-        delta_amp = np.zeros_like(vs30)
-        vlin = C['VLIN']
-        c = self.CONSTS['c']
-        b = C['b']
-        n = self.CONSTS['n']
-
-        idx = vs30 < vlin
-        delta_amp[idx] = (- b * pga1100[idx] / (pga1100[idx] + c) +
-                          b * pga1100[idx] / (pga1100[idx] + c *
-                          ((vs30[idx] / vlin) ** n)))
-
-        return delta_amp
-
-    def _compute_a21_factor(self, C, imt, z1pt0, vs30):
-        """
-        Compute and return a21 factor, equation 18, page 80.
-        """
-        e2 = self._compute_e2_factor(imt, vs30)
-        a21 = e2.copy()
-
-        vs30_star, v1 = self._compute_vs30_star_factor(imt, vs30)
-        median_z1pt0 = self._compute_median_z1pt0(vs30)
-
-        numerator = ((C['a10'] + C['b'] * self.CONSTS['n']) *
-                     np.log(vs30_star / np.min([v1, 1000])))
-        denominator = np.log((z1pt0 + self.CONSTS['c2']) /
-                             (median_z1pt0 + self.CONSTS['c2']))
-
-        idx = numerator + e2 * denominator < 0
-        a21[idx] = - numerator[idx] / denominator[idx]
-
-        idx = vs30 >= 1000
-        a21[idx] = 0.0
-
-        return a21
-
-    def _compute_vs30_star_factor(self, imt, vs30):
-        """
-        Compute and return vs30 star factor, equation 5, page 77.
-        """
-        v1 = self._compute_v1_factor(imt)
-        vs30_star = vs30.copy()
-        vs30_star[vs30_star >= v1] = v1
-
-        return vs30_star, v1
-
-    def _compute_v1_factor(self, imt):
-        """
-        Compute and return v1 factor, equation 6, page 77.
-        """
-        if isinstance(imt, SA):
-            t = imt.period
-            if t <= 0.50:
-                v1 = 1500.0
-            elif t > 0.50 and t <= 1.0:
-                v1 = np.exp(8.0 - 0.795 * np.log(t / 0.21))
-            elif t > 1.0 and t < 2.0:
-                v1 = np.exp(6.76 - 0.297 * np.log(t))
-            else:
-                v1 = 700.0
-        elif isinstance(imt, PGA):
-            v1 = 1500.0
-        else:
-            # this is for PGV
-            v1 = 862.0
-
-        return v1
-
-    def _compute_e2_factor(self, imt, vs30):
-        """
-        Compute and return e2 factor, equation 19, page 80.
-        """
-        e2 = np.zeros_like(vs30)
-
-        if isinstance(imt, PGV):
-            period = 1
-        elif isinstance(imt, PGA):
-            period = 0
-        else:
-            period = imt.period
-
-        if period < 0.35:
-            return e2
-        else:
-            idx = vs30 <= 1000
-            if period >= 0.35 and period <= 2.0:
-                e2[idx] = (-0.25 * np.log(vs30[idx] / 1000) *
-                           np.log(period / 0.35))
-            elif period > 2.0:
-                e2[idx] = (-0.25 * np.log(vs30[idx] / 1000) *
-                           np.log(2.0 / 0.35))
-            return e2
-
-    def _compute_median_z1pt0(self, vs30):
-        """
-        Compute and return median z1pt0 (in m), equation 17, pqge 79.
-        """
-        z1pt0_median = np.zeros_like(vs30) + 6.745
-
-        idx = np.where((vs30 >= 180.0) & (vs30 <= 500.0))
-        z1pt0_median[idx] = 6.745 - 1.35 * np.log(vs30[idx] / 180.0)
-
-        idx = vs30 > 500.0
-        z1pt0_median[idx] = 5.394 - 4.48 * np.log(vs30[idx] / 500.0)
-
-        return np.exp(z1pt0_median)
-
-    def _compute_a22_factor(self, imt):
-        """
-        Compute and return the a22 factor, equation 20, page 80.
-        """
-        if isinstance(imt, PGA) or isinstance(imt, PGV):
-            return 0
-        elif isinstance(imt, SA):
-            period = imt.period
-            if period < 2.0:
-                return 0.0
-            else:
-                return 0.0625 * (period - 2.0)
 
     #: Coefficient tables as per appendix B of Abrahamson et al. (2014)
     COEFFS = CoeffsTable(sa_damping=5, table="""\
