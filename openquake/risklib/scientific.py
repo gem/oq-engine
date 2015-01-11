@@ -665,7 +665,7 @@ def classical_damage(
         an array of M probabilities of occurrence where M is the numbers
         of damage states.
     """
-    imls = fragility_functions.imls
+    imls = numpy.array(fragility_functions.imls)
     if imls[0] == 0.:  # discard IML=0
         imls = imls[1:]
     if fragility_functions.steps_per_interval:  # interpolate
