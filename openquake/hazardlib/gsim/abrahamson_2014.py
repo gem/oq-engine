@@ -233,14 +233,13 @@ class AbrahamsonSilva2014(GMPE):
 
     def _compute_top_of_rupture_depth_term(self, C, rup):
         """
-        Compute and return top of rupture depth term, that is the seventh term
-        in equation 1, page 74. The calculation of this term is explained in
-        paragraph 'Depth-to-Top of Rupture Model', page 78.
+        Compute and return top of rupture depth term. See paragraph 
+        'Depth-to-Top of Rupture Model', page 1042.
         """
-        if rup.ztor >= 10.0:
-            return C['a16']
+        if rup.ztor >= 20.0:
+            return C['a15']
         else:
-            return C['a16'] * rup.ztor / 10.0
+            return C['a15'] * rup.ztor / 20.0
 
     def _compute_large_distance_term(self, C, dists, rup):
         """
