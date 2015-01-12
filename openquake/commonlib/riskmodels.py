@@ -207,7 +207,8 @@ def get_fragility_functions(fname, continuous_fragility_discretization,
         imt_str, imls, min_iml, max_iml, imlUnit = ~ffs.IML
 
         if fmodel['format'] == 'discrete':
-            if nodamage and nodamage < imls[0]:  # discrete fragility
+            if nodamage is not None and nodamage < imls[0]:
+                # discrete fragility
                 imls = [nodamage] + imls
                 add_zero_value = True
             if steps_per_interval:
