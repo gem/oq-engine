@@ -41,7 +41,7 @@ class ClassicalDamageCase1aTestCase(risk.FixtureBasedQATestCase):
         return [row.fraction for row in data]
 
     def expected_data(self):
-        return [0.977497, 0.0028587, 0.0046976, 0.00419187, 0.0107548]
+        return [0.971702, 0.00488098, 0.0067176, 0.005205, 0.0114946]
 
 
 class ClassicalDamageCase1bTestCase(ClassicalDamageCase1aTestCase):
