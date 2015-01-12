@@ -504,6 +504,14 @@ def job_from_file(cfg_file_path, username, log_level='info', exports='',
         params['hazard_investigation_time'] = getattr(
             hc, 'investigation_time', None)
         params['hazard_imtls'] = dict(hc.imtls)
+
+        if hc.continuous_fragility_discretization != \
+           oqparam.continuous_fragility_discretization:
+            raise RuntimeError(
+                'The hazard parameter continuous_fragility_discretization '
+                'was %d but the risk one is %d' % (
+                    hc.continuous_fragility_discretization,
+                    oqparam.continuous_fragility_discretization))
         job.save_params(params)
 
     job.save()
