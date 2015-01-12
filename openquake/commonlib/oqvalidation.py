@@ -130,7 +130,9 @@ class OqParam(valid.ParamSet):
             self.risk_imtls = get_imtls_from_vulnerabilities(self.inputs)
         elif fragility_files(self.inputs):
             fname = self.inputs['fragility']
-            cfd = getattr(self, 'continuous_fragility_discretization', None)
+            # continuous_fragility_discretization with a default
+            cfd = self.__dict__.setdefault(
+                'continuous_fragility_discretization', 20)
             ffs = get_fragility_functions(fname, cfd)
             self.risk_imtls = {fset.imt: fset.imls
                                for fset in ffs.itervalues()}
