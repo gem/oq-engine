@@ -23,7 +23,9 @@ import csv
 from openquake.engine.db import models
 from openquake.engine.export import core
 from openquake.engine.utils import FileWrapper
-from openquake.commonlib import risk_writers
+from openquake.commonlib import risk_writers, writers
+from openquake.baselib.general import block_splitter
+
 
 LOSS_CURVE_FILENAME_FMT = 'loss-curves-%(loss_curve_id)s.xml'
 LOSS_MAP_FILENAME_FMT = 'loss-maps-%(loss_map_id)s.%(file_ext)s'
@@ -32,6 +34,7 @@ AGGREGATE_LOSS_FILENAME_FMT = 'aggregate-loss-%s.csv'
 BCR_FILENAME_FMT = 'bcr-distribution-%(bcr_distribution_id)s.xml'
 EVENT_LOSS_FILENAME_FMT = 'event-loss-%s.csv'
 EVENT_LOSS_ASSET_FILENAME_FMT = 'event-loss-asset-%s.csv'
+DMG_PER_ASSET = 'dmt-per-asset-%s.csv'
 
 
 DAMAGE = dict(
@@ -101,7 +104,8 @@ def _get_result_export_dest(target, output, file_ext='xml'):
             job_id=output.oq_job.id,
             file_ext=file_ext,
         )
-
+    elif output_type == 'dmg_per_asset':
+        filename = DMG_PER_ASSET % output.id
     return os.path.abspath(os.path.join(target, filename))
 
 
@@ -251,6 +255,32 @@ def export_dmg_dist(key, output, target):
     else:
         data = damagecls.objects.filter(dmg_state__risk_calculation__id=job.id)
     writer.to_nrml(key[0], data, dest)
+    return dest
+
+
+@core.export_output.add(('dmg_per_asset', 'csv'))
+def export_dmg_per_asset_csv(key, output, target):
+    """
+    Classical Damage Per Asset in CSV format
+    """
+    dest = _get_result_export_dest(target, output)
+
+    damage_states = list(models.DmgState.objects.filter(
+        risk_calculation=output.oq_job).order_by('lsi'))
+    data = block_splitter(
+        models.DamageData.objects.filter(
+            dmg_state__risk_calculation=output.oq_job).order_by(
+            'exposure_data', 'dmg_state'),
+        len(damage_states))
+
+    with FileWrapper(dest, mode='wb') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(['asset_ref'] + [ds.dmg_state for ds in damage_states])
+        for row in data:
+            asset = row[0].exposure_data
+            fractions = [rec.fraction for rec in row]
+            writer.writerow(
+                [asset.asset_ref] + map(writers.scientificformat, fractions))
     return dest
 
 
