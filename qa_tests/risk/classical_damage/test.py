@@ -18,7 +18,7 @@ from nose.plugins.attrib import attr
 
 from qa_tests import risk
 from openquake.qa_tests_data.classical_damage import (
-    case_1a, case_1b, case_1c, case_2a)
+    case_1a, case_1b, case_1c, case_2a, case_2b, case_5a)
 
 from openquake.engine.db import models
 
@@ -38,7 +38,6 @@ class ClassicalDamageCase1aTestCase(risk.FixtureBasedQATestCase):
             'exposure_data', 'dmg_state')
         # this is a test with a single asset and 5 damage states
         # no_damage, slight, moderate, extreme, complete
-        print [row.fraction for row in data]
         return [row.fraction for row in data]
 
     def expected_data(self):
@@ -67,3 +66,19 @@ class ClassicalDamageCase2aTestCase(ClassicalDamageCase1aTestCase):
 
     def expected_data(self):
         return [0.970723, 0.0045270, 0.0084847, 0.0052886, 0.010976]
+
+
+class ClassicalDamageCase2bTestCase(ClassicalDamageCase1aTestCase):
+    module = case_2b
+    hazard_calculation_fixture = 'Classical Damage Case2b'
+
+    def expected_data(self):
+        return [0.970740, 0.004517, 0.00847858, 0.0052878, 0.0109759]
+
+
+class ClassicalDamageCase5aTestCase(ClassicalDamageCase1aTestCase):
+    module = case_5a
+    hazard_calculation_fixture = 'Classical Damage Case5a'
+
+    def expected_data(self):
+        return [4.8542, 0.02215, 0.0420483, 0.0264303, 0.0551130]
