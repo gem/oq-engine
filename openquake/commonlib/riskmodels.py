@@ -201,18 +201,30 @@ def get_fragility_functions(fname, continuous_fragility_discretization,
     tag = 'ffc' if fmodel['format'] == 'continuous' else 'ffd'
     fragility_functions = AccumDict()  # taxonomy -> functions
     for ffs in fmodel.getnodes('ffs'):
+        add_zero_value = False
+        # NB: the noDamageLimit is only defined for discrete fragility
+        # functions. It is a way to set the starting point of the functions:
+        # if noDamageLimit is at the left of each IMLs, it means that the
+        # function starts at zero at the given point, so we need to add
+        # noDamageLimit to the list of IMLs and zero to the list of poes
         nodamage = ffs.attrib.get('noDamageLimit')
         taxonomy = ~ffs.taxonomy
         imt_str, imls, min_iml, max_iml, imlUnit = ~ffs.IML
-        if continuous_fragility_discretization and not imls:
+
+        if fmodel['format'] == 'discrete':
+            if nodamage is not None and nodamage < imls[0]:
+                # discrete fragility
+                imls = [nodamage] + imls
+                add_zero_value = True
+            if steps_per_interval:
+                gen_imls = scientific.fine_graining(imls, steps_per_interval)
+            else:
+                gen_imls = imls
+        else:  # continuous:
             gen_imls = numpy.linspace(min_iml, max_iml,
                                       continuous_fragility_discretization)
-        elif steps_per_interval:
-            gen_imls = scientific.fine_graining(imls, steps_per_interval)
-        else:
-            gen_imls = imls
         fragility_functions[taxonomy] = scientific.FragilityFunctionList(
-            [], imt=imt_str, imls=gen_imls,
+            [], imt=imt_str, imls=list(gen_imls),
             no_damage_limit=nodamage,
             continuous_fragility_discretization=
             continuous_fragility_discretization,
@@ -229,6 +241,9 @@ def get_fragility_functions(fname, continuous_fragility_discretization,
             else:  # discrete
                 with context(fname, ff):
                     poes = ~ff.poEs
+                if add_zero_value:
+                    poes = [0.] + poes
+
                 fragility_functions[taxonomy].append(
                     scientific.FragilityFunctionDiscrete(
                         ls, imls, poes, nodamage))

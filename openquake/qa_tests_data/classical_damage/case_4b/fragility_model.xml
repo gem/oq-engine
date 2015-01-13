@@ -1,0 +1,24 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" 
+ 	  xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <fragilityModel format="continuous">
+    <description>Fragility Functions for Risk Test Set 1 Case 2b</description>
+    <limitStates>slight moderate extreme complete</limitStates>
+    <ffs type="lognormal">
+	  <taxonomy>Wood</taxonomy>
+	  <IML IMT="PGA" imlUnit="g" minIML="0.05" maxIML="1.40"/>
+	  <ffc ls="slight">
+		<params mean="0.160" stddev="0.104"/>
+	  </ffc>
+	  <ffc ls="moderate">
+		<params mean="0.225" stddev="0.158"/>
+	  </ffc>
+	  <ffc ls="extreme">
+		<params mean="0.400" stddev="0.300"/>
+	  </ffc>
+	  <ffc ls="complete">
+		<params mean="0.600" stddev="0.480"/>
+	  </ffc>
+    </ffs>
+  </fragilityModel>
+</nrml>

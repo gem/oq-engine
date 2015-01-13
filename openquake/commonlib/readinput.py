@@ -472,7 +472,7 @@ def get_risk_model(oqparam):
         # scenario damage calculator
         fragility_functions = get_fragility_functions(
             oqparam.inputs['fragility'],
-            getattr(oqparam, 'continuous_fragility_discretization', None),
+            oqparam.continuous_fragility_discretization,
             getattr(oqparam, 'steps_per_interval', None),
         )
         riskmodel.damage_states = fragility_functions.damage_states

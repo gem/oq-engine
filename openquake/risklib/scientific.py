@@ -665,16 +665,14 @@ def classical_damage(
         an array of M probabilities of occurrence where M is the numbers
         of damage states.
     """
-    imls = fragility_functions.imls
-    if imls[0] == 0.:  # discard IML=0
-        imls = imls[1:]
+    imls = numpy.array(fragility_functions.imls)
     if fragility_functions.steps_per_interval:  # interpolate
         min_val, max_val = hazard_imls[0], hazard_imls[-1]
         numpy.putmask(imls, imls < min_val, min_val)
         numpy.putmask(imls, imls > max_val, max_val)
         poes = interpolate.interp1d(hazard_imls, hazard_poes)(imls)
     else:
-        poes = hazard_poes
+        poes = numpy.array(hazard_poes)
     afe = annual_frequency_of_exceedence(poes, hazard_investigation_time)
     annual_frequency_of_occurrence = pairwise_diff(
         pairwise_mean([afe[0]] + list(afe) + [afe[-1]]))
