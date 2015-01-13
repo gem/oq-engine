@@ -82,29 +82,25 @@ class Abrahamson2014(GMPE):
         # intensity measure type and for PGA
         C = self.COEFFS[imt]
 
-        # this is used to compute the PGA on reference bedrock
-        C_PGA = self.COEFFS[PGA()]
-
         # compute median sa on rock (vs30=1180m/s), used for site response
         # term calculation
-        sa1180 = np.exp(self._compute_imt1180(PGA(), sites, rup, dists))
+        sa1180 = np.exp(self._get_sa_at_1180(imt, sites, rup, dists))
 
         # get the mean value
-        mean = (self._compute_basic_term(C, rup, dists) +
-                self._compute_faulting_style_term(C, rup) +
-                self._compute_site_response_term(C, imt, sites, sa1180) +
-                self._compute_hanging_wall_term(C, dists, rup) +
-                self._compute_top_of_rupture_depth_term(C, rup) +
-                self._compute_large_distance_term(C, dists, rup) +
-                self._compute_soil_depth_term(C, imt, sites.z1pt0, sites.vs30))
+        mean = (self._get_basic_term(C, rup, dists) +
+                self._get_faulting_style_term(C, rup) +
+                self._get_site_response_term(C, imt, sites, sa1180) +
+                self._get_hanging_wall_term(C, dists, rup) +
+                self._get_top_of_rupture_depth_term(C, rup) +
+                self._get_large_distance_term(C, dists, rup) +
+                self._get_soil_depth_term(C, imt, sites.z1pt0, sites.vs30))
 
         # get standard deviation
-        stddevs = self._get_stddevs(C, C_PGA, sa1180, rup, sites,
-                                    stddev_types)
+        stddevs = self._get_stddevs(C, sa1180, rup, sites, stddev_types)
 
         return mean, stddevs
 
-    def _compute_basic_term(self, C, rup, dists):
+    def _get_basic_term(self, C, rup, dists):
         """
         Compute and return basic form, see page 1030.
         """
@@ -132,12 +128,12 @@ class Abrahamson2014(GMPE):
                           C['a7'] * (rup.mag - self.CONSTS['m2'])**2.)
         return base_term
 
-    def _compute_faulting_style_term(self, C, rup):
+    def _get_faulting_style_term(self, C, rup):
         """
         Compute and return faulting style term, that is the sum of the second
         and third terms in equation 1, page 74.
         """
-        # this implements equations 5 and 6 at page 1032. f7 is the 
+        # this implements equations 5 and 6 at page 1032. f7 is the
         # coefficient for reverse mechanisms while f8 is the the correction
         # factor for normal ruptures
         if rup.mag > 5.0:
@@ -154,7 +150,7 @@ class Abrahamson2014(GMPE):
         return (f7 * float(rup.rake > 30 and rup.rake < 150) +
                 f8 * float(rup.rake > -150 and rup.rake < -30))
 
-    def _compute_site_response_term(self, C, imt, sites, sa1180):
+    def _get_site_response_term(self, C, imt, sites, sa1180):
         """
         Compute and return site response model term see page 1033
         """
@@ -191,13 +187,13 @@ class Abrahamson2014(GMPE):
                                                    C['n']))
         return site_resp_term
 
-    def _compute_hanging_wall_term(self, C, dists, rup):
+    def _get_hanging_wall_term(self, C, dists, rup):
         """
         Compute and return hanging wall model term, see page 1038.
         """
         # compute t1
         t1 = 60./45. if rup.dip <= 30. else (90.-rup.dip)/45.0
-        # compute t2 (eq 12 at page 1039) - a2hw set to 0.2 as indicated 
+        # compute t2 (eq 12 at page 1039) - a2hw set to 0.2 as indicated
         # at page 1041
         a2hw = 0.2
         if rup.mag > 6.5:
@@ -206,20 +202,20 @@ class Abrahamson2014(GMPE):
             t2 = 1 + a2hw * (rup.mag - 6.5) - (1 - a2hw) * (rup.mag - 6.5)**2
         else:
             t2 = 0.0
-        # compute t3 (eq. 13 at page 1039) - r1 and r2 specified at 
+        # compute t3 (eq. 13 at page 1039) - r1 and r2 specified at
         # page 1040
         r1 = rup.width * np.cos(np.rad(rup.dip))
         r2 = 3 * r1
         if dists.rx < r1:
             t3 = (self.CONSTS['h1'] + self.CONSTS['h2'] * (rup.rx / r1) +
                   self.CONSTS['h3'] * (rup.rx / r1)**2)
-        elif dist.rx <= r2:
-            t3 = 1 - (dists.rx - r1) / (r2 -r1)
+        elif dists.rx <= r2:
+            t3 = 1 - (dists.rx - r1) / (r2 - r1)
         else:
             t3 = 0
         # compute t4 (eq. 14 at page 1040)
         t4 = 0.0 if rup.ztor > 10. else 1 - rup.ztor**2 / 100.
-        # compute t5 (eq 15a at page 1040) - ry1 computed according to 
+        # compute t5 (eq 15a at page 1040) - ry1 computed according to
         # suggestions provided at page 1040
         ry1 = rup.rx * np.ran(np.rad(20.))
         if (rup.ry0 - ry1) <= 0.0:
@@ -231,9 +227,9 @@ class Abrahamson2014(GMPE):
         # finally, compute the hanging wall term
         return C['a13']*t1*t2*t3*t4*t5
 
-    def _compute_top_of_rupture_depth_term(self, C, rup):
+    def _get_top_of_rupture_depth_term(self, C, rup):
         """
-        Compute and return top of rupture depth term. See paragraph 
+        Compute and return top of rupture depth term. See paragraph
         'Depth-to-Top of Rupture Model', page 1042.
         """
         if rup.ztor >= 20.0:
@@ -241,46 +237,38 @@ class Abrahamson2014(GMPE):
         else:
             return C['a15'] * rup.ztor / 20.0
 
-    def _compute_soil_depth_term(self, C, rup):
+    def _get_soil_depth_term(self, C, rup):
         """
         Compute and return soil depth term. Here we put the term = 0 to
-        exclude it. Subclasses of 
+        exclude it. Subclasses of
         :class:`openquake.hazardlib.gsim.abrahamson_2014.Abrahamson2014:
         will implement the soil depth model proposed for different regions.
         See page 1042.
         """
-        return 0.0 
+        return 0.0
 
-    def _compute_imt1100(self, imt, sites, rup, dists):
+    # TODO
+    def _get_sa_at_1180(self, imt, sites, rup, dists, sa1180):
         """
         Compute and return mean imt value for rock conditions
         (vs30 = 1100 m/s)
         """
-        vs30_1100 = np.zeros_like(sites.vs30) + 1100
-        vs30_star, _ = self._compute_vs30_star_factor(imt, vs30_1100)
+        vs30_1180 = np.zeros_like(sites.vs30) + 1180
         C = self.COEFFS[imt]
-        mean = (self._compute_base_term(C, rup, dists) +
-                self._compute_faulting_style_term(C, rup) +
-                self._compute_hanging_wall_term(C, dists, rup) +
-                self._compute_top_of_rupture_depth_term(C, rup) +
-                self._compute_large_distance_term(C, dists, rup) +
-                self._compute_soil_depth_term(C, imt, sites.z1pt0, vs30_1100) +
-                # this is the site response term in case of vs30=1100
-                ((C['a10'] + C['b'] * self.CONSTS['n']) *
-                np.log(vs30_star / C['VLIN'])))
+        return (self._get_basic_term(C, rup, dists) +
+                self._get_faulting_style_term(C, rup) +
+                self._get_hanging_wall_term(C, dists, rup) +
+                self._get_top_of_rupture_depth_term(C, rup) +
+                self._get_large_distance_term(C, dists, rup) +
+                self._get_soil_depth_term(C, imt, sites.z1pt0, sites.vs30))
 
-        return mean
-
-    def _get_stddevs(self, C, C_PGA, pga1100, rup, sites, stddev_types):
+    def _get_stddevs(self, C, rup, sites, stddev_types):
         """
         Return standard deviations as described in paragraph 'Equations for
         standard deviation', page 1046.
         """
-        std_intra = self._get_intra_event_std(C, C_PGA, pga1100, rup.mag,
-                                              sites.vs30,
-                                              sites.vs30measured)
-        std_inter = self._get_inter_event_std(C, C_PGA, pga1100, rup.mag,
-                                              sites.vs30)
+        std_intra = self._get_intra_event_std(C, rup.mag, sites.vs30measured)
+        std_inter = self._get_inter_event_std(C, rup.mag)
         stddevs = []
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
@@ -292,76 +280,40 @@ class Abrahamson2014(GMPE):
                 stddevs.append(std_inter)
         return stddevs
 
-    def _compute_intra_event_std(self, C, C_PGA, pga1100, mag, vs30,
-                                 vs30measured):
+    def _get_intra_event_std(self, C, mag, vs30measured):
         """
-        Compute intra event standard deviation (equation 24) as described
-        in the errata and not in the original paper.
+        Returns intra event standard deviation (equation 24, page 1046)
         """
-        sigma_b = self._compute_sigma_b(C, mag, vs30measured)
-        sigma_b_pga = self._compute_sigma_b(C_PGA, mag, vs30measured)
-        delta_amp = self._compute_partial_derivative_site_amp(C, pga1100, vs30)
-
-        std_intra = np.sqrt(sigma_b ** 2 + self.CONSTS['sigma_amp'] ** 2 +
-                            (delta_amp ** 2) * (sigma_b_pga ** 2) +
-                            2 * delta_amp * sigma_b * sigma_b_pga * C['rho'])
-
+        if vs30measured:
+            s1 = C['c1m']
+            s2 = C['c2m']
+        else:
+            s1 = C['c1e']
+            s2 = C['c2e']
+        if mag < 4:
+            std_intra = s1
+        elif mag <= 6:
+            std_intra = s1 + (s2 - s1) / 2. * (mag - 4.)
+        else:
+            std_intra = s2
         return std_intra
 
-    def _compute_inter_event_std(self, C, C_PGA, pga1100, mag, vs30):
+    def _get_inter_event_std(self, C, mag):
         """
-        Compute inter event standard deviation, equation 25, page 82.
-        """
-        tau_0 = self._compute_std_0(C['s3'], C['s4'], mag)
-        tau_b_pga = self._compute_std_0(C_PGA['s3'], C_PGA['s4'], mag)
-        delta_amp = self._compute_partial_derivative_site_amp(C, pga1100, vs30)
-
-        std_inter = np.sqrt(tau_0 ** 2 + (delta_amp ** 2) * (tau_b_pga ** 2) +
-                            2 * delta_amp * tau_0 * tau_b_pga * C['rho'])
-
-        return std_inter
-
-    def _compute_sigma_b(self, C, mag, vs30measured):
-        """
-        Equation 23, page 81.
-        """
-        sigma_0 = self._compute_sigma_0(C, mag, vs30measured)
-        sigma_amp = self.CONSTS['sigma_amp']
-
-        return np.sqrt(sigma_0 ** 2 - sigma_amp ** 2)
-
-    def _compute_sigma_0(self, C, mag, vs30measured):
-        """
-        Equation 27, page 82.
-        """
-        s1 = np.zeros_like(vs30measured, dtype=float)
-        s2 = np.zeros_like(vs30measured, dtype=float)
-
-        idx = vs30measured == 1
-        s1[idx] = C['s1mea']
-        s2[idx] = C['s2mea']
-
-        idx = vs30measured == 0
-        s1[idx] = C['s1est']
-        s2[idx] = C['s2est']
-
-        return self._compute_std_0(s1, s2, mag)
-
-    def _compute_std_0(self, c1, c2, mag):
-        """
-        Common part of equations 27 and 28, pag 82.
+        Returns intra event standard deviation (equation 25, page 1046)
         """
         if mag < 5:
-            return c1
-        elif mag >= 5 and mag <= 7:
-            return c1 + (c2 - c1) * (mag - 5) / 2
+            std_inter = C['s3']
+        elif mag <= 7:
+            std_inter = C['s3'] + (C['s4'] - C['s3']) / 2. * (mag - 5.)
         else:
-            return c2
+            std_inter = C['s3']
+        return std_inter
 
     #: Coefficient tables as per appendix B of Abrahamson et al. (2014)
     COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT     m1      vlin    b       c       c4      a1      a2      a3      a4      a5      a6      a8      a10     a11     a12     a13     a14     a15     a17     a43     a44     a45     a46     a25     a28     a29     a31     a36     a37     a38     a39     a40     a41     a42     s1e     s2e     s3      s4      s1m     s2m     s5      s6
-0       6.75    660     -1.47   2.4     4.5     0.587   -0.79   0.275   -0.1    -0.41   2.154   -0.015  1.735   0       -0.1    0.6     -0.3    1.1     -0.0072 0.1     0.05    0       -0.05   -0.0015 0.0025  -0.0034 -0.1503 0.265   0.337   0.188   0       0.088   -0.196  0.044   0.754   0.52    0.47    0.36    0.741   0.501   0.54    0.6300
+PGA     6.75    660     -1.47   2.4     4.5     0.587   -0.79   0.275   -0.1    -0.41   2.154   -0.015  1.735   0       -0.1    0.6     -0.3    1.1     -0.0072 0.1     0.05    0       -0.05   -0.0015 0.0025  -0.0034 -0.1503 0.265   0.337   0.188   0       0.088   -0.196  0.044   0.754   0.52    0.47    0.36    0.741   0.501   0.54    0.6300
 -1      6.75    330     -2.02   2400    4.5     5.975   -0.919  0.275   -0.1    -0.41   2.366   -0.094  2.36    0       -0.1    0.25    0.22    0.3     -0.0005 0.28    0.15    0.09    0.07    -0.0001 0.0005  -0.0037 -0.1462 0.377   0.212   0.157   0       0.095   -0.038  0.065   0.662   0.51    0.38    0.38    0.66    0.51    0.58    0.5300
 0.01    6.75    660     -1.47   2.4     4.5     0.587   -0.790  0.275   -0.1    -0.41   2.154   -0.015  1.735   0       -0.1    0.6     -0.3    1.1     -0.0072 0.1     0.05    0       -0.05   -0.0015 0.0025  -0.0034 -0.1503 0.265   0.337   0.188   0       0.088   -0.196  0.044   0.754   0.52    0.47    0.36    0.741   0.501   0.54    0.6300
 0.02    6.75    680     -1.46   2.4     4.5     0.598   -0.790  0.275   -0.1    -0.41   2.146   -0.015  1.718   0       -0.1    0.6     -0.3    1.1     -0.0073 0.1     0.05    0       -0.05   -0.0015 0.0024  -0.0033 -0.1479 0.255   0.328   0.184   0       0.088   -0.194  0.061   0.76    0.52    0.47    0.36    0.747   0.501   0.54    0.6300
@@ -392,7 +344,7 @@ IMT     m1      vlin    b       c       c4      a1      a2      a3      a4      
         # m2 specified at page 1032 (top)
         'm2': 5.00,
         # h1, h2, h3 specified at page 1040 (top)
-        'h1', +0.25,
-        'h2', +1.50,
-        'h3', -0.75,
+        'h1': +0.25,
+        'h2': +1.50,
+        'h3': -0.75,
     }
