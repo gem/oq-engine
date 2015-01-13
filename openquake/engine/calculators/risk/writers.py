@@ -237,6 +237,29 @@ def total_damage_distribution(fractions, dmg_state_ids):
             dmg_state_id=dmg_state, mean=mean, stddev=std)
 
 
+def classical_damage(assets, fraction_matrix, dmg_state_ids, damage_id):
+    """
+    Save the damage distribution for the given assets.
+
+    :param assets:
+       a list of ExposureData instances
+    :param fraction_matrix:
+       numpy array with the damage fractions for each asset
+    :param dmg_state_ids:
+       a list of IDs of instances of
+       :class:`openquake.engine.db.models.DmgState` ordered by `lsi`
+    :param damage_id:
+       ID of a :class:`openquake.engine.db.models.Damage` instance
+    """
+    for fractions, asset in zip(fraction_matrix, assets):
+        for fraction, dmg_state_id in zip(fractions, dmg_state_ids):
+            models.DamageData.objects.create(
+                damage_id=damage_id,
+                dmg_state_id=dmg_state_id,
+                exposure_data=asset,
+                fraction=fraction)
+
+
 # A namedtuple that identifies an Output object in a risk calculation
 # E.g. A Quantile LossCurve associated with a specific hazard output is
 # OutputKey(output_type="loss_curve",
@@ -630,3 +653,22 @@ class ConditionalLossFractionBuilder(OutputBuilder):
                 poe=poe))
 
         return loss_fractions
+
+
+class DamageCurveBuilder(OutputBuilder):
+    """
+    Create output outputdict for damage distribution
+    """
+    def individual_outputs(self, _damage, hazard_output):
+        output = models.Output.objects.create_output(
+            self.calc.job,
+            "Damage distribution for hazard=%s" % hazard_output.id,
+            'dmg_per_asset')
+        outs = [models.Damage.objects.create(
+            risk_calculation=self.calc.job,
+            hazard_output=hazard_output, output=output)]
+        return outs
+
+    def statistical_outputs(self):
+        # TODO
+        return []
