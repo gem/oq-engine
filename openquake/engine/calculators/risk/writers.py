@@ -657,12 +657,12 @@ class ConditionalLossFractionBuilder(OutputBuilder):
 
 class DamageCurveBuilder(OutputBuilder):
     """
-    Create output outputdict for Damage Curves
+    Create output outputdict for damage distribution
     """
     def individual_outputs(self, _damage, hazard_output):
         output = models.Output.objects.create_output(
             self.calc.job,
-            "Damage curve for hazard=%s" % hazard_output.id,
+            "Damage distribution for hazard=%s" % hazard_output.id,
             'dmg_per_asset')
         outs = [models.Damage.objects.create(
             risk_calculation=self.calc.job,
