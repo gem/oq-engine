@@ -202,6 +202,11 @@ def get_fragility_functions(fname, continuous_fragility_discretization,
     fragility_functions = AccumDict()  # taxonomy -> functions
     for ffs in fmodel.getnodes('ffs'):
         add_zero_value = False
+        # NB: the noDamageLimit is only defined for discrete fragility
+        # functions. It is a way to set the starting point of the functions:
+        # if noDamageLimit is at the left of each IMLs, it means that the
+        # function starts at zero at the given point, so we need to add
+        # noDamageLimit to the list of IMLs and zero to the list of poes
         nodamage = ffs.attrib.get('noDamageLimit')
         taxonomy = ~ffs.taxonomy
         imt_str, imls, min_iml, max_iml, imlUnit = ~ffs.IML
