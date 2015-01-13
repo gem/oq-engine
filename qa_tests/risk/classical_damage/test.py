@@ -79,7 +79,7 @@ class ClassicalDamageCase2bTestCase(ClassicalDamageCase1aTestCase):
 
 class ClassicalDamageCase3aTestCase(ClassicalDamageCase1aTestCase):
     module = case_3a
-    hazard_calculation_fixture = 'Classical Damage Case2b'
+    hazard_calculation_fixture = 'Classical Damage Case3a'
 
     def expected_data(self):
         return [0.9724910, 0.0080209, 0.0105995, 0.00573419, 0.00315432]
@@ -87,7 +87,7 @@ class ClassicalDamageCase3aTestCase(ClassicalDamageCase1aTestCase):
 
 class ClassicalDamageCase4aTestCase(ClassicalDamageCase1aTestCase):
     module = case_4a
-    hazard_calculation_fixture = 'Classical Damage Case2b'
+    hazard_calculation_fixture = 'Classical Damage Case4a'
 
     def expected_data(self):
         return [0.227843, 0.058247, 0.153393, 0.135054, 0.425463]
@@ -95,7 +95,7 @@ class ClassicalDamageCase4aTestCase(ClassicalDamageCase1aTestCase):
 
 class ClassicalDamageCase4bTestCase(ClassicalDamageCase1aTestCase):
     module = case_4b
-    hazard_calculation_fixture = 'Classical Damage Case2b'
+    hazard_calculation_fixture = 'Classical Damage Case4b'
 
     def expected_data(self):
         return [0.970851, 0.004430, 0.0084097, 0.0052861, 0.0110226]
@@ -103,7 +103,7 @@ class ClassicalDamageCase4bTestCase(ClassicalDamageCase1aTestCase):
 
 class ClassicalDamageCase4cTestCase(ClassicalDamageCase1aTestCase):
     module = case_4c
-    hazard_calculation_fixture = 'Classical Damage Case2b'
+    hazard_calculation_fixture = 'Classical Damage Case4c'
 
     def expected_data(self):
         return [0.227843, 0.058247, 0.153393, 0.135054, 0.42546]
