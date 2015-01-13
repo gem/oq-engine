@@ -34,7 +34,7 @@ AGGREGATE_LOSS_FILENAME_FMT = 'aggregate-loss-%s.csv'
 BCR_FILENAME_FMT = 'bcr-distribution-%(bcr_distribution_id)s.xml'
 EVENT_LOSS_FILENAME_FMT = 'event-loss-%s.csv'
 EVENT_LOSS_ASSET_FILENAME_FMT = 'event-loss-asset-%s.csv'
-DMG_PER_ASSET = 'dmt-per-asset-%s.csv'
+DMG_PER_ASSET = 'dmg-per-asset-%s.csv'
 
 
 DAMAGE = dict(
