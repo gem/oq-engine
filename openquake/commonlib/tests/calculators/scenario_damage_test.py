@@ -25,11 +25,12 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     def test_case_4(self):
         out = self.run_calc(case_4.__file__, 'job_haz.ini,job_risk.ini')
         self.assertEqualFiles(
-            'expected/dmg_dist_per_asset.xml', out['dmg_dist_per_asset_xml'])
+            'expected/dmg_dist_per_asset.xml',
+            out['dmg_dist_per_asset', 'xml'])
         self.assertEqualFiles(
             'expected/dmg_dist_per_taxonomy.xml',
-            out['dmg_dist_per_taxonomy_xml'])
+            out['dmg_dist_per_taxonomy', 'xml'])
         self.assertEqualFiles(
-            'expected/dmg_dist_total.xml', out['dmg_dist_total_xml'])
+            'expected/dmg_dist_total.xml', out['dmg_dist_total', 'xml'])
         self.assertEqualFiles(
-            'expected/collapse_map.xml', out['collapse_map_xml'])
+            'expected/collapse_map.xml', out['collapse_map', 'xml'])

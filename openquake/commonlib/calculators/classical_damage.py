@@ -89,6 +89,7 @@ class ClassicalDamageCalculator(base.RiskCalculator):
         exported = {}
         for rlz_idx in sorted(result):
             fname = 'damage_%d.csv' % rlz_idx
-            exported += export('classical_damage_csv', self.oqparam.export_dir,
+            exported += export(('classical_damage', 'csv'),
+                               self.oqparam.export_dir,
                                fname, dmg_states, result[rlz_idx])
         return exported

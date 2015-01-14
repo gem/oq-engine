@@ -25,16 +25,15 @@ from openquake.commonlib import risk_writers
 from openquake.commonlib.writers import scientificformat
 
 
-@export.add('dmg_dist_per_asset_xml', 'dmg_dist_per_taxonomy_xml',
-            'dmg_dist_total_xml', 'collapse_map_xml')
+@export.add(('dmg_dist_per_asset', 'xml'), ('dmg_dist_per_taxonomy', 'xml'),
+            ('dmg_dist_total', 'xml'), ('collapse_map', 'xml'))
 def export_dmg_xml(key, export_dir, damage_states, dmg_data):
-    dest = os.path.join(export_dir, key.replace('_xml', '.xml'))
-    risk_writers.DamageWriter(damage_states).to_nrml(
-        key.replace('_xml', ''), dmg_data, dest)
+    dest = os.path.join(export_dir, '%s.%s' % key)
+    risk_writers.DamageWriter(damage_states).to_nrml(key[0], dmg_data, dest)
     return AccumDict({key: dest})
 
 
-@export.add('agg_loss_csv')
+@export.add(('agg_loss', 'csv'))
 def export_agg_loss_csv(key, export_dir, aggcurves):
     """
     Export aggregate losses in CSV.
@@ -43,7 +42,7 @@ def export_agg_loss_csv(key, export_dir, aggcurves):
     :param export_dir: the export directory
     :param aggcurves: a list [(loss_type, unit, mean, stddev), ...]
     """
-    dest = os.path.join(export_dir, key.replace('_csv', '.csv'))
+    dest = os.path.join(export_dir, '%s.%s' % key)
     with open(dest, 'w') as csvfile:
         writer = csv.writer(csvfile, delimiter='|', lineterminator='\n')
         writer.writerow(['LossType', 'Unit', 'Mean', 'Standard Deviation'])
@@ -51,7 +50,7 @@ def export_agg_loss_csv(key, export_dir, aggcurves):
     return AccumDict({key: dest})
 
 
-@export.add('classical_damage_csv')
+@export.add(('classical_damage', 'csv'))
 def export_classical_damage_csv(key, export_dir, fname, damage_states,
                                 fractions_by_asset):
     """
