@@ -33,6 +33,7 @@ from openquake.baselib.general import AccumDict
 
 from openquake.commonlib.writers import save_csv
 from openquake.commonlib.calculators import base, calc
+from openquake.commonlib.calculators.hazard import ClassicalCalculator
 
 SESRupture = collections.namedtuple(
     'SESRupture', 'rupture site_indices seed tag trt_model_id')
@@ -232,4 +233,4 @@ class EventBasedCalculator(base.HazardCalculator):
             concurrent_tasks=self.oqparam.concurrent_tasks, acc=zero,
             key=operator.attrgetter('trt_model_id'))
 
-    post_execute = base.calculators['classical'].post_execute.__func__
+    post_execute = ClassicalCalculator.post_execute.__func__
