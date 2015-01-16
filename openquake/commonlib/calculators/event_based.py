@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os.path
 import random
 import operator
 import itertools
@@ -23,12 +24,14 @@ import collections
 
 import numpy
 
+from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
-from openquake.hazardlib import imt, site
+from openquake.hazardlib import site
 from openquake.commonlib import readinput, parallel
 from openquake.baselib.general import AccumDict
 
+from openquake.commonlib.writers import save_csv
 from openquake.commonlib.calculators import base, calc
 
 SESRupture = collections.namedtuple(
@@ -165,9 +168,8 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
     trt_id = ses_ruptures[0].trt_model_id
     gsims = sorted(gsims_assoc[trt_id])
     gcalc = calc.GmfCalculator(
-        map(imt.from_string, oq.imtls), gsims, trt_id,
-        getattr(oq, 'truncation_level', None),
-        readinput.get_correl_model(oq))
+        map(from_string, oq.imtls), gsims, trt_id,
+        getattr(oq, 'truncation_level', None), readinput.get_correl_model(oq))
 
     for rupture, group in itertools.groupby(
             ses_ruptures, operator.attrgetter('rupture')):
@@ -175,7 +177,11 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
         indices = srs[0].site_indices
         r_sites = (sitecol if indices is None else
                    site.FilteredSiteCollection(indices, sitecol))
-        gcalc.calc_gmfs(r_sites, rupture, [(sr.tag, sr.seed) for sr in srs])
+        for gsim_name, rows in gcalc.calc_gmfs(
+                r_sites, rupture, [(sr.tag, sr.seed) for sr in srs]):
+            fname = os.path.join(
+                oq.export_dir, '%s-%s.csv' % (trt_id, gsim_name))
+            save_csv(fname, rows, mode='a')
 
     if getattr(oq, 'hazard_curves_from_gmfs', None):
         for gsim, curves_by_imt in gcalc.to_haz_curves(
@@ -204,6 +210,12 @@ class EventBasedCalculator(base.HazardCalculator):
         self.rlzs_assoc = haz_out['rlzs_assoc']
         self.sesruptures = sorted(sum(haz_out['result'].itervalues(), []),
                                   key=operator.attrgetter('tag'))
+
+        # touch output files
+        for trt_id, gsim in self.rlzs_assoc:
+            fname = os.path.join(
+                self.oqparam.export_dir, '%s-%s.csv' % (trt_id, gsim))
+            open(fname, 'w').close()
 
     def execute(self):
         """
