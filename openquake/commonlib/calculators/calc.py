@@ -277,17 +277,21 @@ class GmfCalculator(object):
             a list of pairs (ses_rupture_id, ses_rupture_seed)
         """
         for gsim in self.sorted_gsims:
-            gsim_name = gsim.__class__.__name__
+            rows = []
             computer = gmf.GmfComputer(
                 rupture, r_sites, self.sorted_imts, gsim,
                 self.truncation_level, self.correl_model)
             for rupid, seed in rupid_seed_pairs:
+                row = [rupid]
                 for imt_str, gmvs in computer.compute(seed):
+                    row.append(r_sites.expand(gmvs, 0))
                     for site_id, gmv in zip(r_sites.sids, gmvs):
                         self.gmvs_per_site[
-                            gsim_name, imt_str, site_id].append(gmv)
+                            gsim, imt_str, site_id].append(gmv)
                         self.ruptures_per_site[
-                            gsim_name, imt_str, site_id].append(rupid)
+                            gsim, imt_str, site_id].append(rupid)
+                rows.append(row)
+            yield gsim.__class__.__name__, rows
 
     def to_haz_curves(self, sids, imtls, invest_time, num_ses):
         """

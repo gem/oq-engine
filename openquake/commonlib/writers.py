@@ -166,11 +166,11 @@ def tostring(node, indent=4):
     return out.getvalue()
 
 
-def save_csv(dest, header_rows, sep=',', fmt='%12.8E'):
+def save_csv(dest, header_rows, sep=',', fmt='%12.8E', mode='wb'):
     """
     :param dest: destination filename
     :param header_rows: header + rows to save
     """
-    with open(dest, 'w') as f:
+    with open(dest, mode) as f:
         for row in header_rows:
             f.write(sep.join(scientificformat(col, fmt) for col in row) + '\n')
