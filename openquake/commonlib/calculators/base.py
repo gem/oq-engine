@@ -118,6 +118,29 @@ class HazardCalculator(BaseCalculator):
             self.rlzs_assoc = workflows.FakeRlzsAssoc()
 
 
+def get_hazard(calculator):
+    """
+    Get the hazard from a calculator, possibly by using cached results
+
+    :param calculator: a calculator with a .hazard_calculator attribute
+    """
+    cache = os.path.join(calculator.oqparam.export_dir, 'hazard.pik')
+    if calculator.oqparam.usecache:
+        with open(cache) as f:
+            haz_out = cPickle.load(f)
+    else:
+        hcalc = calculators[calculator.hazard_calculator](
+            calculator.oqparam, calculator.monitor('hazard'))
+        hcalc.pre_execute()
+        result = hcalc.execute()
+        haz_out = dict(result=result, rlzs_assoc=hcalc.rlzs_assoc,
+                       sitecol=hcalc.sitecol)
+        logging.info('Saving hazard output on %s', cache)
+        with open(cache, 'w') as f:
+            cPickle.dump(haz_out, f)
+    return haz_out
+
+
 class RiskCalculator(BaseCalculator):
     """
     Base class for all risk calculators. A risk calculator must set the
@@ -185,25 +208,6 @@ class RiskCalculator(BaseCalculator):
                           if sid in assets_by_sid]
         filteredcol = sitecol.filter(mask)
         return filteredcol, numpy.array(assets_by_site)
-
-    def get_hazard(self):
-        """
-        Getting the hazard (possibly from the cache).
-        """
-        cache = os.path.join(self.oqparam.export_dir, 'hazard.pik')
-        if self.oqparam.usecache:
-            with open(cache) as f:
-                haz_out = cPickle.load(f)
-        else:
-            hcalc = calculators[self.hazard_calculator](
-                self.oqparam, self.monitor('hazard'))
-            hcalc.pre_execute()
-            result = hcalc.execute()
-            haz_out = dict(result=result, rlzs_assoc=hcalc.rlzs_assoc)
-            logging.info('Saving hazard output on %s', cache)
-            with open(cache, 'w') as f:
-                cPickle.dump(haz_out, f)
-        return haz_out
 
     def pre_execute(self):
         """

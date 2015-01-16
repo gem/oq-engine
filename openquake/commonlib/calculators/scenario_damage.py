@@ -72,7 +72,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         super(ScenarioDamageCalculator, self).pre_execute()
 
         logging.info('Computing the GMFs')
-        gmfs_by_imt = self.get_hazard()['result']
+        gmfs_by_imt = base.get_hazard(self)['result']
 
         logging.info('Preparing the risk input')
         self.riskinputs = self.build_riskinputs(gmfs_by_imt)

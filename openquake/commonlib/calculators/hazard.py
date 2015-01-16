@@ -147,15 +147,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 for imt, curves in curves_by_imt.iteritems()}
 
 
-@base.calculators.add('event_based')
-class EventBasedCalculator(base.HazardCalculator):
-    """
-    Event based PSHA calculator
-    """
-    def post_execute(self, result):
-        return {}
-
-
 @base.calculators.add('disaggregation')
 class DisaggregationCalculator(base.HazardCalculator):
     """
