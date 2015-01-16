@@ -314,7 +314,7 @@ class GmfCalculator(object):
             curves_by_imt = []
             for imt in sorted_imts:
                 curves_by_imt.append(
-                    numpy.array([gmf[gsim, imt].get(site_id, zeros[imt])
+                    numpy.array([gmf[gsim_obj, imt].get(site_id, zeros[imt])
                                  for site_id in sids]))
             curves_by_gsim.append((gsim, curves_by_imt))
         return curves_by_gsim
