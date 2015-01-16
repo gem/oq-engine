@@ -132,7 +132,7 @@ class GmfCollection(object):
         yield GmfSet(gmfset)
 
 
-@export.add('gmf_xml')
+@export.add(('gmf', 'xml'))
 def export_gmf_xml(key, export_dir, sitecol, rupture_tags, gmfs):
     """
     :param key: output_type and export_type
@@ -141,7 +141,7 @@ def export_gmf_xml(key, export_dir, sitecol, rupture_tags, gmfs):
     :rupture_tags: a list of rupture tags
     :gmfs: a dictionary of ground motion fields keyed by IMT
     """
-    dest = os.path.join(export_dir, key.replace('_xml', '.xml'))
+    dest = os.path.join(export_dir, '%s.%s' % key)
     writer = hazard_writers.EventBasedGMFXMLWriter(
         dest, sm_lt_path='', gsim_lt_path='')
     with floatformat('%12.8E'):
@@ -149,7 +149,7 @@ def export_gmf_xml(key, export_dir, sitecol, rupture_tags, gmfs):
     return {key: dest}
 
 
-@export.add('gmf_csv')
+@export.add(('gmf', 'csv'))
 def export_gmf_csv(key, export_dir, sitecol, rupture_tags, gmfs):
     """
     :param key: output_type and export_type
@@ -158,7 +158,7 @@ def export_gmf_csv(key, export_dir, sitecol, rupture_tags, gmfs):
     :rupture_tags: a list of rupture tags
     :gmfs: a dictionary of ground motion fields keyed by IMT
     """
-    dest = os.path.join(export_dir, key.replace('_csv', '.csv'))
+    dest = os.path.join(export_dir, '%s.%s' % key)
     with floatformat('%12.8E'), open(dest, 'w') as f:
         for imt, gmf in gmfs.iteritems():
             for site, gmvs in zip(sitecol, gmf):
@@ -171,7 +171,7 @@ def export_gmf_csv(key, export_dir, sitecol, rupture_tags, gmfs):
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
-@export.add('hazard_curves_csv')
+@export.add(('hazard_curves', 'csv'))
 def export_hazard_curves_csv(key, export_dir, fname, sitecol, curves_by_imt,
                              imtls, investigation_time=None):
     """
@@ -192,7 +192,7 @@ def export_hazard_curves_csv(key, export_dir, fname, sitecol, curves_by_imt,
     return {fname: dest}
 
 
-@export.add('hazard_curves_xml')
+@export.add(('hazard_curves', 'xml'))
 def export_hazard_curves_xml(key, export_dir, fname, sitecol, curves_by_imt,
                              imtls, investigation_time):
     """
@@ -232,7 +232,7 @@ def export_hazard_curves_xml(key, export_dir, fname, sitecol, curves_by_imt,
     return {fname: dest}
 
 
-@export.add('hazard_stats_csv')
+@export.add(('hazard_stats', 'csv'))
 def export_stats_csv(key, export_dir, fname, sitecol, data_by_imt):
     """
     Export the scalar outputs.

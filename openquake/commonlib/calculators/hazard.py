@@ -114,7 +114,7 @@ class ClassicalCalculator(base.HazardCalculator):
             smlt_path = '_'.join(rlz.sm_lt_path)
             gsimlt_path = '_'.join(rlz.gsim_lt_path)
             for fmt in exports:
-                key = 'hazard_curves_' + fmt
+                key = ('hazard_curves', fmt)
                 fname = 'hazard_curve-smltp_%s-gsimltp_%s-ltr_%d.%s' % (
                     smlt_path, gsimlt_path, rlz.ordinal, fmt)
                 saved += export(
@@ -131,7 +131,7 @@ class ClassicalCalculator(base.HazardCalculator):
         for fmt in exports:
             fname = 'hazard_curve-mean.%s' % fmt
             saved += export(
-                'hazard_curves_' + fmt,
+                ('hazard_curves', fmt),
                 oq.export_dir, fname, self.sitecol, mean_curves,
                 oq.imtls, oq.investigation_time)
         return saved
@@ -220,10 +220,10 @@ class ScenarioCalculator(base.HazardCalculator):
     def post_execute(self, result):
         """
         :param result: a dictionary imt -> gmfs
-        :returns: a dictionary {'gmf_xml': <gmf.xml filename>}
+        :returns: a dictionary {('gmf', 'xml'): <gmf.xml filename>}
         """
         logging.info('Exporting the result')
         out = export(
-            'gmf_xml', self.oqparam.export_dir,
+            ('gmf', 'xml'), self.oqparam.export_dir,
             self.sitecol, self.tags, result)
         return out

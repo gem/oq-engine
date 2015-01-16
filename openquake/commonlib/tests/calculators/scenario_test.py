@@ -42,7 +42,7 @@ class ScenarioHazardTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'scenario')
     def test_case_1(self):
         out = self.run_calc(case_1.__file__, 'job.ini')
-        self.assertEqualFiles('expected.xml', out['gmf_xml'])
+        self.assertEqualFiles('expected.xml', out['gmf', 'xml'])
 
     @attr('qa', 'hazard', 'scenario')
     def test_case_2(self):
