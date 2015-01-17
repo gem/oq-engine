@@ -45,6 +45,7 @@ class UpgradeManagerTestCase(unittest.TestCase):
     ## 0005-populate_model.py
 
     def setUp(self):
+        conn.autocommit = False
         conn.cursor().execute('CREATE SCHEMA test')
         conn.commit()  # make sure the schema really exists
 
