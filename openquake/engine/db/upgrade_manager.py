@@ -326,13 +326,8 @@ def upgrade_db(conn, pkg_name='openquake.engine.db.schema.upgrades',
     upgrader = UpgradeManager.instance(conn, pkg_name)
     t0 = time.time()
     # run the upgrade scripts
-    try:
+    with conn:
         versions_applied = upgrader.upgrade(conn, skip_versions)
-    except:
-        conn.rollback()
-        raise
-    else:
-        conn.commit()
     dt = time.time() - t0
     logs.LOG.info('Upgrade completed in %s seconds', dt)
     return versions_applied
