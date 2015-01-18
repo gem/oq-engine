@@ -34,8 +34,6 @@ from openquake.engine.db import models
 from openquake.engine import logs, writer
 from openquake.engine.performance import EnginePerformanceMonitor
 
-from django.db import transaction
-
 
 @tasks.oqtask
 def calc_gmfs(job_id, tag_seed_pairs, computer):
@@ -106,14 +104,8 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         latter piece basically defines the work to be done in the
         `execute` phase.)
         """
-        # if you don't use an explicit transaction, errors will be masked
-        # the problem is that Django by default performs implicit transactions
-        # without rollback, see
-        # https://docs.djangoproject.com/en/1.3/topics/db/transactions/
-        with transaction.commit_on_success(using='job_init'):
-            self.parse_risk_model()
-        with transaction.commit_on_success(using='job_init'):
-            self.initialize_site_collection()
+        self.parse_risk_model()
+        self.initialize_site_collection()
 
         hc = self.oqparam
         n_sites = len(self.site_collection)
