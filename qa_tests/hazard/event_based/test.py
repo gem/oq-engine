@@ -378,33 +378,33 @@ class EventBasedHazardCase13TestCase(qa_utils.BaseQATestCase):
         aaae(expected_curve_poes, curve.poes, decimal=2)
 
 
-# test where a simple point source is sampled twice; twin to
-# the ClassicalHazardCase17TestCase
 class EventBasedHazardCase17TestCase(qa_utils.BaseQATestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test(self):
         cfg = os.path.join(os.path.dirname(case_17.__file__), 'job.ini')
-        expected_curve_pga = [0.28347, 0., 0.]
-
-        # this is a test where src.iter_ruptures() produces 39 ruptures;
-        # 37 of them never occur, whereas the ruptures 1 and 13 occur once
-        # within the given investigation time
-        expected_tags = ['trt=01|ses=0002|src=1|rup=013-01',
-                         'trt=01|ses=0003|src=1|rup=001-01']
+        expected_curves_pga = [
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [0.486582881, 0.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0]]
 
         job = self.run_hazard(cfg)
-
+        j = job.id
         tags = models.SESRupture.objects.filter(
-            rupture__ses_collection__trt_model__lt_model__hazard_calculation=
-            job.id).values_list('tag', flat=True)
+            rupture__ses_collection__trt_model__lt_model__hazard_calculation=j
+        ).values_list('tag', flat=True)
 
-        self.assertEqual(sorted(tags), expected_tags)
+        t1_tags = [t for t in tags if t.startswith('trt=01')]
+        t2_tags = [t for t in tags if t.startswith('trt=02')]
 
-        curve1, curve2 = models.HazardCurveData.objects.filter(
-            hazard_curve__output__oq_job=job.id, hazard_curve__imt='PGA')
+        self.assertEqual(len(t1_tags), 2742)
+        self.assertEqual(len(t2_tags), 2)
+
+        curves = [c.poes for c in models.HazardCurveData.objects.filter(
+            hazard_curve__output__oq_job=job.id, hazard_curve__imt='PGA'
+        ).order_by('hazard_curve')]
 
         numpy.testing.assert_array_almost_equal(
-            expected_curve_pga, curve1.poes, decimal=5)
-        numpy.testing.assert_array_almost_equal(
-            expected_curve_pga, curve2.poes, decimal=5)
+            expected_curves_pga, curves, decimal=7)
