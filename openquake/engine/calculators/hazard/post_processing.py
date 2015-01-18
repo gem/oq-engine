@@ -23,7 +23,6 @@ E.g. mean and quantile curves.
 
 import numpy
 
-from django.db import transaction
 from itertools import izip
 
 from openquake.commonlib.calculators import calc
@@ -73,45 +72,44 @@ def hazard_curves_to_hazard_map(job_id, hazard_curves, poes):
         curves = (_poes for _, _, _poes in hcd)
         hazard_maps = calc.compute_hazard_maps(curves, hc.imls, poes)
 
-        with transaction.commit_on_success(using='job_init'):
-            # Prepare the maps to be saved to the DB
-            for i, poe in enumerate(poes):
-                map_values = hazard_maps[i]
-                lons = numpy.empty(map_values.shape)
-                lats = numpy.empty(map_values.shape)
+        # Prepare the maps to be saved to the DB
+        for i, poe in enumerate(poes):
+            map_values = hazard_maps[i]
+            lons = numpy.empty(map_values.shape)
+            lats = numpy.empty(map_values.shape)
 
-                for loc_idx, _ in enumerate(map_values):
-                    lons[loc_idx] = hcd[loc_idx][0]
-                    lats[loc_idx] = hcd[loc_idx][1]
+            for loc_idx, _ in enumerate(map_values):
+                lons[loc_idx] = hcd[loc_idx][0]
+                lats[loc_idx] = hcd[loc_idx][1]
 
-                # Create 'Output' records for the map for this PoE
-                if hc.statistics == 'mean':
-                    disp_name = _HAZ_MAP_DISP_NAME_MEAN_FMT % dict(
-                        poe=poe, imt=imt)
-                elif hc.statistics == 'quantile':
-                    disp_name = _HAZ_MAP_DISP_NAME_QUANTILE_FMT % dict(
-                        poe=poe, imt=imt, quantile=hc.quantile)
-                else:
-                    disp_name = _HAZ_MAP_DISP_NAME_FMT % dict(
-                        poe=poe, imt=imt, rlz=hc.lt_realization.id)
+            # Create 'Output' records for the map for this PoE
+            if hc.statistics == 'mean':
+                disp_name = _HAZ_MAP_DISP_NAME_MEAN_FMT % dict(
+                    poe=poe, imt=imt)
+            elif hc.statistics == 'quantile':
+                disp_name = _HAZ_MAP_DISP_NAME_QUANTILE_FMT % dict(
+                    poe=poe, imt=imt, quantile=hc.quantile)
+            else:
+                disp_name = _HAZ_MAP_DISP_NAME_FMT % dict(
+                    poe=poe, imt=imt, rlz=hc.lt_realization.id)
 
-                output = job.get_or_create_output(disp_name, 'hazard_map')
+            output = job.get_or_create_output(disp_name, 'hazard_map')
 
-                # Save the complete hazard map
-                models.HazardMap.objects.create(
-                    output=output,
-                    lt_realization=hc.lt_realization,
-                    investigation_time=hc.investigation_time,
-                    imt=hc.imt,
-                    statistics=hc.statistics,
-                    quantile=hc.quantile,
-                    sa_period=hc.sa_period,
-                    sa_damping=hc.sa_damping,
-                    poe=poe,
-                    lons=lons.tolist(),
-                    lats=lats.tolist(),
-                    imls=map_values.tolist(),
-                )
+            # Save the complete hazard map
+            models.HazardMap.objects.create(
+                output=output,
+                lt_realization=hc.lt_realization,
+                investigation_time=hc.investigation_time,
+                imt=hc.imt,
+                statistics=hc.statistics,
+                quantile=hc.quantile,
+                sa_period=hc.sa_period,
+                sa_damping=hc.sa_damping,
+                poe=poe,
+                lons=lons.tolist(),
+                lats=lats.tolist(),
+                imls=map_values.tolist(),
+            )
 
 
 def do_uhs_post_proc(job):
@@ -253,13 +251,12 @@ def _save_uhs(job, uhs_results, poe, rlz=None, statistics=None, quantile=None):
     # This should fail if neither `lt_realization` nor `statistics` is defined:
     uhs.save()
 
-    with transaction.commit_on_success(using='job_init'):
-        inserter = CacheInserter(models.UHSData, max_cache_size=10000)
-        for lon, lat, imls in uhs_results['uh_spectra']:
-            inserter.add(
-                models.UHSData(
-                    uhs_id=uhs.id,
-                    imls='{%s}' % ','.join(str(x) for x in imls),
-                    location='POINT(%s %s)' % (lon, lat))
-            )
-        inserter.flush()
+    inserter = CacheInserter(models.UHSData, max_cache_size=10000)
+    for lon, lat, imls in uhs_results['uh_spectra']:
+        inserter.add(
+            models.UHSData(
+                uhs_id=uhs.id,
+                imls='{%s}' % ','.join(str(x) for x in imls),
+                location='POINT(%s %s)' % (lon, lat))
+        )
+    inserter.flush()
