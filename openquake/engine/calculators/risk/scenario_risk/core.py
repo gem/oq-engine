@@ -19,7 +19,6 @@ Core functionality for the scenario risk calculator.
 """
 import itertools
 import numpy
-from django import db
 
 from openquake.baselib.general import AccumDict
 from openquake.engine.calculators.risk import (
@@ -155,24 +154,23 @@ class ScenarioRiskCalculator(base.RiskCalculator):
     def post_process(self):
         aggregate_losses_acc, insured_losses_acc = self.acc
         for loss_type, aggregate_losses in aggregate_losses_acc.items():
-            with db.transaction.commit_on_success(using='job_init'):
+            models.AggregateLoss.objects.create(
+                output=models.Output.objects.create_output(
+                    self.job,
+                    "aggregate loss. type=%s" % loss_type,
+                    "aggregate_loss"),
+                loss_type=loss_type,
+                mean=numpy.mean(aggregate_losses),
+                std_dev=numpy.std(aggregate_losses, ddof=1))
+
+            if self.oqparam.insured_losses:
+                insured_losses = insured_losses_acc[loss_type]
                 models.AggregateLoss.objects.create(
                     output=models.Output.objects.create_output(
                         self.job,
-                        "aggregate loss. type=%s" % loss_type,
+                        "insured aggregate loss. type=%s" % loss_type,
                         "aggregate_loss"),
+                    insured=True,
                     loss_type=loss_type,
-                    mean=numpy.mean(aggregate_losses),
-                    std_dev=numpy.std(aggregate_losses, ddof=1))
-
-                if self.oqparam.insured_losses:
-                    insured_losses = insured_losses_acc[loss_type]
-                    models.AggregateLoss.objects.create(
-                        output=models.Output.objects.create_output(
-                            self.job,
-                            "insured aggregate loss. type=%s" % loss_type,
-                            "aggregate_loss"),
-                        insured=True,
-                        loss_type=loss_type,
-                        mean=numpy.mean(insured_losses),
-                        std_dev=numpy.std(insured_losses, ddof=1))
+                    mean=numpy.mean(insured_losses),
+                    std_dev=numpy.std(insured_losses, ddof=1))
