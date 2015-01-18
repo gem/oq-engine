@@ -30,7 +30,6 @@ from openquake.hazardlib.imt import from_string
 
 # FIXME: one must import the engine before django to set DJANGO_SETTINGS_MODULE
 from openquake.engine.db import models
-from django.db import transaction
 
 from openquake.baselib import general
 from openquake.commonlib import readinput, risk_parsers
@@ -188,27 +187,19 @@ class BaseHazardCalculator(base.Calculator):
         """
         Initialize risk models, site model and sources
         """
-        # if you don't use an explicit transaction, errors will be masked
-        # the problem is that Django by default performs implicit transactions
-        # without rollback, see
-        # https://docs.djangoproject.com/en/1.3/topics/db/transactions/
-        with transaction.commit_on_success(using='job_init'):
-            self.parse_risk_model()
-        with transaction.commit_on_success(using='job_init'):
-            self.initialize_site_collection()
-        with transaction.commit_on_success(using='job_init'):
-            self.initialize_sources()
+        self.parse_risk_model()
+        self.initialize_site_collection()
+        self.initialize_sources()
         info = readinput.get_job_info(
             self.oqparam, self.composite_model, self.site_collection)
-        with transaction.commit_on_success(using='job_init'):
-            models.JobInfo.objects.create(
-                oq_job=self.job,
-                num_sites=info['n_sites'],
-                num_realizations=info['max_realizations'],
-                num_imts=info['n_imts'],
-                num_levels=info['n_levels'],
-                input_weight=info['input_weight'],
-                output_weight=info['output_weight'])
+        models.JobInfo.objects.create(
+            oq_job=self.job,
+            num_sites=info['n_sites'],
+            num_realizations=info['max_realizations'],
+            num_imts=info['n_imts'],
+            num_levels=info['n_levels'],
+            input_weight=info['input_weight'],
+            output_weight=info['output_weight'])
         self.check_limits(info['input_weight'], info['output_weight'])
         self.init_zeros_ones()
         return info['input_weight'], info['output_weight']
