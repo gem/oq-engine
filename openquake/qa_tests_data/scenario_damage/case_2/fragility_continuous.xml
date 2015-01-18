@@ -8,7 +8,7 @@
         <limitStates>LS1 LS2</limitStates>
         <ffs type="lognormal">
             <taxonomy>RC</taxonomy>
-            <IML IMT="PGA"/>
+            <IML IMT="PGA" minIML="0.1" maxIML="9.9" imlUnit="g"/>
             <ffc ls="LS1">
                 <params mean="0.2" stddev="0.05" />
             </ffc>
@@ -18,7 +18,7 @@
         </ffs>
         <ffs type="lognormal">
             <taxonomy>RM</taxonomy>
-            <IML IMT="PGA"/>
+            <IML IMT="PGA" minIML="0.1" maxIML="9.9" imlUnit="g"/>
             <ffc ls="LS1">
                 <params mean="0.25" stddev="0.08" />
             </ffc>
