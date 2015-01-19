@@ -669,6 +669,6 @@ class DamageCurveBuilder(OutputBuilder):
             hazard_output=hazard_output, output=output)]
         return outs
 
-    def statistical_outputs(self):
+    def statistical_outputs(self, _damage):
         # TODO
         return []
