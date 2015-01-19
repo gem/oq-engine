@@ -45,14 +45,14 @@ class CalculatorTestCase(unittest.TestCase):
             monitor_csv=os.path.join(oq.export_dir, 'performance_csv'))
         return base.calculators(oq, monitor)
 
-    def run_calc(self, testfile, job_ini, exports='xml'):
+    def run_calc(self, testfile, job_ini, **kw):
         """
         Return the outputs of the calculation as a dictionary
         """
         self.calc = self.get_calc(testfile, job_ini)
+        vars(self.calc.oqparam).update(kw)
         self.calc.pre_execute()
         self.result = self.calc.execute()
-        self.calc.oqparam.exports = exports
         return self.calc.post_execute(self.result)
 
     def execute(self, testfile, job_ini):
