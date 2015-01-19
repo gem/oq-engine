@@ -45,6 +45,7 @@ class ClassicalDamageCase1aTestCase(risk.FixtureBasedQATestCase):
             len(damage_states))
         # this is a test with 5 damage states
         # no_damage, slight, moderate, extreme, complete
+        # NB: you can print the actual values with the command
         # print [[round(col.fraction, 8) for col in row] for row in data]
         return [[col.fraction for col in row] for row in data]
 
