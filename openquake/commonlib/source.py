@@ -20,13 +20,9 @@ import random
 from lxml import etree
 
 from openquake.baselib.general import AccumDict
-from openquake.hazardlib import gsim
 from openquake.commonlib.node import read_nodes
 from openquake.commonlib import valid, logictree, sourceconverter
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
-
-
-GSIMS = gsim.get_available_gsims()
 
 
 class DuplicatedID(Exception):
@@ -248,8 +244,8 @@ class RlzsAssoc(collections.Mapping):
         Return a dictionary trt_model_id -> [GSIM instances]
         """
         gsims_by_trt = collections.defaultdict(list)
-        for trt_id, gsim_str in sorted(self.rlzs_assoc):
-            gsims_by_trt[trt_id].append(valid.gsim(gsim_str))
+        for trt_id, gsim in sorted(self.rlzs_assoc):
+            gsims_by_trt[trt_id].append(valid.gsim(gsim))
         return gsims_by_trt
 
     def combine(self, results, agg=agg_prob):
