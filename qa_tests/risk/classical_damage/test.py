@@ -20,7 +20,8 @@ from qa_tests import risk
 from openquake.baselib.general import block_splitter
 from openquake.qa_tests_data.classical_damage import (
     case_1a, case_1b, case_1c, case_2a, case_2b, case_3a,
-    case_4a, case_4b, case_4c, case_5a, case_6a, case_8a)
+    case_4a, case_4b, case_4c, case_5a, case_6a, case_6b,
+    case_7a, case_7b, case_7c, case_8a)
 
 from openquake.engine.db import models
 
@@ -44,7 +45,7 @@ class ClassicalDamageCase1aTestCase(risk.FixtureBasedQATestCase):
             len(damage_states))
         # this is a test with 5 damage states
         # no_damage, slight, moderate, extreme, complete
-        # print [[col.fraction for col in row] for row in data]
+        # print [[round(col.fraction, 8) for col in row] for row in data]
         return [[col.fraction for col in row] for row in data]
 
     def expected_data(self):
@@ -136,6 +137,59 @@ class ClassicalDamageCase6aTestCase(ClassicalDamageCase1aTestCase):
                 [0.4016303, 0.1060677, 0.1600523, 0.126004, 0.206245]]
 
 
+class ClassicalDamageCase6bTestCase(ClassicalDamageCase1aTestCase):
+    module = case_6b
+    hazard_calculation_fixture = 'Classical Damage Case6b'
+
+    def expected_data(self):
+        return [[0.22654903, 0.05918849, 0.15474879, 0.13540796, 0.42410573],
+                [0.36089874, 0.10761677, 0.21465305, 0.12544987, 0.19138158],
+                [0.96601557, 0.01555393, 0.01379943, 0.0029868, 0.00164426],
+                [0.32287589, 0.08534957, 0.18400765, 0.12698155, 0.28078533],
+                [0.53854835, 0.11165868, 0.17567752, 0.0795058, 0.09460965],
+                [0.36089874, 0.10761677, 0.21465305, 0.12544987, 0.19138158]]
+
+
+class ClassicalDamageCase7aTestCase(ClassicalDamageCase1aTestCase):
+    module = case_7a
+    hazard_calculation_fixture = 'Classical Damage Case7a'
+
+    def expected_data(self):
+        return [[0.25102546, 0.06852193, 0.12451979, 0.12793774, 0.42799508],
+                [0.40163034, 0.1060677, 0.16005229, 0.12600433, 0.20624533],
+                [0.9586621, 0.02426024, 0.0136213, 0.00286526, 0.0005911],
+                [0.43915033, 0.16345734, 0.19543766, 0.10851369, 0.09344098],
+                [0.80773398, 0.12742696, 0.04430473, 0.01628931, 0.00424503],
+                [0.68932368, 0.18455533, 0.07998794, 0.0347065, 0.01142655]]
+
+
+class ClassicalDamageCase7bTestCase(ClassicalDamageCase1aTestCase):
+    module = case_7b
+    hazard_calculation_fixture = 'Classical Damage Case7b'
+
+    def expected_data(self):
+        return [[0.25102546, 0.06852193, 0.12451979, 0.12793774, 0.42799508],
+                [0.40163034, 0.1060677, 0.16005229, 0.12600433, 0.20624533],
+                [0.85640489, 0.07993567, 0.04916151, 0.01154356, 0.00295438],
+                [0.33259244, 0.13266886, 0.19890633, 0.14781286, 0.18801952],
+                [0.79354501, 0.1258138, 0.05012525, 0.02102434, 0.00949161],
+                [0.69104088, 0.17095902, 0.08051344, 0.03767266, 0.019814]]
+
+
+class ClassicalDamageCase7cTestCase(ClassicalDamageCase1aTestCase):
+    module = case_7c
+    hazard_calculation_fixture = 'Classical Damage Case7c'
+
+    def expected_data(self):
+        return [[0.2482902, 0.0689948, 0.12532688, 0.12860513, 0.42878298],
+                [0.3861423, 0.10877146, 0.16501495, 0.12990844, 0.21016286],
+                [0.94943895, 0.02713987, 0.01729247, 0.00461489, 0.00151381],
+                [0.34935413, 0.12533486, 0.19216183, 0.14568879, 0.18746039],
+                [0.9081546, 0.05804201, 0.02191703, 0.00895668, 0.00292968],
+                [0.83461239, 0.09989713, 0.04120767, 0.01779776, 0.00648504]]
+
+
+# test with two realizations
 class ClassicalDamageCase8aTestCase(ClassicalDamageCase1aTestCase):
     module = case_8a
     hazard_calculation_fixture = 'Classical Damage Case8a'
