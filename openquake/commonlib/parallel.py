@@ -349,10 +349,14 @@ def apply_reduce(task_func, task_args, agg=operator.add, acc=None,
         acc = AccumDict()
     if not arg0:
         return acc
-    elif len(arg0) == 1 or not concurrent_tasks:
+    elif len(arg0) == 1:
         return agg(acc, task_func(arg0, *args))
-    chunks = list(split_in_blocks(arg0, concurrent_tasks, weight, key))
+    chunks = list(split_in_blocks(arg0, concurrent_tasks or 1, weight, key))
     apply_reduce._chunks = chunks
+    if not concurrent_tasks:
+        for chunk in chunks:
+            acc = agg(acc, task_func(chunk, *args))
+        return acc
     tm = starmap(task_func, [(chunk,) + args for chunk in chunks],
                  logging.info, name)
     return tm.reduce(agg, acc)
