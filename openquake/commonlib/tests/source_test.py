@@ -700,14 +700,15 @@ class CompositeSourceModelTestCase(unittest.TestCase):
         oqparam.number_of_logic_tree_samples = 0
         sitecol = readinput.get_site_collection(oqparam)
         csm = readinput.get_composite_source_model(oqparam, sitecol)
-        self.assertEqual(len(csm), 9)  # the smlt example has 1 x 3 x 3 paths
+        self.assertEqual(len(csm), 9)  # the smlt example has 1 x 3 x 3 paths;
+        # there are 2 distinct tectonic region types, so 18 trt_models
         rlzs = csm.get_rlzs_assoc().realizations
         self.assertEqual(len(rlzs), 18)  # the gsimlt has 1 x 2 paths
         self.assertEqual([1, 584, 1, 584, 1, 584, 1, 582, 1, 582,
                           1, 582, 1, 582, 1, 582, 1, 582],
                          map(len, csm.trt_models))
 
-        # removing trt_models
+        # removing 9 trt_models out of 18
         for trt_model in csm.trt_models:
             if trt_model.trt == 'Active Shallow Crust':  # no ruptures
                 trt_model.num_ruptures = 0
