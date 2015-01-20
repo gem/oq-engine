@@ -326,7 +326,7 @@ class RlzsAssoc(collections.Mapping):
     def __str__(self):
         pairs = []
         for key in sorted(self.rlzs_assoc):
-            pairs.append(('%s-%s' % key, map(str, self.rlzs_assoc[key])))
+            pairs.append(('%s,%s' % key, map(str, self.rlzs_assoc[key])))
         return '{%s}' % '\n'.join('%s: %s' % pair for pair in pairs)
 
 

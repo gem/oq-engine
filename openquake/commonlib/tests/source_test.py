@@ -692,8 +692,8 @@ class CompositeSourceModelTestCase(unittest.TestCase):
         self.assertEqual(rlz, (0, ('b1', 'b5', 'b8'), ('b2', 'b3'), 0.5))
         self.assertEqual(
             str(assoc),
-            "{0-SadighEtAl1997: ['<0,b1_b5_b8,b2_b3,w=0.5>']\n"
-            "1-ChiouYoungs2008: ['<0,b1_b5_b8,b2_b3,w=0.5>']}")
+            "{0,SadighEtAl1997: ['<0,b1_b5_b8,b2_b3,w=0.5>']\n"
+            "1,ChiouYoungs2008: ['<0,b1_b5_b8,b2_b3,w=0.5>']}")
 
     def test_many_rlzs(self):
         oqparam = tests.get_oqparam('classical_job.ini')
@@ -715,15 +715,15 @@ class CompositeSourceModelTestCase(unittest.TestCase):
         self.assertEqual(map(len, csm.trt_models), [1, 1, 1, 1, 1, 1, 1, 1, 1])
         assoc = csm.get_rlzs_assoc()
         expected_assoc = """\
-{0-SadighEtAl1997: ['<0,b1_b3_b6,b3,w=0.04>']
-2-SadighEtAl1997: ['<1,b1_b3_b7,b3,w=0.12>']
-4-SadighEtAl1997: ['<2,b1_b3_b8,b3,w=0.04>']
-6-SadighEtAl1997: ['<3,b1_b4_b6,b3,w=0.12>']
-8-SadighEtAl1997: ['<4,b1_b4_b7,b3,w=0.36>']
-10-SadighEtAl1997: ['<5,b1_b4_b8,b3,w=0.12>']
-12-SadighEtAl1997: ['<6,b1_b5_b6,b3,w=0.04>']
-14-SadighEtAl1997: ['<7,b1_b5_b7,b3,w=0.12>']
-16-SadighEtAl1997: ['<8,b1_b5_b8,b3,w=0.04>']}"""
+{0,SadighEtAl1997: ['<0,b1_b3_b6,b3,w=0.04>']
+2,SadighEtAl1997: ['<1,b1_b3_b7,b3,w=0.12>']
+4,SadighEtAl1997: ['<2,b1_b3_b8,b3,w=0.04>']
+6,SadighEtAl1997: ['<3,b1_b4_b6,b3,w=0.12>']
+8,SadighEtAl1997: ['<4,b1_b4_b7,b3,w=0.36>']
+10,SadighEtAl1997: ['<5,b1_b4_b8,b3,w=0.12>']
+12,SadighEtAl1997: ['<6,b1_b5_b6,b3,w=0.04>']
+14,SadighEtAl1997: ['<7,b1_b5_b7,b3,w=0.12>']
+16,SadighEtAl1997: ['<8,b1_b5_b8,b3,w=0.04>']}"""
         self.assertEqual(str(assoc), expected_assoc)
         self.assertEqual(len(assoc.realizations), 9)
 
