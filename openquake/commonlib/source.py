@@ -31,6 +31,9 @@ class DuplicatedID(Exception):
 
 LtRealization = collections.namedtuple(
     'LtRealization', 'ordinal sm_lt_path gsim_lt_path weight')
+LtRealization.__str__ = lambda self: '<%d,%s,%s,w=%s>' % (
+    self.ordinal, '_'.join(self.sm_lt_path), '_'.join(self.gsim_lt_path),
+    self.weight)
 
 
 SourceModel = collections.namedtuple(
@@ -319,6 +322,12 @@ class RlzsAssoc(collections.Mapping):
 
     def __len__(self):
         return len(self.rlzs_assoc)
+
+    def __str__(self):
+        pairs = []
+        for key in sorted(self.rlzs_assoc):
+            pairs.append(('%s,%s' % key, map(str, self.rlzs_assoc[key])))
+        return '{%s}' % '\n'.join('%s: %s' % pair for pair in pairs)
 
 
 class CompositeSourceModel(collections.Sequence):
