@@ -211,10 +211,13 @@ class EventBasedCalculator(base.HazardCalculator):
                                   key=operator.attrgetter('tag'))
 
         # touch output files
-        for trt_id, gsim in self.rlzs_assoc:
-            fname = os.path.join(
-                self.oqparam.export_dir, '%s-%s.csv' % (trt_id, gsim))
-            open(fname, 'w').close()
+        self.saved = AccumDict()
+        if self.oqparam.ground_motion_fields:
+            for trt_id, gsim in self.rlzs_assoc:
+                name = '%s-%s.csv' % (trt_id, gsim)
+                self.saved[name] = fname = os.path.join(
+                    self.oqparam.export_dir, name)
+                open(fname, 'w').close()
 
     def execute(self):
         """
@@ -233,4 +236,8 @@ class EventBasedCalculator(base.HazardCalculator):
             concurrent_tasks=self.oqparam.concurrent_tasks, acc=zero,
             key=operator.attrgetter('trt_model_id'))
 
-    post_execute = ClassicalCalculator.post_execute.__func__
+    def post_execute(self, result):
+        if getattr(self.oqparam, 'hazard_curves_from_gmfs', None):
+            return self.saved + ClassicalCalculator.post_execute.__func__(
+                self, result)
+        return self.saved
