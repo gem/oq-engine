@@ -14,6 +14,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import mock
 import unittest
 from StringIO import StringIO
 
@@ -735,3 +736,21 @@ class CompositeSourceModelTestCase(unittest.TestCase):
         csm.reduce_trt_models()
         self.assertEqual(map(len, csm.trt_models), [])
         self.assertEqual(csm.get_rlzs_assoc().realizations, [])
+
+    def test_oversampling(self):
+        from openquake.qa_tests_data.classical import case_17
+        oq = readinput.get_oqparam(
+            os.path.join(os.path.dirname(case_17.__file__), 'job.ini'))
+        sitecol = readinput.get_site_collection(oq)
+        csm = readinput.get_composite_source_model(oq, sitecol)
+        with mock.patch('logging.warn') as warn:
+            assoc = csm.get_rlzs_assoc()
+        args = warn.call_args[0]
+        msg = args[0] % args[1:]
+        self.assertEqual(
+            msg, "The logic tree path ('b2',) was sampled 4 times: the "
+            "realizations [0, 1, 3, 4] will produce identical results")
+        self.assertEqual(
+            str(assoc), "{0,SadighEtAl1997: ['<0,b2,b1,w=0.2>', "
+            "'<1,b2,b1,w=0.2>', '<3,b2,b1,w=0.2>', '<4,b2,b1,w=0.2>']\n"
+            "1,SadighEtAl1997: ['<2,b1,b1,w=0.2>']}")

@@ -408,19 +408,29 @@ class CompositeSourceModel(collections.Sequence):
         random_seed = self.source_model_lt.seed
         num_samples = self.source_model_lt.num_samples
         idx = 0
+        counter = collections.Counter()
         for sm_name, weight, sm_lt_path, _ in self.source_model_lt:
             lt_model = self.get_source_model(sm_lt_path)
             if num_samples:  # sampling, pick just one gsim realization
                 rnd = random.Random(random_seed + idx)
                 rlzs = [logictree.sample_one(lt_model.gsim_lt, rnd)]
+                counter[sm_lt_path] += 1
             else:
                 rlzs = list(lt_model.gsim_lt)  # full enumeration
             logging.info('Creating %d GMPE realization(s) for model %s, %s',
                          len(rlzs), lt_model.name, lt_model.path)
             idx = assoc._add_realizations(idx, lt_model, rlzs)
 
-        # TODO: if num_samples > total_num_paths we should add a warning here,
-        # see https://bugs.launchpad.net/oq-engine/+bug/1367273
+        if num_samples:
+            # warn the user in case of oversampling
+            for lt_path in sorted(counter):
+                if counter[lt_path] > 1:
+                    rlzs = [rlz for rlz in assoc.realizations
+                            if rlz.sm_lt_path == lt_path]
+                    logging.warn(
+                        'The logic tree path %s was sampled %d times: '
+                        'the realizations %s will produce identical results',
+                        str(lt_path), len(rlzs), [rlz.ordinal for rlz in rlzs])
         return assoc
 
     def __getitem__(self, i):
