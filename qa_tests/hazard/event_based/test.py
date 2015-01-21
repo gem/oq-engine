@@ -209,7 +209,7 @@ class EventBasedHazardCase2TestCase(qa_utils.BaseQATestCase):
         result_dir = tempfile.mkdtemp()
 
         cfg = os.path.join(os.path.dirname(case_2.__file__), 'job.ini')
-        expected_curve_poes = [0.0095, 0.00076, 0.000097, 0.0]
+        expected_curve_poes = [0.00853479861, 0., 0., 0.]
 
         job = self.run_hazard(cfg)
 
@@ -398,13 +398,17 @@ class EventBasedHazardCase17TestCase(qa_utils.BaseQATestCase):
 
         t1_tags = [t for t in tags if t.startswith('trt=01')]
         t2_tags = [t for t in tags if t.startswith('trt=02')]
+#(Pdb++) len([t for t in tags if t.startswith('trt=05')])
+#2725
+#(Pdb++) len([t for t in tags if t.startswith('trt=04')])
+#2735
+#(Pdb++) len([t for t in tags if t.startswith('trt=03')])
 
         self.assertEqual(len(t1_tags), 2742)
-        self.assertEqual(len(t2_tags), 2)
+        self.assertEqual(len(t2_tags), 2761)
 
         curves = [c.poes for c in models.HazardCurveData.objects.filter(
             hazard_curve__output__oq_job=job.id, hazard_curve__imt='PGA'
         ).order_by('hazard_curve')]
-
         numpy.testing.assert_array_almost_equal(
             expected_curves_pga, curves, decimal=7)
