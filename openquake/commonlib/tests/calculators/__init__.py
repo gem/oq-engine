@@ -63,14 +63,14 @@ class CalculatorTestCase(unittest.TestCase):
         self.calc.pre_execute()
         return self.calc.execute()
 
-    def assertEqualFiles(self, fname1, fname2):
+    def assertEqualFiles(self, fname1, fname2, wraplines=lambda line: line):
         """
         Make sure the expected and actual files have the same content
         """
         expected = os.path.join(self.testdir, fname1)
         actual = os.path.join(self.calc.oqparam.export_dir, fname2)
-        expected_content = open(expected).read()
-        actual_content = open(actual).read()
+        expected_content = wraplines(open(expected).readlines())
+        actual_content = wraplines(open(actual).readlines())
         try:
             self.assertEqual(expected_content, actual_content)
         except:

@@ -163,7 +163,7 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
     """
     oq = monitor.oqparam
 
-    result = {}  # trt_model_id -> curves_by_gsim
+    result = AccumDict()  # trt_model_id -> curves_by_gsim
     # NB: by construction each block is a non-empty list with
     # ruptures of the trt_model_id
     trt_id = ses_ruptures[0].trt_model_id
@@ -189,9 +189,9 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
         for gsim, curves_by_imt in gcalc.to_haz_curves(
                 sitecol.sids, oq.imtls,
                 oq.investigation_time, oq.ses_per_logic_tree_path):
-            result[trt_id, gsim] = {imt: curve for imt, curve in zip(
-                gcalc.sorted_imts, curves_by_imt)}
-
+            result[trt_id, gsim] = AccumDict(
+                {imt: curve for imt, curve in zip(
+                    gcalc.sorted_imts, curves_by_imt)})
     return result
 
 
@@ -234,7 +234,7 @@ class EventBasedCalculator(base.HazardCalculator):
             self.core_func.__func__,
             (self.sesruptures, self.sitecol, gsims_assoc, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks, acc=zero,
-            key=operator.attrgetter('trt_model_id'))
+            agg=calc.agg_prob, key=operator.attrgetter('trt_model_id'))
 
     def post_execute(self, result):
         if getattr(self.oqparam, 'hazard_curves_from_gmfs', None):
