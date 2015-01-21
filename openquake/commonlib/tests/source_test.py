@@ -742,15 +742,18 @@ class CompositeSourceModelTestCase(unittest.TestCase):
         oq = readinput.get_oqparam(
             os.path.join(os.path.dirname(case_17.__file__), 'job.ini'))
         sitecol = readinput.get_site_collection(oq)
-        csm = readinput.get_composite_source_model(oq, sitecol)
         with mock.patch('logging.warn') as warn:
-            assoc = csm.get_rlzs_assoc()
+            csm = readinput.get_composite_source_model(oq, sitecol)
         args = warn.call_args[0]
         msg = args[0] % args[1:]
         self.assertEqual(
-            msg, "The logic tree path ('b2',) was sampled 4 times: the "
-            "realizations [0, 1, 3, 4] will produce identical results")
+            msg, "The logic tree path ('b2',) was sampled 4 times")
+
+        assoc = csm.get_rlzs_assoc()
         self.assertEqual(
-            str(assoc), "{0,SadighEtAl1997: ['<0,b2,b1,w=0.2>', "
-            "'<1,b2,b1,w=0.2>', '<3,b2,b1,w=0.2>', '<4,b2,b1,w=0.2>']\n"
-            "1,SadighEtAl1997: ['<2,b1,b1,w=0.2>']}")
+            str(assoc),
+            "{0,SadighEtAl1997: ['<0,b2,b1,w=0.2>']\n"
+            "1,SadighEtAl1997: ['<1,b2,b1,w=0.2>']\n"
+            "2,SadighEtAl1997: ['<2,b1,b1,w=0.2>']\n"
+            "3,SadighEtAl1997: ['<3,b2,b1,w=0.2>']\n"
+            "4,SadighEtAl1997: ['<4,b2,b1,w=0.2>']}")

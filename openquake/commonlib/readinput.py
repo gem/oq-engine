@@ -34,7 +34,7 @@ from openquake.commonlib import nrml, valid, logictree, InvalidFile, parallel
 from openquake.commonlib.oqvalidation import vulnerability_files
 from openquake.commonlib.riskmodels import \
     get_fragility_functions, get_vfs
-from openquake.baselib.general import groupby, AccumDict, distinct
+from openquake.baselib.general import groupby, AccumDict
 from openquake.commonlib import source, sourceconverter
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
@@ -287,8 +287,13 @@ def get_source_models(oqparam, source_model_lt):
         oqparam.complex_fault_mesh_spacing,
         oqparam.width_of_mfd_bin,
         oqparam.area_source_discretization)
+    samples_by_lt_path = source_model_lt.samples_by_lt_path()
 
-    for i, (sm, weight, smpath, _) in enumerate(distinct(source_model_lt)):
+    for i, (sm, weight, smpath, _) in enumerate(source_model_lt):
+        num_samples = samples_by_lt_path[smpath]
+        if num_samples > 1:
+            logging.warn('The logic tree path %s was sampled %d times',
+                         smpath, num_samples)
         fname = os.path.join(oqparam.base_path, sm)
         apply_unc = source_model_lt.make_apply_uncertainties(smpath)
         try:
