@@ -341,24 +341,25 @@ class BaseHazardCalculator(base.Calculator):
 
         rlzs_assoc = cm.get_rlzs_assoc()
         gsims_by_trt_id = rlzs_assoc.get_gsims_by_trt_id()
-        for rlz, gsim_by_trt in zip(
-                rlzs_assoc.realizations, rlzs_assoc.gsim_by_trt):
+        for sm_ordinal, rlzs in rlzs_assoc.rlzs_by_smodel.iteritems():
             lt_model = models.LtSourceModel.objects.get(
-                hazard_calculation=self.job,
-                sm_lt_path=self.tilepath + rlz.sm_lt_path)
+                hazard_calculation=self.job, ordinal=sm_ordinal)
             trt_models = lt_model.trtmodel_set.filter(num_ruptures__gt=0)
-            lt_rlz = models.LtRealization.objects.create(
-                lt_model=lt_model, gsim_lt_path=rlz.gsim_lt_path,
-                weight=rlz.weight, ordinal=rlz.ordinal)
-            self._realizations.append(lt_rlz)
-            for trt_model in trt_models:
-                trt = trt_model.tectonic_region_type
-                # populate the association table rlz <-> trt_model
-                models.AssocLtRlzTrtModel.objects.create(
-                    rlz=lt_rlz, trt_model=trt_model, gsim=gsim_by_trt[trt])
-                trt_model.gsims = [gsim.__class__.__name__
-                                   for gsim in gsims_by_trt_id[trt_model.id]]
-                trt_model.save()
+            for rlz in rlzs:
+                lt_rlz = models.LtRealization.objects.create(
+                    lt_model=lt_model, gsim_lt_path=rlz.gsim_lt_path,
+                    weight=rlz.weight, ordinal=rlz.ordinal)
+                self._realizations.append(lt_rlz)
+                for trt_model in trt_models:
+                    trt = trt_model.tectonic_region_type
+                    # populate the association table rlz <-> trt_model
+                    models.AssocLtRlzTrtModel.objects.create(
+                        rlz=lt_rlz, trt_model=trt_model,
+                        gsim=rlzs_assoc.gsim_by_trt[rlz.ordinal][trt])
+                    trt_model.gsims = [
+                        gsim.__class__.__name__
+                        for gsim in gsims_by_trt_id[trt_model.id]]
+                    trt_model.save()
 
     # this could be parallelized in the future, however in all the cases
     # I have seen until now, the serialized approach is fast enough (MS)
