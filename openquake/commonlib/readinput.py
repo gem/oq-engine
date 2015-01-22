@@ -284,7 +284,7 @@ def possibly_gunzip(fname):
         return fname[:-3]
     elif there_is_gz:
         open(fname, 'w').write(gzip.open(fname + '.gz').read())
-        return fname
+    return fname
 
 
 def get_source_models(oqparam, source_model_lt):
