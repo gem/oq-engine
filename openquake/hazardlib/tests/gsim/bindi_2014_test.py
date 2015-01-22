@@ -65,66 +65,66 @@ class BindiEtAl2014RjbTestCase(BaseGSIMTestCase):
                    max_discrep_percentage=STDDEV_DISCREP)
 
 
-#class BindiEtAl2014RjbEC8TestCase(BindiEtAl2014RjbTestCase):
-#    """
-#    Tests the Bindi et al (2014) GMPE for the case in which Joyner-Boore
-#    distance is the preferred distance metric, style-of-faulting is NOT
-#    required and site amplification uses the Eurocode 8 classification
-#    """
-#    GSIM_CLASS = BindiEtAl2014RjbEC8
-#    MEAN_FILE = ""
-#    STD_FILE = ""
-#    INTER_FILE = ""
-#    INTRA_FILE = ""
-#
-#
-#class BindiEtAl2014RjbEC8NoSOFTestCase(BindiEtAl2014RjbTestCase):
-#    """
-#    Tests the Bindi et al (2014) GMPE for the case in which Joyner-Boore
-#    distance is the preferred distance metric, style-of-faulting is required
-#    and site amplification uses the Eurocode 8 classification
-#    """
-#    GSIM_CLASS = BindiEtAl2014RjbEC8NoSOF
-#    MEAN_FILE = ""
-#    STD_FILE = ""
-#    INTER_FILE = ""
-#    INTRA_FILE = ""
-#
-#
-#class BindiEtAl2014RhypTestCase(BindiEtAl2014RjbTestCase):
-#    """
-#    Tests the Bindi et al (2014) GMPE for the case in which hypocentral
-#    distance is the preferred distance metric, style-of-faulting is required
-#    and site amplification uses a linear scaling model with Vs30
-#    """
-#    GSIM_CLASS = BindiEtAl2014Rhyp
-#    MEAN_FILE = ""
-#    STD_FILE = ""
-#    INTER_FILE = ""
-#    INTRA_FILE = ""
-#
-#
-#class BindiEtAl2014RhypEC8TestCase(BindiEtAl2014RjbTestCase):
-#    """
-#    Tests the Bindi et al (2014) GMPE for the case in which hypocentral
-#    distance is the preferred distance metric, style-of-faulting is required
-#    and site amplification uses the Eurocode 8 classification
-#    """
-#    GSIM_CLASS = BindiEtAl2014RhypEC8
-#    MEAN_FILE = ""
-#    STD_FILE = ""
-#    INTER_FILE = ""
-#    INTRA_FILE = ""
-#
-#
-#class BindiEtAl2014RhypEC8NoSOFTestCase(BindiEtAl2014RjbTestCase):
-#    """
-#    Tests the Bindi et al (2014) GMPE for the case in which hypoccentral
-#    distance is the preferred distance metric, style-of-faulting is NOT
-#    required and site amplification uses the Eurocode 8 classification
-#    """
-#    GSIM_CLASS = BindiEtAl2014RhypEC8NoSOF
-#    MEAN_FILE = ""
-#    STD_FILE = ""
-#    INTER_FILE = ""
-#    INTRA_FILE = ""
+class BindiEtAl2014RjbEC8TestCase(BindiEtAl2014RjbTestCase):
+    """
+    Tests the Bindi et al (2014) GMPE for the case in which Joyner-Boore
+    distance is the preferred distance metric, style-of-faulting is NOT
+    required and site amplification uses the Eurocode 8 classification
+    """
+    GSIM_CLASS = BindiEtAl2014RjbEC8
+    MEAN_FILE = "BINDI2014/B14_Rjb_EC8_MEAN.csv"
+    STD_FILE = "BINDI2014/B14_Rjb_EC8_TOTAL_STD.csv"
+    INTER_FILE = "BINDI2014/B14_Rjb_EC8_INTER_STD.csv"
+    INTRA_FILE = "BINDI2014/B14_Rjb_EC8_INTRA_STD.csv"
+
+
+class BindiEtAl2014RjbEC8NoSOFTestCase(BindiEtAl2014RjbTestCase):
+    """
+    Tests the Bindi et al (2014) GMPE for the case in which Joyner-Boore
+    distance is the preferred distance metric, style-of-faulting is required
+    and site amplification uses the Eurocode 8 classification
+    """
+    GSIM_CLASS = BindiEtAl2014RjbEC8NoSOF
+    MEAN_FILE = "BINDI2014/B14_Rjb_EC8_NoSOF_MEAN.csv"
+    STD_FILE = "BINDI2014/B14_Rjb_EC8_NoSOF_TOTAL_STD.csv"
+    INTER_FILE = "BINDI2014/B14_Rjb_EC8_NoSOF_INTER_STD.csv"
+    INTRA_FILE = "BINDI2014/B14_Rjb_EC8_NoSOF_INTRA_STD.csv"
+
+
+class BindiEtAl2014RhypTestCase(BindiEtAl2014RjbTestCase):
+    """
+    Tests the Bindi et al (2014) GMPE for the case in which hypocentral
+    distance is the preferred distance metric, style-of-faulting is required
+    and site amplification uses a linear scaling model with Vs30
+    """
+    GSIM_CLASS = BindiEtAl2014Rhyp
+    MEAN_FILE = "BINDI2014/B14_Rhypo_Vs30_MEAN.csv"
+    STD_FILE = "BINDI2014/B14_Rhypo_Vs30_TOTAL_STD.csv"
+    INTER_FILE = "BINDI2014/B14_Rhypo_Vs30_INTER_STD.csv"
+    INTRA_FILE = "BINDI2014/B14_Rhypo_Vs30_INTRA_STD.csv"
+
+
+class BindiEtAl2014RhypEC8TestCase(BindiEtAl2014RjbTestCase):
+    """
+    Tests the Bindi et al (2014) GMPE for the case in which hypocentral
+    distance is the preferred distance metric, style-of-faulting is required
+    and site amplification uses the Eurocode 8 classification
+    """
+    GSIM_CLASS = BindiEtAl2014RhypEC8
+    MEAN_FILE = "BINDI2014/B14_Rhypo_EC8_MEAN.csv"
+    STD_FILE = "BINDI2014/B14_Rhypo_EC8_TOTAL_STD.csv"
+    INTER_FILE = "BINDI2014/B14_Rhypo_EC8_INTER_STD.csv"
+    INTRA_FILE = "BINDI2014/B14_Rhypo_EC8_INTRA_STD.csv"
+
+
+class BindiEtAl2014RhypEC8NoSOFTestCase(BindiEtAl2014RjbTestCase):
+    """
+    Tests the Bindi et al (2014) GMPE for the case in which hypoccentral
+    distance is the preferred distance metric, style-of-faulting is NOT
+    required and site amplification uses the Eurocode 8 classification
+    """
+    GSIM_CLASS = BindiEtAl2014RhypEC8NoSOF
+    MEAN_FILE = "BINDI2014/B14_Rhypo_EC8_NoSOF_MEAN.csv"
+    STD_FILE = "BINDI2014/B14_Rhypo_EC8_NoSOF_TOTAL_STD.csv"
+    INTER_FILE = "BINDI2014/B14_Rhypo_EC8_NoSOF_INTER_STD.csv"
+    INTRA_FILE = "BINDI2014/B14_Rhypo_EC8_NoSOF_INTRA_STD.csv"

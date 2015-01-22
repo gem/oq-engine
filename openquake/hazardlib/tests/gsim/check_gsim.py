@@ -89,11 +89,6 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
 
             if result_type == 'MEAN':
                 result = numpy.exp(mean)
-                print imt, rctx.mag, rctx.rake
-                dummy = numpy.column_stack([dctx.rjb, sctx.vs30, result,
-                                            expected_result, result / expected_result])
-                for row in dummy:
-                    print "%.1f  %.1f  %.8e  %.8e  %.8f" % (row[0], row[1], row[2], row[3], row[4])
             else:
                 [result] = stddevs
             assert isinstance(result, numpy.ndarray), result_type
