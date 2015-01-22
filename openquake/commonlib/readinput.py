@@ -18,6 +18,7 @@
 
 import os
 import csv
+import gzip
 import logging
 import collections
 import ConfigParser
@@ -290,6 +291,10 @@ def get_source_models(oqparam, source_model_lt):
 
     for i, (sm, weight, smpath, _) in enumerate(distinct(source_model_lt)):
         fname = os.path.join(oqparam.base_path, sm)
+        # the source model can be .gzipped to save space (this happens
+        # in the debian package); in that case, let's gunzip it
+        if not os.path.exists(fname) and os.path.exists(fname + '.gz'):
+            open(fname, 'w').write(gzip.open(fname + '.gz').read())
         apply_unc = source_model_lt.make_apply_uncertainties(smpath)
         try:
             trt_models = source.parse_source_model(
