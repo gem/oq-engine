@@ -26,9 +26,9 @@ def git_suffix(fname):
     :returns: `<short git hash>` if Git repository found
     """
     try:
-        po = subprocess.Popen(
-            ['git', 'rev-parse', '--short', 'HEAD'], stdout=subprocess.PIPE,
-            stderr=open(os.devnull, 'w'), cwd=os.path.dirname(fname))
+        po = subprocess.check_output(
+            ['git', 'rev-parse', '--short', 'HEAD'],
+            cwd=os.path.dirname(fname))
         return "-git" + po.stdout.read().strip()
     except:
         # trapping everything on purpose; git may not be installed or it
