@@ -319,7 +319,8 @@ class RiskInitializer(object):
         self.cursor = models.getcursor('job_init')
 
         hazard_exposure = models.extract_from([self.oqparam], 'exposuremodel')
-        if self.exposure_model is hazard_exposure:
+        if self.exposure_model and hazard_exposure and \
+           self.exposure_model.id == hazard_exposure.id:
             # no need of geospatial queries, just join on the location
             self.assoc_query = self.cursor.mogrify("""\
 WITH assocs AS (
@@ -352,7 +353,6 @@ INSERT INTO riskr.asset_site (job_id, asset_id, site_id)
 SELECT * FROM assocs""", (self.calc.job.id, max_dist, self.oqparam.id,
                           self.exposure_model.id, taxonomy,
                           self.calc.oqparam.region_constraint))
-
         self.num_assets = 0
         self._rupture_ids = {}
         self.epsilons_shape = {}
