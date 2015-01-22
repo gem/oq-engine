@@ -219,10 +219,14 @@ class RlzsAssoc(collections.Mapping):
     (3, 'CampbellBozorgnia2008') ['#7-SM2_a3b1-CB2008']
     """
     def __init__(self, rlzs_assoc=None):
-        self.realizations = []
         self.gsim_by_trt = []  # [trt -> gsim]
         self.rlzs_assoc = rlzs_assoc or collections.defaultdict(list)
-        self.rlzs_by_smodel = collections.defaultdict(list)
+        self.rlzs_by_smodel = []
+
+    @property
+    def realizations(self):
+        """Flat list with all the realizations"""
+        return sum(self.rlzs_by_smodel, [])
 
     def _add_realizations(self, idx, lt_model, realizations):
         # create the realizations for the given lt source model
@@ -230,11 +234,11 @@ class RlzsAssoc(collections.Mapping):
         if not trt_models:
             return idx
         gsims_by_trt = lt_model.gsim_lt.values
+        rlzs = []
         for gsim_by_trt, weight, gsim_path, _ in realizations:
             weight = float(lt_model.weight) * float(weight)
             rlz = LtRealization(idx, lt_model.path, gsim_path, weight)
-            self.rlzs_by_smodel[lt_model.ordinal].append(rlz)
-            self.realizations.append(rlz)
+            rlzs.append(rlz)
             self.gsim_by_trt.append(gsim_by_trt)
             for trt_model in trt_models:
                 trt = trt_model.trt
@@ -242,6 +246,7 @@ class RlzsAssoc(collections.Mapping):
                 self.rlzs_assoc[trt_model.id, gsim].append(rlz)
                 trt_model.gsims = gsims_by_trt[trt]
             idx += 1
+        self.rlzs_by_smodel.append(rlzs)
         return idx
 
     def get_gsims_by_trt_id(self):
