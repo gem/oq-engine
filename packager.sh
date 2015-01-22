@@ -281,7 +281,7 @@ _pkgtest_innervm_run () {
         # copy demos file to $HOME
         ssh $lxc_ip "cp -a /usr/share/doc/${GEM_DEB_PACKAGE}/examples/demos ."
         # run the ported risk demos
-        ssh $lxc_ip "set -e ; cd demos
+        ssh $lxc_ip "set -e ; cd oq-risklib/demos
         oq-lite run ScenarioDamage/job_hazard.ini,ScenarioDamage/job_risk.ini"
     fi
     trap ERR
