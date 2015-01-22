@@ -319,7 +319,8 @@ class RiskInitializer(object):
         self.cursor = models.getcursor('job_init')
 
         hazard_exposure = models.extract_from([self.oqparam], 'exposuremodel')
-        if self.exposure_model.id == hazard_exposure.id:
+        if self.exposure_model and hazard_exposure and \
+           self.exposure_model.id == hazard_exposure.id:
             # no need of geospatial queries, just join on the location
             self.assoc_query = self.cursor.mogrify("""\
 WITH assocs AS (
