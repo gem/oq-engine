@@ -278,10 +278,10 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}"
 
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
-        # copy demos file to $HOME
-        # ssh $lxc_ip "cp -a /usr/share/doc/${GEM_DEB_PACKAGE}/examples/demos ."
-        # run the ported risk demos
-        ssh $lxc_ip "set -e ; cd /usr/share/doc/python-oq-risklib/examples/demos
+        # copy risk demos
+        ssh $lxc_ip "set -e ; cp -r /usr/share/doc/python-oq-risklib/examples/demos ."
+        # run selected risk demos
+        ssh $lxc_ip "set -e ; cd demos
         oq-lite run ScenarioDamage/job_hazard.ini,ScenarioDamage/job_risk.ini"
     fi
     trap ERR
