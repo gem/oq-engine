@@ -38,11 +38,11 @@ class ClassicalDamageCase1aTestCase(risk.FixtureBasedQATestCase):
     def actual_data(self, job):
         damage_states = list(models.DmgState.objects.filter(
             risk_calculation=job).order_by('lsi'))
-        data = block_splitter(
+        data = list(block_splitter(
             models.DamageData.objects.filter(
                 dmg_state__risk_calculation=job).order_by(
                 'exposure_data', 'dmg_state'),
-            len(damage_states))
+            len(damage_states)))
         # this is a test with 5 damage states
         # no_damage, slight, moderate, extreme, complete
         # NB: you can print the actual values with the command
@@ -98,7 +98,7 @@ class ClassicalDamageCase4aTestCase(ClassicalDamageCase1aTestCase):
     hazard_calculation_fixture = 'Classical Damage Case4a'
 
     def expected_data(self):
-        return [[0.227843, 0.058247, 0.153393, 0.135054, 0.425463]]
+        return [[0.9708513, 0.00443036, 0.00840967, 0.00528607, 0.01102261]]
 
 
 class ClassicalDamageCase4bTestCase(ClassicalDamageCase1aTestCase):
@@ -106,7 +106,7 @@ class ClassicalDamageCase4bTestCase(ClassicalDamageCase1aTestCase):
     hazard_calculation_fixture = 'Classical Damage Case4b'
 
     def expected_data(self):
-        return [[0.970851, 0.004430, 0.0084097, 0.0052861, 0.0110226]]
+        return [[0.10875611, 0.04426596, 0.13832666, 0.14414043, 0.56451083]]
 
 
 class ClassicalDamageCase4cTestCase(ClassicalDamageCase1aTestCase):
@@ -114,7 +114,7 @@ class ClassicalDamageCase4cTestCase(ClassicalDamageCase1aTestCase):
     hazard_calculation_fixture = 'Classical Damage Case4c'
 
     def expected_data(self):
-        return [[0.227843, 0.058247, 0.153393, 0.135054, 0.42546]]
+        return [[0.10875611, 0.04426596, 0.13832666, 0.14414043, 0.56451083]]
 
 
 class ClassicalDamageCase5aTestCase(ClassicalDamageCase1aTestCase):
@@ -130,12 +130,12 @@ class ClassicalDamageCase6aTestCase(ClassicalDamageCase1aTestCase):
     hazard_calculation_fixture = 'Classical Damage Case6a'
 
     def expected_data(self):
-        return [[0.2510254, 0.0685219, 0.1245198, 0.127938, 0.427995],
-                [0.4016303, 0.1060677, 0.1600523, 0.126004, 0.206245],
-                [0.9369767, 0.0216853, 0.0220220, 0.011158, 0.008157],
-                [0.3501431, 0.0890072, 0.1430024, 0.125272, 0.292575],
-                [0.5488149, 0.1044122, 0.1376653, 0.092864, 0.116242],
-                [0.4016303, 0.1060677, 0.1600523, 0.126004, 0.206245]]
+        return [[0.06301378, 0.03909675, 0.09508513, 0.12999397, 0.67281037],
+                [0.16130693, 0.09645038, 0.18813321, 0.18415595, 0.36995353],
+                [0.87792542, 0.04110761, 0.0427084, 0.02201042, 0.01624816],
+                [0.12260021, 0.0702528, 0.14604874, 0.16154833, 0.49954991],
+                [0.30119781, 0.12550791, 0.19880522, 0.15551612, 0.21897294],
+                [0.16130693, 0.09645038, 0.18813321, 0.18415595, 0.36995353]]
 
 
 class ClassicalDamageCase6bTestCase(ClassicalDamageCase1aTestCase):
@@ -143,12 +143,12 @@ class ClassicalDamageCase6bTestCase(ClassicalDamageCase1aTestCase):
     hazard_calculation_fixture = 'Classical Damage Case6b'
 
     def expected_data(self):
-        return [[0.22654903, 0.05918849, 0.15474879, 0.13540796, 0.42410573],
-                [0.36089874, 0.10761677, 0.21465305, 0.12544987, 0.19138158],
-                [0.96601557, 0.01555393, 0.01379943, 0.0029868, 0.00164426],
-                [0.32287589, 0.08534957, 0.18400765, 0.12698155, 0.28078533],
-                [0.53854835, 0.11165868, 0.17567752, 0.0795058, 0.09460965],
-                [0.36089874, 0.10761677, 0.21465305, 0.12544987, 0.19138158]]
+        return [[0.05132446, 0.03032147, 0.11238226, 0.13762602, 0.66834579],
+                [0.1302479, 0.08925888, 0.2472125, 0.18714448, 0.34613624],
+                [0.93318609, 0.03029261, 0.02728063, 0.00595485, 0.00328582],
+                [0.10424884, 0.06239919, 0.18409204, 0.16652967, 0.48273026],
+                [0.29003432, 0.13273485, 0.25931611, 0.1376464, 0.18026831],
+                [0.1302479, 0.08925888, 0.2472125, 0.18714448, 0.34613624]]
 
 
 class ClassicalDamageCase7aTestCase(ClassicalDamageCase1aTestCase):
@@ -156,12 +156,12 @@ class ClassicalDamageCase7aTestCase(ClassicalDamageCase1aTestCase):
     hazard_calculation_fixture = 'Classical Damage Case7a'
 
     def expected_data(self):
-        return [[0.25102546, 0.06852193, 0.12451979, 0.12793774, 0.42799508],
-                [0.40163034, 0.1060677, 0.16005229, 0.12600433, 0.20624533],
-                [0.9586621, 0.02426024, 0.0136213, 0.00286526, 0.0005911],
-                [0.43915033, 0.16345734, 0.19543766, 0.10851369, 0.09344098],
-                [0.80773398, 0.12742696, 0.04430473, 0.01628931, 0.00424503],
-                [0.68932368, 0.18455533, 0.07998794, 0.0347065, 0.01142655]]
+        return [[0.06301378, 0.03909675, 0.09508513, 0.12999397, 0.67281037],
+                [0.16130693, 0.09645038, 0.18813321, 0.18415595, 0.36995353],
+                [0.91903303, 0.0471033, 0.0269629, 0.00571892, 0.00118185],
+                [0.19285301, 0.17028299, 0.27374034, 0.18497291, 0.17815075],
+                [0.65243418, 0.22209179, 0.08482701, 0.03217498, 0.00847204],
+                [0.47516714, 0.28849739, 0.14619763, 0.06741531, 0.02272253]]
 
 
 class ClassicalDamageCase7bTestCase(ClassicalDamageCase1aTestCase):
@@ -169,12 +169,12 @@ class ClassicalDamageCase7bTestCase(ClassicalDamageCase1aTestCase):
     hazard_calculation_fixture = 'Classical Damage Case7b'
 
     def expected_data(self):
-        return [[0.25102546, 0.06852193, 0.12451979, 0.12793774, 0.42799508],
-                [0.40163034, 0.1060677, 0.16005229, 0.12600433, 0.20624533],
-                [0.85640489, 0.07993567, 0.04916151, 0.01154356, 0.00295438],
-                [0.33259244, 0.13266886, 0.19890633, 0.14781286, 0.18801952],
-                [0.79354501, 0.1258138, 0.05012525, 0.02102434, 0.00949161],
-                [0.69104088, 0.17095902, 0.08051344, 0.03767266, 0.019814]]
+        return [[0.06301378, 0.03909675, 0.09508513, 0.12999397, 0.67281037],
+                [0.16130693, 0.09645038, 0.18813321, 0.18415595, 0.36995353],
+                [0.73342934, 0.14330431, 0.09448068, 0.02288565, 0.00590003],
+                [0.11061773, 0.10585034, 0.22465056, 0.21819367, 0.3406877],
+                [0.62971368, 0.21550694, 0.09467873, 0.04120754, 0.01889312],
+                [0.47753749, 0.26550632, 0.14528757, 0.0724332, 0.03923541]]
 
 
 class ClassicalDamageCase7cTestCase(ClassicalDamageCase1aTestCase):
@@ -182,12 +182,12 @@ class ClassicalDamageCase7cTestCase(ClassicalDamageCase1aTestCase):
     hazard_calculation_fixture = 'Classical Damage Case7c'
 
     def expected_data(self):
-        return [[0.2482902, 0.0689948, 0.12532688, 0.12860513, 0.42878298],
-                [0.3861423, 0.10877146, 0.16501495, 0.12990844, 0.21016286],
-                [0.94943895, 0.02713987, 0.01729247, 0.00461489, 0.00151381],
-                [0.34935413, 0.12533486, 0.19216183, 0.14568879, 0.18746039],
-                [0.9081546, 0.05804201, 0.02191703, 0.00895668, 0.00292968],
-                [0.83461239, 0.09989713, 0.04120767, 0.01779776, 0.00648504]]
+        return [[0.06164802, 0.03902175, 0.09523551, 0.1303836, 0.67371112],
+                [0.14910587, 0.09583375, 0.19056627, 0.18833682, 0.37615729],
+                [0.90143432, 0.05227187, 0.03407395, 0.00919452, 0.00302533],
+                [0.12204831, 0.10328133, 0.21936038, 0.2155306, 0.33977939],
+                [0.82474478, 0.10879111, 0.04283268, 0.01778066, 0.00585077],
+                [0.69657784, 0.17673021, 0.07871599, 0.03504793, 0.01292803]]
 
 
 # test with two realizations
