@@ -28,8 +28,8 @@ def git_suffix(fname):
     try:
         po = subprocess.check_output(
             ['git', 'rev-parse', '--short', 'HEAD'],
-            cwd=os.path.dirname(fname))
-        return "-git" + po.stdout.read().strip()
+            cwd=os.path.dirname(fname)).strip()
+        return "-git" + po
     except:
         # trapping everything on purpose; git may not be installed or it
         # may not work properly
