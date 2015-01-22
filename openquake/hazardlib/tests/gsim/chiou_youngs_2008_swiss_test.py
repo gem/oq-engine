@@ -25,7 +25,7 @@ class ChiouYoungs2008SWISS01TestCase(BaseGSIMTestCase):
 
     def test_std_total(self):
         self.check('CY08Swiss/cy_2008_phis_ss_embeded.csv',
-                   max_discrep_percentage=1.50)
+                   max_discrep_percentage=2.00)
 
     def test_mean_hanging_wall_normal_slip(self):
         self.check('CY08Swiss/CY08_MEDIAN_MS_HW_NM_VsK-1.csv',
@@ -45,7 +45,7 @@ class ChiouYoungs2008SWISS06TestCase(BaseGSIMTestCase):
 
     def test_std_total(self):
         self.check('CY08Swiss/cy_2008_phis_ss_embeded.csv',
-                   max_discrep_percentage=1.50)
+                   max_discrep_percentage=2.00)
 
     def test_mean_hanging_wall_normal_slip(self):
         self.check('CY08Swiss/CY08_MEDIAN_MS_HW_NM_VsK-6.csv',
@@ -65,16 +65,16 @@ class ChiouYoungs2008SWISS04TestCase(BaseGSIMTestCase):
 
     def test_std_total(self):
         self.check('CY08Swiss/cy_2008_phis_ss_embeded.csv',
-                   max_discrep_percentage=1.50)
+                   max_discrep_percentage=2.00)
 
     def test_mean_hanging_wall_normal_slip(self):
-        self.check('CY08Swiss/CY08_MEDIAN_MS_HW_NM_VsK-4_corr.csv',
+        self.check('CY08Swiss/CY08_MEDIAN_MS_HW_NM_VsK-4.csv',
                    max_discrep_percentage=0.80)
 
     def test_mean_hanging_wall_reversed_slip(self):
-        self.check('CY08Swiss/CY08_MEDIAN_MS_HW_RV_VsK-4_corr.csv',
+        self.check('CY08Swiss/CY08_MEDIAN_MS_HW_RV_VsK-4.csv',
                    max_discrep_percentage=0.80)
 
     def test_mean_hanging_wall_strike_slip(self):
-        self.check('CY08Swiss/CY08_MEDIAN_MS_HW_SS_VsK-4_corr.csv',
+        self.check('CY08Swiss/CY08_MEDIAN_MS_HW_SS_VsK-4.csv',
                    max_discrep_percentage=0.80)

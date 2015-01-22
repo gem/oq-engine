@@ -36,11 +36,13 @@ class ChiouYoungs2008SWISS01(ChiouYoungs2008):
     """
     This class extends :class:ChiouYoungs2008,
     adjusted to be used for the Swiss Hazard Model [2014].
+    This GMPE is valid for a fixed value of vs30=620m/s
 
     1) kappa value
        K-adjustments corresponding to model 01 - as prepared by Ben Edwards
        K-value for PGA were not provided but infered from SA[0.01s]
-       the model considers a fixed value of vs30=1100m/s
+       the model considers a fixed value of vs30==620 to match the
+       reference vs30=1100m/s
 
     2) small-magnitude correction
 
@@ -55,6 +57,8 @@ class ChiouYoungs2008SWISS01(ChiouYoungs2008):
     """
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+
+        sites.vs30 = 620 * np.ones(len(sites.vs30))
 
         mean, stddevs = super(ChiouYoungs2008SWISS01, self).\
             get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)

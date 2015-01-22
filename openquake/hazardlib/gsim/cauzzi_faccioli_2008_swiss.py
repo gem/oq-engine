@@ -39,10 +39,15 @@ class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
     This class extends
     :class:`openquake.hazardlib.gsim.cauzzi_faccioli_2008.CauzziFaccioli2008`
     adjusted to be used for the Swiss Hazard Model [2014].
+    This GMPE is valid for a fixed value of vs30=700m/s
+
     #. kappa value K-adjustments corresponding to model 01 - as prepared by
     Ben Edwards K-value for PGA were not provided but infered
-    from SA[0.01s] the model considers a fixed value of vs30=1100m/s
+    from SA[0.01s] the model considers a fixed value of vs30=700 to match the
+    reference vs30=1100m/s
+
     #. small-magnitude correction
+
     #. single station sigma - inter-event magnitude/distance adjustment
 
     Disclaimer: these equations are modified to be used for the
@@ -71,6 +76,8 @@ class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
+
+        sites.vs30 = 700 * np.ones(len(sites.vs30))
 
         mean, stddevs = super(CauzziFaccioli2008SWISS01, self).\
             get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
