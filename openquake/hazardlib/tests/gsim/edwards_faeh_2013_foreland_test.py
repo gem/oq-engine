@@ -15,20 +15,20 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.hazardlib.gsim.edwards_fah_2013f import (
-    EdwardsFah2013Foreland10MPa,
-    EdwardsFah2013Foreland20MPa,
-    EdwardsFah2013Foreland30MPa,
-    EdwardsFah2013Foreland50MPa,
-    EdwardsFah2013Foreland60MPa,
-    EdwardsFah2013Foreland75MPa,
-    EdwardsFah2013Foreland90MPa,
-    EdwardsFah2013Foreland120MPa)
+    EdwardsFah2013Foreland10Bars,
+    EdwardsFah2013Foreland20Bars,
+    EdwardsFah2013Foreland30Bars,
+    EdwardsFah2013Foreland50Bars,
+    EdwardsFah2013Foreland60Bars,
+    EdwardsFah2013Foreland75Bars,
+    EdwardsFah2013Foreland90Bars,
+    EdwardsFah2013Foreland120Bars)
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
-class EdwardsFah2013Foreland10MPaTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = EdwardsFah2013Foreland10MPa
+class EdwardsFah2013Foreland10BarsTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = EdwardsFah2013Foreland10Bars
 
     def test_mean(self):
         self.check('EF13f/for_sd10_table.csv',
@@ -39,8 +39,8 @@ class EdwardsFah2013Foreland10MPaTestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.80)
 
 
-class EdwardsFah2013Foreland20MPaTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = EdwardsFah2013Foreland20MPa
+class EdwardsFah2013Foreland20BarsTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = EdwardsFah2013Foreland20Bars
 
     def test_mean(self):
         self.check('EF13f/for_sd20_table.csv',
@@ -51,8 +51,8 @@ class EdwardsFah2013Foreland20MPaTestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.80)
 
 
-class EdwardsFah2013Foreland30MPaTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = EdwardsFah2013Foreland30MPa
+class EdwardsFah2013Foreland30BarsTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = EdwardsFah2013Foreland30Bars
 
     def test_mean(self):
         self.check('EF13f/for_sd30_table.csv',
@@ -63,8 +63,8 @@ class EdwardsFah2013Foreland30MPaTestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.80)
 
 
-class EdwardsFah2013Foreland50MPaTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = EdwardsFah2013Foreland50MPa
+class EdwardsFah2013Foreland50BarsTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = EdwardsFah2013Foreland50Bars
 
     def test_mean(self):
         self.check('EF13f/for_sd50_table.csv',
@@ -75,8 +75,8 @@ class EdwardsFah2013Foreland50MPaTestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.80)
 
 
-class EdwardsFah2013Foreland60MPaTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = EdwardsFah2013Foreland60MPa
+class EdwardsFah2013Foreland60BarsTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = EdwardsFah2013Foreland60Bars
 
     def test_mean(self):
         self.check('EF13f/for_sd60_table.csv',
@@ -87,8 +87,8 @@ class EdwardsFah2013Foreland60MPaTestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.80)
 
 
-class EdwardsFah2013Foreland75MPaTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = EdwardsFah2013Foreland75MPa
+class EdwardsFah2013Foreland75BarsTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = EdwardsFah2013Foreland75Bars
 
     def test_mean(self):
         self.check('EF13f/for_sd75_table.csv',
@@ -99,8 +99,8 @@ class EdwardsFah2013Foreland75MPaTestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.80)
 
 
-class EdwardsFah2013Foreland90MPaTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = EdwardsFah2013Foreland90MPa
+class EdwardsFah2013Foreland90BarsTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = EdwardsFah2013Foreland90Bars
 
     def test_mean(self):
         self.check('EF13f/for_sd90_table.csv',
@@ -111,8 +111,8 @@ class EdwardsFah2013Foreland90MPaTestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.80)
 
 
-class EdwardsFah2013Foreland120MPaTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = EdwardsFah2013Foreland120MPa
+class EdwardsFah2013Foreland120BarsTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = EdwardsFah2013Foreland120Bars
 
     def test_mean(self):
         self.check('EF13f/for_sd120_table.csv',
