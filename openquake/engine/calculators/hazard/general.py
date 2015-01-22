@@ -136,6 +136,7 @@ class BaseHazardCalculator(base.Calculator):
             self.oqparam, 'quantile_hazard_curves', ())
         self._hazard_curves = []
         self._realizations = []
+        self._source_models = []
 
     @EnginePerformanceMonitor.monitor
     def execute(self):
@@ -261,14 +262,13 @@ class BaseHazardCalculator(base.Calculator):
         logs.LOG.progress("initializing sources")
         self.composite_model = readinput.get_composite_source_model(
             self.oqparam, self.site_collection)
-        samples = self.composite_model.source_model_lt.samples_by_lt_path()
         for sm in self.composite_model:
             # create an LtSourceModel for each distinct source model
             lt_model = models.LtSourceModel.objects.create(
                 hazard_calculation=self.job,
                 sm_lt_path=self.tilepath + sm.path,
-                ordinal=sm.ordinal, sm_name=sm.name, weight=sm.weight,
-                samples=samples[sm.path])
+                ordinal=sm.ordinal, sm_name=sm.name, weight=sm.weight)
+            self._source_models.append(lt_model)
 
             # save TrtModels for each tectonic region type
             # and stored the db ID in the in-memory models
@@ -341,9 +341,8 @@ class BaseHazardCalculator(base.Calculator):
 
         rlzs_assoc = cm.get_rlzs_assoc()
         gsims_by_trt_id = rlzs_assoc.get_gsims_by_trt_id()
-        for sm_ordinal, rlzs in rlzs_assoc.rlzs_by_smodel.iteritems():
-            lt_model = models.LtSourceModel.objects.get(
-                hazard_calculation=self.job, ordinal=sm_ordinal)
+        for lt_model, rlzs in zip(
+                self._source_models, rlzs_assoc.rlzs_by_smodel):
             trt_models = lt_model.trtmodel_set.filter(num_ruptures__gt=0)
             for rlz in rlzs:
                 lt_rlz = models.LtRealization.objects.create(
