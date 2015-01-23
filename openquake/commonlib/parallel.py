@@ -59,7 +59,7 @@ def check_mem_usage(soft_percent=80, hard_percent=100):
 
     :param int mem_percent: the memory limit as a percentage
     """
-    used_mem_percent = psutil.phymem_usage().percent
+    used_mem_percent = psutil.virtual_memory().percent
     if used_mem_percent > soft_percent:
         logging.warn('Using over %d%% of the memory!', used_mem_percent)
     if used_mem_percent > hard_percent:
@@ -82,9 +82,9 @@ def safely_call(func, args, pickle=False):
         if set, the input arguments are unpickled and the return value
         is pickled; otherwise they are left unchanged
     """
-    if pickle:
-        args = [a.unpickle() for a in args]
     try:
+        if pickle:
+            args = [a.unpickle() for a in args]
         res = func(*args), None
     except:
         etype, exc, tb = sys.exc_info()
@@ -416,7 +416,7 @@ class PerformanceMonitor(object):
         """A memory measurement (in bytes)"""
         try:
             if self._proc:
-                return self._proc.get_memory_info().rss
+                return self._proc.memory_info().rss
         except psutil.AccessDenied:
             # no access to information about this process
             # don't not try to check it anymore
