@@ -42,11 +42,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 amqp = config.get_section("amqp")
 
-BROKER_HOST = amqp.get("host")
-BROKER_PORT = int(amqp.get("port"))
-BROKER_USER = amqp.get("user")
-BROKER_PASSWORD = amqp.get("password")
-BROKER_VHOST = amqp.get("vhost")
+BROKER_URL = 'amqp://%(user)s:%(password)s@%(host)s:%(port)s/%(vhost)s' % amqp
+
 # BROKER_POOL_LIMIT enables a connections pool so Celery can reuse
 # a single connection to RabbitMQ. Value 10 is the default from
 # Celery 2.5 where this feature is enabled by default.
@@ -68,6 +65,8 @@ CELERY_RESULT_BACKEND = "amqp"
 CELERY_ACKS_LATE = True
 CELERYD_PREFETCH_MULTIPLIER = 1
 CELERY_MAX_CACHED_RESULTS = 1
+
+CELERY_ACCEPT_CONTENT = ['pickle', 'json']
 
 CELERY_IMPORTS = get_core_modules(engine) + [
     "openquake.engine.calculators.hazard.general",
