@@ -261,7 +261,7 @@ def get_source_model_lt(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
-        a :class:`openquake.commonlib.readinput.SourceModelLogicTree`
+        a :class:`openquake.commonlib.logictree.SourceModelLogicTree`
         instance
     """
     fname = oqparam.inputs['source_model_logic_tree']
@@ -295,9 +295,9 @@ def get_source_models(oqparam, source_model_lt):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param source_model_lt:
-        a :class:`openquake.commonlib.readinput.SourceModelLogicTree` instance
+        a :class:`openquake.commonlib.logictree.SourceModelLogicTree` instance
     :returns:
-        an iterator over :class:`openquake.commonlib.readinput.SourceModel`
+        an iterator over :class:`openquake.commonlib.source.SourceModel`
         tuples
     """
     converter = sourceconverter.SourceConverter(
@@ -348,11 +348,11 @@ def get_filtered_source_models(oqparam, source_model_lt, sitecol):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param source_model_lt:
-        a :class:`openquake.commonlib.readinput.SourceModelLogicTree` instance
+        a :class:`openquake.commonlib.logictree.SourceModelLogicTree` instance
     :param sitecol:
         a SiteCollection
     :returns:
-        an iterator over :class:`openquake.commonlib.readinput.SourceModel`
+        an iterator over :class:`openquake.commonlib.source.SourceModel`
         tuples skipping the empty models
     """
     for source_model in get_source_models(oqparam, source_model_lt):
@@ -386,7 +386,7 @@ def get_composite_source_model(oqparam, sitecol):
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :returns:
-        an iterator over :class:`openquake.commonlib.readinput.SourceModel`
+        an iterator over :class:`openquake.commonlib.source.SourceModel`
         tuples skipping the empty models
     """
     source_model_lt = get_source_model_lt(oqparam)
@@ -411,7 +411,7 @@ def get_job_info(oqparam, source_models, sitecol):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param source_models:
-        a list of :class:`openquake.commonlib.readinput.SourceModel` tuples
+        a list of :class:`openquake.commonlib.source.SourceModel` tuples
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :returns:
