@@ -36,6 +36,8 @@ from openquake.commonlib.oqvalidation import vulnerability_files
 from openquake.commonlib.riskmodels import \
     get_fragility_functions, get_vfs
 from openquake.baselib.general import groupby, AccumDict, distinct
+from openquake.baselib.general import writetmp
+
 from openquake.commonlib import source, sourceconverter
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
@@ -280,10 +282,9 @@ def possibly_gunzip(fname):
     is_gz = os.path.exists(fname) and fname.endswith('.gz')
     there_is_gz = not os.path.exists(fname) and os.path.exists(fname + '.gz')
     if is_gz:
-        open(fname[:-3], 'w').write(gzip.open(fname).read())
-        return fname[:-3]
+        return writetmp(gzip.open(fname).read())
     elif there_is_gz:
-        open(fname, 'w').write(gzip.open(fname + '.gz').read())
+        return writetmp(gzip.open(fname + '.gz').read())
     return fname
 
 
