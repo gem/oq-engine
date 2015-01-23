@@ -27,7 +27,7 @@ def git_suffix(fname):
     """
     try:
         gh = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'],
-             cwd=os.path.dirname(fname)).strip()
+             stderr=open(os.devnull, 'w'), cwd=os.path.dirname(fname)).strip()
         gh = "-git" + gh if gh else ''
         return gh
     except:
