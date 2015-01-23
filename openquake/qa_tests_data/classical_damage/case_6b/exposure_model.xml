@@ -1,0 +1,63 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+	<exposureModel id="exp1" category="buildings">
+		<description>
+			Exposure Model for Multiple Asset Tests
+		</description>
+		<conversions>
+			<costTypes>
+			  <costType name="structural" type="per_asset" unit="USD" />
+			</costTypes>
+		</conversions>
+		<assets>
+			<asset id="a1" number="1"  taxonomy="Wood" >
+				<location lon="-122.000" lat="38.113" />
+				<costs>
+					<cost type="structural" value="1" />
+				</costs>
+			</asset>
+			
+			<asset id="a2" number="1"  taxonomy="Wood" >
+				<location lon="-122.114" lat="38.113" />
+				<costs>
+					<cost type="structural" value="1" />
+				</costs>
+			</asset>
+			
+			<asset id="a3" number="1"  taxonomy="Wood" >
+				<location lon="-122.570" lat="38.113" />
+				<costs>
+					<cost type="structural" value="1" />
+				</costs>
+			</asset>
+			
+			<asset id="a4" number="1"  taxonomy="Wood" >
+				<location lon="-122.000" lat="38.000" />
+				<costs>
+					<cost type="structural" value="1" />
+				</costs>
+			</asset>
+			
+			<asset id="a5" number="1"  taxonomy="Wood" >
+				<location lon="-122.000" lat="37.910" />
+				<costs>
+					<cost type="structural" value="1" />
+				</costs>
+			</asset>
+			
+			<asset id="a6" number="1"  taxonomy="Wood" >
+				<location lon="-122.000" lat="38.225" />
+				<costs>
+					<cost type="structural" value="1" />
+				</costs>
+			</asset>
+			
+			<asset id="a7" number="1"  taxonomy="Wood" >
+				<location lon="-121.886" lat="38.113" />
+				<costs>
+					<cost type="structural" value="1" />
+				</costs>
+			</asset>
+		</assets>
+	</exposureModel>
+</nrml>

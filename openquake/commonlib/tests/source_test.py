@@ -14,6 +14,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import mock
 import unittest
 from StringIO import StringIO
 
@@ -690,27 +691,43 @@ class CompositeSourceModelTestCase(unittest.TestCase):
                          {'Subduction Interface': 'SadighEtAl1997',
                           'Active Shallow Crust': 'ChiouYoungs2008'})
         self.assertEqual(rlz, (0, ('b1', 'b5', 'b8'), ('b2', 'b3'), 0.5))
+        self.assertEqual(
+            str(assoc),
+            "{0,SadighEtAl1997: ['<0,b1_b5_b8,b2_b3,w=0.5>']\n"
+            "1,ChiouYoungs2008: ['<0,b1_b5_b8,b2_b3,w=0.5>']}")
 
     def test_many_rlzs(self):
         oqparam = tests.get_oqparam('classical_job.ini')
         oqparam.number_of_logic_tree_samples = 0
         sitecol = readinput.get_site_collection(oqparam)
         csm = readinput.get_composite_source_model(oqparam, sitecol)
-        self.assertEqual(len(csm), 9)  # the smlt example has 1 x 3 x 3 paths
+        self.assertEqual(len(csm), 9)  # the smlt example has 1 x 3 x 3 paths;
+        # there are 2 distinct tectonic region types, so 18 trt_models
         rlzs = csm.get_rlzs_assoc().realizations
         self.assertEqual(len(rlzs), 18)  # the gsimlt has 1 x 2 paths
         self.assertEqual([1, 584, 1, 584, 1, 584, 1, 582, 1, 582,
                           1, 582, 1, 582, 1, 582, 1, 582],
                          map(len, csm.trt_models))
 
-        # removing trt_models
+        # removing 9 trt_models out of 18
         for trt_model in csm.trt_models:
             if trt_model.trt == 'Active Shallow Crust':  # no ruptures
                 trt_model.num_ruptures = 0
         csm.reduce_trt_models()
         self.assertEqual(map(len, csm.trt_models), [1, 1, 1, 1, 1, 1, 1, 1, 1])
-        rlzs = csm.get_rlzs_assoc().realizations
-        self.assertEqual(len(rlzs), 9)
+        assoc = csm.get_rlzs_assoc()
+        expected_assoc = """\
+{0,SadighEtAl1997: ['<0,b1_b3_b6,b3,w=0.04>']
+2,SadighEtAl1997: ['<1,b1_b3_b7,b3,w=0.12>']
+4,SadighEtAl1997: ['<2,b1_b3_b8,b3,w=0.04>']
+6,SadighEtAl1997: ['<3,b1_b4_b6,b3,w=0.12>']
+8,SadighEtAl1997: ['<4,b1_b4_b7,b3,w=0.36>']
+10,SadighEtAl1997: ['<5,b1_b4_b8,b3,w=0.12>']
+12,SadighEtAl1997: ['<6,b1_b5_b6,b3,w=0.04>']
+14,SadighEtAl1997: ['<7,b1_b5_b7,b3,w=0.12>']
+16,SadighEtAl1997: ['<8,b1_b5_b8,b3,w=0.04>']}"""
+        self.assertEqual(str(assoc), expected_assoc)
+        self.assertEqual(len(assoc.realizations), 9)
 
         # removing all trt_models
         for trt_model in csm.trt_models:
@@ -719,3 +736,21 @@ class CompositeSourceModelTestCase(unittest.TestCase):
         csm.reduce_trt_models()
         self.assertEqual(map(len, csm.trt_models), [])
         self.assertEqual(csm.get_rlzs_assoc().realizations, [])
+
+    def test_oversampling(self):
+        from openquake.qa_tests_data.classical import case_17
+        oq = readinput.get_oqparam(
+            os.path.join(os.path.dirname(case_17.__file__), 'job.ini'))
+        sitecol = readinput.get_site_collection(oq)
+        csm = readinput.get_composite_source_model(oq, sitecol)
+        with mock.patch('logging.warn') as warn:
+            assoc = csm.get_rlzs_assoc()
+        args = warn.call_args[0]
+        msg = args[0] % args[1:]
+        self.assertEqual(
+            msg, "The logic tree path ('b2',) was sampled 4 times: the "
+            "realizations [0, 1, 3, 4] will produce identical results")
+        self.assertEqual(
+            str(assoc), "{0,SadighEtAl1997: ['<0,b2,b1,w=0.2>', "
+            "'<1,b2,b1,w=0.2>', '<3,b2,b1,w=0.2>', '<4,b2,b1,w=0.2>']\n"
+            "1,SadighEtAl1997: ['<2,b1,b1,w=0.2>']}")
