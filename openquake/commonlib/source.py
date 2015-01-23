@@ -219,7 +219,7 @@ class RlzsAssoc(collections.Mapping):
     (3, 'CampbellBozorgnia2008') ['#7-SM2_a3b1-CB2008']
     """
     def __init__(self, rlzs_assoc=None):
-        self.gsim_by_trt = []  # [trt -> gsim]
+        self.gsim_by_trt = {}  # rlz -> {trt: gsim}
         self.rlzs_assoc = rlzs_assoc or collections.defaultdict(list)
         self.rlzs_by_smodel = []
 
@@ -239,7 +239,7 @@ class RlzsAssoc(collections.Mapping):
             weight = float(lt_model.weight) * float(weight)
             rlz = LtRealization(idx, lt_model.path, gsim_path, weight)
             rlzs.append(rlz)
-            self.gsim_by_trt.append(gsim_by_trt)
+            self.gsim_by_trt[rlz] = gsim_by_trt
             for trt_model in trt_models:
                 trt = trt_model.trt
                 gsim = gsim_by_trt[trt]
