@@ -686,8 +686,8 @@ class CompositeSourceModelTestCase(unittest.TestCase):
         sitecol = readinput.get_site_collection(oqparam)
         csm = readinput.get_composite_source_model(oqparam, sitecol)
         assoc = csm.get_rlzs_assoc()
-        [(rlz, gsim_by_trt)] = zip(assoc.realizations, assoc.gsim_by_trt)
-        self.assertEqual(gsim_by_trt,
+        [rlz] = assoc.realizations
+        self.assertEqual(assoc.gsim_by_trt[rlz],
                          {'Subduction Interface': 'SadighEtAl1997',
                           'Active Shallow Crust': 'ChiouYoungs2008'})
         self.assertEqual(rlz, (0, ('b1', 'b5', 'b8'), ('b2', 'b3'), 0.5))
