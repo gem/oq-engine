@@ -673,20 +673,23 @@ class ClassicalHazardCase16TestCase(qa_utils.BaseQATestCase):
         aaae(expected_q0_9_poes, quantile_0_9_curve.poes, decimal=7)
 
 
-# test where a simple point source is sampled twice
+# test with 5 samplings of 2 sources, with weight 20% and 80%, and 1 point
 class ClassicalHazardCase17TestCase(qa_utils.BaseQATestCase):
 
     @attr('qa', 'hazard', 'classical')
     def test(self):
         cfg = os.path.join(os.path.dirname(case_17.__file__), 'job.ini')
-        expected_curve_pga = [0.27612144, 0.03543563, 0.01143429]
+        expected_curves_pga = [
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [0.27612144, 0.035435631, 0.011434286],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0]]
 
         job = self.run_hazard(cfg)
 
-        curve1, curve2 = models.HazardCurveData.objects.filter(
-            hazard_curve__output__oq_job=job.id, hazard_curve__imt='PGA')
-
+        curves = [c.poes for c in models.HazardCurveData.objects.filter(
+            hazard_curve__output__oq_job=job.id, hazard_curve__imt='PGA'
+        ).order_by('hazard_curve')]
         numpy.testing.assert_array_almost_equal(
-            expected_curve_pga, curve1.poes, decimal=7)
-        numpy.testing.assert_array_almost_equal(
-            expected_curve_pga, curve2.poes, decimal=7)
+            expected_curves_pga, curves, decimal=7)
