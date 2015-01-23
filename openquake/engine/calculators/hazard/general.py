@@ -136,6 +136,7 @@ class BaseHazardCalculator(base.Calculator):
             self.oqparam, 'quantile_hazard_curves', ())
         self._hazard_curves = []
         self._realizations = []
+        self._source_models = []
 
     @EnginePerformanceMonitor.monitor
     def execute(self):
@@ -261,14 +262,13 @@ class BaseHazardCalculator(base.Calculator):
         logs.LOG.progress("initializing sources")
         self.composite_model = readinput.get_composite_source_model(
             self.oqparam, self.site_collection)
-        samples = self.composite_model.source_model_lt.samples_by_lt_path()
         for sm in self.composite_model:
             # create an LtSourceModel for each distinct source model
             lt_model = models.LtSourceModel.objects.create(
                 hazard_calculation=self.job,
                 sm_lt_path=self.tilepath + sm.path,
-                ordinal=sm.ordinal, sm_name=sm.name, weight=sm.weight,
-                samples=samples[sm.path])
+                ordinal=sm.ordinal, sm_name=sm.name, weight=sm.weight)
+            self._source_models.append(lt_model)
 
             # save TrtModels for each tectonic region type
             # and stored the db ID in the in-memory models
@@ -341,24 +341,26 @@ class BaseHazardCalculator(base.Calculator):
 
         rlzs_assoc = cm.get_rlzs_assoc()
         gsims_by_trt_id = rlzs_assoc.get_gsims_by_trt_id()
-        for rlz, gsim_by_trt in zip(
-                rlzs_assoc.realizations, rlzs_assoc.gsim_by_trt):
-            lt_model = models.LtSourceModel.objects.get(
-                hazard_calculation=self.job,
-                sm_lt_path=self.tilepath + rlz.sm_lt_path)
+        smodels = [sm for sm in self._source_models
+                   if sm.trtmodel_set.filter(num_ruptures__gt=0)]
+        for lt_model, rlzs in zip(smodels, rlzs_assoc.rlzs_by_smodel):
             trt_models = lt_model.trtmodel_set.filter(num_ruptures__gt=0)
-            lt_rlz = models.LtRealization.objects.create(
-                lt_model=lt_model, gsim_lt_path=rlz.gsim_lt_path,
-                weight=rlz.weight, ordinal=rlz.ordinal)
-            self._realizations.append(lt_rlz)
-            for trt_model in trt_models:
-                trt = trt_model.tectonic_region_type
-                # populate the association table rlz <-> trt_model
-                models.AssocLtRlzTrtModel.objects.create(
-                    rlz=lt_rlz, trt_model=trt_model, gsim=gsim_by_trt[trt])
-                trt_model.gsims = [gsim.__class__.__name__
-                                   for gsim in gsims_by_trt_id[trt_model.id]]
-                trt_model.save()
+            for rlz in rlzs:
+                gsim_by_trt = rlzs_assoc.gsim_by_trt[rlz]
+                lt_rlz = models.LtRealization.objects.create(
+                    lt_model=lt_model, gsim_lt_path=rlz.gsim_lt_path,
+                    weight=rlz.weight, ordinal=rlz.ordinal)
+                self._realizations.append(lt_rlz)
+                for trt_model in trt_models:
+                    trt = trt_model.tectonic_region_type
+                    # populate the association table rlz <-> trt_model
+                    models.AssocLtRlzTrtModel.objects.create(
+                        rlz=lt_rlz, trt_model=trt_model,
+                        gsim=gsim_by_trt[trt])
+                    trt_model.gsims = [
+                        gsim.__class__.__name__
+                        for gsim in gsims_by_trt_id[trt_model.id]]
+                    trt_model.save()
 
     # this could be parallelized in the future, however in all the cases
     # I have seen until now, the serialized approach is fast enough (MS)
