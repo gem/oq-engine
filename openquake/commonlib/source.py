@@ -340,9 +340,9 @@ class RlzsAssoc(collections.Mapping):
 class CompositeSourceModel(collections.Sequence):
     """
     :param source_model_lt:
-        a :class:`openquake.commonlib.readinput.SourceModelLogicTree` instance
+        a :class:`openquake.commonlib.logictree.SourceModelLogicTree` instance
     :param source_models:
-        a list of :class:`openquake.commonlib.readinput.SourceModel` tuples
+        a list of :class:`openquake.commonlib.source.SourceModel` tuples
     """
     def __init__(self, source_model_lt, source_models):
         self.source_model_lt = source_model_lt

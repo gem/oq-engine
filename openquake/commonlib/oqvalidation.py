@@ -126,7 +126,7 @@ class OqParam(valid.ParamSet):
             self.hazard_imtls = self.intensity_measure_types_and_levels
             # remove the now redundant parameter
             delattr(self, 'intensity_measure_types_and_levels')
-        elif vulnerability_files(self.inputs):
+        if vulnerability_files(self.inputs):
             self.risk_imtls = get_imtls_from_vulnerabilities(self.inputs)
         elif fragility_files(self.inputs):
             fname = self.inputs['fragility']
