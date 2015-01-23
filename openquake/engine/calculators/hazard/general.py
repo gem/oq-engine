@@ -341,10 +341,12 @@ class BaseHazardCalculator(base.Calculator):
 
         rlzs_assoc = cm.get_rlzs_assoc()
         gsims_by_trt_id = rlzs_assoc.get_gsims_by_trt_id()
-        for lt_model, rlzs in zip(
-                self._source_models, rlzs_assoc.rlzs_by_smodel):
+        smodels = [sm for sm in self._source_models
+                   if sm.trtmodel_set.filter(num_ruptures__gt=0)]
+        for lt_model, rlzs in zip(smodels, rlzs_assoc.rlzs_by_smodel):
             trt_models = lt_model.trtmodel_set.filter(num_ruptures__gt=0)
             for rlz in rlzs:
+                gsim_by_trt = rlzs_assoc.gsim_by_trt[rlz]
                 lt_rlz = models.LtRealization.objects.create(
                     lt_model=lt_model, gsim_lt_path=rlz.gsim_lt_path,
                     weight=rlz.weight, ordinal=rlz.ordinal)
@@ -354,7 +356,7 @@ class BaseHazardCalculator(base.Calculator):
                     # populate the association table rlz <-> trt_model
                     models.AssocLtRlzTrtModel.objects.create(
                         rlz=lt_rlz, trt_model=trt_model,
-                        gsim=rlzs_assoc.gsim_by_trt[rlz.ordinal][trt])
+                        gsim=gsim_by_trt[trt])
                     trt_model.gsims = [
                         gsim.__class__.__name__
                         for gsim in gsims_by_trt_id[trt_model.id]]
