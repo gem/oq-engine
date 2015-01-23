@@ -196,6 +196,19 @@ class CatalogueTestCase(unittest.TestCase):
         cat1.update_end_year()
         self.assertEqual(cat1.end_year, 2000)
 
+    def test_get_bounding_box(self):
+        """
+
+        """
+        cat1 = Catalogue()
+        cat1.data["longitude"] = np.array([10.0, 20.0])
+        cat1.data["latitude"] = np.array([40.0, 50.0])
+        bbox = cat1.get_bounding_box()
+        self.assertAlmostEqual(bbox[0], 10.0)
+        self.assertAlmostEqual(bbox[1], 20.0)
+        self.assertAlmostEqual(bbox[2], 40.0)
+        self.assertAlmostEqual(bbox[3], 50.0)
+
 
 class TestGetDistributions(unittest.TestCase):
     """

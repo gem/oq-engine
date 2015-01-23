@@ -200,6 +200,17 @@ class Catalogue(object):
         if not np.all(flag):
             self.purge_catalogue(flag)
 
+    def get_bounding_box(self):
+        """
+        Returns the bounding box of the catalogue
+        :returns:
+           * (West, East, South, North)
+        """
+        return (np.min(self.data["longitude"]),
+                np.max(self.data["longitude"]),
+                np.min(self.data["latitude"]),
+                np.max(self.data["latitude"]))
+
     def get_observed_mmax_sigma(self, default=None):
         """
         :returns: the sigma for the maximum observed magnitude
