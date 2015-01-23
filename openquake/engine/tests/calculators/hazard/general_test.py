@@ -99,7 +99,7 @@ class CalculationLimitsTestCase(unittest.TestCase):
         models.JobStats.objects.create(oq_job=job)
         calc = calculators(job)
         input_weight, output_weight = calc.pre_execute()
-        self.assertEqual(input_weight, 1352.75)
+        self.assertEqual(input_weight, 2705.5)
         self.assertAlmostEqual(output_weight, 1210.0)
         # NB: 12.1 = 121 sites * 2 IMT * 2 rlzs * 5 SES * 50/100
 
