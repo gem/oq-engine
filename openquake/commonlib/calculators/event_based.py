@@ -163,7 +163,6 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
     """
     oq = monitor.oqparam
 
-    result = AccumDict()  # trt_model_id -> curves_by_gsim
     # NB: by construction each block is a non-empty list with
     # ruptures of the trt_model_id
     trt_id = ses_ruptures[0].trt_model_id
@@ -172,6 +171,8 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
         map(from_string, oq.imtls), gsims, trt_id,
         getattr(oq, 'truncation_level', None), readinput.get_correl_model(oq))
 
+    result = AccumDict({(trt_id, gsim.__class__.__name__): ([], AccumDict())
+                        for gsim in gsims})
     for rupture, group in itertools.groupby(
             ses_ruptures, operator.attrgetter('rupture')):
         srs = list(group)
@@ -181,17 +182,14 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
         for gsim_name, rows in gcalc.calc_gmfs(
                 r_sites, rupture, [(sr.tag, sr.seed) for sr in srs]):
             if oq.ground_motion_fields:
-                fname = os.path.join(
-                    oq.export_dir, '%s-%s.csv' % (trt_id, gsim_name))
-                save_csv(fname, rows, mode='a')
+                result[trt_id, gsim_name][0].extend(rows)
 
     if getattr(oq, 'hazard_curves_from_gmfs', None):
         for gsim, curves_by_imt in gcalc.to_haz_curves(
                 sitecol.sids, oq.imtls,
                 oq.investigation_time, oq.ses_per_logic_tree_path):
-            result[trt_id, gsim] = AccumDict(
-                {imt: curve for imt, curve in zip(
-                    gcalc.sorted_imts, curves_by_imt)})
+            curves = result[trt_id, gsim][1]
+            curves += dict(zip(gcalc.sorted_imts, curves_by_imt))
     return result
 
 
@@ -219,6 +217,22 @@ class EventBasedCalculator(base.HazardCalculator):
                     self.oqparam.export_dir, name)
                 open(fname, 'w').close()
 
+    def combine_curves_and_save_gmfs(self, acc, res):
+        """
+        Combine the hazard curves (if any) and save the gmfs (if any)
+        sequentially; however, notice that the gmfs may come from
+        different tasks in any order. The full list of gmfs is never
+        stored in memory.
+        """
+        for trt_id, gsim in res:
+            rows, curves_by_imt = res[trt_id, gsim]
+            acc = calc.agg_prob(
+                acc, AccumDict({(trt_id, gsim): curves_by_imt}))
+            fname = os.path.join(
+                self.oqparam.export_dir, '%s-%s.csv' % (trt_id, gsim))
+            save_csv(fname, rows, mode='a')
+        return acc
+
     def execute(self):
         """
         Run in parallel `core_func(sources, sitecol, monitor)`, by
@@ -234,7 +248,8 @@ class EventBasedCalculator(base.HazardCalculator):
             self.core_func.__func__,
             (self.sesruptures, self.sitecol, gsims_assoc, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks, acc=zero,
-            agg=calc.agg_prob, key=operator.attrgetter('trt_model_id'))
+            agg=self.combine_curves_and_save_gmfs,
+            key=operator.attrgetter('trt_model_id'))
 
     def post_execute(self, result):
         if getattr(self.oqparam, 'hazard_curves_from_gmfs', None):

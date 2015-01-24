@@ -5,15 +5,11 @@ from openquake.qa_tests_data.event_based import (
     case_1, case_2, case_4, case_5, case_6, case_12, case_13, case_17)
 
 
-# NB: the tests break for concurrent_tasks > 0 !
-# this is due to the hazard curve conversion algorithm;
-# maybe there is a way to solve this
 class EventBasedTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_1(self):
-        out = self.run_calc(case_1.__file__, 'job.ini', exports='csv',
-                            concurrent_tasks=0)
+        out = self.run_calc(case_1.__file__, 'job.ini', exports='csv')
         self.assertEqualFiles(
             'expected/0-SadighEtAl1997.csv',
             out['0-SadighEtAl1997.csv'], sorted)
@@ -74,8 +70,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_12(self):
-        out = self.run_calc(case_12.__file__, 'job.ini', exports='csv',
-                            concurrent_tasks=0)
+        out = self.run_calc(case_12.__file__, 'job.ini', exports='csv')
         self.assertEqualFiles('expected/0-SadighEtAl1997.csv',
                               out['0-SadighEtAl1997.csv'], sorted)
         self.assertEqualFiles(
@@ -84,8 +79,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_13(self):
-        out = self.run_calc(case_13.__file__, 'job.ini', exports='csv',
-                            concurrent_tasks=0)
+        out = self.run_calc(case_13.__file__, 'job.ini', exports='csv')
         self.assertEqualFiles('expected/0-BooreAtkinson2008.csv',
                               out['0-BooreAtkinson2008.csv'], sorted)
         self.assertEqualFiles(
@@ -102,7 +96,6 @@ class EventBasedTestCase(CalculatorTestCase):
             'hazard_curve-smltp_b2-gsimltp_b1-ltr_4.csv',
             'hazard_curve-mean.csv',
         ]
-        out = self.run_calc(case_17.__file__, 'job.ini', exports='csv',
-                            concurrent_tasks=0)
+        out = self.run_calc(case_17.__file__, 'job.ini', exports='csv')
         for fname in expected:
             self.assertEqualFiles('expected/%s' % fname, out[fname], sorted)
