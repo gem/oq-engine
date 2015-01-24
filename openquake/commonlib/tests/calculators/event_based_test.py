@@ -2,10 +2,20 @@ from nose.plugins.attrib import attr
 
 from openquake.commonlib.tests.calculators import CalculatorTestCase
 from openquake.qa_tests_data.event_based import (
-    case_1, case_2, case_4, case_5, case_6, case_12, case_13, case_17)
+    blocksize, case_1, case_2, case_4, case_5, case_6, case_12, case_13,
+    case_17)
 
 
 class EventBasedTestCase(CalculatorTestCase):
+
+    @attr('qa', 'hazard', 'event_based')
+    def test_blocksize(self):
+        out = self.run_calc(blocksize.__file__, 'job.ini', concurrent_tasks=4)
+        self.assertEqualFiles('expected/0-ChiouYoungs2008.csv',
+                              out['0-ChiouYoungs2008.csv'], sorted)
+        out = self.run_calc(blocksize.__file__, 'job.ini', concurrent_tasks=8)
+        self.assertEqualFiles('expected/0-ChiouYoungs2008.csv',
+                              out['0-ChiouYoungs2008.csv'], sorted)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_1(self):
