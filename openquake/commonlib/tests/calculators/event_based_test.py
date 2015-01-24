@@ -12,7 +12,8 @@ class EventBasedTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_1(self):
-        out = self.run_calc(case_1.__file__, 'job.ini', exports='csv')
+        out = self.run_calc(case_1.__file__, 'job.ini', exports='csv',
+                            concurrent_tasks=0)
         self.assertEqualFiles(
             'expected/0-SadighEtAl1997.csv',
             out['0-SadighEtAl1997.csv'], sorted)
@@ -101,6 +102,7 @@ class EventBasedTestCase(CalculatorTestCase):
             'hazard_curve-smltp_b2-gsimltp_b1-ltr_4.csv',
             'hazard_curve-mean.csv',
         ]
-        out = self.run_calc(case_17.__file__, 'job.ini', exports='csv')
+        out = self.run_calc(case_17.__file__, 'job.ini', exports='csv',
+                            concurrent_tasks=0)
         for fname in expected:
             self.assertEqualFiles('expected/%s' % fname, out[fname], sorted)
