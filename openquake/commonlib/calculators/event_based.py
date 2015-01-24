@@ -202,6 +202,11 @@ class EventBasedCalculator(base.HazardCalculator):
     core_func = compute_gmfs_and_curves
 
     def pre_execute(self):
+        """
+        Read the precompute ruptures (or compute them on the fly) and
+        prepare some empty files on the export directory to store the gmfs
+        (if any).
+        """
         haz_out = base.get_hazard(self)
         self.sitecol = haz_out['sitecol']
         self.rlzs_assoc = haz_out['rlzs_assoc']
@@ -223,14 +228,18 @@ class EventBasedCalculator(base.HazardCalculator):
         sequentially; however, notice that the gmfs may come from
         different tasks in any order. The full list of gmfs is never
         stored in memory.
+
+        :param acc: an accumulator for the hazard curves
+        :param res: a dictionary trt_id, gsim -> (gmfs, curves_by_imt)
+        :returns: a new accumulator
         """
         for trt_id, gsim in res:
             rows, curves_by_imt = res[trt_id, gsim]
             acc = calc.agg_prob(
                 acc, AccumDict({(trt_id, gsim): curves_by_imt}))
-            fname = os.path.join(
-                self.oqparam.export_dir, '%s-%s.csv' % (trt_id, gsim))
-            save_csv(fname, rows, mode='a')
+            fname = self.saved.get('%s-%s.csv' % (trt_id, gsim))
+            if fname:  # when ground_motion_fields is true
+                save_csv(fname, rows, mode='a')
         return acc
 
     def execute(self):
@@ -252,6 +261,10 @@ class EventBasedCalculator(base.HazardCalculator):
             key=operator.attrgetter('trt_model_id'))
 
     def post_execute(self, result):
+        """
+        Return a dictionary with the output files, i.e. gmfs (if any)
+        and hazard curves (if any).
+        """
         if getattr(self.oqparam, 'hazard_curves_from_gmfs', None):
             return self.saved + ClassicalCalculator.post_execute.__func__(
                 self, result)
