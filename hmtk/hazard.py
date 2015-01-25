@@ -85,7 +85,7 @@ def _check_imts_imls(imts, imls):
     """
     Pre-process IMTS and IMLs, returning a corresponding IMT dictionary
     """
-    imts = _check_supported_imts(imts)
+    #imts = _check_supported_imts(imts)
     n_imts = len(imts)
     if len(imls) == 1:
         # Fixed IMLs
@@ -221,10 +221,13 @@ class HMTKHazardCurve(object):
         :param int num_src_workers:
             Number of elements per worker
         """
-        return hazard_curve.hazard_curves(self.source_model, self.sites,
-                                          self.imts, self.gmpes,
-                                          self.truncation_level,
-                                          self.src_filter, self.rup_filter)
+        return hazard_curve.calc_hazard_curves(self.source_model,
+                                               self.sites,
+                                               self.imts,
+                                               self.gmpes,
+                                               self.truncation_level,
+                                               self.src_filter,
+                                               self.rup_filter)
 
 
 def get_hazard_curve_source(input_set):
@@ -235,16 +238,16 @@ def get_hazard_curve_source(input_set):
         for rupture, r_sites in input_set["ruptures_sites"]:
             gsim = input_set["gsims"][rupture.tectonic_region_type]
             sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
-            for imt in input_set["imts"]:
-                poes = gsim.get_poes(sctx, rctx, dctx, imt,
-                                     input_set["imts"][imt],
+            for iimt in input_set["imts"]:
+                poes = gsim.get_poes(sctx, rctx, dctx, imt.from_string(iimt),
+                                     input_set["imts"][iimt],
                                      input_set["truncation_level"])
                 pno = rupture.get_probability_no_exceedance(poes)
-                input_set["curves"][imt] *= r_sites.expand(pno, placeholder=1)
+                input_set["curves"][iimt] *= r_sites.expand(pno, placeholder=1)
     except Exception, err:
         pass
-    for imt in input_set["imts"]:
-        input_set["curves"][imt] = 1 - input_set["curves"][imt]
+    for iimt in input_set["imts"]:
+        input_set["curves"][iimt] = 1 - input_set["curves"][iimt]
     return input_set["curves"]
 
 

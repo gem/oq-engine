@@ -64,39 +64,40 @@ from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source.point import PointSource
-from openquake.hazardlib.calc.hazard_curve import hazard_curves
+from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
 import hmtk.hazard as haz
 
 SUPPORTED_GSIMS = gsim.get_available_gsims()
 
-class TestCheckSupportedIMTs(unittest.TestCase):
-    """
-    Checks the pre-processor for ensuring IMT input is correctly formatted
-    """
-    def setUp(self):
-        """
-
-        """
-        self.imt_list = None
-
-    def test_correct_input(self):
-        """
-        Checks the output when a correctly formatted list of IMTs is passed
-        """
-        self.imt_list = ['PGA', 'PGV', 'SA(0.2)']
-        expected_output = [PGA(), PGV(), SA(period=0.2, damping=5.0)]
-        output = haz._check_supported_imts(self.imt_list)
-        self.assertListEqual(output, expected_output)
-
-    def test_unsupported_imt_input(self):
-        """
-        Checks that when an unsupported IMT is input then an error is raised
-        """
-        self.imt_list = ['XXX', 'PGV', 'SA(0.2)']
-        with self.assertRaises(ValueError) as ae:
-            _ = haz._check_supported_imts(self.imt_list)
-            self.assertEqual(ae.exception.message,
-                             "IMT XXX not supported in OpenQuake!")
+#class TestCheckSupportedIMTs(unittest.TestCase):
+#    """
+#    Checks the pre-processor for ensuring IMT input is correctly formatted
+#    """
+#    def setUp(self):
+#        """
+#
+#        """
+#        self.imt_list = None
+#
+#    def test_correct_input(self):
+#        """
+#        Checks the output when a correctly formatted list of IMTs is passed
+#        """
+#        self.imt_list = ['PGA', 'PGV', 'SA(0.2)']
+#        expected_output = [PGA(), PGV(), SA(period=0.2, damping=5.0)]
+#        expected_output = [PGA(), PGV(), SA(period=0.2, damping=5.0)]
+#        output = haz._check_supported_imts(self.imt_list)
+#        self.assertListEqual(output, expected_output)
+#
+#    def test_unsupported_imt_input(self):
+#        """
+#        Checks that when an unsupported IMT is input then an error is raised
+#        """
+#        self.imt_list = ['XXX', 'PGV', 'SA(0.2)']
+#        with self.assertRaises(ValueError) as ae:
+#            _ = haz._check_supported_imts(self.imt_list)
+#            self.assertEqual(ae.exception.message,
+#                             "IMT XXX not supported in OpenQuake!")
 
 class TestCheckIMTIMLsInput(unittest.TestCase):
     """
@@ -116,12 +117,13 @@ class TestCheckIMTIMLsInput(unittest.TestCase):
         self.imt_list = ['PGA', 'SA(0.2)']
         self.imls = [[0.005, 0.1, 0.5, 1.0]]
         output_imts = haz._check_imts_imls(self.imt_list, self.imls)
-        expected_keys = [PGA(), SA(period=0.2, damping=5.0)]
+        #expected_keys = [PGA(), SA(period=0.2, damping=5.0)]
+        expected_keys = ['PGA', 'SA(0.2)']
         self.assertListEqual(output_imts.keys(), expected_keys)
         for iloc, iml in enumerate(self.imls[0]):
-            self.assertAlmostEqual(output_imts[PGA()][iloc], iml)
+            self.assertAlmostEqual(output_imts['PGA'][iloc], iml)
             self.assertAlmostEqual(
-                output_imts[SA(period=0.2, damping=5.0)][iloc],
+                output_imts['SA(0.2)'][iloc],
                 iml)
 
     def test_input_with_same_imls_imts(self):
@@ -132,12 +134,12 @@ class TestCheckIMTIMLsInput(unittest.TestCase):
         self.imt_list = ['PGA', 'PGV']
         self.imls = [[0.005, 0.1, 0.5, 1.0], [1.0, 10.0, 50.0, 100.0]]
         output_imts = haz._check_imts_imls(self.imt_list, self.imls)
-        expected_keys = [PGA(), PGV()]
+        expected_keys = ['PGA', 'PGV']
         self.assertListEqual(output_imts.keys(), expected_keys)
         for iloc in range(0, 4):
-            self.assertAlmostEqual(output_imts[PGA()][iloc],
+            self.assertAlmostEqual(output_imts['PGA'][iloc],
                                    self.imls[0][iloc])
-            self.assertAlmostEqual(output_imts[PGV()][iloc],
+            self.assertAlmostEqual(output_imts['PGV'][iloc],
                                    self.imls[1][iloc])
 
     def test_input_with_different_imls_to_imts(self):
@@ -281,12 +283,12 @@ def reference_psha_calculation_openquake():
                                 0.0, 30.0, Point(30.0, 30.5),
                                 PMF([(1.0, NodalPlane(0.0, 90.0, 0.0))]),
                                 PMF([(1.0, 10.0)]))]
-    imts = {PGA(): [0.01, 0.1, 0.2, 0.5, 0.8],
-            SA(period=0.5, damping=5.0): [0.01, 0.1, 0.2, 0.5, 0.8]}
+    imts = {'PGA': [0.01, 0.1, 0.2, 0.5, 0.8],
+            'SA(0.5)': [0.01, 0.1, 0.2, 0.5, 0.8]}
     # Akkar & Bommer (2010) GMPE
     gsims = {'Active Shallow Crust': gsim.akkar_bommer_2010.AkkarBommer2010()}
     truncation_level = None
-    return hazard_curves(source_model, site_model, imts, gsims,
+    return calc_hazard_curves(source_model, site_model, imts, gsims,
                          truncation_level)
 
 
@@ -356,10 +358,10 @@ class TestHMTKHazardCalculator(unittest.TestCase):
         self.assertTrue(isinstance(haz_curve.gmpes['Active Shallow Crust'],
                                    gsim.akkar_bommer_2010.AkkarBommer2010))
         # Check IMT dictionary instantiated correctly
-        np.testing.assert_array_almost_equal(haz_curve.imts[PGA()],
+        np.testing.assert_array_almost_equal(haz_curve.imts['PGA'],
                                              self.imls[0])
         np.testing.assert_array_almost_equal(
-            haz_curve.imts[SA(period=0.5, damping=5.0)],
+            haz_curve.imts['SA(0.5)'],
             self.imls[0])
 
     def test_bad_sites_input_instantiation(self):
@@ -390,9 +392,9 @@ class TestHMTKHazardCalculator(unittest.TestCase):
                                         deepcopy(self.imts))
         poe_set = haz_curve._setup_poe_set()
         expected_array = np.ones([3, 5], dtype=float)
-        np.testing.assert_array_almost_equal(poe_set[PGA()], expected_array)
+        np.testing.assert_array_almost_equal(poe_set['PGA'], expected_array)
         np.testing.assert_array_almost_equal(
-                poe_set[SA(period=0.5, damping=5.0)],
+                poe_set['SA(0.5)'],
                 expected_array)
 
     def test_hazard_curve(self):
@@ -407,11 +409,11 @@ class TestHMTKHazardCalculator(unittest.TestCase):
 
         poes = haz_curve.calculate_hazard()
         np.testing.assert_array_almost_equal(
-            np.log10(poes[PGA()]), np.log10(TARGET_HAZARD_OUTPUT[PGA()]))
+            np.log10(poes['PGA']), np.log10(TARGET_HAZARD_OUTPUT['PGA']))
 
         np.testing.assert_array_almost_equal(
-            np.log10(poes[SA(period=0.5, damping=5.0)]),
-            np.log10(TARGET_HAZARD_OUTPUT[SA(period=0.5, damping=5.0)]))
+            np.log10(poes['SA(0.5)']),
+            np.log10(TARGET_HAZARD_OUTPUT['SA(0.5)']))
 
 
 class TestHMTKHazardCurvesBySource(unittest.TestCase):
@@ -454,11 +456,10 @@ class TestHMTKHazardCurvesBySource(unittest.TestCase):
             deepcopy(self.gsims),
             deepcopy(self.imls),
             deepcopy(self.imts))
-
         poes = haz_curve.calculate_hazard()
         np.testing.assert_array_almost_equal(
-            np.log10(poes[PGA()]), np.log10(TARGET_HAZARD_OUTPUT[PGA()]))
+            np.log10(poes['PGA']), np.log10(TARGET_HAZARD_OUTPUT['PGA']))
 
         np.testing.assert_array_almost_equal(
-            np.log10(poes[SA(period=0.5, damping=5.0)]),
-            np.log10(TARGET_HAZARD_OUTPUT[SA(period=0.5, damping=5.0)]))
+            np.log10(poes['SA(0.5)']),
+            np.log10(TARGET_HAZARD_OUTPUT['SA(0.5)']))

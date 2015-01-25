@@ -53,6 +53,7 @@
 
 import unittest
 import numpy as np
+from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.utils import spherical_to_cartesian
 from hmtk.seismicity.catalogue import Catalogue
@@ -198,7 +199,7 @@ class CatalogueTestCase(unittest.TestCase):
 
     def test_get_bounding_box(self):
         """
-
+        Tests the method to return the bounding box of a catalogue
         """
         cat1 = Catalogue()
         cat1.data["longitude"] = np.array([10.0, 20.0])
@@ -316,6 +317,35 @@ class TestMagnitudeDepthDistribution(unittest.TestCase):
             expected_array / np.sum(expected_array),
             self.catalogue.get_magnitude_depth_distribution(mag_bins,
                 depth_bins, normalisation=True))
+
+    def test_depth_to_pmf(self):
+        """
+        Tests the function to get depth pmf assuming a simple PMF can be
+        extracted
+        """
+        self.catalogue.data["depth"] = np.array([2.5, 2.5, 7.5, 12.5, 12.5])
+        self.catalogue.data["depthError"] = np.array([0.1, 0.1, 0.1, 0.1, 0.1])
+        # Test case with good data
+        depth_bins = np.array([0.0, 5.0, 10.0, 15.0])
+        output_pmf = self.catalogue.get_depth_pmf(depth_bins)
+        self.assertTrue(isinstance(output_pmf, PMF))
+        expected_output = [(0.4, 2.5), (0.2, 7.5), (0.4, 12.5)]
+        for iloc, (prob, val) in enumerate(output_pmf.data):
+            self.assertAlmostEqual(prob, expected_output[iloc][0])
+            self.assertAlmostEqual(val, expected_output[iloc][1])
+
+    def test_depth_to_pmf_default(self):
+        """
+        Tests the function to get depth pmf assuming no depths are found in
+        catalogue - takes a default value
+        """
+        self.catalogue.data["depth"] = np.array([])
+        self.catalogue.data["depthError"] = np.array([])
+        depth_bins = np.array([0.0, 5.0, 10.0, 15.0])
+        output_pmf = self.catalogue.get_depth_pmf(depth_bins,
+                                                  default_depth=10.0)
+        self.assertAlmostEqual(output_pmf.data[0][0], 1.0)
+        self.assertAlmostEqual(output_pmf.data[0][1], 10.0)
 
     def test_mag_depth_distribution_uncertainties(self):
         """
