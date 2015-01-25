@@ -52,6 +52,7 @@ Prototype of a 'Catalogue' class
 """
 
 import numpy as np
+from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.utils import spherical_to_cartesian
 from hmtk.seismicity.utils import (decimal_time, bootstrap_histogram_1D,
@@ -298,7 +299,7 @@ class Catalogue(object):
         in the catalogue the distrbution may be bootstrap sampled
 
         :param numpy.ndarray depth_bins:
-            Bin edges for the depths
+             getBin edges for the depths
 
         :param bool normalisation:
             Choose to normalise the results such that the total contributions
@@ -325,6 +326,24 @@ class Catalogue(object):
                                       normalisation=normalisation,
                                       number_bootstraps=bootstrap,
                                       boundaries=(0., None))
+
+    def get_depth_pmf(self, depth_bins, default_depth=5.0, bootstrap=None):
+        """
+        Returns the depth distribution of the catalogue as a probability mass
+        function
+        """
+        if len(self.data['depth']) == 0:
+            # If depth information is missing
+            return PMF([(1.0, default_depth)])
+        # Get the depth distribution
+        depth_hist = self.get_depth_distribution(depth_bins,
+                                                 normalisation=True,
+                                                 bootstrap=bootstrap)
+        pmf_list = []
+        for iloc, prob in enumerate(np.around(depth_hist, 3)):
+            pmf_list.append((prob,
+                             (depth_bins[iloc] + depth_bins[iloc + 1]) / 2.0))
+        return PMF(pmf_list)
 
     def get_magnitude_depth_distribution(self, magnitude_bins, depth_bins,
                                          normalisation=False, bootstrap=None):
