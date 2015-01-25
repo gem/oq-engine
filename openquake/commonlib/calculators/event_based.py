@@ -27,13 +27,17 @@ import numpy
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
-from openquake.hazardlib import site
+from openquake.hazardlib import site, calc
 from openquake.commonlib import readinput, parallel
 from openquake.baselib.general import AccumDict
 
 from openquake.commonlib.writers import save_csv
-from openquake.commonlib.calculators import base, calc
+from openquake.commonlib.calculators import base
+from openquake.commonlib.calculators.calc import \
+    MAX_INT, gmvs_to_haz_curve, agg_prob
 from openquake.commonlib.calculators.hazard import ClassicalCalculator
+
+# ######################## rupture calculator ############################ #
 
 SESRupture = collections.namedtuple(
     'SESRupture', 'rupture site_indices seed tag trt_model_id')
@@ -74,7 +78,7 @@ def compute_ruptures(sources, sitecol, monitor):
         for rup_no, rup in enumerate(src.iter_ruptures(), 1):
             rup.rup_no = rup_no
             for ses_idx in all_ses:
-                numpy.random.seed(rnd.randint(0, calc.MAX_INT))
+                numpy.random.seed(rnd.randint(0, MAX_INT))
                 num_occurrences = rup.sample_number_of_occurrences()
                 if num_occurrences:
                     ses_num_occ[rup].append((ses_idx, num_occurrences))
@@ -96,7 +100,7 @@ def compute_ruptures(sources, sitecol, monitor):
             # creating SESRuptures
             for ses_idx, num_occurrences in ses_num_occ[rup]:
                 for occ_no in range(1, num_occurrences + 1):
-                    seed = rnd.randint(0, calc.MAX_INT)
+                    seed = rnd.randint(0, MAX_INT)
                     tag = 'trt=%02d|ses=%04d|src=%s|rup=%03d-%02d' % (
                         trt_model_id, ses_idx, src.source_id, rup.rup_no,
                         occ_no)
@@ -121,7 +125,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         rnd = random.Random()
         rnd.seed(self.oqparam.random_seed)
         for src in self.composite_source_model.sources:
-            src.seed = rnd.randint(0, calc.MAX_INT)
+            src.seed = rnd.randint(0, MAX_INT)
 
     def execute(self):
         """
@@ -147,6 +151,8 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         return {}
 
 
+# ######################## GMF calculator ############################ #
+
 def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
     """
     :param ses_ruptures:
@@ -167,9 +173,9 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
     # ruptures of the trt_model_id
     trt_id = ses_ruptures[0].trt_model_id
     gsims = sorted(gsims_assoc[trt_id])
-    gcalc = calc.GmfCalculator(
-        map(from_string, oq.imtls), gsims, trt_id,
-        getattr(oq, 'truncation_level', None), readinput.get_correl_model(oq))
+    imts = map(from_string, oq.imtls)
+    trunc_level = getattr(oq, 'truncation_level', None)
+    correl_model = readinput.get_correl_model(oq)
 
     result = AccumDict({(trt_id, gsim.__class__.__name__): ([], AccumDict())
                         for gsim in gsims})
@@ -179,18 +185,44 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
         indices = srs[0].site_indices
         r_sites = (sitecol if indices is None else
                    site.FilteredSiteCollection(indices, sitecol))
-        for gsim_name, rows in gcalc.calc_gmfs(
-                r_sites, rupture, [(sr.tag, sr.seed) for sr in srs]):
-            if oq.ground_motion_fields:
-                result[trt_id, gsim_name][0].extend(rows)
+        for gsim in gsims:
+            gsim_name = gsim.__class__.__name__
+            computer = calc.gmf.GmfComputer(
+                rupture, r_sites, imts, gsim, trunc_level, correl_model)
+            for sr in srs:
+                gmf_by_imt = AccumDict(computer.compute(sr.seed))
+                gmf_by_imt.tag = sr.tag
+                gmf_by_imt.r_sites = r_sites
+                result[trt_id, gsim_name][0].append(gmf_by_imt)
 
     if getattr(oq, 'hazard_curves_from_gmfs', None):
-        for gsim, curves_by_imt in gcalc.to_haz_curves(
-                sitecol.sids, oq.imtls,
-                oq.investigation_time, oq.ses_per_logic_tree_path):
-            curves = result[trt_id, gsim][1]
-            curves += dict(zip(gcalc.sorted_imts, curves_by_imt))
+        duration = oq.investigation_time * oq.ses_per_logic_tree_path
+        for gsim in gsims:
+            gmfs, curves = result[trt_id, gsim.__class__.__name__]
+            curves.update(to_haz_curves(
+                sitecol.sids, gmfs, oq.imtls, oq.investigation_time, duration))
     return result
+
+
+def to_haz_curves(site_ids, gmfs, imtls, investigation_time, duration):
+    """
+    :param sids: IDs of the given sites
+    :param gmfs: a list of gmf keyed by IMT
+    :param imtls: ordered dictionary {IMT: intensity measure levels}
+    :param investigation_time: investigation time
+    :param duration: investigation_time * number of Stochastic Event Sets
+    """
+    curves = {}
+    for imt in imtls:
+        data = collections.defaultdict(list)
+        for gmf in gmfs:
+            for sid, gmv in zip(gmf.r_sites.sids, gmf[imt]):
+                data[sid].append(gmv)
+        curves[imt] = numpy.array([
+            gmvs_to_haz_curve(data.get(sid, []),
+                              imtls[imt], investigation_time, duration)
+            for sid in site_ids])
+    return curves
 
 
 @base.calculators.add('event_based')
@@ -233,13 +265,17 @@ class EventBasedCalculator(base.HazardCalculator):
         :param res: a dictionary trt_id, gsim -> (gmfs, curves_by_imt)
         :returns: a new accumulator
         """
+        imts = list(self.oqparam.imtls)
         for trt_id, gsim in res:
-            rows, curves_by_imt = res[trt_id, gsim]
-            acc = calc.agg_prob(
-                acc, AccumDict({(trt_id, gsim): curves_by_imt}))
+            gmfs, curves_by_imt = res[trt_id, gsim]
+            acc = agg_prob(acc, AccumDict({(trt_id, gsim): curves_by_imt}))
             fname = self.saved.get('%s-%s.csv' % (trt_id, gsim))
             if fname:  # when ground_motion_fields is true
-                save_csv(fname, rows, mode='a')
+                for gmf in gmfs:
+                    row = [gmf.tag]
+                    for imt in imts:
+                        row.append(gmf.r_sites.expand(gmf[imt], 0))
+                    save_csv(fname, [row], mode='a')
         return acc
 
     def execute(self):
