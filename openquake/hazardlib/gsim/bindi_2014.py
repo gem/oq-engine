@@ -300,7 +300,7 @@ class BindiEtAl2014Rhyp(BindiEtAl2014Rjb):
     site amplification is dependent directly on Vs30
     """
 
-    #: Required distance measure is Rjb (eq. 1).
+    #: Required distance measure is Rhypo (eq. 1).
     REQUIRES_DISTANCES = set(('rhypo', ))
 
     def _get_mean(self, C, rup, dists, sites):
