@@ -134,7 +134,7 @@ class ClassicalCalculator(base.HazardCalculator):
             q: {imt: scientific.quantile_curve(
                 curves_by_imt[imt], q, weights)
                 for imt in oq.imtls}
-            for q in oq.quantile_hazard_curves
+            for q in getattr(oq, 'quantile_hazard_curves', [])
         }
         for fmt in exports:
             fname = 'hazard_curve-mean.%s' % fmt

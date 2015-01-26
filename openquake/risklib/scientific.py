@@ -932,7 +932,7 @@ def quantile_curve(curves, quantile, weights=None):
     weights = numpy.array(weights, dtype=numpy.float64)
 
     result_curve = []
-    np_curves = numpy.array(curves)
+    np_curves = numpy.array(curves).reshape(len(curves), -1)
     np_weights = numpy.array(weights)
     for poes in np_curves.transpose():
         sorted_poe_idxs = numpy.argsort(poes)
