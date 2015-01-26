@@ -1,6 +1,7 @@
 from nose.plugins.attrib import attr
 from openquake.commonlib.tests.calculators import CalculatorTestCase
-from openquake.qa_tests_data.classical import case_1, case_2, case_17
+from openquake.qa_tests_data.classical import \
+    case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_17
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -17,6 +18,57 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv',
             out['hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv'])
+
+    @attr('qa', 'hazard', 'classical')
+    def test_case_3(self):
+        out = self.run_calc(case_3.__file__, 'job.ini', exports='csv')
+        self.assertEqualFiles(
+            'expected/hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv',
+            out['hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv'])
+
+    @attr('qa', 'hazard', 'classical')
+    def test_case_4(self):
+        out = self.run_calc(case_4.__file__, 'job.ini', exports='csv')
+        self.assertEqualFiles(
+            'expected/hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv',
+            out['hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv'])
+
+    @attr('qa', 'hazard', 'classical')
+    def test_case_5(self):
+        out = self.run_calc(case_5.__file__, 'job.ini', exports='csv')
+        self.assertEqualFiles(
+            'expected/hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv',
+            out['hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv'])
+
+    @attr('qa', 'hazard', 'classical')
+    def test_case_6(self):
+        out = self.run_calc(case_6.__file__, 'job.ini', exports='csv')
+        self.assertEqualFiles(
+            'expected/hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv',
+            out['hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv'])
+
+    @attr('qa', 'hazard', 'classical')
+    def test_case_7(self):
+        expected = [
+            'hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv',
+            'hazard_curve-smltp_b2-gsimltp_b1-ltr_0.csv',
+            'hazard_curve-mean.csv',
+        ]
+        out = self.run_calc(case_7.__file__, 'job.ini', exports='csv')
+        for fname in expected:
+            self.assertEqualFiles('expected/%s' % fname, out[fname])
+
+    @attr('qa', 'hazard', 'classical')
+    def test_case_8(self):
+        expected = [
+            'hazard_curve-smltp_b1_b2-gsimltp_b1-ltr_0.csv',
+            'hazard_curve-smltp_b1_b3-gsimltp_b1-ltr_0.csv',
+            'hazard_curve-smltp_b1_b4-gsimltp_b1-ltr_0.csv',
+            'hazard_curve-mean.csv',
+        ]
+        out = self.run_calc(case_8.__file__, 'job.ini', exports='csv')
+        for fname in expected:
+            self.assertEqualFiles('expected/%s' % fname, out[fname])
 
     @attr('qa', 'hazard', 'classical')
     def test_case_17(self):
