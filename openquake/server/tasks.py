@@ -209,18 +209,16 @@ DBINTERFACE = {
            SELECT %s, iml, ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)
            FROM temp_icebox_hazardmap"""),
     'ses': DbInterface(
-        """SELECT tag, magnitude, St_AsText(hypocenter)
-           FROM hzrdr.ses_rupture r
+        """SELECT tag, magnitude FROM hzrdr.ses_rupture r
            JOIN hzrdr.probabilistic_rupture pr ON r.id = r.rupture_id
            JOIN hzrdr.ses_collection sc ON pr.ses_collection_id = sc.id
            JOIN uiapi.output o ON o.id = sc.output_id
            WHERE o.id = %(output_id)d""",
         "icebox_ses",
-        "tag varchar, magnitude float, hypocenter varchar",
+        "tag varchar, magnitude float",
         """INSERT INTO
-           icebox_ses(output_layer_id, hypocenter, rupture_tag, magnitude)
-           SELECT %s, St_GeomFromText(hypocenter, 4326), tag, magnitude
-           FROM temp_icebox_ses"""),
+           icebox_ses(output_layer_id, rupture_tag, magnitude)
+           SELECT %s, tag, magnitude FROM temp_icebox_ses"""),
     # TODO: instead of the region_constraint, we should specify the convex
     # hull of the exposure
     'aggregate_loss': DbInterface(
