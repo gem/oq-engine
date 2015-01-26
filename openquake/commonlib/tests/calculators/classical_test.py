@@ -35,20 +35,6 @@ class ClassicalTestCase(CalculatorTestCase):
             out['hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv'])
 
     @attr('qa', 'hazard', 'classical')
-    def test_case_3(self):
-        out = self.run_calc(case_3.__file__, 'job.ini', exports='csv')
-        self.assertEqualFiles(
-            'expected/hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv',
-            out['hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv'])
-
-    @attr('qa', 'hazard', 'classical')
-    def test_case_4(self):
-        out = self.run_calc(case_4.__file__, 'job.ini', exports='csv')
-        self.assertEqualFiles(
-            'expected/hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv',
-            out['hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv'])
-
-    @attr('qa', 'hazard', 'classical')
     def test_case_5(self):
         out = self.run_calc(case_5.__file__, 'job.ini', exports='csv')
         self.assertEqualFiles(
@@ -173,6 +159,8 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_16(self):
         expected = [
             'hazard_curve-mean.csv',
+            'quantile_curve-0.1.csv',
+            'quantile_curve-0.9.csv',
         ]
         out = self.run_calc(case_16.__file__, 'job.ini', exports='csv')
         for fname in expected:
