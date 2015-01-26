@@ -1,4 +1,3 @@
-import zipfile
 import json
 import mock
 import os
@@ -439,15 +438,8 @@ class RunCalcTestCase(BaseViewTestCase):
         # prepare an archive with the test files
         if os.path.exists('archive.zip'):
             os.remove('archive.zip')
-        archive = zipfile.ZipFile('archive.zip', 'w')
-        write(archive, 'job.ini')
-        write(archive, 'exposure_model.xml')
-        write(archive, 'source_model.xml')
-        write(archive, 'source_model_logic_tree.xml')
-        write(archive, 'gsim_logic_tree.xml')
-        write(archive, 'vulnerability_model.xml')
-        archive.close()
-
+        shutil.make_archive(
+            'archive', 'zip', os.path.dirname(__file__), 'data')
         archive_file = open('archive.zip')
         self.request.FILES = MultiValueDict({
             'archive': [archive_file]})
@@ -463,7 +455,7 @@ class RunCalcTestCase(BaseViewTestCase):
         temp_dir = tempfile.mkdtemp()
 
         # Set up expected test values for job_from_file:
-        jff_exp_call_args = ((os.path.join(temp_dir, 'job.ini'),
+        jff_exp_call_args = ((os.path.join(temp_dir, 'data', 'job_risk.ini'),
                               'platform', 'progress',  '', None, 666), {})
 
         try:

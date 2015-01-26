@@ -88,6 +88,24 @@ def create_detect_job_file(*candidates):
     return detect_job_file
 
 
+def collect_files(dirpath, cond=lambda fullname: True):
+    """
+    Recursively collect the files contained inside dirpath.
+
+    :param dirpath: path to a readable directory
+    :param cond: condition on the path to collect the file
+    """
+    files = []
+    for fname in os.listdir(dirpath):
+        fullname = os.path.join(dirpath, fname)
+        if os.path.isdir(fullname):  # navigate inside
+            files.extend(collect_files(fullname))
+        else:  # collect files
+            if cond(fullname):
+                files.append(fullname)
+    return files
+
+
 def _prepare_job(request, hazard_output_id, hazard_job_id,
                  detect_job_file):
     """
@@ -98,8 +116,7 @@ def _prepare_job(request, hazard_output_id, hazard_job_id,
     :returns: job_file and temp_dir
     """
     temp_dir = tempfile.mkdtemp()
-    files = []
-
+    inifiles = []
     try:
         archive = zipfile.ZipFile(request.FILES['archive'])
     except KeyError:
@@ -108,13 +125,13 @@ def _prepare_job(request, hazard_output_id, hazard_job_id,
         for each_file in request.FILES.values():
             new_path = os.path.join(temp_dir, each_file.name)
             shutil.move(each_file.temporary_file_path(), new_path)
-            files.append(new_path)
+            if new_path.endswith('.ini'):
+                inifiles.append(new_path)
     else:  # extract the files from the archive into temp_dir
         archive.extractall(temp_dir)
         archive.close()
-        for fname in os.listdir(temp_dir):
-            files.append(os.path.join(temp_dir, fname))
-    job_file = detect_job_file([f for f in files if f.endswith('.ini')])
+        inifiles = collect_files(temp_dir, lambda f: f.endswith('.ini'))
+    job_file = detect_job_file(inifiles)
     return job_file, temp_dir
 
 
