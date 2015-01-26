@@ -2,7 +2,7 @@
 <nrml xmlns:gml="http://www.opengis.net/gml" 
  	  xmlns="http://openquake.org/xmlns/nrml/0.4">
   <fragilityModel format="continuous">
-    <description>Fragility Functions for Case 4</description>
+    <description>Fragility Functions for Case 4c</description>
     <limitStates>slight moderate extreme complete</limitStates>
     <ffs type="lognormal">
 	  <taxonomy>Wood</taxonomy>
