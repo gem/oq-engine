@@ -126,14 +126,28 @@ class ClassicalCalculator(base.HazardCalculator):
 
         weights = (None if oq.number_of_logic_tree_samples
                    else [rlz.weight for rlz in rlzs])
+        curves_by_imt = {imt: [curves_by_rlz[rlz][imt] for rlz in rlzs]
+                         for imt in oq.imtls}
         mean_curves = scientific.mean_curve(
             [curves_by_rlz[rlz] for rlz in rlzs], weights)
+        quantile = {
+            q: {imt: scientific.quantile_curve(
+                curves_by_imt[imt], q, weights)
+                for imt in oq.imtls}
+            for q in getattr(oq, 'quantile_hazard_curves', [])
+        }
         for fmt in exports:
             fname = 'hazard_curve-mean.%s' % fmt
             saved += export(
                 ('hazard_curves', fmt),
                 oq.export_dir, fname, self.sitecol, mean_curves,
                 oq.imtls, oq.investigation_time)
+            for q in quantile:
+                fname = 'quantile_curve-%s.%s' % (q, fmt)
+                saved += export(
+                    ('hazard_curves', fmt),
+                    oq.export_dir, fname, self.sitecol, quantile[q],
+                    oq.imtls, oq.investigation_time)
         return saved
 
     def hazard_maps(self, curves_by_imt):
