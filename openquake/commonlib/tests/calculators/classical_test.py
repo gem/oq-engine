@@ -27,28 +27,28 @@ class ClassicalTestCase(CalculatorTestCase):
             'expected/hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv',
             out['hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv'])
 
-    @attr('qa', 'hazard', 'classical')
+    @attr('qa', 'hazard', 'classical', 'slow')
     def test_case_4(self):
         out = self.run_calc(case_4.__file__, 'job.ini', exports='csv')
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv',
             out['hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv'])
 
-    @attr('qa', 'hazard', 'classical')
+    @attr('qa', 'hazard', 'classical', 'slow')
     def test_case_5(self):
         out = self.run_calc(case_5.__file__, 'job.ini', exports='csv')
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv',
             out['hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv'])
 
-    @attr('qa', 'hazard', 'classical')
+    @attr('qa', 'hazard', 'classical', 'slow')
     def test_case_6(self):
         out = self.run_calc(case_6.__file__, 'job.ini', exports='csv')
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv',
             out['hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv'])
 
-    @attr('qa', 'hazard', 'classical')
+    @attr('qa', 'hazard', 'classical', 'slow')
     def test_case_7(self):
         expected = [
             'hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv',
