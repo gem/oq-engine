@@ -41,7 +41,6 @@ class OqParamTestCase(unittest.TestCase):
                 '-78.182 15.565', sites='0.1 0.2', inputs=dict(site_model='')
             ).validate()
 
-
     def test_poes(self):
         # if hazard_maps or uniform_hazard_spectra are set, poes
         # cannot be empty
