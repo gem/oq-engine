@@ -31,9 +31,9 @@ from openquake.engine import engine
 from openquake.engine.db import models as oqe_models
 
 from openquake.server.dbsettings import PLATFORM_DATABASES as DATABASES
+from openquake.server.settings import DEBUG
 
-
-DEFAULT_LOG_LEVEL = 'progress'
+DEFAULT_LOG_LEVEL = 'debug' if DEBUG else 'info'
 
 
 # FIXME. Configure logging by using the configuration stored in settings
@@ -104,7 +104,10 @@ def run_calc(job_id, calc_dir,
         exctype, exc, tb = sys.exc_info()
         einfo = ''.join(traceback.format_tb(tb))
         einfo += '%s: %s' % (exctype.__name__, exc)
+        #print einfo, '*******************8'
+        #logging.root.error(einfo)
         update_calculation(callback_url, status="failed", einfo=einfo)
+        raise
     finally:
         logging.root.removeHandler(progress_handler)
 
