@@ -171,15 +171,14 @@ class OqParam(valid.ParamSet):
         flags = dict(
             sites=getattr(self, 'sites', 0),
             sites_csv=self.inputs.get('sites', 0),
-            sites_model_file=self.inputs.get('site_model', 0),
             hazard_curves_csv=self.inputs.get('hazard_curves', 0),
             gmvs_csv=self.inputs.get('gmvs', 0),
             region=getattr(self, 'region', 0),
             exposure=self.inputs.get('exposure', 0))
         # NB: below we check that all the flags
         # are mutually exclusive
-        return sum(bool(v) for v in flags.values()) == 1 or (
-            self.inputs.get('site_model'))
+        return sum(bool(v) for v in flags.values()) == 1 or self.inputs.get(
+            'site_model')
 
     def is_valid_poes(self):
         """
