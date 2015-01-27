@@ -33,7 +33,9 @@ from openquake.engine.db import models as oqe_models
 from openquake.server.dbsettings import PLATFORM_DATABASES as DATABASES
 from openquake.server.settings import DEBUG
 
-DEFAULT_LOG_LEVEL = 'debug' if DEBUG else 'info'
+# all the logs are sent to the platform; one would need a different logger
+# to discriminate between progress logs and debug logs written in the file
+DEFAULT_LOG_LEVEL = 'debug' if DEBUG else 'progress'
 
 
 # FIXME. Configure logging by using the configuration stored in settings
