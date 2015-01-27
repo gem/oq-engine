@@ -1,5 +1,5 @@
 PLATFORM_DATABASES = {
-    'platform': {
+    'oq-platform': {
         'HOST': 'localhost',
         'NAME': "oqplatform",
         'USER': 'oqplatform',
