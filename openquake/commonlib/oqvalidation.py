@@ -179,7 +179,7 @@ class OqParam(valid.ParamSet):
         # NB: below we check that all the flags
         # are mutually exclusive
         return sum(bool(v) for v in flags.values()) == 1 or (
-            'site_model' in self.inputs)
+            self.inputs.get('site_model'))
 
     def is_valid_poes(self):
         """
