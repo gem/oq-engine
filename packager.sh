@@ -461,7 +461,8 @@ _pkgtest_innervm_run () {
             fi
         done
 
-        for demo_dir in \$(find ./risk  -mindepth 1 -maxdepth 1 -type d | sort); do
+        for demo_dir in \$(find /usr/share/doc/python-oq-risklib/examples/demos
+                -mindepth 1 -maxdepth 1 -type d | sort); do
             cd \$demo_dir
             echo \"Running \$demo_dir/job_hazard.ini\"
             oq-engine --run-hazard job_hazard.ini -l info
