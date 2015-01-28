@@ -436,13 +436,10 @@ _pkgtest_innervm_run () {
     # run celeryd daemon
     ssh $lxc_ip "cd /usr/openquake/engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
 
-    # copy demos file to $HOME
-    ssh $lxc_ip "cp -a /usr/share/doc/${GEM_DEB_PACKAGE}/examples/demos ."
-
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
         # run all of the hazard and risk demos
-        ssh $lxc_ip "set -e ; cd demos
-        for ini in \$(find /usr/share/doc/python-oq-risklib/examples/demos -name job.ini | sort); do
+        ssh $lxc_ip "set -e ; cd usr/share/doc/python-oq-risklib/examples/demos
+        for ini in \$(find . -name job.ini | sort); do
             echo \"Running \$ini\"
             for loop in \$(seq 1 $GEM_MAXLOOP); do
                 set +e
@@ -461,7 +458,7 @@ _pkgtest_innervm_run () {
             fi
         done
 
-        for demo_dir in \$(find /usr/share/doc/python-oq-risklib/examples/demos -mindepth 1 -maxdepth 1 -type d | sort); do
+        for demo_dir in \$(find . -maxdepth 1 -type d | sort); do
             cd \$demo_dir
             if [ -f \$demo_dir/job_hazard.ini ]; then
             echo \"Running \$demo_dir/job_hazard.ini\"
