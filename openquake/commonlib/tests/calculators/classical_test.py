@@ -65,7 +65,6 @@ class ClassicalTestCase(CalculatorTestCase):
             'hazard_curve-smltp_b1_b2-gsimltp_b1-ltr_0.csv',
             'hazard_curve-smltp_b1_b3-gsimltp_b1-ltr_1.csv',
             'hazard_curve-smltp_b1_b4-gsimltp_b1-ltr_2.csv',
-            'hazard_curve-mean.csv',
         ]
         out = self.run_calc(case_8.__file__, 'job.ini', exports='csv')
         for fname in expected:
@@ -76,7 +75,6 @@ class ClassicalTestCase(CalculatorTestCase):
         expected = [
             'hazard_curve-smltp_b1_b2-gsimltp_b1-ltr_0.csv',
             'hazard_curve-smltp_b1_b3-gsimltp_b1-ltr_1.csv',
-            'hazard_curve-mean.csv',
         ]
         out = self.run_calc(case_9.__file__, 'job.ini', exports='csv')
         for fname in expected:
