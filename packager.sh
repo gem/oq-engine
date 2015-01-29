@@ -459,15 +459,15 @@ _pkgtest_innervm_run () {
         done
 
         for demo_dir in \$(find . -mindepth 1 -maxdepth 1 -type d | sort); do
+            if [ -f \$demo_dir/job_hazard.ini ]; then
             cd \$demo_dir
-            if [ -f job_hazard.ini ]; then
             echo \"Running \$demo_dir/job_hazard.ini\"
             oq-engine --run-hazard job_hazard.ini -l info
             job_id=\$(oq-engine --list-hazard-calculations | tail -1 | awk '{print \$1}')
             echo \"Running \$demo_dir/job_risk.ini\"
             oq-engine --run-risk job_risk.ini --exports xml,csv --hazard-calculation-id \$job_id -l info
-            fi
             cd -
+            fi
         done"
     fi
     ssh $lxc_ip "oq-engine --make-html-report today"
