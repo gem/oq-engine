@@ -43,8 +43,8 @@ class RietbrockEtAl2013SelfSimilar(GMPE):
     when stress drop is considered to be self-similar (i.e. independent
     of magnitude).
     """
-    #: Supported tectonic region type is active shallow crust,
-    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.STABLE_SHALLOW_CRUST
+    #: Supported tectonic region type is stabe continental crust,
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.STABLE_CONTINENTAL
 
     #: Supported intensity measure types are spectral acceleration, peak
     #: ground acceleration and peak ground velocity.
@@ -137,7 +137,7 @@ class RietbrockEtAl2013SelfSimilar(GMPE):
         f_2[rval <= self.CONSTS["r2"]] = 0.0
         return f_0, f_1, f_2
 
-    def self._get_stddevs(self, C, stddev_types, num_sites):
+    def _get_stddevs(self, C, stddev_types, num_sites):
         """
         Returns the standard deviation. Original standard deviations are in
         logarithms of base 10. Converts to natural logarithm.
