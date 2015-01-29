@@ -70,7 +70,7 @@ def hazard_curves_to_hazard_map(job_id, hazard_curves, poes):
             imt = 'SA(%s)' % hc.sa_period
 
         # Gather all of the curves and compute the maps, for all PoEs
-        curves = (_poes for _, _, _poes in hcd)
+        curves = [_poes for _, _, _poes in hcd]
         hazard_maps = calc.compute_hazard_maps(curves, hc.imls, poes)
 
         with transaction.commit_on_success(using='job_init'):
