@@ -94,7 +94,7 @@ class OqParamTestCase(unittest.TestCase):
                       str(ctx.exception))
 
     def test_create_export_dir(self):
-        EDIR = '/tmp/nonexisting'
+        EDIR = os.path.join(TMP, 'nonexisting')
         OqParam(
             calculation_mode='event_based', inputs={},
             sites='0.1 0.2',
