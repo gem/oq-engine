@@ -211,13 +211,13 @@ def set_up_arg_parser():
         '--export-outputs',
         '--eos',
         help='Export all the calculation outputs to the specified directory',
-        nargs=2, metavar=('HAZARD_CALCULATION_ID', 'TARGET_DIR'))
+        nargs=2, metavar=('CALCULATION_ID', 'TARGET_DIR'))
     export_grp.add_argument(
         '--export-stats',
         '--es',
         help='Export the statistical outputs to the specified directory',
         nargs=3,
-        metavar=('HAZARD_CALCULATION_ID', 'TARGET_DIR', 'OUTPUT_TYPE'))
+        metavar=('CALCULATION_ID', 'TARGET_DIR', 'OUTPUT_TYPE'))
     export_grp.add_argument(
         '--export-hazard-outputs',
         '--eho',
@@ -227,7 +227,7 @@ def set_up_arg_parser():
         '--export-risk-outputs',
         '--ero',
         help='Export all the outputs to the specified directory [deprecated]',
-        nargs=2, metavar=('HAZARD_CALCULATION_ID', 'TARGET_DIR'))
+        nargs=2, metavar=('RISK_CALCULATION_ID', 'TARGET_DIR'))
     save_load_grp = parser.add_argument_group('Save/Load')
     save_load_grp.add_argument(
         '--save-hazard-calculation', '--shc',
