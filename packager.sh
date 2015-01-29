@@ -460,7 +460,7 @@ _pkgtest_innervm_run () {
 
         for demo_dir in \$(find . -mindepth 1 -maxdepth 1 -type d | sort); do
             cd \$demo_dir
-            if [ -f \$demo_dir/job_hazard.ini ]; then
+            if [ -f job_hazard.ini ]; then
             echo \"Running \$demo_dir/job_hazard.ini\"
             oq-engine --run-hazard job_hazard.ini -l info
             job_id=\$(oq-engine --list-hazard-calculations | tail -1 | awk '{print \$1}')
