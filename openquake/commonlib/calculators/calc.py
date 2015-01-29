@@ -160,12 +160,17 @@ def compute_hazard_maps(curves, imls, poes):
         Value(s) on which to interpolate a hazard map from the input
         ``curves``. Can be an array-like or scalar value (for a single PoE).
     """
+    curves = numpy.array(curves)
     poes = numpy.array(poes)
 
     if len(poes.shape) == 0:
-        # ``poes`` was passed in as a scalar;
+        # `poes` was passed in as a scalar;
         # convert it to 1D array of 1 element
         poes = poes.reshape(1)
+
+    if len(curves.shape) == 1:
+        # `curves` was passed as 1 dimensional array, there is a single site
+        curves = curves.reshape((1,) + curves.shape)  # 1 x L
 
     result = []
     imls = numpy.log(numpy.array(imls[::-1]))
