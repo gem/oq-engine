@@ -23,6 +23,7 @@ import random
 
 import numpy
 
+from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import gmf, filters
 from openquake.hazardlib.site import SiteCollection
 from openquake.baselib.general import AccumDict
@@ -217,34 +218,13 @@ def make_uhs(maps):
             * uh_spectra: a list of triples (lon, lat, imls), where `imls`
               is a `tuple` of the IMLs from all maps for each of the `periods`
     """
-    result = dict()
-    result['periods'] = []
-
-    # filter out non-PGA -SA maps
-    maps = [x for x in maps if x.imt in ('PGA', 'SA')]
-
-    # give PGA maps an sa_period of 0.0
-    # this is slightly hackish, but makes the sorting simple
-    for each_map in maps:
-        if each_map.imt == 'PGA':
-            each_map.sa_period = 0.0
-
-    # sort the maps by period:
-    sorted_maps = sorted(maps, key=lambda m: m.sa_period)
-
-    # start constructing the results:
-    result['periods'] = [x.sa_period for x in sorted_maps]
-
-    # assume the `lons` and `lats` are uniform for all maps
-    lons = sorted_maps[0].lons
-    lats = sorted_maps[0].lats
-
-    result['uh_spectra'] = []
-    imls_list = zip(*(x.imls for x in sorted_maps))
-    for lon, lat, imls in zip(lons, lats, imls_list):
-        result['uh_spectra'].append((lon, lat, imls))
-
-    return result
+    sorted_imts = map(str, sorted(
+        from_string(imt) for imt in maps
+        if imt.startswith('SA') or imt == 'PGA'))
+    return zip(*(maps[imt].T for imt in sorted_imts))
+    # a matrix N x I x P where N is the number of sites, I the number
+    # of intensity measure types of kind SA (with PGA = SA(0)) and P
+    # is the number of poes in the hazard maps
 
 
 ###################### utilities for classical calculators #################

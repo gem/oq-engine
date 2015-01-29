@@ -107,6 +107,7 @@ class ClassicalCalculator(base.HazardCalculator):
         rlzs = self.rlzs_assoc.realizations
         oq = self.oqparam
         hazard_maps = getattr(oq, 'hazard_maps', None)
+        uhs = getattr(oq, 'uniform_hazard_spectra', None)
 
         # export curves
         saved = AccumDict()
@@ -124,12 +125,19 @@ class ClassicalCalculator(base.HazardCalculator):
                     oq.imtls, oq.investigation_time)
 
                 if hazard_maps:
+                    maps = self.hazard_maps(curves_by_rlz[rlz])
                     fname = 'hazard_map-smltp_%s-gsimltp_%s-ltr_%d.%s' % (
                         smlt_path, gsimlt_path, rlz.ordinal, fmt)
                     saved += export(
                         key, oq.export_dir, fname,
-                        self.sitecol, self.hazard_maps(curves_by_rlz[rlz]),
+                        self.sitecol, maps,
                         oq.imtls, oq.investigation_time)
+                    if uhs:
+                        uhs_curves = calc.make_uhs(maps)
+                        saved += export(
+                            ('uhs', fmt), oq.export_dir, fname.replace(
+                                'hazard_map', 'uh_spectra'),
+                            self.sitecol, uhs_curves)
 
         if len(rlzs) == 1:  # cannot compute statistics
             return saved
@@ -153,20 +161,34 @@ class ClassicalCalculator(base.HazardCalculator):
                     key, oq.export_dir, 'hazard_curve-mean.%s' % fmt,
                     self.sitecol, mean_curves, oq.imtls, oq.investigation_time)
                 if hazard_maps:
+                    mean_maps = self.hazard_maps(mean_curves)
                     saved += export(
                         key, oq.export_dir, 'hazard_map-mean.%s' % fmt,
-                        self.sitecol, self.hazard_maps(mean_curves),
+                        self.sitecol, mean_maps,
                         oq.imtls, oq.investigation_time)
+                    if uhs:
+                        uhs_curves = calc.make_uhs(mean_maps)
+                        saved += export(
+                            ('uhs', fmt), oq.export_dir,
+                            'uh_spectra-mean.%s' % fmt,
+                            self.sitecol, uhs_curves)
             for q in quantile:
                 saved += export(
                     key, oq.export_dir, 'quantile_curve-%s.%s' % (q, fmt),
                     self.sitecol, quantile[q],
                     oq.imtls, oq.investigation_time)
                 if hazard_maps:
+                    quantile_maps = self.hazard_maps(quantile[q])
                     saved += export(
                         key, oq.export_dir, 'quantile_map-%s.%s' % (q, fmt),
-                        self.sitecol, self.hazard_maps(quantile[q]),
+                        self.sitecol, quantile_maps,
                         oq.imtls, oq.investigation_time)
+                    if uhs:
+                        uhs_curves = calc.make_uhs(quantile_maps)
+                        saved += export(
+                            ('uhs', fmt), oq.export_dir,
+                            'uh_quantile-%s.%s' % (q, fmt),
+                            self.sitecol, uhs_curves)
 
         return saved
 

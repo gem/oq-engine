@@ -252,3 +252,19 @@ def export_stats_csv(key, export_dir, fname, sitecol, data_by_imt):
         rows.append(row)
     save_csv(dest, numpy.array(rows).T)
     return {fname: dest}
+
+
+@export.add(('uhs', 'csv'))
+def export_uhs_csv(key, export_dir, fname, sitecol, rows):
+    """
+    Export the scalar outputs.
+
+    :param key: output_type and export_type
+    :param export_dir: the directory where to export
+    :param fname: file name
+    :param sitecol: site collection
+    :param rows: a matrix N x I x P
+    """
+    dest = os.path.join(export_dir, fname)
+    save_csv(dest, zip(sitecol.lons, sitecol.lats, rows))
+    return {fname: dest}
