@@ -148,15 +148,15 @@ class ClassicalCalculator(base.HazardCalculator):
         }
         for fmt in exports:
             key = ('hazard_curves', fmt)
-            saved += export(
-                key, oq.export_dir, 'hazard_curve-mean.%s' % fmt,
-                self.sitecol, mean_curves,
-                oq.imtls, oq.investigation_time)
-            if hazard_maps:
+            if getattr(oq, 'mean_hazard_curves', None):
                 saved += export(
-                    key, oq.export_dir, 'hazard_map-mean.%s' % fmt,
-                    self.sitecol, self.hazard_maps(mean_curves),
-                    oq.imtls, oq.investigation_time)
+                    key, oq.export_dir, 'hazard_curve-mean.%s' % fmt,
+                    self.sitecol, mean_curves, oq.imtls, oq.investigation_time)
+                if hazard_maps:
+                    saved += export(
+                        key, oq.export_dir, 'hazard_map-mean.%s' % fmt,
+                        self.sitecol, self.hazard_maps(mean_curves),
+                        oq.imtls, oq.investigation_time)
             for q in quantile:
                 saved += export(
                     key, oq.export_dir, 'quantile_curve-%s.%s' % (q, fmt),

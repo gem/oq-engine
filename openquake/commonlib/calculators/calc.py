@@ -169,7 +169,7 @@ def compute_hazard_maps(curves, imls, poes):
         poes = poes.reshape(1)
 
     if len(curves.shape) == 1:
-        # `curves` was passed a 1 dimensional array, there is a single site
+        # `curves` was passed as 1 dimensional array, there is a single site
         curves = curves.reshape((1,) + curves.shape)  # 1 x L
 
     result = []
