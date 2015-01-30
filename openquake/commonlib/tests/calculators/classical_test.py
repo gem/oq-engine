@@ -169,7 +169,8 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_16(self):
         expected = [
             'hazard_curve-mean.csv',
-            'quantile_curve.csv',
+            'quantile_curve-0.1.csv',
+            'quantile_curve-0.9.csv',
         ]
         out = self.run_calc(case_16.__file__, 'job.ini', exports='csv')
         for fname in expected:
