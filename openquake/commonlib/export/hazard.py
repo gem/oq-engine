@@ -255,7 +255,7 @@ def export_stats_csv(key, export_dir, fname, sitecol, data_by_imt):
 
 
 @export.add(('uhs', 'csv'))
-def export_uhs_csv(key, export_dir, fname, sitecol, cube):
+def export_uhs_csv(key, export_dir, fname, sitecol, hmaps):
     """
     Export the scalar outputs.
 
@@ -263,10 +263,12 @@ def export_uhs_csv(key, export_dir, fname, sitecol, cube):
     :param export_dir: the directory where to export
     :param fname: file name
     :param sitecol: site collection
-    :param cube: an array N x I x P
+    :param hmaps:
+        an array N x I x P where N is the number of sites,
+        I the number of IMTs of SA type, and P the number of poes
     """
     dest = os.path.join(export_dir, fname)
     rows = ([[lon, lat]] + list(row)
-            for lon, lat, row in zip(sitecol.lons, sitecol.lats, cube))
+            for lon, lat, row in zip(sitecol.lons, sitecol.lats, hmaps))
     save_csv(dest, rows)
     return {fname: dest}

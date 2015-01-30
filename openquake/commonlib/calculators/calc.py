@@ -35,7 +35,7 @@ MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
 # in this way even on 32 bit machines Python will not have to convert
 # the generated seed into a long integer
 
-############### utilities for the classical calculator ################
+# ############## utilities for the classical calculator ############### #
 
 SourceRuptureSites = collections.namedtuple(
     'SourceRuptureSites',
@@ -213,13 +213,13 @@ def make_uhs(maps):
         sites and P is the number of poes in the hazard maps
     :returns:
         an array N x I x P where I the number of intensity measure types of
-        kind SA (with PGA = SA(0))
+        kind SA (with PGA = SA(0)), containing the hazard maps
     """
     sorted_imts = map(str, sorted(
         from_string(imt) for imt in maps
         if imt.startswith('SA') or imt == 'PGA'))
-    cube = numpy.array([maps[imt] for imt in sorted_imts])  #  I * P * N
-    return cube.transpose(2, 0, 1)  # N * I * P
+    hmaps = numpy.array([maps[imt] for imt in sorted_imts])  # I * P * N
+    return hmaps.transpose(2, 0, 1)  # N * I * P
 
 
 # ################## utilities for classical calculators ################ #
