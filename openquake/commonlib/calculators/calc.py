@@ -209,25 +209,20 @@ def make_uhs(maps):
     uniform.
 
     :param maps:
-        A sequence of :class:`openquake.engine.db.models.HazardMap` objects, or
-        equivalent objects with the same fields attributes.
+        A dictionary IMT -> array with shape P x N, where N is the number of
+        sites and P is the number of poes in the hazard maps
     :returns:
-        A `dict` with two values::
-            * periods: a list of the SA periods from all of the ``maps``,
-              sorted ascendingly
-            * uh_spectra: a list of triples (lon, lat, imls), where `imls`
-              is a `tuple` of the IMLs from all maps for each of the `periods`
+        an array N x I x P where I the number of intensity measure types of
+        kind SA (with PGA = SA(0))
     """
     sorted_imts = map(str, sorted(
         from_string(imt) for imt in maps
         if imt.startswith('SA') or imt == 'PGA'))
-    return zip(*(maps[imt].T for imt in sorted_imts))
-    # a matrix N x I x P where N is the number of sites, I the number
-    # of intensity measure types of kind SA (with PGA = SA(0)) and P
-    # is the number of poes in the hazard maps
+    cube = numpy.array([maps[imt] for imt in sorted_imts])  #  I * P * N
+    return cube.transpose(2, 0, 1)  # N * I * P
 
 
-###################### utilities for classical calculators #################
+# ################## utilities for classical calculators ################ #
 
 def agg_prob(acc, prob):
     """

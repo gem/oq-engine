@@ -28,7 +28,7 @@ from openquake.commonlib import hazard_writers
 from openquake.hazardlib.imt import from_string
 
 
-##################### export Ground Motion fields #############################
+# #################### export Ground Motion fields ########################## #
 
 class GmfSet(object):
     """
@@ -166,7 +166,7 @@ def export_gmf_csv(key, export_dir, sitecol, rupture_tags, gmfs):
                 f.write(scientificformat(row) + '\n')
     return {key: dest}
 
-######################## export hazard curves ##############################
+# ####################### export hazard curves ############################ #
 
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
@@ -255,7 +255,7 @@ def export_stats_csv(key, export_dir, fname, sitecol, data_by_imt):
 
 
 @export.add(('uhs', 'csv'))
-def export_uhs_csv(key, export_dir, fname, sitecol, rows):
+def export_uhs_csv(key, export_dir, fname, sitecol, cube):
     """
     Export the scalar outputs.
 
@@ -263,8 +263,10 @@ def export_uhs_csv(key, export_dir, fname, sitecol, rows):
     :param export_dir: the directory where to export
     :param fname: file name
     :param sitecol: site collection
-    :param rows: a matrix N x I x P
+    :param cube: an array N x I x P
     """
     dest = os.path.join(export_dir, fname)
-    save_csv(dest, zip(sitecol.lons, sitecol.lats, rows))
+    rows = ([[lon, lat]] + list(row)
+            for lon, lat, row in zip(sitecol.lons, sitecol.lats, cube))
+    save_csv(dest, rows)
     return {fname: dest}
