@@ -93,6 +93,20 @@ class OqParamTestCase(unittest.TestCase):
         self.assertIn('You must set `hazard_curves_from_gmfs`',
                       str(ctx.exception))
 
+    def test_create_export_dir(self):
+        EDIR = os.path.join(TMP, 'nonexisting')
+        OqParam(
+            calculation_mode='event_based', inputs={},
+            sites='0.1 0.2',
+            reference_vs30_type='measured',
+            reference_vs30_value=200,
+            reference_depth_to_2pt5km_per_sec=100,
+            reference_depth_to_1pt0km_per_sec=150,
+            maximum_distance=400,
+            export_dir=EDIR,
+        ).validate()
+        self.assertTrue(os.path.exists(EDIR))
+
     def test_invalid_export_dir(self):
         with self.assertRaises(ValueError) as ctx:
             OqParam(
