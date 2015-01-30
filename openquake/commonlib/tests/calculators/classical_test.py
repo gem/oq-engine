@@ -151,15 +151,15 @@ class ClassicalTestCase(CalculatorTestCase):
             'hazard_curve-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008-ltr_4.csv',
             'hazard_curve-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008-ltr_5.csv',
             'hazard_curve-mean.csv',
-            'uh_spectra-smltp_SM1-gsimltp_BA2008_C2003-ltr_0.csv',
-            'uh_spectra-smltp_SM1-gsimltp_BA2008_T2002-ltr_1.csv',
-            'uh_spectra-smltp_SM1-gsimltp_CB2008_C2003-ltr_2.csv',
-            'uh_spectra-smltp_SM1-gsimltp_CB2008_T2002-ltr_3.csv',
-            'uh_spectra-smltp_SM2_a3b1-gsimltp_BA2008-ltr_6.csv',
-            'uh_spectra-smltp_SM2_a3b1-gsimltp_CB2008-ltr_7.csv',
-            'uh_spectra-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008-ltr_4.csv',
-            'uh_spectra-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008-ltr_5.csv',
-            'uh_spectra-mean.csv',
+            'hazard_uhs-smltp_SM1-gsimltp_BA2008_C2003-ltr_0.csv',
+            'hazard_uhs-smltp_SM1-gsimltp_BA2008_T2002-ltr_1.csv',
+            'hazard_uhs-smltp_SM1-gsimltp_CB2008_C2003-ltr_2.csv',
+            'hazard_uhs-smltp_SM1-gsimltp_CB2008_T2002-ltr_3.csv',
+            'hazard_uhs-smltp_SM2_a3b1-gsimltp_BA2008-ltr_6.csv',
+            'hazard_uhs-smltp_SM2_a3b1-gsimltp_CB2008-ltr_7.csv',
+            'hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008-ltr_4.csv',
+            'hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008-ltr_5.csv',
+            'hazard_uhs-mean.csv',
         ]
         out = self.run_calc(case_15.__file__, 'job.ini', exports='csv')
         for fname in expected:
@@ -169,8 +169,7 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_16(self):
         expected = [
             'hazard_curve-mean.csv',
-            'quantile_curve-0.1.csv',
-            'quantile_curve-0.9.csv',
+            'quantile_curve.csv',
         ]
         out = self.run_calc(case_16.__file__, 'job.ini', exports='csv')
         for fname in expected:
