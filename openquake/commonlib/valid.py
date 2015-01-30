@@ -750,8 +750,8 @@ class ParamSet(object):
             try:
                 value = convert(val)
             except Exception as exc:
-                raise ValueError('%s: could not convert to %s: %s'
-                                 % (exc, convert.__name__, val))
+                raise ValueError('%s: could not convert to %s: %s=%s'
+                                 % (exc, convert.__name__, name, val))
             setattr(self, name, value)
 
     def validate(self):
