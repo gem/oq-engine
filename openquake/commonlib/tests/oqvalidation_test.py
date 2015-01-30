@@ -149,5 +149,5 @@ class OqParamTestCase(unittest.TestCase):
         self.assertEqual(
             str(ctx.exception),
             'Found duplicated levels for PGA: [0.4, 0.4, 0.6]: could not '
-            'convert to intensity_measure_types_and_levels '
+            'convert to intensity_measure_types_and_levels: '
             '{"PGA": [0.4, 0.4, 0.6]}')
