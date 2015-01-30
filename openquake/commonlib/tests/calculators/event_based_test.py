@@ -5,6 +5,7 @@ from nose.plugins.attrib import attr
 import numpy.testing
 
 from openquake.baselib.general import AccumDict
+from openquake.hazardlib.site import FilteredSiteCollection
 from openquake.commonlib.tests.calculators import CalculatorTestCase
 from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_4, case_5, case_6, case_12, case_13,
@@ -45,19 +46,24 @@ def joint_prob_of_occurrence(gmvs_site_1, gmvs_site_2, gmv, time_span,
     return prob
 
 
-def get_gmfs_by_imt(fname, imts):
+def get_gmfs_by_imt(fname, sitecol, imts):
     """
     Return a list of dictionaries with a ground motion field per IMT,
     one dictionary per rupture.
 
     :param fname: path to the CSV file
+    :param sitecol: the underlying site collection
     :param imts: the IMTs corresponding to the columns in the CSV file
     """
     dicts = []
     with open(fname) as f:
         for row in csv.reader(f):
-            gmf_by_imt = [map(float, col.split()) for col in row[1:]]
-            dic = AccumDict(zip(imts, gmf_by_imt))
+            indices = map(int, row[1].split())
+            sc = FilteredSiteCollection(indices, sitecol)
+            dic = AccumDict()
+            for imt, col in zip(imts, row[2:]):
+                gmf = numpy.array(map(float, col.split()))
+                dic[imt] = sc.expand(gmf, 0)
             dic.tag = row[0]
             dicts.append(dic)
     return sorted(dicts, key=lambda dic: dic.tag)
@@ -76,7 +82,8 @@ class EventBasedTestCase(CalculatorTestCase):
             oq = self.calc.oqparam
             self.assertEqual(list(oq.imtls), ['PGA'])
 
-            gmfs = get_gmfs_by_imt(out['0-BooreAtkinson2008.csv'], oq.imtls)
+            gmfs = get_gmfs_by_imt(out['0-BooreAtkinson2008.csv'],
+                                   self.calc.sitecol, oq.imtls)
             gmvs_site_1 = [gmf['PGA'][0] for gmf in gmfs]
             gmvs_site_2 = [gmf['PGA'][1] for gmf in gmfs]
 

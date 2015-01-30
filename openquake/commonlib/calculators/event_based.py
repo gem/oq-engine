@@ -272,9 +272,9 @@ class EventBasedCalculator(base.HazardCalculator):
             fname = self.saved.get('%s-%s.csv' % (trt_id, gsim))
             if fname:  # when ground_motion_fields is true
                 for gmf in gmfs:
-                    row = [gmf.tag]
+                    row = [gmf.tag, gmf.r_sites.indices]
                     for imt in imts:
-                        row.append(gmf.r_sites.expand(gmf[imt], 0))
+                        row.append(gmf[imt])
                     save_csv(fname, [row], mode='a')
         return acc
 
