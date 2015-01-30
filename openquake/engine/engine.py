@@ -500,7 +500,8 @@ def job_from_file(cfg_file_path, username, log_level='info', exports='',
             params['master_seed'] = 0
         if not 'risk_investigation_time' in params and not \
            params['calculation_mode'].startswith('scenario'):
-            params['risk_investigation_time'] = hc.investigation_time
+            params['risk_investigation_time'] = params.get(
+                'investigation_time', hc.investigation_time)
         params['hazard_investigation_time'] = getattr(
             hc, 'investigation_time', None)
         params['hazard_imtls'] = dict(hc.imtls)
