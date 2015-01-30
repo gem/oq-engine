@@ -31,9 +31,11 @@ from openquake.engine import engine
 from openquake.engine.db import models as oqe_models
 
 from openquake.server.dbsettings import PLATFORM_DATABASES as DATABASES
+from openquake.server.settings import DEBUG
 
-
-DEFAULT_LOG_LEVEL = 'progress'
+# all the logs are sent to the platform; one would need a different logger
+# to discriminate between progress logs and debug logs written in the file
+DEFAULT_LOG_LEVEL = 'debug' if DEBUG else 'progress'
 
 
 # FIXME. Configure logging by using the configuration stored in settings
@@ -105,10 +107,10 @@ def run_calc(job_id, calc_dir,
         einfo = ''.join(traceback.format_tb(tb))
         einfo += '%s: %s' % (exctype.__name__, exc)
         update_calculation(callback_url, status="failed", einfo=einfo)
+        raise
     finally:
         logging.root.removeHandler(progress_handler)
-
-    shutil.rmtree(calc_dir)
+        shutil.rmtree(calc_dir)
 
     # If requested to, signal job completion and trigger a migration of
     # results.
@@ -208,19 +210,6 @@ DBINTERFACE = {
            icebox_hazardmap(output_layer_id, iml, location)
            SELECT %s, iml, ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)
            FROM temp_icebox_hazardmap"""),
-    'ses': DbInterface(
-        """SELECT tag, magnitude, St_AsText(hypocenter)
-           FROM hzrdr.ses_rupture r
-           JOIN hzrdr.probabilistic_rupture pr ON r.id = r.rupture_id
-           JOIN hzrdr.ses_collection sc ON pr.ses_collection_id = sc.id
-           JOIN uiapi.output o ON o.id = sc.output_id
-           WHERE o.id = %(output_id)d""",
-        "icebox_ses",
-        "tag varchar, magnitude float, hypocenter varchar",
-        """INSERT INTO
-           icebox_ses(output_layer_id, hypocenter, rupture_tag, magnitude)
-           SELECT %s, St_GeomFromText(hypocenter, 4326), tag, magnitude
-           FROM temp_icebox_ses"""),
     # TODO: instead of the region_constraint, we should specify the convex
     # hull of the exposure
     'aggregate_loss': DbInterface(
