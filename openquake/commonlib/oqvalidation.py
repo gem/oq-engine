@@ -277,7 +277,10 @@ class OqParam(valid.ParamSet):
         elif not os.path.exists(self.export_dir):
             # check that we can write on the parent directory
             pdir = os.path.dirname(self.export_dir)
-            return os.path.exists(pdir) and os.access(pdir, os.W_OK)
+            can_write = os.path.exists(pdir) and os.access(pdir, os.W_OK)
+            if can_write:
+                os.mkdir(self.export_dir)
+            return can_write
         return os.path.isdir(self.export_dir) and os.access(
             self.export_dir, os.W_OK)
 
