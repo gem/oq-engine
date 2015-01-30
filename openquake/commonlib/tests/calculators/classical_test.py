@@ -65,7 +65,6 @@ class ClassicalTestCase(CalculatorTestCase):
             'hazard_curve-smltp_b1_b2-gsimltp_b1-ltr_0.csv',
             'hazard_curve-smltp_b1_b3-gsimltp_b1-ltr_1.csv',
             'hazard_curve-smltp_b1_b4-gsimltp_b1-ltr_2.csv',
-            'hazard_curve-mean.csv',
         ]
         out = self.run_calc(case_8.__file__, 'job.ini', exports='csv')
         for fname in expected:
@@ -76,7 +75,6 @@ class ClassicalTestCase(CalculatorTestCase):
         expected = [
             'hazard_curve-smltp_b1_b2-gsimltp_b1-ltr_0.csv',
             'hazard_curve-smltp_b1_b3-gsimltp_b1-ltr_1.csv',
-            'hazard_curve-mean.csv',
         ]
         out = self.run_calc(case_9.__file__, 'job.ini', exports='csv')
         for fname in expected:
@@ -87,7 +85,6 @@ class ClassicalTestCase(CalculatorTestCase):
         expected = [
             'hazard_curve-smltp_b1_b2-gsimltp_b1-ltr_0.csv',
             'hazard_curve-smltp_b1_b3-gsimltp_b1-ltr_1.csv',
-            'hazard_curve-mean.csv',
         ]
         out = self.run_calc(case_10.__file__, 'job.ini', exports='csv')
         for fname in expected:
@@ -122,6 +119,11 @@ class ClassicalTestCase(CalculatorTestCase):
             'hazard_curve-smltp_bFault_stitched_D2.1_Char-gsimltp_BooreAtkinson2008-ltr_2.csv',
             'hazard_curve-smltp_bFault_stitched_D2.1_Char-gsimltp_ChiouYoungs2008-ltr_3.csv',
             'hazard_curve-mean.csv',
+            'hazard_map-smltp_aFault_aPriori_D2.1-gsimltp_BooreAtkinson2008-ltr_0.csv',
+            'hazard_map-smltp_aFault_aPriori_D2.1-gsimltp_ChiouYoungs2008-ltr_1.csv',
+            'hazard_map-smltp_bFault_stitched_D2.1_Char-gsimltp_BooreAtkinson2008-ltr_2.csv',
+            'hazard_map-smltp_bFault_stitched_D2.1_Char-gsimltp_ChiouYoungs2008-ltr_3.csv',
+            'hazard_map-mean.csv',
         ]
         out = self.run_calc(case_13.__file__, 'job.ini', exports='csv')
         for fname in expected:
@@ -132,7 +134,6 @@ class ClassicalTestCase(CalculatorTestCase):
         expected = [
             'hazard_curve-smltp_simple_fault-gsimltp_AbrahamsonSilva2008-ltr_0.csv',
             'hazard_curve-smltp_simple_fault-gsimltp_CampbellBozorgnia2008-ltr_1.csv',
-            'hazard_curve-mean.csv',
         ]
         out = self.run_calc(case_14.__file__, 'job.ini', exports='csv')
         for fname in expected:
@@ -174,7 +175,6 @@ class ClassicalTestCase(CalculatorTestCase):
             'hazard_curve-smltp_b1-gsimltp_b1-ltr_2.csv',
             'hazard_curve-smltp_b2-gsimltp_b1-ltr_3.csv',
             'hazard_curve-smltp_b2-gsimltp_b1-ltr_4.csv',
-            'hazard_curve-mean.csv',
         ]
         out = self.run_calc(case_17.__file__, 'job.ini', exports='csv')
         for fname in expected:
