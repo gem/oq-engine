@@ -115,7 +115,8 @@ class HazardCalculator(BaseCalculator):
             # we could manage limits here
             self.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
         else:  # calculators without sources, i.e. scenario
-            self.rlzs_assoc = workflows.FakeRlzsAssoc()
+            self.gsims = readinput.get_gsims(self.oqparam)
+            self.rlzs_assoc = workflows.FakeRlzsAssoc(len(self.gsims))
 
 
 def get_hazard(calculator):
@@ -149,6 +150,7 @@ class RiskCalculator(BaseCalculator):
     """
 
     hazard_calculator = None  # to be ovverriden in subclasses
+    rlzs_assoc = None  # to be ovverriden in subclasses
 
     def build_riskinputs(self, hazards_by_imt):
         """
@@ -226,9 +228,6 @@ class RiskCalculator(BaseCalculator):
             self.oqparam, self.exposure)
         logging.info('Extracted %d unique sites from the exposure',
                      len(self.sitecol))
-
-        # overridde this for calculators with more than one realization
-        self.rlzs_assoc = workflows.FakeRlzsAssoc()
 
     def execute(self):
         """

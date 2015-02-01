@@ -177,7 +177,7 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
     trunc_level = getattr(oq, 'truncation_level', None)
     correl_model = readinput.get_correl_model(oq)
 
-    result = AccumDict({(trt_id, gsim.__class__.__name__): ([], AccumDict())
+    result = AccumDict({(trt_id, str(gsim)): ([], AccumDict())
                         for gsim in gsims})
     for rupture, group in itertools.groupby(
             ses_ruptures, operator.attrgetter('rupture')):
@@ -185,20 +185,19 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
         indices = srs[0].site_indices
         r_sites = (sitecol if indices is None else
                    site.FilteredSiteCollection(indices, sitecol))
-        for gsim in gsims:
-            gsim_name = gsim.__class__.__name__
-            computer = calc.gmf.GmfComputer(
-                rupture, r_sites, imts, gsim, trunc_level, correl_model)
-            for sr in srs:
-                gmf_by_imt = AccumDict(computer.compute(sr.seed))
+
+        computer = calc.gmf.GmfComputer(
+            rupture, r_sites, imts, gsims, trunc_level, correl_model)
+        for sr in srs:
+            for gsim_str, gmvs in computer.compute(sr.seed):
+                gmf_by_imt = AccumDict(gmvs)
                 gmf_by_imt.tag = sr.tag
                 gmf_by_imt.r_sites = r_sites
-                result[trt_id, gsim_name][0].append(gmf_by_imt)
-
+                result[trt_id, gsim_str][0].append(gmf_by_imt)
     if getattr(oq, 'hazard_curves_from_gmfs', None):
         duration = oq.investigation_time * oq.ses_per_logic_tree_path
         for gsim in gsims:
-            gmfs, curves = result[trt_id, gsim.__class__.__name__]
+            gmfs, curves = result[trt_id, str(gsim)]
             curves.update(to_haz_curves(
                 sitecol.sids, gmfs, oq.imtls, oq.investigation_time, duration))
     return result
@@ -226,7 +225,7 @@ def to_haz_curves(site_ids, gmfs, imtls, investigation_time, duration):
 
 
 @base.calculators.add('event_based')
-class EventBasedCalculator(base.HazardCalculator):
+class EventBasedCalculator(base.calculators['classical']):
     """
     Event based PSHA calculator generating the ruptures only
     """

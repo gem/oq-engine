@@ -74,6 +74,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         logging.info('Preparing the risk input')
         hcurves_by_imt = calc.data_by_imt(
             haz_out['result'], self.oqparam.hazard_imtls, num_sites)
+        # this is a dict imt -> [key -> val]
         self.rlzs_assoc = haz_out['rlzs_assoc']
         self.riskinputs = self.build_riskinputs(hcurves_by_imt)
 

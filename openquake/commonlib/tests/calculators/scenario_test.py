@@ -25,7 +25,7 @@ def count_close(gmf_value, gmvs_site_one, gmvs_site_two, delta=0.1):
 class ScenarioHazardTestCase(CalculatorTestCase):
 
     def frequencies(self, case, fst_value, snd_value):
-        gmfs = self.execute(case.__file__, 'job.ini')
+        [gmfs] = self.execute(case.__file__, 'job.ini').values()
         realizations = float(self.calc.oqparam.number_of_ground_motion_fields)
         [imt] = self.calc.oqparam.imtls.keys()
         gmvs_within_range_fst = count_close(
@@ -36,7 +36,7 @@ class ScenarioHazardTestCase(CalculatorTestCase):
                 gmvs_within_range_snd / realizations)
 
     def medians(self, case):
-        gmfs = self.execute(case.__file__, 'job.ini')
+        [gmfs] = self.execute(case.__file__, 'job.ini').values()
         return {imt: map(numpy.median, gmfs[imt]) for imt in gmfs}
 
     @attr('qa', 'hazard', 'scenario')

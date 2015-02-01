@@ -96,7 +96,6 @@ def gen_ruptures_for_site(site, sources, maximum_distance, monitor):
 
 # ############## utilities for the scenario calculators ############### #
 
-
 def calc_gmfs_fast(oqparam, sitecol):
     """
     Build all the ground motion fields for the whole site collection in

@@ -18,12 +18,14 @@
 
 import os
 import logging
+import numpy
 
 from openquake.baselib.general import AccumDict
 from openquake.commonlib import readinput
 from openquake.commonlib.calculators import base
 from openquake.commonlib.export import export
 from openquake.commonlib.risk_writers import DmgState
+from openquake.risklib import workflows
 
 
 def classical_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
@@ -75,7 +77,12 @@ class ClassicalDamageCalculator(base.RiskCalculator):
         logging.info('Associated %d assets to %d sites', num_assets, num_sites)
 
         logging.info('Preparing the risk input')
-        self.riskinputs = self.build_riskinputs(hcurves_by_imt)
+        data = {}
+        for imt in hcurves_by_imt:
+            data[imt] = numpy.array([{(0, 'FromCsv'): curve}
+                                     for curve in hcurves_by_imt[imt]])
+        self.riskinputs = self.build_riskinputs(data)
+        self.rlzs_assoc = workflows.FakeRlzsAssoc(num_rlzs=1)  # TODO: extend
 
     def post_execute(self, result):
         """
