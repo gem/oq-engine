@@ -173,7 +173,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
             models.OqJob.objects.get(pk=self.job.id))
         gsim = valid.gsim(oqparam.gsim)
         self.computer = GmfComputer(
-            self.rupture, self.site_collection, self.imts, gsim,
+            self.rupture, self.site_collection, self.imts, [gsim],
             trunc_level, correlation_model)
 
     @EnginePerformanceMonitor.monitor
