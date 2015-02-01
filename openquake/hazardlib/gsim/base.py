@@ -514,6 +514,12 @@ class GroundShakingIntensityModel(object):
         """
         return self.__class__.__name__ == other.__class__.__name__
 
+    def __str__(self):
+        """
+        To be overridden in subclasses if the GSIM takes parameters.
+        """
+        return '%s' % self.__class__.__name__
+
 
 def _truncnorm_sf(truncation_level, values):
     """
