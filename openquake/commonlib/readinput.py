@@ -209,12 +209,12 @@ def get_site_collection(oqparam, mesh=None, site_ids=None,
         mesh.lons, mesh.lats, site_ids, oqparam)
 
 
-def get_gsim(oqparam):
+def get_gsims(oqparam):
     """
-    Return a GSIM instance from the gsim name in the configuration
+    Return a list of GSIM instances from the gsim name in the configuration
     file (defined for scenario computations).
     """
-    return valid.gsim(oqparam.gsim)
+    return map(valid.gsim, oqparam.gsim.split())
 
 
 def get_correl_model(oqparam):

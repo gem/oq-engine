@@ -28,7 +28,7 @@ from openquake.hazardlib.calc import gmf, filters
 from openquake.hazardlib.site import SiteCollection
 from openquake.baselib.general import AccumDict
 from openquake.commonlib.readinput import \
-    get_gsim, get_rupture, get_correl_model, get_imts
+    get_gsims, get_rupture, get_correl_model, get_imts
 
 
 MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
@@ -106,7 +106,7 @@ def calc_gmfs_fast(oqparam, sitecol):
     correl_model = get_correl_model(oqparam)
     seed = getattr(oqparam, 'random_seed', 42)
     imts = get_imts(oqparam)
-    gsim = get_gsim(oqparam)
+    [gsim] = get_gsims(oqparam)
     trunc_level = getattr(oqparam, 'truncation_level', None)
     n_gmfs = getattr(oqparam, 'number_of_ground_motion_fields', 1)
     rupture = get_rupture(oqparam)
@@ -125,7 +125,7 @@ def calc_gmfs(oqparam, sitecol):
     rnd = random.Random()
     rnd.seed(getattr(oqparam, 'random_seed', 42))
     imts = get_imts(oqparam)
-    gsim = get_gsim(oqparam)
+    [gsim] = get_gsims(oqparam)
     trunc_level = getattr(oqparam, 'truncation_level', None)
     n_gmfs = getattr(oqparam, 'number_of_ground_motion_fields', 1)
     rupture = get_rupture(oqparam)

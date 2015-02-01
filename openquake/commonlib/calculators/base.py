@@ -114,7 +114,7 @@ class HazardCalculator(BaseCalculator):
                 self.oqparam, self.composite_source_model, self.sitecol)
             # we could manage limits here
             self.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
-        else:  # calculators without sources
+        else:  # calculators without sources, i.e. scenario
             self.rlzs_assoc = workflows.FakeRlzsAssoc()
 
 
