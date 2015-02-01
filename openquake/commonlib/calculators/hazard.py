@@ -178,15 +178,6 @@ class ClassicalCalculator(base.HazardCalculator):
         return saved
 
 
-@base.calculators.add('event_based')
-class EventBasedCalculator(base.HazardCalculator):
-    """
-    Event based PSHA calculator
-    """
-    def post_execute(self, result):
-        return {}
-
-
 @base.calculators.add('disaggregation')
 class DisaggregationCalculator(base.HazardCalculator):
     """

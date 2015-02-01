@@ -8,11 +8,14 @@ aaae = numpy.testing.assert_array_almost_equal
 class TestByImt(unittest.TestCase):
 
     def test_data_by_imt(self):
-        dda = {'x': dict(PGA=[1, 2], PGV=[3, 4]),
-               'y': dict(PGA=[5, 6], PGV=[7, 8])}
+        dda = {'r1': dict(PGA=[1, 2], PGV=[3, 4]),
+               'r2': dict(PGA=[5, 6], PGV=[7, 8]),
+               'r3': dict(PGA=[9, 10], PGV=[11, 12])}
 
-        expected = {'PGA': numpy.array([{'x': 1, 'y': 5}, {'x': 2, 'y': 6}]),
-                    'PGV': numpy.array([{'x': 3, 'y': 7}, {'x': 4, 'y': 8}])}
+        expected = {'PGA': numpy.array([{'r1': 1, 'r2': 5, 'r3': 9},
+                                        {'r1': 2, 'r2': 6, 'r3': 10}]),
+                    'PGV': numpy.array([{'r1': 3, 'r2': 7, 'r3': 11},
+                                        {'r1': 4, 'r2': 8, 'r3': 12}])}
 
         actual = calc.data_by_imt(dda, ['PGA', 'PGV'], 2)
         for imt in ('PGA', 'PGV'):
