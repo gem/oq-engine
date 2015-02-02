@@ -73,6 +73,7 @@ class _BaseMultiTestCase(unittest.TestCase):
             return Point(self.lons.flatten()[0], self.lats.flatten()[0],
                          self.depths.flatten()[0])
 
+
     def setUp(self):
         self.surfaces_mesh2D = [
             self.FakeSurface(numpy.array([[-1., 2., 3.], [4., 5., 6.]]),
@@ -181,6 +182,11 @@ class DistancesTestCase(_BaseMultiTestCase):
         surf = MultiSurface(self.surfaces_mesh1D)
         numpy.testing.assert_equal(surf.get_rx_distance(self.mesh1D),
                                    numpy.array([-1., 2., 2.]))
+
+    def test_ry0_distance_mesh1D(self):
+        surf = MultiSurface(self.surfaces_mesh1D)
+        self.assertRaises(NotImplementedError, surf.get_ry0_distance,
+                          self.mesh1D)
 
 
 class SurfacePropertiesTestCase(_BaseMultiTestCase):
