@@ -353,6 +353,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         min_distance = numpy.array([10, 11])
         rx_distance = numpy.array([4, 5])
         jb_distance = numpy.array([6, 7])
+        ry0_distance = numpy.array([8, 9])
         top_edge_depth = 30
         width = 15
         strike = 60.123
@@ -383,6 +384,14 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
                 self.assertEqual(point2, self.site2_location)
                 fake_surface.call_counts['get_rx_distance'] += 1
                 return rx_distance
+
+            def get_ry0_distance(fake_surface, mesh):
+                self.assertIsInstance(mesh, Mesh)
+                [point1, point2] = mesh
+                self.assertEqual(point1, self.site1_location)
+                self.assertEqual(point2, self.site2_location)
+                fake_surface.call_counts['get_ry0_distance'] += 1
+                return ry0_distance
 
             def get_joyner_boore_distance(fake_surface, mesh):
                 self.assertIsInstance(mesh, Mesh)
@@ -433,10 +442,10 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
 
     def test_all_values(self):
         self.gsim_class.REQUIRES_DISTANCES = set(
-            'rjb rx rrup repi rhypo'.split()
+            'rjb rx rrup repi rhypo ry0'.split()
         )
         self.gsim_class.REQUIRES_RUPTURE_PARAMETERS = set(
-            'mag rake strike dip ztor hypo_lon hypo_lat hypo_depth width'. \
+            'mag rake strike dip ztor hypo_lon hypo_lat hypo_depth width'.
             split()
         )
         self.gsim_class.REQUIRES_SITES_PARAMETERS = set(
@@ -464,6 +473,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.assertTrue((sctx.lats == [2, -3]).all())
         self.assertTrue((dctx.rjb == [6, 7]).all())
         self.assertTrue((dctx.rx == [4, 5]).all())
+        self.assertTrue((dctx.ry0 == [8, 9]).all())
         self.assertTrue((dctx.rrup == [10, 11]).all())
         numpy.testing.assert_almost_equal(dctx.rhypo,
                                           [162.18749272, 802.72247682])
@@ -473,7 +483,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
                          {'get_top_edge_depth': 1, 'get_rx_distance': 1,
                           'get_joyner_boore_distance': 1, 'get_dip': 1,
                           'get_min_distance': 1, 'get_width': 1,
-                          'get_strike': 1})
+                          'get_strike': 1, 'get_ry0_distance': 1})
 
     def test_some_values(self):
         self.gsim_class.REQUIRES_DISTANCES = set('rjb rx'.split())
@@ -503,6 +513,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
                          {'get_rx_distance': 1,
                           'get_joyner_boore_distance': 1,
                           'get_strike': 1})
+
 
 class ContextTestCase(unittest.TestCase):
     def test_equality(self):
