@@ -63,14 +63,19 @@ class CalculatorTestCase(unittest.TestCase):
         self.calc.pre_execute()
         return self.calc.execute()
 
-    def assertEqualFiles(self, fname1, fname2, wraplines=lambda line: line):
+    def assertEqualFiles(
+            self, fname1, fname2, make_comparable=lambda lines: lines):
         """
-        Make sure the expected and actual files have the same content
+        Make sure the expected and actual files have the same content.
+        `make_comparable` is a function processing the lines of the
+        files to make them comparable. By default it does nothing,
+        but in some tests sorting function is passed, because some
+        files can be equal only up to the ordering.
         """
         expected = os.path.join(self.testdir, fname1)
         actual = os.path.join(self.calc.oqparam.export_dir, fname2)
-        expected_content = wraplines(open(expected).readlines())
-        actual_content = wraplines(open(actual).readlines())
+        expected_content = make_comparable(open(expected).readlines())
+        actual_content = make_comparable(open(actual).readlines())
         try:
             self.assertEqual(expected_content, actual_content)
         except:

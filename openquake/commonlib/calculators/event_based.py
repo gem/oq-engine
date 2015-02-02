@@ -54,6 +54,8 @@ def compute_ruptures(sources, sitecol, monitor):
     :returns:
         a dictionary trt_model_id -> [Rupture instances]
     """
+    # NB: by construction each block is a non-empty list with
+    # sources of the same trt_model_id
     trt_model_id = sources[0].trt_model_id
     oq = monitor.oqparam
     all_ses = range(1, oq.ses_per_logic_tree_path + 1)
@@ -144,10 +146,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             key=operator.attrgetter('trt_model_id'))
 
     def post_execute(self, result):
-        for trt_id in sorted(result):
-            for sr in result[trt_id]:
-                for tag in sorted(sr.tags):
-                    print tag
+        # TODO: decide how to export the ruptures
         return {}
 
 
@@ -170,7 +169,7 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
     oq = monitor.oqparam
 
     # NB: by construction each block is a non-empty list with
-    # ruptures of the trt_model_id
+    # ruptures of the same trt_model_id
     trt_id = ses_ruptures[0].trt_model_id
     gsims = sorted(gsims_assoc[trt_id])
     imts = map(from_string, oq.imtls)
@@ -181,14 +180,14 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
                         for gsim in gsims})
     for rupture, group in itertools.groupby(
             ses_ruptures, operator.attrgetter('rupture')):
-        srs = list(group)
-        indices = srs[0].site_indices
+        sesruptures = list(group)
+        indices = sesruptures[0].site_indices
         r_sites = (sitecol if indices is None else
                    site.FilteredSiteCollection(indices, sitecol))
 
         computer = calc.gmf.GmfComputer(
             rupture, r_sites, imts, gsims, trunc_level, correl_model)
-        for sr in srs:
+        for sr in sesruptures:
             for gsim_str, gmvs in computer.compute(sr.seed):
                 gmf_by_imt = AccumDict(gmvs)
                 gmf_by_imt.tag = sr.tag
@@ -203,7 +202,7 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
     return result
 
 
-def to_haz_curves(site_ids, gmfs, imtls, investigation_time, duration):
+def to_haz_curves(sids, gmfs, imtls, investigation_time, duration):
     """
     :param sids: IDs of the given sites
     :param gmfs: a list of gmf keyed by IMT
@@ -220,7 +219,7 @@ def to_haz_curves(site_ids, gmfs, imtls, investigation_time, duration):
         curves[imt] = numpy.array([
             gmvs_to_haz_curve(data.get(sid, []),
                               imtls[imt], investigation_time, duration)
-            for sid in site_ids])
+            for sid in sids])
     return curves
 
 
@@ -234,9 +233,9 @@ class EventBasedCalculator(base.calculators['classical']):
 
     def pre_execute(self):
         """
-        Read the precompute ruptures (or compute them on the fly) and
-        prepare some empty files on the export directory to store the gmfs
-        (if any).
+        Read the precomputed ruptures (or compute them on the fly) and
+        prepare some empty files in the export directory to store the gmfs
+        (if any). If there were pre-existing files, they will be erased.
         """
         haz_out = base.get_hazard(self)
         self.sitecol = haz_out['sitecol']
