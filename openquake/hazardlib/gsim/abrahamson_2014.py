@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`AbrahamsonSilva2008`.
+Module exports :class:`AbrahamsonEtAl2014`.
 """
 from __future__ import division
 
@@ -34,6 +34,7 @@ class Abrahamson2014(GMPE):
     part of the PEER West 2 Project. The GMPE is described in a paper
     published in 2014 on Earthquake Spectra, Volume 30, Number 3.
     """
+    # TODO - Update page numbers
     #: Supported tectonic region type is active shallow crust, see paragraph
     #: 'Data Set Selection', see page 68.
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
