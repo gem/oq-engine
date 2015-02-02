@@ -202,7 +202,7 @@ _devtest_innervm_run () {
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
         ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-risklib:\$PWD/oq-hazardlib\" ;
                  cd $GEM_GIT_PACKAGE ;
-                 nosetests -v --with-doctest --with-coverage --cover-package=openquake.baselib --cover-package=openquake.risklib --cover-package=openquake.commonlib --with-xunit"
+                 nosetests -a'!slow' -v --with-doctest --with-coverage --cover-package=openquake.baselib --cover-package=openquake.risklib --cover-package=openquake.commonlib --with-xunit"
         scp "$lxc_ip:$GEM_GIT_PACKAGE/nosetests.xml" .
     else
         if [ -d $HOME/fake-data/$GEM_GIT_PACKAGE ]; then
@@ -278,8 +278,11 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}"
 
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
-        # no demos currently available
-        :
+        # run selected risk demos
+        ssh $lxc_ip "set -e ; cd /usr/share/doc/python-oq-risklib/examples/demos
+        oq-lite run AreaSourceClassicalPSHA/job.ini
+        oq-lite run ScenarioDamage/job_hazard.ini,ScenarioDamage/job_risk.ini
+        "
     fi
     trap ERR
 

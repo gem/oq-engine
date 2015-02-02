@@ -888,7 +888,7 @@ def mean_curve(values, weights=None):
     """
     if weights:
         weights = map(float, weights)
-        assert abs(sum(weights) - 1.) < 1E-15
+        assert abs(sum(weights) - 1.) < 1E-12, sum(weights) - 1.
     else:
         weights = [1. / len(values)] * len(values)
     if isinstance(values[0], (numpy.ndarray, list, tuple)):  # fast lane
@@ -917,7 +917,7 @@ def quantile_curve(curves, quantile, weights=None):
         # numpy.array(mstats.mquantiles(curves, prob=quantile, axis=0))[0]
         # more or less copied from the scipy mquantiles function, just special
         # cased for what we need (and a lot faster)
-        arr = numpy.array(curves)
+        arr = numpy.array(curves).reshape(len(curves), -1)
         p = numpy.array(quantile)
         m = 0.4 + p * 0.2
         n = len(arr)
@@ -932,7 +932,7 @@ def quantile_curve(curves, quantile, weights=None):
     weights = numpy.array(weights, dtype=numpy.float64)
 
     result_curve = []
-    np_curves = numpy.array(curves)
+    np_curves = numpy.array(curves).reshape(len(curves), -1)
     np_weights = numpy.array(weights)
     for poes in np_curves.transpose():
         sorted_poe_idxs = numpy.argsort(poes)

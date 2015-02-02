@@ -23,6 +23,7 @@ import random
 
 import numpy
 
+from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import gmf, filters
 from openquake.hazardlib.site import SiteCollection
 from openquake.baselib.general import AccumDict
@@ -34,7 +35,7 @@ MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
 # in this way even on 32 bit machines Python will not have to convert
 # the generated seed into a long integer
 
-############### utilities for the classical calculator ################
+# ############## utilities for the classical calculator ############### #
 
 SourceRuptureSites = collections.namedtuple(
     'SourceRuptureSites',
@@ -160,12 +161,17 @@ def compute_hazard_maps(curves, imls, poes):
         Value(s) on which to interpolate a hazard map from the input
         ``curves``. Can be an array-like or scalar value (for a single PoE).
     """
+    curves = numpy.array(curves)
     poes = numpy.array(poes)
 
     if len(poes.shape) == 0:
-        # ``poes`` was passed in as a scalar;
+        # `poes` was passed in as a scalar;
         # convert it to 1D array of 1 element
         poes = poes.reshape(1)
+
+    if len(curves.shape) == 1:
+        # `curves` was passed as 1 dimensional array, there is a single site
+        curves = curves.reshape((1,) + curves.shape)  # 1 x L
 
     result = []
     imls = numpy.log(numpy.array(imls[::-1]))
@@ -195,7 +201,28 @@ def compute_hazard_maps(curves, imls, poes):
     return numpy.array(result).transpose()
 
 
-###################### utilities for classical calculators #################
+def make_uhs(maps):
+    """
+    Make Uniform Hazard Spectra curves for each location.
+
+    It is assumed that the `lons` and `lats` for each of the ``maps`` are
+    uniform.
+
+    :param maps:
+        A dictionary IMT -> array with shape P x N, where N is the number of
+        sites and P is the number of poes in the hazard maps
+    :returns:
+        an array N x I x P where I the number of intensity measure types of
+        kind SA (with PGA = SA(0)), containing the hazard maps
+    """
+    sorted_imts = map(str, sorted(
+        from_string(imt) for imt in maps
+        if imt.startswith('SA') or imt == 'PGA'))
+    hmaps = numpy.array([maps[imt] for imt in sorted_imts])  # I * P * N
+    return hmaps.transpose(2, 0, 1)  # N * I * P
+
+
+# ################## utilities for classical calculators ################ #
 
 def agg_prob(acc, prob):
     """

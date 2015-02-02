@@ -177,7 +177,8 @@ class OqParam(valid.ParamSet):
             exposure=self.inputs.get('exposure', 0))
         # NB: below we check that all the flags
         # are mutually exclusive
-        return sum(bool(v) for v in flags.values()) == 1
+        return sum(bool(v) for v in flags.values()) == 1 or self.inputs.get(
+            'site_model')
 
     def is_valid_poes(self):
         """
@@ -276,7 +277,10 @@ class OqParam(valid.ParamSet):
         elif not os.path.exists(self.export_dir):
             # check that we can write on the parent directory
             pdir = os.path.dirname(self.export_dir)
-            return os.path.exists(pdir) and os.access(pdir, os.W_OK)
+            can_write = os.path.exists(pdir) and os.access(pdir, os.W_OK)
+            if can_write:
+                os.mkdir(self.export_dir)
+            return can_write
         return os.path.isdir(self.export_dir) and os.access(
             self.export_dir, os.W_OK)
 

@@ -219,9 +219,14 @@ class RlzsAssoc(collections.Mapping):
     (3, 'CampbellBozorgnia2008') ['#7-SM2_a3b1-CB2008']
     """
     def __init__(self, rlzs_assoc=None):
-        self.realizations = []
-        self.gsim_by_trt = []  # [trt -> gsim]
+        self.gsim_by_trt = {}  # rlz -> {trt: gsim}
         self.rlzs_assoc = rlzs_assoc or collections.defaultdict(list)
+        self.rlzs_by_smodel = []
+
+    @property
+    def realizations(self):
+        """Flat list with all the realizations"""
+        return sum(self.rlzs_by_smodel, [])
 
     def _add_realizations(self, idx, lt_model, realizations):
         # create the realizations for the given lt source model
@@ -229,17 +234,19 @@ class RlzsAssoc(collections.Mapping):
         if not trt_models:
             return idx
         gsims_by_trt = lt_model.gsim_lt.values
+        rlzs = []
         for gsim_by_trt, weight, gsim_path, _ in realizations:
             weight = float(lt_model.weight) * float(weight)
             rlz = LtRealization(idx, lt_model.path, gsim_path, weight)
-            self.realizations.append(rlz)
-            self.gsim_by_trt.append(gsim_by_trt)
+            rlzs.append(rlz)
+            self.gsim_by_trt[rlz] = gsim_by_trt
             for trt_model in trt_models:
                 trt = trt_model.trt
                 gsim = gsim_by_trt[trt]
                 self.rlzs_assoc[trt_model.id, gsim].append(rlz)
                 trt_model.gsims = gsims_by_trt[trt]
             idx += 1
+        self.rlzs_by_smodel.append(rlzs)
         return idx
 
     def get_gsims_by_trt_id(self):
@@ -333,9 +340,9 @@ class RlzsAssoc(collections.Mapping):
 class CompositeSourceModel(collections.Sequence):
     """
     :param source_model_lt:
-        a :class:`openquake.commonlib.readinput.SourceModelLogicTree` instance
+        a :class:`openquake.commonlib.logictree.SourceModelLogicTree` instance
     :param source_models:
-        a list of :class:`openquake.commonlib.readinput.SourceModel` tuples
+        a list of :class:`openquake.commonlib.source.SourceModel` tuples
     """
     def __init__(self, source_model_lt, source_models):
         self.source_model_lt = source_model_lt
@@ -387,18 +394,6 @@ class CompositeSourceModel(collections.Sequence):
             self[sm.ordinal] = SourceModel(
                 sm.name, sm.weight, sm.path, tmodels, gsim_lt, sm.ordinal)
 
-    def get_source_model(self, path):
-        """
-        Extract a specific source model, given its logic tree path.
-
-        :param path: the source model logic tree path as a tuple of string
-        """
-        for sm in self:
-            if sm.path == path:
-                return sm
-        raise KeyError(
-            'There is no source model with sm_lt_path=%s' % str(path))
-
     def get_rlzs_assoc(self):
         """
         Return a RlzsAssoc with fields realizations, gsim_by_trt,
@@ -408,29 +403,16 @@ class CompositeSourceModel(collections.Sequence):
         random_seed = self.source_model_lt.seed
         num_samples = self.source_model_lt.num_samples
         idx = 0
-        counter = collections.Counter()
-        for sm_name, weight, sm_lt_path, _ in self.source_model_lt:
-            lt_model = self.get_source_model(sm_lt_path)
+        for smodel in self.source_models:
             if num_samples:  # sampling, pick just one gsim realization
                 rnd = random.Random(random_seed + idx)
-                rlzs = [logictree.sample_one(lt_model.gsim_lt, rnd)]
-                counter[sm_lt_path] += 1
+                rlzs = [logictree.sample_one(smodel.gsim_lt, rnd)]
             else:
-                rlzs = list(lt_model.gsim_lt)  # full enumeration
+                rlzs = list(smodel.gsim_lt)  # full enumeration
             logging.info('Creating %d GMPE realization(s) for model %s, %s',
-                         len(rlzs), lt_model.name, lt_model.path)
-            idx = assoc._add_realizations(idx, lt_model, rlzs)
+                         len(rlzs), smodel.name, smodel.path)
+            idx = assoc._add_realizations(idx, smodel, rlzs)
 
-        if num_samples:
-            # warn the user in case of oversampling
-            for lt_path in sorted(counter):
-                if counter[lt_path] > 1:
-                    rlzs = [rlz for rlz in assoc.realizations
-                            if rlz.sm_lt_path == lt_path]
-                    logging.warn(
-                        'The logic tree path %s was sampled %d times: '
-                        'the realizations %s will produce identical results',
-                        str(lt_path), len(rlzs), [rlz.ordinal for rlz in rlzs])
         return assoc
 
     def __getitem__(self, i):

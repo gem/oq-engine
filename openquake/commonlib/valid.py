@@ -512,8 +512,8 @@ def intensity_measure_types_and_levels(value):
     {'PGA': [0.1, 0.2]}
     """
     dic = dictionary(value)
-    for imt, imls in dic.iteritems():
-        check_levels(imls, imt)  # ValueError if the levels are invalid
+    for imt_str, imls in dic.iteritems():
+        check_levels(imls, imt_str)  # ValueError if the levels are invalid
     return dic
 
 
@@ -749,9 +749,9 @@ class ParamSet(object):
                 continue
             try:
                 value = convert(val)
-            except:
-                raise ValueError('Could not convert to %s: %s=%s'
-                                 % (convert.__name__, name, val))
+            except Exception as exc:
+                raise ValueError('%s: could not convert to %s: %s=%s'
+                                 % (exc, convert.__name__, name, val))
             setattr(self, name, value)
 
     def validate(self):
