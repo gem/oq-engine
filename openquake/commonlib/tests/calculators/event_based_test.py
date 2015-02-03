@@ -32,6 +32,8 @@ def joint_prob_of_occurrence(gmvs_site_1, gmvs_site_2, gmv, time_span,
         `ses_per_logic_tree_path` parameter from the calculation which produced
         these ground motion values. In other words, the total number of
         stochastic event sets.
+    :param delta_gmv:
+        the interval to consider
     """
     assert len(gmvs_site_1) == len(gmvs_site_2)
 

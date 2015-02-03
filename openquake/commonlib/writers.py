@@ -170,6 +170,9 @@ def save_csv(dest, header_rows, sep=',', fmt='%12.8E', mode='wb'):
     """
     :param dest: destination filename
     :param header_rows: header + rows to save
+    :param sep: separator to use (default comma)
+    :param fmt: formatting string (default '%12.8E')
+    :param mode: file open mode (default 'wb')
     """
     with open(dest, mode) as f:
         for row in header_rows:
