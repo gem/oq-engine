@@ -27,7 +27,7 @@ class GriddedSurface(BaseSurface):
         :returns:
             A numpy array of distances in km.
         """
-        return (self.mesh_surface.get_min_distance(self))
+        return (self.mesh_surface.get_min_distance(mesh))
 
     def get_closest_points(self, mesh):
         """
@@ -153,5 +153,12 @@ class GriddedSurface(BaseSurface):
         :return:
             instance of :class:`openquake.hazardlib.geo.point.Point`
             representing surface middle point.
+        """
+        raise NotImplementedError
+
+    def get_ry0_distance(self, mesh):
+        """
+        :param mesh:
+            :class:`~openquake.hazardlib.geo.mesh.Mesh` of points 
         """
         raise NotImplementedError
