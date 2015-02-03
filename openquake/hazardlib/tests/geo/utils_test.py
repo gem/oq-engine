@@ -371,8 +371,8 @@ class ConvexToPointDistanceTestCase(SpeedupsTestCase):
 
 class PlaneFit(unittest.TestCase):
     """
-    In order to test the method we use to fit a plane to a cloud of points
-    we generate points from a given plane equation.
+    In order to test the method we fit a plane to a cloud of points
+    generated from a given plane equation.
 
     ax + by + cz + d = 0
     """
