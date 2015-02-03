@@ -159,6 +159,9 @@ def compute_hazard_maps(curves, imls, poes):
     :param poes:
         Value(s) on which to interpolate a hazard map from the input
         ``curves``. Can be an array-like or scalar value (for a single PoE).
+    :returns:
+        An array of shape P x N, where N is the number of curves and P the
+        number of poes.
     """
     curves = numpy.array(curves)
     poes = numpy.array(poes)
@@ -197,7 +200,7 @@ def compute_hazard_maps(curves, imls, poes):
                 hmap_val.append(val)
 
         result.append(hmap_val)
-    return numpy.array(result).transpose()
+    return numpy.array(result).T
 
 
 ###########################  GMF->curves ######################################
