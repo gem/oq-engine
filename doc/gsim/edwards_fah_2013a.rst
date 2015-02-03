@@ -5,26 +5,26 @@ Edwards and Fah 2013 Alpine
 
 .. module:: openquake.hazardlib.gsim.edwards_fah_2013a
 
-.. autoclass:: EdwardsFah2013Alpine10MPa
+.. autoclass:: EdwardsFah2013Alpine10Bars
     :members:
 
-.. autoclass:: EdwardsFah2013Alpine20MPa
+.. autoclass:: EdwardsFah2013Alpine20Bars
     :members:
 
-.. autoclass:: EdwardsFah2013Alpine30MPa
+.. autoclass:: EdwardsFah2013Alpine30Bars
     :members:
 
-.. autoclass:: EdwardsFah2013Alpine50MPa
+.. autoclass:: EdwardsFah2013Alpine50Bars
     :members:
 
-.. autoclass:: EdwardsFah2013Alpine60MPa
+.. autoclass:: EdwardsFah2013Alpine60Bars
     :members:
 
-.. autoclass:: EdwardsFah2013Alpine75MPa
+.. autoclass:: EdwardsFah2013Alpine75Bars
     :members:
 
-.. autoclass:: EdwardsFah2013Alpine90MPa
+.. autoclass:: EdwardsFah2013Alpine90Bars
     :members:
 
-.. autoclass:: EdwardsFah2013Alpine120MPa
+.. autoclass:: EdwardsFah2013Alpine120Bars
     :members:

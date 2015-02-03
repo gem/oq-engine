@@ -173,6 +173,10 @@ class GroundShakingIntensityModel(object):
     #: ``rx``
     #:     Perpendicular distance to rupture top edge projection.
     #:     See :meth:`~openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_rx_distance`.
+    #: ``ry0``
+    #:     Horizontal distance off the end of the rupture measured parallel to
+    #      strike. See:
+    #:     See :meth:`~openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_ry0_distance`.
     #:
     #: All the distances are available from the :class:`DistancesContext`
     #: object attributes with same names. Values are in kilometers.
@@ -439,6 +443,8 @@ class GroundShakingIntensityModel(object):
                 dist = rupture.surface.get_min_distance(site_collection.mesh)
             elif param == 'rx':
                 dist = rupture.surface.get_rx_distance(site_collection.mesh)
+            elif param == 'ry0':
+                dist = rupture.surface.get_ry0_distance(site_collection.mesh)
             elif param == 'rjb':
                 dist = rupture.surface.get_joyner_boore_distance(
                     site_collection.mesh
@@ -677,7 +683,7 @@ class DistancesContext(BaseContext):
     does it need. Only those required values are calculated and made available
     in a result context object.
     """
-    __slots__ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi')
+    __slots__ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi', 'ry0')
 
 
 class RuptureContext(BaseContext):

@@ -23,6 +23,8 @@ Module exports
 """
 from __future__ import division
 
+import numpy as np
+
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
@@ -41,11 +43,13 @@ class ZhaoEtAl2006AscSWISS05(ZhaoEtAl2006Asc):
     """
     This class extends :class:ZhaoEtAl2006Asc,
     adjusted to be used for the Swiss Hazard Model [2014].
+    This GMPE is valid for a fixed value of vs30=700m/s
 
     #. kappa value
        K-adjustments corresponding to model 01 - as prepared by Ben Edwards
        K-value for PGA were not provided but infered from SA[0.01s]
-       the model considers a fixed value of vs30=1100m/s
+       the model applies to a fixed value of vs30=700m/s to match the 
+       reference vs30=1100m/s
 
     #. small-magnitude correction
 
@@ -74,6 +78,8 @@ class ZhaoEtAl2006AscSWISS05(ZhaoEtAl2006Asc):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
+
+        sites.vs30 = 700 * np.ones(len(sites.vs30))
 
         mean, stddevs = super(ZhaoEtAl2006AscSWISS05, self).\
             get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
