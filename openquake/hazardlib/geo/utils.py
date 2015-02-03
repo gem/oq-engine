@@ -427,14 +427,14 @@ def cross_idl(lon1, lon2):
 
 def plane_fit(points):
     """
-    usage: p, n = planeFit(points)
-
-    Fit an n-dimensional plane to the points.
-    Return a point on the plane and the normal.
+    This fits an n-dimensional plane to a set of points. See
+    http://stackoverflow.com/questions/12299540/plane-fitting-to-4-or-more-xyz-points
 
     :parameter points:
         An instance of :class:~numpy.ndarray. The number of columns must be
         equal to three.
+    :return:
+         A point on the plane and the normal to the plane.
     """
     points = numpy.transpose(points)
     points = numpy.reshape(points, (numpy.shape(points)[0], -1))
