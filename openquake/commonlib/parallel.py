@@ -32,12 +32,20 @@ from concurrent.futures import as_completed, ProcessPoolExecutor
 
 import psutil
 
-if psutil.__version__ >= '1.2.1':  # Ubuntu 14.04
+
+if psutil.__version__ > '2.0.0':  # Ubuntu 14.10
     def virtual_memory():
         return psutil.virtual_memory()
 
     def memory_info(proc):
         return proc.memory_info()
+
+elif psutil.__version__ >= '1.2.1':  # Ubuntu 14.04
+    def virtual_memory():
+        return psutil.virtual_memory()
+
+    def memory_info(proc):
+        return proc.get_memory_info()
 
 else:  # Ubuntu 12.04
     def virtual_memory():
