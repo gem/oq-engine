@@ -164,6 +164,8 @@ def split_source(src, area_source_discretization):
         area source discretization
     """
     if isinstance(src, source.AreaSource):
+        # area_source_discretization cannot be None if there are area sources
+        assert area_source_discretization, area_source_discretization
         for s in area_to_point_sources(src, area_source_discretization):
             yield s
     elif isinstance(
@@ -218,9 +220,10 @@ class RuptureConverter(object):
     """
     fname = None  # should be set externally
 
-    def __init__(self, rupture_mesh_spacing, complex_fault_mesh_spacing):
+    def __init__(self, rupture_mesh_spacing, complex_fault_mesh_spacing=None):
         self.rupture_mesh_spacing = rupture_mesh_spacing
-        self.complex_fault_mesh_spacing = complex_fault_mesh_spacing
+        self.complex_fault_mesh_spacing = (
+            complex_fault_mesh_spacing or rupture_mesh_spacing)
 
     def convert_node(self, node):
         """
@@ -389,11 +392,12 @@ class SourceConverter(RuptureConverter):
     Convert sources from valid nodes into Hazardlib objects.
     """
     def __init__(self, investigation_time, rupture_mesh_spacing,
-                 complex_fault_mesh_spacing, width_of_mfd_bin,
-                 area_source_discretization):
+                 complex_fault_mesh_spacing=None, width_of_mfd_bin=1.0,
+                 area_source_discretization=None):
         self.area_source_discretization = area_source_discretization
         self.rupture_mesh_spacing = rupture_mesh_spacing
-        self.complex_fault_mesh_spacing = complex_fault_mesh_spacing
+        self.complex_fault_mesh_spacing = (
+            complex_fault_mesh_spacing or rupture_mesh_spacing)
         self.width_of_mfd_bin = width_of_mfd_bin
         self.tom = PoissonTOM(investigation_time)
 
