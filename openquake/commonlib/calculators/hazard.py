@@ -109,18 +109,15 @@ class ClassicalCalculator(base.HazardCalculator):
 
         # export curves
         saved = AccumDict()
-        exports = self.oqparam.exports.split(',')
+        exports = oq.exports.split(',')
         for rlz in rlzs:
             smlt_path = '_'.join(rlz.sm_lt_path)
             gsimlt_path = '_'.join(rlz.gsim_lt_path)
             for fmt in exports:
-                key = ('hazard_curves', fmt)
                 fname = 'hazard_curve-smltp_%s-gsimltp_%s-ltr_%d.%s' % (
                     smlt_path, gsimlt_path, rlz.ordinal, fmt)
-                saved += export(
-                    key, oq.export_dir, fname,
-                    self.sitecol, curves_by_rlz[rlz],
-                    oq.imtls, oq.investigation_time)
+                saved += self.export_curves(curves_by_rlz[rlz], fmt, fname)
+
         if len(rlzs) == 1:  # cannot compute statistics
             return saved
 
@@ -137,17 +134,11 @@ class ClassicalCalculator(base.HazardCalculator):
             for q in getattr(oq, 'quantile_hazard_curves', [])
         }
         for fmt in exports:
-            fname = 'hazard_curve-mean.%s' % fmt
-            saved += export(
-                ('hazard_curves', fmt),
-                oq.export_dir, fname, self.sitecol, mean_curves,
-                oq.imtls, oq.investigation_time)
+            saved += self.export_curves(
+                mean_curves, fmt, 'hazard_curve-mean.%s' % fmt)
             for q in quantile:
-                fname = 'quantile_curve-%s.%s' % (q, fmt)
-                saved += export(
-                    ('hazard_curves', fmt),
-                    oq.export_dir, fname, self.sitecol, quantile[q],
-                    oq.imtls, oq.investigation_time)
+                saved += self.export_curves(
+                    quantile[q], fmt, 'quantile_curve-%s.%s' % (q, fmt))
         return saved
 
     def hazard_maps(self, curves_by_imt):
@@ -160,14 +151,31 @@ class ClassicalCalculator(base.HazardCalculator):
                     curves, self.oqparam.imtls[imt], self.oqparam.poes)
                 for imt, curves in curves_by_imt.iteritems()}
 
-
-@base.calculators.add('event_based')
-class EventBasedCalculator(base.HazardCalculator):
-    """
-    Event based PSHA calculator
-    """
-    def post_execute(self, result):
-        return {}
+    def export_curves(self, curves, fmt, fname):
+        """
+        :param curves: an array of N curves to export
+        :param fmt: the export format ('xml', 'csv', ...)
+        :param fname: the name of the exported file
+        """
+        saved = AccumDict()
+        oq = self.oqparam
+        export_dir = oq.export_dir
+        saved += export(
+            ('hazard_curves', fmt), export_dir, fname, self.sitecol, curves,
+            oq.imtls, oq.investigation_time)
+        if getattr(oq, 'hazard_maps', None):
+            hmaps = self.hazard_maps(curves)
+            saved += export(
+                ('hazard_curves', fmt), export_dir,
+                fname.replace('curve', 'map'), self.sitecol, hmaps,
+                oq.imtls, oq.investigation_time)
+            if getattr(oq, 'uniform_hazard_spectra', None):
+                uhs_curves = calc.make_uhs(hmaps)
+                saved += export(
+                    ('uhs', fmt), oq.export_dir,
+                    fname.replace('curve', 'uhs'),
+                    self.sitecol, uhs_curves)
+        return saved
 
 
 @base.calculators.add('disaggregation')
@@ -192,11 +200,13 @@ def calc_gmfs(tag_seed_pairs, computer, monitor):
     :returns:
         a dictionary tag -> {imt: gmf}
     """
+    result = AccumDict({(0, str(gsim)): AccumDict()
+                        for gsim in computer.gsims})
     with monitor:
-        res = AccumDict()  # tag -> {imt: gmvs}
         for tag, seed in tag_seed_pairs:
-            res += {tag: dict(computer.compute(seed))}
-    return res
+            for gsim_str, gmvs in computer.compute(seed):
+                result[0, gsim_str][tag] = gmvs
+    return result
 
 
 @base.calculators.add('scenario')
@@ -212,33 +222,34 @@ class ScenarioCalculator(base.HazardCalculator):
         """
         super(ScenarioCalculator, self).pre_execute()
         self.imts = readinput.get_imts(self.oqparam)
-        gsim = readinput.get_gsim(self.oqparam)
         trunc_level = getattr(self.oqparam, 'truncation_level', None)
         correl_model = readinput.get_correl_model(self.oqparam)
         n_gmfs = self.oqparam.number_of_ground_motion_fields
         rupture = readinput.get_rupture(self.oqparam)
 
         self.tags = ['scenario-%010d' % i for i in xrange(n_gmfs)]
-        self.computer = GmfComputer(rupture, self.sitecol, self.imts, gsim,
-                                    trunc_level, correl_model)
+        self.computer = GmfComputer(
+            rupture, self.sitecol, self.imts, self.gsims,
+            trunc_level, correl_model)
         rnd = random.Random(getattr(self.oqparam, 'random_seed', 42))
         self.tag_seed_pairs = [(tag, rnd.randint(0, calc.MAX_INT))
                                for tag in self.tags]
 
     def execute(self):
         """
-        Compute the GMFs in parallel and return a dictionary imt -> gmfs
+        Compute the GMFs in parallel and return a dictionary key -> imt -> gmfs
         """
         logging.info('Computing the GMFs')
-        result = parallel.apply_reduce(
-            self.core_func.__func__,
-            (self.tag_seed_pairs, self.computer, self.monitor('calc_gmfs')),
-            concurrent_tasks=self.oqparam.concurrent_tasks)
-        gmfs_by_imt = {  # build N x R matrices
-            imt: numpy.array(
-                [result[tag][imt] for tag in self.tags]).T
-            for imt in map(str, self.imts)}
-        return gmfs_by_imt
+        args = (self.tag_seed_pairs, self.computer, self.monitor('calc_gmfs'))
+        data = {}
+        for (trt_id, gsim), dic in parallel.apply_reduce(
+                self.core_func.__func__, args,
+                concurrent_tasks=self.oqparam.concurrent_tasks).iteritems():
+            data[trt_id, gsim] = {  # build N x R matrices
+                imt: numpy.array(
+                    [dic[tag][imt] for tag in self.tags]).T
+                for imt in map(str, self.imts)}
+        return data
 
     def post_execute(self, result):
         """
@@ -246,7 +257,10 @@ class ScenarioCalculator(base.HazardCalculator):
         :returns: a dictionary {('gmf', 'xml'): <gmf.xml filename>}
         """
         logging.info('Exporting the result')
-        out = export(
-            ('gmf', 'xml'), self.oqparam.export_dir,
-            self.sitecol, self.tags, result)
+        out = AccumDict()
+        for (trt_id, gsim), gmfs_by_imt in result.iteritems():
+            fname = '%s_gmf.xml' % gsim
+            out += export(
+                ('gmf', 'xml'), self.oqparam.export_dir, fname,
+                self.sitecol, self.tags, gmfs_by_imt)
         return out

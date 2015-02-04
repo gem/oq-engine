@@ -70,10 +70,11 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         num_sites = len(sitecol)
         logging.info('Associated %d assets to %d sites', num_assets, num_sites)
 
-        haz_out = self.get_hazard()
+        haz_out = base.get_hazard(self)
         logging.info('Preparing the risk input')
         hcurves_by_imt = calc.data_by_imt(
             haz_out['result'], self.oqparam.hazard_imtls, num_sites)
+        # this is a dict imt -> [key -> val]
         self.rlzs_assoc = haz_out['rlzs_assoc']
         self.riskinputs = self.build_riskinputs(hcurves_by_imt)
 

@@ -23,7 +23,7 @@ import numpy
 
 from openquake.risklib import scientific
 from openquake.baselib.general import AccumDict
-from openquake.commonlib.calculators import base
+from openquake.commonlib.calculators import base, calc
 from openquake.commonlib.export import export
 from openquake.commonlib.risk_writers import (
     DmgState, DmgDistPerTaxonomy, DmgDistPerAsset, DmgDistTotal,
@@ -49,7 +49,8 @@ def scenario_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
                  sum(ri.weight for ri in riskinputs))
     with monitor:
         result = AccumDict()  # (key_type, key) -> result
-        for [(assets, fractions)] in riskmodel.gen_outputs(riskinputs):
+        for [(assets, fractions)] in riskmodel.gen_outputs(
+                riskinputs, rlzs_assoc):
             for asset, fraction in zip(assets, fractions):
                 damages = fraction * asset.number
                 result += {('asset', asset): scientific.mean_std(damages)}
@@ -72,9 +73,12 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         super(ScenarioDamageCalculator, self).pre_execute()
 
         logging.info('Computing the GMFs')
-        gmfs_by_imt = self.get_hazard()['result']
+        haz_out = base.get_hazard(self)
+        gmfs_by_imt = calc.data_by_imt(
+            haz_out['result'], self.oqparam.imtls, len(self.sitecol))
 
         logging.info('Preparing the risk input')
+        self.rlzs_assoc = haz_out['rlzs_assoc']
         self.riskinputs = self.build_riskinputs(gmfs_by_imt)
 
     def post_execute(self, result):

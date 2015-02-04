@@ -28,7 +28,7 @@ from openquake.commonlib import hazard_writers
 from openquake.hazardlib.imt import from_string
 
 
-##################### export Ground Motion fields #############################
+# #################### export Ground Motion fields ########################## #
 
 class GmfSet(object):
     """
@@ -133,15 +133,16 @@ class GmfCollection(object):
 
 
 @export.add(('gmf', 'xml'))
-def export_gmf_xml(key, export_dir, sitecol, rupture_tags, gmfs):
+def export_gmf_xml(key, export_dir, fname, sitecol, rupture_tags, gmfs):
     """
     :param key: output_type and export_type
     :param export_dir: the directory where to export
+    :param fname: name of the exported file
     :param sitecol: site collection
     :rupture_tags: a list of rupture tags
     :gmfs: a dictionary of ground motion fields keyed by IMT
     """
-    dest = os.path.join(export_dir, '%s.%s' % key)
+    dest = os.path.join(export_dir, fname)
     writer = hazard_writers.EventBasedGMFXMLWriter(
         dest, sm_lt_path='', gsim_lt_path='')
     with floatformat('%12.8E'):
@@ -150,15 +151,16 @@ def export_gmf_xml(key, export_dir, sitecol, rupture_tags, gmfs):
 
 
 @export.add(('gmf', 'csv'))
-def export_gmf_csv(key, export_dir, sitecol, rupture_tags, gmfs):
+def export_gmf_csv(key, export_dir, fname, sitecol, rupture_tags, gmfs):
     """
     :param key: output_type and export_type
     :param export_dir: the directory where to export
+    :param fname: name of the exported file
     :param sitecol: site collection
     :rupture_tags: a list of rupture tags
     :gmfs: a dictionary of ground motion fields keyed by IMT
     """
-    dest = os.path.join(export_dir, '%s.%s' % key)
+    dest = os.path.join(export_dir, fname)
     with floatformat('%12.8E'), open(dest, 'w') as f:
         for imt, gmf in gmfs.iteritems():
             for site, gmvs in zip(sitecol, gmf):
@@ -166,7 +168,7 @@ def export_gmf_csv(key, export_dir, sitecol, rupture_tags, gmfs):
                 f.write(scientificformat(row) + '\n')
     return {key: dest}
 
-######################## export hazard curves ##############################
+# ####################### export hazard curves ############################ #
 
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
@@ -251,4 +253,24 @@ def export_stats_csv(key, export_dir, fname, sitecol, data_by_imt):
             row.append(scientificformat(col))
         rows.append(row)
     save_csv(dest, numpy.array(rows).T)
+    return {fname: dest}
+
+
+@export.add(('uhs', 'csv'))
+def export_uhs_csv(key, export_dir, fname, sitecol, hmaps):
+    """
+    Export the scalar outputs.
+
+    :param key: output_type and export_type
+    :param export_dir: the directory where to export
+    :param fname: file name
+    :param sitecol: site collection
+    :param hmaps:
+        an array N x I x P where N is the number of sites,
+        I the number of IMTs of SA type, and P the number of poes
+    """
+    dest = os.path.join(export_dir, fname)
+    rows = ([[lon, lat]] + list(row)
+            for lon, lat, row in zip(sitecol.lons, sitecol.lats, hmaps))
+    save_csv(dest, rows)
     return {fname: dest}
