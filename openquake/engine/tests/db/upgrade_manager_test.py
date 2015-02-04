@@ -145,3 +145,4 @@ Even dangerous scripts are fine if they affect empty tables or data you are not 
         # in case of errors upgrade_db has already performed a rollback
         conn.cursor().execute('DROP SCHEMA test CASCADE')
         conn.commit()
+        conn.autocommit = True
