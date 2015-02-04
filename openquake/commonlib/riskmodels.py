@@ -111,6 +111,8 @@ def filter_vset(elem):
     return elem.tag.endswith('discreteVulnerabilitySet')
 
 
+# this works only for discreteVulnerabilitySet, since there are no
+# continuousVulnerabilitySet
 def get_vulnerability_functions(fname):
     """
     :param fname:
@@ -221,6 +223,12 @@ def get_fragility_functions(fname, continuous_fragility_discretization,
             else:
                 gen_imls = imls
         else:  # continuous:
+            if min_iml is None:
+                raise InvalidFile(
+                    'Missing attribute minIML, line %d' % ffs.IML.lineno)
+            elif max_iml is None:
+                raise InvalidFile(
+                    'Missing attribute maxIML, line %d' % ffs.IML.lineno)
             gen_imls = numpy.linspace(min_iml, max_iml,
                                       continuous_fragility_discretization)
         fragility_functions[taxonomy] = scientific.FragilityFunctionList(
