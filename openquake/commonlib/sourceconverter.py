@@ -165,7 +165,8 @@ def split_source(src, area_source_discretization):
     """
     if isinstance(src, source.AreaSource):
         # area_source_discretization cannot be None if there are area sources
-        assert area_source_discretization, area_source_discretization
+        assert area_source_discretization, (
+            "Please set area_source_discretization in the job.ini file")
         for s in area_to_point_sources(src, area_source_discretization):
             yield s
     elif isinstance(
