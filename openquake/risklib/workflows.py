@@ -838,6 +838,14 @@ class FakeRlzsAssoc(collections.Mapping):
         """
         :param dicts: a list of dicts with key (trt_model_id, gsim)
         :returns: a dictionary of lists keyed by realization
+
+        For instance
+
+        >>> assoc = FakeRlzsAssoc(num_rlzs=2)
+        >>> assoc.collect_by_rlz([
+        ... {(0, 'ChiouYoungs2008'): numpy.array([0.06, 0.02, 0.09]),
+        ...  (0, 'AkkarBommer2010'): numpy.array([0.05, 0.03, 0.04])}])
+        {0: [array([ 0.05,  0.03,  0.04])], 1: [array([ 0.06,  0.02,  0.09])]}
         """
         keys = sorted(dicts[0])
         values_by_rlz = {i: [] for i in range(len(keys))}
