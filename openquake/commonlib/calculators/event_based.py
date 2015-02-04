@@ -242,8 +242,6 @@ class EventBasedCalculator(base.calculators['classical']):
         self.rlzs_assoc = haz_out['rlzs_assoc']
         self.sesruptures = sorted(sum(haz_out['result'].itervalues(), []),
                                   key=operator.attrgetter('tag'))
-
-        # touch output files
         self.saved = AccumDict()
         if self.oqparam.ground_motion_fields:
             for trt_id, gsim in self.rlzs_assoc:
