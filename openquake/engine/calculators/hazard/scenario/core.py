@@ -165,7 +165,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
             models.OqJob.objects.get(pk=self.job.id))
         gsim = valid.gsim(oqparam.gsim)
         self.computer = GmfComputer(
-            self.rupture, self.site_collection, self.imts, gsim,
+            self.rupture, self.site_collection, self.imts, [gsim],
             trunc_level, correlation_model)
 
     @EnginePerformanceMonitor.monitor
@@ -186,7 +186,8 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         gmf_id = self.gmf.id
         inserter = writer.CacheInserter(models.GmfData, max_cache_size=1000)
         for imt in self.imts:
-            gmfs = numpy.array([self.acc[tag][str(imt)]
+            # self.acc[tag].values() is a one-dimensional list (1 GSIM)
+            gmfs = numpy.array([self.acc[tag].values()[0][str(imt)]
                                 for tag in self.tags]).transpose()
             for site_id, gmvs in zip(self.site_collection.sids, gmfs):
                 inserter.add(
