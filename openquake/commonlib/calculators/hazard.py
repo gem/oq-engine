@@ -178,15 +178,6 @@ class ClassicalCalculator(base.HazardCalculator):
         return saved
 
 
-@base.calculators.add('event_based')
-class EventBasedCalculator(base.HazardCalculator):
-    """
-    Event based PSHA calculator
-    """
-    def post_execute(self, result):
-        return {}
-
-
 @base.calculators.add('disaggregation')
 class DisaggregationCalculator(base.HazardCalculator):
     """
@@ -209,11 +200,13 @@ def calc_gmfs(tag_seed_pairs, computer, monitor):
     :returns:
         a dictionary tag -> {imt: gmf}
     """
+    result = AccumDict({(0, str(gsim)): AccumDict()
+                        for gsim in computer.gsims})
     with monitor:
-        res = AccumDict()  # tag -> {imt: gmvs}
         for tag, seed in tag_seed_pairs:
-            res += {tag: dict(computer.compute(seed))}
-    return res
+            for gsim_str, gmvs in computer.compute(seed):
+                result[0, gsim_str][tag] = gmvs
+    return result
 
 
 @base.calculators.add('scenario')
@@ -229,33 +222,34 @@ class ScenarioCalculator(base.HazardCalculator):
         """
         super(ScenarioCalculator, self).pre_execute()
         self.imts = readinput.get_imts(self.oqparam)
-        gsim = readinput.get_gsim(self.oqparam)
         trunc_level = getattr(self.oqparam, 'truncation_level', None)
         correl_model = readinput.get_correl_model(self.oqparam)
         n_gmfs = self.oqparam.number_of_ground_motion_fields
         rupture = readinput.get_rupture(self.oqparam)
 
         self.tags = ['scenario-%010d' % i for i in xrange(n_gmfs)]
-        self.computer = GmfComputer(rupture, self.sitecol, self.imts, gsim,
-                                    trunc_level, correl_model)
+        self.computer = GmfComputer(
+            rupture, self.sitecol, self.imts, self.gsims,
+            trunc_level, correl_model)
         rnd = random.Random(getattr(self.oqparam, 'random_seed', 42))
         self.tag_seed_pairs = [(tag, rnd.randint(0, calc.MAX_INT))
                                for tag in self.tags]
 
     def execute(self):
         """
-        Compute the GMFs in parallel and return a dictionary imt -> gmfs
+        Compute the GMFs in parallel and return a dictionary key -> imt -> gmfs
         """
         logging.info('Computing the GMFs')
-        result = parallel.apply_reduce(
-            self.core_func.__func__,
-            (self.tag_seed_pairs, self.computer, self.monitor('calc_gmfs')),
-            concurrent_tasks=self.oqparam.concurrent_tasks)
-        gmfs_by_imt = {  # build N x R matrices
-            imt: numpy.array(
-                [result[tag][imt] for tag in self.tags]).T
-            for imt in map(str, self.imts)}
-        return gmfs_by_imt
+        args = (self.tag_seed_pairs, self.computer, self.monitor('calc_gmfs'))
+        data = {}
+        for (trt_id, gsim), dic in parallel.apply_reduce(
+                self.core_func.__func__, args,
+                concurrent_tasks=self.oqparam.concurrent_tasks).iteritems():
+            data[trt_id, gsim] = {  # build N x R matrices
+                imt: numpy.array(
+                    [dic[tag][imt] for tag in self.tags]).T
+                for imt in map(str, self.imts)}
+        return data
 
     def post_execute(self, result):
         """
@@ -263,7 +257,10 @@ class ScenarioCalculator(base.HazardCalculator):
         :returns: a dictionary {('gmf', 'xml'): <gmf.xml filename>}
         """
         logging.info('Exporting the result')
-        out = export(
-            ('gmf', 'xml'), self.oqparam.export_dir,
-            self.sitecol, self.tags, result)
+        out = AccumDict()
+        for (trt_id, gsim), gmfs_by_imt in result.iteritems():
+            fname = '%s_gmf.xml' % gsim
+            out += export(
+                ('gmf', 'xml'), self.oqparam.export_dir, fname,
+                self.sitecol, self.tags, gmfs_by_imt)
         return out

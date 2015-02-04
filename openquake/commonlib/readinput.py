@@ -209,12 +209,12 @@ def get_site_collection(oqparam, mesh=None, site_ids=None,
         mesh.lons, mesh.lats, site_ids, oqparam)
 
 
-def get_gsim(oqparam):
+def get_gsims(oqparam):
     """
-    Return a GSIM instance from the gsim name in the configuration
+    Return a list of GSIM instances from the gsim name in the configuration
     file (defined for scenario computations).
     """
-    return valid.gsim(oqparam.gsim)
+    return map(valid.gsim, oqparam.gsim.split())
 
 
 def get_correl_model(oqparam):
@@ -309,7 +309,7 @@ def get_source_models(oqparam, source_model_lt):
         oqparam.rupture_mesh_spacing,
         oqparam.complex_fault_mesh_spacing,
         oqparam.width_of_mfd_bin,
-        oqparam.area_source_discretization)
+        getattr(oqparam, 'area_source_discretization', None))
     samples_by_lt_path = source_model_lt.samples_by_lt_path()
 
     for i, (sm, weight, smpath, _) in enumerate(source_model_lt):
@@ -409,7 +409,7 @@ def get_composite_source_model(oqparam, sitecol):
             logging.info('Splitting sources and counting ruptures for %s',
                          trt_model)
             trt_model.split_sources_and_count_ruptures(
-                oqparam.area_source_discretization)
+                getattr(oqparam, 'area_source_discretization', None))
             logging.info('Got %s', trt_model)
         smodels.append(source_model)
     return source.CompositeSourceModel(source_model_lt, smodels)

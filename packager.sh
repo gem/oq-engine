@@ -282,6 +282,7 @@ _pkgtest_innervm_run () {
         ssh $lxc_ip "set -e ; cd /usr/share/doc/python-oq-risklib/examples/demos
         oq-lite run AreaSourceClassicalPSHA/job.ini
         oq-lite run ScenarioDamage/job_hazard.ini,ScenarioDamage/job_risk.ini
+        oq-lite run ProbabilisticEventBased/job_hazard.ini
         "
     fi
     trap ERR

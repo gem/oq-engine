@@ -17,7 +17,8 @@ import unittest
 import StringIO
 import numpy
 from numpy.testing import assert_almost_equal
-from openquake.commonlib.riskmodels import get_vulnerability_functions
+from openquake.commonlib.riskmodels import (
+    get_vulnerability_functions, get_fragility_functions)
 from openquake.commonlib import InvalidFile
 
 
@@ -129,3 +130,53 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
         self.assertIn('It is not valid to define a loss ratio = 0.0 with a '
                       'corresponding coeff. of variation > 0.0',
                       ar.exception.message)
+
+    def test_missing_minIML(self):
+        vuln_content = StringIO.StringIO("""\
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+     <fragilityModel format="continuous">
+        <description>Fragility for test</description>
+        <limitStates>LS1 LS2</limitStates>
+        <ffs type="lognormal">
+            <taxonomy>RC</taxonomy>
+            <IML IMT="PGA" maxIML="9.9" imlUnit="g"/>
+            <ffc ls="LS1">
+                <params mean="0.2" stddev="0.05" />
+            </ffc>
+            <ffc ls="LS2">
+                <params mean="0.35" stddev="0.10" />
+            </ffc>
+        </ffs>
+    </fragilityModel>
+</nrml>""")
+        with self.assertRaises(InvalidFile) as ar:
+            get_fragility_functions(vuln_content, 20)
+        self.assertEqual('Missing attribute minIML, line 9',
+                         ar.exception.message)
+
+    def test_missing_maxIML(self):
+        vuln_content = StringIO.StringIO("""\
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+     <fragilityModel format="continuous">
+        <description>Fragility for test</description>
+        <limitStates>LS1 LS2</limitStates>
+        <ffs type="lognormal">
+            <taxonomy>RC</taxonomy>
+            <IML IMT="PGA" minIML="9.9" imlUnit="g"/>
+            <ffc ls="LS1">
+                <params mean="0.2" stddev="0.05" />
+            </ffc>
+            <ffc ls="LS2">
+                <params mean="0.35" stddev="0.10" />
+            </ffc>
+        </ffs>
+    </fragilityModel>
+</nrml>""")
+        with self.assertRaises(InvalidFile) as ar:
+            get_fragility_functions(vuln_content, 20)
+        self.assertEqual('Missing attribute maxIML, line 9',
+                         ar.exception.message)
