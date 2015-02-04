@@ -32,6 +32,21 @@ from concurrent.futures import as_completed, ProcessPoolExecutor
 
 import psutil
 
+if psutil.__version__ >= '1.2.1':  # Ubuntu 14.04
+    def virtual_memory():
+        return psutil.virtual_memory()
+
+    def memory_info(proc):
+        return proc.memory_info()
+
+else:  # Ubuntu 12.04
+    def virtual_memory():
+        return psutil.phymem_usage()
+
+    def memory_info(proc):
+        return proc.get_memory_info()
+
+
 from openquake.baselib.general import split_in_blocks, AccumDict
 
 
@@ -59,7 +74,7 @@ def check_mem_usage(soft_percent=80, hard_percent=100):
 
     :param int mem_percent: the memory limit as a percentage
     """
-    used_mem_percent = psutil.virtual_memory().percent
+    used_mem_percent = virtual_memory().percent
     if used_mem_percent > soft_percent:
         logging.warn('Using over %d%% of the memory!', used_mem_percent)
     if used_mem_percent > hard_percent:
@@ -416,7 +431,7 @@ class PerformanceMonitor(object):
         """A memory measurement (in bytes)"""
         try:
             if self._proc:
-                return self._proc.memory_info().rss
+                return memory_info(self._proc).rss
         except psutil.AccessDenied:
             # no access to information about this process
             # don't not try to check it anymore
