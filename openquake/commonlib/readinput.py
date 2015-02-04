@@ -752,3 +752,41 @@ def get_sitecol_gmfs(oqparam):
             csvfile, imts, num_values, valid.positivefloats)
     sitecol = get_site_collection(oqparam, mesh)
     return sitecol, gmfs_by_imt
+
+
+def get_mesh_hcurves(oqparam):
+    """
+    Read CSV data in the format `IMT lon lat value1 ... valueN`.
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :returns:
+        the mesh of points and the data as a dictionary
+        imt -> array of curves for each site
+    """
+    imtls = oqparam.imtls
+    lon_lats = set()
+    data = AccumDict()  # imt -> list of arrays
+    ncols = len(imtls) + 1  # lon_lat + curve_per_imt ...
+    csvfile = oqparam.inputs['hazard_curves']
+    for line, row in enumerate(csv.reader(csvfile), 1):
+        try:
+            if len(row) != ncols:
+                raise ValueError('Expected %d columns, found %d' %
+                                 ncols, len(row))
+            x, y = row[0].split()
+            lon_lat = valid.longitude(x), valid.latitude(y)
+            if lon_lat in lon_lats:
+                raise DuplicatedPoint(lon_lat)
+            lon_lats.add(lon_lat)
+            for i, imt in enumerate(imtls, 1):
+                values = valid.decreasing_probabilities(row[i])
+                if len(values) != len(imtls[imt]):
+                    raise ValueError('Found %d values, expected %d' %
+                                     (len(values), len(imtls([imt]))))
+        except (ValueError, DuplicatedPoint) as err:
+            raise err.__class__('%s: file %s, line %d' % (err, csvfile, line))
+        data += {imt: [numpy.array(values)]}
+    lons, lats = zip(*sorted(lon_lats))
+    mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
+    return mesh, {imt: numpy.array(lst) for imt, lst in data.iteritems()}
