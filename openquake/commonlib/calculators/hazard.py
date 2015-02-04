@@ -106,6 +106,7 @@ class ClassicalCalculator(base.HazardCalculator):
         curves_by_rlz = self.rlzs_assoc.combine(result)
         rlzs = self.rlzs_assoc.realizations
         oq = self.oqparam
+        nsites = len(self.sitecol)
 
         # export curves
         saved = AccumDict()
@@ -129,7 +130,7 @@ class ClassicalCalculator(base.HazardCalculator):
             [curves_by_rlz[rlz] for rlz in rlzs], weights)
         quantile = {
             q: {imt: scientific.quantile_curve(
-                curves_by_imt[imt], q, weights)
+                curves_by_imt[imt], q, weights).reshape((nsites, -1))
                 for imt in oq.imtls}
             for q in getattr(oq, 'quantile_hazard_curves', [])
         }
@@ -165,9 +166,11 @@ class ClassicalCalculator(base.HazardCalculator):
             oq.imtls, oq.investigation_time)
         if getattr(oq, 'hazard_maps', None):
             hmaps = self.hazard_maps(curves)
+            # a dictionary IMT -> matrix(P, N)
             saved += export(
                 ('hazard_curves', fmt), export_dir,
-                fname.replace('curve', 'map'), self.sitecol, hmaps,
+                fname.replace('curve', 'map'), self.sitecol,
+                {k: v.T for k, v in hmaps.iteritems()},
                 oq.imtls, oq.investigation_time)
             if getattr(oq, 'uniform_hazard_spectra', None):
                 uhs_curves = calc.make_uhs(hmaps)
