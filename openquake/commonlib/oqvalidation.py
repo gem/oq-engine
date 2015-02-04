@@ -45,7 +45,7 @@ CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS + EXPERIMENTAL_CALCULATORS
 
 class OqParam(valid.ParamSet):
     params = valid.parameters(
-        area_source_discretization=valid.positivefloat,
+        area_source_discretization=valid.NoneOr(valid.positivefloat),
         asset_correlation=valid.NoneOr(valid.FloatRange(0, 1)),
         asset_life_expectancy=valid.positivefloat,
         base_path=valid.utf8,
