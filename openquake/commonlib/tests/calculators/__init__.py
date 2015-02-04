@@ -45,14 +45,14 @@ class CalculatorTestCase(unittest.TestCase):
             monitor_csv=os.path.join(oq.export_dir, 'performance_csv'))
         return base.calculators(oq, monitor)
 
-    def run_calc(self, testfile, job_ini, exports='xml'):
+    def run_calc(self, testfile, job_ini, **kw):
         """
         Return the outputs of the calculation as a dictionary
         """
         self.calc = self.get_calc(testfile, job_ini)
+        vars(self.calc.oqparam).update(kw)
         self.calc.pre_execute()
         self.result = self.calc.execute()
-        self.calc.oqparam.exports = exports
         return self.calc.post_execute(self.result)
 
     def execute(self, testfile, job_ini):
@@ -63,14 +63,19 @@ class CalculatorTestCase(unittest.TestCase):
         self.calc.pre_execute()
         return self.calc.execute()
 
-    def assertEqualFiles(self, fname1, fname2):
+    def assertEqualFiles(
+            self, fname1, fname2, make_comparable=lambda lines: lines):
         """
-        Make sure the expected and actual files have the same content
+        Make sure the expected and actual files have the same content.
+        `make_comparable` is a function processing the lines of the
+        files to make them comparable. By default it does nothing,
+        but in some tests sorting function is passed, because some
+        files can be equal only up to the ordering.
         """
         expected = os.path.join(self.testdir, fname1)
         actual = os.path.join(self.calc.oqparam.export_dir, fname2)
-        expected_content = open(expected).read()
-        actual_content = open(actual).read()
+        expected_content = make_comparable(open(expected).readlines())
+        actual_content = make_comparable(open(actual).readlines())
         try:
             self.assertEqual(expected_content, actual_content)
         except:

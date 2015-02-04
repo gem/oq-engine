@@ -353,7 +353,7 @@ def apply_reduce(task_func, task_args, agg=operator.add, acc=None,
         return agg(acc, task_func(arg0, *args))
     chunks = list(split_in_blocks(arg0, concurrent_tasks or 1, weight, key))
     apply_reduce._chunks = chunks
-    if not concurrent_tasks:
+    if not concurrent_tasks or no_distribute():
         for chunk in chunks:
             acc = agg(acc, task_func(chunk, *args))
         return acc

@@ -133,15 +133,16 @@ class GmfCollection(object):
 
 
 @export.add(('gmf', 'xml'))
-def export_gmf_xml(key, export_dir, sitecol, rupture_tags, gmfs):
+def export_gmf_xml(key, export_dir, fname, sitecol, rupture_tags, gmfs):
     """
     :param key: output_type and export_type
     :param export_dir: the directory where to export
+    :param fname: name of the exported file
     :param sitecol: site collection
     :rupture_tags: a list of rupture tags
     :gmfs: a dictionary of ground motion fields keyed by IMT
     """
-    dest = os.path.join(export_dir, '%s.%s' % key)
+    dest = os.path.join(export_dir, fname)
     writer = hazard_writers.EventBasedGMFXMLWriter(
         dest, sm_lt_path='', gsim_lt_path='')
     with floatformat('%12.8E'):
@@ -150,15 +151,16 @@ def export_gmf_xml(key, export_dir, sitecol, rupture_tags, gmfs):
 
 
 @export.add(('gmf', 'csv'))
-def export_gmf_csv(key, export_dir, sitecol, rupture_tags, gmfs):
+def export_gmf_csv(key, export_dir, fname, sitecol, rupture_tags, gmfs):
     """
     :param key: output_type and export_type
     :param export_dir: the directory where to export
+    :param fname: name of the exported file
     :param sitecol: site collection
     :rupture_tags: a list of rupture tags
     :gmfs: a dictionary of ground motion fields keyed by IMT
     """
-    dest = os.path.join(export_dir, '%s.%s' % key)
+    dest = os.path.join(export_dir, fname)
     with floatformat('%12.8E'), open(dest, 'w') as f:
         for imt, gmf in gmfs.iteritems():
             for site, gmvs in zip(sitecol, gmf):
