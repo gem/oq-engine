@@ -29,7 +29,7 @@ class DifferentFiles(Exception):
 
 
 class CalculatorTestCase(unittest.TestCase):
-    OVERWRITE = True
+    OVERWRITE_EXPECTED = False
 
     def get_calc(self, testfile, job_ini):
         """
@@ -80,7 +80,7 @@ class CalculatorTestCase(unittest.TestCase):
         try:
             self.assertEqual(expected_content, actual_content)
         except:
-            if self.OVERWRITE:
+            if self.OVERWRITE_EXPECTED:
                 # use this path when the expected outputs have changed
                 # for a good reason
                 open(expected, 'w').write(''.join(actual_content))

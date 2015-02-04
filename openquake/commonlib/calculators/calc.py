@@ -200,7 +200,7 @@ def compute_hazard_maps(curves, imls, poes):
                 hmap_val.append(val)
 
         result.append(hmap_val)
-    return numpy.array(result).T
+    return numpy.array(result).transpose()
 
 
 ###########################  GMF->curves ######################################
