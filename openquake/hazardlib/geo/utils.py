@@ -438,7 +438,7 @@ def plane_fit(points):
     """
     points = numpy.transpose(points)
     points = numpy.reshape(points, (numpy.shape(points)[0], -1))
-    assert points.shape[0] < points.shape[1]
+    assert points.shape[0] < points.shape[1], points.shape
     ctr = points.mean(axis=1)
     x = points - ctr[:, None]
     M = numpy.dot(x, x.T)
