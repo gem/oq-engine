@@ -24,6 +24,8 @@ of kind "Active Shallow Crust": that means that the full GMPE logic tree
 "Stable Continental Crust": ["C2003", "T2002"]}
 
 produces 2 pairs of identical GMPE realizations for that model.
+Such realizations are managed by a single effective realization with double
+weight.
 
 The associations (trt_id, gsim) -> rlzs are:
 {
@@ -31,9 +33,9 @@ The associations (trt_id, gsim) -> rlzs are:
 0,CampbellBozorgnia2008: ['<2,SM1,CB2008_C2003,w=0.125>', '<3,SM1,CB2008_T2002,w=0.125>']
 1,Campbell2003: ['<0,SM1,BA2008_C2003,w=0.125>', '<2,SM1,CB2008_C2003,w=0.125>']
 1,ToroEtAl2002: ['<1,SM1,BA2008_T2002,w=0.125>', '<3,SM1,CB2008_T2002,w=0.125>']
-2,BooreAtkinson2008: ['<4,SM2_a3pt2b0pt8,BA2008,w=0.125>']
-2,CampbellBozorgnia2008: ['<5,SM2_a3pt2b0pt8,CB2008,w=0.125>']
-3,BooreAtkinson2008: ['<6,SM2_a3b1,BA2008,w=0.125>']
-3,CampbellBozorgnia2008: ['<7,SM2_a3b1,CB2008,w=0.125>']
+2,BooreAtkinson2008: ['<4,SM2_a3pt2b0pt8,BA2008_*,w=0.125>']
+2,CampbellBozorgnia2008: ['<5,SM2_a3pt2b0pt8,CB2008_*,w=0.125>']
+3,BooreAtkinson2008: ['<6,SM2_a3b1,BA2008_*,w=0.125>']
+3,CampbellBozorgnia2008: ['<7,SM2_a3b1,CB2008_*,w=0.125>']
 }
 """
