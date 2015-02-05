@@ -1086,7 +1086,9 @@ class GsimLogicTree(object):
             raise NameError('%s in file %r' % (e, self.fname))
 
     def __iter__(self):
-        # yield realizations for both sampling and full enumeration
+        """
+        Yield :class:`openquake.commonlib.logictree.Realization` instances
+        """
         groups = []
         tectonic_region_types = []
         # NB: branches are already sorted
