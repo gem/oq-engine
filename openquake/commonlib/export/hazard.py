@@ -186,11 +186,16 @@ def export_hazard_curves_csv(key, export_dir, fname, sitecol, curves_by_imt,
     :param curves_by_imt: dictionary with the curves keyed by IMT
     """
     dest = os.path.join(export_dir, fname)
-    rows = []
-    for imt in sorted(curves_by_imt):
-        row = map(scientificformat, curves_by_imt[imt])
-        rows.append(row)
-    save_csv(dest, numpy.array(rows).T)
+    nsites = len(sitecol)
+    # build a matrix of strings with size nsites * (num_imts + 1)
+    # the + 1 is needed since the 0-th column contains lon lat
+    rows = numpy.empty((nsites, len(imtls) + 1), dtype=object)
+    for sid, lon, lat in zip(range(nsites), sitecol.lons, sitecol.lats):
+        rows[sid, 0] = '%s %s' % (lon, lat)
+    for i, imt in enumerate(sorted(curves_by_imt), 1):
+        for sid, curve in zip(range(nsites), curves_by_imt[imt]):
+            rows[sid, i] = scientificformat(curve)
+    save_csv(dest, rows)
     return {fname: dest}
 
 
