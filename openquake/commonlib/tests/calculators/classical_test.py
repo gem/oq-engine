@@ -140,7 +140,7 @@ class ClassicalTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/%s' % fname, out[fname])
 
     @attr('qa', 'hazard', 'classical')
-    def test_case_15(self):
+    def test_case_15(self):  # full enumeration
         expected = [
             'hazard_curve-smltp_SM1-gsimltp_BA2008_C2003-ltr_0.csv',
             'hazard_curve-smltp_SM1-gsimltp_BA2008_T2002-ltr_1.csv',
@@ -166,7 +166,7 @@ class ClassicalTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/%s' % fname, out[fname])
 
     @attr('qa', 'hazard', 'classical')
-    def test_case_16(self):
+    def test_case_16(self):   # sampling
         expected = [
             'hazard_curve-mean.csv',
             'quantile_curve-0.1.csv',
@@ -177,7 +177,7 @@ class ClassicalTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/%s' % fname, out[fname])
 
     @attr('qa', 'hazard', 'classical')
-    def test_case_17(self):
+    def test_case_17(self):  # oversampling
         expected = [
             'hazard_curve-smltp_b2-gsimltp_b1-ltr_0.csv',
             'hazard_curve-smltp_b2-gsimltp_b1-ltr_1.csv',

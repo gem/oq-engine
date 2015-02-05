@@ -1036,7 +1036,7 @@ class GsimLogicTree(object):
 
     def _build_branches(self):
         # do the parsing, called at instantiation time to populate .values
-        fkeys = []
+        trts = []
         branchsetids = set()
         for branching_level in self._ltnode:
             if len(branching_level) > 1:
@@ -1054,10 +1054,10 @@ class GsimLogicTree(object):
                         'Duplicated branchSetID %s' % bsid)
                 else:
                     branchsetids.add(bsid)
-                fkey = branchset.attrib.get('applyToTectonicRegionType')
-                if fkey:
-                    fkeys.append(fkey)
-                if fkey in self.tectonic_region_types:
+                trt = branchset.attrib.get('applyToTectonicRegionType')
+                if trt:
+                    trts.append(trt)
+                if trt in self.tectonic_region_types:
                     weights = []
                     for branch in branchset:
                         weight = Decimal(branch.uncertaintyWeight.text)
@@ -1065,13 +1065,13 @@ class GsimLogicTree(object):
                         branch_id = branch['branchID']
                         uncertainty = branch.uncertaintyModel.text.strip()
                         self.validate_gsim(uncertainty)
-                        self.values[fkey].append(uncertainty)
+                        self.values[trt].append(uncertainty)
                         yield BranchTuple(
                             branchset, branch_id, uncertainty, weight)
                     assert sum(weights) == 1, weights
-        if len(fkeys) > len(set(fkeys)):
+        if len(trts) > len(set(trts)):
             raise InvalidLogicTree(
-                'Found duplicated applyToTectonicRegionType=%s' % fkeys)
+                'Found duplicated applyToTectonicRegionType=%s' % trts)
 
     def validate_gsim(self, value):
         """
@@ -1100,10 +1100,10 @@ class GsimLogicTree(object):
             weight = 1
             lt_path = []
             value = {}
-            for fkey, branch in zip(tectonic_region_types, branches):
+            for trt, branch in zip(tectonic_region_types, branches):
                 lt_path.append(branch.id)
                 weight *= branch.weight
-                assert branch.uncertainty in self.values[fkey], \
+                assert branch.uncertainty in self.values[trt], \
                     branch.uncertainty  # sanity check
-                value[fkey] = branch.uncertainty
+                value[trt] = branch.uncertainty
             yield Realization(value, weight, tuple(lt_path), i)
