@@ -203,7 +203,7 @@ def get_effective_rlzs(rlzs):
     for uid, group in groupby(rlzs, operator.attrgetter('uid')).iteritems():
         rlz = group[0]
         effective.append(
-            logictree.Realization(rlz.value, rlz.weight * len(group),
+            logictree.Realization(rlz.value, sum(r.weight for r in group),
                                   rlz.lt_path, rlz.ordinal, rlz.lt_uid))
     return effective
 
