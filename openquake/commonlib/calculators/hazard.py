@@ -166,10 +166,10 @@ class ClassicalCalculator(base.HazardCalculator):
             oq.imtls, oq.investigation_time)
         if getattr(oq, 'hazard_maps', None):
             hmaps = self.hazard_maps(curves)
-            # a dictionary IMT -> matrix(P, N)
             saved += export(
                 ('hazard_curves', fmt), export_dir,
                 fname.replace('curve', 'map'), self.sitecol,
+                # hmaps is a dictionary IMT -> matrix(P, N)
                 {k: v.T for k, v in hmaps.iteritems()},
                 oq.imtls, oq.investigation_time)
             if getattr(oq, 'uniform_hazard_spectra', None):

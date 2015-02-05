@@ -187,6 +187,8 @@ def export_hazard_curves_csv(key, export_dir, fname, sitecol, curves_by_imt,
     """
     dest = os.path.join(export_dir, fname)
     nsites = len(sitecol)
+    # build a matrix of strings with size nsites * (num_imts + 1)
+    # the + 1 is needed since the 0-th column contains lon lat
     rows = numpy.empty((nsites, len(imtls) + 1), dtype=object)
     for sid, lon, lat in zip(range(nsites), sitecol.lons, sitecol.lats):
         rows[sid, 0] = '%s %s' % (lon, lat)
