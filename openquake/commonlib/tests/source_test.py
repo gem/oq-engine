@@ -713,8 +713,7 @@ class CompositeSourceModelTestCase(unittest.TestCase):
         for trt_model in csm.trt_models:
             if trt_model.trt == 'Active Shallow Crust':  # no ruptures
                 trt_model.num_ruptures = 0
-        csm.reduce_trt_models()
-        self.assertEqual(map(len, csm.trt_models), [1, 1, 1, 1, 1, 1, 1, 1, 1])
+        csm.reduce_gsim_lt()
         assoc = csm.get_rlzs_assoc()
         expected_assoc = """\
 {0,SadighEtAl1997: ['<0,b1_b3_b6,*_b3,w=0.04>']
@@ -733,8 +732,7 @@ class CompositeSourceModelTestCase(unittest.TestCase):
         for trt_model in csm.trt_models:
             if trt_model.trt == 'Subduction Interface':  # no ruptures
                 trt_model.num_ruptures = 0
-        csm.reduce_trt_models()
-        self.assertEqual(map(len, csm.trt_models), [])
+        csm.reduce_gsim_lt()
         self.assertEqual(csm.get_rlzs_assoc().realizations, [])
 
     def test_oversampling(self):

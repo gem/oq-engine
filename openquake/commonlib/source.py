@@ -388,26 +388,24 @@ class CompositeSourceModel(collections.Sequence):
                 src.trt_model_id = trt_model.id
                 yield src
 
-    def reduce_trt_models(self):
+    def reduce_gsim_lt(self):
         """
         Remove the tectonic regions without ruptures and reduce the
         GSIM logic tree. It works by updating the underlying source models.
         """
         for sm in self:
-            trts = set(trt_model.trt for trt_model in sm.trt_models
+            trt_models = list(sm.trt_models)
+            trts = set(trt_model.trt for trt_model in trt_models
                        if trt_model.num_ruptures > 0)
             if trts == set(sm.gsim_lt.tectonic_region_types):
                 # nothing to remove
                 continue
             # build the reduced logic tree
             gsim_lt = sm.gsim_lt.filter(trts)
-            tmodels = []  # collect the reduced trt models
-            for trt_model in sm.trt_models:
-                if trt_model.trt in trts:
-                    trt_model.gsims = gsim_lt.values[trt_model.trt]
-                    tmodels.append(trt_model)
+            for trt_model in trt_models:
+                trt_model.gsims = gsim_lt.values[trt_model.trt]
             self[sm.ordinal] = SourceModel(
-                sm.name, sm.weight, sm.path, tmodels, gsim_lt, sm.ordinal)
+                sm.name, sm.weight, sm.path, trt_models, gsim_lt, sm.ordinal)
 
     def get_rlzs_assoc(self):
         """
@@ -427,8 +425,6 @@ class CompositeSourceModel(collections.Sequence):
             logging.info('Creating %d GMPE realization(s) for model %s, %s',
                          len(rlzs), smodel.name, smodel.path)
             idx = assoc._add_realizations(idx, smodel, rlzs)
-        #print assoc
-        #import pdb; pdb.set_trace()
         return assoc
 
     def __getitem__(self, i):
