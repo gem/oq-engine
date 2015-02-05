@@ -311,7 +311,9 @@ def get_source_models(oqparam, source_model_lt):
         getattr(oqparam, 'area_source_discretization', None))
     samples_by_lt_path = source_model_lt.samples_by_lt_path()
 
-    for i, (sm, weight, smpath, _) in enumerate(source_model_lt):
+    for i, rlz in enumerate(source_model_lt):
+        sm = rlz.value  # name of the source model
+        smpath = rlz.lt_path
         num_samples = samples_by_lt_path[smpath]
         if num_samples > 1:
             logging.warn('The logic tree path %s was sampled %d times',
@@ -345,7 +347,7 @@ python -m openquake.engine.tools.correct_complex_sources %s
                 trt_model.gsims = gsim_lt.values[trt_model.trt]
         # the num_ruptures is not updated; it will be updated in the
         # engine, after filtering of the sources
-        yield source.SourceModel(sm, weight, smpath, trt_models, gsim_lt, i)
+        yield source.SourceModel(sm, rlz.weight, smpath, trt_models, gsim_lt, i)
 
 
 def get_filtered_source_models(oqparam, source_model_lt, sitecol):

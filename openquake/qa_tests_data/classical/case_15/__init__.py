@@ -16,7 +16,15 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
-This is an example with a nontrivial logic tree producing 8 realizations.
+This is an example with a nontrivial logic tree producing 8 independent
+realizations. The file source_model_2.xml contains a single area source
+of kind "Active Shallow Crust": that means that the full GMPE logic tree
+
+{"Active Shallow Crust": ["BA2008", "CB2008"],
+"Stable Continental Crust": ["C2003", "T2002"]}
+
+produces 2 pairs of identical GMPE realizations for that model.
+
 The associations (trt_id, gsim) -> rlzs are:
 {
 0,BooreAtkinson2008: ['<0,SM1,BA2008_C2003,w=0.125>', '<1,SM1,BA2008_T2002,w=0.125>']

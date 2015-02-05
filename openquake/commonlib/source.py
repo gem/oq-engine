@@ -19,7 +19,7 @@ import collections
 import random
 from lxml import etree
 
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, groupby
 from openquake.commonlib.node import read_nodes
 from openquake.commonlib import valid, logictree, sourceconverter
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
@@ -30,11 +30,11 @@ class DuplicatedID(Exception):
 
 
 LtRealization = collections.namedtuple(
-    'LtRealization', 'ordinal sm_lt_path gsim_lt_path weight')
-LtRealization.__str__ = lambda self: '<%d,%s,%s,w=%s>' % (
-    self.ordinal, '_'.join(self.sm_lt_path), '_'.join(self.gsim_lt_path),
-    self.weight)
-
+    'LtRealization', 'ordinal sm_lt_path gsim_lt_path weight gsim_uid')
+LtRealization.__str__ = lambda self: '<%d,%s,w=%s>' % (
+    self.ordinal, self.uid, self.weight)
+LtRealization.uid = property(
+    lambda self: '_'.join(self.sm_lt_path) + ',' + '_'.join(self.gsim_uid))
 
 SourceModel = collections.namedtuple(
     'SourceModel', 'name weight path trt_models gsim_lt ordinal')
@@ -194,6 +194,20 @@ def agg_prob(acc, prob):
     return 1. - (1. - acc) * (1. - prob)
 
 
+def get_effective_rlzs(rlzs):
+    """
+    Group together realizations with the same unique identifier (uid)
+    and yield the first representative of each group.
+    """
+    effective = []
+    for uid, group in groupby(rlzs, operator.attrgetter('uid')).iteritems():
+        rlz = group[0]
+        effective.append(
+            logictree.Realization(rlz.value, rlz.weight * len(group),
+                                  rlz.lt_path, rlz.ordinal, rlz.lt_uid))
+    return effective
+
+
 class RlzsAssoc(collections.Mapping):
     """
     Realization association class. It should not be instantiated directly,
@@ -235,9 +249,10 @@ class RlzsAssoc(collections.Mapping):
             return idx
         gsims_by_trt = lt_model.gsim_lt.values
         rlzs = []
-        for gsim_by_trt, weight, gsim_path, _ in realizations:
+        for gsim_by_trt, weight, gsim_path, _ordinal, gsim_uid in realizations:
             weight = float(lt_model.weight) * float(weight)
-            rlz = LtRealization(idx, lt_model.path, gsim_path, weight)
+            rlz = LtRealization(
+                idx, lt_model.path, gsim_path, weight, gsim_uid)
             rlzs.append(rlz)
             self.gsim_by_trt[rlz] = gsim_by_trt
             for trt_model in trt_models:
@@ -407,11 +422,13 @@ class CompositeSourceModel(collections.Sequence):
             if num_samples:  # sampling, pick just one gsim realization
                 rnd = random.Random(random_seed + idx)
                 rlzs = [logictree.sample_one(smodel.gsim_lt, rnd)]
-            else:
-                rlzs = list(smodel.gsim_lt)  # full enumeration
+            else:  # full enumeration
+                rlzs = get_effective_rlzs(smodel.gsim_lt)
             logging.info('Creating %d GMPE realization(s) for model %s, %s',
                          len(rlzs), smodel.name, smodel.path)
             idx = assoc._add_realizations(idx, smodel, rlzs)
+        #print assoc
+        #import pdb; pdb.set_trace()
         return assoc
 
     def __getitem__(self, i):

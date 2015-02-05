@@ -45,7 +45,8 @@ MIN_SINT_32 = -(2 ** 31)
 MAX_SINT_32 = (2 ** 31) - 1
 
 
-Realization = namedtuple('Realization', 'value weight lt_path ordinal')
+Realization = namedtuple('Realization', 'value weight lt_path ordinal lt_uid')
+Realization.uid = property(lambda self: '_'.join(self.lt_uid))  # unique ID
 
 
 class LogicTreeError(Exception):
@@ -582,12 +583,14 @@ class BaseLogicTree(object):
             weight = 1. / self.num_samples
             for _ in xrange(self.num_samples):
                 name, sm_lt_path = self.sample_path(rnd)
-                yield Realization(name, weight, tuple(sm_lt_path), None)
+                yield Realization(name, weight, tuple(sm_lt_path), None,
+                                  tuple(sm_lt_path))
         else:  # full enumeration
             for weight, smlt_path in self.root_branchset.enumerate_paths():
                 name = smlt_path[0].value
                 smlt_branch_ids = [branch.branch_id for branch in smlt_path]
-                yield Realization(name, weight, tuple(smlt_branch_ids), None)
+                yield Realization(name, weight, tuple(smlt_branch_ids), None,
+                                  tuple(smlt_branch_ids))
 
     @abc.abstractmethod
     def parse_uncertainty_value(self, node, branchset, value):
@@ -960,7 +963,7 @@ class SourceModelLogicTree(BaseLogicTree):
         return collections.Counter(rlz.lt_path for rlz in self)
 
 
-BranchTuple = namedtuple('BranchTuple', 'bset, id, uncertainty, weight')
+BranchTuple = namedtuple('BranchTuple', 'bset id uncertainty weight effective')
 
 
 class InvalidLogicTree(Exception):
@@ -1015,23 +1018,26 @@ class GsimLogicTree(object):
 
     def get_num_branches(self):
         """
-        Return the number of branches for branchset id, as a dictionary.
+        Return the number of effective branches for branchset id,
+        as a dictionary.
         """
         num = {}
         for branchset, branches in itertools.groupby(
                 self.branches, operator.attrgetter('bset')):
-            num[branchset['branchSetID']] = len(list(branches))
+            num[branchset['branchSetID']] = sum(
+                1 for br in branches if br.effective)
         return num
 
     def get_num_paths(self):
         """
-        Return the total number of paths in the tree.
+        Return the effective number of paths in the tree.
         """
         # NB: the algorithm assume a symmetric logic tree for the GSIMs;
         # in the future we may relax such assumption
         num = 1
         for val in self.get_num_branches().itervalues():
-            num *= val
+            if val:  # the branch is effective
+                num *= val
         return num
 
     def _build_branches(self):
@@ -1057,18 +1063,18 @@ class GsimLogicTree(object):
                 trt = branchset.attrib.get('applyToTectonicRegionType')
                 if trt:
                     trts.append(trt)
-                if trt in self.tectonic_region_types:
-                    weights = []
-                    for branch in branchset:
-                        weight = Decimal(branch.uncertaintyWeight.text)
-                        weights.append(weight)
-                        branch_id = branch['branchID']
-                        uncertainty = branch.uncertaintyModel.text.strip()
-                        self.validate_gsim(uncertainty)
-                        self.values[trt].append(uncertainty)
-                        yield BranchTuple(
-                            branchset, branch_id, uncertainty, weight)
-                    assert sum(weights) == 1, weights
+                effective = trt in self.tectonic_region_types
+                weights = []
+                for branch in branchset:
+                    weight = Decimal(branch.uncertaintyWeight.text)
+                    weights.append(weight)
+                    branch_id = branch['branchID']
+                    uncertainty = branch.uncertaintyModel.text.strip()
+                    self.validate_gsim(uncertainty)
+                    self.values[trt].append(uncertainty)
+                    yield BranchTuple(
+                        branchset, branch_id, uncertainty, weight, effective)
+                assert sum(weights) == 1, weights
         if len(trts) > len(set(trts)):
             raise InvalidLogicTree(
                 'Found duplicated applyToTectonicRegionType=%s' % trts)
@@ -1101,11 +1107,13 @@ class GsimLogicTree(object):
         for i, branches in enumerate(itertools.product(*groups)):
             weight = 1
             lt_path = []
+            lt_uid = []
             value = {}
             for trt, branch in zip(tectonic_region_types, branches):
-                lt_path.append(branch.id)
-                weight *= branch.weight
                 assert branch.uncertainty in self.values[trt], \
                     branch.uncertainty  # sanity check
+                lt_path.append(branch.id)
+                lt_uid.append(branch.id if branch.effective else '*')
+                weight *= branch.weight
                 value[trt] = branch.uncertainty
-            yield Realization(value, weight, tuple(lt_path), i)
+            yield Realization(value, weight, tuple(lt_path), i, tuple(lt_uid))
