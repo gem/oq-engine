@@ -337,7 +337,7 @@ class BaseHazardCalculator(base.Calculator):
         for trt_model in cm.trt_models:
             trt_model.num_ruptures = models.TrtModel.objects.get(
                 pk=trt_model.id).num_ruptures
-        cm.reduce_trt_models()
+        cm.reduce_gsim_lt()
 
         rlzs_assoc = cm.get_rlzs_assoc()
         gsims_by_trt_id = rlzs_assoc.get_gsims_by_trt_id()
