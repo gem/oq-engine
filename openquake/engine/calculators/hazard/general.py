@@ -348,7 +348,7 @@ class BaseHazardCalculator(base.Calculator):
             for rlz in rlzs:
                 gsim_by_trt = rlzs_assoc.gsim_by_trt[rlz]
                 lt_rlz = models.LtRealization.objects.create(
-                    lt_model=lt_model, gsim_lt_path=rlz.gsim_lt_path,
+                    lt_model=lt_model, gsim_lt_path=rlz.gsim_uid,
                     weight=rlz.weight, ordinal=rlz.ordinal)
                 self._realizations.append(lt_rlz)
                 for trt_model in trt_models:
