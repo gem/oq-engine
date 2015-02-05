@@ -402,7 +402,7 @@ class PlaneFit(unittest.TestCase):
         Tests the parameters of the plane obtained through the regression.
         """
         pnt, par = utils.plane_fit(self.points)
-        self.assertTrue(numpy.all(numpy.abs(self.c[0:3] - par) < 1e-5))
+        numpy.testing.assert_allclose(numpy.abs(self.c[0:3], par, atol=1e-5))
         self.assertAlmostEqual(self.c[-1], -sum(par*pnt))
 
     def test_plane_fit02(self):
@@ -412,5 +412,5 @@ class PlaneFit(unittest.TestCase):
         """
         self.points[:, 2] += numpy.random.random(self.npts) * 0.01
         pnt, par = utils.plane_fit(self.points)
-        self.assertTrue(numpy.all(numpy.abs(self.c[0:3] - par) < 1e-1))
+        numpy.testing.assert_allclose(numpy.abs(self.c[0:3], par, atol=1e-1))
         self.assertAlmostEqual(self.c[-1], -sum(par*pnt), 2)

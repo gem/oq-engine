@@ -1,9 +1,39 @@
+# The Hazard Library
+# Copyright (C) 2012-2015, GEM Foundation
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+Module :mod:`openquake.hazardlib.geo.surface.gridded` defines
+:class:`GriddedSurface`.
+"""
+
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh
 
 
 class GriddedSurface(BaseSurface):
     """
+    Gridded surface defined by an unstructured cloud of points. This surface
+    type is required for a proper implementation of some subduction interface
+    surfaces included int the Japan 2012 model.
+
+    Note that currently we support only one rupture-site typology i.e. since
+    this the only one that can be unambiguosly computed.
+
+    :param mesh:
+        An unstructured mesh of points ideally representing a rupture surface.
+        Must be an instance of :class:`~openquake.hazardlib.geo.mesh.Mesh`
     """
     def __init__(self, mesh):
         self.mesh_surface = mesh
@@ -11,8 +41,13 @@ class GriddedSurface(BaseSurface):
     @classmethod
     def from_points_list(cls, points):
         """
+        Create a gridded surface from a list of points.
+
         :parameter points:
             A list of :class:`~openquake.hazardlib.geo.Point`
+        :returns:
+            An instance of
+            :class:`~openquake.hazardlib.geo.surface.gridded.GriddedSurface`
         """
         return cls(Mesh.from_points_list(points))
 
