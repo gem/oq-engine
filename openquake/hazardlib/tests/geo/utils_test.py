@@ -390,7 +390,7 @@ class PlaneFit(unittest.TestCase):
         # Normalise the plane equation coefficients to get the direction
         # cosines
         self.c[0:3] = self.c[0:3] / (sum(self.c[0:3]**2.))**0.5
-        # Compute the TODO
+        # Compute the constant term
         self.c[-1] = -abs(self.c[-1])
         # Compute the z coordinate of the points
         self.points[:, 2] = (-self.points[:, 0] * self.c[0] +
