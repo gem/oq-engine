@@ -412,7 +412,6 @@ class CompositeSourceModel(collections.Sequence):
             logging.info('Creating %d GMPE realization(s) for model %s, %s',
                          len(rlzs), smodel.name, smodel.path)
             idx = assoc._add_realizations(idx, smodel, rlzs)
-
         return assoc
 
     def __getitem__(self, i):

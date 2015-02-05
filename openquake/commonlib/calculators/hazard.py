@@ -65,7 +65,7 @@ def classical(sources, sitecol, gsims_assoc, monitor):
             rupture_site_filter=rupture_site_distance_filter(max_dist))
         # notice that the rupture filter may remove everything
         if sum(v.sum() for v in curves.itervalues()):
-            result[trt_model_id, gsim.__class__.__name__] = AccumDict(curves)
+            result[trt_model_id, str(gsim)] = AccumDict(curves)
     return result
 
 
