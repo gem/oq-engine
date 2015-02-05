@@ -35,13 +35,12 @@ class Abrahamson2014(GMPE):
     published in 2014 on Earthquake Spectra, Volume 30, Number 3.
     """
     # TODO - Update page numbers
-    #: Supported tectonic region type is active shallow crust, see paragraph
-    #: 'Data Set Selection', see page 68.
+    #: Supported tectonic region type is active shallow crust, see title!
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
     #: Supported intensity measure types are spectral acceleration, peak
-    #: ground velocity and peak ground acceleration, see tables 5a and 5b
-    #: pages 84, 85, respectively.
+    #: ground velocity and peak ground acceleration, see tables 4
+    #: pages 1036
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
         PGA,
         PGV,
@@ -50,7 +49,7 @@ class Abrahamson2014(GMPE):
 
     #: Supported intensity measure component is orientation-independent
     #: average horizontal :attr:`~openquake.hazardlib.const.IMC.GMRotI50`,
-    #: see abstract, page 67.
+    #: see page 1025.
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
 
     #: Supported standard deviation types are inter-event, intra-event
