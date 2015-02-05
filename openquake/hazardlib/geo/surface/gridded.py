@@ -194,6 +194,6 @@ class GriddedSurface(BaseSurface):
     def get_ry0_distance(self, mesh):
         """
         :param mesh:
-            :class:`~openquake.hazardlib.geo.mesh.Mesh` of points 
+            :class:`~openquake.hazardlib.geo.mesh.Mesh` of points
         """
         raise NotImplementedError
