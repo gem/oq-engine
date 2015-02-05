@@ -792,7 +792,7 @@ class SourceModelLogicTree(BaseLogicTree):
 
         if 'applyToSources' in filters:
             for source_id in filters['applyToSources'].split():
-                if not source_id in self.source_ids:
+                if source_id not in self.source_ids:
                     raise ValidationError(
                         branchset_node, self.filename, self.basepath,
                         "source with id %r is not defined in source models"
@@ -862,7 +862,7 @@ class SourceModelLogicTree(BaseLogicTree):
         if apply_to_branches:
             apply_to_branches = apply_to_branches.split()
             for branch_id in apply_to_branches:
-                if not branch_id in self.branches:
+                if branch_id not in self.branches:
                     raise ValidationError(
                         branchset_node, self.filename, self.basepath,
                         'branch %r is not yet defined' % branch_id
@@ -873,7 +873,7 @@ class SourceModelLogicTree(BaseLogicTree):
                         branchset_node, self.filename, self.basepath,
                         'branch %r already has child branchset' % branch_id
                     )
-                if not branch in self.open_ends:
+                if branch not in self.open_ends:
                     raise ValidationError(
                         branchset_node, self.filename, self.basepath,
                         'applyToBranches must reference only branches '
@@ -907,7 +907,7 @@ class SourceModelLogicTree(BaseLogicTree):
                 break
             except etree.XMLSyntaxError as exc:
                 raise ParsingError(source_model, self.basepath, str(exc))
-            if not node.tag in all_source_types:
+            if node.tag not in all_source_types:
                 continue
             self.tectonic_region_types.add(node.attrib['tectonicRegion'])
             source_id = node.attrib['id']
@@ -977,28 +977,31 @@ class GsimLogicTree(object):
 
     :param str fname:
         full path of the gsim_logic_tree file
-    :param str filter_name:
-        the string `"applyToTectonicRegionType"`
     :param tectonic_region_types:
         a sequence of distinct tectonic region types
+    :param ltnode:
+        usually None, but it can also be a
+        :class:`openquake.commonlib.nrml.Node` object describing the
+        GSIM logic tree XML file, to avoid reparsing it
     """
-    def __init__(self, fname, branchset_filter, tectonic_region_types):
+    def __init__(self, fname, tectonic_region_types, ltnode=None):
         self.fname = fname
-        self.branchset_filter = branchset_filter
         self.tectonic_region_types = sorted(tectonic_region_types)
-        assert branchset_filter == 'applyToTectonicRegionType'
         trts = self.tectonic_region_types
         if len(trts) > len(set(trts)):
             raise ValueError(
                 'The given tectonic region types are not distinct: %s' %
                 ','.join(self.tectonic_region_types))
         self.values = collections.defaultdict(list)  # {fkey: uncertainties}
+        self._ltnode = ltnode or node_from_xml(fname).logicTree
         self.branches = sorted(
-            self._parse_lt(), key=lambda b: (b.bset['branchSetID'], b.id))
+            self._build_branches(),
+            key=lambda b: (b.bset['branchSetID'], b.id))
         if tectonic_region_types and not self.branches:
             raise InvalidLogicTree(
-                'Could not find branches with attribute %r in %s' %
-                (self.branchset_filter, set(tectonic_region_types)))
+                'Could not find branches with attribute '
+                "'applyToTectonicRegionType' in %s" %
+                set(tectonic_region_types))
 
     def filter(self, trts):
         """
@@ -1008,7 +1011,7 @@ class GsimLogicTree(object):
         """
         assert set(trts) <= set(self.tectonic_region_types), (
             trts, self.tectonic_region_types)
-        return self.__class__(self.fname, self.branchset_filter, trts)
+        return self.__class__(self.fname, trts, self._ltnode)
 
     def get_num_branches(self):
         """
@@ -1031,12 +1034,11 @@ class GsimLogicTree(object):
             num *= val
         return num
 
-    def _parse_lt(self):
+    def _build_branches(self):
         # do the parsing, called at instantiation time to populate .values
         fkeys = []
         branchsetids = set()
-        nrml = node_from_xml(self.fname)
-        for branching_level in nrml.logicTree:
+        for branching_level in self._ltnode:
             if len(branching_level) > 1:
                 raise InvalidLogicTree(
                     'Branching level %s has multiple branchsets'
@@ -1052,7 +1054,7 @@ class GsimLogicTree(object):
                         'Duplicated branchSetID %s' % bsid)
                 else:
                     branchsetids.add(bsid)
-                fkey = branchset.attrib.get(self.branchset_filter)
+                fkey = branchset.attrib.get('applyToTectonicRegionType')
                 if fkey:
                     fkeys.append(fkey)
                 if fkey in self.tectonic_region_types:
@@ -1068,8 +1070,8 @@ class GsimLogicTree(object):
                             branchset, branch_id, uncertainty, weight)
                     assert sum(weights) == 1, weights
         if len(fkeys) > len(set(fkeys)):
-            raise InvalidLogicTree('Found duplicated %s=%s' % (
-                self.branchset_filter, fkeys))
+            raise InvalidLogicTree(
+                'Found duplicated applyToTectonicRegionType=%s' % fkeys)
 
     def validate_gsim(self, value):
         """
@@ -1090,7 +1092,8 @@ class GsimLogicTree(object):
         # NB: branches are already sorted
         for branchset, branches in itertools.groupby(
                 self.branches, operator.attrgetter('bset')):
-            tectonic_region_types.append(branchset[self.branchset_filter])
+            tectonic_region_types.append(
+                branchset['applyToTectonicRegionType'])
             groups.append(list(branches))
         # with T tectonic region types there are T groups and T branches
         for i, branches in enumerate(itertools.product(*groups)):

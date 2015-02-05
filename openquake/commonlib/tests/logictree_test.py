@@ -1433,14 +1433,12 @@ class BranchSetFilterTestCase(unittest.TestCase):
 class GsimLogicTreeTestCase(unittest.TestCase):
     def parse_invalid(self, xml, errorclass, errormessage=None):
         with self.assertRaises(errorclass) as exc:
-            logictree.GsimLogicTree(
-                StringIO(xml), 'applyToTectonicRegionType', ['Shield'])
+            logictree.GsimLogicTree(StringIO(xml), ['Shield'])
         if errormessage is not None:
             self.assertEqual(errormessage, str(exc.exception))
 
     def parse_valid(self, xml, tectonic_region_types=('Shield',)):
-        return logictree.GsimLogicTree(
-            StringIO(xml), 'applyToTectonicRegionType', tectonic_region_types)
+        return logictree.GsimLogicTree(StringIO(xml), tectonic_region_types)
 
     def test_not_xml(self):
         self.parse_invalid('xxx', etree.XMLSyntaxError)

@@ -256,8 +256,7 @@ def get_gsim_lt(oqparam, trts):
     """
     gsim_file = os.path.join(
         oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
-    return logictree.GsimLogicTree(
-        gsim_file, 'applyToTectonicRegionType', trts)
+    return logictree.GsimLogicTree(gsim_file, trts)
 
 
 def get_source_model_lt(oqparam):
