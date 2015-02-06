@@ -1,5 +1,4 @@
-from django.conf.urls.defaults import patterns
-from django.conf.urls.defaults import url
+from django.conf.urls import patterns, url
 
 # each url is prefixed with /v1/calc/
 urlpatterns = patterns(
