@@ -356,31 +356,6 @@ class BaseQuadrilateralSurface(BaseSurface):
         return dst
 
     def get_hypo_location(self, mesh, mesh_spacing, hypo_loc=None):
-        """
-        The method determines the location of the hypocentre within the rupture
-        :param plane:
-            Rupture plane as instance of :class:
-            `~openquake.hazardlib.geo.surface.SimpleFaultSurface`
-        :param mesh:
-            :class:`~openquake.hazardlib.geo.mesh.Mesh` of points
-        :param mesh_spacing:
-            The desired distance between two adjacent points in source's
-            ruptures' mesh, in km. Mainly this parameter allows to balance
-            the trade-off between time needed to compute the :meth:`distance
-            <openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_min_distance>`
-            between the rupture surface and a site and the precision of that
-            computation.
-        :param tuple hypo_loc:
-            Hypocentre location as fraction of rupture plane, as a tuple of
-            (Along Strike, Down Dip), e.g. a hypocentre located in the centroid
-            of the rupture would be input as (0.5, 0.5), whereas a
-            hypocentre located in a position 3/4 along the length, and 1/4 of
-            the way down dip of the rupture plane would be entered as
-            (0.75, 0.25).
-        :returns:
-            Hypocentre location as instance of :class:
-            `~openquake.hazardlib.geo.point.Point`
-        """
 
         centroid = mesh.get_middle_point()
         if hypo_loc is None:
