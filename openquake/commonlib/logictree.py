@@ -1119,3 +1119,9 @@ class GsimLogicTree(object):
                 weight *= branch.weight
                 value[trt] = branch.uncertainty
             yield Realization(value, weight, tuple(lt_path), i, tuple(lt_uid))
+
+    def __str__(self):
+        lines = ['%s,%s,%s,w=%s' % (b.bset['applyToTectonicRegionType'],
+                                    b.id, b.uncertainty, b.weight)
+                 for b in self.branches if b.effective]
+        return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(lines))
