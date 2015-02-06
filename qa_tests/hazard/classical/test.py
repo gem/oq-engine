@@ -620,10 +620,10 @@ class ClassicalHazardCase15TestCase(BaseQATestCase):
             [['SM1'], ['BA2008', 'T2002']],
             [['SM1'], ['CB2008', 'C2003']],
             [['SM1'], ['CB2008', 'T2002']],
-            [['SM2', 'a3pt2b0pt8'], ['BA2008']],
-            [['SM2', 'a3pt2b0pt8'], ['CB2008']],
-            [['SM2', 'a3b1'], ['BA2008']],
-            [['SM2', 'a3b1'], ['CB2008']],
+            [['SM2', 'a3pt2b0pt8'], ['BA2008', '*']],
+            [['SM2', 'a3pt2b0pt8'], ['CB2008', '*']],
+            [['SM2', 'a3b1'], ['BA2008', '*']],
+            [['SM2', 'a3b1'], ['CB2008', '*']],
         ]
 
         csvdir = os.path.join(self.CURRENTDIR, 'expected_results')
