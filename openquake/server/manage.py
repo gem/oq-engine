@@ -15,7 +15,7 @@ else:
 
 
 # the code here is run in development mode; for instance
-# $ python manage.py runserver 0.0.0.0:8080 celery
+# $ python manage.py runserver 0.0.0.0:8800 celery
 if __name__ == "__main__":
     os.environ.setdefault(
         "DJANGO_SETTINGS_MODULE", "openquake.server.settings")
