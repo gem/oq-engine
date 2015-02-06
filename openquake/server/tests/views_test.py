@@ -452,15 +452,14 @@ class RunCalcTestCase(BaseViewTestCase):
         )
         multi_mock = MultiMock(**mocks)
 
-        temp_dir = tempfile.mkdtemp()
-
         # Set up expected test values for job_from_file:
-        jff_exp_call_args = ((os.path.join(temp_dir, 'data', 'job_risk.ini'),
-                              'platform', 'progress',  '', None, 666), {})
+        jff_exp_call_args = (
+            ('TMP/data/job_risk.ini', 'platform', 'progress',  '', None, 666),
+            {})
 
         try:
             with multi_mock:
-                multi_mock['mkdtemp'].return_value = temp_dir
+                multi_mock['mkdtemp'].return_value = 'TMP'
 
                 fake_job = FakeJob(
                     777, 'pending', FakeUser(1), None,
@@ -471,7 +470,7 @@ class RunCalcTestCase(BaseViewTestCase):
                 # Call the function under test
                 views.run_calc(self.request)
 
-            self.assertEqual(1, multi_mock['mkdtemp'].call_count)
+            self.assertEqual(2, multi_mock['mkdtemp'].call_count)
 
             self.assertEqual(1, multi_mock['job_from_file'].call_count)
             self.assertEqual(jff_exp_call_args,
@@ -480,12 +479,11 @@ class RunCalcTestCase(BaseViewTestCase):
             self.assertEqual({
                 'count': 1,
                 'args': ((multi_mock['run_calc'],
-                          777, temp_dir, None, None, 'platform', None),
+                          777, 'TMP/data', None, None, 'platform', None),
                          {})
                 }, self.executor_call_data)
         finally:
             archive_file.close()
-            shutil.rmtree(temp_dir)
 
 
 class SubmitJobTestCase(unittest.TestCase):
