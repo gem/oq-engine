@@ -225,8 +225,9 @@ def submit_job(job_file, temp_dir, dbname,
     Create a job object from the given job.ini file in the job directory
     and submit it to the job queue.
     """
+    ini = os.path.join(temp_dir, job_file)
     job, exctype = safely_call(
-        oq_engine.job_from_file, (job_file, "platform", DEFAULT_LOG_LEVEL, '',
+        oq_engine.job_from_file, (ini, "platform", DEFAULT_LOG_LEVEL, '',
                                   hazard_output_id, hazard_job_id))
     if exctype:
         tasks.update_calculation(callback_url, status="failed", einfo=job)
