@@ -695,6 +695,7 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         self.assertEqual(assoc.gsim_by_trt[rlz],
                          {'Subduction Interface': 'SadighEtAl1997',
                           'Active Shallow Crust': 'ChiouYoungs2008'})
+        # ignoring the end of the tuple, with the uid field
         self.assertEqual(rlz[:4], (0, ('b1', 'b5', 'b8'), ('b2', 'b3'), 0.5))
         self.assertEqual(
             str(assoc),
