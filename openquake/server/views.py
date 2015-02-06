@@ -14,7 +14,7 @@ from django.http import HttpResponseNotFound
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from openquake.commonlib import nrml
+from openquake.commonlib import nrml, readinput
 from openquake.engine import engine as oq_engine, __version__ as oqversion
 from openquake.engine.db import models as oqe_models
 from openquake.engine.export import core
@@ -74,38 +74,6 @@ def _get_base_url(request):
     return base_url
 
 
-def create_detect_job_file(*candidates):
-    def detect_job_file(files):
-        for candidate in candidates:
-            try:
-                file_idx = [os.path.basename(f)
-                            for f in files].index(candidate)
-                return files[file_idx]
-            except ValueError:
-                pass
-        raise RuntimeError("No job file found in %s for %s" % (
-            str(files), str(candidates)))
-    return detect_job_file
-
-
-def collect_files(dirpath, cond=lambda fullname: True):
-    """
-    Recursively collect the files contained inside dirpath.
-
-    :param dirpath: path to a readable directory
-    :param cond: condition on the path to collect the file
-    """
-    files = []
-    for fname in os.listdir(dirpath):
-        fullname = os.path.join(dirpath, fname)
-        if os.path.isdir(fullname):  # navigate inside
-            files.extend(collect_files(fullname))
-        else:  # collect files
-            if cond(fullname):
-                files.append(fullname)
-    return files
-
-
 def _prepare_job(request, hazard_output_id, hazard_job_id,
                  detect_job_file):
     """
@@ -113,13 +81,12 @@ def _prepare_job(request, hazard_output_id, hazard_job_id,
     select the job file by using the `detect_job_file` callable which
     accepts in input a list holding all the filenames ending with .ini
 
-    :returns: job_file and temp_dir
+    :returns: full path of the job_file
     """
     temp_dir = tempfile.mkdtemp()
     inifiles = []
-    try:
-        archive = zipfile.ZipFile(request.FILES['archive'])
-    except KeyError:
+    arch = request.FILES.get('archive')
+    if arch is None:
         # move each file to a new temp dir, using the upload file names,
         # not the temporary ones
         for each_file in request.FILES.values():
@@ -127,12 +94,9 @@ def _prepare_job(request, hazard_output_id, hazard_job_id,
             shutil.move(each_file.temporary_file_path(), new_path)
             if new_path.endswith('.ini'):
                 inifiles.append(new_path)
-    else:  # extract the files from the archive into temp_dir
-        archive.extractall(temp_dir)
-        archive.close()
-        inifiles = collect_files(temp_dir, lambda f: f.endswith('.ini'))
-    job_file = detect_job_file(inifiles)
-    return job_file, temp_dir
+        return detect_job_file(inifiles)
+    # else extract the files from the archive into temp_dir
+    return readinput.extract_from_zip(arch, detect_job_file)
 
 
 def _is_source_model(tempfile):
@@ -227,17 +191,19 @@ def run_calc(request):
 
     is_risk = hazard_output_id or hazard_job_id
     if is_risk:
-        detect_job_file = create_detect_job_file("job_risk.ini", "job.ini")
+        detect_job_file = readinput.create_detect_file(
+            "job_risk.ini", "job.ini")
     else:
-        detect_job_file = create_detect_job_file("job_hazard.ini", "job.ini")
+        detect_job_file = readinput.create_detect_file(
+            "job_hazard.ini", "job.ini")
     einfo, exctype = safely_call(
         _prepare_job, (request, hazard_output_id, hazard_job_id,
                        detect_job_file))
     if exctype:
         tasks.update_calculation(callback_url, status="failed", einfo=einfo)
         raise exctype(einfo)
-    else:
-        job_file, temp_dir = einfo
+    job_file = os.path.basename(einfo)
+    temp_dir = os.path.dirname(einfo)
     job, _fut = submit_job(job_file, temp_dir, request.POST['database'],
                            callback_url, foreign_calc_id,
                            hazard_output_id, hazard_job_id)
