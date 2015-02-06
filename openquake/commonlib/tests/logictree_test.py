@@ -1468,8 +1468,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             </logicTree>
         """)
         self.parse_invalid(
-            xml, logictree.InvalidLogicTree, "Could not find branches with "
-            "attribute 'applyToTectonicRegionType' in set(['Shield'])")
+            xml, NameError, 'Unknown GSIM: +100 in file <StringIO>')
 
     def test_gmpe_uncertainty(self):
         xml = _make_nrml("""\
@@ -1620,13 +1619,14 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         as_model_lt = self.parse_valid(xml, as_model_trts)
         fs_bg_model_lt = self.parse_valid(xml, fs_bg_model_trts)
         self.assertEqual(as_model_lt.get_num_branches(),
-                         {'bs4': 1, 'bs1': 4, 'bs2': 5, 'bs3': 2})
+                         {'bs1': 4, 'bs2': 5, 'bs3': 2, 'bs4': 1})
         self.assertEqual(fs_bg_model_lt.get_num_branches(),
-                         {'bs1': 4, 'bs2': 5})
+                         {'bs1': 4, 'bs2': 5, 'bs3': 0, 'bs4': 0})
         self.assertEqual(as_model_lt.get_num_paths(), 40)
         self.assertEqual(fs_bg_model_lt.get_num_paths(), 20)
         self.assertEqual(len(list(as_model_lt)), 5 * 4 * 2 * 1)
-        self.assertEqual(len(list(fs_bg_model_lt)), 5 * 4)
+        effective_rlzs = set(rlz.uid for rlz in fs_bg_model_lt)
+        self.assertEqual(len(effective_rlzs), 5 * 4)
 
     def test_sampling(self):
         xml = _make_nrml("""\
@@ -1671,7 +1671,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         self.rnd = random.Random(oqparam.random_seed)
 
     def test_sample_source_model(self):
-        [(sm_name, weight, branch_ids, _)] = self.source_model_lt
+        [(sm_name, weight, branch_ids, _, _)] = self.source_model_lt
         self.assertEqual(sm_name, 'example-source-model.xml')
         self.assertEqual(('b1', 'b5', 'b8'), branch_ids)
 
@@ -1687,7 +1687,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
             self.source_model_lt.num_samples = orig_samples
 
     def test_sample_gmpe(self):
-        (value, weight, branch_ids, _) = logictree.sample_one(
+        (value, weight, branch_ids, _, _) = logictree.sample_one(
             self.gmpe_lt, self.rnd)
         self.assertEqual(value,
                          {'Subduction Interface': 'SadighEtAl1997',

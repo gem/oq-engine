@@ -110,6 +110,7 @@ class HazardCalculator(BaseCalculator):
             logging.info('Reading the composite source models')
             self.composite_source_model = readinput.get_composite_source_model(
                 self.oqparam, self.sitecol)
+            self.composite_source_model.reduce_gsim_lt()
             self.job_info = readinput.get_job_info(
                 self.oqparam, self.composite_source_model, self.sitecol)
             # we could manage limits here

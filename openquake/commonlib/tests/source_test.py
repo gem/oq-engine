@@ -685,12 +685,18 @@ class CompositeSourceModelTestCase(unittest.TestCase):
         # the example has number_of_logic_tree_samples = 1
         sitecol = readinput.get_site_collection(oqparam)
         csm = readinput.get_composite_source_model(oqparam, sitecol)
+        self.assertEqual(str(csm[0].gsim_lt), '''\
+<GsimLogicTree
+Active Shallow Crust,b1,SadighEtAl1997,w=0.5
+Active Shallow Crust,b2,ChiouYoungs2008,w=0.5
+Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         assoc = csm.get_rlzs_assoc()
         [rlz] = assoc.realizations
         self.assertEqual(assoc.gsim_by_trt[rlz],
                          {'Subduction Interface': 'SadighEtAl1997',
                           'Active Shallow Crust': 'ChiouYoungs2008'})
-        self.assertEqual(rlz, (0, ('b1', 'b5', 'b8'), ('b2', 'b3'), 0.5))
+        # ignoring the end of the tuple, with the uid field
+        self.assertEqual(rlz[:4], (0, ('b1', 'b5', 'b8'), ('b2', 'b3'), 0.5))
         self.assertEqual(
             str(assoc),
             "{0,SadighEtAl1997: ['<0,b1_b5_b8,b2_b3,w=0.5>']\n"
@@ -713,19 +719,18 @@ class CompositeSourceModelTestCase(unittest.TestCase):
         for trt_model in csm.trt_models:
             if trt_model.trt == 'Active Shallow Crust':  # no ruptures
                 trt_model.num_ruptures = 0
-        csm.reduce_trt_models()
-        self.assertEqual(map(len, csm.trt_models), [1, 1, 1, 1, 1, 1, 1, 1, 1])
+        csm.reduce_gsim_lt()
         assoc = csm.get_rlzs_assoc()
         expected_assoc = """\
-{0,SadighEtAl1997: ['<0,b1_b3_b6,b3,w=0.04>']
-2,SadighEtAl1997: ['<1,b1_b3_b7,b3,w=0.12>']
-4,SadighEtAl1997: ['<2,b1_b3_b8,b3,w=0.04>']
-6,SadighEtAl1997: ['<3,b1_b4_b6,b3,w=0.12>']
-8,SadighEtAl1997: ['<4,b1_b4_b7,b3,w=0.36>']
-10,SadighEtAl1997: ['<5,b1_b4_b8,b3,w=0.12>']
-12,SadighEtAl1997: ['<6,b1_b5_b6,b3,w=0.04>']
-14,SadighEtAl1997: ['<7,b1_b5_b7,b3,w=0.12>']
-16,SadighEtAl1997: ['<8,b1_b5_b8,b3,w=0.04>']}"""
+{0,SadighEtAl1997: ['<0,b1_b3_b6,*_b3,w=0.04>']
+2,SadighEtAl1997: ['<1,b1_b3_b7,*_b3,w=0.12>']
+4,SadighEtAl1997: ['<2,b1_b3_b8,*_b3,w=0.04>']
+6,SadighEtAl1997: ['<3,b1_b4_b6,*_b3,w=0.12>']
+8,SadighEtAl1997: ['<4,b1_b4_b7,*_b3,w=0.36>']
+10,SadighEtAl1997: ['<5,b1_b4_b8,*_b3,w=0.12>']
+12,SadighEtAl1997: ['<6,b1_b5_b6,*_b3,w=0.04>']
+14,SadighEtAl1997: ['<7,b1_b5_b7,*_b3,w=0.12>']
+16,SadighEtAl1997: ['<8,b1_b5_b8,*_b3,w=0.04>']}"""
         self.assertEqual(str(assoc), expected_assoc)
         self.assertEqual(len(assoc.realizations), 9)
 
@@ -733,8 +738,7 @@ class CompositeSourceModelTestCase(unittest.TestCase):
         for trt_model in csm.trt_models:
             if trt_model.trt == 'Subduction Interface':  # no ruptures
                 trt_model.num_ruptures = 0
-        csm.reduce_trt_models()
-        self.assertEqual(map(len, csm.trt_models), [])
+        csm.reduce_gsim_lt()
         self.assertEqual(csm.get_rlzs_assoc().realizations, [])
 
     def test_oversampling(self):
