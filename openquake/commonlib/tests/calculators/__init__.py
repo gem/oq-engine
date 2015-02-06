@@ -21,7 +21,7 @@ import unittest
 
 from openquake.commonlib.calculators import base
 from openquake.commonlib.parallel import PerformanceMonitor, executor
-from openquake.commonlib import readinput
+from openquake.commonlib import readinput, oqvalidation
 
 
 class DifferentFiles(Exception):
@@ -37,7 +37,8 @@ class CalculatorTestCase(unittest.TestCase):
         """
         self.testdir = os.path.dirname(testfile)
         inis = [os.path.join(self.testdir, ini) for ini in job_ini.split(',')]
-        oq = readinput.get_oqparam(inis)
+        oq = oqvalidation.OqParam(**readinput.get_params(inis))
+        oq.validate()
         oq.concurrent_tasks = executor.num_tasks_hint
         oq.usecache = False
         # change this when debugging the test
