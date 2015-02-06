@@ -53,3 +53,21 @@ class GriddedSurfaceTestCase(unittest.TestCase):
     def test_get_ry0_distance(self):
         self.assertRaises(NotImplementedError, self.surf.get_ry0_distance,
                           self.mesh)
+
+    def test_get_strike(self):
+        self.assertRaises(NotImplementedError, self.surf.get_strike)
+
+    def test_get_dip(self):
+        self.assertRaises(NotImplementedError, self.surf.get_dip)
+
+    def test_get_width(self):
+        self.assertRaises(NotImplementedError, self.surf.get_width)
+
+    def test_get_area(self):
+        self.assertRaises(NotImplementedError, self.surf.get_area)
+
+    def test_get_bounding_box(self):
+        self.assertRaises(NotImplementedError, self.surf.get_bounding_box)
+
+    def test_get_middle_point(self):
+        self.assertRaises(NotImplementedError, self.surf.get_middle_point)

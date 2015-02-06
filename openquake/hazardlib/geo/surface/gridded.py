@@ -36,7 +36,7 @@ class GriddedSurface(BaseSurface):
         Must be an instance of :class:`~openquake.hazardlib.geo.mesh.Mesh`
     """
     def __init__(self, mesh):
-        self.mesh_surface = mesh
+        self.mesh = mesh
 
     @classmethod
     def from_points_list(cls, points):
@@ -49,7 +49,19 @@ class GriddedSurface(BaseSurface):
             An instance of
             :class:`~openquake.hazardlib.geo.surface.gridded.GriddedSurface`
         """
+        
         return cls(Mesh.from_points_list(points))
+
+    def get_bounding_box(self):
+        """
+        Compute surface geographical bounding box.
+
+        :return:
+            A tuple of four items. These items represent western, eastern,
+            northern and southern borders of the bounding box respectively.
+            Values are floats in decimal degrees.
+        """
+        raise NotImplementedError
 
     def get_min_distance(self, mesh):
         """
@@ -62,7 +74,7 @@ class GriddedSurface(BaseSurface):
         :returns:
             A numpy array of distances in km.
         """
-        return (self.mesh_surface.get_min_distance(mesh))
+        return (self.mesh.get_min_distance(mesh))
 
     def get_closest_points(self, mesh):
         """
@@ -164,17 +176,6 @@ class GriddedSurface(BaseSurface):
 
         :returns:
             Float value, the surface area
-        """
-        raise NotImplementedError
-
-    def get_bounding_box(self):
-        """
-        Compute surface geographical bounding box.
-
-        :return:
-            A tuple of four items. These items represent western, eastern,
-            northern and southern borders of the bounding box respectively.
-            Values are floats in decimal degrees.
         """
         raise NotImplementedError
 
