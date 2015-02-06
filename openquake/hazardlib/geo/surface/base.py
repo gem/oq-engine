@@ -261,12 +261,12 @@ class BaseQuadrilateralSurface(BaseSurface):
 
         dst1 = geodetic.distance_to_arc(top_edge.lons[0, 0],
                                         top_edge.lats[0, 0],
-                                        (mean_strike+90.) % 360,
+                                        (mean_strike + 90.) % 360,
                                         mesh.lons, mesh.lats)
 
         dst2 = geodetic.distance_to_arc(top_edge.lons[0, -1],
                                         top_edge.lats[0, -1],
-                                        (mean_strike+90.) % 360,
+                                        (mean_strike + 90.) % 360,
                                         mesh.lons, mesh.lats)
 
         # Get the shortest distance from two two lines
