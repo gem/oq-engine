@@ -28,7 +28,6 @@ from openquake.hazardlib.slots import with_slots
 
 @with_slots
 class SimpleFaultSource(ParametricSeismicSource):
-
     """
     Simple fault source typology represents seismicity occurring on a fault
     surface with simple geometry.
