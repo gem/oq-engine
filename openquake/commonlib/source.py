@@ -362,7 +362,7 @@ class CompositeSourceModel(collections.Sequence):
     def __init__(self, source_model_lt, source_models):
         self.source_model_lt = source_model_lt
         self.source_models = list(source_models)
-        if not self.source_models:
+        if len(list(self.sources)) == 0:
             raise RuntimeError('All sources were filtered away')
         self.tmdict = {}
         for i, tm in enumerate(self.trt_models):
