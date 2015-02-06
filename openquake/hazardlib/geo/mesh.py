@@ -332,7 +332,6 @@ class Mesh(object):
         multipoint = shapely.geometry.MultiPoint(coords)
         # create a 2d polygon from a convex hull around that multipoint.
         polygon2d = multipoint.convex_hull
-
         return proj, polygon2d
 
     def _get_proj_enclosing_polygon(self):
@@ -380,7 +379,7 @@ class RectangularMesh(Mesh):
     of points but rather a sort of table of points, where index of the point
     in a mesh is related to it's position with respect to neighbouring points.
     """
-    def __init__(self, lons, lats, depths):
+    def __init__(self, lons, lats, depths=None):
         super(RectangularMesh, self).__init__(lons, lats, depths)
         assert lons.ndim == 2
 
