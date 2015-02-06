@@ -66,7 +66,7 @@ to have an effect: in such a situation we would expect to have only 2
 effective realizations corresponding to the GMPEs in the second
 tectonic region type. The weight of each effective realizations will be
 three times the weight of a regular representation, since three different paths
-in the first tectonic region type will product exactly the same result.
+in the first tectonic region type will produce exactly the same result.
 It is not important which GMPE was chosen for the first tectonic region
 type because there are no sources of kind T1; so let's denote the
 path of the effective realizations with the notation
