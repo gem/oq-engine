@@ -443,7 +443,7 @@ def job_from_file(cfg_file_path, username, log_level='info', exports='',
     models.JobStats.objects.create(oq_job=job)
     with logs.handle(job, log_level):
         # read calculation params and create the calculation profile
-        params = readinput.get_params(cfg_file_path)
+        params = readinput.get_params([cfg_file_path])
         if not exports:  # when called from the engine server
             # ignore the user-provided export_dir: the engine server will
             # export on demand with its own mechanism on a temporary directory
