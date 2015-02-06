@@ -19,7 +19,9 @@
 import os
 import csv
 import gzip
+import zipfile
 import logging
+import tempfile
 import collections
 import ConfigParser
 
@@ -50,23 +52,78 @@ class DuplicatedPoint(Exception):
     """
 
 
-def get_params(job_ini):
+def create_detect_file(*candidates):
+    """
+    Create function which is able to extract a certain file from a list
+    of files, by looking at the given candidates, in order. Usually the
+    candidates are `job.ini`, 'job_hazard.ini', 'job_risk.ini'.
+    """
+    def detect_file(files):
+        for candidate in candidates:
+            try:
+                file_idx = map(os.path.basename, files).index(candidate)
+                return files[file_idx]
+            except ValueError:
+                pass
+        raise IOError("No suitable file found in %s for %s" % (
+            str(files), str(candidates)))
+    return detect_file
+
+
+def collect_files(dirpath, cond=lambda fullname: True):
+    """
+    Recursively collect the files contained inside dirpath.
+
+    :param dirpath: path to a readable directory
+    :param cond: condition on the path to collect the file
+    """
+    files = []
+    for fname in os.listdir(dirpath):
+        fullname = os.path.join(dirpath, fname)
+        if os.path.isdir(fullname):  # navigate inside
+            files.extend(collect_files(fullname))
+        else:  # collect files
+            if cond(fullname):
+                files.append(fullname)
+    return files
+
+
+def extract_from_zip(path, detect_file):
+    """
+    Given a zip archive and a function to detect the presence of a given
+    filename, unzip the archive into a temporary directory and return the
+    full path of the file. Raise an IOError if the file cannot be found
+    within the archive.
+
+    :param path: pathname of the archive
+    :param detect_file: searching function
+    """
+    temp_dir = tempfile.mkdtemp()
+    with zipfile.ZipFile(path) as archive:
+        archive.extractall(temp_dir)
+    return detect_file(collect_files(temp_dir))
+
+
+def get_params(job_inis):
     """
     Parse a dictionary of parameters from one or more INI-style config file.
 
-    :param job_ini:
-        Configuration file or list of configuration files
+    :param job_inis:
+        List of configuration files, or zip archive
     :returns:
         A dictionary of parameters
     """
-    job_inis = [job_ini] if isinstance(job_ini, basestring) else job_ini
+    if len(job_inis) == 1 and job_inis[0].endswith('.zip'):
+        detect_job_ini = create_detect_file('job.ini')
+        job_inis = [extract_from_zip(job_inis[0], detect_job_ini)]
+
     cp = ConfigParser.ConfigParser()
     cp.read(job_inis)
 
     # drectory containing the config files we're parsing
     base_path = os.path.dirname(
         os.path.join(os.path.abspath('.'), job_inis[0]))
-    params = dict(base_path=base_path, inputs={'job_ini': job_ini})
+    params = dict(base_path=base_path, inputs={'job_ini': ','.join(job_inis)})
 
     for sect in cp.sections():
         for key, value in cp.items(sect):
@@ -92,8 +149,7 @@ def get_oqparam(job_ini, calculators=None):
     Parse a dictionary of parameters from one or more INI-style config file.
 
     :param job_ini:
-        Configuration file or list of configuration files or dictionary
-        of parameters
+        Path to configuration file/archive or dictionary of parameters
     :param calculators:
         Sequence of calculator names (optional) used to restrict the
         valid choices for `calculation_mode`
@@ -113,7 +169,7 @@ def get_oqparam(job_ini, calculators=None):
     if isinstance(job_ini, dict):
         oqparam = OqParam(**job_ini)
     else:
-        oqparam = OqParam(**get_params(job_ini))
+        oqparam = OqParam(**get_params(job_ini.split(',')))
 
     oqparam.validate()
     return oqparam
