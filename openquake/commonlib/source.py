@@ -390,9 +390,11 @@ class CompositeSourceModel(collections.Sequence):
 
     def reduce_gsim_lt(self):
         """
-        Remove the tectonic regions without ruptures and reduce the
-        GSIM logic tree. It works by updating the underlying source models.
+        Reduce the GSIM logic tree by ignoring TRT models withot ruptures.
+        It has effect only if sampling is disabled, i.e for full enumeration.
         """
+        if self.source_model_lt.num_samples:
+            return
         for sm in self:
             trt_models = list(sm.trt_models)
             trts = set(trt_model.trt for trt_model in trt_models

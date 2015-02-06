@@ -347,7 +347,8 @@ python -m openquake.engine.tools.correct_complex_sources %s
                 trt_model.gsims = gsim_lt.values[trt_model.trt]
         # the num_ruptures is not updated; it will be updated in the
         # engine, after filtering of the sources
-        yield source.SourceModel(sm, rlz.weight, smpath, trt_models, gsim_lt, i)
+        yield source.SourceModel(
+            sm, rlz.weight, smpath, trt_models, gsim_lt, i)
 
 
 def get_filtered_source_models(oqparam, source_model_lt, sitecol):
@@ -381,7 +382,6 @@ def get_filtered_source_models(oqparam, source_model_lt, sitecol):
                     'sm_lt_path=%s, maximum_distance=%s km, TRT=%s',
                     source_model.name, source_model.path,
                     oqparam.maximum_distance, trt_model.trt)
-                source_model.trt_models.remove(trt_model)
         if source_model.trt_models:
             yield source_model
             parallel.TaskManager.restart()  # hack to save memory
