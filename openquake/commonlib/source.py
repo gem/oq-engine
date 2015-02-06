@@ -403,11 +403,9 @@ class CompositeSourceModel(collections.Sequence):
                 # nothing to remove
                 continue
             # build the reduced logic tree
-            gsim_lt = sm.gsim_lt.filter(trts)
+            sm.gsim_lt.reduce(trts)
             for trt_model in trt_models:
-                trt_model.gsims = gsim_lt.values[trt_model.trt]
-            self[sm.ordinal] = SourceModel(
-                sm.name, sm.weight, sm.path, trt_models, gsim_lt, sm.ordinal)
+                trt_model.gsims = sm.gsim_lt.values[trt_model.trt]
 
     def get_rlzs_assoc(self):
         """
@@ -432,10 +430,6 @@ class CompositeSourceModel(collections.Sequence):
     def __getitem__(self, i):
         """Return the i-th source model"""
         return self.source_models[i]
-
-    def __setitem__(self, i, sm):
-        """Update the i-th source model"""
-        self.source_models[i] = sm
 
     def __iter__(self):
         """Return an iterator over the underlying source models"""

@@ -995,7 +995,7 @@ class GsimLogicTree(object):
             raise ValueError(
                 'The given tectonic region types are not distinct: %s' %
                 ','.join(self.tectonic_region_types))
-        self.values = collections.defaultdict(list)  # {fkey: uncertainties}
+        self.values = collections.defaultdict(list)  # {trt: gsims}
         self._ltnode = ltnode or node_from_xml(fname).logicTree
         self.branches = sorted(
             self._build_branches(),
@@ -1006,15 +1006,17 @@ class GsimLogicTree(object):
                 "'applyToTectonicRegionType' in %s" %
                 set(tectonic_region_types))
 
-    def filter(self, trts):
+    def reduce(self, trts):
         """
-        Build a reduced GsimLogicTree.
+        Reduce the GsimLogicTree.
 
         :param trts: a subset of tectonic region types
         """
-        assert set(trts) <= set(self.tectonic_region_types), (
-            trts, self.tectonic_region_types)
-        return self.__class__(self.fname, trts, self._ltnode)
+        self.tectonic_region_types = sorted(trts)
+        self.values = collections.defaultdict(list)
+        self.branches = sorted(
+            self._build_branches(),
+            key=lambda b: (b.bset['branchSetID'], b.id))
 
     def get_num_branches(self):
         """
