@@ -47,14 +47,15 @@ class SimpleFaultSource(ParametricSeismicSource):
     :param hypo_loc:
         Hypocentre location as fraction of rupture plane and the expected
         probability of the hypocentre occured at this location on the rupture,
-        as numpy array[(Along Strike, Down Dip, Probabiligy)], e.g. two possibe
-        hypocentre are assigned on the rupture. One of them, the hypocentre
+        as numpy array[(Along Strike, Down Dip, Probabiligy)], e.g. two possible
+        hypocentres are assigned on the rupture. One of them, the hypocentre
         located in a position 1/4 along the length and 1/4 of the the way down
         dip of the rupture plane with the assigned probability of occurring 0.3
-        . Another hypocentre located in a position 3/4 along the length and 3/4
+        Another hypocentre located in a position 3/4 along the length and 3/4
         of the the way down dip of the rupture plane with the assigned
         probability of occurring 0.7. The numpy array would be entered as
         numpy.array([0.25, 0.25, 0.3], [0.75, 0.75, 0.7]).
+
     See also :class:`openquake.hazardlib.source.base.ParametricSeismicSource`
     for description of other parameters.
 
