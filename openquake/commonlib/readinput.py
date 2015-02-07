@@ -443,14 +443,17 @@ def get_filtered_source_models(oqparam, source_model_lt, sitecol):
             parallel.TaskManager.restart()  # hack to save memory
 
 
-def get_composite_source_model(oqparam, sitecol):
+def get_composite_source_model(oqparam, sitecol, prefilter=False):
     """
-    Build the source models with filtered and split sources.
+    Build the source models by splitting the sources. If prefiltering is
+    enabled, also reduce the GSIM logic trees in the underlying source models.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
+    :param prefilter:
+        if True, filter the sources before splitting them
     :returns:
         an iterator over :class:`openquake.commonlib.source.SourceModel`
         tuples skipping the empty models
@@ -458,8 +461,8 @@ def get_composite_source_model(oqparam, sitecol):
     source_model_lt = get_source_model_lt(oqparam)
     smodels = []
     trt_id = 0
-    for source_model in get_filtered_source_models(
-            oqparam, source_model_lt, sitecol):
+    get_sm = get_filtered_source_models if prefilter else get_source_models
+    for source_model in get_sm(oqparam, source_model_lt, sitecol):
         for trt_model in source_model.trt_models:
             trt_model.id = trt_id
             trt_id += 1
@@ -469,7 +472,10 @@ def get_composite_source_model(oqparam, sitecol):
                 getattr(oqparam, 'area_source_discretization', None))
             logging.info('Got %s', trt_model)
         smodels.append(source_model)
-    return source.CompositeSourceModel(source_model_lt, smodels)
+    csm = source.CompositeSourceModel(source_model_lt, smodels)
+    if prefilter:
+        csm.reduce_gsim_lt()
+    return csm
 
 
 def get_job_info(oqparam, source_models, sitecol):
