@@ -684,7 +684,7 @@ class CompositeSourceModelTestCase(unittest.TestCase):
         oqparam = tests.get_oqparam('classical_job.ini')
         # the example has number_of_logic_tree_samples = 1
         sitecol = readinput.get_site_collection(oqparam)
-        csm = readinput.get_composite_source_model(oqparam, sitecol)
+        csm = readinput.get_composite_source_model(oqparam, sitecol, True)
         self.assertEqual(str(csm[0].gsim_lt), '''\
 <GsimLogicTree
 Active Shallow Crust,b1,SadighEtAl1997,w=0.5
