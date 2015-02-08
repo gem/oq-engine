@@ -333,13 +333,9 @@ class BaseHazardCalculator(base.Calculator):
         logs.LOG.progress("initializing realizations")
         cm = self.composite_model
         self._realizations = []
-        # update the attribute num_ruptures, to discard fake realizations
-        for trt_model in cm.trt_models:
-            trt_model.num_ruptures = models.TrtModel.objects.get(
-                pk=trt_model.id).num_ruptures
-        cm.reduce_gsim_lt()
-
-        rlzs_assoc = cm.get_rlzs_assoc()
+        rlzs_assoc = cm.get_rlzs_assoc(
+            lambda trt_model: models.TrtModel.objects.get(
+                pk=trt_model.id).num_ruptures)
         gsims_by_trt_id = rlzs_assoc.get_gsims_by_trt_id()
         smodels = [sm for sm in self._source_models
                    if sm.trtmodel_set.filter(num_ruptures__gt=0)]
