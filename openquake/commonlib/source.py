@@ -388,35 +388,27 @@ class CompositeSourceModel(collections.Sequence):
                 src.trt_model_id = trt_model.id
                 yield src
 
-    def reduce_gsim_lt(self):
-        """
-        Reduce the GSIM logic tree by ignoring TRT models withot ruptures.
-        It has effect only if sampling is disabled, i.e for full enumeration.
-        """
-        if self.source_model_lt.num_samples:
-            return
-        for sm in self:
-            trt_models = list(sm.trt_models)
-            trts = set(trt_model.trt for trt_model in trt_models
-                       if trt_model.num_ruptures > 0)
-            if trts == set(sm.gsim_lt.tectonic_region_types):
-                # nothing to remove
-                continue
-            # build the reduced logic tree
-            sm.gsim_lt.reduce(trts)
-            for trt_model in trt_models:
-                trt_model.gsims = sm.gsim_lt.values[trt_model.trt]
-
-    def get_rlzs_assoc(self):
+    def get_rlzs_assoc(self, get_num_ruptures=lambda tm: tm.num_ruptures):
         """
         Return a RlzsAssoc with fields realizations, gsim_by_trt,
         rlz_idx and trt_gsims.
+
+        :param get_num_ruptures: a function trt_model -> num_ruptures
         """
         assoc = RlzsAssoc()
         random_seed = self.source_model_lt.seed
         num_samples = self.source_model_lt.num_samples
         idx = 0
         for smodel in self.source_models:
+            # count the number of ruptures per tectonic region type
+            trts = set()
+            for trt_model in smodel.trt_models:
+                trt_model.num_ruptures = get_num_ruptures(trt_model)
+                if trt_model.num_ruptures > 0:
+                    trts.add(trt_model.trt)
+            # reduce the GSIM logic tree if there are fewer effective TRTs
+            if trts < set(smodel.gsim_lt.tectonic_region_types):
+                smodel.gsim_lt.reduce(trts)
             if num_samples:  # sampling, pick just one gsim realization
                 rnd = random.Random(random_seed + idx)
                 rlzs = [logictree.sample_one(smodel.gsim_lt, rnd)]

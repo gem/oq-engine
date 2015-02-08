@@ -690,7 +690,8 @@ class CompositeSourceModelTestCase(unittest.TestCase):
 Active Shallow Crust,b1,SadighEtAl1997,w=0.5
 Active Shallow Crust,b2,ChiouYoungs2008,w=0.5
 Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
-        assoc = csm.get_rlzs_assoc()
+        assoc = csm.get_rlzs_assoc(
+            lambda trtmod: sum(src.count_ruptures() for src in trtmod.sources))
         [rlz] = assoc.realizations
         self.assertEqual(assoc.gsim_by_trt[rlz],
                          {'Subduction Interface': 'SadighEtAl1997',
@@ -706,7 +707,8 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         oqparam = tests.get_oqparam('classical_job.ini')
         oqparam.number_of_logic_tree_samples = 0
         sitecol = readinput.get_site_collection(oqparam)
-        csm = readinput.get_composite_source_model(oqparam, sitecol)
+        csm = readinput.get_composite_source_model(
+            oqparam, sitecol, prefilter=True)
         self.assertEqual(len(csm), 9)  # the smlt example has 1 x 3 x 3 paths;
         # there are 2 distinct tectonic region types, so 18 trt_models
         rlzs = csm.get_rlzs_assoc().realizations
@@ -719,7 +721,6 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         for trt_model in csm.trt_models:
             if trt_model.trt == 'Active Shallow Crust':  # no ruptures
                 trt_model.num_ruptures = 0
-        csm.reduce_gsim_lt()
         assoc = csm.get_rlzs_assoc()
         expected_assoc = """\
 {0,SadighEtAl1997: ['<0,b1_b3_b6,*_b3,w=0.04>']
@@ -738,7 +739,6 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         for trt_model in csm.trt_models:
             if trt_model.trt == 'Subduction Interface':  # no ruptures
                 trt_model.num_ruptures = 0
-        csm.reduce_gsim_lt()
         self.assertEqual(csm.get_rlzs_assoc().realizations, [])
 
     def test_oversampling(self):
@@ -747,12 +747,12 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
             os.path.join(os.path.dirname(case_17.__file__), 'job.ini'))
         sitecol = readinput.get_site_collection(oq)
         with mock.patch('logging.warn') as warn:
-            csm = readinput.get_composite_source_model(oq, sitecol)
+            csm = readinput.get_composite_source_model(
+                oq, sitecol, prefilter=True)
         args = warn.call_args[0]
         msg = args[0] % args[1:]
         self.assertEqual(
             msg, "The logic tree path ('b2',) was sampled 4 times")
-
         assoc = csm.get_rlzs_assoc()
         self.assertEqual(
             str(assoc),
