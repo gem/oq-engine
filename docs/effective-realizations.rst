@@ -16,15 +16,22 @@ The reduction of the full logic tree happens when the actual
 sources do not span the full range of tectonic region types in the
 GMPE logic tree file. This happens practically always in SHARE calculations.
 The SHARE GMPE logic tree potentially contains 1280 realizations,
-coming from 7 different tectonic region types:
+coming from 7 different tectonic region types.
 
-Active_Shallow: 4 GMPEs
-Stable_Shallow: 5 GMPEs
-Shield: 2 GMPEs
-Subduction_Interface: 4 GMPEs
-Subduction_InSlab: 4 GMPEs
-Volcanic: 1 GMPE
-Deep: 2 GMPEs
+Active_Shallow:
+ 4 GMPEs
+Stable_Shallow:
+ 5 GMPEs
+Shield:
+ 2 GMPEs
+Subduction_Interface:
+ 4 GMPEs
+Subduction_InSlab:
+ 4 GMPEs
+Volcanic:
+ 1 GMPE
+Deep:
+ 2 GMPEs
 
 The number of paths in the full logic tree is 4 * 5 * 2 * 4 * 4 * 1 *
 2 = 1280, pretty large. However, in practice, in most computation
@@ -51,14 +58,16 @@ tectonic region type. Let's number the realizations, starting from zero,
 and let's identify the logic tree path with the notation
 `<GMPE of first region type>_<GMPE of second region type>`:
 
-# | lt_path
---+--------
-0 | A_D
-1 | B_D
-2 | C_D
-3 | A_E
-4 | B_E
-5 | C_E
+== ========
+#  lt_path
+== ========
+0  `A_D`
+1   `B_D`
+2   `C_D`
+3   `A_E`
+4   `B_E`
+5   `C_E`
+== ========
 
 Now assume that the source model does not contain sources of tectonic region
 type T1, or that such sources are filtered away since they are too distant
@@ -72,10 +81,12 @@ type because there are no sources of kind T1; so let's denote the
 path of the effective realizations with the notation
 `*_<GMPE of second region type>`:
 
-# | path
---+------
-0 | *_D
-1 | *_E
+== ======
+#   path
+== ======
+0  `*_D`
+1  `*_E`
+== ======
 
 The engine lite will export two files with a name like
 
