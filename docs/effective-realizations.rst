@@ -61,7 +61,7 @@ and let's identify the logic tree path with the notation
 == ========
 #  lt_path
 == ========
-0  `A_D`
+0   `A_D`
 1   `B_D`
 2   `C_D`
 3   `A_E`
