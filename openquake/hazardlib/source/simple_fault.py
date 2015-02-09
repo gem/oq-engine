@@ -45,16 +45,20 @@ class SimpleFaultSource(ParametricSeismicSource):
     :param rake:
         Angle describing rupture propagation direction in decimal degrees.
     :param hypo_loc:
-        Hypocentre location as fraction of rupture plane and the expected
-        probability of the hypocentre occured at this location on the rupture,
-        as numpy array[(Along Strike, Down Dip, Probabiligy)], e.g. two possible
-        hypocentres are assigned on the rupture. One of them, the hypocentre
-        located in a position 1/4 along the length and 1/4 of the the way down
-        dip of the rupture plane with the assigned probability of occurring 0.3
-        Another hypocentre located in a position 3/4 along the length and 3/4
-        of the the way down dip of the rupture plane with the assigned
-        probability of occurring 0.7. The numpy array would be entered as
-        numpy.array([0.25, 0.25, 0.3], [0.75, 0.75, 0.7]).
+        Array describing the relative position of the hypocentre on the rupture
+        surface. Each line represents an hypocentral position defined in terms
+        of the relative distance along strike and dip (from the upper, left
+        corner of the fault surface i.e. the corner which results from the
+        projection at depth of the first vertex of the fault trace) and the
+        corresponding weight. Example 1: one single hypocentral position at the
+        center of the rupture will be described by the following
+        array[(0.5, 0.5, 1.0)]. Example 2: two possible hypocenters are
+        admitted for a rupture. One hypocentre is located along the strike at
+        1/4 of the fault length and at 1/4 of the fault width along the dip and
+        occurs with a weight of 0.3, the other one is at 3/4 of fault length
+        along strike and at 3/4 of fault width along strike with a weight of
+        0.7. The numpy array would be entered as numpy.array([0.25, 0.25, 0.3],
+        [0.75, 0.75, 0.7]).
 
     See also :class:`openquake.hazardlib.source.base.ParametricSeismicSource`
     for description of other parameters.
