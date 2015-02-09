@@ -652,7 +652,10 @@ def get_exposure(oqparam):
                 raise DuplicatedID(asset_id)
             asset_refs.add(asset_id)
             taxonomy = asset['taxonomy']
-            number = asset.attrib.get('number')
+            if 'damage' in oqparam.calculation_mode:
+                number = asset.attrib['number']
+            else:
+                number = asset.attrib.get('number')
             location = asset.location['lon'], asset.location['lat']
             if region and not geometry.Point(*location).within(region):
                 out_of_region += 1
