@@ -29,6 +29,18 @@ class DuplicatedID(Exception):
     """Raised when two sources with the same ID are found in a source model"""
 
 
+def get_gsims_by_trt_id(smodel):
+    """
+    Given a source model, returns a dictionary of associations
+    trt_model_id -> list of GSIM instances.
+    """
+    gsims_by_trt = smodel.gsim_lt.values
+    gsims_assoc = AccumDict()
+    for trt_model in smodel.trt_models:
+        gsims = map(valid.gsim, gsims_by_trt[trt_model.trt])
+        gsims_assoc += {trt_model.id: gsims}
+    return gsims_assoc
+
 LtRealization = collections.namedtuple(
     'LtRealization', 'ordinal sm_lt_path gsim_lt_path weight gsim_uid')
 LtRealization.__str__ = lambda self: '<%d,%s,w=%s>' % (
@@ -38,6 +50,7 @@ LtRealization.uid = property(
 
 SourceModel = collections.namedtuple(
     'SourceModel', 'name weight path trt_models gsim_lt ordinal')
+SourceModel.get_gsims_by_trt_id = get_gsims_by_trt_id
 
 
 class TrtModel(collections.Sequence):
@@ -263,15 +276,6 @@ class RlzsAssoc(collections.Mapping):
             idx += 1
         self.rlzs_by_smodel.append(rlzs)
         return idx
-
-    def get_gsims_by_trt_id(self):
-        """
-        Return a dictionary trt_model_id -> [GSIM instances]
-        """
-        gsims_by_trt = collections.defaultdict(list)
-        for trt_id, gsim in sorted(self.rlzs_assoc):
-            gsims_by_trt[trt_id].append(valid.gsim(gsim))
-        return gsims_by_trt
 
     def combine(self, results, agg=agg_prob):
         """

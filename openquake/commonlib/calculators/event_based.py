@@ -284,7 +284,8 @@ class EventBasedCalculator(base.calculators['classical']):
         monitor.oqparam = self.oqparam
         zero = AccumDict((key, AccumDict())
                          for key in self.rlzs_assoc)
-        gsims_assoc = self.rlzs_assoc.get_gsims_by_trt_id()
+        gsims_assoc = sum((sm.get_gsims_by_trt_id()
+                           for sm in self.composite_source_model), {})
         return parallel.apply_reduce(
             self.core_func.__func__,
             (self.sesruptures, self.sitecol, gsims_assoc, monitor),
