@@ -427,10 +427,10 @@ class MeshJoynerBooreDistanceTestCase(unittest.TestCase):
         mesh = RectangularMesh(lons, lats)
         dist = mesh.get_joyner_boore_distance(
             Mesh.from_points_list([Point(-121.76, 37.23)]))
-        # this is the distance with Ubuntu 12.04
-        numpy.testing.assert_almost_equal(dist, [36.61260128])
-        # this is the distance with Ubuntu 14.04
-        # numpy.testing.assert_almost_equal(dist, [36.61389245])
+        dist_ubuntu_12_04 = 36.61260128
+        dist_ubuntu_14_04 = 36.61389245
+        self.assertTrue(numpy.allclose(dist, dist_ubuntu_12_04) or
+                        numpy.allclose(dist, dist_ubuntu_14_04))
 
 
 class RectangularMeshGetMiddlePointTestCase(unittest.TestCase):
