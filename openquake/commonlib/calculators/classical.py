@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import operator
 import collections
 from functools import partial
@@ -27,7 +28,7 @@ from openquake.hazardlib.calc.filters import source_site_distance_filter, \
 from openquake.risklib import scientific
 from openquake.commonlib import parallel
 from openquake.commonlib.export import export
-from openquake.baselib.general import AccumDict, split_in_blocks
+from openquake.baselib.general import AccumDict, split_in_blocks, groupby
 
 from openquake.commonlib.calculators import base, calc
 
@@ -160,7 +161,7 @@ class ClassicalCalculator(base.HazardCalculator):
         :param fname: the name of the exported file
         """
         if hasattr(self, 'tileno'):
-            fname = '%s-%s' % (self.tileno, fname)
+            fname += self.tileno
         saved = AccumDict()
         oq = self.oqparam
         export_dir = oq.export_dir
@@ -202,7 +203,7 @@ def classical_tiling(calculator, sitecol, tileno):
         a SiteCollection instance
     """
     calculator.sitecol = sitecol
-    calculator.tileno = '%04d' % tileno
+    calculator.tileno = '.%04d' % tileno
     result = AccumDict()
     for smodel in calculator.composite_source_model:
         calculator.gsims_assoc = smodel.get_gsims_by_trt_id()
@@ -238,4 +239,18 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         return parallel.starmap(classical_tiling, all_args).reduce()
 
     def post_execute(self, result):
-        return result
+        """
+        Merge together the exported files for each tile
+        """
+        # group files by name
+        dic = groupby((fname for fname in result.itervalues()),
+                      lambda fname: fname.rsplit('.', 1)[0])
+        # merge together files with different tile numbers (in order)
+        d = {}
+        for fname in dic:
+            with open(fname, 'w') as f:
+                for tilename in sorted(dic[fname]):
+                    f.write(open(tilename).read())
+                    os.remove(tilename)
+            d[os.path.basename(fname)] = fname
+        return d
