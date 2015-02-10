@@ -195,7 +195,6 @@ class EventBasedTestCase(CalculatorTestCase):
             'hazard_curve-smltp_b1-gsimltp_b1-ltr_2.csv',
             'hazard_curve-smltp_b2-gsimltp_b1-ltr_3.csv',
             'hazard_curve-smltp_b2-gsimltp_b1-ltr_4.csv',
-            'hazard_curve-mean.csv',
         ]
         out = self.run_calc(case_17.__file__, 'job.ini', exports='csv')
         for fname in expected:
