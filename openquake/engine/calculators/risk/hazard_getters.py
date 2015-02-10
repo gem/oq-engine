@@ -361,13 +361,12 @@ SELECT * FROM assocs""", (self.calc.job.id, max_dist, self.oqparam.id,
         """
         Stores the associations asset <-> site into the database
         """
-        # insert the associations for the current taxonomy
-        with transaction.commit_on_success(using='job_init'):
+        with transaction.atomic(using='job_init'):
+            # insert the associations for the current taxonomy
             self.cursor.execute(self.assoc_query)
-
-        # now read the associations just inserted
-        self.num_assets = models.AssetSite.objects.filter(
-            job=self.calc.job, asset__taxonomy=self.taxonomy).count()
+            # now read the associations just inserted
+            self.num_assets = models.AssetSite.objects.filter(
+                job=self.calc.job, asset__taxonomy=self.taxonomy).count()
 
         # check if there are no associations
         if self.num_assets == 0:
