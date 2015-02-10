@@ -399,7 +399,7 @@ def check_hazard_risk_consistency(haz_job, risk_mode):
             (risk_mode, expected_mode, hazard_mode))
 
 
-@django_db.transaction.commit_on_success
+@django_db.transaction.atomic
 def job_from_file(cfg_file_path, username, log_level='info', exports='',
                   hazard_output_id=None, hazard_calculation_id=None, **extras):
     """

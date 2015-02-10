@@ -25,6 +25,8 @@ from openquake.engine.utils import config
 # DEBUG = True
 DB_SECTION = config.get_section('database')
 
+INSTALLED_APPS = ('openquake.engine.db',)
+
 
 def _db_cfg(db_name):
     """

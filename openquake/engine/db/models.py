@@ -35,7 +35,7 @@ from datetime import datetime
 import numpy
 from scipy import interpolate
 
-from django.db import connections, transaction
+from django.db import connections
 from django.core.exceptions import ObjectDoesNotExist
 
 from django.contrib.gis.db import models as djm
@@ -2701,8 +2701,7 @@ class AssetManager(djm.GeoManager):
         asset_ids = tuple(assoc.asset.id for assoc in assocs)
         query, args = self._get_asset_chunk_query_args(
             exposure_model, time_event, asset_ids)
-        with transaction.commit_on_success('job_init'):
-            annotated_assets = list(self.raw(query, args))
+        annotated_assets = list(self.raw(query, args))
         # add asset_site_id attribute to each asset
         for ass, assoc in zip(annotated_assets, assocs):
             ass.asset_site_id = assoc.id
