@@ -94,6 +94,8 @@ class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
+    prefilter = True  # filter the sources before splitting them
+
     def pre_execute(self):
         """
         Read the site collection and the sources.
@@ -109,8 +111,7 @@ class HazardCalculator(BaseCalculator):
         if 'source' in self.oqparam.inputs:
             logging.info('Reading the composite source models')
             self.composite_source_model = readinput.get_composite_source_model(
-                self.oqparam, self.sitecol)
-            self.composite_source_model.reduce_gsim_lt()
+                self.oqparam, self.sitecol, self.prefilter)
             self.job_info = readinput.get_job_info(
                 self.oqparam, self.composite_source_model, self.sitecol)
             # we could manage limits here

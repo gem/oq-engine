@@ -202,6 +202,8 @@ def get_effective_rlzs(rlzs):
     effective = []
     for uid, group in groupby(rlzs, operator.attrgetter('uid')).iteritems():
         rlz = group[0]
+        if all(path == '*' for path in rlz.lt_uid):  # empty realization
+            continue
         effective.append(
             logictree.Realization(rlz.value, sum(r.weight for r in group),
                                   rlz.lt_path, rlz.ordinal, rlz.lt_uid))
@@ -243,10 +245,6 @@ class RlzsAssoc(collections.Mapping):
         return sum(self.rlzs_by_smodel, [])
 
     def _add_realizations(self, idx, lt_model, realizations):
-        # create the realizations for the given lt source model
-        trt_models = [tm for tm in lt_model.trt_models if tm.num_ruptures]
-        if not trt_models:
-            return idx
         gsims_by_trt = lt_model.gsim_lt.values
         rlzs = []
         for gsim_by_trt, weight, gsim_path, _ordinal, gsim_uid in realizations:
@@ -255,7 +253,7 @@ class RlzsAssoc(collections.Mapping):
                 idx, lt_model.path, gsim_path, weight, gsim_uid)
             rlzs.append(rlz)
             self.gsim_by_trt[rlz] = gsim_by_trt
-            for trt_model in trt_models:
+            for trt_model in lt_model.trt_models:
                 trt = trt_model.trt
                 gsim = gsim_by_trt[trt]
                 self.rlzs_assoc[trt_model.id, gsim].append(rlz)
@@ -388,35 +386,26 @@ class CompositeSourceModel(collections.Sequence):
                 src.trt_model_id = trt_model.id
                 yield src
 
-    def reduce_gsim_lt(self):
-        """
-        Reduce the GSIM logic tree by ignoring TRT models withot ruptures.
-        It has effect only if sampling is disabled, i.e for full enumeration.
-        """
-        if self.source_model_lt.num_samples:
-            return
-        for sm in self:
-            trt_models = list(sm.trt_models)
-            trts = set(trt_model.trt for trt_model in trt_models
-                       if trt_model.num_ruptures > 0)
-            if trts == set(sm.gsim_lt.tectonic_region_types):
-                # nothing to remove
-                continue
-            # build the reduced logic tree
-            sm.gsim_lt.reduce(trts)
-            for trt_model in trt_models:
-                trt_model.gsims = sm.gsim_lt.values[trt_model.trt]
-
-    def get_rlzs_assoc(self):
+    def get_rlzs_assoc(self, get_weight=lambda tm: tm.num_ruptures):
         """
         Return a RlzsAssoc with fields realizations, gsim_by_trt,
         rlz_idx and trt_gsims.
+
+        :param get_weight: a function trt_model -> positive number
         """
         assoc = RlzsAssoc()
         random_seed = self.source_model_lt.seed
         num_samples = self.source_model_lt.num_samples
         idx = 0
         for smodel in self.source_models:
+            # count the number of ruptures per tectonic region type
+            trts = set()
+            for trt_model in smodel.trt_models:
+                if get_weight(trt_model) > 0:
+                    trts.add(trt_model.trt)
+            # reduce the GSIM logic tree if there are fewer effective TRTs
+            if trts < set(smodel.gsim_lt.tectonic_region_types):
+                smodel.gsim_lt.reduce(trts)
             if num_samples:  # sampling, pick just one gsim realization
                 rnd = random.Random(random_seed + idx)
                 rlzs = [logictree.sample_one(smodel.gsim_lt, rnd)]
