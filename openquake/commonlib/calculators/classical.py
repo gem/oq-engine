@@ -39,7 +39,7 @@ def classical(sources, sitecol, gsims_assoc, monitor):
     :param sources:
         a non-empty sequence of sources of homogeneous tectonic region type
     :param sitecol:
-        a SiteCollection
+        a SiteCollection instance
     :param gsims_assoc:
         associations trt_model_id -> gsims
     :param monitor:
@@ -80,7 +80,8 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = self.oqparam
-        sources = list(self.composite_source_model.sources)
+        sources = getattr(self, 'sources', None) or list(
+            self.composite_source_model.sources)
         zero = AccumDict((key, AccumDict())
                          for key in self.rlzs_assoc)
         gsims_assoc = sum((sm.get_gsims_by_trt_id()
@@ -154,6 +155,8 @@ class ClassicalCalculator(base.HazardCalculator):
         :param fmt: the export format ('xml', 'csv', ...)
         :param fname: the name of the exported file
         """
+        if hasattr(self, 'tileno'):
+            fname = '%s-%s' % (self.tileno, fname)
         saved = AccumDict()
         oq = self.oqparam
         export_dir = oq.export_dir
@@ -177,6 +180,37 @@ class ClassicalCalculator(base.HazardCalculator):
         return saved
 
 
+def is_effective_trt_model(result_dict):
+    """
+    Returns a closure returning True on tectonic region types
+    which id in contained in the result_dict.
+
+    :param result_dict: a dictionary with keys (trt_id, gsim)
+    """
+    return lambda trt_model: any(
+        trt_model.id == trt_id for trt_id, _gsim in result_dict)
+
+
+def classical_tiling(calculator, sitecol, tileno):
+    """
+    :param calculator:
+        a ClassicalCalculator instance
+    :param sitecol:
+        a SiteCollection instance
+    """
+    calculator.sitecol = sitecol
+    calculator.tileno = '%04d' % tileno
+    result = AccumDict()
+    for smodel in calculator.composite_source_model:
+        calculator.gsims_assoc = smodel.get_gsims_by_trt_id()
+        for trt_model in smodel.trt_models:
+            calculator.sources = trt_model.sources
+            result = calc.agg_prob(result, calculator.execute())
+    calculator.rlzs_assoc = calculator.composite_source_model.get_rlzs_assoc(
+        is_effective_trt_model(result))
+    return calculator.post_execute(result)
+
+
 @base.calculators.add('classical_tiling')
 class ClassicalTilingCalculator(ClassicalCalculator):
     """
@@ -186,30 +220,19 @@ class ClassicalTilingCalculator(ClassicalCalculator):
 
     def execute(self):
         """
-        Run in parallel `core_func(sources, sitecol, monitor)`, by
-        parallelizing on the sources according to their weight and
-        tectonic region type.
+        Split the computation by tiles which are run in parallel.
         """
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = self.oqparam
-
         self.tiles = map(SiteCollection, split_in_blocks(
             self.sitecol, self.oqparam.concurrent_tasks or 1))
-        self.num_tiles = len(self.tiles)
-        zero = AccumDict((key, AccumDict())
-                         for key in self.rlzs_assoc)
-        all_args = []
-        for smodel in self.composite_source_model:
-            gsims_assoc = smodel.get_gsims_by_trt_id()
-            for trt_model in smodel.trt_models:
-                for tile in self.tiles:
-                    all_args.append(
-                        (trt_model.sources, tile, gsims_assoc, monitor))
-        return parallel.starmap(self.core_func.__func__, all_args).reduce(
-            calc.agg_prob, zero)
+        self.oqparam.concurrent_tasks = 0
+        calculator = ClassicalCalculator(self.oqparam, monitor)
+        calculator.composite_source_model = self.composite_source_model
+        calculator.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
+        all_args = [(calculator, tile, i)
+                    for (i, tile) in enumerate(self.tiles)]
+        return parallel.starmap(classical_tiling, all_args).reduce()
 
     def post_execute(self, result):
-        effective_trts = set(trt_id for trt_id, _gsim in result)
-        self.rlzs_assoc = self.composite_source_model.get_rlzs_assoc(
-            lambda tm: tm.id in effective_trts)
-        ClassicalCalculator.post_execute(self, result)
+        return result
