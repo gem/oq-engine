@@ -18,6 +18,7 @@
 
 import operator
 import collections
+from functools import partial
 
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
@@ -180,15 +181,14 @@ class ClassicalCalculator(base.HazardCalculator):
         return saved
 
 
-def is_effective_trt_model(result_dict):
+def is_effective_trt_model(result_dict, trt_model):
     """
-    Returns a closure returning True on tectonic region types
-    which id in contained in the result_dict.
+    Returns True on tectonic region types
+    which ID in contained in the result_dict.
 
     :param result_dict: a dictionary with keys (trt_id, gsim)
     """
-    return lambda trt_model: any(
-        trt_model.id == trt_id for trt_id, _gsim in result_dict)
+    return any(trt_model.id == trt_id for trt_id, _gsim in result_dict)
 
 
 def classical_tiling(calculator, sitecol, tileno):
@@ -207,7 +207,7 @@ def classical_tiling(calculator, sitecol, tileno):
             calculator.sources = trt_model.sources
             result = calc.agg_prob(result, calculator.execute())
     calculator.rlzs_assoc = calculator.composite_source_model.get_rlzs_assoc(
-        is_effective_trt_model(result))
+        partial(is_effective_trt_model, result))
     return calculator.post_execute(result)
 
 

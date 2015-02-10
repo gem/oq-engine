@@ -407,17 +407,18 @@ class CompositeSourceModel(collections.Sequence):
             for trt_model in smodel.trt_models:
                 if get_weight(trt_model) > 0:
                     trts.add(trt_model.trt)
-            # reduce the GSIM logic tree if there are fewer effective TRTs
-            if trts < set(smodel.gsim_lt.tectonic_region_types):
+            # recompute the GSIM logic tree if needed
+            if trts != set(smodel.gsim_lt.tectonic_region_types):
                 smodel.gsim_lt.reduce(trts)
             if num_samples:  # sampling, pick just one gsim realization
                 rnd = random.Random(random_seed + idx)
                 rlzs = [logictree.sample_one(smodel.gsim_lt, rnd)]
             else:  # full enumeration
                 rlzs = get_effective_rlzs(smodel.gsim_lt)
-            logging.info('Creating %d GMPE realization(s) for model %s, %s',
-                         len(rlzs), smodel.name, smodel.path)
-            idx = assoc._add_realizations(idx, smodel, rlzs)
+            if rlzs:
+                logging.info('Creating %d GMPE realization(s) for model '
+                             '%s, %s', len(rlzs), smodel.name, smodel.path)
+                idx = assoc._add_realizations(idx, smodel, rlzs)
         return assoc
 
     def __getitem__(self, i):
