@@ -39,7 +39,6 @@ import collections
 
 import numpy.random
 
-from django.db import transaction
 from openquake.hazardlib.calc import gmf, filters
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import FilteredSiteCollection
@@ -177,18 +176,16 @@ def compute_ruptures(job_id, sources, sitecol):
 
             # saving ses_ruptures
             with save_ruptures_mon:
-                # using a django transaction make the saving faster
-                with transaction.commit_on_success(using='job_init'):
-                    indices = r_sites.indices if len(r_sites) < len(sitecol) \
-                        else None  # None means that nothing was filtered
-                    prob_rup = models.ProbabilisticRupture.create(
-                        rup, ses_coll, indices)
-                    for ses_idx, num_occurrences in ses_num_occ[rup]:
-                        for occ_no in range(1, num_occurrences + 1):
-                            rup_seed = rnd.randint(0, models.MAX_SINT_32)
-                            models.SESRupture.create(
-                                prob_rup, ses_idx, src.source_id,
-                                rup.rup_no, occ_no, rup_seed)
+                indices = r_sites.indices if len(r_sites) < len(sitecol) \
+                    else None  # None means that nothing was filtered
+                prob_rup = models.ProbabilisticRupture.create(
+                    rup, ses_coll, indices)
+                for ses_idx, num_occurrences in ses_num_occ[rup]:
+                    for occ_no in range(1, num_occurrences + 1):
+                        rup_seed = rnd.randint(0, models.MAX_SINT_32)
+                        models.SESRupture.create(
+                            prob_rup, ses_idx, src.source_id,
+                            rup.rup_no, occ_no, rup_seed)
 
         if ses_num_occ:
             num_ruptures = len(ses_num_occ)
@@ -422,8 +419,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
             src.seed = rnd.randint(0, models.MAX_SINT_32)
         for i, trt_model in enumerate(models.TrtModel.objects.filter(
                 lt_model__hazard_calculation=self.job), 1):
-            with transaction.commit_on_success(using='job_init'):
-                self.initialize_ses_db_records(trt_model, i)
+            self.initialize_ses_db_records(trt_model, i)
         return weights
 
     def agg_curves(self, acc, result):

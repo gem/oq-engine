@@ -42,7 +42,7 @@ class ExposureDBWriter(object):
         self.ignore_missing_costs = self.job.get_param(
             'ignore_missing_costs', [])
 
-    @transaction.commit_on_success(router.db_for_write(models.ExposureModel))
+    @transaction.atomic(router.db_for_write(models.ExposureModel))
     def serialize(self, iterator):
         """
         Serialize a list of values produced by iterating over an instance of

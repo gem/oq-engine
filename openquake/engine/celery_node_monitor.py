@@ -23,7 +23,6 @@ import signal
 import threading
 
 import celery.task.control
-from amqplib.client_0_8.exceptions import AMQPChannelException
 
 from openquake.engine import logs
 from openquake.engine.utils import config
@@ -111,7 +110,7 @@ class CeleryNodeMonitor(object):
         celery_inspect = celery.task.control.inspect(timeout=timeout)
         try:
             response_dict = celery_inspect.ping() or {}
-        except AMQPChannelException as e:
+        except Exception as e:
             logs.LOG.warn(str(e))
             response_dict = {}
         return set(response_dict)
