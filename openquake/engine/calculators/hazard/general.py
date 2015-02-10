@@ -121,7 +121,7 @@ class BaseHazardCalculator(base.Calculator):
     Abstract base class for hazard calculators. Contains a bunch of common
     functionality, like initialization procedures.
     """
-
+    prefilter = True
     tilepath = ()  # set only by the tiling calculator
 
     def __init__(self, job):
@@ -261,7 +261,7 @@ class BaseHazardCalculator(base.Calculator):
         """
         logs.LOG.progress("initializing sources")
         self.composite_model = readinput.get_composite_source_model(
-            self.oqparam, self.site_collection)
+            self.oqparam, self.site_collection, self.prefilter)
         for sm in self.composite_model:
             # create an LtSourceModel for each distinct source model
             lt_model = models.LtSourceModel.objects.create(
@@ -269,7 +269,7 @@ class BaseHazardCalculator(base.Calculator):
                 sm_lt_path=self.tilepath + sm.path,
                 ordinal=sm.ordinal, sm_name=sm.name, weight=sm.weight)
             self._source_models.append(lt_model)
-
+            gsims_by_trt = sm.gsim_lt.values
             # save TrtModels for each tectonic region type
             # and stored the db ID in the in-memory models
             for trt_mod in sm.trt_models:
@@ -280,7 +280,7 @@ class BaseHazardCalculator(base.Calculator):
                     num_ruptures=trt_mod.num_ruptures,
                     min_mag=trt_mod.min_mag,
                     max_mag=trt_mod.max_mag,
-                    gsims=trt_mod.gsims).id
+                    gsims=gsims_by_trt[trt_mod.trt]).id
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_model(self):
@@ -333,13 +333,9 @@ class BaseHazardCalculator(base.Calculator):
         logs.LOG.progress("initializing realizations")
         cm = self.composite_model
         self._realizations = []
-        # update the attribute num_ruptures, to discard fake realizations
-        for trt_model in cm.trt_models:
-            trt_model.num_ruptures = models.TrtModel.objects.get(
-                pk=trt_model.id).num_ruptures
-        cm.reduce_gsim_lt()
-
-        rlzs_assoc = cm.get_rlzs_assoc()
+        rlzs_assoc = cm.get_rlzs_assoc(
+            lambda trt_model: models.TrtModel.objects.get(
+                pk=trt_model.id).num_ruptures)
         gsims_by_trt_id = rlzs_assoc.get_gsims_by_trt_id()
         smodels = [sm for sm in self._source_models
                    if sm.trtmodel_set.filter(num_ruptures__gt=0)]
