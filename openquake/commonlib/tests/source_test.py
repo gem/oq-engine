@@ -724,14 +724,23 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         assoc = csm.get_rlzs_assoc()
         expected_assoc = """\
 {0,SadighEtAl1997: ['<0,b1_b3_b6,*_b3,w=0.04>']
+1,SadighEtAl1997: ['<0,b1_b3_b6,*_b3,w=0.04>']
 2,SadighEtAl1997: ['<1,b1_b3_b7,*_b3,w=0.12>']
+3,SadighEtAl1997: ['<1,b1_b3_b7,*_b3,w=0.12>']
 4,SadighEtAl1997: ['<2,b1_b3_b8,*_b3,w=0.04>']
+5,SadighEtAl1997: ['<2,b1_b3_b8,*_b3,w=0.04>']
 6,SadighEtAl1997: ['<3,b1_b4_b6,*_b3,w=0.12>']
+7,SadighEtAl1997: ['<3,b1_b4_b6,*_b3,w=0.12>']
 8,SadighEtAl1997: ['<4,b1_b4_b7,*_b3,w=0.36>']
+9,SadighEtAl1997: ['<4,b1_b4_b7,*_b3,w=0.36>']
 10,SadighEtAl1997: ['<5,b1_b4_b8,*_b3,w=0.12>']
+11,SadighEtAl1997: ['<5,b1_b4_b8,*_b3,w=0.12>']
 12,SadighEtAl1997: ['<6,b1_b5_b6,*_b3,w=0.04>']
+13,SadighEtAl1997: ['<6,b1_b5_b6,*_b3,w=0.04>']
 14,SadighEtAl1997: ['<7,b1_b5_b7,*_b3,w=0.12>']
-16,SadighEtAl1997: ['<8,b1_b5_b8,*_b3,w=0.04>']}"""
+15,SadighEtAl1997: ['<7,b1_b5_b7,*_b3,w=0.12>']
+16,SadighEtAl1997: ['<8,b1_b5_b8,*_b3,w=0.04>']
+17,SadighEtAl1997: ['<8,b1_b5_b8,*_b3,w=0.04>']}"""
         self.assertEqual(str(assoc), expected_assoc)
         self.assertEqual(len(assoc.realizations), 9)
 
