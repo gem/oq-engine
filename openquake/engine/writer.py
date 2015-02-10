@@ -24,9 +24,8 @@ import weakref
 import atexit
 from cStringIO import StringIO
 
-from django.db import transaction
 from django.db import connections
-from django.db import router
+from django.db import router, transaction
 from django.contrib.gis.db.models.fields import GeometryField
 from django.contrib.gis.geos.point import Point
 
@@ -58,7 +57,7 @@ class CacheInserter(object):
         self = cls(objects[0].__class__, block_size)
         curs = connections[self.alias].cursor()
         seq = self.tname.replace('"', '') + '_id_seq'
-        with transaction.commit_on_success(using=self.alias):
+        with transaction.atomic(using=self.alias):
             reserve_ids = "select nextval('%s') "\
                 "from generate_series(1, %d)" % (seq, len(objects))
             curs.execute(reserve_ids)
@@ -123,12 +122,11 @@ class CacheInserter(object):
             return
 
         # save the StringIO object with a COPY FROM
-        with transaction.commit_on_success(using=self.alias):
-            curs = connections[self.alias].cursor()
-            self.stringio.reset()
-            curs.copy_from(self.stringio, self.tname, columns=self.fields)
-            self.stringio.close()
-            self.stringio = StringIO()
+        curs = connections[self.alias].cursor()
+        self.stringio.reset()
+        curs.copy_from(self.stringio, self.tname, columns=self.fields)
+        self.stringio.close()
+        self.stringio = StringIO()
 
         ## TODO: should we add an assert that the number of rows stored
         ## in the db is the expected one? I (MS) have seen a case where

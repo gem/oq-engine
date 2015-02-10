@@ -108,7 +108,7 @@ class PickleFormField(forms.Field):
 class FloatArrayField(djm.Field):
     """This field models a postgres `float` array."""
 
-    def db_type(self, connection):
+    def db_type(self, connection=None):
         return 'float[]'
 
     def get_prep_value(self, value):
@@ -141,7 +141,7 @@ class IntArrayField(djm.Field):
     """This field models a postgresql `int` array"""
 
     # TODO(lp) implement the corresponding form field
-    def db_type(self, connection):
+    def db_type(self, connection=None):
         return 'int[]'
 
     def get_prep_value(self, value):
@@ -153,7 +153,7 @@ class IntArrayField(djm.Field):
 class CharArrayField(djm.Field):
     """This field models a postgres `varchar` array."""
 
-    def db_type(self, _connection=None):
+    def db_type(self, connection=None):
         return 'varchar[]'
 
     def to_python(self, value):
@@ -213,7 +213,7 @@ class LiteralField(djm.Field):
 
     __metaclass__ = djm.SubfieldBase
 
-    def db_type(self, _connection=None):
+    def db_type(self, connection=None):
         return 'text'
 
     def to_python(self, value):
@@ -266,7 +266,7 @@ class GzippedField(djm.Field):
     """
     __metaclass__ = djm.SubfieldBase
 
-    def db_type(self, _connection):
+    def db_type(self, connection=None):
         return 'bytea'
 
     def get_prep_value(self, value):
