@@ -177,7 +177,7 @@ class ClosestSiteModelTestCase(unittest.TestCase):
 
 
 class ExposureTestCase(unittest.TestCase):
-    exposure = StringIO('''\
+    exposure = general.writetmp('''\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
   <exposureModel id="ep" category="buildings">
@@ -194,7 +194,7 @@ class ExposureTestCase(unittest.TestCase):
           <cost type="structural" value="1000"/>
         </costs>
       </asset>
-      <asset id="a2" taxonomy="RC" number="1000">
+      <asset id="a2" taxonomy="RC">
         <location lon="83.082298" lat="27.9006"/>
         <costs>
           <cost type="structural" value="500"/>
@@ -209,7 +209,6 @@ class ExposureTestCase(unittest.TestCase):
     </assets>
   </exposureModel>
 </nrml>''')
-    exposure.name = 'fake-exposure.xml'
 
     def test_get_exposure_metadata(self):
         exp, _assets = readinput.get_exposure_lazy(self.exposure)
@@ -218,6 +217,18 @@ class ExposureTestCase(unittest.TestCase):
         self.assertEqual(exp.deductible_is_absolute, None)
         self.assertEqual(exp.cost_types, [
             {'type': 'per_asset', 'name': 'structural', 'unit': 'USD'}])
+
+    def test_exposure_missing_number(self):
+        oqparam = mock.Mock()
+        oqparam.calculation_mode = 'scenario_damage'
+        oqparam.inputs = {'exposure': self.exposure}
+        oqparam.region_constraint = '''\
+POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
+        oqparam.time_event = None
+
+        with self.assertRaises(KeyError) as ctx:
+            readinput.get_exposure(oqparam)
+        self.assertIn("node asset: 'number', line 17 of", str(ctx.exception))
 
 
 class ReadCsvTestCase(unittest.TestCase):
