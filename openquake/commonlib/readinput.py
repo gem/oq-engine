@@ -653,8 +653,12 @@ def get_exposure(oqparam):
             asset_refs.add(asset_id)
             taxonomy = asset['taxonomy']
             if 'damage' in oqparam.calculation_mode:
+                # calculators of 'damage' kind require the 'number' attribute;
+                # if it is missing a KeyError is raised
                 number = asset.attrib['number']
             else:
+                # other calculators ignore the 'number' attribute;
+                # if it is missing it is considered None
                 number = asset.attrib.get('number')
             location = asset.location['lon'], asset.location['lat']
             if region and not geometry.Point(*location).within(region):
