@@ -124,8 +124,10 @@ class ClassicalCalculator(base.HazardCalculator):
                    else [rlz.weight for rlz in rlzs])
         curves_by_imt = {imt: [curves_by_rlz[rlz][imt] for rlz in rlzs]
                          for imt in oq.imtls}
-        mean_curves = scientific.mean_curve(
-            [curves_by_rlz[rlz] for rlz in rlzs], weights)
+        mean = getattr(oq, 'mean_hazard_curves', None)
+        if mean:
+            mean_curves = scientific.mean_curve(
+                [curves_by_rlz[rlz] for rlz in rlzs], weights)
         quantile = {
             q: {imt: scientific.quantile_curve(
                 curves_by_imt[imt], q, weights).reshape((nsites, -1))
@@ -133,8 +135,9 @@ class ClassicalCalculator(base.HazardCalculator):
             for q in getattr(oq, 'quantile_hazard_curves', [])
         }
         for fmt in exports:
-            saved += self.export_curves(
-                mean_curves, fmt, 'hazard_curve-mean.%s' % fmt)
+            if mean:
+                saved += self.export_curves(
+                    mean_curves, fmt, 'hazard_curve-mean.%s' % fmt)
             for q in quantile:
                 saved += self.export_curves(
                     quantile[q], fmt, 'quantile_curve-%s.%s' % (q, fmt))
