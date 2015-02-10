@@ -257,7 +257,7 @@ class RlzsAssoc(collections.Mapping):
         """Flat list with all the realizations"""
         return sum(self.rlzs_by_smodel, [])
 
-    def get_gsims_assoc(self):
+    def get_gsims_by_trt_id(self):
         """Returns associations trt_id -> [GSIM instance, ...]"""
         dic = groupby(self.rlzs_assoc, operator.itemgetter(0))
         for trt_id in dic:
