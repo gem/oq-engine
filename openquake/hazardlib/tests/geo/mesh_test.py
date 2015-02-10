@@ -381,12 +381,10 @@ class MeshJoynerBooreDistanceTestCase(unittest.TestCase):
     def test_distance_to_2d_mesh(self):
         lons = numpy.array([[0., 1.], [0., 1.]])
         lats = numpy.array([[1., 1.], [0., 0.]])
-        depths = numpy.array([[0., 0.,], [0., 0.]])
-        mesh = Mesh(lons, lats, depths)
+        mesh = Mesh(lons, lats)
         target_lons = numpy.array([[0.25, 0.75], [0.25, 0.75]])
         target_lats = numpy.array([[0.75, 0.75], [0.25, 0.25]])
-        target_depths = numpy.array([[0., 0.], [0., 0.]])
-        target_mesh = Mesh(target_lons, target_lats, target_depths)
+        target_mesh = Mesh(target_lons, target_lats)
         dists = mesh.get_joyner_boore_distance(target_mesh)
         expected_dists = numpy.zeros((2, 2))
         numpy.testing.assert_equal(dists, expected_dists)
@@ -413,6 +411,26 @@ class MeshJoynerBooreDistanceTestCase(unittest.TestCase):
     def test5(self):
         self._test(_mesh_test_data.TEST5_MESH, _mesh_test_data.TEST5_SITE,
                    _mesh_test_data.TEST5_JB_DISTANCE)
+
+    def test_version(self):
+        # this test is sensitive to different versions of shapely/libgeos
+        lons = numpy.array(
+            [[-121.3956, -121.41050474, -121.42542273, -121.44035399,
+              -121.45529855, -121.47025643],
+             [-121.3956, -121.41050474, -121.42542273, -121.44035399,
+              -121.45529855, -121.47025643]])
+        lats = numpy.array(
+            [[36.8257, 36.85963772, 36.89357357, 36.92750756,
+              36.96143968, 36.99536993],
+             [36.8257, 36.85963772, 36.89357357, 36.92750756,
+              36.96143968,  36.99536993]])
+        mesh = RectangularMesh(lons, lats)
+        dist = mesh.get_joyner_boore_distance(
+            Mesh.from_points_list([Point(-121.76, 37.23)]))
+        dist_ubuntu_12_04 = 36.61260128
+        dist_ubuntu_14_04 = 36.61389245
+        self.assertTrue(numpy.allclose(dist, dist_ubuntu_12_04) or
+                        numpy.allclose(dist, dist_ubuntu_14_04))
 
 
 class RectangularMeshGetMiddlePointTestCase(unittest.TestCase):

@@ -44,6 +44,7 @@ class BaseFakeGSIM(object):
     def to_imt_unit_values(gsim, intensities):
         return intensities - 10.
 
+
 class FakeGSIMInterIntraStdDevs(BaseFakeGSIM):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set(
         [const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT]
@@ -61,14 +62,16 @@ class FakeGSIMInterIntraStdDevs(BaseFakeGSIM):
                              stddev_types):
         assert imt is gsim.testcase.imt1 or imt is gsim.testcase.imt2
         if gsim.expect_stddevs:
-            gsim.testcase.assertEqual(stddev_types, [const.StdDev.INTER_EVENT,
-                                            const.StdDev.INTRA_EVENT])
+            gsim.testcase.assertEqual(
+                stddev_types,
+                [const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT])
             # + 10 is needed to make sure that to_imt_unit_values()
             # is called on the result of gmf calc
             return mean + 10, [std_inter, std_intra]
         else:
             gsim.testcase.assertEqual(stddev_types, [])
             return mean + 10, []
+
 
 class FakeGSIMTotalStdDev(BaseFakeGSIM):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
@@ -93,6 +96,7 @@ class FakeGSIMTotalStdDev(BaseFakeGSIM):
         else:
             gsim.testcase.assertEqual(stddev_types, [])
             return mean + 10, []
+
 
 class BaseGMFCalcTestCase(unittest.TestCase):
     def setUp(self):

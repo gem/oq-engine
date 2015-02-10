@@ -22,6 +22,7 @@ from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo.surface.base import BaseQuadrilateralSurface
 
 from openquake.hazardlib.tests.geo.surface import _planar_test_data
+from openquake.hazardlib.geo.geodetic import geodetic_distance
 
 
 class DummySurface(BaseQuadrilateralSurface):
@@ -35,7 +36,9 @@ class DummySurface(BaseQuadrilateralSurface):
         return RectangularMesh.from_points_list(points)
 
     def get_strike(self):
-        raise NotImplementedError()
+        top_row = self.get_mesh()[0:2]
+        self.dip, self.strike = top_row.get_mean_inclination_and_azimuth()
+        return self.strike
 
     def get_dip(self):
         raise NotImplementedError()
@@ -115,6 +118,31 @@ class GetJoynerBooreDistanceTestCase(unittest.TestCase):
             Point(0.05, 0.15).distance(Point(0.05, 0.1))
         ]
         self.assertTrue(numpy.allclose(dists, expected_dists, atol=0.2))
+
+
+class GetRY0DistanceTestCase(unittest.TestCase):
+    def _test_rectangular_surface(self):
+        corners = [[(0, 0, 8), (-0.05, 0, 8), (-0.1, 0, 8)],
+                   [(0, 0, 9), (-0.05, 0, 9), (-0.1, 0, 9)]]
+        surface = DummySurface(corners)
+        return surface
+
+    def test1_site_on_the_edges(self):
+        surface = self._test_rectangular_surface()
+        sites = Mesh.from_points_list([Point(0.0, 0.05), Point(0.0, -0.05)])
+        dists = surface.get_ry0_distance(sites)
+        expected_dists = [0.0]
+        self.assertTrue(numpy.allclose(dists, expected_dists))
+
+    def test2_sites_at_one_degree_distance(self):
+        surface = self._test_rectangular_surface()
+        sites = Mesh.from_points_list([Point(+1.0, 0.0), Point(+1.0, -1.0),
+                                       Point(+1.0, 1.0), Point(-1.1, +0.0),
+                                       Point(-1.1, 1.0), Point(-1.1, -1.0)])
+        dists = surface.get_ry0_distance(sites)
+        expected_dists = [111.19505230826488, 111.177990689, 111.177990689,
+                          111.19505230826488, 111.177990689, 111.177990689]
+        self.assertTrue(numpy.allclose(dists, expected_dists))
 
 
 class GetRXDistanceTestCase(unittest.TestCase):

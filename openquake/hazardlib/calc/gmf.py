@@ -46,7 +46,7 @@ class GmfComputer(object):
     ground shaking over a set of sites, by randomly sampling a ground
     shaking intensity model. The usage is::
 
-       gmfcomputer = GmfComputer(rupture, r_sites, imts, gsim,
+       gmfcomputer = GmfComputer(rupture, r_sites, imts, gsims,
                                  truncation_level, correlation_model)
        gmf1 = gmfcomputer.compute(seed1)
        gmf2 = gmfcomputer.compute(seed2)
@@ -76,23 +76,23 @@ class GmfComputer(object):
         case non-correlated ground motion fields are calculated.
         Correlation model is not used if ``truncation_level`` is zero.
     """
-    def __init__(self, rupture, sites, imts, gsim,
+    def __init__(self, rupture, sites, imts, gsims,
                  truncation_level=None, correlation_model=None):
         assert sites and imts, (sites, imts)
         self.rupture = rupture
         self.sites = sites
         self.imts = imts
-        self.gsim = gsim
+        self.gsims = gsims
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
-        self.ctx = gsim.make_contexts(sites, rupture)
+        self.ctx = {gsim: gsim.make_contexts(sites, rupture) for gsim in gsims}
 
     def _compute(self, seed, gsim, realizations):
         # the method doing the real stuff; use compute instead
         if seed is not None:
             numpy.random.seed(seed)
         result = collections.OrderedDict()
-        sctx, rctx, dctx = self.ctx
+        sctx, rctx, dctx = self.ctx[gsim]
 
         if self.truncation_level == 0:
             assert self.correlation_model is None
@@ -168,15 +168,17 @@ class GmfComputer(object):
             the seed for the numpy random number generator
         :returns:
             A list of pairs
-            [((gsim_name, imt_name), ground_motion_values), ...]
+            [(gsim_name, {imt: ground_motion_values}), ...]
         """
-        gmf_by_imt = []
-        result = self._compute(seed, self.gsim, realizations=1)
-        for imt, gmf in result.iteritems():
-            # consider 1 realization, i.e. return column 0-th of the gmf
-            gmvs = numpy.array(map(float, gmf[:, 0]), dtype=float)
-            gmf_by_imt.append((str(imt), gmvs))
-        return gmf_by_imt
+        gmf_by_gsim = []
+        for gsim in self.gsims:
+            result = self._compute(seed, gsim, realizations=1)
+            gmvs = {}
+            for imt, gmf in result.iteritems():
+                # consider 1 realization, i.e. return column 0-th of the gmf
+                gmvs[str(imt)] = numpy.array(map(float, gmf[:, 0]))
+            gmf_by_gsim.append((str(gsim), gmvs))
+        return gmf_by_gsim
 
 
 # this is not used in the engine; it is still useful for usage in IPython
@@ -238,7 +240,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
                     for imt in imts)
     [(rupture, sites)] = ruptures_sites
 
-    gc = GmfComputer(rupture, sites, imts, gsim, truncation_level,
+    gc = GmfComputer(rupture, sites, imts, [gsim], truncation_level,
                      correlation_model)
     result = gc._compute(seed, gsim, realizations)
     for imt, gmf in result.iteritems():

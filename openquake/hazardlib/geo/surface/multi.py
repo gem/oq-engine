@@ -269,3 +269,6 @@ class MultiSurface(BaseSurface):
             self.areas = numpy.array(self.areas)
 
         return self.areas
+
+    def get_ry0_distance(self, mesh):
+        raise NotImplementedError()
