@@ -366,21 +366,13 @@ def get_source_models(oqparam, source_model_lt, sitecol=None):
         oqparam.complex_fault_mesh_spacing,
         oqparam.width_of_mfd_bin,
         getattr(oqparam, 'area_source_discretization', None))
-    samples_by_lt_path = source_model_lt.samples_by_lt_path()
+
     if oqparam.calculation_mode == 'event_based':
-        rlzs = list(source_model_lt)  # consider all source mode realizations
+        rlzs = list(source_model_lt)  # consider all realizations
     else:  # consider only source mode effective realizations
-        #rlz_by_lt_path = {}
-        #for rlz in source_model_lt:
-        #    if rlz.lt_path not in rlz_by_lt_path:
-        #        weight = rlz.weight * samples_by_lt_path[rlz.lt_path]
-        #        ordinal = len(rlz_by_lt_path)
-        #        rlz_by_lt_path[rlz.lt_path] = logictree.Realization(
-        #            rlz.value, weight, rlz.lt_path, ordinal, rlz.lt_uid)
-        #rlzs = sorted(rlz_by_lt_path.itervalues(),
-        #              key=operator.attrgetter('ordinal'))
         rlzs = source.get_effective_rlzs(source_model_lt)
 
+    samples_by_lt_path = source_model_lt.samples_by_lt_path()
     for i, rlz in enumerate(rlzs):
         sm = rlz.value  # name of the source model
         smpath = rlz.lt_path
