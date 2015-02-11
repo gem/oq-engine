@@ -761,9 +761,10 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         args = warn.call_args[0]
         msg = args[0] % args[1:]
         self.assertEqual(
-            msg, "The logic tree path ('b2',) was sampled 4 times")
+            msg, "The source path ('b2',) was sampled 4 times")
         assoc = csm.get_rlzs_assoc()
         self.assertEqual(
             str(assoc),
             "{0,SadighEtAl1997: ['<0,b1,b1,w=0.2>']\n"
-            "1,SadighEtAl1997: ['<1,b2,b1,w=0.8>']}")
+            "1,SadighEtAl1997: ['<1,b2,b1,w=0.2>', '<2,b2,b1,w=0.2>', "
+            "'<3,b2,b1,w=0.2>', '<4,b2,b1,w=0.2>']}")

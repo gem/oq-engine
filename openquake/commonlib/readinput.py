@@ -22,7 +22,6 @@ import gzip
 import zipfile
 import logging
 import tempfile
-import operator
 import collections
 import ConfigParser
 
@@ -369,16 +368,15 @@ def get_source_models(oqparam, source_model_lt, sitecol=None):
 
     if oqparam.calculation_mode == 'event_based':
         rlzs = list(source_model_lt)  # consider all realizations
-    else:  # consider only source mode effective realizations
-        rlzs = source.get_effective_rlzs(source_model_lt)
-
+    else:  # consider only the effective realizations
+        rlzs = logictree.get_effective_rlzs(source_model_lt)
     samples_by_lt_path = source_model_lt.samples_by_lt_path()
     for i, rlz in enumerate(rlzs):
         sm = rlz.value  # name of the source model
         smpath = rlz.lt_path
         num_samples = samples_by_lt_path[smpath]
         if num_samples > 1:
-            logging.warn('The logic tree path %s was sampled %d times',
+            logging.warn('The source path %s was sampled %d times',
                          smpath, num_samples)
         fname = possibly_gunzip(os.path.join(oqparam.base_path, sm))
         apply_unc = source_model_lt.make_apply_uncertainties(smpath)
@@ -407,10 +405,12 @@ python -m openquake.engine.tools.correct_complex_sources %s
                         "Found in %r a tectonic region type %r inconsistent "
                         "with the ones in %r" % (sm, trt_model.trt, fname))
                 trt_model.gsims = gsim_lt.values[trt_model.trt]
-        # the num_ruptures is not updated; it will be updated in the
-        # engine, after filtering of the sources
+
+        weight = (rlz.weight if oqparam.calculation_mode == 'event_based'
+                  else rlz.weight / num_samples)
         yield source.SourceModel(
-            sm, rlz.weight, smpath, trt_models, gsim_lt, i)
+            sm, weight, smpath, trt_models, gsim_lt, i,
+            1 if oqparam.calculation_mode == 'event_based' else num_samples)
 
 
 def get_filtered_source_models(oqparam, source_model_lt, sitecol):
