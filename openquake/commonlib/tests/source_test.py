@@ -765,8 +765,5 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         assoc = csm.get_rlzs_assoc()
         self.assertEqual(
             str(assoc),
-            "{0,SadighEtAl1997: ['<0,b2,b1,w=0.2>']\n"
-            "1,SadighEtAl1997: ['<1,b2,b1,w=0.2>']\n"
-            "2,SadighEtAl1997: ['<2,b1,b1,w=0.2>']\n"
-            "3,SadighEtAl1997: ['<3,b2,b1,w=0.2>']\n"
-            "4,SadighEtAl1997: ['<4,b2,b1,w=0.2>']}")
+            "{0,SadighEtAl1997: ['<0,b1,b1,w=0.2>']\n"
+            "1,SadighEtAl1997: ['<1,b2,b1,w=0.8>']}")
