@@ -28,19 +28,6 @@ from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
 class DuplicatedID(Exception):
     """Raised when two sources with the same ID are found in a source model"""
 
-
-def get_gsims_by_trt_id(smodel):
-    """
-    Given a source model, returns a dictionary of associations
-    trt_model_id -> list of GSIM instances.
-    """
-    gsims_by_trt = smodel.gsim_lt.values
-    gsims_assoc = AccumDict()
-    for trt_model in smodel.trt_models:
-        gsims = map(valid.gsim, gsims_by_trt[trt_model.trt])
-        gsims_assoc += {trt_model.id: gsims}
-    return gsims_assoc
-
 LtRealization = collections.namedtuple(
     'LtRealization', 'ordinal sm_lt_path gsim_lt_path weight gsim_uid')
 LtRealization.__str__ = lambda self: '<%d,%s,w=%s>' % (
@@ -50,7 +37,6 @@ LtRealization.uid = property(
 
 SourceModel = collections.namedtuple(
     'SourceModel', 'name weight path trt_models gsim_lt ordinal')
-SourceModel.get_gsims_by_trt_id = get_gsims_by_trt_id
 
 
 class TrtModel(collections.Sequence):

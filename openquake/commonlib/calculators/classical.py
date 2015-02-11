@@ -86,8 +86,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.composite_source_model.sources)
         zero = AccumDict((key, AccumDict())
                          for key in self.rlzs_assoc)
-        gsims_assoc = sum((sm.get_gsims_by_trt_id()
-                          for sm in self.composite_source_model), {})
+        gsims_assoc = self.rlzs_assoc.get_gsims_by_trt_id()
         return parallel.apply_reduce(
             self.core_func.__func__,
             (sources, self.sitecol, gsims_assoc, monitor),
@@ -206,7 +205,6 @@ def classical_tiling(calculator, sitecol, tileno):
     calculator.tileno = '.%04d' % tileno
     result = AccumDict()
     for smodel in calculator.composite_source_model:
-        calculator.gsims_assoc = smodel.get_gsims_by_trt_id()
         for trt_model in smodel.trt_models:
             calculator.sources = trt_model.sources
             result = calc.agg_prob(result, calculator.execute())
@@ -233,7 +231,8 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         self.oqparam.concurrent_tasks = 0
         calculator = ClassicalCalculator(self.oqparam, monitor)
         calculator.composite_source_model = self.composite_source_model
-        calculator.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
+        calculator.rlzs_assoc = self.composite_source_model.get_rlzs_assoc(
+            lambda tm: True)
         all_args = [(calculator, tile, i)
                     for (i, tile) in enumerate(self.tiles)]
         return parallel.starmap(classical_tiling, all_args).reduce()
