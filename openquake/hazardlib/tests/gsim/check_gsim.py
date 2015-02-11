@@ -89,6 +89,7 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
 
             if result_type == 'MEAN':
                 result = numpy.exp(mean)
+
             else:
                 [result] = stddevs
             assert isinstance(result, numpy.ndarray), result_type

@@ -86,7 +86,6 @@ class RietbrockEtAl2013SelfSimilar(GMPE):
         C = self.COEFFS[imt]
         imean = (self._get_magnitude_scaling_term(C, rup.mag) +
                  self._get_distance_scaling_term(C, dists.rjb, rup.mag))
-        imean = self._compute_mean(C, rup, dists, sites, imt)
         # convert from cm/s**2 to g for SA and from cm/s**2 to g for PGA (PGV
         # is already in cm/s) and also convert from base 10 to base e.
         if isinstance(imt, (PGA, SA)):
@@ -112,7 +111,7 @@ class RietbrockEtAl2013SelfSimilar(GMPE):
         """
         # Depth adjusted distance, equation 11 (Page 63)
         rval = np.sqrt(rjb ** 2.0 + C["c11"] ** 2.0)
-        f_0, f_1, f_2 = self._get_distance_segment_coefficients(rval)
+        f_0, f_1, f_2 = self._get_distance_segment_coefficients(rjb)
         return ((C["c4"] + C["c5"] * mag) * f_0 +
                 (C["c6"] + C["c7"] * mag) * f_1 +
                 (C["c8"] + C["c9"] * mag) * f_2 +
@@ -126,7 +125,7 @@ class RietbrockEtAl2013SelfSimilar(GMPE):
         # Get distance segment ends
         nsites = len(rval)
         # Equation 12a
-        f_0 = np.log10(self.CONSTS["r0"] / rval[idx])
+        f_0 = np.log10(self.CONSTS["r0"] / rval)
         f_0[rval > self.CONSTS["r0"]] = 0.0
 
         # Equation 12b
@@ -146,14 +145,15 @@ class RietbrockEtAl2013SelfSimilar(GMPE):
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
+                sigma = np.sqrt(C["tau"] ** 2.0 + C["phi"] ** 2.0)
                 stddevs.append(np.log(10.0 **
-                                      (C['sigma'] + np.zeros(num_sites))))
+                                      (sigma + np.zeros(num_sites))))
             elif stddev_type == const.StdDev.INTRA_EVENT:
                 stddevs.append(np.log(10.0 **
-                                      (C['phi'] + np.zeros(num_sites))))
+                                      (C["phi"] + np.zeros(num_sites))))
             elif stddev_type == const.StdDev.INTER_EVENT:
                 stddevs.append(np.log(10.0 **
-                                      (C['tau'] + np.zeros(num_sites))))
+                                      (C["tau"] + np.zeros(num_sites))))
         return stddevs
 
     # Coefficients from Table 5, Page 64
