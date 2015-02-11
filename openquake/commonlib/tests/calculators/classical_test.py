@@ -141,26 +141,25 @@ class ClassicalTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'classical')
     def test_case_15(self):  # full enumeration
-        expected = [
-            'hazard_curve-smltp_SM1-gsimltp_BA2008_C2003-ltr_0.csv',
-            'hazard_curve-smltp_SM1-gsimltp_BA2008_T2002-ltr_1.csv',
-            'hazard_curve-smltp_SM1-gsimltp_CB2008_C2003-ltr_2.csv',
-            'hazard_curve-smltp_SM1-gsimltp_CB2008_T2002-ltr_3.csv',
-            'hazard_curve-smltp_SM2_a3b1-gsimltp_BA2008_*-ltr_6.csv',
-            'hazard_curve-smltp_SM2_a3b1-gsimltp_CB2008_*-ltr_7.csv',
-            'hazard_curve-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008_*-ltr_4.csv',
-            'hazard_curve-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_*-ltr_5.csv',
-            'hazard_curve-mean.csv',
-            'hazard_uhs-smltp_SM1-gsimltp_BA2008_C2003-ltr_0.csv',
-            'hazard_uhs-smltp_SM1-gsimltp_BA2008_T2002-ltr_1.csv',
-            'hazard_uhs-smltp_SM1-gsimltp_CB2008_C2003-ltr_2.csv',
-            'hazard_uhs-smltp_SM1-gsimltp_CB2008_T2002-ltr_3.csv',
-            'hazard_uhs-smltp_SM2_a3b1-gsimltp_BA2008_*-ltr_6.csv',
-            'hazard_uhs-smltp_SM2_a3b1-gsimltp_CB2008_*-ltr_7.csv',
-            'hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008_*-ltr_4.csv',
-            'hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_*-ltr_5.csv',
-            'hazard_uhs-mean.csv',
-        ]
+        expected = '''\
+hazard_curve-mean.csv
+hazard_curve-smltp_SM1-gsimltp_BA2008_C2003-ltr_0.csv
+hazard_curve-smltp_SM1-gsimltp_BA2008_T2002-ltr_1.csv
+hazard_curve-smltp_SM1-gsimltp_CB2008_C2003-ltr_2.csv
+hazard_curve-smltp_SM1-gsimltp_CB2008_T2002-ltr_3.csv
+hazard_curve-smltp_SM2_a3b1-gsimltp_BA2008_*-ltr_4.csv
+hazard_curve-smltp_SM2_a3b1-gsimltp_CB2008_*-ltr_5.csv
+hazard_curve-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008_*-ltr_6.csv
+hazard_curve-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_*-ltr_7.csv
+hazard_uhs-mean.csv
+hazard_uhs-smltp_SM1-gsimltp_BA2008_C2003-ltr_0.csv
+hazard_uhs-smltp_SM1-gsimltp_BA2008_T2002-ltr_1.csv
+hazard_uhs-smltp_SM1-gsimltp_CB2008_C2003-ltr_2.csv
+hazard_uhs-smltp_SM1-gsimltp_CB2008_T2002-ltr_3.csv
+hazard_uhs-smltp_SM2_a3b1-gsimltp_BA2008_*-ltr_4.csv
+hazard_uhs-smltp_SM2_a3b1-gsimltp_CB2008_*-ltr_5.csv
+hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008_*-ltr_6.csv
+hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_*-ltr_7.csv'''.split()
         out = self.run_calc(case_15.__file__, 'job.ini', exports='csv')
         for fname in expected:
             self.assertEqualFiles('expected/%s' % fname, out[fname])

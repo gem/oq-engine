@@ -22,6 +22,7 @@ import gzip
 import zipfile
 import logging
 import tempfile
+import operator
 import collections
 import ConfigParser
 
@@ -366,8 +367,21 @@ def get_source_models(oqparam, source_model_lt, sitecol=None):
         oqparam.width_of_mfd_bin,
         getattr(oqparam, 'area_source_discretization', None))
     samples_by_lt_path = source_model_lt.samples_by_lt_path()
+    if oqparam.calculation_mode == 'event_based':
+        rlzs = list(source_model_lt)  # consider all source mode realizations
+    else:  # consider only source mode effective realizations
+        #rlz_by_lt_path = {}
+        #for rlz in source_model_lt:
+        #    if rlz.lt_path not in rlz_by_lt_path:
+        #        weight = rlz.weight * samples_by_lt_path[rlz.lt_path]
+        #        ordinal = len(rlz_by_lt_path)
+        #        rlz_by_lt_path[rlz.lt_path] = logictree.Realization(
+        #            rlz.value, weight, rlz.lt_path, ordinal, rlz.lt_uid)
+        #rlzs = sorted(rlz_by_lt_path.itervalues(),
+        #              key=operator.attrgetter('ordinal'))
+        rlzs = source.get_effective_rlzs(source_model_lt)
 
-    for i, rlz in enumerate(source_model_lt):
+    for i, rlz in enumerate(rlzs):
         sm = rlz.value  # name of the source model
         smpath = rlz.lt_path
         num_samples = samples_by_lt_path[smpath]
