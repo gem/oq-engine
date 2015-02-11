@@ -28,7 +28,6 @@ from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
 class DuplicatedID(Exception):
     """Raised when two sources with the same ID are found in a source model"""
 
-
 LtRealization = collections.namedtuple(
     'LtRealization', 'ordinal sm_lt_path gsim_lt_path weight gsim_uid')
 LtRealization.__str__ = lambda self: '<%d,%s,w=%s>' % (
@@ -244,6 +243,13 @@ class RlzsAssoc(collections.Mapping):
         """Flat list with all the realizations"""
         return sum(self.rlzs_by_smodel, [])
 
+    def get_gsims_by_trt_id(self):
+        """Returns associations trt_id -> [GSIM instance, ...]"""
+        dic = groupby(self.rlzs_assoc, operator.itemgetter(0))
+        for trt_id in dic:
+            dic[trt_id] = [valid.gsim(g) for trt_id, g in dic[trt_id]]
+        return dic
+
     def _add_realizations(self, idx, lt_model, realizations):
         gsims_by_trt = lt_model.gsim_lt.values
         rlzs = []
@@ -261,15 +267,6 @@ class RlzsAssoc(collections.Mapping):
             idx += 1
         self.rlzs_by_smodel.append(rlzs)
         return idx
-
-    def get_gsims_by_trt_id(self):
-        """
-        Return a dictionary trt_model_id -> [GSIM instances]
-        """
-        gsims_by_trt = collections.defaultdict(list)
-        for trt_id, gsim in sorted(self.rlzs_assoc):
-            gsims_by_trt[trt_id].append(valid.gsim(gsim))
-        return gsims_by_trt
 
     def combine(self, results, agg=agg_prob):
         """
@@ -403,17 +400,18 @@ class CompositeSourceModel(collections.Sequence):
             for trt_model in smodel.trt_models:
                 if get_weight(trt_model) > 0:
                     trts.add(trt_model.trt)
-            # reduce the GSIM logic tree if there are fewer effective TRTs
-            if trts < set(smodel.gsim_lt.tectonic_region_types):
+            # recompute the GSIM logic tree if needed
+            if trts != set(smodel.gsim_lt.tectonic_region_types):
                 smodel.gsim_lt.reduce(trts)
             if num_samples:  # sampling, pick just one gsim realization
                 rnd = random.Random(random_seed + idx)
                 rlzs = [logictree.sample_one(smodel.gsim_lt, rnd)]
             else:  # full enumeration
                 rlzs = get_effective_rlzs(smodel.gsim_lt)
-            logging.info('Creating %d GMPE realization(s) for model %s, %s',
-                         len(rlzs), smodel.name, smodel.path)
-            idx = assoc._add_realizations(idx, smodel, rlzs)
+            if rlzs:
+                logging.info('Creating %d GMPE realization(s) for model '
+                             '%s, %s', len(rlzs), smodel.name, smodel.path)
+                idx = assoc._add_realizations(idx, smodel, rlzs)
         return assoc
 
     def __getitem__(self, i):

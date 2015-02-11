@@ -16,21 +16,19 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import random
+import os
 import operator
-import logging
 import collections
+from functools import partial
 
-import numpy
-
-from openquake.hazardlib.calc.gmf import GmfComputer
+from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
 from openquake.hazardlib.calc.filters import source_site_distance_filter, \
     rupture_site_distance_filter
 from openquake.risklib import scientific
-from openquake.commonlib import readinput, parallel
+from openquake.commonlib import parallel
 from openquake.commonlib.export import export
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, split_in_blocks, groupby
 
 from openquake.commonlib.calculators import base, calc
 
@@ -43,7 +41,7 @@ def classical(sources, sitecol, gsims_assoc, monitor):
     :param sources:
         a non-empty sequence of sources of homogeneous tectonic region type
     :param sitecol:
-        a SiteCollection
+        a SiteCollection instance
     :param gsims_assoc:
         associations trt_model_id -> gsims
     :param monitor:
@@ -101,7 +99,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Collect the hazard curves by realization and export them.
 
         :param result:
-            a dictionary of hazard curves dictionaries
+            a nested dictionary (trt_id, gsim) -> IMT -> hazard curves
         """
         curves_by_rlz = self.rlzs_assoc.combine(result)
         rlzs = self.rlzs_assoc.realizations
@@ -118,7 +116,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 fname = 'hazard_curve-smltp_%s-gsimltp_%s-ltr_%d.%s' % (
                     smlt_path, gsimlt_path, rlz.ordinal, fmt)
                 saved += self.export_curves(curves_by_rlz[rlz], fmt, fname)
-
         if len(rlzs) == 1:  # cannot compute statistics
             return saved
 
@@ -126,8 +123,10 @@ class ClassicalCalculator(base.HazardCalculator):
                    else [rlz.weight for rlz in rlzs])
         curves_by_imt = {imt: [curves_by_rlz[rlz][imt] for rlz in rlzs]
                          for imt in oq.imtls}
-        mean_curves = scientific.mean_curve(
-            [curves_by_rlz[rlz] for rlz in rlzs], weights)
+        mean = getattr(oq, 'mean_hazard_curves', None)
+        if mean:
+            mean_curves = scientific.mean_curve(
+                [curves_by_rlz[rlz] for rlz in rlzs], weights)
         quantile = {
             q: {imt: scientific.quantile_curve(
                 curves_by_imt[imt], q, weights).reshape((nsites, -1))
@@ -135,8 +134,9 @@ class ClassicalCalculator(base.HazardCalculator):
             for q in getattr(oq, 'quantile_hazard_curves', [])
         }
         for fmt in exports:
-            saved += self.export_curves(
-                mean_curves, fmt, 'hazard_curve-mean.%s' % fmt)
+            if mean:
+                saved += self.export_curves(
+                    mean_curves, fmt, 'hazard_curve-mean.%s' % fmt)
             for q in quantile:
                 saved += self.export_curves(
                     quantile[q], fmt, 'quantile_curve-%s.%s' % (q, fmt))
@@ -158,6 +158,8 @@ class ClassicalCalculator(base.HazardCalculator):
         :param fmt: the export format ('xml', 'csv', ...)
         :param fname: the name of the exported file
         """
+        if hasattr(self, 'tileno'):
+            fname += self.tileno
         saved = AccumDict()
         oq = self.oqparam
         export_dir = oq.export_dir
@@ -181,89 +183,84 @@ class ClassicalCalculator(base.HazardCalculator):
         return saved
 
 
-@base.calculators.add('disaggregation')
-class DisaggregationCalculator(base.HazardCalculator):
+def is_effective_trt_model(result_dict, trt_model):
     """
-    Classical disaggregation PSHA calculator
+    Returns True on tectonic region types
+    which ID in contained in the result_dict.
+
+    :param result_dict: a dictionary with keys (trt_id, gsim)
     """
-    def post_execute(self, result):
-        return {}
+    return any(trt_model.id == trt_id for trt_id, _gsim in result_dict)
 
 
-def calc_gmfs(tag_seed_pairs, computer, monitor):
+def classical_tiling(calculator, sitecol, tileno):
     """
-    Computes several GMFs in parallel, one for each tag and seed.
-
-    :param tag_seed_pairs:
-        list of pairs (rupture tag, rupture seed)
-    :param computer:
-        :class:`openquake.hazardlib.calc.gmf.GMFComputer` instance
-    :param monitor:
-        :class:`openquake.commonlib.parallel.PerformanceMonitor` instance
+    :param calculator:
+        a ClassicalCalculator instance
+    :param sitecol:
+        a SiteCollection instance
+    :param tileno:
+        the number of the current tile
     :returns:
-        a dictionary tag -> {imt: gmf}
+        a dictionary file name -> full path for each exported file
     """
-    result = AccumDict({(0, str(gsim)): AccumDict()
-                        for gsim in computer.gsims})
-    with monitor:
-        for tag, seed in tag_seed_pairs:
-            for gsim_str, gmvs in computer.compute(seed):
-                result[0, gsim_str][tag] = gmvs
-    return result
+    calculator.sitecol = sitecol
+    calculator.tileno = '.%04d' % tileno
+    result = calculator.execute()
+    # build the correct realizations from the (reduced) logic tree
+    calculator.rlzs_assoc = calculator.composite_source_model.get_rlzs_assoc(
+        partial(is_effective_trt_model, result))
+    # export the calculator outputs
+    return calculator.post_execute(result)
 
 
-@base.calculators.add('scenario')
-class ScenarioCalculator(base.HazardCalculator):
+@base.calculators.add('classical_tiling')
+class ClassicalTilingCalculator(ClassicalCalculator):
     """
-    Scenario hazard calculator
+    Classical Tiling calculator
     """
-    core_func = calc_gmfs
-
-    def pre_execute(self):
-        """
-        Read the site collection and initialize GmfComputer, tags and seeds
-        """
-        super(ScenarioCalculator, self).pre_execute()
-        self.imts = readinput.get_imts(self.oqparam)
-        trunc_level = getattr(self.oqparam, 'truncation_level', None)
-        correl_model = readinput.get_correl_model(self.oqparam)
-        n_gmfs = self.oqparam.number_of_ground_motion_fields
-        rupture = readinput.get_rupture(self.oqparam)
-
-        self.tags = ['scenario-%010d' % i for i in xrange(n_gmfs)]
-        self.computer = GmfComputer(
-            rupture, self.sitecol, self.imts, self.gsims,
-            trunc_level, correl_model)
-        rnd = random.Random(getattr(self.oqparam, 'random_seed', 42))
-        self.tag_seed_pairs = [(tag, rnd.randint(0, calc.MAX_INT))
-                               for tag in self.tags]
+    prefilter = False
 
     def execute(self):
         """
-        Compute the GMFs in parallel and return a dictionary key -> imt -> gmfs
+        Split the computation by tiles which are run in parallel.
         """
-        logging.info('Computing the GMFs')
-        args = (self.tag_seed_pairs, self.computer, self.monitor('calc_gmfs'))
-        data = {}
-        for (trt_id, gsim), dic in parallel.apply_reduce(
-                self.core_func.__func__, args,
-                concurrent_tasks=self.oqparam.concurrent_tasks).iteritems():
-            data[trt_id, gsim] = {  # build N x R matrices
-                imt: numpy.array(
-                    [dic[tag][imt] for tag in self.tags]).T
-                for imt in map(str, self.imts)}
-        return data
+        monitor = self.monitor(self.core_func.__name__)
+        monitor.oqparam = self.oqparam
+        self.tiles = map(SiteCollection, split_in_blocks(
+            self.sitecol, self.oqparam.concurrent_tasks or 1))
+        self.oqparam.concurrent_tasks = 0
+        calculator = ClassicalCalculator(self.oqparam, monitor)
+        calculator.composite_source_model = self.composite_source_model
+        calculator.rlzs_assoc = self.composite_source_model.get_rlzs_assoc(
+            lambda tm: True)  # build the full logic tree
+        all_args = [(calculator, tile, i)
+                    for (i, tile) in enumerate(self.tiles)]
+        return parallel.starmap(classical_tiling, all_args).reduce()
 
     def post_execute(self, result):
         """
-        :param result: a dictionary imt -> gmfs
-        :returns: a dictionary {('gmf', 'xml'): <gmf.xml filename>}
+        Merge together the exported files for each tile.
+
+        :param result: a dictionary key -> exported filename
         """
-        logging.info('Exporting the result')
-        out = AccumDict()
-        for (trt_id, gsim), gmfs_by_imt in result.iteritems():
-            fname = '%s_gmf.xml' % gsim
-            out += export(
-                ('gmf', 'xml'), self.oqparam.export_dir, fname,
-                self.sitecol, self.tags, gmfs_by_imt)
-        return out
+        # group files by name; for instance the file names
+        # ['quantile_curve-0.1.csv.0000', 'quantile_curve-0.1.csv.0001',
+        # 'hazard_map-mean.csv.0000', 'hazard_map-mean.csv.0001']
+        # are grouped in the dictionary
+        # {'quantile_curve-0.1.csv': ['quantile_curve-0.1.csv.0000',
+        #                             'quantile_curve-0.1.csv.0001'],
+        # 'hazard_map-mean.csv': ['hazard_map-mean.csv.0000',
+        #                         'hazard_map-mean.csv.0001'],
+        # }
+        dic = groupby((fname for fname in result.itervalues()),
+                      lambda fname: fname.rsplit('.', 1)[0])
+        # merge together files coming from different tiles in order
+        d = {}
+        for fname in dic:
+            with open(fname, 'w') as f:
+                for tilename in sorted(dic[fname]):
+                    f.write(open(tilename).read())
+                    os.remove(tilename)
+            d[os.path.basename(fname)] = fname
+        return d
