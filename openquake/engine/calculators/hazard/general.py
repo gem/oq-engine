@@ -331,14 +331,13 @@ class BaseHazardCalculator(base.Calculator):
         smodels = [sm for sm in self._source_models
                    if sm.trtmodel_set.filter(num_ruptures__gt=0)]
         for lt_model, rlzs in zip(smodels, rlzs_assoc.rlzs_by_smodel):
-            trt_models = lt_model.trtmodel_set.filter(num_ruptures__gt=0)
             for rlz in rlzs:
                 gsim_by_trt = rlzs_assoc.gsim_by_trt[rlz]
                 lt_rlz = models.LtRealization.objects.create(
                     lt_model=lt_model, gsim_lt_path=rlz.gsim_uid,
                     weight=rlz.weight, ordinal=rlz.ordinal)
                 self._realizations.append(lt_rlz)
-                for trt_model in trt_models:
+                for trt_model in lt_model.trtmodel_set.all():
                     trt = trt_model.tectonic_region_type
                     # populate the association table rlz <-> trt_model
                     models.AssocLtRlzTrtModel.objects.create(
