@@ -161,11 +161,11 @@ def export_gmf_csv(key, export_dir, fname, sitecol, rupture_tags, gmfs):
     :gmfs: a dictionary of ground motion fields keyed by IMT
     """
     dest = os.path.join(export_dir, fname)
-    with floatformat('%12.8E'), open(dest, 'w') as f:
-        for imt, gmf in gmfs.iteritems():
-            for site, gmvs in zip(sitecol, gmf):
-                row = [imt, site.location.x, site.location.y] + list(gmvs)
-                f.write(scientificformat(row) + '\n')
+    dic = collections.defaultdict(list)
+    for imt, gmf in gmfs.iteritems():
+        for tag, gmvs in zip(rupture_tags, gmf.T):
+            dic[tag].append(gmvs)
+    save_csv(dest, [[tag, ''] + dic[tag] for tag in rupture_tags])
     return {key: dest}
 
 # ####################### export hazard curves ############################ #
