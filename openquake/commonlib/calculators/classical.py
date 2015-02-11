@@ -82,8 +82,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = self.oqparam
-        sources = getattr(self, 'sources', None) or list(
-            self.composite_source_model.sources)
+        sources = list(self.composite_source_model.sources)
         zero = AccumDict((key, AccumDict())
                          for key in self.rlzs_assoc)
         gsims_assoc = self.rlzs_assoc.get_gsims_by_trt_id()
@@ -100,7 +99,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Collect the hazard curves by realization and export them.
 
         :param result:
-            a dictionary of hazard curves dictionaries
+            a nested dictionary (trt_id, gsim) -> IMT -> hazard curves
         """
         curves_by_rlz = self.rlzs_assoc.combine(result)
         rlzs = self.rlzs_assoc.realizations
@@ -200,16 +199,18 @@ def classical_tiling(calculator, sitecol, tileno):
         a ClassicalCalculator instance
     :param sitecol:
         a SiteCollection instance
+    :param tileno:
+        the number of the current tile
+    :returns:
+        a dictionary file name -> full path for each exported file
     """
     calculator.sitecol = sitecol
     calculator.tileno = '.%04d' % tileno
-    result = AccumDict()
-    for smodel in calculator.composite_source_model:
-        for trt_model in smodel.trt_models:
-            calculator.sources = trt_model.sources
-            result = calc.agg_prob(result, calculator.execute())
+    result = calculator.execute()
+    # build the correct realizations from the (reduced) logic tree
     calculator.rlzs_assoc = calculator.composite_source_model.get_rlzs_assoc(
         partial(is_effective_trt_model, result))
+    # export the calculator outputs
     return calculator.post_execute(result)
 
 
@@ -232,19 +233,29 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         calculator = ClassicalCalculator(self.oqparam, monitor)
         calculator.composite_source_model = self.composite_source_model
         calculator.rlzs_assoc = self.composite_source_model.get_rlzs_assoc(
-            lambda tm: True)
+            lambda tm: True)  # build the full logic tree
         all_args = [(calculator, tile, i)
                     for (i, tile) in enumerate(self.tiles)]
         return parallel.starmap(classical_tiling, all_args).reduce()
 
     def post_execute(self, result):
         """
-        Merge together the exported files for each tile
+        Merge together the exported files for each tile.
+
+        :param result: a dictionary key -> exported filename
         """
-        # group files by name
+        # group files by name; for instance the file names
+        # ['quantile_curve-0.1.csv.0000', 'quantile_curve-0.1.csv.0001',
+        # 'hazard_map-mean.csv.0000', 'hazard_map-mean.csv.0001']
+        # are grouped in the dictionary
+        # {'quantile_curve-0.1.csv': ['quantile_curve-0.1.csv.0000',
+        #                             'quantile_curve-0.1.csv.0001'],
+        # 'hazard_map-mean.csv': ['hazard_map-mean.csv.0000',
+        #                         'hazard_map-mean.csv.0001'],
+        # }
         dic = groupby((fname for fname in result.itervalues()),
                       lambda fname: fname.rsplit('.', 1)[0])
-        # merge together files with different tile numbers (in order)
+        # merge together files coming from different tiles in order
         d = {}
         for fname in dic:
             with open(fname, 'w') as f:
