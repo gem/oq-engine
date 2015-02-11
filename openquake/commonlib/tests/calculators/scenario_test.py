@@ -88,3 +88,10 @@ class ScenarioHazardTestCase(CalculatorTestCase):
         f1, f2 = self.frequencies(case_8, 0.5, 1.0)
         self.assertAlmostEqual(f1, 0)
         self.assertAlmostEqual(f2, 0)
+
+    @attr('qa', 'hazard', 'scenario')
+    def test_case_9(self):
+        # all sites were filtered out
+        out = self.run_calc(case_1.__file__, 'job.ini',
+                            maximum_distance=0.1, exports='csv')
+        print out
