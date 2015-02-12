@@ -218,6 +218,8 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1,
     return block_splitter(items, math.ceil(total_weight / hint), weight, key)
 
 
+# the implementation here is unbelievably ugly; it is a remnant of the
+# past and soon or later will be removed (MS)
 def deep_eq(a, b, decimal=7, exclude=None):
     """Deep compare two objects for equality by traversing __dict__ and
     __slots__.
@@ -286,6 +288,8 @@ def _deep_eq(a, b, decimal, exclude=None):
         assert a.__class__ == b.__class__, (
             "%s and %s are different classes") % (a.__class__, b.__class__)
         _test_dict(a.__dict__, b.__dict__)
+    elif isinstance(a, numpy.ndarray):
+        assert numpy.array_equal(a, b), '%s and %s are different' % (a, b)
     # iterables (not strings)
     elif isinstance(a, collections.Iterable) and not isinstance(a, str):
         # If there's a generator or another type of iterable, treat it as a
