@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
+# Copyright (C) 2012-2015, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -367,3 +367,50 @@ class ConvexToPointDistanceTestCase(SpeedupsTestCase):
             pyy = numpy.array([1.5, 2.0, 2.0])
             dist = utils.point_to_polygon_distance(polygon, pxx, pyy)
             numpy.testing.assert_almost_equal(dist, [0.5, 1, 2])
+
+
+class PlaneFit(unittest.TestCase):
+    """
+    In order to test the method we fit a plane to a cloud of points
+    generated from a given plane equation.
+
+    ax + by + cz + d = 0
+    """
+
+    def setUp(self):
+        # Set the seed of the random number generator
+        numpy.random.seed(41)
+        # Compute the x and y coordinates of the points which lay on the plane
+        self.npts = 20
+        self.points = numpy.zeros((self.npts, 3))
+        self.points[:, 0] = (numpy.random.random(self.npts) - 0.5) * 10.
+        self.points[:, 1] = (numpy.random.random(self.npts) - 0.5) * 10.
+        # Plane equation coefficients
+        self.c = numpy.random.random(4)
+        # Normalise the plane equation coefficients to get the direction
+        # cosines
+        self.c[0:3] = self.c[0:3] / (sum(self.c[0:3]**2.))**0.5
+        # Compute the constant term
+        self.c[-1] = -abs(self.c[-1])
+        # Compute the z coordinate of the points
+        self.points[:, 2] = (-self.points[:, 0] * self.c[0] +
+                             -self.points[:, 1] * self.c[1] +
+                             -self.c[3]) / self.c[2]
+
+    def test_plane_fit01(self):
+        """
+        Tests the parameters of the plane obtained through the regression.
+        """
+        pnt, par = utils.plane_fit(self.points)
+        numpy.testing.assert_allclose(self.c[0:3], par, rtol=1e-5, atol=0)
+        self.assertAlmostEqual(self.c[-1], -sum(par*pnt))
+
+    def test_plane_fit02(self):
+        """
+        Tests the parameters of the plane obtained through the regression.
+        In this second case we add noise to the z values
+        """
+        self.points[:, 2] += numpy.random.random(self.npts) * 0.01
+        pnt, par = utils.plane_fit(self.points)
+        numpy.testing.assert_allclose(self.c[0:3], par, rtol=1e-3, atol=0)
+        self.assertAlmostEqual(self.c[-1], -sum(par*pnt), 2)
