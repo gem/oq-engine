@@ -28,6 +28,48 @@ from openquake.commonlib import hazard_writers
 from openquake.hazardlib.imt import from_string
 
 
+class SES(object):
+    """
+    Stochastic Event Set: A container for 1 or more ruptures associated with a
+    specific investigation time span.
+    """
+    # the ordinal must be > 0: the reason is that it appears in the
+    # exported XML file and the schema constraints the number to be
+    # nonzero
+    def __init__(self, ruptures, investigation_time, ordinal=1):
+        self.ruptures = ruptures
+        self.investigation_time = investigation_time
+        self.ordinal = ordinal
+
+    def __iter__(self):
+        return iter(self.ruptures)
+
+
+class SESCollection(object):
+    """
+    Stochastic Event Set Collection
+    """
+    def __init__(self, idx_ses_dict, sm_lt_path, investigation_time=None):
+        self.idx_ses_dict = idx_ses_dict
+        self.sm_lt_path = sm_lt_path
+        self.investigation_time = investigation_time
+
+    def __iter__(self):
+        for idx, ses in sorted(self.idx_ses_dict.iteritems()):
+            yield SES(ses, self.investigation_time, idx)
+
+
+@export.add(('ses', 'xml'))
+def export_ses_xml(key, export_dir, fname, ses_coll):
+    """
+    Export a Stochastic Event Set Collection
+    """
+    dest = os.path.join(export_dir, fname)
+    writer = hazard_writers.SESXMLWriter(dest, '_'.join(ses_coll.sm_lt_path))
+    writer.serialize(ses_coll)
+    return {fname: dest}
+
+
 # #################### export Ground Motion fields ########################## #
 
 class GmfSet(object):

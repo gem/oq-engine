@@ -121,7 +121,7 @@ class HazardCalculator(BaseCalculator):
             self.rlzs_assoc = workflows.FakeRlzsAssoc(len(self.gsims))
 
 
-def get_hazard(calculator):
+def get_hazard(calculator, post_execute=False):
     """
     Get the hazard from a calculator, possibly by using cached results
 
@@ -136,6 +136,10 @@ def get_hazard(calculator):
             calculator.oqparam, calculator.monitor('hazard'))
         hcalc.pre_execute()
         result = hcalc.execute()
+        if post_execute:
+            for item in sorted(hcalc.post_execute(result).iteritems()):
+                logging.info('exported %s: %s', *item)
+
         haz_out = dict(result=result, rlzs_assoc=hcalc.rlzs_assoc,
                        sitecol=hcalc.sitecol)
         logging.info('Saving hazard output on %s', cache)
