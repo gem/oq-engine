@@ -1247,7 +1247,7 @@ class SESRupture(djm.Model):
         :param int seed:
             a seed that will be used when computing the GMF from the rupture
         """
-        tag = 'trt=%02d|ses=%04d|src=%s|rup=%03d-%02d' % (
+        tag = 'col=%02d|ses=%04d|src=%s|rup=%03d-%02d' % (
             prob_rupture.ses_collection.ordinal, ses_ordinal,
             source_id, rupt_no, rupt_occ)
         return cls.objects.create(
