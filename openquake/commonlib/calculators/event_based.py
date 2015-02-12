@@ -24,12 +24,15 @@ import collections
 
 import numpy
 
+from openquake.hazardlib import geo
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib import site, calc
 from openquake.commonlib import readinput, parallel
-from openquake.baselib.general import AccumDict
+from openquake.commonlib.export import export
+from openquake.commonlib.export.hazard import SESCollection
+from openquake.baselib.general import AccumDict, groupby
 
 from openquake.commonlib.writers import save_csv
 from openquake.commonlib.calculators import base
@@ -39,8 +42,124 @@ from openquake.commonlib.calculators.classical import ClassicalCalculator
 
 # ######################## rupture calculator ############################ #
 
-SESRupture = collections.namedtuple(
-    'SESRupture', 'rupture site_indices seed tag trt_model_id')
+
+def get_geom(surface, is_from_fault_source, is_multi_surface):
+    """
+    The following fields can be interpreted different ways,
+    depending on the value of `is_from_fault_source`. If
+    `is_from_fault_source` is True, each of these fields should
+    contain a 2D numpy array (all of the same shape). Each triple
+    of (lon, lat, depth) for a given index represents the node of
+    a rectangular mesh. If `is_from_fault_source` is False, each
+    of these fields should contain a sequence (tuple, list, or
+    numpy array, for example) of 4 values. In order, the triples
+    of (lon, lat, depth) represent top left, top right, bottom
+    left, and bottom right corners of the the rupture's planar
+    surface. Update: There is now a third case. If the rupture
+    originated from a characteristic fault source with a
+    multi-planar-surface geometry, `lons`, `lats`, and `depths`
+    will contain one or more sets of 4 points, similar to how
+    planar surface geometry is stored (see above).
+
+    :param rupture: an instance of :class:
+    `openquake.hazardlib.source.rupture.BaseProbabilisticRupture`
+
+    :param is_from_fault_source: a boolean
+    :param is_multi_surface: a boolean
+    """
+    if is_from_fault_source:
+        # for simple and complex fault sources,
+        # rupture surface geometry is represented by a mesh
+        surf_mesh = surface.get_mesh()
+        lons = surf_mesh.lons
+        lats = surf_mesh.lats
+        depths = surf_mesh.depths
+    else:
+        if is_multi_surface:
+            # `list` of
+            # openquake.hazardlib.geo.surface.planar.PlanarSurface
+            # objects:
+            surfaces = surface.surfaces
+
+            # lons, lats, and depths are arrays with len == 4*N,
+            # where N is the number of surfaces in the
+            # multisurface for each `corner_*`, the ordering is:
+            #   - top left
+            #   - top right
+            #   - bottom left
+            #   - bottom right
+            lons = numpy.concatenate([x.corner_lons for x in surfaces])
+            lats = numpy.concatenate([x.corner_lats for x in surfaces])
+            depths = numpy.concatenate([x.corner_depths for x in surfaces])
+        else:
+            # For area or point source,
+            # rupture geometry is represented by a planar surface,
+            # defined by 3D corner points
+            lons = numpy.zeros((4))
+            lats = numpy.zeros((4))
+            depths = numpy.zeros((4))
+
+            # NOTE: It is important to maintain the order of these
+            # corner points. TODO: check the ordering
+            for i, corner in enumerate((surface.top_left,
+                                        surface.top_right,
+                                        surface.bottom_left,
+                                        surface.bottom_right)):
+                lons[i] = corner.longitude
+                lats[i] = corner.latitude
+                depths[i] = corner.depth
+    return lons, lats, depths
+
+
+class SESRupture(object):
+    def __init__(self, rupture, site_indices, seed, tag, trt_model_id):
+        self.rupture = self
+        self.site_indices = site_indices
+        self.seed = seed
+        self.tag = tag
+        self.trt_model_id = trt_model_id
+
+        self.is_from_fault_source = iffs = isinstance(
+            rupture.surface, (geo.ComplexFaultSurface, geo.SimpleFaultSurface))
+        self.is_multi_surface = ims = isinstance(
+            rupture.surface, geo.MultiSurface)
+        self.lons, self.lats, self.depths = get_geom(
+            rupture.surface, iffs, ims)
+        self.surface = rupture.surface
+        self.strike = rupture.surface.get_strike()
+        self.dip = rupture.surface.get_dip()
+        self.rake = rupture.rake
+        self.hypocenter = rupture.hypocenter
+        self.tectonic_region_type = rupture.tectonic_region_type
+        self.magnitude = self.mag = rupture.mag
+
+    @property
+    def top_left_corner(self):
+        if not (self.is_from_fault_source or self.is_multi_surface):
+            return self.lons[0], self.lats[0], self.depths[0]
+
+    @property
+    def top_right_corner(self):
+        if not (self.is_from_fault_source or self.is_multi_surface):
+            return self.lons[1], self.lats[1], self.depths[1]
+
+    @property
+    def bottom_left_corner(self):
+        if not (self.is_from_fault_source or self.is_multi_surface):
+            return self.lons[2], self.lats[2], self.depths[2]
+
+    @property
+    def bottom_right_corner(self):
+        if not (self.is_from_fault_source or self.is_multi_surface):
+            return self.lons[3], self.lats[3], self.depths[3]
+
+
+def get_ses_idx(sesrupture):
+    """
+    Extract the SES ordinal (>=1) from the rupture tag.
+    For instance 'trt=00|ses=0001|src=1|rup=001-01' => 1
+    """
+    return int(sesrupture.tag.split('|', 2)[1].split('=')[1])
 
 
 def compute_ruptures(sources, sitecol, monitor):
@@ -138,16 +257,29 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = self.oqparam
         sources = list(self.composite_source_model.sources)
-        return parallel.apply_reduce(
+        result = parallel.apply_reduce(
             self.core_func.__func__,
             (sources, self.sitecol, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_model_id'))
+        return result
 
     def post_execute(self, result):
-        # TODO: decide how to export the ruptures
-        return {}
+        """Export the ruptures"""
+        oq = self.oqparam
+        saved = AccumDict()
+        for smodel in self.composite_source_model:
+            smpath = '_'.join(smodel.path)
+            for trt_model in smodel.trt_models:
+                sesruptures = result[trt_model.id]
+                ses_coll = SESCollection(
+                    groupby(sesruptures, get_ses_idx),
+                    smodel.path, oq.investigation_time)
+                fname = 'ses-%d-smltp_%s.xml' % (
+                    trt_model.id, smpath)
+                saved += export(('ses', 'xml'), oq.export_dir, fname, ses_coll)
+        return saved
 
 
 # ######################## GMF calculator ############################ #
@@ -237,7 +369,7 @@ class EventBasedCalculator(base.calculators['classical']):
         prepare some empty files in the export directory to store the gmfs
         (if any). If there were pre-existing files, they will be erased.
         """
-        haz_out = base.get_hazard(self)
+        haz_out = base.get_hazard(self, post_execute=True)
         self.sitecol = haz_out['sitecol']
         self.rlzs_assoc = haz_out['rlzs_assoc']
         self.sesruptures = sorted(sum(haz_out['result'].itervalues(), []),
