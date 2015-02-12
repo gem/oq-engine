@@ -46,9 +46,9 @@ class SES(object):
 
 
 class SESCollection(object):
-	"""
-	Stochastic Event Set Collection
-	"""
+    """
+    Stochastic Event Set Collection
+    """
     def __init__(self, idx_ses_dict, sm_lt_path, investigation_time=None):
         self.idx_ses_dict = idx_ses_dict
         self.sm_lt_path = sm_lt_path

@@ -266,13 +266,13 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         return result
 
     def post_execute(self, result):
-        """Export the ruptures"""
+        """Export the ruptures, if any"""
         oq = self.oqparam
         saved = AccumDict()
         for smodel in self.composite_source_model:
             smpath = '_'.join(smodel.path)
             for trt_model in smodel.trt_models:
-                sesruptures = result[trt_model.id]
+                sesruptures = result.get(trt_model.id, [])
                 ses_coll = SESCollection(
                     groupby(sesruptures, get_ses_idx),
                     smodel.path, oq.investigation_time)
