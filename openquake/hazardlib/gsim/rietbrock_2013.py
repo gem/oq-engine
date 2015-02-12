@@ -111,7 +111,7 @@ class RietbrockEtAl2013SelfSimilar(GMPE):
         """
         # Depth adjusted distance, equation 11 (Page 63)
         rval = np.sqrt(rjb ** 2.0 + C["c11"] ** 2.0)
-        f_0, f_1, f_2 = self._get_distance_segment_coefficients(rjb)
+        f_0, f_1, f_2 = self._get_distance_segment_coefficients(rval)
         return ((C["c4"] + C["c5"] * mag) * f_0 +
                 (C["c6"] + C["c7"] * mag) * f_1 +
                 (C["c8"] + C["c9"] * mag) * f_2 +
