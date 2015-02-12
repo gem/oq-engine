@@ -33,7 +33,7 @@ from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
 from openquake.hazardlib.imt import PGA, PGV, PGD, SA, CAV
 
 
-def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=True):
+def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
     """
     Test GSIM against the data file and return test result.
 
