@@ -17,6 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import operator
 import collections
 
 import numpy
@@ -37,7 +38,7 @@ class SES(object):
     # exported XML file and the schema constraints the number to be
     # nonzero
     def __init__(self, ruptures, investigation_time, ordinal=1):
-        self.ruptures = ruptures
+        self.ruptures = sorted(ruptures, key=operator.attrgetter('tag'))
         self.investigation_time = investigation_time
         self.ordinal = ordinal
 
