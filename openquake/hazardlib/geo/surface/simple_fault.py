@@ -177,6 +177,7 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
         Get surface main vertices.
         Parameters are the same as for :meth:`from_fault_data`, excluding
         mesh spacing.
+
         :param index_patch:
             indicate the patch of the fault to output the vertices.
             The first patch strating from where the fault trace starts.
