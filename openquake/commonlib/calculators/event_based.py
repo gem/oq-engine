@@ -369,9 +369,10 @@ class EventBasedCalculator(base.calculators['classical']):
         prepare some empty files in the export directory to store the gmfs
         (if any). If there were pre-existing files, they will be erased.
         """
-        haz_out = base.get_hazard(self, post_execute=True)
-        self.sitecol = haz_out['sitecol']
-        self.rlzs_assoc = haz_out['rlzs_assoc']
+        haz_out, hcalc = base.get_hazard(self, post_execute=True)
+        self.composite_source_model = hcalc.composite_source_model
+        self.sitecol = hcalc.sitecol
+        self.rlzs_assoc = hcalc.rlzs_assoc
         self.sesruptures = sorted(sum(haz_out['result'].itervalues(), []),
                                   key=operator.attrgetter('tag'))
         self.saved = AccumDict()

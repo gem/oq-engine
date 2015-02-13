@@ -106,10 +106,10 @@ def extract_from_zip(path, detect_file):
 
 def get_params(job_inis):
     """
-    Parse a dictionary of parameters from one or more INI-style config file.
+    Parse one or more INI-style config files.
 
     :param job_inis:
-        List of configuration files, or zip archive
+        List of configuration files (or list containing a single zip archive)
     :returns:
         A dictionary of parameters
     """
@@ -121,8 +121,7 @@ def get_params(job_inis):
     cp.read(job_inis)
 
     # drectory containing the config files we're parsing
-    base_path = os.path.dirname(
-        os.path.join(os.path.abspath('.'), job_inis[0]))
+    base_path = os.path.dirname(os.path.abspath(job_inis[0]))
     params = dict(base_path=base_path, inputs={'job_ini': ','.join(job_inis)})
 
     for sect in cp.sections():
@@ -144,12 +143,14 @@ def get_params(job_inis):
     return params
 
 
-def get_oqparam(job_ini, calculators=None):
+def get_oqparam(job_ini, pkg=None, calculators=None):
     """
     Parse a dictionary of parameters from one or more INI-style config file.
 
     :param job_ini:
         Path to configuration file/archive or dictionary of parameters
+    :param pkg:
+        Python package where to find the configuration file (optional)
     :param calculators:
         Sequence of calculator names (optional) used to restrict the
         valid choices for `calculation_mode`
@@ -169,7 +170,9 @@ def get_oqparam(job_ini, calculators=None):
     if isinstance(job_ini, dict):
         oqparam = OqParam(**job_ini)
     else:
-        oqparam = OqParam(**get_params(job_ini.split(',')))
+        basedir = os.path.dirname(pkg.__file__) if pkg else ''
+        inis = [os.path.join(basedir, ini) for ini in job_ini.split(',')]
+        oqparam = OqParam(**get_params(inis))
 
     oqparam.validate()
     return oqparam
