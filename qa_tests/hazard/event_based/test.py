@@ -188,7 +188,7 @@ class EventBasedHazardCase1TestCase(qa_utils.BaseQATestCase):
         result_dir = tempfile.mkdtemp()
 
         cfg = os.path.join(os.path.dirname(case_1.__file__), 'job.ini')
-        expected_curve_poes = [0.4570, 0.0587, 0.0069]
+        expected_curve_poes = [0.4596, 0.05729, 0.01193]
 
         job = self.run_hazard(cfg)
 
@@ -210,7 +210,7 @@ class EventBasedHazardCase2TestCase(qa_utils.BaseQATestCase):
         result_dir = tempfile.mkdtemp()
 
         cfg = os.path.join(os.path.dirname(case_2.__file__), 'job.ini')
-        expected_curve_poes = [0.00853479861, 0., 0., 0.]
+        expected_curve_poes = [0.0085348, 0., 0., 0.]
 
         job = self.run_hazard(cfg)
 
