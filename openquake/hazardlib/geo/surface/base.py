@@ -20,8 +20,8 @@ Module :mod:`openquake.hazardlib.geo.surface.base` implements
 import abc
 
 import numpy
-
-from openquake.hazardlib.geo import geodetic, utils, Point
+import math
+from openquake.hazardlib.geo import geodetic, utils, Point, Line
 
 
 class BaseSurface(object):
@@ -259,12 +259,12 @@ class BaseQuadrilateralSurface(BaseSurface):
 
         dst1 = geodetic.distance_to_arc(top_edge.lons[0, 0],
                                         top_edge.lats[0, 0],
-                                        (mean_strike+90.) % 360,
+                                        (mean_strike + 90.) % 360,
                                         mesh.lons, mesh.lats)
 
         dst2 = geodetic.distance_to_arc(top_edge.lons[0, -1],
                                         top_edge.lats[0, -1],
-                                        (mean_strike+90.) % 360,
+                                        (mean_strike + 90.) % 360,
                                         mesh.lons, mesh.lats)
 
         # Get the shortest distance from two two lines
@@ -426,6 +426,67 @@ class BaseQuadrilateralSurface(BaseSurface):
         mesh = self.get_mesh()
 
         return mesh.get_middle_point()
+
+    def get_resampled_top_edge(self):
+        """
+        Compute the top edge of the rupture patch.
+
+        Return :class:`~openquake.hazardlib.geo.line.Line` representing the
+        rupture surface's top edge.
+
+        """
+        mesh = self.get_mesh()
+        top_edge = []
+        top_edge.append(Point(mesh.lons[0][0], mesh.lats[0][0],
+                              mesh.depths[0][0]))
+        for i in range(len(mesh.triangulate()[1][0]) - 1):
+
+            if not (numpy.allclose(numpy.asarray(mesh.triangulate()[1][0][i]),
+                    numpy.asarray(mesh.triangulate()[1][0][i + 1]),
+                    atol=0.1, rtol=0.)):
+
+                top_edge.append(Point(mesh.lons[0][i + 1],
+                                      mesh.lats[0][i + 1],
+                                      mesh.depths[0][i + 1]))
+
+        top_edge.append(Point(mesh.lons[0][-1],
+                              mesh.lats[0][-1], mesh.depths[0][-1]))
+        line_top_edge = Line(top_edge)
+        return line_top_edge
+
+    def get_resampled_top_edge_angle(self, angle_var=0.1):
+        """
+        Compute the top edge of the rupture plane.
+
+        :param angle_var:
+            Float number represents the angel allowed to bend within a fault
+            segment.
+        :returns:
+            A :class:`~openquake.hazardlib.geo.line.Line` representing the
+            rupture surface's top edge.
+        """
+        mesh = self.get_mesh()
+        top_edge = []
+        top_edge.append(Point(mesh.lons[0][0], mesh.lats[0][0],
+                              mesh.depths[0][0]))
+        for i in range(len(mesh.triangulate()[1][0]) - 1):
+            v1 = numpy.asarray(mesh.triangulate()[1][0][i])
+            v2 = numpy.asarray(mesh.triangulate()[1][0][i + 1])
+            cosang = numpy.dot(v1, v2)
+            sinang = numpy.linalg.norm(numpy.cross(v1, v2))
+            angle = math.degrees(numpy.arctan2(sinang, cosang))
+
+            if abs(angle) > angle_var:
+
+                top_edge.append(Point(mesh.lons[0][i + 1],
+                                      mesh.lats[0][i + 1],
+                                      mesh.depths[0][i + 1]))
+
+        top_edge.append(Point(mesh.lons[0][-1],
+                              mesh.lats[0][-1], mesh.depths[0][-1]))
+        line_top_edge = Line(top_edge)
+
+        return line_top_edge
 
     @abc.abstractmethod
     def _create_mesh(self):
