@@ -392,7 +392,7 @@ class EventBasedHazardCase17TestCase(qa_utils.BaseQATestCase):
                                [1.0, 1.0, 0.0],
                                [0.0, 0.0, 0.0],
                                [1.0, 1.0, 0.0],
-                               [1.0, 0.999999999999, 0.0]]
+                               [1.0, 1.0, 0.0]]
 
         job = self.run_hazard(cfg)
         j = job.id
