@@ -128,8 +128,9 @@ class TrtModel(collections.Sequence):
         self.sources = sorted(sources, key=operator.attrgetter('source_id'))
 
     def __repr__(self):
-        return '<%s #%d %s, %d source(s)>' % (
-            self.__class__.__name__, self.id, self.trt, len(self.sources))
+        return '<%s #%d %s, %d source(s), %d rupture(s)>' % (
+            self.__class__.__name__, self.id, self.trt,
+            len(self.sources), self.num_ruptures)
 
     def __lt__(self, other):
         """
@@ -413,6 +414,15 @@ class CompositeSourceModel(collections.Sequence):
                              '%s, %s', len(rlzs), smodel.name, smodel.path)
                 idx = assoc._add_realizations(idx, smodel, rlzs)
         return assoc
+
+    def __repr__(self):
+        """
+        Return a string representation of the composite model
+        """
+        models = ['%d-%s-%s,w=%s [%d trt_model(s)]' % (
+            sm.ordinal, sm.name, '_'.join(sm.path), sm.weight,
+            len(sm.trt_models)) for sm in self]
+        return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(models))
 
     def __getitem__(self, i):
         """Return the i-th source model"""
