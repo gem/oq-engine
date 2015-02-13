@@ -160,7 +160,7 @@ def compute_ruptures(job_id, sources, sitecol):
                 rup.rup_no = i
                 ruptures_per_src.append(rup)
                 ses_num_occ[rup] = AccumDict()
-            for ses_coll, seed in zip(ses_colls, src.seed):
+            for coll_id, seed in enumerate(src.seed):
                 rnd.seed(seed)
                 for rup in ruptures_per_src:
                     for ses_id in all_ses:
@@ -168,7 +168,7 @@ def compute_ruptures(job_id, sources, sitecol):
                         num_occurrences = rup.sample_number_of_occurrences()
                         if num_occurrences:
                             ses_num_occ[rup] += {
-                                (ses_coll.ordinal, ses_id): num_occurrences}
+                                (coll_id, ses_id): num_occurrences}
 
         # reset the random generator; this is useful to decouple the seed
         # generation (rnd.randint) before from the seed generation below
