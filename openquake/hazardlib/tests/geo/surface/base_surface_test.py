@@ -342,7 +342,7 @@ class GetResampledTopEdge(unittest.TestCase):
         )
 
         ref = Line([Point(0., 0.), Point(0.5, 0.5), Point(1.5, 1.0)])
-        result = whole_fault_surface.get_resampled_top_edge_angle()
+        result = whole_fault_surface.get_resampled_top_edge()
         for ref_point, result_point in zip(ref.points, result.points):
 
             self.assertAlmostEqual(ref_point.longitude,

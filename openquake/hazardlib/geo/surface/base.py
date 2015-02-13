@@ -427,34 +427,7 @@ class BaseQuadrilateralSurface(BaseSurface):
 
         return mesh.get_middle_point()
 
-    def get_resampled_top_edge(self):
-        """
-        Compute the top edge of the rupture patch.
-
-        Return :class:`~openquake.hazardlib.geo.line.Line` representing the
-        rupture surface's top edge.
-
-        """
-        mesh = self.get_mesh()
-        top_edge = []
-        top_edge.append(Point(mesh.lons[0][0], mesh.lats[0][0],
-                              mesh.depths[0][0]))
-        for i in range(len(mesh.triangulate()[1][0]) - 1):
-
-            if not (numpy.allclose(numpy.asarray(mesh.triangulate()[1][0][i]),
-                    numpy.asarray(mesh.triangulate()[1][0][i + 1]),
-                    atol=0.1, rtol=0.)):
-
-                top_edge.append(Point(mesh.lons[0][i + 1],
-                                      mesh.lats[0][i + 1],
-                                      mesh.depths[0][i + 1]))
-
-        top_edge.append(Point(mesh.lons[0][-1],
-                              mesh.lats[0][-1], mesh.depths[0][-1]))
-        line_top_edge = Line(top_edge)
-        return line_top_edge
-
-    def get_resampled_top_edge_angle(self, angle_var=0.1):
+    def get_resampled_top_edge(self, angle_var=0.1):
         """
         Compute the top edge of the rupture plane.
 
@@ -518,7 +491,7 @@ class BaseQuadrilateralSurface(BaseSurface):
             the way down dip of the rupture plane would be entered as
             (0.75, 0.25).
         :returns:
-            Hypocentre location as instance of 
+            Hypocentre location as instance of
             :class:`~openquake.hazardlib.geo.point.Point`
         """
         centroid = mesh.get_middle_point()
@@ -535,4 +508,3 @@ class BaseQuadrilateralSurface(BaseSurface):
                            mesh.lats[y_node][x_node],
                            mesh.depths[y_node][x_node])
         return hypocentre
-
