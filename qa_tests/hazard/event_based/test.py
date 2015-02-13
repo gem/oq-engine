@@ -46,26 +46,25 @@ class EventBasedHazardTestCase(qa_utils.BaseQATestCase):
     # then you will see in /tmp a few files which you can diff
     # to see the problem
     expected_tags = [
-        'trt=01|ses=0001|src=1-296|rup=002-01',
-        'trt=01|ses=0001|src=2-231|rup=002-01',
-        'trt=01|ses=0001|src=2-40|rup=001-01',
-        'trt=01|ses=0001|src=24-72|rup=002-01',
-    ]
+        'col=00|ses=0001|src=1-296|rup=002-01',
+        'col=00|ses=0001|src=2-231|rup=002-01',
+        'col=00|ses=0001|src=2-40|rup=001-01',
+        'col=00|ses=0001|src=24-72|rup=002-01']
+
     expected_gmfs = '''\
 GMFsPerSES(investigation_time=5.000000, stochastic_event_set_id=1,
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=1-296|rup=002-01
-<X=131.00000, Y= 40.00000, GMV=0.0068590>
-<X=131.00000, Y= 40.10000, GMV=0.0066422>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=2-231|rup=002-01
-<X=131.00000, Y= 40.00000, GMV=0.0009365>
-<X=131.00000, Y= 40.10000, GMV=0.0009827>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=2-40|rup=001-01
-<X=131.00000, Y= 40.00000, GMV=0.0001138>
-<X=131.00000, Y= 40.10000, GMV=0.0001653>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=24-72|rup=002-01
-<X=131.00000, Y= 40.00000, GMV=0.0005475>
-<X=131.00000, Y= 40.10000, GMV=0.0007085>))'''
-
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=col=00|ses=0001|src=1-296|rup=002-01
+<X=131.00000, Y= 40.00000, GMV=0.0152418>
+<X=131.00000, Y= 40.10000, GMV=0.0101317>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=col=00|ses=0001|src=2-231|rup=002-01
+<X=131.00000, Y= 40.00000, GMV=0.0017037>
+<X=131.00000, Y= 40.10000, GMV=0.0018199>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=col=00|ses=0001|src=2-40|rup=001-01
+<X=131.00000, Y= 40.00000, GMV=0.0004525>
+<X=131.00000, Y= 40.10000, GMV=0.0000602>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=col=00|ses=0001|src=24-72|rup=002-01
+<X=131.00000, Y= 40.00000, GMV=0.0011126>
+<X=131.00000, Y= 40.10000, GMV=0.0006756>))'''
     @attr('qa', 'hazard', 'event_based')
     def test_4(self):
         tags_4, gmfs_4 = self.run_with_concurrent_tasks(4)
@@ -350,7 +349,7 @@ class EventBasedHazardCase12TestCase(qa_utils.BaseQATestCase):
         aaae = numpy.testing.assert_array_almost_equal
 
         cfg = os.path.join(os.path.dirname(case_12.__file__), 'job.ini')
-        expected_curve_poes = [0.75421006, 0.08098179, 0.00686616]
+        expected_curve_poes = [0.73657853, 0.07477126, 0.01079842]
 
         job = self.run_hazard(cfg)
 
@@ -371,7 +370,7 @@ class EventBasedHazardCase13TestCase(qa_utils.BaseQATestCase):
         aaae = numpy.testing.assert_array_almost_equal
 
         cfg = os.path.join(os.path.dirname(case_13.__file__), 'job.ini')
-        expected_curve_poes = [0.54736, 0.02380, 0.00000]
+        expected_curve_poes = [5.4406271E-01, 2.1564097E-02, 5.99820040E-04]
 
         job = self.run_hazard(cfg)
 
@@ -388,11 +387,7 @@ class EventBasedHazardCase17TestCase(qa_utils.BaseQATestCase):
     @attr('qa', 'hazard', 'event_based')
     def test(self):
         cfg = os.path.join(os.path.dirname(case_17.__file__), 'job.ini')
-        expected_curves_pga = [[1.0, 1.0, 0.0],
-                               [1.0, 1.0, 0.0],
-                               [0.0, 0.0, 0.0],
-                               [1.0, 1.0, 0.0],
-                               [1.0, 1.0, 0.0]]
+        expected_curves_pga = [[1.0, 1.0, 0.0]]
 
         job = self.run_hazard(cfg)
         j = job.id
@@ -400,17 +395,17 @@ class EventBasedHazardCase17TestCase(qa_utils.BaseQATestCase):
             rupture__ses_collection__trt_model__lt_model__hazard_calculation=j
         ).values_list('tag', flat=True)
 
-        t1_tags = [t for t in tags if t.startswith('trt=01')]
-        t2_tags = [t for t in tags if t.startswith('trt=02')]
-        t3_tags = [t for t in tags if t.startswith('trt=03')]
-        t4_tags = [t for t in tags if t.startswith('trt=04')]
-        t5_tags = [t for t in tags if t.startswith('trt=05')]
+        t1_tags = [t for t in tags if t.startswith('col=01')]
+        t2_tags = [t for t in tags if t.startswith('col=02')]
+        t3_tags = [t for t in tags if t.startswith('col=03')]
+        t4_tags = [t for t in tags if t.startswith('col=04')]
+        t5_tags = [t for t in tags if t.startswith('col=05')]
 
-        self.assertEqual(len(t1_tags), 2742)
-        self.assertEqual(len(t2_tags), 2761)
-        self.assertEqual(len(t3_tags), 1)
-        self.assertEqual(len(t4_tags), 2735)
-        self.assertEqual(len(t5_tags), 2725)
+        self.assertEqual(len(t1_tags), 2761)
+        self.assertEqual(len(t2_tags), 2724)
+        self.assertEqual(len(t3_tags), 2735)
+        self.assertEqual(len(t4_tags), 2725)
+        self.assertEqual(len(t5_tags), 0)
 
         curves = [c.poes for c in models.HazardCurveData.objects.filter(
             hazard_curve__output__oq_job=job.id, hazard_curve__imt='PGA'
