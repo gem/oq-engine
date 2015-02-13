@@ -122,7 +122,7 @@ def compute_ruptures(job_id, sources, sitecol):
     # NB: all realizations in gsims correspond to the same source model
     trt_model_id = sources[0].trt_model_id
     trt_model = models.TrtModel.objects.get(pk=trt_model_id)
-    ses_colls = models.SESCollection.objects.filter(trt_model=trt_model)
+    ses_colls = list(models.SESCollection.objects.filter(trt_model=trt_model))
     num_ses_colls = len(ses_colls)
     num_seeds = len(sources[0].seed)
     assert num_ses_colls == num_seeds, (num_ses_colls, num_seeds)
@@ -163,17 +163,21 @@ def compute_ruptures(job_id, sources, sitecol):
             for ses_coll, seed in zip(ses_colls, src.seed):
                 rnd.seed(seed)
                 for rup in ruptures_per_src:
-                    for ses_idx in all_ses:
+                    for ses_id in all_ses:
                         numpy.random.seed(rnd.randint(0, models.MAX_SINT_32))
                         num_occurrences = rup.sample_number_of_occurrences()
                         if num_occurrences:
                             ses_num_occ[rup] += {
-                                (ses_coll, ses_idx): num_occurrences}
+                                (ses_coll.ordinal, ses_id): num_occurrences}
+
+        # reset the random generator; this is useful to decouple the seed
+        # generation (rnd.randint) before from the seed generation below
+        rnd.seed(src.seed[0])
 
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_number_of_occurrences() *before* the filtering
-        num_ruptures = 0
+        uniq_ruptures = 0
         for rup in sorted(ses_num_occ, key=operator.attrgetter('rup_no')):
             with filter_ruptures_mon:  # filtering ruptures
                 r_sites = filters.filter_sites_by_distance_to_rupture(
@@ -190,19 +194,19 @@ def compute_ruptures(job_id, sources, sitecol):
                     else None  # None means that nothing was filtered
                 ses_num = ses_num_occ[rup]
                 cache = {}
-                for (ses_coll, ses_idx), num_occurrences in sorted(
+                for (coll_id, ses_id), num_occurrences in sorted(
                         ses_num.iteritems()):
-                    if ses_coll not in cache:
+                    if coll_id not in cache:
                         prob_rup = models.ProbabilisticRupture.create(
-                            rup, ses_coll, indices)
-                        cache[ses_coll] = prob_rup
-                        num_ruptures += 1
+                            rup, ses_colls[coll_id], indices)
+                        cache[coll_id] = prob_rup
+                        uniq_ruptures += 1
                     else:
-                        prob_rup = cache[ses_coll]
+                        prob_rup = cache[coll_id]
                     for occ_no in range(1, num_occurrences + 1):
                         rup_seed = rnd.randint(0, models.MAX_SINT_32)
                         models.SESRupture.create(
-                            prob_rup, ses_idx, src.source_id,
+                            prob_rup, ses_id, src.source_id,
                             rup.rup_no, occ_no, rup_seed)
 
         if ses_num_occ:
@@ -220,7 +224,7 @@ def compute_ruptures(job_id, sources, sitecol):
                               num_sites=len(s_sites),
                               num_ruptures=0,  # to fix
                               occ_ruptures=occ_ruptures,
-                              uniq_ruptures=num_ruptures,
+                              uniq_ruptures=uniq_ruptures,
                               calc_time=time.time() - t0))
 
     filter_sites_mon.flush()
@@ -494,7 +498,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                         rupture__ses_collection__trt_model=trt_model):
                     # adding the annotation below saves a LOT of memory
                     # otherwise one would need as key in apply_reduce
-                    # lambda sr: sr.rupture.tsrt_model.id which would
+                    # lambda sr: sr.rupture.trt_model.id which would
                     # read the world from the database
                     sr.trt_id = trt_model.id
                     sesruptures.append(sr)
