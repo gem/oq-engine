@@ -43,6 +43,7 @@ from openquake.hazardlib.calc import gmf, filters
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import FilteredSiteCollection
 
+from openquake.baselib.general import AccumDict
 from openquake.commonlib import valid
 
 from openquake.engine import writer
@@ -121,7 +122,10 @@ def compute_ruptures(job_id, sources, sitecol):
     # NB: all realizations in gsims correspond to the same source model
     trt_model_id = sources[0].trt_model_id
     trt_model = models.TrtModel.objects.get(pk=trt_model_id)
-    ses_coll = models.SESCollection.objects.get(trt_model=trt_model)
+    ses_colls = list(models.SESCollection.objects.filter(trt_model=trt_model))
+    num_ses_colls = len(ses_colls)
+    num_seeds = len(sources[0].seed)
+    assert num_ses_colls == num_seeds, (num_ses_colls, num_seeds)
 
     hc = models.oqparam(job_id)
     all_ses = range(1, hc.ses_per_logic_tree_path + 1)
@@ -140,7 +144,6 @@ def compute_ruptures(job_id, sources, sitecol):
     rnd = random.Random()
     for src in sources:
         t0 = time.time()
-        rnd.seed(src.seed)
 
         with filter_sites_mon:  # filtering sources
             s_sites = src.filter_sites_by_distance_to_source(
@@ -148,22 +151,33 @@ def compute_ruptures(job_id, sources, sitecol):
             if s_sites is None:
                 continue
 
-        # the dictionary `ses_num_occ` contains [(ses, num_occurrences)]
+        # ses_num_occ: rup -> (ses_coll, ses_id) -> num_occurrences
         # for each occurring rupture for each ses in the ses collection
-        ses_num_occ = collections.defaultdict(list)
-        # generating ruptures for the given source
+        ses_num_occ = {}
         with generate_ruptures_mon:
-            for rup_no, rup in enumerate(src.iter_ruptures(), 1):
-                rup.rup_no = rup_no
-                for ses_idx in all_ses:
-                    numpy.random.seed(rnd.randint(0, models.MAX_SINT_32))
-                    num_occurrences = rup.sample_number_of_occurrences()
-                    if num_occurrences:
-                        ses_num_occ[rup].append((ses_idx, num_occurrences))
+            ruptures_per_src = []
+            for i, rup in enumerate(src.iter_ruptures(), 1):
+                rup.rup_no = i
+                ruptures_per_src.append(rup)
+                ses_num_occ[rup] = AccumDict()
+            for coll_id, seed in enumerate(src.seed):
+                rnd.seed(seed)
+                for rup in ruptures_per_src:
+                    for ses_id in all_ses:
+                        numpy.random.seed(rnd.randint(0, models.MAX_SINT_32))
+                        num_occurrences = rup.sample_number_of_occurrences()
+                        if num_occurrences:
+                            ses_num_occ[rup] += {
+                                (coll_id, ses_id): num_occurrences}
+
+        # reset the random generator; this is useful to decouple the seed
+        # generation (rnd.randint) before from the seed generation below
+        rnd.seed(src.seed[0])
 
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_number_of_occurrences() *before* the filtering
+        uniq_ruptures = 0
         for rup in sorted(ses_num_occ, key=operator.attrgetter('rup_no')):
             with filter_ruptures_mon:  # filtering ruptures
                 r_sites = filters.filter_sites_by_distance_to_rupture(
@@ -178,22 +192,28 @@ def compute_ruptures(job_id, sources, sitecol):
             with save_ruptures_mon:
                 indices = r_sites.indices if len(r_sites) < len(sitecol) \
                     else None  # None means that nothing was filtered
-                prob_rup = models.ProbabilisticRupture.create(
-                    rup, ses_coll, indices)
-                for ses_idx, num_occurrences in ses_num_occ[rup]:
+                ses_num = ses_num_occ[rup]
+                cache = {}
+                for (coll_id, ses_id), num_occurrences in sorted(
+                        ses_num.iteritems()):
+                    if coll_id not in cache:
+                        prob_rup = models.ProbabilisticRupture.create(
+                            rup, ses_colls[coll_id], indices)
+                        cache[coll_id] = prob_rup
+                        uniq_ruptures += 1
+                    else:
+                        prob_rup = cache[coll_id]
                     for occ_no in range(1, num_occurrences + 1):
                         rup_seed = rnd.randint(0, models.MAX_SINT_32)
                         models.SESRupture.create(
-                            prob_rup, ses_idx, src.source_id,
+                            prob_rup, ses_id, src.source_id,
                             rup.rup_no, occ_no, rup_seed)
 
         if ses_num_occ:
-            num_ruptures = len(ses_num_occ)
             occ_ruptures = sum(num for rup in ses_num_occ
-                               for ses, num in ses_num_occ[rup])
+                               for num in ses_num_occ[rup].values())
             tot_ruptures += occ_ruptures
         else:
-            num_ruptures = rup_no
             occ_ruptures = 0
 
         # save SourceInfo
@@ -202,9 +222,9 @@ def compute_ruptures(job_id, sources, sitecol):
                               source_id=src.source_id,
                               source_class=src.__class__.__name__,
                               num_sites=len(s_sites),
-                              num_ruptures=rup_no,
+                              num_ruptures=0,  # to fix
                               occ_ruptures=occ_ruptures,
-                              uniq_ruptures=num_ruptures,
+                              uniq_ruptures=uniq_ruptures,
                               calc_time=time.time() - t0))
 
     filter_sites_mon.flush()
@@ -261,7 +281,6 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol):
                 hc.investigation_time, hc.ses_per_logic_tree_path), [])
     else:
         result[trt_model.id] = ([], [])
-
     if hc.ground_motion_fields:
         with EnginePerformanceMonitor(
                 'saving gmfs', job_id, compute_gmfs_and_curves):
@@ -415,11 +434,19 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         hc = self.oqparam
         rnd = random.Random()
         rnd.seed(hc.random_seed)
-        for src in self.composite_model.sources:
-            src.seed = rnd.randint(0, models.MAX_SINT_32)
-        for i, trt_model in enumerate(models.TrtModel.objects.filter(
-                lt_model__hazard_calculation=self.job), 1):
-            self.initialize_ses_db_records(trt_model, i)
+        ordinal = 0
+        for smodel, ltmodel in zip(self.composite_model,  self._source_models):
+            for trt_model in smodel.trt_models:
+                for src in trt_model.sources:
+                    seeds = []
+                    for _ in range(smodel.samples):
+                        seeds.append(rnd.randint(0, models.MAX_SINT_32))
+                    src.seed = numpy.array(seeds)
+
+            for trt_model in models.TrtModel.objects.filter(lt_model=ltmodel):
+                for _ in range(smodel.samples):
+                    self.initialize_ses_db_records(trt_model, ordinal)
+                    ordinal += 1
         return weights
 
     def agg_curves(self, acc, result):
@@ -471,7 +498,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                         rupture__ses_collection__trt_model=trt_model):
                     # adding the annotation below saves a LOT of memory
                     # otherwise one would need as key in apply_reduce
-                    # lambda sr: sr.rupture.tsrt_model.id which would
+                    # lambda sr: sr.rupture.trt_model.id which would
                     # read the world from the database
                     sr.trt_id = trt_model.id
                     sesruptures.append(sr)

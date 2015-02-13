@@ -29,6 +29,8 @@ from openquake.qa_tests_data.event_based import (
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
+from openquake.commonlib.writers import scientificformat
+
 aaae = numpy.testing.assert_array_almost_equal
 
 
@@ -46,26 +48,25 @@ class EventBasedHazardTestCase(qa_utils.BaseQATestCase):
     # then you will see in /tmp a few files which you can diff
     # to see the problem
     expected_tags = [
-        'trt=01|ses=0001|src=1-296|rup=002-01',
-        'trt=01|ses=0001|src=2-231|rup=002-01',
-        'trt=01|ses=0001|src=2-40|rup=001-01',
-        'trt=01|ses=0001|src=24-72|rup=002-01',
-    ]
+        'col=00|ses=0001|src=1-296|rup=002-01',
+        'col=00|ses=0001|src=2-231|rup=002-01',
+        'col=00|ses=0001|src=2-40|rup=001-01',
+        'col=00|ses=0001|src=24-72|rup=002-01']
+
     expected_gmfs = '''\
 GMFsPerSES(investigation_time=5.000000, stochastic_event_set_id=1,
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=1-296|rup=002-01
-<X=131.00000, Y= 40.00000, GMV=0.0068590>
-<X=131.00000, Y= 40.10000, GMV=0.0066422>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=2-231|rup=002-01
-<X=131.00000, Y= 40.00000, GMV=0.0009365>
-<X=131.00000, Y= 40.10000, GMV=0.0009827>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=2-40|rup=001-01
-<X=131.00000, Y= 40.00000, GMV=0.0001138>
-<X=131.00000, Y= 40.10000, GMV=0.0001653>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=24-72|rup=002-01
-<X=131.00000, Y= 40.00000, GMV=0.0005475>
-<X=131.00000, Y= 40.10000, GMV=0.0007085>))'''
-
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=col=00|ses=0001|src=1-296|rup=002-01
+<X=131.00000, Y= 40.00000, GMV=0.0152418>
+<X=131.00000, Y= 40.10000, GMV=0.0101317>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=col=00|ses=0001|src=2-231|rup=002-01
+<X=131.00000, Y= 40.00000, GMV=0.0017037>
+<X=131.00000, Y= 40.10000, GMV=0.0018199>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=col=00|ses=0001|src=2-40|rup=001-01
+<X=131.00000, Y= 40.00000, GMV=0.0004525>
+<X=131.00000, Y= 40.10000, GMV=0.0000602>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=col=00|ses=0001|src=24-72|rup=002-01
+<X=131.00000, Y= 40.00000, GMV=0.0011126>
+<X=131.00000, Y= 40.10000, GMV=0.0006756>))'''
     @attr('qa', 'hazard', 'event_based')
     def test_4(self):
         tags_4, gmfs_4 = self.run_with_concurrent_tasks(4)
@@ -187,7 +188,7 @@ class EventBasedHazardCase1TestCase(qa_utils.BaseQATestCase):
         result_dir = tempfile.mkdtemp()
 
         cfg = os.path.join(os.path.dirname(case_1.__file__), 'job.ini')
-        expected_curve_poes = [0.4570, 0.0587, 0.0069]
+        expected_curve_poes = [0.4596, 0.05729, 0.01193]
 
         job = self.run_hazard(cfg)
 
@@ -209,7 +210,7 @@ class EventBasedHazardCase2TestCase(qa_utils.BaseQATestCase):
         result_dir = tempfile.mkdtemp()
 
         cfg = os.path.join(os.path.dirname(case_2.__file__), 'job.ini')
-        expected_curve_poes = [0.00853479861, 0., 0., 0.]
+        expected_curve_poes = [0.0085348, 0., 0., 0.]
 
         job = self.run_hazard(cfg)
 
@@ -254,43 +255,14 @@ group by gsim_lt_path, c.output_id, imt, sa_period, sa_damping
 order by c.output_id;
 '''
 
-# this is an example with 0 realization for source_model 1
-# 5 realizations for source model 2
-# (for TRT=Stable Shallow Crust) and 0 realizations
-# for source model 3, i.e. a total of 5 realizations
+# see the docstring in the test package for more info
 EXPECTED_GMFS = [
-    # (gsim_lt_path, gmf) pairs
-    (['*', 'b2_1', '*', '*'],
-     [0.00822917040699, 0.0034042851599, 0.00428337018622,
-      0.0025270726635, 0.00606112335209, 0.0112245743761,
-      0.0179907692793, 0.0173946859667, 0.00922980939898,
-      0.726593190686, 0.00495477503721, 0.0415099434432,
-      0.0125880009831, 0.0124495516475]),
-    (['*', 'b2_2', '*', '*'],
-        [0.00288537938821, 0.00107995958217, 0.00142877779947,
-         0.000724092064875, 0.00221523273814, 0.00783122282702,
-         0.00491624227026, 0.00665180766619, 0.00469543848075,
-         0.00310630748453, 0.423926958129, 0.022738208891,
-         0.00518327577291, 0.00589077454912]),
-    (['*', 'b2_3', '*', '*'],
-        [0.00795512355585, 0.00305068332773, 0.00386916664508,
-         0.00230772046628, 0.00551261356351, 0.0100154584429,
-         0.0192898688711, 0.00799975891393, 0.0200084979633,
-         0.768238309158, 0.00376526374305, 0.0439684332239,
-         0.013332105199, 0.0119999914465]),
-    (['*', 'b2_4', '*', '*'],
-     [0.0096913860471, 0.00411106304155, 0.00520803315284,
-      0.00297152070044, 0.00745986019708, 0.0195767577423,
-      0.0151584294161, 0.0156128323892, 0.0173448581516,
-      1.0342310621, 0.0101958545893, 0.0478640962161,
-      0.0135769826018, 0.0143048207197]),
-    (['*', 'b2_5', '*', '*'],
-        [0.00929127217018, 0.00405983191645, 0.00494117277395,
-         0.00290638690174, 0.0067144964127, 0.0225768116043,
-         0.0204078758048, 0.0212867716314, 0.01879161511,
-         0.941450341214, 0.00951592753892, 0.0477618047224,
-         0.0139189584458, 0.0142090106379]),
-    (['*', '*', '*', 'b4_1'], [0.00638234839428, 0.00481213194677])]
+    ('*_b2_1_*_*', '8.5526E-04 2.2252E-03 2.6027E-03 2.6323E-03 3.5311E-03 3.8909E-03 6.5216E-03 1.6441E-02 2.4064E-02 2.4824E-02 3.0388E-02 4.1106E-02 4.4205E-02 1.6736E-01'),
+    ('*_b2_2_*_*', '3.6630E-04 7.2146E-04 9.0327E-04 1.1236E-03 1.2992E-03 1.5111E-03 3.0201E-03 9.7407E-03 1.0662E-02 1.4750E-02 1.6862E-02 2.8004E-02 4.2474E-02 1.9598E-01'),
+    ('*_b2_3_*_*', '6.5318E-04 1.9370E-03 2.2189E-03 2.3965E-03 3.0831E-03 3.3025E-03 6.4507E-03 1.5176E-02 2.3726E-02 2.4064E-02 3.2772E-02 3.4458E-02 3.5513E-02 1.2917E-01'),
+    ('*_b2_4_*_*', '1.7654E-03 2.9733E-03 3.5309E-03 3.5506E-03 4.8153E-03 5.4332E-03 8.7564E-03 2.3742E-02 2.4962E-02 3.3978E-02 3.7184E-02 6.2524E-02 9.5075E-02 3.8498E-01'),
+    ('*_b2_5_*_*', '1.7318E-03 2.8662E-03 3.5210E-03 4.0793E-03 4.3884E-03 5.2238E-03 9.9567E-03 2.3962E-02 3.8131E-02 3.8779E-02 5.4894E-02 5.6851E-02 1.0871E-01 4.2594E-01'),
+    ('*_*_*_b4_1', '3.7618E-03 7.6974E-03')]
 
 
 class EventBasedHazardCase5TestCase(qa_utils.BaseQATestCase):
@@ -301,14 +273,13 @@ class EventBasedHazardCase5TestCase(qa_utils.BaseQATestCase):
         job = self.run_hazard(cfg)
         cursor = models.getcursor('job_init')
         cursor.execute(GET_GMF_OUTPUTS % job.id)
-        actual_gmfs = cursor.fetchall()
+        actual_gmfs = [('_'.join(k), scientificformat(sorted(v), '%8.4E'))
+                       for k, v in cursor.fetchall()]
         self.assertEqual(len(actual_gmfs), len(EXPECTED_GMFS))
         for (actual_path, actual_gmf), (expected_path, expected_gmf) in zip(
                 actual_gmfs, EXPECTED_GMFS):
             self.assertEqual(actual_path, expected_path)
-            self.assertEqual(len(actual_gmf), len(expected_gmf))
-            numpy.testing.assert_almost_equal(
-                sorted(actual_gmf), sorted(expected_gmf))
+            self.assertEqual(actual_gmf, expected_gmf)
 
 
 # a test for the case ground_motion_fields=false, hazard_curves_from_gmvs=true
@@ -316,11 +287,11 @@ class EventBasedHazardCase6TestCase(qa_utils.BaseQATestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test(self):
-        expected_mean_poes = [0.962621437215, 0.934650031955, 0.894381466273,
-                              0.837844843687, 0.782933836463]
+        expected_mean_poes = [0.967179166906, 0.941377183559, 0.90128199551,
+                              0.851388130568, 0.792993661773]
 
-        expected_q0_1_poes = [0.838637792751, 0.749373612177, 0.623662070173,
-                              0.496434891584, 0.385987239512]
+        expected_q0_1_poes = [0.859337648936, 0.764599653662, 0.648572338491,
+                              0.522990178604, 0.408798695783]
 
         job = self.run_hazard(
             os.path.join(os.path.dirname(case_6.__file__), 'job.ini'))
@@ -350,7 +321,7 @@ class EventBasedHazardCase12TestCase(qa_utils.BaseQATestCase):
         aaae = numpy.testing.assert_array_almost_equal
 
         cfg = os.path.join(os.path.dirname(case_12.__file__), 'job.ini')
-        expected_curve_poes = [0.75421006, 0.08098179, 0.00686616]
+        expected_curve_poes = [0.73657853, 0.07477126, 0.01079842]
 
         job = self.run_hazard(cfg)
 
@@ -371,7 +342,7 @@ class EventBasedHazardCase13TestCase(qa_utils.BaseQATestCase):
         aaae = numpy.testing.assert_array_almost_equal
 
         cfg = os.path.join(os.path.dirname(case_13.__file__), 'job.ini')
-        expected_curve_poes = [0.54736, 0.02380, 0.00000]
+        expected_curve_poes = [5.4406271E-01, 2.1564097E-02, 5.99820040E-04]
 
         job = self.run_hazard(cfg)
 
@@ -388,11 +359,7 @@ class EventBasedHazardCase17TestCase(qa_utils.BaseQATestCase):
     @attr('qa', 'hazard', 'event_based')
     def test(self):
         cfg = os.path.join(os.path.dirname(case_17.__file__), 'job.ini')
-        expected_curves_pga = [[1.0, 1.0, 0.0],
-                               [1.0, 1.0, 0.0],
-                               [0.0, 0.0, 0.0],
-                               [1.0, 1.0, 0.0],
-                               [1.0, 1.0, 0.0]]
+        expected_curves_pga = [[1.0, 1.0, 0.0]]
 
         job = self.run_hazard(cfg)
         j = job.id
@@ -400,17 +367,17 @@ class EventBasedHazardCase17TestCase(qa_utils.BaseQATestCase):
             rupture__ses_collection__trt_model__lt_model__hazard_calculation=j
         ).values_list('tag', flat=True)
 
-        t1_tags = [t for t in tags if t.startswith('trt=01')]
-        t2_tags = [t for t in tags if t.startswith('trt=02')]
-        t3_tags = [t for t in tags if t.startswith('trt=03')]
-        t4_tags = [t for t in tags if t.startswith('trt=04')]
-        t5_tags = [t for t in tags if t.startswith('trt=05')]
+        t1_tags = [t for t in tags if t.startswith('col=01')]
+        t2_tags = [t for t in tags if t.startswith('col=02')]
+        t3_tags = [t for t in tags if t.startswith('col=03')]
+        t4_tags = [t for t in tags if t.startswith('col=04')]
+        t5_tags = [t for t in tags if t.startswith('col=05')]
 
-        self.assertEqual(len(t1_tags), 2742)
-        self.assertEqual(len(t2_tags), 2761)
-        self.assertEqual(len(t3_tags), 1)
-        self.assertEqual(len(t4_tags), 2735)
-        self.assertEqual(len(t5_tags), 2725)
+        self.assertEqual(len(t1_tags), 2761)
+        self.assertEqual(len(t2_tags), 2724)
+        self.assertEqual(len(t3_tags), 2735)
+        self.assertEqual(len(t4_tags), 2725)
+        self.assertEqual(len(t5_tags), 0)
 
         curves = [c.poes for c in models.HazardCurveData.objects.filter(
             hazard_curve__output__oq_job=job.id, hazard_curve__imt='PGA'

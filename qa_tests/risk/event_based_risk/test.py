@@ -35,16 +35,16 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
         self._run_test()
 
     expected_elt_b2 = [  # the first 10 values for structural
-        ('trt=00|ses=1250|src=3|rup=002-01', 5.55, 4598.15454207),
-        ('trt=00|ses=0899|src=3|rup=006-01', 6.75, 3229.03853895),
-        ('trt=00|ses=0236|src=3|rup=004-01', 6.15, 1429.41738598),
-        ('trt=00|ses=0833|src=3|rup=006-01', 6.75, 1333.06460009),
-        ('trt=00|ses=1159|src=3|rup=001-02', 5.25, 1027.93870557),
-        ('trt=00|ses=1395|src=3|rup=001-01', 5.25, 1004.52792749),
-        ('trt=00|ses=0410|src=3|rup=001-01', 5.25, 801.220856365),
-        ('trt=00|ses=1652|src=3|rup=003-01', 5.85, 710.514040648),
-        ('trt=00|ses=0986|src=3|rup=001-01', 5.25, 661.852362756),
-        ('trt=00|ses=0296|src=3|rup=002-01', 5.55, 605.144033155),
+        ('col=00|ses=0899|src=3|rup=006-01', 6.75, 5000.70195926),
+        ('col=00|ses=1652|src=3|rup=003-01', 5.85, 1695.73806676),
+        ('col=00|ses=0986|src=3|rup=001-01', 5.25, 1616.02519712),
+        ('col=00|ses=0410|src=3|rup=001-01', 5.25, 1541.65889955),
+        ('col=00|ses=0833|src=3|rup=006-01', 6.75, 1537.37564177),
+        ('col=00|ses=1250|src=3|rup=002-01', 5.55, 1493.81917509),
+        ('col=00|ses=0236|src=3|rup=004-01', 6.15, 1434.79598377),
+        ('col=00|ses=1395|src=3|rup=001-01', 5.25, 734.205956121),
+        ('col=00|ses=1159|src=3|rup=001-02', 5.25, 680.828016553),
+        ('col=00|ses=0296|src=3|rup=002-01', 5.55, 546.435038991),
     ]
 
     def expected_output_data(self):
@@ -121,14 +121,13 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
         actual_lm1 = [
             point.value for point in models.LossMapData.objects.filter(
                 loss_map=lm1).order_by('asset_ref', 'loss_map__poe')]
-        aae(actual_lm1, [644.42878691, 234.89986442,
-                         664.82432932, 753.55988728])
-
+        aae(actual_lm1, [678.477001592533, 280.814859739759,
+                         661.73629005541, 777.092150609068])
         actual_lm2 = [
             point.value for point in models.LossMapData.objects.filter(
                 loss_map=lm2).order_by('asset_ref', 'loss_map__poe')]
-        aae(actual_lm2, [376.21304957, 219.38682742,
-                         639.86715118,  801.07318199])
+        aae(actual_lm2, [401.951863344031, 232.793896122415,
+                         644.37214688894, 834.012565907811])
 
     def check_loss_map_mean(self, job):
         lm_with_stats = models.LossMap.objects.filter(
@@ -139,10 +138,10 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
             point.value for point in models.LossMapData.objects.filter(
                 loss_map__in=lm_with_stats).order_by(
                 'asset_ref', 'loss_map__poe')]
-        aae(actual, [514.22057893, 0., 0.,
-                     227.85575576, 0., 0.,
-                     652.50322751, 0., 0.,
-                     778.04645901, 0., 0.])
+        aae(actual, [542.132838477895, 0.0, 0.0,
+                     254.790354584725, 0.0, 0.0,
+                     653.871039876869, 0.0, 0.0,
+                     806.2713593155, 0.0, 0.0])
 
     def check_loss_map_quantile(self, job):
         lm_with_quantile = models.LossMap.objects.filter(
@@ -153,8 +152,8 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
             point.value for point in models.LossMapData.objects.filter(
                 loss_map=lm_with_quantile[0]).order_by(
                 'asset_ref', 'loss_map__poe')]
-        aae(actual_0, [376.24261986, 219.38682742,
-                       639.86715118, 753.55988728])
+        aae(actual_0, [401.955278940267, 232.802818304691,
+                       644.37214688894, 777.097165009322])
 
 
 class EventBaseQATestCase2(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
@@ -169,29 +168,29 @@ class EventBaseQATestCase2(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
         self._run_test()
 
     expected_elt = [
-        ('trt=01|ses=0013|src=1|rup=003-01', 5.85, 2033.11562854),
-        ('trt=01|ses=0019|src=3|rup=004-01', 6.15, 1586.04744656),
-        ('trt=01|ses=0019|src=1|rup=004-01', 6.15, 1173.63337907),
-        ('trt=01|ses=0016|src=2|rup=005-01', 6.45, 1120.1768802),
-        ('trt=01|ses=0018|src=2|rup=001-01', 5.25, 1120.08595039),
-        ('trt=01|ses=0005|src=2|rup=001-01', 5.25, 1119.98450891),
-        ('trt=01|ses=0013|src=2|rup=001-01', 5.25, 1074.88832758),
-        ('trt=01|ses=0003|src=1|rup=001-01', 5.25, 815.483004866),
-        ('trt=01|ses=0004|src=1|rup=003-01', 5.85, 744.047680872),
-        ('trt=01|ses=0005|src=3|rup=002-01', 5.55, 575.464242323),
-        ('trt=01|ses=0018|src=3|rup=001-01', 5.25, 511.548977101),
-        ('trt=01|ses=0003|src=1|rup=001-02', 5.25, 432.753660021),
-        ('trt=01|ses=0006|src=1|rup=004-01', 6.15, 237.82338926),
-        ('trt=01|ses=0015|src=2|rup=001-01', 5.25, 217.751093258),
-        ('trt=01|ses=0009|src=2|rup=005-01', 6.45, 137.719501569),
-        ('trt=01|ses=0011|src=2|rup=002-01', 5.55, 124.731722658),
-        ('trt=01|ses=0018|src=2|rup=001-03', 5.25, 117.308215526),
-        ('trt=01|ses=0003|src=2|rup=001-01', 5.25, 96.5702659374),
-        ('trt=01|ses=0018|src=2|rup=001-02', 5.25, 71.8709085026),
-    ]
+        ('col=00|ses=0004|src=1|rup=003-01', 5.85, 2399.94379185),
+        ('col=00|ses=0019|src=3|rup=004-01', 6.15, 1859.37094092),
+        ('col=00|ses=0005|src=3|rup=002-01', 5.55, 1398.44179016),
+        ('col=00|ses=0009|src=2|rup=005-01', 6.45, 1120.07253786),
+        ('col=00|ses=0013|src=2|rup=001-01', 5.25, 1119.97377137),
+        ('col=00|ses=0003|src=1|rup=001-02', 5.25, 1018.58017379),
+        ('col=00|ses=0016|src=2|rup=005-01', 6.45, 769.940003353),
+        ('col=00|ses=0019|src=1|rup=004-01', 6.15, 621.742098689),
+        ('col=00|ses=0018|src=3|rup=001-01', 5.25, 611.148813601),
+        ('col=00|ses=0006|src=1|rup=004-01', 6.15, 486.809581416),
+        ('col=00|ses=0018|src=2|rup=001-03', 5.25, 435.594721806),
+        ('col=00|ses=0005|src=2|rup=001-01', 5.25, 392.876937548),
+        ('col=00|ses=0003|src=1|rup=001-01', 5.25, 346.164386961),
+        ('col=00|ses=0015|src=2|rup=001-01', 5.25, 288.404646066),
+        ('col=00|ses=0011|src=2|rup=002-01', 5.55, 285.345216305),
+        ('col=00|ses=0013|src=1|rup=003-01', 5.85, 219.757481599),
+        ('col=00|ses=0010|src=2|rup=001-01', 5.25, 215.447768197),
+        ('col=00|ses=0018|src=2|rup=001-01', 5.25, 125.270805262),
+        ('col=00|ses=0003|src=2|rup=001-01', 5.25, 96.3438118385),
+        ('col=00|ses=0018|src=2|rup=001-02', 5.25, 94.7896506125)]
 
     expected_loss_fractions = collections.OrderedDict([
-        ('80.0000,82.0000|28.0000,30.0000', (5436.856742629, 1.0)),
+        ('80.0000,82.0000|28.0000,30.0000', (5092.997514305, 1.0)),
         ('82.0000,84.0000|26.0000,28.0000', (0.0, 0.0)),
         ('84.0000,86.0000|26.0000,28.0000', (0.0, 0.0)),
     ])
