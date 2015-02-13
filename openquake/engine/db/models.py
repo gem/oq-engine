@@ -126,7 +126,7 @@ def extract_ses_ordinal(tag):
     """
     Extract the SES ordinal from a tag. For instance
 
-    >>> extract_ses_ordinal('trt=01|ses=0002|src=A|rup=001-17')
+    >>> extract_ses_ordinal('col=01|ses=0002|src=A|rup=001-17')
     2
     """
     mo = re.search(r'\|ses=(\d+)\|', tag)
