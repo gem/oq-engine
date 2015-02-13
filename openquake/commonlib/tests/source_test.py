@@ -626,16 +626,17 @@ class TrtModelTestCase(unittest.TestCase):
     def test_repr(self):
         self.assertEqual(
             repr(self.source_collector['Volcanic']),
-            '<TrtModel #0 Volcanic, 3 source(s)>')
+            '<TrtModel #0 Volcanic, 3 source(s), 0 rupture(s)>')
         self.assertEqual(
             repr(self.source_collector['Stable Continental Crust']),
-            '<TrtModel #0 Stable Continental Crust, 1 source(s)>')
+            '<TrtModel #0 Stable Continental Crust, 1 source(s), 0 rupture(s)>'
+        )
         self.assertEqual(
             repr(self.source_collector['Subduction Interface']),
-            '<TrtModel #0 Subduction Interface, 1 source(s)>')
+            '<TrtModel #0 Subduction Interface, 1 source(s), 0 rupture(s)>')
         self.assertEqual(
             repr(self.source_collector['Active Shallow Crust']),
-            '<TrtModel #0 Active Shallow Crust, 2 source(s)>')
+            '<TrtModel #0 Active Shallow Crust, 2 source(s), 0 rupture(s)>')
 
 
 class RuptureConverterTestCase(unittest.TestCase):
