@@ -572,14 +572,17 @@ class AccumDict(dict):
                                for key, value in self.iteritems()})
 
 
-def groupby(objects, key):
+def groupby(objects, key, reducegroup=list):
     """
     :param objects: a sequence of objects with a key value
     :param key: the key function to extract the key value
-    :returns: an OrderedDict {key value: list of objects}
+    :param reducegroup: the function to apply to each group
+    :returns: an OrderedDict {key value: map(reducegroup, group)}
 
-    >>> groupby('pippo', key=lambda x: x)
-    OrderedDict([('i', ['i']), ('o', ['o']), ('p', ['p', 'p', 'p'])])
+    >>> groupby(['A1', 'A2', 'B1', 'B2', 'B3'], lambda x: x[0],
+    ...         lambda group: ''.join(x[1] for x in group))
+    OrderedDict([('A', '12'), ('B', '123')])
     """
     kgroups = itertools.groupby(sorted(objects, key=key), key)
-    return collections.OrderedDict((k, list(group)) for k, group in kgroups)
+    return collections.OrderedDict((k, reducegroup(group))
+                                   for k, group in kgroups)
