@@ -20,12 +20,13 @@ Functionality for exporting and serializing hazard curve calculation results.
 
 import os
 import csv
+import operator
+from collections import namedtuple, defaultdict
 
-from collections import namedtuple
-
+from openquake.baselib.general import groupby
 from openquake.hazardlib.calc import disagg
 from openquake.commonlib import hazard_writers
-from openquake.commonlib.writers import floatformat, scientificformat
+from openquake.commonlib.writers import floatformat, scientificformat, save_csv
 
 from openquake.engine.db import models
 from openquake.engine.export import core
@@ -265,6 +266,80 @@ def export_gmf_xml(key, output, target):
     with floatformat('%12.8E'):
         writer.serialize(gmf)
     return dest
+
+
+@core.export_output.add(('gmf_scenario', 'csv'), ('gmf', 'csv'))
+def export_gmf_csv(key, output, target):
+    """
+    Export the GMF Collection specified by ``output`` to the ``target``.
+
+    :param output:
+        :class:`openquake.engine.db.models.Output` with an `output_type` of
+        `gmf`.
+    :param target:
+        The same ``target`` as :func:`export`.
+
+    :returns:
+        The same return value as defined by :func:`export`.
+    """
+    haz_calc = output.oq_job
+    dest = _get_result_export_dest(
+        haz_calc.id, target, output.gmf)[:-3] + 'csv'
+    save_csv(dest, _gen_gmf_rows(output))
+    return dest
+
+
+def to_imt_str(gmf):
+    if gmf.sa_period:
+        return 'SA(%s)' % gmf.sa_period
+    else:
+        return gmf.imt
+
+
+def regroup(idx_gmv_imt_triples):
+    """
+    Regroup the GMF data in a form suitable for export.
+
+    >>> data = [(1, 0.1, 'PGA'), (2, 0.2, 'PGA'),
+    ...         (1, 0.11, 'SA(0.1)'), (2, 0.21, 'SA(0.1)'),
+    ...         (1, 0.12, 'SA(0.2)'), (2, 0.22, 'SA(0.2)')]
+    >>> regroup(data)
+    [(1, 2), [0.1, 0.2], [0.11, 0.21], [0.12, 0.22]]
+    """
+    def reducegroup(group):
+        indices = []
+        gmvs = []
+        for sid, gmv, imt in group:
+            indices.append(sid)
+            gmvs.append(gmv)
+        return tuple(indices), gmvs
+    by_imt = operator.itemgetter(2)
+    dic = groupby(idx_gmv_imt_triples, by_imt, reducegroup)
+    by_indices = operator.itemgetter(0)
+    val = groupby(dic.values(), by_indices,
+                  lambda group: [gmvs for indices, gmvs in group])
+    [(indices, gmvs_by_imt)] = val.items()
+    return [indices] + gmvs_by_imt
+
+
+def _gen_gmf_rows(output):
+    # yield a row for each rupture; the format is
+    # [tag, indices, gmf_imt_1, ... , gmf_imt_N]
+    gmf = models.Gmf.objects.get(output=output)
+    haz_calc = output.oq_job
+    sids = sorted(models.HazardSite.objects.filter(
+        hazard_calculation=haz_calc).values_list('id', flat=True))
+    idx = {s: i for i, s in enumerate(sids)}  # sid -> idx
+    gmf_by_rupture = defaultdict(list)
+    for data in models.GmfData.objects.filter(
+            site_id__in=sids, gmf=gmf):
+        for rupid, gmv in zip(data.rupture_ids, data.gmvs):
+            gmf_by_rupture[rupid].append(
+                (idx[data.site_id], gmv, to_imt_str(data)))
+    tag = dict(models.SESRupture.objects.filter(
+        pk__in=gmf_by_rupture).values_list('id', 'tag'))
+    for rupid in sorted(gmf_by_rupture):
+        yield [tag[rupid]] + regroup(gmf_by_rupture[rupid])
 
 
 @core.export_output.add(('ses', 'xml'))

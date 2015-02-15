@@ -21,6 +21,7 @@ import tempfile
 from nose.plugins.attrib import attr
 from openquake.engine.db import models
 from openquake.engine.utils import config
+from openquake.engine.export import core
 from qa_tests import _utils as qa_utils
 from qa_tests.hazard.event_based import sc_utils
 from openquake.qa_tests_data.event_based import (
@@ -209,9 +210,20 @@ class EventBasedHazardCase2TestCase(qa_utils.BaseQATestCase):
         result_dir = tempfile.mkdtemp()
 
         cfg = os.path.join(os.path.dirname(case_2.__file__), 'job.ini')
+        expected_gmf = os.path.join(os.path.dirname(case_2.__file__),
+                                    'expected', '0-SadighEtAl1997.csv')
         expected_curve_poes = [0.00853479861, 0., 0., 0.]
 
         job = self.run_hazard(cfg)
+
+        # Test the GMF exported values
+        gmf_output = models.Output.objects.get(
+            output_type='gmf', oq_job=job)
+
+        fname = core.export(gmf_output.id, result_dir, 'csv')
+        gotlines = sorted(open(fname).readlines())
+        expected = sorted(open(expected_gmf).readlines())
+        self.assertEqual(gotlines, expected)
 
         # Test the poe values of the single curve:
         [actual_curve] = models.HazardCurveData.objects.filter(
