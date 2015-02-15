@@ -931,6 +931,7 @@ class SESCollection(djm.Model):
 
     @classmethod
     def create(cls, output):
+        # this is used in the tests
         """
         Create an LtSourceModel, a TrtModel and a SESCollection associated
         to it and to the given output.
