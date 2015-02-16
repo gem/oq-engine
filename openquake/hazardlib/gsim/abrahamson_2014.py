@@ -29,9 +29,11 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 
 class AbrahamsonEtAl2014(GMPE):
     """
-    Implements GMPE developed by Abrahamson, Silva and Kamal in 2014 as
-    part of the PEER West 2 Project. The GMPE is described in a paper
-    published in 2014 on Earthquake Spectra, Volume 30, Number 3.
+    Implements GMPE by Abrahamson, Silva and Kamai developed within the
+    the PEER West 2 Project. This GMPE is described in a paper
+    published in 2014 on Earthquake Spectra, Volume 30, Number 3 and
+    titled 'Summary of the ASK14 Ground Motion Relation for Active Crustal 
+    Regions'.
     """
     #: Supported tectonic region type is active shallow crust, see title!
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
@@ -441,7 +443,7 @@ pgv     6.75    330     -2.02   2400    4.5     5.975   -0.919  0.275   -0.1    
 
 class AbrahamsonEtAl2014RegTWN(AbrahamsonEtAl2014):
     """
-    Implements GMPE developed by Abrahamson, Silva and Kamal in 2014 as
+    Implements GMPE developed by Abrahamson, Silva and Kamai in 2014 as
     part of the PEER West 2 Project. The GMPE is described in a paper
     published in 2014 on Earthquake Spectra, Volume 30, Number 3.
 
@@ -459,7 +461,7 @@ class AbrahamsonEtAl2014RegTWN(AbrahamsonEtAl2014):
 
 class AbrahamsonEtAl2014RegCHN(AbrahamsonEtAl2014):
     """
-    Implements GMPE developed by Abrahamson, Silva and Kamal in 2014 as
+    Implements GMPE developed by Abrahamson, Silva and Kamai in 2014 as
     part of the PEER West 2 Project. The GMPE is described in a paper
     published in 2014 on Earthquake Spectra, Volume 30, Number 3.
 
@@ -476,7 +478,7 @@ class AbrahamsonEtAl2014RegCHN(AbrahamsonEtAl2014):
 
 class AbrahamsonEtAl2014RegJPN(AbrahamsonEtAl2014):
     """
-    Implements GMPE developed by Abrahamson, Silva and Kamal in 2014 as
+    Implements GMPE developed by Abrahamson, Silva and Kamai in 2014 as
     part of the PEER West 2 Project. The GMPE is described in a paper
     published in 2014 on Earthquake Spectra, Volume 30, Number 3.
 
