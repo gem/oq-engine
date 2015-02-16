@@ -461,7 +461,7 @@ def job_from_file(cfg_file_path, username, log_level='info', exports='',
                     'hazard output: the statistics will not be computed')
 
         # build and validate an OqParam object
-        oqparam = readinput.get_oqparam(params, calculators)
+        oqparam = readinput.get_oqparam(params, calculators=calculators)
         oqparam.hazard_calculation_id = \
             haz_job.id if haz_job and not hazard_output_id else None
         oqparam.hazard_output_id = hazard_output_id
@@ -480,7 +480,7 @@ def job_from_file(cfg_file_path, username, log_level='info', exports='',
         hc = haz_job.get_oqparam()
         # copy the non-conflicting hazard parameters in the risk parameters
         for name, value in hc:
-            if not name in params:
+            if name not in params:
                 params[name] = value
         if 'quantile_loss_curves' not in params:
             params['quantile_loss_curves'] = []
@@ -498,7 +498,7 @@ def job_from_file(cfg_file_path, username, log_level='info', exports='',
             params['asset_correlation'] = 0
         if 'master_seed' not in params:
             params['master_seed'] = 0
-        if not 'risk_investigation_time' in params and not \
+        if 'risk_investigation_time' not in params and not \
            params['calculation_mode'].startswith('scenario'):
             params['risk_investigation_time'] = params.get(
                 'investigation_time', hc.investigation_time)
