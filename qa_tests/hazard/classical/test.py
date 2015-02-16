@@ -680,9 +680,9 @@ class ClassicalHazardCase17TestCase(qa_utils.BaseQATestCase):
     def test(self):
         cfg = os.path.join(os.path.dirname(case_17.__file__), 'job.ini')
         expected_curves_pga = [
-            [1.0, 1.0, 0.0],
-            [1.0, 1.0, 0.0],
             [0.27612144, 0.035435631, 0.011434286],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
             [1.0, 1.0, 0.0],
             [1.0, 1.0, 0.0]]
 
