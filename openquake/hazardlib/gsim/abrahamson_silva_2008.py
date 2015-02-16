@@ -104,6 +104,9 @@ class AbrahamsonSilva2008(GMPE):
         stddevs = self._get_stddevs(C, C_PGA, pga1100, rup, sites,
                                     stddev_types)
 
+        print type(stddevs)
+        print stddevs
+        () + 1
         return mean, stddevs
 
     def _compute_base_term(self, C, rup, dists):
