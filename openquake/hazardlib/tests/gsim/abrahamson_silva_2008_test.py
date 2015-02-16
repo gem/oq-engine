@@ -23,6 +23,7 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 # Note that the Fortran implementation has been modified not
 # to compute the 'Constant Displacement Model' term
 
+
 class AbrahamsonSilva2008TestCase(BaseGSIMTestCase):
     GSIM_CLASS = AbrahamsonSilva2008
 
@@ -41,4 +42,3 @@ class AbrahamsonSilva2008TestCase(BaseGSIMTestCase):
     def test_std_total(self):
         self.check('AS08/AS08_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
-
