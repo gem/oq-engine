@@ -54,7 +54,7 @@ class Abrahamson2014EtAlRegTWNTestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check('ASK14/ASK14_ResMEAN_RegTWN.csv',
-                   max_discrep_percentage=0.2)
+                   max_discrep_percentage=0.3)
 
 
 class Abrahamson2014EtAlRegCHNTestCase(BaseGSIMTestCase):
