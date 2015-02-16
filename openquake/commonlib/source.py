@@ -36,7 +36,7 @@ LtRealization.uid = property(
     lambda self: '_'.join(self.sm_lt_path) + ',' + '_'.join(self.gsim_uid))
 
 SourceModel = collections.namedtuple(
-    'SourceModel', 'name weight path trt_models gsim_lt ordinal')
+    'SourceModel', 'name weight path trt_models gsim_lt ordinal samples')
 
 
 class TrtModel(collections.Sequence):
@@ -192,22 +192,6 @@ def parse_source_model(fname, converter, apply_uncertainties=lambda src: None):
 def agg_prob(acc, prob):
     """Aggregation function for probabilities"""
     return 1. - (1. - acc) * (1. - prob)
-
-
-def get_effective_rlzs(rlzs):
-    """
-    Group together realizations with the same unique identifier (uid)
-    and yield the first representative of each group.
-    """
-    effective = []
-    for uid, group in groupby(rlzs, operator.attrgetter('uid')).iteritems():
-        rlz = group[0]
-        if all(path == '*' for path in rlz.lt_uid):  # empty realization
-            continue
-        effective.append(
-            logictree.Realization(rlz.value, sum(r.weight for r in group),
-                                  rlz.lt_path, rlz.ordinal, rlz.lt_uid))
-    return effective
 
 
 class RlzsAssoc(collections.Mapping):
@@ -404,13 +388,13 @@ class CompositeSourceModel(collections.Sequence):
             # recompute the GSIM logic tree if needed
             if trts != set(smodel.gsim_lt.tectonic_region_types):
                 smodel.gsim_lt.reduce(trts)
-            if num_samples:  # sampling, pick just one gsim realization
+            if num_samples:  # sampling
                 rnd = random.Random(random_seed + idx)
-                rlzs = [logictree.sample_one(smodel.gsim_lt, rnd)]
+                rlzs = logictree.sample(smodel.gsim_lt, smodel.samples, rnd)
             else:  # full enumeration
-                rlzs = get_effective_rlzs(smodel.gsim_lt)
+                rlzs = logictree.get_effective_rlzs(smodel.gsim_lt)
             if rlzs:
-                logging.info('Creating %d GMPE realization(s) for model '
+                logging.info('Creating %d realization(s) for model '
                              '%s, %s', len(rlzs), smodel.name, smodel.path)
                 idx = assoc._add_realizations(idx, smodel, rlzs)
         return assoc
