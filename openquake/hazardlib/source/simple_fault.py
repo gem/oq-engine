@@ -18,7 +18,7 @@ Module :mod:`openquake.hazardlib.source.simple_fault` defines
 :class:`SimpleFaultSource`.
 """
 import math
-
+import numpy
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
@@ -44,6 +44,21 @@ class SimpleFaultSource(ParametricSeismicSource):
         Angle between earth surface and fault plane in decimal degrees.
     :param rake:
         Angle describing rupture propagation direction in decimal degrees.
+    :param hypo_loc:
+        Array describing the relative position of the hypocentre on the rupture
+        surface. Each line represents an hypocentral position defined in terms
+        of the relative distance along strike and dip (from the upper, left
+        corner of the fault surface i.e. the corner which results from the
+        projection at depth of the first vertex of the fault trace) and the
+        corresponding weight. Example 1: one single hypocentral position at the
+        center of the rupture will be described by the following
+        array[(0.5, 0.5, 1.0)]. Example 2: two possible hypocenters are
+        admitted for a rupture. One hypocentre is located along the strike at
+        1/4 of the fault length and at 1/4 of the fault width along the dip and
+        occurs with a weight of 0.3, the other one is at 3/4 of fault length
+        along strike and at 3/4 of fault width along strike with a weight of
+        0.7. The numpy array would be entered as numpy.array([0.25, 0.25, 0.3],
+        [0.75, 0.75, 0.7]).
 
     See also :class:`openquake.hazardlib.source.base.ParametricSeismicSource`
     for description of other parameters.
@@ -54,7 +69,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         for the lowest magnitude value.
     """
     __slots__ = ParametricSeismicSource.__slots__ + '''upper_seismogenic_depth
-    lower_seismogenic_depth fault_trace dip rake'''.split()
+    lower_seismogenic_depth fault_trace dip rake hypo_list'''.split()
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
@@ -62,7 +77,7 @@ class SimpleFaultSource(ParametricSeismicSource):
                  temporal_occurrence_model,
                  # simple fault specific parameters
                  upper_seismogenic_depth, lower_seismogenic_depth,
-                 fault_trace, dip, rake):
+                 fault_trace, dip, rake, hypo_list=numpy.array(None)):
         super(SimpleFaultSource, self).__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
             magnitude_scaling_relationship, rupture_aspect_ratio,
@@ -83,8 +98,9 @@ class SimpleFaultSource(ParametricSeismicSource):
         min_mag, max_mag = self.mfd.get_min_max_mag()
         cols_rows = self._get_rupture_dimensions(float('inf'), float('inf'),
                                                  min_mag)
+        self.hypo_list = hypo_list
         if 1 in cols_rows:
-            raise ValueError('mesh spacing %s is too low to represent '
+            raise ValueError('mesh spacing %s is too high to represent '
                              'ruptures of magnitude %s' %
                              (rupture_mesh_spacing, min_mag))
 
@@ -143,13 +159,36 @@ class SimpleFaultSource(ParametricSeismicSource):
                 for first_col in xrange(num_rup_along_length):
                     mesh = whole_fault_mesh[first_row: first_row + rup_rows,
                                             first_col: first_col + rup_cols]
-                    hypocenter = mesh.get_middle_point()
-                    surface = SimpleFaultSurface(mesh)
-                    yield ParametricProbabilisticRupture(
-                        mag, self.rake, self.tectonic_region_type, hypocenter,
-                        surface, type(self),
-                        occurrence_rate, self.temporal_occurrence_model
-                    )
+
+                    if self.hypo_list.size == 1:
+
+                        hypocenter = mesh.get_middle_point()
+                        occurrence_rate_hypo = occurrence_rate
+                        surface = SimpleFaultSurface(mesh)
+
+                        yield ParametricProbabilisticRupture(
+                            mag, self.rake, self.tectonic_region_type,
+                            hypocenter, surface, type(self),
+                            occurrence_rate_hypo,
+                            self.temporal_occurrence_model
+                        )
+                    else:
+                        for hypo in self.hypo_list:
+
+                            surface = SimpleFaultSurface(mesh)
+                            hypocenter = surface.get_hypo_location(
+                                mesh, self.rupture_mesh_spacing,
+                                hypo[:2])
+
+                            occurrence_rate_hypo = occurrence_rate * \
+                                hypo[2]
+
+                            yield ParametricProbabilisticRupture(
+                                mag, self.rake, self.tectonic_region_type,
+                                hypocenter, surface, type(self),
+                                occurrence_rate_hypo,
+                                self.temporal_occurrence_model
+                            )
 
     def count_ruptures(self):
         """

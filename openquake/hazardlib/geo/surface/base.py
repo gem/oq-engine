@@ -239,73 +239,33 @@ class BaseQuadrilateralSurface(BaseSurface):
         """
         return self.get_mesh().get_joyner_boore_distance(mesh)
 
-    def get_ry0_distance(self, mesh, option=1):
+    def get_ry0_distance(self, mesh):
         """
         :param mesh:
             :class:`~openquake.hazardlib.geo.mesh.Mesh` of points to calculate
             Ry0-distance to.
-        :parameter option:
-            Admitted values for this parameter are 1 and 2. See description
-            below.
         :returns:
             Numpy array of distances in km.
 
         See also :meth:`superclass method <.base.BaseSurface.get_ry0_distance>`
         for spec of input and result values.
 
-        This method accepts an option id which determines the method to
-        be used for the calculation of the ry0 parameter. The default
-        method, the one selected with option 1, uses an average strike
-        direction. With option 2 the ry0 if computed using the lines
-        perpendicular to the two end segments of the set used to define
-        the fault trace.
+        This method uses an average strike direction to compute ry0.
         """
 
-        if option == 1:
+        # This computes ry0 by using an average strike direction
+        top_edge = self.get_mesh()[0:1]
+        mean_strike = self.get_strike()
 
-            # This option computes ry0 by using an average strike direction
-            top_edge = self.get_mesh()[0:1]
-            mean_strike = self.get_strike()
+        dst1 = geodetic.distance_to_arc(top_edge.lons[0, 0],
+                                        top_edge.lats[0, 0],
+                                        (mean_strike+90.) % 360,
+                                        mesh.lons, mesh.lats)
 
-            dst1 = geodetic.distance_to_arc(top_edge.lons[0, 0],
-                                            top_edge.lats[0, 0],
-                                            (mean_strike+90.) % 360,
-                                            mesh.lons, mesh.lats)
-
-            dst2 = geodetic.distance_to_arc(top_edge.lons[0, -1],
-                                            top_edge.lats[0, -1],
-                                            (mean_strike+90.) % 360,
-                                            mesh.lons, mesh.lats)
-
-        elif option == 2:
-
-            # This option computes ry0 using the lines perpendicular to the
-            # segments at the two extremes of the fault trace
-            top_edge = self.get_mesh()[0:1]
-
-            # This computes the azimuth of the first segment of the trace
-            p_1 = Point(top_edge.lons[0, 0], top_edge.lats[0, 0],
-                        top_edge.depths[0, 0])
-            p_2 = Point(top_edge.lons[0, 1], top_edge.lats[0, 1],
-                        top_edge.depths[0, 1])
-            azimuth = p_1.azimuth(p_2)
-
-            dst1 = geodetic.distance_to_arc(p_1.longitude,
-                                            p_1.latitude,
-                                            (azimuth+90.) % 360,
-                                            mesh.lons, mesh.lats)
-
-            # This computes the azimuth of the last segment of the trace
-            p_1 = Point(top_edge.lons[0, -1], top_edge.lats[0, -1],
-                        top_edge.depths[0, -1])
-            p_2 = Point(top_edge.lons[0, -2], top_edge.lats[0, -2],
-                        top_edge.depths[0, -2])
-            azimuth = p_1.azimuth(p_2)
-
-            dst2 = geodetic.distance_to_arc(p_1.longitude,
-                                            p_1.latitude,
-                                            (azimuth+90.) % 360,
-                                            mesh.lons, mesh.lats)
+        dst2 = geodetic.distance_to_arc(top_edge.lons[0, -1],
+                                        top_edge.lats[0, -1],
+                                        (mean_strike+90.) % 360,
+                                        mesh.lons, mesh.lats)
 
         # Get the shortest distance from two two lines
         dst = numpy.fmin(numpy.abs(dst1), numpy.abs(dst2))
@@ -476,3 +436,42 @@ class BaseQuadrilateralSurface(BaseSurface):
             An instance of
             :class:`openquake.hazardlib.geo.mesh.RectangularMesh`.
         """
+
+    def get_hypo_location(self, mesh, mesh_spacing, hypo_loc=None):
+        """
+        The method determines the location of the hypocentre within the rupture
+
+        :param mesh:
+            :class:`~openquake.hazardlib.geo.mesh.Mesh` of points
+        :param mesh_spacing:
+            The desired distance between two adjacent points in source's
+            ruptures' mesh, in km. Mainly this parameter allows to balance
+            the trade-off between time needed to compute the distance
+            between the rupture surface and a site and the precision of that
+            computation.
+        :param hypo_loc:
+            Hypocentre location as fraction of rupture plane, as a tuple of
+            (Along Strike, Down Dip), e.g. a hypocentre located in the centroid
+            of the rupture would be input as (0.5, 0.5), whereas a
+            hypocentre located in a position 3/4 along the length, and 1/4 of
+            the way down dip of the rupture plane would be entered as
+            (0.75, 0.25).
+        :returns:
+            Hypocentre location as instance of 
+            :class:`~openquake.hazardlib.geo.point.Point`
+        """
+        centroid = mesh.get_middle_point()
+        if hypo_loc is None:
+            return centroid
+
+        total_len_y = (len(mesh.depths) - 1) * mesh_spacing
+        y_distance = hypo_loc[1] * total_len_y
+        y_node = numpy.round(y_distance / mesh_spacing)
+        total_len_x = (len(mesh.lons[y_node]) - 1) * mesh_spacing
+        x_distance = hypo_loc[0] * total_len_x
+        x_node = numpy.round(x_distance / mesh_spacing)
+        hypocentre = Point(mesh.lons[y_node][x_node],
+                           mesh.lats[y_node][x_node],
+                           mesh.depths[y_node][x_node])
+        return hypocentre
+

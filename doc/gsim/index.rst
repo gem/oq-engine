@@ -24,6 +24,7 @@ Built-in GSIMs
     atkinson_boore_2006
     berge_thierry_2003
     bindi_2011
+    bindi_2014
     boore_1993
     boore_1997
     boore_2014
@@ -34,6 +35,7 @@ Built-in GSIMs
     campbell_bozorgnia_2003
     campbell_bozorgnia_2008
     campbell_bozorgnia_2014
+    cauzzi_2014
     cauzzi_faccioli_2008
     cauzzi_faccioli_2008_swiss
     chiou_youngs_2008
@@ -54,6 +56,7 @@ Built-in GSIMs
     mcverry_2006
     megawati_pan_2010
     pezeshk_2011
+    rietbrock_2013
     sadigh_1997
     silva_2002
     si_midorikawa_1999

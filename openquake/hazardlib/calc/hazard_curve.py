@@ -88,7 +88,7 @@ def calc_hazard_curves(
         of :class:`openquake.hazardlib.const.TRT`) to
         :class:`~openquake.hazardlib.gsim.base.GMPE` or
         :class:`~openquake.hazardlib.gsim.base.IPE` objects.
-    :param trunctation_level:
+    :param truncation_level:
         Float, number of standard deviations for truncation of the intensity
         distribution.
     :param source_site_filter:
