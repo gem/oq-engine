@@ -1,27 +1,27 @@
 GMFsPerSES(investigation_time=50.000000, stochastic_event_set_id=1,
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=2-115|rup=001-01
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=00|ses=0001|src=2-115|rup=001-01
 <X=  0.03961, Y= -0.48925, GMV=0.1143102>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=2-28|rup=002-01
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=00|ses=0001|src=2-28|rup=002-01
 <X=  0.12953, Y=  0.23020, GMV=0.1659666>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=2-47|rup=001-01
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=00|ses=0001|src=2-47|rup=001-01
 <X= -0.14027, Y=  0.05034, GMV=0.0914062>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=2-49|rup=001-01
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=00|ses=0001|src=2-49|rup=001-01
 <X=  0.03959, Y=  0.05034, GMV=0.1203996>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=2-53|rup=001-01
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=00|ses=0001|src=2-53|rup=001-01
 <X=  0.39932, Y=  0.05034, GMV=0.0795600>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=2-74|rup=002-01
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=00|ses=0001|src=2-74|rup=002-01
 <X=  0.30939, Y= -0.12953, GMV=0.1358416>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=2-90|rup=002-01
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=00|ses=0001|src=2-90|rup=002-01
 <X= -0.23020, Y= -0.30939, GMV=0.1841433>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=3-77|rup=001-01
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=00|ses=0001|src=3-77|rup=001-01
 <X= -0.05034, Y= -0.03959, GMV=0.2421046>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=4-224|rup=001-01
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=00|ses=0001|src=4-224|rup=001-01
 <X=  0.03959, Y=  0.05034, GMV=0.2285158>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=4-53|rup=001-01
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=00|ses=0001|src=4-53|rup=001-01
 <X=  0.21946, Y=  0.23020, GMV=0.0822852>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=4-68|rup=001-01
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=00|ses=0001|src=4-68|rup=001-01
 <X= -0.23020, Y= -0.21946, GMV=0.2506004>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=7|rup=002-01
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=00|ses=0001|src=7|rup=002-01
 <X=  0.03959, Y=  0.05034, GMV=0.0542925>
 <X=  0.03959, Y=  0.14027, GMV=0.0345405>
 <X=  0.03959, Y= -0.03959, GMV=0.0378325>
@@ -143,7 +143,7 @@ GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=7|rup=
 <X= -0.41007, Y= -0.21946, GMV=0.0797212>
 <X= -0.41007, Y= -0.30939, GMV=0.0243454>
 <X= -0.41007, Y= -0.39932, GMV=0.0385081>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=7|rup=003-01
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=00|ses=0001|src=7|rup=003-01
 <X=  0.03959, Y=  0.05034, GMV=0.0594840>
 <X=  0.03959, Y=  0.14027, GMV=0.0542273>
 <X=  0.03959, Y= -0.03959, GMV=0.0745308>
@@ -265,7 +265,7 @@ GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=7|rup=
 <X= -0.41007, Y= -0.21946, GMV=0.1606849>
 <X= -0.41007, Y= -0.30939, GMV=0.0593051>
 <X= -0.41007, Y= -0.39932, GMV=0.0744769>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=7|rup=003-02
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=00|ses=0001|src=7|rup=003-02
 <X=  0.03959, Y=  0.05034, GMV=0.0981026>
 <X=  0.03959, Y=  0.14027, GMV=0.1503215>
 <X=  0.03959, Y= -0.03959, GMV=0.0537664>
@@ -387,7 +387,7 @@ GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=7|rup=
 <X= -0.41007, Y= -0.21946, GMV=0.0344423>
 <X= -0.41007, Y= -0.30939, GMV=0.0172035>
 <X= -0.41007, Y= -0.39932, GMV=0.0395403>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=7|rup=004-01
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=00|ses=0001|src=7|rup=004-01
 <X=  0.03959, Y=  0.05034, GMV=0.2599925>
 <X=  0.03959, Y=  0.14027, GMV=0.1748274>
 <X=  0.03959, Y= -0.03959, GMV=0.2010977>
@@ -509,7 +509,7 @@ GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=7|rup=
 <X= -0.41007, Y= -0.21946, GMV=0.0978651>
 <X= -0.41007, Y= -0.30939, GMV=0.2493560>
 <X= -0.41007, Y= -0.39932, GMV=0.1009655>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=7|rup=004-02
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=00|ses=0001|src=7|rup=004-02
 <X=  0.03959, Y=  0.05034, GMV=0.0700459>
 <X=  0.03959, Y=  0.14027, GMV=0.0792572>
 <X=  0.03959, Y= -0.03959, GMV=0.0857390>
@@ -631,7 +631,7 @@ GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=7|rup=
 <X= -0.41007, Y= -0.21946, GMV=0.1773531>
 <X= -0.41007, Y= -0.30939, GMV=0.1689226>
 <X= -0.41007, Y= -0.39932, GMV=0.1669564>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=7|rup=005-01
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=00|ses=0001|src=7|rup=005-01
 <X=  0.03959, Y=  0.05034, GMV=0.1010310>
 <X=  0.03959, Y=  0.14027, GMV=0.0577505>
 <X=  0.03959, Y= -0.03959, GMV=0.1341187>
@@ -753,7 +753,7 @@ GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=7|rup=
 <X= -0.41007, Y= -0.21946, GMV=0.0675536>
 <X= -0.41007, Y= -0.30939, GMV=0.1082507>
 <X= -0.41007, Y= -0.39932, GMV=0.1466995>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=7|rup=012-01
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=00|ses=0001|src=7|rup=012-01
 <X=  0.03959, Y=  0.05034, GMV=0.3689403>
 <X=  0.03959, Y=  0.14027, GMV=0.6722234>
 <X=  0.03959, Y= -0.03959, GMV=0.2563144>
@@ -875,29 +875,29 @@ GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=01|ses=0001|src=7|rup=
 <X= -0.41007, Y= -0.21946, GMV=0.2398532>
 <X= -0.41007, Y= -0.30939, GMV=0.2094928>
 <X= -0.41007, Y= -0.39932, GMV=0.2983010>)
-GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=01|ses=0001|src=2-115|rup=001-01
+GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=00|ses=0001|src=2-115|rup=001-01
 <X=  0.03961, Y= -0.48925, GMV=0.4307592>)
-GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=01|ses=0001|src=2-28|rup=002-01
+GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=00|ses=0001|src=2-28|rup=002-01
 <X=  0.12953, Y=  0.23020, GMV=0.3463998>)
-GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=01|ses=0001|src=2-47|rup=001-01
+GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=00|ses=0001|src=2-47|rup=001-01
 <X= -0.14027, Y=  0.05034, GMV=0.2750353>)
-GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=01|ses=0001|src=2-49|rup=001-01
+GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=00|ses=0001|src=2-49|rup=001-01
 <X=  0.03959, Y=  0.05034, GMV=0.9374184>)
-GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=01|ses=0001|src=2-53|rup=001-01
+GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=00|ses=0001|src=2-53|rup=001-01
 <X=  0.39932, Y=  0.05034, GMV=0.0944510>)
-GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=01|ses=0001|src=2-74|rup=002-01
+GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=00|ses=0001|src=2-74|rup=002-01
 <X=  0.30939, Y= -0.12953, GMV=0.3271256>)
-GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=01|ses=0001|src=2-90|rup=002-01
+GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=00|ses=0001|src=2-90|rup=002-01
 <X= -0.23020, Y= -0.30939, GMV=0.2145643>)
-GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=01|ses=0001|src=3-77|rup=001-01
+GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=00|ses=0001|src=3-77|rup=001-01
 <X= -0.05034, Y= -0.03959, GMV=0.0428873>)
-GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=01|ses=0001|src=4-224|rup=001-01
+GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=00|ses=0001|src=4-224|rup=001-01
 <X=  0.03959, Y=  0.05034, GMV=0.6581056>)
-GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=01|ses=0001|src=4-53|rup=001-01
+GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=00|ses=0001|src=4-53|rup=001-01
 <X=  0.21946, Y=  0.23020, GMV=0.2574881>)
-GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=01|ses=0001|src=4-68|rup=001-01
+GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=00|ses=0001|src=4-68|rup=001-01
 <X= -0.23020, Y= -0.21946, GMV=0.1875814>)
-GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=01|ses=0001|src=7|rup=002-01
+GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=00|ses=0001|src=7|rup=002-01
 <X=  0.03959, Y=  0.05034, GMV=0.1357473>
 <X=  0.03959, Y=  0.14027, GMV=0.0807748>
 <X=  0.03959, Y= -0.03959, GMV=0.1148821>
@@ -1019,7 +1019,7 @@ GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=01|ses=0001|src=7|rup=002
 <X= -0.41007, Y= -0.21946, GMV=0.2059060>
 <X= -0.41007, Y= -0.30939, GMV=0.3291740>
 <X= -0.41007, Y= -0.39932, GMV=0.2207011>)
-GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=01|ses=0001|src=7|rup=003-01
+GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=00|ses=0001|src=7|rup=003-01
 <X=  0.03959, Y=  0.05034, GMV=0.2427729>
 <X=  0.03959, Y=  0.14027, GMV=0.2251433>
 <X=  0.03959, Y= -0.03959, GMV=0.2320519>
@@ -1141,7 +1141,7 @@ GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=01|ses=0001|src=7|rup=003
 <X= -0.41007, Y= -0.21946, GMV=0.1954111>
 <X= -0.41007, Y= -0.30939, GMV=0.1753428>
 <X= -0.41007, Y= -0.39932, GMV=0.0300705>)
-GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=01|ses=0001|src=7|rup=003-02
+GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=00|ses=0001|src=7|rup=003-02
 <X=  0.03959, Y=  0.05034, GMV=0.2306956>
 <X=  0.03959, Y=  0.14027, GMV=0.2885752>
 <X=  0.03959, Y= -0.03959, GMV=0.4375876>
@@ -1263,7 +1263,7 @@ GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=01|ses=0001|src=7|rup=003
 <X= -0.41007, Y= -0.21946, GMV=0.2483785>
 <X= -0.41007, Y= -0.30939, GMV=0.4862945>
 <X= -0.41007, Y= -0.39932, GMV=0.3519954>)
-GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=01|ses=0001|src=7|rup=004-01
+GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=00|ses=0001|src=7|rup=004-01
 <X=  0.03959, Y=  0.05034, GMV=0.3231207>
 <X=  0.03959, Y=  0.14027, GMV=0.3400765>
 <X=  0.03959, Y= -0.03959, GMV=0.3175696>
@@ -1385,7 +1385,7 @@ GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=01|ses=0001|src=7|rup=004
 <X= -0.41007, Y= -0.21946, GMV=0.1749631>
 <X= -0.41007, Y= -0.30939, GMV=0.1102504>
 <X= -0.41007, Y= -0.39932, GMV=0.1929027>)
-GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=01|ses=0001|src=7|rup=004-02
+GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=00|ses=0001|src=7|rup=004-02
 <X=  0.03959, Y=  0.05034, GMV=0.2572368>
 <X=  0.03959, Y=  0.14027, GMV=0.2154159>
 <X=  0.03959, Y= -0.03959, GMV=0.1913618>
@@ -1507,7 +1507,7 @@ GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=01|ses=0001|src=7|rup=004
 <X= -0.41007, Y= -0.21946, GMV=0.4160576>
 <X= -0.41007, Y= -0.30939, GMV=0.6667311>
 <X= -0.41007, Y= -0.39932, GMV=0.6443435>)
-GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=01|ses=0001|src=7|rup=005-01
+GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=00|ses=0001|src=7|rup=005-01
 <X=  0.03959, Y=  0.05034, GMV=0.1798749>
 <X=  0.03959, Y=  0.14027, GMV=0.5939720>
 <X=  0.03959, Y= -0.03959, GMV=0.3028034>
@@ -1629,7 +1629,7 @@ GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=01|ses=0001|src=7|rup=005
 <X= -0.41007, Y= -0.21946, GMV=0.1302887>
 <X= -0.41007, Y= -0.30939, GMV=0.1355248>
 <X= -0.41007, Y= -0.39932, GMV=0.1337882>)
-GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=01|ses=0001|src=7|rup=012-01
+GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=trt=00|ses=0001|src=7|rup=012-01
 <X=  0.03959, Y=  0.05034, GMV=1.9182498>
 <X=  0.03959, Y=  0.14027, GMV=0.9186873>
 <X=  0.03959, Y= -0.03959, GMV=4.1917840>

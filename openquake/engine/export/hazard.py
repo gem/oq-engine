@@ -64,6 +64,7 @@ def _get_result_export_dest(calc_id, target, result, file_ext='xml'):
 
     output = result.output
     output_type = output.output_type
+    samples = output.oq_job.get_param('number_of_logic_tree_samples')
 
     # Create the names for each subdirectory
     calc_dir = 'calc_%s' % calc_id
@@ -101,31 +102,55 @@ def _get_result_export_dest(calc_id, target, result, file_ext='xml'):
             ltr = result.lt_realization
             sm_ltp = core.LT_PATH_JOIN_TOKEN.join(ltr.sm_lt_path)
             gsim_ltp = core.LT_PATH_JOIN_TOKEN.join(ltr.gsim_lt_path)
-            filename = '%s-smltp_%s-gsimltp_%s-ltr_%s.%s' % (
-                output_type, sm_ltp, gsim_ltp, ltr.ordinal, file_ext)
-
+            if samples:
+                # Monte-Carlo logic tree sampling
+                filename = '%s-smltp_%s-gsimltp_%s-ltr_%s.%s' % (
+                    output_type, sm_ltp, gsim_ltp, ltr.ordinal, file_ext
+                )
+            else:
+                # End Branch Enumeration
+                filename = '%s-smltp_%s-gsimltp_%s.%s' % (
+                    output_type, sm_ltp, gsim_ltp, file_ext
+                )
     elif output_type == 'gmf':
         # only logic trees, no stats
         ltr = result.lt_realization
         sm_ltp = core.LT_PATH_JOIN_TOKEN.join(ltr.sm_lt_path)
         gsim_ltp = core.LT_PATH_JOIN_TOKEN.join(ltr.gsim_lt_path)
-        filename = '%s-smltp_%s-gsimltp_%s-ltr_%s.%s' % (
-            output_type, sm_ltp, gsim_ltp, ltr.ordinal, file_ext)
-
+        if samples:
+            # Monte-Carlo logic tree sampling
+            filename = '%s-smltp_%s-gsimltp_%s-ltr_%s.%s' % (
+                output_type, sm_ltp, gsim_ltp, ltr.ordinal, file_ext
+            )
+        else:
+            # End Branch Enumeration
+            filename = '%s-smltp_%s-gsimltp_%s.%s' % (
+                output_type, sm_ltp, gsim_ltp, file_ext
+            )
     elif output_type == 'ses':
         sm_ltp = core.LT_PATH_JOIN_TOKEN.join(result.sm_lt_path)
         filename = '%s-%s-smltp_%s.%s' % (
-            output_type, result.ordinal, sm_ltp, file_ext)
-
+            output_type, result.ordinal, sm_ltp, file_ext
+        )
     elif output_type == 'disagg_matrix':
         # only logic trees, no stats
+
         out = '%s(%s)' % (output_type, result.poe)
         location = 'lon_%s-lat_%s' % (result.location.x, result.location.y)
+
         ltr = result.lt_realization
         sm_ltp = core.LT_PATH_JOIN_TOKEN.join(ltr.sm_lt_path)
         gsim_ltp = core.LT_PATH_JOIN_TOKEN.join(ltr.gsim_lt_path)
-        filename = '%s-%s-smltp_%s-gsimltp_%s-ltr_%s.%s' % (
-            out, location, sm_ltp, gsim_ltp, ltr.ordinal, file_ext)
+        if samples:
+            # Monte-Carlo logic tree sampling
+            filename = '%s-%s-smltp_%s-gsimltp_%s-ltr_%s.%s' % (
+                out, location, sm_ltp, gsim_ltp, ltr.ordinal, file_ext
+            )
+        else:
+            # End Branch Enumeration
+            filename = '%s-%s-smltp_%s-gsimltp_%s.%s' % (
+                out, location, sm_ltp, gsim_ltp, file_ext
+            )
     else:
         filename = '%s.%s' % (output_type, file_ext)
 
@@ -290,6 +315,7 @@ def export_gmf_csv(key, output, target):
 
 
 def to_imt_str(gmf):
+    """Extract the IMT from a gmf record"""
     if gmf.sa_period:
         return 'SA(%s)' % gmf.sa_period
     else:
