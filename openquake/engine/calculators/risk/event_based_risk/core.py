@@ -86,7 +86,7 @@ def event_based(workflow, getter, outputdict, params, monitor):
             if specific_assets:
                 loss_matrix, assets = _filter_loss_matrix_assets(
                     out.output.loss_matrix, out.output.assets, specific_assets)
-                if assets:
+                if len(assets):
                     # compute the loss per rupture per asset
                     event_loss = models.EventLoss.objects.get(
                         output__oq_job=monitor.job_id,
