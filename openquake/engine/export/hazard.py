@@ -64,7 +64,7 @@ def _get_result_export_dest(calc_id, target, result, file_ext='xml'):
 
     output = result.output
     output_type = output.output_type
-    samples = output.oq_job.get_param('number_of_logic_tree_samples')
+    samples = output.oq_job.get_param('number_of_logic_tree_samples', 0)
 
     # Create the names for each subdirectory
     calc_dir = 'calc_%s' % calc_id
