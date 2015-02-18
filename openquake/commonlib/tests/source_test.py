@@ -698,11 +698,14 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
                          {'Subduction Interface': 'SadighEtAl1997',
                           'Active Shallow Crust': 'ChiouYoungs2008'})
         # ignoring the end of the tuple, with the uid field
-        self.assertEqual(rlz[:4], (0, ('b1', 'b5', 'b8'), ('b2', 'b3'), 0.5))
+        self.assertEqual(rlz.ordinal, 0)
+        self.assertEqual(rlz.sm_lt_path, ('b1', 'b5', 'b8'))
+        self.assertEqual(rlz.gsim_lt_path, ('b2', 'b3'))
+        self.assertEqual(rlz.weight, 1.)
         self.assertEqual(
             str(assoc),
-            "{0,SadighEtAl1997: ['<0,b1_b5_b8,b2_b3,w=0.5>']\n"
-            "1,ChiouYoungs2008: ['<0,b1_b5_b8,b2_b3,w=0.5>']}")
+            "{0,SadighEtAl1997: ['<0,b1_b5_b8,b2_b3,w=1.0>']\n"
+            "1,ChiouYoungs2008: ['<0,b1_b5_b8,b2_b3,w=1.0>']}")
 
     def test_many_rlzs(self):
         oqparam = tests.get_oqparam('classical_job.ini')
@@ -723,6 +726,7 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
             if trt_model.trt == 'Active Shallow Crust':  # no ruptures
                 trt_model.num_ruptures = 0
         assoc = csm.get_rlzs_assoc()
+
         expected_assoc = """\
 {0,SadighEtAl1997: ['<0,b1_b3_b6,*_b3,w=0.04>']
 1,SadighEtAl1997: ['<0,b1_b3_b6,*_b3,w=0.04>']

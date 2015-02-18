@@ -28,12 +28,30 @@ from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
 class DuplicatedID(Exception):
     """Raised when two sources with the same ID are found in a source model"""
 
-LtRealization = collections.namedtuple(
-    'LtRealization', 'ordinal sm_lt_path gsim_lt_path weight gsim_uid')
-LtRealization.__str__ = lambda self: '<%d,%s,w=%s>' % (
-    self.ordinal, self.uid, self.weight)
-LtRealization.uid = property(
-    lambda self: '_'.join(self.sm_lt_path) + ',' + '_'.join(self.gsim_uid))
+
+class LtRealization(object):
+    """
+    Composite realization build on top of a source model realization and
+    a GSIM realization.
+    """
+    def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight):
+        self.ordinal = ordinal
+        self.sm_lt_path = sm_lt_path
+        self.gsim_rlz = gsim_rlz
+        self.weight = weight
+
+    def __str__(self):
+        return '<%d,%s,w=%s>' % (self.ordinal, self.uid, self.weight)
+
+    @property
+    def gsim_lt_path(self):
+        return self.gsim_rlz.lt_path
+
+    @property
+    def uid(self):
+        """An unique identifier for effective realizations"""
+        return '_'.join(self.sm_lt_path) + ',' + self.gsim_rlz.uid
+
 
 SourceModel = collections.namedtuple(
     'SourceModel', 'name weight path trt_models gsim_lt ordinal samples')
@@ -234,19 +252,17 @@ class RlzsAssoc(collections.Mapping):
             self.rlzs_assoc, operator.itemgetter(0),
             lambda group: [valid.gsim(gsim) for trt_id, gsim in group])
 
-    def _add_realizations(self, idx, lt_model, realizations, samples):
+    def _add_realizations(self, idx, lt_model, realizations):
         gsims_by_trt = lt_model.gsim_lt.values
         rlzs = []
-        for gsim_by_trt, weight, gsim_path, _ordinal, gsim_uid in realizations:
-            weight = (1. / samples / len(realizations) if samples else
-                      float(lt_model.weight) * float(weight))
-            rlz = LtRealization(
-                idx, lt_model.path, gsim_path, weight, gsim_uid)
+        for gsim_rlz in realizations:
+            weight = float(lt_model.weight) * float(gsim_rlz.weight)
+            rlz = LtRealization(idx, lt_model.path, gsim_rlz, weight)
             rlzs.append(rlz)
-            self.gsim_by_trt[rlz] = gsim_by_trt
+            self.gsim_by_trt[rlz] = gsim_rlz.value
             for trt_model in lt_model.trt_models:
                 trt = trt_model.trt
-                gsim = gsim_by_trt[trt]
+                gsim = gsim_rlz.value[trt]
                 self.rlzs_assoc[trt_model.id, gsim].append(rlz)
                 trt_model.gsims = gsims_by_trt[trt]
             idx += 1
@@ -396,10 +412,16 @@ class CompositeSourceModel(collections.Sequence):
             if rlzs:
                 logging.info('Creating %d realization(s) for model '
                              '%s, %s', len(rlzs), smodel.name, smodel.path)
-                idx = assoc._add_realizations(idx, smodel, rlzs, num_samples)
+                idx = assoc._add_realizations(idx, smodel, rlzs)
         # sanity check
-        delta1 = abs(sum(rlz.weight for rlz in assoc.realizations) - 1)
-        assert delta1 < 1E-12, delta1
+        if assoc.realizations:
+            if num_samples:
+                assert len(assoc.realizations) == num_samples
+                for rlz in assoc.realizations:
+                    rlz.weight = 1. / num_samples
+            else:
+                delta = abs(sum(rlz.weight for rlz in assoc.realizations) - 1)
+                assert delta < 1E-12, delta
         return assoc
 
     def __repr__(self):
