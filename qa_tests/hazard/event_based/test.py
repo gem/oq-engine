@@ -47,23 +47,23 @@ class EventBasedHazardTestCase(qa_utils.BaseQATestCase):
     # then you will see in /tmp a few files which you can diff
     # to see the problem
     expected_tags = [
-        'trt=00|ses=0001|src=1-296|rup=002-01',
-        'trt=00|ses=0001|src=2-231|rup=002-01',
-        'trt=00|ses=0001|src=2-40|rup=001-01',
-        'trt=00|ses=0001|src=24-72|rup=002-01',
+        'col=00|ses=0001|src=1-296|rup=002-01',
+        'col=00|ses=0001|src=2-231|rup=002-01',
+        'col=00|ses=0001|src=2-40|rup=001-01',
+        'col=00|ses=0001|src=24-72|rup=002-01',
     ]
     expected_gmfs = '''\
 GMFsPerSES(investigation_time=5.000000, stochastic_event_set_id=1,
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=00|ses=0001|src=1-296|rup=002-01
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=col=00|ses=0001|src=1-296|rup=002-01
 <X=131.00000, Y= 40.00000, GMV=0.0068590>
 <X=131.00000, Y= 40.10000, GMV=0.0066422>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=00|ses=0001|src=2-231|rup=002-01
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=col=00|ses=0001|src=2-231|rup=002-01
 <X=131.00000, Y= 40.00000, GMV=0.0009365>
 <X=131.00000, Y= 40.10000, GMV=0.0009827>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=00|ses=0001|src=2-40|rup=001-01
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=col=00|ses=0001|src=2-40|rup=001-01
 <X=131.00000, Y= 40.00000, GMV=0.0001138>
 <X=131.00000, Y= 40.10000, GMV=0.0001653>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=trt=00|ses=0001|src=24-72|rup=002-01
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=col=00|ses=0001|src=24-72|rup=002-01
 <X=131.00000, Y= 40.00000, GMV=0.0005475>
 <X=131.00000, Y= 40.10000, GMV=0.0007085>))'''
 
@@ -412,11 +412,11 @@ class EventBasedHazardCase17TestCase(qa_utils.BaseQATestCase):
             rupture__ses_collection__trt_model__lt_model__hazard_calculation=j
         ).values_list('tag', flat=True)
 
-        t1_tags = [t for t in tags if t.startswith('trt=00')]
-        t2_tags = [t for t in tags if t.startswith('trt=01')]
-        t3_tags = [t for t in tags if t.startswith('trt=02')]
-        t4_tags = [t for t in tags if t.startswith('trt=03')]
-        t5_tags = [t for t in tags if t.startswith('trt=04')]
+        t1_tags = [t for t in tags if t.startswith('col=00')]
+        t2_tags = [t for t in tags if t.startswith('col=01')]
+        t3_tags = [t for t in tags if t.startswith('col=02')]
+        t4_tags = [t for t in tags if t.startswith('col=03')]
+        t5_tags = [t for t in tags if t.startswith('col=04')]
 
         self.assertEqual(len(t1_tags), 2742)
         self.assertEqual(len(t2_tags), 2761)
