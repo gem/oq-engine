@@ -234,11 +234,12 @@ class RlzsAssoc(collections.Mapping):
             self.rlzs_assoc, operator.itemgetter(0),
             lambda group: [valid.gsim(gsim) for trt_id, gsim in group])
 
-    def _add_realizations(self, idx, lt_model, realizations):
+    def _add_realizations(self, idx, lt_model, realizations, samples):
         gsims_by_trt = lt_model.gsim_lt.values
         rlzs = []
         for gsim_by_trt, weight, gsim_path, _ordinal, gsim_uid in realizations:
-            weight = float(lt_model.weight) * float(weight)
+            weight = (1. / samples / len(realizations) if samples else
+                      float(lt_model.weight) * float(weight))
             rlz = LtRealization(
                 idx, lt_model.path, gsim_path, weight, gsim_uid)
             rlzs.append(rlz)
@@ -395,7 +396,10 @@ class CompositeSourceModel(collections.Sequence):
             if rlzs:
                 logging.info('Creating %d realization(s) for model '
                              '%s, %s', len(rlzs), smodel.name, smodel.path)
-                idx = assoc._add_realizations(idx, smodel, rlzs)
+                idx = assoc._add_realizations(idx, smodel, rlzs, num_samples)
+        # sanity check
+        delta1 = abs(sum(rlz.weight for rlz in assoc.realizations) - 1)
+        assert delta1 < 1E-12, delta1
         return assoc
 
     def __repr__(self):
