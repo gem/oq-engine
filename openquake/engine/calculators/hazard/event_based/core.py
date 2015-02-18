@@ -389,7 +389,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         :param trt_model:
             :class:`openquake.engine.db.models.TrtModel` instance
         :param i:
-            an ordinal number starting from 1
+            an ordinal number starting from 0
         :returns:
             a :class:`openquake.engine.db.models.SESCollection` instance
         """
@@ -418,7 +418,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         for src in self.composite_model.sources:
             src.seed = rnd.randint(0, models.MAX_SINT_32)
         for i, trt_model in enumerate(models.TrtModel.objects.filter(
-                lt_model__hazard_calculation=self.job), 1):
+                lt_model__hazard_calculation=self.job)):
             self.initialize_ses_db_records(trt_model, i)
         return weights
 
