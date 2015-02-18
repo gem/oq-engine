@@ -170,10 +170,12 @@ def export_avgloss_csv(key, output, target):
     """
     dest = _get_result_export_dest(target, output)[:-3] + 'csv'
     data = output.loss_curve.losscurvedata_set.all().order_by('asset_ref')
+    header = ['lon', 'lat', 'asset_ref', 'asset_value', 'average_loss',
+              'stddev_loss', 'loss_type']
     rows = [(c.location.x, c.location.y, c.asset_ref, c.asset_value,
-             c.average_loss, c.stddev_loss or 'None') for c in data]
-    # NB: the loss type can be extracted from c.loss_curve.loss_type
-    writers.save_csv(dest, rows)
+             c.average_loss, c.stddev_loss or '', c.loss_curve.loss_type)
+            for c in data]
+    writers.save_csv(dest, [header] + rows)
     return dest
 
 
