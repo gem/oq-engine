@@ -413,15 +413,19 @@ class CompositeSourceModel(collections.Sequence):
                 logging.info('Creating %d realization(s) for model '
                              '%s, %s', len(rlzs), smodel.name, smodel.path)
                 idx = assoc._add_realizations(idx, smodel, rlzs)
-        # sanity check
+
         if assoc.realizations:
             if num_samples:
                 assert len(assoc.realizations) == num_samples
                 for rlz in assoc.realizations:
                     rlz.weight = 1. / num_samples
             else:
-                delta = abs(sum(rlz.weight for rlz in assoc.realizations) - 1)
-                assert delta < 1E-12, delta
+                tot_weight = sum(rlz.weight for rlz in assoc.realizations)
+                if tot_weight < 1:
+                    logging.warn('Some source models are not contributing, '
+                                 'weights are being rescaled')
+                for rlz in assoc.realizations:
+                    rlz.weight = rlz.weight / tot_weight
         return assoc
 
     def __repr__(self):
