@@ -130,6 +130,24 @@ class EventBasedTestCase(CalculatorTestCase):
             out['hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv'])
 
     @attr('qa', 'hazard', 'event_based')
+    def test_case_3(self):  # oversampling
+        out = self.run_calc(case_2.__file__, 'job_2.ini', exports='csv')
+        self.assertEqualFiles(
+            'expected/0-SadighEtAl1997.csv',
+            out['0-SadighEtAl1997.csv'], sorted)
+        self.assertEqualFiles(
+            'expected/1-SadighEtAl1997.csv',
+            out['1-SadighEtAl1997.csv'], sorted)
+        self.assertEqualFiles(
+            'expected/hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv',
+            out['hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv'])
+        # NB: we are testing that the file ltr_1.csv is equal to
+        # ltr_0.csv, as it should be for the hazard curves
+        self.assertEqualFiles(
+            'expected/hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv',
+            out['hazard_curve-smltp_b1-gsimltp_b1-ltr_1.csv'])
+
+    @attr('qa', 'hazard', 'event_based')
     def test_case_4(self):
         out = self.run_calc(case_4.__file__, 'job.ini', exports='csv')
         self.assertEqualFiles(

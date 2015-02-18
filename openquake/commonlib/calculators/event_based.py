@@ -157,7 +157,7 @@ class SESRupture(object):
 def get_ses_idx(sesrupture):
     """
     Extract the SES ordinal (>=1) from the rupture tag.
-    For instance 'trt=00|ses=0001|src=1|rup=001-01' => 1
+    For instance 'col=00|ses=0001|src=1|rup=001-01' => 1
     """
     return int(sesrupture.tag.split('|', 2)[1].split('=')[1])
 
@@ -222,7 +222,7 @@ def compute_ruptures(sources, sitecol, monitor):
             for ses_idx, num_occurrences in ses_num_occ[rup]:
                 for occ_no in range(1, num_occurrences + 1):
                     seed = rnd.randint(0, MAX_INT)
-                    tag = 'trt=%02d|ses=%04d|src=%s|rup=%03d-%02d' % (
+                    tag = 'col=%02d|ses=%04d|src=%s|rup=%03d-%02d' % (
                         trt_model_id, ses_idx, src.source_id, rup.rup_no,
                         occ_no)
                     sesruptures.append(
