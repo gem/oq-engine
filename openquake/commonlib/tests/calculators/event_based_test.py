@@ -141,6 +141,8 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv',
             out['hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv'])
+        # NB: we are testing that the file ltr_1.csv is equal to
+        # ltr_0.csv, as it should be for the hazard curves
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv',
             out['hazard_curve-smltp_b1-gsimltp_b1-ltr_1.csv'])
