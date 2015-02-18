@@ -125,7 +125,7 @@ def extract_ses_ordinal(tag):
     """
     Extract the SES ordinal from a tag. For instance
 
-    >>> extract_ses_ordinal('trt=01|ses=0002|src=A|rup=001-17')
+    >>> extract_ses_ordinal('col=01|ses=0002|src=A|rup=001-17')
     2
     """
     mo = re.search(r'\|ses=(\d+)\|', tag)
@@ -931,6 +931,7 @@ class SESCollection(djm.Model):
 
     @classmethod
     def create(cls, output):
+        # this is used in the tests
         """
         Create an LtSourceModel, a TrtModel and a SESCollection associated
         to it and to the given output.
@@ -1247,7 +1248,7 @@ class SESRupture(djm.Model):
         :param int seed:
             a seed that will be used when computing the GMF from the rupture
         """
-        tag = 'trt=%02d|ses=%04d|src=%s|rup=%03d-%02d' % (
+        tag = 'col=%02d|ses=%04d|src=%s|rup=%03d-%02d' % (
             prob_rupture.ses_collection.ordinal, ses_ordinal,
             source_id, rupt_no, rupt_occ)
         return cls.objects.create(
