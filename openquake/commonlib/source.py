@@ -421,7 +421,9 @@ class CompositeSourceModel(collections.Sequence):
                     rlz.weight = 1. / num_samples
             else:
                 tot_weight = sum(rlz.weight for rlz in assoc.realizations)
-                if tot_weight < 1:
+                if tot_weight == 0:
+                    raise ValueError('All realizations have zero weight??')
+                elif tot_weight < 1:
                     logging.warn('Some source models are not contributing, '
                                  'weights are being rescaled')
                 for rlz in assoc.realizations:
