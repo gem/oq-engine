@@ -111,7 +111,7 @@ class ClassicalCalculator(base.HazardCalculator):
         exports = oq.exports.split(',')
         for rlz in rlzs:
             smlt_path = '_'.join(rlz.sm_lt_path)
-            gsimlt_path = '_'.join(rlz.gsim_uid)
+            gsimlt_path = rlz.gsim_rlz.uid
             for fmt in exports:
                 fname = 'hazard_curve-smltp_%s-gsimltp_%s-ltr_%d.%s' % (
                     smlt_path, gsimlt_path, rlz.ordinal, fmt)
