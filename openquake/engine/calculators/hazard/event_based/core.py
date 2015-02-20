@@ -44,6 +44,8 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import FilteredSiteCollection
 
 from openquake.commonlib import valid
+from openquake.commonlib.calculators.event_based import (
+    sample_ruptures, filter_ruptures)
 
 from openquake.engine import writer
 from openquake.engine.calculators import calculators
@@ -124,7 +126,6 @@ def compute_ruptures(job_id, sources, sitecol):
     ses_coll = models.SESCollection.objects.get(trt_model=trt_model)
 
     hc = models.oqparam(job_id)
-    all_ses = range(1, hc.ses_per_logic_tree_path + 1)
     tot_ruptures = 0
 
     filter_sites_mon = LightMonitor(
@@ -148,44 +149,21 @@ def compute_ruptures(job_id, sources, sitecol):
             if s_sites is None:
                 continue
 
-        # the dictionary `ses_num_occ` contains [(ses, num_occurrences)]
-        # for each occurring rupture for each ses in the ses collection
-        ses_num_occ = collections.defaultdict(list)
-        # generating ruptures for the given source
         with generate_ruptures_mon:
-            for rup_no, rup in enumerate(src.iter_ruptures(), 1):
-                rup.rup_no = rup_no
-                for ses_idx in all_ses:
-                    numpy.random.seed(rnd.randint(0, models.MAX_SINT_32))
-                    num_occurrences = rup.sample_number_of_occurrences()
-                    if num_occurrences:
-                        ses_num_occ[rup].append((ses_idx, num_occurrences))
+            ses_num_occ = sample_ruptures(src, hc.ses_per_logic_tree_path, rnd)
 
-        # NB: the number of occurrences is very low, << 1, so it is
-        # more efficient to filter only the ruptures that occur, i.e.
-        # to call sample_number_of_occurrences() *before* the filtering
-        for rup in sorted(ses_num_occ, key=operator.attrgetter('rup_no')):
-            with filter_ruptures_mon:  # filtering ruptures
-                r_sites = filters.filter_sites_by_distance_to_rupture(
-                    rup, hc.maximum_distance, s_sites
-                    ) if hc.maximum_distance else s_sites
-                if r_sites is None:
-                    # ignore ruptures which are far away
-                    del ses_num_occ[rup]  # save memory
-                    continue
+        for rup, rups in filter_ruptures(
+                ses_num_occ, s_sites, hc.maximum_distance, sitecol,
+                rnd, src, filter_ruptures_mon):
 
             # saving ses_ruptures
             with save_ruptures_mon:
-                indices = r_sites.indices if len(r_sites) < len(sitecol) \
-                    else None  # None means that nothing was filtered
                 prob_rup = models.ProbabilisticRupture.create(
-                    rup, ses_coll, indices)
-                for ses_idx, num_occurrences in ses_num_occ[rup]:
-                    for occ_no in range(1, num_occurrences + 1):
-                        rup_seed = rnd.randint(0, models.MAX_SINT_32)
-                        models.SESRupture.create(
-                            prob_rup, ses_idx, src.source_id,
-                            rup.rup_no, occ_no, rup_seed)
+                    rup, ses_coll, rups[0].indices)
+                for rup in rups:
+                    models.SESRupture.objects.create(
+                        rupture=prob_rup, ses_id=rup.get_ses_idx(),
+                        tag=rup.tag, seed=rup.seed)
 
         if ses_num_occ:
             num_ruptures = len(ses_num_occ)
@@ -193,7 +171,7 @@ def compute_ruptures(job_id, sources, sitecol):
                                for ses, num in ses_num_occ[rup])
             tot_ruptures += occ_ruptures
         else:
-            num_ruptures = rup_no
+            num_ruptures = 0
             occ_ruptures = 0
 
         # save SourceInfo
@@ -202,7 +180,7 @@ def compute_ruptures(job_id, sources, sitecol):
                               source_id=src.source_id,
                               source_class=src.__class__.__name__,
                               num_sites=len(s_sites),
-                              num_ruptures=rup_no,
+                              num_ruptures=num_ruptures,
                               occ_ruptures=occ_ruptures,
                               uniq_ruptures=num_ruptures,
                               calc_time=time.time() - t0))
