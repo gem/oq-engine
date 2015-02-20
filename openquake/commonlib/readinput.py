@@ -408,7 +408,8 @@ python -m openquake.engine.tools.correct_complex_sources %s
                         "Found in %r a tectonic region type %r inconsistent "
                         "with the ones in %r" % (sm, trt_model.trt, fname))
                 trt_model.gsims = gsim_lt.values[trt_model.trt]
-
+        else:
+            gsim_lt = logictree.DummyGsimLogicTree()
         weight = (rlz.weight if oqparam.calculation_mode == 'event_based'
                   else rlz.weight / num_samples)
         yield source.SourceModel(

@@ -43,7 +43,8 @@ class SES(object):
         self.ordinal = ordinal
 
     def __iter__(self):
-        return iter(self.ruptures)
+        for sesrup in self.ruptures:
+            yield sesrup.export()
 
 
 class SESCollection(object):

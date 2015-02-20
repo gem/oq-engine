@@ -112,54 +112,51 @@ def get_geom(surface, is_from_fault_source, is_multi_surface):
 
 
 class SESRupture(object):
-    def __init__(self, rupture, site_indices, seed, tag, trt_model_id):
-        self.rupture = self
-        self.site_indices = site_indices
+    def __init__(self, rupture, indices, seed, tag, trt_model_id):
+        self.rupture = rupture
+        self.indices = indices
         self.seed = seed
         self.tag = tag
         self.trt_model_id = trt_model_id
 
-        self.is_from_fault_source = iffs = isinstance(
+    def export(self):
+        """
+        Return a new SESRupture object, with all the attributes set
+        suitable to export in XML format.
+        """
+        rupture = self.rupture
+        new = self.__class__(
+            rupture, self.indices, self.seed, self.tag, self.trt_model_id)
+        new.rupture = new
+        new.is_from_fault_source = iffs = isinstance(
             rupture.surface, (geo.ComplexFaultSurface, geo.SimpleFaultSurface))
-        self.is_multi_surface = ims = isinstance(
+        new.is_multi_surface = ims = isinstance(
             rupture.surface, geo.MultiSurface)
-        self.lons, self.lats, self.depths = get_geom(
+        new.lons, new.lats, new.depths = get_geom(
             rupture.surface, iffs, ims)
-        self.surface = rupture.surface
-        self.strike = rupture.surface.get_strike()
-        self.dip = rupture.surface.get_dip()
-        self.rake = rupture.rake
-        self.hypocenter = rupture.hypocenter
-        self.tectonic_region_type = rupture.tectonic_region_type
-        self.magnitude = self.mag = rupture.mag
+        new.surface = rupture.surface
+        new.strike = rupture.surface.get_strike()
+        new.dip = rupture.surface.get_dip()
+        new.rake = rupture.rake
+        new.hypocenter = rupture.hypocenter
+        new.tectonic_region_type = rupture.tectonic_region_type
+        new.magnitude = new.mag = rupture.mag
+        new.top_left_corner = None if iffs or ims else (
+            new.lons[0], new.lats[0], new.depths[0])
+        new.top_right_corner = None if iffs or ims else (
+            new.lons[1], new.lats[1], new.depths[1])
+        new.bottom_left_corner = None if iffs or ims else (
+            new.lons[2], new.lats[2], new.depths[2])
+        new.bottom_right_corner = None if iffs or ims else (
+            new.lons[3], new.lats[3], new.depths[3])
+        return new
 
-    @property
-    def top_left_corner(self):
-        if not (self.is_from_fault_source or self.is_multi_surface):
-            return self.lons[0], self.lats[0], self.depths[0]
-
-    @property
-    def top_right_corner(self):
-        if not (self.is_from_fault_source or self.is_multi_surface):
-            return self.lons[1], self.lats[1], self.depths[1]
-
-    @property
-    def bottom_left_corner(self):
-        if not (self.is_from_fault_source or self.is_multi_surface):
-            return self.lons[2], self.lats[2], self.depths[2]
-
-    @property
-    def bottom_right_corner(self):
-        if not (self.is_from_fault_source or self.is_multi_surface):
-            return self.lons[3], self.lats[3], self.depths[3]
-
-
-def get_ses_idx(sesrupture):
-    """
-    Extract the SES ordinal (>=1) from the rupture tag.
-    For instance 'col=00|ses=0001|src=1|rup=001-01' => 1
-    """
-    return int(sesrupture.tag.split('|', 2)[1].split('=')[1])
+    def get_ses_idx(self):
+        """
+        Extract the SES ordinal (>=1) from the rupture tag.
+        For instance 'col=00|ses=0001|src=1|rup=001-01' => 1
+        """
+        return int(self.tag.split('|', 2)[1].split('=')[1])
 
 
 def compute_ruptures(sources, sitecol, monitor):
@@ -177,7 +174,6 @@ def compute_ruptures(sources, sitecol, monitor):
     # sources of the same trt_model_id
     trt_model_id = sources[0].trt_model_id
     oq = monitor.oqparam
-    all_ses = range(1, oq.ses_per_logic_tree_path + 1)
     sesruptures = []
 
     # Compute and save stochastic event sets
@@ -192,25 +188,41 @@ def compute_ruptures(sources, sitecol, monitor):
         if s_sites is None:
             continue
 
-        # the dictionary `ses_num_occ` contains [(ses, num_occurrences)]
-        # for each occurring rupture for each ses in the ses collection
-        ses_num_occ = collections.defaultdict(list)
-        # generating ruptures for the given source
-        for rup_no, rup in enumerate(src.iter_ruptures(), 1):
-            rup.rup_no = rup_no
-            for ses_idx in all_ses:
-                numpy.random.seed(rnd.randint(0, MAX_INT))
-                num_occurrences = rup.sample_number_of_occurrences()
-                if num_occurrences:
-                    ses_num_occ[rup].append((ses_idx, num_occurrences))
-
+        ses_num_occ = sample_ruptures(src, oq.ses_per_logic_tree_path, rnd)
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
-        # to call sample_number_of_occurrences() *before* the filtering
+        # to call sample_ruptures *before* the filtering
+
+        for rup, rups in filter_ruptures(
+                ses_num_occ, s_sites, oq.maximum_distance, sitecol, rnd,
+                src, monitor):
+            sesruptures.extend(rups)
+
+    return {trt_model_id: sesruptures}
+
+
+def sample_ruptures(src, num_ses, rnd):
+    # the dictionary `ses_num_occ` contains [(ses, num_occurrences)]
+    # for each occurring rupture for each ses in the ses collection
+    ses_num_occ = collections.defaultdict(list)
+    # generating ruptures for the given source
+    for rup_no, rup in enumerate(src.iter_ruptures(), 1):
+        rup.rup_no = rup_no
+        for ses_idx in range(1, num_ses + 1):
+            numpy.random.seed(rnd.randint(0, MAX_INT))
+            num_occurrences = rup.sample_number_of_occurrences()
+            if num_occurrences:
+                ses_num_occ[rup].append((ses_idx, num_occurrences))
+    return ses_num_occ
+
+
+def filter_ruptures(
+        ses_num_occ, s_sites, maximum_distance, sitecol, rnd, src, monitor):
+    with monitor:
         for rup in sorted(ses_num_occ, key=operator.attrgetter('rup_no')):
             # filtering ruptures
             r_sites = filter_sites_by_distance_to_rupture(
-                rup, oq.maximum_distance, s_sites)
+                rup, maximum_distance, s_sites)
             if r_sites is None:
                 # ignore ruptures which are far away
                 del ses_num_occ[rup]  # save memory
@@ -219,16 +231,17 @@ def compute_ruptures(sources, sitecol, monitor):
                 else None  # None means that nothing was filtered
 
             # creating SESRuptures
+            sesruptures = []
             for ses_idx, num_occurrences in ses_num_occ[rup]:
                 for occ_no in range(1, num_occurrences + 1):
                     seed = rnd.randint(0, MAX_INT)
                     tag = 'col=%02d|ses=%04d|src=%s|rup=%03d-%02d' % (
-                        trt_model_id, ses_idx, src.source_id, rup.rup_no,
+                        src.trt_model_id, ses_idx, src.source_id, rup.rup_no,
                         occ_no)
                     sesruptures.append(
-                        SESRupture(rup, indices, seed, tag, trt_model_id))
-
-    return {trt_model_id: sesruptures}
+                        SESRupture(rup, indices, seed, tag, src.trt_model_id))
+            if sesruptures:
+                yield rup, sesruptures
 
 
 @base.calculators.add('event_based_rupture')
@@ -274,7 +287,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             for trt_model in smodel.trt_models:
                 sesruptures = result.get(trt_model.id, [])
                 ses_coll = SESCollection(
-                    groupby(sesruptures, get_ses_idx),
+                    groupby(sesruptures, SESRupture.get_ses_idx),
                     smodel.path, oq.investigation_time)
                 fname = 'ses-%d-smltp_%s.xml' % (
                     trt_model.id, smpath)
@@ -313,7 +326,7 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
     for rupture, group in itertools.groupby(
             ses_ruptures, operator.attrgetter('rupture')):
         sesruptures = list(group)
-        indices = sesruptures[0].site_indices
+        indices = sesruptures[0].indices
         r_sites = (sitecol if indices is None else
                    site.FilteredSiteCollection(indices, sitecol))
 
