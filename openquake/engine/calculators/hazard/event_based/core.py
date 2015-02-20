@@ -39,7 +39,7 @@ import collections
 
 import numpy.random
 
-from openquake.hazardlib.calc import gmf, filters
+from openquake.hazardlib.calc import gmf
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import FilteredSiteCollection
 
@@ -98,7 +98,7 @@ def gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
 
 
 @tasks.oqtask
-def compute_ruptures(job_id, sources, sitecol):
+def compute_ruptures(job_id, sources, sitecol, info):
     """
     Celery task for the stochastic event set calculator.
 
@@ -117,6 +117,8 @@ def compute_ruptures(job_id, sources, sitecol):
         List of commonlib.source.Source tuples
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
+    :param info:
+        a :class:`openquake.commonlib.source.CompositionInfo` instance
     :returns:
         a dictionary trt_model_id -> tot_ruptures
     """
@@ -150,12 +152,15 @@ def compute_ruptures(job_id, sources, sitecol):
                 continue
 
         with generate_ruptures_mon:
-            ses_num_occ = sample_ruptures(src, hc.ses_per_logic_tree_path, rnd)
+            num_occ_by_rup = sample_ruptures(
+                src, hc.ses_per_logic_tree_path, info, rnd)
 
-        for rup, rups in filter_ruptures(
-                ses_num_occ, s_sites, hc.maximum_distance, sitecol,
-                rnd, src, filter_ruptures_mon):
-
+        with filter_ruptures_mon:
+            pairs = list(
+                filter_ruptures(
+                    num_occ_by_rup, s_sites, hc.maximum_distance, sitecol,
+                    rnd, src))
+        for rup, rups in pairs:
             # saving ses_ruptures
             with save_ruptures_mon:
                 prob_rup = models.ProbabilisticRupture.create(
@@ -165,10 +170,10 @@ def compute_ruptures(job_id, sources, sitecol):
                         rupture=prob_rup, ses_id=rup.ses_idx,
                         tag=rup.tag, seed=rup.seed)
 
-        if ses_num_occ:
-            num_ruptures = len(ses_num_occ)
-            occ_ruptures = sum(num for rup in ses_num_occ
-                               for ses, num in ses_num_occ[rup])
+        if num_occ_by_rup:
+            num_ruptures = len(num_occ_by_rup)
+            occ_ruptures = sum(num for rup in num_occ_by_rup
+                               for num in num_occ_by_rup[rup].itervalues())
             tot_ruptures += occ_ruptures
         else:
             num_ruptures = 0
