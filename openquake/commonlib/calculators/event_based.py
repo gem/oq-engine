@@ -118,6 +118,9 @@ class SESRupture(object):
         self.seed = seed
         self.tag = tag
         self.trt_model_id = trt_model_id
+        # extract the SES ordinal (>=1) from the rupture tag
+        # for instance 'col=00|ses=0001|src=1|rup=001-01' => 1
+        self.ses_idx = int(tag.split('|')[1].split('=')[1])
 
     def export(self):
         """
@@ -151,20 +154,15 @@ class SESRupture(object):
             new.lons[3], new.lats[3], new.depths[3])
         return new
 
-    def get_ses_idx(self):
-        """
-        Extract the SES ordinal (>=1) from the rupture tag.
-        For instance 'col=00|ses=0001|src=1|rup=001-01' => 1
-        """
-        return int(self.tag.split('|', 2)[1].split('=')[1])
 
-
-def compute_ruptures(sources, sitecol, monitor):
+def compute_ruptures(sources, sitecol, info, monitor):
     """
     :param sources:
         List of commonlib.source.Source tuples
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
+    :param info:
+        a :class:`openquake.commonlib.source.CompositionInfo` instance
     :param monitor:
         monitor instance
     :returns:
@@ -188,60 +186,77 @@ def compute_ruptures(sources, sitecol, monitor):
         if s_sites is None:
             continue
 
-        ses_num_occ = sample_ruptures(src, oq.ses_per_logic_tree_path, rnd)
+        num_occ_by_rup = sample_ruptures(
+            src, oq.ses_per_logic_tree_path, info, rnd)
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
 
         for rup, rups in filter_ruptures(
-                ses_num_occ, s_sites, oq.maximum_distance, sitecol, rnd,
-                src, monitor):
+                num_occ_by_rup, s_sites, oq.maximum_distance,
+                sitecol, rnd, src):
             sesruptures.extend(rups)
 
     return {trt_model_id: sesruptures}
 
 
-def sample_ruptures(src, num_ses, rnd):
-    # the dictionary `ses_num_occ` contains [(ses, num_occurrences)]
-    # for each occurring rupture for each ses in the ses collection
-    ses_num_occ = collections.defaultdict(list)
+def sample_ruptures(src, num_ses, info, rnd):
+    """
+    Sample the ruptures contained in the given source.
+
+    :param src: a hazardlib source object
+    :param num_ses: the number of Stochastic Event Sets to generate
+    :param rnd: an instance of :class:`random.Random`
+    :param info: a :class:`openquake.commonlib.source.CompositionInfo` instance
+    :returns: a dictionary of dictionaries rupture ->
+              {(col_id, ses_id): num_occurrences}
+    """
+    # the dictionary `num_occ_by_rup` contains a dictionary
+    # (col_id, ses_id) -> num_occurrences
+    # for each occurring rupture
+    num_occ_by_rup = collections.defaultdict(AccumDict)
     # generating ruptures for the given source
     for rup_no, rup in enumerate(src.iter_ruptures(), 1):
         rup.rup_no = rup_no
-        for ses_idx in range(1, num_ses + 1):
-            numpy.random.seed(rnd.randint(0, MAX_INT))
-            num_occurrences = rup.sample_number_of_occurrences()
-            if num_occurrences:
-                ses_num_occ[rup].append((ses_idx, num_occurrences))
-    return ses_num_occ
+        for idx in range(info.get_num_samples(src.trt_model_id)):
+            col_id = info.get_col_id(src.trt_model_id, idx)
+            for ses_idx in range(1, num_ses + 1):
+                numpy.random.seed(rnd.randint(0, MAX_INT))
+                num_occurrences = rup.sample_number_of_occurrences()
+                if num_occurrences:
+                    num_occ_by_rup[rup] += {(col_id, ses_idx): num_occurrences}
+    return num_occ_by_rup
 
 
 def filter_ruptures(
-        ses_num_occ, s_sites, maximum_distance, sitecol, rnd, src, monitor):
-    with monitor:
-        for rup in sorted(ses_num_occ, key=operator.attrgetter('rup_no')):
-            # filtering ruptures
-            r_sites = filter_sites_by_distance_to_rupture(
-                rup, maximum_distance, s_sites)
-            if r_sites is None:
-                # ignore ruptures which are far away
-                del ses_num_occ[rup]  # save memory
-                continue
-            indices = r_sites.indices if len(r_sites) < len(sitecol) \
-                else None  # None means that nothing was filtered
+        num_occ_by_rup, s_sites, maximum_distance, sitecol, rnd, src):
+    """
+    Filter the ruptures stored in the dictionary num_occ_by_rup and
+    yield pairs (rupture, <list of associated SESRuptures>)
+    """
+    for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
+        # filtering ruptures
+        r_sites = filter_sites_by_distance_to_rupture(
+            rup, maximum_distance, s_sites)
+        if r_sites is None:
+            # ignore ruptures which are far away
+            del num_occ_by_rup[rup]  # save memory
+            continue
+        indices = r_sites.indices if len(r_sites) < len(sitecol) \
+            else None  # None means that nothing was filtered
 
-            # creating SESRuptures
-            sesruptures = []
-            for ses_idx, num_occurrences in ses_num_occ[rup]:
-                for occ_no in range(1, num_occurrences + 1):
-                    seed = rnd.randint(0, MAX_INT)
-                    tag = 'col=%02d|ses=%04d|src=%s|rup=%03d-%02d' % (
-                        src.trt_model_id, ses_idx, src.source_id, rup.rup_no,
-                        occ_no)
-                    sesruptures.append(
-                        SESRupture(rup, indices, seed, tag, src.trt_model_id))
-            if sesruptures:
-                yield rup, sesruptures
+        # creating SESRuptures
+        sesruptures = []
+        for (col_id, ses_idx), num_occ in sorted(
+                num_occ_by_rup[rup].iteritems()):
+            for occ_no in range(1, num_occ + 1):
+                seed = rnd.randint(0, MAX_INT)
+                tag = 'col=%02d|ses=%04d|src=%s|rup=%03d-%02d' % (
+                    col_id, ses_idx, src.source_id, rup.rup_no, occ_no)
+                sesruptures.append(
+                    SESRupture(rup, indices, seed, tag, src.trt_model_id))
+        if sesruptures:
+            yield rup, sesruptures
 
 
 @base.calculators.add('event_based_rupture')
@@ -263,16 +278,17 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
 
     def execute(self):
         """
-        Run in parallel `core_func(sources, sitecol, monitor)`, by
+        Run in parallel `core_func(sources, sitecol, info, monitor)`, by
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = self.oqparam
-        sources = list(self.composite_source_model.sources)
+        csm = self.composite_source_model
+        sources = list(csm.sources)
         result = parallel.apply_reduce(
             self.core_func.__func__,
-            (sources, self.sitecol, monitor),
+            (sources, self.sitecol, csm.info, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_model_id'))
@@ -287,7 +303,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             for trt_model in smodel.trt_models:
                 sesruptures = result.get(trt_model.id, [])
                 ses_coll = SESCollection(
-                    groupby(sesruptures, SESRupture.get_ses_idx),
+                    groupby(sesruptures, operator.attrgetter('ses_idx')),
                     smodel.path, oq.investigation_time)
                 fname = 'ses-%d-smltp_%s.xml' % (
                     trt_model.id, smpath)
