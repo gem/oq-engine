@@ -162,7 +162,7 @@ def compute_ruptures(job_id, sources, sitecol):
                     rup, ses_coll, rups[0].indices)
                 for rup in rups:
                     models.SESRupture.objects.create(
-                        rupture=prob_rup, ses_id=rup.get_ses_idx(),
+                        rupture=prob_rup, ses_id=rup.ses_idx,
                         tag=rup.tag, seed=rup.seed)
 
         if ses_num_occ:
