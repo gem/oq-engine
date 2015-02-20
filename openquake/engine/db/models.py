@@ -222,7 +222,7 @@ def build_curves(rlz, curves_by_trt_model_gsim):
     return curves
 
 
-## Tables in the 'hzrdi' (Hazard Input) schema.
+# Tables in the 'hzrdi' (Hazard Input) schema.
 
 class SiteModel(djm.Model):
     '''
@@ -1640,7 +1640,7 @@ class LtSourceModel(djm.Model):
         gsim_lt = logictree.GsimLogicTree(
             fname, 'applyToTectonicRegionType', trts)
         for trt in trts:
-            if not trt in gsim_lt.values:
+            if trt not in gsim_lt.values:
                 raise ValueError(
                     "Found in %r a tectonic region type %r inconsistent with "
                     "the ones in %r" % (self.sm_name, trt, fname))
