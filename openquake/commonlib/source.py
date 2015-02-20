@@ -357,10 +357,9 @@ class CompositionInfo(object):
         self._col_dict = {}  # dictionary trt_id, idx -> col_id
         self._num_samples = {}  # trt_id -> num_samples
         col_id = 0
-        trt_id = 0
         for sm in source_models:
             for trt_model in sm.trt_models:
-                trt_model.id = trt_id
+                trt_id = trt_model.id
                 if sm.samples > 1:
                     self.num_samples[trt_id] = sm.samples
                 for idx in range(sm.samples):
