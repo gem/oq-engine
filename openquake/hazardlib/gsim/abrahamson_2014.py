@@ -179,7 +179,7 @@ class AbrahamsonEtAl2014(GMPE):
 
     def _get_vs30star(self, vs30, imt):
         """
-        This computes equations 8 and 9 at page 1034 
+        This computes equations 8 and 9 at page 1034
         """
         # compute the v1 value (see eq. 9, page 1034)
         if isinstance(imt, SA):
