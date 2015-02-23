@@ -250,7 +250,8 @@ class RlzsAssoc(collections.Mapping):
         """Returns associations trt_id -> [GSIM instance, ...]"""
         return groupby(
             self.rlzs_assoc, operator.itemgetter(0),
-            lambda group: [valid.gsim(gsim) for trt_id, gsim in group])
+            lambda group: sorted(valid.gsim(gsim)
+                                 for trt_id, gsim in group))
 
     def _add_realizations(self, idx, lt_model, realizations):
         gsims_by_trt = lt_model.gsim_lt.values
@@ -348,6 +349,52 @@ class RlzsAssoc(collections.Mapping):
         return '{%s}' % '\n'.join('%s: %s' % pair for pair in pairs)
 
 
+class CompositionInfo(object):
+    """
+    An object to collect information about the composition of
+    a composite source model.
+    """
+    def __init__(self, source_models):
+        self._col_dict = {}  # dictionary trt_id, idx -> col_id
+        self._num_samples = {}  # trt_id -> num_samples
+        col_id = 0
+        for sm in source_models:
+            for trt_model in sm.trt_models:
+                trt_id = trt_model.id
+                if sm.samples > 1:
+                    self._num_samples[trt_id] = sm.samples
+                for idx in range(sm.samples):
+                    self._col_dict[trt_id, idx] = col_id
+                    col_id += 1
+                trt_id += 1
+
+    def get_num_samples(self, trt_id):
+        """
+        :param trt_id: tectonic region type object ID
+        :returns: how many times the sources of that TRT are to be sampled
+        """
+        return self._num_samples.get(trt_id, 1)
+
+    def get_col_id(self, trt_id, idx):
+        """
+        :param trt_id: tectonic region type object ID
+        :param idx: an integer index from 0 to num_samples
+        :returns: the SESCollection ordinal
+        """
+        return self._col_dict[trt_id, idx]
+
+    def get_trt_id(self, col_id):
+        """
+        :param col_id: the ordinal of a SESCollection
+        :returns: the ID of the associated TrtModel
+        """
+        for (trt_id, idx), cid in self._col_dict.iteritems():
+            if cid == col_id:
+                return trt_id
+        raise KeyError('There is no TrtModel associated to the collection %d!'
+                       % col_id)
+
+
 class CompositeSourceModel(collections.Sequence):
     """
     :param source_model_lt:
@@ -360,10 +407,7 @@ class CompositeSourceModel(collections.Sequence):
         self.source_models = list(source_models)
         if len(list(self.sources)) == 0:
             raise RuntimeError('All sources were filtered away')
-        self.tmdict = {}
-        for i, tm in enumerate(self.trt_models):
-            tm.id = i
-            self.tmdict[i] = tm
+        self.info = CompositionInfo(source_models)
 
     @property
     def trt_models(self):
