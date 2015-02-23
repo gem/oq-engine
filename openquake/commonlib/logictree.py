@@ -34,6 +34,7 @@ from collections import namedtuple
 from decimal import Decimal
 from lxml import etree
 
+from openquake.baselib.general import groupby
 from openquake.commonlib import nrml, valid
 from openquake.commonlib.node import node_from_xml
 
@@ -47,6 +48,24 @@ MAX_SINT_32 = (2 ** 31) - 1
 
 Realization = namedtuple('Realization', 'value weight lt_path ordinal lt_uid')
 Realization.uid = property(lambda self: '_'.join(self.lt_uid))  # unique ID
+
+
+def get_effective_rlzs(rlzs):
+    """
+    Group together realizations with the same unique identifier (uid)
+    and yield the first representative of each group.
+    """
+    effective = []
+    ordinal = 0
+    for uid, group in groupby(rlzs, operator.attrgetter('uid')).iteritems():
+        rlz = group[0]
+        if all(path == '*' for path in rlz.lt_uid):  # empty realization
+            continue
+        effective.append(
+            Realization(rlz.value, sum(r.weight for r in group),
+                        rlz.lt_path, ordinal, rlz.lt_uid))
+        ordinal += 1
+    return effective
 
 
 class LogicTreeError(Exception):
@@ -1125,3 +1144,15 @@ class GsimLogicTree(object):
                                     b.id, b.uncertainty, b.weight)
                  for b in self.branches if b.effective]
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(lines))
+
+
+class DummyGsimLogicTree(object):
+    """
+    A dummy GSIM logic tree object containing a single realization
+    """
+    def get_num_paths(self):
+        """Return 1"""
+        return 1
+
+    def __iter__(self):
+        yield Realization({}, 1, (), 0, ())

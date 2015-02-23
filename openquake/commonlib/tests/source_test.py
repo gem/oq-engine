@@ -626,16 +626,17 @@ class TrtModelTestCase(unittest.TestCase):
     def test_repr(self):
         self.assertEqual(
             repr(self.source_collector['Volcanic']),
-            '<TrtModel #0 Volcanic, 3 source(s)>')
+            '<TrtModel #0 Volcanic, 3 source(s), 0 rupture(s)>')
         self.assertEqual(
             repr(self.source_collector['Stable Continental Crust']),
-            '<TrtModel #0 Stable Continental Crust, 1 source(s)>')
+            '<TrtModel #0 Stable Continental Crust, 1 source(s), 0 rupture(s)>'
+        )
         self.assertEqual(
             repr(self.source_collector['Subduction Interface']),
-            '<TrtModel #0 Subduction Interface, 1 source(s)>')
+            '<TrtModel #0 Subduction Interface, 1 source(s), 0 rupture(s)>')
         self.assertEqual(
             repr(self.source_collector['Active Shallow Crust']),
-            '<TrtModel #0 Active Shallow Crust, 2 source(s)>')
+            '<TrtModel #0 Active Shallow Crust, 2 source(s), 0 rupture(s)>')
 
 
 class RuptureConverterTestCase(unittest.TestCase):
@@ -697,11 +698,14 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
                          {'Subduction Interface': 'SadighEtAl1997',
                           'Active Shallow Crust': 'ChiouYoungs2008'})
         # ignoring the end of the tuple, with the uid field
-        self.assertEqual(rlz[:4], (0, ('b1', 'b5', 'b8'), ('b2', 'b3'), 0.5))
+        self.assertEqual(rlz.ordinal, 0)
+        self.assertEqual(rlz.sm_lt_path, ('b1', 'b5', 'b8'))
+        self.assertEqual(rlz.gsim_lt_path, ('b2', 'b3'))
+        self.assertEqual(rlz.weight, 1.)
         self.assertEqual(
             str(assoc),
-            "{0,SadighEtAl1997: ['<0,b1_b5_b8,b2_b3,w=0.5>']\n"
-            "1,ChiouYoungs2008: ['<0,b1_b5_b8,b2_b3,w=0.5>']}")
+            "{0,SadighEtAl1997: ['<0,b1_b5_b8,b2_b3,w=1.0>']\n"
+            "1,ChiouYoungs2008: ['<0,b1_b5_b8,b2_b3,w=1.0>']}")
 
     def test_many_rlzs(self):
         oqparam = tests.get_oqparam('classical_job.ini')
@@ -722,6 +726,7 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
             if trt_model.trt == 'Active Shallow Crust':  # no ruptures
                 trt_model.num_ruptures = 0
         assoc = csm.get_rlzs_assoc()
+
         expected_assoc = """\
 {0,SadighEtAl1997: ['<0,b1_b3_b6,*_b3,w=0.04>']
 1,SadighEtAl1997: ['<0,b1_b3_b6,*_b3,w=0.04>']
@@ -761,12 +766,10 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         args = warn.call_args[0]
         msg = args[0] % args[1:]
         self.assertEqual(
-            msg, "The logic tree path ('b2',) was sampled 4 times")
+            msg, "The source path ('b2',) was sampled 4 times")
         assoc = csm.get_rlzs_assoc()
         self.assertEqual(
             str(assoc),
-            "{0,SadighEtAl1997: ['<0,b2,b1,w=0.2>']\n"
-            "1,SadighEtAl1997: ['<1,b2,b1,w=0.2>']\n"
-            "2,SadighEtAl1997: ['<2,b1,b1,w=0.2>']\n"
-            "3,SadighEtAl1997: ['<3,b2,b1,w=0.2>']\n"
-            "4,SadighEtAl1997: ['<4,b2,b1,w=0.2>']}")
+            "{0,SadighEtAl1997: ['<0,b1,b1,w=0.2>']\n"
+            "1,SadighEtAl1997: ['<1,b2,b1,w=0.2>', '<2,b2,b1,w=0.2>', "
+            "'<3,b2,b1,w=0.2>', '<4,b2,b1,w=0.2>']}")

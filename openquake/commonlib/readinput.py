@@ -106,10 +106,10 @@ def extract_from_zip(path, detect_file):
 
 def get_params(job_inis):
     """
-    Parse a dictionary of parameters from one or more INI-style config file.
+    Parse one or more INI-style config files.
 
     :param job_inis:
-        List of configuration files, or zip archive
+        List of configuration files (or list containing a single zip archive)
     :returns:
         A dictionary of parameters
     """
@@ -121,8 +121,7 @@ def get_params(job_inis):
     cp.read(job_inis)
 
     # drectory containing the config files we're parsing
-    base_path = os.path.dirname(
-        os.path.join(os.path.abspath('.'), job_inis[0]))
+    base_path = os.path.dirname(os.path.abspath(job_inis[0]))
     params = dict(base_path=base_path, inputs={'job_ini': ','.join(job_inis)})
 
     for sect in cp.sections():
@@ -144,12 +143,14 @@ def get_params(job_inis):
     return params
 
 
-def get_oqparam(job_ini, calculators=None):
+def get_oqparam(job_ini, pkg=None, calculators=None):
     """
     Parse a dictionary of parameters from one or more INI-style config file.
 
     :param job_ini:
         Path to configuration file/archive or dictionary of parameters
+    :param pkg:
+        Python package where to find the configuration file (optional)
     :param calculators:
         Sequence of calculator names (optional) used to restrict the
         valid choices for `calculation_mode`
@@ -169,7 +170,9 @@ def get_oqparam(job_ini, calculators=None):
     if isinstance(job_ini, dict):
         oqparam = OqParam(**job_ini)
     else:
-        oqparam = OqParam(**get_params(job_ini.split(',')))
+        basedir = os.path.dirname(pkg.__file__) if pkg else ''
+        inis = [os.path.join(basedir, ini) for ini in job_ini.split(',')]
+        oqparam = OqParam(**get_params(inis))
 
     oqparam.validate()
     return oqparam
@@ -365,14 +368,18 @@ def get_source_models(oqparam, source_model_lt, sitecol=None):
         oqparam.complex_fault_mesh_spacing,
         oqparam.width_of_mfd_bin,
         getattr(oqparam, 'area_source_discretization', None))
-    samples_by_lt_path = source_model_lt.samples_by_lt_path()
 
-    for i, rlz in enumerate(source_model_lt):
+    if oqparam.calculation_mode == 'event_based':
+        rlzs = list(source_model_lt)  # consider all realizations
+    else:  # consider only the effective realizations
+        rlzs = logictree.get_effective_rlzs(source_model_lt)
+    samples_by_lt_path = source_model_lt.samples_by_lt_path()
+    for i, rlz in enumerate(rlzs):
         sm = rlz.value  # name of the source model
         smpath = rlz.lt_path
         num_samples = samples_by_lt_path[smpath]
         if num_samples > 1:
-            logging.warn('The logic tree path %s was sampled %d times',
+            logging.warn('The source path %s was sampled %d times',
                          smpath, num_samples)
         fname = possibly_gunzip(os.path.join(oqparam.base_path, sm))
         apply_unc = source_model_lt.make_apply_uncertainties(smpath)
@@ -401,10 +408,13 @@ python -m openquake.engine.tools.correct_complex_sources %s
                         "Found in %r a tectonic region type %r inconsistent "
                         "with the ones in %r" % (sm, trt_model.trt, fname))
                 trt_model.gsims = gsim_lt.values[trt_model.trt]
-        # the num_ruptures is not updated; it will be updated in the
-        # engine, after filtering of the sources
+        else:
+            gsim_lt = logictree.DummyGsimLogicTree()
+        weight = (rlz.weight if oqparam.calculation_mode == 'event_based'
+                  else rlz.weight / num_samples)
         yield source.SourceModel(
-            sm, rlz.weight, smpath, trt_models, gsim_lt, i)
+            sm, weight, smpath, trt_models, gsim_lt, i,
+            1 if oqparam.calculation_mode == 'event_based' else num_samples)
 
 
 def get_filtered_source_models(oqparam, source_model_lt, sitecol):

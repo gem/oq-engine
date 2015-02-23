@@ -28,7 +28,7 @@ from openquake.hazardlib.geo import geodetic
 
 from openquake.baselib import general
 from openquake.commonlib import readinput
-from openquake.commonlib.parallel import apply_reduce, DummyMonitor
+from openquake.commonlib.parallel import apply_reduce, DummyMonitor, executor
 from openquake.risklib import workflows
 
 get_taxonomy = operator.attrgetter('taxonomy')
@@ -52,6 +52,10 @@ class BaseCalculator(object):
     def __init__(self, oqparam, monitor=DummyMonitor()):
         self.oqparam = oqparam
         self.monitor = monitor
+        if not hasattr(oqparam, 'concurrent_tasks'):
+            oqparam.concurrent_tasks = executor.num_tasks_hint
+        if not hasattr(oqparam, 'usecache'):
+            oqparam.usecache = False
 
     def run(self):
         """
@@ -121,11 +125,12 @@ class HazardCalculator(BaseCalculator):
             self.rlzs_assoc = workflows.FakeRlzsAssoc(len(self.gsims))
 
 
-def get_hazard(calculator):
+def get_hazard(calculator, post_execute=False):
     """
     Get the hazard from a calculator, possibly by using cached results
 
     :param calculator: a calculator with a .hazard_calculator attribute
+    :returns: a pair (hazard output, hazard_calculator)
     """
     cache = os.path.join(calculator.oqparam.export_dir, 'hazard.pik')
     if calculator.oqparam.usecache:
@@ -136,12 +141,16 @@ def get_hazard(calculator):
             calculator.oqparam, calculator.monitor('hazard'))
         hcalc.pre_execute()
         result = hcalc.execute()
+        if post_execute:
+            for item in sorted(hcalc.post_execute(result).iteritems()):
+                logging.info('exported %s: %s', *item)
+
         haz_out = dict(result=result, rlzs_assoc=hcalc.rlzs_assoc,
                        sitecol=hcalc.sitecol)
         logging.info('Saving hazard output on %s', cache)
         with open(cache, 'w') as f:
             cPickle.dump(haz_out, f)
-    return haz_out
+    return haz_out, hcalc
 
 
 class RiskCalculator(BaseCalculator):
