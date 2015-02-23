@@ -372,7 +372,11 @@ class EventBasedHazardCase17TestCase(qa_utils.BaseQATestCase):
     @attr('qa', 'hazard', 'event_based')
     def test(self):
         cfg = os.path.join(os.path.dirname(case_17.__file__), 'job.ini')
-        expected_curves_pga = [[1.0, 1.0, 0.0]]
+        expected_curves_pga = [[1.0, 1.0, 0.0],
+                               [1.0, 1.0, 0.0],
+                               [0.0, 0.0, 0.0],
+                               [1.0, 1.0, 0.0],
+                               [1.0, 1.0, 0.0]]
 
         job = self.run_hazard(cfg)
         j = job.id
@@ -386,11 +390,11 @@ class EventBasedHazardCase17TestCase(qa_utils.BaseQATestCase):
         t4_tags = [t for t in tags if t.startswith('col=03')]
         t5_tags = [t for t in tags if t.startswith('col=04')]
 
-        self.assertEqual(len(t1_tags), 2761)
-        self.assertEqual(len(t2_tags), 2724)
-        self.assertEqual(len(t3_tags), 2735)
-        self.assertEqual(len(t4_tags), 2725)
-        self.assertEqual(len(t5_tags), 0)
+        self.assertEqual(len(t1_tags), 2742)
+        self.assertEqual(len(t2_tags), 2761)
+        self.assertEqual(len(t3_tags), 1)
+        self.assertEqual(len(t4_tags), 2735)
+        self.assertEqual(len(t5_tags), 2725)
 
         curves = [c.poes for c in models.HazardCurveData.objects.filter(
             hazard_curve__output__oq_job=job.id, hazard_curve__imt='PGA'
