@@ -206,8 +206,8 @@ def sample_ruptures(src, num_ses, info, rnd):
 
     :param src: a hazardlib source object
     :param num_ses: the number of Stochastic Event Sets to generate
-    :param rnd: an instance of :class:`random.Random`
     :param info: a :class:`openquake.commonlib.source.CompositionInfo` instance
+    :param rnd: an instance of :class:`random.Random`
     :returns: a dictionary of dictionaries rupture ->
               {(col_id, ses_id): num_occurrences}
     """
