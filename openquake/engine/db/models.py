@@ -47,7 +47,6 @@ from openquake.commonlib.riskmodels import loss_type_to_cost_type
 from openquake.commonlib.readinput import get_mesh
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import logictree, valid
-from openquake.commonlib.calculators.event_based import get_geom
 
 from openquake.engine.db import fields
 from openquake.engine import writer, logs, utils
@@ -223,7 +222,7 @@ def build_curves(rlz, curves_by_trt_model_gsim):
     return curves
 
 
-## Tables in the 'hzrdi' (Hazard Input) schema.
+# Tables in the 'hzrdi' (Hazard Input) schema.
 
 class SiteModel(djm.Model):
     '''
@@ -932,6 +931,7 @@ class SESCollection(djm.Model):
 
     @classmethod
     def create(cls, output):
+        # this is used in the tests
         """
         Create an LtSourceModel, a TrtModel and a SESCollection associated
         to it and to the given output.
@@ -1004,6 +1004,74 @@ class SES(object):
         return SESRupture.objects.filter(
             rupture__ses_collection=self.ses_collection.id,
             ses_id=self.ordinal).order_by('tag').iterator()
+
+
+def get_geom(surface, is_from_fault_source, is_multi_surface):
+    """
+    The following fields can be interpreted different ways,
+    depending on the value of `is_from_fault_source`. If
+    `is_from_fault_source` is True, each of these fields should
+    contain a 2D numpy array (all of the same shape). Each triple
+    of (lon, lat, depth) for a given index represents the node of
+    a rectangular mesh. If `is_from_fault_source` is False, each
+    of these fields should contain a sequence (tuple, list, or
+    numpy array, for example) of 4 values. In order, the triples
+    of (lon, lat, depth) represent top left, top right, bottom
+    left, and bottom right corners of the the rupture's planar
+    surface. Update: There is now a third case. If the rupture
+    originated from a characteristic fault source with a
+    multi-planar-surface geometry, `lons`, `lats`, and `depths`
+    will contain one or more sets of 4 points, similar to how
+    planar surface geometry is stored (see above).
+
+    :param rupture: an instance of :class:
+    `openquake.hazardlib.source.rupture.BaseProbabilisticRupture`
+
+    :param is_from_fault_source: a boolean
+    :param is_multi_surface: a boolean
+    """
+    if is_from_fault_source:
+        # for simple and complex fault sources,
+        # rupture surface geometry is represented by a mesh
+        surf_mesh = surface.get_mesh()
+        lons = surf_mesh.lons
+        lats = surf_mesh.lats
+        depths = surf_mesh.depths
+    else:
+        if is_multi_surface:
+            # `list` of
+            # openquake.hazardlib.geo.surface.planar.PlanarSurface
+            # objects:
+            surfaces = surface.surfaces
+
+            # lons, lats, and depths are arrays with len == 4*N,
+            # where N is the number of surfaces in the
+            # multisurface for each `corner_*`, the ordering is:
+            #   - top left
+            #   - top right
+            #   - bottom left
+            #   - bottom right
+            lons = numpy.concatenate([x.corner_lons for x in surfaces])
+            lats = numpy.concatenate([x.corner_lats for x in surfaces])
+            depths = numpy.concatenate([x.corner_depths for x in surfaces])
+        else:
+            # For area or point source,
+            # rupture geometry is represented by a planar surface,
+            # defined by 3D corner points
+            lons = numpy.zeros((4))
+            lats = numpy.zeros((4))
+            depths = numpy.zeros((4))
+
+            # NOTE: It is important to maintain the order of these
+            # corner points. TODO: check the ordering
+            for i, corner in enumerate((surface.top_left,
+                                        surface.top_right,
+                                        surface.bottom_left,
+                                        surface.bottom_right)):
+                lons[i] = corner.longitude
+                lats[i] = corner.latitude
+                depths[i] = corner.depth
+    return lons, lats, depths
 
 
 class ProbabilisticRupture(djm.Model):
@@ -1160,31 +1228,6 @@ class SESRupture(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"ses_rupture'
         ordering = ['tag']
-
-    @classmethod
-    def create(cls, prob_rupture, ses_ordinal, source_id, rupt_no, rupt_occ,
-               seed):
-        """
-        Create a SESRupture row in the database.
-
-        :param prob_rupture:
-            :class:`openquake.engine.db.models.ProbabilisticRupture` instance
-        :param int ses_ordinal:
-            ordinal for a :class:`openquake.engine.db.models.SES` instance
-        :param str source_id:
-            id of the source that generated the rupture
-        :param rupt_no:
-            the rupture number (an ordinal from source.iter_ruptures())
-        :param rupt_occ:
-            the occurrence number of the rupture in the given ses
-        :param int seed:
-            a seed that will be used when computing the GMF from the rupture
-        """
-        tag = 'col=%02d|ses=%04d|src=%s|rup=%03d-%02d' % (
-            prob_rupture.ses_collection.ordinal, ses_ordinal,
-            source_id, rupt_no, rupt_occ)
-        return cls.objects.create(
-            rupture=prob_rupture, ses_id=ses_ordinal, tag=tag, seed=seed)
 
     @property
     def surface(self):
@@ -1597,7 +1640,7 @@ class LtSourceModel(djm.Model):
         gsim_lt = logictree.GsimLogicTree(
             fname, 'applyToTectonicRegionType', trts)
         for trt in trts:
-            if not trt in gsim_lt.values:
+            if trt not in gsim_lt.values:
                 raise ValueError(
                     "Found in %r a tectonic region type %r inconsistent with "
                     "the ones in %r" % (self.sm_name, trt, fname))
