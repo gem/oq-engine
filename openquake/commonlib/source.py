@@ -250,7 +250,8 @@ class RlzsAssoc(collections.Mapping):
         """Returns associations trt_id -> [GSIM instance, ...]"""
         return groupby(
             self.rlzs_assoc, operator.itemgetter(0),
-            lambda group: [valid.gsim(gsim) for trt_id, gsim in group])
+            lambda group: sorted(valid.gsim(gsim)
+                                 for trt_id, gsim in group))
 
     def _add_realizations(self, idx, lt_model, realizations):
         gsims_by_trt = lt_model.gsim_lt.values
