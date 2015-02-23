@@ -21,6 +21,7 @@ import tempfile
 from nose.plugins.attrib import attr
 from openquake.engine.db import models
 from openquake.engine.utils import config
+from openquake.engine.export import core
 from qa_tests import _utils as qa_utils
 from qa_tests.hazard.event_based import sc_utils
 from openquake.qa_tests_data.event_based import (
@@ -210,9 +211,21 @@ class EventBasedHazardCase2TestCase(qa_utils.BaseQATestCase):
         result_dir = tempfile.mkdtemp()
 
         cfg = os.path.join(os.path.dirname(case_2.__file__), 'job.ini')
-        expected_curve_poes = [0.0085348, 0., 0., 0.]
+        expected_gmf = os.path.join(os.path.dirname(case_2.__file__),
+                                    'expected', '0-SadighEtAl1997.csv')
+
+        expected_curve_poes = [0.00853479861, 0., 0., 0.]
 
         job = self.run_hazard(cfg)
+
+        # Test the GMF exported values
+        gmf_output = models.Output.objects.get(
+            output_type='gmf', oq_job=job)
+
+        fname = core.export(gmf_output.id, result_dir, 'csv')
+        gotlines = sorted(open(fname).readlines())
+        expected = sorted(open(expected_gmf).readlines())
+        self.assertEqual(gotlines, expected)
 
         # Test the poe values of the single curve:
         [actual_curve] = models.HazardCurveData.objects.filter(
@@ -367,11 +380,11 @@ class EventBasedHazardCase17TestCase(qa_utils.BaseQATestCase):
             rupture__ses_collection__trt_model__lt_model__hazard_calculation=j
         ).values_list('tag', flat=True)
 
-        t1_tags = [t for t in tags if t.startswith('col=01')]
-        t2_tags = [t for t in tags if t.startswith('col=02')]
-        t3_tags = [t for t in tags if t.startswith('col=03')]
-        t4_tags = [t for t in tags if t.startswith('col=04')]
-        t5_tags = [t for t in tags if t.startswith('col=05')]
+        t1_tags = [t for t in tags if t.startswith('col=00')]
+        t2_tags = [t for t in tags if t.startswith('col=01')]
+        t3_tags = [t for t in tags if t.startswith('col=02')]
+        t4_tags = [t for t in tags if t.startswith('col=03')]
+        t5_tags = [t for t in tags if t.startswith('col=04')]
 
         self.assertEqual(len(t1_tags), 2761)
         self.assertEqual(len(t2_tags), 2724)

@@ -163,6 +163,22 @@ def export_loss_curve_xml(key, output, target):
     return dest
 
 
+@core.export_output.add(('loss_curve', 'csv'))
+def export_avgloss_csv(key, output, target):
+    """
+    Export `output` to `target` in csv format for a given loss type
+    """
+    dest = _get_result_export_dest(target, output)[:-3] + 'csv'
+    data = output.loss_curve.losscurvedata_set.all().order_by('asset_ref')
+    header = ['lon', 'lat', 'asset_ref', 'asset_value', 'average_loss',
+              'stddev_loss', 'loss_type']
+    rows = [(c.location.x, c.location.y, c.asset_ref, c.asset_value,
+             c.average_loss, c.stddev_loss or '', c.loss_curve.loss_type)
+            for c in data]
+    writers.save_csv(dest, [header] + rows)
+    return dest
+
+
 @core.export_output.add(('loss_map', 'xml'), ('loss_map', 'geojson'))
 def export_loss_map(key, output, target):
     """
