@@ -222,7 +222,7 @@ def build_curves(rlz, curves_by_trt_model_gsim):
     return curves
 
 
-## Tables in the 'hzrdi' (Hazard Input) schema.
+# Tables in the 'hzrdi' (Hazard Input) schema.
 
 class SiteModel(djm.Model):
     '''
@@ -1229,31 +1229,6 @@ class SESRupture(djm.Model):
         db_table = 'hzrdr\".\"ses_rupture'
         ordering = ['tag']
 
-    @classmethod
-    def create(cls, prob_rupture, ses_ordinal, source_id, rupt_no, rupt_occ,
-               seed):
-        """
-        Create a SESRupture row in the database.
-
-        :param prob_rupture:
-            :class:`openquake.engine.db.models.ProbabilisticRupture` instance
-        :param int ses_ordinal:
-            ordinal for a :class:`openquake.engine.db.models.SES` instance
-        :param str source_id:
-            id of the source that generated the rupture
-        :param rupt_no:
-            the rupture number (an ordinal from source.iter_ruptures())
-        :param rupt_occ:
-            the occurrence number of the rupture in the given ses
-        :param int seed:
-            a seed that will be used when computing the GMF from the rupture
-        """
-        tag = 'col=%02d|ses=%04d|src=%s|rup=%03d-%02d' % (
-            prob_rupture.ses_collection.ordinal, ses_ordinal,
-            source_id, rupt_no, rupt_occ)
-        return cls.objects.create(
-            rupture=prob_rupture, ses_id=ses_ordinal, tag=tag, seed=seed)
-
     @property
     def surface(self):
         """The surface of the underlying rupture"""
@@ -1665,7 +1640,7 @@ class LtSourceModel(djm.Model):
         gsim_lt = logictree.GsimLogicTree(
             fname, 'applyToTectonicRegionType', trts)
         for trt in trts:
-            if not trt in gsim_lt.values:
+            if trt not in gsim_lt.values:
                 raise ValueError(
                     "Found in %r a tectonic region type %r inconsistent with "
                     "the ones in %r" % (self.sm_name, trt, fname))
