@@ -361,7 +361,7 @@ class CompositionInfo(object):
             for trt_model in sm.trt_models:
                 trt_id = trt_model.id
                 if sm.samples > 1:
-                    self.num_samples[trt_id] = sm.samples
+                    self._num_samples[trt_id] = sm.samples
                 for idx in range(sm.samples):
                     self._col_dict[trt_id, idx] = col_id
                     col_id += 1
