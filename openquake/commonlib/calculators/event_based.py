@@ -313,6 +313,9 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
 
 # ######################## GMF calculator ############################ #
 
+GmfsCurves = collections.namedtuple('GmfsCurves', 'gmfs curves')
+
+
 def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
     """
     :param ses_ruptures:
@@ -326,7 +329,7 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
     :returns:
         a dictionary trt_model_id -> curves_by_gsim
         where the list of bounding boxes is empty
-    """
+   """
     oq = monitor.oqparam
 
     # NB: by construction each block is a non-empty list with
@@ -337,7 +340,7 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
     trunc_level = getattr(oq, 'truncation_level', None)
     correl_model = readinput.get_correl_model(oq)
 
-    result = AccumDict({(trt_id, str(gsim)): ([], AccumDict())
+    result = AccumDict({(trt_id, str(gsim)): GmfsCurves([], AccumDict())
                         for gsim in gsims})
     for rupture, group in itertools.groupby(
             ses_ruptures, operator.attrgetter('rupture')):
@@ -353,7 +356,7 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
                 gmf_by_imt = AccumDict(gmvs)
                 gmf_by_imt.tag = sr.tag
                 gmf_by_imt.r_sites = r_sites
-                result[trt_id, gsim_str][0].append(gmf_by_imt)
+                result[trt_id, gsim_str].gmfs.append(gmf_by_imt)
     if getattr(oq, 'hazard_curves_from_gmfs', None):
         duration = oq.investigation_time * oq.ses_per_logic_tree_path
         for gsim in gsims:
