@@ -32,7 +32,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.engine.db import models
 
 from openquake.baselib import general
-from openquake.commonlib import readinput, risk_parsers
+from openquake.commonlib import readinput, risk_parsers, source
 from openquake.commonlib.readinput import (
     get_site_collection, get_site_model)
 
@@ -143,10 +143,10 @@ class BaseHazardCalculator(base.Calculator):
         Run the `.core_calc_task` in parallel, by using the apply_reduce
         distribution, but it can be overridden in subclasses.
         """
+        csm = self.composite_model
         self.acc = tasks.apply_reduce(
             self.core_calc_task,
-            (self.job.id, list(self.composite_model.sources),
-             self.site_collection),
+            (self.job.id, list(csm.sources), self.site_collection, csm.info),
             agg=self.agg_curves, acc=self.acc,
             weight=attrgetter('weight'), key=attrgetter('trt_model_id'))
 
@@ -272,6 +272,9 @@ class BaseHazardCalculator(base.Calculator):
                     min_mag=trt_mod.min_mag,
                     max_mag=trt_mod.max_mag,
                     gsims=gsims_by_trt[trt_mod.trt]).id
+        # rebuild the info object with the trt_ids coming from the db
+        self.composite_model.info = source.CompositionInfo(
+            self.composite_model.source_models)
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_model(self):
@@ -324,18 +327,19 @@ class BaseHazardCalculator(base.Calculator):
         logs.LOG.progress("initializing realizations")
         cm = self.composite_model
         self._realizations = []
-        rlzs_assoc = cm.get_rlzs_assoc(
+        self.rlzs_assoc = cm.get_rlzs_assoc(
             lambda trt_model: models.TrtModel.objects.get(
                 pk=trt_model.id).num_ruptures)
-        gsims_by_trt_id = rlzs_assoc.get_gsims_by_trt_id()
+        gsims_by_trt_id = self.rlzs_assoc.get_gsims_by_trt_id()
         smodels = [sm for sm in self._source_models
                    if sm.trtmodel_set.filter(num_ruptures__gt=0)]
-        for lt_model, rlzs in zip(smodels, rlzs_assoc.rlzs_by_smodel):
+        for lt_model, rlzs in zip(smodels, self.rlzs_assoc.rlzs_by_smodel):
             for rlz in rlzs:
-                gsim_by_trt = rlzs_assoc.gsim_by_trt[rlz]
+                gsim_by_trt = self.rlzs_assoc.gsim_by_trt[rlz]
                 lt_rlz = models.LtRealization.objects.create(
                     lt_model=lt_model, gsim_lt_path=rlz.gsim_rlz.lt_uid,
                     weight=rlz.weight, ordinal=rlz.ordinal)
+                rlz.id = lt_rlz.id
                 self._realizations.append(lt_rlz)
                 for trt_model in lt_model.trtmodel_set.all():
                     trt = trt_model.tectonic_region_type

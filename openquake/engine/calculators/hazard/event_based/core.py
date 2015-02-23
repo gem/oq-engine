@@ -39,11 +39,13 @@ import collections
 
 import numpy.random
 
-from openquake.hazardlib.calc import gmf, filters
+from openquake.hazardlib.calc import gmf
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import FilteredSiteCollection
 
 from openquake.commonlib import valid
+from openquake.commonlib.calculators.event_based import (
+    sample_ruptures, filter_ruptures)
 
 from openquake.engine import writer
 from openquake.engine.calculators import calculators
@@ -96,7 +98,7 @@ def gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
 
 
 @tasks.oqtask
-def compute_ruptures(job_id, sources, sitecol):
+def compute_ruptures(job_id, sources, sitecol, info):
     """
     Celery task for the stochastic event set calculator.
 
@@ -115,6 +117,8 @@ def compute_ruptures(job_id, sources, sitecol):
         List of commonlib.source.Source tuples
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
+    :param info:
+        a :class:`openquake.commonlib.source.CompositionInfo` instance
     :returns:
         a dictionary trt_model_id -> tot_ruptures
     """
@@ -124,7 +128,6 @@ def compute_ruptures(job_id, sources, sitecol):
     ses_coll = models.SESCollection.objects.get(trt_model=trt_model)
 
     hc = models.oqparam(job_id)
-    all_ses = range(1, hc.ses_per_logic_tree_path + 1)
     tot_ruptures = 0
 
     filter_sites_mon = LightMonitor(
@@ -148,52 +151,32 @@ def compute_ruptures(job_id, sources, sitecol):
             if s_sites is None:
                 continue
 
-        # the dictionary `ses_num_occ` contains [(ses, num_occurrences)]
-        # for each occurring rupture for each ses in the ses collection
-        ses_num_occ = collections.defaultdict(list)
-        # generating ruptures for the given source
         with generate_ruptures_mon:
-            for rup_no, rup in enumerate(src.iter_ruptures(), 1):
-                rup.rup_no = rup_no
-                for ses_idx in all_ses:
-                    numpy.random.seed(rnd.randint(0, models.MAX_SINT_32))
-                    num_occurrences = rup.sample_number_of_occurrences()
-                    if num_occurrences:
-                        ses_num_occ[rup].append((ses_idx, num_occurrences))
+            num_occ_by_rup = sample_ruptures(
+                src, hc.ses_per_logic_tree_path, info, rnd)
 
-        # NB: the number of occurrences is very low, << 1, so it is
-        # more efficient to filter only the ruptures that occur, i.e.
-        # to call sample_number_of_occurrences() *before* the filtering
-        for rup in sorted(ses_num_occ, key=operator.attrgetter('rup_no')):
-            with filter_ruptures_mon:  # filtering ruptures
-                r_sites = filters.filter_sites_by_distance_to_rupture(
-                    rup, hc.maximum_distance, s_sites
-                    ) if hc.maximum_distance else s_sites
-                if r_sites is None:
-                    # ignore ruptures which are far away
-                    del ses_num_occ[rup]  # save memory
-                    continue
-
+        with filter_ruptures_mon:
+            pairs = list(
+                filter_ruptures(
+                    num_occ_by_rup, s_sites, hc.maximum_distance, sitecol,
+                    rnd, src))
+        for rup, rups in pairs:
             # saving ses_ruptures
             with save_ruptures_mon:
-                indices = r_sites.indices if len(r_sites) < len(sitecol) \
-                    else None  # None means that nothing was filtered
                 prob_rup = models.ProbabilisticRupture.create(
-                    rup, ses_coll, indices)
-                for ses_idx, num_occurrences in ses_num_occ[rup]:
-                    for occ_no in range(1, num_occurrences + 1):
-                        rup_seed = rnd.randint(0, models.MAX_SINT_32)
-                        models.SESRupture.create(
-                            prob_rup, ses_idx, src.source_id,
-                            rup.rup_no, occ_no, rup_seed)
+                    rup, ses_coll, rups[0].indices)
+                for rup in rups:
+                    models.SESRupture.objects.create(
+                        rupture=prob_rup, ses_id=rup.ses_idx,
+                        tag=rup.tag, seed=rup.seed)
 
-        if ses_num_occ:
-            num_ruptures = len(ses_num_occ)
-            occ_ruptures = sum(num for rup in ses_num_occ
-                               for ses, num in ses_num_occ[rup])
+        if num_occ_by_rup:
+            num_ruptures = len(num_occ_by_rup)
+            occ_ruptures = sum(num for rup in num_occ_by_rup
+                               for num in num_occ_by_rup[rup].itervalues())
             tot_ruptures += occ_ruptures
         else:
-            num_ruptures = rup_no
+            num_ruptures = 0
             occ_ruptures = 0
 
         # save SourceInfo
@@ -202,7 +185,7 @@ def compute_ruptures(job_id, sources, sitecol):
                               source_id=src.source_id,
                               source_class=src.__class__.__name__,
                               num_sites=len(s_sites),
-                              num_ruptures=rup_no,
+                              num_ruptures=num_ruptures,
                               occ_ruptures=occ_ruptures,
                               uniq_ruptures=num_ruptures,
                               calc_time=time.time() - t0))
@@ -217,7 +200,7 @@ def compute_ruptures(job_id, sources, sitecol):
 
 
 @tasks.oqtask
-def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol):
+def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol, rlzs_assoc):
     """
     :param int job_id:
         ID of the currently running job
@@ -225,6 +208,8 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol):
         a list of blocks of SESRuptures with homogeneous TrtModel
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
+    :param rlzs_assoc:
+        a :class:`openquake.commonlib.source.RlzsAssoc` instance
     :returns:
         a dictionary trt_model_id -> (curves_by_gsim, bounding_boxes)
         where the list of bounding boxes is empty
@@ -237,8 +222,7 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol):
     # NB: by construction each block is a non-empty list with
     # ruptures of homogeneous trt_model
     trt_model = ses_ruptures[0].rupture.ses_collection.trt_model
-    rlzs_by_gsim = trt_model.get_rlzs_by_gsim()
-    gsims = [valid.gsim(gsim) for gsim in rlzs_by_gsim]
+    gsims = rlzs_assoc.get_gsims_by_trt_id()[trt_model.id]
     calc = GmfCalculator(
         sorted(imts), sorted(gsims), trt_model.id,
         getattr(hc, 'truncation_level', None), models.get_correl_model(job))
@@ -265,7 +249,7 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol):
     if hc.ground_motion_fields:
         with EnginePerformanceMonitor(
                 'saving gmfs', job_id, compute_gmfs_and_curves):
-            calc.save_gmfs(rlzs_by_gsim)
+            calc.save_gmfs(rlzs_assoc)
 
     return result
 
@@ -323,24 +307,29 @@ class GmfCalculator(object):
                         self.ruptures_per_site[
                             gsim_name, imt_str, site_id].append(rupid)
 
-    def save_gmfs(self, rlzs_by_gsim):
+    def save_gmfs(self, rlzs_assoc):
         """
         Helper method to save the computed GMF data to the database.
+
+        :param rlzs_assoc:
+            a :class:`openquake.commonlib.source.RlzsAssoc` instance
         """
         for gsim_name, imt_str, site_id in self.gmvs_per_site:
-            for rlz in rlzs_by_gsim[gsim_name]:
-                imt_name, sa_period, sa_damping = from_string(imt_str)
-                inserter.add(models.GmfData(
-                    gmf=models.Gmf.objects.get(lt_realization=rlz),
-                    task_no=0,
-                    imt=imt_name,
-                    sa_period=sa_period,
-                    sa_damping=sa_damping,
-                    site_id=site_id,
-                    gmvs=self.gmvs_per_site[gsim_name, imt_str, site_id],
-                    rupture_ids=self.ruptures_per_site[
-                        gsim_name, imt_str, site_id]
-                ))
+            for trt_id, gsim in sorted(rlzs_assoc):
+                if trt_id == self.trt_model_id and gsim == gsim_name:
+                    for rlz in rlzs_assoc[trt_id, gsim]:
+                        imt_name, sa_period, sa_damping = from_string(imt_str)
+                        inserter.add(models.GmfData(
+                            gmf=models.Gmf.objects.get(lt_realization=rlz.id),
+                            task_no=0,
+                            imt=imt_name,
+                            sa_period=sa_period,
+                            sa_damping=sa_damping,
+                            site_id=site_id,
+                            gmvs=self.gmvs_per_site[gsim, imt_str, site_id],
+                            rupture_ids=self.ruptures_per_site[
+                                gsim_name, imt_str, site_id]
+                        ))
         inserter.flush()
         self.gmvs_per_site.clear()
         self.ruptures_per_site.clear()
@@ -478,5 +467,5 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         base_agg = super(EventBasedHazardCalculator, self).agg_curves
         return tasks.apply_reduce(
             compute_gmfs_and_curves,
-            (self.job.id, sesruptures, sitecol),
+            (self.job.id, sesruptures, sitecol, self.rlzs_assoc),
             base_agg, {}, key=lambda sr: sr.trt_id)
