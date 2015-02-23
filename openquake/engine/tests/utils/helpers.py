@@ -525,8 +525,14 @@ def create_ses_ruptures(job, ses_collection, num):
     ses_ordinal = 1
     seed = 42
     pr = models.ProbabilisticRupture.create(rupture, ses_collection)
-    return [models.SESRupture.create(pr, ses_ordinal, 'test', 1, i, seed + i)
-            for i in range(num)]
+    sesruptures = []
+    for i in range(num):
+        tag = 'col=%02d|ses=%04d|src=test|rup=001-%02d' % (
+            pr.ses_collection.ordinal, ses_ordinal, i)
+        sr = models.SESRupture.objects.create(
+            rupture=pr, ses_id=ses_ordinal, tag=tag, seed=seed + i)
+        sesruptures.append(sr)
+    return sesruptures
 
 
 class MultiMock(object):
