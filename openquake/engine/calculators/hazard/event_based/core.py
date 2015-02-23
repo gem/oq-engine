@@ -200,7 +200,7 @@ def compute_ruptures(job_id, sources, sitecol, info):
 
 
 @tasks.oqtask
-def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol):
+def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol, rlzs_assoc):
     """
     :param int job_id:
         ID of the currently running job
@@ -220,7 +220,7 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol):
     # NB: by construction each block is a non-empty list with
     # ruptures of homogeneous trt_model
     trt_model = ses_ruptures[0].rupture.ses_collection.trt_model
-    rlzs_by_gsim = trt_model.get_rlzs_by_gsim()
+    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(trt_model.id)
     gsims = [valid.gsim(gsim) for gsim in rlzs_by_gsim]
     calc = GmfCalculator(
         sorted(imts), sorted(gsims), trt_model.id,
@@ -314,7 +314,7 @@ class GmfCalculator(object):
             for rlz in rlzs_by_gsim[gsim_name]:
                 imt_name, sa_period, sa_damping = from_string(imt_str)
                 inserter.add(models.GmfData(
-                    gmf=models.Gmf.objects.get(lt_realization=rlz),
+                    gmf=models.Gmf.objects.get(lt_realization=rlz.id),
                     task_no=0,
                     imt=imt_name,
                     sa_period=sa_period,
@@ -461,5 +461,5 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         base_agg = super(EventBasedHazardCalculator, self).agg_curves
         return tasks.apply_reduce(
             compute_gmfs_and_curves,
-            (self.job.id, sesruptures, sitecol),
+            (self.job.id, sesruptures, sitecol, self.rlzs_assoc),
             base_agg, {}, key=lambda sr: sr.trt_id)
