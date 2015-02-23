@@ -208,6 +208,8 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol, rlzs_assoc):
         a list of blocks of SESRuptures with homogeneous TrtModel
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
+    :param rlzs_assoc:
+        a :class:`openquake.commonlib.source.RlzsAssoc` instance
     :returns:
         a dictionary trt_model_id -> (curves_by_gsim, bounding_boxes)
         where the list of bounding boxes is empty
@@ -220,8 +222,7 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol, rlzs_assoc):
     # NB: by construction each block is a non-empty list with
     # ruptures of homogeneous trt_model
     trt_model = ses_ruptures[0].rupture.ses_collection.trt_model
-    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(trt_model.id)
-    gsims = [valid.gsim(gsim) for gsim in rlzs_by_gsim]
+    gsims = rlzs_assoc.get_gsims_by_trt_id()[trt_model.id]
     calc = GmfCalculator(
         sorted(imts), sorted(gsims), trt_model.id,
         getattr(hc, 'truncation_level', None), models.get_correl_model(job))
@@ -248,7 +249,7 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol, rlzs_assoc):
     if hc.ground_motion_fields:
         with EnginePerformanceMonitor(
                 'saving gmfs', job_id, compute_gmfs_and_curves):
-            calc.save_gmfs(rlzs_by_gsim)
+            calc.save_gmfs(rlzs_assoc)
 
     return result
 
@@ -306,24 +307,29 @@ class GmfCalculator(object):
                         self.ruptures_per_site[
                             gsim_name, imt_str, site_id].append(rupid)
 
-    def save_gmfs(self, rlzs_by_gsim):
+    def save_gmfs(self, rlzs_assoc):
         """
         Helper method to save the computed GMF data to the database.
+
+        :param rlzs_assoc:
+            a :class:`openquake.commonlib.source.RlzsAssoc` instance
         """
         for gsim_name, imt_str, site_id in self.gmvs_per_site:
-            for rlz in rlzs_by_gsim[gsim_name]:
-                imt_name, sa_period, sa_damping = from_string(imt_str)
-                inserter.add(models.GmfData(
-                    gmf=models.Gmf.objects.get(lt_realization=rlz.id),
-                    task_no=0,
-                    imt=imt_name,
-                    sa_period=sa_period,
-                    sa_damping=sa_damping,
-                    site_id=site_id,
-                    gmvs=self.gmvs_per_site[gsim_name, imt_str, site_id],
-                    rupture_ids=self.ruptures_per_site[
-                        gsim_name, imt_str, site_id]
-                ))
+            for trt_id, gsim in sorted(rlzs_assoc):
+                if trt_id == self.trt_model_id and gsim == gsim_name:
+                    for rlz in rlzs_assoc[trt_id, gsim]:
+                        imt_name, sa_period, sa_damping = from_string(imt_str)
+                        inserter.add(models.GmfData(
+                            gmf=models.Gmf.objects.get(lt_realization=rlz.id),
+                            task_no=0,
+                            imt=imt_name,
+                            sa_period=sa_period,
+                            sa_damping=sa_damping,
+                            site_id=site_id,
+                            gmvs=self.gmvs_per_site[gsim, imt_str, site_id],
+                            rupture_ids=self.ruptures_per_site[
+                                gsim_name, imt_str, site_id]
+                        ))
         inserter.flush()
         self.gmvs_per_site.clear()
         self.ruptures_per_site.clear()
