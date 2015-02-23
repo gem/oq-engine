@@ -253,19 +253,6 @@ class RlzsAssoc(collections.Mapping):
             lambda group: sorted(valid.gsim(gsim)
                                  for trt_id, gsim in group))
 
-    # used in the engine
-    def get_rlzs_by_gsim(self, trt_model_id):
-        """
-        Return the realizations associated to the given trt_model_id
-        as an ordered dictionary {gsim_name: [rlz, ...]}
-        """
-        dic = collections.defaultdict(list)
-        for (trt_id, gsim) in self.rlzs_assoc:
-            if trt_id == trt_model_id:
-                dic[gsim].extend(self.rlzs_assoc[trt_id, gsim])
-        return collections.OrderedDict(
-            (gsim, dic[gsim]) for gsim in sorted(dic))
-
     def _add_realizations(self, idx, lt_model, realizations):
         gsims_by_trt = lt_model.gsim_lt.values
         rlzs = []
