@@ -114,7 +114,6 @@ class ScenarioCalculator(base.HazardCalculator):
             for fmt in exports:
                 fname = '%s_gmf.%s' % (gsim, fmt)
                 out += export(
-                    ('gmf', fmt), self.oqparam.export_dir, fname, self.sitecol,
-                    self.tags, {k: self.sites.expand(v, 0)
-                                for k, v in gmfs_by_imt.iteritems()})
+                    ('gmf', fmt), self.oqparam.export_dir, fname, self.sites,
+                    self.tags, gmfs_by_imt)
         return out
