@@ -327,18 +327,19 @@ class BaseHazardCalculator(base.Calculator):
         logs.LOG.progress("initializing realizations")
         cm = self.composite_model
         self._realizations = []
-        rlzs_assoc = cm.get_rlzs_assoc(
+        self.rlzs_assoc = cm.get_rlzs_assoc(
             lambda trt_model: models.TrtModel.objects.get(
                 pk=trt_model.id).num_ruptures)
-        gsims_by_trt_id = rlzs_assoc.get_gsims_by_trt_id()
+        gsims_by_trt_id = self.rlzs_assoc.get_gsims_by_trt_id()
         smodels = [sm for sm in self._source_models
                    if sm.trtmodel_set.filter(num_ruptures__gt=0)]
-        for lt_model, rlzs in zip(smodels, rlzs_assoc.rlzs_by_smodel):
+        for lt_model, rlzs in zip(smodels, self.rlzs_assoc.rlzs_by_smodel):
             for rlz in rlzs:
-                gsim_by_trt = rlzs_assoc.gsim_by_trt[rlz]
+                gsim_by_trt = self.rlzs_assoc.gsim_by_trt[rlz]
                 lt_rlz = models.LtRealization.objects.create(
                     lt_model=lt_model, gsim_lt_path=rlz.gsim_rlz.lt_uid,
                     weight=rlz.weight, ordinal=rlz.ordinal)
+                rlz.id = lt_rlz.id
                 self._realizations.append(lt_rlz)
                 for trt_model in lt_model.trtmodel_set.all():
                     trt = trt_model.tectonic_region_type
