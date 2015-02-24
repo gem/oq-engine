@@ -187,8 +187,8 @@ def compute_ruptures(sources, sitecol, info, monitor):
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
 
-        for rup, rups in filter_ruptures(
-                num_occ_by_rup, s_sites, oq.maximum_distance, sitecol, src):
+        for rup, rups in build_ses_ruptures(
+                src, num_occ_by_rup, s_sites, oq.maximum_distance, sitecol):
             sesruptures.extend(rups)
 
     return {trt_model_id: sesruptures}
@@ -223,8 +223,8 @@ def sample_ruptures(src, num_ses, info):
     return num_occ_by_rup
 
 
-def filter_ruptures(
-        num_occ_by_rup, s_sites, maximum_distance, sitecol, src):
+def build_ses_ruptures(
+        src, num_occ_by_rup, s_sites, maximum_distance, sitecol):
     """
     Filter the ruptures stored in the dictionary num_occ_by_rup and
     yield pairs (rupture, <list of associated SESRuptures>)
