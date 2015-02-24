@@ -308,9 +308,8 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
                 ses_coll = SESCollection(
                     groupby(sesruptures, operator.attrgetter('ses_idx')),
                     smodel.path, oq.investigation_time)
-                fname = 'ses-%d-smltp_%s.xml' % (
-                    trt_model.id, smpath)
-                saved += export(('ses', 'xml'), oq.export_dir, fname, ses_coll)
+                fname = 'ses-%d-smltp_%s.csv' % (trt_model.id, smpath)
+                saved += export(('ses', 'csv'), oq.export_dir, fname, ses_coll)
         return saved
 
 

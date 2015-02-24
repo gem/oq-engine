@@ -57,8 +57,8 @@ class SESCollection(object):
         self.investigation_time = investigation_time
 
     def __iter__(self):
-        for idx, ses in sorted(self.idx_ses_dict.iteritems()):
-            yield SES(ses, self.investigation_time, idx)
+        for idx, sesruptures in sorted(self.idx_ses_dict.iteritems()):
+            yield SES(sesruptures, self.investigation_time, idx)
 
 
 @export.add(('ses', 'xml'))
@@ -69,6 +69,20 @@ def export_ses_xml(key, export_dir, fname, ses_coll):
     dest = os.path.join(export_dir, fname)
     writer = hazard_writers.SESXMLWriter(dest, '_'.join(ses_coll.sm_lt_path))
     writer.serialize(ses_coll)
+    return {fname: dest}
+
+
+@export.add(('ses', 'csv'))
+def export_ses_csv(key, export_dir, fname, ses_coll):
+    """
+    Export a Stochastic Event Set Collection
+    """
+    dest = os.path.join(export_dir, fname)
+    rows = []
+    for ses in ses_coll:
+        for sesrup in ses:
+            rows.append([sesrup.tag, sesrup.seed])
+    save_csv(dest, sorted(rows, key=operator.itemgetter(0)))
     return {fname: dest}
 
 
