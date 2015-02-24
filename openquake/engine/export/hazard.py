@@ -411,12 +411,13 @@ def export_ses_csv(key, output, target):
     """
     ses_coll = models.SESCollection.objects.get(output=output.id)
     haz_calc = output.oq_job
-    dest = _get_result_export_dest(haz_calc.id, target, output.ses)
+    dest = _get_result_export_dest(
+        haz_calc.id, target, output.ses)[:-3] + 'csv'
     rows = []
     for ses in ses_coll:
         for sesrup in ses:
             rows.append([sesrup.tag, sesrup.seed])
-    save_csv(dest, rows)
+    save_csv(dest, sorted(rows, key=operator.itemgetter(0)))
     return dest
 
 
