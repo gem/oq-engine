@@ -44,7 +44,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import FilteredSiteCollection
 
 from openquake.commonlib.calculators.event_based import (
-    sample_ruptures, filter_ruptures)
+    sample_ruptures, build_ses_ruptures)
 
 from openquake.engine import writer
 from openquake.engine.calculators import calculators
@@ -154,9 +154,9 @@ def compute_ruptures(job_id, sources, sitecol, info):
 
         with filter_ruptures_mon:
             pairs = list(
-                filter_ruptures(
-                    num_occ_by_rup, s_sites, hc.maximum_distance, sitecol,
-                    src))
+                build_ses_ruptures(
+                    src, num_occ_by_rup, s_sites, hc.maximum_distance, sitecol
+                ))
         for rup, rups in pairs:
             # saving ses_ruptures
             with save_ruptures_mon:
