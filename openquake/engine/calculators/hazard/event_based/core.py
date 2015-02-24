@@ -164,10 +164,10 @@ def compute_ruptures(job_id, sources, sitecol, info):
                 for col_idx in set(r.col_idx for r in rups):
                     prob_rup = models.ProbabilisticRupture.create(
                         rup, ses_coll[col_idx], rups[0].indices)
-                    for rup in rups:
+                    for r in rups:
                         models.SESRupture.objects.create(
-                            rupture=prob_rup, ses_id=rup.ses_idx,
-                            tag=rup.tag, seed=rup.seed)
+                            rupture=prob_rup, ses_id=r.ses_idx,
+                            tag=r.tag, seed=r.seed)
 
         if num_occ_by_rup:
             num_ruptures = len(num_occ_by_rup)
