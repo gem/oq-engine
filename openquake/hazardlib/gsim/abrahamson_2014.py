@@ -14,7 +14,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`AbrahamsonEtAl2014`.
+Module exports :class:`AbrahamsonEtAl2014`
+               :class:`AbrahamsonEtAl2014RegCHN`
+               :class:`AbrahamsonEtAl2014RegJPN`
+               :class:`AbrahamsonEtAl2014RegTWN`
 """
 from __future__ import division
 
@@ -78,24 +81,26 @@ class AbrahamsonEtAl2014(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
+        # get the necessary set of coefficients
+        C = self.COEFFS[imt]
         # compute median sa on rock (vs30=1180m/s). Used for site response
         # term calculation
-        sa1180 = np.exp(self._get_sa_at_1180(imt, sites, rup, dists))
+        sa1180 = np.exp(self._get_sa_at_1180(C, imt, sites, rup, dists))
         # get the mean value
-        mean = (self._get_basic_term(imt, rup, dists) +
-                self._get_faulting_style_term(imt, rup) +
-                self._get_site_response_term(imt, sites.vs30, sa1180) +
-                self._get_hanging_wall_term(imt, dists, rup) +
-                self._get_top_of_rupture_depth_term(imt, rup) +
-                self._get_soil_depth_term(imt, sites.z1pt0, sites.vs30)
+        mean = (self._get_basic_term(C, rup, dists) +
+                self._get_faulting_style_term(C, rup) +
+                self._get_site_response_term(C, imt, sites.vs30, sa1180) +
+                self._get_hanging_wall_term(C, dists, rup) +
+                self._get_top_of_rupture_depth_term(C, imt, rup) +
+                self._get_soil_depth_term(C, sites.z1pt0, sites.vs30)
                 )
-        mean += self._get_regional_term(imt, sites.vs30, dists.rrup)
+        mean += self._get_regional_term(C, imt, sites.vs30, dists.rrup)
         # get standard deviations
-        stddevs = self._get_stddevs(imt, rup, sites, stddev_types, sa1180,
+        stddevs = self._get_stddevs(C, imt, rup, sites, stddev_types, sa1180,
                                     dists)
         return mean, stddevs
 
-    def _get_sa_at_1180(self, imt, sites, rup, dists):
+    def _get_sa_at_1180(self, C, imt, sites, rup, dists):
         """
         Compute and return mean imt value for rock conditions
         (vs30 = 1100 m/s)
@@ -107,21 +112,19 @@ class AbrahamsonEtAl2014(GMPE):
         # fake Z1.0 - Since negative it will be replaced by the default Z1.0
         # for the corresponding region
         fake_z1pt0 = np.ones_like(sites.vs30) * -1
-        return (self._get_basic_term(imt, rup, dists) +
-                self._get_faulting_style_term(imt, rup) +
-                self._get_site_response_term(imt, vs30_1180, ref_iml) +
-                self._get_hanging_wall_term(imt, dists, rup) +
-                self._get_top_of_rupture_depth_term(imt, rup) +
-                self._get_soil_depth_term(imt, fake_z1pt0, vs30_1180) +
-                self._get_regional_term(imt, vs30_1180, dists.rrup)
+        return (self._get_basic_term(C, rup, dists) +
+                self._get_faulting_style_term(C, rup) +
+                self._get_site_response_term(C, imt, vs30_1180, ref_iml) +
+                self._get_hanging_wall_term(C, dists, rup) +
+                self._get_top_of_rupture_depth_term(C, imt, rup) +
+                self._get_soil_depth_term(C, fake_z1pt0, vs30_1180) +
+                self._get_regional_term(C, imt, vs30_1180, dists.rrup)
                 )
 
-    def _get_basic_term(self, imt, rup, dists):
+    def _get_basic_term(self, C, rup, dists):
         """
         Compute and return basic form, see page 1030.
-        # Tested for m <= 4.9
         """
-        C = self.COEFFS[imt]
         # Fictitious depth calculation
         if rup.mag > 5.:
             c4m = C['c4']
@@ -152,12 +155,11 @@ class AbrahamsonEtAl2014(GMPE):
                           np.log(R))
         return base_term
 
-    def _get_faulting_style_term(self, imt, rup):
+    def _get_faulting_style_term(self, C, rup):
         """
         Compute and return faulting style term, that is the sum of the second
         and third terms in equation 1, page 74.
         """
-        C = self.COEFFS[imt]
         # this implements equations 5 and 6 at page 1032. f7 is the
         # coefficient for reverse mechanisms while f8 is the correction
         # factor for normal ruptures
@@ -177,7 +179,7 @@ class AbrahamsonEtAl2014(GMPE):
 
     def _get_vs30star(self, vs30, imt):
         """
-        This computes equations 8 and 9 at page 1034 
+        This computes equations 8 and 9 at page 1034
         """
         # compute the v1 value (see eq. 9, page 1034)
         if isinstance(imt, SA):
@@ -198,12 +200,10 @@ class AbrahamsonEtAl2014(GMPE):
         vs30_star[vs30 >= v1] = v1
         return vs30_star
 
-    def _get_site_response_term(self, imt, vs30, sa1180):
+    def _get_site_response_term(self, C, imt, vs30, sa1180):
         """
         Compute and return site response model term see page 1033
         """
-        # coefficients
-        C = self.COEFFS[imt]
         # vs30 star
         vs30_star = self._get_vs30star(vs30, imt)
         # compute the site term
@@ -222,11 +222,10 @@ class AbrahamsonEtAl2014(GMPE):
                                                    self.CONSTS['n']))
         return site_resp_term
 
-    def _get_hanging_wall_term(self, imt, dists, rup):
+    def _get_hanging_wall_term(self, C, dists, rup):
         """
         Compute and return hanging wall model term, see page 1038.
         """
-        C = self.COEFFS[imt]
         # compute t1
         T1 = np.ones_like(dists.rx)
         T1 *= 60./45. if rup.dip <= 30. else (90.-rup.dip)/45.0
@@ -272,12 +271,11 @@ class AbrahamsonEtAl2014(GMPE):
         # finally, compute the hanging wall term
         return C['a13']*T1*T2*T3*T4*T5
 
-    def _get_top_of_rupture_depth_term(self, imt, rup):
+    def _get_top_of_rupture_depth_term(self, C, imt, rup):
         """
         Compute and return top of rupture depth term. See paragraph
         'Depth-to-Top of Rupture Model', page 1042.
         """
-        C = self.COEFFS[imt]
         if rup.ztor >= 20.0:
             return C['a15']
         else:
@@ -291,12 +289,10 @@ class AbrahamsonEtAl2014(GMPE):
         return 1/1000 * np.exp(-7.67/4.*np.log((vs30**4+610.**4) /
                                                (1360.**4+610.**4)))
 
-    def _get_soil_depth_term(self, imt, z1pt0, vs30):
+    def _get_soil_depth_term(self, C, z1pt0, vs30):
         """
         Compute and return soil depth term.  See page 1042.
         """
-        # Coefficients
-        C = self.COEFFS[imt]
         # Get reference z1pt0
         z1ref = self._get_z1pt0ref(vs30)
         # This is used for the calculation of the motion on reference rock
@@ -312,21 +308,21 @@ class AbrahamsonEtAl2014(GMPE):
             kind='linear')
         return f2(vs30) * factor
 
-    def _get_regional_term(self, imt, vs30, rrup):
+    def _get_regional_term(self, C, imt, vs30, rrup):
         """
         In accordance with Abrahamson et al. (2014) we assume California
         as the default region hence here the regional term is assumed = 0.
         """
         return 0.
 
-    def _get_stddevs(self, imt, rup, sites, stddev_types, sa1180, dists):
+    def _get_stddevs(self, C, imt, rup, sites, stddev_types, sa1180, dists):
         """
         Return standard deviations as described in paragraph 'Equations for
         standard deviation', page 1046.
         """
-        std_intra = self._get_intra_event_std(imt, rup.mag, sa1180, sites.vs30,
+        std_intra = self._get_intra_event_std(C, rup.mag, sa1180, sites.vs30,
                                               sites.vs30measured, dists.rrup)
-        std_inter = self._get_inter_event_std(imt, rup.mag, sa1180, sites.vs30)
+        std_inter = self._get_inter_event_std(C, rup.mag, sa1180, sites.vs30)
         stddevs = []
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
@@ -339,12 +335,12 @@ class AbrahamsonEtAl2014(GMPE):
                 stddevs.append(std_inter)
         return stddevs
 
-    def _get_intra_event_std(self, imt, mag, sa1180, vs30, vs30measured, rrup):
+    def _get_intra_event_std(self, C, mag, sa1180, vs30, vs30measured,
+                             rrup):
         """
         Returns Phi as described at pages 1046 and 1047
         """
-        C = self.COEFFS[imt]
-        phi_al = self._get_phi_al_regional(imt, mag, vs30measured, rrup)
+        phi_al = self._get_phi_al_regional(C, mag, vs30measured, rrup)
         derAmp = self._get_derivative(C, sa1180, vs30)
         phi_amp = 0.4
         if any(phi_al**2 < phi_amp**2):
@@ -368,11 +364,10 @@ class AbrahamsonEtAl2014(GMPE):
                        1./(sa1180[idx] + c*(vs30[idx]/C['vlin'])**n)))
         return derAmp
 
-    def _get_phi_al_regional(self, imt, mag, vs30measured, rrup):
+    def _get_phi_al_regional(self, C, mag, vs30measured, rrup):
         """
         Returns intra-event (Phi) standard deviation (equation 24, page 1046)
         """
-        C = self.COEFFS[imt]
         phi_al = np.ones((len(vs30measured)))
         s1 = np.ones_like(phi_al) * C['s1e']
         s2 = np.ones_like(phi_al) * C['s2e']
@@ -386,11 +381,10 @@ class AbrahamsonEtAl2014(GMPE):
             phi_al *= s2
         return phi_al
 
-    def _get_inter_event_std(self, imt, mag, sa1180, vs30):
+    def _get_inter_event_std(self, C, mag, sa1180, vs30):
         """
         Returns inter event (tau) standard deviation (equation 25, page 1046)
         """
-        C = self.COEFFS[imt]
         if mag < 5:
             tau_al = C['s3']
         elif mag <= 7:
@@ -451,12 +445,11 @@ class AbrahamsonEtAl2014RegTWN(AbrahamsonEtAl2014):
     Regional corrections for Taiwan
     """
 
-    def _get_regional_term(self, imt, vs30, rrup):
+    def _get_regional_term(self, C, imt, vs30, rrup):
         """
         In accordance with Abrahamson et al. (2014) we assume as the default
         region California
         """
-        C = self.COEFFS[imt]
         vs30star = self._get_vs30star(vs30, imt)
         return C['a31'] * np.log(vs30star/C['vlin']) + C['a25'] * rrup
 
@@ -470,12 +463,11 @@ class AbrahamsonEtAl2014RegCHN(AbrahamsonEtAl2014):
     Regional corrections for China
     """
 
-    def _get_regional_term(self, imt, vs30, rrup):
+    def _get_regional_term(self, C, imt, vs30, rrup):
         """
         In accordance with Abrahamson et al. (2014) we assume as the default
         region California
         """
-        C = self.COEFFS[imt]
         return C['a28'] * rrup
 
 
@@ -495,11 +487,10 @@ class AbrahamsonEtAl2014RegJPN(AbrahamsonEtAl2014):
         return 1./1000. * np.exp(-5.23/2.*np.log((vs30**2+412.**2.) /
                                                  (1360.**2+412**2.)))
 
-    def _get_regional_term(self, imt, vs30, rrup):
+    def _get_regional_term(self, C, imt, vs30, rrup):
         """
         Compute regional term for Japan. See page 1043
         """
-        C = self.COEFFS[imt]
         f3 = interpolate.interp1d(
             [150, 250, 350, 450, 600, 850, 1150, 2000],
             [C['a36'], C['a37'], C['a38'], C['a39'], C['a40'], C['a41'],
@@ -507,11 +498,10 @@ class AbrahamsonEtAl2014RegJPN(AbrahamsonEtAl2014):
             kind='linear')
         return f3(vs30) + C['a29'] * rrup
 
-    def _get_phi_al_regional(self, imt, mag, vs30measured, rrup):
+    def _get_phi_al_regional(self, C, mag, vs30measured, rrup):
         """
         Returns intra-event (Tau) standard deviation (equation 26, page 1046)
         """
-        C = self.COEFFS[imt]
         phi_al = np.ones((len(vs30measured)))
 
         idx = rrup < 30
