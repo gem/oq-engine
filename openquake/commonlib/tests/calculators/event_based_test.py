@@ -154,16 +154,14 @@ class EventBasedTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'event_based')
     def test_case_5(self):
         expected = '''\
-1-FaccioliEtAl2010.csv
 3-AkkarBommer2010.csv
-3-CauzziFaccioli2008.csv
-3-ChiouYoungs2008.csv
-3-ZhaoEtAl2006Asc.csv
 4-AkkarBommer2010.csv
-4-Campbell2003SHARE.csv
 4-CauzziFaccioli2008.csv
 4-ChiouYoungs2008.csv
+4-Campbell2003SHARE.csv
 4-ToroEtAl2002SHARE.csv
+5-AkkarBommer2010.csv
+6-ToroEtAl2002SHARE.csv
 7-FaccioliEtAl2010.csv'''.split()
         out = self.run_calc(case_5.__file__, 'job.ini', exports='csv')
         for fname in expected:
