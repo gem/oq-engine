@@ -205,9 +205,9 @@ class EventBasedTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'event_based')
     def test_case_17(self):
         expected = [
-            'hazard_curve-smltp_b2-gsimltp_b1-ltr_0.csv',
+            'hazard_curve-smltp_b1-gsimltp_*-ltr_0.csv',
             'hazard_curve-smltp_b2-gsimltp_b1-ltr_1.csv',
-            'hazard_curve-smltp_b1-gsimltp_b1-ltr_2.csv',
+            'hazard_curve-smltp_b2-gsimltp_b1-ltr_2.csv',
             'hazard_curve-smltp_b2-gsimltp_b1-ltr_3.csv',
             'hazard_curve-smltp_b2-gsimltp_b1-ltr_4.csv',
         ]

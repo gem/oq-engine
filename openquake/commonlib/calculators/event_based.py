@@ -284,13 +284,18 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         monitor.oqparam = self.oqparam
         csm = self.composite_source_model
         sources = list(csm.sources)
-        result = parallel.apply_reduce(
+        ses_ruptures_by_trt_id = parallel.apply_reduce(
             self.core_func.__func__,
             (sources, self.sitecol, csm.info, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_model_id'))
-        return result
+
+        # recompute rlzs_assoc
+        self.rlzs_assoc = csm.get_rlzs_assoc(
+            lambda trt: len(ses_ruptures_by_trt_id.get(trt.id, [])))
+
+        return ses_ruptures_by_trt_id
 
     def post_execute(self, result):
         """Export the ruptures, if any"""

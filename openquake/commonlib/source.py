@@ -40,7 +40,7 @@ class LtRealization(object):
         self.gsim_rlz = gsim_rlz
         self.weight = weight
 
-    def __str__(self):
+    def __repr__(self):
         return '<%d,%s,w=%s>' % (self.ordinal, self.uid, self.weight)
 
     @property
