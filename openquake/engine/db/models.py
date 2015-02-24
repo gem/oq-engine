@@ -921,8 +921,7 @@ class SESCollection(djm.Model):
     See also :class:`SES` and :class:`SESRupture`.
     """
     output = djm.OneToOneField('Output', related_name="ses")
-    trt_model = djm.OneToOneField(
-        'TrtModel', related_name='ses_collection', null=False)
+    trt_model = djm.ForeignKey('TrtModel', null=False)
     ordinal = djm.IntegerField(null=False)
 
     class Meta:

@@ -124,7 +124,8 @@ def compute_ruptures(job_id, sources, sitecol, info):
     # NB: all realizations in gsims correspond to the same source model
     trt_model_id = sources[0].trt_model_id
     trt_model = models.TrtModel.objects.get(pk=trt_model_id)
-    ses_coll = models.SESCollection.objects.get(trt_model=trt_model)
+    ses_coll = {sc.ordinal: sc for sc in models.SESCollection.objects.filter(
+        trt_model=trt_model)}
 
     hc = models.oqparam(job_id)
     tot_ruptures = 0
@@ -157,15 +158,16 @@ def compute_ruptures(job_id, sources, sitecol, info):
                 build_ses_ruptures(
                     src, num_occ_by_rup, s_sites, hc.maximum_distance, sitecol
                 ))
-        for rup, rups in pairs:
-            # saving ses_ruptures
-            with save_ruptures_mon:
-                prob_rup = models.ProbabilisticRupture.create(
-                    rup, ses_coll, rups[0].indices)
-                for rup in rups:
-                    models.SESRupture.objects.create(
-                        rupture=prob_rup, ses_id=rup.ses_idx,
-                        tag=rup.tag, seed=rup.seed)
+        # saving ses_ruptures
+        with save_ruptures_mon:
+            for rup, rups in pairs:
+                for col_idx in set(r.col_idx for r in rups):
+                    prob_rup = models.ProbabilisticRupture.create(
+                        rup, ses_coll[col_idx], rups[0].indices)
+                    for rup in rups:
+                        models.SESRupture.objects.create(
+                            rupture=prob_rup, ses_id=rup.ses_idx,
+                            tag=rup.tag, seed=rup.seed)
 
         if num_occ_by_rup:
             num_ruptures = len(num_occ_by_rup)
@@ -366,7 +368,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
     """
     core_calc_task = compute_ruptures
 
-    def initialize_ses_db_records(self, trt_model, i):
+    def initialize_ses_db_records(self, trt_model_id, ordinal):
         """
         Create :class:`~openquake.engine.db.models.Output` and
         :class:`openquake.engine.db.models.SESCollection` records for
@@ -381,11 +383,12 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         """
         output = models.Output.objects.create(
             oq_job=self.job,
-            display_name='SES Collection %d' % i,
+            display_name='SES Collection %d' % ordinal,
             output_type='ses')
 
+        trt_model = models.TrtModel.objects.get(pk=trt_model_id)
         ses_coll = models.SESCollection.objects.create(
-            output=output, trt_model=trt_model, ordinal=i)
+            output=output, trt_model=trt_model, ordinal=ordinal)
 
         return ses_coll
 
@@ -402,9 +405,8 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         rnd = random.Random(hc.random_seed)
         for src in self.composite_model.sources:
             src.seed = rnd.randint(0, models.MAX_SINT_32)
-        for i, trt_model in enumerate(models.TrtModel.objects.filter(
-                lt_model__hazard_calculation=self.job)):
-            self.initialize_ses_db_records(trt_model, i)
+        for trt_id, idx, col_id in self.composite_model.info.get_triples():
+            self.initialize_ses_db_records(trt_id, col_id)
         return weights
 
     def agg_curves(self, acc, result):
