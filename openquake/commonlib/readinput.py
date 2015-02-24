@@ -369,10 +369,8 @@ def get_source_models(oqparam, source_model_lt, sitecol=None):
         oqparam.width_of_mfd_bin,
         getattr(oqparam, 'area_source_discretization', None))
 
-    if oqparam.calculation_mode == 'event_based':
-        rlzs = list(source_model_lt)  # consider all realizations
-    else:  # consider only the effective realizations
-        rlzs = logictree.get_effective_rlzs(source_model_lt)
+    # consider only the effective realizations
+    rlzs = logictree.get_effective_rlzs(source_model_lt)
     samples_by_lt_path = source_model_lt.samples_by_lt_path()
     for i, rlz in enumerate(rlzs):
         sm = rlz.value  # name of the source model
@@ -410,11 +408,9 @@ python -m openquake.engine.tools.correct_complex_sources %s
                 trt_model.gsims = gsim_lt.values[trt_model.trt]
         else:
             gsim_lt = logictree.DummyGsimLogicTree()
-        weight = (rlz.weight if oqparam.calculation_mode == 'event_based'
-                  else rlz.weight / num_samples)
+        weight = rlz.weight / num_samples
         yield source.SourceModel(
-            sm, weight, smpath, trt_models, gsim_lt, i,
-            1 if oqparam.calculation_mode == 'event_based' else num_samples)
+            sm, weight, smpath, trt_models, gsim_lt, i, num_samples)
 
 
 def get_filtered_source_models(oqparam, source_model_lt, sitecol):

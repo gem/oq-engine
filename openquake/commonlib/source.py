@@ -394,6 +394,13 @@ class CompositionInfo(object):
         raise KeyError('There is no TrtModel associated to the collection %d!'
                        % col_id)
 
+    def get_triples(self):
+        """
+        Yield triples (trt_id, idx, col_id) in order
+        """
+        for (trt_id, idx), col_id in sorted(self._col_dict.iteritems()):
+            yield trt_id, idx, col_id
+
 
 class CompositeSourceModel(collections.Sequence):
     """

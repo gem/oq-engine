@@ -136,9 +136,6 @@ class EventBasedTestCase(CalculatorTestCase):
             'expected/0-SadighEtAl1997.csv',
             out['0-SadighEtAl1997.csv'], sorted)
         self.assertEqualFiles(
-            'expected/1-SadighEtAl1997.csv',
-            out['1-SadighEtAl1997.csv'], sorted)
-        self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv',
             out['hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv'])
         # NB: we are testing that the file ltr_1.csv is equal to

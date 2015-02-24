@@ -120,7 +120,9 @@ class SESRupture(object):
         self.trt_model_id = trt_model_id
         # extract the SES ordinal (>=1) from the rupture tag
         # for instance 'col=00|ses=0001|src=1|rup=001-01' => 1
-        self.ses_idx = int(tag.split('|')[1].split('=')[1])
+        pieces = tag.split('|')
+        self.col_idx = int(pieces[0].split('=')[1])
+        self.ses_idx = int(pieces[1].split('=')[1])
 
     def export(self):
         """
