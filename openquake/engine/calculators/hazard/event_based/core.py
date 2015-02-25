@@ -318,27 +318,28 @@ class GmfCalculator(object):
         :param rlzs_assoc:
             a :class:`openquake.commonlib.source.RlzsAssoc` instance
         """
+        max_samples = info.get_max_samples()
         for gsim_name, imt_str, site_id in self.gmvs_per_site:
-            for trt_id, gsim in sorted(rlzs_assoc):
-                if trt_id == self.trt_model_id and gsim == gsim_name:
-                    for i, rlz in enumerate(rlzs_assoc[trt_id, gsim]):
-                        col_idx = info.get_col_id(trt_id, i)
-                        if col_idx != self.col_idx:
-                            continue
-                        # save only the data for the realization corresponding
-                        # to the current SESCollection
-                        imt_name, sa_period, sa_damping = from_string(imt_str)
-                        inserter.add(models.GmfData(
-                            gmf=models.Gmf.objects.get(lt_realization=rlz.id),
-                            task_no=0,
-                            imt=imt_name,
-                            sa_period=sa_period,
-                            sa_damping=sa_damping,
-                            site_id=site_id,
-                            gmvs=self.gmvs_per_site[gsim, imt_str, site_id],
-                            rupture_ids=self.ruptures_per_site[
-                                gsim_name, imt_str, site_id]
-                        ))
+            rlzs = rlzs_assoc[self.trt_model_id, gsim_name]
+            if max_samples > 1 and len(rlzs) > 1:
+                # save only the data for the realization corresponding
+                # to the current SESCollection
+                rlzs = [rlz for rlz in rlzs if rlz.ordinal == self.col_idx]
+                assert rlzs, ('Could not find the realization associated to '
+                              'SESCollection #%d' % self.col_idx)
+            for rlz in rlzs:
+                imt_name, sa_period, sa_damping = from_string(imt_str)
+                inserter.add(models.GmfData(
+                    gmf=models.Gmf.objects.get(lt_realization=rlz.id),
+                    task_no=0,
+                    imt=imt_name,
+                    sa_period=sa_period,
+                    sa_damping=sa_damping,
+                    site_id=site_id,
+                    gmvs=self.gmvs_per_site[gsim_name, imt_str, site_id],
+                    rupture_ids=self.ruptures_per_site[
+                        gsim_name, imt_str, site_id]
+                ))
         inserter.flush()
         self.gmvs_per_site.clear()
         self.ruptures_per_site.clear()
