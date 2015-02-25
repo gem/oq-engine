@@ -24,3 +24,6 @@ Atkinson and Boore 2006
 
 .. autoclass:: AtkinsonBoore2006Mwbar200NSHMP2008
     :members:
+
+.. autoclass:: AtkinsonBoore2006Modified2011
+    :members:
