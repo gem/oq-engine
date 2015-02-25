@@ -1,3 +1,35 @@
+python-oq-hazardlib (0.13.0-0) precise; urgency=low
+
+  [Marco Pagani]
+  * Implements Ask2014 GMPE
+
+  [Graeme Weatherill]
+  * Implements Rietbrock et al (2013) GMPE
+
+  [Yen-Shin Chen]
+  * enable to change the hypocentre location.
+
+  [Marco Pagani]
+  * Gridsource added
+
+  [Michele Simionato]
+  * Added a test sensitive to the underlying distance libraries
+
+  [Marco Pagani]
+  * Ry0 support
+
+  [Graeme Weatherill]
+  * Implements Bindi et al (2014) GMPE
+
+  [Laurentiu Danciu]
+  * Implements Cf2008 for Swiss GMPE
+
+  [Graeme Weatherill]
+  * Implements Cauzzi et al (2014) GMPE
+  * Implements PEER adaptation of Chiou & Youngs 2014
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 25 Feb 2015 16:04:03 +0100
+
 python-oq-hazardlib (0.12.1-0) precise; urgency=low
 
   * consistency in version management between debian/ubuntu package and
