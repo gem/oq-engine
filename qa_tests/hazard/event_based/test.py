@@ -397,12 +397,12 @@ class EventBasedHazardCase17TestCase(qa_utils.BaseQATestCase):
         self.assertEqual(len(t4_tags), 2736)
         self.assertEqual(len(t5_tags), 2649)
 
+        # check the total number of exported GMFs among the 4 realizations
         countlines = 0
         for gmf_output in models.Output.objects.filter(
                 output_type='gmf', oq_job=job):
             fname = core.export(gmf_output.id, result_dir, 'csv')
             countlines += len(open(fname).readlines())
-
         self.assertEqual(countlines, len(tags))
 
         curves = [c.poes for c in models.HazardCurveData.objects.filter(
