@@ -484,7 +484,7 @@ if [ $BUILD_DEVEL -eq 1 ]; then
     if [ "$pkg_maj" = "$ini_maj" -a "$pkg_min" = "$ini_min" -a \
          "$pkg_bfx" = "$ini_bfx" -a "$pkg_deb" != "" ]; then
         deb_ct="$(echo "$pkg_deb" | sed 's/^-//g')"
-        pkg_deb="-$(( deb_ct + 1 ))"
+        pkg_deb="-${deb_ct}"
     else
         pkg_maj="$ini_maj"
         pkg_min="$ini_min"
@@ -492,7 +492,7 @@ if [ $BUILD_DEVEL -eq 1 ]; then
         pkg_deb="-1"
     fi
 
-    ( echo "$pkg_name (${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}+dev${dt}-${hash}) $pkg_rest"
+    ( echo "$pkg_name (${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}~dev${dt}-${hash}) $pkg_rest"
       echo
       echo "  * Development version from $hash commit"
       echo
