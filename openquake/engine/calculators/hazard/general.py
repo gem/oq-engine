@@ -258,7 +258,8 @@ class BaseHazardCalculator(base.Calculator):
             lt_model = models.LtSourceModel.objects.create(
                 hazard_calculation=self.job,
                 sm_lt_path=self.tilepath + sm.path,
-                ordinal=sm.ordinal, sm_name=sm.name, weight=sm.weight)
+                ordinal=sm.ordinal, sm_name=sm.name, weight=sm.weight,
+                samples=sm.samples)
             self._source_models.append(lt_model)
             gsims_by_trt = sm.gsim_lt.values
             # save TrtModels for each tectonic region type
