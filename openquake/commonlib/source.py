@@ -221,6 +221,7 @@ class RlzsAssoc(collections.Mapping):
     :attr realizations: list of LtRealization objects
     :attr gsim_by_trt: list of dictionaries {trt: gsim}
     :attr rlzs_assoc: dictionary {trt_model_id, gsim: rlzs}
+    :attr rlzs_by_smodel: dictionary {source_model_ordinal: rlzs}
 
     For instance, for the non-trivial logic tree in
     :mod:`openquake.qa_tests_data.classical.case_15`, which has 4 tectonic
@@ -239,12 +240,12 @@ class RlzsAssoc(collections.Mapping):
     def __init__(self, rlzs_assoc=None):
         self.gsim_by_trt = {}  # rlz -> {trt: gsim}
         self.rlzs_assoc = rlzs_assoc or collections.defaultdict(list)
-        self.rlzs_by_smodel = []
+        self.rlzs_by_smodel = collections.OrderedDict()
 
     @property
     def realizations(self):
         """Flat list with all the realizations"""
-        return sum(self.rlzs_by_smodel, [])
+        return sum(self.rlzs_by_smodel.itervalues(), [])
 
     def get_gsims_by_trt_id(self):
         """Returns associations trt_id -> [GSIM instance, ...]"""
@@ -259,7 +260,6 @@ class RlzsAssoc(collections.Mapping):
         for gsim_rlz in realizations:
             weight = float(lt_model.weight) * float(gsim_rlz.weight)
             rlz = LtRealization(idx, lt_model.path, gsim_rlz, weight)
-            rlzs.append(rlz)
             self.gsim_by_trt[rlz] = gsim_rlz.value
             for trt_model in lt_model.trt_models:
                 trt = trt_model.trt
@@ -267,7 +267,8 @@ class RlzsAssoc(collections.Mapping):
                 self.rlzs_assoc[trt_model.id, gsim].append(rlz)
                 trt_model.gsims = gsims_by_trt[trt]
             idx += 1
-        self.rlzs_by_smodel.append(rlzs)
+            rlzs.append(rlz)
+        self.rlzs_by_smodel[lt_model.ordinal] = rlzs
         return idx
 
     def combine(self, results, agg=agg_prob):
@@ -461,8 +462,6 @@ class CompositeSourceModel(collections.Sequence):
             else:  # full enumeration
                 rlzs = logictree.get_effective_rlzs(smodel.gsim_lt)
             if rlzs:
-                logging.info('Creating %d realization(s) for model '
-                             '%s, %s', len(rlzs), smodel.name, smodel.path)
                 idx = assoc._add_realizations(idx, smodel, rlzs)
 
         if assoc.realizations:
