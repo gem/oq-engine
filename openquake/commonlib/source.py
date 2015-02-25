@@ -472,7 +472,10 @@ class CompositeSourceModel(collections.Sequence):
                 logging.warn('Some source models are not contributing, '
                              'weights are being rescaled')
             for rlz in assoc.realizations:
-                rlz.weight = rlz.weight / tot_weight
+                if num_samples:
+                    rlz.weight = 1. / len(assoc.realizations)
+                else:
+                    rlz.weight = rlz.weight / tot_weight
         return assoc
 
     def __repr__(self):
