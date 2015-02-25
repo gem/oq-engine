@@ -417,6 +417,7 @@ class LiteralNode(Node):
     """
     validators = {}  # to be overridden in subclasses
     __metaclass__ = MetaLiteralNode
+    cast_leaves = True
 
     def __init__(self, fulltag, attrib=None, text=None,
                  nodes=None, lineno=None):
@@ -426,9 +427,12 @@ class LiteralNode(Node):
             # try to cast the node, if the tag is known
             assert not nodes, 'You cannot cast a composite node: %s' % nodes
             try:
-                text = validators[tag](text, **attrib)
-                assert text is not None
-                attrib = {}
+                validator = validators[tag]
+                if self.cast_leaves:
+                    text = validator(text, **attrib)
+                    assert text is not None
+                    attrib = {}
+
             except Exception as exc:
                 raise ValueError('Could not convert %s->%s: %s, line %s' %
                                  (tag, validators[tag].__name__, exc, lineno))

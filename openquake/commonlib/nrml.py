@@ -185,6 +185,7 @@ def float_or_flag(value, isAbsolute=None):
 
 @nodefactory.add('exposureModel')
 class ExposureDataNode(LiteralNode):
+    cast_leaves = False
     validators = valid.parameters(
         description=valid.utf8,
         name=valid.name,
