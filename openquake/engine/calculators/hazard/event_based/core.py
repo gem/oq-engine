@@ -165,9 +165,10 @@ def compute_ruptures(job_id, sources, sitecol, info):
                     prob_rup = models.ProbabilisticRupture.create(
                         rup, ses_coll[col_idx], rups[0].indices)
                     for r in rups:
-                        models.SESRupture.objects.create(
-                            rupture=prob_rup, ses_id=r.ses_idx,
-                            tag=r.tag, seed=r.seed)
+                        if r.col_idx == col_idx:
+                            models.SESRupture.objects.create(
+                                rupture=prob_rup, ses_id=r.ses_idx,
+                                tag=r.tag, seed=r.seed)
 
         if num_occ_by_rup:
             num_ruptures = len(num_occ_by_rup)
@@ -317,6 +318,7 @@ class GmfCalculator(object):
             for trt_id, gsim in sorted(rlzs_assoc):
                 if trt_id == self.trt_model_id and gsim == gsim_name:
                     for rlz in rlzs_assoc[trt_id, gsim]:
+                        import pdb; pdb.set_trace()
                         imt_name, sa_period, sa_damping = from_string(imt_str)
                         inserter.add(models.GmfData(
                             gmf=models.Gmf.objects.get(lt_realization=rlz.id),
