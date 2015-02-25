@@ -371,8 +371,13 @@ class EventBasedHazardCase17TestCase(qa_utils.BaseQATestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test(self):
+        result_dir = tempfile.mkdtemp()
+
         cfg = os.path.join(os.path.dirname(case_17.__file__), 'job.ini')
-        expected_curves_pga = [[1.0, 1.0, 0.0]]
+        expected_curves_pga = [[1.0, 1.0, 0.0],
+                               [1.0, 1.0, 0.0],
+                               [1.0, 1.0, 0.0],
+                               [1.0, 1.0, 0.0]]
 
         job = self.run_hazard(cfg)
         j = job.id
@@ -387,13 +392,19 @@ class EventBasedHazardCase17TestCase(qa_utils.BaseQATestCase):
         t5_tags = [t for t in tags if t.startswith('col=04')]
 
         self.assertEqual(len(t1_tags), 0)
-        self.assertEqual(len(t2_tags), 11264)
-        self.assertEqual(len(t3_tags), 11100)
-        self.assertEqual(len(t4_tags), 10944)
-        self.assertEqual(len(t5_tags), 10596)
+        self.assertEqual(len(t2_tags), 2816)
+        self.assertEqual(len(t3_tags), 2775)
+        self.assertEqual(len(t4_tags), 2736)
+        self.assertEqual(len(t5_tags), 2649)
 
+        #for gmf_output in models.Output.objects.filter(
+        #        output_type='gmf', oq_job=job):
+        #    fname = core.export(gmf_output.id, result_dir, 'csv')
+        #    print fname
         curves = [c.poes for c in models.HazardCurveData.objects.filter(
             hazard_curve__output__oq_job=job.id, hazard_curve__imt='PGA'
         ).order_by('hazard_curve')]
         numpy.testing.assert_array_almost_equal(
             expected_curves_pga, curves, decimal=7)
+
+        shutil.rmtree(result_dir)
