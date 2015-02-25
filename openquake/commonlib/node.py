@@ -417,7 +417,7 @@ class LiteralNode(Node):
     """
     validators = {}  # to be overridden in subclasses
     __metaclass__ = MetaLiteralNode
-    cast_leaves = True
+    cast_leaves = False
 
     def __init__(self, fulltag, attrib=None, text=None,
                  nodes=None, lineno=None):

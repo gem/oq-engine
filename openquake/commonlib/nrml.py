@@ -134,6 +134,7 @@ class ValidNode(LiteralNode):
     A subclass of :class:`LiteralNode` to be used when parsing sources
     and ruptures from NRML files.
     """
+    cast_leaves = True
     validators = valid.parameters(
         strike=valid.strike_range,  # needed for the moment
         dip=valid.dip_range,  # needed for the moment
@@ -185,7 +186,6 @@ def float_or_flag(value, isAbsolute=None):
 
 @nodefactory.add('exposureModel')
 class ExposureDataNode(LiteralNode):
-    cast_leaves = False
     validators = valid.parameters(
         description=valid.utf8,
         name=valid.name,
@@ -205,6 +205,7 @@ class VulnerabilityNode(LiteralNode):
     """
     Literal Node class used to validate discrete vulnerability functions
     """
+    cast_leaves = True
     validators = valid.parameters(
         vulnerabilitySetID=str,  # any ASCII string is fine
         vulnerabilityFunctionID=str,  # any ASCII string is fine
@@ -224,6 +225,7 @@ class FragilityNode(LiteralNode):
     """
     Literal Node class used to validate fragility functions
     """
+    cast_leaves = True
     validators = valid.parameters(
         format=valid.ChoiceCI('discrete', 'continuous'),
         lossCategory=valid.name,
