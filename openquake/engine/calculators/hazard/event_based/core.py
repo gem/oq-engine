@@ -200,7 +200,7 @@ def compute_ruptures(job_id, sources, sitecol, info):
 
 
 @tasks.oqtask
-def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol, rlzs_assoc):
+def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol, rlzs_assoc, info):
     """
     :param int job_id:
         ID of the currently running job
@@ -210,6 +210,8 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol, rlzs_assoc):
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param rlzs_assoc:
         a :class:`openquake.commonlib.source.RlzsAssoc` instance
+    :param info:
+        a :class:`openquake.commonlib.source.CompositionInfo` instance
     :returns:
         a dictionary trt_model_id -> (curves_by_gsim, bounding_boxes)
         where the list of bounding boxes is empty
@@ -220,11 +222,12 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol, rlzs_assoc):
 
     result = {}  # trt_model_id -> (curves_by_gsim, [])
     # NB: by construction each block is a non-empty list with
-    # ruptures of homogeneous trt_model
-    trt_model = ses_ruptures[0].rupture.ses_collection.trt_model
+    # ruptures of homogeneous SESCollection
+    ses_coll = ses_ruptures[0].rupture.ses_collection
+    trt_model = ses_coll.trt_model
     gsims = rlzs_assoc.get_gsims_by_trt_id()[trt_model.id]
     calc = GmfCalculator(
-        sorted(imts), sorted(gsims), trt_model.id,
+        sorted(imts), sorted(gsims), ses_coll,
         getattr(hc, 'truncation_level', None), models.get_correl_model(job))
 
     with EnginePerformanceMonitor(
@@ -249,7 +252,7 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol, rlzs_assoc):
     if hc.ground_motion_fields:
         with EnginePerformanceMonitor(
                 'saving gmfs', job_id, compute_gmfs_and_curves):
-            calc.save_gmfs(rlzs_assoc)
+            calc.save_gmfs(rlzs_assoc, info)
 
     return result
 
@@ -258,7 +261,7 @@ class GmfCalculator(object):
     """
     A class to store ruptures and then compute and save ground motion fields.
     """
-    def __init__(self, sorted_imts, sorted_gsims, trt_model_id,
+    def __init__(self, sorted_imts, sorted_gsims, ses_coll,
                  truncation_level=None, correl_model=None):
         """
         :param sorted_imts:
@@ -274,7 +277,8 @@ class GmfCalculator(object):
         """
         self.sorted_imts = sorted_imts
         self.sorted_gsims = sorted_gsims
-        self.trt_model_id = trt_model_id
+        self.col_idx = ses_coll.ordinal
+        self.trt_model_id = ses_coll.trt_model.id
         self.truncation_level = truncation_level
         self.correl_model = correl_model
         # NB: I tried to use a single dictionary
@@ -307,7 +311,7 @@ class GmfCalculator(object):
                         self.ruptures_per_site[
                             gsim_name, imt_str, site_id].append(rupid)
 
-    def save_gmfs(self, rlzs_assoc):
+    def save_gmfs(self, rlzs_assoc, info):
         """
         Helper method to save the computed GMF data to the database.
 
@@ -317,8 +321,12 @@ class GmfCalculator(object):
         for gsim_name, imt_str, site_id in self.gmvs_per_site:
             for trt_id, gsim in sorted(rlzs_assoc):
                 if trt_id == self.trt_model_id and gsim == gsim_name:
-                    for rlz in rlzs_assoc[trt_id, gsim]:
-                        import pdb; pdb.set_trace()
+                    for i, rlz in enumerate(rlzs_assoc[trt_id, gsim]):
+                        col_idx = info.get_col_id(trt_id, i)
+                        if col_idx != self.col_idx:
+                            continue
+                        # save only the data for the realization corresponding
+                        # to the current SESCollection
                         imt_name, sa_period, sa_damping = from_string(imt_str)
                         inserter.add(models.GmfData(
                             gmf=models.Gmf.objects.get(lt_realization=rlz.id),
@@ -454,18 +462,19 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         sitecol = self.site_collection
         sesruptures = []  # collect the ruptures in a fixed order
         with self.monitor('reading ruptures'):
-            for trt_model in models.TrtModel.objects.filter(
-                    lt_model__hazard_calculation=self.job):
+            for ses_coll in models.SESCollection.objects.filter(
+                    trt_model__lt_model__hazard_calculation=self.job):
                 for sr in models.SESRupture.objects.filter(
-                        rupture__ses_collection__trt_model=trt_model):
+                        rupture__ses_collection=ses_coll):
                     # adding the annotation below saves a LOT of memory
                     # otherwise one would need as key in apply_reduce
-                    # lambda sr: sr.rupture.tsrt_model.id which would
+                    # lambda sr: sr.rupture.ses_collection.ordinal which would
                     # read the world from the database
-                    sr.trt_id = trt_model.id
+                    sr.col_idx = ses_coll.ordinal
                     sesruptures.append(sr)
         base_agg = super(EventBasedHazardCalculator, self).agg_curves
         return tasks.apply_reduce(
             compute_gmfs_and_curves,
-            (self.job.id, sesruptures, sitecol, self.rlzs_assoc),
-            base_agg, {}, key=lambda sr: sr.trt_id)
+            (self.job.id, sesruptures, sitecol, self.rlzs_assoc,
+             self.composite_model.info),
+            base_agg, {}, key=lambda sr: sr.col_idx)
