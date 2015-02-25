@@ -77,8 +77,11 @@ class GmfCalculatorTestCase(unittest.TestCase):
         pga = PGA()
         rlz = mock.Mock()
         rlz.id = 1
+        ses_coll = mock.Mock()
+        ses_coll.ordinal = 0
+        ses_coll.trt_model.id = 1
         calc = core.GmfCalculator(
-            [pga], [gsim], trt_model_id=1, truncation_level=3)
+            [pga], [gsim], ses_coll, truncation_level=3)
         calc.calc_gmfs(site_coll, rup, [(rup.id, rup_seed)])
         expected_rups = {
             ('AkkarBommer2010', 'PGA', 0): [rup_id],
