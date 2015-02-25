@@ -369,6 +369,13 @@ class CompositionInfo(object):
                     col_id += 1
                 trt_id += 1
 
+    def get_max_samples(self):
+        """Return the maximum number of samples of the source model"""
+        values = self._num_samples.values()
+        if not values:
+            return 1
+        return max(values)
+
     def get_num_samples(self, trt_id):
         """
         :param trt_id: tectonic region type object ID
