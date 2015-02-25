@@ -669,7 +669,7 @@ if [ $BUILD_DEVEL -eq 1 ]; then
         pkg_deb="-1"
     fi
 
-    ( echo "$pkg_name (${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}+dev${dt}-${hash}) $pkg_rest"
+    ( echo "$pkg_name (${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}~dev${dt}-${hash}) $pkg_rest"
       echo
       echo "  * Development version from $hash commit"
       echo
