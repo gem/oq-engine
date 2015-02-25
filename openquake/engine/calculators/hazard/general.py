@@ -333,7 +333,11 @@ class BaseHazardCalculator(base.Calculator):
         gsims_by_trt_id = self.rlzs_assoc.get_gsims_by_trt_id()
         smodels = [sm for sm in self._source_models
                    if sm.trtmodel_set.filter(num_ruptures__gt=0)]
-        for lt_model, rlzs in zip(smodels, self.rlzs_assoc.rlzs_by_smodel):
+        for lt_model in smodels:
+            rlzs = self.rlzs_assoc.rlzs_by_smodel[lt_model.ordinal]
+            logs.LOG.info('Creating %d realization(s) for model '
+                          '%s, %s', len(rlzs), lt_model.sm_name,
+                          '_'.join(lt_model.sm_lt_path))
             for rlz in rlzs:
                 gsim_by_trt = self.rlzs_assoc.gsim_by_trt[rlz]
                 lt_rlz = models.LtRealization.objects.create(
