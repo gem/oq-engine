@@ -170,6 +170,7 @@ class ValidNode(LiteralNode):
 
 @nodefactory.add('siteModel')
 class SiteModelNode(LiteralNode):
+    cast_leaves = True
     validators = valid.parameters(site=valid.site_param)
 
 
