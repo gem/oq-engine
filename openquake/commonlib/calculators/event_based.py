@@ -175,42 +175,37 @@ def compute_ruptures(sources, sitecol, info, monitor):
     sesruptures = []
 
     # Compute and save stochastic event sets
-    rnd = random.Random()
     for src in sources:
-        rnd.seed(src.seed)  # keep this here and not after the filtering;
-        # in this way changing the maximum distance does not change the
-        # generated seeds, which could be surprising
-
         s_sites = src.filter_sites_by_distance_to_source(
             oq.maximum_distance, sitecol)
         if s_sites is None:
             continue
 
         num_occ_by_rup = sample_ruptures(
-            src, oq.ses_per_logic_tree_path, info, rnd)
+            src, oq.ses_per_logic_tree_path, info)
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
 
-        for rup, rups in filter_ruptures(
-                num_occ_by_rup, s_sites, oq.maximum_distance,
-                sitecol, rnd, src):
+        for rup, rups in build_ses_ruptures(
+                src, num_occ_by_rup, s_sites, oq.maximum_distance, sitecol):
             sesruptures.extend(rups)
 
     return {trt_model_id: sesruptures}
 
 
-def sample_ruptures(src, num_ses, info, rnd):
+def sample_ruptures(src, num_ses, info):
     """
     Sample the ruptures contained in the given source.
 
     :param src: a hazardlib source object
     :param num_ses: the number of Stochastic Event Sets to generate
     :param info: a :class:`openquake.commonlib.source.CompositionInfo` instance
-    :param rnd: an instance of :class:`random.Random`
     :returns: a dictionary of dictionaries rupture ->
               {(col_id, ses_id): num_occurrences}
     """
+    rnd = random.Random(src.seed)
+
     # the dictionary `num_occ_by_rup` contains a dictionary
     # (col_id, ses_id) -> num_occurrences
     # for each occurring rupture
@@ -228,12 +223,13 @@ def sample_ruptures(src, num_ses, info, rnd):
     return num_occ_by_rup
 
 
-def filter_ruptures(
-        num_occ_by_rup, s_sites, maximum_distance, sitecol, rnd, src):
+def build_ses_ruptures(
+        src, num_occ_by_rup, s_sites, maximum_distance, sitecol):
     """
     Filter the ruptures stored in the dictionary num_occ_by_rup and
     yield pairs (rupture, <list of associated SESRuptures>)
     """
+    rnd = random.Random(src.seed)
     for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
         # filtering ruptures
         r_sites = filter_sites_by_distance_to_rupture(
