@@ -43,9 +43,8 @@ from openquake.hazardlib.calc import gmf
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import FilteredSiteCollection
 
-from openquake.commonlib import valid
 from openquake.commonlib.calculators.event_based import (
-    sample_ruptures, filter_ruptures)
+    sample_ruptures, build_ses_ruptures)
 
 from openquake.engine import writer
 from openquake.engine.calculators import calculators
@@ -140,10 +139,8 @@ def compute_ruptures(job_id, sources, sitecol, info):
         'saving ruptures', job_id, compute_ruptures)
 
     # Compute and save stochastic event sets
-    rnd = random.Random()
     for src in sources:
         t0 = time.time()
-        rnd.seed(src.seed)
 
         with filter_sites_mon:  # filtering sources
             s_sites = src.filter_sites_by_distance_to_source(
@@ -153,13 +150,13 @@ def compute_ruptures(job_id, sources, sitecol, info):
 
         with generate_ruptures_mon:
             num_occ_by_rup = sample_ruptures(
-                src, hc.ses_per_logic_tree_path, info, rnd)
+                src, hc.ses_per_logic_tree_path, info)
 
         with filter_ruptures_mon:
             pairs = list(
-                filter_ruptures(
-                    num_occ_by_rup, s_sites, hc.maximum_distance, sitecol,
-                    rnd, src))
+                build_ses_ruptures(
+                    src, num_occ_by_rup, s_sites, hc.maximum_distance, sitecol
+                ))
         for rup, rups in pairs:
             # saving ses_ruptures
             with save_ruptures_mon:
@@ -402,8 +399,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         """
         weights = super(EventBasedHazardCalculator, self).pre_execute()
         hc = self.oqparam
-        rnd = random.Random()
-        rnd.seed(hc.random_seed)
+        rnd = random.Random(hc.random_seed)
         for src in self.composite_model.sources:
             src.seed = rnd.randint(0, models.MAX_SINT_32)
         for i, trt_model in enumerate(models.TrtModel.objects.filter(
