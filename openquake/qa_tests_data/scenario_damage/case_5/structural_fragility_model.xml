@@ -1,0 +1,93 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <fragilityModel format="discrete">
+        <description>Fragility model for Nepal (discrete)</description>
+        <limitStates>
+            slight
+            moderate
+            extreme
+            complete
+        </limitStates>
+        
+        <ffs noDamageLimit= "0.05">
+          <taxonomy>RC</taxonomy>
+            <IML IMT="PGA" imlUnit="g"> 0.0 0.2 0.4 0.6 0.8 1 1.2 1.4</IML>
+            <ffd ls="slight">
+                <poEs> 0 0.788 0.97 0.994 0.998 1 1 1 </poEs>
+            </ffd>
+		 <ffd ls="moderate">
+                <poEs> 0 0.6 0.909 0.976 0.992 0.997 0.999 1 </poEs>
+            </ffd>
+		 <ffd ls="extreme">
+                <poEs> 0 0.341 0.75 0.904 0.960 0.982 0.992 0.996 </poEs>
+            </ffd>
+		 <ffd ls="complete">
+                <poEs> 0 0.109 0.441 0.686 0.825 0.900 0.942 0.965 </poEs>
+            </ffd>
+           </ffs>
+        <ffs noDamageLimit= "0.05">
+            <taxonomy>UFB</taxonomy>
+            <IML IMT="PGA" imlUnit="g"> 0.0 0.2 0.4 0.6 0.8 1 1.2 1.4</IML>
+            <ffd ls="slight">
+                <poEs> 0 0.771 0.950 0.989 0.997 0.999 1 1 </poEs>
+            </ffd>
+		 <ffd ls="moderate">
+                <poEs> 0 0.5 0.861 0.957 0.985 0.994 0.997 0.999 </poEs>
+            </ffd>
+		 <ffd ls="extreme">
+                <poEs> 0 0.231 0.636 0.837 0.924 0.962 0.981 0.989 </poEs>
+            </ffd>
+		 <ffd ls="complete">
+                <poEs> 0 0.097 0.414 0.661 0.806 0.887 0.933 0.959 </poEs>
+            </ffd>
+           </ffs>
+        <ffs noDamageLimit= "0.05">
+           <taxonomy>W</taxonomy>
+            <IML IMT="PGA" imlUnit="g"> 0.0 0.2 0.4 0.6 0.8 1 1.2 1.4</IML>
+            <ffd ls="slight">
+                <poEs> 0 0.500 0.861 0.957 0.985 0.994 0.997 0.999 </poEs>
+            </ffd>
+		 <ffd ls="moderate">
+                <poEs> 0 0.204 0.600 0.813 0.909 0.954 0.976 0.986 </poEs>
+            </ffd>
+		 <ffd ls="extreme">
+                <poEs> 0 0.041 0.255 0.490 0.664 0.780 0.855 0.903 </poEs>
+            </ffd>
+		 <ffd ls="complete">
+                <poEs> 0 0.007 0.088 0.236 0.394 0.532 0.642 0.728 </poEs>
+            </ffd>
+           </ffs>
+        <ffs noDamageLimit= "0.05">
+           <taxonomy>A</taxonomy>
+            <IML IMT="PGA" imlUnit="g"> 0.0 0.2 0.4 0.6 0.8 1 1.2 1.4</IML>
+            <ffd ls="slight">
+                <poEs> 0 0.750 0.960 0.992 0.998 0.999 1 1 </poEs>
+            </ffd>
+		 <ffd ls="moderate">
+                <poEs> 0 0.6 0.909 0.976 0.992 0.997 0.999 1 </poEs>
+            </ffd>
+		 <ffd ls="extreme">
+                <poEs> 0 0.341 0.75 0.904 0.960 0.982 0.992 0.996 </poEs>
+            </ffd>
+		 <ffd ls="complete">
+                <poEs> 0 0.168 0.548 0.775 0.886 0.940 0.967 0.981 </poEs>
+            </ffd>
+           </ffs>
+        <ffs noDamageLimit= "0.05">
+         <taxonomy>DS</taxonomy>
+            <IML IMT="PGA" imlUnit="g"> 0.0 0.2 0.4 0.6 0.8 1 1.2 1.4</IML>
+            <ffd ls="slight">
+                <poEs> 0 0.673 0.937 0.985 0.996 0.998 0.999 1 </poEs>
+            </ffd>
+		 <ffd ls="moderate">
+                <poEs> 0 0.532 0.878 0.964 0.988 0.995 0.998 0.999 </poEs>
+            </ffd>
+		 <ffd ls="extreme">
+                <poEs> 0 0.300 0.711 0.883 0.950 0.977 0.989 0.994 </poEs>
+            </ffd>
+		 <ffd ls="complete">
+                <poEs> 0 0.148 0.516 0.750 0.869 0.929 0.960 0.977 </poEs>
+            </ffd>
+           </ffs>
+    </fragilityModel>
+</nrml>
