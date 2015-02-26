@@ -279,7 +279,7 @@ class RlzsAssoc(collections.Mapping):
         Example: a case with tectonic region type T1 with GSIMS A, B, C
         and tectonic region type T2 with GSIMS D, E.
 
-        >>> assoc = RlzsAssoc({
+        >>> assoc = RlzsAssoc(CompositionInfo([]), {
         ... ('T1', 'A'): ['r0', 'r1'],
         ... ('T1', 'B'): ['r2', 'r3'],
         ... ('T1', 'C'): ['r4', 'r5'],
