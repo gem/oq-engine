@@ -217,8 +217,7 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_18(self):
         expected = [
             '0-AkkarBommer2010.csv',
-            '1-ChiouYoungs2008.csv',
-            '2-ChiouYoungs2008.csv',
+            '0-CauzziFaccioli2008.csv',
         ]
         out = self.run_calc(case_18.__file__, 'job_3.ini', exports='csv')
         for fname in expected:

@@ -216,12 +216,13 @@ def sample_ruptures(src, num_ses, info):
     for rup_no, rup in enumerate(src.iter_ruptures(), 1):
         rup.rup_no = rup_no
         for idx in range(info.get_num_samples(src.trt_model_id)):
-            col_id = info.get_col_id(src.trt_model_id, idx)
+            col_idx = info.get_col_idx(src.trt_model_id, idx)
             for ses_idx in range(1, num_ses + 1):
                 numpy.random.seed(rnd.randint(0, MAX_INT))
                 num_occurrences = rup.sample_number_of_occurrences()
                 if num_occurrences:
-                    num_occ_by_rup[rup] += {(col_id, ses_idx): num_occurrences}
+                    num_occ_by_rup[rup] += {
+                        (col_idx, ses_idx): num_occurrences}
     return num_occ_by_rup
 
 

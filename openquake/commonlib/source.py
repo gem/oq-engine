@@ -237,9 +237,10 @@ class RlzsAssoc(collections.Mapping):
     (3, 'BooreAtkinson2008') ['#6-SM2_a3b1-BA2008']
     (3, 'CampbellBozorgnia2008') ['#7-SM2_a3b1-CB2008']
     """
-    def __init__(self, rlzs_assoc=None):
-        self.gsim_by_trt = {}  # rlz -> {trt: gsim}
+    def __init__(self, csm_info, rlzs_assoc=None):
+        self.csm_info = csm_info
         self.rlzs_assoc = rlzs_assoc or collections.defaultdict(list)
+        self.gsim_by_trt = {}  # rlz -> {trt: gsim}
         self.rlzs_by_smodel = collections.OrderedDict()
 
     @property
@@ -257,15 +258,19 @@ class RlzsAssoc(collections.Mapping):
     def _add_realizations(self, idx, lt_model, realizations):
         gsims_by_trt = lt_model.gsim_lt.values
         rlzs = []
-        for gsim_rlz in realizations:
+        for i, gsim_rlz in enumerate(realizations):
             weight = float(lt_model.weight) * float(gsim_rlz.weight)
             rlz = LtRealization(idx, lt_model.path, gsim_rlz, weight)
+            rlz.col_ids = set()
             self.gsim_by_trt[rlz] = gsim_rlz.value
             for trt_model in lt_model.trt_models:
                 trt = trt_model.trt
                 gsim = gsim_rlz.value[trt]
                 self.rlzs_assoc[trt_model.id, gsim].append(rlz)
                 trt_model.gsims = gsims_by_trt[trt]
+                if lt_model.samples > 1:  # oversampling
+                    col_idx = self.csm_info.get_col_idx(trt_model.id, i)
+                    rlz.col_ids.add(col_idx)
             idx += 1
             rlzs.append(rlz)
         self.rlzs_by_smodel[lt_model.ordinal] = rlzs
@@ -383,7 +388,7 @@ class CompositionInfo(object):
         """
         return self._num_samples.get(trt_id, 1)
 
-    def get_col_id(self, trt_id, idx):
+    def get_col_idx(self, trt_id, idx):
         """
         :param trt_id: tectonic region type object ID
         :param idx: an integer index from 0 to num_samples
@@ -450,7 +455,7 @@ class CompositeSourceModel(collections.Sequence):
 
         :param get_weight: a function trt_model -> positive number
         """
-        assoc = RlzsAssoc()
+        assoc = RlzsAssoc(self.info)
         random_seed = self.source_model_lt.seed
         num_samples = self.source_model_lt.num_samples
         idx = 0
@@ -470,8 +475,11 @@ class CompositeSourceModel(collections.Sequence):
                 rlzs = logictree.get_effective_rlzs(smodel.gsim_lt)
             if rlzs:
                 idx = assoc._add_realizations(idx, smodel, rlzs)
-
-        if assoc.realizations:
+        if num_samples:
+            assert len(assoc.realizations) == num_samples
+            for rlz in assoc.realizations:
+                rlz.weight = 1. / num_samples
+        elif assoc.realizations:
             tot_weight = sum(rlz.weight for rlz in assoc.realizations)
             if tot_weight == 0:
                 raise ValueError('All realizations have zero weight??')
@@ -479,10 +487,7 @@ class CompositeSourceModel(collections.Sequence):
                 logging.warn('Some source models are not contributing, '
                              'weights are being rescaled')
             for rlz in assoc.realizations:
-                if num_samples:
-                    rlz.weight = 1. / len(assoc.realizations)
-                else:
-                    rlz.weight = rlz.weight / tot_weight
+                rlz.weight = rlz.weight / tot_weight
         return assoc
 
     def __repr__(self):
