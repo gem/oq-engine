@@ -278,16 +278,24 @@ EXPECTED_GMFS = [
     ('*_*_*_b4_1', '3.7618E-03 7.6974E-03')]
 
 
+def get_actual_gmfs(job):
+    """
+    Returns the GMFs in the database as a list of pairs [(rlz_path, values)].
+    """
+    cursor = models.getcursor('job_init')
+    cursor.execute(GET_GMF_OUTPUTS % job.id)
+    actual_gmfs = [('_'.join(k), scientificformat(sorted(v), '%8.4E'))
+                   for k, v in cursor.fetchall()]
+    return actual_gmfs
+
+
 class EventBasedHazardCase5TestCase(qa_utils.BaseQATestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test(self):
         cfg = os.path.join(os.path.dirname(case_5.__file__), 'job.ini')
         job = self.run_hazard(cfg)
-        cursor = models.getcursor('job_init')
-        cursor.execute(GET_GMF_OUTPUTS % job.id)
-        actual_gmfs = [('_'.join(k), scientificformat(sorted(v), '%8.4E'))
-                       for k, v in cursor.fetchall()]
+        actual_gmfs = get_actual_gmfs(job)
         self.assertEqual(len(actual_gmfs), len(EXPECTED_GMFS))
         for (actual_path, actual_gmf), (expected_path, expected_gmf) in zip(
                 actual_gmfs, EXPECTED_GMFS):
@@ -367,6 +375,7 @@ class EventBasedHazardCase13TestCase(qa_utils.BaseQATestCase):
         aaae(expected_curve_poes, curve.poes, decimal=2)
 
 
+# oversampling test
 class EventBasedHazardCase17TestCase(qa_utils.BaseQATestCase):
 
     @attr('qa', 'hazard', 'event_based')
@@ -401,3 +410,17 @@ class EventBasedHazardCase17TestCase(qa_utils.BaseQATestCase):
         ).order_by('hazard_curve')]
         numpy.testing.assert_array_almost_equal(
             expected_curves_pga, curves, decimal=7)
+
+
+# another oversampling test
+class EventBasedHazardCase18TestCase(qa_utils.BaseQATestCase):
+
+    @attr('qa', 'hazard', 'event_based')
+    def test(self):
+        cfg = os.path.join(os.path.dirname(case_2.__file__), 'job_3.ini')
+        job = self.run_hazard(cfg)
+        expected = [
+            ('g1', '1.6293E-01 1.7273E-01 1.9337E-01 2.1405E-01 2.2364E-01 3.0367E-01'),
+            ('g3', '1.5591E-01 1.6827E-01 2.4443E-01'),
+            ('g3', '1.2968E-01 1.3050E-01 1.6888E-01 2.2314E-01 3.0461E-01 3.8201E-01')]
+        self.assertEqual(get_actual_gmfs(job), expected)
