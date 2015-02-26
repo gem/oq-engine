@@ -431,7 +431,7 @@ class EventBasedHazardCase18TestCase(qa_utils.BaseQATestCase):
         cfg = os.path.join(os.path.dirname(case_18.__file__), 'job_3.ini')
         job = self.run_hazard(cfg)
         expected = [
-            ('AB', '1.6293E-01 1.7273E-01 1.9337E-01 2.1405E-01 2.2364E-01 3.0367E-01'),
-            ('CY', '1.5591E-01 1.6827E-01 2.4443E-01'),
-            ('CY', '1.2968E-01 1.3050E-01 1.6888E-01 2.2314E-01 3.0461E-01 3.8201E-01')]
+            ('AB', '9.7812E-02 1.1691E-01 2.0018E-01'),
+            ('AB', '8.4810E-02 1.0532E-01 1.1238E-01 1.3214E-01 1.7364E-01'),
+            ('CF', '1.4015E-02 1.6917E-02 1.7467E-02 1.8669E-02 1.8717E-02 1.9903E-02 2.0498E-02 2.1686E-02 2.5976E-02 3.2168E-02 4.0298E-02 5.1991E-02 8.8104E-02')]
         self.assertEqual(get_actual_gmfs(job), expected)
