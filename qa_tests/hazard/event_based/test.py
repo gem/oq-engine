@@ -383,7 +383,8 @@ class EventBasedHazardCase17TestCase(qa_utils.BaseQATestCase):
         result_dir = tempfile.mkdtemp()
 
         cfg = os.path.join(os.path.dirname(case_17.__file__), 'job.ini')
-        expected_curves_pga = [[1.0, 1.0, 0.0],
+        expected_curves_pga = [[0.0, 0.0, 0.0],
+                               [1.0, 1.0, 0.0],
                                [1.0, 1.0, 0.0],
                                [1.0, 1.0, 0.0],
                                [1.0, 1.0, 0.0]]
