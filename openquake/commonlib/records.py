@@ -237,9 +237,9 @@ class Exposure(Record):
                                           unit=self['area_unit'])))
             conv.append(Node('costTypes'))
             conv.append(Node('deductible', dict(
-                isAbsolute=self['deductible_is_absolute'])))
+                isAbsolute=self['deductible_is_absolute'] or 'False')))
             conv.append(Node('insuranceLimit', dict(
-                isAbsolute=self['insurance_limit_is_absolute'])))
+                isAbsolute=self['insurance_limit_is_absolute'] or 'False')))
             node.append(conv)
         node.append(Node('assets'))
         return node
