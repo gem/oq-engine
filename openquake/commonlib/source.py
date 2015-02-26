@@ -361,17 +361,17 @@ class CompositionInfo(object):
     a composite source model.
     """
     def __init__(self, source_models):
-        self._col_dict = {}  # dictionary trt_id, idx -> col_id
+        self._col_dict = {}  # dictionary trt_id, idx -> col_idx
         self._num_samples = {}  # trt_id -> num_samples
-        col_id = 0
+        col_idx = 0
         for sm in source_models:
             for trt_model in sm.trt_models:
                 trt_id = trt_model.id
                 if sm.samples > 1:
                     self._num_samples[trt_id] = sm.samples
                 for idx in range(sm.samples):
-                    self._col_dict[trt_id, idx] = col_id
-                    col_id += 1
+                    self._col_dict[trt_id, idx] = col_idx
+                    col_idx += 1
                 trt_id += 1
 
     def get_max_samples(self):
@@ -396,23 +396,23 @@ class CompositionInfo(object):
         """
         return self._col_dict[trt_id, idx]
 
-    def get_trt_id(self, col_id):
+    def get_trt_id(self, col_idx):
         """
-        :param col_id: the ordinal of a SESCollection
+        :param col_idx: the ordinal of a SESCollection
         :returns: the ID of the associated TrtModel
         """
         for (trt_id, idx), cid in self._col_dict.iteritems():
-            if cid == col_id:
+            if cid == col_idx:
                 return trt_id
         raise KeyError('There is no TrtModel associated to the collection %d!'
-                       % col_id)
+                       % col_idx)
 
     def get_triples(self):
         """
-        Yield triples (trt_id, idx, col_id) in order
+        Yield triples (trt_id, idx, col_idx) in order
         """
-        for (trt_id, idx), col_id in sorted(self._col_dict.iteritems()):
-            yield trt_id, idx, col_id
+        for (trt_id, idx), col_idx in sorted(self._col_dict.iteritems()):
+            yield trt_id, idx, col_idx
 
 
 class CompositeSourceModel(collections.Sequence):
@@ -475,19 +475,20 @@ class CompositeSourceModel(collections.Sequence):
                 rlzs = logictree.get_effective_rlzs(smodel.gsim_lt)
             if rlzs:
                 idx = assoc._add_realizations(idx, smodel, rlzs)
-        if num_samples:
-            assert len(assoc.realizations) == num_samples
-            for rlz in assoc.realizations:
-                rlz.weight = 1. / num_samples
-        elif assoc.realizations:
-            tot_weight = sum(rlz.weight for rlz in assoc.realizations)
-            if tot_weight == 0:
-                raise ValueError('All realizations have zero weight??')
-            elif tot_weight < 1:
-                logging.warn('Some source models are not contributing, '
-                             'weights are being rescaled')
-            for rlz in assoc.realizations:
-                rlz.weight = rlz.weight / tot_weight
+        if assoc.realizations:
+            if num_samples:
+                assert len(assoc.realizations) == num_samples
+                for rlz in assoc.realizations:
+                    rlz.weight = 1. / num_samples
+            else:
+                tot_weight = sum(rlz.weight for rlz in assoc.realizations)
+                if tot_weight == 0:
+                    raise ValueError('All realizations have zero weight??')
+                elif tot_weight < 1:
+                    logging.warn('Some source models are not contributing, '
+                                 'weights are being rescaled')
+                for rlz in assoc.realizations:
+                    rlz.weight = rlz.weight / tot_weight
         return assoc
 
     def __repr__(self):
