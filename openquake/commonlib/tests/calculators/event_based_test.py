@@ -9,7 +9,7 @@ from openquake.hazardlib.site import FilteredSiteCollection
 from openquake.commonlib.tests.calculators import CalculatorTestCase
 from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_4, case_5, case_6, case_12, case_13,
-    case_17)
+    case_17, case_18)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
@@ -215,5 +215,16 @@ class EventBasedTestCase(CalculatorTestCase):
             'hazard_curve-smltp_b2-gsimltp_b1-ltr_4.csv',
         ]
         out = self.run_calc(case_17.__file__, 'job.ini', exports='csv')
+        for fname in expected:
+            self.assertEqualFiles('expected/%s' % fname, out[fname], sorted)
+
+    @attr('qa', 'hazard', 'event_based')
+    def test_case_18(self):
+        expected = [
+            '0-AkkarBommer2010.csv',
+            '1-ChiouYoungs2008.csv',
+            '2-ChiouYoungs2008.csv',
+        ]
+        out = self.run_calc(case_18.__file__, 'job_3.ini', exports='csv')
         for fname in expected:
             self.assertEqualFiles('expected/%s' % fname, out[fname], sorted)
