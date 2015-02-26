@@ -166,7 +166,6 @@ if [ -f /usr/lib/postgresql/9.1/bin/postgres ]; then
 
     DDIR="/usr/share/doc/python-oq-risklib/examples/demos"
 
-    cd $DDIR && find . | grep gz$ | xargs gunzip -f
     # Last but not least copy the smoke tests into a more prominent place.
     if [ -d $HDIR/demos ]; then
         # are existing demos different from the ones we just installed?
@@ -180,10 +179,12 @@ if [ -f /usr/lib/postgresql/9.1/bin/postgres ]; then
     # differ i.e. there's no point in installing them again.
     if [ ! -d $HDIR/demos ]; then
         cp -a $DDIR $HDIR
-        cd $HDIR/demos && chown -R root.openquake .
+        cd $HDIR/demos
+        find . -type f -name '*.gz' | xargs gunzip -f
+        chown -R root.openquake .
         # Make the demo files writable by owner and group.
-        cd $HDIR/demos && find . -type f | xargs chmod 664
-        cd $HDIR/demos && find . -type d | xargs chmod 775
+        find . -type f | xargs chmod 664
+        find . -type d | xargs chmod 775
     fi
 fi
 
