@@ -332,9 +332,7 @@ class BaseHazardCalculator(base.Calculator):
             lambda trt_model: models.TrtModel.objects.get(
                 pk=trt_model.id).num_ruptures)
         gsims_by_trt_id = self.rlzs_assoc.get_gsims_by_trt_id()
-        smodels = [sm for sm in self._source_models
-                   if sm.trtmodel_set.filter(num_ruptures__gt=0)]
-        for lt_model in smodels:
+        for lt_model in self._source_models:
             rlzs = self.rlzs_assoc.rlzs_by_smodel[lt_model.ordinal]
             logs.LOG.info('Creating %d realization(s) for model '
                           '%s, %s', len(rlzs), lt_model.sm_name,

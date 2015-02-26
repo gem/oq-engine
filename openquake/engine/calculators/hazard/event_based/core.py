@@ -200,7 +200,7 @@ def compute_ruptures(job_id, sources, sitecol, info):
 
 
 @tasks.oqtask
-def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol, rlzs_assoc, info):
+def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol, rlzs_assoc):
     """
     :param int job_id:
         ID of the currently running job
@@ -210,8 +210,6 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol, rlzs_assoc, info):
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param rlzs_assoc:
         a :class:`openquake.commonlib.source.RlzsAssoc` instance
-    :param info:
-        a :class:`openquake.commonlib.source.CompositionInfo` instance
     :returns:
         a dictionary trt_model_id -> (curves_by_gsim, bounding_boxes)
         where the list of bounding boxes is empty
@@ -252,7 +250,7 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol, rlzs_assoc, info):
     if hc.ground_motion_fields:
         with EnginePerformanceMonitor(
                 'saving gmfs', job_id, compute_gmfs_and_curves):
-            calc.save_gmfs(rlzs_assoc, info)
+            calc.save_gmfs(rlzs_assoc)
 
     return result
 
@@ -311,22 +309,23 @@ class GmfCalculator(object):
                         self.ruptures_per_site[
                             gsim_name, imt_str, site_id].append(rupid)
 
-    def save_gmfs(self, rlzs_assoc, info):
+    def save_gmfs(self, rlzs_assoc):
         """
         Helper method to save the computed GMF data to the database.
 
         :param rlzs_assoc:
             a :class:`openquake.commonlib.source.RlzsAssoc` instance
         """
-        max_samples = info.get_max_samples()
+        max_samples = rlzs_assoc.csm_info.get_max_samples()
         for gsim_name, imt_str, site_id in self.gmvs_per_site:
             rlzs = rlzs_assoc[self.trt_model_id, gsim_name]
             if max_samples > 1 and len(rlzs) > 1:
                 # save only the data for the realization corresponding
                 # to the current SESCollection
-                rlzs = [rlz for rlz in rlzs if rlz.ordinal == self.col_idx]
-                assert rlzs, ('Could not find the realization associated to '
-                              'SESCollection #%d' % self.col_idx)
+                rlzs = [rlz for rlz in rlzs if self.col_idx in rlz.col_ids]
+                if not rlzs:
+                    print('Could not find the realization associated to '
+                          'SESCollection #%d' % self.col_idx)
             for rlz in rlzs:
                 imt_name, sa_period, sa_damping = from_string(imt_str)
                 inserter.add(models.GmfData(
@@ -476,6 +475,5 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         base_agg = super(EventBasedHazardCalculator, self).agg_curves
         return tasks.apply_reduce(
             compute_gmfs_and_curves,
-            (self.job.id, sesruptures, sitecol, self.rlzs_assoc,
-             self.composite_model.info),
+            (self.job.id, sesruptures, sitecol, self.rlzs_assoc),
             base_agg, {}, key=lambda sr: sr.col_idx)
