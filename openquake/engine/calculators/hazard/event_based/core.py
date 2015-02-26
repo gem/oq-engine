@@ -473,7 +473,10 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                     sr.col_idx = ses_coll.ordinal
                     sesruptures.append(sr)
         base_agg = super(EventBasedHazardCalculator, self).agg_curves
-        zeros = {key: self.zeros for key in self.rlzs_assoc}
+        if hasattr(self, 'zeros'):  # there are IMTLs
+            zeros = {key: self.zeros for key in self.rlzs_assoc}
+        else:
+            zeros = {}
         return tasks.apply_reduce(
             compute_gmfs_and_curves,
             (self.job.id, sesruptures, sitecol, self.rlzs_assoc),
