@@ -1,3 +1,10 @@
+  [Marco Pagani]
+  * Test item for development purpose
+
+  [Graeme Weatherill]
+  * Test item for development purpose with long description on
+    multiple lines
+
 python-oq-hazardlib (0.13.0-0) precise; urgency=low
 
   [Marco Pagani]
