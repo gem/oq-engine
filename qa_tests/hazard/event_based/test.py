@@ -26,7 +26,7 @@ from qa_tests import _utils as qa_utils
 from qa_tests.hazard.event_based import sc_utils
 from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_4, case_5, case_6, case_12, case_13,
-    case_17)
+    case_17, case_18)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
@@ -417,10 +417,10 @@ class EventBasedHazardCase18TestCase(qa_utils.BaseQATestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test(self):
-        cfg = os.path.join(os.path.dirname(case_2.__file__), 'job_3.ini')
+        cfg = os.path.join(os.path.dirname(case_18.__file__), 'job_3.ini')
         job = self.run_hazard(cfg)
         expected = [
-            ('g1', '1.6293E-01 1.7273E-01 1.9337E-01 2.1405E-01 2.2364E-01 3.0367E-01'),
-            ('g3', '1.5591E-01 1.6827E-01 2.4443E-01'),
-            ('g3', '1.2968E-01 1.3050E-01 1.6888E-01 2.2314E-01 3.0461E-01 3.8201E-01')]
+            ('AB', '1.6293E-01 1.7273E-01 1.9337E-01 2.1405E-01 2.2364E-01 3.0367E-01'),
+            ('CY', '1.5591E-01 1.6827E-01 2.4443E-01'),
+            ('CY', '1.2968E-01 1.3050E-01 1.6888E-01 2.2314E-01 3.0461E-01 3.8201E-01')]
         self.assertEqual(get_actual_gmfs(job), expected)
