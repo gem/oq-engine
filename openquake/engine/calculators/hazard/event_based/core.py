@@ -473,7 +473,8 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                     sr.col_idx = ses_coll.ordinal
                     sesruptures.append(sr)
         base_agg = super(EventBasedHazardCalculator, self).agg_curves
+        zeros = {key: self.zeros for key in self.rlzs_assoc}
         return tasks.apply_reduce(
             compute_gmfs_and_curves,
             (self.job.id, sesruptures, sitecol, self.rlzs_assoc),
-            base_agg, {}, key=lambda sr: sr.col_idx)
+            base_agg, zeros, key=lambda sr: sr.col_idx)
