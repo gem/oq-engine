@@ -555,7 +555,7 @@ _lxc_name_and_ip_get()
     if [ $i -eq 40 -o $e -eq 40 ]; then
         return 1
     fi
-    echo "SUCCESSFULY RUNNED $lxc_name ($lxc_ip)"
+    echo "SUCCESSFULLY RUNNED $lxc_name ($lxc_ip)"
 
     return 0
 }
@@ -864,6 +864,10 @@ pkg_suf="$(echo "$pkg_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.[0-9]\+-[^+]\+\(+.*\)
 if [ $BUILD_DEVEL -eq 1 ]; then
     hash="$(git log --pretty='format:%h' -1)"
     mv debian/changelog debian/changelog.orig
+    cp debian/control debian/control.orig
+    for dep in $GEM_GIT_DEPS; do
+        sed -i "s/\(python-${dep}\) \(([<>=]\+\) \([^)]\+\)\()\)/\1 \2 \3~dev0\4/g"  debian/control
+    done
 
     if [ "$pkg_maj" = "$ini_maj" -a "$pkg_min" = "$ini_min" -a \
          "$pkg_bfx" = "$ini_bfx" -a "$pkg_deb" != "" ]; then
@@ -876,7 +880,7 @@ if [ $BUILD_DEVEL -eq 1 ]; then
         pkg_deb="-1"
     fi
 
-    ( echo "$pkg_name (${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}+dev${dt}-${hash}) $pkg_rest"
+    ( echo "$pkg_name (${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}~dev${dt}-${hash}) $pkg_rest"
       echo
       echo "  * Development version from $hash commit"
       echo
@@ -886,7 +890,7 @@ if [ $BUILD_DEVEL -eq 1 ]; then
     cat debian/changelog.orig >> debian/changelog
     rm debian/changelog.orig
 
-    sed -i "s/^__version__[  ]*=.*/__version__ = '${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}+dev${dt}-${hash}'/g" openquake/engine/__init__.py
+    sed -i "s/^__version__[  ]*=.*/__version__ = '${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}~dev${dt}-${hash}'/g" openquake/engine/__init__.py
 fi
 
 if [  "$ini_maj" != "$pkg_maj" -o \
