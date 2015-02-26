@@ -41,4 +41,6 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         out = self.run_calc(case_5.__file__, 'job_haz.ini,job_risk.ini')
         self.assertEqualFiles(
             'expected_dmg_dist_total.xml', out['dmg_dist_total', 'xml'])
-
+        self.assertEqualFiles(
+            'expected_dmg_dist_per_asset.xml',
+            out['dmg_dist_per_asset', 'xml'])

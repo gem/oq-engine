@@ -54,6 +54,10 @@ class Site(object):
     def __lt__(self, other):
         return (self.x, self.y) < (other.x, other.y)
 
+    def __eq__(self, other):
+	    # without this the groupby site in the ScenarioDamageWriter would not work
+        return (self.x, self.y) == (other.x, other.y)
+
 
 class LossCurveXMLWriter(object):
     """
