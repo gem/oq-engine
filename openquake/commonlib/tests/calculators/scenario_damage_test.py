@@ -40,5 +40,5 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         # this is a test for the rupture filtering
         out = self.run_calc(case_5.__file__, 'job_haz.ini,job_risk.ini')
         self.assertEqualFiles(
-            'expected/dmg_dist_total.xml', out['dmg_dist_total', 'xml'])
+            'expected_dmg_dist_total.xml', out['dmg_dist_total', 'xml'])
 
