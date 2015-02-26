@@ -381,8 +381,7 @@ def export_ses_xml(key, output, target):
         Destination directory location for exported files.
 
     :returns:
-        A list of exported file names (including the absolute path to each
-        file).
+        The exported file path
     """
     ses_coll = models.SESCollection.objects.get(output=output.id)
     haz_calc = output.oq_job
@@ -392,6 +391,33 @@ def export_ses_xml(key, output, target):
                                    output.ses)
     writer = hazard_writers.SESXMLWriter(dest, sm_lt_path)
     writer.serialize(ses_coll)
+    return dest
+
+
+@core.export_output.add(('ses', 'csv'))
+def export_ses_csv(key, output, target):
+    """
+    Export the Stochastic Event Set Collection specified by ``output`` to the
+    ``target`` in csv format.
+
+    :param output:
+        :class:`openquake.engine.db.models.Output` with an `output_type` of
+        `ses`.
+    :param str target:
+        Destination directory location for exported files.
+
+    :returns:
+        The exported file path
+    """
+    ses_coll = models.SESCollection.objects.get(output=output.id)
+    haz_calc = output.oq_job
+    dest = _get_result_export_dest(
+        haz_calc.id, target, output.ses)[:-3] + 'csv'
+    rows = []
+    for ses in ses_coll:
+        for sesrup in ses:
+            rows.append([sesrup.tag, sesrup.seed])
+    save_csv(dest, sorted(rows, key=operator.itemgetter(0)))
     return dest
 
 
