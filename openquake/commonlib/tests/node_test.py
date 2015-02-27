@@ -164,7 +164,6 @@ param=yyy
     def test_node_factory(self):
         class ValidNode(n.LiteralNode):
             "ValidNode test implementation. "
-            cast_leaves = True
             validators = dict(a=float, b=int)
 
         self.assertEqual(ValidNode.__doc__, '''\
