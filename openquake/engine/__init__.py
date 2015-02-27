@@ -59,7 +59,7 @@ from openquake.hazardlib.general import git_suffix
 #  "-" + <pkg-version> + "+dev" + <secs_since_epoch> + "-" + <commit-id>
 # NB: the next line is managed by packager.sh script (we retrieve the version
 #     using sed and optionally replace it)
-__version__ = '1.2.2'
+__version__ = '1.3.0'
 __version__ += git_suffix(__file__)
 
 # The path to the OpenQuake root directory
