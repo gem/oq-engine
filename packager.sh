@@ -285,6 +285,10 @@ _pkgtest_innervm_run () {
         oq-lite run ProbabilisticEventBased/job_hazard.ini
         "
     fi
+
+    scp -r "$lxc_ip://usr/share/doc/${GEM_DEB_PACKAGE}/changelog*" .
+    scp -r "$lxc_ip://usr/share/doc/${GEM_DEB_PACKAGE}/README*" .
+
     trap ERR
 
     return
