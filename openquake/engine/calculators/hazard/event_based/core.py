@@ -316,16 +316,13 @@ class GmfCalculator(object):
         :param rlzs_assoc:
             a :class:`openquake.commonlib.source.RlzsAssoc` instance
         """
-        max_samples = rlzs_assoc.csm_info.get_max_samples()
+        samples = rlzs_assoc.csm_info.get_num_samples(self.trt_model_id)
         for gsim_name, imt_str, site_id in self.gmvs_per_site:
             rlzs = rlzs_assoc[self.trt_model_id, gsim_name]
-            if max_samples > 1 and len(rlzs) > 1:
+            if samples > 1:
                 # save only the data for the realization corresponding
                 # to the current SESCollection
                 rlzs = [rlz for rlz in rlzs if self.col_idx in rlz.col_ids]
-                if not rlzs:
-                    print('Could not find the realization associated to '
-                          'SESCollection #%d' % self.col_idx)
             for rlz in rlzs:
                 imt_name, sa_period, sa_damping = from_string(imt_str)
                 inserter.add(models.GmfData(
