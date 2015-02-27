@@ -186,6 +186,8 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
     ssh $lxc_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}"
 
+    scp -r "$lxc_ip://usr/share/doc/${GEM_DEB_PACKAGE}" ./usr_share_doc
+
     trap ERR
 
     return
