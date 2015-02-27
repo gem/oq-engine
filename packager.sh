@@ -105,6 +105,7 @@ sig_hand () {
     if [ -f /tmp/packager.eph.$$.log ]; then
         rm /tmp/packager.eph.$$.log
     fi
+    exit 1
 }
 
 
