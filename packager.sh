@@ -468,6 +468,10 @@ _pkgtest_innervm_run () {
     fi
     ssh $lxc_ip "oq-engine --make-html-report today"
     scp "${lxc_ip}:jobs-*.html" .
+
+    scp -r "$lxc_ip://usr/share/doc/${GEM_DEB_PACKAGE}/changelog*" .
+    scp -r "$lxc_ip://usr/share/doc/${GEM_DEB_PACKAGE}/README*" .
+
     trap ERR
 
     return
