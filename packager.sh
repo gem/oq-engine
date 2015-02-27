@@ -631,7 +631,7 @@ cd "$GEM_BUILD_SRC"
 dt="$(date +%s)"
 
 # version info from openquake/risklib/__init__.py
-ini_vers="$(sed 's/^[ 	]*__version__[ 	]*=[ 	]*["'"'"']\([^"'"'"']*\)/\1/g' openquake/risklib/__init__.py)"
+ini_vers="$(sed 's/^[ 	]*__version__[ 	]*=[ 	]*["'"'"']\([^"'"'"']*\)/\1/g' openquake/risklib/__init__.py)" # ' (emacs hell)
 ini_maj="$(echo "$ini_vers" | sed -n 's/^\([0-9]\+\).*/\1/gp')"
 ini_min="$(echo "$ini_vers" | sed -n 's/^[0-9]\+\.\([0-9]\+\).*/\1/gp')"
 ini_bfx="$(echo "$ini_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.\([0-9]\+\).*/\1/gp')"
@@ -653,19 +653,23 @@ pkg_suf="$(echo "$pkg_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.[0-9]\+-[^+]\+\(+.*\)
 if [ $BUILD_DEVEL -eq 1 ]; then
     hash="$(git log --pretty='format:%h' -1)"
     mv debian/changelog debian/changelog.orig
+    cp debian/control debian/control.orig
+    for dep in $GEM_GIT_DEPS; do
+        sed -i "s/\(python-${dep}\) \(([<>=]\+\) \([^)]\+\)\()\)/\1 \2 \3~dev0\4/g"  debian/control
+    done
 
     if [ "$pkg_maj" = "$ini_maj" -a "$pkg_min" = "$ini_min" -a \
          "$pkg_bfx" = "$ini_bfx" -a "$pkg_deb" != "" ]; then
         deb_ct="$(echo "$pkg_deb" | sed 's/^-//g')"
-        pkg_deb="-$(( deb_ct + 1 ))"
+        pkg_deb="-$(( deb_ct ))"
     else
         pkg_maj="$ini_maj"
         pkg_min="$ini_min"
         pkg_bfx="$ini_bfx"
-        pkg_deb="-1"
+        pkg_deb="-0"
     fi
 
-    ( echo "$pkg_name (${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}+dev${dt}-${hash}) $pkg_rest"
+    ( echo "$pkg_name (${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}~dev${dt}-${hash}) $pkg_rest"
       echo
       echo "  * Development version from $hash commit"
       echo
