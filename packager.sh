@@ -186,6 +186,9 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
     ssh $lxc_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}"
 
+    scp -r "$lxc_ip://usr/share/doc/${GEM_DEB_PACKAGE}/changelog*" .
+    scp -r "$lxc_ip://usr/share/doc/${GEM_DEB_PACKAGE}/README*" .
+
     trap ERR
 
     return
@@ -465,7 +468,7 @@ ini_bfx="$(echo "$ini_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.\([0-9]\+\).*/\1/gp')
 ini_suf="" # currently not included into the version array structure
 
 # version info from debian/changelog
-h="$(head -n1 debian/changelog)"
+h="$(grep "^$GEM_DEB_PACKAGE" debian/changelog | head -n 1)"
 # pkg_vers="$(echo "$h" | cut -d ' ' -f 2 | cut -d '(' -f 2 | cut -d ')' -f 1 | sed -n 's/[-+].*//gp')"
 pkg_name="$(echo "$h" | cut -d ' ' -f 1)"
 pkg_vers="$(echo "$h" | cut -d ' ' -f 2 | cut -d '(' -f 2 | cut -d ')' -f 1)"
@@ -489,17 +492,19 @@ if [ $BUILD_DEVEL -eq 1 ]; then
         pkg_maj="$ini_maj"
         pkg_min="$ini_min"
         pkg_bfx="$ini_bfx"
-        pkg_deb="-1"
+        pkg_deb="-0"
     fi
 
     ( echo "$pkg_name (${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}~dev${dt}-${hash}) $pkg_rest"
       echo
+      echo "  [Automatic Script]"
       echo "  * Development version from $hash commit"
       echo
+      cat debian/changelog.orig | sed -n "/^$GEM_DEB_PACKAGE/q;p"
       echo " -- $DEBFULLNAME <$DEBEMAIL>  $(date -d@$dt -R)"
       echo
     )  > debian/changelog
-    cat debian/changelog.orig >> debian/changelog
+    cat debian/changelog.orig | sed -n "/^$GEM_DEB_PACKAGE/,\$ p" >> debian/changelog
     rm debian/changelog.orig
 fi
 
