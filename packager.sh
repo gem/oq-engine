@@ -435,7 +435,7 @@ _pkgtest_innervm_run () {
 
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
         # run all of the hazard and risk demos
-        ssh $lxc_ip "set -e ; cd /usr/share/doc/python-oq-risklib/examples/demos
+        ssh $lxc_ip "set -e ; cd /usr/openquake/engine/demos
         for ini in \$(find . -name job.ini | sort); do
             echo \"Running \$ini\"
             for loop in \$(seq 1 $GEM_MAXLOOP); do
