@@ -41,7 +41,11 @@ class LtRealization(object):
         self.weight = weight
 
     def __repr__(self):
-        return '<%d,%s,w=%s>' % (self.ordinal, self.uid, self.weight)
+        if self.col_ids:
+            col = ',col=' + ','.join(map(str, sorted(self.col_ids)))
+        else:
+            col = ''
+        return '<%d,%s,w=%s%s>' % (self.ordinal, self.uid, self.weight, col)
 
     @property
     def gsim_lt_path(self):
