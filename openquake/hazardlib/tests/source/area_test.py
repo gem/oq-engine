@@ -37,9 +37,9 @@ def make_area_source(polygon, discretization, **kwargs):
         'mfd': TruncatedGRMFD(a_val=3, b_val=1, min_mag=5,
                               max_mag=7, bin_width=1),
         'nodal_plane_distribution': PMF([(1, NodalPlane(1, 2, 3))]),
-        'hypocenter_distribution': PMF([(1, 4)]),
+        'hypocenter_distribution': PMF([(0.5, 4.0), (0.5, 8.0)]),
         'upper_seismogenic_depth': 1.3,
-        'lower_seismogenic_depth': 4.9,
+        'lower_seismogenic_depth': 10.0,
         'magnitude_scaling_relationship': PeerMSR(),
         'rupture_aspect_ratio': 1.333,
         'polygon': polygon,
@@ -72,21 +72,28 @@ class AreaSourceIterRupturesTestCase(unittest.TestCase):
         # resulting 3x3 mesh has points in these coordinates:
         lons = [-1.4, -0.8, -0.2]
         lats = [-0.6, -1.2, -1.8]
+        depths = [4.0, 8.0]
         ruptures_iter = iter(ruptures)
         for lat in lats:
             for lon in lons:
                 r1 = next(ruptures_iter)
                 r2 = next(ruptures_iter)
-                for rupture in [r1, r2]:
+                r3 = next(ruptures_iter)
+                r4 = next(ruptures_iter)
+                for iloc, rupture in enumerate([r1, r2]):
                     self.assertAlmostEqual(rupture.hypocenter.longitude,
                                            lon, delta=1e-3)
                     self.assertAlmostEqual(rupture.hypocenter.latitude,
                                            lat, delta=1e-3)
+                    self.assertAlmostEqual(rupture.hypocenter.depth,
+                                           depths[iloc], delta=1e-3)
                     self.assertEqual(rupture.surface.mesh_spacing, 5)
                     self.assertIs(rupture.source_typology, AreaSource)
                 self.assertEqual(r1.mag, 5.5)
-                self.assertEqual(r2.mag, 6.5)
-        self.assertEqual(len(ruptures), 9 * 2)
+                self.assertEqual(r2.mag, 5.5)
+                self.assertEqual(r3.mag, 6.5)
+                self.assertEqual(r4.mag, 6.5)
+        self.assertEqual(len(ruptures), 9 * 4)
 
     def test_occurrence_rate_rescaling(self):
         mfd = EvenlyDiscretizedMFD(min_mag=4, bin_width=1,
@@ -96,10 +103,10 @@ class AreaSourceIterRupturesTestCase(unittest.TestCase):
         source = self.make_area_source(polygon, discretization=10, mfd=mfd)
         self.assertIs(source.mfd, mfd)
         ruptures = list(source.iter_ruptures())
-        self.assertEqual(len(ruptures), 4)
+        self.assertEqual(len(ruptures), 8)
         for rupture in ruptures:
             self.assertNotEqual(rupture.occurrence_rate, 3)
-            self.assertEqual(rupture.occurrence_rate, 3.0 / 4.0)
+            self.assertEqual(rupture.occurrence_rate, 3.0 / 8.0)
 
 
 class AreaSourceRupEncPolyTestCase(unittest.TestCase):
