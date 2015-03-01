@@ -272,3 +272,7 @@ class RiskCalculator(BaseCalculator):
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=get_weight,
             key=get_imt)
+
+    def save_cache(self, result):
+        """Doing nothing, the risk has no cache"""
+        return {}
