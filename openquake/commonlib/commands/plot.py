@@ -20,14 +20,32 @@ import cPickle
 from openquake.commonlib import sap
 
 
-def plot(hazard_pik):
-    """
-    Hazard curves plotter
-    """
+def make_figure(n_sites, imtls, spec_curves, curves=(), label=''):
     # NB: matplotlib is imported inside, otherwise nosetest would fail in an
     # installation without matplotlib
     import matplotlib.pyplot as plt
 
+    fig = plt.figure()
+    n_imts = len(imtls)
+    for i in range(n_sites):
+        for j, imt in enumerate(imtls):
+            ax = fig.add_subplot(n_sites, n_imts, i * n_imts + j + 1)
+            ax.grid(True)
+            ax.set_xlabel('Hazard curve on site %d, %s' % (i + 1, imt))
+            if j == 0:  # set Y label only on the leftmost graph
+                ax.set_ylabel('PoE')
+            if spec_curves is not None:
+                ax.plot(imtls[imt], spec_curves[imt][i], '--', label=label)
+            for rlz in sorted(curves):
+                ax.plot(imtls[imt], curves[rlz][imt][i], label=str(rlz))
+    plt.legend()
+    return plt
+
+
+def plot(hazard_pik):
+    """
+    Hazard curves plotter
+    """
     # read the hazard data
     with open(hazard_pik) as f:
         haz = cPickle.load(f)
@@ -37,30 +55,10 @@ def plot(hazard_pik):
         print('There are %d sites; only the first 5 will be displayed'
               % n_sites)
         n_sites = 5
-    n_imts = len(imtls)
     mean_curves = haz['mean_curves']
-    curves_by_rlz = haz['rlzs_assoc'].combine(haz['curves_by_trt_gsim'])
-
-    # make the figure
-    fig = plt.figure()
-    axes = {}
-    for i in range(1, n_sites + 1):
-        for j, imt in enumerate(imtls, 1):
-            ax = axes[i, imt] = fig.add_subplot(
-                n_sites, n_imts, (i - 1) * n_imts + j)
-            ax.grid(True)
-            ax.set_xlabel('Hazard curve on site %d, %s' % (i, imt))
-            if j == 1:  # set Y label only on the leftmost graph
-                ax.set_ylabel('PoE')
-            if mean_curves is not None and len(curves_by_rlz) > 1:
-                ax.plot(imtls[imt], mean_curves[imt][i - 1],
-                        '--', label='mean')
-            for rlz in sorted(curves_by_rlz):
-                ax.plot(imtls[imt], curves_by_rlz[rlz][imt][i - 1],
-                        label=str(rlz))
-
-    # display the plot
-    plt.legend()
+    curves_by_rlz = (haz['rlzs_assoc'].combine(haz['curves_by_trt_gsim'])
+                     if len(haz['curves_by_trt_gsim']) > 1 else {})
+    plt = make_figure(n_sites, imtls, mean_curves, curves_by_rlz, 'mean')
     plt.show()
 
 parser = sap.Parser(plot)
