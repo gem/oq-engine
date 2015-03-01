@@ -17,7 +17,6 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import cPickle
-import matplotlib.pyplot as plt
 from openquake.commonlib import sap
 
 
@@ -25,9 +24,13 @@ def plot(hazard_pik):
     """
     Hazard curves plotter
     """
+    # NB: matplotlib is imported inside, otherwise nosetest would fail in an
+    # installation without matplotlib
+    import matplotlib.pyplot as plt
+
+    # read the hazard data
     with open(hazard_pik) as f:
         haz = cPickle.load(f)
-
     imtls = haz['oqparam'].imtls
     n_sites = len(haz['sitecol'])
     if n_sites > 5:
@@ -37,6 +40,8 @@ def plot(hazard_pik):
     n_imts = len(imtls)
     mean_curves = haz['mean_curves']
     curves_by_rlz = haz['rlzs_assoc'].combine(haz['curves_by_trt_gsim'])
+
+    # make the figure
     fig = plt.figure()
     axes = {}
     for i in range(1, n_sites + 1):
@@ -54,6 +59,7 @@ def plot(hazard_pik):
                 ax.plot(imtls[imt], curves_by_rlz[rlz][imt][i - 1],
                         label=str(rlz))
 
+    # display the plot
     plt.legend()
     plt.show()
 
