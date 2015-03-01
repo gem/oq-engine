@@ -18,11 +18,11 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.commonlib import sap, __version__
-from openquake.commonlib.commands import run, info, check
+from openquake.commonlib.commands import run, info, check, plot
 
 
 if __name__ == '__main__':
-    parser = sap.compose([check.parser, run.parser, info.parser],
+    parser = sap.compose([check.parser, run.parser, info.parser, plot.parser],
                          version=__version__)
     try:
         parser.callfunc()

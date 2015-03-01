@@ -117,6 +117,10 @@ def get_params(job_inis):
         detect_job_ini = create_detect_file('job.ini')
         job_inis = [extract_from_zip(job_inis[0], detect_job_ini)]
 
+    not_found = [ini for ini in job_inis if not os.path.exists(ini)]
+    if len(not_found) == len(job_inis):  # nothing was found
+        raise IOError('File not found: %s' % not_found[0])
+
     cp = ConfigParser.ConfigParser()
     cp.read(job_inis)
 

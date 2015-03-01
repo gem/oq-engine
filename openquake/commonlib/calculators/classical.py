@@ -73,6 +73,7 @@ class ClassicalCalculator(base.HazardCalculator):
     Classical PSHA calculator
     """
     core_func = classical
+    result_kind = 'curves_by_trt_gsim'
 
     def execute(self):
         """
@@ -109,14 +110,15 @@ class ClassicalCalculator(base.HazardCalculator):
         # export curves
         saved = AccumDict()
         exports = oq.exports.split(',')
-        for rlz in rlzs:
-            smlt_path = '_'.join(rlz.sm_lt_path)
-            gsimlt_path = rlz.gsim_rlz.uid
-            for fmt in exports:
-                fname = 'hazard_curve-smltp_%s-gsimltp_%s-ltr_%d.%s' % (
-                    smlt_path, gsimlt_path, rlz.ordinal, fmt)
-                saved += self.export_curves(curves_by_rlz[rlz], fmt, fname)
+        if getattr(oq, 'individual_curves', True):
+            for rlz in rlzs:
+                smlt_path = '_'.join(rlz.sm_lt_path)
+                for fmt in exports:
+                    fname = 'hazard_curve-smltp_%s-gsimltp_%s-ltr_%d.%s' % (
+                        smlt_path, rlz.gsim_rlz.uid, rlz.ordinal, fmt)
+                    saved += self.export_curves(curves_by_rlz[rlz], fmt, fname)
         if len(rlzs) == 1:  # cannot compute statistics
+            [self.mean_curves] = curves_by_rlz.values()
             return saved
 
         weights = (None if oq.number_of_logic_tree_samples
@@ -125,9 +127,9 @@ class ClassicalCalculator(base.HazardCalculator):
                          for imt in oq.imtls}
         mean = getattr(oq, 'mean_hazard_curves', None)
         if mean:
-            mean_curves = scientific.mean_curve(
+            self.mean_curves = scientific.mean_curve(
                 [curves_by_rlz[rlz] for rlz in rlzs], weights)
-        quantile = {
+        self.quantile = {
             q: {imt: scientific.quantile_curve(
                 curves_by_imt[imt], q, weights).reshape((nsites, -1))
                 for imt in oq.imtls}
@@ -136,10 +138,10 @@ class ClassicalCalculator(base.HazardCalculator):
         for fmt in exports:
             if mean:
                 saved += self.export_curves(
-                    mean_curves, fmt, 'hazard_curve-mean.%s' % fmt)
-            for q in quantile:
+                    self.mean_curves, fmt, 'hazard_curve-mean.%s' % fmt)
+            for q in self.quantile:
                 saved += self.export_curves(
-                    quantile[q], fmt, 'quantile_curve-%s.%s' % (q, fmt))
+                    self.quantile[q], fmt, 'quantile_curve-%s.%s' % (q, fmt))
         return saved
 
     def hazard_maps(self, curves_by_imt):
@@ -220,6 +222,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
     Classical Tiling calculator
     """
     prefilter = False
+    result_kind = 'pathname_by_fname'
 
     def execute(self):
         """
