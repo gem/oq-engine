@@ -17,13 +17,25 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+import importlib
 from openquake.commonlib import sap, __version__
-from openquake.commonlib.commands import run, info, check, plot
+from openquake.commonlib import commands
 
 
 if __name__ == '__main__':
-    parser = sap.compose([check.parser, run.parser, info.parser, plot.parser],
-                         version=__version__)
+    modnames = ['openquake.commonlib.commands.%s' % mod[:-3]
+                for mod in os.listdir(commands.__path__[0])
+                if mod.endswith('.py') and not mod.startswith('_')]
+    parsers = []
+    for modname in modnames:
+        try:
+            mod = importlib.import_module(modname)
+        except ImportError as exc:
+            print 'warning: %s' % exc
+        else:
+            parsers.append(mod.parser)
+    parser = sap.compose(parsers, version=__version__)
     try:
         parser.callfunc()
     except NotImplementedError as exc:

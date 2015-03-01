@@ -16,9 +16,9 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.commonlib import sap
 import cPickle
 import matplotlib.pyplot as plt
+from openquake.commonlib import sap
 
 
 def plot(hazard_pik):
@@ -47,7 +47,7 @@ def plot(hazard_pik):
             ax.set_xlabel('Hazard curve on site %d, %s' % (i, imt))
             if j == 1:  # set Y label only on the leftmost graph
                 ax.set_ylabel('PoE')
-            if mean_curves is not None:
+            if mean_curves is not None and len(curves_by_rlz) > 1:
                 ax.plot(imtls[imt], mean_curves[imt][i - 1],
                         '--', label='mean')
             for rlz in sorted(curves_by_rlz):
