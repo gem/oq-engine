@@ -59,12 +59,13 @@ class BaseCalculator(object):
 
     def run(self):
         """
-        Run the calculation and return the exported files.
+        Run the calculation and return the saved output.
         """
         self.monitor.write('operation pid time_sec memory_mb'.split())
         self.pre_execute()
         result = self.execute()
-        return self.post_execute(result)
+        self.post_execute(result)
+        return self.save_cache(result)
 
     def core_func(*args):
         """
