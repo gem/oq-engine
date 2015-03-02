@@ -19,7 +19,7 @@ hazardlib stands for Hazard Library.
 
 from openquake.hazardlib import (
     calc, geo, gsim, mfd, scalerel, source, const, correlation, imt, pmf, site,
-    tom, general
+    tom, general, near_fault
 )
 
 # the version is managed by packager.sh with a sed

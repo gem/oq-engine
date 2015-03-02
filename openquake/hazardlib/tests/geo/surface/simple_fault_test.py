@@ -309,6 +309,53 @@ class SimpleFaultSurfaceProjectionTestCase(unittest.TestCase):
         self.assertAlmostEqual(p7.depth, 14., delta=0.1)
 
 
+class PatchIndexTest(unittest.TestCase):
+
+    def test_hypocentre_index_1stpatch(self):
+        hypocentre = Point(10.164151, 45.466944, 8.0)
+        upper_seismogenic_depth = 0.
+        lower_seismogenic_depth = 15.
+        dip = 30.
+
+        mesh_spacing = 1.
+        fault_trace = Line([Point(10., 45.2), Point(10.0, 45.559729),
+                           Point(10.365145, 45.813659)])
+
+        whole_fault_surface = SimpleFaultSurface.from_fault_data(
+            fault_trace, upper_seismogenic_depth,
+            lower_seismogenic_depth, dip, mesh_spacing
+        )
+
+        target_rupture_surface = whole_fault_surface.get_resampled_top_edge()
+        index = SimpleFaultSurface.hypocentre_patch_index(
+            hypocentre, target_rupture_surface, upper_seismogenic_depth,
+            lower_seismogenic_depth, dip)
+        # The value used for this test is by hand calculation
+        self.assertEqual(index, 1)
+
+    def test_hypocentre_index_2ndpatch(self):
+        hypocentre = Point(10.237155, 45.562761, 8.0)
+        upper_seismogenic_depth = 0.
+        lower_seismogenic_depth = 15.
+        dip = 30.
+
+        mesh_spacing = 1.
+        fault_trace = Line([Point(10., 45.2), Point(10.0, 45.559729),
+                           Point(10.365145, 45.813659)])
+
+        whole_fault_surface = SimpleFaultSurface.from_fault_data(
+            fault_trace, upper_seismogenic_depth,
+            lower_seismogenic_depth, dip, mesh_spacing
+        )
+
+        target_rupture_surface = whole_fault_surface.get_resampled_top_edge()
+        index = SimpleFaultSurface.hypocentre_patch_index(
+            hypocentre, target_rupture_surface, upper_seismogenic_depth,
+            lower_seismogenic_depth, dip)
+        # The value used for this test is by hand calculation
+        self.assertEqual(index, 2)
+
+
 class SimpleFaultSurfaceGetWidthTestCase(unittest.TestCase):
     def test_vertical_planar_surface(self):
         p1 = Point(0.1, 0.1, 0.0)

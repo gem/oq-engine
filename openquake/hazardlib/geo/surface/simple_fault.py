@@ -25,6 +25,7 @@ from openquake.hazardlib.geo.surface.base import BaseQuadrilateralSurface
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo import utils as geo_utils
 from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.near_fault.NearFault import get_plane_equation
 
 
 class SimpleFaultSurface(BaseQuadrilateralSurface):
@@ -237,6 +238,43 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
                        all_deps[2 * len(fault_trace) - index_patch])
 
         return p0, p1, p2, p3
+
+    @classmethod
+    def hypocentre_patch_index(cls, hypocentre, fault_trace,
+                               upper_seismogenic_depth,
+                               lower_seismogenic_depth, dip):
+        """
+        Indicate the fault patch where the hypocentre locates
+
+        :param hypocentre:
+            :class:`~openquake.hazardlib.geo.point.Point` object
+            representing the location of hypocentre.
+        :param openquake.hazardlib.geo.line.Line fault_trace:
+            Geographical line representing the intersection between
+            the fault surface and the earth surface.
+        :param upper_seismo_depth:
+            Minimum depth ruptures can reach, in km (i.e. depth
+            to fault's top edge).
+        :param lower_seismo_depth:
+            Maximum depth ruptures can reach, in km (i.e. depth
+            to fault's bottom edge).
+        :param dip:
+            Dip angle (i.e. angle between fault surface
+            and earth surface), in degrees.
+        :return:
+            index, indicate which fault patch the hypocentre locates.
+        """
+        totaln_patch = len(fault_trace)
+        print range(1, totaln_patch)
+        for index in range(1, totaln_patch):
+            p0, p1, p2, p3 = cls.get_fault_vertices_3d(
+                fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
+                dip, index_patch=index)
+            origin = hypocentre
+            [normal, dist_to_plane] = get_plane_equation(p0, p1, p2, origin)
+            print index, dist_to_plane
+            if (numpy.allclose(dist_to_plane, 0., atol=20., rtol=0.)):
+                return index
 
     @classmethod
     def get_surface_vertexes(cls, fault_trace,
