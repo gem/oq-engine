@@ -1,3 +1,10 @@
+python-oq-hazardlib (0.13.1-0) precise; urgency=low
+
+  [Graeme Weatherill]
+  * Fixes area hypocentral depth bug
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 02 Mar 2015 09:40:47 +0100
+
 python-oq-hazardlib (0.13.0-0) precise; urgency=low
 
   [Marco Pagani]
