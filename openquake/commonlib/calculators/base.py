@@ -59,12 +59,13 @@ class BaseCalculator(object):
 
     def run(self):
         """
-        Run the calculation and return the exported files.
+        Run the calculation and return the saved output.
         """
         self.monitor.write('operation pid time_sec memory_mb'.split())
         self.pre_execute()
         result = self.execute()
-        return self.post_execute(result)
+        self.post_execute(result)
+        return self.save_cache(result)
 
     def core_func(*args):
         """
@@ -93,12 +94,20 @@ class BaseCalculator(object):
         of output files.
         """
 
+    @abc.abstractmethod
+    def save_cache(self, result):
+        """
+        Called after post_execute
+        """
+
 
 class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
     prefilter = True  # filter the sources before splitting them
+    mean_curves = None  # to be overridden
+    result_kind = None  # to be overridden
 
     def pre_execute(self):
         """
@@ -124,6 +133,21 @@ class HazardCalculator(BaseCalculator):
             self.gsims = readinput.get_gsims(self.oqparam)
             self.rlzs_assoc = workflows.FakeRlzsAssoc(len(self.gsims))
 
+    def save_cache(self, result):
+        """
+        Must be run at the end of post_execute. Returns a dictionary
+        with the saved results.
+        """
+        haz_out = dict(rlzs_assoc=self.rlzs_assoc,
+                       sitecol=self.sitecol, oqparam=self.oqparam,
+                       mean_curves=self.mean_curves)
+        haz_out[self.result_kind] = result
+        cache = os.path.join(self.oqparam.export_dir, 'hazard.pik')
+        logging.info('Saving hazard output on %s', cache)
+        with open(cache, 'w') as f:
+            cPickle.dump(haz_out, f)
+        return haz_out
+
 
 def get_hazard(calculator, post_execute=False):
     """
@@ -144,12 +168,8 @@ def get_hazard(calculator, post_execute=False):
         if post_execute:
             for item in sorted(hcalc.post_execute(result).iteritems()):
                 logging.info('exported %s: %s', *item)
+        haz_out = hcalc.save_cache(result)
 
-        haz_out = dict(result=result, rlzs_assoc=hcalc.rlzs_assoc,
-                       sitecol=hcalc.sitecol)
-        logging.info('Saving hazard output on %s', cache)
-        with open(cache, 'w') as f:
-            cPickle.dump(haz_out, f)
     return haz_out, hcalc
 
 
@@ -253,3 +273,7 @@ class RiskCalculator(BaseCalculator):
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=get_weight,
             key=get_imt)
+
+    def save_cache(self, result):
+        """Doing nothing, the risk has no cache"""
+        return {}

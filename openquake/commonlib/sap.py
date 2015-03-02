@@ -148,7 +148,7 @@ class Parser(object):
     def check_arguments(self):
         """Make sure all arguments have a specification"""
         for name, default in self.argdict.iteritems():
-            if not name in self.names and default is NODEFAULT:
+            if name not in self.names and default is NODEFAULT:
                 raise NameError('Missing argparse specification for %r' % name)
 
     def callfunc(self, argv=None):

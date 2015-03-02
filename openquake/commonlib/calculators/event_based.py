@@ -264,6 +264,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
     Event based PSHA calculator generating the ruptures only
     """
     core_func = compute_ruptures
+    result_kind = 'ruptures_by_trt'
 
     def pre_execute(self):
         """
@@ -397,6 +398,7 @@ class EventBasedCalculator(base.calculators['classical']):
     """
     hazard_calculator = 'event_based_rupture'
     core_func = compute_gmfs_and_curves
+    result_kind = 'curves_by_trt_gsim'
 
     def pre_execute(self):
         """
@@ -408,8 +410,9 @@ class EventBasedCalculator(base.calculators['classical']):
         self.composite_source_model = hcalc.composite_source_model
         self.sitecol = hcalc.sitecol
         self.rlzs_assoc = hcalc.rlzs_assoc
-        self.sesruptures = sorted(sum(haz_out['result'].itervalues(), []),
-                                  key=operator.attrgetter('tag'))
+        self.sesruptures = sorted(
+            sum(haz_out['ruptures_by_trt'].itervalues(), []),
+            key=operator.attrgetter('tag'))
         self.saved = AccumDict()
         if self.oqparam.ground_motion_fields:
             for trt_id, gsim in self.rlzs_assoc:
@@ -458,7 +461,7 @@ class EventBasedCalculator(base.calculators['classical']):
             (self.sesruptures, self.sitecol, gsims_assoc, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks, acc=zero,
             agg=self.combine_curves_and_save_gmfs,
-            key=operator.attrgetter('trt_model_id'))
+            key=operator.attrgetter('trt_model_id'))  # curves_by_trt_gsim
 
     def post_execute(self, result):
         """
