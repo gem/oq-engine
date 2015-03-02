@@ -56,6 +56,10 @@ def plot(hazard_pik):
         print('There are %d sites; only the first 5 will be displayed'
               % n_sites)
         n_sites = 5
+    no_curves = all(len(c) == 0 for c in haz['curves_by_trt_gsim'].values())
+    if no_curves:
+        raise Exception('Could not find hazard curves in %s' % hazard_pik)
+
     curves_by_rlz = haz['rlzs_assoc'].combine(haz['curves_by_trt_gsim'])
     rlzs = sorted(curves_by_rlz)
     weights = [rlz.weight for rlz in rlzs]
