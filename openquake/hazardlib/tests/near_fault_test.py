@@ -20,13 +20,13 @@ import numpy as np
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.point import Point
 
-from openquake.hazardlib.near_fault.NearFault import get_xyz_from_ll
-from openquake.hazardlib.near_fault.NearFault import get_plane_equation
-from openquake.hazardlib.near_fault.NearFault import projection_pp
-from openquake.hazardlib.near_fault.NearFault import directp
-from openquake.hazardlib.near_fault.NearFault import vectors2angle
-from openquake.hazardlib.near_fault.NearFault import average_s_rad
-from openquake.hazardlib.near_fault.NearFault import isochone_ratio
+from openquake.hazardlib.near_fault import get_xyz_from_ll
+from openquake.hazardlib.near_fault import get_plane_equation
+from openquake.hazardlib.near_fault import projection_pp
+from openquake.hazardlib.near_fault import directp
+from openquake.hazardlib.near_fault import vectors2angle
+from openquake.hazardlib.near_fault import average_s_rad
+from openquake.hazardlib.near_fault import isochone_ratio
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
 
 

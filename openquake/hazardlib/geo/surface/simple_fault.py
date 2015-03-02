@@ -25,7 +25,7 @@ from openquake.hazardlib.geo.surface.base import BaseQuadrilateralSurface
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo import utils as geo_utils
 from openquake.hazardlib.geo.point import Point
-from openquake.hazardlib.near_fault.NearFault import get_plane_equation
+from openquake.hazardlib.near_fault import get_plane_equation
 
 
 class SimpleFaultSurface(BaseQuadrilateralSurface):
