@@ -20,7 +20,8 @@ from openquake.hazardlib.gsim.atkinson_boore_2006 import (
     AtkinsonBoore2006Mwbar140NSHMP2008,
     AtkinsonBoore2006MblgAB1987bar200NSHMP2008,
     AtkinsonBoore2006MblgJ1996bar200NSHMP2008,
-    AtkinsonBoore2006Mwbar200NSHMP2008
+    AtkinsonBoore2006Mwbar200NSHMP2008,
+    AtkinsonBoore2006Modified2011
 )
 from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
                                            DistancesContext)
@@ -133,3 +134,13 @@ class AtkinsonBoore2006Mwbar200NSHMP2008TestCase(BaseGSIMTestCase):
     def test_mean(self):
         self.check('AB06/AB06MwNSHMP200bar_MEAN.csv',
                     max_discrep_percentage=1.9)
+
+
+class AtkinsonBoore2006Modified2011TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = AtkinsonBoore2006Modified2011
+
+    # Test data provided by David M. Boore
+
+    def test_mean(self):
+        self.check('AB06/AB06_UPDATE2011_MEAN.csv',
+                    max_discrep_percentage=1.0)

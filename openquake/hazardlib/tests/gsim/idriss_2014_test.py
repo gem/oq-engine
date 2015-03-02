@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
+# Copyright (C) 2015 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -13,32 +13,22 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from openquake.hazardlib.gsim.abrahamson_silva_2008 import AbrahamsonSilva2008
 
+from openquake.hazardlib.gsim.idriss_2014 import Idriss2014
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
-# Test data have been generated from Fortran implementation
-# of Dave Boore available at:
-# http://www.daveboore.com/software_online.html
-# Note that the Fortran implementation has been modified not
-# to compute the 'Constant Displacement Model' term
+# Test data generated using the Matlab implementation created by Yue Hua,
+# Stanford University, available from
+# http://web.stanford.edu/~bakerjw/GMPEs/I_2014_nga.m
 
 
-class AbrahamsonSilva2008TestCase(BaseGSIMTestCase):
-    GSIM_CLASS = AbrahamsonSilva2008
+class Idriss2014TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = Idriss2014
 
     def test_mean(self):
-        self.check('AS08/AS08_MEAN.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_inter(self):
-        self.check('AS08/AS08_STD_INTER.csv',
-                   max_discrep_percentage=0.1)
-
-    def test_std_intra(self):
-        self.check('AS08/AS08_STD_INTRA.csv',
+        self.check("IDRISS14/IDRISS_2014_MEAN.csv",
                    max_discrep_percentage=0.1)
 
     def test_std_total(self):
-        self.check('AS08/AS08_STD_TOTAL.csv',
+        self.check("IDRISS14/IDRISS_2014_TOTAL_STD.csv",
                    max_discrep_percentage=0.1)
