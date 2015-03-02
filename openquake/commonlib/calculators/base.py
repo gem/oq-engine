@@ -139,8 +139,7 @@ class HazardCalculator(BaseCalculator):
         with the saved results.
         """
         haz_out = dict(rlzs_assoc=self.rlzs_assoc,
-                       sitecol=self.sitecol, oqparam=self.oqparam,
-                       mean_curves=self.mean_curves)
+                       sitecol=self.sitecol, oqparam=self.oqparam)
         haz_out[self.result_kind] = result
         cache = os.path.join(self.oqparam.export_dir, 'hazard.pik')
         logging.info('Saving hazard output on %s', cache)

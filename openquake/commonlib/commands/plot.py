@@ -18,6 +18,7 @@
 
 import cPickle
 from openquake.commonlib import sap
+from openquake.risklib import scientific
 
 
 def make_figure(n_sites, imtls, spec_curves, curves=(), label=''):
@@ -55,10 +56,13 @@ def plot(hazard_pik):
         print('There are %d sites; only the first 5 will be displayed'
               % n_sites)
         n_sites = 5
-    mean_curves = haz['mean_curves']
-    curves_by_rlz = (haz['rlzs_assoc'].combine(haz['curves_by_trt_gsim'])
-                     if len(haz['curves_by_trt_gsim']) > 1 else {})
-    plt = make_figure(n_sites, imtls, mean_curves, curves_by_rlz, 'mean')
+    curves_by_rlz = haz['rlzs_assoc'].combine(haz['curves_by_trt_gsim'])
+    rlzs = sorted(curves_by_rlz)
+    weights = [rlz.weight for rlz in rlzs]
+    mean_curves = scientific.mean_curve(
+        [curves_by_rlz[rlz] for rlz in rlzs], weights)
+    plt = make_figure(n_sites, imtls, mean_curves,
+                      curves_by_rlz if len(rlzs) > 1 else {}, 'mean')
     plt.show()
 
 parser = sap.Parser(plot)
