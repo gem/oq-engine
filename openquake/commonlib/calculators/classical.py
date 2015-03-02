@@ -20,6 +20,7 @@ import os
 import operator
 import collections
 from functools import partial
+import numpy
 
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
@@ -95,6 +96,14 @@ class ClassicalCalculator(base.HazardCalculator):
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_model_id'))
 
+    def _fix_empty_curves(self, curves_by_rlz):
+        imtls = self.oqparam.imtls
+        n = len(self.sitecol)
+        for rlz, curves_by_imt in curves_by_rlz.iteritems():
+            if not curves_by_imt:
+                for imt in imtls:
+                    curves_by_imt[imt] = numpy.zeros((n, len(imtls[imt])))
+
     def post_execute(self, result):
         """
         Collect the hazard curves by realization and export them.
@@ -103,6 +112,8 @@ class ClassicalCalculator(base.HazardCalculator):
             a nested dictionary (trt_id, gsim) -> IMT -> hazard curves
         """
         curves_by_rlz = self.rlzs_assoc.combine(result)
+        self._fix_empty_curves(curves_by_rlz)
+
         rlzs = self.rlzs_assoc.realizations
         oq = self.oqparam
         nsites = len(self.sitecol)
