@@ -103,7 +103,8 @@ def event_based(workflow, getter, outputdict, params, monitor):
                             ela = models.EventLossAsset(
                                 event_loss=event_loss, rupture_id=rup_id,
                                 asset=asset, loss=loss_per_rup)
-                            inserter.add(ela)
+                            if loss_per_rup:  # save only non-zero losses
+                                inserter.add(ela)
                     if params.sites_disagg:
                         with monitor('disaggregating results'):
                             ruptures = [models.SESRupture.objects.get(pk=rid)
