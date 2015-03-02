@@ -334,6 +334,40 @@ def get_source_model_lt(oqparam):
         num_samples=oqparam.number_of_logic_tree_samples)
 
 
+def get_csm_fast(oqparam):
+    """
+    A very fast routine to get a CompositeSourceModel instance.
+    The price is:
+
+    1. no sources are stored in memory
+    2. no filtering is done
+    """
+    source_model_lt = get_source_model_lt(oqparam)
+    smodels = []
+    rlzs = logictree.get_effective_rlzs(source_model_lt)
+    num_samples = 1
+    for i, rlz in enumerate(rlzs):
+        sm = rlz.value  # name of the source model
+        fname = possibly_gunzip(os.path.join(oqparam.base_path, sm))
+        [sm] = nrml.read_lazy(fname, ['sourceModel'])
+        trt_models = source.TrtModel.collect(sm)
+        trts = set(tm.trt for tm in trt_models)
+        if oqparam.inputs.get('gsim_logic_tree'):  # check TRTs
+            gsim_lt = get_gsim_lt(oqparam, trts)
+            for trt_model in trt_models:
+                if trt_model.trt not in gsim_lt.values:
+                    raise ValueError(
+                        "Found in %r a tectonic region type %r inconsistent "
+                        "with the ones in %r" % (sm, trt_model.trt, fname))
+                trt_model.gsims = gsim_lt.values[trt_model.trt]
+        else:
+            gsim_lt = logictree.DummyGsimLogicTree()
+        weight = rlz.weight / num_samples
+        smodels.append(source.SourceModel(
+            sm, weight, rlz.lt_path, trt_models, gsim_lt, i, num_samples))
+    return source.CompositeSourceModel(source_model_lt, smodels)
+
+
 def possibly_gunzip(fname):
     """
     A file can be .gzipped to save space (this happens

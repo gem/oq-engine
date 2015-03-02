@@ -79,6 +79,24 @@ class TrtModel(collections.Sequence):
     """
     POINT_SOURCE_WEIGHT = 1 / 40.
 
+    @classmethod
+    def collect(cls, sources):
+        """
+        :param sources: dictionaries with a key 'tectonicRegion'
+        :returns: an ordered list of TrtModel instances
+        """
+        source_stats_dict = {}
+        for src in sources:
+            trt = src['tectonicRegion']
+            if trt not in source_stats_dict:
+                source_stats_dict[trt] = TrtModel(trt)
+            tm = source_stats_dict[trt]
+            if not tm.sources:
+                tm.sources.append(src)
+
+        # return ordered by TRT string TrtModels
+        return sorted(source_stats_dict.itervalues())
+
     def __init__(self, trt, sources=None, num_ruptures=0,
                  min_mag=None, max_mag=None, gsims=None, id=0):
         self.trt = trt
@@ -428,6 +446,7 @@ class CompositeSourceModel(collections.Sequence):
         if len(list(self.sources)) == 0:
             raise RuntimeError('All sources were filtered away')
         self.info = CompositionInfo(source_models)
+        self.update_trt_model_ids()
 
     @property
     def trt_models(self):
@@ -445,8 +464,16 @@ class CompositeSourceModel(collections.Sequence):
         """
         for trt_model in self.trt_models:
             for src in trt_model:
-                src.trt_model_id = trt_model.id
                 yield src
+
+    def update_trt_model_ids(self):
+        """
+        Set the trt_model_id attribute for each source in the model.
+        """
+        for trt_model in self.trt_models:
+            for src in trt_model:
+                if hasattr(src, 'trt_model_id'):
+                    src.trt_model_id = trt_model.id
 
     def get_rlzs_assoc(self, get_weight=lambda tm: tm.num_ruptures):
         """
