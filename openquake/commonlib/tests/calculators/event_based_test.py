@@ -174,14 +174,10 @@ class EventBasedTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_6(self):
+        # 2 models x 3 GMPEs, different weights
         expected = [
-            'hazard_curve-smltp_b11-gsimltp_b11-ltr_0.csv',
-            'hazard_curve-smltp_b11-gsimltp_b12-ltr_1.csv',
-            'hazard_curve-smltp_b11-gsimltp_b13-ltr_2.csv',
-            'hazard_curve-smltp_b12-gsimltp_b11-ltr_3.csv',
-            'hazard_curve-smltp_b12-gsimltp_b12-ltr_4.csv',
-            'hazard_curve-smltp_b12-gsimltp_b13-ltr_5.csv',
             'hazard_curve-mean.csv',
+            'quantile_curve-0.1.csv',
         ]
         out = self.run_calc(case_6.__file__, 'job.ini', exports='csv')
         for fname in expected:

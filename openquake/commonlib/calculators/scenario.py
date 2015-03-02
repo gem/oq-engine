@@ -57,6 +57,7 @@ class ScenarioCalculator(base.HazardCalculator):
     Scenario hazard calculator
     """
     core_func = calc_gmfs
+    result_kind = 'gmfs_by_trt_gsim'
 
     def pre_execute(self):
         """

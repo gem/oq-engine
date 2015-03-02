@@ -117,6 +117,10 @@ def get_params(job_inis):
         detect_job_ini = create_detect_file('job.ini')
         job_inis = [extract_from_zip(job_inis[0], detect_job_ini)]
 
+    not_found = [ini for ini in job_inis if not os.path.exists(ini)]
+    if len(not_found) == len(job_inis):  # nothing was found
+        raise IOError('File not found: %s' % not_found[0])
+
     cp = ConfigParser.ConfigParser()
     cp.read(job_inis)
 
@@ -477,11 +481,9 @@ def get_composite_source_model(oqparam, sitecol, prefilter=False):
             trt_model.id = trt_id
             trt_id += 1
             if prefilter:
-                logging.info('Splitting sources and counting ruptures for %s',
-                             trt_model)
                 trt_model.split_sources_and_count_ruptures(
                     getattr(oqparam, 'area_source_discretization', None))
-                logging.info('Got %s', trt_model)
+                logging.info('Processed %s', trt_model)
         smodels.append(source_model)
     csm = source.CompositeSourceModel(source_model_lt, smodels)
     return csm
