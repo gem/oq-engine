@@ -19,6 +19,7 @@
 import os.path
 import random
 import operator
+import logging
 import itertools
 import collections
 
@@ -289,6 +290,8 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_model_id'))
+        num_ruptures = sum(len(result[trt_id]) for trt_id in result)
+        logging.info('Generated %d SESRuptures', num_ruptures)
         return result
 
     def post_execute(self, result):
