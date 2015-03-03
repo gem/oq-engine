@@ -214,7 +214,7 @@ class EventBaseQATestCase2(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
         gotlines = [
             row.to_csv_str()
             for row in el.eventlossasset_set.order_by(
-                'asset__asset_ref', 'rupture__tag')]
+                'rupture__tag', 'asset__asset_ref')]
         if gotlines != expectedlines:
             actual_dir = self._test_path("actual")
             if not os.path.exists(actual_dir):
