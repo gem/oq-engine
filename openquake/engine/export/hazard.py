@@ -310,7 +310,8 @@ def export_gmf_csv(key, output, target):
     haz_calc = output.oq_job
     dest = _get_result_export_dest(
         haz_calc.id, target, output.gmf)[:-3] + 'csv'
-    save_csv(dest, _gen_gmf_rows(output))
+    # export the GMFs ordered by tag
+    save_csv(dest, sorted(_gen_gmf_rows(output), key=operator.itemgetter(0)))
     return dest
 
 
@@ -364,7 +365,7 @@ def _gen_gmf_rows(output):
                 (idx[data.site_id], gmv, to_imt_str(data)))
     tag = dict(models.SESRupture.objects.filter(
         pk__in=gmf_by_rupture).values_list('id', 'tag'))
-    for rupid in sorted(gmf_by_rupture):
+    for rupid in gmf_by_rupture:
         yield [tag[rupid]] + regroup(gmf_by_rupture[rupid])
 
 
