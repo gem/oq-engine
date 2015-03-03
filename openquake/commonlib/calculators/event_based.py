@@ -19,6 +19,7 @@
 import os.path
 import random
 import operator
+import logging
 import itertools
 import collections
 
@@ -293,7 +294,10 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_model_id'))
 
-        # recompute rlzs_assoc
+        num_ruptures = sum(len(ses_ruptures_by_trt_id[trt_id])
+                           for trt_id in ses_ruptures_by_trt_id)
+        logging.info('Generated %d SESRuptures', num_ruptures)
+
         self.rlzs_assoc = csm.get_rlzs_assoc(
             lambda trt: len(ses_ruptures_by_trt_id.get(trt.id, [])))
 
