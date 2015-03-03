@@ -341,7 +341,7 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
     oq = monitor.oqparam
 
     # NB: by construction each block is a non-empty list with
-    # ruptures of the same trt_model_id
+    # ruptures of the same col_idx and therefore trt_model_id
     trt_id = ses_ruptures[0].trt_model_id
     gsims = sorted(gsims_assoc[trt_id])
     imts = map(from_string, oq.imtls)
@@ -465,7 +465,7 @@ class EventBasedCalculator(base.calculators['classical']):
             (self.sesruptures, self.sitecol, gsims_assoc, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks, acc=zero,
             agg=self.combine_curves_and_save_gmfs,
-            key=operator.attrgetter('trt_model_id'))  # curves_by_trt_gsim
+            key=operator.attrgetter('col_idx'))  # curves_by_trt_gsim
 
     def post_execute(self, result):
         """
