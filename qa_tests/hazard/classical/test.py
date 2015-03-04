@@ -700,6 +700,8 @@ class ClassicalHazardCase19TestCase(qa_utils.BaseQATestCase):
 
     @attr('qa', 'hazard', 'classical')
     def test(self):
+        result_dir = tempfile.mkdtemp()
+
         cfg = os.path.join(os.path.dirname(case_19.__file__), 'job.ini')
         job = self.run_hazard(cfg)
 
@@ -708,9 +710,14 @@ class ClassicalHazardCase19TestCase(qa_utils.BaseQATestCase):
             hazard_curve__statistics='mean'
         )
         [pga_curve] = curves.filter(hazard_curve__imt='PGA')
- 
-        result_dir = tempfile.mkdtemp()
+
         exported_file = hazard_export.export(
-            pga_curve.hazard_curve.output.id, result_dir)
-        # TODO: compare the file with the expected one
+            pga_curve.hazard_curve.output.id, result_dir, 'csv')
+        actual = [' '.join(line.split(' ')[2:]).strip()
+                  for line in open(exported_file)]
+        fname = os.path.join(os.path.dirname(case_19.__file__), 'expected',
+                             'hazard_curve-mean.csv')
+        expected = [line.split(',')[1] for line in open(fname)]
+        self.assertEqual(actual, expected)
+
         shutil.rmtree(result_dir)
