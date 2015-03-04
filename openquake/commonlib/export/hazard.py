@@ -239,7 +239,7 @@ def export_hazard_curves_csv(key, export_dir, fname, sitecol, curves_by_imt,
     for i, imt in enumerate(sorted(curves_by_imt), 1):
         for sid, curve in zip(range(nsites), curves_by_imt[imt]):
             rows[sid, i] = scientificformat(curve)
-    save_csv(dest, rows)
+    save_csv(dest, rows, fmt='%11.7E')
     return {fname: dest}
 
 
