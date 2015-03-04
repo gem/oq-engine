@@ -1,6 +1,8 @@
 import os
 import unittest
+from cStringIO import StringIO
 from openquake.commonlib.writers import tostring, StreamingXMLWriter
+from openquake.commonlib.node import Node
 from lxml import etree
 
 
@@ -62,3 +64,15 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
                 writer.serialize(asset)
         allocated = proc.get_memory_info().rss - rss
         self.assertLess(allocated, 102400)  # < 100 KB
+
+    def test_zero_node(self):
+        s = StringIO()
+        node = Node('zero', {}, 0)
+        with StreamingXMLWriter(s) as writer:
+            writer.serialize(node)
+        self.assertEqual(s.getvalue(), '''\
+<?xml version="1.0" encoding="utf-8"?>
+<zero>
+    0
+</zero>
+''')
