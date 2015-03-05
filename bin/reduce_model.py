@@ -1,4 +1,22 @@
 #!/usr/bin/env python
+#  -*- coding: utf-8 -*-
+#  vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+#  Copyright (c) 2015, GEM Foundation
+
+#  OpenQuake is free software: you can redistribute it and/or modify it
+#  under the terms of the GNU Affero General Public License as published
+#  by the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+
+#  OpenQuake is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+
+#  You should have received a copy of the GNU Affero General Public License
+#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
 import random
 import shutil
 from openquake.commonlib import nrml
@@ -22,7 +40,8 @@ def random_filter(objects, reduction_factor, seed=42):
 
 def main(fname, reduction_factor):
     """
-    Produce a new exposure from `fname` by sampling the assets.
+    Produce a submodel from `fname` by sampling the nodes randomly.
+    This is a debugging utility to reduce large computations to small ones.
     """
     factor = float(reduction_factor)
     model, = nrml.read(fname)
