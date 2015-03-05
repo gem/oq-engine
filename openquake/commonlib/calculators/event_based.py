@@ -305,9 +305,8 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
                 ses_coll = SESCollection(
                     groupby(sesruptures, operator.attrgetter('ses_idx')),
                     smodel.path, oq.investigation_time)
-                fname = 'ses-%d-smltp_%s.xml' % (
-                    trt_model.id, smpath)
-                saved += export(('ses', 'xml'), oq.export_dir, fname, ses_coll)
+                fname = 'ses-%d-smltp_%s.csv' % (trt_model.id, smpath)
+                saved += export(('ses', 'csv'), oq.export_dir, fname, ses_coll)
         return saved
 
 
@@ -388,7 +387,7 @@ def to_haz_curves(sids, gmfs, imtls, investigation_time, duration):
 
 
 @base.calculators.add('event_based')
-class EventBasedCalculator(base.calculators['classical']):
+class EventBasedCalculator(ClassicalCalculator):
     """
     Event based PSHA calculator generating the ruptures only
     """
@@ -468,3 +467,16 @@ class EventBasedCalculator(base.calculators['classical']):
             return self.saved + ClassicalCalculator.post_execute.__func__(
                 self, result)
         return self.saved
+
+
+@base.calculators.add('event_based_cl')
+class EventBasedClassicalCalculator(EventBasedCalculator):
+    """
+    Event based + classical calculator
+    """
+    def save_cache(self, result):
+        haz_out = super(EventBasedClassicalCalculator, self).save_cache(result)
+        self.oqparam.export_dir = os.path.join(self.oqparam.export_dir, 'cl')
+        self.oqparam.is_valid_export_dir()
+        ClassicalCalculator(self.oqparam, self.monitor).run()
+        return haz_out

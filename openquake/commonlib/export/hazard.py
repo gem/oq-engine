@@ -72,6 +72,20 @@ def export_ses_xml(key, export_dir, fname, ses_coll):
     return {fname: dest}
 
 
+@export.add(('ses', 'csv'))
+def export_ses_csv(key, export_dir, fname, ses_coll):
+    """
+    Export a Stochastic Event Set Collection in csv format
+    """
+    dest = os.path.join(export_dir, fname)
+    rows = []
+    for ses in ses_coll:
+        for sesrup in ses:
+            rows.append([sesrup.tag, sesrup.seed])
+    save_csv(dest, sorted(rows, key=operator.itemgetter(0)))
+    return {fname: dest}
+
+
 # #################### export Ground Motion fields ########################## #
 
 class GmfSet(object):
