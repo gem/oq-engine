@@ -713,10 +713,15 @@ class ClassicalHazardCase19TestCase(qa_utils.BaseQATestCase):
 
         exported_file = hazard_export.export(
             pga_curve.hazard_curve.output.id, result_dir, 'csv')
+        # NB: the format of the exported file is 'lon lat poe1 ... poeN'
+        # we discard lon and lat and extract the poes
         actual = [' '.join(line.split(' ')[2:]).strip()
                   for line in open(exported_file)]
         fname = os.path.join(os.path.dirname(case_19.__file__), 'expected',
                              'hazard_curve-mean.csv')
+        # NB: the format of the expected file is lon lat, poe1 ... poeN, ...
+        # we extract the poes
+        # TODO: unify the engine and oq-lite export formats
         expected = [line.split(',')[1] for line in open(fname)]
         self.assertEqual(actual, expected)
 
