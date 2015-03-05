@@ -2,7 +2,7 @@ import os
 import unittest
 from cStringIO import StringIO
 from openquake.commonlib.writers import tostring, StreamingXMLWriter
-from openquake.commonlib.node import Node
+from openquake.commonlib.node import LiteralNode
 from lxml import etree
 
 
@@ -63,11 +63,11 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
             for asset in assetgen(1000):
                 writer.serialize(asset)
         allocated = proc.get_memory_info().rss - rss
-        self.assertLess(allocated, 102400)  # < 100 KB
+        self.assertLess(allocated, 204800)  # < 200 KB
 
     def test_zero_node(self):
         s = StringIO()
-        node = Node('zero', {}, 0)
+        node = LiteralNode('zero', {}, 0)
         with StreamingXMLWriter(s) as writer:
             writer.serialize(node)
         self.assertEqual(s.getvalue(), '''\
