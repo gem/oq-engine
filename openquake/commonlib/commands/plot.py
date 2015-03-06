@@ -33,6 +33,7 @@ def make_figure(n_sites, imtls, spec_curves, curves=(), label=''):
             ax = fig.add_subplot(n_sites, n_imts, i * n_imts + j + 1)
             ax.grid(True)
             ax.set_xlabel('Hazard curve on site %d, %s' % (i + 1, imt))
+            ax.set_ylim([0, 1])
             if j == 0:  # set Y label only on the leftmost graph
                 ax.set_ylabel('PoE')
             if spec_curves is not None:
