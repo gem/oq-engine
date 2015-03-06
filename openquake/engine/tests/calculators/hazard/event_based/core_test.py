@@ -104,7 +104,7 @@ class GmfCalculatorTestCase(unittest.TestCase):
         # 5 curves (one per each site) for 3 levels, 1 IMT
         [(gname, [curves])] = calc.to_haz_curves(
             site_coll.sids, dict(PGA=[0.03, 0.04, 0.05]),
-            invest_time=50., num_ses=10)
+            invest_time=50., duration=500)
         self.assertEqual(gname, 'AkkarBommer2010')
         numpy.testing.assert_array_almost_equal(
             curves,
