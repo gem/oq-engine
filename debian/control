@@ -9,7 +9,7 @@ Homepage: http://www.globalquakemodel.org/openquake/
 Package: python-oq-engine
 Architecture: all
 Conflicts: python-noq, python-oq
-Depends: ${shlibs:Depends}, ${misc:Depends}, python (>=2.6), debconf, python-celery (>=2.4.6-1ubuntu0.2~gem03), python-geohash, python-lxml, python-numpy, python-paramiko, python-scipy, python-shapely, python-psycopg2, python-django16 (>=1.6.1), python-setuptools, python-psutil, python-mock, python-oq-hazardlib (>=0.12.1), python-oq-risklib (>=0.5.1), python-concurrent.futures (>=2.1.2), rabbitmq-server (>=2.8.0-2~gem02)
+Depends: ${shlibs:Depends}, ${misc:Depends}, python (>=2.6), debconf, python-celery (>=2.4.6-1ubuntu0.2~gem03), python-geohash, python-lxml, python-numpy, python-paramiko, python-scipy, python-shapely, python-psycopg2, python-django16 (>=1.6.1), python-setuptools, python-psutil, python-mock, python-oq-hazardlib (>=0.14.0), python-oq-risklib (>=0.7.0), python-concurrent.futures (>=2.1.2), rabbitmq-server (>=2.8.0-2~gem02)
 Recommends: postgresql-9.1, postgresql-client, postgresql-9.1-postgis
 Description: computes seismic hazard and physical risk
  based on the hazard and risk libraries (python-oq-hazardlib,

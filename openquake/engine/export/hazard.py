@@ -200,7 +200,7 @@ def export_hazard_curve_csv(key, output, target):
     dest = _get_result_export_dest(haz_calc_id, target, hc, file_ext='csv')
     with open(dest, 'wb') as f:
         writer = csv.writer(f, delimiter=' ')
-        with floatformat('%12.8E'):
+        with floatformat('%11.7E'):
             for x, y, poes in sorted(data):
                 writer.writerow(map(scientificformat, [x, y] + poes))
     return dest
@@ -310,7 +310,8 @@ def export_gmf_csv(key, output, target):
     haz_calc = output.oq_job
     dest = _get_result_export_dest(
         haz_calc.id, target, output.gmf)[:-3] + 'csv'
-    save_csv(dest, _gen_gmf_rows(output))
+    # export the GMFs ordered by tag
+    save_csv(dest, sorted(_gen_gmf_rows(output), key=operator.itemgetter(0)))
     return dest
 
 
@@ -364,7 +365,7 @@ def _gen_gmf_rows(output):
                 (idx[data.site_id], gmv, to_imt_str(data)))
     tag = dict(models.SESRupture.objects.filter(
         pk__in=gmf_by_rupture).values_list('id', 'tag'))
-    for rupid in sorted(gmf_by_rupture):
+    for rupid in gmf_by_rupture:
         yield [tag[rupid]] + regroup(gmf_by_rupture[rupid])
 
 
@@ -381,8 +382,7 @@ def export_ses_xml(key, output, target):
         Destination directory location for exported files.
 
     :returns:
-        A list of exported file names (including the absolute path to each
-        file).
+        The exported file path
     """
     ses_coll = models.SESCollection.objects.get(output=output.id)
     haz_calc = output.oq_job
@@ -392,6 +392,33 @@ def export_ses_xml(key, output, target):
                                    output.ses)
     writer = hazard_writers.SESXMLWriter(dest, sm_lt_path)
     writer.serialize(ses_coll)
+    return dest
+
+
+@core.export_output.add(('ses', 'csv'))
+def export_ses_csv(key, output, target):
+    """
+    Export the Stochastic Event Set Collection specified by ``output`` to the
+    ``target`` in csv format.
+
+    :param output:
+        :class:`openquake.engine.db.models.Output` with an `output_type` of
+        `ses`.
+    :param str target:
+        Destination directory location for exported files.
+
+    :returns:
+        The exported file path
+    """
+    ses_coll = models.SESCollection.objects.get(output=output.id)
+    haz_calc = output.oq_job
+    dest = _get_result_export_dest(
+        haz_calc.id, target, output.ses)[:-3] + 'csv'
+    rows = []
+    for ses in ses_coll:
+        for sesrup in ses:
+            rows.append([sesrup.tag, sesrup.seed])
+    save_csv(dest, sorted(rows, key=operator.itemgetter(0)))
     return dest
 
 

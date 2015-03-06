@@ -25,8 +25,8 @@ from openquake.engine.export import core
 from qa_tests import _utils as qa_utils
 from qa_tests.hazard.event_based import sc_utils
 from openquake.qa_tests_data.event_based import (
-    blocksize, case_1, case_2, case_4, case_5, case_6, case_12, case_13,
-    case_17)
+    blocksize, case_1, case_2, case_4, case_5, case_6, case_7, case_12, case_13,
+    case_17, case_18)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
@@ -278,16 +278,24 @@ EXPECTED_GMFS = [
     ('*_*_*_b4_1', '3.7618E-03 7.6974E-03')]
 
 
+def get_actual_gmfs(job):
+    """
+    Returns the GMFs in the database as a list of pairs [(rlz_path, values)].
+    """
+    cursor = models.getcursor('job_init')
+    cursor.execute(GET_GMF_OUTPUTS % job.id)
+    actual_gmfs = [('_'.join(k), scientificformat(sorted(v), '%8.4E'))
+                   for k, v in cursor.fetchall()]
+    return actual_gmfs
+
+
 class EventBasedHazardCase5TestCase(qa_utils.BaseQATestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test(self):
         cfg = os.path.join(os.path.dirname(case_5.__file__), 'job.ini')
         job = self.run_hazard(cfg)
-        cursor = models.getcursor('job_init')
-        cursor.execute(GET_GMF_OUTPUTS % job.id)
-        actual_gmfs = [('_'.join(k), scientificformat(sorted(v), '%8.4E'))
-                       for k, v in cursor.fetchall()]
+        actual_gmfs = get_actual_gmfs(job)
         self.assertEqual(len(actual_gmfs), len(EXPECTED_GMFS))
         for (actual_path, actual_gmf), (expected_path, expected_gmf) in zip(
                 actual_gmfs, EXPECTED_GMFS):
@@ -324,6 +332,28 @@ class EventBasedHazardCase6TestCase(qa_utils.BaseQATestCase):
                 'hazard_curve__quantile')
         # print quantile_0_1_curve.poes
         aaae(expected_q0_1_poes, quantile_0_1_curve.poes, decimal=7)
+
+
+# convergency test for the mean curves; compare with oq-lite
+class EventBasedHazardCase7TestCase(qa_utils.BaseQATestCase):
+
+    @attr('qa', 'hazard', 'event_based', 'slow')
+    def test(self):
+        job = self.run_hazard(
+            os.path.join(os.path.dirname(case_7.__file__), 'job.ini'))
+
+        mean_curves = models.HazardCurveData.objects \
+            .filter(hazard_curve__output__oq_job=job.id,
+                    hazard_curve__statistics='mean', hazard_curve__imt='PGA') \
+            .order_by('location')
+        actual = scientificformat(mean_curves[0].poes, '%11.7E')
+
+        fname = os.path.join(os.path.dirname(case_7.__file__), 'expected',
+                             'hazard_curve-mean.csv')
+        # NB: the format of the expected file is lon lat, poe1 ... poeN, ...
+        # we extract the first poes for the first point
+        expected = [line.split(',')[1] for line in open(fname)][0]
+        self.assertEqual(actual, expected)
 
 
 class EventBasedHazardCase12TestCase(qa_utils.BaseQATestCase):
@@ -367,14 +397,17 @@ class EventBasedHazardCase13TestCase(qa_utils.BaseQATestCase):
         aaae(expected_curve_poes, curve.poes, decimal=2)
 
 
+# oversampling test
 class EventBasedHazardCase17TestCase(qa_utils.BaseQATestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test(self):
+        result_dir = tempfile.mkdtemp()
+
         cfg = os.path.join(os.path.dirname(case_17.__file__), 'job.ini')
-        expected_curves_pga = [[1.0, 1.0, 0.0],
+        expected_curves_pga = [[0.0, 0.0, 0.0],
                                [1.0, 1.0, 0.0],
-                               [0.0, 0.0, 0.0],
+                               [1.0, 1.0, 0.0],
                                [1.0, 1.0, 0.0],
                                [1.0, 1.0, 0.0]]
 
@@ -390,14 +423,38 @@ class EventBasedHazardCase17TestCase(qa_utils.BaseQATestCase):
         t4_tags = [t for t in tags if t.startswith('col=03')]
         t5_tags = [t for t in tags if t.startswith('col=04')]
 
-        self.assertEqual(len(t1_tags), 2742)
-        self.assertEqual(len(t2_tags), 2761)
-        self.assertEqual(len(t3_tags), 1)
-        self.assertEqual(len(t4_tags), 2735)
-        self.assertEqual(len(t5_tags), 2725)
+        self.assertEqual(len(t1_tags), 0)
+        self.assertEqual(len(t2_tags), 2816)
+        self.assertEqual(len(t3_tags), 2775)
+        self.assertEqual(len(t4_tags), 2736)
+        self.assertEqual(len(t5_tags), 2649)
+
+        # check the total number of exported GMFs among the 4 realizations
+        countlines = 0
+        for gmf_output in models.Output.objects.filter(
+                output_type='gmf', oq_job=job):
+            fname = core.export(gmf_output.id, result_dir, 'csv')
+            countlines += len(open(fname).readlines())
+        self.assertEqual(countlines, len(tags))
 
         curves = [c.poes for c in models.HazardCurveData.objects.filter(
             hazard_curve__output__oq_job=job.id, hazard_curve__imt='PGA'
         ).order_by('hazard_curve')]
         numpy.testing.assert_array_almost_equal(
             expected_curves_pga, curves, decimal=7)
+
+        shutil.rmtree(result_dir)
+
+
+# another oversampling test
+class EventBasedHazardCase18TestCase(qa_utils.BaseQATestCase):
+
+    @attr('qa', 'hazard', 'event_based')
+    def test(self):
+        cfg = os.path.join(os.path.dirname(case_18.__file__), 'job_3.ini')
+        job = self.run_hazard(cfg)
+        expected = [
+            ('AB', '9.7812E-02 1.1691E-01 2.0018E-01'),
+            ('AB', '8.4810E-02 1.0532E-01 1.1238E-01 1.3214E-01 1.7364E-01'),
+            ('CF', '1.7467E-02 1.8669E-02 1.9903E-02 3.2168E-02 8.8104E-02')]
+        self.assertEqual(get_actual_gmfs(job), expected)
