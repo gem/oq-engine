@@ -100,10 +100,11 @@ def event_based(workflow, getter, outputdict, params, monitor):
                     for rup_id, losses_per_rup in zip(
                             getter.rupture_ids, losses):
                         for asset, loss_per_rup in zip(assets, losses_per_rup):
-                            ela = models.EventLossAsset(
-                                event_loss=event_loss, rupture_id=rup_id,
-                                asset=asset, loss=loss_per_rup)
-                            inserter.add(ela)
+                            if loss_per_rup:  # save only non-zero losses
+                                ela = models.EventLossAsset(
+                                    event_loss=event_loss, rupture_id=rup_id,
+                                    asset=asset, loss=loss_per_rup)
+                                inserter.add(ela)
                     if params.sites_disagg:
                         with monitor('disaggregating results'):
                             ruptures = [models.SESRupture.objects.get(pk=rid)

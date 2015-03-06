@@ -217,7 +217,7 @@ def build_curves(rlz, curves_by_trt_model_gsim):
     # number of TrtModels
     curves = 0
     for art in AssocLtRlzTrtModel.objects.filter(rlz=rlz):
-        pnes = 1. - curves_by_trt_model_gsim[art.trt_model_id, art.gsim]
+        pnes = 1. - curves_by_trt_model_gsim.get((art.trt_model_id, art.gsim), 0)
         curves = 1. - (1. - curves) * pnes
     return curves
 
@@ -921,8 +921,7 @@ class SESCollection(djm.Model):
     See also :class:`SES` and :class:`SESRupture`.
     """
     output = djm.OneToOneField('Output', related_name="ses")
-    trt_model = djm.OneToOneField(
-        'TrtModel', related_name='ses_collection', null=False)
+    trt_model = djm.ForeignKey('TrtModel', null=False)
     ordinal = djm.IntegerField(null=False)
 
     class Meta:
