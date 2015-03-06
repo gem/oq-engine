@@ -121,7 +121,9 @@ class SESRupture(object):
         self.trt_model_id = trt_model_id
         # extract the SES ordinal (>=1) from the rupture tag
         # for instance 'col=00|ses=0001|src=1|rup=001-01' => 1
-        self.ses_idx = int(tag.split('|')[1].split('=')[1])
+        pieces = tag.split('|')
+        self.col_idx = int(pieces[0].split('=')[1])
+        self.ses_idx = int(pieces[1].split('=')[1])
 
     def export(self):
         """
@@ -215,12 +217,13 @@ def sample_ruptures(src, num_ses, info):
     for rup_no, rup in enumerate(src.iter_ruptures(), 1):
         rup.rup_no = rup_no
         for idx in range(info.get_num_samples(src.trt_model_id)):
-            col_id = info.get_col_id(src.trt_model_id, idx)
+            col_idx = info.get_col_idx(src.trt_model_id, idx)
             for ses_idx in range(1, num_ses + 1):
                 numpy.random.seed(rnd.randint(0, MAX_INT))
                 num_occurrences = rup.sample_number_of_occurrences()
                 if num_occurrences:
-                    num_occ_by_rup[rup] += {(col_id, ses_idx): num_occurrences}
+                    num_occ_by_rup[rup] += {
+                        (col_idx, ses_idx): num_occurrences}
     return num_occ_by_rup
 
 
@@ -284,15 +287,21 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         monitor.oqparam = self.oqparam
         csm = self.composite_source_model
         sources = list(csm.sources)
-        result = parallel.apply_reduce(
+        ses_ruptures_by_trt_id = parallel.apply_reduce(
             self.core_func.__func__,
             (sources, self.sitecol, csm.info, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_model_id'))
-        num_ruptures = sum(len(result[trt_id]) for trt_id in result)
+
+        num_ruptures = sum(
+            len(rups) for rups in ses_ruptures_by_trt_id.itervalues())
         logging.info('Generated %d SESRuptures', num_ruptures)
-        return result
+
+        self.rlzs_assoc = csm.get_rlzs_assoc(
+            lambda trt: len(ses_ruptures_by_trt_id.get(trt.id, [])))
+
+        return ses_ruptures_by_trt_id
 
     def post_execute(self, result):
         """Export the ruptures, if any"""
@@ -305,9 +314,8 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
                 ses_coll = SESCollection(
                     groupby(sesruptures, operator.attrgetter('ses_idx')),
                     smodel.path, oq.investigation_time)
-                fname = 'ses-%d-smltp_%s.xml' % (
-                    trt_model.id, smpath)
-                saved += export(('ses', 'xml'), oq.export_dir, fname, ses_coll)
+                fname = 'ses-%d-smltp_%s.csv' % (trt_model.id, smpath)
+                saved += export(('ses', 'csv'), oq.export_dir, fname, ses_coll)
         return saved
 
 
@@ -333,7 +341,7 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
     oq = monitor.oqparam
 
     # NB: by construction each block is a non-empty list with
-    # ruptures of the same trt_model_id
+    # ruptures of the same col_idx and therefore trt_model_id
     trt_id = ses_ruptures[0].trt_model_id
     gsims = sorted(gsims_assoc[trt_id])
     imts = map(from_string, oq.imtls)
@@ -358,7 +366,8 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
                 gmf_by_imt.r_sites = r_sites
                 result[trt_id, gsim_str].gmfs.append(gmf_by_imt)
     if getattr(oq, 'hazard_curves_from_gmfs', None):
-        duration = oq.investigation_time * oq.ses_per_logic_tree_path
+        duration = oq.investigation_time * oq.ses_per_logic_tree_path * (
+            oq.number_of_logic_tree_samples or 1)
         for gsim in gsims:
             gmfs, curves = result[trt_id, str(gsim)]
             curves.update(to_haz_curves(
@@ -457,7 +466,7 @@ class EventBasedCalculator(base.calculators['classical']):
             (self.sesruptures, self.sitecol, gsims_assoc, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks, acc=zero,
             agg=self.combine_curves_and_save_gmfs,
-            key=operator.attrgetter('trt_model_id'))  # curves_by_trt_gsim
+            key=operator.attrgetter('col_idx'))  # curves_by_trt_gsim
 
     def post_execute(self, result):
         """
