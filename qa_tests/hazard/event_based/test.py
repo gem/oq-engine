@@ -380,10 +380,12 @@ class EventBasedHazardCase17TestCase(qa_utils.BaseQATestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test(self):
+        result_dir = tempfile.mkdtemp()
+
         cfg = os.path.join(os.path.dirname(case_17.__file__), 'job.ini')
-        expected_curves_pga = [[1.0, 1.0, 0.0],
+        expected_curves_pga = [[0.0, 0.0, 0.0],
                                [1.0, 1.0, 0.0],
-                               [0.0, 0.0, 0.0],
+                               [1.0, 1.0, 0.0],
                                [1.0, 1.0, 0.0],
                                [1.0, 1.0, 0.0]]
 
@@ -399,17 +401,27 @@ class EventBasedHazardCase17TestCase(qa_utils.BaseQATestCase):
         t4_tags = [t for t in tags if t.startswith('col=03')]
         t5_tags = [t for t in tags if t.startswith('col=04')]
 
-        self.assertEqual(len(t1_tags), 2742)
-        self.assertEqual(len(t2_tags), 2761)
-        self.assertEqual(len(t3_tags), 1)
-        self.assertEqual(len(t4_tags), 2735)
-        self.assertEqual(len(t5_tags), 2725)
+        self.assertEqual(len(t1_tags), 0)
+        self.assertEqual(len(t2_tags), 2816)
+        self.assertEqual(len(t3_tags), 2775)
+        self.assertEqual(len(t4_tags), 2736)
+        self.assertEqual(len(t5_tags), 2649)
+
+        # check the total number of exported GMFs among the 4 realizations
+        countlines = 0
+        for gmf_output in models.Output.objects.filter(
+                output_type='gmf', oq_job=job):
+            fname = core.export(gmf_output.id, result_dir, 'csv')
+            countlines += len(open(fname).readlines())
+        self.assertEqual(countlines, len(tags))
 
         curves = [c.poes for c in models.HazardCurveData.objects.filter(
             hazard_curve__output__oq_job=job.id, hazard_curve__imt='PGA'
         ).order_by('hazard_curve')]
         numpy.testing.assert_array_almost_equal(
             expected_curves_pga, curves, decimal=7)
+
+        shutil.rmtree(result_dir)
 
 
 # another oversampling test
@@ -420,7 +432,7 @@ class EventBasedHazardCase18TestCase(qa_utils.BaseQATestCase):
         cfg = os.path.join(os.path.dirname(case_18.__file__), 'job_3.ini')
         job = self.run_hazard(cfg)
         expected = [
-            ('AB', '1.6293E-01 1.7273E-01 1.9337E-01 2.1405E-01 2.2364E-01 3.0367E-01'),
-            ('CY', '1.5591E-01 1.6827E-01 2.4443E-01'),
-            ('CY', '1.2968E-01 1.3050E-01 1.6888E-01 2.2314E-01 3.0461E-01 3.8201E-01')]
+            ('AB', '9.7812E-02 1.1691E-01 2.0018E-01'),
+            ('AB', '8.4810E-02 1.0532E-01 1.1238E-01 1.3214E-01 1.7364E-01'),
+            ('CF', '1.7467E-02 1.8669E-02 1.9903E-02 3.2168E-02 8.8104E-02')]
         self.assertEqual(get_actual_gmfs(job), expected)
