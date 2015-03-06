@@ -258,7 +258,8 @@ class BaseHazardCalculator(base.Calculator):
             lt_model = models.LtSourceModel.objects.create(
                 hazard_calculation=self.job,
                 sm_lt_path=self.tilepath + sm.path,
-                ordinal=sm.ordinal, sm_name=sm.name, weight=sm.weight)
+                ordinal=sm.ordinal, sm_name=sm.name, weight=sm.weight,
+                samples=sm.samples)
             self._source_models.append(lt_model)
             gsims_by_trt = sm.gsim_lt.values
             # save TrtModels for each tectonic region type
@@ -331,9 +332,11 @@ class BaseHazardCalculator(base.Calculator):
             lambda trt_model: models.TrtModel.objects.get(
                 pk=trt_model.id).num_ruptures)
         gsims_by_trt_id = self.rlzs_assoc.get_gsims_by_trt_id()
-        smodels = [sm for sm in self._source_models
-                   if sm.trtmodel_set.filter(num_ruptures__gt=0)]
-        for lt_model, rlzs in zip(smodels, self.rlzs_assoc.rlzs_by_smodel):
+        for lt_model in self._source_models:
+            rlzs = self.rlzs_assoc.rlzs_by_smodel.get(lt_model.ordinal, [])
+            logs.LOG.info('Creating %d realization(s) for model '
+                          '%s, %s', len(rlzs), lt_model.sm_name,
+                          '_'.join(lt_model.sm_lt_path))
             for rlz in rlzs:
                 gsim_by_trt = self.rlzs_assoc.gsim_by_trt[rlz]
                 lt_rlz = models.LtRealization.objects.create(
