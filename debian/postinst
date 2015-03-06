@@ -79,37 +79,6 @@ do
 done
 chown -R root.openquake $SDIR
 
-#
-#  NOTE
-#        look 'debian/config' file if you want to change something here
-#
-# is postgresql installed on this system?
-if [ -f "$PG_CONF" ]; then
-    # does a bad explicit configuration exist?
-    if grep -q '^[ 	]*standard_conforming_strings[ 	]*=' "$PG_CONF" ; then
-        if grep -q '^[ 	]*standard_conforming_strings[ 	]*=[ 	]*on' "$PG_CONF" ; then
-            db_get python-oq-engine/override-psql-std-conf-str || true
-            if [ "$RET" = "true" ]; then
-                if [ ! -f "${PG_CONF}.${GEM_DEB_PACKAGE}.orig" ]; then
-                    cp "$PG_CONF" "${PG_CONF}.${GEM_DEB_PACKAGE}.orig"
-                fi
-                sed -i 's/^[ 	]*standard_conforming_strings[ 	]*=.*/# ADDED BY python-oq-engine\nstandard_conforming_strings = off/g' "$PG_CONF"
-            fi
-        fi
-    elif grep -q  '^[ 	]*#[ 	]*standard_conforming_strings[ 	]*=' "$PG_CONF" ; then
-        if [ ! -f "${PG_CONF}.${GEM_DEB_PACKAGE}.orig" ]; then
-            cp "$PG_CONF" "${PG_CONF}.${GEM_DEB_PACKAGE}.orig"
-        fi
-        sed -i 's/^[ 	]*#[ 	]*standard_conforming_strings[ 	]*=.*/# ADDED BY python-oq-engine\nstandard_conforming_strings = off/g' "$PG_CONF"
-    else
-        if [ ! -f "${PG_CONF}.${GEM_DEB_PACKAGE}.orig" ]; then
-            cp "$PG_CONF" "${PG_CONF}.${GEM_DEB_PACKAGE}.orig"
-        fi
-        echo "# ADDED BY python-oq-engine" >>  "$PG_CONF"
-        echo "standard_conforming_strings = off" >>  "$PG_CONF"
-    fi
-fi
-
 if [ -f /usr/lib/postgresql/9.1/bin/postgres ]; then
     # postgres is installed, flatten and recreate the database.
 
@@ -197,7 +166,6 @@ if [ -f /usr/lib/postgresql/9.1/bin/postgres ]; then
 
     DDIR="/usr/share/doc/python-oq-risklib/examples/demos"
 
-    cd $DDIR && find . | grep gz$ | xargs gunzip -f
     # Last but not least copy the smoke tests into a more prominent place.
     if [ -d $HDIR/demos ]; then
         # are existing demos different from the ones we just installed?
@@ -211,10 +179,12 @@ if [ -f /usr/lib/postgresql/9.1/bin/postgres ]; then
     # differ i.e. there's no point in installing them again.
     if [ ! -d $HDIR/demos ]; then
         cp -a $DDIR $HDIR
-        cd $HDIR/demos && chown -R root.openquake .
+        cd $HDIR/demos
+        find . -type f -name '*.gz' | xargs gunzip -f
+        chown -R root.openquake .
         # Make the demo files writable by owner and group.
-        cd $HDIR/demos && find . -type f | xargs chmod 664
-        cd $HDIR/demos && find . -type d | xargs chmod 775
+        find . -type f | xargs chmod 664
+        find . -type d | xargs chmod 775
     fi
 fi
 

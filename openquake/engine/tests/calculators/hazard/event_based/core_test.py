@@ -77,8 +77,11 @@ class GmfCalculatorTestCase(unittest.TestCase):
         pga = PGA()
         rlz = mock.Mock()
         rlz.id = 1
+        ses_coll = mock.Mock()
+        ses_coll.ordinal = 0
+        ses_coll.trt_model.id = 1
         calc = core.GmfCalculator(
-            [pga], [gsim], trt_model_id=1, truncation_level=3)
+            [pga], [gsim], ses_coll, truncation_level=3)
         calc.calc_gmfs(site_coll, rup, [(rup.id, rup_seed)])
         expected_rups = {
             ('AkkarBommer2010', 'PGA', 0): [rup_id],
@@ -101,7 +104,7 @@ class GmfCalculatorTestCase(unittest.TestCase):
         # 5 curves (one per each site) for 3 levels, 1 IMT
         [(gname, [curves])] = calc.to_haz_curves(
             site_coll.sids, dict(PGA=[0.03, 0.04, 0.05]),
-            invest_time=50., num_ses=10)
+            invest_time=50., duration=500)
         self.assertEqual(gname, 'AkkarBommer2010')
         numpy.testing.assert_array_almost_equal(
             curves,
