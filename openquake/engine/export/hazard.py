@@ -200,7 +200,7 @@ def export_hazard_curve_csv(key, output, target):
     dest = _get_result_export_dest(haz_calc_id, target, hc, file_ext='csv')
     with open(dest, 'wb') as f:
         writer = csv.writer(f, delimiter=' ')
-        with floatformat('%12.8E'):
+        with floatformat('%11.7E'):
             for x, y, poes in sorted(data):
                 writer.writerow(map(scientificformat, [x, y] + poes))
     return dest
