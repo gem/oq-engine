@@ -341,7 +341,7 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
     oq = monitor.oqparam
 
     # NB: by construction each block is a non-empty list with
-    # ruptures of the same trt_model_id
+    # ruptures of the same col_idx and therefore trt_model_id
     trt_id = ses_ruptures[0].trt_model_id
     gsims = sorted(gsims_assoc[trt_id])
     imts = map(from_string, oq.imtls)
@@ -366,7 +366,8 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
                 gmf_by_imt.r_sites = r_sites
                 result[trt_id, gsim_str].gmfs.append(gmf_by_imt)
     if getattr(oq, 'hazard_curves_from_gmfs', None):
-        duration = oq.investigation_time * oq.ses_per_logic_tree_path
+        duration = oq.investigation_time * oq.ses_per_logic_tree_path * (
+            oq.number_of_logic_tree_samples or 1)
         for gsim in gsims:
             gmfs, curves = result[trt_id, str(gsim)]
             curves.update(to_haz_curves(
@@ -465,7 +466,7 @@ class EventBasedCalculator(base.calculators['classical']):
             (self.sesruptures, self.sitecol, gsims_assoc, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks, acc=zero,
             agg=self.combine_curves_and_save_gmfs,
-            key=operator.attrgetter('trt_model_id'))  # curves_by_trt_gsim
+            key=operator.attrgetter('col_idx'))  # curves_by_trt_gsim
 
     def post_execute(self, result):
         """
