@@ -238,12 +238,13 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol, rlzs_assoc):
                 r_sites, rupture, [(r.id, r.seed) for r in group])
 
     if getattr(hc, 'hazard_curves_from_gmfs', None):
+        duration = hc.investigation_time * hc.ses_per_logic_tree_path * (
+            hc.number_of_logic_tree_samples or 1)
         with EnginePerformanceMonitor(
                 'hazard curves from gmfs',
                 job_id, compute_gmfs_and_curves):
             result[trt_model.id] = (calc.to_haz_curves(
-                sitecol.sids, hc.imtls,
-                hc.investigation_time, hc.ses_per_logic_tree_path), [])
+                sitecol.sids, hc.imtls, hc.investigation_time, duration), [])
     else:
         result[trt_model.id] = ([], [])
 
@@ -340,21 +341,22 @@ class GmfCalculator(object):
         self.gmvs_per_site.clear()
         self.ruptures_per_site.clear()
 
-    def to_haz_curves(self, sids, imtls, invest_time, num_ses):
+    def to_haz_curves(self, sids, imtls, invest_time, duration):
         """
         Convert the gmf into hazard curves (by gsim and imt)
 
         :param sids: database ids of the given sites
         :param imtls: dictionary {IMT: intensity measure levels}
         :param invest_time: investigation time
-        :param num_ses: number of Stochastic Event Sets
+        :param duration: effective duration (investigation time multiplied
+                         by number of SES and number of samples)
         """
         gmf = collections.defaultdict(dict)  # (gsim, imt) > {site_id: poes}
         sorted_imts = map(str, self.sorted_imts)
         zeros = {imt: numpy.zeros(len(imtls[imt])) for imt in sorted_imts}
         for (gsim, imt, site_id), gmvs in self.gmvs_per_site.iteritems():
             gmf[gsim, imt][site_id] = gmvs_to_haz_curve(
-                gmvs, imtls[imt], invest_time, num_ses * invest_time)
+                gmvs, imtls[imt], invest_time, duration)
         curves_by_gsim = []
         for gsim_obj in self.sorted_gsims:
             gsim = gsim_obj.__class__.__name__
