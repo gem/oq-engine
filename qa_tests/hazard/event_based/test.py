@@ -344,7 +344,8 @@ class EventBasedHazardCase7TestCase(qa_utils.BaseQATestCase):
 
         mean_curves = models.HazardCurveData.objects \
             .filter(hazard_curve__output__oq_job=job.id,
-                    hazard_curve__statistics='mean', hazard_curve__imt='PGA')
+                    hazard_curve__statistics='mean', hazard_curve__imt='PGA') \
+            .order_by('location')
         actual = scientificformat(mean_curves[0].poes, '%11.7E')
 
         fname = os.path.join(os.path.dirname(case_7.__file__), 'expected',
