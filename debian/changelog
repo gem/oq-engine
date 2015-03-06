@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed an issue in the scenario calculator: the GMFs were not filtered
+    according to the distance to the rupture
   * Fixed bug in the event based calculator; in the case
     number_of_logic_tree_samples > 0 it was generating incorrect hazard curves.
     Also improved (a lot) the performance in this case.
