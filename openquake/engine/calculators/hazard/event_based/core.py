@@ -124,7 +124,8 @@ def compute_ruptures(job_id, sources, sitecol, info):
     # NB: all realizations in gsims correspond to the same source model
     trt_model_id = sources[0].trt_model_id
     trt_model = models.TrtModel.objects.get(pk=trt_model_id)
-    ses_coll = models.SESCollection.objects.get(trt_model=trt_model)
+    ses_coll = {sc.ordinal: sc for sc in models.SESCollection.objects.filter(
+        trt_model=trt_model)}
 
     hc = models.oqparam(job_id)
     tot_ruptures = 0
@@ -157,15 +158,17 @@ def compute_ruptures(job_id, sources, sitecol, info):
                 build_ses_ruptures(
                     src, num_occ_by_rup, s_sites, hc.maximum_distance, sitecol
                 ))
-        for rup, rups in pairs:
-            # saving ses_ruptures
-            with save_ruptures_mon:
-                prob_rup = models.ProbabilisticRupture.create(
-                    rup, ses_coll, rups[0].indices)
-                for rup in rups:
-                    models.SESRupture.objects.create(
-                        rupture=prob_rup, ses_id=rup.ses_idx,
-                        tag=rup.tag, seed=rup.seed)
+        # saving ses_ruptures
+        with save_ruptures_mon:
+            for rup, rups in pairs:
+                for col_idx in set(r.col_idx for r in rups):
+                    prob_rup = models.ProbabilisticRupture.create(
+                        rup, ses_coll[col_idx], rups[0].indices)
+                    for r in rups:
+                        if r.col_idx == col_idx:
+                            models.SESRupture.objects.create(
+                                rupture=prob_rup, ses_id=r.ses_idx,
+                                tag=r.tag, seed=r.seed)
 
         if num_occ_by_rup:
             num_ruptures = len(num_occ_by_rup)
@@ -217,11 +220,12 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol, rlzs_assoc):
 
     result = {}  # trt_model_id -> (curves_by_gsim, [])
     # NB: by construction each block is a non-empty list with
-    # ruptures of homogeneous trt_model
-    trt_model = ses_ruptures[0].rupture.ses_collection.trt_model
+    # ruptures of homogeneous SESCollection
+    ses_coll = ses_ruptures[0].rupture.ses_collection
+    trt_model = ses_coll.trt_model
     gsims = rlzs_assoc.get_gsims_by_trt_id()[trt_model.id]
     calc = GmfCalculator(
-        sorted(imts), sorted(gsims), trt_model.id,
+        sorted(imts), sorted(gsims), ses_coll,
         getattr(hc, 'truncation_level', None), models.get_correl_model(job))
 
     with EnginePerformanceMonitor(
@@ -255,7 +259,7 @@ class GmfCalculator(object):
     """
     A class to store ruptures and then compute and save ground motion fields.
     """
-    def __init__(self, sorted_imts, sorted_gsims, trt_model_id,
+    def __init__(self, sorted_imts, sorted_gsims, ses_coll,
                  truncation_level=None, correl_model=None):
         """
         :param sorted_imts:
@@ -271,7 +275,8 @@ class GmfCalculator(object):
         """
         self.sorted_imts = sorted_imts
         self.sorted_gsims = sorted_gsims
-        self.trt_model_id = trt_model_id
+        self.col_idx = ses_coll.ordinal
+        self.trt_model_id = ses_coll.trt_model.id
         self.truncation_level = truncation_level
         self.correl_model = correl_model
         # NB: I tried to use a single dictionary
@@ -311,22 +316,26 @@ class GmfCalculator(object):
         :param rlzs_assoc:
             a :class:`openquake.commonlib.source.RlzsAssoc` instance
         """
+        samples = rlzs_assoc.csm_info.get_num_samples(self.trt_model_id)
         for gsim_name, imt_str, site_id in self.gmvs_per_site:
-            for trt_id, gsim in sorted(rlzs_assoc):
-                if trt_id == self.trt_model_id and gsim == gsim_name:
-                    for rlz in rlzs_assoc[trt_id, gsim]:
-                        imt_name, sa_period, sa_damping = from_string(imt_str)
-                        inserter.add(models.GmfData(
-                            gmf=models.Gmf.objects.get(lt_realization=rlz.id),
-                            task_no=0,
-                            imt=imt_name,
-                            sa_period=sa_period,
-                            sa_damping=sa_damping,
-                            site_id=site_id,
-                            gmvs=self.gmvs_per_site[gsim, imt_str, site_id],
-                            rupture_ids=self.ruptures_per_site[
-                                gsim_name, imt_str, site_id]
-                        ))
+            rlzs = rlzs_assoc[self.trt_model_id, gsim_name]
+            if samples > 1:
+                # save only the data for the realization corresponding
+                # to the current SESCollection
+                rlzs = [rlz for rlz in rlzs if self.col_idx in rlz.col_ids]
+            for rlz in rlzs:
+                imt_name, sa_period, sa_damping = from_string(imt_str)
+                inserter.add(models.GmfData(
+                    gmf=models.Gmf.objects.get(lt_realization=rlz.id),
+                    task_no=0,
+                    imt=imt_name,
+                    sa_period=sa_period,
+                    sa_damping=sa_damping,
+                    site_id=site_id,
+                    gmvs=self.gmvs_per_site[gsim_name, imt_str, site_id],
+                    rupture_ids=self.ruptures_per_site[
+                        gsim_name, imt_str, site_id]
+                ))
         inserter.flush()
         self.gmvs_per_site.clear()
         self.ruptures_per_site.clear()
@@ -366,7 +375,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
     """
     core_calc_task = compute_ruptures
 
-    def initialize_ses_db_records(self, trt_model, i):
+    def initialize_ses_db_records(self, trt_model_id, ordinal):
         """
         Create :class:`~openquake.engine.db.models.Output` and
         :class:`openquake.engine.db.models.SESCollection` records for
@@ -381,11 +390,12 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         """
         output = models.Output.objects.create(
             oq_job=self.job,
-            display_name='SES Collection %d' % i,
+            display_name='SES Collection %d' % ordinal,
             output_type='ses')
 
+        trt_model = models.TrtModel.objects.get(pk=trt_model_id)
         ses_coll = models.SESCollection.objects.create(
-            output=output, trt_model=trt_model, ordinal=i)
+            output=output, trt_model=trt_model, ordinal=ordinal)
 
         return ses_coll
 
@@ -402,9 +412,8 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         rnd = random.Random(hc.random_seed)
         for src in self.composite_model.sources:
             src.seed = rnd.randint(0, models.MAX_SINT_32)
-        for i, trt_model in enumerate(models.TrtModel.objects.filter(
-                lt_model__hazard_calculation=self.job)):
-            self.initialize_ses_db_records(trt_model, i)
+        for trt_id, idx, col_id in self.composite_model.info.get_triples():
+            self.initialize_ses_db_records(trt_id, col_id)
         return weights
 
     def agg_curves(self, acc, result):
@@ -450,18 +459,22 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         sitecol = self.site_collection
         sesruptures = []  # collect the ruptures in a fixed order
         with self.monitor('reading ruptures'):
-            for trt_model in models.TrtModel.objects.filter(
-                    lt_model__hazard_calculation=self.job):
+            for ses_coll in models.SESCollection.objects.filter(
+                    trt_model__lt_model__hazard_calculation=self.job):
                 for sr in models.SESRupture.objects.filter(
-                        rupture__ses_collection__trt_model=trt_model):
+                        rupture__ses_collection=ses_coll):
                     # adding the annotation below saves a LOT of memory
                     # otherwise one would need as key in apply_reduce
-                    # lambda sr: sr.rupture.tsrt_model.id which would
+                    # lambda sr: sr.rupture.ses_collection.ordinal which would
                     # read the world from the database
-                    sr.trt_id = trt_model.id
+                    sr.col_idx = ses_coll.ordinal
                     sesruptures.append(sr)
         base_agg = super(EventBasedHazardCalculator, self).agg_curves
+        if hasattr(self, 'zeros'):  # there are IMTLs
+            zeros = {key: self.zeros for key in self.rlzs_assoc}
+        else:
+            zeros = {}
         return tasks.apply_reduce(
             compute_gmfs_and_curves,
             (self.job.id, sesruptures, sitecol, self.rlzs_assoc),
-            base_agg, {}, key=lambda sr: sr.trt_id)
+            base_agg, zeros, key=lambda sr: sr.col_idx)
