@@ -180,7 +180,7 @@ class EventBasedTestCase(CalculatorTestCase):
         for fname in expected:
             self.assertEqualFiles('expected/%s' % fname, out[fname])
 
-    @attr('qa', 'hazard', 'event_based')
+    @attr('qa', 'hazard', 'event_based', 'slow')
     def test_case_7(self):
         # 2 models x 3 GMPEs, 500 samples
         expected = [
