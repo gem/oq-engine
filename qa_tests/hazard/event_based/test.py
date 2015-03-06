@@ -25,7 +25,7 @@ from openquake.engine.export import core
 from qa_tests import _utils as qa_utils
 from qa_tests.hazard.event_based import sc_utils
 from openquake.qa_tests_data.event_based import (
-    blocksize, case_1, case_2, case_4, case_5, case_6, case_12, case_13,
+    blocksize, case_1, case_2, case_4, case_5, case_6, case_7, case_12, case_13,
     case_17, case_18)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
@@ -332,6 +332,27 @@ class EventBasedHazardCase6TestCase(qa_utils.BaseQATestCase):
                 'hazard_curve__quantile')
         # print quantile_0_1_curve.poes
         aaae(expected_q0_1_poes, quantile_0_1_curve.poes, decimal=7)
+
+
+# convergency test for the mean curves; compare with oq-lite
+class EventBasedHazardCase7TestCase(qa_utils.BaseQATestCase):
+
+    @attr('qa', 'hazard', 'event_based', 'slow')
+    def test(self):
+        job = self.run_hazard(
+            os.path.join(os.path.dirname(case_7.__file__), 'job.ini'))
+
+        mean_curves = models.HazardCurveData.objects \
+            .filter(hazard_curve__output__oq_job=job.id,
+                    hazard_curve__statistics='mean', hazard_curve__imt='PGA')
+        actual = scientificformat(mean_curves[0].poes, '%11.7E')
+
+        fname = os.path.join(os.path.dirname(case_7.__file__), 'expected',
+                             'hazard_curve-mean.csv')
+        # NB: the format of the expected file is lon lat, poe1 ... poeN, ...
+        # we extract the first poes for the first point
+        expected = [line.split(',')[1] for line in open(fname)][0]
+        self.assertEqual(actual, expected)
 
 
 class EventBasedHazardCase12TestCase(qa_utils.BaseQATestCase):
