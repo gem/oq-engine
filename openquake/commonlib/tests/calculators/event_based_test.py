@@ -133,18 +133,15 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_3(self):  # oversampling
         out = self.run_calc(case_2.__file__, 'job_2.ini', exports='csv')
         self.assertEqualFiles(
-            'expected/0-SadighEtAl1997.csv',
+            'expected/SadighEtAl1997.csv',
             out['0-SadighEtAl1997.csv'], sorted)
         self.assertEqualFiles(
-            'expected/1-SadighEtAl1997.csv',
-            out['1-SadighEtAl1997.csv'], sorted)
-        self.assertEqualFiles(
-            'expected/hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv',
+            'expected/hc-smltp_b1-gsimltp_b1-ltr_0.csv',
             out['hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv'])
         # NB: we are testing that the file ltr_1.csv is equal to
         # ltr_0.csv, as it should be for the hazard curves
         self.assertEqualFiles(
-            'expected/hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv',
+            'expected/hc-smltp_b1-gsimltp_b1-ltr_0.csv',
             out['hazard_curve-smltp_b1-gsimltp_b1-ltr_1.csv'])
 
     @attr('qa', 'hazard', 'event_based')
@@ -157,16 +154,14 @@ class EventBasedTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'event_based')
     def test_case_5(self):
         expected = '''\
-1-FaccioliEtAl2010.csv
 3-AkkarBommer2010.csv
-3-CauzziFaccioli2008.csv
-3-ChiouYoungs2008.csv
-3-ZhaoEtAl2006Asc.csv
 4-AkkarBommer2010.csv
-4-Campbell2003SHARE.csv
 4-CauzziFaccioli2008.csv
 4-ChiouYoungs2008.csv
+4-Campbell2003SHARE.csv
 4-ToroEtAl2002SHARE.csv
+5-AkkarBommer2010.csv
+6-ToroEtAl2002SHARE.csv
 7-FaccioliEtAl2010.csv'''.split()
         out = self.run_calc(case_5.__file__, 'job.ini', exports='csv')
         for fname in expected:
@@ -204,9 +199,9 @@ class EventBasedTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'event_based')
     def test_case_17(self):
         expected = [
-            'hazard_curve-smltp_b2-gsimltp_b1-ltr_0.csv',
+            'hazard_curve-smltp_b1-gsimltp_*-ltr_0.csv',
             'hazard_curve-smltp_b2-gsimltp_b1-ltr_1.csv',
-            'hazard_curve-smltp_b1-gsimltp_b1-ltr_2.csv',
+            'hazard_curve-smltp_b2-gsimltp_b1-ltr_2.csv',
             'hazard_curve-smltp_b2-gsimltp_b1-ltr_3.csv',
             'hazard_curve-smltp_b2-gsimltp_b1-ltr_4.csv',
         ]
@@ -218,8 +213,7 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_18(self):
         expected = [
             '0-AkkarBommer2010.csv',
-            '1-ChiouYoungs2008.csv',
-            '2-ChiouYoungs2008.csv',
+            '0-CauzziFaccioli2008.csv',
         ]
         out = self.run_calc(case_18.__file__, 'job_3.ini', exports='csv')
         for fname in expected:

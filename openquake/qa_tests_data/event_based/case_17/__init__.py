@@ -12,3 +12,11 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+"""
+This is a case with two source models, a single GMPE and 5 samples.
+The first source model has weight 0.2, the second 0.8, and the seed is
+such that the second model is sampled 4 times. Moreover the first model
+produces no ruptures in the given investigation time and with the given
+number of SES per logic tree path. Therefore at the end only 4 realizations
+are generated.
+"""
