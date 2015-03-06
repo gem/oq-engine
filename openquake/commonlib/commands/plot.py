@@ -22,6 +22,13 @@ from openquake.risklib import scientific
 
 
 def make_figure(n_sites, imtls, spec_curves, curves=(), label=''):
+    """
+    :param n_sites: the number of sites under analysis
+    :param imtls: ordered dictionary with the IMTs and levels
+    :param spec_curves: a dictionary of curves IMT -> array(n_sites, n_levels)
+    :param curves: a dictionary of dictionaries IMT -> array
+    :param label: the label associated to `spec_curves`
+    """
     # NB: matplotlib is imported inside, otherwise nosetest would fail in an
     # installation without matplotlib
     import matplotlib.pyplot as plt
@@ -46,7 +53,9 @@ def make_figure(n_sites, imtls, spec_curves, curves=(), label=''):
 
 def combined_curves(haz, hazard_pik):
     """
-    returns: curves_by_rlz, mean_curves
+    :param haz: a dictionary with the hazard outputs
+    :param hazard_pik: the pathname to a pickled file
+    :returns: curves_by_rlz, mean_curves
     """
     no_curves = all(len(c) == 0 for c in haz['curves_by_trt_gsim'].values())
     if no_curves:
@@ -61,7 +70,10 @@ def combined_curves(haz, hazard_pik):
 
 def plot(hazard_pik, hazard_pik2=None):
     """
-    Hazard curves plotter
+    Hazard curves plotter.
+
+    :param hazard_pik: the pathname to a pickled file
+    :param hazard_pik2: None or the pathname to another pickled file
     """
     # read the hazard data
     with open(hazard_pik) as f:
