@@ -28,7 +28,8 @@ from qa_tests import _utils as qa_utils
 from qa_tests._utils import BaseQATestCase, compare_hazard_curve_with_csv
 from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
-    case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17)
+    case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
+    case_19)
 
 aaae = numpy.testing.assert_array_almost_equal
 
@@ -693,3 +694,35 @@ class ClassicalHazardCase17TestCase(qa_utils.BaseQATestCase):
         ).order_by('hazard_curve')]
         numpy.testing.assert_array_almost_equal(
             expected_curves_pga, curves, decimal=7)
+
+
+class ClassicalHazardCase19TestCase(qa_utils.BaseQATestCase):
+
+    @attr('qa', 'hazard', 'classical')
+    def test(self):
+        result_dir = tempfile.mkdtemp()
+
+        cfg = os.path.join(os.path.dirname(case_19.__file__), 'job.ini')
+        job = self.run_hazard(cfg)
+
+        curves = models.HazardCurveData.objects.filter(
+            hazard_curve__output__oq_job=job.id,
+            hazard_curve__statistics='mean'
+        )
+        [pga_curve] = curves.filter(hazard_curve__imt='PGA')
+
+        exported_file = hazard_export.export(
+            pga_curve.hazard_curve.output.id, result_dir, 'csv')
+        # NB: the format of the exported file is 'lon lat poe1 ... poeN'
+        # we discard lon and lat and extract the poes
+        actual = [' '.join(line.split(' ')[2:]).strip()
+                  for line in open(exported_file)]
+        fname = os.path.join(os.path.dirname(case_19.__file__), 'expected',
+                             'hazard_curve-mean.csv')
+        # NB: the format of the expected file is lon lat, poe1 ... poeN, ...
+        # we extract the poes
+        # TODO: unify the engine and oq-lite export formats
+        expected = [line.split(',')[1] for line in open(fname)]
+        self.assertEqual(actual, expected)
+
+        shutil.rmtree(result_dir)

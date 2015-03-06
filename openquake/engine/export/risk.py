@@ -349,7 +349,7 @@ def export_event_loss_asset_csv(key, output, target):
 
         for event_loss in models.EventLossAsset.objects.filter(
                 event_loss__output=output).select_related().order_by(
-                '-loss'):
+                'rupture__tag', 'asset__asset_ref'):
             writer.writerow([event_loss.rupture.tag,
                              event_loss.asset.asset_ref,
                              "%.07f" % event_loss.rupture.rupture.magnitude,

@@ -217,7 +217,7 @@ def build_curves(rlz, curves_by_trt_model_gsim):
     # number of TrtModels
     curves = 0
     for art in AssocLtRlzTrtModel.objects.filter(rlz=rlz):
-        pnes = 1. - curves_by_trt_model_gsim[art.trt_model_id, art.gsim]
+        pnes = 1. - curves_by_trt_model_gsim.get((art.trt_model_id, art.gsim), 0)
         curves = 1. - (1. - curves) * pnes
     return curves
 
