@@ -44,6 +44,8 @@ CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS + EXPERIMENTAL_CALCULATORS
 
 
 class OqParam(valid.ParamSet):
+    exports = 'csv'  # default value, normally overridden
+
     params = valid.parameters(
         area_source_discretization=valid.NoneOr(valid.positivefloat),
         asset_correlation=valid.NoneOr(valid.FloatRange(0, 1)),
