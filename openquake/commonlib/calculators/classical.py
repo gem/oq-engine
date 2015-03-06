@@ -22,8 +22,6 @@ import collections
 from functools import partial
 import numpy
 
-import numpy
-
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
 from openquake.hazardlib.calc.filters import source_site_distance_filter, \
