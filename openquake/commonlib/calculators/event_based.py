@@ -451,12 +451,13 @@ class EventBasedCalculator(ClassicalCalculator):
         zero = AccumDict((key, AccumDict())
                          for key in self.rlzs_assoc)
         gsims_assoc = self.rlzs_assoc.get_gsims_by_trt_id()
-        return parallel.apply_reduce(
+        curves_by_trt_gsim = parallel.apply_reduce(
             self.core_func.__func__,
             (self.sesruptures, self.sitecol, gsims_assoc, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks, acc=zero,
             agg=self.combine_curves_and_save_gmfs,
-            key=operator.attrgetter('trt_model_id'))  # curves_by_trt_gsim
+            key=operator.attrgetter('trt_model_id'))
+        return curves_by_trt_gsim
 
     def post_execute(self, result):
         """

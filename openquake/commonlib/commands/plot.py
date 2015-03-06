@@ -50,7 +50,7 @@ def plot(hazard_pik):
     # read the hazard data
     with open(hazard_pik) as f:
         haz = cPickle.load(f)
-    imtls = haz['oqparam'].imtls
+    oq = haz['oqparam']
     n_sites = len(haz['sitecol'])
     if n_sites > 5:
         print('There are %d sites; only the first 5 will be displayed'
@@ -65,8 +65,9 @@ def plot(hazard_pik):
     weights = [rlz.weight for rlz in rlzs]
     mean_curves = scientific.mean_curve(
         [curves_by_rlz[rlz] for rlz in rlzs], weights)
-    plt = make_figure(n_sites, imtls, mean_curves,
-                      curves_by_rlz if len(rlzs) > 1 else {}, 'mean')
+    single_curve = len(rlzs) == 1 or not getattr(oq, 'individual_curves', True)
+    plt = make_figure(n_sites, oq.imtls, mean_curves,
+                      {} if single_curve else curves_by_rlz, 'mean')
     plt.show()
 
 parser = sap.Parser(plot)
