@@ -287,8 +287,8 @@ class AbrahamsonEtAl2014(GMPE):
         This computes the reference depth to the 1.0 km/s interface using
         equation 18 at page 1042 of Abrahamson et al. (2014)
         """
-        return 1/1000 * np.exp(-7.67/4.*np.log((vs30**4+610.**4) /
-                                               (1360.**4+610.**4)))
+        return 1/1000 * np.exp(-7.67 / 4.*np.log((vs30**4 + 610.**4) /
+                                                 (1360.**4 + 610.**4)))
 
     def _get_soil_depth_term(self, C, z1pt0, vs30):
         """
@@ -301,7 +301,7 @@ class AbrahamsonEtAl2014(GMPE):
         # This is used for the calculation of the motion on reference rock
         idx = z1pt0 < 0
         z10[idx] = z1ref[idx]
-        factor = np.log((z10+0.01)/(z1ref+0.01))
+        factor = np.log((z10 + 0.01) / (z1ref + 0.01))
         # Here we use a linear interpolation as suggested in the 'Application
         # guidelines' at page 1044
         f2 = interpolate.interp1d(
