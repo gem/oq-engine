@@ -44,7 +44,22 @@ def make_figure(n_sites, imtls, spec_curves, curves=(), label=''):
     return plt
 
 
-def plot(hazard_pik):
+def combined_curves(haz, hazard_pik):
+    """
+    returns: curves_by_rlz, mean_curves
+    """
+    no_curves = all(len(c) == 0 for c in haz['curves_by_trt_gsim'].values())
+    if no_curves:
+        raise Exception('Could not find hazard curves in %s' % hazard_pik)
+
+    curves_by_rlz = haz['rlzs_assoc'].combine(haz['curves_by_trt_gsim'])
+    rlzs = sorted(curves_by_rlz)
+    weights = [rlz.weight for rlz in rlzs]
+    return curves_by_rlz, scientific.mean_curve(
+        [curves_by_rlz[rlz] for rlz in rlzs], weights)
+
+
+def plot(hazard_pik, hazard_pik2=None):
     """
     Hazard curves plotter
     """
@@ -57,19 +72,21 @@ def plot(hazard_pik):
         print('There are %d sites; only the first 5 will be displayed'
               % n_sites)
         n_sites = 5
-    no_curves = all(len(c) == 0 for c in haz['curves_by_trt_gsim'].values())
-    if no_curves:
-        raise Exception('Could not find hazard curves in %s' % hazard_pik)
-
-    curves_by_rlz = haz['rlzs_assoc'].combine(haz['curves_by_trt_gsim'])
-    rlzs = sorted(curves_by_rlz)
-    weights = [rlz.weight for rlz in rlzs]
-    mean_curves = scientific.mean_curve(
-        [curves_by_rlz[rlz] for rlz in rlzs], weights)
-    single_curve = len(rlzs) == 1 or not getattr(oq, 'individual_curves', True)
-    plt = make_figure(n_sites, oq.imtls, mean_curves,
-                      {} if single_curve else curves_by_rlz, 'mean')
+    curves_by_rlz, mean_curves = combined_curves(haz, hazard_pik)
+    if hazard_pik2 is None:
+        single_curve = len(curves_by_rlz) == 1 or not getattr(
+            oq, 'individual_curves', True)
+        plt = make_figure(n_sites, oq.imtls, mean_curves,
+                          {} if single_curve else curves_by_rlz, 'mean')
+    else:
+        _, mean1 = combined_curves(haz, hazard_pik)
+        _, mean2 = combined_curves(
+            cPickle.load(open(hazard_pik2)), hazard_pik2)
+        plt = make_figure(n_sites, oq.imtls, mean1, {'mean2': mean2}, 'mean1')
     plt.show()
+
 
 parser = sap.Parser(plot)
 parser.arg('hazard_pik', '.pik file containing the result of a computation')
+parser.arg('hazard_pik2', 'optional .pik file containing the result '
+           'of another computation')

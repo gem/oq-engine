@@ -64,7 +64,8 @@ class BaseCalculator(object):
         self.monitor.write('operation pid time_sec memory_mb'.split())
         self.pre_execute()
         result = self.execute()
-        self.post_execute(result)
+        for item in sorted(self.post_execute(result).iteritems()):
+            logging.info('exported %s: %s', *item)
         return self.save_cache(result)
 
     def core_func(*args):
