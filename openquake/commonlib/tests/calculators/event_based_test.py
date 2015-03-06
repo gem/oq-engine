@@ -1,3 +1,4 @@
+import os
 import csv
 import math
 from nose.plugins.attrib import attr
@@ -6,10 +7,11 @@ import numpy.testing
 
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib.site import FilteredSiteCollection
+from openquake.commonlib.util import max_rel_diff
 from openquake.commonlib.tests.calculators import CalculatorTestCase
 from openquake.qa_tests_data.event_based import (
-    blocksize, case_1, case_2, case_4, case_5, case_6, case_12, case_13,
-    case_17)
+    blocksize, case_1, case_2, case_4, case_5, case_6, case_7, case_12,
+    case_13, case_17, case_18)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
@@ -133,18 +135,15 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_3(self):  # oversampling
         out = self.run_calc(case_2.__file__, 'job_2.ini', exports='csv')
         self.assertEqualFiles(
-            'expected/0-SadighEtAl1997.csv',
+            'expected/SadighEtAl1997.csv',
             out['0-SadighEtAl1997.csv'], sorted)
         self.assertEqualFiles(
-            'expected/1-SadighEtAl1997.csv',
-            out['1-SadighEtAl1997.csv'], sorted)
-        self.assertEqualFiles(
-            'expected/hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv',
+            'expected/hc-smltp_b1-gsimltp_b1-ltr_0.csv',
             out['hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv'])
         # NB: we are testing that the file ltr_1.csv is equal to
         # ltr_0.csv, as it should be for the hazard curves
         self.assertEqualFiles(
-            'expected/hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv',
+            'expected/hc-smltp_b1-gsimltp_b1-ltr_0.csv',
             out['hazard_curve-smltp_b1-gsimltp_b1-ltr_1.csv'])
 
     @attr('qa', 'hazard', 'event_based')
@@ -157,16 +156,14 @@ class EventBasedTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'event_based')
     def test_case_5(self):
         expected = '''\
-1-FaccioliEtAl2010.csv
 3-AkkarBommer2010.csv
-3-CauzziFaccioli2008.csv
-3-ChiouYoungs2008.csv
-3-ZhaoEtAl2006Asc.csv
 4-AkkarBommer2010.csv
-4-Campbell2003SHARE.csv
 4-CauzziFaccioli2008.csv
 4-ChiouYoungs2008.csv
+4-Campbell2003SHARE.csv
 4-ToroEtAl2002SHARE.csv
+5-AkkarBommer2010.csv
+6-ToroEtAl2002SHARE.csv
 7-FaccioliEtAl2010.csv'''.split()
         out = self.run_calc(case_5.__file__, 'job.ini', exports='csv')
         for fname in expected:
@@ -174,18 +171,38 @@ class EventBasedTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_6(self):
+        # 2 models x 3 GMPEs, different weights
         expected = [
-            'hazard_curve-smltp_b11-gsimltp_b11-ltr_0.csv',
-            'hazard_curve-smltp_b11-gsimltp_b12-ltr_1.csv',
-            'hazard_curve-smltp_b11-gsimltp_b13-ltr_2.csv',
-            'hazard_curve-smltp_b12-gsimltp_b11-ltr_3.csv',
-            'hazard_curve-smltp_b12-gsimltp_b12-ltr_4.csv',
-            'hazard_curve-smltp_b12-gsimltp_b13-ltr_5.csv',
             'hazard_curve-mean.csv',
+            'quantile_curve-0.1.csv',
         ]
         out = self.run_calc(case_6.__file__, 'job.ini', exports='csv')
         for fname in expected:
             self.assertEqualFiles('expected/%s' % fname, out[fname])
+
+    @attr('qa', 'hazard', 'event_based', 'slow')
+    def test_case_7(self):
+        # 2 models x 3 GMPEs, 500 samples
+        expected = [
+            'hazard_curve-mean.csv',
+            'quantile_curve-0.1.csv',
+            'quantile_curve-0.9.csv',
+        ]
+        out = self.run_calc(case_7.__file__, 'job.ini', exports='csv')
+        mean_eb = self.calc.mean_curves
+        for fname in expected:
+            self.assertEqualFiles('expected/%s' % fname, out[fname])
+
+        edir = os.path.join(self.calc.oqparam.export_dir, 'cl')
+        out_cl = self.run_calc(case_7.__file__, 'job.ini', exports='csv',
+                               calculation_mode='classical', export_dir=edir,
+                               number_of_logic_tree_samples=0)
+        for fname in expected:
+            self.assertEqualFiles('expected_cl/%s' % fname, out_cl[fname])
+        mean_cl = self.calc.mean_curves
+        for imt in mean_cl:
+            reldiff = max_rel_diff(mean_eb[imt], mean_cl[imt], min_value=0.1)
+            self.assertLess(reldiff, 0.52)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_12(self):
@@ -208,12 +225,22 @@ class EventBasedTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'event_based')
     def test_case_17(self):
         expected = [
-            'hazard_curve-smltp_b2-gsimltp_b1-ltr_0.csv',
+            'hazard_curve-smltp_b1-gsimltp_*-ltr_0.csv',
             'hazard_curve-smltp_b2-gsimltp_b1-ltr_1.csv',
-            'hazard_curve-smltp_b1-gsimltp_b1-ltr_2.csv',
+            'hazard_curve-smltp_b2-gsimltp_b1-ltr_2.csv',
             'hazard_curve-smltp_b2-gsimltp_b1-ltr_3.csv',
             'hazard_curve-smltp_b2-gsimltp_b1-ltr_4.csv',
         ]
         out = self.run_calc(case_17.__file__, 'job.ini', exports='csv')
+        for fname in expected:
+            self.assertEqualFiles('expected/%s' % fname, out[fname], sorted)
+
+    @attr('qa', 'hazard', 'event_based')
+    def test_case_18(self):
+        expected = [
+            '0-AkkarBommer2010.csv',
+            '0-CauzziFaccioli2008.csv',
+        ]
+        out = self.run_calc(case_18.__file__, 'job_3.ini', exports='csv')
         for fname in expected:
             self.assertEqualFiles('expected/%s' % fname, out[fname], sorted)

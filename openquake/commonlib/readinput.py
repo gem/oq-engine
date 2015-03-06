@@ -117,6 +117,10 @@ def get_params(job_inis):
         detect_job_ini = create_detect_file('job.ini')
         job_inis = [extract_from_zip(job_inis[0], detect_job_ini)]
 
+    not_found = [ini for ini in job_inis if not os.path.exists(ini)]
+    if len(not_found) == len(job_inis):  # nothing was found
+        raise IOError('File not found: %s' % not_found[0])
+
     cp = ConfigParser.ConfigParser()
     cp.read(job_inis)
 
@@ -369,10 +373,8 @@ def get_source_models(oqparam, source_model_lt, sitecol=None):
         oqparam.width_of_mfd_bin,
         getattr(oqparam, 'area_source_discretization', None))
 
-    if oqparam.calculation_mode == 'event_based':
-        rlzs = list(source_model_lt)  # consider all realizations
-    else:  # consider only the effective realizations
-        rlzs = logictree.get_effective_rlzs(source_model_lt)
+    # consider only the effective realizations
+    rlzs = logictree.get_effective_rlzs(source_model_lt)
     samples_by_lt_path = source_model_lt.samples_by_lt_path()
     for i, rlz in enumerate(rlzs):
         sm = rlz.value  # name of the source model
@@ -410,11 +412,9 @@ python -m openquake.engine.tools.correct_complex_sources %s
                 trt_model.gsims = gsim_lt.values[trt_model.trt]
         else:
             gsim_lt = logictree.DummyGsimLogicTree()
-        weight = (rlz.weight if oqparam.calculation_mode == 'event_based'
-                  else rlz.weight / num_samples)
+        weight = rlz.weight / num_samples
         yield source.SourceModel(
-            sm, weight, smpath, trt_models, gsim_lt, i,
-            1 if oqparam.calculation_mode == 'event_based' else num_samples)
+            sm, weight, smpath, trt_models, gsim_lt, i, num_samples)
 
 
 def get_filtered_source_models(oqparam, source_model_lt, sitecol):
@@ -477,11 +477,9 @@ def get_composite_source_model(oqparam, sitecol, prefilter=False):
             trt_model.id = trt_id
             trt_id += 1
             if prefilter:
-                logging.info('Splitting sources and counting ruptures for %s',
-                             trt_model)
                 trt_model.split_sources_and_count_ruptures(
                     getattr(oqparam, 'area_source_discretization', None))
-                logging.info('Got %s', trt_model)
+                logging.info('Processed %s', trt_model)
         smodels.append(source_model)
     csm = source.CompositeSourceModel(source_model_lt, smodels)
     return csm
@@ -502,7 +500,8 @@ def get_job_info(oqparam, source_models, sitecol):
     # The input weight is given by the number of ruptures generated
     # by the sources; for point sources however a corrective factor
     # given by the parameter `point_source_weight` is applied
-    input_weight = sum(src.weight or 0 for src_model in source_models
+    input_weight = sum((src.weight or 0) * src_model.samples
+                       for src_model in source_models
                        for trt_model in src_model.trt_models
                        for src in trt_model)
 

@@ -40,8 +40,12 @@ class LtRealization(object):
         self.gsim_rlz = gsim_rlz
         self.weight = weight
 
-    def __str__(self):
-        return '<%d,%s,w=%s>' % (self.ordinal, self.uid, self.weight)
+    def __repr__(self):
+        if self.col_ids:
+            col = ',col=' + ','.join(map(str, sorted(self.col_ids)))
+        else:
+            col = ''
+        return '<%d,%s,w=%s%s>' % (self.ordinal, self.uid, self.weight, col)
 
     @property
     def gsim_lt_path(self):
@@ -221,6 +225,7 @@ class RlzsAssoc(collections.Mapping):
     :attr realizations: list of LtRealization objects
     :attr gsim_by_trt: list of dictionaries {trt: gsim}
     :attr rlzs_assoc: dictionary {trt_model_id, gsim: rlzs}
+    :attr rlzs_by_smodel: dictionary {source_model_ordinal: rlzs}
 
     For instance, for the non-trivial logic tree in
     :mod:`openquake.qa_tests_data.classical.case_15`, which has 4 tectonic
@@ -236,15 +241,16 @@ class RlzsAssoc(collections.Mapping):
     (3, 'BooreAtkinson2008') ['#6-SM2_a3b1-BA2008']
     (3, 'CampbellBozorgnia2008') ['#7-SM2_a3b1-CB2008']
     """
-    def __init__(self, rlzs_assoc=None):
-        self.gsim_by_trt = {}  # rlz -> {trt: gsim}
+    def __init__(self, csm_info, rlzs_assoc=None):
+        self.csm_info = csm_info
         self.rlzs_assoc = rlzs_assoc or collections.defaultdict(list)
-        self.rlzs_by_smodel = []
+        self.gsim_by_trt = {}  # rlz -> {trt: gsim}
+        self.rlzs_by_smodel = collections.OrderedDict()
 
     @property
     def realizations(self):
         """Flat list with all the realizations"""
-        return sum(self.rlzs_by_smodel, [])
+        return sum(self.rlzs_by_smodel.itervalues(), [])
 
     def get_gsims_by_trt_id(self):
         """Returns associations trt_id -> [GSIM instance, ...]"""
@@ -256,18 +262,22 @@ class RlzsAssoc(collections.Mapping):
     def _add_realizations(self, idx, lt_model, realizations):
         gsims_by_trt = lt_model.gsim_lt.values
         rlzs = []
-        for gsim_rlz in realizations:
+        for i, gsim_rlz in enumerate(realizations):
             weight = float(lt_model.weight) * float(gsim_rlz.weight)
             rlz = LtRealization(idx, lt_model.path, gsim_rlz, weight)
-            rlzs.append(rlz)
+            rlz.col_ids = set()
             self.gsim_by_trt[rlz] = gsim_rlz.value
             for trt_model in lt_model.trt_models:
                 trt = trt_model.trt
                 gsim = gsim_rlz.value[trt]
                 self.rlzs_assoc[trt_model.id, gsim].append(rlz)
                 trt_model.gsims = gsims_by_trt[trt]
+                if lt_model.samples > 1:  # oversampling
+                    col_idx = self.csm_info.get_col_idx(trt_model.id, i)
+                    rlz.col_ids.add(col_idx)
             idx += 1
-        self.rlzs_by_smodel.append(rlzs)
+            rlzs.append(rlz)
+        self.rlzs_by_smodel[lt_model.ordinal] = rlzs
         return idx
 
     def combine(self, results, agg=agg_prob):
@@ -279,7 +289,7 @@ class RlzsAssoc(collections.Mapping):
         Example: a case with tectonic region type T1 with GSIMS A, B, C
         and tectonic region type T2 with GSIMS D, E.
 
-        >>> assoc = RlzsAssoc({
+        >>> assoc = RlzsAssoc(CompositionInfo([]), {
         ... ('T1', 'A'): ['r0', 'r1'],
         ... ('T1', 'B'): ['r2', 'r3'],
         ... ('T1', 'C'): ['r4', 'r5'],
@@ -355,18 +365,25 @@ class CompositionInfo(object):
     a composite source model.
     """
     def __init__(self, source_models):
-        self._col_dict = {}  # dictionary trt_id, idx -> col_id
+        self._col_dict = {}  # dictionary trt_id, idx -> col_idx
         self._num_samples = {}  # trt_id -> num_samples
-        col_id = 0
+        col_idx = 0
         for sm in source_models:
             for trt_model in sm.trt_models:
                 trt_id = trt_model.id
                 if sm.samples > 1:
                     self._num_samples[trt_id] = sm.samples
                 for idx in range(sm.samples):
-                    self._col_dict[trt_id, idx] = col_id
-                    col_id += 1
+                    self._col_dict[trt_id, idx] = col_idx
+                    col_idx += 1
                 trt_id += 1
+
+    def get_max_samples(self):
+        """Return the maximum number of samples of the source model"""
+        values = self._num_samples.values()
+        if not values:
+            return 1
+        return max(values)
 
     def get_num_samples(self, trt_id):
         """
@@ -375,7 +392,7 @@ class CompositionInfo(object):
         """
         return self._num_samples.get(trt_id, 1)
 
-    def get_col_id(self, trt_id, idx):
+    def get_col_idx(self, trt_id, idx):
         """
         :param trt_id: tectonic region type object ID
         :param idx: an integer index from 0 to num_samples
@@ -383,16 +400,23 @@ class CompositionInfo(object):
         """
         return self._col_dict[trt_id, idx]
 
-    def get_trt_id(self, col_id):
+    def get_trt_id(self, col_idx):
         """
-        :param col_id: the ordinal of a SESCollection
+        :param col_idx: the ordinal of a SESCollection
         :returns: the ID of the associated TrtModel
         """
         for (trt_id, idx), cid in self._col_dict.iteritems():
-            if cid == col_id:
+            if cid == col_idx:
                 return trt_id
         raise KeyError('There is no TrtModel associated to the collection %d!'
-                       % col_id)
+                       % col_idx)
+
+    def get_triples(self):
+        """
+        Yield triples (trt_id, idx, col_idx) in order
+        """
+        for (trt_id, idx), col_idx in sorted(self._col_dict.iteritems()):
+            yield trt_id, idx, col_idx
 
 
 class CompositeSourceModel(collections.Sequence):
@@ -435,7 +459,7 @@ class CompositeSourceModel(collections.Sequence):
 
         :param get_weight: a function trt_model -> positive number
         """
-        assoc = RlzsAssoc()
+        assoc = RlzsAssoc(self.info)
         random_seed = self.source_model_lt.seed
         num_samples = self.source_model_lt.num_samples
         idx = 0
@@ -454,10 +478,7 @@ class CompositeSourceModel(collections.Sequence):
             else:  # full enumeration
                 rlzs = logictree.get_effective_rlzs(smodel.gsim_lt)
             if rlzs:
-                logging.info('Creating %d realization(s) for model '
-                             '%s, %s', len(rlzs), smodel.name, smodel.path)
                 idx = assoc._add_realizations(idx, smodel, rlzs)
-
         if assoc.realizations:
             if num_samples:
                 assert len(assoc.realizations) == num_samples
