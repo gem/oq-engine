@@ -65,6 +65,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
     """
     hazard_calculator = 'scenario'
     core_func = scenario_damage
+    result_kind = 'damages_by_key'
 
     def pre_execute(self):
         """

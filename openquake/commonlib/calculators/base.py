@@ -273,5 +273,12 @@ class RiskCalculator(BaseCalculator):
             key=get_imt)
 
     def save_cache(self, result, **kw):
-        """Doing nothing, the risk has no cache"""
-        return {}
+        """Save the risk outputs"""
+        risk_out = dict(oqparam=self.oqparam)
+        risk_out[self.result_kind] = result
+        risk_out.update(kw)
+        cache = os.path.join(self.oqparam.export_dir, 'risk.pik')
+        logging.info('Saving risk output on %s', cache)
+        with open(cache, 'w') as f:
+            cPickle.dump(risk_out, f)
+        return risk_out
