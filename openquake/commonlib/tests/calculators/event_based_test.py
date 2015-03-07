@@ -182,7 +182,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'event_based', 'slow')
     def test_case_7(self):
-        # 2 models x 3 GMPEs, 500 samples
+        # 2 models x 3 GMPEs, 100 samples * 10 SES
         expected = [
             'hazard_curve-mean.csv',
             'quantile_curve-0.1.csv',
@@ -192,17 +192,10 @@ class EventBasedTestCase(CalculatorTestCase):
         mean_eb = self.calc.mean_curves
         for fname in expected:
             self.assertEqualFiles('expected/%s' % fname, out[fname])
-
-        edir = os.path.join(self.calc.oqparam.export_dir, 'cl')
-        out_cl = self.run_calc(case_7.__file__, 'job.ini', exports='csv',
-                               calculation_mode='classical', export_dir=edir,
-                               number_of_logic_tree_samples=0)
-        for fname in expected:
-            self.assertEqualFiles('expected_cl/%s' % fname, out_cl[fname])
-        mean_cl = self.calc.mean_curves
+        mean_cl = self.calc.cl.mean_curves
         for imt in mean_cl:
-            reldiff = max_rel_diff(mean_eb[imt], mean_cl[imt], min_value=0.1)
-            self.assertLess(reldiff, 0.52)
+            reldiff = max_rel_diff(mean_cl[imt], mean_eb[imt], min_value=0.1)
+            self.assertLess(reldiff, 0.47)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_12(self):

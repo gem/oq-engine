@@ -57,16 +57,18 @@ class BaseCalculator(object):
         if not hasattr(oqparam, 'usecache'):
             oqparam.usecache = False
 
-    def run(self):
+    def run(self, **kw):
         """
         Run the calculation and return the saved output.
         """
         self.monitor.write('operation pid time_sec memory_mb'.split())
+        vars(self.oqparam).update(kw)
         self.pre_execute()
         result = self.execute()
-        for item in sorted(self.post_execute(result).iteritems()):
+        exported = self.post_execute(result)
+        for item in sorted(exported.iteritems()):
             logging.info('exported %s: %s', *item)
-        return self.save_cache(result)
+        return self.save_cache(result, exported=exported)
 
     def core_func(*args):
         """
@@ -96,7 +98,7 @@ class BaseCalculator(object):
         """
 
     @abc.abstractmethod
-    def save_cache(self, result):
+    def save_cache(self, result, **kw):
         """
         Called after post_execute
         """
@@ -134,7 +136,7 @@ class HazardCalculator(BaseCalculator):
             self.gsims = readinput.get_gsims(self.oqparam)
             self.rlzs_assoc = workflows.FakeRlzsAssoc(len(self.gsims))
 
-    def save_cache(self, result):
+    def save_cache(self, result, **kw):
         """
         Must be run at the end of post_execute. Returns a dictionary
         with the saved results.
@@ -142,6 +144,7 @@ class HazardCalculator(BaseCalculator):
         haz_out = dict(rlzs_assoc=self.rlzs_assoc,
                        sitecol=self.sitecol, oqparam=self.oqparam)
         haz_out[self.result_kind] = result
+        haz_out.update(kw)
         cache = os.path.join(self.oqparam.export_dir, 'hazard.pik')
         logging.info('Saving hazard output on %s', cache)
         with open(cache, 'w') as f:
@@ -149,7 +152,7 @@ class HazardCalculator(BaseCalculator):
         return haz_out
 
 
-def get_hazard(calculator, post_execute=False):
+def get_hazard(calculator, exports=''):
     """
     Get the hazard from a calculator, possibly by using cached results
 
@@ -163,12 +166,7 @@ def get_hazard(calculator, post_execute=False):
     else:
         hcalc = calculators[calculator.hazard_calculator](
             calculator.oqparam, calculator.monitor('hazard'))
-        hcalc.pre_execute()
-        result = hcalc.execute()
-        if post_execute:
-            for item in sorted(hcalc.post_execute(result).iteritems()):
-                logging.info('exported %s: %s', *item)
-        haz_out = hcalc.save_cache(result)
+        haz_out = hcalc.run(exports=exports)
 
     return haz_out, hcalc
 
@@ -274,6 +272,6 @@ class RiskCalculator(BaseCalculator):
             weight=get_weight,
             key=get_imt)
 
-    def save_cache(self, result):
+    def save_cache(self, result, **kw):
         """Doing nothing, the risk has no cache"""
         return {}

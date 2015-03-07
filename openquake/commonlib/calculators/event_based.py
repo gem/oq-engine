@@ -31,6 +31,8 @@ from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib import site, calc
 from openquake.commonlib import readinput, parallel
+from openquake.commonlib.util import max_rel_diff
+
 from openquake.commonlib.export import export
 from openquake.commonlib.export.hazard import SESCollection
 from openquake.baselib.general import AccumDict, groupby
@@ -416,7 +418,7 @@ class EventBasedCalculator(ClassicalCalculator):
         prepare some empty files in the export directory to store the gmfs
         (if any). If there were pre-existing files, they will be erased.
         """
-        haz_out, hcalc = base.get_hazard(self, post_execute=True)
+        haz_out, hcalc = base.get_hazard(self, exports='csv')
         self.composite_source_model = hcalc.composite_source_model
         self.sitecol = hcalc.sitecol
         self.rlzs_assoc = hcalc.rlzs_assoc
@@ -484,15 +486,17 @@ class EventBasedCalculator(ClassicalCalculator):
                 self, result)
         return self.saved
 
-
-@base.calculators.add('event_based_cl')
-class EventBasedClassicalCalculator(EventBasedCalculator):
-    """
-    Event based + classical calculator
-    """
-    def save_cache(self, result):
-        haz_out = super(EventBasedClassicalCalculator, self).save_cache(result)
-        self.oqparam.export_dir = os.path.join(self.oqparam.export_dir, 'cl')
-        self.oqparam.is_valid_export_dir()
-        ClassicalCalculator(self.oqparam, self.monitor).run()
+    def save_cache(self, result, **kw):
+        haz_out = super(EventBasedCalculator, self).save_cache(result, **kw)
+        if self.mean_curves is not None:  # compute classical ones
+            export_dir = os.path.join(self.oqparam.export_dir, 'cl')
+            if not os.path.exists(export_dir):
+                os.makedirs(export_dir)
+            self.cl = ClassicalCalculator(self.oqparam, self.monitor)
+            self.cl.run(calculation_mode='classical', export_dir=export_dir)
+            for imt in self.mean_curves:
+                rdiff = max_rel_diff(
+                    self.cl.mean_curves[imt], self.mean_curves[imt])
+                logging.warn('Relative difference with the classical '
+                             'mean curves for IMT=%s: %d%%', imt, rdiff * 100)
         return haz_out
