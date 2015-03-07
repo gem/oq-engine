@@ -58,6 +58,22 @@ def scenario_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
     return result
 
 
+def expand(data_dict, filtered_sites):
+    """
+    Expand arrays with n elements into arrays of N elements (with N > n)
+    by adding zeros. n is the number of filtered sites, N the total number.
+
+    :param data_dict: a dictionary key -> imt -> array with n elements
+    :param filtered_sites: a filtered SiteCollection
+    :returns: a dictionary key -> imt -> array with N elements
+    """
+    expanded = {}
+    for key, data_by_imt in data_dict.iteritems():
+        expanded[key] = {imt: filtered_sites.expand(array, 0)
+                         for imt, array in data_by_imt.iteritems()}
+    return expanded
+
+
 @base.calculators.add('scenario_damage')
 class ScenarioDamageCalculator(base.RiskCalculator):
     """
@@ -73,9 +89,10 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         super(ScenarioDamageCalculator, self).pre_execute()
 
         logging.info('Computing the GMFs')
-        haz_out, _hcalc = base.get_hazard(self)
+        haz_out, hcalc = base.get_hazard(self)
+        gmfs_by_trt_gsim = expand(haz_out['gmfs_by_trt_gsim'], hcalc.sites)
         gmfs_by_imt = calc.data_by_imt(
-            haz_out['gmfs_by_trt_gsim'], self.oqparam.imtls, len(self.sitecol))
+            gmfs_by_trt_gsim, self.oqparam.imtls, len(self.sitecol))
 
         logging.info('Preparing the risk input')
         self.rlzs_assoc = haz_out['rlzs_assoc']
