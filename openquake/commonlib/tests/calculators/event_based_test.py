@@ -194,7 +194,7 @@ class EventBasedTestCase(CalculatorTestCase):
         mean_cl = self.calc.cl.mean_curves
         for imt in mean_cl:
             reldiff = max_rel_diff(mean_cl[imt], mean_eb[imt], min_value=0.1)
-            self.assertLess(reldiff, 0.47)
+            self.assertLess(reldiff, 0.41)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_12(self):
