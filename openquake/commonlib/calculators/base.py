@@ -68,7 +68,7 @@ class BaseCalculator(object):
         exported = self.post_execute(result)
         for item in sorted(exported.iteritems()):
             logging.info('exported %s: %s', *item)
-        return self.save_cache(result, exported=exported)
+        return self.save_pik(result, exported=exported)
 
     def core_func(*args):
         """
@@ -98,7 +98,7 @@ class BaseCalculator(object):
         """
 
     @abc.abstractmethod
-    def save_cache(self, result, **kw):
+    def save_pik(self, result, **kw):
         """
         Called after post_execute
         """
@@ -136,10 +136,14 @@ class HazardCalculator(BaseCalculator):
             self.gsims = readinput.get_gsims(self.oqparam)
             self.rlzs_assoc = workflows.FakeRlzsAssoc(len(self.gsims))
 
-    def save_cache(self, result, **kw):
+    def save_pik(self, result, **kw):
         """
         Must be run at the end of post_execute. Returns a dictionary
         with the saved results.
+
+        :param result: the output of the `execute` method
+        :param kw: extras to add to the output dictionary
+        :returns: a dictionary with the saved data
         """
         haz_out = dict(rlzs_assoc=self.rlzs_assoc,
                        sitecol=self.sitecol, oqparam=self.oqparam)
@@ -272,7 +276,7 @@ class RiskCalculator(BaseCalculator):
             weight=get_weight,
             key=get_imt)
 
-    def save_cache(self, result, **kw):
+    def save_pik(self, result, **kw):
         """Save the risk outputs"""
         risk_out = dict(oqparam=self.oqparam)
         risk_out[self.result_kind] = result

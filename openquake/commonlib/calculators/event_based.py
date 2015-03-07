@@ -486,14 +486,28 @@ class EventBasedCalculator(ClassicalCalculator):
                 self, result)
         return self.saved
 
-    def save_cache(self, result, **kw):
-        haz_out = super(EventBasedCalculator, self).save_cache(result, **kw)
+    def save_pik(self, result, **kw):
+        """
+        :param result: the output of the `execute` method
+        :param kw: extras to add to the output dictionary
+        :returns: a dictionary with the saved data
+        """
+        haz_out = super(EventBasedCalculator, self).save_pik(result, **kw)
         if self.mean_curves is not None:  # compute classical ones
             export_dir = os.path.join(self.oqparam.export_dir, 'cl')
             if not os.path.exists(export_dir):
                 os.makedirs(export_dir)
+            self.oqparam.export_dir = export_dir
             self.cl = ClassicalCalculator(self.oqparam, self.monitor)
-            self.cl.run(calculation_mode='classical', export_dir=export_dir)
+            # copy the relevant attributes
+            self.cl.composite_source_model = self.composite_source_model
+            self.cl.sitecol = self.sitecol
+            self.cl.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
+            result = self.cl.execute()
+            exported = self.cl.post_execute(result)
+            for item in sorted(exported.iteritems()):
+                logging.info('exported %s: %s', *item)
+            self.cl.save_pik(result, exported=exported)
             for imt in self.mean_curves:
                 rdiff = max_rel_diff(
                     self.cl.mean_curves[imt], self.mean_curves[imt])
