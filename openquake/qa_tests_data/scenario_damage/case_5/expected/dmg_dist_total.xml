@@ -7,7 +7,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <damageStates>
             no_damage slight moderate extreme complete
         </damageStates>
-        <damage ds="no_damage" mean="4.624147597E+03" stddev="7.866431161E+02"/>
+        <damage ds="no_damage" mean="5.388147597E+03" stddev="7.866431161E+02"/>
         <damage ds="slight" mean="2.430366972E+02" stddev="1.125361897E+02"/>
         <damage ds="moderate" mean="4.657378226E+02" stddev="1.948939374E+02"/>
         <damage ds="extreme" mean="3.762803175E+02" stddev="1.644606666E+02"/>
