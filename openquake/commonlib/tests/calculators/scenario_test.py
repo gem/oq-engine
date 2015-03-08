@@ -91,7 +91,7 @@ class ScenarioHazardTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'scenario')
     def test_case_9(self):
-        # all sites were filtered out
+        # 2 out of 3 sites were filtered out
         out = self.run_calc(case_1.__file__, 'job.ini',
                             maximum_distance=0.1, exports='csv')
         self.assertEqualFiles(

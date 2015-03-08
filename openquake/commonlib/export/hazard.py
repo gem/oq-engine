@@ -225,6 +225,8 @@ def export_gmf_csv(key, export_dir, fname, sites, rupture_tags, gmfs):
             dic[tag].append(gmvs)
     indices = ' '.join(map(str, sites.indices)) \
               if sites.indices is not None else ''
+    # the csv file has the form
+    # tag,indices,gmvs_imt_1,...,gmvs_imt_N
     save_csv(dest, [[tag, indices] + dic[tag] for tag in rupture_tags])
     return {key: dest}
 
