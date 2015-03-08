@@ -96,16 +96,10 @@ class ScenarioDamageRiskCase5TestCase(risk.FixtureBasedQATestCase):
 
     @attr('qa', 'risk', 'scenario_damage')
     def test(self):
-        self._run_test()
-
-    def get_data(self, fname):
-        path = os.path.join(os.path.dirname(self.module.__file__), fname)
-        return open(path).read()
-
-    def expected_outputs(self):
-        return map(self.get_data, [
-            'expected/dmg_dist_per_asset.xml',
-            'expected/collapse_map.xml',
-            'expected/dmg_dist_per_taxonomy.xml',
-            'expected/dmg_dist_total.xml',
-        ])
+        job = self._run_test()
+        self.compare_xml_outputs(
+            job,
+            ['expected/dmg_dist_per_asset.xml',
+             'expected/collapse_map.xml',
+             'expected/dmg_dist_per_taxonomy.xml',
+             'expected/dmg_dist_total.xml'])
