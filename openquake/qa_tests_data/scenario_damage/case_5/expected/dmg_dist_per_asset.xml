@@ -16,11 +16,11 @@ xmlns:gml="http://www.opengis.net/gml"
             <asset
             assetRef="a4351"
             >
-                <damage ds="no_damage" mean="3.505320729E+03" stddev="3.307193341E+02"/>
-                <damage ds="slight" mean="3.133585425E+01" stddev="6.614386682E+01"/>
-                <damage ds="moderate" mean="5.410657500E+01" stddev="1.142084100E+02"/>
-                <damage ds="extreme" mean="3.614068523E+01" stddev="7.628592640E+01"/>
-                <damage ds="complete" mean="3.509615676E+01" stddev="7.408113084E+01"/>
+                <damage ds="no_damage" mean="3.6620000E+03" stddev="0.0000000E+00"/>
+                <damage ds="slight" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="moderate" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="extreme" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="complete" mean="0.0000000E+00" stddev="0.0000000E+00"/>
             </asset>
         </DDNode>
         <DDNode>
@@ -32,11 +32,11 @@ xmlns:gml="http://www.opengis.net/gml"
             <asset
             assetRef="a395"
             >
-                <damage ds="no_damage" mean="1.764290880E+01" stddev="1.129221533E+00"/>
-                <damage ds="slight" mean="2.113979920E-01" stddev="6.684991476E-01"/>
-                <damage ds="moderate" mean="1.164117321E-01" stddev="3.681262198E-01"/>
-                <damage ds="extreme" mean="2.428220179E-02" stddev="7.678706425E-02"/>
-                <damage ds="complete" mean="4.999276838E-03" stddev="1.580910146E-02"/>
+                <damage ds="no_damage" mean="1.8000000E+01" stddev="0.0000000E+00"/>
+                <damage ds="slight" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="moderate" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="extreme" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="complete" mean="0.0000000E+00" stddev="0.0000000E+00"/>
             </asset>
         </DDNode>
         <DDNode>
@@ -48,11 +48,11 @@ xmlns:gml="http://www.opengis.net/gml"
             <asset
             assetRef="a7180"
             >
-                <damage ds="no_damage" mean="3.730555717E+01" stddev="3.591831137E+00"/>
-                <damage ds="slight" mean="5.955823693E-01" stddev="1.262498363E+00"/>
-                <damage ds="moderate" mean="5.911869275E-01" stddev="1.253181032E+00"/>
-                <damage ds="extreme" mean="2.944946033E-01" stddev="6.242611833E-01"/>
-                <damage ds="complete" mean="2.131789292E-01" stddev="4.518905580E-01"/>
+                <damage ds="no_damage" mean="3.9000000E+01" stddev="0.0000000E+00"/>
+                <damage ds="slight" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="moderate" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="extreme" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="complete" mean="0.0000000E+00" stddev="0.0000000E+00"/>
             </asset>
         </DDNode>
         <DDNode>
@@ -64,11 +64,11 @@ xmlns:gml="http://www.opengis.net/gml"
             <asset
             assetRef="a2925"
             >
-                <damage ds="no_damage" mean="7.927827521E+01" stddev="2.356246511E+01"/>
-                <damage ds="slight" mean="1.014434496E+01" stddev="4.712493022E+00"/>
-                <damage ds="moderate" mean="1.751590230E+01" stddev="8.136904617E+00"/>
-                <damage ds="extreme" mean="1.169981119E+01" stddev="5.435075285E+00"/>
-                <damage ds="complete" mean="1.136166635E+01" stddev="5.277992184E+00"/>
+                <damage ds="no_damage" mean="1.2443793E+02" stddev="1.1740446E+01"/>
+                <damage ds="slight" mean="1.1124143E+00" stddev="2.3480892E+00"/>
+                <damage ds="moderate" mean="1.9207686E+00" stddev="4.0543674E+00"/>
+                <damage ds="extreme" mean="1.2829845E+00" stddev="2.7081296E+00"/>
+                <damage ds="complete" mean="1.2459040E+00" stddev="2.6298599E+00"/>
             </asset>
         </DDNode>
         <DDNode>
@@ -80,11 +80,11 @@ xmlns:gml="http://www.opengis.net/gml"
             <asset
             assetRef="a3518"
             >
-                <damage ds="no_damage" mean="3.551898869E+02" stddev="1.393985193E+02"/>
-                <damage ds="slight" mean="4.448479807E+01" stddev="2.269342430E+01"/>
-                <damage ds="moderate" mean="7.835863295E+01" stddev="4.149839395E+01"/>
-                <damage ds="extreme" mean="5.443060193E+01" stddev="3.135057664E+01"/>
-                <damage ds="complete" mean="6.053608011E+01" stddev="4.709433205E+01"/>
+                <damage ds="no_damage" mean="5.7535374E+02" stddev="5.5802364E+01"/>
+                <damage ds="slight" mean="3.5292514E+00" stddev="1.1160473E+01"/>
+                <damage ds="moderate" mean="6.0938407E+00" stddev="1.9270416E+01"/>
+                <damage ds="extreme" mean="4.0704033E+00" stddev="1.2871745E+01"/>
+                <damage ds="complete" mean="3.9527616E+00" stddev="1.2499730E+01"/>
             </asset>
         </DDNode>
         <DDNode>
@@ -96,11 +96,11 @@ xmlns:gml="http://www.opengis.net/gml"
             <asset
             assetRef="a2544"
             >
-                <damage ds="no_damage" mean="2.031360915E+01" stddev="5.493092194E+00"/>
-                <damage ds="slight" mean="1.737278169E+00" stddev="1.098618439E+00"/>
-                <damage ds="moderate" mean="2.999700305E+00" stddev="1.896947838E+00"/>
-                <damage ds="extreme" mean="2.003660822E+00" stddev="1.267073266E+00"/>
-                <damage ds="complete" mean="1.945751549E+00" stddev="1.230452651E+00"/>
+                <damage ds="no_damage" mean="2.7774348E+01" stddev="2.5981019E+00"/>
+                <damage ds="slight" mean="2.4513041E-01" stddev="5.1962039E-01"/>
+                <damage ds="moderate" mean="4.2325851E-01" stddev="8.9721120E-01"/>
+                <damage ds="extreme" mean="2.8271707E-01" stddev="5.9929551E-01"/>
+                <damage ds="complete" mean="2.7454606E-01" stddev="5.8197483E-01"/>
             </asset>
         </DDNode>
         <DDNode>
@@ -112,11 +112,11 @@ xmlns:gml="http://www.opengis.net/gml"
             <asset
             assetRef="a4102"
             >
-                <damage ds="no_damage" mean="6.090966311E+02" stddev="4.784864317E+02"/>
-                <damage ds="slight" mean="1.545274414E+02" stddev="6.005580627E+01"/>
-                <damage ds="moderate" mean="3.120494134E+02" stddev="7.546665993E+01"/>
-                <damage ds="extreme" mean="2.716867815E+02" stddev="8.614773342E+01"/>
-                <damage ds="complete" mean="5.326397327E+02" stddev="4.249268596E+02"/>
+                <damage ds="no_damage" mean="1.1464858E+03" stddev="3.4074950E+02"/>
+                <damage ds="slight" mean="1.4670283E+02" stddev="6.8149899E+01"/>
+                <damage ds="moderate" mean="2.5330689E+02" stddev="1.1767216E+02"/>
+                <damage ds="extreme" mean="1.6919727E+02" stddev="7.8599550E+01"/>
+                <damage ds="complete" mean="1.6430717E+02" stddev="7.6327887E+01"/>
             </asset>
         </DDNode>
         <DDNode>
@@ -128,11 +128,11 @@ xmlns:gml="http://www.opengis.net/gml"
             <asset
             assetRef="a125"
             >
-                <damage ds="no_damage" mean="4.000000000E+00" stddev="0.000000000E+00"/>
-                <damage ds="slight" mean="0.000000000E+00" stddev="0.000000000E+00"/>
-                <damage ds="moderate" mean="0.000000000E+00" stddev="0.000000000E+00"/>
-                <damage ds="extreme" mean="0.000000000E+00" stddev="0.000000000E+00"/>
-                <damage ds="complete" mean="0.000000000E+00" stddev="0.000000000E+00"/>
+                <damage ds="no_damage" mean="2.8980557E+00" stddev="6.9184750E-01"/>
+                <damage ds="slight" mean="6.1573745E-01" stddev="3.3932123E-01"/>
+                <damage ds="moderate" mean="3.6870168E-01" stddev="2.4564225E-01"/>
+                <damage ds="extreme" mean="9.0897728E-02" stddev="8.4381704E-02"/>
+                <damage ds="complete" mean="2.6607438E-02" stddev="3.7733326E-02"/>
             </asset>
         </DDNode>
         <DDNode>
@@ -144,11 +144,11 @@ xmlns:gml="http://www.opengis.net/gml"
             <asset
             assetRef="a4498"
             >
-                <damage ds="no_damage" mean="1.000000000E+00" stddev="0.000000000E+00"/>
-                <damage ds="slight" mean="0.000000000E+00" stddev="0.000000000E+00"/>
-                <damage ds="moderate" mean="0.000000000E+00" stddev="0.000000000E+00"/>
-                <damage ds="extreme" mean="0.000000000E+00" stddev="0.000000000E+00"/>
-                <damage ds="complete" mean="0.000000000E+00" stddev="0.000000000E+00"/>
+                <damage ds="no_damage" mean="7.3122110E-01" stddev="1.6997016E-01"/>
+                <damage ds="slight" mean="5.6311775E-02" stddev="3.5610391E-02"/>
+                <damage ds="moderate" mean="9.2654836E-02" stddev="5.8592983E-02"/>
+                <damage ds="extreme" mean="6.0704892E-02" stddev="3.8388506E-02"/>
+                <damage ds="complete" mean="5.9107395E-02" stddev="3.7378283E-02"/>
             </asset>
         </DDNode>
         <DDNode>
@@ -160,11 +160,11 @@ xmlns:gml="http://www.opengis.net/gml"
             <asset
             assetRef="a8309"
             >
-                <damage ds="no_damage" mean="7.150000000E+02" stddev="0.000000000E+00"/>
-                <damage ds="slight" mean="0.000000000E+00" stddev="0.000000000E+00"/>
-                <damage ds="moderate" mean="0.000000000E+00" stddev="0.000000000E+00"/>
-                <damage ds="extreme" mean="0.000000000E+00" stddev="0.000000000E+00"/>
-                <damage ds="complete" mean="0.000000000E+00" stddev="0.000000000E+00"/>
+                <damage ds="no_damage" mean="2.2736396E+02" stddev="1.7636746E+02"/>
+                <damage ds="slight" mean="1.0561498E+02" stddev="4.1678366E+01"/>
+                <damage ds="moderate" mean="1.3808267E+02" stddev="3.1893092E+01"/>
+                <damage ds="extreme" mean="9.7307855E+01" stddev="4.5450576E+01"/>
+                <damage ds="complete" mean="1.4663054E+02" stddev="1.3273066E+02"/>
             </asset>
         </DDNode>
         <DDNode>
@@ -176,11 +176,11 @@ xmlns:gml="http://www.opengis.net/gml"
             <asset
             assetRef="a5229"
             >
-                <damage ds="no_damage" mean="4.400000000E+01" stddev="0.000000000E+00"/>
-                <damage ds="slight" mean="0.000000000E+00" stddev="0.000000000E+00"/>
-                <damage ds="moderate" mean="0.000000000E+00" stddev="0.000000000E+00"/>
-                <damage ds="extreme" mean="0.000000000E+00" stddev="0.000000000E+00"/>
-                <damage ds="complete" mean="0.000000000E+00" stddev="0.000000000E+00"/>
+                <damage ds="no_damage" mean="4.4000000E+01" stddev="0.0000000E+00"/>
+                <damage ds="slight" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="moderate" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="extreme" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="complete" mean="0.0000000E+00" stddev="0.0000000E+00"/>
             </asset>
         </DDNode>
     </dmgDistPerAsset>
