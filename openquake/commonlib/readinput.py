@@ -138,12 +138,18 @@ def get_params(job_inis):
             else:
                 params[key] = value
 
-    # load job_ini inputs (the paths are the job_ini_model_logic_tree)
+    # possibly gunzip the logic tree files and populate the 'source' list
     smlt = params['inputs'].get('source_model_logic_tree')
     if smlt:
+        smlt = params['inputs']['source_model_logic_tree'] = \
+               possibly_gunzip(smlt)
         params['inputs']['source'] = [
             os.path.join(base_path, src_path)
             for src_path in source._collect_source_model_paths(smlt)]
+    gsimlt = params['inputs'].get('gsim_logic_tree')
+    if gsimlt:
+        params['inputs']['gsim_logic_tree'] = possibly_gunzip(gsimlt)
+
     return params
 
 
