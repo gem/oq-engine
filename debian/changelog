@@ -8,6 +8,7 @@
     the table event_loss_asset.
   * Added a CSV exporter for the Stochastic Event Sets, for debugging purposes.
   * The GMF CSV exporter now sorts the output by rupture tag.  
+
   [Matteo Nastasi]
   * Each pull request must now be accompanied by an update of the debian
     changelog.
