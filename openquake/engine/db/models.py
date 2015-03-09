@@ -490,6 +490,20 @@ class Performance(djm.Model):
         db_table = 'uiapi\".\"performance'
 
 
+class Log(djm.Model):
+    '''
+    Log table for calculations
+    '''
+    job = djm.ForeignKey('OqJob', null=True)
+    timestamp = djm.DateTimeField(editable=False, default=datetime.utcnow)
+    level = djm.TextField(choices=OqJob.LOG_LEVEL_CHOICES)
+    process = djm.IntegerField(null=False)
+    message = djm.TextField(null=False)
+
+    class Meta:
+        db_table = 'uiapi\".\"log'
+
+
 def save_sites(job, coords):
     """
     Save all the gives sites on the hzrdi.hazard_site table.
