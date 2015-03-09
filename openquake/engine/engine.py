@@ -367,6 +367,7 @@ def run_job(cfg_file, log_level, log_file, exports='', hazard_output_id=None,
             assert os.path.getsize(log_file) > 0
         else:
             sys.exit('Calculation %s failed' % job.id)
+    return job
 
 
 def check_hazard_risk_consistency(haz_job, risk_mode):
