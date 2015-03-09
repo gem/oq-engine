@@ -6,7 +6,7 @@ python-oq-risklib (0.6.0-1) precise; urgency=low
   * Added a script to reduce large source models and large exposure models
   * Fixed a bug in the NRML writer for nodes with value=0
   * Added a `plot` command to oq-lite
-  
+
   [Matteo Nastasi]
   * Wrong oq-hazardlib version dependency fixed
 
