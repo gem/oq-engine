@@ -497,7 +497,7 @@ class Log(djm.Model):
     job = djm.ForeignKey('OqJob', null=True)
     timestamp = djm.DateTimeField(editable=False, default=datetime.utcnow)
     level = djm.TextField(choices=OqJob.LOG_LEVEL_CHOICES)
-    process = djm.IntegerField(null=False)
+    process = djm.TextField(null=False)
     message = djm.TextField(null=False)
 
     class Meta:
