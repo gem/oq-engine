@@ -180,7 +180,7 @@ def run_calc(job, log_level, log_file, exports):
     with logs.handle(job, log_level, log_file), job_stats(job):  # run the job
         try:
             _do_run_calc(calculator, exports)
-        except Exception as exc:
+        except BaseException as exc:
             logs.LOG.critical(exc)
             raise
     return calculator
