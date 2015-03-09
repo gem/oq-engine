@@ -86,7 +86,8 @@ def set_up_arg_parser():
     )
     general_grp.add_argument(
         '--run',
-        help='Run a job with the specified config file',
+        help='Run a job with the specified configuration file; you can also '
+        'pass a comma-separated pair of files for hazard and risk',
         metavar='CONFIG_FILE')
     general_grp.add_argument(
         '--list-inputs', '--li',
