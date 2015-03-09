@@ -28,7 +28,7 @@ from openquake.risklib.utils import numpy_map
 from openquake.engine.calculators.risk import (
     base, hazard_getters, validation, writers)
 from openquake.engine.db import models
-from openquake.engine import writer
+from openquake.engine import writer, logs
 from openquake.engine.calculators import calculators
 from openquake.engine.performance import EnginePerformanceMonitor
 
@@ -63,6 +63,7 @@ def event_based(workflow, getter, outputdict, params, monitor):
     # NB: event_loss_table is a dictionary (loss_type, out_id) -> loss,
     # out_id can be None, and it that case it stores the statistics
     event_loss_table = {}
+    num_losses = collections.defaultdict(lambda : numpy.zeros(2, dtype=int))
     specific_assets = set(params.specific_assets)
     statistics = getattr(params, 'statistics', True)  # enabled by default
     # keep in memory the loss_matrix only when specific_assets are set
@@ -105,6 +106,8 @@ def event_based(workflow, getter, outputdict, params, monitor):
                                     event_loss=event_loss, rupture_id=rup_id,
                                     asset=asset, loss=loss_per_rup)
                                 inserter.add(ela)
+                            num_losses[asset.asset_ref] += numpy.array(
+                                [bool(loss_per_rup), 1])
                     if params.sites_disagg:
                         with monitor('disaggregating results'):
                             ruptures = [models.SESRupture.objects.get(pk=rid)
@@ -131,6 +134,11 @@ def event_based(workflow, getter, outputdict, params, monitor):
             event_loss_table[loss_type, None] = stats.event_loss_table
 
     inserter.flush()
+
+    # log info about the rows entered in the event_loss_asset table
+    for asset_ref in sorted(num_losses):
+        num, total = num_losses[asset_ref]
+        logs.LOG.info('Saved %d/%d losses for asset %s', num, total, asset_ref)
     return event_loss_table
 
 
