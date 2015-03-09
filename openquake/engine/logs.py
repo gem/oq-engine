@@ -137,7 +137,7 @@ class LogDatabaseHandler(logging.Handler):
             self.Log.objects.create(
                 job=self.job,
                 level=record.levelname,
-                process=record.process,
+                process='%s/%s' % (record.processName, record.process),
                 message=record.message)
 
 
