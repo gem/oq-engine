@@ -43,13 +43,6 @@ HDIR=/usr/openquake/engine
 IDIR=/usr/share/pyshared/openquake/engine
 mkdir -p $HDIR
 chmod 1777 $HDIR
-for vdir in /var/lib/openquake ; do
-    if [ ! -d $vdir ]; then
-        mkdir -p $vdir 2>/dev/null || echo "Failed to create $vdir, please make sure all is proper."
-    fi
-    chown -R root.openquake $vdir 2>/dev/null || echo "Failed to change the $vdir owner, please make sure all is proper."
-    chmod 1770 $vdir 2>/dev/null || echo "Failed to change the $vdir permissions, please make sure all is proper."
-done
 
 rm -f $HDIR/celeryconfig.py.new_in_this_release
 if [ -f $HDIR/celeryconfig.py ]; then
