@@ -203,7 +203,7 @@ def compute_hazard_maps(curves, imls, poes):
     return numpy.array(result).transpose()
 
 
-###########################  GMF->curves ######################################
+# #########################  GMF->curves #################################### #
 
 # NB (MS): the approach used here will not work for non-poissonian models
 def gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
@@ -293,9 +293,8 @@ def data_by_imt(dict_of_dict_arrays, imtls, n_sites):
     """
     dic = {}
     for imt in imtls:
-        res = numpy.array([{} for _ in xrange(n_sites)])
-        for k, dic in dict_of_dict_arrays.iteritems():
-            for i, curve in enumerate(dic[imt]):
-                res[i][k] = curve
-        dic[imt] = res
+        dic[imt] = numpy.array([{} for _ in xrange(n_sites)])
+        for k, d in dict_of_dict_arrays.iteritems():
+            for i, array in enumerate(d[imt]):
+                dic[imt][i][k] = array
     return dic

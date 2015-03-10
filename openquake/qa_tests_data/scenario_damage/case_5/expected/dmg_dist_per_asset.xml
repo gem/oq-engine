@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <dmgDistPerAsset>
+        <damageStates>
+            no_damage slight moderate extreme complete
+        </damageStates>
+        <DDNode>
+            <gml:Point>
+                <gml:pos>
+                    81.138823 28.411172
+                </gml:pos>
+            </gml:Point>
+            <asset
+            assetRef="a4351"
+            >
+                <damage ds="no_damage" mean="3.6620000E+03" stddev="0.0000000E+00"/>
+                <damage ds="slight" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="moderate" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="extreme" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="complete" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+            </asset>
+        </DDNode>
+        <DDNode>
+            <gml:Point>
+                <gml:pos>
+                    81.213823 28.711172
+                </gml:pos>
+            </gml:Point>
+            <asset
+            assetRef="a395"
+            >
+                <damage ds="no_damage" mean="1.8000000E+01" stddev="0.0000000E+00"/>
+                <damage ds="slight" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="moderate" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="extreme" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="complete" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+            </asset>
+        </DDNode>
+        <DDNode>
+            <gml:Point>
+                <gml:pos>
+                    81.213823 29.986172
+                </gml:pos>
+            </gml:Point>
+            <asset
+            assetRef="a7180"
+            >
+                <damage ds="no_damage" mean="3.9000000E+01" stddev="0.0000000E+00"/>
+                <damage ds="slight" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="moderate" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="extreme" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="complete" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+            </asset>
+        </DDNode>
+        <DDNode>
+            <gml:Point>
+                <gml:pos>
+                    81.963823 27.961172
+                </gml:pos>
+            </gml:Point>
+            <asset
+            assetRef="a2925"
+            >
+                <damage ds="no_damage" mean="1.2443793E+02" stddev="1.1740446E+01"/>
+                <damage ds="slight" mean="1.1124143E+00" stddev="2.3480892E+00"/>
+                <damage ds="moderate" mean="1.9207686E+00" stddev="4.0543674E+00"/>
+                <damage ds="extreme" mean="1.2829845E+00" stddev="2.7081296E+00"/>
+                <damage ds="complete" mean="1.2459040E+00" stddev="2.6298599E+00"/>
+            </asset>
+        </DDNode>
+        <DDNode>
+            <gml:Point>
+                <gml:pos>
+                    81.963823 28.561172
+                </gml:pos>
+            </gml:Point>
+            <asset
+            assetRef="a3518"
+            >
+                <damage ds="no_damage" mean="5.7535374E+02" stddev="5.5802364E+01"/>
+                <damage ds="slight" mean="3.5292514E+00" stddev="1.1160473E+01"/>
+                <damage ds="moderate" mean="6.0938407E+00" stddev="1.9270416E+01"/>
+                <damage ds="extreme" mean="4.0704033E+00" stddev="1.2871745E+01"/>
+                <damage ds="complete" mean="3.9527616E+00" stddev="1.2499730E+01"/>
+            </asset>
+        </DDNode>
+        <DDNode>
+            <gml:Point>
+                <gml:pos>
+                    82.788823 29.461172
+                </gml:pos>
+            </gml:Point>
+            <asset
+            assetRef="a2544"
+            >
+                <damage ds="no_damage" mean="2.7774348E+01" stddev="2.5981019E+00"/>
+                <damage ds="slight" mean="2.4513041E-01" stddev="5.1962039E-01"/>
+                <damage ds="moderate" mean="4.2325851E-01" stddev="8.9721120E-01"/>
+                <damage ds="extreme" mean="2.8271707E-01" stddev="5.9929551E-01"/>
+                <damage ds="complete" mean="2.7454606E-01" stddev="5.8197483E-01"/>
+            </asset>
+        </DDNode>
+        <DDNode>
+            <gml:Point>
+                <gml:pos>
+                    83.238823 28.111172
+                </gml:pos>
+            </gml:Point>
+            <asset
+            assetRef="a4102"
+            >
+                <damage ds="no_damage" mean="1.1464858E+03" stddev="3.4074950E+02"/>
+                <damage ds="slight" mean="1.4670283E+02" stddev="6.8149899E+01"/>
+                <damage ds="moderate" mean="2.5330689E+02" stddev="1.1767216E+02"/>
+                <damage ds="extreme" mean="1.6919727E+02" stddev="7.8599550E+01"/>
+                <damage ds="complete" mean="1.6430717E+02" stddev="7.6327887E+01"/>
+            </asset>
+        </DDNode>
+        <DDNode>
+            <gml:Point>
+                <gml:pos>
+                    83.463823 28.936172
+                </gml:pos>
+            </gml:Point>
+            <asset
+            assetRef="a125"
+            >
+                <damage ds="no_damage" mean="2.8980557E+00" stddev="6.9184750E-01"/>
+                <damage ds="slight" mean="6.1573745E-01" stddev="3.3932123E-01"/>
+                <damage ds="moderate" mean="3.6870168E-01" stddev="2.4564225E-01"/>
+                <damage ds="extreme" mean="9.0897728E-02" stddev="8.4381704E-02"/>
+                <damage ds="complete" mean="2.6607438E-02" stddev="3.7733326E-02"/>
+            </asset>
+        </DDNode>
+        <DDNode>
+            <gml:Point>
+                <gml:pos>
+                    83.913823 29.311172
+                </gml:pos>
+            </gml:Point>
+            <asset
+            assetRef="a4498"
+            >
+                <damage ds="no_damage" mean="7.3122110E-01" stddev="1.6997016E-01"/>
+                <damage ds="slight" mean="5.6311775E-02" stddev="3.5610391E-02"/>
+                <damage ds="moderate" mean="9.2654836E-02" stddev="5.8592983E-02"/>
+                <damage ds="extreme" mean="6.0704892E-02" stddev="3.8388506E-02"/>
+                <damage ds="complete" mean="5.9107395E-02" stddev="3.7378283E-02"/>
+            </asset>
+        </DDNode>
+        <DDNode>
+            <gml:Point>
+                <gml:pos>
+                    85.263823 27.361172
+                </gml:pos>
+            </gml:Point>
+            <asset
+            assetRef="a8309"
+            >
+                <damage ds="no_damage" mean="2.2736396E+02" stddev="1.7636746E+02"/>
+                <damage ds="slight" mean="1.0561498E+02" stddev="4.1678366E+01"/>
+                <damage ds="moderate" mean="1.3808267E+02" stddev="3.1893092E+01"/>
+                <damage ds="extreme" mean="9.7307855E+01" stddev="4.5450576E+01"/>
+                <damage ds="complete" mean="1.4663054E+02" stddev="1.3273066E+02"/>
+            </asset>
+        </DDNode>
+        <DDNode>
+            <gml:Point>
+                <gml:pos>
+                    87.588823 27.436172
+                </gml:pos>
+            </gml:Point>
+            <asset
+            assetRef="a5229"
+            >
+                <damage ds="no_damage" mean="4.4000000E+01" stddev="0.0000000E+00"/>
+                <damage ds="slight" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="moderate" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="extreme" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="complete" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+            </asset>
+        </DDNode>
+    </dmgDistPerAsset>
+</nrml>

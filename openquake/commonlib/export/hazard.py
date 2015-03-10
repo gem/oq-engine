@@ -209,21 +209,25 @@ def export_gmf_xml(key, export_dir, fname, sitecol, rupture_tags, gmfs):
 
 
 @export.add(('gmf', 'csv'))
-def export_gmf_csv(key, export_dir, fname, sitecol, rupture_tags, gmfs):
+def export_gmf_csv(key, export_dir, fname, sites, rupture_tags, gmfs):
     """
     :param key: output_type and export_type
     :param export_dir: the directory where to export
     :param fname: name of the exported file
-    :param sitecol: site collection
+    :param sites: a filtered site collection
     :rupture_tags: a list of rupture tags
     :gmfs: a dictionary of ground motion fields keyed by IMT
     """
     dest = os.path.join(export_dir, fname)
-    with floatformat('%12.8E'), open(dest, 'w') as f:
-        for imt, gmf in gmfs.iteritems():
-            for site, gmvs in zip(sitecol, gmf):
-                row = [imt, site.location.x, site.location.y] + list(gmvs)
-                f.write(scientificformat(row) + '\n')
+    dic = collections.defaultdict(list)
+    for imt, gmf in gmfs.iteritems():
+        for tag, gmvs in zip(rupture_tags, gmf.T):
+            dic[tag].append(gmvs)
+    indices = ' '.join(map(str, sites.indices)) \
+              if sites.indices is not None else ''
+    # the csv file has the form
+    # tag,indices,gmvs_imt_1,...,gmvs_imt_N
+    save_csv(dest, [[tag, indices] + dic[tag] for tag in rupture_tags])
     return {key: dest}
 
 # ####################### export hazard curves ############################ #
