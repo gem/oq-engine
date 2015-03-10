@@ -63,7 +63,10 @@ def event_based(workflow, getter, outputdict, params, monitor):
     # NB: event_loss_table is a dictionary (loss_type, out_id) -> loss,
     # out_id can be None, and it that case it stores the statistics
     event_loss_table = {}
-    num_losses = collections.defaultdict(lambda : numpy.zeros(2, dtype=int))
+
+    # num_loss is a dictionary asset_ref -> array([not_zeros, total])
+    num_losses = collections.defaultdict(lambda: numpy.zeros(2, dtype=int))
+
     specific_assets = set(params.specific_assets)
     statistics = getattr(params, 'statistics', True)  # enabled by default
     # keep in memory the loss_matrix only when specific_assets are set
@@ -106,6 +109,8 @@ def event_based(workflow, getter, outputdict, params, monitor):
                                     event_loss=event_loss, rupture_id=rup_id,
                                     asset=asset, loss=loss_per_rup)
                                 inserter.add(ela)
+                            # update the counters: not_zeros is incremented
+                            # only if loss_per_rup is nonzero, total always
                             num_losses[asset.asset_ref] += numpy.array(
                                 [bool(loss_per_rup), 1])
                     if params.sites_disagg:
