@@ -85,6 +85,11 @@ def set_up_arg_parser():
               ' and profiling.')
     )
     general_grp.add_argument(
+        '--run',
+        help='Run a job with the specified configuration file; you can also '
+        'pass a comma-separated pair of files for hazard and risk',
+        metavar='CONFIG_FILE')
+    general_grp.add_argument(
         '--list-inputs', '--li',
         help='List inputs of a specific input type',
         metavar="INPUT_TYPE")
@@ -434,7 +439,7 @@ def main():
         print __version__
         sys.exit(0)
 
-    if args.run_hazard or args.run_risk:
+    if args.run or args.run_hazard or args.run_risk:
         # the logging will be configured in engine.py
         pass
     else:
@@ -479,6 +484,21 @@ def main():
     if args.list_inputs:
         list_inputs(args.list_inputs)
 
+   # hazard or hazard+risk
+    elif args.run:
+        job_inis = map(expanduser, args.run.split(','))
+        if len(job_inis) not in (1, 2):
+            sys.exit('%s should be a .ini filename or a pair of filenames '
+                     'separated by a comma' % args.run)
+        for job_ini in job_inis:
+            open(job_ini).read()  # raise an IOError if the file does not exist
+        log_file = expanduser(args.log_file) \
+            if args.log_file is not None else None
+        job = engine.run_job(job_inis[0], args.log_level,
+                             log_file, args.exports)
+        if len(job_inis) == 2:
+            engine.run_job(job_inis[1], args.log_level, log_file,
+                           args.exports, hazard_calculation_id=job.id)
     # hazard
     elif args.list_hazard_calculations:
         list_calculations('hazard')
