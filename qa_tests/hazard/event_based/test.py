@@ -25,8 +25,8 @@ from openquake.engine.export import core
 from qa_tests import _utils as qa_utils
 from qa_tests.hazard.event_based import sc_utils
 from openquake.qa_tests_data.event_based import (
-    blocksize, case_1, case_2, case_4, case_5, case_6, case_7, case_12, case_13,
-    case_17, case_18)
+    blocksize, case_1, case_2, case_4, case_5, case_6, case_7, case_12,
+    case_13, case_17, case_18)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
