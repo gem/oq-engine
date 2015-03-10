@@ -142,8 +142,9 @@ def event_based(workflow, getter, outputdict, params, monitor):
 
     # log info about the rows entered in the event_loss_asset table
     for asset_ref in sorted(num_losses):
-        num, total = num_losses[asset_ref]
-        logs.LOG.info('Saved %d/%d losses for asset %s', num, total, asset_ref)
+        not_zeros, total = num_losses[asset_ref]
+        logs.LOG.info('Saved %d/%d losses for asset %s',
+                      not_zeros, total, asset_ref)
     return event_loss_table
 
 
