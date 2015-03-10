@@ -372,6 +372,11 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
             gmfs, curves = result[trt_id, str(gsim)]
             curves.update(to_haz_curves(
                 sitecol.sids, gmfs, oq.imtls, oq.investigation_time, duration))
+    if not oq.ground_motion_fields:
+        # reset the gmfs lists inside the result dictionary to avoid
+        # transferring a lot of unused data
+        for key in result:
+            result[key].gmfs[:] = []
     return result
 
 
