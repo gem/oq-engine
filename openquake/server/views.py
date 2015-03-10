@@ -173,6 +173,47 @@ def calc(request, job_type):
                         content_type=JSON)
 
 
+def log_to_json(log):
+    """Convert a log record into a list of strings"""
+    return [log.timestamp.isoformat()[:22],
+            log.level, log.process, log.message]
+
+
+@require_http_methods(['GET'])
+@cross_domain_ajax
+def get_log_slice(request, calc_id, start, stop):
+    """
+    Get a slice of the calculation log as a JSON list of rows
+    """
+    stop = stop or None
+    try:
+        rows = oqe_models.Log.objects.filter(job_id=calc_id)[start:stop]
+        response_data = map(log_to_json, rows)
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound()
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
+
+
+@require_http_methods(['GET'])
+@cross_domain_ajax
+def get_log_size(request, calc_id):
+    """
+    Get the current number of lines in the log
+    """
+    try:
+        response_data = oqe_models.Log.objects.filter(job_id=calc_id).count()
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound()
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
+
+
+def get_log(request, calc_id):
+    """
+    Get the full log of the calculation as a JSON list of rows
+    """
+    return get_log_slice(request, calc_id, 0, None)
+
+
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
