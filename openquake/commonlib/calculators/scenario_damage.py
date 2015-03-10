@@ -95,7 +95,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         super(ScenarioDamageCalculator, self).pre_execute()
 
         logging.info('Computing the GMFs')
-        haz_out, hcalc = base.get_hazard(self)
+        haz_out, hcalc = base.get_hazard(self, exports='xml')
         gmfs_by_trt_gsim = expand(haz_out['gmfs_by_trt_gsim'], hcalc.sites)
         gmfs_by_imt = calc.data_by_imt(
             gmfs_by_trt_gsim, self.oqparam.imtls, len(self.sitecol))
