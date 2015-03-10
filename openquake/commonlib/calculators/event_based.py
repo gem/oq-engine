@@ -31,6 +31,8 @@ from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib import site, calc
 from openquake.commonlib import readinput, parallel
+from openquake.commonlib.util import max_rel_diff
+
 from openquake.commonlib.export import export
 from openquake.commonlib.export.hazard import SESCollection
 from openquake.baselib.general import AccumDict, groupby
@@ -372,6 +374,11 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
             gmfs, curves = result[trt_id, str(gsim)]
             curves.update(to_haz_curves(
                 sitecol.sids, gmfs, oq.imtls, oq.investigation_time, duration))
+    if not oq.ground_motion_fields:
+        # reset the gmfs lists inside the result dictionary to avoid
+        # transferring a lot of unused data
+        for key in result:
+            result[key].gmfs[:] = []
     return result
 
 
@@ -397,7 +404,7 @@ def to_haz_curves(sids, gmfs, imtls, investigation_time, duration):
 
 
 @base.calculators.add('event_based')
-class EventBasedCalculator(base.calculators['classical']):
+class EventBasedCalculator(ClassicalCalculator):
     """
     Event based PSHA calculator generating the ruptures only
     """
@@ -411,7 +418,7 @@ class EventBasedCalculator(base.calculators['classical']):
         prepare some empty files in the export directory to store the gmfs
         (if any). If there were pre-existing files, they will be erased.
         """
-        haz_out, hcalc = base.get_hazard(self, post_execute=True)
+        haz_out, hcalc = base.get_hazard(self, exports='csv')
         self.composite_source_model = hcalc.composite_source_model
         self.sitecol = hcalc.sitecol
         self.rlzs_assoc = hcalc.rlzs_assoc
@@ -461,12 +468,13 @@ class EventBasedCalculator(base.calculators['classical']):
         zero = AccumDict((key, AccumDict())
                          for key in self.rlzs_assoc)
         gsims_assoc = self.rlzs_assoc.get_gsims_by_trt_id()
-        return parallel.apply_reduce(
+        curves_by_trt_gsim = parallel.apply_reduce(
             self.core_func.__func__,
             (self.sesruptures, self.sitecol, gsims_assoc, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks, acc=zero,
             agg=self.combine_curves_and_save_gmfs,
-            key=operator.attrgetter('col_idx'))  # curves_by_trt_gsim
+            key=operator.attrgetter('col_idx'))
+        return curves_by_trt_gsim
 
     def post_execute(self, result):
         """
@@ -477,3 +485,32 @@ class EventBasedCalculator(base.calculators['classical']):
             return self.saved + ClassicalCalculator.post_execute.__func__(
                 self, result)
         return self.saved
+
+    def save_pik(self, result, **kw):
+        """
+        :param result: the output of the `execute` method
+        :param kw: extras to add to the output dictionary
+        :returns: a dictionary with the saved data
+        """
+        haz_out = super(EventBasedCalculator, self).save_pik(result, **kw)
+        if self.mean_curves is not None:  # compute classical ones
+            export_dir = os.path.join(self.oqparam.export_dir, 'cl')
+            if not os.path.exists(export_dir):
+                os.makedirs(export_dir)
+            self.oqparam.export_dir = export_dir
+            self.cl = ClassicalCalculator(self.oqparam, self.monitor)
+            # copy the relevant attributes
+            self.cl.composite_source_model = self.composite_source_model
+            self.cl.sitecol = self.sitecol
+            self.cl.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
+            result = self.cl.execute()
+            exported = self.cl.post_execute(result)
+            for item in sorted(exported.iteritems()):
+                logging.info('exported %s: %s', *item)
+            self.cl.save_pik(result, exported=exported)
+            for imt in self.mean_curves:
+                rdiff = max_rel_diff(
+                    self.cl.mean_curves[imt], self.mean_curves[imt])
+                logging.warn('Relative difference with the classical '
+                             'mean curves for IMT=%s: %d%%', imt, rdiff * 100)
+        return haz_out
