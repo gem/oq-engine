@@ -178,7 +178,11 @@ def run_calc(job, log_level, log_file, exports):
 
     calculator = calculators(job)
     with logs.handle(job, log_level, log_file), job_stats(job):  # run the job
-        _do_run_calc(calculator, exports)
+        try:
+            _do_run_calc(calculator, exports)
+        except BaseException as exc:
+            logs.LOG.critical(exc)
+            raise
     return calculator
 
 
@@ -326,6 +330,7 @@ def print_outputs_summary(outputs, full=True):
                    'with the command\n`oq-engine --list-outputs`')
 
 
+# this function is called only by openquake_cli.py, not by the engine server
 def run_job(cfg_file, log_level, log_file, exports='', hazard_output_id=None,
             hazard_calculation_id=None):
     """
@@ -359,7 +364,11 @@ def run_job(cfg_file, log_level, log_file, exports='', hazard_output_id=None,
 
         # instantiate the calculator and run the calculation
         t0 = time.time()
-        run_calc(job, log_level, log_file, exports)
+        try:
+            run_calc(job, log_level, log_file, exports)
+        except:
+            # the error is already logged inside run_calc
+            sys.exit('Calculation %s failed' % job.id)
         duration = time.time() - t0
         if job.status == 'complete':
             print_results(job.id, duration, list_outputs)
@@ -367,6 +376,7 @@ def run_job(cfg_file, log_level, log_file, exports='', hazard_output_id=None,
             assert os.path.getsize(log_file) > 0
         else:
             sys.exit('Calculation %s failed' % job.id)
+    return job
 
 
 def check_hazard_risk_consistency(haz_job, risk_mode):
