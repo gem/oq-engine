@@ -29,10 +29,10 @@ from openquake.commonlib import sap
 def main(calc_id, host='localhost', port=8000):
     base_url = 'http://%s:%s/v1/calc/' % (host, port)
     start = 0
-    pagesize = 10
+    psize = 10  # page size
     try:
         while True:
-            url = base_url + '%d/log/%d:%d' % (calc_id, start, start + pagesize)
+            url = base_url + '%d/log/%d:%d' % (calc_id, start, start + psize)
             rows = json.load(urllib.urlopen(url))
             for row in rows:
                 print ' '.join(row)

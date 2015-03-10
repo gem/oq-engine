@@ -103,7 +103,7 @@ Response:
 The requested result as a blob of text. If the desired `export_type` is not supported, an HTTP 404 error is returned.
 
 
-#### GET /v1/log/:calc_id/
+#### GET /v1/calc/:calc_id/log
 
 Get the full calculation log for the given `calc_id`.
 
@@ -111,10 +111,10 @@ Parameters: None
 
 Response:
 
-The requested log as a JSON
+The requested log as a JSON list of rows
 
 
-#### GET /v1/log/:calc_id/:start::stop
+#### GET /v1/calc/:calc_id/log/:start::stop
 
 Get a slice of the calculation log for the given `calc_id`, from `start`
 to `stop`. 
@@ -123,7 +123,19 @@ Parameters: None
 
 Response:
 
-The requested log slice as a JSON
+The requested log slice as a JSON list of rows
+
+
+#### GET /v1/calc/:calc_id/log/size
+
+Get the (current) number of lines of the calculation log for the given
+`calc_id`.
+
+Parameters: None
+
+Response:
+
+The number of lines of log
 
 
 #### POST /v1/calc/run
