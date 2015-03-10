@@ -268,7 +268,9 @@ def del_calc(job_id):
 
         # No risk calculation are referencing what we want to delete.
         # Carry on with the deletion.
-        job.delete(using='admin')
+
+        curs = models.getcursor('admin')
+        curs.execute('DELETE FROM uiapi.oq_job WHERE id=%s', (job_id,))
     else:
         # this doesn't belong to the current user
         raise RuntimeError(UNABLE_TO_DEL_HC_FMT % 'Access denied')
