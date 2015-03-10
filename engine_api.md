@@ -103,6 +103,29 @@ Response:
 The requested result as a blob of text. If the desired `export_type` is not supported, an HTTP 404 error is returned.
 
 
+#### GET /v1/log/:calc_id/
+
+Get the full calculation log for the given `calc_id`.
+
+Parameters: None
+
+Response:
+
+The requested log as a JSON
+
+
+#### GET /v1/log/:calc_id/:start::stop
+
+Get a slice of the calculation log for the given `calc_id`, from `start`
+to `stop`. 
+
+Parameters: None
+
+Response:
+
+The requested log slice as a JSON
+
+
 #### POST /v1/calc/run
 
 Run a new calculation with the specified job config file, input models, and other parameters.
