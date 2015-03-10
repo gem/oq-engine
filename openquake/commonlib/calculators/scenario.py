@@ -76,7 +76,7 @@ class ScenarioCalculator(base.HazardCalculator):
             rupture, self.oqparam.maximum_distance, self.sitecol)
         if self.sites is None:
             raise RuntimeError(
-                'All sites where filtered out! '
+                'All sites were filtered out! '
                 'maximum_distance=%s km' % self.oqparam.maximum_distance)
 
         self.tags = ['scenario-%010d' % i for i in xrange(n_gmfs)]

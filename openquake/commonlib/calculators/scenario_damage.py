@@ -21,6 +21,7 @@ import logging
 
 import numpy
 
+from openquake.hazardlib import site
 from openquake.risklib import scientific
 from openquake.baselib.general import AccumDict
 from openquake.commonlib.calculators import base, calc
@@ -67,6 +68,10 @@ def expand(data_dict, filtered_sites):
     :param filtered_sites: a filtered SiteCollection
     :returns: a dictionary key -> imt -> array with N elements
     """
+    if isinstance(filtered_sites, site.SiteCollection):
+        # nothing was filtered, do nothing
+        return data_dict
+
     expanded = {}
     for key, data_by_imt in data_dict.iteritems():
         expanded[key] = {imt: filtered_sites.expand(array, 0)
