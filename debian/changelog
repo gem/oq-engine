@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed an issue in the scenario calculator: the GMFs were not filtered
+    according to the distance to the rupture
   * Now critical errors appear in the log file
   * Added a --run command to run hazard and risk together
   * Fixed bug in the event based calculator; in the case
@@ -9,12 +11,12 @@
   * The event based risk calculator now save only the non-zero losses in
     the table event_loss_asset.
   * Added a CSV exporter for the Stochastic Event Sets, for debugging purposes.
-  * The GMF CSV exporter now sorts the output by rupture tag.  
+  * The GMF CSV exporter now sorts the output by rupture tag.
 
   [Matteo Nastasi]
   * Each pull request must be accompanied by an update of the debian
     changelog now.
-  
+
 python-oq-engine (1.3.0-1) precise; urgency=low
 
   [Matteo Nastasi]
