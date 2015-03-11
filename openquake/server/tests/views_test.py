@@ -60,31 +60,34 @@ class UtilsTestCase(BaseViewTestCase):
 class CalcHazardTestCase(BaseViewTestCase):
 
     def setUp(self):
-        self.request = self.factory.get('/v1/calc/hazard/')
+        self.request = self.factory.get('/v1/calc/list?job_type=hazard')
         self.request.META['HTTP_HOST'] = 'www.openquake.org'
 
     def test_get(self):
         expected_content = [
             {u'url': u'http://www.openquake.org/v1/calc/1',
              u'status': u'executing',
+             u'job_type': u'hazard',
              u'description': u'description 1',
              u'id': 1},
             {u'url': u'http://www.openquake.org/v1/calc/2',
              u'status': u'pre_executing',
+             u'job_type': u'hazard',
              u'description': u'description 2',
              u'id': 2},
             {u'url': u'http://www.openquake.org/v1/calc/3',
              u'status': u'complete',
+             u'job_type': u'hazard',
              u'description': u'description e',
              u'id': 3},
         ]
         with mock.patch('openquake.server.views._get_calcs') as ghc:
             ghc.return_value = [
-                (1, 'executing', 'description 1'),
-                (2, 'pre_executing', 'description 2'),
-                (3, 'complete', 'description e'),
+                (1, 'executing', 'hazard', 'description 1'),
+                (2, 'pre_executing', 'hazard', 'description 2'),
+                (3, 'complete', 'hazard', 'description e'),
             ]
-            response = views.calc(self.request, 'hazard')
+            response = views.calc(self.request)
 
             self.assertEqual(200, response.status_code)
             self.assertEqual(expected_content, json.loads(response.content))
@@ -92,7 +95,7 @@ class CalcHazardTestCase(BaseViewTestCase):
     def test_404_no_calcs(self):
         with mock.patch('openquake.server.views._get_calcs') as ghc:
             ghc.return_value = []
-            response = views.calc(self.request, 'hazard')
+            response = views.calc(self.request)
 
         self.assertEqual(404, response.status_code)
 
@@ -103,26 +106,29 @@ class CalcRiskTestCase(BaseViewTestCase):
         expected_content = [
             {u'url': u'http://www.openquake.org/v1/calc/1',
              u'status': u'executing',
+             u'job_type': u'risk',
              u'description': u'description 1',
              u'id': 1},
             {u'url': u'http://www.openquake.org/v1/calc/2',
              u'status': u'pre_executing',
+             u'job_type': u'risk',
              u'description': u'description 2',
              u'id': 2},
             {u'url': u'http://www.openquake.org/v1/calc/3',
              u'status': u'complete',
+             u'job_type': u'risk',
              u'description': u'description e',
              u'id': 3},
         ]
         with mock.patch('openquake.server.views._get_calcs') as grc:
             grc.return_value = [
-                (1, 'executing', 'description 1'),
-                (2, 'pre_executing', 'description 2'),
-                (3, 'complete', 'description e'),
+                (1, 'executing', 'risk', 'description 1'),
+                (2, 'pre_executing', 'risk', 'description 2'),
+                (3, 'complete', 'risk', 'description e'),
             ]
-            request = self.factory.get('/v1/calc/risk/')
+            request = self.factory.get('/v1/calc/list?job_type=risk')
             request.META['HTTP_HOST'] = 'www.openquake.org'
-            response = views.calc(request, 'risk')
+            response = views.calc(request)
 
             self.assertEqual(200, response.status_code)
             self.assertEqual(expected_content, json.loads(response.content))
