@@ -76,6 +76,10 @@ TB="	"
 sig_hand () {
     trap ERR
     echo "signal trapped"
+    #
+    #  FIXME: JUST FOR DEVEL, REMOVE IT WHEN FINISHED
+    #
+    sleep 36000
     if [ "$lxc_name" != "" ]; then
         set +e
         scp "${lxc_ip}:/var/tmp/openquake-db-installation" openquake-db-installation
