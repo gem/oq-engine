@@ -181,7 +181,7 @@ def run_calc(job, log_level, log_file, exports):
         try:
             _do_run_calc(calculator, exports)
         except BaseException as exc:
-            logs.LOG.critical(exc)
+            logs.LOG.critical('%s: %s', exc.__class__.__name__, exc)
             raise
     return calculator
 
@@ -267,8 +267,12 @@ def del_calc(job_id):
                 msg % ', '.join(str(x.id) for x in assoc_outputs))
 
         # No risk calculation are referencing what we want to delete.
-        # Carry on with the deletion.
-        job.delete(using='admin')
+        # Carry on with the deletion. Notice that we cannot use job.delete()
+        # directly because Django is so stupid that it reads from the database
+        # all the records to delete before deleting them: thus, it runs out
+        # of memory for large calculations
+        curs = models.getcursor('admin')
+        curs.execute('DELETE FROM uiapi.oq_job WHERE id=%s', (job_id,))
     else:
         # this doesn't belong to the current user
         raise RuntimeError(UNABLE_TO_DEL_HC_FMT % 'Access denied')
