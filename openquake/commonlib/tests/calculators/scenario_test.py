@@ -41,7 +41,7 @@ class ScenarioHazardTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'scenario')
     def test_case_1(self):
-        out = self.run_calc(case_1.__file__, 'job.ini')
+        out = self.run_calc(case_1.__file__, 'job.ini', exports='xml')
         self.assertEqualFiles('expected.xml', out['gmf', 'xml'])
 
     @attr('qa', 'hazard', 'scenario')
@@ -88,3 +88,11 @@ class ScenarioHazardTestCase(CalculatorTestCase):
         f1, f2 = self.frequencies(case_8, 0.5, 1.0)
         self.assertAlmostEqual(f1, 0)
         self.assertAlmostEqual(f2, 0)
+
+    @attr('qa', 'hazard', 'scenario')
+    def test_case_9(self):
+        # 2 out of 3 sites were filtered out
+        out = self.run_calc(case_1.__file__, 'job.ini',
+                            maximum_distance=0.1, exports='csv')
+        self.assertEqualFiles(
+            'BooreAtkinson2008_gmf.csv', out['gmf', 'csv'])

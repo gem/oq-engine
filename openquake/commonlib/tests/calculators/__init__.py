@@ -54,10 +54,7 @@ class CalculatorTestCase(unittest.TestCase):
         Return the outputs of the calculation as a dictionary
         """
         self.calc = self.get_calc(testfile, job_ini, **kw)
-        vars(self.calc.oqparam).update(kw)
-        self.calc.pre_execute()
-        self.result = self.calc.execute()
-        return self.calc.post_execute(self.result)
+        return self.calc.run(**kw)['exported']
 
     def execute(self, testfile, job_ini):
         """

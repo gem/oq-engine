@@ -44,8 +44,8 @@ def run(job_ini, concurrent_tasks=executor.num_tasks_hint,
             result = calc.execute()
         with monitor('post_execute'):
             out = calc.post_execute(result)
-        with monitor('save_cache'):
-            calc.save_cache(result)
+        with monitor('save_pik'):
+            calc.save_pik(result)
     for item in sorted(out.iteritems()):
         logging.info('exported %s: %s', *item)
     logging.info('Total time spent: %s s', monitor.duration)

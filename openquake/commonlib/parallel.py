@@ -76,7 +76,7 @@ def no_distribute():
     return nd in ('1', 'true', 'yes')
 
 
-def check_mem_usage(soft_percent=80, hard_percent=100):
+def check_mem_usage(soft_percent=90, hard_percent=100):
     """
     Display a warning if we are running out of memory
 

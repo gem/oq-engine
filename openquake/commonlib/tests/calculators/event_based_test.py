@@ -6,10 +6,11 @@ import numpy.testing
 
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib.site import FilteredSiteCollection
+from openquake.commonlib.util import max_rel_diff
 from openquake.commonlib.tests.calculators import CalculatorTestCase
 from openquake.qa_tests_data.event_based import (
-    blocksize, case_1, case_2, case_4, case_5, case_6, case_12, case_13,
-    case_17, case_18)
+    blocksize, case_1, case_2, case_4, case_5, case_6, case_7, case_12,
+    case_13, case_17, case_18)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
@@ -177,6 +178,23 @@ class EventBasedTestCase(CalculatorTestCase):
         out = self.run_calc(case_6.__file__, 'job.ini', exports='csv')
         for fname in expected:
             self.assertEqualFiles('expected/%s' % fname, out[fname])
+
+    @attr('qa', 'hazard', 'event_based')
+    def test_case_7(self):
+        # 2 models x 3 GMPEs, 100 samples * 10 SES
+        expected = [
+            'hazard_curve-mean.csv',
+            'quantile_curve-0.1.csv',
+            'quantile_curve-0.9.csv',
+        ]
+        out = self.run_calc(case_7.__file__, 'job.ini', exports='csv')
+        mean_eb = self.calc.mean_curves
+        for fname in expected:
+            self.assertEqualFiles('expected/%s' % fname, out[fname])
+        mean_cl = self.calc.cl.mean_curves
+        for imt in mean_cl:
+            reldiff = max_rel_diff(mean_cl[imt], mean_eb[imt], min_value=0.1)
+            self.assertLess(reldiff, 0.41)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_12(self):

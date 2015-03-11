@@ -21,6 +21,7 @@ import logging
 
 import numpy
 
+from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.commonlib import readinput, parallel
 from openquake.commonlib.export import export
@@ -70,9 +71,17 @@ class ScenarioCalculator(base.HazardCalculator):
         n_gmfs = self.oqparam.number_of_ground_motion_fields
         rupture = readinput.get_rupture(self.oqparam)
 
+        # filter the sites
+        self.sites = filters.filter_sites_by_distance_to_rupture(
+            rupture, self.oqparam.maximum_distance, self.sitecol)
+        if self.sites is None:
+            raise RuntimeError(
+                'All sites were filtered out! '
+                'maximum_distance=%s km' % self.oqparam.maximum_distance)
+
         self.tags = ['scenario-%010d' % i for i in xrange(n_gmfs)]
         self.computer = GmfComputer(
-            rupture, self.sitecol, self.imts, self.gsims,
+            rupture, self.sites, self.imts, self.gsims,
             trunc_level, correl_model)
         rnd = random.Random(getattr(self.oqparam, 'random_seed', 42))
         self.tag_seed_pairs = [(tag, rnd.randint(0, calc.MAX_INT))
@@ -101,9 +110,11 @@ class ScenarioCalculator(base.HazardCalculator):
         """
         logging.info('Exporting the result')
         out = AccumDict()
+        exports = self.oqparam.exports.split(',')
         for (trt_id, gsim), gmfs_by_imt in result.iteritems():
-            fname = '%s_gmf.xml' % gsim
-            out += export(
-                ('gmf', 'xml'), self.oqparam.export_dir, fname,
-                self.sitecol, self.tags, gmfs_by_imt)
+            for fmt in exports:
+                fname = '%s_gmf.%s' % (gsim, fmt)
+                out += export(
+                    ('gmf', fmt), self.oqparam.export_dir, fname, self.sites,
+                    self.tags, gmfs_by_imt)
         return out

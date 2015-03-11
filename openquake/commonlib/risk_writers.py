@@ -26,7 +26,7 @@ from lxml import etree
 from openquake.commonlib.nrml import NRMLFile, SERIALIZE_NS_MAP
 from openquake.baselib.general import groupby, writetmp
 from openquake.commonlib.node import Node
-from openquake.commonlib import nrml
+from openquake.commonlib import nrml, writers
 
 DmgState = collections.namedtuple("DmgState", 'dmg_state lsi')
 
@@ -53,6 +53,10 @@ class Site(object):
 
     def __lt__(self, other):
         return (self.x, self.y) < (other.x, other.y)
+
+    def __eq__(self, other):
+        # without this the groupby in the ScenarioDamageWriter would not work
+        return (self.x, self.y) == (other.x, other.y)
 
 
 class LossCurveXMLWriter(object):
@@ -1044,7 +1048,7 @@ class DamageWriter(object):
             node.append(self.cm_node(loc, asset_refs, means, stddevs))
         return node
 
-    def to_nrml(self, key, data, fname=None):
+    def to_nrml(self, key, data, fname=None, fmt='%11.7E'):
         """
         :param key:
          `dmg_dist_per_asset|dmg_dist_per_taxonomy|dmg_dist_total|collapse_map`
@@ -1054,6 +1058,6 @@ class DamageWriter(object):
         """
         fname = fname or writetmp()
         node = getattr(self, key + '_node')(data)
-        with open(fname, 'w') as out:
+        with open(fname, 'w') as out, writers.floatformat(fmt):
             nrml.write([node], out)
         return fname

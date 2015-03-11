@@ -60,6 +60,7 @@ class ClassicalDamageCalculator(base.RiskCalculator):
     Scenario damage calculator
     """
     core_func = classical_damage
+    result_kind = 'damages_by_rlz'
 
     def pre_execute(self):
         """

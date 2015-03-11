@@ -850,8 +850,9 @@ class FakeRlzsAssoc(collections.Mapping):
         keys = sorted(dicts[0])
         values_by_rlz = {i: [] for i in range(len(keys))}
         for dic in map(self.combine, dicts):
-            for i in range(len(keys)):
-                values_by_rlz[i].append(dic[i])
+            if dic:
+                for i in range(len(keys)):
+                    values_by_rlz[i].append(dic[i])
         return values_by_rlz
 
     def __iter__(self):
@@ -952,6 +953,8 @@ class RiskModel(collections.Mapping):
                 continue
             # hazards_[taxonomy] is a list of dictionaries key -> value
             hazards_by_rlz = rlzs_assoc.collect_by_rlz(hazards_[taxonomy])
+            if not hazards_by_rlz:
+                continue
             epsilons = epsilons_[taxonomy]
             workflow = self[riskinput.imt, taxonomy]
             for loss_type in workflow.loss_types:
