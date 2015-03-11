@@ -64,6 +64,16 @@ if [ "$GEM_EPHEM_CMD" = "" ]; then
 fi
 GEM_EPHEM_NAME="ubuntu-lxc-eph"
 
+if command -v lxc-shutdown &> /dev/null; then
+    # Older lxc (< 1.0.0) with lxc-shutdown
+    LXC_KILL="lxc-stop"
+    LXC_TERM="lxc-shutdown"
+else
+    # Newer lxc (>= 1.0.0) with lxc-stop ony
+    LXC_TERM="lxc-stop"
+    LXC_KILL="lxc-stop -k"
+fi
+
 NL="
 "
 TB="	"
@@ -87,7 +97,7 @@ sig_hand () {
         if [ -f "${upper}.dsk" ]; then
             loop_dev="$(sudo losetup -a | grep "(${upper}.dsk)$" | cut -d ':' -f1)"
         fi
-        sudo lxc-stop -n $lxc_name
+        sudo $LXC_KILL -n $lxc_name
         sudo umount /var/lib/lxc/$lxc_name/rootfs
         sudo umount /var/lib/lxc/$lxc_name/ephemeralbind
         echo "$upper" | grep -q '^/tmp/'
@@ -635,7 +645,7 @@ devtest_run () {
     scp "${lxc_ip}:/tmp/celeryd.log" celeryd.log
     scp "${lxc_ip}:ssh.log" devtest.history
 
-    sudo lxc-shutdown -n $lxc_name -w -t 10
+    sudo $LXC_TERM -n $lxc_name -w -t 10
 
     # NOTE: pylint returns errors too frequently to consider them a critical event
     if pylint --rcfile pylintrc -f parseable openquake > pylint.txt ; then
@@ -709,7 +719,7 @@ EOF
     scp "${lxc_ip}:/tmp/celeryd.log" celeryd.log
     scp "${lxc_ip}:ssh.log" pkgtest.history
 
-    sudo lxc-shutdown -n $lxc_name -w -t 10
+    sudo $LXC_TERM -n $lxc_name -w -t 10
     set -e
 
     if [ $inner_ret -ne 0 ]; then
