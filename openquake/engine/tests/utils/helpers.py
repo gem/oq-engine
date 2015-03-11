@@ -103,15 +103,6 @@ def get_data_path(file_name):
     return os.path.join(DATA_DIR, file_name)
 
 
-def demo_file(file_name):
-    """
-    Take a file name and return the full path to the file in the demos
-    directory.
-    """
-    return os.path.join(
-        os.path.dirname(__file__), "../../demos", file_name)
-
-
 def run_job(cfg, exports='xml,csv', hazard_calculation_id=None,
             hazard_output_id=None, **params):
     """
