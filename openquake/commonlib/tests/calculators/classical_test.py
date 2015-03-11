@@ -2,7 +2,8 @@ from nose.plugins.attrib import attr
 from openquake.commonlib.tests.calculators import CalculatorTestCase
 from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
-    case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17)
+    case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
+    case_19)
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -182,5 +183,18 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_*-ltr_7.csv'''.split()
             'hazard_curve-smltp_b2-gsimltp_b1-ltr_1.csv',
         ]
         out = self.run_calc(case_17.__file__, 'job.ini', exports='csv')
+        for fname in expected:
+            self.assertEqualFiles('expected/%s' % fname, out[fname])
+
+    @attr('qa', 'hazard', 'classical')
+    def test_case_19(self):  # oversampling
+        expected = [
+            'hazard_curve-mean.csv',
+            'hazard_curve-smltp_b1-gsimltp_*_*_*_*_b51_*_*-ltr_0.csv',
+            'hazard_curve-smltp_b1-gsimltp_*_*_*_*_b52_*_*-ltr_1.csv',
+            'hazard_curve-smltp_b1-gsimltp_*_*_*_*_b53_*_*-ltr_2.csv',
+            'hazard_curve-smltp_b1-gsimltp_*_*_*_*_b54_*_*-ltr_3.csv',
+        ]
+        out = self.run_calc(case_19.__file__, 'job.ini', exports='csv')
         for fname in expected:
             self.assertEqualFiles('expected/%s' % fname, out[fname])

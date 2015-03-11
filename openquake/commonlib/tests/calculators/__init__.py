@@ -31,13 +31,15 @@ class DifferentFiles(Exception):
 class CalculatorTestCase(unittest.TestCase):
     OVERWRITE_EXPECTED = False
 
-    def get_calc(self, testfile, job_ini):
+    def get_calc(self, testfile, job_ini, **kw):
         """
         Return the outputs of the calculation as a dictionary
         """
         self.testdir = os.path.dirname(testfile)
         inis = [os.path.join(self.testdir, ini) for ini in job_ini.split(',')]
-        oq = oqvalidation.OqParam(**readinput.get_params(inis))
+        params = readinput.get_params(inis)
+        params.update(kw)
+        oq = oqvalidation.OqParam(**params)
         oq.validate()
         oq.concurrent_tasks = executor.num_tasks_hint
         oq.usecache = False
@@ -51,11 +53,8 @@ class CalculatorTestCase(unittest.TestCase):
         """
         Return the outputs of the calculation as a dictionary
         """
-        self.calc = self.get_calc(testfile, job_ini)
-        vars(self.calc.oqparam).update(kw)
-        self.calc.pre_execute()
-        self.result = self.calc.execute()
-        return self.calc.post_execute(self.result)
+        self.calc = self.get_calc(testfile, job_ini, **kw)
+        return self.calc.run(**kw)['exported']
 
     def execute(self, testfile, job_ini):
         """
