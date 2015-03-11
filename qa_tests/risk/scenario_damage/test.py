@@ -19,7 +19,7 @@ from nose.plugins.attrib import attr
 
 from qa_tests import risk
 from openquake.qa_tests_data.scenario_damage import (
-    case_1, case_2, case_3, case_4)
+    case_1, case_2, case_3, case_4, case_5)
 from openquake.engine.tests.utils import helpers
 from openquake.engine.db import models
 
@@ -87,3 +87,19 @@ class ScenarioDamageRiskCase4TestCase(risk.FixtureBasedQATestCase):
              [690.8808, 883.1827]],
             [[3512.8972, 1239.1419], [1525.0160, 685.8950],
              [962.0867, 1051.8785]]]
+
+
+class ScenarioDamageRiskCase5TestCase(risk.FixtureBasedQATestCase):
+    module = case_5
+    output_type = 'gmf_scenario'
+    hazard_calculation_fixture = 'Scenario Damage QA Test 5'
+
+    @attr('qa', 'risk', 'scenario_damage')
+    def test(self):
+        job = self._run_test()
+        self.compare_xml_outputs(
+            job,
+            ['expected/dmg_dist_per_asset.xml',
+             'expected/collapse_map.xml',
+             'expected/dmg_dist_per_taxonomy.xml',
+             'expected/dmg_dist_total.xml'])
