@@ -287,6 +287,9 @@ def _get_calcs(request_get_dict):
         job_type = request_get_dict.get('job_type')
         job_params = job_params.filter(
             job__hazard_calculation__isnull=job_type == 'hazard')
+    relevant = request_get_dict.get('relevant')
+    if relevant:
+        job_params = job_params.filter(job__relevant=relevant in ('1', 'true'))
     return [(jp.job.id, jp.job.status, jp.job.job_type, jp.value)
             for jp in job_params]
 
