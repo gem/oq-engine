@@ -97,6 +97,7 @@ class TrtModel(collections.Sequence):
                 source_stats_dict[trt] = TrtModel(trt)
             tm = source_stats_dict[trt]
             if not tm.sources:
+                tm.num_ruptures = 1
                 tm.sources.append(src)
 
         # return ordered by TRT string TrtModels
@@ -435,6 +436,10 @@ class CompositionInfo(object):
         """
         for (trt_id, idx), col_idx in sorted(self._col_dict.iteritems()):
             yield trt_id, idx, col_idx
+
+    def __repr__(self):
+        triples = ['trt=%s,idx=%s,col=%s' % row for row in self.get_triples()]
+        return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(triples))
 
 
 class CompositeSourceModel(collections.Sequence):

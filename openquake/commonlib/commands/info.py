@@ -21,22 +21,21 @@ from openquake.commonlib import sap, readinput
 from openquake.commonlib.calculators import base
 
 
-def info(smlt, name=None):
+def info(name=None):
     """
-    Give information about the given name. For the moment, only the
-    names of the available calculators are recognized.
+    Give information. You can pass the name of an available calculator or
+    also a job.ini file.
     """
     if name in base.calculators:
         print textwrap.dedent(base.calculators[name].__doc__.strip())
-    elif name:
-        print "No info for '%s'" % name
-    if smlt:
-        oqparam = readinput.get_oqparam(smlt)
-        csm = readinput.get_csm_fast(oqparam)
+    elif name.endswith('.ini'):
+        oqparam = readinput.get_oqparam(name)
+        csm = readinput.get_composite_source_model(
+            oqparam, prefilter=False, in_memory=False)
         print csm.info
         print csm.get_rlzs_assoc()
-
+    else:
+        print "No info for '%s'" % name
 
 parser = sap.Parser(info)
-parser.opt('smlt', 'source model composition info')
-parser.arg('name', 'calculator name', choices=base.calculators)
+parser.arg('name', 'calculator name or job.ini file')
