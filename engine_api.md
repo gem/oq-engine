@@ -6,9 +6,9 @@ oq-engine-server provides a series of REST API methods for running calculations,
 
 All responses are JSON, unless otherwise noted.
 
-#### GET /v1/calc/hazard
+#### GET /v1/calc/list
 
-List a summary of hazard calculations. The [url](#get-v1calchazardcalc_id) in each item of the response can be followed to retrieve complete calculation details.
+List the available calculations. The [url](#get-v1calccalc_id) in each item of the response can be followed to retrieve complete calculation details.
 
 Parameters: None
 
@@ -17,32 +17,18 @@ Response:
     [{"description": "Hazard Calculation for end-to-end hazard+risk",
       "id": 1,
       "status": "executing",
-      "url": "http://localhost:8000/v1/calc/hazard/1"},
+      "job_type": "hazard",
+      "url": "http://localhost:8000/v1/calc/1"},
      {"description": "Hazard Calculation for end-to-end hazard+risk",
       "id": 2,
       "status": "complete",
-      "url": "http://localhost:8000/v1/calc/hazard/2"},
+      "job_type": "hazard",
+      "url": "http://localhost:8000/v1/calc/2"},
      {"description": "Hazard Calculation for end-to-end hazard+risk",
       "id": 3,
       "status": "complete",
-      "url": "http://localhost:8000/v1/calc/hazard/3"}]
-
-#### GET /v1/calc/risk
-
-List a summary of risk calculations. The [url](#get-v1calcriskcalc_id) in each item of the response can be followed to retrieve complete calculation details.
-
-Parameters: None
-
-Response:
-
-    [{"description": "Risk Calculation for end-to-end hazard+risk",
-      "id": 1,
-      "status": "complete",
-      "url": "http://localhost:8000/v1/calc/risk/1"},
-     {"description": "Risk Calculation for end-to-end hazard+risk",
-      "id": 2,
-      "status": "complete",
-      "url": "http://localhost:8000/v1/calc/risk/2"}]
+      "job_type": "hazard",
+      "url": "http://localhost:8000/v1/calc/3"}]
 
 #### GET /v1/calc/:calc_id
 
