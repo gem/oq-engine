@@ -157,8 +157,9 @@ def oqtask(task_func):
         # the revoke functionality can work
         EnginePerformanceMonitor.store_task_id(job_id, tsk)
 
-        # log on the db
-        if len(logs.LOG.handlers) <= 1:  # there is only the streamhandler
+        # if there is no db handler already, add one
+        if not any(isinstance(handler, logs.LogDatabaseHandler)
+                   for handler in logs.LOG.handlers):
             logs.LOG.addHandler(logs.LogDatabaseHandler(job))
             logs.set_level(job.log_level)
 
