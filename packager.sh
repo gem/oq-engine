@@ -66,8 +66,8 @@ GEM_EPHEM_NAME="ubuntu-lxc-eph"
 
 if command -v lxc-shutdown &> /dev/null; then
     # Older lxc (< 1.0.0) with lxc-shutdown
-    LXC_KILL="lxc-stop"
     LXC_TERM="lxc-shutdown"
+    LXC_KILL="lxc-stop"
 else
     # Newer lxc (>= 1.0.0) with lxc-stop ony
     LXC_TERM="lxc-stop"
