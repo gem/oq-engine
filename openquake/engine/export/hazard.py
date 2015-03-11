@@ -349,6 +349,7 @@ def regroup(idx_gmv_imt_triples):
     return [indices] + gmvs_by_imt
 
 
+# this is so complicated because the db structure is so wrong
 def _gen_gmf_rows(output):
     # yield a row for each rupture; the format is
     # [tag, indices, gmf_imt_1, ... , gmf_imt_N]
@@ -357,6 +358,10 @@ def _gen_gmf_rows(output):
     sids = sorted(models.HazardSite.objects.filter(
         hazard_calculation=haz_calc).values_list('id', flat=True))
     idx = {s: i for i, s in enumerate(sids)}  # sid -> idx
+    # if some sites are filtered out, the exported indices are wrong
+    # and different from the ones that are exported by oq-lite; since
+    # it is too difficult to fix, with the moment we live we that. NB: the
+    # indices in the database are right, it is only the export which is wrong
     gmf_by_rupture = defaultdict(list)
     for data in models.GmfData.objects.filter(
             site_id__in=sids, gmf=gmf):
