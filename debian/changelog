@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Now the logs are stored also in the database, both for the controller node
+    and the worker nodes
   * Bypassed Django when deleting calculations from the database: this avoids
     running out of memory for large calculations
   * Fixed an issue in the scenario calculator: the GMFs were not filtered
