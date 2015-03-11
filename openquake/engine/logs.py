@@ -121,6 +121,26 @@ class LogFileHandler(logging.FileHandler):
         super(LogFileHandler, self).emit(record)
 
 
+class LogDatabaseHandler(logging.Handler):
+    """
+    Log stream handler
+    """
+    def __init__(self, job):
+        from openquake.engine.db.models import Log  # avoid circular imports
+        self.Log = Log
+        super(LogDatabaseHandler, self).__init__()
+        self.job_type = job.job_type
+        self.job = job
+
+    def emit(self, record):  # pylint: disable=E0202
+        if record.levelno >= logging.INFO:
+            self.Log.objects.create(
+                job=self.job,
+                level=record.levelname,
+                process='%s/%s' % (record.processName, record.process),
+                message=record.message)
+
+
 @contextmanager
 def handle(job, log_level='info', log_file=None):
     """
@@ -136,11 +156,14 @@ def handle(job, log_level='info', log_file=None):
     handler = (LogFileHandler(job, log_file) if log_file
                else LogStreamHandler(job))
     logging.root.addHandler(handler)
+    db_handler = LogDatabaseHandler(job)
+    logging.root.addHandler(db_handler)
     set_level(log_level)
     try:
         yield
     finally:
         logging.root.removeHandler(handler)
+        logging.root.removeHandler(db_handler)
 
 
 class tracing(object):

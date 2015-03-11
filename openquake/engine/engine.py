@@ -181,7 +181,7 @@ def run_calc(job, log_level, log_file, exports):
         try:
             _do_run_calc(calculator, exports)
         except BaseException as exc:
-            logs.LOG.critical(exc)
+            logs.LOG.critical('%s: %s', exc.__class__.__name__, exc)
             raise
     return calculator
 
