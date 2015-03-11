@@ -19,6 +19,8 @@
 """
 Set up some system-wide loggers
 """
+
+import os.path
 import logging
 from contextlib import contextmanager
 
@@ -37,6 +39,15 @@ LOG_FORMAT = ('[%(asctime)s %(job_type)s job #%(job_id)s %(hostname)s '
               '%(levelname)s %(processName)s/%(process)s] %(message)s')
 
 LOG = logging.getLogger()
+
+
+def touch_log_file(log_file):
+    """
+    If a log file destination is specified, attempt to open the file in
+    'append' mode ('a'). If the specified file is not writable, an
+    :exc:`IOError` will be raised.
+    """
+    open(os.path.abspath(log_file), 'a').close()
 
 
 def _log_progress(msg, *args, **kwargs):
@@ -138,7 +149,7 @@ class LogDatabaseHandler(logging.Handler):
                 job=self.job,
                 level=record.levelname,
                 process='%s/%s' % (record.processName, record.process),
-                message=record.message)
+                message=record.getMessage())
 
 
 @contextmanager
@@ -153,17 +164,28 @@ def handle(job, log_level='info', log_file=None):
     :param log_file:
          log file path (if None, logs on stdout only)
     """
-    handler = (LogFileHandler(job, log_file) if log_file
-               else LogStreamHandler(job))
-    logging.root.addHandler(handler)
-    db_handler = LogDatabaseHandler(job)
-    logging.root.addHandler(db_handler)
+    handlers = [LogDatabaseHandler(job)]  # log on db always
+    if log_file is None:
+        handlers.append(LogStreamHandler(job))
+    elif log_file == 'stderr':
+        edir = job.get_param('export_dir')
+        log_file = os.path.join(edir, 'calc_%d.log' % job.id)
+        touch_log_file(log_file)  # check if writeable
+        handlers.append(LogStreamHandler(job))
+        handlers.append(LogFileHandler(job, log_file))
+    else:
+        handlers.append(LogFileHandler(job, log_file))
+    for handler in handlers:
+        logging.root.addHandler(handler)
     set_level(log_level)
     try:
         yield
     finally:
-        logging.root.removeHandler(handler)
-        logging.root.removeHandler(db_handler)
+        for handler in handlers:
+            logging.root.removeHandler(handler)
+        # sanity check to make sure that the logging on file is working
+        if log_file:
+            assert os.path.getsize(log_file) > 0
 
 
 class tracing(object):
