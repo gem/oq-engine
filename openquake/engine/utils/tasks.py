@@ -157,9 +157,9 @@ def oqtask(task_func):
         # the revoke functionality can work
         EnginePerformanceMonitor.store_task_id(job_id, tsk)
 
-        with EnginePerformanceMonitor(
-                'total ' + task_func.__name__, job_id, tsk, flush=True
-        ), logs.handle(job):
+        with (EnginePerformanceMonitor(
+                'total ' + task_func.__name__, job_id, tsk, flush=True),
+              logs.handle(job)):
             try:
                 # log a warning if too much memory is used
                 check_mem_usage(SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
