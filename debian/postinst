@@ -157,29 +157,6 @@ if [ -f /usr/lib/postgresql/9.1/bin/postgres ]; then
         rm -f /tmp/celeryd.log
         echo "celeryd has been stopped, remember to start it before running new calculations"
     fi
-
-    DDIR="/usr/share/doc/python-oq-risklib/examples/demos"
-
-    # Last but not least copy the smoke tests into a more prominent place.
-    if [ -d $HDIR/demos ]; then
-        # are existing demos different from the ones we just installed?
-        if ! diff -qrN $HDIR/demos $DDIR >/dev/null ; then
-            # The demos do differ, move the old demos out of the way.
-            tstamp=`date +"%Y-%m-%d-%H-%M-%S"`
-            mv  $HDIR/demos $HDIR/demos.backup-from-$tstamp
-        fi
-    fi
-    # If the $HDIR/demos directory is still in place the old/new demos do not
-    # differ i.e. there's no point in installing them again.
-    if [ ! -d $HDIR/demos ]; then
-        cp -a $DDIR $HDIR
-        cd $HDIR/demos
-        find . -type f -name '*.gz' | xargs gunzip -f
-        chown -R root.openquake .
-        # Make the demo files writable by owner and group.
-        find . -type f | xargs chmod 664
-        find . -type d | xargs chmod 775
-    fi
 fi
 
 # Last but not least delete obsolete .pyc files in /usr/openquake/engine
