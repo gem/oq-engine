@@ -35,6 +35,8 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
     """
     Base abstract class for risk QA tests.
     """
+    OVERWRITE_EXPECTED = False
+
     def _test_path(self, relative_path):
         return os.path.join(
             os.path.dirname(self.module.__file__), relative_path)
@@ -46,7 +48,11 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
             actual = os.path.basename(exported_file)
             for expected in expected_fnames:
                 if actual.startswith(os.path.basename(expected)[:-4]):
-                    check_equal(self.module.__file__, expected, exported_file)
+                    if self.OVERWRITE_EXPECTED:
+                        shutil.copy(exported_file, self._test_path(expected))
+                    else:
+                        check_equal(
+                            self.module.__file__, expected, exported_file)
         shutil.rmtree(result_dir)
 
     #: QA test must override this params to feed the risk job with
