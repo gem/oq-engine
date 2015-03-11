@@ -66,11 +66,11 @@ GEM_EPHEM_NAME="ubuntu-lxc-eph"
 
 if command -v lxc-shutdown &> /dev/null; then
     # Older lxc (< 1.0.0) with lxc-shutdown
-    LXC_TERM="lxc-shutdown"
+    LXC_TERM="lxc-shutdown -t 10 -w"
     LXC_KILL="lxc-stop"
 else
     # Newer lxc (>= 1.0.0) with lxc-stop ony
-    LXC_TERM="lxc-stop"
+    LXC_TERM="lxc-stop -t 10"
     LXC_KILL="lxc-stop -k"
 fi
 
@@ -645,7 +645,7 @@ devtest_run () {
     scp "${lxc_ip}:/tmp/celeryd.log" celeryd.log
     scp "${lxc_ip}:ssh.log" devtest.history
 
-    sudo $LXC_TERM -n $lxc_name -w -t 10
+    sudo $LXC_TERM -n $lxc_name
 
     # NOTE: pylint returns errors too frequently to consider them a critical event
     if pylint --rcfile pylintrc -f parseable openquake > pylint.txt ; then
@@ -719,7 +719,7 @@ EOF
     scp "${lxc_ip}:/tmp/celeryd.log" celeryd.log
     scp "${lxc_ip}:ssh.log" pkgtest.history
 
-    sudo $LXC_TERM -n $lxc_name -w -t 10
+    sudo $LXC_TERM -n $lxc_name
     set -e
 
     if [ $inner_ret -ne 0 ]; then
