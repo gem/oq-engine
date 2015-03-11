@@ -6,6 +6,7 @@
 if [ $GEM_SET_DEBUG ]; then
     set -x
 fi
+set -x
 set -e
 
 # summary of how this script can be called:
