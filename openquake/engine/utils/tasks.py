@@ -157,10 +157,13 @@ def oqtask(task_func):
         # the revoke functionality can work
         EnginePerformanceMonitor.store_task_id(job_id, tsk)
 
+        # log on the db
+        if len(logs.LOG.handlers) <= 1:  # there is only the streamhandler
+            logs.LOG.addHandler(logs.LogDatabaseHandler(job))
+            logs.set_level(job.log_level)
+
         with EnginePerformanceMonitor(
                 'total ' + task_func.__name__, job_id, tsk, flush=True):
-            # tasks write on the celery log file
-            logs.set_level(job.log_level)
             try:
                 # log a warning if too much memory is used
                 check_mem_usage(SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
