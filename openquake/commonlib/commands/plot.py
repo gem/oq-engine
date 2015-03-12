@@ -21,9 +21,9 @@ from openquake.commonlib import sap
 from openquake.risklib import scientific
 
 
-def make_figure(n_sites, imtls, spec_curves, curves=(), label=''):
+def make_figure(indices, imtls, spec_curves, curves=(), label=''):
     """
-    :param n_sites: the number of sites under analysis
+    :param indices: the indices of the sites under analysis
     :param imtls: ordered dictionary with the IMTs and levels
     :param spec_curves: a dictionary of curves IMT -> array(n_sites, n_levels)
     :param curves: a dictionary of dictionaries IMT -> array
@@ -35,18 +35,19 @@ def make_figure(n_sites, imtls, spec_curves, curves=(), label=''):
 
     fig = plt.figure()
     n_imts = len(imtls)
-    for i in range(n_sites):
+    n_sites = len(indices)
+    for i, site in enumerate(indices):
         for j, imt in enumerate(imtls):
             ax = fig.add_subplot(n_sites, n_imts, i * n_imts + j + 1)
             ax.grid(True)
-            ax.set_xlabel('Hazard curve on site %d, %s' % (i + 1, imt))
+            ax.set_xlabel('Hazard curve on site %d, %s' % (site, imt))
             ax.set_ylim([0, 1])
             if j == 0:  # set Y label only on the leftmost graph
                 ax.set_ylabel('PoE')
             if spec_curves is not None:
-                ax.plot(imtls[imt], spec_curves[imt][i], '--', label=label)
+                ax.plot(imtls[imt], spec_curves[imt][site], '--', label=label)
             for rlz in sorted(curves):
-                ax.plot(imtls[imt], curves[rlz][imt][i], label=str(rlz))
+                ax.plot(imtls[imt], curves[rlz][imt][site], label=str(rlz))
     plt.legend()
     return plt
 
@@ -68,7 +69,7 @@ def combined_curves(haz, hazard_pik):
         [curves_by_rlz[rlz] for rlz in rlzs], weights)
 
 
-def plot(hazard_pik, hazard_pik2=None):
+def plot(hazard_pik, hazard_pik2=None, sites='0'):
     """
     Hazard curves plotter.
 
@@ -79,22 +80,24 @@ def plot(hazard_pik, hazard_pik2=None):
     with open(hazard_pik) as f:
         haz = cPickle.load(f)
     oq = haz['oqparam']
+    indices = map(int, sites.split(','))
     n_sites = len(haz['sitecol'])
-    if n_sites > 5:
-        print('There are %d sites; only the first 5 will be displayed'
-              % n_sites)
-        n_sites = 5
+    if not set(indices) <= set(range(n_sites)):
+        invalid = sorted(set(indices) - set(range(n_sites)))
+        print('The indices %s are invalid: no graph for them' % invalid)
+    valid = sorted(set(range(n_sites)) & set(indices))
+    print 'Found %d site(s); plotting %d of them' % (n_sites, len(valid))
     curves_by_rlz, mean_curves = combined_curves(haz, hazard_pik)
     if hazard_pik2 is None:
         single_curve = len(curves_by_rlz) == 1 or not getattr(
             oq, 'individual_curves', True)
-        plt = make_figure(n_sites, oq.imtls, mean_curves,
+        plt = make_figure(valid, oq.imtls, mean_curves,
                           {} if single_curve else curves_by_rlz, 'mean')
     else:
         _, mean1 = combined_curves(haz, hazard_pik)
         _, mean2 = combined_curves(
             cPickle.load(open(hazard_pik2)), hazard_pik2)
-        plt = make_figure(n_sites, oq.imtls, mean1, {'mean2': mean2}, 'mean1')
+        plt = make_figure(valid, oq.imtls, mean1, {'mean2': mean2}, 'mean1')
     plt.show()
 
 
@@ -102,3 +105,4 @@ parser = sap.Parser(plot)
 parser.arg('hazard_pik', '.pik file containing the result of a computation')
 parser.arg('hazard_pik2', 'optional .pik file containing the result '
            'of another computation')
+parser.opt('sites', 'comma-separated string with the site indices')
