@@ -686,9 +686,9 @@ pkgtest_run () {
     dpkg-scansources . > Sources
     cat Sources | gzip > Sources.gz
     cat > Release <<EOF
-Archive: precise
+Archive: trusty
 Origin: Ubuntu
-Label: Local Ubuntu Precise Repository
+Label: Local Ubuntu Trusty Repository
 Architecture: amd64
 MD5Sum:
 EOF
