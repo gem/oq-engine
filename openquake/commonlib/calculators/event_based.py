@@ -512,6 +512,6 @@ class EventBasedCalculator(ClassicalCalculator):
                 rdiff, index = max_rel_diff_index(
                     self.cl.mean_curves[imt], self.mean_curves[imt])
                 logging.warn('Relative difference with the classical '
-                             'mean curves for IMT=%s: %d%% at site %d',
+                             'mean curves for IMT=%s: %d%% at site index %d',
                              imt, rdiff * 100, index)
         return haz_out
