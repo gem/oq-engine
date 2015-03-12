@@ -31,7 +31,7 @@ from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib import site, calc
 from openquake.commonlib import readinput, parallel
-from openquake.commonlib.util import max_rel_diff
+from openquake.commonlib.util import max_rel_diff_index
 
 from openquake.commonlib.export import export
 from openquake.commonlib.export.hazard import SESCollection
@@ -509,8 +509,9 @@ class EventBasedCalculator(ClassicalCalculator):
                 logging.info('exported %s: %s', *item)
             self.cl.save_pik(result, exported=exported)
             for imt in self.mean_curves:
-                rdiff = max_rel_diff(
+                rdiff, index = max_rel_diff_index(
                     self.cl.mean_curves[imt], self.mean_curves[imt])
                 logging.warn('Relative difference with the classical '
-                             'mean curves for IMT=%s: %d%%', imt, rdiff * 100)
+                             'mean curves for IMT=%s: %d%% at site %d',
+                             imt, rdiff * 100, index)
         return haz_out
