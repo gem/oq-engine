@@ -345,10 +345,10 @@ celeryd_wait $GEM_MAXLOOP"
         "
         scp "${lxc_ip}:oq-engine/xunit-*.xml" .
         scp "${lxc_ip}:oq-engine/coverage.xml" .
-    else
-        if [ -d $HOME/fake-data/oq-engine ]; then
-            cp $HOME/fake-data/oq-engine/* .
-        fi
+    #else
+    #    if [ -d $HOME/fake-data/oq-engine ]; then
+    #        cp $HOME/fake-data/oq-engine/* .
+    #    fi
     fi
 
     # TODO: version check
