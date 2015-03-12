@@ -134,16 +134,17 @@ def get_params(job_inis):
                 input_type, _ext = key.rsplit('_', 1)
                 path = value if os.path.isabs(value) else os.path.join(
                     base_path, value)
-                params['inputs'][input_type] = path
+                params['inputs'][input_type] = possibly_gunzip(path)
             else:
                 params[key] = value
 
-    # load job_ini inputs (the paths are the job_ini_model_logic_tree)
+    # populate the 'source' list
     smlt = params['inputs'].get('source_model_logic_tree')
     if smlt:
         params['inputs']['source'] = [
             os.path.join(base_path, src_path)
             for src_path in source._collect_source_model_paths(smlt)]
+
     return params
 
 
@@ -599,7 +600,7 @@ def get_risk_model(oqparam):
 
     return riskmodel
 
-############################ exposure #############################
+# ########################### exposure ############################ #
 
 
 class DuplicatedID(Exception):
