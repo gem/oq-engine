@@ -34,8 +34,9 @@ def info(name=None, filtersources=False):
                    if filtersources else None)
         csm = readinput.get_composite_source_model(
             oqparam, sitecol, prefilter=filtersources, in_memory=filtersources)
-        print csm.info
-        print csm.get_rlzs_assoc()
+        assoc = csm.get_rlzs_assoc()
+        print assoc.csm_info
+        print assoc
     else:
         print "No info for '%s'" % name
 

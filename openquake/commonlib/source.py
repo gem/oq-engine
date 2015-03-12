@@ -58,8 +58,20 @@ class LtRealization(object):
         return '_'.join(self.sm_lt_path) + ',' + self.gsim_rlz.uid
 
 
+def get_skeleton(sm):
+    """
+    Return a copy of the source model `sm` which is empty, i.e. without
+    sources.
+    """
+    trt_models = [TrtModel(tm.trt, [], tm.num_ruptures, tm.min_mag,
+                           tm.max_mag, tm.gsims, tm.id)
+                  for tm in sm.trt_models]
+    return SourceModel(sm.name, sm.weight, sm.path, trt_models, sm.gsim_lt,
+                       sm.ordinal, sm.samples)
+
 SourceModel = collections.namedtuple(
     'SourceModel', 'name weight path trt_models gsim_lt ordinal samples')
+SourceModel.get_skeleton = get_skeleton
 
 
 class TrtModel(collections.Sequence):
@@ -377,8 +389,6 @@ class RlzsAssoc(collections.Mapping):
             pairs.append(('%s,%s' % key, map(str, self.rlzs_assoc[key])))
         return '{%s}' % '\n'.join('%s: %s' % pair for pair in pairs)
 
-InfoByModel = collections.namedtuple('InfoByModel', 'name trt_ids num_rlzs')
-
 
 class CompositionInfo(object):
     """
@@ -388,21 +398,17 @@ class CompositionInfo(object):
     def __init__(self, source_models):
         self._col_dict = {}  # dictionary trt_id, idx -> col_idx
         self._num_samples = {}  # trt_id -> num_samples
-        self.info_by_model = collections.OrderedDict()
+        self.source_models = [sm.get_skeleton() for sm in source_models]
         col_idx = 0
         for sm in source_models:
-            trt_ids = []
             for trt_model in sm.trt_models:
                 trt_id = trt_model.id
-                trt_ids.append(trt_id)
                 if sm.samples > 1:
                     self._num_samples[trt_id] = sm.samples
                 for idx in range(sm.samples):
                     self._col_dict[trt_id, idx] = col_idx
                     col_idx += 1
                 trt_id += 1
-            self.info_by_model[sm.path] = InfoByModel(
-                sm.name, trt_ids, sm.gsim_lt.get_num_paths() * sm.samples)
 
     def get_max_samples(self):
         """Return the maximum number of samples of the source model"""
@@ -445,17 +451,22 @@ class CompositionInfo(object):
             yield trt_id, idx, col_idx
 
     def __repr__(self):
-        by_trt = operator.itemgetter(0)
+        info_by_model = collections.OrderedDict(
+            (sm.path, (sm.name, [tm.id for tm in sm.trt_models],
+                       sm.gsim_lt.get_num_paths() * sm.samples))
+            for sm in self.source_models)
 
         def collect_col_ids(triples):
             col_ids = []
             for triple in triples:
                 col_ids.append(triple[2])
             return col_ids
+
+        by_trt = operator.itemgetter(0)
         dic = groupby(self.get_triples(), by_trt, collect_col_ids)
         lines = ['trt=%s, col=%s' % (trt, dic[trt]) for trt in dic]
         summary = ['%s, trt=%s: %d realization(s)' % ibm
-                   for ibm in self.info_by_model.itervalues()]
+                   for ibm in info_by_model.itervalues()]
         return '<%s\n%s\n%s>' % (
             self.__class__.__name__, '\n'.join(summary), '\n'.join(lines))
 
