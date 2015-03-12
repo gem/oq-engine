@@ -21,7 +21,7 @@ from openquake.commonlib import sap, readinput
 from openquake.commonlib.calculators import base
 
 
-def info(name=None):
+def info(name=None, filtersources=False):
     """
     Give information. You can pass the name of an available calculator or
     also a job.ini file.
@@ -30,8 +30,10 @@ def info(name=None):
         print textwrap.dedent(base.calculators[name].__doc__.strip())
     elif name.endswith('.ini'):
         oqparam = readinput.get_oqparam(name)
+        sitecol = (readinput.get_site_collection(oqparam)
+                   if filtersources else None)
         csm = readinput.get_composite_source_model(
-            oqparam, prefilter=False, in_memory=False)
+            oqparam, sitecol, prefilter=filtersources, in_memory=filtersources)
         print csm.info
         print csm.get_rlzs_assoc()
     else:
@@ -39,3 +41,4 @@ def info(name=None):
 
 parser = sap.Parser(info)
 parser.arg('name', 'calculator name or job.ini file')
+parser.flg('filtersources', 'flag to enable filtering of the source models')

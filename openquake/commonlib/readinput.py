@@ -483,6 +483,9 @@ def get_composite_source_model(oqparam, sitecol=None, prefilter=False,
         an iterator over :class:`openquake.commonlib.source.SourceModel`
         tuples skipping the empty models
     """
+    if prefilter and not in_memory:
+        raise RuntimeError('If you want to enable prefiltering, the in_memory '
+                           'option must be True')
     source_model_lt = get_source_model_lt(oqparam)
     smodels = []
     trt_id = 0

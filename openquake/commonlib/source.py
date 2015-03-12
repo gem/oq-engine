@@ -377,6 +377,8 @@ class RlzsAssoc(collections.Mapping):
             pairs.append(('%s,%s' % key, map(str, self.rlzs_assoc[key])))
         return '{%s}' % '\n'.join('%s: %s' % pair for pair in pairs)
 
+InfoByModel = collections.namedtuple('InfoByModel', 'name trt_ids num_rlzs')
+
 
 class CompositionInfo(object):
     """
@@ -386,16 +388,21 @@ class CompositionInfo(object):
     def __init__(self, source_models):
         self._col_dict = {}  # dictionary trt_id, idx -> col_idx
         self._num_samples = {}  # trt_id -> num_samples
+        self.info_by_model = collections.OrderedDict()
         col_idx = 0
         for sm in source_models:
+            trt_ids = []
             for trt_model in sm.trt_models:
                 trt_id = trt_model.id
+                trt_ids.append(trt_id)
                 if sm.samples > 1:
                     self._num_samples[trt_id] = sm.samples
                 for idx in range(sm.samples):
                     self._col_dict[trt_id, idx] = col_idx
                     col_idx += 1
                 trt_id += 1
+            self.info_by_model[sm.path] = InfoByModel(
+                sm.name, trt_ids, sm.gsim_lt.get_num_paths() * sm.samples)
 
     def get_max_samples(self):
         """Return the maximum number of samples of the source model"""
@@ -438,8 +445,19 @@ class CompositionInfo(object):
             yield trt_id, idx, col_idx
 
     def __repr__(self):
-        triples = ['trt=%s,idx=%s,col=%s' % row for row in self.get_triples()]
-        return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(triples))
+        by_trt = operator.itemgetter(0)
+
+        def collect_col_ids(triples):
+            col_ids = []
+            for triple in triples:
+                col_ids.append(triple[2])
+            return col_ids
+        dic = groupby(self.get_triples(), by_trt, collect_col_ids)
+        lines = ['trt=%s, col=%s' % (trt, dic[trt]) for trt in dic]
+        summary = ['%s, trt=%s: %d realization(s)' % ibm
+                   for ibm in self.info_by_model.itervalues()]
+        return '<%s\n%s\n%s>' % (
+            self.__class__.__name__, '\n'.join(summary), '\n'.join(lines))
 
 
 class CompositeSourceModel(collections.Sequence):
@@ -473,7 +491,9 @@ class CompositeSourceModel(collections.Sequence):
         """
         for trt_model in self.trt_models:
             for src in trt_model:
-                src.trt_model_id = trt_model.id
+                if hasattr(src, 'trt_model_id'):
+                    # .trt_model_id is missing for source nodes
+                    src.trt_model_id = trt_model.id
                 yield src
 
     def update_trt_model_ids(self):
@@ -521,7 +541,7 @@ class CompositeSourceModel(collections.Sequence):
                 tot_weight = sum(rlz.weight for rlz in assoc.realizations)
                 if tot_weight == 0:
                     raise ValueError('All realizations have zero weight??')
-                elif tot_weight < 1:
+                elif abs(tot_weight - 1) > 1E-12:  # allow for rounding errors
                     logging.warn('Some source models are not contributing, '
                                  'weights are being rescaled')
                 for rlz in assoc.realizations:
