@@ -38,6 +38,7 @@
 if [ $GEM_SET_DEBUG ]; then
     set -x
 fi
+set -x
 set -e
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-engine"
