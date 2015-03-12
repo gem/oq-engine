@@ -387,7 +387,8 @@ class RlzsAssoc(collections.Mapping):
         pairs = []
         for key in sorted(self.rlzs_assoc):
             pairs.append(('%s,%s' % key, map(str, self.rlzs_assoc[key])))
-        return '{%s}' % '\n'.join('%s: %s' % pair for pair in pairs)
+        return '<%s\n%s>' % (self.__class__.__name__,
+                             '\n'.join('%s: %s' % pair for pair in pairs))
 
 
 class CompositionInfo(object):

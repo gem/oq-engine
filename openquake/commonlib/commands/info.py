@@ -21,10 +21,12 @@ from openquake.commonlib import sap, readinput
 from openquake.commonlib.calculators import base
 
 
-def info(name=None, filtersources=False):
+# the documentation about how to use this feature can be found
+# in the file effective-realizations.rst
+def info(name, filtersources=False):
     """
-    Give information. You can pass the name of an available calculator or
-    also a job.ini file.
+    Give information. You can pass the name of an available calculator,
+    a job.ini file, or a zip archive with the input files.
     """
     if name in base.calculators:
         print textwrap.dedent(base.calculators[name].__doc__.strip())
@@ -41,5 +43,5 @@ def info(name=None, filtersources=False):
         print "No info for '%s'" % name
 
 parser = sap.Parser(info)
-parser.arg('name', 'calculator name or job.ini file')
+parser.arg('name', 'calculator name, job.ini file or zip archive')
 parser.flg('filtersources', 'flag to enable filtering of the source models')
