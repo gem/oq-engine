@@ -1,21 +1,21 @@
 The concept of effective realizations
 ==============================================
 
-The management of the so-called logic trees is the most complex
+The management of the logic trees is the most complex
 concept in the OpenQuake-engine. The difficulty lies in optimization
 concerns: it is necessary to implement logic trees in an efficient way,
 otherwise the engine will not be able to cope with large computations.
 
-To this aim we introduced the concept of *effective realizations*:
-there are very common situations in which it is possible to reduce the
+To this aim we introduced the concept of *effective realizations*. The idea is
+that there are very common situations in which it is possible to reduce the
 full logic tree of a computation to a much smaller tree, containing
 much less effective realizations (i.e. paths) than the potential
 realizations.
 
-Reduction of the GMPE logic tree
+Reduction of the logic tree
 ------------------------------------
 
-The reduction of the GMPE logic tree happens when the actual
+The reduction of the logic tree happens when the
 sources do not span the full range of tectonic region types in the
 GMPE logic tree file. This happens practically always in SHARE calculations.
 The SHARE GMPE logic tree potentially contains 1280 realizations,
@@ -39,8 +39,8 @@ Deep:
 The number of paths in the full logic tree is 4 * 5 * 2 * 4 * 4 * 1 *
 2 = 1280, pretty large. However, in practice, in most computation
 users are interested only in a subset of the tectonic region type. For
-instance, if the sources in your model are only of kind Active_Shallow
-and Stable_Shallow, you should consider only 4 * 5  = 20 effective
+instance, if the sources in your model are only of kind `Active_Shallow`
+and `Stable_Shallow`, you should consider only 4 * 5  = 20 effective
 realizations instead of 1280. Doing so will improve the computation
 time and the neeed storage by a factor of 1280 / 20 = 64, which is
 very significant.
@@ -54,7 +54,7 @@ tectonic region type (T1) the GMPE logic tree file contains 3 GMPEs A,
 B, C and for the second tectonic region type (T2) the GMPE logic tree
 file contains 2 GMPEs D, E. The total number of realizations is
 
-`total_num_rlzs = 3 * 2 = 6`
+  `total_num_rlzs = 3 * 2 = 6`
 
 The realizations are identified by an ordered pair of GMPEs, one for each
 tectonic region type. Let's number the realizations, starting from zero,
@@ -97,8 +97,8 @@ The engine lite will export two files with names like::
   hazard_curve-smltp_sm-gsimltp_*_E-ltr_1.csv
 
 
-Reduction of the source model logic tree when sampling is enabled
------------------------------------------------------------------
+Reduction of the logic tree when sampling is enabled
+----------------------------------------------------
 
 Consider a very common use case where one has a simple source model
 but a very large GMPE logic tree (we have real life examples
@@ -126,7 +126,7 @@ not necessarily the case. There are two very different situations:
    identical samples will produce identical ruptures.
 
 In both cases the engine is so smart that even if source model path is
-sampled several times, the model is parsed and sen to the workers *only
+sampled several times, the model is parsed and sent to the workers *only
 once*. In particular if there is a single source model and
 `number_of_logic_tree_samples = 4000`, we generate effectively
 1 source model realization and not 4,000 equivalent source model
@@ -137,6 +137,12 @@ by calling the appropriate hazardlib function `N` times. This is done
 inside the worker nodes. In the classical case, all the ruptures are
 identical and there are no seeds, so the computation is done only once,
 in an efficient way.
+
+In our tests, we have a case (`classical/case_16`) with a *huge* source model logic tree.
+With full enumeration, it would produce XXX realizations. Therefore sampling is
+necessary, otherwise the computation would run out of memory (and would take years
+anyway).
+
 
 
 Convergency of the event based hazard curves to the classical hazard curves
@@ -219,7 +225,7 @@ model. You will get something like this::
    trt=17, col=[17]
    trt=18, col=[18]
    trt=19, col=[19]>
-   <lots-of-other-stuff-here>
+   <RlzsAssoc...>
 
 You can read the lines above as follows. The SHARE model is composed by three
 submodels:
@@ -240,7 +246,7 @@ reduced by the filtering, i.e. you want to know the effective
 realizations, not the potential ones. You can perform that check by
 using the `--filtersources` flag. For the sake of exemplification, I will
 show the output of a real life computation, performed by one of our users
-which was interested in only three sites and wanted to filter the sources
+who was interested in only three sites and wanted to filter the sources
 around those points with a maximum distance of 200 kilometers::
 
    $ oq-lite info SHARE.zip --filtersources
@@ -268,7 +274,7 @@ around those points with a maximum distance of 200 kilometers::
    trt=17, col=[17]
    trt=18, col=[18]
    trt=19, col=[19]>
-   <lots-of-other-stuff-here>
+   <RlzsAssoc...>
 
 In this example the effective SHARE model is composed by three submodels:
 
@@ -281,16 +287,17 @@ In this example the effective SHARE model is composed by three submodels:
 
 Depending on the location of the points and the maximum distance, one or more submodels
 could be completely filtered out and could produce zero effective realizations, so
-the reduction effect could be even stronger. Already in this case we reduced the
+the reduction effect could be even stronger. Such a situation is covered by our tests
+(classical/case_19) and will be discussed. Notice that already in this case we reduced the
 computation from 1280 + 1280 + 640 = 3200 potential realizations to only 80 + 80 + 80 = 240
 realizations.
 
 
-The realization association object
+The realization-association object
 ----------------------------------
 
 The `info` commands produces more output, which I have denoted simply as
-`<lots-of-other-stuff-here>`. This output is the string representation of
+`<RlzsAssoc...>`. This output is the string representation of
 a Python object containing the associations between the pairs
 
   `(trt_model_id, gsim) -> realizations`
@@ -339,8 +346,8 @@ This is a SHARE calculation where a lot of tectonic region types have been compl
 filtered out, so the original 3200 realizations have been reduced to merely 4 for
 5 different tectonic region types.
 
-THe first TRT with GSIM `AtkinsonBoore2003SInter` contributes to all the realizations;
-the second TRT with GSIM `FaccioliEtAl2010` contributes to all the realizations;
-the third TRT with GSIM `ToroEtAl2002SHARE` contributes to all the realizations;
-the fourth TRT with GSIM `AtkinsonBoore2003SInter` contributes to all the realizations;
-the fifth TRT contributes to one realization for each of four different GSIMs. 
+- the first TRT with GSIM `AtkinsonBoore2003SInter` contributes to all the realizations;
+- the second TRT with GSIM `FaccioliEtAl2010` contributes to all the realizations;
+- the third TRT with GSIM `ToroEtAl2002SHARE` contributes to all the realizations;
+- the fourth TRT with GSIM `AtkinsonBoore2003SInter` contributes to all the realizations;
+- the fifth TRT contributes to one realization for each of four different GSIMs. 
