@@ -61,7 +61,7 @@ GEM_ALWAYS_YES=false
 if [ "$GEM_EPHEM_CMD" = "" ]; then
     GEM_EPHEM_CMD="lxc-start-ephemeral"
 fi
-GEM_EPHEM_NAME="ubuntu-lxc-eph"
+GEM_EPHEM_NAME="ubuntu14-lxc-eph"
 
 if command -v lxc-shutdown &> /dev/null; then
     # Older lxc (< 1.0.0) with lxc-shutdown
