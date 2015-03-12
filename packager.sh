@@ -647,12 +647,12 @@ devtest_run () {
 
     sudo $LXC_TERM -n $lxc_name
 
-    # NOTE: pylint returns errors too frequently to consider them a critical event
-    if pylint --rcfile pylintrc -f parseable openquake > pylint.txt ; then
-        echo "pylint exits without errors"
-    else
-        echo "WARNING: pylint exits with $? value"
-    fi
+    ## NOTE: pylint returns errors too frequently to consider them a critical event
+    #if pylint --rcfile pylintrc -f parseable openquake > pylint.txt ; then
+    #    echo "pylint exits without errors"
+    #else
+    #    echo "WARNING: pylint exits with $? value"
+    #fi
     set -e
 
     # if [ $inner_ret -ne 0 ]; then
