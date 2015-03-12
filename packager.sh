@@ -31,7 +31,7 @@ if command -v lxc-shutdown &> /dev/null; then
     LXC_TERM="lxc-shutdown -t 10 -w"
     LXC_KILL="lxc-stop"
 else
-    # Newer lxc (>= 1.0.0) with lxc-stop ony
+    # Newer lxc (>= 1.0.0) with lxc-stop only
     LXC_TERM="lxc-stop -t 10"
     LXC_KILL="lxc-stop -k"
 fi
