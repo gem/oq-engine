@@ -429,7 +429,8 @@ _pkgtest_innervm_run () {
 
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get upgrade -y"
-
+    #FIXME
+    sleep 30m
     # packaging related tests (install, remove, purge, install, reinstall)
     ssh $lxc_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
     ssh $lxc_ip "sudo apt-get remove -y ${GEM_DEB_PACKAGE}"
