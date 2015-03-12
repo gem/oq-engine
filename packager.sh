@@ -25,6 +25,16 @@ if [ "$GEM_EPHEM_CMD" = "" ]; then
 fi
 GEM_EPHEM_NAME="ubuntu-lxc-eph"
 
+if command -v lxc-shutdown &> /dev/null; then
+    # Older lxc (< 1.0.0) with lxc-shutdown
+    LXC_TERM="lxc-shutdown -t 10 -w"
+    LXC_KILL="lxc-stop"
+else
+    # Newer lxc (>= 1.0.0) with lxc-stop only
+    LXC_TERM="lxc-stop -t 10"
+    LXC_KILL="lxc-stop -k"
+fi
+
 NL="
 "
 TB="	"
@@ -41,7 +51,7 @@ sig_hand () {
         if [ -f "${upper}.dsk" ]; then
             loop_dev="$(sudo losetup -a | grep "(${upper}.dsk)$" | cut -d ':' -f1)"
         fi
-        sudo lxc-stop -n $lxc_name
+        sudo $LXC_KILL -n $lxc_name
         sudo umount /var/lib/lxc/$lxc_name/rootfs
         sudo umount /var/lib/lxc/$lxc_name/ephemeralbind
         echo "$upper" | grep -q '^/tmp/'
@@ -238,8 +248,8 @@ _lxc_name_and_ip_get()
             lxc_name="$(grep "sudo lxc-console -n $GEM_EPHEM_NAME" /tmp/packager.eph.$$.log | sed "s/.*sudo lxc-console -n \($GEM_EPHEM_NAME\)/\1/g")"
             for e in $(seq 1 40); do
                 sleep 2
-                if grep -q "$lxc_name" /var/lib/misc/dnsmasq.leases ; then
-                    lxc_ip="$(grep " $lxc_name " /var/lib/misc/dnsmasq.leases | cut -d ' ' -f 3)"
+                if grep -q "$lxc_name" /var/lib/misc/dnsmasq*.leases ; then
+                    lxc_ip="$(grep " $lxc_name " /var/lib/misc/dnsmasq*.leases | tail -n 1 | cut -d ' ' -f 3)"
                     break
                 fi
             done
@@ -264,7 +274,7 @@ devtest_run () {
     set +e
     _devtest_innervm_run $lxc_ip
     inner_ret=$?
-    sudo lxc-shutdown -n $lxc_name -w -t 10
+    sudo $LXC_TERM -n $lxc_name
     set -e
 
     if [ -f /tmp/packager.eph.$$.log ]; then
@@ -326,7 +336,7 @@ EOF
     set +e
     _pkgtest_innervm_run $lxc_ip
     inner_ret=$?
-    sudo lxc-shutdown -n $lxc_name -w -t 10
+    sudo $LXC_TERM -n $lxc_name
     set -e
 
     if [ -f /tmp/packager.eph.$$.log ]; then
