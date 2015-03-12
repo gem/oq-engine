@@ -289,7 +289,7 @@ _devtest_innervm_run () {
     # configure the machine to run tests
     ssh $lxc_ip "set -e
         for dbu in oq_job_init oq_admin; do
-            sudo sed -i \"1ilocal   openquake2   \$dbu                   md5\" /etc/postgresql/9.1/main/pg_hba.conf
+            sudo sed -i \"1ilocal   openquake2   \$dbu                   md5\" /etc/postgresql/9.3/main/pg_hba.conf
         done"
 
     ssh $lxc_ip "sudo service postgresql restart"
