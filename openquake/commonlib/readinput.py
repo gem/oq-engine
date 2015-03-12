@@ -386,7 +386,7 @@ def get_source_models(oqparam, source_model_lt, sitecol=None, in_memory=True):
         if num_samples > 1:
             logging.warn('The source path %s was sampled %d times',
                          smpath, num_samples)
-        fname = os.path.join(oqparam.base_path, sm)
+        fname = possibly_gunzip(os.path.join(oqparam.base_path, sm))
         if in_memory:
             apply_unc = source_model_lt.make_apply_uncertainties(smpath)
             try:
