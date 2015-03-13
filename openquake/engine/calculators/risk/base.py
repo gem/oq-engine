@@ -308,6 +308,6 @@ class RiskCalculator(base.Calculator):
 
     def get_risk_model(self):
         """
-        :returns: a :class:`openquake.risklib.workflows.RiskModel` dictionary
+        :returns: a :class:`openquake.risklib.riskinput.RiskModel` dictionary
         """
         return get_risk_model(self.oqparam)
