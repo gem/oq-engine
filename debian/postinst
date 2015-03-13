@@ -40,7 +40,7 @@ if [ -f /usr/sbin/rabbitmqctl ]; then
 fi
 
 HDIR=/usr/openquake/engine
-IDIR=/usr/share/pyshared/openquake/engine
+IDIR=/usr/lib/python2.7/dist-packages/openquake/engine
 mkdir -p $HDIR
 chmod 1777 $HDIR
 
