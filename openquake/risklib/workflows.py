@@ -947,20 +947,23 @@ class RiskModel(collections.Mapping):
         """
         assets_, hazards_, epsilons_ = riskinput.get_all()
         output = {}
-        for taxonomy in riskinput.taxonomies:
-            assets = assets_[taxonomy]
-            if not assets:
-                continue
-            # hazards_[taxonomy] is a list of dictionaries key -> value
-            hazards_by_rlz = rlzs_assoc.collect_by_rlz(hazards_[taxonomy])
-            if not hazards_by_rlz:
-                continue
-            epsilons = epsilons_[taxonomy]
-            workflow = self[riskinput.imt, taxonomy]
-            for loss_type in workflow.loss_types:
-                output[taxonomy, loss_type] = [
-                    workflow(loss_type, assets, hazards_by_rlz[rlz], epsilons)
-                    for rlz in rlzs_assoc.realizations]
+        for imt, taxonomies in riskinput.imt_taxonomies:
+            for taxonomy in taxonomies:
+                assets = assets_[taxonomy]
+                if not assets:
+                    continue
+                hazards = hazards_[taxonomy]
+                if not hazards:
+                    continue
+                # hazards_[taxonomy] is a list of dictionaries key -> value
+                hazards_by_rlz = rlzs_assoc.collect_by_rlz(hazards)
+                epsilons = epsilons_[taxonomy]
+                workflow = self[imt, taxonomy]
+                for loss_type in workflow.loss_types:
+                    output[taxonomy, loss_type] = [
+                        workflow(loss_type, assets,
+                                 hazards_by_rlz[rlz], epsilons)
+                        for rlz in rlzs_assoc.realizations]
         return output
 
 
@@ -982,6 +985,11 @@ class RiskInput(object):
                 taxonomies.add(taxo)
                 self.weight += len(assets)
         self.taxonomies = sorted(taxonomies)
+
+    @property
+    def imt_taxonomies(self):
+        """Return a list of pairs (imt, taxonomies) with a single element"""
+        return [(self.imt, self.taxonomies)]
 
     def get_all(self):
         """
