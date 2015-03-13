@@ -429,19 +429,20 @@ class BaseQuadrilateralSurface(BaseSurface):
 
     def get_resampled_top_edge(self, angle_var=0.1):
         """
-        Compute the top edge of the rupture plane.
+        This methods computes a simplified representation of a fault top edge
+        by removing the points that are not describing a change of direction,
+        provided a certain tolerance angle.
 
-        :param angle_var:
-            Float number represents the angel allowed to bend within a fault
-            segment.
+        :param float angle_var:
+            Number representing the maximum deviation (in degrees) admitted
+            without the creation of a new segment
         :returns:
             A :class:`~openquake.hazardlib.geo.line.Line` representing the
             rupture surface's top edge.
         """
         mesh = self.get_mesh()
-        top_edge = []
-        top_edge.append(Point(mesh.lons[0][0], mesh.lats[0][0],
-                              mesh.depths[0][0]))
+        top_edge = [Point(mesh.lons[0][0], mesh.lats[0][0], mesh.depths[0][0])]
+
         for i in range(len(mesh.triangulate()[1][0]) - 1):
             v1 = numpy.asarray(mesh.triangulate()[1][0][i])
             v2 = numpy.asarray(mesh.triangulate()[1][0][i + 1])
