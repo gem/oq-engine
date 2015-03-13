@@ -66,7 +66,7 @@ class CalculatorTestCase(unittest.TestCase):
 
     def practicallyEqual(self, string1, string2, ignore_last):
         """
-        Compare strings containing numbers up to the last digit (excluded)
+        Compare strings containing numbers up to the last digits (excluded)
         """
         numbers1 = string1.split()
         numbers2 = string2.split()
