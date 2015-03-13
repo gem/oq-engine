@@ -326,6 +326,29 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
 GmfsCurves = collections.namedtuple('GmfsCurves', 'gmfs curves')
 
 
+def gen_gmf_by_imt(ses_ruptures, sitecol, imts, gsims,
+                   trunc_level, correl_model):
+    """
+    Yield gmf_by_imt AccumDicts for each SESRupture and GSIM, with attributes
+    .tag, .gsim_str and .r_sites.
+    """
+    for rupture, group in itertools.groupby(
+            ses_ruptures, operator.attrgetter('rupture')):
+        sesruptures = list(group)
+        indices = sesruptures[0].indices
+        r_sites = (sitecol if indices is None else
+                   site.FilteredSiteCollection(indices, sitecol))
+        computer = calc.gmf.GmfComputer(
+            rupture, r_sites, imts, gsims, trunc_level, correl_model)
+        for sr in sesruptures:
+            for gsim_str, gmvs in computer.compute(sr.seed):
+                gmf_by_imt = AccumDict(gmvs)
+                gmf_by_imt.tag = sr.tag
+                gmf_by_imt.r_sites = r_sites
+                gmf_by_imt.gsim_str = gsim_str
+                yield gmf_by_imt
+
+
 def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
     """
     :param ses_ruptures:
@@ -352,21 +375,9 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
 
     result = AccumDict({(trt_id, str(gsim)): GmfsCurves([], AccumDict())
                         for gsim in gsims})
-    for rupture, group in itertools.groupby(
-            ses_ruptures, operator.attrgetter('rupture')):
-        sesruptures = list(group)
-        indices = sesruptures[0].indices
-        r_sites = (sitecol if indices is None else
-                   site.FilteredSiteCollection(indices, sitecol))
-
-        computer = calc.gmf.GmfComputer(
-            rupture, r_sites, imts, gsims, trunc_level, correl_model)
-        for sr in sesruptures:
-            for gsim_str, gmvs in computer.compute(sr.seed):
-                gmf_by_imt = AccumDict(gmvs)
-                gmf_by_imt.tag = sr.tag
-                gmf_by_imt.r_sites = r_sites
-                result[trt_id, gsim_str].gmfs.append(gmf_by_imt)
+    for gmf_by_imt in gen_gmf_by_imt(
+            ses_ruptures, sitecol, imts, gsims, trunc_level, correl_model):
+        result[trt_id, gmf_by_imt.gsim_str].gmfs.append(gmf_by_imt)
     if getattr(oq, 'hazard_curves_from_gmfs', None):
         duration = oq.investigation_time * oq.ses_per_logic_tree_path * (
             oq.number_of_logic_tree_samples or 1)
