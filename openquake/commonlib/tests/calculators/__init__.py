@@ -64,8 +64,19 @@ class CalculatorTestCase(unittest.TestCase):
         self.calc.pre_execute()
         return self.calc.execute()
 
+    def practicallyEqual(self, string1, string2, ignore_last):
+        """
+        Compare strings containing numbers up to the last digit (excluded)
+        """
+        numbers1 = string1.split()
+        numbers2 = string2.split()
+        self.assertEqual(len(numbers1), len(numbers2))
+        for n1, n2 in zip(numbers1, numbers2):
+            self.assertEqual(n1[: -ignore_last], n2[: -ignore_last])
+
     def assertEqualFiles(
-            self, fname1, fname2, make_comparable=lambda lines: lines):
+            self, fname1, fname2, make_comparable=lambda lines: lines,
+            ignore_last_digits=0):
         """
         Make sure the expected and actual files have the same content.
         `make_comparable` is a function processing the lines of the
@@ -75,10 +86,15 @@ class CalculatorTestCase(unittest.TestCase):
         """
         expected = os.path.join(self.testdir, fname1)
         actual = os.path.join(self.calc.oqparam.export_dir, fname2)
-        expected_content = make_comparable(open(expected).readlines())
-        actual_content = make_comparable(open(actual).readlines())
+        expected_content = '\n'.join(
+            make_comparable(open(expected).readlines()))
+        actual_content = '\n'.join(make_comparable(open(actual).readlines()))
         try:
-            self.assertEqual(expected_content, actual_content)
+            if ignore_last_digits:
+                self.practicallyEqual(expected_content, actual_content,
+                                      ignore_last_digits)
+            else:
+                self.assertEqual(expected_content, actual_content)
         except:
             if self.OVERWRITE_EXPECTED:
                 # use this path when the expected outputs have changed
