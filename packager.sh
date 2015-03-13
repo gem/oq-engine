@@ -280,11 +280,11 @@ _pkgtest_innervm_run () {
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
         # run selected risk demos
         ssh $lxc_ip "set -e; cd /usr/share/doc/python-oq-risklib/examples/demos
-        echo AreaSourceClassicalPSHA
+        echo 'running AreaSourceClassicalPSHA...'
         oq-lite run AreaSourceClassicalPSHA/job.ini
-        echo AreaSourceClassicalPSHA
+        echo 'running ScenarioDamage...'
         oq-lite run ScenarioDamage/job_hazard.ini,ScenarioDamage/job_risk.ini
-        echo ProbabilisticEventBased
+        echo 'running ProbabilisticEventBased...'
         oq-lite run ProbabilisticEventBased/job_hazard.ini
         "
     fi
