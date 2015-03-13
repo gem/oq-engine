@@ -309,6 +309,9 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         """Export the ruptures, if any"""
         oq = self.oqparam
         saved = AccumDict()
+        if not oq.exports:
+            return saved
+        exports = oq.exports.split(',')
         for smodel in self.composite_source_model:
             smpath = '_'.join(smodel.path)
             for trt_model in smodel.trt_models:
@@ -316,8 +319,10 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
                 ses_coll = SESCollection(
                     groupby(sesruptures, operator.attrgetter('ses_idx')),
                     smodel.path, oq.investigation_time)
-                fname = 'ses-%d-smltp_%s.csv' % (trt_model.id, smpath)
-                saved += export(('ses', 'csv'), oq.export_dir, fname, ses_coll)
+                for fmt in exports:
+                    fname = 'ses-%d-smltp_%s.%s' % (trt_model.id, smpath, fmt)
+                    saved += export(
+                        ('ses', fmt), oq.export_dir, fname, ses_coll)
         return saved
 
 
@@ -418,7 +423,7 @@ class EventBasedCalculator(ClassicalCalculator):
         prepare some empty files in the export directory to store the gmfs
         (if any). If there were pre-existing files, they will be erased.
         """
-        haz_out, hcalc = base.get_hazard(self, exports='csv')
+        haz_out, hcalc = base.get_hazard(self, exports=self.oqparam.exports)
         self.composite_source_model = hcalc.composite_source_model
         self.sitecol = hcalc.sitecol
         self.rlzs_assoc = hcalc.rlzs_assoc
@@ -426,7 +431,7 @@ class EventBasedCalculator(ClassicalCalculator):
             sum(haz_out['ruptures_by_trt'].itervalues(), []),
             key=operator.attrgetter('tag'))
         self.saved = AccumDict()
-        if self.oqparam.ground_motion_fields:
+        if self.oqparam.ground_motion_fields and 'csv' in self.oqparam.exports:
             for trt_id, gsim in self.rlzs_assoc:
                 name = '%s-%s.csv' % (trt_id, gsim)
                 self.saved[name] = fname = os.path.join(
@@ -449,7 +454,7 @@ class EventBasedCalculator(ClassicalCalculator):
             gmfs, curves_by_imt = res[trt_id, gsim]
             acc = agg_prob(acc, AccumDict({(trt_id, gsim): curves_by_imt}))
             fname = self.saved.get('%s-%s.csv' % (trt_id, gsim))
-            if fname:  # when ground_motion_fields is true
+            if fname:  # when ground_motion_fields is true and there is csv
                 for gmf in gmfs:
                     row = [gmf.tag, gmf.r_sites.indices]
                     for imt in imts:

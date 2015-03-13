@@ -117,8 +117,11 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         nsites = len(self.sitecol)
 
-        # export curves
         saved = AccumDict()
+        if not oq.exports:
+            return saved
+
+        # export curves
         exports = oq.exports.split(',')
         if getattr(oq, 'individual_curves', True):
             for rlz in rlzs:
