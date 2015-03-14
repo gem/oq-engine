@@ -17,12 +17,13 @@ import os
 import collections
 
 from nose.plugins.attrib import attr as noseattr
+from numpy.testing import assert_almost_equal as aae
+
 from qa_tests import risk
 from openquake.qa_tests_data.event_based_risk import case_1, case_2
 
 from openquake.engine.db import models
-
-from numpy.testing import assert_almost_equal as aae
+from openquake.commonlib.writers import scientificformat
 
 
 class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
@@ -212,7 +213,8 @@ class EventBaseQATestCase2(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
         path = self._test_path("expected/event_loss_asset.csv")
         expectedlines = open(path).read().split()
         gotlines = [
-            row.to_csv_str()
+            scientificformat([row.rupture.tag, row.asset.asset_ref, row.loss],
+                             fmt='%11.8E', sep=',')
             for row in el.eventlossasset_set.order_by(
                 'rupture__tag', 'asset__asset_ref')]
         if gotlines != expectedlines:
