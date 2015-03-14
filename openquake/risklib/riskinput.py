@@ -258,6 +258,26 @@ def make_eps_dict(assets_by_site, num_samples, seed, correlation,
     return eps_dict
 
 
+def expand(array, N):
+    """
+    Given a non-empty array with n elements, expands it to a larger
+    array with N elements.
+
+    >>> expand([1], 3)
+    array([1, 1, 1])
+    >>> expand([1, 2, 3], 10)
+    array([1, 2, 3, 1, 2, 3, 1, 2, 3, 1])
+    >>> expand(numpy.zeros((2, 10)), 5).shape
+    (5, 10)
+    """
+    n = len(array)
+    assert n > 0, 'Empty array'
+    if n >= N:
+        raise ValueError('Cannot expand an array of %d elements to %d',
+                         n, N)
+    return numpy.array([array[i % n] for i in xrange(N)])
+
+
 class RiskInputFromRuptures(object):
     """
     Contains all the assets associated to the given IMT and a subsets of
@@ -331,7 +351,7 @@ class RiskInputFromRuptures(object):
             for asset in assets_:
                 assets.append(asset)
                 hazards.append(hazard)
-                epsilons.append(self.eps_dict[asset.id])
+                epsilons.append(expand(self.eps_dict[asset.id], self.weight))
         return assets, hazards, epsilons
 
     def split(self, n):

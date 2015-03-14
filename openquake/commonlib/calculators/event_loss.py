@@ -97,7 +97,8 @@ class EventLossCalculator(base.RiskCalculator):
             eps_dict = riskinput.make_eps_dict(
                 self.assets_by_site, len(sesruptures),
                 getattr(oq, 'master_seed', 42),
-                getattr(oq, 'asset_correlation', 0))
+                getattr(oq, 'asset_correlation', 0),
+                epsilon_sampling=1000)
 
             gsims = gsims_by_trt_id[trt_id]
 
