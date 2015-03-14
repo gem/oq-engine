@@ -47,6 +47,7 @@ class Asset(object):
                  number,
                  location,
                  values,
+                 area=1,
                  deductibles=None,
                  insurance_limits=None,
                  retrofitting_values=None):
@@ -75,6 +76,7 @@ class Asset(object):
         self.number = number
         self.location = location
         self.values = values
+        self.area = area
         self.retrofitting_values = retrofitting_values
         self.deductibles = deductibles
         self.insurance_limits = insurance_limits
@@ -83,7 +85,7 @@ class Asset(object):
         """
         :returns: the asset value for `loss_type`
         """
-        return self.values[loss_type]
+        return self.values[loss_type] * self.number * self.area
 
     def deductible(self, loss_type):
         """
@@ -468,6 +470,7 @@ class ProbabilisticEventBased(Workflow):
             `openquake.risklib.scientific.ProbabilisticEventBased.Output`
             instance.
         """
+        import pdb; pdb.set_trace()
         loss_matrix = self.risk_functions[loss_type].apply_to(
             ground_motion_values, epsilons)
 

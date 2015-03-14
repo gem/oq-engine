@@ -94,10 +94,10 @@ class EventLossCalculator(base.RiskCalculator):
                 gsims, oq.truncation_level, correl_model)
 
             # there should be different epsilons for each SES collection
+            # and for each taxonomy
             riskinput.set_epsilons(
                 ri, len(sesruptures), oq.master_seed,
                 getattr(oq, 'asset_correlation', 0))
-
             self.riskinputs.append(ri)
 
     def post_execute(self, result):

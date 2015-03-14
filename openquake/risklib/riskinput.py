@@ -23,6 +23,7 @@ import collections
 
 import numpy
 
+from openquake.baselib.general import groupby
 from openquake.hazardlib.imt import from_string
 from openquake.risklib import scientific
 
@@ -235,16 +236,14 @@ class RiskInput(object):
             self.weight)
 
 
-def get_assets(riskinput):
+def get_assets_by_taxonomy(riskinput):
     """
     :returns:
        the assets contained in the object, obtained by merging
        the lists in the .assets_by_site attribute.
     """
-    ls = []
-    for assets in riskinput.assets_by_site:
-        ls.extend(assets)
-    return ls
+    all_assets = (a for assets in riskinput.assets_by_site for a in assets)
+    return groupby(all_assets, operator.attrgetter('taxonomy'))
 
 
 def set_epsilons(riskinput, num_samples, seed, correlation,
@@ -258,11 +257,11 @@ def set_epsilons(riskinput, num_samples, seed, correlation,
     riskinput.epsilons = {}  # asset_id -> epsilons
     if epsilon_sampling:
         num_samples = min(num_samples, epsilon_sampling)
-    assets = get_assets(riskinput)
-    zeros = numpy.zeros((len(assets), num_samples))
-    epsilons = scientific.make_epsilons(zeros, seed, correlation)
-    for asset, eps in zip(assets, epsilons):
-        riskinput.epsilons[asset.id] = eps
+    for taxonomy, assets in get_assets_by_taxonomy(riskinput).iteritems():
+        zeros = numpy.zeros((len(assets), num_samples))
+        epsilons = scientific.make_epsilons(zeros, seed, correlation)
+        for asset, eps in zip(assets, epsilons):
+            riskinput.epsilons[asset.id] = eps
 
 
 class RiskInputFromRuptures(object):

@@ -702,8 +702,9 @@ def get_exposure(oqparam):
                         values['fatalities'] = occupancy['occupants']
                         break
 
+        area = float(asset.attrib.get('area', 1))
         ass = workflows.Asset(
-            asset_id, taxonomy, number, location, values, deductibles,
+            asset_id, taxonomy, number, location, values, area, deductibles,
             insurance_limits, retrofitting_values)
         exposure.assets.append(ass)
         exposure.taxonomies.add(taxonomy)
