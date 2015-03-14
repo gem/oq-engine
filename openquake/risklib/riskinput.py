@@ -23,7 +23,7 @@ import collections
 
 import numpy
 
-from openquake.baselib.general import groupby
+from openquake.baselib.general import groupby, split_in_blocks
 from openquake.hazardlib.imt import from_string
 from openquake.risklib import scientific
 
@@ -128,7 +128,7 @@ class RiskModel(collections.Mapping):
         return RiskInput(imt_taxonomies, hazards_by_site, assets_by_site)
 
     def build_input_from_ruptures(self, sitecol, assets_by_site, ses_ruptures,
-                                  gsims, trunc_level, correl_model):
+                                  gsims, trunc_level, correl_model, eps_dict):
         """
         :param imt: an Intensity Measure Type
         :param hazards_by_site: an array of hazards per each site
@@ -138,7 +138,7 @@ class RiskModel(collections.Mapping):
         imt_taxonomies = list(self.get_imt_taxonomies())
         return RiskInputFromRuptures(
             imt_taxonomies, sitecol, assets_by_site, ses_ruptures,
-            gsims, trunc_level, correl_model)
+            gsims, trunc_level, correl_model, eps_dict)
 
     def gen_outputs(self, riskinputs, rlzs_assoc):
         """
@@ -236,32 +236,26 @@ class RiskInput(object):
             self.weight)
 
 
-def get_assets_by_taxonomy(riskinput):
-    """
-    :returns:
-       the assets contained in the object, obtained by merging
-       the lists in the .assets_by_site attribute.
-    """
-    all_assets = (a for assets in riskinput.assets_by_site for a in assets)
-    return groupby(all_assets, operator.attrgetter('taxonomy'))
-
-
-def set_epsilons(riskinput, num_samples, seed, correlation,
-                 epsilon_sampling=0):
+def make_eps_dict(assets_by_site, num_samples, seed, correlation,
+                  epsilon_sampling=0):
     """
     :param riskinput: an object with an attribute .assets_by_site
     :param int num_samples: the number of ruptures
     :param int seed: a random seed
     :param float correlation: the correlation coefficient
+    :returns: dictionary asset_id -> epsilons
     """
-    riskinput.epsilons = {}  # asset_id -> epsilons
+    eps_dict = {}  # asset_id -> epsilons
     if epsilon_sampling:
         num_samples = min(num_samples, epsilon_sampling)
-    for taxonomy, assets in get_assets_by_taxonomy(riskinput).iteritems():
+    all_assets = (a for assets in assets_by_site for a in assets)
+    assets_by_taxo = groupby(all_assets, operator.attrgetter('taxonomy'))
+    for taxonomy, assets in assets_by_taxo.iteritems():
         zeros = numpy.zeros((len(assets), num_samples))
         epsilons = scientific.make_epsilons(zeros, seed, correlation)
         for asset, eps in zip(assets, epsilons):
-            riskinput.epsilons[asset.id] = eps
+            eps_dict[asset.id] = eps
+    return eps_dict
 
 
 class RiskInputFromRuptures(object):
@@ -272,23 +266,25 @@ class RiskInputFromRuptures(object):
     :param imt_taxonomies: list given by the risk model
     :param sitecol: SiteCollection instance
     :param assets_by_site: list of list of assets
-    :param ses_ruptures: ordered list of SESRuptures
+    :param ses_ruptures: ordered array of SESRuptures
     :param gsims: list of GSIM instances
     :param trunc_level: truncation level for the GSIMs
     :param correl_model: correlation model for the GSIMs
+    :params eps_dict: a dictionary asset_id -> epsilons
     """
     def __init__(self, imt_taxonomies, sitecol, assets_by_site, ses_ruptures,
-                 gsims, trunc_level, correl_model):
+                 gsims, trunc_level, correl_model, eps_dict):
         self.imt_taxonomies = imt_taxonomies
         self.sitecol = sitecol
         self.assets_by_site = assets_by_site
-        self.ses_ruptures = ses_ruptures
+        self.ses_ruptures = numpy.array(ses_ruptures)
         self.trt_id = ses_ruptures[0].trt_model_id
         self.col_idx = ses_ruptures[0].col_idx
         self.gsims = gsims
         self.trunc_level = trunc_level
         self.correl_model = correl_model
         self.weight = len(ses_ruptures)
+        self.eps_dict = eps_dict
 
     @property
     def tags(self):
@@ -335,8 +331,29 @@ class RiskInputFromRuptures(object):
             for asset in assets_:
                 assets.append(asset)
                 hazards.append(hazard)
-                epsilons.append(self.epsilons[asset.id])
+                epsilons.append(self.eps_dict[asset.id])
         return assets, hazards, epsilons
+
+    def split(self, n):
+        """
+        Split a large RiskInputFromRuptures object into `n` children objects,
+        each one with a slice of the ruptures and of the epsilons of the
+        parent object.
+
+        :param n: the number of slices to perform (0 means 1)
+        """
+        ris = []
+        for block in split_in_blocks(range(len(self.ses_ruptures)), n or 1):
+            indices = numpy.array(block, dtype=int)
+            ses_ruptures = self.ses_ruptures[indices]
+            eps_dict = {asset_id: eps[indices]
+                        for asset_id, eps in self.eps_dict.iteritems()}
+            ri = self.__class__(self.imt_taxonomies, self.sitecol,
+                                self.assets_by_site, ses_ruptures,
+                                self.gsims, self.trunc_level,
+                                self.correl_model, eps_dict)
+            ris.append(ri)
+        return ris
 
     def __repr__(self):
         return '<%s IMT_taxonomies=%s, weight=%d>' % (

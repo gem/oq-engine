@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import logging
 import operator
 import collections
 
@@ -86,19 +87,25 @@ class EventLossCalculator(base.RiskCalculator):
 
         correl_model = readinput.get_correl_model(oq)
         gsims_by_trt_id = self.rlzs_assoc.get_gsims_by_trt_id()
+        logging.info('Building the epsilons')
+
+        logging.info('Populating the risk inputs')
         self.riskinputs = []
         for trt_id, sesruptures in haz_out['ruptures_by_trt'].iteritems():
-            gsims = gsims_by_trt_id[trt_id]
-            ri = self.riskmodel.build_input_from_ruptures(
-                self.sitecol, self.assets_by_site, self.ses_ruptures,
-                gsims, oq.truncation_level, correl_model)
-
             # there should be different epsilons for each SES collection
             # and for each taxonomy
-            riskinput.set_epsilons(
-                ri, len(sesruptures), oq.master_seed,
+            eps_dict = riskinput.make_eps_dict(
+                self.assets_by_site, len(sesruptures),
+                getattr(oq, 'master_seed', 42),
                 getattr(oq, 'asset_correlation', 0))
-            self.riskinputs.append(ri)
+
+            gsims = gsims_by_trt_id[trt_id]
+
+            ri = self.riskmodel.build_input_from_ruptures(
+                self.sitecol, self.assets_by_site, self.ses_ruptures,
+                gsims, oq.truncation_level, correl_model, eps_dict)
+
+            self.riskinputs.extend(ri.split(oq.concurrent_tasks))
 
     def post_execute(self, result):
         saved = {}
