@@ -342,16 +342,12 @@ def export_event_loss_asset_csv(key, output, target):
     Export Event Loss Per Asset in CSV format
     """
     dest = _get_result_export_dest(target, output)
-
-    with FileWrapper(dest, mode='wb') as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(['Rupture', 'Asset', 'Magnitude', 'Loss'])
-
-        for event_loss in models.EventLossAsset.objects.filter(
-                event_loss__output=output).select_related().order_by(
-                'rupture__tag', 'asset__asset_ref'):
-            writer.writerow([event_loss.rupture.tag,
-                             event_loss.asset.asset_ref,
-                             "%.07f" % event_loss.rupture.rupture.magnitude,
-                             "%.07f" % event_loss.loss])
+    rows = []
+    for event_loss in models.EventLossAsset.objects.filter(
+            event_loss__output=output).select_related().order_by(
+            'rupture__tag', 'asset__asset_ref'):
+        rows.append([event_loss.rupture.tag,
+                     event_loss.asset.asset_ref,
+                     event_loss.loss])
+    writers.save_csv(dest, rows)
     return dest
