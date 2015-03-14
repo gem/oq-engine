@@ -29,7 +29,7 @@ import numpy
 from shapely import wkt, geometry
 
 from openquake.hazardlib import geo, site, correlation, imt
-from openquake.risklib import workflows
+from openquake.risklib import workflows, riskinput
 
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.node import read_nodes, LiteralNode, context
@@ -554,13 +554,13 @@ def get_imts(oqparam):
 
 def get_risk_model(oqparam):
     """
-    Return a :class:`openquake.risklib.workflows.RiskModel` instance
+    Return a :class:`openquake.risklib.riskinput.RiskModel` instance
 
    :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     risk_models = {}  # (imt, taxonomy) -> workflow
-    riskmodel = workflows.RiskModel(risk_models)
+    riskmodel = riskinput.RiskModel(risk_models)
 
     oqparam.__dict__.setdefault('insured_losses', False)
     extras = {}  # extra parameter tses for event based

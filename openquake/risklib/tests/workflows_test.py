@@ -22,7 +22,7 @@ import mock
 
 import numpy
 
-from openquake.risklib import workflows, scientific
+from openquake.risklib import workflows
 
 aaae = numpy.testing.assert_array_almost_equal
 

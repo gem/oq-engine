@@ -17,8 +17,6 @@
 # <http://www.gnu.org/licenses/>.
 
 import inspect
-import itertools
-import operator
 import functools
 import collections
 import numpy
@@ -51,8 +49,7 @@ class Asset(object):
                  values,
                  deductibles=None,
                  insurance_limits=None,
-                 retrofitting_values=None,
-                 epsilons=None):
+                 retrofitting_values=None):
         """
         :param asset_id:
             an unique identifier of the assets within the given exposure
@@ -81,7 +78,6 @@ class Asset(object):
         self.retrofitting_values = retrofitting_values
         self.deductibles = deductibles
         self.insurance_limits = insurance_limits
-        self.epsilons = epsilons
 
     def value(self, loss_type):
         """
@@ -200,7 +196,7 @@ class Classical(Workflow):
 
     Output = collections.namedtuple(
         'Output',
-        'assets loss_curves average_losses '
+        'assets loss_type loss_curves average_losses '
         'insured_curves average_insured_losses '
         'loss_maps loss_fractions')
 
@@ -273,7 +269,7 @@ class Classical(Workflow):
             average_insured_losses = None
 
         return self.Output(
-            assets,
+            assets, loss_type,
             curves, average_losses, insured_curves, average_insured_losses,
             maps, fractions)
 
@@ -399,9 +395,9 @@ class ProbabilisticEventBased(Workflow):
     """
     Output = collections.namedtuple(
         'Output',
-        "assets loss_matrix loss_curves average_losses stddev_losses "
-        "insured_curves average_insured_losses stddev_insured_losses "
-        "loss_maps event_loss_table")
+        "assets loss_type loss_matrix loss_curves average_losses stddev_losses"
+        " insured_curves average_insured_losses stddev_insured_losses"
+        " loss_maps event_loss_table")
 
     StatisticalOutput = collections.namedtuple(
         'StatisticalOutput',
@@ -497,7 +493,8 @@ class ProbabilisticEventBased(Workflow):
             stddev_insured_losses = None
 
         return self.Output(
-            assets, loss_matrix if self.return_loss_matrix else None,
+            assets, loss_type,
+            loss_matrix if self.return_loss_matrix else None,
             curves, average_losses, stddev_losses,
             insured_curves, average_insured_losses, stddev_insured_losses,
             maps, elt)
@@ -581,6 +578,55 @@ class ProbabilisticEventBased(Workflow):
                 losses, poes, bounds_error=False, fill_value=0)(loss_ratios)
                 for losses, poes in curves]
         return loss_ratios, curves_poes
+
+
+@registry.add('event_loss')
+class EventLoss(ProbabilisticEventBased):
+    """
+    Implements the Event Loss workflow
+
+    Per-realization Output are saved into
+    :class:`openquake.risklib.workflows.EventLoss.Output`
+    which contains several fields:
+
+    :attr assets:
+      an iterable over N assets the outputs refer to
+
+    :attr dict event_loss_table:
+      a dictionary mapping event ids to aggregate loss values
+
+    """
+    Output = collections.namedtuple(
+        'Output', "assets loss_type event_loss_per_asset tags")
+
+    def __call__(self, loss_type, assets, ground_motion_values, epsilons,
+                 event_ids):
+        """
+        :param str loss_type: the loss type considered
+
+        :param assets:
+           assets is an iterator over
+           :class:`openquake.risklib.scientific.Asset` instances
+
+        :param ground_motion_values:
+           a numpy array with ground_motion_values of shape N x R
+
+        :param epsilons:
+           a numpy array with stochastic values of shape N x R
+
+        :param event_ids:
+           a numpy array of R event ID (integer)
+
+        :returns:
+            a :class:
+            `openquake.risklib.workflows.EventLoss.Output`
+            instance.
+        """
+        loss_matrix = self.risk_functions[loss_type].apply_to(
+            ground_motion_values, epsilons)
+        values = utils.numpy_map(lambda a: a.value(loss_type), assets)
+        ela = loss_matrix.T * values  # matrix with R x N elements
+        return self.Output(assets, loss_type, ela, event_ids)
 
 
 @registry.add('classical_bcr')
@@ -730,7 +776,7 @@ class Damage(Workflow):
         self.taxonomy = taxonomy
         self.risk_functions = fragility_functions
 
-    def __call__(self, loss_type, assets, gmfs, _epsilons=None):
+    def __call__(self, loss_type, assets, gmfs, _epsilons=None, _tags=None):
         """
         :param loss_type: the string 'damage'
         :param assets: a list of N assets of the same taxonomy
@@ -821,193 +867,3 @@ def get_workflow(imt, taxonomy, oqparam, **extra):
     if missing:
         raise TypeError('Missing parameter: %s' % ', '.join(missing))
     return workflow_class(imt, taxonomy, **all_args)
-
-
-class FakeRlzsAssoc(collections.Mapping):
-    """
-    Used for scenario calculators, when there are no realizations.
-    """
-    def __init__(self, num_rlzs):
-        self.realizations = range(num_rlzs)
-        self.rlzs_assoc = {i: [] for i in self.realizations}
-
-    def combine(self, result):
-        return {i: result[key] for i, key in enumerate(sorted(result))}
-
-    def collect_by_rlz(self, dicts):
-        """
-        :param dicts: a list of dicts with key (trt_model_id, gsim)
-        :returns: a dictionary of lists keyed by realization
-
-        For instance
-
-        >>> assoc = FakeRlzsAssoc(num_rlzs=2)
-        >>> assoc.collect_by_rlz([
-        ... {(0, 'ChiouYoungs2008'): numpy.array([0.06, 0.02, 0.09]),
-        ...  (0, 'AkkarBommer2010'): numpy.array([0.05, 0.03, 0.04])}])
-        {0: [array([ 0.05,  0.03,  0.04])], 1: [array([ 0.06,  0.02,  0.09])]}
-        """
-        keys = sorted(dicts[0])
-        values_by_rlz = {i: [] for i in range(len(keys))}
-        for dic in map(self.combine, dicts):
-            if dic:
-                for i in range(len(keys)):
-                    values_by_rlz[i].append(dic[i])
-        return values_by_rlz
-
-    def __iter__(self):
-        return self.rlzs_assoc.iterkeys()
-
-    def __getitem__(self, key):
-        return self.rlzs_assoc[key]
-
-    def __len__(self):
-        return len(self.rlzs_assoc)
-
-
-class RiskModel(collections.Mapping):
-    """
-    A container (imt, taxonomy) -> workflow
-    """
-    def __init__(self, workflows, damage_states=None):
-        self.damage_states = damage_states  # not None for damage calculations
-        self._workflows = workflows
-
-    def get_taxonomies(self, imt=None):
-        """
-        Return the set of taxonomies which are part of the RiskModel
-        """
-        if imt is None:
-            return set(taxonomy for imt, taxonomy in self)
-        return set(taxonomy for imt_str, taxonomy in self if imt_str == imt)
-
-    def get_imts(self, taxonomy=None):
-        if taxonomy is None:
-            return set(imt for imt, taxonomy in self)
-        return set(imt for imt, taxo in self if taxo == taxonomy)
-
-    def get_imt_taxonomies(self):
-        """
-        For each IMT in the risk model, yield pairs (imt, taxonomies)
-        with the taxonomies associated to the IMT. For fragility functions,
-        there is a single taxonomy for each IMT.
-        """
-        by_imt = operator.itemgetter(0)
-        by_taxo = operator.itemgetter(1)
-        for imt, group in itertools.groupby(sorted(self), key=by_imt):
-            yield imt, map(by_taxo, group)
-
-    def __getitem__(self, imt_taxo):
-        return self._workflows[imt_taxo]
-
-    def __iter__(self):
-        return iter(sorted(self._workflows))
-
-    def __len__(self):
-        return len(self._workflows)
-
-    def build_input(self, imt, hazards_by_site, assets_by_site):
-        """
-        :param imt: an Intensity Measure Type
-        :param hazards_by_site: an array of hazards per each site
-        :param assets_by_site: an array of assets per each site
-        :returns: a :class:`RiskInput` instance
-        """
-        bytaxonomy = operator.attrgetter('taxonomy')
-        taxonomies = self.get_taxonomies(imt)
-        hazard_per_asset_group = []
-        for hazard, assets in itertools.izip(hazards_by_site, assets_by_site):
-            assets_by_taxo = {}
-            for taxonomy, group in itertools.groupby(
-                    sorted(assets, key=bytaxonomy), bytaxonomy):
-                if taxonomy in taxonomies:
-                    assets_by_taxo[taxonomy] = list(group)
-            if assets_by_taxo:
-                hazard_per_asset_group.append((hazard, assets_by_taxo))
-        return RiskInput(imt, hazard_per_asset_group)
-
-    def gen_outputs(self, riskinputs, rlzs_assoc):
-        """
-        Yield the outputs generated by each getter and loss type for each
-        workflow, as a list of values, one for each realization.
-
-        :param riskinputs: a list of riskinputs with consistent IMT
-        :param rlzs_assoc: a RlzsAssoc instance
-        """
-        for riskinput in riskinputs:
-            out = self.gen_output(riskinput, rlzs_assoc)
-            for key in sorted(out):
-                yield out[key]  # list of results by realization
-
-    def gen_output(self, riskinput, rlzs_assoc):
-        """
-        :param riskinput: RiskInput instance
-        :param rlzs_assoc: a RlzsAssoc instance
-        :returns: a map taxonomy, loss_type -> results by realization
-        """
-        assets_, hazards_, epsilons_ = riskinput.get_all()
-        output = {}
-        for imt, taxonomies in riskinput.imt_taxonomies:
-            for taxonomy in taxonomies:
-                assets = assets_[taxonomy]
-                if not assets:
-                    continue
-                hazards = hazards_[taxonomy]
-                if not hazards:
-                    continue
-                # hazards_[taxonomy] is a list of dictionaries key -> value
-                hazards_by_rlz = rlzs_assoc.collect_by_rlz(hazards)
-                epsilons = epsilons_[taxonomy]
-                workflow = self[imt, taxonomy]
-                for loss_type in workflow.loss_types:
-                    output[taxonomy, loss_type] = [
-                        workflow(loss_type, assets,
-                                 hazards_by_rlz[rlz], epsilons)
-                        for rlz in rlzs_assoc.realizations]
-        return output
-
-
-class RiskInput(object):
-    """
-    Contains all the assets and hazard values associated to a given
-    imt and site.
-
-    :param imt: Intensity Measure Type string
-    :param hazard_assets_by_taxo: pairs (hazard, {imt: assets}) for each site
-    """
-    def __init__(self, imt, hazard_assets_by_taxo):
-        self.imt = imt
-        self.hazard_assets_by_taxo = hazard_assets_by_taxo
-        taxonomies = set()
-        self.weight = 0
-        for _hazard, assets_by_taxo in hazard_assets_by_taxo:
-            for taxo, assets in assets_by_taxo.iteritems():
-                taxonomies.add(taxo)
-                self.weight += len(assets)
-        self.taxonomies = sorted(taxonomies)
-
-    @property
-    def imt_taxonomies(self):
-        """Return a list of pairs (imt, taxonomies) with a single element"""
-        return [(self.imt, self.taxonomies)]
-
-    def get_all(self):
-        """
-        Return dictionaries with
-        assets, hazards and epsilons for each taxonomy.
-        """
-        assets = {taxonomy: [] for taxonomy in self.taxonomies}
-        hazards = {taxonomy: [] for taxonomy in self.taxonomies}
-        epsilons = {taxonomy: [] for taxonomy in self.taxonomies}
-        for hazard, assets_by_taxo in self.hazard_assets_by_taxo:
-            for taxonomy in self.taxonomies:
-                for asset in assets_by_taxo.get(taxonomy, []):
-                    assets[taxonomy].append(asset)
-                    hazards[taxonomy].append(hazard)
-                    epsilons[taxonomy].append(asset.epsilons)
-        return assets, hazards, epsilons
-
-    def __repr__(self):
-        return '<%s IMT=%s, taxonomy=%s, weight=%d>' % (
-            self.__class__.__name__, self.imt, ', '.join(self.taxonomies),
-            self.weight)

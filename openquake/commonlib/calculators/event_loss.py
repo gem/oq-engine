@@ -1,0 +1,113 @@
+#  -*- coding: utf-8 -*-
+#  vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+#  Copyright (c) 2015, GEM Foundation
+
+#  OpenQuake is free software: you can redistribute it and/or modify it
+#  under the terms of the GNU Affero General Public License as published
+#  by the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+
+#  OpenQuake is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+
+#  You should have received a copy of the GNU Affero General Public License
+#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+import operator
+import collections
+
+from openquake.baselib.general import AccumDict
+from openquake.commonlib.calculators import base
+from openquake.commonlib import readinput, writers
+from openquake.risklib import riskinput
+
+
+def event_loss(riskinputs, riskmodel, rlzs_assoc, monitor):
+    """
+    :param riskinputs:
+        a list of :class:`openquake.risklib.riskinput.RiskInput` objects
+    :param riskmodel:
+        a :class:`openquake.risklib.riskinput.RiskModel` instance
+    :param rlzs_assoc:
+        a class:`openquake.commonlib.source.RlzsAssoc` instance
+    :param monitor:
+        :class:`openquake.commonlib.parallel.PerformanceMonitor` instance
+    :returns:
+        a dictionary (rlz.ordinal, loss_type) -> tag -> [(asset.id, loss), ...]
+    """
+    acc = collections.defaultdict(AccumDict)
+    # rlz.ordinal, loss_type -> tag -> [(asset.id, loss), ...]
+    for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc):
+        for rlz, out in out_by_rlz.iteritems():
+            for tag, losses in zip(out.tags, out.event_loss_per_asset):
+                acc[rlz.ordinal, out.loss_type] += {
+                    tag: [(asset.id, loss) for asset, loss in zip(
+                        out.assets, losses) if loss]}
+    return acc
+
+
+@base.calculators.add('event_loss')
+class EventLossCalculator(base.RiskCalculator):
+    """
+    Event based PSHA calculator generating the ruptures only
+    """
+    hazard_calculator = 'event_based_rupture'
+    core_func = event_loss
+    result_kind = 'event_loss_by_rlz_tag'
+
+    def riskinput_key(self, ri):
+        """
+        :param ri: riskinput object
+        :returns: the SESCollection idx associated to it
+        """
+        return ri.col_idx
+
+    def pre_execute(self):
+        """
+        Read the precomputed ruptures (or compute them on the fly) and
+        prepare some empty files in the export directory to store the gmfs
+        (if any). If there were pre-existing files, they will be erased.
+        """
+        oq = self.oqparam
+        oq.tses = oq.investigation_time * oq.ses_per_logic_tree_path * (
+            oq.number_of_logic_tree_samples or 1)
+        self.riskmodel = readinput.get_risk_model(self.oqparam)
+        haz_out, hcalc = base.get_hazard(self)
+        self.assets_by_site = hcalc.assets_by_site
+        self.composite_source_model = hcalc.composite_source_model
+        self.sitecol = hcalc.sitecol
+        self.rlzs_assoc = hcalc.rlzs_assoc
+        self.ses_ruptures = sorted(
+            sum(haz_out['ruptures_by_trt'].itervalues(), []),
+            key=operator.attrgetter('tag'))
+
+        correl_model = readinput.get_correl_model(oq)
+        gsims_by_trt_id = self.rlzs_assoc.get_gsims_by_trt_id()
+        self.riskinputs = []
+        for trt_id, sesruptures in haz_out['ruptures_by_trt'].iteritems():
+            gsims = gsims_by_trt_id[trt_id]
+            ri = self.riskmodel.build_input_from_ruptures(
+                self.sitecol, self.assets_by_site, self.ses_ruptures,
+                gsims, oq.truncation_level, correl_model)
+
+            # there should be different epsilons for each SES collection
+            riskinput.set_epsilons(
+                ri, len(sesruptures), oq.master_seed,
+                getattr(oq, 'asset_correlation', 0))
+
+            self.riskinputs.append(ri)
+
+    def post_execute(self, result):
+        saved = {}
+        for ordinal, loss_type in sorted(result):
+            data = result[ordinal, loss_type]
+            rows = []
+            for tag in sorted(data):
+                for asset_id, loss in sorted(data[tag]):
+                    rows.append((tag, asset_id, loss))
+            key = 'rlz-%03d-%s-event-loss-asset.csv' % (ordinal, loss_type)
+            saved[key] = writers.save_csv(key, rows, fmt='%11.8E')
+        return saved

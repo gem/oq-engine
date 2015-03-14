@@ -38,7 +38,7 @@ RISK_CALCULATORS = [
     'classical_bcr', 'event_based_bcr', 'scenario_damage', 'classical_damage']
 
 EXPERIMENTAL_CALCULATORS = [
-    'event_based_fr']
+    'event_loss']
 
 CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS + EXPERIMENTAL_CALCULATORS
 
@@ -250,8 +250,6 @@ class OqParam(valid.ParamSet):
         specific_assets = getattr(self, 'specific_assets', None)
         if specific_assets and 'specific_assets' in self.inputs:
             return False
-        elif specific_assets or 'specific_assets' in self.inputs:
-            return self.calculation_mode in RISK_CALCULATORS
         else:
             return True
 

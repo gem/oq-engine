@@ -25,7 +25,7 @@ from openquake.commonlib import readinput
 from openquake.commonlib.calculators import base
 from openquake.commonlib.export import export
 from openquake.commonlib.risk_writers import DmgState
-from openquake.risklib import workflows
+from openquake.risklib import riskinput
 
 
 def classical_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
@@ -33,9 +33,9 @@ def classical_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
     Core function for a classical damage computation.
 
     :param riskinputs:
-        a list of :class:`openquake.risklib.workflows.RiskInput` objects
+        a list of :class:`openquake.risklib.riskinput.RiskInput` objects
     :param riskmodel:
-        a :class:`openquake.risklib.workflows.RiskModel` instance
+        a :class:`openquake.risklib.riskinput.RiskModel` instance
     :param rlzs_assoc:
         associations (trt_id, gsim) -> realizations
     :param monitor:
@@ -83,7 +83,7 @@ class ClassicalDamageCalculator(base.RiskCalculator):
             data[imt] = numpy.array([{(0, 'FromCsv'): curve}
                                      for curve in hcurves_by_imt[imt]])
         self.riskinputs = self.build_riskinputs(data)
-        self.rlzs_assoc = workflows.FakeRlzsAssoc(num_rlzs=1)  # TODO: extend
+        self.rlzs_assoc = riskinput.FakeRlzsAssoc(num_rlzs=1)  # TODO: extend
 
     def post_execute(self, result):
         """

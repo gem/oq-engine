@@ -21,7 +21,6 @@ import logging
 
 import numpy
 
-from openquake.hazardlib import site
 from openquake.risklib import scientific
 from openquake.baselib.general import AccumDict
 from openquake.commonlib.calculators import base, calc
@@ -36,9 +35,11 @@ def scenario_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
     Core function for a damage computation.
 
     :param riskinputs:
-        a list of :class:`openquake.risklib.workflows.RiskInput` objects
+        a list of :class:`openquake.risklib.riskinput.RiskInput` objects
     :param riskmodel:
-        a :class:`openquake.risklib.workflows.RiskModel` instance
+        a :class:`openquake.risklib.riskinput.RiskModel` instance
+    :param rlzs_assoc:
+        a class:`openquake.commonlib.source.RlzsAssoc` instance
     :param monitor:
         :class:`openquake.commonlib.parallel.PerformanceMonitor` instance
     :returns:
@@ -50,33 +51,13 @@ def scenario_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
                  sum(ri.weight for ri in riskinputs))
     with monitor:
         result = AccumDict()  # (key_type, key) -> result
-        for [(assets, fractions)] in riskmodel.gen_outputs(
-                riskinputs, rlzs_assoc):
-            for asset, fraction in zip(assets, fractions):
+        for output in riskmodel.gen_outputs(riskinputs, rlzs_assoc):
+            [assets_fractions] = output.values()  # there is a single rlz
+            for asset, fraction in zip(*assets_fractions):
                 damages = fraction * asset.number
                 result += {('asset', asset): scientific.mean_std(damages)}
                 result += {('taxonomy', asset.taxonomy): damages}
     return result
-
-
-def expand(data_dict, filtered_sites):
-    """
-    Expand arrays with n elements into arrays of N elements (with N > n)
-    by adding zeros. n is the number of filtered sites, N the total number.
-
-    :param data_dict: a dictionary key -> imt -> array with n elements
-    :param filtered_sites: a filtered SiteCollection
-    :returns: a dictionary key -> imt -> array with N elements
-    """
-    if isinstance(filtered_sites, site.SiteCollection):
-        # nothing was filtered, do nothing
-        return data_dict
-
-    expanded = {}
-    for key, data_by_imt in data_dict.iteritems():
-        expanded[key] = {imt: filtered_sites.expand(array, 0)
-                         for imt, array in data_by_imt.iteritems()}
-    return expanded
 
 
 @base.calculators.add('scenario_damage')
@@ -96,7 +77,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
         logging.info('Computing the GMFs')
         haz_out, hcalc = base.get_hazard(self, exports='xml')
-        gmfs_by_trt_gsim = expand(haz_out['gmfs_by_trt_gsim'], hcalc.sites)
+        gmfs_by_trt_gsim = calc.expand(
+            haz_out['gmfs_by_trt_gsim'], hcalc.sites)
         gmfs_by_imt = calc.data_by_imt(
             gmfs_by_trt_gsim, self.oqparam.imtls, len(self.sitecol))
 
