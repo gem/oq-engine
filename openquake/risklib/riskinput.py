@@ -19,6 +19,7 @@
 
 import itertools
 import operator
+import logging
 import collections
 
 import numpy
@@ -236,8 +237,7 @@ class RiskInput(object):
             self.weight)
 
 
-def make_eps_dict(assets_by_site, num_samples, seed, correlation,
-                  epsilon_sampling=0):
+def make_eps_dict(assets_by_site, num_samples, seed, correlation):
     """
     :param riskinput: an object with an attribute .assets_by_site
     :param int num_samples: the number of ruptures
@@ -246,19 +246,19 @@ def make_eps_dict(assets_by_site, num_samples, seed, correlation,
     :returns: dictionary asset_id -> epsilons
     """
     eps_dict = {}  # asset_id -> epsilons
-    if epsilon_sampling:
-        num_samples = min(num_samples, epsilon_sampling)
     all_assets = (a for assets in assets_by_site for a in assets)
     assets_by_taxo = groupby(all_assets, operator.attrgetter('taxonomy'))
     for taxonomy, assets in assets_by_taxo.iteritems():
-        zeros = numpy.zeros((len(assets), num_samples))
+        shape = (len(assets), num_samples)
+        logging.info('Building %s epsilons for taxonomy %s', shape, taxonomy)
+        zeros = numpy.zeros(shape)
         epsilons = scientific.make_epsilons(zeros, seed, correlation)
         for asset, eps in zip(assets, epsilons):
             eps_dict[asset.id] = eps
     return eps_dict
 
 
-def expand(array, N):
+def expand(array, N, indices=None):
     """
     Given a non-empty array with n elements, expands it to a larger
     array with N elements.
@@ -275,12 +275,9 @@ def expand(array, N):
     n = len(array)
     if n == 0:
         raise ValueError('Empty array')
-    elif n == N:
+    elif n >= N:
         return array
-    elif n > N:
-        raise ValueError('Cannot expand an array of %d elements to %d',
-                         n, N)
-    return numpy.array([array[i % n] for i in xrange(N)])
+    return numpy.array([array[i % n] for i in indices or xrange(N)])
 
 
 class RiskInputFromRuptures(object):
@@ -359,7 +356,7 @@ class RiskInputFromRuptures(object):
                 epsilons.append(expand(self.eps_dict[asset.id], self.weight))
         return assets, hazards, epsilons
 
-    def split(self, n):
+    def split(self, n, epsilon_sampling):
         """
         Split a large RiskInputFromRuptures object into `n` children objects,
         each one with a slice of the ruptures and of the epsilons of the
@@ -369,9 +366,9 @@ class RiskInputFromRuptures(object):
         """
         ris = []
         for block in split_in_blocks(range(len(self.ses_ruptures)), n or 1):
-            indices = numpy.array(block, dtype=int)
+            indices = list(block)
             ses_ruptures = self.ses_ruptures[indices]
-            eps_dict = {asset_id: eps[indices]
+            eps_dict = {asset_id: eps[indices][:epsilon_sampling]
                         for asset_id, eps in self.eps_dict.iteritems()}
             ri = self.__class__(self.imt_taxonomies, self.sitecol,
                                 self.assets_by_site, ses_ruptures,

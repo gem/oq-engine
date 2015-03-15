@@ -97,8 +97,7 @@ class EventLossCalculator(base.RiskCalculator):
             eps_dict = riskinput.make_eps_dict(
                 self.assets_by_site, len(sesruptures),
                 getattr(oq, 'master_seed', 42),
-                getattr(oq, 'asset_correlation', 0),
-                epsilon_sampling=1000)
+                getattr(oq, 'asset_correlation', 0))
 
             gsims = gsims_by_trt_id[trt_id]
 
@@ -106,7 +105,8 @@ class EventLossCalculator(base.RiskCalculator):
                 self.sitecol, self.assets_by_site, sesruptures,
                 gsims, oq.truncation_level, correl_model, eps_dict)
 
-            self.riskinputs.extend(ri.split(oq.concurrent_tasks))
+            self.riskinputs.extend(
+                ri.split(oq.concurrent_tasks, epsilon_sampling=1000))
 
     def post_execute(self, result):
         saved = {}
