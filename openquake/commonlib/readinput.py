@@ -673,8 +673,8 @@ def get_exposure(oqparam):
                 number = asset.attrib['number']
             else:
                 # other calculators ignore the 'number' attribute;
-                # if it is missing it is considered None
-                number = asset.attrib.get('number')
+                # if it is missing it is considered 1
+                number = asset.attrib.get('number', 1)
             location = asset.location['lon'], asset.location['lat']
             if region and not geometry.Point(*location).within(region):
                 out_of_region += 1

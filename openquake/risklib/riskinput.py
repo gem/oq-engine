@@ -269,10 +269,15 @@ def expand(array, N):
     array([1, 2, 3, 1, 2, 3, 1, 2, 3, 1])
     >>> expand(numpy.zeros((2, 10)), 5).shape
     (5, 10)
+    >>> expand([1, 2], 2)  # already expanded
+    array([1, 2])
     """
     n = len(array)
-    assert n > 0, 'Empty array'
-    if n >= N:
+    if n == 0:
+        raise ValueError('Empty array')
+    elif n == N:
+        return array
+    elif n > N:
         raise ValueError('Cannot expand an array of %d elements to %d',
                          n, N)
     return numpy.array([array[i % n] for i in xrange(N)])
