@@ -103,7 +103,7 @@ class EventLossCalculator(base.RiskCalculator):
             gsims = gsims_by_trt_id[trt_id]
 
             ri = self.riskmodel.build_input_from_ruptures(
-                self.sitecol, self.assets_by_site, self.ses_ruptures,
+                self.sitecol, self.assets_by_site, sesruptures,
                 gsims, oq.truncation_level, correl_model, eps_dict)
 
             self.riskinputs.extend(ri.split(oq.concurrent_tasks))
