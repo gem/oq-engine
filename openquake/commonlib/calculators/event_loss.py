@@ -39,14 +39,18 @@ def event_loss(riskinputs, riskmodel, rlzs_assoc, monitor):
     :returns:
         a dictionary (rlz.ordinal, loss_type) -> tag -> [(asset.id, loss), ...]
     """
+    specific = riskmodel.specific_assets
     acc = collections.defaultdict(AccumDict)
     # rlz.ordinal, loss_type -> tag -> [(asset.id, loss), ...]
     for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc):
         for rlz, out in out_by_rlz.iteritems():
             for tag, losses in zip(out.tags, out.event_loss_per_asset):
+                pairs = [(asset.id, loss) for asset, loss in zip(
+                    out.assets, losses) if loss and asset.id in specific]
                 acc[rlz.ordinal, out.loss_type] += {
-                    tag: [(asset.id, loss) for asset, loss in zip(
-                        out.assets, losses) if loss]}
+                    tag: AccumDict(
+                        pairs=pairs, loss=sum(losses), nonzero=len(pairs),
+                        total=sum(1 for a in out.assets if a.id in specific))}
     return acc
 
 
@@ -75,8 +79,12 @@ class EventLossCalculator(base.RiskCalculator):
         oq = self.oqparam
         oq.tses = oq.investigation_time * oq.ses_per_logic_tree_path * (
             oq.number_of_logic_tree_samples or 1)
+
         self.riskmodel = readinput.get_risk_model(self.oqparam)
+        self.riskmodel.specific_assets = set(self.oqparam.specific_assets)
+
         haz_out, hcalc = base.get_hazard(self)
+
         self.assets_by_site = hcalc.assets_by_site
         self.composite_source_model = hcalc.composite_source_model
         self.sitecol = hcalc.sitecol
@@ -112,10 +120,22 @@ class EventLossCalculator(base.RiskCalculator):
         saved = {}
         for ordinal, loss_type in sorted(result):
             data = result[ordinal, loss_type]
-            rows = []
+            ela = []  # event loss per asset
+            elo = []  # total event loss
+            nonzero = total = 0
             for tag in sorted(data):
-                for asset_id, loss in sorted(data[tag]):
-                    rows.append((tag, asset_id, loss))
-            key = 'rlz-%03d-%s-event-loss-asset.csv' % (ordinal, loss_type)
-            saved[key] = writers.save_csv(key, rows, fmt='%11.8E')
+                d = data[tag]
+                for asset_id, loss in sorted(d['pairs']):
+                    ela.append((tag, asset_id, loss))
+                elo.append((tag, d['loss']))
+                nonzero += d['nonzero']
+                total += d['total']
+            if ela:
+                key = 'rlz-%03d-%s-event-loss-asset.csv' % (ordinal, loss_type)
+                saved[key] = writers.save_csv(key, ela, fmt='%11.8E')
+                logging.info('rlz %d, loss type %s: %d/%d nonzero losses',
+                             ordinal, loss_type, nonzero, total)
+            if elo:
+                key = 'rlz-%03d-%s-event-loss.csv' % (ordinal, loss_type)
+                saved[key] = writers.save_csv(key, elo, fmt='%11.8E')
         return saved
