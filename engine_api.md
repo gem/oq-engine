@@ -117,7 +117,9 @@ The requested log as a JSON list of rows
 #### GET /v1/calc/:calc_id/log/:start::stop
 
 Get a slice of the calculation log for the given `calc_id`, from `start`
-to `stop`. 
+to `stop`. If `stop` is the empty string, gives all the available lines.
+For instance `http://host/v1/calc/123/log/0:` gives the complete log
+for calculation 123.
 
 Parameters: None
 
