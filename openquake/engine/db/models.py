@@ -134,7 +134,7 @@ def extract_ses_ordinal(tag):
     return int(mo.group(1))
 
 
-############## Fix FloatField underflow error ##################
+# ############## Fix FloatField underflow error ################# #
 # http://stackoverflow.com/questions/9556586/floating-point-numbers-of-python-float-and-postgresql-double-precision
 
 def _get_prep_value(self, value):
@@ -291,6 +291,7 @@ class OqJob(djm.Model):
     job_pid = djm.IntegerField(default=0)
     supervisor_pid = djm.IntegerField(default=0)
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
+    relevant = djm.BooleanField(null=False, default=True)
 
     class Meta:
         db_table = 'uiapi\".\"oq_job'
