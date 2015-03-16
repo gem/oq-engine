@@ -157,14 +157,9 @@ def oqtask(task_func):
         # the revoke functionality can work
         EnginePerformanceMonitor.store_task_id(job_id, tsk)
 
-        # if there is no db handler already, add one
-        if not any(isinstance(handler, logs.LogDatabaseHandler)
-                   for handler in logs.LOG.handlers):
-            logs.LOG.addHandler(logs.LogDatabaseHandler(job))
-            logs.set_level(job.log_level)
-
         with EnginePerformanceMonitor(
-                'total ' + task_func.__name__, job_id, tsk, flush=True):
+                'total ' + task_func.__name__, job_id, tsk, flush=True), \
+                logs.handle(job):
             try:
                 # log a warning if too much memory is used
                 check_mem_usage(SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
