@@ -49,7 +49,7 @@ def classical_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
     with monitor:
         result = {i: AccumDict() for i in range(len(rlzs_assoc))}
         for outputs in riskmodel.gen_outputs(riskinputs, rlzs_assoc):
-            for i, out in enumerate(outputs):
+            for i, out in outputs.iteritems():
                 result[i] += dict(zip(out.assets, out.damages))
     return result
 

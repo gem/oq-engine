@@ -270,7 +270,7 @@ def expand(array, N, indices=None):
     >>> expand(numpy.zeros((2, 10)), 5).shape
     (5, 10)
     >>> expand([1, 2], 2)  # already expanded
-    array([1, 2])
+    [1, 2]
     """
     n = len(array)
     if n == 0:

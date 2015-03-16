@@ -31,7 +31,7 @@ def asset(values, deductibles=None,
           insurance_limits=None,
           retrofitting_values=None):
     return workflows.Asset('a1', 'taxonomy', 1, (0, 0), values,
-                           deductibles, insurance_limits,
+                           1, deductibles, insurance_limits,
                            retrofitting_values)
 
 
