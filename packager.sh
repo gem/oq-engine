@@ -63,6 +63,16 @@ if [ "$GEM_EPHEM_CMD" = "" ]; then
 fi
 GEM_EPHEM_NAME="ubuntu-lxc-eph"
 
+if command -v lxc-shutdown &> /dev/null; then
+    # Older lxc (< 1.0.0) with lxc-shutdown
+    LXC_TERM="lxc-shutdown -t 10 -w"
+    LXC_KILL="lxc-stop"
+else
+    # Newer lxc (>= 1.0.0) with lxc-stop only
+    LXC_TERM="lxc-stop -t 10"
+    LXC_KILL="lxc-stop -k"
+fi
+
 NL="
 "
 TB="	"
@@ -86,7 +96,7 @@ sig_hand () {
         if [ -f "${upper}.dsk" ]; then
             loop_dev="$(sudo losetup -a | grep "(${upper}.dsk)$" | cut -d ':' -f1)"
         fi
-        sudo lxc-stop -n $lxc_name
+        sudo $LXC_KILL -n $lxc_name
         sudo umount /var/lib/lxc/$lxc_name/rootfs
         sudo umount /var/lib/lxc/$lxc_name/ephemeralbind
         echo "$upper" | grep -q '^/tmp/'
@@ -435,7 +445,7 @@ _pkgtest_innervm_run () {
 
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
         # run all of the hazard and risk demos
-        ssh $lxc_ip "set -e ; cd /usr/openquake/engine/demos
+        ssh $lxc_ip "set -e ; cd /usr/share/doc/python-oq-risklib/examples/demos
         for ini in \$(find . -name job.ini | sort); do
             echo \"Running \$ini\"
             for loop in \$(seq 1 $GEM_MAXLOOP); do
@@ -548,8 +558,8 @@ _lxc_name_and_ip_get()
             lxc_name="$(grep "sudo lxc-console -n $GEM_EPHEM_NAME" $filename | sed "s/.*sudo lxc-console -n \($GEM_EPHEM_NAME\)/\1/g")"
             for e in $(seq 1 40); do
                 sleep 2
-                if grep -q "$lxc_name" /var/lib/misc/dnsmasq.leases ; then
-                    lxc_ip="$(grep " $lxc_name " /var/lib/misc/dnsmasq.leases | cut -d ' ' -f 3)"
+                if grep -q "$lxc_name" /var/lib/misc/dnsmasq*.leases ; then
+                    lxc_ip="$(grep " $lxc_name " /var/lib/misc/dnsmasq*.leases | tail -n 1 | cut -d ' ' -f 3)"
                     break
                 fi
             done
@@ -634,7 +644,7 @@ devtest_run () {
     scp "${lxc_ip}:/tmp/celeryd.log" celeryd.log
     scp "${lxc_ip}:ssh.log" devtest.history
 
-    sudo lxc-shutdown -n $lxc_name -w -t 10
+    sudo $LXC_TERM -n $lxc_name
 
     # NOTE: pylint returns errors too frequently to consider them a critical event
     if pylint --rcfile pylintrc -f parseable openquake > pylint.txt ; then
@@ -708,7 +718,7 @@ EOF
     scp "${lxc_ip}:/tmp/celeryd.log" celeryd.log
     scp "${lxc_ip}:ssh.log" pkgtest.history
 
-    sudo lxc-shutdown -n $lxc_name -w -t 10
+    sudo $LXC_TERM -n $lxc_name
     set -e
 
     if [ $inner_ret -ne 0 ]; then
