@@ -239,7 +239,8 @@ class Classical(Workflow):
         self.poes_disagg = poes_disagg
         self.insured_losses = insured_losses
 
-    def __call__(self, loss_type, assets, hazard_curves, _epsilons=None):
+    def __call__(self, loss_type, assets, hazard_curves, _epsilons=None,
+                 _tags=None):
         """
         :param str loss_type:
             the loss type considered
@@ -470,7 +471,6 @@ class ProbabilisticEventBased(Workflow):
             `openquake.risklib.scientific.ProbabilisticEventBased.Output`
             instance.
         """
-        import pdb; pdb.set_trace()
         loss_matrix = self.risk_functions[loss_type].apply_to(
             ground_motion_values, epsilons)
 
@@ -815,7 +815,8 @@ class ClassicalDamage(Workflow):
             hazard_investigation_time=hazard_investigation_time,
             risk_investigation_time=risk_investigation_time)
 
-    def __call__(self, loss_type, assets, hazard_curves, _epsilons=None):
+    def __call__(self, loss_type, assets, hazard_curves, _epsilons=None,
+                 _tags=None):
         """
         :param loss_type: the string 'damage'
         :param assets: a list of N assets of the same taxonomy
