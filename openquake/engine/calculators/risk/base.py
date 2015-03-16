@@ -26,6 +26,7 @@ import numpy
 from openquake.commonlib import risk_parsers
 from openquake.hazardlib.imt import from_string
 from openquake.commonlib.readinput import get_risk_model
+from openquake.commonlib.parallel import virtual_memory
 
 from openquake.engine import logs
 from openquake.engine.db import models
@@ -78,7 +79,7 @@ def prepare_risk(job_id, counts_taxonomy, calc):
             # TODO: the estimate should be revised by taking into account
             # the number of realizations
             estimate_mb = nbytes / 1024 / 1024 * 3
-            phymem = psutil.phymem_usage()
+            phymem = virtual_memory()
             available_memory = (1 - phymem.percent / 100) * phymem.total
             available_mb = available_memory / 1024 / 1024
             if nbytes * 3 > available_memory:

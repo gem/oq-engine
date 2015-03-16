@@ -184,6 +184,7 @@ def get_log_slice(request, calc_id, start, stop):
     """
     Get a slice of the calculation log as a JSON list of rows
     """
+    start = start or 0
     stop = stop or None
     try:
         rows = oqe_models.Log.objects.filter(job_id=calc_id)[start:stop]
@@ -204,13 +205,6 @@ def get_log_size(request, calc_id):
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
-
-
-def get_log(request, calc_id):
-    """
-    Get the full log of the calculation as a JSON list of rows
-    """
-    return get_log_slice(request, calc_id, 0, None)
 
 
 @csrf_exempt

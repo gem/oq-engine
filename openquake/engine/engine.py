@@ -21,7 +21,6 @@ import sys
 import time
 import getpass
 import itertools
-import logging
 import operator
 import tempfile
 from contextlib import contextmanager
@@ -295,15 +294,6 @@ def list_outputs(job_id, full=True):
     print_outputs_summary(outputs, full)
 
 
-def touch_log_file(log_file):
-    """
-    If a log file destination is specified, attempt to open the file in
-    'append' mode ('a'). If the specified file is not writable, an
-    :exc:`IOError` will be raised.
-    """
-    open(os.path.abspath(log_file), 'a').close()
-
-
 def print_results(job_id, duration, list_outputs):
     print 'Calculation %d completed in %d seconds. Results:' % (
         job_id, duration)
@@ -360,12 +350,6 @@ def run_job(cfg_file, log_level, log_file, exports='', hazard_output_id=None,
         job = job_from_file(
             cfg_file, getpass.getuser(), log_level, exports, hazard_output_id,
             hazard_calculation_id)
-        if log_file is 'stderr':
-            edir = job.get_param('export_dir')
-            log_file = os.path.join(edir, 'calc_%d.log' % job.id)
-            logging.root.addHandler(logs.LogStreamHandler(job))
-        touch_log_file(log_file)  # check if writeable
-
         # instantiate the calculator and run the calculation
         t0 = time.time()
         try:
@@ -376,8 +360,6 @@ def run_job(cfg_file, log_level, log_file, exports='', hazard_output_id=None,
         duration = time.time() - t0
         if job.status == 'complete':
             print_results(job.id, duration, list_outputs)
-            # sanity check to make sure that the logging is working
-            assert os.path.getsize(log_file) > 0
         else:
             sys.exit('Calculation %s failed' % job.id)
     return job
