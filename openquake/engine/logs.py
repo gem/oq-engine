@@ -181,12 +181,12 @@ def handle(job, log_level='info', log_file=None):
     try:
         yield
     finally:
+        # sanity check to make sure that the logging on file is working
+        if log_file and os.path.getsize(log_file) == 0:
+            logging.root.warn('The log file %s is empty!?' % log_file)
         for handler in handlers:
             logging.root.removeHandler(handler)
-        # sanity check to make sure that the logging on file is working
-        if log_file:
-            assert os.path.getsize(log_file) > 0
-
+            
 
 class tracing(object):
     """
