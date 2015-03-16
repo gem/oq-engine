@@ -103,12 +103,13 @@ Response:
 The requested result as a blob of text. If the desired `export_type` is not supported, an HTTP 404 error is returned.
 
 
-#### GET /v1/calc/:calc_id/log/:start:[:stop]
+#### GET /v1/calc/:calc_id/log/[:start]:[:stop]
 
 Get a slice of the calculation log for the given `calc_id`, from `start`
-to `stop`. If `stop` is the empty string, gives all the available lines.
-For instance `http://host/v1/calc/123/log/0:` gives the complete log
-for calculation 123.
+to `stop`. If `start` is the empty string, consider it `0` and starts
+from the beginning. If `stop` is the empty string, gives all the
+available lines. For instance `http://host/v1/calc/123/log/:` gives the
+complete log for calculation 123.
 
 Parameters: None
 
