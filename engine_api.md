@@ -103,17 +103,6 @@ Response:
 The requested result as a blob of text. If the desired `export_type` is not supported, an HTTP 404 error is returned.
 
 
-#### GET /v1/calc/:calc_id/log
-
-Get the full calculation log for the given `calc_id`.
-
-Parameters: None
-
-Response:
-
-The requested log as a JSON list of rows
-
-
 #### GET /v1/calc/:calc_id/log/:start:[:stop]
 
 Get a slice of the calculation log for the given `calc_id`, from `start`
