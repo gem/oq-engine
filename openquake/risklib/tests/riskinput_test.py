@@ -2,25 +2,9 @@ import unittest
 from operator import itemgetter
 
 from openquake.commonlib import readinput, writers
-from openquake.risklib import riskinput, utils
+from openquake.risklib import riskinput
 from openquake.commonlib.calculators import event_based
 from openquake.qa_tests_data.event_based_risk import case_2
-
-
-def make_event_loss_table(output, tags):
-    """
-    :returns: a list [((tag, asset_id, loss), ...] for nonzero losses
-    """
-    rows = []
-    all_losses = (output.loss_matrix.transpose() *
-                  utils.numpy_map(lambda a: a.value(output.loss_type),
-                                  output.assets))  # a matrix R x N
-    asset_ids = [a.id for a in output.assets]
-    for tag, losses in zip(tags, all_losses):
-        for asset_id, loss in zip(asset_ids, losses):
-            if loss:
-                rows.append((tag, asset_id, loss))
-    return rows
 
 
 class RiskInputTestCase(unittest.TestCase):
@@ -83,13 +67,3 @@ class RiskInputTestCase(unittest.TestCase):
         self.assertEqual(set(a.taxonomy for a in assets),
                          set(['RM', 'RC', 'W']))
         self.assertEqual(map(len, epsilons), [20] * 5)
-
-        data = {loss_type: [] for loss_type in self.riskmodel.get_loss_types()}
-        for out_by_rlz in self.riskmodel.gen_outputs([ri], rupcalc.rlzs_assoc):
-            [out] = out_by_rlz.values()
-            elt = make_event_loss_table(out, ri.tags)
-            data[out.loss_type].extend(elt)
-        for loss_type in data:
-            # sort by tag, asset_id
-            sdata = sorted(data[loss_type], key=itemgetter(0, 1))
-            writers.save_csv('elt-%s.csv' % loss_type, sdata)

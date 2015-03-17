@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os.path
 import logging
 import operator
 import collections
@@ -131,11 +132,15 @@ class EventLossCalculator(base.RiskCalculator):
                 nonzero += d['nonzero']
                 total += d['total']
             if ela:
-                key = 'rlz-%03d-%s-event-loss-asset.csv' % (ordinal, loss_type)
-                saved[key] = writers.save_csv(key, ela, fmt='%11.8E')
+                key = 'rlz-%03d-%s-event-loss-asset' % (ordinal, loss_type)
+                saved[key] = self.export_csv(key, ela)
                 logging.info('rlz %d, loss type %s: %d/%d nonzero losses',
                              ordinal, loss_type, nonzero, total)
             if elo:
-                key = 'rlz-%03d-%s-event-loss.csv' % (ordinal, loss_type)
-                saved[key] = writers.save_csv(key, elo, fmt='%11.8E')
+                key = 'rlz-%03d-%s-event-loss' % (ordinal, loss_type)
+                saved[key] = self.export_csv(key, elo)
         return saved
+
+    def export_csv(self, key, data):
+        dest = os.path.join(self.oqparam.export_dir, key) + '.csv'
+        return writers.save_csv(dest, data, fmt='%11.8E')
