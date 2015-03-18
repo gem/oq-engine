@@ -330,7 +330,7 @@ celeryd_wait $GEM_MAXLOOP"
         ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ;
                  cd oq-engine
                  DJANGO_SETTINGS_MODULE=openquake.server.settings nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-server.xml --with-coverage --cover-package=openquake.server --with-doctest openquake/server/tests/
-                 nosetests -v -a '${skip_tests}'--with-xunit --xunit-file=xunit-engine.xml --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine/tests/
+                 nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-engine.xml --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine/tests/
 
                  # OQ Engine QA tests (splitted into multiple execution to track the performance)
                  nosetests  -a '${skip_tests}qa,hazard,classical' -v --with-xunit --xunit-file=xunit-qa-hazard-classical.xml
