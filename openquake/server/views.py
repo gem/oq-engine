@@ -244,6 +244,7 @@ def run_calc(request):
     try:
         calc = oqe_models.OqJob.objects.get(pk=job.id)
         response_data = vars(calc.get_oqparam())
+        response_data['job_id'] = job.id
         response_data['status'] = calc.status
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
