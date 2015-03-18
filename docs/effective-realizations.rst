@@ -169,7 +169,7 @@ for probabilities of exceedence larger than 1% (for low values of
 the probability the convergency may be bad). For the details I
 suggest your `to look at the code`_.
 
-.. _to look at the code: ../openquake/commonlib/util.py).
+.. _to look at the code: ../openquake/commonlib/util.py
 
 I should also notice that the effective realizations produced by an
 event based calculation are not necessarily the same as the one
