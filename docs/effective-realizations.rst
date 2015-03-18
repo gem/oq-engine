@@ -158,7 +158,7 @@ of our examples (a case with bad convergence was chosen)::
  $ oq-lite run event_based/case_7/job.ini
  <...>
  WARNING:root:Relative difference with the classical mean curves for IMT=SA(0.1): 51%
-WARNING:root:Relative difference with the classical mean curves for IMT=PGA: 49%
+ WARNING:root:Relative difference with the classical mean curves for IMT=PGA: 49%
  <...>
  $ oq-lite plot /tmp/cl/hazard.pik /tmp/hazard.pik
 
@@ -167,7 +167,9 @@ computed by computing the relative difference between each point of
 the curves for each curve, and by taking the maximum, at least
 for probabilities of exceedence larger than 1% (for low values of
 the probability the convergency may be bad). For the details I
-suggest your [to look at the code](../openquake/commonlib/util.py).
+suggest your `to look at the code`__.
+
+.. _to look at the code: ../openquake/commonlib/util.py).
 
 I should also notice that the effective realizations produced by an
 event based calculation are not necessarily the same as the one
