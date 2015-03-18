@@ -92,13 +92,6 @@ class CalcHazardTestCase(BaseViewTestCase):
             self.assertEqual(200, response.status_code)
             self.assertEqual(expected_content, json.loads(response.content))
 
-    def test_404_no_calcs(self):
-        with mock.patch('openquake.server.views._get_calcs') as ghc:
-            ghc.return_value = []
-            response = views.calc(self.request)
-
-        self.assertEqual(404, response.status_code)
-
 
 class CalcRiskTestCase(BaseViewTestCase):
 
