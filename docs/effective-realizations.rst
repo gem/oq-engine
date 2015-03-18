@@ -1,14 +1,15 @@
 The concept of effective realizations
 ==============================================
 
-The management of the logic trees is the most complex
-thing in OpenQuake. The difficulty lies in optimization
-concerns: it is necessary to implement logic trees in an efficient way,
-otherwise the engine will not be able to manage large computations.
+The management of the logic trees is the most complex thing in
+OpenQuake. The problem is that it is necessary to implement logic
+trees in an efficient way, otherwise the engine will not be able to
+cope with large computations.
 
-To this aim we introduced the concept of *effective realizations*. The point is
-that there are very common situations in which it is possible to reduce the
-full logic tree of a computation to a much smaller one.
+To this aim we introduced the concept of *effective
+realizations*. Thhere are very common situations in which it is
+possible to reduce the full logic tree of a computation to a much
+smaller one. The engine takes full advantage of such situations.
 
 Reduction of the logic tree with full enumeration
 --------------------------------------------------
@@ -16,8 +17,8 @@ Reduction of the logic tree with full enumeration
 The reduction of the logic tree happens when the actual
 sources do not span the full range of tectonic region types in the
 GMPE logic tree file. This happens very often in SHARE calculations.
-The SHARE GMPE logic tree potentially contains 1280 realizations (per each
-of the three source models contained in the SHARE model),
+The GMPE logic tree potentially contains 1280 realizations per each
+of the three source models contained in the SHARE model,
 coming from 7 different tectonic region types:
 
 Active_Shallow:
@@ -36,8 +37,8 @@ Deep:
  2 GMPEs (b71, b72)
 
 The number of paths in the logic tree is 4 * 5 * 2 * 4 * 4 * 1 * 2 =
-1280, pretty large. We say that there 1280 *potential realizations*.
-However, in practice, in most computations users will be interested
+1280, pretty large. We say that there are 1280 *potential realizations*.
+However, in most computations the user will be interested
 only in a subset of them. For instance, if the sources contributing to
 your region of interest are only of kind **Active_Shallow** and
 **Stable_Shallow**, you would consider only 4 * 5 = 20 effective
@@ -115,31 +116,17 @@ Suppose for instance that we set
   `number_of_logic_tree_samples = 4000`
 
 to sample 4,000 branches instead of 400,000. The expectation is that
-the computation will be 100 times faster. This is the case for the
-classical calculator. However for the event based calculator things
+the computation will be 100 times faster. This is indeed the case for the
+classical calculator. However, for the event based calculator things
 are trickier: each sample of the source model must produce different
 ruptures, even if there is only one source model repeated 4,000 times,
 because of the inherent stochasticity of the process. Therefore the
-time spent in generating the needed amount of ruptures may make the
+time spent in generating the needed amount of ruptures could make the
 calculator slower than using full enumeration: remember than when
 using full enumeration the ruptures of a given source model are generated
 exactly once, since each path is taken exactly once.
 
-Just to give some numbers, suppose you are interested in a site
-specific event based calculation with a single source model and a GMPE
-logic tree with 1280 paths; suppose the time spent to generate the
-ruptures is 1000 seconds and the time spent to generate the ground
-motion fields is 1 second per realization. The total time spent with
-full enumeration is 1000 + 1280 = 2280 seconds. Now, suppose you want
-to use sampling, and suppose you set `number_of_logic_tree_paths=100`;
-then the time to generate the GMFs is indeed reduced from 1280s to
-only 100s, however the time spent to generate the ruptures increases
-by 100 times, so the total time needed is 1000 * 100 + 100 = 100100
-seconds! Be careful with sampling in the event based case. It is
-effective only if your computation is strongly dominated by the GMF
-computation time, i.e. if you have a lot of sites.
-
-Finally, let me point out that even if source model path is
+Notice that even if source model path is
 sampled several times, the model is parsed and sent to the workers *only
 once*. In particular if there is a single source model and
 `number_of_logic_tree_samples = 4000`, we generate effectively
@@ -157,21 +144,41 @@ in an efficient way.
 Convergency of the event based hazard calculator
 ---------------------------------------------------------------------------
 
-Are the effective realizations produced by an event based calculation
-the same as the one produced by an equivalent classical calculation?
-The answer is yes and no: they are the same in theory, since the result
-of an event based calculation should converge to the result of the
-equivalent classical calculation, however in practice if the parameters
-`number_of_logic_tree_samples` and `ses_per_logic_tree_path` (the product
-of them is the relevant one) are not large enough they may be different.
-In particular, if you are unlucky, a tectonic region type producing
-ruptures in the classical calculation could *not* produce case in the
-corresponding event based calculation, for a given set of parameters.
-The consequence is the event based calculation can have less effective
-realizations than the classical calculation. In the limit of
-many samples/many SES however all tectonic regions which are relevant
-for the classical calculation should produce ruptures for the event
-based calculation too.
+In theory, the hazard curves produced by an event based calculation
+should converge to the curves produced by an equivalent classical
+calculation. In practice, if the parameters
+`number_of_logic_tree_samples` and `ses_per_logic_tree_path` (the
+product of them is the relevant one) are not large enough they may be
+different. The `oq-lite` version of the engine is able to compare
+the mean hazard curves and to see how well they converge. This is
+done automatically if the option `mean_hazard_curves = true` is set.
+Here is an example of how to generate and plot the curves for one
+of our examples (a case with bad convergence was chosen)::
+
+ $ oq-lite run event_based/case_7/job.ini
+ <...>
+ WARNING:root:Relative difference with the classical mean curves for IMT=SA(0.1): 51%
+WARNING:root:Relative difference with the classical mean curves for IMT=PGA: 49%
+ <...>
+ $ oq-lite plot /tmp/cl/hazard.pik /tmp/hazard.pik
+
+The relative different between the classical and event based curves is
+computed by computing the relative difference between each point of
+the curves for each curve, and by taking the maximum, at least
+for probabilities of exceedence larger than 1% (for low values of
+the probability the convergency may be bad). For the details I
+suggest your [to look at the code](../openquake/commonlib/util.py).
+
+I should also notice that the effective realizations produced by an
+event based calculation are not necessarily the same as the one
+produced by an equivalent classical calculation. If you are unlucky,
+for a given set of parameter, a tectonic region type producing
+ruptures in the classical calculation could *not* produce ruptures in the
+corresponding event based calculations.  The consequence is the event
+based calculation can have less effective realizations than the
+classical calculation. In the limit of many samples/many SES however
+all tectonic regions which are relevant for the classical calculation
+should produce ruptures for the event based calculation too.
 
  
 How to analyze the logic tree of a calculation without running the calculation
@@ -225,10 +232,6 @@ submodels:
    and produces 1280 potential realizations;
  * `seifa_model.xml` contains 6 Tectonic Region Types numbered from 14 to 19
    and produces 640 potential realizations;
-
-The `col` list contains a single element which is the tectonic region type: this
-is always the case when full enumeration is enabled. That list is only interesting
-when you are doing sampling, which is a case which we will consider later on.
 
 In practice, you want to know if your complete logic tree will be
 reduced by the filtering, i.e. you want to know the effective
