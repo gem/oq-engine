@@ -1,18 +1,17 @@
 The concept of effective realizations
 ==============================================
 
-The management of the logic trees is the most complex thing in
-OpenQuake. The problem is that it is necessary to implement logic
+The management of the logic trees is the most complex thing in the
+OpenQuake libraries. The problem is that it is necessary to implement logic
 trees in an efficient way, otherwise the engine will not be able to
 cope with large computations.
-
 To this aim we introduced the concept of *effective
-realizations*. Thhere are very common situations in which it is
+realizations*. There are common situations where it is
 possible to reduce the full logic tree of a computation to a much
 smaller one. The engine takes full advantage of such situations.
 
-Reduction of the logic tree with full enumeration
---------------------------------------------------
+Reduction of the logic tree (full enumeration)
+-----------------------------------------------
 
 The reduction of the logic tree happens when the actual
 sources do not span the full range of tectonic region types in the
@@ -160,7 +159,7 @@ of our QA tests (a case with bad convergence was chosen on purpose)::
  WARNING:root:Relative difference with the classical mean curves for IMT=SA(0.1): 51%
  WARNING:root:Relative difference with the classical mean curves for IMT=PGA: 49%
  <snip>
- $ oq-lite plot /tmp/cl/hazard.pik /tmp/hazard.pik
+ $ oq-lite plot /tmp/cl/hazard.pik /tmp/hazard.pik --sites=0,1,2
 
 .. image:: ebcl-convergency.png
 
@@ -169,7 +168,7 @@ computed by computing the relative difference between each point of
 the curves for each curve, and by taking the maximum, at least
 for probabilities of exceedence larger than 1% (for low values of
 the probability the convergency may be bad). For the details I
-suggest your `to look at the code`_.
+suggest you `to look at the code`_.
 
 .. _to look at the code: ../openquake/commonlib/util.py
 
@@ -190,7 +189,7 @@ How to analyze the logic tree of a calculation without running the calculation
 
 
 `oq-lite` provide some facilities to explore the logic tree of a
-computation. The command you need is the `info` command::
+computation. The command you need is the *info* command::
 
    $ oq-lite info -h
    usage: oq-lite info [-h] [-f] name
@@ -264,7 +263,7 @@ In this example the effective SHARE model is composed by three submodels:
 Depending on the location of the points and the maximum distance, one
 or more submodels could be completely filtered out and could produce
 zero effective realizations, so the reduction effect could be even
-stronger. Such a situation is covered by our tests (classical/case_19)
+stronger. Such a situation is covered by our tests
 and will be discussed in the next paragraph. Notice that already in
 this case we reduced the computation from 1280 + 1280 + 640 = 3200
 potential realizations to only 80 + 80 + 80 = 240 effective
@@ -317,7 +316,7 @@ the SHARE model with just a simplified area source model::
 
 This is a case where a lot of tectonic region types have been completely
 filtered out, so the original 160 realizations have been reduced to merely 4 for
-5 different tectonic region types.
+5 different tectonic region types:
 
 - the first TRT with GSIM `AtkinsonBoore2003SInter` contributes to all the realizations;
 - the second TRT with GSIM `FaccioliEtAl2010` contributes to all the realizations;
