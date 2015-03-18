@@ -189,7 +189,7 @@ class ClassicalHazardCase4TestCase(qa_utils.BaseQATestCase):
 
 class ClassicalHazardCase5TestCase(qa_utils.BaseQATestCase):
 
-    @attr('qa', 'hazard', 'classical')
+    @attr('qa', 'hazard', 'classical', 'slow')
     def test(self):
         result_dir = tempfile.mkdtemp()
 
@@ -216,7 +216,7 @@ class ClassicalHazardCase5TestCase(qa_utils.BaseQATestCase):
 
 class ClassicalHazardCase6TestCase(qa_utils.BaseQATestCase):
 
-    @attr('qa', 'hazard', 'classical')
+    @attr('qa', 'hazard', 'classical', 'slow')
     def test(self):
         result_dir = tempfile.mkdtemp()
 
@@ -243,7 +243,7 @@ class ClassicalHazardCase6TestCase(qa_utils.BaseQATestCase):
 
 class ClassicalHazardCase7TestCase(qa_utils.BaseQATestCase):
 
-    @attr('qa', 'hazard', 'classical')
+    @attr('qa', 'hazard', 'classical', 'slow')
     def test(self):
         result_dir = tempfile.mkdtemp()
 
