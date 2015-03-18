@@ -158,8 +158,6 @@ def calc(request):
     base_url = _get_base_url(request)
 
     calc_data = _get_calcs(request.GET)
-    if not calc_data:
-        return HttpResponseNotFound()
 
     response_data = []
     for hc_id, status, job_type, desc in calc_data:
