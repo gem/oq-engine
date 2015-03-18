@@ -97,7 +97,7 @@ def plot(hazard_pik, hazard_pik2=None, sites='0'):
         _, mean1 = combined_curves(haz, hazard_pik)
         _, mean2 = combined_curves(
             cPickle.load(open(hazard_pik2)), hazard_pik2)
-        plt = make_figure(valid, oq.imtls, mean1, {'mean2': mean2}, 'mean1')
+        plt = make_figure(valid, oq.imtls, mean1, {'mean': mean2}, 'reference')
     plt.show()
 
 

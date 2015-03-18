@@ -153,14 +153,16 @@ different. The `oq-lite` version of the engine is able to compare
 the mean hazard curves and to see how well they converge. This is
 done automatically if the option `mean_hazard_curves = true` is set.
 Here is an example of how to generate and plot the curves for one
-of our examples (a case with bad convergence was chosen)::
+of our QA tests (a case with bad convergence was chosen on purpose)::
 
  $ oq-lite run event_based/case_7/job.ini
- <...>
+ <snip>
  WARNING:root:Relative difference with the classical mean curves for IMT=SA(0.1): 51%
  WARNING:root:Relative difference with the classical mean curves for IMT=PGA: 49%
- <...>
+ <snip>
  $ oq-lite plot /tmp/cl/hazard.pik /tmp/hazard.pik
+
+.. image:: ebcl-convergency.png
 
 The relative different between the classical and event based curves is
 computed by computing the relative difference between each point of
