@@ -177,9 +177,9 @@ event based calculation are not necessarily the same as the one
 produced by an equivalent classical calculation. If you are unlucky,
 for a given set of parameter, a tectonic region type producing
 ruptures in the classical calculation could *not* produce ruptures in the
-corresponding event based calculations.  The consequence is the event
+corresponding event based calculation.  The consequence is the event
 based calculation can have less effective realizations than the
-classical calculation. In the limit of many samples/many SES however
+classical calculation. However, in the limit of many samples/many SES,
 all tectonic regions which are relevant for the classical calculation
 should produce ruptures for the event based calculation too.
 
@@ -221,9 +221,9 @@ object, which contains information about the composition of the source
 model. You will get something like this::
 
    <CompositionInfo
-   area_source_model.xml, trt=[0, 1, 2, 3, 4, 5, 6]: 1280 realization(s)
-   faults_backg_source_model.xml, trt=[7, 8, 9, 10, 11, 12, 13]: 1280 realization(s)
-   seifa_model.xml, trt=[14, 15, 16, 17, 18, 19]: 640 realization(s)>
+   b1, area_source_model.xml, trt=[0, 1, 2, 3, 4, 5, 6]: 1280 realization(s)
+   b2, faults_backg_source_model.xml, trt=[7, 8, 9, 10, 11, 12, 13]: 1280 realization(s)
+   b3, seifa_model.xml, trt=[14, 15, 16, 17, 18, 19]: 640 realization(s)>
    <RlzsAssoc...>
 
 You can read the lines above as follows. The SHARE model is composed by three
@@ -246,9 +246,9 @@ around those points with a maximum distance of 200 kilometers::
 
    $ oq-lite info SHARE.zip --filtersources
    <CompositionInfo
-   area_source_model.xml, trt=[0, 1, 2, 3, 4, 5, 6]: 80 realization(s)
-   faults_backg_source_model.xml, trt=[7, 8, 9, 10, 11, 12, 13]: 80 realization(s)
-   seifa_model.xml, trt=[14, 15, 16, 17, 18, 19]: 80 realization(s)>
+   b1, area_source_model.xml, trt=[0, 1, 2, 3, 4, 5, 6]: 80 realization(s)
+   b2, faults_backg_source_model.xml, trt=[7, 8, 9, 10, 11, 12, 13]: 80 realization(s)
+   b3, seifa_model.xml, trt=[14, 15, 16, 17, 18, 19]: 80 realization(s)>
    <RlzsAssoc...>
 
 In this example the effective SHARE model is composed by three submodels:
