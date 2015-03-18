@@ -71,7 +71,6 @@ def get_skeleton(sm):
 
 SourceModel = collections.namedtuple(
     'SourceModel', 'name weight path trt_models gsim_lt ordinal samples')
-SourceModel.get_skeleton = get_skeleton
 
 
 class TrtModel(collections.Sequence):
@@ -386,7 +385,10 @@ class RlzsAssoc(collections.Mapping):
     def __str__(self):
         pairs = []
         for key in sorted(self.rlzs_assoc):
-            pairs.append(('%s,%s' % key, map(str, self.rlzs_assoc[key])))
+            rlzs = map(str, self.rlzs_assoc[key])
+            if len(rlzs) > 10:  # short representation
+                rlzs = ['%d realizations' % len(rlzs)]
+            pairs.append(('%s,%s' % key, rlzs))
         return '<%s\n%s>' % (self.__class__.__name__,
                              '\n'.join('%s: %s' % pair for pair in pairs))
 
@@ -399,7 +401,7 @@ class CompositionInfo(object):
     def __init__(self, source_models):
         self._col_dict = {}  # dictionary trt_id, idx -> col_idx
         self._num_samples = {}  # trt_id -> num_samples
-        self.source_models = [sm.get_skeleton() for sm in source_models]
+        self.source_models = map(get_skeleton, source_models)
         col_idx = 0
         for sm in source_models:
             for trt_model in sm.trt_models:
@@ -453,23 +455,14 @@ class CompositionInfo(object):
 
     def __repr__(self):
         info_by_model = collections.OrderedDict(
-            (sm.path, (sm.name, [tm.id for tm in sm.trt_models],
+            (sm.path, ('_'.join(sm.path), sm.name,
+                       [tm.id for tm in sm.trt_models],
                        sm.gsim_lt.get_num_paths() * sm.samples))
             for sm in self.source_models)
-
-        def collect_col_ids(triples):
-            col_ids = []
-            for triple in triples:
-                col_ids.append(triple[2])
-            return col_ids
-
-        by_trt = operator.itemgetter(0)
-        dic = groupby(self.get_triples(), by_trt, collect_col_ids)
-        lines = ['trt=%s, col=%s' % (trt, dic[trt]) for trt in dic]
-        summary = ['%s, trt=%s: %d realization(s)' % ibm
+        summary = ['%s, %s, trt=%s: %d realization(s)' % ibm
                    for ibm in info_by_model.itervalues()]
-        return '<%s\n%s\n%s>' % (
-            self.__class__.__name__, '\n'.join(summary), '\n'.join(lines))
+        return '<%s\n%s>' % (
+            self.__class__.__name__, '\n'.join(summary))
 
 
 class CompositeSourceModel(collections.Sequence):
