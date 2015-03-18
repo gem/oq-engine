@@ -167,7 +167,7 @@ computed by computing the relative difference between each point of
 the curves for each curve, and by taking the maximum, at least
 for probabilities of exceedence larger than 1% (for low values of
 the probability the convergency may be bad). For the details I
-suggest your `to look at the code`__.
+suggest your `to look at the code`_.
 
 .. _to look at the code: ../openquake/commonlib/util.py).
 
