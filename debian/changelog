@@ -1,9 +1,13 @@
+python-oq-engine (1.3.1-0) precise; urgency=low
+
+  [Michele Simionato]
+  * Fixed a tricky bug happening when some tectonic region types are filtered
+  away.
+  
 python-oq-engine (1.3.0-1) precise; urgency=low
 
   [Matteo Nastasi]
   * gunzip xml demos files after copied into /usr/openquake/engine directory
-
- -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 26 Feb 2015 16:35:20 +0100
 
 python-oq-engine (1.3.0-0) precise; urgency=low
 
