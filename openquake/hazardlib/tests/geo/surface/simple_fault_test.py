@@ -254,12 +254,12 @@ class SimpleFaultSurfaceProjectionTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(polygon.lats, elats)
 
     def test_get_fault_vertices_3d(self):
-        p0, p1, p2, p3 = SimpleFaultSurface.get_fault_vertices_3d(
+        p0, p1, p2, p3 = SimpleFaultSurface.get_fault_patch_vertices(
             Line([Point(10., 45.2), Point(10.5, 45.3), Point(10., 45.487783)]),
             upper_seismogenic_depth=0., lower_seismogenic_depth=14.,
             dip=30, index_patch=1.
         )
-        p4, p5, p6, p7 = SimpleFaultSurface.get_fault_vertices_3d(
+        p4, p5, p6, p7 = SimpleFaultSurface.get_fault_patch_vertices(
             Line([Point(10., 45.2), Point(10.5, 45.3), Point(10., 45.487783)]),
             upper_seismogenic_depth=0., lower_seismogenic_depth=14.,
             dip=30, index_patch=2.

@@ -171,8 +171,8 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
         return cls(mesh)
 
     @classmethod
-    def get_fault_vertices_3d(cls, fault_trace, upper_seismogenic_depth,
-                              lower_seismogenic_depth, dip, index_patch=1):
+    def get_fault_patch_vertices(cls, fault_trace, upper_seismogenic_depth,
+                                 lower_seismogenic_depth, dip, index_patch=1):
         """
         Get surface main vertices.
         Parameters are the same as for :meth:`from_fault_data`, excluding
