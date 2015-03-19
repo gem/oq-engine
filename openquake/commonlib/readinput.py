@@ -19,7 +19,9 @@
 import os
 import csv
 import gzip
+import zipfile
 import logging
+import tempfile
 import collections
 import ConfigParser
 
@@ -27,7 +29,7 @@ import numpy
 from shapely import wkt, geometry
 
 from openquake.hazardlib import geo, site, correlation, imt
-from openquake.risklib import workflows
+from openquake.risklib import workflows, riskinput
 
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.node import read_nodes, LiteralNode, context
@@ -50,23 +52,81 @@ class DuplicatedPoint(Exception):
     """
 
 
-def get_params(job_ini):
+def create_detect_file(*candidates):
     """
-    Parse a dictionary of parameters from one or more INI-style config file.
+    Create function which is able to extract a certain file from a list
+    of files, by looking at the given candidates, in order. Usually the
+    candidates are `job.ini`, 'job_hazard.ini', 'job_risk.ini'.
+    """
+    def detect_file(files):
+        for candidate in candidates:
+            try:
+                file_idx = map(os.path.basename, files).index(candidate)
+                return files[file_idx]
+            except ValueError:
+                pass
+        raise IOError("No suitable file found in %s for %s" % (
+            str(files), str(candidates)))
+    return detect_file
 
-    :param job_ini:
-        Configuration file or list of configuration files
+
+def collect_files(dirpath, cond=lambda fullname: True):
+    """
+    Recursively collect the files contained inside dirpath.
+
+    :param dirpath: path to a readable directory
+    :param cond: condition on the path to collect the file
+    """
+    files = []
+    for fname in os.listdir(dirpath):
+        fullname = os.path.join(dirpath, fname)
+        if os.path.isdir(fullname):  # navigate inside
+            files.extend(collect_files(fullname))
+        else:  # collect files
+            if cond(fullname):
+                files.append(fullname)
+    return files
+
+
+def extract_from_zip(path, detect_file):
+    """
+    Given a zip archive and a function to detect the presence of a given
+    filename, unzip the archive into a temporary directory and return the
+    full path of the file. Raise an IOError if the file cannot be found
+    within the archive.
+
+    :param path: pathname of the archive
+    :param detect_file: searching function
+    """
+    temp_dir = tempfile.mkdtemp()
+    with zipfile.ZipFile(path) as archive:
+        archive.extractall(temp_dir)
+    return detect_file(collect_files(temp_dir))
+
+
+def get_params(job_inis):
+    """
+    Parse one or more INI-style config files.
+
+    :param job_inis:
+        List of configuration files (or list containing a single zip archive)
     :returns:
         A dictionary of parameters
     """
-    job_inis = [job_ini] if isinstance(job_ini, basestring) else job_ini
+    if len(job_inis) == 1 and job_inis[0].endswith('.zip'):
+        detect_job_ini = create_detect_file('job.ini')
+        job_inis = [extract_from_zip(job_inis[0], detect_job_ini)]
+
+    not_found = [ini for ini in job_inis if not os.path.exists(ini)]
+    if len(not_found) == len(job_inis):  # nothing was found
+        raise IOError('File not found: %s' % not_found[0])
+
     cp = ConfigParser.ConfigParser()
     cp.read(job_inis)
 
     # drectory containing the config files we're parsing
-    base_path = os.path.dirname(
-        os.path.join(os.path.abspath('.'), job_inis[0]))
-    params = dict(base_path=base_path, inputs={'job_ini': job_ini})
+    base_path = os.path.dirname(os.path.abspath(job_inis[0]))
+    params = dict(base_path=base_path, inputs={'job_ini': ','.join(job_inis)})
 
     for sect in cp.sections():
         for key, value in cp.items(sect):
@@ -74,26 +134,28 @@ def get_params(job_ini):
                 input_type, _ext = key.rsplit('_', 1)
                 path = value if os.path.isabs(value) else os.path.join(
                     base_path, value)
-                params['inputs'][input_type] = path
+                params['inputs'][input_type] = possibly_gunzip(path)
             else:
                 params[key] = value
 
-    # load job_ini inputs (the paths are the job_ini_model_logic_tree)
+    # populate the 'source' list
     smlt = params['inputs'].get('source_model_logic_tree')
     if smlt:
         params['inputs']['source'] = [
             os.path.join(base_path, src_path)
             for src_path in source._collect_source_model_paths(smlt)]
+
     return params
 
 
-def get_oqparam(job_ini, calculators=None):
+def get_oqparam(job_ini, pkg=None, calculators=None):
     """
     Parse a dictionary of parameters from one or more INI-style config file.
 
     :param job_ini:
-        Configuration file or list of configuration files or dictionary
-        of parameters
+        Path to configuration file/archive or dictionary of parameters
+    :param pkg:
+        Python package where to find the configuration file (optional)
     :param calculators:
         Sequence of calculator names (optional) used to restrict the
         valid choices for `calculation_mode`
@@ -113,7 +175,9 @@ def get_oqparam(job_ini, calculators=None):
     if isinstance(job_ini, dict):
         oqparam = OqParam(**job_ini)
     else:
-        oqparam = OqParam(**get_params(job_ini))
+        basedir = os.path.dirname(pkg.__file__) if pkg else ''
+        inis = [os.path.join(basedir, ini) for ini in job_ini.split(',')]
+        oqparam = OqParam(**get_params(inis))
 
     oqparam.validate()
     return oqparam
@@ -256,8 +320,7 @@ def get_gsim_lt(oqparam, trts):
     """
     gsim_file = os.path.join(
         oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
-    return logictree.GsimLogicTree(
-        gsim_file, 'applyToTectonicRegionType', trts)
+    return logictree.GsimLogicTree(gsim_file, trts)
 
 
 def get_source_model_lt(oqparam):
@@ -292,7 +355,7 @@ def possibly_gunzip(fname):
     return fname
 
 
-def get_source_models(oqparam, source_model_lt):
+def get_source_models(oqparam, source_model_lt, sitecol=None):
     """
     Build all the source models generated by the logic tree.
 
@@ -310,12 +373,16 @@ def get_source_models(oqparam, source_model_lt):
         oqparam.complex_fault_mesh_spacing,
         oqparam.width_of_mfd_bin,
         getattr(oqparam, 'area_source_discretization', None))
-    samples_by_lt_path = source_model_lt.samples_by_lt_path()
 
-    for i, (sm, weight, smpath, _) in enumerate(source_model_lt):
+    # consider only the effective realizations
+    rlzs = logictree.get_effective_rlzs(source_model_lt)
+    samples_by_lt_path = source_model_lt.samples_by_lt_path()
+    for i, rlz in enumerate(rlzs):
+        sm = rlz.value  # name of the source model
+        smpath = rlz.lt_path
         num_samples = samples_by_lt_path[smpath]
         if num_samples > 1:
-            logging.warn('The logic tree path %s was sampled %d times',
+            logging.warn('The source path %s was sampled %d times',
                          smpath, num_samples)
         fname = possibly_gunzip(os.path.join(oqparam.base_path, sm))
         apply_unc = source_model_lt.make_apply_uncertainties(smpath)
@@ -344,9 +411,11 @@ python -m openquake.engine.tools.correct_complex_sources %s
                         "Found in %r a tectonic region type %r inconsistent "
                         "with the ones in %r" % (sm, trt_model.trt, fname))
                 trt_model.gsims = gsim_lt.values[trt_model.trt]
-        # the num_ruptures is not updated; it will be updated in the
-        # engine, after filtering of the sources
-        yield source.SourceModel(sm, weight, smpath, trt_models, gsim_lt, i)
+        else:
+            gsim_lt = logictree.DummyGsimLogicTree()
+        weight = rlz.weight / num_samples
+        yield source.SourceModel(
+            sm, weight, smpath, trt_models, gsim_lt, i, num_samples)
 
 
 def get_filtered_source_models(oqparam, source_model_lt, sitecol):
@@ -380,20 +449,22 @@ def get_filtered_source_models(oqparam, source_model_lt, sitecol):
                     'sm_lt_path=%s, maximum_distance=%s km, TRT=%s',
                     source_model.name, source_model.path,
                     oqparam.maximum_distance, trt_model.trt)
-                source_model.trt_models.remove(trt_model)
         if source_model.trt_models:
             yield source_model
             parallel.TaskManager.restart()  # hack to save memory
 
 
-def get_composite_source_model(oqparam, sitecol):
+def get_composite_source_model(oqparam, sitecol, prefilter=False):
     """
-    Build the source models with filtered and split sources.
+    Build the source models by splitting the sources. If prefiltering is
+    enabled, also reduce the GSIM logic trees in the underlying source models.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
+    :param prefilter:
+        if True, filter the sources before splitting them
     :returns:
         an iterator over :class:`openquake.commonlib.source.SourceModel`
         tuples skipping the empty models
@@ -401,18 +472,18 @@ def get_composite_source_model(oqparam, sitecol):
     source_model_lt = get_source_model_lt(oqparam)
     smodels = []
     trt_id = 0
-    for source_model in get_filtered_source_models(
-            oqparam, source_model_lt, sitecol):
+    get_sm = get_filtered_source_models if prefilter else get_source_models
+    for source_model in get_sm(oqparam, source_model_lt, sitecol):
         for trt_model in source_model.trt_models:
             trt_model.id = trt_id
             trt_id += 1
-            logging.info('Splitting sources and counting ruptures for %s',
-                         trt_model)
-            trt_model.split_sources_and_count_ruptures(
-                getattr(oqparam, 'area_source_discretization', None))
-            logging.info('Got %s', trt_model)
+            if prefilter:
+                trt_model.split_sources_and_count_ruptures(
+                    getattr(oqparam, 'area_source_discretization', None))
+                logging.info('Processed %s', trt_model)
         smodels.append(source_model)
-    return source.CompositeSourceModel(source_model_lt, smodels)
+    csm = source.CompositeSourceModel(source_model_lt, smodels)
+    return csm
 
 
 def get_job_info(oqparam, source_models, sitecol):
@@ -430,7 +501,8 @@ def get_job_info(oqparam, source_models, sitecol):
     # The input weight is given by the number of ruptures generated
     # by the sources; for point sources however a corrective factor
     # given by the parameter `point_source_weight` is applied
-    input_weight = sum(src.weight or 0 for src_model in source_models
+    input_weight = sum((src.weight or 0) * src_model.samples
+                       for src_model in source_models
                        for trt_model in src_model.trt_models
                        for src in trt_model)
 
@@ -482,13 +554,13 @@ def get_imts(oqparam):
 
 def get_risk_model(oqparam):
     """
-    Return a :class:`openquake.risklib.workflows.RiskModel` instance
+    Return a :class:`openquake.risklib.riskinput.RiskModel` instance
 
    :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     risk_models = {}  # (imt, taxonomy) -> workflow
-    riskmodel = workflows.RiskModel(risk_models)
+    riskmodel = riskinput.RiskModel(risk_models)
 
     oqparam.__dict__.setdefault('insured_losses', False)
     extras = {}  # extra parameter tses for event based
@@ -528,7 +600,7 @@ def get_risk_model(oqparam):
 
     return riskmodel
 
-############################ exposure #############################
+# ########################### exposure ############################ #
 
 
 class DuplicatedID(Exception):
@@ -595,7 +667,15 @@ def get_exposure(oqparam):
                 raise DuplicatedID(asset_id)
             asset_refs.add(asset_id)
             taxonomy = asset['taxonomy']
-            number = asset.attrib.get('number')
+            if 'damage' in oqparam.calculation_mode:
+                # calculators of 'damage' kind require the 'number' attribute;
+                # if it is missing a KeyError is raised
+                number = asset.attrib['number']
+            else:
+                # other calculators ignore the 'number' attribute;
+                # if it is missing it is considered 1, since we are going
+                # to multiply by it
+                number = asset.attrib.get('number', 1)
             location = asset.location['lon'], asset.location['lat']
             if region and not geometry.Point(*location).within(region):
                 out_of_region += 1
@@ -613,8 +693,10 @@ def get_exposure(oqparam):
             # check we are not missing a cost type
             missing = relevant_cost_types - set(values)
             if missing:
-                raise RuntimeError(
-                    'Missing cost types: %s' % ', '.join(missing))
+                logging.warn(
+                    'Discarding asset %s, missing cost type(s): %s',
+                    asset_id, ', '.join(missing))
+                continue
 
         if time_event:
             for occupancy in asset.occupancies:
@@ -623,8 +705,9 @@ def get_exposure(oqparam):
                         values['fatalities'] = occupancy['occupants']
                         break
 
+        area = float(asset.attrib.get('area', 1))
         ass = workflows.Asset(
-            asset_id, taxonomy, number, location, values, deductibles,
+            asset_id, taxonomy, number, location, values, area, deductibles,
             insurance_limits, retrofitting_values)
         exposure.assets.append(ass)
         exposure.taxonomies.add(taxonomy)

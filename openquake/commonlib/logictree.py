@@ -34,6 +34,7 @@ from collections import namedtuple
 from decimal import Decimal
 from lxml import etree
 
+from openquake.baselib.general import groupby
 from openquake.commonlib import nrml, valid
 from openquake.commonlib.node import node_from_xml
 
@@ -45,7 +46,26 @@ MIN_SINT_32 = -(2 ** 31)
 MAX_SINT_32 = (2 ** 31) - 1
 
 
-Realization = namedtuple('Realization', 'value weight lt_path ordinal')
+Realization = namedtuple('Realization', 'value weight lt_path ordinal lt_uid')
+Realization.uid = property(lambda self: '_'.join(self.lt_uid))  # unique ID
+
+
+def get_effective_rlzs(rlzs):
+    """
+    Group together realizations with the same unique identifier (uid)
+    and yield the first representative of each group.
+    """
+    effective = []
+    ordinal = 0
+    for uid, group in groupby(rlzs, operator.attrgetter('uid')).iteritems():
+        rlz = group[0]
+        if all(path == '*' for path in rlz.lt_uid):  # empty realization
+            continue
+        effective.append(
+            Realization(rlz.value, sum(r.weight for r in group),
+                        rlz.lt_path, ordinal, rlz.lt_uid))
+        ordinal += 1
+    return effective
 
 
 class LogicTreeError(Exception):
@@ -582,12 +602,14 @@ class BaseLogicTree(object):
             weight = 1. / self.num_samples
             for _ in xrange(self.num_samples):
                 name, sm_lt_path = self.sample_path(rnd)
-                yield Realization(name, weight, tuple(sm_lt_path), None)
+                yield Realization(name, weight, tuple(sm_lt_path), None,
+                                  tuple(sm_lt_path))
         else:  # full enumeration
             for weight, smlt_path in self.root_branchset.enumerate_paths():
                 name = smlt_path[0].value
                 smlt_branch_ids = [branch.branch_id for branch in smlt_path]
-                yield Realization(name, weight, tuple(smlt_branch_ids), None)
+                yield Realization(name, weight, tuple(smlt_branch_ids), None,
+                                  tuple(smlt_branch_ids))
 
     @abc.abstractmethod
     def parse_uncertainty_value(self, node, branchset, value):
@@ -792,7 +814,7 @@ class SourceModelLogicTree(BaseLogicTree):
 
         if 'applyToSources' in filters:
             for source_id in filters['applyToSources'].split():
-                if not source_id in self.source_ids:
+                if source_id not in self.source_ids:
                     raise ValidationError(
                         branchset_node, self.filename, self.basepath,
                         "source with id %r is not defined in source models"
@@ -862,7 +884,7 @@ class SourceModelLogicTree(BaseLogicTree):
         if apply_to_branches:
             apply_to_branches = apply_to_branches.split()
             for branch_id in apply_to_branches:
-                if not branch_id in self.branches:
+                if branch_id not in self.branches:
                     raise ValidationError(
                         branchset_node, self.filename, self.basepath,
                         'branch %r is not yet defined' % branch_id
@@ -873,7 +895,7 @@ class SourceModelLogicTree(BaseLogicTree):
                         branchset_node, self.filename, self.basepath,
                         'branch %r already has child branchset' % branch_id
                     )
-                if not branch in self.open_ends:
+                if branch not in self.open_ends:
                     raise ValidationError(
                         branchset_node, self.filename, self.basepath,
                         'applyToBranches must reference only branches '
@@ -907,7 +929,7 @@ class SourceModelLogicTree(BaseLogicTree):
                 break
             except etree.XMLSyntaxError as exc:
                 raise ParsingError(source_model, self.basepath, str(exc))
-            if not node.tag in all_source_types:
+            if node.tag not in all_source_types:
                 continue
             self.tectonic_region_types.add(node.attrib['tectonicRegion'])
             source_id = node.attrib['id']
@@ -960,7 +982,7 @@ class SourceModelLogicTree(BaseLogicTree):
         return collections.Counter(rlz.lt_path for rlz in self)
 
 
-BranchTuple = namedtuple('BranchTuple', 'bset, id, uncertainty, weight')
+BranchTuple = namedtuple('BranchTuple', 'bset id uncertainty weight effective')
 
 
 class InvalidLogicTree(Exception):
@@ -977,66 +999,73 @@ class GsimLogicTree(object):
 
     :param str fname:
         full path of the gsim_logic_tree file
-    :param str filter_name:
-        the string `"applyToTectonicRegionType"`
     :param tectonic_region_types:
         a sequence of distinct tectonic region types
+    :param ltnode:
+        usually None, but it can also be a
+        :class:`openquake.commonlib.nrml.Node` object describing the
+        GSIM logic tree XML file, to avoid reparsing it
     """
-    def __init__(self, fname, branchset_filter, tectonic_region_types):
+    def __init__(self, fname, tectonic_region_types, ltnode=None):
         self.fname = fname
-        self.branchset_filter = branchset_filter
         self.tectonic_region_types = sorted(tectonic_region_types)
-        assert branchset_filter == 'applyToTectonicRegionType'
         trts = self.tectonic_region_types
         if len(trts) > len(set(trts)):
             raise ValueError(
                 'The given tectonic region types are not distinct: %s' %
                 ','.join(self.tectonic_region_types))
-        self.values = collections.defaultdict(list)  # {fkey: uncertainties}
+        self.values = collections.defaultdict(list)  # {trt: gsims}
+        self._ltnode = ltnode or node_from_xml(fname).logicTree
         self.branches = sorted(
-            self._parse_lt(), key=lambda b: (b.bset['branchSetID'], b.id))
+            self._build_branches(),
+            key=lambda b: (b.bset['branchSetID'], b.id))
         if tectonic_region_types and not self.branches:
             raise InvalidLogicTree(
-                'Could not find branches with attribute %r in %s' %
-                (self.branchset_filter, set(tectonic_region_types)))
+                'Could not find branches with attribute '
+                "'applyToTectonicRegionType' in %s" %
+                set(tectonic_region_types))
 
-    def filter(self, trts):
+    def reduce(self, trts):
         """
-        Build a reduced GsimLogicTree.
+        Reduce the GsimLogicTree.
 
         :param trts: a subset of tectonic region types
         """
-        assert set(trts) <= set(self.tectonic_region_types), (
-            trts, self.tectonic_region_types)
-        return self.__class__(self.fname, self.branchset_filter, trts)
+        self.tectonic_region_types = sorted(trts)
+        self.values = collections.defaultdict(list)
+        self.branches = sorted(
+            self._build_branches(),
+            key=lambda b: (b.bset['branchSetID'], b.id))
 
     def get_num_branches(self):
         """
-        Return the number of branches for branchset id, as a dictionary.
+        Return the number of effective branches for branchset id,
+        as a dictionary.
         """
         num = {}
         for branchset, branches in itertools.groupby(
                 self.branches, operator.attrgetter('bset')):
-            num[branchset['branchSetID']] = len(list(branches))
+            num[branchset['branchSetID']] = sum(
+                1 for br in branches if br.effective)
         return num
 
     def get_num_paths(self):
         """
-        Return the total number of paths in the tree.
+        Return the effective number of paths in the tree.
         """
         # NB: the algorithm assume a symmetric logic tree for the GSIMs;
         # in the future we may relax such assumption
         num = 1
         for val in self.get_num_branches().itervalues():
-            num *= val
+            if val:  # the branch is effective
+                num *= val
         return num
 
-    def _parse_lt(self):
+    def _build_branches(self):
         # do the parsing, called at instantiation time to populate .values
-        fkeys = []
+        trts = []
         branchsetids = set()
-        nrml = node_from_xml(self.fname)
-        for branching_level in nrml.logicTree:
+        for branching_level in self._ltnode:
             if len(branching_level) > 1:
                 raise InvalidLogicTree(
                     'Branching level %s has multiple branchsets'
@@ -1052,24 +1081,24 @@ class GsimLogicTree(object):
                         'Duplicated branchSetID %s' % bsid)
                 else:
                     branchsetids.add(bsid)
-                fkey = branchset.attrib.get(self.branchset_filter)
-                if fkey:
-                    fkeys.append(fkey)
-                if fkey in self.tectonic_region_types:
-                    weights = []
-                    for branch in branchset:
-                        weight = Decimal(branch.uncertaintyWeight.text)
-                        weights.append(weight)
-                        branch_id = branch['branchID']
-                        uncertainty = branch.uncertaintyModel.text.strip()
-                        self.validate_gsim(uncertainty)
-                        self.values[fkey].append(uncertainty)
-                        yield BranchTuple(
-                            branchset, branch_id, uncertainty, weight)
-                    assert sum(weights) == 1, weights
-        if len(fkeys) > len(set(fkeys)):
-            raise InvalidLogicTree('Found duplicated %s=%s' % (
-                self.branchset_filter, fkeys))
+                trt = branchset.attrib.get('applyToTectonicRegionType')
+                if trt:
+                    trts.append(trt)
+                effective = trt in self.tectonic_region_types
+                weights = []
+                for branch in branchset:
+                    weight = Decimal(branch.uncertaintyWeight.text)
+                    weights.append(weight)
+                    branch_id = branch['branchID']
+                    uncertainty = branch.uncertaintyModel.text.strip()
+                    self.validate_gsim(uncertainty)
+                    self.values[trt].append(uncertainty)
+                    yield BranchTuple(
+                        branchset, branch_id, uncertainty, weight, effective)
+                assert sum(weights) == 1, weights
+        if len(trts) > len(set(trts)):
+            raise InvalidLogicTree(
+                'Found duplicated applyToTectonicRegionType=%s' % trts)
 
     def validate_gsim(self, value):
         """
@@ -1084,23 +1113,46 @@ class GsimLogicTree(object):
             raise NameError('%s in file %r' % (e, self.fname))
 
     def __iter__(self):
-        # yield realizations for both sampling and full enumeration
+        """
+        Yield :class:`openquake.commonlib.logictree.Realization` instances
+        """
         groups = []
         tectonic_region_types = []
         # NB: branches are already sorted
         for branchset, branches in itertools.groupby(
                 self.branches, operator.attrgetter('bset')):
-            tectonic_region_types.append(branchset[self.branchset_filter])
+            tectonic_region_types.append(
+                branchset['applyToTectonicRegionType'])
             groups.append(list(branches))
         # with T tectonic region types there are T groups and T branches
         for i, branches in enumerate(itertools.product(*groups)):
             weight = 1
             lt_path = []
+            lt_uid = []
             value = {}
-            for fkey, branch in zip(tectonic_region_types, branches):
-                lt_path.append(branch.id)
-                weight *= branch.weight
-                assert branch.uncertainty in self.values[fkey], \
+            for trt, branch in zip(tectonic_region_types, branches):
+                assert branch.uncertainty in self.values[trt], \
                     branch.uncertainty  # sanity check
-                value[fkey] = branch.uncertainty
-            yield Realization(value, weight, tuple(lt_path), i)
+                lt_path.append(branch.id)
+                lt_uid.append(branch.id if branch.effective else '*')
+                weight *= branch.weight
+                value[trt] = branch.uncertainty
+            yield Realization(value, weight, tuple(lt_path), i, tuple(lt_uid))
+
+    def __str__(self):
+        lines = ['%s,%s,%s,w=%s' % (b.bset['applyToTectonicRegionType'],
+                                    b.id, b.uncertainty, b.weight)
+                 for b in self.branches if b.effective]
+        return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(lines))
+
+
+class DummyGsimLogicTree(object):
+    """
+    A dummy GSIM logic tree object containing a single realization
+    """
+    def get_num_paths(self):
+        """Return 1"""
+        return 1
+
+    def __iter__(self):
+        yield Realization({}, 1, (), 0, ())

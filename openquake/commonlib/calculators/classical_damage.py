@@ -18,14 +18,13 @@
 
 import os
 import logging
-import numpy
 
 from openquake.baselib.general import AccumDict
 from openquake.commonlib import readinput
 from openquake.commonlib.calculators import base
 from openquake.commonlib.export import export
 from openquake.commonlib.risk_writers import DmgState
-from openquake.risklib import workflows
+from openquake.risklib import riskinput
 
 
 def classical_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
@@ -33,9 +32,9 @@ def classical_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
     Core function for a classical damage computation.
 
     :param riskinputs:
-        a list of :class:`openquake.risklib.workflows.RiskInput` objects
+        a list of :class:`openquake.risklib.riskinput.RiskInput` objects
     :param riskmodel:
-        a :class:`openquake.risklib.workflows.RiskModel` instance
+        a :class:`openquake.risklib.riskinput.RiskModel` instance
     :param rlzs_assoc:
         associations (trt_id, gsim) -> realizations
     :param monitor:
@@ -48,9 +47,9 @@ def classical_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
                  sum(ri.weight for ri in riskinputs))
     with monitor:
         result = {i: AccumDict() for i in range(len(rlzs_assoc))}
-        for outputs in riskmodel.gen_outputs(riskinputs, rlzs_assoc):
-            for i, out in enumerate(outputs):
-                result[i] += dict(zip(out.assets, out.damages))
+        for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc):
+            for rlz, out in out_by_rlz.iteritems():
+                result[rlz] += dict(zip(out.assets, out.damages))
     return result
 
 
@@ -60,6 +59,7 @@ class ClassicalDamageCalculator(base.RiskCalculator):
     Scenario damage calculator
     """
     core_func = classical_damage
+    result_kind = 'damages_by_rlz'
 
     def pre_execute(self):
         """
@@ -77,12 +77,9 @@ class ClassicalDamageCalculator(base.RiskCalculator):
         logging.info('Associated %d assets to %d sites', num_assets, num_sites)
 
         logging.info('Preparing the risk input')
-        data = {}
-        for imt in hcurves_by_imt:
-            data[imt] = numpy.array([{(0, 'FromCsv'): curve}
-                                     for curve in hcurves_by_imt[imt]])
-        self.riskinputs = self.build_riskinputs(data)
-        self.rlzs_assoc = workflows.FakeRlzsAssoc(num_rlzs=1)  # TODO: extend
+        self.riskinputs = self.build_riskinputs(
+            {(0, 'FromCsv'): hcurves_by_imt}, eps_dict={})
+        self.rlzs_assoc = riskinput.FakeRlzsAssoc(num_rlzs=1)  # TODO: extend
 
     def post_execute(self, result):
         """

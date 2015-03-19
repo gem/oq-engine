@@ -11,9 +11,12 @@ Contents:
 .. toctree::
    :maxdepth: 4
 
+   effective-realizations.rst
+
    openquake.baselib
    openquake.risklib
    openquake.commonlib
+
 
 Indices and tables
 ==================

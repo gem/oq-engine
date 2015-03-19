@@ -218,6 +218,8 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1,
     return block_splitter(items, math.ceil(total_weight / hint), weight, key)
 
 
+# the implementation here is unbelievably ugly; it is a remnant of the
+# past and soon or later will be removed (MS)
 def deep_eq(a, b, decimal=7, exclude=None):
     """Deep compare two objects for equality by traversing __dict__ and
     __slots__.
@@ -286,6 +288,8 @@ def _deep_eq(a, b, decimal, exclude=None):
         assert a.__class__ == b.__class__, (
             "%s and %s are different classes") % (a.__class__, b.__class__)
         _test_dict(a.__dict__, b.__dict__)
+    elif isinstance(a, numpy.ndarray):
+        assert numpy.array_equal(a, b), '%s and %s are different' % (a, b)
     # iterables (not strings)
     elif isinstance(a, collections.Iterable) and not isinstance(a, str):
         # If there's a generator or another type of iterable, treat it as a
@@ -399,7 +403,6 @@ def assert_independent(package, *packages):
 
     >>> assert_independent('openquake.hazardlib',
     ...                    'openquake.risklib', 'openquake.commonlib')
-    >>> assert_independent('openquake.risklib', 'openquake.commonlib')
     >>> assert_independent('openquake.risklib.tests', 'openquake.risklib')
     Traceback (most recent call last):
     ...
@@ -458,7 +461,7 @@ class CallableDict(collections.OrderedDict):
 
     def __call__(self, obj, *args, **kw):
         key = self.keyfunc(obj)
-        if not key in self:
+        if key not in self:
             raise KeyError(
                 'There is nothing registered for %s' % repr(key))
         return self[key](obj, *args, **kw)
@@ -568,14 +571,17 @@ class AccumDict(dict):
                                for key, value in self.iteritems()})
 
 
-def groupby(objects, key):
+def groupby(objects, key, reducegroup=list):
     """
     :param objects: a sequence of objects with a key value
     :param key: the key function to extract the key value
-    :returns: an OrderedDict {key value: list of objects}
+    :param reducegroup: the function to apply to each group
+    :returns: an OrderedDict {key value: map(reducegroup, group)}
 
-    >>> groupby('pippo', key=lambda x: x)
-    OrderedDict([('i', ['i']), ('o', ['o']), ('p', ['p', 'p', 'p'])])
+    >>> groupby(['A1', 'A2', 'B1', 'B2', 'B3'], lambda x: x[0],
+    ...         lambda group: ''.join(x[1] for x in group))
+    OrderedDict([('A', '12'), ('B', '123')])
     """
     kgroups = itertools.groupby(sorted(objects, key=key), key)
-    return collections.OrderedDict((k, list(group)) for k, group in kgroups)
+    return collections.OrderedDict((k, reducegroup(group))
+                                   for k, group in kgroups)

@@ -131,11 +131,11 @@ class StreamingXMLWriter(object):
             tag = self.shorten(node.tag)
         else:
             tag = node.tag
-        if not node and not node.text:
+        if not node and node.text is None:
             self.emptyElement(tag, node.attrib)
             return
         self.start_tag(tag, node.attrib)
-        if node.text:
+        if node.text is not None:
             self._write(escape(scientificformat(node.text).strip()))
         for subnode in node:
             self.serialize(subnode)
@@ -177,3 +177,4 @@ def save_csv(dest, header_rows, sep=',', fmt='%12.8E', mode='wb'):
     with open(dest, mode) as f:
         for row in header_rows:
             f.write(sep.join(scientificformat(col, fmt) for col in row) + '\n')
+    return dest

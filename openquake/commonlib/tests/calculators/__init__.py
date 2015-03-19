@@ -21,7 +21,7 @@ import unittest
 
 from openquake.commonlib.calculators import base
 from openquake.commonlib.parallel import PerformanceMonitor, executor
-from openquake.commonlib import readinput
+from openquake.commonlib import readinput, oqvalidation
 
 
 class DifferentFiles(Exception):
@@ -31,13 +31,16 @@ class DifferentFiles(Exception):
 class CalculatorTestCase(unittest.TestCase):
     OVERWRITE_EXPECTED = False
 
-    def get_calc(self, testfile, job_ini):
+    def get_calc(self, testfile, job_ini, **kw):
         """
         Return the outputs of the calculation as a dictionary
         """
         self.testdir = os.path.dirname(testfile)
         inis = [os.path.join(self.testdir, ini) for ini in job_ini.split(',')]
-        oq = readinput.get_oqparam(inis)
+        params = readinput.get_params(inis)
+        params.update(kw)
+        oq = oqvalidation.OqParam(**params)
+        oq.validate()
         oq.concurrent_tasks = executor.num_tasks_hint
         oq.usecache = False
         # change this when debugging the test
@@ -50,11 +53,8 @@ class CalculatorTestCase(unittest.TestCase):
         """
         Return the outputs of the calculation as a dictionary
         """
-        self.calc = self.get_calc(testfile, job_ini)
-        vars(self.calc.oqparam).update(kw)
-        self.calc.pre_execute()
-        self.result = self.calc.execute()
-        return self.calc.post_execute(self.result)
+        self.calc = self.get_calc(testfile, job_ini, **kw)
+        return self.calc.run(**kw)['exported']
 
     def execute(self, testfile, job_ini):
         """
@@ -64,8 +64,19 @@ class CalculatorTestCase(unittest.TestCase):
         self.calc.pre_execute()
         return self.calc.execute()
 
+    def practicallyEqual(self, string1, string2, ignore_last):
+        """
+        Compare strings containing numbers up to the last digits (excluded)
+        """
+        numbers1 = string1.split()
+        numbers2 = string2.split()
+        self.assertEqual(len(numbers1), len(numbers2))
+        for n1, n2 in zip(numbers1, numbers2):
+            self.assertEqual(n1[: -ignore_last], n2[: -ignore_last])
+
     def assertEqualFiles(
-            self, fname1, fname2, make_comparable=lambda lines: lines):
+            self, fname1, fname2, make_comparable=lambda lines: lines,
+            ignore_last_digits=0):
         """
         Make sure the expected and actual files have the same content.
         `make_comparable` is a function processing the lines of the
@@ -75,10 +86,15 @@ class CalculatorTestCase(unittest.TestCase):
         """
         expected = os.path.join(self.testdir, fname1)
         actual = os.path.join(self.calc.oqparam.export_dir, fname2)
-        expected_content = make_comparable(open(expected).readlines())
-        actual_content = make_comparable(open(actual).readlines())
+        expected_content = '\n'.join(
+            make_comparable(open(expected).readlines()))
+        actual_content = '\n'.join(make_comparable(open(actual).readlines()))
         try:
-            self.assertEqual(expected_content, actual_content)
+            if ignore_last_digits:
+                self.practicallyEqual(expected_content, actual_content,
+                                      ignore_last_digits)
+            else:
+                self.assertEqual(expected_content, actual_content)
         except:
             if self.OVERWRITE_EXPECTED:
                 # use this path when the expected outputs have changed

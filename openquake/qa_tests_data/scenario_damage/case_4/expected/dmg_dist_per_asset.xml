@@ -16,31 +16,9 @@ xmlns:gml="http://www.opengis.net/gml"
             <asset
             assetRef="a1"
             >
-                <damage ds="no_damage" mean="2.665925147E+03" stddev="3.854088466E+02"/>
-            </asset>
-        </DDNode>
-        <DDNode>
-            <gml:Point>
-                <gml:pos>
-                    81.2985 29.1098
-                </gml:pos>
-            </gml:Point>
-            <asset
-            assetRef="a1"
-            >
-                <damage ds="no_damage" mean="3.209249659E+02" stddev="3.632749734E+02"/>
-            </asset>
-        </DDNode>
-        <DDNode>
-            <gml:Point>
-                <gml:pos>
-                    81.2985 29.1098
-                </gml:pos>
-            </gml:Point>
-            <asset
-            assetRef="a1"
-            >
-                <damage ds="no_damage" mean="1.314988674E+01" stddev="2.386200472E+01"/>
+                <damage ds="no_damage" mean="2.6659251E+03" stddev="3.8540885E+02"/>
+                <damage ds="LS1" mean="3.2092497E+02" stddev="3.6327497E+02"/>
+                <damage ds="LS2" mean="1.3149887E+01" stddev="2.3862005E+01"/>
             </asset>
         </DDNode>
         <DDNode>
@@ -52,31 +30,9 @@ xmlns:gml="http://www.opengis.net/gml"
             <asset
             assetRef="a2"
             >
-                <damage ds="no_damage" mean="2.082695782E+02" stddev="3.073967265E+02"/>
-            </asset>
-        </DDNode>
-        <DDNode>
-            <gml:Point>
-                <gml:pos>
-                    83.082298 27.9006
-                </gml:pos>
-            </gml:Point>
-            <asset
-            assetRef="a2"
-            >
-                <damage ds="no_damage" mean="5.336744693E+02" stddev="1.771909145E+02"/>
-            </asset>
-        </DDNode>
-        <DDNode>
-            <gml:Point>
-                <gml:pos>
-                    83.082298 27.9006
-                </gml:pos>
-            </gml:Point>
-            <asset
-            assetRef="a2"
-            >
-                <damage ds="no_damage" mean="2.580559526E+02" stddev="2.515760660E+02"/>
+                <damage ds="no_damage" mean="2.0826958E+02" stddev="3.0739673E+02"/>
+                <damage ds="LS1" mean="5.3367447E+02" stddev="1.7719091E+02"/>
+                <damage ds="LS2" mean="2.5805595E+02" stddev="2.5157607E+02"/>
             </asset>
         </DDNode>
         <DDNode>
@@ -88,31 +44,9 @@ xmlns:gml="http://www.opengis.net/gml"
             <asset
             assetRef="a3"
             >
-                <damage ds="no_damage" mean="6.387025145E+02" stddev="7.579946037E+02"/>
-            </asset>
-        </DDNode>
-        <DDNode>
-            <gml:Point>
-                <gml:pos>
-                    85.747703 27.9015
-                </gml:pos>
-            </gml:Point>
-            <asset
-            assetRef="a3"
-            >
-                <damage ds="no_damage" mean="6.704166005E+02" stddev="5.393635278E+02"/>
-            </asset>
-        </DDNode>
-        <DDNode>
-            <gml:Point>
-                <gml:pos>
-                    85.747703 27.9015
-                </gml:pos>
-            </gml:Point>
-            <asset
-            assetRef="a3"
-            >
-                <damage ds="no_damage" mean="6.908808850E+02" stddev="8.831827780E+02"/>
+                <damage ds="no_damage" mean="6.3870251E+02" stddev="7.5799460E+02"/>
+                <damage ds="LS1" mean="6.7041660E+02" stddev="5.3936353E+02"/>
+                <damage ds="LS2" mean="6.9088089E+02" stddev="8.8318278E+02"/>
             </asset>
         </DDNode>
     </dmgDistPerAsset>

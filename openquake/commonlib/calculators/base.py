@@ -20,6 +20,7 @@ import os
 import abc
 import logging
 import operator
+import collections
 import cPickle
 
 import numpy
@@ -28,8 +29,8 @@ from openquake.hazardlib.geo import geodetic
 
 from openquake.baselib import general
 from openquake.commonlib import readinput
-from openquake.commonlib.parallel import apply_reduce, DummyMonitor
-from openquake.risklib import workflows
+from openquake.commonlib.parallel import apply_reduce, DummyMonitor, executor
+from openquake.risklib import riskinput
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
@@ -52,15 +53,23 @@ class BaseCalculator(object):
     def __init__(self, oqparam, monitor=DummyMonitor()):
         self.oqparam = oqparam
         self.monitor = monitor
+        if not hasattr(oqparam, 'concurrent_tasks'):
+            oqparam.concurrent_tasks = executor.num_tasks_hint
+        if not hasattr(oqparam, 'usecache'):
+            oqparam.usecache = False
 
-    def run(self):
+    def run(self, **kw):
         """
-        Run the calculation and return the exported files.
+        Run the calculation and return the saved output.
         """
         self.monitor.write('operation pid time_sec memory_mb'.split())
+        vars(self.oqparam).update(kw)
         self.pre_execute()
         result = self.execute()
-        return self.post_execute(result)
+        exported = self.post_execute(result)
+        for item in sorted(exported.iteritems()):
+            logging.info('exported %s: %s', *item)
+        return self.save_pik(result, exported=exported)
 
     def core_func(*args):
         """
@@ -89,11 +98,21 @@ class BaseCalculator(object):
         of output files.
         """
 
+    @abc.abstractmethod
+    def save_pik(self, result, **kw):
+        """
+        Called after post_execute
+        """
+
 
 class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
+    prefilter = True  # filter the sources before splitting them
+    mean_curves = None  # to be overridden
+    result_kind = None  # to be overridden
+
     def pre_execute(self):
         """
         Read the site collection and the sources.
@@ -101,7 +120,7 @@ class HazardCalculator(BaseCalculator):
         if 'exposure' in self.oqparam.inputs:
             logging.info('Reading the exposure')
             exposure = readinput.get_exposure(self.oqparam)
-            self.sitecol, self.assets = readinput.get_sitecol_assets(
+            self.sitecol, self.assets_by_site = readinput.get_sitecol_assets(
                 self.oqparam, exposure)
         else:
             logging.info('Reading the site collection')
@@ -109,21 +128,41 @@ class HazardCalculator(BaseCalculator):
         if 'source' in self.oqparam.inputs:
             logging.info('Reading the composite source models')
             self.composite_source_model = readinput.get_composite_source_model(
-                self.oqparam, self.sitecol)
+                self.oqparam, self.sitecol, self.prefilter)
             self.job_info = readinput.get_job_info(
                 self.oqparam, self.composite_source_model, self.sitecol)
             # we could manage limits here
             self.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
         else:  # calculators without sources, i.e. scenario
             self.gsims = readinput.get_gsims(self.oqparam)
-            self.rlzs_assoc = workflows.FakeRlzsAssoc(len(self.gsims))
+            self.rlzs_assoc = riskinput.FakeRlzsAssoc(len(self.gsims))
+
+    def save_pik(self, result, **kw):
+        """
+        Must be run at the end of post_execute. Returns a dictionary
+        with the saved results.
+
+        :param result: the output of the `execute` method
+        :param kw: extras to add to the output dictionary
+        :returns: a dictionary with the saved data
+        """
+        haz_out = dict(rlzs_assoc=self.rlzs_assoc,
+                       sitecol=self.sitecol, oqparam=self.oqparam)
+        haz_out[self.result_kind] = result
+        haz_out.update(kw)
+        cache = os.path.join(self.oqparam.export_dir, 'hazard.pik')
+        logging.info('Saving hazard output on %s', cache)
+        with open(cache, 'w') as f:
+            cPickle.dump(haz_out, f)
+        return haz_out
 
 
-def get_hazard(calculator):
+def get_hazard(calculator, exports=''):
     """
     Get the hazard from a calculator, possibly by using cached results
 
     :param calculator: a calculator with a .hazard_calculator attribute
+    :returns: a pair (hazard output, hazard_calculator)
     """
     cache = os.path.join(calculator.oqparam.export_dir, 'hazard.pik')
     if calculator.oqparam.usecache:
@@ -132,14 +171,9 @@ def get_hazard(calculator):
     else:
         hcalc = calculators[calculator.hazard_calculator](
             calculator.oqparam, calculator.monitor('hazard'))
-        hcalc.pre_execute()
-        result = hcalc.execute()
-        haz_out = dict(result=result, rlzs_assoc=hcalc.rlzs_assoc,
-                       sitecol=hcalc.sitecol)
-        logging.info('Saving hazard output on %s', cache)
-        with open(cache, 'w') as f:
-            cPickle.dump(haz_out, f)
-    return haz_out
+        haz_out = hcalc.run(exports=exports)
+
+    return haz_out, hcalc
 
 
 class RiskCalculator(BaseCalculator):
@@ -152,10 +186,20 @@ class RiskCalculator(BaseCalculator):
     hazard_calculator = None  # to be ovverriden in subclasses
     rlzs_assoc = None  # to be ovverriden in subclasses
 
-    def build_riskinputs(self, hazards_by_imt):
+    def make_eps_dict(self, num_ruptures):
         """
-        :param hazards_by_imt:
-            a dictionary IMT -> array of length equal to the  number of sites
+        :param num_ruptures: the size of the epsilon array for each asset
+        """
+        oq = self.oqparam
+        return riskinput.make_eps_dict(
+            self.assets_by_site, num_ruptures,
+            getattr(oq, 'master_seed', 42),
+            getattr(oq, 'asset_correlation', 0))
+
+    def build_riskinputs(self, hazards_by_key, eps_dict):
+        """
+        :param hazards_by_key:
+            a dictionary key -> IMT -> array of length num_sites
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
@@ -168,13 +212,35 @@ class RiskCalculator(BaseCalculator):
             weight=operator.itemgetter(1))
         for block in blocks:
             idx = numpy.array([idx for idx, _weight in block])
-            for imt, hazards_by_site in hazards_by_imt.iteritems():
+            reduced_assets = self.assets_by_site[idx]
+            reduced_eps = {}  # for the assets belonging to the idx array
+            if eps_dict:
+                for assets in reduced_assets:
+                    for asset in assets:
+                        reduced_eps[asset.id] = eps_dict[asset.id]
+
+            # collect the hazards by key into hazards by imt
+            hdata = collections.defaultdict(lambda: [{} for _ in idx])
+            for key, hazards_by_imt in hazards_by_key.iteritems():
+                for imt, hazards_by_site in hazards_by_imt.iteritems():
+                    for i, haz in enumerate(hazards_by_site[idx]):
+                        hdata[imt][i][key] = haz
+
+            # build the riskinputs
+            for imt in hdata:
                 ri = self.riskmodel.build_input(
-                    imt, hazards_by_site[idx], self.assets_by_site[idx])
+                    imt, hdata[imt], reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
         logging.info('Built %d risk inputs', len(riskinputs))
-        return sorted(riskinputs, key=get_imt)
+        return sorted(riskinputs, key=self.riskinput_key)
+
+    def riskinput_key(self, ri):
+        """
+        :param ri: riskinput object
+        :returns: the IMT associated to it
+        """
+        return ri.imt
 
     def assoc_assets_sites(self, sitecol):
         """
@@ -240,5 +306,15 @@ class RiskCalculator(BaseCalculator):
             self.core_func.__func__,
             (self.riskinputs, self.riskmodel, self.rlzs_assoc, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
-            weight=get_weight,
-            key=get_imt)
+            weight=get_weight, key=self.riskinput_key)
+
+    def save_pik(self, result, **kw):
+        """Save the risk outputs"""
+        risk_out = dict(oqparam=self.oqparam)
+        risk_out[self.result_kind] = result
+        risk_out.update(kw)
+        cache = os.path.join(self.oqparam.export_dir, 'risk.pik')
+        logging.info('Saving risk output on %s', cache)
+        with open(cache, 'w') as f:
+            cPickle.dump(risk_out, f)
+        return risk_out

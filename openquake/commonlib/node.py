@@ -428,7 +428,6 @@ class LiteralNode(Node):
             try:
                 text = validators[tag](text, **attrib)
                 assert text is not None
-                attrib = {}
             except Exception as exc:
                 raise ValueError('Could not convert %s->%s: %s, line %s' %
                                  (tag, validators[tag].__name__, exc, lineno))

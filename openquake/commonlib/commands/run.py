@@ -31,7 +31,7 @@ def run(job_ini, concurrent_tasks=executor.num_tasks_hint,
     (0 to disable the parallelization).
     """
     logging.basicConfig(level=getattr(logging, loglevel.upper()))
-    oqparam = readinput.get_oqparam(job_ini.split(','))
+    oqparam = readinput.get_oqparam(job_ini)
     oqparam.concurrent_tasks = concurrent_tasks
     oqparam.usecache = usecache
     oqparam.exports = exports
@@ -44,6 +44,8 @@ def run(job_ini, concurrent_tasks=executor.num_tasks_hint,
             result = calc.execute()
         with monitor('post_execute'):
             out = calc.post_execute(result)
+        with monitor('save_pik'):
+            calc.save_pik(result)
     for item in sorted(out.iteritems()):
         logging.info('exported %s: %s', *item)
     logging.info('Total time spent: %s s', monitor.duration)
@@ -54,6 +56,6 @@ parser.arg('job_ini', 'calculation configuration file '
            '(or files, comma-separated)')
 parser.opt('concurrent_tasks', 'hint for the number of tasks to spawn',
            type=int)
-parser.opt('loglevel', 'logging level', choices=
-           'debug info warn error critical'.split())
+parser.opt('loglevel', 'logging level',
+           choices='debug info warn error critical'.split())
 parser.flg('usecache', 'use the hazard output cache if possible')

@@ -19,7 +19,7 @@ import collections
 import random
 from lxml import etree
 
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, groupby
 from openquake.commonlib.node import read_nodes
 from openquake.commonlib import valid, logictree, sourceconverter
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
@@ -29,15 +29,36 @@ class DuplicatedID(Exception):
     """Raised when two sources with the same ID are found in a source model"""
 
 
-LtRealization = collections.namedtuple(
-    'LtRealization', 'ordinal sm_lt_path gsim_lt_path weight')
-LtRealization.__str__ = lambda self: '<%d,%s,%s,w=%s>' % (
-    self.ordinal, '_'.join(self.sm_lt_path), '_'.join(self.gsim_lt_path),
-    self.weight)
+class LtRealization(object):
+    """
+    Composite realization build on top of a source model realization and
+    a GSIM realization.
+    """
+    def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight):
+        self.ordinal = ordinal
+        self.sm_lt_path = sm_lt_path
+        self.gsim_rlz = gsim_rlz
+        self.weight = weight
+
+    def __repr__(self):
+        if self.col_ids:
+            col = ',col=' + ','.join(map(str, sorted(self.col_ids)))
+        else:
+            col = ''
+        return '<%d,%s,w=%s%s>' % (self.ordinal, self.uid, self.weight, col)
+
+    @property
+    def gsim_lt_path(self):
+        return self.gsim_rlz.lt_path
+
+    @property
+    def uid(self):
+        """An unique identifier for effective realizations"""
+        return '_'.join(self.sm_lt_path) + ',' + self.gsim_rlz.uid
 
 
 SourceModel = collections.namedtuple(
-    'SourceModel', 'name weight path trt_models gsim_lt ordinal')
+    'SourceModel', 'name weight path trt_models gsim_lt ordinal samples')
 
 
 class TrtModel(collections.Sequence):
@@ -129,8 +150,9 @@ class TrtModel(collections.Sequence):
         self.sources = sorted(sources, key=operator.attrgetter('source_id'))
 
     def __repr__(self):
-        return '<%s #%d %s, %d source(s)>' % (
-            self.__class__.__name__, self.id, self.trt, len(self.sources))
+        return '<%s #%d %s, %d source(s), %d rupture(s)>' % (
+            self.__class__.__name__, self.id, self.trt,
+            len(self.sources), self.num_ruptures)
 
     def __lt__(self, other):
         """
@@ -203,6 +225,7 @@ class RlzsAssoc(collections.Mapping):
     :attr realizations: list of LtRealization objects
     :attr gsim_by_trt: list of dictionaries {trt: gsim}
     :attr rlzs_assoc: dictionary {trt_model_id, gsim: rlzs}
+    :attr rlzs_by_smodel: dictionary {source_model_ordinal: rlzs}
 
     For instance, for the non-trivial logic tree in
     :mod:`openquake.qa_tests_data.classical.case_15`, which has 4 tectonic
@@ -218,45 +241,44 @@ class RlzsAssoc(collections.Mapping):
     (3, 'BooreAtkinson2008') ['#6-SM2_a3b1-BA2008']
     (3, 'CampbellBozorgnia2008') ['#7-SM2_a3b1-CB2008']
     """
-    def __init__(self, rlzs_assoc=None):
-        self.gsim_by_trt = {}  # rlz -> {trt: gsim}
+    def __init__(self, csm_info, rlzs_assoc=None):
+        self.csm_info = csm_info
         self.rlzs_assoc = rlzs_assoc or collections.defaultdict(list)
-        self.rlzs_by_smodel = []
+        self.gsim_by_trt = {}  # rlz -> {trt: gsim}
+        self.rlzs_by_smodel = collections.OrderedDict()
 
     @property
     def realizations(self):
         """Flat list with all the realizations"""
-        return sum(self.rlzs_by_smodel, [])
-
-    def _add_realizations(self, idx, lt_model, realizations):
-        # create the realizations for the given lt source model
-        trt_models = [tm for tm in lt_model.trt_models if tm.num_ruptures]
-        if not trt_models:
-            return idx
-        gsims_by_trt = lt_model.gsim_lt.values
-        rlzs = []
-        for gsim_by_trt, weight, gsim_path, _ in realizations:
-            weight = float(lt_model.weight) * float(weight)
-            rlz = LtRealization(idx, lt_model.path, gsim_path, weight)
-            rlzs.append(rlz)
-            self.gsim_by_trt[rlz] = gsim_by_trt
-            for trt_model in trt_models:
-                trt = trt_model.trt
-                gsim = gsim_by_trt[trt]
-                self.rlzs_assoc[trt_model.id, gsim].append(rlz)
-                trt_model.gsims = gsims_by_trt[trt]
-            idx += 1
-        self.rlzs_by_smodel.append(rlzs)
-        return idx
+        return sum(self.rlzs_by_smodel.itervalues(), [])
 
     def get_gsims_by_trt_id(self):
-        """
-        Return a dictionary trt_model_id -> [GSIM instances]
-        """
-        gsims_by_trt = collections.defaultdict(list)
-        for trt_id, gsim in sorted(self.rlzs_assoc):
-            gsims_by_trt[trt_id].append(valid.gsim(gsim))
-        return gsims_by_trt
+        """Returns associations trt_id -> [GSIM instance, ...]"""
+        return groupby(
+            self.rlzs_assoc, operator.itemgetter(0),
+            lambda group: sorted(valid.gsim(gsim)
+                                 for trt_id, gsim in group))
+
+    def _add_realizations(self, idx, lt_model, realizations):
+        gsims_by_trt = lt_model.gsim_lt.values
+        rlzs = []
+        for i, gsim_rlz in enumerate(realizations):
+            weight = float(lt_model.weight) * float(gsim_rlz.weight)
+            rlz = LtRealization(idx, lt_model.path, gsim_rlz, weight)
+            rlz.col_ids = set()
+            self.gsim_by_trt[rlz] = gsim_rlz.value
+            for trt_model in lt_model.trt_models:
+                trt = trt_model.trt
+                gsim = gsim_rlz.value[trt]
+                self.rlzs_assoc[trt_model.id, gsim].append(rlz)
+                trt_model.gsims = gsims_by_trt[trt]
+                if lt_model.samples > 1:  # oversampling
+                    col_idx = self.csm_info.get_col_idx(trt_model.id, i)
+                    rlz.col_ids.add(col_idx)
+            idx += 1
+            rlzs.append(rlz)
+        self.rlzs_by_smodel[lt_model.ordinal] = rlzs
+        return idx
 
     def combine(self, results, agg=agg_prob):
         """
@@ -267,7 +289,7 @@ class RlzsAssoc(collections.Mapping):
         Example: a case with tectonic region type T1 with GSIMS A, B, C
         and tectonic region type T2 with GSIMS D, E.
 
-        >>> assoc = RlzsAssoc({
+        >>> assoc = RlzsAssoc(CompositionInfo([]), {
         ... ('T1', 'A'): ['r0', 'r1'],
         ... ('T1', 'B'): ['r2', 'r3'],
         ... ('T1', 'C'): ['r4', 'r5'],
@@ -337,6 +359,66 @@ class RlzsAssoc(collections.Mapping):
         return '{%s}' % '\n'.join('%s: %s' % pair for pair in pairs)
 
 
+class CompositionInfo(object):
+    """
+    An object to collect information about the composition of
+    a composite source model.
+    """
+    def __init__(self, source_models):
+        self._col_dict = {}  # dictionary trt_id, idx -> col_idx
+        self._num_samples = {}  # trt_id -> num_samples
+        col_idx = 0
+        for sm in source_models:
+            for trt_model in sm.trt_models:
+                trt_id = trt_model.id
+                if sm.samples > 1:
+                    self._num_samples[trt_id] = sm.samples
+                for idx in range(sm.samples):
+                    self._col_dict[trt_id, idx] = col_idx
+                    col_idx += 1
+                trt_id += 1
+
+    def get_max_samples(self):
+        """Return the maximum number of samples of the source model"""
+        values = self._num_samples.values()
+        if not values:
+            return 1
+        return max(values)
+
+    def get_num_samples(self, trt_id):
+        """
+        :param trt_id: tectonic region type object ID
+        :returns: how many times the sources of that TRT are to be sampled
+        """
+        return self._num_samples.get(trt_id, 1)
+
+    def get_col_idx(self, trt_id, idx):
+        """
+        :param trt_id: tectonic region type object ID
+        :param idx: an integer index from 0 to num_samples
+        :returns: the SESCollection ordinal
+        """
+        return self._col_dict[trt_id, idx]
+
+    def get_trt_id(self, col_idx):
+        """
+        :param col_idx: the ordinal of a SESCollection
+        :returns: the ID of the associated TrtModel
+        """
+        for (trt_id, idx), cid in self._col_dict.iteritems():
+            if cid == col_idx:
+                return trt_id
+        raise KeyError('There is no TrtModel associated to the collection %d!'
+                       % col_idx)
+
+    def get_triples(self):
+        """
+        Yield triples (trt_id, idx, col_idx) in order
+        """
+        for (trt_id, idx), col_idx in sorted(self._col_dict.iteritems()):
+            yield trt_id, idx, col_idx
+
+
 class CompositeSourceModel(collections.Sequence):
     """
     :param source_model_lt:
@@ -347,12 +429,9 @@ class CompositeSourceModel(collections.Sequence):
     def __init__(self, source_model_lt, source_models):
         self.source_model_lt = source_model_lt
         self.source_models = list(source_models)
-        if not self.source_models:
+        if len(list(self.sources)) == 0:
             raise RuntimeError('All sources were filtered away')
-        self.tmdict = {}
-        for i, tm in enumerate(self.trt_models):
-            tm.id = i
-            self.tmdict[i] = tm
+        self.info = CompositionInfo(source_models)
 
     @property
     def trt_models(self):
@@ -373,55 +452,61 @@ class CompositeSourceModel(collections.Sequence):
                 src.trt_model_id = trt_model.id
                 yield src
 
-    def reduce_trt_models(self):
-        """
-        Remove the tectonic regions without ruptures and reduce the
-        GSIM logic tree. It works by updating the underlying source models.
-        """
-        for sm in self:
-            trts = set(trt_model.trt for trt_model in sm.trt_models
-                       if trt_model.num_ruptures > 0)
-            if trts == set(sm.gsim_lt.tectonic_region_types):
-                # nothing to remove
-                continue
-            # build the reduced logic tree
-            gsim_lt = sm.gsim_lt.filter(trts)
-            tmodels = []  # collect the reduced trt models
-            for trt_model in sm.trt_models:
-                if trt_model.trt in trts:
-                    trt_model.gsims = gsim_lt.values[trt_model.trt]
-                    tmodels.append(trt_model)
-            self[sm.ordinal] = SourceModel(
-                sm.name, sm.weight, sm.path, tmodels, gsim_lt, sm.ordinal)
-
-    def get_rlzs_assoc(self):
+    def get_rlzs_assoc(self, get_weight=lambda tm: tm.num_ruptures):
         """
         Return a RlzsAssoc with fields realizations, gsim_by_trt,
         rlz_idx and trt_gsims.
+
+        :param get_weight: a function trt_model -> positive number
         """
-        assoc = RlzsAssoc()
+        assoc = RlzsAssoc(self.info)
         random_seed = self.source_model_lt.seed
         num_samples = self.source_model_lt.num_samples
         idx = 0
         for smodel in self.source_models:
-            if num_samples:  # sampling, pick just one gsim realization
+            # count the number of ruptures per tectonic region type
+            trts = set()
+            for trt_model in smodel.trt_models:
+                if get_weight(trt_model) > 0:
+                    trts.add(trt_model.trt)
+            # recompute the GSIM logic tree if needed
+            if trts != set(smodel.gsim_lt.tectonic_region_types):
+                smodel.gsim_lt.reduce(trts)
+            if num_samples:  # sampling
                 rnd = random.Random(random_seed + idx)
-                rlzs = [logictree.sample_one(smodel.gsim_lt, rnd)]
+                rlzs = logictree.sample(smodel.gsim_lt, smodel.samples, rnd)
+            else:  # full enumeration
+                rlzs = logictree.get_effective_rlzs(smodel.gsim_lt)
+            if rlzs:
+                idx = assoc._add_realizations(idx, smodel, rlzs)
+        if assoc.realizations:
+            if num_samples:
+                assert len(assoc.realizations) == num_samples
+                for rlz in assoc.realizations:
+                    rlz.weight = 1. / num_samples
             else:
-                rlzs = list(smodel.gsim_lt)  # full enumeration
-            logging.info('Creating %d GMPE realization(s) for model %s, %s',
-                         len(rlzs), smodel.name, smodel.path)
-            idx = assoc._add_realizations(idx, smodel, rlzs)
-
+                tot_weight = sum(rlz.weight for rlz in assoc.realizations)
+                if tot_weight == 0:
+                    raise ValueError('All realizations have zero weight??')
+                elif tot_weight < 1:
+                    logging.warn('Some source models are not contributing, '
+                                 'weights are being rescaled')
+                for rlz in assoc.realizations:
+                    rlz.weight = rlz.weight / tot_weight
         return assoc
+
+    def __repr__(self):
+        """
+        Return a string representation of the composite model
+        """
+        models = ['%d-%s-%s,w=%s [%d trt_model(s)]' % (
+            sm.ordinal, sm.name, '_'.join(sm.path), sm.weight,
+            len(sm.trt_models)) for sm in self]
+        return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(models))
 
     def __getitem__(self, i):
         """Return the i-th source model"""
         return self.source_models[i]
-
-    def __setitem__(self, i, sm):
-        """Update the i-th source model"""
-        self.source_models[i] = sm
 
     def __iter__(self):
         """Return an iterator over the underlying source models"""

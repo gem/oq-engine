@@ -164,7 +164,7 @@ class FloatRange(object):
 
 def not_empty(value):
     """Check that the string is not empty"""
-    if not value:
+    if value == '':
         raise ValueError('Got an empty string')
     return value
 

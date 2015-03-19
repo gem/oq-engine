@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2014, GEM Foundation
+#  Copyright (c) 2014-2015, GEM Foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -23,6 +23,7 @@ import numpy
 
 from openquake.risklib import scientific
 from openquake.baselib.general import AccumDict
+from openquake.commonlib import readinput
 from openquake.commonlib.calculators import base, calc
 from openquake.commonlib.export import export
 from openquake.commonlib.risk_writers import (
@@ -35,9 +36,11 @@ def scenario_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
     Core function for a damage computation.
 
     :param riskinputs:
-        a list of :class:`openquake.risklib.workflows.RiskInput` objects
+        a list of :class:`openquake.risklib.riskinput.RiskInput` objects
     :param riskmodel:
-        a :class:`openquake.risklib.workflows.RiskModel` instance
+        a :class:`openquake.risklib.riskinput.RiskModel` instance
+    :param rlzs_assoc:
+        a class:`openquake.commonlib.source.RlzsAssoc` instance
     :param monitor:
         :class:`openquake.commonlib.parallel.PerformanceMonitor` instance
     :returns:
@@ -49,9 +52,9 @@ def scenario_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
                  sum(ri.weight for ri in riskinputs))
     with monitor:
         result = AccumDict()  # (key_type, key) -> result
-        for [(assets, fractions)] in riskmodel.gen_outputs(
-                riskinputs, rlzs_assoc):
-            for asset, fraction in zip(assets, fractions):
+        for output in riskmodel.gen_outputs(riskinputs, rlzs_assoc):
+            [assets_fractions] = output.values()  # there is a single rlz
+            for asset, fraction in zip(*assets_fractions):
                 damages = fraction * asset.number
                 result += {('asset', asset): scientific.mean_std(damages)}
                 result += {('taxonomy', asset.taxonomy): damages}
@@ -65,6 +68,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
     """
     hazard_calculator = 'scenario'
     core_func = scenario_damage
+    result_kind = 'damages_by_key'
 
     def pre_execute(self):
         """
@@ -73,13 +77,14 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         super(ScenarioDamageCalculator, self).pre_execute()
 
         logging.info('Computing the GMFs')
-        haz_out = base.get_hazard(self)
-        gmfs_by_imt = calc.data_by_imt(
-            haz_out['result'], self.oqparam.imtls, len(self.sitecol))
+        haz_out, hcalc = base.get_hazard(self, exports='xml')
+        gmfs_by_trt_gsim = calc.expand(
+            haz_out['gmfs_by_trt_gsim'], hcalc.sites)
 
         logging.info('Preparing the risk input')
         self.rlzs_assoc = haz_out['rlzs_assoc']
-        self.riskinputs = self.build_riskinputs(gmfs_by_imt)
+        self.riskinputs = self.build_riskinputs(
+            gmfs_by_trt_gsim, eps_dict={})
 
     def post_execute(self, result):
         """
