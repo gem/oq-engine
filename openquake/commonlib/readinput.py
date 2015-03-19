@@ -839,7 +839,7 @@ def get_sitecol_gmfs(oqparam):
 
 def get_mesh_hcurves(oqparam):
     """
-    Read CSV data in the format `IMT lon lat value1 ... valueN`.
+    Read CSV data in the format `lon lat, v1-vN, w1-wN, ...`.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -867,9 +867,9 @@ def get_mesh_hcurves(oqparam):
                 if len(values) != len(imtls[imt]):
                     raise ValueError('Found %d values, expected %d' %
                                      (len(values), len(imtls([imt]))))
+                data += {imt: [numpy.array(values)]}
         except (ValueError, DuplicatedPoint) as err:
             raise err.__class__('%s: file %s, line %d' % (err, csvfile, line))
-        data += {imt: [numpy.array(values)]}
     lons, lats = zip(*sorted(lon_lats))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
     return mesh, {imt: numpy.array(lst) for imt, lst in data.iteritems()}
