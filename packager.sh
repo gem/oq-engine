@@ -63,6 +63,16 @@ if [ "$GEM_EPHEM_CMD" = "" ]; then
 fi
 GEM_EPHEM_NAME="ubuntu-lxc-eph"
 
+if command -v lxc-shutdown &> /dev/null; then
+    # Older lxc (< 1.0.0) with lxc-shutdown
+    LXC_TERM="lxc-shutdown -t 10 -w"
+    LXC_KILL="lxc-stop"
+else
+    # Newer lxc (>= 1.0.0) with lxc-stop only
+    LXC_TERM="lxc-stop -t 10"
+    LXC_KILL="lxc-stop -k"
+fi
+
 NL="
 "
 TB="	"
@@ -86,7 +96,7 @@ sig_hand () {
         if [ -f "${upper}.dsk" ]; then
             loop_dev="$(sudo losetup -a | grep "(${upper}.dsk)$" | cut -d ':' -f1)"
         fi
-        sudo lxc-stop -n $lxc_name
+        sudo $LXC_KILL -n $lxc_name
         sudo umount /var/lib/lxc/$lxc_name/rootfs
         sudo umount /var/lib/lxc/$lxc_name/ephemeralbind
         echo "$upper" | grep -q '^/tmp/'
@@ -311,32 +321,37 @@ celeryd_wait() {
 
 celeryd_wait $GEM_MAXLOOP"
 
+        if [ -n "$GEM_DEVTEST_SKIP_SLOW_TESTS" ]; then
+            # skip slow tests
+            skip_tests="!slow,"
+        fi
+
         # run tests (in this case we omit 'set -e' to be able to read all tests outputs)
         ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ;
                  cd oq-engine
-                 DJANGO_SETTINGS_MODULE=openquake.server.settings nosetests -v --with-xunit --xunit-file=xunit-server.xml --with-coverage --cover-package=openquake.server --with-doctest openquake/server/tests/
-                 nosetests -v --with-xunit --xunit-file=xunit-engine.xml --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine/tests/
+                 DJANGO_SETTINGS_MODULE=openquake.server.settings nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-server.xml --with-coverage --cover-package=openquake.server --with-doctest openquake/server/tests/
+                 nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-engine.xml --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine/tests/
 
                  # OQ Engine QA tests (splitted into multiple execution to track the performance)
-                 nosetests  -a 'qa,hazard,classical' -v --with-xunit --xunit-file=xunit-qa-hazard-classical.xml
-                 nosetests  -a 'qa,hazard,event_based' -v --with-xunit --xunit-file=xunit-qa-hazard-event-based.xml
-                 nosetests  -a 'qa,hazard,disagg' -v --with-xunit --xunit-file=xunit-qa-hazard-disagg.xml
-                 nosetests  -a 'qa,hazard,scenario' -v --with-xunit --xunit-file=xunit-qa-hazard-scenario.xml
+                 nosetests  -a '${skip_tests}qa,hazard,classical' -v --with-xunit --xunit-file=xunit-qa-hazard-classical.xml
+                 nosetests  -a '${skip_tests}qa,hazard,event_based' -v --with-xunit --xunit-file=xunit-qa-hazard-event-based.xml
+                 nosetests  -a '${skip_tests}qa,hazard,disagg' -v --with-xunit --xunit-file=xunit-qa-hazard-disagg.xml
+                 nosetests  -a '${skip_tests}qa,hazard,scenario' -v --with-xunit --xunit-file=xunit-qa-hazard-scenario.xml
 
-                 nosetests  -a 'qa,risk,classical' -v --with-xunit --xunit-file=xunit-qa-risk-classical.xml
-                 nosetests  -a 'qa,risk,event_based' -v --with-xunit --xunit-file=xunit-qa-risk-event-based.xml
-                 nosetests  -a 'qa,risk,classical_bcr' -v --with-xunit --xunit-file=xunit-qa-risk-classical-bcr.xml
-                 nosetests  -a 'qa,risk,event_based_bcr' -v --with-xunit --xunit-file=xunit-qa-risk-event-based-bcr.xml
-                 nosetests  -a 'qa,risk,scenario_damage' -v --with-xunit --xunit-file=xunit-qa-risk-scenario-damage.xml
-                 nosetests  -a 'qa,risk,scenario' -v --with-xunit --xunit-file=xunit-qa-risk-scenario.xml
+                 nosetests  -a '${skip_tests}qa,risk,classical' -v --with-xunit --xunit-file=xunit-qa-risk-classical.xml
+                 nosetests  -a '${skip_tests}qa,risk,event_based' -v --with-xunit --xunit-file=xunit-qa-risk-event-based.xml
+                 nosetests  -a '${skip_tests}qa,risk,classical_bcr' -v --with-xunit --xunit-file=xunit-qa-risk-classical-bcr.xml
+                 nosetests  -a '${skip_tests}qa,risk,event_based_bcr' -v --with-xunit --xunit-file=xunit-qa-risk-event-based-bcr.xml
+                 nosetests  -a '${skip_tests}qa,risk,scenario_damage' -v --with-xunit --xunit-file=xunit-qa-risk-scenario-damage.xml
+                 nosetests  -a '${skip_tests}qa,risk,scenario' -v --with-xunit --xunit-file=xunit-qa-risk-scenario.xml
 
                  python-coverage xml --include=\"openquake/*\"
         "
-        scp "${lxc_ip}:oq-engine/xunit-*.xml" .
-        scp "${lxc_ip}:oq-engine/coverage.xml" .
+        scp "${lxc_ip}:oq-engine/xunit-*.xml" . || true
+        scp "${lxc_ip}:oq-engine/coverage.xml" . || true
     else
         if [ -d $HOME/fake-data/oq-engine ]; then
-            cp $HOME/fake-data/oq-engine/* .
+            cp $HOME/fake-data/oq-engine/* . || true
         fi
     fi
 
@@ -548,8 +563,8 @@ _lxc_name_and_ip_get()
             lxc_name="$(grep "sudo lxc-console -n $GEM_EPHEM_NAME" $filename | sed "s/.*sudo lxc-console -n \($GEM_EPHEM_NAME\)/\1/g")"
             for e in $(seq 1 40); do
                 sleep 2
-                if grep -q "$lxc_name" /var/lib/misc/dnsmasq.leases ; then
-                    lxc_ip="$(grep " $lxc_name " /var/lib/misc/dnsmasq.leases | cut -d ' ' -f 3)"
+                if grep -q "$lxc_name" /var/lib/misc/dnsmasq*.leases ; then
+                    lxc_ip="$(grep " $lxc_name " /var/lib/misc/dnsmasq*.leases | tail -n 1 | cut -d ' ' -f 3)"
                     break
                 fi
             done
@@ -634,7 +649,7 @@ devtest_run () {
     scp "${lxc_ip}:/tmp/celeryd.log" celeryd.log
     scp "${lxc_ip}:ssh.log" devtest.history
 
-    sudo lxc-shutdown -n $lxc_name -w -t 10
+    sudo $LXC_TERM -n $lxc_name
 
     # NOTE: pylint returns errors too frequently to consider them a critical event
     if pylint --rcfile pylintrc -f parseable openquake > pylint.txt ; then
@@ -708,7 +723,7 @@ EOF
     scp "${lxc_ip}:/tmp/celeryd.log" celeryd.log
     scp "${lxc_ip}:ssh.log" pkgtest.history
 
-    sudo lxc-shutdown -n $lxc_name -w -t 10
+    sudo $LXC_TERM -n $lxc_name
     set -e
 
     if [ $inner_ret -ne 0 ]; then

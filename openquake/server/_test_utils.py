@@ -17,7 +17,7 @@ class MultiMock(object):
         # The value of each item is the path to the function/method you wish to
         # mock. The key is basically a shortcut to the mock.
         mocks = {
-            'touch': 'openquake.engine.engine.touch_log_file',
+            'touch': 'openquake.engine.logs.touch_log_file',
             'job': 'openquake.engine.engine.haz_job_from_file',
         }
         multi_mock = MultiMock(**mocks)
