@@ -35,12 +35,10 @@ HAZARD_CALCULATORS = [
 
 RISK_CALCULATORS = [
     'classical_risk', 'event_based_risk', 'scenario_risk',
-    'classical_bcr', 'event_based_bcr', 'scenario_damage', 'classical_damage']
+    'classical_bcr', 'event_based_bcr', 'scenario_damage',
+    'classical_damage', 'event_loss']
 
-EXPERIMENTAL_CALCULATORS = [
-    'event_loss']
-
-CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS + EXPERIMENTAL_CALCULATORS
+CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS
 
 
 class OqParam(valid.ParamSet):
@@ -148,8 +146,7 @@ class OqParam(valid.ParamSet):
         Returns an OrderedDict with the risk intensity measure types and
         levels, if given, or the hazard ones.
         """
-        imtls = getattr(self, 'risk_imtls', None) or getattr(
-            self, 'hazard_imtls', None)
+        imtls = getattr(self, 'hazard_imtls', None) or self.risk_imtls
         return collections.OrderedDict(sorted(imtls.items()))
 
     def is_valid_truncation_level_disaggregation(self):

@@ -16,10 +16,12 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os.path
 import logging
+import collections
 
 from openquake.baselib import general
-from openquake.commonlib import readinput
+from openquake.commonlib import readinput, writers
 from openquake.commonlib.calculators import base
 
 
@@ -37,12 +39,15 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
         :class:`openquake.commonlib.parallel.PerformanceMonitor` instance
     """
     with monitor:
-        result = general.AccumDict()
+        result = collections.defaultdict(general.AccumDict)
         for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc):
             for rlz, out in out_by_rlz.iteritems():
-                for asset, average_loss in zip(out.assets, out.average_losses):
-                    result += {('avg_loss', rlz.ordinal, asset.id):
-                               out.average_loss}
+                for i, asset in enumerate(out.assets):
+                    result[rlz.ordinal, 'avg_loss'] += {
+                        asset.id: out.average_losses[i]}
+                    if out.average_insured_losses is not None:
+                        result[rlz.ordinal, 'ins_loss'] += {
+                            asset.id: out.average_insured_losses[i]}
     return result
 
 
@@ -52,6 +57,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
     Classical Risk calculator
     """
     hazard_calculator = 'classical'
+    result_kind = 'avg_loss_by_rlz_asset'
     core_func = classical_risk
 
     def pre_execute(self):
@@ -71,7 +77,8 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         num_sites = len(sitecol)
         logging.info('Associated %d assets to %d sites', num_assets, num_sites)
 
-        haz_out, _hcalc = base.get_hazard(self)
+        haz_out, _hcalc = base.get_hazard(self, exports=self.oqparam.exports)
+
         logging.info('Preparing the risk input')
         self.rlzs_assoc = haz_out['rlzs_assoc']
         self.riskinputs = self.build_riskinputs(
@@ -81,6 +88,20 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         """
         Export the results. TO BE IMPLEMENTED.
         """
-        for k, v in result.iteritems():
-            print k, v
-        return {}
+        oq = self.oqparam
+
+        saved = general.AccumDict()
+        if 'csv' not in oq.exports:
+            return saved
+
+        # export curves
+        for ordinal, key_type in sorted(result):
+            data = sorted(result[ordinal, key_type].iteritems())
+            key = 'rlz-%03d-%s' % (ordinal, key_type)
+            saved[key] = self.export_csv(
+                key, [['asset_ref', 'agg_loss']] + data)
+        return saved
+
+    def export_csv(self, key, data):
+        dest = os.path.join(self.oqparam.export_dir, key) + '.csv'
+        return writers.save_csv(dest, data, fmt='%11.8E')

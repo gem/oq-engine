@@ -165,12 +165,12 @@ def get_hazard(calculator, exports=''):
     :returns: a pair (hazard output, hazard_calculator)
     """
     cache = os.path.join(calculator.oqparam.export_dir, 'hazard.pik')
+    hcalc = calculators[calculator.hazard_calculator](
+        calculator.oqparam, calculator.monitor('hazard'))
     if calculator.oqparam.usecache:
         with open(cache) as f:
             haz_out = cPickle.load(f)
     else:
-        hcalc = calculators[calculator.hazard_calculator](
-            calculator.oqparam, calculator.monitor('hazard'))
         haz_out = hcalc.run(exports=exports)
 
     return haz_out, hcalc
