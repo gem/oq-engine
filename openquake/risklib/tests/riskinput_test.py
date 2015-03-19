@@ -1,7 +1,6 @@
 import unittest
-from operator import itemgetter
 
-from openquake.commonlib import readinput, writers
+from openquake.commonlib import readinput
 from openquake.risklib import riskinput
 from openquake.commonlib.calculators import event_based
 from openquake.qa_tests_data.event_based_risk import case_2

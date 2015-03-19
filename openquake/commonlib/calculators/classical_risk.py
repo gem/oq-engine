@@ -20,7 +20,7 @@ import logging
 
 from openquake.baselib import general
 from openquake.commonlib import readinput
-from openquake.commonlib.calculators import base, calc
+from openquake.commonlib.calculators import base
 
 
 def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
@@ -38,10 +38,11 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     """
     with monitor:
         result = general.AccumDict()
-        for outputs in riskmodel.gen_outputs(riskinputs, rlzs_assoc):
-            for i, out in enumerate(outputs):
+        for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc):
+            for rlz, out in out_by_rlz.iteritems():
                 for asset, average_loss in zip(out.assets, out.average_losses):
-                    result += {('avg_loss', i, asset.id): average_loss}
+                    result += {('avg_loss', rlz.ordinal, asset.id):
+                               out.average_loss}
     return result
 
 
@@ -72,12 +73,9 @@ class ClassicalRiskCalculator(base.RiskCalculator):
 
         haz_out, _hcalc = base.get_hazard(self)
         logging.info('Preparing the risk input')
-        hcurves_by_imt = calc.data_by_imt(
-            haz_out['curves_by_trt_gsim'],
-            self.oqparam.hazard_imtls, num_sites)
-        # this is a dict imt -> [key -> val]
         self.rlzs_assoc = haz_out['rlzs_assoc']
-        self.riskinputs = self.build_riskinputs(hcurves_by_imt)
+        self.riskinputs = self.build_riskinputs(
+            haz_out['curves_by_trt_gsim'], eps_dict={})
 
     def post_execute(self, result):
         """

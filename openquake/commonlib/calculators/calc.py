@@ -128,13 +128,14 @@ def calc_gmfs(oqparam, sitecol):
     trunc_level = getattr(oqparam, 'truncation_level', None)
     n_gmfs = getattr(oqparam, 'number_of_ground_motion_fields', 1)
     rupture = get_rupture(oqparam)
-    computer = gmf.GmfComputer(rupture, sitecol, imts, gsim, trunc_level,
+    computer = gmf.GmfComputer(rupture, sitecol, imts, [gsim], trunc_level,
                                correl_model)
     seeds = [rnd.randint(0, MAX_INT) for _ in xrange(n_gmfs)]
     res = AccumDict()  # imt -> gmf
     for seed in seeds:
-        for imt, gmfield in computer.compute(seed):
-            res += {imt: [gmfield]}
+        for gsim_str, gmf_by_imt in computer.compute(seed):
+            for imt, gmfield in gmf_by_imt.iteritems():
+                res += {imt: [gmfield]}
     # res[imt] is a matrix R x N
     return {imt: numpy.array(matrix).T for imt, matrix in res.iteritems()}
 
@@ -314,6 +315,7 @@ def expand(data_dict, sites=None):
             for key, data_by_imt in data_dict.iteritems()}
 
 
+# not used anymore
 def data_by_imt(dict_of_dict_arrays, imtls, n_sites):
     """
     Convert a dictionary key -> imt -> [value ...] into a dictionary

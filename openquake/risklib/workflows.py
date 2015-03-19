@@ -733,13 +733,19 @@ class Scenario(Workflow):
     """
     Implements the Scenario workflow
     """
+    Output = collections.namedtuple(
+        'Output',
+        "assets loss_type loss_matrix aggregate_losses "
+        "insured_loss_matrix insured_losses")
+
     def __init__(self, imt, taxonomy, vulnerability_functions, insured_losses):
         self.imt = imt
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
         self.insured_losses = insured_losses
 
-    def __call__(self, loss_type, assets, ground_motion_values, epsilons):
+    def __call__(self, loss_type, assets, ground_motion_values, epsilons,
+                 _tags=None):
         values = numpy.array([a.value(loss_type) for a in assets])
 
         # a matrix of N x R elements
@@ -765,8 +771,9 @@ class Scenario(Workflow):
             insured_loss_matrix = None
             insured_losses = None
 
-        return (assets, loss_ratio_matrix, aggregate_losses,
-                insured_loss_matrix, insured_losses)
+        return self.Output(
+            assets, loss_type, loss_ratio_matrix, aggregate_losses,
+            insured_loss_matrix, insured_losses)
 
 
 @registry.add('scenario_damage')

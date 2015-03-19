@@ -20,37 +20,18 @@ import os
 import logging
 import collections
 
-import numpy
-from openquake.risklib import scientific
+from openquake.risklib import scientific, riskinput
 from openquake.baselib import general
-from openquake.commonlib import riskmodels
+from openquake.commonlib import riskmodels, readinput
 from openquake.commonlib.calculators import base, calc
 from openquake.commonlib.export import export
 
-
-def add_epsilons(assets_by_site, num_samples, seed, correlation):
-    """
-    Add an attribute named .epsilons to each asset in the assets_by_site
-    container.
-    """
-    assets_by_taxonomy = sum(
-        (general.groupby(assets, key=lambda a: a.taxonomy)
-         for assets in assets_by_site), {})
-
-    for taxonomy, assets in assets_by_taxonomy.iteritems():
-        logging.info('Building (%d, %d) epsilons for taxonomy %s',
-                     len(assets), num_samples, taxonomy)
-        eps_matrix = scientific.make_epsilons(
-            numpy.zeros((len(assets), num_samples)),
-            seed, correlation)
-        for asset, epsilons in zip(assets, eps_matrix):
-            asset.epsilons = epsilons
 
 AggLossCurve = collections.namedtuple(
     'AggLossCurve', 'loss_type unit mean stddev')
 
 
-def scenario_risk(riskinputs, riskmodel, monitor):
+def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     """
     Core function for a scenario computation.
 
@@ -58,6 +39,8 @@ def scenario_risk(riskinputs, riskmodel, monitor):
         a list of :class:`openquake.risklib.riskinput.RiskInput` objects
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.RiskModel` instance
+    :param rlzs_assoc:
+        a class:`openquake.commonlib.source.RlzsAssoc` instance
     :param monitor:
         :class:`openquake.commonlib.parallel.PerformanceMonitor` instance
     :returns:
@@ -69,12 +52,11 @@ def scenario_risk(riskinputs, riskmodel, monitor):
                  sum(ri.weight for ri in riskinputs))
     with monitor:
         result = general.AccumDict()  # agg_type, loss_type -> losses
-        for loss_type, outs in riskmodel.gen_outputs(riskinputs):
-            (_assets, _loss_ratio_matrix, aggregate_losses,
-             _insured_loss_matrix, insured_losses) = outs
-            result += {('agg', loss_type): aggregate_losses}
-            if insured_losses is not None:
-                result += {('ins', loss_type): insured_losses}
+        for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc):
+            for rlz, out in out_by_rlz.iteritems():
+                result += {('agg', out.loss_type): out.aggregate_losses}
+                if out.insured_losses is not None:
+                    result += {('ins', out.loss_type): out.insured_losses}
     return result
 
 
@@ -84,6 +66,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
     Run a scenario risk calculation
     """
     core_func = scenario_risk
+    result_kind = 'losses_by_key'
 
     def pre_execute(self):
         """
@@ -91,18 +74,17 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         with the unit of measure, used in the export phase.
         """
         super(ScenarioRiskCalculator, self).pre_execute()
+        self.gsims = readinput.get_gsims(self.oqparam)
+        self.rlzs_assoc = riskinput.FakeRlzsAssoc(len(self.gsims))
 
         logging.info('Computing the GMFs')
         gmfs_by_imt = calc.calc_gmfs(self.oqparam, self.sitecol)
 
         logging.info('Preparing the risk input')
-        self.riskinputs = self.build_riskinputs(gmfs_by_imt)
-
-        # build the epsilon matrix and add the epsilons to the assets
-        num_samples = self.oqparam.number_of_ground_motion_fields
-        seed = getattr(self.oqparam, 'master_seed', 42)
-        correlation = getattr(self.oqparam, 'asset_correlation', 0)
-        add_epsilons(self.assets_by_site, num_samples, seed, correlation)
+        eps_dict = self.make_eps_dict(
+            self.oqparam.number_of_ground_motion_fields)
+        self.riskinputs = self.build_riskinputs(
+            {(0, str(self.gsims[0])): gmfs_by_imt}, eps_dict)
         self.unit = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
                      for ct in self.exposure.cost_types}
         self.unit['fatalities'] = 'people'
@@ -118,7 +100,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             aggcurves += {key_type: [curve]}
         out = {}
         for key_type in aggcurves:
-            fname = export('%s_loss_csv' % key_type, self.oqparam.export_dir,
-                           aggcurves[key_type])
+            fname = export(('%s_loss' % key_type, 'csv'),
+                           self.oqparam.export_dir, aggcurves[key_type])
             out[key_type] = fname
         return out

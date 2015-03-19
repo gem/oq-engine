@@ -693,8 +693,10 @@ def get_exposure(oqparam):
             # check we are not missing a cost type
             missing = relevant_cost_types - set(values)
             if missing:
-                raise RuntimeError(
-                    'Missing cost types: %s' % ', '.join(missing))
+                logging.warn(
+                    'Discarding asset %s, missing cost type(s): %s',
+                    asset_id, ', '.join(missing))
+                continue
 
         if time_event:
             for occupancy in asset.occupancies:

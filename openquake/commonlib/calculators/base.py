@@ -20,6 +20,7 @@ import os
 import abc
 import logging
 import operator
+import collections
 import cPickle
 
 import numpy
@@ -185,10 +186,20 @@ class RiskCalculator(BaseCalculator):
     hazard_calculator = None  # to be ovverriden in subclasses
     rlzs_assoc = None  # to be ovverriden in subclasses
 
-    def build_riskinputs(self, hazards_by_imt):
+    def make_eps_dict(self, num_ruptures):
         """
-        :param hazards_by_imt:
-            a dictionary IMT -> array of length equal to the  number of sites
+        :param num_ruptures: the size of the epsilon array for each asset
+        """
+        oq = self.oqparam
+        return riskinput.make_eps_dict(
+            self.assets_by_site, num_ruptures,
+            getattr(oq, 'master_seed', 42),
+            getattr(oq, 'asset_correlation', 0))
+
+    def build_riskinputs(self, hazards_by_key, eps_dict):
+        """
+        :param hazards_by_key:
+            a dictionary key -> IMT -> array of length num_sites
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
@@ -201,9 +212,24 @@ class RiskCalculator(BaseCalculator):
             weight=operator.itemgetter(1))
         for block in blocks:
             idx = numpy.array([idx for idx, _weight in block])
-            for imt, hazards_by_site in hazards_by_imt.iteritems():
+            reduced_assets = self.assets_by_site[idx]
+            reduced_eps = {}  # for the assets belonging to the idx array
+            if eps_dict:
+                for assets in reduced_assets:
+                    for asset in assets:
+                        reduced_eps[asset.id] = eps_dict[asset.id]
+
+            # collect the hazards by key into hazards by imt
+            hdata = collections.defaultdict(lambda: [{} for _ in idx])
+            for key, hazards_by_imt in hazards_by_key.iteritems():
+                for imt, hazards_by_site in hazards_by_imt.iteritems():
+                    for i, haz in enumerate(hazards_by_site[idx]):
+                        hdata[imt][i][key] = haz
+
+            # build the riskinputs
+            for imt in hdata:
                 ri = self.riskmodel.build_input(
-                    imt, hazards_by_site[idx], self.assets_by_site[idx])
+                    imt, hdata[imt], reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
         logging.info('Built %d risk inputs', len(riskinputs))
