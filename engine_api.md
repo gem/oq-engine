@@ -103,6 +103,33 @@ Response:
 The requested result as a blob of text. If the desired `export_type` is not supported, an HTTP 404 error is returned.
 
 
+#### GET /v1/calc/:calc_id/log/[:start]:[:stop]
+
+Get a slice of the calculation log for the given `calc_id`, from `start`
+to `stop`. If `start` is the empty string, consider it `0` and starts
+from the beginning. If `stop` is the empty string, gives all the
+available lines. For instance `http://host/v1/calc/123/log/:` gives the
+complete log for calculation 123.
+
+Parameters: None
+
+Response:
+
+The requested log slice as a JSON list of rows
+
+
+#### GET /v1/calc/:calc_id/log/size
+
+Get the (current) number of lines of the calculation log for the given
+`calc_id`.
+
+Parameters: None
+
+Response:
+
+The number of lines of log
+
+
 #### POST /v1/calc/run
 
 Run a new calculation with the specified job config file, input models, and other parameters.

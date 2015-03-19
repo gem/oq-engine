@@ -1,4 +1,3 @@
-import zipfile
 import shutil
 import json
 import logging
@@ -171,6 +170,41 @@ def calc(request, job_type):
 
     return HttpResponse(content=json.dumps(response_data),
                         content_type=JSON)
+
+
+def log_to_json(log):
+    """Convert a log record into a list of strings"""
+    return [log.timestamp.isoformat()[:22],
+            log.level, log.process, log.message]
+
+
+@require_http_methods(['GET'])
+@cross_domain_ajax
+def get_log_slice(request, calc_id, start, stop):
+    """
+    Get a slice of the calculation log as a JSON list of rows
+    """
+    start = start or 0
+    stop = stop or None
+    try:
+        rows = oqe_models.Log.objects.filter(job_id=calc_id)[start:stop]
+        response_data = map(log_to_json, rows)
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound()
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
+
+
+@require_http_methods(['GET'])
+@cross_domain_ajax
+def get_log_size(request, calc_id):
+    """
+    Get the current number of lines in the log
+    """
+    try:
+        response_data = oqe_models.Log.objects.filter(job_id=calc_id).count()
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound()
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
 @csrf_exempt
