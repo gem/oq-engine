@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2014, GEM Foundation.
+# Copyright (c) 2010-2015, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -13,13 +13,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+import tempfile
 
 from nose.plugins.attrib import attr
 
 from qa_tests import risk
 from openquake.qa_tests_data.classical_risk import case_1, case_2, case_3
 from openquake.engine.tests.utils import helpers
-
+from openquake.commonlib import writers
 from openquake.engine.db import models
 
 
@@ -207,7 +209,16 @@ class ClassicalRiskCase3TestCase(
 
     @attr('qa', 'risk', 'classical')
     def test(self):
-        self._run_test()
+        job = self._run_test()
+        data = [[curve.asset_ref, curve.average_loss]
+                for curve in models.LossCurveData.objects.filter(
+                    loss_curve__output__oq_job=job).order_by('asset_ref')]
+        fd, fname = tempfile.mkstemp(suffix='.csv')
+        os.close(fd)
+        writers.save_csv(
+            fname, [['asset_ref', 'avg_loss']] + data, fmt='%11.8E')
+        expected = self._test_path('expected/rlz-000-avg_loss.csv')
+        self.assertEqual(open(fname).read(), open(expected).read())
 
     items_per_output = None
 
