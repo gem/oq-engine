@@ -28,7 +28,7 @@ def classical_damage(workflow, getter, outputdict, params, monitor):
     Celery task for the classical risk calculator.
 
     :param workflow:
-      A :class:`openquake.risklib.workflows.RiskModel` instance
+      A :class:`openquake.risklib.riskinput.RiskModel` instance
     :param getter:
       A HazardGetter instance
     :param outputdict:
