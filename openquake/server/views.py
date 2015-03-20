@@ -148,25 +148,23 @@ def calc_info(request, calc_id):
 
 @require_http_methods(['GET'])
 @cross_domain_ajax
-def calc(request, job_type):
+def calc(request):
     """
-    Get a list of calculations and report their id, status, description,
-    and a url where more detailed information can be accessed.
+    Get a list of calculations and report their id, status, job_type,
+    description, and a url where more detailed information can be accessed.
 
     Responses are in JSON.
     """
     base_url = _get_base_url(request)
 
-    calc_data = _get_calcs(job_type)
-    if not calc_data:
-        return HttpResponseNotFound()
+    calc_data = _get_calcs(request.GET)
 
     response_data = []
-    for hc_id, status, desc in calc_data:
+    for hc_id, status, job_type, desc in calc_data:
         url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
         response_data.append(
-            dict(id=hc_id, status=status, description=desc, url=url)
-        )
+            dict(id=hc_id, status=status, job_type=job_type,
+                 description=desc, url=url))
 
     return HttpResponse(content=json.dumps(response_data),
                         content_type=JSON)
@@ -244,6 +242,7 @@ def run_calc(request):
     try:
         calc = oqe_models.OqJob.objects.get(pk=job.id)
         response_data = vars(calc.get_oqparam())
+        response_data['job_id'] = job.id
         response_data['status'] = calc.status
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
@@ -273,16 +272,19 @@ def submit_job(job_file, temp_dir, dbname,
     return job, future
 
 
-def _get_calcs(job_type):
-    """
-    Helper function for get job+calculation data from the oq-engine database.
-
-    Gets all calculation records available.
-    """
+def _get_calcs(request_get_dict):
+    # helper to get job+calculation data from the oq-engine database
     job_params = oqe_models.JobParam.objects.filter(
-        name='description', job__user_name='platform',
-        job__hazard_calculation__isnull=job_type == 'hazard')
-    return [(jp.job.id, jp.job.status, jp.value) for jp in job_params]
+        name='description', job__user_name='platform')
+    if 'job_type' in request_get_dict:
+        job_type = request_get_dict.get('job_type')
+        job_params = job_params.filter(
+            job__hazard_calculation__isnull=job_type == 'hazard')
+    relevant = request_get_dict.get('relevant')
+    if relevant:
+        job_params = job_params.filter(job__relevant=relevant in ('1', 'true'))
+    return [(jp.job.id, jp.job.status, jp.job.job_type, jp.value)
+            for jp in job_params]
 
 
 @require_http_methods(['GET'])
