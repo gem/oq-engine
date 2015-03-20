@@ -1,0 +1,11 @@
+=============================
+Dost, van Eck and Haak (2004)
+=============================
+
+.. module:: openquake.hazardlib.gsim.dost_2004
+
+.. autoclass:: DostEtAl2004
+    :members:
+
+.. autoclass:: DostEtAl2004BommerAdaptation
+    :members:

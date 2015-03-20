@@ -46,6 +46,7 @@ class TRT(ConstantContainer):
     SUBDUCTION_INTRASLAB = 'Subduction IntraSlab'
     VOLCANIC = 'Volcanic'
     GEOTHERMAL = 'Geothermal'
+    INDUCED = 'Induced'
 
 
 class IMC(ConstantContainer):
