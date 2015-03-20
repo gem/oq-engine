@@ -19,7 +19,8 @@ import tempfile
 from nose.plugins.attrib import attr
 
 from qa_tests import risk
-from openquake.qa_tests_data.classical_risk import case_1, case_2, case_3
+from openquake.qa_tests_data.classical_risk import (
+    case_1, case_2, case_3, case_4)
 from openquake.engine.tests.utils import helpers
 from openquake.commonlib import writers
 from openquake.engine.db import models
@@ -235,3 +236,31 @@ class ClassicalRiskCase3TestCase(
               "structural") + ('%.5f' % lon, '%.5f' % lat, taxonomy)
              for lon, lat, taxonomy, _loss, _fraction in values],
             [models.LossFractionData(absolute_loss=v) for v in values['f3']])
+
+
+class ClassicalRiskCase4TestCase(
+        risk.CompleteTestCase, risk.FixtureBasedQATestCase):
+
+    module = case_4
+    hazard_calculation_fixture = "Classical Hazard-Risk QA test 4"
+
+    @attr('qa', 'risk', 'classical')
+    def test(self):
+        job = self._run_test()
+        outputs = models.Output.objects.filter(
+            oq_job=job, output_type='loss_curve').order_by('id')
+        for out in outputs:
+            if out.display_name.startswith('Mean'):
+                continue
+            loss_curve = out.loss_curve
+            rlz = loss_curve.hazard_output.hazard_curve.lt_realization
+            key = 'rlz-%03d-avg_loss' % rlz.ordinal
+            data = [[curve.asset_ref, curve.average_loss]
+                    for curve in models.LossCurveData.objects.filter(
+                        loss_curve=loss_curve).order_by('asset_ref')]
+            fd, fname = tempfile.mkstemp(prefix=key, suffix='.csv')
+            os.close(fd)
+            writers.save_csv(
+                fname, [['asset_ref', 'avg_loss']] + data, fmt='%11.8E')
+            expected = self._test_path('expected/%s.csv' % key)
+            self.assertEqual(open(fname).read(), open(expected).read())
