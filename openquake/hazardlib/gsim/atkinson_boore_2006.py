@@ -20,13 +20,15 @@ Module exports :class:`AtkinsonBoore2006`,
 :class:`AtkinsonBoore2006Mwbar140NSHMP2008`,
 :class:`AtkinsonBoore2006MblgAB1987bar200NSHMP2008`,
 :class:`AtkinsonBoore2006MblgJ1996bar200NSHMP2008`,
-:class:`AtkinsonBoore2006Mwbar200NSHMP2008`.
+:class:`AtkinsonBoore2006Mwbar200NSHMP2008`,
+:class:`AtkinsonBoore2006Modified2011`.
 """
 from __future__ import division
 
 import numpy as np
 # standard acceleration of gravity in m/s**2
 from scipy.constants import g
+from math import log10
 
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 from openquake.hazardlib.gsim.utils import (
@@ -365,6 +367,7 @@ class AtkinsonBoore2006(BooreAtkinson2008):
     pgv    0.11   2.00  5.50
     """)
 
+
 class AtkinsonBoore2006MblgAB1987bar140NSHMP2008(AtkinsonBoore2006):
     """
     Implements GMPE developed by Gail M. Atkinson and David M. Boore and
@@ -490,3 +493,37 @@ class AtkinsonBoore2006Mwbar200NSHMP2008(
         Return magnitude value unchanged
         """
         return mag
+
+
+class AtkinsonBoore2006Modified2011(AtkinsonBoore2006):
+    """
+    This GMPE modifies the original implementation of :class:
+    `AtkinsonBoore2006` with the magnitude dependent stress-drop scaling
+    factor proposed in Atkinson & Boore (2011)
+    Atkinson, G. A. and Boore D. M. (2011) Modifications to Existing
+    Ground-Motion Prediciton Equations in Light of New Data. Bulletin of the
+    Seismological Society of America, 101(3), 1121 - 1135
+    """
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+        # Stress drop scaling factor is now a property of magnitude
+        scale_fac = self._get_stress_drop_scaling_factor(rup.mag)
+        mean = self._get_mean(sites.vs30, rup.mag, dists.rrup, imt, scale_fac)
+        stddevs = self._get_stddevs(stddev_types, num_sites=sites.vs30.size)
+
+        return mean, stddevs
+
+    def _get_stress_drop_scaling_factor(self, magnitude):
+        """
+        Returns the magnitude dependent stress drop scaling factor defined in
+        equation 6 (page 1128) of Atkinson & Boore (2011)
+        """
+        stress_drop = 10.0 ** (3.45 - 0.2 * magnitude)
+        cap = 10.0 ** (3.45 - 0.2 * 5.0)
+        if stress_drop > cap:
+            stress_drop = cap
+        return log10(stress_drop / 140.0) / log10(2.0)

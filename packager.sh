@@ -23,7 +23,19 @@ GEM_ALWAYS_YES=false
 if [ "$GEM_EPHEM_CMD" = "" ]; then
     GEM_EPHEM_CMD="lxc-start-ephemeral"
 fi
-GEM_EPHEM_NAME="ubuntu-lxc-eph"
+if [ "$GEM_EPHEM_NAME" = "" ]; then
+    GEM_EPHEM_NAME="ubuntu-lxc-eph"
+fi
+
+if command -v lxc-shutdown &> /dev/null; then
+    # Older lxc (< 1.0.0) with lxc-shutdown
+    LXC_TERM="lxc-shutdown -t 10 -w"
+    LXC_KILL="lxc-stop"
+else
+    # Newer lxc (>= 1.0.0) with lxc-stop only
+    LXC_TERM="lxc-stop -t 10"
+    LXC_KILL="lxc-stop -k"
+fi
 
 NL="
 "
@@ -41,7 +53,7 @@ sig_hand () {
         if [ -f "${upper}.dsk" ]; then
             loop_dev="$(sudo losetup -a | grep "(${upper}.dsk)$" | cut -d ':' -f1)"
         fi
-        sudo lxc-stop -n $lxc_name
+        sudo $LXC_KILL -n $lxc_name
         sudo umount /var/lib/lxc/$lxc_name/rootfs
         sudo umount /var/lib/lxc/$lxc_name/ephemeralbind
         echo "$upper" | grep -q '^/tmp/'
@@ -186,6 +198,9 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
     ssh $lxc_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}"
 
+    scp -r "$lxc_ip://usr/share/doc/${GEM_DEB_PACKAGE}/changelog*" .
+    scp -r "$lxc_ip://usr/share/doc/${GEM_DEB_PACKAGE}/README*" .
+
     trap ERR
 
     return
@@ -235,8 +250,8 @@ _lxc_name_and_ip_get()
             lxc_name="$(grep "sudo lxc-console -n $GEM_EPHEM_NAME" /tmp/packager.eph.$$.log | sed "s/.*sudo lxc-console -n \($GEM_EPHEM_NAME\)/\1/g")"
             for e in $(seq 1 40); do
                 sleep 2
-                if grep -q "$lxc_name" /var/lib/misc/dnsmasq.leases ; then
-                    lxc_ip="$(grep " $lxc_name " /var/lib/misc/dnsmasq.leases | cut -d ' ' -f 3)"
+                if grep -q "$lxc_name" /var/lib/misc/dnsmasq*.leases ; then
+                    lxc_ip="$(grep " $lxc_name " /var/lib/misc/dnsmasq*.leases | tail -n 1 | cut -d ' ' -f 3)"
                     break
                 fi
             done
@@ -261,7 +276,7 @@ devtest_run () {
     set +e
     _devtest_innervm_run $lxc_ip
     inner_ret=$?
-    sudo lxc-shutdown -n $lxc_name -w -t 10
+    sudo $LXC_TERM -n $lxc_name
     set -e
 
     if [ -f /tmp/packager.eph.$$.log ]; then
@@ -323,7 +338,7 @@ EOF
     set +e
     _pkgtest_innervm_run $lxc_ip
     inner_ret=$?
-    sudo lxc-shutdown -n $lxc_name -w -t 10
+    sudo $LXC_TERM -n $lxc_name
     set -e
 
     if [ -f /tmp/packager.eph.$$.log ]; then
@@ -465,7 +480,7 @@ ini_bfx="$(echo "$ini_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.\([0-9]\+\).*/\1/gp')
 ini_suf="" # currently not included into the version array structure
 
 # version info from debian/changelog
-h="$(head -n1 debian/changelog)"
+h="$(grep "^$GEM_DEB_PACKAGE" debian/changelog | head -n 1)"
 # pkg_vers="$(echo "$h" | cut -d ' ' -f 2 | cut -d '(' -f 2 | cut -d ')' -f 1 | sed -n 's/[-+].*//gp')"
 pkg_name="$(echo "$h" | cut -d ' ' -f 1)"
 pkg_vers="$(echo "$h" | cut -d ' ' -f 2 | cut -d '(' -f 2 | cut -d ')' -f 1)"
@@ -484,22 +499,24 @@ if [ $BUILD_DEVEL -eq 1 ]; then
     if [ "$pkg_maj" = "$ini_maj" -a "$pkg_min" = "$ini_min" -a \
          "$pkg_bfx" = "$ini_bfx" -a "$pkg_deb" != "" ]; then
         deb_ct="$(echo "$pkg_deb" | sed 's/^-//g')"
-        pkg_deb="-$(( deb_ct + 1 ))"
+        pkg_deb="-$(( deb_ct ))"
     else
         pkg_maj="$ini_maj"
         pkg_min="$ini_min"
         pkg_bfx="$ini_bfx"
-        pkg_deb="-1"
+        pkg_deb="-0"
     fi
 
-    ( echo "$pkg_name (${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}+dev${dt}-${hash}) $pkg_rest"
+    ( echo "$pkg_name (${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}~dev${dt}-${hash}) $pkg_rest"
       echo
+      echo "  [Automatic Script]"
       echo "  * Development version from $hash commit"
       echo
+      cat debian/changelog.orig | sed -n "/^$GEM_DEB_PACKAGE/q;p"
       echo " -- $DEBFULLNAME <$DEBEMAIL>  $(date -d@$dt -R)"
       echo
     )  > debian/changelog
-    cat debian/changelog.orig >> debian/changelog
+    cat debian/changelog.orig | sed -n "/^$GEM_DEB_PACKAGE/,\$ p" >> debian/changelog
     rm debian/changelog.orig
 fi
 

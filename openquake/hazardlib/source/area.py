@@ -16,6 +16,7 @@
 """
 Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 """
+from copy import deepcopy
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
@@ -123,7 +124,7 @@ class AreaSource(PointSource):
                 # translate the surface from first epicenter position
                 # to the target one preserving it's geometry
                 surface = surface.translate(epicenter0, epicenter)
-                hypocenter = epicenter
+                hypocenter = deepcopy(epicenter)
                 hypocenter.depth = hc_depth
                 rupture = ParametricProbabilisticRupture(
                     mag, rake, self.tectonic_region_type, hypocenter,

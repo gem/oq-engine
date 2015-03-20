@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
+# Copyright (C) 2015 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -13,15 +13,22 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""
-hazardlib stands for Hazard Library.
-"""
 
-from openquake.hazardlib import (
-    calc, geo, gsim, mfd, scalerel, source, const, correlation, imt, pmf, site,
-    tom, general
-)
+from openquake.hazardlib.gsim.idriss_2014 import Idriss2014
+from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
-# the version is managed by packager.sh with a sed
-__version__ = '0.14.0'
-__version__ += general.git_suffix(__file__)
+# Test data generated using the Matlab implementation created by Yue Hua,
+# Stanford University, available from
+# http://web.stanford.edu/~bakerjw/GMPEs/I_2014_nga.m
+
+
+class Idriss2014TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = Idriss2014
+
+    def test_mean(self):
+        self.check("IDRISS14/IDRISS_2014_MEAN.csv",
+                   max_discrep_percentage=0.1)
+
+    def test_std_total(self):
+        self.check("IDRISS14/IDRISS_2014_TOTAL_STD.csv",
+                   max_discrep_percentage=0.1)

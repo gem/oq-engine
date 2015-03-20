@@ -13,6 +13,7 @@ Built-in GSIMs
 
     abrahamson_silva_1997
     abrahamson_silva_2008
+    abrahamson_2014
     akkar_2013
     akkar_2014
     akkar_bommer_2010
@@ -50,6 +51,7 @@ Built-in GSIMs
     fukushima_tanaka_1990
     garcia_2005
     geomatrix_1993
+    idriss_2014
     lin_lee_2008
     lin_2009
     mcverry_2006
