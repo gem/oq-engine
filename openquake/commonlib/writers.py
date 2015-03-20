@@ -177,3 +177,4 @@ def save_csv(dest, header_rows, sep=',', fmt='%12.8E', mode='wb'):
     with open(dest, mode) as f:
         for row in header_rows:
             f.write(sep.join(scientificformat(col, fmt) for col in row) + '\n')
+    return dest

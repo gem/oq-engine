@@ -286,6 +286,34 @@ def agg_prob(acc, prob):
     return 1. - (1. - prob) * (1. - acc)
 
 
+def expand_data_by_imt(data, sites=None):
+    """
+    Expand arrays with n elements into arrays of N elements (with N > n)
+    by adding zeros. n is the number of filtered sites, N the total number.
+
+    :param data: a dictionary imt -> array with n elements
+    :param sites: a filtered SiteCollection or None
+    """
+    return {imt: getattr(data, 'r_sites', sites).expand(array, 0)
+            for imt, array in data.iteritems()}
+
+
+def expand(data_dict, sites=None):
+    """
+    Expand arrays with n elements into arrays of N elements (with N > n)
+    by adding zeros. n is the number of filtered sites, N the total number.
+
+    :param data_dict: a dictionary key -> imt -> array with n elements
+    :param sites: a filtered SiteCollection
+    :returns: a dictionary key -> imt -> array with N elements
+    """
+    if sites is not None and sites.complete is sites:
+        # nothing was filtered, do nothing
+        return data_dict
+    return {key: expand_data_by_imt(data_by_imt, sites)
+            for key, data_by_imt in data_dict.iteritems()}
+
+
 def data_by_imt(dict_of_dict_arrays, imtls, n_sites):
     """
     Convert a dictionary key -> imt -> [value ...] into a dictionary

@@ -29,7 +29,7 @@ from openquake.hazardlib.geo import geodetic
 from openquake.baselib import general
 from openquake.commonlib import readinput
 from openquake.commonlib.parallel import apply_reduce, DummyMonitor, executor
-from openquake.risklib import workflows
+from openquake.risklib import riskinput
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
@@ -119,7 +119,7 @@ class HazardCalculator(BaseCalculator):
         if 'exposure' in self.oqparam.inputs:
             logging.info('Reading the exposure')
             exposure = readinput.get_exposure(self.oqparam)
-            self.sitecol, self.assets = readinput.get_sitecol_assets(
+            self.sitecol, self.assets_by_site = readinput.get_sitecol_assets(
                 self.oqparam, exposure)
         else:
             logging.info('Reading the site collection')
@@ -134,7 +134,7 @@ class HazardCalculator(BaseCalculator):
             self.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
         else:  # calculators without sources, i.e. scenario
             self.gsims = readinput.get_gsims(self.oqparam)
-            self.rlzs_assoc = workflows.FakeRlzsAssoc(len(self.gsims))
+            self.rlzs_assoc = riskinput.FakeRlzsAssoc(len(self.gsims))
 
     def save_pik(self, result, **kw):
         """
@@ -207,7 +207,14 @@ class RiskCalculator(BaseCalculator):
                 if ri.weight > 0:
                     riskinputs.append(ri)
         logging.info('Built %d risk inputs', len(riskinputs))
-        return sorted(riskinputs, key=get_imt)
+        return sorted(riskinputs, key=self.riskinput_key)
+
+    def riskinput_key(self, ri):
+        """
+        :param ri: riskinput object
+        :returns: the IMT associated to it
+        """
+        return ri.imt
 
     def assoc_assets_sites(self, sitecol):
         """
@@ -273,8 +280,7 @@ class RiskCalculator(BaseCalculator):
             self.core_func.__func__,
             (self.riskinputs, self.riskmodel, self.rlzs_assoc, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
-            weight=get_weight,
-            key=get_imt)
+            weight=get_weight, key=self.riskinput_key)
 
     def save_pik(self, result, **kw):
         """Save the risk outputs"""

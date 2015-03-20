@@ -55,9 +55,9 @@ def scenario_risk(riskinputs, riskmodel, monitor):
     Core function for a scenario computation.
 
     :param riskinputs:
-        a list of :class:`openquake.risklib.workflows.RiskInput` objects
+        a list of :class:`openquake.risklib.riskinput.RiskInput` objects
     :param riskmodel:
-        a :class:`openquake.risklib.workflows.RiskModel` instance
+        a :class:`openquake.risklib.riskinput.RiskModel` instance
     :param monitor:
         :class:`openquake.commonlib.parallel.PerformanceMonitor` instance
     :returns:

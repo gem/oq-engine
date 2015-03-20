@@ -29,7 +29,7 @@ import numpy
 from shapely import wkt, geometry
 
 from openquake.hazardlib import geo, site, correlation, imt
-from openquake.risklib import workflows
+from openquake.risklib import workflows, riskinput
 
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.node import read_nodes, LiteralNode, context
@@ -554,13 +554,13 @@ def get_imts(oqparam):
 
 def get_risk_model(oqparam):
     """
-    Return a :class:`openquake.risklib.workflows.RiskModel` instance
+    Return a :class:`openquake.risklib.riskinput.RiskModel` instance
 
    :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     risk_models = {}  # (imt, taxonomy) -> workflow
-    riskmodel = workflows.RiskModel(risk_models)
+    riskmodel = riskinput.RiskModel(risk_models)
 
     oqparam.__dict__.setdefault('insured_losses', False)
     extras = {}  # extra parameter tses for event based
@@ -673,8 +673,9 @@ def get_exposure(oqparam):
                 number = asset.attrib['number']
             else:
                 # other calculators ignore the 'number' attribute;
-                # if it is missing it is considered None
-                number = asset.attrib.get('number')
+                # if it is missing it is considered 1, since we are going
+                # to multiply by it
+                number = asset.attrib.get('number', 1)
             location = asset.location['lon'], asset.location['lat']
             if region and not geometry.Point(*location).within(region):
                 out_of_region += 1
@@ -702,8 +703,9 @@ def get_exposure(oqparam):
                         values['fatalities'] = occupancy['occupants']
                         break
 
+        area = float(asset.attrib.get('area', 1))
         ass = workflows.Asset(
-            asset_id, taxonomy, number, location, values, deductibles,
+            asset_id, taxonomy, number, location, values, area, deductibles,
             insurance_limits, retrofitting_values)
         exposure.assets.append(ass)
         exposure.taxonomies.add(taxonomy)
