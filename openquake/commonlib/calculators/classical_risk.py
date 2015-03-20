@@ -43,11 +43,12 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
         for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc):
             for rlz, out in out_by_rlz.iteritems():
                 for i, asset in enumerate(out.assets):
+                    avalue = asset.value(out.loss_type)
                     result[rlz.ordinal, 'avg_loss'] += {
-                        asset.id: out.average_losses[i]}
+                        asset.id: out.average_losses[i] * avalue}
                     if out.average_insured_losses is not None:
                         result[rlz.ordinal, 'ins_loss'] += {
-                            asset.id: out.average_insured_losses[i]}
+                            asset.id: out.average_insured_losses[i] * avalue}
     return result
 
 
@@ -99,7 +100,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             data = sorted(result[ordinal, key_type].iteritems())
             key = 'rlz-%03d-%s' % (ordinal, key_type)
             saved[key] = self.export_csv(
-                key, [['asset_ref', 'agg_loss']] + data)
+                key, [['asset_ref', key_type]] + data)
         return saved
 
     def export_csv(self, key, data):
