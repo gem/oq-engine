@@ -38,6 +38,10 @@ class FakeRlzsAssoc(collections.Mapping):
         self.rlzs_assoc = {i: [] for i in self.realizations}
 
     def combine(self, result):
+        """
+        :param result: a dictionary with a non-numeric key
+        :returns: a dictionary index -> value, with value in result.values()
+        """
         return {i: result[key] for i, key in enumerate(sorted(result))}
 
     def collect_by_rlz(self, dicts):
@@ -73,7 +77,10 @@ class FakeRlzsAssoc(collections.Mapping):
 
 class RiskModel(collections.Mapping):
     """
-    A container (imt, taxonomy) -> workflow
+    A container (imt, taxonomy) -> workflow.
+
+    :param workflows: a dictionary (imt, taxonomy) -> workflow
+    :param damage_states: None or a list of damage states
     """
     def __init__(self, workflows, damage_states=None):
         self.damage_states = damage_states  # not None for damage calculations
@@ -132,9 +139,14 @@ class RiskModel(collections.Mapping):
                                   gsims, trunc_level, correl_model, eps_dict):
         """
         :param imt: an Intensity Measure Type
-        :param hazards_by_site: an array of hazards per each site
+        :param sitecol: a SiteCollection instance
         :param assets_by_site: an array of assets per each site
-        :returns: a :class:`RiskInput` instance
+        :param ses_ruptures: a list of SESRupture instances
+        :param gsims: a list of GSIM instances
+        :param trunc_level: the truncation level (or None)
+        :param correl_model: the correlation model (or None)
+        :param eps_dict: a dictionary asset_ref -> epsilon array
+        :returns: a :class:`RiskInputFromRuptures` instance
         """
         imt_taxonomies = list(self.get_imt_taxonomies())
         return RiskInputFromRuptures(
@@ -239,7 +251,7 @@ class RiskInput(object):
 
 def make_eps_dict(assets_by_site, num_samples, seed, correlation):
     """
-    :param riskinput: an object with an attribute .assets_by_site
+    :param assets_by_site: a list of lists of assets
     :param int num_samples: the number of ruptures
     :param int seed: a random seed
     :param float correlation: the correlation coefficient
@@ -362,7 +374,8 @@ class RiskInputFromRuptures(object):
         each one with a slice of the ruptures and of the epsilons of the
         parent object.
 
-        :param n: the number of slices to perform (0 means 1)
+        :param int n: the number of slices to perform (0 means 1)
+        :param int epsilon_sampling: the maximum number of epsilons
         """
         ris = []
         for block in split_in_blocks(range(len(self.ses_ruptures)), n or 1):
