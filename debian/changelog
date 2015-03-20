@@ -1,3 +1,7 @@
+  [Yen-Shin Chen]
+  * Enable to get the patch vertices by indicate the specific fault patch.
+  * A method to obtain a resampled rupture top edge.
+
 python-oq-hazardlib (0.13.1-0) precise; urgency=low
 
   [Graeme Weatherill]
