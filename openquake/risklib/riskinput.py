@@ -196,19 +196,22 @@ class RiskModel(collections.Mapping):
                     # the same taxonomy contributes to two IMTs??
                     assert (taxonomy, loss_type) not in output, (
                         taxonomy, loss_type)
-                    idx = numpy.array(
-                        [a.value(loss_type) is not None for a in assets])
-                    if not idx.any():
-                        # there are no assets with a value
-                        continue
-                    # there may be assets without a value
-                    missing_value = not idx.all()
-                    if missing_value:  # filter out the assets without a value
-                        assets_ = assets[idx]
-                        epsilons_ = epsilons[idx]
-                    else:  # keep all the assets
-                        assets_ = assets
-                        epsilons_ = epsilons
+                    assets_ = assets
+                    epsilons_ = epsilons
+                    if loss_type == 'damage':
+                        # ignore values, consider only the 'number' attribute
+                        missing_value = False
+                    else:
+                        idx = numpy.array(
+                            [a.value(loss_type) is not None for a in assets])
+                        if not idx.any():
+                            # there are no assets with a value
+                            continue
+                        # there may be assets without a value
+                        missing_value = not idx.all()
+                        if missing_value:
+                            assets_ = assets[idx]
+                            epsilons_ = epsilons[idx]
                     out_by_rlz = {}
                     for rlz in rlzs_assoc.realizations:
                         if missing_value:
