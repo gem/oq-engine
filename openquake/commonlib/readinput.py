@@ -618,7 +618,11 @@ def get_exposure_lazy(fname):
     """
     [exposure] = nrml.read_lazy(fname, ['assets'])
     description = exposure.description
-    conversions = exposure.conversions
+    try:
+        conversions = exposure.conversions
+    except NameError:
+        conversions = LiteralNode('conversions',
+                                  nodes=[LiteralNode('costTypes', [])])
     try:
         inslimit = conversions.insuranceLimit
     except NameError:
@@ -656,7 +660,7 @@ def get_exposure(oqparam):
         set(['occupants'])
     asset_refs = set()
     time_event = getattr(oqparam, 'time_event', None)
-    ignore_missing_costs = set(oqparam.ignore_missing_costs)
+    ignore_missing_costs = set(getattr(oqparam, 'ignore_missing_costs', []))
 
     for asset in assets_node:
         values = {}
@@ -682,8 +686,12 @@ def get_exposure(oqparam):
             if region and not geometry.Point(*location).within(region):
                 out_of_region += 1
                 continue
-        with context(fname, asset.costs):
-            for cost in asset.costs:
+        try:
+            costs = asset.costs
+        except NameError:
+            costs = LiteralNode('costs', [])
+        with context(fname, costs):
+            for cost in costs:
                 cost_type = cost['type']
                 if cost_type not in relevant_cost_types:
                     continue
