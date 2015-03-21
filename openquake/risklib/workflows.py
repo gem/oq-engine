@@ -770,7 +770,6 @@ class Scenario(Workflow):
         else:
             insured_loss_matrix = None
             insured_losses = None
-
         return self.Output(
             assets, loss_type, loss_ratio_matrix, aggregate_losses,
             insured_loss_matrix, insured_losses)
