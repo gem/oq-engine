@@ -83,9 +83,10 @@ class Asset(object):
 
     def value(self, loss_type):
         """
-        :returns: the asset value for `loss_type`
+        :returns: the total asset value for `loss_type`
         """
-        return self.values[loss_type] * self.number * self.area
+        value = self.values[loss_type]
+        return None if value is None else value * self.number * self.area
 
     def deductible(self, loss_type):
         """
@@ -755,7 +756,6 @@ class Scenario(Workflow):
         # aggregating per asset, getting a vector of R elements
         aggregate_losses = numpy.sum(
             loss_ratio_matrix.transpose() * values, axis=1)
-
         if self.insured_losses and loss_type != "fatalities":
             deductibles = [a.deductible(loss_type) for a in assets]
             limits = [a.insurance_limit(loss_type) for a in assets]

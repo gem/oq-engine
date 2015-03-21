@@ -656,6 +656,8 @@ def get_exposure(oqparam):
         set(['occupants'])
     asset_refs = set()
     time_event = getattr(oqparam, 'time_event', None)
+    ignore_missing_costs = set(oqparam.ignore_missing_costs)
+
     for asset in assets_node:
         values = {}
         deductibles = {}
@@ -692,11 +694,16 @@ def get_exposure(oqparam):
                 values['fatalities'] = number
             # check we are not missing a cost type
             missing = relevant_cost_types - set(values)
-            if missing:
+            if missing and missing <= ignore_missing_costs:
                 logging.warn(
-                    'Discarding asset %s, missing cost type(s): %s',
+                    'Ignoring asset %s, missing cost type(s): %s',
                     asset_id, ', '.join(missing))
-                continue
+                for cost_type in missing:
+                    values[cost_type] = None
+            elif missing:
+                raise ValueError("Invalid Exposure. "
+                                 "Missing cost %s for asset %s" % (
+                                     missing, asset_id))
 
         if time_event:
             for occupancy in asset.occupancies:

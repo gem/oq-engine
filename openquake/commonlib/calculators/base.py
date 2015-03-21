@@ -193,7 +193,7 @@ class RiskCalculator(BaseCalculator):
         oq = self.oqparam
         return riskinput.make_eps_dict(
             self.assets_by_site, num_ruptures,
-            getattr(oq, 'master_seed', 42),
+            getattr(oq, 'master_seed', 0),  # for compatibility with the engine
             getattr(oq, 'asset_correlation', 0))
 
     def build_riskinputs(self, hazards_by_key, eps_dict):
