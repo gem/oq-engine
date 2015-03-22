@@ -254,20 +254,43 @@ class SimpleFaultSurfaceProjectionTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(polygon.lats, elats)
 
     def test_get_fault_vertices_3d(self):
-        lons, lats, deps = SimpleFaultSurface.get_fault_vertices_3d(
-            Line([Point(10, -20), Point(11, -20.2), Point(12, -19.7)]),
-            upper_seismogenic_depth=25.3, lower_seismogenic_depth=53.6,
-            dip=30,
+        p0, p1, p2, p3 = SimpleFaultSurface.get_fault_patch_vertices(
+            Line([Point(10., 45.2), Point(10.5, 45.3), Point(10., 45.487783)]),
+            upper_seismogenic_depth=0., lower_seismogenic_depth=14.,
+            dip=30, index_patch=1.
         )
-        elons = [10.06374285, 11.06382605, 12.06361991,
-                 12.13515987, 11.13560807, 10.1354272]
-        elats = [-20.3895235, -20.58952337, -20.08952368, -
-                 20.52520878, -21.02520738, -20.82520794]
-        edeps = [25.3, 25.3, 25.3, 53.6, 53.6, 53.6]
+        p4, p5, p6, p7 = SimpleFaultSurface.get_fault_patch_vertices(
+            Line([Point(10., 45.2), Point(10.5, 45.3), Point(10., 45.487783)]),
+            upper_seismogenic_depth=0., lower_seismogenic_depth=14.,
+            dip=30, index_patch=2.
+        )
+        # Test for the first patch
+        self.assertAlmostEqual(p0.longitude, 10., delta=0.1)
+        self.assertAlmostEqual(p0.latitude, 45.2, delta=0.1)
+        self.assertAlmostEqual(p0.depth, 0., delta=0.1)
+        self.assertAlmostEqual(p1.longitude, 10.5, delta=0.1)
+        self.assertAlmostEqual(p1.latitude, 45.3, delta=0.1)
+        self.assertAlmostEqual(p1.depth, 0., delta=0.1)
+        self.assertAlmostEqual(p2.longitude, 10.81, delta=0.1)
+        self.assertAlmostEqual(p2.latitude, 45.2995, delta=0.1)
+        self.assertAlmostEqual(p2.depth, 14., delta=0.1)
+        self.assertAlmostEqual(p3.longitude, 10.31, delta=0.1)
+        self.assertAlmostEqual(p3.latitude, 45.1995, delta=0.1)
+        self.assertAlmostEqual(p3.depth, 14., delta=0.1)
 
-        numpy.testing.assert_allclose(lons, elons)
-        numpy.testing.assert_allclose(lats, elats)
-        numpy.testing.assert_allclose(deps, edeps)
+        # Test for the second patch
+        self.assertAlmostEqual(p4.longitude, 10.5, delta=0.1)
+        self.assertAlmostEqual(p4.latitude, 45.3, delta=0.1)
+        self.assertAlmostEqual(p4.depth, 0., delta=0.1)
+        self.assertAlmostEqual(p5.longitude, 10.0, delta=0.1)
+        self.assertAlmostEqual(p5.latitude, 45.4877, delta=0.1)
+        self.assertAlmostEqual(p5.depth, 0., delta=0.1)
+        self.assertAlmostEqual(p6.longitude, 10.311, delta=0.1)
+        self.assertAlmostEqual(p6.latitude, 45.4873, delta=0.1)
+        self.assertAlmostEqual(p6.depth, 14., delta=0.1)
+        self.assertAlmostEqual(p7.longitude, 10.81, delta=0.1)
+        self.assertAlmostEqual(p7.latitude, 45.2995, delta=0.1)
+        self.assertAlmostEqual(p7.depth, 14., delta=0.1)
 
 
 class SimpleFaultSurfaceGetWidthTestCase(unittest.TestCase):

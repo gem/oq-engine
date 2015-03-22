@@ -18,11 +18,12 @@ import unittest
 import numpy
 
 from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
+from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from openquake.hazardlib.geo.surface.base import BaseQuadrilateralSurface
 
 from openquake.hazardlib.tests.geo.surface import _planar_test_data
-from openquake.hazardlib.geo.geodetic import geodetic_distance
 
 
 class DummySurface(BaseQuadrilateralSurface):
@@ -300,6 +301,56 @@ class GetAreaTestCase(unittest.TestCase):
                    [(0.0, 0.0, 10.0), (0.0, 0.089932, 10.0)]]
         surface = DummySurface(corners)
         self.assertAlmostEqual(100.0, surface.get_area(), places=0)
+
+
+class GetResampledTopEdge(unittest.TestCase):
+    def test_get_resampled_top_edge(self):
+        upper_seismogenic_depth = 0.
+        lower_seismogenic_depth = 40.
+        dip = 90.
+
+        mesh_spacing = 10.
+        fault_trace = Line([Point(0.0, 0.0), Point(0.5, 0.5), Point(1.0, 1.0)])
+
+        whole_fault_surface = SimpleFaultSurface.from_fault_data(
+            fault_trace, upper_seismogenic_depth,
+            lower_seismogenic_depth, dip, mesh_spacing
+        )
+
+        ref = Line([Point(0., 0.), Point(1.0, 1.0)])
+        result = whole_fault_surface.get_resampled_top_edge()
+        for ref_point, result_point in zip(ref.points, result.points):
+
+            self.assertAlmostEqual(ref_point.longitude,
+                                   result_point.longitude, delta=0.1)
+            self.assertAlmostEqual(ref_point.latitude,
+                                   result_point.latitude, delta=0.1)
+            self.assertAlmostEqual(ref_point.depth,
+                                   result_point.depth, delta=0.1)
+
+    def test_get_resampled_top_edge_non_planar(self):
+        upper_seismogenic_depth = 0.
+        lower_seismogenic_depth = 40.
+        dip = 90.
+
+        mesh_spacing = 10.
+        fault_trace = Line([Point(0.0, 0.0), Point(0.5, 0.5), Point(1.5, 1.0)])
+
+        whole_fault_surface = SimpleFaultSurface.from_fault_data(
+            fault_trace, upper_seismogenic_depth,
+            lower_seismogenic_depth, dip, mesh_spacing
+        )
+
+        ref = Line([Point(0., 0.), Point(0.5, 0.5), Point(1.5, 1.0)])
+        result = whole_fault_surface.get_resampled_top_edge()
+        for ref_point, result_point in zip(ref.points, result.points):
+
+            self.assertAlmostEqual(ref_point.longitude,
+                                   result_point.longitude, delta=0.1)
+            self.assertAlmostEqual(ref_point.latitude,
+                                   result_point.latitude, delta=0.1)
+            self.assertAlmostEqual(ref_point.depth,
+                                   result_point.depth, delta=0.1)
 
 
 class GetBoundingBoxTestCase(unittest.TestCase):
