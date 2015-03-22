@@ -74,8 +74,8 @@ class ClassicalTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'classical')
     def test_case_9(self):
         expected = [
-            'hazard_curve-smltp_b1_b2-gsimltp_b1-ltr_0.csv',
-            'hazard_curve-smltp_b1_b3-gsimltp_b1-ltr_1.csv',
+            'hazard_curve-smltp_b1_b2-gsimltp_b1.csv',
+            'hazard_curve-smltp_b1_b3-gsimltp_b1.csv',
         ]
         out = self.run_calc(case_9.__file__, 'job.ini', exports='csv')
         for fname in expected:
