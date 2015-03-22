@@ -17,6 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import logging
 import operator
 import collections
 from functools import partial
@@ -225,8 +226,14 @@ def classical_tiling(calculator, sitecol, tileno):
     # build the correct realizations from the (reduced) logic tree
     calculator.rlzs_assoc = calculator.composite_source_model.get_rlzs_assoc(
         partial(is_effective_trt_model, result))
+    n_levels = sum(len(imls) for imls in calculator.oqparam.imtls.itervalues())
+    n_realizations = len(calculator.rlzs_assoc.realizations)
+    out_size = len(calculator.sitecol) * n_levels * n_realizations
+    logging.info('Processed tile %d, got %d realizations, out_size=%s',
+                 tileno, n_realizations, '{:,d}'.format(out_size))
     # export the calculator outputs
-    return calculator.post_execute(result)
+    saved = calculator.post_execute(result)
+    return saved
 
 
 @base.calculators.add('classical_tiling')
