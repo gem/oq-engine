@@ -127,9 +127,11 @@ class ClassicalCalculator(base.HazardCalculator):
         if getattr(oq, 'individual_curves', True):
             for rlz in rlzs:
                 smlt_path = '_'.join(rlz.sm_lt_path)
+                suffix = ('-ltr_%d' % rlz.ordinal
+                          if oq.number_of_logic_tree_samples else '')
                 for fmt in exports:
-                    fname = 'hazard_curve-smltp_%s-gsimltp_%s-ltr_%d.%s' % (
-                        smlt_path, rlz.gsim_rlz.uid, rlz.ordinal, fmt)
+                    fname = 'hazard_curve-smltp_%s-gsimltp_%s%s.%s' % (
+                        smlt_path, rlz.gsim_rlz.uid, suffix, fmt)
                     saved += self.export_curves(curves_by_rlz[rlz], fmt, fname)
         if len(rlzs) == 1:  # cannot compute statistics
             [self.mean_curves] = curves_by_rlz.values()
