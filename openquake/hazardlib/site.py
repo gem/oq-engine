@@ -208,7 +208,7 @@ class SiteCollection(object):
         else:  # from sites
             for i, location in enumerate(self.mesh):
                 yield Site(location, self.vs30[i], self.vs30measured[i],
-                           self.z1pt0[i], self.z2pt5[i], self._backarc[i],
+                           self.z1pt0[i], self.z2pt5[i], self.backarc[i],
                            self.sids[i])
 
     def filter(self, mask):
