@@ -411,7 +411,7 @@ class FilteredSiteCollection(object):
             len(self.indices), self.total_sites)
 
 # attach a number of properties filtering the arrays
-for name in 'vs30 vs30measured z1pt0 z2pt5 lons lats sids'.split():
+for name in 'vs30 vs30measured z1pt0 z2pt5 backarc lons lats sids'.split():
     prop = property(
         lambda fsc, name=name: getattr(fsc.complete, name).take(fsc.indices),
         doc='Extract %s array from FilteredSiteCollection' % name)
