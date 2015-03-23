@@ -747,7 +747,10 @@ class Scenario(Workflow):
 
     def __call__(self, loss_type, assets, ground_motion_values, epsilons,
                  _tags=None):
-        values = numpy.array([a.value(loss_type) for a in assets])
+        if loss_type == 'fatalities':
+            values = numpy.array([a.values[loss_type] for a in assets])
+        else:
+            values = numpy.array([a.value(loss_type) for a in assets])
 
         # a matrix of N x R elements
         loss_ratio_matrix = self.risk_functions[loss_type].apply_to(

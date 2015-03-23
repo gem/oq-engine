@@ -14,6 +14,9 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/agg_loss.csv',
                               out['agg']['agg_loss', 'csv'])
 
-    #@attr('qa', 'risk', 'scenario_damage')
-    #def test_occupants(self):
-    #    out = self.run_calc(occupants.__file__, 'job_haz.ini,job_risk.ini')
+    @attr('qa', 'risk', 'scenario_damage')
+    def test_occupants(self):
+        out = self.run_calc(occupants.__file__, 'job_haz.ini,job_risk.ini')
+        self.assertEqualFiles('expected/agg_loss.csv',
+                              out['agg']['agg_loss', 'csv'])
+
