@@ -229,10 +229,8 @@ def classical_tiling(calculator, sitecol, tileno):
     calculator.rlzs_assoc = calculator.composite_source_model.get_rlzs_assoc(
         partial(is_effective_trt_model, result))
     n_levels = sum(len(imls) for imls in calculator.oqparam.imtls.itervalues())
-    n_realizations = len(calculator.rlzs_assoc.realizations)
-    out_size = len(calculator.sitecol) * n_levels * n_realizations
-    logging.info('Processed tile %d, got %d realizations, out_size=%s',
-                 tileno, n_realizations, '{:,d}'.format(out_size))
+    tup = len(calculator.sitecol), n_levels, len(calculator.rlzs_assoc)
+    logging.info('Processed tile %d, (sites, levels, keys)=%s', tileno, tup)
     # export the calculator outputs
     saved = calculator.post_execute(result)
     return saved
