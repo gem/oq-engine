@@ -41,11 +41,11 @@ class AbrahamsonEtAl2015SInterTestCase(BaseGSIMTestCase):
     def test_std_total(self):
         self.check(self.TOTAL_FILE,
                    max_discrep_percentage=0.1)
-    
+
     def test_std_inter(self):
         self.check(self.INTER_FILE,
                    max_discrep_percentage=0.1)
-    
+
     def test_std_intra(self):
         self.check(self.INTRA_FILE,
                    max_discrep_percentage=0.1)

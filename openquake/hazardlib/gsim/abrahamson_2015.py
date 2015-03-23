@@ -116,7 +116,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
         for large events.
         """
         return self.COEFFS_MAG_SCALE[imt]["dc1"]
-    
+
     def _compute_pga_rock(self, C, dc1, sites, rup, dists):
         """
         Compute and return mean imt value for rock conditions
@@ -130,7 +130,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
         site_response = ((C['theta12'] + C['b'] * self.CONSTS['n']) *
                          np.log(1000. / C['vlin']))
         return mean + site_response
-        
+
     def _compute_magnitude_term(self, C, dc1, mag):
         """
         Computes the magnitude scaling term given by equation (2)
@@ -146,16 +146,14 @@ class AbrahamsonEtAl2015SInter(GMPE):
                 C['theta13'] * ((10. - mag) ** 2.)
 
         return base + f_mag
-    
+
     def _compute_distance_term(self, C, mag, dists):
         """
         Computes the distance scaling term, as contained within equation (1)
         """
-        
         return (C['theta2'] + self.CONSTS['theta3'] * (mag - 7.8)) *\
             np.log(dists.rrup + self.CONSTS['c4'] * np.exp((mag - 6.) *
                    self.CONSTS['theta9'])) + (C['theta6'] * dists.rrup)
-
 
     def _compute_focal_depth_term(self, C, rup):
         """
@@ -191,14 +189,13 @@ class AbrahamsonEtAl2015SInter(GMPE):
         site_resp_term = C["theta12"] * np.log(arg)
         # Get linear scaling term
         idx = sites.vs30 >= C["vlin"]
-        site_resp_term[idx] += (C["b"] * self.CONSTS["n"] *  np.log(arg[idx]))
+        site_resp_term[idx] += (C["b"] * self.CONSTS["n"] * np.log(arg[idx]))
         # Get nonlinear scaling term
         idx = np.logical_not(idx)
         site_resp_term[idx] += (
             -C["b"] * np.log(pga1000[idx] + self.CONSTS["c"]) +
-            C["b"] * np.log(pga1000[idx] + self.CONSTS["c"] * 
-            (arg[idx] ** self.CONSTS["n"]))
-            )
+            C["b"] * np.log(pga1000[idx] + self.CONSTS["c"] *
+                            (arg[idx] ** self.CONSTS["n"])))
         return site_resp_term
 
     def _get_stddevs(self, C, stddev_types, num_sites):
@@ -244,7 +241,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
     7.5000   400.0000   0.0000  -1.6017   -0.4600   -0.0064  -0.4433    0.3000   0.7000  -0.0033   -0.5280   -0.0980    0.0000   0.3000    0.0000   0.6000  0.4300  0.7400    0.6000
     10.0000  400.0000   0.0000  -2.2937   -0.4000   -0.0064  -0.4828    0.3000   0.7000  -0.0060   -0.5040   -0.0980    0.0000   0.3000    0.0000   0.6000  0.4300  0.7400    0.6000
     """)
-    
+
     COEFFS_MAG_SCALE = CoeffsTable(sa_damping=5, table="""
     IMT    dc1
     pga    0.2
@@ -335,7 +332,7 @@ class AbrahamsonEtAl2015SSlab(AbrahamsonEtAl2015SInter):
         for the central branch of the in-slab model
         """
         return -0.3
-    
+
     def _compute_focal_depth_term(self, C, rup):
         """
         Computes the hypocentral depth scaling term - as indicated by

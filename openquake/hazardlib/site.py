@@ -59,7 +59,7 @@ class Site(object):
     __slots__ = 'location vs30 vs30measured z1pt0 z2pt5 backarc id'.split()
 
     def __init__(self, location, vs30, vs30measured, z1pt0, z2pt5,
-            backarc=False, id=0):
+                 backarc=False, id=0):
         if not vs30 > 0:
             raise ValueError('vs30 must be positive')
         if not z1pt0 > 0:
