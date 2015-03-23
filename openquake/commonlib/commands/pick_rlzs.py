@@ -17,12 +17,18 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import cPickle
+import operator
 import collections
 from openquake.commonlib import sap
+from openquake.baselib.general import groupby
 from openquake.commonlib.commands.plot import combined_curves
 from openquake.commonlib.util import max_rel_diff_index
 
 MaxDiff = collections.namedtuple('MaxDiff', 'maxdiff rlz imt site_idx')
+
+
+def max_diff(rows):
+    return max(row.maxdiff for row in rows)
 
 
 def pick_rlzs(hazard_pik):
@@ -43,9 +49,12 @@ def pick_rlzs(hazard_pik):
             maxdiff, site = max_rel_diff_index(
                 mean_curves[imt], curves_by_rlz[rlz][imt])
             diffs.append(MaxDiff(maxdiff, rlz, imt, site))
-    for i, md in enumerate(sorted(diffs), 1):
-        print '%d) rlz=%s, IMT=%s, max_diff=%s at site %d' % (
-            i, md.rlz, md.imt, md.maxdiff, md.site_idx)
+    groups = groupby(diffs, operator.attrgetter('rlz')).values()
+    for group in sorted(groups, key=max_diff):
+        for md in sorted(group):
+            print 'rlz=%s, IMT=%s, max_diff=%s at site %d' % (
+                md.rlz, md.imt, md.maxdiff, md.site_idx)
+        print
 
 parser = sap.Parser(pick_rlzs)
 parser.arg('hazard_pik', '.pik file containing the result of a computation')
