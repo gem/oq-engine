@@ -1,3 +1,7 @@
+  [Graeme Weatherill]
+  * Implements Abrahamson et al. (2015) BC Hydro GMPE
+  * Adds backarc term to the Site and SiteCollection object
+  
   [Yen-Shin Chen]
   * Simple fault: added a method to retrieve the vertexes of a patch given its index
   * Base surface: added a method to get a set of point representing a resampled top edge
