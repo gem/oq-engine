@@ -670,21 +670,22 @@ def ab_values(value):
 vs30_type = ChoiceCI('measured', 'inferred')
 
 SiteParam = collections.namedtuple(
-    'SiteParam', 'z1pt0 z2pt5 measured vs30 lon lat'.split())
+    'SiteParam', 'z1pt0 z2pt5 measured vs30 backarc lon lat'.split())
 
 
-def site_param(value, z1pt0, z2pt5, vs30Type, vs30, lon, lat):
+def site_param(value, z1pt0, z2pt5, vs30Type, vs30, backarc, lon, lat):
     """
     Used to convert a node like
 
        <site lon="24.7125" lat="42.779167" vs30="462" vs30Type="inferred"
-       z1pt0="100" z2pt5="5" />
+       z1pt0="100" z2pt5="5" backarc="False"/>
 
-    into a 6-tuple (z1pt0, z2pt5, measured, vs30, lon, lat)
+    into a 7-tuple (z1pt0, z2pt5, measured, vs30, backarc, lon, lat)
     """
     return SiteParam(positivefloat(z1pt0), positivefloat(z2pt5),
                      vs30_type(vs30Type) == 'measured',
-                     positivefloat(vs30), longitude(lon), latitude(lat))
+                     positivefloat(vs30), boolean(backarc),
+                     longitude(lon), latitude(lat))
 
 
 ###########################################################################
