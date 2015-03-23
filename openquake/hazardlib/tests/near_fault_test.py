@@ -105,14 +105,8 @@ class DppParameterTest(unittest.TestCase):
         fault_trace_end = Point(10., 45.919457)
         fault_trace = Line([fault_trace_start, fault_trace_end])
 
-        # vertices of rupture fault
-
-        lon, lat, dep = SimpleFaultSurface.get_fault_vertices_3d(
-            fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
-            dip=dip)
-
         # E Plane Calculation
-        self.p0, self.p1, self.p2, self.p3 = SimpleFaultSurface.get_fault_vertices_3d(
+        self.p0, self.p1, self.p2, self.p3 = SimpleFaultSurface.get_fault_patch_vertices(
             fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
             dip=dip, index_patch=index_patch)
 

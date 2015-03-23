@@ -53,6 +53,7 @@ def get_xyz_from_ll(projected, reference):
             dists * math.cos(math.radians(azims)),
             depths)
 
+
 def get_plane_equation(p0, p1, p2, reference):
     '''
     Define plane equation by 3 given points, p0, p1, p2, which format in
@@ -100,6 +101,7 @@ def get_plane_equation(p0, p1, p2, reference):
 
     return normal, dist_to_plane
 
+
 def projection_pp(site, normal, dist_to_plane, reference):
     '''
     Find the projection point Pp on the patch plane
@@ -131,6 +133,7 @@ def projection_pp(site, normal, dist_to_plane, reference):
     pp = np.array([x[0], x[1], x[2]])
     return pp
 
+
 def vectors2angle(v1, v2):
     """ Returns the angle in radians between vectors 'v1' and 'v2'.
 
@@ -144,6 +147,7 @@ def vectors2angle(v1, v2):
     cosang = np.dot(v1, v2)
     sinang = np.linalg.norm(np.cross(v1, v2))
     return np.arctan2(sinang, cosang)
+
 
 def average_s_rad(site, hypocenter, reference, pp,
                   normal, dist_to_plane, e, p0, p1, delta_slip):
@@ -240,6 +244,7 @@ def average_s_rad(site, hypocenter, reference, pp,
 
     return fs, rd, r_hyp
 
+
 def isochone_ratio(e, rd, r_hyp):
     """
     Get the isochone ratio which desrcibed in: "Final
@@ -261,6 +266,83 @@ def isochone_ratio(e, rd, r_hyp):
         c_prime = 1. / ((1. / 0.8) - ((r_hyp - rd) / e))
 
     return c_prime
+
+
+def _intersection(seg1_start, seg1_end, seg2_start, seg2_end):
+    """
+    Get the intersection point in the space when given the 2 line segments.
+    :param seg1_start:
+        :class:`~openquake.hazardlib.geo.point.Point` object
+        representing one end point of a segment(e.g. segment1)
+        segment.
+    :param seg1_end:
+        :class:`~openquake.hazardlib.geo.point.Point` object
+        representing the other end point of the first segment(e.g. segment1)
+    :param seg2_start:
+        :class:`~openquake.hazardlib.geo.point.Point` object
+        representing one end point of the other segment(e.g. segment2)
+        segment.
+    :param seg2_end:
+        :class:`~openquake.hazardlib.geo.point.Point` object
+        representing the other end point of the second segment(e.g. segment2)
+    :return:
+        p_intersect, :class:`~openquake.hazardlib.geo.point.Point` object
+        representing the location of intersection point of the two
+        given segments
+        vector1, format in numpy array, vetor defined by intersection point
+        and seg2_end
+        vector2, format in numpy array, vetor defined by seg2_start and
+        seg2_end
+        vector3, format in numpy array, vetor defined by seg1_start and
+        seg1_end
+        vector4, format in numpy array, vetor defined by intersection point
+        and seg1_start
+    """
+
+    pa = np.array([seg1_start, seg2_start])
+    pb = np.array([seg1_end, seg2_end])
+
+    si = pb - pa
+
+    ni = si / np.power(
+        np.dot(np.sum(si ** 2, axis=1).reshape(2, 1),
+               np.ones((1, 3))), 0.5)
+
+    nx = ni[:, 0].reshape(2, 1)
+    ny = ni[:, 1].reshape(2, 1)
+    nz = ni[:, 2].reshape(2, 1)
+    sxx = np.sum(nx ** 2 - 1)
+    syy = np.sum(ny ** 2 - 1)
+    szz = np.sum(nz ** 2 - 1)
+    sxy = np.sum(nx * ny)
+    sxz = np.sum(nx * nz)
+    syz = np.sum(ny * nz)
+    s = np.array([sxx, sxy, sxz, sxy, syy, syz, sxz, syz,
+                 szz]).reshape(3, 3)
+
+    cx = np.sum(pa[:, 0].reshape(2, 1) * (nx ** 2 - 1) +
+                pa[:, 1].reshape(2, 1) * [nx * ny] +
+                pa[:, 2].reshape(2, 1) * (nx * nz))
+    cy = np.sum(pa[:, 0].reshape(2, 1) * [nx * ny] +
+                pa[:, 1].reshape(2, 1) * [ny ** 2 - 1] +
+                pa[:, 2].reshape(2, 1) * [ny * nz])
+    cz = np.sum(pa[:, 0].reshape(2, 1) * [nx * nz] +
+                pa[:, 1].reshape(2, 1) * [ny * nz] +
+                pa[:, 2].reshape(2, 1) * [nz ** 2 - 1])
+    c = np.array([cx, cy, cz]).reshape(3, 1)
+    p_intersect = np.linalg.solve(s, c)
+
+    vector1 = (p_intersect.flatten() - seg2_end) / \
+        sum((p_intersect.flatten() - seg2_end) ** 2) ** 0.5
+    vector2 = (seg2_start - seg2_end) / \
+        sum((seg2_start - seg2_end) ** 2) ** 0.5
+    vector3 = (np.array(seg1_end) - np.array(seg1_start)) / \
+        sum((np.array(seg1_end) - np.array(seg1_start)) ** 2) ** 0.5
+    vector4 = (p_intersect.flatten() - np.array(seg1_start)) / \
+        sum((p_intersect.flatten() - np.array(seg1_start)) ** 2) ** 0.5
+
+    return p_intersect, vector1, vector2, vector3, vector4
+
 
 def directp(node0, node1, node2, node3, hypocenter, reference, pp):
     """
@@ -343,47 +425,8 @@ def directp(node0, node1, node2, node3, hypocenter, reference, pp):
         exit_flag = False
         for (seg_s, seg_e) in zip(segment_s, segment_e):
 
-            pa = np.array([seg_s, pp_xyz])
-            pb = np.array([seg_e, hypocenter_xyz])
-
-            si = pb - pa
-
-            ni = si / np.power(
-                np.dot(np.sum(si ** 2, axis=1).reshape(2, 1),
-                       np.ones((1, 3))), 0.5)
-
-            nx = ni[:, 0].reshape(2, 1)
-            ny = ni[:, 1].reshape(2, 1)
-            nz = ni[:, 2].reshape(2, 1)
-            sxx = np.sum(nx ** 2 - 1)
-            syy = np.sum(ny ** 2 - 1)
-            szz = np.sum(nz ** 2 - 1)
-            sxy = np.sum(nx * ny)
-            sxz = np.sum(nx * nz)
-            syz = np.sum(ny * nz)
-            s = np.array([sxx, sxy, sxz, sxy, syy, syz, sxz, syz,
-                         szz]).reshape(3, 3)
-
-            cx = np.sum(pa[:, 0].reshape(2, 1) * (nx ** 2 - 1) +
-                        pa[:, 1].reshape(2, 1) * [nx * ny] +
-                        pa[:, 2].reshape(2, 1) * (nx * nz))
-            cy = np.sum(pa[:, 0].reshape(2, 1) * [nx * ny] +
-                        pa[:, 1].reshape(2, 1) * [ny ** 2 - 1] +
-                        pa[:, 2].reshape(2, 1) * [ny * nz])
-            cz = np.sum(pa[:, 0].reshape(2, 1) * [nx * nz] +
-                        pa[:, 1].reshape(2, 1) * [ny * nz] +
-                        pa[:, 2].reshape(2, 1) * [nz ** 2 - 1])
-            c = np.array([cx, cy, cz]).reshape(3, 1)
-            p_intersect = np.linalg.solve(s, c)
-
-            vector1 = (p_intersect.flatten() - hypocenter_xyz) / \
-                sum((p_intersect.flatten() - hypocenter_xyz) ** 2) ** 0.5
-            vector2 = (pp_xyz - hypocenter_xyz) / \
-                sum((pp_xyz - hypocenter_xyz) ** 2) ** 0.5
-            vector3 = (np.array(seg_e) - np.array(seg_s)) / \
-                sum((np.array(seg_e) - np.array(seg_s)) ** 2) ** 0.5
-            vector4 = (p_intersect.flatten() - np.array(seg_s)) / \
-                sum((p_intersect.flatten() - np.array(seg_s)) ** 2) ** 0.5
+            p_intersect, vector1, vector2, vector3, vector4 = _intersection(
+                seg_s, seg_e, pp_xyz, hypocenter_xyz)
 
             ppph = dst.pdist([pp, hypocenter_xyz])
             pdph = dst.pdist([p_intersect.flatten(), hypocenter_xyz])
@@ -397,7 +440,6 @@ def directp(node0, node1, node2, node3, hypocenter, reference, pp):
                                  rtol=0.))):
 
                     # Check if ppph >= pdph.
-
                     if (ppph >= pdph):
                         if (p_intersect[0] >= x_min) & (p_intersect[0] <=
                                                         x_max):
