@@ -39,6 +39,14 @@ def info(name, filtersources=False):
         assoc = csm.get_rlzs_assoc()
         print assoc.csm_info
         print assoc
+        if filtersources:
+            # display information about the size of the hazard curve matrices
+            tup = (len(sitecol),
+                   sum(len(imls) for imls in oqparam.imtls.values() if imls),
+                   len(assoc))
+            size_mb = (tup[0] * tup[1] * tup[2] * 8.) / 1024 / 1024
+            if size_mb:
+                print "sites, levels, keys = %s [~%d MB]" % (tup, size_mb)
     else:
         print "No info for '%s'" % name
 
