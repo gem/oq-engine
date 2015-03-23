@@ -747,7 +747,8 @@ class Scenario(Workflow):
 
     def __call__(self, loss_type, assets, ground_motion_values, epsilons,
                  _tags=None):
-        if loss_type == 'fatalities':
+        if loss_type == 'fatalities' and hasattr(assets[0], 'values'):
+            # this is called only in oq-lite
             values = numpy.array([a.values[loss_type] for a in assets])
         else:
             values = numpy.array([a.value(loss_type) for a in assets])
