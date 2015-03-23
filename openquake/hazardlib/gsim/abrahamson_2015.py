@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2013 GEM Foundation
+# Copyright (C) 2015 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -14,7 +14,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`AbrahamsonEtAl2013`.
+Module exports :class:`AbrahamsonEtAl2015`
+               :class:`AbrahamsonEtAl2015SInter`
+               :class:`AbrahamsonEtAl2015SInterHigh`
+               :class:`AbrahamsonEtAl2015SInterLow`
+               :class:`AbrahamsonEtAl2015SSlab`
+               :class:`AbrahamsonEtAl2015SSlabHigh`
+               :class:`AbrahamsonEtAl2015SSlabLow`
+
 """
 
 from __future__ import division
@@ -31,36 +38,39 @@ class AbrahamsonEtAl2015SInter(GMPE):
     Implements the Subduction GMPE developed by Norman Abrahamson, Nicholas
     Gregor and Kofi Addo, otherwise known as the "BC Hydro" Model, published
     as "BC Hydro Ground Motion Prediction Equations For Subduction Earthquakes
-    (2015, Earthquake Spectra, in press).
-    This implements only the interface GMPE for forearc sites
+    (2015, Earthquake Spectra, in press), for subduction interface events.
+
+    From observations of very large events it was found that the magnitude
+    scaling term can be adjusted as part of the epistemic uncertainty model.
+    The adjustment comes in the form of the parameter DeltaC1, which is
+    period dependent for interface events. To capture the epistemic uncertainty
+    in DeltaC1, three models are proposed: a 'central', 'upper' and 'lower'
+    model. The current class implements the 'centra' model, whilst additional
+    classes will implement the 'upper' and 'lower' alternatives.
     """
 
     #: Supported tectonic region type is subduction interface
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
     #: Supported intensity measure types are spectral acceleration,
-    #: and peak ground acceleration, see table 1, page 1715
+    #: and peak ground acceleration
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
         PGA,
         SA
     ])
 
-    #: Supported intensity measure component is the random horizontal
-    #component :
-    #attr:`~openquake.hazardlib.const.IMC.GEOMETRIC_MEAN`, see
-    #paragraph 'Functional : Form', page 1706
+    #: Supported intensity measure component is the geometric mean component
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation types are inter-event, intra-event
-    #: and total, see table 1, page 1715
+    #: and total, see table 3, pages 12 - 13
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
         const.StdDev.TOTAL,
         const.StdDev.INTER_EVENT,
         const.StdDev.INTRA_EVENT
     ])
 
-    #: Required site parameters is Vs30, used to distinguish between NEHRP
-    #: soil classes, see paragraph 'Functional Form', page 1706
+    #: Site amplification is dependent upon Vs30
     #: For the Abrahamson et al (2013) GMPE a new term is introduced to
     #: determine whether a site is on the forearc with respect to the
     #: subduction interface, or on the backarc. This boolean is a vector
@@ -69,8 +79,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
 
     REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc'))
 
-    #: Required rupture parameters are magnitude and focal depth, see equation
-    #: 1, page 1706
+    #: Required rupture parameters are magnitude for the interface model
     REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
 
     #: Required distance measure is closest distance to rupture, for
@@ -87,10 +96,9 @@ class AbrahamsonEtAl2015SInter(GMPE):
         # intensity measure type and for PGA
         C = self.COEFFS[imt]
         dc1 = self._get_delta_c1(imt)
-        #C = self._get_delta_c1_coeffs(C)
         C_PGA = self.COEFFS[PGA()]
         dc1_pga = self._get_delta_c1(PGA())
-        # compute median pga on rock (vs30=1100), needed for site response
+        # compute median pga on rock (vs30=1000), needed for site response
         # term calculation
         pga1000 = np.exp(
             self._compute_pga_rock(C_PGA, dc1_pga, sites, rup, dists))
@@ -99,39 +107,33 @@ class AbrahamsonEtAl2015SInter(GMPE):
                 self._compute_focal_depth_term(C, rup) +
                 self._compute_forearc_backarc_term(C, sites, dists) +
                 self._compute_site_response_term(C, sites, pga1000))
-        #print "PGA1000", pga1000
-        #print "Magnitude", self._compute_magnitude_term(C, dc1, rup.mag)
-        #print "Distance", self._compute_distance_term(C, rup.mag, dists)
-        #print "Depth", self._compute_focal_depth_term(C, rup)
-        #print "Forearc", self._compute_forearc_backarc_term(C, sites, dists)
-        #print "Site", np.exp(self._compute_site_response_term(C, sites, pga1000))
-
         stddevs = self._get_stddevs(C, stddev_types, len(sites.vs30))
         return mean, stddevs
 
     def _get_delta_c1(self, imt):
         """
-        Retrunrs themagnitude scaling parameter deltaC1
+        Returns the magnitude scaling parameter deltaC1 for capturing scaling
+        for large events.
         """
         return self.COEFFS_MAG_SCALE[imt]["dc1"]
     
     def _compute_pga_rock(self, C, dc1, sites, rup, dists):
         """
         Compute and return mean imt value for rock conditions
-        (vs30 = 1100 m/s)
+        (vs30 = 1000 m/s)
         """
         mean = (self._compute_magnitude_term(C, dc1, rup.mag) +
                 self._compute_distance_term(C, rup.mag, dists) +
                 self._compute_focal_depth_term(C, rup) +
                 self._compute_forearc_backarc_term(C, sites, dists))
+        # Apply linear site term
         site_response = ((C['theta12'] + C['b'] * self.CONSTS['n']) *
                          np.log(1000. / C['vlin']))
-        #print "PGA", mean, np.exp(site_response)
         return mean + site_response
         
     def _compute_magnitude_term(self, C, dc1, mag):
         """
-        Computes the magnitude scaling term given by equation (4).
+        Computes the magnitude scaling term given by equation (2)
         """
         base = C['theta1'] + (self.CONSTS['theta4'] * dc1)
         dmag = self.CONSTS["C1"] + dc1
@@ -147,7 +149,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
     
     def _compute_distance_term(self, C, mag, dists):
         """
-        Computes the distance scaling term, as contained within equation (3)
+        Computes the distance scaling term, as contained within equation (1)
         """
         
         return (C['theta2'] + self.CONSTS['theta3'] * (mag - 7.8)) *\
@@ -158,14 +160,14 @@ class AbrahamsonEtAl2015SInter(GMPE):
     def _compute_focal_depth_term(self, C, rup):
         """
         Computes the hypocentral depth scaling term - as indicated by
-        equation (5)
+        equation (3)
+        For interface events F_EVENT = 0.. so no depth scaling is returned
         """
-        # For interface events F_EVENT = 0.. so no depth scaling is returned
         return 0.
 
     def _compute_forearc_backarc_term(self, C, sites, dists):
         """
-        Computes the forearc/backarc scaling term given by equation (6).
+        Computes the forearc/backarc scaling term given by equation (4)
         """
         f_faba = np.zeros_like(dists.rrup)
         # Term only applies to backarc sites (F_FABA = 0. for forearc)
@@ -177,8 +179,8 @@ class AbrahamsonEtAl2015SInter(GMPE):
 
     def _compute_site_response_term(self, C, sites, pga1000):
         """
-        Compute and return site response model term, the Abrahamson et al
-        (2013) GMPE adopts the same site response scaling model of
+        Compute and return site response model term
+        This GMPE adopts the same site response scaling model of
         Walling et al (2008) as implemented in the Abrahamson & Silva (2008)
         GMPE. The functional form is retained here.
         """
@@ -201,7 +203,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
 
     def _get_stddevs(self, C, stddev_types, num_sites):
         """
-        Return standard deviations as defined in table 5, p. 200.
+        Return standard deviations as defined in table 3
         """
         stddevs = []
         for stddev_type in stddev_types:
@@ -256,7 +258,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
     """)
 
     CONSTS = {
-        # Period-Independent Coefficients (Table 4)
+        # Period-Independent Coefficients (Table 2)
         'n': 1.18,
         'c': 1.88,
         'theta3': 0.1,
@@ -288,11 +290,11 @@ class AbrahamsonEtAl2015SInterHigh(AbrahamsonEtAl2015SInter):
 
 
 class AbrahamsonEtAl2015SInterLow(AbrahamsonEtAl2015SInter):
-    '''
-    Defines the Abrahamson et al. (2013) scaling relation  assuming the upper
+    """
+    Defines the Abrahamson et al. (2013) scaling relation  assuming the lower
     values of the magnitude scaling for large slab earthquakes, as defined in
     table 4
-    '''
+    """
 
     COEFFS_MAG_SCALE = CoeffsTable(sa_damping=5, table="""
     IMT    dc1
@@ -318,13 +320,13 @@ class AbrahamsonEtAl2015SSlab(AbrahamsonEtAl2015SInter):
     the hypocentral distance metric is used in place of the rupture distance,
     and the hypocentral depth is used to scale the ground motion by depth
     """
-    #: Supported tectonic region type is subduction interface
+    #: Supported tectonic region type is subduction in-slab
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
     #: Required distance measure is hypocentral for in-slab events
     REQUIRES_DISTANCES = set(('rhypo',))
 
-    #: In-slab events require constraint of hypocentral depth
+    #: In-slab events require constraint of hypocentral depth and magnitude
     REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
 
     def _get_delta_c1(self, imt):
@@ -337,7 +339,7 @@ class AbrahamsonEtAl2015SSlab(AbrahamsonEtAl2015SInter):
     def _compute_focal_depth_term(self, C, rup):
         """
         Computes the hypocentral depth scaling term - as indicated by
-        equation (5)
+        equation (3)
         """
         if rup.hypo_depth > 120.0:
             z_h = 120.0
@@ -347,7 +349,7 @@ class AbrahamsonEtAl2015SSlab(AbrahamsonEtAl2015SInter):
 
     def _compute_distance_term(self, C, mag, dists):
         """
-        Computes the distance scaling term, as contained within equation (3)
+        Computes the distance scaling term, as contained within equation (1)
         """
         return ((C['theta2'] + C['theta14'] + self.CONSTS['theta3'] *
                 (mag - 7.8)) * np.log(dists.rhypo + self.CONSTS['c4'] *
@@ -356,7 +358,7 @@ class AbrahamsonEtAl2015SSlab(AbrahamsonEtAl2015SInter):
 
     def _compute_forearc_backarc_term(self, C, sites, dists):
         """
-        Computes the forearc/backarc scaling term given by equation (6).
+        Computes the forearc/backarc scaling term given by equation (4).
         """
         f_faba = np.zeros_like(dists.rhypo)
         # Term only applies to backarc sites (F_FABA = 0. for forearc)
@@ -384,7 +386,7 @@ class AbrahamsonEtAl2015SSlabHigh(AbrahamsonEtAl2015SSlab):
 
 class AbrahamsonEtAl2015SSlabLow(AbrahamsonEtAl2015SSlab):
     """
-    Defines the Abrahamson et al. (2013) scaling relation  assuming the upper
+    Defines the Abrahamson et al. (2013) scaling relation  assuming the lower
     values of the magnitude scaling for large slab earthquakes, as defined in
     table 8
     """

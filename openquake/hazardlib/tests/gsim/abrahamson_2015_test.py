@@ -51,7 +51,6 @@ class AbrahamsonEtAl2015SInterTestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.1)
 
 
-
 class AbrahamsonEtAl2015SInterHighTestCase(AbrahamsonEtAl2015SInterTestCase):
     """
     Tests the Abrahamson et al. (2015) BC Hydro model for subduction
@@ -68,7 +67,6 @@ class AbrahamsonEtAl2015SInterLowTestCase(AbrahamsonEtAl2015SInterTestCase):
     """
     Tests the Abrahamson et al. (2015) BC Hydro model for subduction
     interface earthquakes with the low magnitude scaling term
-    
     """
     GSIM_CLASS = AbrahamsonEtAl2015SInterLow
     MEAN_FILE = "BCHYDRO/BCHYDRO_SINTER_LOW_MEAN.csv"
