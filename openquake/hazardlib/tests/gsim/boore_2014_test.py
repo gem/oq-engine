@@ -26,7 +26,7 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 # Discrepency percentages to be applied to all tests
 MEAN_DISCREP = 2.0
-STDDEV_DISCREP = 2.0
+STDDEV_DISCREP = 1.0
 
 
 class BooreEtAl2014TestCase(BaseGSIMTestCase):

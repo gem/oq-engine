@@ -45,7 +45,7 @@ class BaseSeismicSource(object):
         self.name = name
         self.tectonic_region_type = tectonic_region_type
         self.trt_model_id = None  # set by the engine
-        self.weight = None  # set by the engine
+        self.weight = 1  # set by the engine
         self.seed = None  # set by the engine
 
     @abc.abstractmethod
