@@ -16,6 +16,8 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import numpy
+
 
 def max_rel_diff(curve_ref, curve, min_value=0.01):
     """
@@ -51,6 +53,45 @@ def max_rel_diff_index(curve_ref, curve, min_value=0.01):
     assert len(curve), 'The curves are empty!'
     diffs = [max_rel_diff(c1, c2, min_value)
              for c1, c2 in zip(curve_ref, curve)]
+    maxdiff = max(diffs)
+    maxindex = diffs.index(maxdiff)
+    return maxdiff, maxindex
+
+
+def rmsep(curve_ref, curve):
+    """
+    Root Mean Square Error Percentage
+
+    :param numpy.array curve_ref: reference curve
+    :param numpy.array curve: a curve
+
+    >>> curve_ref = numpy.array([0.01, 0.02, 0.03, 0.05, 1.0])
+    >>> curve = numpy.array([0.011, 0.021, 0.031, 0.051, 1.0])
+    >>> rmsep(curve_ref, curve)
+    0.052936020082947469
+    """
+    reldiffsquare = (1. - curve / curve_ref) ** 2
+    return numpy.sqrt(reldiffsquare.mean())
+
+
+def rmsep_index(curves_ref, curves):
+    """
+    Root Mean Square Error Percentage for a set of curves
+
+    :param numpy.array curve_ref: reference curves
+    :param numpy.array curve: curves
+    :returns: the maximum difference and the curve index
+
+    >>> curve_ref = numpy.array([[0.01, 0.02, 0.03, 0.05],
+    ... [0.01, 0.02, 0.04, 0.06]])
+    >>> curve = numpy.array([[0.011, 0.021, 0.031, 0.051],
+    ... [0.012, 0.022, 0.032, 0.051]])
+    >>> rmsep_index(curve_ref, curve)
+    (0.16770509831248417, 1)
+    """
+    assert len(curves_ref) == len(curves), (len(curves_ref), len(curves))
+    assert len(curves), 'The curves are empty!'
+    diffs = [rmsep(c1, c2) for c1, c2 in zip(curves_ref, curves)]
     maxdiff = max(diffs)
     maxindex = diffs.index(maxdiff)
     return maxdiff, maxindex
