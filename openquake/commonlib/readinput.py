@@ -656,59 +656,61 @@ def get_exposure(oqparam):
         set(['occupants'])
     asset_refs = set()
     time_event = getattr(oqparam, 'time_event', None)
-    for asset in assets_node:
-        values = {}
-        deductibles = {}
-        insurance_limits = {}
-        retrofitting_values = {}
-        with context(fname, asset):
-            asset_id = asset['id']
-            if asset_id in asset_refs:
-                raise DuplicatedID(asset_id)
-            asset_refs.add(asset_id)
-            taxonomy = asset['taxonomy']
-            if 'damage' in oqparam.calculation_mode:
-                # calculators of 'damage' kind require the 'number' attribute;
-                # if it is missing a KeyError is raised
-                number = asset.attrib['number']
-            else:
-                # other calculators ignore the 'number' attribute;
-                # if it is missing it is considered 1, since we are going
-                # to multiply by it
-                number = asset.attrib.get('number', 1)
-            location = asset.location['lon'], asset.location['lat']
-            if region and not geometry.Point(*location).within(region):
-                out_of_region += 1
-                continue
-        with context(fname, asset.costs):
-            for cost in asset.costs:
-                cost_type = cost['type']
-                if cost_type not in relevant_cost_types:
+    with context(fname, assets_node):
+        for asset in assets_node:
+            values = {}
+            deductibles = {}
+            insurance_limits = {}
+            retrofitting_values = {}
+            with context(fname, asset):
+                asset_id = asset['id']
+                if asset_id in asset_refs:
+                    raise DuplicatedID(asset_id)
+                asset_refs.add(asset_id)
+                taxonomy = asset['taxonomy']
+                if 'damage' in oqparam.calculation_mode:
+                    # calculators of 'damage' kind require the 'number'
+                    # if it is missing a KeyError is raised
+                    number = asset.attrib['number']
+                else:
+                    # other calculators ignore the 'number' attribute;
+                    # if it is missing it is considered 1, since we are going
+                    # to multiply by it
+                    number = asset.attrib.get('number', 1)
+                location = asset.location['lon'], asset.location['lat']
+                if region and not geometry.Point(*location).within(region):
+                    out_of_region += 1
                     continue
-                values[cost_type] = cost['value']
-                deductibles[cost_type] = cost.attrib.get('deductible')
-                insurance_limits[cost_type] = cost.attrib.get('insuranceLimit')
-            if exposure.category == 'population':
-                values['fatalities'] = number
-            # check we are not missing a cost type
-            missing = relevant_cost_types - set(values)
-            if missing:
-                raise RuntimeError(
-                    'Missing cost types: %s' % ', '.join(missing))
+            with context(fname, asset.costs):
+                for cost in asset.costs:
+                    cost_type = cost['type']
+                    if cost_type not in relevant_cost_types:
+                        continue
+                    values[cost_type] = cost['value']
+                    deductibles[cost_type] = cost.attrib.get('deductible')
+                    insurance_limits[cost_type] = cost.attrib.get(
+                        'insuranceLimit')
+                if exposure.category == 'population':
+                    values['fatalities'] = number
+                # check we are not missing a cost type
+                missing = relevant_cost_types - set(values)
+                if missing:
+                    raise RuntimeError(
+                        'Missing cost types: %s' % ', '.join(missing))
 
-        if time_event:
-            for occupancy in asset.occupancies:
-                with context(fname, occupancy):
-                    if occupancy['period'] == time_event:
-                        values['fatalities'] = occupancy['occupants']
-                        break
+            if time_event:
+                for occupancy in asset.occupancies:
+                    with context(fname, occupancy):
+                        if occupancy['period'] == time_event:
+                            values['fatalities'] = occupancy['occupants']
+                            break
 
-        area = float(asset.attrib.get('area', 1))
-        ass = workflows.Asset(
-            asset_id, taxonomy, number, location, values, area, deductibles,
-            insurance_limits, retrofitting_values)
-        exposure.assets.append(ass)
-        exposure.taxonomies.add(taxonomy)
+            area = float(asset.attrib.get('area', 1))
+            ass = workflows.Asset(
+                asset_id, taxonomy, number, location, values, area,
+                deductibles, insurance_limits, retrofitting_values)
+            exposure.assets.append(ass)
+            exposure.taxonomies.add(taxonomy)
     if region:
         logging.info('Read %d assets within the region_constraint '
                      'and discarded %d assets outside the region',
