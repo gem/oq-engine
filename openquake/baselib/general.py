@@ -597,14 +597,11 @@ class ArrayDict(collections.Mapping):
     [1 4]
     >>> print a.apply(numpy.sqrt)
     [ 1.          1.41421356]
+    >>> a.from_array(numpy.array([1, 2, 3]))
+    Traceback (most recent call last):
+     ...
+    ValueError: Wrong array size: expected 2, got 3
     """
-    @classmethod
-    def from_array(cls, array, slicedic):
-        self = cls.__new__(cls)
-        self.array = array
-        self.slicedic = slicedic
-        return self
-
     def __init__(self, dic):
         self.array = numpy.concatenate([dic[k] for k in sorted(dic)])
         self.slicedic = {}
@@ -618,6 +615,20 @@ class ArrayDict(collections.Mapping):
     def shape(self):
         return self.array.shape
 
+    def from_array(self, array):
+        """
+        :param array: an array with the right length
+        :returns: a new ArrayDict with the same .slicedic as self
+        """
+        n = sum(len(v) for v in self.itervalues())
+        if len(array) != n:
+            raise ValueError('Wrong array size: expected %d, got %d' %
+                             (n, len(array)))
+        new = self.__new__(self.__class__)
+        new.array = array
+        new.slicedic = self.slicedic
+        return new
+
     def __getitem__(self, key):
         return self.array[self.slicedic[key]]
 
@@ -629,32 +640,32 @@ class ArrayDict(collections.Mapping):
         return len(self.slicedic)
 
     def __add__(self, other):
-        return self.from_array(self.array + other.array, self.slicedic)
+        return self.from_array(self.array + other.array)
 
     __radd__ = __add__
 
     def __sub__(self, other):
-        return self.from_array(self.array - other.array, self.slicedic)
+        return self.from_array(self.array - other.array)
 
     def __rsub__(self, other):
         return - self.__sub__(other)
 
     def __neg__(self):
-        return self.from_array(-self.array, self.slicedic)
+        return self.from_array(-self.array)
 
     def __mul__(self, other):
-        return self.from_array(self.array * other.array, self.slicedic)
+        return self.from_array(self.array * other.array)
 
     __rmul__ = __mul__
 
     def __div__(self, other):
-        return self.from_array(self.array / other.array, self.slicedic)
+        return self.from_array(self.array / other.array)
 
     def __pow__(self, other):
-        return self.from_array(self.array.__pow__(other), self.slicedic)
+        return self.from_array(self.array.__pow__(other))
 
     def apply(self, func, *extras):
-        return self.from_array(func(self.array, *extras), self.slicedic)
+        return self.from_array(func(self.array, *extras))
 
     def __repr__(self):
         sizes = ['%s:%s' % (k, s.stop - s.start)
