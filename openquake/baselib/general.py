@@ -640,12 +640,12 @@ class ArrayDict(collections.Mapping):
         return len(self.slicedic)
 
     def __add__(self, other):
-        return self.from_array(self.array + other.array)
+        return self.from_array(self.array + getattr(other, 'array', other))
 
     __radd__ = __add__
 
     def __sub__(self, other):
-        return self.from_array(self.array - other.array)
+        return self.from_array(self.array - getattr(other, 'array', other))
 
     def __rsub__(self, other):
         return - self.__sub__(other)
@@ -654,12 +654,12 @@ class ArrayDict(collections.Mapping):
         return self.from_array(-self.array)
 
     def __mul__(self, other):
-        return self.from_array(self.array * other.array)
+        return self.from_array(self.array * getattr(other, 'array', other))
 
     __rmul__ = __mul__
 
     def __div__(self, other):
-        return self.from_array(self.array / other.array)
+        return self.from_array(self.array / getattr(other, 'array', other))
 
     def __pow__(self, other):
         return self.from_array(self.array.__pow__(other))

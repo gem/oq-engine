@@ -17,18 +17,10 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import cPickle
-import operator
-import collections
 from openquake.commonlib import sap
-from openquake.baselib.general import groupby
+from openquake.baselib.general import ArrayDict
 from openquake.commonlib.commands.plot import combined_curves
-from openquake.commonlib.util import max_rel_diff_index
-
-MaxDiff = collections.namedtuple('MaxDiff', 'maxdiff rlz imt site_idx')
-
-
-def max_diff(rows):
-    return max(row.maxdiff for row in rows)
+from openquake.commonlib.util import rmsep
 
 
 def pick_rlzs(hazard_pik):
@@ -43,18 +35,13 @@ def pick_rlzs(hazard_pik):
     with open(hazard_pik) as f:
         haz = cPickle.load(f)
     curves_by_rlz, mean_curves = combined_curves(haz, hazard_pik)
-    diffs = []
+    dists = []
     for rlz in sorted(curves_by_rlz):
-        for imt in mean_curves:
-            maxdiff, site = max_rel_diff_index(
-                mean_curves[imt], curves_by_rlz[rlz][imt])
-            diffs.append(MaxDiff(maxdiff, rlz, imt, site))
-    groups = groupby(diffs, operator.attrgetter('rlz')).values()
-    for group in sorted(groups, key=max_diff):
-        for md in sorted(group):
-            print 'rlz=%s, IMT=%s, max_diff=%s at site %d' % (
-                md.rlz, md.imt, md.maxdiff, md.site_idx)
-        print
+        mean = ArrayDict(mean_curves).array
+        arr = ArrayDict(curves_by_rlz[rlz]).array
+        dists.append((rmsep(mean, arr), rlz))
+    for dist, rlz in sorted(dists):
+        print 'rlz=%s, dist=%s' % (rlz, dist)
 
 parser = sap.Parser(pick_rlzs)
 parser.arg('hazard_pik', '.pik file containing the result of a computation')

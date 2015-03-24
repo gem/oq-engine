@@ -58,40 +58,22 @@ def max_rel_diff_index(curve_ref, curve, min_value=0.01):
     return maxdiff, maxindex
 
 
-def rmsep(curve_ref, curve):
+def rmsep(array_ref, array, min_value=0.01):
     """
-    Root Mean Square Error Percentage
+    Root Mean Square Error Percentage for two arrays.
 
-    :param numpy.array curve_ref: reference curve
-    :param numpy.array curve: a curve
-
-    >>> curve_ref = numpy.array([0.01, 0.02, 0.03, 0.05, 1.0])
-    >>> curve = numpy.array([0.011, 0.021, 0.031, 0.051, 1.0])
-    >>> rmsep(curve_ref, curve)
-    0.052936020082947469
-    """
-    reldiffsquare = (1. - curve / curve_ref) ** 2
-    return numpy.sqrt(reldiffsquare.mean())
-
-
-def rmsep_index(curves_ref, curves):
-    """
-    Root Mean Square Error Percentage for a set of curves
-
-    :param numpy.array curve_ref: reference curves
-    :param numpy.array curve: curves
-    :returns: the maximum difference and the curve index
+    :param array_ref: reference array
+    :param array: another array
+    :param min_value: compare only the elements larger than min_value
+    :returns: the relative distance between the arrays
 
     >>> curve_ref = numpy.array([[0.01, 0.02, 0.03, 0.05],
     ... [0.01, 0.02, 0.04, 0.06]])
     >>> curve = numpy.array([[0.011, 0.021, 0.031, 0.051],
     ... [0.012, 0.022, 0.032, 0.051]])
-    >>> rmsep_index(curve_ref, curve)
-    (0.16770509831248417, 1)
+    >>> round(rmsep(curve_ref, curve), 5)
+    0.12575
     """
-    assert len(curves_ref) == len(curves), (len(curves_ref), len(curves))
-    assert len(curves), 'The curves are empty!'
-    diffs = [rmsep(c1, c2) for c1, c2 in zip(curves_ref, curves)]
-    maxdiff = max(diffs)
-    maxindex = diffs.index(maxdiff)
-    return maxdiff, maxindex
+    idx = numpy.where(array_ref > min_value)
+    reldiffsquare = (1. - array[idx] / array_ref[idx]) ** 2
+    return numpy.sqrt(reldiffsquare.mean())
