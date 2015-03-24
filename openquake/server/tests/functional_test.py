@@ -33,6 +33,7 @@ import requests
 
 class EngineServerTestCase(unittest.TestCase):
     hostport = 'localhost:8761'
+    datadir = os.path.join(os.path.dirname(__file__), 'data')
 
     @classmethod
     def get(cls, path, **params):
@@ -71,7 +72,7 @@ class EngineServerTestCase(unittest.TestCase):
         cls.proc.kill()
 
     def postzip(self, archive):
-        with open(archive) as a:
+        with open(os.path.join(self.datadir, archive)) as a:
             resp = requests.post('http://%s/v1/calc/run' % self.hostport,
                                  dict(database='platform'),
                                  files=dict(archive=a))
@@ -80,12 +81,12 @@ class EngineServerTestCase(unittest.TestCase):
         return job_id
 
     def test_ok(self):
-        job_id = self.postzip('archive.zip')
+        job_id = self.postzip('archive_ok.zip')
         log = self.get('%d/log/:' % job_id)
         self.assertGreater(len(log), 0)
 
-    def test_failed(self):
-        job_id = self.postzip('archive2.zip')
+    def test_err(self):
+        job_id = self.postzip('archive_err.zip')
         while True:
             time.sleep(1)
             info = self.get(str(job_id))
