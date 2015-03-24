@@ -5,6 +5,7 @@ urlpatterns = patterns(
     'openquake.server.views',
     url(r'^list$', 'calc'),
     url(r'^(\d+)$', 'calc_info'),
+    url(r'^(\d+)/traceback$', 'calc_traceback'),
     url(r'^(\d+)/results$', 'calc_results'),
     url(r'^(\d+)/log/size$', 'get_log_size'),
     url(r'^(\d+)/log/(\d*):(\d*)$', 'get_log_slice'),
