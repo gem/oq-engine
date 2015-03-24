@@ -327,6 +327,24 @@ def calc_results(request, calc_id):
     return HttpResponse(content=json.dumps(response_data))
 
 
+@require_http_methods(['GET'])
+@cross_domain_ajax
+def calc_traceback(request, calc_id):
+    """
+    Get the traceback as a list of lines for a given ``calc_id``.
+    """
+    # If the specified calculation doesn't exist throw back a 404.
+    try:
+        oqe_models.OqJob.objects.get(id=calc_id)
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound()
+
+    response_data = [log.message for log in oqe_models.Log.objects.filter(
+        job_id=calc_id, level='CRITICAL').order_by('id')]
+
+    return HttpResponse(content=json.dumps(response_data))
+
+
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def get_result(request, result_id):
