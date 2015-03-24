@@ -302,7 +302,7 @@ def _deep_eq(a, b, decimal, exclude=None):
         assert a.__slots__ == b.__slots__, (
             "slots %s and %s are not the same") % (a.__slots__, b.__slots__)
         for slot in a.__slots__:
-            if not slot in exclude:
+            if slot not in exclude:
                 _deep_eq(getattr(a, slot), getattr(b, slot), decimal)
     else:
         # Objects must be primitives
@@ -569,6 +569,111 @@ class AccumDict(dict):
         """
         return self.__class__({key: func(value, *extras)
                                for key, value in self.iteritems()})
+
+
+class ArrayDict(collections.Mapping):
+    """
+    >>> a = ArrayDict(dict(x=[1], y=[2]))
+    >>> b = ArrayDict(dict(x=[3], y=[4]))
+    >>> a
+    <ArrayDict x:1, y:1>
+    >>> a.shape
+    (2,)
+    >>> print a
+    [1 2]
+    >>> print b
+    [3 4]
+    >>> print a + b
+    [4 6]
+    >>> print a - b
+    [-2 -2]
+    >>> print a * b
+    [3 8]
+    >>> print a / b
+    [0 0]
+    >>> print -a
+    [-1 -2]
+    >>> print a ** 2
+    [1 4]
+    >>> print a.apply(numpy.sqrt)
+    [ 1.          1.41421356]
+    >>> a.from_array(numpy.array([1, 2, 3]))
+    Traceback (most recent call last):
+     ...
+    ValueError: Wrong array size: expected 2, got 3
+    """
+    def __init__(self, dic):
+        self.array = numpy.concatenate([dic[k] for k in sorted(dic)])
+        self.slicedic = {}
+        start = 0
+        for k in sorted(dic):
+            size = len(dic[k])
+            self.slicedic[k] = slice(start, start + size)
+            start += size
+
+    @property
+    def shape(self):
+        return self.array.shape
+
+    def from_array(self, array):
+        """
+        :param array: an array with the right length
+        :returns: a new ArrayDict with the same .slicedic as self
+        """
+        n = sum(len(v) for v in self.itervalues())
+        if len(array) != n:
+            raise ValueError('Wrong array size: expected %d, got %d' %
+                             (n, len(array)))
+        new = self.__new__(self.__class__)
+        new.array = array
+        new.slicedic = self.slicedic
+        return new
+
+    def __getitem__(self, key):
+        return self.array[self.slicedic[key]]
+
+    def __iter__(self):
+        for k in sorted(self.slicedic):
+            yield k
+
+    def __len__(self):
+        return len(self.slicedic)
+
+    def __add__(self, other):
+        return self.from_array(self.array + other.array)
+
+    __radd__ = __add__
+
+    def __sub__(self, other):
+        return self.from_array(self.array - other.array)
+
+    def __rsub__(self, other):
+        return - self.__sub__(other)
+
+    def __neg__(self):
+        return self.from_array(-self.array)
+
+    def __mul__(self, other):
+        return self.from_array(self.array * other.array)
+
+    __rmul__ = __mul__
+
+    def __div__(self, other):
+        return self.from_array(self.array / other.array)
+
+    def __pow__(self, other):
+        return self.from_array(self.array.__pow__(other))
+
+    def apply(self, func, *extras):
+        return self.from_array(func(self.array, *extras))
+
+    def __repr__(self):
+        sizes = ['%s:%s' % (k, s.stop - s.start)
+                 for k, s in sorted(self.slicedic.iteritems())]
+        return '<%s %s>' % (self.__class__.__name__, ', '.join(sizes))
+
+    def __str__(self):
+        return str(self.array)
 
 
 def groupby(objects, key, reducegroup=list):
