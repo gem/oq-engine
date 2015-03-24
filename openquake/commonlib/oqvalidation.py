@@ -121,7 +121,7 @@ class OqParam(valid.ParamSet):
 
     def __init__(self, **names_vals):
         super(OqParam, self).__init__(**names_vals)
-        if "reference_backarc" not in names_vals:
+        if not hasattr(self, 'reference_backarc'):
             self.reference_backarc = False
         if hasattr(self, 'intensity_measure_types'):
             self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
@@ -206,8 +206,7 @@ class OqParam(valid.ParamSet):
             return (self.reference_vs30_type and
                     self.reference_vs30_value and
                     self.reference_depth_to_2pt5km_per_sec and
-                    self.reference_depth_to_1pt0km_per_sec and
-                    self.reference_backarc)
+                    self.reference_depth_to_1pt0km_per_sec)
         else:
             return True
 
