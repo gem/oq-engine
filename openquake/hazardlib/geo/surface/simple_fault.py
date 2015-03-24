@@ -238,7 +238,8 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
                                upper_seismogenic_depth,
                                lower_seismogenic_depth, dip):
         """
-        Indicate the fault patch where the hypocentre locates
+        This methods finds the index of the fault patch including
+        the hypocentre.
 
         :param hypocentre:
             :class:`~openquake.hazardlib.geo.point.Point` object
@@ -256,12 +257,13 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
             Dip angle (i.e. angle between fault surface
             and earth surface), in degrees.
         :return:
-            index, indicate which fault patch the hypocentre locates.
+            An integer corresponding to the index of the fault patch which
+            contains the hypocentre.
         """
         totaln_patch = len(fault_trace)
         print range(1, totaln_patch)
         for index in range(1, totaln_patch):
-            p0, p1, p2, p3 = cls.get_fault_vertices_3d(
+            p0, p1, p2, p3 = cls.get_fault_patch_vertices(
                 fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
                 dip, index_patch=index)
             origin = hypocentre
