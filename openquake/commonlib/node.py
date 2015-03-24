@@ -634,10 +634,6 @@ def context(fname, node):
         yield node
     except:
         etype, exc, tb = sys.exc_info()
-        if str(exc).startswith('Could not convert'):
-            # error when instantiating the Node object
-            msg = 'node %s: %s of %s' % (striptag(node.tag), exc, fname)
-        else:
-            msg = 'node %s: %s, line %s of %s' % (
-                striptag(node.tag), exc, node.lineno, fname)
+        msg = 'node %s: %s, line %s of %s' % (
+            striptag(node.tag), exc, node.lineno, fname)
         raise etype, msg, tb
