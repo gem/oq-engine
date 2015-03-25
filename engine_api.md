@@ -62,6 +62,18 @@ Response:
      "uniform_hazard_spectra": false,
      "width_of_mfd_bin": 0.2}
 
+#### GET /v1/calc/:calc_id/traceback
+
+Get the calculation traceback for the given `calc_id` as a list of
+strings.
+
+Parameters: None
+
+Response:
+
+A list of error lines extracted from the log. If the calculation was
+successfull, the list is empty.
+
 #### GET /v1/calc/:calc_id/results
 
 List a summary of results for the given `calc_id`. The [url](#get-v1calchazardresultresult_id) in each response item can be followed to retrieve the full result artifact.
