@@ -313,18 +313,3 @@ def expand(data_dict, sites=None):
         return data_dict
     return {key: expand_data_by_imt(data_by_imt, sites)
             for key, data_by_imt in data_dict.iteritems()}
-
-
-# not used anymore
-def data_by_imt(dict_of_dict_arrays, imtls, n_sites):
-    """
-    Convert a dictionary key -> imt -> [value ...] into a dictionary
-    imt -> array([key -> value ...])
-    """
-    dic = {}
-    for imt in imtls:
-        dic[imt] = numpy.array([{} for _ in xrange(n_sites)])
-        for k, d in dict_of_dict_arrays.iteritems():
-            for i, array in enumerate(d[imt]):
-                dic[imt][i][k] = array
-    return dic
