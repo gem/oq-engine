@@ -83,9 +83,10 @@ class Asset(object):
 
     def value(self, loss_type):
         """
-        :returns: the asset value for `loss_type`
+        :returns: the total asset value for `loss_type`
         """
-        return self.values[loss_type] * self.number * self.area
+        value = self.values[loss_type]
+        return None if value is None else value * self.number * self.area
 
     def deductible(self, loss_type):
         """
@@ -733,14 +734,24 @@ class Scenario(Workflow):
     """
     Implements the Scenario workflow
     """
+    Output = collections.namedtuple(
+        'Output',
+        "assets loss_type loss_matrix aggregate_losses "
+        "insured_loss_matrix insured_losses")
+
     def __init__(self, imt, taxonomy, vulnerability_functions, insured_losses):
         self.imt = imt
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
         self.insured_losses = insured_losses
 
-    def __call__(self, loss_type, assets, ground_motion_values, epsilons):
-        values = numpy.array([a.value(loss_type) for a in assets])
+    def __call__(self, loss_type, assets, ground_motion_values, epsilons,
+                 _tags=None):
+        if loss_type == 'fatalities' and hasattr(assets[0], 'values'):
+            # this is called only in oq-lite
+            values = numpy.array([a.values[loss_type] for a in assets])
+        else:
+            values = numpy.array([a.value(loss_type) for a in assets])
 
         # a matrix of N x R elements
         loss_ratio_matrix = self.risk_functions[loss_type].apply_to(
@@ -749,7 +760,6 @@ class Scenario(Workflow):
         # aggregating per asset, getting a vector of R elements
         aggregate_losses = numpy.sum(
             loss_ratio_matrix.transpose() * values, axis=1)
-
         if self.insured_losses and loss_type != "fatalities":
             deductibles = [a.deductible(loss_type) for a in assets]
             limits = [a.insurance_limit(loss_type) for a in assets]
@@ -764,9 +774,9 @@ class Scenario(Workflow):
         else:
             insured_loss_matrix = None
             insured_losses = None
-
-        return (assets, loss_ratio_matrix, aggregate_losses,
-                insured_loss_matrix, insured_losses)
+        return self.Output(
+            assets, loss_type, loss_ratio_matrix, aggregate_losses,
+            insured_loss_matrix, insured_losses)
 
 
 @registry.add('scenario_damage')

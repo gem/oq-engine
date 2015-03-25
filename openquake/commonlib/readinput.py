@@ -618,7 +618,11 @@ def get_exposure_lazy(fname):
     """
     [exposure] = nrml.read_lazy(fname, ['assets'])
     description = exposure.description
-    conversions = exposure.conversions
+    try:
+        conversions = exposure.conversions
+    except NameError:
+        conversions = LiteralNode('conversions',
+                                  nodes=[LiteralNode('costTypes', [])])
     try:
         inslimit = conversions.insuranceLimit
     except NameError:
@@ -656,6 +660,7 @@ def get_exposure(oqparam):
         set(['occupants'])
     asset_refs = set()
     time_event = getattr(oqparam, 'time_event', None)
+    ignore_missing_costs = set(getattr(oqparam, 'ignore_missing_costs', []))
 
     def asset_gen():
         # wrap the asset generation to get a nice error message
@@ -687,8 +692,12 @@ def get_exposure(oqparam):
             if region and not geometry.Point(*location).within(region):
                 out_of_region += 1
                 continue
-        with context(fname, asset.costs):
-            for cost in asset.costs:
+        try:
+            costs = asset.costs
+        except NameError:
+            costs = LiteralNode('costs', [])
+        with context(fname, costs):
+            for cost in costs:
                 cost_type = cost['type']
                 if cost_type not in relevant_cost_types:
                     continue
@@ -699,9 +708,16 @@ def get_exposure(oqparam):
                 values['fatalities'] = number
             # check we are not missing a cost type
             missing = relevant_cost_types - set(values)
-            if missing:
-                raise RuntimeError(
-                    'Missing cost types: %s' % ', '.join(missing))
+            if missing and missing <= ignore_missing_costs:
+                logging.warn(
+                    'Ignoring asset %s, missing cost type(s): %s',
+                    asset_id, ', '.join(missing))
+                for cost_type in missing:
+                    values[cost_type] = None
+            elif missing:
+                raise ValueError("Invalid Exposure. "
+                                 "Missing cost %s for asset %s" % (
+                                     missing, asset_id))
 
         if time_event:
             for occupancy in asset.occupancies:
