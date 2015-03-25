@@ -261,14 +261,13 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
             contains the hypocentre.
         """
         totaln_patch = len(fault_trace)
-        print range(1, totaln_patch)
+
         for index in range(1, totaln_patch):
             p0, p1, p2, p3 = cls.get_fault_patch_vertices(
                 fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
                 dip, index_patch=index)
-            origin = hypocentre
-            [normal, dist_to_plane] = get_plane_equation(p0, p1, p2, origin)
-            print index, dist_to_plane
+            [normal, dist_to_plane] = get_plane_equation(p0, p1, p2,
+                                                         hypocentre)
             if (numpy.allclose(dist_to_plane, 0., atol=20., rtol=0.)):
                 return index
 

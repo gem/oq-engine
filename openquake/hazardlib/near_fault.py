@@ -26,7 +26,7 @@ import scipy.spatial.distance as dst
 
 def get_xyz_from_ll(projected, reference):
     """
-    This method computes the x ,y and z coordinates of a set of points
+    This method computes the x, y and z coordinates of a set of points
     provided a reference point
 
     :param projected:
@@ -56,29 +56,33 @@ def get_xyz_from_ll(projected, reference):
 
 def get_plane_equation(p0, p1, p2, reference):
     '''
-    Define plane equation by 3 given points, p0, p1, p2, which format in
-    class:`~openquake.hazardlib.geo.point.Point` object
+    Define the equation of target fault plane passing through 3 given points
+    which includes two points on the fault trace and one point on the
+    fault plane but away from the fault trace. Note: in order to remain the
+    consistency of the fault normal vector direction definition, the order
+    of the three given points is strickly defined.
 
     :param p0:
+        The fault trace and is the closer points from the starting point of
+        fault trace.
         :class:`~openquake.hazardlib.geo.point.Point` object
         representing the location of the one vertex of the fault patch.
     :param p1:
+        The fault trace and is the further points from the starting point of
+        fault trace.
         :class:`~openquake.hazardlib.geo.point.Point` object
         representing the location of the one vertex of the fault patch.
-        Note: the order of the vertex should give
-        in clockwise.
     :param p2:
+        The point on the fault plane but away from the fault trace.
         :class:`~openquake.hazardlib.geo.point.Point` object
         representing the location of the one vertex of the fault patch.
-        Note: the order of the vertex should give
-        in clockwise.
     :param reference:
         :class:`~openquake.hazardlib.geo.point.Point` object
-        representing the location of project reference point
+        representing the origin of the cartesian system used the represent
+        objects in a projected reference
     :returns:
         normal: normal vector of the plane (a,b,c)
         dist_to_plane: d in the plane equation, ax + by + cz = d
-
     '''
 
     p0_xyz = get_xyz_from_ll(p0, reference)
@@ -93,7 +97,6 @@ def get_plane_equation(p0, p1, p2, reference):
     v = p2 - p0
 
     # vector normal to plane, ax+by+cy = d, normal=(a,b,c)
-
     normal = np.cross(u, v)
 
     # Define the d for the plane equation
@@ -104,20 +107,24 @@ def get_plane_equation(p0, p1, p2, reference):
 
 def projection_pp(site, normal, dist_to_plane, reference):
     '''
-    Find the projection point Pp on the patch plane
+    This method finds the projection of the site onto the plane containing
+    the slipped area, defined as the Pp(i.e. 'perpendicular projection of
+    site location onto the fault plane' Spudich et al. (2013) - page 88)
+    given a site.
 
     :param site:
         Location of the site, [lon, lat, dep]
     :param normal:
-        normal of the plane, describe by a normal vector[a, b, c]
+        Normal to the plane including the fault patch,
+        describe by a normal vector[a, b, c]
     :param dist_to_plane:
-            d in the plane equation,  ax + by + cz = d
+            D in the plane equation,  ax + by + cz = d
     :param reference:
         :class:`~openquake.hazardlib.geo.point.Point` object
         representing the location of project reference point
     :returns:
         pp, the projection point, [ppx, ppy, ppz], in xyz domain
-        format in numpy array
+        a numpy array
     '''
 
     # Transform to xyz coordinate
@@ -152,11 +159,10 @@ def vectors2angle(v1, v2):
 def average_s_rad(site, hypocenter, reference, pp,
                   normal, dist_to_plane, e, p0, p1, delta_slip):
     """
-    Get the average S-wave radiation pattern over E-path desrcibed in:
-    "Final report of the NGA-West2 directivity working group." (2013) by
-    Spudich, Paul, et al. and publish in PEER report, page 90- 92. Also
-    obtain the site to direct point distance, rd, and the hypocentre
-    distance, r_hyp.
+    Gets the average S-wave radiation pattern given an e-path as described in:
+    Spudich et al. (2013) "Final report of the NGA-West2 directivity working
+    group", PEER report, page 90- 92 and computes: the site to the direct point
+    distance, rd, and the hypocentral distance, r_hyp.
 
     :param site:
         :class:`~openquake.hazardlib.geo.point.Point` object
@@ -175,9 +181,10 @@ def average_s_rad(site, hypocenter, reference, pp,
     :param normal:
         normal of the plane, describe by a normal vector[a, b, c]
     :param dist_to_plane:
-        d in the plane equation,  ax + by + cz = d
+        d is the constant term in the plane equation, e.g., ax + by + cz = d
     :param e:
-        E-path, in km.
+        a float defining the E-path length, which is the distance from
+        Pd(direction) point to hypocentre. In km.
     :param p0:
         :class:`~openquake.hazardlib.geo.point.Point` object
         representing the location of the starting point on fault segment
@@ -190,11 +197,10 @@ def average_s_rad(site, hypocenter, reference, pp,
     :return:
         fs, float value of the average S-wave radiation pattern.
         rd, the distance from site to the direct point.
-        r_hyp, the hypocetre distance. Both distance calculation has been
-        sugggested in the Spudich, et al.(2013)
+        r_hyp, the hypocetre distance.
     """
-    # zs
-
+    # Obtain the distance of Ps and Pp. If Ps is above the fault plane
+    # zs is positive, and negative when Ps is below the fault plane
     site_xyz = get_xyz_from_ll(site, reference)
     zs = dst.pdist([pp, site_xyz])
 
@@ -202,44 +208,25 @@ def average_s_rad(site, hypocenter, reference, pp,
        normal[2] - dist_to_plane > 0:
         zs = -zs
 
-    # l2
-
+    # Obtain the distance of Pp and hypocentre
     hyp_xyz = get_xyz_from_ll(hypocenter, reference)
     hyp_xyz = np.array(hyp_xyz).reshape(1, 3).flatten()
     l2 = dst.pdist([pp, hyp_xyz])
 
-    # Rd
-
     rd = ((l2 - e) ** 2 + zs ** 2) ** 0.5
-
-    # Rhyp
-
     r_hyp = (l2 ** 2 + zs ** 2) ** 0.5
-
-    # phi
-
     p0_xyz = get_xyz_from_ll(p0, reference)
     p1_xyz = get_xyz_from_ll(p1, reference)
     u = (np.array(p1_xyz) - np.array(p0_xyz))
     v = pp - hyp_xyz
     phi = vectors2angle(u, v) - np.deg2rad(delta_slip)
-
-    # Ix
-
     ix = np.cos(phi) * (2 * zs * (l2 / r_hyp - (l2 - e) / rd) -
                         zs * np.log((l2 + r_hyp) / (l2 - e + rd)))
-
-    # In
-
     inn = np.cos(phi) * (-2 * zs ** 2 * (1 / r_hyp - 1 / rd)
                          - (r_hyp - rd))
-
-    # Iphi
-
     iphi = np.sin(phi) * (zs * np.log((l2 + r_hyp) / (l2 - e + rd)))
 
-    # FS
-
+    # Obtain the final average radiation pattern value
     fs = (ix ** 2 + inn ** 2 + iphi ** 2) ** 0.5 / e
 
     return fs, rd, r_hyp
@@ -247,17 +234,17 @@ def average_s_rad(site, hypocenter, reference, pp,
 
 def isochone_ratio(e, rd, r_hyp):
     """
-    Get the isochone ratio which desrcibed in: "Final
-    report of the NGA-West2 directivity working group." (2013) by Spudich,
-    Paul, et al. and publish in PEER report, page 88.
+    Get the isochone ratio as described in Spudich et al. (2013) PEER
+    report, page 88.
     :param e:
-        E-path, in km.
+        a float defining the E-path length, which is the distance from
+        Pd(direction) point to hypocentre. In km.
     :param rd:
         float, distance from the site to the direct point.
     :param r_hyp:
         float, the hypocentre distance.
     :return:
-        c_prime, float valut, the isochone ration.
+        c_prime, a float defining the isochone ratio
     """
 
     if e == 0.:
@@ -270,7 +257,7 @@ def isochone_ratio(e, rd, r_hyp):
 
 def _intersection(seg1_start, seg1_end, seg2_start, seg2_end):
     """
-    Get the intersection point in the space when given the 2 line segments.
+    Get the intersection point between two segments.
     :param seg1_start:
         :class:`~openquake.hazardlib.geo.point.Point` object
         representing one end point of a segment(e.g. segment1)
@@ -289,13 +276,11 @@ def _intersection(seg1_start, seg1_end, seg2_start, seg2_end):
         p_intersect, :class:`~openquake.hazardlib.geo.point.Point` object
         representing the location of intersection point of the two
         given segments
-        vector1, format in numpy array, vetor defined by intersection point
-        and seg2_end
-        vector2, format in numpy array, vetor defined by seg2_start and
+        vector1, a numpy array, vector defined by intersection point and
         seg2_end
-        vector3, format in numpy array, vetor defined by seg1_start and
-        seg1_end
-        vector4, format in numpy array, vetor defined by intersection point
+        vector2, a numpy array, vector defined by seg2_start and seg2_end
+        vector3, a numpy array, vector defined by seg1_start and seg1_end
+        vector4, a numpy array, vector defined by intersection point
         and seg1_start
     """
 
@@ -346,11 +331,31 @@ def _intersection(seg1_start, seg1_end, seg2_start, seg2_end):
 
 def directp(node0, node1, node2, node3, hypocenter, reference, pp):
     """
-    Get the Direct Point and the corresponding E-path desrcibed in: "Final
-    report of the NGA-West2 directivity working group." (2013) by Spudich,
-    Paul, et al. and publish in PEER report, page 85- 96. Also obtain the
-    flag if the DPP calculation keep going on the next fault segment(in the
-    case of multi-segment).
+    Get the Direct Point and the corresponding E-path as described in
+    Spudich et al. (2013). This method also provides a logical variable
+    stating if the DPP calculation must consider the neighbouring patch.
+    To define the intersection point(Pd) of PpPh line segment and the four
+    sides of the fault plane, we obtain the intersection points(Pd) with each
+    side, and check which intersection point(Pd) is the one fitting the
+    definition in the Chiou and Spudich(2014) directivity model.
+    Two possible locations for Pd, the first case, Pd locates on the side of
+    the fault patch when Pp is not inside the fault patch. The second case is
+    when Pp is inside the fault patch, then Pd=Pp.
+
+    For the first case, it follows three conditions:
+    1. the PpPh and PdPh line vector are the same,
+    2. PpPh >= PdPh,
+    3. Pd is not inside the fault patch.
+
+    If we can not find solution for all the four possible intersection points
+    for the first case, we check if the intersection point fit the second case
+    by checking if Pp is inside the fault patch.
+
+    Because of the coordinate system mapping(from geographic system to
+    Catestian system), we allow an error when we check the location. The allow
+    error will keep increasing after each loop when no solution in the two
+    cases are found, until the solution get obtained.
+
     :param node0:
         :class:`~openquake.hazardlib.geo.point.Point` object
         representing the location of one vertices on the target fault
@@ -376,8 +381,8 @@ def directp(node0, node1, node2, node3, hypocenter, reference, pp):
         :class:`~openquake.hazardlib.geo.point.Point` object
         representing the location of reference point for projection
     :param pp:
-        the projection point pp on the patch plane,
-        format in numpy array
+        the projection of the site onto the plane containing the fault
+        slipped area. A numpy array.
     :return:
         Pd, :class:`~openquake.hazardlib.geo.point.Point` object
         representing the location of direction point
@@ -448,7 +453,6 @@ def directp(node0, node1, node2, node3, hypocenter, reference, pp):
                                 e = pdph
                                 pd = p_intersect
                                 exit_flag = True
-
                                 break
             # when the pp located within the fault rupture plane, e = ppph
             if not e:
@@ -457,12 +461,10 @@ def directp(node0, node1, node2, node3, hypocenter, reference, pp):
                         pd = pp_xyz
                         e = ppph
                         exit_flag = True
-
         if exit_flag:
             break
 
         if not e:
-
             looptime += 1
             atol = 0.0001 * looptime
             buf = 0.0001 * looptime
