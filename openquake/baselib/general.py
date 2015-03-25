@@ -629,6 +629,10 @@ class ArrayDict(collections.Mapping):
         """The size (number of elements) of the underlying array"""
         return self.array.size
 
+    def mean(self):
+        """The mean of the underlying array"""
+        return self.array.mean()
+
     def from_array(self, array):
         """
         :param array: an array with the right length
@@ -644,7 +648,10 @@ class ArrayDict(collections.Mapping):
         return new
 
     def __getitem__(self, key):
-        return self.array[self.slicedic[key]]
+        if isinstance(key, str):
+            return self.array[self.slicedic[key]]
+        else:
+            return self.array[key]
 
     def __iter__(self):
         for k in sorted(self.slicedic):
@@ -677,6 +684,18 @@ class ArrayDict(collections.Mapping):
 
     def __pow__(self, other):
         return self.from_array(self.array.__pow__(other))
+
+    def __gt__(self, other):
+        return self.array > other
+
+    def __lt__(self, other):
+        return self.array < other
+
+    def __ge__(self, other):
+        return self.array >= other
+
+    def __le__(self, other):
+        return self.array <= other
 
     def apply(self, func, *extras):
         return self.from_array(func(self.array, *extras))

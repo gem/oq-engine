@@ -37,11 +37,11 @@ def pick_rlzs(hazard_pik):
     curves_by_rlz, mean_curves = combined_curves(haz, hazard_pik)
     dists = []
     for rlz in sorted(curves_by_rlz):
-        mean = ArrayDict(mean_curves).array
-        arr = ArrayDict(curves_by_rlz[rlz]).array
+        mean = ArrayDict(mean_curves)
+        arr = ArrayDict(curves_by_rlz[rlz])
         dists.append((rmsep(mean, arr), rlz))
     for dist, rlz in sorted(dists):
-        print 'rlz=%s, dist=%s' % (rlz, dist)
+        print 'rlz=%s, rmsep=%s' % (rlz, dist)
 
 parser = sap.Parser(pick_rlzs)
 parser.arg('hazard_pik', '.pik file containing the result of a computation')
