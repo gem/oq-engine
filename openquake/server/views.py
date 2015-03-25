@@ -344,7 +344,7 @@ def get_traceback(request, calc_id):
     response_data = [log.message for log in oqe_models.Log.objects.filter(
         job_id=calc_id, level='CRITICAL').order_by('id')]
 
-    return HttpResponse(content=json.dumps(response_data))
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
 @cross_domain_ajax
