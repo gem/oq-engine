@@ -27,6 +27,7 @@ from openquake.hazardlib.near_fault import directp
 from openquake.hazardlib.near_fault import vectors2angle
 from openquake.hazardlib.near_fault import average_s_rad
 from openquake.hazardlib.near_fault import isochone_ratio
+from openquake.hazardlib.near_fault import _intersection
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
 
 
@@ -79,6 +80,30 @@ class ProjectionPpTest(unittest.TestCase):
         self.assertAlmostEqual(pp[2], -16.67, delta=0.1)
 
 
+class IntersectionTest(unittest.TestCase):
+
+    def test_two_segment(self):
+
+        a1 = np.array([0., 0., 0.])
+        a2 = np.array([4., 4., 4.])
+        b1 = np.array([4., 0., 0.])
+        b2 = np.array([0., 4., 4.])
+
+        p_intersect, vector1, vector2, vector3, vector4 = _intersection(a1, a2,
+                                                                        b1, b2)
+        # The value used for this test is computed by hand.
+        self.assertTrue(np.allclose(p_intersect.flatten(), [2., 2., 2.],
+                                    atol=0.1))
+        self.assertTrue(np.allclose(vector1, [0.58, -0.58, -0.58],
+                                    atol=0.1))
+        self.assertTrue(np.allclose(vector2, [0.58, -0.58, -0.58],
+                                    atol=0.1))
+        self.assertTrue(np.allclose(vector3, [0.58, 0.58, 0.58],
+                                    atol=0.1))
+        self.assertTrue(np.allclose(vector4, [0.58, 0.58, 0.58],
+                                    atol=0.1))
+
+
 class VectorTest(unittest.TestCase):
 
     def test_angle_two_vectors(self):
@@ -124,7 +149,7 @@ class DppParameterTest(unittest.TestCase):
                                       e, self.p0, self.p1, self.delta_slip)
         c_prime = isochone_ratio(e, rd, r_hyp)
         # The value used for this test is from the DPP author Dr. Chiou
-        # for the case, ss3, pure strike slip.
+        # for the case, ss3, pure strike slip
         self.assertAlmostEqual(fs, 0.9931506, delta=0.1)
         self.assertAlmostEqual(rd, 70.4828, delta=0.1)
         self.assertAlmostEqual(r_hyp, 85.5862, delta=0.1)

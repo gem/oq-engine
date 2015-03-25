@@ -257,23 +257,25 @@ def isochone_ratio(e, rd, r_hyp):
 
 def _intersection(seg1_start, seg1_end, seg2_start, seg2_end):
     """
-    Get the intersection point between two segments.
+    Get the intersection point between two segments. The calculation is in
+    Catestian coordinate system.
+
     :param seg1_start:
-        :class:`~openquake.hazardlib.geo.point.Point` object
+        A numpy array,
         representing one end point of a segment(e.g. segment1)
         segment.
     :param seg1_end:
-        :class:`~openquake.hazardlib.geo.point.Point` object
+        A numpy array,
         representing the other end point of the first segment(e.g. segment1)
     :param seg2_start:
-        :class:`~openquake.hazardlib.geo.point.Point` object
+        A numpy array,
         representing one end point of the other segment(e.g. segment2)
         segment.
     :param seg2_end:
-        :class:`~openquake.hazardlib.geo.point.Point` object
+        A numpy array,
         representing the other end point of the second segment(e.g. segment2)
     :return:
-        p_intersect, :class:`~openquake.hazardlib.geo.point.Point` object
+        p_intersect, :a numpy ndarray.
         representing the location of intersection point of the two
         given segments
         vector1, a numpy array, vector defined by intersection point and
@@ -321,10 +323,10 @@ def _intersection(seg1_start, seg1_end, seg2_start, seg2_end):
         sum((p_intersect.flatten() - seg2_end) ** 2) ** 0.5
     vector2 = (seg2_start - seg2_end) / \
         sum((seg2_start - seg2_end) ** 2) ** 0.5
-    vector3 = (np.array(seg1_end) - np.array(seg1_start)) / \
-        sum((np.array(seg1_end) - np.array(seg1_start)) ** 2) ** 0.5
-    vector4 = (p_intersect.flatten() - np.array(seg1_start)) / \
-        sum((p_intersect.flatten() - np.array(seg1_start)) ** 2) ** 0.5
+    vector3 = (seg1_end - seg1_start) / \
+        sum((seg1_end - seg1_start) ** 2) ** 0.5
+    vector4 = (p_intersect.flatten() - seg1_start) / \
+        sum((p_intersect.flatten() - seg1_start) ** 2) ** 0.5
 
     return p_intersect, vector1, vector2, vector3, vector4
 
@@ -429,7 +431,8 @@ def directp(node0, node1, node2, node3, hypocenter, reference, pp):
         n_seg = 0
         exit_flag = False
         for (seg_s, seg_e) in zip(segment_s, segment_e):
-
+            seg_s = np.array(seg_s).flatten()
+            seg_e = np.array(seg_e).flatten()
             p_intersect, vector1, vector2, vector3, vector4 = _intersection(
                 seg_s, seg_e, pp_xyz, hypocenter_xyz)
 
