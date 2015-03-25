@@ -13,7 +13,7 @@ from django.http import HttpResponseNotFound
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from openquake.commonlib import nrml, readinput
+from openquake.commonlib import nrml, readinput, valid
 from openquake.engine import engine as oq_engine, __version__ as oqversion
 from openquake.engine.db import models as oqe_models
 from openquake.engine.export import core
@@ -74,11 +74,10 @@ def _get_base_url(request):
 
 
 def _prepare_job(request, hazard_output_id, hazard_job_id,
-                 detect_job_file):
+                 candidates):
     """
     Creates a temporary directory, move uploaded files there and
-    select the job file by using the `detect_job_file` callable which
-    accepts in input a list holding all the filenames ending with .ini
+    select the job file by looking at the candidate names.
 
     :returns: full path of the job_file
     """
@@ -91,11 +90,11 @@ def _prepare_job(request, hazard_output_id, hazard_job_id,
         for each_file in request.FILES.values():
             new_path = os.path.join(temp_dir, each_file.name)
             shutil.move(each_file.temporary_file_path(), new_path)
-            if new_path.endswith('.ini'):
+            if each_file.name in candidates:
                 inifiles.append(new_path)
-        return detect_job_file(inifiles)
+        return inifiles
     # else extract the files from the archive into temp_dir
-    return readinput.extract_from_zip(arch, detect_job_file)
+    return readinput.extract_from_zip(arch, candidates)
 
 
 def _is_source_model(tempfile):
@@ -223,19 +222,16 @@ def run_calc(request):
 
     is_risk = hazard_output_id or hazard_job_id
     if is_risk:
-        detect_job_file = readinput.create_detect_file(
-            "job_risk.ini", "job.ini")
+        candidates = ("job_risk.ini", "job.ini")
     else:
-        detect_job_file = readinput.create_detect_file(
-            "job_hazard.ini", "job.ini")
+        candidates = ("job_hazard.ini", "job.ini")
     einfo, exctype = safely_call(
-        _prepare_job, (request, hazard_output_id, hazard_job_id,
-                       detect_job_file))
+        _prepare_job, (request, hazard_output_id, hazard_job_id, candidates))
     if exctype:
         tasks.update_calculation(callback_url, status="failed", einfo=einfo)
         raise exctype(einfo)
-    job_file = os.path.basename(einfo)
-    temp_dir = os.path.dirname(einfo)
+    job_file = os.path.basename(einfo[0])
+    temp_dir = os.path.dirname(einfo[0])
     job, _fut = submit_job(job_file, temp_dir, request.POST['database'],
                            callback_url, foreign_calc_id,
                            hazard_output_id, hazard_job_id)
@@ -276,13 +272,21 @@ def _get_calcs(request_get_dict):
     # helper to get job+calculation data from the oq-engine database
     job_params = oqe_models.JobParam.objects.filter(
         name='description', job__user_name='platform')
+
     if 'job_type' in request_get_dict:
         job_type = request_get_dict.get('job_type')
         job_params = job_params.filter(
             job__hazard_calculation__isnull=job_type == 'hazard')
-    relevant = request_get_dict.get('relevant')
-    if relevant:
-        job_params = job_params.filter(job__relevant=relevant in ('1', 'true'))
+
+    if 'is_running' in request_get_dict:
+        is_running = request_get_dict.get('is_running')
+        job_params = job_params.filter(
+            job__is_running=valid.boolean(is_running))
+
+    if 'relevant' in request_get_dict:
+        relevant = request_get_dict.get('relevant')
+        job_params = job_params.filter(job__relevant=valid.boolean(relevant))
+
     return [(jp.job.id, jp.job.status, jp.job.job_type, jp.value)
             for jp in job_params]
 
