@@ -43,6 +43,15 @@ class EngineServerTestCase(unittest.TestCase):
         return json.loads(resp.text)
 
     @classmethod
+    def wait(cls):
+        # wait until all calculations stop
+        while True:
+            running_calcs = cls.get('list', is_running='true')
+            if not running_calcs:
+                break
+            time.sleep(1)
+
+    @classmethod
     def setUpClass(cls):
         cls.job_ids = []
         env = os.environ.copy()
@@ -54,14 +63,7 @@ class EngineServerTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        while cls.job_ids:
-            job_id = cls.job_ids[0]
-            status = cls.get(str(job_id))['status']
-            print job_id, status
-            if status in ('complete', 'failed'):
-                del cls.job_ids[0]
-            else:
-                time.sleep(1)
+        cls.wait()
 
         data = cls.get('list', job_type='hazard', relevant='true')
         assert len(data) > 0
@@ -82,16 +84,13 @@ class EngineServerTestCase(unittest.TestCase):
 
     def test_ok(self):
         job_id = self.postzip('archive_ok.zip')
+        time.sleep(1)
         log = self.get('%d/log/:' % job_id)
         self.assertGreater(len(log), 0)
 
     def test_err(self):
         job_id = self.postzip('archive_err.zip')
-        while True:
-            time.sleep(1)
-            info = self.get(str(job_id))
-            if info['status'] in ('failed', 'complete'):
-                break
-        self.assertEqual(info['status'], 'failed')
+        self.wait()
+        time.sleep(1)
         tb = self.get('%d/traceback' % job_id)
         self.assertGreater(len(tb), 0)

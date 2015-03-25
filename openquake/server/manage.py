@@ -5,6 +5,7 @@ import celery
 import subprocess
 from django.core.management import execute_from_command_line
 from openquake.server import executor
+from openquake.engine.db import models
 
 if celery.__version__ < '3.0.0':
     CELERY = [sys.executable, '-m', 'celery.bin.celeryd', '-l', 'INFO',
@@ -26,6 +27,10 @@ if __name__ == "__main__":
         sys.argv.remove('celery')
         cel = subprocess.Popen(CELERY)
         print 'Starting celery, logging on /tmp/celery.log'
+
+    # cleanup on the db, if some tests left is_running=True
+    models.getcursor('job_init').execute(
+        'UPDATE uiapi.oq_job SET is_running=false WHERE is_running')
     try:
         with executor:
             execute_from_command_line(sys.argv)
