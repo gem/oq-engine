@@ -59,13 +59,13 @@ class InvalidHazardCalculationID(Exception):
     pass
 
 RISK_HAZARD_MAP = dict(
-    scenario_risk='scenario',
-    scenario_damage='scenario',
-    classical_risk='classical',
-    classical_bcr='classical',
-    classical_damage='classical',
-    event_based_risk='event_based',
-    event_based_bcr='event_based')
+    scenario_risk=['scenario'],
+    scenario_damage=['scenario'],
+    classical_risk=['classical', 'classical_tiling'],
+    classical_bcr=['classical', 'classical_tiling'],
+    classical_damage=['classical', 'classical_tiling'],
+    event_based_risk=['event_based'],
+    event_based_bcr=['event_based'])
 
 
 def cleanup_after_job(job, terminate):
@@ -387,7 +387,7 @@ def check_hazard_risk_consistency(haz_job, risk_mode):
     # check hazard calculation_mode consistency
     hazard_mode = haz_job.get_param('calculation_mode')
     expected_mode = RISK_HAZARD_MAP[risk_mode]
-    if hazard_mode != expected_mode:
+    if hazard_mode not in expected_mode:
         raise InvalidHazardCalculationID(
             'In order to run a risk calculation of kind %r, '
             'you need to provide a hazard calculation of kind %r, '
