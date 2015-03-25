@@ -80,24 +80,23 @@ def scenario(workflow, getter, outputdict, params, monitor):
                 continue
             outputdict = outputdict.with_args(
                 loss_type=loss_type, output_type="loss_map")
-            (assets, loss_ratio_matrix, aggregate_losses,
-             insured_loss_matrix, insured_losses) = workflow(**argdict)
-            agg[loss_type] = aggregate_losses
-        ins[loss_type] = insured_losses
+            out = workflow(**argdict)
+            agg[loss_type] = out.aggregate_losses
+        ins[loss_type] = out.insured_losses
 
         with monitor('saving risk'):
             outputdict.write(
                 assets,
-                loss_ratio_matrix.mean(axis=1),
-                loss_ratio_matrix.std(ddof=1, axis=1),
+                out.loss_matrix.mean(axis=1),
+                out.loss_matrix.std(ddof=1, axis=1),
                 hazard_output_id=getter.hid,
                 insured=False)
 
-            if insured_loss_matrix is not None:
+            if out.insured_loss_matrix is not None:
                 outputdict.write(
                     assets,
-                    insured_loss_matrix.mean(axis=1),
-                    insured_loss_matrix.std(ddof=1, axis=1),
+                    out.insured_loss_matrix.mean(axis=1),
+                    out.insured_loss_matrix.std(ddof=1, axis=1),
                     itertools.cycle([True]),
                     hazard_output_id=getter.hid,
                     insured=True)
