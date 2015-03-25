@@ -20,7 +20,7 @@
 """
 Utility functions of general interest.
 """
-
+from __future__ import division
 import os
 import sys
 import imp
@@ -558,7 +558,7 @@ class AccumDict(dict):
 
     __rmul__ = __mul__
 
-    def __div__(self, other):
+    def __truediv__(self, other):
         return self * (1. / other)
 
     def apply(self, func, *extras):
@@ -573,34 +573,42 @@ class AccumDict(dict):
 
 class ArrayDict(collections.Mapping):
     """
-    >>> a = ArrayDict(dict(x=[1], y=[2]))
-    >>> b = ArrayDict(dict(x=[3], y=[4]))
+    A class wrapping an array-valued dictionary. ArrayDict instances
+    work as mapping, but they also get some methods from numpy arrays.
+    In particular, the arithmetic operators and other are supported.
+    Notice that the arrays may have different lenghts for different keys.
+    You should use this class when you have fixed keys and you want to
+    store the data in a compact way.
+    Here are a few examples of usage:
+
+    >>> a = ArrayDict(dict(x=[1], y=[2, 3]))
     >>> a
-    <ArrayDict x:1, y:1>
+    <ArrayDict x:1, y:2>
     >>> a.shape
-    (2,)
+    (3,)
+    >>> b = ArrayDict(dict(x=[3], y=[4, 5]))
     >>> print a
-    [1 2]
+    [1 2 3]
     >>> print b
-    [3 4]
+    [3 4 5]
     >>> print a + b
-    [4 6]
+    [4 6 8]
     >>> print a - b
-    [-2 -2]
+    [-2 -2 -2]
     >>> print a * b
-    [3 8]
+    [ 3  8 15]
     >>> print a / b
-    [0 0]
+    [ 0.33333333  0.5         0.6       ]
     >>> print -a
-    [-1 -2]
+    [-1 -2 -3]
     >>> print a ** 2
-    [1 4]
+    [1 4 9]
     >>> print a.apply(numpy.sqrt)
-    [ 1.          1.41421356]
-    >>> a.from_array(numpy.array([1, 2, 3]))
+    [ 1.          1.41421356  1.73205081]
+    >>> a.from_array(numpy.array([1, 2, 3, 4]))
     Traceback (most recent call last):
      ...
-    ValueError: Wrong array size: expected 2, got 3
+    ValueError: Wrong array size: expected 3, got 4
     """
     def __init__(self, dic):
         self.array = numpy.concatenate([dic[k] for k in sorted(dic)])
@@ -613,7 +621,13 @@ class ArrayDict(collections.Mapping):
 
     @property
     def shape(self):
+        """The shape of the underlying array"""
         return self.array.shape
+
+    @property
+    def size(self):
+        """The size (number of elements) of the underlying array"""
+        return self.array.size
 
     def from_array(self, array):
         """
@@ -658,7 +672,7 @@ class ArrayDict(collections.Mapping):
 
     __rmul__ = __mul__
 
-    def __div__(self, other):
+    def __truediv__(self, other):
         return self.from_array(self.array / getattr(other, 'array', other))
 
     def __pow__(self, other):
