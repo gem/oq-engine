@@ -20,7 +20,6 @@ Base RiskCalculator class.
 """
 
 import itertools
-import psutil
 import numpy
 
 from openquake.commonlib import risk_parsers
