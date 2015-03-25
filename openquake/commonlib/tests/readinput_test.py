@@ -164,7 +164,7 @@ class ClosestSiteModelTestCase(unittest.TestCase):
       xmlns="http://openquake.org/xmlns/nrml/0.4">
     <siteModel>
         <site lon="0.0" lat="0.0" vs30="1200.0" vs30Type="inferred" z1pt0="100.0" z2pt5="2.0" backarc="False" />
-        <site lon="0.0" lat="0.1" vs30="600.0" vs30Type="inferred" z1pt0="100.0" z2pt5="2.0" backarc="False" />
+        <site lon="0.0" lat="0.1" vs30="600.0" vs30Type="inferred" z1pt0="100.0" z2pt5="2.0" backarc="True" />
         <site lon="0.0" lat="0.2" vs30="200.0" vs30Type="inferred" z1pt0="100.0" z2pt5="2.0" backarc="False" />
     </siteModel>
 </nrml>''')
@@ -174,7 +174,7 @@ class ClosestSiteModelTestCase(unittest.TestCase):
             valid.SiteParam(z1pt0=100.0, z2pt5=2.0, measured=False,
                             vs30=1200.0, backarc=False, lon=0.0, lat=0.0),
             valid.SiteParam(z1pt0=100.0, z2pt5=2.0, measured=False,
-                            vs30=600.0, backarc=False, lon=0.0, lat=0.1),
+                            vs30=600.0, backarc=True, lon=0.0, lat=0.1),
             valid.SiteParam(z1pt0=100.0, z2pt5=2.0, measured=False,
                             vs30=200.0, backarc=False, lon=0.0, lat=0.2)]
         self.assertEqual(list(readinput.get_site_model(oqparam)), expected)
