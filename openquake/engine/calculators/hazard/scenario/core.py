@@ -47,7 +47,7 @@ def calc_gmfs(job_id, tag_seed_pairs, computer):
     :param computer:
         :class:`openquake.hazardlib.calc.gmf.GMFComputer` instance
     :returns:
-        a dictionary tag -> {imt: gmf}
+        a dictionary tag -> key -> imt -> gmf
     """
     return {tag: dict(computer.compute(seed)) for tag, seed in tag_seed_pairs}
 
