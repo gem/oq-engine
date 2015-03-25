@@ -1,6 +1,4 @@
   [Michele Simionato]
-  * Fixed a bug in the risk_hazard_map: now it is possible to run a risk
-    calculation on top of a classical_tiling one
   * Added a resource /v1/calc/:calc_id/traceback to get the traceback of a
     failed calculation
   * Now the logs are stored also in the database, both for the controller node
