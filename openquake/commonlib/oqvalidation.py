@@ -301,13 +301,3 @@ class OqParam(valid.ParamSet):
         if rms and not getattr(self, 'complex_fault_mesh_spacing', None):
             self.complex_fault_mesh_spacing = self.rupture_mesh_spacing
         return True
-
-    def is_valid_tiling(self):
-        """
-        Currently the classical_tiling calculator does not support
-        sampling.
-        """
-        if self.calculation_mode == 'classical_tiling':
-            return (self.maximum_tile_weight and not
-                    self.number_of_logic_tree_samples)
-        return True

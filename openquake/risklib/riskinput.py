@@ -187,6 +187,8 @@ class RiskModel(collections.Mapping):
                         epsilons.append(epsilon)
                 if not assets:
                     continue
+                assets, hazards, epsilons = map(
+                    numpy.array, [assets, hazards, epsilons])
                 # hazards is a list of dictionaries key -> array
                 hazards_by_rlz = rlzs_assoc.collect_by_rlz(hazards)
                 workflow = self[imt, taxonomy]
@@ -194,11 +196,31 @@ class RiskModel(collections.Mapping):
                     # the same taxonomy contributes to two IMTs??
                     assert (taxonomy, loss_type) not in output, (
                         taxonomy, loss_type)
+                    assets_ = assets
+                    epsilons_ = epsilons
+                    if loss_type == 'damage':
+                        # ignore values, consider only the 'number' attribute
+                        missing_value = False
+                    else:
+                        idx = numpy.array(
+                            [a.value(loss_type) is not None for a in assets])
+                        if not idx.any():
+                            # there are no assets with a value
+                            continue
+                        # there may be assets without a value
+                        missing_value = not idx.all()
+                        if missing_value:
+                            assets_ = assets[idx]
+                            epsilons_ = epsilons[idx]
                     out_by_rlz = {}
                     for rlz in rlzs_assoc.realizations:
-                        haz = hazards_by_rlz[rlz]
+                        if missing_value:
+                            hazards_ = numpy.array(hazards_by_rlz[rlz])[idx]
+                        else:
+                            hazards_ = hazards_by_rlz[rlz]
                         out_by_rlz[rlz] = workflow(
-                            loss_type, assets, haz, epsilons, riskinput.tags)
+                            loss_type, assets_, hazards_, epsilons_,
+                            riskinput.tags)
                     output[taxonomy, loss_type] = out_by_rlz
         return output
 

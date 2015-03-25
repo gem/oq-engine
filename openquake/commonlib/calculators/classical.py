@@ -17,6 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import logging
 import operator
 import collections
 from functools import partial
@@ -126,9 +127,11 @@ class ClassicalCalculator(base.HazardCalculator):
         if getattr(oq, 'individual_curves', True):
             for rlz in rlzs:
                 smlt_path = '_'.join(rlz.sm_lt_path)
+                suffix = ('-ltr_%d' % rlz.ordinal
+                          if oq.number_of_logic_tree_samples else '')
                 for fmt in exports:
-                    fname = 'hazard_curve-smltp_%s-gsimltp_%s-ltr_%d.%s' % (
-                        smlt_path, rlz.gsim_rlz.uid, rlz.ordinal, fmt)
+                    fname = 'hazard_curve-smltp_%s-gsimltp_%s%s.%s' % (
+                        smlt_path, rlz.gsim_rlz.uid, suffix, fmt)
                     saved += self.export_curves(curves_by_rlz[rlz], fmt, fname)
         if len(rlzs) == 1:  # cannot compute statistics
             [self.mean_curves] = curves_by_rlz.values()
@@ -225,8 +228,12 @@ def classical_tiling(calculator, sitecol, tileno):
     # build the correct realizations from the (reduced) logic tree
     calculator.rlzs_assoc = calculator.composite_source_model.get_rlzs_assoc(
         partial(is_effective_trt_model, result))
+    n_levels = sum(len(imls) for imls in calculator.oqparam.imtls.itervalues())
+    tup = len(calculator.sitecol), n_levels, len(calculator.rlzs_assoc)
+    logging.info('Processed tile %d, (sites, levels, keys)=%s', tileno, tup)
     # export the calculator outputs
-    return calculator.post_execute(result)
+    saved = calculator.post_execute(result)
+    return saved
 
 
 @base.calculators.add('classical_tiling')
