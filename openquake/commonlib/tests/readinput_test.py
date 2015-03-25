@@ -271,6 +271,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.region_constraint = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
+        oqparam.ignore_missing_costs = []
 
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
