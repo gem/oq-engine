@@ -210,6 +210,39 @@ class ExposureTestCase(unittest.TestCase):
   </exposureModel>
 </nrml>''')
 
+    exposure0 = general.writetmp('''\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <exposureModel id="ep" category="buildings">
+    <description>Exposure model for buildings</description>
+    <conversions>
+      <costTypes>
+        <costType name="structural" unit="USD" type="per_asset"/>
+      </costTypes>
+    </conversions>
+    <assets>
+      <asset id="a1" taxonomy="RM" number="3000">
+        <location lon="81.2985" lat="29.1098"/>
+        <costs>
+          <cost type="structural" value="1000"/>
+        </costs>
+      </asset>
+      <asset id="a2" taxonomy="RC" number="0">
+        <location lon="83.082298" lat="27.9006"/>
+        <costs>
+          <cost type="structural" value="500"/>
+        </costs>
+      </asset>
+      <asset id="a3" taxonomy="W" number="2000">
+        <location lon="85.747703" lat="27.9015"/>
+        <costs>
+          <cost type="structural" value="1000"/>
+        </costs>
+      </asset>
+    </assets>
+  </exposureModel>
+</nrml>''')
+
     def test_get_exposure_metadata(self):
         exp, _assets = readinput.get_exposure_lazy(self.exposure)
         self.assertEqual(exp.description, 'Exposure model for buildings')
@@ -230,6 +263,18 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         with self.assertRaises(KeyError) as ctx:
             readinput.get_exposure(oqparam)
         self.assertIn("node asset: 'number', line 17 of", str(ctx.exception))
+
+    def test_exposure_zero_number(self):
+        oqparam = mock.Mock()
+        oqparam.calculation_mode = 'scenario_damage'
+        oqparam.inputs = {'exposure': self.exposure0}
+        oqparam.region_constraint = '''\
+POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
+        oqparam.time_event = None
+
+        with self.assertRaises(ValueError) as ctx:
+            readinput.get_exposure(oqparam)
+        self.assertIn("node assets: Could not convert number->compose(positivefloat,nonzero): '0' is zero, line 17", str(ctx.exception))
 
 
 class ReadCsvTestCase(unittest.TestCase):

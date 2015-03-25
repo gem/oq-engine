@@ -228,6 +228,23 @@ def float_(value):
         raise ValueError('%r is not a float' % value)
 
 
+def nonzero(value):
+    """
+    :param value: input string
+    :returns: the value unchanged
+
+    >>> nonzero('1')
+    '1'
+    >>> nonzero('0')
+    Traceback (most recent call last):
+      ...
+    ValueError: '0' is zero
+    """
+    if float_(value) == 0:
+        raise ValueError('%r is zero' % value)
+    return value
+
+
 def longitude(value):
     """
     :param value: input string
