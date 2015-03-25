@@ -80,17 +80,16 @@ class EngineServerTestCase(unittest.TestCase):
                                  files=dict(archive=a))
         job_id = json.loads(resp.text)['job_id']
         self.job_ids.append(job_id)
+        time.sleep(1)  # wait a bit for the calc to start
         return job_id
 
     def test_ok(self):
         job_id = self.postzip('archive_ok.zip')
-        time.sleep(1)
         log = self.get('%d/log/:' % job_id)
         self.assertGreater(len(log), 0)
 
     def test_err(self):
         job_id = self.postzip('archive_err.zip')
         self.wait()
-        time.sleep(1)
         tb = self.get('%d/traceback' % job_id)
         self.assertGreater(len(tb), 0)

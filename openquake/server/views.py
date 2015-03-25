@@ -2,6 +2,7 @@ import shutil
 import json
 import logging
 import os
+import traceback
 import tempfile
 import urlparse
 
@@ -229,10 +230,10 @@ def run_calc(request):
         _prepare_job, (request, hazard_output_id, hazard_job_id, candidates))
     if exctype:
         tasks.update_calculation(callback_url, status="failed", einfo=einfo)
-        raise exctype(einfo)
-    job_file = os.path.basename(einfo[0])
+        return HttpResponse(json.dumps(einfo.splitlines()),
+                            content_type=JSON, status=500)
     temp_dir = os.path.dirname(einfo[0])
-    job, _fut = submit_job(job_file, temp_dir, request.POST['database'],
+    job, _fut = submit_job(einfo[0], temp_dir, request.POST['database'],
                            callback_url, foreign_calc_id,
                            hazard_output_id, hazard_job_id)
     try:
@@ -333,7 +334,7 @@ def calc_results(request, calc_id):
 
 @require_http_methods(['GET'])
 @cross_domain_ajax
-def calc_traceback(request, calc_id):
+def get_traceback(request, calc_id):
     """
     Get the traceback as a list of lines for a given ``calc_id``.
     """
@@ -346,7 +347,7 @@ def calc_traceback(request, calc_id):
     response_data = [log.message for log in oqe_models.Log.objects.filter(
         job_id=calc_id, level='CRITICAL').order_by('id')]
 
-    return HttpResponse(content=json.dumps(response_data))
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
 @cross_domain_ajax
