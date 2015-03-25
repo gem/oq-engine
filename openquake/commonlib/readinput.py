@@ -656,7 +656,14 @@ def get_exposure(oqparam):
         set(['occupants'])
     asset_refs = set()
     time_event = getattr(oqparam, 'time_event', None)
-    for asset in assets_node:
+
+    def asset_gen():
+        # wrap the asset generation to get a nice error message
+        with context(fname, assets_node):
+            for asset in assets_node:
+                yield asset
+
+    for asset in asset_gen():
         values = {}
         deductibles = {}
         insurance_limits = {}
@@ -668,7 +675,7 @@ def get_exposure(oqparam):
             asset_refs.add(asset_id)
             taxonomy = asset['taxonomy']
             if 'damage' in oqparam.calculation_mode:
-                # calculators of 'damage' kind require the 'number' attribute;
+                # calculators of 'damage' kind require the 'number'
                 # if it is missing a KeyError is raised
                 number = asset.attrib['number']
             else:
@@ -705,8 +712,8 @@ def get_exposure(oqparam):
 
         area = float(asset.attrib.get('area', 1))
         ass = workflows.Asset(
-            asset_id, taxonomy, number, location, values, area, deductibles,
-            insurance_limits, retrofitting_values)
+            asset_id, taxonomy, number, location, values, area,
+            deductibles, insurance_limits, retrofitting_values)
         exposure.assets.append(ass)
         exposure.taxonomies.add(taxonomy)
     if region:
