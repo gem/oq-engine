@@ -38,7 +38,7 @@ RISK_CALCULATORS = [
     'classical_bcr', 'event_based_bcr', 'scenario_damage', 'classical_damage']
 
 EXPERIMENTAL_CALCULATORS = [
-    'event_based_fr']
+    'event_loss']
 
 CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS + EXPERIMENTAL_CALCULATORS
 
@@ -250,8 +250,6 @@ class OqParam(valid.ParamSet):
         specific_assets = getattr(self, 'specific_assets', None)
         if specific_assets and 'specific_assets' in self.inputs:
             return False
-        elif specific_assets or 'specific_assets' in self.inputs:
-            return self.calculation_mode in RISK_CALCULATORS
         else:
             return True
 
@@ -305,14 +303,4 @@ class OqParam(valid.ParamSet):
         rms = getattr(self, 'rupture_mesh_spacing', None)
         if rms and not getattr(self, 'complex_fault_mesh_spacing', None):
             self.complex_fault_mesh_spacing = self.rupture_mesh_spacing
-        return True
-
-    def is_valid_tiling(self):
-        """
-        Currently the classical_tiling calculator does not support
-        sampling.
-        """
-        if self.calculation_mode == 'classical_tiling':
-            return (self.maximum_tile_weight and not
-                    self.number_of_logic_tree_samples)
         return True

@@ -403,7 +403,6 @@ def assert_independent(package, *packages):
 
     >>> assert_independent('openquake.hazardlib',
     ...                    'openquake.risklib', 'openquake.commonlib')
-    >>> assert_independent('openquake.risklib', 'openquake.commonlib')
     >>> assert_independent('openquake.risklib.tests', 'openquake.risklib')
     Traceback (most recent call last):
     ...
@@ -462,7 +461,7 @@ class CallableDict(collections.OrderedDict):
 
     def __call__(self, obj, *args, **kw):
         key = self.keyfunc(obj)
-        if not key in self:
+        if key not in self:
             raise KeyError(
                 'There is nothing registered for %s' % repr(key))
         return self[key](obj, *args, **kw)

@@ -20,6 +20,7 @@ import os
 import abc
 import logging
 import operator
+import collections
 import cPickle
 
 import numpy
@@ -29,7 +30,7 @@ from openquake.hazardlib.geo import geodetic
 from openquake.baselib import general
 from openquake.commonlib import readinput
 from openquake.commonlib.parallel import apply_reduce, DummyMonitor, executor
-from openquake.risklib import workflows
+from openquake.risklib import riskinput
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
@@ -119,7 +120,7 @@ class HazardCalculator(BaseCalculator):
         if 'exposure' in self.oqparam.inputs:
             logging.info('Reading the exposure')
             exposure = readinput.get_exposure(self.oqparam)
-            self.sitecol, self.assets = readinput.get_sitecol_assets(
+            self.sitecol, self.assets_by_site = readinput.get_sitecol_assets(
                 self.oqparam, exposure)
         else:
             logging.info('Reading the site collection')
@@ -131,10 +132,13 @@ class HazardCalculator(BaseCalculator):
             self.job_info = readinput.get_job_info(
                 self.oqparam, self.composite_source_model, self.sitecol)
             # we could manage limits here
-            self.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
+            if self.prefilter:
+                self.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
+            else:
+                self.rlzs_assoc = riskinput.FakeRlzsAssoc(0)
         else:  # calculators without sources, i.e. scenario
             self.gsims = readinput.get_gsims(self.oqparam)
-            self.rlzs_assoc = workflows.FakeRlzsAssoc(len(self.gsims))
+            self.rlzs_assoc = riskinput.FakeRlzsAssoc(len(self.gsims))
 
     def save_pik(self, result, **kw):
         """
@@ -185,10 +189,20 @@ class RiskCalculator(BaseCalculator):
     hazard_calculator = None  # to be ovverriden in subclasses
     rlzs_assoc = None  # to be ovverriden in subclasses
 
-    def build_riskinputs(self, hazards_by_imt):
+    def make_eps_dict(self, num_ruptures):
         """
-        :param hazards_by_imt:
-            a dictionary IMT -> array of length equal to the  number of sites
+        :param num_ruptures: the size of the epsilon array for each asset
+        """
+        oq = self.oqparam
+        return riskinput.make_eps_dict(
+            self.assets_by_site, num_ruptures,
+            getattr(oq, 'master_seed', 0),  # for compatibility with the engine
+            getattr(oq, 'asset_correlation', 0))
+
+    def build_riskinputs(self, hazards_by_key, eps_dict):
+        """
+        :param hazards_by_key:
+            a dictionary key -> IMT -> array of length num_sites
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
@@ -201,13 +215,35 @@ class RiskCalculator(BaseCalculator):
             weight=operator.itemgetter(1))
         for block in blocks:
             idx = numpy.array([idx for idx, _weight in block])
-            for imt, hazards_by_site in hazards_by_imt.iteritems():
+            reduced_assets = self.assets_by_site[idx]
+            reduced_eps = {}  # for the assets belonging to the idx array
+            if eps_dict:
+                for assets in reduced_assets:
+                    for asset in assets:
+                        reduced_eps[asset.id] = eps_dict[asset.id]
+
+            # collect the hazards by key into hazards by imt
+            hdata = collections.defaultdict(lambda: [{} for _ in idx])
+            for key, hazards_by_imt in hazards_by_key.iteritems():
+                for imt, hazards_by_site in hazards_by_imt.iteritems():
+                    for i, haz in enumerate(hazards_by_site[idx]):
+                        hdata[imt][i][key] = haz
+
+            # build the riskinputs
+            for imt in hdata:
                 ri = self.riskmodel.build_input(
-                    imt, hazards_by_site[idx], self.assets_by_site[idx])
+                    imt, hdata[imt], reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
         logging.info('Built %d risk inputs', len(riskinputs))
-        return sorted(riskinputs, key=get_imt)
+        return sorted(riskinputs, key=self.riskinput_key)
+
+    def riskinput_key(self, ri):
+        """
+        :param ri: riskinput object
+        :returns: the IMT associated to it
+        """
+        return ri.imt
 
     def assoc_assets_sites(self, sitecol):
         """
@@ -273,8 +309,7 @@ class RiskCalculator(BaseCalculator):
             self.core_func.__func__,
             (self.riskinputs, self.riskmodel, self.rlzs_assoc, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
-            weight=get_weight,
-            key=get_imt)
+            weight=get_weight, key=self.riskinput_key)
 
     def save_pik(self, result, **kw):
         """Save the risk outputs"""

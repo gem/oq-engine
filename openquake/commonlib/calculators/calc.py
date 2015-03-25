@@ -128,13 +128,14 @@ def calc_gmfs(oqparam, sitecol):
     trunc_level = getattr(oqparam, 'truncation_level', None)
     n_gmfs = getattr(oqparam, 'number_of_ground_motion_fields', 1)
     rupture = get_rupture(oqparam)
-    computer = gmf.GmfComputer(rupture, sitecol, imts, gsim, trunc_level,
+    computer = gmf.GmfComputer(rupture, sitecol, imts, [gsim], trunc_level,
                                correl_model)
     seeds = [rnd.randint(0, MAX_INT) for _ in xrange(n_gmfs)]
     res = AccumDict()  # imt -> gmf
     for seed in seeds:
-        for imt, gmfield in computer.compute(seed):
-            res += {imt: [gmfield]}
+        for gsim_str, gmf_by_imt in computer.compute(seed):
+            for imt, gmfield in gmf_by_imt.iteritems():
+                res += {imt: [gmfield]}
     # res[imt] is a matrix R x N
     return {imt: numpy.array(matrix).T for imt, matrix in res.iteritems()}
 
@@ -286,15 +287,29 @@ def agg_prob(acc, prob):
     return 1. - (1. - prob) * (1. - acc)
 
 
-def data_by_imt(dict_of_dict_arrays, imtls, n_sites):
+def expand_data_by_imt(data, sites=None):
     """
-    Convert a dictionary key -> imt -> [value ...] into a dictionary
-    imt -> array([key -> value ...])
+    Expand arrays with n elements into arrays of N elements (with N > n)
+    by adding zeros. n is the number of filtered sites, N the total number.
+
+    :param data: a dictionary imt -> array with n elements
+    :param sites: a filtered SiteCollection or None
     """
-    dic = {}
-    for imt in imtls:
-        dic[imt] = numpy.array([{} for _ in xrange(n_sites)])
-        for k, d in dict_of_dict_arrays.iteritems():
-            for i, array in enumerate(d[imt]):
-                dic[imt][i][k] = array
-    return dic
+    return {imt: getattr(data, 'r_sites', sites).expand(array, 0)
+            for imt, array in data.iteritems()}
+
+
+def expand(data_dict, sites=None):
+    """
+    Expand arrays with n elements into arrays of N elements (with N > n)
+    by adding zeros. n is the number of filtered sites, N the total number.
+
+    :param data_dict: a dictionary key -> imt -> array with n elements
+    :param sites: a filtered SiteCollection
+    :returns: a dictionary key -> imt -> array with N elements
+    """
+    if sites is not None and sites.complete is sites:
+        # nothing was filtered, do nothing
+        return data_dict
+    return {key: expand_data_by_imt(data_by_imt, sites)
+            for key, data_by_imt in data_dict.iteritems()}

@@ -22,7 +22,7 @@ import mock
 
 import numpy
 
-from openquake.risklib import workflows, scientific
+from openquake.risklib import workflows
 
 aaae = numpy.testing.assert_array_almost_equal
 
@@ -31,7 +31,7 @@ def asset(values, deductibles=None,
           insurance_limits=None,
           retrofitting_values=None):
     return workflows.Asset('a1', 'taxonomy', 1, (0, 0), values,
-                           deductibles, insurance_limits,
+                           1, deductibles, insurance_limits,
                            retrofitting_values)
 
 
@@ -83,14 +83,12 @@ class ScenarioTestCase(unittest.TestCase):
         calc.risk_functions[self.loss_type].apply_to = mock.Mock(
             return_value=numpy.empty((4, 2)))
 
-        (_assets, loss_ratio_matrix, aggregate_losses,
-         insured_loss_matrix, insured_losses) = \
-            calc(self.loss_type, assets, mock.Mock(), mock.Mock())
+        out = calc(self.loss_type, assets, mock.Mock(), mock.Mock())
 
-        self.assertEqual((4, 2), loss_ratio_matrix.shape)
-        self.assertEqual((2,), aggregate_losses.shape)
-        self.assertEqual((4, 2), insured_loss_matrix.shape)
-        self.assertEqual((2,), insured_losses.shape)
+        self.assertEqual((4, 2), out.loss_matrix.shape)
+        self.assertEqual((2,), out.aggregate_losses.shape)
+        self.assertEqual((4, 2), out.insured_loss_matrix.shape)
+        self.assertEqual((2,), out.insured_losses.shape)
 
     def test_call_no_insured(self):
         vf = mock.MagicMock()
@@ -100,14 +98,12 @@ class ScenarioTestCase(unittest.TestCase):
         vf = calc.risk_functions[self.loss_type]
         vf.apply_to = mock.Mock(return_value=numpy.empty((4, 2)))
 
-        (_assets, loss_ratio_matrix, aggregate_losses,
-         insured_loss_matrix, insured_losses) = (
-            calc(self.loss_type, assets, mock.Mock(), mock.Mock()))
+        out = calc(self.loss_type, assets, mock.Mock(), mock.Mock())
 
-        self.assertEqual((4, 2), loss_ratio_matrix.shape)
-        self.assertEqual((2,), aggregate_losses.shape)
-        self.assertIsNone(insured_loss_matrix)
-        self.assertIsNone(insured_losses)
+        self.assertEqual((4, 2), out.loss_matrix.shape)
+        self.assertEqual((2,), out.aggregate_losses.shape)
+        self.assertIsNone(out.insured_loss_matrix)
+        self.assertIsNone(out.insured_losses)
 
 
 class DamageTest(unittest.TestCase):
