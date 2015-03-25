@@ -131,7 +131,10 @@ class HazardCalculator(BaseCalculator):
             self.job_info = readinput.get_job_info(
                 self.oqparam, self.composite_source_model, self.sitecol)
             # we could manage limits here
-            self.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
+            if self.prefilter:
+                self.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
+            else:
+                self.rlzs_assoc = riskinput.FakeRlzsAssoc(0)
         else:  # calculators without sources, i.e. scenario
             self.gsims = readinput.get_gsims(self.oqparam)
             self.rlzs_assoc = riskinput.FakeRlzsAssoc(len(self.gsims))

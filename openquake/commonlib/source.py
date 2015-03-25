@@ -479,6 +479,9 @@ class CompositeSourceModel(collections.Sequence):
                 rlzs = logictree.get_effective_rlzs(smodel.gsim_lt)
             if rlzs:
                 idx = assoc._add_realizations(idx, smodel, rlzs)
+            else:
+                logging.warn('No realizations for %s, %s',
+                             '_'.join(smodel.path), smodel.name)
         if assoc.realizations:
             if num_samples:
                 assert len(assoc.realizations) == num_samples
