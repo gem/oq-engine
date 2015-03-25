@@ -586,6 +586,8 @@ class ArrayDict(collections.Mapping):
     <ArrayDict x:1, y:2>
     >>> a.shape
     (3,)
+    >>> a.nbytes
+    24
     >>> b = ArrayDict(dict(x=[3], y=[4, 5]))
     >>> print a
     [1 2 3]
@@ -628,6 +630,11 @@ class ArrayDict(collections.Mapping):
     def size(self):
         """The size (number of elements) of the underlying array"""
         return self.array.size
+
+    @property
+    def nbytes(self):
+        """The size in bytes of the underlying array"""
+        return self.array.nbytes
 
     def mean(self):
         """The mean of the underlying array"""
