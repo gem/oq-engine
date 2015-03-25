@@ -125,15 +125,17 @@ class RiskModel(collections.Mapping):
     def __len__(self):
         return len(self._workflows)
 
-    def build_input(self, imt, hazards_by_site, assets_by_site):
+    def build_input(self, imt, hazards_by_site, assets_by_site, eps_dict=None):
         """
         :param imt: an Intensity Measure Type
         :param hazards_by_site: an array of hazards per each site
         :param assets_by_site: an array of assets per each site
+        :param eps_dict: a dictionary of epsilons per each asset
         :returns: a :class:`RiskInput` instance
         """
         imt_taxonomies = [(imt, self.get_taxonomies(imt))]
-        return RiskInput(imt_taxonomies, hazards_by_site, assets_by_site)
+        return RiskInput(imt_taxonomies, hazards_by_site,
+                         assets_by_site, eps_dict)
 
     def build_input_from_ruptures(self, sitecol, assets_by_site, ses_ruptures,
                                   gsims, trunc_level, correl_model, eps_dict):
@@ -185,6 +187,8 @@ class RiskModel(collections.Mapping):
                         epsilons.append(epsilon)
                 if not assets:
                     continue
+                assets, hazards, epsilons = map(
+                    numpy.array, [assets, hazards, epsilons])
                 # hazards is a list of dictionaries key -> array
                 hazards_by_rlz = rlzs_assoc.collect_by_rlz(hazards)
                 workflow = self[imt, taxonomy]
@@ -192,11 +196,31 @@ class RiskModel(collections.Mapping):
                     # the same taxonomy contributes to two IMTs??
                     assert (taxonomy, loss_type) not in output, (
                         taxonomy, loss_type)
+                    assets_ = assets
+                    epsilons_ = epsilons
+                    if loss_type == 'damage':
+                        # ignore values, consider only the 'number' attribute
+                        missing_value = False
+                    else:
+                        idx = numpy.array(
+                            [a.value(loss_type) is not None for a in assets])
+                        if not idx.any():
+                            # there are no assets with a value
+                            continue
+                        # there may be assets without a value
+                        missing_value = not idx.all()
+                        if missing_value:
+                            assets_ = assets[idx]
+                            epsilons_ = epsilons[idx]
                     out_by_rlz = {}
                     for rlz in rlzs_assoc.realizations:
-                        haz = hazards_by_rlz[rlz]
+                        if missing_value:
+                            hazards_ = numpy.array(hazards_by_rlz[rlz])[idx]
+                        else:
+                            hazards_ = hazards_by_rlz[rlz]
                         out_by_rlz[rlz] = workflow(
-                            loss_type, assets, haz, epsilons, riskinput.tags)
+                            loss_type, assets_, hazards_, epsilons_,
+                            riskinput.tags)
                     output[taxonomy, loss_type] = out_by_rlz
         return output
 
@@ -209,7 +233,8 @@ class RiskInput(object):
     :param imt: Intensity Measure Type string
     :param hazard_assets_by_taxo: pairs (hazard, {imt: assets}) for each site
     """
-    def __init__(self, imt_taxonomies, hazard_by_site, assets_by_site):
+    def __init__(self, imt_taxonomies, hazard_by_site, assets_by_site,
+                 eps_dict=None):
         [(self.imt, taxonomies)] = imt_taxonomies
         self.hazard_by_site = hazard_by_site
         self.assets_by_site = [
@@ -223,7 +248,7 @@ class RiskInput(object):
             self.weight += len(assets)
         self.taxonomies = sorted(taxonomies)
         self.tags = None  # for API compatibility with RiskInputFromRuptures
-        self.epsilons = {}  # populated with the function set_epsilons
+        self.eps_dict = eps_dict or {}
 
     @property
     def imt_taxonomies(self):
@@ -240,7 +265,7 @@ class RiskInput(object):
             for asset in assets_:
                 assets.append(asset)
                 hazards.append({self.imt: hazard})
-                epsilons.append(self.epsilons.get(asset.id, None))
+                epsilons.append(self.eps_dict.get(asset.id, None))
         return assets, hazards, epsilons
 
     def __repr__(self):

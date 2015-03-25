@@ -10,15 +10,15 @@ class ClassicalTestCase(CalculatorTestCase):
         expected = [
             'hazard_curve-mean.csv',
             'hazard_uhs-mean.csv',
-            'hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv',
-            'hazard_uhs-smltp_b1-gsimltp_b1-ltr_0.csv',
-            'hazard_curve-smltp_b1-gsimltp_b2-ltr_1.csv',
-            'hazard_uhs-smltp_b1-gsimltp_b2-ltr_1.csv',
+            'hazard_curve-smltp_b1-gsimltp_b1.csv',
+            'hazard_uhs-smltp_b1-gsimltp_b1.csv',
+            'hazard_curve-smltp_b1-gsimltp_b2.csv',
+            'hazard_uhs-smltp_b1-gsimltp_b2.csv',
             'hazard_map-mean.csv',
             'quantile_curve-0.1.csv',
-            'hazard_map-smltp_b1-gsimltp_b1-ltr_0.csv',
+            'hazard_map-smltp_b1-gsimltp_b1.csv',
             'quantile_map-0.1.csv',
-            'hazard_map-smltp_b1-gsimltp_b2-ltr_1.csv',
+            'hazard_map-smltp_b1-gsimltp_b2.csv',
             'quantile_uhs-0.1.csv',
         ]
         out = self.run_calc(case_1.__file__, 'job.ini', exports='csv')

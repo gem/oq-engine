@@ -193,7 +193,7 @@ class ExposureDataNode(LiteralNode):
         deductible=float_or_flag,
         occupants=valid.positivefloat,
         value=valid.positivefloat,
-        number=valid.positivefloat,
+        number=valid.compose(valid.positivefloat, valid.nonzero),
         lon=valid.longitude,
         lat=valid.latitude,
     )

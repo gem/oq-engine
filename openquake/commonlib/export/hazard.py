@@ -220,8 +220,8 @@ def export_gmf_csv(key, export_dir, fname, sites, rupture_tags, gmfs):
     """
     dest = os.path.join(export_dir, fname)
     dic = collections.defaultdict(list)
-    for imt, gmf in gmfs.iteritems():
-        for tag, gmvs in zip(rupture_tags, gmf.T):
+    for imt in sorted(gmfs):
+        for tag, gmvs in zip(rupture_tags, gmfs[imt].T):
             dic[tag].append(gmvs)
     indices = ' '.join(map(str, sites.indices)) \
               if sites.indices is not None else ''

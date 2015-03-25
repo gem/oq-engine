@@ -21,7 +21,7 @@ import csv
 
 from openquake.baselib.general import AccumDict
 from openquake.commonlib.export import export
-from openquake.commonlib import risk_writers
+from openquake.commonlib import writers, risk_writers
 from openquake.commonlib.writers import scientificformat
 
 
@@ -43,10 +43,8 @@ def export_agg_loss_csv(key, export_dir, aggcurves):
     :param aggcurves: a list [(loss_type, unit, mean, stddev), ...]
     """
     dest = os.path.join(export_dir, '%s.%s' % key)
-    with open(dest, 'w') as csvfile:
-        writer = csv.writer(csvfile, delimiter='|', lineterminator='\n')
-        writer.writerow(['LossType', 'Unit', 'Mean', 'Standard Deviation'])
-        writer.writerows(aggcurves)
+    header = ['LossType', 'Unit', 'Mean', 'Standard Deviation']
+    writers.save_csv(dest, [header] + aggcurves)
     return AccumDict({key: dest})
 
 

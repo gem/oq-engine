@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2014, GEM Foundation
+#  Copyright (c) 2014-2015, GEM Foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -23,6 +23,7 @@ import numpy
 
 from openquake.risklib import scientific
 from openquake.baselib.general import AccumDict
+from openquake.commonlib import readinput
 from openquake.commonlib.calculators import base, calc
 from openquake.commonlib.export import export
 from openquake.commonlib.risk_writers import (
@@ -79,12 +80,11 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         haz_out, hcalc = base.get_hazard(self, exports='xml')
         gmfs_by_trt_gsim = calc.expand(
             haz_out['gmfs_by_trt_gsim'], hcalc.sites)
-        gmfs_by_imt = calc.data_by_imt(
-            gmfs_by_trt_gsim, self.oqparam.imtls, len(self.sitecol))
 
         logging.info('Preparing the risk input')
         self.rlzs_assoc = haz_out['rlzs_assoc']
-        self.riskinputs = self.build_riskinputs(gmfs_by_imt)
+        self.riskinputs = self.build_riskinputs(
+            gmfs_by_trt_gsim, eps_dict={})
 
     def post_execute(self, result):
         """
