@@ -329,7 +329,7 @@ def calc_results(request, calc_id):
 
 @require_http_methods(['GET'])
 @cross_domain_ajax
-def calc_traceback(request, calc_id):
+def get_traceback(request, calc_id):
     """
     Get the traceback as a list of lines for a given ``calc_id``.
     """
