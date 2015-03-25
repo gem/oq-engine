@@ -234,7 +234,8 @@ def run_calc(request):
                        detect_job_file))
     if exctype:
         tasks.update_calculation(callback_url, status="failed", einfo=einfo)
-        return HttpResponse(einfo, content_type='text/plain', status=500)
+        return HttpResponse(json.dumps(einfo.splitlines()),
+                            content_type=JSON, status=500)
     job_file = os.path.basename(einfo)
     temp_dir = os.path.dirname(einfo)
     job, _fut = submit_job(job_file, temp_dir, request.POST['database'],
