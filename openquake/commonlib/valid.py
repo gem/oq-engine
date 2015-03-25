@@ -240,7 +240,7 @@ def nonzero(value):
       ...
     ValueError: '0' is zero
     """
-    if value in (0, '0'):
+    if float_(value) == 0:
         raise ValueError('%r is zero' % value)
     return value
 
