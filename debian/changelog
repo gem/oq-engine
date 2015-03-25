@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Ported the classical_risk calculator to oq-lite
   * Ported the scenario_risk calculator to oq-lite
   * Added a check to forbid exposures with an asset number=0
   * In the tests you can compare for equality files containing numbers, possibly
