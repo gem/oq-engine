@@ -2,6 +2,7 @@ import shutil
 import json
 import logging
 import os
+import traceback
 import tempfile
 import urlparse
 
@@ -233,7 +234,8 @@ def run_calc(request):
                        detect_job_file))
     if exctype:
         tasks.update_calculation(callback_url, status="failed", einfo=einfo)
-        raise exctype(einfo)
+        return HttpResponse(json.dumps(einfo.splitlines()),
+                            content_type=JSON, status=500)
     job_file = os.path.basename(einfo)
     temp_dir = os.path.dirname(einfo)
     job, _fut = submit_job(job_file, temp_dir, request.POST['database'],
@@ -325,6 +327,24 @@ def calc_results(request, calc_id):
         response_data.append(datum)
 
     return HttpResponse(content=json.dumps(response_data))
+
+
+@require_http_methods(['GET'])
+@cross_domain_ajax
+def get_traceback(request, calc_id):
+    """
+    Get the traceback as a list of lines for a given ``calc_id``.
+    """
+    # If the specified calculation doesn't exist throw back a 404.
+    try:
+        oqe_models.OqJob.objects.get(id=calc_id)
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound()
+
+    response_data = [log.message for log in oqe_models.Log.objects.filter(
+        job_id=calc_id, level='CRITICAL').order_by('id')]
+
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
 @cross_domain_ajax
