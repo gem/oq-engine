@@ -2,6 +2,7 @@ import shutil
 import json
 import logging
 import os
+import traceback
 import tempfile
 import urlparse
 
@@ -233,7 +234,7 @@ def run_calc(request):
                        detect_job_file))
     if exctype:
         tasks.update_calculation(callback_url, status="failed", einfo=einfo)
-        raise exctype(einfo)
+        return HttpResponse(einfo, content_type='text/plain', status=500)
     job_file = os.path.basename(einfo)
     temp_dir = os.path.dirname(einfo)
     job, _fut = submit_job(job_file, temp_dir, request.POST['database'],
