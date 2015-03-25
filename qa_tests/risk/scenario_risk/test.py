@@ -122,6 +122,7 @@ class ScenarioRiskCase3TestCase(risk.FixtureBasedQATestCase):
         return [[[137.4694907, 59.539054],
                  [192.4915728, 209.61370],
                  [242.257360, 263.45910]],
+                # see scenario_risk/case_3/expected/agg_loss.csv
                 [572.2184, 340.15917]]
 
 
@@ -153,6 +154,7 @@ class ScenarioOccupantsQATestCase(risk.FixtureBasedQATestCase):
         return [(0.36863306563175, 0.198942735032192),
                 (1.58950924789158, 1.8570835311939),
                 (1.12788692684151, 0.698151682472273),
+                # see see scenario_risk/occupants/expected/agg_loss.csv
                 (3.08602924036484, 1.97594906538496)]
 
 # For NIGHT:
