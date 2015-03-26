@@ -1,4 +1,9 @@
   [Yen-Shin Chen]
+  * Simple fault: added a method to finds the index of the fault patch including the hypocentre.
+  * Base surface: fixes mesh input in get_hypo_location method
+  * Near fault: implementing the Chiou & Spudich(2014) direcitivty model, the methods needed in the model.
+  
+  [Yen-Shin Chen]
   * Simple fault: added a method to retrieve the vertexes of a patch given its index
   * Base surface: added a method to get a set of point representing a resampled top edge
 
