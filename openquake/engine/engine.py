@@ -23,6 +23,7 @@ import getpass
 import itertools
 import operator
 import tempfile
+import traceback
 from contextlib import contextmanager
 from datetime import datetime
 
@@ -179,8 +180,9 @@ def run_calc(job, log_level, log_file, exports):
     with logs.handle(job, log_level, log_file), job_stats(job):  # run the job
         try:
             _do_run_calc(calculator, exports)
-        except BaseException as exc:
-            logs.LOG.critical('%s: %s', exc.__class__.__name__, exc)
+        except:
+            tb = traceback.format_exc()
+            logs.LOG.critical(tb)
             raise
     return calculator
 
