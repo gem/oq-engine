@@ -20,7 +20,7 @@
 """
 Utility functions of general interest.
 """
-
+from __future__ import division
 import os
 import sys
 import imp
@@ -302,7 +302,7 @@ def _deep_eq(a, b, decimal, exclude=None):
         assert a.__slots__ == b.__slots__, (
             "slots %s and %s are not the same") % (a.__slots__, b.__slots__)
         for slot in a.__slots__:
-            if not slot in exclude:
+            if slot not in exclude:
                 _deep_eq(getattr(a, slot), getattr(b, slot), decimal)
     else:
         # Objects must be primitives
@@ -558,7 +558,7 @@ class AccumDict(dict):
 
     __rmul__ = __mul__
 
-    def __div__(self, other):
+    def __truediv__(self, other):
         return self * (1. / other)
 
     def apply(self, func, *extras):
@@ -569,6 +569,192 @@ class AccumDict(dict):
         """
         return self.__class__({key: func(value, *extras)
                                for key, value in self.iteritems()})
+
+
+class ArrayDict(collections.Mapping):
+    """
+    A class wrapping an array-valued dictionary. ArrayDict instances
+    work as fixed-lenght mappings, but they also get some methods from
+    numpy arrays. In particular, the arithmetic operators are supported.
+    Notice that the arrays may have different lenghts for different keys.
+    You should use this class when you have fixed keys and you want to
+    store the data in a compact way.
+    Here are a few examples of usage:
+
+    >>> z = ArrayDict.zeros(dict(x=1, y=2), extradims=(5,))
+    >>> z
+    <ArrayDict x:1, y:2>
+    >>> z.shape
+    (3, 5)
+    >>> a = ArrayDict(dict(x=[0], y=[2, 3]))
+    >>> a.nbytes
+    24
+    >>> a['x'] = [1]
+    >>> a['z'] = [2]
+    Traceback (most recent call last):
+     ...
+    KeyError: 'z'
+    >>> a.from_array(numpy.array([1, 2, 3, 4]))
+    Traceback (most recent call last):
+     ...
+    ValueError: Wrong array size: expected 3, got 4
+
+    >>> b = ArrayDict(dict(x=[3], y=[4, 5]))
+    >>> print a
+    [1 2 3]
+    >>> print b
+    [3 4 5]
+    >>> print a + b
+    [4 6 8]
+    >>> print a - b
+    [-2 -2 -2]
+    >>> print a * b
+    [ 3  8 15]
+    >>> print a / b
+    [ 0.33333333  0.5         0.6       ]
+    >>> print -a
+    [-1 -2 -3]
+    >>> print a ** 2
+    [1 4 9]
+    >>> print a.apply(numpy.sqrt)
+    [ 1.          1.41421356  1.73205081]
+    """
+    @classmethod
+    def zeros(cls, sizedic, extradims=()):
+        """
+        :sizedic: a dictionary key -> size of array slice
+        :extradims: an optional tuple of integers with extra dimensions
+        :returns: an ArrayDict full of zeros
+        """
+        self = cls.__new__(cls)
+        self.slicedic = {}
+        start = 0
+        for k in sorted(sizedic):
+            self.slicedic[k] = slice(start, start + sizedic[k])
+            start += sizedic[k]
+        self.array = numpy.zeros((start,) + extradims)
+        return self
+
+    def __init__(self, dic):
+        self.array = numpy.concatenate([dic[k] for k in sorted(dic)])
+        self.slicedic = {}
+        start = 0
+        for k in sorted(dic):
+            size = len(dic[k])
+            self.slicedic[k] = slice(start, start + size)
+            start += size
+
+    @property
+    def shape(self):
+        """The shape of the underlying array"""
+        return self.array.shape
+
+    @property
+    def size(self):
+        """The size (number of elements) of the underlying array"""
+        return self.array.size
+
+    @property
+    def nbytes(self):
+        """The size in bytes of the underlying array"""
+        return self.array.nbytes
+
+    def copy(self):
+        """
+        Return a copy of the DictArray.
+
+        >>> z = ArrayDict.zeros(dict(x=1))
+        >>> w = z.copy()  # make a copy
+        >>> w['x'] = [2]  # change the copy
+        >>> print w - z   # w and z are different
+        [ 2.]
+        """
+        return self.from_array(numpy.array(self.array))
+
+    def mean(self):
+        """The mean of the underlying array"""
+        return self.array.mean()
+
+    def from_array(self, array):
+        """
+        :param array: an array with the right length
+        :returns: a new ArrayDict with the same .slicedic as self
+        """
+        n = sum(len(v) for v in self.itervalues())
+        if len(array) != n:
+            raise ValueError('Wrong array size: expected %d, got %d' %
+                             (n, len(array)))
+        new = self.__new__(self.__class__)
+        new.array = array
+        new.slicedic = self.slicedic
+        return new
+
+    def __getitem__(self, key):
+        if isinstance(key, str):
+            return self.array[self.slicedic[key]]
+        else:
+            return self.array[key]
+
+    def __setitem__(self, key, value):
+        if isinstance(key, str):
+            self.array[self.slicedic[key]] = value
+        else:
+            self.array[key] = value
+
+    def __iter__(self):
+        for k in sorted(self.slicedic):
+            yield k
+
+    def __len__(self):
+        return len(self.array)
+
+    def __add__(self, other):
+        return self.from_array(self.array + getattr(other, 'array', other))
+
+    __radd__ = __add__
+
+    def __sub__(self, other):
+        return self.from_array(self.array - getattr(other, 'array', other))
+
+    def __rsub__(self, other):
+        return - self.__sub__(other)
+
+    def __neg__(self):
+        return self.from_array(-self.array)
+
+    def __mul__(self, other):
+        return self.from_array(self.array * getattr(other, 'array', other))
+
+    __rmul__ = __mul__
+
+    def __truediv__(self, other):
+        return self.from_array(self.array / getattr(other, 'array', other))
+
+    def __pow__(self, other):
+        return self.from_array(self.array.__pow__(other))
+
+    def __gt__(self, other):
+        return self.array > other
+
+    def __lt__(self, other):
+        return self.array < other
+
+    def __ge__(self, other):
+        return self.array >= other
+
+    def __le__(self, other):
+        return self.array <= other
+
+    def apply(self, func, *extras):
+        return self.from_array(func(self.array, *extras))
+
+    def __repr__(self):
+        sizes = ['%s:%s' % (k, s.stop - s.start)
+                 for k, s in sorted(self.slicedic.iteritems())]
+        return '<%s %s>' % (self.__class__.__name__, ', '.join(sizes))
+
+    def __str__(self):
+        return str(self.array)
 
 
 def groupby(objects, key, reducegroup=list):
