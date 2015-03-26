@@ -16,6 +16,9 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import division
+import numpy
+
 
 def max_rel_diff(curve_ref, curve, min_value=0.01):
     """
@@ -54,3 +57,24 @@ def max_rel_diff_index(curve_ref, curve, min_value=0.01):
     maxdiff = max(diffs)
     maxindex = diffs.index(maxdiff)
     return maxdiff, maxindex
+
+
+def rmsep(array_ref, array, min_value=0.01):
+    """
+    Root Mean Square Error Percentage for two arrays.
+
+    :param array_ref: reference array
+    :param array: another array
+    :param min_value: compare only the elements larger than min_value
+    :returns: the relative distance between the arrays
+
+    >>> curve_ref = numpy.array([[0.01, 0.02, 0.03, 0.05],
+    ... [0.01, 0.02, 0.04, 0.06]])
+    >>> curve = numpy.array([[0.011, 0.021, 0.031, 0.051],
+    ... [0.012, 0.022, 0.032, 0.051]])
+    >>> round(rmsep(curve_ref, curve), 5)
+    0.11292
+    """
+    bigvalues = array_ref > min_value
+    reldiffsquare = (1. - array[bigvalues] / array_ref[bigvalues]) ** 2
+    return numpy.sqrt(reldiffsquare.mean())
