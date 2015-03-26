@@ -52,24 +52,6 @@ class DuplicatedPoint(Exception):
     """
 
 
-def create_detect_file(*candidates):
-    """
-    Create function which is able to extract a certain file from a list
-    of files, by looking at the given candidates, in order. Usually the
-    candidates are `job.ini`, 'job_hazard.ini', 'job_risk.ini'.
-    """
-    def detect_file(files):
-        for candidate in candidates:
-            try:
-                file_idx = map(os.path.basename, files).index(candidate)
-                return files[file_idx]
-            except ValueError:
-                pass
-        raise IOError("No suitable file found in %s for %s" % (
-            str(files), str(candidates)))
-    return detect_file
-
-
 def collect_files(dirpath, cond=lambda fullname: True):
     """
     Recursively collect the files contained inside dirpath.
@@ -88,7 +70,7 @@ def collect_files(dirpath, cond=lambda fullname: True):
     return files
 
 
-def extract_from_zip(path, detect_file):
+def extract_from_zip(path, candidates):
     """
     Given a zip archive and a function to detect the presence of a given
     filename, unzip the archive into a temporary directory and return the
@@ -96,12 +78,13 @@ def extract_from_zip(path, detect_file):
     within the archive.
 
     :param path: pathname of the archive
-    :param detect_file: searching function
+    :param candidates: list of names to search for
     """
     temp_dir = tempfile.mkdtemp()
     with zipfile.ZipFile(path) as archive:
         archive.extractall(temp_dir)
-    return detect_file(collect_files(temp_dir))
+    return [f for f in collect_files(temp_dir)
+            if os.path.basename(f) in candidates]
 
 
 def get_params(job_inis):
@@ -114,8 +97,9 @@ def get_params(job_inis):
         A dictionary of parameters
     """
     if len(job_inis) == 1 and job_inis[0].endswith('.zip'):
-        detect_job_ini = create_detect_file('job.ini')
-        job_inis = [extract_from_zip(job_inis[0], detect_job_ini)]
+        job_inis = extract_from_zip(
+            job_inis[0], ['job_hazard.ini', 'job_haz.ini',
+                          'job.ini', 'job_risk.ini'])
 
     not_found = [ini for ini in job_inis if not os.path.exists(ini)]
     if len(not_found) == len(job_inis):  # nothing was found
