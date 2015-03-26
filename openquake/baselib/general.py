@@ -574,20 +574,31 @@ class AccumDict(dict):
 class ArrayDict(collections.Mapping):
     """
     A class wrapping an array-valued dictionary. ArrayDict instances
-    work as mapping, but they also get some methods from numpy arrays.
-    In particular, the arithmetic operators and other are supported.
+    work as fixed-lenght mappings, but they also get some methods from
+    numpy arrays. In particular, the arithmetic operators are supported.
     Notice that the arrays may have different lenghts for different keys.
     You should use this class when you have fixed keys and you want to
     store the data in a compact way.
     Here are a few examples of usage:
 
-    >>> a = ArrayDict(dict(x=[1], y=[2, 3]))
-    >>> a
+    >>> z = ArrayDict.zeros(dict(x=1, y=2), extradims=(5,))
+    >>> z
     <ArrayDict x:1, y:2>
-    >>> a.shape
-    (3,)
+    >>> z.shape
+    (3, 5)
+    >>> a = ArrayDict(dict(x=[0], y=[2, 3]))
     >>> a.nbytes
     24
+    >>> a['x'] = [1]
+    >>> a['z'] = [2]
+    Traceback (most recent call last):
+     ...
+    KeyError: 'z'
+    >>> a.from_array(numpy.array([1, 2, 3, 4]))
+    Traceback (most recent call last):
+     ...
+    ValueError: Wrong array size: expected 3, got 4
+
     >>> b = ArrayDict(dict(x=[3], y=[4, 5]))
     >>> print a
     [1 2 3]
@@ -607,11 +618,23 @@ class ArrayDict(collections.Mapping):
     [1 4 9]
     >>> print a.apply(numpy.sqrt)
     [ 1.          1.41421356  1.73205081]
-    >>> a.from_array(numpy.array([1, 2, 3, 4]))
-    Traceback (most recent call last):
-     ...
-    ValueError: Wrong array size: expected 3, got 4
     """
+    @classmethod
+    def zeros(cls, sizedic, extradims=()):
+        """
+        :sizedic: a dictionary key -> size of array slice
+        :extradims: an optional tuple of integers with extra dimensions
+        :returns: an ArrayDict full of zeros
+        """
+        self = cls.__new__(cls)
+        self.slicedic = {}
+        start = 0
+        for k in sorted(sizedic):
+            self.slicedic[k] = slice(start, start + sizedic[k])
+            start += sizedic[k]
+        self.array = numpy.zeros((start,) + extradims)
+        return self
+
     def __init__(self, dic):
         self.array = numpy.concatenate([dic[k] for k in sorted(dic)])
         self.slicedic = {}
@@ -635,6 +658,18 @@ class ArrayDict(collections.Mapping):
     def nbytes(self):
         """The size in bytes of the underlying array"""
         return self.array.nbytes
+
+    def copy(self):
+        """
+        Return a copy of the DictArray.
+
+        >>> z = ArrayDict.zeros(dict(x=1))
+        >>> w = z.copy()  # make a copy
+        >>> w['x'] = [2]  # change the copy
+        >>> print w - z   # w and z are different
+        [ 2.]
+        """
+        return self.from_array(numpy.array(self.array))
 
     def mean(self):
         """The mean of the underlying array"""
@@ -660,12 +695,18 @@ class ArrayDict(collections.Mapping):
         else:
             return self.array[key]
 
+    def __setitem__(self, key, value):
+        if isinstance(key, str):
+            self.array[self.slicedic[key]] = value
+        else:
+            self.array[key] = value
+
     def __iter__(self):
         for k in sorted(self.slicedic):
             yield k
 
     def __len__(self):
-        return len(self.slicedic)
+        return len(self.array)
 
     def __add__(self, other):
         return self.from_array(self.array + getattr(other, 'array', other))
