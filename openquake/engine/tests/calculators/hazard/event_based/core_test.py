@@ -37,7 +37,7 @@ def make_site_coll(lon, lat, n):
     sites = []
     for i in range(n):
         site = Site(Point(lon - float(i) / 1000, lat),
-                    800., 'measured', 50., 2.5, i)
+                    800., 'measured', 50., 2.5, False, i)
         sites.append(site)
     return SiteCollection(sites)
 
