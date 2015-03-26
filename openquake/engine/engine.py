@@ -23,6 +23,7 @@ import getpass
 import itertools
 import operator
 import tempfile
+import traceback
 from contextlib import contextmanager
 from datetime import datetime
 
@@ -59,13 +60,13 @@ class InvalidHazardCalculationID(Exception):
     pass
 
 RISK_HAZARD_MAP = dict(
-    scenario_risk='scenario',
-    scenario_damage='scenario',
-    classical_risk='classical',
-    classical_bcr='classical',
-    classical_damage='classical',
-    event_based_risk='event_based',
-    event_based_bcr='event_based')
+    scenario_risk=['scenario'],
+    scenario_damage=['scenario'],
+    classical_risk=['classical'],
+    classical_bcr=['classical'],
+    classical_damage=['classical'],
+    event_based_risk=['event_based'],
+    event_based_bcr=['event_based'])
 
 
 def cleanup_after_job(job, terminate):
@@ -179,8 +180,9 @@ def run_calc(job, log_level, log_file, exports):
     with logs.handle(job, log_level, log_file), job_stats(job):  # run the job
         try:
             _do_run_calc(calculator, exports)
-        except BaseException as exc:
-            logs.LOG.critical('%s: %s', exc.__class__.__name__, exc)
+        except:
+            tb = traceback.format_exc()
+            logs.LOG.critical(tb)
             raise
     return calculator
 
@@ -387,7 +389,7 @@ def check_hazard_risk_consistency(haz_job, risk_mode):
     # check hazard calculation_mode consistency
     hazard_mode = haz_job.get_param('calculation_mode')
     expected_mode = RISK_HAZARD_MAP[risk_mode]
-    if hazard_mode != expected_mode:
+    if hazard_mode not in expected_mode:
         raise InvalidHazardCalculationID(
             'In order to run a risk calculation of kind %r, '
             'you need to provide a hazard calculation of kind %r, '
