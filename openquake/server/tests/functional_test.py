@@ -17,7 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Here there are real functional tests starting an engine server and
+Here there are some real functional tests starting an engine server and
 running computations.
 """
 
@@ -35,12 +35,21 @@ class EngineServerTestCase(unittest.TestCase):
     hostport = 'localhost:8761'
     datadir = os.path.join(os.path.dirname(__file__), 'data')
 
+    # general utilities
+
     @classmethod
     def get(cls, path, **params):
         resp = requests.get('http://%s/v1/calc/%s' % (cls.hostport, path),
                             params=params)
         assert resp.status_code == 200, resp
         return json.loads(resp.text)
+
+    @classmethod
+    def get_text(cls, path, **params):
+        resp = requests.get('http://%s/v1/calc/%s' % (cls.hostport, path),
+                            params=params)
+        assert resp.status_code == 200, resp
+        return resp.text
 
     @classmethod
     def wait(cls):
@@ -51,6 +60,18 @@ class EngineServerTestCase(unittest.TestCase):
                 break
             time.sleep(1)
 
+    def postzip(self, archive):
+        with open(os.path.join(self.datadir, archive)) as a:
+            resp = requests.post('http://%s/v1/calc/run' % self.hostport,
+                                 dict(database='platform'),
+                                 files=dict(archive=a))
+        job_id = json.loads(resp.text)['job_id']
+        self.job_ids.append(job_id)
+        time.sleep(1)  # wait a bit for the calc to start
+        return job_id
+
+    # start/stop server utilities
+
     @classmethod
     def setUpClass(cls):
         cls.job_ids = []
@@ -58,7 +79,8 @@ class EngineServerTestCase(unittest.TestCase):
         env['OQ_NO_DISTRIBUTE'] = '1'
         cls.proc = subprocess.Popen(
             [sys.executable, '-m', 'openquake.server.manage', 'runserver',
-             cls.hostport, '--noreload'], env=env)
+             cls.hostport, '--noreload'], env=env, stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE)
         time.sleep(2)
 
     @classmethod
@@ -73,23 +95,31 @@ class EngineServerTestCase(unittest.TestCase):
 
         cls.proc.kill()
 
-    def postzip(self, archive):
-        with open(os.path.join(self.datadir, archive)) as a:
-            resp = requests.post('http://%s/v1/calc/run' % self.hostport,
-                                 dict(database='platform'),
-                                 files=dict(archive=a))
-        job_id = json.loads(resp.text)['job_id']
-        self.job_ids.append(job_id)
-        time.sleep(1)  # wait a bit for the calc to start
-        return job_id
+    # tests
+
+    def test_404(self):
+        # looking for a missing calc_id
+        resp = requests.get('http://%s/v1/calc/0' % self.hostport)
+        assert resp.status_code == 404, resp
 
     def test_ok(self):
         job_id = self.postzip('archive_ok.zip')
         log = self.get('%d/log/:' % job_id)
         self.assertGreater(len(log), 0)
+        self.wait()
+        results = self.get('%d/results' % job_id)
 
-    def test_err(self):
+        for res in results:
+            text = self.get_text('result/%d' % res['id'])
+            self.assertGreater(len(text), 0)
+        self.assertGreater(len(results), 0)
+
+    def test_err_1(self):
+        # the rupture XML file has a syntax error
         job_id = self.postzip('archive_err.zip')
         self.wait()
         tb = self.get('%d/traceback' % job_id)
+        print 'Error in job', job_id, '\n'.join(tb)
         self.assertGreater(len(tb), 0)
+
+    # TODO: add more tests for error situations
