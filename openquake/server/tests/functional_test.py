@@ -30,6 +30,9 @@ import subprocess
 
 import requests
 
+if requests.__version__ < '1.0.0':
+    requests.Response.text = property(lambda self: self.content)
+
 
 class EngineServerTestCase(unittest.TestCase):
     hostport = 'localhost:8761'
@@ -108,7 +111,6 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertGreater(len(log), 0)
         self.wait()
         results = self.get('%d/results' % job_id)
-
         for res in results:
             text = self.get_text('result/%d' % res['id'])
             self.assertGreater(len(text), 0)
