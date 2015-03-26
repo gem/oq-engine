@@ -99,7 +99,7 @@ def get_params(job_inis):
     if len(job_inis) == 1 and job_inis[0].endswith('.zip'):
         job_inis = extract_from_zip(
             job_inis[0], ['job_hazard.ini', 'job_haz.ini',
-                          'job.ini', 'job_risk.init'])
+                          'job.ini', 'job_risk.ini'])
 
     not_found = [ini for ini in job_inis if not os.path.exists(ini)]
     if len(not_found) == len(job_inis):  # nothing was found
