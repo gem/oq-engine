@@ -238,6 +238,7 @@ class SiteModel(djm.Model):
     # Depth to shear wave velocity of 2.5 km/s. Units km.
     z2pt5 = djm.FloatField()
     location = djm.PointField(srid=DEFAULT_SRID)
+    backarc = False  # TODO: change the database
 
     @property
     def measured(self):
