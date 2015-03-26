@@ -486,7 +486,6 @@ class CompositeSourceModel(collections.Sequence):
         if len(list(self.sources)) == 0:
             raise RuntimeError('All sources were filtered away')
         self.info = CompositionInfo(source_models)
-        #self.update_trt_model_ids()
 
     @property
     def trt_models(self):
@@ -508,15 +507,6 @@ class CompositeSourceModel(collections.Sequence):
                     # .trt_model_id is missing for source nodes
                     src.trt_model_id = trt_model.id
                 yield src
-
-    def update_trt_model_ids(self):
-        """
-        Set the trt_model_id attribute for each source in the model.
-        """
-        for trt_model in self.trt_models:
-            for src in trt_model:
-                if hasattr(src, 'trt_model_id'):
-                    src.trt_model_id = trt_model.id
 
     def get_rlzs_assoc(self, get_weight=lambda tm: tm.num_ruptures):
         """
