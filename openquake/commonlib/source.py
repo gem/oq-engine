@@ -108,10 +108,18 @@ class TrtModel(collections.Sequence):
                 source_stats_dict[trt] = TrtModel(trt)
             tm = source_stats_dict[trt]
             if not tm.sources:
-                tm.num_ruptures = 1
-                tm.sources.append(src)
 
-        # return ordered by TRT string TrtModels
+                # we increate the rupture counter by 1,
+                # to avoid filtering away the TRTModel
+                tm.num_ruptures = 1
+
+                # we append just one source per TRTModel, so that
+                # the memory occupation is insignificand and at
+                # the same time we avoid the RuntimeError
+                # "All sources were filtered away"
+                tm.append(src)
+
+        # return TrtModels, ordered by TRT string
         return sorted(source_stats_dict.itervalues())
 
     def __init__(self, trt, sources=None, num_ruptures=0,
