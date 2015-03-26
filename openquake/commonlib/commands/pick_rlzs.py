@@ -17,13 +17,13 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import cPickle
-from openquake.commonlib import sap
+from openquake.commonlib import sap, valid
 from openquake.baselib.general import ArrayDict
 from openquake.commonlib.commands.plot import combined_curves
 from openquake.commonlib.util import rmsep
 
 
-def pick_rlzs(hazard_pik):
+def pick_rlzs(hazard_pik, min_value=0.01):
     """
     An utility to print out the realizations, in order of distance
     from the mean.
@@ -39,9 +39,11 @@ def pick_rlzs(hazard_pik):
     for rlz in sorted(curves_by_rlz):
         mean = ArrayDict(mean_curves)
         arr = ArrayDict(curves_by_rlz[rlz])
-        dists.append((rmsep(mean, arr), rlz))
+        dists.append((rmsep(mean, arr, min_value), rlz))
     for dist, rlz in sorted(dists):
         print 'rlz=%s, rmsep=%s' % (rlz, dist)
 
 parser = sap.Parser(pick_rlzs)
 parser.arg('hazard_pik', '.pik file containing the result of a computation')
+parser.arg('min_value', 'ignore poes lower than that',
+           type=valid.positivefloat)
