@@ -414,7 +414,8 @@ class RiskInputFromRuptures(object):
             ri = self.__class__(self.imt_taxonomies, self.sitecol,
                                 self.assets_by_site, ses_ruptures,
                                 self.gsims, self.trunc_level,
-                                self.correl_model, self.eps_dict)
+                                self.correl_model, self.eps_dict,
+                                self.epsilon_sampling)
             ris.append(ri)
         return ris
 
