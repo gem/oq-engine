@@ -91,9 +91,6 @@ class EventLossCalculator(base.RiskCalculator):
         self.composite_source_model = hcalc.composite_source_model
         self.sitecol = hcalc.sitecol
         self.rlzs_assoc = hcalc.rlzs_assoc
-        self.ses_ruptures = sorted(
-            sum(haz_out['ruptures_by_trt'].itervalues(), []),
-            key=operator.attrgetter('tag'))
 
         correl_model = readinput.get_correl_model(oq)
         gsims_by_trt_id = self.rlzs_assoc.get_gsims_by_trt_id()
@@ -112,6 +109,7 @@ class EventLossCalculator(base.RiskCalculator):
 
             gsims = gsims_by_trt_id[trt_id]
 
+            sesruptures.sort(key=operator.attrgetter('tag'))
             ris = self.riskmodel.build_inputs_from_ruptures(
                 self.sitecol, self.assets_by_site, sesruptures,
                 gsims, oq.truncation_level, correl_model, eps_dict,

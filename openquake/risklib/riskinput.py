@@ -155,10 +155,10 @@ class RiskModel(collections.Mapping):
         :returns: a :class:`RiskInputFromRuptures` instance
         """
         imt_taxonomies = list(self.get_imt_taxonomies())
-        return RiskInputFromRuptures(
-            imt_taxonomies, sitecol, assets_by_site, ses_ruptures,
-            gsims, trunc_level, correl_model, eps_dict, epsilon_sampling
-        ).split()
+        return [RiskInputFromRuptures(
+            imt_taxonomies, sitecol, assets_by_site, ruptures,
+            gsims, trunc_level, correl_model, eps_dict)
+            for ruptures in block_splitter(ses_ruptures, epsilon_sampling)]
 
     def gen_outputs(self, riskinputs, rlzs_assoc):
         """
@@ -169,7 +169,7 @@ class RiskModel(collections.Mapping):
         :param rlzs_assoc: a RlzsAssoc instance
         """
         for riskinput in riskinputs:
-            out = self.gen_output(riskinput,rlzs_assoc)
+            out = self.gen_output(riskinput, rlzs_assoc)
             # out is a dict taxonomy, loss_type -> result_by_rlz
             for taxonomy, loss_type in sorted(out):
                 yield out[taxonomy, loss_type]
@@ -337,7 +337,7 @@ class RiskInputFromRuptures(object):
     :params eps_dict: a dictionary asset_id -> epsilons
     """
     def __init__(self, imt_taxonomies, sitecol, assets_by_site, ses_ruptures,
-                 gsims, trunc_level, correl_model, eps_dict, epsilon_sampling):
+                 gsims, trunc_level, correl_model, eps_dict):
         self.imt_taxonomies = imt_taxonomies
         self.sitecol = sitecol
         self.assets_by_site = assets_by_site
@@ -349,7 +349,6 @@ class RiskInputFromRuptures(object):
         self.correl_model = correl_model
         self.weight = len(ses_ruptures)
         self.eps_dict = eps_dict
-        self.epsilon_sampling = epsilon_sampling
 
     @property
     def tags(self):
@@ -398,26 +397,6 @@ class RiskInputFromRuptures(object):
                 hazards.append(hazard)
                 epsilons.append(self.eps_dict[asset.id])
         return assets, hazards, epsilons
-
-    def split(self):
-        """
-        Split a large RiskInputFromRuptures object into children objects,
-        each one with a slice of the ruptures and of the epsilons of the
-        parent object. The size of the slice is given by the parameter
-        .epsilon_sampling.
-        """
-        if len(self.ses_ruptures) <= self.epsilon_sampling:
-            return [self]
-        ris = []
-        for ses_ruptures in block_splitter(
-                self.ses_ruptures, self.epsilon_sampling):
-            ri = self.__class__(self.imt_taxonomies, self.sitecol,
-                                self.assets_by_site, ses_ruptures,
-                                self.gsims, self.trunc_level,
-                                self.correl_model, self.eps_dict,
-                                self.epsilon_sampling)
-            ris.append(ri)
-        return ris
 
     def __repr__(self):
         return '<%s IMT_taxonomies=%s, weight=%d>' % (
