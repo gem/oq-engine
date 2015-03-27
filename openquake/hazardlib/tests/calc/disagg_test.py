@@ -422,7 +422,7 @@ class DisaggregateTestCase(_BaseDisaggTestCase):
                     'No ruptures have contributed to the hazard at site '
                     '<Location=<Latitude=0.000000, Longitude=0.000000, '
                     'Depth=0.0000>, Vs30=2.0000, Vs30Measured=False, '
-                    'Depth1.0km=4.0000, Depth2.5km=5.0000>'
+                    'Depth1.0km=4.0000, Depth2.5km=5.0000, Backarc=False>'
                 )
                 self.assertEqual(1, len(w))
                 [warning] = list(w)

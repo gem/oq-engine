@@ -42,6 +42,9 @@ class Site(object):
     :param z2pt5:
         Vertical distance from earth surface to the layer where seismic waves
         start to propagate with a speed above 2.5 km/sec, in km.
+    :param backarc":
+        Boolean value, ``True`` if the site is in the subduction backarc and
+        ``False`` if it is in the subduction forearc or is unknown
     :param id:
         Optional parameter with default 0. If given, it should be an
         integer identifying the site univocally.
@@ -53,9 +56,10 @@ class Site(object):
 
         :class:`Sites <Site>` are pickleable
     """
-    __slots__ = 'location vs30 vs30measured z1pt0 z2pt5 id'.split()
+    __slots__ = 'location vs30 vs30measured z1pt0 z2pt5 backarc id'.split()
 
-    def __init__(self, location, vs30, vs30measured, z1pt0, z2pt5, id=0):
+    def __init__(self, location, vs30, vs30measured, z1pt0, z2pt5,
+                 backarc=False, id=0):
         if not vs30 > 0:
             raise ValueError('vs30 must be positive')
         if not z1pt0 > 0:
@@ -67,6 +71,7 @@ class Site(object):
         self.vs30measured = vs30measured
         self.z1pt0 = z1pt0
         self.z2pt5 = z2pt5
+        self.backarc = backarc
         self.id = id
 
     def __str__(self):
@@ -75,13 +80,14 @@ class Site(object):
         >>> loc = openquake.hazardlib.geo.point.Point(1, 2, 3)
         >>> str(Site(loc, 760.0, True, 100.0, 5.0))
         '<Location=<Latitude=2.000000, Longitude=1.000000, Depth=3.0000>, \
-Vs30=760.0000, Vs30Measured=True, Depth1.0km=100.0000, Depth2.5km=5.0000>'
+Vs30=760.0000, Vs30Measured=True, Depth1.0km=100.0000, Depth2.5km=5.0000, \
+Backarc=False>'
         """
         return (
             "<Location=%s, Vs30=%.4f, Vs30Measured=%r, Depth1.0km=%.4f, "
-            "Depth2.5km=%.4f>") % (
+            "Depth2.5km=%.4f, Backarc=%r>") % (
             self.location, self.vs30, self.vs30measured, self.z1pt0,
-            self.z2pt5)
+            self.z2pt5, self.backarc)
 
     def __repr__(self):
         """
@@ -129,7 +135,8 @@ class SiteCollection(object):
             reference_vs30_value,
             reference_vs30_type,
             reference_depth_to_1pt0km_per_sec,
-            reference_depth_to_2pt5km_per_sec.
+            reference_depth_to_2pt5km_per_sec,
+            reference_backarc
         """
         assert len(lons) == len(lats) == len(site_ids), (
             len(lons), len(lats), len(site_ids))
@@ -143,6 +150,7 @@ class SiteCollection(object):
         self._vs30measured = sitemodel.reference_vs30_type == 'measured'
         self._z1pt0 = sitemodel.reference_depth_to_1pt0km_per_sec
         self._z2pt5 = sitemodel.reference_depth_to_2pt5km_per_sec
+        self._backarc = sitemodel.reference_backarc
         return self
 
     def __init__(self, sites):
@@ -155,6 +163,7 @@ class SiteCollection(object):
         self._vs30measured = numpy.zeros(n, dtype=bool)
         self._z1pt0 = numpy.zeros(n, dtype=float)
         self._z2pt5 = numpy.zeros(n, dtype=float)
+        self._backarc = numpy.zeros(n, dtype=bool)
 
         for i in xrange(n):
             self.sids[i] = sites[i].id
@@ -164,6 +173,7 @@ class SiteCollection(object):
             self._vs30measured[i] = sites[i].vs30measured
             self._z1pt0[i] = sites[i].z1pt0
             self._z2pt5[i] = sites[i].z2pt5
+            self._backarc[i] = sites[i].backarc
 
         # protect arrays from being accidentally changed. it is useful
         # because we pass these arrays directly to a GMPE through
@@ -172,7 +182,7 @@ class SiteCollection(object):
         # subsequent calculation. note that this doesn't protect arrays from
         # being changed by calling itemset()
         for arr in (self._vs30, self._vs30measured, self._z1pt0, self._z2pt5,
-                    self.lons, self.lats, self.sids):
+                    self.lons, self.lats, self._backarc, self.sids):
             arr.flags.writeable = False
 
     @property
@@ -193,11 +203,13 @@ class SiteCollection(object):
         if isinstance(self.vs30, float):  # from points
             for i, location in enumerate(self.mesh):
                 yield Site(location, self._vs30, self._vs30measured,
-                           self._z1pt0, self._z2pt5, self.sids[i])
+                           self._z1pt0, self._z2pt5, self._backarc,
+                           self.sids[i])
         else:  # from sites
             for i, location in enumerate(self.mesh):
                 yield Site(location, self.vs30[i], self.vs30measured[i],
-                           self.z1pt0[i], self.z2pt5[i], self.sids[i])
+                           self.z1pt0[i], self.z2pt5[i], self.backarc[i],
+                           self.sids[i])
 
     def filter(self, mask):
         """
@@ -248,7 +260,7 @@ class SiteCollection(object):
         return '<SiteCollection with %d sites>' % self.total_sites
 
 # adding a number of properties for the site model data
-for name in 'vs30 vs30measured z1pt0 z2pt5'.split():
+for name in 'vs30 vs30measured z1pt0 z2pt5 backarc'.split():
     def getarray(sc, name=name):  # sc is a SiteCollection
         value = getattr(sc, '_' + name)
         if isinstance(value, (float, bool)):
@@ -387,7 +399,8 @@ class FilteredSiteCollection(object):
         """
         for i, location in enumerate(self.mesh):
             yield Site(location, self.vs30[i], self.vs30measured[i],
-                       self.z1pt0[i], self.z2pt5[i], self.sids[i])
+                       self.z1pt0[i], self.z2pt5[i], self.sids[i],
+                       self.backarc[i])
 
     def __len__(self):
         """Return the number of filtered sites"""
@@ -398,7 +411,7 @@ class FilteredSiteCollection(object):
             len(self.indices), self.total_sites)
 
 # attach a number of properties filtering the arrays
-for name in 'vs30 vs30measured z1pt0 z2pt5 lons lats sids'.split():
+for name in 'vs30 vs30measured z1pt0 z2pt5 backarc lons lats sids'.split():
     prop = property(
         lambda fsc, name=name: getattr(fsc.complete, name).take(fsc.indices),
         doc='Extract %s array from FilteredSiteCollection' % name)
