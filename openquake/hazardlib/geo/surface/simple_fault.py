@@ -24,6 +24,7 @@ import numpy
 from openquake.hazardlib.geo.surface.base import BaseQuadrilateralSurface
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo import utils as geo_utils
+from openquake.hazardlib.geo.point import Point
 
 
 class SimpleFaultSurface(BaseQuadrilateralSurface):
@@ -170,18 +171,20 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
         return cls(mesh)
 
     @classmethod
-    def get_fault_vertices_3d(cls, fault_trace, upper_seismogenic_depth,
-                              lower_seismogenic_depth, dip):
+    def get_fault_patch_vertices(cls, fault_trace, upper_seismogenic_depth,
+                                 lower_seismogenic_depth, dip, index_patch=1):
         """
-        Get surface main vertexes.
-
+        Get surface main vertices.
         Parameters are the same as for :meth:`from_fault_data`, excluding
         mesh spacing.
 
+        :param index_patch:
+            Indicate the patch of the fault in order to output the vertices.
+            The fault patch numbering follows the same logic of the right-hand
+            rule i.e. patch with index 1 is the first patch along the trace.
         :returns:
-            Coordinates of fault surface vertexes in Longitude, Latitude, and
-            Depth.
-            The order of vertexs is given clockwisely
+            Four :class:~openquake.hazardlib.geo.point.Point objects
+            representing the four vertices of the target patch.
         """
         # Similar to :meth:`from_fault_data`, we just don't resample edges
         dip_tan = math.tan(math.radians(dip))
@@ -211,11 +214,23 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
             t_lat.append(bottom_edge_point.latitude)
             t_dep.append(lower_seismogenic_depth)
 
-        all_lons = numpy.array(lons + list(reversed(t_lon)), float)
-        all_lats = numpy.array(lats + list(reversed(t_lat)), float)
-        all_deps = numpy.array(deps + list(reversed(t_dep)), float)
+            all_lons = numpy.array(lons + list(reversed(t_lon)), float)
+            all_lats = numpy.array(lats + list(reversed(t_lat)), float)
+            all_deps = numpy.array(deps + list(reversed(t_dep)), float)
 
-        return all_lons, all_lats, all_deps
+        p0 = Point(all_lons[index_patch - 1], all_lats[index_patch - 1],
+                   all_deps[index_patch - 1])
+        p1 = Point(all_lons[index_patch], all_lats[index_patch],
+                   all_deps[index_patch])
+        p2 = Point(all_lons[2 * len(fault_trace) - (index_patch + 1)],
+                   all_lats[2 *
+                   len(fault_trace) - (index_patch + 1)],
+                   all_deps[2 * len(fault_trace) - (index_patch + 1)])
+        p3 = Point(all_lons[2 * len(fault_trace) - index_patch],
+                   all_lats[2 * len(fault_trace) - index_patch],
+                   all_deps[2 * len(fault_trace) - index_patch])
+
+        return p0, p1, p2, p3
 
     @classmethod
     def get_surface_vertexes(cls, fault_trace,
