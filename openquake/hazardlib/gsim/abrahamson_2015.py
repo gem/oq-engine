@@ -45,7 +45,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
     The adjustment comes in the form of the parameter DeltaC1, which is
     period dependent for interface events. To capture the epistemic uncertainty
     in DeltaC1, three models are proposed: a 'central', 'upper' and 'lower'
-    model. The current class implements the 'centra' model, whilst additional
+    model. The current class implements the 'central' model, whilst additional
     classes will implement the 'upper' and 'lower' alternatives.
     """
 
@@ -200,7 +200,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
 
     def _get_stddevs(self, C, stddev_types, num_sites):
         """
-        Return standard deviations as defined in table 3
+        Return standard deviations as defined in Table 3
         """
         stddevs = []
         for stddev_type in stddev_types:
@@ -328,7 +328,7 @@ class AbrahamsonEtAl2015SSlab(AbrahamsonEtAl2015SInter):
 
     def _get_delta_c1(self, imt):
         """
-        Returns them agnitude scaling parameter deltaC1 which is fixed at -0.3
+        Returns the magnitude scaling parameter deltaC1 which is fixed at -0.3
         for the central branch of the in-slab model
         """
         return -0.3
@@ -346,7 +346,7 @@ class AbrahamsonEtAl2015SSlab(AbrahamsonEtAl2015SInter):
 
     def _compute_distance_term(self, C, mag, dists):
         """
-        Computes the distance scaling term, as contained within equation (1)
+        Computes the distance scaling term, as contained within equation (1b)
         """
         return ((C['theta2'] + C['theta14'] + self.CONSTS['theta3'] *
                 (mag - 7.8)) * np.log(dists.rhypo + self.CONSTS['c4'] *
