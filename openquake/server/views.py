@@ -151,7 +151,8 @@ def calc_info(request, calc_id):
 def calc(request):
     """
     Get a list of calculations and report their id, status, job_type,
-    description, and a url where more detailed information can be accessed.
+    is_running, description, and a url where more detailed information
+    can be accessed.
 
     Responses are in JSON.
     """
@@ -160,11 +161,11 @@ def calc(request):
     calc_data = _get_calcs(request.GET)
 
     response_data = []
-    for hc_id, status, job_type, desc in calc_data:
+    for hc_id, status, job_type, is_running, desc in calc_data:
         url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
         response_data.append(
             dict(id=hc_id, status=status, job_type=job_type,
-                 description=desc, url=url))
+                 is_running=is_running, description=desc, url=url))
 
     return HttpResponse(content=json.dumps(response_data),
                         content_type=JSON)
@@ -288,8 +289,8 @@ def _get_calcs(request_get_dict):
         relevant = request_get_dict.get('relevant')
         job_params = job_params.filter(job__relevant=valid.boolean(relevant))
 
-    return [(jp.job.id, jp.job.status, jp.job.job_type, jp.value)
-            for jp in job_params]
+    return [(jp.job.id, jp.job.status, jp.job.job_type, jp.job.is_running,
+             jp.value) for jp in job_params]
 
 
 @require_http_methods(['GET'])
