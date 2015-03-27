@@ -58,6 +58,7 @@ class OqParam(valid.ParamSet):
         description=valid.utf8_not_empty,
         distance_bin_width=valid.positivefloat,
         mag_bin_width=valid.positivefloat,
+        epsilon_sampling=valid.positiveint,
         export_dir=valid.utf8,
         export_multi_curves=valid.boolean,
         ground_motion_correlation_model=valid.NoneOr(

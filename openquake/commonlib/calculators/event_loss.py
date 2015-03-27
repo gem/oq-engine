@@ -98,7 +98,8 @@ class EventLossCalculator(base.RiskCalculator):
 
         logging.info('Populating the risk inputs')
         self.riskinputs = []
-        for trt_id, sesruptures in haz_out['ruptures_by_trt'].iteritems():
+        for trt_id, sesruptures in sorted(
+                haz_out['ruptures_by_trt'].iteritems()):
             # there should be different epsilons for each SES collection
             # and for each taxonomy
             eps_dict = riskinput.make_eps_dict(
@@ -116,6 +117,7 @@ class EventLossCalculator(base.RiskCalculator):
                 epsilon_sampling)
 
             self.riskinputs.extend(ris)
+        logging.info('Built %d risk inputs', len(self.riskinputs))
 
     def post_execute(self, result):
         saved = {}
