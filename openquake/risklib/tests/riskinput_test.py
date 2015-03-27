@@ -56,9 +56,10 @@ class RiskInputTestCase(unittest.TestCase):
             self.assets_by_site, len(ses_ruptures), oq.master_seed,
             getattr(oq, 'asset_correlation', 0))
 
-        ri = self.riskmodel.build_input_from_ruptures(
+        [ri] = self.riskmodel.build_inputs_from_ruptures(
             self.sitecol, self.assets_by_site, ses_ruptures,
-            gsims, oq.truncation_level, correl_model, eps_dict)
+            gsims, oq.truncation_level, correl_model, eps_dict,
+            epsilon_sampling=1000)
 
         assets, hazards, epsilons = ri.get_all()
         self.assertEqual([a.id for a in assets],
