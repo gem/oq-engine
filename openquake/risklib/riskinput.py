@@ -164,23 +164,25 @@ class RiskModel(collections.Mapping):
         :param rlzs_assoc: a RlzsAssoc instance
         """
         for riskinput in riskinputs:
-            out = self.gen_output(riskinput, rlzs_assoc)
-            # out is a dict taxonomy, loss_type -> result_by_rlz
-            for taxonomy, loss_type in sorted(out):
-                yield out[taxonomy, loss_type]
+            for section in riskinput:
+                out = self.gen_output(riskinput, section, rlzs_assoc)
+                # out is a dict taxonomy, loss_type -> result_by_rlz
+                for taxonomy, loss_type in sorted(out):
+                    yield out[taxonomy, loss_type]
 
-    def gen_output(self, riskinput, rlzs_assoc):
+    def gen_output(self, riskinput, section, rlzs_assoc):
         """
         :param riskinput: RiskInput instance
+        :param section: a section of the RiskInput instance
         :param rlzs_assoc: a RlzsAssoc instance
         :returns: a map taxonomy, loss_type -> results by realization
         """
-        triples = zip(*riskinput.get_all())
+        ahes = zip(*riskinput.get_all(section))  # assets, hazards, epsilons
         output = {}
         for imt, taxonomies in riskinput.imt_taxonomies:
             for taxonomy in taxonomies:
                 assets, hazards, epsilons = [], [], []
-                for asset, hazard, epsilon in triples:
+                for asset, hazard, epsilon in ahes:
                     if asset.taxonomy == taxonomy:
                         assets.append(asset)
                         hazards.append(hazard[imt])
@@ -255,7 +257,7 @@ class RiskInput(object):
         """Return a list of pairs (imt, taxonomies) with a single element"""
         return [(self.imt, self.taxonomies)]
 
-    def get_all(self):
+    def get_all(self, dummy):
         """
         Return dictionaries with
         assets, hazards and epsilons for each taxonomy.
@@ -267,6 +269,9 @@ class RiskInput(object):
                 hazards.append({self.imt: hazard})
                 epsilons.append(self.eps_dict.get(asset.id, None))
         return assets, hazards, epsilons
+
+    def __iter__(self):
+        yield
 
     def __repr__(self):
         return '<%s IMT=%s, taxonomy=%s, weight=%d>' % (
@@ -354,8 +359,10 @@ class RiskInputFromRuptures(object):
         """
         return [sr.tag for sr in self.ses_ruptures]
 
-    def compute_hazard_by_site(self):
+    def compute_hazard_by_site(self, rupturegroup):
         """
+        :param rupturegroup:
+            an ordered list of SESRuptures corresponding to the same rupture
         :returns:
             a list of hazard dictionaries, one for each site; each
             dictionary for each IMT contains a dictionary key->array(R)
@@ -364,7 +371,7 @@ class RiskInputFromRuptures(object):
         from openquake.commonlib.calculators.event_based import gen_gmf_by_imt
         imts = sorted(set(imt for imt, _ in self.imt_taxonomies))
         ddic = gen_gmf_by_imt(
-            self.ses_ruptures, self.sitecol, map(from_string, imts),
+            rupturegroup, self.sitecol, map(from_string, imts),
             self.gsims, self.trunc_level, self.correl_model)
         for key, gmf_by_tag in ddic.iteritems():
             items = sorted(gmf_by_tag.iteritems())
@@ -379,13 +386,13 @@ class RiskInputFromRuptures(object):
                     out[i][imt][key] = row
         return out
 
-    def get_all(self):
+    def get_all(self, rupturegroup):
         """
         :returns:
             dictionaries with assets, hazards and epsilons for each taxonomy.
         """
         assets, hazards, epsilons = [], [], []
-        hazard_by_site = self.compute_hazard_by_site()
+        hazard_by_site = self.compute_hazard_by_site(rupturegroup)
         for hazard, assets_ in zip(hazard_by_site, self.assets_by_site):
             for asset in assets_:
                 assets.append(asset)
@@ -414,6 +421,11 @@ class RiskInputFromRuptures(object):
                                 self.correl_model, eps_dict)
             ris.append(ri)
         return ris
+
+    def __iter__(self):
+        for rupture, group in itertools.groupby(
+                self.ses_ruptures, operator.attrgetter('rupture')):
+            yield list(group)
 
     def __repr__(self):
         return '<%s IMT_taxonomies=%s, weight=%d>' % (
