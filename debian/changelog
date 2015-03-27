@@ -1,7 +1,10 @@
   [Michele Simionato]
   * Added an event_loss calculator which is able to compute the event loss
     table and also event losses per asset directly from the ruptures
-  * Added an `oq-lite pick_rlzs` command to plot the distance of the
+  * Extended the `oq-lite info` command to plot some useful informations
+    about the source model
+  * Ported the classical_risk calculator to oq-lite
+  * Added an `oq-lite pick_rlzs` command to display the distance of the
     hazard curves from the mean, by using the RMSEP distance
   * Ported the scenario_risk calculator to oq-lite
   * Added a check to forbid exposures with an asset number=0

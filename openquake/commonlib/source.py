@@ -34,11 +34,12 @@ class LtRealization(object):
     Composite realization build on top of a source model realization and
     a GSIM realization.
     """
-    def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight):
+    def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight, col_ids=()):
         self.ordinal = ordinal
         self.sm_lt_path = sm_lt_path
         self.gsim_rlz = gsim_rlz
         self.weight = weight
+        self.col_ids = col_ids
 
     def __repr__(self):
         if self.col_ids:
@@ -56,6 +57,17 @@ class LtRealization(object):
         """An unique identifier for effective realizations"""
         return '_'.join(self.sm_lt_path) + ',' + self.gsim_rlz.uid
 
+
+def get_skeleton(sm):
+    """
+    Return a copy of the source model `sm` which is empty, i.e. without
+    sources.
+    """
+    trt_models = [TrtModel(tm.trt, [], tm.num_ruptures, tm.min_mag,
+                           tm.max_mag, tm.gsims, tm.id)
+                  for tm in sm.trt_models]
+    return SourceModel(sm.name, sm.weight, sm.path, trt_models, sm.gsim_lt,
+                       sm.ordinal, sm.samples)
 
 SourceModel = collections.namedtuple(
     'SourceModel', 'name weight path trt_models gsim_lt ordinal samples')
@@ -82,6 +94,33 @@ class TrtModel(collections.Sequence):
         the model to a database object
     """
     POINT_SOURCE_WEIGHT = 1 / 40.
+
+    @classmethod
+    def collect(cls, sources):
+        """
+        :param sources: dictionaries with a key 'tectonicRegion'
+        :returns: an ordered list of TrtModel instances
+        """
+        source_stats_dict = {}
+        for src in sources:
+            trt = src['tectonicRegion']
+            if trt not in source_stats_dict:
+                source_stats_dict[trt] = TrtModel(trt)
+            tm = source_stats_dict[trt]
+            if not tm.sources:
+
+                # we increate the rupture counter by 1,
+                # to avoid filtering away the TRTModel
+                tm.num_ruptures = 1
+
+                # we append just one source per TRTModel, so that
+                # the memory occupation is insignificand and at
+                # the same time we avoid the RuntimeError
+                # "All sources were filtered away"
+                tm.append(src)
+
+        # return TrtModels, ordered by TRT string
+        return sorted(source_stats_dict.itervalues())
 
     def __init__(self, trt, sources=None, num_ruptures=0,
                  min_mag=None, max_mag=None, gsims=None, id=0):
@@ -264,8 +303,7 @@ class RlzsAssoc(collections.Mapping):
         rlzs = []
         for i, gsim_rlz in enumerate(realizations):
             weight = float(lt_model.weight) * float(gsim_rlz.weight)
-            rlz = LtRealization(idx, lt_model.path, gsim_rlz, weight)
-            rlz.col_ids = set()
+            rlz = LtRealization(idx, lt_model.path, gsim_rlz, weight, set())
             self.gsim_by_trt[rlz] = gsim_rlz.value
             for trt_model in lt_model.trt_models:
                 trt = trt_model.trt
@@ -355,8 +393,12 @@ class RlzsAssoc(collections.Mapping):
     def __str__(self):
         pairs = []
         for key in sorted(self.rlzs_assoc):
-            pairs.append(('%s,%s' % key, map(str, self.rlzs_assoc[key])))
-        return '{%s}' % '\n'.join('%s: %s' % pair for pair in pairs)
+            rlzs = map(str, self.rlzs_assoc[key])
+            if len(rlzs) > 10:  # short representation
+                rlzs = ['%d realizations' % len(rlzs)]
+            pairs.append(('%s,%s' % key, rlzs))
+        return '<%s\n%s>' % (self.__class__.__name__,
+                             '\n'.join('%s: %s' % pair for pair in pairs))
 
 
 class CompositionInfo(object):
@@ -367,6 +409,7 @@ class CompositionInfo(object):
     def __init__(self, source_models):
         self._col_dict = {}  # dictionary trt_id, idx -> col_idx
         self._num_samples = {}  # trt_id -> num_samples
+        self.source_models = map(get_skeleton, source_models)
         col_idx = 0
         for sm in source_models:
             for trt_model in sm.trt_models:
@@ -418,6 +461,17 @@ class CompositionInfo(object):
         for (trt_id, idx), col_idx in sorted(self._col_dict.iteritems()):
             yield trt_id, idx, col_idx
 
+    def __repr__(self):
+        info_by_model = collections.OrderedDict(
+            (sm.path, ('_'.join(sm.path), sm.name,
+                       [tm.id for tm in sm.trt_models],
+                       sm.gsim_lt.get_num_paths() * sm.samples))
+            for sm in self.source_models)
+        summary = ['%s, %s, trt=%s: %d realization(s)' % ibm
+                   for ibm in info_by_model.itervalues()]
+        return '<%s\n%s>' % (
+            self.__class__.__name__, '\n'.join(summary))
+
 
 class CompositeSourceModel(collections.Sequence):
     """
@@ -449,7 +503,9 @@ class CompositeSourceModel(collections.Sequence):
         """
         for trt_model in self.trt_models:
             for src in trt_model:
-                src.trt_model_id = trt_model.id
+                if hasattr(src, 'trt_model_id'):
+                    # .trt_model_id is missing for source nodes
+                    src.trt_model_id = trt_model.id
                 yield src
 
     def get_rlzs_assoc(self, get_weight=lambda tm: tm.num_ruptures):
@@ -491,7 +547,7 @@ class CompositeSourceModel(collections.Sequence):
                 tot_weight = sum(rlz.weight for rlz in assoc.realizations)
                 if tot_weight == 0:
                     raise ValueError('All realizations have zero weight??')
-                elif tot_weight < 1:
+                elif abs(tot_weight - 1) > 1E-12:  # allow for rounding errors
                     logging.warn('Some source models are not contributing, '
                                  'weights are being rescaled')
                 for rlz in assoc.realizations:

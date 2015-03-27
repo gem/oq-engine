@@ -21,6 +21,7 @@ import shutil
 import tempfile
 import mock
 import unittest
+import collections
 from StringIO import StringIO
 
 from numpy.testing import assert_allclose
@@ -390,3 +391,33 @@ PGA 12.0 42.2 0.64 0.65
             readinput.get_mesh_csvdata(
                 fakecsv, ['PGV'], [3], valid.probabilities)
         self.assertIn("Got 'PGA', expected PGV", str(ctx.exception))
+
+    def test_get_mesh_hcurves_ok(self):
+        fakecsv = StringIO("""\
+0 0, 0.42 0.24 0.14, 0.25 0.16 0.08
+0 1, 0.42 0.24 0.14, 0.45 0.40 0.18
+0 2, 0.42 0.24 0.14, 0.65 0.64 0.60
+0 3, 0.42 0.24 0.14, 0.25 0.21 0.20
+0 4, 0.42 0.24 0.04, 0.35 0.31 0.30
+0 5, 0.42 0.24 0.04, 0.55 0.51 0.50
+""")
+        oqparam = mock.Mock()
+        oqparam.inputs = dict(hazard_curves=fakecsv)
+        oqparam.imtls = collections.OrderedDict([
+            ('PGA', [0.1, 0.2, 0.3]),
+            ('PGV', [0.11, 0.22, 0.33])])
+        mesh, data = readinput.get_mesh_hcurves(oqparam)
+        assert_allclose(mesh.lons, [0., 0., 0., 0., 0., 0.])
+        assert_allclose(mesh.lats, [0., 1., 2., 3., 4., 5.])
+        assert_allclose(data['PGA'], [[0.42, 0.24, 0.14],
+                                      [0.42, 0.24, 0.14],
+                                      [0.42, 0.24, 0.14],
+                                      [0.42, 0.24, 0.14],
+                                      [0.42, 0.24, 0.04],
+                                      [0.42, 0.24, 0.04]])
+        assert_allclose(data['PGV'], [[0.25, 0.16, 0.08],
+                                      [0.45, 0.4, 0.18],
+                                      [0.65, 0.64, 0.6],
+                                      [0.25, 0.21, 0.2],
+                                      [0.35, 0.31, 0.3],
+                                      [0.55, 0.51, 0.5]])

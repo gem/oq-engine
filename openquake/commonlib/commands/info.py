@@ -17,19 +17,39 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import textwrap
-from openquake.commonlib import sap
+from openquake.commonlib import sap, readinput
 from openquake.commonlib.calculators import base
 
 
-def info(name):
+# the documentation about how to use this feature can be found
+# in the file effective-realizations.rst
+def info(name, filtersources=False):
     """
-    Give information about the given name. For the moment, only the
-    names of the available calculators are recognized.
+    Give information. You can pass the name of an available calculator,
+    a job.ini file, or a zip archive with the input files.
     """
     if name in base.calculators:
         print textwrap.dedent(base.calculators[name].__doc__.strip())
+    elif name.endswith('.ini'):
+        oqparam = readinput.get_oqparam(name)
+        sitecol = (readinput.get_site_collection(oqparam)
+                   if filtersources else None)
+        csm = readinput.get_composite_source_model(
+            oqparam, sitecol, prefilter=filtersources, in_memory=filtersources)
+        assoc = csm.get_rlzs_assoc()
+        print assoc.csm_info
+        print assoc
+        if filtersources:
+            # display information about the size of the hazard curve matrices
+            tup = (len(sitecol),
+                   sum(len(imls) for imls in oqparam.imtls.values() if imls),
+                   len(assoc))
+            size_mb = (tup[0] * tup[1] * tup[2] * 8.) / 1024 / 1024
+            if size_mb:
+                print "sites, levels, keys = %s [~%d MB]" % (tup, size_mb)
     else:
         print "No info for '%s'" % name
 
 parser = sap.Parser(info)
-parser.arg('name', 'calculator name', choices=base.calculators)
+parser.arg('name', 'calculator name, job.ini file or zip archive')
+parser.flg('filtersources', 'flag to enable filtering of the source models')
