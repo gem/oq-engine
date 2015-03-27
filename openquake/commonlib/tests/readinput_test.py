@@ -61,6 +61,7 @@ export_dir = %s
                 'calculation_mode': 'classical',
                 'truncation_level': 0.0,
                 'random_seed': 0,
+                'reference_backarc': False,
                 'maximum_distance': 1.0,
                 'inputs': {'job_ini': job_config,
                            'site_model': site_model_input},
@@ -71,6 +72,8 @@ export_dir = %s
 
             with mock.patch('logging.warn') as warn:
                 params = vars(readinput.get_oqparam(job_config))
+                print params
+                print expected_params
                 self.assertEqual(expected_params, params)
                 self.assertEqual(['site_model', 'job_ini'],
                                  params['inputs'].keys())
@@ -114,6 +117,7 @@ export_dir = %s
                 'truncation_level': 3.0,
                 'random_seed': 5,
                 'maximum_distance': 1.0,
+                'reference_backarc': False,
                 'inputs': {'job_ini': source,
                            'sites': sites_csv},
                 'reference_depth_to_1pt0km_per_sec': 100.0,
@@ -159,20 +163,20 @@ class ClosestSiteModelTestCase(unittest.TestCase):
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
     <siteModel>
-        <site lon="0.0" lat="0.0" vs30="1200.0" vs30Type="inferred" z1pt0="100.0" z2pt5="2.0" />
-        <site lon="0.0" lat="0.1" vs30="600.0" vs30Type="inferred" z1pt0="100.0" z2pt5="2.0" />
-        <site lon="0.0" lat="0.2" vs30="200.0" vs30Type="inferred" z1pt0="100.0" z2pt5="2.0" />
+        <site lon="0.0" lat="0.0" vs30="1200.0" vs30Type="inferred" z1pt0="100.0" z2pt5="2.0" backarc="False" />
+        <site lon="0.0" lat="0.1" vs30="600.0" vs30Type="inferred" z1pt0="100.0" z2pt5="2.0" backarc="True" />
+        <site lon="0.0" lat="0.2" vs30="200.0" vs30Type="inferred" z1pt0="100.0" z2pt5="2.0" backarc="False" />
     </siteModel>
 </nrml>''')
         oqparam = mock.Mock()
         oqparam.inputs = dict(site_model=data)
         expected = [
             valid.SiteParam(z1pt0=100.0, z2pt5=2.0, measured=False,
-                            vs30=1200.0, lon=0.0, lat=0.0),
+                            vs30=1200.0, backarc=False, lon=0.0, lat=0.0),
             valid.SiteParam(z1pt0=100.0, z2pt5=2.0, measured=False,
-                            vs30=600.0, lon=0.0, lat=0.1),
+                            vs30=600.0, backarc=True, lon=0.0, lat=0.1),
             valid.SiteParam(z1pt0=100.0, z2pt5=2.0, measured=False,
-                            vs30=200.0, lon=0.0, lat=0.2)]
+                            vs30=200.0, backarc=False, lon=0.0, lat=0.2)]
         self.assertEqual(list(readinput.get_site_model(oqparam)), expected)
 
 

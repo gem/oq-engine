@@ -249,7 +249,7 @@ def get_site_collection(oqparam, mesh=None, site_ids=None,
                 get_closest(pt.longitude, pt.latitude)
             sitecol.append(
                 site.Site(pt, param.vs30, param.measured,
-                          param.z1pt0, param.z2pt5, i))
+                          param.z1pt0, param.z2pt5, param.backarc, i))
         return site.SiteCollection(sitecol)
 
     # else use the default site params
