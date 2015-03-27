@@ -35,12 +35,10 @@ HAZARD_CALCULATORS = [
 
 RISK_CALCULATORS = [
     'classical_risk', 'event_based_risk', 'scenario_risk',
-    'classical_bcr', 'event_based_bcr', 'scenario_damage', 'classical_damage']
+    'classical_bcr', 'event_based_bcr', 'scenario_damage',
+    'classical_damage', 'event_loss']
 
-EXPERIMENTAL_CALCULATORS = [
-    'event_loss']
-
-CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS + EXPERIMENTAL_CALCULATORS
+CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS
 
 
 class OqParam(valid.ParamSet):
@@ -100,6 +98,7 @@ class OqParam(valid.ParamSet):
         reference_depth_to_2pt5km_per_sec=valid.positivefloat,
         reference_vs30_type=valid.Choice('measured', 'inferred'),
         reference_vs30_value=valid.positivefloat,
+        reference_backarc=valid.boolean,
         region=valid.coordinates,
         region_constraint=valid.wkt_polygon,
         region_grid_spacing=valid.positivefloat,
@@ -120,6 +119,8 @@ class OqParam(valid.ParamSet):
 
     def __init__(self, **names_vals):
         super(OqParam, self).__init__(**names_vals)
+        if not hasattr(self, 'reference_backarc'):
+            self.reference_backarc = False
         if hasattr(self, 'intensity_measure_types'):
             self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
             # remove the now redundant parameter
@@ -148,8 +149,7 @@ class OqParam(valid.ParamSet):
         Returns an OrderedDict with the risk intensity measure types and
         levels, if given, or the hazard ones.
         """
-        imtls = getattr(self, 'risk_imtls', None) or getattr(
-            self, 'hazard_imtls', None)
+        imtls = getattr(self, 'hazard_imtls', None) or self.risk_imtls
         return collections.OrderedDict(sorted(imtls.items()))
 
     def is_valid_truncation_level_disaggregation(self):

@@ -86,7 +86,7 @@ class Asset(object):
         :returns: the total asset value for `loss_type`
         """
         value = self.values[loss_type]
-        return None if value is None else value * self.number * self.area
+        return numpy.nan if value is None else value * self.number * self.area
 
     def deductible(self, loss_type):
         """
@@ -111,6 +111,19 @@ class Asset(object):
         return '<Asset %s>' % self.id
 
 
+def get_values(loss_type, assets):
+    """
+    A numpy array with the values for the given assets, depending on the
+    loss_type.
+    """
+    if loss_type == 'fatalities' and hasattr(assets[0], 'values'):
+        # this is called only in oq-lite, return naked value
+        values = numpy.array([a.values['fatalities'] for a in assets])
+    else:  # return dressed value
+        values = numpy.array([a.value(loss_type) for a in assets])
+    return values
+
+
 class Workflow(object):
     """
     Base class. Can be used in the tests as a mock.
@@ -127,6 +140,7 @@ class Workflow(object):
         in lexicographic order
         """
         return sorted(self.risk_functions)
+
 
 
 @registry.add('classical_risk')
@@ -747,11 +761,7 @@ class Scenario(Workflow):
 
     def __call__(self, loss_type, assets, ground_motion_values, epsilons,
                  _tags=None):
-        if loss_type == 'fatalities' and hasattr(assets[0], 'values'):
-            # this is called only in oq-lite
-            values = numpy.array([a.values[loss_type] for a in assets])
-        else:
-            values = numpy.array([a.value(loss_type) for a in assets])
+        values = get_values(loss_type, assets)
 
         # a matrix of N x R elements
         loss_ratio_matrix = self.risk_functions[loss_type].apply_to(

@@ -52,24 +52,6 @@ class DuplicatedPoint(Exception):
     """
 
 
-def create_detect_file(*candidates):
-    """
-    Create function which is able to extract a certain file from a list
-    of files, by looking at the given candidates, in order. Usually the
-    candidates are `job.ini`, 'job_hazard.ini', 'job_risk.ini'.
-    """
-    def detect_file(files):
-        for candidate in candidates:
-            try:
-                file_idx = map(os.path.basename, files).index(candidate)
-                return files[file_idx]
-            except ValueError:
-                pass
-        raise IOError("No suitable file found in %s for %s" % (
-            str(files), str(candidates)))
-    return detect_file
-
-
 def collect_files(dirpath, cond=lambda fullname: True):
     """
     Recursively collect the files contained inside dirpath.
@@ -88,7 +70,7 @@ def collect_files(dirpath, cond=lambda fullname: True):
     return files
 
 
-def extract_from_zip(path, detect_file):
+def extract_from_zip(path, candidates):
     """
     Given a zip archive and a function to detect the presence of a given
     filename, unzip the archive into a temporary directory and return the
@@ -96,12 +78,13 @@ def extract_from_zip(path, detect_file):
     within the archive.
 
     :param path: pathname of the archive
-    :param detect_file: searching function
+    :param candidates: list of names to search for
     """
     temp_dir = tempfile.mkdtemp()
     with zipfile.ZipFile(path) as archive:
         archive.extractall(temp_dir)
-    return detect_file(collect_files(temp_dir))
+    return [f for f in collect_files(temp_dir)
+            if os.path.basename(f) in candidates]
 
 
 def get_params(job_inis):
@@ -114,8 +97,9 @@ def get_params(job_inis):
         A dictionary of parameters
     """
     if len(job_inis) == 1 and job_inis[0].endswith('.zip'):
-        detect_job_ini = create_detect_file('job.ini')
-        job_inis = [extract_from_zip(job_inis[0], detect_job_ini)]
+        job_inis = extract_from_zip(
+            job_inis[0], ['job_hazard.ini', 'job_haz.ini',
+                          'job.ini', 'job_risk.ini'])
 
     not_found = [ini for ini in job_inis if not os.path.exists(ini)]
     if len(not_found) == len(job_inis):  # nothing was found
@@ -265,7 +249,7 @@ def get_site_collection(oqparam, mesh=None, site_ids=None,
                 get_closest(pt.longitude, pt.latitude)
             sitecol.append(
                 site.Site(pt, param.vs30, param.measured,
-                          param.z1pt0, param.z2pt5, i))
+                          param.z1pt0, param.z2pt5, param.backarc, i))
         return site.SiteCollection(sitecol)
 
     # else use the default site params
@@ -701,10 +685,17 @@ def get_exposure(oqparam):
                 # if it is missing a KeyError is raised
                 number = asset.attrib['number']
             else:
-                # other calculators ignore the 'number' attribute;
+                # some calculators ignore the 'number' attribute;
                 # if it is missing it is considered 1, since we are going
                 # to multiply by it
-                number = asset.attrib.get('number', 1)
+                try:
+                    number = asset['number']
+                except KeyError:
+                    number = 1
+                else:
+                    # this is needed by the classical_risk calculator
+                    values['fatalities'] = number
+
             location = asset.location['lon'], asset.location['lat']
             if region and not geometry.Point(*location).within(region):
                 out_of_region += 1
@@ -721,8 +712,7 @@ def get_exposure(oqparam):
                 values[cost_type] = cost['value']
                 deductibles[cost_type] = cost.attrib.get('deductible')
                 insurance_limits[cost_type] = cost.attrib.get('insuranceLimit')
-            if exposure.category == 'population':
-                values['fatalities'] = number
+
             # check we are not missing a cost type
             missing = relevant_cost_types - set(values)
             if missing and missing <= ignore_missing_costs:
@@ -873,3 +863,41 @@ def get_sitecol_gmfs(oqparam):
             csvfile, imts, num_values, valid.positivefloats)
     sitecol = get_site_collection(oqparam, mesh)
     return sitecol, gmfs_by_imt
+
+
+def get_mesh_hcurves(oqparam):
+    """
+    Read CSV data in the format `lon lat, v1-vN, w1-wN, ...`.
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :returns:
+        the mesh of points and the data as a dictionary
+        imt -> array of curves for each site
+    """
+    imtls = oqparam.imtls
+    lon_lats = set()
+    data = AccumDict()  # imt -> list of arrays
+    ncols = len(imtls) + 1  # lon_lat + curve_per_imt ...
+    csvfile = oqparam.inputs['hazard_curves']
+    for line, row in enumerate(csv.reader(csvfile), 1):
+        try:
+            if len(row) != ncols:
+                raise ValueError('Expected %d columns, found %d' %
+                                 ncols, len(row))
+            x, y = row[0].split()
+            lon_lat = valid.longitude(x), valid.latitude(y)
+            if lon_lat in lon_lats:
+                raise DuplicatedPoint(lon_lat)
+            lon_lats.add(lon_lat)
+            for i, imt in enumerate(imtls, 1):
+                values = valid.decreasing_probabilities(row[i])
+                if len(values) != len(imtls[imt]):
+                    raise ValueError('Found %d values, expected %d' %
+                                     (len(values), len(imtls([imt]))))
+                data += {imt: [numpy.array(values)]}
+        except (ValueError, DuplicatedPoint) as err:
+            raise err.__class__('%s: file %s, line %d' % (err, csvfile, line))
+    lons, lats = zip(*sorted(lon_lats))
+    mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
+    return mesh, {imt: numpy.array(lst) for imt, lst in data.iteritems()}

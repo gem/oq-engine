@@ -21,6 +21,7 @@ import shutil
 import tempfile
 import mock
 import unittest
+import collections
 from StringIO import StringIO
 
 from numpy.testing import assert_allclose
@@ -61,6 +62,7 @@ export_dir = %s
                 'calculation_mode': 'classical',
                 'truncation_level': 0.0,
                 'random_seed': 0,
+                'reference_backarc': False,
                 'maximum_distance': 1.0,
                 'inputs': {'job_ini': job_config,
                            'site_model': site_model_input},
@@ -71,6 +73,8 @@ export_dir = %s
 
             with mock.patch('logging.warn') as warn:
                 params = vars(readinput.get_oqparam(job_config))
+                print params
+                print expected_params
                 self.assertEqual(expected_params, params)
                 self.assertEqual(['site_model', 'job_ini'],
                                  params['inputs'].keys())
@@ -114,6 +118,7 @@ export_dir = %s
                 'truncation_level': 3.0,
                 'random_seed': 5,
                 'maximum_distance': 1.0,
+                'reference_backarc': False,
                 'inputs': {'job_ini': source,
                            'sites': sites_csv},
                 'reference_depth_to_1pt0km_per_sec': 100.0,
@@ -159,20 +164,20 @@ class ClosestSiteModelTestCase(unittest.TestCase):
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
     <siteModel>
-        <site lon="0.0" lat="0.0" vs30="1200.0" vs30Type="inferred" z1pt0="100.0" z2pt5="2.0" />
-        <site lon="0.0" lat="0.1" vs30="600.0" vs30Type="inferred" z1pt0="100.0" z2pt5="2.0" />
-        <site lon="0.0" lat="0.2" vs30="200.0" vs30Type="inferred" z1pt0="100.0" z2pt5="2.0" />
+        <site lon="0.0" lat="0.0" vs30="1200.0" vs30Type="inferred" z1pt0="100.0" z2pt5="2.0" backarc="False" />
+        <site lon="0.0" lat="0.1" vs30="600.0" vs30Type="inferred" z1pt0="100.0" z2pt5="2.0" backarc="True" />
+        <site lon="0.0" lat="0.2" vs30="200.0" vs30Type="inferred" z1pt0="100.0" z2pt5="2.0" backarc="False" />
     </siteModel>
 </nrml>''')
         oqparam = mock.Mock()
         oqparam.inputs = dict(site_model=data)
         expected = [
             valid.SiteParam(z1pt0=100.0, z2pt5=2.0, measured=False,
-                            vs30=1200.0, lon=0.0, lat=0.0),
+                            vs30=1200.0, backarc=False, lon=0.0, lat=0.0),
             valid.SiteParam(z1pt0=100.0, z2pt5=2.0, measured=False,
-                            vs30=600.0, lon=0.0, lat=0.1),
+                            vs30=600.0, backarc=True, lon=0.0, lat=0.1),
             valid.SiteParam(z1pt0=100.0, z2pt5=2.0, measured=False,
-                            vs30=200.0, lon=0.0, lat=0.2)]
+                            vs30=200.0, backarc=False, lon=0.0, lat=0.2)]
         self.assertEqual(list(readinput.get_site_model(oqparam)), expected)
 
 
@@ -386,3 +391,33 @@ PGA 12.0 42.2 0.64 0.65
             readinput.get_mesh_csvdata(
                 fakecsv, ['PGV'], [3], valid.probabilities)
         self.assertIn("Got 'PGA', expected PGV", str(ctx.exception))
+
+    def test_get_mesh_hcurves_ok(self):
+        fakecsv = StringIO("""\
+0 0, 0.42 0.24 0.14, 0.25 0.16 0.08
+0 1, 0.42 0.24 0.14, 0.45 0.40 0.18
+0 2, 0.42 0.24 0.14, 0.65 0.64 0.60
+0 3, 0.42 0.24 0.14, 0.25 0.21 0.20
+0 4, 0.42 0.24 0.04, 0.35 0.31 0.30
+0 5, 0.42 0.24 0.04, 0.55 0.51 0.50
+""")
+        oqparam = mock.Mock()
+        oqparam.inputs = dict(hazard_curves=fakecsv)
+        oqparam.imtls = collections.OrderedDict([
+            ('PGA', [0.1, 0.2, 0.3]),
+            ('PGV', [0.11, 0.22, 0.33])])
+        mesh, data = readinput.get_mesh_hcurves(oqparam)
+        assert_allclose(mesh.lons, [0., 0., 0., 0., 0., 0.])
+        assert_allclose(mesh.lats, [0., 1., 2., 3., 4., 5.])
+        assert_allclose(data['PGA'], [[0.42, 0.24, 0.14],
+                                      [0.42, 0.24, 0.14],
+                                      [0.42, 0.24, 0.14],
+                                      [0.42, 0.24, 0.14],
+                                      [0.42, 0.24, 0.04],
+                                      [0.42, 0.24, 0.04]])
+        assert_allclose(data['PGV'], [[0.25, 0.16, 0.08],
+                                      [0.45, 0.4, 0.18],
+                                      [0.65, 0.64, 0.6],
+                                      [0.25, 0.21, 0.2],
+                                      [0.35, 0.31, 0.3],
+                                      [0.55, 0.51, 0.5]])
