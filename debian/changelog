@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Now the URL /v1/calc/list returns a list of dictionaries with a boolean
+    key is_running
   * Replaced the mock tests for the engine server with real functional tests
   * Added a resource /v1/calc/:calc_id/traceback to get the traceback of a
     failed calculation
