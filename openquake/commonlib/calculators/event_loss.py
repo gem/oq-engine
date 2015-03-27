@@ -78,6 +78,7 @@ class EventLossCalculator(base.RiskCalculator):
         (if any). If there were pre-existing files, they will be erased.
         """
         oq = self.oqparam
+        epsilon_sampling = getattr(oq, 'epsilon_sampling', 1000)
         oq.tses = oq.investigation_time * oq.ses_per_logic_tree_path * (
             oq.number_of_logic_tree_samples or 1)
 
@@ -104,18 +105,19 @@ class EventLossCalculator(base.RiskCalculator):
             # there should be different epsilons for each SES collection
             # and for each taxonomy
             eps_dict = riskinput.make_eps_dict(
-                self.assets_by_site, len(sesruptures),
+                self.assets_by_site,
+                min(len(sesruptures), epsilon_sampling),
                 getattr(oq, 'master_seed', 42),
                 getattr(oq, 'asset_correlation', 0))
 
             gsims = gsims_by_trt_id[trt_id]
 
-            ri = self.riskmodel.build_input_from_ruptures(
+            ris = self.riskmodel.build_inputs_from_ruptures(
                 self.sitecol, self.assets_by_site, sesruptures,
-                gsims, oq.truncation_level, correl_model, eps_dict)
+                gsims, oq.truncation_level, correl_model, eps_dict,
+                epsilon_sampling)
 
-            self.riskinputs.extend(
-                ri.split(oq.concurrent_tasks, epsilon_sampling=1000))
+            self.riskinputs.extend(ris)
 
     def post_execute(self, result):
         saved = {}
