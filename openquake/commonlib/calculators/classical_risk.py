@@ -89,7 +89,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
 
     def post_execute(self, result):
         """
-        Export the results. TO BE IMPLEMENTED.
+        Export the losses in csv format
         """
         oq = self.oqparam
 
