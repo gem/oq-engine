@@ -26,7 +26,7 @@ import numpy
 
 from openquake.baselib.general import groupby, split_in_blocks
 from openquake.hazardlib.imt import from_string
-from openquake.risklib import scientific
+from openquake.risklib import scientific, workflows
 
 
 class FakeRlzsAssoc(collections.Mapping):
@@ -202,20 +202,20 @@ class RiskModel(collections.Mapping):
                         # ignore values, consider only the 'number' attribute
                         missing_value = False
                     else:
-                        idx = numpy.array(
-                            [a.value(loss_type) is not None for a in assets])
-                        if not idx.any():
+                        values = workflows.get_values(loss_type, assets)
+                        ok = ~numpy.isnan(values)
+                        if not ok.any():
                             # there are no assets with a value
                             continue
                         # there may be assets without a value
-                        missing_value = not idx.all()
+                        missing_value = not ok.all()
                         if missing_value:
-                            assets_ = assets[idx]
-                            epsilons_ = epsilons[idx]
+                            assets_ = assets[ok]
+                            epsilons_ = epsilons[ok]
                     out_by_rlz = {}
                     for rlz in rlzs_assoc.realizations:
                         if missing_value:
-                            hazards_ = numpy.array(hazards_by_rlz[rlz])[idx]
+                            hazards_ = numpy.array(hazards_by_rlz[rlz])[ok]
                         else:
                             hazards_ = hazards_by_rlz[rlz]
                         out_by_rlz[rlz] = workflow(

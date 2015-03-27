@@ -1,0 +1,49 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <exposureModel id="ep" category="buildings">
+    <description>Exposure model for buildings in Nepal</description>
+    <conversions>
+      <costTypes>
+        <costType name="structural" unit="USD" type="per_asset"/>
+      </costTypes>
+    </conversions>
+    <assets>
+      <asset id="a1" taxonomy="W" number="8766">
+        <location lon="81.2985" lat="29.1098"/>
+        <costs>
+          <cost type="structural" value="11340"/>
+        </costs>
+      </asset>
+      <asset id="a2" taxonomy="W" number="8492">
+        <location lon="83.082298" lat="27.9006"/>
+        <costs>
+          <cost type="structural" value="11340"/>
+        </costs>
+      </asset>
+      <asset id="a3" taxonomy="W" number="11154">
+        <location lon="83.250999" lat="28.340499"/>
+        <costs>
+          <cost type="structural" value="11340"/>
+        </costs>
+      </asset>
+      <asset id="a4" taxonomy="A" number="8193">
+        <location lon="80.562103" lat="29.5104"/>
+        <costs>
+          <cost type="structural" value="11340"/>
+        </costs>
+      </asset>
+      <asset id="a5" taxonomy="W" number="6125">
+        <location lon="81.1791" lat="29.7136"/>
+        <costs>
+          <cost type="structural" value="11340"/>
+        </costs>
+      </asset>
+      <asset id="a6" taxonomy="W" number="4516">
+        <location lon="81.568496" lat="29.564199"/>
+        <costs>
+          <cost type="structural" value="11340"/>
+        </costs>
+      </asset>
+     </assets>
+  </exposureModel>
+</nrml>

@@ -668,10 +668,17 @@ def get_exposure(oqparam):
                 # if it is missing a KeyError is raised
                 number = asset.attrib['number']
             else:
-                # other calculators ignore the 'number' attribute;
+                # some calculators ignore the 'number' attribute;
                 # if it is missing it is considered 1, since we are going
                 # to multiply by it
-                number = asset.attrib.get('number', 1)
+                try:
+                    number = asset['number']
+                except KeyError:
+                    number = 1
+                else:
+                    # this is needed by the classical_risk calculator
+                    values['fatalities'] = number
+
             location = asset.location['lon'], asset.location['lat']
             if region and not geometry.Point(*location).within(region):
                 out_of_region += 1
@@ -688,8 +695,7 @@ def get_exposure(oqparam):
                 values[cost_type] = cost['value']
                 deductibles[cost_type] = cost.attrib.get('deductible')
                 insurance_limits[cost_type] = cost.attrib.get('insuranceLimit')
-            if exposure.category == 'population':
-                values['fatalities'] = number
+
             # check we are not missing a cost type
             missing = relevant_cost_types - set(values)
             if missing and missing <= ignore_missing_costs:
@@ -840,3 +846,41 @@ def get_sitecol_gmfs(oqparam):
             csvfile, imts, num_values, valid.positivefloats)
     sitecol = get_site_collection(oqparam, mesh)
     return sitecol, gmfs_by_imt
+
+
+def get_mesh_hcurves(oqparam):
+    """
+    Read CSV data in the format `lon lat, v1-vN, w1-wN, ...`.
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :returns:
+        the mesh of points and the data as a dictionary
+        imt -> array of curves for each site
+    """
+    imtls = oqparam.imtls
+    lon_lats = set()
+    data = AccumDict()  # imt -> list of arrays
+    ncols = len(imtls) + 1  # lon_lat + curve_per_imt ...
+    csvfile = oqparam.inputs['hazard_curves']
+    for line, row in enumerate(csv.reader(csvfile), 1):
+        try:
+            if len(row) != ncols:
+                raise ValueError('Expected %d columns, found %d' %
+                                 ncols, len(row))
+            x, y = row[0].split()
+            lon_lat = valid.longitude(x), valid.latitude(y)
+            if lon_lat in lon_lats:
+                raise DuplicatedPoint(lon_lat)
+            lon_lats.add(lon_lat)
+            for i, imt in enumerate(imtls, 1):
+                values = valid.decreasing_probabilities(row[i])
+                if len(values) != len(imtls[imt]):
+                    raise ValueError('Found %d values, expected %d' %
+                                     (len(values), len(imtls([imt]))))
+                data += {imt: [numpy.array(values)]}
+        except (ValueError, DuplicatedPoint) as err:
+            raise err.__class__('%s: file %s, line %d' % (err, csvfile, line))
+    lons, lats = zip(*sorted(lon_lats))
+    mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
+    return mesh, {imt: numpy.array(lst) for imt, lst in data.iteritems()}

@@ -1,5 +1,6 @@
   [Michele Simionato]
-  * Added an `oq-lite pick_rlzs` command to plot the distance of the
+  * Ported the classical_risk calculator to oq-lite
+  * Added an `oq-lite pick_rlzs` command to display the distance of the
     hazard curves from the mean, by using the RMSEP distance
   * Ported the scenario_risk calculator to oq-lite
   * Added a check to forbid exposures with an asset number=0
