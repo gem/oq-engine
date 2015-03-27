@@ -219,10 +219,15 @@ class RiskModel(collections.Mapping):
                             epsilons_ = epsilons[idx]
                     out_by_rlz = {}
                     for rlz in rlzs_assoc.realizations:
-                        if missing_value:
-                            hazards_ = numpy.array(hazards_by_rlz[rlz])[idx]
+                        haz = hazards_by_rlz[rlz]  # a list, possibly empty
+                        if len(haz) == 0:
+                            logging.warn('No hazard for %s, assets=%s', rlz,
+                                         assets_)
+                            continue
+                        elif missing_value:
+                            hazards_ = numpy.array(haz)[idx]
                         else:
-                            hazards_ = hazards_by_rlz[rlz]
+                            hazards_ = haz
                         out_by_rlz[rlz] = workflow(
                             loss_type, assets_, hazards_, epsilons_,
                             riskinput.tags)
