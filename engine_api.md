@@ -18,16 +18,19 @@ Response:
       "id": 1,
       "status": "executing",
       "job_type": "hazard",
+      "is_running": true,
       "url": "http://localhost:8000/v1/calc/1"},
      {"description": "Hazard Calculation for end-to-end hazard+risk",
       "id": 2,
       "status": "complete",
       "job_type": "hazard",
+      "is_running": true,
       "url": "http://localhost:8000/v1/calc/2"},
      {"description": "Hazard Calculation for end-to-end hazard+risk",
       "id": 3,
       "status": "complete",
       "job_type": "hazard",
+      "is_running": false,
       "url": "http://localhost:8000/v1/calc/3"}]
 
 #### GET /v1/calc/:calc_id
