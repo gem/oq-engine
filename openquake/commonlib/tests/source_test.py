@@ -704,8 +704,8 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         self.assertEqual(rlz.weight, 1.)
         self.assertEqual(
             str(assoc),
-            "{0,SadighEtAl1997: ['<0,b1_b5_b8,b2_b3,w=1.0>']\n"
-            "1,ChiouYoungs2008: ['<0,b1_b5_b8,b2_b3,w=1.0>']}")
+            "<RlzsAssoc\n0,SadighEtAl1997: ['<0,b1_b5_b8,b2_b3,w=1.0>']\n"
+            "1,ChiouYoungs2008: ['<0,b1_b5_b8,b2_b3,w=1.0>']>")
 
     def test_many_rlzs(self):
         oqparam = tests.get_oqparam('classical_job.ini')
@@ -728,7 +728,8 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         assoc = csm.get_rlzs_assoc()
 
         expected_assoc = """\
-{0,SadighEtAl1997: ['<0,b1_b3_b6,*_b3,w=0.04>']
+<RlzsAssoc
+0,SadighEtAl1997: ['<0,b1_b3_b6,*_b3,w=0.04>']
 1,SadighEtAl1997: ['<0,b1_b3_b6,*_b3,w=0.04>']
 2,SadighEtAl1997: ['<1,b1_b3_b7,*_b3,w=0.12>']
 3,SadighEtAl1997: ['<1,b1_b3_b7,*_b3,w=0.12>']
@@ -745,7 +746,7 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
 14,SadighEtAl1997: ['<7,b1_b5_b7,*_b3,w=0.12>']
 15,SadighEtAl1997: ['<7,b1_b5_b7,*_b3,w=0.12>']
 16,SadighEtAl1997: ['<8,b1_b5_b8,*_b3,w=0.04>']
-17,SadighEtAl1997: ['<8,b1_b5_b8,*_b3,w=0.04>']}"""
+17,SadighEtAl1997: ['<8,b1_b5_b8,*_b3,w=0.04>']>"""
         self.assertEqual(str(assoc), expected_assoc)
         self.assertEqual(len(assoc.realizations), 9)
 
@@ -770,5 +771,6 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         assoc = csm.get_rlzs_assoc()
         self.assertEqual(
             str(assoc),
-            "{0,SadighEtAl1997: ['<0,b1,b1,w=0.2>']\n"
-            "1,SadighEtAl1997: ['<1,b2,b1,w=0.2,col=1>', '<2,b2,b1,w=0.2,col=2>', '<3,b2,b1,w=0.2,col=3>', '<4,b2,b1,w=0.2,col=4>']}")
+            "<RlzsAssoc\n"
+            "0,SadighEtAl1997: ['<0,b1,b1,w=0.2>']\n"
+            "1,SadighEtAl1997: ['<1,b2,b1,w=0.2,col=1>', '<2,b2,b1,w=0.2,col=2>', '<3,b2,b1,w=0.2,col=3>', '<4,b2,b1,w=0.2,col=4>']>")
