@@ -684,10 +684,17 @@ def get_exposure(oqparam):
                 # if it is missing a KeyError is raised
                 number = asset.attrib['number']
             else:
-                # other calculators ignore the 'number' attribute;
+                # some calculators ignore the 'number' attribute;
                 # if it is missing it is considered 1, since we are going
                 # to multiply by it
-                number = asset.attrib.get('number', 1)
+                try:
+                    number = asset['number']
+                except KeyError:
+                    number = 1
+                else:
+                    # this is needed by the classical_risk calculator
+                    values['fatalities'] = number
+
             location = asset.location['lon'], asset.location['lat']
             if region and not geometry.Point(*location).within(region):
                 out_of_region += 1
@@ -704,8 +711,7 @@ def get_exposure(oqparam):
                 values[cost_type] = cost['value']
                 deductibles[cost_type] = cost.attrib.get('deductible')
                 insurance_limits[cost_type] = cost.attrib.get('insuranceLimit')
-            if exposure.category == 'population':
-                values['fatalities'] = number
+
             # check we are not missing a cost type
             missing = relevant_cost_types - set(values)
             if missing and missing <= ignore_missing_costs:

@@ -21,6 +21,7 @@ import logging
 import collections
 
 from openquake.baselib import general
+from openquake.risklib import workflows
 from openquake.commonlib import readinput, writers
 from openquake.commonlib.calculators import base
 
@@ -42,8 +43,9 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
         result = collections.defaultdict(general.AccumDict)
         for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc):
             for rlz, out in out_by_rlz.iteritems():
+                values = workflows.get_values(out.loss_type, out.assets)
                 for i, asset in enumerate(out.assets):
-                    avalue = asset.value(out.loss_type)
+                    avalue = values[i]
                     result[rlz.ordinal, 'avg_loss'] += {
                         asset.id: out.average_losses[i] * avalue}
                     if out.average_insured_losses is not None:
