@@ -27,8 +27,3 @@ class ClassicalBCRCalculator(base.RiskCalculator):
 @base.calculators.add('event_based_bcr')
 class EventBasedBCRCalculator(base.RiskCalculator):
     pass
-
-
-@base.calculators.add('event_based_risk')
-class EventBasedRiskCalculator(base.RiskCalculator):
-    pass
