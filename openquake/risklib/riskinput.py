@@ -194,8 +194,6 @@ class RiskModel(collections.Mapping):
                     continue
                 assets, hazards, epsilons = map(
                     numpy.array, [assets, hazards, epsilons])
-                # hazards is a list of dictionaries key -> array
-                hazards_by_rlz = rlzs_assoc.collect_by_rlz(hazards)
                 workflow = self[imt, taxonomy]
                 for loss_type in workflow.loss_types:
                     # the same taxonomy contributes to two IMTs??
@@ -218,19 +216,15 @@ class RiskModel(collections.Mapping):
                             assets_ = assets[ok]
                             epsilons_ = epsilons[ok]
                     out_by_rlz = {}
-                    for rlz in rlzs_assoc.realizations:
-                        haz = hazards_by_rlz[rlz]  # a list, possibly empty
-                        if len(haz) == 0:
-                            logging.warn('No hazard for %s, assets=%s', rlz,
-                                         assets_)
-                            continue
-                        elif missing_value:
-                            hazards_ = numpy.array(haz)[idx]
-                        else:
-                            hazards_ = haz
-                        out_by_rlz[rlz] = workflow(
-                            loss_type, assets_, hazards_, epsilons_,
-                            riskinput.tags)
+                    # hazards is a list of dictionaries key -> array
+                    for key in hazards[0]:  # the keys are homogenous
+                        for rlz in rlzs_assoc[key]:
+                            hazards_ = [h[key] for h in hazards]
+                            if missing_value:
+                                hazards_ = numpy.array(hazards_)[ok]
+                            out_by_rlz[rlz] = workflow(
+                                loss_type, assets_, hazards_, epsilons_,
+                                riskinput.tags)
                     output[taxonomy, loss_type] = out_by_rlz
         return output
 

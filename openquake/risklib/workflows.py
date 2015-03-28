@@ -142,7 +142,6 @@ class Workflow(object):
         return sorted(self.risk_functions)
 
 
-
 @registry.add('classical_risk')
 class Classical(Workflow):
     """
