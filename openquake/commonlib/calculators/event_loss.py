@@ -24,7 +24,7 @@ import collections
 from openquake.baselib.general import AccumDict
 from openquake.commonlib.calculators import base
 from openquake.commonlib import readinput, writers
-from openquake.risklib import riskinput
+from openquake.risklib import riskinput, workflows
 
 
 def event_loss(riskinputs, riskmodel, rlzs_assoc, monitor):
@@ -55,7 +55,7 @@ def event_loss(riskinputs, riskmodel, rlzs_assoc, monitor):
     return acc
 
 
-@base.calculators.add('event_loss')
+@base.calculators.add('event_loss', 'event_based_risk')
 class EventLossCalculator(base.RiskCalculator):
     """
     Event based PSHA calculator generating the ruptures only
@@ -82,6 +82,10 @@ class EventLossCalculator(base.RiskCalculator):
         oq.tses = oq.investigation_time * oq.ses_per_logic_tree_path * (
             oq.number_of_logic_tree_samples or 1)
 
+        # HACK: replace the event_based_risk workflow with the event_loss
+        # workflow, so that the riskmodel has the correct workflows
+        workflows.registry['event_based_risk'] = workflows.registry[
+            'event_loss']
         self.riskmodel = readinput.get_risk_model(self.oqparam)
         self.riskmodel.specific_assets = set(self.oqparam.specific_assets)
 

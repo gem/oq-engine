@@ -122,6 +122,9 @@ class OqParam(valid.ParamSet):
         super(OqParam, self).__init__(**names_vals)
         if not hasattr(self, 'reference_backarc'):
             self.reference_backarc = False
+        if not hasattr(self, 'risk_investigation_time') and \
+                hasattr(self, 'investigation_time'):
+            self.risk_investigation_time = self.investigation_time
         if hasattr(self, 'intensity_measure_types'):
             self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
             # remove the now redundant parameter
