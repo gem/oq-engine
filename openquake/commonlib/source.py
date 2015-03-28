@@ -117,7 +117,7 @@ class TrtModel(collections.Sequence):
                 # the memory occupation is insignificand and at
                 # the same time we avoid the RuntimeError
                 # "All sources were filtered away"
-                tm.append(src)
+                tm.sources.append(src)
 
         # return TrtModels, ordered by TRT string
         return sorted(source_stats_dict.itervalues())
