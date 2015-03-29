@@ -370,17 +370,6 @@ class RlzsAssoc(collections.Mapping):
                 acc = agg(acc, AccumDict({rlz: value}))
         return acc
 
-    def collect_by_rlz(self, dicts):
-        """
-        :param dicts: a list of dicts with key (trt_model_id, gsim)
-        :returns: a dictionary of lists keyed by realization
-        """
-        by_rlz = AccumDict({rlz: [] for rlz in self.realizations})
-        for dic in dicts:
-            items = self.combine(dic).iteritems()
-            by_rlz += {rlz: [val] for rlz, val in items}
-        return by_rlz
-
     def __iter__(self):
         return self.rlzs_assoc.iterkeys()
 
