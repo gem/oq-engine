@@ -331,7 +331,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
 GmfsCurves = collections.namedtuple('GmfsCurves', 'gmfs curves')
 
 
-def gen_gmf_by_imt(ses_ruptures, sitecol, imts, gsims,
+def make_gmf_by_key(ses_ruptures, sitecol, imts, gsims,
                    trunc_level, correl_model):
     """
     Yield gmf_by_imt AccumDicts for each SESRupture and GSIM, with attributes
@@ -383,7 +383,7 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
 
     result = AccumDict({(trt_id, str(gsim)): GmfsCurves([], AccumDict())
                         for gsim in gsims})
-    ddic = gen_gmf_by_imt(
+    ddic = make_gmf_by_key(
         ses_ruptures, sitecol, imts, gsims, trunc_level, correl_model)
     for gsim in gsims:
         data = ddic[trt_id, str(gsim)]
