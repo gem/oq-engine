@@ -141,14 +141,14 @@ class Workflow(object):
         """
         return sorted(self.risk_functions)
 
-    def gen_out_by_rlz(self, hazards, assets, epsilons, tags):
+    def gen_out_by_rlz(self, assets, hazards, epsilons, tags):
         """
-        :param hazards: an array of dictionaries per each asset
         :param assets: an array of assets of homogeneous taxonomy
+        :param hazards: an array of dictionaries per each asset
         :param epsilons: an array of epsilons per each asset
         :param tags: rupture tags
 
-        Yield pairs (loss_type, out_by_rlz)
+        Yield dictionaries out_by_rlz.
         """
         for loss_type in self.loss_types:
             assets_ = assets
@@ -848,14 +848,14 @@ class Damage(Workflow):
              for gmvs in gmfs])
         return assets, damages
 
-    def gen_out_by_rlz(self, hazards, assets, epsilons, tags):
+    def gen_out_by_rlz(self, assets, hazards, epsilons, tags):
         """
-        :param hazards: an array of dictionaries per each asset
         :param assets: an array of assets of homogeneous taxonomy
+        :param hazards: an array of dictionaries per each asset
         :param epsilons: an array of epsilons per each asset
         :param tags: rupture tags
 
-        Yield pairs (loss_type, out_by_rlz)
+        Yield dictionaries out_by_rlz
         """
         out_by_rlz = {}
         for rlz in hazards[0]:

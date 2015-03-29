@@ -163,7 +163,7 @@ class RiskModel(collections.Mapping):
                         continue
                     workflow = self[imt, taxonomy]
                     for out_by_rlz in workflow.gen_out_by_rlz(
-                            hazards, assets, epsilons, riskinput.tags):
+                            assets, hazards, epsilons, riskinput.tags):
                         yield out_by_rlz
 
 
@@ -199,8 +199,8 @@ class RiskInput(object):
 
     def get_all(self, rlzs_assoc):
         """
-        Return dictionaries with
-        assets, hazards and epsilons for each taxonomy.
+        :returns:
+            lists of assets, hazards and epsilons
         """
         assets, hazards, epsilons = [], [], []
         for hazard, assets_ in zip(self.hazard_by_site, self.assets_by_site):
@@ -297,15 +297,15 @@ class RiskInputFromRuptures(object):
         """
         return [sr.tag for sr in self.ses_ruptures]
 
-    def compute_hazard_by_site(self):
+    def compute_expand_gmf(self):
         """
         :returns:
             a list of hazard dictionaries, one for each site; each
-            dictionary for each IMT contains a dictionary key->array(R)
-            where R is the number of ruptures.
+            dictionary for each key contains a dictionary IMT->array(N, R)
+            where N is the number of sites and R is the number of ruptures.
         """
-        from openquake.commonlib.calculators.event_based import gen_gmf_by_imt
-        ddic = gen_gmf_by_imt(
+        from openquake.commonlib.calculators.event_based import make_gmf_by_key
+        ddic = make_gmf_by_key(
             self.ses_ruptures, self.sitecol, map(from_string, self.imts),
             self.gsims, self.trunc_level, self.correl_model)
         for key, gmf_by_tag in ddic.iteritems():
@@ -319,10 +319,10 @@ class RiskInputFromRuptures(object):
     def get_all(self, rlzs_assoc):
         """
         :returns:
-            dictionaries with assets, hazards and epsilons for each taxonomy.
+            lists of assets, hazards and epsilons
         """
         assets, hazards, epsilons = [], [], []
-        hazard_by_key_imt = self.compute_hazard_by_site()
+        hazard_by_key_imt = self.compute_expand_gmf()
         for i, assets_ in enumerate(self.assets_by_site):
             haz_by_imt_rlz = {imt: {} for imt in self.imts}
             for key in hazard_by_key_imt:
