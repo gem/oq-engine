@@ -420,10 +420,12 @@ class PerformanceMonitor(object):
     and by overriding the method on_exit(), called at end and used to display
     or store the results of the analysis.
     """
-    def __init__(self, operation, pid=None, monitor_csv='performance.csv'):
+    def __init__(self, operation, pid=None, monitor_csv='performance.csv',
+                 flush=False):
         self.operation = operation
         self.pid = pid
         self.monitor_csv = monitor_csv
+        self._flush = flush
         if pid:
             self._proc = psutil.Process(pid)
         else:
@@ -473,6 +475,8 @@ class PerformanceMonitor(object):
 
     def on_exit(self):
         "To be overridden in subclasses"
+        if self._flush:
+            self.flush()
 
     def flush(self):
         """
