@@ -173,7 +173,7 @@ class Workflow(object):
                 hazards_ = [haz[rlz] for haz in hazards]
                 out_by_rlz[rlz] = self(
                     loss_type, assets_, hazards_, epsilons_, tags_)
-            yield loss_type, out_by_rlz
+            yield out_by_rlz
 
 
 @registry.add('classical_risk')
@@ -861,7 +861,7 @@ class Damage(Workflow):
         for rlz in hazards[0]:
             hazs = [haz[rlz] for haz in hazards]
             out_by_rlz[rlz] = self('damage', assets, hazs, epsilons, tags)
-        yield 'damage', out_by_rlz
+        yield out_by_rlz
 
 
 @registry.add('classical_damage')
