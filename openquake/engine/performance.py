@@ -57,7 +57,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
             self.task = None
             self.task_id = None
         self.tracing = tracing
-        self.flush = flush
+        self._flush = flush
         if tracing:
             self.tracer = logs.tracing(operation)
 
@@ -69,7 +69,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         in the same task.
         """
         return self.__class__(operation, self.job_id, self.task,
-                              self.tracing, self.flush)
+                              self.tracing, self._flush)
 
     def on_exit(self):
         """
@@ -86,7 +86,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
                 pymemory=self.mem,
                 pgmemory=None)
             self.cache.add(perf)
-            if self.flush:
+            if self._flush:
                 self.cache.flush()
 
     def __enter__(self):
@@ -100,7 +100,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         if self.tracing:
             self.tracer.__exit__(etype, exc, tb)
 
-## makes sure the performance results are flushed in the db at the end
+# make sure the performance results are flushed in the db at the end
 atexit.register(EnginePerformanceMonitor.cache.flush)
 
 
