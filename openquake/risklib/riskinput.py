@@ -44,27 +44,6 @@ class FakeRlzsAssoc(collections.Mapping):
         """
         return {i: result[key] for i, key in enumerate(sorted(result))}
 
-    def collect_by_rlz(self, dicts):
-        """
-        :param dicts: a list of dicts with key (trt_model_id, gsim)
-        :returns: a dictionary of lists keyed by realization
-
-        For instance
-
-        >>> assoc = FakeRlzsAssoc(num_rlzs=2)
-        >>> assoc.collect_by_rlz([
-        ... {(0, 'ChiouYoungs2008'): numpy.array([0.06, 0.02, 0.09]),
-        ...  (0, 'AkkarBommer2010'): numpy.array([0.05, 0.03, 0.04])}])
-        {0: [array([ 0.05,  0.03,  0.04])], 1: [array([ 0.06,  0.02,  0.09])]}
-        """
-        keys = sorted(dicts[0])
-        values_by_rlz = {i: [] for i in range(len(keys))}
-        for dic in map(self.combine, dicts):
-            if dic:
-                for i in range(len(keys)):
-                    values_by_rlz[i].append(dic[i])
-        return values_by_rlz
-
     def __iter__(self):
         return self.rlzs_assoc.iterkeys()
 
@@ -318,6 +297,7 @@ class RiskInputFromRuptures(object):
         self.correl_model = correl_model
         self.weight = len(ses_ruptures)
         self.eps_dict = eps_dict
+        self.imts = sorted(set(imt for imt, _ in imt_taxonomies))
 
     @property
     def tags(self):
@@ -336,16 +316,15 @@ class RiskInputFromRuptures(object):
             where R is the number of ruptures.
         """
         from openquake.commonlib.calculators.event_based import gen_gmf_by_imt
-        imts = sorted(set(imt for imt, _ in self.imt_taxonomies))
         ddic = gen_gmf_by_imt(
-            self.ses_ruptures, self.sitecol, map(from_string, imts),
+            self.ses_ruptures, self.sitecol, map(from_string, self.imts),
             self.gsims, self.trunc_level, self.correl_model)
         for key, gmf_by_tag in ddic.iteritems():
             items = sorted(gmf_by_tag.iteritems())
             ddic[key] = {  # build N x R matrices
                 imt: numpy.array(
                     [gmf.r_sites.expand(gmf[imt], 0) for tag, gmf in items]).T
-                for imt in imts}
+                for imt in self.imts}
         return ddic
 
     def get_all(self, rlzs_assoc):
@@ -356,14 +335,15 @@ class RiskInputFromRuptures(object):
         assets, hazards, epsilons = [], [], []
         hazard_by_key_imt = self.compute_hazard_by_site()
         for i, assets_ in enumerate(self.assets_by_site):
+            haz_by_imt_rlz = {imt: {} for imt in self.imts}
             for key in hazard_by_key_imt:
-                haz_by_rlz = {}
                 for imt in hazard_by_key_imt[key]:
                     hazard = hazard_by_key_imt[key][imt][i]
-                    haz_by_rlz[imt] = {rlz: hazard for rlz in rlzs_assoc[key]}
+                    for rlz in rlzs_assoc[key]:
+                        haz_by_imt_rlz[imt][rlz] = hazard
             for asset in assets_:
                 assets.append(asset)
-                hazards.append(haz_by_rlz)
+                hazards.append(haz_by_imt_rlz)
                 epsilons.append(self.eps_dict[asset.id])
         return assets, hazards, epsilons
 
