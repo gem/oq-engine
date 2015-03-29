@@ -404,9 +404,9 @@ class PerformanceMonitor(object):
     the execution of a block of code. Should be used as a context manager,
     as follows::
 
-     with PerformanceMonitor('do_something') as mm:
+     with PerformanceMonitor('do_something') as mon:
          do_something()
-     deltamemory, = mm.mem
+     print mon.mem
 
     At the end of the block the PerformanceMonitor object will have the
     following 5 public attributes:
@@ -414,14 +414,13 @@ class PerformanceMonitor(object):
     .start_time: when the monitor started (a datetime object)
     .duration: time elapsed between start and stop (in seconds)
     .exc: None unless an exception happened inside the block of code
-    .mem: an array with the memory deltas (in bytes)
+    .mem: the memory delta in bytes
 
-    The memory array has the same length as the number of processes.
     The behaviour of the PerformanceMonitor can be customized by subclassing it
     and by overriding the method on_exit(), called at end and used to display
     or store the results of the analysis.
     """
-    def __init__(self, operation, pid=None, monitor_csv='performance_csv'):
+    def __init__(self, operation, pid=None, monitor_csv='performance.csv'):
         self.operation = operation
         self.pid = pid
         self.monitor_csv = monitor_csv
@@ -457,8 +456,8 @@ class PerformanceMonitor(object):
             pid = os.getpid()
             self.pid = pid
             self._proc = psutil.Process(pid)
-        self.duration = None  # seconds
-        self.mem = None  # bytes
+        self.duration = 0  # seconds
+        self.mem = 0  # bytes
         self.exc = None  # exception
         self._start_time = time.time()
         self.start_mem = self.measure_mem()
@@ -468,12 +467,17 @@ class PerformanceMonitor(object):
         "Call .stop"
         self.exc = exc
         self.stop_mem = self.measure_mem()
-        self.mem = self.stop_mem - self.start_mem
-        self.duration = time.time() - self._start_time
+        self.mem = max(self.mem, self.stop_mem - self.start_mem)
+        self.duration += time.time() - self._start_time
         self.on_exit()
 
     def on_exit(self):
-        "Save the results: to be overridden in subclasses"
+        "To be overridden in subclasses"
+
+    def flush(self):
+        """
+        Save the measurements on the performance file
+        """
         time_sec = str(self.duration)
         memory_mb = str(self.mem / 1024. / 1024.)
         self.write([self.operation, str(self.pid), time_sec, memory_mb])
@@ -504,4 +508,7 @@ class DummyMonitor(PerformanceMonitor):
         return self
 
     def __exit__(self, etype, exc, tb):
+        pass
+
+    def flush(self):
         pass
