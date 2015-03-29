@@ -7,6 +7,7 @@ from openquake.commonlib.calculators import event_based
 from openquake.qa_tests_data.event_based_risk import case_2
 
 rlzs_assoc = mock.MagicMock()
+rlzs_assoc.return_value = []  # so you can iterate on the mock
 
 
 class RiskInputTestCase(unittest.TestCase):
