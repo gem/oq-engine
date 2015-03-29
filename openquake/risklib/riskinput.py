@@ -26,7 +26,7 @@ import numpy
 
 from openquake.baselib.general import groupby, block_splitter
 from openquake.hazardlib.imt import from_string
-from openquake.risklib import scientific, workflows
+from openquake.risklib import scientific
 
 
 class FakeRlzsAssoc(collections.Mapping):
@@ -35,7 +35,7 @@ class FakeRlzsAssoc(collections.Mapping):
     """
     def __init__(self, num_rlzs):
         self.realizations = range(num_rlzs)
-        self.rlzs_assoc = {i: [] for i in self.realizations}
+        self.rlzs_assoc = {(i, 'FromCsv'): [] for i in self.realizations}
 
     def combine(self, result):
         """
@@ -180,7 +180,7 @@ class RiskModel(collections.Mapping):
         :param rlzs_assoc: a RlzsAssoc instance
         :returns: a map taxonomy, loss_type -> results by realization
         """
-        ahes = zip(*riskinput.get_all())  # assets, hazards, epsilons
+        ahes = zip(*riskinput.get_all(rlzs_assoc))  # assets, hazards, epsilons
         output = {}
         for imt, taxonomies in riskinput.imt_taxonomies:
             for taxonomy in taxonomies:
@@ -192,45 +192,9 @@ class RiskModel(collections.Mapping):
                         epsilons.append(epsilon)
                 if not assets:
                     continue
-                assets, hazards, epsilons = map(
-                    numpy.array, [assets, hazards, epsilons])
-                # hazards is a list of dictionaries key -> array
-                hazards_by_rlz = rlzs_assoc.collect_by_rlz(hazards)
                 workflow = self[imt, taxonomy]
-                for loss_type in workflow.loss_types:
-                    # the same taxonomy contributes to two IMTs??
-                    assert (taxonomy, loss_type) not in output, (
-                        taxonomy, loss_type)
-                    assets_ = assets
-                    epsilons_ = epsilons
-                    if loss_type == 'damage':
-                        # ignore values, consider only the 'number' attribute
-                        missing_value = False
-                    else:
-                        values = workflows.get_values(loss_type, assets)
-                        ok = ~numpy.isnan(values)
-                        if not ok.any():
-                            # there are no assets with a value
-                            continue
-                        # there may be assets without a value
-                        missing_value = not ok.all()
-                        if missing_value:
-                            assets_ = assets[ok]
-                            epsilons_ = epsilons[ok]
-                    out_by_rlz = {}
-                    for rlz in rlzs_assoc.realizations:
-                        haz = hazards_by_rlz[rlz]  # a list, possibly empty
-                        if len(haz) == 0:
-                            logging.warn('No hazard for %s, assets=%s', rlz,
-                                         assets_)
-                            continue
-                        elif missing_value:
-                            hazards_ = numpy.array(haz)[idx]
-                        else:
-                            hazards_ = haz
-                        out_by_rlz[rlz] = workflow(
-                            loss_type, assets_, hazards_, epsilons_,
-                            riskinput.tags)
+                for loss_type, out_by_rlz in workflow.gen_out_by_rlz(
+                        hazards, assets, epsilons, riskinput.tags):
                     output[taxonomy, loss_type] = out_by_rlz
         return output
 
@@ -265,7 +229,7 @@ class RiskInput(object):
         """Return a list of pairs (imt, taxonomies) with a single element"""
         return [(self.imt, self.taxonomies)]
 
-    def get_all(self):
+    def get_all(self, rlzs_assoc):
         """
         Return dictionaries with
         assets, hazards and epsilons for each taxonomy.
@@ -274,7 +238,7 @@ class RiskInput(object):
         for hazard, assets_ in zip(self.hazard_by_site, self.assets_by_site):
             for asset in assets_:
                 assets.append(asset)
-                hazards.append({self.imt: hazard})
+                hazards.append({self.imt: rlzs_assoc.combine(hazard)})
                 epsilons.append(self.eps_dict.get(asset.id, None))
         return assets, hazards, epsilons
 
@@ -382,24 +346,24 @@ class RiskInputFromRuptures(object):
                 imt: numpy.array(
                     [gmf.r_sites.expand(gmf[imt], 0) for tag, gmf in items]).T
                 for imt in imts}
-        out = [{imt: {} for imt in imts} for _ in range(len(self.sitecol))]
-        for key, gmf_by_imt in ddic.iteritems():
-            for imt, matrix in gmf_by_imt.iteritems():
-                for i, row in enumerate(matrix):
-                    out[i][imt][key] = row
-        return out
+        return ddic
 
-    def get_all(self):
+    def get_all(self, rlzs_assoc):
         """
         :returns:
             dictionaries with assets, hazards and epsilons for each taxonomy.
         """
         assets, hazards, epsilons = [], [], []
-        hazard_by_site = self.compute_hazard_by_site()
-        for hazard, assets_ in zip(hazard_by_site, self.assets_by_site):
+        hazard_by_key_imt = self.compute_hazard_by_site()
+        for i, assets_ in enumerate(self.assets_by_site):
+            for key in hazard_by_key_imt:
+                haz_by_rlz = {}
+                for imt in hazard_by_key_imt[key]:
+                    hazard = hazard_by_key_imt[key][imt][i]
+                    haz_by_rlz[imt] = {rlz: hazard for rlz in rlzs_assoc[key]}
             for asset in assets_:
                 assets.append(asset)
-                hazards.append(hazard)
+                hazards.append(haz_by_rlz)
                 epsilons.append(self.eps_dict[asset.id])
         return assets, hazards, epsilons
 
