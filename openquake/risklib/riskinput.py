@@ -26,7 +26,7 @@ import numpy
 
 from openquake.baselib.general import groupby, block_splitter
 from openquake.hazardlib.imt import from_string
-from openquake.risklib import scientific, workflows
+from openquake.risklib import scientific
 
 
 class FakeRlzsAssoc(collections.Mapping):
@@ -197,35 +197,8 @@ class RiskModel(collections.Mapping):
                 # hazards is a list of dictionaries key -> array
                 hazards_by_rlz = rlzs_assoc.collect_by_rlz(hazards)
                 workflow = self[imt, taxonomy]
-                for loss_type in workflow.loss_types:
-                    # the same taxonomy contributes to two IMTs??
-                    assert (taxonomy, loss_type) not in output, (
-                        taxonomy, loss_type)
-                    assets_ = assets
-                    epsilons_ = epsilons
-                    if loss_type == 'damage':
-                        # ignore values, consider only the 'number' attribute
-                        missing_value = False
-                    else:
-                        values = workflows.get_values(loss_type, assets)
-                        ok = ~numpy.isnan(values)
-                        if not ok.any():
-                            # there are no assets with a value
-                            continue
-                        # there may be assets without a value
-                        missing_value = not ok.all()
-                        if missing_value:
-                            assets_ = assets[ok]
-                            epsilons_ = epsilons[ok]
-                    out_by_rlz = {}
-                    for rlz in rlzs_assoc.realizations:
-                        if missing_value:
-                            hazards_ = numpy.array(hazards_by_rlz[rlz])[ok]
-                        else:
-                            hazards_ = hazards_by_rlz[rlz]
-                        out_by_rlz[rlz] = workflow(
-                            loss_type, assets_, hazards_, epsilons_,
-                            riskinput.tags)
+                for loss_type, out_by_rlz in workflow.gen_out_by_rlz(
+                        hazards_by_rlz, assets, epsilons, riskinput.tags):
                     output[taxonomy, loss_type] = out_by_rlz
         return output
 

@@ -141,6 +141,45 @@ class Workflow(object):
         """
         return sorted(self.risk_functions)
 
+    def gen_out_by_rlz(self, hazards_by_rlz, assets, epsilons, tags):
+        """
+        :param hazards_by_rlz: an array of dictionaries per each asset
+        :param assets: an array of assets of homogeneous taxonomy
+        :param epsilons: an array of epsilons per each asset
+        :param tags: rupture tags
+
+        Yield pairs (loss_type, out_by_rlz)
+        """
+        for loss_type in self.loss_types:
+            assets_ = assets
+            epsilons_ = epsilons
+            tags_ = tags
+            if loss_type == 'damage':
+                # ignore values, consider only the 'number' attribute
+                missing_value = False
+            else:
+                values = get_values(loss_type, assets)
+                ok = ~numpy.isnan(values)
+                if not ok.any():
+                    # there are no assets with a value
+                    continue
+                # there may be assets without a value
+                missing_value = not ok.all()
+                if missing_value:
+                    assets_ = assets[ok]
+                    epsilons_ = epsilons[ok]
+                    tags_ = tags[ok]
+
+            out_by_rlz = {}
+            for rlz in hazards_by_rlz:
+                if missing_value:
+                    hazards_ = numpy.array(hazards_by_rlz[rlz])[ok]
+                else:
+                    hazards_ = hazards_by_rlz[rlz]
+                    out_by_rlz[rlz] = self(
+                        loss_type, assets_, hazards_, epsilons_, tags_)
+            yield loss_type, out_by_rlz
+
 
 @registry.add('classical_risk')
 class Classical(Workflow):
