@@ -1,8 +1,12 @@
 import os
 
+from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS
 from openquake.engine import settings as oqe_settings
 
-DEBUG = False  # NB: when True, test_haz_risk_ok breaks!
+
+OQSERVER_ROOT = os.path.dirname(__file__)
+
+DEBUG = True  # NB: when True, test_haz_risk_ok breaks!
 TEMPLATE_DEBUG = DEBUG
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 
@@ -10,7 +14,22 @@ ADMINS = (
     # ('Your Name', 'your_email@example.com'),
 )
 
+TEMPLATE_CONTEXT_PROCESSORS += (
+    'openquake.server.utils.oq_server_context_processor',
+)
+
 MANAGERS = ADMINS
+
+STATIC_URL = '/static/'
+
+MEDIA_ROOT = '%(mediaroot)s'
+STATIC_ROOT = '%(staticroot)s'
+
+# Additional directories which hold static files
+STATICFILES_DIRS = [
+    os.path.join(OQSERVER_ROOT, 'static'),
+]
+
 
 DATABASES = oqe_settings.DATABASES
 
@@ -51,7 +70,8 @@ MIDDLEWARE_CLASSES = (
 
 ROOT_URLCONF = 'openquake.server.urls'
 
-INSTALLED_APPS = ('openquake.server',)
+INSTALLED_APPS = ('django.contrib.staticfiles',
+                  'openquake.server',)
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
@@ -97,4 +117,6 @@ LOGGING = {
 }
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1
+
+OQ_ENGINE_SERVER_URL = 'http://oq-platform-mn.gem.lan:8000'  # i.e. : 'http://oq-platform:8800'
 
