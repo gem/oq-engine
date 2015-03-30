@@ -64,7 +64,6 @@ if [ "$GEM_EPHEM_CMD" = "" ]; then
 fi
 if [ "$GEM_EPHEM_NAME" = "" ]; then
     GEM_EPHEM_NAME="ubuntu14-lxc-eph"
-    GEM_EPHEM_NAME="ubuntu-lxc-eph"
 fi
 
 if command -v lxc-shutdown &> /dev/null; then
