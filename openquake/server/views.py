@@ -171,6 +171,30 @@ def calc(request):
                         content_type=JSON)
 
 
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def calc_remove(request, calc_id):
+    """
+    Remove the calculation id by setting the field oq_job.relevant to False.
+    """
+    try:
+        job = oqe_models.OqJob.objects.get(pk=calc_id)
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound()
+    try:
+        job.relevant = False
+        job.save()
+    except:
+        response_data = traceback.format_exc().splitlines()
+        status = 500
+    else:
+        response_data = []
+        status = 200
+    return HttpResponse(content=json.dumps(response_data),
+                        content_type=JSON, status=status)
+
+
 def log_to_json(log):
     """Convert a log record into a list of strings"""
     return [log.timestamp.isoformat()[:22],
