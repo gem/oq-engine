@@ -1,3 +1,19 @@
+# Copyright (c) 2015, GEM Foundation.
+#
+# This program is free software: you can redistribute it and/or modify
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import zipfile
 import shutil
 import json
 import logging
@@ -13,6 +29,8 @@ from django.http import HttpResponse
 from django.http import HttpResponseNotFound
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.shortcuts import render_to_response
+from django.template import RequestContext
 
 from openquake.commonlib import nrml, readinput, valid
 from openquake.engine import engine as oq_engine, __version__ as oqversion
@@ -376,7 +394,7 @@ def get_traceback(request, calc_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
-def get_result(request, result_id):
+def get_result_ng(request, calc_id, result_id):
     """
     Download a specific result, by ``result_id``.
 
@@ -431,3 +449,14 @@ def get_result(request, result_id):
         return response
     finally:
         shutil.rmtree(tmpdir)
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def get_result(request, result_id):
+    get_result_ng(request, -1, result_id)
+
+def engineweb(request, **kwargs):
+    return render_to_response("engineweb/index.html",
+                              dict(),
+                              context_instance=RequestContext(request))
+
