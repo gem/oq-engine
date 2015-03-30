@@ -369,9 +369,8 @@ def get_traceback(request, calc_id):
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
 
-    response_data = [log.message for log in oqe_models.Log.objects.filter(
-        job_id=calc_id, level='CRITICAL').order_by('id')]
-
+    response_data = oqe_models.Log.objects.get(
+        job_id=calc_id, level='CRITICAL').message.splitlines()
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
