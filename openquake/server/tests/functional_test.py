@@ -41,6 +41,11 @@ class EngineServerTestCase(unittest.TestCase):
     # general utilities
 
     @classmethod
+    def post(cls, path, data=None, **params):
+        return requests.post('http://%s/v1/calc/%s' % (cls.hostport, path),
+                             data, **params)
+
+    @classmethod
     def get(cls, path, **params):
         resp = requests.get('http://%s/v1/calc/%s' % (cls.hostport, path),
                             params=params)
@@ -65,9 +70,8 @@ class EngineServerTestCase(unittest.TestCase):
 
     def postzip(self, archive):
         with open(os.path.join(self.datadir, archive)) as a:
-            resp = requests.post('http://%s/v1/calc/run' % self.hostport,
-                                 dict(database='platform'),
-                                 files=dict(archive=a))
+            resp = self.post('run', dict(database='platform'),
+                             files=dict(archive=a))
         job_id = json.loads(resp.text)['job_id']
         self.job_ids.append(job_id)
         time.sleep(1)  # wait a bit for the calc to start
@@ -93,9 +97,8 @@ class EngineServerTestCase(unittest.TestCase):
         data = cls.get('list', job_type='hazard', relevant='true')
         assert len(data) > 0
 
-        nodata = cls.get('list', job_type='hazard', relevant='false')
-        assert nodata == [], nodata
-
+        not_relevant = cls.get('list', job_type='hazard', relevant='false')
+        assert not_relevant  # there should be at least 1 from test_err_1
         cls.proc.kill()
 
     # tests
@@ -123,5 +126,11 @@ class EngineServerTestCase(unittest.TestCase):
         tb = self.get('%d/traceback' % job_id)
         print 'Error in job', job_id, '\n'.join(tb)
         self.assertGreater(len(tb), 0)
+
+        resp = self.post('%d/remove' % job_id)
+        assert resp.status_code == 200, resp
+        # make sure job_id is no more in the list of relevant jobs
+        job_ids = [job['id'] for job in self.get('list', relevant=True)]
+        self.assertFalse(job_id in job_ids)
 
     # TODO: add more tests for error situations
