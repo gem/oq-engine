@@ -18,6 +18,15 @@ else:
 if __name__ == "__main__":
     os.environ.setdefault(
         "DJANGO_SETTINGS_MODULE", "openquake.server.settings")
+    # notice that the import must be done after the os.environ.setdefault;
+    # the issue is that importing openquake.engine sets a wrong
+    # DJANGO_SETTINGS_MODULE environment variable, causing the irritating
+    # CommandError: You must set settings.ALLOWED_HOSTS if DEBUG is False.
+    from openquake.engine.db import models
+    models.getcursor('job_init').execute(
+        # cleanup of the flag oq_job.is_running
+        'UPDATE uiapi.oq_job SET is_running=false WHERE is_running')
+
     # the django autoreloader sets the variable RUN_MAIN; at the beginning
     # it is None, and only at that moment celery must be run
     run_celery = 'celery' in sys.argv and os.environ.get("RUN_MAIN") is None
@@ -25,13 +34,6 @@ if __name__ == "__main__":
         sys.argv.remove('celery')
         cel = subprocess.Popen(CELERY)
         print 'Starting celery, logging on /tmp/celery.log'
-
-    # notice that the import must be done here. to avoid the irritating
-    # CommandError: You must set settings.ALLOWED_HOSTS if DEBUG is False.
-    from openquake.engine.db import models
-    # cleanup on the field oq_job.is_running
-    models.getcursor('job_init').execute(
-        'UPDATE uiapi.oq_job SET is_running=false WHERE is_running')
     try:
         with executor:
             execute_from_command_line(sys.argv)
