@@ -853,16 +853,29 @@ def get_sitecol_gmfs(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
-        the site collection and the GMFs as a dictionary, by reading
-        a CSV file with format `IMT lon lat gmv1 ... gmvN`
+        a dictionary IMT -> array(N, R) read from a CSV file with format
+        `tag indices [gmv1 ... gmvN] * num_imts`
     """
     imts = oqparam.imtls.keys()
-    num_values = [oqparam.number_of_ground_motion_fields] * len(imts)
+    num_gmfs = oqparam.number_of_ground_motion_fields
+    gmf_by_imt = {imt: [] for imt in imts}
+    sitecol = get_site_collection(oqparam)  # extract it from inputs['sites']
+    tags = []
     with open(oqparam.inputs['gmvs']) as csvfile:
-        mesh, gmfs_by_imt = get_mesh_csvdata(
-            csvfile, imts, num_values, valid.positivefloats)
-    sitecol = get_site_collection(oqparam, mesh)
-    return sitecol, gmfs_by_imt
+        for line in csvfile:
+            row = line.split(',')
+            indices = map(int, row[1].split())
+            r_sites = (
+                sitecol if not indices else
+                site.FilteredSiteCollection(indices, sitecol))
+            for i in range(len(imts)):
+                array = numpy.array(valid.positivefloats(row[i + 2]))
+                gmf_by_imt[imts[i]].append(r_sites.expand(array, 0))
+            tags.append(row[0])
+    data = gmf_by_imt[imts[0]]
+    assert len(data) == num_gmfs, (len(data), num_gmfs)
+    assert tags == sorted(tags)
+    return sitecol, {imt: numpy.array(gmf_by_imt[imt]).T for imt in imts}
 
 
 def get_mesh_hcurves(oqparam):

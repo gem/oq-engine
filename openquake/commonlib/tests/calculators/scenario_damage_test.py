@@ -13,7 +13,9 @@ class ScenarioDamageTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_1(self):
-        raise unittest.SkipTest(case_1)
+        out = self.run_calc(case_1.__file__, 'job_risk.ini')
+        #for key in self.KEYS:
+        #    self.assertEqualFiles('expected/%s.xml' % key, out[key, 'xml'])
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_2(self):

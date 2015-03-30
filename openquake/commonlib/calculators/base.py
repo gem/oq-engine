@@ -199,7 +199,7 @@ class RiskCalculator(BaseCalculator):
             getattr(oq, 'master_seed', 0),  # for compatibility with the engine
             getattr(oq, 'asset_correlation', 0))
 
-    def build_riskinputs(self, hazards_by_key, eps_dict):
+    def build_riskinputs(self, hazards_by_key, eps_dict=None):
         """
         :param hazards_by_key:
             a dictionary key -> IMT -> array of length num_sites
@@ -214,7 +214,7 @@ class RiskCalculator(BaseCalculator):
             self.oqparam.concurrent_tasks or 1,
             weight=operator.itemgetter(1))
         for block in blocks:
-            idx = numpy.array([idx for idx, _weight in block])
+            idx = numpy.array([idx_ for idx_, _weight in block])
             reduced_assets = self.assets_by_site[idx]
             reduced_eps = {}  # for the assets belonging to the idx array
             if eps_dict:
@@ -248,7 +248,7 @@ class RiskCalculator(BaseCalculator):
     def assoc_assets_sites(self, sitecol):
         """
         :param sitecol: a sequence of sites
-        :returns: a pair (sitecollection, assets_by_site)
+        :returns: a pair (filtered_sites, assets_by_site)
 
         The new site collection is different from the original one
         if some assets were discarded because of the maximum_distance
