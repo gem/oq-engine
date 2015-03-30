@@ -1,0 +1,234 @@
+<html>
+<!--
+FIXME
+no <script src="/static/js/d3.js"></script>
+si      <script src="https://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+si    <script src="/static/lib/js/assets.min.js"></script>
+si    <script src="/static/geonode/js/utils/utils.js"></script>
+si    <script src="/static/geonode/js/base/base.js"></script>
+si    <script src="/static/lib/jquery-ui/js/jquery-ui-1.10.3.custom.js"></script>
+si    <script type="text/javascript" src="/static/bootstrap-extend/js/jasny-bootstrap.min.js"></script>
+si    <script type="text/javascript" src="/static/js/underscore-min.js"></script>
+si    <script type="text/javascript" src="/static/js/backbone-min.js"></script>
+si    <script src="/static/js/jquery.form-3.44.0.js"></script>
+<script src="/static/icebox/calculate.js"></script>
+    <script type="text/javascript" src="/jsi18n/"></script>
+    <script type="text/javascript" src="/lang.js"></script>
+-->
+
+<head>
+    <meta charset="utf-8">
+    <title> Welcome! - OpenQuake Platform </title>
+    
+      <link href="static/css/base.css" rel="stylesheet">
+      <link href="static/geonode/font/lato_font.css" rel="stylesheet" type="text/css">
+      <link href="static/geonode/css/ext-compatibility.css" rel="stylesheet">
+      
+      <link href="static/css/assets.min.css" rel="stylesheet">
+      
+      
+    
+    <link href="static/img/favicon.ico" rel="shortcut icon"><link href="static/css/oqplatform.css" rel="stylesheet">
+    <link href="static/bootstrap-extend/css/jasny-bootstrap.min.css" rel="stylesheet"/>
+
+</head>
+<body>
+
+    <div id="header" class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <section>
+        <div class="container">
+          <div class="row">
+            <div class="span3">
+              <!-- <a href="{#% url "home" %#}"><span class="nav-logo"></span></a> -->
+            </div>
+            <div class="span10">
+              <nav class="main-nav">
+                <ul>
+                </ul>
+              </nav>
+            </div> <!-- ./span10 -->
+            <div class="span9">
+              <div class="nav-collapse pull-right">
+                <div class="pull-right">
+                  <ul class="nav pull-right account-bar">
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div id="gem-right-logo">
+              <a href="http://www.globalquakemodel.org" title="GEM Foundation" target="_blank"><span class="nav-logo nav-logo-gem"></span></a>
+            </div>
+          </div>
+        </div> <!-- /.container -->
+        </section>
+      </div> <!-- /.navbar-inner -->
+    </div> <!-- /.navbar navbar-fixed-top -->
+
+
+<div class="content-wrap">
+      
+      <div class="container">
+        <div class="row">
+        
+    <div id="oq-body-wrapper">
+     
+
+    <div class="span12">
+        <div class="tabbable well-large">
+            <ul class="nav nav-tabs">
+                <li class="active"><a href="#tab1" data-toggle="tab">My Calculations</a></li>
+                <li><a href="#tab2" data-toggle="tab">My Outputs</a></li>
+            </ul>
+             <div class="tab-content">
+               <div class="tab-pane active" id="tab1">
+                   <form class="calc-form form-horizontal"
+                         enctype="multipart/form-data"
+                         method="post" action="{{ oq_engine_server_url }}/v1/calc/run">
+                     <input type="hidden" name="calculation_type" value="hazard"/>
+                     <div class="control-group">
+                       <label style="width: auto" class="control-label" for="archive">
+                         Run a Hazard Calculation
+                       </label>
+                       <div class="controls">
+                         <div class="fileinput" data-provides="fileinput">
+                           <span class="btn btn-default btn-file"><span>Select Job Archive</span><input type="file" name="archive"/></span>
+                         </div>
+                       </div>
+                     </div>
+<!--                       <input type="hidden" name="callback_url" value=""/> -->
+                       <input type="hidden" name="foreign_calculation_id" value=""/>
+                       <input type="hidden" name="database" value="openquake2"/>
+                   </form>
+                 <div id="my-calculations" class="well"></div>
+               </div>
+               <div class="tab-pane well" id="tab2"></div>
+            </div>
+        </div>
+    </div>
+
+
+
+    </div>
+
+        </div>
+      </div> <!-- /.container -->
+    </div>
+
+
+
+</body>
+
+<!-- <script src="http://code.jquery.com/jquery-1.11.2.min.js"></script> -->
+ <script src="/static/js/d3.js"></script>
+    <script src="https://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+<!-- <script type="text/javascript" src="/static/js/geonode/utils.js"></script>
+<script type="text/javascript" src="/static/js/geonode/base.js"></script> -->
+
+<script type="text/javascript" src="static/lib/jquery-ui/js/jquery-1.9.1.js"></script>
+<script type="text/javascript" src="static/lib/jquery-ui/js/jquery-ui-1.10.3.custom.js"></script>
+<script type="text/javascript" src="static/js/assets.min.js"></script>
+<script type="text/javascript" src="static/bootstrap-extend/js/jasny-bootstrap.min.js"></script>
+<script type="text/javascript" src="static/js/underscore-min.js"></script>
+<script type="text/javascript" src="static/js/backbone-min.js"></script>
+<script type="text/template" id="calculation-table-template">
+  <table id="calculation_table" class="table table-hover">
+    <caption>My Calculations</caption>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Type</th>
+        <th width="300px">Description</th>
+        <th width="215px">Status</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% _.each(calculations, function(calc) { %>
+      <tr class="<%= (calc.get('is_running') == true || ! calc.get('id') ) ? 'warning' : (calc.get('status') == 'complete' ? 'success' : 'error') %>">
+        <td><%= calc.get('id') || 'New' %></td>
+        <td><%= calc.get('calculation_type') %></td>
+        <td><%= calc.get('description') %></td>
+        <td><% if(calc.get('is_running') == true) { %>
+          <%= calc.get('status') %>
+          <% } else if(calc.get('status') == 'complete') { %>
+          <%= calc.get('status') %>
+          <% } else { %>
+          failed<br>( <%= calc.get('status') %> )
+          <% } %>
+        </td>
+        <td>
+          <% if(calc.get('is_running') == false) { %>
+            <p>
+              <% if(calc.get('map')) { %>
+                <a href="/maps/<%= calc.get('map') %>" class="btn btn-sm btn-success">Open</a>
+              <% } %>
+              <a href="download/input/<%= calc.get('calculation_type') %>/<%= calc.get('id') %>" class="btn btn-sm">Download input</a>
+            </p>
+            <% if(calc.get('job_type') == 'hazard') { %>
+            <form class="calc-form" enctype="multipart/form-data"
+              style="margin: 0; display: inline-block"
+              method="post" action="{{ oq_engine_server_url }}/v1/calc/run">
+            <input type="hidden" name="calculation_type" value="risk"/>
+            <div class="fileinput-new" data-provides="fileinput" style="margin: 0 2px 0 0">
+              <span class="btn btn-default btn-sm btn-file"><span class="fileinput-new">Run Risk</span><input type="file" name="archive"/></span>
+            </div>
+            <input type="hidden" name="callback_url" value=""/>
+            <input type="hidden" name="foreign_calculation_id" value=""/>
+            <input type="hidden" name="hazard_job_id" value="<%= calc.get('engine_id') %>"/>
+            </form>
+            <% } %>
+
+          <% if(calc.get('id')) { %>
+            <% if(calc.get('status') != 'complete') { %>
+              <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-traceback" >Traceback</button>
+            <% } %>
+            <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-danger">Remove</a>
+         <% } %>
+        </td>
+      </tr>
+      <% } %>
+      <% }); %>
+    </tbody>
+  </table>
+</script>
+
+<script type="text/template" id="output-table-template">
+  <table id="output_table" class="table table-hover">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Calculation ID</th>
+        <th>Description</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% _.each(outputs, function(out) { %>
+      <% if(out.get('user') ==  {{ user.id }}) { %>
+      <tr>
+        <td><%= out.get('engine_id') %></td>
+        <td><%= out.get('calculation') %></td>
+        <td><%= out.get('display_name') || 'Loading...' %></td>
+        <td>
+          <% if(out.get('layer')) { %>
+            <a href="/layers/<%= out.get('layername') %>" class="btn btn-success">Open</a>
+          <% } %>
+          <% if(out.calc().get('calculation_type') == 'hazard') { %>
+          <a href="#" class="btn btn-primary">Run Risk</a>
+          <% } %>
+        </td>
+      </tr>
+      <% } %>
+      <% }); %>
+    </tbody>
+  </table>
+</script>
+
+<script src="static/js/jquery.form-3.44.0.js"></script>
+<script type="text/javascript"><!--
+  var gem_oq_server_url = '{{ oq_engine_server_url }}';
+  //-->
+  </script>
+<script src="static/icebox/calculate.js"></script>
+</html>
