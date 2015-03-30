@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added an API /v1/calc/:calc_id/remove, to hide jobs
   * A new key is_running is added to the list of dictionaries returned by
     the URL /v1/calc/list
   * Replaced the mock tests for the engine server with real functional tests
