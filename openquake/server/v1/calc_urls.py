@@ -9,6 +9,7 @@ urlpatterns = patterns(
     url(r'^(\d+)/traceback$', 'get_traceback'),
     url(r'^(\d+)/log/size$', 'get_log_size'),
     url(r'^(\d+)/log/(\d*):(\d*)$', 'get_log_slice'),
+    url(r'^(\d+)/remove$', 'calc_remove'),
     url(r'^result/(\d+)$', 'get_result'),
     url(r'^run$', 'run_calc'),
 )
