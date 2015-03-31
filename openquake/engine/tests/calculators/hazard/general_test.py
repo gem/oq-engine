@@ -136,10 +136,10 @@ class ClosestSiteModelTestCase(unittest.TestCase):
 
         sm1 = SiteParam(
             measured=True, vs30=0.0000001,
-            z1pt0=0.0000001, z2pt5=0.0000001, lon=-1, lat=0)
+            z1pt0=0.0000001, z2pt5=0.0000001, backarc=False, lon=-1, lat=0)
         sm2 = SiteParam(
             measured=False, vs30=0.0000002,
-            z1pt0=0.0000002, z2pt5=0.0000002, lon=1, lat=0)
+            z1pt0=0.0000002, z2pt5=0.0000002, backarc=False, lon=1, lat=0)
 
         job = models.OqJob.objects.create(user_name="openquake")
         siteparams = general.SiteModelParams(job, [sm1, sm2])

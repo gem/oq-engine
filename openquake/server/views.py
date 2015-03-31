@@ -151,7 +151,8 @@ def calc_info(request, calc_id):
 def calc(request):
     """
     Get a list of calculations and report their id, status, job_type,
-    description, and a url where more detailed information can be accessed.
+    is_running, description, and a url where more detailed information
+    can be accessed.
 
     Responses are in JSON.
     """
@@ -160,14 +161,38 @@ def calc(request):
     calc_data = _get_calcs(request.GET)
 
     response_data = []
-    for hc_id, status, job_type, desc in calc_data:
+    for hc_id, status, job_type, is_running, desc in calc_data:
         url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
         response_data.append(
             dict(id=hc_id, status=status, job_type=job_type,
-                 description=desc, url=url))
+                 is_running=is_running, description=desc, url=url))
 
     return HttpResponse(content=json.dumps(response_data),
                         content_type=JSON)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def calc_remove(request, calc_id):
+    """
+    Remove the calculation id by setting the field oq_job.relevant to False.
+    """
+    try:
+        job = oqe_models.OqJob.objects.get(pk=calc_id)
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound()
+    try:
+        job.relevant = False
+        job.save()
+    except:
+        response_data = traceback.format_exc().splitlines()
+        status = 500
+    else:
+        response_data = []
+        status = 200
+    return HttpResponse(content=json.dumps(response_data),
+                        content_type=JSON, status=status)
 
 
 def log_to_json(log):
@@ -288,8 +313,8 @@ def _get_calcs(request_get_dict):
         relevant = request_get_dict.get('relevant')
         job_params = job_params.filter(job__relevant=valid.boolean(relevant))
 
-    return [(jp.job.id, jp.job.status, jp.job.job_type, jp.value)
-            for jp in job_params]
+    return [(jp.job.id, jp.job.status, jp.job.job_type, jp.job.is_running,
+             jp.value) for jp in job_params]
 
 
 @require_http_methods(['GET'])
@@ -344,9 +369,8 @@ def get_traceback(request, calc_id):
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
 
-    response_data = [log.message for log in oqe_models.Log.objects.filter(
-        job_id=calc_id, level='CRITICAL').order_by('id')]
-
+    response_data = oqe_models.Log.objects.get(
+        job_id=calc_id, level='CRITICAL').message.splitlines()
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 

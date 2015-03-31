@@ -332,7 +332,7 @@ celeryd_wait $GEM_MAXLOOP"
         # run tests (in this case we omit 'set -e' to be able to read all tests outputs)
         ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ;
                  cd oq-engine
-                 DJANGO_SETTINGS_MODULE=openquake.server.settings nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-server.xml --with-coverage --cover-package=openquake.server --with-doctest openquake/server/tests/
+                 nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-server.xml --with-coverage --cover-package=openquake.server --with-doctest openquake/server/tests/
                  nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-engine.xml --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine/tests/
 
                  # OQ Engine QA tests (splitted into multiple execution to track the performance)
@@ -563,7 +563,7 @@ _lxc_name_and_ip_get()
     for i in $(seq 1 40); do
         sleep 2
         if grep -q "sudo lxc-console -n $GEM_EPHEM_NAME" $filename 2>&1 ; then
-            lxc_name="$(grep "sudo lxc-console -n $GEM_EPHEM_NAME" $filename | sed "s/.*sudo lxc-console -n \($GEM_EPHEM_NAME\)/\1/g")"
+            lxc_name="$(grep "sudo lxc-console -n $GEM_EPHEM_NAME" $filename | grep -v '+ echo' | sed "s/.*sudo lxc-console -n \($GEM_EPHEM_NAME\)/\1/g")"
             for e in $(seq 1 40); do
                 sleep 2
                 if grep -q "$lxc_name" /var/lib/misc/dnsmasq*.leases ; then
