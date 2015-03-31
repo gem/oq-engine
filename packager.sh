@@ -373,7 +373,7 @@ _lxc_name_and_ip_get()
     for i in $(seq 1 40); do
         sleep 2
         if grep -q "sudo lxc-console -n $GEM_EPHEM_NAME" /tmp/packager.eph.$$.log 2>&1 ; then
-            lxc_name="$(grep "sudo lxc-console -n $GEM_EPHEM_NAME" /tmp/packager.eph.$$.log | sed "s/.*sudo lxc-console -n \($GEM_EPHEM_NAME\)/\1/g")"
+            lxc_name="$(grep "sudo lxc-console -n $GEM_EPHEM_NAME" /tmp/packager.eph.$$.log | grep -v '+ echo' | sed "s/.*sudo lxc-console -n \($GEM_EPHEM_NAME\)/\1/g")"
             for e in $(seq 1 40); do
                 sleep 2
                 if grep -q "$lxc_name" /var/lib/misc/dnsmasq*.leases ; then
