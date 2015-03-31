@@ -153,7 +153,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None):
     # UGLY: this is here to avoid circular imports
     from openquake.commonlib.calculators import base
 
-    OqParam.params['calculation_mode'].choices = tuple(
+    OqParam.calculation_mode.validator.choices = tuple(
         calculators or base.calculators)
 
     if isinstance(job_ini, dict):
@@ -175,7 +175,7 @@ def get_mesh(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    if getattr(oqparam, 'sites', None):
+    if oqparam.sites:
         lons, lats = zip(*oqparam.sites)
         return geo.Mesh(numpy.array(lons), numpy.array(lats))
     elif 'sites' in oqparam.inputs:
@@ -184,7 +184,7 @@ def get_mesh(oqparam):
             csv_data.strip().replace(',', ' ').replace('\n', ','))
         lons, lats = zip(*coords)
         return geo.Mesh(numpy.array(lons), numpy.array(lats))
-    elif getattr(oqparam, 'region', None):
+    elif oqparam.region:
         # close the linear polygon ring by appending the first
         # point to the end
         firstpoint = geo.Point(*oqparam.region[0])
@@ -574,7 +574,7 @@ def get_risk_model(oqparam):
         fragility_functions = get_fragility_functions(
             oqparam.inputs['fragility'],
             oqparam.continuous_fragility_discretization,
-            getattr(oqparam, 'steps_per_interval', None),
+            oqparam.steps_per_interval,
         )
         riskmodel.damage_states = fragility_functions.damage_states
         for taxonomy, ffs in fragility_functions.iteritems():
@@ -651,7 +651,7 @@ def get_exposure(oqparam):
         an :class:`Exposure` instance
     """
     out_of_region = 0
-    if hasattr(oqparam, 'region_constraint'):
+    if oqparam.region_constraint:
         region = wkt.loads(oqparam.region_constraint)
     else:
         region = None
@@ -660,8 +660,8 @@ def get_exposure(oqparam):
     relevant_cost_types = set(vulnerability_files(oqparam.inputs)) - \
         set(['occupants'])
     asset_refs = set()
-    time_event = getattr(oqparam, 'time_event', None)
-    ignore_missing_costs = set(getattr(oqparam, 'ignore_missing_costs', []))
+    time_event = oqparam.time_event
+    ignore_missing_costs = set(oqparam.ignore_missing_costs)
 
     def asset_gen():
         # wrap the asset generation to get a nice error message

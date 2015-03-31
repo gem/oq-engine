@@ -727,6 +727,29 @@ def parameters(**names_vals):
     return names_vals
 
 
+class Param(object):
+
+    NODEFAULT = object()
+
+    def __init__(self, validator, default=NODEFAULT):
+        if not callable(validator):
+            raise ValueError(
+                '%r for %s is not a validator: it is not callable'
+                % (validator, name))
+        if not hasattr(validator, '__name__'):
+            raise ValueError(
+                '%r for %s is not a validator: it has no __name__'
+                % (validator, name))
+
+        self.validator = validator
+        self.default = default
+
+    def __get__(self, obj, objclass):
+        if obj is not None:
+            return self.default
+        return self
+
+
 # used in commonlib.oqvalidation
 class ParamSet(object):
     """
@@ -734,7 +757,8 @@ class ParamSet(object):
     of usage:
 
     >>> class MyParams(ParamSet):
-    ...     params = parameters(a=positiveint, b=positivefloat)
+    ...     a = Param(positiveint)
+    ...     b = Param(positivefloat)
     ...
     ...     def is_valid_not_too_big(self):
     ...         "The sum of a and b must be under 10. "
@@ -761,8 +785,8 @@ class ParamSet(object):
                 raise NameError('The parameter name %s is not acceptable'
                                 % name)
             try:
-                convert = self.__class__.params[name]
-            except KeyError:
+                convert = getattr(self.__class__, name).validator
+            except AttributeError:
                 logging.warn('The parameter %r is unknown, ignoring' % name)
                 continue
             try:
