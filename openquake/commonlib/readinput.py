@@ -270,7 +270,7 @@ def get_correl_model(oqparam):
     Return a correlation object. See :mod:`openquake.hazardlib.correlation`
     for more info.
     """
-    correl_name = getattr(oqparam, 'ground_motion_correlation_model', None)
+    correl_name = oqparam.ground_motion_correlation_model
     if correl_name is None:  # no correlation model
         return
     correl_model_cls = getattr(correlation, '%sCorrelationModel' % correl_name)
@@ -358,7 +358,7 @@ def get_source_models(oqparam, source_model_lt, sitecol=None, in_memory=True):
         oqparam.rupture_mesh_spacing,
         oqparam.complex_fault_mesh_spacing,
         oqparam.width_of_mfd_bin,
-        getattr(oqparam, 'area_source_discretization', None))
+        oqparam.area_source_discretization)
 
     # consider only the effective realizations
     rlzs = logictree.get_effective_rlzs(source_model_lt)
@@ -480,7 +480,7 @@ def get_composite_source_model(oqparam, sitecol=None, prefilter=False,
             trt_id += 1
             if prefilter:
                 trt_model.split_sources_and_count_ruptures(
-                    getattr(oqparam, 'area_source_discretization', None))
+                    oqparam.area_source_discretization)
                 logging.info('Processed %s', trt_model)
         smodels.append(source_model)
     csm = source.CompositeSourceModel(source_model_lt, smodels)

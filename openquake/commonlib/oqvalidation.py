@@ -44,7 +44,8 @@ CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS
 class OqParam(valid.ParamSet):
     exports = 'csv'  # default value, normally overridden
 
-    area_source_discretization = valid.Param(valid.NoneOr(valid.positivefloat))
+    area_source_discretization = valid.Param(
+        valid.NoneOr(valid.positivefloat), None)
     asset_correlation = valid.Param(valid.NoneOr(valid.FloatRange(0, 1)), 0)
     asset_life_expectancy = valid.Param(valid.positivefloat)
     base_path = valid.Param(valid.utf8)
@@ -70,7 +71,7 @@ class OqParam(valid.ParamSet):
     ignore_missing_costs = valid.Param(valid.namelist, [])
     individual_curves = valid.Param(valid.boolean, True)
     inputs = valid.Param(dict, {})
-    insured_losses = valid.Param(valid.boolean)
+    insured_losses = valid.Param(valid.boolean, False)
     intensity_measure_types = valid.Param(valid.intensity_measure_types, None)
     intensity_measure_types_and_levels = valid.Param(
         valid.intensity_measure_types_and_levels, None)
@@ -82,10 +83,10 @@ class OqParam(valid.ParamSet):
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 0)
     master_seed = valid.Param(valid.positiveint, 0)
-    maximum_distance = valid.Param(valid.positivefloat, None)
+    maximum_distance = valid.Param(valid.positivefloat, 5)  # 5 km for risk
     maximum_tile_weight = valid.Param(valid.positivefloat)
     mean_hazard_curves = valid.Param(valid.boolean, False)
-    number_of_ground_motion_fields = valid.Param(valid.positiveint)
+    number_of_ground_motion_fields = valid.Param(valid.positiveint, 0)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
     num_epsilon_bins = valid.Param(valid.positiveint)
     poes = valid.Param(valid.probabilities)

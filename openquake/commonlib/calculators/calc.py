@@ -103,11 +103,11 @@ def calc_gmfs_fast(oqparam, sitecol):
     """
     max_dist = oqparam.maximum_distance
     correl_model = get_correl_model(oqparam)
-    seed = getattr(oqparam, 'random_seed', 42)
+    seed = oqparam.random_seed
     imts = get_imts(oqparam)
     [gsim] = get_gsims(oqparam)
-    trunc_level = getattr(oqparam, 'truncation_level', None)
-    n_gmfs = getattr(oqparam, 'number_of_ground_motion_fields', 1)
+    trunc_level = oqparam.truncation_level
+    n_gmfs = oqparam.number_of_ground_motion_fields
     rupture = get_rupture(oqparam)
     res = gmf.ground_motion_fields(
         rupture, sitecol, imts, gsim,
@@ -122,11 +122,11 @@ def calc_gmfs(oqparam, sitecol):
     """
     correl_model = get_correl_model(oqparam)
     rnd = random.Random()
-    rnd.seed(getattr(oqparam, 'random_seed', 42))
+    rnd.seed(oqparam.random_seed)
     imts = get_imts(oqparam)
     [gsim] = get_gsims(oqparam)
     trunc_level = getattr(oqparam, 'truncation_level', None)
-    n_gmfs = getattr(oqparam, 'number_of_ground_motion_fields', 1)
+    n_gmfs = oqparam.number_of_ground_motion_fields
     rupture = get_rupture(oqparam)
     computer = gmf.GmfComputer(rupture, sitecol, imts, [gsim], trunc_level,
                                correl_model)
