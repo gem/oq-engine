@@ -862,7 +862,7 @@ def get_sitecol_gmfs(oqparam):
     gmf_by_imt = {imt: [] for imt in imts}
     sitecol = get_site_collection(oqparam)  # extract it from inputs['sites']
     tags = []
-    with open(oqparam.inputs['gmvs']) as csvfile:
+    with open(oqparam.inputs['gmfs']) as csvfile:
         for line in csvfile:
             row = line.split(',')
             indices = map(int, row[1].split())

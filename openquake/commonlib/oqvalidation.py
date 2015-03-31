@@ -164,7 +164,7 @@ class OqParam(valid.ParamSet):
     def is_valid_geometry(self):
         """
         It is possible to infer the geometry only if exactly
-        one of sites, sites_csv, hazard_curves_csv, gmvs_csv,
+        one of sites, sites_csv, hazard_curves_csv, gmfs_csv,
         region and exposure_file is set. You did set more than
         one, or nothing.
         """
@@ -174,7 +174,7 @@ class OqParam(valid.ParamSet):
             sites=getattr(self, 'sites', 0),
             sites_csv=self.inputs.get('sites', 0),
             hazard_curves_csv=self.inputs.get('hazard_curves', 0),
-            gmvs_csv=self.inputs.get('gmvs', 0),
+            gmfs_csv=self.inputs.get('gmvs', 0),
             region=getattr(self, 'region', 0),
             exposure=self.inputs.get('exposure', 0))
         # NB: below we check that all the flags

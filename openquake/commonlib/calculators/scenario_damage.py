@@ -75,7 +75,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         Get the GMFs and build the riskinputs.
         """
         super(ScenarioDamageCalculator, self).pre_execute()
-        if 'gmvs' in self.oqparam.inputs:
+        if 'gmfs' in self.oqparam.inputs:
             self.riskinputs = self.read_gmfs_from_csv()
         else:
             self.riskinputs = self.compute_gmfs()
@@ -100,10 +100,12 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         logging.info('Reading hazard curves from CSV')
         sitecol, gmfs_by_imt = readinput.get_sitecol_gmfs(self.oqparam)
 
+        # filter the hazard sites by taking the closest to the assets
         with self.monitor('assoc_assets_sites'):
             self.sitecol, self.assets_by_site = self.assoc_assets_sites(
                 sitecol)
 
+        # reduce the gmfs matrices to the filtered sites
         for imt in gmfs_by_imt:
             gmfs_by_imt[imt] = gmfs_by_imt[imt][self.sitecol.indices]
 
