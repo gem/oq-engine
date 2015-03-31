@@ -75,12 +75,6 @@ si    <script src="{{ STATIC_URL }}lib/jquery/js/jquery.form-3.44.0.js"></script
      
 
     <div class="span12">
-        <div class="tabbable well-large">
-            <ul class="nav nav-tabs">
-                <li class="active"><a href="#tab1" data-toggle="tab">Calculations</a></li>
-            </ul>
-             <div class="tab-content">
-               <div class="tab-pane active" id="tab1">
                    <form class="calc-form form-horizontal"
                          enctype="multipart/form-data"
                          method="post" action="{{ oq_engine_server_url }}/v1/calc/run">
@@ -100,10 +94,6 @@ si    <script src="{{ STATIC_URL }}lib/jquery/js/jquery.form-3.44.0.js"></script
                        <input type="hidden" name="database" value="openquake2"/>
                    </form>
                  <div id="my-calculations" class="well"></div>
-               </div>
-               <div class="tab-pane well" id="tab2"></div>
-            </div>
-        </div>
     </div>
 
 
@@ -132,7 +122,7 @@ si    <script src="{{ STATIC_URL }}lib/jquery/js/jquery.form-3.44.0.js"></script
 <script type="text/javascript" src="{{ STATIC_URL }}lib/backbone/js/backbone-min.js"></script>
 <script type="text/template" id="calculation-table-template">
   <table id="calculation_table" class="table table-hover">
-    <caption>My Calculations</caption>
+    <caption>Calculations</caption>
     <thead>
       <tr>
         <th>ID</th>
