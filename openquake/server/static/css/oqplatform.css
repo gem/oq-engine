@@ -1,0 +1,363 @@
+.navbar-fixed-top-second {
+   position: fixed;
+   top: 73px;
+   width: 100%;
+}
+
+#header-wrapper {
+    height: 40px;
+}
+
+.dropdown-backdrop {
+    position: none;
+    top: none;
+    right: none;
+    bottom: none;
+    left: none;
+    z-index: none;
+}
+
+.pull-right > li.user > .dropdown-menu {
+    right: -6px;
+}
+
+li.search > ul.dropdown-menu {
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+}
+
+.pull-right > li.search > .dropdown-menu,
+.pull-right > li.share > .dropdown-menu {
+    right: -3px;
+}
+
+body {
+    color: #555;
+    padding-top: 40px;
+    padding-bottom: 20px;
+}
+
+h2 {
+    color: #1b75a7;
+}
+
+.container,
+.navbar-static-top .container,
+.navbar-fixed-top .container,
+.navbar-fixed-bottom .container {
+    width: 100%;
+}
+
+.navbar .nav.account-bar {
+    margin-top: 0;
+}
+
+.span10 {
+    margin-top: 5px;
+    width: 400px;
+}
+
+.span9 {
+    position: absolute;
+    width: auto;
+    margin-left: 0;
+    margin-right: 75px;
+    float: right;
+    right: 0;
+}
+
+.span3 {
+    width: auto;
+}
+
+.gem {
+    width: auto;
+}
+
+.navbar .navbar-inner {
+    background-image: none;
+    margin: 0;
+    padding: 0;
+}
+
+.navbar .nav > li > a {
+    color: #fff;
+    text-shadow: none;
+    font-size: 16px;
+    padding: 0 10px;
+}
+
+.navbar .nav > li.user {
+    padding-top: 10px;
+}
+
+.navbar .nav.account-bar > li.actions > a,
+.navbar .nav.account-bar > li.search > a,
+.navbar .nav.account-bar > li.share > a {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.navbar .nav.account-bar > li.divider-v {
+    padding: 10px 0;
+}
+
+.nav-logo {
+    background: url(/static/img/oq-logo.png) no-repeat;
+    width: 218px;
+    height: 40px;
+    margin: 0;
+}
+
+#gem-right-logo {
+    float: right;
+    right: 0;
+    position: absolute;
+
+}
+
+.nav-logo-gem {
+    background: url(/static/img/oq-gem.png) no-repeat;
+    width: 72px;
+    height: 40px;
+    margin: 0;
+}
+
+.navbar .navbar-inner {
+    background: url(/static/img/oq-header.png) no-repeat left top;
+    background-color: #1b75a5;
+}
+
+.nav-box {
+    background: none;
+}
+
+nav.main-nav {
+    margin: 0;
+}
+nav.main-nav ul li {
+    height: 30px;
+    display: inline-block;
+    float: left;
+    width: 80px;
+    margin-left: 15px;
+    margin-right: 15px;
+    padding: 0;
+}
+nav.main-nav ul li a {
+    color: #fff;
+    text-transform: none;
+    width: 80px;
+    text-align: center;
+    padding: 4px 0;
+    font-size: 18px;
+}
+
+nav.main-nav ul li.calc{
+   border-bottom: solid #ffdc00 5px;
+}
+nav.main-nav ul li.share{
+   border-bottom: solid #eb737d 5px;
+}
+nav.main-nav ul li.explore{
+   border-bottom: solid #dc6522 5px;
+}
+
+.span11 {
+    float: right;
+    right: 0;
+    width: 100px;
+}
+
+.input-append, .input-prepend {
+    margin-bottom: 5px;
+}
+
+#submenu a {
+    display: block;
+    padding: 4px;
+    text-decoration: none;
+    font-family: 'Lato', sans-serif;
+    font-weight: 400;
+    color: #1b75a7;
+    text-transform: capitalize;
+}
+
+#submenu a:hover {
+    font-weight: 700;
+}
+
+#submenu h3 {
+    font-size: 11px;
+    font-weight: bold;
+    color: #fff;
+    margin-top: 5px;
+}
+
+/*--- DROPDOWN ---*/
+#submenu ul {
+    background: #fff;
+    /* Adding a background makes the dropdown work properly in IE7+.
+       Make this as close to your page's background as possible
+       (i.e. white page == white background).
+    */
+    background:rgba(255,255,255,0);
+    /* But! Let's make the background fully transparent where we can,
+       we don't actually want to see it if we can help it...
+    */
+    list-style:none;
+    position:absolute;
+    /* Hide off-screen when not needed
+       (this is more accessible than display:none;)
+    */
+    left: -9999px;
+    z-index: 80000;
+}
+
+#submenu ul li{
+    padding-top:0px; /* Introducing a padding between the li and the a give the illusion spaced items */
+    float:none;
+    min-width: 200px;
+}
+
+#submenu ul a{
+    white-space:nowrap; /* Stop text wrapping and creating multi-line dropdown items */
+}
+
+#submenu li:hover ul li ul{ /* Display the dropdown on hover */
+    left: -9999px; /* Bring back on-screen when needed */
+}
+
+#submenu li:hover ul{ /* Display the dropdown on hover */
+    left: 1px; /* Bring back on-screen when needed */
+}
+
+#submenu li ul li:hover ul{ /* Display the dropdown on hover */
+    left: 174px; /* Bring back on-screen when needed */
+    top: 0px;
+}
+
+#submenu li:hover a{ /* These create persistent hover states, meaning the top-most link stays 'hovered' even when your cursor has moved down the list. */
+    background: #FFFFFF;
+    background-repeat: repeat-y;
+    text-decoration: none;
+}
+
+#submenu li:hover ul a{ /* The persistent hover state does however create a global style for links even before they're hovered. Here we undo these effects. */
+    text-decoration: none;
+}
+
+#submenu li:hover ul li a:hover {
+ /* Here we define the most explicit hover states--what happens when you hover each individual link. */
+    font-weight: 700;
+}
+
+ul.social li a {
+    margin-top: -5px;
+}
+
+ul.social li a.tw {
+    margin-top: -5px;
+}
+
+ul.social li a.gp {
+    margin-top: -5px;
+}
+
+.oq-btns {
+    margin-left: 25px;
+    margin-bottom: 50px;
+}
+
+.oq-btns .btn {
+    background: #f7931e;
+}
+
+.oq-btns a.btn-large {
+    font-size: 20px;
+    margin: 0 0 15px;
+    width: 160px;
+}
+
+#oq-page-header {
+    height: 40px;
+    position: absolute;
+    top: 0;
+}
+
+#oq-body-content {
+    font-size: 18px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 200;
+    line-height: 27px;
+    color: #555;
+}
+
+#oq-body-heading h1 {
+    color: #1b75a7;
+    font-size: 40px;
+    text-transform: uppercase;
+    font-weight: 300;
+}
+
+#oq-body-content {
+    float: left;
+    width: 68%;
+}
+
+#oq-body-sidebar {
+    float: right;
+    width: 30%;
+}
+
+#oq-page-middle div.content-wrap {
+    margin-bottom: 0px;
+    padding-top: 0px;
+    padding-left: 0px;
+    width: auto;
+}
+
+#oq-page-middle div.content-wrap div.container {
+    width: 980px;
+}
+
+#oq-page-middle div.content-wrap div.container div.row {
+    margin-left: 0px;
+}
+
+#oq-page-footer, footer.footer {
+    z-index: 1000;
+    background: #bebebe;
+    font-size: 12px;
+    position: fixed;
+    bottom: 0;
+    padding-left: 10%;
+    padding-right: 10%;
+    float: left;
+    width: 80%;
+    height: auto;
+    padding-top: 0;
+}
+
+footer.footer div.container {
+    /* Make the footer content align nicely, and not so close to the
+       top of the bar */
+}
+
+#oq-page-footer, footer.footer form label {
+    color: #fff;
+}
+
+#my-calculations.well {
+    background-color: #f5f5f5;
+}
+
+/*
+   This rule is set also in templates/data_viewer_base.html
+   with a 'z-index: 10000;'. It is not just here because the
+   z-index must be set _after_ any jquery import.
+   Used by widgets in Leaflet apps.
+*/
+.ui-dialog, .ui-widget { }
