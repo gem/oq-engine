@@ -74,7 +74,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         """
         Get the GMFs and build the riskinputs.
         """
-        # super(ScenarioDamageCalculator, self).pre_execute()
+        super(ScenarioDamageCalculator, self).pre_execute()
         if 'gmvs' in self.oqparam.inputs:
             self.riskinputs = self.read_gmfs_from_csv()
         else:
@@ -98,14 +98,15 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         :returns: riskinputs
         """
         logging.info('Reading hazard curves from CSV')
-        self.sitecol, gmfs_by_imt = readinput.get_sitecol_gmfs(self.oqparam)
+        sitecol, gmfs_by_imt = readinput.get_sitecol_gmfs(self.oqparam)
 
         with self.monitor('assoc_assets_sites'):
-            _, assets_by_site = readinput.get_sitecol_assets(
-                self.oqparam, readinput.get_exposure(self.oqparam))
             self.sitecol, self.assets_by_site = self.assoc_assets_sites(
-                assets_by_site, self.sitecol)
-            # self.assets_by_site = self.sitecol.expand(assets_by_site, [])
+                sitecol)
+
+        for imt in gmfs_by_imt:
+            gmfs_by_imt[imt] = gmfs_by_imt[imt][self.sitecol.indices]
+
         num_assets = sum(len(assets) for assets in self.assets_by_site)
         num_sites = len(self.sitecol)
         logging.info('Associated %d assets to %d sites', num_assets, num_sites)
