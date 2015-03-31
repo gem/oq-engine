@@ -68,7 +68,7 @@ def event_based(workflow, getter, outputdict, params, monitor):
     num_losses = collections.defaultdict(lambda: numpy.zeros(2, dtype=int))
 
     specific_assets = set(params.specific_assets)
-    statistics = getattr(params, 'statistics', True)  # enabled by default
+    statistics = params.statistics  # enabled by default
     # keep in memory the loss_matrix only when specific_assets are set
     workflow.return_loss_matrix = bool(specific_assets)
 

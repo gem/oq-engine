@@ -129,10 +129,8 @@ class BaseHazardCalculator(base.Calculator):
         self.num_ruptures = collections.defaultdict(int)
         # now a dictionary (trt_model_id, gsim) -> poes
         self.acc = general.AccumDict()
-        self.mean_hazard_curves = getattr(
-            self.oqparam, 'mean_hazard_curves', None)
-        self.quantile_hazard_curves = getattr(
-            self.oqparam, 'quantile_hazard_curves', ())
+        self.mean_hazard_curves = self.oqparam.mean_hazard_curves
+        self.quantile_hazard_curves = self.oqparam.quantile_hazard_curves
         self._hazard_curves = []
         self._realizations = []
         self._source_models = []
@@ -178,7 +176,7 @@ class BaseHazardCalculator(base.Calculator):
                 pnes2 = 1 - acc.get((trt_model_id, gsim), self.zeros)
                 acc[trt_model_id, gsim] = 1 - pnes1 * pnes2
 
-            if getattr(self.oqparam, 'poes_disagg', None):
+            if self.oqparam.poes_disagg:
                 for bb in bbs:
                     self.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
 
@@ -572,11 +570,10 @@ class BaseHazardCalculator(base.Calculator):
         # required for computing UHS
         # if `hazard_maps` is false but `uniform_hazard_spectra` is true,
         # just don't export the maps
-        if (getattr(self.oqparam, 'hazard_maps', None) or
-                getattr(self.oqparam, 'uniform_hazard_spectra', None)):
+        if (self.oqparam.hazard_maps or self.oqparam.uniform_hazard_spectra):
             with self.monitor('generating hazard maps'):
                 tasks.apply_reduce(
                     hazard_curves_to_hazard_map,
                     (self.job.id, self._hazard_curves, self.oqparam.poes))
-        if getattr(self.oqparam, 'uniform_hazard_spectra', None):
+        if self.oqparam.uniform_hazard_spectra:
             do_uhs_post_proc(self.job)
