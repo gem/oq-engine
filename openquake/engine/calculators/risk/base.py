@@ -44,9 +44,6 @@ epsilon_sampling in openquake.cfg. It the correlation is
 nonzero, consider setting asset_correlation=0 to avoid building the
 correlation matrix.'''
 
-#: Default maximum asset-hazard distance in km
-DEFAULT_MAXIMUM_DISTANCE = 5
-
 eps_sampling = int(config.get('risk', 'epsilon_sampling'))
 
 
@@ -167,9 +164,7 @@ class RiskCalculator(base.Calculator):
             dist = min(dist, grid_spacing * numpy.sqrt(2) / 2)
         self.best_maximum_distance = dist
         self.time_event = self.oqparam.time_event
-
         self.taxonomies_from_model = self.oqparam.taxonomies_from_model
-        self.oqparam.insured_losses = self.oqparam.insured_losses
 
     def get_hazard_outputs(self):
         """
