@@ -177,7 +177,7 @@ class SimpleFaultSource(ParametricSeismicSource):
 
                             surface = SimpleFaultSurface(mesh)
                             hypocenter = surface.get_hypo_location(
-                                mesh, self.rupture_mesh_spacing,
+                                self.rupture_mesh_spacing,
                                 hypo[:2])
 
                             occurrence_rate_hypo = occurrence_rate * \
