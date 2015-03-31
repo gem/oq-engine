@@ -707,7 +707,7 @@ class RuptureContext(BaseContext):
     """
     __slots__ = (
         'mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
-        'hypo_depth', 'width'
+        'hypo_depth', 'width', 'hypo_loc'
     )
 
 
