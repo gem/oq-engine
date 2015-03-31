@@ -18,7 +18,7 @@ si    <script src="/static/js/jquery.form-3.44.0.js"></script>
 
 <head>
     <meta charset="utf-8">
-    <title> Welcome! - OpenQuake Platform </title>
+    <title> OpenQuakeWeb </title>
     
       <link href="static/css/base.css" rel="stylesheet">
       <link href="static/geonode/font/lato_font.css" rel="stylesheet" type="text/css">
@@ -77,8 +77,7 @@ si    <script src="/static/js/jquery.form-3.44.0.js"></script>
     <div class="span12">
         <div class="tabbable well-large">
             <ul class="nav nav-tabs">
-                <li class="active"><a href="#tab1" data-toggle="tab">My Calculations</a></li>
-                <li><a href="#tab2" data-toggle="tab">My Outputs</a></li>
+                <li class="active"><a href="#tab1" data-toggle="tab">Calculations</a></li>
             </ul>
              <div class="tab-content">
                <div class="tab-pane active" id="tab1">
@@ -149,7 +148,7 @@ si    <script src="/static/js/jquery.form-3.44.0.js"></script>
         <td><%= calc.get('id') || 'New' %></td>
         <td><%= calc.get('calculation_type') %></td>
         <td><%= calc.get('description') %></td>
-        <td><% if(calc.get('is_running') == true) { %>
+        <td><% if (calc.get('is_running') == true || ! calc.get('id')) { %>
           <%= calc.get('status') %>
           <% } else if(calc.get('status') == 'complete') { %>
           <%= calc.get('status') %>
@@ -158,12 +157,14 @@ si    <script src="/static/js/jquery.form-3.44.0.js"></script>
           <% } %>
         </td>
         <td>
-          <% if(calc.get('is_running') == false) { %>
+          <% if(calc.get('is_running') == false && calc.get('id')) { %>
             <p>
               <% if(calc.get('map')) { %>
                 <a href="/maps/<%= calc.get('map') %>" class="btn btn-sm btn-success">Open</a>
               <% } %>
-              <a href="download/input/<%= calc.get('calculation_type') %>/<%= calc.get('id') %>" class="btn btn-sm">Download input</a>
+              <!--
+                   <a href="download/input/<%= calc.get('calculation_type') %>/<%= calc.get('id') %>" class="btn btn-sm">Download input</a>
+              -->
             </p>
             <% if(calc.get('job_type') == 'hazard') { %>
             <form class="calc-form" enctype="multipart/form-data"
@@ -173,9 +174,10 @@ si    <script src="/static/js/jquery.form-3.44.0.js"></script>
             <div class="fileinput-new" data-provides="fileinput" style="margin: 0 2px 0 0">
               <span class="btn btn-default btn-sm btn-file"><span class="fileinput-new">Run Risk</span><input type="file" name="archive"/></span>
             </div>
-            <input type="hidden" name="callback_url" value=""/>
+            <!-- <input type="hidden" name="callback_url" value=""/> -->
             <input type="hidden" name="foreign_calculation_id" value=""/>
-            <input type="hidden" name="hazard_job_id" value="<%= calc.get('engine_id') %>"/>
+            <input type="hidden" name="hazard_job_id" value="<%= calc.get('id') %>"/>
+            <input type="hidden" name="database" value="openquake2"/>
             </form>
             <% } %>
 
