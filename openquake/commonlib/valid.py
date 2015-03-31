@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2013, GEM Foundation
+#  Copyright (c) 2013-2015, GEM Foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -707,28 +707,14 @@ def site_param(value, z1pt0, z2pt5, vs30Type, vs30, lon, lat, backarc="false"):
 
 ###########################################################################
 
-def parameters(**names_vals):
-    """
-    Returns a dictionary {name: validator} by making sure
-    that the validators are callable objects with a `__name__`.
-
-    :param names_vals:
-        keyword arguments parameter_name -> parameter_validator
-    """
-    for name, val in names_vals.iteritems():
-        if not callable(val):
-            raise ValueError(
-                '%r for %s is not a validator: it is not callable'
-                % (val, name))
-        if not hasattr(val, '__name__'):
-            raise ValueError(
-                '%r for %s is not a validator: it has no __name__'
-                % (val, name))
-    return names_vals
-
-
 class Param(object):
+    """
+    A descriptor for validated parameters with a default, to be
+    used as attributes in ParamSet objects.
 
+    :param validator: the validator
+    :param default: the default value
+    """
     NODEFAULT = object()
 
     def __init__(self, validator, default=NODEFAULT):
