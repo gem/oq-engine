@@ -1,7 +1,5 @@
   [Graeme Weatherill]
   * Adds 'hypo_loc' slot to RuptureContext object
-  
-  [Graeme Weatherill]
   * Implements Abrahamson et al. (2015) BC Hydro GMPE
   * Adds backarc term to the Site and SiteCollection object
   
