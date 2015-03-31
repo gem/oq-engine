@@ -572,6 +572,10 @@ if [ 0 -eq 1 ]; then
 fi
 
 if [ $BUILD_ON_LXC -eq 1 ]; then
+    sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
+    _lxc_name_and_ip_get /tmp/packager.eph.$$.log
+    _wait_ssh $lxc_ip
+
     set +e
     _pkgbuild_innervm_run $lxc_ip $DPBP_FLAG
     inner_ret=$?
