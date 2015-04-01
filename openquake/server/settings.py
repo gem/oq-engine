@@ -6,7 +6,7 @@ from openquake.engine import settings as oqe_settings
 
 OQSERVER_ROOT = os.path.dirname(__file__)
 
-DEBUG = False  # NB: when True, test_haz_risk_ok breaks!
+DEBUG = True  # NB: when True, test_haz_risk_ok breaks!
 TEMPLATE_DEBUG = DEBUG
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 
