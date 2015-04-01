@@ -158,7 +158,7 @@ class RiskCalculator(base.Calculator):
             pk=self.oqparam.hazard_output_id) \
             if self.oqparam.hazard_output_id else None
 
-        dist = self.oqparam.maximum_distance
+        dist = self.oqparam.assert_hazard_distance
         grid_spacing = self.oqparam.region_grid_spacing
         if grid_spacing:
             dist = min(dist, grid_spacing * numpy.sqrt(2) / 2)
