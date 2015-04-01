@@ -36,7 +36,7 @@ class GmfNode(LiteralNode):
 
     into LiteralNode objects.
     """
-    validators = valid.parameters(
+    validators = dict(
         gmv=valid.positivefloat,
         lon=valid.longitude,
         lat=valid.latitude)
