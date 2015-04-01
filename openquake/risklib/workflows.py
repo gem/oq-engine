@@ -23,6 +23,7 @@ import numpy
 from scipy import interpolate
 
 from openquake.baselib.general import CallableDict
+from openquake.commonlib import valid
 from openquake.risklib import utils, scientific
 
 Output = collections.namedtuple('Output', 'hid weight loss_type output')
@@ -428,8 +429,10 @@ class ProbabilisticEventBased(Workflow):
     def __init__(
             self, imt, taxonomy,
             vulnerability_functions,
+            hazard_investigation_time,
             risk_investigation_time,
-            tses,
+            number_of_logic_tree_samples,
+            ses_per_logic_tree_path,
             loss_curve_resolution,
             conditional_loss_poes,
             insured_losses=False):
@@ -437,6 +440,8 @@ class ProbabilisticEventBased(Workflow):
         See :func:`openquake.risklib.scientific.event_based` for a description
         of the input parameters.
         """
+        tses = ((hazard_investigation_time or risk_investigation_time) *
+                ses_per_logic_tree_path * (number_of_logic_tree_samples or 1))
         self.imt = imt
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
@@ -704,7 +709,11 @@ class ProbabilisticEventBasedBCR(Workflow):
     def __init__(self, imt, taxonomy,
                  vulnerability_functions_orig,
                  vulnerability_functions_retro,
-                 risk_investigation_time, tses, loss_curve_resolution,
+                 hazard_investigation_time,
+                 risk_investigation_time,
+                 number_of_logic_tree_samples,
+                 ses_per_logic_tree_path,
+                 loss_curve_resolution,
                  interest_rate, asset_life_expectancy):
         self.imt = imt
         self.taxonomy = taxonomy
@@ -716,7 +725,10 @@ class ProbabilisticEventBasedBCR(Workflow):
         self.vf_retro = vulnerability_functions_retro
         self.curves = functools.partial(
             scientific.event_based, curve_resolution=loss_curve_resolution,
-            time_span=risk_investigation_time, tses=tses)
+            time_span=risk_investigation_time, tses=(
+                (hazard_investigation_time or risk_investigation_time) *
+                ses_per_logic_tree_path))
+        # TODO: add multiplication by number_of_logic_tree_samples or 1
 
     def __call__(self, loss_type, assets, gmfs, epsilons, event_ids):
         self.assets = assets
@@ -877,11 +889,13 @@ def get_workflow(imt, taxonomy, oqparam, **extra):
     argnames = inspect.getargspec(workflow_class.__init__).args[3:]
 
     # arguments extracted from oqparam
-    known_args = vars(oqparam)
+    known_args = set(name for name, value in
+                     inspect.getmembers(oqparam.__class__)
+                     if isinstance(value, valid.Param))
     all_args = {}
     for argname in argnames:
         if argname in known_args:
-            all_args[argname] = known_args[argname]
+            all_args[argname] = getattr(oqparam, argname)
 
     if 'hazard_imtls' in argnames:  # special case
         all_args['hazard_imtls'] = oqparam.imtls
