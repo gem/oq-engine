@@ -440,8 +440,8 @@ class ProbabilisticEventBased(Workflow):
         See :func:`openquake.risklib.scientific.event_based` for a description
         of the input parameters.
         """
-        tses = (hazard_investigation_time * ses_per_logic_tree_path *
-                (number_of_logic_tree_samples or 1))
+        tses = ((hazard_investigation_time or risk_investigation_time) *
+                ses_per_logic_tree_path * (number_of_logic_tree_samples or 1))
         self.imt = imt
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
