@@ -727,7 +727,8 @@ class ProbabilisticEventBasedBCR(Workflow):
             scientific.event_based, curve_resolution=loss_curve_resolution,
             time_span=risk_investigation_time, tses=(
                 (hazard_investigation_time or risk_investigation_time) *
-                ses_per_logic_tree_path * (number_of_logic_tree_samples or 1)))
+                ses_per_logic_tree_path))
+        # TODO: add multiplication by number_of_logic_tree_samples or 1
 
     def __call__(self, loss_type, assets, gmfs, epsilons, event_ids):
         self.assets = assets
