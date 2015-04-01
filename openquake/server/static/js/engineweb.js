@@ -147,7 +147,6 @@
 
                 var myXhr = $.ajax({url: gem_oq_server_url + "/v1/calc/" + calc_id + "/traceback",
                                     error: function (jqXHR, textStatus, errorThrown) {
-                                        console.log(jqXHR);
                                         if (jqXHR.status == 404) {
                                             diaerror.showDiaError("Calculation " + calc_id + " not found.");
                                         }
