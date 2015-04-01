@@ -83,7 +83,7 @@ class OqParam(valid.ParamSet):
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 0)
     master_seed = valid.Param(valid.positiveint, 0)
-    maximum_distance = valid.Param(valid.positivefloat, 5)  # 5 km for risk
+    maximum_distance = valid.Param(valid.positivefloat)
     maximum_tile_weight = valid.Param(valid.positivefloat)
     mean_hazard_curves = valid.Param(valid.boolean, False)
     number_of_ground_motion_fields = valid.Param(valid.positiveint, 0)
