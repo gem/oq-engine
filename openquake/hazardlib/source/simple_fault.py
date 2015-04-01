@@ -24,6 +24,12 @@ from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.slots import with_slots
+from openquake.hazardlib.geo.geodetic import geodetic_distance
+from openquake.hazardlib.geo.mesh import RectangularMesh
+from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.near_fault import (get_plane_equation, projection_pp,
+                                            directp, average_s_rad,
+                                            isochone_ratio)
 
 
 @with_slots
@@ -44,7 +50,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         Angle between earth surface and fault plane in decimal degrees.
     :param rake:
         Angle describing rupture propagation direction in decimal degrees.
-    :param hypo_loc:
+    :param hypo_list:
         Array describing the relative position of the hypocentre on the rupture
         surface. Each line represents an hypocentral position defined in terms
         of the relative distance along strike and dip (from the upper, left
@@ -69,7 +75,8 @@ class SimpleFaultSource(ParametricSeismicSource):
         for the lowest magnitude value.
     """
     __slots__ = ParametricSeismicSource.__slots__ + '''upper_seismogenic_depth
-    lower_seismogenic_depth fault_trace dip rake hypo_list'''.split()
+    lower_seismogenic_depth fault_trace dip rake hypo_list
+    slip_list'''.split()
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
@@ -77,7 +84,8 @@ class SimpleFaultSource(ParametricSeismicSource):
                  temporal_occurrence_model,
                  # simple fault specific parameters
                  upper_seismogenic_depth, lower_seismogenic_depth,
-                 fault_trace, dip, rake, hypo_list=numpy.array(None)):
+                 fault_trace, dip, rake, hypo_list=numpy.array(None),
+                 slip_list=numpy.array(None)):
         super(SimpleFaultSource, self).__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
             magnitude_scaling_relationship, rupture_aspect_ratio,
@@ -98,6 +106,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         min_mag, max_mag = self.mfd.get_min_max_mag()
         cols_rows = self._get_rupture_dimensions(float('inf'), float('inf'),
                                                  min_mag)
+        self.slip_list = slip_list
         self.hypo_list = hypo_list
         if 1 in cols_rows:
             raise ValueError('mesh spacing %s is too high to represent '
@@ -106,7 +115,7 @@ class SimpleFaultSource(ParametricSeismicSource):
 
     def get_rupture_enclosing_polygon(self, dilation=0):
         """
-        Uses :meth:`openquake.hazardlib.geo.surface.simple_fault.SimpleFaultSurface.surface_projection_from_fault_data`
+        Uses :meth:`openquake.hazardlib.geo.surface.simple_fault.SimpleFaultSursface.surface_projection_from_fault_data`
         for getting the fault's surface projection and then calls
         its :meth:`~openquake.hazardlib.geo.polygon.Polygon.dilate`
         method passing in ``dilation`` parameter.
@@ -160,7 +169,8 @@ class SimpleFaultSource(ParametricSeismicSource):
                     mesh = whole_fault_mesh[first_row: first_row + rup_rows,
                                             first_col: first_col + rup_cols]
 
-                    if self.hypo_list.size == 1:
+                    if ((self.hypo_list.size == 1) and
+                            (self.slip_list.size == 1)):
 
                         hypocenter = mesh.get_middle_point()
                         occurrence_rate_hypo = occurrence_rate
@@ -174,21 +184,22 @@ class SimpleFaultSource(ParametricSeismicSource):
                         )
                     else:
                         for hypo in self.hypo_list:
+                            for slip in self.slip_list:
+                                surface = SimpleFaultSurface(mesh)
+                                hypocenter = surface.get_hypo_location(
+                                    self.rupture_mesh_spacing,
+                                    hypo[:2])
+                                occurrence_rate_hypo = occurrence_rate * \
+                                    hypo[2] * slip[1]
+                                rupture_slip_direction = slip[0]
 
-                            surface = SimpleFaultSurface(mesh)
-                            hypocenter = surface.get_hypo_location(
-                                self.rupture_mesh_spacing,
-                                hypo[:2])
-
-                            occurrence_rate_hypo = occurrence_rate * \
-                                hypo[2]
-
-                            yield ParametricProbabilisticRupture(
-                                mag, self.rake, self.tectonic_region_type,
-                                hypocenter, surface, type(self),
-                                occurrence_rate_hypo,
-                                self.temporal_occurrence_model
-                            )
+                                yield ParametricProbabilisticRupture(
+                                    mag, self.rake, self.tectonic_region_type,
+                                    hypocenter, surface, type(self),
+                                    occurrence_rate_hypo,
+                                    self.temporal_occurrence_model,
+                                    rupture_slip_direction
+                                )
 
     def count_ruptures(self):
         """
@@ -257,3 +268,131 @@ class SimpleFaultSource(ParametricSeismicSource):
         rup_cols = int(round(rup_length / self.rupture_mesh_spacing) + 1)
         rup_rows = int(round(rup_width / self.rupture_mesh_spacing) + 1)
         return rup_cols, rup_rows
+
+    def _get_dpp(self, site):
+        """
+        Compute and return the directivity prediction value, DPP at a given
+        site.
+        :param site:
+            :class:`~openquake.hazardlib.geo.point.Point` object
+            representing the location of the target site
+        :returns:
+            directivity predication value.
+        """
+        self.origin = self.fault_trace.points[0]
+        dpp_multi = []
+        index_patch = SimpleFaultSurface.get_fault_patch_vertices(
+            self.hypocentre, self.fault_trace, self.upper_seis_depth,
+            self.lower_seis_depth, self.dip)
+
+        idx_nxtp = True
+        hypocentre = self.hypocentre
+
+        while idx_nxtp:
+
+            # E Plane Calculation
+            p0, p1, p2, p3 = SimpleFaultSurface.get_fault_patch_vertices(
+                self.fault_trace, self.upper_seis_depth,
+                self.lower_seis_depth, self.dip, index_patch=index_patch)
+
+            [normal, dist_to_plane] = get_plane_equation(
+                p0, p1, p2, self.origin)
+
+            pp = projection_pp(site, normal, dist_to_plane, self.origin)
+            pd, e1, idx_nxtp = directp(
+                p0, p1, p2, p3, hypocentre, self.origin, pp)
+            pd_geo = self.origin.point_at(
+                (pd[0] ** 2 + pd[1] ** 2) ** 0.5, -pd[2],
+                numpy.degrees(math.atan2(pd[0], pd[1])))
+
+            # determine the lower bound of E path value
+            f1 = geodetic_distance(p0.longitude,
+                                   p0.latitude,
+                                   p1.longitude,
+                                   p1.latitude)
+            f2 = geodetic_distance(p2.longitude,
+                                   p2.latitude,
+                                   p3.longitude,
+                                   p3.latitude)
+
+            if f1 > f2:
+                f = f1
+            else:
+                f = f2
+
+            fs, rd, r_hyp = average_s_rad(site, hypocentre, self.origin,
+                                          pp, normal, dist_to_plane, e1, p0,
+                                          p1, self.rupture_slip_direction)
+            cprime = isochone_ratio(e1, rd, r_hyp)
+
+            dpp_exp = cprime * numpy.maximum(e1, 0.1 * f) *\
+                numpy.maximum(fs, 0.2)
+            dpp_multi.append(dpp_exp)
+
+            # check if go through the next patch of the fault
+            index_patch = index_patch + 1
+
+            if (len(self.fault_trace) <= 2) and (index_patch >=
+                                                 len(self.fault_trace)):
+                idx_nxtp = False
+            elif index_patch >= len(self.fault_trace):
+                idx_nxtp = False
+            elif idx_nxtp:
+                hypocentre = pd_geo
+                idx_nxtp = True
+
+        # calculate DPP value of the site.
+        dpp = numpy.log(numpy.sum(dpp_multi))
+
+        return dpp
+
+    def get_cdppvalue(self, target, buf=1., delta=0.01, space=1.):
+        """
+        Compute and return the directivity prediction value, centred DPP at
+        a given site.
+
+        :param target_site:
+            :class:`~openquake.hazardlib.geo.point.Point` object
+            representing the location of the target site.
+        :param buf:
+            A float vaule presents the length extend from the mesh boundary,
+            in km.
+        :param delta:
+            A float vaule presents the spacing of the mesh point, in km.
+        :param space:
+            A float vaule presents the buffering distance while search the sits
+            which share the same distance
+        :returns:
+            A float value presents the centreed directivity predication value
+            which used in Chioud and Young(2014) GMPE for directivity term
+        """
+
+        min_lon, max_lon, max_lat, min_lat = self.surface.get_bounding_box()
+
+        min_lon -= buf
+        max_lon += buf
+        min_lat -= buf
+        max_lat += buf
+
+        lons = numpy.arange(min_lon, max_lon + delta, delta)
+        lats = numpy.arange(min_lat, max_lat + delta, delta)
+        lons, lats = numpy.meshgrid(lons, lats)
+        mesh = RectangularMesh(lons=lons, lats=lats, depths=None)
+        target_rup = self.surface.get_min_distance(target)
+        mesh_rup = self.surface.get_min_distance(mesh)
+
+        cdpp_sites_lats = mesh.lats[(mesh_rup <= target_rup + space)
+                                    & (mesh_rup >= target_rup - space)]
+        cdpp_sites_lons = mesh.lons[(mesh_rup <= target_rup + space)
+                                    & (mesh_rup >= target_rup - space)]
+        dpp_sum = []
+        dpp_target = self.get_dppvalue(target)
+        for lon, lat in zip(cdpp_sites_lons, cdpp_sites_lats):
+            sites = Point(lon, lat, 0.)
+            dpp_one = self._get_dppvalue(sites)
+            dpp_sum.append(dpp_one)
+
+        mean_dpp = numpy.mean(dpp_sum)
+        c_dpp = dpp_target - mean_dpp
+
+        return c_dpp

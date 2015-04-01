@@ -457,6 +457,10 @@ class GroundShakingIntensityModel(object):
                 dist = rupture.hypocenter.distance_to_mesh(
                     site_collection.mesh, with_depths=False
                 )
+            elif param == 'rcdpp':
+                dist = rupture.get_cdppvalue(
+                    site_collection.mesh, with_depths=False
+                )
             else:
                 raise ValueError('%s requires unknown distance measure %r' %
                                  (type(self).__name__, param))
@@ -491,6 +495,8 @@ class GroundShakingIntensityModel(object):
                 value = rupture.hypocenter.depth
             elif param == 'width':
                 value = rupture.surface.get_width()
+            elif param == 'rupture_slip_direction':
+                value = rupture.surface.rupture_slip_direction
             else:
                 raise ValueError('%s requires unknown rupture parameter %r' %
                                  (type(self).__name__, param))
@@ -689,7 +695,7 @@ class DistancesContext(BaseContext):
     does it need. Only those required values are calculated and made available
     in a result context object.
     """
-    __slots__ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi', 'ry0')
+    __slots__ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi', 'ry0', 'rcdpp')
 
 
 class RuptureContext(BaseContext):
