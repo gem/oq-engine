@@ -250,10 +250,10 @@ class RiskCalculator(BaseCalculator):
         :returns: a pair (sitecollection, assets_by_site)
 
         The new site collection is different from the original one
-        if some assets were discarded because of the maximum_distance
+        if some assets were discarded because of the asset_hazard_distance
         or if there were missing assets for some sites.
         """
-        maximum_distance = self.oqparam.maximum_distance
+        maximum_distance = self.oqparam.asset_hazard_distance
 
         def getlon(site):
             return site.location.longitude
