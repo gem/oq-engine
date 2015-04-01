@@ -203,7 +203,7 @@ class OqParam(valid.ParamSet):
         The maximum_distance must be set for all hazard calculators
         """
         return (self.calculation_mode in RISK_CALCULATORS
-                or self.maximum_distance)
+                or getattr(self, 'maximum_distance', None))
 
     def is_valid_imtls(self):
         """

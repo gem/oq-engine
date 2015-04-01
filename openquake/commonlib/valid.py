@@ -682,7 +682,7 @@ def ab_values(value):
     return positivefloat(a), float_(b)
 
 
-################################ site model ##################################
+# ############################## site model ################################ #
 
 vs30_type = ChoiceCI('measured', 'inferred')
 
@@ -732,6 +732,8 @@ class Param(object):
 
     def __get__(self, obj, objclass):
         if obj is not None:
+            if self.default is self.NODEFAULT:
+                raise AttributeError
             return self.default
         return self
 
