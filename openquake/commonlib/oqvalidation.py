@@ -84,6 +84,7 @@ class OqParam(valid.ParamSet):
     steps_per_interval = valid.Param(valid.positiveint, 0)
     master_seed = valid.Param(valid.positiveint, 0)
     maximum_distance = valid.Param(valid.positivefloat)  # km
+    maximum_distance = valid.Param(valid.positivefloat)
     asset_hazard_distance = valid.Param(valid.positivefloat, 5)  # km
     maximum_tile_weight = valid.Param(valid.positivefloat)
     mean_hazard_curves = valid.Param(valid.boolean, False)
@@ -204,7 +205,7 @@ class OqParam(valid.ParamSet):
         The maximum_distance must be set for all hazard calculators
         """
         return (self.calculation_mode in RISK_CALCULATORS
-                or self.maximum_distance)
+                or getattr(self, 'maximum_distance', None))
 
     def is_valid_imtls(self):
         """
