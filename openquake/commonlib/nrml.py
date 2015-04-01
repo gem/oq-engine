@@ -134,7 +134,7 @@ class ValidNode(LiteralNode):
     A subclass of :class:`LiteralNode` to be used when parsing sources
     and ruptures from NRML files.
     """
-    validators = valid.parameters(
+    validators = dict(
         strike=valid.strike_range,  # needed for the moment
         dip=valid.dip_range,  # needed for the moment
         rake=valid.rake_range,  # needed for the moment
@@ -169,7 +169,7 @@ class ValidNode(LiteralNode):
 
 @nodefactory.add('siteModel')
 class SiteModelNode(LiteralNode):
-    validators = valid.parameters(site=valid.site_param)
+    validators = dict(site=valid.site_param)
 
 
 # insuranceLimit and deductible can be either tags or attributes!
@@ -185,7 +185,7 @@ def float_or_flag(value, isAbsolute=None):
 
 @nodefactory.add('exposureModel')
 class ExposureDataNode(LiteralNode):
-    validators = valid.parameters(
+    validators = dict(
         description=valid.utf8,
         name=valid.name,
         type=valid.name,
@@ -204,7 +204,7 @@ class VulnerabilityNode(LiteralNode):
     """
     Literal Node class used to validate discrete vulnerability functions
     """
-    validators = valid.parameters(
+    validators = dict(
         vulnerabilitySetID=str,  # any ASCII string is fine
         vulnerabilityFunctionID=str,  # any ASCII string is fine
         assetCategory=str,  # any ASCII string is fine
@@ -223,7 +223,7 @@ class FragilityNode(LiteralNode):
     """
     Literal Node class used to validate fragility functions
     """
-    validators = valid.parameters(
+    validators = dict(
         format=valid.ChoiceCI('discrete', 'continuous'),
         lossCategory=valid.name,
         IML=valid.IML,
@@ -241,7 +241,7 @@ valid_loss_types = valid.Choice('structural', 'nonstructural', 'contents',
 
 @nodefactory.add('aggregateLossCurve', 'hazardCurves', 'hazardMap')
 class CurveNode(LiteralNode):
-    validators = valid.parameters(
+    validators = dict(
         investigationTime=valid.positivefloat,
         loss_type=valid_loss_types,
         unit=str,
@@ -264,7 +264,7 @@ class CurveNode(LiteralNode):
 
 @nodefactory.add('bcrMap')
 class BcrNode(LiteralNode):
-    validators = valid.parameters(
+    validators = dict(
         assetLifeExpectancy=valid.positivefloat,
         interestRate=valid.positivefloat,
         lossCategory=str,
@@ -284,7 +284,7 @@ def asset_mean_stddev(value, assetRef, mean, stdDev):
 
 @nodefactory.add('collapseMap')
 class CollapseNode(LiteralNode):
-    validators = valid.parameters(
+    validators = dict(
         pos=valid.lon_lat,
         cf=asset_mean_stddev,
     )
@@ -296,7 +296,7 @@ def damage_triple(value, ds, mean, stddev):
 
 @nodefactory.add('totalDmgDist', 'dmgDistPerAsset', 'dmgDistPerTaxonomy')
 class DamageNode(LiteralNode):
-    validators = valid.parameters(
+    validators = dict(
         damage=damage_triple,
         pos=valid.lon_lat,
         damageStates=valid.namelist,
