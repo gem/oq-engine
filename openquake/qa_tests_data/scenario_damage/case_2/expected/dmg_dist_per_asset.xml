@@ -16,9 +16,9 @@ xmlns:gml="http://www.opengis.net/gml"
             <asset
             assetRef="a1"
             >
-                <damage ds="no_damage" mean="1.2519884E+03" stddev="9.1342981E+02"/>
-                <damage ds="LS1" mean="1.1616262E+03" stddev="5.4342369E+02"/>
-                <damage ds="LS2" mean="5.8638547E+02" stddev="7.6173872E+02"/>
+                <damage ds="no_damage" mean="1.5626087E+03" stddev="9.6893520E+02"/>
+                <damage ds="LS1" mean="1.1080180E+03" stddev="6.5273666E+02"/>
+                <damage ds="LS2" mean="3.2937331E+02" stddev="3.4739165E+02"/>
             </asset>
         </DDNode>
         <DDNode>
@@ -30,9 +30,9 @@ xmlns:gml="http://www.opengis.net/gml"
             <asset
             assetRef="a3"
             >
-                <damage ds="no_damage" mean="5.2086958E+02" stddev="3.2297840E+02"/>
-                <damage ds="LS1" mean="3.6933932E+02" stddev="2.1757889E+02"/>
-                <damage ds="LS2" mean="1.0979110E+02" stddev="1.1579722E+02"/>
+                <damage ds="no_damage" mean="4.1732945E+02" stddev="3.0447660E+02"/>
+                <damage ds="LS1" mean="3.8720873E+02" stddev="1.8114123E+02"/>
+                <damage ds="LS2" mean="1.9546182E+02" stddev="2.5391291E+02"/>
             </asset>
         </DDNode>
         <DDNode>
