@@ -862,20 +862,35 @@ def get_sitecol_gmfs(oqparam):
     gmf_by_imt = {imt: [] for imt in imts}
     sitecol = get_site_collection(oqparam)  # extract it from inputs['sites']
     tags = []
-    with open(oqparam.inputs['gmfs']) as csvfile:
+    fname = oqparam.inputs['gmfs']
+    with open(fname) as csvfile:
         for line in csvfile:
             row = line.split(',')
-            indices = map(int, row[1].split())
+            try:
+                indices = map(valid.positiveint, row[1].split())
+            except:
+                raise InvalidFile(
+                    'The second column in %s is expected to contain integer '
+                    'indices, got %s instead' % (fname, row[1]))
             r_sites = (
                 sitecol if not indices else
                 site.FilteredSiteCollection(indices, sitecol))
             for i in range(len(imts)):
-                array = numpy.array(valid.positivefloats(row[i + 2]))
+                try:
+                    array = numpy.array(valid.positivefloats(row[i + 2]))
+                    # NB: i + 2 because the first 2 fields are tag and indices
+                except:
+                    raise InvalidFile(
+                        'The column #%d in %s is expected to contain positive '
+                        'floats, got %s instead' % (i + 3, fname, row[i + 2]))
                 gmf_by_imt[imts[i]].append(r_sites.expand(array, 0))
             tags.append(row[0])
     data = gmf_by_imt[imts[0]]
-    assert len(data) == num_gmfs, (len(data), num_gmfs)
-    assert tags == sorted(tags)
+    if len(data) != num_gmfs:
+        raise InvalidFile('%s contains %d rows, expected %d' % (
+            fname, len(data), num_gmfs))
+    if tags != sorted(tags):
+        raise InvalidFile('The tags in %s are not ordered: %s' % (fname, tags))
     return sitecol, {imt: numpy.array(gmf_by_imt[imt]).T for imt in imts}
 
 

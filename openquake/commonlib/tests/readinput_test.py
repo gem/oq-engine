@@ -419,3 +419,80 @@ PGA 12.0 42.2 0.64 0.65
                                       [0.25, 0.21, 0.2],
                                       [0.35, 0.31, 0.3],
                                       [0.55, 0.51, 0.5]])
+
+
+class TestReadGmfTestCase(unittest.TestCase):
+    def setUp(self):
+        self.oqparam = mock.Mock()
+        self.oqparam.inputs = {}
+        self.oqparam.sites = [(0, 0), (0, 1)]
+        self.oqparam.imtls = {'PGA': None}
+        self.oqparam.number_of_ground_motion_fields = 3
+
+    def test_gmf_ok(self):
+        self.oqparam.inputs['gmfs'] = general.writetmp('''\
+col=00|ses=0001|src=test|rup=001-00,0 1,3.05128000E-01 6.04032000E-01
+col=00|ses=0001|src=test|rup=001-01,0 1,2.67031000E-01 3.34878000E-01
+col=00|ses=0001|src=test|rup=001-02,0 1,1.59434000E-01 3.92602000E-01
+''')
+        sitecol, gmfs = readinput.get_sitecol_gmfs(self.oqparam)
+        gmvs1, gmvs2 = gmfs['PGA']
+        self.assertEqual(len(sitecol), 2)
+        assert_allclose(gmvs1, [0.305128, 0.267031, 0.159434])
+        assert_allclose(gmvs2, [0.604032, 0.334878, 0.392602])
+
+    def test_missing_indices_are_ok(self):
+        self.oqparam.inputs['gmfs'] = general.writetmp('''\
+col=00|ses=0001|src=test|rup=001-00,,1.59434000E-01 3.92602000E-01
+col=00|ses=0001|src=test|rup=001-01,0 1,3.05128000E-01 6.04032000E-01
+col=00|ses=0001|src=test|rup=001-02,0,2.67031000E-01
+''')
+        sitecol, gmfs = readinput.get_sitecol_gmfs(self.oqparam)
+        self.assertEqual(len(sitecol), 2)
+        gmvs1, gmvs2 = gmfs['PGA']
+        assert_allclose(gmvs1, [0.159434, 0.305128, 0.267031])
+        assert_allclose(gmvs2, [0.392602, 0.604032, 0.])
+
+    def test_negative_gmf(self):
+        self.oqparam.inputs['gmfs'] = general.writetmp('''\
+col=00|ses=0001|src=test|rup=001-00,0 1,3.05128000E-01 6.04032000E-01
+col=00|ses=0001|src=test|rup=001-01,0 1,2.67031000E-01 3.34878000E-01
+col=00|ses=0001|src=test|rup=001-02,0 1,1.59434000E-01 -3.92602000E-01
+''')
+        with self.assertRaises(readinput.InvalidFile):
+            readinput.get_sitecol_gmfs(self.oqparam)
+
+    def test_missing_line(self):
+        self.oqparam.inputs['gmfs'] = general.writetmp('''\
+col=00|ses=0001|src=test|rup=001-00,0 1,3.05128000E-01 6.04032000E-01
+col=00|ses=0001|src=test|rup=001-01,0 1,2.67031000E-01 3.34878000E-01
+''')
+        with self.assertRaises(readinput.InvalidFile):
+            readinput.get_sitecol_gmfs(self.oqparam)
+
+    def test_not_ordered_tags(self):
+        self.oqparam.inputs['gmfs'] = general.writetmp('''\
+col=00|ses=0001|src=test|rup=001-02,0 1,1.59434000E-01 3.92602000E-01
+col=00|ses=0001|src=test|rup=001-00,0 1,3.05128000E-01 6.04032000E-01
+col=00|ses=0001|src=test|rup=001-01,0 1,2.67031000E-01 3.34878000E-01
+''')
+        with self.assertRaises(readinput.InvalidFile):
+            readinput.get_sitecol_gmfs(self.oqparam)
+
+    def test_negative_indices(self):
+        self.oqparam.inputs['gmfs'] = general.writetmp('''\
+col=00|ses=0001|src=test|rup=001-00,0 -1,1.59434000E-01 3.92602000E-01
+col=00|ses=0001|src=test|rup=001-01,0 1,3.05128000E-01 6.04032000E-01
+col=00|ses=0001|src=test|rup=001-02,0 1,2.67031000E-01 3.34878000E-01
+''')
+        with self.assertRaises(readinput.InvalidFile):
+            readinput.get_sitecol_gmfs(self.oqparam)
+
+    def test_missing_bad_indices(self):
+        self.oqparam.inputs['gmfs'] = general.writetmp('''\
+col=00|ses=0001|src=test|rup=001-00,,1.59434000E-01 3.92602000E-01
+col=00|ses=0001|src=test|rup=001-01,0 1,3.05128000E-01 6.04032000E-01
+col=00|ses=0001|src=test|rup=001-02,X,2.67031000E-01
+''')
+        with self.assertRaises(readinput.InvalidFile):
+            readinput.get_sitecol_gmfs(self.oqparam)
