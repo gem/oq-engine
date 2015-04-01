@@ -243,7 +243,7 @@
         function() {
             var calculation_table = new CalculationTable({ calculations: calculations });
             calculations.fetch({reset: true});
-            setInterval(function() { calculations.fetch({reset: true}) }, 15000);
+            setTimer();
 
             // var output_table = new OutputTable({ outputs: outputs });
             // outputs.fetch({reset: true});
