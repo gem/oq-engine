@@ -118,5 +118,3 @@ LOGGING = {
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1
 
-OQ_ENGINE_SERVER_URL = 'http://oq-platform-mn.gem.lan:8000'  # i.e. : 'http://oq-platform:8800'
-
