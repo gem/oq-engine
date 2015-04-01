@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added defaults to the parameters in job.ini
   * Extended the `oq-lite info` command to plot some useful informations
     about the source model
   * Ported the classical_risk calculator to oq-lite

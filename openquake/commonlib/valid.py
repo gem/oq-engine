@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2013, GEM Foundation
+#  Copyright (c) 2013-2015, GEM Foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -682,7 +682,7 @@ def ab_values(value):
     return positivefloat(a), float_(b)
 
 
-################################ site model ##################################
+# ############################## site model ################################ #
 
 vs30_type = ChoiceCI('measured', 'inferred')
 
@@ -707,24 +707,35 @@ def site_param(value, z1pt0, z2pt5, vs30Type, vs30, lon, lat, backarc="false"):
 
 ###########################################################################
 
-def parameters(**names_vals):
+class Param(object):
     """
-    Returns a dictionary {name: validator} by making sure
-    that the validators are callable objects with a `__name__`.
+    A descriptor for validated parameters with a default, to be
+    used as attributes in ParamSet objects.
 
-    :param names_vals:
-        keyword arguments parameter_name -> parameter_validator
+    :param validator: the validator
+    :param default: the default value
     """
-    for name, val in names_vals.iteritems():
-        if not callable(val):
+    NODEFAULT = object()
+
+    def __init__(self, validator, default=NODEFAULT):
+        if not callable(validator):
             raise ValueError(
                 '%r for %s is not a validator: it is not callable'
-                % (val, name))
-        if not hasattr(val, '__name__'):
+                % (validator, name))
+        if not hasattr(validator, '__name__'):
             raise ValueError(
                 '%r for %s is not a validator: it has no __name__'
-                % (val, name))
-    return names_vals
+                % (validator, name))
+
+        self.validator = validator
+        self.default = default
+
+    def __get__(self, obj, objclass):
+        if obj is not None:
+            if self.default is self.NODEFAULT:
+                raise AttributeError
+            return self.default
+        return self
 
 
 # used in commonlib.oqvalidation
@@ -734,7 +745,8 @@ class ParamSet(object):
     of usage:
 
     >>> class MyParams(ParamSet):
-    ...     params = parameters(a=positiveint, b=positivefloat)
+    ...     a = Param(positiveint)
+    ...     b = Param(positivefloat)
     ...
     ...     def is_valid_not_too_big(self):
     ...         "The sum of a and b must be under 10. "
@@ -761,8 +773,8 @@ class ParamSet(object):
                 raise NameError('The parameter name %s is not acceptable'
                                 % name)
             try:
-                convert = self.__class__.params[name]
-            except KeyError:
+                convert = getattr(self.__class__, name).validator
+            except AttributeError:
                 logging.warn('The parameter %r is unknown, ignoring' % name)
                 continue
             try:
