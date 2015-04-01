@@ -8,7 +8,7 @@ def oq_server_context_processor(request):
 
     context = {}
 
-    context['oq_engine_server_url'] = '//' + request.META.get('SERVER_NAME', 'localhost') + ':' + request.META.get('SERVER_PORT', '8000')
+    context['oq_engine_server_url'] = '//' + request.META.get('HTTP_HOST', 'localhost:8000')
 
     return context
 
