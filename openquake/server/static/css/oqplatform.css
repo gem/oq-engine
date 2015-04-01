@@ -354,6 +354,10 @@ footer.footer div.container {
     background-color: #f5f5f5;
 }
 
+#my-outputs.well {
+    background-color: #f5f5f5;
+}
+
 /*
    This rule is set also in templates/data_viewer_base.html
    with a 'z-index: 10000;'. It is not just here because the

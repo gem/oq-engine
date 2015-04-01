@@ -15,7 +15,7 @@
  along with this program.  If not, see <https://www.gnu.org/licenses/agpl.html>.
  */
 
-(function($, Backbone, _) {
+(function($, Backbone, _, oq_server_url, calc_id) {
     var progressHandlingFunction = function(progress) {
 	var percent = progress.loaded / progress.total * 100;
  	$('.bar').css('width', percent + '%');
@@ -80,19 +80,19 @@
                       };
                   })();
 
-    var CalculationTable = Backbone.View.extend(
+    var OutputTable = Backbone.View.extend(
         {
             /* the html element where the table is rendered */
-            el: $('#my-calculations'),
+            el: $('#my-outputs'),
             
             initialize: function(options) {
 
                 /* whatever happens to any calculation, re-render the table */
                 _.bindAll(this, 'render');
-                this.calculations = options.calculations;
-                this.calculations.bind('reset', this.render);
-                this.calculations.bind('add', this.render);
-                this.calculations.bind('remove', this.render);
+                this.outputs = options.outputs;
+                this.outputs.bind('reset', this.render);
+                this.outputs.bind('add', this.render);
+                this.outputs.bind('remove', this.render);
 
                 /* if false, it prevents the table to be refreshed */
                 this.can_be_rendered = true;
@@ -122,12 +122,12 @@
                 var calc_id = $(e.target).attr('data-calc-id');
                 var view = this;
                 diaerror.showDiaError("Removing calculation  " + calc_id + ".", "...");
-                $.post(gem_oq_server_url + "/v1/calc/" + calc_id + "/remove"
+                $.post(oq_server_url + "/v1/calc/" + calc_id + "/remove"
                      ).success(
                          function(data, textStatus, jqXHR)
                          {
                              diaerror.showDiaError("Remove calculation  " + calc_id + ".", "done");
-                             view.calculations.remove([view.calculations.get(calc_id)]);
+                             view.outputs.remove([view.outputs.get(calc_id)]);
                          }
                      ).error(
                          function(jqXHR, textStatus, errorThrown)
@@ -145,7 +145,7 @@
             show_traceback: function(e) {
                 var calc_id = $(e.target).attr('data-calc-id');
 
-                var myXhr = $.ajax({url: gem_oq_server_url + "/v1/calc/" + calc_id + "/traceback",
+                var myXhr = $.ajax({url: oq_server_url + "/v1/calc/" + calc_id + "/traceback",
                                     error: function (jqXHR, textStatus, errorThrown) {
                                         console.log(jqXHR);
                                         if (jqXHR.status == 404) {
@@ -177,8 +177,8 @@
                 if (!this.can_be_rendered) {
                     return;
                 };
-                this.$el.html(_.template($('#calculation-table-template').html(),
-                                         { calculations: this.calculations.models }));
+                this.$el.html(_.template($('#output-table-template').html(),
+                                         { outputs: this.outputs.models }));
             }
         });
 
@@ -189,14 +189,7 @@
         }
     });
 
-    var Calculations = Backbone.Collection.extend(
-        { 
-            model: Calculation,
-            url: gem_oq_server_url + "/v1/calc/list?relevant=true"
-        });
-    var calculations = new Calculations();
-
-
+/*
     var OutputTable = Backbone.View.extend(
         {
             el: $('#tab2'),
@@ -214,42 +207,42 @@
                                          { outputs: this.outputs.models }));
             }
         });
+*/
 
     var Output = Backbone.Model.extend(
         {
             calc: function() {
-                return calculations.get(this.get('calculation')) || new Output({ 'calculation_type': undefined });
+                return outputs.get(this.get('calculation')) || new Output({ 'calculation_type': undefined });
             }
         });
 
-    /*
-      var Outputs = Backbone.Collection.extend(
-      { 
-      model: Output,
-      url: '/icebox/outputs'
-      });
-      var outputs = new Outputs();
-    */
+    var Outputs = Backbone.Collection.extend(
+        { 
+            model: Output,
+            url: oq_server_url + "/v1/calc/" + calc_id + "/result/list"
+        });
+    var outputs = new Outputs();
+
 
     var refresh_calcs;
     
     function setTimer() {
-        refresh_calcs = setInterval(function() { calculations.fetch({reset: true}) }, 5000);
+        refresh_calcs = setInterval(function() { outputs.fetch({reset: true}) }, 5000);
     }
     
 
     /* classic event management */   
     $(document).ready(
         function() {
-            var calculation_table = new CalculationTable({ calculations: calculations });
-            calculations.fetch({reset: true});
-            setInterval(function() { calculations.fetch({reset: true}) }, 15000);
-
-            // var output_table = new OutputTable({ outputs: outputs });
+            // var calculation_table = new CalculationTable({ outputs: outputs });
             // outputs.fetch({reset: true});
+            // setInterval(function() { outputs.fetch({reset: true}) }, 15000);
+
+            var output_table = new OutputTable({ outputs: outputs });
+            outputs.fetch({reset: true});
 
             // /* TODO. output collection should observe the calculation one */
-            // setInterval(function() { outputs.fetch({reset: true}) }, 10000);
+            setInterval(function() { outputs.fetch({reset: true}) }, 10000);
 
 
             /* XXX. Reset the input file value to ensure the change event
@@ -272,7 +265,7 @@
                                            return myXhr;
                                        },
 		                       success: function(data) {
-                                           calculations.add(new Calculation(data));
+                                           outputs.add(new Calculation(data));
                                        },
 		                       error: function(xhr) { 
                                            dialog.hidePleaseWait();
@@ -294,5 +287,5 @@
 
             
         });
-})($, Backbone, _, gem_oq_server_url);
+})($, Backbone, _, gem_oq_server_url, gem_calc_id);
 

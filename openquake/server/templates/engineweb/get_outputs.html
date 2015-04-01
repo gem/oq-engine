@@ -1,0 +1,168 @@
+<html>
+<!--
+FIXME
+no <script src="{{ STATIC_URL }}js/d3.js"></script>
+si      <script src="https://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+si    <script src="{{ STATIC_URL }}lib/js/assets.min.js"></script>
+si    <script src="{{ STATIC_URL }}geonode/js/utils/utils.js"></script>
+si    <script src="{{ STATIC_URL }}geonode/js/base/base.js"></script>
+si    <script src="{{ STATIC_URL }}lib/jquery/js/jquery-ui-1.10.3.custom.js"></script>
+si    <script type="text/javascript" src="{{ STATIC_URL }}bootstrap-extend/js/jasny-bootstrap.min.js"></script>
+si    <script type="text/javascript" src="{{ STATIC_URL }}js/underscore-min.js"></script>
+si    <script type="text/javascript" src="{{ STATIC_URL }}js/backbone-min.js"></script>
+si    <script src="{{ STATIC_URL }}lib/jquery/js/jquery.form-3.44.0.js"></script>
+<script src="{{ STATIC_URL }}icebox/calculate.js"></script>
+    <script type="text/javascript" src="/jsi18n/"></script>
+    <script type="text/javascript" src="/lang.js"></script>
+-->
+
+<head>
+    <meta charset="utf-8">
+    <title> OpenQuakeWeb: results of calculation {{ calc_id }}.</title>
+    
+      <link href="{{ STATIC_URL }}css/base.css" rel="stylesheet">
+      <link href="{{ STATIC_URL }}geonode/font/lato_font.css" rel="stylesheet" type="text/css">
+      <link href="{{ STATIC_URL }}css/ext-compatibility.css" rel="stylesheet">
+      
+      <link href="{{ STATIC_URL }}css/assets.min.css" rel="stylesheet">
+      
+      
+    
+    <link href="{{ STATIC_URL }}img/favicon.ico" rel="shortcut icon"><link href="{{ STATIC_URL }}css/oqplatform.css" rel="stylesheet">
+    <link href="{{ STATIC_URL }}css/jasny-bootstrap.min.css" rel="stylesheet"/>
+
+</head>
+<body>
+
+    <div id="header" class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <section>
+        <div class="container">
+          <div class="row">
+            <div class="span3">
+              <!-- <a href="{#% url "home" %#}"><span class="nav-logo"></span></a> -->
+            </div>
+            <div class="span10">
+              <nav class="main-nav">
+                <ul>
+                </ul>
+              </nav>
+            </div> <!-- ./span10 -->
+            <div class="span9">
+              <div class="nav-collapse pull-right">
+                <div class="pull-right">
+                  <ul class="nav pull-right account-bar">
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div id="gem-right-logo">
+              <a href="http://www.globalquakemodel.org" title="GEM Foundation" target="_blank"><span class="nav-logo nav-logo-gem"></span></a>
+            </div>
+          </div>
+        </div> <!-- /.container -->
+        </section>
+      </div> <!-- /.navbar-inner -->
+    </div> <!-- /.navbar navbar-fixed-top -->
+
+
+<div class="content-wrap">
+      
+      <div class="container">
+        <div class="row">
+        
+    <div id="oq-body-wrapper">
+     
+
+    <div class="span12">
+        <div id="my-outputs" class="well"></div>
+    </div>
+
+
+
+    </div>
+
+        </div>
+      </div> <!-- /.container -->
+    </div>
+
+
+ qui qui qui
+</body>
+
+<!-- <script src="http://code.jquery.com/jquery-1.11.2.min.js"></script> -->
+<!-- <script src="{{ STATIC_URL }}js/d3.js"></script> -->
+    <script src="https://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+<!-- <script type="text/javascript" src="{{ STATIC_URL }}js/geonode/utils.js"></script>
+<script type="text/javascript" src="{{ STATIC_URL }}js/geonode/base.js"></script> -->
+
+<script type="text/javascript" src="{{ STATIC_URL }}lib/jquery/js/jquery-1.9.1.js"></script>
+<script type="text/javascript" src="{{ STATIC_URL }}lib/jquery/js/jquery-ui-1.10.3.custom.js"></script>
+<script type="text/javascript" src="{{ STATIC_URL }}js/assets.min.js"></script>
+<script type="text/javascript" src="{{ STATIC_URL }}lib/bootstrap-extend/js/jasny-bootstrap.min.js"></script>
+<script type="text/javascript" src="{{ STATIC_URL }}lib/underscore/js/underscore-min.js"></script>
+<script type="text/javascript" src="{{ STATIC_URL }}lib/backbone/js/backbone-min.js"></script>
+<script type="text/template" id="output-table-template">
+  <table id="output_table" class="table table-hover">
+    <caption>Outputs for calculation {{ calc_id }}.</caption>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th style="width: 300px;">Name</th>
+        <th>Type</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% _.each(outputs, function(output) { %>
+      <tr class="success">
+        <td><%= output.get('id') || 'New' %></td>
+        <td><%= output.get('name') %></td>
+        <td><%= output.get('type') %></td>
+        <td>
+          <a href="/v1/calc/{{ calc_id }}/result/<%= output.get('id') %>" class="btn btn-sm">View</a>
+          <a href="/v1/calc/{{ calc_id }}/result/<%= output.get('id') %>?export_type=xml" class="btn btn-sm">Download</a>
+        </td>
+      </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</script>
+
+<script type="text/template" id="output-table-template">
+  <table id="output_table" class="table table-hover">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% _.each(outputs, function(out) { %>
+      <tr>
+        <td><%= out.get('id') %></td>
+        <td><%= out.get('name') %></td>
+        <td><%= out.get('type') || 'Loading...' %></td>
+        <td>
+<!--
+          <% if(out.calc().get('calculation_type') == 'hazard') { %>
+          <a href="#" class="btn btn-primary">Run Risk</a>
+          <% } %>
+-->
+        </td>
+      </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</script>
+
+<script src="{{ STATIC_URL }}lib/jquery/js/jquery.form-3.44.0.js"></script>
+<script type="text/javascript"><!--
+  var gem_oq_server_url = '{{ oq_engine_server_url }}';
+  var gem_calc_id = '{{ calc_id }}';
+  //-->
+  </script>
+<script src="{{ STATIC_URL }}js/engineweb_get_outputs.js"></script>
+</html>
