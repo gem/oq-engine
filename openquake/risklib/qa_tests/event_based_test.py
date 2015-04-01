@@ -67,7 +67,9 @@ class EventBasedTestCase(unittest.TestCase):
             'PGA', 'SOME-TAXONOMY',
             vulnerability_functions={self.loss_type: vf},
             risk_investigation_time=50,
-            tses=10000,
+            hazard_investigation_time=50,
+            ses_per_logic_tree_path=200,
+            number_of_logic_tree_samples=0,
             loss_curve_resolution=4,
             conditional_loss_poes=[0.1, 0.5, 0.9],
             insured_losses=False
@@ -104,7 +106,9 @@ class EventBasedTestCase(unittest.TestCase):
             'PGA', 'SOMETAXONOMY',
             vulnerability_functions={self.loss_type: vf},
             risk_investigation_time=50,
-            tses=10000,
+            hazard_investigation_time=50,
+            ses_per_logic_tree_path=200,
+            number_of_logic_tree_samples=0,
             loss_curve_resolution=4,
             conditional_loss_poes=[0.1, 0.5, 0.9],
             insured_losses=False
@@ -143,7 +147,9 @@ class EventBasedTestCase(unittest.TestCase):
             'PGA', 'SOMETAXONOMY',
             vulnerability_functions={self.loss_type: vf},
             risk_investigation_time=50,
-            tses=10000,
+            hazard_investigation_time=50,
+            ses_per_logic_tree_path=200,
+            number_of_logic_tree_samples=0,
             loss_curve_resolution=4,
             conditional_loss_poes=[0.1, 0.5, 0.9],
             insured_losses=False
@@ -234,7 +240,9 @@ class EventBasedTestCase(unittest.TestCase):
             'PGA', 'SOMETAXONOMY',
             vulnerability_functions={self.loss_type: vf},
             risk_investigation_time=50,
-            tses=10000,
+            hazard_investigation_time=50,
+            ses_per_logic_tree_path=200,
+            number_of_logic_tree_samples=0,
             loss_curve_resolution=4,
             conditional_loss_poes=[0.1, 0.5, 0.9],
             insured_losses=True
