@@ -432,7 +432,7 @@ def get_filtered_source_models(oqparam, source_model_lt, sitecol,
         for trt_model in list(source_model.trt_models):
             num_original_sources = len(trt_model)
             trt_model.sources = sourceconverter.filter_sources(
-                trt_model, sitecol, oqparam.asset_hazard_distance)
+                trt_model, sitecol, oqparam.maximum_distance)
             if num_original_sources > 1:
                 logging.info(
                     'Considering %d of %d sources for model %s%s, TRT=%s',
