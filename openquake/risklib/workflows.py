@@ -877,11 +877,11 @@ def get_workflow(imt, taxonomy, oqparam, **extra):
     argnames = inspect.getargspec(workflow_class.__init__).args[3:]
 
     # arguments extracted from oqparam
-    known_args = vars(oqparam)
+    known_args = vars(oqparam.__class__)
     all_args = {}
     for argname in argnames:
         if argname in known_args:
-            all_args[argname] = known_args[argname]
+            all_args[argname] = getattr(oqparam, argname)
 
     if 'hazard_imtls' in argnames:  # special case
         all_args['hazard_imtls'] = oqparam.imtls
