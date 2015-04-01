@@ -680,7 +680,8 @@ class SitesContext(BaseContext):
     Only those required parameters are made available in a result context
     object.
     """
-    __slots__ = ('vs30', 'vs30measured', 'z1pt0', 'z2pt5', 'lons', 'lats')
+    __slots__ = ('vs30', 'vs30measured', 'z1pt0', 'z2pt5', 'backarc',
+        'lons', 'lats')
 
 
 class DistancesContext(BaseContext):
@@ -712,7 +713,7 @@ class RuptureContext(BaseContext):
     """
     __slots__ = (
         'mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
-        'hypo_depth', 'width'
+        'hypo_depth', 'width', 'hypo_loc'
     )
 
 
