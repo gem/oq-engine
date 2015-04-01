@@ -124,7 +124,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         # export curves
         exports = oq.exports.split(',')
-        if getattr(oq, 'individual_curves', True):
+        if oq.individual_curves:
             for rlz in rlzs:
                 smlt_path = '_'.join(rlz.sm_lt_path)
                 suffix = ('-ltr_%d' % rlz.ordinal
@@ -141,7 +141,7 @@ class ClassicalCalculator(base.HazardCalculator):
                    else [rlz.weight for rlz in rlzs])
         curves_by_imt = {imt: [curves_by_rlz[rlz][imt] for rlz in rlzs]
                          for imt in oq.imtls}
-        mean = getattr(oq, 'mean_hazard_curves', None)
+        mean = oq.mean_hazard_curves
         if mean:
             self.mean_curves = scientific.mean_curve(
                 [curves_by_rlz[rlz] for rlz in rlzs], weights)
@@ -149,7 +149,7 @@ class ClassicalCalculator(base.HazardCalculator):
             q: {imt: scientific.quantile_curve(
                 curves_by_imt[imt], q, weights).reshape((nsites, -1))
                 for imt in oq.imtls}
-            for q in getattr(oq, 'quantile_hazard_curves', [])
+            for q in oq.quantile_hazard_curves
         }
         for fmt in exports:
             if mean:
@@ -184,7 +184,7 @@ class ClassicalCalculator(base.HazardCalculator):
         saved += export(
             ('hazard_curves', fmt), export_dir, fname, self.sitecol, curves,
             oq.imtls, oq.investigation_time)
-        if getattr(oq, 'hazard_maps', None):
+        if oq.hazard_maps:
             hmaps = self.hazard_maps(curves)
             saved += export(
                 ('hazard_curves', fmt), export_dir,
@@ -192,7 +192,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 # hmaps is a dictionary IMT -> matrix(P, N)
                 {k: v.T for k, v in hmaps.iteritems()},
                 oq.imtls, oq.investigation_time)
-            if getattr(oq, 'uniform_hazard_spectra', None):
+            if oq.uniform_hazard_spectra:
                 uhs_curves = calc.make_uhs(hmaps)
                 saved += export(
                     ('uhs', fmt), oq.export_dir,
