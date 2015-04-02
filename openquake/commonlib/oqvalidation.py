@@ -51,7 +51,7 @@ class OqParam(valid.ParamSet):
     base_path = valid.Param(valid.utf8)
     calculation_mode = valid.Param(valid.Choice(*CALCULATORS), '')
     coordinate_bin_width = valid.Param(valid.positivefloat)
-    conditional_loss_poes = valid.Param(valid.probabilities)
+    conditional_loss_poes = valid.Param(valid.probabilities, [])
     continuous_fragility_discretization = valid.Param(valid.positiveint, 20)
     description = valid.Param(valid.utf8_not_empty)
     distance_bin_width = valid.Param(valid.positivefloat)
