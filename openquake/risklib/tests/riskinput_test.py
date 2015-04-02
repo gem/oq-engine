@@ -58,7 +58,7 @@ class RiskInputTestCase(unittest.TestCase):
 
         eps_dict = riskinput.make_eps_dict(
             self.assets_by_site, len(ses_ruptures), oq.master_seed,
-            getattr(oq, 'asset_correlation', 0))
+            oq.asset_correlation)
 
         [ri] = self.riskmodel.build_inputs_from_ruptures(
             self.sitecol, self.assets_by_site, ses_ruptures,

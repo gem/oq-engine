@@ -44,108 +44,97 @@ CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS
 class OqParam(valid.ParamSet):
     exports = 'csv'  # default value, normally overridden
 
-    params = valid.parameters(
-        area_source_discretization=valid.NoneOr(valid.positivefloat),
-        asset_correlation=valid.NoneOr(valid.FloatRange(0, 1)),
-        asset_life_expectancy=valid.positivefloat,
-        base_path=valid.utf8,
-        calculation_mode=valid.Choice(*CALCULATORS),
-        coordinate_bin_width=valid.positivefloat,
-        conditional_loss_poes=valid.probabilities,
-        continuous_fragility_discretization=valid.positiveint,
-        description=valid.utf8_not_empty,
-        distance_bin_width=valid.positivefloat,
-        mag_bin_width=valid.positivefloat,
-        epsilon_sampling=valid.positiveint,
-        export_dir=valid.utf8,
-        export_multi_curves=valid.boolean,
-        ground_motion_correlation_model=valid.NoneOr(
-            valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)),
-        ground_motion_correlation_params=valid.dictionary,
-        ground_motion_fields=valid.boolean,
-        gsim=valid.Choice(*GSIMS),
-        hazard_calculation_id=valid.NoneOr(valid.positiveint),
-        hazard_curves_from_gmfs=valid.boolean,
-        hazard_output_id=valid.NoneOr(valid.positiveint),
-        hazard_maps=valid.boolean,
-        hypocenter=valid.point3d,
-        ignore_missing_costs=valid.namelist,
-        individual_curves=valid.boolean,
-        inputs=dict,
-        insured_losses=valid.boolean,
-        intensity_measure_types=valid.intensity_measure_types,
-        intensity_measure_types_and_levels=
-        valid.intensity_measure_types_and_levels,
-        hazard_imtls=valid.intensity_measure_types_and_levels,
-        hazard_investigation_time=valid.positivefloat,
-        interest_rate=valid.positivefloat,
-        investigation_time=valid.positivefloat,
-        loss_curve_resolution=valid.positiveint,
-        lrem_steps_per_interval=valid.positiveint,  # maybe will be deprecated
-        steps_per_interval=valid.positiveint,
-        master_seed=valid.positiveint,
-        maximum_distance=valid.positivefloat,
-        maximum_tile_weight=valid.positivefloat,
-        mean_hazard_curves=valid.boolean,
-        number_of_ground_motion_fields=valid.positiveint,
-        number_of_logic_tree_samples=valid.positiveint,
-        num_epsilon_bins=valid.positiveint,
-        poes=valid.probabilities,
-        poes_disagg=valid.probabilities,
-        quantile_hazard_curves=valid.probabilities,
-        quantile_loss_curves=valid.probabilities,
-        random_seed=valid.positiveint,
-        reference_depth_to_1pt0km_per_sec=valid.positivefloat,
-        reference_depth_to_2pt5km_per_sec=valid.positivefloat,
-        reference_vs30_type=valid.Choice('measured', 'inferred'),
-        reference_vs30_value=valid.positivefloat,
-        reference_backarc=valid.boolean,
-        region=valid.coordinates,
-        region_constraint=valid.wkt_polygon,
-        region_grid_spacing=valid.positivefloat,
-        risk_investigation_time=valid.positivefloat,
-        rupture_mesh_spacing=valid.positivefloat,
-        complex_fault_mesh_spacing=valid.NoneOr(valid.positivefloat),
-        ses_per_logic_tree_path=valid.positiveint,
-        sites=valid.NoneOr(valid.coordinates),
-        sites_disagg=valid.NoneOr(valid.coordinates),
-        specific_assets=str.split,
-        statistics=valid.boolean,
-        taxonomies_from_model=valid.boolean,
-        time_event=str,
-        truncation_level=valid.NoneOr(valid.positivefloat),
-        uniform_hazard_spectra=valid.boolean,
-        width_of_mfd_bin=valid.positivefloat,
-        )
+    area_source_discretization = valid.Param(
+        valid.NoneOr(valid.positivefloat), None)
+    asset_correlation = valid.Param(valid.NoneOr(valid.FloatRange(0, 1)), 0)
+    asset_life_expectancy = valid.Param(valid.positivefloat)
+    base_path = valid.Param(valid.utf8)
+    calculation_mode = valid.Param(valid.Choice(*CALCULATORS), '')
+    coordinate_bin_width = valid.Param(valid.positivefloat)
+    conditional_loss_poes = valid.Param(valid.probabilities)
+    continuous_fragility_discretization = valid.Param(valid.positiveint, 20)
+    description = valid.Param(valid.utf8_not_empty)
+    distance_bin_width = valid.Param(valid.positivefloat)
+    mag_bin_width = valid.Param(valid.positivefloat)
+    epsilon_sampling = valid.Param(valid.positiveint, 1000)
+    export_dir = valid.Param(valid.utf8, None)
+    export_multi_curves = valid.Param(valid.boolean, False)
+    ground_motion_correlation_model = valid.Param(
+        valid.NoneOr(valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)), None)
+    ground_motion_correlation_params = valid.Param(valid.dictionary)
+    ground_motion_fields = valid.Param(valid.boolean, False)
+    gsim = valid.Param(valid.Choice(*GSIMS))
+    hazard_calculation_id = valid.Param(valid.NoneOr(valid.positiveint))
+    hazard_curves_from_gmfs = valid.Param(valid.boolean, False)
+    hazard_output_id = valid.Param(valid.NoneOr(valid.positiveint))
+    hazard_maps = valid.Param(valid.boolean, False)
+    hypocenter = valid.Param(valid.point3d)
+    ignore_missing_costs = valid.Param(valid.namelist, [])
+    individual_curves = valid.Param(valid.boolean, True)
+    inputs = valid.Param(dict, {})
+    insured_losses = valid.Param(valid.boolean, False)
+    intensity_measure_types = valid.Param(valid.intensity_measure_types, None)
+    intensity_measure_types_and_levels = valid.Param(
+        valid.intensity_measure_types_and_levels, None)
+    # hazard_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
+    hazard_investigation_time = valid.Param(valid.positivefloat, None)
+    interest_rate = valid.Param(valid.positivefloat)
+    investigation_time = valid.Param(valid.positivefloat, None)
+    loss_curve_resolution = valid.Param(valid.positiveint, 50)
+    lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
+    steps_per_interval = valid.Param(valid.positiveint, 0)
+    master_seed = valid.Param(valid.positiveint, 0)
+    maximum_distance = valid.Param(valid.positivefloat)
+    maximum_tile_weight = valid.Param(valid.positivefloat)
+    mean_hazard_curves = valid.Param(valid.boolean, False)
+    number_of_ground_motion_fields = valid.Param(valid.positiveint, 0)
+    number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
+    num_epsilon_bins = valid.Param(valid.positiveint)
+    poes = valid.Param(valid.probabilities)
+    poes_disagg = valid.Param(valid.probabilities, [])
+    quantile_hazard_curves = valid.Param(valid.probabilities, [])
+    quantile_loss_curves = valid.Param(valid.probabilities, [])
+    random_seed = valid.Param(valid.positiveint, 42)
+    reference_depth_to_1pt0km_per_sec = valid.Param(valid.positivefloat)
+    reference_depth_to_2pt5km_per_sec = valid.Param(valid.positivefloat)
+    reference_vs30_type = valid.Param(valid.Choice('measured', 'inferred'))
+    reference_vs30_value = valid.Param(valid.positivefloat)
+    reference_backarc = valid.Param(valid.boolean, False)
+    region = valid.Param(valid.coordinates, None)
+    region_constraint = valid.Param(valid.wkt_polygon, None)
+    region_grid_spacing = valid.Param(valid.positivefloat, None)
+    # risk_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
+    risk_investigation_time = valid.Param(valid.positivefloat, None)
+    rupture_mesh_spacing = valid.Param(valid.positivefloat, None)
+    complex_fault_mesh_spacing = valid.Param(
+        valid.NoneOr(valid.positivefloat), None)
+    ses_per_logic_tree_path = valid.Param(valid.positiveint, 1)
+    sites = valid.Param(valid.NoneOr(valid.coordinates), None)
+    sites_disagg = valid.Param(valid.NoneOr(valid.coordinates), [])
+    specific_assets = valid.Param(str.split, [])
+    statistics = valid.Param(valid.boolean, True)
+    taxonomies_from_model = valid.Param(valid.boolean, False)
+    time_event = valid.Param(str, None)
+    truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
+    uniform_hazard_spectra = valid.Param(valid.boolean, False)
+    width_of_mfd_bin = valid.Param(valid.positivefloat)
 
     def __init__(self, **names_vals):
         super(OqParam, self).__init__(**names_vals)
-        if not hasattr(self, 'reference_backarc'):
-            self.reference_backarc = False
-        if not hasattr(self, 'risk_investigation_time') and \
-                hasattr(self, 'investigation_time'):
-            self.risk_investigation_time = self.investigation_time
-        if hasattr(self, 'intensity_measure_types'):
+        if 'intensity_measure_types' in names_vals:
             self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
-            # remove the now redundant parameter
             delattr(self, 'intensity_measure_types')
-        elif hasattr(self, 'intensity_measure_types_and_levels'):
+        elif 'intensity_measure_types_and_levels' in names_vals:
             self.hazard_imtls = self.intensity_measure_types_and_levels
-            # remove the now redundant parameter
             delattr(self, 'intensity_measure_types_and_levels')
         if vulnerability_files(self.inputs):
             self.risk_imtls = get_imtls_from_vulnerabilities(self.inputs)
         elif fragility_files(self.inputs):
             fname = self.inputs['fragility']
-            # continuous_fragility_discretization with a default
-            cfd = self.__dict__.setdefault(
-                'continuous_fragility_discretization', 20)
-            ffs = get_fragility_functions(fname, cfd)
+            ffs = get_fragility_functions(
+                fname, self.continuous_fragility_discretization)
             self.risk_imtls = {fset.imt: fset.imls
                                for fset in ffs.itervalues()}
-        if 'event_based' in self.calculation_mode and not hasattr(
-                self, 'loss_curve_resolution'):
-            self.loss_curve_resolution = 50  # default
 
     @property
     def imtls(self):
@@ -175,11 +164,11 @@ class OqParam(valid.ParamSet):
         if self.calculation_mode not in HAZARD_CALCULATORS:
             return True  # no check on the sites for risk
         flags = dict(
-            sites=getattr(self, 'sites', 0),
+            sites=bool(self.sites),
             sites_csv=self.inputs.get('sites', 0),
             hazard_curves_csv=self.inputs.get('hazard_curves', 0),
             gmvs_csv=self.inputs.get('gmvs', 0),
-            region=getattr(self, 'region', 0),
+            region=bool(self.region),
             exposure=self.inputs.get('exposure', 0))
         # NB: below we check that all the flags
         # are mutually exclusive
@@ -191,9 +180,8 @@ class OqParam(valid.ParamSet):
         When computing hazard maps and/or uniform hazard spectra,
         the poes list must be non-empty.
         """
-        if getattr(self, 'hazard_maps', None) or getattr(
-                self, 'uniform_hazard_spectra', None):
-            return bool(getattr(self, 'poes', None))
+        if self.hazard_maps or self.uniform_hazard_spectra:
+            return bool(self.poes)
         else:
             return True
 
@@ -215,8 +203,8 @@ class OqParam(valid.ParamSet):
         """
         The maximum_distance must be set for all hazard calculators
         """
-        return self.calculation_mode in RISK_CALCULATORS or (
-            getattr(self, 'maximum_distance', None))
+        return (self.calculation_mode in RISK_CALCULATORS
+                or getattr(self, 'maximum_distance', None))
 
     def is_valid_imtls(self):
         """
@@ -227,12 +215,11 @@ class OqParam(valid.ParamSet):
         """
         if fragility_files(self.inputs) or vulnerability_files(self.inputs):
             return (
-                getattr(self, 'intensity_measure_types', None) is None
-                and getattr(self, 'intensity_measure_types_and_levels', None
-                            ) is None
+                self.intensity_measure_types is None
+                and self.intensity_measure_types_and_levels is None
                 )
-        elif getattr(self, 'intensity_measure_types_and_levels', None):
-            return getattr(self, 'intensity_measure_types', None) is None
+        elif self.intensity_measure_types_and_levels:
+            return self.intensity_measure_types is None
         return True
 
     def is_valid_sites_disagg(self):
@@ -240,9 +227,8 @@ class OqParam(valid.ParamSet):
         The option `sites_disagg` (when given) requires `specific_assets` to
         be set.
         """
-        if getattr(self, 'sites_disagg', None):
-            return getattr(self, 'specific_assets', None) or \
-                'specific_assets' in self.inputs
+        if self.sites_disagg:
+            return self.specific_assets or 'specific_assets' in self.inputs
         return True  # a missing sites_disagg is valid
 
     def is_valid_specific_assets(self):
@@ -251,8 +237,7 @@ class OqParam(valid.ParamSet):
         `specific_assets_csv`, if present. You cannot have both. The
         concept is meaninful only for risk calculators.
         """
-        specific_assets = getattr(self, 'specific_assets', None)
-        if specific_assets and 'specific_assets' in self.inputs:
+        if self.specific_assets and 'specific_assets' in self.inputs:
             return False
         else:
             return True
@@ -263,9 +248,8 @@ class OqParam(valid.ParamSet):
         or `quantile_hazard_curves` are set.
         """
         if self.calculation_mode == 'event_based' and (
-           getattr(self, 'mean_hazard_curves', False) or
-           getattr(self, 'quantile_hazard_curves', False)):
-            return getattr(self, 'hazard_curves_from_gmfs', False)
+           self.mean_hazard_curves or self.quantile_hazard_curves):
+            return self.hazard_curves_from_gmfs
         return True
 
     def is_valid_export_dir(self):
@@ -273,7 +257,7 @@ class OqParam(valid.ParamSet):
         The `export_dir` parameter must refer to a directory,
         and the user must have the permission to write on it.
         """
-        if not hasattr(self, 'export_dir'):
+        if not self.export_dir:
             self.export_dir = os.path.expanduser('~')  # home directory
             logging.warn('export_dir not specified. Using export_dir=%s'
                          % self.export_dir)
