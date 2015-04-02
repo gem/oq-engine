@@ -14,5 +14,5 @@ urlpatterns = patterns(
     url(r'^run$', 'run_calc'),
 
     url(r'^(\d+)/result/list$', 'calc_results'),
-    url(r'^[0-9]+/result/(\d+)$', 'get_result'),
+    url(r'^\d+/result/(\d+)$', 'get_result'),
 )
