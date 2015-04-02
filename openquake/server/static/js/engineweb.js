@@ -233,7 +233,7 @@
     var refresh_calcs;
     
     function setTimer() {
-        refresh_calcs = setInterval(function() { calculations.fetch({reset: true}) }, 5000);
+        refresh_calcs = setInterval(function() { calculations.fetch({reset: true}) }, 1000);
     }
     
 
