@@ -121,6 +121,9 @@ class OqParam(valid.ParamSet):
 
     def __init__(self, **names_vals):
         super(OqParam, self).__init__(**names_vals)
+        if 'hazard_investigation_time' not in names_vals:
+            self.risk_investigation_time = valid.positivefloat(
+                names_vals['investigation_time'])
         if 'intensity_measure_types' in names_vals:
             self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
             delattr(self, 'intensity_measure_types')

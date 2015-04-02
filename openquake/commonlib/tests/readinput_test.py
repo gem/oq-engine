@@ -73,8 +73,6 @@ export_dir = %s
 
             with mock.patch('logging.warn') as warn:
                 params = vars(readinput.get_oqparam(job_config))
-                print params
-                print expected_params
                 self.assertEqual(expected_params, params)
                 self.assertEqual(['site_model', 'job_ini'],
                                  params['inputs'].keys())
