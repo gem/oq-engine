@@ -258,18 +258,22 @@ def run_calc(request):
         return HttpResponse(json.dumps(einfo.splitlines()),
                             content_type=JSON, status=500)
     temp_dir = os.path.dirname(einfo[0])
-    job, _fut = submit_job(einfo[0], temp_dir, request.POST['database'],
-                           callback_url, foreign_calc_id,
-                           hazard_output_id, hazard_job_id)
     try:
+        job, _fut = submit_job(einfo[0], temp_dir, request.POST['database'],
+                               callback_url, foreign_calc_id,
+                               hazard_output_id, hazard_job_id)
+    except Exception as exc:  # no job created, for instance missing .xml file
+        logging.error(exc)
+        response_data = str(exc).splitlines()
+        status = 500
+    else:
         calc = oqe_models.OqJob.objects.get(pk=job.id)
         response_data = vars(calc.get_oqparam())
         response_data['job_id'] = job.id
         response_data['status'] = calc.status
-    except ObjectDoesNotExist:
-        return HttpResponseNotFound()
-
-    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
+        status = 200
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON,
+                        status=status)
 
 
 def submit_job(job_file, temp_dir, dbname,
