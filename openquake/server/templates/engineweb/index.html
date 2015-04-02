@@ -113,9 +113,10 @@
       <% _.each(calculations, function(calc) { %>
       <tr class="<%= (calc.get('is_running') == true || ! calc.get('id') ) ? 'warning' : (calc.get('status') == 'complete' ? 'success' : 'error') %>">
         <td><%= calc.get('id') || 'New' %></td>
-        <td><%= calc.get('calculation_type') %></td>
+        <td><%= calc.get('job_type') %></td>
         <td><%= calc.get('description') %></td>
-        <td><% if (calc.get('is_running') == true || ! calc.get('id')) { %>
+        <td>
+          <% if (calc.get('is_running') == true || ! calc.get('id')) { %>
           <%= calc.get('status') %>
           <% } else if(calc.get('status') == 'complete') { %>
           <%= calc.get('status') %>
@@ -124,22 +125,23 @@
           <% } %>
         </td>
         <td>
-          <% if(calc.get('is_running') == false && calc.get('id')) { %>
-            <p>
-              <% if(calc.get('map')) { %>
-                <a href="/maps/<%= calc.get('map') %>" class="btn btn-sm btn-success">Open</a>
-              <% } %>
+          <% if (calc.get('is_running') == false && calc.get('id')) { %>
+              <% if (calc.get('status') == 'complete') { %>
+                  <% if(calc.get('map')) { %>
+                        <a href="/maps/<%= calc.get('map') %>" class="btn btn-sm btn-success">Open</a>
+                  <% } %>
               <!--
-                   <a href="download/input/<%= calc.get('calculation_type') %>/<%= calc.get('id') %>" class="btn btn-sm">Download input</a>
+                   <p>
+                        <a href="download/input/<%= calc.get('calculation_type') %>/<%= calc.get('id') %>" class="btn btn-sm">Download input</a>
+                   </p>
               -->
-            <a href="engineweb/<%= calc.get('id') %>/outputs" class="btn btn-sm">Show outputs</a>
-            </p>
-            <% if(calc.get('job_type') == 'hazard') { %>
+            <a href="engineweb/<%= calc.get('id') %>/outputs" class="btn btn-sm" style="margin: 2px 0 2px 0">Show outputs</a>
+                  <% if(calc.get('job_type') == 'hazard') { %>
             <form class="calc-form" enctype="multipart/form-data"
               style="margin: 0; display: inline-block"
               method="post" action="{{ oq_engine_server_url }}/v1/calc/run">
             <input type="hidden" name="calculation_type" value="risk"/>
-            <div class="fileinput-new" data-provides="fileinput" style="margin: 0 2px 0 0">
+            <div class="fileinput-new" data-provides="fileinput" style="margin: 2px 0 2px 0">
               <span class="btn btn-default btn-sm btn-file"><span class="fileinput-new">Run Risk</span><input type="file" name="archive"/></span>
             </div>
             <!-- <input type="hidden" name="callback_url" value=""/> -->
@@ -147,17 +149,14 @@
             <input type="hidden" name="hazard_job_id" value="<%= calc.get('id') %>"/>
             <input type="hidden" name="database" value="openquake2"/>
             </form>
-            <% } %>
-
-          <% if(calc.get('id')) { %>
-            <% if(calc.get('status') != 'complete') { %>
-              <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-traceback" >Traceback</button>
-            <% } %>
-            <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-danger">Remove</a>
-         <% } %>
+                  <% } %>
+              <% } else { %>
+                  <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-traceback" style="margin: 2px 0 2px 0;">Traceback</a>
+              <% } %>
+            <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-danger" style="margin: 2px 0 2px 0;">Remove</a>
+          <% } %>
         </td>
       </tr>
-      <% } %>
       <% }); %>
     </tbody>
   </table>
