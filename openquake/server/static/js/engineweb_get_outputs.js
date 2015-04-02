@@ -17,11 +17,11 @@
 
 (function($, Backbone, _, oq_server_url, calc_id) {
     var progressHandlingFunction = function(progress) {
-	var percent = progress.loaded / progress.total * 100;
- 	$('.bar').css('width', percent + '%');
-	if (percent == 100) {
-            dialog.hidePleaseWait();
-	}
+        var percent = progress.loaded / progress.total * 100;
+        $('.bar').css('width', percent + '%');
+        if (percent == 100) {
+                dialog.hidePleaseWait();
+        }
     };
 
     var dialog = (function ()
@@ -29,12 +29,12 @@
                       var pleaseWaitDiv = $('<div class="modal hide" id="pleaseWaitDialog" data-backdrop="static" data-keyboard="false"><div class="modal-header"><h1>Processing...</h1></div><div class="modal-body"><div class="progress progress-striped active"><div class="bar" style="width: 0%;"></div></div></div></div>');
                       return {
                           showPleaseWait: function(msg, progress) {
-	                      $('h1', pleaseWaitDiv).text(msg);
-	                      if (progress) {
-		                  progressHandlingFunction({loaded: 0, total: 1});
-	                      } else {
-		                  progressHandlingFunction({loaded: 1, total: 1});
-	                      }
+                          $('h1', pleaseWaitDiv).text(msg);
+                          if (progress) {
+                              progressHandlingFunction({loaded: 0, total: 1});
+                          } else {
+                              progressHandlingFunction({loaded: 1, total: 1});
+                          }
                               pleaseWaitDiv.modal();
                           },
                           hidePleaseWait: function () {
@@ -70,7 +70,7 @@
                                   $('.modal-title', errorDiv).html(title);
                               }
                               if (msg != null) {
-	                          $('.modal-body-pre', errorDiv).html(msg);
+                                  $('.modal-body-pre', errorDiv).html(msg);
                               }
                               errorDiv.modal();
                           },
@@ -84,7 +84,7 @@
         {
             /* the html element where the table is rendered */
             el: $('#my-outputs'),
-            
+
             initialize: function(options) {
 
                 /* whatever happens to any calculation, re-render the table */
@@ -216,7 +216,7 @@
         });
 
     var Outputs = Backbone.Collection.extend(
-        { 
+        {
             model: Output,
             url: oq_server_url + "/v1/calc/" + calc_id + "/result/list"
         });
@@ -224,13 +224,12 @@
 
 
     var refresh_calcs;
-    
+
     function setTimer() {
         refresh_calcs = setInterval(function() { outputs.fetch({reset: true}) }, 5000);
     }
-    
 
-    /* classic event management */   
+    /* classic event management */
     $(document).ready(
         function() {
             // var calculation_table = new CalculationTable({ outputs: outputs });
@@ -253,30 +252,30 @@
                                dialog.showPleaseWait('Uploading calculation', true);
                                var input = $(e.target);
                                var form = input.parents('form')[0];
-                               
-	                       $(form).ajaxSubmit(
+
+                               $(form).ajaxSubmit(
                                    {
-		                       xhr: function() {  // custom xhr to add progress bar management
-                                           var myXhr = $.ajaxSettings.xhr();
-                                           if(myXhr.upload){ // if upload property exists
-                                               myXhr.upload.addEventListener('progress', progressHandlingFunction, false);
-                                           }
-                                           return myXhr;
-                                       },
-		                       success: function(data) {
-                                           outputs.add(new Calculation(data));
-                                       },
-		                       error: function(xhr) { 
-                                           dialog.hidePleaseWait();
-                                           var s, out, ret = $.parseJSON(xhr.responseText);
-                                           out = ""
-                                           for (s in ret) {
-                                               if (ret[s] == "")
-                                                   continue;
-                                               out += ret[s] + '\n';
-                                           }
-                                           diaerror.showDiaError("Calculation not accepted: traceback", out);
-		                       }});
+                                    xhr: function() {  // custom xhr to add progress bar management
+                                        var myXhr = $.ajaxSettings.xhr();
+                                        if(myXhr.upload){ // if upload property exists
+                                            myXhr.upload.addEventListener('progress', progressHandlingFunction, false);
+                                        }
+                                        return myXhr;
+                                    },
+                                    success: function(data) {
+                                        outputs.add(new Calculation(data));
+                                    },
+                                    error: function(xhr) {
+                                        dialog.hidePleaseWait();
+                                        var s, out, ret = $.parseJSON(xhr.responseText);
+                                        out = ""
+                                        for (s in ret) {
+                                            if (ret[s] == "")
+                                                continue;
+                                            out += ret[s] + '\n';
+                                        }
+                                        diaerror.showDiaError("Calculation not accepted: traceback", out);
+                                    }});
                            });
 
             $(document).on('hidden.bs.modal', 'div[id^=traceback-]',
@@ -284,7 +283,5 @@
                                setTimer();
                            });
 
-            
         });
 })($, Backbone, _, gem_oq_server_url, gem_calc_id);
-
