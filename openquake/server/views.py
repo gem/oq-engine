@@ -315,7 +315,7 @@ def submit_job(job_file, temp_dir, dbname,
 def _get_calcs(request_get_dict):
     # helper to get job+calculation data from the oq-engine database
     job_params = oqe_models.JobParam.objects.filter(
-        name='description', job__user_name='platform')
+        name='description', job__user_name='platform').order_by('-id')
 
     if 'job_type' in request_get_dict:
         job_type = request_get_dict.get('job_type')
