@@ -212,7 +212,7 @@ def compute_hazard_curves(job_id, sources, sitecol, info):
     gsims = trt_model.get_gsim_instances()
     curves = [[numpy.ones([total_sites, len(ls)]) for ls in sorted_imls]
               for gsim in gsims]
-    if getattr(hc, 'poes_disagg', None):  # doing disaggregation
+    if hc.poes_disagg:  # doing disaggregation
         lt_model_id = trt_model.lt_model.id
         bbs = [BoundingBox(lt_model_id, site_id) for site_id in sitecol.sids]
     else:
@@ -234,7 +234,7 @@ def compute_hazard_curves(job_id, sources, sitecol, info):
         for _source, rupture, r_sites in rows:
             num_sites = max(num_sites, len(r_sites))
             num_ruptures += 1
-            if getattr(hc, 'poes_disagg', None):  # doing disaggregation
+            if hc.poes_disagg:  # doing disaggregation
                 jb_dists = rupture.surface.get_joyner_boore_distance(sitemesh)
                 closest_points = rupture.surface.get_closest_points(sitemesh)
                 for bb, dist, point in itertools.izip(
@@ -247,8 +247,7 @@ def compute_hazard_curves(job_id, sources, sitecol, info):
             for gsim, curv in itertools.izip(gsims, curves):
                 for i, pnes in enumerate(_calc_pnes(
                         gsim, r_sites, rupture, sorted_imts, sorted_imls,
-                        getattr(hc, 'truncation_level', None),
-                        make_ctxt_mon, calc_poes_mon)):
+                        hc.truncation_level, make_ctxt_mon, calc_poes_mon)):
                     curv[i] *= pnes
 
         inserter.add(
@@ -298,7 +297,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         # a dictionary with the bounding boxes for earch source
         # model and each site, defined only for disaggregation
         # calculations:
-        if getattr(self.oqparam, 'poes_disagg', None):
+        if self.oqparam.poes_disagg:
             lt_models = models.LtSourceModel.objects.filter(
                 hazard_calculation=self.job)
             self.bb_dict = dict(

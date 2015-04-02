@@ -3,7 +3,6 @@ import os
 from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS
 from openquake.engine import settings as oqe_settings
 
-
 OQSERVER_ROOT = os.path.dirname(__file__)
 
 DEBUG = True
