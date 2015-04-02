@@ -45,7 +45,7 @@
 
     var diaerror = (function ()
                   {
-                      var errorDiv = $('<div class="modal fade" style="display: none;" data-keyboard="true">\
+                      var errorDiv = $('<div class="modal fade" style="display: none;" data-keyboard="true" tabindex="-1">\
                 <div class="modal-dialog">\
                   <div class="modal-content">\
                     <div class="modal-header">\
