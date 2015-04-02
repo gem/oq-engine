@@ -42,7 +42,7 @@ class NormalizeTestCase(unittest.TestCase):
         self.vf = {self.loss_type: mock.MagicMock()}
         self.poes = [0.1, 0.2]
         self.workflow = workflows.ProbabilisticEventBased(
-            'PGA', 'TAXO', self.vf, 50, 1000, 20, self.poes, True)
+            'PGA', 'TAXO', self.vf, 50, 50, 0, 20, 20, self.poes, True)
         self.workflow.conditional_loss_poes = self.poes
         self.workflow.curves = mock.Mock(return_value=numpy.empty((3, 2, 20)))
 

@@ -563,12 +563,6 @@ def get_risk_model(oqparam):
     risk_models = {}  # (imt, taxonomy) -> workflow
     riskmodel = riskinput.RiskModel(risk_models)
 
-    oqparam.__dict__.setdefault('insured_losses', False)
-    extras = {}  # extra parameter tses for event based
-    if oqparam.calculation_mode.startswith('event_based'):
-        extras['tses'] = (oqparam.ses_per_logic_tree_path *
-                          oqparam.investigation_time)
-
     if oqparam.calculation_mode.endswith('_damage'):
         # scenario damage calculator
         fragility_functions = get_fragility_functions(
@@ -591,13 +585,13 @@ def get_risk_model(oqparam):
             risk_models[imt_taxo] = workflows.get_workflow(
                 imt_taxo[0], imt_taxo[1], oqparam,
                 vulnerability_functions_orig=vf_orig,
-                vulnerability_functions_retro=vf_retro, **extras)
+                vulnerability_functions_retro=vf_retro)
     else:
         # classical, event based and scenario calculators
         for imt_taxo, vfs in get_vfs(oqparam.inputs).iteritems():
             risk_models[imt_taxo] = workflows.get_workflow(
                 imt_taxo[0], imt_taxo[1], oqparam,
-                vulnerability_functions=vfs, **extras)
+                vulnerability_functions=vfs)
 
     return riskmodel
 
