@@ -131,7 +131,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         self.rupture = readinput.get_rupture(oqparam)
 
         # check filtering
-        trunc_level = getattr(oqparam, 'truncation_level', None)
+        trunc_level = oqparam.truncation_level
         maximum_distance = oqparam.maximum_distance
         self.sites = filters.filter_sites_by_distance_to_rupture(
             self.rupture, maximum_distance, self.site_collection)
