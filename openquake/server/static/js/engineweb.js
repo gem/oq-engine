@@ -195,32 +195,6 @@
         });
     var calculations = new Calculations();
 
-
-    var OutputTable = Backbone.View.extend(
-        {
-            el: $('#tab2'),
-
-            initialize: function(options) {
-                _.bindAll(this, 'render');
-                this.outputs = options.outputs;
-                this.outputs.bind('reset', this.render);
-                this.outputs.bind('add', this.render);
-                this.render();
-            },
-
-            render: function() {
-                this.$el.html(_.template($('#output-table-template').html(),
-                                         { outputs: this.outputs.models }));
-            }
-        });
-
-    var Output = Backbone.Model.extend(
-        {
-            calc: function() {
-                return calculations.get(this.get('calculation')) || new Output({ 'calculation_type': undefined });
-            }
-        });
-
     var refresh_calcs;
 
     function setTimer() {

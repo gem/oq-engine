@@ -42,34 +42,6 @@
     </table>
   </script>
 
-  <script type="text/template" id="output-table-template">
-    <table id="output_table" class="table table-hover">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% _.each(outputs, function(out) { %>
-        <tr>
-          <td><%= out.get('id') %></td>
-          <td><%= out.get('name') %></td>
-          <td><%= out.get('type') || 'Loading...' %></td>
-          <td>
-  <!--
-            <% if(out.calc().get('calculation_type') == 'hazard') { %>
-            <a href="#" class="btn btn-primary">Run Risk</a>
-            <% } %>
-  -->
-          </td>
-        </tr>
-        <% }); %>
-      </tbody>
-    </table>
-  </script>
   {% endblock templates %}
 
   {% block extra_script %}
