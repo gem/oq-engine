@@ -495,8 +495,6 @@ class GroundShakingIntensityModel(object):
                 value = rupture.hypocenter.depth
             elif param == 'width':
                 value = rupture.surface.get_width()
-            elif param == 'rupture_slip_direction':
-                value = rupture.surface.rupture_slip_direction
             else:
                 raise ValueError('%s requires unknown rupture parameter %r' %
                                  (type(self).__name__, param))
@@ -713,7 +711,7 @@ class RuptureContext(BaseContext):
     """
     __slots__ = (
         'mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
-        'hypo_depth', 'width', 'hypo_loc', 'rupture_slip_direction'
+        'hypo_depth', 'width', 'hypo_loc',
     )
 
 

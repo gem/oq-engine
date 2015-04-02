@@ -56,6 +56,8 @@ class Rupture(object):
         Subclass of :class:`~openquake.hazardlib.source.base.BaseSeismicSource`
         (class object, not an instance) referencing the typology
         of the source that produced this rupture.
+    :param rupture_slip_direction:
+        Angle describing rupture propagation direction in decimal degrees.
 
     :raises ValueError:
         If magnitude value is not positive, hypocenter is above the earth
@@ -298,7 +300,7 @@ class ParametricProbabilisticRupture(BaseProbabilisticRupture):
             :class:`~openquake.hazardlib.geo.point.Point` object
             representing the location of the target site
         :returns:
-            directivity predication value.
+            A float number, directivity predication value.
         """
         origin = self.surface.get_resampled_top_edge()[0]
         dpp_multi = []
@@ -378,7 +380,7 @@ class ParametricProbabilisticRupture(BaseProbabilisticRupture):
         a given site.
 
         :param target_site:
-            :class:`~openquake.hazardlib.geo.Mesh` object
+            An instance of :class:`Mesh`
             representing the location of the target site.
         :param buf:
             A float vaule presents the length extend from the mesh boundary,

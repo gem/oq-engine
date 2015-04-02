@@ -49,10 +49,12 @@ class SimpleFaultSource(ParametricSeismicSource):
     :param dip:
         Angle between earth surface and fault plane in decimal degrees.
     :param rake:
+        the direction of hanging wall relative to the foot wall.
+    :param rupture_slip_direction:
         Angle describing rupture propagation direction in decimal degrees.
     :param hypo_list:
         Array describing the relative position of the hypocentre on the rupture
-        surface. Each line represents an hypocentral position defined in terms
+        surface. Each line represents a hypocentral position defined in terms
         of the relative distance along strike and dip (from the upper, left
         corner of the fault surface i.e. the corner which results from the
         projection at depth of the first vertex of the fault trace) and the
@@ -65,6 +67,16 @@ class SimpleFaultSource(ParametricSeismicSource):
         along strike and at 3/4 of fault width along strike with a weight of
         0.7. The numpy array would be entered as numpy.array([0.25, 0.25, 0.3],
         [0.75, 0.75, 0.7]).
+    :param slip_list:
+        Array describing the rupture slip direction, which desribes the rupture
+        propagation direction on the rupture surface. Each line represents a
+        rupture slip direction and the corresponding weight. Example 1: one
+        single rupture slip direction with angle 90 degree will be described
+        by the following array[(90, 1.0)]. Example 2: two possible rupture slip
+        directions are admitted for a rupture. One slip direction is at 90
+        degree with a weight of 0.7, the other one is at 135 degree with a
+        weight of 0.3. The numpy array would be entered as numpy.array(
+        [90, 0.7], [135, 0.3]).
 
     See also :class:`openquake.hazardlib.source.base.ParametricSeismicSource`
     for description of other parameters.
@@ -108,6 +120,12 @@ class SimpleFaultSource(ParametricSeismicSource):
                                                  min_mag)
         self.slip_list = slip_list
         self.hypo_list = hypo_list
+
+        if (((self.hypo_list.size != 1) and (self.slip_list.size == 1)) or
+           ((self.hypo_list.size == 1) and (self.slip_list.size != 1))):
+            raise ValueError('hypo_list and slip_list have to be both given or\
+                neither given')
+
         if 1 in cols_rows:
             raise ValueError('mesh spacing %s is too high to represent '
                              'ruptures of magnitude %s' %
