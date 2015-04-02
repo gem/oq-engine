@@ -221,15 +221,6 @@
             }
         });
 
-    /*
-      var Outputs = Backbone.Collection.extend(
-      {
-      model: Output,
-      url: '/icebox/outputs'
-      });
-      var outputs = new Outputs();
-    */
-
     var refresh_calcs;
 
     function setTimer() {
@@ -243,13 +234,6 @@
             var calculation_table = new CalculationTable({ calculations: calculations });
             calculations.fetch({reset: true});
             setTimer();
-
-            // var output_table = new OutputTable({ outputs: outputs });
-            // outputs.fetch({reset: true});
-
-            // /* TODO. output collection should observe the calculation one */
-            // setInterval(function() { outputs.fetch({reset: true}) }, 10000);
-
 
             /* XXX. Reset the input file value to ensure the change event
                will be always triggered */
