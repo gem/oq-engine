@@ -104,8 +104,6 @@ def job_stats(job):
     dbsize = curs.fetchall()[0][0]
 
     js = job.jobstats
-    job.is_running = True
-    job.save()
     try:
         yield
     except:
