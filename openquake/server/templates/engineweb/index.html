@@ -1,46 +1,6 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title> OpenQuakeWeb </title>
-  <link href="{{ STATIC_URL }}css/base.css" rel="stylesheet">
-  <link href="{{ STATIC_URL }}geonode/font/lato_font.css" rel="stylesheet" type="text/css">
-  <link href="{{ STATIC_URL }}css/assets.min.css" rel="stylesheet">
-  <link href="{{ STATIC_URL }}img/favicon.ico" rel="shortcut icon">
-  <link href="{{ STATIC_URL }}css/oqplatform.css" rel="stylesheet">
-  <link href="{{ STATIC_URL }}css/jasny-bootstrap.min.css" rel="stylesheet"/>
-</head>
-<body>
-  <div id="header" class="navbar navbar-fixed-top">
-    <div class="navbar-inner">
-      <section>
-      <div class="container">
-        <div class="row">
-          <div class="span3">
-            <!-- <a href="{#% url "home" %#}"><span class="nav-logo"></span></a> -->
-          </div>
-          <div class="span10">
-            <nav class="main-nav">
-              <ul>
-              </ul>
-            </nav>
-          </div> <!-- ./span10 -->
-          <div class="span9">
-            <div class="nav-collapse pull-right">
-              <div class="pull-right">
-                <ul class="nav pull-right account-bar">
-                </ul>
-              </div>
-            </div>
-          </div>
-          <div id="gem-right-logo">
-            <a href="http://www.globalquakemodel.org" title="GEM Foundation" target="_blank"><span class="nav-logo nav-logo-gem"></span></a>
-          </div>
-        </div>
-      </div> <!-- /.container -->
-      </section>
-    </div> <!-- /.navbar-inner -->
-  </div> <!-- /.navbar navbar-fixed-top -->
+{% extends "engineweb/base.html" %}
+
+  {% block main %}
   <div class="content-wrap">
     <div class="container">
       <div class="row">
@@ -69,15 +29,9 @@
       </div>
     </div> <!-- /.container -->
   </div>
+  {% endblock main %}
 
-  <script type="text/javascript" src="https://html5shim.googlecode.com/svn/trunk/html5.js"></script>
-  <script type="text/javascript" src="{{ STATIC_URL }}lib/jquery/js/jquery-1.9.1.js"></script>
-  <script type="text/javascript" src="{{ STATIC_URL }}lib/jquery/js/jquery-ui-1.10.3.custom.js"></script>
-  <script type="text/javascript" src="{{ STATIC_URL }}js/assets.min.js"></script>
-  <script type="text/javascript" src="{{ STATIC_URL }}lib/bootstrap-extend/js/jasny-bootstrap.min.js"></script>
-  <script type="text/javascript" src="{{ STATIC_URL }}lib/underscore/js/underscore-min.js"></script>
-  <script type="text/javascript" src="{{ STATIC_URL }}lib/backbone/js/backbone-min.js"></script>
-
+  {% block templates %}
   <script type="text/template" id="calculation-table-template">
     <table id="calculation_table" class="table table-hover">
       <caption>Calculations</caption>
@@ -174,12 +128,9 @@
       </tbody>
     </table>
   </script>
+  {% endblock templates %}
 
-  <script type="text/javascript" src="{{ STATIC_URL }}lib/jquery/js/jquery.form-3.44.0.js"></script>
-  <script type="text/javascript"><!--
-    var gem_oq_server_url = '{{ oq_engine_server_url }}';
-    //-->
-    </script>
+  {% block extra_script %}
+  {{ block.super }}
   <script type="text/javascript" src="{{ STATIC_URL }}js/engineweb.js"></script>
-</body>
-</html>
+  {% endblock extra_script %}
