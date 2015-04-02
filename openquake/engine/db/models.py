@@ -274,6 +274,7 @@ class OqJob(djm.Model):
     )
     log_level = djm.TextField(choices=LOG_LEVEL_CHOICES, default='progress')
     STATUS_CHOICES = (
+        (u'created', u'Created'),
         (u'pre_executing', u'Pre-Executing'),
         (u'executing', u'Executing'),
         (u'post_executing', u'Post-Executing'),
@@ -287,7 +288,7 @@ class OqJob(djm.Model):
     hazardlib_version = djm.TextField(null=True, blank=True)
     commonlib_version = djm.TextField(null=True, blank=True)
     risklib_version = djm.TextField(null=True, blank=True)
-    is_running = djm.BooleanField(default=False)
+    is_running = djm.BooleanField(default=True)
     duration = djm.IntegerField(default=0)
     job_pid = djm.IntegerField(default=0)
     supervisor_pid = djm.IntegerField(default=0)
