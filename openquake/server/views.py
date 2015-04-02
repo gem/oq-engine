@@ -394,7 +394,7 @@ def get_traceback(request, calc_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
-def get_result_ng(request, calc_id, result_id):
+def get_result(request, result_id):
     """
     Download a specific result, by ``result_id``.
 
@@ -449,11 +449,6 @@ def get_result_ng(request, calc_id, result_id):
         return response
     finally:
         shutil.rmtree(tmpdir)
-
-@cross_domain_ajax
-@require_http_methods(['GET'])
-def get_result(request, result_id):
-    get_result_ng(request, -1, result_id)
 
 def engineweb(request, **kwargs):
     return render_to_response("engineweb/index.html",
