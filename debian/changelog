@@ -1,3 +1,6 @@
+  [Matteo Nastasi]
+  * added 'engineweb' django application as local web client for oq-engine
+
   [Michele Simionato]
   * Added to the API an URL /v1/calc/:calc_id/remove to hide jobs
   * A new key is_running is added to the list of dictionaries returned by
