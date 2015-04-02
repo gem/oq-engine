@@ -188,26 +188,6 @@
         }
     });
 
-/*
-    var OutputTable = Backbone.View.extend(
-        {
-            el: $('#tab2'),
-
-            initialize: function(options) {
-                _.bindAll(this, 'render');
-                this.outputs = options.outputs;
-                this.outputs.bind('reset', this.render);
-                this.outputs.bind('add', this.render);
-                this.render();
-            },
-
-            render: function() {
-                this.$el.html(_.template($('#output-table-template').html(),
-                                         { outputs: this.outputs.models }));
-            }
-        });
-*/
-
     var Output = Backbone.Model.extend(
         {
             calc: function() {
@@ -223,10 +203,10 @@
     var outputs = new Outputs();
 
 
-    var refresh_calcs;
+    var refresh_outputs;
 
     function setTimer() {
-        refresh_calcs = setInterval(function() { outputs.fetch({reset: true}) }, 5000);
+        refresh_outputs = setInterval(function() { outputs.fetch({reset: true}) }, 10000);
     }
 
     /* classic event management */
@@ -238,10 +218,7 @@
 
             var output_table = new OutputTable({ outputs: outputs });
             outputs.fetch({reset: true});
-
-            // /* TODO. output collection should observe the calculation one */
-            setInterval(function() { outputs.fetch({reset: true}) }, 10000);
-
+            setTimer()
 
             /* XXX. Reset the input file value to ensure the change event
                will be always triggered */
@@ -277,11 +254,5 @@
                                         diaerror.showDiaError("Calculation not accepted: traceback", out);
                                     }});
                            });
-
-            $(document).on('hidden.bs.modal', 'div[id^=traceback-]',
-                           function(e) {
-                               setTimer();
-                           });
-
         });
 })($, Backbone, _, gem_oq_server_url, gem_calc_id);
