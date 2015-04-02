@@ -249,24 +249,24 @@
                                    {
                                     xhr: function() {  // custom xhr to add progress bar management
                                         var myXhr = $.ajaxSettings.xhr();
-                                            if(myXhr.upload){ // if upload property exists
-                                                myXhr.upload.addEventListener('progress', progressHandlingFunction, false);
+                                        if(myXhr.upload){ // if upload property exists
+                                            myXhr.upload.addEventListener('progress', progressHandlingFunction, false);
                                         }
                                         return myXhr;
-                                        },
-                                        success: function(data) {
-                                            calculations.add(new Calculation(data));
-                                        },
-                                        error: function(xhr) {
-                                            dialog.hidePleaseWait();
-                                            var s, out, ret = $.parseJSON(xhr.responseText);
-                                            out = ""
-                                            for (s in ret) {
-                                                if (ret[s] == "")
-                                                    continue;
-                                                out += ret[s] + '\n';
-                                            }
-                                            diaerror.showDiaError("Calculation not accepted: traceback", out);
+                                    },
+                                    success: function(data) {
+                                        calculations.add(new Calculation(data));
+                                    },
+                                    error: function(xhr) {
+                                        dialog.hidePleaseWait();
+                                        var s, out, ret = $.parseJSON(xhr.responseText);
+                                        out = ""
+                                        for (s in ret) {
+                                            if (ret[s] == "")
+                                                continue;
+                                            out += ret[s] + '\n';
+                                        }
+                                        diaerror.showDiaError("Calculation not accepted: traceback", out);
                                     }});
                            });
 
