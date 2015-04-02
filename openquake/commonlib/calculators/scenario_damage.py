@@ -75,23 +75,24 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         Get the GMFs and build the riskinputs.
         """
         super(ScenarioDamageCalculator, self).pre_execute()
-        if 'gmfs' in self.oqparam.inputs:
-            self.riskinputs = self.read_gmfs_from_csv()
-        else:
-            self.riskinputs = self.compute_gmfs()
+        if 'gmfs' in self.oqparam.inputs:  # from file
+            gmfs = self.read_gmfs_from_csv()
+        else:  # from rupture
+            gmfs = self.compute_gmfs()
+        self.riskinputs = self.build_riskinputs(gmfs)
 
     def compute_gmfs(self):
         """
         :returns: riskinputs
         """
         logging.info('Computing the GMFs')
-        haz_out, hcalc = base.get_hazard(self, exports='xml')
+        haz_out, hcalc = base.get_hazard(self)
         gmfs_by_trt_gsim = calc.expand(
             haz_out['gmfs_by_trt_gsim'], hcalc.sites)
 
         logging.info('Preparing the risk input')
         self.rlzs_assoc = haz_out['rlzs_assoc']
-        return self.build_riskinputs(gmfs_by_trt_gsim)
+        return gmfs_by_trt_gsim
 
     def read_gmfs_from_csv(self):
         """
@@ -115,7 +116,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
         logging.info('Preparing the risk input')
         self.rlzs_assoc = riskinput.FakeRlzsAssoc(num_rlzs=1)
-        return self.build_riskinputs({(0, 'FromCsv'): gmfs_by_imt})
+        return {(0, 'FromCsv'): gmfs_by_imt}
 
     def post_execute(self, result):
         """

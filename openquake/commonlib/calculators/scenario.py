@@ -110,6 +110,8 @@ class ScenarioCalculator(base.HazardCalculator):
         """
         logging.info('Exporting the result')
         out = AccumDict()
+        if not self.oqparam.exports:
+            return out
         exports = self.oqparam.exports.split(',')
         for (trt_id, gsim), gmfs_by_imt in result.iteritems():
             for fmt in exports:
