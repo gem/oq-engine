@@ -76,45 +76,6 @@ def all_equal(obj, value):
         return eq
 
 
-class SiteModelParams(object):
-    """
-    Wrapper around the SiteModel table with a method .get_closest
-
-    :param job:
-        a :class:`openquake.engine.db.models.OqJob` instance
-    :param site_model_objects:
-        an iterable over objects with attributes
-        vs30, measured, z1pt0, z2pt5, lon, lat
-    """
-    def __init__(self, job, site_model_objects):
-        self.job = job
-        data = [models.SiteModel(
-                vs30=obj.vs30,
-                vs30_type='measured' if obj.measured else 'inferred',
-                z1pt0=obj.z1pt0,
-                z2pt5=obj.z2pt5,
-                location=Point(obj.lon, obj.lat),
-                job_id=job.id)
-                for obj in site_model_objects]
-        writer.CacheInserter.saveall(data)
-
-    def get_closest(self, lon, lat):
-        """
-        :param lon: a given longitude
-        :param lat: a given latitude
-        :returns:
-           the SiteMode record closest to the given longitude and latitude
-        """
-        query = """\
-        SELECT s.*, min(ST_Distance_Sphere(
-                        location, 'SRID=4326; POINT(%s %s)')) AS min_dist
-        FROM hzrdi.site_model AS s
-        WHERE job_id = %d GROUP BY id
-        ORDER BY min_dist LIMIT 1;""" % (lon, lat, self.job.id)
-        [sm] = models.SiteModel.objects.raw(query)
-        return sm
-
-
 class BaseHazardCalculator(base.Calculator):
     """
     Abstract base class for hazard calculators. Contains a bunch of common
@@ -305,13 +266,8 @@ class BaseHazardCalculator(base.Calculator):
 
         logs.LOG.progress("initializing site collection")
         oqparam = self.job.get_oqparam()
-        if 'site_model' in oqparam.inputs:
-            sm_params = SiteModelParams(
-                self.job, get_site_model(oqparam))
-        else:
-            sm_params = None
         self.site_collection = get_site_collection(
-            oqparam, points, site_ids, sm_params)
+            oqparam, points, site_ids)
 
     def initialize_realizations(self):
         """
