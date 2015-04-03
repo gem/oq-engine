@@ -1,5 +1,3 @@
-{% url 'openquake.server.views.engineweb' as index %}
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -19,12 +17,12 @@
       <div class="container">
         <div class="row">
           <div class="span3">
-            <a href="{{ index }}"><span class="nav-logo"></span></a>
+            <a href="{% url "index" %}"><span class="nav-logo"></span></a>
           </div>
           <div class="span10">
             <nav class="main-nav">
               <ul>
-                <li class="calc"><a href="{{ index }}">Calculate</a></li>
+                <li class="calc"><a href="{% url "index" %}">Calculate</a></li>
               </ul>
             </nav>
           </div> <!-- ./span10 -->
@@ -55,6 +53,7 @@
     <div class="container">
       <div class="pull-left">
         <a href="https://github.com/gem/oq-engine" target="_blank">OpenQuake Engine</a> <em>{{ oq_engine_version }}</em> |
+        <a href="{% url "license" %}">License</a> |
         <a href="https://groups.google.com/forum/#%21forum/openquake-users" target="_blank">Feedback</a>
       </div>
       <div class="pull-right">
