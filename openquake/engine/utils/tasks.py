@@ -105,7 +105,7 @@ def apply_reduce(task, task_args,
                  key=lambda item: 'Unspecified',
                  name=None):
     """
-    Apply a task to a tuple of the form (job_id, data, *args)
+    Apply a task to a tuple of the form (monitor, data, *args)
     by splitting the data in chunks and reduce the results with an
     aggregation function.
 
@@ -119,15 +119,15 @@ def apply_reduce(task, task_args,
     """
     if acc is None:
         acc = AccumDict()
-    job_id = task_args[0]
+    monitor = task_args[0]
     data = task_args[1]
     args = task_args[2:]
     if not data:
         return acc
     elif len(data) == 1 or not concurrent_tasks:
-        return agg(acc, task.task_func(job_id, data, *args))
+        return agg(acc, task.task_func(monitor, data, *args))
     blocks = split_in_blocks(data, concurrent_tasks, weight, key)
-    task_args = [(job_id, block) + args for block in blocks]
+    task_args = [(monitor, block) + args for block in blocks]
     return starmap(task, task_args, logs.LOG.progress, name).reduce(agg, acc)
 
 
@@ -146,20 +146,20 @@ def oqtask(task_func):
         code surrounded by a try-except. If any error occurs, log it as a
         critical failure.
         """
-        # job_id is always assumed to be the first argument
-        job_id = args[0]
-        job = models.OqJob.objects.get(id=job_id)
+        # the first argument is assumed to be a monitor
+        monitor = args[0]
+        job = models.OqJob.objects.get(id=monitor.job_id)
         if job.is_running is False:
             # the job was killed, it is useless to run the task
-            raise JobNotRunning(job_id)
+            raise JobNotRunning(monitor.job_id)
 
         # it is important to save the task id soon, so that
         # the revoke functionality can work
-        EnginePerformanceMonitor.store_task_id(job_id, tsk)
+        with monitor('storing task id', tsk) as mon:
+            pass
+        mon.flush()
 
-        with EnginePerformanceMonitor(
-                'total ' + task_func.__name__, job_id, tsk, flush=True), \
-                logs.handle(job):
+        with monitor('total ' + task_func.__name__, tsk), logs.handle(job):
             try:
                 # log a warning if too much memory is used
                 check_mem_usage(SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
