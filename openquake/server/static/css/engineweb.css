@@ -98,12 +98,16 @@ nav.main-nav ul li {
     padding: 0;
     text-align: center;
 }
+
 nav.main-nav ul li a {
     color: #fff;
-    font-weight: bold;
     text-transform: none;
     font-size: 16px;
-    padding: 4px 0;
+    padding: 4px 0 15px;
+}
+
+nav.main-nav ul li a:hover {
+    font-weight: normal;
 }
 
 nav.main-nav ul li.calc{
@@ -111,18 +115,17 @@ nav.main-nav ul li.calc{
 }
 
 nav.main-nav ul li.calc:hover{
-   border-bottom: solid #dc6522 5px;
+    border-bottom: solid #fff 5px;
 }
 
 nav.main-nav ul li.calc form{
-    padding: 4px;
     margin: 0;
 }
 
 nav.main-nav ul li.calc label{
+    padding: 4px 0 15px;
     margin: 0;
     font-size: 16px;
-    font-weight: bold;
 }
 
 #license p{
