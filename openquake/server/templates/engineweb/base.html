@@ -36,7 +36,11 @@
                 <ul class="nav pull-right account-bar">
                   {% if user.is_authenticated %}
                   <li class="user">
-                      <a href="">{{ user.username }}</a>
+                    {% if user.is_superuser %}
+                    <a href="{% url "admin:index" %}">{{ user.username }}</a>
+                    {% else %}
+                    {{ user.username }}
+                    {% endif %}
                   </li>
                   {% endif %}
                   <li class="actions">
