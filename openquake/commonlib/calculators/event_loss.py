@@ -56,6 +56,7 @@ def event_loss(riskinputs, riskmodel, rlzs_assoc, monitor):
     return acc
 
 
+# hack: temporarily 'event_based_risk' is an alias for 'event_loss'
 @base.calculators.add('event_loss', 'event_based_risk')
 class EventLossCalculator(base.RiskCalculator):
     """
