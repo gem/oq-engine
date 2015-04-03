@@ -6,6 +6,7 @@
       <div class="row">
         <div id="oq-body-wrapper">
           <div class="span12">
+            <h2>Calculations</h2>
             <form class="calc-form form-horizontal"
                   enctype="multipart/form-data"
                   method="post" action="{{ oq_engine_server_url }}/v1/calc/run">
@@ -34,7 +35,6 @@
   {% block templates %}
   <script type="text/template" id="calculation-table-template">
     <table id="calculation_table" class="table table-hover">
-      <caption>Calculations</caption>
       <thead>
         <tr>
           <th>ID</th>
