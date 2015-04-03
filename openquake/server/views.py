@@ -31,6 +31,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render_to_response
 from django.template import RequestContext
+from django.contrib.auth.decorators import login_required
 
 from openquake.commonlib import nrml, readinput, valid
 from openquake.engine import engine as oq_engine, __version__ as oqversion
@@ -135,6 +136,7 @@ def _is_source_model(tempfile):
     return False
 
 
+@login_required
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def get_engine_version(request):
@@ -144,6 +146,7 @@ def get_engine_version(request):
     return HttpResponse(oqversion)
 
 
+@login_required
 @require_http_methods(['GET'])
 @cross_domain_ajax
 def calc_info(request, calc_id):
@@ -164,6 +167,7 @@ def calc_info(request, calc_id):
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
+@login_required
 @require_http_methods(['GET'])
 @cross_domain_ajax
 def calc(request):
@@ -189,6 +193,7 @@ def calc(request):
                         content_type=JSON)
 
 
+@login_required
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -219,6 +224,7 @@ def log_to_json(log):
             log.level, log.process, log.message]
 
 
+@login_required
 @require_http_methods(['GET'])
 @cross_domain_ajax
 def get_log_slice(request, calc_id, start, stop):
@@ -235,6 +241,7 @@ def get_log_slice(request, calc_id, start, stop):
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
+@login_required
 @require_http_methods(['GET'])
 @cross_domain_ajax
 def get_log_size(request, calc_id):
@@ -248,6 +255,7 @@ def get_log_size(request, calc_id):
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
+@login_required
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -339,6 +347,7 @@ def _get_calcs(request_get_dict):
              jp.value) for jp in job_params]
 
 
+@login_required
 @require_http_methods(['GET'])
 @cross_domain_ajax
 def calc_results(request, calc_id):
@@ -379,6 +388,7 @@ def calc_results(request, calc_id):
     return HttpResponse(content=json.dumps(response_data))
 
 
+@login_required
 @require_http_methods(['GET'])
 @cross_domain_ajax
 def get_traceback(request, calc_id):
@@ -396,6 +406,7 @@ def get_traceback(request, calc_id):
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
+@login_required
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def get_result(request, result_id):
@@ -454,12 +465,14 @@ def get_result(request, result_id):
     finally:
         shutil.rmtree(tmpdir)
 
+@login_required
 def engineweb(request, **kwargs):
     return render_to_response("engineweb/index.html",
                               dict(),
                               context_instance=RequestContext(request))
 
 
+@login_required
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def engineweb_get_outputs(request, calc_id, **kwargs):
@@ -468,6 +481,7 @@ def engineweb_get_outputs(request, calc_id, **kwargs):
                               context_instance=RequestContext(request))
 
 
+@login_required
 @require_http_methods(['GET'])
 def license(request, **kwargs):
     return render_to_response("engineweb/license.html",
