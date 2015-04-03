@@ -226,7 +226,7 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol, rlzs_assoc):
     gsims = rlzs_assoc.get_gsims_by_trt_id()[trt_model.id]
     calc = GmfCalculator(
         sorted(imts), sorted(gsims), ses_coll,
-        getattr(hc, 'truncation_level', None), models.get_correl_model(job))
+        hc.truncation_level, models.get_correl_model(job))
 
     with EnginePerformanceMonitor(
             'computing gmfs', job_id, compute_gmfs_and_curves):
@@ -237,7 +237,7 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol, rlzs_assoc):
             calc.calc_gmfs(
                 r_sites, rupture, [(r.id, r.seed) for r in group])
 
-    if getattr(hc, 'hazard_curves_from_gmfs', None):
+    if hc.hazard_curves_from_gmfs:
         duration = hc.investigation_time * hc.ses_per_logic_tree_path * (
             hc.number_of_logic_tree_samples or 1)
         with EnginePerformanceMonitor(
@@ -435,13 +435,13 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         for trt_model in trt_models:
             trt_model.num_ruptures = self.acc.get(trt_model.id, 0)
             trt_model.save()
-        if (not getattr(self.oqparam, 'ground_motion_fields', None) and
-                not getattr(self.oqparam, 'hazard_curves_from_gmfs', None)):
+        if (not self.oqparam.ground_motion_fields and
+                not self.oqparam.hazard_curves_from_gmfs):
             return  # do nothing
 
         # create a Gmf output for each realization
         self.initialize_realizations()
-        if getattr(self.oqparam, 'ground_motion_fields', None):
+        if self.oqparam.ground_motion_fields:
             for rlz in self._realizations:
                 output = models.Output.objects.create(
                     oq_job=self.job,

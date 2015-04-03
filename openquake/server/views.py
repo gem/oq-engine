@@ -1,3 +1,19 @@
+# Copyright (c) 2015, GEM Foundation.
+#
+# This program is free software: you can redistribute it and/or modify
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import zipfile
 import shutil
 import json
 import logging
@@ -13,6 +29,8 @@ from django.http import HttpResponse
 from django.http import HttpResponseNotFound
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.shortcuts import render_to_response
+from django.template import RequestContext
 
 from openquake.commonlib import nrml, readinput, valid
 from openquake.engine import engine as oq_engine, __version__ as oqversion
@@ -171,6 +189,30 @@ def calc(request):
                         content_type=JSON)
 
 
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def calc_remove(request, calc_id):
+    """
+    Remove the calculation id by setting the field oq_job.relevant to False.
+    """
+    try:
+        job = oqe_models.OqJob.objects.get(pk=calc_id)
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound()
+    try:
+        job.relevant = False
+        job.save()
+    except:
+        response_data = traceback.format_exc().splitlines()
+        status = 500
+    else:
+        response_data = []
+        status = 200
+    return HttpResponse(content=json.dumps(response_data),
+                        content_type=JSON, status=status)
+
+
 def log_to_json(log):
     """Convert a log record into a list of strings"""
     return [log.timestamp.isoformat()[:22],
@@ -234,18 +276,22 @@ def run_calc(request):
         return HttpResponse(json.dumps(einfo.splitlines()),
                             content_type=JSON, status=500)
     temp_dir = os.path.dirname(einfo[0])
-    job, _fut = submit_job(einfo[0], temp_dir, request.POST['database'],
-                           callback_url, foreign_calc_id,
-                           hazard_output_id, hazard_job_id)
     try:
+        job, _fut = submit_job(einfo[0], temp_dir, request.POST['database'],
+                               callback_url, foreign_calc_id,
+                               hazard_output_id, hazard_job_id)
+    except Exception as exc:  # no job created, for instance missing .xml file
+        logging.error(exc)
+        response_data = str(exc).splitlines()
+        status = 500
+    else:
         calc = oqe_models.OqJob.objects.get(pk=job.id)
         response_data = vars(calc.get_oqparam())
         response_data['job_id'] = job.id
         response_data['status'] = calc.status
-    except ObjectDoesNotExist:
-        return HttpResponseNotFound()
-
-    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
+        status = 200
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON,
+                        status=status)
 
 
 def submit_job(job_file, temp_dir, dbname,
@@ -273,7 +319,7 @@ def submit_job(job_file, temp_dir, dbname,
 def _get_calcs(request_get_dict):
     # helper to get job+calculation data from the oq-engine database
     job_params = oqe_models.JobParam.objects.filter(
-        name='description', job__user_name='platform')
+        name='description', job__user_name='platform').order_by('-id')
 
     if 'job_type' in request_get_dict:
         job_type = request_get_dict.get('job_type')
@@ -345,9 +391,8 @@ def get_traceback(request, calc_id):
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
 
-    response_data = [log.message for log in oqe_models.Log.objects.filter(
-        job_id=calc_id, level='CRITICAL').order_by('id')]
-
+    response_data = oqe_models.Log.objects.get(
+        job_id=calc_id, level='CRITICAL').message.splitlines()
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
@@ -408,3 +453,17 @@ def get_result(request, result_id):
         return response
     finally:
         shutil.rmtree(tmpdir)
+
+def engineweb(request, **kwargs):
+    return render_to_response("engineweb/index.html",
+                              dict(),
+                              context_instance=RequestContext(request))
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def engineweb_get_outputs(request, calc_id, **kwargs):
+    return render_to_response("engineweb/get_outputs.html",
+                              dict([('calc_id', calc_id)]),
+                              context_instance=RequestContext(request))
+
