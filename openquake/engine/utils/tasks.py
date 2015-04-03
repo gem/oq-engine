@@ -179,5 +179,5 @@ def oqtask(task_func):
     f = lambda *args: safely_call(wrapped, args, pickle=True)
     f.__name__ = task_func.__name__
     tsk = task(f, queue=celery_queue)
-    tsk.task_func = task_func
+    tsk.__func__ = tsk.task_func = task_func
     return tsk

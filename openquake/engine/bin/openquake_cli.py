@@ -108,6 +108,11 @@ def set_up_arg_parser():
         help='Build an HTML report of the computation at the given date',
         metavar='YYYY-MM-DD|today')
 
+    general_grp.add_argument(
+        '--lite', action='store_true',
+        help='Use lite version of the calculator, if possible'
+    )
+
     db_grp = parser.add_argument_group('Database')
     db_grp.add_argument(
         '--upgrade-db', action='store_true',
@@ -484,7 +489,7 @@ def main():
     if args.list_inputs:
         list_inputs(args.list_inputs)
 
-   # hazard or hazard+risk
+    # hazard or hazard+risk
     elif args.run:
         job_inis = map(expanduser, args.run.split(','))
         if len(job_inis) not in (1, 2):
@@ -494,11 +499,14 @@ def main():
             open(job_ini).read()  # raise an IOError if the file does not exist
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
+        # run hazard
         job = engine.run_job(job_inis[0], args.log_level,
-                             log_file, args.exports)
+                             log_file, args.exports, lite=args.lite)
+        # run risk
         if len(job_inis) == 2:
             engine.run_job(job_inis[1], args.log_level, log_file,
-                           args.exports, hazard_calculation_id=job.id)
+                           args.exports, hazard_calculation_id=job.id,
+                           lite=args.lite)
     # hazard
     elif args.list_hazard_calculations:
         list_calculations('hazard')
