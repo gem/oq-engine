@@ -6,7 +6,17 @@ from openquake.risklib import riskinput
 from openquake.commonlib.calculators import event_based
 from openquake.qa_tests_data.event_based_risk import case_2
 
-rlzs_assoc = mock.MagicMock()
+class MockAssoc(object):
+    def __iter__(self):
+        return iter([])
+
+    def combine(self, dicts):
+        return []
+
+    def __getitem__(self, key):
+        return []
+
+rlzs_assoc = MockAssoc()
 
 
 class RiskInputTestCase(unittest.TestCase):
@@ -57,7 +67,7 @@ class RiskInputTestCase(unittest.TestCase):
 
         eps_dict = riskinput.make_eps_dict(
             self.assets_by_site, len(ses_ruptures), oq.master_seed,
-            getattr(oq, 'asset_correlation', 0))
+            oq.asset_correlation)
 
         [ri] = self.riskmodel.build_inputs_from_ruptures(
             self.sitecol, self.assets_by_site, ses_ruptures,

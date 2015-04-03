@@ -66,7 +66,7 @@ class ScenarioCalculator(base.HazardCalculator):
         """
         super(ScenarioCalculator, self).pre_execute()
         self.imts = readinput.get_imts(self.oqparam)
-        trunc_level = getattr(self.oqparam, 'truncation_level', None)
+        trunc_level = self.oqparam.truncation_level
         correl_model = readinput.get_correl_model(self.oqparam)
         n_gmfs = self.oqparam.number_of_ground_motion_fields
         rupture = readinput.get_rupture(self.oqparam)
@@ -83,7 +83,7 @@ class ScenarioCalculator(base.HazardCalculator):
         self.computer = GmfComputer(
             rupture, self.sites, self.imts, self.gsims,
             trunc_level, correl_model)
-        rnd = random.Random(getattr(self.oqparam, 'random_seed', 42))
+        rnd = random.Random(self.oqparam.random_seed)
         self.tag_seed_pairs = [(tag, rnd.randint(0, calc.MAX_INT))
                                for tag in self.tags]
 
