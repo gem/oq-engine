@@ -1,0 +1,139 @@
+body {
+    color: #555;
+    padding-top: 40px;
+    padding-bottom: 20px;
+}
+
+h2 {
+    color: #1b75a7;
+}
+
+.container,
+.navbar-static-top .container,
+.navbar-fixed-top .container,
+.navbar-fixed-bottom .container {
+    width: 100%;
+}
+
+.navbar .nav.account-bar {
+    margin-top: 0;
+}
+
+.span10 {
+    margin-top: 5px;
+    width: 400px;
+}
+
+.span9 {
+    position: absolute;
+    width: auto;
+    margin-left: 0;
+    margin-right: 75px;
+    float: right;
+    right: 0;
+}
+
+.span3 {
+    width: auto;
+}
+
+.navbar .navbar-inner {
+    background-image: none;
+    margin: 0;
+    padding: 0;
+}
+
+.navbar .nav > li > a {
+    color: #fff;
+    text-shadow: none;
+    font-size: 16px;
+    padding: 0 10px;
+}
+
+.navbar .nav.account-bar > li.actions > a {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.nav-logo {
+    background: url(/static/img/oq-logo.png) no-repeat;
+    width: 218px;
+    height: 40px;
+    margin: 0;
+}
+
+#gem-right-logo {
+    float: right;
+    right: 0;
+    position: absolute;
+
+}
+
+.nav-logo-gem {
+    background: url(/static/img/oq-gem.png) no-repeat;
+    width: 72px;
+    height: 40px;
+    margin: 0;
+}
+
+.navbar .navbar-inner {
+    background: url(/static/img/oq-header.png) no-repeat left top;
+    background-color: #1b75a5;
+}
+
+nav.main-nav {
+    margin: 0;
+}
+
+nav.main-nav ul li {
+    height: 30px;
+    display: inline-block;
+    float: left;
+    width: 80px;
+    margin-left: 15px;
+    margin-right: 15px;
+    padding: 0;
+}
+nav.main-nav ul li a {
+    color: #fff;
+    text-transform: none;
+    width: 80px;
+    text-align: center;
+    padding: 4px 0;
+    font-size: 18px;
+}
+
+nav.main-nav ul li.calc{
+   border-bottom: solid #ffdc00 5px;
+}
+
+
+#license p{
+    text-align: justify;
+}
+
+footer.footer {
+    z-index: 1000;
+    background: #bebebe;
+    font-size: 12px;
+    position: fixed;
+    bottom: 0;
+    padding-left: 10%;
+    padding-right: 10%;
+    float: left;
+    width: 80%;
+    height: auto;
+    padding-top: 0;
+}
+
+footer.footer form label {
+    color: #fff;
+}
+
+#my-calculations.well {
+    background-color: #f5f5f5;
+}
+
+#my-outputs.well {
+    background-color: #f5f5f5;
+}
