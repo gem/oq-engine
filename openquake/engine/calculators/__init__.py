@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2014, GEM Foundation.
+# Copyright (c) 2010-2015, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,3 +22,35 @@ from openquake.baselib.general import CallableDict, import_all
 calculators = CallableDict(lambda job: job.get_param('calculation_mode'))
 
 import_all('openquake.engine.calculators')
+
+from openquake.commonlib.calculators import base
+from openquake.engine.utils import tasks
+
+from openquake.engine.performance import EnginePerformanceMonitor
+from openquake.engine.utils import config
+
+from openquake.commonlib.source import TrtModel
+
+
+def __init__(self, job):
+    self.job = job
+    self.oqparam = self.job.get_oqparam()
+    if not hasattr(self.oqparam, 'concurrent_tasks'):
+        self.oqparam.concurrent_tasks = int(
+            config.get('celery', 'concurrent_tasks'))
+    if not hasattr(self.oqparam, 'usecache'):
+        self.oqparam.usecache = False
+    self.monitor = EnginePerformanceMonitor('', job.id)
+    self.max_input_weight = float(
+        config.get('hazard', 'max_input_weight'))
+    self.max_output_weight = float(
+        config.get('hazard', 'max_output_weight'))
+    TrtModel.POINT_SOURCE_WEIGHT = float(
+        config.get('hazard', 'point_source_weight'))
+
+
+base.BaseCalculator.__init__ = __init__
+
+for name in list(calculators):
+    calc = calculators[name + '_lite'] = base.calculators[name]
+    calc.core_func = tasks.oqtask(calc.core_func)
