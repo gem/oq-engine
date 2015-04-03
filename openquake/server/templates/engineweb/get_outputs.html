@@ -1,12 +1,6 @@
 {% extends "engineweb/base.html" %}
   <title>{% block title %}OpenQuake EngineWeb: outputs for calculation {{ calc_id }}{% endblock %}</title>
 
-  {% block nav-items %}
-                <li class="calc">
-                  <a href="{% url "index" %}">Back to Calculations</a>
-                </li>
-  {% endblock nav-items %}
-
   {% block main %}
   <div class="content-wrap">
     <div class="container">
