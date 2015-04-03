@@ -467,3 +467,8 @@ def engineweb_get_outputs(request, calc_id, **kwargs):
                               dict([('calc_id', calc_id)]),
                               context_instance=RequestContext(request))
 
+
+@require_http_methods(['GET'])
+def license(request, **kwargs):
+    return render_to_response("engineweb/license.html",
+                              context_instance=RequestContext(request))
