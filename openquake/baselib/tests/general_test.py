@@ -148,11 +148,16 @@ class AssertCloseTestCase(unittest.TestCase):
     def test_different(self):
         a = [1, 2]
         b = [1, 2, 3]
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(AssertionError):  # different lenghts
             assert_close(a, b)
 
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(AssertionError):  # different floats
             assert_close([1, 2, 3.1], b)
 
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(AssertionError):  # None and float
             assert_close([1, 2, None], b)
+
+        with self.assertRaises(AssertionError):  # nested dicts
+            gmf1 = {'a': {'PGA': [0.1, 0.2], 'SA(0.1)': [0.3, 0.4]}}
+            gmf2 = {'a': {'PGA': [0.1, 0.2], 'SA(0.1)': [0.3, 0.41]}}
+            assert_close(gmf1, gmf2)
