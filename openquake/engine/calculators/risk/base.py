@@ -48,14 +48,14 @@ eps_sampling = int(config.get('risk', 'epsilon_sampling'))
 
 
 @tasks.oqtask
-def prepare_risk(job_id, counts_taxonomy, calc):
+def prepare_risk(monitor, counts_taxonomy, calc):
     """
     Associates the assets to the closest hazard sites and populate
     the table asset_site. For some calculators also initializes the
     epsilon matrices and save them on the database.
 
-    :param job_id:
-        ID of the current risk job
+    :param monitor:
+        monitor of the current risk job
     :param counts_taxonomy:
         a sorted list of pairs (counts, taxonomy) for each bunch of assets
     :param calc:
@@ -64,8 +64,7 @@ def prepare_risk(job_id, counts_taxonomy, calc):
     for counts, taxonomy in counts_taxonomy:
 
         # building the RiskInitializers
-        with EnginePerformanceMonitor(
-                "associating asset->site", job_id, prepare_risk):
+        with monitor("associating asset->site"):
             initializer = hazard_getters.RiskInitializer(taxonomy, calc)
             initializer.init_assocs()
 
@@ -83,19 +82,18 @@ def prepare_risk(job_id, counts_taxonomy, calc):
                     MEMORY_ERROR % (estimate_mb, available_mb))
 
         # initializing epsilons
-        with EnginePerformanceMonitor(
-                "initializing epsilons", job_id, prepare_risk):
+        with monitor("initializing epsilons"):
             initializer.init_epsilons(eps_sampling)
 
 
 @tasks.oqtask
-def run_risk(job_id, sorted_assocs, calc):
+def run_risk(monitor, sorted_assocs, calc):
     """
     Run the risk calculation on the given assets by using the given
     hazard initializers and risk calculator.
 
-    :param job_id:
-        ID of the current risk job
+    :param monitor:
+        monitor of the current risk job
     :param sorted_assocs:
         asset_site associations, sorted by taxonomy
     :param calc:
@@ -103,7 +101,6 @@ def run_risk(job_id, sorted_assocs, calc):
     """
     acc = calc.acc
     hazard_outputs = calc.get_hazard_outputs()
-    monitor = EnginePerformanceMonitor(None, job_id, run_risk)
     exposure_model = calc.exposure_model
     time_event = calc.time_event
     for taxonomy, assocs_by_taxonomy in itertools.groupby(
@@ -276,7 +273,7 @@ class RiskCalculator(base.Calculator):
         # build the initializers hazard -> risk
         ct = sorted((counts, taxonomy) for taxonomy, counts
                     in self.taxonomies_asset_count.iteritems())
-        tasks.apply_reduce(prepare_risk, (self.job.id, ct, self),
+        tasks.apply_reduce(prepare_risk, (self.monitor, ct, self),
                            concurrent_tasks=self.concurrent_tasks)
 
     @EnginePerformanceMonitor.monitor
@@ -293,7 +290,7 @@ class RiskCalculator(base.Calculator):
         assocs = models.AssetSite.objects.filter(job=self.job).order_by(
             'asset__taxonomy')
         self.acc = tasks.apply_reduce(
-            run_risk, (self.job.id, assocs, self),
+            run_risk, (self.monitor, assocs, self),
             self.agg_result, self.acc, self.concurrent_tasks,
             name=self.core.__name__)
 
