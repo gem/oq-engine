@@ -154,7 +154,6 @@ class RiskCalculator(base.Calculator):
         self.oqparam.hazard_output = models.Output.objects.get(
             pk=self.oqparam.hazard_output_id) \
             if self.oqparam.hazard_output_id else None
-
         dist = self.oqparam.maximum_distance
         grid_spacing = self.oqparam.region_grid_spacing
         if grid_spacing:
