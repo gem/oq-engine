@@ -34,7 +34,7 @@ from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.calculators import calculators
 from openquake.engine.utils import tasks
-from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
+from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.calculators.hazard.classical.core import \
     ClassicalHazardCalculator
 
@@ -56,9 +56,9 @@ def _collect_bins_data(mon, trt_num, source_ruptures, site, curves,
     trts = []
     pnes = []
     sitemesh = sitecol.mesh
-    calc_dist = mon.copy('calc distances')
-    make_ctxt = mon.copy('making contexts')
-    disagg_poe = mon.copy('disaggregate_poe')
+    calc_dist = mon('calc distances')
+    make_ctxt = mon('making contexts')
+    disagg_poe = mon('disaggregate_poe')
     trt_model = models.TrtModel.objects.get(pk=trt_model_id)
     rlzs = trt_model.get_rlzs_by_gsim()
     for source, ruptures in source_ruptures:
@@ -186,13 +186,13 @@ def save_disagg_result(job_id, site_id, bin_edges, trt_names, matrix,
 
 
 @tasks.oqtask
-def compute_disagg(job_id, sitecol, sources, trt_model_id,
+def compute_disagg(monitor, sitecol, sources, trt_model_id,
                    trt_num, curves_dict, bin_edges):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
     :param int job_id:
-        ID of the currently running :class:`openquake.engine.db.models.OqJob`
+        monitor of the currently running job
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param list sources:
@@ -209,8 +209,7 @@ def compute_disagg(job_id, sitecol, sources, trt_model_id,
         a dictionary of probability arrays, with composite key
         (site.id, rlz.id, poe, imt, iml, trt_names).
     """
-    mon = LightMonitor('disagg', job_id, compute_disagg)
-    hc = models.oqparam(job_id)
+    hc = models.oqparam(monitor.job_id)
     trt_model = models.TrtModel.objects.get(pk=trt_model_id)
     gsims = trt_model.get_gsim_instances()
     lt_model_id = trt_model.lt_model.id
@@ -228,17 +227,16 @@ def compute_disagg(job_id, sitecol, sources, trt_model_id,
 
         # generate source, rupture, sites once per site
         source_ruptures = list(
-            gen_ruptures_for_site(site, sources, hc.maximum_distance, mon))
+            gen_ruptures_for_site(site, sources, hc.maximum_distance, monitor))
         if not source_ruptures:
             continue
         logs.LOG.info('Collecting bins from %d ruptures close to %s',
                       sum(len(rupts) for src, rupts in source_ruptures),
                       site.location)
 
-        with EnginePerformanceMonitor(
-                'collecting bins', job_id, compute_disagg):
+        with monitor('collecting bins'):
             bdata = _collect_bins_data(
-                mon, trt_num, source_ruptures, site, curves_dict[site.id],
+                monitor, trt_num, source_ruptures, site, curves_dict[site.id],
                 trt_model_id, gsims, hc.imtls,
                 hc.poes_disagg, hc.truncation_level,
                 hc.num_epsilon_bins)
@@ -263,8 +261,7 @@ def compute_disagg(job_id, sitecol, sources, trt_model_id,
                                 bdata.trts, None, probs]
 
                         # call disagg._arrange_data_in_bins
-                        with EnginePerformanceMonitor(
-                                'arranging bins', job_id, compute_disagg):
+                        with monitor('arranging bins'):
                             key = (site.id, rlz.id, poe, imt, iml, trt_names)
                             matrix = disagg._arrange_data_in_bins(
                                 bins, edges + (trt_names,))
@@ -366,7 +363,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                 self.bin_edges[lt_model.id, site.id] = (
                     mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
 
-            all_args.append((self.job.id, sitecol, srcs, trt_model_id,
+            all_args.append((self.monitor, sitecol, srcs, trt_model_id,
                              trt_num, curves_dict, self.bin_edges))
 
         res = tasks.starmap(compute_disagg, all_args, logs.LOG.progress)
