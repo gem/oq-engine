@@ -38,9 +38,6 @@ class HazardCurveGetterTestCase(unittest.TestCase):
     def setUp(self):
         self.job, _ = helpers.get_fake_risk_job(
             self.risk_demo, self.hazard_demo, self.hazard_output_type)
-        models.JobParam.objects.create(
-            job=self.job, name='intensity_measure_types',
-            value=repr([self.imt]))
 
         # need to run pre-execute to parse exposure model
         calc = RiskCalculator(self.job)
