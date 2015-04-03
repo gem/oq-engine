@@ -51,12 +51,13 @@ class OqParam(valid.ParamSet):
     base_path = valid.Param(valid.utf8)
     calculation_mode = valid.Param(valid.Choice(*CALCULATORS), '')
     coordinate_bin_width = valid.Param(valid.positivefloat)
-    conditional_loss_poes = valid.Param(valid.probabilities)
+    conditional_loss_poes = valid.Param(valid.probabilities, [])
     continuous_fragility_discretization = valid.Param(valid.positiveint, 20)
     description = valid.Param(valid.utf8_not_empty)
     distance_bin_width = valid.Param(valid.positivefloat)
     mag_bin_width = valid.Param(valid.positivefloat)
-    export_dir = valid.Param(valid.utf8, '')
+    epsilon_sampling = valid.Param(valid.positiveint, 1000)
+    export_dir = valid.Param(valid.utf8, None)
     export_multi_curves = valid.Param(valid.boolean, False)
     ground_motion_correlation_model = valid.Param(
         valid.NoneOr(valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)), None)
@@ -121,6 +122,8 @@ class OqParam(valid.ParamSet):
 
     def __init__(self, **names_vals):
         super(OqParam, self).__init__(**names_vals)
+        if not self.risk_investigation_time and self.investigation_time:
+            self.risk_investigation_time = self.investigation_time
         if 'intensity_measure_types' in names_vals:
             self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
             delattr(self, 'intensity_measure_types')
