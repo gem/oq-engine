@@ -121,22 +121,22 @@
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
                 var view = this;
-                diaerror.showDiaError("Removing calculation #" + calc_id, "...");
+                diaerror.showDiaError("Removing calculation " + calc_id, "...");
                 $.post(gem_oq_server_url + "/v1/calc/" + calc_id + "/remove"
                      ).success(
                          function(data, textStatus, jqXHR)
                          {
-                             diaerror.showDiaError("Removing calculation #" + calc_id, "Calculation " + calc_id + " removed.");
+                             diaerror.showDiaError("Removing calculation " + calc_id, "Calculation " + calc_id + " removed.");
                              view.calculations.remove([view.calculations.get(calc_id)]);
                          }
                      ).error(
                          function(jqXHR, textStatus, errorThrown)
                          {
                              if (jqXHR.status == 404) {
-                                 diaerror.showDiaError("Remove calculation  " + calc_id + ".", "Failed: calculation " + calc_id + " not found.");
+                                 diaerror.showDiaError("Removing calculation " + calc_id + ".", "Failed: calculation " + calc_id + " not found.");
                              }
                              else {
-                                 diaerror.showDiaError("Remove calculation  " + calc_id + ".", "Failed: " + textStatus);
+                                 diaerror.showDiaError("Removing calculation " + calc_id + ".", "Failed: " + textStatus);
                              }
                          }
                      );
