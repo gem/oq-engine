@@ -50,7 +50,7 @@ ALLOWED_HOSTS = ['*']
 
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
-    'dpam.backends.PAMBackend',
+    # 'dpam.backends.PAMBackend',
 )
 
 # Local time zone for this installation. Choices can be found here:
