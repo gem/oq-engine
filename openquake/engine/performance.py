@@ -1,6 +1,5 @@
-import time
+import os
 import atexit
-from datetime import datetime
 
 from openquake.commonlib.parallel import PerformanceMonitor
 from openquake.engine import logs
@@ -28,11 +27,6 @@ class EnginePerformanceMonitor(PerformanceMonitor):
     cache = CacheInserter(models.Performance, 1000)  # store at most 1k objects
 
     @classmethod
-    def store_task_id(cls, job_id, task):
-        with cls('storing task id', job_id, task, flush=True):
-            pass
-
-    @classmethod
     def monitor(cls, method):
         """
         A decorator to add monitoring to calculator methods. The only
@@ -46,30 +40,35 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         newmeth.__name__ = method.__name__
         return newmeth
 
+    @property
+    def task_id(self):
+        """Return the celery task ID or None"""
+        return None if self.task is None else self.task.request.id
+
     def __init__(self, operation, job_id, task=None, tracing=False,
-                 flush=False):
-        self.operation = operation
+                 measuremem=True, flush=False):
+        self.measuremem = measuremem
+        pid = os.getpid() if measuremem else None
+        super(EnginePerformanceMonitor, self).__init__(
+            operation, pid, flush=flush)
         self.job_id = job_id
         if task:
             self.task = task
-            self.task_id = task.request.id
         else:
             self.task = None
-            self.task_id = None
         self.tracing = tracing
-        self._flush = flush
         if tracing:
             self.tracer = logs.tracing(operation)
 
-        super(EnginePerformanceMonitor, self).__init__(operation)
-
-    def __call__(self, operation):
+    def __call__(self, operation, task=None, **kw):
         """
         Return a copy of the monitor usable for a different operation
         in the same task.
         """
-        return self.__class__(operation, self.job_id, self.task,
-                              self.tracing, self._flush)
+        new = self.__class__(operation, self.job_id, task or self.task,
+                             self.tracing, self.measuremem, self._flush)
+        vars(new).update(kw)
+        return new
 
     def on_exit(self):
         """
@@ -87,61 +86,24 @@ class EnginePerformanceMonitor(PerformanceMonitor):
                 pgmemory=None)
             self.cache.add(perf)
             if self._flush:
-                self.cache.flush()
+                self.flush()
+
+    def flush(self):
+        """flush the cache of the EnginePerformanceMonitor"""
+        self.cache.flush()
 
     def __enter__(self):
+        # start measuring time and memory
         super(EnginePerformanceMonitor, self).__enter__()
         if self.tracing:
             self.tracer.__enter__()
         return self
 
     def __exit__(self, etype, exc, tb):
+        # measuring time and memory
         super(EnginePerformanceMonitor, self).__exit__(etype, exc, tb)
         if self.tracing:
             self.tracer.__exit__(etype, exc, tb)
 
 # make sure the performance results are flushed in the db at the end
 atexit.register(EnginePerformanceMonitor.cache.flush)
-
-
-class LightMonitor(object):
-    """
-    in situations where a `PerformanceMonitor` is overkill or affects
-    the performance (as in short loops), this helper can aid in
-    measuring roughly the performance of a small piece of code. Please
-    note that it does not prevent the common traps in measuring the
-    performance as stated in the "Algorithms" chapter in the Python
-    Cookbook.
-    """
-    def __init__(self, operation, job_id, task=None):
-        self.operation = operation
-        self.job_id = job_id
-        if task is not None:
-            self.task = task
-            self.task_id = task.request.id
-        else:
-            self.task = None
-            self.task_id = None
-        self.t0 = time.time()
-        self.start_time = datetime.fromtimestamp(self.t0)
-        self.duration = 0
-
-    def __enter__(self):
-        self.t0 = time.time()
-        return self
-
-    def __exit__(self, etype, exc, tb):
-        self.duration += time.time() - self.t0
-
-    def copy(self, operation):
-        return self.__class__(operation, self.job_id, self.task)
-
-    def flush(self):
-        models.Performance.objects.create(
-            oq_job_id=self.job_id,
-            task_id=self.task_id,
-            task=getattr(self.task, '__name__', None),
-            operation=self.operation,
-            start_time=self.start_time,
-            duration=self.duration)
-        self.__init__(self.operation, self.job_id, self.task)

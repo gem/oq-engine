@@ -36,12 +36,12 @@ from openquake.engine.performance import EnginePerformanceMonitor
 
 
 @tasks.oqtask
-def calc_gmfs(job_id, tag_seed_pairs, computer):
+def calc_gmfs(monitor, tag_seed_pairs, computer):
     """
     Computes several GMFs in parallel, one for each tag and seed.
 
-    :param int job_id:
-        the current job ID
+    :param monitor:
+        monitor of the currently running job
     :param tag_seed_pairs:
         list of pairs (rupture tag, rupture seed)
     :param computer:
@@ -176,7 +176,8 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         """
         self.acc = tasks.apply_reduce(
             self.core_calc_task,
-            (self.job.id, zip(self.tags, self.seeds), self.computer))
+            (self.monitor('', self.core_calc_task),
+             zip(self.tags, self.seeds), self.computer))
 
     @EnginePerformanceMonitor.monitor
     def post_execute(self):

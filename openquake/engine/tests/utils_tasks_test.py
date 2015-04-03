@@ -53,7 +53,7 @@ class TaskManagerTestCase(unittest.TestCase):
 
     def test_failing_subtask(self):
         try:
-            tasks.apply_reduce(failing_task, ('job_id', [42]),
+            tasks.apply_reduce(failing_task, ('monitor', [42]),
                                agg=lambda a, x: x)
         except NotImplementedError:
             pass  # expected

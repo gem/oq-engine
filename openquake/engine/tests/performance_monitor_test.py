@@ -1,14 +1,11 @@
-import os
 import mock
 import time
 import unittest
 
-from nose.plugins.attrib import attr
-
 import uuid
 from datetime import datetime
 from openquake.engine.performance import \
-    PerformanceMonitor, EnginePerformanceMonitor, LightMonitor
+    PerformanceMonitor, EnginePerformanceMonitor
 from openquake.engine.db.models import Performance
 from openquake.engine import engine
 
@@ -24,7 +21,7 @@ class TestCase(unittest.TestCase):
         self.assertGreaterEqual(pmon.mem[0], 0)
 
     def test_light_monitor(self):
-        mon = LightMonitor('test', 1)
+        mon = PerformanceMonitor('test', 1)
         with mon:
             time.sleep(.1)
         with mon:
