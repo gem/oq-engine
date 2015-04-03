@@ -34,7 +34,14 @@
             <div class="nav-collapse pull-right">
               <div class="pull-right">
                 <ul class="nav pull-right account-bar">
-                  <a href="https://github.com/gem/oq-engine/wiki" id="help_url" rel="tooltip" target="_blank" title="Help"><img src="/static/img/oq-help.png"></a>
+                  {% if user.is_authenticated %}
+                  <li class="user">
+                      <a href="">{{ user.username }}</a>
+                  </li>
+                  {% endif %}
+                  <li class="actions">
+                      <a href="https://github.com/gem/oq-engine/wiki" id="help_url" rel="tooltip" target="_blank" title="Help"><img src="/static/img/oq-help.png"></a>
+                  </li>
                 </ul>
               </div>
             </div>
