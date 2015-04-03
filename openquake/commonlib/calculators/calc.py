@@ -52,9 +52,9 @@ def gen_ruptures(sources, site_coll, maximum_distance, monitor):
     :param maximum_distance: the maximum distance
     :param monitor: a Monitor object
     """
-    filtsources_mon = monitor.copy('filtering sources')
-    genruptures_mon = monitor.copy('generating ruptures')
-    filtruptures_mon = monitor.copy('filtering ruptures')
+    filtsources_mon = monitor('filtering sources')
+    genruptures_mon = monitor('generating ruptures')
+    filtruptures_mon = monitor('filtering ruptures')
     for src in sources:
         with filtsources_mon:
             s_sites = src.filter_sites_by_distance_to_source(

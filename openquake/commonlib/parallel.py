@@ -430,6 +430,8 @@ class PerformanceMonitor(object):
             self._proc = psutil.Process(pid)
         else:
             self._proc = None
+        self.mem = 0
+        self.duration = 0
 
     def write(self, row):
         """Write a row on the performance file"""
@@ -458,8 +460,6 @@ class PerformanceMonitor(object):
             pid = os.getpid()
             self.pid = pid
             self._proc = psutil.Process(pid)
-        self.duration = 0  # seconds
-        self.mem = 0  # bytes
         self.exc = None  # exception
         self._start_time = time.time()
         self.start_mem = self.measure_mem()
