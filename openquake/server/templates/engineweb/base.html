@@ -22,7 +22,8 @@
           <div class="span10">
             <nav class="main-nav">
               <ul>
-                <li class="calc"><a href="{% url "index" %}">Run a calculation</a></li>
+                {% block nav-items %}
+                {% endblock nav-items %}
               </ul>
             </nav>
           </div> <!-- ./span10 -->
