@@ -21,6 +21,14 @@
 Database routers for the OpenQuake engine server authenticaton DB
 '''
 
+APPS = (
+    'auth',
+    'contenttypes',
+    'sessions',
+    'sites',
+    'admin',
+)
+
 
 class AuthRouter(object):
     """
@@ -31,9 +39,7 @@ class AuthRouter(object):
         """
         Attempts to read auth models go to auth_db.
         """
-        if (model._meta.app_label == 'auth' or
-                model._meta.app_label == 'sessions' or
-                model._meta.app_label == 'admin'):
+        if model._meta.app_label in APPS:
             return 'auth_db'
         return None
 
@@ -41,28 +47,6 @@ class AuthRouter(object):
         """
         Attempts to write auth models go to auth_db.
         """
-        if (model._meta.app_label == 'auth' or
-                model._meta.app_label == 'sessions' or
-                model._meta.app_label == 'admin'):
+        if model._meta.app_label in APPS:
             return 'auth_db'
-        return None
-
-    def allow_relation(self, obj1, obj2, **hints):
-        """
-        Allow relations if a model in the auth app is involved.
-        """
-        if obj1._meta.app_label == 'auth' or \
-           obj2._meta.app_label == 'auth':
-                return True
-        return None
-
-    def allow_migrate(self, db, app_label, model=None, **hints):
-        """
-        Make sure the auth app only appears in the 'auth_db'
-        database.
-        """
-        if (app_label == 'auth' or
-                app_label == 'sessions' or
-                app_label == 'admin'):
-            return db == 'auth_db'
         return None
