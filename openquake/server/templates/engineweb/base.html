@@ -23,6 +23,9 @@
             <nav class="main-nav">
               <ul>
                 {% block nav-items %}
+                <li class="calc">
+                  <a href="{% url "index" %}">Back to Calculations</a>
+                </li>
                 {% endblock nav-items %}
               </ul>
             </nav>
