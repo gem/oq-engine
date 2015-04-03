@@ -397,6 +397,16 @@ def do_not_aggregate(acc, value):
     return acc
 
 
+def litetask(func):
+    """
+    Register the given function in the dictionary `litetask.registry`
+    """
+    fullname = '%s.%s' % (func.__module__, func.__name__)
+    litetask.registry[fullname] = func
+    return func
+litetask.registry = {}
+
+
 # this is not thread-safe
 class PerformanceMonitor(object):
     """

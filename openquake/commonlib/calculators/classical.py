@@ -38,6 +38,7 @@ from openquake.commonlib.calculators import base, calc
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
+@parallel.litetask
 def classical(sources, sitecol, gsims_assoc, monitor):
     """
     :param sources:
@@ -211,6 +212,7 @@ def is_effective_trt_model(result_dict, trt_model):
     return any(trt_model.id == trt_id for trt_id, _gsim in result_dict)
 
 
+@parallel.litetask
 def classical_tiling(calculator, sitecol, tileno):
     """
     :param calculator:

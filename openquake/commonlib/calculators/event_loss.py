@@ -23,10 +23,11 @@ import collections
 
 from openquake.baselib.general import AccumDict
 from openquake.commonlib.calculators import base
-from openquake.commonlib import readinput, writers
+from openquake.commonlib import readinput, writers, parallel
 from openquake.risklib import riskinput, workflows
 
 
+@parallel.litetask
 def event_loss(riskinputs, riskmodel, rlzs_assoc, monitor):
     """
     :param riskinputs:

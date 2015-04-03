@@ -20,13 +20,14 @@ import os
 import logging
 
 from openquake.baselib.general import AccumDict
-from openquake.commonlib import readinput
+from openquake.commonlib import readinput, parallel
 from openquake.commonlib.calculators import base
 from openquake.commonlib.export import export
 from openquake.commonlib.risk_writers import DmgState
 from openquake.risklib import riskinput
 
 
+@parallel.litetask
 def classical_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
     """
     Core function for a classical damage computation.

@@ -30,6 +30,7 @@ from openquake.baselib.general import AccumDict
 from openquake.commonlib.calculators import base, calc
 
 
+@parallel.litetask
 def calc_gmfs(tag_seed_pairs, computer, monitor):
     """
     Computes several GMFs in parallel, one for each tag and seed.

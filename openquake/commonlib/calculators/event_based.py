@@ -160,6 +160,7 @@ class SESRupture(object):
         return new
 
 
+@parallel.litetask
 def compute_ruptures(sources, sitecol, info, monitor):
     """
     :param sources:
@@ -357,6 +358,7 @@ def make_gmf_by_key(ses_ruptures, sitecol, imts, gsims,
     return dic
 
 
+@parallel.litetask
 def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
     """
     :param ses_ruptures:

@@ -22,7 +22,7 @@ import collections
 
 from openquake.risklib import scientific, riskinput
 from openquake.baselib import general
-from openquake.commonlib import riskmodels, readinput
+from openquake.commonlib import riskmodels, readinput, parallel
 from openquake.commonlib.calculators import base, calc
 from openquake.commonlib.export import export
 
@@ -31,6 +31,7 @@ AggLossCurve = collections.namedtuple(
     'AggLossCurve', 'loss_type unit mean stddev')
 
 
+@parallel.litetask
 def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     """
     Core function for a scenario computation.
