@@ -96,10 +96,11 @@ class OqParam(valid.ParamSet):
     quantile_hazard_curves = valid.Param(valid.probabilities, [])
     quantile_loss_curves = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
-    reference_depth_to_1pt0km_per_sec = valid.Param(valid.positivefloat)
-    reference_depth_to_2pt5km_per_sec = valid.Param(valid.positivefloat)
-    reference_vs30_type = valid.Param(valid.Choice('measured', 'inferred'))
-    reference_vs30_value = valid.Param(valid.positivefloat)
+    reference_depth_to_1pt0km_per_sec = valid.Param(valid.positivefloat, 1.)
+    reference_depth_to_2pt5km_per_sec = valid.Param(valid.positivefloat, 1.)
+    reference_vs30_type = valid.Param(
+        valid.Choice('measured', 'inferred'), 'measured')
+    reference_vs30_value = valid.Param(valid.positivefloat, 1.)
     reference_backarc = valid.Param(valid.boolean, False)
     region = valid.Param(valid.coordinates, None)
     region_constraint = valid.Param(valid.wkt_polygon, None)
@@ -160,7 +161,7 @@ class OqParam(valid.ParamSet):
     def is_valid_geometry(self):
         """
         It is possible to infer the geometry only if exactly
-        one of sites, sites_csv, hazard_curves_csv, gmvs_csv,
+        one of sites, sites_csv, hazard_curves_csv, gmfs_csv,
         region and exposure_file is set. You did set more than
         one, or nothing.
         """
@@ -170,7 +171,7 @@ class OqParam(valid.ParamSet):
             sites=bool(self.sites),
             sites_csv=self.inputs.get('sites', 0),
             hazard_curves_csv=self.inputs.get('hazard_curves', 0),
-            gmvs_csv=self.inputs.get('gmvs', 0),
+            gmfs_csv=self.inputs.get('gmvs', 0),
             region=bool(self.region),
             exposure=self.inputs.get('exposure', 0))
         # NB: below we check that all the flags
