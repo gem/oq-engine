@@ -31,7 +31,6 @@ from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.utils import config
 from openquake.engine.writer import CacheInserter
-from openquake.engine.performance import EnginePerformanceMonitor
 
 CONCURRENT_TASKS = int(config.get('celery', 'concurrent_tasks'))
 SOFT_MEM_LIMIT = int(config.get('memory', 'soft_mem_limit'))
@@ -159,21 +158,23 @@ def oqtask(task_func):
             pass
         mon.flush()
 
-        with monitor('total ' + task_func.__name__, tsk), logs.handle(job):
-            try:
-                # log a warning if too much memory is used
-                check_mem_usage(SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
-                # run the task
-                return task_func(*args)
-            finally:
-                # save on the db
-                CacheInserter.flushall()
-                # the task finished, we can remove from the performance
-                # table the associated row 'storing task id'
-                models.Performance.objects.filter(
-                    oq_job=job,
-                    operation='storing task id',
-                    task_id=tsk.request.id).delete()
+        with logs.handle(job):
+            # log a warning if too much memory is used
+            check_mem_usage(SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
+            # run the task
+            with monitor('total ' + task_func.__name__, tsk) as mon:
+                try:
+                    return task_func(*args)
+                finally:
+                    # save on the db
+                    mon.flush()
+                    CacheInserter.flushall()
+                    # the task finished, we can remove from the performance
+                    # table the associated row 'storing task id'
+                    models.Performance.objects.filter(
+                        oq_job=job,
+                        operation='storing task id',
+                        task_id=tsk.request.id).delete()
     celery_queue = config.get('amqp', 'celery_queue')
     f = lambda *args: safely_call(wrapped, args, pickle=True)
     f.__name__ = task_func.__name__
