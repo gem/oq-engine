@@ -85,6 +85,10 @@ h2 {
     background-color: #1b75a5;
 }
 
+.navbar .nav > li.user {
+    padding-top: 10px;
+}
+
 nav.main-nav {
     margin: 0;
 }
