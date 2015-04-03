@@ -14,6 +14,7 @@ ADMINS = (
 )
 
 TEMPLATE_CONTEXT_PROCESSORS += (
+    'django.contrib.messages.context_processors.messages',
     'openquake.server.utils.oq_server_context_processor',
 )
 
@@ -32,9 +33,25 @@ STATICFILES_DIRS = [
 
 DATABASES = oqe_settings.DATABASES
 
-DATABASE_ROUTERS = ['openquake.engine.db.routers.OQRouter', ]
+DATABASE_ROUTERS = ['openquake.server.routers.AuthRouter',
+                    'openquake.engine.db.routers.OQRouter', ]
+
+AUTH_DATABASES = {
+    'auth_db': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(os.path.dirname(__file__),
+                             'engineserver.sqlite3'),
+    }
+}
+
+DATABASES.update(AUTH_DATABASES)
 
 ALLOWED_HOSTS = ['*']
+
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',
+    'dpam.backends.PAMBackend',
+)
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
@@ -63,13 +80,21 @@ USE_L10N = True
 SECRET_KEY = 'f_6=^^_0%ygcpgmemxcp0p^xq%47yqe%u9pu!ad*2ym^zt+xq$'
 
 MIDDLEWARE_CLASSES = (
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
 )
 
 ROOT_URLCONF = 'openquake.server.urls'
 
-INSTALLED_APPS = ('django.contrib.staticfiles',
+INSTALLED_APPS = ('django.contrib.auth',
+                  'django.contrib.contenttypes',
+                  'django.contrib.messages',
+                  'django.contrib.sessions',
+                  'django.contrib.staticfiles',
+                  'django.contrib.admin',
                   'openquake.server',)
 
 # A sample logging configuration. The only tangible logging
