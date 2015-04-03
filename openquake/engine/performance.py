@@ -40,11 +40,6 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         newmeth.__name__ = method.__name__
         return newmeth
 
-    @property
-    def task_id(self):
-        """Return the celery task ID or None"""
-        return None if self.task is None else self.task.request.id
-
     def __init__(self, operation, job_id, task=None, tracing=False,
                  measuremem=True, flush=False):
         self.measuremem = measuremem
@@ -59,6 +54,11 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         self.tracing = tracing
         if tracing:
             self.tracer = logs.tracing(operation)
+
+    @property
+    def task_id(self):
+        """Return the celery task ID or None"""
+        return None if self.task is None else self.task.request.id
 
     def __call__(self, operation, task=None, **kw):
         """
