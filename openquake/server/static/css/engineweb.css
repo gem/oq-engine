@@ -89,7 +89,7 @@ nav.main-nav ul li {
     height: 30px;
     display: inline-block;
     float: left;
-    width: 100px;
+    width: 140px;
     margin-left: 15px;
     margin-right: 15px;
     padding: 0;
@@ -97,7 +97,7 @@ nav.main-nav ul li {
 nav.main-nav ul li a {
     color: #fff;
     text-transform: none;
-    width: 80px;
+    width: 140px;
     text-align: center;
     padding: 4px 0;
     font-size: 18px;
