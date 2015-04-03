@@ -1,11 +1,12 @@
 {% extends "engineweb/base.html" %}
-  <title>{% block title %} OpenQuakeWeb: results of calculation {{ calc_id }} {% endblock %}</title>
+  <title>{% block title %}OpenQuake EngineWeb: results of calculation {{ calc_id }}{% endblock %}</title>
   {% block main %}
   <div class="content-wrap">
     <div class="container">
       <div class="row">
         <div id="oq-body-wrapper">
           <div class="span12">
+              <h2>Outputs for calculation {{ calc_id }}</h2>
               <div id="my-outputs" class="well"></div>
           </div>
         </div>
@@ -17,7 +18,6 @@
   {% block templates %}
   <script type="text/template" id="output-table-template">
     <table id="output_table" class="table table-hover">
-      <caption>Outputs for calculation {{ calc_id }}.</caption>
       <thead>
         <tr>
           <th>ID</th>
