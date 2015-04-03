@@ -326,7 +326,7 @@ def print_outputs_summary(outputs, full=True):
 
 # this function is called only by openquake_cli.py, not by the engine server
 def run_job(cfg_file, log_level, log_file, exports='', hazard_output_id=None,
-            hazard_calculation_id=None):
+            hazard_calculation_id=None, lite=False):
     """
     Run a job using the specified config file and other options.
 
@@ -343,13 +343,15 @@ def run_job(cfg_file, log_level, log_file, exports='', hazard_output_id=None,
         The Hazard Output ID used by the risk calculation (can be None)
     :param str hazard_calculation_id:
         The Hazard Job ID used by the risk calculation (can be None)
+    :param lite:
+        flag to use the lite version of the calculators
     """
     # first of all check the database version and exit if the db is outdated
     upgrader.check_versions(django_db.connections['admin'])
     with CeleryNodeMonitor(openquake.engine.no_distribute(), interval=3):
         job = job_from_file(
             cfg_file, getpass.getuser(), log_level, exports, hazard_output_id,
-            hazard_calculation_id)
+            hazard_calculation_id, lite)
         # instantiate the calculator and run the calculation
         t0 = time.time()
         try:
@@ -397,7 +399,8 @@ def check_hazard_risk_consistency(haz_job, risk_mode):
 
 @django_db.transaction.atomic
 def job_from_file(cfg_file_path, username, log_level='info', exports='',
-                  hazard_output_id=None, hazard_calculation_id=None, **extras):
+                  hazard_output_id=None, hazard_calculation_id=None,
+                  lite=False, **extras):
     """
     Create a full job profile from a job config file.
 
@@ -415,8 +418,11 @@ def job_from_file(cfg_file_path, username, log_level='info', exports='',
     :param int hazard_calculation_id:
         ID of a complete hazard job to use as input to this
         calculation. Specify this xor ``hazard_output_id``.
+    :param lite:
+        flag to use the lite version of the calculators
     :params extras:
         Extra parameters (used only in the tests to override the params)
+
     :returns:
         :class:`openquake.engine.db.models.OqJob` object
     :raises:
@@ -440,6 +446,8 @@ def job_from_file(cfg_file_path, username, log_level='info', exports='',
     with logs.handle(job, log_level):
         # read calculation params and create the calculation profile
         params = readinput.get_params([cfg_file_path])
+        if lite:
+            params['calculation_mode'] = params['calculation_mode'] + '_lite'
         if not exports:  # when called from the engine server
             # ignore the user-provided export_dir: the engine server will
             # export on demand with its own mechanism on a temporary directory
