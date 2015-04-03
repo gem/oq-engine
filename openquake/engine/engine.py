@@ -104,8 +104,6 @@ def job_stats(job):
     dbsize = curs.fetchall()[0][0]
 
     js = job.jobstats
-    job.is_running = True
-    job.save()
     try:
         yield
     except:
@@ -500,11 +498,10 @@ def job_from_file(cfg_file_path, username, log_level='info', exports='',
            params['calculation_mode'].startswith('scenario'):
             params['risk_investigation_time'] = params.get(
                 'investigation_time', hc.investigation_time)
-        params['hazard_investigation_time'] = getattr(
-            hc, 'investigation_time', None)
+        params['hazard_investigation_time'] = hc.investigation_time
         params['hazard_imtls'] = dict(hc.imtls)
 
-        cfd = getattr(hc, 'continuous_fragility_discretization', None)
+        cfd = hc.continuous_fragility_discretization
         if cfd and cfd != oqparam.continuous_fragility_discretization:
             raise RuntimeError(
                 'The hazard parameter continuous_fragility_discretization '
