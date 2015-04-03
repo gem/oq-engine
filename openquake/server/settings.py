@@ -87,6 +87,16 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.auth.middleware.AuthenticationMiddleware',
 )
 
+LOCKDOWN = False
+
+if LOCKDOWN:
+    MIDDLEWARE_CLASSES = MIDDLEWARE_CLASSES + \
+        ('openquake.server.middleware.LoginRequiredMiddleware',)
+
+# Add additional paths (as regular expressions) that don't require
+# authentication.
+AUTH_EXEMPT_URLS = ()
+
 ROOT_URLCONF = 'openquake.server.urls'
 
 INSTALLED_APPS = ('django.contrib.auth',

@@ -8,8 +8,9 @@ urlpatterns = patterns(
 
     url(r'^admin/', include(admin.site.urls)),
     url(r'^accounts/login/$', 'django.contrib.auth.views.login',
-        {'template_name': 'admin/login.html'}),
-    url(r'^accounts/logout/$', 'django.contrib.auth.views.logout'),
+        {'template_name': 'admin/login.html'}, name="login"),
+    url(r'^accounts/logout/$', 'django.contrib.auth.views.logout',
+        name="logout"),
 
     url(r'^engine_version$', 'openquake.server.views.get_engine_version'),
     url(r'^v1/calc/', include('openquake.server.v1.calc_urls')),
