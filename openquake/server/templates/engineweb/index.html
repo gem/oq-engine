@@ -70,7 +70,7 @@
                           <a href="download/input/<%= calc.get('calculation_type') %>/<%= calc.get('id') %>" class="btn btn-sm">Download input</a>
                      </p>
                 -->
-              <a href="engineweb/<%= calc.get('id') %>/outputs" class="btn btn-sm" style="margin: 2px 0 2px 0">Show outputs</a>
+              <a href="{% url "index" %}/<%= calc.get('id') %>/outputs" class="btn btn-sm" style="margin: 2px 0 2px 0">Show outputs</a>
                     <% if(calc.get('job_type') == 'hazard') { %>
               <form class="calc-form" enctype="multipart/form-data"
                 style="margin: 0; display: inline-block"
