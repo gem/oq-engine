@@ -222,8 +222,8 @@ def assert_close_seq(seq1, seq2, rtol, atol):
     """
     Compare two sequences of the same length.
     """
-    assert len(seq1) == len(seq2), 'Objects of different lenghts: %d != %d' % (
-        seq1, seq2)
+    assert len(seq1) == len(seq2), 'Lists of different lenghts: %d != %d' % (
+        len(seq1), len(seq2))
     for x, y in zip(seq1, seq2):
         assert_close(x, y, rtol, atol)
 
@@ -243,11 +243,15 @@ def assert_close(a, b, rtol=1e-07, atol=0):
         assert_close_seq(a.__slots__, b.__slots__, rtol, atol)
         for x, y in zip(a.__slots__, b.__slots__):
             assert_close(getattr(a, x), getattr(a, y), rtol, atol)
+        return
     if isinstance(a, collections.Mapping):
         assert_close_seq(a.keys(), b.keys(), rtol, atol)
         assert_close_seq(a.values(), b.values(), rtol, atol)
-    elif hasattr(a, '__iter__'):
+        return
+    if hasattr(a, '__iter__'):
         assert_close_seq(list(a), list(b), rtol, atol)
+        return
+    raise AssertionError('%r != %r' % (a, b))
 
 
 def writetmp(content=None, dir=None, prefix="tmp", suffix="tmp"):

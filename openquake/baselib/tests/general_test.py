@@ -25,7 +25,8 @@ from operator import attrgetter
 from collections import namedtuple
 
 from openquake.baselib.general import (
-    block_splitter, split_in_blocks, assert_independent, search_module)
+    block_splitter, split_in_blocks, assert_independent, search_module,
+    assert_close)
 
 
 class BlockSplitterTestCase(unittest.TestCase):
@@ -141,3 +142,17 @@ class SearchModuleTestCase(unittest.TestCase):
     def test_existing_module_in_package(self):
         # this test may fail if oq-risklib is not on top of your PYTHONPATH
         self.assertIsNotNone(search_module('openquake.baselib.general'))
+
+
+class AssertCloseTestCase(unittest.TestCase):
+    def test_different(self):
+        a = [1, 2]
+        b = [1, 2, 3]
+        with self.assertRaises(AssertionError):
+            assert_close(a, b)
+
+        with self.assertRaises(AssertionError):
+            assert_close([1, 2, 3.1], b)
+
+        with self.assertRaises(AssertionError):
+            assert_close([1, 2, None], b)
