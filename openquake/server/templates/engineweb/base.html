@@ -42,6 +42,12 @@
                     {{ user.username }}
                     {% endif %}
                   </li>
+                  <li class="user">
+                    |
+                  </li>
+                  <li class="user">
+                    <a href="{% url "logout" %}">logout</a>
+                  </li>
                   {% endif %}
                   <li class="actions">
                       <a href="https://github.com/gem/oq-engine/wiki" id="help_url" rel="tooltip" target="_blank" title="Help"><img src="/static/img/oq-help.png"></a>
