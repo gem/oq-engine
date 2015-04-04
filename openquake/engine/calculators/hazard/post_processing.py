@@ -43,20 +43,20 @@ _UHS_DISP_NAME_FMT = 'UHS (%(poe)s) rlz-%(rlz)s'
 
 
 @tasks.oqtask
-def hazard_curves_to_hazard_map(monitor, hazard_curves, poes):
+def hazard_curves_to_hazard_map(hazard_curves, poes, monitor):
     """
     Function to process a set of hazard curves into 1 hazard map for each PoE
     in ``poes``.
 
     Hazard map results are written directly to the database.
 
-    :param int job_id:
-        monitor of the currently running job
     :param hazard_curves:
         a list of
-        :class:`hazard curves <openquake.engine.db.models.HazardCurve>`.
+        :class:`hazard curves <openquake.engine.db.models.HazardCurve>`
     :param list poes:
-        List of PoEs for which we want to iterpolate hazard maps.
+        list of PoEs for which we want to iterpolate hazard maps
+    :param monitor:
+        monitor of the currently running job
     """
     job = models.OqJob.objects.get(id=monitor.job_id)
     for hc in hazard_curves:

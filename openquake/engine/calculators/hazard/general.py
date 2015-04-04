@@ -144,7 +144,7 @@ class BaseHazardCalculator(base.Calculator):
         csm = self.composite_model
         self.acc = tasks.apply_reduce(
             self.core_calc_task,
-            (self.monitor, list(csm.sources), self.site_collection, csm.info),
+            (list(csm.sources), self.site_collection, csm.info, self.monitor),
             agg=self.agg_curves, acc=self.acc,
             weight=attrgetter('weight'), key=attrgetter('trt_model_id'))
 
@@ -574,7 +574,7 @@ class BaseHazardCalculator(base.Calculator):
             with self.monitor('generating hazard maps') as mon:
                 tasks.apply_reduce(
                     hazard_curves_to_hazard_map,
-                    (mon, self._hazard_curves, self.oqparam.poes))
+                    (self._hazard_curves, self.oqparam.poes, mon))
             mon.flush()
         if self.oqparam.uniform_hazard_spectra:
             do_uhs_post_proc(self.job)
