@@ -366,10 +366,16 @@ def calc_results(request, calc_id):
         * type (hazard_curve, hazard_map, etc.)
         * url (the exact url where the full result can be accessed)
     """
+    if request.user.is_authenticated():
+        user_name = request.user.username
+    else:
+        user_name = "platform"
+
     # If the specified calculation doesn't exist OR is not yet complete,
     # throw back a 404.
     try:
-        oqjob = oqe_models.OqJob.objects.get(id=calc_id)
+        oqjob = oqe_models.OqJob.objects.get(id=calc_id,
+                                             user_name=user_name)
         if not oqjob.status == 'complete':
             return HttpResponseNotFound()
     except ObjectDoesNotExist:
