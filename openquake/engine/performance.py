@@ -35,17 +35,17 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         2) there is an attribute self.job.id
         """
         def newmeth(self, *args):
-            with cls(method.__name__, self.job.id, flush=True):
+            with cls(method.__name__, self.job.id, autoflush=True):
                 return method(self, *args)
         newmeth.__name__ = method.__name__
         return newmeth
 
     def __init__(self, operation, job_id, task=None, tracing=False,
-                 measuremem=True, flush=False):
+                 measuremem=True, autoflush=False):
         self.measuremem = measuremem
         pid = os.getpid() if measuremem else None
         super(EnginePerformanceMonitor, self).__init__(
-            operation, pid, flush=flush)
+            operation, pid, autoflush=autoflush)
         self.job_id = job_id
         if task:
             self.task = task
@@ -66,9 +66,22 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         in the same task.
         """
         new = self.__class__(operation, self.job_id, task or self.task,
-                             self.tracing, self.measuremem, self._flush)
+                             self.tracing, self.measuremem, self.autoflush)
         vars(new).update(kw)
         return new
+
+    def __enter__(self):
+        # start measuring time and memory
+        super(EnginePerformanceMonitor, self).__enter__()
+        if self.tracing:
+            self.tracer.__enter__()
+        return self
+
+    def __exit__(self, etype, exc, tb):
+        # measuring time and memory
+        super(EnginePerformanceMonitor, self).__exit__(etype, exc, tb)
+        if self.tracing:
+            self.tracer.__exit__(etype, exc, tb)
 
     def on_exit(self):
         """
@@ -85,25 +98,14 @@ class EnginePerformanceMonitor(PerformanceMonitor):
                 pymemory=self.mem,
                 pgmemory=None)
             self.cache.add(perf)
-            if self._flush:
+            if self.autoflush:
                 self.flush()
 
     def flush(self):
         """flush the cache of the EnginePerformanceMonitor"""
         self.cache.flush()
-
-    def __enter__(self):
-        # start measuring time and memory
-        super(EnginePerformanceMonitor, self).__enter__()
-        if self.tracing:
-            self.tracer.__enter__()
-        return self
-
-    def __exit__(self, etype, exc, tb):
-        # measuring time and memory
-        super(EnginePerformanceMonitor, self).__exit__(etype, exc, tb)
-        if self.tracing:
-            self.tracer.__exit__(etype, exc, tb)
+        self.mem = 0
+        self.duration = 0
 
 # make sure the performance results are flushed in the db at the end
 atexit.register(EnginePerformanceMonitor.cache.flush)
