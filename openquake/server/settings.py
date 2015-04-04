@@ -89,10 +89,6 @@ MIDDLEWARE_CLASSES = (
 
 LOCKDOWN = False
 
-if LOCKDOWN:
-    MIDDLEWARE_CLASSES = MIDDLEWARE_CLASSES + \
-        ('openquake.server.middleware.LoginRequiredMiddleware',)
-
 # Add additional paths (as regular expressions) that don't require
 # authentication.
 AUTH_EXEMPT_URLS = ()
@@ -156,3 +152,7 @@ try:
     from local_settings import *
 except ImportError:
     raise ImportError
+
+if LOCKDOWN:
+    MIDDLEWARE_CLASSES = MIDDLEWARE_CLASSES + \
+        ('openquake.server.middleware.LoginRequiredMiddleware',)
