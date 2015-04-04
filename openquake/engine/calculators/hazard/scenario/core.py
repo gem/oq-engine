@@ -154,7 +154,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
             output_type="gmf_scenario")
         self.gmf = models.Gmf.objects.create(output=output)
 
-        with self.monitor('saving ruptures'):
+        with self.monitor('saving ruptures', autoflush=True):
             self.tags = ['scenario-%010d' % i for i in xrange(
                 oqparam.number_of_ground_motion_fields)]
             _, self.rupids, self.seeds = create_db_ruptures(

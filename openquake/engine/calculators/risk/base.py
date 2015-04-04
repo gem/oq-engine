@@ -61,10 +61,13 @@ def prepare_risk(counts_taxonomy, calc, monitor):
     :param monitor:
         monitor of the current risk job
     """
+    assoc_mon = monitor("associating asset->site", autoflush=True)
+    init_mon = monitor("initializing epsilons", autoflush=True)
+
     for counts, taxonomy in counts_taxonomy:
 
         # building the RiskInitializers
-        with monitor("associating asset->site"):
+        with assoc_mon:
             initializer = hazard_getters.RiskInitializer(taxonomy, calc)
             initializer.init_assocs()
 
@@ -82,7 +85,7 @@ def prepare_risk(counts_taxonomy, calc, monitor):
                     MEMORY_ERROR % (estimate_mb, available_mb))
 
         # initializing epsilons
-        with monitor("initializing epsilons"):
+        with init_mon:
             initializer.init_epsilons(eps_sampling)
 
 
@@ -103,15 +106,19 @@ def run_risk(sorted_assocs, calc, monitor):
     hazard_outputs = calc.get_hazard_outputs()
     exposure_model = calc.exposure_model
     time_event = calc.time_event
+
+    get_assets_mon = monitor("getting assets", autoflush=True)
+    get_haz_mon = monitor("getting hazard", autoflush=True)
+
     for taxonomy, assocs_by_taxonomy in itertools.groupby(
             sorted_assocs, lambda a: a.asset.taxonomy):
-        with calc.monitor("getting assets"):
+        with get_assets_mon:
             assets = models.ExposureData.objects.get_asset_chunk(
                 exposure_model, time_event, assocs_by_taxonomy)
         for it in models.ImtTaxonomy.objects.filter(
                 job=calc.job, taxonomy=taxonomy):
             imt = it.imt.imt_str
-            with calc.monitor("getting hazard"):
+            with get_haz_mon:
                 getter = calc.getter_class(
                     imt, taxonomy, hazard_outputs, assets)
             logs.LOG.info(
