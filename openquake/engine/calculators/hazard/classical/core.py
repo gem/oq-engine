@@ -216,9 +216,9 @@ def compute_hazard_curves(sources, sitecol, info, monitor):
         bbs = [BoundingBox(lt_model_id, site_id) for site_id in sitecol.sids]
     else:
         bbs = []
-    mon = monitor('getting ruptures')
-    make_ctxt_mon = monitor('making contexts')
-    calc_poes_mon = monitor('computing poes')
+    mon = monitor('getting ruptures', measuremem=False)
+    make_ctxt_mon = monitor('making contexts', measuremem=False)
+    calc_poes_mon = monitor('computing poes', measuremem=False)
 
     num_sites = 0
     # NB: rows are namedtuples with fields (source, rupture, rupture_sites)
