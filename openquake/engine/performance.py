@@ -1,10 +1,8 @@
 import os
-import atexit
 
 from openquake.commonlib.parallel import PerformanceMonitor
 from openquake.engine import logs
 from openquake.engine.db import models
-from openquake.engine.writer import CacheInserter
 
 
 class EnginePerformanceMonitor(PerformanceMonitor):
@@ -22,9 +20,6 @@ class EnginePerformanceMonitor(PerformanceMonitor):
     # the monitor can also be used to measure the memory in postgres;
     # to that aim extract the pid with
     # connections['job_init'].cursor().connection.get_backend_pid()
-
-    # globals per process
-    cache = CacheInserter(models.Performance, 1000)  # store at most 1k objects
 
     @classmethod
     def monitor(cls, method):
@@ -87,25 +82,19 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         """
         Save the memory consumption on the uiapi.performance table.
         """
-        if self.exc is None:  # save only valid calculations
-            perf = models.Performance(
-                oq_job_id=self.job_id,
-                task_id=self.task_id,
-                task=getattr(self.task, '__name__', None),
-                operation=self.operation,
-                start_time=self.start_time,
-                duration=self.duration,
-                pymemory=self.mem,
-                pgmemory=None)
-            self.cache.add(perf)
-            if self.autoflush:
-                self.flush()
+        if self.autoflush and self.exc is None:  # save only valid measures
+            self.flush()
 
     def flush(self):
-        """flush the cache of the EnginePerformanceMonitor"""
-        self.cache.flush()
+        """Save a row in the performance table"""
+        models.Performance.objects.create(
+            oq_job_id=self.job_id,
+            task_id=self.task_id,
+            task=getattr(self.task, '__name__', None),
+            operation=self.operation,
+            start_time=self.start_time,
+            duration=self.duration,
+            pymemory=self.mem,
+            pgmemory=None)
         self.mem = 0
         self.duration = 0
-
-# make sure the performance results are flushed in the db at the end
-atexit.register(EnginePerformanceMonitor.cache.flush)
