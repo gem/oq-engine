@@ -41,9 +41,9 @@ def classical_damage(workflow, getter, outputdict, params, monitor):
       A monitor instance
     """
     for loss_type in workflow.loss_types:
-        with monitor('computing risk'):
+        with monitor('computing risk', autoflush=True):
             outputs = workflow.compute_all_outputs(getter, loss_type)
-        with monitor('saving risk'):
+        with monitor('saving risk', autoflush=True):
             for out in outputs:
                 damage = models.Damage.objects.get(
                     risk_calculation=params.job_id, hazard_output=out.hid)
