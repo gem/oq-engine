@@ -74,7 +74,7 @@ def scenario(workflow, getter, outputdict, params, monitor):
     epsilons = getter.get_epsilons()
     agg, ins = {}, {}
     for loss_type in workflow.loss_types:
-        with monitor('computing risk'):
+        with monitor('computing risk', autoflush=True):
             argdict = workflow_argdict(loss_type, assets, gmfs, epsilons)
             if not argdict['assets']:  # no costs
                 continue
@@ -84,7 +84,7 @@ def scenario(workflow, getter, outputdict, params, monitor):
             agg[loss_type] = out.aggregate_losses
         ins[loss_type] = out.insured_losses
 
-        with monitor('saving risk'):
+        with monitor('saving risk', autoflush=True):
             outputdict.write(
                 assets,
                 out.loss_matrix.mean(axis=1),
