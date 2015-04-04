@@ -44,9 +44,9 @@ from openquake.engine.calculators.hazard.classical.core import \
 BinData = namedtuple('BinData', 'mags, dists, lons, lats, trts, pnes')
 
 
-def _collect_bins_data(mon, trt_num, source_ruptures, site, curves,
+def _collect_bins_data(trt_num, source_ruptures, site, curves,
                        trt_model_id, gsims, imtls, poes, truncation_level,
-                       n_epsilons):
+                       n_epsilons, mon):
     # returns a BinData instance
     sitecol = SiteCollection([site])
     mags = []
@@ -186,13 +186,11 @@ def save_disagg_result(job_id, site_id, bin_edges, trt_names, matrix,
 
 
 @tasks.oqtask
-def compute_disagg(monitor, sitecol, sources, trt_model_id,
-                   trt_num, curves_dict, bin_edges):
+def compute_disagg(sitecol, sources, trt_model_id,
+                   trt_num, curves_dict, bin_edges, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
-    :param int job_id:
-        monitor of the currently running job
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param list sources:
@@ -205,6 +203,8 @@ def compute_disagg(monitor, sitecol, sources, trt_model_id,
         a dictionary with the hazard curves for sites, realizations and IMTs
     :param bin_egdes:
         a dictionary (lt_model_id, site_id) -> edges
+    :param monitor:
+        monitor of the currently running job
     :returns:
         a dictionary of probability arrays, with composite key
         (site.id, rlz.id, poe, imt, iml, trt_names).
@@ -236,10 +236,10 @@ def compute_disagg(monitor, sitecol, sources, trt_model_id,
 
         with monitor('collecting bins'):
             bdata = _collect_bins_data(
-                monitor, trt_num, source_ruptures, site, curves_dict[site.id],
+                trt_num, source_ruptures, site, curves_dict[site.id],
                 trt_model_id, gsims, hc.imtls,
                 hc.poes_disagg, hc.truncation_level,
-                hc.num_epsilon_bins)
+                hc.num_epsilon_bins, monitor)
 
         if not bdata.pnes:  # no contributions for this site
             continue
@@ -363,8 +363,8 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                 self.bin_edges[lt_model.id, site.id] = (
                     mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
 
-            all_args.append((self.monitor, sitecol, srcs, trt_model_id,
-                             trt_num, curves_dict, self.bin_edges))
+            all_args.append((sitecol, srcs, trt_model_id, trt_num,
+                             curves_dict, self.bin_edges, self.monitor))
 
         res = tasks.starmap(compute_disagg, all_args, logs.LOG.progress)
         self.save_disagg_results(res.reduce(self.agg_result))

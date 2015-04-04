@@ -80,5 +80,5 @@ def failing_task(job_id, data):
 
 
 @test_task
-def get_even(job_id, numbers):
+def get_even(numbers):
     return [n for n in numbers if n % 2 == 0]

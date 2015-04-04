@@ -48,18 +48,18 @@ eps_sampling = int(config.get('risk', 'epsilon_sampling'))
 
 
 @tasks.oqtask
-def prepare_risk(monitor, counts_taxonomy, calc):
+def prepare_risk(counts_taxonomy, calc, monitor):
     """
     Associates the assets to the closest hazard sites and populate
     the table asset_site. For some calculators also initializes the
     epsilon matrices and save them on the database.
 
-    :param monitor:
-        monitor of the current risk job
     :param counts_taxonomy:
         a sorted list of pairs (counts, taxonomy) for each bunch of assets
     :param calc:
         the current risk calculator
+    :param monitor:
+        monitor of the current risk job
     """
     for counts, taxonomy in counts_taxonomy:
 
@@ -87,17 +87,17 @@ def prepare_risk(monitor, counts_taxonomy, calc):
 
 
 @tasks.oqtask
-def run_risk(monitor, sorted_assocs, calc):
+def run_risk(sorted_assocs, calc, monitor):
     """
     Run the risk calculation on the given assets by using the given
     hazard initializers and risk calculator.
 
-    :param monitor:
-        monitor of the current risk job
     :param sorted_assocs:
         asset_site associations, sorted by taxonomy
     :param calc:
         the risk calculator to use
+    :param monitor:
+        monitor of the current risk job
     """
     acc = calc.acc
     hazard_outputs = calc.get_hazard_outputs()
@@ -272,7 +272,7 @@ class RiskCalculator(base.Calculator):
         # build the initializers hazard -> risk
         ct = sorted((counts, taxonomy) for taxonomy, counts
                     in self.taxonomies_asset_count.iteritems())
-        tasks.apply_reduce(prepare_risk, (self.monitor, ct, self),
+        tasks.apply_reduce(prepare_risk, (ct, self, self.monitor),
                            concurrent_tasks=self.concurrent_tasks)
 
     @EnginePerformanceMonitor.monitor
@@ -289,7 +289,7 @@ class RiskCalculator(base.Calculator):
         assocs = models.AssetSite.objects.filter(job=self.job).order_by(
             'asset__taxonomy')
         self.acc = tasks.apply_reduce(
-            run_risk, (self.monitor, assocs, self),
+            run_risk, (assocs, self, self.monitor),
             self.agg_result, self.acc, self.concurrent_tasks,
             name=self.core.__name__)
 

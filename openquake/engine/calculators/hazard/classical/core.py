@@ -181,20 +181,20 @@ def _calc_pnes(gsim, r_sites, rupture, imts, imls, truncation_level,
 
 
 @tasks.oqtask
-def compute_hazard_curves(monitor, sources, sitecol, info):
+def compute_hazard_curves(sources, sitecol, info, monitor):
     """
     This task computes R2 * I hazard curves (each one is a
     numpy array of S * L floats) from the given source_ruptures
     pairs.
 
-    :param monitor:
-        monitor of the currently running job
     :param sources:
         a block of source objects
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param info:
         a :class:`openquake.commonlib.source.CompositionInfo` instance
+    :param monitor:
+        monitor of the currently running job
     :returns:
         a dictionary trt_model_id -> (curves_by_gsim, bounding_boxes)
     """
