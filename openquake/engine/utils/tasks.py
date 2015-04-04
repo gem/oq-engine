@@ -52,7 +52,7 @@ class OqTaskManager(TaskManager):
 
     Progress report is built-in.
     """
-    progress = logs.LOG.progress
+    progress = staticmethod(logs.LOG.progress)
 
     def submit(self, *args):
         """
