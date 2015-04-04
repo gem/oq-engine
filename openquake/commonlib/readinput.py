@@ -646,8 +646,7 @@ def get_exposure(oqparam):
     """
     out_of_region = 0
     if oqparam.region_constraint:
-        region = wkt.loads(oqparam.region_constraint).buffer(0.1)
-        # there is a small buffer to accept points on the fence
+        region = wkt.loads(oqparam.region_constraint)
     else:
         region = None
     fname = oqparam.inputs['exposure']
