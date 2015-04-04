@@ -229,7 +229,7 @@ class TaskManager(object):
     Progress report is built-in.
     """
     executor = executor
-    progress = logging.info
+    progress = staticmethod(logging.info)
 
     @classmethod
     def restart(cls):
