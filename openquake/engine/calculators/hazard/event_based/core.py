@@ -224,7 +224,7 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
         sorted(imts), sorted(gsims), ses_coll,
         hc.truncation_level, models.get_correl_model(job))
 
-    with monitor('computing gmfs'):
+    with monitor('computing gmfs', autoflush=True):
         for rupture, group in itertools.groupby(
                 ses_ruptures, operator.attrgetter('rupture')):
             r_sites = sitecol if rupture.site_indices is None \
@@ -235,14 +235,14 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
     if hc.hazard_curves_from_gmfs:
         duration = hc.investigation_time * hc.ses_per_logic_tree_path * (
             hc.number_of_logic_tree_samples or 1)
-        with monitor('hazard curves from gmfs'):
+        with monitor('hazard curves from gmfs', autoflush=True):
             result[trt_model.id] = (calc.to_haz_curves(
                 sitecol.sids, hc.imtls, hc.investigation_time, duration), [])
     else:
         result[trt_model.id] = ([], [])
 
     if hc.ground_motion_fields:
-        with monitor('saving gmfs'):
+        with monitor('saving gmfs', autoflush=True):
             calc.save_gmfs(rlzs_assoc)
 
     return result
