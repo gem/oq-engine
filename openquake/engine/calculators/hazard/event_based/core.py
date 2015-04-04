@@ -130,10 +130,10 @@ def compute_ruptures(sources, sitecol, info, monitor):
     hc = models.oqparam(monitor.job_id)
     tot_ruptures = 0
 
-    filter_sites_mon = monitor('filtering sites')
-    generate_ruptures_mon = monitor('generating ruptures')
-    filter_ruptures_mon = monitor('filtering ruptures')
-    save_ruptures_mon = monitor('saving ruptures')
+    filter_sites_mon = monitor('filtering sites', measuremem=False)
+    generate_ruptures_mon = monitor('generating ruptures', measuremem=False)
+    filter_ruptures_mon = monitor('filtering ruptures', measuremem=False)
+    save_ruptures_mon = monitor('saving ruptures', measuremem=False)
 
     # Compute and save stochastic event sets
     for src in sources:
