@@ -242,7 +242,7 @@ class RiskCalculator(base.Calculator):
         try:
             self.exposure_model = self.job.exposure_model
         except models.ObjectDoesNotExist:
-            with self.monitor('import exposure'):
+            with self.monitor('import exposure', autoflush=True):
                 ExposureDBWriter(self.job).serialize(
                     risk_parsers.ExposureModelParser(
                         self.oqparam.inputs['exposure']))
@@ -251,7 +251,7 @@ class RiskCalculator(base.Calculator):
             self.exposure_model.taxonomies_in(
                 self.oqparam.region_constraint)
 
-        with self.monitor('parse risk models'):
+        with self.monitor('parse risk models', autoflush=True):
             self.risk_model = self.get_risk_model()
 
         self.populate_imt_taxonomy()

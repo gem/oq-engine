@@ -94,7 +94,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
             operation=self.operation,
             start_time=self.start_time,
             duration=self.duration,
-            pymemory=self.mem,
+            pymemory=self.mem if self.measuremem else None,
             pgmemory=None)
         self.mem = 0
         self.duration = 0
