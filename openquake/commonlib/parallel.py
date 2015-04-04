@@ -424,7 +424,7 @@ class PerformanceMonitor(object):
     and by overriding the method on_exit(), called at end and used to display
     or store the results of the analysis.
     """
-    def __init__(self, operation, pid=None, monitor_csv='performance.csv',
+    def __init__(self, operation, pid=None, monitor_csv=None,
                  autoflush=False):
         self.operation = operation
         self.pid = pid
@@ -436,10 +436,12 @@ class PerformanceMonitor(object):
             self._proc = None
         self.mem = 0
         self.duration = 0
+        self.write('operation pid time_sec memory_mb'.split())
 
     def write(self, row):
         """Write a row on the performance file"""
-        open(self.monitor_csv, 'a').write('\t'.join(row) + '\n')
+        if self.monitor_csv:
+            open(self.monitor_csv, 'a').write('\t'.join(row) + '\n')
 
     def measure_mem(self):
         """A memory measurement (in bytes)"""
@@ -496,7 +498,10 @@ class PerformanceMonitor(object):
         """
         Return a copy of the monitor usable for a different operation.
         """
+        self_vars = vars(self).copy()
+        del self_vars['operation']
         new = self.__class__(operation)
+        vars(new).update(self_vars)
         vars(new).update(kw)
         return new
 
