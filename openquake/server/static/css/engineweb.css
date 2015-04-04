@@ -59,7 +59,7 @@ h2 {
     padding: 0;
 }
 
-.navbar .nav.account-bar > li.actions > a {
+.navbar .nav.account-bar > li > a {
     padding-left: 0;
     padding-right: 0;
 }
