@@ -116,5 +116,5 @@ class UhrhammerWindow(BaseDistanceTimeWindow):
 
     def calc(self, magnitude):
         sw_space = np.exp(-1.024 + 0.804 * magnitude)
-        sw_time = np.exp(-2.87 + 1.235 * magnitude / 364.75)
+        sw_time = np.exp(-2.87 + 1.235 * magnitude) / 364.75
         return sw_space, sw_time
