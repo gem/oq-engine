@@ -436,6 +436,7 @@ class PerformanceMonitor(object):
             self._proc = None
         self.mem = 0
         self.duration = 0
+        self._start_time = time.time()
         self.write('operation pid time_sec memory_mb'.split())
 
     def write(self, row):
