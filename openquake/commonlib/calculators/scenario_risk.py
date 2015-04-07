@@ -27,8 +27,11 @@ from openquake.commonlib.calculators import base, calc
 from openquake.commonlib.export import export
 
 
-AggLossCurve = collections.namedtuple(
-    'AggLossCurve', 'loss_type unit mean stddev')
+AggLoss = collections.namedtuple(
+    'AggLoss', 'loss_type unit mean stddev')
+
+PerAssetLoss = collections.namedtuple(
+    'PerAssetLoss', 'loss_type unit asset_ref mean stddev')
 
 
 def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
@@ -54,8 +57,22 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
         result = general.AccumDict()  # agg_type, loss_type -> losses
         for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc):
             for rlz, out in out_by_rlz.iteritems():
+
+                assets = out.assets
+                means = out.loss_matrix.mean(axis=1),
+                stddevs = out.loss_matrix.std(ddof=1, axis=1)
+                result += {
+                    ('asset-loss', out.loss_type):
+                    [(a.id, m, s) for a, m, s in zip(assets, means, stddevs)]}
                 result += {('agg', out.loss_type): out.aggregate_losses}
-                if out.insured_losses is not None:
+
+                if out.insured_loss_matrix is not None:
+                    means = out.insured_loss_matrix.mean(axis=1),
+                    stddevs = out.insured_loss_matrix.std(ddof=1, axis=1)
+                    result += {
+                        ('asset-ins', out.loss_type):
+                        [(a.id, m, s)
+                         for a, m, s in zip(assets, means, stddevs)]}
                     result += {('ins', out.loss_type): out.insured_losses}
     return result
 
@@ -93,14 +110,20 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         """
         Export the aggregate loss curves in CSV format.
         """
-        aggcurves = general.AccumDict()  # key_type -> AggLossCurves
-        for (key_type, loss_type), values in result.iteritems():
-            mean, std = scientific.mean_std(values)
-            curve = AggLossCurve(loss_type, self.unit[loss_type], mean, std)
-            aggcurves += {key_type: [curve]}
+        losses = general.AccumDict()
+        for key, values in result.iteritems():
+            key_type, loss_type = key
+            unit = self.unit[loss_type]
+            if key_type in ('agg', 'ins'):
+                mean, std = scientific.mean_std(values)
+                losses += {key_type: [
+                    AggLoss(loss_type, unit, mean, std)]}
+            else:
+                losses += {key_type: [
+                    PerAssetLoss(loss_type, unit, *vals) for vals in values]}
         out = {}
-        for key_type in aggcurves:
-            fname = export(('%s_loss' % key_type, 'csv'),
-                           self.oqparam.export_dir, aggcurves[key_type])
+        for key_type in losses:
+            fname = export((key_type, 'csv'),
+                           self.oqparam.export_dir, losses[key_type])
             out[key_type] = fname
         return out

@@ -33,7 +33,22 @@ def export_dmg_xml(key, export_dir, damage_states, dmg_data):
     return AccumDict({key: dest})
 
 
-@export.add(('agg_loss', 'csv'))
+@export.add(('asset-loss', 'csv'), ('asset-ins', 'csv'))
+def export_loss_csv(key, export_dir, data):
+    """
+    Export aggregate losses in CSV.
+
+    :param key: 'per_asset_loss'
+    :param export_dir: the export directory
+    :param data: a list [(loss_type, unit, asset_ref, mean, stddev), ...]
+    """
+    dest = os.path.join(export_dir, '%s.%s' % key)
+    header = ['LossType', 'Unit', 'Asset', 'Mean', 'Standard Deviation']
+    writers.save_csv(dest, [header] + data)
+    return AccumDict({key: dest})
+
+
+@export.add(('agg', 'csv'), ('ins', 'csv'))
 def export_agg_loss_csv(key, export_dir, aggcurves):
     """
     Export aggregate losses in CSV.
