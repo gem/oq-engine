@@ -65,13 +65,13 @@ def just_say_1(*args):
 
 
 @test_task
-def single_arg_called_a(a):
+def single_arg_called_a(a, monitor):
     """Takes a single argument called `a` and merely returns `True`."""
     return True
 
 
 @test_task
-def failing_task(job_id, data):
+def failing_task(data, monitor):
     """
     Takes a single argument called `data` and raises a `NotImplementedError`
     exception throwing it back.
@@ -80,5 +80,5 @@ def failing_task(job_id, data):
 
 
 @test_task
-def get_even(job_id, numbers):
+def get_even(numbers, monitor):
     return [n for n in numbers if n % 2 == 0]
