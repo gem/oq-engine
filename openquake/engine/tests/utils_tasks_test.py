@@ -53,7 +53,7 @@ class TaskManagerTestCase(unittest.TestCase):
 
     def test_failing_subtask(self):
         try:
-            tasks.apply_reduce(failing_task, ('job_id', [42]),
+            tasks.apply_reduce(failing_task, ([42], 'monitor'),
                                agg=lambda a, x: x)
         except NotImplementedError:
             pass  # expected
@@ -62,5 +62,5 @@ class TaskManagerTestCase(unittest.TestCase):
 
     def test_apply_reduce(self):
         got = tasks.apply_reduce(
-            get_even, (1, [1, 2, 3, 4, 5]), list.__add__, [], 2)
+            get_even, ([1, 2, 3, 4, 5], 'monitor'), list.__add__, [], 2)
         self.assertEqual(sorted(got), [2, 4])

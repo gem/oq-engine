@@ -31,7 +31,6 @@ from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.utils import config
 from openquake.engine.writer import CacheInserter
-from openquake.engine.performance import EnginePerformanceMonitor
 
 CONCURRENT_TASKS = int(config.get('celery', 'concurrent_tasks'))
 SOFT_MEM_LIMIT = int(config.get('memory', 'soft_mem_limit'))
@@ -53,6 +52,8 @@ class OqTaskManager(TaskManager):
 
     Progress report is built-in.
     """
+    progress = staticmethod(logs.LOG.progress)
+
     def submit(self, *args):
         """
         Submit an oqtask with the given arguments to celery and return
@@ -93,7 +94,7 @@ class OqTaskManager(TaskManager):
             del backend._cache[task_id]  # work around a celery bug
         return acc
 
-# a convenient alias
+# convenient aliases
 starmap = OqTaskManager.starmap
 
 
@@ -105,7 +106,7 @@ def apply_reduce(task, task_args,
                  key=lambda item: 'Unspecified',
                  name=None):
     """
-    Apply a task to a tuple of the form (job_id, data, *args)
+    Apply a task to a tuple of the form (data, *args)
     by splitting the data in chunks and reduce the results with an
     aggregation function.
 
@@ -119,15 +120,14 @@ def apply_reduce(task, task_args,
     """
     if acc is None:
         acc = AccumDict()
-    job_id = task_args[0]
-    data = task_args[1]
-    args = task_args[2:]
+    data = task_args[0]
+    args = task_args[1:]
     if not data:
         return acc
     elif len(data) == 1 or not concurrent_tasks:
-        return agg(acc, task.task_func(job_id, data, *args))
+        return agg(acc, task.task_func(data, *args))
     blocks = split_in_blocks(data, concurrent_tasks, weight, key)
-    task_args = [(job_id, block) + args for block in blocks]
+    task_args = [(block,) + args for block in blocks]
     return starmap(task, task_args, logs.LOG.progress, name).reduce(agg, acc)
 
 
@@ -146,25 +146,26 @@ def oqtask(task_func):
         code surrounded by a try-except. If any error occurs, log it as a
         critical failure.
         """
-        # job_id is always assumed to be the first argument
-        job_id = args[0]
-        job = models.OqJob.objects.get(id=job_id)
+        # the last argument is assumed to be a monitor
+        monitor = args[-1]
+        job = models.OqJob.objects.get(id=monitor.job_id)
         if job.is_running is False:
             # the job was killed, it is useless to run the task
-            raise JobNotRunning(job_id)
+            raise JobNotRunning(monitor.job_id)
 
         # it is important to save the task id soon, so that
         # the revoke functionality can work
-        EnginePerformanceMonitor.store_task_id(job_id, tsk)
+        with monitor('storing task id', task=tsk, autoflush=True):
+            pass
 
-        with EnginePerformanceMonitor(
-                'total ' + task_func.__name__, job_id, tsk, flush=True), \
-                logs.handle(job):
+        with logs.handle(job):
+            # log a warning if too much memory is used
+            check_mem_usage(SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
+            # run the task
             try:
-                # log a warning if too much memory is used
-                check_mem_usage(SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
-                # run the task
-                return task_func(*args)
+                total = 'total ' + task_func.__name__
+                with monitor(total, task=tsk, autoflush=True):
+                    return task_func(*args)
             finally:
                 # save on the db
                 CacheInserter.flushall()
