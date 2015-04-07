@@ -139,7 +139,7 @@ class RiskModel(collections.Mapping):
             gsims, trunc_level, correl_model, eps_dict)
             for ruptures in block_splitter(ses_ruptures, epsilon_sampling)]
 
-    def gen_outputs(self, riskinputs, rlzs_assoc):
+    def gen_outputs(self, riskinputs, rlzs_assoc, monitor):
         """
         Group the assets per taxonomy and compute the outputs by using the
         underlying workflows. Yield the outputs generated as dictionaries
@@ -147,24 +147,32 @@ class RiskModel(collections.Mapping):
 
         :param riskinputs: a list of riskinputs with consistent IMT
         :param rlzs_assoc: a RlzsAssoc instance
+        :param monitor: a monitor object used to measure the performance
         """
+        mon_hazard = monitor('getting hazard')
+        mon_risk = monitor('computing individual risk')
         for riskinput in riskinputs:
-            # get assets, hazards, epsilons
-            a, h, e = riskinput.get_all(rlzs_assoc)
-            for imt, taxonomies in riskinput.imt_taxonomies:
-                for taxonomy in taxonomies:
-                    assets, hazards, epsilons = [], [], []
-                    for asset, hazard, epsilon in zip(a, h, e):
-                        if asset.taxonomy == taxonomy:
-                            assets.append(asset)
-                            hazards.append(hazard[imt])
-                            epsilons.append(epsilon)
-                    if not assets:
-                        continue
-                    workflow = self[imt, taxonomy]
-                    for out_by_rlz in workflow.gen_out_by_rlz(
-                            assets, hazards, epsilons, riskinput.tags):
-                        yield out_by_rlz
+            with mon_hazard:
+                # get assets, hazards, epsilons
+                a, h, e = riskinput.get_all(rlzs_assoc)
+            with mon_risk:
+                # compute the outputs by using the worklow
+                for imt, taxonomies in riskinput.imt_taxonomies:
+                    for taxonomy in taxonomies:
+                        assets, hazards, epsilons = [], [], []
+                        for asset, hazard, epsilon in zip(a, h, e):
+                            if asset.taxonomy == taxonomy:
+                                assets.append(asset)
+                                hazards.append(hazard[imt])
+                                epsilons.append(epsilon)
+                        if not assets:
+                            continue
+                        workflow = self[imt, taxonomy]
+                        for out_by_rlz in workflow.gen_out_by_rlz(
+                                assets, hazards, epsilons, riskinput.tags):
+                            yield out_by_rlz
+        mon_hazard.flush()
+        mon_risk.flush()
 
 
 class RiskInput(object):

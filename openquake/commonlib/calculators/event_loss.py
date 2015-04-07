@@ -43,7 +43,8 @@ def event_loss(riskinputs, riskmodel, rlzs_assoc, monitor):
     specific = riskmodel.specific_assets
     acc = collections.defaultdict(AccumDict)
     # rlz.ordinal, loss_type -> tag -> [(asset.id, loss), ...]
-    for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc):
+    for out_by_rlz in riskmodel.gen_outputs(
+            riskinputs, rlzs_assoc, monitor):
         for rlz, out in out_by_rlz.iteritems():
             for tag, losses in zip(out.tags, out.event_loss_per_asset):
                 pairs = [(asset.id, loss) for asset, loss in zip(

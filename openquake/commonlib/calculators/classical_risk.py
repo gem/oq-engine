@@ -41,7 +41,8 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     """
     with monitor:
         result = collections.defaultdict(general.AccumDict)
-        for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc):
+        for out_by_rlz in riskmodel.gen_outputs(
+                riskinputs, rlzs_assoc, monitor):
             for rlz, out in out_by_rlz.iteritems():
                 values = workflows.get_values(out.loss_type, out.assets)
                 for i, asset in enumerate(out.assets):

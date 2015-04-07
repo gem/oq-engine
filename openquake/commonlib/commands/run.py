@@ -36,7 +36,7 @@ def run(job_ini, concurrent_tasks=executor.num_tasks_hint,
     oqparam.usecache = usecache
     oqparam.exports = exports
     with PerformanceMonitor('total', monitor_csv=os.path.join(
-            oqparam.export_dir, 'performance_csv')) as monitor:
+            oqparam.export_dir, 'performance_csv'), autoflush=True) as monitor:
         calc = base.calculators(oqparam, monitor)
         with monitor('pre_execute'):
             calc.pre_execute()

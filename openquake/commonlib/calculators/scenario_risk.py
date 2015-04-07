@@ -52,7 +52,8 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
                  sum(ri.weight for ri in riskinputs))
     with monitor:
         result = general.AccumDict()  # agg_type, loss_type -> losses
-        for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc):
+        for out_by_rlz in riskmodel.gen_outputs(
+                riskinputs, rlzs_assoc, monitor):
             for rlz, out in out_by_rlz.iteritems():
                 result += {('agg', out.loss_type): out.aggregate_losses}
                 if out.insured_losses is not None:

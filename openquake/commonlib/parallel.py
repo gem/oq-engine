@@ -229,6 +229,7 @@ class TaskManager(object):
     Progress report is built-in.
     """
     executor = executor
+    progress = staticmethod(logging.info)
 
     @classmethod
     def restart(cls):
@@ -247,6 +248,58 @@ class TaskManager(object):
             progress('Submitting task %s #%d', self.name, i)
             self.submit(*a)
         return self
+
+    @classmethod
+    def apply_reduce(cls, task_func, task_args, agg=operator.add, acc=None,
+                     concurrent_tasks=executor._max_workers,
+                     weight=lambda item: 1,
+                     key=lambda item: 'Unspecified',
+                     name=None):
+        """
+        Apply a function to a tuple of the form (sequence, \*other_args)
+        by first splitting the sequence in chunks, according to the weight
+        of the elements and possibly to a key (see :function:
+        `openquake.baselib.general.split_in_blocks`).
+        Then reduce the results with an aggregation function.
+        Here is an example:
+
+        >>> apply_reduce(sum, ([1, 2, 3, 4, 5],), lambda acc, x: acc + x,
+        ...             acc=0, concurrent_tasks=2)
+        15
+
+        The chunks which are generated internally can be seen directly (
+        useful for debugging purposes) by looking at the attribute `._chunks`,
+        right after the `apply_reduce` function has been called:
+
+        >>> apply_reduce._chunks
+        [<WeightedSequence [1, 2, 3], weight=3>, <WeightedSequence [4, 5], weight=2>]
+
+        :param task_func: a function to run in parallel
+        :param task_args: the arguments to be passed to the task function
+        :param agg: the aggregation function
+        :param acc: initial value of the accumulator (default empty AccumDict)
+        :param concurrent_tasks: hint about how many tasks to generate
+        :param weight: function to extract the weight of an item in arg0
+        :param key: function to extract the kind of an item in arg0
+        """
+        arg0 = task_args[0]
+        args = task_args[1:]
+        if acc is None:
+            acc = AccumDict()
+        if not arg0:
+            return acc
+        elif len(arg0) == 1:
+            return agg(acc, task_func(arg0, *args))
+        chunks = list(split_in_blocks(
+            arg0, concurrent_tasks or 1, weight, key))
+        cls.apply_reduce.__func__._chunks = chunks
+        if not concurrent_tasks or no_distribute():
+            for chunk in chunks:
+                acc = agg(acc, task_func(chunk, *args))
+            return acc
+        tm = cls.starmap(task_func, [(chunk,) + args for chunk in chunks],
+                         cls.progress, name)
+        return tm.reduce(agg, acc)
 
     def __init__(self, oqtask, progress=logging.info, name=None):
         self.oqtask = oqtask
@@ -330,58 +383,9 @@ class TaskManager(object):
         """
         return iter(self.results)
 
-# a convenient alias
+# convenient aliases
 starmap = TaskManager.starmap
-
-
-def apply_reduce(task_func, task_args, agg=operator.add, acc=None,
-                 concurrent_tasks=executor._max_workers,
-                 weight=lambda item: 1,
-                 key=lambda item: 'Unspecified',
-                 name=None):
-    """
-    Apply a function to a tuple of the form (sequence, \*other_args)
-    by first splitting the sequence in chunks, according to the weight
-    of the elements and possibly to a key (see :function:
-    `openquake.baselib.general.split_in_blocks`).
-    Then reduce the results with an aggregation function. Here is an example:
-
-    >>> apply_reduce(sum, ([1, 2, 3, 4, 5],), lambda acc, x: acc + x,
-    ...             acc=0, concurrent_tasks=2)
-    15
-
-    The chunks which are generated internally can be seen directly (
-    useful for debugging purposes) by looking at the attribute `._chunks`,
-    right after the `apply_reduce` function has been called:
-
-    >>> apply_reduce._chunks
-    [<WeightedSequence [1, 2, 3], weight=3>, <WeightedSequence [4, 5], weight=2>]
-
-    :param task_func: a function to run in parallel
-    :param task_args: the arguments to be passed to the task function
-    :param agg: the aggregation function
-    :param acc: initial value of the accumulator (default empty AccumDict)
-    :param concurrent_tasks: hint about how many tasks to generate
-    :param weight: function to extract the weight of an item in arg0
-    :param key: function to extract the kind of an item in arg0
-    """
-    arg0 = task_args[0]
-    args = task_args[1:]
-    if acc is None:
-        acc = AccumDict()
-    if not arg0:
-        return acc
-    elif len(arg0) == 1:
-        return agg(acc, task_func(arg0, *args))
-    chunks = list(split_in_blocks(arg0, concurrent_tasks or 1, weight, key))
-    apply_reduce._chunks = chunks
-    if not concurrent_tasks or no_distribute():
-        for chunk in chunks:
-            acc = agg(acc, task_func(chunk, *args))
-        return acc
-    tm = starmap(task_func, [(chunk,) + args for chunk in chunks],
-                 logging.info, name)
-    return tm.reduce(agg, acc)
+apply_reduce = TaskManager.apply_reduce
 
 
 def do_not_aggregate(acc, value):
@@ -404,9 +408,9 @@ class PerformanceMonitor(object):
     the execution of a block of code. Should be used as a context manager,
     as follows::
 
-     with PerformanceMonitor('do_something') as mm:
+     with PerformanceMonitor('do_something') as mon:
          do_something()
-     deltamemory, = mm.mem
+     print mon.mem
 
     At the end of the block the PerformanceMonitor object will have the
     following 5 public attributes:
@@ -414,25 +418,31 @@ class PerformanceMonitor(object):
     .start_time: when the monitor started (a datetime object)
     .duration: time elapsed between start and stop (in seconds)
     .exc: None unless an exception happened inside the block of code
-    .mem: an array with the memory deltas (in bytes)
+    .mem: the memory delta in bytes
 
-    The memory array has the same length as the number of processes.
     The behaviour of the PerformanceMonitor can be customized by subclassing it
     and by overriding the method on_exit(), called at end and used to display
     or store the results of the analysis.
     """
-    def __init__(self, operation, pid=None, monitor_csv='performance_csv'):
+    def __init__(self, operation, pid=None, monitor_csv=None,
+                 autoflush=False):
         self.operation = operation
         self.pid = pid
         self.monitor_csv = monitor_csv
+        self.autoflush = autoflush
         if pid:
             self._proc = psutil.Process(pid)
         else:
             self._proc = None
+        self.mem = 0
+        self.duration = 0
+        self._start_time = time.time()
+        self.write('operation pid time_sec memory_mb'.split())
 
     def write(self, row):
         """Write a row on the performance file"""
-        open(self.monitor_csv, 'a').write('\t'.join(row) + '\n')
+        if self.monitor_csv:
+            open(self.monitor_csv, 'a').write('\t'.join(row) + '\n')
 
     def measure_mem(self):
         """A memory measurement (in bytes)"""
@@ -457,8 +467,6 @@ class PerformanceMonitor(object):
             pid = os.getpid()
             self.pid = pid
             self._proc = psutil.Process(pid)
-        self.duration = None  # seconds
-        self.mem = None  # bytes
         self.exc = None  # exception
         self._start_time = time.time()
         self.start_mem = self.measure_mem()
@@ -468,22 +476,35 @@ class PerformanceMonitor(object):
         "Call .stop"
         self.exc = exc
         self.stop_mem = self.measure_mem()
-        self.mem = self.stop_mem - self.start_mem
-        self.duration = time.time() - self._start_time
+        self.mem = max(self.mem, self.stop_mem - self.start_mem)
+        self.duration += time.time() - self._start_time
         self.on_exit()
 
     def on_exit(self):
-        "Save the results: to be overridden in subclasses"
+        "To be overridden in subclasses"
+        if self.autoflush:
+            self.flush()
+
+    def flush(self):
+        """
+        Save the measurements on the performance file
+        """
         time_sec = str(self.duration)
         memory_mb = str(self.mem / 1024. / 1024.)
         self.write([self.operation, str(self.pid), time_sec, memory_mb])
+        self.mem = 0
+        self.duration = 0
 
-    def __call__(self, operation):
+    def __call__(self, operation, **kw):
         """
-        Return a copy of the monitor usable for a different operation
-        in the same task.
+        Return a copy of the monitor usable for a different operation.
         """
-        return self.__class__(operation, monitor_csv=self.monitor_csv)
+        self_vars = vars(self).copy()
+        del self_vars['operation']
+        new = self.__class__(operation)
+        vars(new).update(self_vars)
+        vars(new).update(kw)
+        return new
 
 
 class DummyMonitor(PerformanceMonitor):
@@ -504,4 +525,7 @@ class DummyMonitor(PerformanceMonitor):
         return self
 
     def __exit__(self, etype, exc, tb):
+        pass
+
+    def flush(self):
         pass
