@@ -1,18 +1,13 @@
-import os
 import mock
 import time
 import unittest
 
-from nose.plugins.attrib import attr
-
 import uuid
 from datetime import datetime
 from openquake.engine.performance import \
-    PerformanceMonitor, EnginePerformanceMonitor, LightMonitor
+    PerformanceMonitor, EnginePerformanceMonitor
 from openquake.engine.db.models import Performance
 from openquake.engine import engine
-
-flush = EnginePerformanceMonitor.cache.flush
 
 
 class TestCase(unittest.TestCase):
@@ -24,7 +19,7 @@ class TestCase(unittest.TestCase):
         self.assertGreaterEqual(pmon.mem[0], 0)
 
     def test_light_monitor(self):
-        mon = LightMonitor('test', 1)
+        mon = PerformanceMonitor('test', 1)
         with mon:
             time.sleep(.1)
         with mon:
@@ -42,7 +37,7 @@ class TestCase(unittest.TestCase):
             pass
         self._check_result(pmon)
         # check that one record was stored on the db, as it should
-        flush()
+        pmon.flush()
         self.assertEqual(len(Performance.objects.filter(task_id=task_id)), 1)
 
     @unittest.skip
@@ -52,6 +47,6 @@ class TestCase(unittest.TestCase):
         with EnginePerformanceMonitor(operation, job.id) as pmon:
             pass
         self._check_result(pmon)
-        flush()
+        pmon.flush()
         records = Performance.objects.filter(operation=operation)
         self.assertEqual(len(records), 1)
