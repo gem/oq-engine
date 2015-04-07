@@ -18,6 +18,7 @@
 
 import os
 import csv
+import operator
 
 from openquake.baselib.general import AccumDict
 from openquake.commonlib.export import export
@@ -44,6 +45,7 @@ def export_asset_loss_csv(key, export_dir, data):
     """
     dest = os.path.join(export_dir, '%s.%s' % key)
     header = ['LossType', 'Unit', 'Asset', 'Mean', 'Standard Deviation']
+    data.sort(operator.itemgetter(2))  # order by asset_ref
     writers.save_csv(dest, [header] + data, fmt='%11.7E')
     return AccumDict({key: dest})
 
