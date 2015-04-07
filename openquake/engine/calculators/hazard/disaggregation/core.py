@@ -56,9 +56,9 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves,
     trts = []
     pnes = []
     sitemesh = sitecol.mesh
-    calc_dist = mon('calc distances')
-    make_ctxt = mon('making contexts')
-    disagg_poe = mon('disaggregate_poe')
+    calc_dist = mon('calc distances', measuremem=False)
+    make_ctxt = mon('making contexts', measuremem=False)
+    disagg_poe = mon('disaggregate_poe', measuremem=False)
     trt_model = models.TrtModel.objects.get(pk=trt_model_id)
     rlzs = trt_model.get_rlzs_by_gsim()
     for source, ruptures in source_ruptures:
@@ -217,6 +217,9 @@ def compute_disagg(sitecol, sources, trt_model_id,
     trt_names = tuple(trt_model.lt_model.get_tectonic_region_types())
     result = {}  # site.id, rlz.id, poe, imt, iml, trt_names -> array
 
+    collecting_mon = monitor('collecting bins')
+    arranging_mon = monitor('arranging bins')
+
     for site in sitecol:
         # edges as wanted by disagg._arrange_data_in_bins
         try:
@@ -234,7 +237,7 @@ def compute_disagg(sitecol, sources, trt_model_id,
                       sum(len(rupts) for src, rupts in source_ruptures),
                       site.location)
 
-        with monitor('collecting bins'):
+        with collecting_mon:
             bdata = _collect_bins_data(
                 trt_num, source_ruptures, site, curves_dict[site.id],
                 trt_model_id, gsims, hc.imtls,
@@ -261,13 +264,14 @@ def compute_disagg(sitecol, sources, trt_model_id,
                                 bdata.trts, None, probs]
 
                         # call disagg._arrange_data_in_bins
-                        with monitor('arranging bins'):
+                        with arranging_mon:
                             key = (site.id, rlz.id, poe, imt, iml, trt_names)
                             matrix = disagg._arrange_data_in_bins(
                                 bins, edges + (trt_names,))
                             result[key] = numpy.array(
                                 [fn(matrix) for fn in disagg.pmf_map.values()])
-
+    collecting_mon.flush()
+    arranging_mon.flush()
     return result
 
 
