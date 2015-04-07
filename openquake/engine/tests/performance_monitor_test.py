@@ -9,8 +9,6 @@ from openquake.engine.performance import \
 from openquake.engine.db.models import Performance
 from openquake.engine import engine
 
-flush = EnginePerformanceMonitor.cache.flush
-
 
 class TestCase(unittest.TestCase):
 
@@ -39,7 +37,7 @@ class TestCase(unittest.TestCase):
             pass
         self._check_result(pmon)
         # check that one record was stored on the db, as it should
-        flush()
+        pmon.flush()
         self.assertEqual(len(Performance.objects.filter(task_id=task_id)), 1)
 
     @unittest.skip
@@ -49,6 +47,6 @@ class TestCase(unittest.TestCase):
         with EnginePerformanceMonitor(operation, job.id) as pmon:
             pass
         self._check_result(pmon)
-        flush()
+        pmon.flush()
         records = Performance.objects.filter(operation=operation)
         self.assertEqual(len(records), 1)
