@@ -25,6 +25,7 @@ import sys
 import cPickle
 import logging
 import operator
+import functools
 import traceback
 import time
 from datetime import datetime
@@ -403,12 +404,16 @@ def do_not_aggregate(acc, value):
 
 def litetask(func):
     """
-    Register the given function in the dictionary `litetask.registry`
+    Add monitoring support to the decorated function. The last argument
+    must be a monitor object.
     """
-    fullname = '%s.%s' % (func.__module__, func.__name__)
-    litetask.registry[fullname] = func
-    return func
-litetask.registry = {}
+    @functools.wraps(func)
+    def wrapped(*args):
+        # the last argument is assumed to be a monitor
+        with args[-1]('total ' + func.__name__, autoflush=True):
+            return func(*args)
+    wrapped.task_func = func
+    return wrapped
 
 
 # this is not thread-safe
