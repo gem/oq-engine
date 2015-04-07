@@ -106,7 +106,7 @@ def apply_reduce(task, task_args,
                  key=lambda item: 'Unspecified',
                  name=None):
     """
-    Apply a task to a tuple of the form (monitor, data, *args)
+    Apply a task to a tuple of the form (data, *args)
     by splitting the data in chunks and reduce the results with an
     aggregation function.
 

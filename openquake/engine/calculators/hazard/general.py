@@ -571,10 +571,9 @@ class BaseHazardCalculator(base.Calculator):
         # if `hazard_maps` is false but `uniform_hazard_spectra` is true,
         # just don't export the maps
         if (self.oqparam.hazard_maps or self.oqparam.uniform_hazard_spectra):
-            with self.monitor('generating hazard maps') as mon:
+            with self.monitor('generating hazard maps', autoflush=True) as mon:
                 tasks.apply_reduce(
                     hazard_curves_to_hazard_map,
                     (self._hazard_curves, self.oqparam.poes, mon))
-            mon.flush()
         if self.oqparam.uniform_hazard_spectra:
             do_uhs_post_proc(self.job)
