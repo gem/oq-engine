@@ -32,6 +32,7 @@ from nose.plugins.attrib import attr
 from openquake.engine.tests.utils import helpers
 
 from openquake.engine.db import models
+from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.calculators.hazard import (
     post_processing as post_proc)
 
@@ -58,6 +59,7 @@ class HazardMapTaskFuncTestCase(unittest.TestCase):
             'calculators/hazard/classical/haz_map_test_job2.ini')
         cls.job = helpers.run_job(cfg).job
         models.JobStats.objects.create(oq_job=cls.job)
+        cls.monitor = EnginePerformanceMonitor('', cls.job.id)
 
     def _test_maps(self, curve, hm_0_1, hm_0_02, lt_rlz=None):
         self.assertEqual(lt_rlz, hm_0_1.lt_realization)
@@ -108,7 +110,7 @@ class HazardMapTaskFuncTestCase(unittest.TestCase):
 
             for curve in lt_haz_curves:
                 post_proc.hazard_curves_to_hazard_map.task_func(
-                    self.job.id, [curve], self.TEST_POES)
+                    [curve], self.TEST_POES, self.monitor)
 
                 lt_rlz = curve.lt_realization
                 # There should be two maps: 1 for each PoE
@@ -130,7 +132,7 @@ class HazardMapTaskFuncTestCase(unittest.TestCase):
 
             for curve in mean_haz_curves:
                 post_proc.hazard_curves_to_hazard_map.task_func(
-                    self.job.id, [curve], self.TEST_POES)
+                    [curve], self.TEST_POES, self.monitor)
 
                 hm_0_1, hm_0_02 = models.HazardMap.objects.filter(
                     output__oq_job=self.job,
@@ -152,7 +154,7 @@ class HazardMapTaskFuncTestCase(unittest.TestCase):
 
                 for curve in quantile_haz_curves:
                     post_proc.hazard_curves_to_hazard_map.task_func(
-                        self.job.id, [curve], self.TEST_POES)
+                        [curve], self.TEST_POES, self.monitor)
 
                     hm_0_1, hm_0_02 = models.HazardMap.objects.filter(
                         output__oq_job=self.job,
