@@ -132,7 +132,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                     PerAssetLoss(loss_type, unit, *vals) for vals in values]}
         out = {}
         for key_type in losses:
-            fname = export((key_type, 'csv'),
-                           self.oqparam.export_dir, losses[key_type])
-            out[key_type] = fname
+            out += export((key_type, 'csv'),
+                          self.oqparam.export_dir, losses[key_type])
         return out
