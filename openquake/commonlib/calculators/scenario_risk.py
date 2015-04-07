@@ -30,8 +30,20 @@ from openquake.commonlib.export import export
 AggLoss = collections.namedtuple(
     'AggLoss', 'loss_type unit mean stddev')
 
-PerAssetLoss = collections.namedtuple(
+PerAssetLoss = collections.namedtuple(  # the loss map
     'PerAssetLoss', 'loss_type unit asset_ref mean stddev')
+
+
+def losses_per_asset(tag, loss_type, assets, means, stddevs):
+    """
+    :returns: a dictionary {
+    (tag, loss_type): [(asset_ref, mean_value, stddev), ...]}
+    """
+    lst = []
+    for a, m, s in zip(assets, means, stddevs):
+        value = a.value(loss_type)
+        lst.append((a.id, m * value, s * value))
+    return {(tag, loss_type): lst}
 
 
 def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
@@ -61,18 +73,15 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
                 assets = out.assets
                 means = out.loss_matrix.mean(axis=1),
                 stddevs = out.loss_matrix.std(ddof=1, axis=1)
-                result += {
-                    ('asset-loss', out.loss_type):
-                    [(a.id, m, s) for a, m, s in zip(assets, means, stddevs)]}
+                result += losses_per_asset(
+                    'asset-loss', out.loss_type, assets, means, stddevs)
                 result += {('agg', out.loss_type): out.aggregate_losses}
 
                 if out.insured_loss_matrix is not None:
                     means = out.insured_loss_matrix.mean(axis=1),
                     stddevs = out.insured_loss_matrix.std(ddof=1, axis=1)
-                    result += {
-                        ('asset-ins', out.loss_type):
-                        [(a.id, m, s)
-                         for a, m, s in zip(assets, means, stddevs)]}
+                    result += losses_per_asset(
+                        'asset-ins', out.loss_type, assets, means, stddevs)
                     result += {('ins', out.loss_type): out.insured_losses}
     return result
 
