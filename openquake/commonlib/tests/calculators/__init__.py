@@ -86,9 +86,9 @@ class CalculatorTestCase(unittest.TestCase):
         """
         expected = os.path.join(self.testdir, fname1)
         actual = os.path.join(self.calc.oqparam.export_dir, fname2)
-        expected_content = '\n'.join(
+        expected_content = ''.join(
             make_comparable(open(expected).readlines()))
-        actual_content = '\n'.join(make_comparable(open(actual).readlines()))
+        actual_content = ''.join(make_comparable(open(actual).readlines()))
         try:
             if ignore_last_digits:
                 self.practicallyEqual(expected_content, actual_content,
@@ -99,7 +99,7 @@ class CalculatorTestCase(unittest.TestCase):
             if self.OVERWRITE_EXPECTED:
                 # use this path when the expected outputs have changed
                 # for a good reason
-                open(expected, 'w').write(''.join(actual_content))
+                open(expected, 'w').write(actual_content)
             else:
                 # normally raise an exception
                 raise DifferentFiles('%s %s' % (expected, actual))

@@ -131,7 +131,6 @@ def log_percent_gen(taskname, todo, progress):
     :param progress:
         a logging function for the progress report
     """
-    progress('spawned %d tasks of kind %s', todo, taskname)
     yield 0
     done = 1
     prev_percent = 0

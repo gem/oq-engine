@@ -1,9 +1,22 @@
+import mock
 import unittest
 
 from openquake.commonlib import readinput
 from openquake.risklib import riskinput
 from openquake.commonlib.calculators import event_based
 from openquake.qa_tests_data.event_based_risk import case_2
+
+class MockAssoc(object):
+    def __iter__(self):
+        return iter([])
+
+    def combine(self, dicts):
+        return []
+
+    def __getitem__(self, key):
+        return []
+
+rlzs_assoc = MockAssoc()
 
 
 class RiskInputTestCase(unittest.TestCase):
@@ -20,25 +33,25 @@ class RiskInputTestCase(unittest.TestCase):
             list(self.riskmodel.get_imt_taxonomies()),
             [('PGA', ['RM']), ('SA(0.2)', ['RC']), ('SA(0.5)', ['W'])])
         self.assertEqual(len(self.sitecol), 4)
-        hazard_by_site = [None] * 4
+        hazard_by_site = [{}] * 4
 
         ri_PGA = self.riskmodel.build_input(
             'PGA', hazard_by_site, self.assets_by_site)
-        assets, hazards, epsilons = ri_PGA.get_all()
+        assets, hazards, epsilons = ri_PGA.get_all(rlzs_assoc)
         self.assertEqual([a.id for a in assets], ['a0', 'a3', 'a4'])
         self.assertEqual(set(a.taxonomy for a in assets), set(['RM']))
         self.assertEqual(epsilons, [None, None, None])
 
         ri_SA_02 = self.riskmodel.build_input(
             'SA(0.2)', hazard_by_site, self.assets_by_site)
-        assets, hazards, epsilons = ri_SA_02.get_all()
+        assets, hazards, epsilons = ri_SA_02.get_all(rlzs_assoc)
         self.assertEqual([a.id for a in assets], ['a1'])
         self.assertEqual(set(a.taxonomy for a in assets), set(['RC']))
         self.assertEqual(epsilons, [None])
 
         ri_SA_05 = self.riskmodel.build_input(
             'SA(0.5)', hazard_by_site, self.assets_by_site)
-        assets, hazards, epsilons = ri_SA_05.get_all()
+        assets, hazards, epsilons = ri_SA_05.get_all(rlzs_assoc)
         self.assertEqual([a.id for a in assets], ['a2'])
         self.assertEqual(set(a.taxonomy for a in assets), set(['W']))
         self.assertEqual(epsilons, [None])
@@ -56,11 +69,12 @@ class RiskInputTestCase(unittest.TestCase):
             self.assets_by_site, len(ses_ruptures), oq.master_seed,
             oq.asset_correlation)
 
-        ri = self.riskmodel.build_input_from_ruptures(
+        [ri] = self.riskmodel.build_inputs_from_ruptures(
             self.sitecol, self.assets_by_site, ses_ruptures,
-            gsims, oq.truncation_level, correl_model, eps_dict)
+            gsims, oq.truncation_level, correl_model, eps_dict,
+            epsilon_sampling=1000)
 
-        assets, hazards, epsilons = ri.get_all()
+        assets, hazards, epsilons = ri.get_all(rlzs_assoc)
         self.assertEqual([a.id for a in assets],
                          ['a0', 'a1', 'a2', 'a3', 'a4'])
         self.assertEqual(set(a.taxonomy for a in assets),

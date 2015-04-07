@@ -16,9 +16,9 @@ xmlns:gml="http://www.opengis.net/gml"
             <asset
             assetRef="a1"
             >
-                <damage ds="no_damage" mean="1.562608737E+03" stddev="9.689351960E+02"/>
-                <damage ds="LS1" mean="1.108017956E+03" stddev="6.527366592E+02"/>
-                <damage ds="LS2" mean="3.293733073E+02" stddev="3.473916478E+02"/>
+                <damage ds="no_damage" mean="1.5626087E+03" stddev="9.6893520E+02"/>
+                <damage ds="LS1" mean="1.1080180E+03" stddev="6.5273666E+02"/>
+                <damage ds="LS2" mean="3.2937331E+02" stddev="3.4739165E+02"/>
             </asset>
         </DDNode>
         <DDNode>
@@ -30,9 +30,9 @@ xmlns:gml="http://www.opengis.net/gml"
             <asset
             assetRef="a3"
             >
-                <damage ds="no_damage" mean="4.173294503E+02" stddev="3.044766034E+02"/>
-                <damage ds="LS1" mean="3.872087261E+02" stddev="1.811412285E+02"/>
-                <damage ds="LS2" mean="1.954618235E+02" stddev="2.539129067E+02"/>
+                <damage ds="no_damage" mean="4.1732945E+02" stddev="3.0447660E+02"/>
+                <damage ds="LS1" mean="3.8720873E+02" stddev="1.8114123E+02"/>
+                <damage ds="LS2" mean="1.9546182E+02" stddev="2.5391291E+02"/>
             </asset>
         </DDNode>
         <DDNode>
@@ -44,9 +44,9 @@ xmlns:gml="http://www.opengis.net/gml"
             <asset
             assetRef="a2"
             >
-                <damage ds="no_damage" mean="5.672036467E+01" stddev="1.177807242E+02"/>
-                <damage ds="LS1" mean="6.731043772E+02" stddev="4.852023545E+02"/>
-                <damage ds="LS2" mean="1.270175258E+03" stddev="5.758729276E+02"/>
+                <damage ds="no_damage" mean="5.6720365E+01" stddev="1.1778072E+02"/>
+                <damage ds="LS1" mean="6.7310438E+02" stddev="4.8520235E+02"/>
+                <damage ds="LS2" mean="1.2701753E+03" stddev="5.7587293E+02"/>
             </asset>
         </DDNode>
     </dmgDistPerAsset>

@@ -198,7 +198,7 @@ class RiskCalculator(BaseCalculator):
             self.assets_by_site, num_ruptures,
             oq.master_seed, oq.asset_correlation)
 
-    def build_riskinputs(self, hazards_by_key, eps_dict):
+    def build_riskinputs(self, hazards_by_key, eps_dict=None):
         """
         :param hazards_by_key:
             a dictionary key -> IMT -> array of length num_sites
@@ -213,19 +213,19 @@ class RiskCalculator(BaseCalculator):
             self.oqparam.concurrent_tasks or 1,
             weight=operator.itemgetter(1))
         for block in blocks:
-            idx = numpy.array([idx for idx, _weight in block])
-            reduced_assets = self.assets_by_site[idx]
-            reduced_eps = {}  # for the assets belonging to the idx array
+            indices = numpy.array([idx for idx, _weight in block])
+            reduced_assets = self.assets_by_site[indices]
+            reduced_eps = {}  # for the assets belonging to the indices array
             if eps_dict:
                 for assets in reduced_assets:
                     for asset in assets:
                         reduced_eps[asset.id] = eps_dict[asset.id]
 
             # collect the hazards by key into hazards by imt
-            hdata = collections.defaultdict(lambda: [{} for _ in idx])
+            hdata = collections.defaultdict(lambda: [{} for _ in indices])
             for key, hazards_by_imt in hazards_by_key.iteritems():
                 for imt, hazards_by_site in hazards_by_imt.iteritems():
-                    for i, haz in enumerate(hazards_by_site[idx]):
+                    for i, haz in enumerate(hazards_by_site[indices]):
                         hdata[imt][i][key] = haz
 
             # build the riskinputs
@@ -247,13 +247,13 @@ class RiskCalculator(BaseCalculator):
     def assoc_assets_sites(self, sitecol):
         """
         :param sitecol: a sequence of sites
-        :returns: a pair (sitecollection, assets_by_site)
+        :returns: a pair (filtered_sites, assets_by_site)
 
         The new site collection is different from the original one
-        if some assets were discarded because of the maximum_distance
+        if some assets were discarded because of the asset_hazard_distance
         or if there were missing assets for some sites.
         """
-        maximum_distance = self.oqparam.maximum_distance
+        maximum_distance = self.oqparam.asset_hazard_distance
 
         def getlon(site):
             return site.location.longitude

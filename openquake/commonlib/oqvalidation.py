@@ -51,12 +51,13 @@ class OqParam(valid.ParamSet):
     base_path = valid.Param(valid.utf8)
     calculation_mode = valid.Param(valid.Choice(*CALCULATORS), '')
     coordinate_bin_width = valid.Param(valid.positivefloat)
-    conditional_loss_poes = valid.Param(valid.probabilities)
+    conditional_loss_poes = valid.Param(valid.probabilities, [])
     continuous_fragility_discretization = valid.Param(valid.positiveint, 20)
     description = valid.Param(valid.utf8_not_empty)
     distance_bin_width = valid.Param(valid.positivefloat)
     mag_bin_width = valid.Param(valid.positivefloat)
-    export_dir = valid.Param(valid.utf8, '')
+    epsilon_sampling = valid.Param(valid.positiveint, 1000)
+    export_dir = valid.Param(valid.utf8, None)
     export_multi_curves = valid.Param(valid.boolean, False)
     ground_motion_correlation_model = valid.Param(
         valid.NoneOr(valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)), None)
@@ -83,7 +84,8 @@ class OqParam(valid.ParamSet):
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 0)
     master_seed = valid.Param(valid.positiveint, 0)
-    maximum_distance = valid.Param(valid.positivefloat)
+    maximum_distance = valid.Param(valid.positivefloat)  # km
+    asset_hazard_distance = valid.Param(valid.positivefloat, 5)  # km
     maximum_tile_weight = valid.Param(valid.positivefloat)
     mean_hazard_curves = valid.Param(valid.boolean, False)
     number_of_ground_motion_fields = valid.Param(valid.positiveint, 0)
@@ -94,10 +96,11 @@ class OqParam(valid.ParamSet):
     quantile_hazard_curves = valid.Param(valid.probabilities, [])
     quantile_loss_curves = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
-    reference_depth_to_1pt0km_per_sec = valid.Param(valid.positivefloat)
-    reference_depth_to_2pt5km_per_sec = valid.Param(valid.positivefloat)
-    reference_vs30_type = valid.Param(valid.Choice('measured', 'inferred'))
-    reference_vs30_value = valid.Param(valid.positivefloat)
+    reference_depth_to_1pt0km_per_sec = valid.Param(valid.positivefloat, 1.)
+    reference_depth_to_2pt5km_per_sec = valid.Param(valid.positivefloat, 1.)
+    reference_vs30_type = valid.Param(
+        valid.Choice('measured', 'inferred'), 'measured')
+    reference_vs30_value = valid.Param(valid.positivefloat, 1.)
     reference_backarc = valid.Param(valid.boolean, False)
     region = valid.Param(valid.coordinates, None)
     region_constraint = valid.Param(valid.wkt_polygon, None)
@@ -120,6 +123,8 @@ class OqParam(valid.ParamSet):
 
     def __init__(self, **names_vals):
         super(OqParam, self).__init__(**names_vals)
+        if not self.risk_investigation_time and self.investigation_time:
+            self.risk_investigation_time = self.investigation_time
         if 'intensity_measure_types' in names_vals:
             self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
             delattr(self, 'intensity_measure_types')
@@ -156,7 +161,7 @@ class OqParam(valid.ParamSet):
     def is_valid_geometry(self):
         """
         It is possible to infer the geometry only if exactly
-        one of sites, sites_csv, hazard_curves_csv, gmvs_csv,
+        one of sites, sites_csv, hazard_curves_csv, gmfs_csv,
         region and exposure_file is set. You did set more than
         one, or nothing.
         """
@@ -166,7 +171,7 @@ class OqParam(valid.ParamSet):
             sites=bool(self.sites),
             sites_csv=self.inputs.get('sites', 0),
             hazard_curves_csv=self.inputs.get('hazard_curves', 0),
-            gmvs_csv=self.inputs.get('gmvs', 0),
+            gmfs_csv=self.inputs.get('gmvs', 0),
             region=bool(self.region),
             exposure=self.inputs.get('exposure', 0))
         # NB: below we check that all the flags

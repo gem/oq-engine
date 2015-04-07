@@ -142,6 +142,39 @@ class Workflow(object):
         """
         return sorted(self.risk_functions)
 
+    def gen_out_by_rlz(self, assets, hazards, epsilons, tags):
+        """
+        :param assets: an array of assets of homogeneous taxonomy
+        :param hazards: an array of dictionaries per each asset
+        :param epsilons: an array of epsilons per each asset
+        :param tags: rupture tags
+
+        Yield dictionaries out_by_rlz.
+        """
+        for loss_type in self.loss_types:
+            assets_ = assets
+            epsilons_ = epsilons
+            tags_ = tags
+
+            values = get_values(loss_type, assets)
+            ok = ~numpy.isnan(values)
+            if not ok.any():
+                # there are no assets with a value
+                continue
+            # there may be assets without a value
+            missing_value = not ok.all()
+            if missing_value:
+                assets_ = assets[ok]
+                hazards = hazards[ok]
+                epsilons_ = epsilons[ok]
+                tags_ = tags[ok]
+
+            out_by_rlz = {}
+            for rlz in hazards[0]:
+                hazards_ = [haz[rlz] for haz in hazards]
+                out_by_rlz[rlz] = self(
+                    loss_type, assets_, hazards_, epsilons_, tags_)
+            yield out_by_rlz
 
 
 @registry.add('classical_risk')
@@ -827,9 +860,24 @@ class Damage(Workflow):
              for gmvs in gmfs])
         return assets, damages
 
+    def gen_out_by_rlz(self, assets, hazards, epsilons, tags):
+        """
+        :param assets: an array of assets of homogeneous taxonomy
+        :param hazards: an array of dictionaries per each asset
+        :param epsilons: an array of epsilons per each asset
+        :param tags: rupture tags
+
+        Yield dictionaries out_by_rlz
+        """
+        out_by_rlz = {}
+        for rlz in hazards[0]:
+            hazs = [haz[rlz] for haz in hazards]
+            out_by_rlz[rlz] = self('damage', assets, hazs, epsilons, tags)
+        yield out_by_rlz
+
 
 @registry.add('classical_damage')
-class ClassicalDamage(Workflow):
+class ClassicalDamage(Damage):
     """
     Implements the ClassicalDamage workflow
     """
