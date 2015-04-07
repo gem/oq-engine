@@ -110,7 +110,7 @@ class HazardMapTaskFuncTestCase(unittest.TestCase):
 
             for curve in lt_haz_curves:
                 post_proc.hazard_curves_to_hazard_map.task_func(
-                    self.monitor, [curve], self.TEST_POES)
+                    [curve], self.TEST_POES, self.monitor)
 
                 lt_rlz = curve.lt_realization
                 # There should be two maps: 1 for each PoE
@@ -132,7 +132,7 @@ class HazardMapTaskFuncTestCase(unittest.TestCase):
 
             for curve in mean_haz_curves:
                 post_proc.hazard_curves_to_hazard_map.task_func(
-                    self.monitor, [curve], self.TEST_POES)
+                    [curve], self.TEST_POES, self.monitor)
 
                 hm_0_1, hm_0_02 = models.HazardMap.objects.filter(
                     output__oq_job=self.job,
@@ -154,7 +154,7 @@ class HazardMapTaskFuncTestCase(unittest.TestCase):
 
                 for curve in quantile_haz_curves:
                     post_proc.hazard_curves_to_hazard_map.task_func(
-                        self.monitor, [curve], self.TEST_POES)
+                        [curve], self.TEST_POES, self.monitor)
 
                     hm_0_1, hm_0_02 = models.HazardMap.objects.filter(
                         output__oq_job=self.job,

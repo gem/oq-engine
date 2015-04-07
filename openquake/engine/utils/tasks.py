@@ -52,6 +52,8 @@ class OqTaskManager(TaskManager):
 
     Progress report is built-in.
     """
+    progress = staticmethod(logs.LOG.progress)
+
     def submit(self, *args):
         """
         Submit an oqtask with the given arguments to celery and return
@@ -92,7 +94,7 @@ class OqTaskManager(TaskManager):
             del backend._cache[task_id]  # work around a celery bug
         return acc
 
-# a convenient alias
+# convenient aliases
 starmap = OqTaskManager.starmap
 
 
@@ -104,7 +106,7 @@ def apply_reduce(task, task_args,
                  key=lambda item: 'Unspecified',
                  name=None):
     """
-    Apply a task to a tuple of the form (monitor, data, *args)
+    Apply a task to a tuple of the form (data, *args)
     by splitting the data in chunks and reduce the results with an
     aggregation function.
 
@@ -118,15 +120,14 @@ def apply_reduce(task, task_args,
     """
     if acc is None:
         acc = AccumDict()
-    monitor = task_args[0]
-    data = task_args[1]
-    args = task_args[2:]
+    data = task_args[0]
+    args = task_args[1:]
     if not data:
         return acc
     elif len(data) == 1 or not concurrent_tasks:
-        return agg(acc, task.task_func(monitor, data, *args))
+        return agg(acc, task.task_func(data, *args))
     blocks = split_in_blocks(data, concurrent_tasks, weight, key)
-    task_args = [(monitor, block) + args for block in blocks]
+    task_args = [(block,) + args for block in blocks]
     return starmap(task, task_args, logs.LOG.progress, name).reduce(agg, acc)
 
 
@@ -145,8 +146,8 @@ def oqtask(task_func):
         code surrounded by a try-except. If any error occurs, log it as a
         critical failure.
         """
-        # the first argument is assumed to be a monitor
-        monitor = args[0]
+        # the last argument is assumed to be a monitor
+        monitor = args[-1]
         job = models.OqJob.objects.get(id=monitor.job_id)
         if job.is_running is False:
             # the job was killed, it is useless to run the task
@@ -154,27 +155,26 @@ def oqtask(task_func):
 
         # it is important to save the task id soon, so that
         # the revoke functionality can work
-        with monitor('storing task id', tsk) as mon:
+        with monitor('storing task id', task=tsk, autoflush=True):
             pass
-        mon.flush()
 
         with logs.handle(job):
             # log a warning if too much memory is used
             check_mem_usage(SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
             # run the task
-            with monitor('total ' + task_func.__name__, tsk) as mon:
-                try:
+            try:
+                total = 'total ' + task_func.__name__
+                with monitor(total, task=tsk, autoflush=True):
                     return task_func(*args)
-                finally:
-                    # save on the db
-                    mon.flush()
-                    CacheInserter.flushall()
-                    # the task finished, we can remove from the performance
-                    # table the associated row 'storing task id'
-                    models.Performance.objects.filter(
-                        oq_job=job,
-                        operation='storing task id',
-                        task_id=tsk.request.id).delete()
+            finally:
+                # save on the db
+                CacheInserter.flushall()
+                # the task finished, we can remove from the performance
+                # table the associated row 'storing task id'
+                models.Performance.objects.filter(
+                    oq_job=job,
+                    operation='storing task id',
+                    task_id=tsk.request.id).delete()
     celery_queue = config.get('amqp', 'celery_queue')
     f = lambda *args: safely_call(wrapped, args, pickle=True)
     f.__name__ = task_func.__name__
