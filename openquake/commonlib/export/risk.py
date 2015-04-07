@@ -34,7 +34,7 @@ def export_dmg_xml(key, export_dir, damage_states, dmg_data):
 
 
 @export.add(('asset-loss', 'csv'), ('asset-ins', 'csv'))
-def export_loss_csv(key, export_dir, data):
+def export_asset_loss_csv(key, export_dir, data):
     """
     Export aggregate losses in CSV.
 
@@ -44,7 +44,7 @@ def export_loss_csv(key, export_dir, data):
     """
     dest = os.path.join(export_dir, '%s.%s' % key)
     header = ['LossType', 'Unit', 'Asset', 'Mean', 'Standard Deviation']
-    writers.save_csv(dest, [header] + data)
+    writers.save_csv(dest, [header] + data, fmt='%11.7E')
     return AccumDict({key: dest})
 
 
@@ -59,7 +59,7 @@ def export_agg_loss_csv(key, export_dir, aggcurves):
     """
     dest = os.path.join(export_dir, '%s.%s' % key)
     header = ['LossType', 'Unit', 'Mean', 'Standard Deviation']
-    writers.save_csv(dest, [header] + aggcurves)
+    writers.save_csv(dest, [header] + aggcurves, fmt='%11.7E')
     return AccumDict({key: dest})
 
 
