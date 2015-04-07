@@ -97,7 +97,7 @@ def gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
 
 
 @tasks.oqtask
-def compute_ruptures(monitor, sources, sitecol, info):
+def compute_ruptures(sources, sitecol, info, monitor):
     """
     Celery task for the stochastic event set calculator.
 
@@ -110,14 +110,14 @@ def compute_ruptures(monitor, sources, sitecol, info):
     `ground_motion_fields` parameter), GMFs can be computed from each rupture
     in each stochastic event set. GMFs are also saved to the database.
 
-    :param monitor:
-        monitor of the currently running job.
     :param sources:
         List of commonlib.source.Source tuples
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param info:
         a :class:`openquake.commonlib.source.CompositionInfo` instance
+    :param monitor:
+        monitor of the currently running job.
     :returns:
         a dictionary trt_model_id -> tot_ruptures
     """
@@ -130,10 +130,10 @@ def compute_ruptures(monitor, sources, sitecol, info):
     hc = models.oqparam(monitor.job_id)
     tot_ruptures = 0
 
-    filter_sites_mon = monitor('filtering sites')
-    generate_ruptures_mon = monitor('generating ruptures')
-    filter_ruptures_mon = monitor('filtering ruptures')
-    save_ruptures_mon = monitor('saving ruptures')
+    filter_sites_mon = monitor('filtering sites', measuremem=False)
+    generate_ruptures_mon = monitor('generating ruptures', measuremem=False)
+    filter_ruptures_mon = monitor('filtering ruptures', measuremem=False)
+    save_ruptures_mon = monitor('saving ruptures', measuremem=False)
 
     # Compute and save stochastic event sets
     for src in sources:
@@ -196,16 +196,16 @@ def compute_ruptures(monitor, sources, sitecol, info):
 
 
 @tasks.oqtask
-def compute_gmfs_and_curves(monitor, ses_ruptures, sitecol, rlzs_assoc):
+def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
     """
-    :param int job_id:
-        monitor of the currently running job
     :param ses_ruptures:
         a list of blocks of SESRuptures with homogeneous TrtModel
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param rlzs_assoc:
         a :class:`openquake.commonlib.source.RlzsAssoc` instance
+    :param monitor:
+        monitor of the currently running job
     :returns:
         a dictionary trt_model_id -> (curves_by_gsim, bounding_boxes)
         where the list of bounding boxes is empty
@@ -224,7 +224,7 @@ def compute_gmfs_and_curves(monitor, ses_ruptures, sitecol, rlzs_assoc):
         sorted(imts), sorted(gsims), ses_coll,
         hc.truncation_level, models.get_correl_model(job))
 
-    with monitor('computing gmfs'):
+    with monitor('computing gmfs', autoflush=True):
         for rupture, group in itertools.groupby(
                 ses_ruptures, operator.attrgetter('rupture')):
             r_sites = sitecol if rupture.site_indices is None \
@@ -235,14 +235,14 @@ def compute_gmfs_and_curves(monitor, ses_ruptures, sitecol, rlzs_assoc):
     if hc.hazard_curves_from_gmfs:
         duration = hc.investigation_time * hc.ses_per_logic_tree_path * (
             hc.number_of_logic_tree_samples or 1)
-        with monitor('hazard curves from gmfs'):
+        with monitor('hazard curves from gmfs', autoflush=True):
             result[trt_model.id] = (calc.to_haz_curves(
                 sitecol.sids, hc.imtls, hc.investigation_time, duration), [])
     else:
         result[trt_model.id] = ([], [])
 
     if hc.ground_motion_fields:
-        with monitor('saving gmfs'):
+        with monitor('saving gmfs', autoflush=True):
             calc.save_gmfs(rlzs_assoc)
 
     return result
@@ -470,5 +470,5 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
             zeros = {}
         return tasks.apply_reduce(
             compute_gmfs_and_curves,
-            (self.monitor, sesruptures, sitecol, self.rlzs_assoc),
+            (sesruptures, sitecol, self.rlzs_assoc, self.monitor),
             base_agg, zeros, key=lambda sr: sr.col_idx)
