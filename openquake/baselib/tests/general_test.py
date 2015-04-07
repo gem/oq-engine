@@ -161,3 +161,12 @@ class AssertCloseTestCase(unittest.TestCase):
             gmf1 = {'a': {'PGA': [0.1, 0.2], 'SA(0.1)': [0.3, 0.4]}}
             gmf2 = {'a': {'PGA': [0.1, 0.2], 'SA(0.1)': [0.3, 0.41]}}
             assert_close(gmf1, gmf2)
+
+        class C:
+            pass
+
+        c1 = C()
+        c2 = C()
+        c2.a = 1
+        with self.assertRaises(AssertionError):  # different attributes
+            assert_close(c1, c2)

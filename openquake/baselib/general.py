@@ -221,6 +221,11 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1,
 def assert_close_seq(seq1, seq2, rtol, atol):
     """
     Compare two sequences of the same length.
+
+    :param seq1: a sequence
+    :param seq2: another sequence
+    :param rtol: relative tolerance
+    :param atol: absolute tolerance
     """
     assert len(seq1) == len(seq2), 'Lists of different lenghts: %d != %d' % (
         len(seq1), len(seq2))
@@ -233,23 +238,31 @@ def assert_close(a, b, rtol=1e-07, atol=0):
     Compare for equality up to a given precision two composite objects
     which may contain floats. NB: if the objects are or contain generators,
     they are exhausted.
+
+    :param a: an object
+    :param b: another object
+    :param rtol: relative tolerance
+    :param atol: absolute tolerance
     """
     if a == b:  # shortcut
         return
     if isinstance(a, numpy.ndarray):  # another shortcut
         numpy.testing.assert_allclose(a, b, rtol, atol)
         return
-    if hasattr(a, '__slots__'):  # typically for source objects
+    if hasattr(a, '__slots__'):  # record-like objects
         assert_close_seq(a.__slots__, b.__slots__, rtol, atol)
         for x, y in zip(a.__slots__, b.__slots__):
             assert_close(getattr(a, x), getattr(a, y), rtol, atol)
         return
-    if isinstance(a, collections.Mapping):
+    if isinstance(a, collections.Mapping):  # dict-like objects
         assert_close_seq(a.keys(), b.keys(), rtol, atol)
         assert_close_seq(a.values(), b.values(), rtol, atol)
         return
-    if hasattr(a, '__iter__'):
+    if hasattr(a, '__iter__'):  # iterable objects
         assert_close_seq(list(a), list(b), rtol, atol)
+        return
+    if hasattr(a, '__dict__'):  # objects with an attribute dictionary
+        assert_close(vars(a), vars(b))
         return
     raise AssertionError('%r != %r' % (a, b))
 
