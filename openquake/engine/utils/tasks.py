@@ -18,23 +18,22 @@
 
 """Utility functions related to splitting work into tasks."""
 
-import operator
-
 from celery.result import ResultSet
 from celery.app import current_app
 from celery.task import task
 
-from openquake.baselib.general import split_in_blocks, AccumDict
 from openquake.commonlib.parallel import \
-    TaskManager, safely_call, check_mem_usage, pickle_sequence, no_distribute
+    TaskManager, safely_call, check_mem_usage
 from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.utils import config
 from openquake.engine.writer import CacheInserter
 
 CONCURRENT_TASKS = int(config.get('celery', 'concurrent_tasks'))
+
 SOFT_MEM_LIMIT = int(config.get('memory', 'soft_mem_limit'))
 HARD_MEM_LIMIT = int(config.get('memory', 'hard_mem_limit'))
+check_mem_usage.__defaults__ = (SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
 
 
 class JobNotRunning(Exception):
@@ -54,21 +53,9 @@ class OqTaskManager(TaskManager):
     """
     progress = staticmethod(logs.LOG.progress)
 
-    def submit(self, *args):
-        """
-        Submit an oqtask with the given arguments to celery and return
-        an AsyncResult. If the variable OQ_NO_DISTRIBUTE is set, the
-        task function is run in process and the result is returned.
-        """
-        # log a warning if too much memory is used
-        check_mem_usage(SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
-        if no_distribute():
-            res = safely_call(self.oqtask.task_func, args)
-        else:
-            piks = pickle_sequence(args)
-            self.sent += sum(len(p) for p in piks)
-            res = self.oqtask.delay(*piks)
-        self.results.append(res)
+    def _submit(self, pickled_args):
+        # submit tasks by using celery
+        return self.oqtask.delay(*pickled_args)
 
     def aggregate_result_set(self, agg, acc):
         """
@@ -84,8 +71,7 @@ class OqTaskManager(TaskManager):
         backend = current_app().backend
         rset = ResultSet(self.results)
         for task_id, result_dict in rset.iter_native():
-            # log a warning if too much memory is used
-            check_mem_usage(SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
+            check_mem_usage()  # warn if too much memory is used
             result = result_dict['result']
             if isinstance(result, BaseException):
                 raise result
@@ -96,39 +82,7 @@ class OqTaskManager(TaskManager):
 
 # convenient aliases
 starmap = OqTaskManager.starmap
-
-
-def apply_reduce(task, task_args,
-                 agg=operator.add,
-                 acc=None,
-                 concurrent_tasks=CONCURRENT_TASKS,
-                 weight=lambda item: 1,
-                 key=lambda item: 'Unspecified',
-                 name=None):
-    """
-    Apply a task to a tuple of the form (data, *args)
-    by splitting the data in chunks and reduce the results with an
-    aggregation function.
-
-    :param task: an oqtask
-    :param task_args: the arguments to be passed to the task function
-    :param agg: the aggregation function
-    :param acc: initial value of the accumulator
-    :param concurrent_tasks: hint about how many tasks to generate
-    :param weight: function to extract the weight of an item in data
-    :param key: function to extract the kind of an item in data
-    """
-    if acc is None:
-        acc = AccumDict()
-    data = task_args[0]
-    args = task_args[1:]
-    if not data:
-        return acc
-    elif len(data) == 1 or not concurrent_tasks:
-        return agg(acc, task.task_func(data, *args))
-    blocks = split_in_blocks(data, concurrent_tasks, weight, key)
-    task_args = [(block,) + args for block in blocks]
-    return starmap(task, task_args, logs.LOG.progress, name).reduce(agg, acc)
+apply_reduce = OqTaskManager.apply_reduce
 
 
 def oqtask(task_func):
@@ -159,8 +113,7 @@ def oqtask(task_func):
             pass
 
         with logs.handle(job):
-            # log a warning if too much memory is used
-            check_mem_usage(SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
+            check_mem_usage()  # warn if too much memory is used
             # run the task
             try:
                 total = 'total ' + task_func.__name__
