@@ -1,4 +1,4 @@
-{% extends "engineweb/base.html" %}
+{% extends "engine/base.html" %}
 
   {% block nav-items %}
                 <li class="calc">
@@ -97,5 +97,5 @@
 
   {% block extra_script %}
   {{ block.super }}
-  <script type="text/javascript" src="{{ STATIC_URL }}js/engineweb.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}js/engine.js"></script>
   {% endblock extra_script %}
