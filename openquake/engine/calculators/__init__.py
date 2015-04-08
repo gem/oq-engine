@@ -18,7 +18,7 @@
 
 from openquake.baselib.general import CallableDict, import_all
 from openquake.commonlib.source import TrtModel
-from openquake.commonlib import parallel
+from openquake.commonlib.parallel import TaskManager
 from openquake.commonlib.calculators import base
 from openquake.engine.utils import tasks, config
 from openquake.engine.performance import EnginePerformanceMonitor
@@ -50,7 +50,9 @@ base.BaseCalculator.__init__ = __init__
 def _submit(self, piks):
     oqtask = tasks.oqtask(self.oqtask.task_func)
     return oqtask.delay(*piks)
-parallel.TaskManager._submit = _submit
+TaskManager._submit = _submit
+TaskManager.aggregate_result_set = (
+    tasks.OqTaskManager.aggregate_result_set.__func__)
 
 # make aliases for the oq-lite calculators
 for name in list(base.calculators):
