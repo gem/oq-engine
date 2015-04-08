@@ -34,15 +34,23 @@ PerAssetLoss = collections.namedtuple(  # the loss map
     'PerAssetLoss', 'loss_type unit asset_ref mean stddev')
 
 
-def losses_per_asset(tag, loss_type, assets, means, stddevs):
+def losses_per_asset(tag, loss_type, assets, means, stddevs,
+                     multiply_by_value=True):
     """
     :returns: a dictionary {
     (tag, loss_type): [(asset_ref, mean_value, stddev), ...]}
     """
     lst = []
     for a, m, s in zip(assets, means, stddevs):
-        value = a.value(loss_type)
-        lst.append((a.id, m * value, s * value))
+        if multiply_by_value:
+            # this is really ugly: we should change workflow.Scenario
+            # to return the already multiplied insured_loss_matrix;
+            # we postpone the fix to the future when the engine
+            # scenario_risk calculator will be removed
+            v = a.value(loss_type)
+        else:
+            v = 1
+        lst.append((a.id, m * v, s * v))
     return {(tag, loss_type): lst}
 
 
@@ -82,7 +90,8 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
                     means = out.insured_loss_matrix.mean(axis=1),
                     stddevs = out.insured_loss_matrix.std(ddof=1, axis=1)
                     result += losses_per_asset(
-                        'asset-ins', out.loss_type, assets, means, stddevs)
+                        'asset-ins', out.loss_type, assets, means, stddevs,
+                        multiply_by_value=False)
                     result += {('ins', out.loss_type): out.insured_losses}
     return result
 
