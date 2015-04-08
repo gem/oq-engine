@@ -25,7 +25,8 @@ from openquake.baselib import general
 from openquake.commonlib import riskmodels, readinput
 from openquake.commonlib.calculators import base, calc
 from openquake.commonlib.export import export
-
+from openquake.commonlib.calculators.scenario_damage import \
+    ScenarioDamageCalculator
 
 AggLoss = collections.namedtuple(
     'AggLoss', 'loss_type unit mean stddev')
@@ -97,7 +98,7 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
 
 
 @base.calculators.add('scenario_risk')
-class ScenarioRiskCalculator(base.RiskCalculator):
+class ScenarioRiskCalculator(ScenarioDamageCalculator):
     """
     Run a scenario risk calculation
     """
@@ -109,18 +110,18 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         Compute the GMFs, build the epsilons, the riskinputs, and a dictionary
         with the unit of measure, used in the export phase.
         """
-        super(ScenarioRiskCalculator, self).pre_execute()
-        self.gsims = readinput.get_gsims(self.oqparam)
-        self.rlzs_assoc = riskinput.FakeRlzsAssoc(len(self.gsims))
+        # notice, not super(ScenarioRiskCalculator, self)
+        super(ScenarioDamageCalculator, self).pre_execute()
+        if 'gmfs' in self.oqparam.inputs:  # from file
+            gmfs = self.read_gmfs_from_csv()
+        else:  # from rupture
+            gmfs = self.compute_gmfs()
 
-        logging.info('Computing the GMFs')
-        gmfs_by_imt = calc.calc_gmfs(self.oqparam, self.sitecol)
-
-        logging.info('Preparing the risk input')
+        logging.info('Building the epsilons')
         eps_dict = self.make_eps_dict(
             self.oqparam.number_of_ground_motion_fields)
-        self.riskinputs = self.build_riskinputs(
-            {(0, str(self.gsims[0])): gmfs_by_imt}, eps_dict)
+
+        self.riskinputs = self.build_riskinputs(gmfs, eps_dict)
         self.unit = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
                      for ct in self.exposure.cost_types}
         self.unit['fatalities'] = 'people'
