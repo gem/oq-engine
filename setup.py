@@ -65,7 +65,12 @@ setup(
     include_package_data=True,
     package_data={"openquake.engine": [
         "db/schema/upgrades/*.sql",
-        "openquake.cfg", "openquake_worker.cfg", "README", "LICENSE"]},
+        "openquake.cfg", "openquake_worker.cfg", "README", "LICENSE"],
+        "openquake.server": [
+        "templates/*.html", "templates/*/*.html", "static/css/*.css",
+        "static/*/*.js", "static/*/*/*.js", "static/*/*/*/*.js",
+        "static/*/*.map", "static/*/*/*.map", "static/*/*/*/*.map",
+        "static/font/*.ttf", "static/font/*.css", "static/img/*.png"]},
     scripts=["openquake/engine/bin/oq_create_db",
              "openquake/engine/bin/openquake"],
 
