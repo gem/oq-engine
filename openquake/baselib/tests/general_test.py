@@ -25,7 +25,8 @@ from operator import attrgetter
 from collections import namedtuple
 
 from openquake.baselib.general import (
-    block_splitter, split_in_blocks, assert_independent, search_module)
+    block_splitter, split_in_blocks, assert_independent, search_module,
+    assert_close)
 
 
 class BlockSplitterTestCase(unittest.TestCase):
@@ -141,3 +142,31 @@ class SearchModuleTestCase(unittest.TestCase):
     def test_existing_module_in_package(self):
         # this test may fail if oq-risklib is not on top of your PYTHONPATH
         self.assertIsNotNone(search_module('openquake.baselib.general'))
+
+
+class AssertCloseTestCase(unittest.TestCase):
+    def test_different(self):
+        a = [1, 2]
+        b = [1, 2, 3]
+        with self.assertRaises(AssertionError):  # different lenghts
+            assert_close(a, b)
+
+        with self.assertRaises(AssertionError):  # different floats
+            assert_close([1, 2, 3.1], b)
+
+        with self.assertRaises(AssertionError):  # None and float
+            assert_close([1, 2, None], b)
+
+        with self.assertRaises(AssertionError):  # nested dicts
+            gmf1 = {'a': {'PGA': [0.1, 0.2], 'SA(0.1)': [0.3, 0.4]}}
+            gmf2 = {'a': {'PGA': [0.1, 0.2], 'SA(0.1)': [0.3, 0.41]}}
+            assert_close(gmf1, gmf2)
+
+        class C:
+            pass
+
+        c1 = C()
+        c2 = C()
+        c2.a = 1
+        with self.assertRaises(AssertionError):  # different attributes
+            assert_close(c1, c2)
