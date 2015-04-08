@@ -131,6 +131,7 @@ def oqtask(task_func):
     celery_queue = config.get('amqp', 'celery_queue')
     f = lambda *args: safely_call(wrapped, args, pickle=True)
     f.__name__ = task_func.__name__
+    f.__module__ = task_func.__module__
     tsk = task(f, queue=celery_queue)
     tsk.__func__ = tsk.task_func = task_func
     return tsk
