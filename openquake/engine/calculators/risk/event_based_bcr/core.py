@@ -16,8 +16,6 @@
 """
 Core functionality for the Event Based BCR Risk calculator.
 """
-from openquake.risklib import workflows
-
 from openquake.engine.calculators.risk import writers, validation
 from openquake.engine.calculators.risk.event_based_risk \
     import core as event_based
@@ -48,10 +46,10 @@ def event_based_bcr(workflow, getter, outputdict, params, monitor):
       A monitor instance
     """
     for loss_type in workflow.loss_types:
-        with monitor('computing risk'):
+        with monitor('computing risk', autoflush=True):
             outputs = workflow.compute_all_outputs(getter, loss_type)
         outputdict = outputdict.with_args(loss_type=loss_type)
-        with monitor('saving risk'):
+        with monitor('saving risk', autoflush=True):
             for out in outputs:
                 outputdict.write(
                     workflow.assets,
