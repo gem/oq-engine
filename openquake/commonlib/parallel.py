@@ -238,15 +238,15 @@ class TaskManager(object):
         cls.executor = ProcessPoolExecutor()
 
     @classmethod
-    def starmap(cls, task, task_args, progress=logging.info, name=None):
+    def starmap(cls, task, task_args, name=None):
         """
         Spawn a bunch of tasks with the given list of arguments
 
         :returns: a TaskManager object with a .result method.
         """
-        self = cls(task, progress, name)
+        self = cls(task, name)
         for i, a in enumerate(task_args, 1):
-            progress('Submitting task %s #%d', self.name, i)
+            cls.progress('Submitting task %s #%d', self.name, i)
             self.submit(*a)
         return self
 
@@ -289,13 +289,11 @@ class TaskManager(object):
             for chunk in chunks:
                 acc = agg(acc, task.task_func(chunk, *args))
             return acc
-        tm = cls.starmap(task, [(chunk,) + args for chunk in chunks],
-                         cls.progress, name)
+        tm = cls.starmap(task, [(chunk,) + args for chunk in chunks], name)
         return tm.reduce(agg, acc)
 
-    def __init__(self, oqtask, progress=logging.info, name=None):
+    def __init__(self, oqtask, name=None):
         self.oqtask = oqtask
-        self.progress = progress
         self.name = name or oqtask.__name__
         self.results = []
         self.sent = 0
@@ -319,6 +317,7 @@ class TaskManager(object):
         self.results.append(res)
 
     def _submit(self, piks):
+        # submit tasks by using the ProcessPoolExecutor
         return self.executor.submit(self.oqtask, *piks)
 
     def aggregate_result_set(self, agg, acc):
