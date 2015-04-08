@@ -17,21 +17,17 @@
 """This package contains Hazard and Risk calculator classes."""
 
 from openquake.baselib.general import CallableDict, import_all
+from openquake.commonlib.source import TrtModel
+from openquake.commonlib import parallel
+from openquake.commonlib.calculators import base
+from openquake.engine.utils import tasks, config
+from openquake.engine.performance import EnginePerformanceMonitor
 
 # an ordered dictionary of calculator classes
 calculators = CallableDict(lambda job: job.get_param('calculation_mode'))
 
-import_all('openquake.engine.calculators')
 
-from openquake.commonlib.calculators import base
-from openquake.engine.utils import tasks
-
-from openquake.engine.performance import EnginePerformanceMonitor
-from openquake.engine.utils import config
-
-from openquake.commonlib.source import TrtModel
-
-
+# monkey patch the base.BaseCalculator class
 def __init__(self, job):
     self.job = job
     self.oqparam = self.job.get_oqparam()
@@ -47,10 +43,17 @@ def __init__(self, job):
         config.get('hazard', 'max_output_weight'))
     TrtModel.POINT_SOURCE_WEIGHT = float(
         config.get('hazard', 'point_source_weight'))
-
-
 base.BaseCalculator.__init__ = __init__
 
-for name in list(calculators):
-    calc = calculators[name + '_lite'] = base.calculators[name]
-    calc.core_func = tasks.oqtask(calc.core_func)
+
+# monkey patch the parallel.TaskManager class
+def _submit(self, piks):
+    oqtask = tasks.oqtask(self.oqtask.task_func)
+    return oqtask.delay(*piks)
+parallel.TaskManager._submit = _submit
+
+# make aliases for the oq-lite calculators
+for name in list(base.calculators):
+    calculators[name + '_lite'] = base.calculators[name]
+
+import_all('openquake.engine.calculators')
