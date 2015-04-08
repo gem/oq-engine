@@ -218,100 +218,53 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1,
     return block_splitter(items, math.ceil(total_weight / hint), weight, key)
 
 
-# the implementation here is unbelievably ugly; it is a remnant of the
-# past and soon or later will be removed (MS)
-def deep_eq(a, b, decimal=7, exclude=None):
-    """Deep compare two objects for equality by traversing __dict__ and
-    __slots__.
-
-    Caution: This function will exhaust generators.
-
-    :param decimal:
-        Desired precision (digits after the decimal point) for numerical
-        comparisons.
-
-    :param exclude:
-        A list of attributes that will be excluded when traversing objects
-
-    :returns:
-        Return `True` or `False` (to indicate if objects are equal) and a `str`
-        message. If the two objects are equal, the message is empty. If the two
-        objects are not equal, the message indicates which part of the
-        comparison failed.
+def assert_close_seq(seq1, seq2, rtol, atol):
     """
-    exclude = exclude or []
+    Compare two sequences of the same length.
 
-    try:
-        _deep_eq(a, b, decimal=decimal, exclude=exclude)
-    except AssertionError, err:
-        return False, err.message
-    return True, ''
-
-
-def _deep_eq(a, b, decimal, exclude=None):
-    """Do the actual deep comparison. If the two items up for comparison are
-    not equal, a :exception:`AssertionError` is raised (to
-    :function:`deep_eq`).
+    :param seq1: a sequence
+    :param seq2: another sequence
+    :param rtol: relative tolerance
+    :param atol: absolute tolerance
     """
+    assert len(seq1) == len(seq2), 'Lists of different lenghts: %d != %d' % (
+        len(seq1), len(seq2))
+    for x, y in zip(seq1, seq2):
+        assert_close(x, y, rtol, atol)
 
-    exclude = exclude or []
 
-    def _test_dict(a, b):
-        """Compare `dict` types recursively."""
-        assert len(a) == len(b), (
-            "Dicts %(a)s and %(b)s do not have the same length."
-            " Actual lengths: %(len_a)s and %(len_b)s") % dict(
-            a=a, b=b, len_a=len(a), len_b=len(b))
+def assert_close(a, b, rtol=1e-07, atol=0):
+    """
+    Compare for equality up to a given precision two composite objects
+    which may contain floats. NB: if the objects are or contain generators,
+    they are exhausted.
 
-        for key in a:
-            if not key in exclude:
-                _deep_eq(a[key], b[key], decimal)
-
-    def _test_seq(a, b):
-        """Compare `list` or `tuple` types recursively."""
-        assert len(a) == len(b), (
-            "Sequences %(a)s and %(b)s do not have the same length."
-            " Actual lengths: %(len_a)s and %(len_b)s") % \
-            dict(a=a, b=b, len_a=len(a), len_b=len(b))
-
-        for i, item in enumerate(a):
-            _deep_eq(item, b[i], decimal)
-
-    # lists or tuples
-    if isinstance(a, (list, tuple)):
-        _test_seq(a, b)
-    # dicts
-    elif isinstance(a, dict):
-        _test_dict(a, b)
-    # objects with a __dict__
-    elif hasattr(a, '__dict__'):
-        assert a.__class__ == b.__class__, (
-            "%s and %s are different classes") % (a.__class__, b.__class__)
-        _test_dict(a.__dict__, b.__dict__)
-    elif isinstance(a, numpy.ndarray):
-        assert numpy.array_equal(a, b), '%s and %s are different' % (a, b)
-    # iterables (not strings)
-    elif isinstance(a, collections.Iterable) and not isinstance(a, str):
-        # If there's a generator or another type of iterable, treat it as a
-        # `list`. NOTE: Generators will be exhausted if you do this.
-        _test_seq(list(a), list(b))
-    # objects with __slots__
-    elif hasattr(a, '__slots__'):
-        assert a.__class__ == b.__class__, (
-            "%s and %s are different classes") % (a.__class__, b.__class__)
-        assert a.__slots__ == b.__slots__, (
-            "slots %s and %s are not the same") % (a.__slots__, b.__slots__)
-        for slot in a.__slots__:
-            if slot not in exclude:
-                _deep_eq(getattr(a, slot), getattr(b, slot), decimal)
-    else:
-        # Objects must be primitives
-
-        # Are they numbers?
-        if isinstance(a, (int, long, float, complex)):
-            numpy.testing.assert_almost_equal(a, b, decimal=decimal)
-        else:
-            assert a == b, "%s != %s" % (a, b)
+    :param a: an object
+    :param b: another object
+    :param rtol: relative tolerance
+    :param atol: absolute tolerance
+    """
+    if a == b:  # shortcut
+        return
+    if isinstance(a, numpy.ndarray):  # another shortcut
+        numpy.testing.assert_allclose(a, b, rtol, atol)
+        return
+    if hasattr(a, '__slots__'):  # record-like objects
+        assert_close_seq(a.__slots__, b.__slots__, rtol, atol)
+        for x, y in zip(a.__slots__, b.__slots__):
+            assert_close(getattr(a, x), getattr(a, y), rtol, atol)
+        return
+    if isinstance(a, collections.Mapping):  # dict-like objects
+        assert_close_seq(a.keys(), b.keys(), rtol, atol)
+        assert_close_seq(a.values(), b.values(), rtol, atol)
+        return
+    if hasattr(a, '__iter__'):  # iterable objects
+        assert_close_seq(list(a), list(b), rtol, atol)
+        return
+    if hasattr(a, '__dict__'):  # objects with an attribute dictionary
+        assert_close(vars(a), vars(b))
+        return
+    raise AssertionError('%r != %r' % (a, b))
 
 
 def writetmp(content=None, dir=None, prefix="tmp", suffix="tmp"):

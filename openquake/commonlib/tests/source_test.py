@@ -33,7 +33,7 @@ from openquake.commonlib import sourceconverter as s
 from openquake.commonlib.source import parse_source_model, DuplicatedID
 from openquake.commonlib.nrml import nodefactory
 from openquake.commonlib.node import read_nodes
-from openquake.baselib.general import deep_eq
+from openquake.baselib.general import assert_close
 
 # directory where the example files are
 NRML_DIR = os.path.dirname(nrml_examples.__file__)
@@ -346,32 +346,25 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         return char
 
     def test_point_to_hazardlib(self):
-        eq, msg = deep_eq(self._expected_point, self.point)
-        self.assertTrue(eq, msg)
+        assert_close(self._expected_point, self.point)
 
     def test_area_to_hazardlib(self):
-        eq, msg = deep_eq(self.area, self._expected_area)
-        self.assertTrue(eq, msg)
+        assert_close(self.area, self._expected_area)
 
     def test_simple_to_hazardlib(self):
-        eq, msg = deep_eq(self._expected_simple, self.simple)
-        self.assertTrue(eq, msg)
+        assert_close(self._expected_simple, self.simple)
 
     def test_complex_to_hazardlib(self):
-        eq, msg = deep_eq(self._expected_complex, self.cmplx)
-        self.assertTrue(eq, msg)
+        assert_close(self._expected_complex, self.cmplx)
 
     def test_characteristic_simple(self):
-        eq, msg = deep_eq(self._expected_char_simple, self.char_simple)
-        self.assertTrue(eq, msg)
+        assert_close(self._expected_char_simple, self.char_simple)
 
     def test_characteristic_complex(self):
-        eq, msg = deep_eq(self._expected_char_complex, self.char_complex)
-        self.assertTrue(eq, msg)
+        assert_close(self._expected_char_complex, self.char_complex)
 
     def test_characteristic_multi(self):
-        eq, msg = deep_eq(self._expected_char_multi, self.char_multi)
-        self.assertTrue(eq, msg)
+        assert_close(self._expected_char_multi, self.char_multi)
 
     def test_duplicate_id(self):
         converter = s.SourceConverter(
