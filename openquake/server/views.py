@@ -454,7 +454,7 @@ def get_result(request, result_id):
     finally:
         shutil.rmtree(tmpdir)
 
-def engine(request, **kwargs):
+def web_engine(request, **kwargs):
     return render_to_response("engine/index.html",
                               dict(),
                               context_instance=RequestContext(request))
@@ -462,7 +462,7 @@ def engine(request, **kwargs):
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
-def engine_get_outputs(request, calc_id, **kwargs):
+def web_engine_get_outputs(request, calc_id, **kwargs):
     return render_to_response("engine/get_outputs.html",
                               dict([('calc_id', calc_id)]),
                               context_instance=RequestContext(request))
