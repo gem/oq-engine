@@ -238,20 +238,20 @@ class TaskManager(object):
         cls.executor = ProcessPoolExecutor()
 
     @classmethod
-    def starmap(cls, task_func, task_args, progress=logging.info, name=None):
+    def starmap(cls, task, task_args, progress=logging.info, name=None):
         """
         Spawn a bunch of tasks with the given list of arguments
 
         :returns: a TaskManager object with a .result method.
         """
-        self = cls(task_func, progress, name)
+        self = cls(task, progress, name)
         for i, a in enumerate(task_args, 1):
             progress('Submitting task %s #%d', self.name, i)
             self.submit(*a)
         return self
 
     @classmethod
-    def apply_reduce(cls, task_func, task_args, agg=operator.add, acc=None,
+    def apply_reduce(cls, task, task_args, agg=operator.add, acc=None,
                      concurrent_tasks=executor._max_workers,
                      weight=lambda item: 1,
                      key=lambda item: 'Unspecified',
@@ -275,7 +275,7 @@ class TaskManager(object):
         >>> apply_reduce._chunks
         [<WeightedSequence [1, 2, 3], weight=3>, <WeightedSequence [4, 5], weight=2>]
 
-        :param task_func: a function to run in parallel
+        :param task: a function to run in parallel
         :param task_args: the arguments to be passed to the task function
         :param agg: the aggregation function
         :param acc: initial value of the accumulator (default empty AccumDict)
@@ -290,15 +290,15 @@ class TaskManager(object):
         if not arg0:
             return acc
         elif len(arg0) == 1:
-            return agg(acc, task_func(arg0, *args))
+            return agg(acc, task(arg0, *args))
         chunks = list(split_in_blocks(
             arg0, concurrent_tasks or 1, weight, key))
         cls.apply_reduce.__func__._chunks = chunks
         if not concurrent_tasks or no_distribute():
             for chunk in chunks:
-                acc = agg(acc, task_func(chunk, *args))
+                acc = agg(acc, task.task_func(chunk, *args))
             return acc
-        tm = cls.starmap(task_func, [(chunk,) + args for chunk in chunks],
+        tm = cls.starmap(task, [(chunk,) + args for chunk in chunks],
                          cls.progress, name)
         return tm.reduce(agg, acc)
 
@@ -319,10 +319,11 @@ class TaskManager(object):
         """
         check_mem_usage()  # log a warning if too much memory is used
         if no_distribute():
-            res = safely_call(self.oqtask, args)
+            res = safely_call(self.oqtask.task_func, args)
         else:
-            res = self.executor.submit(safely_call, self.oqtask, args)
-        self.sent += len(Pickled(args))
+            piks = pickle_sequence(args)
+            self.sent += sum(len(p) for p in piks)
+            res = self.executor.submit(self.oqtask, *piks)
         self.results.append(res)
 
     def aggregate_result_set(self, agg, acc):
@@ -336,7 +337,11 @@ class TaskManager(object):
         """
         for future in as_completed(self.results):
             check_mem_usage()  # log a warning if too much memory is used
-            acc = agg(acc, future.result())
+            result = future.result()
+            if isinstance(result, BaseException):
+                raise result
+            self.received += len(result)
+            acc = agg(acc, result.unpickle())
         return acc
 
     def reduce(self, agg=operator.add, acc=None):
@@ -407,11 +412,10 @@ def litetask(func):
     Add monitoring support to the decorated function. The last argument
     must be a monitor object.
     """
-    @functools.wraps(func)
-    def wrapped(*args):
-        # the last argument is assumed to be a monitor
+    def w(*args):  # the last argument is assumed to be a monitor
         with args[-1]('total ' + func.__name__, autoflush=True):
             return func(*args)
+    wrapped = functools.wraps(func)(lambda *a: safely_call(w, a, pickle=True))
     wrapped.task_func = func
     return wrapped
 

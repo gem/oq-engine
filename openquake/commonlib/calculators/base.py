@@ -304,11 +304,12 @@ class RiskCalculator(BaseCalculator):
         (riskinputs, riskmodel, monitor).
         """
         monitor = self.monitor(self.core_func.__name__)
-        return apply_reduce(
+        res = apply_reduce(
             self.core_func.__func__,
             (self.riskinputs, self.riskmodel, self.rlzs_assoc, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=get_weight, key=self.riskinput_key)
+        return res
 
     def save_pik(self, result, **kw):
         """Save the risk outputs"""
