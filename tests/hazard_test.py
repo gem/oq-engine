@@ -224,9 +224,10 @@ class TestSiteArrayToCollection(unittest.TestCase):
         """
 
         """
-        self.site_array = np.array([[1.0, 30.0, 35.0, 500.0, 1.0, 1.0, 100.0],
-                                    [2.0, 31.0, 36.0, 200.0, 0.0, 5.0, 500.0],
-                                    [3.0, 32.0, 37.0, 900.0, 1.0, 1.0, 200.0]])
+        self.site_array = np.array(
+                [[1.0, 30.0, 35.0, 500.0, 1.0, 1.0, 100.0, 0.],
+                 [2.0, 31.0, 36.0, 200.0, 0.0, 5.0, 500.0, 0.],
+                 [3.0, 32.0, 37.0, 900.0, 1.0, 1.0, 200.0, 1.]])
         output = haz.site_array_to_collection(self.site_array)
         self.assertTrue(isinstance(output, SiteCollection))
         self.assertEqual(output.total_sites, 3)
@@ -241,10 +242,12 @@ class TestSiteArrayToCollection(unittest.TestCase):
                                    self.site_array[iloc, 3])
             self.assertEqual(output._vs30measured[iloc],
                              self.site_array[iloc, 4].astype(bool))
-            self.assertAlmostEqual(output.z1pt0[iloc],
+            self.assertAlmostEqual(output._z1pt0[iloc],
                                    self.site_array[iloc, 5])
-            self.assertAlmostEqual(output.z2pt5[iloc],
+            self.assertAlmostEqual(output._z2pt5[iloc],
                                    self.site_array[iloc, 6])
+            self.assertEqual(output._backarc[iloc],
+                             self.site_array[iloc, 7].astype(bool))
 
     def test_bad_input(self):
         """
