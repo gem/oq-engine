@@ -3,10 +3,11 @@
 <head>
   <meta charset="utf-8">
   <title>{% block title %}OpenQuake engine{% endblock %}</title>
+  <link href="{{ STATIC_URL }}img/favicon.png" rel="shortcut icon" type="image/png"/>
   <link href="{{ STATIC_URL }}css/base.css" rel="stylesheet" type="text/css" />
   <link href="{{ STATIC_URL }}font/lato_font.css" rel="stylesheet" type="text/css" />
   <link href="{{ STATIC_URL }}css/assets.min.css" rel="stylesheet" type="text/css" />
-  <link href="{{ STATIC_URL }}css/engineweb.css" rel="stylesheet" type="text/css" />
+  <link href="{{ STATIC_URL }}css/engine.css" rel="stylesheet" type="text/css" />
   <link href="{{ STATIC_URL }}css/jasny-bootstrap.min.css" rel="stylesheet" type="text/css" />
 </head>
 <body>
@@ -34,7 +35,24 @@
             <div class="nav-collapse pull-right">
               <div class="pull-right">
                 <ul class="nav pull-right account-bar">
-                  <a href="https://github.com/gem/oq-engine/wiki" id="help_url" rel="tooltip" target="_blank" title="Help"><img src="/static/img/oq-help.png"></a>
+                  {% if user.is_authenticated %}
+                  <li class="user">
+                    {% if user.is_superuser %}
+                    <a href="{% url "admin:index" %}">{{ user.username }}</a>
+                    {% else %}
+                    {{ user.username }}
+                    {% endif %}
+                  </li>
+                  <li class="user">
+                    |
+                  </li>
+                  <li class="user">
+                    <a href="{% url "logout" %}">logout</a>
+                  </li>
+                  {% endif %}
+                  <li class="actions">
+                      <a href="https://github.com/gem/oq-engine/wiki" id="help_url" rel="tooltip" target="_blank" title="Help"><img src="/static/img/oq-help.png"></a>
+                  </li>
                 </ul>
               </div>
             </div>

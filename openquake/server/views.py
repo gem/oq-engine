@@ -176,7 +176,7 @@ def calc(request):
     """
     base_url = _get_base_url(request)
 
-    calc_data = _get_calcs(request.GET)
+    calc_data = _get_calcs(request.GET, request.user)
 
     response_data = []
     for hc_id, status, job_type, is_running, desc in calc_data:
@@ -278,7 +278,7 @@ def run_calc(request):
     temp_dir = os.path.dirname(einfo[0])
     try:
         job, _fut = submit_job(einfo[0], temp_dir, request.POST['database'],
-                               callback_url, foreign_calc_id,
+                               request.user, callback_url, foreign_calc_id,
                                hazard_output_id, hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         logging.error(exc)
@@ -294,7 +294,7 @@ def run_calc(request):
                         status=status)
 
 
-def submit_job(job_file, temp_dir, dbname,
+def submit_job(job_file, temp_dir, dbname, request_user,
                callback_url=None, foreign_calc_id=None,
                hazard_output_id=None, hazard_job_id=None,
                logfile=None):
@@ -302,9 +302,15 @@ def submit_job(job_file, temp_dir, dbname,
     Create a job object from the given job.ini file in the job directory
     and submit it to the job queue.
     """
+
+    if request_user.is_authenticated():
+        job__user_name = request_user.username
+    else:
+        job__user_name = "platform"
+
     ini = os.path.join(temp_dir, job_file)
     job, exctype = safely_call(
-        oq_engine.job_from_file, (ini, "platform", DEFAULT_LOG_LEVEL, '',
+        oq_engine.job_from_file, (ini, job__user_name, DEFAULT_LOG_LEVEL, '',
                                   hazard_output_id, hazard_job_id))
     if exctype:
         tasks.update_calculation(callback_url, status="failed", einfo=job)
@@ -316,10 +322,19 @@ def submit_job(job_file, temp_dir, dbname,
     return job, future
 
 
-def _get_calcs(request_get_dict):
+def _get_calcs(request_get_dict, request_user):
+
+    # TODO if superuser with should show all the calculations i.e.
+    # if request_user.is_superuser:
+    #     job__user_name = ""
+    if request_user.is_authenticated():
+        job__user_name = request_user.username
+    else:
+        job__user_name = "platform"
+
     # helper to get job+calculation data from the oq-engine database
     job_params = oqe_models.JobParam.objects.filter(
-        name='description', job__user_name='platform').order_by('-id')
+        name='description', job__user_name=job__user_name).order_by('-id')
 
     if 'job_type' in request_get_dict:
         job_type = request_get_dict.get('job_type')
@@ -351,10 +366,16 @@ def calc_results(request, calc_id):
         * type (hazard_curve, hazard_map, etc.)
         * url (the exact url where the full result can be accessed)
     """
+    if request.user.is_authenticated():
+        user_name = request.user.username
+    else:
+        user_name = "platform"
+
     # If the specified calculation doesn't exist OR is not yet complete,
     # throw back a 404.
     try:
-        oqjob = oqe_models.OqJob.objects.get(id=calc_id)
+        oqjob = oqe_models.OqJob.objects.get(id=calc_id,
+                                             user_name=user_name)
         if not oqjob.status == 'complete':
             return HttpResponseNotFound()
     except ObjectDoesNotExist:
@@ -454,21 +475,21 @@ def get_result(request, result_id):
     finally:
         shutil.rmtree(tmpdir)
 
-def engineweb(request, **kwargs):
-    return render_to_response("engineweb/index.html",
+def engine(request, **kwargs):
+    return render_to_response("engine/index.html",
                               dict(),
                               context_instance=RequestContext(request))
 
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
-def engineweb_get_outputs(request, calc_id, **kwargs):
-    return render_to_response("engineweb/get_outputs.html",
+def engine_get_outputs(request, calc_id, **kwargs):
+    return render_to_response("engine/get_outputs.html",
                               dict([('calc_id', calc_id)]),
                               context_instance=RequestContext(request))
 
 
 @require_http_methods(['GET'])
 def license(request, **kwargs):
-    return render_to_response("engineweb/license.html",
+    return render_to_response("engine/license.html",
                               context_instance=RequestContext(request))
