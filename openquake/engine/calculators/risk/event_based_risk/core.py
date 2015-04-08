@@ -341,8 +341,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         super(EventBasedRiskCalculator, self).__init__(job)
         # accumulator for the event loss tables
         self.acc = collections.defaultdict(collections.Counter)
-        self.sites_disagg = self.job.get_param('sites_disagg')
-        self.specific_assets = self.job.get_param('specific_assets')
+        self.sites_disagg = self.job.get_param('sites_disagg', [])
+        self.specific_assets = self.job.get_param('specific_assets', [])
 
     def pre_execute(self):
         """
