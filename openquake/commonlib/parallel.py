@@ -533,7 +533,7 @@ class DummyMonitor(PerformanceMonitor):
     def write(self, row):
         """Do nothing"""
 
-    def __call__(self, operation):
+    def __call__(self, operation, **kw):
         return self.__class__(operation)
 
     def __enter__(self):
