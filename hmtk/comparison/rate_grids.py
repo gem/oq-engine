@@ -263,6 +263,18 @@ class RateGrid(object):
 class RatePolygon(RateGrid):
     """
     Calculates the rate of events within a polygon
+    :param limits:
+        Polygon as instance of :class: openquake.hazardlib.geo.polygon.Polygon
+    :param float upper_depth:
+        Upper seismic depth of the polygon (km)
+    :param float lower_depth:
+        Lower seismic depth of the polygon (km)
+    :param list source_model:
+        List of seismic sources
+    :param float rates:
+        Activity rate of polygon
+    :param float area_discretisation:
+        Discretisation spacing (km) of the area source
     """
     def __init__(self, limits, sources, area_discretisation=10.):
         """
@@ -270,8 +282,8 @@ class RatePolygon(RateGrid):
         :param dict limits:
              Configuration as dictionary containing:
              * polygon - OpenQuake Polygon
-             * uppper_depth -
-             * lower_depth
+             * uppper_depth - upper seismogenic depth (km)
+             * lower_depth - lower seismogenic depth (km)
         """
         assert isinstance(limits["polygon"], Polygon)
         self.limits = limits["polygon"]

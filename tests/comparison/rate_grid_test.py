@@ -72,6 +72,7 @@ from hmtk.comparison.rate_grids import RateGrid, RatePolygon
 
 SOURCE_MODEL_FILE = os.path.join(os.path.dirname(__file__),
                                  "rate_grid_test_model.xml")
+
 POINT_SOURCE = PointSource("PNT000", "Point 000",
                            "Active Shallow Crust",
                            EvenlyDiscretizedMFD(5.0, 0.1, [1.0]),
@@ -111,12 +112,11 @@ OUTSIDE_POINT_SOURCE = PointSource("PNT000", "Point 000",
                                   PMF([(1.0, NodalPlane(0.0, 90.0, 0.0))]),
                                   PMF([(1.0, 5.0)]))
 
-
-
 AREA_POLY = Polygon([Point(14.95, 15.05),
                      Point(15.05, 15.05),
                      Point(15.05, 14.95),
                      Point(14.95, 14.95)])
+
 AREA_SOURCE = AreaSource("AREA000", "Area 000",
                          "Active Shallow Crust",
                          EvenlyDiscretizedMFD(5.0, 0.1, [1.0]),
@@ -132,6 +132,7 @@ AREA_SOURCE = AreaSource("AREA000", "Area 000",
                          4.0)
 
 SIMPLE_TRACE = Line([Point(14.975, 15.0, 0.0), Point(15.025, 15.0, 0.0)])
+
 SIMPLE_FAULT = SimpleFaultSource("SFLT000", "Simple Fault Source",
                                  "Active Shallow Crust",
                                  EvenlyDiscretizedMFD(7.0, 0.1, [1.0]),
@@ -174,13 +175,14 @@ CHARACTERISTIC_FAULT = CharacteristicFaultSource(
     SIMPLE_FAULT_SURFACE,
     0.0)
 
+
 class RateGridTestCase(unittest.TestCase):
     """
     General test class for Rate Grid calculation
     """
     def setUp(self):
         """
-
+        Set up limits
         """
         self.limits = [14.9, 15.1, 0.1, 14.9, 15.1, 0.1, 0., 20., 10.]
 
@@ -392,6 +394,8 @@ class RateGridFromFilesTestCase(unittest.TestCase):
 
     def test_source_input_equivalence(self):
         """
+        Verify that the same source model gives the same rate grid results
+        when input as a source model or as an xml
         """
         ratemodel1 = RateGrid(self.limits,
                               [POINT_SOURCE,
