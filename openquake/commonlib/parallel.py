@@ -290,7 +290,7 @@ class TaskManager(object):
         if not arg0:
             return acc
         elif len(arg0) == 1:
-            return agg(acc, task(arg0, *args))
+            return agg(acc, task.task_func(arg0, *args))
         chunks = list(split_in_blocks(
             arg0, concurrent_tasks or 1, weight, key))
         cls.apply_reduce.__func__._chunks = chunks
