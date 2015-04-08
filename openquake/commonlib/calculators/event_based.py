@@ -332,7 +332,7 @@ GmfsCurves = collections.namedtuple('GmfsCurves', 'gmfs curves')
 
 
 def make_gmf_by_key(ses_ruptures, sitecol, imts, gsims,
-                   trunc_level, correl_model):
+                    trunc_level, correl_model):
     """
     Yield gmf_by_imt AccumDicts for each SESRupture and GSIM, with attributes
     .tag, .gsim_str and .r_sites.

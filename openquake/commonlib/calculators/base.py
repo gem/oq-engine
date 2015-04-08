@@ -125,7 +125,6 @@ class HazardCalculator(BaseCalculator):
         else:
             logging.info('Reading the site collection')
             self.sitecol = readinput.get_site_collection(self.oqparam)
-        self.sites = self.sitecol
         if 'source' in self.oqparam.inputs:
             logging.info('Reading the composite source models')
             self.composite_source_model = readinput.get_composite_source_model(
@@ -150,7 +149,8 @@ class HazardCalculator(BaseCalculator):
         :param kw: extras to add to the output dictionary
         :returns: a dictionary with the saved data
         """
-        haz_out = dict(rlzs_assoc=self.rlzs_assoc, sites=self.sites,
+        haz_out = dict(rlzs_assoc=self.rlzs_assoc,
+                       sites=getattr(self, 'sites', self.sitecol),
                        oqparam=self.oqparam)
         haz_out[self.result_kind] = result
         haz_out.update(kw)
