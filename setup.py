@@ -69,7 +69,8 @@ setup(
         "openquake.server": [
         "templates/*.html", "templates/*/*.html", "static/css/*.css",
         "static/*/*.js", "static/*/*/*.js", "static/*/*/*/*.js",
-        "static/*/*.map", "static/*/*/*.map", "static/*/*/*/*.map"]},
+        "static/*/*.map", "static/*/*/*.map", "static/*/*/*/*.map",
+        "static/font/*.ttf", "static/font/*.css", "static/img/*.png"]},
     scripts=["openquake/engine/bin/oq_create_db",
              "openquake/engine/bin/openquake"],
 
