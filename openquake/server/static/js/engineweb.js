@@ -17,11 +17,11 @@
 
 (function($, Backbone, _) {
     var progressHandlingFunction = function(progress) {
-	var percent = progress.loaded / progress.total * 100;
- 	$('.bar').css('width', percent + '%');
-	if (percent == 100) {
+        var percent = progress.loaded / progress.total * 100;
+        $('.bar').css('width', percent + '%');
+        if (percent == 100) {
             dialog.hidePleaseWait();
-	}
+        }
     };
 
     var dialog = (function ()
@@ -29,12 +29,12 @@
                       var pleaseWaitDiv = $('<div class="modal hide" id="pleaseWaitDialog" data-backdrop="static" data-keyboard="false"><div class="modal-header"><h1>Processing...</h1></div><div class="modal-body"><div class="progress progress-striped active"><div class="bar" style="width: 0%;"></div></div></div></div>');
                       return {
                           showPleaseWait: function(msg, progress) {
-	                      $('h1', pleaseWaitDiv).text(msg);
-	                      if (progress) {
-		                  progressHandlingFunction({loaded: 0, total: 1});
-	                      } else {
-		                  progressHandlingFunction({loaded: 1, total: 1});
-	                      }
+                          $('h1', pleaseWaitDiv).text(msg);
+                          if (progress) {
+                          progressHandlingFunction({loaded: 0, total: 1});
+                          } else {
+                          progressHandlingFunction({loaded: 1, total: 1});
+                      }
                               pleaseWaitDiv.modal();
                           },
                           hidePleaseWait: function () {
@@ -45,7 +45,7 @@
 
     var diaerror = (function ()
                   {
-                      var errorDiv = $('<div class="modal fade" style="display: none;" data-keyboard="true">\
+                      var errorDiv = $('<div class="modal fade" style="display: none;" data-keyboard="true" tabindex="-1">\
                 <div class="modal-dialog">\
                   <div class="modal-content">\
                     <div class="modal-header">\
@@ -70,7 +70,7 @@
                                   $('.modal-title', errorDiv).html(title);
                               }
                               if (msg != null) {
-	                          $('.modal-body-pre', errorDiv).html(msg);
+                                  $('.modal-body-pre', errorDiv).html(msg);
                               }
                               errorDiv.modal();
                           },
@@ -84,7 +84,7 @@
         {
             /* the html element where the table is rendered */
             el: $('#my-calculations'),
-            
+
             initialize: function(options) {
 
                 /* whatever happens to any calculation, re-render the table */
@@ -121,22 +121,22 @@
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
                 var view = this;
-                diaerror.showDiaError("Removing calculation  " + calc_id + ".", "...");
+                diaerror.showDiaError("Removing calculation " + calc_id, "...");
                 $.post(gem_oq_server_url + "/v1/calc/" + calc_id + "/remove"
                      ).success(
                          function(data, textStatus, jqXHR)
                          {
-                             diaerror.showDiaError("Remove calculation  " + calc_id + ".", "done");
+                             diaerror.showDiaError("Removing calculation " + calc_id, "Calculation " + calc_id + " removed.");
                              view.calculations.remove([view.calculations.get(calc_id)]);
                          }
                      ).error(
                          function(jqXHR, textStatus, errorThrown)
                          {
                              if (jqXHR.status == 404) {
-                                 diaerror.showDiaError("Remove calculation  " + calc_id + ".", "Failed: calculation " + calc_id + " not found.");
+                                 diaerror.showDiaError("Removing calculation " + calc_id + ".", "Failed: calculation " + calc_id + " not found.");
                              }
                              else {
-                                 diaerror.showDiaError("Remove calculation  " + calc_id + ".", "Failed: " + textStatus);
+                                 diaerror.showDiaError("Removing calculation " + calc_id + ".", "Failed: " + textStatus);
                              }
                          }
                      );
@@ -189,67 +189,25 @@
     });
 
     var Calculations = Backbone.Collection.extend(
-        { 
+        {
             model: Calculation,
             url: gem_oq_server_url + "/v1/calc/list?relevant=true"
         });
     var calculations = new Calculations();
 
-
-    var OutputTable = Backbone.View.extend(
-        {
-            el: $('#tab2'),
-
-            initialize: function(options) {
-                _.bindAll(this, 'render');
-                this.outputs = options.outputs;
-                this.outputs.bind('reset', this.render);
-                this.outputs.bind('add', this.render);
-                this.render();
-            },
-
-            render: function() {
-                this.$el.html(_.template($('#output-table-template').html(),
-                                         { outputs: this.outputs.models }));
-            }
-        });
-
-    var Output = Backbone.Model.extend(
-        {
-            calc: function() {
-                return calculations.get(this.get('calculation')) || new Output({ 'calculation_type': undefined });
-            }
-        });
-
-    /*
-      var Outputs = Backbone.Collection.extend(
-      { 
-      model: Output,
-      url: '/icebox/outputs'
-      });
-      var outputs = new Outputs();
-    */
-
     var refresh_calcs;
-    
+
     function setTimer() {
         refresh_calcs = setInterval(function() { calculations.fetch({reset: true}) }, 1000);
     }
-    
 
-    /* classic event management */   
+
+    /* classic event management */
     $(document).ready(
         function() {
             var calculation_table = new CalculationTable({ calculations: calculations });
             calculations.fetch({reset: true});
             setTimer();
-
-            // var output_table = new OutputTable({ outputs: outputs });
-            // outputs.fetch({reset: true});
-
-            // /* TODO. output collection should observe the calculation one */
-            // setInterval(function() { outputs.fetch({reset: true}) }, 10000);
-
 
             /* XXX. Reset the input file value to ensure the change event
                will be always triggered */
@@ -260,30 +218,30 @@
                                dialog.showPleaseWait('Uploading calculation', true);
                                var input = $(e.target);
                                var form = input.parents('form')[0];
-                               
-	                       $(form).ajaxSubmit(
+
+                               $(form).ajaxSubmit(
                                    {
-		                       xhr: function() {  // custom xhr to add progress bar management
-                                           var myXhr = $.ajaxSettings.xhr();
-                                           if(myXhr.upload){ // if upload property exists
-                                               myXhr.upload.addEventListener('progress', progressHandlingFunction, false);
-                                           }
-                                           return myXhr;
-                                       },
-		                       success: function(data) {
-                                           calculations.add(new Calculation(data));
-                                       },
-		                       error: function(xhr) { 
-                                           dialog.hidePleaseWait();
-                                           var s, out, ret = $.parseJSON(xhr.responseText);
-                                           out = ""
-                                           for (s in ret) {
-                                               if (ret[s] == "")
-                                                   continue;
-                                               out += ret[s] + '\n';
-                                           }
-                                           diaerror.showDiaError("Calculation not accepted: traceback", out);
-		                       }});
+                                    xhr: function() {  // custom xhr to add progress bar management
+                                        var myXhr = $.ajaxSettings.xhr();
+                                        if(myXhr.upload){ // if upload property exists
+                                            myXhr.upload.addEventListener('progress', progressHandlingFunction, false);
+                                        }
+                                        return myXhr;
+                                    },
+                                    success: function(data) {
+                                        calculations.add(new Calculation(data));
+                                    },
+                                    error: function(xhr) {
+                                        dialog.hidePleaseWait();
+                                        var s, out, ret = $.parseJSON(xhr.responseText);
+                                        out = ""
+                                        for (s in ret) {
+                                            if (ret[s] == "")
+                                                continue;
+                                            out += ret[s] + '\n';
+                                        }
+                                        diaerror.showDiaError("Calculation not accepted: traceback", out);
+                                    }});
                            });
 
             $(document).on('hidden.bs.modal', 'div[id^=traceback-]',
@@ -291,7 +249,5 @@
                                setTimer();
                            });
 
-            
         });
 })($, Backbone, _, gem_oq_server_url);
-
