@@ -262,18 +262,9 @@ class TaskManager(object):
         of the elements and possibly to a key (see :function:
         `openquake.baselib.general.split_in_blocks`).
         Then reduce the results with an aggregation function.
-        Here is an example:
-
-        >>> apply_reduce(sum, ([1, 2, 3, 4, 5],), lambda acc, x: acc + x,
-        ...             acc=0, concurrent_tasks=2)
-        15
-
         The chunks which are generated internally can be seen directly (
         useful for debugging purposes) by looking at the attribute `._chunks`,
-        right after the `apply_reduce` function has been called:
-
-        >>> apply_reduce._chunks
-        [<WeightedSequence [1, 2, 3], weight=3>, <WeightedSequence [4, 5], weight=2>]
+        right after the `apply_reduce` function has been called.
 
         :param task: a function to run in parallel
         :param task_args: the arguments to be passed to the task function
@@ -317,14 +308,18 @@ class TaskManager(object):
         OQ_NO_DISTRIBUTE is set, the function is run in process and the
         result is returned.
         """
-        check_mem_usage()  # log a warning if too much memory is used
+        check_mem_usage()
+        # log a warning if too much memory is used
         if no_distribute():
             res = safely_call(self.oqtask.task_func, args)
         else:
             piks = pickle_sequence(args)
             self.sent += sum(len(p) for p in piks)
-            res = self.executor.submit(self.oqtask, *piks)
+            res = self._submit(piks)
         self.results.append(res)
+
+    def _submit(self, piks):
+        return self.executor.submit(self.oqtask, *piks)
 
     def aggregate_result_set(self, agg, acc):
         """
@@ -336,7 +331,8 @@ class TaskManager(object):
         :returns: the final value of the accumulator
         """
         for future in as_completed(self.results):
-            check_mem_usage()  # log a warning if too much memory is used
+            check_mem_usage()
+            # log a warning if too much memory is used
             result = future.result()
             if isinstance(result, BaseException):
                 raise result
