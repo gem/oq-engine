@@ -1,203 +1,101 @@
-<html>
-  <head>
-    <meta charset="utf-8">
-    <title> OpenQuakeWeb </title>
-    <link href="{{ STATIC_URL }}css/base.css" rel="stylesheet">
-    <link href="{{ STATIC_URL }}geonode/font/lato_font.css" rel="stylesheet" type="text/css">
-    <link href="{{ STATIC_URL }}css/assets.min.css" rel="stylesheet">
-    <link href="{{ STATIC_URL }}img/favicon.ico" rel="shortcut icon">
-    <link href="{{ STATIC_URL }}css/oqplatform.css" rel="stylesheet">
-    <link href="{{ STATIC_URL }}css/jasny-bootstrap.min.css" rel="stylesheet"/>
-  </head>
-<body>
+{% extends "engineweb/base.html" %}
 
-    <div id="header" class="navbar navbar-fixed-top">
-      <div class="navbar-inner">
-        <section>
-        <div class="container">
-          <div class="row">
-            <div class="span3">
-              <!-- <a href="{#% url "home" %#}"><span class="nav-logo"></span></a> -->
-            </div>
-            <div class="span10">
-              <nav class="main-nav">
-                <ul>
-                </ul>
-              </nav>
-            </div> <!-- ./span10 -->
-            <div class="span9">
-              <div class="nav-collapse pull-right">
-                <div class="pull-right">
-                  <ul class="nav pull-right account-bar">
-                  </ul>
-                </div>
-              </div>
-            </div>
-            <div id="gem-right-logo">
-              <a href="http://www.globalquakemodel.org" title="GEM Foundation" target="_blank"><span class="nav-logo nav-logo-gem"></span></a>
-            </div>
+  {% block nav-items %}
+                <li class="calc">
+                  <form class="calc-form form-horizontal"
+                        enctype="multipart/form-data"
+                        method="post" action="{{ oq_engine_server_url }}/v1/calc/run">
+                    <input type="hidden" name="calculation_type" value="hazard"/>
+                    <label for="hazard_archive">Run a Hazard Calculation</label>
+                    <input id="hazard_archive" type="file" name="archive" style="display: none;" />
+                    <input type="hidden" name="foreign_calculation_id" value=""/>
+                    <input type="hidden" name="database" value="openquake2"/>
+                  </form>
+                </li>
+  {% endblock nav-items %}
+
+  {% block main %}
+  <div class="content-wrap">
+    <div class="container">
+      <div class="row">
+        <div id="oq-body-wrapper">
+          <div class="span12">
+            <h2>List of calculations</h2>
+            <div id="my-calculations" class="well"></div>
           </div>
-        </div> <!-- /.container -->
-        </section>
-      </div> <!-- /.navbar-inner -->
-    </div> <!-- /.navbar navbar-fixed-top -->
-
-
-<div class="content-wrap">
-      
-      <div class="container">
-        <div class="row">
-        
-    <div id="oq-body-wrapper">
-     
-
-    <div class="span12">
-                   <form class="calc-form form-horizontal"
-                         enctype="multipart/form-data"
-                         method="post" action="{{ oq_engine_server_url }}/v1/calc/run">
-                     <input type="hidden" name="calculation_type" value="hazard"/>
-                     <div class="control-group">
-                       <label style="width: auto" class="control-label" for="archive">
-                         Run a Hazard Calculation
-                       </label>
-                       <div class="controls">
-                         <div class="fileinput" data-provides="fileinput">
-                           <span class="btn btn-default btn-file"><span>Select Job Archive</span><input type="file" name="archive"/></span>
-                         </div>
-                       </div>
-                     </div>
-<!--                       <input type="hidden" name="callback_url" value=""/> -->
-                       <input type="hidden" name="foreign_calculation_id" value=""/>
-                       <input type="hidden" name="database" value="openquake2"/>
-                   </form>
-                 <div id="my-calculations" class="well"></div>
-    </div>
-
-
-
-    </div>
-
         </div>
-      </div> <!-- /.container -->
-    </div>
+      </div>
+    </div> <!-- /.container -->
+  </div>
+  {% endblock main %}
 
-
-
-</body>
-
-<!-- <script src="http://code.jquery.com/jquery-1.11.2.min.js"></script> -->
-<!-- <script src="{{ STATIC_URL }}js/d3.js"></script> -->
-    <script src="https://html5shim.googlecode.com/svn/trunk/html5.js"></script>
-<!-- <script type="text/javascript" src="{{ STATIC_URL }}js/geonode/utils.js"></script>
-<script type="text/javascript" src="{{ STATIC_URL }}js/geonode/base.js"></script> -->
-
-<script type="text/javascript" src="{{ STATIC_URL }}lib/jquery/js/jquery-1.9.1.js"></script>
-<script type="text/javascript" src="{{ STATIC_URL }}lib/jquery/js/jquery-ui-1.10.3.custom.js"></script>
-<script type="text/javascript" src="{{ STATIC_URL }}js/assets.min.js"></script>
-<script type="text/javascript" src="{{ STATIC_URL }}lib/bootstrap-extend/js/jasny-bootstrap.min.js"></script>
-<script type="text/javascript" src="{{ STATIC_URL }}lib/underscore/js/underscore-min.js"></script>
-<script type="text/javascript" src="{{ STATIC_URL }}lib/backbone/js/backbone-min.js"></script>
-<script type="text/template" id="calculation-table-template">
-  <table id="calculation_table" class="table table-hover">
-    <caption>Calculations</caption>
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Type</th>
-        <th style="width: 300px;">Description</th>
-        <th style="width: 215px;">Status</th>
-        <th>Action</th>
-      </tr>
-    </thead>
-    <tbody>
-      <% _.each(calculations, function(calc) { %>
-      <tr class="<%= (calc.get('is_running') == true || ! calc.get('id') ) ? 'warning' : (calc.get('status') == 'complete' ? 'success' : 'error') %>">
-        <td><%= calc.get('id') || 'New' %></td>
-        <td><%= calc.get('job_type') %></td>
-        <td><%= calc.get('description') %></td>
-        <td>
-          <% if (calc.get('is_running') == true || ! calc.get('id')) { %>
-          <%= calc.get('status') %>
-          <% } else if(calc.get('status') == 'complete') { %>
-          <%= calc.get('status') %>
-          <% } else { %>
-          failed<br>( <%= calc.get('status') %> )
-          <% } %>
-        </td>
-        <td>
-          <% if (calc.get('is_running') == false && calc.get('id')) { %>
-              <% if (calc.get('status') == 'complete') { %>
-                  <% if(calc.get('map')) { %>
-                        <a href="/maps/<%= calc.get('map') %>" class="btn btn-sm btn-success">Open</a>
-                  <% } %>
-              <!--
-                   <p>
-                        <a href="download/input/<%= calc.get('calculation_type') %>/<%= calc.get('id') %>" class="btn btn-sm">Download input</a>
-                   </p>
-              -->
-            <a href="engineweb/<%= calc.get('id') %>/outputs" class="btn btn-sm" style="margin: 2px 0 2px 0">Show outputs</a>
-                  <% if(calc.get('job_type') == 'hazard') { %>
-            <form class="calc-form" enctype="multipart/form-data"
-              style="margin: 0; display: inline-block"
-              method="post" action="{{ oq_engine_server_url }}/v1/calc/run">
-            <input type="hidden" name="calculation_type" value="risk"/>
-            <div class="fileinput-new" data-provides="fileinput" style="margin: 2px 0 2px 0">
-              <span class="btn btn-default btn-sm btn-file"><span class="fileinput-new">Run Risk</span><input type="file" name="archive"/></span>
-            </div>
-            <!-- <input type="hidden" name="callback_url" value=""/> -->
-            <input type="hidden" name="foreign_calculation_id" value=""/>
-            <input type="hidden" name="hazard_job_id" value="<%= calc.get('id') %>"/>
-            <input type="hidden" name="database" value="openquake2"/>
-            </form>
-                  <% } %>
-              <% } else { %>
-                  <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-traceback" style="margin: 2px 0 2px 0;">Traceback</a>
-              <% } %>
-            <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-danger" style="margin: 2px 0 2px 0;">Remove</a>
-          <% } %>
-        </td>
-      </tr>
-      <% }); %>
-    </tbody>
-  </table>
-</script>
-
-<script type="text/template" id="output-table-template">
-  <table id="output_table" class="table table-hover">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Calculation ID</th>
-        <th>Description</th>
-        <th>Action</th>
-      </tr>
-    </thead>
-    <tbody>
-      <% _.each(outputs, function(out) { %>
-      <% if(out.get('user') ==  {{ user.id }}) { %>
-      <tr>
-        <td><%= out.get('engine_id') %></td>
-        <td><%= out.get('calculation') %></td>
-        <td><%= out.get('display_name') || 'Loading...' %></td>
-        <td>
-          <% if(out.get('layer')) { %>
-            <a href="/layers/<%= out.get('layername') %>" class="btn btn-success">Open</a>
-          <% } %>
-          <% if(out.calc().get('calculation_type') == 'hazard') { %>
-          <a href="#" class="btn btn-primary">Run Risk</a>
-          <% } %>
-        </td>
-      </tr>
-      <% } %>
-      <% }); %>
-    </tbody>
-  </table>
-</script>
-
-<script src="{{ STATIC_URL }}lib/jquery/js/jquery.form-3.44.0.js"></script>
-<script type="text/javascript"><!--
-  var gem_oq_server_url = '{{ oq_engine_server_url }}';
-  //-->
+  {% block templates %}
+  <script type="text/template" id="calculation-table-template">
+    <table id="calculation_table" class="table table-hover">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Type</th>
+          <th style="width: 375px;">Description</th>
+          <th style="width: 150px;">Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% _.each(calculations, function(calc) { %>
+        <tr class="<%= (calc.get('is_running') == true || ! calc.get('id') ) ? 'warning' : (calc.get('status') == 'complete' ? 'success' : 'error') %>">
+          <td><%= calc.get('id') || 'New' %></td>
+          <td><%= calc.get('job_type') %></td>
+          <td><%= calc.get('description') %></td>
+          <td>
+            <% if (calc.get('is_running') == true || ! calc.get('id')) { %>
+            <%= calc.get('status') %>
+            <% } else if(calc.get('status') == 'complete') { %>
+            <%= calc.get('status') %>
+            <% } else { %>
+            failed<br>( <%= calc.get('status') %> )
+            <% } %>
+          </td>
+          <td>
+            <% if (calc.get('is_running') == false && calc.get('id')) { %>
+                <% if (calc.get('status') == 'complete') { %>
+                    <% if(calc.get('map')) { %>
+                          <a href="/maps/<%= calc.get('map') %>" class="btn btn-sm btn-success">Open</a>
+                    <% } %>
+                <!--
+                     <p>
+                          <a href="download/input/<%= calc.get('calculation_type') %>/<%= calc.get('id') %>" class="btn btn-sm">Download input</a>
+                     </p>
+                -->
+              <a href="{% url "index" %}/<%= calc.get('id') %>/outputs" class="btn btn-sm" style="margin: 2px 0 2px 0">Show outputs</a>
+                    <% if(calc.get('job_type') == 'hazard') { %>
+              <form class="calc-form" enctype="multipart/form-data"
+                style="margin: 0; display: inline-block"
+                method="post" action="{{ oq_engine_server_url }}/v1/calc/run">
+              <input type="hidden" name="calculation_type" value="risk"/>
+              <div class="fileinput-new" data-provides="fileinput" style="margin: 2px 0 2px 0">
+                <span class="btn btn-default btn-sm btn-file"><span class="fileinput-new">Run Risk</span><input type="file" name="archive"/></span>
+              </div>
+              <input type="hidden" name="foreign_calculation_id" value=""/>
+              <input type="hidden" name="hazard_job_id" value="<%= calc.get('id') %>"/>
+              <input type="hidden" name="database" value="openquake2"/>
+              </form>
+                    <% } %>
+                <% } else { %>
+                    <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-traceback" style="margin: 2px 0 2px 0;">Traceback</a>
+                <% } %>
+              <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-danger" style="margin: 2px 0 2px 0;">Remove</a>
+            <% } %>
+          </td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
   </script>
-<script src="{{ STATIC_URL }}js/engineweb.js"></script>
-</html>
+
+  {% endblock templates %}
+
+  {% block extra_script %}
+  {{ block.super }}
+  <script type="text/javascript" src="{{ STATIC_URL }}js/engineweb.js"></script>
+  {% endblock extra_script %}
