@@ -51,7 +51,8 @@ class Asset(object):
                  area=1,
                  deductibles=None,
                  insurance_limits=None,
-                 retrofitting_values=None):
+                 retrofitting_values=None,
+                 aggregated=None):
         """
         :param asset_id:
             an unique identifier of the assets within the given exposure
@@ -71,6 +72,8 @@ class Asset(object):
             the value of the asset) keyed by loss types
         :param dict retrofitting_values:
             asset retrofitting values keyed by loss types
+        :param dict aggregated:
+            if the cost is aggregated, do not multiply by the number
         """
         self.id = asset_id
         self.taxonomy = taxonomy
@@ -81,13 +84,15 @@ class Asset(object):
         self.retrofitting_values = retrofitting_values
         self.deductibles = deductibles
         self.insurance_limits = insurance_limits
+        self.aggregated = aggregated or {}
 
     def value(self, loss_type):
         """
         :returns: the total asset value for `loss_type`
         """
         value = self.values[loss_type]
-        return numpy.nan if value is None else value * self.number * self.area
+        number = 1 if self.aggregated.get(loss_type) else self.number
+        return numpy.nan if value is None else value * number * self.area
 
     def deductible(self, loss_type):
         """

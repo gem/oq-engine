@@ -626,10 +626,14 @@ def get_exposure_lazy(fname):
         deductible = conversions.deductible
     except NameError:
         deductible = LiteralNode('deductible')
+    try:
+        area = conversions.area
+    except NameError:
+        area = LiteralNode('area', dict(type=''))
     return Exposure(
         exposure['id'], exposure['category'],
         ~description, [ct.attrib for ct in conversions.costTypes],
-        ~inslimit, ~deductible, [], set()), exposure.assets
+        ~inslimit, ~deductible, area.attrib, [], set()), exposure.assets
 
 
 def get_exposure(oqparam):
@@ -651,6 +655,10 @@ def get_exposure(oqparam):
         region = None
     fname = oqparam.inputs['exposure']
     exposure, assets_node = get_exposure_lazy(fname)
+    aggregated = {
+        ct['name']: (ct['type'] == 'aggregated' or
+                     exposure.area['type'] == 'aggregated')
+        for ct in exposure.cost_types}
     relevant_cost_types = set(vulnerability_files(oqparam.inputs)) - \
         set(['occupants'])
     asset_refs = set()
@@ -730,7 +738,7 @@ def get_exposure(oqparam):
         area = float(asset.attrib.get('area', 1))
         ass = workflows.Asset(
             asset_id, taxonomy, number, location, values, area,
-            deductibles, insurance_limits, retrofitting_values)
+            deductibles, insurance_limits, retrofitting_values, aggregated)
         exposure.assets.append(ass)
         exposure.taxonomies.add(taxonomy)
     if region:
@@ -746,7 +754,7 @@ def get_exposure(oqparam):
 Exposure = collections.namedtuple(
     'Exposure', ['id', 'category', 'description', 'cost_types',
                  'insurance_limit_is_absolute',
-                 'deductible_is_absolute', 'assets', 'taxonomies'])
+                 'deductible_is_absolute', 'area', 'assets', 'taxonomies'])
 
 
 def get_specific_assets(oqparam):
