@@ -16,6 +16,8 @@
  */
 
 (function($, Backbone, _) {
+    var calculation_table;
+
     var progressHandlingFunction = function(progress) {
         var percent = progress.loaded / progress.total * 100;
         $('.bar').css('width', percent + '%');
@@ -59,6 +61,7 @@
                   </div>\
                 </div>\
 </div>');
+                      errorDiv.bind('hide', function() { calculation_table.hide_log(); });
                       return {
                           getdiv: function() {
                               return errorDiv;
@@ -200,6 +203,8 @@
             _show_log_priv: function(is_new, calc_id, is_running, from) {
                 var was_running = is_running;
 
+                // TO CHECK hide_log method enable console.log and take a look
+                // console.log("_show_log_priv: begin");
                 if (this.logXhr != null) {
                     this.logXhr.abort();
                     this.logXhr = null;
@@ -302,6 +307,17 @@
                 this._show_log_priv(true, calc_id, is_running, "0");
             },
 
+            hide_log: function(e) {
+                if (this.logTimeout != null) {
+                    window.clearTimeout(this.logTimeout);
+                    this.logTimeout = null;
+                }
+                if (this.logXhr != null) {
+                    this.logXhr.abort();
+                    this.logXhr = null;
+                }
+            },
+
             render: function() {
                 if (!this.can_be_rendered) {
                     return;
@@ -335,7 +351,7 @@
     /* classic event management */
     $(document).ready(
         function() {
-            var calculation_table = new CalculationTable({ calculations: calculations });
+            calculation_table = new CalculationTable({ calculations: calculations });
             calculations.fetch({reset: true});
             setTimer();
 
