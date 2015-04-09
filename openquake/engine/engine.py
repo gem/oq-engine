@@ -38,6 +38,7 @@ from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.utils import config
 from openquake.engine.celery_node_monitor import CeleryNodeMonitor
+from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.writer import CacheInserter
 from openquake.engine.settings import DATABASES
 from openquake.engine.db.models import Performance
@@ -150,7 +151,7 @@ def create_job(user_name="openquake", log_level='progress'):
 
 
 # used by bin/openquake and openquake.server.views
-def run_calc(job, log_level, log_file, exports):
+def run_calc(job, log_level, log_file, exports, lite=False):
     """
     Run a calculation.
 
@@ -164,17 +165,24 @@ def run_calc(job, log_level, log_file, exports):
         If `None`, logging will just be printed to standard output.
     :param exports:
         A comma-separated string of export types.
+    :param lite:
+        Flag set when the oq-lite calculators are used
     """
     # let's import the calculator classes here, when they are needed
     # the reason is that the command `$ oq-engine --upgrade-db`
     # does not need them and would raise strange errors during installation
     # time if the PYTHONPATH is not set and commonlib is not visible
-    from openquake.engine.calculators import calculators
+    if lite:
+        from openquake.commonlib.calculators import base
+        calculator = base.calculators(job.get_oqparam())
+        calculator.job = job
+        calculator.monitor = EnginePerformanceMonitor('', job.id)
+    else:
+        from openquake.engine.calculators import calculators
+        calculator = calculators(job)
 
     # first of all check the database version and exit if the db is outdated
     upgrader.check_versions(django_db.connections['admin'])
-
-    calculator = calculators(job)
     with logs.handle(job, log_level, log_file), job_stats(job):  # run the job
         try:
             _do_run_calc(calculator, exports)
@@ -218,10 +226,10 @@ def _do_run_calc(calc, exports):
     calc.pre_execute()
 
     log_status(job, "executing")
-    calc.execute()
+    result = calc.execute()
 
     log_status(job, "post_executing")
-    calc.post_execute()
+    calc.post_execute(result)
 
     log_status(job, "post_processing")
     calc.post_process()
@@ -352,11 +360,36 @@ def run_job(cfg_file, log_level, log_file, exports='', hazard_output_id=None,
             hazard_calculation_id)
         # instantiate the calculator and run the calculation
         t0 = time.time()
-        try:
-            run_calc(job, log_level, log_file, exports)
-        except:
-            # the error is already logged inside run_calc
+        run_calc(job, log_level, log_file, exports)
+        duration = time.time() - t0
+        if job.status == 'complete':
+            print_results(job.id, duration, list_outputs)
+        else:
             sys.exit('Calculation %s failed' % job.id)
+    return job
+
+
+# this function is called only by openquake_cli.py, not by the engine server
+def run_job_lite(cfg_files, log_level, log_file, exports=''):
+    """
+    Run a job using the specified config file and other options.
+
+    :param str cfg_files:
+        Path to calculation config (INI-style) files.
+    :param str log_level:
+        'debug', 'info', 'warn', 'error', or 'critical'
+    :param str log_file:
+        Path to log file.
+    :param exports:
+        A comma-separated string of export types requested by the user.
+        Currently only 'xml' is supported.
+    """
+    # first of all check the database version and exit if the db is outdated
+    upgrader.check_versions(django_db.connections['admin'])
+    with CeleryNodeMonitor(openquake.engine.no_distribute(), interval=3):
+        job = job_from_files(cfg_files, getpass.getuser(), log_level, exports)
+        t0 = time.time()
+        run_calc(job, log_level, log_file, exports, lite=True)
         duration = time.time() - t0
         if job.status == 'complete':
             print_results(job.id, duration, list_outputs)
@@ -417,6 +450,7 @@ def job_from_file(cfg_file_path, username, log_level='info', exports='',
         calculation. Specify this xor ``hazard_output_id``.
     :params extras:
         Extra parameters (used only in the tests to override the params)
+
     :returns:
         :class:`openquake.engine.db.models.OqJob` object
     :raises:
@@ -440,13 +474,16 @@ def job_from_file(cfg_file_path, username, log_level='info', exports='',
     with logs.handle(job, log_level):
         # read calculation params and create the calculation profile
         params = readinput.get_params([cfg_file_path])
+        # TODO: improve the logic before; it is very hackish we should
+        # change the call in server.views.submit_job to pass the temporary dir
         if not exports:  # when called from the engine server
             # ignore the user-provided export_dir: the engine server will
             # export on demand with its own mechanism on a temporary directory
             params['export_dir'] = tempfile.gettempdir()
         params.update(extras)
         if haz_job:  # for risk calculations
-            check_hazard_risk_consistency(haz_job, params['calculation_mode'])
+            calcmode = params['calculation_mode']
+            check_hazard_risk_consistency(haz_job, calcmode)
             if haz_job.user_name != username:
                 logs.LOG.warn(
                     'You are using a hazard calculation ran by %s',
@@ -511,6 +548,48 @@ def job_from_file(cfg_file_path, username, log_level='info', exports='',
         job.save_params(params)
 
     job.save()
+    return job
+
+
+# called only when the --lite flag is passed
+@django_db.transaction.atomic
+def job_from_files(cfg_files, username, log_level='info', exports='',
+                   **extras):
+    """
+    Create a full job profile from a job config file.
+
+    :param str cfg_files_path:
+        Path to the job.ini files.
+    :param str username:
+        The user who will own this job profile and all results.
+    :param str log_level:
+        Desired log level.
+    :param exports:
+        Comma-separated sting of desired export types.
+    :params extras:
+        Extra parameters (used only in the tests to override the params)
+
+    :returns:
+        :class:`openquake.engine.db.models.OqJob` object
+    :raises:
+        `RuntimeError` if the input job configuration is not valid
+    """
+    from openquake.commonlib.calculators import base
+    # create the current job
+    job = create_job(user_name=username, log_level=log_level)
+    models.JobStats.objects.create(oq_job=job)
+    with logs.handle(job, log_level):
+        # read calculation params and create the calculation profile
+        params = readinput.get_params(cfg_files)
+        params['hazard_output_id'] = None
+        params['hazard_calculation_id'] = None
+        params.update(extras)
+        # build and validate an OqParam object
+        oqparam = readinput.get_oqparam(params, calculators=base.calculators)
+        oqparam.concurrent_tasks = int(
+            config.get('celery', 'concurrent_tasks'))
+        job.save_params(vars(oqparam))
+        job.save()
     return job
 
 

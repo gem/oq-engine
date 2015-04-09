@@ -373,8 +373,8 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         res = tasks.starmap(compute_disagg, all_args, logs.LOG.progress)
         self.save_disagg_results(res.reduce(self.agg_result))
 
-    def post_execute(self):
-        super(DisaggHazardCalculator, self).post_execute()
+    def post_execute(self, result=None):
+        super(DisaggHazardCalculator, self).post_execute(result)
         self.full_disaggregation()
 
     def agg_result(self, acc, result):
