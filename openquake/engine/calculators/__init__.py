@@ -32,7 +32,7 @@ from openquake.commonlib.calculators import base
 
 
 # monkey patch the base.BaseCalculator class
-def __init__(self, oqparam):
+def __init__(self, oqparam, monitor=None):
     self.oqparam = oqparam
     if not hasattr(self.oqparam, 'concurrent_tasks'):
         self.oqparam.concurrent_tasks = int(
