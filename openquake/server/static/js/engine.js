@@ -82,11 +82,7 @@
                           },
 
                           scroll_to_bottom: function(ctx) {
-                              // FIXME: scrollHeight is always 0 !!!
-                              // console.log("SCROLL");
-                              // console.log(ctx.height());
-                              // .scrollHeight);
-                              // ctx.scrollTop(ctx.prop("scrollHeight"));
+                             ctx.scrollTop(ctx[0].scrollHeight);
                           },
 
                           hide: function () {
@@ -276,8 +272,7 @@
                                           else {
                                               diaerror.append(title, out);
                                           }
-                                          // FIXME: scroll_to_bottom not work
-                                          // diaerror.scroll_to_bottom($('.modal-body-pre', diaerror.getdiv()));
+                                          diaerror.scroll_to_bottom($('.modal-body', diaerror.getdiv()));
 
                                           if (is_running) {
                                               function log_update(obj)
