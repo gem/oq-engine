@@ -474,6 +474,8 @@ def job_from_file(cfg_file_path, username, log_level='info', exports='',
     with logs.handle(job, log_level):
         # read calculation params and create the calculation profile
         params = readinput.get_params([cfg_file_path])
+        # TODO: improve the logic before; it is very hackish we should
+        # change the call in server.views.submit_job to pass the temporary dir
         if not exports:  # when called from the engine server
             # ignore the user-provided export_dir: the engine server will
             # export on demand with its own mechanism on a temporary directory
@@ -579,10 +581,6 @@ def job_from_files(cfg_files, username, log_level='info', exports='',
     with logs.handle(job, log_level):
         # read calculation params and create the calculation profile
         params = readinput.get_params(cfg_files)
-        if not exports:  # when called from the engine server
-            # ignore the user-provided export_dir: the engine server will
-            # export on demand with its own mechanism on a temporary directory
-            params['export_dir'] = tempfile.gettempdir()
         params['hazard_output_id'] = None
         params['hazard_calculation_id'] = None
         params.update(extras)
@@ -590,7 +588,6 @@ def job_from_files(cfg_files, username, log_level='info', exports='',
         oqparam = readinput.get_oqparam(params, calculators=base.calculators)
         oqparam.concurrent_tasks = int(
             config.get('celery', 'concurrent_tasks'))
-
         job.save_params(vars(oqparam))
         job.save()
     return job
