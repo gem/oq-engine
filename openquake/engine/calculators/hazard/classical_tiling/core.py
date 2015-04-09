@@ -43,7 +43,7 @@ class ClassicalTilingHazardCalculator(BaseHazardCalculator):
         classical.initialize_sources()
         classical.init_zeros_ones()
         classical.execute()
-        classical.post_execute(None)
+        classical.post_execute()
         classical.post_process()
 
     def pre_execute(self):
@@ -73,7 +73,7 @@ class ClassicalTilingHazardCalculator(BaseHazardCalculator):
                          i, self.num_tiles, len(tile))
             self.run_tile(i, tile)
 
-    def post_execute(self, result):
+    def post_execute(self, result=None):
         """Do nothing"""
 
     def post_process(self):
