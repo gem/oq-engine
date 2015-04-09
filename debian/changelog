@@ -1,4 +1,5 @@
   [Matteo Nastasi]
+  * added '/v1/calc/<id>/status' API command
   * added 'engineweb' django application as local web client for oq-engine
 
   [Michele Simionato]
