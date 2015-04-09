@@ -77,13 +77,6 @@ CELERY_MAX_CACHED_RESULTS = 1
 
 CELERY_ACCEPT_CONTENT = ['pickle', 'json']
 
-# monkey patch the parallel module
-from openquake.commonlib import parallel
-from openquake.engine.utils import tasks
-parallel.starmap = tasks.starmap
-parallel.apply_reduce = tasks.apply_reduce
-parallel.litetask = tasks.oqtask
-
 CELERY_IMPORTS = get_core_modules(engine) + [
     "openquake.engine.calculators.hazard.general",
     "openquake.engine.tests.utils.tasks"] + [
