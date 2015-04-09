@@ -177,7 +177,12 @@ def calc(request, id=None):
     """
     base_url = _get_base_url(request)
 
-    calc_data = _get_calcs(request.GET, request.user, id=id)
+    user_name = "platform"
+    if hasattr(request, 'user'):
+        if request.user.is_authenticated():
+            user_name = request.user.username
+
+    calc_data = _get_calcs(request.GET, user_name, id=id)
 
     response_data = []
     for hc_id, status, job_type, is_running, desc in calc_data:
@@ -281,9 +286,15 @@ def run_calc(request):
         return HttpResponse(json.dumps(einfo.splitlines()),
                             content_type=JSON, status=500)
     temp_dir = os.path.dirname(einfo[0])
+
+    user_name = "platform"
+    if hasattr(request, 'user'):
+        if request.user.is_authenticated():
+            user_name = request.user.username
+
     try:
         job, _fut = submit_job(einfo[0], temp_dir, request.POST['database'],
-                               request.user, callback_url, foreign_calc_id,
+                               user_name, callback_url, foreign_calc_id,
                                hazard_output_id, hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         logging.error(exc)
@@ -299,7 +310,7 @@ def run_calc(request):
                         status=status)
 
 
-def submit_job(job_file, temp_dir, dbname, request_user,
+def submit_job(job_file, temp_dir, dbname, user_name,
                callback_url=None, foreign_calc_id=None,
                hazard_output_id=None, hazard_job_id=None,
                logfile=None):
@@ -307,15 +318,9 @@ def submit_job(job_file, temp_dir, dbname, request_user,
     Create a job object from the given job.ini file in the job directory
     and submit it to the job queue.
     """
-
-    if request_user.is_authenticated():
-        job__user_name = request_user.username
-    else:
-        job__user_name = "platform"
-
     ini = os.path.join(temp_dir, job_file)
     job, exctype = safely_call(
-        oq_engine.job_from_file, (ini, job__user_name, DEFAULT_LOG_LEVEL, '',
+        oq_engine.job_from_file, (ini, user_name, DEFAULT_LOG_LEVEL, '',
                                   hazard_output_id, hazard_job_id))
     if exctype:
         tasks.update_calculation(callback_url, status="failed", einfo=job)
@@ -327,19 +332,13 @@ def submit_job(job_file, temp_dir, dbname, request_user,
     return job, future
 
 
-def _get_calcs(request_get_dict, request_user, id=None):
+def _get_calcs(request_get_dict, user_name, id=None):
 
     # TODO if superuser with should show all the calculations i.e.
-    # if request_user.is_superuser:
-    #     job__user_name = ""
-    if request_user.is_authenticated():
-        job__user_name = request_user.username
-    else:
-        job__user_name = "platform"
 
     # helper to get job+calculation data from the oq-engine database
     job_params = oqe_models.JobParam.objects.filter(
-        name='description', job__user_name=job__user_name).order_by('-id')
+        name='description', job__user_name=user_name).order_by('-id')
 
     if id is not None:
         job_params = job_params.filter(job_id=id)
@@ -374,10 +373,10 @@ def calc_results(request, calc_id):
         * type (hazard_curve, hazard_map, etc.)
         * url (the exact url where the full result can be accessed)
     """
-    if request.user.is_authenticated():
-        user_name = request.user.username
-    else:
-        user_name = "platform"
+    user_name = "platform"
+    if hasattr(request, 'user'):
+        if request.user.is_authenticated():
+            user_name = request.user.username
 
     # If the specified calculation doesn't exist OR is not yet complete,
     # throw back a 404.
