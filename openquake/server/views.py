@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import zipfile
 import shutil
 import json
 import logging
@@ -189,7 +188,7 @@ def calc(request, id=None):
 
     # if id is specified the related dictionary is returned instead the list
     if id is not None:
-        [ response_data ] = response_data
+        [response_data] = response_data
 
     return HttpResponse(content=json.dumps(response_data),
                         content_type=JSON)
@@ -343,7 +342,7 @@ def _get_calcs(request_get_dict, request_user, id=None):
         name='description', job__user_name=job__user_name).order_by('-id')
 
     if id is not None:
-        job_params = job_params.filter(job_id = id)
+        job_params = job_params.filter(job_id=id)
 
     if 'job_type' in request_get_dict:
         job_type = request_get_dict.get('job_type')
@@ -483,6 +482,7 @@ def get_result(request, result_id):
         return response
     finally:
         shutil.rmtree(tmpdir)
+
 
 def web_engine(request, **kwargs):
     return render_to_response("engine/index.html",
