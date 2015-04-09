@@ -38,6 +38,7 @@ from openquake.commonlib.calculators import base, calc
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
+@parallel.litetask
 def classical(sources, sitecol, gsims_assoc, monitor):
     """
     :param sources:
@@ -47,7 +48,7 @@ def classical(sources, sitecol, gsims_assoc, monitor):
     :param gsims_assoc:
         associations trt_model_id -> gsims
     :param monitor:
-        a Monitor instance
+        a monitor instance
     :returns:
         an AccumDict rlz -> curves
     """
@@ -211,7 +212,8 @@ def is_effective_trt_model(result_dict, trt_model):
     return any(trt_model.id == trt_id for trt_id, _gsim in result_dict)
 
 
-def classical_tiling(calculator, sitecol, tileno):
+@parallel.litetask
+def classical_tiling(calculator, sitecol, tileno, monitor):
     """
     :param calculator:
         a ClassicalCalculator instance
@@ -219,6 +221,8 @@ def classical_tiling(calculator, sitecol, tileno):
         a SiteCollection instance
     :param tileno:
         the number of the current tile
+    :param monitor:
+        a monitor instance
     :returns:
         a dictionary file name -> full path for each exported file
     """
@@ -257,7 +261,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         calculator.composite_source_model = self.composite_source_model
         calculator.rlzs_assoc = self.composite_source_model.get_rlzs_assoc(
             lambda tm: True)  # build the full logic tree
-        all_args = [(calculator, tile, i)
+        all_args = [(calculator, tile, i, monitor)
                     for (i, tile) in enumerate(self.tiles)]
         return parallel.starmap(classical_tiling, all_args).reduce()
 

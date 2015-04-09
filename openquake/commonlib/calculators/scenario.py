@@ -30,6 +30,7 @@ from openquake.baselib.general import AccumDict
 from openquake.commonlib.calculators import base, calc
 
 
+@parallel.litetask
 def calc_gmfs(tag_seed_pairs, computer, monitor):
     """
     Computes several GMFs in parallel, one for each tag and seed.
@@ -93,15 +94,16 @@ class ScenarioCalculator(base.HazardCalculator):
         """
         logging.info('Computing the GMFs')
         args = (self.tag_seed_pairs, self.computer, self.monitor('calc_gmfs'))
-        data = {}
-        for (trt_id, gsim), dic in parallel.apply_reduce(
-                self.core_func.__func__, args,
-                concurrent_tasks=self.oqparam.concurrent_tasks).iteritems():
-            data[trt_id, gsim] = {  # build N x R matrices
+        result = {}
+        res = parallel.apply_reduce(
+            self.core_func.__func__, args,
+            concurrent_tasks=self.oqparam.concurrent_tasks)
+        for (trt_id, gsim), dic in res.iteritems():
+            result[trt_id, gsim] = {  # build N x R matrices
                 imt: numpy.array(
                     [dic[tag][imt] for tag in self.tags]).T
                 for imt in map(str, self.imts)}
-        return data
+        return result
 
     def post_execute(self, result):
         """

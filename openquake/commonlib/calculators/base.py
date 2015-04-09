@@ -55,8 +55,6 @@ class BaseCalculator(object):
         self.monitor = monitor
         if not hasattr(oqparam, 'concurrent_tasks'):
             oqparam.concurrent_tasks = executor.num_tasks_hint
-        if not hasattr(oqparam, 'usecache'):
-            oqparam.usecache = False
 
     def run(self, **kw):
         """
@@ -119,16 +117,21 @@ class HazardCalculator(BaseCalculator):
         """
         if 'exposure' in self.oqparam.inputs:
             logging.info('Reading the exposure')
-            exposure = readinput.get_exposure(self.oqparam)
-            self.sitecol, self.assets_by_site = readinput.get_sitecol_assets(
-                self.oqparam, exposure)
+            with self.monitor('reading exposure', autoflush=True):
+                exposure = readinput.get_exposure(self.oqparam)
+                self.sitecol, self.assets_by_site = (
+                    readinput.get_sitecol_assets(self.oqparam, exposure))
         else:
             logging.info('Reading the site collection')
-            self.sitecol = readinput.get_site_collection(self.oqparam)
+            with self.monitor('reading site collection', autoflush=True):
+                self.sitecol = readinput.get_site_collection(self.oqparam)
         if 'source' in self.oqparam.inputs:
             logging.info('Reading the composite source models')
-            self.composite_source_model = readinput.get_composite_source_model(
-                self.oqparam, self.sitecol, self.prefilter)
+            with self.monitor(
+                    'reading composite source model', autoflush=True):
+                self.composite_source_model = (
+                    readinput.get_composite_source_model(
+                        self.oqparam, self.sitecol, self.prefilter))
             self.job_info = readinput.get_job_info(
                 self.oqparam, self.composite_source_model, self.sitecol)
             # we could manage limits here
@@ -155,8 +158,9 @@ class HazardCalculator(BaseCalculator):
         haz_out.update(kw)
         cache = os.path.join(self.oqparam.export_dir, 'hazard.pik')
         logging.info('Saving hazard output on %s', cache)
-        with open(cache, 'w') as f:
-            cPickle.dump(haz_out, f)
+        with self.monitor('saving hazard', autoflush=True):
+            with open(cache, 'w') as f:
+                cPickle.dump(haz_out, f)
         return haz_out
 
 
@@ -194,9 +198,11 @@ class RiskCalculator(BaseCalculator):
         :param num_ruptures: the size of the epsilon array for each asset
         """
         oq = self.oqparam
-        return riskinput.make_eps_dict(
-            self.assets_by_site, num_ruptures,
-            oq.master_seed, oq.asset_correlation)
+        with self.monitor('building epsilons', autoflush=True):
+            eps = riskinput.make_eps_dict(
+                self.assets_by_site, num_ruptures,
+                oq.master_seed, oq.asset_correlation)
+            return eps
 
     def build_riskinputs(self, hazards_by_key, eps_dict=None):
         """
@@ -205,37 +211,39 @@ class RiskCalculator(BaseCalculator):
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
-        riskinputs = []
-        idx_weight_pairs = [(i, len(assets))
-                            for i, assets in enumerate(self.assets_by_site)]
-        blocks = general.split_in_blocks(
-            idx_weight_pairs,
-            self.oqparam.concurrent_tasks or 1,
-            weight=operator.itemgetter(1))
-        for block in blocks:
-            indices = numpy.array([idx for idx, _weight in block])
-            reduced_assets = self.assets_by_site[indices]
-            reduced_eps = {}  # for the assets belonging to the indices array
-            if eps_dict:
-                for assets in reduced_assets:
-                    for asset in assets:
-                        reduced_eps[asset.id] = eps_dict[asset.id]
+        with self.monitor('building riskinputs', autoflush=True):
+            riskinputs = []
+            idx_weight_pairs = [
+                (i, len(assets))
+                for i, assets in enumerate(self.assets_by_site)]
+            blocks = general.split_in_blocks(
+                idx_weight_pairs,
+                self.oqparam.concurrent_tasks or 1,
+                weight=operator.itemgetter(1))
+            for block in blocks:
+                indices = numpy.array([idx for idx, _weight in block])
+                reduced_assets = self.assets_by_site[indices]
+                reduced_eps = {}  # for the assets belonging to the indices
+                if eps_dict:
+                    for assets in reduced_assets:
+                        for asset in assets:
+                            reduced_eps[asset.id] = eps_dict[asset.id]
 
-            # collect the hazards by key into hazards by imt
-            hdata = collections.defaultdict(lambda: [{} for _ in indices])
-            for key, hazards_by_imt in hazards_by_key.iteritems():
-                for imt, hazards_by_site in hazards_by_imt.iteritems():
-                    for i, haz in enumerate(hazards_by_site[indices]):
-                        hdata[imt][i][key] = haz
+                # collect the hazards by key into hazards by imt
+                hdata = collections.defaultdict(lambda: [{} for _ in indices])
+                for key, hazards_by_imt in hazards_by_key.iteritems():
+                    for imt, hazards_by_site in hazards_by_imt.iteritems():
+                        for i, haz in enumerate(hazards_by_site[indices]):
+                            hdata[imt][i][key] = haz
 
-            # build the riskinputs
-            for imt in hdata:
-                ri = self.riskmodel.build_input(
-                    imt, hdata[imt], reduced_assets, reduced_eps)
-                if ri.weight > 0:
-                    riskinputs.append(ri)
-        logging.info('Built %d risk inputs', len(riskinputs))
-        return sorted(riskinputs, key=self.riskinput_key)
+                # build the riskinputs
+                for imt in hdata:
+                    ri = self.riskmodel.build_input(
+                        imt, hdata[imt], reduced_assets, reduced_eps)
+                    if ri.weight > 0:
+                        riskinputs.append(ri)
+            logging.info('Built %d risk inputs', len(riskinputs))
+            return sorted(riskinputs, key=self.riskinput_key)
 
     def riskinput_key(self, ri):
         """
@@ -284,16 +292,18 @@ class RiskCalculator(BaseCalculator):
         Set the attributes .riskmodel, .sitecol, .assets_by_site
         """
         self.riskmodel = readinput.get_risk_model(self.oqparam)
-        self.exposure = readinput.get_exposure(self.oqparam)
-        logging.info('Read an exposure with %d assets of %d taxonomies',
-                     len(self.exposure.assets), len(self.exposure.taxonomies))
-        missing = self.exposure.taxonomies - set(
-            self.riskmodel.get_taxonomies())
-        if missing:
-            raise RuntimeError('The exposure contains the taxonomies %s '
-                               'which are not in the risk model' % missing)
-        self.sitecol, self.assets_by_site = readinput.get_sitecol_assets(
-            self.oqparam, self.exposure)
+        with self.monitor('reading exposure', autoflush=True):
+            self.exposure = readinput.get_exposure(self.oqparam)
+            logging.info('Read an exposure with %d assets of %d taxonomies',
+                         len(self.exposure.assets),
+                         len(self.exposure.taxonomies))
+            missing = self.exposure.taxonomies - set(
+                self.riskmodel.get_taxonomies())
+            if missing:
+                raise RuntimeError('The exposure contains the taxonomies %s '
+                                   'which are not in the risk model' % missing)
+            self.sitecol, self.assets_by_site = readinput.get_sitecol_assets(
+                self.oqparam, self.exposure)
         logging.info('Extracted %d unique sites from the exposure',
                      len(self.sitecol))
 
@@ -303,12 +313,13 @@ class RiskCalculator(BaseCalculator):
         Require a `.core_func` to be defined with signature
         (riskinputs, riskmodel, monitor).
         """
-        monitor = self.monitor(self.core_func.__name__)
-        return apply_reduce(
-            self.core_func.__func__,
-            (self.riskinputs, self.riskmodel, self.rlzs_assoc, monitor),
-            concurrent_tasks=self.oqparam.concurrent_tasks,
-            weight=get_weight, key=self.riskinput_key)
+        with self.monitor('execute risk', autoflush=True) as monitor:
+            res = apply_reduce(
+                self.core_func.__func__,
+                (self.riskinputs, self.riskmodel, self.rlzs_assoc, monitor),
+                concurrent_tasks=self.oqparam.concurrent_tasks,
+                weight=get_weight, key=self.riskinput_key)
+        return res
 
     def save_pik(self, result, **kw):
         """Save the risk outputs"""
@@ -317,6 +328,7 @@ class RiskCalculator(BaseCalculator):
         risk_out.update(kw)
         cache = os.path.join(self.oqparam.export_dir, 'risk.pik')
         logging.info('Saving risk output on %s', cache)
-        with open(cache, 'w') as f:
-            cPickle.dump(risk_out, f)
+        with self.monitor('saving risk outputs', autoflush=True):
+            with open(cache, 'w') as f:
+                cPickle.dump(risk_out, f)
         return risk_out

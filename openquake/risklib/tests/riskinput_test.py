@@ -1,10 +1,10 @@
-import mock
 import unittest
 
 from openquake.commonlib import readinput
 from openquake.risklib import riskinput
 from openquake.commonlib.calculators import event_based
 from openquake.qa_tests_data.event_based_risk import case_2
+
 
 class MockAssoc(object):
     def __iter__(self):

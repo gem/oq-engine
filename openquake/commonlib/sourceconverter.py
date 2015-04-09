@@ -612,7 +612,7 @@ def parse_ses_ruptures(fname):
     raise NotImplementedError('parse_ses_ruptures')
 
 
-def _filter_sources(sources, sitecol, maxdist):
+def _filter_sources(sources, sitecol, maxdist, monitor):
     # called by filter_sources
     srcs = []
     for src in sources:
@@ -631,11 +631,6 @@ def filter_sources(sources, sitecol, maxdist):
     :param maxdist: maximum distance
     :returns: the filtered sources ordered by source_id
     """
-    if len(sources) * len(sitecol) > LOTS_OF_SOURCES_SITES:
-        # filter in parallel on all available cores
-        sources = parallel.apply_reduce(
-            _filter_sources, (sources, sitecol, maxdist), operator.add, [])
-    else:
-        # few sources and sites, filter sequentially on a single core
-        sources = _filter_sources(sources, sitecol, maxdist)
+    mon = parallel.PerformanceMonitor('')
+    sources = _filter_sources(sources, sitecol, maxdist, mon)
     return sorted(sources, key=operator.attrgetter('source_id'))

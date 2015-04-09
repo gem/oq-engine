@@ -22,10 +22,11 @@ import collections
 
 from openquake.baselib import general
 from openquake.risklib import workflows
-from openquake.commonlib import readinput, writers
+from openquake.commonlib import readinput, writers, parallel
 from openquake.commonlib.calculators import base
 
 
+@parallel.litetask
 def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     """
     Compute and return the average losses for each asset.

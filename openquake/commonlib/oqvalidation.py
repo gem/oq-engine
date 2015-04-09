@@ -119,6 +119,7 @@ class OqParam(valid.ParamSet):
     time_event = valid.Param(str, None)
     truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
+    usecache = valid.Param(valid.boolean, False)
     width_of_mfd_bin = valid.Param(valid.positivefloat)
 
     def __init__(self, **names_vals):
@@ -207,7 +208,7 @@ class OqParam(valid.ParamSet):
         """
         The maximum_distance must be set for all hazard calculators
         """
-        return (self.calculation_mode in RISK_CALCULATORS
+        return (self.calculation_mode not in HAZARD_CALCULATORS
                 or getattr(self, 'maximum_distance', None))
 
     def is_valid_imtls(self):
