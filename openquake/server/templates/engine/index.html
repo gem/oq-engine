@@ -34,11 +34,11 @@
     <table id="calculation_table" class="table table-hover">
       <thead>
         <tr>
-          <th>ID</th>
-          <th>Type</th>
-          <th style="width: 375px;">Description</th>
-          <th style="width: 150px;">Status</th>
-          <th>Action</th>
+          <th style="width: 50px;">ID</th>
+          <th style="width: 50px;">Type</th>
+          <th style="width: 380px;">Description</th>
+          <th style="width: 120px;">Status</th>
+          <th style="width: 150px;">Action</th>
         </tr>
       </thead>
       <tbody>
@@ -57,18 +57,21 @@
             <% } %>
           </td>
           <td>
-            <% if (calc.get('is_running') == false && calc.get('id')) { %>
-                <% if (calc.get('status') == 'complete') { %>
-                    <% if(calc.get('map')) { %>
+            <% if (calc.get('id')) { %>
+                <a href="#" data-calc-id="<%= calc.get('id') %>" is-running="<%= calc.get('is_running') %>" class="btn btn-sm btn-log" style="margin: 2px 0 2px 0;">Console</a>
+                <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-danger" style="margin: 2px 0 2px 0;">Remove</a>
+                <% if (calc.get('is_running') == false) { %>
+                    <% if (calc.get('status') == 'complete') { %>
+                        <% if(calc.get('map')) { %>
                           <a href="/maps/<%= calc.get('map') %>" class="btn btn-sm btn-success">Open</a>
-                    <% } %>
+                        <% } %>
                 <!--
                      <p>
                           <a href="download/input/<%= calc.get('calculation_type') %>/<%= calc.get('id') %>" class="btn btn-sm">Download input</a>
                      </p>
                 -->
-              <a href="{% url "index" %}/<%= calc.get('id') %>/outputs" class="btn btn-sm" style="margin: 2px 0 2px 0">Show outputs</a>
-                    <% if(calc.get('job_type') == 'hazard') { %>
+              <a href="{% url "index" %}/<%= calc.get('id') %>/outputs" class="btn btn-sm" style="margin: 2px 0 2px 0">Outputs</a>
+                        <% if(calc.get('job_type') == 'hazard') { %>
               <form class="calc-form" enctype="multipart/form-data"
                 style="margin: 0; display: inline-block"
                 method="post" action="{{ oq_engine_server_url }}/v1/calc/run">
@@ -80,11 +83,12 @@
               <input type="hidden" name="hazard_job_id" value="<%= calc.get('id') %>"/>
               <input type="hidden" name="database" value="openquake2"/>
               </form>
+                        <% } %>
+                    <% } else { %>
+                        <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-traceback" style="margin: 2px 0 2px 0;">Traceback</a>
                     <% } %>
-                <% } else { %>
-                    <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-traceback" style="margin: 2px 0 2px 0;">Traceback</a>
+
                 <% } %>
-              <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-danger" style="margin: 2px 0 2px 0;">Remove</a>
             <% } %>
           </td>
         </tr>
