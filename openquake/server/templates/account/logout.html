@@ -1,0 +1,21 @@
+{{% extends "engine/base.html" %}
+
+{% load url from future %}
+{% load i18n %}
+
+{% block head_title %}{% trans "Log in" %}{% endblock %}
+
+  {% block main %}
+  <div class="content-wrap">
+    <div class="container">
+      <div class="row">
+        <div id="oq-body-wrapper">
+          <div class="span12">
+            <h2 class="page-title">Log out</h2>
+            <p>You have successfully logged out.</p>
+          </div>
+        </div>
+      </div>
+    </div> <!-- /.container -->
+  </div>
+  {% endblock main %}
