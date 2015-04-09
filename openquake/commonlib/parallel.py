@@ -257,7 +257,7 @@ class TaskManager(object):
                      key=lambda item: 'Unspecified',
                      name=None):
         """
-        Apply a function to a tuple of the form (sequence, \*other_args)
+        Apply a task to a tuple of the form (sequence, \*other_args)
         by first splitting the sequence in chunks, according to the weight
         of the elements and possibly to a key (see :function:
         `openquake.baselib.general.split_in_blocks`).
@@ -266,7 +266,7 @@ class TaskManager(object):
         useful for debugging purposes) by looking at the attribute `._chunks`,
         right after the `apply_reduce` function has been called.
 
-        :param task: a function to run in parallel
+        :param task: a task to run in parallel
         :param task_args: the arguments to be passed to the task function
         :param agg: the aggregation function
         :param acc: initial value of the accumulator (default empty AccumDict)
