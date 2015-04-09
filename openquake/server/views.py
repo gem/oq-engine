@@ -158,6 +158,8 @@ def calc_info(request, calc_id):
         response_data['status'] = calc.status
         response_data['start_time'] = str(calc.jobstats.start_time)
         response_data['stop_time'] = str(calc.jobstats.stop_time)
+        response_data['is_running'] = calc.is_running
+
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
 
