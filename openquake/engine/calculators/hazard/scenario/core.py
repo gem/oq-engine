@@ -179,7 +179,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
             (zip(self.tags, self.seeds), self.computer, self.monitor))
 
     @EnginePerformanceMonitor.monitor
-    def post_execute(self):
+    def post_execute(self, result):
         """
         Saving the GMFs in the database
         """

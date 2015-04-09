@@ -133,5 +133,6 @@ def oqtask(task_func):
     f.__name__ = task_func.__name__
     f.__module__ = task_func.__module__
     tsk = task(f, queue=celery_queue)
-    tsk.__func__ = tsk.task_func = task_func
+    tsk.__func__ = tsk
+    tsk.task_func = task_func
     return tsk
