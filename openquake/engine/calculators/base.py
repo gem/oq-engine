@@ -70,7 +70,7 @@ class Calculator(object):
         """
         raise NotImplementedError
 
-    def post_execute(self):
+    def post_execute(self, result=None):
         """
         Override this method in subclasses to any necessary post-execution
         actions, such as the consolidation of partial results.
