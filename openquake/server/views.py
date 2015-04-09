@@ -166,7 +166,7 @@ def calc_info(request, calc_id):
 
 @require_http_methods(['GET'])
 @cross_domain_ajax
-def calc(request):
+def calc(request, id=None):
     """
     Get a list of calculations and report their id, status, job_type,
     is_running, description, and a url where more detailed information
@@ -176,7 +176,7 @@ def calc(request):
     """
     base_url = _get_base_url(request)
 
-    calc_data = _get_calcs(request.GET)
+    calc_data = _get_calcs(request.GET, id=id)
 
     response_data = []
     for hc_id, status, job_type, is_running, desc in calc_data:
@@ -184,6 +184,10 @@ def calc(request):
         response_data.append(
             dict(id=hc_id, status=status, job_type=job_type,
                  is_running=is_running, description=desc, url=url))
+
+    # if id is specified the related dictionary is returned instead the list
+    if id is not None:
+        [ response_data ] = response_data
 
     return HttpResponse(content=json.dumps(response_data),
                         content_type=JSON)
@@ -316,10 +320,13 @@ def submit_job(job_file, temp_dir, dbname,
     return job, future
 
 
-def _get_calcs(request_get_dict):
+def _get_calcs(request_get_dict, id=None):
     # helper to get job+calculation data from the oq-engine database
     job_params = oqe_models.JobParam.objects.filter(
         name='description', job__user_name='platform').order_by('-id')
+
+    if id is not None:
+        job_params = job_params.filter(job_id = id)
 
     if 'job_type' in request_get_dict:
         job_type = request_get_dict.get('job_type')
