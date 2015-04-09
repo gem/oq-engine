@@ -56,6 +56,8 @@
                     <div class="modal-body" style="font-size: 12px;"><pre style="font-size: 12px;" class="modal-body-pre"></pre>\
                     </div>\
                     <div class="modal-footer">\
+                      <span id="diaerror_scroll_enabled_box" style="display: none;"><input type="checkbox" id="diaerror_scroll_enabled" checked>\
+                      Auto Scroll</span>&nbsp;&nbsp;&nbsp;\
                       <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>\
                     </div>\
                   </div>\
@@ -85,7 +87,7 @@
                           },
 
                           scroll_to_bottom: function(ctx) {
-                             ctx.scrollTop(ctx[0].scrollHeight);
+                              ctx.scrollTop(ctx[0].scrollHeight);
                           },
 
                           hide: function () {
@@ -277,7 +279,9 @@
                                           else {
                                               diaerror.append(title, out);
                                           }
-                                          diaerror.scroll_to_bottom($('.modal-body', diaerror.getdiv()));
+                                          if ($("#diaerror_scroll_enabled").prop( "checked" )) {
+                                              diaerror.scroll_to_bottom($('.modal-body', diaerror.getdiv()));
+                                          }
 
                                           if (is_running) {
                                               function log_update(obj)
@@ -286,6 +290,9 @@
                                               }
 
                                               obj.logTimeout = window.setTimeout(log_update, delay, obj);
+                                          }
+                                          else {
+                                              $('#diaerror_scroll_enabled_box').hide();
                                           }
 
                                           obj.logIsNew = false;
@@ -300,6 +307,7 @@
                 this.logIsNew = true;
 
                 this._show_log_priv(true, calc_id, is_running, "0");
+                $('#diaerror_scroll_enabled_box').show();
             },
 
             hide_log: function(e) {
@@ -311,6 +319,7 @@
                     this.logXhr.abort();
                     this.logXhr = null;
                 }
+                $('#diaerror_scroll_enabled_box').hide();
             },
 
             render: function() {
