@@ -94,15 +94,16 @@ class ScenarioCalculator(base.HazardCalculator):
         """
         logging.info('Computing the GMFs')
         args = (self.tag_seed_pairs, self.computer, self.monitor('calc_gmfs'))
-        data = {}
-        for (trt_id, gsim), dic in parallel.apply_reduce(
-                self.core_func.__func__, args,
-                concurrent_tasks=self.oqparam.concurrent_tasks).iteritems():
-            data[trt_id, gsim] = {  # build N x R matrices
+        result = {}
+        res = parallel.apply_reduce(
+            self.core_func.__func__, args,
+            concurrent_tasks=self.oqparam.concurrent_tasks)
+        for (trt_id, gsim), dic in res.iteritems():
+            result[trt_id, gsim] = {  # build N x R matrices
                 imt: numpy.array(
                     [dic[tag][imt] for tag in self.tags]).T
                 for imt in map(str, self.imts)}
-        return data
+        return result
 
     def post_execute(self, result):
         """
