@@ -222,7 +222,7 @@ def classical_tiling(calculator, sitecol, tileno, monitor):
     :param tileno:
         the number of the current tile
     :param monitor:
-        a Monitor instance
+        a monitor instance
     :returns:
         a dictionary file name -> full path for each exported file
     """
