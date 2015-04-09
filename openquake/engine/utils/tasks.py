@@ -136,3 +136,21 @@ def oqtask(task_func):
     tsk.__func__ = tsk
     tsk.task_func = task_func
     return tsk
+
+
+# ######### oq-lite support: this is hackish for the time being ############# #
+
+from openquake.commonlib import parallel
+
+# monkey patch the parallel module
+parallel.starmap = starmap
+parallel.apply_reduce = apply_reduce
+parallel.litetask = oqtask
+
+# import the oq-lite calculators  *after* the patching
+from openquake.commonlib.calculators import base
+
+# temporarily patching the BaseCalculator class
+base.BaseCalculator.post_process = lambda self: None
+base.BaseCalculator.export = lambda self, exports='': None
+base.BaseCalculator.clean_up = lambda self: None
