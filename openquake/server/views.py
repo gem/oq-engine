@@ -158,6 +158,8 @@ def calc_info(request, calc_id):
         response_data['status'] = calc.status
         response_data['start_time'] = str(calc.jobstats.start_time)
         response_data['stop_time'] = str(calc.jobstats.stop_time)
+        response_data['is_running'] = calc.is_running
+
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
 
@@ -166,7 +168,7 @@ def calc_info(request, calc_id):
 
 @require_http_methods(['GET'])
 @cross_domain_ajax
-def calc(request):
+def calc(request, id=None):
     """
     Get a list of calculations and report their id, status, job_type,
     is_running, description, and a url where more detailed information
@@ -176,7 +178,7 @@ def calc(request):
     """
     base_url = _get_base_url(request)
 
-    calc_data = _get_calcs(request.GET)
+    calc_data = _get_calcs(request.GET, id=id)
 
     response_data = []
     for hc_id, status, job_type, is_running, desc in calc_data:
@@ -184,6 +186,10 @@ def calc(request):
         response_data.append(
             dict(id=hc_id, status=status, job_type=job_type,
                  is_running=is_running, description=desc, url=url))
+
+    # if id is specified the related dictionary is returned instead the list
+    if id is not None:
+        [ response_data ] = response_data
 
     return HttpResponse(content=json.dumps(response_data),
                         content_type=JSON)
@@ -316,10 +322,13 @@ def submit_job(job_file, temp_dir, dbname,
     return job, future
 
 
-def _get_calcs(request_get_dict):
+def _get_calcs(request_get_dict, id=None):
     # helper to get job+calculation data from the oq-engine database
     job_params = oqe_models.JobParam.objects.filter(
         name='description', job__user_name='platform').order_by('-id')
+
+    if id is not None:
+        job_params = job_params.filter(job_id = id)
 
     if 'job_type' in request_get_dict:
         job_type = request_get_dict.get('job_type')
@@ -454,7 +463,7 @@ def get_result(request, result_id):
     finally:
         shutil.rmtree(tmpdir)
 
-def engine(request, **kwargs):
+def web_engine(request, **kwargs):
     return render_to_response("engine/index.html",
                               dict(),
                               context_instance=RequestContext(request))
@@ -462,7 +471,7 @@ def engine(request, **kwargs):
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
-def engine_get_outputs(request, calc_id, **kwargs):
+def web_engine_get_outputs(request, calc_id, **kwargs):
     return render_to_response("engine/get_outputs.html",
                               dict([('calc_id', calc_id)]),
                               context_instance=RequestContext(request))
