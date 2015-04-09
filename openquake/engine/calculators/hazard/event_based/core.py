@@ -420,7 +420,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         """
         return acc + result
 
-    def post_execute(self, result):
+    def post_execute(self, result=None):
         trt_models = models.TrtModel.objects.filter(
             lt_model__hazard_calculation=self.job)
         # save the right number of occurring ruptures
