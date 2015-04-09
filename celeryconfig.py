@@ -89,3 +89,8 @@ CELERY_IMPORTS = get_core_modules(engine) + [
     ]
 
 os.environ["DJANGO_SETTINGS_MODULE"] = "openquake.engine.settings"
+
+try:
+    from openquake.engine.utils import tasks
+except ImportError:  # circular import with celery 2, only affecting nose
+    pass
