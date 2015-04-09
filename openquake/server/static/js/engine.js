@@ -185,7 +185,7 @@
                                         }
                                         else {
                                             var out = "";
-                                            var ct=0;
+                                            var ct = 0;
                                             for (s in data) {
                                                 if (data[s] == "")
                                                     continue;
@@ -385,8 +385,7 @@
                                         dialog.hide();
                                         var s, out, data = $.parseJSON(xhr.responseText);
                                         var out = "";
-
-                                        var ct=0;
+                                        var ct = 0;
                                         for (s in data) {
                                             if (data[s] == "")
                                                 continue;
