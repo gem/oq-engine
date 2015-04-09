@@ -131,7 +131,7 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 1
 try:
     from local_settings import *
 except ImportError:
-    raise ImportError
+    pass
 
 if LOCKDOWN:
     AUTH_DATABASES = {
