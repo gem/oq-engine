@@ -36,7 +36,7 @@ from openquake.engine.performance import EnginePerformanceMonitor
 
 
 @tasks.oqtask
-def calc_gmfs(tag_seed_pairs, computer, monitor):
+def calculate_gmfs(tag_seed_pairs, computer, monitor):
     """
     Computes several GMFs in parallel, one for each tag and seed.
 
@@ -83,7 +83,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
     Scenario hazard calculator. Computes ground motion fields.
     """
 
-    core_calc_task = calc_gmfs
+    core_calc_task = calculate_gmfs
     output = None  # defined in pre_execute
 
     def __init__(self, *args, **kwargs):
@@ -179,7 +179,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
             (zip(self.tags, self.seeds), self.computer, self.monitor))
 
     @EnginePerformanceMonitor.monitor
-    def post_execute(self):
+    def post_execute(self, result=None):
         """
         Saving the GMFs in the database
         """
