@@ -36,22 +36,10 @@ DATABASES = oqe_settings.DATABASES
 DATABASE_ROUTERS = ['openquake.server.routers.AuthRouter',
                     'openquake.engine.db.routers.OQRouter', ]
 
-AUTH_DATABASES = {
-    'auth_db': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(os.path.dirname(__file__),
-                             'engineserver.sqlite3'),
-    }
-}
-
-DATABASES.update(AUTH_DATABASES)
 
 ALLOWED_HOSTS = ['*']
 
-AUTHENTICATION_BACKENDS = (
-    'django.contrib.auth.backends.ModelBackend',
-    # 'dpam.backends.PAMBackend',
-)
+AUTHENTICATION_BACKENDS = ()
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
@@ -80,11 +68,8 @@ USE_L10N = True
 SECRET_KEY = 'f_6=^^_0%ygcpgmemxcp0p^xq%47yqe%u9pu!ad*2ym^zt+xq$'
 
 MIDDLEWARE_CLASSES = (
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
 )
 
 LOCKDOWN = False
@@ -95,12 +80,7 @@ AUTH_EXEMPT_URLS = ()
 
 ROOT_URLCONF = 'openquake.server.urls'
 
-INSTALLED_APPS = ('django.contrib.auth',
-                  'django.contrib.contenttypes',
-                  'django.contrib.messages',
-                  'django.contrib.sessions',
-                  'django.contrib.staticfiles',
-                  'django.contrib.admin',
+INSTALLED_APPS = ('django.contrib.staticfiles',
                   'openquake.server',)
 
 # A sample logging configuration. The only tangible logging
@@ -154,5 +134,32 @@ except ImportError:
     raise ImportError
 
 if LOCKDOWN:
-    MIDDLEWARE_CLASSES = MIDDLEWARE_CLASSES + \
-        ('openquake.server.middleware.LoginRequiredMiddleware',)
+    AUTH_DATABASES = {
+        'auth_db': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.path.join(os.path.dirname(__file__),
+                                 'engineserver.sqlite3'),
+        }
+    }
+
+    DATABASES.update(AUTH_DATABASES)
+
+    AUTHENTICATION_BACKENDS += (
+        'django.contrib.auth.backends.ModelBackend',
+        # 'dpam.backends.PAMBackend',
+    )
+
+    MIDDLEWARE_CLASSES += (
+        'django.contrib.sessions.middleware.SessionMiddleware',
+        'django.contrib.messages.middleware.MessageMiddleware',
+        'django.contrib.auth.middleware.AuthenticationMiddleware',
+        'openquake.server.middleware.LoginRequiredMiddleware',
+    )
+
+    INSTALLED_APPS += (
+        'django.contrib.auth',
+        'django.contrib.contenttypes',
+        'django.contrib.messages',
+        'django.contrib.sessions',
+        'django.contrib.admin',
+        )
