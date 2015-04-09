@@ -236,7 +236,7 @@ class BaseHazardCalculator(base.Calculator):
                 'raise the parameter max_output_weight in openquake.cfg'
                 % (self.max_input_weight, input_weight))
 
-    def post_execute(self):
+    def post_execute(self, result=None):
         """Inizialize realizations"""
         self.initialize_realizations()
         # must be called after the realizations are known
