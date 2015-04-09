@@ -163,3 +163,5 @@ if LOCKDOWN:
         'django.contrib.sessions',
         'django.contrib.admin',
         )
+
+    LOGIN_REDIRECT_URL = '/engine'
