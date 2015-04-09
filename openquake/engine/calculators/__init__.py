@@ -17,21 +17,6 @@
 """This package contains Hazard and Risk calculator classes."""
 
 from openquake.baselib.general import CallableDict, import_all
-from openquake.commonlib import parallel
-from openquake.engine.utils import tasks
-
-# monkey patch the parallel module
-parallel.starmap = tasks.starmap
-parallel.apply_reduce = tasks.apply_reduce
-parallel.litetask = tasks.oqtask
-
-# import the oq-lite calculators  *after* the patching
-from openquake.commonlib.calculators import base
-
-# temporarily patching the BaseCalculator class
-base.BaseCalculator.post_process = lambda self: None
-base.BaseCalculator.export = lambda self, exports='': None
-base.BaseCalculator.clean_up = lambda self: None
 
 # an ordered dictionary of calculator classes
 calculators = CallableDict(lambda job: job.get_param('calculation_mode'))
