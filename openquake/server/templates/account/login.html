@@ -1,0 +1,30 @@
+{% extends "engine/base.html" %}
+
+{% load url from future %}
+{% load i18n %}
+
+{% block head_title %}{% trans "Log in" %}{% endblock %}
+
+  {% block main %}
+  <div class="content-wrap">
+    <div class="container">
+      <div class="row">
+        <div id="oq-body-wrapper">
+          <div class="span12">
+            <h2>Log in to an existing account</h2>
+            <form role="form" method="POST" action="{% url "login" %}" autocapitalize="off" {% if form.is_multipart %} enctype="multipart/form-data"{% endif %}>
+              {% csrf_token %}
+              <div class="form-group"
+                {{ form }}
+                {% if redirect_field_value %}
+                <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
+                {% endif %}
+              </div>
+              <button type="submit" class="btn btn-dafault">Log in</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div> <!-- /.container -->
+  </div>
+  {% endblock main %}
