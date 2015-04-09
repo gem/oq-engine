@@ -499,14 +499,18 @@ def main():
             open(job_ini).read()  # raise an IOError if the file does not exist
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
-        # run hazard
-        job = engine.run_job(job_inis[0], args.log_level,
-                             log_file, args.exports, lite=args.lite)
-        # run risk
-        if len(job_inis) == 2:
-            engine.run_job(job_inis[1], args.log_level, log_file,
-                           args.exports, hazard_calculation_id=job.id,
-                           lite=args.lite)
+        if args.lite:
+            # run hazard and risk together
+            engine.run_job_lite(job_inis, args.log_level,
+                                log_file, args.exports)
+        else:
+            # run hazard
+            job = engine.run_job(job_inis[0], args.log_level,
+                                 log_file, args.exports)
+            # run risk
+            if len(job_inis) == 2:
+                engine.run_job(job_inis[1], args.log_level, log_file,
+                               args.exports, hazard_calculation_id=job.id)
     # hazard
     elif args.list_hazard_calculations:
         list_calculations('hazard')
