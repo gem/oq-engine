@@ -157,3 +157,8 @@ footer.footer form label {
 #my-outputs.well {
     background-color: #f5f5f5;
 }
+
+#errorDialog  {
+     width: 90%;
+     margin-left: -45%;
+}
