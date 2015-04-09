@@ -155,10 +155,10 @@
                          function(jqXHR, textStatus, errorThrown)
                          {
                              if (jqXHR.status == 404) {
-                                 diaerror.show("Removing calculation " + calc_id + ".", "Failed: calculation " + calc_id + " not found.");
+                                 diaerror.show("Removing calculation " + calc_id, "Failed: calculation " + calc_id + " not found.");
                              }
                              else {
-                                 diaerror.show("Removing calculation " + calc_id + ".", "Failed: " + textStatus);
+                                 diaerror.show("Removing calculation " + calc_id, "Failed: " + textStatus);
                              }
                          }
                      );
@@ -173,13 +173,13 @@
                                             diaerror.show("Calculation " + calc_id + " not found.");
                                         }
                                         else {
-                                            diaerror.show("Error retrieving traceback for calculation " + calc_id + ".", textStatus);
+                                            diaerror.show("Error retrieving traceback for calculation " + calc_id, textStatus);
                                         }
                                         // alert("Error: " + textStatus);
                                     },
                                     success: function (data, textStatus, jqXHR) {
                                         if (data.length == 0) {
-                                            diaerror.show("Traceback not found for calculation " + calc_id + ".", []);
+                                            diaerror.show("Traceback not found for calculation " + calc_id, []);
                                         }
                                         else {
                                             var out = "";
@@ -190,7 +190,7 @@
                                                 out += '<p ' + (ct % 2 == 1 ? 'style="background-color: #ffffff;"' : '') + '>' + data[s] + '</p>';
                                                 ct++;
                                             }
-                                            diaerror.show("Traceback of calculation " + calc_id + ".", out);
+                                            diaerror.show("Traceback of calculation " + calc_id, out);
                                         }
                                         // alert("Success: " + textStatus);
                                     }});
@@ -219,7 +219,7 @@
                                               diaerror.show("Log of calculation " + calc_id + " not found.");
                                           }
                                           else {
-                                              diaerror.show("Error retrieving log for calculation " + calc_id + ".", textStatus);
+                                              diaerror.show("Error retrieving log for calculation " + calc_id, textStatus);
                                           }
                                           obj.logIsNew = false;
                                       },
@@ -265,10 +265,10 @@
                                               title = "Log of calculation " + calc_id + " - " + dt.toString();
                                           }
                                           else if (was_running != is_running) {
-                                              title = "Log of calculation " + calc_id + " - finished.";
+                                              title = "Log of calculation " + calc_id + " - finished";
                                           }
                                           else {
-                                              title = "Log of calculation " + calc_id + ".";
+                                              title = "Log of calculation " + calc_id;
                                           }
 
                                           if (obj.logIsNew) {
