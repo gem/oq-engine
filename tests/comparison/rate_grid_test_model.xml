@@ -1,0 +1,120 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <sourceModel name="Example Source Model for Grid Rate">
+        <pointSource id="PNT000" name="Point 000" tectonicRegion="Active Shallow Crust">
+            <pointGeometry>
+                <gml:Point>
+                    <gml:pos>15.05 15.05</gml:pos>
+                </gml:Point>
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>20.0</lowerSeismoDepth>
+            </pointGeometry>
+            <magScaleRel>PointMSR</magScaleRel>
+            <ruptAspectRatio>1.0</ruptAspectRatio>
+            <incrementalMFD minMag="5.0" binWidth="0.1">
+                <occurRates>1.0</occurRates>
+            </incrementalMFD>
+            <nodalPlaneDist>
+                <nodalPlane probability="1.0" strike="0.0" dip="90.0" rake="0.0" />
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth probability="1.0" depth="5.0" />
+            </hypoDepthDist>
+        </pointSource>
+        <areaSource id="AREA000" name="Area 000" tectonicRegion="Active Shallow Crust">
+            <areaGeometry>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing>
+                            <gml:posList>
+                             14.95 15.05
+                             15.05 15.05
+                             15.05 14.95
+                             14.95 14.95
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>40.0</lowerSeismoDepth>
+            </areaGeometry>
+            <magScaleRel>PointMSR</magScaleRel>
+            <ruptAspectRatio>1.0</ruptAspectRatio>
+            <incrementalMFD minMag="5.0" binWidth="0.1">
+                <occurRates>1.0</occurRates>
+            </incrementalMFD>
+            <nodalPlaneDist>
+                <nodalPlane probability="1.0" strike="0.0" dip="90.0" rake="0.0" />
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth probability="0.5" depth="5.0" />
+                <hypoDepth probability="0.5" depth="15.0" />
+            </hypoDepthDist>
+        </areaSource>
+        <simpleFaultSource id="SFLT000" name="Simple Fault Source" tectonicRegion="Active Shallow Crust">
+            <simpleFaultGeometry>
+                <gml:LineString>
+                    <gml:posList>
+                        14.975 15.0
+                        15.025 15.0
+                    </gml:posList>
+                </gml:LineString>
+                <dip>90.0</dip>
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>20.0</lowerSeismoDepth>
+            </simpleFaultGeometry>
+            <magScaleRel>PeerMSR</magScaleRel>
+            <ruptAspectRatio>1.0</ruptAspectRatio>
+            <incrementalMFD minMag="7.0" binWidth="0.1">
+                <occurRates>1.0</occurRates>
+            </incrementalMFD>
+            <rake>0.0</rake>
+        </simpleFaultSource>
+        <complexFaultSource id="CFLT000" name="Complex Fault Source" tectonicRegion="Active Shallow Crust">
+            <complexFaultGeometry>
+                <faultTopEdge>
+                    <gml:LineString>
+                        <gml:posList>
+                        14.975 15.0 0.0
+                        15.025 15.0 0.0
+                        </gml:posList>
+                    </gml:LineString>
+                </faultTopEdge>
+                <faultBottomEdge>
+                    <gml:LineString>
+                        <gml:posList>
+                        14.975 15.0 20.0
+                        15.025 15.0 20.0
+                        </gml:posList>
+                    </gml:LineString>
+                </faultBottomEdge>
+            </complexFaultGeometry>
+            <magScaleRel>PeerMSR</magScaleRel>
+            <ruptAspectRatio>1.0</ruptAspectRatio>
+            <incrementalMFD minMag="7.0" binWidth="0.1">
+                <occurRates>1.0</occurRates>
+            </incrementalMFD>
+            <rake>0.0</rake>
+        </complexFaultSource>
+        <characteristicFaultSource id="CHRFLT000" name="Characteristic 000" tectonicRegion="Active Shallow Crust">
+            <incrementalMFD minMag="7.0" binWidth="0.1">
+                <occurRates>1.0</occurRates>
+            </incrementalMFD>
+            <rake>0.0</rake>
+            <surface>
+            <simpleFaultGeometry>
+                <gml:LineString>
+                    <gml:posList>
+                        14.975 15.0
+                        15.025 15.0
+                    </gml:posList>
+                </gml:LineString>
+                <dip>90.0</dip>
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>20.0</lowerSeismoDepth>
+            </simpleFaultGeometry>
+            </surface>
+        </characteristicFaultSource>
+    </sourceModel>
+</nrml>

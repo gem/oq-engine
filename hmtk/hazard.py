@@ -124,11 +124,12 @@ def site_array_to_collection(site_array):
     Converts a set of sites from a 2D numpy array to an instance of :class:
     openquake.hazardlib.site.SiteCollection
     :param np.ndarray site_array:
-        Site parameters as [ID, Long, Lat, vs30, vs30measured, z1pt0, z2pt5]
+        Site parameters as [ID, Long, Lat, vs30, vs30measured, z1pt0, z2pt5,
+                            backarc]
     """
     site_list = []
     n_sites, n_param = np.shape(site_array)
-    if n_param != 7:
+    if n_param != 8:
         raise ValueError('Site array incorrectly formatted!')
     for iloc in range(0, n_sites):
         site = Site(Point(site_array[iloc, 1], site_array[iloc, 2]), # Location
@@ -136,6 +137,7 @@ def site_array_to_collection(site_array):
                     site_array[iloc, 4].astype(bool), # vs30measured
                     site_array[iloc, 5], # z1pt0
                     site_array[iloc, 6], # z2pt5
+                    site_array[iloc, 7].astype(bool), # Backarc
                     site_array[iloc, 0].astype(int)) # ID
         site_list.append(site)
     return SiteCollection(site_list)
