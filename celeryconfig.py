@@ -87,11 +87,11 @@ parallel.litetask = tasks.oqtask
 CELERY_IMPORTS = get_core_modules(engine) + [
     "openquake.engine.calculators.hazard.general",
     "openquake.engine.tests.utils.tasks"] + [
-        "openquake.commonlib.calculators.event_loss",
-        "openquake.commonlib.calculators.scenario_risk",
-        "openquake.commonlib.calculators.scenario_damage",
-        "openquake.commonlib.calculators.classical_damage",
-        "openquake.commonlib.calculators.classical_risk",
+    "openquake.commonlib.calculators.event_loss",
+    "openquake.commonlib.calculators.scenario_risk",
+    "openquake.commonlib.calculators.scenario_damage",
+    "openquake.commonlib.calculators.classical_damage",
+    "openquake.commonlib.calculators.classical_risk",
     ]
 
 os.environ["DJANGO_SETTINGS_MODULE"] = "openquake.engine.settings"
