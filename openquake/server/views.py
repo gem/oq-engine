@@ -281,6 +281,12 @@ def run_calc(request):
         tasks.update_calculation(callback_url, status="failed", einfo=einfo)
         return HttpResponse(json.dumps(einfo.splitlines()),
                             content_type=JSON, status=500)
+    if not einfo:
+        msg = 'Could not file any file of the form %s' % str(candidates)
+        logging.error(msg)
+        return HttpResponse(content=json.dumps([msg]), content_type=JSON,
+                            status=500)
+
     temp_dir = os.path.dirname(einfo[0])
     try:
         job, _fut = submit_job(einfo[0], temp_dir, request.POST['database'],
