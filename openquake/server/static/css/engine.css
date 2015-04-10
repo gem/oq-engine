@@ -171,7 +171,7 @@ footer.footer form label {
     background-color: #f5f5f5;
 }
 
-#errorDialog  {
+.errorDialogLarge  {
      width: 90%;
      margin-left: -45%;
 }
