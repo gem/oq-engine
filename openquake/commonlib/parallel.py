@@ -25,6 +25,7 @@ import sys
 import cPickle
 import logging
 import operator
+import functools
 import traceback
 import time
 from datetime import datetime
@@ -237,44 +238,35 @@ class TaskManager(object):
         cls.executor = ProcessPoolExecutor()
 
     @classmethod
-    def starmap(cls, task_func, task_args, progress=logging.info, name=None):
+    def starmap(cls, task, task_args, name=None):
         """
         Spawn a bunch of tasks with the given list of arguments
 
         :returns: a TaskManager object with a .result method.
         """
-        self = cls(task_func, progress, name)
+        self = cls(task, name)
         for i, a in enumerate(task_args, 1):
-            progress('Submitting task %s #%d', self.name, i)
+            cls.progress('Submitting task %s #%d', self.name, i)
             self.submit(*a)
         return self
 
     @classmethod
-    def apply_reduce(cls, task_func, task_args, agg=operator.add, acc=None,
+    def apply_reduce(cls, task, task_args, agg=operator.add, acc=None,
                      concurrent_tasks=executor._max_workers,
                      weight=lambda item: 1,
                      key=lambda item: 'Unspecified',
                      name=None):
         """
-        Apply a function to a tuple of the form (sequence, \*other_args)
+        Apply a task to a tuple of the form (sequence, \*other_args)
         by first splitting the sequence in chunks, according to the weight
         of the elements and possibly to a key (see :function:
         `openquake.baselib.general.split_in_blocks`).
         Then reduce the results with an aggregation function.
-        Here is an example:
-
-        >>> apply_reduce(sum, ([1, 2, 3, 4, 5],), lambda acc, x: acc + x,
-        ...             acc=0, concurrent_tasks=2)
-        15
-
         The chunks which are generated internally can be seen directly (
         useful for debugging purposes) by looking at the attribute `._chunks`,
-        right after the `apply_reduce` function has been called:
+        right after the `apply_reduce` function has been called.
 
-        >>> apply_reduce._chunks
-        [<WeightedSequence [1, 2, 3], weight=3>, <WeightedSequence [4, 5], weight=2>]
-
-        :param task_func: a function to run in parallel
+        :param task: a task to run in parallel
         :param task_args: the arguments to be passed to the task function
         :param agg: the aggregation function
         :param acc: initial value of the accumulator (default empty AccumDict)
@@ -289,21 +281,19 @@ class TaskManager(object):
         if not arg0:
             return acc
         elif len(arg0) == 1:
-            return agg(acc, task_func(arg0, *args))
+            return agg(acc, task.task_func(arg0, *args))
         chunks = list(split_in_blocks(
             arg0, concurrent_tasks or 1, weight, key))
         cls.apply_reduce.__func__._chunks = chunks
         if not concurrent_tasks or no_distribute():
             for chunk in chunks:
-                acc = agg(acc, task_func(chunk, *args))
+                acc = agg(acc, task.task_func(chunk, *args))
             return acc
-        tm = cls.starmap(task_func, [(chunk,) + args for chunk in chunks],
-                         cls.progress, name)
+        tm = cls.starmap(task, [(chunk,) + args for chunk in chunks], name)
         return tm.reduce(agg, acc)
 
-    def __init__(self, oqtask, progress=logging.info, name=None):
+    def __init__(self, oqtask, name=None):
         self.oqtask = oqtask
-        self.progress = progress
         self.name = name or oqtask.__name__
         self.results = []
         self.sent = 0
@@ -316,13 +306,19 @@ class TaskManager(object):
         OQ_NO_DISTRIBUTE is set, the function is run in process and the
         result is returned.
         """
-        check_mem_usage()  # log a warning if too much memory is used
+        check_mem_usage()
+        # log a warning if too much memory is used
         if no_distribute():
-            res = safely_call(self.oqtask, args)
+            res = safely_call(self.oqtask.task_func, args)
         else:
-            res = self.executor.submit(safely_call, self.oqtask, args)
-        self.sent += len(Pickled(args))
+            piks = pickle_sequence(args)
+            self.sent += sum(len(p) for p in piks)
+            res = self._submit(piks)
         self.results.append(res)
+
+    def _submit(self, piks):
+        # submit tasks by using the ProcessPoolExecutor
+        return self.executor.submit(self.oqtask, *piks)
 
     def aggregate_result_set(self, agg, acc):
         """
@@ -334,8 +330,13 @@ class TaskManager(object):
         :returns: the final value of the accumulator
         """
         for future in as_completed(self.results):
-            check_mem_usage()  # log a warning if too much memory is used
-            acc = agg(acc, future.result())
+            check_mem_usage()
+            # log a warning if too much memory is used
+            result = future.result()
+            if isinstance(result, BaseException):
+                raise result
+            self.received += len(result)
+            acc = agg(acc, result.unpickle())
         return acc
 
     def reduce(self, agg=operator.add, acc=None):
@@ -399,6 +400,19 @@ def do_not_aggregate(acc, value):
     :returns: the accumulator unchanged
     """
     return acc
+
+
+def litetask(func):
+    """
+    Add monitoring support to the decorated function. The last argument
+    must be a monitor object.
+    """
+    def w(*args):  # the last argument is assumed to be a monitor
+        with args[-1]('total ' + func.__name__, autoflush=True):
+            return func(*args)
+    wrapped = functools.wraps(func)(lambda *a: safely_call(w, a, pickle=True))
+    wrapped.task_func = func
+    return wrapped
 
 
 # this is not thread-safe
@@ -519,7 +533,7 @@ class DummyMonitor(PerformanceMonitor):
     def write(self, row):
         """Do nothing"""
 
-    def __call__(self, operation):
+    def __call__(self, operation, **kw):
         return self.__class__(operation)
 
     def __enter__(self):

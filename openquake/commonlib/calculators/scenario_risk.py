@@ -22,7 +22,7 @@ import collections
 
 from openquake.risklib import scientific, riskinput
 from openquake.baselib import general
-from openquake.commonlib import riskmodels, readinput
+from openquake.commonlib import riskmodels, readinput, parallel
 from openquake.commonlib.calculators import base, calc
 from openquake.commonlib.export import export
 from openquake.commonlib.calculators.scenario_damage import \
@@ -55,6 +55,7 @@ def losses_per_asset(tag, loss_type, assets, means, stddevs,
     return {(tag, loss_type): lst}
 
 
+@parallel.litetask
 def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     """
     Core function for a scenario computation.

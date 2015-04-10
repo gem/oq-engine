@@ -21,7 +21,7 @@ import logging
 
 import numpy
 
-from openquake.commonlib import readinput
+from openquake.commonlib import readinput, parallel
 from openquake.risklib import scientific, riskinput
 from openquake.baselib.general import AccumDict
 from openquake.commonlib.calculators import base, calc
@@ -31,6 +31,7 @@ from openquake.commonlib.risk_writers import (
     ExposureData, Site)
 
 
+@parallel.litetask
 def scenario_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
     """
     Core function for a damage computation.
