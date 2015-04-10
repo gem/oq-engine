@@ -292,16 +292,18 @@ class ParametricProbabilisticRupture(BaseProbabilisticRupture):
         rate = self.occurrence_rate
         return tom.get_probability_no_exceedance(rate, poes)
 
-    def _get_dppvalue(self, site):
+    def get_dppvalue(self, site):
         """
-        Compute and return the directivity prediction value, DPP at a given
-        site.
+        Get the directivity prediction value, DPP at
+        a given site as described in Spudich et al. (2013).
+
         :param site:
             :class:`~openquake.hazardlib.geo.point.Point` object
             representing the location of the target site
         :returns:
-            A float number, directivity predication value.
+            A float number, directivity predication value (DPP).
         """
+
         origin = self.surface.get_resampled_top_edge()[0]
         dpp_multi = []
         index_patch = self.surface.hypocentre_patch_index(
@@ -374,22 +376,25 @@ class ParametricProbabilisticRupture(BaseProbabilisticRupture):
 
         return dpp
 
-    def get_cdppvalue(self, target, buf=1., delta=0.01, space=1.):
+    def get_cdppvalue(self, target, buf=1.0, delta=0.01, space=2.):
         """
-        Compute and return the directivity prediction value, centred DPP at
-        a given site.
+        Get the directivity prediction value, centred DPP(cdpp) at
+        a given site as described in Spudich et al. (2013), and this cdpp is
+        used in Chiou and Young(2014) GMPE for near-fault directivity
+        term prediction.
 
         :param target_site:
             An instance of :class:`Mesh`
-            representing the location of the target site.
+            representing the location of the target sites.
         :param buf:
-            A float vaule presents the length extend from the mesh boundary,
-            in km.
+            A float vaule presents  the buffer distance in km to extend the
+            mesh borders to.
         :param delta:
-            A float vaule presents the spacing of the mesh point, in km.
+            A float vaule presents the desired distance between two adjacent
+            points in mesh
         :param space:
-            A float vaule presents the buffering distance while search the sits
-            which share the same distance
+            A float vaule presents the tolerance for the same distance of the
+            sites (default 2 km)
         :returns:
             A float value presents the centreed directivity predication value
             which used in Chioud and Young(2014) GMPE for directivity term
@@ -405,22 +410,34 @@ class ParametricProbabilisticRupture(BaseProbabilisticRupture):
         lons = numpy.arange(min_lon, max_lon + delta, delta)
         lats = numpy.arange(min_lat, max_lat + delta, delta)
         lons, lats = numpy.meshgrid(lons, lats)
-        mesh = RectangularMesh(lons=lons, lats=lats, depths=None)
+
         target_rup = self.surface.get_min_distance(target)
+        mesh = RectangularMesh(lons=lons, lats=lats, depths=None)
         mesh_rup = self.surface.get_min_distance(mesh)
 
-        cdpp_sites_lats = mesh.lats[(mesh_rup <= target_rup + space)
-                                    & (mesh_rup >= target_rup - space)]
-        cdpp_sites_lons = mesh.lons[(mesh_rup <= target_rup + space)
-                                    & (mesh_rup >= target_rup - space)]
-        dpp_sum = []
-        dpp_target = self._get_dppvalue(target)
-        for lon, lat in zip(cdpp_sites_lons, cdpp_sites_lats):
-            sites = Point(lon, lat, 0.)
-            dpp_one = self._get_dppvalue(sites)
-            dpp_sum.append(dpp_one)
+        target_lons = target.lons
+        target_lats = target.lats
+        cdpp = numpy.empty(len(target_lons))
 
-        mean_dpp = numpy.mean(dpp_sum)
-        c_dpp = dpp_target - mean_dpp
+        for iloc, (target_lon, target_lat) in enumerate(zip(target_lons,
+                                                        target_lats)):
 
-        return c_dpp
+            cdpp_sites_lats = mesh.lats[(mesh_rup <= target_rup[iloc] + space)
+                                        & (mesh_rup >= target_rup[iloc]
+                                           - space)]
+            cdpp_sites_lons = mesh.lons[(mesh_rup <= target_rup[iloc] + space)
+                                        & (mesh_rup >= target_rup[iloc]
+                                           - space)]
+
+            dpp_sum = []
+            dpp_target = self.get_dppvalue(Point(target_lon, target_lat))
+
+            for lon, lat in zip(cdpp_sites_lons, cdpp_sites_lats):
+                site = Point(lon, lat, 0.)
+                dpp_one = self.get_dppvalue(site)
+                dpp_sum.append(dpp_one)
+
+            mean_dpp = numpy.mean(dpp_sum)
+            cdpp[iloc] = dpp_target - mean_dpp
+
+        return cdpp

@@ -17,14 +17,16 @@ import unittest
 
 import numpy
 from decimal import Decimal
-
+import xlrd
 from openquake.hazardlib import const
-from openquake.hazardlib.geo import Point
+from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source.rupture import Rupture, \
     ParametricProbabilisticRupture, NonParametricProbabilisticRupture
 from openquake.hazardlib.pmf import PMF
+from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 
 
 def make_rupture(rupture_class, **kwargs):
@@ -128,6 +130,82 @@ class ParametricProbabilisticRuptureTestCase(unittest.TestCase):
                          [0.7408182, 0.7788008, 0.8187308]])
         )
 
+
+class Cdppvalue(unittest.TestCase):
+
+    def make_rupture_fordpp(self, rupture_class, **kwargs):
+        # Create the rupture surface.
+        upper_seismogenic_depth = 0.
+        lower_seismogenic_depth = 15.
+        dip = 90.
+        mesh_spacing = 1.
+        fault_trace_start = Point(10., 45.2)
+        fault_trace_end = Point(10., 45.919457)
+        fault_trace = Line([fault_trace_start, fault_trace_end])
+        default_arguments = {
+            'mag': 7.2,
+            'rake': 0.,
+            'tectonic_region_type': const.TRT.STABLE_CONTINENTAL,
+            'hypocenter': Point(10.0, 45.334898, 10),
+            'surface': SimpleFaultSurface.from_fault_data(
+                fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
+                dip=dip, mesh_spacing=mesh_spacing),
+            'source_typology': object(),
+            'rupture_slip_direction': 0.
+        }
+        default_arguments.update(kwargs)
+        kwargs = default_arguments
+        rupture = rupture_class(**kwargs)
+        for key in kwargs:
+            assert getattr(rupture, key) is kwargs[key]
+        return rupture
+
+    def test_get_dppvalue(self):
+        rupture = self.make_rupture_fordpp(
+            ParametricProbabilisticRupture, occurrence_rate=0.01,
+            temporal_occurrence_model=PoissonTOM(50))
+        # Load the testing site.
+        input_file = './geo_cycs_ss3_testing_site.xlsx'
+        workbook = xlrd.open_workbook(input_file)
+        sheet = workbook.sheet_by_name('Sheet1')
+
+        stalon = numpy.array(sheet.col_values(0, start_rowx=1, end_rowx=500))
+        stalat = numpy.array(sheet.col_values(1, start_rowx=1, end_rowx=500))
+        ref_dpp = numpy.array(sheet.col_values(2, start_rowx=1, end_rowx=500))
+        ref_cdpp = numpy.array(sheet.col_values(3, start_rowx=1, end_rowx=500))
+
+
+        for lat, lon, refdpp in zip(stalat, stalon, ref_dpp):
+
+            a = Point(lon, lat)
+            dpp = (rupture.get_dppvalue(a))
+
+            self.assertAlmostEqual(dpp, refdpp, delta=0.1)
+
+    def test_get_cdppvalue(self):
+
+        rupture = self.make_rupture_fordpp(ParametricProbabilisticRupture,
+            occurrence_rate=0.01, temporal_occurrence_model=PoissonTOM(50))
+        # Load the testing site.
+        input_file = './geo_cycs_ss3_testing_site.xlsx'
+        workbook = xlrd.open_workbook(input_file)
+        sheet = workbook.sheet_by_name('Sheet1')
+
+        stalon = numpy.array(sheet.col_values(0, start_rowx=1500, end_rowx=1502))
+        stalat = numpy.array(sheet.col_values(1, start_rowx=1500, end_rowx=1502))
+        ref_dpp = numpy.array(sheet.col_values(2, start_rowx=1500, end_rowx=1502))
+        ref_cdpp = numpy.array(sheet.col_values(3, start_rowx=1500, end_rowx=1502))
+
+        points = []
+        for lat, lon, refdpp in zip(stalat, stalon, ref_dpp):
+
+            a = Point(lon, lat)
+            points.append(a)
+
+        mesh = Mesh.from_points_list(points)
+        cdpp, totaltime, numbersite = rupture.get_cdppvalue(mesh)
+        self.assertAlmostEqual(cdpp[0], ref_cdpp[0], delta=0.1)
+        self.assertAlmostEqual(cdpp[1], ref_cdpp[1], delta=0.1)
 
 class NonParametricProbabilisticRuptureTestCase(unittest.TestCase):
     def assert_failed_creation(self, rupture_class, exc, msg, **kwargs):
