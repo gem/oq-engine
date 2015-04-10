@@ -17,3 +17,7 @@ class EventLossTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/rlz-000-structural-event-loss.csv',
             out['rlz-000-structural-event-loss'])
+
+        self.assertEqualFiles(
+            'expected/rlz-000-structural-agg-loss-curve.csv',
+            out['rlz-000-structural-agg-loss-curve'])

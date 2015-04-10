@@ -21,10 +21,12 @@ import logging
 import operator
 import collections
 
+import numpy
+
 from openquake.baselib.general import AccumDict
 from openquake.commonlib.calculators import base
 from openquake.commonlib import readinput, writers, parallel
-from openquake.risklib import riskinput, workflows
+from openquake.risklib import riskinput, workflows, scientific
 
 
 @parallel.litetask
@@ -82,8 +84,6 @@ class EventLossCalculator(base.RiskCalculator):
         """
         oq = self.oqparam
         epsilon_sampling = getattr(oq, 'epsilon_sampling', 1000)
-        oq.tses = oq.investigation_time * oq.ses_per_logic_tree_path * (
-            oq.number_of_logic_tree_samples or 1)
 
         # HACK: replace the event_based_risk workflow with the event_loss
         # workflow, so that the riskmodel has the correct workflows
@@ -127,7 +127,13 @@ class EventLossCalculator(base.RiskCalculator):
         logging.info('Built %d risk inputs', len(self.riskinputs))
 
     def post_execute(self, result):
+        """
+        Extract from the result dictionary
+        (rlz.ordinal, loss_type) -> tag -> [(asset.id, loss), ...]
+        several interesting outputs.
+        """
         saved = {}
+        total_losses = []
         for ordinal, loss_type in sorted(result):
             data = result[ordinal, loss_type]
             ela = []  # event loss per asset
@@ -137,7 +143,7 @@ class EventLossCalculator(base.RiskCalculator):
                 d = data[tag]
                 for asset_id, loss in sorted(d['pairs']):
                     ela.append((tag, asset_id, loss))
-                elo.append((tag, d['loss']))
+                elo.append((tag, d['loss']))  # sum of the losses
                 nonzero += d['nonzero']
                 total += d['total']
             if ela:
@@ -148,7 +154,34 @@ class EventLossCalculator(base.RiskCalculator):
             if elo:
                 key = 'rlz-%03d-%s-event-loss' % (ordinal, loss_type)
                 saved[key] = self.export_csv(key, elo)
+
+                # aggregate loss curve for all tags
+                key = 'rlz-%03d-%s-agg-loss-curve' % (ordinal, loss_type)
+                losses, poes, avg, std = self.build_loss_curve(
+                    [loss for _tag, loss in elo])
+                self.risk_out[key] = dict(
+                    losses=losses, poes=poes, avg=avg, std=std)
+                total_losses.append((ordinal, loss_type, avg, std))
+                saved[key] = self.export_csv(key, zip(losses, poes))
+        header = 'rlz_no loss_type avg_loss stddev'.split()
+        saved['total-losses'] = self.export_csv(
+            'total-losses', [header] + total_losses)
         return saved
+
+    def build_loss_curve(self, losses):
+        """
+        Build a loss curve from a set of losses with length give by
+        the parameter loss_curve_resolution.
+
+        :returns: a pair (losses, poes)
+        """
+        oq = self.oqparam
+        losses_poes = scientific.event_based(
+            losses, tses=oq.tses, time_span=oq.investigation_time,
+            curve_resolution=oq.loss_curve_resolution)
+        return (losses_poes[0], losses_poes[1],
+                scientific.average_loss(losses_poes),
+                numpy.std(losses))
 
     def export_csv(self, key, data):
         dest = os.path.join(self.oqparam.export_dir, key) + '.csv'
