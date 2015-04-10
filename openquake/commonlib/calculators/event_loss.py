@@ -105,16 +105,17 @@ class EventLossCalculator(base.RiskCalculator):
 
         logging.info('Populating the risk inputs')
         self.riskinputs = []
+        num_epsilons = 0
         for trt_id, sesruptures in sorted(
                 haz_out['ruptures_by_trt'].iteritems()):
             # there should be different epsilons for each SES collection
             # and for each taxonomy
+            samples = min(len(sesruptures), epsilon_sampling)
             eps_dict = riskinput.make_eps_dict(
-                self.assets_by_site,
-                min(len(sesruptures), epsilon_sampling),
+                self.assets_by_site, samples,
                 getattr(oq, 'master_seed', 42),
                 getattr(oq, 'asset_correlation', 0))
-
+            num_epsilons += sum(len(v) for v in eps_dict.itervalues())
             gsims = gsims_by_trt_id[trt_id]
 
             sesruptures.sort(key=operator.attrgetter('tag'))
@@ -124,6 +125,7 @@ class EventLossCalculator(base.RiskCalculator):
                 epsilon_sampling)
 
             self.riskinputs.extend(ris)
+        logging.info('Generated %d epsilons', num_epsilons)
         logging.info('Built %d risk inputs', len(self.riskinputs))
 
     def post_execute(self, result):
