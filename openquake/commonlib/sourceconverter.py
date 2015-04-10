@@ -640,5 +640,5 @@ def filter_sources(sources, sitecol, maxdist):
             operator.add, [])
     else:
         # few sources and sites, filter sequentially on a single core
-        sources = _filter_sources(sources, sitecol, maxdist, mon)
+        sources = _filter_sources.task_func(sources, sitecol, maxdist, mon)
     return sorted(sources, key=operator.attrgetter('source_id'))
