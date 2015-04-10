@@ -20,10 +20,10 @@ import os
 import logging
 import collections
 
-from openquake.risklib import scientific, riskinput
+from openquake.risklib import scientific
 from openquake.baselib import general
-from openquake.commonlib import riskmodels, readinput, parallel
-from openquake.commonlib.calculators import base, calc
+from openquake.commonlib import riskmodels, parallel
+from openquake.commonlib.calculators import base
 from openquake.commonlib.export import export
 from openquake.commonlib.calculators.scenario_damage import \
     ScenarioDamageCalculator
@@ -99,12 +99,13 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
 
 
 @base.calculators.add('scenario_risk')
-class ScenarioRiskCalculator(ScenarioDamageCalculator):
+class ScenarioRiskCalculator(base.DamageCalculator):
     """
     Run a scenario risk calculation
     """
     core_func = scenario_risk
     result_kind = 'losses_by_key'
+    hazard_calculator = 'scenario'
 
     def pre_execute(self):
         """
@@ -112,7 +113,7 @@ class ScenarioRiskCalculator(ScenarioDamageCalculator):
         with the unit of measure, used in the export phase.
         """
         # notice, not super(ScenarioRiskCalculator, self)
-        super(ScenarioDamageCalculator, self).pre_execute()
+        super(base.DamageCalculator, self).pre_execute()
         if 'gmfs' in self.oqparam.inputs:  # from file
             gmfs = self.read_gmfs_from_csv()
         else:  # from rupture
