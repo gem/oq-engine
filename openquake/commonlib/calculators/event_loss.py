@@ -174,7 +174,8 @@ class EventLossCalculator(base.RiskCalculator):
                 self.risk_out[key] = dict(
                     losses=losses, poes=poes, avg=avg, std=std)
                 total_losses.append((ordinal, loss_type, avg, std))
-                saved[key] = self.export_csv(key, zip(losses, poes))
+                saved[key] = self.export_csv(
+                    key, [('aggregate', losses, poes, avg, std)])
         header = 'rlz_no loss_type avg_loss stddev'.split()
         saved['total-losses'] = self.export_csv(
             'total-losses', [header] + total_losses)
