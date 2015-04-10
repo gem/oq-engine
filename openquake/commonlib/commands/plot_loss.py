@@ -40,7 +40,8 @@ def make_figure(output_key, losses, poes):
 
 def plot_loss(risk_pik, output_key):
     """
-    Loss curves plotter.
+    Loss curves plotter. For the moment it is restricted to the
+    aggregate curves.
 
     :param risk_pik: the pathname to a pickled file
     :param output_key: an unique string for the output to plot

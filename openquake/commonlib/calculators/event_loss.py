@@ -23,7 +23,7 @@ import collections
 
 import numpy
 
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, groupby
 from openquake.commonlib.calculators import base
 from openquake.commonlib import readinput, writers, parallel
 from openquake.risklib import riskinput, workflows, scientific
@@ -151,6 +151,18 @@ class EventLossCalculator(base.RiskCalculator):
                 saved[key] = self.export_csv(key, ela)
                 logging.info('rlz %d, loss type %s: %d/%d nonzero losses',
                              ordinal, loss_type, nonzero, total)
+
+                # aggregate loss curves per asset
+                losses_by_asset = groupby(  # (tag, asset_id, loss) triples
+                    ela, operator.itemgetter(1),
+                    lambda rows: [row[2] for row in rows])
+                key = 'rlz-%03d-%s-loss-curves' % (ordinal, loss_type)
+                self.risk_out[key] = []
+                for asset_id, losses in losses_by_asset.iteritems():
+                    losses, poes, avg, std = self.build_loss_curve(losses)
+                    self.risk_out[key].append(
+                        (asset_id, losses, poes, avg, std))
+                saved[key] = self.export_csv(key, self.risk_out[key])
             if elo:
                 key = 'rlz-%03d-%s-event-loss' % (ordinal, loss_type)
                 saved[key] = self.export_csv(key, elo)
