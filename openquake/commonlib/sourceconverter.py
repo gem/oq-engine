@@ -612,6 +612,7 @@ def parse_ses_ruptures(fname):
     raise NotImplementedError('parse_ses_ruptures')
 
 
+@parallel.litetask
 def _filter_sources(sources, sitecol, maxdist, monitor):
     # called by filter_sources
     srcs = []
@@ -627,10 +628,17 @@ def filter_sources(sources, sitecol, maxdist):
     Filter a list of hazardlib sources according to the maximum distance.
 
     :param sources: the original sources
-    :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
+    :param sitecol: a SiteCollection instance
     :param maxdist: maximum distance
     :returns: the filtered sources ordered by source_id
     """
-    mon = parallel.PerformanceMonitor('')
-    sources = _filter_sources(sources, sitecol, maxdist, mon)
+    mon = parallel.PerformanceMonitor('filter sources')
+    if len(sources) * len(sitecol) > LOTS_OF_SOURCES_SITES:
+        # filter in parallel on all available cores
+        sources = parallel.TaskManager.apply_reduce(
+            _filter_sources, (sources, sitecol, maxdist, mon),
+            operator.add, [])
+    else:
+        # few sources and sites, filter sequentially on a single core
+        sources = _filter_sources(sources, sitecol, maxdist, mon)
     return sorted(sources, key=operator.attrgetter('source_id'))
