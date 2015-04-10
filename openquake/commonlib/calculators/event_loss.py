@@ -21,6 +21,8 @@ import logging
 import operator
 import collections
 
+import numpy
+
 from openquake.baselib.general import AccumDict
 from openquake.commonlib.calculators import base
 from openquake.commonlib import readinput, writers, parallel
@@ -120,7 +122,7 @@ class EventLossCalculator(base.RiskCalculator):
 
             sesruptures.sort(key=operator.attrgetter('tag'))
             ris = self.riskmodel.build_inputs_from_ruptures(
-                self.sitecol, self.assets_by_site, sesruptures,
+                self.sitecol, self.assets_by_site, numpy.array(sesruptures),
                 gsims, oq.truncation_level, correl_model, eps_dict,
                 epsilon_sampling)
 

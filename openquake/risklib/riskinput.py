@@ -134,10 +134,13 @@ class RiskModel(collections.Mapping):
         :returns: a :class:`RiskInputFromRuptures` instance
         """
         imt_taxonomies = list(self.get_imt_taxonomies())
-        return [RiskInputFromRuptures(
-            imt_taxonomies, sitecol, assets_by_site, ruptures,
-            gsims, trunc_level, correl_model, eps_dict)
-            for ruptures in block_splitter(ses_ruptures, epsilon_sampling)]
+        for idx in block_splitter(range(len(ses_ruptures)), epsilon_sampling):
+            indices = map(int, idx)
+            edic = {asset: expand(eps, len(idx), indices)
+                    for asset, eps in eps_dict.iteritems()}
+            yield RiskInputFromRuptures(
+                imt_taxonomies, sitecol, assets_by_site, ses_ruptures[indices],
+                gsims, trunc_level, correl_model, edic)
 
     def gen_outputs(self, riskinputs, rlzs_assoc, monitor):
         """
