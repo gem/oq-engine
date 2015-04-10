@@ -152,7 +152,7 @@ def export_agg_loss_curve_csv(key, output, target):
     """
     Export `output` to `target` in csv format
     """
-    dest = _get_result_export_dest(target, output)
+    dest = _get_result_export_dest(target, output)[:-3] + 'csv'
     row = output.loss_curve.aggregatelosscurvedata
     data = ('aggregate', row.losses, row.poes, row.average_loss,
             row.stddev_loss)
