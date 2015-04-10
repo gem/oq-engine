@@ -47,7 +47,7 @@
 
     var diaerror = (function ()
                   {
-                      var errorDiv = $('<div id="errorDialog" class="modal fade" style="display: none;" data-keyboard="true" tabindex="-1">\
+                      var errorDiv = $('<div id="errorDialog" class="modal hide" data-keyboard="true" tabindex="-1">\
                 <div class="modal-dialog">\
                   <div class="modal-content">\
                     <div class="modal-header">\
@@ -285,7 +285,7 @@
                                           else {
                                               diaerror.append(title, out);
                                           }
-                                          if ($("#diaerror_scroll_enabled").prop( "checked" )) {
+                                          if ($("#diaerror_scroll_enabled").prop( "checked" ) || was_running == false) {
                                               diaerror.scroll_to_bottom($('.modal-body', diaerror.getdiv()));
                                           }
 
@@ -312,8 +312,12 @@
                 this.logId = calc_id;
                 this.logIsNew = true;
 
+                if (is_running)
+                    $('#diaerror_scroll_enabled_box', diaerror.getdiv()).show();
+                else
+                    $('#diaerror_scroll_enabled_box', diaerror.getdiv()).hide();
+
                 this._show_log_priv(true, calc_id, is_running, "0");
-                $('#diaerror_scroll_enabled_box').show();
             },
 
             hide_log: function(e) {
