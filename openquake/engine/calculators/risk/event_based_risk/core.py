@@ -76,7 +76,7 @@ def event_based(workflow, getter, outputdict, params, monitor):
     inserter = writer.CacheInserter(
         models.EventLossAsset, max_cache_size=10000)
     for loss_type in workflow.loss_types:
-        with monitor('computing individual risk'):
+        with monitor('computing individual risk', autoflush=True):
             outputs = workflow.compute_all_outputs(getter, loss_type)
             if statistics:
                 outputs = list(outputs)  # expand the generator
@@ -114,14 +114,14 @@ def event_based(workflow, getter, outputdict, params, monitor):
                             num_losses[asset.asset_ref] += numpy.array(
                                 [bool(loss_per_rup), 1])
                     if params.sites_disagg:
-                        with monitor('disaggregating results'):
+                        with monitor('disaggregating results', autoflush=True):
                             ruptures = [models.SESRupture.objects.get(pk=rid)
                                         for rid in getter.rupture_ids]
                             disagg_outputs = disaggregate(
                                 out.output, [r.rupture for r in ruptures],
                                 params)
 
-            with monitor('saving individual risk'):
+            with monitor('saving individual risk', autoflush=True):
                 save_individual_outputs(
                     outputdict.with_args(hazard_output_id=out.hid,
                                          loss_type=loss_type),
@@ -131,7 +131,7 @@ def event_based(workflow, getter, outputdict, params, monitor):
             stats = workflow.statistics(
                 outputs, params.quantile_loss_curves)
 
-            with monitor('saving risk statistics'):
+            with monitor('saving risk statistics', autoflush=True):
                 save_statistical_output(
                     outputdict.with_args(
                         hazard_output_id=None, loss_type=loss_type),
@@ -341,8 +341,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         super(EventBasedRiskCalculator, self).__init__(job)
         # accumulator for the event loss tables
         self.acc = collections.defaultdict(collections.Counter)
-        self.sites_disagg = self.job.get_param('sites_disagg')
-        self.specific_assets = self.job.get_param('specific_assets')
+        self.sites_disagg = self.job.get_param('sites_disagg', [])
+        self.specific_assets = self.job.get_param('specific_assets', [])
 
     def pre_execute(self):
         """
@@ -390,7 +390,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
         oq = self.oqparam
         tses = oq.investigation_time * oq.ses_per_logic_tree_path
-        with self.monitor('post processing'):
+        with self.monitor('post processing', autoflush=True):
             inserter = writer.CacheInserter(models.EventLossData,
                                             max_cache_size=10000)
             for (loss_type, out_id), event_loss_table in self.acc.items():
