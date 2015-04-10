@@ -48,10 +48,10 @@ def classical_bcr(workflow, getter, outputdict, params, monitor):
       A monitor instance
     """
     for loss_type in workflow.loss_types:
-        with monitor('computing risk'):
+        with monitor('computing risk', autoflush=True):
             outputs = workflow.compute_all_outputs(getter, loss_type)
         outputdict = outputdict.with_args(loss_type=loss_type)
-        with monitor('saving risk'):
+        with monitor('saving risk', autoflush=True):
             for out in outputs:
                 outputdict.write(
                     workflow.assets,
