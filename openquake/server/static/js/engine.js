@@ -69,14 +69,20 @@
                               return errorDiv;
                           },
 
-                          show: function(title, msg) {
+                          show: function(is_large, title, msg) {
                               if (title != null) {
                                   $('.modal-title', errorDiv).html(title);
                               }
                               if (msg != null) {
                                   $('.modal-body-pre', errorDiv).html(msg);
                               }
-                              errorDiv.modal();
+                              if (is_large) {
+                                  errorDiv.addClass("errorDialogLarge");
+                              }
+                              else {
+                                  errorDiv.removeClass("errorDialogLarge");
+                              }
+                              errorDiv.modal('show');
                           },
 
                           append: function(title, msg) {
@@ -145,22 +151,22 @@
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
                 var view = this;
-                diaerror.show("Removing calculation " + calc_id, "...");
+                diaerror.show(false, "Removing calculation " + calc_id, "...");
                 $.post(gem_oq_server_url + "/v1/calc/" + calc_id + "/remove"
                      ).success(
                          function(data, textStatus, jqXHR)
                          {
-                             diaerror.show("Removing calculation " + calc_id, "Calculation " + calc_id + " removed.");
+                             diaerror.show(false, "Removing calculation " + calc_id, "Calculation " + calc_id + " removed.");
                              view.calculations.remove([view.calculations.get(calc_id)]);
                          }
                      ).error(
                          function(jqXHR, textStatus, errorThrown)
                          {
                              if (jqXHR.status == 404) {
-                                 diaerror.show("Removing calculation " + calc_id, "Failed: calculation " + calc_id + " not found.");
+                                 diaerror.show(false, "Removing calculation " + calc_id, "Failed: calculation " + calc_id + " not found.");
                              }
                              else {
-                                 diaerror.show("Removing calculation " + calc_id, "Failed: " + textStatus);
+                                 diaerror.show(false, "Removing calculation " + calc_id, "Failed: " + textStatus);
                              }
                          }
                      );
@@ -172,16 +178,16 @@
                 var myXhr = $.ajax({url: gem_oq_server_url + "/v1/calc/" + calc_id + "/traceback",
                                     error: function (jqXHR, textStatus, errorThrown) {
                                         if (jqXHR.status == 404) {
-                                            diaerror.show("Calculation " + calc_id + " not found.");
+                                            diaerror.show(false, "Calculation " + calc_id + " not found.");
                                         }
                                         else {
-                                            diaerror.show("Error retrieving traceback for calculation " + calc_id, textStatus);
+                                            diaerror.show(false, "Error retrieving traceback for calculation " + calc_id, textStatus);
                                         }
                                         // alert("Error: " + textStatus);
                                     },
                                     success: function (data, textStatus, jqXHR) {
                                         if (data.length == 0) {
-                                            diaerror.show("Traceback not found for calculation " + calc_id, []);
+                                            diaerror.show(true, "Traceback not found for calculation " + calc_id, []);
                                         }
                                         else {
                                             var out = "";
@@ -192,7 +198,7 @@
                                                 out += '<p ' + (ct % 2 == 1 ? 'style="background-color: #ffffff;"' : '') + '>' + data[s] + '</p>';
                                                 ct++;
                                             }
-                                            diaerror.show("Traceback of calculation " + calc_id, out);
+                                            diaerror.show(true, "Traceback of calculation " + calc_id, out);
                                         }
                                         // alert("Success: " + textStatus);
                                     }});
@@ -218,10 +224,10 @@
                 this.logXhr = $.ajax({url: gem_oq_server_url + "/v1/calc/" + calc_id + "/log/" + from + ":",
                                       error: function (jqXHR, textStatus, errorThrown) {
                                           if (jqXHR.status == 404) {
-                                              diaerror.show("Log of calculation " + calc_id + " not found.");
+                                              diaerror.show(true, "Log of calculation " + calc_id + " not found.");
                                           }
                                           else {
-                                              diaerror.show("Error retrieving log for calculation " + calc_id, textStatus);
+                                              diaerror.show(true, "Error retrieving log for calculation " + calc_id, textStatus);
                                           }
                                           obj.logIsNew = false;
                                       },
@@ -274,7 +280,7 @@
                                           }
 
                                           if (obj.logIsNew) {
-                                              diaerror.show(title, out);
+                                              diaerror.show(true, title, out);
                                           }
                                           else {
                                               diaerror.append(title, out);
@@ -392,7 +398,7 @@
                                             out += '<p ' + (ct % 2 == 1 ? 'style="background-color: #ffffff;"' : '') + '>' + data[s] + '</p>';
                                             ct++;
                                         }
-                                        diaerror.show("Calculation not accepted: traceback", out);
+                                        diaerror.show(false, "Calculation not accepted: traceback", out);
                                     }});
                            });
 
