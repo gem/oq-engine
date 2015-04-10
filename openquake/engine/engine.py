@@ -474,9 +474,9 @@ def job_from_file(cfg_file_path, username, log_level='info', exports='',
     else:  # this is a risk calculation
         if 'maximum_distance' in params:
             raise NameError(
-                'The name of the parameter maximum_distance for risk '
-                'calculators has changed: it is now asset_hazard_distance. '
-                'Please change your risk .ini file. NB: do NOT '
+                'The name of the parameter `maximum_distance` for risk '
+                'calculators has changed.\nIt is now `asset_hazard_distance`. '
+                'Please change your risk .ini file.\nNB: do NOT '
                 'change the maximum_distance in the hazard .ini file!')
 
         job.hazard_calculation = haz_job
@@ -485,7 +485,8 @@ def job_from_file(cfg_file_path, username, log_level='info', exports='',
         for name, value in hc:
             if name not in params:
                 params[name] = value
-
+        params['hazard_investigation_time'] = hc.investigation_time
+        params['hazard_imtls'] = dict(hc.imtls)
         cfd = hc.continuous_fragility_discretization
         if cfd and cfd != oqparam.continuous_fragility_discretization:
             raise RuntimeError(

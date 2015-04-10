@@ -68,7 +68,6 @@ from openquake.engine.calculators import calculators
 from openquake.engine.calculators.hazard import general
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
-from openquake.engine.performance import LightMonitor
 
 
 inserter = writer.CacheInserter(models.SourceInfo, 100)
@@ -182,24 +181,24 @@ def _calc_pnes(gsim, r_sites, rupture, imts, imls, truncation_level,
 
 
 @tasks.oqtask
-def compute_hazard_curves(job_id, sources, sitecol, info):
+def compute_hazard_curves(sources, sitecol, info, monitor):
     """
     This task computes R2 * I hazard curves (each one is a
     numpy array of S * L floats) from the given source_ruptures
     pairs.
 
-    :param job_id:
-        ID of the currently running job
     :param sources:
         a block of source objects
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param info:
         a :class:`openquake.commonlib.source.CompositionInfo` instance
+    :param monitor:
+        monitor of the currently running job
     :returns:
         a dictionary trt_model_id -> (curves_by_gsim, bounding_boxes)
     """
-    hc = models.oqparam(job_id)
+    hc = models.oqparam(monitor.job_id)
     trt_model_id = sources[0].trt_model_id
     total_sites = len(sitecol)
     sitemesh = sitecol.mesh
@@ -217,12 +216,9 @@ def compute_hazard_curves(job_id, sources, sitecol, info):
         bbs = [BoundingBox(lt_model_id, site_id) for site_id in sitecol.sids]
     else:
         bbs = []
-    mon = LightMonitor(
-        'getting ruptures', job_id, compute_hazard_curves)
-    make_ctxt_mon = LightMonitor(
-        'making contexts', job_id, compute_hazard_curves)
-    calc_poes_mon = LightMonitor(
-        'computing poes', job_id, compute_hazard_curves)
+    mon = monitor('getting ruptures', measuremem=False)
+    make_ctxt_mon = monitor('making contexts', measuremem=False)
+    calc_poes_mon = monitor('computing poes', measuremem=False)
 
     num_sites = 0
     # NB: rows are namedtuples with fields (source, rupture, rupture_sites)
