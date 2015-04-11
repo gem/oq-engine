@@ -52,8 +52,9 @@ def event_loss(riskinputs, riskmodel, rlzs_assoc, monitor):
                     out.assets, losses) if loss and asset.id in specific]
                 acc[rlz.ordinal, out.loss_type] += {
                     tag: AccumDict(
-                        pairs=pairs, loss=sum(losses), nonzero=len(pairs),
-                        total=sum(1 for a in out.assets if a.id in specific))}
+                        pairs=pairs, loss=sum(losses),
+                        nonzero=sum(1 for loss in losses if loss),
+                        total=len(losses))}
     return acc
 
 
@@ -140,11 +141,11 @@ class EventLossCalculator(base.RiskCalculator):
             if ela:
                 key = 'rlz-%03d-%s-event-loss-asset' % (ordinal, loss_type)
                 saved[key] = self.export_csv(key, ela)
-                logging.info('rlz %d, loss type %s: %d/%d nonzero losses',
-                             ordinal, loss_type, nonzero, total)
             if elo:
                 key = 'rlz-%03d-%s-event-loss' % (ordinal, loss_type)
                 saved[key] = self.export_csv(key, elo)
+            logging.info('rlz %d, loss type %s: %d/%d nonzero losses',
+                         ordinal, loss_type, nonzero, total)
         return saved
 
     def export_csv(self, key, data):
