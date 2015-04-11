@@ -162,3 +162,10 @@ footer.footer form label {
      width: 90%;
      margin-left: -45%;
 }
+
+td .nopretty {
+     padding: 2px;
+     border: 0;
+     line-height: 12px;
+     margin: 0px;
+}
