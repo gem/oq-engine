@@ -35,11 +35,13 @@ def info(name, filtersources=False):
         if filtersources:
             if 'exposure' in oqparam.inputs:
                 expo = readinput.get_exposure(oqparam)
-                sitecol, assets = readinput.get_sitecol_assets(oqparam, expo)
+                sitecol, assets_by_site = readinput.get_sitecol_assets(
+                    oqparam, expo)
             else:
-                sitecol, assets = readinput.get_site_collection(oqparam), []
+                sitecol, assets_by_site = readinput.get_site_collection(
+                    oqparam), []
         else:
-            sitecol, assets = None, []
+            sitecol, assets_by_site = None, []
         csm = readinput.get_composite_source_model(
             oqparam, sitecol, prefilter=filtersources, in_memory=filtersources)
         assoc = csm.get_rlzs_assoc()
@@ -53,8 +55,8 @@ def info(name, filtersources=False):
             size_mb = (tup[0] * tup[1] * tup[2] * 8.) / 1024 / 1024
             if size_mb:
                 print "sites, levels, keys = %s [~%d MB]" % (tup, size_mb)
-        if len(assets):
-            print 'assets = %d' % len(assets)
+        if len(assets_by_site):
+            print 'assets = %d' % sum(len(assets) for assets in assets_by_site)
     else:
         print "No info for '%s'" % name
 
