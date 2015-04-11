@@ -24,7 +24,7 @@ import collections
 
 import numpy
 
-from openquake.baselib.general import groupby, block_splitter
+from openquake.baselib.general import groupby, split_in_blocks_2
 from openquake.hazardlib.imt import from_string
 from openquake.risklib import scientific
 
@@ -118,28 +118,31 @@ class RiskModel(collections.Mapping):
         return RiskInput(imt_taxonomies, hazards_by_site,
                          assets_by_site, eps_dict)
 
-    def build_inputs_from_ruptures(self, sitecol, assets_by_site, ses_ruptures,
-                                   gsims, trunc_level, correl_model, eps_dict,
-                                   epsilon_sampling):
+    def build_inputs_from_ruptures(self, sitecol, assets_by_site, all_ruptures,
+                                   gsims_by_trt_id, trunc_level, correl_model,
+                                   eps_dict, epsilon_sampling, hint):
         """
         :param imt: an Intensity Measure Type
         :param sitecol: a SiteCollection instance
         :param assets_by_site: an array of assets per each site
-        :param ses_ruptures: a list of SESRupture instances
+        :param all_ruptures: the complete list of SESRupture instances
         :param gsims: a list of GSIM instances
         :param trunc_level: the truncation level (or None)
         :param correl_model: the correlation model (or None)
         :param eps_dict: a dictionary asset_ref -> epsilon array
         :param epsilon_sampling: the maximum number of epsilons per asset
+        :param hint: hint for how many blocks to generate
         :returns: a :class:`RiskInputFromRuptures` instance
         """
         imt_taxonomies = list(self.get_imt_taxonomies())
-        for idx in block_splitter(range(len(ses_ruptures)), epsilon_sampling):
-            indices = map(int, idx)
-            edic = {asset: expand(eps, len(idx), indices)
-                    for asset, eps in eps_dict.iteritems()}
+        all_indices = range(epsilon_sampling)
+        by_trt = operator.attrgetter('trt_model_id')
+        for ses_ruptures, indices in split_in_blocks_2(
+                all_ruptures, all_indices, hint, key=by_trt):
+            gsims = gsims_by_trt_id[ses_ruptures[0].trt_model_id]
+            edic = {asset: eps[indices] for asset, eps in eps_dict.iteritems()}
             yield RiskInputFromRuptures(
-                imt_taxonomies, sitecol, assets_by_site, ses_ruptures[indices],
+                imt_taxonomies, sitecol, assets_by_site, ses_ruptures,
                 gsims, trunc_level, correl_model, edic)
 
     def gen_outputs(self, riskinputs, rlzs_assoc, monitor):
@@ -248,7 +251,7 @@ def make_eps_dict(assets_by_site, num_samples, seed, correlation):
     return eps_dict
 
 
-def expand(array, N, indices=None):
+def expand(array, N):
     """
     Given a non-empty array with n elements, expands it to a larger
     array with N elements.
@@ -267,7 +270,7 @@ def expand(array, N, indices=None):
         raise ValueError('Empty array')
     elif n >= N:
         return array
-    return numpy.array([array[i % n] for i in indices or xrange(N)])
+    return numpy.array([array[i % n] for i in xrange(N)])
 
 
 class RiskInputFromRuptures(object):
@@ -344,7 +347,8 @@ class RiskInputFromRuptures(object):
             for asset in assets_:
                 assets.append(asset)
                 hazards.append(haz_by_imt_rlz)
-                epsilons.append(self.eps_dict[asset.id])
+                eps = expand(self.eps_dict[asset.id], len(self.ses_ruptures))
+                epsilons.append(eps)
         return assets, hazards, epsilons
 
     def __repr__(self):

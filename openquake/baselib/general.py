@@ -218,6 +218,19 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1,
     return block_splitter(items, math.ceil(total_weight / hint), weight, key)
 
 
+def split_in_blocks_2(long_sequence, short_sequence, hint,
+                      weight=lambda item: 1,
+                      key=lambda item: 'Unspecified'):
+    """
+    """
+    N, n = len(long_sequence), len(short_sequence)
+    assert N >= n
+    long_blocks = split_in_blocks(long_sequence, hint, weight, key)
+    short_blocks = split_in_blocks(short_sequence, hint)
+    for long, short in zip(long_blocks, itertools.cycle(short_blocks)):
+        yield list(long), list(short)
+
+
 def assert_close_seq(seq1, seq2, rtol, atol):
     """
     Compare two sequences of the same length.

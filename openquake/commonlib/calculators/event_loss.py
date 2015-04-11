@@ -106,28 +106,19 @@ class EventLossCalculator(base.RiskCalculator):
         logging.info('Building the epsilons')
 
         logging.info('Populating the risk inputs')
-        self.riskinputs = []
-        num_epsilons = 0
-        for trt_id, sesruptures in sorted(
-                haz_out['ruptures_by_trt'].iteritems()):
-            # there should be different epsilons for each SES collection
-            # and for each taxonomy
-            samples = min(len(sesruptures), epsilon_sampling)
-            eps_dict = riskinput.make_eps_dict(
-                self.assets_by_site, samples,
-                getattr(oq, 'master_seed', 42),
-                getattr(oq, 'asset_correlation', 0))
-            num_epsilons += sum(len(v) for v in eps_dict.itervalues())
-            gsims = gsims_by_trt_id[trt_id]
-
-            sesruptures.sort(key=operator.attrgetter('tag'))
-            ris = self.riskmodel.build_inputs_from_ruptures(
-                self.sitecol, self.assets_by_site, numpy.array(sesruptures),
-                gsims, oq.truncation_level, correl_model, eps_dict,
-                epsilon_sampling)
-
-            self.riskinputs.extend(ris)
-        logging.info('Generated %d epsilons', num_epsilons)
+        all_ruptures = sum(
+            (rups for rups in haz_out['ruptures_by_trt'].itervalues()), [])
+        all_ruptures.sort(key=operator.attrgetter('tag'))
+        num_samples = min(len(all_ruptures), epsilon_sampling)
+        eps_dict = riskinput.make_eps_dict(
+            self.assets_by_site, num_samples,
+            getattr(oq, 'master_seed', 42),
+            getattr(oq, 'asset_correlation', 0))
+        logging.info('Generated %d epsilons', num_samples * len(eps_dict))
+        self.riskinputs = list(self.riskmodel.build_inputs_from_ruptures(
+            self.sitecol, self.assets_by_site, all_ruptures,
+            gsims_by_trt_id, oq.truncation_level, correl_model, eps_dict,
+            epsilon_sampling, oq.concurrent_tasks))
         logging.info('Built %d risk inputs', len(self.riskinputs))
 
     def post_execute(self, result):
