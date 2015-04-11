@@ -21,8 +21,6 @@ import logging
 import operator
 import collections
 
-import numpy
-
 from openquake.baselib.general import AccumDict
 from openquake.commonlib.calculators import base
 from openquake.commonlib import readinput, writers, parallel
@@ -118,10 +116,14 @@ class EventLossCalculator(base.RiskCalculator):
         self.riskinputs = list(self.riskmodel.build_inputs_from_ruptures(
             self.sitecol, self.assets_by_site, all_ruptures,
             gsims_by_trt_id, oq.truncation_level, correl_model, eps_dict,
-            epsilon_sampling, oq.concurrent_tasks))
+            epsilon_sampling, oq.concurrent_tasks // 2))
         logging.info('Built %d risk inputs', len(self.riskinputs))
 
     def post_execute(self, result):
+        """
+        :param result: a dictionary (rlz.ordinal, loss_type) -> tag ->
+                       [(asset.id, loss), ...]
+        """
         saved = {}
         for ordinal, loss_type in sorted(result):
             data = result[ordinal, loss_type]
