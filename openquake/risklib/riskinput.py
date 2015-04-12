@@ -120,7 +120,7 @@ class RiskModel(collections.Mapping):
 
     def build_inputs_from_ruptures(self, sitecol, assets_by_site, all_ruptures,
                                    gsims_by_trt_id, trunc_level, correl_model,
-                                   eps_dict, epsilon_sampling, hint):
+                                   eps_dict, hint):
         """
         :param imt: an Intensity Measure Type
         :param sitecol: a SiteCollection instance
@@ -135,10 +135,10 @@ class RiskModel(collections.Mapping):
         :returns: a :class:`RiskInputFromRuptures` instance
         """
         imt_taxonomies = list(self.get_imt_taxonomies())
-        all_indices = range(epsilon_sampling)
+        num_epsilons = len(eps_dict.itervalues().next())
         by_trt = operator.attrgetter('trt_model_id')
         for ses_ruptures, indices in split_in_blocks_2(
-                all_ruptures, all_indices, hint, key=by_trt):
+                all_ruptures, range(num_epsilons), hint, key=by_trt):
             gsims = gsims_by_trt_id[ses_ruptures[0].trt_model_id]
             edic = {asset: eps[indices] for asset, eps in eps_dict.iteritems()}
             yield RiskInputFromRuptures(

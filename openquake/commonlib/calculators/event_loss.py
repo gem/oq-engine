@@ -117,7 +117,7 @@ class EventLossCalculator(base.RiskCalculator):
         self.riskinputs = list(self.riskmodel.build_inputs_from_ruptures(
             self.sitecol, self.assets_by_site, all_ruptures,
             gsims_by_trt_id, oq.truncation_level, correl_model, eps_dict,
-            epsilon_sampling, oq.concurrent_tasks // 2))
+            oq.concurrent_tasks // 2))
         logging.info('Built %d risk inputs', len(self.riskinputs))
 
     def post_execute(self, result):
@@ -144,7 +144,7 @@ class EventLossCalculator(base.RiskCalculator):
             if elo:
                 key = 'rlz-%03d-%s-event-loss' % (ordinal, loss_type)
                 saved[key] = self.export_csv(key, elo)
-            logging.info('rlz %d, loss type %s: %d/%d nonzero losses',
+            logging.info('rlz=%d, loss type=%s: %d/%d nonzero losses',
                          ordinal, loss_type, nonzero, total)
         return saved
 
