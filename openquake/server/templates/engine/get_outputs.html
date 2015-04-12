@@ -34,10 +34,12 @@
           <td><%= output.get('name') %></td>
           <td><%= output.get('type') %></td>
           <td>
-            <table>
+            <table class="table table-disable-hover table-condensed">
             <% _.each(output.get('outtypes'), function(outtype) { %>
-            <tr><td class="nopretty"><a href="/v1/calc/{{ calc_id }}/result/<%= output.get('id') %>?export_type=<%= outtype %>&dload=false" class="btn btn-sm">View <%= outtype %></a></td>
-            <td class="nopretty"><a href="/v1/calc/{{ calc_id }}/result/<%= output.get('id') %>?export_type=<%= outtype %>&dload=true" class="btn btn-sm">Download <%= outtype %></a></td></tr>
+              <tr>
+                <td><a href="/v1/calc/{{ calc_id }}/result/<%= output.get('id') %>?export_type=<%= outtype %>&dload=false" class="btn btn-sm">View <%= outtype %></a></td>
+                <td><a href="/v1/calc/{{ calc_id }}/result/<%= output.get('id') %>?export_type=<%= outtype %>&dload=true" class="btn btn-sm">Download <%= outtype %></a></td>
+              </tr>
             <% }); %>
             </table>
           </td>
