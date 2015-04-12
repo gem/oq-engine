@@ -54,8 +54,9 @@ def event_loss(riskinputs, riskmodel, rlzs_assoc, monitor):
                     out.assets, losses) if loss and asset.id in specific]
                 acc[rlz.ordinal, out.loss_type] += {
                     tag: AccumDict(
-                        pairs=pairs, loss=sum(losses), nonzero=len(pairs),
-                        total=sum(1 for a in out.assets if a.id in specific))}
+                        pairs=pairs, loss=sum(losses),
+                        nonzero=sum(1 for loss in losses if loss),
+                        total=len(losses))}
     return acc
 
 
@@ -104,26 +105,19 @@ class EventLossCalculator(base.RiskCalculator):
         logging.info('Building the epsilons')
 
         logging.info('Populating the risk inputs')
-        self.riskinputs = []
-        for trt_id, sesruptures in sorted(
-                haz_out['ruptures_by_trt'].iteritems()):
-            # there should be different epsilons for each SES collection
-            # and for each taxonomy
-            eps_dict = riskinput.make_eps_dict(
-                self.assets_by_site,
-                min(len(sesruptures), epsilon_sampling),
-                getattr(oq, 'master_seed', 42),
-                getattr(oq, 'asset_correlation', 0))
-
-            gsims = gsims_by_trt_id[trt_id]
-
-            sesruptures.sort(key=operator.attrgetter('tag'))
-            ris = self.riskmodel.build_inputs_from_ruptures(
-                self.sitecol, self.assets_by_site, sesruptures,
-                gsims, oq.truncation_level, correl_model, eps_dict,
-                epsilon_sampling)
-
-            self.riskinputs.extend(ris)
+        all_ruptures = sum(
+            (rups for rups in haz_out['ruptures_by_trt'].itervalues()), [])
+        all_ruptures.sort(key=operator.attrgetter('tag'))
+        num_samples = min(len(all_ruptures), epsilon_sampling)
+        eps_dict = riskinput.make_eps_dict(
+            self.assets_by_site, num_samples,
+            getattr(oq, 'master_seed', 42),
+            getattr(oq, 'asset_correlation', 0))
+        logging.info('Generated %d epsilons', num_samples * len(eps_dict))
+        self.riskinputs = list(self.riskmodel.build_inputs_from_ruptures(
+            self.sitecol, self.assets_by_site, all_ruptures,
+            gsims_by_trt_id, oq.truncation_level, correl_model, eps_dict,
+            oq.concurrent_tasks // 2))
         logging.info('Built %d risk inputs', len(self.riskinputs))
 
     def post_execute(self, result):
@@ -146,11 +140,12 @@ class EventLossCalculator(base.RiskCalculator):
                 elo.append((tag, d['loss']))  # sum of the losses
                 nonzero += d['nonzero']
                 total += d['total']
+            logging.info('rlz=%d, loss type=%s: %d/%d nonzero losses',
+                         ordinal, loss_type, nonzero, total)
+
             if ela:
                 key = 'rlz-%03d-%s-event-loss-asset' % (ordinal, loss_type)
                 saved[key] = self.export_csv(key, ela)
-                logging.info('rlz %d, loss type %s: %d/%d nonzero losses',
-                             ordinal, loss_type, nonzero, total)
 
                 # aggregate loss curves per asset
                 losses_by_asset = groupby(  # (tag, asset_id, loss) triples
@@ -163,10 +158,10 @@ class EventLossCalculator(base.RiskCalculator):
                     self.risk_out[key].append(
                         (asset_id, losses, poes, avg, std))
                 saved[key] = self.export_csv(key, self.risk_out[key])
+
             if elo:
                 key = 'rlz-%03d-%s-event-loss' % (ordinal, loss_type)
                 saved[key] = self.export_csv(key, elo)
-
                 # aggregate loss curve for all tags
                 key = 'rlz-%03d-%s-agg-loss-curve' % (ordinal, loss_type)
                 losses, poes, avg, std = self.build_loss_curve(
@@ -176,6 +171,7 @@ class EventLossCalculator(base.RiskCalculator):
                 total_losses.append((ordinal, loss_type, avg, std))
                 saved[key] = self.export_csv(
                     key, [('aggregate', losses, poes, avg, std)])
+
         header = 'rlz_no loss_type avg_loss stddev'.split()
         saved['total-losses'] = self.export_csv(
             'total-losses', [header] + total_losses)
