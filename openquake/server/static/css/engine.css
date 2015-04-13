@@ -162,3 +162,29 @@ footer.footer form label {
      width: 90%;
      margin-left: -45%;
 }
+
+.table-disable-hover tbody tr:hover td,
+.table-disable-hover tbody tr:hover th {
+    background-color: inherit;
+}
+
+.table .table {
+    background-color: inherit;
+}
+
+.table .table td,
+.table .table th {
+    border: 0;
+}
+
+.table-condensed {
+    margin: 0;
+}
+
+.table-condensed tbody tr td,
+.table-condensed tbody tr th {
+     padding: 2px;
+     border: 0;
+     line-height: 12px;
+     margin: 0px;
+}

@@ -71,7 +71,7 @@
     var refresh_outputs;
 
     function setTimer() {
-        refresh_outputs = setInterval(function() { outputs.fetch({reset: true}) }, 10000);
+        refresh_outputs = setInterval(function() { outputs.fetch({reset: true}) }, 30000);
     }
 
     /* classic event management */
