@@ -114,6 +114,7 @@ Get the full content of a calculation result for the given `result_id`.
 Parameters:
 
     * export_type: the desired format for the result (`xml`, `geojson`, etc.)
+    * dload: `true` to force download, not `true` try to open in browser window
 
 Response:
 
