@@ -101,10 +101,10 @@ Parameters: None
 
 Response:
 
-    [{"url": "http://localhost:8000/v1/calc/hazard/result/12", "type": "hazard_curve", "name": "hc-rlz-22", "id": 12},
-     {"url": "http://localhost:8000/v1/calc/hazard/result/14", "type": "hazard_curve", "name": "hc-rlz-23", "id": 14},
-     {"url": "http://localhost:8000/v1/calc/hazard/result/16", "type": "hazard_curve", "name": "hc-rlz-24", "id": 16},
-     {"url": "http://localhost:8000/v1/calc/hazard/result/18", "type": "hazard_curve", "name": "hc-rlz-25", "id": 18}]
+    [{"url": "http://localhost:8000/v1/calc/hazard/result/12", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-22", "id": 12},
+     {"url": "http://localhost:8000/v1/calc/hazard/result/14", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-23", "id": 14},
+     {"url": "http://localhost:8000/v1/calc/hazard/result/16", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-24", "id": 16},
+     {"url": "http://localhost:8000/v1/calc/hazard/result/18", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-25", "id": 18}]
 
 
 #### GET /v1/calc/result/:result_id
