@@ -479,9 +479,7 @@ devtest_run () {
         rm /tmp/packager.eph.$$.log
     fi
 
-    # if [ $inner_ret -ne 0 ]; then
     return $inner_ret
-    # fi
 }
 
 
