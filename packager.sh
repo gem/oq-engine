@@ -659,7 +659,6 @@ devtest_run () {
     sudo echo
     sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
-    rm /tmp/packager.eph.$$.log
 
     _wait_ssh $lxc_ip
     set +e
@@ -679,10 +678,11 @@ devtest_run () {
         echo "WARNING: pylint exits with $? value"
     fi
     set -e
+    if [ -f /tmp/packager.eph.$$.log ]; then
+        rm /tmp/packager.eph.$$.log
+    fi
 
-    # if [ $inner_ret -ne 0 ]; then
     return $inner_ret
-    # fi
 }
 
 #
@@ -732,7 +732,6 @@ EOF
     sudo echo
     sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
-    rm /tmp/packager.eph.$$.log
 
     _wait_ssh $lxc_ip
 
@@ -746,7 +745,9 @@ EOF
 
     sudo $LXC_TERM -n $lxc_name
     set -e
-
+    if [ -f /tmp/packager.eph.$$.log ]; then
+        rm /tmp/packager.eph.$$.log
+    fi
     if [ $inner_ret -ne 0 ]; then
         return $inner_ret
     fi
