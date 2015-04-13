@@ -2,6 +2,8 @@
   * added authentication support to the 'engineweb' and the 'engineserver'
 
   [Matteo Nastasi]
+  * added 'outtypes' attribute with list of possible output types for
+    each output item in outputs list API command
   * added '/v1/calc/<id>/status' API command
   * added 'engineweb' django application as local web client for oq-engine
 
