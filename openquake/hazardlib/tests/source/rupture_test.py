@@ -16,6 +16,7 @@
 import unittest
 
 import numpy
+import os
 from decimal import Decimal
 from openquake.hazardlib import const
 from openquake.hazardlib.geo import Point, Line
@@ -164,9 +165,11 @@ class Cdppvalue(unittest.TestCase):
             ParametricProbabilisticRupture, occurrence_rate=0.01,
             temporal_occurrence_model=PoissonTOM(50))
         # Load the testing site.
-        data = numpy.genfromtxt("geo_cycs_ss3_testing_site.csv",
+        data_path = os.path.dirname(__file__)
+        filename = os.path.join(data_path, "geo_cycs_ss3_testing_site.csv")
+        data = numpy.genfromtxt(filename,
                                 dtype=float, delimiter=',', names=True,
-                                skip_header=7700, skip_footer=7700)
+                                skip_header=6675, skip_footer=6673)
 
         for loc in range(len(data)):
             lon = data[loc][0]
@@ -182,10 +185,11 @@ class Cdppvalue(unittest.TestCase):
             ParametricProbabilisticRupture, occurrence_rate=0.01,
             temporal_occurrence_model=PoissonTOM(50))
         # Load the testing site.
-        # Load the testing site.
-        data = numpy.genfromtxt("geo_cycs_ss3_testing_site.csv",
+        data_path = os.path.dirname(__file__)
+        filename = os.path.join(data_path, "geo_cycs_ss3_testing_site.csv")
+        data = numpy.genfromtxt(filename,
                                 dtype=float, delimiter=',', names=True,
-                                skip_header=6673, skip_footer=6675)
+                                skip_header=6675, skip_footer=6673)
         print data
         points = []
         for loc in range(len(data)):
