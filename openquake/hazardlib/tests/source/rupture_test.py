@@ -164,7 +164,7 @@ class Cdppvalue(unittest.TestCase):
             ParametricProbabilisticRupture, occurrence_rate=0.01,
             temporal_occurrence_model=PoissonTOM(50))
         # Load the testing site.
-        data = numpy.genfromtxt('./geo_cycs_ss3_testing_site.csv',
+        data = numpy.genfromtxt('geo_cycs_ss3_testing_site.csv',
                                 dtype=float, delimiter=',', names=True,
                                 skip_header=7700, skip_footer=7700)
 
@@ -183,7 +183,7 @@ class Cdppvalue(unittest.TestCase):
             temporal_occurrence_model=PoissonTOM(50))
         # Load the testing site.
         # Load the testing site.
-        data = numpy.genfromtxt('./geo_cycs_ss3_testing_site.csv',
+        data = numpy.genfromtxt('geo_cycs_ss3_testing_site.csv',
                                 dtype=float, delimiter=',', names=True,
                                 skip_header=6673, skip_footer=6675)
         print data
