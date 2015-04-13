@@ -464,7 +464,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                     sr.col_idx = ses_coll.ordinal
                     sesruptures.append(sr)
         base_agg = super(EventBasedHazardCalculator, self).agg_curves
-        if hasattr(self, 'zeros'):  # there are IMTLs
+        if self.oqparam.hazard_curves_from_gmfs:
             zeros = {key: self.zeros for key in self.rlzs_assoc}
         else:
             zeros = {}
