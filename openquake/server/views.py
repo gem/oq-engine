@@ -31,11 +31,13 @@ from django.views.decorators.http import require_http_methods
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 
+from openquake.baselib.general import groupby
 from openquake.commonlib import nrml, readinput, valid
 from openquake.engine import engine as oq_engine, __version__ as oqversion
 from openquake.engine.db import models as oqe_models
 from openquake.engine.export import core
 from openquake.engine.utils.tasks import safely_call
+from openquake.engine.export.core import export_output
 from openquake.server import tasks, executor
 
 METHOD_NOT_ALLOWED = 405
@@ -389,6 +391,8 @@ def calc_results(request, calc_id):
         return HttpResponseNotFound()
     base_url = _get_base_url(request)
 
+    output_types = dict(groupby(export_output, lambda pair: pair[0], lambda pairs: [pair[1] for pair in pairs]))
+
     results = oq_engine.get_outputs(calc_id)
     if not results:
         return HttpResponseNotFound()
@@ -400,6 +404,7 @@ def calc_results(request, calc_id):
             id=result.id,
             name=result.display_name,
             type=result.output_type,
+            outtypes=output_types[result.output_type],
             url=url,
         )
         response_data.append(datum)
@@ -461,6 +466,15 @@ def get_result(request, result_id):
     etype = request.GET.get('export_type')
     export_type = etype or DEFAULT_EXPORT_TYPE
 
+    dload = request.GET.get('dload')
+    download = False
+    if dload is None:
+        if etype is not None:
+            download = True
+    else:
+        if dload == "true":
+            download = True
+
     tmpdir = tempfile.mkdtemp()
     exported = core.export(result_id, tmpdir, export_type=export_type)
     if exported is None:
@@ -476,7 +490,7 @@ def get_result(request, result_id):
         data = open(exported).read()
         response = HttpResponse(data, content_type=content_type)
         response['Content-Length'] = len(data)
-        if etype:  # download as a file
+        if download:  # download as a file
             response['Content-Disposition'] = 'attachment; filename=%s' % fname
         return response
     finally:
