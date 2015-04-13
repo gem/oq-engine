@@ -17,7 +17,6 @@ import unittest
 
 import numpy
 from decimal import Decimal
-import xlrd
 from openquake.hazardlib import const
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
@@ -165,47 +164,41 @@ class Cdppvalue(unittest.TestCase):
             ParametricProbabilisticRupture, occurrence_rate=0.01,
             temporal_occurrence_model=PoissonTOM(50))
         # Load the testing site.
-        input_file = './geo_cycs_ss3_testing_site.xlsx'
-        workbook = xlrd.open_workbook(input_file)
-        sheet = workbook.sheet_by_name('Sheet1')
+        data = numpy.genfromtxt('./geo_cycs_ss3_testing_site.csv',
+                                dtype=float, delimiter=',', names=True,
+                                skip_header=7700, skip_footer=7700)
 
-        stalon = numpy.array(sheet.col_values(0, start_rowx=1, end_rowx=500))
-        stalat = numpy.array(sheet.col_values(1, start_rowx=1, end_rowx=500))
-        ref_dpp = numpy.array(sheet.col_values(2, start_rowx=1, end_rowx=500))
-        ref_cdpp = numpy.array(sheet.col_values(3, start_rowx=1, end_rowx=500))
+        for loc in range(len(data)):
+            lon = data[loc][0]
+            lat = data[loc][1]
+            ref_dpp = data[loc][2]
+            dpp = (rupture.get_dppvalue(Point(lon, lat)))
 
-
-        for lat, lon, refdpp in zip(stalat, stalon, ref_dpp):
-
-            a = Point(lon, lat)
-            dpp = (rupture.get_dppvalue(a))
-
-            self.assertAlmostEqual(dpp, refdpp, delta=0.1)
+            self.assertAlmostEqual(dpp, ref_dpp, delta=0.1)
 
     def test_get_cdppvalue(self):
 
-        rupture = self.make_rupture_fordpp(ParametricProbabilisticRupture,
-            occurrence_rate=0.01, temporal_occurrence_model=PoissonTOM(50))
+        rupture = self.make_rupture_fordpp(
+            ParametricProbabilisticRupture, occurrence_rate=0.01,
+            temporal_occurrence_model=PoissonTOM(50))
         # Load the testing site.
-        input_file = './geo_cycs_ss3_testing_site.xlsx'
-        workbook = xlrd.open_workbook(input_file)
-        sheet = workbook.sheet_by_name('Sheet1')
-
-        stalon = numpy.array(sheet.col_values(0, start_rowx=1500, end_rowx=1502))
-        stalat = numpy.array(sheet.col_values(1, start_rowx=1500, end_rowx=1502))
-        ref_dpp = numpy.array(sheet.col_values(2, start_rowx=1500, end_rowx=1502))
-        ref_cdpp = numpy.array(sheet.col_values(3, start_rowx=1500, end_rowx=1502))
-
+        # Load the testing site.
+        data = numpy.genfromtxt('./geo_cycs_ss3_testing_site.csv',
+                                dtype=float, delimiter=',', names=True,
+                                skip_header=6673, skip_footer=6675)
+        print data
         points = []
-        for lat, lon, refdpp in zip(stalat, stalon, ref_dpp):
-
-            a = Point(lon, lat)
-            points.append(a)
+        for loc in range(len(data)):
+            lon = data[loc][0]
+            lat = data[loc][1]
+            print lon, lat
+            points.append(Point(lon, lat))
 
         mesh = Mesh.from_points_list(points)
-        cdpp, totaltime, numbersite = rupture.get_cdppvalue(mesh)
-        self.assertAlmostEqual(cdpp[0], ref_cdpp[0], delta=0.1)
-        self.assertAlmostEqual(cdpp[1], ref_cdpp[1], delta=0.1)
+        cdpp = rupture.get_cdppvalue(mesh)
+        self.assertAlmostEqual(cdpp[0], data[0][3], delta=0.1)
+        self.assertAlmostEqual(cdpp[1], data[1][3], delta=0.1)
+
 
 class NonParametricProbabilisticRuptureTestCase(unittest.TestCase):
     def assert_failed_creation(self, rupture_class, exc, msg, **kwargs):
