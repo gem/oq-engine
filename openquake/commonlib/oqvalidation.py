@@ -113,7 +113,7 @@ class OqParam(valid.ParamSet):
     ses_per_logic_tree_path = valid.Param(valid.positiveint, 1)
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     sites_disagg = valid.Param(valid.NoneOr(valid.coordinates), [])
-    specific_assets = valid.Param(str.split, [])
+    specific_assets = valid.Param(valid.namelist, [])
     statistics = valid.Param(valid.boolean, True)
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)
@@ -140,6 +140,15 @@ class OqParam(valid.ParamSet):
                 fname, self.continuous_fragility_discretization)
             self.risk_imtls = {fset.imt: fset.imls
                                for fset in ffs.itervalues()}
+
+    @property
+    def tses(self):
+        """
+        Return the total time as investigation_time * ses_per_logic_tree_path *
+        (number_of_logic_tree_samples or 1)
+        """
+        return self.investigation_time * self.ses_per_logic_tree_path * (
+            self.number_of_logic_tree_samples or 1)
 
     @property
     def imtls(self):

@@ -319,16 +319,16 @@ class RiskCalculator(BaseCalculator):
                 (self.riskinputs, self.riskmodel, self.rlzs_assoc, monitor),
                 concurrent_tasks=self.oqparam.concurrent_tasks,
                 weight=get_weight, key=self.riskinput_key)
+        self.risk_out = dict(oqparam=self.oqparam)
         return res
 
     def save_pik(self, result, **kw):
         """Save the risk outputs"""
-        risk_out = dict(oqparam=self.oqparam)
-        risk_out[self.result_kind] = result
-        risk_out.update(kw)
+        self.risk_out[self.result_kind] = result
+        self.risk_out.update(kw)
         cache = os.path.join(self.oqparam.export_dir, 'risk.pik')
         logging.info('Saving risk output on %s', cache)
         with self.monitor('saving risk outputs', autoflush=True):
             with open(cache, 'w') as f:
-                cPickle.dump(risk_out, f)
-        return risk_out
+                cPickle.dump(self.risk_out, f)
+        return self.risk_out
