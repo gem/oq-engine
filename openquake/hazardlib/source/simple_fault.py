@@ -127,7 +127,7 @@ class SimpleFaultSource(ParametricSeismicSource):
 
     def get_rupture_enclosing_polygon(self, dilation=0):
         """
-        Uses :meth:`openquake.hazardlib.geo.surface.simple_fault.SimpleFaultSursface.surface_projection_from_fault_data`
+        Uses :meth:`openquake.hazardlib.geo.surface.simple_fault.SimpleFaultSurface.surface_projection_from_fault_data`
         for getting the fault's surface projection and then calls
         its :meth:`~openquake.hazardlib.geo.polygon.Polygon.dilate`
         method passing in ``dilation`` parameter.
