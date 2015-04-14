@@ -196,4 +196,4 @@ class EventLossCalculator(base.RiskCalculator):
 
     def export_csv(self, key, data):
         dest = os.path.join(self.oqparam.export_dir, key) + '.csv'
-        return writers.save_csv(dest, data, fmt='%11.8E')
+        return writers.save_csv(dest, data, fmt='%10.6E')
