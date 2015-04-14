@@ -190,12 +190,10 @@ class Cdppvalue(unittest.TestCase):
         data = numpy.genfromtxt(filename,
                                 dtype=float, delimiter=',', names=True,
                                 skip_header=6675, skip_footer=6673)
-        print data
         points = []
         for loc in range(len(data)):
             lon = data[loc][0]
             lat = data[loc][1]
-            print lon, lat
             points.append(Point(lon, lat))
 
         mesh = Mesh.from_points_list(points)

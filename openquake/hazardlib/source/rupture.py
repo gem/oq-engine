@@ -384,8 +384,7 @@ class ParametricProbabilisticRupture(BaseProbabilisticRupture):
         term prediction.
 
         :param target_site:
-            An instance of :class:`Mesh`
-            representing the location of the target sites.
+            A mesh object representing the location of the target sites.
         :param buf:
             A float vaule presents  the buffer distance in km to extend the
             mesh borders to.
