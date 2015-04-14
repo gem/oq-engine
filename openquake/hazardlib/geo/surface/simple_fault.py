@@ -188,7 +188,6 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
             representing the four vertices of the target patch.
         """
         # Similar to :meth:`from_fault_data`, we just don't resample edges
-
         dip_tan = math.tan(math.radians(dip))
         hdist_top = upper_seismogenic_depth / dip_tan
         hdist_bottom = lower_seismogenic_depth / dip_tan
