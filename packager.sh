@@ -151,6 +151,25 @@ _wait_ssh () {
     fi
 }
 
+_pkgbuild_innervm_run () {
+    local lxc_ip="$1"
+    local DPBP_FLAG="$2"
+
+    trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
+
+    ssh $lxc_ip mkdir build-deb
+    scp -r * $lxc_ip:build-deb
+    gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
+    ssh $lxc_ip sudo apt-get update
+    ssh $lxc_ip sudo apt-get -y install build-essential dpatch fakeroot devscripts equivs lintian quilt
+    ssh $lxc_ip "sudo mk-build-deps --install --tool 'apt-get -y' build-deb/debian/control"
+
+    ssh $lxc_ip "cd build-deb && dpkg-buildpackage $DPBP_FLAG"
+    scp -r $lxc_ip:*.{tar.gz,deb,changes,dsc} ../
+
+    return
+}
+
 _devtest_innervm_run () {
     local i lxc_ip="$1"
 
@@ -261,7 +280,7 @@ _lxc_name_and_ip_get()
     if [ $i -eq 40 -o $e -eq 40 ]; then
         return 1
     fi
-    echo "SUCCESSFULY RUNNED $lxc_name ($lxc_ip)"
+    echo "SUCCESSFULLY RUNNED $lxc_name ($lxc_ip)"
 
     return 0
 }
@@ -283,9 +302,7 @@ devtest_run () {
         rm /tmp/packager.eph.$$.log
     fi
 
-    # if [ $inner_ret -ne 0 ]; then
     return $inner_ret
-    # fi
 }
 
 
@@ -422,6 +439,9 @@ while [ $# -gt 0 ]; do
         -U|--unsigned)
             BUILD_UNSIGN=1
             ;;
+        -L|--lxc_build)
+            BUILD_ON_LXC=1
+            ;;
         -h|--help)
             usage 0
             break
@@ -549,7 +569,25 @@ if [ 0 -eq 1 ]; then
     rm -rf $(find demos -mindepth 1 -maxdepth 1 | egrep -v 'demos/simple_fault_demo_hazard|demos/event_based_hazard|demos/_site_model')
 fi
 
-dpkg-buildpackage $DPBP_FLAG
+if [ $BUILD_ON_LXC -eq 1 ]; then
+    sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
+    _lxc_name_and_ip_get /tmp/packager.eph.$$.log
+    _wait_ssh $lxc_ip
+
+    set +e
+    _pkgbuild_innervm_run $lxc_ip $DPBP_FLAG
+    inner_ret=$?
+    sudo $LXC_TERM -n $lxc_name
+    set -e
+    if [ -f /tmp/packager.eph.$$.log ]; then
+        rm /tmp/packager.eph.$$.log
+    fi
+    if [ $inner_ret -ne 0 ]; then
+        return $inner_ret
+    fi
+else
+    dpkg-buildpackage $DPBP_FLAG
+fi
 cd -
 
 # if the monotone directory exists and is the "gem" repo and is the "master" branch then ...
