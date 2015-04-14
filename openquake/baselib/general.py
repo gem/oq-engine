@@ -259,8 +259,8 @@ def split_in_blocks_2(long_sequence, short_sequence, hint,
     assert N >= n
     long_blocks = split_in_blocks(long_sequence, hint, weight, key)
     short_blocks = split_in_blocks(short_sequence, hint)
-    for long, short in zip(long_blocks, itertools.cycle(short_blocks)):
-        yield list(long), list(short)
+    for long_, short in zip(long_blocks, itertools.cycle(short_blocks)):
+        yield list(long_), list(short)
 
 
 def assert_close_seq(seq1, seq2, rtol, atol):
