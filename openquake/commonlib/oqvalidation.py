@@ -150,6 +150,12 @@ class OqParam(valid.ParamSet):
         imtls = getattr(self, 'hazard_imtls', None) or self.risk_imtls
         return collections.OrderedDict(sorted(imtls.items()))
 
+    def no_imls(self):
+        """
+        Return True if there are no intensity measure levels
+        """
+        return all(ls is None for ls in self.imtls.itervalues())
+
     def is_valid_truncation_level_disaggregation(self):
         """
         Truncation level must be set for disaggregation calculations
@@ -211,7 +217,7 @@ class OqParam(valid.ParamSet):
         return (self.calculation_mode not in HAZARD_CALCULATORS
                 or getattr(self, 'maximum_distance', None))
 
-    def is_valid_imtls(self):
+    def is_valid_intensity_measure_types(self):
         """
         If the IMTs and levels are extracted from the risk models,
         they must not be set directly. Moreover, if
@@ -219,13 +225,22 @@ class OqParam(valid.ParamSet):
         `intensity_measure_types` must not be set.
         """
         if fragility_files(self.inputs) or vulnerability_files(self.inputs):
-            return (
-                self.intensity_measure_types is None
-                and self.intensity_measure_types_and_levels is None
-                )
-        elif self.intensity_measure_types_and_levels:
-            return self.intensity_measure_types is None
+            return (self.intensity_measure_types is None
+                    and self.intensity_measure_types_and_levels is None)
+        elif not hasattr(self, 'hazard_imtls') and not hasattr(
+                self, 'risk_imtls'):
+            return False
         return True
+
+    def is_valid_intensity_measure_levels(self):
+        """
+        In order to compute hazard curves, `intensity_measure_types_and_levels`
+        must be set or extracted from the risk models.
+        """
+        invalid = self.no_imls() and (
+            self.hazard_curves_from_gmfs or self.calculation_mode in
+            ('classical', 'classical_tiling', 'disaggregation'))
+        return not invalid
 
     def is_valid_sites_disagg(self):
         """
