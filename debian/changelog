@@ -10,7 +10,8 @@
   [Michele Simionato]
   * Renamed the maximum_distance parameter of the risk calculators to
     asset_hazard_distance, to avoid confusion with the maximum_distance
-    parameter of the hazard calculators, which has a different meaning
+    parameter of the hazard calculators, which has a different meaning;
+    is it an error to set the maximum_distance in a job_risk.ini file
   * Added to the API an URL /v1/calc/:calc_id/remove to hide jobs
   * A new key is_running is added to the list of dictionaries returned by
     the URL /v1/calc/list

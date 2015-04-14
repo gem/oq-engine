@@ -509,35 +509,21 @@ def job_from_file(cfg_file_path, username, log_level='info', exports='',
         del params['hazard_calculation_id']
         del params['hazard_output_id']
     else:  # this is a risk calculation
+        if 'maximum_distance' in params:
+            raise NameError(
+                'The name of the parameter `maximum_distance` for risk '
+                'calculators has changed.\nIt is now `asset_hazard_distance`. '
+                'Please change your risk .ini file.\nNB: do NOT '
+                'change the maximum_distance in the hazard .ini file!')
+
         job.hazard_calculation = haz_job
         hc = haz_job.get_oqparam()
         # copy the non-conflicting hazard parameters in the risk parameters
         for name, value in hc:
             if name not in params:
                 params[name] = value
-        if 'quantile_loss_curves' not in params:
-            params['quantile_loss_curves'] = []
-        if 'poes_disagg' not in params:
-            params['poes_disagg'] = []
-        if 'sites_disagg' not in params:
-            params['sites_disagg'] = []
-        if 'specific_assets' not in params:
-            params['specific_assets'] = []
-        if 'conditional_loss_poes' not in params:
-            params['conditional_loss_poes'] = []
-        if 'insured_losses' not in params:
-            params['insured_losses'] = False
-        if 'asset_correlation' not in params:
-            params['asset_correlation'] = 0
-        if 'master_seed' not in params:
-            params['master_seed'] = 0
-        if 'risk_investigation_time' not in params and not \
-           params['calculation_mode'].startswith('scenario'):
-            params['risk_investigation_time'] = params.get(
-                'investigation_time', hc.investigation_time)
         params['hazard_investigation_time'] = hc.investigation_time
         params['hazard_imtls'] = dict(hc.imtls)
-
         cfd = hc.continuous_fragility_discretization
         if cfd and cfd != oqparam.continuous_fragility_discretization:
             raise RuntimeError(
