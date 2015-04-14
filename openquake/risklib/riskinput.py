@@ -122,17 +122,16 @@ class RiskModel(collections.Mapping):
                                    gsims_by_trt_id, trunc_level, correl_model,
                                    eps_dict, hint):
         """
-        :param imt: an Intensity Measure Type
         :param sitecol: a SiteCollection instance
         :param assets_by_site: an array of assets per each site
         :param all_ruptures: the complete list of SESRupture instances
-        :param gsims: a list of GSIM instances
+        :param gsims_by_trt_id: a dictionary of GSIM instances
         :param trunc_level: the truncation level (or None)
         :param correl_model: the correlation model (or None)
         :param eps_dict: a dictionary asset_ref -> epsilon array
-        :param epsilon_sampling: the maximum number of epsilons per asset
         :param hint: hint for how many blocks to generate
-        :returns: a :class:`RiskInputFromRuptures` instance
+
+        Yield :class:`RiskInputFromRuptures` instances.
         """
         imt_taxonomies = list(self.get_imt_taxonomies())
         num_epsilons = len(eps_dict.itervalues().next())

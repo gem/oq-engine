@@ -118,6 +118,8 @@ class EventLossCalculator(base.RiskCalculator):
             self.sitecol, self.assets_by_site, all_ruptures,
             gsims_by_trt_id, oq.truncation_level, correl_model, eps_dict,
             oq.concurrent_tasks // 2))
+        # we divide by 2 to reduce the number of tasks and save data transfer
+        # time; this is a bit ad hoc and can change in the future
         logging.info('Built %d risk inputs', len(self.riskinputs))
 
     def post_execute(self, result):
@@ -153,8 +155,8 @@ class EventLossCalculator(base.RiskCalculator):
                     lambda rows: [row[2] for row in rows])
                 key = 'rlz-%03d-%s-loss-curves' % (ordinal, loss_type)
                 self.risk_out[key] = []
-                for asset_id, losses in losses_by_asset.iteritems():
-                    losses, poes, avg, std = self.build_loss_curve(losses)
+                for asset_id, all_losses in losses_by_asset.iteritems():
+                    losses, poes, avg, std = self.build_loss_curve(all_losses)
                     self.risk_out[key].append(
                         (asset_id, losses, poes, avg, std))
                 saved[key] = self.export_csv(key, self.risk_out[key])
