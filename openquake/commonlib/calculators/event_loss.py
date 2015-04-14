@@ -84,7 +84,6 @@ class EventLossCalculator(base.RiskCalculator):
         (if any). If there were pre-existing files, they will be erased.
         """
         oq = self.oqparam
-        epsilon_sampling = getattr(oq, 'epsilon_sampling', 1000)
 
         # HACK: replace the event_based_risk workflow with the event_loss
         # workflow, so that the riskmodel has the correct workflows
@@ -108,7 +107,7 @@ class EventLossCalculator(base.RiskCalculator):
         all_ruptures = sum(
             (rups for rups in haz_out['ruptures_by_trt'].itervalues()), [])
         all_ruptures.sort(key=operator.attrgetter('tag'))
-        num_samples = min(len(all_ruptures), epsilon_sampling)
+        num_samples = len(all_ruptures)
         eps_dict = riskinput.make_eps_dict(
             self.assets_by_site, num_samples,
             getattr(oq, 'master_seed', 42),
@@ -116,8 +115,10 @@ class EventLossCalculator(base.RiskCalculator):
         logging.info('Generated %d epsilons', num_samples * len(eps_dict))
         self.riskinputs = list(self.riskmodel.build_inputs_from_ruptures(
             self.sitecol, self.assets_by_site, all_ruptures,
-            gsims_by_trt_id, oq.truncation_level, correl_model, eps_dict, 32))
-        # we try to generate 32 tasks; this is ad hoc and will change
+            gsims_by_trt_id, oq.truncation_level, correl_model, eps_dict,
+            oq.concurrent_tasks // 2))
+        # we divide by 2 to reduce the number of tasks and save data transfer
+        # time; this is a bit ad hoc and can change in the future
         logging.info('Built %d risk inputs', len(self.riskinputs))
 
     def post_execute(self, result):

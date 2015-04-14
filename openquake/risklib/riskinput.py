@@ -104,14 +104,12 @@ class RiskModel(collections.Mapping):
     def __len__(self):
         return len(self._workflows)
 
-    def build_input(self, imt, hazards_by_site, assets_by_site, eps_dict=None,
-                    epsilon_sampling=None):
+    def build_input(self, imt, hazards_by_site, assets_by_site, eps_dict=None):
         """
         :param imt: an Intensity Measure Type
         :param hazards_by_site: an array of hazards per each site
         :param assets_by_site: an array of assets per each site
         :param eps_dict: a dictionary of epsilons per each asset
-        :param epsilon_sampling: the maximum number of epsilons per asset
         :returns: a :class:`RiskInput` instance
         """
         imt_taxonomies = [(imt, self.get_taxonomies(imt))]
