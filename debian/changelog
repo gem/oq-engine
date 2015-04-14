@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Extended the event_loss calculator to compute loss curves per asset and
+    aggregated
   * Added an event_loss calculator which is able to compute the event loss
   * Added defaults to the parameters in job.ini
     table and also event losses per asset directly from the ruptures

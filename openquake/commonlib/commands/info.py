@@ -32,8 +32,16 @@ def info(name, filtersources=False):
         print textwrap.dedent(base.calculators[name].__doc__.strip())
     elif name.endswith('.ini'):
         oqparam = readinput.get_oqparam(name)
-        sitecol = (readinput.get_site_collection(oqparam)
-                   if filtersources else None)
+        if filtersources:
+            if 'exposure' in oqparam.inputs:
+                expo = readinput.get_exposure(oqparam)
+                sitecol, assets_by_site = readinput.get_sitecol_assets(
+                    oqparam, expo)
+            else:
+                sitecol, assets_by_site = readinput.get_site_collection(
+                    oqparam), []
+        else:
+            sitecol, assets_by_site = None, []
         csm = readinput.get_composite_source_model(
             oqparam, sitecol, prefilter=filtersources, in_memory=filtersources)
         assoc = csm.get_rlzs_assoc()
@@ -47,6 +55,8 @@ def info(name, filtersources=False):
             size_mb = (tup[0] * tup[1] * tup[2] * 8.) / 1024 / 1024
             if size_mb:
                 print "sites, levels, keys = %s [~%d MB]" % (tup, size_mb)
+        if len(assets_by_site):
+            print 'assets = %d' % sum(len(assets) for assets in assets_by_site)
     else:
         print "No info for '%s'" % name
 

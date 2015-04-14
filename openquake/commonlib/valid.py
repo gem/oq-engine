@@ -195,8 +195,10 @@ def utf8_not_empty(value):
 def namelist(value):
     """
     :param value: input string
-    :returns: list of identifiers
+    :returns: list of identifiers separated by whitespace or commas
 
+    >>> namelist('a,b')
+    ['a', 'b']
     >>> namelist('a1  b_2\t_c')
     ['a1', 'b_2', '_c']
 
@@ -205,7 +207,7 @@ def namelist(value):
         ...
     ValueError: List of names containing an invalid name: 1c
     """
-    names = value.split()
+    names = value.replace(',', ' ').split()
     if not names:
         raise ValueError('Got an empty name list')
     for n in names:
