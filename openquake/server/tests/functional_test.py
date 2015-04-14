@@ -142,4 +142,9 @@ class EngineServerTestCase(unittest.TestCase):
         tb_str = self.postzip('archive_err_2.zip')
         self.assertIn('failed to load external entity', tb_str)
 
+    def test_err_3(self):
+        # there is no file job.ini, job_hazard.ini or job_risk.ini
+        tb_str = self.postzip('archive_err_3.zip')
+        self.assertIn('Could not find any file of the form', tb_str)
+
     # TODO: add more tests for error situations
