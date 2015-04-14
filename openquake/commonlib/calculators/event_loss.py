@@ -116,10 +116,8 @@ class EventLossCalculator(base.RiskCalculator):
         logging.info('Generated %d epsilons', num_samples * len(eps_dict))
         self.riskinputs = list(self.riskmodel.build_inputs_from_ruptures(
             self.sitecol, self.assets_by_site, all_ruptures,
-            gsims_by_trt_id, oq.truncation_level, correl_model, eps_dict,
-            oq.concurrent_tasks // 2))
-        # we divide by 2 to reduce the number of tasks and save data transfer
-        # time; this is a bit ad hoc and can change in the future
+            gsims_by_trt_id, oq.truncation_level, correl_model, eps_dict, 32))
+        # we try to generate 32 tasks; this is ad hoc and will change
         logging.info('Built %d risk inputs', len(self.riskinputs))
 
     def post_execute(self, result):
