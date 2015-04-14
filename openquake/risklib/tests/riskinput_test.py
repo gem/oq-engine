@@ -63,7 +63,7 @@ class RiskInputTestCase(unittest.TestCase):
         # this is case with a single TRT
         [(trt_id, ses_ruptures)] = rupcalc.run()['ruptures_by_trt'].items()
 
-        gsims = rupcalc.rlzs_assoc.get_gsims_by_trt_id()[trt_id]
+        gsims_by_trt_id = rupcalc.rlzs_assoc.get_gsims_by_trt_id()
 
         eps_dict = riskinput.make_eps_dict(
             self.assets_by_site, len(ses_ruptures), oq.master_seed,
@@ -71,8 +71,7 @@ class RiskInputTestCase(unittest.TestCase):
 
         [ri] = self.riskmodel.build_inputs_from_ruptures(
             self.sitecol, self.assets_by_site, ses_ruptures,
-            gsims, oq.truncation_level, correl_model, eps_dict,
-            epsilon_sampling=1000)
+            gsims_by_trt_id, oq.truncation_level, correl_model, eps_dict, 1)
 
         assets, hazards, epsilons = ri.get_all(rlzs_assoc)
         self.assertEqual([a.id for a in assets],
