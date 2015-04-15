@@ -135,7 +135,7 @@ class RiskModel(collections.Mapping):
         num_epsilons = len(eps_dict.itervalues().next())
         by_trt = operator.attrgetter('trt_model_id')
         for ses_ruptures, indices in split_in_blocks_2(
-                all_ruptures, range(num_epsilons), hint, key=by_trt):
+                all_ruptures, range(num_epsilons), hint or 1, key=by_trt):
             gsims = gsims_by_trt_id[ses_ruptures[0].trt_model_id]
             edic = {asset: eps[indices] for asset, eps in eps_dict.iteritems()}
             yield RiskInputFromRuptures(

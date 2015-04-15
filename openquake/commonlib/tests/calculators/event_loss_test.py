@@ -8,7 +8,8 @@ class EventLossTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_loss')
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job_haz.ini,job_risk.ini',
-                            calculation_mode='event_loss', exports='csv')
+                            calculation_mode='event_loss', exports='csv',
+                            concurrent_tasks=0)
 
         self.assertEqualFiles(
             'expected/rlz-000-structural-event-loss-asset.csv',
@@ -29,7 +30,8 @@ class EventLossTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_loss')
     def test_case_3(self):
         out = self.run_calc(case_3.__file__, 'job_haz.ini,job_risk.ini',
-                            calculation_mode='event_loss', exports='csv')
+                            calculation_mode='event_loss', exports='csv',
+                            concurrent_tasks=0)
         self.assertEqualFiles(
             'expected/total-losses.csv',
             out['total-losses'])
