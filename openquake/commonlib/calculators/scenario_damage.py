@@ -53,10 +53,9 @@ def scenario_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
                  sum(ri.weight for ri in riskinputs))
     with monitor:
         result = AccumDict()  # (key_type, key) -> result
-        for output in riskmodel.gen_outputs(
-                riskinputs, rlzs_assoc, monitor):
-            [assets_fractions] = output.values()  # there is a single rlz
-            for asset, fraction in zip(*assets_fractions):
+        for [out] in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
+            # there is a single rlz
+            for asset, fraction in zip(out.assets, out.damages):
                 damages = fraction * asset.number
                 result += {('asset', asset): scientific.mean_std(damages)}
                 result += {('taxonomy', asset.taxonomy): damages}

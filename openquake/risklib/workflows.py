@@ -26,7 +26,26 @@ from openquake.baselib.general import CallableDict
 from openquake.commonlib import valid
 from openquake.risklib import utils, scientific
 
-Output = collections.namedtuple('Output', 'hid weight loss_type output')
+
+class Output(object):
+    """
+    A generic container of attributes. Only assets, loss_type, hid and weight
+    are always defined.
+    """
+    def __init__(self, assets, loss_type, hid=0, weigth=1, **attrs):
+        self.assets = assets
+        self.loss_type = loss_type
+        self.hid = hid
+        self.weigth = weigth
+        vars(self).update(attrs)
+
+    def __repr__(self):
+        return '<%s %s, hid=%s>' % (
+            self.__class__.__name__, self.loss_type, self.hid)
+
+    def __str__(self):
+        items = '\n'.join('%s=%s' % item for item in vars(self).iteritems())
+        return '<%s\n%s>' % (self.__class__.__name__, items)
 
 registry = CallableDict()
 
@@ -130,6 +149,26 @@ def get_values(loss_type, assets):
     return values
 
 
+def out_by_rlz(workflow, assets, hazards, epsilons, tags, loss_type):
+    """
+    :param workflow: a Workflow instance
+    :param assets: an array of assets of homogeneous taxonomy
+    :param hazards: an array of dictionaries per each asset
+    :param epsilons: an array of epsilons per each asset
+    :param tags: rupture tags
+
+    Yield lists out_by_rlz
+    """
+    out_by_rlz = []
+    for rlz in hazards[0]:
+        hazs = [haz[rlz] for haz in hazards]
+        out = workflow(loss_type, assets, hazs, epsilons, tags)
+        out.hid = rlz.ordinal
+        out.weight = rlz.weight
+        out_by_rlz.append(out)
+    return out_by_rlz
+
+
 class Workflow(object):
     """
     Base class. Can be used in the tests as a mock.
@@ -154,7 +193,7 @@ class Workflow(object):
         :param epsilons: an array of epsilons per each asset
         :param tags: rupture tags
 
-        Yield dictionaries out_by_rlz.
+        Yield lists out_by_rlz.
         """
         for loss_type in self.loss_types:
             assets_ = assets
@@ -173,13 +212,8 @@ class Workflow(object):
                 hazards = hazards[ok]
                 epsilons_ = epsilons[ok]
                 tags_ = tags[ok]
-
-            out_by_rlz = {}
-            for rlz in hazards[0]:
-                hazards_ = [haz[rlz] for haz in hazards]
-                out_by_rlz[rlz] = self(
-                    loss_type, assets_, hazards_, epsilons_, tags_)
-            yield out_by_rlz
+            yield out_by_rlz(
+                self, assets_, hazards, epsilons_, tags_, loss_type)
 
 
 @registry.add('classical_risk')
@@ -192,9 +226,7 @@ class Classical(Workflow):
     2) Compute (if more than one realization is given) mean and
        quantiles loss curves, maps and fractions.
 
-    Per-realization Output are saved into
-    :class:`openquake.risklib.scientific.Classical.Output` which contains
-    the several fields:
+    Per-realization Outputs contain the following fields:
 
     :attr assets:
       an iterable over N assets the outputs refer to
@@ -249,14 +281,6 @@ class Classical(Workflow):
     :attr quantile_average_insured_losses:
        A numpy array shaped (Q, N) with average insured losses
     """
-
-    Output = collections.namedtuple(
-        'Output',
-        'assets loss_type loss_curves average_losses '
-        'insured_curves average_insured_losses '
-        'loss_maps loss_fractions extra')
-    Output.weight = property(lambda out: out.extra['weight'])
-    Output.hid = property(lambda out: out.extra['hid'])
 
     StatisticalOutput = collections.namedtuple(
         'StatisticalOutput',
@@ -327,10 +351,11 @@ class Classical(Workflow):
             insured_curves = None
             average_insured_losses = None
 
-        return self.Output(
-            assets, loss_type,
-            curves, average_losses, insured_curves, average_insured_losses,
-            maps, fractions, extra={})
+        return Output(
+            assets, loss_type, loss_curves=curves,
+            average_losses=average_losses, insured_curves=insured_curves,
+            average_insured_losses=average_insured_losses,
+            loss_maps=maps, loss_fractions=fractions)
 
     def statistics(self, all_outputs, quantiles):
         """
@@ -400,8 +425,8 @@ class Classical(Workflow):
         all_outputs = []
         for hazard in getter.get_hazards():  # for each realization
             out = self(loss_type, getter.assets, hazard.data)
-            out.extra['hid'] = hazard.hid
-            out.extra['weight'] = hazard.weight
+            out.hid = hazard.hid
+            out.weight = hazard.weight
             all_outputs.append(out)
         return all_outputs
 
@@ -453,14 +478,6 @@ class ProbabilisticEventBased(Workflow):
     See :class:`openquake.risklib.scientific.Classical.StatisticalOutput` for
     more details.
     """
-    Output = collections.namedtuple(
-        'Output',
-        "assets loss_type loss_matrix loss_curves average_losses stddev_losses"
-        " insured_curves average_insured_losses stddev_insured_losses"
-        " loss_maps event_loss_table extra")
-    Output.weight = property(lambda out: out.extra['weight'])
-    Output.hid = property(lambda out: out.extra['hid'])
-
     StatisticalOutput = collections.namedtuple(
         'StatisticalOutput',
         'assets mean_curves mean_average_losses '
@@ -557,13 +574,14 @@ class ProbabilisticEventBased(Workflow):
             insured_curves = None
             average_insured_losses = None
             stddev_insured_losses = None
-
-        return self.Output(
+        return Output(
             assets, loss_type,
-            loss_matrix if self.return_loss_matrix else None,
-            curves, average_losses, stddev_losses,
-            insured_curves, average_insured_losses, stddev_insured_losses,
-            maps, elt, extra={})
+            loss_matrix=loss_matrix if self.return_loss_matrix else None,
+            loss_curves=curves, average_losses=average_losses,
+            stddev_losses=stddev_losses, insured_curves=insured_curves,
+            average_insured_losses=average_insured_losses,
+            stddev_insured_losses=stddev_insured_losses,
+            loss_maps=maps, event_loss_table=elt)
 
     def compute_all_outputs(self, getter, loss_type):
         """
@@ -577,8 +595,8 @@ class ProbabilisticEventBased(Workflow):
         for hazard in getter.get_hazards():  # for each realization
             out = self(loss_type, getter.assets, hazard.data,
                        getter.get_epsilons(), getter.rupture_ids)
-            out.extra['hid'] = hazard.hid
-            out.extra['weight'] = hazard.weight
+            out.hid = hazard.hid
+            out.weight = hazard.weight
             yield out
 
     def statistics(self, all_outputs, quantiles):
@@ -664,9 +682,6 @@ class EventLoss(ProbabilisticEventBased):
       a dictionary mapping event ids to aggregate loss values
 
     """
-    Output = collections.namedtuple(
-        'Output', "assets loss_type event_loss_per_asset tags")
-
     def __call__(self, loss_type, assets, ground_motion_values, epsilons,
                  event_ids):
         """
@@ -694,7 +709,8 @@ class EventLoss(ProbabilisticEventBased):
             ground_motion_values, epsilons)
         values = utils.numpy_map(lambda a: a.value(loss_type), assets)
         ela = loss_matrix.T * values  # matrix with R x N elements
-        return self.Output(assets, loss_type, ela, event_ids)
+        return Output(assets, loss_type, event_loss_per_asset=ela,
+                      tags=event_ids)
 
 
 @registry.add('classical_bcr')
@@ -744,7 +760,8 @@ class ClassicalBCR(Workflow):
                 asset.value(loss_type), asset.retrofitted(loss_type))
             for i, asset in enumerate(assets)]
 
-        return zip(eal_original, eal_retrofitted, bcr_results)
+        return Output(assets, loss_type,
+                      data=zip(eal_original, eal_retrofitted, bcr_results))
 
     compute_all_outputs = Classical.compute_all_outputs.im_func
 
@@ -795,7 +812,8 @@ class ProbabilisticEventBasedBCR(Workflow):
                 asset.value(loss_type), asset.retrofitted(loss_type))
             for i, asset in enumerate(assets)]
 
-        return zip(eal_original, eal_retrofitted, bcr_results)
+        return Output(assets, loss_type,
+                      data=zip(eal_original, eal_retrofitted, bcr_results))
 
     compute_all_outputs = ProbabilisticEventBased.compute_all_outputs.im_func
 
@@ -805,11 +823,6 @@ class Scenario(Workflow):
     """
     Implements the Scenario workflow
     """
-    Output = collections.namedtuple(
-        'Output',
-        "assets loss_type loss_matrix aggregate_losses "
-        "insured_loss_matrix insured_losses")
-
     def __init__(self, imt, taxonomy, vulnerability_functions, insured_losses):
         self.imt = imt
         self.taxonomy = taxonomy
@@ -841,9 +854,11 @@ class Scenario(Workflow):
         else:
             insured_loss_matrix = None
             insured_losses = None
-        return self.Output(
-            assets, loss_type, loss_ratio_matrix, aggregate_losses,
-            insured_loss_matrix, insured_losses)
+        return Output(
+            assets, loss_type, loss_matrix=loss_ratio_matrix,
+            aggregate_losses=aggregate_losses,
+            insured_loss_matrix=insured_loss_matrix,
+            insured_losses=insured_losses)
 
 
 @registry.add('scenario_damage')
@@ -870,22 +885,10 @@ class Damage(Workflow):
         damages = numpy.array(
             [[scientific.scenario_damage(ffs, gmv) for gmv in gmvs]
              for gmvs in gmfs])
-        return assets, damages
+        return Output(assets, 'damage', damages=damages)
 
-    def gen_out_by_rlz(self, assets, hazards, epsilons, tags):
-        """
-        :param assets: an array of assets of homogeneous taxonomy
-        :param hazards: an array of dictionaries per each asset
-        :param epsilons: an array of epsilons per each asset
-        :param tags: rupture tags
-
-        Yield dictionaries out_by_rlz
-        """
-        out_by_rlz = {}
-        for rlz in hazards[0]:
-            hazs = [haz[rlz] for haz in hazards]
-            out_by_rlz[rlz] = self('damage', assets, hazs, epsilons, tags)
-        yield out_by_rlz
+    def gen_out_by_rlz(workflow, assets, hazards, epsilons, tags):
+        yield out_by_rlz(workflow, assets, hazards, epsilons, tags, 'damage')
 
 
 @registry.add('classical_damage')
@@ -893,8 +896,6 @@ class ClassicalDamage(Damage):
     """
     Implements the ClassicalDamage workflow
     """
-    Output = collections.namedtuple('Output', "assets damages")
-
     def __init__(self, imt, taxonomy, fragility_functions,
                  hazard_imtls, hazard_investigation_time,
                  risk_investigation_time):
@@ -920,7 +921,7 @@ class ClassicalDamage(Damage):
         fractions = utils.numpy_map(self.curves, hazard_curves)
         damages = [asset.number * fraction
                    for asset, fraction in zip(assets, fractions)]
-        return self.Output(assets, damages)
+        return Output(assets, 'damage', damages=damages)
 
     compute_all_outputs = Classical.compute_all_outputs.im_func
 

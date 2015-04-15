@@ -44,14 +44,14 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
         result = collections.defaultdict(general.AccumDict)
         for out_by_rlz in riskmodel.gen_outputs(
                 riskinputs, rlzs_assoc, monitor):
-            for rlz, out in out_by_rlz.iteritems():
+            for out in out_by_rlz:
                 values = workflows.get_values(out.loss_type, out.assets)
                 for i, asset in enumerate(out.assets):
                     avalue = values[i]
-                    result[rlz.ordinal, 'avg_loss'] += {
+                    result[out.hid, 'avg_loss'] += {
                         asset.id: out.average_losses[i] * avalue}
                     if out.average_insured_losses is not None:
-                        result[rlz.ordinal, 'ins_loss'] += {
+                        result[out.hid, 'ins_loss'] += {
                             asset.id: out.average_insured_losses[i] * avalue}
     return result
 

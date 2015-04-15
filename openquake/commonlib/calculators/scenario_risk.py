@@ -70,8 +70,7 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
         result = general.AccumDict()  # agg_type, loss_type -> losses
         for out_by_rlz in riskmodel.gen_outputs(
                 riskinputs, rlzs_assoc, monitor):
-            for rlz, out in out_by_rlz.iteritems():
-
+            for out in out_by_rlz:
                 assets = out.assets
                 means = out.loss_matrix.mean(axis=1),
                 stddevs = out.loss_matrix.std(ddof=1, axis=1)
