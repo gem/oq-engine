@@ -17,6 +17,13 @@ export DH_OPTIONS
 bd=openquake/bin
 
 
+ifeq ($(shell lsb_release --codename --short),trusty)
+	DEPENDS = -Vdist:Depends="python-amqp, python-django"
+	RECOMMENDS = -Vdist:Recommends="postgresql-9.3, postgresql-9.3-postgis-2.1"
+else
+	DEPENDS = -Vdist:Depends="python-django16"
+	RECOMMENDS = -Vdist:Recommends="postgresql-9.1, postgresql-9.1-postgis"
+
 %:
 	dh --with python2 --with quilt --buildsystem=python_distutils $@
 
@@ -24,3 +31,6 @@ override_dh_quilt_patch:
 	dh_quilt_patch
 	cp openquake/__init__.py /tmp
 	cat /tmp/__init__.py | sed -e "s/0)  #.*$$/`date +'%s'`)/" > openquake/__init__.py
+
+override_dh_gencontrol:
+	dh_gencontrol -- $(DEPENDS) $(RECOMMENDS)
