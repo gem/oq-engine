@@ -27,6 +27,8 @@ if [ "$GEM_EPHEM_NAME" = "" ]; then
     GEM_EPHEM_NAME="ubuntu-lxc-eph"
 fi
 
+LSB_RELEASE=$(lsb_release --id --short)
+
 if command -v lxc-shutdown &> /dev/null; then
     # Older lxc (< 1.0.0) with lxc-shutdown
     LXC_TERM="lxc-shutdown -t 10 -w"
@@ -329,9 +331,9 @@ pkgtest_run () {
     dpkg-scansources . > Sources
     cat Sources | gzip > Sources.gz
     cat > Release <<EOF
-Archive: precise
+Archive: $LSB_RELEASE
 Origin: Ubuntu
-Label: Local Ubuntu Precise Repository
+Label: Local Ubuntu ${LSB_RELEASE^} Repository
 Architecture: amd64
 MD5Sum:
 EOF
