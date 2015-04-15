@@ -23,6 +23,7 @@ ifeq ($(shell lsb_release --codename --short),trusty)
 else
 	DEPENDS = -Vdist:Depends="python-django16"
 	RECOMMENDS = -Vdist:Recommends="postgresql-9.1, postgresql-9.1-postgis"
+endif
 
 %:
 	dh --with python2 --with quilt --buildsystem=python_distutils $@
