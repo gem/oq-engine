@@ -48,7 +48,7 @@ def classical_damage(workflow, getter, outputdict, params, monitor):
                 damage = models.Damage.objects.get(
                     risk_calculation=params.job_id, hazard_output=out.hid)
                 writers.classical_damage(
-                    out.output.assets, out.output.damages,
+                    out.assets, out.damages,
                     params.damage_state_ids, damage.id)
         # TODO: statistical outputs
 
