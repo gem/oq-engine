@@ -28,7 +28,7 @@ if [ "$GEM_EPHEM_NAME" = "" ]; then
     GEM_EPHEM_NAME="ubuntu-lxc-eph"
 fi
 
-LSB_RELEASE=$(lsb_release --id --short)
+LSB_RELEASE=$(lsb_release --codename --short)
 
 if command -v lxc-shutdown &> /dev/null; then
     # Older lxc (< 1.0.0) with lxc-shutdown
