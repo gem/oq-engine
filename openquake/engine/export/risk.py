@@ -156,7 +156,7 @@ def export_agg_loss_curve_csv(key, output, target):
     row = output.loss_curve.aggregatelosscurvedata
     data = ('aggregate', row.losses, row.poes, row.average_loss,
             row.stddev_loss)
-    return writers.save_csv(dest, [data])
+    return writers.save_csv(dest, [data], fmt='%10.6E')
 
 
 @core.export_output.add(('loss_curve', 'xml'), ('event_loss_curve', 'xml'))
