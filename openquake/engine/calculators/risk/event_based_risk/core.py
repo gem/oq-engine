@@ -85,11 +85,11 @@ def event_based(workflow, getter, outputdict, params, monitor):
                 # the statistics we can save memory by keeping only one
                 # hazard realization at the time
         for out in outputs:
-            event_loss_table[loss_type, out.hid] = out.output.event_loss_table
+            event_loss_table[loss_type, out.hid] = out.event_loss_table
             disagg_outputs = None  # changed if params.sites_disagg is set
             if specific_assets:
                 loss_matrix, assets = _filter_loss_matrix_assets(
-                    out.output.loss_matrix, out.output.assets, specific_assets)
+                    out.loss_matrix, out.assets, specific_assets)
                 if len(assets):
                     # compute the loss per rupture per asset
                     event_loss = models.EventLoss.objects.get(
@@ -118,14 +118,13 @@ def event_based(workflow, getter, outputdict, params, monitor):
                             ruptures = [models.SESRupture.objects.get(pk=rid)
                                         for rid in getter.rupture_ids]
                             disagg_outputs = disaggregate(
-                                out.output, [r.rupture for r in ruptures],
-                                params)
+                                out, [r.rupture for r in ruptures], params)
 
             with monitor('saving individual risk', autoflush=True):
                 save_individual_outputs(
                     outputdict.with_args(hazard_output_id=out.hid,
                                          loss_type=loss_type),
-                    out.output, disagg_outputs, params)
+                    out, disagg_outputs, params)
 
         if statistics and len(outputs) > 1:
             stats = workflow.statistics(
