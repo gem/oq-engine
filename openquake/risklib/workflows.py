@@ -254,7 +254,9 @@ class Classical(Workflow):
         'Output',
         'assets loss_type loss_curves average_losses '
         'insured_curves average_insured_losses '
-        'loss_maps loss_fractions')
+        'loss_maps loss_fractions extra')
+    Output.weight = property(lambda out: out.extra['weight'])
+    Output.hid = property(lambda out: out.extra['hid'])
 
     StatisticalOutput = collections.namedtuple(
         'StatisticalOutput',
@@ -328,7 +330,7 @@ class Classical(Workflow):
         return self.Output(
             assets, loss_type,
             curves, average_losses, insured_curves, average_insured_losses,
-            maps, fractions)
+            maps, fractions, extra={})
 
     def statistics(self, all_outputs, quantiles):
         """
@@ -345,9 +347,9 @@ class Classical(Workflow):
         weights = []
         loss_curves = []
         for out in all_outputs:
-            outputs.append(out.output)
+            outputs.append(out)
             weights.append(out.weight)
-            loss_curves.append(out.output.loss_curves)
+            loss_curves.append(out.loss_curves)
 
         def normalize_curves(curves):
             losses = curves[0][0]
@@ -397,9 +399,10 @@ class Classical(Workflow):
         """
         all_outputs = []
         for hazard in getter.get_hazards():  # for each realization
-            all_outputs.append(
-                Output(hazard.hid, hazard.weight, loss_type,
-                       self(loss_type, getter.assets, hazard.data)))
+            out = self(loss_type, getter.assets, hazard.data)
+            out.extra['hid'] = hazard.hid
+            out.extra['weight'] = hazard.weight
+            all_outputs.append(out)
         return all_outputs
 
 
@@ -454,7 +457,9 @@ class ProbabilisticEventBased(Workflow):
         'Output',
         "assets loss_type loss_matrix loss_curves average_losses stddev_losses"
         " insured_curves average_insured_losses stddev_insured_losses"
-        " loss_maps event_loss_table")
+        " loss_maps event_loss_table extra")
+    Output.weight = property(lambda out: out.extra['weight'])
+    Output.hid = property(lambda out: out.extra['hid'])
 
     StatisticalOutput = collections.namedtuple(
         'StatisticalOutput',
@@ -558,7 +563,7 @@ class ProbabilisticEventBased(Workflow):
             loss_matrix if self.return_loss_matrix else None,
             curves, average_losses, stddev_losses,
             insured_curves, average_insured_losses, stddev_insured_losses,
-            maps, elt)
+            maps, elt, extra={})
 
     def compute_all_outputs(self, getter, loss_type):
         """
@@ -572,7 +577,9 @@ class ProbabilisticEventBased(Workflow):
         for hazard in getter.get_hazards():  # for each realization
             out = self(loss_type, getter.assets, hazard.data,
                        getter.get_epsilons(), getter.rupture_ids)
-            yield Output(hazard.hid, hazard.weight, loss_type, out)
+            out.extra['hid'] = hazard.hid
+            out.extra['weight'] = hazard.weight
+            yield out
 
     def statistics(self, all_outputs, quantiles):
         """
@@ -589,9 +596,9 @@ class ProbabilisticEventBased(Workflow):
         weights = []
         loss_curves = []
         for out in all_outputs:
-            outputs.append(out.output)
+            outputs.append(out)
             weights.append(out.weight)
-            loss_curves.append(out.output.loss_curves)
+            loss_curves.append(out.loss_curves)
 
         curve_matrix = numpy.array(loss_curves).transpose(1, 0, 2, 3)
 
