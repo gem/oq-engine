@@ -17,7 +17,6 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 # -*- coding: utf-8 -*-
 
-import itertools
 import operator
 import logging
 import collections
@@ -92,8 +91,7 @@ class RiskModel(collections.Mapping):
         """
         by_imt = operator.itemgetter(0)
         by_taxo = operator.itemgetter(1)
-        for imt, group in itertools.groupby(sorted(self), key=by_imt):
-            yield imt, map(by_taxo, group)
+        return groupby(self, by_imt, lambda group: map(by_taxo, group)).items()
 
     def __getitem__(self, imt_taxo):
         return self._workflows[imt_taxo]
