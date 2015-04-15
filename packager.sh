@@ -38,6 +38,7 @@
 if [ $GEM_SET_DEBUG ]; then
     set -x
 fi
+set -x
 set -e
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-engine"
@@ -62,7 +63,7 @@ if [ "$GEM_EPHEM_CMD" = "" ]; then
     GEM_EPHEM_CMD="lxc-start-ephemeral"
 fi
 if [ "$GEM_EPHEM_NAME" = "" ]; then
-    GEM_EPHEM_NAME="ubuntu-lxc-eph"
+    GEM_EPHEM_NAME="ubuntu14-lxc-eph"
 fi
 
 if command -v lxc-shutdown &> /dev/null; then
@@ -309,7 +310,7 @@ _devtest_innervm_run () {
     # configure the machine to run tests
     ssh $lxc_ip "set -e
         for dbu in oq_job_init oq_admin; do
-            sudo sed -i \"1ilocal   openquake2   \$dbu                   md5\" /etc/postgresql/9.1/main/pg_hba.conf
+            sudo sed -i \"1ilocal   openquake2   \$dbu                   md5\" /etc/postgresql/9.3/main/pg_hba.conf
         done"
 
     ssh $lxc_ip "sudo service postgresql restart"
@@ -712,9 +713,9 @@ pkgtest_run () {
     dpkg-scansources . > Sources
     cat Sources | gzip > Sources.gz
     cat > Release <<EOF
-Archive: precise
+Archive: trusty
 Origin: Ubuntu
-Label: Local Ubuntu Precise Repository
+Label: Local Ubuntu Trusty Repository
 Architecture: amd64
 MD5Sum:
 EOF

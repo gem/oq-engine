@@ -24,7 +24,7 @@ set -e
 . /usr/share/debconf/confmodule
 
 GEM_DEB_PACKAGE="python-oq-engine"
-PG_CONF="/etc/postgresql/9.1/main/postgresql.conf"
+PG_CONF="/etc/postgresql/9.3/main/postgresql.conf"
 
 if [ -f /usr/sbin/rabbitmqctl ]; then
     # create rabbitmq configuration for python-celery
@@ -72,7 +72,7 @@ do
 done
 chown -R root.openquake $SDIR
 
-if [ -f /usr/lib/postgresql/9.1/bin/postgres ]; then
+if [ -f /usr/lib/postgresql/9.3/bin/postgres ]; then
     # postgres is installed, flatten and recreate the database.
 
     # Restart postgres in order to get rid of idle/open connections
@@ -92,9 +92,9 @@ if [ -f /usr/lib/postgresql/9.1/bin/postgres ]; then
         kill -9 $pid
     done
 
-    /etc/init.d/postgresql restart 9.1
+    /etc/init.d/postgresql restart 9.3
 
-    pgport=`cat /etc/postgresql/9.1/main/postgresql.conf | perl -wane ' if ($_ =~ /^\s*port\s*=/) { s/^\s*port\s*=\s*(\d+).*$/$1/; print $_; }'`
+    pgport=`cat /etc/postgresql/9.3/main/postgresql.conf | perl -wane ' if ($_ =~ /^\s*port\s*=/) { s/^\s*port\s*=\s*(\d+).*$/$1/; print $_; }'`
     LOGFILE=/var/tmp/openquake-db-installation
     rm -f $LOGFILE
     su -c "/usr/bin/oq_create_db --yes --db-name=openquake2 --db-port=$pgport > $LOGFILE 2>&1" postgres
@@ -115,7 +115,7 @@ if [ -f /usr/lib/postgresql/9.1/bin/postgres ]; then
         exit 1
     fi
 
-    PG_ROOT=/etc/postgresql/9.1/main
+    PG_ROOT=/etc/postgresql/9.3/main
     # Do we already have oq_* database users configured and how many?
     oq_config_lines=`grep oq_ $PG_ROOT/pg_hba.conf | grep -v '^#' | wc -l`
     # Do we already have oq_* database users *auto-configured* and how many?
@@ -130,7 +130,7 @@ if [ -f /usr/lib/postgresql/9.1/bin/postgres ]; then
             echo "local   openquake2   $dbu                   md5" >> $PG_ROOT/pg_hba.conf
         done
         cat $PG_ROOT/pg_hba.conf.orig | grep -v 'local..*oq_' >> $PG_ROOT/pg_hba.conf
-        /etc/init.d/postgresql reload 9.1
+        /etc/init.d/postgresql reload 9.3
     else
         echo ""
         echo "============================================================"
