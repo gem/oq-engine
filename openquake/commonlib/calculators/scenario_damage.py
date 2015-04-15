@@ -21,8 +21,8 @@ import logging
 
 import numpy
 
-from openquake.commonlib import readinput, parallel
-from openquake.risklib import scientific, riskinput
+from openquake.commonlib import parallel
+from openquake.risklib import scientific
 from openquake.baselib.general import AccumDict
 from openquake.commonlib.calculators import base, calc
 from openquake.commonlib.export import export
@@ -64,13 +64,17 @@ def scenario_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
 
 
 @base.calculators.add('scenario_damage')
-class ScenarioDamageCalculator(base.DamageCalculator):
+class ScenarioDamageCalculator(base.RiskCalculator):
     """
     Scenario damage calculator
     """
     hazard_calculator = 'scenario'
     core_func = scenario_damage
     result_kind = 'damages_by_key'
+
+    def pre_execute(self):
+        base.RiskCalculator.pre_execute(self)
+        self.riskinputs = self.build_riskinputs(base.get_gmfs(self))
 
     def post_execute(self, result):
         """

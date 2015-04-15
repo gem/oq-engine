@@ -25,8 +25,7 @@ from openquake.baselib import general
 from openquake.commonlib import riskmodels, parallel
 from openquake.commonlib.calculators import base
 from openquake.commonlib.export import export
-from openquake.commonlib.calculators.scenario_damage import \
-    ScenarioDamageCalculator
+
 
 AggLoss = collections.namedtuple(
     'AggLoss', 'loss_type unit mean stddev')
@@ -99,7 +98,7 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
 
 
 @base.calculators.add('scenario_risk')
-class ScenarioRiskCalculator(base.DamageCalculator):
+class ScenarioRiskCalculator(base.RiskCalculator):
     """
     Run a scenario risk calculation
     """
@@ -112,12 +111,8 @@ class ScenarioRiskCalculator(base.DamageCalculator):
         Compute the GMFs, build the epsilons, the riskinputs, and a dictionary
         with the unit of measure, used in the export phase.
         """
-        # notice, not super(ScenarioRiskCalculator, self)
-        super(base.DamageCalculator, self).pre_execute()
-        if 'gmfs' in self.oqparam.inputs:  # from file
-            gmfs = self.read_gmfs_from_csv()
-        else:  # from rupture
-            gmfs = self.compute_gmfs()
+        base.RiskCalculator.pre_execute(self)
+        gmfs = base.get_gmfs(self)
 
         logging.info('Building the epsilons')
         eps_dict = self.make_eps_dict(
