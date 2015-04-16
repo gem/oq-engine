@@ -25,9 +25,9 @@ set -e
 
 GEM_DEB_PACKAGE="python-oq-engine"
 LSB_RELEASE=$(lsb_release --codename --short)
-if [ "$LSB_RELEASE" == "precise" ]; then
+if [ "$LSB_RELEASE" = "precise" ]; then
     PG_VERSION="9.1"
-elif [ "$LSB_RELEASE" == "trusty" ]; then
+elif [ "$LSB_RELEASE" = "trusty" ]; then
     PG_VERSION="9.3"
 else
     echo "This operating system release is not supported"
