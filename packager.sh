@@ -524,15 +524,18 @@ _pkgtest_innervm_run () {
 deps_list() {
     local old_ifs out_list skip i d listtype="$1" filename="$2"
 
+    rules_dep=$(grep "^${LSB_RELEASE^^}_DEP =" debian/rules | cut -d '"' -f 2 | tr -d ",")
+    rules_rec=$(grep "^${LSB_RELEASE^^}_REC =" debian/rules | cut -d '"' -f 2 | tr -d ",")
+
     out_list=""
     if [ "$listtype" = "all" ]; then
-        in_list="$(cat "$filename" | egrep '^Depends:|^Recommends:|Build-Depends:' | sed 's/^\(Build-\)\?Depends://g;s/^Recommends://g' | tr '\n' ',')"
+        in_list="$(cat "$filename" | egrep '^Depends:|^Recommends:|Build-Depends:' | sed 's/^\(Build-\)\?Depends://g;s/^Recommends://g' | tr '\n' ',') $rules_dep $rules_rec"
     elif [  "$listtype" = "deprec" ]; then
-        in_list="$(cat "$filename" | egrep '^Depends:|^Recommends:' | sed 's/^Depends://g;s/^Recommends://g' | tr '\n' ',')"
+        in_list="$(cat "$filename" | egrep '^Depends:|^Recommends:' | sed 's/^Depends://g;s/^Recommends://g' | tr '\n' ',') $rules_dep $rules_rec"
     elif [  "$listtype" = "build" ]; then
-        in_list="$(cat "$filename" | egrep '^Depends:|^Build-Depends:' | sed 's/^\(Build-\)\?Depends://g' | tr '\n' ',')"
+        in_list="$(cat "$filename" | egrep '^Depends:|^Build-Depends:' | sed 's/^\(Build-\)\?Depends://g' | tr '\n' ',') $rules_dep"
     else
-        in_list="$(cat "$filename" | egrep "^Depends:" | sed 's/^Depends: //g')"
+        in_list="$(cat "$filename" | egrep "^Depends:" | sed 's/^Depends: //g') $rules_dep"
     fi
 
     old_ifs="$IFS"
