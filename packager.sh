@@ -65,6 +65,8 @@ if [ "$GEM_EPHEM_NAME" = "" ]; then
     GEM_EPHEM_NAME="ubuntu-lxc-eph"
 fi
 
+LSB_RELEASE=$(lsb_release --codename --short)
+
 if command -v lxc-shutdown &> /dev/null; then
     # Older lxc (< 1.0.0) with lxc-shutdown
     LXC_TERM="lxc-shutdown -t 10 -w"
@@ -309,7 +311,7 @@ _devtest_innervm_run () {
     # configure the machine to run tests
     ssh $lxc_ip "set -e
         for dbu in oq_job_init oq_admin; do
-            sudo sed -i \"1ilocal   openquake2   \$dbu                   md5\" /etc/postgresql/9.1/main/pg_hba.conf
+            sudo sed -i \"1ilocal   openquake2   \$dbu                   md5\" /etc/postgresql/*/main/pg_hba.conf
         done"
 
     ssh $lxc_ip "sudo service postgresql restart"
@@ -522,15 +524,18 @@ _pkgtest_innervm_run () {
 deps_list() {
     local old_ifs out_list skip i d listtype="$1" filename="$2"
 
+    rules_dep=$(grep "^${LSB_RELEASE^^}_DEP =" debian/rules | cut -d '"' -f 2 | tr -d ",")
+    rules_rec=$(grep "^${LSB_RELEASE^^}_REC =" debian/rules | cut -d '"' -f 2 | tr -d ",")
+
     out_list=""
     if [ "$listtype" = "all" ]; then
-        in_list="$(cat "$filename" | egrep '^Depends:|^Recommends:|Build-Depends:' | sed 's/^\(Build-\)\?Depends://g;s/^Recommends://g' | tr '\n' ',')"
+        in_list="$(cat "$filename" | egrep '^Depends:|^Recommends:|Build-Depends:' | sed 's/^\(Build-\)\?Depends://g;s/^Recommends://g' | tr '\n' ',') $rules_dep $rules_rec"
     elif [  "$listtype" = "deprec" ]; then
-        in_list="$(cat "$filename" | egrep '^Depends:|^Recommends:' | sed 's/^Depends://g;s/^Recommends://g' | tr '\n' ',')"
+        in_list="$(cat "$filename" | egrep '^Depends:|^Recommends:' | sed 's/^Depends://g;s/^Recommends://g' | tr '\n' ',') $rules_dep $rules_rec"
     elif [  "$listtype" = "build" ]; then
-        in_list="$(cat "$filename" | egrep '^Depends:|^Build-Depends:' | sed 's/^\(Build-\)\?Depends://g' | tr '\n' ',')"
+        in_list="$(cat "$filename" | egrep '^Depends:|^Build-Depends:' | sed 's/^\(Build-\)\?Depends://g' | tr '\n' ',') $rules_dep"
     else
-        in_list="$(cat "$filename" | egrep "^Depends:" | sed 's/^Depends: //g')"
+        in_list="$(cat "$filename" | egrep "^Depends:" | sed 's/^Depends: //g') $rules_dep"
     fi
 
     old_ifs="$IFS"
@@ -712,9 +717,9 @@ pkgtest_run () {
     dpkg-scansources . > Sources
     cat Sources | gzip > Sources.gz
     cat > Release <<EOF
-Archive: precise
+Archive: $LSB_RELEASE
 Origin: Ubuntu
-Label: Local Ubuntu Precise Repository
+Label: Local Ubuntu ${LSB_RELEASE^} Repository
 Architecture: amd64
 MD5Sum:
 EOF
