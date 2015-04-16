@@ -528,54 +528,13 @@ class ProbabilisticEventBased(Workflow):
         """
         if len(all_outputs) == 1:  # single realization
             return
-
-        outputs = []
-        weights = []
-        loss_curves = []
-        for out in all_outputs:
-            outputs.append(out)
-            weights.append(out.weight)
-            loss_curves.append(out.loss_curves)
-
-        curve_matrix = numpy.array(loss_curves).transpose(1, 0, 2, 3)
-
-        (mean_curves, mean_average_losses, mean_maps,
-         quantile_curves, quantile_average_losses, quantile_maps) = (
-            scientific.exposure_statistics(
-                [self._normalize_curves(curves) for curves in curve_matrix],
-                self.conditional_loss_poes, weights, quantiles))
-        elt = sum((out.event_loss_table for out in outputs),
-                  collections.Counter())
-
-        if self.insured_losses:
-            loss_curves = [out.insured_curves for out in outputs]
-            (mean_insured_curves, mean_average_insured_losses, _,
-             quantile_insured_curves, quantile_average_insured_losses, _) = (
-                scientific.exposure_statistics(
-                    [self._normalize_curves(curves)
-                     for curves
-                     in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
-                    [], weights, quantiles))
-        else:
-            mean_insured_curves = None
-            mean_average_insured_losses = None
-            quantile_insured_curves = None
-            quantile_average_insured_losses = None
-
-        return scientific.Output(
-            assets=outputs[0].assets,
-            loss_type=outputs[0].loss_type,
-            mean_curves=mean_curves,
-            mean_average_losses=mean_average_losses,
-            mean_maps=mean_maps,
-            quantile_curves=quantile_curves,
-            quantile_average_losses=quantile_average_losses,
-            quantile_maps=quantile_maps,
-            mean_insured_curve=mean_insured_curves,
-            mean_average_insured_losses=mean_average_insured_losses,
-            quantile_insured_curves=quantile_insured_curves,
-            quantile_average_insured_losses=quantile_average_insured_losses,
-            event_loss_table=elt)
+        stats = scientific.StatsBuilder(
+            quantiles, self.conditional_loss_poes, [], self._normalize_curves)
+        out = stats.build(all_outputs)
+        out.event_loss_table = sum(
+            (out.event_loss_table for out in all_outputs),
+            collections.Counter())
+        return out
 
     def _normalize_curves(self, curves):
         non_trivial_curves = [(losses, poes)

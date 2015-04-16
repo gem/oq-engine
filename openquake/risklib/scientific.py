@@ -1057,6 +1057,13 @@ class StatsBuilder(object):
         self.poes_disagg = poes_disagg
         self.normalize_curves = normalize_curves
 
+    def normalize(self, loss_curves):
+        """
+        Normalize the loss curves by using the provided normalization function
+        """
+        return map(self.normalize_curves,
+                   numpy.array(loss_curves).transpose(1, 0, 2, 3))
+
     def build(self, all_outputs):
         """
         Build all statistics from classical risk outputs referring to the
@@ -1073,19 +1080,16 @@ class StatsBuilder(object):
         (mean_curves, mean_average_losses, mean_maps,
          quantile_curves, quantile_average_losses, quantile_maps) = (
              exposure_statistics(
-                 [self.normalize_curves(curves) for curves
-                  in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
+                 self.normalize(loss_curves),
                  self.conditional_loss_poes + self.poes_disagg,
                  weights, self.quantiles))
 
-        if self.insured_losses:
+        if outputs[0].insured_curves is not None:
             loss_curves = [out.insured_curves for out in outputs]
             (mean_insured_curves, mean_average_insured_losses, _,
              quantile_insured_curves, quantile_average_insured_losses, _) = (
                  exposure_statistics(
-                     [self.normalize_curves(curves) for curves
-                      in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
-                     [], weights, self.quantiles))
+                     self.normalize(loss_curves), [], weights, self.quantiles))
         else:
             mean_insured_curves = None
             mean_average_insured_losses = None
@@ -1098,8 +1102,8 @@ class StatsBuilder(object):
             loss_type=outputs[0].loss_type,
             mean_curves=mean_curves,
             mean_average_losses=mean_average_losses,
-            mean_maps=mean_maps[0:len(self.conditional_loss_poes)],
-            mean_fractions=mean_maps[len(self.conditional_loss_poes):],
+            mean_maps=mean_maps[0:clp],
+            mean_fractions=mean_maps[clp:],
             quantile_curves=quantile_curves,
             quantile_average_losses=quantile_average_losses,
             quantile_maps=quantile_maps[:, 0:clp],
