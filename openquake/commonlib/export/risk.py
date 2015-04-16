@@ -19,6 +19,7 @@
 import os
 import csv
 import operator
+import collections
 
 from openquake.baselib.general import AccumDict
 from openquake.commonlib.export import export

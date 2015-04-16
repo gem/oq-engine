@@ -24,6 +24,7 @@ This module includes the scientific API of the oq-risklib
 import abc
 import copy
 import itertools
+import collections
 import bisect
 
 import numpy
@@ -1045,6 +1046,29 @@ def normalize_curves(curves):
     return curves[0][0], [poes for _losses, poes in curves]
 
 
+def normalize_curves_eb(curves):
+    """
+    A more sophisticated version of normalize_curves, used in the event
+    based calculator.
+
+    :param curves: a list of pairs (losses, poes)
+    :returns: first losses, all_poes
+    """
+    non_trivial_curves = [(losses, poes)
+                          for losses, poes in curves if losses[-1] > 0]
+    if not non_trivial_curves:  # no damage. all trivial curves
+        return curves[0][0], [poes for _losses, poes in curves]
+    else:  # standard case
+        max_losses = [losses[-1]  # we assume non-decreasing losses
+                      for losses, _poes in non_trivial_curves]
+        reference_curve = non_trivial_curves[numpy.argmax(max_losses)]
+        loss_ratios = reference_curve[0]
+        curves_poes = [interpolate.interp1d(
+            losses, poes, bounds_error=False, fill_value=0)(loss_ratios)
+            for losses, poes in curves]
+    return loss_ratios, curves_poes
+
+
 class StatsBuilder(object):
     """
     A class to build risk statistics
@@ -1066,8 +1090,28 @@ class StatsBuilder(object):
 
     def build(self, all_outputs):
         """
-        Build all statistics from classical risk outputs referring to the
-        same assets and loss_type.
+        Build all statistics from a set of risk outputs.
+
+        :param all_outputs:
+            a non empty sequence of risk outputs referring to the same assets
+            and loss_type. Each output must have attributes assets, loss_type,
+            weight, loss_curves and insured_curves (the latter possibly None).
+        :returns:
+            an Output object with attributes
+            assets,
+            loss_type,
+            mean_curves,
+            mean_average_losses,
+            mean_maps,
+            mean_fractions,
+            quantile_curves,
+            quantile_average_losses,
+            quantile_maps,
+            quantile_fractions,
+            mean_insured_curves,
+            mean_average_insured_losses,
+            quantile_insured_curves,
+            quantile_average_insured_losses
         """
         outputs = []
         weights = []
@@ -1114,16 +1158,93 @@ class StatsBuilder(object):
             quantile_average_insured_losses=quantile_average_insured_losses)
 
 
+LossCurvePerAsset = collections.namedtuple(
+    'LossCurvePerAsset', 'asset_ref losses poes average_loss stddev_loss kind')
+LossCurvePerAsset.__new__.__defaults__ = (None, 'loss_curve_per_asset')
+
+LossMapPerAsset = collections.namedtuple(
+    'LossCurvePerAsset', 'asset_ref loss std_dev kind')
+LossMapPerAsset.__new__.__defaults__ = (None, 'loss_map_per_asset')
+
+
+def loss_curves(assets, curves, averages, kind):
+    """
+    :param kind: one of mean, quantile, mean_insured, quantile_insured
+    """
+    acc = []
+    for asset_ref, (losses, poes), mal in zip(assets, curves, averages):
+        acc.append(LossCurvePerAsset(asset_ref, losses, poes, mal, '', kind))
+    return acc
+
+
+def loss_maps(assets, maps, kind):
+    """
+    :param kind: one of mean_maps, quantile_maps
+    """
+    acc = []
+    for asset_ref, loss in zip(assets, maps):
+        acc.append(LossCurvePerAsset(asset_ref, loss, '', kind))
+    return acc
+
+
+def get_stat_curves(stats):
+    """
+    :param stats:
+        an object with attributes mean_curves, mean_average_losses, mean_maps,
+        quantile_curves, quantile_average_losses, quantile_loss_curves,
+        quantile_maps, mean_insured_curves, mean_average_insured_losses,
+        quantile_insured_curves, quantile_average_insured_losses, assets.
+        There is also a loss_type attribute which must be always the same.
+    :returns:
+        mean and quantile loss curves per asset
+    """
+    curves = loss_curves(
+        stats.assets, stats.mean_curves, stats.mean_average_losses, 'mean')
+    for qcs, qal in zip(stats.quantile_curves, stats.quantile_average_losses):
+        curves.extend(loss_curves(stats.assets, qcs, qal, 'quantile'))
+
+    if stats.mean_insured_curves is not None:
+        curves.extend(loss_curves(
+            stats.assets, stats.mean_insured_curves,
+            stats.mean_average_insured_losses), 'mean_insured')
+    if stats.quantile_insured_curves is not None:
+        for qcs, qal in zip(stats.quantile_insured_curves,
+                            stats.quantile_average_insured_losses):
+            curves.extend(
+                loss_curves(stats.assets, qcs, qal, 'quantile_insured'))
+    return curves
+
+
+def get_stat_maps(stats):
+    """
+    :param stats:
+        an object with attributes mean_curves, mean_average_losses, mean_maps,
+        quantile_curves, quantile_average_losses, quantile_loss_curves,
+        quantile_maps, mean_insured_curves, mean_average_insured_losses,
+        quantile_insured_curves, quantile_average_insured_losses, assets.
+        There is also a loss_type attribute which must be always the same.
+    :returns:
+        mean and quantile maps per asset
+    """
+    all_maps = []
+    for maps in stats.mean_maps:
+        all_maps.extend(loss_maps(stats.assets, maps, 'mean_maps'))
+    for qmaps in stats.quantile_maps:
+        for maps in qmaps:
+            all_maps.extend(loss_maps(stats.assets, maps, 'quantile_maps'))
+    return all_maps
+
+
 class Output(object):
     """
     A generic container of attributes. Only assets, loss_type, hid and weight
     are always defined.
     """
-    def __init__(self, assets, loss_type, hid=None, weigth=0, **attrs):
+    def __init__(self, assets, loss_type, hid=None, weight=0, **attrs):
         self.assets = assets
         self.loss_type = loss_type
         self.hid = hid
-        self.weigth = weigth
+        self.weight = weight
         vars(self).update(attrs)
 
     def __repr__(self):
