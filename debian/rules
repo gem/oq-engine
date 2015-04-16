@@ -16,13 +16,18 @@ export DH_OPTIONS
 
 bd=openquake/bin
 
+TRUSTY_DEP = "python-amqp, python-django"
+TRUSTY_REC = "postgresql-9.3, postgresql-9.3-postgis-2.1"
+PRECISE_DEP = "python-django16"
+PRECISE_REC = "postgresql-9.1, postgresql-9.1-postgis"
+
 
 ifeq ($(shell lsb_release --codename --short),trusty)
-	DEPENDS = -Vdist:Depends="python-amqp, python-django"
-	RECOMMENDS = -Vdist:Recommends="postgresql-9.3, postgresql-9.3-postgis-2.1"
+	DEPENDS = -Vdist:Depends=$(TRUSTY_DEP)
+	RECOMMENDS = -Vdist:Recommends=$(TRUSTY_REC)
 else
-	DEPENDS = -Vdist:Depends="python-django16"
-	RECOMMENDS = -Vdist:Recommends="postgresql-9.1, postgresql-9.1-postgis"
+	DEPENDS = -Vdist:Depends=$(PRECISE_DEP)
+	RECOMMENDS = -Vdist:Recommends=$(PRECISE_REC)
 endif
 
 %:
