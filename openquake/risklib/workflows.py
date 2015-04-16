@@ -776,6 +776,14 @@ class Damage(Workflow):
         return scientific.Output(assets, 'damage', damages=damages)
 
     def gen_out_by_rlz(workflow, assets, hazards, epsilons, tags):
+        """
+        :param assets: an array of assets of homogeneous taxonomy
+        :param hazards: an array of dictionaries per each asset
+        :param epsilons: an array of epsilons per each asset
+        :param tags: rupture tags
+
+        Yield a single list of outputs, one per realization
+        """
         yield out_by_rlz(workflow, assets, hazards, epsilons, tags, 'damage')
 
 
