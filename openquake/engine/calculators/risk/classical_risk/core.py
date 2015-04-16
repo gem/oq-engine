@@ -54,7 +54,7 @@ def classical(workflow, getter, outputdict, params, monitor):
                 save_individual_outputs(
                     outputdict.with_args(
                         loss_type=loss_type, hazard_output_id=out.hid),
-                    out.output, params)
+                    out, params)
             if stats is not None:
                 save_statistical_output(
                     outputdict.with_args(
