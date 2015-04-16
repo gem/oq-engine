@@ -1035,3 +1035,97 @@ def asset_statistics(
          for quantile in quantiles]).reshape((len(quantiles), 2, len(losses)))
     quantile_maps = loss_map_matrix(poes, quantile_curves).transpose()
     return (mean_curve_, mean_map, quantile_curves, quantile_maps)
+
+
+def normalize_curves(curves):
+    """
+    :param curves: a list of pairs (losses, poes)
+    :returns: first losses, all_poes
+    """
+    return curves[0][0], [poes for _losses, poes in curves]
+
+
+class StatsBuilder(object):
+    """
+    A class to build risk statistics
+    """
+    def __init__(self, quantiles,
+                 conditional_loss_poes, poes_disagg,
+                 normalize_curves=normalize_curves):
+        self.quantiles = quantiles
+        self.conditional_loss_poes = conditional_loss_poes
+        self.poes_disagg = poes_disagg
+        self.normalize_curves = normalize_curves
+
+    def build(self, all_outputs):
+        """
+        Build all statistics from classical risk outputs referring to the
+        same assets and loss_type.
+        """
+        outputs = []
+        weights = []
+        loss_curves = []
+        for out in all_outputs:
+            outputs.append(out)
+            weights.append(out.weight)
+            loss_curves.append(out.loss_curves)
+
+        (mean_curves, mean_average_losses, mean_maps,
+         quantile_curves, quantile_average_losses, quantile_maps) = (
+             exposure_statistics(
+                 [self.normalize_curves(curves) for curves
+                  in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
+                 self.conditional_loss_poes + self.poes_disagg,
+                 weights, self.quantiles))
+
+        if self.insured_losses:
+            loss_curves = [out.insured_curves for out in outputs]
+            (mean_insured_curves, mean_average_insured_losses, _,
+             quantile_insured_curves, quantile_average_insured_losses, _) = (
+                 exposure_statistics(
+                     [self.normalize_curves(curves) for curves
+                      in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
+                     [], weights, self.quantiles))
+        else:
+            mean_insured_curves = None
+            mean_average_insured_losses = None
+            quantile_insured_curves = None
+            quantile_average_insured_losses = None
+
+        clp = len(self.conditional_loss_poes)
+        return Output(
+            assets=outputs[0].assets,
+            loss_type=outputs[0].loss_type,
+            mean_curves=mean_curves,
+            mean_average_losses=mean_average_losses,
+            mean_maps=mean_maps[0:len(self.conditional_loss_poes)],
+            mean_fractions=mean_maps[len(self.conditional_loss_poes):],
+            quantile_curves=quantile_curves,
+            quantile_average_losses=quantile_average_losses,
+            quantile_maps=quantile_maps[:, 0:clp],
+            quantile_fractions=quantile_maps[:, clp:],
+            mean_insured_curves=mean_insured_curves,
+            mean_average_insured_losses=mean_average_insured_losses,
+            quantile_insured_curves=quantile_insured_curves,
+            quantile_average_insured_losses=quantile_average_insured_losses)
+
+
+class Output(object):
+    """
+    A generic container of attributes. Only assets, loss_type, hid and weight
+    are always defined.
+    """
+    def __init__(self, assets, loss_type, hid=None, weigth=0, **attrs):
+        self.assets = assets
+        self.loss_type = loss_type
+        self.hid = hid
+        self.weigth = weigth
+        vars(self).update(attrs)
+
+    def __repr__(self):
+        return '<%s %s, hid=%s>' % (
+            self.__class__.__name__, self.loss_type, self.hid)
+
+    def __str__(self):
+        items = '\n'.join('%s=%s' % item for item in vars(self).iteritems())
+        return '<%s\n%s>' % (self.__class__.__name__, items)
