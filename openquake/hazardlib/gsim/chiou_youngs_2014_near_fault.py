@@ -31,7 +31,9 @@ class ChiouYoungs2014NearFaultEffect(GMPE):
     Implements GMPE developed by Brian S.-J. Chiou and Robert R. Youngs
     and published as "Updated of the Chiou and Youngs NGA Model for the
     Average Horizontal Component of Peak Ground Motion and Response Spectra"
-    (2014, Earthquake Spectra).
+    (2014, Earthquake Spectra). The difference between the ChiouYoungs2014 is
+    that in this GMPE, the calculation for near fault directivity effect is
+    available.
     """
     #: Supported tectonic region type is active shallow crust
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
@@ -64,8 +66,8 @@ class ChiouYoungs2014NearFaultEffect(GMPE):
     #: dip and ztor.
     REQUIRES_RUPTURE_PARAMETERS = set(('dip', 'rake', 'mag', 'ztor'))
 
-    #: Required distance measures are RRup, Rjb, Rx, and Rcdpp for
-    #: directivity prediction
+    #: Required distance measures are RRup, Rjb, Rx, and Rcdpp( for
+    #: directivity prediction)
     REQUIRES_DISTANCES = set(('rrup', 'rjb', 'rx', 'rcdpp'))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
@@ -87,7 +89,6 @@ class ChiouYoungs2014NearFaultEffect(GMPE):
         mean = self._get_mean(sites, C, ln_y_ref, exp1, exp2)
         stddevs = self._get_stddevs(sites, rup, C, stddev_types,
                                     ln_y_ref, exp1, exp2)
-
         return mean, stddevs
 
     def _get_mean(self, sites, C, ln_y_ref, exp1, exp2):
@@ -204,11 +205,11 @@ class ChiouYoungs2014NearFaultEffect(GMPE):
             + (C['cg1'] + C['cg2'] / (np.cosh(max(rup.mag - C['cg3'], 0))))
             * dists.rrup
             # fifth part
-            + C['c8'] * np.amax(1 - (np.amax(dists.rrup - 40,
+            + C['c8'] * np.fmax(1 - (np.fmax(dists.rrup - 40,
                                 np.zeros_like(dists)) / 30.),
-                                np.zeros_like(dists))
+                                np.zeros_like(dists))[0]
             * min(max(rup.mag - 5.5, 0) / 0.8, 1.0)
-            * np.exp(-1 * C['c8a'] * (rup.mag - C['c8b'] ** 2)) * dists.rcdpp
+            * np.exp(-1 * C['c8a'] * (rup.mag - C['c8b']) ** 2) * dists.rcdpp
             # sixth part
             + C['c9'] * Fhw * np.cos(math.radians(rup.dip)) *
             (C['c9a'] + (1 - C['c9a']) * np.tanh(dists.rx / C['c9b']))

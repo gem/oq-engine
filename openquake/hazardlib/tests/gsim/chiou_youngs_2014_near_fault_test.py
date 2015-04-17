@@ -28,6 +28,6 @@ class ChiouYoungs2014NearFaultTestCase(BaseGSIMTestCase):
     # This data is distributed under different license, see LICENSE.txt
     # in tests/gsim/data/NGA
 
-    def test_mean_hanging_wall_normal_slip(self):
-        self.check('NGA/CY14_NF/CY14_MEDIAN_MS_HW_RV_CDPP.csv',
+    def test_mean_near_fault(self):
+        self.check('NGA/CY14_NF/CY14_MEDIAN_RCDPP.csv',
                    max_discrep_percentage=0.05)
