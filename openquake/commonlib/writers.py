@@ -27,7 +27,7 @@ def floatformat(fmt_string):
     :param fmt_string: the format to use; for instance '%13.9E'
     """
     fmt_defaults = scientificformat.__defaults__
-    scientificformat.__defaults__ = (fmt_string, fmt_defaults[1])
+    scientificformat.__defaults__ = (fmt_string,) + fmt_defaults[1:]
     try:
         yield
     finally:

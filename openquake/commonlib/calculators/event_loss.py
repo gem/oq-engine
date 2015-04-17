@@ -126,6 +126,8 @@ class EventLossCalculator(base.RiskCalculator):
         (rlz.ordinal, loss_type) -> tag -> [(asset.id, loss), ...]
         several interesting outputs.
         """
+        self.asset_dict = {a.id: a for assets in self.assets_by_site
+                           for a in assets}
         saved = AccumDict()
         total_losses = []
         for ordinal, loss_type in sorted(result):
@@ -152,26 +154,34 @@ class EventLossCalculator(base.RiskCalculator):
                     elass, operator.itemgetter(1),
                     lambda rows: [row[2] for row in rows])
                 key = 'rlz-%03d-%s-loss-curves' % (ordinal, loss_type)
+                key_map = 'rlz-%03d-%s-loss-maps' % (ordinal, loss_type)
                 self.risk_out[key] = []
+                self.risk_out[key_map] = maps = []
                 for asset_ref, all_losses in losses_by_asset.iteritems():
-                    losses, poes, avg, std = self.build_loss_curve(all_losses)
+                    losses, poes, avg, maps_ = (
+                        self.build_loss_curve_and_maps(all_losses))
                     lca = scientific.LossCurvePerAsset(
-                        asset_ref, losses, poes, avg, std)
+                        asset_ref, losses, poes, avg)
+                    # since we are considering a single asset, maps_
+                    # has shape (P, 1) where P = #conditional_loss_poes
+                    lma = [asset_ref] + [loss for loss, in maps_]
                     self.risk_out[key].append(lca)
+                    self.risk_out[key_map].append(lma)
                 saved[key] = self.export_csv(key, self.risk_out[key])
+                if maps:
+                    saved[key_map] = self.export_csv(key_map, maps)
 
             if elagg:
                 key = 'rlz-%03d-%s-event-loss' % (ordinal, loss_type)
                 saved[key] = self.export_csv(key, elagg)
                 # aggregate loss curve for all tags
                 key = 'rlz-%03d-%s-agg-loss-curve' % (ordinal, loss_type)
-                losses, poes, avg, std = self.build_loss_curve(
+                losses, poes, avg, maps = self.build_loss_curve_and_maps(
                     [loss for _tag, loss in elagg])
-                self.risk_out[key] = dict(
-                    losses=losses, poes=poes, avg=avg, std=std)
-                total_losses.append((ordinal, loss_type, avg, std))
+                self.risk_out[key] = dict(losses=losses, poes=poes, avg=avg)
+                total_losses.append((ordinal, loss_type, avg))
                 saved[key] = self.export_csv(
-                    key, [('aggregate', losses, poes, avg, std)])
+                    key, [('aggregate', losses, poes, avg)])
 
         header = 'rlz_no loss_type avg_loss stddev'.split()
         saved['total-losses'] = self.export_csv(
@@ -179,13 +189,15 @@ class EventLossCalculator(base.RiskCalculator):
 
         if len(self.rlzs_assoc.realizations) > 1:
             for stats in self.calc_stats():
-                curves = scientific.get_stat_curves(stats)
+                curves, ins_curves = scientific.get_stat_curves(stats)
                 saved += self.export_curves_stats(curves, loss_type)
+                if ins_curves:
+                    saved += self.export_curves_stats(ins_curves, loss_type)
                 maps = scientific.get_stat_maps(stats)
-                saved += self.export_maps_stats(maps, loss_type)
+                saved += self.export_maps(maps, loss_type)
         return saved
 
-    def build_loss_curve(self, losses):
+    def build_loss_curve_and_maps(self, losses):
         """
         Build a loss curve from a set of losses with length give by
         the parameter loss_curve_resolution.
@@ -196,8 +208,10 @@ class EventLossCalculator(base.RiskCalculator):
         losses_poes = scientific.event_based(
             losses, tses=oq.tses, time_span=oq.investigation_time,
             curve_resolution=oq.loss_curve_resolution)
+        loss_maps = scientific.loss_map_matrix(
+            oq.conditional_loss_poes, [losses_poes])
         return (losses_poes[0], losses_poes[1],
-                scientific.average_loss(losses_poes), numpy.std(losses))
+                scientific.average_loss(losses_poes), loss_maps)
 
     def extract_loss_curve_outputs(self, loss_type):
         """
@@ -243,22 +257,20 @@ class EventLossCalculator(base.RiskCalculator):
         :returns:
             a dictionary key -> path of the exported file
         """
-        asset_dict = {a.id: a for assets in self.assets_by_site
-                      for a in assets}
         data = []
         for lca in loss_curves_per_asset:
-            asset = asset_dict[lca.asset_ref]
+            asset = self.asset_dict[lca.asset_ref]
             lon, lat = asset.location
             data.append((lon, lat, asset.id, asset.value(loss_type),
-                         lca.average_loss, lca.stddev_loss, loss_type))
+                         lca.average_loss, '', loss_type))
         header = ['lon', 'lat', 'asset_ref', 'asset_value', 'average_loss',
                   'stddev_loss', 'loss_type']
         key = 'loss_curve_stats-%s' % loss_type
         return {key: self.export_csv('loss_curve_stats', [header] + data)}
 
-    def export_maps_stats(self, loss_maps_per_asset, loss_type):
+    def export_maps(self, loss_maps_per_asset, loss_type):
         """
-        Export the mean and quantile loss curves in CSV format
+        Export the mean and quantile loss maps in CSV format
 
         :param loss_maps_per_asset:
             a list of LossMapPerAsset instances of homogeneous kind
@@ -267,15 +279,12 @@ class EventLossCalculator(base.RiskCalculator):
         :returns:
             a dictionary key -> path of the exported file
         """
-        asset_dict = {a.id: a for assets in self.assets_by_site
-                      for a in assets}
         data = []
         for lma in loss_maps_per_asset:
-            asset = asset_dict[lma.asset_ref]
+            asset = self.asset_dict[lma.asset_ref]
             lon, lat = asset.location
-            data.append((lon, lat, asset.id, lma.loss, lma.std_dev, loss_type))
-        header = ['lon', 'lat', 'asset_ref', 'average_loss',
-                  'stddev_loss', 'loss_type']
+            data.append((lon, lat, lma.asset_ref, lma.loss, loss_type))
+        header = ['lon', 'lat', 'asset_ref', 'average_loss', 'loss_type']
         key = 'loss_map_stats-%s' % loss_type
         return {key: self.export_csv('loss_map_stats', [header] + data)}
 
