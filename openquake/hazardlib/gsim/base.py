@@ -177,6 +177,10 @@ class GroundShakingIntensityModel(object):
     #:     Horizontal distance off the end of the rupture measured parallel to
     #      strike. See:
     #:     See :meth:`~openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_ry0_distance`.
+    #: ``rcdpp``
+    #:     Direct point parameter for directivity effect centered on the site- and earthquake-specific
+    #      average DPP used. See:
+    #:     See :meth:`~openquake.hazardlib.source.rupture.ParametricProbabilisticRupture.get_dppvalue`.
     #:
     #: All the distances are available from the :class:`DistancesContext`
     #: object attributes with same names. Values are in kilometers.

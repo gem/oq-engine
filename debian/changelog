@@ -2,6 +2,7 @@
   * Simple fault: Adds 'hypo_list' and 'slip_list' slot
   * Adds 'rcdpp' slot to DistanceContext object
   * ParametricProbabilisticRupture: adds 'rupture_slip_direction' slot and get_dppvalue, get_cdppvalue method
+  * Implments CYNearFault2014 GMPE
 
   [Graeme Weatherill]
   * Adds 'hypo_loc' slot to RuptureContext object
