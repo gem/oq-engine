@@ -17,12 +17,16 @@
 # <http://www.gnu.org/licenses/>.
 
 import unittest
+import os.path
+import shutil
 import mock
 import pickle
-import itertools
+import tempfile
 
 import numpy
-from openquake.risklib import DegenerateDistribution, utils, scientific
+from openquake.risklib import (
+    DegenerateDistribution, utils, scientific, workflows)
+from openquake.commonlib import writers, tests
 
 aaae = numpy.testing.assert_array_almost_equal
 
@@ -637,3 +641,77 @@ class ClassicalDamageTestCase(unittest.TestCase):
             fragility_functions, hazard_imls, hazard_poes,
             hazard_investigation_time, risk_investigation_time)
         aaae(poos, [0.56652127, 0.12513401, 0.1709355, 0.06555033, 0.07185889])
+
+
+def asset(ref, value, deductibles=None,
+          insurance_limits=None,
+          retrofitting_values=None):
+    return workflows.Asset(ref, 'taxonomy', 1, (0, 0), dict(structural=value),
+                           1, deductibles, insurance_limits,
+                           retrofitting_values)
+
+
+# return a matrix N x 2 x R with n=2, R=5
+def loss_curves(assets, baselosses, seed):
+    numpy.random.seed(seed)
+    lcs = []
+    for asset in assets:
+        poes = sorted(numpy.random.rand(5), reverse=True)
+        losses = sorted(baselosses * asset.value('structural') + seed)
+        lcs.append((losses, poes))
+    return numpy.array(lcs)
+
+
+def get_header(quantiles):
+    ls = ['asset_ref', 'mean']
+    for q in quantiles:
+        ls.append('quantile-%s' % q)
+    return ls
+
+
+class StatsTestCase(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        assets = [asset('a1', 101), asset('a2', 151), asset('a3', 91),
+                  asset('a4', 81)]
+        asset_refs = [a.id for a in assets]
+        outputs = []
+        weights = [0.3, 0.7]
+        baselosses = numpy.array([.10, .14, .17, .20, .21])
+        for i, w in enumerate(weights):
+            lc = loss_curves(assets, baselosses, i)
+            out = scientific.Output(asset_refs, 'structural', weight=w,
+                                    loss_curves=lc, insured_curves=None)
+            outputs.append(out)
+        cls.stats = scientific.StatsBuilder(
+            quantiles=[0.1, 0.9],
+            conditional_loss_poes=[0.35, 0.24, 0.13],
+            poes_disagg=[]).build(outputs)
+        cls.header = get_header(cls.stats.quantiles)
+        cls.tempdir = tempfile.mkdtemp()
+
+    def test_get_stat_curves(self):
+        curves, ins_curves = scientific.get_stat_curves(self.stats)
+
+        actual = os.path.join(self.tempdir, 'expected_loss_curves.csv')
+        writers.save_csv(actual, [self.header] + curves, fmt='%05.2f')
+        tests.check_equal(__file__, 'expected_loss_curves.csv', actual)
+
+        actual = os.path.join(self.tempdir, 'expected_ins_curves.csv')
+        writers.save_csv(actual, [self.header] + ins_curves, fmt='%05.2f')
+        tests.check_equal(__file__, 'expected_ins_curves.csv', actual)
+
+    def test_get_stat_maps(self):
+        maps = scientific.get_stat_maps(self.stats)
+        data = []
+        for map_ in maps:
+            asset_ref, loss = map_
+            data.append([asset_ref] + list(loss))
+
+        actual = os.path.join(self.tempdir, 'expected_loss_maps.csv')
+        writers.save_csv(actual, [self.header] + data, fmt='%05.2f')
+        tests.check_equal(__file__, 'expected_loss_maps.csv', actual)
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.tempdir)
