@@ -116,6 +116,12 @@ def run_risk(sorted_assocs, calc, monitor):
         with get_assets_mon:
             assets = models.ExposureData.objects.get_asset_chunk(
                 exposure_model, time_event, assocs)
+        if not assets:
+            # NB: this may happen if the user provides a wrong time_event;
+            # the check should be done at the exposure parsing time and
+            # it will done that way in the future
+            raise RuntimeError('Could not find any asset for taxonomy=%s, '
+                               'time_event=%s' % (taxonomy, time_event))
         for it in models.ImtTaxonomy.objects.filter(
                 job=calc.job, taxonomy=taxonomy):
             imt = it.imt.imt_str
