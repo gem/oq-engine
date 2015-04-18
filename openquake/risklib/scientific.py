@@ -1192,6 +1192,7 @@ LossMapPerAsset = collections.namedtuple(
 
 
 def _combine_mq(mean, quantile):
+    # combine mean and quantile into a single array of length Q + 1
     shape = mean.shape
     Q = len(quantile)
     assert quantile.shape[1:] == shape, (quantile.shape[1:], shape)
@@ -1202,6 +1203,7 @@ def _combine_mq(mean, quantile):
 
 
 def _loss_curves(assets, mean, mean_averages, quantile, quantile_averages):
+    # return a list of LossCurvePerAsset instances
     curves = _combine_mq(mean, quantile)  # shape (Q + 1, N, 2, R)
     averages = _combine_mq(mean_averages, quantile_averages)  # (Q + 1, N)
     acc = []
@@ -1234,22 +1236,9 @@ def get_stat_curves(stats):
         stats.quantile_insured_curves,
         stats.quantile_average_insured_losses)
 
-    return curves, insured_curves
-
-
-def get_stat_maps(stats):
-    """
-    :param stats:
-        an object with attributes mean_curves, mean_average_losses, mean_maps,
-        quantile_curves, quantile_average_losses, quantile_loss_curves,
-        quantile_maps, mean_insured_curves, mean_average_insured_losses,
-        quantile_insured_curves, quantile_average_insured_losses, assets.
-        There is also a loss_type attribute which must be always the same.
-    :returns:
-        statistical loss maps per asset
-    """
-    acc = []
+    maps = []
     mq = _combine_mq(stats.mean_maps, stats.quantile_maps)
     for asset_ref, loss in zip(stats.assets, mq.transpose(2, 0, 1)):
-        acc.append(LossMapPerAsset(asset_ref, loss))
-    return acc
+        maps.append(LossMapPerAsset(asset_ref, loss))
+
+    return curves, insured_curves, maps

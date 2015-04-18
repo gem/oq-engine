@@ -222,7 +222,7 @@ class StatsTestCase(unittest.TestCase):
         cls.tempdir = tempfile.mkdtemp()
 
     def test_get_stat_curves(self):
-        curves, ins_curves = scientific.get_stat_curves(self.stats)
+        curves, ins_curves, maps = scientific.get_stat_curves(self.stats)
 
         actual = os.path.join(self.tempdir, 'expected_loss_curves.csv')
         writers.save_csv(actual, [self.header] + curves, fmt='%05.2f')
@@ -232,13 +232,10 @@ class StatsTestCase(unittest.TestCase):
         writers.save_csv(actual, [self.header] + ins_curves, fmt='%05.2f')
         tests.check_equal(__file__, 'expected_ins_curves.csv', actual)
 
-    def test_get_stat_maps(self):
-        maps = scientific.get_stat_maps(self.stats)
         data = []
         for map_ in maps:
             asset_ref, loss = map_
             data.append([asset_ref] + list(loss))
-
         actual = os.path.join(self.tempdir, 'expected_loss_maps.csv')
         writers.save_csv(actual, [self.header] + data, fmt='%05.2f')
         tests.check_equal(__file__, 'expected_loss_maps.csv', actual)

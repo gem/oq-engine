@@ -22,8 +22,6 @@ import logging
 import operator
 import collections
 
-import numpy
-
 from openquake.baselib.general import AccumDict, groupby
 from openquake.commonlib.calculators import base
 from openquake.commonlib import readinput, writers, parallel
@@ -189,11 +187,10 @@ class EventLossCalculator(base.RiskCalculator):
 
         if len(self.rlzs_assoc.realizations) > 1:
             for stats in self.calc_stats():
-                curves, ins_curves = scientific.get_stat_curves(stats)
+                curves, ins_curves, maps = scientific.get_stat_curves(stats)
                 saved += self.export_curves_stats(curves, loss_type)
                 if ins_curves:
                     saved += self.export_curves_stats(ins_curves, loss_type)
-                maps = scientific.get_stat_maps(stats)
                 saved += self.export_maps(maps, loss_type)
         return saved
 
@@ -245,7 +242,6 @@ class EventLossCalculator(base.RiskCalculator):
             outputs = list(self.extract_loss_curve_outputs(loss_type))
             yield stats.build(outputs)
 
-    # should be done only on demand
     def export_curves_stats(self, loss_curves_per_asset, loss_type):
         """
         Export the mean and quantile loss curves in CSV format
