@@ -19,9 +19,9 @@
 Base RiskCalculator class.
 """
 
-import itertools
 import numpy
 
+from openquake.baselib import general
 from openquake.commonlib import risk_parsers
 from openquake.hazardlib.imt import from_string
 from openquake.commonlib.readinput import get_risk_model
@@ -110,11 +110,12 @@ def run_risk(sorted_assocs, calc, monitor):
     get_assets_mon = monitor("getting assets", autoflush=True)
     get_haz_mon = monitor("getting hazard", autoflush=True)
 
-    for taxonomy, assocs_by_taxonomy in itertools.groupby(
-            sorted_assocs, lambda a: a.asset.taxonomy):
+    assocs_by_taxonomy = general.groupby(
+        sorted_assocs, lambda a: a.asset.taxonomy)
+    for taxonomy, assocs in assocs_by_taxonomy.iteritems():
         with get_assets_mon:
             assets = models.ExposureData.objects.get_asset_chunk(
-                exposure_model, time_event, assocs_by_taxonomy)
+                exposure_model, time_event, assocs)
         for it in models.ImtTaxonomy.objects.filter(
                 job=calc.job, taxonomy=taxonomy):
             imt = it.imt.imt_str
