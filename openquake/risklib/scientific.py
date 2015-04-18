@@ -1185,10 +1185,9 @@ class StatsBuilder(object):
 
 
 LossCurvePerAsset = collections.namedtuple(
-    'LossCurvePerAsset', 'asset_ref losses poes average_loss')
+    'LossCurvePerAsset', 'asset losses poes average_loss')
 
-LossMapPerAsset = collections.namedtuple(
-    'LossMapPerAsset', 'asset_ref loss')
+LossMapPerAsset = collections.namedtuple('LossMapPerAsset', 'asset loss')
 
 
 def _combine_mq(mean, quantile):
@@ -1207,11 +1206,11 @@ def _loss_curves(assets, mean, mean_averages, quantile, quantile_averages):
     curves = _combine_mq(mean, quantile)  # shape (Q + 1, N, 2, R)
     averages = _combine_mq(mean_averages, quantile_averages)  # (Q + 1, N)
     acc = []
-    for asset_ref, curve, avg in zip(
+    for asset, curve, avg in zip(
             assets, curves.transpose(1, 0, 2, 3), averages.T):
         losses = [l for l, p in curve]
         poes = [p for l, p in curve]
-        acc.append(LossCurvePerAsset(asset_ref, losses, poes, avg))
+        acc.append(LossCurvePerAsset(asset, losses, poes, avg))
     return acc
 
 
@@ -1238,7 +1237,7 @@ def get_stat_curves(stats):
 
     maps = []
     mq = _combine_mq(stats.mean_maps, stats.quantile_maps)
-    for asset_ref, loss in zip(stats.assets, mq.transpose(2, 0, 1)):
-        maps.append(LossMapPerAsset(asset_ref, loss))
+    for asset, loss in zip(stats.assets, mq.transpose(2, 0, 1)):
+        maps.append(LossMapPerAsset(asset, loss))
 
     return curves, insured_curves, maps

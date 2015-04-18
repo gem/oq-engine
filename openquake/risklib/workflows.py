@@ -16,6 +16,7 @@
 # License along with OpenQuake Risklib. If not, see
 # <http://www.gnu.org/licenses/>.
 
+import os
 import inspect
 import functools
 import collections
@@ -471,23 +472,36 @@ class ProbabilisticEventBased(Workflow):
         """
         loss_matrix = self.risk_functions[loss_type].apply_to(
             ground_motion_values, epsilons)
-
-        curves = utils.numpy_map(self.curves, loss_matrix)
-        average_losses = utils.numpy_map(scientific.average_loss, curves)
-        stddev_losses = numpy.std(loss_matrix, axis=1)
         values = utils.numpy_map(lambda a: a.value(loss_type), assets)
-        maps = scientific.loss_map_matrix(self.conditional_loss_poes, curves)
-        elt = self.event_loss(loss_matrix.transpose() * values, event_ids)
-
+        ela = loss_matrix.T * values  # matrix with R x N elements
         if self.insured_losses and loss_type != 'fatalities':
             deductibles = [a.deductible(loss_type) for a in assets]
             limits = [a.insurance_limit(loss_type) for a in assets]
-            insured_loss_matrix = utils.numpy_map(
+            ila = utils.numpy_map(
                 scientific.insured_losses, loss_matrix, deductibles, limits)
-            insured_curves = utils.numpy_map(self.curves, insured_loss_matrix)
+        else:
+            ila = numpy.zeros((len(epsilons), len(assets)))  # R x N
+
+        if not os.environ.get('OQ_ENGINE_MODE'):
+            # in oq-lite return early, with just the losses per asset
+            return scientific.Output(
+                assets, loss_type,
+                event_loss_per_asset=ela,
+                insured_loss_per_asset=ila,
+                tags=event_ids)
+
+        # in the engine, compute more stuff on the workers
+        curves = utils.numpy_map(self.curves, loss_matrix)
+        average_losses = utils.numpy_map(scientific.average_loss, curves)
+        stddev_losses = numpy.std(loss_matrix, axis=1)
+        maps = scientific.loss_map_matrix(self.conditional_loss_poes, curves)
+        elt = self.event_loss(ela, event_ids)
+
+        if self.insured_losses and loss_type != 'fatalities':
+            insured_curves = utils.numpy_map(self.curves, ila)
             average_insured_losses = utils.numpy_map(
                 scientific.average_loss, insured_curves)
-            stddev_insured_losses = numpy.std(insured_loss_matrix, axis=1)
+            stddev_insured_losses = numpy.std(ila, axis=1)
         else:
             insured_curves = None
             average_insured_losses = None
@@ -535,53 +549,6 @@ class ProbabilisticEventBased(Workflow):
             (out.event_loss_table for out in all_outputs),
             collections.Counter())
         return out
-
-
-@registry.add('event_loss')
-class EventLoss(ProbabilisticEventBased):
-    """
-    Implements the Event Loss workflow
-
-    Per-realization Output are saved into
-    :class:`openquake.risklib.workflows.EventLoss.Output`
-    which contains several fields:
-
-    :attr assets:
-      an iterable over N assets the outputs refer to
-
-    :attr dict event_loss_table:
-      a dictionary mapping event ids to aggregate loss values
-
-    """
-    def __call__(self, loss_type, assets, ground_motion_values, epsilons,
-                 event_ids):
-        """
-        :param str loss_type: the loss type considered
-
-        :param assets:
-           assets is an iterator over
-           :class:`openquake.risklib.scientific.Asset` instances
-
-        :param ground_motion_values:
-           a numpy array with ground_motion_values of shape N x R
-
-        :param epsilons:
-           a numpy array with stochastic values of shape N x R
-
-        :param event_ids:
-           a numpy array of R event ID (integer)
-
-        :returns:
-            a :class:
-            `openquake.risklib.workflows.EventLoss.Output`
-            instance.
-        """
-        loss_matrix = self.risk_functions[loss_type].apply_to(
-            ground_motion_values, epsilons)
-        values = utils.numpy_map(lambda a: a.value(loss_type), assets)
-        ela = loss_matrix.T * values  # matrix with R x N elements
-        return scientific.Output(assets, loss_type, event_loss_per_asset=ela,
-                                 tags=event_ids)
 
 
 @registry.add('classical_bcr')

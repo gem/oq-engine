@@ -506,8 +506,6 @@ class PerformanceMonitor(object):
         time_sec = str(self.duration)
         memory_mb = str(self.mem / 1024. / 1024.)
         self.write([self.operation, str(self.pid), time_sec, memory_mb])
-        self.mem = 0
-        self.duration = 0
 
     def __call__(self, operation, **kw):
         """

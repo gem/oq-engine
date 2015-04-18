@@ -22,10 +22,12 @@ import logging
 import operator
 import collections
 
+import numpy
+
 from openquake.baselib.general import AccumDict, groupby
 from openquake.commonlib.calculators import base
 from openquake.commonlib import readinput, writers, parallel
-from openquake.risklib import riskinput, workflows, scientific
+from openquake.risklib import riskinput, scientific
 
 
 @parallel.litetask
@@ -47,20 +49,23 @@ def event_loss(riskinputs, riskmodel, rlzs_assoc, monitor):
     # rlz.ordinal, loss_type -> tag -> [(asset.id, loss), ...]
     for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
         for out in out_by_rlz:
-            for tag, losses in zip(out.tags, out.event_loss_per_asset):
-                pairs = [(asset.id, loss) for asset, loss in zip(
-                    out.assets, losses) if loss and asset.id in specific]
+            for tag, losses, ins_losses in zip(
+                    out.tags, out.event_loss_per_asset,
+                    out.insured_loss_per_asset):
+                data = [(asset.id, loss, ins_loss)
+                        for asset, loss, ins_loss in zip(
+                            out.assets, losses, ins_losses)
+                        if loss and asset.id in specific]
                 acc[out.hid, out.loss_type] += {
                     tag: AccumDict(
-                        pairs=pairs, loss=sum(losses),
+                        data=data, loss=sum(losses), ins_loss=sum(ins_losses),
                         nonzero=sum(1 for loss in losses if loss),
                         total=len(losses))}
     return acc
 
 
-# hack: temporarily 'event_based_risk' is an alias for 'event_loss'
-@base.calculators.add('event_loss', 'event_based_risk')
-class EventLossCalculator(base.RiskCalculator):
+@base.calculators.add('event_based_risk')
+class EventBasedRiskCalculator(base.RiskCalculator):
     """
     Event based PSHA calculator generating the ruptures only
     """
@@ -83,11 +88,6 @@ class EventLossCalculator(base.RiskCalculator):
         """
         oq = self.oqparam
         epsilon_sampling = getattr(oq, 'epsilon_sampling', 1000)
-
-        # HACK: replace the event_based_risk workflow with the event_loss
-        # workflow, so that the riskmodel has the correct workflows
-        workflows.registry['event_based_risk'] = workflows.registry[
-            'event_loss']
         self.riskmodel = readinput.get_risk_model(self.oqparam)
         self.riskmodel.specific_assets = set(self.oqparam.specific_assets)
 
@@ -124,9 +124,13 @@ class EventLossCalculator(base.RiskCalculator):
         (rlz.ordinal, loss_type) -> tag -> [(asset.id, loss), ...]
         several interesting outputs.
         """
-        self.asset_dict = {a.id: a for assets in self.assets_by_site
-                           for a in assets}
-        saved = AccumDict()
+        oq = self.oqparam
+        self.asset_dict = {
+            a.id: a for assets in self.assets_by_site for a in assets
+            if a.id in self.oqparam.specific_assets}
+        self.risk_out['specific_assets'] = specific_assets = [
+            self.asset_dict[a] for a in sorted(self.oqparam.specific_assets)]
+        self.saved = AccumDict()
         total_losses = []
         for ordinal, loss_type in sorted(result):
             data = result[ordinal, loss_type]
@@ -135,9 +139,9 @@ class EventLossCalculator(base.RiskCalculator):
             nonzero = total = 0
             for tag in sorted(data):
                 d = data[tag]
-                for asset_ref, loss in sorted(d['pairs']):
-                    elass.append((tag, asset_ref, loss))
-                elagg.append((tag, d['loss']))  # sum of the losses
+                for asset_ref, loss, ins_loss in sorted(d['data']):
+                    elass.append((tag, asset_ref, loss, ins_loss))
+                elagg.append((tag, d['loss'], d['ins_loss']))  # aggregates
                 nonzero += d['nonzero']
                 total += d['total']
             logging.info('rlz=%d, loss type=%s: %d/%d nonzero losses',
@@ -145,56 +149,66 @@ class EventLossCalculator(base.RiskCalculator):
 
             if elass:
                 key = 'rlz-%03d-%s-event-loss-asset' % (ordinal, loss_type)
-                saved[key] = self.export_csv(key, elass)
+                self.export_csv(key, elass)
 
-                # aggregate loss curves per asset
-                losses_by_asset = groupby(  # (tag, asset_ref, loss) triples
-                    elass, operator.itemgetter(1),
-                    lambda rows: [row[2] for row in rows])
+                # build the loss curves per asset
                 key = 'rlz-%03d-%s-loss-curves' % (ordinal, loss_type)
-                key_map = 'rlz-%03d-%s-loss-maps' % (ordinal, loss_type)
-                self.risk_out[key] = []
-                self.risk_out[key_map] = maps = []
-                for asset_ref, all_losses in losses_by_asset.iteritems():
-                    losses, poes, avg, maps_ = (
-                        self.build_loss_curve_and_maps(all_losses))
-                    lca = scientific.LossCurvePerAsset(
-                        asset_ref, losses, poes, avg)
-                    # since we are considering a single asset, maps_
-                    # has shape (P, 1) where P = #conditional_loss_poes
-                    lma = [asset_ref] + [loss for loss, in maps_]
-                    self.risk_out[key].append(lca)
-                    self.risk_out[key_map].append(lma)
-                saved[key] = self.export_csv(key, self.risk_out[key])
-                if maps:
-                    saved[key_map] = self.export_csv(key_map, maps)
+                self.risk_out[key] = lc = self.build_loss_curves(elass, 1)
+                data = []
+                for asset, (losses, poes), avg in zip(
+                        specific_assets, lc['losses_poes'], lc['avg']):
+                    data.append((asset.id, losses, poes, avg))
+                self.export_csv(key, data)
+
+                if oq.insured_losses:
+                    # build the insured loss curves per asset
+                    key_ins = 'rlz-%03d-%s-ins-loss-curves' % (
+                        ordinal, loss_type)
+                    self.risk_out[key_ins] = ic = self.build_loss_curves(
+                        elass, 2)
+                    data = []
+                    for asset, (losses, poes), avg in zip(
+                            specific_assets, ic['losses_poes'], ic['avg']):
+                        data.append((asset.id, losses, poes, avg))
+                    self.export_csv(key_ins, data)
+
+                if oq.conditional_loss_poes:
+                    # build the loss maps per asset an array of shape (P, S)
+                    key_map = 'rlz-%03d-%s-loss-maps' % (ordinal, loss_type)
+                    self.risk_out[key_map] = m = scientific.loss_map_matrix(
+                        oq.conditional_loss_poes,
+                        self.risk_out[key]['losses_poes'])
+                    data = []
+                    for asset, loss in zip(specific_assets, m):
+                        data.append((asset.id, loss))
+                    self.export_csv(key_map, data)
 
             if elagg:
                 key = 'rlz-%03d-%s-event-loss' % (ordinal, loss_type)
-                saved[key] = self.export_csv(key, elagg)
+                self.export_csv(key, elagg)
+
                 # aggregate loss curve for all tags
                 key = 'rlz-%03d-%s-agg-loss-curve' % (ordinal, loss_type)
-                losses, poes, avg, maps = self.build_loss_curve_and_maps(
-                    [loss for _tag, loss in elagg])
+                losses, poes, avg, map_ = self.build_agg_loss_curve_and_map(
+                    [loss for _tag, loss, _ins_loss in elagg])
                 self.risk_out[key] = dict(losses=losses, poes=poes, avg=avg)
                 total_losses.append((ordinal, loss_type, avg))
-                saved[key] = self.export_csv(
-                    key, [('aggregate', losses, poes, avg)])
+                self.export_csv(key, [('aggregate', losses, poes, avg)])
 
         header = 'rlz_no loss_type avg_loss stddev'.split()
-        saved['total-losses'] = self.export_csv(
-            'total-losses', [header] + total_losses)
+        self.export_csv('total-losses', [header] + total_losses)
 
         if len(self.rlzs_assoc.realizations) > 1:
-            for stats in self.calc_stats():
-                curves, ins_curves, maps = scientific.get_stat_curves(stats)
-                saved += self.export_curves_stats(curves, loss_type)
-                if ins_curves:
-                    saved += self.export_curves_stats(ins_curves, loss_type)
-                saved += self.export_maps(maps, loss_type)
-        return saved
+            for stat in self.calc_stats():  # one stat for each loss_type
+                curves, ins_curves, maps = scientific.get_stat_curves(stat)
+                self.export_curves_stats(curves, stat.loss_type)
+                if oq.insured_losses:
+                    self.export_curves_stats(ins_curves, stat.loss_type)
+                if oq.conditional_loss_poes:
+                    self.export_maps(maps, loss_type)
+        return self.saved
 
-    def build_loss_curve_and_maps(self, losses):
+    def build_agg_loss_curve_and_map(self, losses):
         """
         Build a loss curve from a set of losses with length give by
         the parameter loss_curve_resolution.
@@ -202,13 +216,41 @@ class EventLossCalculator(base.RiskCalculator):
         :returns: a pair (losses, poes)
         """
         oq = self.oqparam
+        clp = oq.conditional_loss_poes
         losses_poes = scientific.event_based(
             losses, tses=oq.tses, time_span=oq.investigation_time,
             curve_resolution=oq.loss_curve_resolution)
-        loss_maps = scientific.loss_map_matrix(
-            oq.conditional_loss_poes, [losses_poes])
+        loss_map = scientific.loss_map_matrix(
+            clp, [losses_poes]).reshape(len(clp)) if clp else None
         return (losses_poes[0], losses_poes[1],
-                scientific.average_loss(losses_poes), loss_maps)
+                scientific.average_loss(losses_poes), loss_map)
+
+    def build_loss_curves(self, elass, i):
+        """
+        Build loss curves per asset from a set of losses with length given by
+        the parameter loss_curve_resolution.
+
+        :returns: a pair (losses, poes)
+        """
+        # elass has the form (tag, asset_ref, loss, ins_loss)
+        # i is an index 1 (loss curves) or 2 (insured losses)
+        oq = self.oqparam
+        R = oq.loss_curve_resolution
+        loss_curve_dt = numpy.dtype(
+            [('losses_poes', (float, (2, R))), ('avg', float)])
+
+        losses_by_asset = groupby(
+            elass, operator.itemgetter(1),
+            lambda rows: [row[1 + i] for row in rows])
+        lcs = []
+        for asset_ref, all_losses in losses_by_asset.iteritems():
+            losses_poes = scientific.event_based(
+                all_losses, tses=oq.tses, time_span=oq.investigation_time,
+                curve_resolution=R)
+            avg = scientific.average_loss(losses_poes)
+            lcs.append((losses_poes, avg))
+
+        return numpy.array(lcs, loss_curve_dt)
 
     def extract_loss_curve_outputs(self, loss_type):
         """
@@ -216,17 +258,16 @@ class EventLossCalculator(base.RiskCalculator):
         Used to compute the statistics.
         """
         rlzs = self.rlzs_assoc.realizations
+        assets = self.risk_out['specific_assets']
         for key in self.risk_out:
             mo = re.match('rlz-(\d+)-%s-loss-curves' % loss_type, key)
             if mo:
                 ordinal = int(mo.group(1))
                 weight = rlzs[ordinal].weight
+                lcs = self.risk_out[key]
                 out = scientific.Output(
-                    [], loss_type, ordinal, weight,
-                    loss_curves=[], insured_curves=None)
-                for lca in self.risk_out[key]:
-                    out.assets.append(lca.asset_ref)
-                    out.loss_curves.append((lca.losses, lca.poes))
+                    assets, loss_type, ordinal, weight,
+                    loss_curves=lcs['losses_poes'], insured_curves=None)
                 yield out
 
     def calc_stats(self):
@@ -240,7 +281,11 @@ class EventLossCalculator(base.RiskCalculator):
             scientific.normalize_curves_eb)
         for loss_type in self.riskmodel.get_loss_types():
             outputs = list(self.extract_loss_curve_outputs(loss_type))
-            yield stats.build(outputs)
+            if outputs:
+                yield stats.build(outputs)
+            else:
+                # this should never happen
+                logging.error('No outputs found for loss_type=%s', loss_type)
 
     def export_curves_stats(self, loss_curves_per_asset, loss_type):
         """
@@ -255,14 +300,13 @@ class EventLossCalculator(base.RiskCalculator):
         """
         data = []
         for lca in loss_curves_per_asset:
-            asset = self.asset_dict[lca.asset_ref]
-            lon, lat = asset.location
-            data.append((lon, lat, asset.id, asset.value(loss_type),
+            lon, lat = lca.asset.location
+            data.append((lon, lat, lca.asset.id, lca.asset.value(loss_type),
                          lca.average_loss, '', loss_type))
         header = ['lon', 'lat', 'asset_ref', 'asset_value', 'average_loss',
                   'stddev_loss', 'loss_type']
         key = 'loss_curve_stats-%s' % loss_type
-        return {key: self.export_csv('loss_curve_stats', [header] + data)}
+        self.export_csv(key, [header] + data)
 
     def export_maps(self, loss_maps_per_asset, loss_type):
         """
@@ -277,13 +321,16 @@ class EventLossCalculator(base.RiskCalculator):
         """
         data = []
         for lma in loss_maps_per_asset:
-            asset = self.asset_dict[lma.asset_ref]
-            lon, lat = asset.location
-            data.append((lon, lat, lma.asset_ref, lma.loss, loss_type))
+            lon, lat = lma.asset.location
+            data.append((lon, lat, lma.asset.id, lma.loss, loss_type))
         header = ['lon', 'lat', 'asset_ref', 'average_loss', 'loss_type']
         key = 'loss_map_stats-%s' % loss_type
         return {key: self.export_csv('loss_map_stats', [header] + data)}
 
     def export_csv(self, key, data):
         dest = os.path.join(self.oqparam.export_dir, key) + '.csv'
-        return writers.save_csv(dest, data, fmt='%10.6E')
+        if key.startswith('rlz-') and not self.oqparam.individual_curves:
+            return dest  # don't export individual curves
+        writers.save_csv(dest, data, fmt='%10.6E')
+        self.saved[key] = dest
+        return dest
