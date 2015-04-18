@@ -17,6 +17,7 @@ class OqParamTestCase(unittest.TestCase):
                 hazard_calculation_id=None, hazard_output_id=None,
                 maximum_distance=10, sites='0.1 0.2',
                 not_existing_param='XXX', export_dir=TMP,
+                intensity_measure_types_and_levels="{'PGA': [0.1, 0.2]}",
                 rupture_mesh_spacing='1.5').validate()
         self.assertEqual(
             w.call_args[0][0],
@@ -28,13 +29,14 @@ class OqParamTestCase(unittest.TestCase):
             OqParam(calculation_mode='disaggregation',
                     hazard_calculation_id=None, hazard_output_id=None,
                     inputs=dict(site_model=''), maximum_distance=10, sites='',
+                    intensity_measure_types_and_levels="{'PGA': [0.1, 0.2]}",
                     truncation_level=None).validate()
 
     def test_geometry(self):
         # you cannot have both region and sites
         with self.assertRaises(ValueError):
             OqParam(
-                calculation_mode='classical',
+                calculation_mode='classical_risk',
                 hazard_calculation_id=None, hazard_output_id=None,
                 maximum_distance=10,
                 region='-78.182 15.615, -78.152 15.615, -78.152 15.565, '
@@ -46,13 +48,13 @@ class OqParamTestCase(unittest.TestCase):
         # cannot be empty
         with self.assertRaises(ValueError):
             OqParam(
-                calculation_mode='classical',
+                calculation_mode='classical_risk',
                 hazard_calculation_id=None, hazard_output_id=None,
                 inputs=dict(site_model=''), maximum_distance=10, sites='',
                 hazard_maps='true',  poes='').validate()
         with self.assertRaises(ValueError):
             OqParam(
-                calculation_mode='classical',
+                calculation_mode='classical_risk',
                 hazard_calculation_id=None, hazard_output_id=None,
                 inputs=dict(site_model=''), maximum_distance=10, sites='',
                 uniform_hazard_spectra='true',  poes='').validate()
@@ -62,7 +64,7 @@ class OqParamTestCase(unittest.TestCase):
         # the other site model parameters cannot be None
         with self.assertRaises(ValueError):
             OqParam(
-                calculation_mode='classical', inputs={},
+                calculation_mode='classical_risk', inputs={},
                 maximum_distance=10,
                 hazard_calculation_id=None, hazard_output_id=None,
                 reference_vs30_type=None).validate()
@@ -70,13 +72,13 @@ class OqParamTestCase(unittest.TestCase):
     def test_missing_maximum_distance(self):
         with self.assertRaises(ValueError):
             OqParam(
-                calculation_mode='classical', inputs=dict(site_model=''),
+                calculation_mode='classical_risk', inputs=dict(site_model=''),
                 hazard_calculation_id=None, hazard_output_id=None,
                 sites='0.1 0.2').validate()
 
         with self.assertRaises(ValueError):
             OqParam(
-                calculation_mode='classical', inputs=dict(site_model=''),
+                calculation_mode='classical_risk', inputs=dict(site_model=''),
                 hazard_calculation_id=None, hazard_output_id=None,
                 sites='0.1 0.2', maximum_distance=0).validate()
 
@@ -84,11 +86,8 @@ class OqParamTestCase(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             OqParam(
                 calculation_mode='event_based', inputs={},
+                intensity_measure_types_and_levels="{'PGA': [0.1, 0.2]}",
                 mean_hazard_curves='true', sites='0.1 0.2',
-                reference_vs30_type='measured',
-                reference_vs30_value=200,
-                reference_depth_to_2pt5km_per_sec=100,
-                reference_depth_to_1pt0km_per_sec=150,
                 maximum_distance=400).validate()
         self.assertIn('You must set `hazard_curves_from_gmfs`',
                       str(ctx.exception))
@@ -98,10 +97,7 @@ class OqParamTestCase(unittest.TestCase):
         OqParam(
             calculation_mode='event_based', inputs={},
             sites='0.1 0.2',
-            reference_vs30_type='measured',
-            reference_vs30_value=200,
-            reference_depth_to_2pt5km_per_sec=100,
-            reference_depth_to_1pt0km_per_sec=150,
+            intensity_measure_types='PGA',
             maximum_distance=400,
             export_dir=EDIR,
         ).validate()
@@ -112,11 +108,8 @@ class OqParamTestCase(unittest.TestCase):
             OqParam(
                 calculation_mode='event_based', inputs={},
                 sites='0.1 0.2',
-                reference_vs30_type='measured',
-                reference_vs30_value=200,
-                reference_depth_to_2pt5km_per_sec=100,
-                reference_depth_to_1pt0km_per_sec=150,
                 maximum_distance=400,
+                intensity_measure_types='PGA',
                 export_dir='/non/existing',
             ).validate()
         self.assertIn('The `export_dir` parameter must refer to a '
@@ -126,10 +119,7 @@ class OqParamTestCase(unittest.TestCase):
         oq = OqParam(
             calculation_mode='event_based', inputs={},
             sites='0.1 0.2',
-            reference_vs30_type='measured',
-            reference_vs30_value=200,
-            reference_depth_to_2pt5km_per_sec=100,
-            reference_depth_to_1pt0km_per_sec=150,
+            intensity_measure_types='PGA',
             maximum_distance=400)
         oq.validate()
         self.assertEqual(oq.export_dir, os.path.expanduser('~'))
@@ -151,3 +141,26 @@ class OqParamTestCase(unittest.TestCase):
             'Found duplicated levels for PGA: [0.4, 0.4, 0.6]: could not '
             'convert to intensity_measure_types_and_levels: '
             'intensity_measure_types_and_levels={"PGA": [0.4, 0.4, 0.6]}')
+
+    def test_missing_levels_hazard(self):
+        with self.assertRaises(ValueError) as ctx:
+            OqParam(
+                calculation_mode='classical', inputs={},
+                sites='0.1 0.2',
+                maximum_distance=400,
+                intensity_measure_types='PGA',
+            ).validate()
+        self.assertIn('`intensity_measure_types_and_levels`',
+                      str(ctx.exception))
+
+    def test_missing_levels_event_based(self):
+        with self.assertRaises(ValueError) as ctx:
+            OqParam(
+                calculation_mode='event_based', inputs={},
+                sites='0.1 0.2',
+                maximum_distance=400,
+                intensity_measure_types='PGA',
+                hazard_curves_from_gmfs='true',
+            ).validate()
+        self.assertIn('`intensity_measure_types_and_levels`',
+                      str(ctx.exception))
