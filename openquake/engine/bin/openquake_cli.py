@@ -504,6 +504,10 @@ def main():
             engine.run_job_lite(job_inis, args.log_level,
                                 log_file, args.exports)
         else:
+            # set an environment variable to tell the system that we are
+            # running inside the engine
+            os.environ['OQ_ENGINE_MODE'] = '1'
+
             # run hazard
             job = engine.run_job(job_inis[0], args.log_level,
                                  log_file, args.exports)
