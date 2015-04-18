@@ -19,10 +19,10 @@
 import unittest
 import mock
 import pickle
-import itertools
 
 import numpy
-from openquake.risklib import DegenerateDistribution, utils, scientific
+from openquake.risklib import (
+    DegenerateDistribution, utils, scientific)
 
 aaae = numpy.testing.assert_array_almost_equal
 

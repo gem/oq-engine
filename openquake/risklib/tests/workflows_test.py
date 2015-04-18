@@ -35,39 +35,6 @@ def asset(values, deductibles=None,
                            retrofitting_values)
 
 
-class NormalizeTestCase(unittest.TestCase):
-    loss_type = 'structural'
-
-    def setUp(self):
-        self.vf = {self.loss_type: mock.MagicMock()}
-        self.poes = [0.1, 0.2]
-        self.workflow = workflows.ProbabilisticEventBased(
-            'PGA', 'TAXO', self.vf, 50, 50, 0, 20, 20, self.poes, True)
-        self.workflow.conditional_loss_poes = self.poes
-        self.workflow.curves = mock.Mock(return_value=numpy.empty((3, 2, 20)))
-
-    def test_normalize_all_trivial(self):
-        poes = numpy.linspace(1, 0, 11)
-        losses = numpy.zeros(11)
-        curves = [[losses, poes], [losses, poes / 2]]
-        exp_losses, (poes1, poes2) = self.workflow._normalize_curves(curves)
-
-        numpy.testing.assert_allclose(exp_losses, losses)
-        numpy.testing.assert_allclose(poes1, poes)
-        numpy.testing.assert_allclose(poes2, poes / 2)
-
-    def test_normalize_one_trivial(self):
-        trivial = [numpy.zeros(6), numpy.linspace(1, 0, 6)]
-        curve = [numpy.linspace(0., 1., 6), numpy.linspace(1., 0., 6)]
-        with numpy.errstate(invalid='ignore', divide='ignore'):
-            exp_losses, (poes1, poes2) = self.workflow._normalize_curves(
-                [trivial, curve])
-
-        numpy.testing.assert_allclose(exp_losses, curve[0])
-        numpy.testing.assert_allclose(poes1, [numpy.nan, 0., 0., 0., 0., 0.])
-        numpy.testing.assert_allclose(poes2, curve[1])
-
-
 class ScenarioTestCase(unittest.TestCase):
     loss_type = 'structural'
 

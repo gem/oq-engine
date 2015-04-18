@@ -20,7 +20,6 @@ import inspect
 import functools
 import collections
 import numpy
-from scipy import interpolate
 
 from openquake.baselib.general import CallableDict
 from openquake.commonlib import valid
@@ -529,27 +528,13 @@ class ProbabilisticEventBased(Workflow):
         if len(all_outputs) == 1:  # single realization
             return
         stats = scientific.StatsBuilder(
-            quantiles, self.conditional_loss_poes, [], self._normalize_curves)
+            quantiles, self.conditional_loss_poes, [],
+            scientific.normalize_curves_eb)
         out = stats.build(all_outputs)
         out.event_loss_table = sum(
             (out.event_loss_table for out in all_outputs),
             collections.Counter())
         return out
-
-    def _normalize_curves(self, curves):
-        non_trivial_curves = [(losses, poes)
-                              for losses, poes in curves if losses[-1] > 0]
-        if not non_trivial_curves:  # no damage. all trivial curves
-            return curves[0][0], [poes for _losses, poes in curves]
-        else:  # standard case
-            max_losses = [losses[-1]  # we assume non-decreasing losses
-                          for losses, _poes in non_trivial_curves]
-            reference_curve = non_trivial_curves[numpy.argmax(max_losses)]
-            loss_ratios = reference_curve[0]
-            curves_poes = [interpolate.interp1d(
-                losses, poes, bounds_error=False, fill_value=0)(loss_ratios)
-                for losses, poes in curves]
-        return loss_ratios, curves_poes
 
 
 @registry.add('event_loss')
@@ -776,14 +761,6 @@ class Damage(Workflow):
         return scientific.Output(assets, 'damage', damages=damages)
 
     def gen_out_by_rlz(workflow, assets, hazards, epsilons, tags):
-        """
-        :param assets: an array of assets of homogeneous taxonomy
-        :param hazards: an array of dictionaries per each asset
-        :param epsilons: an array of epsilons per each asset
-        :param tags: rupture tags
-
-        Yield a single list of outputs, one per realization
-        """
         yield out_by_rlz(workflow, assets, hazards, epsilons, tags, 'damage')
 
 
