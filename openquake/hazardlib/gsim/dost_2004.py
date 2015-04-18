@@ -45,7 +45,7 @@ class DostEtAl2004(GMPE):
     ])
 
     #: Supported intensity measure component is the average horizontal
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GMRotD100
 
     #: Supported standard deviation types is total.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([

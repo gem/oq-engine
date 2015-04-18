@@ -472,7 +472,7 @@ class BaseQuadrilateralSurface(BaseSurface):
             :class:`openquake.hazardlib.geo.mesh.RectangularMesh`.
         """
 
-    def get_hypo_location(self, mesh, mesh_spacing, hypo_loc=None):
+    def get_hypo_location(self, mesh_spacing, hypo_loc=None):
         """
         The method determines the location of the hypocentre within the rupture
 
@@ -495,6 +495,7 @@ class BaseQuadrilateralSurface(BaseSurface):
             Hypocentre location as instance of
             :class:`~openquake.hazardlib.geo.point.Point`
         """
+        mesh = self.get_mesh()
         centroid = mesh.get_middle_point()
         if hypo_loc is None:
             return centroid
