@@ -42,8 +42,6 @@ CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS
 
 
 class OqParam(valid.ParamSet):
-    exports = 'csv'  # default value, normally overridden
-
     area_source_discretization = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
     asset_correlation = valid.Param(valid.NoneOr(valid.FloatRange(0, 1)), 0)
@@ -59,6 +57,7 @@ class OqParam(valid.ParamSet):
     epsilon_sampling = valid.Param(valid.positiveint, 1000)
     export_dir = valid.Param(valid.utf8, None)
     export_multi_curves = valid.Param(valid.boolean, False)
+    exports = valid.Param(valid.Choice('csv', 'xml', 'geo_json'), 'csv')
     ground_motion_correlation_model = valid.Param(
         valid.NoneOr(valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)), None)
     ground_motion_correlation_params = valid.Param(valid.dictionary)
