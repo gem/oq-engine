@@ -46,7 +46,7 @@ class CalculatorTestCase(unittest.TestCase):
         # change this when debugging the test
         monitor = PerformanceMonitor(
             self.testdir,
-            monitor_csv=os.path.join(oq.export_dir, 'performance_csv'))
+            monitor_csv=os.path.join(oq.export_dir, 'performance.csv'))
         return base.calculators(oq, monitor)
 
     def run_calc(self, testfile, job_ini, **kw):

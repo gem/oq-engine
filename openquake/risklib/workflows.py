@@ -115,6 +115,9 @@ class Asset(object):
     def __repr__(self):
         return '<Asset %s>' % self.id
 
+    def __str__(self):
+        return self.id
+
 
 def get_values(loss_type, assets):
     """

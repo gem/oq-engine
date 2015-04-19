@@ -1186,7 +1186,6 @@ class StatsBuilder(object):
 
 LossCurvePerAsset = collections.namedtuple(
     'LossCurvePerAsset', 'asset losses poes average_loss')
-
 LossMapPerAsset = collections.namedtuple('LossMapPerAsset', 'asset loss')
 
 
