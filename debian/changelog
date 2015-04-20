@@ -1,6 +1,5 @@
   [Michele Simionato]
-  * Extended the event_based calculator to compute loss curves per asset and
-    aggregated
+  * Fully ported the event_based calculator to oq-lite
   * Added an event_based calculator which is able to compute the event loss
   * Added defaults to the parameters in job.ini
     table and also event losses per asset directly from the ruptures
