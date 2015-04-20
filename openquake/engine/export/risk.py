@@ -23,6 +23,7 @@ import csv
 from openquake.engine.db import models
 from openquake.engine.export import core
 from openquake.engine.utils import FileWrapper
+from openquake.risklib import scientific
 from openquake.commonlib import risk_writers, writers
 from openquake.baselib.general import block_splitter
 
@@ -170,8 +171,23 @@ def export_loss_curve_xml(key, output, target):
     args['insured'] = output.loss_curve.insured
 
     data = output.loss_curve.losscurvedata_set.all().order_by('asset_ref')
-
     risk_writers.LossCurveXMLWriter(dest, **args).serialize(data)
+    return dest
+
+
+@core.export_output.add(('loss_curve', 'csv2'), ('event_loss_curve', 'csv2'))
+def export_loss_curve_csv(key, output, target):
+    """
+    Export `output` to `target` in CSV format
+    """
+    dest = _get_result_export_dest(target, output)[:-3] + 'csv'
+    data = []
+    for row in output.loss_curve.losscurvedata_set.all().order_by('asset_ref'):
+        lca = scientific.LossCurvePerAsset(
+            row.asset_ref, row.losses, row.poes, row.average_loss)
+        data.append(lca)
+    header = [lca._fields]
+    writers.save_csv(dest, header + data, fmt='%10.6E')
     return dest
 
 
@@ -207,6 +223,21 @@ def export_loss_map(key, output, target):
     writercls(dest, **args).serialize(
         models.order_by_location(
             output.loss_map.lossmapdata_set.all().order_by('asset_ref')))
+    return dest
+
+
+@core.export_output.add(('loss_map', 'csv'))
+def export_loss_map_csv(key, output, target):
+    """
+    Export `output` to `target` in CSV format
+    """
+    dest = _get_result_export_dest(target, output, file_ext=key[1])
+    data = []
+    for row in models.order_by_location(
+            output.loss_map.lossmapdata_set.all().order_by('asset_ref')):
+        data.append(scientific.LossMapPerAsset(row.asset_ref, row.value))
+    header = [data[0]._fields]
+    writers.save_csv(dest, header + data, fmt='%10.6E')
     return dest
 
 
