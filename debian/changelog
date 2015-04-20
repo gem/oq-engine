@@ -1,4 +1,9 @@
   [Graeme Weatherill]
+  * Implements Dost et al (2004) Induced Seismicity GMPE
+  * Implements Atkinson (2015) Induced Seismicity GMPE
+  * Adds new tectonic region type "Induced" to constants
+  
+  [Graeme Weatherill]
   * Adds 'hypo_loc' slot to RuptureContext object
   * Implements Abrahamson et al. (2015) BC Hydro GMPE
   * Adds backarc term to the Site and SiteCollection object
