@@ -25,7 +25,6 @@ from openquake.qa_tests_data.event_based_risk import case_1, case_2
 
 from openquake.engine.db import models
 from openquake.commonlib.writers import scientificformat
-from openquake.baselib.general import assert_close
 
 
 class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
@@ -141,7 +140,7 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
         for j, mm in enumerate(mean_maps):
             dataset = mm.lossmapdata_set.order_by('asset_ref')
             data[j][0] = [d.value for d in dataset]
-            
+
             quantile_maps = models.LossMap.objects.filter(
                 output__oq_job=job, statistics='quantile', poe=mm.poe,
                 loss_type='structural').order_by('quantile')
