@@ -27,18 +27,19 @@ def floatformat(fmt_string):
     :param fmt_string: the format to use; for instance '%13.9E'
     """
     fmt_defaults = scientificformat.__defaults__
-    scientificformat.__defaults__ = (fmt_string, fmt_defaults[1])
+    scientificformat.__defaults__ = (fmt_string,) + fmt_defaults[1:]
     try:
         yield
     finally:
         scientificformat.__defaults__ = fmt_defaults
 
 
-def scientificformat(value, fmt='%13.9E', sep=' '):
+def scientificformat(value, fmt='%13.9E', sep=' ', sep2=':'):
     """
     :param value: the value to convert into a string
     :param fmt: the formatting string to use for float values
-    :param sep: separator to use for array-like values
+    :param sep: separator to use for vector-like values
+    :param sep2: second separator to use for matrix-like values
 
     Convert a float or an array into a string by using the scientific notation
     and a fixed precision (by default 10 decimal digits). For instance:
@@ -50,14 +51,14 @@ def scientificformat(value, fmt='%13.9E', sep=' '):
     >>> scientificformat([0.01, 0.02], '%10.6E')
     '1.000000E-02 2.000000E-02'
     >>> scientificformat([[0.1, 0.2], [0.3, 0.4]], '%4.1E')
-    '1.0E-01 2.0E-01 3.0E-01 4.0E-01'
+    '1.0E-01:2.0E-01 3.0E-01:4.0E-01'
     """
     if isinstance(value, basestring):
         return value
     elif isinstance(value, (int, long)):
         return str(value)
     elif hasattr(value, '__len__'):
-        return sep.join((scientificformat(f, fmt, sep) for f in value))
+        return sep.join((scientificformat(f, fmt, sep2) for f in value))
     elif isinstance(value, float):
         return fmt % value
     raise ValueError(value)
