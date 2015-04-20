@@ -84,6 +84,7 @@ def scenario(workflow, getter, outputdict, params, monitor):
             agg[loss_type] = out.aggregate_losses
         ins[loss_type] = out.insured_losses
 
+        # this is saving the loss maps
         with monitor('saving risk', autoflush=True):
             outputdict.write(
                 assets,
@@ -97,7 +98,7 @@ def scenario(workflow, getter, outputdict, params, monitor):
                     assets,
                     out.insured_loss_matrix.mean(axis=1),
                     out.insured_loss_matrix.std(ddof=1, axis=1),
-                    itertools.cycle([True]),
+                    itertools.cycle([True]),  # absolute losses
                     hazard_output_id=getter.hid,
                     insured=True)
 
