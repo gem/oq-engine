@@ -16,7 +16,7 @@ class EventLossTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job_haz.ini,job_risk.ini',
-                            concurrent_tasks=4, exports='csv')
+                            concurrent_tasks=0, exports='csv')
 
         self.assertEqualFiles(
             'expected/rlz-000-structural-event-loss-asset.csv',
