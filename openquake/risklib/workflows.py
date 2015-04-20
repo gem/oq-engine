@@ -482,9 +482,8 @@ class ProbabilisticEventBased(Workflow):
             limits = [a.insurance_limit(loss_type) for a in assets]
             ila = utils.numpy_map(
                 scientific.insured_losses, loss_matrix, deductibles, limits)
-        else:
-            ila = numpy.zeros((len(epsilons), len(assets)))  # R x N
-
+        else:  # build a zero matrix of size R x N
+            ila = numpy.zeros((len(ground_motion_values[0]), len(assets)))
         if not os.environ.get('OQ_ENGINE_MODE'):
             # in oq-lite return early, with just the losses per asset
             return scientific.Output(

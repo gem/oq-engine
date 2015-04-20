@@ -20,7 +20,7 @@ import os
 import unittest
 
 from openquake.commonlib.calculators import base
-from openquake.commonlib.parallel import PerformanceMonitor, executor
+from openquake.commonlib.parallel import PerformanceMonitor
 from openquake.commonlib import readinput, oqvalidation
 
 
@@ -41,7 +41,6 @@ class CalculatorTestCase(unittest.TestCase):
         params.update(kw)
         oq = oqvalidation.OqParam(**params)
         oq.validate()
-        oq.concurrent_tasks = executor.num_tasks_hint
         oq.usecache = False
         # change this when debugging the test
         monitor = PerformanceMonitor(
