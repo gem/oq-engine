@@ -24,8 +24,8 @@ from qa_tests import risk
 from openquake.qa_tests_data.event_based_risk import case_1, case_2
 
 from openquake.engine.db import models
-from openquake.commonlib.writers import scientificformat, save_csv
-from openquake.risklib import scientific
+from openquake.commonlib.writers import scientificformat
+from openquake.baselib.general import assert_close
 
 
 class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
@@ -150,15 +150,15 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
                 data[j][i] = [d.value for d in dataset]
 
         stat = data.transpose(2, 1, 0)  # to shape (N, Q + 1, P)
-        assets = 'a0 a1 a2 a3'.split()
-        lmaps = [scientific.LossMapPerAsset(a, s)
-                 for a, s in zip(assets, stat)]
-        exp = self._test_path('expected/loss_map_stats-structural.csv')
-        dest = exp + '~'
-        save_csv(dest, [scientific.LossMapPerAsset._fields] + lmaps,
-                 fmt='%10.6E')
-        assert open(exp).read() == open(dest).read(), (
-            'Please check the files %s and %s' % (exp, dest))
+        expected_data = []
+        lines = open(self._test_path('expected/loss_map_stats-structural.csv'))
+        next(lines)  # skip header
+        for line in lines:
+            values = line.split(',')[1]
+            vals = [map(float, piece.split(':'))
+                    for piece in values.split(' ')]
+            expected_data.append(vals)
+        aae(numpy.array(expected_data), stat, decimal=1)
 
 
 class EventBaseQATestCase2(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
