@@ -289,7 +289,7 @@ def assert_close(a, b, rtol=1e-07, atol=0):
     :param rtol: relative tolerance
     :param atol: absolute tolerance
     """
-    if isinstance(a, numpy.ndarray):  # shortcut
+    if isinstance(a, numpy.ndarray) and a.shape:  # shortcut
         numpy.testing.assert_allclose(a, b, rtol, atol)
         return
     if a == b:  # another shortcut
