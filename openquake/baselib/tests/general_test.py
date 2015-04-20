@@ -88,17 +88,17 @@ class BlockSplitterTestCase(unittest.TestCase):
         self.assertEqual(expected, actual)
 
     def test_split_with_weight(self):
-        weigths = dict([('a', 11), ('b', 10), ('c', 100), ('d', 15), ('e', 20),
+        weights = dict([('a', 11), ('b', 10), ('c', 100), ('d', 15), ('e', 20),
                         ('f', 5), ('g', 30), ('h', 17), ('i', 25)])
-        blocks = list(block_splitter('abcdefghi', 50, weigths.get))
+        blocks = list(block_splitter('abcdefghi', 50, weights.get))
         self.assertEqual(repr(blocks), "[<WeightedSequence ['a', 'b'], weight=21>, <WeightedSequence ['c'], weight=100>, <WeightedSequence ['d', 'e', 'f'], weight=40>, <WeightedSequence ['g', 'h'], weight=47>, <WeightedSequence ['i'], weight=25>]")
 
     def test_split_in_blocks(self):
-        weigths = dict([('a', 11), ('b', 10), ('c', 100), ('d', 15), ('e', 20),
+        weights = dict([('a', 11), ('b', 10), ('c', 100), ('d', 15), ('e', 20),
                         ('f', 5), ('g', 30), ('h', 17), ('i', 25)])
-        blocks = list(split_in_blocks('abcdefghi', 1, weigths.get))
+        blocks = list(split_in_blocks('abcdefghi', 1, weights.get))
         self.assertEqual(len(blocks), 1)
-        blocks = list(split_in_blocks('abcdefghi', 2, weigths.get))
+        blocks = list(split_in_blocks('abcdefghi', 2, weights.get))
         self.assertEqual(len(blocks), 3)
         self.assertEqual(repr(blocks), "[<WeightedSequence ['a', 'b'], weight=21>, <WeightedSequence ['c', 'd'], weight=115>, <WeightedSequence ['e', 'f', 'g', 'h', 'i'], weight=97>]")
 
