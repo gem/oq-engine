@@ -38,6 +38,11 @@ class Output(object):
     """
     A generic container of attributes. Only assets, loss_type, hid and weight
     are always defined.
+
+    :param assets: a list of assets
+    :param loss_type: a loss type string
+    :param hid: ordinal of the hazard realization (can be None)
+    :param weight: weight of the realization (can be None)
     """
     def __init__(self, assets, loss_type, hid=None, weight=0, **attrs):
         self.assets = assets
@@ -1121,7 +1126,9 @@ class StatsBuilder(object):
             possibly None).
         :returns:
             an Output object with the following attributes
-            (numpy arrays; the shape is in parenthesis):
+            (numpy arrays; the shape is in parenthesis, N is the number of
+            assets, R the resolution of the loss curve, P the number of
+            conditional loss poes, Q the number of quantiles):
 
             01. assets (N)
             02. loss_type (1)
