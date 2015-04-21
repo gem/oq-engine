@@ -19,6 +19,12 @@ class DataStoreTestCase(unittest.TestCase):
         self.dstore.remove()
 
     def test_hdf5(self):
+        # optional test, run only if h5py is available
+        try:
+            import h5py
+        except ImportError:
+            raise unittest.SkipTest
+
         # store numpy arrays as hdf5 files
         with self.assertRaises(ValueError):
             self.dstore['key1_h5'] = 'value1'
