@@ -8,6 +8,7 @@ GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-hazardlib"
 GEM_DEB_PACKAGE="python-${GEM_GIT_PACKAGE}"
 GEM_DEB_SERIE="master"
+GEM_DEB_UBUVER="precise"
 if [ -z "$GEM_DEB_REPO" ]; then
     GEM_DEB_REPO="$HOME/gem_ubuntu_repo"
 fi
@@ -127,8 +128,10 @@ usage () {
 
     echo
     echo "USAGE:"
-    echo "    $0 [-D|--development] [-S--sources_copy] [-B|--binaries] [-U|--unsigned] [-R|--repository]    build debian source package."
-    echo "       if -S is present try to copy sources to <GEM_DEB_MONOTONE>/source directory"
+    echo "    $0 [<-s|--serie> <precise|trusty>] [-D|--development] [-S--sources_copy] [-B|--binaries] [-U|--unsigned] [-R|--repository]    build debian source package."
+    echo "       if -s is present try to produce sources for a specific ubuntu version (precise or trusty),"
+    echo "           (default precise)"
+    echo "       if -S is present try to copy sources to <GEM_DEB_MONOTONE>/<GEM_DEB_UBUVER>/source directory"
     echo "       if -B is present binary package is build too."
     echo "       if -R is present update the local repository to the new current package"
     echo "       if -D is present a package with self-computed version is produced."
@@ -378,26 +381,26 @@ EOF
                 fi
             fi
         fi
-        mkdir -p "${GEM_DEB_REPO}/${GEM_DEB_SERIE}"
-        repo_tmpdir="$(mktemp -d "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}.XXXXXX")"
+        mkdir -p "${GEM_DEB_REPO}/${GEM_DEB_UBUVER}/${GEM_DEB_SERIE}"
+        repo_tmpdir="$(mktemp -d "${GEM_DEB_REPO}/${GEM_DEB_UBUVER}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}.XXXXXX")"
 
         # if the monotone directory exists and is the "gem" repo and is the "master" branch then ...
-        if [ -d "${GEM_DEB_MONOTONE}/binary" ]; then
+        if [ -d "${GEM_DEB_MONOTONE}/${GEM_DEB_UBUVER}/binary" ]; then
             if [ "git://$repo_id" == "$GEM_GIT_REPO" -a "$branch_id" == "master" ]; then
                 cp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
                     build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
-                    "${GEM_DEB_MONOTONE}/binary"
+                    "${GEM_DEB_MONOTONE}/${GEM_DEB_UBUVER}/binary/${GEM_DEB_UBUVER}"
             fi
         fi
 
         cp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
             build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
             build-deb/Packages* build-deb/Sources* build-deb/Release* "${repo_tmpdir}"
-        if [ "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}" ]; then
-            rm -rf "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}"
+        if [ "${GEM_DEB_REPO}/${GEM_DEB_UBUVER}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}" ]; then
+            rm -rf "${GEM_DEB_REPO}/${GEM_DEB_UBUVER}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}"
         fi
-        mv "${repo_tmpdir}" "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}"
-        echo "The package is saved here: ${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}"
+        mv "${repo_tmpdir}" "${GEM_DEB_REPO}/${GEM_DEB_UBUVER}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}"
+        echo "The package is saved here: ${GEM_DEB_REPO}/${GEM_DEB_UBUVER}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}"
     fi
 
     # TODO
@@ -415,6 +418,7 @@ BUILD_REPOSITORY=0
 BUILD_DEVEL=0
 BUILD_UNSIGN=0
 BUILD_FLAGS=""
+BUILD_SERIES="precise trusty"
 
 trap sig_hand SIGINT SIGTERM
 #  args management
@@ -424,10 +428,21 @@ while [ $# -gt 0 ]; do
             BUILD_DEVEL=1
             if [ "$DEBFULLNAME" = "" -o "$DEBEMAIL" = "" ]; then
                 echo
-                echo "error: set DEBFULLNAME and DEBEMAIL environment vars and run again the script"
+                echo "ERROR: set DEBFULLNAME and DEBEMAIL environment vars and run again the script"
                 echo
                 exit 1
             fi
+            ;;
+        -s|--serie)
+            GEM_DEB_UBUVER="$2"
+            if [ "$GEM_DEB_UBUVER" != "precise" -a "$GEM_DEB_UBUVER" != "trusty" ]; then
+                echo
+                echo "ERROR: ubuntu version '$GEM_DEB_UBUVER' not supported"
+                echo
+                exit 1
+            fi
+            shift 2
+            continue
             ;;
         -S|--sources_copy)
             BUILD_SOURCES_COPY=1
@@ -495,7 +510,7 @@ cd "$GEM_BUILD_SRC"
 dt="$(date +%s)"
 
 # version info from openquake/hazardlib/__init__.py
-ini_vers="$(sed 's/^[ 	]*__version__[ 	]*=[ 	]*["'"'"']\([^"'"'"']*\)/\1/g' openquake/hazardlib/__init__.py)"
+ini_vers="$(sed 's/^[ 	]*__version__[ 	]*=[ 	]*["'"'"']\([^"'"'"']*\)/\1/g' openquake/hazardlib/__init__.py)" # ' emacs quote hell
 ini_maj="$(echo "$ini_vers" | sed -n 's/^\([0-9]\+\).*/\1/gp')"
 ini_min="$(echo "$ini_vers" | sed -n 's/^[0-9]\+\.\([0-9]\+\).*/\1/gp')"
 ini_bfx="$(echo "$ini_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.\([0-9]\+\).*/\1/gp')"
@@ -529,7 +544,7 @@ if [ $BUILD_DEVEL -eq 1 ]; then
         pkg_deb="-0"
     fi
 
-    ( echo "$pkg_name (${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}~dev${dt}-${hash}) $pkg_rest"
+    ( echo "$pkg_name (${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}-${GEM_DEB_UBUVER}01~dev${dt}-${hash}) $pkg_rest"
       echo
       echo "  [Automatic Script]"
       echo "  * Development version from $hash commit"
@@ -539,6 +554,10 @@ if [ $BUILD_DEVEL -eq 1 ]; then
       echo
     )  > debian/changelog
     cat debian/changelog.orig | sed -n "/^$GEM_DEB_PACKAGE/,\$ p" >> debian/changelog
+    rm debian/changelog.orig
+else
+    cp debian/changelog debian/changelog.orig
+    cat debian/changelog.orig | sed "1 s/ [a-zA-Z]\+; priority/ ${GEM_DEB_UBUVER}; priority/g" > debian/changelog
     rm debian/changelog.orig
 fi
 
@@ -593,10 +612,10 @@ fi
 cd -
 
 # if the monotone directory exists and is the "gem" repo and is the "master" branch then ...
-if [ -d "${GEM_DEB_MONOTONE}/source" -a $BUILD_SOURCES_COPY -eq 1 ]; then
+if [ -d "${GEM_DEB_MONOTONE}/${GEM_DEB_UBUVER}/source" -a $BUILD_SOURCES_COPY -eq 1 ]; then
     cp build-deb/${GEM_DEB_PACKAGE}_*.changes \
         build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
-        "${GEM_DEB_MONOTONE}/source"
+        "${GEM_DEB_MONOTONE}/${GEM_DEB_UBUVER}/source"
 fi
 
 if [ $BUILD_DEVEL -ne 1 ]; then
