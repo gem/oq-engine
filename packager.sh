@@ -416,7 +416,8 @@ BUILD_BINARIES=0
 BUILD_REPOSITORY=0
 BUILD_DEVEL=0
 BUILD_UNSIGN=0
-BUILD_UBUVER="precise"
+BUILD_UBUVER_REFERENCE="precise"
+BUILD_UBUVER="$BUILD_UBUVER_REFERENCE"
 BUILD_FLAGS=""
 
 trap sig_hand SIGINT SIGTERM
@@ -556,7 +557,7 @@ if [ $BUILD_DEVEL -eq 1 ]; then
     rm debian/changelog.orig
 else
     cp debian/changelog debian/changelog.orig
-    cat debian/changelog.orig | sed "1 s/ [a-zA-Z]\+; priority/ ${BUILD_UBUVER}; priority/g" > debian/changelog
+    cat debian/changelog.orig | sed "1 s/${BUILD_UBUVER_REFERENCE}/${BUILD_UBUVER}/g" > debian/changelog
     rm debian/changelog.orig
 fi
 
