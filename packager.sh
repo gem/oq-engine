@@ -441,8 +441,8 @@ while [ $# -gt 0 ]; do
                 echo
                 exit 1
             fi
-            shift 2
-            continue
+            BUILD_FLAGS="$BUILD_FLAGS $1"
+            shift
             ;;
         -S|--sources_copy)
             BUILD_SOURCES_COPY=1
