@@ -165,22 +165,23 @@ class GmfComputer(object):
 
         return result
 
-    def compute(self, seed):
+    def compute(self, seeds):
         """
-        Compute the ground motion field for the given sites.
+        Compute the ground motion field for the given sites and seeds.
 
-        :param seed:
-            the seed for the numpy random number generator
+        :param seeds:
+            S seeds for the numpy random number generator
         :returns:
-            a numpy array of dtype gmf_dt
+            a numpy array of dtype gmf_dt and length S
         """
-        gmfs = numpy.zeros(1, self.gmf_dt)
-        for gsim in self.gsims:
-            gmf_by_imt = gmfs[str(gsim)]
-            result = self._compute(seed, gsim, realizations=1)
-            for imt, array in result.iteritems():
-                # consider 1 realization, i.e. return column 0-th of the array
-                gmf_by_imt[imt] = map(float, array[:, 0])
+        S = len(seeds)
+        gmfs = numpy.zeros(S, self.gmf_dt)
+        for seed, gmf_ in zip(seeds, gmfs):
+            for gsim in self.gsims:
+                result = self._compute(seed, gsim, realizations=1)
+                # 1 realization, i.e. consider column 0-th of the v-array
+                tup = tuple(v[:, 0].reshape(-1) for v in result.itervalues())
+                gmf_[str(gsim)] = numpy.array([tup], self.imt_dt)
         return gmfs
 
 

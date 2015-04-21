@@ -412,9 +412,7 @@ class GMFCalcCorrelatedTestCase(BaseGMFCalcTestCase):
             ground_motion_fields(
                 self.rupture, self.sites, [self.imt1], gsim,
                 truncation_level=None, realizations=6000,
-                correlation_model=cormo,
-           )
-
+                correlation_model=cormo)
 
     def test_rupture_site_filtering(self):
         mean = 10
