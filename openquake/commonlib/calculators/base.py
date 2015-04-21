@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2014, GEM Foundation
+#  Copyright (c) 2014-2015, GEM Foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -16,19 +16,17 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import abc
 import logging
 import operator
 import collections
-import cPickle
 
 import numpy
 
 from openquake.hazardlib.geo import geodetic
 
 from openquake.baselib import general
-from openquake.commonlib import readinput
+from openquake.commonlib import readinput, datastore
 from openquake.commonlib.parallel import apply_reduce, DummyMonitor, executor
 from openquake.risklib import riskinput
 
@@ -53,6 +51,7 @@ class BaseCalculator(object):
     def __init__(self, oqparam, monitor=DummyMonitor()):
         self.oqparam = oqparam
         self.monitor = monitor
+        self.datastore = datastore.DataStore()
         if not hasattr(oqparam, 'concurrent_tasks'):
             oqparam.concurrent_tasks = executor.num_tasks_hint
 
@@ -156,11 +155,9 @@ class HazardCalculator(BaseCalculator):
                        sitecol=self.sitecol, oqparam=self.oqparam)
         haz_out[self.result_kind] = result
         haz_out.update(kw)
-        cache = os.path.join(self.oqparam.export_dir, 'hazard.pik')
-        logging.info('Saving hazard output on %s', cache)
+        logging.info('Saving hazard output on %s', self.datastore.calc_dir)
         with self.monitor('saving hazard', autoflush=True):
-            with open(cache, 'w') as f:
-                cPickle.dump(haz_out, f)
+            self.datastore.update(haz_out)
         return haz_out
 
 
@@ -171,12 +168,10 @@ def get_hazard(calculator, exports=''):
     :param calculator: a calculator with a .hazard_calculator attribute
     :returns: a pair (hazard output, hazard_calculator)
     """
-    cache = os.path.join(calculator.oqparam.export_dir, 'hazard.pik')
     hcalc = calculators[calculator.hazard_calculator](
         calculator.oqparam, calculator.monitor('hazard'))
     if calculator.oqparam.usecache:
-        with open(cache) as f:
-            haz_out = cPickle.load(f)
+        haz_out = hcalc.datastore
     else:
         haz_out = hcalc.run(exports=exports)
 
@@ -326,9 +321,7 @@ class RiskCalculator(BaseCalculator):
         """Save the risk outputs"""
         self.risk_out[self.result_kind] = result
         self.risk_out.update(kw)
-        cache = os.path.join(self.oqparam.export_dir, 'risk.pik')
-        logging.info('Saving risk output on %s', cache)
+        logging.info('Saving risk output on %s', self.datastore.calc_dir)
         with self.monitor('saving risk outputs', autoflush=True):
-            with open(cache, 'w') as f:
-                cPickle.dump(self.risk_out, f)
+            self.datastore.update(self.risk_out)
         return self.risk_out
