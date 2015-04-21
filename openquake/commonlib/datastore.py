@@ -28,7 +28,7 @@ try:
     import h5py
 except ImportError:
     class mock_h5py(object):
-        def getattr(self, name):
+        def __getattr__(self, name):
             raise ImportError('Could not import h5py.%s' % name)
     h5py = mock_h5py()
 
@@ -57,6 +57,14 @@ class DataStore(collections.MutableMapping):
     NB: the calc_dir is created only at the first attempt to write on it,
     so there is potentially a race condition. It is up to the client code
     to ensure that two calculations are not writing on the same directory.
+
+    Here is a minimal example of usage:
+
+    >>> ds = DataStore()
+    >>> ds['example'] = 'hello world'
+    >>> ds.items()
+    [('example', 'hello world')]
+    >>> ds.remove()
     """
     def __init__(self, calc_id=None, oqdir=OQDIR):
         if not os.path.exists(oqdir):
@@ -64,7 +72,10 @@ class DataStore(collections.MutableMapping):
         self.calc_id = calc_id or (get_last_calc_id(oqdir) + 1)
         self.calc_dir = os.path.join(oqdir, 'calc_%s' % self.calc_id)
 
-    def fname(self, key):
+    def path(self, key):
+        """
+        Return the full path name associated to the given key
+        """
         if key.endswith('_h5'):
             return os.path.join(self.calc_dir, key[:-3] + '.hdf5')
         return os.path.join(self.calc_dir, key + '.pik')
@@ -75,11 +86,11 @@ class DataStore(collections.MutableMapping):
 
     def __getitem__(self, key):
         if key.endswith('_h5'):
-            h5f = h5py.File(self.fname(key), 'r')
+            h5f = h5py.File(self.path(key), 'r')
             value = h5f['dset'][:]
             h5f.close()
             return value
-        with open(self.fname(key)) as df:
+        with open(self.path(key)) as df:
             return cPickle.load(df)
 
     def __setitem__(self, key, value):
@@ -88,15 +99,15 @@ class DataStore(collections.MutableMapping):
         if key.endswith('_h5'):
             if not isinstance(value, numpy.ndarray):
                 raise ValueError('%r is not a numpy array' % value)
-            h5f = h5py.File(self.fname(key), 'w', libver='latest')
+            h5f = h5py.File(self.path(key), 'w', libver='latest')
             dset = h5f.create_dataset('dset', data=value)
             h5f.close()
             return dset
-        with open(self.fname(key), 'w') as df:
+        with open(self.path(key), 'w') as df:
             return cPickle.dump(value, df, cPickle.HIGHEST_PROTOCOL)
 
     def __delitem__(self, key):
-        os.remove(self.fname(key))
+        os.remove(self.path(key))
 
     def __iter__(self):
         for f in sorted(os.listdir(self.calc_dir)):
