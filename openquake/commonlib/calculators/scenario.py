@@ -48,8 +48,9 @@ def calc_gmfs(tag_seed_pairs, computer, monitor):
                         for gsim in computer.gsims})
     with monitor:
         for tag, seed in tag_seed_pairs:
-            for gsim_str, gmvs in computer.compute(seed):
-                result[0, gsim_str][tag] = gmvs
+            for gmf in computer.compute(seed):
+                for gsim in gmf.dtype.fields:
+                    result[0, gsim][tag] = gmf[gsim]
     return result
 
 
@@ -66,7 +67,6 @@ class ScenarioCalculator(base.HazardCalculator):
         Read the site collection and initialize GmfComputer, tags and seeds
         """
         super(ScenarioCalculator, self).pre_execute()
-        self.imts = readinput.get_imts(self.oqparam)
         trunc_level = self.oqparam.truncation_level
         correl_model = readinput.get_correl_model(self.oqparam)
         n_gmfs = self.oqparam.number_of_ground_motion_fields
@@ -82,7 +82,7 @@ class ScenarioCalculator(base.HazardCalculator):
 
         self.tags = ['scenario-%010d' % i for i in xrange(n_gmfs)]
         self.computer = GmfComputer(
-            rupture, self.sites, self.imts, self.gsims,
+            rupture, self.sites, self.oqparam.imtls, self.gsims,
             trunc_level, correl_model)
         rnd = random.Random(self.oqparam.random_seed)
         self.tag_seed_pairs = [(tag, rnd.randint(0, calc.MAX_INT))
@@ -102,7 +102,7 @@ class ScenarioCalculator(base.HazardCalculator):
             result[trt_id, gsim] = {  # build N x R matrices
                 imt: numpy.array(
                     [dic[tag][imt] for tag in self.tags]).T
-                for imt in map(str, self.imts)}
+                for imt in map(str, self.oqparam.imtls)}
         return result
 
     def post_execute(self, result):
