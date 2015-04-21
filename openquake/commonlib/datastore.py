@@ -65,6 +65,9 @@ class DataStore(collections.MutableMapping):
     >>> ds.items()
     [('example', 'hello world')]
     >>> ds.remove()
+
+    It is also possible to store callables with two arguments (key, datastore).
+    They will be automatically invoked when the key is accessed:
     """
     def __init__(self, calc_id=None, oqdir=OQDIR):
         if not os.path.exists(oqdir):
@@ -91,7 +94,10 @@ class DataStore(collections.MutableMapping):
             h5f.close()
             return value
         with open(self.path(key)) as df:
-            return cPickle.load(df)
+            value = cPickle.load(df)
+            if callable(value):
+                return value(key, self)
+            return value
 
     def __setitem__(self, key, value):
         if not os.path.exists(self.calc_dir):

@@ -3,6 +3,10 @@ import numpy
 from openquake.commonlib.datastore import DataStore
 
 
+def key1_upper(key, dstore):
+    return dstore['key1'].upper()
+
+
 class DataStoreTestCase(unittest.TestCase):
     def setUp(self):
         self.dstore = DataStore()
@@ -16,6 +20,10 @@ class DataStoreTestCase(unittest.TestCase):
         del self.dstore['key2']
         self.assertEqual(list(self.dstore), ['key1'])
         self.assertEqual(self.dstore['key1'], 'value1')
+
+        # store and retrieve a callable
+        self.dstore['key1_upper'] = key1_upper
+        self.assertEqual(self.dstore['key1_upper'], 'VALUE1')
         self.dstore.remove()
 
     def test_hdf5(self):
