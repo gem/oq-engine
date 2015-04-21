@@ -46,11 +46,10 @@ def calc_gmfs(tag_seed_pairs, computer, monitor):
     """
     result = AccumDict({(0, str(gsim)): AccumDict()
                         for gsim in computer.gsims})
-    with monitor:
-        for tag, seed in tag_seed_pairs:
-            for gmf in computer.compute(seed):
-                for gsim in gmf.dtype.fields:
-                    result[0, gsim][tag] = gmf[gsim]
+    tags, seeds = zip(*tag_seed_pairs)
+    for tag, gmf in zip(tags, computer.compute(seeds)):
+        for gsim in gmf.dtype.fields:
+            result[0, gsim][tag] = gmf[gsim]
     return result
 
 

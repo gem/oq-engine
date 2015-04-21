@@ -19,14 +19,12 @@
 import collections
 import itertools
 import operator
-import random
 
 import numpy
 
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import gmf, filters
 from openquake.hazardlib.site import SiteCollection
-from openquake.baselib.general import AccumDict
 from openquake.commonlib.readinput import \
     get_gsims, get_rupture, get_correl_model, get_imts
 
