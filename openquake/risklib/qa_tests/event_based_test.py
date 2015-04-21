@@ -38,20 +38,6 @@ assets = [workflows.Asset(
 class EventBasedTestCase(unittest.TestCase):
     loss_type = 'structural'
 
-    @classmethod
-    def setUpClass(cls):
-        # emulate the engine behavior, for backward compatibility
-        cls.enginemode_orig = os.environ.get('OQ_ENGINE_MODE')
-        os.environ['OQ_ENGINE_MODE'] = '1'
-
-    @classmethod
-    def tearDownClass(cls):
-        # restore the variable OQ_ENGINE_MODE as it was
-        if cls.enginemode_orig is None:
-            del os.environ['OQ_ENGINE_MODE']
-        else:
-            os.environ['OQ_ENGINE_MODE'] = cls.enginemode_orig
-
     def assert_similar(self, a, b):
         assert a.keys() == b.keys(), (a.keys(), b.keys())
         for k in a:
