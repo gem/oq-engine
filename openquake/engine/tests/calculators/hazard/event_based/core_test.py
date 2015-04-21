@@ -74,14 +74,13 @@ class GmfCalculatorTestCase(unittest.TestCase):
         site_coll = make_site_coll(-78, 15.5, num_sites)
         rup_id, rup_seed = 42, 44
         rup = FakeRupture(rup_id, trt)
-        pga = PGA()
         rlz = mock.Mock()
         rlz.id = 1
         ses_coll = mock.Mock()
         ses_coll.ordinal = 0
         ses_coll.trt_model.id = 1
         calc = core.GmfCalculator(
-            [pga], [gsim], ses_coll, truncation_level=3)
+            ['PGA'], [gsim], ses_coll, truncation_level=3)
         calc.calc_gmfs(site_coll, rup, [(rup.id, rup_seed)])
         expected_rups = {
             ('AkkarBommer2010', 'PGA', 0): [rup_id],
