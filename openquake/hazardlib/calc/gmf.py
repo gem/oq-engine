@@ -24,6 +24,7 @@ import scipy.stats
 
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.calc import filters
+from openquake.hazardlib.imt import from_string
 
 
 class CorrelationButNoInterIntraStdDevs(Exception):
@@ -58,13 +59,12 @@ class GmfComputer(object):
         Sites of interest to calculate GMFs.
 
     :param imts:
-        List of intensity measure type objects (see
-        :mod:`openquake.hazardlib.imt`).
+        Sorted list of intensity measure type strings
 
     :param gsims:
         Ground-shaking intensity models, instances of subclass of either
         :class:`~openquake.hazardlib.gsim.base.GMPE` or
-        :class:`~openquake.hazardlib.gsim.base.IPE`.
+        :class:`~openquake.hazardlib.gsim.base.IPE`, sorted lexicographically.
 
     :param truncation_level:
         Float, number of standard deviations for truncation of the intensity
@@ -79,13 +79,18 @@ class GmfComputer(object):
     def __init__(self, rupture, sites, imts, gsims,
                  truncation_level=None, correlation_model=None):
         assert sites and imts, (sites, imts)
+        n = len(sites)
         self.rupture = rupture
         self.sites = sites
-        self.imts = imts
+        self.imts = map(from_string, imts)
         self.gsims = gsims
+        self.gsim_strings = map(str, gsims)
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
         self.ctx = {gsim: gsim.make_contexts(sites, rupture) for gsim in gsims}
+        self.imt_dt = numpy.dtype([(imt, (float, n)) for imt in imts])
+        self.gmf_dt = numpy.dtype([(gsim, self.imt_dt)
+                                   for gsim in self.gsim_strings])
 
     def _compute(self, seed, gsim, realizations):
         # the method doing the real stuff; use compute instead
@@ -102,7 +107,7 @@ class GmfComputer(object):
                 mean = gsim.to_imt_unit_values(mean)
                 mean.shape += (1, )
                 mean = mean.repeat(realizations, axis=1)
-                result[imt] = mean
+                result[str(imt)] = mean
             return result
         elif self.truncation_level is None:
             distribution = scipy.stats.norm()
@@ -156,7 +161,7 @@ class GmfComputer(object):
                 gmf = gsim.to_imt_unit_values(
                     mean + intra_residual + inter_residual)
 
-            result[imt] = gmf
+            result[str(imt)] = gmf
 
         return result
 
@@ -167,18 +172,16 @@ class GmfComputer(object):
         :param seed:
             the seed for the numpy random number generator
         :returns:
-            A list of pairs
-            [(gsim_name, {imt: ground_motion_values}), ...]
+            a numpy array of dtype gmf_dt
         """
-        gmf_by_gsim = []
+        gmfs = numpy.zeros(1, self.gmf_dt)
         for gsim in self.gsims:
+            gmf_by_imt = gmfs[str(gsim)]
             result = self._compute(seed, gsim, realizations=1)
-            gmvs = {}
-            for imt, gmf in result.iteritems():
-                # consider 1 realization, i.e. return column 0-th of the gmf
-                gmvs[str(imt)] = numpy.array(map(float, gmf[:, 0]))
-            gmf_by_gsim.append((str(gsim), gmvs))
-        return gmf_by_gsim
+            for imt, array in result.iteritems():
+                # consider 1 realization, i.e. return column 0-th of the array
+                gmf_by_imt[imt] = map(float, array[:, 0])
+        return gmfs
 
 
 # this is not used in the engine; it is still useful for usage in IPython
@@ -240,7 +243,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
                     for imt in imts)
     [(rupture, sites)] = ruptures_sites
 
-    gc = GmfComputer(rupture, sites, imts, [gsim], truncation_level,
+    gc = GmfComputer(rupture, sites, map(str, imts), [gsim], truncation_level,
                      correlation_model)
     result = gc._compute(seed, gsim, realizations)
     for imt, gmf in result.iteritems():
@@ -248,4 +251,4 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         if rupture_site_filter is not filters.rupture_site_noop_filter:
             result[imt] = sites.expand(gmf, placeholder=0)
 
-    return result
+    return {from_string(imt): result[imt] for imt in result}
