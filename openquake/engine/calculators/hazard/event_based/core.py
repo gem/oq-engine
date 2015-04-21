@@ -293,16 +293,17 @@ class GmfCalculator(object):
         computer = gmf.GmfComputer(
             rupture, r_sites, self.sorted_imts, self.sorted_gsims,
             self.truncation_level, self.correl_model)
-        for rupid, seed in rupid_seed_pairs:
-            for gmfa in computer.compute(seed):
-                for gsim_name in gmfa.dtype.fields:
-                    gmf_by_imt = gmfa[gsim_name]
-                    for imt in self.sorted_imts:
-                        for site_id, gmv in zip(r_sites.sids, gmf_by_imt[imt]):
-                            self.gmvs_per_site[
-                                gsim_name, imt, site_id].append(gmv)
-                            self.ruptures_per_site[
-                                gsim_name, imt, site_id].append(rupid)
+        rupids, seeds = zip(*rupid_seed_pairs)
+        for rupid, gmfa in zip(rupids, computer.compute(seeds)):
+            for gname in gmfa.dtype.fields:
+                gmf_by_imt = gmfa[gname]
+                print gmf_by_imt
+                for imt in self.sorted_imts:
+                    for site_id, gmv in zip(r_sites.sids, gmf_by_imt[imt]):
+                        self.gmvs_per_site[
+                            gname, imt, site_id].append(gmv)
+                        self.ruptures_per_site[
+                            gname, imt, site_id].append(rupid)
 
     def save_gmfs(self, rlzs_assoc):
         """
@@ -312,8 +313,8 @@ class GmfCalculator(object):
             a :class:`openquake.commonlib.source.RlzsAssoc` instance
         """
         samples = rlzs_assoc.csm_info.get_num_samples(self.trt_model_id)
-        for gsim_name, imt_str, site_id in self.gmvs_per_site:
-            rlzs = rlzs_assoc[self.trt_model_id, gsim_name]
+        for gname, imt_str, site_id in self.gmvs_per_site:
+            rlzs = rlzs_assoc[self.trt_model_id, gname]
             if samples > 1:
                 # save only the data for the realization corresponding
                 # to the current SESCollection
@@ -327,9 +328,8 @@ class GmfCalculator(object):
                     sa_period=sa_period,
                     sa_damping=sa_damping,
                     site_id=site_id,
-                    gmvs=self.gmvs_per_site[gsim_name, imt_str, site_id],
-                    rupture_ids=self.ruptures_per_site[
-                        gsim_name, imt_str, site_id]
+                    gmvs=self.gmvs_per_site[gname, imt_str, site_id],
+                    rupture_ids=self.ruptures_per_site[gname, imt_str, site_id]
                 ))
         inserter.flush()
         self.gmvs_per_site.clear()

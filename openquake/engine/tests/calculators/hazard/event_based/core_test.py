@@ -19,7 +19,6 @@ import unittest
 import mock
 import numpy
 
-from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.mesh import Mesh
