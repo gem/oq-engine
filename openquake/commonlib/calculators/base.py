@@ -29,6 +29,7 @@ from openquake.hazardlib.geo import geodetic
 
 from openquake.baselib import general
 from openquake.commonlib import readinput
+from openquake.commonlib.calculators import calc
 from openquake.commonlib.parallel import apply_reduce, DummyMonitor, executor
 from openquake.risklib import riskinput
 
@@ -153,7 +154,8 @@ class HazardCalculator(BaseCalculator):
         :returns: a dictionary with the saved data
         """
         haz_out = dict(rlzs_assoc=self.rlzs_assoc,
-                       sitecol=self.sitecol, oqparam=self.oqparam)
+                       sites=getattr(self, 'sites', self.sitecol),
+                       oqparam=self.oqparam)
         haz_out[self.result_kind] = result
         haz_out.update(kw)
         cache = os.path.join(self.oqparam.export_dir, 'hazard.pik')
@@ -332,3 +334,57 @@ class RiskCalculator(BaseCalculator):
             with open(cache, 'w') as f:
                 cPickle.dump(self.risk_out, f)
         return self.risk_out
+
+
+# functions useful for the calculators ScenarioDamage and ScenarioRisk
+
+
+def get_gmfs(self):
+    """
+    :param self: a ScenarioDamage or ScenarioRisk selfulator
+    :returns: a dictionary of gmfs
+    """
+    if 'gmfs' in self.oqparam.inputs:  # from file
+        gmfs = read_gmfs_from_csv(self)
+    else:  # from rupture
+        gmfs = compute_gmfs(self)
+    return gmfs
+
+
+def compute_gmfs(self):
+    """
+    :returns: riskinputs
+    """
+    logging.info('Computing the GMFs')
+    haz_out, hself = get_hazard(self)
+    gmfs_by_trt_gsim = calc.expand(
+        haz_out['gmfs_by_trt_gsim'], haz_out['sites'])
+
+    logging.info('Preparing the risk input')
+    self.rlzs_assoc = haz_out['rlzs_assoc']
+    return gmfs_by_trt_gsim
+
+
+def read_gmfs_from_csv(self):
+    """
+    :returns: riskinputs
+    """
+    logging.info('Reading hazard curves from CSV')
+    sitecol, gmfs_by_imt = readinput.get_sitecol_gmfs(self.oqparam)
+
+    # filter the hazard sites by taking the closest to the assets
+    with self.monitor('assoc_assets_sites'):
+        self.sitecol, self.assets_by_site = self.assoc_assets_sites(
+            sitecol)
+
+    # reduce the gmfs matrices to the filtered sites
+    for imt in gmfs_by_imt:
+        gmfs_by_imt[imt] = gmfs_by_imt[imt][self.sitecol.indices]
+
+    num_assets = sum(len(assets) for assets in self.assets_by_site)
+    num_sites = len(self.sitecol)
+    logging.info('Associated %d assets to %d sites', num_assets, num_sites)
+
+    logging.info('Preparing the risk input')
+    self.rlzs_assoc = riskinput.FakeRlzsAssoc(num_rlzs=1)
+    return {(0, 'FromCsv'): gmfs_by_imt}
