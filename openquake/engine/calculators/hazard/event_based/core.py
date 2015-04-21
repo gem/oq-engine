@@ -212,7 +212,7 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
     """
     job = models.OqJob.objects.get(pk=monitor.job_id)
     hc = job.get_oqparam()
-    imts = map(from_string, sorted(hc.imtls))
+    imts = hc.imtls
 
     result = {}  # trt_model_id -> (curves_by_gsim, [])
     # NB: by construction each block is a non-empty list with
@@ -294,13 +294,15 @@ class GmfCalculator(object):
             rupture, r_sites, self.sorted_imts, self.sorted_gsims,
             self.truncation_level, self.correl_model)
         for rupid, seed in rupid_seed_pairs:
-            for gsim_name, gmf_by_imt in computer.compute(seed):
-                for imt_str, gmvs in gmf_by_imt.iteritems():
-                    for site_id, gmv in zip(r_sites.sids, gmvs):
-                        self.gmvs_per_site[
-                            gsim_name, imt_str, site_id].append(gmv)
-                        self.ruptures_per_site[
-                            gsim_name, imt_str, site_id].append(rupid)
+            for gmfa in computer.compute(seed):
+                for gsim_name in gmfa.dtype.fields:
+                    gmf_by_imt = gmfa[gsim_name]
+                    for imt in self.sorted_imts:
+                        for site_id, gmv in zip(r_sites.sids, gmf_by_imt[imt]):
+                            self.gmvs_per_site[
+                                gsim_name, imt, site_id].append(gmv)
+                            self.ruptures_per_site[
+                                gsim_name, imt, site_id].append(rupid)
 
     def save_gmfs(self, rlzs_assoc):
         """
