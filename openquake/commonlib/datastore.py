@@ -47,12 +47,32 @@ def get_last_calc_id(oqdir=OQDIR):
     return max(calc_ids)
 
 
+def key2str(key):
+    """
+    Convert the key (a string or a tuple of strings) into a dash-separated
+    ASCII string.
+    """
+    if isinstance(key, basestring):
+        if '-' in key:
+            raise KeyError('The key %s is invalid since it contains a dash'
+                           % key)
+        return str(key)
+    return '-'.join(key)
+
+
+def str2key(keystr):
+    """
+    Convert a key string into a tuple of strings, by splitting on dashes
+    """
+    return tuple(keystr.split('-'))
+
+
 class DataStore(collections.MutableMapping):
     """
     DataStore class to store the inputs/outputs of each calculation on the
-    filesystem. It works like a mapping; keys ending with the suffix
-    "_h5" are associated to .hdf5 files, whereas regular keys are associated
-    to .pik files contained pickled objects.
+    filesystem. It works like a mapping; composite keys ending with
+    "h5" are associated to .hdf5 files; other keys are associated
+    to .pik files containing pickled objects.
 
     NB: the calc_dir is created only at the first attempt to write on it,
     so there is potentially a race condition. It is up to the client code
@@ -63,7 +83,7 @@ class DataStore(collections.MutableMapping):
     >>> ds = DataStore()
     >>> ds['example'] = 'hello world'
     >>> ds.items()
-    [('example', 'hello world')]
+    [(('example',), 'hello world')]
     >>> ds.remove()
 
     It is also possible to store callables with two arguments (key, datastore).
@@ -79,16 +99,16 @@ class DataStore(collections.MutableMapping):
         """
         Return the full path name associated to the given key
         """
-        if key.endswith('_h5'):
-            return os.path.join(self.calc_dir, key[:-3] + '.hdf5')
-        return os.path.join(self.calc_dir, key + '.pik')
+        if key[-1] == 'h5':
+            return os.path.join(self.calc_dir, key2str(key)[:-3] + '.hdf5')
+        return os.path.join(self.calc_dir, key2str(key) + '.pik')
 
     def remove(self):
         """Remove the datastore from the file system"""
         shutil.rmtree(self.calc_dir)
 
     def __getitem__(self, key):
-        if key.endswith('_h5'):
+        if key[-1] == 'h5':
             h5f = h5py.File(self.path(key), 'r')
             value = h5f['dset'][:]
             h5f.close()
@@ -102,7 +122,7 @@ class DataStore(collections.MutableMapping):
     def __setitem__(self, key, value):
         if not os.path.exists(self.calc_dir):
             os.mkdir(self.calc_dir)
-        if key.endswith('_h5'):
+        if key[-1] == 'h5':
             if not isinstance(value, numpy.ndarray):
                 raise ValueError('%r is not a numpy array' % value)
             h5f = h5py.File(self.path(key), 'w', libver='latest')
@@ -118,9 +138,9 @@ class DataStore(collections.MutableMapping):
     def __iter__(self):
         for f in sorted(os.listdir(self.calc_dir)):
             if f.endswith('.pik'):
-                yield f[:-4]
+                yield str2key(f[:-4])
             elif f.endswith('.hdf5'):
-                yield f[:-5] + '_h5'
+                yield str2key(f[:-5]) + ('h5',)
 
     def __len__(self):
         return sum(1 for f in os.listdir(self.calc_dir)
