@@ -89,7 +89,6 @@ CELERY_IMPORTS = get_core_modules(engine) + [
     ]
 
 os.environ["DJANGO_SETTINGS_MODULE"] = "openquake.engine.settings"
-os.environ['OQ_ENGINE_MODE'] = '1'
 
 try:
     from openquake.engine.utils import tasks
