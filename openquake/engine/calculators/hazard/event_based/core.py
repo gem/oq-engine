@@ -297,7 +297,6 @@ class GmfCalculator(object):
         for rupid, gmfa in zip(rupids, computer.compute(seeds)):
             for gname in gmfa.dtype.fields:
                 gmf_by_imt = gmfa[gname]
-                print gmf_by_imt
                 for imt in self.sorted_imts:
                     for site_id, gmv in zip(r_sites.sids, gmf_by_imt[imt]):
                         self.gmvs_per_site[
