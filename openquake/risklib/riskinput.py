@@ -25,6 +25,7 @@ import collections
 import numpy
 
 from openquake.baselib.general import groupby, split_in_blocks_2
+from openquake.hazardlib.calc import gmf
 from openquake.risklib import scientific
 
 FakeRlz = collections.namedtuple('FakeRlz', 'ordinal weight')
@@ -316,22 +317,22 @@ class RiskInputFromRuptures(object):
     def compute_expand_gmfs(self):
         """
         :returns:
-            a list of hazard dictionaries, one for each site; each
-            dictionary for each key contains a dictionary IMT->array(N, R)
-            where N is the number of sites and R is the number of ruptures.
+            an array R x N where N is the number of sites and
+            R is the number of ruptures.
         """
         from openquake.commonlib.calculators.event_based import make_gmf_by_tag
         gmf_by_tag = make_gmf_by_tag(
             self.ses_ruptures, self.sitecol, self.imts,
             self.gsims, self.trunc_level, self.correl_model)
-        gmfs = []
+        gmf_dt = gmf.dtype(self.gsims, self.imts)
         n = len(self.sitecol)
-        for tag in sorted(gmf_by_tag):
-            indices, gmf = gmf_by_tag[tag]
-            expanded_gmf = numpy.zeros(n, gmf.dtype)
-            expanded_gmf[indices] = gmf
-            gmfs.append(expanded_gmf)
-        return numpy.array(gmfs)  # array R x N
+        gmfs = numpy.zeros((len(gmf_by_tag), n), gmf_dt)
+        for r, tag in enumerate(sorted(gmf_by_tag)):
+            indices, gmfa = gmf_by_tag[tag]
+            expanded_gmf = numpy.zeros(n, gmf_dt)
+            expanded_gmf[indices] = gmfa
+            gmfs[r] = expanded_gmf
+        return gmfs  # array R x N
 
     def get_all(self, rlzs_assoc):
         """

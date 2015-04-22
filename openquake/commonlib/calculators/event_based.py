@@ -25,10 +25,9 @@ import collections
 
 import numpy
 
-from openquake.hazardlib import geo
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
-from openquake.hazardlib import site, calc
+from openquake.hazardlib import geo, site, calc
 from openquake.commonlib import readinput, parallel
 from openquake.commonlib.util import max_rel_diff_index
 
