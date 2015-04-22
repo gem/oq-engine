@@ -44,6 +44,8 @@ class DataStoreTestCase(unittest.TestCase):
         self.assertEqual(list(self.dstore), [('key1', 'h5')])
         numpy.testing.assert_equal(self.dstore['key1', 'h5'], value1)
 
+        self.assertGreater(self.dstore.getsize('key1', 'h5'), 0)
+        self.assertGreater(self.dstore.getsize(), 0)
         # store items; notice that the output order is lexicographic
         a1 = numpy.array([1, 2])
         a2 = numpy.array([3, 4, 5])
