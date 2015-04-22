@@ -75,6 +75,18 @@ def deprecated(message):
     return _deprecated
 
 
+def gsim_imt_dt(sorted_gsims, sorted_imts):
+    """
+    Build a numpy dtype as a nested record with keys gsim and IMT respectively.
+
+    :param sorted_gsims: a list of GSIM instances, sorted lexicographically
+    :param sorted_imts: a list of intensity measure type strings
+    """
+    imt_dt = numpy.dtype([(imt, float) for imt in sorted_imts])
+    gsim_imt_dt = numpy.dtype([(str(gsim), imt_dt) for gsim in sorted_gsims])
+    return gsim_imt_dt
+
+
 class MetaGSIM(abc.ABCMeta):
     """
     Metaclass providing a warning on instantiation mechanism. A

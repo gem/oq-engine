@@ -24,6 +24,7 @@ import scipy.stats
 
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.calc import filters
+from openquake.hazardlib.gsim.base import gsim_imt_dt
 from openquake.hazardlib.imt import from_string
 
 
@@ -39,19 +40,6 @@ that defines only the total standard deviation. If you want to use a \
 correlation model you have to select a GMPE that provides the inter and \
 intra event standard deviations.''' % (
             self.corr.__class__.__name__, self.gsim.__class__.__name__)
-
-
-def dtype(sorted_gsims, sorted_imts):
-    """
-    Build a numpy dtype for the ground motion field, as an array
-    of nested records with keys gsim and IMT respectively.
-
-    :param sorted_gsims: a list of GSIM instances, sorted lexicographically
-    :param sorted_imts: a list of intensity measure type string, sorted
-    """
-    imt_dt = numpy.dtype([(imt, float) for imt in sorted_imts])
-    gmf_dt = numpy.dtype([(str(gsim), imt_dt) for gsim in sorted_gsims])
-    return gmf_dt
 
 
 class GmfComputer(object):
@@ -100,7 +88,7 @@ class GmfComputer(object):
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
         self.ctx = {gsim: gsim.make_contexts(sites, rupture) for gsim in gsims}
-        self.gmf_dt = dtype(gsims, imts)
+        self.gmf_dt = gsim_imt_dt(gsims, imts)
 
     def _compute(self, seed, gsim, realizations):
         # the method doing the real stuff; use compute instead
