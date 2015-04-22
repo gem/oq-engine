@@ -347,7 +347,7 @@ def make_gmf_by_tag(ses_ruptures, sitecol, imts, gsims,
             rupture, r_sites, imts, gsims, trunc_level, correl_model)
         for sr in sesruptures:
             [gmf_array] = computer.compute([sr.seed])
-            dic[sr.tag] = (r_sites, gmf_array)
+            dic[sr.tag] = (r_sites.indices, gmf_array)
     return dic
 
 
@@ -379,7 +379,7 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
         ses_ruptures, sitecol, oq.imtls, gsims, trunc_level, correl_model)
     result = AccumDict({(trt_id, str(gsim)): GmfsCurves(dic, AccumDict())
                         for gsim in gsims})
-    sites_gmfs = [dic[tag] for tag in sorted(dic)]
+    indices_gmfs = [dic[tag] for tag in sorted(dic)]
     if getattr(oq, 'hazard_curves_from_gmfs', None):
         duration = oq.investigation_time * oq.ses_per_logic_tree_path * (
             oq.number_of_logic_tree_samples or 1)
@@ -387,7 +387,7 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
             gs = str(gsim)
             curves = result[trt_id, gs][1]
             curves.update(to_haz_curves(
-                sitecol.sids, gs, sites_gmfs, oq.imtls,
+                sitecol.sids, gs, indices_gmfs, oq.imtls,
                 oq.investigation_time, duration))
     if not oq.ground_motion_fields:
         # reset the gmf_by_tag dictionary to avoid
@@ -397,11 +397,11 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
     return result
 
 
-def to_haz_curves(sids, gs, sites_gmfs, imtls, investigation_time, duration):
+def to_haz_curves(sids, gs, indices_gmfs, imtls, investigation_time, duration):
     """
     :param sids: IDs of the given sites
     :param gs: a GSIM string
-    :param sites_gmfs: a list of pairs (sites, gmf_by_imt)
+    :param indices_gmfs: a list of pairs (sites, gmf_by_imt)
     :param imtls: ordered dictionary {IMT: intensity measure levels}
     :param investigation_time: investigation time
     :param duration: investigation_time * number of Stochastic Event Sets
@@ -409,8 +409,8 @@ def to_haz_curves(sids, gs, sites_gmfs, imtls, investigation_time, duration):
     curves = {}
     for imt in imtls:
         data = collections.defaultdict(list)
-        for sites, gmf in sites_gmfs:
-            for sid, gmv in zip(sites.sids, gmf[gs][imt]):
+        for indices, gmf in indices_gmfs:
+            for sid, gmv in zip(sids[indices], gmf[gs][imt]):
                 data[sid].append(gmv)
         curves[imt] = numpy.array([
             gmvs_to_haz_curve(data.get(sid, []),
@@ -467,8 +467,8 @@ class EventBasedCalculator(ClassicalCalculator):
             fname = self.saved.get('%s-%s.csv' % (trt_id, gsim))
             if fname:  # when ground_motion_fields is true and there is csv
                 for tag in sorted(gmf_by_tag):
-                    r_sites, gmf = gmf_by_tag[tag]
-                    row = [tag, r_sites.indices]
+                    indices, gmf = gmf_by_tag[tag]
+                    row = [tag, indices]
                     for imt in imts:
                         row.append(gmf[gsim][imt])
                     save_csv(fname, [row], mode='a')
