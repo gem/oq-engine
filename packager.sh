@@ -388,7 +388,7 @@ EOF
             if [ "git://$repo_id" == "$GEM_GIT_REPO" -a "$branch_id" == "master" ]; then
                 cp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
                     build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
-                    "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/binary/${BUILD_UBUVER}"
+                    "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/binary"
             fi
         fi
 
