@@ -79,7 +79,6 @@ class GmfComputer(object):
     def __init__(self, rupture, sites, imts, gsims,
                  truncation_level=None, correlation_model=None):
         assert sites and imts, (sites, imts)
-        n = len(sites)
         self.rupture = rupture
         self.sites = sites
         self.imts = map(from_string, imts)
@@ -88,7 +87,7 @@ class GmfComputer(object):
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
         self.ctx = {gsim: gsim.make_contexts(sites, rupture) for gsim in gsims}
-        self.imt_dt = numpy.dtype([(imt, (float, n)) for imt in imts])
+        self.imt_dt = numpy.dtype([(imt, float) for imt in imts])
         self.gmf_dt = numpy.dtype([(gsim, self.imt_dt)
                                    for gsim in self.gsim_strings])
 
@@ -172,16 +171,20 @@ class GmfComputer(object):
         :param seeds:
             S seeds for the numpy random number generator
         :returns:
-            a numpy array of dtype gmf_dt and length S
+            a list of numpy arrays of dtype gmf_dt and length num_sites
         """
-        S = len(seeds)
-        gmfs = numpy.zeros(S, self.gmf_dt)
-        for seed, gmf_ in zip(seeds, gmfs):
+        n = len(self.sites)
+        gmfs = []
+        for seed in seeds:
+            gmfa = numpy.zeros(n, self.gmf_dt)
             for gsim in self.gsims:
-                result = self._compute(seed, gsim, realizations=1)
-                # 1 realization, i.e. consider column 0-th of the v-array
-                tup = tuple(v[:, 0].reshape(-1) for v in result.itervalues())
-                gmf_[str(gsim)] = numpy.array([tup], self.imt_dt)
+                gs = str(gsim)
+                for imt, value in self._compute(
+                        seed, gsim, realizations=1).iteritems():
+                    # 1 realization, get the 0-th colum of the v-array
+                    for i, gmv in enumerate(value[:, 0].reshape(-1)):
+                        gmfa[i][gs][imt] = gmv
+            gmfs.append(gmfa)
         return gmfs
 
 
