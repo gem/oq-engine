@@ -92,7 +92,7 @@ class EventLossCalculator(base.RiskCalculator):
         self.riskmodel = readinput.get_risk_model(self.oqparam)
         self.riskmodel.specific_assets = set(self.oqparam.specific_assets)
 
-        haz_out, hcalc = base.get_hazard(self)
+        haz_out, hcalc = base.get_pre_calculator(self)
 
         self.assets_by_site = hcalc.assets_by_site
         self.composite_source_model = hcalc.composite_source_model

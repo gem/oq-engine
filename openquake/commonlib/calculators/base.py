@@ -67,7 +67,7 @@ class BaseCalculator(object):
         exported = self.post_execute(result)
         for item in sorted(exported.iteritems()):
             logging.info('exported %s: %s', *item)
-        return self.save_pik(result, exported=exported)
+        self.save_pik(result, exported=exported)
 
     def core_func(*args):
         """
@@ -152,32 +152,25 @@ class HazardCalculator(BaseCalculator):
         :param kw: extras to add to the output dictionary
         :returns: a dictionary with the saved data
         """
-        haz_out = dict(rlzs_assoc=self.rlzs_assoc,
-                       sites=getattr(self, 'sites', self.sitecol),
-                       oqparam=self.oqparam)
-        haz_out[self.result_kind] = result
-        haz_out.update(kw)
-        logging.info('Saving hazard output on %s', self.datastore.calc_dir)
-        with self.monitor('saving hazard', autoflush=True):
-            self.datastore.update(haz_out)
-        return haz_out
+        self.datastore['rlzs_assoc'] = self.rlzs_assoc
+        self.datastore['sites'] = getattr(self, 'sites', self.sitecol)
+        self.datastore['oqparam'] = self.oqparam
+        self.datastore[self.result_kind] = result
+        self.datastore.update(kw)
 
 
-def get_hazard(calculator, exports=''):
+def get_pre_calculator(calculator, exports=''):
     """
-    Get the hazard from a calculator, possibly by using cached results
+    Recompute the hazard or retrieve it from the previous computation.
 
     :param calculator: a calculator with a .hazard_calculator attribute
     :returns: a pair (hazard output, hazard_calculator)
     """
-    hcalc = calculators[calculator.hazard_calculator](
+    precalc = calculators[calculator.hazard_calculator](
         calculator.oqparam, calculator.monitor('hazard'))
-    if calculator.oqparam.usecache:
-        haz_out = hcalc.datastore
-    else:
-        haz_out = hcalc.run(exports=exports)
-
-    return haz_out, hcalc
+    if not calculator.oqparam.usecache:
+        precalc.run(exports=exports)
+    return precalc
 
 
 class RiskCalculator(BaseCalculator):
@@ -321,13 +314,9 @@ class RiskCalculator(BaseCalculator):
 
     def save_pik(self, result, **kw):
         """Save the risk outputs"""
-        self.risk_out[self.result_kind] = result
-        self.risk_out.update(kw)
-        logging.info('Saving risk output on %s', self.datastore.calc_dir)
-        with self.monitor('saving risk outputs', autoflush=True):
-            self.datastore.update(self.risk_out)
-        return self.risk_out
-
+        self.datastore[self.result_kind] = result
+        self.datastore.update(kw)
+        self.datastore.update(self.risk_out)
 
 # functions useful for the calculators ScenarioDamage and ScenarioRisk
 
@@ -349,7 +338,7 @@ def compute_gmfs(self):
     :returns: riskinputs
     """
     logging.info('Computing the GMFs')
-    haz_out, hself = get_hazard(self)
+    haz_out, hself = get_pre_calculator(self)
     gmfs_by_trt_gsim = calc.expand(
         haz_out['gmfs_by_trt_gsim'], haz_out['sites'])
 

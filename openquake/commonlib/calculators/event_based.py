@@ -433,13 +433,13 @@ class EventBasedCalculator(ClassicalCalculator):
         prepare some empty files in the export directory to store the gmfs
         (if any). If there were pre-existing files, they will be erased.
         """
-        haz_out, hcalc = base.get_hazard(self, exports=self.oqparam.exports)
+        hcalc = base.get_pre_calculator(self, exports=self.oqparam.exports)
+        ruptures_by_trt = hcalc.datastorage['ruptures_by_trt']
         self.composite_source_model = hcalc.composite_source_model
         self.sitecol = hcalc.sitecol
         self.rlzs_assoc = hcalc.rlzs_assoc
-        self.sesruptures = sorted(
-            sum(haz_out['ruptures_by_trt'].itervalues(), []),
-            key=operator.attrgetter('tag'))
+        self.sesruptures = sorted(sum(ruptures_by_trt.itervalues(), []),
+                                  key=operator.attrgetter('tag'))
         self.saved = AccumDict()
         if self.oqparam.ground_motion_fields and 'csv' in self.oqparam.exports:
             for trt_id, gsim in self.rlzs_assoc:

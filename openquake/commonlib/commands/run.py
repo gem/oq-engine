@@ -45,6 +45,7 @@ def run(job_ini, concurrent_tasks=executor.num_tasks_hint,
         with monitor('post_execute'):
             out = calc.post_execute(result)
         with monitor('save_pik'):
+            logging.info('Saving results on %s' % calc.datastore.calc_dir)
             calc.save_pik(result)
     for item in sorted(out.iteritems()):
         logging.info('exported %s: %s', *item)
