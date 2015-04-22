@@ -41,6 +41,19 @@ intra event standard deviations.''' % (
             self.corr.__class__.__name__, self.gsim.__class__.__name__)
 
 
+def dtype(sorted_gsims, sorted_imts):
+    """
+    Build a numpy dtype for the ground motion field, as an array
+    of nested records with keys gsim and IMT respectively.
+
+    :param sorted_gsims: a list of GSIM instances, sorted lexicographically
+    :param sorted_imts: a list of intensity measure type string, sorted
+    """
+    imt_dt = numpy.dtype([(imt, float) for imt in sorted_imts])
+    gmf_dt = numpy.dtype([(str(gsim), imt_dt) for gsim in sorted_gsims])
+    return gmf_dt
+
+
 class GmfComputer(object):
     """
     Given an earthquake rupture, the ground motion field computer computes
@@ -87,9 +100,7 @@ class GmfComputer(object):
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
         self.ctx = {gsim: gsim.make_contexts(sites, rupture) for gsim in gsims}
-        self.imt_dt = numpy.dtype([(imt, float) for imt in imts])
-        self.gmf_dt = numpy.dtype([(gsim, self.imt_dt)
-                                   for gsim in self.gsim_strings])
+        self.gmf_dt = dtype(gsims, imts)
 
     def _compute(self, seed, gsim, realizations):
         # the method doing the real stuff; use compute instead
