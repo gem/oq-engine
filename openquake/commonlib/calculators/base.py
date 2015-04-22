@@ -28,7 +28,7 @@ from openquake.hazardlib.geo import geodetic
 from openquake.baselib import general
 from openquake.commonlib import readinput, datastore
 from openquake.commonlib.calculators import calc
-from openquake.commonlib.parallel import apply_reduce, DummyMonitor, executor
+from openquake.commonlib.parallel import apply_reduce, DummyMonitor
 from openquake.risklib import riskinput
 
 get_taxonomy = operator.attrgetter('taxonomy')
@@ -49,12 +49,11 @@ class BaseCalculator(object):
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, oqparam, monitor=DummyMonitor()):
+    def __init__(self, oqparam, monitor=DummyMonitor(), calc_id=None):
         self.oqparam = oqparam
         self.monitor = monitor
-        self.datastore = datastore.DataStore()
-        if not hasattr(oqparam, 'concurrent_tasks'):
-            oqparam.concurrent_tasks = executor.num_tasks_hint
+        self.datastore = datastore.DataStore(calc_id)
+        self.datastore['oqparam'] = self.oqparam
 
     def run(self, **kw):
         """
@@ -125,6 +124,7 @@ class HazardCalculator(BaseCalculator):
             logging.info('Reading the site collection')
             with self.monitor('reading site collection', autoflush=True):
                 self.sitecol = readinput.get_site_collection(self.oqparam)
+        self.datastore['sites'] = self.sitecol
         if 'source' in self.oqparam.inputs:
             logging.info('Reading the composite source models')
             with self.monitor(
@@ -153,8 +153,6 @@ class HazardCalculator(BaseCalculator):
         :returns: a dictionary with the saved data
         """
         self.datastore['rlzs_assoc'] = self.rlzs_assoc
-        self.datastore['sites'] = getattr(self, 'sites', self.sitecol)
-        self.datastore['oqparam'] = self.oqparam
         self.datastore[self.result_kind] = result
         self.datastore.update(kw)
 

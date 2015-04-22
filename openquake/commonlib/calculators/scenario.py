@@ -78,7 +78,7 @@ class ScenarioCalculator(base.HazardCalculator):
             raise RuntimeError(
                 'All sites were filtered out! '
                 'maximum_distance=%s km' % self.oqparam.maximum_distance)
-
+        self.datastore['sites'] = self.sites
         self.tags = ['scenario-%010d' % i for i in xrange(n_gmfs)]
         self.computer = GmfComputer(
             rupture, self.sites, self.oqparam.imtls, self.gsims,
