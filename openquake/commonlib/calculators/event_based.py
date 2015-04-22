@@ -328,7 +328,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
 
 # ######################## GMF calculator ############################ #
 
-GmfsCurves = collections.namedtuple('GmfsCurves', 'gmfs curves')
+GmfsCurves = collections.namedtuple('GmfsCurves', 'gmf_by_tag curves')
 
 
 def make_gmf_by_tag(ses_ruptures, sitecol, imts, gsims,
