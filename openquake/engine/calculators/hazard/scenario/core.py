@@ -49,7 +49,8 @@ def calculate_gmfs(tag_seed_pairs, computer, monitor):
     :returns:
         a dictionary tag -> key -> imt -> gmf
     """
-    return {tag: computer.compute(seed)[0] for tag, seed in tag_seed_pairs}
+    tags, seeds = zip(*tag_seed_pairs)
+    return dict(zip(tags, computer.compute(seeds)))
 
 
 def create_db_ruptures(rupture, ses_coll, tags, seed):
