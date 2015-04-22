@@ -20,7 +20,7 @@ import os
 import logging
 import collections
 from openquake.hazardlib.gsim import get_available_gsims
-from openquake.commonlib import valid
+from openquake.commonlib import valid, parallel
 from openquake.commonlib.riskmodels import (
     get_fragility_functions, get_imtls_from_vulnerabilities,
     vulnerability_files, fragility_files)
@@ -42,14 +42,14 @@ CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS
 
 
 class OqParam(valid.ParamSet):
-    exports = 'csv'  # default value, normally overridden
-
     area_source_discretization = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
     asset_correlation = valid.Param(valid.NoneOr(valid.FloatRange(0, 1)), 0)
     asset_life_expectancy = valid.Param(valid.positivefloat)
     base_path = valid.Param(valid.utf8)
     calculation_mode = valid.Param(valid.Choice(*CALCULATORS), '')
+    concurrent_tasks = valid.Param(
+        valid.positiveint, parallel.executor.num_tasks_hint)
     coordinate_bin_width = valid.Param(valid.positivefloat)
     conditional_loss_poes = valid.Param(valid.probabilities, [])
     continuous_fragility_discretization = valid.Param(valid.positiveint, 20)
@@ -59,6 +59,7 @@ class OqParam(valid.ParamSet):
     epsilon_sampling = valid.Param(valid.positiveint, 1000)
     export_dir = valid.Param(valid.utf8, None)
     export_multi_curves = valid.Param(valid.boolean, False)
+    exports = valid.Param(valid.Choice('csv', 'xml', 'geojson'), 'csv')
     ground_motion_correlation_model = valid.Param(
         valid.NoneOr(valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)), None)
     ground_motion_correlation_params = valid.Param(valid.dictionary)

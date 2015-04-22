@@ -289,10 +289,10 @@ def assert_close(a, b, rtol=1e-07, atol=0):
     :param rtol: relative tolerance
     :param atol: absolute tolerance
     """
-    if a == b:  # shortcut
-        return
-    if isinstance(a, numpy.ndarray):  # another shortcut
+    if isinstance(a, numpy.ndarray) and a.shape:  # shortcut
         numpy.testing.assert_allclose(a, b, rtol, atol)
+        return
+    if a == b:  # another shortcut
         return
     if hasattr(a, '__slots__'):  # record-like objects
         assert_close_seq(a.__slots__, b.__slots__, rtol, atol)
