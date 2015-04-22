@@ -198,4 +198,4 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_*.csv'''.split()
         out = self.run_calc(case_19.__file__, 'job.ini', exports='csv')
         for fname in expected:
             self.assertEqualFiles(
-                'expected/%s' % fname, out[fname], delta=1e-5)
+                'expected/%s' % fname, out[fname], delta=1e-7)
