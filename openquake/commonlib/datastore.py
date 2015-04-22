@@ -108,7 +108,7 @@ class DataStore(collections.MutableMapping):
         """
         Return the full path name associated to the given key
         """
-        if key[-1] == 'h5':
+        if key[-1] in ('h5', 'h5i'):
             return os.path.join(self.calc_dir, key2str(key)[:-3] + '.hdf5')
         return os.path.join(self.calc_dir, key2str(key) + '.pik')
 
