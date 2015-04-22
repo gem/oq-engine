@@ -84,7 +84,6 @@ class GmfComputer(object):
         self.sites = sites
         self.imts = map(from_string, imts)
         self.gsims = gsims
-        self.gsim_strings = map(str, gsims)
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
         self.ctx = {gsim: gsim.make_contexts(sites, rupture) for gsim in gsims}
