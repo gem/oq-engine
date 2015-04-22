@@ -25,7 +25,7 @@ import collections
 import numpy
 
 from openquake.baselib.general import groupby, split_in_blocks_2
-from openquake.hazardlib.calc import gmf
+from openquake.hazardlib.gsim.base import gsim_imt_dt
 from openquake.risklib import scientific
 
 FakeRlz = collections.namedtuple('FakeRlz', 'ordinal weight')
@@ -324,7 +324,7 @@ class RiskInputFromRuptures(object):
         gmf_by_tag = make_gmf_by_tag(
             self.ses_ruptures, self.sitecol, self.imts,
             self.gsims, self.trunc_level, self.correl_model)
-        gmf_dt = gmf.dtype(self.gsims, self.imts)
+        gmf_dt = gsim_imt_dt(self.gsims, self.imts)
         n = len(self.sitecol)
         gmfs = numpy.zeros((len(gmf_by_tag), n), gmf_dt)
         for r, tag in enumerate(sorted(gmf_by_tag)):
