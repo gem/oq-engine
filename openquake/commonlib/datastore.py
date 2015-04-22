@@ -117,7 +117,7 @@ class DataStore(collections.MutableMapping):
         """Remove the datastore from the file system"""
         shutil.rmtree(self.calc_dir)
 
-    def getsize(self, key=()):
+    def getsize(self, *key):
         """
         Return the size in byte of the file associated to the given key.
         If no key is given, returns the total size of all files.
