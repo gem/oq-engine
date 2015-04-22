@@ -182,7 +182,12 @@ class GmfComputer(object):
                 for imt, value in self._compute(
                         seed, gsim, realizations=1).iteritems():
                     # 1 realization, get the 0-th colum of the v-array
-                    for i, gmv in enumerate(value[:, 0].reshape(-1)):
+                    array = map(float, value[:, 0])
+                    # NB: with correlation, the value is a numpy.matrix
+                    # not an array, flatten does not work and the only
+                    # way to extract the numbers is the map before!
+                    # something is wrong and must be fixed in the future
+                    for i, gmv in enumerate(array):
                         gmfa[i][gs][imt] = gmv
             gmfs.append(gmfa)
         return gmfs
