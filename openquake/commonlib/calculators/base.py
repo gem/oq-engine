@@ -338,7 +338,7 @@ def compute_gmfs(self):
     :returns: riskinputs
     """
     logging.info('Computing the GMFs')
-    haz_out, hself = get_pre_calculator(self)
+    haz_out = get_pre_calculator(self).datastore
     gmfs_by_trt_gsim = calc.expand(
         haz_out['gmfs_by_trt_gsim'], haz_out['sites'])
 

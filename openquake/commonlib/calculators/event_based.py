@@ -434,7 +434,7 @@ class EventBasedCalculator(ClassicalCalculator):
         (if any). If there were pre-existing files, they will be erased.
         """
         hcalc = base.get_pre_calculator(self, exports=self.oqparam.exports)
-        ruptures_by_trt = hcalc.datastorage['ruptures_by_trt']
+        ruptures_by_trt = hcalc.datastore['ruptures_by_trt']
         self.composite_source_model = hcalc.composite_source_model
         self.sitecol = hcalc.sitecol
         self.rlzs_assoc = hcalc.rlzs_assoc

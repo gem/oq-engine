@@ -91,7 +91,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.riskmodel = readinput.get_risk_model(self.oqparam)
         self.riskmodel.specific_assets = set(self.oqparam.specific_assets)
 
-        haz_out, hcalc = base.get_hazard(self)
+        hcalc = base.get_pre_calculator(self)
 
         self.assets_by_site = hcalc.assets_by_site
         self.composite_source_model = hcalc.composite_source_model
@@ -103,8 +103,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         logging.info('Building the epsilons')
 
         logging.info('Populating the risk inputs')
+        ruptures_by_trt = hcalc.datastore['ruptures_by_trt']
         all_ruptures = sum(
-            (rups for rups in haz_out['ruptures_by_trt'].itervalues()), [])
+            (rups for rups in ruptures_by_trt.itervalues()), [])
         all_ruptures.sort(key=operator.attrgetter('tag'))
         num_samples = min(len(all_ruptures), epsilon_sampling)
         eps_dict = riskinput.make_eps_dict(
@@ -131,8 +132,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.risk_out['specific_assets'] = specific_assets = [
             self.asset_dict[a] for a in sorted(self.oqparam.specific_assets)]
         self.saved = AccumDict()
-        for ordinal, loss_type in sorted(result):
-            data = result[ordinal, loss_type]
+        for i, loss_type in sorted(result):
+            ordinal = '%03d' % i
+            data = result[i, loss_type]
             # asset_ref -> [(tag, loss, ins_loss), ...]
             elass = {asset.id: [] for asset in specific_assets}
             elagg = []  # aggregate event loss
@@ -145,9 +147,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 nonzero += d['nonzero']
                 total += d['total']
             logging.info('rlz=%d, loss type=%s: %d/%d nonzero losses',
-                         ordinal, loss_type, nonzero, total)
+                         i, loss_type, nonzero, total)
             if elass:
-                key = 'rlz-%03d-%s-event-loss-asset' % (ordinal, loss_type)
+                key = ('rlz', ordinal, loss_type, 'event_loss_asset')
                 data = []
                 for asset_ref, rows in elass.iteritems():
                     for tag, loss, ins_loss in rows:
@@ -155,7 +157,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 self.export_csv(key, data)
 
                 # build the loss curves per asset
-                key = 'rlz-%03d-%s-loss-curves' % (ordinal, loss_type)
+                key = ('rlz', ordinal, loss_type, 'loss_curves')
                 self.risk_out[key] = lc = self.build_loss_curves(elass, 1)
                 data = []
                 for asset, (losses, poes), avg in zip(
@@ -165,8 +167,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
                 if oq.insured_losses:
                     # build the insured loss curves per asset
-                    key_ins = 'rlz-%03d-%s-ins-loss-curves' % (
-                        ordinal, loss_type)
+                    key_ins = ('rlz', ordinal, loss_type, 'ins_loss_curves')
                     self.risk_out[key_ins] = ic = self.build_loss_curves(
                         elass, 2)
                     data = []
@@ -177,7 +178,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
                 if oq.conditional_loss_poes:
                     # build the loss maps per asset an array of shape (P, S)
-                    key_map = 'rlz-%03d-%s-loss-maps' % (ordinal, loss_type)
+                    key_map = ('rlz', ordinal, loss_type, 'loss_maps')
                     self.risk_out[key_map] = scientific.loss_map_matrix(
                         oq.conditional_loss_poes,
                         self.risk_out[key]['losses_poes'])
@@ -188,11 +189,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     self.export_csv(key_map, data)
 
             if elagg:
-                key = 'rlz-%03d-%s-event-loss' % (ordinal, loss_type)
+                key = ('rlz', ordinal, loss_type, 'event_loss')
                 self.export_csv(key, elagg)
 
                 # aggregate loss curve for all tags
-                key = 'rlz-%03d-%s-agg-loss-curve' % (ordinal, loss_type)
+                key = ('rlz', ordinal, loss_type, 'agg_loss_curve')
                 losses, poes, avg, map_ = self.build_agg_loss_curve_and_map(
                     [loss for _tag, loss, _ins_loss in elagg])
                 self.risk_out[key] = dict(losses=losses, poes=poes, avg=avg)
@@ -202,13 +203,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         if len(self.rlzs_assoc.realizations) > 1:
             for stat in self.calc_stats():  # one stat for each loss_type
                 curves, ins_curves, maps = scientific.get_stat_curves(stat)
-                key = 'loss_curve_stats-%s' % stat.loss_type
+                key = ('loss_curve_stats', stat.loss_type)
                 self.export_csv(key, curves)
                 if oq.insured_losses:
-                    key = 'ins_loss_curve_stats-%s' % stat.loss_type
+                    key = ('ins_loss_curve_stats', stat.loss_type)
                     self.export_csv(key, ins_curves)
                 if oq.conditional_loss_poes:
-                    key = 'loss_map_stats-%s' % stat.loss_type
+                    key = ('loss_map_stats', stat.loss_type)
                     self.export_csv(key, maps)
         return self.saved
 
@@ -266,9 +267,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         rlzs = self.rlzs_assoc.realizations
         assets = self.risk_out['specific_assets']
         for key in self.risk_out:
-            mo = re.match('rlz-(\d+)-%s-loss-curves' % loss_type, key)
-            if mo:
-                ordinal = int(mo.group(1))
+            if (key[0] == 'rlz' and key[2] == loss_type and
+                    key[-1] == 'loss_curves'):
+                ordinal = int(key[1])
                 weight = rlzs[ordinal].weight
                 lcs = self.risk_out[key]
                 out = scientific.Output(
@@ -305,7 +306,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             a dictionary key -> path of the exported file
         """
         header = loss_curves_per_asset[0]._fields
-        key = 'loss_curve_stats-%s' % loss_type
+        key = ('loss_curve_stats', loss_type)
         self.export_csv(key, [header] + loss_curves_per_asset)
 
     def export_curves_compact(self, loss_curves_per_asset, loss_type):
@@ -326,7 +327,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                          lca.average_loss, '', loss_type))
         header = ['lon', 'lat', 'asset_ref', 'asset_value', 'average_loss',
                   'stddev_loss', 'loss_type']
-        key = 'loss_avg_stats-%s' % loss_type
+        key = ('loss_avg_stats', loss_type)
         self.export_csv(key, [header] + data)
 
     def export_maps_compact(self, loss_maps_per_asset, loss_type):
@@ -346,14 +347,15 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             data.append((lon, lat, lma.asset.id, lma.loss, loss_type))
 
         header = ['lon', 'lat', 'asset_ref', 'average_loss', 'loss_type']
-        key = 'loss_map_stats-%s' % loss_type
+        key = ('loss_map_stats', loss_type)
         self.export_csv(key, [header] + data)
 
     def export_csv(self, key, data):
         if not data:
             return
-        dest = os.path.join(self.oqparam.export_dir, key) + '.csv'
-        if key.startswith('rlz-') and not self.oqparam.individual_curves:
+        key_str = '-'.join(key) if isinstance(key, tuple) else key
+        dest = os.path.join(self.oqparam.export_dir, key_str) + '.csv'
+        if key[0] == 'rlz' and not self.oqparam.individual_curves:
             return  # don't export individual curves
         if hasattr(data[0], '_fields'):
             header = [data[0]._fields]
