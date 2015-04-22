@@ -43,4 +43,12 @@ class DataStoreTestCase(unittest.TestCase):
         del self.dstore['key2', 'h5']
         self.assertEqual(list(self.dstore), [('key1', 'h5')])
         numpy.testing.assert_equal(self.dstore['key1', 'h5'], value1)
+
+        # store items; notice that the output order is lexicographic
+        a1 = numpy.array([1, 2])
+        a2 = numpy.array([3, 4, 5])
+        items = [('a2', a2), ('a1', a1)]
+        self.dstore['items', 'h5i'] = items
+        numpy.testing.assert_equal(
+            list(self.dstore['items', 'h5i']), sorted(items))
         self.dstore.remove()

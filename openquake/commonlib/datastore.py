@@ -75,8 +75,8 @@ class DataStore(collections.MutableMapping):
     to .pik files containing pickled objects.
 
     NB: the calc_dir is created only at the first attempt to write on it,
-    so there is potentially a race condition. It is up to the client code
-    to ensure that two calculations are not writing on the same directory.
+    so there is potentially a race condition if the client code does not pass
+    an unique calc_id and relies on the DataStore to created it.
 
     Here is a minimal example of usage:
 
@@ -87,7 +87,16 @@ class DataStore(collections.MutableMapping):
     >>> ds.remove()
 
     It is also possible to store callables with two arguments (key, datastore).
-    They will be automatically invoked when the key is accessed:
+    They will be automatically invoked when the key is accessed.
+
+    It possible to store numpy arrays in HDF5 format, if the library h5py is
+    installed and if the last field of the key is 'h5'. If the arrays do not
+    fit in memory, you can split them in several items of the form
+    (name, value) where name is a string and value is a subarray that fits
+    in memory. You can save an item generator, but the last field of the key
+    must be 'h5i'. When reading the items, the DataStore will return a
+    generator. The items will be ordered lexicographically according
+    to their name.
     """
     def __init__(self, calc_id=None, oqdir=OQDIR):
         if not os.path.exists(oqdir):
@@ -109,15 +118,25 @@ class DataStore(collections.MutableMapping):
 
     def __getitem__(self, key):
         if key[-1] == 'h5':
-            h5f = h5py.File(self.path(key), 'r')
-            value = h5f['dset'][:]
-            h5f.close()
-            return value
+            _dset, data = next(self._get_hdf5_items(key))
+            return data
+        elif key[-1] == 'h5i':
+            return self._get_hdf5_items(key)
         with open(self.path(key)) as df:
             value = cPickle.load(df)
             if callable(value):
                 return value(key, self)
             return value
+
+    def _get_hdf5_items(self, key):
+        with h5py.File(self.path(key), 'r') as h5f:
+            for dset, data in sorted(h5f.iteritems()):
+                yield dset, data[:]
+
+    def _set_hdf5_items(self, key, items):
+        with h5py.File(self.path(key), 'w', libver='latest') as h5f:
+            for dset, data in items:
+                h5f.create_dataset(dset, data=data)
 
     def __setitem__(self, key, value):
         if not os.path.exists(self.calc_dir):
@@ -125,12 +144,12 @@ class DataStore(collections.MutableMapping):
         if key[-1] == 'h5':
             if not isinstance(value, numpy.ndarray):
                 raise ValueError('%r is not a numpy array' % value)
-            h5f = h5py.File(self.path(key), 'w', libver='latest')
-            dset = h5f.create_dataset('dset', data=value)
-            h5f.close()
-            return dset
-        with open(self.path(key), 'w') as df:
-            return cPickle.dump(value, df, cPickle.HIGHEST_PROTOCOL)
+            self._set_hdf5_items(key, [('dset', value)])
+        elif key[-1] == 'h5i':
+            self._set_hdf5_items(key, value)
+        else:
+            with open(self.path(key), 'w') as df:
+                return cPickle.dump(value, df, cPickle.HIGHEST_PROTOCOL)
 
     def __delitem__(self, key):
         os.remove(self.path(key))
