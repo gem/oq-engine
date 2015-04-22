@@ -94,7 +94,7 @@ class DataStore(collections.MutableMapping):
     fit in memory, you can split them in several items of the form
     (name, value) where name is a string and value is a subarray that fits
     in memory. You can save an item generator, but the last field of the key
-    must be 'h5i'. When reading the items, the DataStore will return a
+    must be 'hdf5'. When reading the items, the DataStore will return a
     generator. The items will be ordered lexicographically according
     to their name.
     """
@@ -108,19 +108,29 @@ class DataStore(collections.MutableMapping):
         """
         Return the full path name associated to the given key
         """
-        if len(key) > 1 and key[-1] in ('h5', 'h5i'):
-            return os.path.join(self.calc_dir, key2str(key[:-1]) + '.hdf5')
+        if len(key) > 1 and key[-1] in ('h5', 'hdf5'):
+            fname = key2str(key[:-1]) + '.' + key[-1]
+            return os.path.join(self.calc_dir, fname)
         return os.path.join(self.calc_dir, key2str(key) + '.pik')
 
     def remove(self):
         """Remove the datastore from the file system"""
         shutil.rmtree(self.calc_dir)
 
+    def getsize(self, key=()):
+        """
+        Return the size in byte of the file associated to the given key.
+        If no key is given, returns the total size of all files.
+        """
+        if key:
+            return os.path.getsize(self.path(key))
+        return sum(os.path.getsize(self.path(key)) for key in self)
+
     def __getitem__(self, key):
         if key[-1] == 'h5':
             _dset, data = next(self._get_hdf5_items(key))
             return data
-        elif key[-1] == 'h5i':
+        elif key[-1] == 'hdf5':
             return self._get_hdf5_items(key)
         with open(self.path(key)) as df:
             value = cPickle.load(df)
@@ -145,7 +155,7 @@ class DataStore(collections.MutableMapping):
             if not isinstance(value, numpy.ndarray):
                 raise ValueError('%r is not a numpy array' % value)
             self._set_hdf5_items(key, [('dset', value)])
-        elif key[-1] == 'h5i':
+        elif key[-1] == 'hdf5':
             self._set_hdf5_items(key, value)
         else:
             with open(self.path(key), 'w') as df:
@@ -158,8 +168,10 @@ class DataStore(collections.MutableMapping):
         for f in sorted(os.listdir(self.calc_dir)):
             if f.endswith('.pik'):
                 yield str2key(f[:-4])
+            elif f.endswith('.h5'):
+                yield str2key(f[:-3]) + ('h5',)
             elif f.endswith('.hdf5'):
-                yield str2key(f[:-5]) + ('h5',)
+                yield str2key(f[:-5]) + ('hdf5',)
 
     def __len__(self):
         return sum(1 for f in os.listdir(self.calc_dir)
