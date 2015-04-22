@@ -25,7 +25,6 @@ import collections
 import numpy
 
 from openquake.baselib.general import groupby, split_in_blocks_2
-from openquake.hazardlib.imt import from_string
 from openquake.risklib import scientific
 
 FakeRlz = collections.namedtuple('FakeRlz', 'ordinal weight')
@@ -314,24 +313,25 @@ class RiskInputFromRuptures(object):
         """
         return [sr.tag for sr in self.ses_ruptures]
 
-    def compute_expand_gmf(self):
+    def compute_expand_gmfs(self):
         """
         :returns:
             a list of hazard dictionaries, one for each site; each
             dictionary for each key contains a dictionary IMT->array(N, R)
             where N is the number of sites and R is the number of ruptures.
         """
-        from openquake.commonlib.calculators.event_based import make_gmf_by_key
-        ddic = make_gmf_by_key(
-            self.ses_ruptures, self.sitecol, map(from_string, self.imts),
+        from openquake.commonlib.calculators.event_based import make_gmf_by_tag
+        gmf_by_tag = make_gmf_by_tag(
+            self.ses_ruptures, self.sitecol, self.imts,
             self.gsims, self.trunc_level, self.correl_model)
-        for key, gmf_by_tag in ddic.iteritems():
-            items = sorted(gmf_by_tag.iteritems())
-            ddic[key] = {  # build N x R matrices
-                imt: numpy.array(
-                    [gmf.r_sites.expand(gmf[imt], 0) for tag, gmf in items]).T
-                for imt in self.imts}
-        return ddic
+        gmfs = []
+        n = len(self.sitecol)
+        for tag in sorted(gmf_by_tag):
+            indices, gmf = gmf_by_tag[tag]
+            expanded_gmf = numpy.zeros(n, gmf.dtype)
+            expanded_gmf[indices] = gmf
+            gmfs.append(expanded_gmf)
+        return numpy.array(gmfs)  # array R x N
 
     def get_all(self, rlzs_assoc):
         """
@@ -339,14 +339,13 @@ class RiskInputFromRuptures(object):
             lists of assets, hazards and epsilons
         """
         assets, hazards, epsilons = [], [], []
-        hazard_by_key_imt = self.compute_expand_gmf()
-        for i, assets_ in enumerate(self.assets_by_site):
+        gmfs = self.compute_expand_gmfs()
+        for assets_, hazard in zip(self.assets_by_site, gmfs.T):
             haz_by_imt_rlz = {imt: {} for imt in self.imts}
-            for key in hazard_by_key_imt:
-                for imt in hazard_by_key_imt[key]:
-                    hazard = hazard_by_key_imt[key][imt][i]
-                    for rlz in rlzs_assoc[key]:
-                        haz_by_imt_rlz[imt][rlz] = hazard
+            for gsim in hazard.dtype.fields:
+                for imt in hazard[gsim].dtype.fields:
+                    for rlz in rlzs_assoc[self.trt_id, gsim]:
+                        haz_by_imt_rlz[imt][rlz] = hazard[gsim][imt]
             for asset in assets_:
                 assets.append(asset)
                 hazards.append(haz_by_imt_rlz)
