@@ -48,7 +48,7 @@ class DataStoreTestCase(unittest.TestCase):
         a1 = numpy.array([1, 2])
         a2 = numpy.array([3, 4, 5])
         items = [('a2', a2), ('a1', a1)]
-        self.dstore['items', 'h5i'] = items
+        self.dstore['items', 'hdf5'] = items
         numpy.testing.assert_equal(
-            list(self.dstore['items', 'h5i']), sorted(items))
+            list(self.dstore['items', 'hdf5']), sorted(items))
         self.dstore.remove()
