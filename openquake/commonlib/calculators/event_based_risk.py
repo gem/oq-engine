@@ -16,7 +16,6 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
 import os.path
 import logging
 import operator
@@ -129,7 +128,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.asset_dict = {
             a.id: a for assets in self.assets_by_site for a in assets
             if a.id in self.oqparam.specific_assets}
-        self.risk_out['specific_assets'] = specific_assets = [
+        self.datastore['specific_assets'] = specific_assets = [
             self.asset_dict[a] for a in sorted(self.oqparam.specific_assets)]
         self.saved = AccumDict()
         for i, loss_type in sorted(result):
@@ -158,7 +157,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
                 # build the loss curves per asset
                 key = ('rlz', ordinal, loss_type, 'loss_curves')
-                self.risk_out[key] = lc = self.build_loss_curves(elass, 1)
+                self.datastore[key] = lc = self.build_loss_curves(elass, 1)
                 data = []
                 for asset, (losses, poes), avg in zip(
                         specific_assets, lc['losses_poes'], lc['avg']):
@@ -168,7 +167,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 if oq.insured_losses:
                     # build the insured loss curves per asset
                     key_ins = ('rlz', ordinal, loss_type, 'ins_loss_curves')
-                    self.risk_out[key_ins] = ic = self.build_loss_curves(
+                    self.datastore[key_ins] = ic = self.build_loss_curves(
                         elass, 2)
                     data = []
                     for asset, (losses, poes), avg in zip(
@@ -179,12 +178,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 if oq.conditional_loss_poes:
                     # build the loss maps per asset an array of shape (P, S)
                     key_map = ('rlz', ordinal, loss_type, 'loss_maps')
-                    self.risk_out[key_map] = scientific.loss_map_matrix(
+                    self.datastore[key_map] = scientific.loss_map_matrix(
                         oq.conditional_loss_poes,
-                        self.risk_out[key]['losses_poes'])
+                        self.datastore[key]['losses_poes'])
                     data = []
                     for asset, loss in zip(
-                            specific_assets, self.risk_out[key_map]):
+                            specific_assets, self.datastore[key_map]):
                         data.append((asset.id, loss))
                     self.export_csv(key_map, data)
 
@@ -196,7 +195,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 key = ('rlz', ordinal, loss_type, 'agg_loss_curve')
                 losses, poes, avg, map_ = self.build_agg_loss_curve_and_map(
                     [loss for _tag, loss, _ins_loss in elagg])
-                self.risk_out[key] = dict(losses=losses, poes=poes, avg=avg)
+                self.datastore[key] = dict(losses=losses, poes=poes, avg=avg)
                 self.export_csv(key, [('aggregate', losses, poes, avg)])
 
         # export statistics (i.e. mean and quantiles) for curves and maps
@@ -245,7 +244,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             [('losses_poes', (float, (2, R))), ('avg', float)])
 
         lcs = []
-        for asset in self.risk_out['specific_assets']:
+        for asset in self.datastore['specific_assets']:
             all_losses = [loss[i] for loss in elass[asset.id]]
             if all_losses:
                 losses_poes = scientific.event_based(
@@ -261,17 +260,17 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
     def extract_loss_curve_outputs(self, loss_type):
         """
-        Extract the loss curve outputs from the .risk_out dictionary.
+        Extract the loss curve outputs from the datastore.
         Used to compute the statistics.
         """
         rlzs = self.rlzs_assoc.realizations
-        assets = self.risk_out['specific_assets']
-        for key in self.risk_out:
+        assets = self.datastore['specific_assets']
+        for key in self.datastore:
             if (key[0] == 'rlz' and key[2] == loss_type and
                     key[-1] == 'loss_curves'):
                 ordinal = int(key[1])
                 weight = rlzs[ordinal].weight
-                lcs = self.risk_out[key]
+                lcs = self.datastore[key]
                 out = scientific.Output(
                     assets, loss_type, ordinal, weight,
                     loss_curves=lcs['losses_poes'], insured_curves=None)

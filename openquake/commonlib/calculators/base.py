@@ -95,11 +95,20 @@ class BaseCalculator(object):
         of output files.
         """
 
-    @abc.abstractmethod
     def save_pik(self, result, **kw):
         """
-        Called after post_execute
+        Must be run at the end of post_execute. Returns a dictionary
+        with the saved results.
+
+        :param result: the output of the `execute` method
+        :param kw: extras to add to the output dictionary
+        :returns: a dictionary with the saved data
         """
+        logging.info('Saving %r on %s', self.result_kind,
+                     self.datastore.calc_dir)
+        self.datastore['rlzs_assoc'] = self.rlzs_assoc
+        self.datastore[self.result_kind] = result
+        self.datastore.update(kw)
 
 
 class HazardCalculator(BaseCalculator):
@@ -142,19 +151,6 @@ class HazardCalculator(BaseCalculator):
         else:  # calculators without sources, i.e. scenario
             self.gsims = readinput.get_gsims(self.oqparam)
             self.rlzs_assoc = riskinput.FakeRlzsAssoc(len(self.gsims))
-
-    def save_pik(self, result, **kw):
-        """
-        Must be run at the end of post_execute. Returns a dictionary
-        with the saved results.
-
-        :param result: the output of the `execute` method
-        :param kw: extras to add to the output dictionary
-        :returns: a dictionary with the saved data
-        """
-        self.datastore['rlzs_assoc'] = self.rlzs_assoc
-        self.datastore[self.result_kind] = result
-        self.datastore.update(kw)
 
 
 def get_pre_calculator(calculator, exports=''):
@@ -307,14 +303,7 @@ class RiskCalculator(BaseCalculator):
                 (self.riskinputs, self.riskmodel, self.rlzs_assoc, monitor),
                 concurrent_tasks=self.oqparam.concurrent_tasks,
                 weight=get_weight, key=self.riskinput_key)
-        self.risk_out = dict(oqparam=self.oqparam)
         return res
-
-    def save_pik(self, result, **kw):
-        """Save the risk outputs"""
-        self.datastore[self.result_kind] = result
-        self.datastore.update(kw)
-        self.datastore.update(self.risk_out)
 
 # functions useful for the calculators ScenarioDamage and ScenarioRisk
 
