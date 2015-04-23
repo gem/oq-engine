@@ -107,7 +107,6 @@ class CalculationLimitsTestCase(unittest.TestCase):
 class NonEmptyQuantileTestCase(unittest.TestCase):
     # you cannot compute the quantiles if there is only 1 realization
     def test(self):
-        raise unittest.SkipTest
         cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
         with mock.patch('openquake.engine.logs.LOG.warn') as warn:
             helpers.run_job(cfg, number_of_logic_tree_samples=1,
