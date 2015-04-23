@@ -23,6 +23,7 @@ Built-in GSIMs
     atkinson_boore_1995
     atkinson_boore_2003
     atkinson_boore_2006
+    atkinson_2015
     berge_thierry_2003
     bindi_2011
     bindi_2014
@@ -44,6 +45,7 @@ Built-in GSIMs
     chiou_youngs_2014
     climent_1994
     convertito_2012
+    dost_2004
     douglas_stochastic_2013
     edwards_fah_2013a
     edwards_fah_2013f
