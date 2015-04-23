@@ -613,7 +613,7 @@ deps_check_or_clone () {
 
     if [ -d _jenkins_deps/$dep ]; then
         cd _jenkins_deps/$dep
-        local_repo="$(git remote -v | head -n 1 | sed 's/origin[       ]\+//;s/ .*//g')"
+        local_repo="$(git remote -v | head -n 1 | sed 's/origin[ 	]\+//;s/ .*//g')"
         if [ "$local_repo" != "$repo" ]; then
             echo "Dependency $dep: cached repository version differs from required ('$local_repo' != '$repo')."
             exit 1
