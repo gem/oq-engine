@@ -172,6 +172,7 @@ class GmfComputer(object):
             a list of numpy arrays of dtype gmf_dt and length num_sites
         """
         n = len(self.sites)
+        indices = self.sites.indices
         gmfs = []
         for seed in seeds:
             gmfa = numpy.zeros(n, self.gmf_dt)
@@ -186,6 +187,7 @@ class GmfComputer(object):
                     # way to extract the numbers is the map before!
                     # something is wrong and must be fixed in the future
                     for i, gmv in enumerate(array):
+                        gmfa[i]['idx'] = indices[i]
                         gmfa[i][gs][imt] = gmv
             gmfs.append(gmfa)
         return gmfs
@@ -259,3 +261,30 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
             result[imt] = sites.expand(gmf, placeholder=0)
 
     return {from_string(imt): result[imt] for imt in result}
+
+
+# this is used in the engine and in oq-lite
+def build_gmf_by_tag(rsts, gsims, imts, truncation_level=None,
+                     correlation_model=None):
+    """
+    :param rsts:
+        a sequence of tuples of the form (rupture, sites, tags, seeds)
+    :param gsims:
+        an ordered sequence of GSIM instance
+    :param imts:
+        an ordered sequence of IMT strings
+    :param truncation_level:
+        the truncation level (default None)
+    :param correlation_model:
+        the correlation model to use (default None)
+    :returns:
+        a dictionary tag -> gmf
+
+    The tags are assumed to be unique and sortable.
+    """
+    gmf_by_tag = {}
+    for rupture, sites, tags, seeds in rsts:
+        gmfs = GmfComputer(rupture, sites, imts, gsims, truncation_level,
+                           correlation_model).compute(seeds)
+        gmf_by_tag.update(zip(tags, gmfs))
+    return gmf_by_tag
