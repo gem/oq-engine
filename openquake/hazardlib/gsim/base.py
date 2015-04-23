@@ -77,7 +77,8 @@ def deprecated(message):
 
 def gsim_imt_dt(sorted_gsims, sorted_imts):
     """
-    Build a numpy dtype as a nested record with keys gsim and IMT respectively.
+    Build a numpy dtype as a nested record with keys 'idx' and nested
+    (gsim, imt).
 
     :param sorted_gsims: a list of GSIM instances, sorted lexicographically
     :param sorted_imts: a list of intensity measure type strings
