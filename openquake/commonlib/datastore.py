@@ -53,9 +53,10 @@ def key2str(key):
     ASCII string.
     """
     if isinstance(key, basestring):
-        if '-' in key:
-            raise KeyError('The key %s is invalid since it contains a dash'
-                           % key)
+        # temporarily removed check
+        # if '-' in key:
+        #     raise KeyError('The key %s is invalid since it contains a dash'
+        #                    % key)
         return str(key)
     return '-'.join(key)
 
