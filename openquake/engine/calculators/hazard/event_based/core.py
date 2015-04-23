@@ -293,9 +293,10 @@ class GmfCalculator(object):
         computer = gmf.GmfComputer(
             rupture, r_sites, self.sorted_imts, self.sorted_gsims,
             self.truncation_level, self.correl_model)
+        gnames = map(str, computer.gsims)
         rupids, seeds = zip(*rupid_seed_pairs)
         for rupid, gmfa in zip(rupids, computer.compute(seeds)):
-            for gname in gmfa.dtype.fields:
+            for gname in gnames:
                 gmf_by_imt = gmfa[gname]
                 for imt in self.sorted_imts:
                     for site_id, gmv in zip(r_sites.sids, gmf_by_imt[imt]):
