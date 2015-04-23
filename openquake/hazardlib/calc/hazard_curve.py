@@ -106,7 +106,7 @@ def calc_hazard_curves(
         differentiates IMLs (the order and length are the same as
         corresponding value in ``imts`` dict).
     """
-    imt_dt = numpy.dtype([(imt, (float, len(imtls[imt]))) for imt in imtls])
+    imt_dt = numpy.dtype([(imt, float, len(imtls[imt])) for imt in imtls])
     imts = {from_string(imt): imls for imt, imls in imtls.iteritems()}
     curves = numpy.ones(len(sites), imt_dt)
     sources_sites = ((source, sites) for source in sources)
@@ -117,11 +117,11 @@ def calc_hazard_curves(
             for rupture, r_sites in rupture_site_filter(ruptures_sites):
                 gsim = gsims[rupture.tectonic_region_type]
                 sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
-                for imt, imt_str in zip(imts, imtls):
+                for imt in imts:
                     poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
                                          truncation_level)
                     pno = rupture.get_probability_no_exceedance(poes)
-                    curves[imt_str] *= r_sites.expand(pno, placeholder=1)
+                    curves[str(imt)] *= r_sites.expand(pno, placeholder=1)
         except Exception, err:
             etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'

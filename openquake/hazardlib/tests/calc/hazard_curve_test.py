@@ -109,7 +109,6 @@ class HazardCurvesTestCase(unittest.TestCase):
         curves = calc_hazard_curves(
             self.sources, self.sites, self.imts,
             self.gsims, self.truncation_level)
-
         self.assertEqual(set(curves.dtype.fields), set(['PGA', 'PGD']))
 
         pga_curves = curves['PGA']
