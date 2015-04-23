@@ -43,7 +43,7 @@ def get_last_calc_id(oqdir=OQDIR):
     calcs = [f for f in os.listdir(OQDIR) if re.match('calc_\d+', f)]
     if not calcs:
         return 0
-    calc_ids = [int(calc[5:]) for calc in calcs]
+    calc_ids = [int(calc[5:]) for calc in calcs]  # strip calc_
     return max(calc_ids)
 
 
@@ -76,7 +76,7 @@ class DataStore(collections.MutableMapping):
 
     NB: the calc_dir is created only at the first attempt to write on it,
     so there is potentially a race condition if the client code does not pass
-    an unique calc_id and relies on the DataStore to created it.
+    an unique calc_id and relies on the DataStore to create it.
 
     Here is a minimal example of usage:
 
