@@ -68,7 +68,6 @@ def classical(sources, sitecol, gsims_assoc, monitor):
         # notice that the rupture filter may remove everything
         if any(curves[imt].sum() for imt in imtls):
             result[trt_model_id, str(gsim)] = array_to_dict(curves)
-            import pdb; pdb.set_trace()
     return result
 
 
