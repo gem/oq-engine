@@ -328,9 +328,9 @@ class RiskInputFromRuptures(object):
         n = len(self.sitecol)
         gmfs = numpy.zeros((len(gmf_by_tag), n), gmf_dt)
         for r, tag in enumerate(sorted(gmf_by_tag)):
-            indices, gmfa = gmf_by_tag[tag]
+            gmfa = gmf_by_tag[tag]
             expanded_gmf = numpy.zeros(n, gmf_dt)
-            expanded_gmf[indices] = gmfa
+            expanded_gmf[gmfa['idx']] = gmfa
             gmfs[r] = expanded_gmf
         return gmfs  # array R x N
 
@@ -341,10 +341,11 @@ class RiskInputFromRuptures(object):
         """
         assets, hazards, epsilons = [], [], []
         gmfs = self.compute_expand_gmfs()
+        gsims = map(str, self.gsims)
         for assets_, hazard in zip(self.assets_by_site, gmfs.T):
             haz_by_imt_rlz = {imt: {} for imt in self.imts}
-            for gsim in hazard.dtype.fields:
-                for imt in hazard[gsim].dtype.fields:
+            for gsim in gsims:
+                for imt in self.imts:
                     for rlz in rlzs_assoc[self.trt_id, gsim]:
                         haz_by_imt_rlz[imt][rlz] = hazard[gsim][imt]
             for asset in assets_:
