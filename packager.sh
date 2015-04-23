@@ -415,10 +415,35 @@ _lxc_name_and_ip_get()
     return 0
 }
 
+deps_check_or_clone () {
+    local dep="$1" repo="$2" branch="$3"
+    local local_repo local_branch
+
+    if [ -d _jenkins_deps/$dep ]; then
+        cd _jenkins_deps/$dep
+        local_repo="$(git remote -v | head -n 1 | sed 's/origin[ 	]\+//;s/ .*//g')"
+        if [ "$local_repo" != "$repo" ]; then
+            echo "Dependency $dep: cached repository version differs from required ('$local_repo' != '$repo')."
+            exit 1
+        fi
+        local_branch="$(git branch 2>/dev/null | sed -e '/^[^*]/d' | sed -e 's/* \(.*\)/\1/')"
+        if [ "$local_branch" != "$branch" ]; then
+            echo "Dependency $dep: cached branch version differs from required ('$local_branch' != '$branch')."
+            exit 1
+        fi
+        git clean -dfx
+        cd -
+    else
+        git clone --depth=1 -b $branch $repo _jenkins_deps/$dep
+    fi
+}
+
 devtest_run () {
     local deps old_ifs branch_id="$1"
 
-    mkdir _jenkins_deps
+    if [ ! -d _jenkins_deps ]; then
+        mkdir _jenkins_deps
+    fi
 
     #
     #  dependencies repos
@@ -442,15 +467,15 @@ devtest_run () {
         for repo in $repos; do
             # search of same branch in same repo or in GEM_GIT_REPO repo
             if git ls-remote --heads $repo/${dep}.git | grep -q "refs/heads/$branch" ; then
-                git clone --depth=1 -b $branch $repo/${dep}.git _jenkins_deps/$dep
+                deps_check_or_clone "$dep" "$repo/${dep}.git" "$branch"
                 found=1
                 break
             fi
         done
         # if not found it fallback in master branch of GEM_GIT_REPO repo
         if [ $found -eq 0 ]; then
-            git clone --depth=1 $repo/${dep}.git _jenkins_deps/$dep
             branch="master"
+            deps_check_or_clone "$dep" "$repo/${dep}.git" "$branch"
         fi
         cd _jenkins_deps/$dep
         commit="$(git log -1 | grep '^commit' | sed 's/^commit //g')"
