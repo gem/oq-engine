@@ -110,8 +110,7 @@ class HazardCurvesTestCase(unittest.TestCase):
             self.sources, self.sites, self.imts,
             self.gsims, self.truncation_level)
 
-        self.assertIsInstance(curves, dict)
-        self.assertEqual(set(curves), set(['PGA', 'PGD']))
+        self.assertEqual(set(curves.dtype.fields), set(['PGA', 'PGD']))
 
         pga_curves = curves['PGA']
         self.assertIsInstance(pga_curves, numpy.ndarray)

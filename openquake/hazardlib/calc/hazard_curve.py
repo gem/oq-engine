@@ -81,7 +81,7 @@ def calc_hazard_curves(
         Instance of :class:`~openquake.hazardlib.site.SiteCollection` object,
         representing sites of interest.
     :param imtls:
-        Dictionary mapping intensity measure type strings
+        Ordered dictionary mapping intensity measure type strings
         to lists of intensity measure levels.
     :param gsims:
         Dictionary mapping tectonic region types (members
@@ -106,9 +106,9 @@ def calc_hazard_curves(
         differentiates IMLs (the order and length are the same as
         corresponding value in ``imts`` dict).
     """
+    imt_dt = numpy.dtype([(imt, (float, len(imtls[imt]))) for imt in imtls])
     imts = {from_string(imt): imls for imt, imls in imtls.iteritems()}
-    curves = dict((imt, numpy.ones([len(sites), len(imtls[imt])]))
-                  for imt in imtls)
+    curves = numpy.ones(len(sites), imt_dt)
     sources_sites = ((source, sites) for source in sources)
     for source, s_sites in source_site_filter(sources_sites):
         try:
@@ -117,11 +117,11 @@ def calc_hazard_curves(
             for rupture, r_sites in rupture_site_filter(ruptures_sites):
                 gsim = gsims[rupture.tectonic_region_type]
                 sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
-                for imt in imts:
+                for imt, imt_str in zip(imts, imtls):
                     poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
                                          truncation_level)
                     pno = rupture.get_probability_no_exceedance(poes)
-                    curves[str(imt)] *= r_sites.expand(pno, placeholder=1)
+                    curves[imt_str] *= r_sites.expand(pno, placeholder=1)
         except Exception, err:
             etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
