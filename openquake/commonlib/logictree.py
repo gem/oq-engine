@@ -134,7 +134,7 @@ def sample(weighted_objects, num_samples, rnd):
 
     :param weighted_objects:
         A finite sequence of objects with a `.weight` attribute.
-        The weigths must sum up to 1.
+        The weights must sum up to 1.
     :param num_samples:
         The number of samples to return
     :param rnd:

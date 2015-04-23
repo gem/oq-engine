@@ -1,7 +1,13 @@
 import unittest
+import os.path
+import shutil
+import tempfile
+import mock
+
 import numpy
 from scipy.stats import mstats
-from openquake.risklib import scientific
+from openquake.commonlib import writers, tests
+from openquake.risklib import scientific, workflows
 
 aaae = numpy.testing.assert_array_almost_equal
 
@@ -142,3 +148,94 @@ class QuantileCurveTestCase(unittest.TestCase):
         actual_curve = scientific.quantile_curve(curves, quantile, weights)
 
         numpy.testing.assert_allclose(expected_curve, actual_curve)
+
+
+class NormalizeTestCase(unittest.TestCase):
+
+    def test_normalize_all_trivial(self):
+        poes = numpy.linspace(1, 0, 11)
+        losses = numpy.zeros(11)
+        curves = [[losses, poes], [losses, poes / 2]]
+        exp_losses, (poes1, poes2) = scientific.normalize_curves_eb(curves)
+
+        numpy.testing.assert_allclose(exp_losses, losses)
+        numpy.testing.assert_allclose(poes1, poes)
+        numpy.testing.assert_allclose(poes2, poes / 2)
+
+    def test_normalize_one_trivial(self):
+        trivial = [numpy.zeros(6), numpy.linspace(1, 0, 6)]
+        curve = [numpy.linspace(0., 1., 6), numpy.linspace(1., 0., 6)]
+        with numpy.errstate(invalid='ignore', divide='ignore'):
+            exp_losses, (poes1, poes2) = scientific.normalize_curves_eb(
+                [trivial, curve])
+
+        numpy.testing.assert_allclose(exp_losses, curve[0])
+        numpy.testing.assert_allclose(poes1, [numpy.nan, 0., 0., 0., 0., 0.])
+        numpy.testing.assert_allclose(poes2, curve[1])
+
+
+def asset(ref, value, deductibles=None,
+          insurance_limits=None,
+          retrofitting_values=None):
+    return workflows.Asset(ref, 'taxonomy', 1, (0, 0), dict(structural=value),
+                           1, deductibles, insurance_limits,
+                           retrofitting_values)
+
+
+# return a matrix N x 2 x R with n=2, R=5
+def loss_curves(assets, baselosses, seed):
+    numpy.random.seed(seed)
+    lcs = []
+    for asset in assets:
+        poes = sorted(numpy.random.rand(5), reverse=True)
+        losses = sorted(baselosses * asset.value('structural') + seed)
+        lcs.append((losses, poes))
+    return numpy.array(lcs)
+
+
+def get_header(quantiles):
+    ls = ['asset_ref', 'mean']
+    for q in quantiles:
+        ls.append('quantile-%s' % q)
+    return ls
+
+
+class StatsTestCase(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        assets = [asset('a1', 101), asset('a2', 151), asset('a3', 91),
+                  asset('a4', 81)]
+        asset_refs = [a.id for a in assets]
+        outputs = []
+        weights = [0.3, 0.7]
+        baselosses = numpy.array([.10, .14, .17, .20, .21])
+        for i, w in enumerate(weights):
+            lc = loss_curves(assets, baselosses, i)
+            out = scientific.Output(asset_refs, 'structural', weight=w,
+                                    loss_curves=lc, insured_curves=None)
+            outputs.append(out)
+        cls.stats = scientific.StatsBuilder(
+            quantiles=[0.1, 0.9],
+            conditional_loss_poes=[0.35, 0.24, 0.13],
+            poes_disagg=[]).build(outputs)
+        cls.header = get_header(cls.stats.quantiles)
+        cls.tempdir = tempfile.mkdtemp()
+
+    def test_get_stat_curves(self):
+        curves, ins_curves, maps = scientific.get_stat_curves(self.stats)
+
+        actual = os.path.join(self.tempdir, 'expected_loss_curves.csv')
+        writers.save_csv(actual, [self.header] + curves, fmt='%05.2f')
+        tests.check_equal(__file__, 'expected_loss_curves.csv', actual)
+
+        actual = os.path.join(self.tempdir, 'expected_ins_curves.csv')
+        writers.save_csv(actual, [self.header] + ins_curves, fmt='%05.2f')
+        tests.check_equal(__file__, 'expected_ins_curves.csv', actual)
+
+        actual = os.path.join(self.tempdir, 'expected_loss_maps.csv')
+        writers.save_csv(actual, [maps[0]._fields] + maps, fmt='%05.2f')
+        tests.check_equal(__file__, 'expected_loss_maps.csv', actual)
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.tempdir)

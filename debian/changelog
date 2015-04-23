@@ -3,6 +3,8 @@
     and Ubuntu 14.04 (Trusty)
   
   [Michele Simionato]
+  * Introduced a DataStore class to save either generic pickled objects or
+    numpy arrays; if installed, it can use the h5py library
   * Extended the event_loss calculator to compute loss curves per asset and
     aggregated
   * Added an event_loss calculator which is able to compute the event loss

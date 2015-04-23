@@ -39,7 +39,7 @@ class ParseConfigTestCase(unittest.TestCase):
         site_model_input = general.writetmp(dir=temp_dir, content="foo")
         job_config = general.writetmp(dir=temp_dir, content="""
 [general]
-calculation_mode = classical
+calculation_mode = event_based
 [foo]
 bar = baz
 [site]
@@ -59,7 +59,7 @@ export_dir = %s
             expected_params = {
                 'export_dir': TMP,
                 'base_path': exp_base_path,
-                'calculation_mode': 'classical',
+                'calculation_mode': 'event_based',
                 'truncation_level': 0.0,
                 'random_seed': 0,
                 'maximum_distance': 1.0,
@@ -135,7 +135,7 @@ export_dir = %s
     def test_wrong_discretization(self):
         source = general.writetmp("""
 [general]
-calculation_mode = classical
+calculation_mode = event_based
 region = 27.685048 85.280857, 27.736719 85.280857, 27.733376 85.355358, 27.675015 85.355358
 region_grid_spacing = 5.0
 maximum_distance=1
