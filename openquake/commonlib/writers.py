@@ -61,7 +61,7 @@ def scientificformat(value, fmt='%13.9E', sep=' ', sep2=':'):
         return sep.join((scientificformat(f, fmt, sep2) for f in value))
     elif isinstance(value, float):
         return fmt % value
-    raise ValueError(value)
+    return str(value)
 
 
 class StreamingXMLWriter(object):
