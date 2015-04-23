@@ -20,13 +20,11 @@ import inspect
 import functools
 import collections
 import numpy
-from scipy import interpolate
 
 from openquake.baselib.general import CallableDict
 from openquake.commonlib import valid
 from openquake.risklib import utils, scientific
 
-Output = collections.namedtuple('Output', 'hid weight loss_type output')
 
 registry = CallableDict()
 
@@ -130,6 +128,26 @@ def get_values(loss_type, assets):
     return values
 
 
+def out_by_rlz(workflow, assets, hazards, epsilons, tags, loss_type):
+    """
+    :param workflow: a Workflow instance
+    :param assets: an array of assets of homogeneous taxonomy
+    :param hazards: an array of dictionaries per each asset
+    :param epsilons: an array of epsilons per each asset
+    :param tags: rupture tags
+
+    Yield lists out_by_rlz
+    """
+    out_by_rlz = []
+    for rlz in hazards[0]:
+        hazs = [haz[rlz] for haz in hazards]
+        out = workflow(loss_type, assets, hazs, epsilons, tags)
+        out.hid = rlz.ordinal
+        out.weight = rlz.weight
+        out_by_rlz.append(out)
+    return out_by_rlz
+
+
 class Workflow(object):
     """
     Base class. Can be used in the tests as a mock.
@@ -154,7 +172,7 @@ class Workflow(object):
         :param epsilons: an array of epsilons per each asset
         :param tags: rupture tags
 
-        Yield dictionaries out_by_rlz.
+        Yield lists out_by_rlz.
         """
         for loss_type in self.loss_types:
             assets_ = assets
@@ -173,13 +191,8 @@ class Workflow(object):
                 hazards = hazards[ok]
                 epsilons_ = epsilons[ok]
                 tags_ = tags[ok]
-
-            out_by_rlz = {}
-            for rlz in hazards[0]:
-                hazards_ = [haz[rlz] for haz in hazards]
-                out_by_rlz[rlz] = self(
-                    loss_type, assets_, hazards_, epsilons_, tags_)
-            yield out_by_rlz
+            yield out_by_rlz(
+                self, assets_, hazards, epsilons_, tags_, loss_type)
 
 
 @registry.add('classical_risk')
@@ -192,9 +205,7 @@ class Classical(Workflow):
     2) Compute (if more than one realization is given) mean and
        quantiles loss curves, maps and fractions.
 
-    Per-realization Output are saved into
-    :class:`openquake.risklib.scientific.Classical.Output` which contains
-    the several fields:
+    Per-realization Outputs contain the following fields:
 
     :attr assets:
       an iterable over N assets the outputs refer to
@@ -216,7 +227,7 @@ class Classical(Workflow):
       number of `poes_disagg`. Shape: (D, N)
 
     The statistical outputs are stored into
-    :class:`openquake.risklib.scientific.Classical.StatisticalOutput`,
+    :class:`openquake.risklib.scientific.Output`,
     which holds the following fields:
 
     :attr assets:
@@ -249,21 +260,6 @@ class Classical(Workflow):
     :attr quantile_average_insured_losses:
        A numpy array shaped (Q, N) with average insured losses
     """
-
-    Output = collections.namedtuple(
-        'Output',
-        'assets loss_type loss_curves average_losses '
-        'insured_curves average_insured_losses '
-        'loss_maps loss_fractions')
-
-    StatisticalOutput = collections.namedtuple(
-        'StatisticalOutput',
-        'assets mean_curves mean_average_losses '
-        'mean_maps mean_fractions quantile_curves quantile_average_losses '
-        'quantile_maps quantile_fractions '
-        'mean_insured_curves mean_average_insured_losses '
-        'quantile_insured_curves quantile_average_insured_losses')
-
     def __init__(self, imt, taxonomy, vulnerability_functions,
                  hazard_imtls, lrem_steps_per_interval,
                  conditional_loss_poes, poes_disagg,
@@ -325,66 +321,25 @@ class Classical(Workflow):
             insured_curves = None
             average_insured_losses = None
 
-        return self.Output(
-            assets, loss_type,
-            curves, average_losses, insured_curves, average_insured_losses,
-            maps, fractions)
+        return scientific.Output(
+            assets, loss_type, loss_curves=curves,
+            average_losses=average_losses, insured_curves=insured_curves,
+            average_insured_losses=average_insured_losses,
+            loss_maps=maps, loss_fractions=fractions)
 
     def statistics(self, all_outputs, quantiles):
         """
         :param quantiles:
             quantile levels used to compute quantile outputs
         :returns:
-            a :class:`openquake.risklib.scientific.Classical.StatisticalOutput`
+            a :class:`openquake.risklib.scientific.Output`
             instance holding statistical outputs (e.g. mean loss curves).
         """
         if len(all_outputs) == 1:  # single realization
             return
-
-        outputs = []
-        weights = []
-        loss_curves = []
-        for out in all_outputs:
-            outputs.append(out.output)
-            weights.append(out.weight)
-            loss_curves.append(out.output.loss_curves)
-
-        def normalize_curves(curves):
-            losses = curves[0][0]
-            return [losses, [poes for _losses, poes in curves]]
-
-        (mean_curves, mean_average_losses, mean_maps,
-         quantile_curves, quantile_average_losses, quantile_maps) = (
-            scientific.exposure_statistics(
-                [normalize_curves(curves) for curves
-                 in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
-                self.conditional_loss_poes + self.poes_disagg,
-                weights, quantiles))
-
-        if self.insured_losses:
-            loss_curves = [out.insured_curves for out in outputs]
-            (mean_insured_curves, mean_average_insured_losses, _,
-             quantile_insured_curves, quantile_average_insured_losses, _) = (
-                scientific.exposure_statistics(
-                    [normalize_curves(curves) for curves
-                     in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
-                    [], weights, quantiles))
-        else:
-            mean_insured_curves = None
-            mean_average_insured_losses = None
-            quantile_insured_curves = None
-            quantile_average_insured_losses = None
-
-        return self.StatisticalOutput(
-            outputs[0].assets,
-            mean_curves, mean_average_losses,
-            mean_maps[0:len(self.conditional_loss_poes)],
-            mean_maps[len(self.conditional_loss_poes):],
-            quantile_curves, quantile_average_losses,
-            quantile_maps[:, 0:len(self.conditional_loss_poes)],
-            quantile_maps[:, len(self.conditional_loss_poes):],
-            mean_insured_curves, mean_average_insured_losses,
-            quantile_insured_curves, quantile_average_insured_losses)
+        stats = scientific.StatsBuilder(
+            quantiles, self.conditional_loss_poes, self.poes_disagg)
+        return stats.build(all_outputs)
 
     def compute_all_outputs(self, getter, loss_type):
         """
@@ -397,9 +352,10 @@ class Classical(Workflow):
         """
         all_outputs = []
         for hazard in getter.get_hazards():  # for each realization
-            all_outputs.append(
-                Output(hazard.hid, hazard.weight, loss_type,
-                       self(loss_type, getter.assets, hazard.data)))
+            out = self(loss_type, getter.assets, hazard.data)
+            out.hid = hazard.hid
+            out.weight = hazard.weight
+            all_outputs.append(out)
         return all_outputs
 
 
@@ -446,24 +402,8 @@ class ProbabilisticEventBased(Workflow):
       a dictionary mapping event ids to aggregate loss values
 
     The statistical outputs are stored into
-    :class:`.ProbabilisticEventBased.StatisticalOutput`.
-    See :class:`openquake.risklib.scientific.Classical.StatisticalOutput` for
-    more details.
+    :class:`openquake.risklib.scientific.Output` objects.
     """
-    Output = collections.namedtuple(
-        'Output',
-        "assets loss_type loss_matrix loss_curves average_losses stddev_losses"
-        " insured_curves average_insured_losses stddev_insured_losses"
-        " loss_maps event_loss_table")
-
-    StatisticalOutput = collections.namedtuple(
-        'StatisticalOutput',
-        'assets mean_curves mean_average_losses '
-        'mean_maps quantile_curves quantile_average_losses quantile_maps '
-        'mean_insured_curves mean_average_insured_losses '
-        'quantile_insured_curves quantile_average_insured_losses '
-        'event_loss_table')
-
     def __init__(
             self, imt, taxonomy,
             vulnerability_functions,
@@ -552,13 +492,14 @@ class ProbabilisticEventBased(Workflow):
             insured_curves = None
             average_insured_losses = None
             stddev_insured_losses = None
-
-        return self.Output(
+        return scientific.Output(
             assets, loss_type,
-            loss_matrix if self.return_loss_matrix else None,
-            curves, average_losses, stddev_losses,
-            insured_curves, average_insured_losses, stddev_insured_losses,
-            maps, elt)
+            loss_matrix=loss_matrix if self.return_loss_matrix else None,
+            loss_curves=curves, average_losses=average_losses,
+            stddev_losses=stddev_losses, insured_curves=insured_curves,
+            average_insured_losses=average_insured_losses,
+            stddev_insured_losses=stddev_insured_losses,
+            loss_maps=maps, event_loss_table=elt)
 
     def compute_all_outputs(self, getter, loss_type):
         """
@@ -572,73 +513,28 @@ class ProbabilisticEventBased(Workflow):
         for hazard in getter.get_hazards():  # for each realization
             out = self(loss_type, getter.assets, hazard.data,
                        getter.get_epsilons(), getter.rupture_ids)
-            yield Output(hazard.hid, hazard.weight, loss_type, out)
+            out.hid = hazard.hid
+            out.weight = hazard.weight
+            yield out
 
     def statistics(self, all_outputs, quantiles):
         """
         :returns:
-            a :class:`.ProbabilisticEventBased.StatisticalOutput`
+            a :class:`openquake.risklib.scientific.Output`
             instance holding statistical outputs (e.g. mean loss curves).
         :param quantiles:
             quantile levels used to compute quantile outputs
         """
         if len(all_outputs) == 1:  # single realization
             return
-
-        outputs = []
-        weights = []
-        loss_curves = []
-        for out in all_outputs:
-            outputs.append(out.output)
-            weights.append(out.weight)
-            loss_curves.append(out.output.loss_curves)
-
-        curve_matrix = numpy.array(loss_curves).transpose(1, 0, 2, 3)
-
-        (mean_curves, mean_average_losses, mean_maps,
-         quantile_curves, quantile_average_losses, quantile_maps) = (
-            scientific.exposure_statistics(
-                [self._normalize_curves(curves) for curves in curve_matrix],
-                self.conditional_loss_poes, weights, quantiles))
-        elt = sum((out.event_loss_table for out in outputs),
-                  collections.Counter())
-
-        if self.insured_losses:
-            loss_curves = [out.insured_curves for out in outputs]
-            (mean_insured_curves, mean_average_insured_losses, _,
-             quantile_insured_curves, quantile_average_insured_losses, _) = (
-                scientific.exposure_statistics(
-                    [self._normalize_curves(curves)
-                     for curves
-                     in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
-                    [], weights, quantiles))
-        else:
-            mean_insured_curves = None
-            mean_average_insured_losses = None
-            quantile_insured_curves = None
-            quantile_average_insured_losses = None
-
-        return self.StatisticalOutput(
-            outputs[0].assets, mean_curves, mean_average_losses, mean_maps,
-            quantile_curves, quantile_average_losses, quantile_maps,
-            mean_insured_curves, mean_average_insured_losses,
-            quantile_insured_curves, quantile_average_insured_losses,
-            elt)
-
-    def _normalize_curves(self, curves):
-        non_trivial_curves = [(losses, poes)
-                              for losses, poes in curves if losses[-1] > 0]
-        if not non_trivial_curves:  # no damage. all trivial curves
-            return curves[0][0], [poes for _losses, poes in curves]
-        else:  # standard case
-            max_losses = [losses[-1]  # we assume non-decreasing losses
-                          for losses, _poes in non_trivial_curves]
-            reference_curve = non_trivial_curves[numpy.argmax(max_losses)]
-            loss_ratios = reference_curve[0]
-            curves_poes = [interpolate.interp1d(
-                losses, poes, bounds_error=False, fill_value=0)(loss_ratios)
-                for losses, poes in curves]
-        return loss_ratios, curves_poes
+        stats = scientific.StatsBuilder(
+            quantiles, self.conditional_loss_poes, [],
+            scientific.normalize_curves_eb)
+        out = stats.build(all_outputs)
+        out.event_loss_table = sum(
+            (out.event_loss_table for out in all_outputs),
+            collections.Counter())
+        return out
 
 
 @registry.add('event_loss')
@@ -657,9 +553,6 @@ class EventLoss(ProbabilisticEventBased):
       a dictionary mapping event ids to aggregate loss values
 
     """
-    Output = collections.namedtuple(
-        'Output', "assets loss_type event_loss_per_asset tags")
-
     def __call__(self, loss_type, assets, ground_motion_values, epsilons,
                  event_ids):
         """
@@ -687,7 +580,8 @@ class EventLoss(ProbabilisticEventBased):
             ground_motion_values, epsilons)
         values = utils.numpy_map(lambda a: a.value(loss_type), assets)
         ela = loss_matrix.T * values  # matrix with R x N elements
-        return self.Output(assets, loss_type, ela, event_ids)
+        return scientific.Output(assets, loss_type, event_loss_per_asset=ela,
+                                 tags=event_ids)
 
 
 @registry.add('classical_bcr')
@@ -737,7 +631,9 @@ class ClassicalBCR(Workflow):
                 asset.value(loss_type), asset.retrofitted(loss_type))
             for i, asset in enumerate(assets)]
 
-        return zip(eal_original, eal_retrofitted, bcr_results)
+        return scientific.Output(
+            assets, loss_type,
+            data=zip(eal_original, eal_retrofitted, bcr_results))
 
     compute_all_outputs = Classical.compute_all_outputs.im_func
 
@@ -788,7 +684,9 @@ class ProbabilisticEventBasedBCR(Workflow):
                 asset.value(loss_type), asset.retrofitted(loss_type))
             for i, asset in enumerate(assets)]
 
-        return zip(eal_original, eal_retrofitted, bcr_results)
+        return scientific.Output(
+            assets, loss_type,
+            data=zip(eal_original, eal_retrofitted, bcr_results))
 
     compute_all_outputs = ProbabilisticEventBased.compute_all_outputs.im_func
 
@@ -798,11 +696,6 @@ class Scenario(Workflow):
     """
     Implements the Scenario workflow
     """
-    Output = collections.namedtuple(
-        'Output',
-        "assets loss_type loss_matrix aggregate_losses "
-        "insured_loss_matrix insured_losses")
-
     def __init__(self, imt, taxonomy, vulnerability_functions, insured_losses):
         self.imt = imt
         self.taxonomy = taxonomy
@@ -834,9 +727,11 @@ class Scenario(Workflow):
         else:
             insured_loss_matrix = None
             insured_losses = None
-        return self.Output(
-            assets, loss_type, loss_ratio_matrix, aggregate_losses,
-            insured_loss_matrix, insured_losses)
+        return scientific.Output(
+            assets, loss_type, loss_matrix=loss_ratio_matrix,
+            aggregate_losses=aggregate_losses,
+            insured_loss_matrix=insured_loss_matrix,
+            insured_losses=insured_losses)
 
 
 @registry.add('scenario_damage')
@@ -863,7 +758,7 @@ class Damage(Workflow):
         damages = numpy.array(
             [[scientific.scenario_damage(ffs, gmv) for gmv in gmvs]
              for gmvs in gmfs])
-        return assets, damages
+        return scientific.Output(assets, 'damage', damages=damages)
 
     def gen_out_by_rlz(self, assets, hazards, epsilons, tags):
         """
@@ -872,13 +767,9 @@ class Damage(Workflow):
         :param epsilons: an array of epsilons per each asset
         :param tags: rupture tags
 
-        Yield dictionaries out_by_rlz
+        Yield a single list of outputs
         """
-        out_by_rlz = {}
-        for rlz in hazards[0]:
-            hazs = [haz[rlz] for haz in hazards]
-            out_by_rlz[rlz] = self('damage', assets, hazs, epsilons, tags)
-        yield out_by_rlz
+        yield out_by_rlz(self, assets, hazards, epsilons, tags, 'damage')
 
 
 @registry.add('classical_damage')
@@ -886,8 +777,6 @@ class ClassicalDamage(Damage):
     """
     Implements the ClassicalDamage workflow
     """
-    Output = collections.namedtuple('Output', "assets damages")
-
     def __init__(self, imt, taxonomy, fragility_functions,
                  hazard_imtls, hazard_investigation_time,
                  risk_investigation_time):
@@ -913,7 +802,7 @@ class ClassicalDamage(Damage):
         fractions = utils.numpy_map(self.curves, hazard_curves)
         damages = [asset.number * fraction
                    for asset, fraction in zip(assets, fractions)]
-        return self.Output(assets, damages)
+        return scientific.Output(assets, 'damage', damages=damages)
 
     compute_all_outputs = Classical.compute_all_outputs.im_func
 
