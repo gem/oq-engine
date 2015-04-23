@@ -90,13 +90,11 @@ class DataStore(collections.MutableMapping):
     They will be automatically invoked when the key is accessed.
 
     It possible to store numpy arrays in HDF5 format, if the library h5py is
-    installed and if the last field of the key is 'h5'. If the arrays do not
-    fit in memory, you can split them in several items of the form
-    (name, value) where name is a string and value is a subarray that fits
-    in memory. You can save an item generator, but the last field of the key
-    must be 'hdf5'. When reading the items, the DataStore will return a
-    generator. The items will be ordered lexicographically according
-    to their name.
+    installed and if the last field of the key is 'h5'. It is also possible
+    to store items of the form (name, value) where name is a string and value
+    is an array, and the last field of the key is 'hdf5'. When reading the
+    items, the DataStore will return a generator. The items will be ordered
+    lexicographically according to their name.
     """
     def __init__(self, calc_id=None, oqdir=OQDIR):
         if not os.path.exists(oqdir):
@@ -125,6 +123,23 @@ class DataStore(collections.MutableMapping):
         if key:
             return os.path.getsize(self.path(key))
         return sum(os.path.getsize(self.path(key)) for key in self)
+
+    def dataset(self, key, shape=None, dtype=None):
+        """
+        Extracts the HDF5 dataset underlying the given key. It only works for
+        keys ending with the string 'h5'. If the shape is not None, it tries
+        to create and return a new dataset.
+        """
+        if key[-1] != 'h5':
+            raise ValueError('The dset method can only be used with '
+                             'keys of kind "h5", got %s' % repr(key))
+        if shape:  # create an empty dataset
+            if not os.path.exists(self.calc_dir):
+                os.mkdir(self.calc_dir)
+            h5f = h5py.File(self.path(key), libver='latest')
+            return h5f.create_dataset('dset', shape, dtype)
+        # else return an already created dataset
+        return h5py.File(self.path(key))['dset']
 
     def __getitem__(self, key):
         if key[-1] == 'h5':
