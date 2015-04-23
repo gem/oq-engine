@@ -599,7 +599,7 @@ def dict_to_array(dic):
     for k in sorted(dic):
         val = dic[k]
         try:
-            pair = (k, (float, len(val)))
+            pair = (k, float, len(val))
         except:  # val has no len
             pair = (k, float)
         descr.append(pair)
