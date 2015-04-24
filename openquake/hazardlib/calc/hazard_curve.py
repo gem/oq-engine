@@ -28,7 +28,7 @@ from openquake.hazardlib.gsim.base import deprecated
 
 @deprecated('Use calc_hazard_curves instead')
 def hazard_curves(
-        sources, sites, imts, gsims, truncation_level,
+        sources, sites, imtls, gsims, truncation_level,
         source_site_filter=filters.source_site_noop_filter,
         rupture_site_filter=filters.rupture_site_noop_filter):
     """
@@ -37,13 +37,12 @@ def hazard_curves(
     with the only difference that the intensity measure types in input
     and output are hazardlib objects instead of simple strings.
     """
-    imtls = {str(imt): imls for imt, imls in imts.iteritems()}
+    imtls = {str(imt): imls for imt, imls in imtls.iteritems()}
     curves_by_imt = calc_hazard_curves(
         sources, sites, imtls, gsims, truncation_level,
         source_site_filter=filters.source_site_noop_filter,
         rupture_site_filter=filters.rupture_site_noop_filter)
-    return {from_string(imt): curves
-            for imt, curves in curves_by_imt.iteritems()}
+    return {from_string(imt): curves_by_imt[imt] for imt in imtls}
 
 
 def calc_hazard_curves(
