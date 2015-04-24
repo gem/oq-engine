@@ -237,7 +237,7 @@ _pkgbuild_innervm_run () {
     ssh $lxc_ip "cd build-deb && dpkg-buildpackage $DPBP_FLAG"
     echo "MOP: HERE FOR TEST"
     pwd
-    scp -r ${lxc_ip}:*.{tar.gz,deb,changes,dsc} "../out_${BUILD_UBUVER}/"
+    scp -r ${lxc_ip}:*.{tar.gz,deb,changes,dsc} ..
 
     return
 }
