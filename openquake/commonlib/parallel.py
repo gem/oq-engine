@@ -518,6 +518,9 @@ class PerformanceMonitor(object):
         vars(new).update(kw)
         return new
 
+    def __repr__(self):
+        return '<%s duration=%s>' % (self.__class__.__name__, self.duration)
+
 
 class DummyMonitor(PerformanceMonitor):
     """

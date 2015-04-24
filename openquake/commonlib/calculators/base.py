@@ -27,6 +27,7 @@ from openquake.hazardlib.geo import geodetic
 
 from openquake.baselib import general
 from openquake.commonlib import readinput, datastore
+from openquake.commonlib.calculators.calc import expand
 from openquake.commonlib.parallel import apply_reduce, DummyMonitor, executor
 from openquake.risklib import riskinput
 
@@ -151,8 +152,11 @@ class HazardCalculator(BaseCalculator):
         :param kw: extras to add to the output dictionary
         :returns: a dictionary with the saved data
         """
+        sites = getattr(self, 'sites', self.sitecol)  # in the scenario
+        # calculator there is an attribute sites which is a subcollection
+        # of the full site collection
         haz_out = dict(rlzs_assoc=self.rlzs_assoc,
-                       sitecol=self.sitecol, oqparam=self.oqparam)
+                       sites=sites, oqparam=self.oqparam)
         haz_out[self.result_kind] = result
         haz_out.update(kw)
         logging.info('Saving hazard output on %s', self.datastore.calc_dir)
@@ -325,3 +329,55 @@ class RiskCalculator(BaseCalculator):
         with self.monitor('saving risk outputs', autoflush=True):
             self.datastore.update(self.risk_out)
         return self.risk_out
+
+
+# functions useful for the calculators ScenarioDamage and ScenarioRisk
+
+def get_gmfs(calc):
+    """
+    :param calc: a ScenarioDamage or ScenarioRisk calculator
+    :returns: a dictionary of gmfs
+    """
+    if 'gmfs' in calc.oqparam.inputs:  # from file
+        gmfs = read_gmfs_from_csv(calc)
+    else:  # from rupture
+        gmfs = compute_gmfs(calc)
+    return gmfs
+
+
+def compute_gmfs(calc):
+    """
+    :returns: riskinputs
+    """
+    logging.info('Computing the GMFs')
+    haz_out, hcalc = get_hazard(calc)
+    gmfs_by_trt_gsim = expand(haz_out['gmfs_by_trt_gsim'], haz_out['sites'])
+
+    logging.info('Preparing the risk input')
+    calc.rlzs_assoc = haz_out['rlzs_assoc']
+    return gmfs_by_trt_gsim
+
+
+def read_gmfs_from_csv(calc):
+    """
+    :returns: riskinputs
+    """
+    logging.info('Reading hazard curves from CSV')
+    sitecol, gmfs_by_imt = readinput.get_sitecol_gmfs(calc.oqparam)
+
+    # filter the hazard sites by taking the closest to the assets
+    with calc.monitor('assoc_assets_sites'):
+        calc.sitecol, calc.assets_by_site = calc.assoc_assets_sites(
+            sitecol)
+
+    # reduce the gmfs matrices to the filtered sites
+    for imt in gmfs_by_imt:
+        gmfs_by_imt[imt] = gmfs_by_imt[imt][calc.sitecol.indices]
+
+    num_assets = sum(len(assets) for assets in calc.assets_by_site)
+    num_sites = len(calc.sitecol)
+    logging.info('Associated %d assets to %d sites', num_assets, num_sites)
+
+    logging.info('Preparing the risk input')
+    calc.rlzs_assoc = riskinput.FakeRlzsAssoc(num_rlzs=1)
+    return {(0, 'FromCsv'): gmfs_by_imt}

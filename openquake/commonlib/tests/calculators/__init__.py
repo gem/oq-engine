@@ -44,13 +44,14 @@ class CalculatorTestCase(unittest.TestCase):
         """
         Return the outputs of the calculation as a dictionary
         """
-        self.testdir = os.path.dirname(testfile)
+        self.testdir = os.path.dirname(testfile) if os.path.isfile(testfile) \
+            else testfile
         inis = [os.path.join(self.testdir, ini) for ini in job_ini.split(',')]
         params = readinput.get_params(inis)
+        kw.setdefault('usecache', '0')
         params.update(kw)
         oq = oqvalidation.OqParam(**params)
         oq.validate()
-        oq.usecache = False
         # change this when debugging the test
         monitor = PerformanceMonitor(
             self.testdir,
