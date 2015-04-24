@@ -65,8 +65,6 @@ if [ "$GEM_EPHEM_NAME" = "" ]; then
     GEM_EPHEM_NAME="ubuntu-lxc-eph"
 fi
 
-LSB_RELEASE=$(lsb_release --codename --short)
-
 if command -v lxc-shutdown &> /dev/null; then
     # Older lxc (< 1.0.0) with lxc-shutdown
     LXC_TERM="lxc-shutdown -t 10 -w"
@@ -526,8 +524,8 @@ _pkgtest_innervm_run () {
 deps_list() {
     local old_ifs out_list skip i d listtype="$1" filename="$2"
 
-    rules_dep=$(grep "^${LSB_RELEASE^^}_DEP =" debian/rules | cut -d '"' -f 2 | tr -d ",")
-    rules_rec=$(grep "^${LSB_RELEASE^^}_REC =" debian/rules | cut -d '"' -f 2 | tr -d ",")
+    rules_dep=$(grep "^${BUILD_UBUVER^^}_DEP =" debian/rules | cut -d '"' -f 2 | tr -d ",")
+    rules_rec=$(grep "^${BUILD_UBUVER^^}_REC =" debian/rules | cut -d '"' -f 2 | tr -d ",")
 
     out_list=""
     if [ "$listtype" = "all" ]; then
@@ -744,9 +742,9 @@ pkgtest_run () {
     dpkg-scansources . > Sources
     cat Sources | gzip > Sources.gz
     cat > Release <<EOF
-Archive: $LSB_RELEASE
+Archive: $BUILD_UBUVER
 Origin: Ubuntu
-Label: Local Ubuntu ${LSB_RELEASE^} Repository
+Label: Local Ubuntu ${BUILD_UBUVER^} Repository
 Architecture: amd64
 MD5Sum:
 EOF
