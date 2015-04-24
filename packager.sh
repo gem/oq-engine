@@ -90,9 +90,9 @@ sig_hand () {
     echo "signal trapped"
     if [ "$lxc_name" != "" ]; then
         set +e
-        scp "${lxc_ip}:/var/tmp/openquake-db-installation" openquake-db-installation
-        scp "${lxc_ip}:/tmp/celeryd.log" celeryd.log
-        scp "${lxc_ip}:ssh.log" ssh.history
+        scp "${lxc_ip}:/var/tmp/openquake-db-installation" "out_${BUILD_UBUVER}/openquake-db-installation"
+        scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
+        scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/ssh.history"
         echo "Destroying [$lxc_name] lxc"
         upper="$(mount | grep "${lxc_name}.*upperdir" | sed 's@.*upperdir=@@g;s@,.*@@g')"
         if [ -f "${upper}.dsk" ]; then
@@ -235,7 +235,7 @@ _pkgbuild_innervm_run () {
     ssh $lxc_ip "sudo mk-build-deps --install --tool 'apt-get -y' build-deb/debian/control"
 
     ssh $lxc_ip "cd build-deb && dpkg-buildpackage $DPBP_FLAG"
-    scp -r $lxc_ip:*.{tar.gz,deb,changes,dsc} ../
+    scp -r ${lxc_ip}:*.{tar.gz,deb,changes,dsc} "../out_${BUILD_UBUVER}/"
 
     return
 }
@@ -370,8 +370,8 @@ celeryd_wait $GEM_MAXLOOP"
 
                  python-coverage xml --include=\"openquake/*\"
         "
-        scp "${lxc_ip}:oq-engine/xunit-*.xml" . || true
-        scp "${lxc_ip}:oq-engine/coverage.xml" . || true
+        scp "${lxc_ip}:oq-engine/xunit-*.xml" "out_${BUILD_UBUVER}/" || true
+        scp "${lxc_ip}:oq-engine/coverage.xml" "out_${BUILD_UBUVER}/" || true
     else
         if [ -d $HOME/fake-data/oq-engine ]; then
             cp $HOME/fake-data/oq-engine/* . || true
@@ -506,9 +506,9 @@ _pkgtest_innervm_run () {
         done"
     fi
     ssh $lxc_ip "oq-engine --make-html-report today"
-    scp "${lxc_ip}:jobs-*.html" .
+    scp "${lxc_ip}:jobs-*.html" "out_${BUILD_UBUVER}/"
 
-    scp -r "$lxc_ip:/usr/share/doc/${GEM_DEB_PACKAGE}/changelog*" .
+    scp -r "${lxc_ip}:/usr/share/doc/${GEM_DEB_PACKAGE}/changelog*" "out_${BUILD_UBUVER}/"
 
     trap ERR
 
@@ -635,6 +635,9 @@ deps_check_or_clone () {
 devtest_run () {
     local deps old_ifs branch_id="$1"
 
+    if [ ! -d "out_${BUILD_UBUVER}" ]; then
+        mkdir "out_${BUILD_UBUVER}"
+    fi
     if [ ! -d _jenkins_deps ]; then
         mkdir _jenkins_deps
     fi
@@ -695,9 +698,9 @@ devtest_run () {
     _devtest_innervm_run "$branch_id" "$lxc_ip"
     inner_ret=$?
 
-    scp "${lxc_ip}:/var/tmp/openquake-db-installation" openquake-db-installation.dev || true
-    scp "${lxc_ip}:/tmp/celeryd.log" celeryd.log
-    scp "${lxc_ip}:ssh.log" devtest.history
+    scp "${lxc_ip}:/var/tmp/openquake-db-installation" "out_${BUILD_UBUVER}/openquake-db-installation.dev" || true
+    scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
+    scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/devtest.history"
 
     sudo $LXC_TERM -n $lxc_name
 
@@ -721,6 +724,10 @@ devtest_run () {
 #
 pkgtest_run () {
     local i e branch_id="$1"
+
+    if [ ! -d "out_${BUILD_UBUVER}" ]; then
+        mkdir "out_${BUILD_UBUVER}"
+    fi
 
     #
     #  run build of package
@@ -769,9 +776,9 @@ EOF
     _pkgtest_innervm_run $lxc_ip
     inner_ret=$?
 
-    scp "${lxc_ip}:/var/tmp/openquake-db-installation" openquake-db-installation.pkg || true
-    scp "${lxc_ip}:/tmp/celeryd.log" celeryd.log
-    scp "${lxc_ip}:ssh.log" pkgtest.history
+    scp "${lxc_ip}:/var/tmp/openquake-db-installation" "out_${BUILD_UBUVER}/openquake-db-installation.pkg" || true
+    scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
+    scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/pkgtest.history"
 
     sudo $LXC_TERM -n $lxc_name
     set -e
