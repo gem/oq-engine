@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2014, GEM Foundation
+#  Copyright (c) 2014-2015, GEM Foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -16,20 +16,18 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import abc
 import logging
 import operator
 import collections
-import cPickle
 
 import numpy
 
 from openquake.hazardlib.geo import geodetic
 
 from openquake.baselib import general
-from openquake.commonlib import readinput
-from openquake.commonlib.calculators import calc
+from openquake.commonlib import readinput, datastore
+from openquake.commonlib.calculators.calc import expand
 from openquake.commonlib.parallel import apply_reduce, DummyMonitor, executor
 from openquake.risklib import riskinput
 
@@ -54,6 +52,7 @@ class BaseCalculator(object):
     def __init__(self, oqparam, monitor=DummyMonitor()):
         self.oqparam = oqparam
         self.monitor = monitor
+        self.datastore = datastore.DataStore()
         if not hasattr(oqparam, 'concurrent_tasks'):
             oqparam.concurrent_tasks = executor.num_tasks_hint
 
@@ -153,16 +152,16 @@ class HazardCalculator(BaseCalculator):
         :param kw: extras to add to the output dictionary
         :returns: a dictionary with the saved data
         """
+        sites = getattr(self, 'sites', self.sitecol)  # in the scenario
+        # calculator there is an attribute sites which is a subcollection
+        # of the full site collection
         haz_out = dict(rlzs_assoc=self.rlzs_assoc,
-                       sites=getattr(self, 'sites', self.sitecol),
-                       oqparam=self.oqparam)
+                       sites=sites, oqparam=self.oqparam)
         haz_out[self.result_kind] = result
         haz_out.update(kw)
-        cache = os.path.join(self.oqparam.export_dir, 'hazard.pik')
-        logging.info('Saving hazard output on %s', cache)
+        logging.info('Saving hazard output on %s', self.datastore.calc_dir)
         with self.monitor('saving hazard', autoflush=True):
-            with open(cache, 'w') as f:
-                cPickle.dump(haz_out, f)
+            self.datastore.update(haz_out)
         return haz_out
 
 
@@ -173,12 +172,10 @@ def get_hazard(calculator, exports=''):
     :param calculator: a calculator with a .hazard_calculator attribute
     :returns: a pair (hazard output, hazard_calculator)
     """
-    cache = os.path.join(calculator.oqparam.export_dir, 'hazard.pik')
     hcalc = calculators[calculator.hazard_calculator](
         calculator.oqparam, calculator.monitor('hazard'))
     if calculator.oqparam.usecache:
-        with open(cache) as f:
-            haz_out = cPickle.load(f)
+        haz_out = hcalc.datastore
     else:
         haz_out = hcalc.run(exports=exports)
 
@@ -328,63 +325,59 @@ class RiskCalculator(BaseCalculator):
         """Save the risk outputs"""
         self.risk_out[self.result_kind] = result
         self.risk_out.update(kw)
-        cache = os.path.join(self.oqparam.export_dir, 'risk.pik')
-        logging.info('Saving risk output on %s', cache)
+        logging.info('Saving risk output on %s', self.datastore.calc_dir)
         with self.monitor('saving risk outputs', autoflush=True):
-            with open(cache, 'w') as f:
-                cPickle.dump(self.risk_out, f)
+            self.datastore.update(self.risk_out)
         return self.risk_out
 
 
 # functions useful for the calculators ScenarioDamage and ScenarioRisk
 
-
-def get_gmfs(self):
+def get_gmfs(calc):
     """
-    :param self: a ScenarioDamage or ScenarioRisk selfulator
+    :param calc: a ScenarioDamage or ScenarioRisk calculator
     :returns: a dictionary of gmfs
     """
-    if 'gmfs' in self.oqparam.inputs:  # from file
-        gmfs = read_gmfs_from_csv(self)
+    if 'gmfs' in calc.oqparam.inputs:  # from file
+        gmfs = read_gmfs_from_csv(calc)
     else:  # from rupture
-        gmfs = compute_gmfs(self)
+        gmfs = compute_gmfs(calc)
     return gmfs
 
 
-def compute_gmfs(self):
+def compute_gmfs(calc):
     """
     :returns: riskinputs
     """
     logging.info('Computing the GMFs')
-    haz_out, hself = get_hazard(self)
-    gmfs_by_trt_gsim = calc.expand(
-        haz_out['gmfs_by_trt_gsim'], haz_out['sites'])
+    haz_out, hcalc = get_hazard(calc)
+    gmfs_by_trt_gsim = expand(haz_out['gmfs_by_trt_gsim'], haz_out['sites'])
 
     logging.info('Preparing the risk input')
-    self.rlzs_assoc = haz_out['rlzs_assoc']
+    calc.rlzs_assoc = haz_out['rlzs_assoc']
     return gmfs_by_trt_gsim
 
 
-def read_gmfs_from_csv(self):
+def read_gmfs_from_csv(calc):
     """
     :returns: riskinputs
     """
     logging.info('Reading hazard curves from CSV')
-    sitecol, gmfs_by_imt = readinput.get_sitecol_gmfs(self.oqparam)
+    sitecol, gmfs_by_imt = readinput.get_sitecol_gmfs(calc.oqparam)
 
     # filter the hazard sites by taking the closest to the assets
-    with self.monitor('assoc_assets_sites'):
-        self.sitecol, self.assets_by_site = self.assoc_assets_sites(
+    with calc.monitor('assoc_assets_sites'):
+        calc.sitecol, calc.assets_by_site = calc.assoc_assets_sites(
             sitecol)
 
     # reduce the gmfs matrices to the filtered sites
     for imt in gmfs_by_imt:
-        gmfs_by_imt[imt] = gmfs_by_imt[imt][self.sitecol.indices]
+        gmfs_by_imt[imt] = gmfs_by_imt[imt][calc.sitecol.indices]
 
-    num_assets = sum(len(assets) for assets in self.assets_by_site)
-    num_sites = len(self.sitecol)
+    num_assets = sum(len(assets) for assets in calc.assets_by_site)
+    num_sites = len(calc.sitecol)
     logging.info('Associated %d assets to %d sites', num_assets, num_sites)
 
     logging.info('Preparing the risk input')
-    self.rlzs_assoc = riskinput.FakeRlzsAssoc(num_rlzs=1)
+    calc.rlzs_assoc = riskinput.FakeRlzsAssoc(num_rlzs=1)
     return {(0, 'FromCsv'): gmfs_by_imt}
