@@ -524,18 +524,18 @@ _pkgtest_innervm_run () {
 deps_list() {
     local old_ifs out_list skip i d listtype="$1" filename="$2"
 
-    rules_dep=$(grep "^${BUILD_UBUVER^^}_DEP =" debian/rules | cut -d '"' -f 2 | tr -d ",")
-    rules_rec=$(grep "^${BUILD_UBUVER^^}_REC =" debian/rules | cut -d '"' -f 2 | tr -d ",")
+    rules_dep=$(grep "^${BUILD_UBUVER^^}_DEP =" debian/rules | cut -d '"' -f 2)
+    rules_rec=$(grep "^${BUILD_UBUVER^^}_REC =" debian/rules | cut -d '"' -f 2)
 
     out_list=""
     if [ "$listtype" = "all" ]; then
-        in_list="$(cat "$filename" | egrep '^Depends:|^Recommends:|Build-Depends:' | sed 's/^\(Build-\)\?Depends://g;s/^Recommends://g' | tr '\n' ',') $rules_dep $rules_rec"
+        in_list="$((cat "$filename" | egrep '^Depends:|^Recommends:|Build-Depends:' | sed 's/^\(Build-\)\?Depends://g;s/^Recommends://g' ; echo ", $rules_dep, $rules_rec") | tr '\n' ','| sed 's/,\+/,/g')"
     elif [  "$listtype" = "deprec" ]; then
-        in_list="$(cat "$filename" | egrep '^Depends:|^Recommends:' | sed 's/^Depends://g;s/^Recommends://g' | tr '\n' ',') $rules_dep $rules_rec"
+        in_list="$((cat "$filename" | egrep '^Depends:|^Recommends:' | sed 's/^Depends://g;s/^Recommends://g' ; echo ", $rules_dep, $rules_rec") | tr '\n' ','| sed 's/,\+/,/g')"
     elif [  "$listtype" = "build" ]; then
-        in_list="$(cat "$filename" | egrep '^Depends:|^Build-Depends:' | sed 's/^\(Build-\)\?Depends://g' | tr '\n' ',') $rules_dep"
+        in_list="$((cat "$filename" | egrep '^Depends:|^Build-Depends:' | sed 's/^\(Build-\)\?Depends://g' ; echo ", $rules_dep") | tr '\n' ','| sed 's/,\+/,/g')"
     else
-        in_list="$(cat "$filename" | egrep "^Depends:" | sed 's/^Depends: //g') $rules_dep"
+        in_list="$((cat "$filename" | egrep "^Depends:" | sed 's/^Depends: //g'; echo ", $rules_dep") | tr '\n' ','| sed 's/,\+/,/g')"
     fi
 
     old_ifs="$IFS"
