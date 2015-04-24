@@ -1057,10 +1057,10 @@ fi
 cd -
 
 # if the monotone directory exists and is the "gem" repo and is the "master" branch then ...
-if [ -d "${GEM_DEB_MONOTONE}/source" -a $BUILD_SOURCES_COPY -eq 1 ]; then
+if [ -d "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/source" -a $BUILD_SOURCES_COPY -eq 1 ]; then
     cp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.changes \
         ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.dsc ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.tar.gz \
-        "${GEM_DEB_MONOTONE}/source"
+        "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/source"
 fi
 
 if [ $BUILD_DEVEL -ne 1 ]; then
