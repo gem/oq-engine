@@ -34,16 +34,18 @@ except ImportError:
 
 OQDIR = os.environ.get('OQ_DIRECTORY', os.path.expanduser('~/oqlite'))
 
+CALCDIR = re.compile(r'calc_(\d+)')
+
 
 def get_last_calc_id(oqdir=OQDIR):
     """
     Extract the latest calculation ID from the given directory.
     If none is found, return 0.
     """
-    calcs = [f for f in os.listdir(OQDIR) if re.match('calc_\d+', f)]
+    calcs = [f for f in os.listdir(OQDIR) if CALCDIR.match(f)]
     if not calcs:
         return 0
-    calc_ids = [int(calc[5:]) for calc in calcs]  # strip calc_
+    calc_ids = [int(CALCDIR.match(calc).group(1)) for calc in calcs]
     return max(calc_ids)
 
 
@@ -53,10 +55,9 @@ def key2str(key):
     ASCII string.
     """
     if isinstance(key, basestring):
-        # temporarily removed check
-        # if '-' in key:
-        #     raise KeyError('The key %s is invalid since it contains a dash'
-        #                    % key)
+        if '-' in key:
+            raise KeyError('The key %s is invalid since it contains a dash'
+                           % key)
         return str(key)
     return '-'.join(key)
 
@@ -74,10 +75,6 @@ class DataStore(collections.MutableMapping):
     filesystem. It works like a mapping; composite keys ending with
     "h5" are associated to .hdf5 files; other keys are associated
     to .pik files containing pickled objects.
-
-    NB: the calc_dir is created only at the first attempt to write on it,
-    so there is potentially a race condition if the client code does not pass
-    an unique calc_id and relies on the DataStore to create it.
 
     Here is a minimal example of usage:
 
@@ -102,6 +99,8 @@ class DataStore(collections.MutableMapping):
             os.makedirs(oqdir)
         self.calc_id = calc_id or (get_last_calc_id(oqdir) + 1)
         self.calc_dir = os.path.join(oqdir, 'calc_%s' % self.calc_id)
+        if not os.path.exists(self.calc_dir):
+            os.mkdir(self.calc_dir)
 
     def path(self, key):
         """
@@ -125,22 +124,15 @@ class DataStore(collections.MutableMapping):
             return os.path.getsize(self.path(key))
         return sum(os.path.getsize(self.path(key)) for key in self)
 
-    def dataset(self, key, shape=None, dtype=None):
+    def h5file(self, key):
         """
         Extracts the HDF5 dataset underlying the given key. It only works for
         keys ending with the string 'h5'. If the shape is not None, it tries
         to create and return a new dataset.
         """
-        if key[-1] != 'h5':
-            raise ValueError('The dset method can only be used with '
-                             'keys of kind "h5", got %s' % repr(key))
-        if shape:  # create an empty dataset
-            if not os.path.exists(self.calc_dir):
-                os.mkdir(self.calc_dir)
-            h5f = h5py.File(self.path(key), libver='latest')
-            return h5f.create_dataset('dset', shape, dtype)
-        # else return an already created dataset
-        return h5py.File(self.path(key))['dset']
+        if key[-1] not in ('h5', 'hdf5'):
+            raise ValueError('Not an hf5 key: %s' % str(key))
+        return h5py.File(self.path(key), libver='latest')
 
     def __getitem__(self, key):
         if key[-1] == 'h5':
@@ -155,18 +147,16 @@ class DataStore(collections.MutableMapping):
             return value
 
     def _get_hdf5_items(self, key):
-        with h5py.File(self.path(key), 'r') as h5f:
+        with self.h5file(key) as h5f:
             for dset, data in sorted(h5f.iteritems()):
                 yield dset, data[:]
 
     def _set_hdf5_items(self, key, items):
-        with h5py.File(self.path(key), 'w', libver='latest') as h5f:
+        with self.h5file(key) as h5f:
             for dset, data in items:
                 h5f.create_dataset(dset, data=data)
 
     def __setitem__(self, key, value):
-        if not os.path.exists(self.calc_dir):
-            os.mkdir(self.calc_dir)
         if key[-1] == 'h5':
             if not isinstance(value, numpy.ndarray):
                 raise ValueError('%r is not a numpy array' % value)
@@ -188,6 +178,9 @@ class DataStore(collections.MutableMapping):
                 yield str2key(f[:-3]) + ('h5',)
             elif f.endswith('.hdf5'):
                 yield str2key(f[:-5]) + ('hdf5',)
+
+    def __contains__(self, key):
+        return key in set(self)
 
     def __len__(self):
         return sum(1 for f in os.listdir(self.calc_dir)
