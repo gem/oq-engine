@@ -685,6 +685,9 @@ devtest_run () {
         echo "commit:     $commit"
         echo
         var_pfx="$(dep2var "$dep")"
+        if [ ! -f _jenkins_deps_info ]; then
+            touch _jenkins_deps_info
+        fi
         if grep -q "^${var_pfx}_COMMIT=" _jenkins_deps_info; then
             if ! grep -q "^${var_pfx}_COMMIT=$commit" _jenkins_deps_info; then
                 echo "ERROR: $repo -> $branch changed during test:"
