@@ -60,7 +60,6 @@ class FakeGSIMInterIntraStdDevs(BaseFakeGSIM):
 
     def get_mean_and_stddevs(gsim, mean, std_inter, std_intra, imt,
                              stddev_types):
-        assert imt is gsim.testcase.imt1 or imt is gsim.testcase.imt2
         if gsim.expect_stddevs:
             gsim.testcase.assertEqual(
                 stddev_types,
@@ -86,7 +85,6 @@ class FakeGSIMTotalStdDev(BaseFakeGSIM):
 
     def get_mean_and_stddevs(gsim, mean, std_total, not_used, imt,
                              stddev_types):
-        assert imt is gsim.testcase.imt1 or imt is gsim.testcase.imt2
         if gsim.expect_stddevs:
             gsim.testcase.assertEqual(stddev_types, [const.StdDev.TOTAL])
 
@@ -414,9 +412,7 @@ class GMFCalcCorrelatedTestCase(BaseGMFCalcTestCase):
             ground_motion_fields(
                 self.rupture, self.sites, [self.imt1], gsim,
                 truncation_level=None, realizations=6000,
-                correlation_model=cormo,
-           )
-
+                correlation_model=cormo)
 
     def test_rupture_site_filtering(self):
         mean = 10
