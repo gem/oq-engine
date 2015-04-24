@@ -376,7 +376,7 @@ celeryd_wait $GEM_MAXLOOP"
         scp "${lxc_ip}:oq-engine/coverage.xml" "out_${BUILD_UBUVER}/" || true
     else
         if [ -d $HOME/fake-data/oq-engine ]; then
-            cp $HOME/fake-data/oq-engine/* . || true
+            cp $HOME/fake-data/oq-engine/* "out_${BUILD_UBUVER}/" || true
         fi
     fi
 
