@@ -930,13 +930,14 @@ if [ $BUILD_UNSIGN -eq 1 ]; then
     DPBP_FLAG="$DPBP_FLAG -us -uc"
 fi
 
-
-mksafedir "$GEM_BUILD_ROOT"
-mksafedir "$GEM_BUILD_SRC"
-
 if [ ! -d "out_${BUILD_UBUVER}" ]; then
     mkdir "out_${BUILD_UBUVER}"
 fi
+GEM_BUILD_ROOT="out_${BUILD_UBUVER}/build-deb"
+GEM_BUILD_SRC="${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}"
+
+mksafedir "$GEM_BUILD_ROOT"
+mksafedir "$GEM_BUILD_SRC"
 
 git archive HEAD | (cd "$GEM_BUILD_SRC" ; tar xv)
 
