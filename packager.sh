@@ -235,6 +235,7 @@ _pkgbuild_innervm_run () {
     ssh $lxc_ip "sudo mk-build-deps --install --tool 'apt-get -y' build-deb/debian/control"
 
     ssh $lxc_ip "cd build-deb && dpkg-buildpackage $DPBP_FLAG"
+    echo "MOP: HERE FOR TEST"
     pwd
     scp -r ${lxc_ip}:*.{tar.gz,deb,changes,dsc} "../out_${BUILD_UBUVER}/"
 
@@ -929,8 +930,13 @@ if [ $BUILD_UNSIGN -eq 1 ]; then
     DPBP_FLAG="$DPBP_FLAG -us -uc"
 fi
 
+
 mksafedir "$GEM_BUILD_ROOT"
 mksafedir "$GEM_BUILD_SRC"
+
+if [ ! -d "out_${BUILD_UBUVER}" ]; then
+    mkdir "out_${BUILD_UBUVER}"
+fi
 
 git archive HEAD | (cd "$GEM_BUILD_SRC" ; tar xv)
 
