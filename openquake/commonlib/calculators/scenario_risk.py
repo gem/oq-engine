@@ -20,10 +20,10 @@ import os
 import logging
 import collections
 
-from openquake.risklib import scientific, riskinput
+from openquake.risklib import scientific
 from openquake.baselib import general
-from openquake.commonlib import riskmodels, readinput, parallel
-from openquake.commonlib.calculators import base, calc
+from openquake.commonlib import riskmodels, parallel
+from openquake.commonlib.calculators import base
 from openquake.commonlib.export import export
 
 
@@ -34,15 +34,23 @@ PerAssetLoss = collections.namedtuple(  # the loss map
     'PerAssetLoss', 'loss_type unit asset_ref mean stddev')
 
 
-def losses_per_asset(tag, loss_type, assets, means, stddevs):
+def losses_per_asset(tag, loss_type, assets, means, stddevs,
+                     multiply_by_value=True):
     """
     :returns: a dictionary {
     (tag, loss_type): [(asset_ref, mean_value, stddev), ...]}
     """
     lst = []
     for a, m, s in zip(assets, means, stddevs):
-        value = a.value(loss_type)
-        lst.append((a.id, m * value, s * value))
+        if multiply_by_value:
+            # this is really ugly: we should change workflow.Scenario
+            # to return the already multiplied insured_loss_matrix;
+            # we postpone the fix to the future when the engine
+            # scenario_risk calculator will be removed
+            v = a.value(loss_type)
+        else:
+            v = 1
+        lst.append((a.id, m * v, s * v))
     return {(tag, loss_type): lst}
 
 
@@ -82,7 +90,8 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
                     means = out.insured_loss_matrix.mean(axis=1),
                     stddevs = out.insured_loss_matrix.std(ddof=1, axis=1)
                     result += losses_per_asset(
-                        'asset-ins', out.loss_type, assets, means, stddevs)
+                        'asset-ins', out.loss_type, assets, means, stddevs,
+                        multiply_by_value=False)
                     result += {('ins', out.loss_type): out.insured_losses}
     return result
 
@@ -94,24 +103,21 @@ class ScenarioRiskCalculator(base.RiskCalculator):
     """
     core_func = scenario_risk
     result_kind = 'losses_by_key'
+    hazard_calculator = 'scenario'
 
     def pre_execute(self):
         """
         Compute the GMFs, build the epsilons, the riskinputs, and a dictionary
         with the unit of measure, used in the export phase.
         """
-        super(ScenarioRiskCalculator, self).pre_execute()
-        self.gsims = readinput.get_gsims(self.oqparam)
-        self.rlzs_assoc = riskinput.FakeRlzsAssoc(len(self.gsims))
+        base.RiskCalculator.pre_execute(self)
+        gmfs = base.get_gmfs(self)
 
-        logging.info('Computing the GMFs')
-        gmfs_by_imt = calc.calc_gmfs(self.oqparam, self.sitecol)
-
-        logging.info('Preparing the risk input')
+        logging.info('Building the epsilons')
         eps_dict = self.make_eps_dict(
             self.oqparam.number_of_ground_motion_fields)
-        self.riskinputs = self.build_riskinputs(
-            {(0, str(self.gsims[0])): gmfs_by_imt}, eps_dict)
+
+        self.riskinputs = self.build_riskinputs(gmfs, eps_dict)
         self.unit = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
                      for ct in self.exposure.cost_types}
         self.unit['fatalities'] = 'people'

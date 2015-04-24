@@ -19,14 +19,12 @@
 import collections
 import itertools
 import operator
-import random
 
 import numpy
 
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import gmf, filters
 from openquake.hazardlib.site import SiteCollection
-from openquake.baselib.general import AccumDict
 from openquake.commonlib.readinput import \
     get_gsims, get_rupture, get_correl_model, get_imts
 
@@ -114,30 +112,6 @@ def calc_gmfs_fast(oqparam, sitecol):
         trunc_level, n_gmfs, correl_model,
         filters.rupture_site_distance_filter(max_dist), seed)
     return {str(imt): matrix for imt, matrix in res.iteritems()}
-
-
-def calc_gmfs(oqparam, sitecol):
-    """
-    Build all the ground motion fields for the whole site collection
-    """
-    correl_model = get_correl_model(oqparam)
-    rnd = random.Random()
-    rnd.seed(oqparam.random_seed)
-    imts = get_imts(oqparam)
-    [gsim] = get_gsims(oqparam)
-    trunc_level = getattr(oqparam, 'truncation_level', None)
-    n_gmfs = oqparam.number_of_ground_motion_fields
-    rupture = get_rupture(oqparam)
-    computer = gmf.GmfComputer(rupture, sitecol, imts, [gsim], trunc_level,
-                               correl_model)
-    seeds = [rnd.randint(0, MAX_INT) for _ in xrange(n_gmfs)]
-    res = AccumDict()  # imt -> gmf
-    for seed in seeds:
-        for gsim_str, gmf_by_imt in computer.compute(seed):
-            for imt, gmfield in gmf_by_imt.iteritems():
-                res += {imt: [gmfield]}
-    # res[imt] is a matrix R x N
-    return {imt: numpy.array(matrix).T for imt, matrix in res.iteritems()}
 
 # ######################### hazard maps ################################### #
 
