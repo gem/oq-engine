@@ -217,7 +217,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         Build a loss curve from a set of losses with length give by
         the parameter loss_curve_resolution.
 
-        :returns: a pair (losses, poes)
+        :param losses: a sequence of losses
+        :returns: a quartet (losses, poes, av, loss_map)
         """
         oq = self.oqparam
         clp = oq.conditional_loss_poes
@@ -234,10 +235,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         Build loss curves per asset from a set of losses with length given by
         the parameter loss_curve_resolution.
 
-        :returns: a pair (losses, poes)
+        :param elass: a list of tuples (tag, asset_ref, loss, ins_loss)
+        :param i: an index 1 (loss curves) or 2 (insured losses)
+        :returns: an array of loss curves, one for each asset
         """
-        # elass has the form (tag, asset_ref, loss, ins_loss)
-        # i is an index 1 (loss curves) or 2 (insured losses)
         oq = self.oqparam
         R = oq.loss_curve_resolution
         loss_curve_dt = numpy.dtype(
@@ -262,6 +263,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
         Extract the loss curve outputs from the datastore.
         Used to compute the statistics.
+
+        :param loss_type: the loss_type
         """
         rlzs = self.rlzs_assoc.realizations
         assets = self.datastore['specific_assets']
@@ -292,21 +295,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             else:
                 # this should never happen
                 logging.error('No outputs found for loss_type=%s', loss_type)
-
-    def export_curves_stats(self, loss_curves_per_asset, loss_type):
-        """
-        Export the mean and quantile loss curves in CSV format
-
-        :param loss_curves_per_asset:
-            a list of LossCurvePerAsset instance of homogeneous kind
-        :param loss_type:
-            the loss type
-        :returns:
-            a dictionary key -> path of the exported file
-        """
-        header = loss_curves_per_asset[0]._fields
-        key = ('loss_curve_stats', loss_type)
-        self.export_csv(key, [header] + loss_curves_per_asset)
 
     def export_curves_compact(self, loss_curves_per_asset, loss_type):
         """
@@ -350,6 +338,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.export_csv(key, [header] + data)
 
     def export_csv(self, key, data):
+        """
+        :param key: the key from which the name of the exported file is built
+        :param data: array to store in the CSV file
+        """
         if not data:
             return
         key_str = '-'.join(key) if isinstance(key, tuple) else key

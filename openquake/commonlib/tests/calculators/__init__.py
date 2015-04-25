@@ -30,7 +30,7 @@ class DifferentFiles(Exception):
     pass
 
 
-def line2array(line):
+def columns(line):
     data = []
     for column in line.split(','):
         data.append(numpy.array(map(float, column.split(' '))))
@@ -78,10 +78,10 @@ class CalculatorTestCase(unittest.TestCase):
         """
         Compare lines containing numbers up to the given delta
         """
-        array1 = line2array(line1)
-        array2 = line2array(line2)
-        for a1, a2 in zip(array1, array2):
-            numpy.testing.assert_allclose(a1, a2, atol=delta)
+        columns1 = columns(line1)
+        columns2 = columns(line2)
+        for c1, c2 in zip(columns1, columns2):
+            numpy.testing.assert_allclose(c1, c2, atol=delta)
 
     def assertEqualFiles(
             self, fname1, fname2, make_comparable=lambda lines: lines,
