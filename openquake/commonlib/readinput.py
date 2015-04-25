@@ -261,28 +261,39 @@ def get_gsims(oqparam):
     """
     Return an ordered list of GSIM instances from the gsim name in the
     configuration file or from the gsim logic tree file.
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    if oqparam.gsim:
-        oqparam.gsim.lt_path = ()
-        oqparam.gsim.weight = 1
-        return [oqparam.gsim]
-    # otherwise read from the gsim logic tree file
-    gsim_lt = get_gsim_lt(oqparam, [])
-    if len(gsim_lt.values) != 1:
-        gsim_file = os.path.join(
-            oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
-        raise InvalidFile(
-            'The gsim logic tree file % must contain a single tectonic '
-            'region type, found %s instead ' % gsim_file,
-            list(gsim_lt.values))
-    [trt] = gsim_lt.values
-    gsims = []
-    for rlz in gsim_lt:
-        gsim = valid.gsim(rlz.value[trt])
-        gsim.lt_path = rlz.lt_path
-        gsim.weight = rlz.weight
-        gsims.append(gsim)
-    return sorted(gsims)
+    gsims = map(str, get_rlzs_assoc(oqparam).realizations)
+    return map(valid.gsim, gsims)
+
+
+def get_rlzs_assoc(oqparam):
+    """
+    Extract the GSIM realizations from the gsim_logic_tree file, if present,
+    or build a single realization from the gsim attribute. It is only defined
+    for the scenario calculators.
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    """
+    if 'gsim_logic_tree' in oqparam.inputs:
+        gsim_lt = get_gsim_lt(oqparam, [])
+        if len(gsim_lt.values) != 1:
+            gsim_file = os.path.join(
+                oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
+            raise InvalidFile(
+                'The gsim logic tree file % must contain a single tectonic '
+                'region type, found %s instead ' % gsim_file,
+                list(gsim_lt.values))
+        rlzs = sorted(get_gsim_lt(oqparam, []))
+    else:
+        rlzs = [
+            logictree.Realization(
+                value=(str(oqparam.gsim),), weight=1, lt_path=('',),
+                ordinal=0, lt_uid=('*',))]
+    return riskinput.FakeRlzsAssoc(rlzs)
 
 
 def get_correl_model(oqparam):

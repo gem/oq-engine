@@ -65,7 +65,7 @@ class ClassicalDamageCalculator(base.RiskCalculator):
 
     def pre_execute(self):
         """
-        Compute the GMFs and build the riskinputs.
+        Read the curves and build the riskinputs.
         """
         super(ClassicalDamageCalculator, self).pre_execute()
 

@@ -65,6 +65,7 @@ class ScenarioCalculator(base.HazardCalculator):
         correl_model = readinput.get_correl_model(self.oqparam)
         n_gmfs = self.oqparam.number_of_ground_motion_fields
         rupture = readinput.get_rupture(self.oqparam)
+        self.gsims = readinput.get_gsims(self.oqparam)
 
         # filter the sites
         self.sites = filters.filter_sites_by_distance_to_rupture(
@@ -103,11 +104,12 @@ class ScenarioCalculator(base.HazardCalculator):
         if not self.oqparam.exports:
             return out
         exports = self.oqparam.exports.split(',')
-        for gsim in self.gsims:
-            gmfs = [gmf_by_tag[tag][str(gsim)] for tag in self.tags]
+        for rlz in self.rlzs_assoc.realizations:
+            gsim = str(rlz)
+            gmfs = [gmf_by_tag[tag][gsim] for tag in self.tags]
             for fmt in exports:
                 fname = '%s_gmf.%s' % (gsim, fmt)
                 out += export(
                     ('gmf', fmt), self.oqparam.export_dir, fname, self.sites,
-                    self.tags, numpy.array(gmfs), gsim.lt_path)
+                    self.tags, numpy.array(gmfs), rlz.lt_path)
         return out

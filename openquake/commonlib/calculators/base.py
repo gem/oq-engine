@@ -26,7 +26,7 @@ import numpy
 from openquake.hazardlib.geo import geodetic
 
 from openquake.baselib import general
-from openquake.commonlib import readinput, datastore
+from openquake.commonlib import readinput, datastore, logictree
 from openquake.commonlib.parallel import apply_reduce, DummyMonitor, executor
 from openquake.risklib import riskinput
 
@@ -139,8 +139,7 @@ class HazardCalculator(BaseCalculator):
             else:
                 self.rlzs_assoc = riskinput.FakeRlzsAssoc([])
         else:  # calculators without sources, i.e. scenario
-            self.gsims = readinput.get_gsims(self.oqparam)
-            self.rlzs_assoc = riskinput.FakeRlzsAssoc(self.gsims)
+            self.rlzs_assoc = readinput.get_rlzs_assoc(self.oqparam)
 
     def save_pik(self, result, **kw):
         """
@@ -189,7 +188,7 @@ class RiskCalculator(BaseCalculator):
     """
 
     hazard_calculator = None  # to be ovverriden in subclasses
-    rlzs_assoc = None  # to be ovverriden in subclasses
+    rlzs_assoc = None  # to be overriden in subclasses
 
     def make_eps_dict(self, num_ruptures):
         """
@@ -363,19 +362,12 @@ def compute_gmfs(calc):
     dic = collections.defaultdict(list)
     for tag in sorted(gmf_by_tag):
         for rlz in rlzs:
-            gmf = sites.expand(gmf_by_tag[tag][rlz.gsim], 0)
-            dic[0, rlz.gsim].append(gmf)
+            gsim = str(rlz)
+            gmf = sites.expand(gmf_by_tag[tag][gsim], 0)
+            dic[0, gsim].append(gmf)
 
     # (trt_id, gsim) -> N x R matrix
     return {key: numpy.array(dic[key], imt_dt).T for key in dic}
-
-
-class Fake(object):
-    weight = 1
-    gsim = 'FromCsv'
-
-    def __str__(self):
-        return self.gsim
 
 
 def read_gmfs_from_csv(calc):
@@ -399,5 +391,8 @@ def read_gmfs_from_csv(calc):
     logging.info('Associated %d assets to %d sites', num_assets, num_sites)
 
     logging.info('Preparing the risk input')
-    calc.rlzs_assoc = riskinput.FakeRlzsAssoc([Fake()])
+    fake_rlz = logictree.Realization(
+        value=('FromCsv',), weight=1, lt_path=('',),
+        ordinal=0, lt_uid=('*',))
+    calc.rlzs_assoc = riskinput.FakeRlzsAssoc([fake_rlz])
     return {(0, 'FromCsv'): gmfs_by_imt}

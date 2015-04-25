@@ -28,22 +28,22 @@ from openquake.baselib.general import groupby, split_in_blocks_2
 from openquake.hazardlib.gsim.base import gsim_imt_dt
 from openquake.risklib import scientific
 
-FakeRlz = collections.namedtuple('FakeRlz', 'ordinal weight gsim')
-
 
 class FakeRlzsAssoc(collections.Mapping):
     """
     Used for scenario calculators, when there is a realization for each GSIM.
     """
-    def __init__(self, sorted_gsims):
+    def __init__(self, realizations):
+        self.realizations = realizations
         self.rlzs_assoc = {}
-        self.realizations = []
-        for i, gsim in enumerate(sorted_gsims):
-            rlz = FakeRlz(i, gsim.weight, str(gsim))
-            self.rlzs_assoc[0, str(gsim)] = [rlz]
-            self.realizations.append(rlz)
+        for rlz in realizations:
+            self.rlzs_assoc[0, str(rlz)] = [rlz]
 
     def combine(self, result):
+        """
+        Convert a dictionary key -> value into a dictionary rlz -> value,
+        since there is a single realization per key.
+        """
         return {self.rlzs_assoc[key][0]: result[key] for key in result}
 
     def __iter__(self):

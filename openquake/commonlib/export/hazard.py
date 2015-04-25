@@ -176,10 +176,11 @@ class GmfCollection(object):
         self.sitecol = sitecol
         self.rupture_tags = rupture_tags
         self.gmfs_by_imt = gmfs_by_imt
+        self.imts = list(gmfs_by_imt.dtype.fields)
 
     def __iter__(self):
         gmfset = []
-        for imt_str in self.gmfs_by_imt.dtype.fields:
+        for imt_str in self.imts:
             gmfs = self.gmfs_by_imt[imt_str]
             imt, sa_period, sa_damping = from_string(imt_str)
             for rupture_tag, gmf in zip(self.rupture_tags, gmfs):
