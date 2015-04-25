@@ -51,9 +51,7 @@
 Prototype of a 'Catalogue' class
 """
 
-import re
 import numpy as np
-import inspect
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.utils import spherical_to_cartesian
@@ -101,11 +99,7 @@ class Catalogue(object):
                 self.data[attribute] = np.array([], dtype=int)
             else:
                 self.data[attribute] = []
-        # Consider removing
-#        self.data['xyz'] = None
-#        self.data['flag_vector'] = None
         self.number_earthquakes = 0
-#        self.default_completeness = None
 
     def get_number_events(self):
         return len(self.data[self.data.keys()[0]])
