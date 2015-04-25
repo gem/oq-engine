@@ -21,10 +21,10 @@ import logging
 
 import numpy
 
-from openquake.commonlib import readinput, parallel
-from openquake.risklib import scientific, riskinput
+from openquake.commonlib import parallel
+from openquake.risklib import scientific
 from openquake.baselib.general import AccumDict
-from openquake.commonlib.calculators import base, calc
+from openquake.commonlib.calculators import base
 from openquake.commonlib.export import export
 from openquake.commonlib.risk_writers import (
     DmgState, DmgDistPerTaxonomy, DmgDistPerAsset, DmgDistTotal,
@@ -72,52 +72,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
     result_kind = 'damages_by_key'
 
     def pre_execute(self):
-        """
-        Get the GMFs and build the riskinputs.
-        """
-        super(ScenarioDamageCalculator, self).pre_execute()
-        if 'gmfs' in self.oqparam.inputs:  # from file
-            gmfs = self.read_gmfs_from_csv()
-        else:  # from rupture
-            gmfs = self.compute_gmfs()
-        self.riskinputs = self.build_riskinputs(gmfs)
-
-    def compute_gmfs(self):
-        """
-        :returns: riskinputs
-        """
-        logging.info('Computing the GMFs')
-        haz_out, hcalc = base.get_hazard(self)
-        gmfs_by_trt_gsim = calc.expand(
-            haz_out['gmfs_by_trt_gsim'], hcalc.sites)
-
-        logging.info('Preparing the risk input')
-        self.rlzs_assoc = haz_out['rlzs_assoc']
-        return gmfs_by_trt_gsim
-
-    def read_gmfs_from_csv(self):
-        """
-        :returns: riskinputs
-        """
-        logging.info('Reading hazard curves from CSV')
-        sitecol, gmfs_by_imt = readinput.get_sitecol_gmfs(self.oqparam)
-
-        # filter the hazard sites by taking the closest to the assets
-        with self.monitor('assoc_assets_sites'):
-            self.sitecol, self.assets_by_site = self.assoc_assets_sites(
-                sitecol)
-
-        # reduce the gmfs matrices to the filtered sites
-        for imt in gmfs_by_imt:
-            gmfs_by_imt[imt] = gmfs_by_imt[imt][self.sitecol.indices]
-
-        num_assets = sum(len(assets) for assets in self.assets_by_site)
-        num_sites = len(self.sitecol)
-        logging.info('Associated %d assets to %d sites', num_assets, num_sites)
-
-        logging.info('Preparing the risk input')
-        self.rlzs_assoc = riskinput.FakeRlzsAssoc(num_rlzs=1)
-        return {(0, 'FromCsv'): gmfs_by_imt}
+        base.RiskCalculator.pre_execute(self)
+        self.riskinputs = self.build_riskinputs(base.get_gmfs(self))
 
     def post_execute(self, result):
         """

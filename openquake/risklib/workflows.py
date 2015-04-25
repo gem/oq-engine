@@ -484,7 +484,7 @@ class ProbabilisticEventBased(Workflow):
                 scientific.insured_losses, loss_matrix, deductibles, limits)
         else:  # build a zero matrix of size R x N
             ila = numpy.zeros((len(ground_motion_values[0]), len(assets)))
-        if not os.environ.get('OQ_ENGINE_MODE'):
+        if isinstance(assets[0].id, basestring):
             # in oq-lite return early, with just the losses per asset
             return scientific.Output(
                 assets, loss_type,
@@ -729,8 +729,16 @@ class Damage(Workflow):
              for gmvs in gmfs])
         return scientific.Output(assets, 'damage', damages=damages)
 
-    def gen_out_by_rlz(workflow, assets, hazards, epsilons, tags):
-        yield out_by_rlz(workflow, assets, hazards, epsilons, tags, 'damage')
+    def gen_out_by_rlz(self, assets, hazards, epsilons, tags):
+        """
+        :param assets: an array of assets of homogeneous taxonomy
+        :param hazards: an array of dictionaries per each asset
+        :param epsilons: an array of epsilons per each asset
+        :param tags: rupture tags
+
+        Yield a single list of outputs
+        """
+        yield out_by_rlz(self, assets, hazards, epsilons, tags, 'damage')
 
 
 @registry.add('classical_damage')

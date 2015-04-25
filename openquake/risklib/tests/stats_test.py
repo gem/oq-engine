@@ -232,12 +232,8 @@ class StatsTestCase(unittest.TestCase):
         writers.save_csv(actual, [self.header] + ins_curves, fmt='%05.2f')
         tests.check_equal(__file__, 'expected_ins_curves.csv', actual)
 
-        data = []
-        for map_ in maps:
-            asset_ref, loss = map_
-            data.append([asset_ref] + list(loss))
         actual = os.path.join(self.tempdir, 'expected_loss_maps.csv')
-        writers.save_csv(actual, [self.header] + data, fmt='%05.2f')
+        writers.save_csv(actual, [maps[0]._fields] + maps, fmt='%05.2f')
         tests.check_equal(__file__, 'expected_loss_maps.csv', actual)
 
     @classmethod

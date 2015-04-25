@@ -1,9 +1,8 @@
   [Michele Simionato]
-  * Extended the event_based calculator to compute loss curves per asset and
-    aggregated
-  * Added an event_based calculator which is able to compute the event loss
+  * Fully ported the event_based calculator to oq-lite
+  * Introduced a DataStore class to save either generic pickled objects or
+    numpy arrays; if installed, it can use the h5py library
   * Added defaults to the parameters in job.ini
-    table and also event losses per asset directly from the ruptures
   * Extended the `oq-lite info` command to plot some useful informations
     about the source model
   * Ported the classical_risk calculator to oq-lite

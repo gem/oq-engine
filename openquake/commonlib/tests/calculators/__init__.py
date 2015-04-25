@@ -19,6 +19,8 @@
 import os
 import unittest
 
+import numpy
+
 from openquake.commonlib.calculators import base
 from openquake.commonlib.parallel import PerformanceMonitor
 from openquake.commonlib import readinput, oqvalidation
@@ -28,6 +30,13 @@ class DifferentFiles(Exception):
     pass
 
 
+def columns(line):
+    data = []
+    for column in line.split(','):
+        data.append(numpy.array(map(float, column.split(' '))))
+    return data
+
+
 class CalculatorTestCase(unittest.TestCase):
     OVERWRITE_EXPECTED = False
 
@@ -35,13 +44,14 @@ class CalculatorTestCase(unittest.TestCase):
         """
         Return the outputs of the calculation as a dictionary
         """
-        self.testdir = os.path.dirname(testfile)
+        self.testdir = os.path.dirname(testfile) if os.path.isfile(testfile) \
+            else testfile
         inis = [os.path.join(self.testdir, ini) for ini in job_ini.split(',')]
         params = readinput.get_params(inis)
+        kw.setdefault('usecache', '0')
         params.update(kw)
         oq = oqvalidation.OqParam(**params)
         oq.validate()
-        oq.usecache = False
         # change this when debugging the test
         monitor = PerformanceMonitor(
             self.testdir,
@@ -63,19 +73,18 @@ class CalculatorTestCase(unittest.TestCase):
         self.calc.pre_execute()
         return self.calc.execute()
 
-    def practicallyEqual(self, string1, string2, ignore_last):
+    def practicallyEqual(self, line1, line2, delta):
         """
-        Compare strings containing numbers up to the last digits (excluded)
+        Compare lines containing numbers up to the given delta
         """
-        numbers1 = string1.split()
-        numbers2 = string2.split()
-        self.assertEqual(len(numbers1), len(numbers2))
-        for n1, n2 in zip(numbers1, numbers2):
-            self.assertEqual(n1[: -ignore_last], n2[: -ignore_last])
+        columns1 = columns(line1)
+        columns2 = columns(line2)
+        for c1, c2 in zip(columns1, columns2):
+            numpy.testing.assert_allclose(c1, c2, atol=delta)
 
     def assertEqualFiles(
             self, fname1, fname2, make_comparable=lambda lines: lines,
-            ignore_last_digits=0):
+            delta=None):
         """
         Make sure the expected and actual files have the same content.
         `make_comparable` is a function processing the lines of the
@@ -89,12 +98,11 @@ class CalculatorTestCase(unittest.TestCase):
             make_comparable(open(expected).readlines()))
         actual_content = ''.join(make_comparable(open(actual).readlines()))
         try:
-            if ignore_last_digits:
-                self.practicallyEqual(expected_content, actual_content,
-                                      ignore_last_digits)
+            if delta:
+                self.practicallyEqual(expected_content, actual_content, delta)
             else:
                 self.assertEqual(expected_content, actual_content)
-        except:
+        except AssertionError:
             if self.OVERWRITE_EXPECTED:
                 # use this path when the expected outputs have changed
                 # for a good reason
