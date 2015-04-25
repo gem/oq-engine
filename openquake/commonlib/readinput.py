@@ -291,7 +291,7 @@ def get_rlzs_assoc(oqparam):
     else:
         rlzs = [
             logictree.Realization(
-                value=(str(oqparam.gsim),), weight=1, lt_path=('',),
+                value=(oqparam.gsim,), weight=1, lt_path=('',),
                 ordinal=0, lt_uid=('*',))]
     return riskinput.FakeRlzsAssoc(rlzs)
 

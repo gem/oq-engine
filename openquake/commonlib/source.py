@@ -304,7 +304,7 @@ class RlzsAssoc(collections.Mapping):
         for i, gsim_rlz in enumerate(realizations):
             weight = float(lt_model.weight) * float(gsim_rlz.weight)
             rlz = LtRealization(idx, lt_model.path, gsim_rlz, weight, set())
-            self.gsim_by_trt[rlz] = gsim_rlz.value
+            self.gsim_by_trt[rlz] = dict(zip(gsim_lt.all_trts, gsim_rlz.value))
             for trt_model in lt_model.trt_models:
                 trt = trt_model.trt
                 gsim = gsim_lt.get_gsim_by_trt(gsim_rlz, trt)
