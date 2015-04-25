@@ -307,6 +307,7 @@ class RiskCalculator(BaseCalculator):
 
 # functions useful for the calculators ScenarioDamage and ScenarioRisk
 
+
 def get_gmfs(calc):
     """
     :param calc: a ScenarioDamage or ScenarioRisk calculator
@@ -321,10 +322,11 @@ def get_gmfs(calc):
 
 def compute_gmfs(calc):
     """
+    :param calc: a ScenarioDamage or ScenarioRisk calculator
     :returns: riskinputs
     """
     logging.info('Computing the GMFs')
-    haz_out = get_pre_calculator(self).datastore
+    haz_out = get_pre_calculator(calc).datastore
     gmfs_by_trt_gsim = expand(haz_out['gmfs_by_trt_gsim'], haz_out['sites'])
 
     logging.info('Preparing the risk input')
@@ -334,6 +336,7 @@ def compute_gmfs(calc):
 
 def read_gmfs_from_csv(calc):
     """
+    :param calc: a ScenarioDamage or ScenarioRisk calculator
     :returns: riskinputs
     """
     logging.info('Reading hazard curves from CSV')
