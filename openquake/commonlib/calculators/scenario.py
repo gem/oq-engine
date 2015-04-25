@@ -22,6 +22,7 @@ import logging
 import numpy
 
 from openquake.hazardlib.calc import filters
+from openquake.hazardlib.gsim.base import gsim_imt_dt
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.commonlib import readinput, parallel
 from openquake.commonlib.export import export
@@ -42,16 +43,10 @@ def calc_gmfs(tag_seed_pairs, computer, monitor):
     :param monitor:
         :class:`openquake.commonlib.parallel.PerformanceMonitor` instance
     :returns:
-        a dictionary tag -> {imt: gmf}
+        a dictionary tag -> gmf
     """
-    result = AccumDict({(0, str(gsim)): AccumDict()
-                        for gsim in computer.gsims})
     tags, seeds = zip(*tag_seed_pairs)
-    gsims = map(str, computer.gsims)
-    for tag, gmf in zip(tags, computer.compute(seeds)):
-        for gsim in gsims:
-            result[0, gsim][tag] = gmf[gsim]
-    return result
+    return dict(zip(tags, computer.compute(seeds)))
 
 
 @base.calculators.add('scenario')
@@ -60,7 +55,7 @@ class ScenarioCalculator(base.HazardCalculator):
     Scenario hazard calculator
     """
     core_func = calc_gmfs
-    result_kind = 'gmfs_by_trt_gsim'
+    result_kind = 'gmf_by_tag'
 
     def pre_execute(self):
         """
@@ -90,24 +85,18 @@ class ScenarioCalculator(base.HazardCalculator):
 
     def execute(self):
         """
-        Compute the GMFs in parallel and return a dictionary key -> imt -> gmfs
+        Compute the GMFs in parallel and return a dictionary gmf_by_tag
         """
         logging.info('Computing the GMFs')
         args = (self.tag_seed_pairs, self.computer, self.monitor('calc_gmfs'))
-        result = {}
-        res = parallel.apply_reduce(
+        gmf_by_tag = parallel.apply_reduce(
             self.core_func.__func__, args,
             concurrent_tasks=self.oqparam.concurrent_tasks)
-        for (trt_id, gsim), dic in res.iteritems():
-            result[trt_id, gsim] = {  # build N x R matrices
-                imt: numpy.array(
-                    [dic[tag][imt] for tag in self.tags]).T
-                for imt in map(str, self.oqparam.imtls)}
-        return result
+        return gmf_by_tag
 
-    def post_execute(self, result):
+    def post_execute(self, gmf_by_tag):
         """
-        :param result: a dictionary imt -> gmfs
+        :param gmf_by_tag: a dictionary tag -> gmf
         :returns: a dictionary {('gmf', 'xml'): <gmf.xml filename>}
         """
         logging.info('Exporting the result')
@@ -115,10 +104,11 @@ class ScenarioCalculator(base.HazardCalculator):
         if not self.oqparam.exports:
             return out
         exports = self.oqparam.exports.split(',')
-        for (trt_id, gsim), gmfs_by_imt in result.iteritems():
+        for gsim in self.gsims:
+            gmfs = [gmf_by_tag[tag][str(gsim)] for tag in self.tags]
             for fmt in exports:
                 fname = '%s_gmf.%s' % (gsim, fmt)
                 out += export(
                     ('gmf', fmt), self.oqparam.export_dir, fname, self.sites,
-                    self.tags, gmfs_by_imt)
+                    self.tags, numpy.array(gmfs), gsim.lt_path)
         return out

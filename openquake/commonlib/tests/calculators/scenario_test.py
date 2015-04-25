@@ -3,7 +3,7 @@ from numpy.testing import assert_almost_equal as aae
 from nose.plugins.attrib import attr
 
 from openquake.qa_tests_data.scenario import (
-    case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8)
+    case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9)
 
 from openquake.commonlib.tests.calculators import CalculatorTestCase
 
@@ -43,6 +43,14 @@ class ScenarioHazardTestCase(CalculatorTestCase):
     def test_case_1(self):
         out = self.run_calc(case_1.__file__, 'job.ini', exports='xml')
         self.assertEqualFiles('expected.xml', out['gmf', 'xml'])
+
+    @attr('qa', 'hazard', 'scenario')
+    def test_case_1bis(self):
+        # 2 out of 3 sites were filtered out
+        out = self.run_calc(case_1.__file__, 'job.ini',
+                            maximum_distance=0.1, exports='csv')
+        self.assertEqualFiles(
+            'BooreAtkinson2008_gmf.csv', out['gmf', 'csv'])
 
     @attr('qa', 'hazard', 'scenario')
     def test_case_2(self):
@@ -91,8 +99,12 @@ class ScenarioHazardTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'scenario')
     def test_case_9(self):
-        # 2 out of 3 sites were filtered out
-        out = self.run_calc(case_1.__file__, 'job.ini',
-                            maximum_distance=0.1, exports='csv')
-        self.assertEqualFiles(
-            'BooreAtkinson2008_gmf.csv', out['gmf', 'csv'])
+        out = self.run_calc(case_9.__file__, 'job.ini', exports='xml')
+        f1, f2 = out['gmf', 'xml']
+        self.assertEqualFiles('LinLee2008SSlab_gmf.xml', f1)
+        self.assertEqualFiles('YoungsEtAl1997SSlab_gmf.xml', f2)
+
+        out = self.run_calc(case_9.__file__, 'job.ini', exports='csv')
+        f1, f2 = out['gmf', 'csv']
+        self.assertEqualFiles('LinLee2008SSlab_gmf.csv', f1)
+        self.assertEqualFiles('YoungsEtAl1997SSlab_gmf.csv', f2)

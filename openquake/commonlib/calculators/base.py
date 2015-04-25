@@ -27,7 +27,6 @@ from openquake.hazardlib.geo import geodetic
 
 from openquake.baselib import general
 from openquake.commonlib import readinput, datastore
-from openquake.commonlib.calculators.calc import expand
 from openquake.commonlib.parallel import apply_reduce, DummyMonitor, executor
 from openquake.risklib import riskinput
 
@@ -351,11 +350,14 @@ def compute_gmfs(calc):
     """
     logging.info('Computing the GMFs')
     haz_out, hcalc = get_hazard(calc)
-    gmfs_by_trt_gsim = expand(haz_out['gmfs_by_trt_gsim'], haz_out['sites'])
+
+    sites = haz_out['sites']    
+    gmfs = [sites.expand(haz_out['gmf_by_tag'], 0)
+            for tag in haz_out['gmf_by_tag']]
 
     logging.info('Preparing the risk input')
     calc.rlzs_assoc = haz_out['rlzs_assoc']
-    return gmfs_by_trt_gsim
+    return gmfs
 
 
 def read_gmfs_from_csv(calc):

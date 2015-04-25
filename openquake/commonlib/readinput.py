@@ -259,10 +259,28 @@ def get_site_collection(oqparam, mesh=None, site_ids=None,
 
 def get_gsims(oqparam):
     """
-    Return a list of GSIM instances from the gsim name in the configuration
-    file (defined for scenario computations).
+    Return an ordered list of GSIM instances from the gsim name in the
+    configuration file or from the gsim logic tree file.
     """
-    return map(valid.gsim, oqparam.gsim.split())
+    if oqparam.gsim:
+        oqparam.gsim.lt_path = ()
+        return [oqparam.gsim]
+    # otherwise read from the gsim logic tree file
+    gsim_lt = get_gsim_lt(oqparam, [])
+    if len(gsim_lt.values) != 1:
+        gsim_file = os.path.join(
+            oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
+        raise InvalidFile(
+            'The gsim logic tree file % must contain a single tectonic '
+            'region type, found %s instead ' % gsim_file,
+            list(gsim_lt.values))
+    [trt] = gsim_lt.values
+    gsims = []
+    for rlz in gsim_lt:
+        gsim = valid.gsim(rlz.value[trt])
+        gsim.lt_path = rlz.lt_path
+        gsims.append(gsim)
+    return sorted(gsims)
 
 
 def get_correl_model(oqparam):

@@ -19,13 +19,10 @@
 import os
 import logging
 import collections
-from openquake.hazardlib.gsim import get_available_gsims
 from openquake.commonlib import valid, parallel
 from openquake.commonlib.riskmodels import (
     get_fragility_functions, get_imtls_from_vulnerabilities,
     vulnerability_files, fragility_files)
-
-GSIMS = get_available_gsims()
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
 
@@ -64,7 +61,7 @@ class OqParam(valid.ParamSet):
         valid.NoneOr(valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)), None)
     ground_motion_correlation_params = valid.Param(valid.dictionary)
     ground_motion_fields = valid.Param(valid.boolean, False)
-    gsim = valid.Param(valid.Choice(*GSIMS))
+    gsim = valid.Param(valid.gsim, None)
     hazard_calculation_id = valid.Param(valid.NoneOr(valid.positiveint))
     hazard_curves_from_gmfs = valid.Param(valid.boolean, False)
     hazard_output_id = valid.Param(valid.NoneOr(valid.positiveint))
