@@ -137,10 +137,10 @@ class HazardCalculator(BaseCalculator):
             if self.prefilter:
                 self.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
             else:
-                self.rlzs_assoc = riskinput.FakeRlzsAssoc(0)
+                self.rlzs_assoc = riskinput.FakeRlzsAssoc([])
         else:  # calculators without sources, i.e. scenario
             self.gsims = readinput.get_gsims(self.oqparam)
-            self.rlzs_assoc = riskinput.FakeRlzsAssoc(len(self.gsims))
+            self.rlzs_assoc = riskinput.FakeRlzsAssoc(self.gsims)
 
     def save_pik(self, result, **kw):
         """
@@ -209,6 +209,7 @@ class RiskCalculator(BaseCalculator):
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
+        imtls = self.oqparam.imtls
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
             idx_weight_pairs = [
@@ -230,7 +231,8 @@ class RiskCalculator(BaseCalculator):
                 # collect the hazards by key into hazards by imt
                 hdata = collections.defaultdict(lambda: [{} for _ in indices])
                 for key, hazards_by_imt in hazards_by_key.iteritems():
-                    for imt, hazards_by_site in hazards_by_imt.iteritems():
+                    for imt in imtls:
+                        hazards_by_site = hazards_by_imt[imt]
                         for i, haz in enumerate(hazards_by_site[indices]):
                             hdata[imt][i][key] = haz
 
@@ -344,20 +346,36 @@ def get_gmfs(calc):
     return gmfs
 
 
+# this is used by scenario_risk and scenario_damage
 def compute_gmfs(calc):
     """
-    :returns: riskinputs
+    :returns: a dictionary key -> gmf matrix of shape (N, R)
     """
     logging.info('Computing the GMFs')
     haz_out, hcalc = get_hazard(calc)
 
-    sites = haz_out['sites']    
-    gmfs = [sites.expand(haz_out['gmf_by_tag'], 0)
-            for tag in haz_out['gmf_by_tag']]
-
     logging.info('Preparing the risk input')
+    sites = haz_out['sites']
     calc.rlzs_assoc = haz_out['rlzs_assoc']
-    return gmfs
+    gmf_by_tag = haz_out['gmf_by_tag']
+    rlzs = calc.rlzs_assoc.realizations
+    imt_dt = numpy.dtype([(imt, float) for imt in calc.oqparam.imtls])
+    dic = collections.defaultdict(list)
+    for tag in sorted(gmf_by_tag):
+        for rlz in rlzs:
+            gmf = sites.expand(gmf_by_tag[tag][rlz.gsim], 0)
+            dic[0, rlz.gsim].append(gmf)
+
+    # (trt_id, gsim) -> N x R matrix
+    return {key: numpy.array(dic[key], imt_dt).T for key in dic}
+
+
+class Fake(object):
+    weight = 1
+    gsim = 'FromCsv'
+
+    def __str__(self):
+        return self.gsim
 
 
 def read_gmfs_from_csv(calc):
@@ -373,7 +391,7 @@ def read_gmfs_from_csv(calc):
             sitecol)
 
     # reduce the gmfs matrices to the filtered sites
-    for imt in gmfs_by_imt:
+    for imt in calc.oqparam.imtls:
         gmfs_by_imt[imt] = gmfs_by_imt[imt][calc.sitecol.indices]
 
     num_assets = sum(len(assets) for assets in calc.assets_by_site)
@@ -381,5 +399,5 @@ def read_gmfs_from_csv(calc):
     logging.info('Associated %d assets to %d sites', num_assets, num_sites)
 
     logging.info('Preparing the risk input')
-    calc.rlzs_assoc = riskinput.FakeRlzsAssoc(num_rlzs=1)
+    calc.rlzs_assoc = riskinput.FakeRlzsAssoc([Fake()])
     return {(0, 'FromCsv'): gmfs_by_imt}

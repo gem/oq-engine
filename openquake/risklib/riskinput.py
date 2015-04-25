@@ -28,25 +28,23 @@ from openquake.baselib.general import groupby, split_in_blocks_2
 from openquake.hazardlib.gsim.base import gsim_imt_dt
 from openquake.risklib import scientific
 
-FakeRlz = collections.namedtuple('FakeRlz', 'ordinal weight')
-FakeRlz.__new__.__defaults__ = (1,)
+FakeRlz = collections.namedtuple('FakeRlz', 'ordinal weight gsim')
 
 
 class FakeRlzsAssoc(collections.Mapping):
     """
-    Used for scenario calculators, when there are no realizations.
+    Used for scenario calculators, when there is a realization for each GSIM.
     """
-    def __init__(self, num_rlzs):
-        self.realizations = map(FakeRlz, range(num_rlzs))
-        self.rlzs_assoc = {(rlz, 'FromCsv'): [] for rlz in self.realizations}
+    def __init__(self, sorted_gsims):
+        self.rlzs_assoc = {}
+        self.realizations = []
+        for i, gsim in enumerate(sorted_gsims):
+            rlz = FakeRlz(i, gsim.weight, str(gsim))
+            self.rlzs_assoc[0, str(gsim)] = [rlz]
+            self.realizations.append(rlz)
 
     def combine(self, result):
-        """
-        :param result: a dictionary with a non-numeric key
-        :returns: a dictionary index -> value, with value in result.values()
-        """
-        return {FakeRlz(i): result[key]
-                for i, key in enumerate(sorted(result))}
+        return {self.rlzs_assoc[key][0]: result[key] for key in result}
 
     def __iter__(self):
         return self.rlzs_assoc.iterkeys()

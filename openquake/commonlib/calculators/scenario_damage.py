@@ -73,7 +73,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
     def pre_execute(self):
         base.RiskCalculator.pre_execute(self)
-        self.riskinputs = self.build_riskinputs(base.get_gmfs(self))
+        gmfs = base.get_gmfs(self)
+        self.riskinputs = self.build_riskinputs(gmfs)
 
     def post_execute(self, result):
         """

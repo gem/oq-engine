@@ -22,7 +22,6 @@ import logging
 import numpy
 
 from openquake.hazardlib.calc import filters
-from openquake.hazardlib.gsim.base import gsim_imt_dt
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.commonlib import readinput, parallel
 from openquake.commonlib.export import export

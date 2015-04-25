@@ -264,6 +264,7 @@ def get_gsims(oqparam):
     """
     if oqparam.gsim:
         oqparam.gsim.lt_path = ()
+        oqparam.gsim.weight = 1
         return [oqparam.gsim]
     # otherwise read from the gsim logic tree file
     gsim_lt = get_gsim_lt(oqparam, [])
@@ -279,6 +280,7 @@ def get_gsims(oqparam):
     for rlz in gsim_lt:
         gsim = valid.gsim(rlz.value[trt])
         gsim.lt_path = rlz.lt_path
+        gsim.weight = rlz.weight
         gsims.append(gsim)
     return sorted(gsims)
 
@@ -877,13 +879,14 @@ def get_sitecol_gmfs(oqparam):
         `tag indices [gmv1 ... gmvN] * num_imts`
     """
     imts = oqparam.imtls.keys()
+    imt_dt = numpy.dtype([(imt, float) for imt in imts])
     num_gmfs = oqparam.number_of_ground_motion_fields
-    gmf_by_imt = {imt: [] for imt in imts}
     sitecol = get_site_collection(oqparam)  # extract it from inputs['sites']
+    gmf_by_imt = numpy.zeros((num_gmfs, len(sitecol)), imt_dt)
     tags = []
     fname = oqparam.inputs['gmfs']
     with open(fname) as csvfile:
-        for line in csvfile:
+        for no, line in enumerate(csvfile):
             row = line.split(',')
             try:
                 indices = map(valid.positiveint, row[1].split())
@@ -902,7 +905,7 @@ def get_sitecol_gmfs(oqparam):
                     raise InvalidFile(
                         'The column #%d in %s is expected to contain positive '
                         'floats, got %s instead' % (i + 3, fname, row[i + 2]))
-                gmf_by_imt[imts[i]].append(r_sites.expand(array, 0))
+                gmf_by_imt[imts[i]][no, :] = r_sites.expand(array, 0)
             tags.append(row[0])
     data = gmf_by_imt[imts[0]]
     if len(data) != num_gmfs:
@@ -910,7 +913,7 @@ def get_sitecol_gmfs(oqparam):
             fname, len(data), num_gmfs))
     if tags != sorted(tags):
         raise InvalidFile('The tags in %s are not ordered: %s' % (fname, tags))
-    return sitecol, {imt: numpy.array(gmf_by_imt[imt]).T for imt in imts}
+    return sitecol, gmf_by_imt.T
 
 
 def get_mesh_hcurves(oqparam):
