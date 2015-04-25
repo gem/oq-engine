@@ -83,7 +83,7 @@ def calc_hazard_curves(
         Instance of :class:`~openquake.hazardlib.site.SiteCollection` object,
         representing sites of interest.
     :param imtls:
-        Ordered dictionary mapping intensity measure type strings
+        Dictionary mapping intensity measure type strings
         to lists of intensity measure levels.
     :param gsims:
         Dictionary mapping tectonic region types (members
@@ -101,21 +101,23 @@ def calc_hazard_curves(
         :mod:`openquake.hazardlib.calc.filters`.
 
     :returns:
-        Dictionary mapping intensity measure type strings (same keys
-        as in parameter ``imtls``) to 2d numpy arrays of float, where
-        first dimension differentiates sites (the order and length
-        are the same as in ``sites`` parameter) and the second one
-        differentiates IMLs (the order and length are the same as
-        corresponding value in ``imts`` dict).
+        An array of size N, where N is the number of sites, which elements
+        are records with fields given by the intensity measure types; the
+        size of each field is given by the number of levels in ``imtls``.
     """
     sources_by_trt = collections.defaultdict(list)
     for src in sources:
         sources_by_trt[src.tectonic_region_type].append(src)
-    imt_dt = numpy.dtype([(imt, float, len(imtls[imt])) for imt in imtls])
+    imt_dt = numpy.dtype([(imt, float, len(imtls[imt]))
+                          for imt in sorted(imtls)])
     imts = {from_string(imt): imls for imt, imls in imtls.iteritems()}
     curves = numpy.ones(len(sites), imt_dt)
     for trt in sources_by_trt:
-        gsims = sorted(gsims_by_trt[trt])
+        gsims = gsims_by_trt[trt]
+        try:  # if a sequence of gsims was passed
+            gsims = sorted(gsims)
+        except TypeError:  # a single gsim was passed
+            gsims = [gsims]
         sources_sites = ((source, sites) for source in sources_by_trt[trt])
         for source, s_sites in source_site_filter(sources_sites):
             try:
