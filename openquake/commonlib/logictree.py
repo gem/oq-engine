@@ -48,6 +48,7 @@ MAX_SINT_32 = (2 ** 31) - 1
 
 Realization = namedtuple('Realization', 'value weight lt_path ordinal lt_uid')
 Realization.uid = property(lambda self: '_'.join(self.lt_uid))  # unique ID
+Realization.__str__ = lambda self: self.value[0]  # the first GSIM
 
 
 def get_effective_rlzs(rlzs):
@@ -1016,9 +1017,7 @@ class GsimLogicTree(object):
                 ','.join(self.tectonic_region_types))
         self.values = collections.defaultdict(list)  # {trt: gsims}
         self._ltnode = ltnode or node_from_xml(fname).logicTree
-        self.branches = sorted(
-            self._build_branches(),
-            key=lambda b: (b.bset['branchSetID'], b.id))
+        self.all_trts, self.branches = self._build_trts_branches()
         if tectonic_region_types and not self.branches:
             raise InvalidLogicTree(
                 'Could not find branches with attribute '
@@ -1033,9 +1032,7 @@ class GsimLogicTree(object):
         """
         self.tectonic_region_types = sorted(trts)
         self.values = collections.defaultdict(list)
-        self.branches = sorted(
-            self._build_branches(),
-            key=lambda b: (b.bset['branchSetID'], b.id))
+        self.all_trts, self.branches = self._build_trts_branches()
 
     def get_num_branches(self):
         """
@@ -1061,9 +1058,10 @@ class GsimLogicTree(object):
                 num *= val
         return num
 
-    def _build_branches(self):
+    def _build_trts_branches(self):
         # do the parsing, called at instantiation time to populate .values
         trts = []
+        branches = []
         branchsetids = set()
         for branching_level in self._ltnode:
             if len(branching_level) > 1:
@@ -1093,12 +1091,15 @@ class GsimLogicTree(object):
                     uncertainty = branch.uncertaintyModel.text.strip()
                     self.validate_gsim(uncertainty)
                     self.values[trt].append(uncertainty)
-                    yield BranchTuple(
+                    bt = BranchTuple(
                         branchset, branch_id, uncertainty, weight, effective)
+                    branches.append(bt)
                 assert sum(weights) == 1, weights
         if len(trts) > len(set(trts)):
             raise InvalidLogicTree(
                 'Found duplicated applyToTectonicRegionType=%s' % trts)
+        branches.sort(key=lambda b: (b.bset['branchSetID'], b.id))
+        return trts, branches
 
     def validate_gsim(self, value):
         """
@@ -1111,6 +1112,15 @@ class GsimLogicTree(object):
             valid.gsim(value)
         except ValueError as e:
             raise NameError('%s in file %r' % (e, self.fname))
+
+    def get_gsim_by_trt(self, rlz, trt):
+        """
+        :param rlz: a logictree Realization
+        :param: a tectonic region type string
+        :returns: the GSIM string associated to the given realization
+        """
+        idx = self.all_trts.index(trt)
+        return rlz.value[idx]
 
     def __iter__(self):
         """
@@ -1129,15 +1139,16 @@ class GsimLogicTree(object):
             weight = 1
             lt_path = []
             lt_uid = []
-            value = {}
+            value = []
             for trt, branch in zip(tectonic_region_types, branches):
                 assert branch.uncertainty in self.values[trt], \
                     branch.uncertainty  # sanity check
                 lt_path.append(branch.id)
                 lt_uid.append(branch.id if branch.effective else '*')
                 weight *= branch.weight
-                value[trt] = branch.uncertainty
-            yield Realization(value, weight, tuple(lt_path), i, tuple(lt_uid))
+                value.append(branch.uncertainty)
+            yield Realization(tuple(value), weight, tuple(lt_path),
+                              i, tuple(lt_uid))
 
     def __str__(self):
         lines = ['%s,%s,%s,w=%s' % (b.bset['applyToTectonicRegionType'],

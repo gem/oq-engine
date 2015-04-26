@@ -299,17 +299,17 @@ class RlzsAssoc(collections.Mapping):
                                  for trt_id, gsim in group))
 
     def _add_realizations(self, idx, lt_model, realizations):
-        gsims_by_trt = lt_model.gsim_lt.values
+        gsim_lt = lt_model.gsim_lt
         rlzs = []
         for i, gsim_rlz in enumerate(realizations):
             weight = float(lt_model.weight) * float(gsim_rlz.weight)
             rlz = LtRealization(idx, lt_model.path, gsim_rlz, weight, set())
-            self.gsim_by_trt[rlz] = gsim_rlz.value
+            self.gsim_by_trt[rlz] = dict(zip(gsim_lt.all_trts, gsim_rlz.value))
             for trt_model in lt_model.trt_models:
                 trt = trt_model.trt
-                gsim = gsim_rlz.value[trt]
+                gsim = gsim_lt.get_gsim_by_trt(gsim_rlz, trt)
                 self.rlzs_assoc[trt_model.id, gsim].append(rlz)
-                trt_model.gsims = gsims_by_trt[trt]
+                trt_model.gsims = gsim_lt.values[trt]
                 if lt_model.samples > 1:  # oversampling
                     col_idx = self.csm_info.get_col_idx(trt_model.id, i)
                     rlz.col_ids.add(col_idx)

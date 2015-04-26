@@ -1,4 +1,3 @@
-import unittest
 from nose.plugins.attrib import attr
 
 from openquake.qa_tests_data.scenario_damage import (
