@@ -111,5 +111,5 @@ class ScenarioCalculator(base.HazardCalculator):
                 fname = '%s_gmf.%s' % (gsim, fmt)
                 out += export(
                     ('gmf', fmt), self.oqparam.export_dir, fname, self.sites,
-                    self.tags, numpy.array(gmfs), rlz.lt_path)
+                    self.tags, numpy.array(gmfs, gmfs[0].dtype), rlz.lt_path)
         return out

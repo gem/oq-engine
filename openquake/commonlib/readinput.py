@@ -897,7 +897,7 @@ def get_sitecol_gmfs(oqparam):
     tags = []
     fname = oqparam.inputs['gmfs']
     with open(fname) as csvfile:
-        for no, line in enumerate(csvfile):
+        for lineno, line in enumerate(csvfile, 1):
             row = line.split(',')
             try:
                 indices = map(valid.positiveint, row[1].split())
@@ -916,12 +916,11 @@ def get_sitecol_gmfs(oqparam):
                     raise InvalidFile(
                         'The column #%d in %s is expected to contain positive '
                         'floats, got %s instead' % (i + 3, fname, row[i + 2]))
-                gmf_by_imt[imts[i]][no, :] = r_sites.expand(array, 0)
+                gmf_by_imt[imts[i]][lineno - 1, :] = r_sites.expand(array, 0)
             tags.append(row[0])
-    data = gmf_by_imt[imts[0]]
-    if len(data) != num_gmfs:
+    if lineno < num_gmfs:
         raise InvalidFile('%s contains %d rows, expected %d' % (
-            fname, len(data), num_gmfs))
+            fname, lineno, num_gmfs))
     if tags != sorted(tags):
         raise InvalidFile('The tags in %s are not ordered: %s' % (fname, tags))
     return sitecol, gmf_by_imt.T
