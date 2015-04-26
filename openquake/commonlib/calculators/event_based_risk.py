@@ -86,16 +86,16 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         prepare some empty files in the export directory to store the gmfs
         (if any). If there were pre-existing files, they will be erased.
         """
+        super(EventBasedRiskCalculator, self).pre_execute()
+
         oq = self.oqparam
         epsilon_sampling = getattr(oq, 'epsilon_sampling', 1000)
-        self.riskmodel = readinput.get_risk_model(self.oqparam)
         self.riskmodel.specific_assets = set(self.oqparam.specific_assets)
 
         haz_out, hcalc = base.get_hazard(self)
+        # try avoiding reading the exposure twice
 
-        self.assets_by_site = hcalc.assets_by_site
         self.composite_source_model = hcalc.composite_source_model
-        self.sitecol = hcalc.sitecol
         self.rlzs_assoc = hcalc.rlzs_assoc
 
         correl_model = readinput.get_correl_model(oq)

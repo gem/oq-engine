@@ -303,8 +303,18 @@ class RiskCalculator(BaseCalculator):
                                    'which are not in the risk model' % missing)
             self.sitecol, self.assets_by_site = readinput.get_sitecol_assets(
                 self.oqparam, self.exposure)
-        logging.info('Extracted %d unique sites from the exposure',
-                     len(self.sitecol))
+            num_assets = sum(len(assets) for assets in self.assets_by_site)
+
+        if self.oqparam.sites:
+            sites = readinput.get_site_collection(self.oqparam)
+            with self.monitor('assoc_assets_sites'):
+                self.sitecol, self.assets_by_site = self.assoc_assets_sites(
+                    sites)
+            ok_assets = sum(len(assets) for assets in self.assets_by_site)
+            num_sites = len(self.sitecol)
+            logging.warn('Associated %d assets to %d sites, %d discarded',
+                         ok_assets, num_sites, num_assets - ok_assets)
+        logging.info('Extracted %d unique sites', num_sites)
 
     def execute(self):
         """
