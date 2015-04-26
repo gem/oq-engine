@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4" xmlns:gml="http://www.opengis.net/gml">
+	<exposureModel
+	  id="exp_mod_1"
+	  category="buildings"
+	  taxonomySource="GEM Taxonomy">
+	  <description>
+	    Exposure Model for buildings located in Lisbon
+	  </description>
+	  <conversions>
+	    <area type="per_asset" unit="square meters"/>
+	    <costTypes>
+	      <costType name="structural" type="per_area" unit="EUR"  />
+	    </costTypes>
+	  </conversions>
+	  <assets>
+		<asset id="a2371" area="187.72"  number="379.0"  taxonomy="M1_2_PC" >
+		 <location lon="-9.46228" lat="38.79563" />
+		 <costs>
+		   <cost type="structural" value="793.21"  />
+		 </costs>
+		   <occupancies>
+		    <occupancy occupants="297.636286764" period="Day" />
+		    <occupancy occupants="26.3423877476" period="Night" />
+		    <occupancy occupants="60.4004153902" period="Transit" />
+		   </occupancies>
+		 </asset>
+		 <asset id="a2743" area="187.72"  number="9.0"  taxonomy="M3_2_PC" >
+		  <location lon="-9.38267" lat="39.03584" />
+		  <costs>
+		    <cost type="structural" value="628.19"  />
+		  </costs>
+		    <occupancies>
+		     <occupancy occupants="9.71698857429" period="Day" />
+		     <occupancy occupants="0.807699647438" period="Night" />
+		     <occupancy occupants="1.61992823392" period="Transit" />
+		    </occupancies>
+		  </asset>
+		  <asset id="a1955" area="187.72"  number="222.0"  taxonomy="RC_A_2_C" >
+		   <location lon="-9.20601" lat="38.65883" />
+		   <costs>
+		     <cost type="structural" value="793.21"  />
+		   </costs>
+		     <occupancies>
+		      <occupancy occupants="317.530351257" period="Day" />
+		      <occupancy occupants="27.2922075992" period="Night" />
+		      <occupancy occupants="62.4960994463" period="Transit" />
+		     </occupancies>
+		   </asset>
+		   <asset id="a2079" area="187.72"  number="64.0"  taxonomy="RC_2_PC" >
+		    <location lon="-9.09727" lat="38.44568" />
+		    <costs>
+		      <cost type="structural" value="693.38"  />
+		    </costs>
+		      <occupancies>
+		       <occupancy occupants="47.9307374214" period="Day" />
+		       <occupancy occupants="3.5263175552" period="Night" />
+		       <occupancy occupants="8.34744066727" period="Transit" />
+		      </occupancies>
+		    </asset>
+			<asset id="a6330" area="6666.0"  number="23.0"  taxonomy="RC_A_8-15_C" >
+			 <location lon="-9.06160" lat="38.65575" />
+			    <costs>
+			      <cost type="structural" value="793.21"  />
+			    </costs>
+			      <occupancies>
+			       <occupancy occupants="585.723974675" period="Day" />
+			       <occupancy occupants="48.6789117933" period="Night" />
+			       <occupancy occupants="111.315776225" period="Transit" />
+			      </occupancies>
+			    </asset>
+			   <asset id="a3957" area="396.85"  number="10.0"  taxonomy="RC_A_3_C" >
+			    <location lon="-8.63234" lat="38.75606" />
+			    <costs>
+			      <cost type="structural" value="793.21"  />
+			    </costs>
+			      <occupancies>
+			       <occupancy occupants="16.3784842001" period="Day" />
+			       <occupancy occupants="1.15764396855" period="Night" />
+			       <occupancy occupants="2.66362891835" period="Transit" />
+			      </occupancies>
+			    </asset>
+			   <asset id="a5868" area="1333.94"  number="1.0"  taxonomy="RC_A_5-7_C" >
+			    <location lon="-8.60156" lat="38.68230" />
+			    <costs>
+			      <cost type="structural" value="793.21"  />
+			    </costs>
+			      <occupancies>
+			       <occupancy occupants="9.68145699177" period="Day" />
+			       <occupancy occupants="0.821344595941" period="Night" />
+			       <occupancy occupants="1.78174431683" period="Transit" />
+			      </occupancies>
+			    </asset>
+			   <asset id="a5709" area="1333.94"  number="1.0"  taxonomy="M1_5-7_PC" >
+			    <location lon="-9.23369" lat="38.78221" />
+			    <costs>
+			      <cost type="structural" value="793.21"  />
+			    </costs>
+			      <occupancies>
+			       <occupancy occupants="12.7303784519" period="Day" />
+			       <occupancy occupants="1.20357795275" period="Night" />
+			       <occupancy occupants="2.77831015064" period="Transit" />
+			      </occupancies>
+			    </asset>
+			   <asset id="a5547" area="1333.94"  number="2.0"  taxonomy="RC_A_5-7_C" >
+			    <location lon="-9.26805" lat="38.84574" />
+			    <costs>
+			      <cost type="structural" value="793.21"  />
+			    </costs>
+			      <occupancies>
+			       <occupancy occupants="17.9294685306" period="Day" />
+			       <occupancy occupants="1.620331735" period="Night" />
+			       <occupancy occupants="3.58992411266" period="Transit" />
+			      </occupancies>
+			    </asset>
+			   <asset id="a4661" area="792.83"  number="1.0"  taxonomy="M1_4_C" >
+			    <location lon="-9.35988" lat="38.85767" />
+			    <costs>
+			      <cost type="structural" value="793.21"  />
+			    </costs>
+			      <occupancies>
+			       <occupancy occupants="5.48030226868" period="Day" />
+			       <occupancy occupants="0.525404343836" period="Night" />
+			       <occupancy occupants="1.11373480695" period="Transit" />
+			      </occupancies>
+			    </asset>
+	  </assets>
+	</exposureModel>
+</nrml>
