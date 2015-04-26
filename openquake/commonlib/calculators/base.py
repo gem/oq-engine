@@ -165,23 +165,6 @@ class HazardCalculator(BaseCalculator):
         return haz_out
 
 
-def get_hazard(calculator, exports=''):
-    """
-    Get the hazard from a calculator, possibly by using cached results
-
-    :param calculator: a calculator with a .hazard_calculator attribute
-    :returns: a pair (hazard output, hazard_calculator)
-    """
-    hcalc = calculators[calculator.hazard_calculator](
-        calculator.oqparam, calculator.monitor('hazard'))
-    if calculator.oqparam.usecache:
-        haz_out = hcalc.datastore
-    else:
-        haz_out = hcalc.run(exports=exports)
-
-    return haz_out, hcalc
-
-
 class RiskCalculator(BaseCalculator):
     """
     Base class for all risk calculators. A risk calculator must set the
@@ -305,8 +288,9 @@ class RiskCalculator(BaseCalculator):
                 self.oqparam, self.exposure)
             num_assets = sum(len(assets) for assets in self.assets_by_site)
 
-        if self.oqparam.sites:
-            sites = readinput.get_site_collection(self.oqparam)
+        mesh = readinput.get_mesh(self.oqparam)
+        if mesh is not None:
+            sites = readinput.get_site_collection(self.oqparam, mesh)
             with self.monitor('assoc_assets_sites'):
                 self.sitecol, self.assets_by_site = self.assoc_assets_sites(
                     sites)

@@ -199,9 +199,7 @@ def get_mesh(oqparam):
         coords = [(param.lon, param.lat) for param in get_site_model(oqparam)]
         lons, lats = zip(*coords)
         return geo.Mesh(numpy.array(lons), numpy.array(lats))
-    elif 'exposure' in oqparam.inputs:
-        raise RuntimeError('You can extract the site collection from the '
-                           'exposure with get_sitecol_assets')
+    # if there is an exposure the mesh is extracted from get_sitecol_assets
 
 
 def get_site_model(oqparam):
