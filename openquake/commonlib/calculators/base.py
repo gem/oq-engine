@@ -314,7 +314,8 @@ class RiskCalculator(BaseCalculator):
             num_sites = len(self.sitecol)
             logging.warn('Associated %d assets to %d sites, %d discarded',
                          ok_assets, num_sites, num_assets - ok_assets)
-        logging.info('Extracted %d unique sites', num_sites)
+
+        logging.info('Extracted %d unique sites', len(self.sitecol))
 
     def execute(self):
         """
