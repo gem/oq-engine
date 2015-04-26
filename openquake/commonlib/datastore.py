@@ -32,17 +32,17 @@ except ImportError:
             raise ImportError('Could not import h5py.%s' % name)
     h5py = mock_h5py()
 
-OQDIR = os.environ.get('OQ_DIRECTORY', os.path.expanduser('~/oqlite'))
+DATADIR = os.environ.get('OQ_DATADIR', os.path.expanduser('~/oqdata'))
 
 CALCDIR = re.compile(r'calc_(\d+)')
 
 
-def get_last_calc_id(oqdir=OQDIR):
+def get_last_calc_id(datadir=DATADIR):
     """
     Extract the latest calculation ID from the given directory.
     If none is found, return 0.
     """
-    calcs = [f for f in os.listdir(OQDIR) if CALCDIR.match(f)]
+    calcs = [f for f in os.listdir(DATADIR) if CALCDIR.match(f)]
     if not calcs:
         return 0
     calc_ids = [int(CALCDIR.match(calc).group(1)) for calc in calcs]
@@ -94,11 +94,11 @@ class DataStore(collections.MutableMapping):
     items, the DataStore will return a generator. The items will be ordered
     lexicographically according to their name.
     """
-    def __init__(self, calc_id=None, oqdir=OQDIR):
-        if not os.path.exists(oqdir):
-            os.makedirs(oqdir)
-        self.calc_id = calc_id or (get_last_calc_id(oqdir) + 1)
-        self.calc_dir = os.path.join(oqdir, 'calc_%s' % self.calc_id)
+    def __init__(self, calc_id=None, datadir=DATADIR):
+        if not os.path.exists(datadir):
+            os.makedirs(datadir)
+        self.calc_id = calc_id or (get_last_calc_id(datadir) + 1)
+        self.calc_dir = os.path.join(datadir, 'calc_%s' % self.calc_id)
         if not os.path.exists(self.calc_dir):
             os.mkdir(self.calc_dir)
 
