@@ -1,9 +1,12 @@
+import os
 from nose.plugins.attrib import attr
 
 from openquake.qa_tests_data.scenario_risk import (
     case_3, occupants)
 
 from openquake.commonlib.tests.calculators import CalculatorTestCase
+from openquake.commonlib.calculators.scenario import ScenarioCalculator
+from openquake.commonlib import readinput
 
 
 class ScenarioRiskTestCase(CalculatorTestCase):

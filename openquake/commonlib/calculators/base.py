@@ -26,7 +26,7 @@ import numpy
 from openquake.hazardlib.geo import geodetic
 
 from openquake.baselib import general
-from openquake.commonlib import readinput, datastore
+from openquake.commonlib import readinput, datastore, logictree
 from openquake.commonlib.parallel import apply_reduce, DummyMonitor
 from openquake.risklib import riskinput
 
@@ -48,7 +48,10 @@ class BaseCalculator(object):
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, oqparam, monitor=DummyMonitor(), calc_id=None):
+    rlzs_assoc = logictree.RlzsAssoc([])  # to be overridden
+ 
+       def __init__(self, oqparam, monitor=DummyMonitor(), calc_id=None):
+
         self.oqparam = oqparam
         self.monitor = monitor
         self.datastore = datastore.DataStore(calc_id)
@@ -136,11 +139,8 @@ class HazardCalculator(BaseCalculator):
             # we could manage limits here
             if self.prefilter:
                 self.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
-            else:
-                self.rlzs_assoc = riskinput.FakeRlzsAssoc(0)
         else:  # calculators without sources, i.e. scenario
-            self.gsims = readinput.get_gsims(self.oqparam)
-            self.rlzs_assoc = riskinput.FakeRlzsAssoc(len(self.gsims))
+            self.rlzs_assoc = readinput.get_rlzs_assoc(self.oqparam)
 
     def save_pik(self, result, **kw):
         """
@@ -151,8 +151,11 @@ class HazardCalculator(BaseCalculator):
         :param kw: extras to add to the output dictionary
         :returns: a dictionary with the saved data
         """
+        sites = getattr(self, 'sites', self.sitecol)  # in the scenario
+        # calculator there is an attribute sites which is a subcollection
+        # of the full site collection
         haz_out = dict(rlzs_assoc=self.rlzs_assoc,
-                       sitecol=self.sitecol, oqparam=self.oqparam)
+                       sites=sites, oqparam=self.oqparam)
         haz_out[self.result_kind] = result
         haz_out.update(kw)
         logging.info('Saving hazard output on %s', self.datastore.calc_dir)
@@ -184,9 +187,7 @@ class RiskCalculator(BaseCalculator):
     attributes .riskmodel, .sitecol, .assets_by_site, .exposure
     .riskinputs in the pre_execute phase.
     """
-
     hazard_calculator = None  # to be ovverriden in subclasses
-    rlzs_assoc = None  # to be ovverriden in subclasses
 
     def make_eps_dict(self, num_ruptures):
         """
@@ -206,6 +207,7 @@ class RiskCalculator(BaseCalculator):
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
+        imtls = self.oqparam.imtls
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
             idx_weight_pairs = [
@@ -227,7 +229,8 @@ class RiskCalculator(BaseCalculator):
                 # collect the hazards by key into hazards by imt
                 hdata = collections.defaultdict(lambda: [{} for _ in indices])
                 for key, hazards_by_imt in hazards_by_key.iteritems():
-                    for imt, hazards_by_site in hazards_by_imt.iteritems():
+                    for imt in imtls:
+                        hazards_by_site = hazards_by_imt[imt]
                         for i, haz in enumerate(hazards_by_site[indices]):
                             hdata[imt][i][key] = haz
 
@@ -325,3 +328,70 @@ class RiskCalculator(BaseCalculator):
         with self.monitor('saving risk outputs', autoflush=True):
             self.datastore.update(self.risk_out)
         return self.risk_out
+
+
+# functions useful for the calculators ScenarioDamage and ScenarioRisk
+
+def get_gmfs(calc):
+    """
+    :param calc: a ScenarioDamage or ScenarioRisk calculator
+    :returns: a dictionary of gmfs
+    """
+    if 'gmfs' in calc.oqparam.inputs:  # from file
+        gmfs = read_gmfs_from_csv(calc)
+    else:  # from rupture
+        gmfs = compute_gmfs(calc)
+    return gmfs
+
+
+# this is used by scenario_risk and scenario_damage
+def compute_gmfs(calc):
+    """
+    :returns: a dictionary key -> gmf matrix of shape (N, R)
+    """
+    logging.info('Computing the GMFs')
+    haz_out, hcalc = get_hazard(calc)
+
+    logging.info('Preparing the risk input')
+    sites = haz_out['sites']
+    calc.rlzs_assoc = haz_out['rlzs_assoc']
+    gmf_by_tag = haz_out['gmf_by_tag']
+    rlzs = calc.rlzs_assoc.realizations
+    imt_dt = numpy.dtype([(imt, float) for imt in calc.oqparam.imtls])
+    dic = collections.defaultdict(list)
+    for tag in sorted(gmf_by_tag):
+        for rlz in rlzs:
+            gsim = str(rlz)
+            gmf = sites.expand(gmf_by_tag[tag][gsim], 0)
+            dic[0, gsim].append(gmf)
+
+    # (trt_id, gsim) -> N x R matrix
+    return {key: numpy.array(dic[key], imt_dt).T for key in dic}
+
+
+def read_gmfs_from_csv(calc):
+    """
+    :returns: riskinputs
+    """
+    logging.info('Reading hazard curves from CSV')
+    sitecol, gmfs_by_imt = readinput.get_sitecol_gmfs(calc.oqparam)
+
+    # filter the hazard sites by taking the closest to the assets
+    with calc.monitor('assoc_assets_sites'):
+        calc.sitecol, calc.assets_by_site = calc.assoc_assets_sites(
+            sitecol)
+
+    # reduce the gmfs matrices to the filtered sites
+    for imt in calc.oqparam.imtls:
+        gmfs_by_imt[imt] = gmfs_by_imt[imt][calc.sitecol.indices]
+
+    num_assets = sum(len(assets) for assets in calc.assets_by_site)
+    num_sites = len(calc.sitecol)
+    logging.info('Associated %d assets to %d sites', num_assets, num_sites)
+
+    logging.info('Preparing the risk input')
+    fake_rlz = logictree.Realization(
+        value=('FromCsv',), weight=1, lt_path=('',),
+        ordinal=0, lt_uid=('*',))
+    calc.rlzs_assoc = logictree.RlzsAssoc([fake_rlz])
+    return {(0, 'FromCsv'): gmfs_by_imt}

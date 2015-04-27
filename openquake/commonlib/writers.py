@@ -63,7 +63,7 @@ def scientificformat(value, fmt='%13.9E', sep=' ', sep2=':'):
         return sep.join((scientificformat(f, fmt, sep2) for f in value))
     elif isinstance(value, float):
         return fmt % value
-    raise ValueError(value)
+    return str(value)
 
 
 class StreamingXMLWriter(object):
@@ -187,6 +187,8 @@ def save_csv(dest, header_rows, sep=',', fmt='%12.8E', mode='wb'):
 def _build_header(dtype, root):
     header = []
     if dtype.fields is None:
+        if not root:
+            return []
         return [root + (str(dtype), dtype.shape)]
     for field in dtype.fields:
         dt = dtype.fields[field][0]
