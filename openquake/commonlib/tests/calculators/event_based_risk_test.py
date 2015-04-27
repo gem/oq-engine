@@ -33,7 +33,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             'expected/rlz-000-structural-loss-curves.csv',
             out['rlz-000-structural-loss-curves'])
 
-    @attr('qa', 'risk', 'event_loss')
+    @attr('qa', 'risk', 'event_based_risk')
     def test_case_3(self):
         out = self.run_calc(case_3.__file__, 'job_haz.ini,job_risk.ini',
                             exports='csv', individual_curves='false',
