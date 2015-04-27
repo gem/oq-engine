@@ -604,7 +604,7 @@ if [ $BUILD_ON_LXC -eq 1 ]; then
         rm /tmp/packager.eph.$$.log
     fi
     if [ $inner_ret -ne 0 ]; then
-        return $inner_ret
+        exit 1
     fi
 else
     dpkg-buildpackage $DPBP_FLAG
