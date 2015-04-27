@@ -706,10 +706,15 @@ git archive HEAD | (cd "$GEM_BUILD_SRC" ; tar xv)
 ##  "submodule foreach" vars: $name, $path, $sha1 and $toplevel:
 # git submodule foreach "git archive HEAD | (cd \"\${toplevel}/${GEM_BUILD_SRC}/\$path\" ; tar xv ) "
 
-cd "$GEM_BUILD_SRC"
-
 # date
-dt="$(date +%s)"
+if [ -f gem_date_file ]; then
+    dt="$(cat gem_date_file)"
+else
+    dt="$(date +%s)"
+    echo "$dt" > gem_date_file
+fi
+
+cd "$GEM_BUILD_SRC"
 
 # version info from openquake/risklib/__init__.py
 ini_vers="$(cat openquake/risklib/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")"
@@ -750,7 +755,7 @@ if [ $BUILD_DEVEL -eq 1 ]; then
         pkg_deb="-0"
     fi
 
-    ( echo "$pkg_name (${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}-${BUILD_UBUVER}01~dev${dt}-${hash}) $pkg_rest"
+    ( echo "$pkg_name (${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}~dev${dt}-${hash}~${BUILD_UBUVER}01) ${BUILD_UBUVER}; urgency=low"
       echo
       echo "  [Automatic Script]"
       echo "  * Development version from $hash commit"
