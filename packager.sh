@@ -527,7 +527,7 @@ pkg_min="$(echo "$pkg_vers" | sed -n 's/^[0-9]\+\.\([0-9]\+\).*/\1/gp')"
 pkg_bfx="$(echo "$pkg_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.\([0-9]\+\).*/\1/gp')"
 pkg_deb="$(echo "$pkg_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.[0-9]\+\(-[^+]\+\).*/\1/gp')"
 pkg_suf="$(echo "$pkg_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.[0-9]\+-[^+]\+\(+.*\)/\1/gp')"
-# echo "pkg [$pkg_vers] [$pkg_maj] [$pkg_min] [$pkg_bfx] [$pkg_deb] [$pkg_suf]"
+echo "pkg [$pkg_vers] [$pkg_maj] [$pkg_min] [$pkg_bfx] [$pkg_deb] [$pkg_suf]"
 
 if [ $BUILD_DEVEL -eq 1 ]; then
     hash="$(git log --pretty='format:%h' -1)"
@@ -544,7 +544,8 @@ if [ $BUILD_DEVEL -eq 1 ]; then
         pkg_deb="-0"
     fi
 
-    ( echo "$pkg_name (${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}-${BUILD_UBUVER}01~dev${dt}-${hash}) ${BUILD_UBUVER}; urgency=low"
+    (
+      echo "$pkg_name (${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}~dev${dt}-${hash}~${BUILD_UBUVER}03) ${BUILD_UBUVER}; urgency=low"
       echo
       echo "  [Automatic Script]"
       echo "  * Development version from $hash commit"
