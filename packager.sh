@@ -536,12 +536,12 @@ if [ $BUILD_DEVEL -eq 1 ]; then
     if [ "$pkg_maj" = "$ini_maj" -a "$pkg_min" = "$ini_min" -a \
          "$pkg_bfx" = "$ini_bfx" -a "$pkg_deb" != "" ]; then
         deb_ct="$(echo "$pkg_deb" | sed 's/^-//g')"
-        pkg_deb="-$(( deb_ct ))"
+        pkg_deb="-$(( deb_ct + 1 ))" # FIXME: MOP just for test
     else
         pkg_maj="$ini_maj"
         pkg_min="$ini_min"
         pkg_bfx="$ini_bfx"
-        pkg_deb="-0"
+        pkg_deb="-1" # FIXME: MOP just for test
     fi
 
     (
