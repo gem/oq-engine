@@ -26,8 +26,7 @@ import numpy
 from openquake.hazardlib.geo import geodetic
 
 from openquake.baselib import general
-from openquake.commonlib import readinput, datastore
-from openquake.commonlib.calculators.calc import expand
+from openquake.commonlib import readinput, datastore, logictree
 from openquake.commonlib.parallel import apply_reduce, DummyMonitor, executor
 from openquake.risklib import riskinput
 
@@ -48,6 +47,8 @@ class BaseCalculator(object):
     Abstract base class for all calculators.
     """
     __metaclass__ = abc.ABCMeta
+
+    rlzs_assoc = logictree.RlzsAssoc([])  # to be overridden
 
     def __init__(self, oqparam, monitor=DummyMonitor()):
         self.oqparam = oqparam
@@ -137,11 +138,8 @@ class HazardCalculator(BaseCalculator):
             # we could manage limits here
             if self.prefilter:
                 self.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
-            else:
-                self.rlzs_assoc = riskinput.FakeRlzsAssoc(0)
         else:  # calculators without sources, i.e. scenario
-            self.gsims = readinput.get_gsims(self.oqparam)
-            self.rlzs_assoc = riskinput.FakeRlzsAssoc(len(self.gsims))
+            self.rlzs_assoc = readinput.get_rlzs_assoc(self.oqparam)
 
     def save_pik(self, result, **kw):
         """
@@ -188,9 +186,7 @@ class RiskCalculator(BaseCalculator):
     attributes .riskmodel, .sitecol, .assets_by_site, .exposure
     .riskinputs in the pre_execute phase.
     """
-
     hazard_calculator = None  # to be ovverriden in subclasses
-    rlzs_assoc = None  # to be ovverriden in subclasses
 
     def make_eps_dict(self, num_ruptures):
         """
@@ -210,6 +206,7 @@ class RiskCalculator(BaseCalculator):
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
+        imtls = self.oqparam.imtls
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
             idx_weight_pairs = [
@@ -231,7 +228,8 @@ class RiskCalculator(BaseCalculator):
                 # collect the hazards by key into hazards by imt
                 hdata = collections.defaultdict(lambda: [{} for _ in indices])
                 for key, hazards_by_imt in hazards_by_key.iteritems():
-                    for imt, hazards_by_site in hazards_by_imt.iteritems():
+                    for imt in imtls:
+                        hazards_by_site = hazards_by_imt[imt]
                         for i, haz in enumerate(hazards_by_site[indices]):
                             hdata[imt][i][key] = haz
 
@@ -345,17 +343,29 @@ def get_gmfs(calc):
     return gmfs
 
 
+# this is used by scenario_risk and scenario_damage
 def compute_gmfs(calc):
     """
-    :returns: riskinputs
+    :returns: a dictionary key -> gmf matrix of shape (N, R)
     """
     logging.info('Computing the GMFs')
     haz_out, hcalc = get_hazard(calc)
-    gmfs_by_trt_gsim = expand(haz_out['gmfs_by_trt_gsim'], haz_out['sites'])
 
     logging.info('Preparing the risk input')
+    sites = haz_out['sites']
     calc.rlzs_assoc = haz_out['rlzs_assoc']
-    return gmfs_by_trt_gsim
+    gmf_by_tag = haz_out['gmf_by_tag']
+    rlzs = calc.rlzs_assoc.realizations
+    imt_dt = numpy.dtype([(imt, float) for imt in calc.oqparam.imtls])
+    dic = collections.defaultdict(list)
+    for tag in sorted(gmf_by_tag):
+        for rlz in rlzs:
+            gsim = str(rlz)
+            gmf = sites.expand(gmf_by_tag[tag][gsim], 0)
+            dic[0, gsim].append(gmf)
+
+    # (trt_id, gsim) -> N x R matrix
+    return {key: numpy.array(dic[key], imt_dt).T for key in dic}
 
 
 def read_gmfs_from_csv(calc):
@@ -371,7 +381,7 @@ def read_gmfs_from_csv(calc):
             sitecol)
 
     # reduce the gmfs matrices to the filtered sites
-    for imt in gmfs_by_imt:
+    for imt in calc.oqparam.imtls:
         gmfs_by_imt[imt] = gmfs_by_imt[imt][calc.sitecol.indices]
 
     num_assets = sum(len(assets) for assets in calc.assets_by_site)
@@ -379,5 +389,8 @@ def read_gmfs_from_csv(calc):
     logging.info('Associated %d assets to %d sites', num_assets, num_sites)
 
     logging.info('Preparing the risk input')
-    calc.rlzs_assoc = riskinput.FakeRlzsAssoc(num_rlzs=1)
+    fake_rlz = logictree.Realization(
+        value=('FromCsv',), weight=1, lt_path=('',),
+        ordinal=0, lt_uid=('*',))
+    calc.rlzs_assoc = logictree.RlzsAssoc([fake_rlz])
     return {(0, 'FromCsv'): gmfs_by_imt}

@@ -27,35 +27,6 @@ from openquake.baselib.general import groupby, split_in_blocks_2
 from openquake.hazardlib.gsim.base import gsim_imt_dt
 from openquake.risklib import scientific
 
-FakeRlz = collections.namedtuple('FakeRlz', 'ordinal weight')
-FakeRlz.__new__.__defaults__ = (1,)
-
-
-class FakeRlzsAssoc(collections.Mapping):
-    """
-    Used for scenario calculators, when there are no realizations.
-    """
-    def __init__(self, num_rlzs):
-        self.realizations = map(FakeRlz, range(num_rlzs))
-        self.rlzs_assoc = {(rlz, 'FromCsv'): [] for rlz in self.realizations}
-
-    def combine(self, result):
-        """
-        :param result: a dictionary with a non-numeric key
-        :returns: a dictionary index -> value, with value in result.values()
-        """
-        return {FakeRlz(i): result[key]
-                for i, key in enumerate(sorted(result))}
-
-    def __iter__(self):
-        return self.rlzs_assoc.iterkeys()
-
-    def __getitem__(self, key):
-        return self.rlzs_assoc[key]
-
-    def __len__(self):
-        return len(self.rlzs_assoc)
-
 
 class RiskModel(collections.Mapping):
     """
