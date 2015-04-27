@@ -22,7 +22,7 @@ import collections
 
 import numpy
 
-from openquake.commonlib.export import export
+from openquake.commonlib.export import export, ds_export
 from openquake.commonlib.writers import (
     scientificformat, floatformat, save_csv)
 from openquake.commonlib import hazard_writers
@@ -84,6 +84,19 @@ def export_ses_csv(key, export_dir, fname, ses_coll):
             rows.append([sesrup.tag, sesrup.seed])
     save_csv(dest, sorted(rows, key=operator.itemgetter(0)))
     return {fname: dest}
+
+
+@ds_export.add(('ruptures', 'csv'))
+def ds_export_ses_csv(key, dstore):
+    """
+    Export a Stochastic Event Set Collection
+    """
+    dest = dstore.export_path(key)
+    rows = []
+    for sesrup in dstore[key[:-1]]:
+        rows.append([sesrup.tag, sesrup.seed])
+    save_csv(dest, sorted(rows, key=operator.itemgetter(0)))
+    return dest
 
 
 # #################### export Ground Motion fields ########################## #

@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2014, GEM Foundation
+#  Copyright (c) 2015, GEM Foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -16,10 +16,22 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.baselib.general import import_all, CallableDict
 
-export = CallableDict()
+from openquake.commonlib import sap, datastore
+from openquake.commonlib.export import ds_export
 
-ds_export = CallableDict()
 
-import_all('openquake.commonlib.export')
+def export(calc_id, output_key, format='csv'):
+    """
+    Export an output from the datastore.
+    """
+    dstore = datastore.DataStore(calc_id)
+    for fmt in format.split(','):
+        fname = ds_export(tuple(output_key.split('-') + [fmt]), dstore)
+        print 'Exported %s' % fname
+
+
+parser = sap.Parser(export)
+parser.arg('calc_id', 'number of the calculation', type=int)
+parser.arg('output_key', 'output key (dash separated)')
+parser.arg('format', 'export formats (comma separated)')

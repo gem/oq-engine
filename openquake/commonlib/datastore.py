@@ -21,7 +21,6 @@ import re
 import shutil
 import cPickle
 import collections
-
 import numpy
 
 try:
@@ -100,7 +99,8 @@ class DataStore(collections.MutableMapping):
         self.calc_id = calc_id or (get_last_calc_id(datadir) + 1)
         self.calc_dir = os.path.join(datadir, 'calc_%s' % self.calc_id)
         if not os.path.exists(self.calc_dir):
-            os.mkdir(self.calc_dir)
+             os.mkdir(self.calc_dir)
+       self.export_dir = '.'
 
     def path(self, key):
         """
@@ -110,6 +110,23 @@ class DataStore(collections.MutableMapping):
             fname = key2str(key[:-1]) + '.' + key[-1]
             return os.path.join(self.calc_dir, fname)
         return os.path.join(self.calc_dir, key2str(key) + '.pik')
+
+    def export_path(self, key_fmt):
+        """
+        Return the name of the exported file.
+
+        :param key_fmt: the datastore key plus the export format extension
+        """
+        assert len(key_fmt) >= 2, key_fmt
+        fname = os.path.basename(self.path(key_fmt[:-1])) + '.' + key_fmt[-1]
+        return os.path.join(self.export_dir, fname)
+
+    def export_csv(self, key):
+        """
+        Generic csv exporter
+        """
+        dest = self.export_path(key + ('csv',))
+        return save_csv(dest, self[key])
 
     def remove(self):
         """Remove the datastore from the file system"""

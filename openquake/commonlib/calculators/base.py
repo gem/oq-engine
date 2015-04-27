@@ -27,7 +27,7 @@ from openquake.hazardlib.geo import geodetic
 
 from openquake.baselib import general
 from openquake.commonlib import readinput, datastore
-from openquake.commonlib.parallel import apply_reduce, DummyMonitor, executor
+from openquake.commonlib.parallel import apply_reduce, DummyMonitor
 from openquake.risklib import riskinput
 
 get_taxonomy = operator.attrgetter('taxonomy')
@@ -48,12 +48,12 @@ class BaseCalculator(object):
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, oqparam, monitor=DummyMonitor()):
+    def __init__(self, oqparam, monitor=DummyMonitor(), calc_id=None):
         self.oqparam = oqparam
         self.monitor = monitor
-        self.datastore = datastore.DataStore()
-        if not hasattr(oqparam, 'concurrent_tasks'):
-            oqparam.concurrent_tasks = executor.num_tasks_hint
+        self.datastore = datastore.DataStore(calc_id)
+        self.datastore['oqparam'] = self.oqparam
+        self.datastore.export_dir = self.oqparam.export_dir
 
     def run(self, **kw):
         """
