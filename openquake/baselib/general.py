@@ -569,6 +569,45 @@ class AccumDict(dict):
                                for key, value in self.iteritems()})
 
 
+def array_to_dict(array):
+    """
+    Convert a composite array into an array-valued AccumDict
+    """
+    return AccumDict({k: array[k] for k in array.dtype.fields})
+
+
+def dict_to_array(dic):
+    """
+    Convert an array-valued dictionary into a one-dimensionale array using
+    a composite dtype.
+
+    >>> dic = {'a': [1, 2], 'b': [3, 4, 5]}
+    >>> arr = dict_to_array(dic)
+    >>> len(arr)
+    1
+    >>> list(arr.dtype.fields)
+    ['a', 'b']
+    >>> arr['a']
+    array([[ 1.,  2.]])
+    >>> array_to_dict(arr)
+    {'a': array([[ 1.,  2.]]), 'b': array([[ 3.,  4.,  5.]])}
+
+    >>> array_to_dict(dict_to_array({'a': 1, 'b': 2}))
+    {'a': array([ 1.]), 'b': array([ 2.])}
+    """
+    descr = []
+    for k in sorted(dic):
+        val = dic[k]
+        try:
+            pair = (k, float, len(val))
+        except:  # val has no len
+            pair = (k, float)
+        descr.append(pair)
+    dtype = numpy.dtype(descr)
+    tuples = [tuple(dic[k] for k in sorted(dic))]
+    return numpy.array(tuples, dtype)
+
+
 class ArrayDict(collections.Mapping):
     """
     A class wrapping an array-valued dictionary. ArrayDict instances

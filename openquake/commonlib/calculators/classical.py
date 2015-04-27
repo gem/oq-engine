@@ -30,7 +30,8 @@ from openquake.hazardlib.calc.filters import source_site_distance_filter, \
 from openquake.risklib import scientific
 from openquake.commonlib import parallel
 from openquake.commonlib.export import export
-from openquake.baselib.general import AccumDict, split_in_blocks, groupby
+from openquake.baselib.general import (
+    AccumDict, split_in_blocks, groupby, array_to_dict)
 
 from openquake.commonlib.calculators import base, calc
 
@@ -65,8 +66,8 @@ def classical(sources, sitecol, gsims_assoc, monitor):
             source_site_filter=source_site_distance_filter(max_dist),
             rupture_site_filter=rupture_site_distance_filter(max_dist))
         # notice that the rupture filter may remove everything
-        if sum(v.sum() for v in curves.itervalues()):
-            result[trt_model_id, str(gsim)] = AccumDict(curves)
+        if any(curves[imt].sum() for imt in imtls):
+            result[trt_model_id, str(gsim)] = array_to_dict(curves)
     return result
 
 
