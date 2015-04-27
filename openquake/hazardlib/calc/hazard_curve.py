@@ -19,6 +19,8 @@
 :func:`hazard_curves`.
 """
 import sys
+import collections
+
 import numpy
 
 from openquake.hazardlib.calc import filters
@@ -28,7 +30,7 @@ from openquake.hazardlib.gsim.base import deprecated
 
 @deprecated('Use calc_hazard_curves instead')
 def hazard_curves(
-        sources, sites, imts, gsims, truncation_level,
+        sources, sites, imtls, gsims, truncation_level,
         source_site_filter=filters.source_site_noop_filter,
         rupture_site_filter=filters.rupture_site_noop_filter):
     """
@@ -37,17 +39,17 @@ def hazard_curves(
     with the only difference that the intensity measure types in input
     and output are hazardlib objects instead of simple strings.
     """
-    imtls = {str(imt): imls for imt, imls in imts.iteritems()}
+    imtls = {str(imt): imls for imt, imls in imtls.iteritems()}
+    gsims_by_trt = {trt: [gsims[trt]] for trt in gsims}
     curves_by_imt = calc_hazard_curves(
-        sources, sites, imtls, gsims, truncation_level,
+        sources, sites, imtls, gsims_by_trt, truncation_level,
         source_site_filter=filters.source_site_noop_filter,
         rupture_site_filter=filters.rupture_site_noop_filter)
-    return {from_string(imt): curves
-            for imt, curves in curves_by_imt.iteritems()}
+    return {from_string(imt): curves_by_imt[imt] for imt in imtls}
 
 
 def calc_hazard_curves(
-        sources, sites, imtls, gsims, truncation_level,
+        sources, sites, imtls, gsims_by_trt, truncation_level,
         source_site_filter=filters.source_site_noop_filter,
         rupture_site_filter=filters.rupture_site_noop_filter):
     """
@@ -75,7 +77,7 @@ def calc_hazard_curves(
     independent, and ruptures in a seismic source are also independent.
 
     :param sources:
-        An iterator of seismic sources objects (instances of subclasses
+        A sequence of seismic sources objects (instances of subclasses
         of :class:`~openquake.hazardlib.source.base.BaseSeismicSource`).
     :param sites:
         Instance of :class:`~openquake.hazardlib.site.SiteCollection` object,
@@ -99,35 +101,49 @@ def calc_hazard_curves(
         :mod:`openquake.hazardlib.calc.filters`.
 
     :returns:
-        Dictionary mapping intensity measure type strings (same keys
-        as in parameter ``imtls``) to 2d numpy arrays of float, where
-        first dimension differentiates sites (the order and length
-        are the same as in ``sites`` parameter) and the second one
-        differentiates IMLs (the order and length are the same as
-        corresponding value in ``imts`` dict).
+        An array of size N, where N is the number of sites, which elements
+        are records with fields given by the intensity measure types; the
+        size of each field is given by the number of levels in ``imtls``.
     """
+    sources_by_trt = collections.defaultdict(list)
+    for src in sources:
+        sources_by_trt[src.tectonic_region_type].append(src)
+    imt_dt = numpy.dtype([(imt, float, len(imtls[imt]))
+                          for imt in sorted(imtls)])
     imts = {from_string(imt): imls for imt, imls in imtls.iteritems()}
-    curves = dict((imt, numpy.ones([len(sites), len(imtls[imt])]))
-                  for imt in imtls)
-    sources_sites = ((source, sites) for source in sources)
-    for source, s_sites in source_site_filter(sources_sites):
-        try:
-            ruptures_sites = ((rupture, s_sites)
-                              for rupture in source.iter_ruptures())
-            for rupture, r_sites in rupture_site_filter(ruptures_sites):
-                gsim = gsims[rupture.tectonic_region_type]
-                sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
-                for imt in imts:
-                    poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
-                                         truncation_level)
-                    pno = rupture.get_probability_no_exceedance(poes)
-                    curves[str(imt)] *= r_sites.expand(pno, placeholder=1)
-        except Exception, err:
-            etype, err, tb = sys.exc_info()
-            msg = 'An error occurred with source id=%s. Error: %s'
-            msg %= (source.source_id, err.message)
-            raise etype, msg, tb
+    curves = numpy.ones(len(sites), imt_dt)
+    for trt in sources_by_trt:
+        gsims = gsims_by_trt[trt]
+        try:  # if a sequence of gsims was passed
+            gsims = sorted(gsims)
+        except TypeError:  # a single gsim was passed
+            gsims = [gsims]
+        sources_sites = ((source, sites) for source in sources_by_trt[trt])
+        for source, s_sites in source_site_filter(sources_sites):
+            try:
+                ruptures_sites = rupture_site_filter(
+                    (rupture, s_sites) for rupture in source.iter_ruptures())
+                curves = _agg_curves(curves, ruptures_sites,
+                                     gsims, imts, truncation_level)
+            except Exception, err:
+                etype, err, tb = sys.exc_info()
+                msg = 'An error occurred with source id=%s. Error: %s'
+                msg %= (source.source_id, err.message)
+                raise etype, msg, tb
 
     for imt in imtls:
-        curves[imt] = 1 - curves[imt]
+        curves[imt] = 1. - curves[imt]
+    return curves
+
+
+def _agg_curves(curves, rupture_sites, gsims, imts, truncation_level):
+    for rupture, r_sites in rupture_sites:
+        for gsim in gsims:
+            sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
+            for imt in imts:
+                poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
+                                     truncation_level)
+                pno = rupture.get_probability_no_exceedance(poes)
+                expanded_pno = r_sites.expand(pno, placeholder=1)
+                curves[str(imt)] *= expanded_pno
     return curves

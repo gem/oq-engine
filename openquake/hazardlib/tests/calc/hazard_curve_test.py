@@ -35,10 +35,11 @@ class HazardCurvesTestCase(unittest.TestCase):
             return (1 - self.probability) ** numpy.array(poes)
 
     class FakeSource(object):
-        def __init__(self, source_id, ruptures, time_span):
+        def __init__(self, source_id, ruptures, time_span, trt):
             self.source_id = source_id
             self.time_span = time_span
             self.ruptures = ruptures
+            self.tectonic_region_type = trt
 
         def iter_ruptures(self):
             return iter(self.ruptures)
@@ -63,6 +64,9 @@ class HazardCurvesTestCase(unittest.TestCase):
             return numpy.array([self.poes[(epicenter.latitude, rctx, imt)]
                                 for epicenter in sctx.mesh])
 
+        def __str__(self):
+            return self.__class__.__name__
+
     def setUp(self):
         self.truncation_level = 3.4
         self.imts = {'PGA': [1, 2, 3], 'PGD': [2, 4]}
@@ -71,10 +75,11 @@ class HazardCurvesTestCase(unittest.TestCase):
         rup11 = self.FakeRupture(0.23, const.TRT.ACTIVE_SHALLOW_CRUST)
         rup12 = self.FakeRupture(0.15, const.TRT.ACTIVE_SHALLOW_CRUST)
         rup21 = self.FakeRupture(0.04, const.TRT.VOLCANIC)
-        self.source1 = self.FakeSource(1, [rup11, rup12],
-                                       time_span=self.time_span)
-        self.source2 = self.FakeSource(2, [rup21], time_span=self.time_span)
-        self.sources = iter([self.source1, self.source2])
+        self.source1 = self.FakeSource(
+            1, [rup11, rup12], self.time_span, const.TRT.ACTIVE_SHALLOW_CRUST)
+        self.source2 = self.FakeSource(
+            2, [rup21], self.time_span, const.TRT.VOLCANIC)
+        self.sources = [self.source1, self.source2]
         site1 = Site(Point(10, 20), 1, True, 2, 3)
         site2 = Site(Point(20, 30), 2, False, 4, 5)
         self.sites = SiteCollection([site1, site2])
@@ -97,8 +102,8 @@ class HazardCurvesTestCase(unittest.TestCase):
             (site1.location.latitude, rup21, imt.PGD()): [0.24, 0.08],
             (site2.location.latitude, rup21, imt.PGD()): [0.14, 0.09],
         })
-        self.gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: gsim1,
-                      const.TRT.VOLCANIC: gsim2}
+        self.gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: [gsim1],
+                      const.TRT.VOLCANIC: [gsim2]}
 
     def test1(self):
         site1_pga_poe_expected = [0.0639157, 0.03320212, 0.02145989]
@@ -109,9 +114,7 @@ class HazardCurvesTestCase(unittest.TestCase):
         curves = calc_hazard_curves(
             self.sources, self.sites, self.imts,
             self.gsims, self.truncation_level)
-
-        self.assertIsInstance(curves, dict)
-        self.assertEqual(set(curves), set(['PGA', 'PGD']))
+        self.assertEqual(set(curves.dtype.fields), set(['PGA', 'PGD']))
 
         pga_curves = curves['PGA']
         self.assertIsInstance(pga_curves, numpy.ndarray)
@@ -137,7 +140,8 @@ class HazardCurvesTestCase(unittest.TestCase):
 
         fail_source = self.FailSource(self.source2.source_id,
                                       self.source2.ruptures,
-                                      self.source2.time_span)
+                                      self.source2.time_span,
+                                      const.TRT.VOLCANIC)
         sources = iter([self.source1, fail_source])
 
         with self.assertRaises(ValueError) as ae:
@@ -222,7 +226,7 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         sitecol = openquake.hazardlib.site.SiteCollection(sites)
 
         from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
-        gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
+        gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: [SadighEtAl1997()]}
         truncation_level = 1
         imts = {'PGA': [0.1, 0.5, 1.3]}
 
@@ -234,7 +238,7 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
             filters.rupture_site_distance_filter(30)
         )
         calc_hazard_curves(
-            iter(sources), sitecol, imts, gsims, truncation_level,
+            sources, sitecol, imts, gsims, truncation_level,
             source_site_filter=source_site_filter,
             rupture_site_filter=rupture_site_filter
         )

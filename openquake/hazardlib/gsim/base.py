@@ -525,15 +525,15 @@ class GroundShakingIntensityModel(object):
 
     def __lt__(self, other):
         """
-        The GSIMs are ordered according to their name
+        The GSIMs are ordered according to string representation
         """
-        return self.__class__.__name__ < other.__class__.__name__
+        return str(self) < str(other)
 
     def __eq__(self, other):
         """
-        The GSIMs are equal if their names are equal
+        The GSIMs are equal if their string representations are equal
         """
-        return self.__class__.__name__ == other.__class__.__name__
+        return str(self) == str(other)
 
     def __str__(self):
         """
