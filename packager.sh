@@ -504,8 +504,6 @@ git archive HEAD | (cd "$GEM_BUILD_SRC" ; tar xv)
 ##  "submodule foreach" vars: $name, $path, $sha1 and $toplevel:
 # git submodule foreach "git archive HEAD | (cd \"\${toplevel}/${GEM_BUILD_SRC}/\$path\" ; tar xv ) "
 
-cd "$GEM_BUILD_SRC"
-
 # date
 if [ -f gem_date_file ]; then
     dt="$(cat gem_date_file)"
@@ -513,6 +511,8 @@ else
     dt="$(date +%s)"
     echo "$dt" > gem_date_file
 fi
+
+cd "$GEM_BUILD_SRC"
 
 # version info from openquake/hazardlib/__init__.py
 ini_vers="$(cat openquake/hazardlib/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")"
