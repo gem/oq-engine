@@ -293,7 +293,7 @@ def get_rlzs_assoc(oqparam):
             logictree.Realization(
                 value=(oqparam.gsim,), weight=1, lt_path=('',),
                 ordinal=0, lt_uid=('*',))]
-    return riskinput.FakeRlzsAssoc(rlzs)
+    return logictree.RlzsAssoc(rlzs)
 
 
 def get_correl_model(oqparam):

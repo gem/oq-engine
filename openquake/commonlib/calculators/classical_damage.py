@@ -84,7 +84,7 @@ class ClassicalDamageCalculator(base.RiskCalculator):
         fake_rlz = logictree.Realization(
             value=('FromCsv',), weight=1, lt_path=('',),
             ordinal=0, lt_uid=('*',))
-        self.rlzs_assoc = riskinput.FakeRlzsAssoc([fake_rlz])
+        self.rlzs_assoc = logictree.RlzsAssoc([fake_rlz])
 
     def post_execute(self, result):
         """

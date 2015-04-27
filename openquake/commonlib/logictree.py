@@ -51,6 +51,33 @@ Realization.uid = property(lambda self: '_'.join(self.lt_uid))  # unique ID
 Realization.__str__ = lambda self: self.value[0]  # the first GSIM
 
 
+class RlzsAssoc(collections.Mapping):
+    """
+    Used for scenario calculators, when there is a realization for each GSIM.
+    """
+    def __init__(self, realizations):
+        self.realizations = realizations
+        self.rlzs_assoc = {}
+        for rlz in realizations:
+            self.rlzs_assoc[0, str(rlz)] = [rlz]
+
+    def combine(self, result):
+        """
+        Convert a dictionary key -> value into a dictionary rlz -> value,
+        since there is a single realization per key.
+        """
+        return {self.rlzs_assoc[key][0]: result[key] for key in result}
+
+    def __iter__(self):
+        return self.rlzs_assoc.iterkeys()
+
+    def __getitem__(self, key):
+        return self.rlzs_assoc[key]
+
+    def __len__(self):
+        return len(self.rlzs_assoc)
+
+
 def get_effective_rlzs(rlzs):
     """
     Group together realizations with the same unique identifier (uid)
