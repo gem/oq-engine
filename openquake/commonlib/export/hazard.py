@@ -200,8 +200,9 @@ def export_gmf_xml(key, export_dir, fname, sitecol, rupture_tags, gmfs,
     :param export_dir: the directory where to export
     :param fname: name of the exported file
     :param sitecol: site collection
-    :rupture_tags: a list of rupture tags
-    :gmfs: a matrix of ground motion fields of shape (R, N)
+    :param rupture_tags: a list of rupture tags
+    :param gmfs: a matrix of ground motion fields of shape (R, N)
+    :param gsim_path: a tuple with the path in the GSIM logic tree
     """
     dest = os.path.join(export_dir, fname)
     writer = hazard_writers.EventBasedGMFXMLWriter(
@@ -219,8 +220,9 @@ def export_gmf_csv(key, export_dir, fname, sites, rupture_tags, gmfs,
     :param export_dir: the directory where to export
     :param fname: name of the exported file
     :param sites: a filtered site collection
-    :rupture_tags: a list of rupture tags
-    :gmfs: a list of ground motion fields
+    :param rupture_tags: a list of rupture tags
+    :param gmfs: a list of ground motion fields
+    :param gsim_path: a tuple with the path in the GSIM logic tree
     """
     dest = os.path.join(export_dir, fname)
     imts = list(gmfs.dtype.fields)
