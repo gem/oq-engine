@@ -48,7 +48,9 @@ class BaseCalculator(object):
     """
     __metaclass__ = abc.ABCMeta
 
+    rlzs_assoc = logictree.RlzsAssoc([])  # to be overridden
     def __init__(self, oqparam, monitor=DummyMonitor(), calc_id=None):
+
         self.oqparam = oqparam
         self.monitor = monitor
         self.datastore = datastore.DataStore(calc_id)
@@ -145,8 +147,6 @@ class HazardCalculator(BaseCalculator):
             # we could manage limits here
             if self.prefilter:
                 self.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
-            else:
-                self.rlzs_assoc = riskinput.FakeRlzsAssoc([])
         else:  # calculators without sources, i.e. scenario
             self.rlzs_assoc = readinput.get_rlzs_assoc(self.oqparam)
 
@@ -171,9 +171,7 @@ class RiskCalculator(BaseCalculator):
     attributes .riskmodel, .sitecol, .assets_by_site, .exposure
     .riskinputs in the pre_execute phase.
     """
-
     hazard_calculator = None  # to be ovverriden in subclasses
-    rlzs_assoc = None  # to be overriden in subclasses
 
     def make_eps_dict(self, num_ruptures):
         """
@@ -371,5 +369,5 @@ def read_gmfs_from_csv(calc):
     fake_rlz = logictree.Realization(
         value=('FromCsv',), weight=1, lt_path=('',),
         ordinal=0, lt_uid=('*',))
-    calc.rlzs_assoc = riskinput.FakeRlzsAssoc([fake_rlz])
+    calc.rlzs_assoc = logictree.RlzsAssoc([fake_rlz])
     return {(0, 'FromCsv'): gmfs_by_imt}

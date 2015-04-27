@@ -39,4 +39,4 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                             exports='csv', individual_curves='false',
                             concurrent_tasks=0)
         for key in out:
-            self.assertEqualFiles('expected/%s.csv' % key, out[key])
+            self.assertEqualFiles('expected/%s.csv' % '-'.join(key), out[key])
