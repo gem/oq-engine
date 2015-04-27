@@ -183,6 +183,7 @@ def save_csv(dest, header_rows, sep=',', fmt='%12.8E', mode='wb'):
     return dest
 
 
+# recursive function used internally by build_header
 def _build_header(dtype, root):
     header = []
     if dtype.fields is None:
@@ -199,6 +200,9 @@ def _build_header(dtype, root):
 
 def build_header(dtype):
     """
+    Convert a numpy nested dtype into a list of strings suitable as header
+    of csv file.
+
     >>> imt_dt = numpy.dtype([('PGA', float, 3), ('PGV', float, 4)])
     >>> build_header(imt_dt)
     ['PGV:float64:4', 'PGA:float64:3']
@@ -215,6 +219,29 @@ def build_header(dtype):
         shape = col[-1]
         h.append(':'.join([name, numpytype, ':'.join(map(str, shape))]))
     return h
+
+
+def extract_from(data, fields):
+    """
+    Extract data from numpy arrays with nested records.
+
+    >>> imt_dt = numpy.dtype([('PGA', float, 3), ('PGV', float, 4)])
+    >>> a = numpy.array([([1, 2, 3], [4, 5, 6, 7])], imt_dt)
+    >>> extract_from(a, ['PGA'])
+    array([[ 1.,  2.,  3.]])
+
+    >>> gmf_dt = numpy.dtype([('A', imt_dt), ('B', imt_dt),
+    ...                       ('idx', numpy.uint32)])
+    >>> b = numpy.array([(([1, 2, 3], [4, 5, 6, 7]),
+    ...                  ([1, 2, 4], [3, 5, 6, 7]), 8)], gmf_dt)
+    >>> extract_from(b, ['idx'])
+    array([8], dtype=uint32)
+    >>> extract_from(b, ['B', 'PGV'])
+    array([[ 3.,  5.,  6.,  7.]])
+    """
+    for f in fields:
+        data = data[f]
+    return data
 
 
 def write_csv(dest, data, sep=',', fmt='%12.8E'):
@@ -234,7 +261,15 @@ def write_csv(dest, data, sep=',', fmt='%12.8E'):
         header = build_header(data.dtype)
     with open(dest, 'wb') as f:
         if header:
-            f.write(header)
+            f.write(sep.join(header) + '\n')
+            all_fields = [col.split(':', 1)[0].split('-')
+                          for col in header]
+            for record in data:
+                row = []
+                for fields in all_fields:
+                    row.append(extract_from(record, fields))
+                f.write(sep.join(scientificformat(col, fmt)
+                                 for col in row) + '\n')
         else:
             for row in data:
                 f.write(sep.join(scientificformat(col, fmt)

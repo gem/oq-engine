@@ -1,9 +1,11 @@
 import os
 import unittest
 from cStringIO import StringIO
-from openquake.commonlib.writers import tostring, StreamingXMLWriter
+from openquake.commonlib.writers import tostring, StreamingXMLWriter, write_csv
 from openquake.commonlib.node import LiteralNode
 from lxml import etree
+
+import numpy
 
 
 def assetgen(n):
@@ -76,3 +78,18 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
     0
 </zero>
 ''')
+
+
+class write_csvTestCase(unittest.TestCase):
+    def test_flat(self):
+        imt_dt = numpy.dtype([('PGA', int, 3), ('PGV', int, 4)])
+        a = numpy.array([([1, 2, 3], [4, 5, 6, 7])], imt_dt)
+        write_csv('/tmp/x.csv', a)
+
+    def test_nested(self):
+        imt_dt = numpy.dtype([('PGA', int, 3), ('PGV', int, 4)])
+        gmf_dt = numpy.dtype([('A', imt_dt), ('B', imt_dt),
+                              ('idx', numpy.uint32)])
+        b = numpy.array([(([1, 2, 3], [4, 5, 6, 7]),
+                          ([1, 2, 4], [3, 5, 6, 7]), 8)], gmf_dt)
+        write_csv('/tmp/y.csv', b)
