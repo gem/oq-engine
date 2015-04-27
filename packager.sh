@@ -507,7 +507,12 @@ git archive HEAD | (cd "$GEM_BUILD_SRC" ; tar xv)
 cd "$GEM_BUILD_SRC"
 
 # date
-dt="$(date +%s)"
+if [ -f gem_date_file ]; then
+    dt="$(cat gem_date_file)"
+else
+    dt="$(date +%s)"
+    echo "$dt" > gem_date_file
+fi
 
 # version info from openquake/hazardlib/__init__.py
 ini_vers="$(cat openquake/hazardlib/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")"
@@ -536,12 +541,12 @@ if [ $BUILD_DEVEL -eq 1 ]; then
     if [ "$pkg_maj" = "$ini_maj" -a "$pkg_min" = "$ini_min" -a \
          "$pkg_bfx" = "$ini_bfx" -a "$pkg_deb" != "" ]; then
         deb_ct="$(echo "$pkg_deb" | sed 's/^-//g')"
-        pkg_deb="-$(( deb_ct + 1 ))" # FIXME: MOP just for test
+        pkg_deb="-$(( deb_ct + 2 ))" # FIXME: MOP just for test
     else
         pkg_maj="$ini_maj"
         pkg_min="$ini_min"
         pkg_bfx="$ini_bfx"
-        pkg_deb="-1" # FIXME: MOP just for test
+        pkg_deb="-2" # FIXME: MOP just for test
     fi
 
     (
