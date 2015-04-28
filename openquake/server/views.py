@@ -397,7 +397,11 @@ def calc_results(request, calc_id):
         return HttpResponseNotFound()
     base_url = _get_base_url(request)
 
-    output_types = dict(groupby(export_output, lambda pair: pair[0], lambda pairs: [pair[1] for pair in pairs]))
+    # NB: export_output has as keys the list (output_type, extension)
+    # so this returns an ordered map output_type -> extensions such as
+    # OrderedDict([('agg_loss_curve', ['xml', 'csv']), ...])
+    output_types = groupby(export_output, lambda oe: oe[0],
+                           lambda oes: [e for o, e in oes])
 
     results = oq_engine.get_outputs(calc_id)
     if not results:
