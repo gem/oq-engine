@@ -28,8 +28,6 @@ if [ "$GEM_EPHEM_NAME" = "" ]; then
     GEM_EPHEM_NAME="ubuntu-lxc-eph"
 fi
 
-LSB_RELEASE=$(lsb_release --codename --short)
-
 if command -v lxc-shutdown &> /dev/null; then
     # Older lxc (< 1.0.0) with lxc-shutdown
     LXC_TERM="lxc-shutdown -t 10 -w"
@@ -521,7 +519,6 @@ pkgtest_run () {
         if [ ! -f build-deb/${GEM_DEB_PACKAGE}_*.deb ]; then
             echo "'build-deb' directory already exists but .deb file package was not found"
             return 1
-
         fi
     else
         $0 $BUILD_FLAGS
@@ -535,9 +532,9 @@ pkgtest_run () {
     dpkg-scansources . > Sources
     cat Sources | gzip > Sources.gz
     cat > Release <<EOF
-Archive: $LSB_RELEASE
+Archive: $BUILD_UBUVER
 Origin: Ubuntu
-Label: Local Ubuntu ${LSB_RELEASE^} Repository
+Label: Local Ubuntu ${BUILD_UBUVER^} Repository
 Architecture: amd64
 MD5Sum:
 EOF
