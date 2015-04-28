@@ -93,7 +93,7 @@ def ds_export_ses_csv(key, dstore):
     """
     dest = dstore.export_path(key)
     rows = []
-    for sesrup in dstore[key[:-1]]:
+    for sesrup in dstore['ruptures']:
         rows.append([sesrup.tag, sesrup.seed])
     save_csv(dest, sorted(rows, key=operator.itemgetter(0)))
     return dest
