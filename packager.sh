@@ -181,11 +181,17 @@ _devtest_innervm_run () {
     pkgs_list="$(deps_list debian/control)"
     ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
 
-    # TODO: version check
-    git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
+    if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
+        # TODO: version check
+        git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
-    ssh $lxc_ip "cd $GEM_GIT_PACKAGE ; nosetests -v --with-doctest --with-coverage --cover-package=openquake.hazardlib --with-xunit"
-    scp "$lxc_ip:$GEM_GIT_PACKAGE/nosetests.xml" .
+        ssh $lxc_ip "cd $GEM_GIT_PACKAGE ; nosetests -v --with-doctest --with-coverage --cover-package=openquake.hazardlib --with-xunit"
+        scp "$lxc_ip:$GEM_GIT_PACKAGE/nosetests.xml" .
+    else
+        if [ -d $HOME/fake-data/oq-hazardlib ]; then
+            cp $HOME/fake-data/oq-hazardlib/* . || true
+        fi
+    fi
 
     trap ERR
 
