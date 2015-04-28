@@ -55,7 +55,7 @@ def classical_bcr(workflow, getter, outputdict, params, monitor):
             for out in outputs:
                 outputdict.write(
                     workflow.assets,
-                    out.output,
+                    out.data,
                     output_type="bcr_distribution",
                     hazard_output_id=out.hid)
 
