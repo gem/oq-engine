@@ -16,7 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-
+import shutil
 from openquake.commonlib import sap, datastore
 from openquake.commonlib.export import ds_export
 
@@ -27,8 +27,14 @@ def export(calc_id, output_key, format='csv'):
     """
     dstore = datastore.DataStore(calc_id)
     for fmt in format.split(','):
-        fname = ds_export(tuple(output_key.split('-') + [fmt]), dstore)
-        print 'Exported %s' % fname
+        ekey = tuple(output_key.split('-') + [fmt])
+        epath = dstore.export_path(ekey)
+        if ekey[-1] == ekey[-2]:
+            # the export format is the same as the inner format
+            shutil.copy(dstore.path(ekey[:-1]), epath)
+        else:
+            ds_export(ekey, dstore)
+        print 'Exported %s' % epath
 
 
 parser = sap.Parser(export)

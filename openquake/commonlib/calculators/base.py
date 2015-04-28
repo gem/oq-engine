@@ -49,9 +49,8 @@ class BaseCalculator(object):
     __metaclass__ = abc.ABCMeta
 
     rlzs_assoc = logictree.RlzsAssoc([])  # to be overridden
- 
-       def __init__(self, oqparam, monitor=DummyMonitor(), calc_id=None):
 
+    def __init__(self, oqparam, monitor=DummyMonitor(), calc_id=None):
         self.oqparam = oqparam
         self.monitor = monitor
         self.datastore = datastore.DataStore(calc_id)
