@@ -20,4 +20,6 @@ from openquake.baselib.general import import_all, CallableDict
 
 export = CallableDict()
 
+ds_export = CallableDict()
+
 import_all('openquake.commonlib.export')

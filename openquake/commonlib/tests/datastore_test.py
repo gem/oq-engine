@@ -55,10 +55,10 @@ class DataStoreTestCase(unittest.TestCase):
             list(self.dstore['items', 'hdf5']), sorted(items))
 
         # test creating and populating a dset
-        dset = self.dstore.dataset(('xxx', 'h5'), shape=(4, 2))
-        dset[0] = [1, 2]
-        dset[3] = [4, 5]
-        dset.file.close()
+        with self.dstore.h5file(('xxx', 'h5')) as h5f:
+            dset = h5f.create_dataset('dset', shape=(4, 2))
+            dset[0] = [1, 2]
+            dset[3] = [4, 5]
         numpy.testing.assert_equal(
             self.dstore['xxx', 'h5'],
             [[1., 2.], [0., 0.], [0., 0.], [4., 5.]])

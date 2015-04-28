@@ -55,6 +55,7 @@ class BaseCalculator(object):
         self.monitor = monitor
         self.datastore = datastore.DataStore(calc_id)
         self.datastore['oqparam'] = self.oqparam
+        self.datastore.export_dir = self.oqparam.export_dir
 
     def run(self, **kw):
         """
