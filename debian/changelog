@@ -1,7 +1,7 @@
   [Daniele Viganò]
   * Add binary package support for both Ubuntu 12.04 (Precise)
     and Ubuntu 14.04 (Trusty)
-  
+
   [Graeme Weatherill]
   * Implements Dost et al (2004) Induced Seismicity GMPE
   * Implements Atkinson (2015) Induced Seismicity GMPE
@@ -11,7 +11,7 @@
   * Adds 'hypo_loc' slot to RuptureContext object
   * Implements Abrahamson et al. (2015) BC Hydro GMPE
   * Adds backarc term to the Site and SiteCollection object
-  
+
   [Marco Pagani]
   * Fixes a bug in the calculation of the hanging wall term of the Abrahamson
     et al. (2014)
@@ -20,7 +20,7 @@
   * Simple fault: added a method to finds the index of the fault patch including the hypocentre.
   * Base surface: fixes mesh input in get_hypo_location method
   * Near fault: implementing the Chiou & Spudich(2014) direcitivty model, the methods needed in the model.
-  
+
   [Yen-Shin Chen]
   * Simple fault: added a method to retrieve the vertexes of a patch given its index
   * Base surface: added a method to get a set of point representing a resampled top edge
