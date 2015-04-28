@@ -31,7 +31,7 @@ from openquake.risklib import scientific
 from openquake.commonlib import parallel
 from openquake.commonlib.export import export
 from openquake.baselib.general import (
-    AccumDict, split_in_blocks, groupby, array_to_dict)
+    AccumDict, split_in_blocks, groupby, array_to_dict, dict_to_array)
 
 from openquake.commonlib.calculators import base, calc
 
@@ -65,9 +65,7 @@ def classical(sources, sitecol, gsims_assoc, monitor):
             sources, sitecol, imtls, {trt: gsim}, truncation_level,
             source_site_filter=source_site_distance_filter(max_dist),
             rupture_site_filter=rupture_site_distance_filter(max_dist))
-        # notice that the rupture filter may remove everything
-        if any(curves[imt].sum() for imt in imtls):
-            result[trt_model_id, str(gsim)] = array_to_dict(curves)
+        result[trt_model_id, str(gsim)] = array_to_dict(curves)
     return result
 
 
@@ -91,21 +89,14 @@ class ClassicalCalculator(base.HazardCalculator):
         zero = AccumDict((key, AccumDict())
                          for key in self.rlzs_assoc)
         gsims_assoc = self.rlzs_assoc.get_gsims_by_trt_id()
-        return parallel.apply_reduce(
+        curves_by_trt_gsim = parallel.apply_reduce(
             self.core_func.__func__,
             (sources, self.sitecol, gsims_assoc, monitor),
             agg=calc.agg_prob, acc=zero,
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_model_id'))
-
-    def _fix_empty_curves(self, curves_by_trt_gsim):
-        imtls = self.oqparam.imtls
-        n = len(self.sitecol)
-        for curves_by_imt in curves_by_trt_gsim.itervalues():
-            if not curves_by_imt:
-                for imt in imtls:
-                    curves_by_imt[imt] = numpy.zeros((n, len(imtls[imt])))
+        return curves_by_trt_gsim
 
     def post_execute(self, result):
         """
@@ -114,10 +105,13 @@ class ClassicalCalculator(base.HazardCalculator):
         :param result:
             a nested dictionary (trt_id, gsim) -> IMT -> hazard curves
         """
-        self._fix_empty_curves(result)
         curves_by_rlz = self.rlzs_assoc.combine(result)
-        rlzs = self.rlzs_assoc.realizations
         oq = self.oqparam
+        if oq.individual_curves:
+            self.datastore['hcurves', 'hdf5'] = (
+                ('rlz-%d' % rlz.ordinal, dict_to_array(curves))
+                for rlz, curves in curves_by_rlz.iteritems())
+        rlzs = self.rlzs_assoc.realizations
         nsites = len(self.sitecol)
 
         saved = AccumDict()
@@ -153,6 +147,10 @@ class ClassicalCalculator(base.HazardCalculator):
                 for imt in oq.imtls}
             for q in oq.quantile_hazard_curves
         }
+        with self.datastore.h5file(('hcurves', 'hdf5')) as h5f:
+            h5f['mean'] = dict_to_array(self.mean_curves)
+            for q in self.quantile:
+                h5f['quantile-%s' % q] = dict_to_array(self.quantile[q])
         for fmt in exports:
             if mean:
                 saved += self.export_curves(

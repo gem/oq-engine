@@ -578,34 +578,26 @@ def array_to_dict(array):
 
 def dict_to_array(dic):
     """
-    Convert an array-valued dictionary into a one-dimensionale array using
-    a composite dtype.
+    Convert an array-valued dictionary key -> (N, L) into an array of N
+    elements using a composite dtype.
 
-    >>> dic = {'a': [1, 2], 'b': [3, 4, 5]}
-    >>> arr = dict_to_array(dic)
-    >>> len(arr)
-    1
-    >>> list(arr.dtype.fields)
-    ['a', 'b']
-    >>> arr['a']
-    array([[ 1.,  2.]])
-    >>> array_to_dict(arr)
-    {'a': array([[ 1.,  2.]]), 'b': array([[ 3.,  4.,  5.]])}
-
-    >>> array_to_dict(dict_to_array({'a': 1, 'b': 2}))
-    {'a': array([ 1.]), 'b': array([ 2.])}
+    >>> m1 = numpy.array([[1, 2], [3, 4]])  # 2 x 2
+    >>> m2 = numpy.array([[5, 6, 7], [8, 0, 1]])  # 2 x 3
+    >>> dic = {'a': m1, 'b': m2}
+    >>> print dict_to_array(dic)
+    [([1.0, 2.0], [5.0, 6.0, 7.0]) ([3.0, 4.0], [8.0, 0.0, 1.0])]
     """
+    keys = sorted(dic)
     descr = []
-    for k in sorted(dic):
+    for k in keys:
         val = dic[k]
-        try:
-            pair = (k, float, len(val))
-        except:  # val has no len
-            pair = (k, float)
+        n, l = val.shape
+        pair = (k, float, l)
         descr.append(pair)
-    dtype = numpy.dtype(descr)
-    tuples = [tuple(dic[k] for k in sorted(dic))]
-    return numpy.array(tuples, dtype)
+    array = numpy.zeros(n, numpy.dtype(descr))
+    for i in range(n):
+        array[i] = tuple(dic[k][i] for k in keys)
+    return array
 
 
 class ArrayDict(collections.Mapping):
