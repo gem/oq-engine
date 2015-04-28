@@ -808,3 +808,17 @@ def groupby(objects, key, reducegroup=list):
     kgroups = itertools.groupby(sorted(objects, key=key), key)
     return collections.OrderedDict((k, reducegroup(group))
                                    for k, group in kgroups)
+
+
+def humansize(nbytes, suffixes=('B', 'KB', 'MB', 'GB', 'TB', 'PB')):
+    """
+    Return file size in a human-friendly format
+    """
+    if nbytes == 0:
+        return '0 B'
+    i = 0
+    while nbytes >= 1024 and i < len(suffixes) - 1:
+        nbytes /= 1024.
+        i += 1
+    f = ('%.2f' % nbytes).rstrip('0').rstrip('.')
+    return '%s %s' % (f, suffixes[i])

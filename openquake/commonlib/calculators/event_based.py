@@ -288,7 +288,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         monitor.oqparam = self.oqparam
         csm = self.composite_source_model
         sources = list(csm.sources)
-        ses_ruptures_by_trt_id = parallel.apply_reduce(
+        ruptures_by_trt = parallel.apply_reduce(
             self.core_func.__func__,
             (sources, self.sitecol, csm.info, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
@@ -296,13 +296,13 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             key=operator.attrgetter('trt_model_id'))
 
         num_ruptures = sum(
-            len(rups) for rups in ses_ruptures_by_trt_id.itervalues())
+            len(rups) for rups in ruptures_by_trt.itervalues())
         logging.info('Generated %d SESRuptures', num_ruptures)
 
         self.rlzs_assoc = csm.get_rlzs_assoc(
-            lambda trt: len(ses_ruptures_by_trt_id.get(trt.id, [])))
+            lambda trt: len(ruptures_by_trt.get(trt.id, [])))
 
-        return ses_ruptures_by_trt_id
+        return ruptures_by_trt
 
     def post_execute(self, result):
         """Export the ruptures, if any"""
@@ -433,13 +433,13 @@ class EventBasedCalculator(ClassicalCalculator):
         prepare some empty files in the export directory to store the gmfs
         (if any). If there were pre-existing files, they will be erased.
         """
-        haz_out, hcalc = base.get_hazard(self, exports=self.oqparam.exports)
+        hcalc = base.get_pre_calculator(self, exports=self.oqparam.exports)
+        ruptures_by_trt = hcalc.datastore['ruptures_by_trt']
         self.composite_source_model = hcalc.composite_source_model
         self.sitecol = hcalc.sitecol
         self.rlzs_assoc = hcalc.rlzs_assoc
-        self.sesruptures = sorted(
-            sum(haz_out['ruptures_by_trt'].itervalues(), []),
-            key=operator.attrgetter('tag'))
+        self.sesruptures = sorted(sum(ruptures_by_trt.itervalues(), []),
+                                  key=operator.attrgetter('tag'))
         self.saved = AccumDict()
         if self.oqparam.ground_motion_fields and 'csv' in self.oqparam.exports:
             for trt_id, gsim in self.rlzs_assoc:
