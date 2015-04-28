@@ -17,6 +17,7 @@ import os
 import collections
 
 from nose.plugins.attrib import attr as noseattr
+import numpy
 from numpy.testing import assert_almost_equal as aae
 
 from qa_tests import risk
@@ -130,31 +131,33 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
         aae(actual_lm2, [401.951863344031, 232.793896122415,
                          644.37214688894, 834.012565907811])
 
-    def check_loss_map_mean(self, job):
-        lm_with_stats = models.LossMap.objects.filter(
+    def check_loss_map_stats(self, job):
+        mean_maps = models.LossMap.objects.filter(
             output__oq_job=job, statistics='mean',
             loss_type='structural').order_by('poe')
-        self.assertEqual(lm_with_stats.count(), 3)
-        actual = [
-            point.value for point in models.LossMapData.objects.filter(
-                loss_map__in=lm_with_stats).order_by(
-                'asset_ref', 'loss_map__poe')]
-        aae(actual, [542.132838477895, 0.0, 0.0,
-                     254.790354584725, 0.0, 0.0,
-                     653.871039876869, 0.0, 0.0,
-                     806.2713593155, 0.0, 0.0])
+        data = numpy.zeros((3, 4, 4))
+        # 3 clp x (3 quantiles + 1 mean) x 4 assets
+        for j, mm in enumerate(mean_maps):
+            dataset = mm.lossmapdata_set.order_by('asset_ref')
+            data[j][0] = [d.value for d in dataset]
 
-    def check_loss_map_quantile(self, job):
-        lm_with_quantile = models.LossMap.objects.filter(
-            output__oq_job=job, statistics='quantile',
-            loss_type='structural').order_by('poe')
-        self.assertEqual(lm_with_quantile.count(), 9)
-        actual_0 = [
-            point.value for point in models.LossMapData.objects.filter(
-                loss_map=lm_with_quantile[0]).order_by(
-                'asset_ref', 'loss_map__poe')]
-        aae(actual_0, [401.955278940267, 232.802818304691,
-                       644.37214688894, 777.097165009322])
+            quantile_maps = models.LossMap.objects.filter(
+                output__oq_job=job, statistics='quantile', poe=mm.poe,
+                loss_type='structural').order_by('quantile')
+            for i, qm in enumerate(quantile_maps, 1):
+                dataset = qm.lossmapdata_set.order_by('asset_ref')
+                data[j][i] = [d.value for d in dataset]
+
+        stat = data.transpose(2, 1, 0)  # to shape (N, Q + 1, P)
+        expected_data = []
+        lines = open(self._test_path('expected/loss_map_stats-structural.csv'))
+        next(lines)  # skip header
+        for line in lines:
+            values = line.split(',')[1]
+            vals = [map(float, piece.split(':'))
+                    for piece in values.split(' ')]
+            expected_data.append(vals)
+        aae(numpy.array(expected_data), stat, decimal=1)
 
 
 class EventBaseQATestCase2(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
