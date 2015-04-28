@@ -21,7 +21,6 @@ import re
 import shutil
 import cPickle
 import collections
-
 import numpy
 
 try:
@@ -32,15 +31,18 @@ except ImportError:
             raise ImportError('Could not import h5py.%s' % name)
     h5py = mock_h5py()
 
-OQDIR = os.environ.get('OQ_DIRECTORY', os.path.expanduser('~/oqlite'))
+from openquake.commonlib.writers import write_csv
 
 
-def get_last_calc_id(oqdir=OQDIR):
+DATADIR = os.environ.get('OQ_DATADIR', os.path.expanduser('~/oqdata'))
+
+
+def get_last_calc_id(datadir=DATADIR):
     """
     Extract the latest calculation ID from the given directory.
     If none is found, return 0.
     """
-    calcs = [f for f in os.listdir(OQDIR) if re.match('calc_\d+', f)]
+    calcs = [f for f in os.listdir(DATADIR) if re.match('calc_\d+', f)]
     if not calcs:
         return 0
     calc_ids = [int(calc[5:]) for calc in calcs]  # strip calc_
@@ -97,11 +99,14 @@ class DataStore(collections.MutableMapping):
     items, the DataStore will return a generator. The items will be ordered
     lexicographically according to their name.
     """
-    def __init__(self, calc_id=None, oqdir=OQDIR):
-        if not os.path.exists(oqdir):
-            os.makedirs(oqdir)
-        self.calc_id = calc_id or (get_last_calc_id(oqdir) + 1)
-        self.calc_dir = os.path.join(oqdir, 'calc_%s' % self.calc_id)
+    def __init__(self, calc_id=None, datadir=DATADIR):
+        if not os.path.exists(datadir):
+            os.makedirs(datadir)
+        self.calc_id = calc_id or (get_last_calc_id(datadir) + 1)
+        self.calc_dir = os.path.join(datadir, 'calc_%s' % self.calc_id)
+        if not os.path.exists(self.calc_dir):
+            os.mkdir(self.calc_dir)
+        self.export_dir = '.'
 
     def path(self, key):
         """
@@ -111,6 +116,23 @@ class DataStore(collections.MutableMapping):
             fname = key2str(key[:-1]) + '.' + key[-1]
             return os.path.join(self.calc_dir, fname)
         return os.path.join(self.calc_dir, key2str(key) + '.pik')
+
+    def export_path(self, key_fmt):
+        """
+        Return the name of the exported file.
+
+        :param key_fmt: the datastore key plus the export format extension
+        """
+        assert len(key_fmt) >= 2, key_fmt
+        fname = os.path.basename(self.path(key_fmt[:-1])) + '.' + key_fmt[-1]
+        return os.path.join(self.export_dir, fname)
+
+    def export_csv(self, key):
+        """
+        Generic csv exporter
+        """
+        dest = self.export_path(key + ('csv',))
+        return write_csv(dest, self[key])
 
     def remove(self):
         """Remove the datastore from the file system"""
@@ -125,22 +147,13 @@ class DataStore(collections.MutableMapping):
             return os.path.getsize(self.path(key))
         return sum(os.path.getsize(self.path(key)) for key in self)
 
-    def dataset(self, key, shape=None, dtype=None):
+    def h5file(self, key):
         """
-        Extracts the HDF5 dataset underlying the given key. It only works for
-        keys ending with the string 'h5'. If the shape is not None, it tries
-        to create and return a new dataset.
+        Extracts the HDF5 file underlying the given key.
         """
-        if key[-1] != 'h5':
-            raise ValueError('The dset method can only be used with '
-                             'keys of kind "h5", got %s' % repr(key))
-        if shape:  # create an empty dataset
-            if not os.path.exists(self.calc_dir):
-                os.mkdir(self.calc_dir)
-            h5f = h5py.File(self.path(key), libver='latest')
-            return h5f.create_dataset('dset', shape, dtype)
-        # else return an already created dataset
-        return h5py.File(self.path(key))['dset']
+        if key[-1] not in ('h5', 'hdf5'):
+            raise ValueError('Not an hf5 key: %s' % str(key))
+        return h5py.File(self.path(key), libver='latest')
 
     def __getitem__(self, key):
         if key[-1] == 'h5':
@@ -155,18 +168,16 @@ class DataStore(collections.MutableMapping):
             return value
 
     def _get_hdf5_items(self, key):
-        with h5py.File(self.path(key), 'r') as h5f:
+        with self.h5file(key) as h5f:
             for dset, data in sorted(h5f.iteritems()):
                 yield dset, data[:]
 
     def _set_hdf5_items(self, key, items):
-        with h5py.File(self.path(key), 'w', libver='latest') as h5f:
+        with self.h5file(key) as h5f:
             for dset, data in items:
                 h5f.create_dataset(dset, data=data)
 
     def __setitem__(self, key, value):
-        if not os.path.exists(self.calc_dir):
-            os.mkdir(self.calc_dir)
         if key[-1] == 'h5':
             if not isinstance(value, numpy.ndarray):
                 raise ValueError('%r is not a numpy array' % value)
@@ -188,6 +199,9 @@ class DataStore(collections.MutableMapping):
                 yield str2key(f[:-3]) + ('h5',)
             elif f.endswith('.hdf5'):
                 yield str2key(f[:-5]) + ('hdf5',)
+
+    def __contains__(self, key):
+        return key in set(self)
 
     def __len__(self):
         return sum(1 for f in os.listdir(self.calc_dir)
