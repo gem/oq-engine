@@ -17,28 +17,18 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.commonlib import sap, datastore
-from openquake.baselib.general import ArrayDict
+from openquake.baselib.general import ArrayDict, humansize
 from openquake.commonlib.commands.plot import combined_curves
 from openquake.commonlib.util import rmsep
 
 
-def human(nbytes, suffixes=('B', 'KB', 'MB', 'GB', 'TB', 'PB')):
-    """
-    Return file size in a human-friendly format
-    """
-    if nbytes == 0:
-        return '0 B'
-    i = 0
-    while nbytes >= 1024 and i < len(suffixes) - 1:
-        nbytes /= 1024.
-        i += 1
-    f = ('%.2f' % nbytes).rstrip('0').rstrip('.')
-    return '%s %s' % (f, suffixes[i])
-
-
 def show(calc_id, key=None, rlzs=None):
     """
-    Show the content of a datastore
+    Show the content of a datastore.
+
+    :param id: numeric calculation ID
+    :param key: dash-separated key of the datastore
+    :param rlzs: flag; if given, print out the realizations in order
     """
     ds = datastore.DataStore(calc_id)
     if key:
@@ -48,7 +38,7 @@ def show(calc_id, key=None, rlzs=None):
     print ds['oqparam'].calculation_mode, ds, 'saved in %s contains:' % (
         ds.calc_dir)
     for key in ds:
-        print key, human(ds.getsize(*key))
+        print key, humansize(ds.getsize(*key))
     if rlzs and 'curves_by_trt_gsim' in ds:
         min_value = 0.01  # used in rmsep
         curves_by_rlz, mean_curves = combined_curves(ds)
