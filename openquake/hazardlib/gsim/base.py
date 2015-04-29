@@ -75,6 +75,21 @@ def deprecated(message):
     return _deprecated
 
 
+def gsim_imt_dt(sorted_gsims, sorted_imts):
+    """
+    Build a numpy dtype as a nested record with keys 'idx' and nested
+    (gsim, imt).
+
+    :param sorted_gsims: a list of GSIM instances, sorted lexicographically
+    :param sorted_imts: a list of intensity measure type strings
+    """
+    imt_dt = numpy.dtype([(imt, float) for imt in sorted_imts])
+    gsim_imt_dt = numpy.dtype(
+        [('idx', numpy.uint32)] +
+        [(str(gsim), imt_dt) for gsim in sorted_gsims])
+    return gsim_imt_dt
+
+
 class MetaGSIM(abc.ABCMeta):
     """
     Metaclass providing a warning on instantiation mechanism. A
@@ -510,15 +525,15 @@ class GroundShakingIntensityModel(object):
 
     def __lt__(self, other):
         """
-        The GSIMs are ordered according to their name
+        The GSIMs are ordered according to string representation
         """
-        return self.__class__.__name__ < other.__class__.__name__
+        return str(self) < str(other)
 
     def __eq__(self, other):
         """
-        The GSIMs are equal if their names are equal
+        The GSIMs are equal if their string representations are equal
         """
-        return self.__class__.__name__ == other.__class__.__name__
+        return str(self) == str(other)
 
     def __str__(self):
         """

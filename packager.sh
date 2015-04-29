@@ -186,8 +186,14 @@ _devtest_innervm_run () {
     # TODO: version check
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
-    ssh $lxc_ip "cd $GEM_GIT_PACKAGE ; nosetests -v --with-doctest --with-coverage --cover-package=openquake.hazardlib --with-xunit"
-    scp "$lxc_ip:$GEM_GIT_PACKAGE/nosetests.xml" .
+    if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
+        ssh $lxc_ip "cd $GEM_GIT_PACKAGE ; nosetests -v --with-doctest --with-coverage --cover-package=openquake.hazardlib --with-xunit"
+        scp "$lxc_ip:$GEM_GIT_PACKAGE/nosetests.xml" .
+    else
+        if [ -d $HOME/fake-data/$GEM_GIT_PACKAGE ]; then
+            cp $HOME/fake-data/$GEM_GIT_PACKAGE/* . || true
+        fi
+    fi
 
     trap ERR
 
@@ -416,6 +422,7 @@ BUILD_DEVEL=0
 BUILD_UNSIGN=0
 BUILD_UBUVER_REFERENCE="precise"
 BUILD_UBUVER="$BUILD_UBUVER_REFERENCE"
+BUILD_ON_LXC=0
 BUILD_FLAGS=""
 
 trap sig_hand SIGINT SIGTERM
