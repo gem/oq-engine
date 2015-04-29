@@ -51,7 +51,7 @@ from openquake.engine.calculators import calculators
 from openquake.engine.calculators.hazard import general
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
-from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
+from openquake.engine.performance import EnginePerformanceMonitor
 
 # NB: beware of large caches
 inserter = writer.CacheInserter(models.GmfData, 1000)
@@ -97,7 +97,7 @@ def gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
 
 
 @tasks.oqtask
-def compute_ruptures(job_id, sources, sitecol, info):
+def compute_ruptures(sources, sitecol, info, monitor):
     """
     Celery task for the stochastic event set calculator.
 
@@ -110,14 +110,14 @@ def compute_ruptures(job_id, sources, sitecol, info):
     `ground_motion_fields` parameter), GMFs can be computed from each rupture
     in each stochastic event set. GMFs are also saved to the database.
 
-    :param int job_id:
-        ID of the currently running job.
     :param sources:
         List of commonlib.source.Source tuples
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param info:
         a :class:`openquake.commonlib.source.CompositionInfo` instance
+    :param monitor:
+        monitor of the currently running job.
     :returns:
         a dictionary trt_model_id -> tot_ruptures
     """
@@ -127,17 +127,13 @@ def compute_ruptures(job_id, sources, sitecol, info):
     ses_coll = {sc.ordinal: sc for sc in models.SESCollection.objects.filter(
         trt_model=trt_model)}
 
-    hc = models.oqparam(job_id)
+    hc = models.oqparam(monitor.job_id)
     tot_ruptures = 0
 
-    filter_sites_mon = LightMonitor(
-        'filtering sites', job_id, compute_ruptures)
-    generate_ruptures_mon = LightMonitor(
-        'generating ruptures', job_id, compute_ruptures)
-    filter_ruptures_mon = LightMonitor(
-        'filtering ruptures', job_id, compute_ruptures)
-    save_ruptures_mon = LightMonitor(
-        'saving ruptures', job_id, compute_ruptures)
+    filter_sites_mon = monitor('filtering sites', measuremem=False)
+    generate_ruptures_mon = monitor('generating ruptures', measuremem=False)
+    filter_ruptures_mon = monitor('filtering ruptures', measuremem=False)
+    save_ruptures_mon = monitor('saving ruptures', measuremem=False)
 
     # Compute and save stochastic event sets
     for src in sources:
@@ -200,23 +196,23 @@ def compute_ruptures(job_id, sources, sitecol, info):
 
 
 @tasks.oqtask
-def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol, rlzs_assoc):
+def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
     """
-    :param int job_id:
-        ID of the currently running job
     :param ses_ruptures:
         a list of blocks of SESRuptures with homogeneous TrtModel
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param rlzs_assoc:
         a :class:`openquake.commonlib.source.RlzsAssoc` instance
+    :param monitor:
+        monitor of the currently running job
     :returns:
         a dictionary trt_model_id -> (curves_by_gsim, bounding_boxes)
         where the list of bounding boxes is empty
     """
-    job = models.OqJob.objects.get(pk=job_id)
+    job = models.OqJob.objects.get(pk=monitor.job_id)
     hc = job.get_oqparam()
-    imts = map(from_string, sorted(hc.imtls))
+    imts = hc.imtls
 
     result = {}  # trt_model_id -> (curves_by_gsim, [])
     # NB: by construction each block is a non-empty list with
@@ -228,8 +224,7 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol, rlzs_assoc):
         sorted(imts), sorted(gsims), ses_coll,
         hc.truncation_level, models.get_correl_model(job))
 
-    with EnginePerformanceMonitor(
-            'computing gmfs', job_id, compute_gmfs_and_curves):
+    with monitor('computing gmfs', autoflush=True):
         for rupture, group in itertools.groupby(
                 ses_ruptures, operator.attrgetter('rupture')):
             r_sites = sitecol if rupture.site_indices is None \
@@ -240,17 +235,14 @@ def compute_gmfs_and_curves(job_id, ses_ruptures, sitecol, rlzs_assoc):
     if hc.hazard_curves_from_gmfs:
         duration = hc.investigation_time * hc.ses_per_logic_tree_path * (
             hc.number_of_logic_tree_samples or 1)
-        with EnginePerformanceMonitor(
-                'hazard curves from gmfs',
-                job_id, compute_gmfs_and_curves):
+        with monitor('hazard curves from gmfs', autoflush=True):
             result[trt_model.id] = (calc.to_haz_curves(
                 sitecol.sids, hc.imtls, hc.investigation_time, duration), [])
     else:
         result[trt_model.id] = ([], [])
 
     if hc.ground_motion_fields:
-        with EnginePerformanceMonitor(
-                'saving gmfs', job_id, compute_gmfs_and_curves):
+        with monitor('saving gmfs', autoflush=True):
             calc.save_gmfs(rlzs_assoc)
 
     return result
@@ -301,14 +293,17 @@ class GmfCalculator(object):
         computer = gmf.GmfComputer(
             rupture, r_sites, self.sorted_imts, self.sorted_gsims,
             self.truncation_level, self.correl_model)
-        for rupid, seed in rupid_seed_pairs:
-            for gsim_name, gmf_by_imt in computer.compute(seed):
-                for imt_str, gmvs in gmf_by_imt.iteritems():
-                    for site_id, gmv in zip(r_sites.sids, gmvs):
+        gnames = map(str, computer.gsims)
+        rupids, seeds = zip(*rupid_seed_pairs)
+        for rupid, gmfa in zip(rupids, computer.compute(seeds)):
+            for gname in gnames:
+                gmf_by_imt = gmfa[gname]
+                for imt in self.sorted_imts:
+                    for site_id, gmv in zip(r_sites.sids, gmf_by_imt[imt]):
                         self.gmvs_per_site[
-                            gsim_name, imt_str, site_id].append(gmv)
+                            gname, imt, site_id].append(gmv)
                         self.ruptures_per_site[
-                            gsim_name, imt_str, site_id].append(rupid)
+                            gname, imt, site_id].append(rupid)
 
     def save_gmfs(self, rlzs_assoc):
         """
@@ -318,8 +313,8 @@ class GmfCalculator(object):
             a :class:`openquake.commonlib.source.RlzsAssoc` instance
         """
         samples = rlzs_assoc.csm_info.get_num_samples(self.trt_model_id)
-        for gsim_name, imt_str, site_id in self.gmvs_per_site:
-            rlzs = rlzs_assoc[self.trt_model_id, gsim_name]
+        for gname, imt_str, site_id in self.gmvs_per_site:
+            rlzs = rlzs_assoc[self.trt_model_id, gname]
             if samples > 1:
                 # save only the data for the realization corresponding
                 # to the current SESCollection
@@ -333,9 +328,8 @@ class GmfCalculator(object):
                     sa_period=sa_period,
                     sa_damping=sa_damping,
                     site_id=site_id,
-                    gmvs=self.gmvs_per_site[gsim_name, imt_str, site_id],
-                    rupture_ids=self.ruptures_per_site[
-                        gsim_name, imt_str, site_id]
+                    gmvs=self.gmvs_per_site[gname, imt_str, site_id],
+                    rupture_ids=self.ruptures_per_site[gname, imt_str, site_id]
                 ))
         inserter.flush()
         self.gmvs_per_site.clear()
@@ -428,7 +422,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         """
         return acc + result
 
-    def post_execute(self):
+    def post_execute(self, result=None):
         trt_models = models.TrtModel.objects.filter(
             lt_model__hazard_calculation=self.job)
         # save the right number of occurring ruptures
@@ -472,11 +466,11 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                     sr.col_idx = ses_coll.ordinal
                     sesruptures.append(sr)
         base_agg = super(EventBasedHazardCalculator, self).agg_curves
-        if hasattr(self, 'zeros'):  # there are IMTLs
+        if self.oqparam.hazard_curves_from_gmfs:
             zeros = {key: self.zeros for key in self.rlzs_assoc}
         else:
             zeros = {}
         return tasks.apply_reduce(
             compute_gmfs_and_curves,
-            (self.job.id, sesruptures, sitecol, self.rlzs_assoc),
+            (sesruptures, sitecol, self.rlzs_assoc, self.monitor),
             base_agg, zeros, key=lambda sr: sr.col_idx)

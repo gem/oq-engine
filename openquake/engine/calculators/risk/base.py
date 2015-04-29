@@ -19,9 +19,9 @@
 Base RiskCalculator class.
 """
 
-import itertools
 import numpy
 
+from openquake.baselib import general
 from openquake.commonlib import risk_parsers
 from openquake.hazardlib.imt import from_string
 from openquake.commonlib.readinput import get_risk_model
@@ -48,24 +48,26 @@ eps_sampling = int(config.get('risk', 'epsilon_sampling'))
 
 
 @tasks.oqtask
-def prepare_risk(job_id, counts_taxonomy, calc):
+def prepare_risk(counts_taxonomy, calc, monitor):
     """
     Associates the assets to the closest hazard sites and populate
     the table asset_site. For some calculators also initializes the
     epsilon matrices and save them on the database.
 
-    :param job_id:
-        ID of the current risk job
     :param counts_taxonomy:
         a sorted list of pairs (counts, taxonomy) for each bunch of assets
     :param calc:
         the current risk calculator
+    :param monitor:
+        monitor of the current risk job
     """
+    assoc_mon = monitor("associating asset->site", autoflush=True)
+    init_mon = monitor("initializing epsilons", autoflush=True)
+
     for counts, taxonomy in counts_taxonomy:
 
         # building the RiskInitializers
-        with EnginePerformanceMonitor(
-                "associating asset->site", job_id, prepare_risk):
+        with assoc_mon:
             initializer = hazard_getters.RiskInitializer(taxonomy, calc)
             initializer.init_assocs()
 
@@ -83,38 +85,47 @@ def prepare_risk(job_id, counts_taxonomy, calc):
                     MEMORY_ERROR % (estimate_mb, available_mb))
 
         # initializing epsilons
-        with EnginePerformanceMonitor(
-                "initializing epsilons", job_id, prepare_risk):
+        with init_mon:
             initializer.init_epsilons(eps_sampling)
 
 
 @tasks.oqtask
-def run_risk(job_id, sorted_assocs, calc):
+def run_risk(sorted_assocs, calc, monitor):
     """
     Run the risk calculation on the given assets by using the given
     hazard initializers and risk calculator.
 
-    :param job_id:
-        ID of the current risk job
     :param sorted_assocs:
         asset_site associations, sorted by taxonomy
     :param calc:
         the risk calculator to use
+    :param monitor:
+        monitor of the current risk job
     """
     acc = calc.acc
     hazard_outputs = calc.get_hazard_outputs()
-    monitor = EnginePerformanceMonitor(None, job_id, run_risk)
     exposure_model = calc.exposure_model
     time_event = calc.time_event
-    for taxonomy, assocs_by_taxonomy in itertools.groupby(
-            sorted_assocs, lambda a: a.asset.taxonomy):
-        with calc.monitor("getting assets"):
+
+    get_assets_mon = monitor("getting assets", autoflush=True)
+    get_haz_mon = monitor("getting hazard", autoflush=True)
+
+    assocs_by_taxonomy = general.groupby(
+        sorted_assocs, lambda a: a.asset.taxonomy)
+    for taxonomy, assocs in assocs_by_taxonomy.iteritems():
+        with get_assets_mon:
             assets = models.ExposureData.objects.get_asset_chunk(
-                exposure_model, time_event, assocs_by_taxonomy)
+                exposure_model, time_event, assocs)
+        if not assets:
+            # NB: this may happen if the user provides a wrong time_event;
+            # the check should be done at the exposure parsing time and
+            # it will done that way in the future
+            raise RuntimeError('Could not find any asset for taxonomy=%s, '
+                               'time_event=%s' % (taxonomy, time_event))
         for it in models.ImtTaxonomy.objects.filter(
                 job=calc.job, taxonomy=taxonomy):
             imt = it.imt.imt_str
-            with calc.monitor("getting hazard"):
+            with get_haz_mon:
                 getter = calc.getter_class(
                     imt, taxonomy, hazard_outputs, assets)
             logs.LOG.info(
@@ -157,7 +168,6 @@ class RiskCalculator(base.Calculator):
         self.oqparam.hazard_output = models.Output.objects.get(
             pk=self.oqparam.hazard_output_id) \
             if self.oqparam.hazard_output_id else None
-
         dist = self.oqparam.maximum_distance
         grid_spacing = self.oqparam.region_grid_spacing
         if grid_spacing:
@@ -239,7 +249,7 @@ class RiskCalculator(base.Calculator):
         try:
             self.exposure_model = self.job.exposure_model
         except models.ObjectDoesNotExist:
-            with self.monitor('import exposure'):
+            with self.monitor('import exposure', autoflush=True):
                 ExposureDBWriter(self.job).serialize(
                     risk_parsers.ExposureModelParser(
                         self.oqparam.inputs['exposure']))
@@ -248,7 +258,7 @@ class RiskCalculator(base.Calculator):
             self.exposure_model.taxonomies_in(
                 self.oqparam.region_constraint)
 
-        with self.monitor('parse risk models'):
+        with self.monitor('parse risk models', autoflush=True):
             self.risk_model = self.get_risk_model()
 
         self.populate_imt_taxonomy()
@@ -276,7 +286,7 @@ class RiskCalculator(base.Calculator):
         # build the initializers hazard -> risk
         ct = sorted((counts, taxonomy) for taxonomy, counts
                     in self.taxonomies_asset_count.iteritems())
-        tasks.apply_reduce(prepare_risk, (self.job.id, ct, self),
+        tasks.apply_reduce(prepare_risk, (ct, self, self.monitor),
                            concurrent_tasks=self.concurrent_tasks)
 
     @EnginePerformanceMonitor.monitor
@@ -293,7 +303,7 @@ class RiskCalculator(base.Calculator):
         assocs = models.AssetSite.objects.filter(job=self.job).order_by(
             'asset__taxonomy')
         self.acc = tasks.apply_reduce(
-            run_risk, (self.job.id, assocs, self),
+            run_risk, (assocs, self, self.monitor),
             self.agg_result, self.acc, self.concurrent_tasks,
             name=self.core.__name__)
 

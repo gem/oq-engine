@@ -219,6 +219,25 @@ _wait_ssh () {
     fi
 }
 
+_pkgbuild_innervm_run () {
+    local lxc_ip="$1"
+    local DPBP_FLAG="$2"
+
+    trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
+
+    ssh $lxc_ip mkdir build-deb
+    scp -r * $lxc_ip:build-deb
+    gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
+    ssh $lxc_ip sudo apt-get update
+    ssh $lxc_ip sudo apt-get -y install build-essential dpatch fakeroot devscripts equivs lintian quilt
+    ssh $lxc_ip "sudo mk-build-deps --install --tool 'apt-get -y' build-deb/debian/control"
+
+    ssh $lxc_ip "cd build-deb && dpkg-buildpackage $DPBP_FLAG"
+    scp -r $lxc_ip:*.{tar.gz,deb,changes,dsc} ../
+
+    return
+}
+
 #
 #  _devtest_innervm_run <branch_id> <lxc_ip> - part of source test performed on lxc
 #                     the following activities are performed:
@@ -479,7 +498,7 @@ _pkgtest_innervm_run () {
             oq-engine --run-hazard job_hazard.ini -l info
             job_id=\$(oq-engine --list-hazard-calculations | tail -1 | awk '{print \$1}')
             echo \"Running \$demo_dir/job_risk.ini\"
-            oq-engine --run-risk job_risk.ini --exports xml,csv --hazard-calculation-id \$job_id -l info
+            oq-engine --run-risk job_risk.ini --exports csv,xml --hazard-calculation-id \$job_id -l info
             cd -
             fi
         done"
@@ -640,7 +659,6 @@ devtest_run () {
     sudo echo
     sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
-    rm /tmp/packager.eph.$$.log
 
     _wait_ssh $lxc_ip
     set +e
@@ -660,10 +678,11 @@ devtest_run () {
         echo "WARNING: pylint exits with $? value"
     fi
     set -e
+    if [ -f /tmp/packager.eph.$$.log ]; then
+        rm /tmp/packager.eph.$$.log
+    fi
 
-    # if [ $inner_ret -ne 0 ]; then
     return $inner_ret
-    # fi
 }
 
 #
@@ -713,7 +732,6 @@ EOF
     sudo echo
     sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
-    rm /tmp/packager.eph.$$.log
 
     _wait_ssh $lxc_ip
 
@@ -727,7 +745,9 @@ EOF
 
     sudo $LXC_TERM -n $lxc_name
     set -e
-
+    if [ -f /tmp/packager.eph.$$.log ]; then
+        rm /tmp/packager.eph.$$.log
+    fi
     if [ $inner_ret -ne 0 ]; then
         return $inner_ret
     fi
@@ -784,6 +804,7 @@ BUILD_BINARIES=0
 BUILD_REPOSITORY=0
 BUILD_DEVEL=0
 BUILD_UNSIGN=0
+BUILD_ON_LXC=0
 BUILD_FLAGS=""
 
 trap sig_hand SIGINT SIGTERM
@@ -810,6 +831,9 @@ while [ $# -gt 0 ]; do
             ;;
         -U|--unsigned)
             BUILD_UNSIGN=1
+            ;;
+        -L|--lxc_build)
+            BUILD_ON_LXC=1
             ;;
         -h|--help)
             usage 0
@@ -936,7 +960,25 @@ mv README.md       openquake/engine/README
 mv celeryconfig.py openquake/engine
 mv openquake.cfg   openquake/engine
 
-dpkg-buildpackage $DPBP_FLAG
+if [ $BUILD_ON_LXC -eq 1 ]; then
+    sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
+    _lxc_name_and_ip_get /tmp/packager.eph.$$.log
+    _wait_ssh $lxc_ip
+
+    set +e
+    _pkgbuild_innervm_run $lxc_ip $DPBP_FLAG
+    inner_ret=$?
+    sudo $LXC_TERM -n $lxc_name
+    set -e
+    if [ -f /tmp/packager.eph.$$.log ]; then
+        rm /tmp/packager.eph.$$.log
+    fi
+    if [ $inner_ret -ne 0 ]; then
+        return $inner_ret
+    fi
+else
+    dpkg-buildpackage $DPBP_FLAG
+fi
 cd -
 
 # if the monotone directory exists and is the "gem" repo and is the "master" branch then ...

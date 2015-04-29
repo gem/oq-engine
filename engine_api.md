@@ -33,6 +33,21 @@ Response:
       "is_running": false,
       "url": "http://localhost:8000/v1/calc/3"}]
 
+#### GET /v1/calc/:calc_id/status
+
+Return the calculation status (the same content of `/v1/calc/list`) for the given `calc_id`.
+
+Parameters: None
+
+Response:
+
+    {"description": "Hazard Calculation for end-to-end hazard+risk",
+      "id": 1,
+      "status": "executing",
+      "job_type": "hazard",
+      "is_running": true,
+      "url": "http://localhost:8000/v1/calc/1"}
+
 #### GET /v1/calc/:calc_id
 
 Get calculation status and parameter summary for the given `calc_id`.
@@ -52,6 +67,7 @@ Response:
      "no_progress_timeout": 3600,
      "number_of_logic_tree_samples": 0,
      "poes": [0.1, 0.2],
+     "is_running": false,
      "quantile_hazard_curves": [0.15, 0.5, 0.85],
      "random_seed": 1024,
      "reference_depth_to_1pt0km_per_sec": 50.0,
@@ -85,10 +101,10 @@ Parameters: None
 
 Response:
 
-    [{"url": "http://localhost:8000/v1/calc/hazard/result/12", "type": "hazard_curve", "name": "hc-rlz-22", "id": 12},
-     {"url": "http://localhost:8000/v1/calc/hazard/result/14", "type": "hazard_curve", "name": "hc-rlz-23", "id": 14},
-     {"url": "http://localhost:8000/v1/calc/hazard/result/16", "type": "hazard_curve", "name": "hc-rlz-24", "id": 16},
-     {"url": "http://localhost:8000/v1/calc/hazard/result/18", "type": "hazard_curve", "name": "hc-rlz-25", "id": 18}]
+    [{"url": "http://localhost:8000/v1/calc/hazard/result/12", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-22", "id": 12},
+     {"url": "http://localhost:8000/v1/calc/hazard/result/14", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-23", "id": 14},
+     {"url": "http://localhost:8000/v1/calc/hazard/result/16", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-24", "id": 16},
+     {"url": "http://localhost:8000/v1/calc/hazard/result/18", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-25", "id": 18}]
 
 
 #### GET /v1/calc/result/:result_id
@@ -98,6 +114,7 @@ Get the full content of a calculation result for the given `result_id`.
 Parameters:
 
     * export_type: the desired format for the result (`xml`, `geojson`, etc.)
+    * dload: `true` to force download, not `true` try to open in browser window
 
 Response:
 
