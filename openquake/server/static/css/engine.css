@@ -47,14 +47,19 @@ h2 {
     padding: 0;
 }
 
+.navbar .nav > li {
+    font-size: 16px;
+    padding: 0 5px;
+}
+
 .navbar .nav > li > a {
     color: #fff;
     text-shadow: none;
     font-size: 16px;
-    padding: 0 10px;
+    padding: 0;
 }
 
-.navbar .nav.account-bar > li.actions > a {
+.navbar .nav.account-bar > li > a {
     padding-left: 0;
     padding-right: 0;
 }
@@ -83,6 +88,14 @@ h2 {
 .navbar .navbar-inner {
     background: url(/static/img/oq-header.png) no-repeat left top;
     background-color: #1b75a5;
+}
+
+.navbar .nav > li.user {
+    padding-top: 10px;
+}
+
+.navbar .nav > li.user > a:hover{
+    text-decoration: underline;
 }
 
 nav.main-nav {
