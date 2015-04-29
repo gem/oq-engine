@@ -56,7 +56,7 @@ def export_asset_loss_csv(key, export_dir, data, suffix):
     :param data: a list [(loss_type, unit, asset_ref, mean, stddev), ...]
     :param suffix: a suffix specifying the GSIM realization
     """
-    dest = os.path.join(export_dir, '%s.%s' % key)
+    dest = os.path.join(export_dir, '%s%s.%s' % (key[0], suffix, key[1]))
     header = ['LossType', 'Unit', 'Asset', 'Mean', 'Standard Deviation']
     data.sort(key=operator.itemgetter(2))  # order by asset_ref
     writers.save_csv(dest, [header] + data, fmt='%11.7E')
