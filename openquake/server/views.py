@@ -179,10 +179,7 @@ def calc(request, id=None):
     """
     base_url = _get_base_url(request)
 
-    user_name = "platform"
-    if hasattr(request, 'user'):
-        if request.user.is_authenticated():
-            user_name = request.user.username
+    user_name = utils.getusername(request)
 
     calc_data = _get_calcs(request.GET, user_name, id=id)
 
@@ -295,10 +292,7 @@ def run_calc(request):
 
     temp_dir = os.path.dirname(einfo[0])
 
-    user_name = "platform"
-    if hasattr(request, 'user'):
-        if request.user.is_authenticated():
-            user_name = request.user.username
+    user_name = utils.getusername(request)
 
     try:
         job, _fut = submit_job(einfo[0], temp_dir, request.POST['database'],
