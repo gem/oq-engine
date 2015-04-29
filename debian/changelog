@@ -1,3 +1,6 @@
+  [Daniele Viganò]
+  * added authentication support to the 'engineweb' and the 'engineserver'
+
   [Michele Simionato]
   * the aggregate loss curves can be exported in CSV format
 
