@@ -796,9 +796,10 @@ class ParamSet(object):
         """
         Apply the `is_valid` methods to self and possibly raise a ValueError.
         """
-        valids = sorted(getattr(self, valid)
-                        for valid in dir(self.__class__)
-                        if valid.startswith('is_valid_'))
+        # it is important to have the validator applied in a fixed order
+        valids = [getattr(self, valid)
+                  for valid in sorted(dir(self.__class__))
+                  if valid.startswith('is_valid_')]
         for is_valid in valids:
             if not is_valid():
                 dump = '\n'.join('%s=%s' % (n, v)
