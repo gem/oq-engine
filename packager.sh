@@ -65,8 +65,6 @@ if [ "$GEM_EPHEM_NAME" = "" ]; then
     GEM_EPHEM_NAME="ubuntu-lxc-eph"
 fi
 
-LSB_RELEASE=$(lsb_release --codename --short)
-
 if command -v lxc-shutdown &> /dev/null; then
     # Older lxc (< 1.0.0) with lxc-shutdown
     LXC_TERM="lxc-shutdown -t 10 -w"
@@ -92,9 +90,9 @@ sig_hand () {
     echo "signal trapped"
     if [ "$lxc_name" != "" ]; then
         set +e
-        scp "${lxc_ip}:/var/tmp/openquake-db-installation" openquake-db-installation
-        scp "${lxc_ip}:/tmp/celeryd.log" celeryd.log
-        scp "${lxc_ip}:ssh.log" ssh.history
+        scp "${lxc_ip}:/var/tmp/openquake-db-installation" "out_${BUILD_UBUVER}/openquake-db-installation"
+        scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
+        scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/ssh.history"
         echo "Destroying [$lxc_name] lxc"
         upper="$(mount | grep "${lxc_name}.*upperdir" | sed 's@.*upperdir=@@g;s@,.*@@g')"
         if [ -f "${upper}.dsk" ]; then
@@ -185,8 +183,10 @@ usage () {
 
     echo
     echo "USAGE:"
-    echo "    $0 [-D|--development] [-S--sources_copy] [-B|--binaries] [-U|--unsigned] [-R|--repository]    build debian source package."
-    echo "       if -S is present try to copy sources to <GEM_DEB_MONOTONE>/source directory"
+    echo "    $0 [<-s|--serie> <precise|trusty>] [-D|--development] [-S--sources_copy] [-B|--binaries] [-U|--unsigned] [-R|--repository]    build debian source package."
+    echo "       if -s is present try to produce sources for a specific ubuntu version (precise or trusty),"
+    echo "           (default precise)"
+    echo "       if -S is present try to copy sources to <GEM_DEB_MONOTONE>/<BUILD_UBUVER>/source directory"
     echo "       if -B is present binary package is build too."
     echo "       if -R is present update the local repository to the new current package"
     echo "       if -D is present a package with self-computed version is produced."
@@ -235,7 +235,7 @@ _pkgbuild_innervm_run () {
     ssh $lxc_ip "sudo mk-build-deps --install --tool 'apt-get -y' build-deb/debian/control"
 
     ssh $lxc_ip "cd build-deb && dpkg-buildpackage $DPBP_FLAG"
-    scp -r $lxc_ip:*.{tar.gz,deb,changes,dsc} ../
+    scp -r ${lxc_ip}:*.{tar.gz,deb,changes,dsc} ..
 
     return
 }
@@ -272,7 +272,7 @@ _devtest_innervm_run () {
 
     # add custom packages
     ssh $lxc_ip mkdir -p "repo"
-    scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
+    scp -r ${GEM_DEB_REPO}/${BUILD_UBUVER}/custom_pkgs $lxc_ip:repo/custom_pkgs
     ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ./\""
 
     ssh $lxc_ip "sudo apt-get update"
@@ -370,11 +370,11 @@ celeryd_wait $GEM_MAXLOOP"
 
                  python-coverage xml --include=\"openquake/*\"
         "
-        scp "${lxc_ip}:oq-engine/xunit-*.xml" . || true
-        scp "${lxc_ip}:oq-engine/coverage.xml" . || true
+        scp "${lxc_ip}:oq-engine/xunit-*.xml" "out_${BUILD_UBUVER}/" || true
+        scp "${lxc_ip}:oq-engine/coverage.xml" "out_${BUILD_UBUVER}/" || true
     else
         if [ -d $HOME/fake-data/oq-engine ]; then
-            cp $HOME/fake-data/oq-engine/* . || true
+            cp $HOME/fake-data/oq-engine/* "out_${BUILD_UBUVER}/" || true
         fi
     fi
 
@@ -414,9 +414,9 @@ _pkgtest_innervm_run () {
 
     # create a remote "local repo" where place $GEM_DEB_PACKAGE package
     ssh $lxc_ip mkdir -p "repo/${GEM_DEB_PACKAGE}"
-    scp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
-        build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
-        build-deb/Packages* build-deb/Sources*  build-deb/Release* $lxc_ip:repo/${GEM_DEB_PACKAGE}
+    scp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.changes \
+        ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.dsc ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.tar.gz \
+        ${GEM_BUILD_ROOT}/Packages* ${GEM_BUILD_ROOT}/Sources*  ${GEM_BUILD_ROOT}/Release* $lxc_ip:repo/${GEM_DEB_PACKAGE}
     ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/${GEM_DEB_PACKAGE} ./\""
 
     if [ -f _jenkins_deps_info ]; then
@@ -445,13 +445,13 @@ _pkgtest_innervm_run () {
         else
             GEM_DEB_SERIE="devel/$(echo "$repo" | sed 's@^.*://@@g;s@/@__@g;s/\./-/g')__${branch}"
         fi
-        scp -r ${GEM_DEB_REPO}/${GEM_DEB_SERIE}/python-${dep} $lxc_ip:repo/
+        scp -r ${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/python-${dep} $lxc_ip:repo/
         ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-${dep} ./\""
     done
     IFS="$old_ifs"
 
     # add custom packages
-    scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
+    scp -r ${GEM_DEB_REPO}/${BUILD_UBUVER}/custom_pkgs $lxc_ip:repo/custom_pkgs
     ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ./\""
 
     ssh $lxc_ip "sudo apt-get update"
@@ -506,9 +506,9 @@ _pkgtest_innervm_run () {
         done"
     fi
     ssh $lxc_ip "oq-engine --make-html-report today"
-    scp "${lxc_ip}:jobs-*.html" .
+    scp "${lxc_ip}:jobs-*.html" "out_${BUILD_UBUVER}/"
 
-    scp -r "$lxc_ip:/usr/share/doc/${GEM_DEB_PACKAGE}/changelog*" .
+    scp -r "${lxc_ip}:/usr/share/doc/${GEM_DEB_PACKAGE}/changelog*" "out_${BUILD_UBUVER}/"
 
     trap ERR
 
@@ -524,18 +524,18 @@ _pkgtest_innervm_run () {
 deps_list() {
     local old_ifs out_list skip i d listtype="$1" filename="$2"
 
-    rules_dep=$(grep "^${LSB_RELEASE^^}_DEP =" debian/rules | cut -d '"' -f 2 | tr -d ",")
-    rules_rec=$(grep "^${LSB_RELEASE^^}_REC =" debian/rules | cut -d '"' -f 2 | tr -d ",")
+    rules_dep=$(grep "^${BUILD_UBUVER^^}_DEP =" debian/rules | cut -d '"' -f 2)
+    rules_rec=$(grep "^${BUILD_UBUVER^^}_REC =" debian/rules | cut -d '"' -f 2)
 
     out_list=""
     if [ "$listtype" = "all" ]; then
-        in_list="$(cat "$filename" | egrep '^Depends:|^Recommends:|Build-Depends:' | sed 's/^\(Build-\)\?Depends://g;s/^Recommends://g' | tr '\n' ',') $rules_dep $rules_rec"
+        in_list="$((cat "$filename" | egrep '^Depends:|^Recommends:|Build-Depends:' | sed 's/^\(Build-\)\?Depends://g;s/^Recommends://g' ; echo ", $rules_dep, $rules_rec") | tr '\n' ','| sed 's/,\+/,/g')"
     elif [  "$listtype" = "deprec" ]; then
-        in_list="$(cat "$filename" | egrep '^Depends:|^Recommends:' | sed 's/^Depends://g;s/^Recommends://g' | tr '\n' ',') $rules_dep $rules_rec"
+        in_list="$((cat "$filename" | egrep '^Depends:|^Recommends:' | sed 's/^Depends://g;s/^Recommends://g' ; echo ", $rules_dep, $rules_rec") | tr '\n' ','| sed 's/,\+/,/g')"
     elif [  "$listtype" = "build" ]; then
-        in_list="$(cat "$filename" | egrep '^Depends:|^Build-Depends:' | sed 's/^\(Build-\)\?Depends://g' | tr '\n' ',') $rules_dep"
+        in_list="$((cat "$filename" | egrep '^Depends:|^Build-Depends:' | sed 's/^\(Build-\)\?Depends://g' ; echo ", $rules_dep") | tr '\n' ','| sed 's/,\+/,/g')"
     else
-        in_list="$(cat "$filename" | egrep "^Depends:" | sed 's/^Depends: //g') $rules_dep"
+        in_list="$((cat "$filename" | egrep "^Depends:" | sed 's/^Depends: //g'; echo ", $rules_dep") | tr '\n' ','| sed 's/,\+/,/g')"
     fi
 
     old_ifs="$IFS"
@@ -605,6 +605,29 @@ _lxc_name_and_ip_get()
     return 0
 }
 
+deps_check_or_clone () {
+    local dep="$1" repo="$2" branch="$3"
+    local local_repo local_branch
+
+    if [ -d _jenkins_deps/$dep ]; then
+        cd _jenkins_deps/$dep
+        local_repo="$(git remote -v | head -n 1 | sed 's/origin[ 	]\+//;s/ .*//g')"
+        if [ "$local_repo" != "$repo" ]; then
+            echo "Dependency $dep: cached repository version differs from required ('$local_repo' != '$repo')."
+            exit 1
+        fi
+        local_branch="$(git branch 2>/dev/null | sed -e '/^[^*]/d' | sed -e 's/* \(.*\)/\1/')"
+        if [ "$local_branch" != "$branch" ]; then
+            echo "Dependency $dep: cached branch version differs from required ('$local_branch' != '$branch')."
+            exit 1
+        fi
+        git clean -dfx
+        cd -
+    else
+        git clone --depth=1 -b $branch $repo _jenkins_deps/$dep
+    fi
+}
+
 #
 #  devtest_run <branch_id> - main function of source test
 #      <branch_id>    name of the tested branch
@@ -612,7 +635,12 @@ _lxc_name_and_ip_get()
 devtest_run () {
     local deps old_ifs branch_id="$1"
 
-    mkdir _jenkins_deps
+    if [ ! -d "out_${BUILD_UBUVER}" ]; then
+        mkdir "out_${BUILD_UBUVER}"
+    fi
+    if [ ! -d _jenkins_deps ]; then
+        mkdir _jenkins_deps
+    fi
 
     #
     #  dependencies repos
@@ -636,15 +664,15 @@ devtest_run () {
         for repo in $repos; do
             # search of same branch in same repo or in GEM_GIT_REPO repo
             if git ls-remote --heads $repo/${dep}.git | grep -q "refs/heads/$branch" ; then
-                git clone --depth=1 -b $branch $repo/${dep}.git _jenkins_deps/$dep
+                deps_check_or_clone "$dep" "$repo/${dep}.git" "$branch"
                 found=1
                 break
             fi
         done
         # if not found it fallback in master branch of GEM_GIT_REPO repo
         if [ $found -eq 0 ]; then
-            git clone --depth=1 $repo/${dep}.git _jenkins_deps/$dep
             branch="master"
+            deps_check_or_clone "$dep" "$repo/${dep}.git" "$branch"
         fi
         cd _jenkins_deps/$dep
         commit="$(git log -1 | grep '^commit' | sed 's/^commit //g')"
@@ -655,9 +683,23 @@ devtest_run () {
         echo "commit:     $commit"
         echo
         var_pfx="$(dep2var "$dep")"
-        echo "${var_pfx}_COMMIT=$commit" >> _jenkins_deps_info
-        echo "${var_pfx}_REPO=$repo"     >> _jenkins_deps_info
-        echo "${var_pfx}_BRANCH=$branch" >> _jenkins_deps_info
+        if [ ! -f _jenkins_deps_info ]; then
+            touch _jenkins_deps_info
+        fi
+        if grep -q "^${var_pfx}_COMMIT=" _jenkins_deps_info; then
+            if ! grep -q "^${var_pfx}_COMMIT=$commit" _jenkins_deps_info; then
+                echo "ERROR: $repo -> $branch changed during test:"
+                echo "before:"
+                grep "^${var_pfx}_COMMIT=" _jenkins_deps_info
+                echo "after:"
+                echo "${var_pfx}_COMMIT=$commit"
+                exit 1
+            fi
+        else
+            echo "${var_pfx}_COMMIT=$commit" >> _jenkins_deps_info
+            echo "${var_pfx}_REPO=$repo"     >> _jenkins_deps_info
+            echo "${var_pfx}_BRANCH=$branch" >> _jenkins_deps_info
+        fi
     done
     IFS="$old_ifs"
 
@@ -670,9 +712,9 @@ devtest_run () {
     _devtest_innervm_run "$branch_id" "$lxc_ip"
     inner_ret=$?
 
-    scp "${lxc_ip}:/var/tmp/openquake-db-installation" openquake-db-installation.dev || true
-    scp "${lxc_ip}:/tmp/celeryd.log" celeryd.log
-    scp "${lxc_ip}:ssh.log" devtest.history
+    scp "${lxc_ip}:/var/tmp/openquake-db-installation" "out_${BUILD_UBUVER}/openquake-db-installation.dev" || true
+    scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
+    scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/devtest.history"
 
     sudo $LXC_TERM -n $lxc_name
 
@@ -697,11 +739,15 @@ devtest_run () {
 pkgtest_run () {
     local i e branch_id="$1"
 
+    if [ ! -d "out_${BUILD_UBUVER}" ]; then
+        mkdir "out_${BUILD_UBUVER}"
+    fi
+
     #
     #  run build of package
-    if [ -d build-deb ]; then
-        if [ ! -f build-deb/${GEM_DEB_PACKAGE}_*.deb ]; then
-            echo "'build-deb' directory already exists but .deb file package was not found"
+    if [ -d ${GEM_BUILD_ROOT} ]; then
+        if [ ! -f ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb ]; then
+            echo "'${GEM_BUILD_ROOT}' directory already exists but .deb file package was not found"
             return 1
 
         fi
@@ -711,15 +757,15 @@ pkgtest_run () {
 
     #
     #  prepare repo and install $GEM_DEB_PACKAGE package
-    cd build-deb
+    cd ${GEM_BUILD_ROOT}
     dpkg-scanpackages . /dev/null >Packages
     cat Packages | gzip -9c > Packages.gz
     dpkg-scansources . > Sources
     cat Sources | gzip > Sources.gz
     cat > Release <<EOF
-Archive: $LSB_RELEASE
+Archive: $BUILD_UBUVER
 Origin: Ubuntu
-Label: Local Ubuntu ${LSB_RELEASE^} Repository
+Label: Local Ubuntu ${BUILD_UBUVER^} Repository
 Architecture: amd64
 MD5Sum:
 EOF
@@ -744,9 +790,9 @@ EOF
     _pkgtest_innervm_run $lxc_ip
     inner_ret=$?
 
-    scp "${lxc_ip}:/var/tmp/openquake-db-installation" openquake-db-installation.pkg || true
-    scp "${lxc_ip}:/tmp/celeryd.log" celeryd.log
-    scp "${lxc_ip}:ssh.log" pkgtest.history
+    scp "${lxc_ip}:/var/tmp/openquake-db-installation" "out_${BUILD_UBUVER}/openquake-db-installation.pkg" || true
+    scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
+    scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/pkgtest.history"
 
     sudo $LXC_TERM -n $lxc_name
     set -e
@@ -772,30 +818,30 @@ EOF
                 fi
             fi
         fi
-        mkdir -p "${GEM_DEB_REPO}/${GEM_DEB_SERIE}"
-        repo_tmpdir="$(mktemp -d "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}.XXXXXX")"
+        mkdir -p "${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}"
+        repo_tmpdir="$(mktemp -d "${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}.XXXXXX")"
 
         # if the monotone directory exists and is the "gem" repo and is the "master" branch then ...
-        if [ -d "${GEM_DEB_MONOTONE}/binary" ]; then
+        if [ -d "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/binary" ]; then
             if [ "git://$repo_id" == "$GEM_GIT_REPO" -a "$branch_id" == "master" ]; then
-                cp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
-                    build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
-                    "${GEM_DEB_MONOTONE}/binary"
+                cp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.changes \
+                    ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.dsc ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.tar.gz \
+                    "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/binary"
                 PKG_COMMIT="$(git rev-parse HEAD | cut -c 1-7)"
                 grep '_COMMIT' _jenkins_deps_info \
                   | sed 's/\(^.*=[0-9a-f]\{7\}\).*/\1/g' \
-                  > "${GEM_DEB_MONOTONE}"/${GEM_DEB_PACKAGE}_${PKG_COMMIT}_deps.txt
+                  > "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/${GEM_DEB_PACKAGE}_${PKG_COMMIT}_deps.txt"
             fi
         fi
 
-        cp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
-            build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
-            build-deb/Packages* build-deb/Sources* build-deb/Release* "${repo_tmpdir}"
-        if [ "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}" ]; then
-            rm -rf "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}"
+        cp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.changes \
+            ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.dsc ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.tar.gz \
+            ${GEM_BUILD_ROOT}/Packages* ${GEM_BUILD_ROOT}/Sources* ${GEM_BUILD_ROOT}/Release* "${repo_tmpdir}"
+        if [ "${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}" ]; then
+            rm -rf "${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}"
         fi
-        mv "${repo_tmpdir}" "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}"
-        echo "The package is saved here: ${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}"
+        mv "${repo_tmpdir}" "${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}"
+        echo "The package is saved here: ${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}"
     fi
 
     return 0
@@ -809,6 +855,8 @@ BUILD_BINARIES=0
 BUILD_REPOSITORY=0
 BUILD_DEVEL=0
 BUILD_UNSIGN=0
+BUILD_UBUVER_REFERENCE="precise"
+BUILD_UBUVER="$BUILD_UBUVER_REFERENCE"
 BUILD_FLAGS=""
 
 trap sig_hand SIGINT SIGTERM
@@ -819,10 +867,21 @@ while [ $# -gt 0 ]; do
             BUILD_DEVEL=1
             if [ "$DEBFULLNAME" = "" -o "$DEBEMAIL" = "" ]; then
                 echo
-                echo "error: set DEBFULLNAME and DEBEMAIL environment vars and run again the script"
+                echo "ERROR: set DEBFULLNAME and DEBEMAIL environment vars and run again the script"
                 echo
                 exit 1
             fi
+            ;;
+        -s|--serie)
+            BUILD_UBUVER="$2"
+            if [ "$BUILD_UBUVER" != "precise" -a "$BUILD_UBUVER" != "trusty" ]; then
+                echo
+                echo "ERROR: ubuntu version '$BUILD_UBUVER' not supported"
+                echo
+                exit 1
+            fi
+            BUILD_FLAGS="$BUILD_FLAGS $1"
+            shift
             ;;
         -S|--sources_copy)
             BUILD_SOURCES_COPY=1
@@ -872,6 +931,12 @@ if [ $BUILD_UNSIGN -eq 1 ]; then
     DPBP_FLAG="$DPBP_FLAG -us -uc"
 fi
 
+if [ ! -d "out_${BUILD_UBUVER}" ]; then
+    mkdir "out_${BUILD_UBUVER}"
+fi
+GEM_BUILD_ROOT="build-deb"
+GEM_BUILD_SRC="${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}"
+
 mksafedir "$GEM_BUILD_ROOT"
 mksafedir "$GEM_BUILD_SRC"
 
@@ -884,10 +949,15 @@ git archive HEAD | (cd "$GEM_BUILD_SRC" ; tar xv)
 ##  "submodule foreach" vars: $name, $path, $sha1 and $toplevel:
 # git submodule foreach "git archive HEAD | (cd \"\${toplevel}/${GEM_BUILD_SRC}/\$path\" ; tar xv ) "
 
-cd "$GEM_BUILD_SRC"
+#date
+if [ -f gem_date_file ]; then
+    dt="$(cat gem_date_file)"
+else
+    dt="$(date +%s)"
+    echo "$dt" > gem_date_file
+fi
 
-# date
-dt="$(date +%s)"
+cd "$GEM_BUILD_SRC"
 
 # version info from openquake/engine/__init__.py
 ini_vers="$(cat openquake/engine/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")"
@@ -929,7 +999,7 @@ if [ $BUILD_DEVEL -eq 1 ]; then
         pkg_deb="-0"
     fi
 
-    ( echo "$pkg_name (${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}~dev${dt}-${hash}) $pkg_rest"
+    ( echo "$pkg_name (${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}~dev${dt}-${hash}~${BUILD_UBUVER}01) ${BUILD_UBUVER}; urgency=low"
       echo
       echo "  [Automatic Script]"
       echo "  * Development version from $hash commit"
@@ -942,6 +1012,10 @@ if [ $BUILD_DEVEL -eq 1 ]; then
     rm debian/changelog.orig
 
     sed -i "s/^__version__[  ]*=.*/__version__ = '${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}~dev${dt}-${hash}'/g" openquake/engine/__init__.py
+else
+    cp debian/changelog debian/changelog.orig
+    cat debian/changelog.orig | sed "1 s/${BUILD_UBUVER_REFERENCE}/${BUILD_UBUVER}/g" > debian/changelog
+    rm debian/changelog.orig
 fi
 
 if [  "$ini_maj" != "$pkg_maj" -o \
@@ -978,7 +1052,7 @@ if [ $BUILD_ON_LXC -eq 1 ]; then
         rm /tmp/packager.eph.$$.log
     fi
     if [ $inner_ret -ne 0 ]; then
-        return $inner_ret
+        exit $inner_ret
     fi
 else
     dpkg-buildpackage $DPBP_FLAG
@@ -986,10 +1060,10 @@ fi
 cd -
 
 # if the monotone directory exists and is the "gem" repo and is the "master" branch then ...
-if [ -d "${GEM_DEB_MONOTONE}/source" -a $BUILD_SOURCES_COPY -eq 1 ]; then
-    cp build-deb/${GEM_DEB_PACKAGE}_*.changes \
-        build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
-        "${GEM_DEB_MONOTONE}/source"
+if [ -d "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/source" -a $BUILD_SOURCES_COPY -eq 1 ]; then
+    cp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.changes \
+        ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.dsc ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.tar.gz \
+        "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/source"
 fi
 
 if [ $BUILD_DEVEL -ne 1 ]; then
