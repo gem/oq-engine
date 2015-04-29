@@ -14,6 +14,7 @@ ADMINS = (
 )
 
 TEMPLATE_CONTEXT_PROCESSORS += (
+    'django.contrib.messages.context_processors.messages',
     'openquake.server.utils.oq_server_context_processor',
 )
 
@@ -32,9 +33,13 @@ STATICFILES_DIRS = [
 
 DATABASES = oqe_settings.DATABASES
 
-DATABASE_ROUTERS = ['openquake.engine.db.routers.OQRouter', ]
+DATABASE_ROUTERS = ['openquake.server.routers.AuthRouter',
+                    'openquake.engine.db.routers.OQRouter', ]
+
 
 ALLOWED_HOSTS = ['*']
+
+AUTHENTICATION_BACKENDS = ()
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
@@ -66,6 +71,12 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
 )
+
+LOCKDOWN = False
+
+# Add additional paths (as regular expressions) that don't require
+# authentication.
+AUTH_EXEMPT_URLS = ()
 
 ROOT_URLCONF = 'openquake.server.urls'
 
@@ -117,3 +128,40 @@ LOGGING = {
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1
 
+try:
+    from local_settings import *
+except ImportError:
+    pass
+
+if LOCKDOWN:
+    AUTH_DATABASES = {
+        'auth_db': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.path.join(os.path.dirname(__file__),
+                                 'engineserver.sqlite3'),
+        }
+    }
+
+    DATABASES.update(AUTH_DATABASES)
+
+    AUTHENTICATION_BACKENDS += (
+        'django.contrib.auth.backends.ModelBackend',
+        # 'dpam.backends.PAMBackend',
+    )
+
+    MIDDLEWARE_CLASSES += (
+        'django.contrib.sessions.middleware.SessionMiddleware',
+        'django.contrib.messages.middleware.MessageMiddleware',
+        'django.contrib.auth.middleware.AuthenticationMiddleware',
+        'openquake.server.middleware.LoginRequiredMiddleware',
+    )
+
+    INSTALLED_APPS += (
+        'django.contrib.auth',
+        'django.contrib.contenttypes',
+        'django.contrib.messages',
+        'django.contrib.sessions',
+        'django.contrib.admin',
+        )
+
+    LOGIN_REDIRECT_URL = '/engine'

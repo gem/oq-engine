@@ -1,11 +1,8 @@
-import time
-import atexit
-from datetime import datetime
+import os
 
 from openquake.commonlib.parallel import PerformanceMonitor
 from openquake.engine import logs
 from openquake.engine.db import models
-from openquake.engine.writer import CacheInserter
 
 
 class EnginePerformanceMonitor(PerformanceMonitor):
@@ -24,14 +21,6 @@ class EnginePerformanceMonitor(PerformanceMonitor):
     # to that aim extract the pid with
     # connections['job_init'].cursor().connection.get_backend_pid()
 
-    # globals per process
-    cache = CacheInserter(models.Performance, 1000)  # store at most 1k objects
-
-    @classmethod
-    def store_task_id(cls, job_id, task):
-        with cls('storing task id', job_id, task, flush=True):
-            pass
-
     @classmethod
     def monitor(cls, method):
         """
@@ -41,107 +30,71 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         2) there is an attribute self.job.id
         """
         def newmeth(self, *args):
-            with cls(method.__name__, self.job.id, flush=True):
+            with cls(method.__name__, self.job.id, autoflush=True):
                 return method(self, *args)
         newmeth.__name__ = method.__name__
         return newmeth
 
     def __init__(self, operation, job_id, task=None, tracing=False,
-                 flush=False):
-        self.operation = operation
+                 measuremem=True, autoflush=False):
+        self.measuremem = measuremem
+        pid = os.getpid() if measuremem else None
+        super(EnginePerformanceMonitor, self).__init__(
+            operation, pid, autoflush=autoflush)
         self.job_id = job_id
         if task:
             self.task = task
-            self.task_id = task.request.id
         else:
             self.task = None
-            self.task_id = None
         self.tracing = tracing
-        self.flush = flush
         if tracing:
             self.tracer = logs.tracing(operation)
 
-        super(EnginePerformanceMonitor, self).__init__(operation)
+    @property
+    def task_id(self):
+        """Return the celery task ID or None"""
+        return None if self.task is None else self.task.request.id
 
-    def __call__(self, operation):
+    def __call__(self, operation, task=None, **kw):
         """
         Return a copy of the monitor usable for a different operation
         in the same task.
         """
-        return self.__class__(operation, self.job_id, self.task,
-                              self.tracing, self.flush)
-
-    def on_exit(self):
-        """
-        Save the memory consumption on the uiapi.performance table.
-        """
-        if self.exc is None:  # save only valid calculations
-            perf = models.Performance(
-                oq_job_id=self.job_id,
-                task_id=self.task_id,
-                task=getattr(self.task, '__name__', None),
-                operation=self.operation,
-                start_time=self.start_time,
-                duration=self.duration,
-                pymemory=self.mem,
-                pgmemory=None)
-            self.cache.add(perf)
-            if self.flush:
-                self.cache.flush()
+        new = self.__class__(operation, self.job_id, task or self.task,
+                             self.tracing, self.measuremem, self.autoflush)
+        vars(new).update(kw)
+        return new
 
     def __enter__(self):
+        # start measuring time and memory
         super(EnginePerformanceMonitor, self).__enter__()
         if self.tracing:
             self.tracer.__enter__()
         return self
 
     def __exit__(self, etype, exc, tb):
+        # measuring time and memory
         super(EnginePerformanceMonitor, self).__exit__(etype, exc, tb)
         if self.tracing:
             self.tracer.__exit__(etype, exc, tb)
 
-## makes sure the performance results are flushed in the db at the end
-atexit.register(EnginePerformanceMonitor.cache.flush)
-
-
-class LightMonitor(object):
-    """
-    in situations where a `PerformanceMonitor` is overkill or affects
-    the performance (as in short loops), this helper can aid in
-    measuring roughly the performance of a small piece of code. Please
-    note that it does not prevent the common traps in measuring the
-    performance as stated in the "Algorithms" chapter in the Python
-    Cookbook.
-    """
-    def __init__(self, operation, job_id, task=None):
-        self.operation = operation
-        self.job_id = job_id
-        if task is not None:
-            self.task = task
-            self.task_id = task.request.id
-        else:
-            self.task = None
-            self.task_id = None
-        self.t0 = time.time()
-        self.start_time = datetime.fromtimestamp(self.t0)
-        self.duration = 0
-
-    def __enter__(self):
-        self.t0 = time.time()
-        return self
-
-    def __exit__(self, etype, exc, tb):
-        self.duration += time.time() - self.t0
-
-    def copy(self, operation):
-        return self.__class__(operation, self.job_id, self.task)
+    def on_exit(self):
+        """
+        Save the memory consumption on the uiapi.performance table.
+        """
+        if self.autoflush and self.exc is None:  # save only valid measures
+            self.flush()
 
     def flush(self):
+        """Save a row in the performance table"""
         models.Performance.objects.create(
             oq_job_id=self.job_id,
             task_id=self.task_id,
             task=getattr(self.task, '__name__', None),
             operation=self.operation,
             start_time=self.start_time,
-            duration=self.duration)
-        self.__init__(self.operation, self.job_id, self.task)
+            duration=self.duration,
+            pymemory=self.mem if self.measuremem else None,
+            pgmemory=None)
+        self.mem = 0
+        self.duration = 0

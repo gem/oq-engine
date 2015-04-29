@@ -90,7 +90,7 @@ class EngineServerTestCase(unittest.TestCase):
         env['OQ_NO_DISTRIBUTE'] = '1'
         cls.proc = subprocess.Popen(
             [sys.executable, '-m', 'openquake.server.manage', 'runserver',
-             cls.hostport, '--noreload'], env=env, stderr=subprocess.PIPE,
+             cls.hostport, '--noreload'], env=env,
             stdout=subprocess.PIPE)
         time.sleep(2)
 
@@ -141,5 +141,10 @@ class EngineServerTestCase(unittest.TestCase):
         # the file logic-tree-source-model.xml is missing
         tb_str = self.postzip('archive_err_2.zip')
         self.assertIn('failed to load external entity', tb_str)
+
+    def test_err_3(self):
+        # there is no file job.ini, job_hazard.ini or job_risk.ini
+        tb_str = self.postzip('archive_err_3.zip')
+        self.assertIn('Could not find any file of the form', tb_str)
 
     # TODO: add more tests for error situations
