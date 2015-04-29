@@ -38,7 +38,7 @@ from openquake.engine.db import models as oqe_models
 from openquake.engine.export import core
 from openquake.engine.utils.tasks import safely_call
 from openquake.engine.export.core import export_output
-from openquake.server import tasks, executor
+from openquake.server import tasks, executor, utils
 
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
@@ -381,10 +381,7 @@ def calc_results(request, calc_id):
         * type (hazard_curve, hazard_map, etc.)
         * url (the exact url where the full result can be accessed)
     """
-    user_name = "platform"
-    if hasattr(request, 'user'):
-        if request.user.is_authenticated():
-            user_name = request.user.username
+    user_name = utils.getusername(request)
 
     # If the specified calculation doesn't exist OR is not yet complete,
     # throw back a 404.
