@@ -60,7 +60,7 @@ def export_asset_loss_csv(key, export_dir, data, suffix):
     header = ['LossType', 'Unit', 'Asset', 'Mean', 'Standard Deviation']
     data.sort(key=operator.itemgetter(2))  # order by asset_ref
     writers.save_csv(dest, [header] + data, fmt='%11.7E')
-    return AccumDict({key: dest})
+    return AccumDict({key: [dest]})
 
 
 @export.add(('agg', 'csv'), ('ins', 'csv'))
@@ -76,7 +76,7 @@ def export_agg_loss_csv(key, export_dir, aggcurves, suffix):
     dest = os.path.join(export_dir, '%s%s.%s' % (key[0], suffix, key[1]))
     header = ['LossType', 'Unit', 'Mean', 'Standard Deviation']
     writers.save_csv(dest, [header] + aggcurves, fmt='%11.7E')
-    return AccumDict({key: dest})
+    return AccumDict({key: [dest]})
 
 
 @export.add(('classical_damage', 'csv'))
