@@ -276,24 +276,26 @@ class TaskManager(object):
         """
         arg0 = task_args[0]
         args = task_args[1:]
+        task_func = getattr(task, 'task_func', task)
         if acc is None:
             acc = AccumDict()
         if not arg0:
             return acc
         elif len(arg0) == 1:
-            return agg(acc, task.task_func(arg0, *args))
+            return agg(acc, task_func(arg0, *args))
         chunks = list(split_in_blocks(
             arg0, concurrent_tasks or 1, weight, key))
         cls.apply_reduce.__func__._chunks = chunks
         if not concurrent_tasks or no_distribute():
             for chunk in chunks:
-                acc = agg(acc, task.task_func(chunk, *args))
+                acc = agg(acc, task_func(chunk, *args))
             return acc
         tm = cls.starmap(task, [(chunk,) + args for chunk in chunks], name)
         return tm.reduce(agg, acc)
 
     def __init__(self, oqtask, name=None):
         self.oqtask = oqtask
+        self.task_func = getattr(oqtask, 'task_func', oqtask)
         self.name = name or oqtask.__name__
         self.results = []
         self.sent = 0
@@ -309,7 +311,7 @@ class TaskManager(object):
         check_mem_usage()
         # log a warning if too much memory is used
         if no_distribute():
-            res = safely_call(self.oqtask.task_func, args)
+            res = safely_call(self.task_func, args)
         else:
             piks = pickle_sequence(args)
             self.sent += sum(len(p) for p in piks)
@@ -318,7 +320,11 @@ class TaskManager(object):
 
     def _submit(self, piks):
         # submit tasks by using the ProcessPoolExecutor
-        return self.executor.submit(self.oqtask, *piks)
+        if self.oqtask is self.task_func:
+            return self.executor.submit(
+                safely_call, self.task_func, piks, True)
+        else:  # call the decorated task
+            return self.executor.submit(self.oqtask, *piks)
 
     def aggregate_result_set(self, agg, acc):
         """
