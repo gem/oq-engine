@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}OpenQuake engine{% endblock %}</title>
+  <link href="{{ STATIC_URL }}img/favicon.png" rel="shortcut icon" type="image/png"/>
+  <link href="{{ STATIC_URL }}css/base.css" rel="stylesheet" type="text/css" />
+  <link href="{{ STATIC_URL }}font/lato_font.css" rel="stylesheet" type="text/css" />
+  <link href="{{ STATIC_URL }}css/assets.min.css" rel="stylesheet" type="text/css" />
+  <link href="{{ STATIC_URL }}css/engine.css" rel="stylesheet" type="text/css" />
+  <link href="{{ STATIC_URL }}css/jasny-bootstrap.min.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+  {% block header %}
+  <div id="header" class="navbar navbar-fixed-top">
+    <div class="navbar-inner">
+      <section>
+      <div class="container">
+        <div class="row">
+          <div class="span3">
+            <a href="{% url "index" %}"><span class="nav-logo"></span></a>
+          </div>
+          <div class="span10">
+            <nav class="main-nav">
+              <ul>
+                {% block nav-items %}
+                <li class="calc">
+                  <a href="{% url "index" %}">Back to Calculations</a>
+                </li>
+                {% endblock nav-items %}
+              </ul>
+            </nav>
+          </div> <!-- ./span10 -->
+          <div class="span9">
+            <div class="nav-collapse pull-right">
+              <div class="pull-right">
+                <ul class="nav pull-right account-bar">
+                  {% if user.is_authenticated %}
+                  <li class="user">
+                    Hello, <strong>
+                    {% if user.is_superuser %}
+                    <a href="{% url "admin:index" %}">{{ user.username }}</a>
+                    {% else %}
+                    {{ user.username }}
+                    {% endif %}
+                    </strong>
+                  </li>
+                  <li class="user">
+                    |
+                  </li>
+                  <li class="user">
+                    <a href="{% url "logout" %}">logout</a>
+                  </li>
+                  {% endif %}
+                  <li class="actions">
+                      <a href="https://github.com/gem/oq-engine/wiki" id="help_url" rel="tooltip" target="_blank" title="Help"><img src="/static/img/oq-help.png"></a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div id="gem-right-logo">
+            <a href="http://www.globalquakemodel.org" title="GEM Foundation" target="_blank"><span class="nav-logo nav-logo-gem"></span></a>
+          </div>
+        </div>
+      </div> <!-- /.container -->
+      </section>
+    </div> <!-- /.navbar-inner -->
+  </div> <!-- /.navbar navbar-fixed-top -->
+  {% endblock header %}
+
+  {% block main %}
+  {% endblock main %}
+
+  {% block footer %}
+  <footer id="footer" class="footer">
+    <div class="container">
+      <div class="pull-left">
+        <a href="https://github.com/gem/oq-engine" target="_blank">OpenQuake Engine</a> <em>{{ oq_engine_version }}</em> |
+        <a href="{% url "license" %}">License</a> |
+        <a href="https://groups.google.com/forum/#%21forum/openquake-users" target="_blank">Feedback</a>
+      </div>
+      <div class="pull-right">
+      </div> <!-- /.pull-right -->
+    </div> <!-- /.container -->
+  </footer>
+  {% endblock footer %}
+
+  {% block scripts %}
+  <script type="text/javascript" src="https://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}lib/jquery/js/jquery-1.9.1.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}lib/jquery/js/jquery-ui-1.10.3.custom.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}js/assets.min.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}lib/bootstrap-extend/js/jasny-bootstrap.min.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}lib/underscore/js/underscore-min.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}lib/backbone/js/backbone-min.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}lib/jquery/js/jquery.form-3.44.0.js"></script>
+  {% endblock scripts %}
+
+  {% block templates %}
+  {% endblock templates %}
+
+  {% block extra_script %}
+  <script type="text/javascript"><!--
+    var gem_oq_server_url = '{{ oq_engine_server_url }}';
+    //-->
+    </script>
+  {% endblock extra_script %}
+</body>
+</html>

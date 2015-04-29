@@ -34,7 +34,7 @@ from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.calculators import calculators
 from openquake.engine.utils import tasks
-from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
+from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.calculators.hazard.classical.core import \
     ClassicalHazardCalculator
 
@@ -44,9 +44,9 @@ from openquake.engine.calculators.hazard.classical.core import \
 BinData = namedtuple('BinData', 'mags, dists, lons, lats, trts, pnes')
 
 
-def _collect_bins_data(mon, trt_num, source_ruptures, site, curves,
+def _collect_bins_data(trt_num, source_ruptures, site, curves,
                        trt_model_id, gsims, imtls, poes, truncation_level,
-                       n_epsilons):
+                       n_epsilons, mon):
     # returns a BinData instance
     sitecol = SiteCollection([site])
     mags = []
@@ -56,9 +56,9 @@ def _collect_bins_data(mon, trt_num, source_ruptures, site, curves,
     trts = []
     pnes = []
     sitemesh = sitecol.mesh
-    calc_dist = mon.copy('calc distances')
-    make_ctxt = mon.copy('making contexts')
-    disagg_poe = mon.copy('disaggregate_poe')
+    calc_dist = mon('calc distances', measuremem=False)
+    make_ctxt = mon('making contexts', measuremem=False)
+    disagg_poe = mon('disaggregate_poe', measuremem=False)
     trt_model = models.TrtModel.objects.get(pk=trt_model_id)
     rlzs = trt_model.get_rlzs_by_gsim()
     for source, ruptures in source_ruptures:
@@ -186,13 +186,11 @@ def save_disagg_result(job_id, site_id, bin_edges, trt_names, matrix,
 
 
 @tasks.oqtask
-def compute_disagg(job_id, sitecol, sources, trt_model_id,
-                   trt_num, curves_dict, bin_edges):
+def compute_disagg(sitecol, sources, trt_model_id,
+                   trt_num, curves_dict, bin_edges, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
-    :param int job_id:
-        ID of the currently running :class:`openquake.engine.db.models.OqJob`
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param list sources:
@@ -205,18 +203,22 @@ def compute_disagg(job_id, sitecol, sources, trt_model_id,
         a dictionary with the hazard curves for sites, realizations and IMTs
     :param bin_egdes:
         a dictionary (lt_model_id, site_id) -> edges
+    :param monitor:
+        monitor of the currently running job
     :returns:
         a dictionary of probability arrays, with composite key
         (site.id, rlz.id, poe, imt, iml, trt_names).
     """
-    mon = LightMonitor('disagg', job_id, compute_disagg)
-    hc = models.oqparam(job_id)
+    hc = models.oqparam(monitor.job_id)
     trt_model = models.TrtModel.objects.get(pk=trt_model_id)
     gsims = trt_model.get_gsim_instances()
     lt_model_id = trt_model.lt_model.id
     rlzs = trt_model.get_rlzs_by_gsim()
     trt_names = tuple(trt_model.lt_model.get_tectonic_region_types())
     result = {}  # site.id, rlz.id, poe, imt, iml, trt_names -> array
+
+    collecting_mon = monitor('collecting bins')
+    arranging_mon = monitor('arranging bins')
 
     for site in sitecol:
         # edges as wanted by disagg._arrange_data_in_bins
@@ -228,20 +230,19 @@ def compute_disagg(job_id, sitecol, sources, trt_model_id,
 
         # generate source, rupture, sites once per site
         source_ruptures = list(
-            gen_ruptures_for_site(site, sources, hc.maximum_distance, mon))
+            gen_ruptures_for_site(site, sources, hc.maximum_distance, monitor))
         if not source_ruptures:
             continue
         logs.LOG.info('Collecting bins from %d ruptures close to %s',
                       sum(len(rupts) for src, rupts in source_ruptures),
                       site.location)
 
-        with EnginePerformanceMonitor(
-                'collecting bins', job_id, compute_disagg):
+        with collecting_mon:
             bdata = _collect_bins_data(
-                mon, trt_num, source_ruptures, site, curves_dict[site.id],
+                trt_num, source_ruptures, site, curves_dict[site.id],
                 trt_model_id, gsims, hc.imtls,
                 hc.poes_disagg, hc.truncation_level,
-                hc.num_epsilon_bins)
+                hc.num_epsilon_bins, monitor)
 
         if not bdata.pnes:  # no contributions for this site
             continue
@@ -263,14 +264,14 @@ def compute_disagg(job_id, sitecol, sources, trt_model_id,
                                 bdata.trts, None, probs]
 
                         # call disagg._arrange_data_in_bins
-                        with EnginePerformanceMonitor(
-                                'arranging bins', job_id, compute_disagg):
+                        with arranging_mon:
                             key = (site.id, rlz.id, poe, imt, iml, trt_names)
                             matrix = disagg._arrange_data_in_bins(
                                 bins, edges + (trt_names,))
                             result[key] = numpy.array(
                                 [fn(matrix) for fn in disagg.pmf_map.values()])
-
+    collecting_mon.flush()
+    arranging_mon.flush()
     return result
 
 
@@ -366,14 +367,14 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                 self.bin_edges[lt_model.id, site.id] = (
                     mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
 
-            all_args.append((self.job.id, sitecol, srcs, trt_model_id,
-                             trt_num, curves_dict, self.bin_edges))
+            all_args.append((sitecol, srcs, trt_model_id, trt_num,
+                             curves_dict, self.bin_edges, self.monitor))
 
         res = tasks.starmap(compute_disagg, all_args, logs.LOG.progress)
         self.save_disagg_results(res.reduce(self.agg_result))
 
-    def post_execute(self):
-        super(DisaggHazardCalculator, self).post_execute()
+    def post_execute(self, result=None):
+        super(DisaggHazardCalculator, self).post_execute(result)
         self.full_disaggregation()
 
     def agg_result(self, acc, result):

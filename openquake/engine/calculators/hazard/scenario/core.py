@@ -36,20 +36,21 @@ from openquake.engine.performance import EnginePerformanceMonitor
 
 
 @tasks.oqtask
-def calc_gmfs(job_id, tag_seed_pairs, computer):
+def calculate_gmfs(tag_seed_pairs, computer, monitor):
     """
     Computes several GMFs in parallel, one for each tag and seed.
 
-    :param int job_id:
-        the current job ID
     :param tag_seed_pairs:
         list of pairs (rupture tag, rupture seed)
     :param computer:
         :class:`openquake.hazardlib.calc.gmf.GMFComputer` instance
+    :param monitor:
+        monitor of the currently running job
     :returns:
         a dictionary tag -> key -> imt -> gmf
     """
-    return {tag: dict(computer.compute(seed)) for tag, seed in tag_seed_pairs}
+    tags, seeds = zip(*tag_seed_pairs)
+    return dict(zip(tags, computer.compute(seeds)))
 
 
 def create_db_ruptures(rupture, ses_coll, tags, seed):
@@ -83,7 +84,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
     Scenario hazard calculator. Computes ground motion fields.
     """
 
-    core_calc_task = calc_gmfs
+    core_calc_task = calculate_gmfs
     output = None  # defined in pre_execute
 
     def __init__(self, *args, **kwargs):
@@ -154,7 +155,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
             output_type="gmf_scenario")
         self.gmf = models.Gmf.objects.create(output=output)
 
-        with self.monitor('saving ruptures'):
+        with self.monitor('saving ruptures', autoflush=True):
             self.tags = ['scenario-%010d' % i for i in xrange(
                 oqparam.number_of_ground_motion_fields)]
             _, self.rupids, self.seeds = create_db_ruptures(
@@ -165,7 +166,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
             models.OqJob.objects.get(pk=self.job.id))
         gsim = valid.gsim(oqparam.gsim)
         self.computer = GmfComputer(
-            self.rupture, self.sites, self.imts, [gsim],
+            self.rupture, self.sites, oqparam.imtls, [gsim],
             trunc_level, correlation_model)
 
     @EnginePerformanceMonitor.monitor
@@ -176,18 +177,18 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         """
         self.acc = tasks.apply_reduce(
             self.core_calc_task,
-            (self.job.id, zip(self.tags, self.seeds), self.computer))
+            (zip(self.tags, self.seeds), self.computer, self.monitor))
 
     @EnginePerformanceMonitor.monitor
-    def post_execute(self):
+    def post_execute(self, result=None):
         """
         Saving the GMFs in the database
         """
         gmf_id = self.gmf.id
         inserter = writer.CacheInserter(models.GmfData, max_cache_size=1000)
+        gsim = self.oqparam.gsim
         for imt in self.imts:
-            # self.acc[tag].values() is a one-dimensional list (1 GSIM)
-            gmfs = numpy.array([self.acc[tag].values()[0][str(imt)]
+            gmfs = numpy.array([self.acc[tag][gsim][str(imt)]
                                 for tag in self.tags]).transpose()
             for site_id, gmvs in zip(self.sites.sids, gmfs):
                 inserter.add(
