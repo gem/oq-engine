@@ -217,46 +217,13 @@ def build_curves(rlz, curves_by_trt_model_gsim):
     # number of TrtModels
     curves = 0
     for art in AssocLtRlzTrtModel.objects.filter(rlz=rlz):
-        pnes = 1. - curves_by_trt_model_gsim.get((art.trt_model_id, art.gsim), 0)
+        pnes = 1. - curves_by_trt_model_gsim.get(
+            (art.trt_model_id, art.gsim), 0)
         curves = 1. - (1. - curves) * pnes
     return curves
 
 
-# Tables in the 'hzrdi' (Hazard Input) schema.
-
-class SiteModel(djm.Model):
-    '''
-    A model for site-specific parameters, used in hazard calculations.
-    '''
-    job = djm.ForeignKey('OqJob')
-    # Average shear wave velocity for top 30 m. Units m/s.
-    vs30 = djm.FloatField()
-    # 'measured' or 'inferred'
-    vs30_type = djm.TextField(choices=VS30_TYPE_CHOICES)
-    # Depth to shear wave velocity of 1.0 km/s. Units m.
-    z1pt0 = djm.FloatField()
-    # Depth to shear wave velocity of 2.5 km/s. Units km.
-    z2pt5 = djm.FloatField()
-    location = djm.PointField(srid=DEFAULT_SRID)
-    backarc = False  # TODO: change the database
-
-    @property
-    def measured(self):
-        """True or False depending on the field vs30_type"""
-        return self.vs30_type == 'measured'
-
-    def __repr__(self):
-        return (
-            'SiteModel(location="%s", vs30=%s, vs30_type=%s, z1pt0=%s, '
-            'z2pt5=%s)'
-            % (self.location.wkt, self.vs30, self.vs30_type, self.z1pt0,
-               self.z2pt5))
-
-    class Meta:
-        db_table = 'hzrdi\".\"site_model'
-
-
-## Tables in the 'uiapi' schema.
+# Tables in the 'uiapi' schema.
 
 class OqJob(djm.Model):
     '''
