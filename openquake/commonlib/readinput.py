@@ -287,7 +287,8 @@ def get_rlzs_assoc(oqparam):
                 'The gsim logic tree file % must contain a single tectonic '
                 'region type, found %s instead ' % gsim_file,
                 list(gsim_lt.values))
-        rlzs = sorted(get_gsim_lt(oqparam, []))
+        trt = gsim_lt.values
+        rlzs = sorted(get_gsim_lt(oqparam, trt))
     else:
         rlzs = [
             logictree.Realization(

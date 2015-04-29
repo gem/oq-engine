@@ -28,10 +28,10 @@ from openquake.commonlib.writers import scientificformat
 
 @export.add(('dmg_dist_per_asset', 'xml'), ('dmg_dist_per_taxonomy', 'xml'),
             ('dmg_dist_total', 'xml'), ('collapse_map', 'xml'))
-def export_dmg_xml(key, export_dir, damage_states, dmg_data):
-    dest = os.path.join(export_dir, '%s.%s' % key)
+def export_dmg_xml(key, export_dir, damage_states, dmg_data, suffix):
+    dest = os.path.join(export_dir, '%s%s.%s' % (key[0], suffix, key[1]))
     risk_writers.DamageWriter(damage_states).to_nrml(key[0], dmg_data, dest)
-    return AccumDict({key: dest})
+    return AccumDict({key: [dest]})
 
 
 @export.add(('asset-loss', 'csv'), ('asset-ins', 'csv'))
