@@ -74,25 +74,26 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     logging.info('Process %d, considering %d risk input(s) of weight %d',
                  os.getpid(), len(riskinputs),
                  sum(ri.weight for ri in riskinputs))
-    with monitor:
-        result = general.AccumDict()  # agg_type, loss_type -> losses
-        for out_by_rlz in riskmodel.gen_outputs(
-                riskinputs, rlzs_assoc, monitor):
-            for out in out_by_rlz:
-                assets = out.assets
-                means = out.loss_matrix.mean(axis=1),
-                stddevs = out.loss_matrix.std(ddof=1, axis=1)
-                result += losses_per_asset(
-                    'asset-loss', out.loss_type, assets, means, stddevs)
-                result += {('agg', out.loss_type): out.aggregate_losses}
+    result = general.AccumDict({rlz.ordinal: general.AccumDict()
+                                for rlz in rlzs_assoc.realizations})
+    # ordinal -> agg_type, loss_type -> losses
+    for out_by_rlz in riskmodel.gen_outputs(
+            riskinputs, rlzs_assoc, monitor):
+        for out in out_by_rlz:
+            assets = out.assets
+            means = out.loss_matrix.mean(axis=1),
+            stddevs = out.loss_matrix.std(ddof=1, axis=1)
+            result[out.hid] += losses_per_asset(
+                'asset-loss', out.loss_type, assets, means, stddevs)
+            result[out.hid] += {('agg', out.loss_type): out.aggregate_losses}
 
-                if out.insured_loss_matrix is not None:
-                    means = out.insured_loss_matrix.mean(axis=1),
-                    stddevs = out.insured_loss_matrix.std(ddof=1, axis=1)
-                    result += losses_per_asset(
-                        'asset-ins', out.loss_type, assets, means, stddevs,
-                        multiply_by_value=False)
-                    result += {('ins', out.loss_type): out.insured_losses}
+            if out.insured_loss_matrix is not None:
+                means = out.insured_loss_matrix.mean(axis=1),
+                stddevs = out.insured_loss_matrix.std(ddof=1, axis=1)
+                result[out.hid] += losses_per_asset(
+                    'asset-ins', out.loss_type, assets, means, stddevs,
+                    multiply_by_value=False)
+                result[out.hid] += {('ins', out.loss_type): out.insured_losses}
     return result
 
 
@@ -124,8 +125,21 @@ class ScenarioRiskCalculator(base.RiskCalculator):
 
     def post_execute(self, result):
         """
-        Export the aggregate loss curves in CSV format.
+        Export the loss curves in CSV format.
         """
+        saved = {}
+        for rlz in self.rlzs_assoc.realizations:
+            saved += self.export_risk(rlz, result[rlz.ordinal])
+        return saved
+
+    def export_risk(self, rlz, result):
+        """
+        Export the loss curves of a given realization in CSV format.
+
+        :param rlz: the GSIM realization
+        :param result: a dictionary (key_type, loss_type) -> matrix
+        """
+        suffix = '' if rlz.uid == '*' else '-gsimltp_%s' % rlz.uid
         losses = general.AccumDict()
         for key, values in result.iteritems():
             key_type, loss_type = key
@@ -140,5 +154,5 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         out = {}
         for key_type in losses:
             out += export((key_type, 'csv'),
-                          self.oqparam.export_dir, losses[key_type])
+                          self.oqparam.export_dir, losses[key_type], suffix)
         return out

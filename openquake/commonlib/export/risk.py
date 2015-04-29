@@ -29,19 +29,32 @@ from openquake.commonlib.writers import scientificformat
 @export.add(('dmg_dist_per_asset', 'xml'), ('dmg_dist_per_taxonomy', 'xml'),
             ('dmg_dist_total', 'xml'), ('collapse_map', 'xml'))
 def export_dmg_xml(key, export_dir, damage_states, dmg_data, suffix):
+    """
+    Export damage outputs in XML format.
+
+    :param key:
+        dmg_dist_per_asset|dmg_dist_per_taxonomy|dmg_dist_total|collapse_map
+    :param export_dir:
+        the export directory
+    :param data:
+        a list [(loss_type, unit, asset_ref, mean, stddev), ...]
+    :param suffix:
+        a suffix specifying the GSIM realization
+    """
     dest = os.path.join(export_dir, '%s%s.%s' % (key[0], suffix, key[1]))
     risk_writers.DamageWriter(damage_states).to_nrml(key[0], dmg_data, dest)
     return AccumDict({key: [dest]})
 
 
 @export.add(('asset-loss', 'csv'), ('asset-ins', 'csv'))
-def export_asset_loss_csv(key, export_dir, data):
+def export_asset_loss_csv(key, export_dir, data, suffix):
     """
     Export aggregate losses in CSV.
 
-    :param key: 'per_asset_loss'
+    :param key: per_asset_loss|asset-ins
     :param export_dir: the export directory
     :param data: a list [(loss_type, unit, asset_ref, mean, stddev), ...]
+    :param suffix: a suffix specifying the GSIM realization
     """
     dest = os.path.join(export_dir, '%s.%s' % key)
     header = ['LossType', 'Unit', 'Asset', 'Mean', 'Standard Deviation']
@@ -51,15 +64,16 @@ def export_asset_loss_csv(key, export_dir, data):
 
 
 @export.add(('agg', 'csv'), ('ins', 'csv'))
-def export_agg_loss_csv(key, export_dir, aggcurves):
+def export_agg_loss_csv(key, export_dir, aggcurves, suffix):
     """
     Export aggregate losses in CSV.
 
-    :param key: 'agg_loss_csv'
+    :param key: agg|ins
     :param export_dir: the export directory
     :param aggcurves: a list [(loss_type, unit, mean, stddev), ...]
+    :param suffix: a suffix specifying the GSIM realization
     """
-    dest = os.path.join(export_dir, '%s.%s' % key)
+    dest = os.path.join(export_dir, '%s%s.%s' % (key[0], suffix, key[1]))
     header = ['LossType', 'Unit', 'Mean', 'Standard Deviation']
     writers.save_csv(dest, [header] + aggcurves, fmt='%11.7E')
     return AccumDict({key: dest})
