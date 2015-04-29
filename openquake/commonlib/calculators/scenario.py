@@ -42,15 +42,10 @@ def calc_gmfs(tag_seed_pairs, computer, monitor):
     :param monitor:
         :class:`openquake.commonlib.parallel.PerformanceMonitor` instance
     :returns:
-        a dictionary tag -> {imt: gmf}
+        a dictionary tag -> gmf
     """
-    result = AccumDict({(0, str(gsim)): AccumDict()
-                        for gsim in computer.gsims})
-    with monitor:
-        for tag, seed in tag_seed_pairs:
-            for gsim_str, gmvs in computer.compute(seed):
-                result[0, gsim_str][tag] = gmvs
-    return result
+    tags, seeds = zip(*tag_seed_pairs)
+    return dict(zip(tags, computer.compute(seeds)))
 
 
 @base.calculators.add('scenario')
@@ -59,18 +54,18 @@ class ScenarioCalculator(base.HazardCalculator):
     Scenario hazard calculator
     """
     core_func = calc_gmfs
-    result_kind = 'gmfs_by_trt_gsim'
+    result_kind = 'gmf_by_tag'
 
     def pre_execute(self):
         """
         Read the site collection and initialize GmfComputer, tags and seeds
         """
         super(ScenarioCalculator, self).pre_execute()
-        self.imts = readinput.get_imts(self.oqparam)
         trunc_level = self.oqparam.truncation_level
         correl_model = readinput.get_correl_model(self.oqparam)
         n_gmfs = self.oqparam.number_of_ground_motion_fields
         rupture = readinput.get_rupture(self.oqparam)
+        self.gsims = readinput.get_gsims(self.oqparam)
 
         # filter the sites
         self.sites = filters.filter_sites_by_distance_to_rupture(
@@ -79,10 +74,10 @@ class ScenarioCalculator(base.HazardCalculator):
             raise RuntimeError(
                 'All sites were filtered out! '
                 'maximum_distance=%s km' % self.oqparam.maximum_distance)
-
+        self.datastore['sites'] = self.sites
         self.tags = ['scenario-%010d' % i for i in xrange(n_gmfs)]
         self.computer = GmfComputer(
-            rupture, self.sites, self.imts, self.gsims,
+            rupture, self.sites, self.oqparam.imtls, self.gsims,
             trunc_level, correl_model)
         rnd = random.Random(self.oqparam.random_seed)
         self.tag_seed_pairs = [(tag, rnd.randint(0, calc.MAX_INT))
@@ -90,24 +85,18 @@ class ScenarioCalculator(base.HazardCalculator):
 
     def execute(self):
         """
-        Compute the GMFs in parallel and return a dictionary key -> imt -> gmfs
+        Compute the GMFs in parallel and return a dictionary gmf_by_tag
         """
         logging.info('Computing the GMFs')
         args = (self.tag_seed_pairs, self.computer, self.monitor('calc_gmfs'))
-        result = {}
-        res = parallel.apply_reduce(
+        gmf_by_tag = parallel.apply_reduce(
             self.core_func.__func__, args,
             concurrent_tasks=self.oqparam.concurrent_tasks)
-        for (trt_id, gsim), dic in res.iteritems():
-            result[trt_id, gsim] = {  # build N x R matrices
-                imt: numpy.array(
-                    [dic[tag][imt] for tag in self.tags]).T
-                for imt in map(str, self.imts)}
-        return result
+        return gmf_by_tag
 
-    def post_execute(self, result):
+    def post_execute(self, gmf_by_tag):
         """
-        :param result: a dictionary imt -> gmfs
+        :param gmf_by_tag: a dictionary tag -> gmf
         :returns: a dictionary {('gmf', 'xml'): <gmf.xml filename>}
         """
         logging.info('Exporting the result')
@@ -115,10 +104,12 @@ class ScenarioCalculator(base.HazardCalculator):
         if not self.oqparam.exports:
             return out
         exports = self.oqparam.exports.split(',')
-        for (trt_id, gsim), gmfs_by_imt in result.iteritems():
+        for rlz in self.rlzs_assoc.realizations:
+            gsim = str(rlz)
+            gmfs = [gmf_by_tag[tag][gsim] for tag in self.tags]
             for fmt in exports:
                 fname = '%s_gmf.%s' % (gsim, fmt)
                 out += export(
                     ('gmf', fmt), self.oqparam.export_dir, fname, self.sites,
-                    self.tags, gmfs_by_imt)
+                    self.tags, numpy.array(gmfs, gmfs[0].dtype), rlz.lt_path)
         return out

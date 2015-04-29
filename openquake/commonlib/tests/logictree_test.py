@@ -1689,9 +1689,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
     def test_sample_gmpe(self):
         (value, weight, branch_ids, _, _) = logictree.sample_one(
             self.gmpe_lt, self.rnd)
-        self.assertEqual(value,
-                         {'Subduction Interface': 'SadighEtAl1997',
-                          'Active Shallow Crust': 'ChiouYoungs2008'})
+        self.assertEqual(value, ('ChiouYoungs2008', 'SadighEtAl1997'))
         self.assertEqual(weight, 0.5)
         self.assertEqual(('b2', 'b3'), branch_ids)
 

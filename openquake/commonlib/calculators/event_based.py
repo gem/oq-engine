@@ -25,11 +25,9 @@ import collections
 
 import numpy
 
-from openquake.hazardlib import geo
-from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
-from openquake.hazardlib import site, calc
+from openquake.hazardlib import geo, site, calc
 from openquake.commonlib import readinput, parallel
 from openquake.commonlib.util import max_rel_diff_index
 
@@ -290,7 +288,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         monitor.oqparam = self.oqparam
         csm = self.composite_source_model
         sources = list(csm.sources)
-        ses_ruptures_by_trt_id = parallel.apply_reduce(
+        ruptures_by_trt = parallel.apply_reduce(
             self.core_func.__func__,
             (sources, self.sitecol, csm.info, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
@@ -298,13 +296,13 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             key=operator.attrgetter('trt_model_id'))
 
         num_ruptures = sum(
-            len(rups) for rups in ses_ruptures_by_trt_id.itervalues())
+            len(rups) for rups in ruptures_by_trt.itervalues())
         logging.info('Generated %d SESRuptures', num_ruptures)
 
         self.rlzs_assoc = csm.get_rlzs_assoc(
-            lambda trt: len(ses_ruptures_by_trt_id.get(trt.id, [])))
+            lambda trt: len(ruptures_by_trt.get(trt.id, [])))
 
-        return ses_ruptures_by_trt_id
+        return ruptures_by_trt
 
     def post_execute(self, result):
         """Export the ruptures, if any"""
@@ -329,17 +327,16 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
 
 # ######################## GMF calculator ############################ #
 
-GmfsCurves = collections.namedtuple('GmfsCurves', 'gmfs curves')
+GmfsCurves = collections.namedtuple('GmfsCurves', 'gmf_by_tag curves')
 
 
-def make_gmf_by_key(ses_ruptures, sitecol, imts, gsims,
+# NB: this will be replaced by hazardlib.calc.gmf.build_gmf_by_tag
+def make_gmf_by_tag(ses_ruptures, sitecol, imts, gsims,
                     trunc_level, correl_model):
     """
-    Yield gmf_by_imt AccumDicts for each SESRupture and GSIM, with attributes
-    .tag, .gsim_str and .r_sites.
+    :returns: a dictionary tag -> (r_sites, gmf_array)
     """
-    trt_id = ses_ruptures[0].trt_model_id
-    dic = {(trt_id, str(gsim)): {} for gsim in gsims}
+    dic = {}
     for rupture, group in itertools.groupby(
             ses_ruptures, operator.attrgetter('rupture')):
         sesruptures = list(group)
@@ -349,12 +346,7 @@ def make_gmf_by_key(ses_ruptures, sitecol, imts, gsims,
         computer = calc.gmf.GmfComputer(
             rupture, r_sites, imts, gsims, trunc_level, correl_model)
         for sr in sesruptures:
-            for gsim_str, gmvs in computer.compute(sr.seed):
-                gmf_by_imt = AccumDict(gmvs)
-                gmf_by_imt.tag = sr.tag
-                gmf_by_imt.r_sites = r_sites
-                gmf_by_imt.gsim_str = gsim_str
-                dic[trt_id, gsim_str][sr.tag] = gmf_by_imt
+            dic[sr.tag] = computer.compute([sr.seed])[0]
     return dic
 
 
@@ -379,51 +371,50 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
     # ruptures of the same col_idx and therefore trt_model_id
     trt_id = ses_ruptures[0].trt_model_id
     gsims = sorted(gsims_assoc[trt_id])
-    imts = map(from_string, oq.imtls)
     trunc_level = getattr(oq, 'truncation_level', None)
     correl_model = readinput.get_correl_model(oq)
-
-    result = AccumDict({(trt_id, str(gsim)): GmfsCurves([], AccumDict())
+    num_sites = len(sitecol)
+    dic = make_gmf_by_tag(
+        ses_ruptures, sitecol, oq.imtls, gsims, trunc_level, correl_model)
+    result = AccumDict({(trt_id, str(gsim)): GmfsCurves(dic, AccumDict())
                         for gsim in gsims})
-    ddic = make_gmf_by_key(
-        ses_ruptures, sitecol, imts, gsims, trunc_level, correl_model)
-    for gsim in gsims:
-        data = ddic[trt_id, str(gsim)]
-        result[trt_id, str(gsim)].gmfs.extend(
-            data[tag] for tag in sorted(data))
+    gmfs = [dic[tag] for tag in sorted(dic)]
     if getattr(oq, 'hazard_curves_from_gmfs', None):
         duration = oq.investigation_time * oq.ses_per_logic_tree_path * (
             oq.number_of_logic_tree_samples or 1)
         for gsim in gsims:
-            gmfs, curves = result[trt_id, str(gsim)]
+            gs = str(gsim)
+            curves = result[trt_id, gs][1]
             curves.update(to_haz_curves(
-                sitecol.sids, gmfs, oq.imtls, oq.investigation_time, duration))
+                num_sites, gs, gmfs, oq.imtls,
+                oq.investigation_time, duration))
     if not oq.ground_motion_fields:
-        # reset the gmfs lists inside the result dictionary to avoid
+        # reset the gmf_by_tag dictionary to avoid
         # transferring a lot of unused data
         for key in result:
-            result[key].gmfs[:] = []
+            result[key].gmf_by_tag.clear()
     return result
 
 
-def to_haz_curves(sids, gmfs, imtls, investigation_time, duration):
+def to_haz_curves(num_sites, gs, gmfs, imtls, investigation_time, duration):
     """
-    :param sids: IDs of the given sites
-    :param gmfs: a list of gmf keyed by IMT
+    :param num_sites: length of the full site collection
+    :param gs: a GSIM string
+    :param gmfs: gmf arrays
     :param imtls: ordered dictionary {IMT: intensity measure levels}
     :param investigation_time: investigation time
     :param duration: investigation_time * number of Stochastic Event Sets
     """
+    # group gmvs by site index
+    data = [[] for idx in range(num_sites)]
+    for gmf in gmfs:
+        for idx, gmv in zip(gmf['idx'], gmf[gs]):
+            data[idx].append(gmv)
     curves = {}
     for imt in imtls:
-        data = collections.defaultdict(list)
-        for gmf in gmfs:
-            for sid, gmv in zip(gmf.r_sites.sids, gmf[imt]):
-                data[sid].append(gmv)
         curves[imt] = numpy.array([
-            gmvs_to_haz_curve(data.get(sid, []),
-                              imtls[imt], investigation_time, duration)
-            for sid in sids])
+            gmvs_to_haz_curve([gmv[imt] for gmv in gmvs], imtls[imt],
+                              investigation_time, duration) for gmvs in data])
     return curves
 
 
@@ -442,13 +433,13 @@ class EventBasedCalculator(ClassicalCalculator):
         prepare some empty files in the export directory to store the gmfs
         (if any). If there were pre-existing files, they will be erased.
         """
-        haz_out, hcalc = base.get_hazard(self, exports=self.oqparam.exports)
+        hcalc = base.get_pre_calculator(self, exports=self.oqparam.exports)
+        ruptures_by_trt = hcalc.datastore['ruptures_by_trt']
         self.composite_source_model = hcalc.composite_source_model
         self.sitecol = hcalc.sitecol
         self.rlzs_assoc = hcalc.rlzs_assoc
-        self.sesruptures = sorted(
-            sum(haz_out['ruptures_by_trt'].itervalues(), []),
-            key=operator.attrgetter('tag'))
+        self.sesruptures = sorted(sum(ruptures_by_trt.itervalues(), []),
+                                  key=operator.attrgetter('tag'))
         self.saved = AccumDict()
         if self.oqparam.ground_motion_fields and 'csv' in self.oqparam.exports:
             for trt_id, gsim in self.rlzs_assoc:
@@ -470,14 +461,15 @@ class EventBasedCalculator(ClassicalCalculator):
         """
         imts = list(self.oqparam.imtls)
         for trt_id, gsim in res:
-            gmfs, curves_by_imt = res[trt_id, gsim]
+            gmf_by_tag, curves_by_imt = res[trt_id, gsim]
             acc = agg_prob(acc, AccumDict({(trt_id, gsim): curves_by_imt}))
             fname = self.saved.get('%s-%s.csv' % (trt_id, gsim))
             if fname:  # when ground_motion_fields is true and there is csv
-                for gmf in gmfs:
-                    row = [gmf.tag, gmf.r_sites.indices]
+                for tag in sorted(gmf_by_tag):
+                    gmf = gmf_by_tag[tag]
+                    row = [tag, gmf['idx']]
                     for imt in imts:
-                        row.append(gmf[imt])
+                        row.append(gmf[gsim][imt])
                     save_csv(fname, [row], mode='a')
         return acc
 

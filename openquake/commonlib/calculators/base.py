@@ -26,8 +26,8 @@ import numpy
 from openquake.hazardlib.geo import geodetic
 
 from openquake.baselib import general
-from openquake.commonlib import readinput, datastore
-from openquake.commonlib.parallel import apply_reduce, DummyMonitor, executor
+from openquake.commonlib import readinput, datastore, logictree
+from openquake.commonlib.parallel import apply_reduce, DummyMonitor
 from openquake.risklib import riskinput
 
 get_taxonomy = operator.attrgetter('taxonomy')
@@ -45,15 +45,21 @@ class AssetSiteAssociationError(Exception):
 class BaseCalculator(object):
     """
     Abstract base class for all calculators.
+
+    :param oqparam: OqParam object
+    :param monitor: monitor object
+    :param calc_id: numeric calculation ID
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, oqparam, monitor=DummyMonitor()):
+    rlzs_assoc = logictree.RlzsAssoc([])  # to be overridden
+
+    def __init__(self, oqparam, monitor=DummyMonitor(), calc_id=None):
         self.oqparam = oqparam
         self.monitor = monitor
-        self.datastore = datastore.DataStore()
-        if not hasattr(oqparam, 'concurrent_tasks'):
-            oqparam.concurrent_tasks = executor.num_tasks_hint
+        self.datastore = datastore.DataStore(calc_id)
+        self.datastore['oqparam'] = self.oqparam
+        self.datastore.export_dir = self.oqparam.export_dir
 
     def run(self, **kw):
         """
@@ -66,7 +72,7 @@ class BaseCalculator(object):
         exported = self.post_execute(result)
         for item in sorted(exported.iteritems()):
             logging.info('exported %s: %s', *item)
-        return self.save_pik(result, exported=exported)
+        self.save_pik(result, exported=exported)
 
     def core_func(*args):
         """
@@ -95,11 +101,20 @@ class BaseCalculator(object):
         of output files.
         """
 
-    @abc.abstractmethod
     def save_pik(self, result, **kw):
         """
-        Called after post_execute
+        Must be run at the end of post_execute. Returns a dictionary
+        with the saved results.
+
+        :param result: the output of the `execute` method
+        :param kw: extras to add to the output dictionary
+        :returns: a dictionary with the saved data
         """
+        logging.info('Saving %r on %s', self.result_kind,
+                     self.datastore.calc_dir)
+        self.datastore['rlzs_assoc'] = self.rlzs_assoc
+        self.datastore[self.result_kind] = result
+        self.datastore.update(kw)
 
 
 class HazardCalculator(BaseCalculator):
@@ -124,6 +139,7 @@ class HazardCalculator(BaseCalculator):
             logging.info('Reading the site collection')
             with self.monitor('reading site collection', autoflush=True):
                 self.sitecol = readinput.get_site_collection(self.oqparam)
+        self.datastore['sites'] = self.sitecol
         if 'source' in self.oqparam.inputs:
             logging.info('Reading the composite source models')
             with self.monitor(
@@ -136,46 +152,22 @@ class HazardCalculator(BaseCalculator):
             # we could manage limits here
             if self.prefilter:
                 self.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
-            else:
-                self.rlzs_assoc = riskinput.FakeRlzsAssoc(0)
         else:  # calculators without sources, i.e. scenario
-            self.gsims = readinput.get_gsims(self.oqparam)
-            self.rlzs_assoc = riskinput.FakeRlzsAssoc(len(self.gsims))
-
-    def save_pik(self, result, **kw):
-        """
-        Must be run at the end of post_execute. Returns a dictionary
-        with the saved results.
-
-        :param result: the output of the `execute` method
-        :param kw: extras to add to the output dictionary
-        :returns: a dictionary with the saved data
-        """
-        haz_out = dict(rlzs_assoc=self.rlzs_assoc,
-                       sitecol=self.sitecol, oqparam=self.oqparam)
-        haz_out[self.result_kind] = result
-        haz_out.update(kw)
-        logging.info('Saving hazard output on %s', self.datastore.calc_dir)
-        with self.monitor('saving hazard', autoflush=True):
-            self.datastore.update(haz_out)
-        return haz_out
+            self.rlzs_assoc = readinput.get_rlzs_assoc(self.oqparam)
 
 
-def get_hazard(calculator, exports=''):
+def get_pre_calculator(calculator, exports=''):
     """
-    Get the hazard from a calculator, possibly by using cached results
+    Recompute the hazard or retrieve it from the previous computation.
 
     :param calculator: a calculator with a .hazard_calculator attribute
     :returns: a pair (hazard output, hazard_calculator)
     """
-    hcalc = calculators[calculator.hazard_calculator](
+    precalc = calculators[calculator.hazard_calculator](
         calculator.oqparam, calculator.monitor('hazard'))
-    if calculator.oqparam.usecache:
-        haz_out = hcalc.datastore
-    else:
-        haz_out = hcalc.run(exports=exports)
-
-    return haz_out, hcalc
+    if not calculator.oqparam.usecache:
+        precalc.run(exports=exports)
+    return precalc
 
 
 class RiskCalculator(BaseCalculator):
@@ -184,9 +176,7 @@ class RiskCalculator(BaseCalculator):
     attributes .riskmodel, .sitecol, .assets_by_site, .exposure
     .riskinputs in the pre_execute phase.
     """
-
     hazard_calculator = None  # to be ovverriden in subclasses
-    rlzs_assoc = None  # to be ovverriden in subclasses
 
     def make_eps_dict(self, num_ruptures):
         """
@@ -206,6 +196,7 @@ class RiskCalculator(BaseCalculator):
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
+        imtls = self.oqparam.imtls
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
             idx_weight_pairs = [
@@ -227,7 +218,8 @@ class RiskCalculator(BaseCalculator):
                 # collect the hazards by key into hazards by imt
                 hdata = collections.defaultdict(lambda: [{} for _ in indices])
                 for key, hazards_by_imt in hazards_by_key.iteritems():
-                    for imt, hazards_by_site in hazards_by_imt.iteritems():
+                    for imt in imtls:
+                        hazards_by_site = hazards_by_imt[imt]
                         for i, haz in enumerate(hazards_by_site[indices]):
                             hdata[imt][i][key] = haz
 
@@ -314,14 +306,73 @@ class RiskCalculator(BaseCalculator):
                 (self.riskinputs, self.riskmodel, self.rlzs_assoc, monitor),
                 concurrent_tasks=self.oqparam.concurrent_tasks,
                 weight=get_weight, key=self.riskinput_key)
-        self.risk_out = dict(oqparam=self.oqparam)
         return res
 
-    def save_pik(self, result, **kw):
-        """Save the risk outputs"""
-        self.risk_out[self.result_kind] = result
-        self.risk_out.update(kw)
-        logging.info('Saving risk output on %s', self.datastore.calc_dir)
-        with self.monitor('saving risk outputs', autoflush=True):
-            self.datastore.update(self.risk_out)
-        return self.risk_out
+# functions useful for the calculators ScenarioDamage and ScenarioRisk
+
+
+def get_gmfs(calc):
+    """
+    :param calc: a ScenarioDamage or ScenarioRisk calculator
+    :returns: a dictionary of gmfs
+    """
+    if 'gmfs' in calc.oqparam.inputs:  # from file
+        gmfs = read_gmfs_from_csv(calc)
+    else:  # from rupture
+        gmfs = compute_gmfs(calc)
+    return gmfs
+
+
+# this is used by scenario_risk and scenario_damage
+def compute_gmfs(calc):
+    """
+    :param calc: a ScenarioDamage or ScenarioRisk calculator
+    :returns: a dictionary key -> gmf matrix of shape (N, R)
+    """
+    logging.info('Computing the GMFs')
+    haz_out = get_pre_calculator(calc).datastore
+
+    logging.info('Preparing the risk input')
+    sites = haz_out['sites']
+    calc.rlzs_assoc = haz_out['rlzs_assoc']
+    gmf_by_tag = haz_out['gmf_by_tag']
+    rlzs = calc.rlzs_assoc.realizations
+    imt_dt = numpy.dtype([(imt, float) for imt in calc.oqparam.imtls])
+    dic = collections.defaultdict(list)
+    for tag in sorted(gmf_by_tag):
+        for rlz in rlzs:
+            gsim = str(rlz)
+            gmf = sites.expand(gmf_by_tag[tag][gsim], 0)
+            dic[0, gsim].append(gmf)
+
+    # (trt_id, gsim) -> N x R matrix
+    return {key: numpy.array(dic[key], imt_dt).T for key in dic}
+
+
+def read_gmfs_from_csv(calc):
+    """
+    :param calc: a ScenarioDamage or ScenarioRisk calculator
+    :returns: riskinputs
+    """
+    logging.info('Reading hazard curves from CSV')
+    sitecol, gmfs_by_imt = readinput.get_sitecol_gmfs(calc.oqparam)
+
+    # filter the hazard sites by taking the closest to the assets
+    with calc.monitor('assoc_assets_sites'):
+        calc.sitecol, calc.assets_by_site = calc.assoc_assets_sites(
+            sitecol)
+
+    # reduce the gmfs matrices to the filtered sites
+    for imt in calc.oqparam.imtls:
+        gmfs_by_imt[imt] = gmfs_by_imt[imt][calc.sitecol.indices]
+
+    num_assets = sum(len(assets) for assets in calc.assets_by_site)
+    num_sites = len(calc.sitecol)
+    logging.info('Associated %d assets to %d sites', num_assets, num_sites)
+
+    logging.info('Preparing the risk input')
+    fake_rlz = logictree.Realization(
+        value=('FromCsv',), weight=1, lt_path=('',),
+        ordinal=0, lt_uid=('*',))
+    calc.rlzs_assoc = logictree.RlzsAssoc([fake_rlz])
+    return {(0, 'FromCsv'): gmfs_by_imt}

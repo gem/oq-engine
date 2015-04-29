@@ -289,10 +289,10 @@ def assert_close(a, b, rtol=1e-07, atol=0):
     :param rtol: relative tolerance
     :param atol: absolute tolerance
     """
-    if a == b:  # shortcut
-        return
-    if isinstance(a, numpy.ndarray):  # another shortcut
+    if isinstance(a, numpy.ndarray) and a.shape:  # shortcut
         numpy.testing.assert_allclose(a, b, rtol, atol)
+        return
+    if a == b:  # another shortcut
         return
     if hasattr(a, '__slots__'):  # record-like objects
         assert_close_seq(a.__slots__, b.__slots__, rtol, atol)
@@ -569,6 +569,45 @@ class AccumDict(dict):
                                for key, value in self.iteritems()})
 
 
+def array_to_dict(array):
+    """
+    Convert a composite array into an array-valued AccumDict
+    """
+    return AccumDict({k: array[k] for k in array.dtype.fields})
+
+
+def dict_to_array(dic):
+    """
+    Convert an array-valued dictionary into a one-dimensionale array using
+    a composite dtype.
+
+    >>> dic = {'a': [1, 2], 'b': [3, 4, 5]}
+    >>> arr = dict_to_array(dic)
+    >>> len(arr)
+    1
+    >>> list(arr.dtype.fields)
+    ['a', 'b']
+    >>> arr['a']
+    array([[ 1.,  2.]])
+    >>> array_to_dict(arr)
+    {'a': array([[ 1.,  2.]]), 'b': array([[ 3.,  4.,  5.]])}
+
+    >>> array_to_dict(dict_to_array({'a': 1, 'b': 2}))
+    {'a': array([ 1.]), 'b': array([ 2.])}
+    """
+    descr = []
+    for k in sorted(dic):
+        val = dic[k]
+        try:
+            pair = (k, float, len(val))
+        except:  # val has no len
+            pair = (k, float)
+        descr.append(pair)
+    dtype = numpy.dtype(descr)
+    tuples = [tuple(dic[k] for k in sorted(dic))]
+    return numpy.array(tuples, dtype)
+
+
 class ArrayDict(collections.Mapping):
     """
     A class wrapping an array-valued dictionary. ArrayDict instances
@@ -769,3 +808,17 @@ def groupby(objects, key, reducegroup=list):
     kgroups = itertools.groupby(sorted(objects, key=key), key)
     return collections.OrderedDict((k, reducegroup(group))
                                    for k, group in kgroups)
+
+
+def humansize(nbytes, suffixes=('B', 'KB', 'MB', 'GB', 'TB', 'PB')):
+    """
+    Return file size in a human-friendly format
+    """
+    if nbytes == 0:
+        return '0 B'
+    i = 0
+    while nbytes >= 1024 and i < len(suffixes) - 1:
+        nbytes /= 1024.
+        i += 1
+    f = ('%.2f' % nbytes).rstrip('0').rstrip('.')
+    return '%s %s' % (f, suffixes[i])

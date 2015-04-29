@@ -22,7 +22,7 @@ import collections
 
 import numpy
 
-from openquake.commonlib.export import export
+from openquake.commonlib.export import export, ds_export
 from openquake.commonlib.writers import (
     scientificformat, floatformat, save_csv)
 from openquake.commonlib import hazard_writers
@@ -84,6 +84,19 @@ def export_ses_csv(key, export_dir, fname, ses_coll):
             rows.append([sesrup.tag, sesrup.seed])
     save_csv(dest, sorted(rows, key=operator.itemgetter(0)))
     return {fname: dest}
+
+
+@ds_export.add(('ruptures', 'csv'))
+def ds_export_ses_csv(key, dstore):
+    """
+    Export a Stochastic Event Set Collection
+    """
+    dest = dstore.export_path(key)
+    rows = []
+    for sesrup in dstore['ruptures']:
+        rows.append([sesrup.tag, sesrup.seed])
+    save_csv(dest, sorted(rows, key=operator.itemgetter(0)))
+    return dest
 
 
 # #################### export Ground Motion fields ########################## #
@@ -176,12 +189,14 @@ class GmfCollection(object):
         self.sitecol = sitecol
         self.rupture_tags = rupture_tags
         self.gmfs_by_imt = gmfs_by_imt
+        self.imts = list(gmfs_by_imt.dtype.fields)
 
     def __iter__(self):
         gmfset = []
-        for imt_str, gmfs in sorted(self.gmfs_by_imt.iteritems()):
+        for imt_str in self.imts:
+            gmfs = self.gmfs_by_imt[imt_str]
             imt, sa_period, sa_damping = from_string(imt_str)
-            for rupture_tag, gmf in zip(self.rupture_tags, gmfs.transpose()):
+            for rupture_tag, gmf in zip(self.rupture_tags, gmfs):
                 nodes = (GroundMotionFieldNode(gmv, site.location)
                          for site, gmv in zip(self.sitecol, gmf))
                 gmfset.append(
@@ -191,44 +206,46 @@ class GmfCollection(object):
 
 
 @export.add(('gmf', 'xml'))
-def export_gmf_xml(key, export_dir, fname, sitecol, rupture_tags, gmfs):
+def export_gmf_xml(key, export_dir, fname, sitecol, rupture_tags, gmfs,
+                   gsim_path):
     """
     :param key: output_type and export_type
     :param export_dir: the directory where to export
     :param fname: name of the exported file
     :param sitecol: site collection
-    :rupture_tags: a list of rupture tags
-    :gmfs: a dictionary of ground motion fields keyed by IMT
+    :param rupture_tags: a list of rupture tags
+    :param gmfs: a matrix of ground motion fields of shape (R, N)
+    :param gsim_path: a tuple with the path in the GSIM logic tree
     """
     dest = os.path.join(export_dir, fname)
     writer = hazard_writers.EventBasedGMFXMLWriter(
-        dest, sm_lt_path='', gsim_lt_path='')
+        dest, sm_lt_path='', gsim_lt_path=gsim_path)
     with floatformat('%12.8E'):
         writer.serialize(GmfCollection(sitecol, rupture_tags, gmfs))
-    return {key: dest}
+    return {key: [dest]}
 
 
 @export.add(('gmf', 'csv'))
-def export_gmf_csv(key, export_dir, fname, sites, rupture_tags, gmfs):
+def export_gmf_csv(key, export_dir, fname, sites, rupture_tags, gmfs,
+                   gsim_path=None):
     """
     :param key: output_type and export_type
     :param export_dir: the directory where to export
     :param fname: name of the exported file
     :param sites: a filtered site collection
-    :rupture_tags: a list of rupture tags
-    :gmfs: a dictionary of ground motion fields keyed by IMT
+    :param rupture_tags: a list of rupture tags
+    :param gmfs: a list of ground motion fields
+    :param gsim_path: a tuple with the path in the GSIM logic tree
     """
     dest = os.path.join(export_dir, fname)
-    dic = collections.defaultdict(list)
-    for imt in sorted(gmfs):
-        for tag, gmvs in zip(rupture_tags, gmfs[imt].T):
-            dic[tag].append(gmvs)
+    imts = list(gmfs.dtype.fields)
     indices = ' '.join(map(str, sites.indices)) \
               if sites.indices is not None else ''
     # the csv file has the form
     # tag,indices,gmvs_imt_1,...,gmvs_imt_N
-    save_csv(dest, [[tag, indices] + dic[tag] for tag in rupture_tags])
-    return {key: dest}
+    save_csv(dest, [[tag, indices] + [gmf[imt] for imt in imts]
+                    for tag, gmf in zip(rupture_tags, gmfs)])
+    return {key: [dest]}
 
 # ####################### export hazard curves ############################ #
 

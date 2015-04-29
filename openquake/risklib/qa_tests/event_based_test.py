@@ -28,7 +28,7 @@ THISDIR = os.path.dirname(__file__)
 gmf = vectors_from_csv('gmf', THISDIR)
 
 assets = [workflows.Asset(
-          'asset_id', 'SOME-TAXONOMY', 1, (0, 0),
+          1, 'SOME-TAXONOMY', 1, (0, 0),
           dict(structural=10),
           insurance_limits=dict(structural=1250),
           deductibles=dict(structural=40))

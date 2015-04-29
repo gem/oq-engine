@@ -81,13 +81,12 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         num_assets = sum(len(assets) for assets in assets_by_site)
         num_sites = len(sitecol)
         logging.info('Associated %d assets to %d sites', num_assets, num_sites)
-
-        haz_out, _hcalc = base.get_hazard(self, exports=self.oqparam.exports)
+        hcalc = base.get_pre_calculator(self, exports=self.oqparam.exports)
 
         logging.info('Preparing the risk input')
-        self.rlzs_assoc = haz_out['rlzs_assoc']
+        self.rlzs_assoc = hcalc.datastore['rlzs_assoc']
         self.riskinputs = self.build_riskinputs(
-            haz_out['curves_by_trt_gsim'], eps_dict={})
+            hcalc.datastore['curves_by_trt_gsim'], eps_dict={})
 
     def post_execute(self, result):
         """

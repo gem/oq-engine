@@ -22,7 +22,7 @@ import unittest
 import numpy
 
 from openquake.commonlib.calculators import base
-from openquake.commonlib.parallel import PerformanceMonitor, executor
+from openquake.commonlib.parallel import PerformanceMonitor
 from openquake.commonlib import readinput, oqvalidation
 
 
@@ -44,18 +44,18 @@ class CalculatorTestCase(unittest.TestCase):
         """
         Return the outputs of the calculation as a dictionary
         """
-        self.testdir = os.path.dirname(testfile)
+        self.testdir = os.path.dirname(testfile) if os.path.isfile(testfile) \
+            else testfile
         inis = [os.path.join(self.testdir, ini) for ini in job_ini.split(',')]
         params = readinput.get_params(inis)
+        kw.setdefault('usecache', '0')
         params.update(kw)
         oq = oqvalidation.OqParam(**params)
         oq.validate()
-        oq.concurrent_tasks = executor.num_tasks_hint
-        oq.usecache = False
         # change this when debugging the test
         monitor = PerformanceMonitor(
             self.testdir,
-            monitor_csv=os.path.join(oq.export_dir, 'performance_csv'))
+            monitor_csv=os.path.join(oq.export_dir, 'performance.csv'))
         return base.calculators(oq, monitor)
 
     def run_calc(self, testfile, job_ini, **kw):
@@ -63,7 +63,8 @@ class CalculatorTestCase(unittest.TestCase):
         Return the outputs of the calculation as a dictionary
         """
         self.calc = self.get_calc(testfile, job_ini, **kw)
-        return self.calc.run(**kw)['exported']
+        self.calc.run()
+        return self.calc.datastore['exported']
 
     def execute(self, testfile, job_ini):
         """
