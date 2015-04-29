@@ -1,7 +1,8 @@
+import os
 from nose.plugins.attrib import attr
 
 from openquake.qa_tests_data.scenario_damage import (
-    case_1, case_2, case_3, case_4, case_5)
+    case_1, case_2, case_3, case_4, case_5, case_5a)
 
 from openquake.commonlib.tests.calculators import CalculatorTestCase
 
@@ -45,3 +46,12 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         for key in self.KEYS:
             for fname in out[key, 'xml']:
                 self.assertEqualFiles('expected/%s.xml' % key, fname)
+
+    @attr('qa', 'risk', 'scenario_damage')
+    def test_case_5a(self):
+        # this is a test for the rupture filtering
+        out = self.run_calc(case_5a.__file__, 'job_haz.ini,job_risk.ini')
+        for key in self.KEYS:
+            for fname in out[key, 'xml']:
+                expected = os.path.join('expected', os.path.basename(fname))
+                self.assertEqualFiles(expected, fname)
