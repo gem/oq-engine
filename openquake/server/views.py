@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import zipfile
 import shutil
 import json
 import logging
@@ -39,7 +38,7 @@ from openquake.engine.db import models as oqe_models
 from openquake.engine.export import core
 from openquake.engine.utils.tasks import safely_call
 from openquake.engine.export.core import export_output
-from openquake.server import tasks, executor
+from openquake.server import tasks, executor, utils
 
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
@@ -180,7 +179,9 @@ def calc(request, id=None):
     """
     base_url = _get_base_url(request)
 
-    calc_data = _get_calcs(request.GET, id=id)
+    user_name = utils.getusername(request)
+
+    calc_data = _get_calcs(request.GET, user_name, id=id)
 
     response_data = []
     for hc_id, status, job_type, is_running, desc in calc_data:
@@ -191,7 +192,7 @@ def calc(request, id=None):
 
     # if id is specified the related dictionary is returned instead the list
     if id is not None:
-        [ response_data ] = response_data
+        [response_data] = response_data
 
     return HttpResponse(content=json.dumps(response_data),
                         content_type=JSON)
@@ -290,9 +291,12 @@ def run_calc(request):
                             status=500)
 
     temp_dir = os.path.dirname(einfo[0])
+
+    user_name = utils.getusername(request)
+
     try:
         job, _fut = submit_job(einfo[0], temp_dir, request.POST['database'],
-                               callback_url, foreign_calc_id,
+                               user_name, callback_url, foreign_calc_id,
                                hazard_output_id, hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         logging.error(exc)
@@ -308,7 +312,7 @@ def run_calc(request):
                         status=status)
 
 
-def submit_job(job_file, temp_dir, dbname,
+def submit_job(job_file, temp_dir, dbname, user_name,
                callback_url=None, foreign_calc_id=None,
                hazard_output_id=None, hazard_job_id=None,
                logfile=None):
@@ -318,7 +322,7 @@ def submit_job(job_file, temp_dir, dbname,
     """
     ini = os.path.join(temp_dir, job_file)
     job, exctype = safely_call(
-        oq_engine.job_from_file, (ini, "platform", DEFAULT_LOG_LEVEL, '',
+        oq_engine.job_from_file, (ini, user_name, DEFAULT_LOG_LEVEL, '',
                                   hazard_output_id, hazard_job_id))
     if exctype:
         tasks.update_calculation(callback_url, status="failed", einfo=job)
@@ -330,13 +334,16 @@ def submit_job(job_file, temp_dir, dbname,
     return job, future
 
 
-def _get_calcs(request_get_dict, id=None):
+def _get_calcs(request_get_dict, user_name, id=None):
+
+    # TODO if superuser with should show all the calculations i.e.
+
     # helper to get job+calculation data from the oq-engine database
     job_params = oqe_models.JobParam.objects.filter(
-        name='description', job__user_name='platform').order_by('-id')
+        name='description', job__user_name=user_name).order_by('-id')
 
     if id is not None:
-        job_params = job_params.filter(job_id = id)
+        job_params = job_params.filter(job_id=id)
 
     if 'job_type' in request_get_dict:
         job_type = request_get_dict.get('job_type')
@@ -368,17 +375,24 @@ def calc_results(request, calc_id):
         * type (hazard_curve, hazard_map, etc.)
         * url (the exact url where the full result can be accessed)
     """
+    user_name = utils.getusername(request)
+
     # If the specified calculation doesn't exist OR is not yet complete,
     # throw back a 404.
     try:
-        oqjob = oqe_models.OqJob.objects.get(id=calc_id)
+        oqjob = oqe_models.OqJob.objects.get(id=calc_id,
+                                             user_name=user_name)
         if not oqjob.status == 'complete':
             return HttpResponseNotFound()
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
     base_url = _get_base_url(request)
 
-    output_types = dict(groupby(export_output, lambda pair: pair[0], lambda pairs: [pair[1] for pair in pairs]))
+    # NB: export_output has as keys the list (output_type, extension)
+    # so this returns an ordered map output_type -> extensions such as
+    # OrderedDict([('agg_loss_curve', ['xml', 'csv']), ...])
+    output_types = groupby(export_output, lambda oe: oe[0],
+                           lambda oes: [e for o, e in oes])
 
     results = oq_engine.get_outputs(calc_id)
     if not results:
@@ -482,6 +496,7 @@ def get_result(request, result_id):
         return response
     finally:
         shutil.rmtree(tmpdir)
+
 
 def web_engine(request, **kwargs):
     return render_to_response("engine/index.html",
