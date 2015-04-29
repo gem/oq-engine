@@ -3,6 +3,13 @@
     and Ubuntu 14.04 (Trusty)
 
   [Michele Simionato]
+  * Removed the SiteModel table: now the association between the sites and the
+    site model is done by using hazardlib.geo.geodetic.min_distance
+
+  [Daniele Viganò]
+  * added authentication support to the 'engineweb' and the 'engineserver'
+
+  [Michele Simionato]
   * the aggregate loss curves can be exported in CSV format
 
   [Matteo Nastasi]
