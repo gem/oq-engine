@@ -3,7 +3,7 @@ from openquake.engine import __version__ as oqversion
 
 def getusername(request):
     """
-    Return the real user is authentication support is enabled and user is
+    Return the real username if authentication support is enabled and user is
     authenticated, otherwise it returns "platform" as user for backward
     compatibility.
     """
