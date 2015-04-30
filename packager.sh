@@ -235,7 +235,7 @@ _pkgbuild_innervm_run () {
     ssh $lxc_ip "sudo mk-build-deps --install --tool 'apt-get -y' build-deb/debian/control"
 
     ssh $lxc_ip "cd build-deb && dpkg-buildpackage $DPBP_FLAG"
-    scp -r ${lxc_ip}:*.{tar.gz,deb,changes,dsc} ..
+    scp -r ${lxc_ip}:*.{tar.gz,deb,changes,dsc} ../
 
     return
 }
