@@ -16,8 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import cPickle
-from openquake.commonlib import sap
+from openquake.commonlib import sap, datastore
 from openquake.risklib import scientific
 
 
@@ -52,57 +51,55 @@ def make_figure(indices, imtls, spec_curves, curves=(), label=''):
     return plt
 
 
-def combined_curves(haz, hazard_pik):
+def combined_curves(dstore):
     """
-    :param haz: a dictionary with the hazard outputs
-    :param hazard_pik: the pathname to a pickled file
+    :param dstore: a DataStore instance
     :returns: curves_by_rlz, mean_curves
     """
-    no_curves = all(len(c) == 0 for c in haz['curves_by_trt_gsim'].values())
+    no_curves = all(len(c) == 0 for c in dstore['curves_by_trt_gsim'].values())
     if no_curves:
-        raise Exception('Could not find hazard curves in %s' % hazard_pik)
+        raise Exception('Could not find hazard curves in %s' % dstore)
 
-    curves_by_rlz = haz['rlzs_assoc'].combine(haz['curves_by_trt_gsim'])
+    curves_by_rlz = dstore['rlzs_assoc'].combine(dstore['curves_by_trt_gsim'])
     rlzs = sorted(curves_by_rlz)
     weights = [rlz.weight for rlz in rlzs]
     return curves_by_rlz, scientific.mean_curve(
         [curves_by_rlz[rlz] for rlz in rlzs], weights)
 
 
-def plot(hazard_pik, hazard_pik2=None, sites='0'):
+def plot(calc_id, other_id=None, sites='0'):
     """
     Hazard curves plotter.
 
-    :param hazard_pik: the pathname to a pickled file
-    :param hazard_pik2: None or the pathname to another pickled file
+    :param calc_id: calculation numeric ID
+    :param other_id: ID of another calculation (optional)
+    :param sites: comma-separated string with the site indices
     """
     # read the hazard data
-    with open(hazard_pik) as f:
-        haz = cPickle.load(f)
+    haz = datastore.DataStore(calc_id)
+    other = datastore.DataStore(other_id) if other_id else None
     oq = haz['oqparam']
     indices = map(int, sites.split(','))
-    n_sites = len(haz['sitecol'])
+    n_sites = len(haz['sites'])
     if not set(indices) <= set(range(n_sites)):
         invalid = sorted(set(indices) - set(range(n_sites)))
         print('The indices %s are invalid: no graph for them' % invalid)
     valid = sorted(set(range(n_sites)) & set(indices))
     print 'Found %d site(s); plotting %d of them' % (n_sites, len(valid))
-    curves_by_rlz, mean_curves = combined_curves(haz, hazard_pik)
-    if hazard_pik2 is None:
+    curves_by_rlz, mean_curves = combined_curves(haz)
+    if other is None:
         single_curve = len(curves_by_rlz) == 1 or not getattr(
             oq, 'individual_curves', True)
         plt = make_figure(valid, oq.imtls, mean_curves,
                           {} if single_curve else curves_by_rlz, 'mean')
     else:
-        _, mean1 = combined_curves(haz, hazard_pik)
-        _, mean2 = combined_curves(
-            cPickle.load(open(hazard_pik2)), hazard_pik2)
+        _, mean1 = combined_curves(haz)
+        _, mean2 = combined_curves(other)
         plt = make_figure(valid, oq.imtls, mean1, {'mean': mean2}, 'reference')
     plt.show()
 
 
 parser = sap.Parser(plot)
-parser.arg('hazard_pik', '.pik file containing the result of a computation')
-parser.arg('hazard_pik2', 'optional .pik file containing the result '
-           'of another computation')
+parser.arg('calc_id', 'a computation id', type=int)
+parser.arg('other_id', 'optional id of another computation', type=int)
 parser.opt('sites', 'comma-separated string with the site indices')

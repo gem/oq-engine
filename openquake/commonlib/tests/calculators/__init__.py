@@ -63,7 +63,8 @@ class CalculatorTestCase(unittest.TestCase):
         Return the outputs of the calculation as a dictionary
         """
         self.calc = self.get_calc(testfile, job_ini, **kw)
-        return self.calc.run()['exported']
+        self.calc.run()
+        return self.calc.datastore['exported']
 
     def execute(self, testfile, job_ini):
         """

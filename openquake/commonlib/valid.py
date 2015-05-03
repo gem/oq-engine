@@ -754,7 +754,8 @@ class ParamSet(object):
     ...         "The sum of a and b must be under 10. "
     ...         return self.a + self.b < 10
 
-    >>> MyParams(a='1', b='7.2')
+    >>> mp = MyParams(a='1', b='7.2')
+    >>> mp
     <MyParams a=1, b=7.2>
 
     >>> MyParams(a='1', b='9.2').validate()
@@ -765,7 +766,12 @@ class ParamSet(object):
     a=1
     b=9.2
 
-    The constrains are applied in lexicographic order.
+    The constrains are applied in lexicographic order. The attribute
+    corresponding to a Param descriptor can be set as usual:
+
+    >>> mp.a = '2'
+    >>> mp.a
+    '2'
     """
     params = {}
 
@@ -790,9 +796,10 @@ class ParamSet(object):
         """
         Apply the `is_valid` methods to self and possibly raise a ValueError.
         """
-        valids = sorted(getattr(self, valid)
-                        for valid in dir(self.__class__)
-                        if valid.startswith('is_valid_'))
+        # it is important to have the validator applied in a fixed order
+        valids = [getattr(self, valid)
+                  for valid in sorted(dir(self.__class__))
+                  if valid.startswith('is_valid_')]
         for is_valid in valids:
             if not is_valid():
                 dump = '\n'.join('%s=%s' % (n, v)

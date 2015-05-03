@@ -257,10 +257,41 @@ def get_site_collection(oqparam, mesh=None, site_ids=None,
 
 def get_gsims(oqparam):
     """
-    Return a list of GSIM instances from the gsim name in the configuration
-    file (defined for scenario computations).
+    Return an ordered list of GSIM instances from the gsim name in the
+    configuration file or from the gsim logic tree file.
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    return map(valid.gsim, oqparam.gsim.split())
+    gsims = map(str, get_rlzs_assoc(oqparam).realizations)
+    return map(valid.gsim, gsims)
+
+
+def get_rlzs_assoc(oqparam):
+    """
+    Extract the GSIM realizations from the gsim_logic_tree file, if present,
+    or build a single realization from the gsim attribute. It is only defined
+    for the scenario calculators.
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    """
+    if 'gsim_logic_tree' in oqparam.inputs:
+        gsim_lt = get_gsim_lt(oqparam, [])
+        if len(gsim_lt.values) != 1:
+            gsim_file = os.path.join(
+                oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
+            raise InvalidFile(
+                'The gsim logic tree file % must contain a single tectonic '
+                'region type, found %s instead ' % gsim_file,
+                list(gsim_lt.values))
+        rlzs = sorted(get_gsim_lt(oqparam, []))
+    else:
+        rlzs = [
+            logictree.Realization(
+                value=(oqparam.gsim,), weight=1, lt_path=('',),
+                ordinal=0, lt_uid=('*',))]
+    return logictree.RlzsAssoc(rlzs)
 
 
 def get_correl_model(oqparam):
@@ -857,13 +888,14 @@ def get_sitecol_gmfs(oqparam):
         `tag indices [gmv1 ... gmvN] * num_imts`
     """
     imts = oqparam.imtls.keys()
+    imt_dt = numpy.dtype([(imt, float) for imt in imts])
     num_gmfs = oqparam.number_of_ground_motion_fields
-    gmf_by_imt = {imt: [] for imt in imts}
     sitecol = get_site_collection(oqparam)  # extract it from inputs['sites']
+    gmf_by_imt = numpy.zeros((num_gmfs, len(sitecol)), imt_dt)
     tags = []
     fname = oqparam.inputs['gmfs']
     with open(fname) as csvfile:
-        for line in csvfile:
+        for lineno, line in enumerate(csvfile, 1):
             row = line.split(',')
             try:
                 indices = map(valid.positiveint, row[1].split())
@@ -882,15 +914,14 @@ def get_sitecol_gmfs(oqparam):
                     raise InvalidFile(
                         'The column #%d in %s is expected to contain positive '
                         'floats, got %s instead' % (i + 3, fname, row[i + 2]))
-                gmf_by_imt[imts[i]].append(r_sites.expand(array, 0))
+                gmf_by_imt[imts[i]][lineno - 1, :] = r_sites.expand(array, 0)
             tags.append(row[0])
-    data = gmf_by_imt[imts[0]]
-    if len(data) != num_gmfs:
+    if lineno < num_gmfs:
         raise InvalidFile('%s contains %d rows, expected %d' % (
-            fname, len(data), num_gmfs))
+            fname, lineno, num_gmfs))
     if tags != sorted(tags):
         raise InvalidFile('The tags in %s are not ordered: %s' % (fname, tags))
-    return sitecol, {imt: numpy.array(gmf_by_imt[imt]).T for imt in imts}
+    return sitecol, gmf_by_imt.T
 
 
 def get_mesh_hcurves(oqparam):

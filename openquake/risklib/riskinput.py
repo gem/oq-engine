@@ -17,7 +17,6 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 # -*- coding: utf-8 -*-
 
-import itertools
 import operator
 import logging
 import collections
@@ -27,35 +26,6 @@ import numpy
 from openquake.baselib.general import groupby, split_in_blocks_2
 from openquake.hazardlib.gsim.base import gsim_imt_dt
 from openquake.risklib import scientific
-
-FakeRlz = collections.namedtuple('FakeRlz', 'ordinal weight')
-FakeRlz.__new__.__defaults__ = (1,)
-
-
-class FakeRlzsAssoc(collections.Mapping):
-    """
-    Used for scenario calculators, when there are no realizations.
-    """
-    def __init__(self, num_rlzs):
-        self.realizations = map(FakeRlz, range(num_rlzs))
-        self.rlzs_assoc = {(rlz, 'FromCsv'): [] for rlz in self.realizations}
-
-    def combine(self, result):
-        """
-        :param result: a dictionary with a non-numeric key
-        :returns: a dictionary index -> value, with value in result.values()
-        """
-        return {FakeRlz(i): result[key]
-                for i, key in enumerate(sorted(result))}
-
-    def __iter__(self):
-        return self.rlzs_assoc.iterkeys()
-
-    def __getitem__(self, key):
-        return self.rlzs_assoc[key]
-
-    def __len__(self):
-        return len(self.rlzs_assoc)
 
 
 class RiskModel(collections.Mapping):
@@ -96,8 +66,7 @@ class RiskModel(collections.Mapping):
         """
         by_imt = operator.itemgetter(0)
         by_taxo = operator.itemgetter(1)
-        for imt, group in itertools.groupby(sorted(self), key=by_imt):
-            yield imt, map(by_taxo, group)
+        return groupby(self, by_imt, lambda group: map(by_taxo, group)).items()
 
     def __getitem__(self, imt_taxo):
         return self._workflows[imt_taxo]
@@ -108,14 +77,12 @@ class RiskModel(collections.Mapping):
     def __len__(self):
         return len(self._workflows)
 
-    def build_input(self, imt, hazards_by_site, assets_by_site, eps_dict=None,
-                    epsilon_sampling=None):
+    def build_input(self, imt, hazards_by_site, assets_by_site, eps_dict=None):
         """
         :param imt: an Intensity Measure Type
         :param hazards_by_site: an array of hazards per each site
         :param assets_by_site: an array of assets per each site
         :param eps_dict: a dictionary of epsilons per each asset
-        :param epsilon_sampling: the maximum number of epsilons per asset
         :returns: a :class:`RiskInput` instance
         """
         imt_taxonomies = [(imt, self.get_taxonomies(imt))]
@@ -141,7 +108,7 @@ class RiskModel(collections.Mapping):
         num_epsilons = len(eps_dict.itervalues().next())
         by_trt = operator.attrgetter('trt_model_id')
         for ses_ruptures, indices in split_in_blocks_2(
-                all_ruptures, range(num_epsilons), hint, key=by_trt):
+                all_ruptures, range(num_epsilons), hint or 1, key=by_trt):
             gsims = gsims_by_trt_id[ses_ruptures[0].trt_model_id]
             edic = {asset: eps[indices] for asset, eps in eps_dict.iteritems()}
             yield RiskInputFromRuptures(
