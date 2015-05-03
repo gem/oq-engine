@@ -11,9 +11,9 @@ xmlns:gml="http://www.opengis.net/gml"
             <taxonomy>
                 RC
             </taxonomy>
-            <damage ds="no_damage" mean="3.4490869E+02" stddev="3.0061189E+02"/>
-            <damage ds="LS1" mean="7.4762374E+02" stddev="1.4464824E+02"/>
-            <damage ds="LS2" mean="9.0746757E+02" stddev="4.1730772E+02"/>
+            <damage ds="no_damage" mean="9.9863273E+02" stddev="4.9148433E+02"/>
+            <damage ds="LS1" mean="7.2000719E+02" stddev="2.4963548E+02"/>
+            <damage ds="LS2" mean="2.8136008E+02" stddev="2.5064592E+02"/>
         </DDNode>
     </dmgDistPerTaxonomy>
 </nrml>
