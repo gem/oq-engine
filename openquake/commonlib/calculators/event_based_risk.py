@@ -153,7 +153,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 for asset_ref, rows in elass.iteritems():
                     for tag, loss, ins_loss in rows:
                         data.append((tag, asset_ref, loss, ins_loss))
-                self.export_csv(key, data)
+                self.export_csv(key, sorted(data))
 
                 # build the loss curves per asset
                 key = ('rlz', ordinal, loss_type, 'loss_curves')
