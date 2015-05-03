@@ -157,11 +157,19 @@ class HazardCalculator(BaseCalculator):
 
 
 def get_pre_calculator(calculator, exports=''):
+    """
     Recompute the hazard or retrieve it from the previous computation.
+
+    :param calculator: a calculator with a .hazard_calculator attribute
+    :returns: the precalculator
+    """
     precalc = calculators[calculator.hazard_calculator](
+        calculator.oqparam, calculator.monitor('hazard'))
     if not calculator.oqparam.usecache:
         precalc.run(exports=exports)
     return precalc
+
+
 class RiskCalculator(BaseCalculator):
     """
     Base class for all risk calculators. A risk calculator must set the
