@@ -125,7 +125,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
 
     def post_execute(self, result):
         """
-        Export the loss curves in CSV format.
+        Export the loss curves and the aggregated losses in CSV format
         """
         saved = {}
         for rlz in self.rlzs_assoc.realizations:
