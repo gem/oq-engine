@@ -524,8 +524,8 @@ _pkgtest_innervm_run () {
 deps_list() {
     local old_ifs out_list skip i d listtype="$1" filename="$2"
 
-    rules_dep=$(grep "^${BUILD_UBUVER^^}_DEP =" debian/rules | cut -d '"' -f 2)
-    rules_rec=$(grep "^${BUILD_UBUVER^^}_REC =" debian/rules | cut -d '"' -f 2)
+    rules_dep=$(grep "^${BUILD_UBUVER^^}_DEP *= *" debian/rules | sed 's/^.*= *//g')
+    rules_rec=$(grep "^${BUILD_UBUVER^^}_REC *= *" debian/rules | sed 's/^.*= *//g')
 
     out_list=""
     if [ "$listtype" = "all" ]; then
