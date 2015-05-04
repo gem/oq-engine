@@ -176,13 +176,13 @@ def get_mesh(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     if oqparam.sites:
-        lons, lats = zip(*oqparam.sites)
+        lons, lats = zip(*sorted(oqparam.sites))
         return geo.Mesh(numpy.array(lons), numpy.array(lats))
     elif 'sites' in oqparam.inputs:
         csv_data = open(oqparam.inputs['sites'], 'U').read()
         coords = valid.coordinates(
             csv_data.strip().replace(',', ' ').replace('\n', ','))
-        lons, lats = zip(*coords)
+        lons, lats = zip(*sorted(coords))
         return geo.Mesh(numpy.array(lons), numpy.array(lats))
     elif oqparam.region:
         # close the linear polygon ring by appending the first
