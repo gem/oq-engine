@@ -282,9 +282,9 @@ def get_rlzs_assoc(oqparam):
             gsim_file = os.path.join(
                 oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
             raise InvalidFile(
-                'The gsim logic tree file % must contain a single tectonic '
-                'region type, found %s instead ' % gsim_file,
-                list(gsim_lt.values))
+                'The gsim logic tree file %s must contain a single tectonic '
+                'region type, found %s instead ' % (
+                    gsim_file, list(gsim_lt.values)))
         trt = gsim_lt.values
         rlzs = sorted(get_gsim_lt(oqparam, trt))
     else:

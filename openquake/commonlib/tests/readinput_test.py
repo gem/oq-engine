@@ -153,6 +153,53 @@ investigation_time = 50.
             readinput.get_site_collection(oqparam)
         self.assertIn('Could not discretize region', str(ctx.exception))
 
+    def test_get_rlzs_assoc(self):
+        two_trts = general.writetmp("""\
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <logicTree logicTreeID='lt1'>
+        <logicTreeBranchingLevel branchingLevelID="bl1">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
+                    applyToTectonicRegionType="Active Shallow Crust">
+
+                <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>BooreAtkinson2008</uncertaintyModel>
+                    <uncertaintyWeight>0.75</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b2">
+                    <uncertaintyModel>ChiouYoungs2008</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+        <logicTreeBranchingLevel branchingLevelID="bl2">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs2"
+                    applyToTectonicRegionType="Active Deep Crust">
+
+                <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>BooreAtkinson2008</uncertaintyModel>
+                    <uncertaintyWeight>0.75</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b2">
+                    <uncertaintyModel>ChiouYoungs2008</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+    </logicTree>
+</nrml>""")
+        oqparam = mock.Mock()
+        oqparam.inputs = dict(gsim_logic_tree=two_trts)
+        with self.assertRaises(readinput.InvalidFile) as ctx:
+            readinput.get_rlzs_assoc(oqparam)
+        self.assertIn('must contain a single tectonic region type',
+                      str(ctx.exception))
+
 
 class ClosestSiteModelTestCase(unittest.TestCase):
 
