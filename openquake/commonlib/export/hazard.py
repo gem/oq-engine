@@ -99,6 +99,17 @@ def ds_export_ses_csv(key, dstore):
     return dest
 
 
+@ds_export.add(('sitecol', 'csv'))
+def export_sitecol_csv(key, dstore):
+    dest = dstore.export_path(key)
+    rows = []
+    for site in dstore['sitecol']:
+        rows.append([site.sid, site.lon, site.lat, site.vs30,
+                     site.vs30measured, site.z1pt0, site.z2pt5, site.backarc])
+    save_csv(dest, sorted(rows, key=operator.itemgetter(0)))
+    return dest
+
+
 # #################### export Ground Motion fields ########################## #
 
 class GmfSet(object):

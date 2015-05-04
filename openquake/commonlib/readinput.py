@@ -176,13 +176,13 @@ def get_mesh(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     if oqparam.sites:
-        lons, lats = zip(*oqparam.sites)
+        lons, lats = zip(*sorted(oqparam.sites))
         return geo.Mesh(numpy.array(lons), numpy.array(lats))
     elif 'sites' in oqparam.inputs:
         csv_data = open(oqparam.inputs['sites'], 'U').read()
         coords = valid.coordinates(
             csv_data.strip().replace(',', ' ').replace('\n', ','))
-        lons, lats = zip(*coords)
+        lons, lats = zip(*sorted(coords))
         return geo.Mesh(numpy.array(lons), numpy.array(lats))
     elif oqparam.region:
         # close the linear polygon ring by appending the first
@@ -199,9 +199,7 @@ def get_mesh(oqparam):
         coords = [(param.lon, param.lat) for param in get_site_model(oqparam)]
         lons, lats = zip(*coords)
         return geo.Mesh(numpy.array(lons), numpy.array(lats))
-    elif 'exposure' in oqparam.inputs:
-        raise RuntimeError('You can extract the site collection from the '
-                           'exposure with get_sitecol_assets')
+    # if there is an exposure the mesh is extracted from get_sitecol_assets
 
 
 def get_site_model(oqparam):
@@ -237,7 +235,7 @@ def get_site_collection(oqparam, mesh=None, site_ids=None,
         model parameters
     """
     mesh = mesh or get_mesh(oqparam)
-    site_ids = site_ids or range(1, len(mesh) + 1)
+    site_ids = site_ids or range(len(mesh))
     if oqparam.inputs.get('site_model'):
         if site_model_params is None:
             # read the parameters directly from their file
