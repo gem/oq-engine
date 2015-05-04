@@ -30,8 +30,8 @@ from openquake.hazardlib.gsim.base import deprecated
 
 def zero_curves(num_sites, imtls):
     """
-	:param num_sites: the number of sites
-    :param imtls: the intensity measure levels
+    :param num_sites: the number of sites
+    :param imtls: the intensity measure levels dictionary
     :returns: an array of zero curves with length num_sites
     """
     # numpy dtype for the hazard curves
@@ -43,7 +43,7 @@ def zero_curves(num_sites, imtls):
 
 def agg_curves(acc, curves):
     """
-    Aggregate hazard curves.
+    Aggregate hazard curves by composing the probabilities.
 
     :param acc: an accumulator array
     :param curves: an array of hazard curves
@@ -56,7 +56,7 @@ def agg_curves(acc, curves):
 
 @deprecated('Use calc_hazard_curves instead')
 def hazard_curves(
-        sources, sites, imtls, gsims, truncation_level,
+        sources, sites, imtls, gsim_by_trt, truncation_level=None,
         source_site_filter=filters.source_site_noop_filter,
         rupture_site_filter=filters.rupture_site_noop_filter):
     """
@@ -66,16 +66,15 @@ def hazard_curves(
     and output are hazardlib objects instead of simple strings.
     """
     imtls = {str(imt): imls for imt, imls in imtls.iteritems()}
-    gsims_by_trt = {trt: [gsims[trt]] for trt in gsims}
     curves_by_imt = calc_hazard_curves(
-        sources, sites, imtls, gsims_by_trt, truncation_level,
+        sources, sites, imtls, gsim_by_trt, truncation_level,
         source_site_filter=filters.source_site_noop_filter,
         rupture_site_filter=filters.rupture_site_noop_filter)
     return {from_string(imt): curves_by_imt[imt] for imt in imtls}
 
 
 def calc_hazard_curves(
-        sources, sites, imtls, gsim_by_trt, truncation_level,
+        sources, sites, imtls, gsim_by_trt, truncation_level=None,
         source_site_filter=filters.source_site_noop_filter,
         rupture_site_filter=filters.rupture_site_noop_filter):
     """
@@ -134,53 +133,56 @@ def calc_hazard_curves(
     sources_by_trt = collections.defaultdict(list)
     for src in sources:
         sources_by_trt[src.tectonic_region_type].append(src)
-    imt_dt = numpy.dtype([(imt, float, len(imtls[imt]))
-                          for imt in sorted(imtls)])
-    curves = numpy.zeros(len(sites), imt_dt)
+    curves = zero_curves(len(sites), imtls)
     for trt in sources_by_trt:
         gsim = gsim_by_trt[trt]
         curves = agg_curves(curves, hazard_curves_per_trt(
             sources_by_trt[trt], sites, imtls, [gsim], truncation_level,
-            source_site_filter, rupture_site_filter)[str(gsim)])
+            source_site_filter, rupture_site_filter)[0])
     return curves
 
 
 def hazard_curves_per_trt(
-        sources, sites, imtls, gsims, truncation_level,
+        sources, sites, imtls, gsims, truncation_level=None,
         source_site_filter=filters.source_site_noop_filter,
         rupture_site_filter=filters.rupture_site_noop_filter):
     """
     Compute the hazard curves for a set of sources belonging to the same
     tectonic region type for all the GSIMs associated to that TRT.
-    Returns a nested composite array.
+    The arguments are the same as in :func:`calc_hazard_curves`, except
+    for ``gsims``, which is a list of GSIM instances.
+
+    :returns:
+        A list of G arrays of size N, where N is the number of sites and
+        G the number of gsims. Each array contains records with fields given
+        by the intensity measure types; the size of each field is given by the
+        number of levels in ``imtls``.
     """
-    gnames = sorted(str(gsim) for gsim in gsims)
+    gnames = map(str, gsims)
     imt_dt = numpy.dtype([(imt, float, len(imtls[imt]))
                           for imt in sorted(imtls)])
-    gsim_imt_dt = numpy.dtype([(gs, imt_dt) for gs in gnames])
     imts = {from_string(imt): imls for imt, imls in imtls.iteritems()}
-    curves = numpy.ones(len(sites), gsim_imt_dt)
+    curves = [numpy.ones(len(sites), imt_dt) for gname in gnames]
     sources_sites = ((source, sites) for source in sources)
     for source, s_sites in source_site_filter(sources_sites):
         try:
             rupture_sites = rupture_site_filter(
                 (rupture, s_sites) for rupture in source.iter_ruptures())
             for rupture, r_sites in rupture_sites:
-                for gsim in gsims:
-                    gname = str(gsim)
+                for i, gsim in enumerate(gsims):
                     sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
                     for imt in imts:
                         poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
                                              truncation_level)
                         pno = rupture.get_probability_no_exceedance(poes)
                         expanded_pno = r_sites.expand(pno, placeholder=1)
-                        curves[gname][str(imt)] *= expanded_pno
+                        curves[i][str(imt)] *= expanded_pno
         except Exception, err:
             etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
             msg %= (source.source_id, err.message)
             raise etype, msg, tb
-    for gs in gnames:
+    for i in range(len(gnames)):
         for imt in imtls:
-            curves[gs][imt] = 1. - curves[gs][imt]
+            curves[i][imt] = 1. - curves[i][imt]
     return curves
