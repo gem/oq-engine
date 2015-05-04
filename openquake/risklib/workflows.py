@@ -143,8 +143,8 @@ def out_by_rlz(workflow, assets, hazards, epsilons, tags, loss_type):
     Yield lists out_by_rlz
     """
     out_by_rlz = []
-    for rlz in hazards[0]:
-        hazs = [haz[rlz] for haz in hazards]
+    for rlz in hazards[0]:  # extract the realizations from the first asset
+        hazs = [haz[rlz] for haz in hazards]  # hazard per each asset
         out = workflow(loss_type, assets, hazs, epsilons, tags)
         out.hid = rlz.ordinal
         out.weight = rlz.weight

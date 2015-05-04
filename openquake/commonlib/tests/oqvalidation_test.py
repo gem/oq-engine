@@ -177,3 +177,15 @@ class OqParamTestCase(unittest.TestCase):
             ).validate()
         self.assertIn('`intensity_measure_types_and_levels`',
                       str(ctx.exception))
+
+    def test_ambiguous_gsim(self):
+        with self.assertRaises(ValueError) as ctx:
+            OqParam(
+                calculation_mode='scenario', inputs={
+                    'gsim_logic_tree': 'something'},
+                gsim='AbrahamsonEtAl2014',
+                sites='0.1 0.2',
+                maximum_distance=400,
+                intensity_measure_types='PGA',
+            ).validate()
+        self.assertIn('there must be no `gsim` key', str(ctx.exception))
