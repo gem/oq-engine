@@ -231,6 +231,12 @@ class OqParam(valid.ParamSet):
         `intensity_measure_types_and_levels` is set directly,
         `intensity_measure_types` must not be set.
         """
+        if self.ground_motion_correlation_model:
+            for imt in self.imtls:
+                if not (imt.startswith('SA') or imt == 'PGA'):
+                    raise ValueError(
+                        'Correlation model %s does not accept IMT=%s' % (
+                            self.ground_motion_correlation_model, imt))
         if fragility_files(self.inputs) or vulnerability_files(self.inputs):
             return (self.intensity_measure_types is None
                     and self.intensity_measure_types_and_levels is None)
