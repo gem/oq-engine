@@ -356,6 +356,8 @@ class OqJob(djm.Model):
         :param params: a dictionary {name: string} of parameters
         """
         for name, value in params.iteritems():
+            if name == 'gsim':  # special case
+                value = str(value)
             JobParam.objects.create(job=self, name=name, value=repr(value))
 
     def save_hazard_sites(self):
