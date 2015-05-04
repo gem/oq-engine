@@ -19,6 +19,7 @@
 import textwrap
 from openquake.commonlib import sap, readinput
 from openquake.commonlib.calculators import base
+from openquake.hazardlib import gsim
 
 
 # the documentation about how to use this feature can be found
@@ -30,6 +31,9 @@ def info(name, filtersources=False):
     """
     if name in base.calculators:
         print textwrap.dedent(base.calculators[name].__doc__.strip())
+    elif name == 'gsims':
+        for gs in gsim.get_available_gsims():
+            print gs
     elif name.endswith('.ini'):
         oqparam = readinput.get_oqparam(name)
         if filtersources:

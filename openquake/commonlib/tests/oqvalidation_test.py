@@ -124,6 +124,19 @@ class OqParamTestCase(unittest.TestCase):
         oq.validate()
         self.assertEqual(oq.export_dir, os.path.expanduser('~'))
 
+    def test_invalid_imt(self):
+        with self.assertRaises(ValueError) as ctx:
+            OqParam(
+                calculation_mode='event_based', inputs={},
+                sites='0.1 0.2',
+                maximum_distance=400,
+                ground_motion_correlation_model='JB2009',
+                intensity_measure_types_and_levels='{"PGV": [0.4, 0.5, 0.6]}',
+            ).validate()
+        self.assertEqual(
+            str(ctx.exception),
+            'Correlation model JB2009 does not accept IMT=PGV')
+
     def test_duplicated_levels(self):
         with self.assertRaises(ValueError) as ctx:
             OqParam(
@@ -164,3 +177,15 @@ class OqParamTestCase(unittest.TestCase):
             ).validate()
         self.assertIn('`intensity_measure_types_and_levels`',
                       str(ctx.exception))
+
+    def test_ambiguous_gsim(self):
+        with self.assertRaises(ValueError) as ctx:
+            OqParam(
+                calculation_mode='scenario', inputs={
+                    'gsim_logic_tree': 'something'},
+                gsim='AbrahamsonEtAl2014',
+                sites='0.1 0.2',
+                maximum_distance=400,
+                intensity_measure_types='PGA',
+            ).validate()
+        self.assertIn('there must be no `gsim` key', str(ctx.exception))

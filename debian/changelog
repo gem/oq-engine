@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added a check on invalid IMTs when using the JB2009 correlation model
+  * Made sure that the site collection is ordered by (lon, lat) in all cases
   * Extended the scenario calculators so that they can manage multiple GSIMs
     at the same time
   * Ported the event_based calculator to oq-lite (except disaggregation)

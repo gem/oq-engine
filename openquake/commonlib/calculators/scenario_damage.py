@@ -51,14 +51,18 @@ def scenario_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
     logging.info('Process %d, considering %d risk input(s) of weight %d',
                  os.getpid(), len(riskinputs),
                  sum(ri.weight for ri in riskinputs))
-    with monitor:
-        result = AccumDict()  # (key_type, key) -> result
-        for [out] in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
-            # there is a single rlz
+    ordinals = range(len(rlzs_assoc.realizations))
+    result = AccumDict({i: AccumDict() for i in ordinals})
+    # ordinal -> (key_type, key) -> array
+    for out_by_rlz in riskmodel.gen_outputs(
+            riskinputs, rlzs_assoc, monitor):
+        for out in out_by_rlz:
             for asset, fraction in zip(out.assets, out.damages):
                 damages = fraction * asset.number
-                result += {('asset', asset): scientific.mean_std(damages)}
-                result += {('taxonomy', asset.taxonomy): damages}
+                result[out.hid] += {
+                    ('asset', asset): scientific.mean_std(damages)}
+                result[out.hid] += {
+                    ('taxonomy', asset.taxonomy): damages}
     return result
 
 
@@ -79,13 +83,19 @@ class ScenarioDamageCalculator(base.RiskCalculator):
     def post_execute(self, result):
         """
         :param result: a dictionary {
-             ('asset', asset): <mean stddev>,
-             ('taxonomy', asset.taxonomy): <damage array>}
+             ('asset', asset, hid): <mean stddev>,
+             ('taxonomy', asset.taxonomy, hid): <damage array>}
         :returns: a dictionary {
              'dmg_per_asset': /path/to/dmg_per_asset.xml,
              'dmg_per_taxonomy': /path/to/dmg_per_taxonomy.xml,
              'dmg_total': /path/to/dmg_total.xml}
         """
+        saved = {}
+        for rlz in self.rlzs_assoc.realizations:
+            saved += self.export_damage(rlz, result[rlz.ordinal])
+        return saved
+
+    def export_damage(self, rlz, result):
         dmg_states = [DmgState(s, i)
                       for i, s in enumerate(self.riskmodel.damage_states)]
         dd_taxo = []
@@ -112,17 +122,17 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             mean, std = scientific.mean_std(total)
             dd_total.append(DmgDistTotal(dmg_state, mean, std))
 
-        # export
+        suffix = '' if rlz.uid == '*' else '-gsimltp_%s' % rlz.uid
         f1 = export(('dmg_dist_per_asset', 'xml'), self.oqparam.export_dir,
-                    dmg_states, dd_asset)
-        f2 = export(('dmg_dist_per_taxonomy', 'xml'), self.oqparam.export_dir,
-                    dmg_states, dd_taxo)
+                    dmg_states, dd_asset, suffix)
+        f2 = export(('dmg_dist_per_taxonomy', 'xml'),
+                    self.oqparam.export_dir, dmg_states, dd_taxo, suffix)
         f3 = export(('dmg_dist_total', 'xml'), self.oqparam.export_dir,
-                    dmg_states, dd_total)
+                    dmg_states, dd_total, suffix)
         max_damage = dmg_states[-1]
         # the collapse map is extracted from the damage distribution per asset
         # (dda) by taking the value corresponding to the maximum damage
         collapse_map = [dda for dda in dd_asset if dda.dmg_state == max_damage]
         f4 = export(('collapse_map', 'xml'), self.oqparam.export_dir,
-                    dmg_states, collapse_map)
+                    dmg_states, collapse_map, suffix)
         return f1 + f2 + f3 + f4

@@ -60,8 +60,10 @@ class RiskInputTestCase(unittest.TestCase):
         oq = self.oqparam
         correl_model = readinput.get_correl_model(oq)
         rupcalc = event_based.EventBasedRuptureCalculator(oq)
+        rupcalc.run()
+
         # this is case with a single TRT
-        [(trt_id, ses_ruptures)] = rupcalc.run()['ruptures_by_trt'].items()
+        [(trt_id, ses_ruptures)] = rupcalc.datastore['ruptures_by_trt'].items()
 
         gsims_by_trt_id = rupcalc.rlzs_assoc.get_gsims_by_trt_id()
 

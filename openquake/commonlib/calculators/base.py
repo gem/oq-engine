@@ -45,6 +45,10 @@ class AssetSiteAssociationError(Exception):
 class BaseCalculator(object):
     """
     Abstract base class for all calculators.
+
+    :param oqparam: OqParam object
+    :param monitor: monitor object
+    :param calc_id: numeric calculation ID
     """
     __metaclass__ = abc.ABCMeta
 
@@ -68,7 +72,7 @@ class BaseCalculator(object):
         exported = self.post_execute(result)
         for item in sorted(exported.iteritems()):
             logging.info('exported %s: %s', *item)
-        return self.save_pik(result, exported=exported)
+        self.save_pik(result, exported=exported)
 
     def core_func(*args):
         """
@@ -97,11 +101,20 @@ class BaseCalculator(object):
         of output files.
         """
 
-    @abc.abstractmethod
     def save_pik(self, result, **kw):
         """
-        Called after post_execute
+        Must be run at the end of post_execute. Returns a dictionary
+        with the saved results.
+
+        :param result: the output of the `execute` method
+        :param kw: extras to add to the output dictionary
+        :returns: a dictionary with the saved data
         """
+        logging.info('Saving %r on %s', self.result_kind,
+                     self.datastore.calc_dir)
+        self.datastore['rlzs_assoc'] = self.rlzs_assoc
+        self.datastore[self.result_kind] = result
+        self.datastore.update(kw)
 
 
 class HazardCalculator(BaseCalculator):
@@ -126,6 +139,7 @@ class HazardCalculator(BaseCalculator):
             logging.info('Reading the site collection')
             with self.monitor('reading site collection', autoflush=True):
                 self.sitecol = readinput.get_site_collection(self.oqparam)
+        self.datastore['sites'] = self.sitecol
         if 'source' in self.oqparam.inputs:
             logging.info('Reading the composite source models')
             with self.monitor(
@@ -141,43 +155,19 @@ class HazardCalculator(BaseCalculator):
         else:  # calculators without sources, i.e. scenario
             self.rlzs_assoc = readinput.get_rlzs_assoc(self.oqparam)
 
-    def save_pik(self, result, **kw):
-        """
-        Must be run at the end of post_execute. Returns a dictionary
-        with the saved results.
 
-        :param result: the output of the `execute` method
-        :param kw: extras to add to the output dictionary
-        :returns: a dictionary with the saved data
-        """
-        sites = getattr(self, 'sites', self.sitecol)  # in the scenario
-        # calculator there is an attribute sites which is a subcollection
-        # of the full site collection
-        haz_out = dict(rlzs_assoc=self.rlzs_assoc,
-                       sites=sites, oqparam=self.oqparam)
-        haz_out[self.result_kind] = result
-        haz_out.update(kw)
-        logging.info('Saving hazard output on %s', self.datastore.calc_dir)
-        with self.monitor('saving hazard', autoflush=True):
-            self.datastore.update(haz_out)
-        return haz_out
-
-
-def get_hazard(calculator, exports=''):
+def get_pre_calculator(calculator, exports=''):
     """
-    Get the hazard from a calculator, possibly by using cached results
+    Recompute the hazard or retrieve it from the previous computation.
 
     :param calculator: a calculator with a .hazard_calculator attribute
-    :returns: a pair (hazard output, hazard_calculator)
+    :returns: the precalculator
     """
-    hcalc = calculators[calculator.hazard_calculator](
+    precalc = calculators[calculator.hazard_calculator](
         calculator.oqparam, calculator.monitor('hazard'))
-    if calculator.oqparam.usecache:
-        haz_out = hcalc.datastore
-    else:
-        haz_out = hcalc.run(exports=exports)
-
-    return haz_out, hcalc
+    if not calculator.oqparam.usecache:
+        precalc.run(exports=exports)
+    return precalc
 
 
 class RiskCalculator(BaseCalculator):
@@ -301,8 +291,20 @@ class RiskCalculator(BaseCalculator):
                                    'which are not in the risk model' % missing)
             self.sitecol, self.assets_by_site = readinput.get_sitecol_assets(
                 self.oqparam, self.exposure)
-        logging.info('Extracted %d unique sites from the exposure',
-                     len(self.sitecol))
+            num_assets = sum(len(assets) for assets in self.assets_by_site)
+
+        mesh = readinput.get_mesh(self.oqparam)
+        if mesh is not None:
+            sites = readinput.get_site_collection(self.oqparam, mesh)
+            with self.monitor('assoc_assets_sites'):
+                self.sitecol, self.assets_by_site = self.assoc_assets_sites(
+                    sites)
+            ok_assets = sum(len(assets) for assets in self.assets_by_site)
+            num_sites = len(self.sitecol)
+            logging.warn('Associated %d assets to %d sites, %d discarded',
+                         ok_assets, num_sites, num_assets - ok_assets)
+
+        logging.info('Extracted %d unique sites', len(self.sitecol))
 
     def execute(self):
         """
@@ -316,20 +318,10 @@ class RiskCalculator(BaseCalculator):
                 (self.riskinputs, self.riskmodel, self.rlzs_assoc, monitor),
                 concurrent_tasks=self.oqparam.concurrent_tasks,
                 weight=get_weight, key=self.riskinput_key)
-        self.risk_out = dict(oqparam=self.oqparam)
         return res
 
-    def save_pik(self, result, **kw):
-        """Save the risk outputs"""
-        self.risk_out[self.result_kind] = result
-        self.risk_out.update(kw)
-        logging.info('Saving risk output on %s', self.datastore.calc_dir)
-        with self.monitor('saving risk outputs', autoflush=True):
-            self.datastore.update(self.risk_out)
-        return self.risk_out
-
-
 # functions useful for the calculators ScenarioDamage and ScenarioRisk
+
 
 def get_gmfs(calc):
     """
@@ -346,10 +338,11 @@ def get_gmfs(calc):
 # this is used by scenario_risk and scenario_damage
 def compute_gmfs(calc):
     """
+    :param calc: a ScenarioDamage or ScenarioRisk calculator
     :returns: a dictionary key -> gmf matrix of shape (N, R)
     """
     logging.info('Computing the GMFs')
-    haz_out, hcalc = get_hazard(calc)
+    haz_out = get_pre_calculator(calc).datastore
 
     logging.info('Preparing the risk input')
     sites = haz_out['sites']
@@ -370,6 +363,7 @@ def compute_gmfs(calc):
 
 def read_gmfs_from_csv(calc):
     """
+    :param calc: a ScenarioDamage or ScenarioRisk calculator
     :returns: riskinputs
     """
     logging.info('Reading hazard curves from CSV')
