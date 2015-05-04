@@ -61,7 +61,7 @@ class OqParam(valid.ParamSet):
         valid.NoneOr(valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)), None)
     ground_motion_correlation_params = valid.Param(valid.dictionary)
     ground_motion_fields = valid.Param(valid.boolean, False)
-    gsim = valid.Param(str)  # it is validated in pre_execute anyway
+    gsim = valid.Param(valid.gsim, None)
     hazard_calculation_id = valid.Param(valid.NoneOr(valid.positiveint))
     hazard_curves_from_gmfs = valid.Param(valid.boolean, False)
     hazard_output_id = valid.Param(valid.NoneOr(valid.positiveint))
@@ -318,4 +318,13 @@ class OqParam(valid.ParamSet):
         rms = getattr(self, 'rupture_mesh_spacing', None)
         if rms and not getattr(self, 'complex_fault_mesh_spacing', None):
             self.complex_fault_mesh_spacing = self.rupture_mesh_spacing
+        return True
+
+    def is_valid_gsim(self):
+        """
+        If `gsim_logic_tree_file` is set, there must be no `gsim` key in
+        the configuration file.
+        """
+        if 'gsim_logic_tree' in self.inputs:
+            return self.gsim is None
         return True
