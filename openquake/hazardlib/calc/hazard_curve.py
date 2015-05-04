@@ -28,6 +28,32 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.gsim.base import deprecated
 
 
+def zero_curves(num_sites, imtls):
+    """
+	:param num_sites: the number of sites
+    :param imtls: the intensity measure levels
+    :returns: an array of zero curves with length num_sites
+    """
+    # numpy dtype for the hazard curves
+    imt_dt = numpy.dtype([(imt, float, len(imls))
+                          for imt, imls in imtls.items()])
+    zero = numpy.zeros(num_sites, imt_dt)
+    return zero
+
+
+def agg_curves(acc, curves):
+    """
+    Aggregate hazard curves.
+
+    :param acc: an accumulator array
+    :param curves: an array of hazard curves
+    :returns: the updated accumulator
+    """
+    for imt in curves.dtype.fields:
+        acc[imt] = 1. - (1. - curves[imt]) * (1. - acc[imt])
+    return acc
+
+
 @deprecated('Use calc_hazard_curves instead')
 def hazard_curves(
         sources, sites, imtls, gsims, truncation_level,
@@ -113,19 +139,10 @@ def calc_hazard_curves(
     curves = numpy.zeros(len(sites), imt_dt)
     for trt in sources_by_trt:
         gsim = gsim_by_trt[trt]
-        curves = agg_prob(curves, hazard_curves_per_trt(
+        curves = agg_curves(curves, hazard_curves_per_trt(
             sources_by_trt[trt], sites, imtls, [gsim], truncation_level,
             source_site_filter, rupture_site_filter)[str(gsim)])
     return curves
-
-
-def agg_prob(acc, prob):
-    """
-    Aggregate hazard curves with composite dtype imt_dt
-    """
-    for imt in prob.dtype.fields:
-        acc[imt] = 1. - (1. - prob[imt]) * (1. - acc[imt])
-    return acc
 
 
 def hazard_curves_per_trt(
@@ -134,9 +151,10 @@ def hazard_curves_per_trt(
         rupture_site_filter=filters.rupture_site_noop_filter):
     """
     Compute the hazard curves for a set of sources belonging to the same
-    tectonic region type. Returns a nested composite array.
+    tectonic region type for all the GSIMs associated to that TRT.
+    Returns a nested composite array.
     """
-    gnames = map(str, gsims)
+    gnames = sorted(str(gsim) for gsim in gsims)
     imt_dt = numpy.dtype([(imt, float, len(imtls[imt]))
                           for imt in sorted(imtls)])
     gsim_imt_dt = numpy.dtype([(gs, imt_dt) for gs in gnames])
