@@ -161,7 +161,7 @@ def get_pre_calculator(calculator, exports=''):
     Recompute the hazard or retrieve it from the previous computation.
 
     :param calculator: a calculator with a .hazard_calculator attribute
-    :returns: a pair (hazard output, hazard_calculator)
+    :returns: the precalculator
     """
     precalc = calculators[calculator.hazard_calculator](
         calculator.oqparam, calculator.monitor('hazard'))
@@ -291,8 +291,20 @@ class RiskCalculator(BaseCalculator):
                                    'which are not in the risk model' % missing)
             self.sitecol, self.assets_by_site = readinput.get_sitecol_assets(
                 self.oqparam, self.exposure)
-        logging.info('Extracted %d unique sites from the exposure',
-                     len(self.sitecol))
+            num_assets = sum(len(assets) for assets in self.assets_by_site)
+
+        mesh = readinput.get_mesh(self.oqparam)
+        if mesh is not None:
+            sites = readinput.get_site_collection(self.oqparam, mesh)
+            with self.monitor('assoc_assets_sites'):
+                self.sitecol, self.assets_by_site = self.assoc_assets_sites(
+                    sites)
+            ok_assets = sum(len(assets) for assets in self.assets_by_site)
+            num_sites = len(self.sitecol)
+            logging.warn('Associated %d assets to %d sites, %d discarded',
+                         ok_assets, num_sites, num_assets - ok_assets)
+
+        logging.info('Extracted %d unique sites', len(self.sitecol))
 
     def execute(self):
         """
