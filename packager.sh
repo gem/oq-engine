@@ -739,7 +739,7 @@ if [ $BUILD_DEVEL -eq 1 ]; then
     mv debian/changelog debian/changelog.orig
     cp debian/control debian/control.orig
     for dep in $GEM_GIT_DEPS; do
-        sed -i "s/\(python-${dep}\) \(([<>=]\+\) \([^)]\+\)\()\)/\1 \2 \3~dev0\4/g"  debian/control
+        sed -i "s/\(python-${dep}\) \(([<>=]\+\) \([^)]\+\)\()\)/\1 \2 \3~${BUILD_UBUVER}01~dev0\4/g"  debian/control
     done
 
     if [ "$pkg_maj" = "$ini_maj" -a "$pkg_min" = "$ini_min" -a \
@@ -753,7 +753,8 @@ if [ $BUILD_DEVEL -eq 1 ]; then
         pkg_deb="-0"
     fi
 
-    ( echo "$pkg_name (${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}~dev${dt}-${hash}~${BUILD_UBUVER}01) ${BUILD_UBUVER}; urgency=low"
+    (
+      echo "$pkg_name (${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}~${BUILD_UBUVER}01~dev${dt}-${hash}) ${BUILD_UBUVER}; urgency=low"
       echo
       echo "  [Automatic Script]"
       echo "  * Development version from $hash commit"
