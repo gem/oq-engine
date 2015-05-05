@@ -513,16 +513,13 @@ class EventBasedCalculator(ClassicalCalculator):
             if not os.path.exists(export_dir):
                 os.makedirs(export_dir)
             self.oqparam.export_dir = export_dir
+            # use a different datastore
             self.cl = ClassicalCalculator(self.oqparam, self.monitor)
             # copy the relevant attributes
             self.cl.composite_source_model = self.composite_source_model
             self.cl.sitecol = self.sitecol
             self.cl.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
-            result = self.cl.execute()
-            exported = self.cl.post_execute(result)
-            for item in sorted(exported.iteritems()):
-                logging.info('exported %s: %s', *item)
-            self.cl.save_pik(result, exported=exported)
+            self.cl.run(pre_execute=False)
             for imt in self.mean_curves:
                 rdiff, index = max_rel_diff_index(
                     self.cl.mean_curves[imt], self.mean_curves[imt])

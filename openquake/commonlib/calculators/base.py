@@ -72,6 +72,8 @@ class BaseCalculator(object):
     """
     __metaclass__ = abc.ABCMeta
 
+    precalc = None  # to be overridden
+
     oqparam = persistent_attribute('oqparam')
     sitecol = persistent_attribute('sitecol')
     rlzs_assoc = persistent_attribute('rlzs_assoc')
@@ -84,18 +86,20 @@ class BaseCalculator(object):
         self.monitor = monitor
         self.datastore.export_dir = self.oqparam.export_dir
 
-    def run(self, **kw):
+    def run(self, pre_execute=True, **kw):
         """
         Run the calculation and return the saved output.
         """
         self.monitor.write('operation pid time_sec memory_mb'.split())
         vars(self.oqparam).update(kw)
-        self.pre_execute()
+        if pre_execute:
+            self.pre_execute()
         result = self.execute()
         exported = self.post_execute(result)
         for item in sorted(exported.iteritems()):
             logging.info('exported %s: %s', *item)
-        self.save_pik(result, exported=exported)
+        pre_exported = self.datastore.get('exported', {})
+        self.save_pik(result, exported=pre_exported + exported)
         return self.datastore
 
     def core_func(*args):
