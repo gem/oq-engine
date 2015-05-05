@@ -111,9 +111,8 @@ def decimal_time(year, month, day, hour, minute, second):
     :returns decimal_time:
         Decimal representation of the time (as numpy.ndarray)
     """
-
-    tmo = np.zeros_like(year, dtype=int)
-    tda = np.zeros_like(year, dtype=int)
+    tmo = np.ones_like(year, dtype=int)
+    tda = np.ones_like(year, dtype=int)
     tho = np.zeros_like(year, dtype=int)
     tmi = np.zeros_like(year, dtype=int)
     tse = np.zeros_like(year, dtype=float)
