@@ -68,16 +68,15 @@ class ScenarioCalculator(base.HazardCalculator):
         self.gsims = readinput.get_gsims(self.oqparam)
 
         # filter the sites
-        self.sites = filters.filter_sites_by_distance_to_rupture(
+        self.sitecol = filters.filter_sites_by_distance_to_rupture(
             rupture, self.oqparam.maximum_distance, self.sitecol)
-        if self.sites is None:
+        if self.sitecol is None:
             raise RuntimeError(
                 'All sites were filtered out! '
                 'maximum_distance=%s km' % self.oqparam.maximum_distance)
-        self.datastore['sites'] = self.sites
         self.tags = ['scenario-%010d' % i for i in xrange(n_gmfs)]
         self.computer = GmfComputer(
-            rupture, self.sites, self.oqparam.imtls, self.gsims,
+            rupture, self.sitecol, self.oqparam.imtls, self.gsims,
             trunc_level, correl_model)
         rnd = random.Random(self.oqparam.random_seed)
         self.tag_seed_pairs = [(tag, rnd.randint(0, calc.MAX_INT))
@@ -110,6 +109,6 @@ class ScenarioCalculator(base.HazardCalculator):
             for fmt in exports:
                 fname = '%s_gmf.%s' % (gsim, fmt)
                 out += export(
-                    ('gmf', fmt), self.oqparam.export_dir, fname, self.sites,
+                    ('gmf', fmt), self.oqparam.export_dir, fname, self.sitecol,
                     self.tags, numpy.array(gmfs, gmfs[0].dtype), rlz.lt_path)
         return out
