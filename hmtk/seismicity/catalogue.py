@@ -450,6 +450,7 @@ class Catalogue(object):
                 else:
                     print attrib
                     raise ValueError('unknown attibute')
+        self.sort_catalogue_chronologically()
 
 def _merge_data(dat1, dat2):
     """
