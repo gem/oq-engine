@@ -115,7 +115,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
         if 'gmfs' in self.oqparam.inputs:
-            self.precalc.assets_by_site = self.assets_by_site
+            self.assets_by_site = self.assets_by_site
 
         logging.info('Building the epsilons')
         eps_dict = self.make_eps_dict(
@@ -123,7 +123,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
 
         self.riskinputs = self.build_riskinputs(base.get_gmfs(self), eps_dict)
         self.unit = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
-                     for ct in self.precalc.exposure.cost_types}
+                     for ct in self.cost_types}
         self.unit['fatalities'] = 'people'
 
     def post_execute(self, result):

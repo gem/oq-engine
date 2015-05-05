@@ -57,6 +57,15 @@ class LtRealization(object):
         """An unique identifier for effective realizations"""
         return '_'.join(self.sm_lt_path) + ',' + self.gsim_rlz.uid
 
+    def __eq__(self, other):
+        return repr(self) == repr(other)
+
+    def __ne__(self, other):
+        return repr(self) != repr(other)
+
+    def __hash__(self):
+        return hash(repr(self))
+
 
 def get_skeleton(sm):
     """
