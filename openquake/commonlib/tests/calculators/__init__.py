@@ -48,7 +48,6 @@ class CalculatorTestCase(unittest.TestCase):
             else testfile
         inis = [os.path.join(self.testdir, ini) for ini in job_ini.split(',')]
         params = readinput.get_params(inis)
-        kw.setdefault('usecache', '0')
         params.update(kw)
         oq = oqvalidation.OqParam(**params)
         oq.validate()
