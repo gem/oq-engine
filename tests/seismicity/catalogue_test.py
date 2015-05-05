@@ -413,3 +413,36 @@ class TestMagnitudeTimeDistribution(unittest.TestCase):
             self.catalogue.get_magnitude_time_distribution(mag_range,
                                                            time_range,
                                                            normalisation=True))
+
+class TestCatalogueSort(unittest.TestCase):
+
+    def setUp(self):
+        cat1 = Catalogue()
+        cat1.data['eventID'] = [1.0, 2.0, 3.0]
+        cat1.data['magnitude'] = np.array([1.0, 2.0, 3.0])
+        cat1.data['year'] = np.array([1905, 1909, 1902], dtype=int)
+        self.cat1 = cat1
+
+        cat2 = Catalogue()
+        cat2.data['eventID'] = [1.0, 2.0, 3.0]
+        cat2.data['magnitude'] = np.array([1.0, 2.0, 3.0])
+        cat2.data['year'] = np.array([1905, 1909, 1902], dtype=int)
+        cat2.data['month'] = np.array([1, 1, 1], dtype=int)
+        cat2.data['day'] = np.array([1, 1, 1], dtype=int)
+        cat2.data['hour'] = np.array([1, 1, 1], dtype=int)
+        cat2.data['minute'] = np.array([1, 1, 1], dtype=int)
+        cat2.data['second'] = np.array([1., 1., 1.], dtype=float)
+
+        self.cat1 = cat1
+        self.cat2 = cat2
+
+    def test_sort_cat1(self):
+        self.cat1.sort_catalogue_chronologically()
+        self.assertEqual(self.cat1.data['magnitude'][0], 3.0)
+        self.assertEqual(self.cat1.data['year'][0], 1902)
+
+    def test_sort_cat2(self):
+        self.cat2.sort_catalogue_chronologically()
+        self.assertEqual(self.cat2.data['magnitude'][0], 3.0)
+        self.assertEqual(self.cat2.data['year'][0], 1902)
+
