@@ -433,12 +433,19 @@ class TestCatalogueConcatenate(unittest.TestCase):
         self.cat2 = cat2
 
     def test_concatenate(self):
+        """
+        Tests concatenation for correct case - catalogues the same
+        """
         self.cat1.concatenate(self.cat2)
         self.assertEqual(self.cat1.end_year, 2000)
         self.assertEqual(self.cat1.start_year, 1900)
         self.assertEqual(len(self.cat1.data['magnitude']), 6)
 
     def test_warning_merge_data(self):
+        """
+        Tests concatenation for the case when catalogues contain different
+        attributes
+        """
         self.cat2.data['month'] = np.array([1.0, 2.0, 3.0])
         with self.assertRaises(Warning):
             self.cat1.concatenate(self.cat2)
