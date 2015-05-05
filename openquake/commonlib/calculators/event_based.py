@@ -437,8 +437,6 @@ class EventBasedCalculator(ClassicalCalculator):
         hcalc = self.precalc
         ruptures_by_trt = hcalc.datastore['ruptures_by_trt']
         self.composite_source_model = hcalc.composite_source_model
-        self.sitecol = hcalc.sitecol
-        self.rlzs_assoc = hcalc.rlzs_assoc
         self.sesruptures = sorted(sum(ruptures_by_trt.itervalues(), []),
                                   key=operator.attrgetter('tag'))
         self.saved = AccumDict()

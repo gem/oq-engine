@@ -52,7 +52,7 @@ def persistent_attribute(name):
             return self.datastore[name]
         except IOError:
             if self.precalc:
-                return self.precalc.datastore[name]
+                return getattr(self.precalc, name)
             else:
                 raise
 
