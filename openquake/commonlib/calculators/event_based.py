@@ -37,9 +37,9 @@ from openquake.baselib.general import AccumDict, groupby
 
 from openquake.commonlib.writers import save_csv
 from openquake.commonlib.calculators import base
-from openquake.commonlib.calculators.calc import \
-    MAX_INT, gmvs_to_haz_curve, agg_prob
-from openquake.commonlib.calculators.classical import ClassicalCalculator
+from openquake.commonlib.calculators.calc import MAX_INT, gmvs_to_haz_curve
+from openquake.commonlib.calculators.classical import (
+    ClassicalCalculator, agg_prob)
 
 # ######################## rupture calculator ############################ #
 

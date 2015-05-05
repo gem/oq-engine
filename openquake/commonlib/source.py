@@ -318,7 +318,7 @@ class RlzsAssoc(collections.Mapping):
         self.rlzs_by_smodel[lt_model.ordinal] = rlzs
         return idx
 
-    def combine(self, results, agg=agg_prob):
+    def combine_curves(self, results, agg, acc):
         """
         :param results: dictionary (trt_model_id, gsim_name) -> <AccumDict>
         :param agg: aggregation function (default composition of probabilities)
@@ -341,7 +341,7 @@ class RlzsAssoc(collections.Mapping):
         ... ('T2', 'D'): 0.04,
         ... ('T2', 'E'): 0.05,}
         ...
-        >>> combinations = assoc.combine(results, operator.add)
+        >>> combinations = assoc.combine(results, operator.add, 0)
         >>> for key, value in sorted(combinations.items()): print key, value
         r0 0.05
         r1 0.06
@@ -364,11 +364,22 @@ class RlzsAssoc(collections.Mapping):
         function is the composition of probability, which however is closer
         to the sum for small probabilities.
         """
-        acc = 0
+        ad = AccumDict({rlz: acc for rlz in self.realizations})
         for key, value in results.iteritems():
             for rlz in self.rlzs_assoc[key]:
-                acc = agg(acc, AccumDict({rlz: value}))
-        return acc
+                ad[rlz] = agg(ad[rlz], value)
+        return ad
+
+    def combine(self, results):
+        """
+        Combine probabilities. Works when results is a dictionary
+        key -> array of floats
+        """
+        ad = AccumDict({rlz: 0 for rlz in self.realizations})
+        for key, value in results.iteritems():
+            for rlz in self.rlzs_assoc[key]:
+                ad[rlz] = agg_prob(ad[rlz], value)
+        return ad
 
     def __iter__(self):
         return self.rlzs_assoc.iterkeys()

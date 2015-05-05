@@ -25,6 +25,7 @@ import numpy
 
 from openquake.baselib.general import groupby, split_in_blocks_2
 from openquake.hazardlib.gsim.base import gsim_imt_dt
+from openquake.hazardlib.calc.hazard_curve import zero_curves, agg_curves
 from openquake.risklib import scientific
 
 

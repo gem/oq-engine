@@ -36,6 +36,9 @@ def floatformat(fmt_string):
         scientificformat.__defaults__ = fmt_defaults
 
 
+zeroset = set(['E', '-', '+', '.', '0'])
+
+
 def scientificformat(value, fmt='%13.9E', sep=' ', sep2=':'):
     """
     :param value: the value to convert into a string
@@ -46,6 +49,8 @@ def scientificformat(value, fmt='%13.9E', sep=' ', sep2=':'):
     Convert a float or an array into a string by using the scientific notation
     and a fixed precision (by default 10 decimal digits). For instance:
 
+    >>> scientificformat(-0E0)
+    '0.000000000E+00'
     >>> scientificformat(-0.004)
     '-4.000000000E-03'
     >>> scientificformat([0.004])
@@ -62,7 +67,11 @@ def scientificformat(value, fmt='%13.9E', sep=' ', sep2=':'):
     elif hasattr(value, '__len__'):
         return sep.join((scientificformat(f, fmt, sep2) for f in value))
     elif isinstance(value, float):
-        return fmt % value
+        fmt_value = fmt % value
+        if set(fmt_value) <= zeroset:
+            # '-0.0000000E+00' is converted into '0.0000000E+00
+            fmt_value = fmt_value.replace('-', '')
+        return fmt_value
     return str(value)
 
 
