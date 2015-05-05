@@ -107,27 +107,6 @@ class TestSeismicityUtilities(unittest.TestCase):
             self.minute, self.second),
             np.array([1990., 1995.49457858, 2000.99999997])))
 
-    def test_decimal_time1(self):
-        '''Tests the function utils.decimal_time'''
-        self.year = np.array([1990])
-        self.month = np.array([1])
-        self.day = np.array([1])
-        self.hour = np.array([0])
-        self.minute = np.array([0])
-        self.second = np.array([0.0, 30.0, 59.0])
-        self.assertTrue(np.allclose(
-            utils.decimal_time(self.year, self.month, self.day, self.hour,
-            self.minute, self.second),
-            np.array([1990.])))
-
-    def test_decimal_time2(self):
-        '''Tests the function utils.decimal_time'''
-        self.year = np.array([1990])
-        self.assertTrue(np.allclose(
-            utils.decimal_time(self.year, self.month, self.day, self.hour,
-            self.minute, self.second),
-            np.array([1990.])))
-
     def test_haversine(self):
         '''Tests the function utils.haversine
         Distances tested against i) Matlab implementation of the haversine
