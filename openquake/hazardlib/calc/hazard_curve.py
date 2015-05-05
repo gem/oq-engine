@@ -41,17 +41,40 @@ def zero_curves(num_sites, imtls):
     return zero
 
 
+def zero_maps(num_sites, imts):
+    """
+    :param num_sites: the number of sites
+    :param imts: the intensity measure types
+    :returns: an array of zero curves with length num_sites
+    """
+    # numpy dtype for the hazard maps
+    imt_dt = numpy.dtype([(imt, float) for imt in imts])
+    zero = numpy.zeros(num_sites, imt_dt)
+    return zero
+
+
 def agg_curves(acc, curves):
     """
     Aggregate hazard curves by composing the probabilities.
 
     :param acc: an accumulator array
     :param curves: an array of hazard curves
-    :returns: the updated accumulator
+    :returns: a new accumulator
+
+    Notice that::
+
+       agg_prob(acc, 0) = acc
+       agg_prob(acc, 1) = 1
+       agg_prob(0, prob) = prob
+       agg_prob(1, prob) = 1
+       agg_prob(acc, prob) = agg_prob(prob, acc)
+
+       agg_prob(acc, eps) =~ acc + eps for eps << 1
     """
+    new = numpy.array(acc)  # copy of the accumulator
     for imt in curves.dtype.fields:
-        acc[imt] = 1. - (1. - curves[imt]) * (1. - acc[imt])
-    return acc
+        new[imt] = 1. - (1. - curves[imt]) * (1. - acc[imt])
+    return new
 
 
 @deprecated('Use calc_hazard_curves instead')
