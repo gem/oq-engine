@@ -138,7 +138,6 @@ def decimal_time(year, month, day, hour, minute, second):
     dtime = year.astype(float) + (year_secs / (365. * 24. * 3600.))
     dtime[leap_loc] = year[leap_loc].astype(float) + \
         (year_secs[leap_loc] / (366. * 24. * 3600.))
-
     return dtime
 
 
