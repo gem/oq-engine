@@ -63,14 +63,14 @@ class TestSeismicityUtilities(unittest.TestCase):
     '''Class for testing seismicity utilities'''
     def setUp(self):
         '''Sets up the test class'''
-        self.year = None
-        self.month = None
-        self.day = None
-        self.hour = None
-        self.minute = None
-        self.second = None
-        self.longitude = None
-        self.latitude = None
+        self.year = []
+        self.month = []
+        self.day = []
+        self.hour = []
+        self.minute = []
+        self.second = []
+        self.longitude = []
+        self.latitude = []
 
     def test_leap_year_check(self):
         '''Tests the leap year check'''
@@ -106,6 +106,26 @@ class TestSeismicityUtilities(unittest.TestCase):
             utils.decimal_time(self.year, self.month, self.day, self.hour,
             self.minute, self.second),
             np.array([1990., 1995.49457858, 2000.99999997])))
+
+    def test_decimal_time1(self):
+        '''Tests the function utils.decimal_time'''
+        self.year = np.array([1990])
+        self.month = np.array([1])
+        self.day = np.array([1])
+        self.hour = np.array([0])
+        self.minute = np.array([0])
+        self.second = np.array([0.0, 30.0, 59.0])
+        self.assertTrue(np.allclose(
+            utils.decimal_time(self.year, self.month, self.day, self.hour,
+            self.minute, self.second),
+            np.array([1990.])))
+
+    def test_decimal_time2(self):
+        '''Tests the function utils.decimal_time'''
+        self.year = np.array([1990])
+        self.assertTrue(np.allclose(
+            utils.decimal_time(self.year, [], [], [], [], []),
+            np.array([1990.])))
 
     def test_haversine(self):
         '''Tests the function utils.haversine
