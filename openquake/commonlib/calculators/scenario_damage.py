@@ -79,8 +79,6 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         if 'gmfs' in self.oqparam.inputs:
             self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
-        if 'gmfs' in self.oqparam.inputs:
-            self.precalc.assets_by_site = self.assets_by_site
         gmfs = base.get_gmfs(self)
         self.riskinputs = self.build_riskinputs(gmfs)
 

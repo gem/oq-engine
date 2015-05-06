@@ -114,8 +114,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         if 'gmfs' in self.oqparam.inputs:
             self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
-        if 'gmfs' in self.oqparam.inputs:
-            self.precalc.assets_by_site = self.assets_by_site
 
         logging.info('Building the epsilons')
         eps_dict = self.make_eps_dict(
