@@ -515,4 +515,3 @@ class EventBasedCalculator(ClassicalCalculator):
                 logging.warn('Relative difference with the classical '
                              'mean curves for IMT=%s: %d%% at site index %d',
                              imt, rdiff * 100, index)
-

@@ -80,6 +80,7 @@ class BaseCalculator(object):
 
     persistent = True  # by default persistence on the datastore is enabled
     precalc = None  # to be overridden
+    pre_calculator = None  # to be overridden
 
     def __init__(self, oqparam, monitor=DummyMonitor(), calc_id=None):
         self.monitor = monitor
@@ -254,7 +255,6 @@ class RiskCalculator(HazardCalculator):
     attributes .riskmodel, .sitecol, .assets_by_site, .exposure
     .riskinputs in the pre_execute phase.
     """
-    pre_calculator = None  # to be overriden in subclasses
 
     def make_eps_dict(self, num_ruptures):
         """
