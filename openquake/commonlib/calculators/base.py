@@ -172,15 +172,13 @@ class HazardCalculator(BaseCalculator):
                 self.oqparam, self.monitor('precalculator'),
                 precalc_id or self.datastore.calc_id)
             if precalc_id is None:  # no precomputed data
-                datastore = precalc.run()
-            else:  # use the precalculated data
-                datastore = precalc.datastore
-            self.sitecol = datastore['sites']
+                precalc.run()
+            self.sitecol = precalc.datastore['sites']
             try:
                 self.assets_by_site = datastore['assets_by_site']
             except IOError:  # assets_by_site may be absent
                 pass
-            self.rlzs_assoc = datastore['rlzs_assoc']
+            self.rlzs_assoc = precalc.datastore['rlzs_assoc']
             self.precalc = precalc
             return
 

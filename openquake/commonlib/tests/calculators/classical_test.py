@@ -8,12 +8,14 @@ from openquake.qa_tests_data.classical import (
 
 class ClassicalTestCase(CalculatorTestCase):
 
-    def assert_curves_ok(self, expected, test_dir):
+    def assert_curves_ok(self, expected, test_dir, delta=None):
         out = self.run_calc(test_dir, 'job.ini', exports='csv')
-        got = out['hcurves', 'hdf5', 'csv']
+        got = (out['hcurves', 'hdf5', 'csv'] +
+               out.get(('hmaps', 'hdf5', 'csv'), []) +
+               out.get(('uhs', 'hdf5', 'csv'), []))
         self.assertEqual(len(expected), len(got))
         for fname, actual in zip(expected, got):
-            self.assertEqualFiles('expected/%s' % fname, actual)
+            self.assertEqualFiles('expected/%s' % fname, actual, delta=delta)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_1(self):
@@ -122,6 +124,15 @@ hazard_curve-smltp_SM2_a3b1-gsimltp_BA2008_*.csv
 hazard_curve-smltp_SM2_a3b1-gsimltp_CB2008_*.csv
 hazard_curve-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008_*.csv
 hazard_curve-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_*.csv
+hazard_map-mean.csv
+hazard_map-smltp_SM1-gsimltp_BA2008_C2003.csv
+hazard_map-smltp_SM1-gsimltp_BA2008_T2002.csv
+hazard_map-smltp_SM1-gsimltp_CB2008_C2003.csv
+hazard_map-smltp_SM1-gsimltp_CB2008_T2002.csv
+hazard_map-smltp_SM2_a3b1-gsimltp_BA2008_*.csv
+hazard_map-smltp_SM2_a3b1-gsimltp_CB2008_*.csv
+hazard_map-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008_*.csv
+hazard_map-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_*.csv
 hazard_uhs-mean.csv
 hazard_uhs-smltp_SM1-gsimltp_BA2008_C2003.csv
 hazard_uhs-smltp_SM1-gsimltp_BA2008_T2002.csv
@@ -156,4 +167,4 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_*.csv'''.split(),
             'hazard_curve-smltp_b1-gsimltp_*_*_*_*_b52_*_*.csv',
             'hazard_curve-smltp_b1-gsimltp_*_*_*_*_b53_*_*.csv',
             'hazard_curve-smltp_b1-gsimltp_*_*_*_*_b54_*_*.csv',
-        ], case_19.__file__)
+        ], case_19.__file__, delta=1E-7)
