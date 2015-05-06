@@ -146,13 +146,13 @@ class DataStore(collections.MutableMapping):
             return os.path.getsize(self.path(key))
         return sum(os.path.getsize(self.path(key)) for key in self)
 
-    def h5file(self, key):
+    def h5file(self, key, mode='r+'):
         """
         Extracts the HDF5 file underlying the given key.
         """
         if key[-1] not in ('h5', 'hdf5'):
             raise ValueError('Not an hf5 key: %s' % str(key))
-        return h5py.File(self.path(key), libver='latest')
+        return h5py.File(self.path(key), mode, libver='latest')
 
     def __getitem__(self, key):
         if key[-1] == 'h5':
@@ -172,7 +172,7 @@ class DataStore(collections.MutableMapping):
                 yield dset, data[:]
 
     def _set_hdf5_items(self, key, items):
-        with self.h5file(key) as h5f:
+        with self.h5file(key, 'w') as h5f:
             for dset, data in items:
                 h5f.create_dataset(dset, data=data)
 
