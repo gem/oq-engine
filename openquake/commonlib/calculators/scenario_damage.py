@@ -73,7 +73,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
     """
     pre_calculator = 'scenario'
     core_func = scenario_damage
-    result_kind = 'damages_by_key'
+    damages_by_key = base.persistent_attribute('damages_by_key')
 
     def pre_execute(self):
         if 'gmfs' in self.oqparam.inputs:
@@ -92,6 +92,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
              'dmg_per_taxonomy': /path/to/dmg_per_taxonomy.xml,
              'dmg_total': /path/to/dmg_total.xml}
         """
+        self.damages_by_key = result
         saved = {}
         for rlz in self.rlzs_assoc.realizations:
             saved += self.export_damage(rlz, result[rlz.ordinal])

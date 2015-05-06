@@ -62,7 +62,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
     Classical Risk calculator
     """
     pre_calculator = 'classical'
-    result_kind = 'avg_loss_by_rlz_asset'
+    avg_loss_by_rlz_asset = base.persistent_attribute('avg_loss_by_rlz_asset')
     core_func = classical_risk
 
     def pre_execute(self):
@@ -88,6 +88,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         """
         Export the losses in csv format
         """
+        self.avg_loss_by_rlz_asset = result
         oq = self.oqparam
 
         saved = general.AccumDict()

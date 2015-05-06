@@ -81,7 +81,7 @@ class ClassicalCalculator(base.HazardCalculator):
     Classical PSHA calculator
     """
     core_func = classical
-    result_kind = 'curves_by_trt_gsim'
+    curves_by_gsim = base.persistent_attribute('curves_by_trt_gsim')
 
     def execute(self):
         """
@@ -111,7 +111,7 @@ class ClassicalCalculator(base.HazardCalculator):
         :param curves_by_trt_gsim:
             a dictionary (trt_id, gsim) -> hazard curves
         """
-        self.datastore['rlzs_assoc'] = self.rlzs_assoc
+        self.curves_by_gsim = curves_by_trt_gsim
         oq = self.oqparam
         zc = zero_curves(len(self.sitecol), oq.imtls)
         curves_by_rlz = self.rlzs_assoc.combine_curves(
@@ -226,7 +226,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
     """
     prefilter = False
     persistent = False  # use an in-memory datastore
-    result_kind = 'pathname_by_fname'
+    pathname_by_fname = base.persistent_attribute('pathname_by_fname')
 
     def execute(self):
         """
@@ -251,6 +251,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
 
         :param result: a dictionary key -> exported filename
         """
+        self.pathname_by_fname = result
         # group files by name; for instance the file names
         # ['quantile_curve-0.1.csv.0000', 'quantile_curve-0.1.csv.0001',
         # 'hazard_map-mean.csv.0000', 'hazard_map-mean.csv.0001']

@@ -103,7 +103,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
     Run a scenario risk calculation
     """
     core_func = scenario_risk
-    result_kind = 'losses_by_key'
+    losses_by_key = base.persistent_attribute('losses_by_key')
     pre_calculator = 'scenario'
 
     def pre_execute(self):
@@ -130,6 +130,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         """
         Export the loss curves and the aggregated losses in CSV format
         """
+        self.losses_by_key = result
         saved = {}
         for rlz in self.rlzs_assoc.realizations:
             saved += self.export_risk(rlz, result[rlz.ordinal])

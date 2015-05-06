@@ -267,7 +267,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
     Event based PSHA calculator generating the ruptures only
     """
     core_func = compute_ruptures
-    result_kind = 'ruptures_by_trt'
+    ruptures_by_trt = base.persistent_attribute('ruptures_by_trt')
 
     def pre_execute(self):
         """
@@ -307,6 +307,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
 
     def post_execute(self, result):
         """Export the ruptures, if any"""
+        self.ruptures_by_trt = result
         oq = self.oqparam
         saved = AccumDict()
         if not oq.exports:
@@ -423,7 +424,6 @@ class EventBasedCalculator(ClassicalCalculator):
     """
     pre_calculator = 'event_based_rupture'
     core_func = compute_gmfs_and_curves
-    result_kind = 'curves_by_trt_gsim'
 
     def pre_execute(self):
         """

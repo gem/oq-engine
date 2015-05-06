@@ -149,8 +149,6 @@ class HazardCalculator(BaseCalculator):
     """
     prefilter = True  # filter the sources before splitting them
     mean_curves = None  # to be overridden
-    result_kind = None  # to be overridden
-    pre_calculator = None  # to be overridden
 
     def assoc_assets_sites(self, sitecol):
         """
@@ -369,7 +367,7 @@ def compute_gmfs(calc):
     """
     logging.info('Preparing the risk input')
     sites = calc.sitecol
-    gmf_by_tag = calc.precalc.datastore['gmf_by_tag']
+    gmf_by_tag = calc.precalc.gmf_by_tag
     rlzs = calc.rlzs_assoc.realizations
     imt_dt = numpy.dtype([(imt, float) for imt in calc.oqparam.imtls])
     dic = collections.defaultdict(list)

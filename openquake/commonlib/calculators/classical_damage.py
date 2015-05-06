@@ -24,7 +24,6 @@ from openquake.commonlib import readinput, parallel, logictree
 from openquake.commonlib.calculators import base
 from openquake.commonlib.export import export
 from openquake.commonlib.risk_writers import DmgState
-from openquake.risklib import riskinput
 
 
 @parallel.litetask
@@ -61,7 +60,7 @@ class ClassicalDamageCalculator(base.RiskCalculator):
     Scenario damage calculator
     """
     core_func = classical_damage
-    result_kind = 'damages_by_rlz'
+    damages_by_rlz = base.persistent_attribute('damages_by_rlz')
 
     def pre_execute(self):
         """
@@ -93,6 +92,7 @@ class ClassicalDamageCalculator(base.RiskCalculator):
         :param result:
             a dictionary asset -> fractions per damage state
         """
+        self.damages_by_rlz = result
         dmg_states = [DmgState(s, i)
                       for i, s in enumerate(self.riskmodel.damage_states)]
         exported = {}

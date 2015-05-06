@@ -54,7 +54,7 @@ class ScenarioCalculator(base.HazardCalculator):
     Scenario hazard calculator
     """
     core_func = calc_gmfs
-    result_kind = 'gmf_by_tag'
+    gmf_by_tag = base.persistent_attribute('gmf_by_tag')
 
     def pre_execute(self):
         """

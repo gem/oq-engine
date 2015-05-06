@@ -70,7 +70,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
     """
     pre_calculator = 'event_based_rupture'
     core_func = event_loss
-    result_kind = 'event_loss_by_rlz_tag'
+    event_loss_by_rlz_tag = base.persistent_attribute('event_loss_by_rlz_tag')
 
     def riskinput_key(self, ri):
         """
@@ -97,7 +97,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         logging.info('Building the epsilons')
 
         logging.info('Populating the risk inputs')
-        ruptures_by_trt = self.datastore['ruptures_by_trt']
+        ruptures_by_trt = self.ruptures_by_trt
         all_ruptures = sum(
             (rups for rups in ruptures_by_trt.itervalues()), [])
         all_ruptures.sort(key=operator.attrgetter('tag'))
@@ -119,6 +119,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         (rlz.ordinal, loss_type) -> tag -> [(asset.id, loss), ...]
         several interesting outputs.
         """
+        self.event_loss_by_rlz_tag = result
         oq = self.oqparam
         self.asset_dict = {
             a.id: a for assets in self.precalc.assets_by_site for a in assets
