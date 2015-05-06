@@ -23,11 +23,8 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 class ChiouYoungs2014TestCase(BaseGSIMTestCase):
     GSIM_CLASS = ChiouYoungs2014
 
-    # First five tests use data ported from Kenneth Campbell
-    # tables for verifying NGA models, available from OpenSHA, see
-    # http://opensha.usc.edu/docs/opensha/NGA/Campbell_NGA_tests.zip
-    # This data is distributed under different license, see LICENSE.txt
-    # in tests/gsim/data/NGA
+    # Test data were obtained from a tool given by the authorst
+    # in tests/gsim/data/NGA/CY14
 
     def test_mean_hanging_wall_normal_slip(self):
         self.check('NGA/CY14/CY14_MEDIAN_MS_HW_NM.csv',

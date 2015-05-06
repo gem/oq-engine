@@ -59,8 +59,8 @@ class SimpleFaultSource(ParametricSeismicSource):
         1/4 of the fault length and at 1/4 of the fault width along the dip and
         occurs with a weight of 0.3, the other one is at 3/4 of fault length
         along strike and at 3/4 of fault width along strike with a weight of
-        0.7. The numpy array would be entered as numpy.array([0.25, 0.25, 0.3],
-        [0.75, 0.75, 0.7]).
+        0.7. The numpy array would be entered as numpy.array([[0.25, 0.25, 0.3],
+        [0.75, 0.75, 0.7]]).
     :param slip_list:
         Array describing the rupture slip direction, which desribes the rupture
         propagation direction on the rupture surface. Each line represents a
@@ -70,7 +70,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         directions are admitted for a rupture. One slip direction is at 90
         degree with a weight of 0.7, the other one is at 135 degree with a
         weight of 0.3. The numpy array would be entered as numpy.array(
-        [90, 0.7], [135, 0.3]).
+        [[90, 0.7], [135, 0.3]]).
 
     See also :class:`openquake.hazardlib.source.base.ParametricSeismicSource`
     for description of other parameters.

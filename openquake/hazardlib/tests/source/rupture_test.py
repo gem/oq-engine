@@ -166,7 +166,8 @@ class Cdppvalue(unittest.TestCase):
             temporal_occurrence_model=PoissonTOM(50))
         # Load the testing site.
         data_path = os.path.dirname(__file__)
-        filename = os.path.join(data_path, "geo_cycs_ss3_testing_site.csv")
+        filename = os.path.join(
+            data_path, "./data/geo_cycs_ss3_testing_site.csv")
         data = numpy.genfromtxt(filename,
                                 dtype=float, delimiter=',', names=True,
                                 skip_header=6675, skip_footer=6673)
@@ -186,7 +187,8 @@ class Cdppvalue(unittest.TestCase):
             temporal_occurrence_model=PoissonTOM(50))
         # Load the testing site.
         data_path = os.path.dirname(__file__)
-        filename = os.path.join(data_path, "geo_cycs_ss3_testing_site.csv")
+        filename = os.path.join(
+            data_path, "./data/geo_cycs_ss3_testing_site.csv")
         data = numpy.genfromtxt(filename,
                                 dtype=float, delimiter=',', names=True,
                                 skip_header=6675, skip_footer=6673)

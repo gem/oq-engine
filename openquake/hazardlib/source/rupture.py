@@ -301,7 +301,7 @@ class ParametricProbabilisticRupture(BaseProbabilisticRupture):
             :class:`~openquake.hazardlib.geo.point.Point` object
             representing the location of the target site
         :returns:
-            A float number, directivity predication value (DPP).
+            A float number, directivity prediction value (DPP).
         """
 
         origin = self.surface.get_resampled_top_edge()[0]
