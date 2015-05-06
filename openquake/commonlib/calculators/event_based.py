@@ -421,7 +421,7 @@ class EventBasedCalculator(ClassicalCalculator):
     """
     Event based PSHA calculator generating the ruptures only
     """
-    hazard_calculator = 'event_based_rupture'
+    pre_calculator = 'event_based_rupture'
     core_func = compute_gmfs_and_curves
     result_kind = 'curves_by_trt_gsim'
 
@@ -431,7 +431,8 @@ class EventBasedCalculator(ClassicalCalculator):
         prepare some empty files in the export directory to store the gmfs
         (if any). If there were pre-existing files, they will be erased.
         """
-        hcalc = base.get_pre_calculator(self, exports=self.oqparam.exports)
+        ClassicalCalculator.pre_execute(self)
+        hcalc = self.precalc
         ruptures_by_trt = hcalc.datastore['ruptures_by_trt']
         self.composite_source_model = hcalc.composite_source_model
         self.sitecol = hcalc.sitecol

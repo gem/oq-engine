@@ -104,23 +104,24 @@ class ScenarioRiskCalculator(base.RiskCalculator):
     """
     core_func = scenario_risk
     result_kind = 'losses_by_key'
-    hazard_calculator = 'scenario'
+    pre_calculator = 'scenario'
 
     def pre_execute(self):
         """
         Compute the GMFs, build the epsilons, the riskinputs, and a dictionary
         with the unit of measure, used in the export phase.
         """
+        if 'gmfs' in self.oqparam.inputs:
+            self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
-        gmfs = base.get_gmfs(self)
 
         logging.info('Building the epsilons')
         eps_dict = self.make_eps_dict(
             self.oqparam.number_of_ground_motion_fields)
 
-        self.riskinputs = self.build_riskinputs(gmfs, eps_dict)
+        self.riskinputs = self.build_riskinputs(base.get_gmfs(self), eps_dict)
         self.unit = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
-                     for ct in self.exposure.cost_types}
+                     for ct in self.precalc.exposure.cost_types}
         self.unit['fatalities'] = 'people'
 
     def post_execute(self, result):

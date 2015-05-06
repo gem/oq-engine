@@ -68,7 +68,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
     """
     Event based PSHA calculator generating the ruptures only
     """
-    hazard_calculator = 'event_based_rupture'
+    pre_calculator = 'event_based_rupture'
     core_func = event_loss
     result_kind = 'event_loss_by_rlz_tag'
 
@@ -91,29 +91,24 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         epsilon_sampling = getattr(oq, 'epsilon_sampling', 1000)
         self.riskmodel.specific_assets = set(self.oqparam.specific_assets)
 
-        hcalc = base.get_pre_calculator(self)
-        # try avoiding reading the exposure twice
-
-        self.composite_source_model = hcalc.composite_source_model
-        self.rlzs_assoc = hcalc.rlzs_assoc
-
         correl_model = readinput.get_correl_model(oq)
         gsims_by_trt_id = self.rlzs_assoc.get_gsims_by_trt_id()
+        assets_by_site = self.precalc.assets_by_site
         logging.info('Building the epsilons')
 
         logging.info('Populating the risk inputs')
-        ruptures_by_trt = hcalc.datastore['ruptures_by_trt']
+        ruptures_by_trt = self.datastore['ruptures_by_trt']
         all_ruptures = sum(
             (rups for rups in ruptures_by_trt.itervalues()), [])
         all_ruptures.sort(key=operator.attrgetter('tag'))
         num_samples = min(len(all_ruptures), epsilon_sampling)
         eps_dict = riskinput.make_eps_dict(
-            self.assets_by_site, num_samples,
+            assets_by_site, num_samples,
             getattr(oq, 'master_seed', 42),
             getattr(oq, 'asset_correlation', 0))
         logging.info('Generated %d epsilons', num_samples * len(eps_dict))
         self.riskinputs = list(self.riskmodel.build_inputs_from_ruptures(
-            self.sitecol, self.assets_by_site, all_ruptures,
+            self.sitecol, assets_by_site, all_ruptures,
             gsims_by_trt_id, oq.truncation_level, correl_model, eps_dict,
             oq.concurrent_tasks or 1))
         logging.info('Built %d risk inputs', len(self.riskinputs))
@@ -126,7 +121,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
         oq = self.oqparam
         self.asset_dict = {
-            a.id: a for assets in self.assets_by_site for a in assets
+            a.id: a for assets in self.precalc.assets_by_site for a in assets
             if a.id in self.oqparam.specific_assets}
         self.datastore['specific_assets'] = specific_assets = [
             self.asset_dict[a] for a in sorted(self.oqparam.specific_assets)]
