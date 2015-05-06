@@ -40,7 +40,7 @@ from openquake.commonlib.writers import save_csv
 from openquake.commonlib.calculators import base
 from openquake.commonlib.calculators.calc import MAX_INT, gmvs_to_haz_curve
 from openquake.commonlib.calculators.classical import (
-    ClassicalCalculator, agg_prob)
+    ClassicalCalculator, agg_dicts)
 
 # ######################## rupture calculator ############################ #
 
@@ -460,7 +460,7 @@ class EventBasedCalculator(ClassicalCalculator):
         imts = list(self.oqparam.imtls)
         for trt_id, gsim in res:
             gmf_by_tag, curves_by_imt = res[trt_id, gsim]
-            acc = agg_prob(acc, AccumDict({(trt_id, gsim): curves_by_imt}))
+            acc = agg_dicts(acc, AccumDict({(trt_id, gsim): curves_by_imt}))
             fname = self.saved.get('%s-%s.csv' % (trt_id, gsim))
             if fname:  # when ground_motion_fields is true and there is csv
                 for tag in sorted(gmf_by_tag):
@@ -480,13 +480,13 @@ class EventBasedCalculator(ClassicalCalculator):
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = self.oqparam
         zc = zero_curves(len(self.sitecol), self.oqparam.imtls)
-        zero = AccumDict((key, zc) for key in self.rlzs_assoc)
+        zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
         gsims_assoc = self.rlzs_assoc.get_gsims_by_trt_id()
         curves_by_trt_gsim = parallel.apply_reduce(
             self.core_func.__func__,
             (self.sesruptures, self.sitecol, gsims_assoc, monitor),
-            concurrent_tasks=self.oqparam.concurrent_tasks, acc=zero,
-            agg=self.combine_curves_and_save_gmfs,
+            concurrent_tasks=self.oqparam.concurrent_tasks,
+            acc=zerodict, agg=self.combine_curves_and_save_gmfs,
             key=operator.attrgetter('col_idx'))
         return curves_by_trt_gsim
 

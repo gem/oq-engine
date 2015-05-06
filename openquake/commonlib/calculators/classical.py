@@ -66,7 +66,10 @@ def classical(sources, sitecol, gsims_assoc, monitor):
             for gsim, curves in zip(gsims, curves_by_gsim)}
 
 
-def agg_prob(acc, val):
+def agg_dicts(acc, val):
+    """
+    Aggregate dictionaries of hazard curves by updating the accumulator
+    """
     for key in val:
         acc[key] = agg_curves(acc[key], val[key])
     return acc
@@ -90,28 +93,28 @@ class ClassicalCalculator(base.HazardCalculator):
         monitor.oqparam = self.oqparam
         sources = list(self.composite_source_model.sources)
         zc = zero_curves(len(self.sitecol), self.oqparam.imtls)
-        zero = AccumDict((key, zc) for key in self.rlzs_assoc)
+        zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
         gsims_assoc = self.rlzs_assoc.get_gsims_by_trt_id()
         curves_by_trt_gsim = parallel.apply_reduce(
             self.core_func.__func__,
             (sources, self.sitecol, gsims_assoc, monitor),
-            agg=agg_prob, acc=zero,
+            agg=agg_dicts, acc=zerodict,
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_model_id'))
         return curves_by_trt_gsim
 
-    def post_execute(self, curve_by_trt_gsim):
+    def post_execute(self, curves_by_trt_gsim):
         """
         Collect the hazard curves by realization and export them.
 
-        :param curve_by_trt_gsim:
+        :param curves_by_trt_gsim:
             a dictionary (trt_id, gsim) -> hazard curves
         """
         oq = self.oqparam
         zc = zero_curves(len(self.sitecol), oq.imtls)
         curves_by_rlz = self.rlzs_assoc.combine_curves(
-            curve_by_trt_gsim, agg_curves, zc)
+            curves_by_trt_gsim, agg_curves, zc)
         if oq.individual_curves:
             self.datastore['hcurves', 'hdf5'] = (
                 ('rlz-%d' % rlz.ordinal, curves)

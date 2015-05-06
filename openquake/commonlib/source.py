@@ -322,7 +322,7 @@ class RlzsAssoc(collections.Mapping):
         """
         :param results: dictionary (trt_model_id, gsim_name) -> curves
         :param agg: aggregation function (composition of probabilities)
-        :returns: a dictionary rlz -> curves
+        :returns: a dictionary rlz -> aggregated curves
         """
         ad = AccumDict({rlz: acc for rlz in self.realizations})
         for key, value in results.iteritems():
