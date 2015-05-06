@@ -71,11 +71,13 @@ class ScenarioDamageCalculator(base.RiskCalculator):
     """
     Scenario damage calculator
     """
-    hazard_calculator = 'scenario'
+    pre_calculator = 'scenario'
     core_func = scenario_damage
     result_kind = 'damages_by_key'
 
     def pre_execute(self):
+        if 'gmfs' in self.oqparam.inputs:
+            self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
         gmfs = base.get_gmfs(self)
         self.riskinputs = self.build_riskinputs(gmfs)
