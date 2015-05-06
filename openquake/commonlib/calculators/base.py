@@ -26,7 +26,7 @@ import numpy
 from openquake.hazardlib.geo import geodetic
 
 from openquake.baselib import general
-from openquake.commonlib import readinput, datastore, logictree
+from openquake.commonlib import readinput, datastore, logictree, export
 from openquake.commonlib.parallel import apply_reduce, DummyMonitor
 from openquake.risklib import riskinput
 
@@ -63,18 +63,17 @@ class BaseCalculator(object):
         self.datastore['oqparam'] = self.oqparam
         self.datastore.export_dir = self.oqparam.export_dir
 
-    def run(self, **kw):
+    def run(self, pre_execute=False, **kw):
         """
         Run the calculation and return the saved output.
         """
         self.monitor.write('operation pid time_sec memory_mb'.split())
         vars(self.oqparam).update(kw)
-        self.pre_execute()
+        if pre_execute:
+            self.pre_execute()
         result = self.execute()
-        exported = self.post_execute(result)
-        for item in sorted(exported.iteritems()):
-            logging.info('exported %s: %s', *item)
-        self.save_pik(result, exported=exported)
+        self.post_execute(result)
+        return self.export()
 
     def core_func(*args):
         """
@@ -103,20 +102,20 @@ class BaseCalculator(object):
         of output files.
         """
 
-    def save_pik(self, result, **kw):
+    def export(self):
         """
-        Must be run at the end of post_execute. Returns a dictionary
-        with the saved results.
+        Export all the outputs in the datastore in the given export formats.
 
-        :param result: the output of the `execute` method
-        :param kw: extras to add to the output dictionary
-        :returns: a dictionary with the saved data
+        :returns: a dictionary key -> fname of the exported files
         """
-        logging.info('Saving %r on %s', self.result_kind,
-                     getattr(self.datastore, 'calc_dir', 'memory'))
-        self.datastore['rlzs_assoc'] = self.rlzs_assoc
-        self.datastore[self.result_kind] = result
-        self.datastore.update(kw)
+        exported = {}
+        for fmt in self.oqparam.exports.split():
+            for key in self.datastore:
+                ekey = key + (fmt,)
+                if ekey in export.ds_export:
+                    exported[ekey] = export.ds_export(ekey, self.datastore)
+                    logging.info('exported %s: %s', key, exported[ekey])
+        return exported
 
 
 class HazardCalculator(BaseCalculator):

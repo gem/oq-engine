@@ -498,15 +498,7 @@ class EventBasedCalculator(ClassicalCalculator):
         if getattr(self.oqparam, 'hazard_curves_from_gmfs', None):
             return self.saved + ClassicalCalculator.post_execute.__func__(
                 self, result)
-        return self.saved
 
-    def save_pik(self, result, **kw):
-        """
-        :param result: the output of the `execute` method
-        :param kw: extras to add to the output dictionary
-        :returns: a dictionary with the saved data
-        """
-        haz_out = super(EventBasedCalculator, self).save_pik(result, **kw)
         if self.mean_curves is not None:  # compute classical ones
             export_dir = os.path.join(self.oqparam.export_dir, 'cl')
             if not os.path.exists(export_dir):
@@ -517,15 +509,11 @@ class EventBasedCalculator(ClassicalCalculator):
             self.cl.composite_source_model = self.composite_source_model
             self.cl.sitecol = self.sitecol
             self.cl.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
-            result = self.cl.execute()
-            exported = self.cl.post_execute(result)
-            for item in sorted(exported.iteritems()):
-                logging.info('exported %s: %s', *item)
-            self.cl.save_pik(result, exported=exported)
+            result = self.cl.run(pre_execute=False)
             for imt in self.mean_curves.dtype.fields:
                 rdiff, index = max_rel_diff_index(
                     self.cl.mean_curves[imt], self.mean_curves[imt])
                 logging.warn('Relative difference with the classical '
                              'mean curves for IMT=%s: %d%% at site index %d',
                              imt, rdiff * 100, index)
-        return haz_out
+
