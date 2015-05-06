@@ -236,10 +236,10 @@ _devtest_innervm_run () {
         ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-risklib:\$PWD/oq-hazardlib\" ;
                  cd $GEM_GIT_PACKAGE ;
                  nosetests -a'!slow' -v --with-doctest --with-coverage --cover-package=openquake.baselib --cover-package=openquake.risklib --cover-package=openquake.commonlib --with-xunit"
-        scp "$lxc_ip:$GEM_GIT_PACKAGE/nosetests.xml" .
+        scp "$lxc_ip:$GEM_GIT_PACKAGE/nosetests.xml" "out_${BUILD_UBUVER}/"
     else
         if [ -d $HOME/fake-data/$GEM_GIT_PACKAGE ]; then
-            cp $HOME/fake-data/$GEM_GIT_PACKAGE/* .
+            cp $HOME/fake-data/$GEM_GIT_PACKAGE/* "out_${BUILD_UBUVER}/"
         fi
     fi
     trap ERR
@@ -512,6 +512,10 @@ devtest_run () {
 
 pkgtest_run () {
     local i e branch_id="$1"
+
+    if [ ! -d "out_${BUILD_UBUVER}" ]; then
+        mkdir "out_${BUILD_UBUVER}"
+    fi
 
     #
     #  run build of package
