@@ -17,21 +17,21 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import numpy
 import logging
 import operator
 import collections
 from functools import partial
-import numpy
 
 from openquake.hazardlib.site import SiteCollection
-from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
+from openquake.hazardlib.calc.hazard_curve import (
+    hazard_curves_per_trt, zero_curves, zero_maps, agg_curves)
 from openquake.hazardlib.calc.filters import source_site_distance_filter, \
     rupture_site_distance_filter
 from openquake.risklib import scientific
 from openquake.commonlib import parallel
 from openquake.commonlib.export import export
-from openquake.baselib.general import (
-    AccumDict, split_in_blocks, groupby, array_to_dict)
+from openquake.baselib.general import AccumDict, split_in_blocks, groupby
 
 from openquake.commonlib.calculators import base, calc
 
@@ -57,18 +57,22 @@ def classical(sources, sitecol, gsims_assoc, monitor):
     truncation_level = monitor.oqparam.truncation_level
     imtls = monitor.oqparam.imtls
     trt_model_id = sources[0].trt_model_id
-    trt = sources[0].tectonic_region_type
     gsims = gsims_assoc[trt_model_id]
-    result = AccumDict()
-    for gsim in gsims:
-        curves = calc_hazard_curves(
-            sources, sitecol, imtls, {trt: gsim}, truncation_level,
-            source_site_filter=source_site_distance_filter(max_dist),
-            rupture_site_filter=rupture_site_distance_filter(max_dist))
-        # notice that the rupture filter may remove everything
-        if any(curves[imt].sum() for imt in imtls):
-            result[trt_model_id, str(gsim)] = array_to_dict(curves)
-    return result
+    curves_by_gsim = hazard_curves_per_trt(
+        sources, sitecol, imtls, gsims, truncation_level,
+        source_site_filter=source_site_distance_filter(max_dist),
+        rupture_site_filter=rupture_site_distance_filter(max_dist))
+    return {(trt_model_id, str(gsim)): curves
+            for gsim, curves in zip(gsims, curves_by_gsim)}
+
+
+def agg_dicts(acc, val):
+    """
+    Aggregate dictionaries of hazard curves by updating the accumulator
+    """
+    for key in val:
+        acc[key] = agg_curves(acc[key], val[key])
+    return acc
 
 
 @base.calculators.add('classical')
@@ -88,119 +92,93 @@ class ClassicalCalculator(base.HazardCalculator):
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = self.oqparam
         sources = list(self.composite_source_model.sources)
-        zero = AccumDict((key, AccumDict())
-                         for key in self.rlzs_assoc)
+        zc = zero_curves(len(self.sitecol), self.oqparam.imtls)
+        zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
         gsims_assoc = self.rlzs_assoc.get_gsims_by_trt_id()
-        return parallel.apply_reduce(
+        curves_by_trt_gsim = parallel.apply_reduce(
             self.core_func.__func__,
             (sources, self.sitecol, gsims_assoc, monitor),
-            agg=calc.agg_prob, acc=zero,
+            agg=agg_dicts, acc=zerodict,
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_model_id'))
+        return curves_by_trt_gsim
 
-    def _fix_empty_curves(self, curves_by_trt_gsim):
-        imtls = self.oqparam.imtls
-        n = len(self.sitecol)
-        for curves_by_imt in curves_by_trt_gsim.itervalues():
-            if not curves_by_imt:
-                for imt in imtls:
-                    curves_by_imt[imt] = numpy.zeros((n, len(imtls[imt])))
-
-    def post_execute(self, result):
+    def post_execute(self, curves_by_trt_gsim):
         """
         Collect the hazard curves by realization and export them.
 
-        :param result:
-            a nested dictionary (trt_id, gsim) -> IMT -> hazard curves
+        :param curves_by_trt_gsim:
+            a dictionary (trt_id, gsim) -> hazard curves
         """
-        self._fix_empty_curves(result)
-        curves_by_rlz = self.rlzs_assoc.combine(result)
-        rlzs = self.rlzs_assoc.realizations
+        self.datastore['rlzs_assoc'] = self.rlzs_assoc
         oq = self.oqparam
+        zc = zero_curves(len(self.sitecol), oq.imtls)
+        curves_by_rlz = self.rlzs_assoc.combine_curves(
+            curves_by_trt_gsim, agg_curves, zc)
+        rlzs = self.rlzs_assoc.realizations
         nsites = len(self.sitecol)
-
-        saved = AccumDict()
-        if not oq.exports:
-            return saved
-
-        # export curves
-        exports = oq.exports.split(',')
         if oq.individual_curves:
-            for rlz in rlzs:
-                smlt_path = '_'.join(rlz.sm_lt_path)
-                suffix = ('-ltr_%d' % rlz.ordinal
-                          if oq.number_of_logic_tree_samples else '')
-                for fmt in exports:
-                    fname = 'hazard_curve-smltp_%s-gsimltp_%s%s.%s' % (
-                        smlt_path, rlz.gsim_rlz.uid, suffix, fmt)
-                    saved += self.export_curves(curves_by_rlz[rlz], fmt, fname)
+            for rlz, curves in curves_by_rlz.iteritems():
+                self.store_curves('rlz-%d' % rlz.ordinal, curves)
+
         if len(rlzs) == 1:  # cannot compute statistics
             [self.mean_curves] = curves_by_rlz.values()
-            return saved
+            return
 
         weights = (None if oq.number_of_logic_tree_samples
                    else [rlz.weight for rlz in rlzs])
-        curves_by_imt = {imt: [curves_by_rlz[rlz][imt] for rlz in rlzs]
-                         for imt in oq.imtls}
         mean = oq.mean_hazard_curves
         if mean:
-            self.mean_curves = scientific.mean_curve(
-                [curves_by_rlz[rlz] for rlz in rlzs], weights)
-        self.quantile = {
-            q: {imt: scientific.quantile_curve(
-                curves_by_imt[imt], q, weights).reshape((nsites, -1))
-                for imt in oq.imtls}
-            for q in oq.quantile_hazard_curves
-        }
-        for fmt in exports:
-            if mean:
-                saved += self.export_curves(
-                    self.mean_curves, fmt, 'hazard_curve-mean.%s' % fmt)
-            for q in self.quantile:
-                saved += self.export_curves(
-                    self.quantile[q], fmt, 'quantile_curve-%s.%s' % (q, fmt))
-        return saved
+            self.mean_curves = numpy.array(zc)
+            for imt in oq.imtls:
+                self.mean_curves[imt] = scientific.mean_curve(
+                    [curves_by_rlz[rlz][imt] for rlz in rlzs], weights)
 
-    def hazard_maps(self, curves_by_imt):
-        """
-        Compute the hazard maps associated to the curves and returns
-        a dictionary of arrays.
-        """
-        return {imt:
-                calc.compute_hazard_maps(
-                    curves, self.oqparam.imtls[imt], self.oqparam.poes)
-                for imt, curves in curves_by_imt.iteritems()}
+        self.quantile = {}
+        for q in oq.quantile_hazard_curves:
+            self.quantile[q] = qc = numpy.array(zc)
+            for imt in oq.imtls:
+                curves = [curves_by_rlz[rlz][imt] for rlz in rlzs]
+                qc[imt] = scientific.quantile_curve(
+                    curves, q, weights).reshape((nsites, -1))
 
-    def export_curves(self, curves, fmt, fname):
+        if mean:
+            self.store_curves('mean', self.mean_curves)
+        for q in self.quantile:
+            self.store_curves('quantile-%s' % q, self.quantile[q])
+
+    def hazard_maps(self, curves):
         """
-        :param curves: an array of N curves to export
-        :param fmt: the export format ('xml', 'csv', ...)
-        :param fname: the name of the exported file
+        Compute the hazard maps associated to the curves
         """
-        if hasattr(self, 'tileno'):
-            fname += self.tileno
-        saved = AccumDict()
+        n, p = len(self.sitecol), len(self.oqparam.poes)
+        maps = zero_maps((n, p), self.oqparam.imtls)
+        for imt in curves.dtype.fields:
+            maps[imt] = calc.compute_hazard_maps(
+                curves[imt], self.oqparam.imtls[imt], self.oqparam.poes)
+        return maps
+
+    def store_curves(self, dset, curves):
+        """
+        Store all kind of curves, optionally computing maps and uhs curves.
+
+        :param dset: the HDF5 dataset where to store the curves
+        :param curves: an array of N curves to store
+        """
+        if not self.persistent:  # do nothing
+            return
         oq = self.oqparam
-        export_dir = oq.export_dir
-        saved += export(
-            ('hazard_curves', fmt), export_dir, fname, self.sitecol, curves,
-            oq.imtls, oq.investigation_time)
+        with self.datastore.h5file(('hcurves', 'hdf5')) as h5f:
+            h5f[dset] = curves
         if oq.hazard_maps:
-            hmaps = self.hazard_maps(curves)
-            saved += export(
-                ('hazard_curves', fmt), export_dir,
-                fname.replace('curve', 'map'), self.sitecol,
-                # hmaps is a dictionary IMT -> matrix(P, N)
-                {k: v.T for k, v in hmaps.iteritems()},
-                oq.imtls, oq.investigation_time)
+            with self.datastore.h5file(('hmaps', 'hdf5')) as h5f:
+                # hmaps is a composite array of shape (N, P)
+                h5f[dset] = hmaps = self.hazard_maps(curves)
             if oq.uniform_hazard_spectra:
-                uhs_curves = calc.make_uhs(hmaps)
-                saved += export(
-                    ('uhs', fmt), oq.export_dir,
-                    fname.replace('curve', 'uhs'),
-                    self.sitecol, uhs_curves)
-        return saved
+                with self.datastore.h5file(('uhs', 'hdf5')) as h5f:
+                    # uhs is an array of shape (N, P)
+                    h5f[dset] = calc.make_uhs(hmaps)
 
 
 def is_effective_trt_model(result_dict, trt_model):
@@ -247,6 +225,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
     Classical Tiling calculator
     """
     prefilter = False
+    persistent = False  # use an in-memory datastore
     result_kind = 'pathname_by_fname'
 
     def execute(self):

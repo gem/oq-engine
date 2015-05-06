@@ -55,7 +55,7 @@ class DataStoreTestCase(unittest.TestCase):
             list(self.dstore['items', 'hdf5']), sorted(items))
 
         # test creating and populating a dset
-        with self.dstore.h5file(('xxx', 'h5')) as h5f:
+        with self.dstore.h5file(('xxx', 'h5'), 'w') as h5f:
             dset = h5f.create_dataset('dset', shape=(4, 2))
             dset[0] = [1, 2]
             dset[3] = [4, 5]

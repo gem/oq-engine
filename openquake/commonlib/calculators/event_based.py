@@ -27,6 +27,7 @@ import numpy
 
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
+from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.hazardlib import geo, site, calc
 from openquake.commonlib import readinput, parallel
 from openquake.commonlib.util import max_rel_diff_index
@@ -37,9 +38,9 @@ from openquake.baselib.general import AccumDict, groupby
 
 from openquake.commonlib.writers import save_csv
 from openquake.commonlib.calculators import base
-from openquake.commonlib.calculators.calc import \
-    MAX_INT, gmvs_to_haz_curve, agg_prob
-from openquake.commonlib.calculators.classical import ClassicalCalculator
+from openquake.commonlib.calculators.calc import MAX_INT, gmvs_to_haz_curve
+from openquake.commonlib.calculators.classical import (
+    ClassicalCalculator, agg_dicts)
 
 # ######################## rupture calculator ############################ #
 
@@ -327,8 +328,6 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
 
 # ######################## GMF calculator ############################ #
 
-GmfsCurves = collections.namedtuple('GmfsCurves', 'gmf_by_tag curves')
-
 
 # NB: this will be replaced by hazardlib.calc.gmf.build_gmf_by_tag
 def make_gmf_by_tag(ses_ruptures, sitecol, imts, gsims,
@@ -376,23 +375,22 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
     num_sites = len(sitecol)
     dic = make_gmf_by_tag(
         ses_ruptures, sitecol, oq.imtls, gsims, trunc_level, correl_model)
-    result = AccumDict({(trt_id, str(gsim)): GmfsCurves(dic, AccumDict())
-                        for gsim in gsims})
+    zero = zero_curves(num_sites, oq.imtls)
+    result = AccumDict({(trt_id, str(gsim)): [dic, zero] for gsim in gsims})
     gmfs = [dic[tag] for tag in sorted(dic)]
     if getattr(oq, 'hazard_curves_from_gmfs', None):
         duration = oq.investigation_time * oq.ses_per_logic_tree_path * (
             oq.number_of_logic_tree_samples or 1)
         for gsim in gsims:
             gs = str(gsim)
-            curves = result[trt_id, gs][1]
-            curves.update(to_haz_curves(
+            result[trt_id, gs][1] = to_haz_curves(
                 num_sites, gs, gmfs, oq.imtls,
-                oq.investigation_time, duration))
+                oq.investigation_time, duration)
     if not oq.ground_motion_fields:
         # reset the gmf_by_tag dictionary to avoid
         # transferring a lot of unused data
         for key in result:
-            result[key].gmf_by_tag.clear()
+            result[key][0].clear()
     return result
 
 
@@ -410,7 +408,7 @@ def to_haz_curves(num_sites, gs, gmfs, imtls, investigation_time, duration):
     for gmf in gmfs:
         for idx, gmv in zip(gmf['idx'], gmf[gs]):
             data[idx].append(gmv)
-    curves = {}
+    curves = zero_curves(num_sites, imtls)
     for imt in imtls:
         curves[imt] = numpy.array([
             gmvs_to_haz_curve([gmv[imt] for gmv in gmvs], imtls[imt],
@@ -461,7 +459,7 @@ class EventBasedCalculator(ClassicalCalculator):
         imts = list(self.oqparam.imtls)
         for trt_id, gsim in res:
             gmf_by_tag, curves_by_imt = res[trt_id, gsim]
-            acc = agg_prob(acc, AccumDict({(trt_id, gsim): curves_by_imt}))
+            acc = agg_dicts(acc, AccumDict({(trt_id, gsim): curves_by_imt}))
             fname = self.saved.get('%s-%s.csv' % (trt_id, gsim))
             if fname:  # when ground_motion_fields is true and there is csv
                 for tag in sorted(gmf_by_tag):
@@ -480,14 +478,14 @@ class EventBasedCalculator(ClassicalCalculator):
         """
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = self.oqparam
-        zero = AccumDict((key, AccumDict())
-                         for key in self.rlzs_assoc)
+        zc = zero_curves(len(self.sitecol), self.oqparam.imtls)
+        zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
         gsims_assoc = self.rlzs_assoc.get_gsims_by_trt_id()
         curves_by_trt_gsim = parallel.apply_reduce(
             self.core_func.__func__,
             (self.sesruptures, self.sitecol, gsims_assoc, monitor),
-            concurrent_tasks=self.oqparam.concurrent_tasks, acc=zero,
-            agg=self.combine_curves_and_save_gmfs,
+            concurrent_tasks=self.oqparam.concurrent_tasks,
+            acc=zerodict, agg=self.combine_curves_and_save_gmfs,
             key=operator.attrgetter('col_idx'))
         return curves_by_trt_gsim
 
@@ -499,15 +497,7 @@ class EventBasedCalculator(ClassicalCalculator):
         if getattr(self.oqparam, 'hazard_curves_from_gmfs', None):
             return self.saved + ClassicalCalculator.post_execute.__func__(
                 self, result)
-        return self.saved
 
-    def save_pik(self, result, **kw):
-        """
-        :param result: the output of the `execute` method
-        :param kw: extras to add to the output dictionary
-        :returns: a dictionary with the saved data
-        """
-        haz_out = super(EventBasedCalculator, self).save_pik(result, **kw)
         if self.mean_curves is not None:  # compute classical ones
             export_dir = os.path.join(self.oqparam.export_dir, 'cl')
             if not os.path.exists(export_dir):
@@ -518,15 +508,11 @@ class EventBasedCalculator(ClassicalCalculator):
             self.cl.composite_source_model = self.composite_source_model
             self.cl.sitecol = self.sitecol
             self.cl.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
-            result = self.cl.execute()
-            exported = self.cl.post_execute(result)
-            for item in sorted(exported.iteritems()):
-                logging.info('exported %s: %s', *item)
-            self.cl.save_pik(result, exported=exported)
-            for imt in self.mean_curves:
+            result = self.cl.run(pre_execute=False)
+            for imt in self.mean_curves.dtype.fields:
                 rdiff, index = max_rel_diff_index(
                     self.cl.mean_curves[imt], self.mean_curves[imt])
                 logging.warn('Relative difference with the classical '
                              'mean curves for IMT=%s: %d%% at site index %d',
                              imt, rdiff * 100, index)
-        return haz_out
+

@@ -43,11 +43,10 @@ def run(job_ini, concurrent_tasks=executor.num_tasks_hint,
         with monitor('execute'):
             result = calc.execute()
         with monitor('post_execute'):
-            out = calc.post_execute(result)
-        with monitor('save_pik'):
-            calc.save_pik(result)
-    for item in sorted(out.iteritems()):
-        logging.info('exported %s: %s', *item)
+            calc.post_execute(result)
+        with monitor('export'):
+            calc.export()
+    logging.info('Calculation ID: %s', calc.datastore.calc_id)
     logging.info('Total time spent: %s s', monitor.duration)
     logging.info('Memory allocated: %s M', monitor.mem / 1024. / 1024.)
 

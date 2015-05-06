@@ -327,11 +327,23 @@ class RlzsAssoc(collections.Mapping):
         self.rlzs_by_smodel[lt_model.ordinal] = rlzs
         return idx
 
+    def combine_curves(self, results, agg, acc):
+        """
+        :param results: dictionary (trt_model_id, gsim_name) -> curves
+        :param agg: aggregation function (composition of probabilities)
+        :returns: a dictionary rlz -> aggregated curves
+        """
+        ad = AccumDict({rlz: acc for rlz in self.realizations})
+        for key, value in results.iteritems():
+            for rlz in self.rlzs_assoc[key]:
+                ad[rlz] = agg(ad[rlz], value)
+        return ad
+
     def combine(self, results, agg=agg_prob):
         """
-        :param results: dictionary (trt_model_id, gsim_name) -> <AccumDict>
-        :param agg: aggregation function (default composition of probabilities)
-        :returns: a dictionary rlz -> aggregate <AccumDict>
+        :param results: a dictionary (trt_model_id, gsim_name) -> floats
+        :param agg: an aggregation function
+        :returns: a dictionary rlz -> aggregated floats
 
         Example: a case with tectonic region type T1 with GSIMS A, B, C
         and tectonic region type T2 with GSIMS D, E.
@@ -368,16 +380,15 @@ class RlzsAssoc(collections.Mapping):
         r4: 0.03 + 0.04 (T1C + T2D)
         r5: 0.03 + 0.05 (T1C + T2E)
 
-        In reality, the `combine` method is used with dictionaries with the
-        hazard curves keyed by intensity measure type and the aggregation
-        function is the composition of probability, which however is closer
-        to the sum for small probabilities.
+        In reality, the `combine_curves` method is used with hazard_curves and
+        the aggregation function is the `agg_curves` function, a composition of
+        probability, which however is close to the sum for small probabilities.
         """
-        acc = 0
+        ad = AccumDict()
         for key, value in results.iteritems():
             for rlz in self.rlzs_assoc[key]:
-                acc = agg(acc, AccumDict({rlz: value}))
-        return acc
+                ad[rlz] = agg(ad.get(rlz, 0), value)
+        return ad
 
     def __iter__(self):
         return self.rlzs_assoc.iterkeys()

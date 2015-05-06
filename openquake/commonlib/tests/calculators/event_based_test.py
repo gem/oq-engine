@@ -192,7 +192,7 @@ class EventBasedTestCase(CalculatorTestCase):
         for fname in expected:
             self.assertEqualFiles('expected/%s' % fname, out[fname])
         mean_cl = self.calc.cl.mean_curves
-        for imt in mean_cl:
+        for imt in mean_cl.dtype.fields:
             reldiff, _index = max_rel_diff_index(
                 mean_cl[imt], mean_eb[imt], min_value=0.1)
             self.assertLess(reldiff, 0.41)
