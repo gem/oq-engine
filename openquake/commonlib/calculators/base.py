@@ -53,7 +53,7 @@ class BaseCalculator(object):
     __metaclass__ = abc.ABCMeta
 
     rlzs_assoc = logictree.RlzsAssoc([])  # to be overridden
-    persistent = True  # to be overridden
+    persistent = True  # calculators are normally persisted in the datastore
 
     def __init__(self, oqparam, monitor=DummyMonitor(), calc_id=None):
         self.oqparam = oqparam
