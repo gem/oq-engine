@@ -443,6 +443,10 @@ devtest_run () {
         mkdir _jenkins_deps
     fi
 
+    if [ ! -d "out_${BUILD_UBUVER}" ]; then
+        mkdir "out_${BUILD_UBUVER}"
+    fi
+
     #
     #  dependencies repos
     #
@@ -512,10 +516,6 @@ devtest_run () {
 
 pkgtest_run () {
     local i e branch_id="$1"
-
-    if [ ! -d "out_${BUILD_UBUVER}" ]; then
-        mkdir "out_${BUILD_UBUVER}"
-    fi
 
     #
     #  run build of package
