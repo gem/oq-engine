@@ -10,7 +10,9 @@ class ClassicalTestCase(CalculatorTestCase):
 
     def assert_curves_ok(self, expected, test_dir):
         out = self.run_calc(test_dir, 'job.ini', exports='csv')
-        for fname, actual in zip(expected, out['hcurves', 'hdf5', 'csv']):
+        got = out['hcurves', 'hdf5', 'csv']
+        self.assertEqual(len(expected), len(got))
+        for fname, actual in zip(expected, got):
             self.assertEqualFiles('expected/%s' % fname, actual)
 
     @attr('qa', 'hazard', 'classical')
@@ -82,10 +84,10 @@ class ClassicalTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'classical')
     def test_case_11(self):
         self.assert_curves_ok(
-            ['hazard_curve-smltp_b1_b2-gsimltp_b1.csv',
+            ['hazard_curve-mean.csv',
+             'hazard_curve-smltp_b1_b2-gsimltp_b1.csv',
              'hazard_curve-smltp_b1_b3-gsimltp_b1.csv',
-             'hazard_curve-smltp_b1_b4-gsimltp_b1.csv',
-             'hazard_curve-mean.csv'],
+             'hazard_curve-smltp_b1_b4-gsimltp_b1.csv'],
             case_11.__file__)
 
     @attr('qa', 'hazard', 'classical')
