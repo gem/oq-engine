@@ -62,7 +62,7 @@ class OqParam(valid.ParamSet):
     ground_motion_correlation_params = valid.Param(valid.dictionary)
     ground_motion_fields = valid.Param(valid.boolean, False)
     gsim = valid.Param(valid.gsim, None)
-    hazard_calculation_id = valid.Param(valid.NoneOr(valid.positiveint))
+    hazard_calculation_id = valid.Param(valid.NoneOr(valid.positiveint), None)
     hazard_curves_from_gmfs = valid.Param(valid.boolean, False)
     hazard_output_id = valid.Param(valid.NoneOr(valid.positiveint))
     hazard_maps = valid.Param(valid.boolean, False)
@@ -117,7 +117,6 @@ class OqParam(valid.ParamSet):
     time_event = valid.Param(str, None)
     truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
-    usecache = valid.Param(valid.boolean, False)
     width_of_mfd_bin = valid.Param(valid.positivefloat)
 
     def __init__(self, **names_vals):

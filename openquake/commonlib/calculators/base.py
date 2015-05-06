@@ -74,6 +74,7 @@ class BaseCalculator(object):
         result = self.execute()
         self.post_execute(result)
         return self.export()
+        return self.datastore
 
     def core_func(*args):
         """
@@ -125,17 +126,88 @@ class HazardCalculator(BaseCalculator):
     prefilter = True  # filter the sources before splitting them
     mean_curves = None  # to be overridden
     result_kind = None  # to be overridden
+    pre_calculator = None  # to be overridden
+
+    def assoc_assets_sites(self, sitecol):
+        """
+        :param sitecol: a sequence of sites
+        :returns: a pair (filtered_sites, assets_by_site)
+
+        The new site collection is different from the original one
+        if some assets were discarded because of the asset_hazard_distance
+        or if there were missing assets for some sites.
+        """
+        maximum_distance = self.oqparam.asset_hazard_distance
+
+        def getlon(site):
+            return site.location.longitude
+
+        def getlat(site):
+            return site.location.latitude
+
+        siteobjects = geodetic.GeographicObjects(sitecol, getlon, getlat)
+        assets_by_sid = general.AccumDict()
+        for assets in self.precalc.assets_by_site:
+            # assets is a non-empty list of assets on the same location
+            lon, lat = assets[0].location
+            site = siteobjects.get_closest(lon, lat, maximum_distance)
+            if site:
+                assets_by_sid += {site.id: assets}
+        if not assets_by_sid:
+            raise AssetSiteAssociationError(
+                'Could not associate any site to any assets within the '
+                'maximum distance of %s km' % maximum_distance)
+        mask = numpy.array([sid in assets_by_sid for sid in sitecol.sids])
+        assets_by_site = [assets_by_sid[sid] for sid in sitecol.sids
+                          if sid in assets_by_sid]
+        filteredcol = sitecol.filter(mask)
+        return filteredcol, numpy.array(assets_by_site)
 
     def pre_execute(self):
         """
         Read the site collection and the sources.
         """
+        if self.pre_calculator is not None:
+            precalc_id = self.oqparam.hazard_calculation_id
+            precalc = calculators[self.pre_calculator](
+                self.oqparam, self.monitor('precalculator'),
+                precalc_id or self.datastore.calc_id)
+            if precalc_id is None:  # no precomputed data
+                datastore = precalc.run()
+            else:  # use the precalculated data
+                datastore = precalc.datastore
+            self.sitecol = datastore['sites']
+            try:
+                self.assets_by_site = datastore['assets_by_site']
+            except IOError:  # assets_by_site may be absent
+                pass
+            self.rlzs_assoc = datastore['rlzs_assoc']
+            self.precalc = precalc
+            return
+
+        self.precalc = self
+
         if 'exposure' in self.oqparam.inputs:
             logging.info('Reading the exposure')
             with self.monitor('reading exposure', autoflush=True):
-                exposure = readinput.get_exposure(self.oqparam)
+                self.exposure = readinput.get_exposure(self.oqparam)
                 self.sitecol, self.assets_by_site = (
-                    readinput.get_sitecol_assets(self.oqparam, exposure))
+                    readinput.get_sitecol_assets(self.oqparam, self.exposure))
+
+            num_assets = sum(len(assets) for assets in self.assets_by_site)
+            mesh = readinput.get_mesh(self.oqparam)
+            if mesh is not None:
+                sites = readinput.get_site_collection(self.oqparam, mesh)
+                with self.monitor('assoc_assets_sites'):
+                    self.sitecol, self.assets_by_site = \
+                        self.assoc_assets_sites(sites)
+                ok_assets = sum(len(assets) for assets in self.assets_by_site)
+                num_sites = len(self.sitecol)
+                logging.warn('Associated %d assets to %d sites, %d discarded',
+                             ok_assets, num_sites, num_assets - ok_assets)
+
+                self.datastore['assets_by_site'] = self.assets_by_site
+
         else:
             logging.info('Reading the site collection')
             with self.monitor('reading site collection', autoflush=True):
@@ -157,27 +229,13 @@ class HazardCalculator(BaseCalculator):
             self.rlzs_assoc = readinput.get_rlzs_assoc(self.oqparam)
 
 
-def get_pre_calculator(calculator, exports=''):
-    """
-    Recompute the hazard or retrieve it from the previous computation.
-
-    :param calculator: a calculator with a .hazard_calculator attribute
-    :returns: the precalculator
-    """
-    precalc = calculators[calculator.hazard_calculator](
-        calculator.oqparam, calculator.monitor('hazard'))
-    if not calculator.oqparam.usecache:
-        precalc.run(exports=exports)
-    return precalc
-
-
-class RiskCalculator(BaseCalculator):
+class RiskCalculator(HazardCalculator):
     """
     Base class for all risk calculators. A risk calculator must set the
     attributes .riskmodel, .sitecol, .assets_by_site, .exposure
     .riskinputs in the pre_execute phase.
     """
-    hazard_calculator = None  # to be ovverriden in subclasses
+    pre_calculator = None  # to be overriden in subclasses
 
     def make_eps_dict(self, num_ruptures):
         """
@@ -186,7 +244,7 @@ class RiskCalculator(BaseCalculator):
         oq = self.oqparam
         with self.monitor('building epsilons', autoflush=True):
             eps = riskinput.make_eps_dict(
-                self.assets_by_site, num_ruptures,
+                self.precalc.assets_by_site, num_ruptures,
                 oq.master_seed, oq.asset_correlation)
             return eps
 
@@ -202,14 +260,14 @@ class RiskCalculator(BaseCalculator):
             riskinputs = []
             idx_weight_pairs = [
                 (i, len(assets))
-                for i, assets in enumerate(self.assets_by_site)]
+                for i, assets in enumerate(self.precalc.assets_by_site)]
             blocks = general.split_in_blocks(
                 idx_weight_pairs,
                 self.oqparam.concurrent_tasks or 1,
                 weight=operator.itemgetter(1))
             for block in blocks:
                 indices = numpy.array([idx for idx, _weight in block])
-                reduced_assets = self.assets_by_site[indices]
+                reduced_assets = self.precalc.assets_by_site[indices]
                 reduced_eps = {}  # for the assets belonging to the indices
                 if eps_dict:
                     for assets in reduced_assets:
@@ -240,72 +298,18 @@ class RiskCalculator(BaseCalculator):
         """
         return ri.imt
 
-    def assoc_assets_sites(self, sitecol):
-        """
-        :param sitecol: a sequence of sites
-        :returns: a pair (filtered_sites, assets_by_site)
-
-        The new site collection is different from the original one
-        if some assets were discarded because of the asset_hazard_distance
-        or if there were missing assets for some sites.
-        """
-        maximum_distance = self.oqparam.asset_hazard_distance
-
-        def getlon(site):
-            return site.location.longitude
-
-        def getlat(site):
-            return site.location.latitude
-
-        siteobjects = geodetic.GeographicObjects(sitecol, getlon, getlat)
-        assets_by_sid = general.AccumDict()
-        for assets in self.assets_by_site:
-            # assets is a non-empty list of assets on the same location
-            lon, lat = assets[0].location
-            site = siteobjects.get_closest(lon, lat, maximum_distance)
-            if site:
-                assets_by_sid += {site.id: assets}
-        if not assets_by_sid:
-            raise AssetSiteAssociationError(
-                'Could not associate any site to any assets within the '
-                'maximum distance of %s km' % maximum_distance)
-        mask = numpy.array([sid in assets_by_sid for sid in sitecol.sids])
-        assets_by_site = [assets_by_sid[sid] for sid in sitecol.sids
-                          if sid in assets_by_sid]
-        filteredcol = sitecol.filter(mask)
-        return filteredcol, numpy.array(assets_by_site)
-
     def pre_execute(self):
         """
         Set the attributes .riskmodel, .sitecol, .assets_by_site
         """
+        HazardCalculator.pre_execute(self)
         self.riskmodel = readinput.get_risk_model(self.oqparam)
-        with self.monitor('reading exposure', autoflush=True):
-            self.exposure = readinput.get_exposure(self.oqparam)
-            logging.info('Read an exposure with %d assets of %d taxonomies',
-                         len(self.exposure.assets),
-                         len(self.exposure.taxonomies))
+        if hasattr(self, 'exposure'):
             missing = self.exposure.taxonomies - set(
                 self.riskmodel.get_taxonomies())
             if missing:
                 raise RuntimeError('The exposure contains the taxonomies %s '
                                    'which are not in the risk model' % missing)
-            self.sitecol, self.assets_by_site = readinput.get_sitecol_assets(
-                self.oqparam, self.exposure)
-            num_assets = sum(len(assets) for assets in self.assets_by_site)
-
-        mesh = readinput.get_mesh(self.oqparam)
-        if mesh is not None:
-            sites = readinput.get_site_collection(self.oqparam, mesh)
-            with self.monitor('assoc_assets_sites'):
-                self.sitecol, self.assets_by_site = self.assoc_assets_sites(
-                    sites)
-            ok_assets = sum(len(assets) for assets in self.assets_by_site)
-            num_sites = len(self.sitecol)
-            logging.warn('Associated %d assets to %d sites, %d discarded',
-                         ok_assets, num_sites, num_assets - ok_assets)
-
-        logging.info('Extracted %d unique sites', len(self.sitecol))
 
     def execute(self):
         """
@@ -343,7 +347,7 @@ def compute_gmfs(calc):
     :returns: a dictionary key -> gmf matrix of shape (N, R)
     """
     logging.info('Computing the GMFs')
-    haz_out = get_pre_calculator(calc).datastore
+    haz_out = calc.precalc.datastore
 
     logging.info('Preparing the risk input')
     sites = haz_out['sites']
