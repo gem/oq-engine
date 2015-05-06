@@ -60,16 +60,6 @@ def agg_curves(acc, curves):
     :param acc: an accumulator array
     :param curves: an array of hazard curves
     :returns: a new accumulator
-
-    Notice that::
-
-       agg_prob(acc, 0) = acc
-       agg_prob(acc, 1) = 1
-       agg_prob(0, prob) = prob
-       agg_prob(1, prob) = 1
-       agg_prob(acc, prob) = agg_prob(prob, acc)
-
-       agg_prob(acc, eps) =~ acc + eps for eps << 1
     """
     new = numpy.array(acc)  # copy of the accumulator
     for imt in curves.dtype.fields:
@@ -158,10 +148,9 @@ def calc_hazard_curves(
         sources_by_trt[src.tectonic_region_type].append(src)
     curves = zero_curves(len(sites), imtls)
     for trt in sources_by_trt:
-        gsim = gsim_by_trt[trt]
         curves = agg_curves(curves, hazard_curves_per_trt(
-            sources_by_trt[trt], sites, imtls, [gsim], truncation_level,
-            source_site_filter, rupture_site_filter)[0])
+            sources_by_trt[trt], sites, imtls, [gsim_by_trt[trt]],
+            truncation_level, source_site_filter, rupture_site_filter)[0])
     return curves
 
 
