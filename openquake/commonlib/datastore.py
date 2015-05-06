@@ -152,7 +152,10 @@ class DataStore(collections.MutableMapping):
         """
         if key[-1] not in ('h5', 'hdf5'):
             raise ValueError('Not an hf5 key: %s' % str(key))
-        return h5py.File(self.path(key), mode, libver='latest')
+        path = self.path(key)
+        if not os.path.exists(path):
+            mode = 'w'
+        return h5py.File(path, mode, libver='latest')
 
     def __getitem__(self, key):
         if key[-1] == 'h5':

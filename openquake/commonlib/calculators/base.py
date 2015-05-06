@@ -63,7 +63,7 @@ class BaseCalculator(object):
         self.datastore['oqparam'] = self.oqparam
         self.datastore.export_dir = self.oqparam.export_dir
 
-    def run(self, pre_execute=False, **kw):
+    def run(self, pre_execute=True, **kw):
         """
         Run the calculation and return the saved output.
         """
@@ -74,7 +74,6 @@ class BaseCalculator(object):
         result = self.execute()
         self.post_execute(result)
         return self.export()
-        return self.datastore
 
     def core_func(*args):
         """

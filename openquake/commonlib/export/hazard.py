@@ -96,7 +96,7 @@ def ds_export_ses_csv(key, dstore):
     for sesrup in dstore['ruptures']:
         rows.append([sesrup.tag, sesrup.seed])
     save_csv(dest, sorted(rows, key=operator.itemgetter(0)))
-    return dest
+    return [dest]
 
 
 @ds_export.add(('sitecol', 'csv'))
@@ -107,7 +107,7 @@ def export_sitecol_csv(key, dstore):
         rows.append([site.sid, site.lon, site.lat, site.vs30,
                      site.vs30measured, site.z1pt0, site.z2pt5, site.backarc])
     save_csv(dest, sorted(rows, key=operator.itemgetter(0)))
-    return dest
+    return [dest]
 
 
 # #################### export Ground Motion fields ########################## #
@@ -287,6 +287,55 @@ def export_hazard_curves_csv(key, export_dir, fname, sitecol, curves_by_imt,
             rows[sid, i] = scientificformat(curve, fmt='%11.7E')
     save_csv(dest, rows)
     return {fname: dest}
+
+
+def hazard_curve_name(ekey, kind, rlzs_assoc, number_of_logic_tree_samples):
+    """
+    :param kind:
+        a string specifying the kind of hazard curve; it has the form
+        rlz-<ordinal> | mean | quantile-<q>
+    :param rlzs_assoc:
+        a RlzsAssoc instance
+    """
+    infix = {'hcurves': 'curve', 'hmaps': 'map', 'uhs': 'uhs'}[ekey[0]]
+    fmt = ekey[-1]
+    if kind.startswith('rlz-'):
+        rlz_no = int(kind[4:])
+        rlz = rlzs_assoc.realizations[rlz_no]
+        smlt_path = '_'.join(rlz.sm_lt_path)
+        suffix = ('-ltr_%d' % rlz.ordinal
+                  if number_of_logic_tree_samples else '')
+        fname = 'hazard_%s-smltp_%s-gsimltp_%s%s.%s' % (
+            infix, smlt_path, rlz.gsim_rlz.uid, suffix, fmt)
+    elif kind == 'mean':
+        fname = 'hazard_%s-mean.csv' % infix
+    elif kind.startswith('quantile-'):
+        fname = 'quantile_%s-%s.%s' % (infix, kind[9:], fmt)
+    else:
+        raise ValueError('Unknown kind of hazard curve: %s' % kind)
+    return fname
+
+
+@ds_export.add(('hcurves', 'hdf5', 'csv'), ('hmaps', 'hdf5', 'csv'),
+               ('uhs', 'hdf5', 'csv'))
+def ds_export_hcurves_csv(ekey, dstore):
+    """
+    Exports the hazard curves into several .csv files
+    """
+    oq = dstore['oqparam']
+    rlzs_assoc = dstore['rlzs_assoc']
+    sitecol = dstore['sites']
+    fnames = []
+    for kind, hcurves in dstore[ekey[:-1]]:
+        fname = hazard_curve_name(
+            ekey, kind, rlzs_assoc, oq.number_of_logic_tree_samples)
+        fnames.append(os.path.join(dstore.export_dir, fname))
+        if ekey[0] == 'uhs':
+            export_uhs_csv(ekey, dstore.export_dir, fname, sitecol, hcurves)
+        else:
+            export_hazard_curves_csv(ekey, dstore.export_dir, fname, sitecol,
+                                     hcurves, oq.imtls)
+    return fnames
 
 
 @export.add(('hazard_curves', 'xml'))
