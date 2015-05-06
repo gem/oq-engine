@@ -188,10 +188,10 @@ _devtest_innervm_run () {
 
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
         ssh $lxc_ip "cd $GEM_GIT_PACKAGE ; nosetests -v --with-doctest --with-coverage --cover-package=openquake.hazardlib --with-xunit"
-        scp "$lxc_ip:$GEM_GIT_PACKAGE/nosetests.xml" .
+        scp "$lxc_ip:$GEM_GIT_PACKAGE/nosetests.xml" "out_${BUILD_UBUVER}/"
     else
         if [ -d $HOME/fake-data/$GEM_GIT_PACKAGE ]; then
-            cp $HOME/fake-data/$GEM_GIT_PACKAGE/* . || true
+            cp $HOME/fake-data/$GEM_GIT_PACKAGE/* "out_${BUILD_UBUVER}/" || true
         fi
     fi
 
@@ -316,6 +316,10 @@ devtest_run () {
 
 pkgtest_run () {
     local i e branch_id="$1"
+
+    if [ ! -d "out_${BUILD_UBUVER}" ]; then
+        mkdir "out_${BUILD_UBUVER}"
+    fi
 
     #
     #  run build of package
