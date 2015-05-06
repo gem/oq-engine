@@ -191,7 +191,9 @@ _devtest_innervm_run () {
         scp "$lxc_ip:$GEM_GIT_PACKAGE/nosetests.xml" "out_${BUILD_UBUVER}/"
     else
         if [ -d $HOME/fake-data/$GEM_GIT_PACKAGE ]; then
-            cp $HOME/fake-data/$GEM_GIT_PACKAGE/* "out_${BUILD_UBUVER}/" || true
+            # FIXME
+            pwd
+            cp $HOME/fake-data/$GEM_GIT_PACKAGE/* "out_${BUILD_UBUVER}/" # || true
         fi
     fi
 
