@@ -503,6 +503,7 @@ class EventBasedCalculator(ClassicalCalculator):
             if not os.path.exists(export_dir):
                 os.makedirs(export_dir)
             self.oqparam.export_dir = export_dir
+            # use a different datastore
             self.cl = ClassicalCalculator(self.oqparam, self.monitor)
             # copy the relevant attributes
             self.cl.composite_source_model = self.composite_source_model

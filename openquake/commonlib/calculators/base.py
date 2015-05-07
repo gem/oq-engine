@@ -72,6 +72,8 @@ class BaseCalculator(object):
     """
     __metaclass__ = abc.ABCMeta
 
+    precalc = None  # to be overridden
+
     oqparam = persistent_attribute('oqparam')
     sitecol = persistent_attribute('sitecol')
     rlzs_assoc = persistent_attribute('rlzs_assoc')

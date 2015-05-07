@@ -147,6 +147,15 @@ class DataStore(collections.MutableMapping):
             return os.path.getsize(self.path(key))
         return sum(os.path.getsize(self.path(key)) for key in self)
 
+    def get(self, key, default):
+        """
+        :returns: the value associated to the datastore key, or the default
+        """
+        try:
+            return self[key]
+        except IOError:
+            return default
+
     def h5file(self, key, mode='r+'):
         """
         Extracts the HDF5 file underlying the given key.
