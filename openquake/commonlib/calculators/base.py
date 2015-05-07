@@ -355,30 +355,8 @@ def get_gmfs(calc):
     if 'gmfs' in calc.oqparam.inputs:  # from file
         gmfs = read_gmfs_from_csv(calc)
     else:  # from rupture
-        gmfs = compute_gmfs(calc)
+        gmfs = calc.precalc.gmf_by_trt_gsim
     return gmfs
-
-
-# this is used by scenario_risk and scenario_damage
-def compute_gmfs(calc):
-    """
-    :param calc: a ScenarioDamage or ScenarioRisk calculator
-    :returns: a dictionary key -> gmf matrix of shape (N, R)
-    """
-    logging.info('Preparing the risk input')
-    sites = calc.sitecol
-    gmf_by_tag = calc.precalc.gmf_by_tag
-    rlzs = calc.rlzs_assoc.realizations
-    imt_dt = numpy.dtype([(imt, float) for imt in calc.oqparam.imtls])
-    dic = collections.defaultdict(list)
-    for tag in sorted(gmf_by_tag):
-        for rlz in rlzs:
-            gsim = str(rlz)
-            gmf = sites.expand(gmf_by_tag[tag][gsim], 0)
-            dic[0, gsim].append(gmf)
-
-    # (trt_id, gsim) -> N x R matrix
-    return {key: numpy.array(dic[key], imt_dt).T for key in dic}
 
 
 def read_gmfs_from_csv(calc):

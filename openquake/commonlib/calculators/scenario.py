@@ -18,14 +18,13 @@
 
 import random
 import logging
+import collections
 
 import numpy
 
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.commonlib import readinput, parallel
-from openquake.commonlib.export import export
-from openquake.baselib.general import AccumDict
 
 from openquake.commonlib.calculators import base, calc
 
@@ -54,7 +53,8 @@ class ScenarioCalculator(base.HazardCalculator):
     Scenario hazard calculator
     """
     core_func = calc_gmfs
-    gmf_by_tag = base.persistent_attribute('gmf_by_tag')
+    tags = base.persistent_attribute('tags')
+    gmf_by_trt_gsim = base.persistent_attribute('gmf_by_trt_gsim')
 
     def pre_execute(self):
         """
@@ -74,41 +74,38 @@ class ScenarioCalculator(base.HazardCalculator):
             raise RuntimeError(
                 'All sites were filtered out! '
                 'maximum_distance=%s km' % self.oqparam.maximum_distance)
-        self.tags = ['scenario-%010d' % i for i in xrange(n_gmfs)]
+        self.tags = tags = ['scenario-%010d' % i for i in xrange(n_gmfs)]
         self.computer = GmfComputer(
             rupture, self.sitecol, self.oqparam.imtls, self.gsims,
             trunc_level, correl_model)
         rnd = random.Random(self.oqparam.random_seed)
-        self.tag_seed_pairs = [(tag, rnd.randint(0, calc.MAX_INT))
-                               for tag in self.tags]
+        self.tag_seed_pairs = [(tag, rnd.randint(0, calc.MAX_INT)) for tag in tags]
 
     def execute(self):
         """
-        Compute the GMFs in parallel and return a dictionary gmf_by_tag
+        Compute the GMFs in parallel and return a dictionary gmf_by_trt_gsim
         """
         logging.info('Computing the GMFs')
         args = (self.tag_seed_pairs, self.computer, self.monitor('calc_gmfs'))
         gmf_by_tag = parallel.apply_reduce(
             self.core_func.__func__, args,
             concurrent_tasks=self.oqparam.concurrent_tasks)
-        return gmf_by_tag
 
-    def post_execute(self, gmf_by_tag):
+        rlzs = self.rlzs_assoc.realizations
+        imt_dt = numpy.dtype([(imt, float) for imt in self.oqparam.imtls])
+        dic = collections.defaultdict(list)
+        for tag in sorted(gmf_by_tag):
+            for rlz in rlzs:
+                gsim = str(rlz)
+                dic[0, gsim].append(gmf_by_tag[tag][gsim])
+
+        # (trt_id, gsim) -> N x R matrix
+        return {key: numpy.array(dic[key], imt_dt).T for key in dic}
+
+
+    def post_execute(self, gmf_by_trt_gsim):
         """
-        :param gmf_by_tag: a dictionary tag -> gmf
+        :param gmf_by_tag: a dictionary (trt_id, gsim) -> gmf
         :returns: a dictionary {('gmf', 'xml'): <gmf.xml filename>}
         """
-        logging.info('Exporting the result')
-        out = AccumDict()
-        if not self.oqparam.exports:
-            return out
-        exports = self.oqparam.exports.split(',')
-        for rlz in self.rlzs_assoc.realizations:
-            gsim = str(rlz)
-            gmfs = [gmf_by_tag[tag][gsim] for tag in self.tags]
-            for fmt in exports:
-                fname = '%s_gmf.%s' % (gsim, fmt)
-                out += export(
-                    ('gmf', fmt), self.oqparam.export_dir, fname, self.sitecol,
-                    self.tags, numpy.array(gmfs, gmfs[0].dtype), rlz.lt_path)
-        return out
+        self.gmf_by_trt_gsim = gmf_by_trt_gsim

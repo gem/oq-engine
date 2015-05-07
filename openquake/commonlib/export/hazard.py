@@ -338,6 +338,34 @@ def ds_export_hcurves_csv(ekey, dstore):
     return fnames
 
 
+@ds_export.add(('gmf_by_trt_gsim', 'csv'))
+def ds_export_gmf_csv(ekey, dstore):
+    sitecol = dstore['sitecol']
+    tags = dstore['tags']
+    fmt = ekey[-1]
+    fnames = []
+    for (_, gsim), gmf in dstore[ekey[:-1]].iteritems():
+        fname = '%s.%s' % (gsim, fmt)
+        fnames.append(os.path.join(dstore.export_dir, fname))
+        export_gmf_csv(('gmf', 'csv'), dstore.export_dir, fname, sitecol,
+                       tags, gmf.T, gsim)
+    return fnames
+
+
+@ds_export.add(('gmf_by_trt_gsim', 'xml'))
+def ds_export_gmf_xml(ekey, dstore):
+    sitecol = dstore['sitecol']
+    tags = dstore['tags']
+    fmt = ekey[-1]
+    fnames = []
+    for (_, gsim), gmf in dstore[ekey[:-1]].iteritems():
+        fname = '%s_gmf.%s' % (gsim, fmt)
+        fnames.append(os.path.join(dstore.export_dir, fname))
+        export_gmf_xml(('gmf', 'xml'), dstore.export_dir, fname, sitecol,
+                       tags, gmf.T, '')
+    return fnames
+
+
 @export.add(('hazard_curves', 'xml'))
 def export_hazard_curves_xml(key, export_dir, fname, sitecol, curves_by_imt,
                              imtls, investigation_time):
