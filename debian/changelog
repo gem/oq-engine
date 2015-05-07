@@ -1,3 +1,10 @@
+python-oq-engine (1.4.0-1~precise01) precise; urgency=low
+
+  [Matteo Nastasi, Daniele Viganò]
+  * Fixed dependencies veersion management
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 07 May 2015 14:14:09 +0200
+
 python-oq-engine (1.4.0-0~precise01) precise; urgency=low
 
   [Matteo Nastasi, Daniele Viganò]
