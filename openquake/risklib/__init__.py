@@ -25,7 +25,7 @@ from openquake.hazardlib.general import git_suffix
 __all__ = ["VulnerabilityFunction", "DegenerateDistribution", "classical"]
 
 # the version is managed by packager.sh with a sed
-__version__ = '0.7.0'
+__version__ = '0.8.0'
 __version__ += git_suffix(__file__)
 
 path = search_module('openquake.commonlib.general')

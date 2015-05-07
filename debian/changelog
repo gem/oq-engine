@@ -1,3 +1,12 @@
+python-oq-risklib (0.7.0-1~precise01) precise; urgency=low
+
+  [Matteo Nastasi, Daniele Viganò]
+  * Fixed dependencies veersion management
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 07 May 2015 13:56:09 +0200
+
+python-oq-risklib (0.7.0-0~precise01) precise; urgency=low
+
   [Matteo Nastasi, Daniele Viganò]
   * Add binary package support for both Ubuntu 12.04 (Precise)
     and Ubuntu 14.04 (Trusty)
@@ -30,6 +39,8 @@
   * Added a script to reduce large source models and large exposure models
   * Fixed a bug in the NRML writer for nodes with value=0
   * Added a `plot` command to oq-lite
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 07 May 2015 10:51:21 +0200
 
 python-oq-risklib (0.6.0-1) precise; urgency=low
 
