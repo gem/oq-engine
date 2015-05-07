@@ -25,6 +25,7 @@ import collections
 
 import numpy
 
+from openquake.baselib.general import AccumDict
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib.calc.hazard_curve import zero_curves
@@ -32,11 +33,6 @@ from openquake.hazardlib import geo, site, calc
 from openquake.commonlib import readinput, parallel
 from openquake.commonlib.util import max_rel_diff_index
 
-from openquake.commonlib.export import export
-from openquake.commonlib.export.hazard import SESCollection
-from openquake.baselib.general import AccumDict, groupby
-
-from openquake.commonlib.writers import save_csv
 from openquake.commonlib.calculators import base
 from openquake.commonlib.calculators.calc import MAX_INT, gmvs_to_haz_curve
 from openquake.commonlib.calculators.classical import (
@@ -268,6 +264,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
     """
     core_func = compute_ruptures
     ruptures_by_trt = base.persistent_attribute('ruptures_by_trt')
+    tags_by_trt = base.persistent_attribute('tags_by_trt')
 
     def pre_execute(self):
         """
@@ -296,35 +293,34 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_model_id'))
 
-        num_ruptures = sum(
-            len(rups) for rups in ruptures_by_trt.itervalues())
-        logging.info('Generated %d SESRuptures', num_ruptures)
+        tags = {}
+        for trt_id, rups in ruptures_by_trt.iteritems():
+            tags[trt_id] = numpy.array(sorted(rup.tag for rup in rups))
+        logging.info('Generated %d SESRuptures',
+                     sum(len(v) for v in tags.itervalues()))
 
+        self.tags_by_trt = tags
         self.rlzs_assoc = csm.get_rlzs_assoc(
             lambda trt: len(ruptures_by_trt.get(trt.id, [])))
 
         return ruptures_by_trt
 
     def post_execute(self, result):
-        """Export the ruptures, if any"""
         self.ruptures_by_trt = result
-        oq = self.oqparam
-        saved = AccumDict()
-        if not oq.exports:
-            return saved
-        exports = oq.exports.split(',')
-        for smodel in self.composite_source_model:
-            smpath = '_'.join(smodel.path)
-            for trt_model in smodel.trt_models:
-                sesruptures = result.get(trt_model.id, [])
-                ses_coll = SESCollection(
-                    groupby(sesruptures, operator.attrgetter('ses_idx')),
-                    smodel.path, oq.investigation_time)
-                for fmt in exports:
-                    fname = 'ses-%d-smltp_%s.%s' % (trt_model.id, smpath, fmt)
-                    saved += export(
-                        ('ses', fmt), oq.export_dir, fname, ses_coll)
-        return saved
+
+#        exports = oq.exports.split(',')
+#        for smodel in self.composite_source_model:
+#            smpath = '_'.join(smodel.path)
+#            for trt_model in smodel.trt_models:
+#                sesruptures = result.get(trt_model.id, [])
+#                ses_coll = SESCollection(
+#                    groupby(sesruptures, operator.attrgetter('ses_idx')),
+#                    smodel.path, oq.investigation_time)
+#                for fmt in exports:
+#                    fname = 'ses-%d-smltp_%s.%s' % (trt_model.id, smpath, fmt)
+#                    saved += export(
+#                        ('ses', fmt), oq.export_dir, fname, ses_coll)
+#        return saved
 
 
 # ######################## GMF calculator ############################ #
@@ -417,6 +413,16 @@ def to_haz_curves(num_sites, gs, gmfs, imtls, investigation_time, duration):
     return curves
 
 
+def _expand(gmf_array, sitecol):
+    imts = [f for f in gmf_array.dtype.fields if f != 'idx']
+    imt_dt = numpy.dtype([(imt, float) for imt in imts])
+    indices = gmf_array['idx']
+    zeros = numpy.zeros(len(sitecol), imt_dt)
+    for imt in imts:
+        zeros[imt][indices] = gmf_array[imt]
+    return zeros
+
+
 @base.calculators.add('event_based')
 class EventBasedCalculator(ClassicalCalculator):
     """
@@ -424,6 +430,7 @@ class EventBasedCalculator(ClassicalCalculator):
     """
     pre_calculator = 'event_based_rupture'
     core_func = compute_gmfs_and_curves
+    gmf_by_trt_gsim = base.persistent_attribute('gmf_by_trt_gsim')
 
     def pre_execute(self):
         """
@@ -437,37 +444,23 @@ class EventBasedCalculator(ClassicalCalculator):
         self.composite_source_model = hcalc.composite_source_model
         self.sesruptures = sorted(sum(ruptures_by_trt.itervalues(), []),
                                   key=operator.attrgetter('tag'))
-        self.saved = AccumDict()
-        if self.oqparam.ground_motion_fields and 'csv' in self.oqparam.exports:
-            for trt_id, gsim in self.rlzs_assoc:
-                name = '%s-%s.csv' % (trt_id, gsim)
-                self.saved[name] = fname = os.path.join(
-                    self.oqparam.export_dir, name)
-                open(fname, 'w').close()
 
     def combine_curves_and_save_gmfs(self, acc, res):
         """
         Combine the hazard curves (if any) and save the gmfs (if any)
         sequentially; however, notice that the gmfs may come from
-        different tasks in any order. The full list of gmfs is never
-        stored in memory.
+        different tasks in any order.
 
         :param acc: an accumulator for the hazard curves
         :param res: a dictionary trt_id, gsim -> (gmfs, curves_by_imt)
         :returns: a new accumulator
         """
-        imts = list(self.oqparam.imtls)
+        gen_gmf = self.oqparam.ground_motion_fields
         for trt_id, gsim in res:
             gmf_by_tag, curves_by_imt = res[trt_id, gsim]
+            if gen_gmf:
+                self.gmf_dict[trt_id, gsim] += gmf_by_tag
             acc = agg_dicts(acc, AccumDict({(trt_id, gsim): curves_by_imt}))
-            fname = self.saved.get('%s-%s.csv' % (trt_id, gsim))
-            if fname:  # when ground_motion_fields is true and there is csv
-                for tag in sorted(gmf_by_tag):
-                    gmf = gmf_by_tag[tag]
-                    row = [tag, gmf['idx']]
-                    for imt in imts:
-                        row.append(gmf[gsim][imt])
-                    save_csv(fname, [row], mode='a')
         return acc
 
     def execute(self):
@@ -481,6 +474,7 @@ class EventBasedCalculator(ClassicalCalculator):
         zc = zero_curves(len(self.sitecol), self.oqparam.imtls)
         zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
         gsims_assoc = self.rlzs_assoc.get_gsims_by_trt_id()
+        self.gmf_dict = collections.defaultdict(AccumDict)
         curves_by_trt_gsim = parallel.apply_reduce(
             self.core_func.__func__,
             (self.sesruptures, self.sitecol, gsims_assoc, monitor),
@@ -494,17 +488,25 @@ class EventBasedCalculator(ClassicalCalculator):
         Return a dictionary with the output files, i.e. gmfs (if any)
         and hazard curves (if any).
         """
-        if getattr(self.oqparam, 'hazard_curves_from_gmfs', None):
-            return self.saved + ClassicalCalculator.post_execute.__func__(
-                self, result)
-
+        oq = self.oqparam
+        sitecol = self.sitecol
+        tags_by_trt = self.precalc.tags_by_trt
+        if oq.hazard_curves_from_gmfs:
+            ClassicalCalculator.post_execute.__func__(self, result)
+        if oq.ground_motion_fields:
+            for (trt_id, gsim), gmf_by_tag in self.gmf_dict.items():
+                self.gmf_dict[trt_id, gsim] = numpy.array([
+                    _expand(gmf_by_tag[tag], sitecol)
+                    for tag in tags_by_trt[trt_id]]).T
+            self.gmf_by_trt_gsim = self.gmf_dict
+            self.gmf_dict.clear()
         if self.mean_curves is not None:  # compute classical ones
-            export_dir = os.path.join(self.oqparam.export_dir, 'cl')
+            export_dir = os.path.join(oq.export_dir, 'cl')
             if not os.path.exists(export_dir):
                 os.makedirs(export_dir)
-            self.oqparam.export_dir = export_dir
+            oq.export_dir = export_dir
             # use a different datastore
-            self.cl = ClassicalCalculator(self.oqparam, self.monitor)
+            self.cl = ClassicalCalculator(oq, self.monitor)
             # copy the relevant attributes
             self.cl.composite_source_model = self.composite_source_model
             self.cl.sitecol = self.sitecol

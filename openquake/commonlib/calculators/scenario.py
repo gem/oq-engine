@@ -53,7 +53,7 @@ class ScenarioCalculator(base.HazardCalculator):
     Scenario hazard calculator
     """
     core_func = calc_gmfs
-    tags = base.persistent_attribute('tags')
+    tags_by_trt = base.persistent_attribute('tags_by_trt')
     gmf_by_trt_gsim = base.persistent_attribute('gmf_by_trt_gsim')
 
     def pre_execute(self):
@@ -74,12 +74,14 @@ class ScenarioCalculator(base.HazardCalculator):
             raise RuntimeError(
                 'All sites were filtered out! '
                 'maximum_distance=%s km' % self.oqparam.maximum_distance)
-        self.tags = tags = ['scenario-%010d' % i for i in xrange(n_gmfs)]
+        tags = ['scenario-%010d' % i for i in xrange(n_gmfs)]
+        self.tags_by_trt = {0: tags}
         self.computer = GmfComputer(
             rupture, self.sitecol, self.oqparam.imtls, self.gsims,
             trunc_level, correl_model)
         rnd = random.Random(self.oqparam.random_seed)
-        self.tag_seed_pairs = [(tag, rnd.randint(0, calc.MAX_INT)) for tag in tags]
+        self.tag_seed_pairs = [(tag, rnd.randint(0, calc.MAX_INT))
+                               for tag in tags]
 
     def execute(self):
         """

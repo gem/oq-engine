@@ -104,53 +104,58 @@ class EventBasedTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'event_based')
     def test_blocksize(self):
         out = self.run_calc(blocksize.__file__, 'job.ini', concurrent_tasks=4)
+        [fname] = out['gmf_by_trt_gsim', 'csv']
         self.assertEqualFiles('expected/0-ChiouYoungs2008.csv',
-                              out['0-ChiouYoungs2008.csv'], sorted)
+                              fname, sorted)
+
         out = self.run_calc(blocksize.__file__, 'job.ini', concurrent_tasks=8)
+        [fname] = out['gmf_by_trt_gsim', 'csv']
         self.assertEqualFiles('expected/0-ChiouYoungs2008.csv',
-                              out['0-ChiouYoungs2008.csv'], sorted)
+                              fname, sorted)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_1(self):
         out = self.run_calc(case_1.__file__, 'job.ini', exports='csv')
+        [fname] = out['gmf_by_trt_gsim', 'csv']
         self.assertEqualFiles(
-            'expected/0-SadighEtAl1997.csv',
-            out['0-SadighEtAl1997.csv'], sorted)
+            'expected/0-SadighEtAl1997.csv', fname, sorted)
+
+        [fname] = out['hcurves', 'hdf5', 'csv']
         self.assertEqualFiles(
-            'expected/hazard_curve-smltp_b1-gsimltp_b1.csv',
-            out['hazard_curve-smltp_b1-gsimltp_b1.csv'])
+            'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job.ini', exports='csv')
+        [fname] = out['gmf_by_trt_gsim', 'csv']
         self.assertEqualFiles(
-            'expected/0-SadighEtAl1997.csv',
-            out['0-SadighEtAl1997.csv'], sorted)
+            'expected/0-SadighEtAl1997.csv', fname, sorted)
+
+        [fname] = out['hcurves', 'hdf5', 'csv']
         self.assertEqualFiles(
-            'expected/hazard_curve-smltp_b1-gsimltp_b1.csv',
-            out['hazard_curve-smltp_b1-gsimltp_b1.csv'])
+            'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_3(self):  # oversampling
         out = self.run_calc(case_2.__file__, 'job_2.ini', exports='csv')
+        [fname] = out['gmf_by_trt_gsim', 'csv']  # 2 realizations, 1 TRT
         self.assertEqualFiles(
-            'expected/SadighEtAl1997.csv',
-            out['0-SadighEtAl1997.csv'], sorted)
+            'expected/SadighEtAl1997.csv', fname, sorted)
+
+        ltr = out['hcurves', 'hdf5', 'csv']
         self.assertEqualFiles(
-            'expected/hc-smltp_b1-gsimltp_b1-ltr_0.csv',
-            out['hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv'])
+            'expected/hc-smltp_b1-gsimltp_b1-ltr_0.csv', ltr[0])
         # NB: we are testing that the file ltr_1.csv is equal to
         # ltr_0.csv, as it should be for the hazard curves
         self.assertEqualFiles(
-            'expected/hc-smltp_b1-gsimltp_b1-ltr_0.csv',
-            out['hazard_curve-smltp_b1-gsimltp_b1-ltr_1.csv'])
+            'expected/hc-smltp_b1-gsimltp_b1-ltr_0.csv', ltr[1])
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_4(self):
         out = self.run_calc(case_4.__file__, 'job.ini', exports='csv')
+        [fname] = out['hcurves', 'hdf5', 'csv']
         self.assertEqualFiles(
-            'expected/hazard_curve-smltp_b1-gsimltp_b1.csv',
-            out['hazard_curve-smltp_b1-gsimltp_b1.csv'])
+            'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_5(self):
@@ -165,8 +170,9 @@ class EventBasedTestCase(CalculatorTestCase):
 6-ToroEtAl2002SHARE.csv
 7-FaccioliEtAl2010.csv'''.split()
         out = self.run_calc(case_5.__file__, 'job.ini', exports='csv')
-        for fname in expected:
-            self.assertEqualFiles('expected/%s' % fname, out[fname], sorted)
+        fnames = out['gmf_by_trt_gsim', 'csv']
+        for exp, got in zip(expected, fnames):
+            self.assertEqualFiles('expected/%s' % exp, got, sorted)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_6(self):
@@ -176,8 +182,9 @@ class EventBasedTestCase(CalculatorTestCase):
             'quantile_curve-0.1.csv',
         ]
         out = self.run_calc(case_6.__file__, 'job.ini', exports='csv')
-        for fname in expected:
-            self.assertEqualFiles('expected/%s' % fname, out[fname])
+        fnames = out['hcurves', 'hdf5', 'csv']
+        for exp, got in zip(expected, fnames):
+            self.assertEqualFiles('expected/%s' % exp, got)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_7(self):
@@ -188,9 +195,10 @@ class EventBasedTestCase(CalculatorTestCase):
             'quantile_curve-0.9.csv',
         ]
         out = self.run_calc(case_7.__file__, 'job.ini', exports='csv')
+        fnames = out['hcurves', 'hdf5', 'csv']
         mean_eb = self.calc.mean_curves
-        for fname in expected:
-            self.assertEqualFiles('expected/%s' % fname, out[fname])
+        for exp, got in zip(expected, fnames):
+            self.assertEqualFiles('expected/%s' % exp, got)
         mean_cl = self.calc.cl.mean_curves
         for imt in mean_cl.dtype.fields:
             reldiff, _index = max_rel_diff_index(
@@ -200,20 +208,23 @@ class EventBasedTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'event_based')
     def test_case_12(self):
         out = self.run_calc(case_12.__file__, 'job.ini', exports='csv')
-        self.assertEqualFiles('expected/0-SadighEtAl1997.csv',
-                              out['0-SadighEtAl1997.csv'], sorted)
+        sa, ba = out['gmf_by_trt_gsim', 'csv']
+        self.assertEqualFiles('expected/0-SadighEtAl1997.csv', sa, sorted)
+        self.assertEqualFiles('expected/1-BooreAtkinson2008.csv', ba, sorted)
+        [fname] = out['hcurves', 'hdf5', 'csv']
         self.assertEqualFiles(
-            'expected/hazard_curve-smltp_b1-gsimltp_b1_b2.csv',
-            out['hazard_curve-smltp_b1-gsimltp_b1_b2.csv'])
+            'expected/hazard_curve-smltp_b1-gsimltp_b1_b2.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_13(self):
         out = self.run_calc(case_13.__file__, 'job.ini', exports='csv')
+        [fname] = out['gmf_by_trt_gsim', 'csv']
         self.assertEqualFiles('expected/0-BooreAtkinson2008.csv',
-                              out['0-BooreAtkinson2008.csv'], sorted)
+                              fname, sorted)
+
+        [fname] = out['hcurves', 'hdf5', 'csv']
         self.assertEqualFiles(
-            'expected/hazard_curve-smltp_b1-gsimltp_b1.csv',
-            out['hazard_curve-smltp_b1-gsimltp_b1.csv'])
+            'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_17(self):  # oversampling
@@ -225,8 +236,9 @@ class EventBasedTestCase(CalculatorTestCase):
             'hazard_curve-smltp_b2-gsimltp_b1-ltr_4.csv',
         ]
         out = self.run_calc(case_17.__file__, 'job.ini', exports='csv')
-        for fname in expected:
-            self.assertEqualFiles('expected/%s' % fname, out[fname], sorted)
+        fnames = out['hcurves', 'hdf5', 'csv']
+        for exp, got in zip(expected, fnames):
+            self.assertEqualFiles('expected/%s' % exp, got, sorted)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_18(self):  # oversampling
@@ -235,5 +247,6 @@ class EventBasedTestCase(CalculatorTestCase):
             '0-CauzziFaccioli2008.csv',
         ]
         out = self.run_calc(case_18.__file__, 'job_3.ini', exports='csv')
-        for fname in expected:
-            self.assertEqualFiles('expected/%s' % fname, out[fname], sorted)
+        fnames = out['gmf_by_trt_gsim', 'csv']
+        for exp, got in zip(expected, fnames):
+            self.assertEqualFiles('expected/%s' % exp, got, sorted)
