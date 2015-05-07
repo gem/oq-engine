@@ -1,3 +1,5 @@
+python-oq-hazardlib (0.14.0-0) precise; urgency=low
+
   [Matteo Nastasi, Daniele Viganò]
   * Add binary package support for both Ubuntu 12.04 (Precise)
     and Ubuntu 14.04 (Trusty)
@@ -27,6 +29,8 @@
   [Yen-Shin Chen]
   * Simple fault: added a method to retrieve the vertexes of a patch given its index
   * Base surface: added a method to get a set of point representing a resampled top edge
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 07 May 2015 09:34:15 +0200
 
 python-oq-hazardlib (0.13.1-0) precise; urgency=low
 
