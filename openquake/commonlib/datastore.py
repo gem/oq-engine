@@ -123,8 +123,9 @@ class DataStore(collections.MutableMapping):
         :param key_fmt: the datastore key plus the export format extension
         """
         assert len(key_fmt) >= 2, key_fmt
-        fname = os.path.basename(self.path(key_fmt[:-1])) + '.' + key_fmt[-1]
-        return os.path.join(self.export_dir, fname)
+        fname, _ext = os.path.splitext(self.path(key_fmt[:-1]))
+        basename = os.path.basename(fname) + '.' + key_fmt[-1]
+        return os.path.join(self.export_dir, basename)
 
     def export_csv(self, key):
         """

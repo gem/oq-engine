@@ -4,7 +4,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
 xmlns:gml="http://www.opengis.net/gml"
 >
     <gmfCollection
-    gsimTreePath=""
+    gsimTreePath="*"
     sourceModelTreePath=""
     >
         <gmfSet

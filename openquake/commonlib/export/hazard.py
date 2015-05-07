@@ -344,8 +344,8 @@ def ds_export_gmf_csv(ekey, dstore):
     tags = dstore['tags']
     fmt = ekey[-1]
     fnames = []
-    for (_, gsim), gmf in dstore[ekey[:-1]].iteritems():
-        fname = '%s.%s' % (gsim, fmt)
+    for (_, gsim), gmf in sorted(dstore[ekey[:-1]].iteritems()):
+        fname = '%s_gmf.%s' % (gsim, fmt)
         fnames.append(os.path.join(dstore.export_dir, fname))
         export_gmf_csv(('gmf', 'csv'), dstore.export_dir, fname, sitecol,
                        tags, gmf.T, gsim)
@@ -354,15 +354,17 @@ def ds_export_gmf_csv(ekey, dstore):
 
 @ds_export.add(('gmf_by_trt_gsim', 'xml'))
 def ds_export_gmf_xml(ekey, dstore):
+    rlzs_assoc = dstore['rlzs_assoc']
     sitecol = dstore['sitecol']
     tags = dstore['tags']
     fmt = ekey[-1]
     fnames = []
-    for (_, gsim), gmf in dstore[ekey[:-1]].iteritems():
-        fname = '%s_gmf.%s' % (gsim, fmt)
+    for ck, gmf in sorted(dstore[ekey[:-1]].iteritems()):
+        [rlz] = rlzs_assoc[ck]
+        fname = '%s_gmf.%s' % (rlz, fmt)
         fnames.append(os.path.join(dstore.export_dir, fname))
         export_gmf_xml(('gmf', 'xml'), dstore.export_dir, fname, sitecol,
-                       tags, gmf.T, '')
+                       tags, gmf.T, rlz.uid)
     return fnames
 
 

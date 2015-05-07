@@ -104,11 +104,11 @@ class ScenarioHazardTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'scenario')
     def test_case_9(self):
         out = self.run_calc(case_9.__file__, 'job.ini', exports='xml')
-        f1, f2 = out['gmf', 'xml']
+        f1, f2 = out['gmf_by_trt_gsim', 'xml']
         self.assertEqualFiles('LinLee2008SSlab_gmf.xml', f1)
         self.assertEqualFiles('YoungsEtAl1997SSlab_gmf.xml', f2)
 
         out = self.run_calc(case_9.__file__, 'job.ini', exports='csv')
-        f1, f2 = out['gmf', 'csv']
+        f1, f2 = out['gmf_by_trt_gsim', 'csv']
         self.assertEqualFiles('LinLee2008SSlab_gmf.csv', f1)
         self.assertEqualFiles('YoungsEtAl1997SSlab_gmf.csv', f2)
