@@ -28,7 +28,7 @@ class ScenarioHazardTestCase(CalculatorTestCase):
         gmf_by_trt_gsim = self.execute(case.__file__, 'job.ini')
         [imt] = self.calc.oqparam.imtls
         [gsim] = map(str, self.calc.gsims)
-        gmf = gmf_by_trt_gsim[0, gsim]
+        gmf = gmf_by_trt_gsim[0, gsim][imt]
         realizations = float(self.calc.oqparam.number_of_ground_motion_fields)
         gmvs_within_range_fst = count_close(fst_value, gmf[0], gmf[1])
         gmvs_within_range_snd = count_close(snd_value, gmf[0], gmf[1])
