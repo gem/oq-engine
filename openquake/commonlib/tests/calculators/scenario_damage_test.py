@@ -8,50 +8,39 @@ from openquake.commonlib.tests.calculators import CalculatorTestCase
 
 
 class ScenarioDamageTestCase(CalculatorTestCase):
-    KEYS = ['dmg_dist_per_asset', 'dmg_dist_per_taxonomy',
-            'dmg_dist_total', 'collapse_map']
+    def assert_ok(self, pkg, job_ini):
+        test_dir = os.path.dirname(pkg.__file__)
+        out = self.run_calc(test_dir, job_ini, exports='xml')
+        got = out['damages_by_key', 'xml']
+        expected_dir = os.path.join(test_dir, 'expected')
+        expected = sorted(f for f in os.listdir(expected_dir)
+                          if f.endswith('.xml'))
+        self.assertEqual(len(got), len(expected))
+        for fname, actual in zip(expected, got):
+            self.assertEqualFiles('expected/%s' % fname, actual)
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_1(self):
-        out = self.run_calc(case_1.__file__, 'job_risk.ini')
-        for key in self.KEYS:
-            for fname in out[key, 'xml']:
-                self.assertEqualFiles('expected/%s.xml' % key, fname)
+        self.assert_ok(case_1, 'job_risk.ini')
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_2(self):
-        out = self.run_calc(case_2.__file__, 'job_risk.ini')
-        for key in self.KEYS:
-            for fname in out[key, 'xml']:
-                self.assertEqualFiles('expected/%s.xml' % key, fname)
+        self.assert_ok(case_2, 'job_risk.ini')
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_3(self):
-        out = self.run_calc(case_3.__file__, 'job_risk.ini')
-        for key in self.KEYS:
-            for fname in out[key, 'xml']:
-                self.assertEqualFiles('expected/%s.xml' % key, fname)
+        self.assert_ok(case_3, 'job_risk.ini')
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_4(self):
-        out = self.run_calc(case_4.__file__, 'job_haz.ini,job_risk.ini')
-        for key in self.KEYS:
-            for fname in out[key, 'xml']:
-                self.assertEqualFiles('expected/%s.xml' % key, fname)
+        self.assert_ok(case_4, 'job_haz.ini,job_risk.ini')
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_5(self):
         # this is a test for the rupture filtering
-        out = self.run_calc(case_5.__file__, 'job_haz.ini,job_risk.ini')
-        for key in self.KEYS:
-            for fname in out[key, 'xml']:
-                self.assertEqualFiles('expected/%s.xml' % key, fname)
+        self.assert_ok(case_5, 'job_haz.ini,job_risk.ini')
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_5a(self):
-        # this is a test for the rupture filtering
-        out = self.run_calc(case_5a.__file__, 'job_haz.ini,job_risk.ini')
-        for key in self.KEYS:
-            for fname in out[key, 'xml']:
-                expected = os.path.join('expected', os.path.basename(fname))
-                self.assertEqualFiles(expected, fname)
+        # this is a case with two gsims
+        self.assert_ok(case_5a, 'job_haz.ini,job_risk.ini')

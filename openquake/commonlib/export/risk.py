@@ -20,10 +20,71 @@ import os
 import csv
 import operator
 
+import numpy
+
 from openquake.baselib.general import AccumDict
-from openquake.commonlib.export import export
+from openquake.commonlib.export import export, ds_export
 from openquake.commonlib import writers, risk_writers
 from openquake.commonlib.writers import scientificformat
+from openquake.commonlib.risk_writers import (
+    DmgState, DmgDistPerTaxonomy, DmgDistPerAsset, DmgDistTotal,
+    ExposureData, Site)
+from openquake.risklib import scientific
+
+
+# TODO: the export is doing too much; probably we should store
+# a better data structure
+@ds_export.add(('damages_by_key', 'xml'))
+def export_damage(ekey, dstore):
+    oqparam = dstore['oqparam']
+    riskmodel = dstore['riskmodel']
+    rlzs = dstore['rlzs_assoc'].realizations
+    damages_by_key = dstore['damages_by_key']
+    dmg_states = [DmgState(s, i)
+                  for i, s in enumerate(riskmodel.damage_states)]
+    fnames = []
+    for i in sorted(damages_by_key):
+        rlz = rlzs[i]
+        result = damages_by_key[i]
+        dd_taxo = []
+        dd_asset = []
+        shape = oqparam.number_of_ground_motion_fields, len(dmg_states)
+        totals = numpy.zeros(shape)  # R x D matrix
+        for (key_type, key), values in result.iteritems():
+            if key_type == 'taxonomy':
+                # values are fractions, R x D matrix
+                totals += values
+                means, stds = scientific.mean_std(values)
+                for dmg_state, mean, std in zip(dmg_states, means, stds):
+                    dd_taxo.append(
+                        DmgDistPerTaxonomy(key, dmg_state, mean, std))
+            elif key_type == 'asset':
+                means, stddevs = values
+                for dmg_state, mean, std in zip(dmg_states, means, stddevs):
+                    dd_asset.append(
+                        DmgDistPerAsset(
+                            ExposureData(key.id, Site(*key.location)),
+                            dmg_state, mean, std))
+        dd_total = []
+        for dmg_state, total in zip(dmg_states, totals.T):
+            mean, std = scientific.mean_std(total)
+            dd_total.append(DmgDistTotal(dmg_state, mean, std))
+
+        suffix = '' if rlz.uid == '*' else '-gsimltp_%s' % rlz.uid
+        f1 = export(('dmg_dist_per_asset', 'xml'), oqparam.export_dir,
+                    dmg_states, dd_asset, suffix)
+        f2 = export(('dmg_dist_per_taxonomy', 'xml'),
+                    oqparam.export_dir, dmg_states, dd_taxo, suffix)
+        f3 = export(('dmg_dist_total', 'xml'), oqparam.export_dir,
+                    dmg_states, dd_total, suffix)
+        max_damage = dmg_states[-1]
+        # the collapse map is extracted from the damage distribution per asset
+        # (dda) by taking the value corresponding to the maximum damage
+        collapse_map = [dda for dda in dd_asset if dda.dmg_state == max_damage]
+        f4 = export(('collapse_map', 'xml'), oqparam.export_dir,
+                    dmg_states, collapse_map, suffix)
+        fnames.extend(sum((f1 + f2 + f3 + f4).values(), []))
+    return sorted(fnames)
 
 
 @export.add(('dmg_dist_per_asset', 'xml'), ('dmg_dist_per_taxonomy', 'xml'),

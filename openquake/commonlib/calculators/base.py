@@ -141,6 +141,8 @@ class BaseCalculator(object):
                 if ekey in export.ds_export:
                     exported[ekey] = export.ds_export(ekey, self.datastore)
                     logging.info('exported %s: %s', key, exported[ekey])
+                else:
+                    logging.info('%s is not exportable in %s', key, fmt)
         return exported
 
 
@@ -256,6 +258,8 @@ class RiskCalculator(HazardCalculator):
     .riskinputs in the pre_execute phase.
     """
 
+    riskmodel = persistent_attribute('riskmodel')
+
     def make_eps_dict(self, num_ruptures):
         """
         :param num_ruptures: the size of the epsilon array for each asset
@@ -347,6 +351,20 @@ class RiskCalculator(HazardCalculator):
 # functions useful for the calculators ScenarioDamage and ScenarioRisk
 
 
+def expand(gmf, sitecol):
+    """
+    :param gmf: a GMF matrix of shape (N', R) with N' <= N
+    :param sitecol: a site collection of N elements
+    :returns: a GMF matrix of shape (N, R) filled with zeros
+    """
+    if sitecol is sitecol.complete:
+        return gmf  # do nothing
+    n, r = gmf.shape
+    zeros = numpy.zeros((len(sitecol.complete), r), gmf.dtype)
+    zeros[sitecol.indices] = gmf
+    return zeros
+
+
 def get_gmfs(calc):
     """
     :param calc: a ScenarioDamage or ScenarioRisk calculator
@@ -355,7 +373,9 @@ def get_gmfs(calc):
     if 'gmfs' in calc.oqparam.inputs:  # from file
         gmfs = read_gmfs_from_csv(calc)
     else:  # from rupture
-        gmfs = calc.precalc.gmf_by_trt_gsim
+        sitecol = calc.sitecol
+        gmfs = {k: expand(gmf, sitecol)
+                for k, gmf in calc.precalc.gmf_by_trt_gsim.iteritems()}
     return gmfs
 
 
