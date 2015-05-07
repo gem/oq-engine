@@ -32,9 +32,10 @@ def export(calc_id, output_key, format='csv'):
         if ekey[-1] == ekey[-2]:
             # the export format is the same as the inner format
             shutil.copy(dstore.path(ekey[:-1]), epath)
+            fnames = [epath]
         else:
-            ds_export(ekey, dstore)
-        print 'Exported %s' % epath
+            fnames = ds_export(ekey, dstore)
+        print 'Exported %s' % fnames
 
 
 parser = sap.Parser(export)

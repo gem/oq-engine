@@ -138,9 +138,11 @@ class EventBasedTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'event_based')
     def test_case_3(self):  # oversampling
         out = self.run_calc(case_2.__file__, 'job_2.ini', exports='csv')
-        [fname] = out['gmf_by_trt_gsim', 'csv']  # 2 realizations, 1 TRT
+        ltr = out['gmf_by_trt_gsim', 'csv']  # 2 realizations, 1 TRT
         self.assertEqualFiles(
-            'expected/SadighEtAl1997.csv', fname, sorted)
+            'expected/SadighEtAl1997.csv', ltr[0], sorted)
+        self.assertEqualFiles(
+            'expected/SadighEtAl1997.csv', ltr[1], sorted)
 
         ltr = out['hcurves', 'hdf5', 'csv']
         self.assertEqualFiles(
@@ -171,6 +173,7 @@ class EventBasedTestCase(CalculatorTestCase):
 7-FaccioliEtAl2010.csv'''.split()
         out = self.run_calc(case_5.__file__, 'job.ini', exports='csv')
         fnames = out['gmf_by_trt_gsim', 'csv']
+        import pdb; pdb.set_trace()
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got, sorted)
 
@@ -208,9 +211,10 @@ class EventBasedTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'event_based')
     def test_case_12(self):
         out = self.run_calc(case_12.__file__, 'job.ini', exports='csv')
-        sa, ba = out['gmf_by_trt_gsim', 'csv']
-        self.assertEqualFiles('expected/0-SadighEtAl1997.csv', sa, sorted)
-        self.assertEqualFiles('expected/1-BooreAtkinson2008.csv', ba, sorted)
+        [fname] = out['gmf_by_trt_gsim', 'csv']
+        self.assertEqualFiles(
+            'expected/gmf-smltp_b1-gsimltp_b1_b2.csv', fname)
+
         [fname] = out['hcurves', 'hdf5', 'csv']
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1_b2.csv', fname)
@@ -241,10 +245,11 @@ class EventBasedTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/%s' % exp, got, sorted)
 
     @attr('qa', 'hazard', 'event_based')
-    def test_case_18(self):  # oversampling
+    def test_case_18(self):  # oversampling, 3 realizations
         expected = [
-            '0-AkkarBommer2010.csv',
-            '0-CauzziFaccioli2008.csv',
+            'gmf-smltp_b1-gsimltp_AB-ltr_0.csv',
+            'gmf-smltp_b1-gsimltp_AB-ltr_1.csv',
+            'gmf-smltp_b1-gsimltp_CF-ltr_2.csv',
         ]
         out = self.run_calc(case_18.__file__, 'job_3.ini', exports='csv')
         fnames = out['gmf_by_trt_gsim', 'csv']

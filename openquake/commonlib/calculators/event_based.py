@@ -413,16 +413,6 @@ def to_haz_curves(num_sites, gs, gmfs, imtls, investigation_time, duration):
     return curves
 
 
-def _expand(gmf_array, sitecol):
-    imts = [f for f in gmf_array.dtype.fields if f != 'idx']
-    imt_dt = numpy.dtype([(imt, float) for imt in imts])
-    indices = gmf_array['idx']
-    zeros = numpy.zeros(len(sitecol), imt_dt)
-    for imt in imts:
-        zeros[imt][indices] = gmf_array[imt]
-    return zeros
-
-
 @base.calculators.add('event_based')
 class EventBasedCalculator(ClassicalCalculator):
     """
@@ -489,15 +479,12 @@ class EventBasedCalculator(ClassicalCalculator):
         and hazard curves (if any).
         """
         oq = self.oqparam
-        sitecol = self.sitecol
-        tags_by_trt = self.precalc.tags_by_trt
         if oq.hazard_curves_from_gmfs:
             ClassicalCalculator.post_execute.__func__(self, result)
         if oq.ground_motion_fields:
             for (trt_id, gsim), gmf_by_tag in self.gmf_dict.items():
-                self.gmf_dict[trt_id, gsim] = numpy.array([
-                    _expand(gmf_by_tag[tag], sitecol)
-                    for tag in tags_by_trt[trt_id]]).T
+                self.gmf_dict[trt_id, gsim] = {tag: gmf_by_tag[tag][gsim]
+                                               for tag in gmf_by_tag}
             self.gmf_by_trt_gsim = self.gmf_dict
             self.gmf_dict.clear()
         if self.mean_curves is not None:  # compute classical ones

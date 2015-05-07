@@ -339,6 +339,17 @@ class RlzsAssoc(collections.Mapping):
                 ad[rlz] = agg(ad[rlz], value)
         return ad
 
+    # XXX: perhaps we should combine by col_idx?
+    def combine_gmfs(self, results):
+        """
+        :param results: a dictionary (trt_model_id, gsim_name) -> gmf_by_tag
+        """
+        ad = {rlz: AccumDict() for rlz in self.realizations}
+        for key, value in results.iteritems():
+            for rlz in self.rlzs_assoc[key]:
+                ad[rlz] += value
+        return ad
+
     def combine(self, results, agg=agg_prob):
         """
         :param results: a dictionary (trt_model_id, gsim_name) -> floats

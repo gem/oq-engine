@@ -17,6 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import logging
 import operator
 import collections
 
@@ -100,7 +101,7 @@ def ds_export_ses_csv(key, dstore):
 
 
 @ds_export.add(('sitecol', 'csv'))
-def export_sitecol_csv(key, dstore):
+def ds_export_sitecol_csv(key, dstore):
     dest = dstore.export_path(key)
     rows = []
     for site in dstore['sitecol']:
@@ -196,11 +197,12 @@ class GmfCollection(object):
     into an object with the right form for the EventBasedGMFXMLWriter.
     Iterating over a GmfCollection yields GmfSet objects.
     """
-    def __init__(self, sitecol, rupture_tags, gmfs_by_imt):
+    def __init__(self, sitecol, rupture_tags, gmfs):
         self.sitecol = sitecol
         self.rupture_tags = rupture_tags
-        self.gmfs_by_imt = gmfs_by_imt
-        self.imts = list(gmfs_by_imt.dtype.fields)
+        self.imts = list(gmfs[0].dtype.fields)
+        self.gmfs_by_imt = {imt: [gmf[imt] for gmf in gmfs]
+                            for imt in self.imts}
 
     def __iter__(self):
         gmfset = []
@@ -216,7 +218,6 @@ class GmfCollection(object):
         yield GmfSet(gmfset)
 
 
-@export.add(('gmf', 'xml'))
 def export_gmf_xml(key, export_dir, fname, sitecol, rupture_tags, gmfs,
                    gsim_path):
     """
@@ -236,7 +237,6 @@ def export_gmf_xml(key, export_dir, fname, sitecol, rupture_tags, gmfs,
     return {key: [dest]}
 
 
-@export.add(('gmf', 'csv'))
 def export_gmf_csv(key, export_dir, fname, sites, rupture_tags, gmfs,
                    gsim_path):
     """
@@ -249,7 +249,7 @@ def export_gmf_csv(key, export_dir, fname, sites, rupture_tags, gmfs,
     :param gsim_path: a tuple with the path in the GSIM logic tree
     """
     dest = os.path.join(export_dir, fname)
-    imts = list(gmfs.dtype.fields)
+    imts = list(gmfs[0].dtype.fields)
     indices = ' '.join(map(str, sites.indices)) \
               if sites.indices is not None else ''
     # the csv file has the form
@@ -297,22 +297,32 @@ def hazard_curve_name(ekey, kind, rlzs_assoc, number_of_logic_tree_samples):
     :param rlzs_assoc:
         a RlzsAssoc instance
     """
-    infix = {'hcurves': 'curve', 'hmaps': 'map', 'uhs': 'uhs'}[ekey[0]]
+    prefix = {'hcurves': 'hazard_curve', 'hmaps': 'hazard_map',
+              'hazard_uhs': 'uhs'}[ekey[0]]
     fmt = ekey[-1]
     if kind.startswith('rlz-'):
         rlz_no = int(kind[4:])
         rlz = rlzs_assoc.realizations[rlz_no]
-        smlt_path = '_'.join(rlz.sm_lt_path)
-        suffix = ('-ltr_%d' % rlz.ordinal
-                  if number_of_logic_tree_samples else '')
-        fname = 'hazard_%s-smltp_%s-gsimltp_%s%s.%s' % (
-            infix, smlt_path, rlz.gsim_rlz.uid, suffix, fmt)
+        fname = build_name(rlz, prefix, fmt, number_of_logic_tree_samples)
     elif kind == 'mean':
-        fname = 'hazard_%s-mean.csv' % infix
+        fname = '%s-mean.csv' % prefix
     elif kind.startswith('quantile-'):
-        fname = 'quantile_%s-%s.%s' % (infix, kind[9:], fmt)
+        # strip the 7 characters 'hazard_'
+        fname = 'quantile_%s-%s.%s' % (prefix[7:], kind[9:], fmt)
     else:
         raise ValueError('Unknown kind of hazard curve: %s' % kind)
+    return fname
+
+
+def build_name(rlz, prefix, fmt, number_of_logic_tree_samples):
+    smlt_path = '_'.join(rlz.sm_lt_path)
+    suffix = ('-ltr_%d' % rlz.ordinal
+              if number_of_logic_tree_samples else '')
+    if not hasattr(rlz, 'gsim_rlz'):
+        fname = '%s_%s.%s' % (prefix, rlz.gsim_rlz.uid, fmt)
+    else:
+        fname = '%s-smltp_%s-gsimltp_%s%s.%s' % (
+            prefix, smlt_path, rlz.gsim_rlz.uid, suffix, fmt)
     return fname
 
 
@@ -338,34 +348,35 @@ def ds_export_hcurves_csv(ekey, dstore):
     return fnames
 
 
-@ds_export.add(('gmf_by_trt_gsim', 'csv'))
-def ds_export_gmf_csv(ekey, dstore):
-    sitecol = dstore['sitecol']
-    tags = dstore['tags_by_trt']
-    fmt = ekey[-1]
-    fnames = []
-    for (trt_id, gsim), gmf in sorted(dstore[ekey[:-1]].iteritems()):
-        fname = '%s-%s_gmf.%s' % (trt_id, gsim, fmt)
-        fnames.append(os.path.join(dstore.export_dir, fname))
-        export_gmf_csv(('gmf', 'csv'), dstore.export_dir, fname, sitecol,
-                       tags[trt_id], gmf.T, gsim)
-    return fnames
+def _expand(gmf_array, sitecol, gsim, imt_dt):
+    indices = gmf_array['idx']
+    gmf = gmf_array[gsim]
+    zeros = numpy.zeros(len(sitecol), imt_dt)
+    for imt in imt_dt.fields:
+        zeros[imt][indices] = gmf[imt]
+    return zeros
 
 
-@ds_export.add(('gmf_by_trt_gsim', 'xml'))
-def ds_export_gmf_xml(ekey, dstore):
+@ds_export.add(('gmf_by_trt_gsim', 'xml'), ('gmf_by_trt_gsim', 'csv'))
+def ds_export_gmf(ekey, dstore):
     rlzs_assoc = dstore['rlzs_assoc']
     sitecol = dstore['sitecol']
-    tags = dstore['tags_by_trt']
+    samples = dstore['oqparam'].number_of_logic_tree_samples
     fmt = ekey[-1]
     fnames = []
-    for (trt_id, gsim), gmf in sorted(dstore[ekey[:-1]].iteritems()):
-        [rlz] = rlzs_assoc[trt_id, gsim]
-        fname = '%s_gmf.%s' % (rlz, fmt)
+    gmf_by_rlz = rlzs_assoc.combine_gmfs(dstore[ekey[:-1]])
+    for rlz, gmf_by_tag in sorted(gmf_by_rlz.iteritems()):
+        tags = sorted(gmf_by_tag)
+        gmfs = [gmf_by_tag[tag] for tag in tags]
+        fname = build_name(rlz, 'gmf', fmt, samples)
+        if not gmfs:
+            logging.warn('Not generating %s, it would be empty', fname)
+            continue
         fnames.append(os.path.join(dstore.export_dir, fname))
-        export_gmf_xml(('gmf', 'xml'), dstore.export_dir, fname, sitecol,
-                       tags[trt_id], gmf.T, rlz.uid)
-    return fnames
+        export_gmf = globals()['export_gmf_%s' % fmt]
+        export_gmf(('gmf', 'xml'), dstore.export_dir, fname, sitecol,
+                   tags, gmfs, rlz.uid)
+    return sorted(fnames)
 
 
 @export.add(('hazard_curves', 'xml'))
