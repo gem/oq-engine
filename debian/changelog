@@ -1,3 +1,5 @@
+python-oq-engine (1.4.0-0~precise01) precise; urgency=low
+
   [Matteo Nastasi, Daniele Viganò]
   * Add binary package support for both Ubuntu 12.04 (Precise)
     and Ubuntu 14.04 (Trusty)
@@ -50,6 +52,8 @@
   [Matteo Nastasi]
   * Each pull request must be accompanied by an update of the debian
     changelog now.
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 07 May 2015 11:33:24 +0200
 
 python-oq-engine (1.3.0-1) precise; urgency=low
 
