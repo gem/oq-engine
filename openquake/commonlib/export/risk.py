@@ -19,12 +19,13 @@
 import os
 import csv
 import operator
+import collections
 
 import numpy
 
 from openquake.baselib.general import AccumDict
 from openquake.commonlib.export import export, ds_export
-from openquake.commonlib import writers, risk_writers
+from openquake.commonlib import writers, risk_writers, riskmodels
 from openquake.commonlib.writers import scientificformat
 from openquake.commonlib.risk_writers import (
     DmgState, DmgDistPerTaxonomy, DmgDistPerAsset, DmgDistTotal,
@@ -160,3 +161,46 @@ def export_classical_damage_csv(key, export_dir, fname, damage_states,
             writer.writerow(
                 [asset.id] + map(scientificformat, fractions_by_asset[asset]))
     return AccumDict({key: dest})
+
+
+# exports for scenario_risk
+
+AggLoss = collections.namedtuple(
+    'AggLoss', 'loss_type unit mean stddev')
+
+PerAssetLoss = collections.namedtuple(  # the loss map
+    'PerAssetLoss', 'loss_type unit asset_ref mean stddev')
+
+
+@ds_export.add(('losses_by_key', 'csv'))
+def export_risk(ekey, dstore):
+    """
+    Export the loss curves of a given realization in CSV format.
+    """
+    oqparam = dstore['oqparam']
+    unit_by_lt = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
+                  for ct in dstore['cost_types']}
+    unit_by_lt['fatalities'] = 'people'
+    rlzs = dstore['rlzs_assoc'].realizations
+    losses_by_key = dstore['losses_by_key']
+    fnames = []
+    for i in sorted(losses_by_key):
+        rlz = rlzs[i]
+        result = losses_by_key[i]
+        suffix = '' if rlz.uid == '*' else '-gsimltp_%s' % rlz.uid
+        losses = AccumDict()
+        for key, values in result.iteritems():
+            key_type, loss_type = key
+            unit = unit_by_lt[loss_type]
+            if key_type in ('agg', 'ins'):
+                mean, std = scientific.mean_std(values)
+                losses += {key_type: [
+                    AggLoss(loss_type, unit, mean, std)]}
+            else:
+                losses += {key_type: [
+                    PerAssetLoss(loss_type, unit, *vals) for vals in values]}
+        for key_type in losses:
+            out = export((key_type, 'csv'),
+                         oqparam.export_dir, losses[key_type], suffix)
+            fnames.extend(out.values()[0])
+    return sorted(fnames)

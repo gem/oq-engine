@@ -18,20 +18,10 @@
 
 import os
 import logging
-import collections
 
-from openquake.risklib import scientific
 from openquake.baselib import general
-from openquake.commonlib import riskmodels, parallel
+from openquake.commonlib import parallel
 from openquake.commonlib.calculators import base
-from openquake.commonlib.export import export
-
-
-AggLoss = collections.namedtuple(
-    'AggLoss', 'loss_type unit mean stddev')
-
-PerAssetLoss = collections.namedtuple(  # the loss map
-    'PerAssetLoss', 'loss_type unit asset_ref mean stddev')
 
 
 def losses_per_asset(tag, loss_type, assets, means, stddevs,
@@ -120,41 +110,9 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             self.oqparam.number_of_ground_motion_fields)
 
         self.riskinputs = self.build_riskinputs(base.get_gmfs(self), eps_dict)
-        self.unit = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
-                     for ct in self.cost_types}
-        self.unit['fatalities'] = 'people'
 
     def post_execute(self, result):
         """
         Export the loss curves and the aggregated losses in CSV format
         """
         self.losses_by_key = result
-        saved = {}
-        for rlz in self.rlzs_assoc.realizations:
-            saved += self.export_risk(rlz, result[rlz.ordinal])
-        return saved
-
-    def export_risk(self, rlz, result):
-        """
-        Export the loss curves of a given realization in CSV format.
-
-        :param rlz: the GSIM realization
-        :param result: a dictionary (key_type, loss_type) -> matrix
-        """
-        suffix = '' if rlz.uid == '*' else '-gsimltp_%s' % rlz.uid
-        losses = general.AccumDict()
-        for key, values in result.iteritems():
-            key_type, loss_type = key
-            unit = self.unit[loss_type]
-            if key_type in ('agg', 'ins'):
-                mean, std = scientific.mean_std(values)
-                losses += {key_type: [
-                    AggLoss(loss_type, unit, mean, std)]}
-            else:
-                losses += {key_type: [
-                    PerAssetLoss(loss_type, unit, *vals) for vals in values]}
-        out = {}
-        for key_type in losses:
-            out += export((key_type, 'csv'),
-                          self.oqparam.export_dir, losses[key_type], suffix)
-        return out
