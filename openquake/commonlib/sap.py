@@ -136,8 +136,13 @@ class Parser(object):
             kw['default'] = default
             kw['metavar'] = metavar or str(default)
         abbrev = abbrev or '-' + name[0]
+        abbrevs = set(args[0] for args, kw in self.all_arguments)
         longname = '--' + name.replace('_', '-')
-        self._add(name, abbrev, longname, **kw)
+        if abbrev == '-h' or abbrev in abbrevs:
+            # avoid conflicts with predefined abbreviations
+            self._add(name, longname, **kw)
+        else:
+            self._add(name, abbrev, longname, **kw)
 
     def flg(self, name, help, abbrev=None):
         """Describe a flag"""

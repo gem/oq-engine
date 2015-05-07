@@ -61,7 +61,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
     """
     Classical Risk calculator
     """
-    hazard_calculator = 'classical'
+    pre_calculator = 'classical'
     result_kind = 'avg_loss_by_rlz_asset'
     core_func = classical_risk
 
@@ -74,19 +74,15 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         if hazard_from_csv:
             self.sitecol, hcurves_by_imt = readinput.get_sitecol_hcurves(
                 self.oqparam)
+            self.sitecol, self.precalc.assets_by_site = \
+                self.assoc_assets_sites(self.sitecol)
 
-        logging.info('Associating assets -> sites')
-        with self.monitor('assoc_assets_sites'):
-            sitecol, assets_by_site = self.assoc_assets_sites(self.sitecol)
-        num_assets = sum(len(assets) for assets in assets_by_site)
-        num_sites = len(sitecol)
-        logging.info('Associated %d assets to %d sites', num_assets, num_sites)
-        hcalc = base.get_pre_calculator(self, exports=self.oqparam.exports)
-
+        hcalc = self.precalc
+        self.assets_by_site = hcalc.assets_by_site
         logging.info('Preparing the risk input')
         self.rlzs_assoc = hcalc.datastore['rlzs_assoc']
         self.riskinputs = self.build_riskinputs(
-            hcalc.datastore['curves_by_trt_gsim'], eps_dict={})
+            hcalc.datastore['curves_by_trt_gsim'])
 
     def post_execute(self, result):
         """
