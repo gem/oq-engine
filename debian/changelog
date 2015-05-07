@@ -1,4 +1,4 @@
-python-oq-hazardlib (0.14.0-0) precise; urgency=low
+python-oq-hazardlib (0.14.0-0~precise01) precise; urgency=low
 
   [Matteo Nastasi, Daniele Viganò]
   * Add binary package support for both Ubuntu 12.04 (Precise)
