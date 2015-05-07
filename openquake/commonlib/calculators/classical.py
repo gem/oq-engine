@@ -58,17 +58,18 @@ def classical(sources, sitecol, gsims_assoc, monitor):
     imtls = monitor.oqparam.imtls
     trt_model_id = sources[0].trt_model_id
     gsims = gsims_assoc[trt_model_id]
-    result = AccumDict()
     curves_by_gsim = hazard_curves_per_trt(
         sources, sitecol, imtls, gsims, truncation_level,
         source_site_filter=source_site_distance_filter(max_dist),
         rupture_site_filter=rupture_site_distance_filter(max_dist))
-    for gsim, curves in zip(gsims, curves_by_gsim):
-        result[trt_model_id, str(gsim)] = curves
-    return result
+    return {(trt_model_id, str(gsim)): curves
+            for gsim, curves in zip(gsims, curves_by_gsim)}
 
 
-def agg_prob(acc, val):
+def agg_dicts(acc, val):
+    """
+    Aggregate dictionaries of hazard curves by updating the accumulator
+    """
     for key in val:
         acc[key] = agg_curves(acc[key], val[key])
     return acc
@@ -91,28 +92,29 @@ class ClassicalCalculator(base.HazardCalculator):
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = self.oqparam
         sources = list(self.composite_source_model.sources)
-        self.zc = zero_curves(len(self.sitecol), self.oqparam.imtls)
-        zero = AccumDict((key, self.zc) for key in self.rlzs_assoc)
+        zc = zero_curves(len(self.sitecol), self.oqparam.imtls)
+        zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
         gsims_assoc = self.rlzs_assoc.get_gsims_by_trt_id()
         curves_by_trt_gsim = parallel.apply_reduce(
             self.core_func.__func__,
             (sources, self.sitecol, gsims_assoc, monitor),
-            agg=agg_prob, acc=zero,
+            agg=agg_dicts, acc=zerodict,
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_model_id'))
         return curves_by_trt_gsim
 
-    def post_execute(self, result):
+    def post_execute(self, curves_by_trt_gsim):
         """
         Collect the hazard curves by realization and export them.
 
-        :param result:
-            a nested dictionary (trt_id, gsim) -> IMT -> hazard curves
+        :param curves_by_trt_gsim:
+            a dictionary (trt_id, gsim) -> hazard curves
         """
-        curves_by_rlz = self.rlzs_assoc.combine_curves(
-            result, agg_curves, self.zc)
         oq = self.oqparam
+        zc = zero_curves(len(self.sitecol), oq.imtls)
+        curves_by_rlz = self.rlzs_assoc.combine_curves(
+            curves_by_trt_gsim, agg_curves, zc)
         if oq.individual_curves:
             self.datastore['hcurves', 'hdf5'] = (
                 ('rlz-%d' % rlz.ordinal, curves)
@@ -145,22 +147,23 @@ class ClassicalCalculator(base.HazardCalculator):
                          for imt in oq.imtls}
         mean = oq.mean_hazard_curves
         if mean:
-            self.mean_curves = numpy.array(self.zc)
+            self.mean_curves = numpy.array(zc)
             for imt in oq.imtls:
                 self.mean_curves[imt] = scientific.mean_curve(
                     [curves_by_rlz[rlz][imt] for rlz in rlzs], weights)
 
         self.quantile = {}
         for q in oq.quantile_hazard_curves:
-            self.quantile[q] = qc = numpy.array(self.zc)
+            self.quantile[q] = qc = numpy.array(zc)
             for imt in oq.imtls:
                 qc[imt] = scientific.quantile_curve(
                     curves_by_imt[imt], q, weights).reshape((nsites, -1))
-        with self.datastore.h5file(('hcurves', 'hdf5')) as h5f:
-            if mean:
-                h5f['mean'] = self.mean_curves
-            for q in self.quantile:
-                h5f['quantile-%s' % q] = self.quantile[q]
+        if hasattr(self.datastore, 'h5file'):
+            with self.datastore.h5file(('hcurves', 'hdf5'), 'w') as h5f:
+                if mean:
+                    h5f['mean'] = self.mean_curves
+                for q in self.quantile:
+                    h5f['quantile-%s' % q] = self.quantile[q]
         for fmt in exports:
             if mean:
                 saved += self.export_curves(
@@ -256,6 +259,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
     Classical Tiling calculator
     """
     prefilter = False
+    persistent = False  # use an in-memory datastore
     result_kind = 'pathname_by_fname'
 
     def execute(self):

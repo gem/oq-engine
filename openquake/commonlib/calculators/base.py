@@ -53,11 +53,13 @@ class BaseCalculator(object):
     __metaclass__ = abc.ABCMeta
 
     rlzs_assoc = logictree.RlzsAssoc([])  # to be overridden
+    persistent = True  # calculators are normally persisted in the datastore
 
     def __init__(self, oqparam, monitor=DummyMonitor(), calc_id=None):
         self.oqparam = oqparam
         self.monitor = monitor
-        self.datastore = datastore.DataStore(calc_id)
+        self.datastore = datastore.DataStore(calc_id) \
+            if self.persistent else general.AccumDict()
         self.datastore['oqparam'] = self.oqparam
         self.datastore.export_dir = self.oqparam.export_dir
 
@@ -112,7 +114,7 @@ class BaseCalculator(object):
         :returns: a dictionary with the saved data
         """
         logging.info('Saving %r on %s', self.result_kind,
-                     self.datastore.calc_dir)
+                     getattr(self.datastore, 'calc_dir', 'memory'))
         self.datastore['rlzs_assoc'] = self.rlzs_assoc
         self.datastore[self.result_kind] = result
         self.datastore.update(kw)
