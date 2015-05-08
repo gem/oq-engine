@@ -16,7 +16,6 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os.path
 import logging
 import operator
 
@@ -24,7 +23,7 @@ import numpy
 
 from openquake.baselib import general
 from openquake.risklib import workflows, riskinput
-from openquake.commonlib import readinput, writers, parallel
+from openquake.commonlib import readinput, parallel
 from openquake.commonlib.calculators import base
 
 
