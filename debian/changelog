@@ -1,9 +1,3 @@
- [Yen-Shin Chen]
-  * Simple fault: Adds 'hypo_list' and 'slip_list' slot
-  * Adds 'rcdpp' slot to DistanceContext object
-  * ParametricProbabilisticRupture: adds 'rupture_slip_direction' slot and get_dppvalue, get_cdppvalue method
-  * Implements near fault effect- directivity adaptation of Chiou & Youngs 2014
-
   [Michele Simionato]
   * Introduced a compact representation of the GMFs as a single array
 
