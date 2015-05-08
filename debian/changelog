@@ -1,7 +1,14 @@
+python-oq-engine (1.4.0-2~precise01) precise; urgency=low
+
+  [Daniele Viganò]
+  * Fixed debian/control: add missing lsb-release to build deps
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Fri, 08 May 2015 14:33:26 +0200
+
 python-oq-engine (1.4.0-1~precise01) precise; urgency=low
 
   [Matteo Nastasi, Daniele Viganò]
-  * Fixed dependencies veersion management
+  * Fixed dependencies version management
 
  -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 07 May 2015 14:14:09 +0200
 
