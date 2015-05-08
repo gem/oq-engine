@@ -49,7 +49,7 @@ class HazardMapTaskFuncTestCase(unittest.TestCase):
     MOCK_HAZARD_MAP = numpy.array([
         [0.0098, 0.0084],
         [0.0091, 0.00687952],
-    ])
+    ]).T
 
     TEST_POES = [0.1, 0.02]
 
