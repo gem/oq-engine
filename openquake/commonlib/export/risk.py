@@ -30,7 +30,28 @@ from openquake.commonlib.writers import scientificformat
 from openquake.commonlib.risk_writers import (
     DmgState, DmgDistPerTaxonomy, DmgDistPerAsset, DmgDistTotal,
     ExposureData, Site)
-from openquake.risklib import scientific
+from openquake.risklib import scientific, riskinput
+
+
+@ds_export.add(('avg_losses', 'h5', 'csv'))
+def ds_export_avg_losses(ekey, dstore):
+    avg_losses = dstore[ekey[:-1]]
+    assets = riskinput.sorted_assets(dstore['assets_by_site'])
+    rlzs = dstore['rlzs_assoc'].realizations
+    fields = [('asset_ref', str, 20), ('lon', float), ('lat', float)] + \
+             [(f, float) for f in avg_losses.dtype.fields]
+    dt = numpy.dtype(fields)
+    columns = [f[0] for f in fields]
+    fnames = []
+    for rlz, losses in zip(rlzs, avg_losses):
+        dest = os.path.join(
+            dstore.export_dir, 'rlz-%03d-avg_loss.csv' % rlz.ordinal)
+        zeros = numpy.zeros(len(assets), dt)
+        for i, asset in enumerate(assets):
+            zeros[i] = (asset.id,) + asset.location + tuple(losses[i])
+        writers.write_csv(dest, zeros, header=columns)
+        fnames.append(dest)
+    return fnames
 
 
 # TODO: the export is doing too much; probably we should store

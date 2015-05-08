@@ -17,6 +17,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job_haz.ini,job_risk.ini',
                             concurrent_tasks=0, exports='csv')
+        import pdb; pdb.set_trace()
         self.assertEqualFiles(
             'expected/rlz-000-structural-event_loss_asset.csv',
             out['rlz', '000', 'structural', 'event_loss_asset'])

@@ -28,6 +28,17 @@ from openquake.hazardlib.gsim.base import gsim_imt_dt
 from openquake.risklib import scientific
 
 
+def sorted_assets(assets_by_site):
+    """
+    :param assets_by_site: a list of lists of disjoint assets
+    :returns: the assets sorted by .id
+    """
+    all_assets = []
+    for assets in assets_by_site:
+        all_assets.extend(assets)
+    return sorted(all_assets, key=operator.attrgetter('id'))
+
+
 class RiskModel(collections.Mapping):
     """
     A container (imt, taxonomy) -> workflow.

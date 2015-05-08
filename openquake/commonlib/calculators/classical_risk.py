@@ -18,10 +18,12 @@
 
 import os.path
 import logging
-import collections
+import operator
+
+import numpy
 
 from openquake.baselib import general
-from openquake.risklib import workflows
+from openquake.risklib import workflows, riskinput
 from openquake.commonlib import readinput, writers, parallel
 from openquake.commonlib.calculators import base
 
@@ -40,19 +42,18 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     :param monitor:
         :class:`openquake.commonlib.parallel.PerformanceMonitor` instance
     """
-    with monitor:
-        result = collections.defaultdict(general.AccumDict)
-        for out_by_rlz in riskmodel.gen_outputs(
-                riskinputs, rlzs_assoc, monitor):
-            for out in out_by_rlz:
-                values = workflows.get_values(out.loss_type, out.assets)
-                for i, asset in enumerate(out.assets):
-                    avalue = values[i]
-                    result[out.hid, 'avg_loss'] += {
-                        asset.id: out.average_losses[i] * avalue}
-                    if out.average_insured_losses is not None:
-                        result[out.hid, 'ins_loss'] += {
-                            asset.id: out.average_insured_losses[i] * avalue}
+    result = general.AccumDict({rlz.ordinal: general.AccumDict()
+                                for rlz in rlzs_assoc.realizations})
+    for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
+        for out in out_by_rlz:
+            values = workflows.get_values(out.loss_type, out.assets)
+            for i, asset in enumerate(out.assets):
+                if out.average_insured_losses is not None:
+                    ins = out.average_insured_losses[i] * values[i]
+                else:
+                    ins = numpy.nan
+                result[out.hid][out.loss_type, asset.id] = (
+                    out.average_losses[i] * values[i], ins)
     return result
 
 
@@ -62,7 +63,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
     Classical Risk calculator
     """
     pre_calculator = 'classical'
-    avg_loss_by_rlz_asset = base.persistent_attribute('avg_loss_by_rlz_asset')
+    avg_losses = base.persistent_attribute('avg_losses', 'h5')
     core_func = classical_risk
 
     def pre_execute(self):
@@ -77,32 +78,37 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             self.sitecol, self.precalc.assets_by_site = \
                 self.assoc_assets_sites(self.sitecol)
 
-        hcalc = self.precalc
-        self.assets_by_site = hcalc.assets_by_site
         logging.info('Preparing the risk input')
-        self.rlzs_assoc = hcalc.datastore['rlzs_assoc']
         self.riskinputs = self.build_riskinputs(
-            hcalc.datastore['curves_by_trt_gsim'])
+            self.precalc.curves_by_trt_gsim)
 
     def post_execute(self, result):
         """
-        Export the losses in csv format
+        Save the losses in a compact form.
+
+        :param result:
+            a dictionary rlz_idx -> (loss_type, asset_id) -> (avg, ins)
         """
-        self.avg_loss_by_rlz_asset = result
-        oq = self.oqparam
+        fields = []
+        for loss_type in self.riskmodel.get_loss_types():
+            fields.append(('avg_loss~%s' % loss_type, float))
+            fields.append(('ins_loss~%s' % loss_type, float))
+        avg_loss_dt = numpy.dtype(fields)
+        num_rlzs = len(self.rlzs_assoc.realizations)
+        assets = riskinput.sorted_assets(self.assets_by_site)
+        self.asset_no_by_id = {a.id: no for no, a in enumerate(assets)}
+        avg_losses = numpy.zeros(
+            (num_rlzs, len(self.asset_no_by_id)), avg_loss_dt)
 
-        saved = general.AccumDict()
-        if 'csv' not in oq.exports:
-            return saved
+        for rlz_no in result:
+            losses_by_lt_asset = result[rlz_no]
+            by_asset = operator.itemgetter(1)
+            for asset, keys in general.groupby(
+                    losses_by_lt_asset, by_asset).iteritems():
+                asset_no = self.asset_no_by_id[asset]
+                losses = []
+                for (loss_type, _) in keys:
+                    losses.extend(losses_by_lt_asset[loss_type, asset])
+                avg_losses[rlz_no][asset_no] = tuple(losses)
 
-        # export curves
-        for ordinal, key_type in sorted(result):
-            data = sorted(result[ordinal, key_type].iteritems())
-            key = 'rlz-%03d-%s' % (ordinal, key_type)
-            saved[key] = self.export_csv(
-                key, [['asset_ref', key_type]] + data)
-        return saved
-
-    def export_csv(self, key, data):
-        dest = os.path.join(self.oqparam.export_dir, key) + '.csv'
-        return writers.save_csv(dest, data, fmt='%11.8E')
+        self.avg_losses = avg_losses

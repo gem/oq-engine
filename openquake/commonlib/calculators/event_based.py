@@ -264,7 +264,6 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
     """
     core_func = compute_ruptures
     rupture_by_tag = base.persistent_attribute('rupture_by_tag')
-    tags_by_trt = base.persistent_attribute('tags_by_trt')
 
     def pre_execute(self):
         """
@@ -299,7 +298,6 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         logging.info('Generated %d SESRuptures',
                      sum(len(v) for v in tags.itervalues()))
 
-        self.tags_by_trt = tags
         self.rlzs_assoc = csm.get_rlzs_assoc(
             lambda trt: len(ruptures_by_trt.get(trt.id, [])))
 

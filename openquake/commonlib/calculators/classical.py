@@ -30,7 +30,6 @@ from openquake.hazardlib.calc.filters import source_site_distance_filter, \
     rupture_site_distance_filter
 from openquake.risklib import scientific
 from openquake.commonlib import parallel
-from openquake.commonlib.export import export
 from openquake.baselib.general import AccumDict, split_in_blocks, groupby
 
 from openquake.commonlib.calculators import base, calc
@@ -81,7 +80,7 @@ class ClassicalCalculator(base.HazardCalculator):
     Classical PSHA calculator
     """
     core_func = classical
-    curves_by_gsim = base.persistent_attribute('curves_by_trt_gsim')
+    curves_by_trt_gsim = base.persistent_attribute('curves_by_trt_gsim')
 
     def execute(self):
         """
@@ -111,7 +110,7 @@ class ClassicalCalculator(base.HazardCalculator):
         :param curves_by_trt_gsim:
             a dictionary (trt_id, gsim) -> hazard curves
         """
-        self.curves_by_gsim = curves_by_trt_gsim
+        self.curves_by_trt_gsim = curves_by_trt_gsim
         oq = self.oqparam
         zc = zero_curves(len(self.sitecol), oq.imtls)
         curves_by_rlz = self.rlzs_assoc.combine_curves(

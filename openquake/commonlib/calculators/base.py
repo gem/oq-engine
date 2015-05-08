@@ -42,14 +42,17 @@ class AssetSiteAssociationError(Exception):
     """Raised when there are no hazard sites close enough to any asset"""
 
 
-def persistent_attribute(name):
+def persistent_attribute(name, *extras):
     """
-    :param name: the name of the attribute to be made datastore persistent
+    :param name: the name of the attribute to be made datastore-persistent
+    :param extras: strings to specify the underlying key in the datastore
     :returns: a property to be added to a class with a .datastore attribute
     """
+    key = (name,) + extras
+
     def getter(self):
         try:
-            return self.datastore[name]
+            return self.datastore[key]
         except IOError:
             if self.precalc:
                 return getattr(self.precalc, name)
@@ -57,7 +60,7 @@ def persistent_attribute(name):
                 raise
 
     def setter(self, value):
-        self.datastore[name] = value
+        self.datastore[key] = value
 
     return property(getter, setter)
 
@@ -343,6 +346,7 @@ class RiskCalculator(HazardCalculator):
         (riskinputs, riskmodel, monitor).
         """
         with self.monitor('execute risk', autoflush=True) as monitor:
+            monitor.oqparam = self.oqparam
             res = apply_reduce(
                 self.core_func.__func__,
                 (self.riskinputs, self.riskmodel, self.rlzs_assoc, monitor),

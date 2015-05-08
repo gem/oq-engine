@@ -18,7 +18,6 @@
 
 import os.path
 import logging
-import operator
 import collections
 
 import numpy
@@ -43,7 +42,7 @@ def event_loss(riskinputs, riskmodel, rlzs_assoc, monitor):
     :returns:
         a dictionary (rlz.ordinal, loss_type) -> tag -> [(asset.id, loss), ...]
     """
-    specific = riskmodel.specific_assets
+    specific = set(monitor.oqparam.specific_assets)
     acc = collections.defaultdict(AccumDict)
     # rlz.ordinal, loss_type -> tag -> [(asset.id, loss), ...]
     for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
@@ -89,7 +88,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         oq = self.oqparam
         epsilon_sampling = getattr(oq, 'epsilon_sampling', 1000)
-        self.riskmodel.specific_assets = set(self.oqparam.specific_assets)
 
         correl_model = readinput.get_correl_model(oq)
         gsims_by_trt_id = self.rlzs_assoc.get_gsims_by_trt_id()
@@ -97,10 +95,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         logging.info('Building the epsilons')
 
         logging.info('Populating the risk inputs')
-        ruptures_by_trt = self.ruptures_by_trt
-        all_ruptures = sum(
-            (rups for rups in ruptures_by_trt.itervalues()), [])
-        all_ruptures.sort(key=operator.attrgetter('tag'))
+        rup_by_tag = self.precalc.rupture_by_tag
+        all_ruptures = [rup_by_tag[tag] for tag in sorted(rup_by_tag)]
         num_samples = min(len(all_ruptures), epsilon_sampling)
         eps_dict = riskinput.make_eps_dict(
             assets_by_site, num_samples,
@@ -124,7 +120,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.asset_dict = {
             a.id: a for assets in self.precalc.assets_by_site for a in assets
             if a.id in self.oqparam.specific_assets}
-        self.datastore['specific_assets'] = specific_assets = [
+        self.specific_assets = specific_assets = [
             self.asset_dict[a] for a in sorted(self.oqparam.specific_assets)]
         self.saved = AccumDict()
         for i, loss_type in sorted(result):
@@ -340,14 +336,4 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
         if not data:
             return
-        key_str = '-'.join(key) if isinstance(key, tuple) else key
-        dest = os.path.join(self.oqparam.export_dir, key_str) + '.csv'
-        if key[0] == 'rlz' and not self.oqparam.individual_curves:
-            return  # don't export individual curves
-        if hasattr(data[0], '_fields'):
-            header = [data[0]._fields]
-        else:
-            header = []
-        writers.save_csv(dest, header + data, fmt='%10.6E')
-        self.saved[key] = dest
-        return dest
+        self.datastore[key] = data
