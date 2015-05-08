@@ -54,28 +54,34 @@ def ds_export_avg_losses(ekey, dstore):
     return fnames
 
 
-@ds_export.add(('loss_curves', 'csv'))
+@ds_export.add(('loss_curves', 'hdf5', 'csv'))
 def ds_export_loss_curves(ekey, dstore):
     all_assets = riskinput.sorted_assets(dstore['assets_by_site'])
     specific_assets = set(dstore['oqparam'].specific_assets)
     assets = [a for a in all_assets if a.id in specific_assets]
     rlzs = dstore['rlzs_assoc'].realizations
-    loss_curves_by_lt = dstore['loss_curves']
+    rlz_by_dset = {rlz.uid: rlz for rlz in rlzs}
     fnames = []
-    for loss_type in loss_curves_by_lt.dtype.fields:
-        loss_curves = loss_curves_by_lt[loss_type]
-        import pdb; pdb.set_trace()
-        fields = [('asset_ref', str, 20), ('lon', float), ('lat', float)] + \
-                 [(f, float) for f in loss_curves.dtype.fields]
-        dt = numpy.dtype(fields)
-        columns = [f[0] for f in fields]
-        for rlz, lc in zip(rlzs, loss_curves):
+    for dset, loss_curves_by_lt in dstore['loss_curves', 'hdf5']:
+        rlz = rlz_by_dset.get(dset, dset)
+        if isinstance(rlz, unicode):
+            continue
+        for loss_type in loss_curves_by_lt.dtype.fields:
+            loss_curves = loss_curves_by_lt[loss_type]
+            fields = [('asset_ref', str, 20), ('lon', float), ('lat', float)] + \
+                     [(f, float) for f in loss_curves.dtype.fields]
+            dt = numpy.dtype(fields)
+            columns = [f[0] for f in fields]
             dest = os.path.join(
                 dstore.export_dir, 'rlz-%03d-loss_curve-%s.csv' % (
                     rlz.ordinal, loss_type))
             zeros = numpy.zeros(len(assets), dt)
             for i, asset in enumerate(assets):
-                zeros[i] = (asset.id,) + asset.location + tuple(lc[i])
+                z = zeros[i]
+                z['asset_ref'] = asset.id
+                z['lon'], z['lat'] = asset.location
+                for f in loss_curves.dtype.fields:
+                    z[f] = loss_curves[i][f]
             writers.write_csv(dest, zeros, header=columns)
             fnames.append(dest)
     return fnames
