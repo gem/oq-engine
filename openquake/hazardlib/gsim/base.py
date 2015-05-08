@@ -477,9 +477,7 @@ class GroundShakingIntensityModel(object):
                     site_collection.mesh, with_depths=False
                 )
             elif param == 'rcdpp':
-                dist = rupture.get_cdppvalue(
-                    site_collection.mesh, with_depths=False
-                )
+                dist = rupture.get_cdppvalue(site_collection.mesh)
             else:
                 raise ValueError('%s requires unknown distance measure %r' %
                                  (type(self).__name__, param))
