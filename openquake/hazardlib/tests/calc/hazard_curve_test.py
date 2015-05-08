@@ -102,8 +102,8 @@ class HazardCurvesTestCase(unittest.TestCase):
             (site1.location.latitude, rup21, imt.PGD()): [0.24, 0.08],
             (site2.location.latitude, rup21, imt.PGD()): [0.14, 0.09],
         })
-        self.gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: [gsim1],
-                      const.TRT.VOLCANIC: [gsim2]}
+        self.gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: gsim1,
+                      const.TRT.VOLCANIC: gsim2}
 
     def test1(self):
         site1_pga_poe_expected = [0.0639157, 0.03320212, 0.02145989]
@@ -226,7 +226,7 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         sitecol = openquake.hazardlib.site.SiteCollection(sites)
 
         from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
-        gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: [SadighEtAl1997()]}
+        gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
         truncation_level = 1
         imts = {'PGA': [0.1, 0.5, 1.3]}
 
