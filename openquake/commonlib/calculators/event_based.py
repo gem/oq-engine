@@ -263,7 +263,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
     Event based PSHA calculator generating the ruptures only
     """
     core_func = compute_ruptures
-    ruptures_by_trt = base.persistent_attribute('ruptures_by_trt')
+    rupture_by_tag = base.persistent_attribute('rupture_by_tag')
     tags_by_trt = base.persistent_attribute('tags_by_trt')
 
     def pre_execute(self):
@@ -306,7 +306,10 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         return ruptures_by_trt
 
     def post_execute(self, result):
-        self.ruptures_by_trt = result
+        rupture_by_tag = AccumDict()
+        for trt_id in result:
+            rupture_by_tag += {r.tag: r for r in result[trt_id]}
+        self.rupture_by_tag = rupture_by_tag
 
 #        exports = oq.exports.split(',')
 #        for smodel in self.composite_source_model:
@@ -429,11 +432,10 @@ class EventBasedCalculator(ClassicalCalculator):
         (if any). If there were pre-existing files, they will be erased.
         """
         ClassicalCalculator.pre_execute(self)
-        hcalc = self.precalc
-        ruptures_by_trt = hcalc.datastore['ruptures_by_trt']
-        self.composite_source_model = hcalc.composite_source_model
-        self.sesruptures = sorted(sum(ruptures_by_trt.itervalues(), []),
-                                  key=operator.attrgetter('tag'))
+        self.composite_source_model = self.precalc.composite_source_model
+        rupture_by_tag = self.precalc.rupture_by_tag
+        self.sesruptures = [rupture_by_tag[tag]
+                            for tag in sorted(rupture_by_tag)]
 
     def combine_curves_and_save_gmfs(self, acc, res):
         """

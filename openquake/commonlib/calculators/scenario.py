@@ -28,6 +28,8 @@ from openquake.commonlib import readinput, parallel
 
 from openquake.commonlib.calculators import base, calc
 
+Rupture = collections.namedtuple('Rupture', 'tag seed rupture')
+
 
 @parallel.litetask
 def calc_gmfs(tag_seed_pairs, computer, monitor):
@@ -53,7 +55,7 @@ class ScenarioCalculator(base.HazardCalculator):
     Scenario hazard calculator
     """
     core_func = calc_gmfs
-    tags_by_trt = base.persistent_attribute('tags_by_trt')
+    rupture_by_tag = base.persistent_attribute('rupture_by_tag')
     gmf_by_trt_gsim = base.persistent_attribute('gmf_by_trt_gsim')
 
     def pre_execute(self):
@@ -75,13 +77,14 @@ class ScenarioCalculator(base.HazardCalculator):
                 'All sites were filtered out! '
                 'maximum_distance=%s km' % self.oqparam.maximum_distance)
         tags = ['scenario-%010d' % i for i in xrange(n_gmfs)]
-        self.tags_by_trt = {0: tags}
         self.computer = GmfComputer(
             rupture, self.sitecol, self.oqparam.imtls, self.gsims,
             trunc_level, correl_model)
         rnd = random.Random(self.oqparam.random_seed)
         self.tag_seed_pairs = [(tag, rnd.randint(0, calc.MAX_INT))
                                for tag in tags]
+        self.rupture_by_tag = {tag: Rupture(tag, seed, rupture)
+                               for tag, seed in self.tag_seed_pairs}
 
     def execute(self):
         """
@@ -103,7 +106,6 @@ class ScenarioCalculator(base.HazardCalculator):
 
         # (trt_id, gsim) -> N x R matrix
         return {key: numpy.array(dic[key], imt_dt).T for key in dic}
-
 
     def post_execute(self, gmf_by_trt_gsim):
         """

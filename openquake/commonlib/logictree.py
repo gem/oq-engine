@@ -61,7 +61,7 @@ class RlzsAssoc(collections.Mapping):
         for rlz in realizations:
             self.rlzs_assoc[0, str(rlz)] = [rlz]
 
-    def combine(self, result):
+    def combine_gmfs(self, result):
         """
         Convert a dictionary key -> value into a dictionary rlz -> value,
         since there is a single realization per key.

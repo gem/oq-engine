@@ -354,15 +354,15 @@ class RlzsAssoc(collections.Mapping):
         :param results: a dictionary (trt_model_id, gsim_name) -> gmf_by_tag
         """
         ad = {rlz: AccumDict() for rlz in self.realizations}
-        for key, value in results.iteritems():
+        for key, gmf_by_tag in results.iteritems():
             for rlz in self.rlzs_assoc[key]:
                 if not rlz.col_ids:
-                    ad[rlz] += value
+                    ad[rlz] += gmf_by_tag
                 else:
-                    for tag in value:
+                    for tag in gmf_by_tag:
                         # if the rupture contributes to the given realization
                         if get_col_idx(tag) in rlz.col_ids:
-                            ad[rlz][tag] = value[tag]
+                            ad[rlz][tag] = gmf_by_tag[tag]
         return ad
 
     def combine(self, results, agg=agg_prob):
