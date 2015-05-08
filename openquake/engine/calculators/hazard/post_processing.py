@@ -70,7 +70,7 @@ def hazard_curves_to_hazard_map(hazard_curves, poes, monitor):
 
         # Gather all of the curves and compute the maps, for all PoEs
         curves = [_poes for _, _, _poes in hcd]
-        hazard_maps = calc.compute_hazard_maps(curves, hc.imls, poes)
+        hazard_maps = calc.compute_hazard_maps(curves, hc.imls, poes).T
 
         # Prepare the maps to be saved to the DB
         for i, poe in enumerate(poes):
