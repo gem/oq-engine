@@ -264,6 +264,16 @@ def agg_prob(acc, prob):
     return 1. - (1. - acc) * (1. - prob)
 
 
+def get_col_idx(tag):
+    """
+    Extract the ses collection index from the tag:
+
+    >>> get_col_idx('col=01|...')
+    1
+    """
+    return int(tag.split('|', 1)[0].split('=')[1])
+
+
 class RlzsAssoc(collections.Mapping):
     """
     Realization association class. It should not be instantiated directly,
@@ -339,7 +349,6 @@ class RlzsAssoc(collections.Mapping):
                 ad[rlz] = agg(ad[rlz], value)
         return ad
 
-    # XXX: perhaps we should combine by col_idx?
     def combine_gmfs(self, results):
         """
         :param results: a dictionary (trt_model_id, gsim_name) -> gmf_by_tag
@@ -347,7 +356,13 @@ class RlzsAssoc(collections.Mapping):
         ad = {rlz: AccumDict() for rlz in self.realizations}
         for key, value in results.iteritems():
             for rlz in self.rlzs_assoc[key]:
-                ad[rlz] += value
+                if not rlz.col_ids:
+                    ad[rlz] += value
+                else:
+                    for tag in value:
+                        # if the rupture contributes to the given realization
+                        if get_col_idx(tag) in rlz.col_ids:
+                            ad[rlz][tag] = value[tag]
         return ad
 
     def combine(self, results, agg=agg_prob):

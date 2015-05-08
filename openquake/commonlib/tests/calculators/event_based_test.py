@@ -84,9 +84,8 @@ class EventBasedTestCase(CalculatorTestCase):
             out = self.run_calc(case.__file__, 'job.ini')
             oq = self.calc.oqparam
             self.assertEqual(list(oq.imtls), ['PGA'])
-
-            gmfs = get_gmfs_by_imt(out['0-BooreAtkinson2008.csv'],
-                                   self.calc.sitecol, oq.imtls)
+            [fname] = out['gmf_by_trt_gsim', 'csv']
+            gmfs = get_gmfs_by_imt(fname, self.calc.sitecol, oq.imtls)
             gmvs_site_1 = [gmf['PGA'][0] for gmf in gmfs]
             gmvs_site_2 = [gmf['PGA'][1] for gmf in gmfs]
 
@@ -129,20 +128,20 @@ class EventBasedTestCase(CalculatorTestCase):
         out = self.run_calc(case_2.__file__, 'job.ini', exports='csv')
         [fname] = out['gmf_by_trt_gsim', 'csv']
         self.assertEqualFiles(
-            'expected/0-SadighEtAl1997.csv', fname, sorted)
+            'expected/SadighEtAl1997.csv', fname, sorted)
 
         [fname] = out['hcurves', 'hdf5', 'csv']
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
-    def test_case_3(self):  # oversampling
+    def test_case_2bis(self):  # oversampling
         out = self.run_calc(case_2.__file__, 'job_2.ini', exports='csv')
         ltr = out['gmf_by_trt_gsim', 'csv']  # 2 realizations, 1 TRT
         self.assertEqualFiles(
-            'expected/SadighEtAl1997.csv', ltr[0], sorted)
+            'expected/gmf-smltp_b1-gsimltp_b1-ltr_0.csv', ltr[0])
         self.assertEqualFiles(
-            'expected/SadighEtAl1997.csv', ltr[1], sorted)
+            'expected/gmf-smltp_b1-gsimltp_b1-ltr_1.csv', ltr[1])
 
         ltr = out['hcurves', 'hdf5', 'csv']
         self.assertEqualFiles(
@@ -162,18 +161,14 @@ class EventBasedTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'event_based')
     def test_case_5(self):
         expected = '''\
-3-AkkarBommer2010.csv
-4-AkkarBommer2010.csv
-4-CauzziFaccioli2008.csv
-4-ChiouYoungs2008.csv
-4-Campbell2003SHARE.csv
-4-ToroEtAl2002SHARE.csv
-5-AkkarBommer2010.csv
-6-ToroEtAl2002SHARE.csv
-7-FaccioliEtAl2010.csv'''.split()
+gmf-smltp_b2-gsimltp_*_b2_1_*_*.csv
+gmf-smltp_b2-gsimltp_*_b2_2_*_*.csv
+gmf-smltp_b2-gsimltp_*_b2_3_*_*.csv
+gmf-smltp_b2-gsimltp_*_b2_4_*_*.csv
+gmf-smltp_b2-gsimltp_*_b2_5_*_*.csv
+gmf-smltp_b3-gsimltp_*_*_*_b4_1.csv'''.split()
         out = self.run_calc(case_5.__file__, 'job.ini', exports='csv')
         fnames = out['gmf_by_trt_gsim', 'csv']
-        import pdb; pdb.set_trace()
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got, sorted)
 

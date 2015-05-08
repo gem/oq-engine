@@ -298,7 +298,7 @@ def hazard_curve_name(ekey, kind, rlzs_assoc, number_of_logic_tree_samples):
         a RlzsAssoc instance
     """
     prefix = {'hcurves': 'hazard_curve', 'hmaps': 'hazard_map',
-              'hazard_uhs': 'uhs'}[ekey[0]]
+              'uhs': 'hazard_uhs'}[ekey[0]]
     fmt = ekey[-1]
     if kind.startswith('rlz-'):
         rlz_no = int(kind[4:])
@@ -314,10 +314,19 @@ def hazard_curve_name(ekey, kind, rlzs_assoc, number_of_logic_tree_samples):
     return fname
 
 
-def build_name(rlz, prefix, fmt, number_of_logic_tree_samples):
+def build_name(rlz, prefix, fmt, sampling):
+    """
+    Build a file name from a realization, by using prefix and extension.
+
+    :param rlz: a realization object
+    :param prefix: the prefix to use
+    :param fmt: the extension
+    :param bool sampling: if sampling is enabled or not
+
+    :returns: relative pathname including the extension
+    """
     smlt_path = '_'.join(rlz.sm_lt_path)
-    suffix = ('-ltr_%d' % rlz.ordinal
-              if number_of_logic_tree_samples else '')
+    suffix = '-ltr_%d' % rlz.ordinal if sampling else ''
     if not hasattr(rlz, 'gsim_rlz'):
         fname = '%s_%s.%s' % (prefix, rlz.gsim_rlz.uid, fmt)
     else:
