@@ -101,7 +101,12 @@ class DataStore(collections.MutableMapping):
     def __init__(self, calc_id=None, datadir=DATADIR):
         if not os.path.exists(datadir):
             os.makedirs(datadir)
-        self.calc_id = calc_id or (get_last_calc_id(datadir) + 1)
+        if calc_id is None:  # use a new datastore
+            self.calc_id = get_last_calc_id(datadir) + 1
+        elif calc_id == -1:  # use the last datastore
+            self.calc_id = get_last_calc_id(datadir)
+        else:  # use the given datastore
+            self.calc_id = calc_id
         self.calc_dir = os.path.join(datadir, 'calc_%s' % self.calc_id)
         if not os.path.exists(self.calc_dir):
             os.mkdir(self.calc_dir)
