@@ -175,7 +175,7 @@ def compute_hazard_maps(curves, imls, poes):
                 hmap_val.append(val)
 
         result.append(hmap_val)
-    return numpy.array(result).transpose()
+    return numpy.array(result)
 
 
 # #########################  GMF->curves #################################### #
@@ -228,62 +228,14 @@ def make_uhs(maps):
     uniform.
 
     :param maps:
-        A dictionary IMT -> array with shape P x N, where N is the number of
+        A composite array with shape N x P, where N is the number of
         sites and P is the number of poes in the hazard maps
     :returns:
         an array N x I x P where I the number of intensity measure types of
         kind SA (with PGA = SA(0)), containing the hazard maps
     """
     sorted_imts = map(str, sorted(
-        from_string(imt) for imt in maps
+        from_string(imt) for imt in maps.dtype.fields
         if imt.startswith('SA') or imt == 'PGA'))
-    hmaps = numpy.array([maps[imt] for imt in sorted_imts])  # I * P * N
-    return hmaps.transpose(2, 0, 1)  # N * I * P
-
-
-def agg_prob(acc, prob):
-    """
-    Aggregation function for probabilities.
-
-    :param acc: the accumulator
-    :param prob: the probability (can be an array or more)
-
-    In particular::
-
-       agg_prob(acc, 0) = acc
-       agg_prob(acc, 1) = 1
-       agg_prob(0, prob) = prob
-       agg_prob(1, prob) = 1
-       agg_prob(acc, prob) = agg_prob(prob, acc)
-
-       agg_prob(acc, eps) =~ acc + eps for eps << 1
-    """
-    return 1. - (1. - prob) * (1. - acc)
-
-
-def expand_data_by_imt(data, sites=None):
-    """
-    Expand arrays with n elements into arrays of N elements (with N > n)
-    by adding zeros. n is the number of filtered sites, N the total number.
-
-    :param data: a dictionary imt -> array with n elements
-    :param sites: a filtered SiteCollection or None
-    """
-    return {imt: getattr(data, 'r_sites', sites).expand(array, 0)
-            for imt, array in data.iteritems()}
-
-
-def expand(data_dict, sites=None):
-    """
-    Expand arrays with n elements into arrays of N elements (with N > n)
-    by adding zeros. n is the number of filtered sites, N the total number.
-
-    :param data_dict: a dictionary key -> imt -> array with n elements
-    :param sites: a filtered SiteCollection
-    :returns: a dictionary key -> imt -> array with N elements
-    """
-    if sites is not None and sites.complete is sites:
-        # nothing was filtered, do nothing
-        return data_dict
-    return {key: expand_data_by_imt(data_by_imt, sites)
-            for key, data_by_imt in data_dict.iteritems()}
+    hmaps = numpy.array([maps[imt] for imt in sorted_imts])  # I * N * P
+    return hmaps.transpose(1, 0, 2)  # N * I * P

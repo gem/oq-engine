@@ -17,7 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.commonlib import sap, datastore
-from openquake.baselib.general import ArrayDict, humansize
+from openquake.baselib.general import humansize
 from openquake.commonlib.commands.plot import combined_curves
 from openquake.commonlib.util import rmsep
 
@@ -44,9 +44,10 @@ def show(calc_id, key=None, rlzs=None):
         curves_by_rlz, mean_curves = combined_curves(ds)
         dists = []
         for rlz in sorted(curves_by_rlz):
-            mean = ArrayDict(mean_curves)
-            arr = ArrayDict(curves_by_rlz[rlz])
-            dists.append((rmsep(mean, arr, min_value), rlz))
+            curves = curves_by_rlz[rlz]
+            dist = sum(rmsep(mean_curves[imt], curves[imt], min_value)
+                       for imt in mean_curves.dtype.fields)
+            dists.append((dist, rlz))
         for dist, rlz in sorted(dists):
             print 'rlz=%s, rmsep=%s' % (rlz, dist)
 
