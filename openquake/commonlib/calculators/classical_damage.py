@@ -93,12 +93,3 @@ class ClassicalDamageCalculator(base.RiskCalculator):
             a dictionary asset -> fractions per damage state
         """
         self.damages_by_rlz = result
-        dmg_states = [DmgState(s, i)
-                      for i, s in enumerate(self.riskmodel.damage_states)]
-        exported = {}
-        for rlz_idx in sorted(result):
-            fname = 'damage_%d.csv' % rlz_idx
-            exported += export(('classical_damage', 'csv'),
-                               self.oqparam.export_dir,
-                               fname, dmg_states, result[rlz_idx])
-        return exported

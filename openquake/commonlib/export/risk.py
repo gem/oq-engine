@@ -195,13 +195,27 @@ def export_agg_loss_csv(key, export_dir, aggcurves, suffix):
     return AccumDict({key: [dest]})
 
 
-@export.add(('classical_damage', 'csv'))
-def export_classical_damage_csv(key, export_dir, fname, damage_states,
+@ds_export.add(('damages_by_rlz', 'csv'))
+def ds_export_classical_damage_csv(ekey, dstore):
+    damages_by_rlz = dstore['damages_by_rlz']
+    rlzs = dstore['rlzs_assoc'].realizations
+    damage_states = dstore['riskmodel'].damage_states
+    dmg_states = [DmgState(s, i) for i, s in enumerate(damage_states)]
+    fnames = []
+    for rlz in rlzs:
+        damages = damages_by_rlz[rlz.ordinal]
+        fname = 'damage_%d.csv' % rlz.ordinal
+        fnames.append(
+            export_classical_damage_csv(
+                dstore.export_dir, fname, dmg_states, damages))
+    return fnames
+
+
+def export_classical_damage_csv(export_dir, fname, damage_states,
                                 fractions_by_asset):
     """
     Export damage fractions in CSV.
 
-    :param key: 'classical_damage_csv'
     :param export_dir: the export directory
     :param fname: the name of the exported file
     :param damage_states: the damage states
@@ -214,7 +228,7 @@ def export_classical_damage_csv(key, export_dir, fname, damage_states,
         for asset in sorted(fractions_by_asset):
             writer.writerow(
                 [asset.id] + map(scientificformat, fractions_by_asset[asset]))
-    return AccumDict({key: dest})
+    return dest
 
 
 # exports for scenario_risk
