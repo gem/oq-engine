@@ -54,7 +54,10 @@ class RiskModel(collections.Mapping):
         """
         :returns: a sorted list with all the loss_types contained in the model
         """
-        return sorted(set(sum([w.loss_types for w in self.values()], [])))
+        ltypes = set()
+        for wf in self.values():
+            ltypes.update(wf.loss_types)
+        return sorted(ltypes)
 
     def get_taxonomies(self, imt=None):
         """
@@ -160,6 +163,10 @@ class RiskModel(collections.Mapping):
                             yield out_by_rlz
         mon_hazard.flush()
         mon_risk.flush()
+
+    def __repr__(self):
+        lines = ['%s: %s' % item for item in sorted(self.items())]
+        return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(lines))
 
 
 class RiskInput(object):
