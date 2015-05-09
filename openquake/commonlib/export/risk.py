@@ -83,53 +83,65 @@ def ds_export_avg_losses(ekey, dstore):
     return fnames
 
 
-@ds_export.add(('loss_curves', 'hdf5', 'csv'))
+@ds_export.add(
+    ('loss_curves', 'individual', 'hdf5', 'csv'),
+    ('loss_curves', 'stats', 'hdf5', 'csv'),
+    ('loss_maps', 'individual', 'hdf5', 'csv'),
+    ('loss_maps', 'stats', 'hdf5', 'csv'))
 def ds_export_loss_curves(ekey, dstore):
     assets = get_assets(dstore)
     rlzs = dstore['rlzs_assoc'].realizations
     rlz_by_dset = {rlz.uid: rlz for rlz in rlzs}
     fnames = []
-    columns = 'asset_ref lon lat losses poes avg'.split()
-    for dset, loss_curves_by_lt in dstore[ekey[:-1]]:
-        rlz = rlz_by_dset.get(dset, dset)
-        if isinstance(rlz, unicode):
-            continue
-        for loss_type in loss_curves_by_lt.dtype.fields:
-            loss_curves = compose_arrays(
-                assets, loss_curves_by_lt[loss_type])
+    if ekey[0] == 'loss_curves':
+        columns = 'asset_ref lon lat losses poes avg'.split()
+    elif ekey[0] == 'loss_maps':
+        columns = None
+    for dset, curves_by_lt in dstore[ekey[:-1]]:
+        if dset in rlz_by_dset:
+            prefix = 'rlz-%03d' % rlz_by_dset[dset].ordinal
+        else:
+            prefix = dset
+        for loss_type in curves_by_lt.dtype.fields:
+            curves = compose_arrays(
+                assets, curves_by_lt[loss_type])
             dest = os.path.join(
-                dstore.export_dir, 'rlz-%03d-%s-loss_curves.csv' % (
-                    rlz.ordinal, loss_type))
-            writers.write_csv(dest, loss_curves, fmt='%10.6E', header=columns)
+                dstore.export_dir, '%s-%s-%s.csv' %
+                (prefix, loss_type, ekey[0]))
+            writers.write_csv(dest, curves, fmt='%10.6E', header=columns)
             fnames.append(dest)
     return fnames
 
 
-@ds_export.add(('agg_loss_curve', 'hdf5', 'csv'))
+@ds_export.add(('agg_loss_curve', 'individual', 'hdf5', 'csv'),
+               ('agg_loss_curve', 'stats', 'hdf5', 'csv'))
 def ds_export_agg_loss_curve(ekey, dstore):
     rlzs = dstore['rlzs_assoc'].realizations
     rlz_by_dset = {rlz.uid: rlz for rlz in rlzs}
     fnames = []
     columns = 'losses poes avg'.split()
     for dset, loss_curve_by_lt in dstore[ekey[:-1]]:
-        rlz = rlz_by_dset.get(dset, dset)
-        if isinstance(rlz, unicode):
-            continue
+        if dset in rlz_by_dset:
+            prefix = 'rlz-%03d' % rlz_by_dset[dset].ordinal
+        else:
+            prefix = dset
         for loss_type in loss_curve_by_lt.dtype.fields:
             loss_curve = loss_curve_by_lt[loss_type]
             dest = os.path.join(
-                dstore.export_dir, 'rlz-%03d-%s-%s.csv' % (
-                    rlz.ordinal, loss_type, ekey[0]))
+                dstore.export_dir, '%s-%s-%s.csv' %
+                (prefix, loss_type, ekey[0]))
             writers.write_csv(dest, loss_curve, fmt='%10.6E', header=columns)
             fnames.append(dest)
     return fnames
 
 
-@ds_export.add(('event_loss', 'csv'), ('event_loss_asset', 'csv'))
+@ds_export.add(
+    ('event_loss', 'individual', 'csv'),
+    ('event_loss_asset', 'individual', 'csv'))
 def ds_export_event_loss(ekey, dstore):
-    name, fmt = ekey
+    name, kind, fmt = ekey
     fnames = []
-    for i, data in enumerate(dstore[name]):
+    for i, data in enumerate(dstore[ekey[:-1]]):
         for loss_type in data.dtype.fields:
             dest = os.path.join(
                 dstore.export_dir, 'rlz-%03d-%s-%s.csv' % (i, loss_type, name))

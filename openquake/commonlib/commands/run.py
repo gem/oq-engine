@@ -46,7 +46,7 @@ def run(job_ini, concurrent_tasks=executor.num_tasks_hint,
             calc.post_execute(result)
         with monitor('export'):
             calc.export()
-    logging.info('Calculation %s, saved in %s',
+    logging.info('Calculation %s saved in %s',
                  calc.datastore.calc_id, calc.datastore.calc_dir)
     logging.info('Total time spent: %s s', monitor.duration)
     logging.info('Memory allocated: %s M', monitor.mem / 1024. / 1024.)

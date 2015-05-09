@@ -43,11 +43,12 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
         a dictionary rlz.ordinal -> (loss_type, tag) -> AccumDict()
     """
     specific = set(monitor.oqparam.specific_assets)
-    acc = AccumDict({rlz.ordinal: collections.defaultdict(dict)
+    acc = AccumDict({rlz.ordinal: AccumDict()
                      for rlz in rlzs_assoc.realizations})
     # rlz.ordinal -> (loss_type, tag) -> AccumDict
     for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
         for out in out_by_rlz:
+            acc_rlz = acc[out.hid]
             for tag, losses, ins_losses in zip(
                     out.tags, out.event_loss_per_asset,
                     out.insured_loss_per_asset):
@@ -55,10 +56,16 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
                         for asset, loss, ins_loss in zip(
                             out.assets, losses, ins_losses)
                         if loss and asset.id in specific]
-                acc[out.hid][out.loss_type, tag] += AccumDict(
+                ad = AccumDict(
                     data=data, loss=sum(losses), ins_loss=sum(ins_losses),
                     nonzero=sum(1 for loss in losses if loss),
                     total=len(losses))
+                try:
+                    a = acc_rlz[out.loss_type, tag]
+                except KeyError:
+                    acc_rlz[out.loss_type, tag] = ad
+                else:
+                    a += ad
     return acc
 
 
@@ -71,7 +78,7 @@ def mean_quantiles(quantiles):
 def loss_map_names(conditional_loss_poes):
     names = []
     for clp in conditional_loss_poes:
-        names.append('poe-%s' % clp)
+        names.append('poe~%s' % clp)
     return names
 
 
@@ -83,8 +90,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
     pre_calculator = 'event_based_rupture'
     core_func = event_based_risk
     specific_assets = datastore.persistent_attribute('specific_assets')
-    event_loss_asset = datastore.persistent_attribute('event_loss_asset')
-    event_loss = datastore.persistent_attribute('event_loss')
+    event_loss_asset = datastore.persistent_attribute(
+        'event_loss_asset', 'individual')
+    event_loss = datastore.persistent_attribute(
+        'event_loss', 'individual')
 
     def riskinput_key(self, ri):
         """
@@ -211,11 +220,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         for lm, lmap in zip(lm_names, lmaps):
                             loss_maps[loss_type][lm] = lmap
 
-            self.store('loss_curves', rlz.uid, loss_curves)
+            self.store('loss_curves', rlz, loss_curves)
             if oq.insured_losses:
-                self.store('ins_curves', rlz.uid, ins_curves)
+                self.store('ins_curves', rlz, ins_curves)
             if oq.conditional_loss_poes:
-                self.store('loss_maps', rlz.uid, loss_maps)
+                self.store('loss_maps', rlz, loss_maps)
 
             if elagg:
                 for loss_type, rows in groupby(
@@ -228,7 +237,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     agg_loss_curve[loss_type] = [(losses, poes, avg)]
                     # NB: the aggregated loss_map is not stored
 
-                self.store('agg_loss_curve', rlz.uid, agg_loss_curve)
+                self.store('agg_loss_curve', rlz, agg_loss_curve)
 
         self.event_loss_asset = event_loss_asset
         self.event_loss = event_loss
@@ -289,7 +298,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         :param dset: the dataset where to store the curves
         :param curves: an array of curves to store
         """
-        with self.datastore.h5file(name, 'hdf5') as h5f:
+        if hasattr(dset, 'uid'):
+            dset = dset.uid
+            kind = 'individual'
+        else:
+            kind = 'stats'
+        with self.datastore.h5file(name, kind, 'hdf5') as h5f:
             h5f[dset] = curves
 
     # ################### methods to compute statistics  #################### #
@@ -309,7 +323,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         # NB: should we encounter memory issues in the future, the easy
         # solution is to split the specific assets in blocks and perform
         # the computation one block at the time
-        with self.datastore.h5file('loss_curves', 'hdf5') as loss_curves:
+        with self.datastore.h5file(
+                'loss_curves', 'individual', 'hdf5') as loss_curves:
             for loss_type in self.riskmodel.get_loss_types():
                 outputs = []
                 for rlz in rlzs:

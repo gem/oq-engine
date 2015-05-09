@@ -117,8 +117,11 @@ class BaseCalculator(object):
         :returns: a dictionary key -> fname of the exported files
         """
         exported = {}
+        individual_curves = self.oqparam.individual_curves
         for fmt in self.oqparam.exports.split():
             for key in self.datastore:
+                if 'individual' in key and not individual_curves:
+                    continue  # skip individual curves
                 ekey = key + (fmt,)
                 if ekey in export.ds_export:
                     exported[ekey] = export.ds_export(ekey, self.datastore)
@@ -320,7 +323,7 @@ class RiskCalculator(HazardCalculator):
         """
         Parallelize on the riskinputs and returns a dictionary of results.
         Require a `.core_func` to be defined with signature
-        (riskinputs, riskmodel, monitor).
+        (riskinputs, riskmodel, rlzs_assoc, monitor).
         """
         with self.monitor('execute risk', autoflush=True) as monitor:
             monitor.oqparam = self.oqparam
