@@ -110,16 +110,15 @@ def get_geom(surface, is_from_fault_source, is_multi_surface):
 
 
 class SESRupture(object):
-    def __init__(self, rupture, indices, seed, tag, trt_model_id):
+    def __init__(self, rupture, indices, seed, tag, col_id):
         self.rupture = rupture
         self.indices = indices
         self.seed = seed
         self.tag = tag
-        self.trt_model_id = trt_model_id
+        self.col_id = col_id
         # extract the SES ordinal (>=1) from the rupture tag
         # for instance 'col=00|ses=0001|src=1|rup=001-01' => 1
         pieces = tag.split('|')
-        self.col_idx = int(pieces[0].split('=')[1])
         self.ses_idx = int(pieces[1].split('=')[1])
 
     def export(self):
@@ -129,7 +128,7 @@ class SESRupture(object):
         """
         rupture = self.rupture
         new = self.__class__(
-            rupture, self.indices, self.seed, self.tag, self.trt_model_id)
+            rupture, self.indices, self.seed, self.tag, self.col_id)
         new.rupture = new
         new.is_from_fault_source = iffs = isinstance(
             rupture.surface, (geo.ComplexFaultSurface, geo.SimpleFaultSurface))
@@ -215,13 +214,13 @@ def sample_ruptures(src, num_ses, info):
     for rup_no, rup in enumerate(src.iter_ruptures(), 1):
         rup.rup_no = rup_no
         for idx in range(info.get_num_samples(src.trt_model_id)):
-            col_idx = info.get_col_idx(src.trt_model_id, idx)
+            col_id = info.get_col_id(src.trt_model_id, idx)
             for ses_idx in range(1, num_ses + 1):
                 numpy.random.seed(rnd.randint(0, MAX_INT))
                 num_occurrences = rup.sample_number_of_occurrences()
                 if num_occurrences:
                     num_occ_by_rup[rup] += {
-                        (col_idx, ses_idx): num_occurrences}
+                        (col_id, ses_idx): num_occurrences}
     return num_occ_by_rup
 
 
@@ -252,7 +251,7 @@ def build_ses_ruptures(
                 tag = 'col=%02d|ses=%04d|src=%s|rup=%03d-%02d' % (
                     col_id, ses_idx, src.source_id, rup.rup_no, occ_no)
                 sesruptures.append(
-                    SESRupture(rup, indices, seed, tag, src.trt_model_id))
+                    SESRupture(rup, indices, seed, tag, col_id))
         if sesruptures:
             yield rup, sesruptures
 
@@ -263,7 +262,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
     Event based PSHA calculator generating the ruptures only
     """
     core_func = compute_ruptures
-    rupture_by_tag = datastore.persistent_attribute('rupture_by_tag')
+    sescollection = datastore.persistent_attribute('sescollection')
 
     def pre_execute(self):
         """
@@ -292,11 +291,8 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_model_id'))
 
-        tags = {}
-        for trt_id, rups in ruptures_by_trt.iteritems():
-            tags[trt_id] = numpy.array(sorted(rup.tag for rup in rups))
         logging.info('Generated %d SESRuptures',
-                     sum(len(v) for v in tags.itervalues()))
+                     sum(len(v) for v in ruptures_by_trt.itervalues()))
 
         self.rlzs_assoc = csm.get_rlzs_assoc(
             lambda trt: len(ruptures_by_trt.get(trt.id, [])))
@@ -304,10 +300,12 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         return ruptures_by_trt
 
     def post_execute(self, result):
-        rupture_by_tag = AccumDict()
+        nc = self.rlzs_assoc.csm_info.num_collections
+        sescollection = [{} for col_id in range(nc)]
         for trt_id in result:
-            rupture_by_tag += {r.tag: r for r in result[trt_id]}
-        self.rupture_by_tag = rupture_by_tag
+            for sr in result[trt_id]:
+                sescollection[sr.col_id][sr.tag] = sr
+        self.sescollection = sescollection
 
 #        exports = oq.exports.split(',')
 #        for smodel in self.composite_source_model:
@@ -348,14 +346,14 @@ def make_gmf_by_tag(ses_ruptures, sitecol, imts, gsims,
 
 
 @parallel.litetask
-def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
+def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
     """
     :param ses_ruptures:
         a list of blocks of SESRuptures with homogeneous TrtModel
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param gsims_assoc:
-        associations trt_model_id -> gsims
+    :param rlzs_assoc:
+        a RlzsAssoc instance
     :param monitor:
         a Monitor instance
     :returns:
@@ -363,11 +361,11 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, gsims_assoc, monitor):
         where the list of bounding boxes is empty
    """
     oq = monitor.oqparam
-
     # NB: by construction each block is a non-empty list with
-    # ruptures of the same col_idx and therefore trt_model_id
-    trt_id = ses_ruptures[0].trt_model_id
-    gsims = sorted(gsims_assoc[trt_id])
+    # ruptures of the same col_id and therefore trt_model_id
+    col_id = ses_ruptures[0].col_id
+    trt_id = rlzs_assoc.csm_info.get_trt_id(col_id)
+    gsims = rlzs_assoc.get_gsims_by_col()[col_id]
     trunc_level = getattr(oq, 'truncation_level', None)
     correl_model = readinput.get_correl_model(oq)
     num_sites = len(sitecol)
@@ -431,7 +429,7 @@ class EventBasedCalculator(ClassicalCalculator):
         """
         ClassicalCalculator.pre_execute(self)
         self.composite_source_model = self.precalc.composite_source_model
-        rupture_by_tag = self.precalc.rupture_by_tag
+        rupture_by_tag = sum(self.precalc.sescollection, AccumDict())
         self.sesruptures = [rupture_by_tag[tag]
                             for tag in sorted(rupture_by_tag)]
 
@@ -463,14 +461,13 @@ class EventBasedCalculator(ClassicalCalculator):
         monitor.oqparam = self.oqparam
         zc = zero_curves(len(self.sitecol), self.oqparam.imtls)
         zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
-        gsims_assoc = self.rlzs_assoc.get_gsims_by_trt_id()
         self.gmf_dict = collections.defaultdict(AccumDict)
         curves_by_trt_gsim = parallel.apply_reduce(
             self.core_func.__func__,
-            (self.sesruptures, self.sitecol, gsims_assoc, monitor),
+            (self.sesruptures, self.sitecol, self.rlzs_assoc, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
             acc=zerodict, agg=self.combine_curves_and_save_gmfs,
-            key=operator.attrgetter('col_idx'))
+            key=operator.attrgetter('col_id'))
         return curves_by_trt_gsim
 
     def post_execute(self, result):

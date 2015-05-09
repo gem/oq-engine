@@ -100,7 +100,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         :param ri: riskinput object
         :returns: the SESCollection idx associated to it
         """
-        return ri.col_idx
+        return ri.col_id
 
     def pre_execute(self):
         """
@@ -114,12 +114,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         epsilon_sampling = getattr(oq, 'epsilon_sampling', 1000)
 
         correl_model = readinput.get_correl_model(oq)
-        gsims_by_trt_id = self.rlzs_assoc.get_gsims_by_trt_id()
+        gsims_by_col = self.rlzs_assoc.get_gsims_by_col()
         assets_by_site = self.precalc.assets_by_site
         logging.info('Building the epsilons')
 
         logging.info('Populating the risk inputs')
-        rup_by_tag = self.precalc.rupture_by_tag
+        rup_by_tag = sum(self.precalc.sescollection, AccumDict())
         all_ruptures = [rup_by_tag[tag] for tag in sorted(rup_by_tag)]
         num_samples = min(len(all_ruptures), epsilon_sampling)
         eps_dict = riskinput.make_eps_dict(
@@ -128,7 +128,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         self.riskinputs = list(self.riskmodel.build_inputs_from_ruptures(
             self.sitecol, assets_by_site, all_ruptures,
-            gsims_by_trt_id, oq.truncation_level, correl_model, eps_dict,
+            gsims_by_col, oq.truncation_level, correl_model, eps_dict,
             oq.concurrent_tasks or 1))
         logging.info('Built %d risk inputs', len(self.riskinputs))
 

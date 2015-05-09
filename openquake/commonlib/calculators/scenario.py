@@ -55,7 +55,7 @@ class ScenarioCalculator(base.HazardCalculator):
     Scenario hazard calculator
     """
     core_func = calc_gmfs
-    rupture_by_tag = datastore.persistent_attribute('rupture_by_tag')
+    sescollection = datastore.persistent_attribute('sescollection')
     gmf_by_trt_gsim = datastore.persistent_attribute('gmf_by_trt_gsim')
 
     def pre_execute(self):
@@ -83,8 +83,8 @@ class ScenarioCalculator(base.HazardCalculator):
         rnd = random.Random(self.oqparam.random_seed)
         self.tag_seed_pairs = [(tag, rnd.randint(0, calc.MAX_INT))
                                for tag in tags]
-        self.rupture_by_tag = {tag: Rupture(tag, seed, rupture)
-                               for tag, seed in self.tag_seed_pairs}
+        self.sescollection = [{tag: Rupture(tag, seed, rupture)
+                               for tag, seed in self.tag_seed_pairs}]
 
     def execute(self):
         """

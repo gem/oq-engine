@@ -23,6 +23,7 @@ import collections
 
 import numpy
 
+from openquake.baselib.general import AccumDict
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import FilteredSiteCollection
 from openquake.commonlib.export import export, ds_export
@@ -382,7 +383,7 @@ def _expand(gmf_array, sitecol, gsim, imt_dt):
 def ds_export_gmf(ekey, dstore):
     sitecol = dstore['sitecol']
     rlzs_assoc = dstore['rlzs_assoc']
-    rupture_by_tag = dstore['rupture_by_tag']
+    rupture_by_tag = sum(dstore['sescollection'], AccumDict())
     samples = dstore['oqparam'].number_of_logic_tree_samples
     fmt = ekey[-1]
     fnames = []
