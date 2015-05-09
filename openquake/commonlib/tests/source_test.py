@@ -708,11 +708,18 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
             oqparam, sitecol, prefilter=True)
         self.assertEqual(len(csm), 9)  # the smlt example has 1 x 3 x 3 paths;
         # there are 2 distinct tectonic region types, so 18 trt_models
-        rlzs = csm.get_rlzs_assoc().realizations
+        rlzs_assoc = csm.get_rlzs_assoc()
+        rlzs = rlzs_assoc.realizations
         self.assertEqual(len(rlzs), 18)  # the gsimlt has 1 x 2 paths
         self.assertEqual([1, 584, 1, 584, 1, 584, 1, 582, 1, 582,
                           1, 582, 1, 582, 1, 582, 1, 582],
                          map(len, csm.trt_models))
+
+        # test the method csm_info.get_col_ids
+        col_ids_first = rlzs_assoc.csm_info.get_col_ids(rlzs[0])
+        self.assertEqual(col_ids_first, set([0, 1]))
+        col_ids_last = rlzs_assoc.csm_info.get_col_ids(rlzs[-1])
+        self.assertEqual(col_ids_last, set([16, 17]))
 
         # removing 9 trt_models out of 18
         for trt_model in csm.trt_models:
@@ -767,3 +774,9 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
             "<RlzsAssoc\n"
             "0,SadighEtAl1997: ['<0,b1,b1,w=0.2>']\n"
             "1,SadighEtAl1997: ['<1,b2,b1,w=0.2,col=1>', '<2,b2,b1,w=0.2,col=2>', '<3,b2,b1,w=0.2,col=3>', '<4,b2,b1,w=0.2,col=4>']>")
+
+        # test the method csm_info.get_col_ids
+        col_ids_first = assoc.csm_info.get_col_ids(assoc.realizations[0])
+        self.assertEqual(col_ids_first, set([0]))
+        col_ids_last = assoc.csm_info.get_col_ids(assoc.realizations[-1])
+        self.assertEqual(col_ids_last, set([4]))

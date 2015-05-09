@@ -470,6 +470,20 @@ class CompositionInfo(object):
         """
         return self._num_samples.get(trt_id, 1)
 
+    # this useful to extract the ruptures affecting a given realization
+    def get_col_ids(self, rlz):
+        """
+        :param rlz: a realization
+        :returns: a set of ses collection indices relevant for the realization
+        """
+        # first consider the oversampling case, when the col_ids are known
+        if rlz.col_ids:
+            return rlz.col_ids
+        # else consider the source model to which the realization belongs
+        # and extract the trt_model_ids, which are the same as the col_ids
+        return set(tm.id for sm in self.source_models
+                   for tm in sm.trt_models if sm.path == rlz.sm_lt_path)
+
     def get_col_idx(self, trt_id, idx):
         """
         :param trt_id: tectonic region type object ID
