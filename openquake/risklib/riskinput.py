@@ -201,6 +201,7 @@ class RiskInput(object):
         for hazard, assets_ in zip(self.hazard_by_site, self.assets_by_site):
             for asset in assets_:
                 assets.append(asset)
+                import pdb; pdb.set_trace()
                 hazards.append({self.imt: rlzs_assoc.combine(hazard)})
                 epsilons.append(self.eps_dict.get(asset.id, None))
         return assets, hazards, epsilons
