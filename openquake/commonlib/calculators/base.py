@@ -42,46 +42,6 @@ class AssetSiteAssociationError(Exception):
     """Raised when there are no hazard sites close enough to any asset"""
 
 
-def persistent_attribute(name, *extras):
-    """
-    :param name: the name of the attribute to be made datastore-persistent
-    :param extras: strings to specify the underlying key in the datastore
-    :returns: a property to be added to a class with a .datastore attribute
-    """
-    key = (name,) + extras
-    privatekey = '_' + '_'.join(key)
-
-    def getter(self):
-        # Try to get the value from the privatekey attribute (i.e. from
-        # the cache of the datastore); if not possible, get the value
-        # from the datastore and set the cache; if not possible, get the
-        # value from the precalculator and set the cache. If the value cannot
-        # be retrieved, raise an AttributeError.
-        try:
-            try:
-                return getattr(self.datastore, privatekey)
-            except AttributeError:
-                value = self.datastore[key]
-                setattr(self.datastore, privatekey, value)
-                return value
-        except IOError:
-            if self.precalc:
-                try:
-                    return getattr(self.precalc, name)
-                except AttributeError:
-                    value = self.datastore[key]
-                    setattr(self.datastore, privatekey, value)
-            else:
-                raise AttributeError('_'.join(key))
-
-    def setter(self, value):
-        # Update the datastore and the private key
-        self.datastore[key] = value
-        setattr(self.datastore, privatekey, value)
-
-    return property(getter, setter)
-
-
 class BaseCalculator(object):
     """
     Abstract base class for all calculators.
@@ -94,11 +54,11 @@ class BaseCalculator(object):
 
     precalc = None  # to be overridden
 
-    oqparam = persistent_attribute('oqparam')
-    sitecol = persistent_attribute('sitecol')
-    rlzs_assoc = persistent_attribute('rlzs_assoc')
-    assets_by_site = persistent_attribute('assets_by_site')
-    cost_types = persistent_attribute('cost_types')
+    oqparam = datastore.persistent_attribute('oqparam')
+    sitecol = datastore.persistent_attribute('sitecol')
+    rlzs_assoc = datastore.persistent_attribute('rlzs_assoc')
+    assets_by_site = datastore.persistent_attribute('assets_by_site')
+    cost_types = datastore.persistent_attribute('cost_types')
 
     persistent = True  # by default persistence on the datastore is enabled
     precalc = None  # to be overridden
@@ -280,7 +240,7 @@ class RiskCalculator(HazardCalculator):
     .riskinputs in the pre_execute phase.
     """
 
-    riskmodel = persistent_attribute('riskmodel')
+    riskmodel = datastore.persistent_attribute('riskmodel')
 
     def make_eps_dict(self, num_ruptures):
         """

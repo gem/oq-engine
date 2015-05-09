@@ -20,7 +20,7 @@ import os
 import logging
 
 from openquake.baselib import general
-from openquake.commonlib import parallel
+from openquake.commonlib import parallel, datastore
 from openquake.commonlib.calculators import base
 
 
@@ -93,7 +93,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
     Run a scenario risk calculation
     """
     core_func = scenario_risk
-    losses_by_key = base.persistent_attribute('losses_by_key')
+    losses_by_key = datastore.persistent_attribute('losses_by_key')
     pre_calculator = 'scenario'
 
     def pre_execute(self):

@@ -19,7 +19,7 @@
 import os
 import logging
 
-from openquake.commonlib import parallel
+from openquake.commonlib import parallel, datastore
 from openquake.risklib import scientific
 from openquake.baselib.general import AccumDict
 from openquake.commonlib.calculators import base
@@ -67,7 +67,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
     """
     pre_calculator = 'scenario'
     core_func = scenario_damage
-    damages_by_key = base.persistent_attribute('damages_by_key')
+    damages_by_key = datastore.persistent_attribute('damages_by_key')
 
     def pre_execute(self):
         if 'gmfs' in self.oqparam.inputs:

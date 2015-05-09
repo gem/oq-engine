@@ -29,7 +29,7 @@ from openquake.hazardlib.calc.hazard_curve import (
 from openquake.hazardlib.calc.filters import source_site_distance_filter, \
     rupture_site_distance_filter
 from openquake.risklib import scientific
-from openquake.commonlib import parallel
+from openquake.commonlib import parallel, datastore
 from openquake.baselib.general import AccumDict, split_in_blocks, groupby
 
 from openquake.commonlib.calculators import base, calc
@@ -80,7 +80,7 @@ class ClassicalCalculator(base.HazardCalculator):
     Classical PSHA calculator
     """
     core_func = classical
-    curves_by_trt_gsim = base.persistent_attribute('curves_by_trt_gsim')
+    curves_by_trt_gsim = datastore.persistent_attribute('curves_by_trt_gsim')
 
     def execute(self):
         """
@@ -225,7 +225,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
     """
     prefilter = False
     persistent = False  # use an in-memory datastore
-    pathname_by_fname = base.persistent_attribute('pathname_by_fname')
+    pathname_by_fname = datastore.persistent_attribute('pathname_by_fname')
 
     def execute(self):
         """

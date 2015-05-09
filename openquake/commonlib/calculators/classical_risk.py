@@ -23,7 +23,7 @@ import numpy
 
 from openquake.baselib import general
 from openquake.risklib import workflows, riskinput
-from openquake.commonlib import readinput, parallel
+from openquake.commonlib import readinput, parallel, datastore
 from openquake.commonlib.calculators import base
 
 
@@ -62,7 +62,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
     Classical Risk calculator
     """
     pre_calculator = 'classical'
-    avg_losses = base.persistent_attribute('avg_losses', 'h5')
+    avg_losses = datastore.persistent_attribute('avg_losses', 'h5')
     core_func = classical_risk
 
     def pre_execute(self):

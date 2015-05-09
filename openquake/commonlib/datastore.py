@@ -86,7 +86,7 @@ class DataStore(collections.MutableMapping):
     >>> ds['example'] = 'hello world'
     >>> ds.items()
     [(('example',), 'hello world')]
-    >>> ds.remove()
+    >>> ds.clear()
 
     It is also possible to store callables with two arguments (key, datastore).
     They will be automatically invoked when the key is accessed.
@@ -225,3 +225,63 @@ class DataStore(collections.MutableMapping):
 
     def __repr__(self):
         return '<%s %d>' % (self.__class__.__name__, self.calc_id)
+
+
+def persistent_attribute(name, *extras):
+    """
+    Persistent attributes are automatically persisted to the datastore and
+    cached. If you have a huge object that does not fit in memory use the
+    datastore directory (for instance, open a HDF5 file and create an empty
+    array, then populate it). Notice that you can use any dict-like data
+    structure in place of the datastore, provided you can set attributes on it.
+    Here is an example:
+
+    >>> class Datastore(dict):
+    ...     "A fake datastore"
+
+    >>> class Store(object):
+    ...     a = persistent_attribute('a')
+    ...     def __init__(self, a):
+    ...         self.datastore = Datastore()
+    ...         self.a = a  # the assegnation will store the attribute
+
+    >>> store = Store(a=[1])
+    >>> store.a  # this retrieves the attribute
+    [1]
+
+    :param name: the name of the attribute to be made persistent
+    :param extras: strings to specify the underlying key in the datastore
+    :returns: a property to be added to a class with a .datastore attribute
+    """
+    key = (name,) + extras
+    privatekey = '_' + '_'.join(key)
+
+    def getter(self):
+        # Try to get the value from the privatekey attribute (i.e. from
+        # the cache of the datastore); if not possible, get the value
+        # from the datastore and set the cache; if not possible, get the
+        # value from the precalculator and set the cache. If the value cannot
+        # be retrieved, raise an AttributeError.
+        try:
+            try:
+                return getattr(self.datastore, privatekey)
+            except AttributeError:
+                value = self.datastore[key]
+                setattr(self.datastore, privatekey, value)
+                return value
+        except IOError:
+            if self.precalc:
+                try:
+                    return getattr(self.precalc, name)
+                except AttributeError:
+                    value = self.datastore[key]
+                    setattr(self.datastore, privatekey, value)
+            else:
+                raise AttributeError('_'.join(key))
+
+    def setter(self, value):
+        # Update the datastore and the private key
+        self.datastore[key] = value
+        setattr(self.datastore, privatekey, value)
+
+    return property(getter, setter)

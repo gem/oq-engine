@@ -20,10 +20,8 @@ import os
 import logging
 
 from openquake.baselib.general import AccumDict
-from openquake.commonlib import readinput, parallel, logictree
+from openquake.commonlib import readinput, parallel, logictree, datastore
 from openquake.commonlib.calculators import base
-from openquake.commonlib.export import export
-from openquake.commonlib.risk_writers import DmgState
 
 
 @parallel.litetask
@@ -60,7 +58,7 @@ class ClassicalDamageCalculator(base.RiskCalculator):
     Scenario damage calculator
     """
     core_func = classical_damage
-    damages_by_rlz = base.persistent_attribute('damages_by_rlz')
+    damages_by_rlz = datastore.persistent_attribute('damages_by_rlz')
 
     def pre_execute(self):
         """

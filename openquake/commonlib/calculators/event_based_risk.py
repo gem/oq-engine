@@ -24,7 +24,7 @@ import numpy
 
 from openquake.baselib.general import AccumDict, groupby
 from openquake.commonlib.calculators import base
-from openquake.commonlib import readinput, parallel
+from openquake.commonlib import readinput, parallel, datastore
 from openquake.risklib import riskinput, scientific
 
 
@@ -82,8 +82,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
     """
     pre_calculator = 'event_based_rupture'
     core_func = event_based_risk
-    event_loss_asset = base.persistent_attribute('event_loss_asset')
-    event_loss = base.persistent_attribute('event_loss')
+    event_loss_asset = datastore.persistent_attribute('event_loss_asset')
+    event_loss = datastore.persistent_attribute('event_loss')
 
     def riskinput_key(self, ri):
         """
@@ -140,7 +140,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.loss_curve_dt = numpy.dtype(
             [('losses', (float, R)), ('poes', (float, R)), ('avg', float)])
 
-        P = len(oq.conditional_loss_poes)
         lm_names = loss_map_names(oq.conditional_loss_poes)
         self.loss_map_dt = numpy.dtype([(f, float) for f in lm_names])
 

@@ -30,7 +30,7 @@ from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.hazardlib import geo, site, calc
-from openquake.commonlib import readinput, parallel
+from openquake.commonlib import readinput, parallel, datastore
 from openquake.commonlib.util import max_rel_diff_index
 
 from openquake.commonlib.calculators import base
@@ -263,7 +263,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
     Event based PSHA calculator generating the ruptures only
     """
     core_func = compute_ruptures
-    rupture_by_tag = base.persistent_attribute('rupture_by_tag')
+    rupture_by_tag = datastore.persistent_attribute('rupture_by_tag')
 
     def pre_execute(self):
         """
@@ -421,7 +421,7 @@ class EventBasedCalculator(ClassicalCalculator):
     """
     pre_calculator = 'event_based_rupture'
     core_func = compute_gmfs_and_curves
-    gmf_by_trt_gsim = base.persistent_attribute('gmf_by_trt_gsim')
+    gmf_by_trt_gsim = datastore.persistent_attribute('gmf_by_trt_gsim')
 
     def pre_execute(self):
         """
