@@ -30,59 +30,110 @@ from openquake.commonlib.writers import scientificformat
 from openquake.commonlib.risk_writers import (
     DmgState, DmgDistPerTaxonomy, DmgDistPerAsset, DmgDistTotal,
     ExposureData, Site)
-from openquake.risklib import scientific, riskinput
+from openquake.risklib import scientific
 
 
+# ########################## utility functions ############################## #
+
+def compose_arrays(a1, a2):
+    """
+    Compose composite arrays by generating an extended datatype containing
+    all the fields. The two arrays must have the same shape.
+    """
+    fields1 = [(f, dt[0]) for f, dt in a1.dtype.fields.items()]
+    fields2 = [(f, dt[0]) for f, dt in a2.dtype.fields.items()]
+    composite = numpy.zeros(a1.shape, numpy.dtype(fields1 + fields2))
+    for f1 in dict(fields1):
+        composite[f1] = a1[f1]
+    for f2 in dict(fields2):
+        composite[f2] = a2[f2]
+    return composite
+
+
+def get_assets(dstore):
+    """
+    :param dstore: a datastore with a key `specific_assets`
+    :returns: an ordered array of records (asset_ref, lon, lat)
+    """
+    assets = dstore['specific_assets']  # they are already ordered by ID
+    asset_dt = numpy.dtype(
+        [('asset_ref', str, 20), ('lon', float), ('lat', float)])
+    asset_data = numpy.array(
+        [(asset.id, asset.location[0], asset.location[1])
+         for asset in assets], asset_dt)
+    return asset_data
+
+
+# ############################### exporters ############################## #
+
+# this is used by classical_risk from csv
 @ds_export.add(('avg_losses', 'h5', 'csv'))
 def ds_export_avg_losses(ekey, dstore):
     avg_losses = dstore[ekey[:-1]]
-    assets = riskinput.sorted_assets(dstore['assets_by_site'])
     rlzs = dstore['rlzs_assoc'].realizations
-    fields = [('asset_ref', str, 20), ('lon', float), ('lat', float)] + \
-             [(f, float) for f in avg_losses.dtype.fields]
-    dt = numpy.dtype(fields)
-    columns = [f[0] for f in fields]
+    assets = get_assets(dstore)
+    columns = 'asset_ref lon lat avg'.split()
     fnames = []
     for rlz, losses in zip(rlzs, avg_losses):
         dest = os.path.join(
             dstore.export_dir, 'rlz-%03d-avg_loss.csv' % rlz.ordinal)
-        zeros = numpy.zeros(len(assets), dt)
-        for i, asset in enumerate(assets):
-            zeros[i] = (asset.id,) + asset.location + tuple(losses[i])
-        writers.write_csv(dest, zeros, header=columns)
+        data = compose_arrays(assets, losses)
+        writers.write_csv(dest, data, fmt='%11.7E', header=columns)
         fnames.append(dest)
     return fnames
 
 
 @ds_export.add(('loss_curves', 'hdf5', 'csv'))
 def ds_export_loss_curves(ekey, dstore):
-    all_assets = riskinput.sorted_assets(dstore['assets_by_site'])
-    specific_assets = set(dstore['oqparam'].specific_assets)
-    assets = [a for a in all_assets if a.id in specific_assets]
+    assets = get_assets(dstore)
     rlzs = dstore['rlzs_assoc'].realizations
     rlz_by_dset = {rlz.uid: rlz for rlz in rlzs}
     fnames = []
-    for dset, loss_curves_by_lt in dstore['loss_curves', 'hdf5']:
+    columns = 'asset_ref lon lat losses poes avg'.split()
+    for dset, loss_curves_by_lt in dstore[ekey[:-1]]:
         rlz = rlz_by_dset.get(dset, dset)
         if isinstance(rlz, unicode):
             continue
         for loss_type in loss_curves_by_lt.dtype.fields:
-            loss_curves = loss_curves_by_lt[loss_type]
-            fields = [('asset_ref', str, 20), ('lon', float), ('lat', float)] + \
-                     [(f, float) for f in loss_curves.dtype.fields]
-            dt = numpy.dtype(fields)
-            columns = [f[0] for f in fields]
+            loss_curves = compose_arrays(
+                assets, loss_curves_by_lt[loss_type])
             dest = os.path.join(
-                dstore.export_dir, 'rlz-%03d-loss_curve-%s.csv' % (
+                dstore.export_dir, 'rlz-%03d-%s-loss_curves.csv' % (
                     rlz.ordinal, loss_type))
-            zeros = numpy.zeros(len(assets), dt)
-            for i, asset in enumerate(assets):
-                z = zeros[i]
-                z['asset_ref'] = asset.id
-                z['lon'], z['lat'] = asset.location
-                for f in loss_curves.dtype.fields:
-                    z[f] = loss_curves[i][f]
-            writers.write_csv(dest, zeros, header=columns)
+            writers.write_csv(dest, loss_curves, fmt='%10.6E', header=columns)
+            fnames.append(dest)
+    return fnames
+
+
+@ds_export.add(('agg_loss_curve', 'hdf5', 'csv'))
+def ds_export_agg_loss_curve(ekey, dstore):
+    rlzs = dstore['rlzs_assoc'].realizations
+    rlz_by_dset = {rlz.uid: rlz for rlz in rlzs}
+    fnames = []
+    columns = 'losses poes avg'.split()
+    for dset, loss_curve_by_lt in dstore[ekey[:-1]]:
+        rlz = rlz_by_dset.get(dset, dset)
+        if isinstance(rlz, unicode):
+            continue
+        for loss_type in loss_curve_by_lt.dtype.fields:
+            loss_curve = loss_curve_by_lt[loss_type]
+            dest = os.path.join(
+                dstore.export_dir, 'rlz-%03d-%s-%s.csv' % (
+                    rlz.ordinal, loss_type, ekey[0]))
+            writers.write_csv(dest, loss_curve, fmt='%10.6E', header=columns)
+            fnames.append(dest)
+    return fnames
+
+
+@ds_export.add(('event_loss', 'csv'), ('event_loss_asset', 'csv'))
+def ds_export_event_loss(ekey, dstore):
+    name, fmt = ekey
+    fnames = []
+    for i, data in enumerate(dstore[name]):
+        for loss_type in data.dtype.fields:
+            dest = os.path.join(
+                dstore.export_dir, 'rlz-%03d-%s-%s.csv' % (i, loss_type, name))
+            writers.write_csv(dest, sorted(data[loss_type]), fmt='%10.6E')
             fnames.append(dest)
     return fnames
 

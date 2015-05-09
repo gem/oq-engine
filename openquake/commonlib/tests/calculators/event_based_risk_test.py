@@ -17,22 +17,21 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job_haz.ini,job_risk.ini',
                             concurrent_tasks=0, exports='csv')
-        import pdb; pdb.set_trace()
+        [fname] = out['loss_curves', 'hdf5', 'csv']
         self.assertEqualFiles(
-            'expected/rlz-000-structural-event_loss_asset.csv',
-            out['rlz', '000', 'structural', 'event_loss_asset'])
+            'expected/rlz-000-structural-loss_curves.csv', fname)
 
+        [fname] = out['agg_loss_curve', 'hdf5', 'csv']
         self.assertEqualFiles(
-            'expected/rlz-000-structural-event_loss.csv',
-            out['rlz', '000', 'structural', 'event_loss'])
+            'expected/rlz-000-structural-agg_loss_curve.csv', fname)
 
+        [fname] = out['event_loss_asset', 'csv']
         self.assertEqualFiles(
-            'expected/rlz-000-structural-agg_loss_curve.csv',
-            out['rlz', '000', 'structural', 'agg_loss_curve'])
+            'expected/rlz-000-structural-event_loss_asset.csv', fname)
 
+        [fname] = out['event_loss', 'csv']
         self.assertEqualFiles(
-            'expected/rlz-000-structural-loss_curves.csv',
-            out['rlz', '000', 'structural', 'loss_curves'])
+            'expected/rlz-000-structural-event_loss.csv', fname)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_3(self):
