@@ -49,18 +49,35 @@ def persistent_attribute(name, *extras):
     :returns: a property to be added to a class with a .datastore attribute
     """
     key = (name,) + extras
+    privatekey = '_' + '_'.join(key)
 
     def getter(self):
+        # Try to get the value from the privatekey attribute (i.e. from
+        # the cache of the datastore); if not possible, get the value
+        # from the datastore and set the cache; if not possible, get the
+        # value from the precalculator and set the cache. If the value cannot
+        # be retrieved, raise an AttributeError.
         try:
-            return self.datastore[key]
+            try:
+                return getattr(self.datastore, privatekey)
+            except AttributeError:
+                value = self.datastore[key]
+                setattr(self.datastore, privatekey, value)
+                return value
         except IOError:
             if self.precalc:
-                return getattr(self.precalc, name)
+                try:
+                    return getattr(self.precalc, name)
+                except AttributeError:
+                    value = self.datastore[key]
+                    setattr(self.datastore, privatekey, value)
             else:
-                raise
+                raise AttributeError('_'.join(key))
 
     def setter(self, value):
+        # Update the datastore and the private key
         self.datastore[key] = value
+        setattr(self.datastore, privatekey, value)
 
     return property(getter, setter)
 
