@@ -244,6 +244,7 @@ class RiskCalculator(HazardCalculator):
     """
 
     riskmodel = datastore.persistent_attribute('riskmodel')
+    specific_assets = datastore.persistent_attribute('specific_assets')
 
     def make_eps_dict(self, num_ruptures):
         """
