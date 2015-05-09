@@ -320,7 +320,7 @@ class RlzsAssoc(collections.Mapping):
     def get_gsims_by_col(self):
         """Return a list of lists of GSIMs of length num_collections"""
         gsims = self.get_gsims_by_trt_id()
-        return [gsims[self.csm_info.get_trt_id(col)]
+        return [gsims.get(self.csm_info.get_trt_id(col), [])
                 for col in range(self.csm_info.num_collections)]
 
     def _add_realizations(self, idx, lt_model, realizations):

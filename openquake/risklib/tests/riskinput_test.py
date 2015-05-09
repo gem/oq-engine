@@ -1,3 +1,4 @@
+import mock
 import unittest
 
 from openquake.commonlib import readinput
@@ -7,6 +8,9 @@ from openquake.qa_tests_data.event_based_risk import case_2
 
 
 class MockAssoc(object):
+    csm_info = mock.Mock()
+    csm_info.get_trt_id.return_value = 0
+
     def __iter__(self):
         return iter([])
 
@@ -62,8 +66,8 @@ class RiskInputTestCase(unittest.TestCase):
         rupcalc = event_based.EventBasedRuptureCalculator(oq)
         rupcalc.run()
 
-        # this is case with a single TRT
-        [(trt_id, ses_ruptures)] = rupcalc.datastore['ruptures_by_trt'].items()
+        # this is case with a single SES collection
+        ses_ruptures = rupcalc.datastore['sescollection'][0].values()
 
         gsims_by_trt_id = rupcalc.rlzs_assoc.get_gsims_by_trt_id()
 

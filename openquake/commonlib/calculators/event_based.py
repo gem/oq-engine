@@ -349,7 +349,7 @@ def make_gmf_by_tag(ses_ruptures, sitecol, imts, gsims,
 def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
     """
     :param ses_ruptures:
-        a list of blocks of SESRuptures with homogeneous TrtModel
+        a list of blocks of SESRuptures of the same SESCollection
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param rlzs_assoc:

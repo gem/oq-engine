@@ -24,7 +24,7 @@ class DataStoreTestCase(unittest.TestCase):
         # store and retrieve a callable
         self.dstore['key1_upper'] = key1_upper
         self.assertEqual(self.dstore['key1_upper'], 'VALUE1')
-        self.dstore.remove()
+        self.dstore.clear()
 
     def test_hdf5(self):
         # optional test, run only if h5py is available
