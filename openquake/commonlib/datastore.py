@@ -229,12 +229,12 @@ class DataStore(collections.MutableMapping):
 
 def persistent_attribute(name, *extras):
     """
-    Persistent attributes are automatically persisted to the datastore and
-    cached. If you have a huge object that does not fit in memory use the
-    datastore directory (for instance, open a HDF5 file and create an empty
-    array, then populate it). Notice that you can use any dict-like data
-    structure in place of the datastore, provided you can set attributes on it.
-    Here is an example:
+    Persistent attributes are persisted to the datastore and cached. Modifications
+    to mutable objects are not automagically persisted. If you have a huge object
+    that does not fit in memory use the datastore directory (for instance, open
+    a HDF5 file to create an empty array, then populate it). Notice that you can
+    use any dict-like data structure in place of the datastore, provided you can
+    set attributes on it. Here is an example:
 
     >>> class Datastore(dict):
     ...     "A fake datastore"
@@ -243,11 +243,13 @@ def persistent_attribute(name, *extras):
     ...     a = persistent_attribute('a')
     ...     def __init__(self, a):
     ...         self.datastore = Datastore()
-    ...         self.a = a  # the assegnation will store the attribute
+    ...         self.a = a  # this assegnation will store the attribute
 
-    >>> store = Store(a=[1])
+    >>> store = Store([1])
     >>> store.a  # this retrieves the attribute
     [1]
+    >>> store.a.append(2)
+    >>> store.a = store.a  # remember to store the modified attribute!
 
     :param name: the name of the attribute to be made persistent
     :param extras: strings to specify the underlying key in the datastore
