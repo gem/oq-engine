@@ -307,7 +307,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         stats = scientific.StatsBuilder(
             oq.quantile_loss_curves, oq.conditional_loss_poes, [],
             scientific.normalize_curves_eb)
-        with self.datastore.h5file(('loss_curves', 'hdf5')) as loss_curves:
+        with self.datastore.h5file('loss_curves', 'hdf5') as loss_curves:
             for loss_type in self.riskmodel.get_loss_types():
                 outputs = []
                 for rlz in rlzs:
@@ -332,5 +332,5 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         :param dset: the HDF5 dataset where to store the curves
         :param curves: an array of N curves to store
         """
-        with self.datastore.h5file((name, 'hdf5')) as h5f:
+        with self.datastore.h5file(name, 'hdf5') as h5f:
             h5f[dset] = curves

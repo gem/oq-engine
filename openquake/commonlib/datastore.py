@@ -139,7 +139,7 @@ class DataStore(collections.MutableMapping):
         dest = self.export_path(key + ('csv',))
         return write_csv(dest, self[key])
 
-    def remove(self):
+    def clear(self):
         """Remove the datastore from the file system"""
         shutil.rmtree(self.calc_dir)
 
@@ -161,15 +161,14 @@ class DataStore(collections.MutableMapping):
         except IOError:
             return default
 
-    def h5file(self, key, mode='r+'):
+    def h5file(self, *key):
         """
         Extracts the HDF5 file underlying the given key.
         """
         if key[-1] not in ('h5', 'hdf5'):
             raise ValueError('Not an hf5 key: %s' % str(key))
         path = self.path(key)
-        if not os.path.exists(path):
-            mode = 'w'
+        mode = 'r+' if os.path.exists(path) else 'w'
         return h5py.File(path, mode, libver='latest')
 
     def __getitem__(self, key):
@@ -185,12 +184,12 @@ class DataStore(collections.MutableMapping):
             return value
 
     def _get_hdf5_items(self, key):
-        with self.h5file(key) as h5f:
+        with self.h5file(*key) as h5f:
             for dset, data in sorted(h5f.iteritems()):
                 yield dset, data[:]
 
     def _set_hdf5_items(self, key, items):
-        with self.h5file(key, 'w') as h5f:
+        with self.h5file(*key) as h5f:
             for dset, data in items:
                 h5f.create_dataset(dset, data=data)
 
