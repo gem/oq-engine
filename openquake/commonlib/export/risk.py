@@ -55,7 +55,11 @@ def get_assets(dstore):
     :param dstore: a datastore with a key `specific_assets`
     :returns: an ordered array of records (asset_ref, lon, lat)
     """
-    assets = dstore['specific_assets']  # they are already ordered by ID
+    if 'specific_assets' in dstore:
+        assets = dstore['specific_assets']  # they are already ordered by ID
+    else:  # consider all assets
+        assets = sorted(numpy.concatenate(dstore['assets_by_site']),
+                        key=operator.attrgetter('id'))
     asset_dt = numpy.dtype(
         [('asset_ref', str, 20), ('lon', float), ('lat', float)])
     asset_data = numpy.array(
@@ -72,13 +76,14 @@ def export_avg_losses(ekey, dstore):
     avg_losses = dstore[ekey[:-1]]
     rlzs = dstore['rlzs_assoc'].realizations
     assets = get_assets(dstore)
-    columns = 'asset_ref lon lat avg'.split()
+    columns = 'asset_ref lon lat avg_loss~structural ins_loss~structural' \
+        .split()
     fnames = []
     for rlz, losses in zip(rlzs, avg_losses):
         dest = os.path.join(
             dstore.export_dir, 'rlz-%03d-avg_loss.csv' % rlz.ordinal)
         data = compose_arrays(assets, losses)
-        writers.write_csv(dest, data, fmt='%11.7E', header=columns)
+        writers.write_csv(dest, data, fmt='%10.6E', header=columns)
         fnames.append(dest)
     return fnames
 
