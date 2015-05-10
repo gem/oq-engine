@@ -26,7 +26,7 @@ import numpy
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import FilteredSiteCollection
-from openquake.commonlib.export import export, ds_export
+from openquake.commonlib.export import export
 from openquake.commonlib.writers import (
     scientificformat, floatformat, save_csv)
 from openquake.commonlib import hazard_writers
@@ -64,8 +64,7 @@ class SESCollection(object):
             yield SES(sesruptures, self.investigation_time, idx)
 
 
-@export.add(('ses', 'xml'))
-def export_ses_xml(key, export_dir, fname, ses_coll):
+def _export_ses_xml(key, export_dir, fname, ses_coll):
     """
     Export a Stochastic Event Set Collection
     """
@@ -75,8 +74,7 @@ def export_ses_xml(key, export_dir, fname, ses_coll):
     return {fname: dest}
 
 
-@export.add(('ses', 'csv'))
-def export_ses_csv(key, export_dir, fname, ses_coll):
+def _export_ses_csv(key, export_dir, fname, ses_coll):
     """
     Export a Stochastic Event Set Collection
     """
@@ -89,8 +87,8 @@ def export_ses_csv(key, export_dir, fname, ses_coll):
     return {fname: dest}
 
 
-@ds_export.add(('ruptures', 'csv'))
-def ds_export_ses_csv(key, dstore):
+@export.add(('ruptures', 'csv'))
+def export_ses_csv(key, dstore):
     """
     Export a Stochastic Event Set Collection
     """
@@ -102,8 +100,8 @@ def ds_export_ses_csv(key, dstore):
     return [dest]
 
 
-@ds_export.add(('sitecol', 'csv'))
-def ds_export_sitecol_csv(key, dstore):
+@export.add(('sitecol', 'csv'))
+def export_sitecol_csv(key, dstore):
     dest = dstore.export_path(key)
     rows = []
     for site in dstore['sitecol']:
@@ -276,7 +274,6 @@ def export_gmf_csv(key, export_dir, fname, sitecol, ruptures, gmfs, gsim_path):
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
-@export.add(('hazard_curves', 'csv'))
 def export_hazard_curves_csv(key, export_dir, fname, sitecol, curves_by_imt,
                              imtls, investigation_time=None):
     """
@@ -348,9 +345,9 @@ def build_name(rlz, prefix, fmt, sampling):
     return fname
 
 
-@ds_export.add(('hcurves', 'hdf5', 'csv'), ('hmaps', 'hdf5', 'csv'),
-               ('uhs', 'hdf5', 'csv'))
-def ds_export_hcurves_csv(ekey, dstore):
+@export.add(('hcurves', 'hdf5', 'csv'), ('hmaps', 'hdf5', 'csv'),
+            ('uhs', 'hdf5', 'csv'))
+def export_hcurves_csv(ekey, dstore):
     """
     Exports the hazard curves into several .csv files
     """
@@ -379,8 +376,8 @@ def _expand(gmf_array, sitecol, gsim, imt_dt):
     return zeros
 
 
-@ds_export.add(('gmf_by_trt_gsim', 'xml'), ('gmf_by_trt_gsim', 'csv'))
-def ds_export_gmf(ekey, dstore):
+@export.add(('gmf_by_trt_gsim', 'xml'), ('gmf_by_trt_gsim', 'csv'))
+def export_gmf(ekey, dstore):
     sitecol = dstore['sitecol']
     rlzs_assoc = dstore['rlzs_assoc']
     rupture_by_tag = sum(dstore['sescollection'], AccumDict())
@@ -447,7 +444,6 @@ def export_hazard_curves_xml(key, export_dir, fname, sitecol, curves_by_imt,
     return {fname: dest}
 
 
-@export.add(('hazard_stats', 'csv'))
 def export_stats_csv(key, export_dir, fname, sitecol, data_by_imt):
     """
     Export the scalar outputs.
@@ -469,7 +465,6 @@ def export_stats_csv(key, export_dir, fname, sitecol, data_by_imt):
     return {fname: dest}
 
 
-@export.add(('uhs', 'csv'))
 def export_uhs_csv(key, export_dir, fname, sitecol, hmaps):
     """
     Export the scalar outputs.

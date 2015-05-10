@@ -24,7 +24,7 @@ import collections
 import numpy
 
 from openquake.baselib.general import AccumDict
-from openquake.commonlib.export import export, ds_export
+from openquake.commonlib.export import export
 from openquake.commonlib import writers, risk_writers, riskmodels
 from openquake.commonlib.writers import scientificformat
 from openquake.commonlib.risk_writers import (
@@ -67,8 +67,8 @@ def get_assets(dstore):
 # ############################### exporters ############################## #
 
 # this is used by classical_risk from csv
-@ds_export.add(('avg_losses', 'h5', 'csv'))
-def ds_export_avg_losses(ekey, dstore):
+@export.add(('avg_losses', 'h5', 'csv'))
+def export_avg_losses(ekey, dstore):
     avg_losses = dstore[ekey[:-1]]
     rlzs = dstore['rlzs_assoc'].realizations
     assets = get_assets(dstore)
@@ -83,12 +83,12 @@ def ds_export_avg_losses(ekey, dstore):
     return fnames
 
 
-@ds_export.add(
+@export.add(
     ('loss_curves', 'individual', 'hdf5', 'csv'),
     ('loss_curves', 'stats', 'hdf5', 'csv'),
     ('loss_maps', 'individual', 'hdf5', 'csv'),
     ('loss_maps', 'stats', 'hdf5', 'csv'))
-def ds_export_loss_curves(ekey, dstore):
+def export_loss_curves(ekey, dstore):
     assets = get_assets(dstore)
     rlzs = dstore['rlzs_assoc'].realizations
     rlz_by_dset = {rlz.uid: rlz for rlz in rlzs}
@@ -113,9 +113,9 @@ def ds_export_loss_curves(ekey, dstore):
     return fnames
 
 
-@ds_export.add(('agg_loss_curve', 'individual', 'hdf5', 'csv'),
-               ('agg_loss_curve', 'stats', 'hdf5', 'csv'))
-def ds_export_agg_loss_curve(ekey, dstore):
+@export.add(('agg_loss_curve', 'individual', 'hdf5', 'csv'),
+            ('agg_loss_curve', 'stats', 'hdf5', 'csv'))
+def export_agg_loss_curve(ekey, dstore):
     rlzs = dstore['rlzs_assoc'].realizations
     rlz_by_dset = {rlz.uid: rlz for rlz in rlzs}
     fnames = []
@@ -135,10 +135,10 @@ def ds_export_agg_loss_curve(ekey, dstore):
     return fnames
 
 
-@ds_export.add(
+@export.add(
     ('event_loss', 'individual', 'csv'),
     ('event_loss_asset', 'individual', 'csv'))
-def ds_export_event_loss(ekey, dstore):
+def export_event_loss(ekey, dstore):
     name, kind, fmt = ekey
     fnames = []
     for i, data in enumerate(dstore[ekey[:-1]]):
@@ -152,7 +152,7 @@ def ds_export_event_loss(ekey, dstore):
 
 # TODO: the export is doing too much; probably we should store
 # a better data structure
-@ds_export.add(('damages_by_key', 'xml'))
+@export.add(('damages_by_key', 'xml'))
 def export_damage(ekey, dstore):
     oqparam = dstore['oqparam']
     riskmodel = dstore['riskmodel']
@@ -189,24 +189,22 @@ def export_damage(ekey, dstore):
             dd_total.append(DmgDistTotal(dmg_state, mean, std))
 
         suffix = '' if rlz.uid == '*' else '-gsimltp_%s' % rlz.uid
-        f1 = export(('dmg_dist_per_asset', 'xml'), oqparam.export_dir,
-                    dmg_states, dd_asset, suffix)
-        f2 = export(('dmg_dist_per_taxonomy', 'xml'),
-                    oqparam.export_dir, dmg_states, dd_taxo, suffix)
-        f3 = export(('dmg_dist_total', 'xml'), oqparam.export_dir,
-                    dmg_states, dd_total, suffix)
+        f1 = export_dmg_xml(('dmg_dist_per_asset', 'xml'), oqparam.export_dir,
+                            dmg_states, dd_asset, suffix)
+        f2 = export_dmg_xml(('dmg_dist_per_taxonomy', 'xml'),
+                            oqparam.export_dir, dmg_states, dd_taxo, suffix)
+        f3 = export_dmg_xml(('dmg_dist_total', 'xml'), oqparam.export_dir,
+                            dmg_states, dd_total, suffix)
         max_damage = dmg_states[-1]
         # the collapse map is extracted from the damage distribution per asset
         # (dda) by taking the value corresponding to the maximum damage
         collapse_map = [dda for dda in dd_asset if dda.dmg_state == max_damage]
-        f4 = export(('collapse_map', 'xml'), oqparam.export_dir,
-                    dmg_states, collapse_map, suffix)
+        f4 = export_dmg_xml(('collapse_map', 'xml'), oqparam.export_dir,
+                            dmg_states, collapse_map, suffix)
         fnames.extend(sum((f1 + f2 + f3 + f4).values(), []))
     return sorted(fnames)
 
 
-@export.add(('dmg_dist_per_asset', 'xml'), ('dmg_dist_per_taxonomy', 'xml'),
-            ('dmg_dist_total', 'xml'), ('collapse_map', 'xml'))
 def export_dmg_xml(key, export_dir, damage_states, dmg_data, suffix):
     """
     Export damage outputs in XML format.
@@ -225,41 +223,8 @@ def export_dmg_xml(key, export_dir, damage_states, dmg_data, suffix):
     return AccumDict({key: [dest]})
 
 
-@export.add(('asset-loss', 'csv'), ('asset-ins', 'csv'))
-def export_asset_loss_csv(key, export_dir, data, suffix):
-    """
-    Export aggregate losses in CSV.
-
-    :param key: per_asset_loss|asset-ins
-    :param export_dir: the export directory
-    :param data: a list [(loss_type, unit, asset_ref, mean, stddev), ...]
-    :param suffix: a suffix specifying the GSIM realization
-    """
-    dest = os.path.join(export_dir, '%s%s.%s' % (key[0], suffix, key[1]))
-    header = ['LossType', 'Unit', 'Asset', 'Mean', 'Standard Deviation']
-    data.sort(key=operator.itemgetter(2))  # order by asset_ref
-    writers.save_csv(dest, [header] + data, fmt='%11.7E')
-    return AccumDict({key: [dest]})
-
-
-@export.add(('agg', 'csv'), ('ins', 'csv'))
-def export_agg_loss_csv(key, export_dir, aggcurves, suffix):
-    """
-    Export aggregate losses in CSV.
-
-    :param key: agg|ins
-    :param export_dir: the export directory
-    :param aggcurves: a list [(loss_type, unit, mean, stddev), ...]
-    :param suffix: a suffix specifying the GSIM realization
-    """
-    dest = os.path.join(export_dir, '%s%s.%s' % (key[0], suffix, key[1]))
-    header = ['LossType', 'Unit', 'Mean', 'Standard Deviation']
-    writers.save_csv(dest, [header] + aggcurves, fmt='%11.7E')
-    return AccumDict({key: [dest]})
-
-
-@ds_export.add(('damages_by_rlz', 'csv'))
-def ds_export_classical_damage_csv(ekey, dstore):
+@export.add(('damages_by_rlz', 'csv'))
+def export_classical_damage_csv(ekey, dstore):
     damages_by_rlz = dstore['damages_by_rlz']
     rlzs = dstore['rlzs_assoc'].realizations
     damage_states = dstore['riskmodel'].damage_states
@@ -269,13 +234,13 @@ def ds_export_classical_damage_csv(ekey, dstore):
         damages = damages_by_rlz[rlz.ordinal]
         fname = 'damage_%d.csv' % rlz.ordinal
         fnames.append(
-            export_classical_damage_csv(
+            _export_classical_damage_csv(
                 dstore.export_dir, fname, dmg_states, damages))
     return fnames
 
 
-def export_classical_damage_csv(export_dir, fname, damage_states,
-                                fractions_by_asset):
+def _export_classical_damage_csv(export_dir, fname, damage_states,
+                                 fractions_by_asset):
     """
     Export damage fractions in CSV.
 
@@ -303,7 +268,7 @@ PerAssetLoss = collections.namedtuple(  # the loss map
     'PerAssetLoss', 'loss_type unit asset_ref mean stddev')
 
 
-@ds_export.add(('losses_by_key', 'csv'))
+@export.add(('losses_by_key', 'csv'))
 def export_risk(ekey, dstore):
     """
     Export the loss curves of a given realization in CSV format.
@@ -331,7 +296,26 @@ def export_risk(ekey, dstore):
                 losses += {key_type: [
                     PerAssetLoss(loss_type, unit, *vals) for vals in values]}
         for key_type in losses:
-            out = export((key_type, 'csv'),
-                         oqparam.export_dir, losses[key_type], suffix)
-            fnames.extend(out.values()[0])
+            out = export_loss_csv((key_type, 'csv'),
+                                  oqparam.export_dir, losses[key_type], suffix)
+            fnames.append(out)
     return sorted(fnames)
+
+
+def export_loss_csv(key, export_dir, data, suffix):
+    """
+    Export (aggregate) losses in CSV.
+
+    :param key: per_asset_loss|asset-ins
+    :param export_dir: the export directory
+    :param data: a list [(loss_type, unit, asset_ref, mean, stddev), ...]
+    :param suffix: a suffix specifying the GSIM realization
+    """
+    dest = os.path.join(export_dir, '%s%s.%s' % (key[0], suffix, key[1]))
+    if key[0] in ('agg', 'ins'):  # aggregate
+        header = ['LossType', 'Unit', 'Mean', 'Standard Deviation']
+    else:
+        header = ['LossType', 'Unit', 'Asset', 'Mean', 'Standard Deviation']
+        data.sort(key=operator.itemgetter(2))  # order by asset_ref
+    writers.save_csv(dest, [header] + data, fmt='%11.7E')
+    return dest

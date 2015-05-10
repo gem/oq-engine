@@ -123,8 +123,8 @@ class BaseCalculator(object):
                 if 'individual' in key and not individual_curves:
                     continue  # skip individual curves
                 ekey = key + (fmt,)
-                if ekey in export.ds_export:
-                    exported[ekey] = export.ds_export(ekey, self.datastore)
+                if ekey in export.export:
+                    exported[ekey] = export.export(ekey, self.datastore)
                     logging.info('exported %s: %s', key, exported[ekey])
                 else:
                     logging.info('%s is not exportable in %s', key, fmt)
