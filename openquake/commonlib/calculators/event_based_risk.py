@@ -244,15 +244,17 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         # store statistics (i.e. mean and quantiles) for curves and maps
         if len(self.rlzs_assoc.realizations) > 1:
-            self.store_stats()
+            with self.datastore.h5file(
+                    'loss_curves', 'individual', 'hdf5') as loss_curves:
+                self.compute_store_stats(loss_curves)
 
     def build_agg_loss_curve_and_map(self, losses):
         """
-        Build a loss curve from a set of losses with length give by
+        Build a loss curve from a set of losses with length given by
         the parameter loss_curve_resolution.
 
         :param losses: a sequence of losses
-        :returns: a quartet (losses, poes, av, loss_map)
+        :returns: a quartet (losses, poes, avg, loss_map)
         """
         oq = self.oqparam
         clp = oq.conditional_loss_poes
@@ -308,7 +310,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
     # ################### methods to compute statistics  #################### #
 
-    def calc_stats(self):
+    def build_stats(self, loss_curves):
         """
         Compute all statistics for the specified assets starting from the
         stored loss curves. Yield a statistical output object for each
@@ -323,21 +325,19 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         # NB: should we encounter memory issues in the future, the easy
         # solution is to split the specific assets in blocks and perform
         # the computation one block at the time
-        with self.datastore.h5file(
-                'loss_curves', 'individual', 'hdf5') as loss_curves:
-            for loss_type in self.riskmodel.get_loss_types():
-                outputs = []
-                for rlz in rlzs:
-                    lcs = loss_curves[rlz.uid][loss_type]
-                    losses_poes = numpy.array(  # -> shape (N, 2, R)
-                        [lcs['losses'], lcs['poes']]).transpose(1, 0, 2)
-                    out = scientific.Output(
-                        assets, loss_type, rlz.ordinal, rlz.weight,
-                        loss_curves=losses_poes, insured_curves=None)
-                    outputs.append(out)
-                yield stats.build(outputs)
+        for loss_type in self.riskmodel.get_loss_types():
+            outputs = []
+            for rlz in rlzs:
+                lcs = loss_curves[rlz.uid][loss_type]
+                losses_poes = numpy.array(  # -> shape (N, 2, R)
+                    [lcs['losses'], lcs['poes']]).transpose(1, 0, 2)
+                out = scientific.Output(
+                    assets, loss_type, rlz.ordinal, rlz.weight,
+                    loss_curves=losses_poes, insured_curves=None)
+                outputs.append(out)
+            yield stats.build(outputs)
 
-    def store_stats(self):
+    def compute_store_stats(self, loss_curves):
         """
         Compute and store the statistical outputs
         """
@@ -348,7 +348,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         ins_curve_stats = self.zeros((Q, N), self.loss_curve_dt)
         loss_map_stats = self.zeros((Q, N), self.loss_map_dt)
 
-        for stat in self.calc_stats():  # one stat for each loss_type
+        for stat in self.build_stats(loss_curves):
+            # there is one stat for each loss_type
             curves, ins_curves, maps = scientific.get_stat_curves(stat)
             loss_curve_stats[:][stat.loss_type] = curves
             if oq.insured_losses:
