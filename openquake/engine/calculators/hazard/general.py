@@ -292,7 +292,7 @@ class BaseHazardCalculator(base.Calculator):
                           '%s, %s', len(rlzs), lt_model.sm_name,
                           '_'.join(lt_model.sm_lt_path))
             for rlz in rlzs:
-                gsim_by_trt = self.rlzs_assoc.gsim_by_trt[rlz]
+                gsim_by_trt = self.rlzs_assoc.gsim_by_trt[rlz.ordinal]
                 lt_rlz = models.LtRealization.objects.create(
                     lt_model=lt_model, gsim_lt_path=rlz.gsim_rlz.lt_uid,
                     weight=rlz.weight, ordinal=rlz.ordinal)
