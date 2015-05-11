@@ -18,6 +18,8 @@ import tempfile
 
 from nose.plugins.attrib import attr
 
+import numpy
+
 from qa_tests import risk
 from openquake.qa_tests_data.classical_risk import (
     case_1, case_2, case_3, case_4)
@@ -212,7 +214,7 @@ class ClassicalRiskCase3TestCase(
     def test(self):
         job = self._run_test()
         data = [[curve.asset_ref, curve.location.x, curve.location.y,
-                 curve.average_loss, 'NAN']
+                 curve.average_loss, numpy.nan]
                 for curve in models.LossCurveData.objects.filter(
                     loss_curve__output__oq_job=job).order_by('asset_ref')]
         fd, fname = tempfile.mkstemp(suffix='.csv')
@@ -258,7 +260,7 @@ class ClassicalRiskCase4TestCase(
             rlz = loss_curve.hazard_output.hazard_curve.lt_realization
             key = 'rlz-%03d-avg_loss' % rlz.ordinal
             data = [[curve.asset_ref, curve.location.x, curve.location.y,
-                     curve.average_loss, 'NAN']
+                     curve.average_loss, numpy.nan]
                     for curve in models.LossCurveData.objects.filter(
                         loss_curve=loss_curve).order_by('asset_ref')]
             fd, fname = tempfile.mkstemp(prefix='avg_loss', suffix='.csv')
