@@ -1214,7 +1214,7 @@ def _loss_curves(assets, mean, mean_averages, quantile, quantile_averages):
         for (losses, poes), avg in zip(mq_curve, mq_avg):
             lcs.append((losses, poes, avg))
         acc.append(numpy.array(lcs, loss_curve_dt))
-    return numpy.array(acc).T  # (Q + 1, N)
+    return numpy.array(acc, loss_curve_dt).T  # (Q + 1, N)
 
 
 def get_stat_curves(stats):
