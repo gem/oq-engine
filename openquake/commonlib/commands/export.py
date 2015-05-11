@@ -18,7 +18,7 @@
 
 import shutil
 from openquake.commonlib import sap, datastore
-from openquake.commonlib.export import export
+from openquake.commonlib.export import export as export_
 
 
 def export(calc_id, output_key, format='csv'):
@@ -34,7 +34,7 @@ def export(calc_id, output_key, format='csv'):
             shutil.copy(dstore.path(ekey[:-1]), epath)
             fnames = [epath]
         else:
-            fnames = export(ekey, dstore)
+            fnames = export_(ekey, dstore)
         print 'Exported %s' % fnames
 
 

@@ -49,19 +49,20 @@ def compose_arrays(a1, a2):
         composite[f2] = a2[f2]
     return composite
 
+asset_dt = numpy.dtype(
+    [('asset_ref', str, 20), ('lon', float), ('lat', float)])
+
 
 def get_assets(dstore):
     """
     :param dstore: a datastore with a key `specific_assets`
     :returns: an ordered array of records (asset_ref, lon, lat)
     """
-    if 'specific_assets' in dstore:
+    if ('specific_assets',) in dstore:
         assets = dstore['specific_assets']  # they are already ordered by ID
     else:  # consider all assets
         assets = sorted(numpy.concatenate(dstore['assets_by_site']),
                         key=operator.attrgetter('id'))
-    asset_dt = numpy.dtype(
-        [('asset_ref', str, 20), ('lon', float), ('lat', float)])
     asset_data = numpy.array(
         [(asset.id, asset.location[0], asset.location[1])
          for asset in assets], asset_dt)
