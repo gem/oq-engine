@@ -687,7 +687,7 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         assoc = csm.get_rlzs_assoc(
             lambda trtmod: sum(src.count_ruptures() for src in trtmod.sources))
         [rlz] = assoc.realizations
-        self.assertEqual(assoc.gsim_by_trt[rlz],
+        self.assertEqual(assoc.gsim_by_trt[rlz.ordinal],
                          {'Subduction Interface': 'SadighEtAl1997',
                           'Active Shallow Crust': 'ChiouYoungs2008'})
         # ignoring the end of the tuple, with the uid field
