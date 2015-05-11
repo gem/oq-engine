@@ -1241,14 +1241,14 @@ def get_stat_curves(stats):
     if stats.conditional_loss_poes:
         mq = _combine_mq(stats.mean_maps, stats.quantile_maps)
 
-        poes = ['poe-%s' % clp for clp in stats.conditional_loss_poes]
+        poes = ['poe~%s' % clp for clp in stats.conditional_loss_poes]
         loss_map_dt = numpy.dtype([(poe, float) for poe in poes])
 
-        Q, P, N = mq.shape
-        maps = [numpy.zeros(N, loss_map_dt) for _ in range(Q)]
+        Q1, P, N = mq.shape
+        maps = numpy.zeros((Q1, N), loss_map_dt)
         for i, imaps in enumerate(mq):
             for poe, imap in zip(poes, imaps):
-                maps[i][poe] = imap
+                maps[i, :][poe] = imap
     else:
         maps = []
-    return curves, insured_curves, maps  # shape (Q + 1, N)
+    return curves, insured_curves, maps  # shape (Q1, N)
