@@ -1,3 +1,4 @@
+from django.conf import settings
 from openquake.engine import __version__ as oqversion
 
 
@@ -9,7 +10,7 @@ def getusername(request):
     """
 
     user_name = (request.user.username if hasattr(request, 'user') and
-                 request.user.is_authenticated() else 'platform')
+                 request.user.is_authenticated() else settings.DEFAULT_USER)
 
     return user_name
 
