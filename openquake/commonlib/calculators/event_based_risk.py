@@ -155,8 +155,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.loss_curve_dt = numpy.dtype(
             [('losses', (float, R)), ('poes', (float, R)), ('avg', float)])
 
-        lm_names = loss_map_names(oq.conditional_loss_poes)
-        self.loss_map_dt = numpy.dtype([(f, float) for f in lm_names])
+        if oq.conditional_loss_poes:
+            lm_names = loss_map_names(oq.conditional_loss_poes)
+            self.loss_map_dt = numpy.dtype([(f, float) for f in lm_names])
 
         self.specific_assets = specific_assets = [
             a for assets in self.assets_by_site for a in assets
@@ -346,7 +347,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         Q = 1 + len(oq.quantile_loss_curves)
         loss_curve_stats = self.zeros((Q, N), self.loss_curve_dt)
         ins_curve_stats = self.zeros((Q, N), self.loss_curve_dt)
-        loss_map_stats = self.zeros((Q, N), self.loss_map_dt)
+        if oq.conditional_loss_poes:
+            loss_map_stats = self.zeros((Q, N), self.loss_map_dt)
 
         for stat in self.build_stats(loss_curves):
             # there is one stat for each loss_type

@@ -1214,7 +1214,7 @@ def _loss_curves(assets, mean, mean_averages, quantile, quantile_averages):
         for (losses, poes), avg in zip(mq_curve, mq_avg):
             lcs.append((losses, poes, avg))
         acc.append(numpy.array(lcs, loss_curve_dt))
-    return acc
+    return numpy.array(acc).T  # (Q + 1, N)
 
 
 def get_stat_curves(stats):
@@ -1238,14 +1238,17 @@ def get_stat_curves(stats):
         stats.quantile_insured_curves,
         stats.quantile_average_insured_losses)
 
-    mq = _combine_mq(stats.mean_maps, stats.quantile_maps)
+    if stats.conditional_loss_poes:
+        mq = _combine_mq(stats.mean_maps, stats.quantile_maps)
 
-    poes = ['poe-%s' % clp for clp in stats.conditional_loss_poes]
-    loss_map_dt = numpy.dtype([(poe, float) for poe in poes])
+        poes = ['poe-%s' % clp for clp in stats.conditional_loss_poes]
+        loss_map_dt = numpy.dtype([(poe, float) for poe in poes])
 
-    Q, P, N = mq.shape
-    maps = [numpy.zeros(N, loss_map_dt) for _ in range(Q)]
-    for i, imaps in enumerate(mq):
-        for poe, imap in zip(poes, imaps):
-            maps[i][poe] = imap
-    return curves, insured_curves, maps
+        Q, P, N = mq.shape
+        maps = [numpy.zeros(N, loss_map_dt) for _ in range(Q)]
+        for i, imaps in enumerate(mq):
+            for poe, imap in zip(poes, imaps):
+                maps[i][poe] = imap
+    else:
+        maps = []
+    return curves, insured_curves, maps  # shape (Q + 1, N)
