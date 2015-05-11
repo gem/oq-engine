@@ -1244,9 +1244,8 @@ def get_stat_curves(stats):
     loss_map_dt = numpy.dtype([(poe, float) for poe in poes])
 
     Q, P, N = mq.shape
-    maps = numpy.zeros((Q, N), loss_map_dt)
-    for i, imaps in enumerate(maps):
+    maps = [numpy.zeros(N, loss_map_dt) for _ in range(Q)]
+    for i, imaps in enumerate(mq):
         for poe, imap in zip(poes, imaps):
-            maps[i, :][poe] = imap
-
+            maps[i][poe] = imap
     return curves, insured_curves, maps
