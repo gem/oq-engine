@@ -1,3 +1,5 @@
+import getpass
+
 from django.conf import settings
 from openquake.engine import __version__ as oqversion
 
@@ -10,7 +12,8 @@ def getusername(request):
     """
 
     user_name = (request.user.username if hasattr(request, 'user') and
-                 request.user.is_authenticated() else settings.DEFAULT_USER)
+                 request.user.is_authenticated() else settings.DEFAULT_USER if
+                 hasattr(settings, 'DEFAULT_USER') else getpass.getuser())
 
     return user_name
 
