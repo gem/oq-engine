@@ -54,15 +54,11 @@ def get_subtypes(dtype):
 
 
 def _cast_str(col, type, shape, lineno, fname):
-    # an utility to convert strings into tuples or numbers
-    try:
-        if shape:
-            return tuple(map(type, col.split()))
-        else:
-            return type(col)
-    except:
-        raise InvalidFile('Could not parse %r in file %s, line %d' % (
-            col, fname, lineno))
+    # convert strings into tuples or numbers, used inside read_composite_array
+    if shape:
+        return tuple(map(type, col.split()))
+    else:
+        return type(col)
 
 
 # NB: this only works with flat composite arrays
