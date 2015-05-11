@@ -211,13 +211,15 @@ class ClassicalRiskCase3TestCase(
     @attr('qa', 'risk', 'classical')
     def test(self):
         job = self._run_test()
-        data = [[curve.asset_ref, curve.average_loss]
+        data = [[curve.asset_ref, curve.location.x, curve.location.y,
+                 curve.average_loss, 'NAN']
                 for curve in models.LossCurveData.objects.filter(
                     loss_curve__output__oq_job=job).order_by('asset_ref')]
         fd, fname = tempfile.mkstemp(suffix='.csv')
         os.close(fd)
-        writers.save_csv(
-            fname, [['asset_ref', 'avg_loss']] + data, fmt='%11.8E')
+        writers.write_csv(
+            fname, [['asset_ref', 'lon', 'lat', 'avg_loss~structural',
+                     'ins_loss~structural']] + data, fmt='%10.6E')
         expected = self._test_path('expected/rlz-000-avg_loss.csv')
         self.assertEqual(open(fname).read(), open(expected).read())
 
@@ -255,12 +257,14 @@ class ClassicalRiskCase4TestCase(
             loss_curve = out.loss_curve
             rlz = loss_curve.hazard_output.hazard_curve.lt_realization
             key = 'rlz-%03d-avg_loss' % rlz.ordinal
-            data = [[curve.asset_ref, curve.average_loss]
+            data = [[curve.asset_ref, curve.location.x, curve.location.y,
+                     curve.average_loss, 'NAN']
                     for curve in models.LossCurveData.objects.filter(
                         loss_curve=loss_curve).order_by('asset_ref')]
-            fd, fname = tempfile.mkstemp(prefix=key, suffix='.csv')
+            fd, fname = tempfile.mkstemp(prefix='avg_loss', suffix='.csv')
             os.close(fd)
-            writers.save_csv(
-                fname, [['asset_ref', 'avg_loss']] + data, fmt='%11.8E')
+            hd = [['asset_ref', 'lon', 'lat', 'avg_loss~structural',
+                   'ins_loss~structural']] + data
+            writers.save_csv(fname, hd, fmt='%10.6E')
             expected = self._test_path('expected/%s.csv' % key)
             self.assertEqual(open(fname).read(), open(expected).read())
