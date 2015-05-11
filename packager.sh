@@ -1,5 +1,5 @@
 #!/bin/bash
-if [ "$GEM_SET_DEBUG" = "true ]; then
+if [ "$GEM_SET_DEBUG" = "true" ]; then
     export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
     set -x
 fi
