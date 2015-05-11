@@ -302,7 +302,7 @@ class RlzsAssoc(collections.Mapping):
     def __init__(self, csm_info, rlzs_assoc=None):
         self.csm_info = csm_info
         self.rlzs_assoc = rlzs_assoc or collections.defaultdict(list)
-        self.gsim_by_trt = {}  # rlz -> {trt: gsim}
+        self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
         self.rlzs_by_smodel = collections.OrderedDict()
 
     @property
@@ -329,7 +329,8 @@ class RlzsAssoc(collections.Mapping):
         for i, gsim_rlz in enumerate(realizations):
             weight = float(lt_model.weight) * float(gsim_rlz.weight)
             rlz = LtRealization(idx, lt_model.path, gsim_rlz, weight, set())
-            self.gsim_by_trt[rlz] = dict(zip(gsim_lt.all_trts, gsim_rlz.value))
+            self.gsim_by_trt.append(dict(
+                zip(gsim_lt.all_trts, gsim_rlz.value)))
             for trt_model in lt_model.trt_models:
                 trt = trt_model.trt
                 gsim = gsim_lt.get_gsim_by_trt(gsim_rlz, trt)
