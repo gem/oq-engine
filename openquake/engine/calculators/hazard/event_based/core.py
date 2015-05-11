@@ -157,11 +157,11 @@ def compute_ruptures(sources, sitecol, info, monitor):
         # saving ses_ruptures
         with save_ruptures_mon:
             for rup, rups in pairs:
-                for col_idx in set(r.col_idx for r in rups):
+                for col_id in set(r.col_id for r in rups):
                     prob_rup = models.ProbabilisticRupture.create(
-                        rup, ses_coll[col_idx], rups[0].indices)
+                        rup, ses_coll[col_id], rups[0].indices)
                     for r in rups:
-                        if r.col_idx == col_idx:
+                        if r.col_id == col_id:
                             models.SESRupture.objects.create(
                                 rupture=prob_rup, ses_id=r.ses_idx,
                                 tag=r.tag, seed=r.seed)
@@ -268,7 +268,7 @@ class GmfCalculator(object):
         """
         self.sorted_imts = sorted_imts
         self.sorted_gsims = sorted_gsims
-        self.col_idx = ses_coll.ordinal
+        self.col_id = ses_coll.ordinal
         self.trt_model_id = ses_coll.trt_model.id
         self.truncation_level = truncation_level
         self.correl_model = correl_model
@@ -318,7 +318,7 @@ class GmfCalculator(object):
             if samples > 1:
                 # save only the data for the realization corresponding
                 # to the current SESCollection
-                rlzs = [rlz for rlz in rlzs if self.col_idx in rlz.col_ids]
+                rlzs = [rlz for rlz in rlzs if self.col_id in rlz.col_ids]
             for rlz in rlzs:
                 imt_name, sa_period, sa_damping = from_string(imt_str)
                 inserter.add(models.GmfData(
@@ -463,7 +463,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                     # otherwise one would need as key in apply_reduce
                     # lambda sr: sr.rupture.ses_collection.ordinal which would
                     # read the world from the database
-                    sr.col_idx = ses_coll.ordinal
+                    sr.col_id = ses_coll.ordinal
                     sesruptures.append(sr)
         base_agg = super(EventBasedHazardCalculator, self).agg_curves
         if self.oqparam.hazard_curves_from_gmfs:
@@ -473,4 +473,4 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         return tasks.apply_reduce(
             compute_gmfs_and_curves,
             (sesruptures, sitecol, self.rlzs_assoc, self.monitor),
-            base_agg, zeros, key=lambda sr: sr.col_idx)
+            base_agg, zeros, key=lambda sr: sr.col_id)
