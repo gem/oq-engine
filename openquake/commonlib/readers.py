@@ -17,6 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import numpy
+from openquake.commonlib import InvalidFile
 
 
 def parse_header(header):
@@ -34,8 +35,8 @@ def parse_header(header):
     for col_str in header:
         col = col_str.split(':')
         field = col[0]
-        numpytype = getattr(numpy, col[1])
-        shape = tuple(map(int, col[2:]))
+        numpytype = col[1]
+        shape = () if not col[2].strip() else (int(col[2]),)
         triples.append((field, numpytype, shape))
     return numpy.dtype(triples)
 
@@ -48,8 +49,20 @@ def get_subtypes(dtype):
     sd = []
     for f in dtype.fields:
         dt = dtype.fields[f][0]
-        sd.append(dt.subdtype[0].type)
+        sd.append((dt.subdtype[0].type if dt.subdtype else dt.type, dt.shape))
     return sd
+
+
+def _cast_str(col, type, shape, lineno, fname):
+    # an utility to convert strings into tuples or numbers
+    try:
+        if shape:
+            return tuple(map(type, col.split()))
+        else:
+            return type(col)
+    except:
+        raise InvalidFile('Could not parse %r in file %s, line %d' % (
+            col, fname, lineno))
 
 
 # NB: this only works with flat composite arrays
@@ -67,12 +80,26 @@ def read_composite_array(fname, sep=','):
         header = next(f)
         dtype = parse_header(header.split(sep))
         subtypes = get_subtypes(dtype)
+        col_ids = range(1, len(subtypes) + 1)
+        num_columns = len(col_ids)
         records = []
-        for line in f:
+        col, col_id = '', 0
+        for i, line in enumerate(f, 2):
             row = line.split(sep)
-            record = tuple(map(subtype, col.split())
-                           for subtype, col in zip(subtypes, row))
-            records.append(record)
+            if len(row) != num_columns:
+                raise InvalidFile(
+                    'expected %d columns, found %d in file %s, line %d' %
+                    (num_columns, len(row), fname, i))
+            try:
+                record = []
+                for (type, shape), col, col_id in zip(subtypes, row, col_ids):
+                    record.append(_cast_str(col, type, shape, i, fname))
+                records.append(tuple(record))
+            except Exception as e:
+                raise InvalidFile(
+                    'Could not cast %r in file %s, line %d, column %d '
+                    'using %s: %s' % (col, fname, i, col_id,
+                                      (type.__name__,) + shape), e)
         return numpy.array(records, dtype)
 
 
