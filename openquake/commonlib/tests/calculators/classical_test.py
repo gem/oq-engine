@@ -87,6 +87,8 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_11(self):
         self.assert_curves_ok(
             ['hazard_curve-mean.csv',
+             'quantile_curve-0.1.csv',
+             'quantile_curve-0.9.csv',
              'hazard_curve-smltp_b1_b2-gsimltp_b1.csv',
              'hazard_curve-smltp_b1_b3-gsimltp_b1.csv',
              'hazard_curve-smltp_b1_b4-gsimltp_b1.csv'],
