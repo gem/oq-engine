@@ -27,18 +27,18 @@ def show(calc_id, key=None, rlzs=None):
     Show the content of a datastore.
 
     :param id: numeric calculation ID
-    :param key: dash-separated key of the datastore
+    :param key: key of the datastore
     :param rlzs: flag; if given, print out the realizations in order
     """
     ds = datastore.DataStore(calc_id)
     if key:
-        print ds[key.split('-')]
+        print ds[key]
         return
     # print all keys
     print ds['oqparam'].calculation_mode, \
         'calculation saved in %s contains:' % ds.calc_dir
     for key in ds:
-        print '%s: %s' % ('-'.join(key), humansize(ds.getsize(*key)))
+        print key, humansize(ds.getsize(key))
     if rlzs and 'curves_by_trt_gsim' in ds:
         min_value = 0.01  # used in rmsep
         curves_by_rlz, mean_curves = combined_curves(ds)
