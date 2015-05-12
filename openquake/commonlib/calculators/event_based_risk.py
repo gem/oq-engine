@@ -243,9 +243,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         # store statistics (i.e. mean and quantiles) for curves and maps
         if len(self.rlzs_assoc.realizations) > 1:
-            with self.datastore.h5file(
-                    'loss_curves', 'individual', 'hdf5') as loss_curves:
-                self.compute_store_stats(loss_curves)
+            self.compute_store_stats()
 
     def build_agg_loss_curve_and_map(self, losses):
         """
@@ -301,15 +299,14 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
         if hasattr(dset, 'uid'):
             dset = dset.uid
-            kind = 'individual'
+            kind = 'rlzs'
         else:
             kind = 'stats'
-        with self.datastore.h5file(name, kind, 'hdf5') as h5f:
-            h5f[dset] = curves
+        self.datastore['/%s/%s/%s' % (name, kind, dset)] = curves
 
     # ################### methods to compute statistics  #################### #
 
-    def build_stats(self, loss_curves):
+    def build_stats(self):
         """
         Compute all statistics for the specified assets starting from the
         stored loss curves. Yield a statistical output object for each
@@ -327,7 +324,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         for loss_type in self.riskmodel.get_loss_types():
             outputs = []
             for rlz in rlzs:
-                lcs = loss_curves[rlz.uid][loss_type]
+                lcs = self.datastore['/loss_curves/rlzs/%s' % rlz.uid][
+                    loss_type]
                 losses_poes = numpy.array(  # -> shape (N, 2, R)
                     [lcs['losses'], lcs['poes']]).transpose(1, 0, 2)
                 out = scientific.Output(
@@ -336,7 +334,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 outputs.append(out)
             yield stats.build(outputs)
 
-    def compute_store_stats(self, loss_curves):
+    def compute_store_stats(self):
         """
         Compute and store the statistical outputs
         """
@@ -348,7 +346,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         if oq.conditional_loss_poes:
             loss_map_stats = self.zeros((Q, N), self.loss_map_dt)
 
-        for stat in self.build_stats(loss_curves):
+        for stat in self.build_stats():
             # there is one stat for each loss_type
             curves, ins_curves, maps = scientific.get_stat_curves(stat)
             loss_curve_stats[:][stat.loss_type] = curves

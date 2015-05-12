@@ -121,6 +121,7 @@ def export_agg_loss_curve(ekey, dstore):
     rlz_by_dset = {rlz.uid: rlz for rlz in rlzs}
     fnames = []
     columns = 'losses poes avg'.split()
+    import pdb; pdb.set_trace()
     for dset, loss_curve_by_lt in dstore[ekey[0]]:
         if dset in rlz_by_dset:
             prefix = 'rlz-%03d' % rlz_by_dset[dset].ordinal
