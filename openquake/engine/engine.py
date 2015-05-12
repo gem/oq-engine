@@ -46,7 +46,7 @@ from openquake.engine.db.schema.upgrades import upgrader
 
 from openquake import hazardlib, risklib, commonlib
 
-from openquake.commonlib import readinput, valid
+from openquake.commonlib import readinput, valid, datastore
 
 
 INPUT_TYPES = set(dict(models.INPUT_TYPE_CHOICES))
@@ -388,6 +388,8 @@ def run_job_lite(cfg_files, log_level, log_file, exports=''):
     upgrader.check_versions(django_db.connections['admin'])
     with CeleryNodeMonitor(openquake.engine.no_distribute(), interval=3):
         job = job_from_files(cfg_files, getpass.getuser(), log_level, exports)
+        job.ds_calc_dir = datastore.DataStore(job.id).calc_dir
+        job.save()
         t0 = time.time()
         run_calc(job, log_level, log_file, exports, lite=True)
         duration = time.time() - t0
