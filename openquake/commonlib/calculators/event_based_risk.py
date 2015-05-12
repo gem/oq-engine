@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import re
 import os.path
 import logging
 import operator
@@ -27,6 +28,11 @@ from openquake.baselib.general import AccumDict
 from openquake.commonlib.calculators import base
 from openquake.commonlib import readinput, writers, parallel
 from openquake.risklib import riskinput, scientific
+
+
+def to_key(*args):
+    "dash-join the arguments and return a string"
+    return '-'.join(map(str, args))
 
 
 @parallel.litetask
@@ -143,7 +149,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             logging.info('rlz=%d, loss type=%s: %d/%d nonzero losses',
                          i, loss_type, nonzero, total)
             if elass:
-                key = ('rlz', ordinal, loss_type, 'event_loss_asset')
+                key = to_key('rlz', ordinal, loss_type, 'event_loss_asset')
                 data = []
                 for asset_ref, rows in elass.iteritems():
                     for tag, loss, ins_loss in rows:
@@ -151,7 +157,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 self.export_csv(key, sorted(data))
 
                 # build the loss curves per asset
-                key = ('rlz', ordinal, loss_type, 'loss_curves')
+                key = to_key('rlz', ordinal, loss_type, 'loss_curves')
                 self.datastore[key] = lc = self.build_loss_curves(elass, 1)
                 data = []
                 for asset, (losses, poes), avg in zip(
@@ -161,7 +167,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
                 if oq.insured_losses:
                     # build the insured loss curves per asset
-                    key_ins = ('rlz', ordinal, loss_type, 'ins_loss_curves')
+                    key_ins = to_key(
+                        'rlz', ordinal, loss_type, 'ins_loss_curves')
                     self.datastore[key_ins] = ic = self.build_loss_curves(
                         elass, 2)
                     data = []
@@ -172,7 +179,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
                 if oq.conditional_loss_poes:
                     # build the loss maps per asset an array of shape (P, S)
-                    key_map = ('rlz', ordinal, loss_type, 'loss_maps')
+                    key_map = to_key('rlz', ordinal, loss_type, 'loss_maps')
                     self.datastore[key_map] = scientific.loss_map_matrix(
                         oq.conditional_loss_poes,
                         self.datastore[key]['losses_poes'])
@@ -183,11 +190,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     self.export_csv(key_map, data)
 
             if elagg:
-                key = ('rlz', ordinal, loss_type, 'event_loss')
+                key = to_key('rlz', ordinal, loss_type, 'event_loss')
                 self.export_csv(key, elagg)
 
                 # aggregate loss curve for all tags
-                key = ('rlz', ordinal, loss_type, 'agg_loss_curve')
+                key = to_key('rlz', ordinal, loss_type, 'agg_loss_curve')
                 losses, poes, avg, map_ = self.build_agg_loss_curve_and_map(
                     [loss for _tag, loss, _ins_loss in elagg])
                 self.datastore[key] = dict(losses=losses, poes=poes, avg=avg)
@@ -197,13 +204,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         if len(self.rlzs_assoc.realizations) > 1:
             for stat in self.calc_stats():  # one stat for each loss_type
                 curves, ins_curves, maps = scientific.get_stat_curves(stat)
-                key = ('loss_curve_stats', stat.loss_type)
+                key = to_key('loss_curve_stats', stat.loss_type)
                 self.export_csv(key, curves)
                 if oq.insured_losses:
-                    key = ('ins_loss_curve_stats', stat.loss_type)
+                    key = to_key('ins_loss_curve_stats', stat.loss_type)
                     self.export_csv(key, ins_curves)
                 if oq.conditional_loss_poes:
-                    key = ('loss_map_stats', stat.loss_type)
+                    key = to_key('loss_map_stats', stat.loss_type)
                     self.export_csv(key, maps)
         return self.saved
 
@@ -263,10 +270,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
         rlzs = self.rlzs_assoc.realizations
         assets = self.datastore['specific_assets']
+        pattern = 'rlz-(\d+)-%s-loss_curves' % loss_type
         for key in self.datastore:
-            if (key[0] == 'rlz' and key[2] == loss_type and
-                    key[-1] == 'loss_curves'):
-                ordinal = int(key[1])
+            mo = re.match(pattern, key)
+            if mo is not None:
+                ordinal = int(mo.group(1))
                 weight = rlzs[ordinal].weight
                 lcs = self.datastore[key]
                 out = scientific.Output(
@@ -309,7 +317,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                          lca.average_loss, '', loss_type))
         header = ['lon', 'lat', 'asset_ref', 'asset_value', 'average_loss',
                   'stddev_loss', 'loss_type']
-        key = ('loss_avg_stats', loss_type)
+        key = to_key('loss_avg_stats', loss_type)
         self.export_csv(key, [header] + data)
 
     def export_maps_compact(self, loss_maps_per_asset, loss_type):
@@ -329,7 +337,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             data.append((lon, lat, lma.asset.id, lma.loss, loss_type))
 
         header = ['lon', 'lat', 'asset_ref', 'average_loss', 'loss_type']
-        key = ('loss_map_stats', loss_type)
+        key = to_key('loss_map_stats', loss_type)
         self.export_csv(key, [header] + data)
 
     def export_csv(self, key, data):
@@ -341,7 +349,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             return
         key_str = '-'.join(key) if isinstance(key, tuple) else key
         dest = os.path.join(self.oqparam.export_dir, key_str) + '.csv'
-        if key[0] == 'rlz' and not self.oqparam.individual_curves:
+        if key.startswith('rlz-') and not self.oqparam.individual_curves:
             return  # don't export individual curves
         if hasattr(data[0], '_fields'):
             header = [data[0]._fields]

@@ -116,9 +116,9 @@ class ClassicalCalculator(base.HazardCalculator):
         curves_by_rlz = self.rlzs_assoc.combine_curves(
             curves_by_trt_gsim, agg_curves, zc)
         if oq.individual_curves:
-            self.datastore['hcurves', 'hdf5'] = (
-                ('rlz-%d' % rlz.ordinal, curves)
-                for rlz, curves in curves_by_rlz.iteritems())
+            for rlz, curves in curves_by_rlz.iteritems():
+                dset = 'rlz-%d' % rlz.ordinal
+                self.datastore.hdf5['/hcurves/%s' % dset] = curves
         rlzs = self.rlzs_assoc.realizations
         nsites = len(self.sitecol)
 
@@ -158,12 +158,12 @@ class ClassicalCalculator(base.HazardCalculator):
             for imt in oq.imtls:
                 qc[imt] = scientific.quantile_curve(
                     curves_by_imt[imt], q, weights).reshape((nsites, -1))
-        if hasattr(self.datastore, 'h5file'):
-            with self.datastore.h5file(('hcurves', 'hdf5'), 'w') as h5f:
-                if mean:
-                    h5f['mean'] = self.mean_curves
-                for q in self.quantile:
-                    h5f['quantile-%s' % q] = self.quantile[q]
+
+        h5 = self.datastore.hdf5
+        if mean:
+            h5['mean'] = self.mean_curves
+        for q in self.quantile:
+            h5['quantile-%s' % q] = self.quantile[q]
         for fmt in exports:
             if mean:
                 saved += self.export_curves(
@@ -259,7 +259,6 @@ class ClassicalTilingCalculator(ClassicalCalculator):
     Classical Tiling calculator
     """
     prefilter = False
-    persistent = False  # use an in-memory datastore
     result_kind = 'pathname_by_fname'
 
     def execute(self):
@@ -271,7 +270,8 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         self.tiles = map(SiteCollection, split_in_blocks(
             self.sitecol, self.oqparam.concurrent_tasks or 1))
         self.oqparam.concurrent_tasks = 0
-        calculator = ClassicalCalculator(self.oqparam, monitor)
+        calculator = ClassicalCalculator(
+            self.oqparam, monitor, persistent=False)
         calculator.composite_source_model = self.composite_source_model
         calculator.rlzs_assoc = self.composite_source_model.get_rlzs_assoc(
             lambda tm: True)  # build the full logic tree
