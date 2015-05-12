@@ -72,9 +72,9 @@ def get_assets(dstore):
 # ############################### exporters ############################## #
 
 # this is used by classical_risk from csv
-@export.add(('avg_losses', 'h5', 'csv'))
+@export.add(('avg_losses', 'csv'))
 def export_avg_losses(ekey, dstore):
-    avg_losses = dstore[ekey[:-1]]
+    avg_losses = dstore[ekey[0]]
     rlzs = dstore['rlzs_assoc'].realizations
     assets = get_assets(dstore)
     columns = 'asset_ref lon lat avg_loss~structural ins_loss~structural' \
@@ -89,11 +89,7 @@ def export_avg_losses(ekey, dstore):
     return fnames
 
 
-@export.add(
-    ('loss_curves', 'individual', 'hdf5', 'csv'),
-    ('loss_curves', 'stats', 'hdf5', 'csv'),
-    ('loss_maps', 'individual', 'hdf5', 'csv'),
-    ('loss_maps', 'stats', 'hdf5', 'csv'))
+@export.add(('loss_curves', 'csv'), ('loss_maps', 'csv'))
 def export_loss_curves(ekey, dstore):
     assets = get_assets(dstore)
     rlzs = dstore['rlzs_assoc'].realizations
@@ -103,7 +99,7 @@ def export_loss_curves(ekey, dstore):
         columns = 'asset_ref lon lat losses poes avg'.split()
     elif ekey[0] == 'loss_maps':
         columns = None
-    for dset, curves_by_lt in dstore[ekey[:-1]]:
+    for dset, curves_by_lt in dstore[ekey[0]]:
         if dset in rlz_by_dset:
             prefix = 'rlz-%03d' % rlz_by_dset[dset].ordinal
         else:
@@ -119,14 +115,13 @@ def export_loss_curves(ekey, dstore):
     return fnames
 
 
-@export.add(('agg_loss_curve', 'individual', 'hdf5', 'csv'),
-            ('agg_loss_curve', 'stats', 'hdf5', 'csv'))
+@export.add(('/agg_loss_curve', 'csv'), ('/agg_loss_curve', 'csv'))
 def export_agg_loss_curve(ekey, dstore):
     rlzs = dstore['rlzs_assoc'].realizations
     rlz_by_dset = {rlz.uid: rlz for rlz in rlzs}
     fnames = []
     columns = 'losses poes avg'.split()
-    for dset, loss_curve_by_lt in dstore[ekey[:-1]]:
+    for dset, loss_curve_by_lt in dstore[ekey[0]]:
         if dset in rlz_by_dset:
             prefix = 'rlz-%03d' % rlz_by_dset[dset].ordinal
         else:
@@ -141,13 +136,11 @@ def export_agg_loss_curve(ekey, dstore):
     return fnames
 
 
-@export.add(
-    ('event_loss', 'individual', 'csv'),
-    ('event_loss_asset', 'individual', 'csv'))
+@export.add(('event_loss', 'csv'), ('event_loss_asset', 'csv'))
 def export_event_loss(ekey, dstore):
-    name, kind, fmt = ekey
+    name, fmt = ekey
     fnames = []
-    for i, data in enumerate(dstore[ekey[:-1]]):
+    for i, data in enumerate(dstore[ekey[0]]):
         for loss_type in data.dtype.fields:
             dest = os.path.join(
                 dstore.export_dir, 'rlz-%03d-%s-%s.csv' % (i, loss_type, name))

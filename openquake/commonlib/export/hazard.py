@@ -374,7 +374,7 @@ def export_gmf(ekey, dstore):
     samples = dstore['oqparam'].number_of_logic_tree_samples
     fmt = ekey[-1]
     fnames = []
-    gmf_by_rlz = rlzs_assoc.combine_gmfs(dstore[ekey[:-1]])
+    gmf_by_rlz = rlzs_assoc.combine_gmfs(dstore[ekey[0]])
     for rlz, gmf_by_tag in sorted(gmf_by_rlz.iteritems()):
         if isinstance(gmf_by_tag, dict):  # event based
             tags = sorted(gmf_by_tag)

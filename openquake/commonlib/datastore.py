@@ -93,7 +93,8 @@ class DataStore(collections.MutableMapping):
             os.mkdir(self.calc_dir)
         self.export_dir = '.'
         self.hdf5path = os.path.join(self.calc_dir, 'output.hdf5')
-        self.hdf5 = h5py.File(self.hdf5path, 'w', libver='latest')
+        mode = 'r+' if os.path.exists(self.hdf5path) else 'w'
+        self.hdf5 = h5py.File(self.hdf5path, mode, libver='latest')
 
     def path(self, key):
         """
