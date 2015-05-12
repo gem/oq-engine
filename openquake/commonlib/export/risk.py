@@ -133,10 +133,11 @@ def export_agg_loss_curve(ekey, dstore):
             prefix = dset
         for loss_type in loss_curve_by_lt.dtype.fields:
             loss_curve = loss_curve_by_lt[loss_type]
-            dest = os.path.join(
-                dstore.export_dir, '%s-%s-%s.csv' %
-                (prefix, loss_type, ekey[0]))
+            name = '%s-%s-%s.csv' % (prefix, loss_type, ekey[0])
+            dest = os.path.join(dstore.export_dir, name)
             writers.write_csv(dest, loss_curve, fmt='%10.6E', header=columns)
+            # useful for checking
+            print '******* avg', name, loss_curve['avg']
             fnames.append(dest)
     return fnames
 
