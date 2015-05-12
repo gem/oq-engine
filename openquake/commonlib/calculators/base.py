@@ -120,11 +120,12 @@ class BaseCalculator(object):
         individual_curves = self.oqparam.individual_curves
         for fmt in self.oqparam.exports.split():
             for key in self.datastore:
-                if 'individual' in key and not individual_curves:
+                if 'rlz' in key and not individual_curves:
                     continue  # skip individual curves
-                ekey = key + (fmt,)
+                ekey = (key, fmt)
                 if ekey in export.export:
-                    exported[ekey] = export.export(ekey, self.datastore)
+                    exported[ekey] = sorted(
+                        export.export(ekey, self.datastore))
                     logging.info('exported %s: %s', key, exported[ekey])
                 else:
                     logging.info('%s is not exportable in %s', key, fmt)

@@ -90,10 +90,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
     pre_calculator = 'event_based_rupture'
     core_func = event_based_risk
 
-    event_loss_asset = datastore.persistent_attribute(
-        'event_loss_asset', 'individual')
-    event_loss = datastore.persistent_attribute(
-        'event_loss', 'individual')
+    event_loss_asset = datastore.persistent_attribute('event_loss_asset')
+    event_loss = datastore.persistent_attribute('event_loss')
 
     def riskinput_key(self, ri):
         """

@@ -168,16 +168,14 @@ class ClassicalCalculator(base.HazardCalculator):
         if not self.persistent:  # do nothing
             return
         oq = self.oqparam
-        with self.datastore.h5file('hcurves', 'hdf5') as h5f:
-            h5f[dset] = curves
+        h5 = self.datastore.hdf5
+        h5['/hcurves/' + dset] = curves
         if oq.hazard_maps:
-            with self.datastore.h5file('hmaps', 'hdf5') as h5f:
-                # hmaps is a composite array of shape (N, P)
-                h5f[dset] = hmaps = self.hazard_maps(curves)
+            # hmaps is a composite array of shape (N, P)
+            h5['/hmaps/' + dset] = hmaps = self.hazard_maps(curves)
             if oq.uniform_hazard_spectra:
-                with self.datastore.h5file('uhs', 'hdf5') as h5f:
-                    # uhs is an array of shape (N, P)
-                    h5f[dset] = calc.make_uhs(hmaps)
+                # uhs is an array of shape (N, P)
+                self.datastore.hdf5['/uhs/' + dset] = calc.make_uhs(hmaps)
 
 
 def is_effective_trt_model(result_dict, trt_model):
