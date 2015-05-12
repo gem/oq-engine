@@ -72,9 +72,9 @@ def get_assets(dstore):
 # ############################### exporters ############################## #
 
 # this is used by classical_risk from csv
-@export.add(('avg_losses', 'csv'))
+@export.add(('/avg_losses', 'csv'))
 def export_avg_losses(ekey, dstore):
-    avg_losses = dstore[ekey[0]]
+    avg_losses = dstore[ekey[0] + '/rlzs']
     rlzs = dstore['rlzs_assoc'].realizations
     assets = get_assets(dstore)
     columns = 'asset_ref lon lat avg_loss~structural ins_loss~structural' \

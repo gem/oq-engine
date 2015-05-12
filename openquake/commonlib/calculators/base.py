@@ -60,7 +60,6 @@ class BaseCalculator(object):
     assets_by_site = datastore.persistent_attribute('assets_by_site')
     cost_types = datastore.persistent_attribute('cost_types')
 
-    persistent = True  # by default persistence on the datastore is enabled
     precalc = None  # to be overridden
     pre_calculator = None  # to be overridden
 
@@ -74,6 +73,7 @@ class BaseCalculator(object):
             self.datastore.hdf5 = {}
         self.oqparam = oqparam
         self.datastore.export_dir = oqparam.export_dir
+        self.persistent = persistent
 
     def run(self, pre_execute=True, **kw):
         """
