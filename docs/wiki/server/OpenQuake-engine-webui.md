@@ -36,7 +36,7 @@ AUTHENTICATION_BACKENDS = (
 ## Running with supervisord
 
 ### Supervisord
-[# OpenQuake Engine WebUI supervisord configuration](supervisord.md)
+[OpenQuake Engine WebUI supervisord configuration](supervisord.md)
 
 ### Nginx
-[# OpenQuake Engine WebUI nginx configuration](nginx.md)
+[OpenQuake Engine WebUI nginx configuration](nginx.md)
