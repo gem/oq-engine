@@ -64,12 +64,16 @@ class BaseCalculator(object):
     precalc = None  # to be overridden
     pre_calculator = None  # to be overridden
 
-    def __init__(self, oqparam, monitor=DummyMonitor(), calc_id=None):
+    def __init__(self, oqparam, monitor=DummyMonitor(), calc_id=None,
+                 persistent=True):
         self.monitor = monitor
-        self.datastore = datastore.DataStore(calc_id) \
-            if self.persistent else general.AccumDict()
-        self.datastore.export_dir = oqparam.export_dir
+        if persistent:
+            self.datastore = datastore.DataStore(calc_id)
+        else:
+            self.datastore = general.AccumDict()
+            self.datastore.hdf5 = {}
         self.oqparam = oqparam
+        self.datastore.export_dir = oqparam.export_dir
 
     def run(self, pre_execute=True, **kw):
         """
