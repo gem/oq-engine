@@ -61,7 +61,7 @@ def get_assets(dstore):
     if ('specific_assets',) in dstore:
         assets = dstore['specific_assets']  # they are already ordered by ID
     else:  # consider all assets
-        assets = sorted(numpy.concatenate(dstore['assets_by_site']),
+        assets = sorted(sum(map(list, dstore['assets_by_site']), []),
                         key=operator.attrgetter('id'))
     asset_data = numpy.array(
         [(asset.id, asset.location[0], asset.location[1])
