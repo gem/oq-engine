@@ -115,8 +115,8 @@ class SimpleFaultSource(ParametricSeismicSource):
         self.slip_list = slip_list
         self.hypo_list = hypo_list
 
-        if (((self.hypo_list.size != 1) and (self.slip_list.size == 1)) or
-           ((self.hypo_list.size == 1) and (self.slip_list.size != 1))):
+        if (self.hypo_list.size != 1 and self.slip_list.size == 1 or
+           self.hypo_list.size == 1 and self.slip_list.size != 1):
             raise ValueError('hypo_list and slip_list have to be both given or\
                 neither given')
 
