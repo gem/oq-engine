@@ -41,12 +41,12 @@ def parse_header(header):
     return numpy.dtype(triples)
 
 
-def _cast(col, type, shape, lineno, fname):
+def _cast(col, ntype, shape, lineno, fname):
     # convert strings into tuples or numbers, used inside read_composite_array
     if shape:
-        return tuple(map(type, col.split()))
+        return tuple(map(ntype, col.split()))
     else:
-        return type(col)
+        return ntype(col)
 
 
 # NB: this only works with flat composite arrays
@@ -80,14 +80,14 @@ def read_composite_array(fname, sep=','):
                     (num_columns, len(row), fname, i))
             try:
                 record = []
-                for (type, shape), col, col_id in zip(ts_pairs, row, col_ids):
-                    record.append(_cast(col, type, shape, i, fname))
+                for (ntype, shape), col, col_id in zip(ts_pairs, row, col_ids):
+                    record.append(_cast(col, ntype, shape, i, fname))
                 records.append(tuple(record))
             except Exception as e:
                 raise InvalidFile(
                     'Could not cast %r in file %s, line %d, column %d '
                     'using %s: %s' % (col, fname, i, col_id,
-                                      (type.__name__,) + shape), e)
+                                      (ntype.__name__,) + shape, e))
         return numpy.array(records, dtype)
 
 
