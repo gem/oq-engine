@@ -259,7 +259,6 @@ class ClassicalTilingCalculator(ClassicalCalculator):
     Classical Tiling calculator
     """
     prefilter = False
-    persistent = False  # use an in-memory datastore
     result_kind = 'pathname_by_fname'
 
     def execute(self):
@@ -271,7 +270,8 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         self.tiles = map(SiteCollection, split_in_blocks(
             self.sitecol, self.oqparam.concurrent_tasks or 1))
         self.oqparam.concurrent_tasks = 0
-        calculator = ClassicalCalculator(self.oqparam, monitor)
+        calculator = ClassicalCalculator(
+            self.oqparam, monitor, persistent=False)
         calculator.composite_source_model = self.composite_source_model
         calculator.rlzs_assoc = self.composite_source_model.get_rlzs_assoc(
             lambda tm: True)  # build the full logic tree
