@@ -167,7 +167,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
                 if oq.insured_losses:
                     # build the insured loss curves per asset
-                    key_ins = ('rlz', ordinal, loss_type, 'ins_loss_curves')
+                    key_ins = to_key(
+                        'rlz', ordinal, loss_type, 'ins_loss_curves')
                     self.datastore[key_ins] = ic = self.build_loss_curves(
                         elass, 2)
                     data = []
