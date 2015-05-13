@@ -4,11 +4,12 @@ from django.conf import settings
 from openquake.engine import __version__ as oqversion
 
 
-def getusername(request):
+def get_user(request):
     """
-    Return the real username if authentication support is enabled and user is
+    Returns the real username if authentication support is enabled and user is
     authenticated, otherwise it returns "platform" as user for backward
     compatibility.
+    Returns also if the user is 'superuser' or not.
     """
 
     is_super = False
