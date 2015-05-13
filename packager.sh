@@ -241,7 +241,7 @@ _pkgbuild_innervm_run () {
 }
 
 #
-#  _devtest_innervm_run <branch_id> <lxc_ip> - part of source test performed on lxc
+#  _devtest_innervm_run <lxc_ip> <branch_id> - part of source test performed on lxc
 #                     the following activities are performed:
 #                     - extracts dependencies from oq-{engine,hazardlib, ..} debian/control
 #                       files and install them
@@ -254,11 +254,11 @@ _pkgbuild_innervm_run () {
 #                     - runs coverage
 #                     - collects all tests output files from lxc
 #
-#      <branch_id>    name of the tested branch
-#      <lxc_ip>       the IP address of lxc instance
+#      <lxc_ip>     the IP address of lxc instance
+#      <branch_id>  name of the tested branch
 #
 _devtest_innervm_run () {
-    local i old_ifs pkgs_list dep branch_id="$1" lxc_ip="$2"
+    local i old_ifs pkgs_list dep lxc_ip="$1" branch_id="$2"
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
@@ -387,7 +387,7 @@ celeryd_wait $GEM_MAXLOOP"
 }
 
 #
-#  _pkgtest_innervm_run <lxc_ip> - part of package test performed on lxc
+#  _pkgtest_innervm_run <lxc_ip> <branch_id> - part of package test performed on lxc
 #                     the following activities are performed:
 #                     - adds local gpg key to apt keystore
 #                     - copies 'oq-*' package repositories on lxc
@@ -398,10 +398,11 @@ celeryd_wait $GEM_MAXLOOP"
 #                     - runs celeryd
 #                     - executes demos
 #
-#      <lxc_ip>    the IP address of lxc instance
+#      <lxc_ip>     the IP address of lxc instance
+#      <branch_id>  name of the tested branch
 #
 _pkgtest_innervm_run () {
-    local lxc_ip="$1" old_ifs
+    local lxc_ip="$1" branch_id="$2" old_ifs from_dir
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
@@ -711,7 +712,7 @@ devtest_run () {
 
     _wait_ssh $lxc_ip
     set +e
-    _devtest_innervm_run "$branch_id" "$lxc_ip"
+    _devtest_innervm_run "$lxc_ip" "$branch_id"
     inner_ret=$?
 
     scp "${lxc_ip}:/var/tmp/openquake-db-installation" "out_${BUILD_UBUVER}/openquake-db-installation.dev" || true
@@ -790,7 +791,7 @@ EOF
     _wait_ssh $lxc_ip
 
     set +e
-    _pkgtest_innervm_run $lxc_ip
+    _pkgtest_innervm_run "$lxc_ip" "$branch_id"
     inner_ret=$?
 
     scp "${lxc_ip}:/var/tmp/openquake-db-installation" "out_${BUILD_UBUVER}/openquake-db-installation.pkg" || true
