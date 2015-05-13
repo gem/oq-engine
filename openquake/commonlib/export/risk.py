@@ -138,7 +138,7 @@ def export_event_loss(ekey, dstore):
     name, fmt = ekey
     fnames = []
     for i, data in enumerate(dstore[ekey[0]]):
-        for loss_type in data.dtype.fields:
+        for loss_type in data:
             dest = os.path.join(
                 dstore.export_dir, 'rlz-%03d-%s-%s.csv' % (i, loss_type, name))
             writers.write_csv(dest, sorted(data[loss_type]), fmt='%10.6E')

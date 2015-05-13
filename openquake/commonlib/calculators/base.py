@@ -84,7 +84,9 @@ class BaseCalculator(object):
             self.pre_execute()
         result = self.execute()
         self.post_execute(result)
-        return self.export()
+        exported = self.export()
+        self.clean_up()
+        return exported
 
     def core_func(*args):
         """
@@ -134,6 +136,12 @@ class BaseCalculator(object):
                 else:
                     logging.info('%s is not exportable in %s', key, fmt)
         return exported
+
+    def clean_up(self):
+        """
+        Close the datastore and possibly other resources
+        """
+        self.datastore.close()
 
 
 class HazardCalculator(BaseCalculator):

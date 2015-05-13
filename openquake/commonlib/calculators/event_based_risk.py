@@ -164,8 +164,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         N = len(specific_assets)
 
-        event_loss_asset = self.zeros(len(rlzs), object)
-        event_loss = self.zeros(len(rlzs), object)
+        event_loss_asset = [{} for rlz in rlzs]
+        event_loss = [{} for rlz in rlzs]
 
         loss_curves = self.zeros(N, self.loss_curve_dt)
         ins_curves = self.zeros(N, self.loss_curve_dt)
@@ -234,9 +234,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     losses, poes, avg, _ = self.build_agg_loss_curve_and_map(
                         [loss for _lt, _tag, loss, _ins_loss in rows])
                     # NB: there is no aggregate insured loss curve
-                    agg_loss_curve[loss_type] = [(losses, poes, avg)]
+                    agg_loss_curve[loss_type][0] = (losses, poes, avg)
                     # NB: the aggregated loss_map is not stored
 
+                    print '========== avg loss', loss_type, avg
                 self.store('agg_loss_curve', rlz, agg_loss_curve)
 
         self.event_loss_asset = event_loss_asset
