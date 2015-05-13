@@ -11,11 +11,17 @@ def getusername(request):
     compatibility.
     """
 
-    user_name = (request.user.username if hasattr(request, 'user') and
-                 request.user.is_authenticated() else settings.DEFAULT_USER if
-                 hasattr(settings, 'DEFAULT_USER') else getpass.getuser())
+    is_super = False
+    if hasattr(request, 'user'):
+        if request.user.is_authenticated():
+            name = request.user.username
+        if request.user.is_superuser:
+            is_super = True
+    else:
+        name = (settings.DEFAULT_USER if
+                hasattr(settings, 'DEFAULT_USER') else getpass.getuser())
 
-    return user_name
+    return {'name': name, 'is_super': is_super}
 
 
 def oq_server_context_processor(request):
