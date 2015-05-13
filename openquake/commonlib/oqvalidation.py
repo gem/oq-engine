@@ -144,8 +144,8 @@ class OqParam(valid.ParamSet):
         Return the total time as investigation_time * ses_per_logic_tree_path *
         (number_of_logic_tree_samples or 1)
         """
-        return self.investigation_time * self.ses_per_logic_tree_path * (
-            self.number_of_logic_tree_samples or 1)
+        return (self.hazard_investigation_time * self.ses_per_logic_tree_path *
+                (self.number_of_logic_tree_samples or 1))
 
     @property
     def imtls(self):

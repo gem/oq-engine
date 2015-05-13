@@ -58,4 +58,4 @@ parser.opt('concurrent_tasks', 'hint for the number of tasks to spawn',
            type=int)
 parser.opt('loglevel', 'logging level',
            choices='debug info warn error critical'.split())
-parser.opt('hc', 'previous calculation ID')
+parser.opt('hc', 'previous calculation ID', type=int)

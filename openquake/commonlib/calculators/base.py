@@ -69,8 +69,9 @@ class BaseCalculator(object):
         else:
             self.datastore = general.AccumDict()
             self.datastore.hdf5 = {}
-        self.oqparam = oqparam
-        self.datastore.export_dir = oqparam.export_dir
+        if 'oqparam' not in self.datastore:  # new datastore
+            self.oqparam = oqparam
+            self.datastore.export_dir = oqparam.export_dir
         self.persistent = persistent
 
     def run(self, pre_execute=True, **kw):
@@ -196,6 +197,9 @@ class HazardCalculator(BaseCalculator):
         """
         if self.pre_calculator is not None:
             self.precalc = self.pre_compute()
+            if self.oqparam.hazard_investigation_time is None:
+                self.oqparam.hazard_investigation_time = (
+                    self.precalc.datastore['oqparam'].investigation_time)
             return
 
         if 'exposure' in self.oqparam.inputs:

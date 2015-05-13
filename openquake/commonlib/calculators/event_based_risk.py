@@ -146,6 +146,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         several interesting outputs.
         """
         oq = self.oqparam
+        self.rlzs_assoc = self.rlzs_assoc  # write anew
         rlzs = self.rlzs_assoc.realizations
         loss_types = self.riskmodel.get_loss_types()
 
@@ -256,7 +257,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         oq = self.oqparam
         clp = oq.conditional_loss_poes
         losses_poes = scientific.event_based(
-            losses, tses=oq.tses, time_span=oq.investigation_time,
+            losses, tses=oq.tses, time_span=oq.hazard_investigation_time,
             curve_resolution=oq.loss_curve_resolution)
         loss_map = scientific.loss_map_matrix(
             clp, [losses_poes]).reshape(len(clp)) if clp else None
@@ -280,7 +281,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             all_losses = [loss[i] for loss in elass[loss_type, asset.id]]
             if all_losses:
                 losses, poes = scientific.event_based(
-                    all_losses, tses=oq.tses, time_span=oq.investigation_time,
+                    all_losses, tses=oq.tses,
+                    time_span=oq.hazard_investigation_time,
                     curve_resolution=R)
                 avg = scientific.average_loss((losses, poes))
             else:
