@@ -102,7 +102,7 @@ def get_params(job_inis):
                           'job.ini', 'job_risk.ini'])
 
     not_found = [ini for ini in job_inis if not os.path.exists(ini)]
-    if len(not_found) == len(job_inis):  # nothing was found
+    if not_found:  # something was not found
         raise IOError('File not found: %s' % not_found[0])
 
     cp = ConfigParser.ConfigParser()
