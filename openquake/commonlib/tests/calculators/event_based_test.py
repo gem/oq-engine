@@ -119,7 +119,7 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/0-SadighEtAl1997.csv', fname, sorted)
 
-        [fname] = out['hcurves', 'hdf5', 'csv']
+        [fname] = out['/hcurves', 'csv']
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
@@ -130,7 +130,7 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/SadighEtAl1997.csv', fname, sorted)
 
-        [fname] = out['hcurves', 'hdf5', 'csv']
+        [fname] = out['/hcurves', 'csv']
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
@@ -143,7 +143,7 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/gmf-smltp_b1-gsimltp_b1-ltr_1.csv', ltr[1])
 
-        ltr = out['hcurves', 'hdf5', 'csv']
+        ltr = out['/hcurves', 'csv']
         self.assertEqualFiles(
             'expected/hc-smltp_b1-gsimltp_b1-ltr_0.csv', ltr[0])
         # NB: we are testing that the file ltr_1.csv is equal to
@@ -154,7 +154,7 @@ class EventBasedTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'event_based')
     def test_case_4(self):
         out = self.run_calc(case_4.__file__, 'job.ini', exports='csv')
-        [fname] = out['hcurves', 'hdf5', 'csv']
+        [fname] = out['/hcurves', 'csv']
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
@@ -180,7 +180,7 @@ gmf-smltp_b3-gsimltp_*_*_*_b4_1.csv'''.split()
             'quantile_curve-0.1.csv',
         ]
         out = self.run_calc(case_6.__file__, 'job.ini', exports='csv')
-        fnames = out['hcurves', 'hdf5', 'csv']
+        fnames = out['/hcurves', 'csv']
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got)
 
@@ -193,7 +193,7 @@ gmf-smltp_b3-gsimltp_*_*_*_b4_1.csv'''.split()
             'quantile_curve-0.9.csv',
         ]
         out = self.run_calc(case_7.__file__, 'job.ini', exports='csv')
-        fnames = out['hcurves', 'hdf5', 'csv']
+        fnames = out['/hcurves', 'csv']
         mean_eb = self.calc.mean_curves
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got)
@@ -210,7 +210,7 @@ gmf-smltp_b3-gsimltp_*_*_*_b4_1.csv'''.split()
         self.assertEqualFiles(
             'expected/gmf-smltp_b1-gsimltp_b1_b2.csv', fname)
 
-        [fname] = out['hcurves', 'hdf5', 'csv']
+        [fname] = out['/hcurves', 'csv']
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1_b2.csv', fname)
 
@@ -221,7 +221,7 @@ gmf-smltp_b3-gsimltp_*_*_*_b4_1.csv'''.split()
         self.assertEqualFiles('expected/0-BooreAtkinson2008.csv',
                               fname, sorted)
 
-        [fname] = out['hcurves', 'hdf5', 'csv']
+        [fname] = out['/hcurves', 'csv']
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
@@ -235,7 +235,7 @@ gmf-smltp_b3-gsimltp_*_*_*_b4_1.csv'''.split()
             'hazard_curve-smltp_b2-gsimltp_b1-ltr_4.csv',
         ]
         out = self.run_calc(case_17.__file__, 'job.ini', exports='csv')
-        fnames = out['hcurves', 'hdf5', 'csv']
+        fnames = out['/hcurves', 'csv']
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got, sorted)
 

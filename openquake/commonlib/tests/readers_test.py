@@ -25,7 +25,7 @@ a3,8.574770E+01,0.000000E+00,2.790150E+01,0.000000E+00,8.062714E+02
 
 wrong2 = writetmp('''\
 asset_ref:|S20:,lon:float64:,poe~0.9:float64:,lat:float64:,poe~0.5:float64:,poe~0.1:float64:
-8.129850E+01,0.000000E+00,2.910980E+01,0.000000E+00,5.421328E+02
+a0,8.129850E+01,0.000000E+00,2.910980E+01,0.0 0.0,5.421328E+02
 a1,8.308230E+01,0.000000E+00,2.790060E+01,0.000000E+00,2.547904E+02
 a2,8.574770E+01,0.000000E+00,2.790150E+01,0.000000E+00,6.538710E+02
 a3,8.574770E+01,0.000000E+00,2.790150E+01,0.000000E+00,8.062714E+02
@@ -51,9 +51,13 @@ class ReadCompositeArrayTestCase(unittest.TestCase):
         self.assertEqual(str(got), expected)
 
     def test_read_err1(self):
-        with self.assertRaises(InvalidFile):
+        with self.assertRaises(InvalidFile) as ctx:
             read_composite_array(wrong1)
+        self.assertIn('expected 6 columns, found 5 in file',
+                      str(ctx.exception))
 
     def test_read_err2(self):
-        with self.assertRaises(InvalidFile):
+        with self.assertRaises(InvalidFile) as ctx:
             read_composite_array(wrong2)
+        self.assertIn("Could not cast '0.0 0.0' in file",
+                      str(ctx.exception))

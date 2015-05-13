@@ -92,7 +92,7 @@ def export_ses_csv(key, dstore):
     """
     Export a Stochastic Event Set Collection
     """
-    dest = dstore.export_path(key)
+    dest = dstore.export_path(*key)
     rows = []
     for sesrup in dstore['ruptures']:
         rows.append([sesrup.tag, sesrup.seed])
@@ -102,7 +102,7 @@ def export_ses_csv(key, dstore):
 
 @export.add(('sitecol', 'csv'))
 def export_sitecol_csv(key, dstore):
-    dest = dstore.export_path(key)
+    dest = dstore.export_path(*key)
     rows = []
     for site in dstore['sitecol']:
         rows.append([site.id, site.location.x, site.location.y, site.vs30,
@@ -299,21 +299,20 @@ def export_hazard_curves_csv(key, export_dir, fname, sitecol, curves_by_imt,
     return {fname: dest}
 
 
-def hazard_curve_name(ekey, kind, rlzs_assoc, number_of_logic_tree_samples):
+def hazard_curve_name(ekey, kind, rlzs_assoc, samples):
     """
-    :param kind:
-        a string specifying the kind of hazard curve; it has the form
-        rlz-<ordinal> | mean | quantile-<q>
-    :param rlzs_assoc:
-        a RlzsAssoc instance
+    :param ekey: the export key
+    :param kind: the kind of key
+    :param rlzs_assoc: a RlzsAssoc instance
+    :param samples: if sampling is enabled or not
     """
-    prefix = {'hcurves': 'hazard_curve', 'hmaps': 'hazard_map',
-              'uhs': 'hazard_uhs'}[ekey[0]]
-    fmt = ekey[-1]
+    key, fmt = ekey
+    prefix = {'/hcurves': 'hazard_curve', '/hmaps': 'hazard_map',
+              '/uhs': 'hazard_uhs'}[key]
     if kind.startswith('rlz-'):
         rlz_no = int(kind[4:])
         rlz = rlzs_assoc.realizations[rlz_no]
-        fname = build_name(rlz, prefix, fmt, number_of_logic_tree_samples)
+        fname = build_name(rlz, prefix, fmt, samples)
     elif kind == 'mean':
         fname = '%s-mean.csv' % prefix
     elif kind.startswith('quantile-'):
@@ -345,8 +344,7 @@ def build_name(rlz, prefix, fmt, sampling):
     return fname
 
 
-@export.add(('hcurves', 'hdf5', 'csv'), ('hmaps', 'hdf5', 'csv'),
-            ('uhs', 'hdf5', 'csv'))
+@export.add(('/hcurves', 'csv'), ('/hmaps', 'csv'), ('/uhs', 'csv'))
 def export_hcurves_csv(ekey, dstore):
     """
     Exports the hazard curves into several .csv files
@@ -354,26 +352,18 @@ def export_hcurves_csv(ekey, dstore):
     oq = dstore['oqparam']
     rlzs_assoc = dstore['rlzs_assoc']
     sitecol = dstore['sitecol']
+    key, fmt = ekey
     fnames = []
-    for kind, hcurves in dstore[ekey[:-1]]:
+    for kind, hcurves in dstore[key].iteritems():
         fname = hazard_curve_name(
             ekey, kind, rlzs_assoc, oq.number_of_logic_tree_samples)
         fnames.append(os.path.join(dstore.export_dir, fname))
-        if ekey[0] == 'uhs':
+        if key == '/uhs':
             export_uhs_csv(ekey, dstore.export_dir, fname, sitecol, hcurves)
         else:
             export_hazard_curves_csv(ekey, dstore.export_dir, fname, sitecol,
                                      hcurves, oq.imtls)
     return fnames
-
-
-def _expand(gmf_array, sitecol, gsim, imt_dt):
-    indices = gmf_array['idx']
-    gmf = gmf_array[gsim]
-    zeros = numpy.zeros(len(sitecol), imt_dt)
-    for imt in imt_dt.fields:
-        zeros[imt][indices] = gmf[imt]
-    return zeros
 
 
 @export.add(('gmf_by_trt_gsim', 'xml'), ('gmf_by_trt_gsim', 'csv'))
@@ -384,7 +374,7 @@ def export_gmf(ekey, dstore):
     samples = dstore['oqparam'].number_of_logic_tree_samples
     fmt = ekey[-1]
     fnames = []
-    gmf_by_rlz = rlzs_assoc.combine_gmfs(dstore[ekey[:-1]])
+    gmf_by_rlz = rlzs_assoc.combine_gmfs(dstore[ekey[0]])
     for rlz, gmf_by_tag in sorted(gmf_by_rlz.iteritems()):
         if isinstance(gmf_by_tag, dict):  # event based
             tags = sorted(gmf_by_tag)
@@ -404,7 +394,6 @@ def export_gmf(ekey, dstore):
     return sorted(fnames)
 
 
-@export.add(('hazard_curves', 'xml'))
 def export_hazard_curves_xml(key, export_dir, fname, sitecol, curves_by_imt,
                              imtls, investigation_time):
     """

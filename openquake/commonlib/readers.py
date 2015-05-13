@@ -41,24 +41,12 @@ def parse_header(header):
     return numpy.dtype(triples)
 
 
-def get_subtypes(dtype):
-    """
-    :param: a composite numpy dtype
-    :returns: the subtypes contained in the dtype
-    """
-    sd = []
-    for f in dtype.fields:
-        dt = dtype.fields[f][0]
-        sd.append((dt.subdtype[0].type if dt.subdtype else dt.type, dt.shape))
-    return sd
-
-
-def _cast_str(col, type, shape, lineno, fname):
+def _cast(col, ntype, shape, lineno, fname):
     # convert strings into tuples or numbers, used inside read_composite_array
     if shape:
-        return tuple(map(type, col.split()))
+        return tuple(map(ntype, col.split()))
     else:
-        return type(col)
+        return ntype(col)
 
 
 # NB: this only works with flat composite arrays
@@ -75,8 +63,12 @@ def read_composite_array(fname, sep=','):
     with open(fname) as f:
         header = next(f)
         dtype = parse_header(header.split(sep))
-        subtypes = get_subtypes(dtype)
-        col_ids = range(1, len(subtypes) + 1)
+        ts_pairs = []  # [(type, shape), ...]
+        for name in dtype.fields:
+            dt = dtype.fields[name][0]
+            ts_pairs.append((dt.subdtype[0].type if dt.subdtype else dt.type,
+                             dt.shape))
+        col_ids = range(1, len(ts_pairs) + 1)
         num_columns = len(col_ids)
         records = []
         col, col_id = '', 0
@@ -88,17 +80,18 @@ def read_composite_array(fname, sep=','):
                     (num_columns, len(row), fname, i))
             try:
                 record = []
-                for (type, shape), col, col_id in zip(subtypes, row, col_ids):
-                    record.append(_cast_str(col, type, shape, i, fname))
+                for (ntype, shape), col, col_id in zip(ts_pairs, row, col_ids):
+                    record.append(_cast(col, ntype, shape, i, fname))
                 records.append(tuple(record))
             except Exception as e:
                 raise InvalidFile(
                     'Could not cast %r in file %s, line %d, column %d '
                     'using %s: %s' % (col, fname, i, col_id,
-                                      (type.__name__,) + shape), e)
+                                      (ntype.__name__,) + shape, e))
         return numpy.array(records, dtype)
 
 
+# this is simple and without error checking for the moment
 def read_array(fname, sep=','):
     r"""
     Convert a CSV file without header into a numpy array of floats.

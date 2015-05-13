@@ -60,16 +60,20 @@ class BaseCalculator(object):
     assets_by_site = datastore.persistent_attribute('assets_by_site')
     cost_types = datastore.persistent_attribute('cost_types')
 
-    persistent = True  # by default persistence on the datastore is enabled
     precalc = None  # to be overridden
     pre_calculator = None  # to be overridden
 
-    def __init__(self, oqparam, monitor=DummyMonitor(), calc_id=None):
+    def __init__(self, oqparam, monitor=DummyMonitor(), calc_id=None,
+                 persistent=True):
         self.monitor = monitor
-        self.datastore = datastore.DataStore(calc_id) \
-            if self.persistent else general.AccumDict()
-        self.datastore.export_dir = oqparam.export_dir
+        if persistent:
+            self.datastore = datastore.DataStore(calc_id)
+        else:
+            self.datastore = general.AccumDict()
+            self.datastore.hdf5 = {}
         self.oqparam = oqparam
+        self.datastore.export_dir = oqparam.export_dir
+        self.persistent = persistent
 
     def run(self, pre_execute=True, **kw):
         """
@@ -120,11 +124,12 @@ class BaseCalculator(object):
         individual_curves = self.oqparam.individual_curves
         for fmt in self.oqparam.exports.split():
             for key in self.datastore:
-                if 'individual' in key and not individual_curves:
+                if 'rlz' in key and not individual_curves:
                     continue  # skip individual curves
-                ekey = key + (fmt,)
+                ekey = (key, fmt)
                 if ekey in export.export:
-                    exported[ekey] = export.export(ekey, self.datastore)
+                    exported[ekey] = sorted(
+                        export.export(ekey, self.datastore))
                     logging.info('exported %s: %s', key, exported[ekey])
                 else:
                     logging.info('%s is not exportable in %s', key, fmt)
