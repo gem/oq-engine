@@ -375,7 +375,7 @@ _pkgtest_innervm_run () {
         fi
         from_dir="${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/python-${dep}.${!var_commit:0:7}"
         time_start="$(date +%s)"
-        while [ true ]; do
+        while true; do
             if scp -r "$from_dir" $lxc_ip:repo/python-${dep}; then
                 break
             fi
