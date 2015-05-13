@@ -58,7 +58,7 @@ def get_assets(dstore):
     :param dstore: a datastore with a key `specific_assets`
     :returns: an ordered array of records (asset_ref, lon, lat)
     """
-    if ('specific_assets',) in dstore:
+    if 'specific_assets' in dstore:
         assets = dstore['specific_assets']  # they are already ordered by ID
     else:  # consider all assets
         assets = sorted(sum(map(list, dstore['assets_by_site']), []),
