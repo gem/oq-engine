@@ -274,7 +274,7 @@ class SimpleFaultRupEncPolyTestCase(_BaseFaultSourceTestCase):
         numpy.testing.assert_allclose(polygon.lats, elats, rtol=0, atol=1e-5)
 
 
-class HypoLocRupture(unittest.TestCase):
+class HypoLocSlipRupture(unittest.TestCase):
 
     def setUp(self):
         # Set the source property
@@ -299,13 +299,14 @@ class HypoLocRupture(unittest.TestCase):
         source_id = name = 'test-source'
         trt = TRT.ACTIVE_SHALLOW_CRUST
         hypo_list = numpy.array([[0.25, 0.25, 0.4], [0.75, 0.75, 0.6]])
+        slip_list = numpy.array([[90., 1.]])
         src = SimpleFaultSource(source_id, name, trt,
                                 self.src_mfd, self.mesh_spacing,
                                 self.sarea, 1., self.src_tom,
                                 self.upper_seismogenic_depth,
                                 self.lower_seismogenic_depth,
                                 self.fault_trace, self.dip,
-                                self.rake, hypo_list)
+                                self.rake, hypo_list, slip_list)
 
         lon = [0.11691180881629422, 0.35972864251163345, 0.12590502487907043,
                0.36872185857443507, 0.13489824094187208, 0.37771507463723675,
@@ -442,12 +443,14 @@ class HypoLocRupture(unittest.TestCase):
         trt = TRT.ACTIVE_SHALLOW_CRUST
         dip = 30.
         hypo_list = numpy.array([[0.25, 0.25, 0.4], [0.75, 0.75, 0.6]])
+        slip_list = numpy.array([[90., 1.]])
         self.mesh_spacing = 5.
         src = SimpleFaultSource(source_id, name, trt,
                                 self.src_mfd, self.mesh_spacing, self.sarea,
                                 1., self.src_tom, self.upper_seismogenic_depth,
                                 self.lower_seismogenic_depth,
-                                self.fault_trace, dip, self.rake, hypo_list)
+                                self.fault_trace, dip, self.rake, hypo_list,
+                                slip_list)
 
         lon = [0.0899, 0.3148, 0.1349, 0.3597, 0.1799, 0.4047, 0.2248,
                0.4497, 0.2698, 0.4946, 0.3148, 0.5396, 0.3597, 0.5846,
@@ -584,6 +587,7 @@ class HypoLocRupture(unittest.TestCase):
         source_id = name = 'test-source'
         trt = TRT.ACTIVE_SHALLOW_CRUST
         hypo_list = numpy.array([[0.25, 0.25, 0.4], [0.75, 0.75, 0.6]])
+        slip_list = numpy.array([[90., 1.]])
         self.mesh_spacing = 5.
         self.fault_trace_nodes = [
             self.fault_trace_start, Point(0.3, 0.3), self.fault_trace_end]
@@ -594,7 +598,7 @@ class HypoLocRupture(unittest.TestCase):
                                 self.upper_seismogenic_depth,
                                 self.lower_seismogenic_depth,
                                 self.fault_trace, self.dip, self.rake,
-                                hypo_list)
+                                hypo_list, slip_list)
 
         lon = [0.0954, 0.2544, 0.1272, 0.2862, 0.159, 0.3279, 0.1908, 0.3696,
                0.2226, 0.4114, 0.2544, 0.4531, 0.2862, 0.4949, 0.3279, 0.5366,
@@ -620,4 +624,26 @@ class HypoLocRupture(unittest.TestCase):
             self.assertAlmostEqual(rup.hypocenter.longitude, lon[i], delta=0.1)
             self.assertAlmostEqual(rup.hypocenter.latitude, lat[i], delta=0.1)
             self.assertAlmostEqual(rup.hypocenter.depth, dep[i], delta=0.1)
+            self.assertAlmostEqual(rup.occurrence_rate, rate[i], delta=0.01)
+
+    def test_slip_vertical_rupture(self):
+        self.src_mfd = mfdeven.EvenlyDiscretizedMFD(8.5, 1., [1.])
+        source_id = name = 'test-source'
+        trt = TRT.ACTIVE_SHALLOW_CRUST
+        hypo_list = numpy.array([[0.25, 0.25, 0.4], [0.75, 0.75, 0.6]])
+        slip_list = numpy.array([[90., 0.25], [0., 0.75]])
+        src = SimpleFaultSource(source_id, name, trt,
+                                self.src_mfd, self.mesh_spacing,
+                                self.sarea, 1., self.src_tom,
+                                self.upper_seismogenic_depth,
+                                self.lower_seismogenic_depth,
+                                self.fault_trace, self.dip,
+                                self.rake, hypo_list, slip_list)
+
+        slip = [90., 0., 90., 0.]
+        rate = [0.1, 0.3, 0.15, 0.45]
+
+        for rup, i in zip(src.iter_ruptures(), range(1000)):
+            self.assertAlmostEqual(rup.rupture_slip_direction,
+                                   slip[i], delta=0.1)
             self.assertAlmostEqual(rup.occurrence_rate, rate[i], delta=0.01)

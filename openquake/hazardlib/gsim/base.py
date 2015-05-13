@@ -192,6 +192,10 @@ class GroundShakingIntensityModel(object):
     #:     Horizontal distance off the end of the rupture measured parallel to
     #      strike. See:
     #:     See :meth:`~openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_ry0_distance`.
+    #: ``rcdpp``
+    #:     Direct point parameter for directivity effect centered on the site- and earthquake-specific
+    #      average DPP used. See:
+    #:     See :meth:`~openquake.hazardlib.source.rupture.ParametricProbabilisticRupture.get_dppvalue`.
     #:
     #: All the distances are available from the :class:`DistancesContext`
     #: object attributes with same names. Values are in kilometers.
@@ -472,6 +476,8 @@ class GroundShakingIntensityModel(object):
                 dist = rupture.hypocenter.distance_to_mesh(
                     site_collection.mesh, with_depths=False
                 )
+            elif param == 'rcdpp':
+                dist = rupture.get_cdppvalue(site_collection.mesh)
             else:
                 raise ValueError('%s requires unknown distance measure %r' %
                                  (type(self).__name__, param))
@@ -705,7 +711,7 @@ class DistancesContext(BaseContext):
     does it need. Only those required values are calculated and made available
     in a result context object.
     """
-    __slots__ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi', 'ry0')
+    __slots__ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi', 'ry0', 'rcdpp')
 
 
 class RuptureContext(BaseContext):
