@@ -357,20 +357,20 @@ _pkgtest_innervm_run () {
         var_branch="${var_pfx}_BRANCH"
         var_commit="${var_pfx}_COMMIT"
         if [ "${!var_repo}" != "" ]; then
-            repo="${!var_repo}"
+            dep_repo="${!var_repo}"
         else
-            repo="$GEM_GIT_REPO"
+            dep_repo="$GEM_GIT_REPO"
         fi
         if [ "${!var_branch}" != "" ]; then
-            branch="${!var_branch}"
+            dep_branch="${!var_branch}"
         else
-            branch="master"
+            dep_branch="master"
         fi
 
-        if [ "$repo" = "$GEM_GIT_REPO" -a "$branch" = "master" ]; then
+        if [ "$dep_repo" = "$GEM_GIT_REPO" -a "$dep_branch" = "master" ]; then
             GEM_DEB_SERIE="master"
         else
-            GEM_DEB_SERIE="devel/$(echo "$repo" | sed 's@^.*://@@g;s@/@__@g;s/\./-/g')__${branch}"
+            GEM_DEB_SERIE="devel/$(echo "$dep_repo" | sed 's@^.*://@@g;s@/@__@g;s/\./-/g')__${dep_branch}"
         fi
         scp -r ${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/python-${dep}.${!var_commit:0:7} $lxc_ip:repo/python-${dep}
         ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-${dep} ./\""
