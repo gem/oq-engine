@@ -383,8 +383,9 @@ def calc_results(request, calc_id):
     # If the specified calculation doesn't exist OR is not yet complete,
     # throw back a 404.
     try:
-        oqjob = oqe_models.OqJob.objects.get(id=calc_id,
-                                             user_name=user['name'])
+        oqjob = oqe_models.OqJob.objects.get(id=calc_id)
+        if not user['is_super']:
+            oqjob = oqjob.filter(user_name=user['name'])
         if not oqjob.status == 'complete':
             return HttpResponseNotFound()
     except ObjectDoesNotExist:
