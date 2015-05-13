@@ -158,8 +158,11 @@ class DataStore(collections.MutableMapping):
                           if not key.startswith('/'))
             return piksize + os.path.getsize(self.hdf5path)
         elif key.startswith('/'):
+            dset = self.hdf5[key]
+            if hasattr(dset, 'value'):
+                return dset.value.nbytes
             bc = ByteCounter()
-            self.hdf5[key].visititems(bc)
+            dset.visititems(bc)
             return bc.nbytes
         return os.path.getsize(self.path(key))
 
