@@ -38,6 +38,24 @@ from openquake.commonlib.writers import write_csv
 DATADIR = os.environ.get('OQ_DATADIR', os.path.expanduser('~/oqdata'))
 
 
+class ByteCounter(object):
+    """
+    A visitor used to measure the dimensions of a HDF5 dataset or group.
+    Build an instance of it, pass it to the .visititems method, and then
+    read the value of the .nbytes attribute.
+    """
+    def __init__(self, nbytes=0):
+        self.nbytes = nbytes
+
+    def __call__(self, name, dset_or_group):
+        try:
+            value = dset_or_group.value
+        except AttributeError:
+            pass  # .value is only defined for datasets, not groups
+        else:
+            self.nbytes += value.nbytes
+
+
 def get_last_calc_id(datadir=DATADIR):
     """
     Extract the latest calculation ID from the given directory.
@@ -101,7 +119,7 @@ class DataStore(collections.MutableMapping):
         Return the full path name associated to the given key
         """
         if key.startswith('/'):
-            return key[1:]
+            return key
         return os.path.join(self.calc_dir, key + '.pik')
 
     def export_path(self, key, fmt):
@@ -140,7 +158,9 @@ class DataStore(collections.MutableMapping):
                           if not key.startswith('/'))
             return piksize + os.path.getsize(self.hdf5path)
         elif key.startswith('/'):
-            return self.hdf5[key[1:]][:].nbytes
+            bc = ByteCounter()
+            self.hdf5[key].visititems(bc)
+            return bc.nbytes
         return os.path.getsize(self.path(key))
 
     def get(self, key, default):
