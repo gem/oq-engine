@@ -42,7 +42,6 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     :returns:
         a dictionary rlz.ordinal -> (loss_type, tag) -> AccumDict()
     """
-    specific = set(monitor.oqparam.specific_assets)
     acc = AccumDict({rlz.ordinal: AccumDict()
                      for rlz in rlzs_assoc.realizations})
     # rlz.ordinal -> (loss_type, tag) -> AccumDict
@@ -55,7 +54,7 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
                 data = [(asset.id, loss, ins_loss)
                         for asset, loss, ins_loss in zip(
                             out.assets, losses, ins_losses)
-                        if loss and asset.id in specific]
+                        if loss]
                 ad = AccumDict(
                     data=data, loss=sum(losses), ins_loss=sum(ins_losses),
                     nonzero=sum(1 for loss in losses if loss),
@@ -158,11 +157,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             lm_names = loss_map_names(oq.conditional_loss_poes)
             self.loss_map_dt = numpy.dtype([(f, float) for f in lm_names])
 
-        self.specific_assets = specific_assets = [
-            a for assets in self.assets_by_site for a in assets
-            if a.id in sorted(self.oqparam.specific_assets)]
+        self.assets = assets = riskinput.sorted_assets(self.assets_by_site)
 
-        N = len(specific_assets)
+        self.specific_assets = specific_assets = [
+            a for a in assets if a.id in self.oqparam.specific_assets]
+        specific_asset_refs = set(self.oqparam.specific_assets)
+
+        N = len(assets)
 
         event_loss_asset = [{} for rlz in rlzs]
         event_loss = [{} for rlz in rlzs]
@@ -178,7 +179,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
             data_by_lt_tag = result[i]
             # (loss_type, asset_id) -> [(tag, loss, ins_loss), ...]
-            elass = {(loss_type, asset.id): [] for asset in specific_assets
+            elass = {(loss_type, asset.id): [] for asset in assets
                      for loss_type in loss_types}
             elagg = []  # aggregate event loss
             nonzero = total = 0
@@ -200,7 +201,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         data_by_lt[loss_type].append(
                             (tag, asset_id, loss, ins_loss))
                 for loss_type, data in data_by_lt.iteritems():
-                    event_loss_asset[i][loss_type] = sorted(data)
+                    event_loss_asset[i][loss_type] = sorted(
+                        (t, a, l, i) for t, a, l, i in data
+                        if a in specific_asset_refs)
 
                     # build the loss curves per asset
                     lc = self.build_loss_curves(elass, loss_type, 1)
@@ -240,7 +243,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     print '========== avg loss', loss_type, avg
                 self.store('agg_loss_curve', rlz, agg_loss_curve)
 
-        self.event_loss_asset = event_loss_asset
+        if specific_assets:
+            self.event_loss_asset = event_loss_asset
         self.event_loss = event_loss
 
         # store statistics (i.e. mean and quantiles) for curves and maps
@@ -278,7 +282,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         oq = self.oqparam
         R = oq.loss_curve_resolution
         lcs = []
-        for asset in self.specific_assets:
+        for asset in self.assets:
             all_losses = [loss[i] for loss in elass[loss_type, asset.id]]
             if all_losses:
                 losses, poes = scientific.event_based(

@@ -71,7 +71,7 @@ class BaseCalculator(object):
             self.datastore.hdf5 = {}
         if 'oqparam' not in self.datastore:  # new datastore
             self.oqparam = oqparam
-            self.datastore.export_dir = oqparam.export_dir
+        self.datastore.export_dir = oqparam.export_dir
         self.persistent = persistent
 
     def run(self, pre_execute=True, **kw):
