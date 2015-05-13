@@ -181,8 +181,8 @@ class SimpleFaultSource(ParametricSeismicSource):
                     mesh = whole_fault_mesh[first_row: first_row + rup_rows,
                                             first_col: first_col + rup_cols]
 
-                    if ((self.hypo_list.size == 1) and
-                            (self.slip_list.size == 1)):
+                    if (self.hypo_list.size == 1 and
+                            self.slip_list.size == 1):
 
                         hypocenter = mesh.get_middle_point()
                         occurrence_rate_hypo = occurrence_rate
