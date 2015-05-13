@@ -89,47 +89,47 @@ def export_avg_losses(ekey, dstore):
     return fnames
 
 
-@export.add(('/loss_curves', 'csv'), ('/loss_maps', 'csv'))
+@export.add(('/loss_curves', 'csv'), ('/loss_maps', 'csv'),
+            ('/agg_loss_curve', 'csv'))
 def export_loss_curves(ekey, dstore):
-    assets = get_assets(dstore)
+    name = ekey[0][1:]
+    if name == 'agg_loss_curve':
+        assets = None
+        columns = 'losses poes avg'.split()
+    elif name == 'loss_curves':
+        assets = get_assets(dstore)
+        columns = 'asset_ref lon lat losses poes avg'.split()
+    elif name == 'loss_maps':
+        assets = get_assets(dstore)
+        columns = None
     rlzs = dstore['rlzs_assoc'].realizations
     rlz_by_dset = {rlz.uid: rlz for rlz in rlzs}
     fnames = []
-    if ekey[0] == '/loss_curves':
-        columns = 'asset_ref lon lat losses poes avg'.split()
-    elif ekey[0] == '/loss_maps':
-        columns = None
-    for dset, curves_by_lt in dstore[ekey[0] + '/rlzs'].iteritems():
+    for dset, curves in dstore.get(ekey[0] + '/stats', {}).iteritems():
+        fnames.extend(
+            _export_curves_csv(name, assets, curves[:], dstore.export_dir,
+                               dset, columns))
+    if not dstore['oqparam'].individual_curves:
+        return fnames
+    for dset, curves in dstore.get(ekey[0] + '/rlzs', {}).iteritems():
         prefix = 'rlz-%03d' % rlz_by_dset[dset].ordinal
-        for loss_type in curves_by_lt.dtype.fields:
-            curves = compose_arrays(
-                assets, curves_by_lt[loss_type])
-            dest = os.path.join(
-                dstore.export_dir, '%s-%s-%s.csv' %
-                (prefix, loss_type, ekey[0]))
-            writers.write_csv(dest, curves, fmt='%10.6E', header=columns)
-            fnames.append(dest)
+        fnames.extend(
+            _export_curves_csv(name, assets, curves[:], dstore.export_dir,
+                               prefix, columns))
     return fnames
 
 
-@export.add(('/agg_loss_curve/rlzs', 'csv'), ('/agg_loss_curve/rlzs', 'csv'))
-def export_agg_loss_curve(ekey, dstore):
-    rlzs = dstore['rlzs_assoc'].realizations
-    rlz_by_dset = {rlz.uid: rlz for rlz in rlzs}
+def _export_curves_csv(name, assets, curves, export_dir, prefix, columns=None):
     fnames = []
-    columns = 'losses poes avg'.split()
-    for dset, loss_curve_by_lt in dstore[ekey[0]].iteritems():
-        if dset in rlz_by_dset:
-            prefix = 'rlz-%03d' % rlz_by_dset[dset].ordinal
+    for loss_type in curves.dtype.fields:
+        if assets is None:
+            data = curves[loss_type]
         else:
-            prefix = dset
-        for loss_type in loss_curve_by_lt.dtype.fields:
-            loss_curve = loss_curve_by_lt[loss_type]
-            dest = os.path.join(
-                dstore.export_dir, '%s-%s-%s.csv' %
-                (prefix, loss_type, ekey[0]))
-            writers.write_csv(dest, loss_curve, fmt='%10.6E', header=columns)
-            fnames.append(dest)
+            data = compose_arrays(assets, curves[loss_type])
+        dest = os.path.join(
+            export_dir, '%s-%s-%s.csv' % (prefix, loss_type, name))
+        writers.write_csv(dest, data, fmt='%10.6E', header=columns)
+        fnames.append(dest)
     return fnames
 
 
