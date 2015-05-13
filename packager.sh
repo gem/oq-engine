@@ -230,7 +230,7 @@ _pkgbuild_innervm_run () {
 }
 
 #
-#  _devtest_innervm_run <branch> <lxc_ip> - part of source test performed on lxc
+#  _devtest_innervm_run <lxc_ip> <branch> - part of source test performed on lxc
 #                     the following activities are performed:
 #                     - extracts dependencies from oq-hazardlib debian/control
 #                       files and install them
@@ -243,11 +243,11 @@ _pkgbuild_innervm_run () {
 #                     - runs coverage
 #                     - collects all tests output files from lxc
 #
-#      <branch>       name of the tested branch
 #      <lxc_ip>       the IP address of lxc instance
+#      <branch>       name of the tested branch
 #
 _devtest_innervm_run () {
-    local i branch="$1" lxc_ip="$2"
+    local i old_ifs pkgs_list dep lxc_ip="$1" branch="$2"
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
@@ -324,11 +324,11 @@ _devtest_innervm_run () {
 #                     - runs celeryd
 #                     - executes demos
 #
-#      <lxc_ip>      the IP address of lxc instance
-#      <branch>      the name of the branch under test
+#      <lxc_ip>    the IP address of lxc instance
+#      <branch>    the name of the branch under test
 #
 _pkgtest_innervm_run () {
-    local lxc_ip="$1" branch="$2" from_dir
+    local lxc_ip="$1" branch="$2" old_ifs from_dir
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
@@ -626,7 +626,7 @@ devtest_run () {
     _wait_ssh $lxc_ip
 
     set +e
-    _devtest_innervm_run "$branch" "$lxc_ip"
+    _devtest_innervm_run "$lxc_ip" "$branch"
     inner_ret=$?
 
     scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/devtest.history"
@@ -698,7 +698,7 @@ EOF
     _wait_ssh $lxc_ip
 
     set +e
-    _pkgtest_innervm_run $lxc_ip "$branch"
+    _pkgtest_innervm_run "$lxc_ip" "$branch"
     inner_ret=$?
 
     scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/pkgtest.history"
