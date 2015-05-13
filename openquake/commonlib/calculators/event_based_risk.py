@@ -321,7 +321,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
         oq = self.oqparam
         rlzs = self.rlzs_assoc.realizations
-        assets = self.specific_assets
         stats = scientific.StatsBuilder(
             oq.quantile_loss_curves, oq.conditional_loss_poes, [],
             scientific.normalize_curves_eb)
@@ -336,7 +335,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 losses_poes = numpy.array(  # -> shape (N, 2, R)
                     [lcs['losses'], lcs['poes']]).transpose(1, 0, 2)
                 out = scientific.Output(
-                    assets, loss_type, rlz.ordinal, rlz.weight,
+                    self.assets, loss_type, rlz.ordinal, rlz.weight,
                     loss_curves=losses_poes, insured_curves=None)
                 outputs.append(out)
             yield stats.build(outputs)
@@ -346,7 +345,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         Compute and store the statistical outputs
         """
         oq = self.oqparam
-        N = len(self.specific_assets)
+        N = len(self.assets)
         Q = 1 + len(oq.quantile_loss_curves)
         loss_curve_stats = self.zeros((Q, N), self.loss_curve_dt)
         ins_curve_stats = self.zeros((Q, N), self.loss_curve_dt)
