@@ -50,6 +50,8 @@ def info(name, filtersources=False):
             oqparam, sitecol, prefilter=filtersources, in_memory=filtersources)
         assoc = csm.get_rlzs_assoc()
         print assoc.csm_info
+        print('See https://github.com/gem/oq-risklib/blob/master/docs/'
+              'effective-realizations.rst for an explanation')
         print assoc
         if filtersources:
             # display information about the size of the hazard curve matrices
