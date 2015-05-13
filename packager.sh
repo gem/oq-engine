@@ -465,7 +465,7 @@ _pkgtest_innervm_run () {
                 # NOTE: in the other case dep branch is 'master' and package branch isn't
                 #       so we try to get the correct commit package and if it isn't yet built
                 #       it fallback to the latest builded
-                from_dir="$(ls -drt ${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/python-${dep}*  | ta
+                from_dir="$(ls -drt ${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/python-${dep}* | tail -n 1)"
                 scp -r "$from_dir" $lxc_ip:repo/python-${dep}
                 break
             fi
