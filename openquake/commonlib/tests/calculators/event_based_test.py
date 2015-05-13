@@ -206,10 +206,6 @@ gmf-smltp_b3-gsimltp_*_*_*_b4_1.csv'''.split()
     @attr('qa', 'hazard', 'event_based')
     def test_case_12(self):
         out = self.run_calc(case_12.__file__, 'job.ini', exports='csv')
-        [fname] = out['gmf_by_trt_gsim', 'csv']
-        self.assertEqualFiles(
-            'expected/gmf-smltp_b1-gsimltp_b1_b2.csv', fname)
-
         [fname] = out['/hcurves', 'csv']
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1_b2.csv', fname)

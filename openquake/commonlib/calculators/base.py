@@ -52,8 +52,6 @@ class BaseCalculator(object):
     """
     __metaclass__ = abc.ABCMeta
 
-    precalc = None  # to be overridden
-
     oqparam = datastore.persistent_attribute('oqparam')
     sitecol = datastore.persistent_attribute('sitecol')
     rlzs_assoc = datastore.persistent_attribute('rlzs_assoc')
@@ -118,12 +116,13 @@ class BaseCalculator(object):
         """
         Export all the outputs in the datastore in the given export formats.
 
-        :returns: a dictionary key -> fname of the exported files
+        :returns: dictionary output_key -> sorted list of exported paths
         """
         exported = {}
         individual_curves = self.oqparam.individual_curves
         for fmt in self.oqparam.exports.split():
             for key in self.datastore:
+                # TODO: improve on this
                 if 'rlz' in key and not individual_curves:
                     continue  # skip individual curves
                 ekey = (key, fmt)
@@ -198,8 +197,6 @@ class HazardCalculator(BaseCalculator):
         if self.pre_calculator is not None:
             self.precalc = self.pre_compute()
             return
-
-        self.precalc = None
 
         if 'exposure' in self.oqparam.inputs:
             logging.info('Reading the exposure')
@@ -318,6 +315,7 @@ class RiskCalculator(HazardCalculator):
         """
         HazardCalculator.pre_execute(self)
         self.riskmodel = readinput.get_risk_model(self.oqparam)
+        # NB: precalc is not None for all risk calculators
         if hasattr(self.precalc, 'exposure'):
             missing = self.precalc.exposure.taxonomies - set(
                 self.riskmodel.get_taxonomies())
