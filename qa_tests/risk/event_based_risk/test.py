@@ -152,14 +152,14 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
         # compare with oq-lite means
         means = read_composite_array(
             self._test_path('expected/mean-structural-loss_maps.csv'))
-        aae(means['poe~0.1'], data[0, 0], decimal=4)  # (P, Q+1, N)
+        aae(means['poe~0.1'], data[0, 0], decimal=4)  # (P, 0, N)
         aae(means['poe~0.5'], data[1, 0])
         aae(means['poe~0.9'], data[2, 0])
 
         # compare with oq-lite first quantile
         q025 = read_composite_array(
             self._test_path('expected/quantile-0.25-structural-loss_maps.csv'))
-        aae(q025['poe~0.1'], data[0, 1], decimal=4)  # (P, Q+1, N)
+        aae(q025['poe~0.1'], data[0, 1], decimal=4)  # (P, 1, N)
         aae(q025['poe~0.5'], data[1, 1], decimal=4)
         aae(q025['poe~0.9'], data[2, 1], decimal=4)
 
