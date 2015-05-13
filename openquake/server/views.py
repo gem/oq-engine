@@ -184,10 +184,10 @@ def calc(request, id=None):
     calc_data = _get_calcs(request.GET, user['name'], user['is_super'], id=id)
 
     response_data = []
-    for hc_id, status, job_type, is_running, desc in calc_data:
+    for hc_id, owner, status, job_type, is_running, desc in calc_data:
         url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
         response_data.append(
-            dict(id=hc_id, status=status, job_type=job_type,
+            dict(id=hc_id, owner=owner, status=status, job_type=job_type,
                  is_running=is_running, description=desc, url=url))
 
     # if id is specified the related dictionary is returned instead the list
@@ -362,8 +362,8 @@ def _get_calcs(request_get_dict, user_name, user_is_super=False, id=None):
         relevant = request_get_dict.get('relevant')
         job_params = job_params.filter(job__relevant=valid.boolean(relevant))
 
-    return [(jp.job.id, jp.job.status, jp.job.job_type, jp.job.is_running,
-             jp.value) for jp in job_params]
+    return [(jp.job.id, jp.job.user_name, jp.job.status, jp.job.job_type,
+             jp.job.is_running, jp.value) for jp in job_params]
 
 
 @require_http_methods(['GET'])
