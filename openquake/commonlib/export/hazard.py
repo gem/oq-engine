@@ -388,10 +388,10 @@ def export_gmf(ekey, dstore):
             logging.warn('Not generating %s, it would be empty', fname)
             continue
         fnames.append(os.path.join(dstore.export_dir, fname))
-        export_gmf = globals()['export_gmf_%s' % fmt]
-        export_gmf(('gmf', 'xml'), dstore.export_dir, fname, sitecol,
-                   ruptures, gmfs, rlz.uid)
-    return sorted(fnames)
+        globals()['export_gmf_%s' % fmt](
+            ('gmf', fmt), dstore.export_dir, fname, sitecol,
+            ruptures, gmfs, rlz.uid)
+    return fnames
 
 
 def export_hazard_curves_xml(key, export_dir, fname, sitecol, curves_by_imt,
