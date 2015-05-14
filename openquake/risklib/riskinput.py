@@ -40,11 +40,11 @@ def build_asset_collection(assets_by_site):
                            [(lt, float) for lt in loss_types])
     num_assets = sum(len(assets) for assets in assets_by_site)
     assetcol = numpy.zeros(num_assets, asset_dt)
-    i = 0
+    asset_ordinal = 0
     for sid, assets_ in enumerate(assets_by_site):
         for asset in sorted(assets_, key=operator.attrgetter('id')):
-            record = assetcol[i]
-            i += 1
+            record = assetcol[asset_ordinal]
+            asset_ordinal += 1
             for field in asset_dt.fields:
                 if field == 'asset_ref':
                     value = asset.id
