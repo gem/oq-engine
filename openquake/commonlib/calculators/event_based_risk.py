@@ -124,9 +124,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         logging.info('Generated %d epsilons', num_samples * len(eps_dict))
 
         self.riskinputs = list(self.riskmodel.build_inputs_from_ruptures(
-            self.sitecol, assets_by_site, all_ruptures,
-            gsims_by_col, oq.truncation_level, correl_model, eps_dict,
-            oq.concurrent_tasks or 1))
+            self.sitecol, all_ruptures, gsims_by_col, oq.truncation_level,
+            correl_model, eps_dict, oq.concurrent_tasks or 1))
         logging.info('Built %d risk inputs', len(self.riskinputs))
 
     def zeros(self, shape, dtype):
@@ -185,8 +184,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             nonzero = total = 0
             for loss_type, tag in data_by_lt_tag:
                 d = data_by_lt_tag[loss_type, tag]
-                for asset_ref, loss, ins_loss in sorted(d['data']):
-                    elass[loss_type, asset_ref].append((tag, loss, ins_loss))
+                for aid, loss, ins_loss in d['data']:
+                    elass[loss_type, aid].append((tag, loss, ins_loss))
 
                 # aggregates
                 elagg.append((loss_type, tag, d['loss'], d['ins_loss']))

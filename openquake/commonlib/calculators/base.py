@@ -343,6 +343,8 @@ class RiskCalculator(HazardCalculator):
         """
         with self.monitor('execute risk', autoflush=True) as monitor:
             monitor.oqparam = self.oqparam
+            if self.pre_calculator == 'event_based_rupture':
+                monitor.assets_by_site = self.assets_by_site
             res = apply_reduce(
                 self.core_func.__func__,
                 (self.riskinputs, self.riskmodel, self.rlzs_assoc, monitor),
