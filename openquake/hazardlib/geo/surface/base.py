@@ -252,7 +252,6 @@ class BaseQuadrilateralSurface(BaseSurface):
 
         This method uses an average strike direction to compute ry0.
         """
-
         # This computes ry0 by using an average strike direction
         top_edge = self.get_mesh()[0:1]
         mean_strike = self.get_strike()
@@ -266,9 +265,13 @@ class BaseQuadrilateralSurface(BaseSurface):
                                         top_edge.lats[0, -1],
                                         (mean_strike + 90.) % 360,
                                         mesh.lons, mesh.lats)
+        # Find the points on the rupture
 
-        # Get the shortest distance from two two lines
-        dst = numpy.fmin(numpy.abs(dst1), numpy.abs(dst2))
+        # Get the shortest distance from the two lines
+        idx = numpy.sign(dst1) == numpy.sign(dst2)
+        dst = numpy.zeros_like(dst1)
+        dst[idx] = numpy.fmin(numpy.abs(dst1[idx]), numpy.abs(dst2[idx]))
+        #dst = numpy.fmin(numpy.abs(dst1), numpy.abs(dst2))
 
         return dst
 
