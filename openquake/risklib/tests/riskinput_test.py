@@ -1,7 +1,8 @@
 import mock
 import unittest
-
-from openquake.commonlib import readinput
+import numpy
+from openquake.baselib.general import writetmp
+from openquake.commonlib import readinput, readers
 from openquake.risklib import riskinput
 from openquake.commonlib.calculators import event_based
 from openquake.qa_tests_data.event_based_risk import case_2
@@ -31,6 +32,19 @@ class RiskInputTestCase(unittest.TestCase):
         cls.sitecol, cls.assets_by_site = readinput.get_sitecol_assets(
             cls.oqparam, readinput.get_exposure(cls.oqparam))
         cls.riskmodel = readinput.get_risk_model(cls.oqparam)
+
+    def test_assetcol(self):
+        expected = writetmp('''\
+asset_ref:|S20:,site_id:uint32:,fatalities:float64:,structural:float64:
+a0,0,3,3000
+a1,1,500,2000
+a2,2,1000,1000
+a3,2,10,5000
+a4,3,10,500000
+''')
+        assetcol = riskinput.build_asset_collection(self.assets_by_site)
+        numpy.testing.assert_equal(
+            assetcol, readers.read_composite_array(expected))
 
     def test_get_all(self):
         self.assertEqual(

@@ -252,6 +252,14 @@ class HazardCalculator(BaseCalculator):
         else:  # calculators without sources, i.e. scenario
             self.rlzs_assoc = readinput.get_rlzs_assoc(self.oqparam)
 
+        # save mesh and asset collection
+        mesh_dt = numpy.dtype([('lon', float), ('lat', float)])
+        mesh = numpy.array(zip(self.sitecol.lons, self.sitecol.lats), mesh_dt)
+        self.datastore['/sitemesh'] = mesh
+        if hasattr(self, 'assets_by_site'):
+            self.datastore['/assetcol'] = riskinput.build_asset_collection(
+                self.assets_by_site)
+
 
 class RiskCalculator(HazardCalculator):
     """

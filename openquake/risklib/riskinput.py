@@ -39,6 +39,36 @@ def sorted_assets(assets_by_site):
     return sorted(all_assets, key=operator.attrgetter('id'))
 
 
+# TODO: add deductibles, insurance_limits, retrofitting_values
+def build_asset_collection(assets_by_site):
+    """
+    :params assets_by_site: a list of lists of assets
+    :returns: an array with composite dtype
+    """
+    first_asset = assets_by_site[0][0]
+    loss_types = first_asset.values.keys()
+    asset_dt = numpy.dtype([('asset_ref', '|S20'), ('site_id', numpy.uint32)] +
+                           [(lt, float) for lt in loss_types])
+    num_assets = sum(len(assets) for assets in assets_by_site)
+    assetcol = numpy.zeros(num_assets, asset_dt)
+    asset_ordinal = 0
+    for sid, assets_ in enumerate(assets_by_site):
+        for asset in sorted(assets_, key=operator.attrgetter('id')):
+            record = assetcol[asset_ordinal]
+            asset_ordinal += 1
+            for field in asset_dt.fields:
+                if field == 'asset_ref':
+                    value = asset.id
+                elif field == 'site_id':
+                    value = sid
+                elif field == 'fatalities':
+                    value = asset.values[field]
+                else:
+                    value = asset.value(field)
+                record[field] = value
+    return assetcol
+
+
 class RiskModel(collections.Mapping):
     """
     A container (imt, taxonomy) -> workflow.
