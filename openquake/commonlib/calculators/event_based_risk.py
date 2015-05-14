@@ -277,7 +277,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         oq = self.oqparam
         clp = oq.conditional_loss_poes
         losses_poes = scientific.event_based(
-            losses, tses=oq.tses, time_span=oq.hazard_investigation_time,
+            losses, tses=oq.tses, time_span=oq.risk_investigation_time,
             curve_resolution=oq.loss_curve_resolution)
         loss_map = scientific.loss_map_matrix(
             clp, [losses_poes]).reshape(len(clp)) if clp else None
@@ -302,7 +302,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             if all_losses:
                 losses, poes = scientific.event_based(
                     all_losses, tses=oq.tses,
-                    time_span=oq.hazard_investigation_time,
+                    time_span=oq.risk_investigation_time,
                     curve_resolution=C)
                 avg = scientific.average_loss((losses, poes))
             else:

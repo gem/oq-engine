@@ -682,7 +682,7 @@ def event_based(loss_values, tses, time_span, curve_resolution):
 
     :param tses: Time representative of the stochastic event set
 
-    :param time_span: Investigation Time spanned by the hazard input
+    :param time_span: Investigation Time spanned by the risk input
 
     :param curve_resolution: The number of points the output curve is
                              defined by
