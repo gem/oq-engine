@@ -43,7 +43,7 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
         a dictionary rlz.ordinal -> (loss_type, tag) -> AccumDict()
     """
     specific = set(monitor.oqparam.specific_assets)
-    if not specific and monitor.num_assets <= 10:  # hack
+    if monitor.num_assets <= 10:  # hack
         specific = set(a.id for assets in monitor.assets_by_site
                        for a in assets)
     acc = AccumDict({rlz.ordinal: AccumDict()

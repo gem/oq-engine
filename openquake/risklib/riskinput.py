@@ -202,12 +202,14 @@ class RiskInput(object):
         """Return a list of pairs (imt, taxonomies) with a single element"""
         return [(self.imt, self.taxonomies)]
 
-    def get_all(self, rlzs_assoc, assets_by_site):
+    def get_all(self, rlzs_assoc, assets_by_site=None):
         """
         :returns:
             lists of assets, hazards and epsilons
         """
         assets, hazards, epsilons = [], [], []
+        if assets_by_site is None:
+            assets_by_site = self.assets_by_site
         for hazard, assets_ in zip(self.hazard_by_site, assets_by_site):
             for asset in assets_:
                 assets.append(asset)
