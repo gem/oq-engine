@@ -620,6 +620,59 @@ class BetaDistribution(Distribution):
 # Event Based
 #
 
+class CurveBuilder(object):
+    """
+    Build loss ratio curves. The usage is something like this:
+
+      builder = CurveBuilder(curve_resolution)
+      counts = builder.build_counts(loss_matrix)
+      poes = builder.build_poes(counts, tses, time_span)
+      loss_ratio_curve = (builder.ratios, poes)
+    """
+    def __init__(self, curve_resolution):
+        self.curve_resolution = R = curve_resolution
+        self.ratios = numpy.linspace(0, 1, curve_resolution)
+        self.loss_curve_dt = numpy.dtype([
+            ('losses', (float, R)), ('poes', (float, R)), ('avg', float)])
+
+    def build_counts(self, loss_matrix):
+        """
+        :param loss_matrix:
+            a matrix of loss ratios of size N x R, N = #assets, R = #ruptures
+        """
+        N = len(loss_matrix)
+        counts = numpy.zeros((N, self.curve_resolution), numpy.uint32)
+        for i, loss_ratios in enumerate(loss_matrix):
+            # build the counts for each asset
+            counts[i, :] = numpy.array([(loss_ratios > ratio).sum()
+                                        for ratio in self.ratios])
+        return counts
+
+    def build_poes(self, counts, tses, time_span):
+        """
+        :param counts: an array of counts of exceedence for the bins
+        :param tses: Time representative of the stochastic event set
+        :param time_span: Investigation Time spanned by the hazard input
+        :returns: an array of PoEs
+        """
+        rates_of_exceedance = numpy.array(counts, float) / tses
+        return 1. - numpy.exp(-rates_of_exceedance * time_span)
+
+    def build_loss_curves(self, poe_matrix, asset_values):
+        """
+        :param poe_matrix: a matrix N x C
+        :param asset_values: N asset values for a given loss_type
+        """
+        N = len(asset_values)
+        lcs = numpy.zeros(N, self.loss_curve_dt)
+        for i, value in enumerate(asset_values):
+            losses = self.ratios * value
+            poes = poe_matrix[i]
+            avg = average_loss((losses, poes))
+            lcs[i] = (losses, poes, avg)
+        return lcs
+
+
 def event_based(loss_values, tses, time_span, curve_resolution):
     """
     Compute a loss (or loss ratio) curve.
@@ -1080,14 +1133,14 @@ def normalize_curves_eb(curves):
     :param curves: a list of pairs (losses, poes)
     :returns: first losses, all_poes
     """
-    non_trivial_curves = [(losses, poes)
-                          for losses, poes in curves if losses[-1] > 0]
-    if not non_trivial_curves:  # no damage. all trivial curves
+    # we assume non-decreasing losses, so losses[-1] is the maximum loss
+    non_zero_curves = [(losses, poes)
+                       for losses, poes in curves if losses[-1] > 0]
+    if not non_zero_curves:  # no damage. all zero curves
         return curves[0][0], [poes for _losses, poes in curves]
     else:  # standard case
-        max_losses = [losses[-1]  # we assume non-decreasing losses
-                      for losses, _poes in non_trivial_curves]
-        reference_curve = non_trivial_curves[numpy.argmax(max_losses)]
+        max_losses = [losses[-1] for losses, _poes in non_zero_curves]
+        reference_curve = non_zero_curves[numpy.argmax(max_losses)]
         loss_ratios = reference_curve[0]
         curves_poes = [interpolate.interp1d(
             losses, poes, bounds_error=False, fill_value=0)(loss_ratios)

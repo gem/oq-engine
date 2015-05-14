@@ -245,6 +245,31 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         ])
         aaae(lrem, expected_lrem, decimal=3)
 
+        expected_counts = numpy.matrix([
+            [4, 4, 4, 4, 0],
+            [4, 4, 4, 4, 0],
+            [4, 4, 4, 4, 0],
+            [4, 4, 4, 4, 0],
+            [4, 4, 4, 4, 0],
+            [4, 4, 4, 4, 0],
+            [3, 3, 3, 3, 0],
+            [3, 3, 3, 3, 0],
+            [3, 3, 3, 2, 0],
+            [3, 3, 3, 2, 0],
+            [3, 3, 2, 2, 0],
+            [3, 2, 2, 2, 0],
+            [3, 2, 2, 2, 0],
+            [3, 2, 2, 2, 0],
+            [3, 2, 2, 1, 0],
+            [3, 2, 1, 1, 0],
+            [2, 1, 1, 1, 0],
+            [2, 1, 1, 1, 0],
+            [1, 1, 1, 1, 0],
+            [1, 1, 1, 1, 0],
+            [1, 1, 0, 0, 0]])
+        b = scientific.CurveBuilder(curve_resolution=5)
+        aaae(b.build_counts(expected_lrem), expected_counts)
+
 
 class MeanLossTestCase(unittest.TestCase):
     def test_mean_loss(self):

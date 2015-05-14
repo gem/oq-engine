@@ -186,6 +186,10 @@ class HazardCalculator(BaseCalculator):
         filteredcol = sitecol.filter(mask)
         return filteredcol, numpy.array(assets_by_site)
 
+    def count_assets(self):
+        """Count how many assets are taken into consideration by the calculator"""
+        return sum(len(assets) for assets in self.assets_by_site)
+
     def pre_compute(self):
         """
         If there is a pre_calculator, use it to recompute the input, or simply
@@ -217,15 +221,14 @@ class HazardCalculator(BaseCalculator):
                 self.sitecol, self.assets_by_site = (
                     readinput.get_sitecol_assets(self.oqparam, self.exposure))
                 self.cost_types = self.exposure.cost_types
-
-            num_assets = sum(len(assets) for assets in self.assets_by_site)
+            num_assets = self.count_assets()
             mesh = readinput.get_mesh(self.oqparam)
             if mesh is not None:
                 sites = readinput.get_site_collection(self.oqparam, mesh)
                 with self.monitor('assoc_assets_sites'):
                     self.sitecol, self.assets_by_site = \
                         self.assoc_assets_sites(sites)
-                ok_assets = sum(len(assets) for assets in self.assets_by_site)
+                ok_assets = self.count_assets()
                 num_sites = len(self.sitecol)
                 logging.warn('Associated %d assets to %d sites, %d discarded',
                              ok_assets, num_sites, num_assets - ok_assets)
@@ -345,6 +348,7 @@ class RiskCalculator(HazardCalculator):
             monitor.oqparam = self.oqparam
             if self.pre_calculator == 'event_based_rupture':
                 monitor.assets_by_site = self.assets_by_site
+                monitor.num_assets = self.count_assets()
             res = apply_reduce(
                 self.core_func.__func__,
                 (self.riskinputs, self.riskmodel, self.rlzs_assoc, monitor),
@@ -400,7 +404,7 @@ def read_gmfs_from_csv(calc):
     for imt in calc.oqparam.imtls:
         gmfs_by_imt[imt] = gmfs_by_imt[imt][calc.sitecol.indices]
 
-    num_assets = sum(len(assets) for assets in calc.assets_by_site)
+    num_assets = calc.count_assets()
     num_sites = len(calc.sitecol)
     logging.info('Associated %d assets to %d sites', num_assets, num_sites)
 

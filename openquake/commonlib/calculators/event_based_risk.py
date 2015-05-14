@@ -42,19 +42,24 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     :returns:
         a dictionary rlz.ordinal -> (loss_type, tag) -> AccumDict()
     """
+    specific = set(monitor.oqparam.specific_assets)
+    if not specific and monitor.num_assets <= 10:  # hack
+        specific = set(a.id for assets in monitor.assets_by_site
+                       for a in assets)
     acc = AccumDict({rlz.ordinal: AccumDict()
                      for rlz in rlzs_assoc.realizations})
     # rlz.ordinal -> (loss_type, tag) -> AccumDict
     for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
         for out in out_by_rlz:
             acc_rlz = acc[out.hid]
+            acc_rlz[out.loss_type, 'counts_matrix'] = out.counts_matrix
             for tag, losses, ins_losses in zip(
                     out.tags, out.event_loss_per_asset,
                     out.insured_loss_per_asset):
                 data = [(asset.id, loss, ins_loss)
                         for asset, loss, ins_loss in zip(
                             out.assets, losses, ins_losses)
-                        if loss]
+                        if loss and asset.id in specific]
                 ad = AccumDict(
                     data=data, loss=sum(losses), ins_loss=sum(ins_losses),
                     nonzero=sum(1 for loss in losses if loss),
@@ -148,9 +153,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         rlzs = self.rlzs_assoc.realizations
         loss_types = self.riskmodel.get_loss_types()
 
-        R = oq.loss_curve_resolution
+        C = oq.loss_curve_resolution
         self.loss_curve_dt = numpy.dtype(
-            [('losses', (float, R)), ('poes', (float, R)), ('avg', float)])
+            [('losses', (float, C)), ('poes', (float, C)), ('avg', float)])
 
         if oq.conditional_loss_poes:
             lm_names = loss_map_names(oq.conditional_loss_poes)
@@ -173,6 +178,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             loss_maps = self.zeros(N, self.loss_map_dt)
         agg_loss_curve = self.zeros(1, self.loss_curve_dt)
 
+        cb = scientific.CurveBuilder(oq.loss_curve_resolution)
+
         for i in sorted(result):
             rlz = rlzs[i]
 
@@ -184,6 +191,15 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             nonzero = total = 0
             for loss_type, tag in data_by_lt_tag:
                 d = data_by_lt_tag[loss_type, tag]
+                if tag == 'counts_matrix':
+                    # matrix (N, C)
+                    # poes = cb.build_poes(
+                    #    d, oq.tses, oq.hazard_investigation_time)
+                    # values = workflows.get_values(loss_type, assets)
+                    # loss_curves[loss_type] = cb.build_loss_curves(
+                    # poes, values)
+                    continue
+
                 for aid, loss, ins_loss in d['data']:
                     elass[loss_type, aid].append((tag, loss, ins_loss))
 
@@ -215,7 +231,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
                     if oq.conditional_loss_poes:
                         # build the loss maps per asset, array of shape (N, P)
-                        losses_poes = numpy.array(  # shape (N, 2, R)
+                        losses_poes = numpy.array(  # shape (N, 2, C)
                             [lc['losses'], lc['poes']]).transpose(1, 0, 2)
                         lmaps = scientific.loss_map_matrix(
                             oq.conditional_loss_poes, losses_poes)  # (P, N)
@@ -279,7 +295,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         :returns: an array of loss curves, one for each asset
         """
         oq = self.oqparam
-        R = oq.loss_curve_resolution
+        C = oq.loss_curve_resolution
         lcs = []
         for asset in self.assets:
             all_losses = [loss[i] for loss in elass[loss_type, asset.id]]
@@ -287,10 +303,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 losses, poes = scientific.event_based(
                     all_losses, tses=oq.tses,
                     time_span=oq.hazard_investigation_time,
-                    curve_resolution=R)
+                    curve_resolution=C)
                 avg = scientific.average_loss((losses, poes))
             else:
-                losses, poes = numpy.zeros(R), numpy.zeros(R)
+                losses, poes = numpy.zeros(C), numpy.zeros(C)
                 avg = 0
             lcs.append((losses, poes, avg))
         return numpy.array(lcs, self.loss_curve_dt)
@@ -331,7 +347,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             for rlz in rlzs:
                 lcs = self.datastore['/loss_curves/rlzs/%s' % rlz.uid][
                     loss_type]
-                losses_poes = numpy.array(  # -> shape (N, 2, R)
+                losses_poes = numpy.array(  # -> shape (N, 2, C)
                     [lcs['losses'], lcs['poes']]).transpose(1, 0, 2)
                 out = scientific.Output(
                     self.assets, loss_type, rlz.ordinal, rlz.weight,

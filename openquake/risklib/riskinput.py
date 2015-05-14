@@ -143,7 +143,7 @@ class RiskModel(collections.Mapping):
         for riskinput in riskinputs:
             try:
                 assets_by_site = riskinput.assets_by_site
-            except AttributeError:
+            except AttributeError:  # for event_based_risk
                 assets_by_site = monitor.assets_by_site
             with mon_hazard:
                 # get assets, hazards, epsilons

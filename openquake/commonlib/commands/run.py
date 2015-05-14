@@ -35,18 +35,19 @@ def run(job_ini, concurrent_tasks=executor.num_tasks_hint,
     oqparam.concurrent_tasks = concurrent_tasks
     oqparam.hazard_calculation_id = hc
     oqparam.exports = exports
-    with PerformanceMonitor('total', monitor_csv=os.path.join(
-            oqparam.export_dir, 'performance.csv'), autoflush=True) as monitor:
-        calc = base.calculators(oqparam, monitor)
-        with monitor('pre_execute'):
-            calc.pre_execute()
-        with monitor('execute'):
-            result = calc.execute()
-        with monitor('post_execute'):
-            calc.post_execute(result)
-        with monitor('export'):
-            calc.export()
-        calc.clean_up()
+    monitor = PerformanceMonitor('total', autoflush=True)
+    calc = base.calculators(oqparam, monitor)
+    monitor.monitor_csv = os.path.join(
+        calc.datastore.calc_dir, 'performance.csv')
+    with monitor('pre_execute'):
+        calc.pre_execute()
+    with monitor('execute'):
+        result = calc.execute()
+    with monitor('post_execute'):
+        calc.post_execute(result)
+    with monitor('export'):
+        calc.export()
+    calc.clean_up()
     logging.info('Calculation %s saved in %s',
                  calc.datastore.calc_id, calc.datastore.calc_dir)
     logging.info('Total time spent: %s s', monitor.duration)

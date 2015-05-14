@@ -429,6 +429,7 @@ class ProbabilisticEventBased(Workflow):
         self.imt = imt
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
+        self.loss_curve_resolution = loss_curve_resolution
         self.curves = functools.partial(
             scientific.event_based, curve_resolution=loss_curve_resolution,
             time_span=risk_investigation_time, tses=tses)
@@ -488,10 +489,12 @@ class ProbabilisticEventBased(Workflow):
             ila = numpy.zeros((len(ground_motion_values[0]), len(assets)))
         if isinstance(assets[0].id, basestring):
             # in oq-lite return early, with just the losses per asset
+            cb = scientific.CurveBuilder(self.loss_curve_resolution)
             return scientific.Output(
                 assets, loss_type,
                 event_loss_per_asset=ela,
                 insured_loss_per_asset=ila,
+                counts_matrix=cb.build_counts(loss_matrix),
                 tags=event_ids)
 
         # in the engine, compute more stuff on the workers
