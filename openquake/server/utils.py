@@ -4,7 +4,7 @@ from django.conf import settings
 from openquake.engine import __version__ as oqversion
 
 
-def get_user(request):
+def get_user_data(request):
     """
     Returns the real username if authentication support is enabled and user is
     authenticated, otherwise it returns "platform" as user for backward
