@@ -179,7 +179,7 @@ def calc(request, id=None):
     """
     base_url = _get_base_url(request)
 
-    user = utils.get_user(request)
+    user = utils.get_user_data(request)
 
     calc_data = _get_calcs(request.GET, user['name'], user['is_super'], id=id)
 
@@ -292,7 +292,7 @@ def run_calc(request):
 
     temp_dir = os.path.dirname(einfo[0])
 
-    user = utils.get_user(request)
+    user = utils.get_user_data(request)
 
     try:
         job, _fut = submit_job(einfo[0], temp_dir, request.POST['database'],
@@ -378,14 +378,14 @@ def calc_results(request, calc_id):
         * type (hazard_curve, hazard_map, etc.)
         * url (the exact url where the full result can be accessed)
     """
-    user = utils.get_user(request)
+    user = utils.get_user_data(request)
 
     # If the specified calculation doesn't exist OR is not yet complete,
     # throw back a 404.
     try:
         oqjob = oqe_models.OqJob.objects.get(id=calc_id)
-        if not user['is_super']:
-            oqjob = oqjob.filter(user_name=user['name'])
+        if not user['is_super'] and oqjob.user_name != user['name']:
+            return HttpResponseNotFound()
         if not oqjob.status == 'complete':
             return HttpResponseNotFound()
     except ObjectDoesNotExist:
