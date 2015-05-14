@@ -26,7 +26,7 @@ def parse_header(header):
     into a numpy composite dtype. Here is an example:
 
     >>> parse_header(['PGA:float64:3', 'PGV:float64:2', 'avg:float:1'])
-    dtype([('PGA', '<f8', (3,)), ('PGV', '<f8', (2,)), ('avg', '<f8', (1,))])
+    (['PGA', 'PGV', 'avg'], dtype([('PGA', '<f8', (3,)), ('PGV', '<f8', (2,)), ('avg', '<f8', (1,))]))
 
     :params header: a list of type descriptions
     :returns: column names and the corresponding composite dtype
