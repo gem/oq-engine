@@ -216,7 +216,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         data_by_lt[loss_type].append(
                             (tag, asset_id, loss, ins_loss))
                 for loss_type, data in data_by_lt.iteritems():
-                    event_loss_asset[i][loss_type] = sorted(
+                    event_loss[i][loss_type] = sorted(
                         (t, a, l, i) for t, a, l, i in data
                         if a in specific_asset_refs)
 
@@ -325,7 +325,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             kind = 'rlzs'
         else:
             kind = 'stats'
-        self.datastore['%s/%s/%s' % (name, kind, dset)] = curves
+        self.datastore['%s-%s/%s' % (name, kind, dset)] = curves
 
     # ################### methods to compute statistics  #################### #
 
@@ -346,7 +346,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         for loss_type in self.riskmodel.get_loss_types():
             outputs = []
             for rlz in rlzs:
-                key = '%s/rlzs/%s' % (loss_curve_key, rlz.uid)
+                key = '%s-rlzs/%s' % (loss_curve_key, rlz.uid)
                 lcs = self.datastore[key][loss_type]
                 assets = [None] if key.startswith('/agg') else self.assets
                 losses_poes = numpy.array(  # -> shape (N, 2, C)

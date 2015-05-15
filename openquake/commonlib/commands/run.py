@@ -39,15 +39,8 @@ def run(job_ini, concurrent_tasks=executor.num_tasks_hint,
     calc = base.calculators(oqparam, monitor)
     monitor.monitor_csv = os.path.join(
         calc.datastore.calc_dir, 'performance.csv')
-    with monitor('pre_execute'):
-        calc.pre_execute()
-    with monitor('execute'):
-        result = calc.execute()
-    with monitor('post_execute'):
-        calc.post_execute(result)
-    with monitor('export'):
-        calc.export()
-    calc.clean_up()
+    with monitor:
+        calc.run()
     logging.info('Calculation %s saved in %s',
                  calc.datastore.calc_id, calc.datastore.calc_dir)
     logging.info('Total time spent: %s s', monitor.duration)

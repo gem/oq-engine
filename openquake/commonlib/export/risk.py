@@ -112,8 +112,6 @@ def export_loss_curves(ekey, dstore):
         fnames.extend(
             _export_curves_csv(name[1:], assets, curves[:], dstore.export_dir,
                                dset, columns))
-    if not dstore['oqparam'].individual_curves:
-        return fnames
     for dset, curves in dstore.get(ekey[0] + '/rlzs', {}).iteritems():
         prefix = 'rlz-%03d' % rlz_by_dset[dset].ordinal
         fnames.extend(
