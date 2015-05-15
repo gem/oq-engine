@@ -191,7 +191,7 @@ def export_loss_curve_csv(key, output, target):
     return dest
 
 
-@core.export_output.add(('loss_curve', 'csv'))
+@core.export_output.add(('loss_curve', 'csv'), ('event_loss_curve', 'csv'))
 def export_avgloss_csv(key, output, target):
     """
     Export `output` to `target` in csv format for a given loss type
