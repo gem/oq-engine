@@ -179,15 +179,15 @@ def calc(request, id=None):
     """
     base_url = _get_base_url(request)
 
-    user_name = utils.getusername(request)
+    user = utils.get_user_data(request)
 
-    calc_data = _get_calcs(request.GET, user_name, id=id)
+    calc_data = _get_calcs(request.GET, user['name'], user['is_super'], id=id)
 
     response_data = []
-    for hc_id, status, job_type, is_running, desc in calc_data:
+    for hc_id, owner, status, job_type, is_running, desc in calc_data:
         url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
         response_data.append(
-            dict(id=hc_id, status=status, job_type=job_type,
+            dict(id=hc_id, owner=owner, status=status, job_type=job_type,
                  is_running=is_running, description=desc, url=url))
 
     # if id is specified the related dictionary is returned instead the list
@@ -292,11 +292,11 @@ def run_calc(request):
 
     temp_dir = os.path.dirname(einfo[0])
 
-    user_name = utils.getusername(request)
+    user = utils.get_user_data(request)
 
     try:
         job, _fut = submit_job(einfo[0], temp_dir, request.POST['database'],
-                               user_name, callback_url, foreign_calc_id,
+                               user['name'], callback_url, foreign_calc_id,
                                hazard_output_id, hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         logging.error(exc)
@@ -334,13 +334,16 @@ def submit_job(job_file, temp_dir, dbname, user_name,
     return job, future
 
 
-def _get_calcs(request_get_dict, user_name, id=None):
+def _get_calcs(request_get_dict, user_name, user_is_super=False, id=None):
 
     # TODO if superuser with should show all the calculations i.e.
 
     # helper to get job+calculation data from the oq-engine database
     job_params = oqe_models.JobParam.objects.filter(
-        name='description', job__user_name=user_name).order_by('-id')
+        name='description').order_by('-id')
+
+    if not user_is_super:
+        job_params = job_params.filter(job__user_name=user_name)
 
     if id is not None:
         job_params = job_params.filter(job_id=id)
@@ -359,8 +362,8 @@ def _get_calcs(request_get_dict, user_name, id=None):
         relevant = request_get_dict.get('relevant')
         job_params = job_params.filter(job__relevant=valid.boolean(relevant))
 
-    return [(jp.job.id, jp.job.status, jp.job.job_type, jp.job.is_running,
-             jp.value) for jp in job_params]
+    return [(jp.job.id, jp.job.user_name, jp.job.status, jp.job.job_type,
+             jp.job.is_running, jp.value) for jp in job_params]
 
 
 @require_http_methods(['GET'])
@@ -375,13 +378,14 @@ def calc_results(request, calc_id):
         * type (hazard_curve, hazard_map, etc.)
         * url (the exact url where the full result can be accessed)
     """
-    user_name = utils.getusername(request)
+    user = utils.get_user_data(request)
 
     # If the specified calculation doesn't exist OR is not yet complete,
     # throw back a 404.
     try:
-        oqjob = oqe_models.OqJob.objects.get(id=calc_id,
-                                             user_name=user_name)
+        oqjob = oqe_models.OqJob.objects.get(id=calc_id)
+        if not user['is_super'] and oqjob.user_name != user['name']:
+            return HttpResponseNotFound()
         if not oqjob.status == 'complete':
             return HttpResponseNotFound()
     except ObjectDoesNotExist:
