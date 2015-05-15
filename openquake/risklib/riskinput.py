@@ -28,15 +28,6 @@ from openquake.hazardlib.gsim.base import gsim_imt_dt
 from openquake.risklib import scientific
 
 
-def _get_value(asset, field):
-    try:
-        name, lt = field.split('~')
-    except ValueError:  # no ~ in field
-        name, lt = 'value', field
-    return getattr(asset, name)(lt)
-
-
-# TODO: add deductibles, insurance_limits, retrofitting_values
 def build_asset_collection(assets_by_site):
     """
     :params assets_by_site: a list of lists of assets
@@ -69,7 +60,11 @@ def build_asset_collection(assets_by_site):
                 elif field == 'fatalities':
                     value = asset.values[field]
                 else:
-                    value = _get_value(asset, field)
+                    try:
+                        name, lt = field.split('~')
+                    except ValueError:  # no ~ in field
+                        name, lt = 'value', field
+                    value = getattr(asset, name)(lt)
                 record[field] = value
     return assetcol
 
