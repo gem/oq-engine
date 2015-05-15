@@ -32,7 +32,11 @@ def show(calc_id, key=None, rlzs=None):
     """
     ds = datastore.DataStore(calc_id)
     if key:
-        print ds[key]
+        obj = ds[key]
+        if key.startswith('/') and hasattr(obj, 'value'):
+            print obj.value
+        else:
+            print obj
         return
     # print all keys
     print ds['oqparam'].calculation_mode, \
