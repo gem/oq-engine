@@ -86,32 +86,38 @@ def export_avg_losses(ekey, dstore):
     return fnames
 
 
-@export.add(('/loss_curves', 'csv'), ('/loss_maps', 'csv'),
-            ('/agg_loss_curve', 'csv'))
+@export.add(('/loss_curves', 'csv'), ('/agg_loss_curve', 'csv'),
+            ('/loss_curves_ins', 'csv'), ('/agg_loss_curve_ins', 'csv'),
+            ('/loss_curves_maps', 'csv'),  ('/agg_loss_curve_maps', 'csv'))
 def export_loss_curves(ekey, dstore):
-    name = ekey[0][1:]
-    if name == 'agg_loss_curve':
+    name = ekey[0]
+    if name in ('/agg_loss_curve', '/agg_loss_curve_ins'):
         assets = None
         columns = 'losses poes avg'.split()
-    elif name == 'loss_curves':
+    elif name == '/agg_loss_curve_maps':
+        assets = None
+        columns = None
+    elif name in ('/loss_curves', '/loss_curves_ins'):
         assets = get_assets(dstore)
         columns = 'asset_ref lon lat losses poes avg'.split()
-    elif name == 'loss_maps':
+    elif name == '/loss_curves_maps':
         assets = get_assets(dstore)
         columns = None
+    else:
+        raise ValueError(name)
     rlzs = dstore['rlzs_assoc'].realizations
     rlz_by_dset = {rlz.uid: rlz for rlz in rlzs}
     fnames = []
     for dset, curves in dstore.get(ekey[0] + '/stats', {}).iteritems():
         fnames.extend(
-            _export_curves_csv(name, assets, curves[:], dstore.export_dir,
+            _export_curves_csv(name[1:], assets, curves[:], dstore.export_dir,
                                dset, columns))
     if not dstore['oqparam'].individual_curves:
         return fnames
     for dset, curves in dstore.get(ekey[0] + '/rlzs', {}).iteritems():
         prefix = 'rlz-%03d' % rlz_by_dset[dset].ordinal
         fnames.extend(
-            _export_curves_csv(name, assets, curves[:], dstore.export_dir,
+            _export_curves_csv(name[1:], assets, curves[:], dstore.export_dir,
                                prefix, columns))
     return fnames
 

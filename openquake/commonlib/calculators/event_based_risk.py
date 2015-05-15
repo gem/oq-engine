@@ -238,11 +238,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         for lm, lmap in zip(lm_names, lmaps):
                             loss_maps[loss_type][lm] = lmap
 
-            self.store('loss_curves', rlz, loss_curves)
+            self.store('/loss_curves', rlz, loss_curves)
             if oq.insured_losses:
-                self.store('ins_curves', rlz, ins_curves)
+                self.store('/ins_curves', rlz, ins_curves)
             if oq.conditional_loss_poes:
-                self.store('loss_maps', rlz, loss_maps)
+                self.store('/loss_maps', rlz, loss_maps)
 
             if elagg:
                 for loss_type, rows in groupby(
@@ -256,7 +256,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     # NB: the aggregated loss_map is not stored
 
                     print '========== avg loss', loss_type, avg
-                self.store('agg_loss_curve', rlz, agg_loss_curve)
+                self.store('/agg_loss_curve', rlz, agg_loss_curve)
 
         if specific_assets:
             self.event_loss_asset = event_loss_asset
@@ -264,7 +264,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         # store statistics (i.e. mean and quantiles) for curves and maps
         if len(self.rlzs_assoc.realizations) > 1:
-            self.compute_store_stats()
+            self.compute_store_stats('/loss_curves')
+            self.compute_store_stats('/agg_loss_curve')
 
     def build_agg_loss_curve_and_map(self, losses):
         """
@@ -324,11 +325,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             kind = 'rlzs'
         else:
             kind = 'stats'
-        self.datastore['/%s/%s/%s' % (name, kind, dset)] = curves
+        self.datastore['%s/%s/%s' % (name, kind, dset)] = curves
 
     # ################### methods to compute statistics  #################### #
 
-    def build_stats(self):
+    def build_stats(self, loss_curve_key):
         """
         Compute all statistics for the specified assets starting from the
         stored loss curves. Yield a statistical output object for each
@@ -345,29 +346,30 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         for loss_type in self.riskmodel.get_loss_types():
             outputs = []
             for rlz in rlzs:
-                lcs = self.datastore['/loss_curves/rlzs/%s' % rlz.uid][
-                    loss_type]
+                key = '%s/rlzs/%s' % (loss_curve_key, rlz.uid)
+                lcs = self.datastore[key][loss_type]
+                assets = [None] if key.startswith('/agg') else self.assets
                 losses_poes = numpy.array(  # -> shape (N, 2, C)
                     [lcs['losses'], lcs['poes']]).transpose(1, 0, 2)
                 out = scientific.Output(
-                    self.assets, loss_type, rlz.ordinal, rlz.weight,
+                    assets, loss_type, rlz.ordinal, rlz.weight,
                     loss_curves=losses_poes, insured_curves=None)
                 outputs.append(out)
             yield stats.build(outputs)
 
-    def compute_store_stats(self):
+    def compute_store_stats(self, loss_curve_key):
         """
         Compute and store the statistical outputs
         """
         oq = self.oqparam
-        N = len(self.assets)
+        N = 1 if loss_curve_key.startswith('/agg_') else len(self.assets)
         Q = 1 + len(oq.quantile_loss_curves)
         loss_curve_stats = self.zeros((Q, N), self.loss_curve_dt)
         ins_curve_stats = self.zeros((Q, N), self.loss_curve_dt)
         if oq.conditional_loss_poes:
             loss_map_stats = self.zeros((Q, N), self.loss_map_dt)
 
-        for stat in self.build_stats():
+        for stat in self.build_stats(loss_curve_key):
             # there is one stat for each loss_type
             curves, ins_curves, maps = scientific.get_stat_curves(stat)
             loss_curve_stats[:][stat.loss_type] = curves
@@ -377,8 +379,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 loss_map_stats[:][stat.loss_type] = maps
 
         for i, stats in enumerate(mean_quantiles(oq.quantile_loss_curves)):
-            self.store('loss_curves', stats, loss_curve_stats[i])
+            self.store(loss_curve_key, stats, loss_curve_stats[i])
             if oq.insured_losses:
-                self.store('ins_curves', stats, ins_curve_stats[i])
+                self.store(loss_curve_key + '_ins', stats, ins_curve_stats[i])
             if oq.conditional_loss_poes:
-                self.store('loss_maps', stats, loss_map_stats[i])
+                self.store(loss_curve_key + '_maps', stats, loss_map_stats[i])
