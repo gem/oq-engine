@@ -128,6 +128,9 @@ LOGGING = {
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1
 
+# Enable this setting if used as backend for the OpenQuake Platform
+# DEFAULT_USER = 'platform'
+
 try:
     from local_settings import *
 except ImportError:

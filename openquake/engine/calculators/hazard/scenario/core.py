@@ -177,7 +177,8 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         """
         self.acc = tasks.apply_reduce(
             self.core_calc_task,
-            (zip(self.tags, self.seeds), self.computer, self.monitor))
+            (zip(self.tags, self.seeds), self.computer, self.monitor),
+            concurrent_tasks=self.concurrent_tasks)
 
     @EnginePerformanceMonitor.monitor
     def post_execute(self, result=None):
