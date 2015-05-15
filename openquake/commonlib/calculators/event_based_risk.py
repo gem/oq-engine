@@ -86,6 +86,20 @@ def loss_map_names(conditional_loss_poes):
     return names
 
 
+def extract_avglosses(dstore):
+    """
+    Generator extracting the average losses from the loss curves
+    for each realization. Yields dictionaries loss_type -> avg losses per asset
+    """
+    rlzs = dstore['rlzs_assoc'].realizations
+    loss_types = dstore['riskmodel'].get_loss_types()
+    data = []
+    for rlz in rlzs:
+        curves = dstore['/loss_curves-rlzs/%s' % rlz.uid]
+        data.append({lt: curves[lt]['avg'] for lt in loss_types})
+    return data
+
+
 @base.calculators.add('event_based_risk')
 class EventBasedRiskCalculator(base.RiskCalculator):
     """
@@ -96,6 +110,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
     event_loss_asset = datastore.persistent_attribute('event_loss_asset')
     event_loss = datastore.persistent_attribute('event_loss')
+    avglosses_rlzs = datastore.persistent_attribute('avglosses-rlzs')
 
     def riskinput_key(self, ri):
         """
@@ -254,14 +269,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     # NB: there is no aggregate insured loss curve
                     agg_loss_curve[loss_type][0] = (losses, poes, avg)
                     # NB: the aggregated loss_map is not stored
-
-                    print '========== avg loss', loss_type, avg
                 self.store('/agg_loss_curve', rlz, agg_loss_curve)
 
         if specific_assets:
             self.event_loss_asset = event_loss_asset
         self.event_loss = event_loss
 
+        self.avglosses_rlzs = extract_avglosses
         # store statistics (i.e. mean and quantiles) for curves and maps
         if len(self.rlzs_assoc.realizations) > 1:
             self.compute_store_stats('/loss_curves')

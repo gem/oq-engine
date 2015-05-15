@@ -86,6 +86,30 @@ def export_avg_losses(ekey, dstore):
     return fnames
 
 
+# this is used by event_based_risk
+@export.add(('avglosses-rlzs', 'csv'))
+def export_avglosses_csv(ekey, dstore):
+    data_by_rlz = dstore[ekey[0]]
+    rlzs = dstore['rlzs_assoc'].realizations
+    sitemesh = dstore['/sitemesh']
+    assetcol = dstore['/assetcol']
+    header = ['lon', 'lat', 'asset_ref', 'asset_value', 'average_loss',
+              'stddev_loss', 'loss_type']
+    fnames = []
+    for rlz, data in zip(rlzs, data_by_rlz):
+        dest = os.path.join(
+            dstore.export_dir, 'rlz-%03d-avglosses.csv' % rlz.ordinal)
+        rows = []
+        for loss_type in data:
+            for asset, loss in zip(assetcol, data[loss_type]):
+                loc = sitemesh[asset['site_id']]
+                row = [loc['lon'], loc['lat'], asset['asset_ref'],
+                       asset[loss_type], loss, numpy.nan, loss_type]
+                rows.append(row)
+        fnames.append(writers.write_csv(dest, [header] + rows))
+    return fnames
+
+
 @export.add(('/loss_curves-rlzs', 'csv'),
             ('/agg_loss_curve-rlzs', 'csv'),
             ('/loss_curves-rlzs_ins', 'csv'),
