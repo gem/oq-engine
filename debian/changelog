@@ -1,3 +1,11 @@
+python-oq-engine (1.4.1-0~precise01) precise; urgency=low
+
+  [Michele Simionato]
+  * Fixed a bug in the hazard calculators which were not using the parameter
+    concurrent_tasks from the configuration file
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Fri, 15 May 2015 10:06:26 +0200
+
 python-oq-engine (1.4.0-2~precise01) precise; urgency=low
 
   [Daniele Viganò]
