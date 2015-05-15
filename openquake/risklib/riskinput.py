@@ -35,8 +35,16 @@ def sorted_assets(assets_by_site):
     """
     all_assets = []
     for assets in assets_by_site:
-        all_assets.extend(assets)
+        all_assets.extend(assets)        
     return sorted(all_assets, key=operator.attrgetter('id'))
+
+    
+def _get_value(asset, field):
+    try:
+        name, lt = field.split('~')
+    except ValueError:  # no ~ in field
+        name, lt = 'value', field
+    return getattr(asset, name)(lt)
 
 
 # TODO: add deductibles, insurance_limits, retrofitting_values
@@ -47,8 +55,16 @@ def build_asset_collection(assets_by_site):
     """
     first_asset = assets_by_site[0][0]
     loss_types = first_asset.values.keys()
-    asset_dt = numpy.dtype([('asset_ref', '|S20'), ('site_id', numpy.uint32)] +
-                           [(lt, float) for lt in loss_types])
+    deductible_d = first_asset.deductibles or {}
+    limit_d = first_asset.insurance_limits or {}
+    retrofitting_d = first_asset.retrofitting_values or {}
+    deductibles = ['deductible~%s' % name for name in deductible_d]
+    limits = ['insurance_limit~%s' % name for name in limit_d]
+    retrofittings = ['retrofitted~%s' % n for n in retrofitting_d]
+    asset_dt = numpy.dtype(
+        [('asset_ref', '|S20'), ('site_id', numpy.uint32)] +
+        [(name, float) for name in
+         loss_types + deductibles + limits + retrofittings])
     num_assets = sum(len(assets) for assets in assets_by_site)
     assetcol = numpy.zeros(num_assets, asset_dt)
     asset_ordinal = 0
@@ -64,7 +80,7 @@ def build_asset_collection(assets_by_site):
                 elif field == 'fatalities':
                     value = asset.values[field]
                 else:
-                    value = asset.value(field)
+                    value = _get_value(asset, field)
                 record[field] = value
     return assetcol
 
