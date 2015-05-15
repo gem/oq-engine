@@ -473,4 +473,5 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         return tasks.apply_reduce(
             compute_gmfs_and_curves,
             (sesruptures, sitecol, self.rlzs_assoc, self.monitor),
-            base_agg, zeros, key=lambda sr: sr.col_idx)
+            base_agg, zeros, key=lambda sr: sr.col_idx,
+            concurrent_tasks=self.concurrent_tasks)
