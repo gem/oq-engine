@@ -107,7 +107,8 @@ class BaseHazardCalculator(base.Calculator):
             self.core_calc_task,
             (list(csm.sources), self.site_collection, csm.info, self.monitor),
             agg=self.agg_curves, acc=self.acc,
-            weight=attrgetter('weight'), key=attrgetter('trt_model_id'))
+            weight=attrgetter('weight'), key=attrgetter('trt_model_id'),
+            concurrent_tasks=self.concurrent_tasks)
 
     @EnginePerformanceMonitor.monitor
     def agg_curves(self, acc, result):
@@ -530,6 +531,7 @@ class BaseHazardCalculator(base.Calculator):
             with self.monitor('generating hazard maps', autoflush=True) as mon:
                 tasks.apply_reduce(
                     hazard_curves_to_hazard_map,
-                    (self._hazard_curves, self.oqparam.poes, mon))
+                    (self._hazard_curves, self.oqparam.poes, mon),
+                    concurrent_tasks=self.concurrent_tasks)
         if self.oqparam.uniform_hazard_spectra:
             do_uhs_post_proc(self.job)
