@@ -86,11 +86,14 @@ def export_avg_losses(ekey, dstore):
     return fnames
 
 
-@export.add(('/loss_curves', 'csv'), ('/agg_loss_curve', 'csv'),
-            ('/loss_curves_ins', 'csv'), ('/agg_loss_curve_ins', 'csv'),
-            ('/loss_curves_maps', 'csv'),  ('/agg_loss_curve_maps', 'csv'))
-def export_loss_curves(ekey, dstore):
-    name = ekey[0]
+@export.add(('/loss_curves-rlzs', 'csv'),
+            ('/agg_loss_curve-rlzs', 'csv'),
+            ('/loss_curves-rlzs_ins', 'csv'),
+            ('/agg_loss_curve-rlzs_ins', 'csv'),
+            ('/loss_curves-rlzs_maps', 'csv'),
+            ('/agg_loss_curve-rlzs_maps', 'csv'))
+def export_loss_curves_rlzs(ekey, dstore):
+    name = ekey[0].replace('-rlzs', '')
     if name in ('/agg_loss_curve', '/agg_loss_curve_ins'):
         assets = None
         columns = 'losses poes avg'.split()
@@ -108,15 +111,41 @@ def export_loss_curves(ekey, dstore):
     rlzs = dstore['rlzs_assoc'].realizations
     rlz_by_dset = {rlz.uid: rlz for rlz in rlzs}
     fnames = []
-    for dset, curves in dstore.get(ekey[0] + '/stats', {}).iteritems():
-        fnames.extend(
-            _export_curves_csv(name[1:], assets, curves[:], dstore.export_dir,
-                               dset, columns))
-    for dset, curves in dstore.get(ekey[0] + '/rlzs', {}).iteritems():
+    for dset, curves in dstore.get(ekey[0], {}).iteritems():
         prefix = 'rlz-%03d' % rlz_by_dset[dset].ordinal
         fnames.extend(
             _export_curves_csv(name[1:], assets, curves[:], dstore.export_dir,
                                prefix, columns))
+    return fnames
+
+
+@export.add(('/loss_curves-stats', 'csv'),
+            ('/agg_loss_curve-stats', 'csv'),
+            ('/loss_curves-stats_ins', 'csv'),
+            ('/agg_loss_curve-stats_ins', 'csv'),
+            ('/loss_curves-stats_maps', 'csv'),
+            ('/agg_loss_curve-stats_maps', 'csv'))
+def export_loss_curves_stats(ekey, dstore):
+    name = ekey[0].replace('-stats', '')
+    if name in ('/agg_loss_curve', '/agg_loss_curve_ins'):
+        assets = None
+        columns = 'losses poes avg'.split()
+    elif name == '/agg_loss_curve_maps':
+        assets = None
+        columns = None
+    elif name in ('/loss_curves', '/loss_curves_ins'):
+        assets = get_assets(dstore)
+        columns = 'asset_ref lon lat losses poes avg'.split()
+    elif name == '/loss_curves_maps':
+        assets = get_assets(dstore)
+        columns = None
+    else:
+        raise ValueError(name)
+    fnames = []
+    for dset, curves in dstore.get(ekey[0], {}).iteritems():
+        fnames.extend(
+            _export_curves_csv(name[1:], assets, curves[:], dstore.export_dir,
+                               dset, columns))
     return fnames
 
 

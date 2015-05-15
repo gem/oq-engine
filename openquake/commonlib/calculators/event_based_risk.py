@@ -216,7 +216,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         data_by_lt[loss_type].append(
                             (tag, asset_id, loss, ins_loss))
                 for loss_type, data in data_by_lt.iteritems():
-                    event_loss[i][loss_type] = sorted(
+                    event_loss_asset[i][loss_type] = sorted(
                         (t, a, l, i) for t, a, l, i in data
                         if a in specific_asset_refs)
 
