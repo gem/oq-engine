@@ -87,7 +87,7 @@ def export_avg_losses(ekey, dstore):
 
 
 # this is used by event_based_risk
-@export.add(('avglosses-rlzs', 'csv'))
+@export.add(('avglosses_rlzs', 'csv'))
 def export_avglosses_csv(ekey, dstore):
     data_by_rlz = dstore[ekey[0]]
     rlzs = dstore['rlzs_assoc'].realizations
@@ -97,8 +97,8 @@ def export_avglosses_csv(ekey, dstore):
               'stddev_loss', 'loss_type']
     fnames = []
     for rlz, data in zip(rlzs, data_by_rlz):
-        dest = os.path.join(
-            dstore.export_dir, 'rlz-%03d-avglosses.csv' % rlz.ordinal)
+        fname = ekey[0].replace('rlzs', '%03d' % rlz.ordinal) + '.csv'
+        dest = os.path.join(dstore.export_dir, fname)
         rows = []
         for loss_type in data:
             for asset, loss in zip(assetcol, data[loss_type]):
@@ -108,6 +108,9 @@ def export_avglosses_csv(ekey, dstore):
                 rows.append(row)
         fnames.append(writers.write_csv(dest, [header] + rows))
     return fnames
+
+# NB: agg_avgloss_rlzs is not exported on purpose, but it can be shown:
+# oq-lite show <calc_id> agg_avgloss_rlzs
 
 
 @export.add(('/loss_curves-rlzs', 'csv'),
