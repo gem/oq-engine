@@ -53,7 +53,8 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
         for out in out_by_rlz:
             acc_rlz = acc[out.hid]
-            acc_rlz[out.loss_type, 'counts_matrix'] = out.counts_matrix
+            acc_rlz[out.loss_type, 'counts_matrix'] = AccumDict(
+                zip(out.assets, out.counts_matrix))
             for tag, losses, ins_losses in zip(
                     out.tags, out.event_loss_per_asset,
                     out.insured_loss_per_asset):
@@ -212,11 +213,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 d = data_by_lt_tag[loss_type, tag]
                 if tag == 'counts_matrix':
                     # matrix (N, C)
+                    # assets = d.keys()
+                    # ratios = d.values()
                     # poes = cb.build_poes(
-                    #    d, oq.tses, oq.hazard_investigation_time)
-                    # values = workflows.get_values(loss_type, assets)
+                    #    ratios, oq.tses, oq.risk_investigation_time)
                     # loss_curves[loss_type] = cb.build_loss_curves(
-                    # poes, values)
+                    #    poes, [asset.value(loss_type) for asset in assets])
+                    # print loss_curves[loss_type]
                     continue
 
                 for aid, loss, ins_loss in d['data']:

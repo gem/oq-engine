@@ -244,7 +244,7 @@ def persistent_attribute(key):
     :param key: the name of the attribute to be made persistent
     :returns: a property to be added to a class with a .datastore attribute
     """
-    privatekey = '_' + key
+    privatekey = '_' + key[1:] if key[0] == '/' else '_' + key
 
     def getter(self):
         # Try to get the value from the privatekey attribute (i.e. from
