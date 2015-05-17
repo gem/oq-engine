@@ -23,6 +23,7 @@ Built-in GSIMs
     atkinson_boore_1995
     atkinson_boore_2003
     atkinson_boore_2006
+    atkinson_macias_2009
     atkinson_2015
     berge_thierry_2003
     bindi_2011
