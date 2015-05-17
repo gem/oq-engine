@@ -68,7 +68,10 @@ class SESCollection(object):
 def export_ses_xml(ekey, dstore):
     fmt = ekey[-1]
     oq = dstore['oqparam']
-    csm_info = dstore['rlzs_assoc'].csm_info
+    try:
+        csm_info = dstore['rlzs_assoc'].csm_info
+    except AttributeError:  # for scenario calculators don't export
+        return []
     sescollection = dstore['sescollection']
     col_id = 0
     fnames = []
@@ -81,7 +84,7 @@ def export_ses_xml(ekey, dstore):
                 sm.path, oq.investigation_time)
             smpath = '_'.join(sm.path)
             fname = 'ses-%d-smltp_%s.%s' % (trt_model.id, smpath, fmt)
-            dest = os.path.join(dstore.export_dir, fname)
+            dest = os.path.join(oq.export_dir, fname)
             globals()['_export_ses_' + fmt](dest, ses_coll)
             fnames.append(fname)
     return fnames
