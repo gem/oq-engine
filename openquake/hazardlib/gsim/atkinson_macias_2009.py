@@ -29,8 +29,8 @@ from openquake.hazardlib.imt import PGA, SA
 
 class AtkinsonMacias2009(GMPE):
     """
-    Implements the Induced Seismicity GMPE of Atkinson & Macias (2009) for
-    large interface earthquakes in the Cascadia subductoin zone.
+    Implements the Subduction Interface GMPE of Atkinson & Macias (2009) for
+    large interface earthquakes in the Cascadia subduction zone.
     Atkinson, G. M. and Macias, M. (2009) "Predicted Ground Motions for
     Great Interface Earthquakes in the Cascadia Subduction Zone", Bulletin
     of the Seismological Society of America, 99(3), 1552 - 1578
@@ -38,7 +38,8 @@ class AtkinsonMacias2009(GMPE):
     #: The GMPE is derived for subduction interface earthquakes in Cascadia
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
-    #: Supported intensity measure types are peak ground acceleration
+    #: Supported intensity measure types are peak ground acceleration and
+    #: Spectral Acceleration
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
         PGA,
         SA
@@ -54,7 +55,7 @@ class AtkinsonMacias2009(GMPE):
     ])
 
     #: No required site parameters, the GMPE is derived for B/C site
-    #: amplification factors
+    #: conditions
     REQUIRES_SITES_PARAMETERS = set(())
 
     #: Required rupture parameters are magnitude
