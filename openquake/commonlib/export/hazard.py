@@ -103,19 +103,6 @@ def _export_ses_csv(dest, ses_coll):
     save_csv(dest, sorted(rows, key=operator.itemgetter(0)))
 
 
-@export.add(('ruptures', 'csv'))
-def export_ses_csv(key, dstore):
-    """
-    Export a Stochastic Event Set Collection
-    """
-    dest = dstore.export_path(*key)
-    rows = []
-    for sesrup in dstore['ruptures']:
-        rows.append([sesrup.tag, sesrup.seed])
-    save_csv(dest, sorted(rows, key=operator.itemgetter(0)))
-    return [dest]
-
-
 @export.add(('sitecol', 'csv'))
 def export_sitecol_csv(key, dstore):
     dest = dstore.export_path(*key)
