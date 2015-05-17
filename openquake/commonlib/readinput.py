@@ -198,7 +198,7 @@ def get_mesh(oqparam):
                 '%(region_grid_spacing)s' % vars(oqparam))
     elif 'site_model' in oqparam.inputs:
         coords = [(param.lon, param.lat) for param in get_site_model(oqparam)]
-        lons, lats = zip(*coords)
+        lons, lats = zip(*sorted(coords))
         return geo.Mesh(numpy.array(lons), numpy.array(lats))
     # if there is an exposure the mesh is extracted from get_sitecol_assets
 
