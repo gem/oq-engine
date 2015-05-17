@@ -22,8 +22,6 @@ import itertools
 import collections
 from operator import attrgetter
 
-from django.contrib.gis.geos.point import Point
-
 import numpy
 
 from openquake.hazardlib.imt import from_string
@@ -33,8 +31,7 @@ from openquake.engine.db import models
 
 from openquake.baselib import general
 from openquake.commonlib import readinput, risk_parsers, source
-from openquake.commonlib.readinput import (
-    get_site_collection, get_site_model)
+from openquake.commonlib.readinput import get_site_collection
 
 from openquake.engine.input import exposure
 from openquake.engine import logs
@@ -267,8 +264,7 @@ class BaseHazardCalculator(base.Calculator):
 
         logs.LOG.progress("initializing site collection")
         oqparam = self.job.get_oqparam()
-        self.site_collection = get_site_collection(
-            oqparam, points, site_ids)
+        self.site_collection = get_site_collection(oqparam, points, site_ids)
 
     def initialize_realizations(self):
         """
