@@ -23,7 +23,7 @@ import collections
 
 import numpy
 
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, groupby
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import FilteredSiteCollection
 from openquake.commonlib.export import export
@@ -64,27 +64,40 @@ class SESCollection(object):
             yield SES(sesruptures, self.investigation_time, idx)
 
 
-def _export_ses_xml(key, export_dir, fname, ses_coll):
-    """
-    Export a Stochastic Event Set Collection
-    """
-    dest = os.path.join(export_dir, fname)
+@export.add(('sescollection', 'xml'), ('sescollection', 'csv'))
+def export_ses_xml(ekey, dstore):
+    fmt = ekey[-1]
+    oq = dstore['oqparam']
+    csm_info = dstore['rlzs_assoc'].csm_info
+    sescollection = dstore['sescollection']
+    col_id = 0
+    fnames = []
+    for sm in csm_info.source_models:
+        for trt_model in sm.trt_models:
+            sesruptures = sescollection[col_id].values()
+            col_id += 1
+            ses_coll = SESCollection(
+                groupby(sesruptures, operator.attrgetter('ses_idx')),
+                sm.path, oq.investigation_time)
+            smpath = '_'.join(sm.path)
+            fname = 'ses-%d-smltp_%s.%s' % (trt_model.id, smpath, fmt)
+            dest = os.path.join(dstore.export_dir, fname)
+            globals()['_export_ses_' + fmt](dest, ses_coll)
+            fnames.append(fname)
+    return fnames
+
+
+def _export_ses_xml(dest, ses_coll):
     writer = hazard_writers.SESXMLWriter(dest, '_'.join(ses_coll.sm_lt_path))
     writer.serialize(ses_coll)
-    return {fname: dest}
 
 
-def _export_ses_csv(key, export_dir, fname, ses_coll):
-    """
-    Export a Stochastic Event Set Collection
-    """
-    dest = os.path.join(export_dir, fname)
+def _export_ses_csv(dest, ses_coll):
     rows = []
     for ses in ses_coll:
         for sesrup in ses:
             rows.append([sesrup.tag, sesrup.seed])
     save_csv(dest, sorted(rows, key=operator.itemgetter(0)))
-    return {fname: dest}
 
 
 @export.add(('ruptures', 'csv'))
