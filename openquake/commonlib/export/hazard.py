@@ -104,8 +104,12 @@ def _export_ses_csv(dest, ses_coll):
 
 
 @export.add(('sitecol', 'csv'))
-def export_sitecol_csv(key, dstore):
-    dest = dstore.export_path(*key)
+def export_sitecol_csv(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    dest = dstore.export_path(*ekey)
     rows = []
     for site in dstore['sitecol']:
         rows.append([site.id, site.location.x, site.location.y, site.vs30,
@@ -302,12 +306,12 @@ def export_hazard_curves_csv(key, export_dir, fname, sitecol, curves_by_imt,
     return {fname: dest}
 
 
-def hazard_curve_name(ekey, kind, rlzs_assoc, samples):
+def hazard_curve_name(ekey, kind, rlzs_assoc, sampling):
     """
     :param ekey: the export key
     :param kind: the kind of key
     :param rlzs_assoc: a RlzsAssoc instance
-    :param samples: if sampling is enabled or not
+    :param sampling: if sampling is enabled or not
     """
     key, fmt = ekey
     prefix = {'/hcurves': 'hazard_curve', '/hmaps': 'hazard_map',
@@ -315,7 +319,7 @@ def hazard_curve_name(ekey, kind, rlzs_assoc, samples):
     if kind.startswith('rlz-'):
         rlz_no = int(kind[4:])
         rlz = rlzs_assoc.realizations[rlz_no]
-        fname = build_name(rlz, prefix, fmt, samples)
+        fname = build_name(rlz, prefix, fmt, sampling)
     elif kind == 'mean':
         fname = '%s-mean.csv' % prefix
     elif kind.startswith('quantile-'):
