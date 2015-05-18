@@ -307,21 +307,6 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
                 sescollection[sr.col_id][sr.tag] = sr
         self.sescollection = sescollection
 
-#        exports = oq.exports.split(',')
-#        for smodel in self.composite_source_model:
-#            smpath = '_'.join(smodel.path)
-#            for trt_model in smodel.trt_models:
-#                sesruptures = result.get(trt_model.id, [])
-#                ses_coll = SESCollection(
-#                    groupby(sesruptures, operator.attrgetter('ses_idx')),
-#                    smodel.path, oq.investigation_time)
-#                for fmt in exports:
-#                    fname = 'ses-%d-smltp_%s.%s' % (trt_model.id, smpath, fmt)
-#                    saved += export(
-#                        ('ses', fmt), oq.export_dir, fname, ses_coll)
-#        return saved
-
-
 # ######################## GMF calculator ############################ #
 
 
