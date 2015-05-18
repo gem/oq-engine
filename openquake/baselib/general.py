@@ -442,9 +442,10 @@ class CallableDict(collections.OrderedDict):
     The default keyfunc is the identity function, i.e. the first
     argument is assumed to be the key.
     """
-    def __init__(self, keyfunc=lambda key: key):
+    def __init__(self, keyfunc=lambda key: key, missing=None):
         super(CallableDict, self).__init__()
         self.keyfunc = keyfunc
+        self.missing = missing
 
     def add(self, *keys):
         """
@@ -459,10 +460,12 @@ class CallableDict(collections.OrderedDict):
 
     def __call__(self, obj, *args, **kw):
         key = self.keyfunc(obj)
-        if key not in self:
-            raise KeyError(
-                'There is nothing registered for %s' % repr(key))
         return self[key](obj, *args, **kw)
+
+    def __missing__(self, key):
+        if callable(self.missing):
+            return self.missing(key)
+        raise KeyError(key)
 
 
 class AccumDict(dict):
