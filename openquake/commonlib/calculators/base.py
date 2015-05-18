@@ -206,9 +206,8 @@ class HazardCalculator(BaseCalculator):
                 self.sitecol, self.assets_by_site = (
                     readinput.get_sitecol_assets(self.oqparam, self.exposure))
                 self.cost_types = self.exposure.cost_types
-                taxonomies = numpy.array(
+                self.taxonomies = numpy.array(
                     sorted(self.exposure.taxonomies), '|S100')
-                self.taxonomies = taxonomies.reshape((len(taxonomies), 1))
 
             num_assets = sum(len(assets) for assets in self.assets_by_site)
             mesh = readinput.get_mesh(self.oqparam)
