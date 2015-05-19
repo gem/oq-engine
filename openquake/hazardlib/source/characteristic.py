@@ -59,7 +59,8 @@ class CharacteristicFaultSource(ParametricSeismicSource):
         'surface surface_node rake').split()
 
     def __init__(self, source_id, name, tectonic_region_type,
-                 mfd, temporal_occurrence_model, surface, rake):
+                 mfd, temporal_occurrence_model, surface, rake,
+                 surface_node=None):
         super(CharacteristicFaultSource, self).__init__(
             source_id, name, tectonic_region_type, mfd, None, None, None,
             temporal_occurrence_model
@@ -67,6 +68,7 @@ class CharacteristicFaultSource(ParametricSeismicSource):
         NodalPlane.check_rake(rake)
         self.surface = surface
         self.rake = rake
+        self.surface_node = surface_node
 
     def get_rupture_enclosing_polygon(self, dilation=0):
         """
