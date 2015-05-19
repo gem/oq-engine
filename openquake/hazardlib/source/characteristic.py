@@ -53,7 +53,7 @@ class CharacteristicFaultSource(ParametricSeismicSource):
 
     NB: if you want to convert a characteristic source into XML, you must set
     its attribute `surface_node` to an explicit representation of the surface
-    as a :class:`openquake.baselib.node.LiteralNode` object.
+    as a :class:`openquake.commonlib.node.LiteralNode` object.
     """
     __slots__ = ParametricSeismicSource.__slots__ + (
         'surface surface_node rake').split()
