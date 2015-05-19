@@ -689,8 +689,8 @@ def get_exposure(oqparam):
         ct['name']: (ct['type'] == 'aggregated' or
                      exposure.area['type'] == 'aggregated')
         for ct in exposure.cost_types}
-    relevant_cost_types = set(vulnerability_files(oqparam.inputs)) - \
-        set(['occupants'])
+    all_cost_types = set(vulnerability_files(oqparam.inputs))
+    relevant_cost_types = all_cost_types - set(['occupants'])
     asset_refs = set()
     time_event = oqparam.time_event
     ignore_missing_costs = set(oqparam.ignore_missing_costs)
@@ -725,8 +725,8 @@ def get_exposure(oqparam):
                 except KeyError:
                     number = 1
                 else:
-                    # this is needed by the classical_risk calculator
-                    values['fatalities'] = number
+                    if 'occupants' in all_cost_types:
+                        values['fatalities'] = number
 
             location = asset.location['lon'], asset.location['lat']
             if region and not geometry.Point(*location).within(region):
@@ -742,8 +742,12 @@ def get_exposure(oqparam):
                 if cost_type not in relevant_cost_types:
                     continue
                 values[cost_type] = cost['value']
-                deductibles[cost_type] = cost.attrib.get('deductible')
-                insurance_limits[cost_type] = cost.attrib.get('insuranceLimit')
+                deduct = cost.attrib.get('deductible')
+                if deduct is not None:
+                    deductibles[cost_type] = deduct
+                limit = cost.attrib.get('insuranceLimit')
+                if limit is not None:
+                    insurance_limits[cost_type] = limit
 
             # check we are not missing a cost type
             missing = relevant_cost_types - set(values)

@@ -230,7 +230,7 @@ _pkgbuild_innervm_run () {
 }
 
 #
-#  _devtest_innervm_run <branch_id> <lxc_ip> - part of source test performed on lxc
+#  _devtest_innervm_run <lxc_ip> <branch> - part of source test performed on lxc
 #                     the following activities are performed:
 #                     - extracts dependencies from oq-hazardlib debian/control
 #                       files and install them
@@ -243,11 +243,11 @@ _pkgbuild_innervm_run () {
 #                     - runs coverage
 #                     - collects all tests output files from lxc
 #
-#      <branch_id>    name of the tested branch
 #      <lxc_ip>       the IP address of lxc instance
+#      <branch>       name of the tested branch
 #
 _devtest_innervm_run () {
-    local i branch="$1" lxc_ip="$2"
+    local i old_ifs pkgs_list dep lxc_ip="$1" branch="$2"
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
@@ -313,7 +313,7 @@ _devtest_innervm_run () {
 }
 
 #
-#  _pkgtest_innervm_run <lxc_ip> - part of package test performed on lxc
+#  _pkgtest_innervm_run <lxc_ip> <branch> - part of package test performed on lxc
 #                     the following activities are performed:
 #                     - adds local gpg key to apt keystore
 #                     - copies 'oq-*' package repositories on lxc
@@ -325,9 +325,10 @@ _devtest_innervm_run () {
 #                     - executes demos
 #
 #      <lxc_ip>    the IP address of lxc instance
+#      <branch>    the name of the branch under test
 #
 _pkgtest_innervm_run () {
-    local lxc_ip="$1"
+    local lxc_ip="$1" branch="$2" old_ifs from_dir
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
@@ -357,22 +358,44 @@ _pkgtest_innervm_run () {
         var_branch="${var_pfx}_BRANCH"
         var_commit="${var_pfx}_COMMIT"
         if [ "${!var_repo}" != "" ]; then
-            repo="${!var_repo}"
+            dep_repo="${!var_repo}"
         else
-            repo="$GEM_GIT_REPO"
+            dep_repo="$GEM_GIT_REPO"
         fi
         if [ "${!var_branch}" != "" ]; then
-            branch="${!var_branch}"
+            dep_branch="${!var_branch}"
         else
-            branch="master"
+            dep_branch="master"
         fi
 
-        if [ "$repo" = "$GEM_GIT_REPO" -a "$branch" = "master" ]; then
+        if [ "$dep_repo" = "$GEM_GIT_REPO" -a "$dep_branch" = "master" ]; then
             GEM_DEB_SERIE="master"
         else
-            GEM_DEB_SERIE="devel/$(echo "$repo" | sed 's@^.*://@@g;s@/@__@g;s/\./-/g')__${branch}"
+            GEM_DEB_SERIE="devel/$(echo "$dep_repo" | sed 's@^.*://@@g;s@/@__@g;s/\./-/g')__${dep_branch}"
         fi
-        scp -r ${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/python-${dep}.${!var_commit:0:7} $lxc_ip:repo/python-${dep}
+        from_dir="${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/python-${dep}.${!var_commit:0:7}"
+        time_start="$(date +%s)"
+        while true; do
+            if scp -r "$from_dir" $lxc_ip:repo/python-${dep}; then
+                break
+            fi
+            if [ "$dep_branch" = "$branch" ]; then
+                # NOTE: currently we retry for 1 hour to get the correct dep version
+                # if there is concordance between package and dependency branches
+                time_cur="$(date +%s)"
+                if [ $time_cur -gt $((time_start + 3600)) ]; then
+                    return 1
+                fi
+                sleep 10
+            else
+                # NOTE: in the other case dep branch is 'master' and package branch isn't
+                #       so we try to get the correct commit package and if it isn't yet built
+                #       it fallback to the latest builded
+                from_dir="$(ls -drt ${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/python-${dep}*  | tail -n 1)"
+                scp -r "$from_dir" $lxc_ip:repo/python-${dep}
+                break
+            fi
+        done
         ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-${dep} ./\""
     done
     IFS="$old_ifs"
@@ -521,11 +544,11 @@ deps_check_or_clone () {
 }
 
 #
-#  devtest_run <branch_id> - main function of source test
-#      <branch_id>    name of the tested branch
+#  devtest_run <branch> - main function of source test
+#      <branch>    name of the tested branch
 #
 devtest_run () {
-    local deps old_ifs branch_id="$1"
+    local deps old_ifs branch="$1" branch_cur
 
     if [ ! -d "out_${BUILD_UBUVER}" ]; then
         mkdir "out_${BUILD_UBUVER}"
@@ -553,26 +576,26 @@ devtest_run () {
     IFS=" "
     for dep in $GEM_GIT_DEPS; do
         found=0
-        branch="$branch_id"
+        branch_cur="$branch"
         for repo in $repos; do
             # search of same branch in same repo or in GEM_GIT_REPO repo
-            if git ls-remote --heads $repo/${dep}.git | grep -q "refs/heads/$branch" ; then
-                deps_check_or_clone "$dep" "$repo/${dep}.git" "$branch"
+            if git ls-remote --heads $repo/${dep}.git | grep -q "refs/heads/$branch_cur" ; then
+                deps_check_or_clone "$dep" "$repo/${dep}.git" "$branch_cur"
                 found=1
                 break
             fi
         done
         # if not found it fallback in master branch of GEM_GIT_REPO repo
         if [ $found -eq 0 ]; then
-            branch="master"
-            deps_check_or_clone "$dep" "$repo/${dep}.git" "$branch"
+            branch_cur="master"
+            deps_check_or_clone "$dep" "$repo/${dep}.git" "$branch_cur"
         fi
         cd _jenkins_deps/$dep
         commit="$(git log -1 | grep '^commit' | sed 's/^commit //g')"
         cd -
         echo "dependency: $dep"
         echo "repo:       $repo"
-        echo "branch:     $branch"
+        echo "branch:     $branch_cur"
         echo "commit:     $commit"
         echo
         var_pfx="$(dep2var "$dep")"
@@ -581,7 +604,7 @@ devtest_run () {
         fi
         if grep -q "^${var_pfx}_COMMIT=" _jenkins_deps_info; then
             if ! grep -q "^${var_pfx}_COMMIT=$commit" _jenkins_deps_info; then
-                echo "ERROR: $repo -> $branch changed during test:"
+                echo "ERROR: $repo -> $branch_cur changed during test:"
                 echo "before:"
                 grep "^${var_pfx}_COMMIT=" _jenkins_deps_info
                 echo "after:"
@@ -591,7 +614,7 @@ devtest_run () {
         else
             echo "${var_pfx}_COMMIT=$commit" >> _jenkins_deps_info
             echo "${var_pfx}_REPO=$repo"     >> _jenkins_deps_info
-            echo "${var_pfx}_BRANCH=$branch" >> _jenkins_deps_info
+            echo "${var_pfx}_BRANCH=$branch_cur" >> _jenkins_deps_info
         fi
     done
     IFS="$old_ifs"
@@ -603,7 +626,7 @@ devtest_run () {
     _wait_ssh $lxc_ip
 
     set +e
-    _devtest_innervm_run "$branch_id" "$lxc_ip"
+    _devtest_innervm_run "$lxc_ip" "$branch"
     inner_ret=$?
 
     scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/devtest.history"
@@ -620,11 +643,11 @@ devtest_run () {
 
 
 #
-#  pkgtest_run <branch_id> - main function of package test
-#      <branch_id>    name of the tested branch
+#  pkgtest_run <branch> - main function of package test
+#      <branch>    name of the tested branch
 #
 pkgtest_run () {
-    local i e branch_id="$1" commit
+    local i e branch="$1" commit
 
     commit="$(git log --pretty='format:%h' -1)"
 
@@ -675,7 +698,7 @@ EOF
     _wait_ssh $lxc_ip
 
     set +e
-    _pkgtest_innervm_run $lxc_ip
+    _pkgtest_innervm_run "$lxc_ip" "$branch"
     inner_ret=$?
 
     scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/pkgtest.history"
@@ -695,10 +718,10 @@ EOF
     # correct dependencies during the "test Ubuntu package" procedure
     #
     if [ $BUILD_REPOSITORY -eq 1 -a -d "${GEM_DEB_REPO}" ]; then
-        if [ "$branch_id" != "" ]; then
+        if [ "$branch" != "" ]; then
             repo_id="$(repo_id_get)"
-            if [ "git://$repo_id" != "$GEM_GIT_REPO" -o "$branch_id" != "master" ]; then
-                CUSTOM_SERIE="devel/$(echo "$repo_id" | sed "s@/@__@g;s/\./-/g")__${branch_id}"
+            if [ "git://$repo_id" != "$GEM_GIT_REPO" -o "$branch" != "master" ]; then
+                CUSTOM_SERIE="devel/$(echo "$repo_id" | sed "s@/@__@g;s/\./-/g")__${branch}"
                 if [ "$CUSTOM_SERIE" != "" ]; then
                     GEM_DEB_SERIE="$CUSTOM_SERIE"
                 fi
@@ -709,7 +732,7 @@ EOF
 
         # if the monotone directory exists and is the "gem" repo and is the "master" branch then ...
         if [ -d "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/binary" ]; then
-            if [ "git://$repo_id" == "$GEM_GIT_REPO" -a "$branch_id" == "master" ]; then
+            if [ "git://$repo_id" == "$GEM_GIT_REPO" -a "$branch" == "master" ]; then
                 cp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.changes \
                     ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.dsc ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.tar.gz \
                     "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/binary"
