@@ -237,7 +237,8 @@ class RuptureConverter(object):
             convert_rupture = getattr(self, 'convert_' + striptag(node.tag))
             mag = ~node.magnitude
             rake = ~node.rake
-            hypocenter = ~node.hypocenter
+            h = node.hypocenter
+            hypocenter = geo.Point(h['lon'], h['lat'], h['depth'])
         return convert_rupture(node, mag, rake, hypocenter)
 
     def geo_line(self, edge):
@@ -274,10 +275,14 @@ class RuptureConverter(object):
         :param surface: PlanarSurface node
         """
         with context(self.fname, surface):
-            top_left = geo.Point(*~surface.topLeft)
-            top_right = geo.Point(*~surface.topRight)
-            bottom_left = geo.Point(*~surface.bottomLeft)
-            bottom_right = geo.Point(*~surface.bottomRight)
+            tl = surface.topLeft
+            top_left = geo.Point(tl['lon'], tl['lat'], tl['depth'])
+            tr = surface.topRight
+            top_right = geo.Point(tr['lon'], tr['lat'], tr['depth'])
+            bl = surface.bottomLeft
+            bottom_left = geo.Point(bl['lon'], bl['lat'], bl['depth'])
+            br = surface.bottomRight
+            bottom_right = geo.Point(br['lon'], br['lat'], br['depth'])
         return geo.PlanarSurface.from_corner_points(
             self.rupture_mesh_spacing,
             top_left, top_right, bottom_right, bottom_left)
@@ -326,7 +331,7 @@ class RuptureConverter(object):
             surfaces = [node.simpleFaultGeometry]
         rupt = source.rupture.Rupture(
             mag=mag, rake=rake, tectonic_region_type=None,
-            hypocenter=geo.Point(*hypocenter),
+            hypocenter=hypocenter,
             surface=self.convert_surfaces(surfaces),
             source_typology=source.SimpleFaultSource)
         rupt.surface_nodes = surfaces
@@ -345,7 +350,7 @@ class RuptureConverter(object):
             surfaces = [node.complexFaultGeometry]
         rupt = source.rupture.Rupture(
             mag=mag, rake=rake, tectonic_region_type=None,
-            hypocenter=geo.Point(*hypocenter),
+            hypocenter=hypocenter,
             surface=self.convert_surfaces(surfaces),
             source_typology=source.ComplexFaultSource)
         rupt.surface_nodes = surfaces
@@ -365,7 +370,7 @@ class RuptureConverter(object):
         rupt = source.rupture.Rupture(
             mag=mag, rake=rake,
             tectonic_region_type=None,
-            hypocenter=geo.Point(*hypocenter),
+            hypocenter=hypocenter,
             surface=self.convert_surfaces(surfaces),
             source_typology=source.NonParametricSeismicSource)
         rupt.surface_nodes = surfaces
@@ -385,7 +390,7 @@ class RuptureConverter(object):
         rupt = source.rupture.Rupture(
             mag=mag, rake=rake,
             tectonic_region_type=None,
-            hypocenter=geo.Point(*hypocenter),
+            hypocenter=hypocenter,
             surface=self.convert_surfaces(surfaces),
             source_typology=source.NonParametricSeismicSource)
         rupt.surface_nodes = surfaces

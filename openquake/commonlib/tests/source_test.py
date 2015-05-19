@@ -358,9 +358,11 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         assert_close(self._expected_complex, self.cmplx)
 
     def test_characteristic_simple(self):
+        self.char_simple.surface_node = None
         assert_close(self._expected_char_simple, self.char_simple)
 
     def test_characteristic_complex(self):
+        self.char_complex.surface_node = None
         assert_close(self._expected_char_complex, self.char_complex)
 
     def test_characteristic_multi(self):
