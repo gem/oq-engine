@@ -988,14 +988,12 @@ class DamageWriter(object):
         data_by_location = groupby(data, lambda r: r.exposure_data.site)
         for loc in data_by_location:
             dd = Node('DDNode', nodes=[self.point_node(loc)])
-            data_by_asset = groupby(data_by_location[loc],
-                                    key=lambda r: r.exposure_data.asset_ref)
-            means = []
-            stddevs = []
-            for asset_ref in data_by_asset:
-                for row in data_by_asset[asset_ref]:
-                    means.append(row.mean)
-                    stddevs.append(row.stddev)
+            data_by_asset = groupby(
+                data_by_location[loc],
+                lambda r: r.exposure_data.asset_ref,
+                lambda rows: [(r.mean, r.stddev) for r in rows])
+            for asset_ref, data in data_by_asset.iteritems():
+                means, stddevs = zip(*data)
                 dd.append(self.asset_node(asset_ref, means, stddevs))
             node.append(dd)
         return node
