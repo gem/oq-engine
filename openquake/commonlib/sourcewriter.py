@@ -406,6 +406,7 @@ def write_sources(dest, sources, name=None):
     :param str name:
         Name of the source model (if missing, extracted from the filename)
     """
+    sources.sort(key=lambda src: src.source_id)
     name = name or os.path.splitext(os.path.basename(dest))[0]
     source_model = LiteralNode(
         "sourceModel", {"name": name}, nodes=map(obj_to_node, sources))
