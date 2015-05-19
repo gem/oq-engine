@@ -16,7 +16,6 @@
 # License along with OpenQuake Risklib. If not, see
 # <http://www.gnu.org/licenses/>.
 
-import os
 import inspect
 import functools
 import collections
