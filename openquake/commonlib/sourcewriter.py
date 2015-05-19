@@ -394,7 +394,7 @@ def build_complex_fault_source_node(fault_source):
                        nodes=source_nodes)
 
 
-def write_sources(dest, sources, name=None):
+def write_source_model(dest, sources, name=None):
     """
     Writes a source model to XML.
 
