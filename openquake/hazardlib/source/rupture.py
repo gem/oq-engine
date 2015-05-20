@@ -62,12 +62,15 @@ class Rupture(object):
     :raises ValueError:
         If magnitude value is not positive, hypocenter is above the earth
         surface or tectonic region type is unknown.
+
+    NB: if you want to convert the rupture into XML, you should set the
+    attribute surface_nodes to an appropriate value.
     """
     __slots__ = '''mag rake tectonic_region_type hypocenter surface
-    source_typology'''.split()
+    surface_nodes source_typology'''.split()
 
     def __init__(self, mag, rake, tectonic_region_type, hypocenter,
-                 surface, source_typology):
+                 surface, source_typology, surface_nodes=()):
         if not mag > 0:
             raise ValueError('magnitude must be positive')
         if not hypocenter.depth > 0:
@@ -79,6 +82,7 @@ class Rupture(object):
         self.hypocenter = hypocenter
         self.surface = surface
         self.source_typology = source_typology
+        self.surface_nodes = surface_nodes
 
 
 class BaseProbabilisticRupture(Rupture):
