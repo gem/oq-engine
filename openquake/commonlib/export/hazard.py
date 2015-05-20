@@ -66,6 +66,10 @@ class SESCollection(object):
 
 @export.add(('sescollection', 'xml'), ('sescollection', 'csv'))
 def export_ses_xml(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
     fmt = ekey[-1]
     oq = dstore['oqparam']
     try:
@@ -355,6 +359,9 @@ def build_name(rlz, prefix, fmt, sampling):
 def export_hcurves_csv(ekey, dstore):
     """
     Exports the hazard curves into several .csv files
+
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
     """
     oq = dstore['oqparam']
     rlzs_assoc = dstore['rlzs_assoc']
@@ -375,6 +382,10 @@ def export_hcurves_csv(ekey, dstore):
 
 @export.add(('gmf_by_trt_gsim', 'xml'), ('gmf_by_trt_gsim', 'csv'))
 def export_gmf(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
     sitecol = dstore['sitecol']
     rlzs_assoc = dstore['rlzs_assoc']
     rupture_by_tag = sum(dstore['sescollection'], AccumDict())
