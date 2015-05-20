@@ -532,6 +532,14 @@ class SourceConverter(RuptureConverter):
         """
         geom = node.simpleFaultGeometry
         msr = valid.SCALEREL[~node.magScaleRel]()
+        try:
+            hypo_list = valid.hypo_list(node.hypoList)
+        except NameError:
+            hypo_list = ()
+        try:
+            slip_list = valid.slip_list(node.slipList)
+        except NameError:
+            slip_list = ()
         simple = source.SimpleFaultSource(
             source_id=node['id'],
             name=node['name'],
@@ -545,7 +553,9 @@ class SourceConverter(RuptureConverter):
             fault_trace=self.geo_line(geom),
             dip=~geom.dip,
             rake=~node.rake,
-            temporal_occurrence_model=self.tom)
+            temporal_occurrence_model=self.tom,
+            hypo_list=hypo_list,
+            slip_list=slip_list)
         return simple
 
     def convert_complexFaultSource(self, node):

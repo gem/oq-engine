@@ -123,6 +123,22 @@ xmlns:gml="http://www.opengis.net/gml"
             <rake>
                 30.0
             </rake>
+            <hypoList>
+                <hypo alongStrike="0.25" downDip="0.25" weight="0.3"/>
+                <hypo alongStrike="0.75" downDip="0.75" weight="0.7"/>
+            </hypoList>
+            <slipList>
+                <slip
+                weight="0.7"
+                >
+                    90.0
+                </slip>
+                <slip
+                weight="0.3"
+                >
+                    135.0
+                </slip>
+            </slipList>
         </simpleFaultSource>
         <complexFaultSource
         id="4"

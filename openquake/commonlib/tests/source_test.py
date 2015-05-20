@@ -18,6 +18,7 @@ import mock
 import unittest
 from StringIO import StringIO
 
+import numpy
 from numpy.testing import assert_allclose
 
 from openquake.hazardlib import site
@@ -184,7 +185,9 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             ),
             dip=45.0,
             rake=30.0,
-            temporal_occurrence_model=PoissonTOM(50.)
+            temporal_occurrence_model=PoissonTOM(50.),
+            hypo_list=numpy.array([[0.25, 0.25, 0.3], [0.75, 0.75, 0.7]]),
+            slip_list=numpy.array([[90, 0.7], [135, 0.3]])
         )
         return simple
 

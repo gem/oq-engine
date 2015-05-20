@@ -27,6 +27,8 @@ import textwrap
 import collections
 from decimal import Decimal
 
+import numpy
+
 from openquake.hazardlib import imt, scalerel, gsim
 from openquake.baselib.general import distinct
 
@@ -595,6 +597,39 @@ def pmf(value):
     if sum(map(Decimal, value.split())) != 1:
         raise ValueError('The probabilities %s do not sum up to 1!' % value)
     return [(p, i) for i, p in enumerate(probs)]
+
+
+def check_weights(nodes_with_a_weight):
+    """
+    Ensure that the sum of the values is 1
+
+    :param nodes_with_a_weight: a list of Node objects with a weight attribute
+    """
+    weights = [n['weight'] for n in nodes_with_a_weight]
+    if abs(sum(weights) - 1.) > 1E-12:
+        raise ValueError('The weights do not sum up to 1!', weights)
+    return nodes_with_a_weight
+
+
+def hypo_list(nodes):
+    """
+    """
+    check_weights(nodes)
+    data = []
+    for node in nodes:
+        data.append([node['alongStrike'], node['downDip'], node['weight']])
+    return numpy.array(data, float)
+
+
+def slip_list(nodes):
+    """
+    """
+    check_weights(nodes)
+    data = []
+    for node in nodes:
+        # TODO: move the float conversion before
+        data.append([float(~node), node['weight']])
+    return numpy.array(data, float)
 
 
 def posList(value):

@@ -159,6 +159,10 @@ class ValidNode(LiteralNode):
         nodalPlane=valid.nodal_plane,
         occurRates=valid.positivefloats,
         probs_occur=valid.pmf,
+        weight=valid.probability,
+        #slip=float,
+        alongStrike=valid.probability,
+        downDip=valid.probability,
         )
 
 
