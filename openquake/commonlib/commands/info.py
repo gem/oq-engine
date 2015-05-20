@@ -46,7 +46,7 @@ def info(name, filtersources=False):
                     oqparam), []
         else:
             sitecol, assets_by_site = None, []
-        print 'Reading and filtering the source model...'
+        print 'Reading the source model...'
         csm = readinput.get_composite_source_model(
             oqparam, sitecol, prefilter=filtersources, in_memory=filtersources)
         assoc = csm.get_rlzs_assoc()
