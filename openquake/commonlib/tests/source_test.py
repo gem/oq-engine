@@ -83,7 +83,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         (cls.area, cls.point, cls.simple, cls.cmplx, cls.char_simple,
          cls.char_complex, cls.char_multi) = map(
             converter.convert_node, source_nodes)
-
         # the parameters here would typically be specified in the job .ini
         cls.investigation_time = 50.
         cls.rupture_mesh_spacing = 1  # km
@@ -315,8 +314,8 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         surfaces = [
             geo.PlanarSurface(
                 mesh_spacing=self.rupture_mesh_spacing,
-                strike=0.0,
-                dip=90.0,
+                strike=89.98254582,
+                dip=9.696547068,
                 top_left=geo.Point(-1, 1, 21),
                 top_right=geo.Point(1, 1, 21),
                 bottom_left=geo.Point(-1, -1, 59),
@@ -324,8 +323,8 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             ),
             geo.PlanarSurface(
                 mesh_spacing=self.rupture_mesh_spacing,
-                strike=20.0,
-                dip=45.0,
+                strike=89.98254582,
+                dip=15.0987061388,
                 top_left=geo.Point(1, 1, 20),
                 top_right=geo.Point(3, 1, 20),
                 bottom_left=geo.Point(1, -1, 80),
@@ -333,7 +332,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             )
         ]
         multi_surface = geo.MultiSurface(surfaces)
-
         char = source.CharacteristicFaultSource(
             source_id="7",
             name="characteristic source, multi surface",
