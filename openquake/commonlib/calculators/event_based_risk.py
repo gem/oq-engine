@@ -60,6 +60,11 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
                     data=data, loss=sum(losses), ins_loss=sum(ins_losses),
                     nonzero=sum(1 for loss in losses if loss),
                     total=len(losses))
+                # TODO: the names of the variables here are really bad:
+                # things like (acc_rlz, ad, a) for the inner dictionaries.
+                # The solution will be to refactor the input/output
+                # and use more arrays instead than a dictionary of dictionaries
+                # of dictionaries (bleah!)
                 try:
                     a = acc_rlz[out.loss_type, tag]
                 except KeyError:

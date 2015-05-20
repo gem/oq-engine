@@ -26,19 +26,21 @@ def parse_header(header):
     into a numpy composite dtype. Here is an example:
 
     >>> parse_header(['PGA:float64:3', 'PGV:float64:2', 'avg:float:1'])
-    dtype([('PGA', '<f8', (3,)), ('PGV', '<f8', (2,)), ('avg', '<f8', (1,))])
+    (['PGA', 'PGV', 'avg'], dtype([('PGA', '<f8', (3,)), ('PGV', '<f8', (2,)), ('avg', '<f8', (1,))]))
 
     :params header: a list of type descriptions
-    :returns: the corresponding composite dtype
+    :returns: column names and the corresponding composite dtype
     """
     triples = []
+    fields = []
     for col_str in header:
         col = col_str.split(':')
         field = col[0]
         numpytype = col[1]
         shape = () if not col[2].strip() else (int(col[2]),)
         triples.append((field, numpytype, shape))
-    return numpy.dtype(triples)
+        fields.append(field)
+    return fields, numpy.dtype(triples)
 
 
 def _cast(col, ntype, shape, lineno, fname):
@@ -62,9 +64,9 @@ def read_composite_array(fname, sep=','):
     """
     with open(fname) as f:
         header = next(f)
-        dtype = parse_header(header.split(sep))
+        fields, dtype = parse_header(header.split(sep))
         ts_pairs = []  # [(type, shape), ...]
-        for name in dtype.fields:
+        for name in fields:
             dt = dtype.fields[name][0]
             ts_pairs.append((dt.subdtype[0].type if dt.subdtype else dt.type,
                              dt.shape))
