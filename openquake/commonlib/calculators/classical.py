@@ -29,8 +29,7 @@ from openquake.hazardlib.calc.hazard_curve import (
 from openquake.hazardlib.calc.filters import source_site_distance_filter, \
     rupture_site_distance_filter
 from openquake.risklib import scientific
-from openquake.commonlib import parallel
-from openquake.commonlib.export import export
+from openquake.commonlib import parallel, datastore
 from openquake.baselib.general import AccumDict, split_in_blocks, groupby
 
 from openquake.commonlib.calculators import base, calc
@@ -81,7 +80,7 @@ class ClassicalCalculator(base.HazardCalculator):
     Classical PSHA calculator
     """
     core_func = classical
-    result_kind = 'curves_by_trt_gsim'
+    curves_by_trt_gsim = datastore.persistent_attribute('curves_by_trt_gsim')
 
     def execute(self):
         """
@@ -111,40 +110,23 @@ class ClassicalCalculator(base.HazardCalculator):
         :param curves_by_trt_gsim:
             a dictionary (trt_id, gsim) -> hazard curves
         """
+        self.curves_by_trt_gsim = curves_by_trt_gsim
         oq = self.oqparam
         zc = zero_curves(len(self.sitecol), oq.imtls)
         curves_by_rlz = self.rlzs_assoc.combine_curves(
             curves_by_trt_gsim, agg_curves, zc)
-        if oq.individual_curves:
-            for rlz, curves in curves_by_rlz.iteritems():
-                dset = 'rlz-%d' % rlz.ordinal
-                self.datastore.hdf5['/hcurves/%s' % dset] = curves
         rlzs = self.rlzs_assoc.realizations
         nsites = len(self.sitecol)
-
-        saved = AccumDict()
-        if not oq.exports:
-            return saved
-
-        # export curves
-        exports = oq.exports.split(',')
         if oq.individual_curves:
-            for rlz in rlzs:
-                smlt_path = '_'.join(rlz.sm_lt_path)
-                suffix = ('-ltr_%d' % rlz.ordinal
-                          if oq.number_of_logic_tree_samples else '')
-                for fmt in exports:
-                    fname = 'hazard_curve-smltp_%s-gsimltp_%s%s.%s' % (
-                        smlt_path, rlz.gsim_rlz.uid, suffix, fmt)
-                    saved += self.export_curves(curves_by_rlz[rlz], fmt, fname)
+            for rlz, curves in curves_by_rlz.iteritems():
+                self.store_curves('rlz-%d' % rlz.ordinal, curves)
+
         if len(rlzs) == 1:  # cannot compute statistics
             [self.mean_curves] = curves_by_rlz.values()
-            return saved
+            return
 
         weights = (None if oq.number_of_logic_tree_samples
                    else [rlz.weight for rlz in rlzs])
-        curves_by_imt = {imt: [curves_by_rlz[rlz][imt] for rlz in rlzs]
-                         for imt in oq.imtls}
         mean = oq.mean_hazard_curves
         if mean:
             self.mean_curves = numpy.array(zc)
@@ -156,63 +138,44 @@ class ClassicalCalculator(base.HazardCalculator):
         for q in oq.quantile_hazard_curves:
             self.quantile[q] = qc = numpy.array(zc)
             for imt in oq.imtls:
+                curves = [curves_by_rlz[rlz][imt] for rlz in rlzs]
                 qc[imt] = scientific.quantile_curve(
-                    curves_by_imt[imt], q, weights).reshape((nsites, -1))
+                    curves, q, weights).reshape((nsites, -1))
 
-        h5 = self.datastore.hdf5
         if mean:
-            h5['mean'] = self.mean_curves
+            self.store_curves('mean', self.mean_curves)
         for q in self.quantile:
-            h5['quantile-%s' % q] = self.quantile[q]
-        for fmt in exports:
-            if mean:
-                saved += self.export_curves(
-                    self.mean_curves, fmt, 'hazard_curve-mean.%s' % fmt)
-            for q in self.quantile:
-                saved += self.export_curves(
-                    self.quantile[q], fmt, 'quantile_curve-%s.%s' % (q, fmt))
-        return saved
+            self.store_curves('quantile-%s' % q, self.quantile[q])
 
-    def hazard_maps(self, curves_by_imt):
+    def hazard_maps(self, curves):
         """
-        Compute the hazard maps associated to the curves and returns
-        a dictionary of arrays.
+        Compute the hazard maps associated to the curves
         """
         n, p = len(self.sitecol), len(self.oqparam.poes)
         maps = zero_maps((n, p), self.oqparam.imtls)
-        for imt in curves_by_imt.dtype.fields:
+        for imt in curves.dtype.fields:
             maps[imt] = calc.compute_hazard_maps(
-                curves_by_imt[imt], self.oqparam.imtls[imt], self.oqparam.poes)
+                curves[imt], self.oqparam.imtls[imt], self.oqparam.poes)
         return maps
 
-    def export_curves(self, curves, fmt, fname):
+    def store_curves(self, dset, curves):
         """
-        :param curves: an array of N curves to export
-        :param fmt: the export format ('xml', 'csv', ...)
-        :param fname: the name of the exported file
+        Store all kind of curves, optionally computing maps and uhs curves.
+
+        :param dset: the HDF5 dataset where to store the curves
+        :param curves: an array of N curves to store
         """
-        if hasattr(self, 'tileno'):
-            fname += self.tileno
-        saved = AccumDict()
+        if not self.persistent:  # do nothing
+            return
         oq = self.oqparam
-        export_dir = oq.export_dir
-        saved += export(
-            ('hazard_curves', fmt), export_dir, fname, self.sitecol, curves,
-            oq.imtls, oq.investigation_time)
+        h5 = self.datastore.hdf5
+        h5['/hcurves/' + dset] = curves
         if oq.hazard_maps:
             # hmaps is a composite array of shape (N, P)
-            hmaps = self.hazard_maps(curves)
-            saved += export(
-                ('hazard_curves', fmt), export_dir,
-                fname.replace('curve', 'map'), self.sitecol,
-                hmaps, oq.imtls, oq.investigation_time)
+            h5['/hmaps/' + dset] = hmaps = self.hazard_maps(curves)
             if oq.uniform_hazard_spectra:
-                uhs_curves = calc.make_uhs(hmaps)
-                saved += export(
-                    ('uhs', fmt), oq.export_dir,
-                    fname.replace('curve', 'uhs'),
-                    self.sitecol, uhs_curves)
-        return saved
+                # uhs is an array of shape (N, P)
+                self.datastore.hdf5['/uhs/' + dset] = calc.make_uhs(hmaps)
 
 
 def is_effective_trt_model(result_dict, trt_model):
@@ -259,7 +222,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
     Classical Tiling calculator
     """
     prefilter = False
-    result_kind = 'pathname_by_fname'
+    pathname_by_fname = datastore.persistent_attribute('pathname_by_fname')
 
     def execute(self):
         """
@@ -285,6 +248,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
 
         :param result: a dictionary key -> exported filename
         """
+        self.pathname_by_fname = result
         # group files by name; for instance the file names
         # ['quantile_curve-0.1.csv.0000', 'quantile_curve-0.1.csv.0001',
         # 'hazard_map-mean.csv.0000', 'hazard_map-mean.csv.0001']

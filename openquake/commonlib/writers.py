@@ -17,7 +17,7 @@ import cStringIO
 from contextlib import contextmanager
 from xml.sax.saxutils import escape, quoteattr
 
-import numpy
+import numpy  # this is needed by the doctests, don't remove it
 
 
 @contextmanager
@@ -255,21 +255,23 @@ def extract_from(data, fields):
     return data
 
 
-def write_csv(dest, data, sep=',', fmt='%12.8E'):
+def write_csv(dest, data, sep=',', fmt='%12.8E', header=None):
     """
     :param dest: destination filename
     :param data: array to save
     :param sep: separator to use (default comma)
     :param fmt: formatting string (default '%12.8E')
+    :param header:
+       optional list with the names of the columns to display
     """
     try:
         # see if data is a composite numpy array
         data.dtype.fields
     except AttributeError:
         # not a composite array
-        header = []
+        header = header or []
     else:
-        header = build_header(data.dtype)
+        header = header or build_header(data.dtype)
     with open(dest, 'wb') as f:
         if header:
             f.write(sep.join(header) + '\n')

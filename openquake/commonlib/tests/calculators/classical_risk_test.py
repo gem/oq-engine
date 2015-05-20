@@ -20,14 +20,13 @@ class ClassicalRiskTestCase(CalculatorTestCase):
     def test_case_3(self):
         out = self.run_calc(case_3.__file__, 'job_haz.ini,job_risk.ini',
                             exports='csv')
-        self.assertEqualFiles(
-            'expected/rlz-000-avg_loss.csv', out['rlz-000-avg_loss'])
+        [fname] = out['/avg_losses', 'csv']
+        self.assertEqualFiles('expected/rlz-000-avg_loss.csv', fname)
 
     @attr('qa', 'risk', 'classical_risk')
     def test_case_4(self):
         out = self.run_calc(case_4.__file__, 'job_haz.ini,job_risk.ini',
                             exports='csv')
-        self.assertEqualFiles(
-            'expected/rlz-000-avg_loss.csv', out['rlz-000-avg_loss'])
-        self.assertEqualFiles(
-            'expected/rlz-001-avg_loss.csv', out['rlz-001-avg_loss'])
+        fnames = out['/avg_losses', 'csv']
+        self.assertEqualFiles('expected/rlz-000-avg_loss.csv', fnames[0])
+        self.assertEqualFiles('expected/rlz-001-avg_loss.csv', fnames[1])

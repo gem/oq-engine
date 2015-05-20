@@ -197,6 +197,9 @@ class Workflow(object):
             yield out_by_rlz(
                 self, assets_, hazards, epsilons_, tags_, loss_type)
 
+    def __repr__(self):
+        return '<%s%s>' % (self.__class__.__name__, self.risk_functions.keys())
+
 
 @registry.add('classical_risk')
 class Classical(Workflow):

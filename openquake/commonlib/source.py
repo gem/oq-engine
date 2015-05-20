@@ -57,6 +57,15 @@ class LtRealization(object):
         """An unique identifier for effective realizations"""
         return '_'.join(self.sm_lt_path) + ',' + self.gsim_rlz.uid
 
+    def __eq__(self, other):
+        return repr(self) == repr(other)
+
+    def __ne__(self, other):
+        return repr(self) != repr(other)
+
+    def __hash__(self):
+        return hash(repr(self))
+
 
 def get_skeleton(sm):
     """
@@ -255,6 +264,16 @@ def agg_prob(acc, prob):
     return 1. - (1. - acc) * (1. - prob)
 
 
+def get_col_id(tag):
+    """
+    Extract the ses collection index from the tag:
+
+    >>> get_col_id('col=01|...')
+    1
+    """
+    return int(tag.split('|', 1)[0].split('=')[1])
+
+
 class RlzsAssoc(collections.Mapping):
     """
     Realization association class. It should not be instantiated directly,
@@ -283,7 +302,7 @@ class RlzsAssoc(collections.Mapping):
     def __init__(self, csm_info, rlzs_assoc=None):
         self.csm_info = csm_info
         self.rlzs_assoc = rlzs_assoc or collections.defaultdict(list)
-        self.gsim_by_trt = {}  # rlz -> {trt: gsim}
+        self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
         self.rlzs_by_smodel = collections.OrderedDict()
 
     @property
@@ -298,21 +317,28 @@ class RlzsAssoc(collections.Mapping):
             lambda group: sorted(valid.gsim(gsim)
                                  for trt_id, gsim in group))
 
+    def get_gsims_by_col(self):
+        """Return a list of lists of GSIMs of length num_collections"""
+        gsims = self.get_gsims_by_trt_id()
+        return [gsims.get(self.csm_info.get_trt_id(col), [])
+                for col in range(self.csm_info.num_collections)]
+
     def _add_realizations(self, idx, lt_model, realizations):
         gsim_lt = lt_model.gsim_lt
         rlzs = []
         for i, gsim_rlz in enumerate(realizations):
             weight = float(lt_model.weight) * float(gsim_rlz.weight)
             rlz = LtRealization(idx, lt_model.path, gsim_rlz, weight, set())
-            self.gsim_by_trt[rlz] = dict(zip(gsim_lt.all_trts, gsim_rlz.value))
+            self.gsim_by_trt.append(dict(
+                zip(gsim_lt.all_trts, gsim_rlz.value)))
             for trt_model in lt_model.trt_models:
                 trt = trt_model.trt
                 gsim = gsim_lt.get_gsim_by_trt(gsim_rlz, trt)
                 self.rlzs_assoc[trt_model.id, gsim].append(rlz)
                 trt_model.gsims = gsim_lt.values[trt]
                 if lt_model.samples > 1:  # oversampling
-                    col_idx = self.csm_info.get_col_idx(trt_model.id, i)
-                    rlz.col_ids.add(col_idx)
+                    col_id = self.csm_info.get_col_id(trt_model.id, i)
+                    rlz.col_ids.add(col_id)
             idx += 1
             rlzs.append(rlz)
         self.rlzs_by_smodel[lt_model.ordinal] = rlzs
@@ -328,6 +354,22 @@ class RlzsAssoc(collections.Mapping):
         for key, value in results.iteritems():
             for rlz in self.rlzs_assoc[key]:
                 ad[rlz] = agg(ad[rlz], value)
+        return ad
+
+    def combine_gmfs(self, results):
+        """
+        :param results: a dictionary (trt_model_id, gsim_name) -> gmf_by_tag
+        """
+        ad = {rlz: AccumDict() for rlz in self.realizations}
+        for key, gmf_by_tag in results.iteritems():
+            for rlz in self.rlzs_assoc[key]:
+                if not rlz.col_ids:
+                    ad[rlz] += gmf_by_tag
+                else:
+                    for tag in gmf_by_tag:
+                        # if the rupture contributes to the given realization
+                        if get_col_id(tag) in rlz.col_ids:
+                            ad[rlz][tag] = gmf_by_tag[tag]
         return ad
 
     def combine(self, results, agg=agg_prob):
@@ -407,19 +449,20 @@ class CompositionInfo(object):
     a composite source model.
     """
     def __init__(self, source_models):
-        self._col_dict = {}  # dictionary trt_id, idx -> col_idx
+        self._col_dict = {}  # dictionary trt_id, idx -> col_id
         self._num_samples = {}  # trt_id -> num_samples
         self.source_models = map(get_skeleton, source_models)
-        col_idx = 0
+        col_id = 0
         for sm in source_models:
             for trt_model in sm.trt_models:
                 trt_id = trt_model.id
                 if sm.samples > 1:
                     self._num_samples[trt_id] = sm.samples
                 for idx in range(sm.samples):
-                    self._col_dict[trt_id, idx] = col_idx
-                    col_idx += 1
+                    self._col_dict[trt_id, idx] = col_id
+                    col_id += 1
                 trt_id += 1
+        self.num_collections = col_id
 
     def get_max_samples(self):
         """Return the maximum number of samples of the source model"""
@@ -435,7 +478,21 @@ class CompositionInfo(object):
         """
         return self._num_samples.get(trt_id, 1)
 
-    def get_col_idx(self, trt_id, idx):
+    # this useful to extract the ruptures affecting a given realization
+    def get_col_ids(self, rlz):
+        """
+        :param rlz: a realization
+        :returns: a set of ses collection indices relevant for the realization
+        """
+        # first consider the oversampling case, when the col_ids are known
+        if rlz.col_ids:
+            return rlz.col_ids
+        # else consider the source model to which the realization belongs
+        # and extract the trt_model_ids, which are the same as the col_ids
+        return set(tm.id for sm in self.source_models
+                   for tm in sm.trt_models if sm.path == rlz.sm_lt_path)
+
+    def get_col_id(self, trt_id, idx):
         """
         :param trt_id: tectonic region type object ID
         :param idx: an integer index from 0 to num_samples
@@ -443,23 +500,23 @@ class CompositionInfo(object):
         """
         return self._col_dict[trt_id, idx]
 
-    def get_trt_id(self, col_idx):
+    def get_trt_id(self, col_id):
         """
-        :param col_idx: the ordinal of a SESCollection
+        :param col_id: the ordinal of a SESCollection
         :returns: the ID of the associated TrtModel
         """
         for (trt_id, idx), cid in self._col_dict.iteritems():
-            if cid == col_idx:
+            if cid == col_id:
                 return trt_id
         raise KeyError('There is no TrtModel associated to the collection %d!'
-                       % col_idx)
+                       % col_id)
 
     def get_triples(self):
         """
-        Yield triples (trt_id, idx, col_idx) in order
+        Yield triples (trt_id, idx, col_id) in order
         """
-        for (trt_id, idx), col_idx in sorted(self._col_dict.iteritems()):
-            yield trt_id, idx, col_idx
+        for (trt_id, idx), col_id in sorted(self._col_dict.iteritems()):
+            yield trt_id, idx, col_id
 
     def __repr__(self):
         info_by_model = collections.OrderedDict(

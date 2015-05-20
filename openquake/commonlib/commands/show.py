@@ -35,8 +35,8 @@ def show(calc_id, key=None, rlzs=None):
         print ds[key]
         return
     # print all keys
-    print ds['oqparam'].calculation_mode, ds, 'saved in %s contains:' % (
-        ds.calc_dir)
+    print ds['oqparam'].calculation_mode, \
+        'calculation saved in %s contains:' % ds.calc_dir
     for key in ds:
         print key, humansize(ds.getsize(key))
     if rlzs and 'curves_by_trt_gsim' in ds:

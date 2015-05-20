@@ -24,7 +24,6 @@ This module includes the scientific API of the oq-risklib
 import abc
 import copy
 import itertools
-import collections
 import bisect
 
 import numpy
@@ -1188,12 +1187,8 @@ class StatsBuilder(object):
             mean_average_insured_losses=mean_average_insured_losses,
             quantile_insured_curves=quantile_insured_curves,
             quantile_average_insured_losses=quantile_average_insured_losses,
-            quantiles=self.quantiles)
-
-
-LossCurvePerAsset = collections.namedtuple(
-    'LossCurvePerAsset', 'asset losses poes average_loss')
-LossMapPerAsset = collections.namedtuple('LossMapPerAsset', 'asset loss')
+            quantiles=self.quantiles,
+            conditional_loss_poes=self.conditional_loss_poes)
 
 
 def _combine_mq(mean, quantile):
@@ -1208,16 +1203,18 @@ def _combine_mq(mean, quantile):
 
 
 def _loss_curves(assets, mean, mean_averages, quantile, quantile_averages):
-    # return a list of LossCurvePerAsset instances
-    curves = _combine_mq(mean, quantile)  # shape (Q + 1, N, 2, R)
-    averages = _combine_mq(mean_averages, quantile_averages)  # (Q + 1, N)
+    R = mean.shape[-1]
+    loss_curve_dt = numpy.dtype([('losses', (float, R)), ('poes', (float, R)),
+                                 ('avg', float)])
+    mq_curves = _combine_mq(mean, quantile)  # shape (Q + 1, N, 2, R)
+    mq_avgs = _combine_mq(mean_averages, quantile_averages)  # (Q + 1, N)
     acc = []
-    for asset, curve, avg in zip(
-            assets, curves.transpose(1, 0, 2, 3), averages.T):
-        losses = [l for l, p in curve]
-        poes = [p for l, p in curve]
-        acc.append(LossCurvePerAsset(asset, losses, poes, avg))
-    return acc
+    for mq_curve, mq_avg in zip(mq_curves.transpose(1, 0, 2, 3), mq_avgs.T):
+        lcs = []
+        for (losses, poes), avg in zip(mq_curve, mq_avg):
+            lcs.append((losses, poes, avg))
+        acc.append(numpy.array(lcs, loss_curve_dt))
+    return numpy.array(acc, loss_curve_dt).T  # (Q + 1, N)
 
 
 def get_stat_curves(stats):
@@ -1241,9 +1238,17 @@ def get_stat_curves(stats):
         stats.quantile_insured_curves,
         stats.quantile_average_insured_losses)
 
-    maps = []
-    mq = _combine_mq(stats.mean_maps, stats.quantile_maps)
-    for asset, loss in zip(stats.assets, mq.transpose(2, 0, 1)):
-        maps.append(LossMapPerAsset(asset, loss))
+    if stats.conditional_loss_poes:
+        mq = _combine_mq(stats.mean_maps, stats.quantile_maps)
 
-    return curves, insured_curves, maps
+        poes = ['poe~%s' % clp for clp in stats.conditional_loss_poes]
+        loss_map_dt = numpy.dtype([(poe, float) for poe in poes])
+
+        Q1, P, N = mq.shape
+        maps = numpy.zeros((Q1, N), loss_map_dt)
+        for i, imaps in enumerate(mq):
+            for poe, imap in zip(poes, imaps):
+                maps[i, :][poe] = imap
+    else:
+        maps = []
+    return curves, insured_curves, maps  # shape (Q1, N)
