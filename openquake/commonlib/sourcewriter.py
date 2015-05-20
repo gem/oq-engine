@@ -406,10 +406,9 @@ def write_source_model(dest, sources, name=None):
     :param str name:
         Name of the source model (if missing, extracted from the filename)
     """
-    sources.sort(key=lambda src: src.source_id)
     name = name or os.path.splitext(os.path.basename(dest))[0]
-    source_model = LiteralNode(
-        "sourceModel", {"name": name}, nodes=map(obj_to_node, sources))
+    nodes = map(obj_to_node, sorted(sources, key=lambda src: src.source_id))
+    source_model = LiteralNode("sourceModel", {"name": name}, nodes=nodes)
     with open(dest, 'w') as f, writers.floatformat('%s'):
         nrml.write([source_model], f)
     return dest
