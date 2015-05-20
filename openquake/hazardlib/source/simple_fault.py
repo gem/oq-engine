@@ -90,8 +90,7 @@ class SimpleFaultSource(ParametricSeismicSource):
                  temporal_occurrence_model,
                  # simple fault specific parameters
                  upper_seismogenic_depth, lower_seismogenic_depth,
-                 fault_trace, dip, rake, hypo_list=numpy.array(None),
-                 slip_list=numpy.array(None)):
+                 fault_trace, dip, rake, hypo_list=(), slip_list=()):
         super(SimpleFaultSource, self).__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
             magnitude_scaling_relationship, rupture_aspect_ratio,
@@ -115,8 +114,8 @@ class SimpleFaultSource(ParametricSeismicSource):
         self.slip_list = slip_list
         self.hypo_list = hypo_list
 
-        if (self.hypo_list.size != 1 and self.slip_list.size == 1 or
-           self.hypo_list.size == 1 and self.slip_list.size != 1):
+        if (len(self.hypo_list) and len(self.slip_list) == 0 or
+           len(self.hypo_list) == 0 and len(self.slip_list)):
             raise ValueError('hypo_list and slip_list have to be both given or\
                 neither given')
 
@@ -181,8 +180,7 @@ class SimpleFaultSource(ParametricSeismicSource):
                     mesh = whole_fault_mesh[first_row: first_row + rup_rows,
                                             first_col: first_col + rup_cols]
 
-                    if (self.hypo_list.size == 1 and
-                            self.slip_list.size == 1):
+                    if len(self.hypo_list) == 0 and len(self.slip_list) == 0:
 
                         hypocenter = mesh.get_middle_point()
                         occurrence_rate_hypo = occurrence_rate
