@@ -23,7 +23,7 @@ import collections
 
 import numpy
 
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, groupby
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import FilteredSiteCollection
 from openquake.commonlib.export import export
@@ -64,45 +64,56 @@ class SESCollection(object):
             yield SES(sesruptures, self.investigation_time, idx)
 
 
-def _export_ses_xml(key, export_dir, fname, ses_coll):
+@export.add(('sescollection', 'xml'), ('sescollection', 'csv'))
+def export_ses_xml(ekey, dstore):
     """
-    Export a Stochastic Event Set Collection
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
     """
-    dest = os.path.join(export_dir, fname)
+    fmt = ekey[-1]
+    oq = dstore['oqparam']
+    try:
+        csm_info = dstore['rlzs_assoc'].csm_info
+    except AttributeError:  # for scenario calculators don't export
+        return []
+    sescollection = dstore['sescollection']
+    col_id = 0
+    fnames = []
+    for sm in csm_info.source_models:
+        for trt_model in sm.trt_models:
+            sesruptures = sescollection[col_id].values()
+            col_id += 1
+            ses_coll = SESCollection(
+                groupby(sesruptures, operator.attrgetter('ses_idx')),
+                sm.path, oq.investigation_time)
+            smpath = '_'.join(sm.path)
+            fname = 'ses-%d-smltp_%s.%s' % (trt_model.id, smpath, fmt)
+            dest = os.path.join(oq.export_dir, fname)
+            globals()['_export_ses_' + fmt](dest, ses_coll)
+            fnames.append(fname)
+    return fnames
+
+
+def _export_ses_xml(dest, ses_coll):
     writer = hazard_writers.SESXMLWriter(dest, '_'.join(ses_coll.sm_lt_path))
     writer.serialize(ses_coll)
-    return {fname: dest}
 
 
-def _export_ses_csv(key, export_dir, fname, ses_coll):
-    """
-    Export a Stochastic Event Set Collection
-    """
-    dest = os.path.join(export_dir, fname)
+def _export_ses_csv(dest, ses_coll):
     rows = []
     for ses in ses_coll:
         for sesrup in ses:
             rows.append([sesrup.tag, sesrup.seed])
     save_csv(dest, sorted(rows, key=operator.itemgetter(0)))
-    return {fname: dest}
-
-
-@export.add(('ruptures', 'csv'))
-def export_ses_csv(key, dstore):
-    """
-    Export a Stochastic Event Set Collection
-    """
-    dest = dstore.export_path(*key)
-    rows = []
-    for sesrup in dstore['ruptures']:
-        rows.append([sesrup.tag, sesrup.seed])
-    save_csv(dest, sorted(rows, key=operator.itemgetter(0)))
-    return [dest]
 
 
 @export.add(('sitecol', 'csv'))
-def export_sitecol_csv(key, dstore):
-    dest = dstore.export_path(*key)
+def export_sitecol_csv(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    dest = dstore.export_path(*ekey)
     rows = []
     for site in dstore['sitecol']:
         rows.append([site.id, site.location.x, site.location.y, site.vs30,
@@ -299,12 +310,12 @@ def export_hazard_curves_csv(key, export_dir, fname, sitecol, curves_by_imt,
     return {fname: dest}
 
 
-def hazard_curve_name(ekey, kind, rlzs_assoc, samples):
+def hazard_curve_name(ekey, kind, rlzs_assoc, sampling):
     """
     :param ekey: the export key
     :param kind: the kind of key
     :param rlzs_assoc: a RlzsAssoc instance
-    :param samples: if sampling is enabled or not
+    :param sampling: if sampling is enabled or not
     """
     key, fmt = ekey
     prefix = {'/hcurves': 'hazard_curve', '/hmaps': 'hazard_map',
@@ -312,7 +323,7 @@ def hazard_curve_name(ekey, kind, rlzs_assoc, samples):
     if kind.startswith('rlz-'):
         rlz_no = int(kind[4:])
         rlz = rlzs_assoc.realizations[rlz_no]
-        fname = build_name(rlz, prefix, fmt, samples)
+        fname = build_name(rlz, prefix, fmt, sampling)
     elif kind == 'mean':
         fname = '%s-mean.csv' % prefix
     elif kind.startswith('quantile-'):
@@ -348,6 +359,9 @@ def build_name(rlz, prefix, fmt, sampling):
 def export_hcurves_csv(ekey, dstore):
     """
     Exports the hazard curves into several .csv files
+
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
     """
     oq = dstore['oqparam']
     rlzs_assoc = dstore['rlzs_assoc']
@@ -368,6 +382,10 @@ def export_hcurves_csv(ekey, dstore):
 
 @export.add(('gmf_by_trt_gsim', 'xml'), ('gmf_by_trt_gsim', 'csv'))
 def export_gmf(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
     sitecol = dstore['sitecol']
     rlzs_assoc = dstore['rlzs_assoc']
     rupture_by_tag = sum(dstore['sescollection'], AccumDict())

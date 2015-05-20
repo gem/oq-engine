@@ -71,6 +71,10 @@ def get_assets(dstore):
 # this is used by classical_risk from csv
 @export.add(('/avg_losses', 'csv'))
 def export_avg_losses(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
     avg_losses = dstore[ekey[0] + '/rlzs']
     rlzs = dstore['rlzs_assoc'].realizations
     assets = get_assets(dstore)
@@ -89,6 +93,10 @@ def export_avg_losses(ekey, dstore):
 @export.add(('/loss_curves', 'csv'), ('/loss_maps', 'csv'),
             ('/agg_loss_curve', 'csv'))
 def export_loss_curves(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
     name = ekey[0][1:]
     if name == 'agg_loss_curve':
         assets = None
@@ -132,6 +140,10 @@ def _export_curves_csv(name, assets, curves, export_dir, prefix, columns=None):
 
 @export.add(('event_loss', 'csv'), ('event_loss_asset', 'csv'))
 def export_event_loss(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
     name, fmt = ekey
     fnames = []
     for i, data in enumerate(dstore[ekey[0]]):
@@ -147,6 +159,10 @@ def export_event_loss(ekey, dstore):
 # a better data structure
 @export.add(('damages_by_key', 'xml'))
 def export_damage(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
     oqparam = dstore['oqparam']
     riskmodel = dstore['riskmodel']
     rlzs = dstore['rlzs_assoc'].realizations
@@ -206,7 +222,9 @@ def export_dmg_xml(key, export_dir, damage_states, dmg_data, suffix):
         dmg_dist_per_asset|dmg_dist_per_taxonomy|dmg_dist_total|collapse_map
     :param export_dir:
         the export directory
-    :param data:
+    :param damage_states:
+        the list of damage states
+    :param dmg_data:
         a list [(loss_type, unit, asset_ref, mean, stddev), ...]
     :param suffix:
         a suffix specifying the GSIM realization
@@ -218,6 +236,10 @@ def export_dmg_xml(key, export_dir, damage_states, dmg_data, suffix):
 
 @export.add(('damages_by_rlz', 'csv'))
 def export_classical_damage_csv(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
     damages_by_rlz = dstore['damages_by_rlz']
     rlzs = dstore['rlzs_assoc'].realizations
     damage_states = dstore['riskmodel'].damage_states
@@ -265,6 +287,9 @@ PerAssetLoss = collections.namedtuple(  # the loss map
 def export_risk(ekey, dstore):
     """
     Export the loss curves of a given realization in CSV format.
+
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
     """
     oqparam = dstore['oqparam']
     unit_by_lt = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']

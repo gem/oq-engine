@@ -15,7 +15,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         for fnames in out.itervalues():
             for fname in fnames:
                 if ('rlz-' not in fname and fname.endswith('.csv')
-                        and 'sitecol' not in fname):
+                        and 'sitecol' not in fname and 'ses-'not in fname):
                     all_csv.append(fname)
         for fname in all_csv:
             self.assertEqualFiles(
