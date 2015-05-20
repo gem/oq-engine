@@ -237,7 +237,8 @@ class RuptureConverter(object):
             convert_rupture = getattr(self, 'convert_' + striptag(node.tag))
             mag = ~node.magnitude
             rake = ~node.rake
-            hypocenter = ~node.hypocenter
+            h = node.hypocenter
+            hypocenter = geo.Point(h['lon'], h['lat'], h['depth'])
         return convert_rupture(node, mag, rake, hypocenter)
 
     def geo_line(self, edge):
@@ -274,10 +275,14 @@ class RuptureConverter(object):
         :param surface: PlanarSurface node
         """
         with context(self.fname, surface):
-            top_left = geo.Point(*~surface.topLeft)
-            top_right = geo.Point(*~surface.topRight)
-            bottom_left = geo.Point(*~surface.bottomLeft)
-            bottom_right = geo.Point(*~surface.bottomRight)
+            tl = surface.topLeft
+            top_left = geo.Point(tl['lon'], tl['lat'], tl['depth'])
+            tr = surface.topRight
+            top_right = geo.Point(tr['lon'], tr['lat'], tr['depth'])
+            bl = surface.bottomLeft
+            bottom_left = geo.Point(bl['lon'], bl['lat'], bl['depth'])
+            br = surface.bottomRight
+            bottom_right = geo.Point(br['lon'], br['lat'], br['depth'])
         return geo.PlanarSurface.from_corner_points(
             self.rupture_mesh_spacing,
             top_left, top_right, bottom_right, bottom_left)
@@ -326,9 +331,10 @@ class RuptureConverter(object):
             surfaces = [node.simpleFaultGeometry]
         rupt = source.rupture.Rupture(
             mag=mag, rake=rake, tectonic_region_type=None,
-            hypocenter=geo.Point(*hypocenter),
+            hypocenter=hypocenter,
             surface=self.convert_surfaces(surfaces),
-            source_typology=source.SimpleFaultSource)
+            source_typology=source.SimpleFaultSource,
+            surface_nodes=surfaces)
         return rupt
 
     def convert_complexFaultRupture(self, node, mag, rake, hypocenter):
@@ -344,9 +350,10 @@ class RuptureConverter(object):
             surfaces = [node.complexFaultGeometry]
         rupt = source.rupture.Rupture(
             mag=mag, rake=rake, tectonic_region_type=None,
-            hypocenter=geo.Point(*hypocenter),
+            hypocenter=hypocenter,
             surface=self.convert_surfaces(surfaces),
-            source_typology=source.ComplexFaultSource)
+            source_typology=source.ComplexFaultSource,
+            surface_nodes=surfaces)
         return rupt
 
     def convert_singlePlaneRupture(self, node, mag, rake, hypocenter):
@@ -360,13 +367,14 @@ class RuptureConverter(object):
         """
         with context(self.fname, node):
             surfaces = [node.planarSurface]
-        hrupt = source.rupture.Rupture(
+        rupt = source.rupture.Rupture(
             mag=mag, rake=rake,
             tectonic_region_type=None,
-            hypocenter=geo.Point(*hypocenter),
+            hypocenter=hypocenter,
             surface=self.convert_surfaces(surfaces),
-            source_typology=source.NonParametricSeismicSource)
-        return hrupt
+            source_typology=source.NonParametricSeismicSource,
+            surface_nodes=surfaces)
+        return rupt
 
     def convert_multiPlanesRupture(self, node, mag, rake, hypocenter):
         """
@@ -379,13 +387,14 @@ class RuptureConverter(object):
         """
         with context(self.fname, node):
             surfaces = list(node.getnodes('planarSurface'))
-        hrupt = source.rupture.Rupture(
+        rupt = source.rupture.Rupture(
             mag=mag, rake=rake,
             tectonic_region_type=None,
-            hypocenter=geo.Point(*hypocenter),
+            hypocenter=hypocenter,
             surface=self.convert_surfaces(surfaces),
-            source_typology=source.NonParametricSeismicSource)
-        return hrupt
+            source_typology=source.NonParametricSeismicSource,
+            surface_nodes=surfaces)
+        return rupt
 
 
 class SourceConverter(RuptureConverter):
@@ -579,7 +588,8 @@ class SourceConverter(RuptureConverter):
             mfd=self.convert_mfdist(node),
             surface=self.convert_surfaces(node.surface),
             rake=~node.rake,
-            temporal_occurrence_model=self.tom)
+            temporal_occurrence_model=self.tom,
+            surface_node=node.surface)
         return char
 
     def convert_nonParametricSeismicSource(self, node):
