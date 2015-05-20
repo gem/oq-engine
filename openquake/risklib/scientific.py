@@ -664,6 +664,7 @@ class CurveBuilder(object):
         :param asset_values: N asset values for a given loss_type
         """
         N = len(asset_values)
+        assert len(poe_matrix) == N, (len(poe_matrix), N)
         lcs = numpy.zeros(N, self.loss_curve_dt)
         for i, value in enumerate(asset_values):
             losses = self.ratios * value

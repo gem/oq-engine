@@ -3,7 +3,7 @@ import numpy
 from openquake.commonlib.datastore import DataStore
 
 
-def key1_upper(key, dstore):
+def key1_upper(dstore):
     return dstore['key1'].upper()
 
 

@@ -21,6 +21,7 @@ import csv
 import gzip
 import zipfile
 import logging
+import operator
 import tempfile
 import collections
 import ConfigParser
@@ -197,7 +198,7 @@ def get_mesh(oqparam):
                 '%(region_grid_spacing)s' % vars(oqparam))
     elif 'site_model' in oqparam.inputs:
         coords = [(param.lon, param.lat) for param in get_site_model(oqparam)]
-        lons, lats = zip(*coords)
+        lons, lats = zip(*sorted(coords))
         return geo.Mesh(numpy.array(lons), numpy.array(lats))
     # if there is an exposure the mesh is extracted from get_sitecol_assets
 
@@ -818,9 +819,11 @@ def get_sitecol_assets(oqparam, exposure):
     lons, lats = zip(*sorted(assets_by_loc))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
     sitecol = get_site_collection(oqparam, mesh)
-    return sitecol, numpy.array([
-        assets_by_loc[site.location.longitude, site.location.latitude]
-        for site in sitecol])
+    assets_by_site = []
+    for s in sitecol:
+        assets = assets_by_loc[s.location.longitude, s.location.latitude]
+        assets_by_site.append(sorted(assets, key=operator.attrgetter('id')))
+    return sitecol, numpy.array(assets_by_site)
 
 
 def get_mesh_csvdata(csvfile, imts, num_values, validvalues):

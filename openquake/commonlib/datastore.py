@@ -87,7 +87,7 @@ class DataStore(collections.MutableMapping):
     [('example', 'hello world')]
     >>> ds.clear()
 
-    It is also possible to store callables with two arguments (key, datastore).
+    It is also possible to store callables taking in input the datastore.
     They will be automatically invoked when the key is accessed.
 
     It possible to store numpy arrays in HDF5 format, if the library h5py is
@@ -181,7 +181,7 @@ class DataStore(collections.MutableMapping):
         with open(self.path(key)) as df:
             value = cPickle.load(df)
             if callable(value):
-                return value(key, self)
+                return value(self)
             return value
 
     def __setitem__(self, key, value):
@@ -244,7 +244,7 @@ def persistent_attribute(key):
     :param key: the name of the attribute to be made persistent
     :returns: a property to be added to a class with a .datastore attribute
     """
-    privatekey = '_' + key
+    privatekey = '_' + key[1:] if key[0] == '/' else '_' + key
 
     def getter(self):
         # Try to get the value from the privatekey attribute (i.e. from

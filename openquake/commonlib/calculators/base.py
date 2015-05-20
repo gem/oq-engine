@@ -56,6 +56,7 @@ class BaseCalculator(object):
     sitecol = datastore.persistent_attribute('sitecol')
     rlzs_assoc = datastore.persistent_attribute('rlzs_assoc')
     assets_by_site = datastore.persistent_attribute('assets_by_site')
+    assetcol = datastore.persistent_attribute('/assetcol')
     cost_types = datastore.persistent_attribute('cost_types')
 
     precalc = None  # to be overridden
@@ -125,8 +126,7 @@ class BaseCalculator(object):
         individual_curves = self.oqparam.individual_curves
         for fmt in self.oqparam.exports.split():
             for key in self.datastore:
-                # TODO: improve on this
-                if 'rlz' in key and not individual_curves:
+                if 'rlzs' in key and not individual_curves:
                     continue  # skip individual curves
                 ekey = (key, fmt)
                 if ekey in export.export:
@@ -187,7 +187,9 @@ class HazardCalculator(BaseCalculator):
         return filteredcol, numpy.array(assets_by_site)
 
     def count_assets(self):
-        """Count how many assets are taken into consideration by the calculator"""
+        """
+        Count how many assets are taken into consideration by the calculator
+        """
         return sum(len(assets) for assets in self.assets_by_site)
 
     def pre_compute(self):
@@ -257,7 +259,7 @@ class HazardCalculator(BaseCalculator):
         mesh = numpy.array(zip(self.sitecol.lons, self.sitecol.lats), mesh_dt)
         self.datastore['/sitemesh'] = mesh
         if hasattr(self, 'assets_by_site'):
-            self.datastore['/assetcol'] = riskinput.build_asset_collection(
+            self.assetcol = riskinput.build_asset_collection(
                 self.assets_by_site)
 
 
