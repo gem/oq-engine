@@ -22,8 +22,6 @@ import itertools
 import collections
 from operator import attrgetter
 
-from django.contrib.gis.geos.point import Point
-
 import numpy
 
 from openquake.hazardlib.imt import from_string
@@ -33,8 +31,7 @@ from openquake.engine.db import models
 
 from openquake.baselib import general
 from openquake.commonlib import readinput, risk_parsers, source
-from openquake.commonlib.readinput import (
-    get_site_collection, get_site_model)
+from openquake.commonlib.readinput import get_site_collection
 
 from openquake.engine.input import exposure
 from openquake.engine import logs
@@ -267,8 +264,7 @@ class BaseHazardCalculator(base.Calculator):
 
         logs.LOG.progress("initializing site collection")
         oqparam = self.job.get_oqparam()
-        self.site_collection = get_site_collection(
-            oqparam, points, site_ids)
+        self.site_collection = get_site_collection(oqparam, points, site_ids)
 
     def initialize_realizations(self):
         """
@@ -293,7 +289,7 @@ class BaseHazardCalculator(base.Calculator):
                           '%s, %s', len(rlzs), lt_model.sm_name,
                           '_'.join(lt_model.sm_lt_path))
             for rlz in rlzs:
-                gsim_by_trt = self.rlzs_assoc.gsim_by_trt[rlz]
+                gsim_by_trt = self.rlzs_assoc.gsim_by_trt[rlz.ordinal]
                 lt_rlz = models.LtRealization.objects.create(
                     lt_model=lt_model, gsim_lt_path=rlz.gsim_rlz.lt_uid,
                     weight=rlz.weight, ordinal=rlz.ordinal)
