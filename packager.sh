@@ -298,9 +298,14 @@ _devtest_innervm_run () {
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
+        if [ -n "$GEM_DEVTEST_SKIP_SLOW_TESTS" ]; then
+            # skip slow tests
+            skip_tests="!slow,"
+        fi
+
         ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-risklib:\$PWD/oq-hazardlib\" ;
                  cd $GEM_GIT_PACKAGE ;
-                 nosetests -a'!slow' -v --with-doctest --with-coverage --cover-package=openquake.baselib --cover-package=openquake.risklib --cover-package=openquake.commonlib --with-xunit"
+                 nosetests -a '${skip_tests}' -v --with-doctest --with-coverage --cover-package=openquake.baselib --cover-package=openquake.risklib --cover-package=openquake.commonlib --with-xunit"
         scp "$lxc_ip:$GEM_GIT_PACKAGE/nosetests.xml" "out_${BUILD_UBUVER}/"
     else
         if [ -d $HOME/fake-data/$GEM_GIT_PACKAGE ]; then
