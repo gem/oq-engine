@@ -42,11 +42,15 @@ def export_csv(ekey, dstore):
 
 
 def get_export_csv(ekey):
+    """
+    If the key corresponds to a HDF5 path and the format is csv,
+    return the default csv exporter, otherwise raise a KeyError.
+    """
     key, fmt = ekey
     if key.startswith('/') and fmt == 'csv':
         return export_csv
     raise KeyError(ekey)
 
-export = CallableDict(missing=get_export_csv)
+export = CallableDict(keymissing=get_export_csv)
 
 import_all('openquake.commonlib.export')

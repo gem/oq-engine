@@ -438,16 +438,35 @@ def search_module(module, syspath=sys.path):
 
 
 class CallableDict(collections.OrderedDict):
+    r"""
+    A callable object built on top of a dictionary of functions, used
+    as a smart registry or as a poor man generic function dispatching
+    on the first argument. It is typically used to implement converters.
+    Here is an example:
+
+    >>> format_attrs = CallableDict()  # dict of functions (fmt, obj) -> str
+
+    >>> @format_attrs.add('csv')  # implementation for csv
+    ... def format_attrs_csv(fmt, obj):
+    ...     items = sorted(vars(obj).iteritems())
+    ...     return '\n'.join('%s,%s' % item for item in items)
+
+    >>> @format_attrs.add('json')  # implementation for json
+    ... def format_attrs_json(fmt, obj):
+    ...     return json.dumps(vars(obj))
+
+    `format_attrs(fmt, obj)` calls the correct underlying function
+    depending on the `fmt` key. If the format is unknown a `KeyError` is
+    raised. It is also possible to set a `keymissing` function to specify
+    what to return if the key is missing.
+
+    For a more practical example see the implementation of the exporters
+    in :module:`openquake.commonlib.export`
     """
-    A callable object built on top of a dictionary of functions,
-    dispatching on the first argument according to the given keyfunc.
-    The default keyfunc is the identity function, i.e. the first
-    argument is assumed to be the key.
-    """
-    def __init__(self, keyfunc=lambda key: key, missing=None):
+    def __init__(self, keyfunc=lambda key: key, keymissing=None):
         super(CallableDict, self).__init__()
         self.keyfunc = keyfunc
-        self.missing = missing
+        self.keymissing = keymissing
 
     def add(self, *keys):
         """
@@ -465,8 +484,8 @@ class CallableDict(collections.OrderedDict):
         return self[key](obj, *args, **kw)
 
     def __missing__(self, key):
-        if callable(self.missing):
-            return self.missing(key)
+        if callable(self.keymissing):
+            return self.keymissing(key)
         raise KeyError(key)
 
 
