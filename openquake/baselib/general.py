@@ -263,7 +263,7 @@ def split_in_blocks_2(long_sequence, short_sequence, hint,
         yield list(long_), list(short)
 
 
-def assert_close_seq(seq1, seq2, rtol, atol):
+def assert_close_seq(seq1, seq2, rtol, atol, context=None):
     """
     Compare two sequences of the same length.
 
@@ -275,10 +275,10 @@ def assert_close_seq(seq1, seq2, rtol, atol):
     assert len(seq1) == len(seq2), 'Lists of different lenghts: %d != %d' % (
         len(seq1), len(seq2))
     for x, y in zip(seq1, seq2):
-        assert_close(x, y, rtol, atol)
+        assert_close(x, y, rtol, atol, context)
 
 
-def assert_close(a, b, rtol=1e-07, atol=0):
+def assert_close(a, b, rtol=1e-07, atol=0, context=None):
     """
     Compare for equality up to a given precision two composite objects
     which may contain floats. NB: if the objects are or contain generators,
@@ -289,27 +289,29 @@ def assert_close(a, b, rtol=1e-07, atol=0):
     :param rtol: relative tolerance
     :param atol: absolute tolerance
     """
-    if isinstance(a, numpy.ndarray) and a.shape:  # shortcut
+    if isinstance(a, float) or isinstance(a, numpy.ndarray) and a.shape:
+        # shortcut
         numpy.testing.assert_allclose(a, b, rtol, atol)
         return
     if a == b:  # another shortcut
         return
     if hasattr(a, '__slots__'):  # record-like objects
-        assert_close_seq(a.__slots__, b.__slots__, rtol, atol)
+        assert_close_seq(a.__slots__, b.__slots__, rtol, atol, a)
         for x, y in zip(a.__slots__, b.__slots__):
-            assert_close(getattr(a, x), getattr(a, y), rtol, atol)
+            assert_close(getattr(a, x), getattr(b, y), rtol, atol, x)
         return
     if isinstance(a, collections.Mapping):  # dict-like objects
-        assert_close_seq(a.keys(), b.keys(), rtol, atol)
-        assert_close_seq(a.values(), b.values(), rtol, atol)
+        assert_close_seq(a.keys(), b.keys(), rtol, atol, a)
+        assert_close_seq(a.values(), b.values(), rtol, atol, a)
         return
     if hasattr(a, '__iter__'):  # iterable objects
-        assert_close_seq(list(a), list(b), rtol, atol)
+        assert_close_seq(list(a), list(b), rtol, atol, a)
         return
     if hasattr(a, '__dict__'):  # objects with an attribute dictionary
-        assert_close(vars(a), vars(b))
+        assert_close(vars(a), vars(b), context=a)
         return
-    raise AssertionError('%r != %r' % (a, b))
+    ctx = '' if context is None else 'in context ' + repr(context)
+    raise AssertionError('%r != %r %s' % (a, b, ctx))
 
 
 def writetmp(content=None, dir=None, prefix="tmp", suffix="tmp"):
@@ -436,15 +438,35 @@ def search_module(module, syspath=sys.path):
 
 
 class CallableDict(collections.OrderedDict):
+    r"""
+    A callable object built on top of a dictionary of functions, used
+    as a smart registry or as a poor man generic function dispatching
+    on the first argument. It is typically used to implement converters.
+    Here is an example:
+
+    >>> format_attrs = CallableDict()  # dict of functions (fmt, obj) -> str
+
+    >>> @format_attrs.add('csv')  # implementation for csv
+    ... def format_attrs_csv(fmt, obj):
+    ...     items = sorted(vars(obj).iteritems())
+    ...     return '\n'.join('%s,%s' % item for item in items)
+
+    >>> @format_attrs.add('json')  # implementation for json
+    ... def format_attrs_json(fmt, obj):
+    ...     return json.dumps(vars(obj))
+
+    `format_attrs(fmt, obj)` calls the correct underlying function
+    depending on the `fmt` key. If the format is unknown a `KeyError` is
+    raised. It is also possible to set a `keymissing` function to specify
+    what to return if the key is missing.
+
+    For a more practical example see the implementation of the exporters
+    in :module:`openquake.commonlib.export`
     """
-    A callable object built on top of a dictionary of functions,
-    dispatching on the first argument according to the given keyfunc.
-    The default keyfunc is the identity function, i.e. the first
-    argument is assumed to be the key.
-    """
-    def __init__(self, keyfunc=lambda key: key):
+    def __init__(self, keyfunc=lambda key: key, keymissing=None):
         super(CallableDict, self).__init__()
         self.keyfunc = keyfunc
+        self.keymissing = keymissing
 
     def add(self, *keys):
         """
@@ -459,10 +481,12 @@ class CallableDict(collections.OrderedDict):
 
     def __call__(self, obj, *args, **kw):
         key = self.keyfunc(obj)
-        if key not in self:
-            raise KeyError(
-                'There is nothing registered for %s' % repr(key))
         return self[key](obj, *args, **kw)
+
+    def __missing__(self, key):
+        if callable(self.keymissing):
+            return self.keymissing(key)
+        raise KeyError(key)
 
 
 class AccumDict(dict):

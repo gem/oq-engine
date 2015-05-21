@@ -58,6 +58,7 @@ class BaseCalculator(object):
     assets_by_site = datastore.persistent_attribute('assets_by_site')
     assetcol = datastore.persistent_attribute('/assetcol')
     cost_types = datastore.persistent_attribute('cost_types')
+    taxonomies = datastore.persistent_attribute('/taxonomies')
 
     precalc = None  # to be overridden
     pre_calculator = None  # to be overridden
@@ -129,11 +130,11 @@ class BaseCalculator(object):
                 if 'rlzs' in key and not individual_curves:
                     continue  # skip individual curves
                 ekey = (key, fmt)
-                if ekey in export.export:
+                try:
                     exported[ekey] = sorted(
                         export.export(ekey, self.datastore))
                     logging.info('exported %s: %s', key, exported[ekey])
-                else:
+                except KeyError:
                     logging.info('%s is not exportable in %s', key, fmt)
         return exported
 
@@ -223,6 +224,8 @@ class HazardCalculator(BaseCalculator):
                 self.sitecol, self.assets_by_site = (
                     readinput.get_sitecol_assets(self.oqparam, self.exposure))
                 self.cost_types = self.exposure.cost_types
+                self.taxonomies = numpy.array(
+                    sorted(self.exposure.taxonomies), '|S100')
             num_assets = self.count_assets()
             mesh = readinput.get_mesh(self.oqparam)
             if mesh is not None:
