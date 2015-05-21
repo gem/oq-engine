@@ -35,8 +35,9 @@ def sorted_assets(assets_by_site):
     """
     all_assets = []
     for assets in assets_by_site:
-        all_assets.extend(assets)        
+        all_assets.extend(assets)
     return sorted(all_assets, key=operator.attrgetter('id'))
+
 
 def build_asset_collection(assets_by_site):
     """

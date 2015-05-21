@@ -203,8 +203,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             loss_maps = self.zeros(N, self.loss_map_dt)
         agg_loss_curve = self.zeros(1, self.loss_curve_dt)
 
-        cb = scientific.CurveBuilder(oq.loss_curve_resolution)
-
         for i in sorted(result):
             rlz = rlzs[i]
 
@@ -217,14 +215,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             for loss_type, tag in data_by_lt_tag:
                 d = data_by_lt_tag[loss_type, tag]
                 if tag == 'counts_matrix':
-                    # matrix (N, C)
-                    # assets = d.keys()
-                    # ratios = d.values()
-                    # poes = cb.build_poes(
-                    #    ratios, oq.tses, oq.risk_investigation_time)
-                    # loss_curves[loss_type] = cb.build_loss_curves(
-                    #    poes, [asset.value(loss_type) for asset in assets])
-                    # print loss_curves[loss_type]
+                    # the counts_matrix management is left for the future
                     continue
 
                 for aid, loss, ins_loss in d['data']:
