@@ -25,11 +25,10 @@ def count_close(gmf_value, gmvs_site_one, gmvs_site_two, delta=0.1):
 class ScenarioHazardTestCase(CalculatorTestCase):
 
     def frequencies(self, case, fst_value, snd_value):
-        gmf_by_tag = self.execute(case.__file__, 'job.ini')
+        gmf_by_trt_gsim = self.execute(case.__file__, 'job.ini')
         [imt] = self.calc.oqparam.imtls
         [gsim] = map(str, self.calc.gsims)
-        gmf = numpy.array([gmf_by_tag[tag][gsim][imt]
-                           for tag in self.calc.tags]).T  # shape N x R
+        gmf = gmf_by_trt_gsim[0, gsim][imt]
         realizations = float(self.calc.oqparam.number_of_ground_motion_fields)
         gmvs_within_range_fst = count_close(fst_value, gmf[0], gmf[1])
         gmvs_within_range_snd = count_close(snd_value, gmf[0], gmf[1])
@@ -37,19 +36,17 @@ class ScenarioHazardTestCase(CalculatorTestCase):
                 gmvs_within_range_snd / realizations)
 
     def medians(self, case):
-        gmf_by_tag = self.execute(case.__file__, 'job.ini')
+        gmf_by_trt_gsim = self.execute(case.__file__, 'job.ini')
         median = self.calc.oqparam.imtls.copy()
         [gsim] = map(str, self.calc.gsims)
         for imt in median:
-            gmfs = numpy.array([gmf_by_tag[tag][gsim][imt]
-                                for tag in self.calc.tags])  # shape R x N
-            median[imt] = map(numpy.median, gmfs.T)
+            median[imt] = map(numpy.median, gmf_by_trt_gsim[0, gsim][imt])
         return median
 
     @attr('qa', 'hazard', 'scenario')
     def test_case_1(self):
         out = self.run_calc(case_1.__file__, 'job.ini', exports='xml')
-        self.assertEqualFiles('expected.xml', out['gmf', 'xml'][0])
+        self.assertEqualFiles('expected.xml', out['gmf_by_trt_gsim', 'xml'][0])
 
     @attr('qa', 'hazard', 'scenario')
     def test_case_1bis(self):
@@ -57,7 +54,7 @@ class ScenarioHazardTestCase(CalculatorTestCase):
         out = self.run_calc(case_1.__file__, 'job.ini',
                             maximum_distance=0.1, exports='csv')
         self.assertEqualFiles(
-            'BooreAtkinson2008_gmf.csv', out['gmf', 'csv'][0])
+            'BooreAtkinson2008_gmf.csv', out['gmf_by_trt_gsim', 'csv'][0])
 
     @attr('qa', 'hazard', 'scenario')
     def test_case_2(self):
@@ -107,11 +104,11 @@ class ScenarioHazardTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'scenario')
     def test_case_9(self):
         out = self.run_calc(case_9.__file__, 'job.ini', exports='xml')
-        f1, f2 = out['gmf', 'xml']
+        f1, f2 = out['gmf_by_trt_gsim', 'xml']
         self.assertEqualFiles('LinLee2008SSlab_gmf.xml', f1)
         self.assertEqualFiles('YoungsEtAl1997SSlab_gmf.xml', f2)
 
         out = self.run_calc(case_9.__file__, 'job.ini', exports='csv')
-        f1, f2 = out['gmf', 'csv']
+        f1, f2 = out['gmf_by_trt_gsim', 'csv']
         self.assertEqualFiles('LinLee2008SSlab_gmf.csv', f1)
         self.assertEqualFiles('YoungsEtAl1997SSlab_gmf.csv', f2)

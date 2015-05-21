@@ -263,7 +263,7 @@ def split_in_blocks_2(long_sequence, short_sequence, hint,
         yield list(long_), list(short)
 
 
-def assert_close_seq(seq1, seq2, rtol, atol):
+def assert_close_seq(seq1, seq2, rtol, atol, context=None):
     """
     Compare two sequences of the same length.
 
@@ -275,10 +275,10 @@ def assert_close_seq(seq1, seq2, rtol, atol):
     assert len(seq1) == len(seq2), 'Lists of different lenghts: %d != %d' % (
         len(seq1), len(seq2))
     for x, y in zip(seq1, seq2):
-        assert_close(x, y, rtol, atol)
+        assert_close(x, y, rtol, atol, context)
 
 
-def assert_close(a, b, rtol=1e-07, atol=0):
+def assert_close(a, b, rtol=1e-07, atol=0, context=None):
     """
     Compare for equality up to a given precision two composite objects
     which may contain floats. NB: if the objects are or contain generators,
@@ -289,27 +289,29 @@ def assert_close(a, b, rtol=1e-07, atol=0):
     :param rtol: relative tolerance
     :param atol: absolute tolerance
     """
-    if isinstance(a, numpy.ndarray) and a.shape:  # shortcut
+    if isinstance(a, float) or isinstance(a, numpy.ndarray) and a.shape:
+        # shortcut
         numpy.testing.assert_allclose(a, b, rtol, atol)
         return
     if a == b:  # another shortcut
         return
     if hasattr(a, '__slots__'):  # record-like objects
-        assert_close_seq(a.__slots__, b.__slots__, rtol, atol)
+        assert_close_seq(a.__slots__, b.__slots__, rtol, atol, a)
         for x, y in zip(a.__slots__, b.__slots__):
-            assert_close(getattr(a, x), getattr(b, y), rtol, atol)
+            assert_close(getattr(a, x), getattr(b, y), rtol, atol, x)
         return
     if isinstance(a, collections.Mapping):  # dict-like objects
-        assert_close_seq(a.keys(), b.keys(), rtol, atol)
-        assert_close_seq(a.values(), b.values(), rtol, atol)
+        assert_close_seq(a.keys(), b.keys(), rtol, atol, a)
+        assert_close_seq(a.values(), b.values(), rtol, atol, a)
         return
     if hasattr(a, '__iter__'):  # iterable objects
-        assert_close_seq(list(a), list(b), rtol, atol)
+        assert_close_seq(list(a), list(b), rtol, atol, a)
         return
     if hasattr(a, '__dict__'):  # objects with an attribute dictionary
-        assert_close(vars(a), vars(b))
+        assert_close(vars(a), vars(b), context=a)
         return
-    raise AssertionError('%r != %r' % (a, b))
+    ctx = '' if context is None else 'in context ' + repr(context)
+    raise AssertionError('%r != %r %s' % (a, b, ctx))
 
 
 def writetmp(content=None, dir=None, prefix="tmp", suffix="tmp"):

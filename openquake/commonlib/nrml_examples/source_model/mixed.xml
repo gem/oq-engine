@@ -274,8 +274,8 @@ xmlns:gml="http://www.opengis.net/gml"
             </rake>
             <surface>
                 <planarSurface
-                dip="90.0"
-                strike="0.0"
+                dip="9.696547068"
+                strike="89.98254582"
                 >
                     <topLeft depth="21.0" lat="1.0" lon="-1.0"/>
                     <topRight depth="21.0" lat="1.0" lon="1.0"/>
@@ -283,8 +283,8 @@ xmlns:gml="http://www.opengis.net/gml"
                     <bottomRight depth="59.0" lat="-1.0" lon="1.0"/>
                 </planarSurface>
                 <planarSurface
-                dip="45.0"
-                strike="20.0"
+                dip="15.0987061388"
+                strike="89.98254582"
                 >
                     <topLeft depth="20.0" lat="1.0" lon="1.0"/>
                     <topRight depth="20.0" lat="1.0" lon="3.0"/>

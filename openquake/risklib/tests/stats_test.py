@@ -2,7 +2,6 @@ import unittest
 import os.path
 import shutil
 import tempfile
-import mock
 
 import numpy
 from scipy.stats import mstats
@@ -193,13 +192,6 @@ def loss_curves(assets, baselosses, seed):
     return numpy.array(lcs)
 
 
-def get_header(quantiles):
-    ls = ['asset_ref', 'mean']
-    for q in quantiles:
-        ls.append('quantile-%s' % q)
-    return ls
-
-
 class StatsTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -218,22 +210,21 @@ class StatsTestCase(unittest.TestCase):
             quantiles=[0.1, 0.9],
             conditional_loss_poes=[0.35, 0.24, 0.13],
             poes_disagg=[]).build(outputs)
-        cls.header = get_header(cls.stats.quantiles)
         cls.tempdir = tempfile.mkdtemp()
 
     def test_get_stat_curves(self):
         curves, ins_curves, maps = scientific.get_stat_curves(self.stats)
 
         actual = os.path.join(self.tempdir, 'expected_loss_curves.csv')
-        writers.save_csv(actual, [self.header] + curves, fmt='%05.2f')
+        writers.write_csv(actual, curves, fmt='%05.2f')
         tests.check_equal(__file__, 'expected_loss_curves.csv', actual)
 
         actual = os.path.join(self.tempdir, 'expected_ins_curves.csv')
-        writers.save_csv(actual, [self.header] + ins_curves, fmt='%05.2f')
+        writers.write_csv(actual, ins_curves, fmt='%05.2f')
         tests.check_equal(__file__, 'expected_ins_curves.csv', actual)
 
         actual = os.path.join(self.tempdir, 'expected_loss_maps.csv')
-        writers.save_csv(actual, [maps[0]._fields] + maps, fmt='%05.2f')
+        writers.write_csv(actual, maps, fmt='%05.2f')
         tests.check_equal(__file__, 'expected_loss_maps.csv', actual)
 
     @classmethod

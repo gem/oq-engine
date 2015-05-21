@@ -28,6 +28,59 @@ from openquake.hazardlib.gsim.base import gsim_imt_dt
 from openquake.risklib import scientific
 
 
+def sorted_assets(assets_by_site):
+    """
+    :param assets_by_site: a list of lists of disjoint assets
+    :returns: the assets sorted by .id
+    """
+    all_assets = []
+    for assets in assets_by_site:
+        all_assets.extend(assets)
+    return sorted(all_assets, key=operator.attrgetter('id'))
+
+
+def build_asset_collection(assets_by_site):
+    """
+    :params assets_by_site: a list of lists of assets
+    :returns: an array with composite dtype
+    """
+    first_asset = assets_by_site[0][0]
+    loss_types = first_asset.values.keys()
+    deductible_d = first_asset.deductibles or {}
+    limit_d = first_asset.insurance_limits or {}
+    retrofitting_d = first_asset.retrofitting_values or {}
+    deductibles = ['deductible~%s' % name for name in deductible_d]
+
+    limits = ['insurance_limit~%s' % name for name in limit_d]
+    retrofittings = ['retrofitted~%s' % n for n in retrofitting_d]
+    asset_dt = numpy.dtype(
+        [('asset_ref', '|S20'), ('site_id', numpy.uint32)] +
+        [(name, float) for name in
+         loss_types + deductibles + limits + retrofittings])
+    num_assets = sum(len(assets) for assets in assets_by_site)
+    assetcol = numpy.zeros(num_assets, asset_dt)
+    asset_ordinal = 0
+    for sid, assets_ in enumerate(assets_by_site):
+        for asset in sorted(assets_, key=operator.attrgetter('id')):
+            record = assetcol[asset_ordinal]
+            asset_ordinal += 1
+            for field in asset_dt.fields:
+                if field == 'asset_ref':
+                    value = asset.id
+                elif field == 'site_id':
+                    value = sid
+                elif field == 'fatalities':
+                    value = asset.values[field]
+                else:
+                    try:
+                        name, lt = field.split('~')
+                    except ValueError:  # no ~ in field
+                        name, lt = 'value', field
+                    value = getattr(asset, name)(lt)
+                record[field] = value
+    return assetcol
+
+
 class RiskModel(collections.Mapping):
     """
     A container (imt, taxonomy) -> workflow.
@@ -43,7 +96,10 @@ class RiskModel(collections.Mapping):
         """
         :returns: a sorted list with all the loss_types contained in the model
         """
-        return sorted(set(sum([w.loss_types for w in self.values()], [])))
+        ltypes = set()
+        for wf in self.values():
+            ltypes.update(wf.loss_types)
+        return sorted(ltypes)
 
     def get_taxonomies(self, imt=None):
         """
@@ -90,13 +146,13 @@ class RiskModel(collections.Mapping):
                          assets_by_site, eps_dict)
 
     def build_inputs_from_ruptures(self, sitecol, assets_by_site, all_ruptures,
-                                   gsims_by_trt_id, trunc_level, correl_model,
+                                   gsims_by_col, trunc_level, correl_model,
                                    eps_dict, hint):
         """
         :param sitecol: a SiteCollection instance
         :param assets_by_site: an array of assets per each site
         :param all_ruptures: the complete list of SESRupture instances
-        :param gsims_by_trt_id: a dictionary of GSIM instances
+        :param gsims_by_col: a dictionary of GSIM instances
         :param trunc_level: the truncation level (or None)
         :param correl_model: the correlation model (or None)
         :param eps_dict: a dictionary asset_ref -> epsilon array
@@ -106,10 +162,10 @@ class RiskModel(collections.Mapping):
         """
         imt_taxonomies = list(self.get_imt_taxonomies())
         num_epsilons = len(eps_dict.itervalues().next())
-        by_trt = operator.attrgetter('trt_model_id')
+        by_col = operator.attrgetter('col_id')
         for ses_ruptures, indices in split_in_blocks_2(
-                all_ruptures, range(num_epsilons), hint or 1, key=by_trt):
-            gsims = gsims_by_trt_id[ses_ruptures[0].trt_model_id]
+                all_ruptures, range(num_epsilons), hint or 1, key=by_col):
+            gsims = gsims_by_col[ses_ruptures[0].col_id]
             edic = {asset: eps[indices] for asset, eps in eps_dict.iteritems()}
             yield RiskInputFromRuptures(
                 imt_taxonomies, sitecol, assets_by_site, ses_ruptures,
@@ -149,6 +205,10 @@ class RiskModel(collections.Mapping):
                             yield out_by_rlz
         mon_hazard.flush()
         mon_risk.flush()
+
+    def __repr__(self):
+        lines = ['%s: %s' % item for item in sorted(self.items())]
+        return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(lines))
 
 
 class RiskInput(object):
@@ -263,8 +323,7 @@ class RiskInputFromRuptures(object):
         self.sitecol = sitecol
         self.assets_by_site = assets_by_site
         self.ses_ruptures = numpy.array(ses_ruptures)
-        self.trt_id = ses_ruptures[0].trt_model_id
-        self.col_idx = ses_ruptures[0].col_idx
+        self.col_id = ses_ruptures[0].col_id
         self.gsims = gsims
         self.trunc_level = trunc_level
         self.correl_model = correl_model
@@ -309,11 +368,12 @@ class RiskInputFromRuptures(object):
         assets, hazards, epsilons = [], [], []
         gmfs = self.compute_expand_gmfs()
         gsims = map(str, self.gsims)
+        trt_id = rlzs_assoc.csm_info.get_trt_id(self.col_id)
         for assets_, hazard in zip(self.assets_by_site, gmfs.T):
             haz_by_imt_rlz = {imt: {} for imt in self.imts}
             for gsim in gsims:
                 for imt in self.imts:
-                    for rlz in rlzs_assoc[self.trt_id, gsim]:
+                    for rlz in rlzs_assoc[trt_id, gsim]:
                         haz_by_imt_rlz[imt][rlz] = hazard[gsim][imt]
             for asset in assets_:
                 assets.append(asset)

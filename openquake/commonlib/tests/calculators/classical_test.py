@@ -7,142 +7,116 @@ from openquake.qa_tests_data.classical import (
 
 
 class ClassicalTestCase(CalculatorTestCase):
+
+    def assert_curves_ok(self, expected, test_dir, delta=None):
+        out = self.run_calc(test_dir, 'job.ini', exports='csv')
+        got = (out['/hcurves', 'csv'] +
+               out.get(('/hmaps', 'csv'), []) +
+               out.get(('/uhs', 'csv'), []))
+        self.assertEqual(len(expected), len(got))
+        for fname, actual in zip(expected, got):
+            self.assertEqualFiles('expected/%s' % fname, actual, delta=delta)
+
     @attr('qa', 'hazard', 'classical')
     def test_case_1(self):
-        out = self.run_calc(case_1.__file__, 'job.ini', exports='csv')
-        self.assertEqualFiles(
-            'expected/hazard_curve-smltp_b1-gsimltp_b1.csv',
-            out['hazard_curve-smltp_b1-gsimltp_b1.csv'])
+        self.assert_curves_ok(
+            ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
+            case_1.__file__)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_2(self):
-        out = self.run_calc(case_2.__file__, 'job.ini', exports='csv')
-        self.assertEqualFiles(
-            'expected/hazard_curve-smltp_b1-gsimltp_b1.csv',
-            out['hazard_curve-smltp_b1-gsimltp_b1.csv'])
+        self.assert_curves_ok(
+            ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
+            case_2.__file__)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_3(self):
-        out = self.run_calc(case_3.__file__, 'job.ini', exports='csv')
-        self.assertEqualFiles(
-            'expected/hazard_curve-smltp_b1-gsimltp_b1.csv',
-            out['hazard_curve-smltp_b1-gsimltp_b1.csv'])
+        self.assert_curves_ok(
+            ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
+            case_3.__file__)
 
     @attr('qa', 'hazard', 'classical', 'slow')
     def test_case_4(self):
-        out = self.run_calc(case_4.__file__, 'job.ini', exports='csv')
-        self.assertEqualFiles(
-            'expected/hazard_curve-smltp_b1-gsimltp_b1.csv',
-            out['hazard_curve-smltp_b1-gsimltp_b1.csv'])
+        self.assert_curves_ok(
+            ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
+            case_4.__file__)
 
     @attr('qa', 'hazard', 'classical', 'slow')
     def test_case_5(self):
-        out = self.run_calc(case_5.__file__, 'job.ini', exports='csv')
-        self.assertEqualFiles(
-            'expected/hazard_curve-smltp_b1-gsimltp_b1.csv',
-            out['hazard_curve-smltp_b1-gsimltp_b1.csv'])
+        self.assert_curves_ok(
+            ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
+            case_5.__file__)
 
     @attr('qa', 'hazard', 'classical', 'slow')
     def test_case_6(self):
-        out = self.run_calc(case_6.__file__, 'job.ini', exports='csv')
-        self.assertEqualFiles(
-            'expected/hazard_curve-smltp_b1-gsimltp_b1.csv',
-            out['hazard_curve-smltp_b1-gsimltp_b1.csv'])
+        self.assert_curves_ok(
+            ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
+            case_6.__file__)
 
     @attr('qa', 'hazard', 'classical', 'slow')
     def test_case_7(self):
-        expected = [
-            'hazard_curve-smltp_b1-gsimltp_b1.csv',
-            'hazard_curve-smltp_b2-gsimltp_b1.csv',
-            'hazard_curve-mean.csv',
-        ]
-        out = self.run_calc(case_7.__file__, 'job.ini', exports='csv')
-        for fname in expected:
-            self.assertEqualFiles('expected/%s' % fname, out[fname])
+        self.assert_curves_ok(
+            ['hazard_curve-mean.csv',
+             'hazard_curve-smltp_b1-gsimltp_b1.csv',
+             'hazard_curve-smltp_b2-gsimltp_b1.csv'],
+            case_7.__file__)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_8(self):
-        expected = [
-            'hazard_curve-smltp_b1_b2-gsimltp_b1.csv',
-            'hazard_curve-smltp_b1_b3-gsimltp_b1.csv',
-            'hazard_curve-smltp_b1_b4-gsimltp_b1.csv',
-        ]
-        out = self.run_calc(case_8.__file__, 'job.ini', exports='csv')
-        for fname in expected:
-            self.assertEqualFiles('expected/%s' % fname, out[fname])
+        self.assert_curves_ok(
+            ['hazard_curve-smltp_b1_b2-gsimltp_b1.csv',
+             'hazard_curve-smltp_b1_b3-gsimltp_b1.csv',
+             'hazard_curve-smltp_b1_b4-gsimltp_b1.csv'],
+            case_8.__file__)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_9(self):
-        expected = [
-            'hazard_curve-smltp_b1_b2-gsimltp_b1.csv',
-            'hazard_curve-smltp_b1_b3-gsimltp_b1.csv',
-        ]
-        out = self.run_calc(case_9.__file__, 'job.ini', exports='csv')
-        for fname in expected:
-            self.assertEqualFiles('expected/%s' % fname, out[fname])
+        self.assert_curves_ok(
+            ['hazard_curve-smltp_b1_b2-gsimltp_b1.csv',
+             'hazard_curve-smltp_b1_b3-gsimltp_b1.csv'],
+            case_9.__file__)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_10(self):
-        expected = [
-            'hazard_curve-smltp_b1_b2-gsimltp_b1.csv',
-            'hazard_curve-smltp_b1_b3-gsimltp_b1.csv',
-        ]
-        out = self.run_calc(case_10.__file__, 'job.ini', exports='csv')
-        for fname in expected:
-            self.assertEqualFiles('expected/%s' % fname, out[fname])
+        self.assert_curves_ok(
+            ['hazard_curve-smltp_b1_b2-gsimltp_b1.csv',
+             'hazard_curve-smltp_b1_b3-gsimltp_b1.csv'],
+            case_10.__file__)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_11(self):
-        expected = [
-            'hazard_curve-smltp_b1_b2-gsimltp_b1.csv',
-            'hazard_curve-smltp_b1_b3-gsimltp_b1.csv',
-            'hazard_curve-smltp_b1_b4-gsimltp_b1.csv',
-            'hazard_curve-mean.csv',
-        ]
-        out = self.run_calc(case_11.__file__, 'job.ini', exports='csv')
-        for fname in expected:
-            self.assertEqualFiles('expected/%s' % fname, out[fname])
+        self.assert_curves_ok(
+            ['hazard_curve-mean.csv',
+             'hazard_curve-smltp_b1_b2-gsimltp_b1.csv',
+             'hazard_curve-smltp_b1_b3-gsimltp_b1.csv',
+             'hazard_curve-smltp_b1_b4-gsimltp_b1.csv',
+             'quantile_curve-0.1.csv',
+             'quantile_curve-0.9.csv'],
+            case_11.__file__)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_12(self):
-        expected = [
-            'hazard_curve-smltp_b1-gsimltp_b1_b2.csv',
-        ]
-        out = self.run_calc(case_12.__file__, 'job.ini', exports='csv')
-        for fname in expected:
-            self.assertEqualFiles('expected/%s' % fname, out[fname])
+        self.assert_curves_ok(
+            ['hazard_curve-smltp_b1-gsimltp_b1_b2.csv'],
+            case_12.__file__)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_13(self):
-        expected = [
-            'hazard_curve-smltp_aFault_aPriori_D2.1-gsimltp_BooreAtkinson2008.csv',
-            'hazard_curve-smltp_aFault_aPriori_D2.1-gsimltp_ChiouYoungs2008.csv',
-            'hazard_curve-smltp_bFault_stitched_D2.1_Char-gsimltp_BooreAtkinson2008.csv',
-            'hazard_curve-smltp_bFault_stitched_D2.1_Char-gsimltp_ChiouYoungs2008.csv',
-            'hazard_curve-mean.csv',
-            'hazard_map-smltp_aFault_aPriori_D2.1-gsimltp_BooreAtkinson2008.csv',
-            'hazard_map-smltp_aFault_aPriori_D2.1-gsimltp_ChiouYoungs2008.csv',
-            'hazard_map-smltp_bFault_stitched_D2.1_Char-gsimltp_BooreAtkinson2008.csv',
-            'hazard_map-smltp_bFault_stitched_D2.1_Char-gsimltp_ChiouYoungs2008.csv',
-            'hazard_map-mean.csv',
-        ]
-        out = self.run_calc(case_13.__file__, 'job.ini', exports='csv')
-        for fname in expected:
-            self.assertEqualFiles('expected/%s' % fname, out[fname])
+        self.assert_curves_ok(
+            ['hazard_curve-mean.csv',
+             'hazard_map-mean.csv'],
+            case_13.__file__)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_14(self):
-        expected = [
+        self.assert_curves_ok([
             'hazard_curve-smltp_simple_fault-gsimltp_AbrahamsonSilva2008.csv',
-            'hazard_curve-smltp_simple_fault-gsimltp_CampbellBozorgnia2008.csv',
-        ]
-        out = self.run_calc(case_14.__file__, 'job.ini', exports='csv')
-        for fname in expected:
-            self.assertEqualFiles('expected/%s' % fname, out[fname])
+            'hazard_curve-smltp_simple_fault-gsimltp_CampbellBozorgnia2008.csv'
+        ], case_14.__file__)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_15(self):  # full enumeration
-        expected = '''\
+        self.assert_curves_ok('''\
 hazard_curve-mean.csv
 hazard_curve-smltp_SM1-gsimltp_BA2008_C2003.csv
 hazard_curve-smltp_SM1-gsimltp_BA2008_T2002.csv
@@ -152,6 +126,15 @@ hazard_curve-smltp_SM2_a3b1-gsimltp_BA2008_*.csv
 hazard_curve-smltp_SM2_a3b1-gsimltp_CB2008_*.csv
 hazard_curve-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008_*.csv
 hazard_curve-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_*.csv
+hazard_map-mean.csv
+hazard_map-smltp_SM1-gsimltp_BA2008_C2003.csv
+hazard_map-smltp_SM1-gsimltp_BA2008_T2002.csv
+hazard_map-smltp_SM1-gsimltp_CB2008_C2003.csv
+hazard_map-smltp_SM1-gsimltp_CB2008_T2002.csv
+hazard_map-smltp_SM2_a3b1-gsimltp_BA2008_*.csv
+hazard_map-smltp_SM2_a3b1-gsimltp_CB2008_*.csv
+hazard_map-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008_*.csv
+hazard_map-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_*.csv
 hazard_uhs-mean.csv
 hazard_uhs-smltp_SM1-gsimltp_BA2008_C2003.csv
 hazard_uhs-smltp_SM1-gsimltp_BA2008_T2002.csv
@@ -160,42 +143,33 @@ hazard_uhs-smltp_SM1-gsimltp_CB2008_T2002.csv
 hazard_uhs-smltp_SM2_a3b1-gsimltp_BA2008_*.csv
 hazard_uhs-smltp_SM2_a3b1-gsimltp_CB2008_*.csv
 hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008_*.csv
-hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_*.csv'''.split()
-        out = self.run_calc(case_15.__file__, 'job.ini', exports='csv')
-        for fname in expected:
-            self.assertEqualFiles('expected/%s' % fname, out[fname])
+hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_*.csv'''.split(),
+                              case_15.__file__)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_16(self):   # sampling
-        expected = [
-            'hazard_curve-mean.csv',
-            'quantile_curve-0.1.csv',
-            'quantile_curve-0.9.csv',
-        ]
-        out = self.run_calc(case_16.__file__, 'job.ini', exports='csv')
-        for fname in expected:
-            self.assertEqualFiles('expected/%s' % fname, out[fname])
+        self.assert_curves_ok(
+            ['hazard_curve-mean.csv',
+             'quantile_curve-0.1.csv',
+             'quantile_curve-0.9.csv'],
+            case_16.__file__)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_17(self):  # oversampling
-        expected = [
-            'hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv',
-            'hazard_curve-smltp_b2-gsimltp_b1-ltr_1.csv',
-        ]
-        out = self.run_calc(case_17.__file__, 'job.ini', exports='csv')
-        for fname in expected:
-            self.assertEqualFiles('expected/%s' % fname, out[fname])
+        self.assert_curves_ok(
+            ['hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv',
+             'hazard_curve-smltp_b2-gsimltp_b1-ltr_1.csv',
+             'hazard_curve-smltp_b2-gsimltp_b1-ltr_2.csv',
+             'hazard_curve-smltp_b2-gsimltp_b1-ltr_3.csv',
+             'hazard_curve-smltp_b2-gsimltp_b1-ltr_4.csv'],
+            case_17.__file__)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_19(self):
-        expected = [
+        self.assert_curves_ok([
             'hazard_curve-mean.csv',
             'hazard_curve-smltp_b1-gsimltp_*_*_*_*_b51_*_*.csv',
             'hazard_curve-smltp_b1-gsimltp_*_*_*_*_b52_*_*.csv',
             'hazard_curve-smltp_b1-gsimltp_*_*_*_*_b53_*_*.csv',
             'hazard_curve-smltp_b1-gsimltp_*_*_*_*_b54_*_*.csv',
-        ]
-        out = self.run_calc(case_19.__file__, 'job.ini', exports='csv')
-        for fname in expected:
-            self.assertEqualFiles(
-                'expected/%s' % fname, out[fname], delta=1e-7)
+        ], case_19.__file__, delta=1E-7)

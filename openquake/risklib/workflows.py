@@ -16,7 +16,6 @@
 # License along with OpenQuake Risklib. If not, see
 # <http://www.gnu.org/licenses/>.
 
-import os
 import inspect
 import functools
 import collections
@@ -197,6 +196,9 @@ class Workflow(object):
                 tags_ = tags[ok]
             yield out_by_rlz(
                 self, assets_, hazards, epsilons_, tags_, loss_type)
+
+    def __repr__(self):
+        return '<%s%s>' % (self.__class__.__name__, self.risk_functions.keys())
 
 
 @registry.add('classical_risk')

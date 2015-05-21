@@ -61,12 +61,14 @@ class RlzsAssoc(collections.Mapping):
         for rlz in realizations:
             self.rlzs_assoc[0, str(rlz)] = [rlz]
 
-    def combine(self, result):
+    def combine(self, result):  # this is used in the workers
         """
         Convert a dictionary key -> value into a dictionary rlz -> value,
         since there is a single realization per key.
         """
         return {self.rlzs_assoc[key][0]: result[key] for key in result}
+
+    combine_gmfs = combine  # this is used in the export
 
     def __iter__(self):
         return self.rlzs_assoc.iterkeys()
