@@ -76,7 +76,7 @@ supplemented by a dictionary of validators.
 """
 
 import sys
-import collections
+from openquake.baselib.general import CallableDict
 from openquake.commonlib import valid
 from openquake.commonlib.node import node_to_xml, \
     Node, LiteralNode, node_from_elem, striptag, parse, iterparse
@@ -112,19 +112,7 @@ class NRMLFile(object):
         self._file.close()
 
 
-class Register(collections.OrderedDict):
-    """
-    An ordered dictionary tag -> callable, used to register functions
-    or classes.
-    """
-    def add(self, *tags):
-        def dec(obj):
-            for tag in tags:
-                self[tag] = obj
-            return obj
-        return dec
-
-nodefactory = Register()
+nodefactory = CallableDict(keyfunc=striptag)
 
 
 @nodefactory.add('sourceModel', 'simpleFaultRupture', 'complexFaultRupture',
