@@ -128,9 +128,9 @@ class GmfSet(object):
     """
     Small wrapper around the list of Gmf objects associated to the given SES.
     """
-    def __init__(self, gmfset):
+    def __init__(self, gmfset, investigation_time):
         self.gmfset = gmfset
-        self.investigation_time = None
+        self.investigation_time = investigation_time
         self.stochastic_event_set_id = 1
 
     def __iter__(self):
@@ -208,12 +208,13 @@ class GmfCollection(object):
     into an object with the right form for the EventBasedGMFXMLWriter.
     Iterating over a GmfCollection yields GmfSet objects.
     """
-    def __init__(self, sitecol, ruptures, gmfs):
+    def __init__(self, sitecol, ruptures, gmfs, investigation_time):
         self.sitecol = sitecol
         self.ruptures = ruptures
         self.imts = list(gmfs[0].dtype.fields)
         self.gmfs_by_imt = {imt: [gmf[imt] for gmf in gmfs]
                             for imt in self.imts}
+        self.investigation_time = investigation_time
 
     def __iter__(self):
         gmfset = []
@@ -222,8 +223,11 @@ class GmfCollection(object):
             imt, sa_period, sa_damping = from_string(imt_str)
             for rupture, gmf in zip(self.ruptures, gmfs):
                 if hasattr(rupture, 'indices'):  # event based
+                    indices = (range(len(self.sitecol))
+                               if rupture.indices is None
+                               else rupture.indices)
                     sites = FilteredSiteCollection(
-                        rupture.indices, self.sitecol)
+                        indices, self.sitecol)
                 else:  # scenario
                     sites = self.sitecol
                 nodes = (GroundMotionFieldNode(gmv, site.location)
@@ -231,10 +235,11 @@ class GmfCollection(object):
                 gmfset.append(
                     GroundMotionField(
                         imt, sa_period, sa_damping, rupture.tag, nodes))
-        yield GmfSet(gmfset)
+        yield GmfSet(gmfset, self.investigation_time)
 
 
-def export_gmf_xml(key, export_dir, fname, sitecol, ruptures, gmfs, gsim_path):
+def export_gmf_xml(key, export_dir, fname, sitecol, ruptures, gmfs, rlz,
+                   investigation_time):
     """
     :param key: output_type and export_type
     :param export_dir: the directory where to export
@@ -242,17 +247,26 @@ def export_gmf_xml(key, export_dir, fname, sitecol, ruptures, gmfs, gsim_path):
     :param sitecol: the full site collection
     :param ruptures: an ordered list of ruptures
     :param gmfs: a matrix of ground motion fields of shape (R, N)
-    :param gsim_path: a tuple with the path in the GSIM logic tree
+    :param rlz: a realization object
+    :param investigation_time: investigation time (None for scenario)
     """
     dest = os.path.join(export_dir, fname)
+    if hasattr(rlz, 'gsim_rlz'):  # event based
+        smltpath = '_'.join(rlz.sm_lt_path)
+        gsimpath = rlz.gsim_rlz.uid
+    else:  # scenario
+        smltpath = '*'
+        gsimpath = rlz.uid
     writer = hazard_writers.EventBasedGMFXMLWriter(
-        dest, sm_lt_path='', gsim_lt_path=gsim_path)
+        dest, sm_lt_path=smltpath, gsim_lt_path=gsimpath)
     with floatformat('%12.8E'):
-        writer.serialize(GmfCollection(sitecol, ruptures, gmfs))
+        writer.serialize(
+            GmfCollection(sitecol, ruptures, gmfs, investigation_time))
     return {key: [dest]}
 
 
-def export_gmf_csv(key, export_dir, fname, sitecol, ruptures, gmfs, gsim_path):
+def export_gmf_csv(key, export_dir, fname, sitecol, ruptures, gmfs, rlz,
+                   investigation_time):
     """
     :param key: output_type and export_type
     :param export_dir: the directory where to export
@@ -260,7 +274,8 @@ def export_gmf_csv(key, export_dir, fname, sitecol, ruptures, gmfs, gsim_path):
     :param sitecol: the full site collection
     :param ruptures: an ordered list of ruptures
     :param gmfs: an orderd list of ground motion fields
-    :param gsim_path: a tuple with the path in the GSIM logic tree
+    :param rlz: a realization object
+    :param investigation_time: investigation time (None for scenario)
     """
     dest = os.path.join(export_dir, fname)
     imts = list(gmfs[0].dtype.fields)
@@ -389,7 +404,8 @@ def export_gmf(ekey, dstore):
     sitecol = dstore['sitecol']
     rlzs_assoc = dstore['rlzs_assoc']
     rupture_by_tag = sum(dstore['sescollection'], AccumDict())
-    samples = dstore['oqparam'].number_of_logic_tree_samples
+    oq = dstore['oqparam']
+    samples = oq.number_of_logic_tree_samples
     fmt = ekey[-1]
     fnames = []
     gmf_by_rlz = rlzs_assoc.combine_gmfs(dstore[ekey[0]])
@@ -408,7 +424,7 @@ def export_gmf(ekey, dstore):
         fnames.append(os.path.join(dstore.export_dir, fname))
         globals()['export_gmf_%s' % fmt](
             ('gmf', fmt), dstore.export_dir, fname, sitecol,
-            ruptures, gmfs, rlz.uid)
+            ruptures, gmfs, rlz, oq.investigation_time)
     return fnames
 
 
