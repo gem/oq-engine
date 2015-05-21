@@ -255,7 +255,7 @@ def export_gmf_xml(key, export_dir, fname, sitecol, ruptures, gmfs, rlz,
         smltpath = '_'.join(rlz.sm_lt_path)
         gsimpath = rlz.gsim_rlz.uid
     else:  # scenario
-        smltpath = '*'
+        smltpath = ''
         gsimpath = rlz.uid
     writer = hazard_writers.EventBasedGMFXMLWriter(
         dest, sm_lt_path=smltpath, gsim_lt_path=gsimpath)
