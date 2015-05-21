@@ -187,7 +187,11 @@ _devtest_innervm_run () {
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
-        ssh $lxc_ip "cd $GEM_GIT_PACKAGE ; nosetests -v --with-doctest --with-coverage --cover-package=openquake.hazardlib --with-xunit"
+        if [ -n "$GEM_DEVTEST_SKIP_SLOW_TESTS" ]; then
+            # skip slow tests
+            skip_tests="!slow,"
+        fi
+        ssh $lxc_ip "cd $GEM_GIT_PACKAGE ; nosetests -v -a '${skip_tests}' --with-doctest --with-coverage --cover-package=openquake.hazardlib --with-xunit"
         scp "$lxc_ip:$GEM_GIT_PACKAGE/nosetests.xml" "out_${BUILD_UBUVER}/"
     else
         if [ -d $HOME/fake-data/$GEM_GIT_PACKAGE ]; then
