@@ -30,7 +30,11 @@ def export_csv(ekey, dstore):
     :returns: a list with the path of the exported file
     """
     name = ekey[0][1:] + '.csv'
-    array = dstore[ekey[0]].value
+    try:
+        array = dstore[ekey[0]].value
+    except AttributeError:
+        # this happens if the key correspond to a HDF5 group
+        return []  # write a custom exporter in this case
     if len(array.shape) == 1:  # vector
         array = array.reshape((len(array), 1))
     dest = os.path.join(dstore.export_dir, name)
