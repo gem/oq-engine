@@ -160,7 +160,6 @@ class ValidNode(LiteralNode):
         occurRates=valid.positivefloats,
         probs_occur=valid.pmf,
         weight=valid.probability,
-        #slip=float,
         alongStrike=valid.probability,
         downDip=valid.probability,
         )

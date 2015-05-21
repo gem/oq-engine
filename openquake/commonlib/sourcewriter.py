@@ -237,6 +237,10 @@ def get_distributed_seismicity_source_nodes(source):
 
 def build_hypo_list_node(hypo_list):
     """
+    :param hypo_list:
+       an array of shape (N, 3) with columns (alongStrike, downDip, weight)
+    :returns:
+        a hypoList node containing N hypo nodes
     """
     hypolist = LiteralNode('hypoList', {})
     for row in hypo_list:
@@ -248,6 +252,10 @@ def build_hypo_list_node(hypo_list):
 
 def build_slip_list_node(slip_list):
     """
+    :param slip_list:
+       an array of shape (N, 2) with columns (slip, weight)
+    :returns:
+        a hypoList node containing N slip nodes
     """
     sliplist = LiteralNode('slipList', {})
     for row in slip_list:

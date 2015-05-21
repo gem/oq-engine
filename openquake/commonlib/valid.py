@@ -613,6 +613,8 @@ def check_weights(nodes_with_a_weight):
 
 def hypo_list(nodes):
     """
+    :param nodes: a hypoList node with N hypocenter nodes
+    :returns: a numpy array of shape (N, 3) with strike, dip and weight
     """
     check_weights(nodes)
     data = []
@@ -623,12 +625,13 @@ def hypo_list(nodes):
 
 def slip_list(nodes):
     """
+    :param nodes: a slipList node with N slip nodes
+    :returns: a numpy array of shape (N, 2) with slip angle and weight
     """
     check_weights(nodes)
     data = []
     for node in nodes:
-        # TODO: move the float conversion before
-        data.append([float(~node), node['weight']])
+        data.append([slip_range(~node), node['weight']])
     return numpy.array(data, float)
 
 
@@ -690,6 +693,7 @@ def probability_depth(value, probability, depth):
 
 
 strike_range = FloatRange(0, 360)
+slip_range = strike_range
 dip_range = FloatRange(0, 90)
 rake_range = FloatRange(-180, 180)
 
