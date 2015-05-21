@@ -1,7 +1,13 @@
   [Michele Simionato]
   * Added a functionality `write_source_model` to serialize sources in XML
+
+python-oq-risklib (0.7.1-0~precise01) precise; urgency=low
+
+  [Michele Simionato]
   * Fixed an export bug in the scenario_damage calculator: now the case of
     multiple assets on the same location is treated correctly
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 20 May 2015 09:58:07 +0200
 
 python-oq-risklib (0.7.0-1~precise01) precise; urgency=low
 
