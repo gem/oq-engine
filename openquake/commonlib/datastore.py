@@ -97,7 +97,7 @@ class DataStore(collections.MutableMapping):
     items, the DataStore will return a generator. The items will be ordered
     lexicographically according to their name.
     """
-    def __init__(self, calc_id=None, datadir=DATADIR):
+    def __init__(self, calc_id=None, datadir=DATADIR, parent=None):
         if not os.path.exists(datadir):
             os.makedirs(datadir)
         if calc_id is None:  # use a new datastore
@@ -106,6 +106,7 @@ class DataStore(collections.MutableMapping):
             self.calc_id = get_last_calc_id(datadir)
         else:  # use the given datastore
             self.calc_id = calc_id
+        self.parent = parent  # parent datastore (if any)
         self.calc_dir = os.path.join(datadir, 'calc_%s' % self.calc_id)
         if not os.path.exists(self.calc_dir):
             os.mkdir(self.calc_dir)
@@ -177,8 +178,17 @@ class DataStore(collections.MutableMapping):
 
     def __getitem__(self, key):
         if key.startswith('/'):
-            return self.hdf5[key]
-        with open(self.path(key)) as df:
+            try:
+                return self.hdf5[key]
+            except KeyError:
+                if self.parent:
+                    return self.parent.hdf5[key]
+                else:
+                    raise
+        path = self.path(key)
+        if not os.path.exists(path) and self.parent:
+            path = self.parent.path(key)
+        with open(path) as df:
             value = cPickle.load(df)
             if callable(value):
                 return value(self)
@@ -259,14 +269,7 @@ def persistent_attribute(key):
         try:
             return getattr(self.datastore, privatekey)
         except AttributeError:
-            try:
-                value = self.datastore[key]
-            except (KeyError, IOError):
-                parent = getattr(self.datastore, 'parent', None)
-                if parent is not None:
-                    value = parent[key]
-                else:
-                    raise
+            value = self.datastore[key]
             setattr(self.datastore, privatekey, value)
             return value
 
