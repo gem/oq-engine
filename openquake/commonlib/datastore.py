@@ -253,22 +253,18 @@ def persistent_attribute(key):
         # value from the parent and set the cache. If the value cannot
         # be retrieved, raise an AttributeError.
         try:
+            return getattr(self.datastore, privatekey)
+        except AttributeError:
             try:
-                return getattr(self.datastore, privatekey)
-            except AttributeError:
                 value = self.datastore[key]
-                setattr(self.datastore, privatekey, value)
-                return value
-        except (KeyError, IOError):
-            parent = getattr(self, 'parent', None)
-            if parent is not None:
-                try:
-                    return parent[key]
-                except:
-                    value = self.datastore[key]
-                    setattr(self.datastore, privatekey, value)
-            else:
-                raise AttributeError(key)
+            except (KeyError, IOError):
+                parent = getattr(self.datastore, 'parent', None)
+                if parent is not None:
+                    value = parent[key]
+                else:
+                    raise
+            setattr(self.datastore, privatekey, value)
+            return value
 
     def setter(self, value):
         # Update the datastore and the private key
