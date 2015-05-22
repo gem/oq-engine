@@ -144,8 +144,9 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/gmf-smltp_b1-gsimltp_b1-ltr_1.csv', ltr[1])
 
-        l0 = out['gmf_by_trt_gsim', 'xml'][0]
-        self.assertEqualFiles('expected/gmf-smltp_b1-gsimltp_b1-ltr_0.xml', l0)
+        ltr0 = out['gmf_by_trt_gsim', 'xml'][0]
+        self.assertEqualFiles('expected/gmf-smltp_b1-gsimltp_b1-ltr_0.xml',
+                              ltr0)
 
         ltr = out['/hcurves', 'csv']
         self.assertEqualFiles(
