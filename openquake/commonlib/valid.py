@@ -142,6 +142,8 @@ class Choices(Choice):
                     val, self.choices))
         return tuple(values)
 
+export_formats = Choices('xml', 'csv', 'geojson')
+
 
 class Regex(object):
     """
