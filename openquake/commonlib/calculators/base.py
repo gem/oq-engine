@@ -208,7 +208,8 @@ class HazardCalculator(BaseCalculator):
                     self.oqparam, self.monitor('precalculator'),
                     self.datastore.calc_id)
                 precalc.run()
-                self.composite_source_model = precalc.composite_source_model
+                if 'composite_source_model' in vars(precalc):
+                    self.csm = precalc.composite_source_model
             else:  # read previously computed data
                 self.datastore.parent = datastore.DataStore(precalc_id)
             if self.oqparam.hazard_investigation_time is None:

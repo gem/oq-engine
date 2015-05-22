@@ -473,13 +473,12 @@ class EventBasedCalculator(ClassicalCalculator):
             if not os.path.exists(export_dir):
                 os.makedirs(export_dir)
             oq.export_dir = export_dir
-            csm = self.composite_source_model
             # use a different datastore
             self.cl = ClassicalCalculator(oq, self.monitor)
             # copy the relevant attributes
-            self.cl.composite_source_model = csm
+            self.cl.composite_source_model = self.csm
             self.cl.sitecol = self.sitecol
-            self.cl.rlzs_assoc = csm.get_rlzs_assoc()
+            self.cl.rlzs_assoc = self.csm.get_rlzs_assoc()
             result = self.cl.run(pre_execute=False)
             for imt in self.mean_curves.dtype.fields:
                 rdiff, index = max_rel_diff_index(
