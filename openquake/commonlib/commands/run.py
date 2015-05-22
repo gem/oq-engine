@@ -19,7 +19,7 @@
 import os
 import logging
 
-from openquake.commonlib import sap, readinput
+from openquake.commonlib import sap, readinput, valid
 from openquake.commonlib.parallel import executor, PerformanceMonitor
 from openquake.commonlib.calculators import base
 
@@ -54,3 +54,5 @@ parser.opt('concurrent_tasks', 'hint for the number of tasks to spawn',
 parser.opt('loglevel', 'logging level',
            choices='debug info warn error critical'.split())
 parser.opt('hc', 'previous calculation ID', type=int)
+parser.opt('exports', 'export formats as a comma-separated string',
+           type=valid.export_formats)

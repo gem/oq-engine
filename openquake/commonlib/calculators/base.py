@@ -125,7 +125,7 @@ class BaseCalculator(object):
         """
         exported = {}
         individual_curves = self.oqparam.individual_curves
-        for fmt in self.oqparam.exports.split():
+        for fmt in self.oqparam.exports:
             for key in self.datastore:
                 if 'rlzs' in key and not individual_curves:
                     continue  # skip individual curves

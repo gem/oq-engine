@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <gmfCollection
+    gsimTreePath="b1"
+    sourceModelTreePath="b1"
+    >
+        <gmfSet
+        investigationTime="1.0"
+        stochasticEventSetId="1"
+        >
+            <gmf
+            IMT="PGA"
+            ruptureId="col=00|ses=0058|src=1|rup=1671-01"
+            >
+                <node gmv="5.20341816E-01" lat="0.00000000E+00" lon="0.00000000E+00"/>
+            </gmf>
+            <gmf
+            IMT="PGA"
+            ruptureId="col=00|ses=0122|src=1|rup=085-01"
+            >
+                <node gmv="2.45000156E-01" lat="0.00000000E+00" lon="0.00000000E+00"/>
+            </gmf>
+            <gmf
+            IMT="PGA"
+            ruptureId="col=00|ses=0250|src=1|rup=910-01"
+            >
+                <node gmv="3.62531718E-01" lat="0.00000000E+00" lon="0.00000000E+00"/>
+            </gmf>
+            <gmf
+            IMT="PGA"
+            ruptureId="col=00|ses=0262|src=1|rup=176-01"
+            >
+                <node gmv="2.55822242E-01" lat="0.00000000E+00" lon="0.00000000E+00"/>
+            </gmf>
+        </gmfSet>
+    </gmfCollection>
+</nrml>

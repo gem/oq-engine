@@ -435,7 +435,7 @@ class Distribution(object):
     A Distribution class models continuous probability distribution of
     random variables used to sample losses of a set of assets. It is
     usually registered with a name (e.g. LN, BT) by using
-    :class:`openquake.risklib.utils.Register`
+    :class:`openquake.baselib.general.CallableDict`
     """
 
     __metaclass__ = abc.ABCMeta

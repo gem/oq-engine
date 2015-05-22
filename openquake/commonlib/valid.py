@@ -102,7 +102,7 @@ class Choice(object):
         self.choices = choices
 
     def __call__(self, value):
-        if not value in self.choices:
+        if value not in self.choices:
             raise ValueError('Got %r, expected %s' % (
                              value, '|'.join(self.choices)))
         return value
@@ -118,12 +118,31 @@ class ChoiceCI(object):
 
     def __call__(self, value):
         value = value.lower()
-        if not value in self.choices:
+        if value not in self.choices:
             raise ValueError('%r is not a valid choice in %s' % (
                              value, self.choices))
         return value
 
 category = ChoiceCI('population', 'buildings')
+
+
+class Choices(Choice):
+    """
+    Convert the choices, passed as a comma separated string, into a tuple
+    of validated strings. For instance
+
+    >>> Choices('xml', 'csv')('xml,csv')
+    ('xml', 'csv')
+    """
+    def __call__(self, value):
+        values = value.lower().split(',')
+        for val in values:
+            if val not in self.choices:
+                raise ValueError('%r is not a valid choice in %s' % (
+                    val, self.choices))
+        return tuple(values)
+
+export_formats = Choices('xml', 'csv', 'geojson')
 
 
 class Regex(object):
@@ -563,7 +582,7 @@ def dictionary(value):
     return dic
 
 
-############################# SOURCES/RUPTURES ###############################
+# ########################### SOURCES/RUPTURES ############################# #
 
 def mag_scale_rel(value):
     """
