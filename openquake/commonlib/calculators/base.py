@@ -254,12 +254,13 @@ class HazardCalculator(BaseCalculator):
                 self.sitecol = readinput.get_site_collection(self.oqparam)
 
         # save mesh and asset collection
-        if '/assetcol' not in self.datastore:
+        if '/sitemesh' not in self.datastore:
             mesh_dt = numpy.dtype([('lon', float), ('lat', float)])
             self.sitemesh = numpy.array(
                 zip(self.sitecol.lons, self.sitecol.lats), mesh_dt)
-            self.assetcol = riskinput.build_asset_collection(
-                self.assets_by_site)
+            if hasattr(self, 'assets_by_site'):
+                self.assetcol = riskinput.build_asset_collection(
+                    self.assets_by_site)
 
     def read_sources(self):
         """
