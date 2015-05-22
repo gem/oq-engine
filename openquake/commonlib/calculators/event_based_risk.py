@@ -142,11 +142,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         correl_model = readinput.get_correl_model(oq)
         gsims_by_col = self.rlzs_assoc.get_gsims_by_col()
-        assets_by_site = self.precalc.assets_by_site
+        assets_by_site = self.assets_by_site
         logging.info('Building the epsilons')
 
         logging.info('Populating the risk inputs')
-        rup_by_tag = sum(self.precalc.sescollection, AccumDict())
+        rup_by_tag = sum(self.datastore['sescollection'], AccumDict())
         all_ruptures = [rup_by_tag[tag] for tag in sorted(rup_by_tag)]
         num_samples = min(len(all_ruptures), epsilon_sampling)
         eps_dict = riskinput.make_eps_dict(

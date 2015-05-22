@@ -60,7 +60,6 @@ class BaseCalculator(object):
     cost_types = datastore.persistent_attribute('cost_types')
     taxonomies = datastore.persistent_attribute('/taxonomies')
 
-    precalc = None  # to be overridden
     pre_calculator = None  # to be overridden
 
     def __init__(self, oqparam, monitor=DummyMonitor(), calc_id=None,
@@ -73,7 +72,8 @@ class BaseCalculator(object):
             self.datastore.hdf5 = {}
         if 'oqparam' not in self.datastore:  # new datastore
             self.oqparam = oqparam
-        self.datastore.export_dir = oqparam.export_dir
+            self.datastore.export_dir = oqparam.export_dir
+        # else we are doing a precalculation; oqparam have been already stored
         self.persistent = persistent
 
     def run(self, pre_execute=True, **kw):
@@ -193,30 +193,32 @@ class HazardCalculator(BaseCalculator):
         """
         return sum(len(assets) for assets in self.assets_by_site)
 
-    def pre_compute(self):
-        """
-        If there is a pre_calculator, use it to recompute the input, or simply
-        read it from the datastore if the precalculation ID is given.
-        """
-        precalc_id = self.oqparam.hazard_calculation_id
-        precalc = calculators[self.pre_calculator](
-            self.oqparam, self.monitor('precalculator'),
-            precalc_id or self.datastore.calc_id)
-        if precalc_id is None:  # recompute
-            precalc.run()
-        return precalc
-
     def pre_execute(self):
         """
-        Read the site collection and the sources.
+        Check if there is a pre_calculator or a previous calculation ID.
+        If yes, read the inputs by invoking the precalculator or by retrieving
+        the previous calculation; if not, read the inputs directly.
         """
         if self.pre_calculator is not None:
-            self.precalc = self.pre_compute()
+            # the parameter hazard_calculation_id is only meaningful if
+            # there is a precalculator
+            precalc_id = self.oqparam.hazard_calculation_id
+            if precalc_id is None:  # recompute everything
+                calculators[self.pre_calculator](
+                    self.oqparam, self.monitor('precalculator'),
+                    self.datastore.calc_id).run()
+            else:  # read previously computed data
+                self.datastore.parent = datastore.DataStore(precalc_id)
             if self.oqparam.hazard_investigation_time is None:
                 self.oqparam.hazard_investigation_time = (
-                    self.precalc.datastore['oqparam'].investigation_time)
-            return
+                    self.datastore['oqparam'].investigation_time)
+        else:
+            self.read_inputs()
 
+    def read_inputs(self):
+        """
+        Read exposure, sitecollection and sources
+        """
         if 'exposure' in self.oqparam.inputs:
             logging.info('Reading the exposure')
             with self.monitor('reading exposure', autoflush=True):
@@ -343,9 +345,8 @@ class RiskCalculator(HazardCalculator):
         """
         HazardCalculator.pre_execute(self)
         self.riskmodel = readinput.get_risk_model(self.oqparam)
-        # NB: precalc is not None for all risk calculators
-        if hasattr(self.precalc, 'exposure'):
-            missing = self.precalc.exposure.taxonomies - set(
+        if hasattr(self, 'exposure'):
+            missing = self.exposure.taxonomies - set(
                 self.riskmodel.get_taxonomies())
             if missing:
                 raise RuntimeError('The exposure contains the taxonomies %s '
@@ -396,7 +397,7 @@ def get_gmfs(calc):
     else:  # from rupture
         sitecol = calc.sitecol
         gmfs = {k: expand(gmf, sitecol)
-                for k, gmf in calc.precalc.gmf_by_trt_gsim.iteritems()}
+                for k, gmf in calc.gmf_by_trt_gsim.iteritems()}
     return gmfs
 
 

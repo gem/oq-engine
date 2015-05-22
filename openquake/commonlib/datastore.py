@@ -250,7 +250,7 @@ def persistent_attribute(key):
         # Try to get the value from the privatekey attribute (i.e. from
         # the cache of the datastore); if not possible, get the value
         # from the datastore and set the cache; if not possible, get the
-        # value from the precalculator and set the cache. If the value cannot
+        # value from the parent and set the cache. If the value cannot
         # be retrieved, raise an AttributeError.
         try:
             try:
@@ -260,11 +260,11 @@ def persistent_attribute(key):
                 setattr(self.datastore, privatekey, value)
                 return value
         except (KeyError, IOError):
-            precalc = getattr(self, 'precalc', None)
-            if precalc is not None:
+            parent = getattr(self, 'parent', None)
+            if parent is not None:
                 try:
-                    return getattr(self.precalc, key)
-                except AttributeError:
+                    return parent[key]
+                except:
                     value = self.datastore[key]
                     setattr(self.datastore, privatekey, value)
             else:
