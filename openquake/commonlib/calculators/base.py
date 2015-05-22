@@ -53,6 +53,7 @@ class BaseCalculator(object):
     __metaclass__ = abc.ABCMeta
 
     oqparam = datastore.persistent_attribute('oqparam')
+    sitemesh = datastore.persistent_attribute('/sitemesh')
     sitecol = datastore.persistent_attribute('sitecol')
     rlzs_assoc = datastore.persistent_attribute('rlzs_assoc')
     assets_by_site = datastore.persistent_attribute('assets_by_site')
@@ -70,10 +71,10 @@ class BaseCalculator(object):
         else:
             self.datastore = general.AccumDict()
             self.datastore.hdf5 = {}
+        self.datastore.export_dir = oqparam.export_dir
         if 'oqparam' not in self.datastore:  # new datastore
             self.oqparam = oqparam
-            self.datastore.export_dir = oqparam.export_dir
-        # else we are doing a precalculation; oqparam have been already stored
+        # else we are doing a precalculation; oqparam has been already stored
         self.persistent = persistent
 
     def run(self, pre_execute=True, **kw):
@@ -215,12 +216,16 @@ class HazardCalculator(BaseCalculator):
             if self.oqparam.hazard_investigation_time is None:
                 self.oqparam.hazard_investigation_time = (
                     self.datastore['oqparam'].investigation_time)
-        else:
-            self.read_inputs()
+            if '/taxonomies' not in self.datastore:
+                self.read_exposure_sitecol()
+        else:  # we are in a basic calculator
+            self.read_exposure_sitecol()
+            self.read_sources()
 
-    def read_inputs(self):
+    def read_exposure_sitecol(self):
         """
-        Read exposure, sitecollection and sources
+        Read the exposure (if any) and then the site collection, possibly
+        extracted from the exposure.
         """
         if 'exposure' in self.oqparam.inputs:
             logging.info('Reading the exposure')
@@ -247,6 +252,21 @@ class HazardCalculator(BaseCalculator):
             logging.info('Reading the site collection')
             with self.monitor('reading site collection', autoflush=True):
                 self.sitecol = readinput.get_site_collection(self.oqparam)
+
+        # save mesh and asset collection
+        if '/assetcol' not in self.datastore:
+            mesh_dt = numpy.dtype([('lon', float), ('lat', float)])
+            self.sitemesh = numpy.array(
+                zip(self.sitecol.lons, self.sitecol.lats), mesh_dt)
+            self.assetcol = riskinput.build_asset_collection(
+                self.assets_by_site)
+
+    def read_sources(self):
+        """
+        Read the composite source model (if any).
+        This method must be called after read_exposure_sitecol, to be able
+        to filter to sources according to the site collection.
+        """
         if 'source' in self.oqparam.inputs:
             logging.info('Reading the composite source models')
             with self.monitor(
@@ -261,14 +281,6 @@ class HazardCalculator(BaseCalculator):
                 self.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
         else:  # calculators without sources, i.e. scenario
             self.rlzs_assoc = readinput.get_rlzs_assoc(self.oqparam)
-
-        # save mesh and asset collection
-        mesh_dt = numpy.dtype([('lon', float), ('lat', float)])
-        mesh = numpy.array(zip(self.sitecol.lons, self.sitecol.lats), mesh_dt)
-        self.datastore['/sitemesh'] = mesh
-        if hasattr(self, 'assets_by_site'):
-            self.assetcol = riskinput.build_asset_collection(
-                self.assets_by_site)
 
 
 class RiskCalculator(HazardCalculator):

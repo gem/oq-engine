@@ -188,7 +188,11 @@ class DataStore(collections.MutableMapping):
         if key.startswith('/'):
             if not isinstance(value, numpy.ndarray):
                 raise ValueError('not an array: %r' % value)
-            self.hdf5[key] = value
+            try:
+                self.hdf5[key] = value
+            except RuntimeError as exc:
+                raise RuntimeError('Could not save %s: %s in %s' %
+                                   (key, exc, self.hdf5path))
         else:
             with open(self.path(key), 'w') as df:
                 return cPickle.dump(value, df, cPickle.HIGHEST_PROTOCOL)
