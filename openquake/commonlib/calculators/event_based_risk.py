@@ -80,13 +80,13 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     return acc
 
 
-def mean_quantiles(quantiles):
+def _mean_quantiles(quantiles):
     yield 'mean'
     for q in quantiles:
         yield 'quantile-%s' % q
 
 
-def loss_map_names(conditional_loss_poes):
+def _loss_map_names(conditional_loss_poes):
     names = []
     for clp in conditional_loss_poes:
         names.append('poe~%s' % clp)
@@ -183,7 +183,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             [('losses', (float, C)), ('poes', (float, C)), ('avg', float)])
 
         if oq.conditional_loss_poes:
-            lm_names = loss_map_names(oq.conditional_loss_poes)
+            lm_names = _loss_map_names(oq.conditional_loss_poes)
             self.loss_map_dt = numpy.dtype([(f, float) for f in lm_names])
 
         self.assets = assets = riskinput.sorted_assets(self.assets_by_site)
@@ -411,7 +411,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             if oq.conditional_loss_poes:
                 loss_map_stats[:][stat.loss_type] = maps
 
-        for i, stats in enumerate(mean_quantiles(oq.quantile_loss_curves)):
+        for i, stats in enumerate(_mean_quantiles(oq.quantile_loss_curves)):
             self.store(loss_curve_key, stats, loss_curve_stats[i])
             if oq.insured_losses:
                 self.store(loss_curve_key + '_ins', stats, ins_curve_stats[i])

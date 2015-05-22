@@ -204,9 +204,11 @@ class HazardCalculator(BaseCalculator):
             # there is a precalculator
             precalc_id = self.oqparam.hazard_calculation_id
             if precalc_id is None:  # recompute everything
-                calculators[self.pre_calculator](
+                precalc = calculators[self.pre_calculator](
                     self.oqparam, self.monitor('precalculator'),
-                    self.datastore.calc_id).run()
+                    self.datastore.calc_id)
+                precalc.run()
+                self.composite_source_model = precalc.composite_source_model
             else:  # read previously computed data
                 self.datastore.parent = datastore.DataStore(precalc_id)
             if self.oqparam.hazard_investigation_time is None:
