@@ -213,6 +213,12 @@ class HazardCalculator(BaseCalculator):
                     self.csm = precalc.composite_source_model
             else:  # read previously computed data
                 self.datastore.parent = datastore.DataStore(precalc_id)
+                # merge old oqparam into the new ones, when possible
+                new = vars(self.oqparam)
+                for name, value in self.datastore.parent['oqparam']:
+                    if name not in new:  # add missing parameter
+                        new[name] = value
+                self.oqparam = self.oqparam
             if self.oqparam.hazard_investigation_time is None:
                 self.oqparam.hazard_investigation_time = (
                     self.datastore['oqparam'].investigation_time)
