@@ -355,7 +355,7 @@ class RiskInputFromRuptures(object):
             self.ses_ruptures, self.sitecol, self.imts,
             self.gsims, self.trunc_level, self.correl_model)
         gmf_dt = gsim_imt_dt(self.gsims, self.imts)
-        n = len(self.sitecol)
+        n = len(self.sitecol.complete)
         gmfs = numpy.zeros((len(gmf_by_tag), n), gmf_dt)
         for r, tag in enumerate(sorted(gmf_by_tag)):
             gmfa = gmf_by_tag[tag]
