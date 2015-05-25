@@ -144,7 +144,7 @@ class ClassicalTestCase(unittest.TestCase):
             [0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000]]
 
         vf = scientific.VulnerabilityFunction(
-            'PGA', self.imls, self.mean_loss_ratios, self.covs, "BT")
+            'VF', 'PGA', self.imls, self.mean_loss_ratios, self.covs, "BT")
 
         loss_ratios, lrem = vf.loss_ratio_exceedance_matrix(5)
         numpy.testing.assert_allclose(
@@ -156,7 +156,7 @@ class ClassicalTestCase(unittest.TestCase):
         loss_ratios = [0.05, 0.08, 0.2, 0.4]
 
         vulnerability_function = scientific.VulnerabilityFunction(
-            'PGA', imls, loss_ratios, covs, "LN")
+            'VF', 'PGA', imls, loss_ratios, covs, "LN")
 
         expected_steps = [0.05, 0.15, 0.3, 0.5, 0.7]
 
@@ -171,7 +171,7 @@ class ClassicalTestCase(unittest.TestCase):
         loss_ratios = [0.05, 0.08, 0.2, 0.4]
 
         vulnerability_function = scientific.VulnerabilityFunction(
-            'PGA', imls, loss_ratios, covs, "LN")
+            'VF', 'PGA', imls, loss_ratios, covs, "LN")
 
         loss_ratio_curve = scientific.classical(
             vulnerability_function, hazard_imls, hazard_curve, 2)

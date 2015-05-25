@@ -28,7 +28,7 @@ gmv = vectors_from_csv('gmv', THISDIR)
 
 def vf(loss_ratios, covs=(0.0, 0.0, 0.0, 0.0, 0.0)):
     return scientific.VulnerabilityFunction(
-        'PGA', [0.1, 0.2, 0.3, 0.5, 0.7], loss_ratios, covs)
+        'VF', 'PGA', [0.1, 0.2, 0.3, 0.5, 0.7], loss_ratios, covs)
 
 
 class ScenarioTestCase(unittest.TestCase):

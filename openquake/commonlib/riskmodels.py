@@ -153,7 +153,7 @@ def get_vulnerability_functions(fname):
                      vfun.coefficientsVariation.lineno))
             with context(fname, vfun):
                 vf_dict[imt_str, taxonomy] = scientific.VulnerabilityFunction(
-                    imt_str, imls, loss_ratios, coefficients,
+                    taxonomy, imt_str, imls, loss_ratios, coefficients,
                     vfun['probabilisticDistribution'])
     return vf_dict
 

@@ -25,14 +25,14 @@ class BCRTestCase(unittest.TestCase):
     def test_bcr_classical(self):
         vulnerability_function_rm = (
             scientific.VulnerabilityFunction(
-                'PGA',
+                'RM', 'PGA',
                 [0.1, 0.2, 0.3, 0.45, 0.6],
                 [0.05, 0.1, 0.2, 0.4, 0.8],
                 [0.5, 0.4, 0.3, 0.2, 0.1], "LN"))
 
         vulnerability_function_rf = (
             scientific.VulnerabilityFunction(
-                'PGA',
+                'RF', 'PGA',
                 [0.1, 0.2, 0.3, 0.45, 0.6],
                 [0.035, 0.07, 0.14, 0.28, 0.56],
                 [0.5, 0.4, 0.3, 0.2, 0.1], "LN"))
