@@ -116,10 +116,10 @@ class VulnerabilityFunction(object):
         :param str distribution_name: The probabilistic distribution
             related to this function.
         """
-        self._check_vulnerability_data(
-            imls, mean_loss_ratios, covs, distribution)
         self.id = vf_id
         self.imt = imt
+        self._check_vulnerability_data(
+            imls, mean_loss_ratios, covs, distribution)
         self.imls = numpy.array(imls)
         self.mean_loss_ratios = numpy.array(mean_loss_ratios)
 
@@ -240,15 +240,16 @@ class VulnerabilityFunction(object):
                 [self.imls[-1], self.imls[0], lambda x: x]))
 
     def __getstate__(self):
-        return (self.imt, self.imls, self.mean_loss_ratios,
+        return (self.id, self.imt, self.imls, self.mean_loss_ratios,
                 self.covs, self.distribution_name)
 
     def __setstate__(self, state):
-        self.imt = state[0]
-        self.imls = state[1]
-        self.mean_loss_ratios = state[2]
-        self.covs = state[3]
-        self.distribution_name = state[4]
+        self.id = state[0]
+        self.imt = state[1]
+        self.imls = state[2]
+        self.mean_loss_ratios = state[3]
+        self.covs = state[4]
+        self.distribution_name = state[5]
         self.init()
 
     def _check_vulnerability_data(self, imls, loss_ratios, covs, distribution):
