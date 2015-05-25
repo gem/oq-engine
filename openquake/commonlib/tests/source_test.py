@@ -18,6 +18,7 @@ import mock
 import unittest
 from StringIO import StringIO
 
+import numpy
 from numpy.testing import assert_allclose
 
 from openquake.hazardlib import site
@@ -72,7 +73,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        converter = s.SourceConverter(
+        cls.converter = s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,  # km
             complex_fault_mesh_spacing=1,  # km
@@ -82,14 +83,13 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         source_nodes = read_nodes(MIXED_SRC_MODEL, filter_sources, ValidNode)
         (cls.area, cls.point, cls.simple, cls.cmplx, cls.char_simple,
          cls.char_complex, cls.char_multi) = map(
-            converter.convert_node, source_nodes)
+            cls.converter.convert_node, source_nodes)
         # the parameters here would typically be specified in the job .ini
         cls.investigation_time = 50.
         cls.rupture_mesh_spacing = 1  # km
         cls.complex_fault_mesh_spacing = 1  # km
         cls.width_of_mfd_bin = 1.  # for Truncated GR MFDs
         cls.area_source_discretization = 1.  # km
-        cls.converter = converter
 
     @property
     def _expected_point(self):
@@ -183,7 +183,9 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             ),
             dip=45.0,
             rake=30.0,
-            temporal_occurrence_model=PoissonTOM(50.)
+            temporal_occurrence_model=PoissonTOM(50.),
+            hypo_list=numpy.array([[0.25, 0.25, 0.3], [0.75, 0.75, 0.7]]),
+            slip_list=numpy.array([[90, 0.7], [135, 0.3]])
         )
         return simple
 
@@ -367,7 +369,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         assert_close(self._expected_char_multi, self.char_multi)
 
     def test_duplicate_id(self):
-        converter = s.SourceConverter(
+        converter = s.SourceConverter(  # different from self.converter
             investigation_time=50.,
             rupture_mesh_spacing=1,
             complex_fault_mesh_spacing=1,
@@ -476,6 +478,65 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         self.assertIn(
             "node areaSource: No subnode named 'nodalPlaneDist'"
             " found in 'areaSource', line 5 of", str(ctx.exception))
+
+    def test_hypolist_but_not_sliplist(self):
+        simple_file = StringIO("""\
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <sourceModel name="Some Source Model">
+        <simpleFaultSource
+        id="3"
+        name="Mount Diablo Thrust"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <simpleFaultGeometry>
+                <gml:LineString>
+                    <gml:posList>
+                        -121.8229 37.7301 -122.0388 37.8771
+                    </gml:posList>
+                </gml:LineString>
+                <dip>
+                    45.0
+                </dip>
+                <upperSeismoDepth>
+                    10.0
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    20.0
+                </lowerSeismoDepth>
+            </simpleFaultGeometry>
+            <magScaleRel>
+                WC1994
+            </magScaleRel>
+            <ruptAspectRatio>
+                1.5
+            </ruptAspectRatio>
+            <incrementalMFD
+            binWidth="0.1"
+            minMag="5.0"
+            >
+                <occurRates>
+                    0.0010614989 0.00088291627 0.00073437777 0.0006108288 0.0005080653
+                </occurRates>
+            </incrementalMFD>
+            <rake>
+                30.0
+            </rake>
+            <hypoList>
+                <hypo alongStrike="0.25" downDip="0.25" weight="0.3"/>
+                <hypo alongStrike="0.75" downDip="0.75" weight="0.7"/>
+            </hypoList>
+        </simpleFaultSource>
+    </sourceModel>
+</nrml>
+""")
+        # check that the error raised by hazardlib is wrapped correctly
+        msg = ('node simpleFaultSource: hypo_list and slip_list have to be '
+               'both given')
+        with self.assertRaises(ValueError) as ctx:
+            parse_source_model(simple_file, self.converter)
+        self.assertIn(msg, str(ctx.exception))
 
     def test_nonparametric_source_ok(self):
         converter = s.SourceConverter(

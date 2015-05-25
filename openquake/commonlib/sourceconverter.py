@@ -532,20 +532,33 @@ class SourceConverter(RuptureConverter):
         """
         geom = node.simpleFaultGeometry
         msr = valid.SCALEREL[~node.magScaleRel]()
-        simple = source.SimpleFaultSource(
-            source_id=node['id'],
-            name=node['name'],
-            tectonic_region_type=node['tectonicRegion'],
-            mfd=self.convert_mfdist(node),
-            rupture_mesh_spacing=self.rupture_mesh_spacing,
-            magnitude_scaling_relationship=msr,
-            rupture_aspect_ratio=~node.ruptAspectRatio,
-            upper_seismogenic_depth=~geom.upperSeismoDepth,
-            lower_seismogenic_depth=~geom.lowerSeismoDepth,
-            fault_trace=self.geo_line(geom),
-            dip=~geom.dip,
-            rake=~node.rake,
-            temporal_occurrence_model=self.tom)
+        fault_trace = self.geo_line(geom)
+        mfd = self.convert_mfdist(node)
+        with context(self.fname, node):
+            try:
+                hypo_list = valid.hypo_list(node.hypoList)
+            except NameError:
+                hypo_list = ()
+            try:
+                slip_list = valid.slip_list(node.slipList)
+            except NameError:
+                slip_list = ()
+            simple = source.SimpleFaultSource(
+                source_id=node['id'],
+                name=node['name'],
+                tectonic_region_type=node['tectonicRegion'],
+                mfd=mfd,
+                rupture_mesh_spacing=self.rupture_mesh_spacing,
+                magnitude_scaling_relationship=msr,
+                rupture_aspect_ratio=~node.ruptAspectRatio,
+                upper_seismogenic_depth=~geom.upperSeismoDepth,
+                lower_seismogenic_depth=~geom.lowerSeismoDepth,
+                fault_trace=fault_trace,
+                dip=~geom.dip,
+                rake=~node.rake,
+                temporal_occurrence_model=self.tom,
+                hypo_list=hypo_list,
+                slip_list=slip_list)
         return simple
 
     def convert_complexFaultSource(self, node):
@@ -557,18 +570,21 @@ class SourceConverter(RuptureConverter):
                   instance
         """
         geom = node.complexFaultGeometry
+        edges = self.geo_lines(geom)
+        mfd = self.convert_mfdist(node)
         msr = valid.SCALEREL[~node.magScaleRel]()
-        cmplx = source.ComplexFaultSource(
-            source_id=node['id'],
-            name=node['name'],
-            tectonic_region_type=node['tectonicRegion'],
-            mfd=self.convert_mfdist(node),
-            rupture_mesh_spacing=self.complex_fault_mesh_spacing,
-            magnitude_scaling_relationship=msr,
-            rupture_aspect_ratio=~node.ruptAspectRatio,
-            edges=self.geo_lines(geom),
-            rake=~node.rake,
-            temporal_occurrence_model=self.tom)
+        with context(self.fname, node):
+            cmplx = source.ComplexFaultSource(
+                source_id=node['id'],
+                name=node['name'],
+                tectonic_region_type=node['tectonicRegion'],
+                mfd=mfd,
+                rupture_mesh_spacing=self.complex_fault_mesh_spacing,
+                magnitude_scaling_relationship=msr,
+                rupture_aspect_ratio=~node.ruptAspectRatio,
+                edges=edges,
+                rake=~node.rake,
+                temporal_occurrence_model=self.tom)
         return cmplx
 
     def convert_characteristicFaultSource(self, node):
