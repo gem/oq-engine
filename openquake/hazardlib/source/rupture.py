@@ -231,7 +231,8 @@ class ParametricProbabilisticRupture(BaseProbabilisticRupture):
         If occurrence rate is not positive.
     """
     __slots__ = Rupture.__slots__ + [
-        'occurrence_rate', 'temporal_occurrence_model']
+        'occurrence_rate', 'temporal_occurrence_model',
+        'rupture_slip_direction']
 
     def __init__(self, mag, rake, tectonic_region_type, hypocenter, surface,
                  source_typology, occurrence_rate, temporal_occurrence_model,
