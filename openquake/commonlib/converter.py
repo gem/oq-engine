@@ -146,7 +146,8 @@ class Vulnerability(Converter):
 
             # check that we can instantiate a VulnerabilityFunction in risklib
             scientific.VulnerabilityFunction(
-                imt, map(float, imls), map(float, ratios), map(float, coeffs))
+                vf_id, imt, map(float, imls),
+                map(float, ratios), map(float, coeffs))
 
             dvf.lossRatio.text = ' '.join(ratios)
             dvf.coefficientsVariation.text = ' '.join(coeffs)
