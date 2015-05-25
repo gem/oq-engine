@@ -14,7 +14,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:'GhofraniAtkinson2014'
+Module exports :class:`GhofraniAtkinson2014`,
+               :class:`GhofraniAtkinson2014Cascadia`,
+               :class:`GhofraniAtkinson2014Lower`,
+               :class:`GhofraniAtkinson2014Upper`,
+               :class:`GhofraniAtkinson2014CascadiaLower`,
+               :class:`GhofraniAtkinson2014CascadiaUpper`
 """
 from __future__ import division
 import numpy as np
@@ -24,12 +29,16 @@ from scipy.constants import g
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGA, SA
+from openquake.hazardlib.imt import PGA, PGV, SA
+
 
 class GhofraniAtkinson2014(GMPE):
     """
-    Implements the Subduction Interface GMPE of Ghofrani & Atkinson (2014) for
-    ...
+    Implements the Subduction Interface GMPE of Ghofrani & Atkinson (2014)
+    for large magnitude earthquakes, based on the Tohoku records.
+    Ghofrani, H. and Atkinson, G. M. (2014) Ground Motion Prediction Equations
+    for Interface Earthquakes of M7 to M9 based on Empirical Data from Japan.
+    Bulletin of Earthquake Engineering, 12, 549 - 571
     """
     #: The GMPE is derived for subduction interface earthquakes in Japan
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
@@ -38,13 +47,12 @@ class GhofraniAtkinson2014(GMPE):
     #: peak ground velocity and spectral acceleration
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
         PGA,
-        PGV
+        PGV,
         SA
     ])
 
-    #: Supported intensity measure component is assumed to be equivalent
-    #: to the random horizontal component
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RANDOM_HORIZONTAL
+    #: Supported intensity measure component is assumed to be geometric mean
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation types is total.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
@@ -53,9 +61,9 @@ class GhofraniAtkinson2014(GMPE):
         const.StdDev.TOTAL,
     ])
 
-    #: No required site parameters, the GMPE is derived for B/C site
-    #: conditions
-    REQUIRES_SITES_PARAMETERS = set(('vs30','backarc'))
+    #: The GMPE provides a Vs30-dependent site scaling term and a forearc/
+    #: backarc attenuation term
+    REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc'))
 
     #: Required rupture parameters are magnitude
     REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
@@ -72,7 +80,7 @@ class GhofraniAtkinson2014(GMPE):
         C = self.COEFFS[imt]
 
         imean = (self._get_magnitude_term(C, rup.mag) +
-                 self._get_distance_term(C, dists.rrup, sctx.backarc) +
+                 self._get_distance_term(C, dists.rrup, sites.backarc) +
                  self._get_site_term(C, sites.vs30) +
                  self._get_scaling_term(C, dists.rrup))
         # Convert mean from cm/s and cm/s/s and from common logarithm to
@@ -83,7 +91,6 @@ class GhofraniAtkinson2014(GMPE):
             mean = np.log((10.0 ** (imean)))
         stddevs = self._get_stddevs(C, len(dists.rrup), stddev_types)
         return mean, stddevs
-
 
     def _get_magnitude_term(self, C, mag):
         """
@@ -96,8 +103,11 @@ class GhofraniAtkinson2014(GMPE):
         Returns the distance scaling term, which varies depending on whether
         the site is in the forearc or the backarc
         """
+        # Geometric attenuation function
         distance_scale = -np.log10(np.sqrt(rrup ** 2 + 3600.0))
+        # Anelastic attenuation in the backarc
         distance_scale[backarc] += (C["c2"] * rrup[backarc])
+        # Anelastic Attenuation in the forearc
         idx = np.logical_not(backarc)
         distance_scale[idx] += (C["c1"] * rrup[idx])
         return distance_scale
@@ -122,8 +132,8 @@ class GhofraniAtkinson2014(GMPE):
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(
-                    np.log(10.0 ** C["sig_tot"]) + np.zeros(num_sites))
+                sig_tot = np.sqrt(C["tau"] ** 2. + C["sigma"] ** 2.)
+                stddevs.append(np.log(10.0 ** sig_tot) + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTER_EVENT:
                 stddevs.append(
                     np.log(10.0 ** C["tau"]) + np.zeros(num_sites))
@@ -131,7 +141,6 @@ class GhofraniAtkinson2014(GMPE):
                 stddevs.append(
                     np.log(10.0 ** C["sigma"]) + np.zeros(num_sites))
         return stddevs
-
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT        c0         a        b         c1         c2       c3   sig_init       af   sigma     tau   sig_tot
@@ -149,8 +158,8 @@ class GhofraniAtkinson2014(GMPE):
     0.53   4.7060    2.5332   0.2331   -0.00213   -0.00290   -0.606      0.276    0.007   0.276   0.155     0.316
     0.65   4.5870    2.3234   0.2435   -0.00200   -0.00262   -0.672      0.257    0.011   0.257   0.147     0.296
     0.81   4.4640    2.1321   0.2522   -0.00183   -0.00234   -0.705      0.249    0.014   0.249   0.131     0.281
-    1.25   4.2140    1.9852   0.2561   -0.00133   -0.00177   -0.646      0.261    0.089   0.249   0.115     0.274
-    1.01   4.3360    1.8442   0.2599   -0.00158   -0.00205   -0.690      0.249    0.021   0.261   0.110     0.283
+    1.01   4.3360    1.9852   0.2561   -0.00158   -0.00205   -0.690      0.249    0.021   0.249   0.115     0.274
+    1.25   4.2140    1.8442   0.2599   -0.00133   -0.00177   -0.646      0.261    0.089   0.261   0.110     0.283
     1.56   4.1050    1.6301   0.2730   -0.00112   -0.00152   -0.578      0.274    0.139   0.274   0.113     0.296
     1.92   3.9900    1.4124   0.2851   -0.00086   -0.00125   -0.518      0.285    0.174   0.285   0.121     0.310
     2.44   3.8290    1.1154   0.3015   -0.00059   -0.00097   -0.513      0.275    0.129   0.275   0.132     0.305
@@ -184,19 +193,21 @@ class GhofraniAtkinson2014Upper(GhofraniAtkinson2014):
     """
     def _get_scaling_term(self, C, rrup):
         """
-        Applies
+        Applies the positive correction factor given on Page 567
         """
         a_f = 0.15 + 0.0007 * rrup
         a_f[a_f > 0.35] = 0.35
         return a_f
 
+
 class GhofraniAtkinson2014Lower(GhofraniAtkinson2014):
     """
-
+    Implements the Subduction Interface GMPE of Ghofrani & Atkinson (2014)
+    with the "lower" epistemic uncertainty model
     """
     def _get_scaling_term(self, C, rrup):
         """
-
+        Applies the negative correction factor given on Page 567
         """
         a_f = 0.15 + 0.0007 * rrup
         a_f[a_f > 0.35] = 0.35
@@ -205,25 +216,31 @@ class GhofraniAtkinson2014Lower(GhofraniAtkinson2014):
 
 class GhofraniAtkinson2014CascadiaUpper(GhofraniAtkinson2014):
     """
-
+    Implements the Subduction Interface GMPE of Ghofrani & Atkinson (2014)
+    with the "upper" epistemic uncertainty model and the Cascadia correction
+    term.
     """
     def _get_scaling_term(self, C, rrup):
         """
-
+        Applies the Cascadia correction factor from Table 2 and the positive
+        correction factor given on Page 567
         """
         a_f = 0.15 + 0.0007 * rrup
         a_f[a_f > 0.35] = 0.35
         return C["af"] + a_f
 
+
 class GhofraniAtkinson2014CascadiaLower(GhofraniAtkinson2014):
     """
-
+    Implements the Subduction Interface GMPE of Ghofrani & Atkinson (2014)
+    with the "lower" epistemic uncertainty model and the Cascadia correction
+    term.
     """
     def _get_scaling_term(self, C, rrup):
         """
-
+        Applies the Cascadia correction factor from Table 2 and the negative
+        correction factor given on Page 567
         """
         a_f = 0.15 + 0.0007 * rrup
         a_f[a_f > 0.35] = 0.35
         return C["af"] - a_f
-
