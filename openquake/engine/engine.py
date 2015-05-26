@@ -46,7 +46,7 @@ from openquake.engine.db.schema.upgrades import upgrader
 
 from openquake import hazardlib, risklib, commonlib
 
-from openquake.commonlib import readinput, valid
+from openquake.commonlib import readinput, valid, datastore
 
 
 INPUT_TYPES = set(dict(models.INPUT_TYPE_CHOICES))
@@ -388,14 +388,32 @@ def run_job_lite(cfg_files, log_level, log_file, exports=''):
     upgrader.check_versions(django_db.connections['admin'])
     with CeleryNodeMonitor(openquake.engine.no_distribute(), interval=3):
         job = job_from_files(cfg_files, getpass.getuser(), log_level, exports)
+        job.ds_calc_dir = datastore.DataStore(job.id).calc_dir
+        job.save()
         t0 = time.time()
-        run_calc(job, log_level, log_file, exports, lite=True)
+        calc = run_calc(job, log_level, log_file, exports, lite=True)
+        expose_outputs(calc.datastore, job)
         duration = time.time() - t0
         if job.status == 'complete':
             print_results(job.id, duration, list_outputs)
         else:
             sys.exit('Calculation %s failed' % job.id)
     return job
+
+
+def expose_outputs(dstore, job):
+    """
+    Build a correspondence between the outputs in the datastore and the
+    ones in the database.
+
+    :param dstore: a datastore instance
+    :param job: an OqJob instance
+    """
+    for key in dstore:
+        out = models.Output.objects.create_output(
+            job, key, output_type='datastore')
+        out.ds_key = key
+        out.save()
 
 
 def check_hazard_risk_consistency(haz_job, risk_mode):
