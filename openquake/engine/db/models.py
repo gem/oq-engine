@@ -261,7 +261,7 @@ class OqJob(djm.Model):
     supervisor_pid = djm.IntegerField(default=0)
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
     relevant = djm.BooleanField(null=False, default=True)
-    ds_basepath = djm.TextField(null=True, blank=True)  # datastore basepath
+    ds_calc_dir = djm.TextField(null=True, blank=True)  # datastore calc_dir
 
     class Meta:
         db_table = 'uiapi\".\"oq_job'
