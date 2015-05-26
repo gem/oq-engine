@@ -1,6 +1,6 @@
  [Yen-Shin Chen]
 
-  * ParametricProbabilisticRupture: adds 'rupture_slip_direction' slot
+  * Rupture: adds 'rupture_slip_direction' slot
 
   [Graeme Weatherill]
   * Adds Atkinson & Macias (2009) Subduction Interface GMPE
