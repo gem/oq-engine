@@ -26,7 +26,7 @@ import collections
 import numpy
 
 from openquake.commonlib.node import read_nodes, context
-from openquake.commonlib import InvalidFile
+from openquake.commonlib import InvalidFile, nrml, valid
 from openquake.risklib import scientific
 from openquake.baselib.general import AccumDict
 from openquake.commonlib.nrml import nodefactory
@@ -127,6 +127,22 @@ def get_vulnerability_functions(fname):
     imts = set()
     taxonomies = set()
     vf_dict = {}  # imt, taxonomy -> vulnerability function
+    node = nrml.read(fname)
+    if node['xmlns'] == 'http://openquake.org/xmlns/nrml/0.5':
+        vmodel = node[0]
+        for vfun in vmodel[1:]:  # the first node is the description
+            imt = vfun.imls['imt']
+            imls = numpy.array(~vfun.imls)
+            taxonomy = vfun['id']
+            ratios, probs = [], []
+            for probabilities in vfun[1:]:
+                ratios.append(probabilities['lr'])
+                probs.append(valid.probabilities(~probabilities))
+            probs = numpy.array(probs)
+            assert probs.shape == (len(ratios), len(imls))
+            vf_dict[imt, taxonomy] = scientific.VulnerabilityFunctionWithPMF(
+                taxonomy, imt, imls, numpy.array(ratios), probs)
+        return vf_dict
     for vset in read_nodes(fname, filter_vset,
                            nodefactory['vulnerabilityModel']):
         imt_str, imls, min_iml, max_iml, imlUnit = ~vset.IML

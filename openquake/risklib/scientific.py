@@ -338,6 +338,26 @@ class VulnerabilityFunction(object):
         return '<VulnerabilityFunction(%s, %s)>' % (self.id, self.imt)
 
 
+class VulnerabilityFunctionWithPMF(object):
+    """
+    Vulnerability function with an explicit distribution of probabilities
+
+    :param str vf_id: vulnerability function ID
+    :param str imt: Intensity Measure Type
+    :param imls: intensity measure levels (L)
+    :param ratios: mean ratios (R)
+    :param probs: a matrix of probabilities of shape (R, L)
+    """
+    def __init__(self, vf_id, imt, imls, ratios, probs):
+        self.id = vf_id
+        self.imt = imt
+        self.imls = imls
+        self.mean_loss_ratios = ratios
+        self.probs = probs
+        self.covs = None
+        self.distribution = "PM"
+
+
 class FragilityFunctionContinuous(object):
     # FIXME (lp). Should be re-factored with LogNormalDistribution
     def __init__(self, limit_state, mean, stddev):
