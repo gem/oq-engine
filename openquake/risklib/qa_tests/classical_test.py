@@ -43,7 +43,7 @@ class ClassicalTestCase(unittest.TestCase):
     def test_lognormal_distribution(self):
         loss_ratio_curve = scientific.classical(
             scientific.VulnerabilityFunction(
-                'PGA',
+                'VF', 'PGA',
                 [0.1, 0.2, 0.3, 0.45, 0.6],
                 [0.05, 0.1, 0.2, 0.4, 0.8],
                 [0.5, 0.4, 0.3, 0.2, 0.1]),
@@ -84,7 +84,7 @@ class ClassicalTestCase(unittest.TestCase):
     def test_beta_distribution(self):
         loss_ratio_curve = scientific.classical(
             scientific.VulnerabilityFunction(
-                'PGA',
+                'VF', 'PGA',
                 [0.1, 0.2, 0.3, 0.45, 0.6],
                 [0.05, 0.1, 0.2, 0.4, 0.8],
                 [0.5, 0.4, 0.3, 0.2, 0.1],

@@ -89,7 +89,7 @@ def fine_graining(points, steps):
 
 
 class VulnerabilityFunction(object):
-    def __init__(self, imt, imls, mean_loss_ratios, covs=None,
+    def __init__(self, vf_id, imt, imls, mean_loss_ratios, covs=None,
                  distribution="LN"):
         """
         A wrapper around a probabilistic distribution function
@@ -100,6 +100,7 @@ class VulnerabilityFunction(object):
         fields and epsilons and return a loss matrix with N x R
         elements.
 
+        :param str vf_id: Vulnerability Function ID
         :param str imt: Intensity Measure Type as a string
 
         :param list imls: Intensity Measure Levels for the
@@ -115,9 +116,10 @@ class VulnerabilityFunction(object):
         :param str distribution_name: The probabilistic distribution
             related to this function.
         """
+        self.id = vf_id
+        self.imt = imt
         self._check_vulnerability_data(
             imls, mean_loss_ratios, covs, distribution)
-        self.imt = imt
         self.imls = numpy.array(imls)
         self.mean_loss_ratios = numpy.array(mean_loss_ratios)
 
@@ -194,7 +196,7 @@ class VulnerabilityFunction(object):
                 previous_mlr = mlr
 
         return self.__class__(
-            self.imt, imls, mlrs, covs, self.distribution_name)
+            self.id, self.imt, imls, mlrs, covs, self.distribution_name)
 
     def mean_loss_ratios_with_steps(self, steps):
         """
@@ -238,15 +240,16 @@ class VulnerabilityFunction(object):
                 [self.imls[-1], self.imls[0], lambda x: x]))
 
     def __getstate__(self):
-        return (self.imt, self.imls, self.mean_loss_ratios,
+        return (self.id, self.imt, self.imls, self.mean_loss_ratios,
                 self.covs, self.distribution_name)
 
     def __setstate__(self, state):
-        self.imt = state[0]
-        self.imls = state[1]
-        self.mean_loss_ratios = state[2]
-        self.covs = state[3]
-        self.distribution_name = state[4]
+        self.id = state[0]
+        self.imt = state[1]
+        self.imls = state[2]
+        self.mean_loss_ratios = state[3]
+        self.covs = state[4]
+        self.distribution_name = state[5]
         self.init()
 
     def _check_vulnerability_data(self, imls, loss_ratios, covs, distribution):
@@ -332,7 +335,7 @@ class VulnerabilityFunction(object):
             [self.imls[-1] + ((self.imls[-1] - self.imls[-2]) / 2)])
 
     def __repr__(self):
-        return '<VulnerabilityFunction(%s)>' % self.imt
+        return '<VulnerabilityFunction(%s, %s)>' % (self.id, self.imt)
 
 
 class FragilityFunctionContinuous(object):

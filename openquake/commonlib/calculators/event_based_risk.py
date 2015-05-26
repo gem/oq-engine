@@ -174,7 +174,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         several interesting outputs.
         """
         oq = self.oqparam
-        self.rlzs_assoc = self.rlzs_assoc  # write anew
+        # take the cached self.rlzs_assoc and write it on the datastore
+        self.rlzs_assoc = self.rlzs_assoc
         rlzs = self.rlzs_assoc.realizations
         loss_types = self.riskmodel.get_loss_types()
 
@@ -235,6 +236,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                             (tag, asset_id, loss, ins_loss))
                 for loss_type, data in data_by_lt.iteritems():
                     event_loss_asset[i][loss_type] = sorted(
+                        # data contains rows (tag, asset, loss, ins_loss)
                         (t, a, l, i) for t, a, l, i in data
                         if a in specific_asset_refs)
 

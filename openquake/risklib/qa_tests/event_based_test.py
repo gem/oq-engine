@@ -47,7 +47,7 @@ class EventBasedTestCase(unittest.TestCase):
         # This is a regression test. Data has not been checked
         vf = (
             scientific.VulnerabilityFunction(
-                'PGA',
+                'SOME-TAXONOMY', 'PGA',
                 [0.001, 0.2, 0.3, 0.5, 0.7],
                 [0.01, 0.1, 0.2, 0.4, 0.8],
                 [0.01, 0.02, 0.02, 0.01, 0.03]))
@@ -88,7 +88,7 @@ class EventBasedTestCase(unittest.TestCase):
         # This is a regression test. Data has not been checked
         vf = (
             scientific.VulnerabilityFunction(
-                'PGA',
+                'SOME-TAXONOMY', 'PGA',
                 [0.001, 0.2, 0.3, 0.5, 0.7],
                 [0.01, 0.1, 0.2, 0.4, 0.8],
                 [0.01, 0.02, 0.02, 0.01, 0.03]))
@@ -103,7 +103,7 @@ class EventBasedTestCase(unittest.TestCase):
         self.assertAlmostEqual(0.48983614471, first_curve_integral)
 
         wf = workflows.ProbabilisticEventBased(
-            'PGA', 'SOMETAXONOMY',
+            'PGA', 'SOME-TAXONOMY',
             vulnerability_functions={self.loss_type: vf},
             risk_investigation_time=50,
             hazard_investigation_time=50,
@@ -127,7 +127,7 @@ class EventBasedTestCase(unittest.TestCase):
         # This is a regression test. Data has not been checked
         vf = (
             scientific.VulnerabilityFunction(
-                'PGA',
+                'SOME-TAXONOMY', 'PGA',
                 [0.001, 0.2, 0.3, 0.5, 0.7],
                 [0.01, 0.1, 0.2, 0.4, 0.8],
                 [0.01, 0.02, 0.02, 0.01, 0.03]))
@@ -144,7 +144,7 @@ class EventBasedTestCase(unittest.TestCase):
         self.assertAlmostEqual(0.483041416, first_curve_integral)
 
         wf = workflows.ProbabilisticEventBased(
-            'PGA', 'SOMETAXONOMY',
+            'PGA', 'SOME-TAXONOMY',
             vulnerability_functions={self.loss_type: vf},
             risk_investigation_time=50,
             hazard_investigation_time=50,
@@ -168,14 +168,14 @@ class EventBasedTestCase(unittest.TestCase):
         epsilons = scientific.make_epsilons([gmf[0]], seed=1, correlation=0)
         vulnerability_function_rm = (
             scientific.VulnerabilityFunction(
-                'PGA',
+                'RM', 'PGA',
                 [0.001, 0.2, 0.3, 0.5, 0.7],
                 [0.01, 0.1, 0.2, 0.4, 0.8],
                 [0.0, 0.0, 0.0, 0.0, 0.0]))
 
         vulnerability_function_rc = (
             scientific.VulnerabilityFunction(
-                'PGA',
+                'RC', 'PGA',
                 [0.001, 0.2, 0.3, 0.5, 0.7],
                 [0.0035, 0.07, 0.14, 0.28, 0.56],
                 [0.0, 0.0, 0.0, 0.0, 0.0]))
@@ -212,7 +212,7 @@ class EventBasedTestCase(unittest.TestCase):
 
     def test_insured_loss_mean_based(self):
         vf = scientific.VulnerabilityFunction(
-            'PGA',
+            'VF', 'PGA',
             [0.001, 0.2, 0.3, 0.5, 0.7],
             [0.01, 0.1, 0.2, 0.4, 0.8],
             [0.0, 0.0, 0.0, 0.0, 0.0])
@@ -237,7 +237,7 @@ class EventBasedTestCase(unittest.TestCase):
             insured_average_losses)
 
         wf = workflows.ProbabilisticEventBased(
-            'PGA', 'SOMETAXONOMY',
+            'PGA', 'SOME-TAXONOMY',
             vulnerability_functions={self.loss_type: vf},
             risk_investigation_time=50,
             hazard_investigation_time=50,

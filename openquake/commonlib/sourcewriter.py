@@ -235,6 +235,35 @@ def get_distributed_seismicity_source_nodes(source):
     return source_nodes
 
 
+def build_hypo_list_node(hypo_list):
+    """
+    :param hypo_list:
+       an array of shape (N, 3) with columns (alongStrike, downDip, weight)
+    :returns:
+        a hypoList node containing N hypo nodes
+    """
+    hypolist = LiteralNode('hypoList', {})
+    for row in hypo_list:
+        n = LiteralNode(
+            'hypo', dict(alongStrike=row[0], downDip=row[1], weight=row[2]))
+        hypolist.append(n)
+    return hypolist
+
+
+def build_slip_list_node(slip_list):
+    """
+    :param slip_list:
+       an array of shape (N, 2) with columns (slip, weight)
+    :returns:
+        a hypoList node containing N slip nodes
+    """
+    sliplist = LiteralNode('slipList', {})
+    for row in slip_list:
+        sliplist.append(
+            LiteralNode('slip', dict(weight=row[1]), row[0]))
+    return sliplist
+
+
 def get_fault_source_nodes(source):
     """
     Returns list of nodes of attributes common to all fault source classes
@@ -258,6 +287,11 @@ def get_fault_source_nodes(source):
     source_nodes.append(obj_to_node(source.mfd))
     # Parse Rake
     source_nodes.append(LiteralNode("rake", text=source.rake))
+    if len(getattr(source, 'hypo_list', [])):
+        source_nodes.append(build_hypo_list_node(source.hypo_list))
+    if len(getattr(source, 'slip_list', [])):
+        source_nodes.append(build_slip_list_node(source.slip_list))
+
     return source_nodes
 
 

@@ -72,7 +72,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
     def setUp(self):
         self.vulnerability_function1 = scientific.VulnerabilityFunction(
-            'PGA',
+            'VF1', 'PGA',
             [0.01, 0.04, 0.07, 0.1, 0.12, 0.22, 0.37, 0.52],
             [0.001, 0.022, 0.051, 0.08, 0.1, 0.2, 0.405, 0.7],
             [0.0] * 8, "LN")
@@ -83,7 +83,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         ])
 
         self.vulnerability_function2 = scientific.VulnerabilityFunction(
-            'PGA',
+            'VF2', 'PGA',
             [0.0, 0.04, 0.08, 0.12, 0.16, 0.2, 0.24, 0.28, 0.32, 0.36,
              0.4, 0.44, 0.48, 0.53, 0.57, 0.61, 0.65, 0.69, 0.73, 0.77, 0.81,
              0.85, 0.89, 0.93, 0.97, 1.01, 1.05, 1.09, 1.13, 1.17, 1.21, 1.25,
@@ -151,7 +151,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         """
 
         vf = scientific.VulnerabilityFunction(
-            'PGA',
+            'VF', 'PGA',
             [0.10, 0.30, 0.50, 1.00], [0.05, 0.10, 0.15, 0.30],
             [0.30, 0.30, 0.20, 0.20], "LN")
 
@@ -178,7 +178,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         """
 
         vuln_function = scientific.VulnerabilityFunction(
-            'PGA',
+            'VF', 'PGA',
             [0.10, 0.30, 0.50, 1.00], [0.05, 0.10, 0.15, 0.30],
             [0.30, 0.30, 0.20, 0.20], "LN")
 
@@ -204,7 +204,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         loss_ratios = [0.05, 0.10, 0.15, 0.30]
         covs = [0.30, 0.30, 0.20, 0.20]
         vuln_function = scientific.VulnerabilityFunction(
-            'PGA', imls, loss_ratios, covs, "LN")
+            'VF', 'PGA', imls, loss_ratios, covs, "LN")
 
         gmfs = (1.1, 0.9706, 0.9572, 0.4854, 0.8003,
                 0.1419, 0.4218, 0.9157, 1.05, 0.9595)
