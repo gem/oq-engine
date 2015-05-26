@@ -404,12 +404,16 @@ def run_job_lite(cfg_files, log_level, log_file, exports=''):
 def expose_outputs(dstore, job):
     """
     Build a correspondence between the outputs in the datastore and the
-    ones in the database
+    ones in the database.
+
+    :param dstore: a datastore instance
+    :param job: an OqJob instance
     """
     for key in dstore:
         out = models.Output.objects.create_output(
             job, key, output_type='datastore')
         out.ds_key = key
+        out.save()
 
 
 def check_hazard_risk_consistency(haz_job, risk_mode):
