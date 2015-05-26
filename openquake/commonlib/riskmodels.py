@@ -143,6 +143,7 @@ def get_vulnerability_functions(fname):
             vf_dict[imt, taxonomy] = scientific.VulnerabilityFunctionWithPMF(
                 taxonomy, imt, imls, numpy.array(ratios), probs)
         return vf_dict
+    # otherwise, read the old format (NRML 0.4)
     for vset in read_nodes(fname, filter_vset,
                            nodefactory['vulnerabilityModel']):
         imt_str, imls, min_iml, max_iml, imlUnit = ~vset.IML

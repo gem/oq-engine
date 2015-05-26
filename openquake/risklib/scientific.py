@@ -354,8 +354,21 @@ class VulnerabilityFunctionWithPMF(object):
         self.imls = imls
         self.mean_loss_ratios = ratios
         self.probs = probs
-        self.covs = None
         self.distribution = "PM"
+
+    def apply_to(self, ground_motion_values, epsilons=None):
+        """
+        :param ground_motion_values:
+           matrix of floats N x R
+        :param epsilons:
+           not used
+        :returns: a N x R loss matrix
+        """
+        # TODO: implement the right logic here
+        return numpy.array(ground_motion_values)
+
+    def __repr__(self):
+        return '<VulnerabilityFunctionWithPMF(%s, %s)>' % (self.id, self.imt)
 
 
 class FragilityFunctionContinuous(object):
