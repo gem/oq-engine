@@ -22,8 +22,17 @@ import os
 from openquake.engine.db import models
 from openquake.engine.logs import LOG
 from openquake.baselib.general import CallableDict
+from openquake.commonlib.export import export as ds_export
+from openquake.commonlib.datastore import DataStore
 
 export_output = CallableDict()
+
+
+@export_output.add(('datastore', 'csv'), ('datastore', 'xml'))
+def export_from_datastore(key, output, target):
+    fmt = key[1]
+    dstore = DataStore(output.oq_job.id)
+    return ds_export((output.ds_key, fmt), dstore)
 
 
 def export(output_id, target, export_type='xml,geojson,csv'):
