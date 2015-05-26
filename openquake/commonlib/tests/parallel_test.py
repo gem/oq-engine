@@ -1,4 +1,5 @@
 import unittest
+import numpy
 from openquake.commonlib import parallel
 
 
@@ -11,7 +12,7 @@ class TaskManagerTestCase(unittest.TestCase):
 
     def test_apply_reduce(self):
         res = parallel.apply_reduce(
-            get_length, (range(10),), concurrent_tasks=3)
+            get_length, (numpy.arange(10),), concurrent_tasks=3)
         self.assertEqual(res, {'n': 10})
         self.assertEqual(map(len, parallel.apply_reduce._chunks), [4, 4, 2])
 
