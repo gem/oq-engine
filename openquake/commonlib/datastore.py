@@ -38,6 +38,24 @@ from openquake.commonlib.writers import write_csv
 DATADIR = os.environ.get('OQ_DATADIR', os.path.expanduser('~/oqdata'))
 
 
+class ByteCounter(object):
+    """
+    A visitor used to measure the dimensions of a HDF5 dataset or group.
+    Build an instance of it, pass it to the .visititems method, and then
+    read the value of the .nbytes attribute.
+    """
+    def __init__(self, nbytes=0):
+        self.nbytes = nbytes
+
+    def __call__(self, name, dset_or_group):
+        try:
+            value = dset_or_group.value
+        except AttributeError:
+            pass  # .value is only defined for datasets, not groups
+        else:
+            self.nbytes += value.nbytes
+
+
 def get_last_calc_id(datadir=DATADIR):
     """
     Extract the latest calculation ID from the given directory.
@@ -69,7 +87,7 @@ class DataStore(collections.MutableMapping):
     [('example', 'hello world')]
     >>> ds.clear()
 
-    It is also possible to store callables with two arguments (key, datastore).
+    It is also possible to store callables taking in input the datastore.
     They will be automatically invoked when the key is accessed.
 
     It possible to store numpy arrays in HDF5 format, if the library h5py is
@@ -79,7 +97,7 @@ class DataStore(collections.MutableMapping):
     items, the DataStore will return a generator. The items will be ordered
     lexicographically according to their name.
     """
-    def __init__(self, calc_id=None, datadir=DATADIR):
+    def __init__(self, calc_id=None, datadir=DATADIR, parent=None):
         if not os.path.exists(datadir):
             os.makedirs(datadir)
         if calc_id is None:  # use a new datastore
@@ -88,6 +106,7 @@ class DataStore(collections.MutableMapping):
             self.calc_id = get_last_calc_id(datadir)
         else:  # use the given datastore
             self.calc_id = calc_id
+        self.parent = parent  # parent datastore (if any)
         self.calc_dir = os.path.join(datadir, 'calc_%s' % self.calc_id)
         if not os.path.exists(self.calc_dir):
             os.mkdir(self.calc_dir)
@@ -101,7 +120,7 @@ class DataStore(collections.MutableMapping):
         Return the full path name associated to the given key
         """
         if key.startswith('/'):
-            return key[1:]
+            return key
         return os.path.join(self.calc_dir, key + '.pik')
 
     def export_path(self, key, fmt):
@@ -140,7 +159,12 @@ class DataStore(collections.MutableMapping):
                           if not key.startswith('/'))
             return piksize + os.path.getsize(self.hdf5path)
         elif key.startswith('/'):
-            return self.hdf5[key[1:]][:].nbytes
+            dset = self.hdf5[key]
+            if hasattr(dset, 'value'):
+                return dset.value.nbytes
+            bc = ByteCounter()
+            dset.visititems(bc)
+            return bc.nbytes
         return os.path.getsize(self.path(key))
 
     def get(self, key, default):
@@ -154,18 +178,31 @@ class DataStore(collections.MutableMapping):
 
     def __getitem__(self, key):
         if key.startswith('/'):
-            return self.hdf5[key]
-        with open(self.path(key)) as df:
+            try:
+                return self.hdf5[key]
+            except KeyError:
+                if self.parent:
+                    return self.parent.hdf5[key]
+                else:
+                    raise
+        path = self.path(key)
+        if not os.path.exists(path) and self.parent:
+            path = self.parent.path(key)
+        with open(path) as df:
             value = cPickle.load(df)
             if callable(value):
-                return value(key, self)
+                return value(self)
             return value
 
     def __setitem__(self, key, value):
         if key.startswith('/'):
             if not isinstance(value, numpy.ndarray):
                 raise ValueError('not an array: %r' % value)
-            self.hdf5[key] = value
+            try:
+                self.hdf5[key] = value
+            except RuntimeError as exc:
+                raise RuntimeError('Could not save %s: %s in %s' %
+                                   (key, exc, self.hdf5path))
         else:
             with open(self.path(key), 'w') as df:
                 return cPickle.dump(value, df, cPickle.HIGHEST_PROTOCOL)
@@ -221,31 +258,20 @@ def persistent_attribute(key):
     :param key: the name of the attribute to be made persistent
     :returns: a property to be added to a class with a .datastore attribute
     """
-    privatekey = '_' + key
+    privatekey = '_' + key[1:] if key[0] == '/' else '_' + key
 
     def getter(self):
         # Try to get the value from the privatekey attribute (i.e. from
         # the cache of the datastore); if not possible, get the value
         # from the datastore and set the cache; if not possible, get the
-        # value from the precalculator and set the cache. If the value cannot
+        # value from the parent and set the cache. If the value cannot
         # be retrieved, raise an AttributeError.
         try:
-            try:
-                return getattr(self.datastore, privatekey)
-            except AttributeError:
-                value = self.datastore[key]
-                setattr(self.datastore, privatekey, value)
-                return value
-        except (KeyError, IOError):
-            precalc = getattr(self, 'precalc', None)
-            if precalc is not None:
-                try:
-                    return getattr(self.precalc, key)
-                except AttributeError:
-                    value = self.datastore[key]
-                    setattr(self.datastore, privatekey, value)
-            else:
-                raise AttributeError(key)
+            return getattr(self.datastore, privatekey)
+        except AttributeError:
+            value = self.datastore[key]
+            setattr(self.datastore, privatekey, value)
+            return value
 
     def setter(self, value):
         # Update the datastore and the private key

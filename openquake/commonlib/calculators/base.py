@@ -53,13 +53,14 @@ class BaseCalculator(object):
     __metaclass__ = abc.ABCMeta
 
     oqparam = datastore.persistent_attribute('oqparam')
+    sitemesh = datastore.persistent_attribute('/sitemesh')
     sitecol = datastore.persistent_attribute('sitecol')
     rlzs_assoc = datastore.persistent_attribute('rlzs_assoc')
     assets_by_site = datastore.persistent_attribute('assets_by_site')
+    assetcol = datastore.persistent_attribute('/assetcol')
     cost_types = datastore.persistent_attribute('cost_types')
     taxonomies = datastore.persistent_attribute('/taxonomies')
 
-    precalc = None  # to be overridden
     pre_calculator = None  # to be overridden
 
     def __init__(self, oqparam, monitor=DummyMonitor(), calc_id=None,
@@ -70,8 +71,10 @@ class BaseCalculator(object):
         else:
             self.datastore = general.AccumDict()
             self.datastore.hdf5 = {}
-        self.oqparam = oqparam
         self.datastore.export_dir = oqparam.export_dir
+        if 'oqparam' not in self.datastore:  # new datastore
+            self.oqparam = oqparam
+        # else we are doing a precalculation; oqparam has been already stored
         self.persistent = persistent
 
     def run(self, pre_execute=True, **kw):
@@ -84,7 +87,9 @@ class BaseCalculator(object):
             self.pre_execute()
         result = self.execute()
         self.post_execute(result)
-        return self.export()
+        exported = self.export()
+        self.clean_up()
+        return exported
 
     def core_func(*args):
         """
@@ -123,8 +128,7 @@ class BaseCalculator(object):
         individual_curves = self.oqparam.individual_curves
         for fmt in self.oqparam.exports:
             for key in self.datastore:
-                # TODO: improve on this
-                if 'rlz' in key and not individual_curves:
+                if 'rlzs' in key and not individual_curves:
                     continue  # skip individual curves
                 ekey = (key, fmt)
                 try:
@@ -134,6 +138,12 @@ class BaseCalculator(object):
                 except KeyError:
                     logging.info('%s is not exportable in %s', key, fmt)
         return exported
+
+    def clean_up(self):
+        """
+        Close the datastore and possibly other resources
+        """
+        self.datastore.close()
 
 
 class HazardCalculator(BaseCalculator):
@@ -167,7 +177,7 @@ class HazardCalculator(BaseCalculator):
             lon, lat = assets[0].location
             site = siteobjects.get_closest(lon, lat, maximum_distance)
             if site:
-                assets_by_sid += {site.id: assets}
+                assets_by_sid += {site.id: list(assets)}
         if not assets_by_sid:
             raise AssetSiteAssociationError(
                 'Could not associate any site to any assets within the '
@@ -178,27 +188,45 @@ class HazardCalculator(BaseCalculator):
         filteredcol = sitecol.filter(mask)
         return filteredcol, numpy.array(assets_by_site)
 
-    def pre_compute(self):
+    def count_assets(self):
         """
-        If there is a pre_calculator, use it to recompute the input, or simply
-        read it from the datastore if the precalculation ID is given.
+        Count how many assets are taken into consideration by the calculator
         """
-        precalc_id = self.oqparam.hazard_calculation_id
-        precalc = calculators[self.pre_calculator](
-            self.oqparam, self.monitor('precalculator'),
-            precalc_id or self.datastore.calc_id)
-        if precalc_id is None:  # recompute
-            precalc.run()
-        return precalc
+        return sum(len(assets) for assets in self.assets_by_site)
 
     def pre_execute(self):
         """
-        Read the site collection and the sources.
+        Check if there is a pre_calculator or a previous calculation ID.
+        If yes, read the inputs by invoking the precalculator or by retrieving
+        the previous calculation; if not, read the inputs directly.
         """
         if self.pre_calculator is not None:
-            self.precalc = self.pre_compute()
-            return
+            # the parameter hazard_calculation_id is only meaningful if
+            # there is a precalculator
+            precalc_id = self.oqparam.hazard_calculation_id
+            if precalc_id is None:  # recompute everything
+                precalc = calculators[self.pre_calculator](
+                    self.oqparam, self.monitor('precalculator'),
+                    self.datastore.calc_id)
+                precalc.run()
+                if 'composite_source_model' in vars(precalc):
+                    self.csm = precalc.composite_source_model
+            else:  # read previously computed data
+                self.datastore.parent = datastore.DataStore(precalc_id)
+            if self.oqparam.hazard_investigation_time is None:
+                self.oqparam.hazard_investigation_time = (
+                    self.datastore['oqparam'].investigation_time)
+            if '/taxonomies' not in self.datastore:
+                self.read_exposure_sitecol()
+        else:  # we are in a basic calculator
+            self.read_exposure_sitecol()
+            self.read_sources()
 
+    def read_exposure_sitecol(self):
+        """
+        Read the exposure (if any) and then the site collection, possibly
+        extracted from the exposure.
+        """
         if 'exposure' in self.oqparam.inputs:
             logging.info('Reading the exposure')
             with self.monitor('reading exposure', autoflush=True):
@@ -208,15 +236,14 @@ class HazardCalculator(BaseCalculator):
                 self.cost_types = self.exposure.cost_types
                 self.taxonomies = numpy.array(
                     sorted(self.exposure.taxonomies), '|S100')
-
-            num_assets = sum(len(assets) for assets in self.assets_by_site)
+            num_assets = self.count_assets()
             mesh = readinput.get_mesh(self.oqparam)
             if mesh is not None:
                 sites = readinput.get_site_collection(self.oqparam, mesh)
                 with self.monitor('assoc_assets_sites'):
                     self.sitecol, self.assets_by_site = \
                         self.assoc_assets_sites(sites)
-                ok_assets = sum(len(assets) for assets in self.assets_by_site)
+                ok_assets = self.count_assets()
                 num_sites = len(self.sitecol)
                 logging.warn('Associated %d assets to %d sites, %d discarded',
                              ok_assets, num_sites, num_assets - ok_assets)
@@ -225,6 +252,22 @@ class HazardCalculator(BaseCalculator):
             logging.info('Reading the site collection')
             with self.monitor('reading site collection', autoflush=True):
                 self.sitecol = readinput.get_site_collection(self.oqparam)
+
+        # save mesh and asset collection
+        if '/sitemesh' not in self.datastore:
+            mesh_dt = numpy.dtype([('lon', float), ('lat', float)])
+            self.sitemesh = numpy.array(
+                zip(self.sitecol.lons, self.sitecol.lats), mesh_dt)
+            if hasattr(self, 'assets_by_site'):
+                self.assetcol = riskinput.build_asset_collection(
+                    self.assets_by_site)
+
+    def read_sources(self):
+        """
+        Read the composite source model (if any).
+        This method must be called after read_exposure_sitecol, to be able
+        to filter to sources according to the site collection.
+        """
         if 'source' in self.oqparam.inputs:
             logging.info('Reading the composite source models')
             with self.monitor(
@@ -239,14 +282,6 @@ class HazardCalculator(BaseCalculator):
                 self.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
         else:  # calculators without sources, i.e. scenario
             self.rlzs_assoc = readinput.get_rlzs_assoc(self.oqparam)
-
-        # save mesh and asset collection
-        mesh_dt = numpy.dtype([('lon', float), ('lat', float)])
-        mesh = numpy.array(zip(self.sitecol.lons, self.sitecol.lats), mesh_dt)
-        self.datastore['/sitemesh'] = mesh
-        if hasattr(self, 'assets_by_site'):
-            self.datastore['/assetcol'] = riskinput.build_asset_collection(
-                self.assets_by_site)
 
 
 class RiskCalculator(HazardCalculator):
@@ -326,9 +361,8 @@ class RiskCalculator(HazardCalculator):
         """
         HazardCalculator.pre_execute(self)
         self.riskmodel = readinput.get_risk_model(self.oqparam)
-        # NB: precalc is not None for all risk calculators
-        if hasattr(self.precalc, 'exposure'):
-            missing = self.precalc.exposure.taxonomies - set(
+        if hasattr(self, 'exposure'):
+            missing = self.exposure.taxonomies - set(
                 self.riskmodel.get_taxonomies())
             if missing:
                 raise RuntimeError('The exposure contains the taxonomies %s '
@@ -342,6 +376,9 @@ class RiskCalculator(HazardCalculator):
         """
         with self.monitor('execute risk', autoflush=True) as monitor:
             monitor.oqparam = self.oqparam
+            if self.pre_calculator == 'event_based_rupture':
+                monitor.assets_by_site = self.assets_by_site
+                monitor.num_assets = self.count_assets()
             res = apply_reduce(
                 self.core_func.__func__,
                 (self.riskinputs, self.riskmodel, self.rlzs_assoc, monitor),
@@ -376,7 +413,7 @@ def get_gmfs(calc):
     else:  # from rupture
         sitecol = calc.sitecol
         gmfs = {k: expand(gmf, sitecol)
-                for k, gmf in calc.precalc.gmf_by_trt_gsim.iteritems()}
+                for k, gmf in calc.gmf_by_trt_gsim.iteritems()}
     return gmfs
 
 
@@ -397,7 +434,7 @@ def read_gmfs_from_csv(calc):
     for imt in calc.oqparam.imtls:
         gmfs_by_imt[imt] = gmfs_by_imt[imt][calc.sitecol.indices]
 
-    num_assets = sum(len(assets) for assets in calc.assets_by_site)
+    num_assets = calc.count_assets()
     num_sites = len(calc.sitecol)
     logging.info('Associated %d assets to %d sites', num_assets, num_sites)
 

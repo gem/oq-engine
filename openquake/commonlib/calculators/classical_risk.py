@@ -74,12 +74,12 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         if hazard_from_csv:
             self.sitecol, hcurves_by_imt = readinput.get_sitecol_hcurves(
                 self.oqparam)
-            self.sitecol, self.precalc.assets_by_site = \
+            self.sitecol, self.assets_by_site = \
                 self.assoc_assets_sites(self.sitecol)
 
         logging.info('Preparing the risk input')
         self.riskinputs = self.build_riskinputs(
-            self.precalc.curves_by_trt_gsim)
+            self.datastore['curves_by_trt_gsim'])
 
     def post_execute(self, result):
         """

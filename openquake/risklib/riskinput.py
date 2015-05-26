@@ -145,12 +145,11 @@ class RiskModel(collections.Mapping):
         return RiskInput(imt_taxonomies, hazards_by_site,
                          assets_by_site, eps_dict)
 
-    def build_inputs_from_ruptures(self, sitecol, assets_by_site, all_ruptures,
+    def build_inputs_from_ruptures(self, sitecol, all_ruptures,
                                    gsims_by_col, trunc_level, correl_model,
                                    eps_dict, hint):
         """
         :param sitecol: a SiteCollection instance
-        :param assets_by_site: an array of assets per each site
         :param all_ruptures: the complete list of SESRupture instances
         :param gsims_by_col: a dictionary of GSIM instances
         :param trunc_level: the truncation level (or None)
@@ -168,7 +167,7 @@ class RiskModel(collections.Mapping):
             gsims = gsims_by_col[ses_ruptures[0].col_id]
             edic = {asset: eps[indices] for asset, eps in eps_dict.iteritems()}
             yield RiskInputFromRuptures(
-                imt_taxonomies, sitecol, assets_by_site, ses_ruptures,
+                imt_taxonomies, sitecol, ses_ruptures,
                 gsims, trunc_level, correl_model, edic)
 
     def gen_outputs(self, riskinputs, rlzs_assoc, monitor):
@@ -184,9 +183,13 @@ class RiskModel(collections.Mapping):
         mon_hazard = monitor('getting hazard')
         mon_risk = monitor('computing individual risk')
         for riskinput in riskinputs:
+            try:
+                assets_by_site = riskinput.assets_by_site
+            except AttributeError:  # for event_based_risk
+                assets_by_site = monitor.assets_by_site
             with mon_hazard:
                 # get assets, hazards, epsilons
-                a, h, e = riskinput.get_all(rlzs_assoc)
+                a, h, e = riskinput.get_all(rlzs_assoc, assets_by_site)
             with mon_risk:
                 # compute the outputs by using the worklow
                 for imt, taxonomies in riskinput.imt_taxonomies:
@@ -241,13 +244,15 @@ class RiskInput(object):
         """Return a list of pairs (imt, taxonomies) with a single element"""
         return [(self.imt, self.taxonomies)]
 
-    def get_all(self, rlzs_assoc):
+    def get_all(self, rlzs_assoc, assets_by_site=None):
         """
         :returns:
             lists of assets, hazards and epsilons
         """
         assets, hazards, epsilons = [], [], []
-        for hazard, assets_ in zip(self.hazard_by_site, self.assets_by_site):
+        if assets_by_site is None:
+            assets_by_site = self.assets_by_site
+        for hazard, assets_ in zip(self.hazard_by_site, assets_by_site):
             for asset in assets_:
                 assets.append(asset)
                 hazards.append({self.imt: rlzs_assoc.combine(hazard)})
@@ -317,11 +322,10 @@ class RiskInputFromRuptures(object):
     :param correl_model: correlation model for the GSIMs
     :params eps_dict: a dictionary asset_id -> epsilons
     """
-    def __init__(self, imt_taxonomies, sitecol, assets_by_site, ses_ruptures,
+    def __init__(self, imt_taxonomies, sitecol, ses_ruptures,
                  gsims, trunc_level, correl_model, eps_dict):
         self.imt_taxonomies = imt_taxonomies
         self.sitecol = sitecol
-        self.assets_by_site = assets_by_site
         self.ses_ruptures = numpy.array(ses_ruptures)
         self.col_id = ses_ruptures[0].col_id
         self.gsims = gsims
@@ -351,7 +355,7 @@ class RiskInputFromRuptures(object):
             self.ses_ruptures, self.sitecol, self.imts,
             self.gsims, self.trunc_level, self.correl_model)
         gmf_dt = gsim_imt_dt(self.gsims, self.imts)
-        n = len(self.sitecol)
+        n = len(self.sitecol.complete)
         gmfs = numpy.zeros((len(gmf_by_tag), n), gmf_dt)
         for r, tag in enumerate(sorted(gmf_by_tag)):
             gmfa = gmf_by_tag[tag]
@@ -360,7 +364,7 @@ class RiskInputFromRuptures(object):
             gmfs[r] = expanded_gmf
         return gmfs  # array R x N
 
-    def get_all(self, rlzs_assoc):
+    def get_all(self, rlzs_assoc, assets_by_site):
         """
         :returns:
             lists of assets, hazards and epsilons
@@ -369,7 +373,7 @@ class RiskInputFromRuptures(object):
         gmfs = self.compute_expand_gmfs()
         gsims = map(str, self.gsims)
         trt_id = rlzs_assoc.csm_info.get_trt_id(self.col_id)
-        for assets_, hazard in zip(self.assets_by_site, gmfs.T):
+        for assets_, hazard in zip(assets_by_site, gmfs.T):
             haz_by_imt_rlz = {imt: {} for imt in self.imts}
             for gsim in gsims:
                 for imt in self.imts:
