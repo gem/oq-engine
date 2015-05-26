@@ -391,13 +391,25 @@ def run_job_lite(cfg_files, log_level, log_file, exports=''):
         job.ds_calc_dir = datastore.DataStore(job.id).calc_dir
         job.save()
         t0 = time.time()
-        run_calc(job, log_level, log_file, exports, lite=True)
+        calc = run_calc(job, log_level, log_file, exports, lite=True)
+        expose_outputs(calc.datastore, job)
         duration = time.time() - t0
         if job.status == 'complete':
             print_results(job.id, duration, list_outputs)
         else:
             sys.exit('Calculation %s failed' % job.id)
     return job
+
+
+def expose_outputs(dstore, job):
+    """
+    Build a correspondence between the outputs in the datastore and the
+    ones in the database
+    """
+    for key in dstore:
+        out = models.Output.objects.create_output(
+            job, key, output_type='datastore')
+        out.ds_key = key
 
 
 def check_hazard_risk_consistency(haz_job, risk_mode):
