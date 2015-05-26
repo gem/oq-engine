@@ -4,18 +4,25 @@ from django.conf import settings
 from openquake.engine import __version__ as oqversion
 
 
-def getusername(request):
+def get_user_data(request):
     """
-    Return the real username if authentication support is enabled and user is
+    Returns the real username if authentication support is enabled and user is
     authenticated, otherwise it returns "platform" as user for backward
     compatibility.
+    Returns also if the user is 'superuser' or not.
     """
 
-    user_name = (request.user.username if hasattr(request, 'user') and
-                 request.user.is_authenticated() else settings.DEFAULT_USER if
-                 hasattr(settings, 'DEFAULT_USER') else getpass.getuser())
+    is_super = False
+    if hasattr(request, 'user'):
+        if request.user.is_authenticated():
+            name = request.user.username
+        if request.user.is_superuser:
+            is_super = True
+    else:
+        name = (settings.DEFAULT_USER if
+                hasattr(settings, 'DEFAULT_USER') else getpass.getuser())
 
-    return user_name
+    return {'name': name, 'is_super': is_super}
 
 
 def oq_server_context_processor(request):
