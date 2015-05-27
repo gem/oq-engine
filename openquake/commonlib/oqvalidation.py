@@ -125,12 +125,16 @@ class OqParam(valid.ParamSet):
             self.risk_investigation_time = self.investigation_time
         elif not self.investigation_time and self.hazard_investigation_time:
             self.investigation_time = self.hazard_investigation_time
-        if 'intensity_measure_types' in names_vals:
-            self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
-            delattr(self, 'intensity_measure_types')
-        elif 'intensity_measure_types_and_levels' in names_vals:
+        if ('intensity_measure_types_and_levels' in names_vals and
+                'intensity_measure_types' in names_vals):
+            logging.warn('Ignoring intensity_measure_types since '
+                         'intensity_measure_types_and_levels is set')
+        if 'intensity_measure_types_and_levels' in names_vals:
             self.hazard_imtls = self.intensity_measure_types_and_levels
             delattr(self, 'intensity_measure_types_and_levels')
+        elif 'intensity_measure_types' in names_vals:
+            self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
+            delattr(self, 'intensity_measure_types')
         if vulnerability_files(self.inputs):
             self.risk_imtls = get_imtls_from_vulnerabilities(self.inputs)
         elif fragility_files(self.inputs):
