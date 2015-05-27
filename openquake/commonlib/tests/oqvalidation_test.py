@@ -82,6 +82,15 @@ class OqParamTestCase(unittest.TestCase):
                 hazard_calculation_id=None, hazard_output_id=None,
                 sites='0.1 0.2', maximum_distance=0).validate()
 
+    def test_imts_and_imtls(self):
+        oq = OqParam(
+            calculation_mode='event_based', inputs={},
+            intensity_measure_types_and_levels="{'PGA': [0.1, 0.2]}",
+            intensity_measure_types='PGV', sites='0.1 0.2',
+            maximum_distance=400)
+        oq.validate()
+        self.assertEqual(oq.imtls.keys(), ['PGA'])
+
     def test_missing_hazard_curves_from_gmfs(self):
         with self.assertRaises(ValueError) as ctx:
             OqParam(

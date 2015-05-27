@@ -274,14 +274,15 @@ class TaskManager(object):
         :param weight: function to extract the weight of an item in arg0
         :param key: function to extract the kind of an item in arg0
         """
-        arg0 = task_args[0]
+        arg0 = task_args[0]  # this is assumed to be a sequence
+        num_items = len(arg0)
         args = task_args[1:]
         task_func = getattr(task, 'task_func', task)
         if acc is None:
             acc = AccumDict()
-        if not arg0:
+        if num_items == 0:  # nothing to do
             return acc
-        elif len(arg0) == 1:
+        elif num_items == 1:  # apply the function in the master process
             return agg(acc, task_func(arg0, *args))
         chunks = list(split_in_blocks(
             arg0, concurrent_tasks or 1, weight, key))
