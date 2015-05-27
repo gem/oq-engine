@@ -218,100 +218,100 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1,
     return block_splitter(items, math.ceil(total_weight / hint), weight, key)
 
 
-# the implementation here is unbelievably ugly; it is a remnant of the
-# past and soon or later will be removed (MS)
-def deep_eq(a, b, decimal=7, exclude=None):
-    """Deep compare two objects for equality by traversing __dict__ and
-    __slots__.
-
-    Caution: This function will exhaust generators.
-
-    :param decimal:
-        Desired precision (digits after the decimal point) for numerical
-        comparisons.
-
-    :param exclude:
-        A list of attributes that will be excluded when traversing objects
-
-    :returns:
-        Return `True` or `False` (to indicate if objects are equal) and a `str`
-        message. If the two objects are equal, the message is empty. If the two
-        objects are not equal, the message indicates which part of the
-        comparison failed.
+def split_in_blocks_2(long_sequence, short_sequence, hint,
+                      weight=lambda item: 1,
+                      key=lambda item: 'Unspecified'):
     """
-    exclude = exclude or []
+    Split two sequences in blocks. The first sequence has to be longer
+    than the second. Yield pairs (block_from_seq_1, block_from_seq_2).
 
-    try:
-        _deep_eq(a, b, decimal=decimal, exclude=exclude)
-    except AssertionError, err:
-        return False, err.message
-    return True, ''
+    :param long_sequence: a finite sequence of items of size N
+    :param short_sequence: a finite sequence of items of size n <=N
+    :param hint: an integer suggesting the number of blocks to generate
+    :param weight: a function returning the weigth of a given item
+    :param key: a function returning the key of a given item
 
+    A few examples will explain how it works:
 
-def _deep_eq(a, b, decimal, exclude=None):
-    """Do the actual deep comparison. If the two items up for comparison are
-    not equal, a :exception:`AssertionError` is raised (to
-    :function:`deep_eq`).
+    >>> for b1, b2 in split_in_blocks_2(range(10), 'ABC', 3):
+    ...      print b1, b2
+    [0, 1, 2, 3] ['A']
+    [4, 5, 6, 7] ['B']
+    [8, 9] ['C']
+
+    >>> for b1, b2 in split_in_blocks_2(range(10), 'ABC', 2):
+    ...      print b1, b2
+    [0, 1, 2, 3, 4] ['A', 'B']
+    [5, 6, 7, 8, 9] ['C']
+
+    If the second sequence is so short that it cannot be splitted in enough
+    blocks (i.e. n < hint), then its blocks will be repeated to produce a
+    number of blocks equal to the number of blocks of the first sequence:
+
+    >>> for b1, b2 in split_in_blocks_2(range(10), 'ABC', 4):
+    ...      print b1, b2
+    [0, 1, 2] ['A']
+    [3, 4, 5] ['B']
+    [6, 7, 8] ['C']
+    [9] ['A']
     """
+    N, n = len(long_sequence), len(short_sequence)
+    assert N >= n
+    long_blocks = split_in_blocks(long_sequence, hint, weight, key)
+    short_blocks = split_in_blocks(short_sequence, hint)
+    for long_, short in zip(long_blocks, itertools.cycle(short_blocks)):
+        yield list(long_), list(short)
 
-    exclude = exclude or []
 
-    def _test_dict(a, b):
-        """Compare `dict` types recursively."""
-        assert len(a) == len(b), (
-            "Dicts %(a)s and %(b)s do not have the same length."
-            " Actual lengths: %(len_a)s and %(len_b)s") % dict(
-            a=a, b=b, len_a=len(a), len_b=len(b))
+def assert_close_seq(seq1, seq2, rtol, atol, context=None):
+    """
+    Compare two sequences of the same length.
 
-        for key in a:
-            if not key in exclude:
-                _deep_eq(a[key], b[key], decimal)
+    :param seq1: a sequence
+    :param seq2: another sequence
+    :param rtol: relative tolerance
+    :param atol: absolute tolerance
+    """
+    assert len(seq1) == len(seq2), 'Lists of different lenghts: %d != %d' % (
+        len(seq1), len(seq2))
+    for x, y in zip(seq1, seq2):
+        assert_close(x, y, rtol, atol, context)
 
-    def _test_seq(a, b):
-        """Compare `list` or `tuple` types recursively."""
-        assert len(a) == len(b), (
-            "Sequences %(a)s and %(b)s do not have the same length."
-            " Actual lengths: %(len_a)s and %(len_b)s") % \
-            dict(a=a, b=b, len_a=len(a), len_b=len(b))
 
-        for i, item in enumerate(a):
-            _deep_eq(item, b[i], decimal)
+def assert_close(a, b, rtol=1e-07, atol=0, context=None):
+    """
+    Compare for equality up to a given precision two composite objects
+    which may contain floats. NB: if the objects are or contain generators,
+    they are exhausted.
 
-    # lists or tuples
-    if isinstance(a, (list, tuple)):
-        _test_seq(a, b)
-    # dicts
-    elif isinstance(a, dict):
-        _test_dict(a, b)
-    # objects with a __dict__
-    elif hasattr(a, '__dict__'):
-        assert a.__class__ == b.__class__, (
-            "%s and %s are different classes") % (a.__class__, b.__class__)
-        _test_dict(a.__dict__, b.__dict__)
-    elif isinstance(a, numpy.ndarray):
-        assert numpy.array_equal(a, b), '%s and %s are different' % (a, b)
-    # iterables (not strings)
-    elif isinstance(a, collections.Iterable) and not isinstance(a, str):
-        # If there's a generator or another type of iterable, treat it as a
-        # `list`. NOTE: Generators will be exhausted if you do this.
-        _test_seq(list(a), list(b))
-    # objects with __slots__
-    elif hasattr(a, '__slots__'):
-        assert a.__class__ == b.__class__, (
-            "%s and %s are different classes") % (a.__class__, b.__class__)
-        assert a.__slots__ == b.__slots__, (
-            "slots %s and %s are not the same") % (a.__slots__, b.__slots__)
-        for slot in a.__slots__:
-            if slot not in exclude:
-                _deep_eq(getattr(a, slot), getattr(b, slot), decimal)
-    else:
-        # Objects must be primitives
-
-        # Are they numbers?
-        if isinstance(a, (int, long, float, complex)):
-            numpy.testing.assert_almost_equal(a, b, decimal=decimal)
-        else:
-            assert a == b, "%s != %s" % (a, b)
+    :param a: an object
+    :param b: another object
+    :param rtol: relative tolerance
+    :param atol: absolute tolerance
+    """
+    if isinstance(a, float) or isinstance(a, numpy.ndarray) and a.shape:
+        # shortcut
+        numpy.testing.assert_allclose(a, b, rtol, atol)
+        return
+    if a == b:  # another shortcut
+        return
+    if hasattr(a, '__slots__'):  # record-like objects
+        assert_close_seq(a.__slots__, b.__slots__, rtol, atol, a)
+        for x, y in zip(a.__slots__, b.__slots__):
+            assert_close(getattr(a, x), getattr(b, y), rtol, atol, x)
+        return
+    if isinstance(a, collections.Mapping):  # dict-like objects
+        assert_close_seq(a.keys(), b.keys(), rtol, atol, a)
+        assert_close_seq(a.values(), b.values(), rtol, atol, a)
+        return
+    if hasattr(a, '__iter__'):  # iterable objects
+        assert_close_seq(list(a), list(b), rtol, atol, a)
+        return
+    if hasattr(a, '__dict__'):  # objects with an attribute dictionary
+        assert_close(vars(a), vars(b), context=a)
+        return
+    ctx = '' if context is None else 'in context ' + repr(context)
+    raise AssertionError('%r != %r %s' % (a, b, ctx))
 
 
 def writetmp(content=None, dir=None, prefix="tmp", suffix="tmp"):
@@ -438,15 +438,35 @@ def search_module(module, syspath=sys.path):
 
 
 class CallableDict(collections.OrderedDict):
+    r"""
+    A callable object built on top of a dictionary of functions, used
+    as a smart registry or as a poor man generic function dispatching
+    on the first argument. It is typically used to implement converters.
+    Here is an example:
+
+    >>> format_attrs = CallableDict()  # dict of functions (fmt, obj) -> str
+
+    >>> @format_attrs.add('csv')  # implementation for csv
+    ... def format_attrs_csv(fmt, obj):
+    ...     items = sorted(vars(obj).iteritems())
+    ...     return '\n'.join('%s,%s' % item for item in items)
+
+    >>> @format_attrs.add('json')  # implementation for json
+    ... def format_attrs_json(fmt, obj):
+    ...     return json.dumps(vars(obj))
+
+    `format_attrs(fmt, obj)` calls the correct underlying function
+    depending on the `fmt` key. If the format is unknown a `KeyError` is
+    raised. It is also possible to set a `keymissing` function to specify
+    what to return if the key is missing.
+
+    For a more practical example see the implementation of the exporters
+    in :module:`openquake.commonlib.export`
     """
-    A callable object built on top of a dictionary of functions,
-    dispatching on the first argument according to the given keyfunc.
-    The default keyfunc is the identity function, i.e. the first
-    argument is assumed to be the key.
-    """
-    def __init__(self, keyfunc=lambda key: key):
+    def __init__(self, keyfunc=lambda key: key, keymissing=None):
         super(CallableDict, self).__init__()
         self.keyfunc = keyfunc
+        self.keymissing = keymissing
 
     def add(self, *keys):
         """
@@ -461,10 +481,12 @@ class CallableDict(collections.OrderedDict):
 
     def __call__(self, obj, *args, **kw):
         key = self.keyfunc(obj)
-        if key not in self:
-            raise KeyError(
-                'There is nothing registered for %s' % repr(key))
         return self[key](obj, *args, **kw)
+
+    def __missing__(self, key):
+        if callable(self.keymissing):
+            return self.keymissing(key)
+        raise KeyError(key)
 
 
 class AccumDict(dict):
@@ -571,192 +593,6 @@ class AccumDict(dict):
                                for key, value in self.iteritems()})
 
 
-class ArrayDict(collections.Mapping):
-    """
-    A class wrapping an array-valued dictionary. ArrayDict instances
-    work as fixed-lenght mappings, but they also get some methods from
-    numpy arrays. In particular, the arithmetic operators are supported.
-    Notice that the arrays may have different lenghts for different keys.
-    You should use this class when you have fixed keys and you want to
-    store the data in a compact way.
-    Here are a few examples of usage:
-
-    >>> z = ArrayDict.zeros(dict(x=1, y=2), extradims=(5,))
-    >>> z
-    <ArrayDict x:1, y:2>
-    >>> z.shape
-    (3, 5)
-    >>> a = ArrayDict(dict(x=[0], y=[2, 3]))
-    >>> a.nbytes
-    24
-    >>> a['x'] = [1]
-    >>> a['z'] = [2]
-    Traceback (most recent call last):
-     ...
-    KeyError: 'z'
-    >>> a.from_array(numpy.array([1, 2, 3, 4]))
-    Traceback (most recent call last):
-     ...
-    ValueError: Wrong array size: expected 3, got 4
-
-    >>> b = ArrayDict(dict(x=[3], y=[4, 5]))
-    >>> print a
-    [1 2 3]
-    >>> print b
-    [3 4 5]
-    >>> print a + b
-    [4 6 8]
-    >>> print a - b
-    [-2 -2 -2]
-    >>> print a * b
-    [ 3  8 15]
-    >>> print a / b
-    [ 0.33333333  0.5         0.6       ]
-    >>> print -a
-    [-1 -2 -3]
-    >>> print a ** 2
-    [1 4 9]
-    >>> print a.apply(numpy.sqrt)
-    [ 1.          1.41421356  1.73205081]
-    """
-    @classmethod
-    def zeros(cls, sizedic, extradims=()):
-        """
-        :sizedic: a dictionary key -> size of array slice
-        :extradims: an optional tuple of integers with extra dimensions
-        :returns: an ArrayDict full of zeros
-        """
-        self = cls.__new__(cls)
-        self.slicedic = {}
-        start = 0
-        for k in sorted(sizedic):
-            self.slicedic[k] = slice(start, start + sizedic[k])
-            start += sizedic[k]
-        self.array = numpy.zeros((start,) + extradims)
-        return self
-
-    def __init__(self, dic):
-        self.array = numpy.concatenate([dic[k] for k in sorted(dic)])
-        self.slicedic = {}
-        start = 0
-        for k in sorted(dic):
-            size = len(dic[k])
-            self.slicedic[k] = slice(start, start + size)
-            start += size
-
-    @property
-    def shape(self):
-        """The shape of the underlying array"""
-        return self.array.shape
-
-    @property
-    def size(self):
-        """The size (number of elements) of the underlying array"""
-        return self.array.size
-
-    @property
-    def nbytes(self):
-        """The size in bytes of the underlying array"""
-        return self.array.nbytes
-
-    def copy(self):
-        """
-        Return a copy of the DictArray.
-
-        >>> z = ArrayDict.zeros(dict(x=1))
-        >>> w = z.copy()  # make a copy
-        >>> w['x'] = [2]  # change the copy
-        >>> print w - z   # w and z are different
-        [ 2.]
-        """
-        return self.from_array(numpy.array(self.array))
-
-    def mean(self):
-        """The mean of the underlying array"""
-        return self.array.mean()
-
-    def from_array(self, array):
-        """
-        :param array: an array with the right length
-        :returns: a new ArrayDict with the same .slicedic as self
-        """
-        n = sum(len(v) for v in self.itervalues())
-        if len(array) != n:
-            raise ValueError('Wrong array size: expected %d, got %d' %
-                             (n, len(array)))
-        new = self.__new__(self.__class__)
-        new.array = array
-        new.slicedic = self.slicedic
-        return new
-
-    def __getitem__(self, key):
-        if isinstance(key, str):
-            return self.array[self.slicedic[key]]
-        else:
-            return self.array[key]
-
-    def __setitem__(self, key, value):
-        if isinstance(key, str):
-            self.array[self.slicedic[key]] = value
-        else:
-            self.array[key] = value
-
-    def __iter__(self):
-        for k in sorted(self.slicedic):
-            yield k
-
-    def __len__(self):
-        return len(self.array)
-
-    def __add__(self, other):
-        return self.from_array(self.array + getattr(other, 'array', other))
-
-    __radd__ = __add__
-
-    def __sub__(self, other):
-        return self.from_array(self.array - getattr(other, 'array', other))
-
-    def __rsub__(self, other):
-        return - self.__sub__(other)
-
-    def __neg__(self):
-        return self.from_array(-self.array)
-
-    def __mul__(self, other):
-        return self.from_array(self.array * getattr(other, 'array', other))
-
-    __rmul__ = __mul__
-
-    def __truediv__(self, other):
-        return self.from_array(self.array / getattr(other, 'array', other))
-
-    def __pow__(self, other):
-        return self.from_array(self.array.__pow__(other))
-
-    def __gt__(self, other):
-        return self.array > other
-
-    def __lt__(self, other):
-        return self.array < other
-
-    def __ge__(self, other):
-        return self.array >= other
-
-    def __le__(self, other):
-        return self.array <= other
-
-    def apply(self, func, *extras):
-        return self.from_array(func(self.array, *extras))
-
-    def __repr__(self):
-        sizes = ['%s:%s' % (k, s.stop - s.start)
-                 for k, s in sorted(self.slicedic.iteritems())]
-        return '<%s %s>' % (self.__class__.__name__, ', '.join(sizes))
-
-    def __str__(self):
-        return str(self.array)
-
-
 def groupby(objects, key, reducegroup=list):
     """
     :param objects: a sequence of objects with a key value
@@ -771,3 +607,17 @@ def groupby(objects, key, reducegroup=list):
     kgroups = itertools.groupby(sorted(objects, key=key), key)
     return collections.OrderedDict((k, reducegroup(group))
                                    for k, group in kgroups)
+
+
+def humansize(nbytes, suffixes=('B', 'KB', 'MB', 'GB', 'TB', 'PB')):
+    """
+    Return file size in a human-friendly format
+    """
+    if nbytes == 0:
+        return '0 B'
+    i = 0
+    while nbytes >= 1024 and i < len(suffixes) - 1:
+        nbytes /= 1024.
+        i += 1
+    f = ('%.2f' % nbytes).rstrip('0').rstrip('.')
+    return '%s %s' % (f, suffixes[i])
