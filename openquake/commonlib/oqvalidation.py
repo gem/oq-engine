@@ -140,11 +140,6 @@ class OqParam(valid.ParamSet):
                 fname, self.continuous_fragility_discretization)
             self.risk_imtls = {fset.imt: fset.imls
                                for fset in ffs.itervalues()}
-        if (self.hazard_imtls and self.risk_imtls and
-                set(self.hazard_imtls) != set(self.risk_imtls)):
-            raise ValueError(
-                'hazard_imts=%s but risk_imts=%s!' %
-                (sorted(self.hazard_imtls), sorted(self.risk_imtls)))
 
     @property
     def tses(self):
@@ -247,8 +242,7 @@ class OqParam(valid.ParamSet):
         if fragility_files(self.inputs) or vulnerability_files(self.inputs):
             return (self.intensity_measure_types is None
                     and self.intensity_measure_types_and_levels is None)
-        elif not hasattr(self, 'hazard_imtls') and not hasattr(
-                self, 'risk_imtls'):
+        elif not self.hazard_imtls and not self.risk_imtls:
             return False
         return True
 
