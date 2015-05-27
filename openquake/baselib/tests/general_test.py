@@ -25,7 +25,8 @@ from operator import attrgetter
 from collections import namedtuple
 
 from openquake.baselib.general import (
-    block_splitter, split_in_blocks, assert_independent, search_module)
+    block_splitter, split_in_blocks, assert_independent, search_module,
+    assert_close)
 
 
 class BlockSplitterTestCase(unittest.TestCase):
@@ -87,17 +88,17 @@ class BlockSplitterTestCase(unittest.TestCase):
         self.assertEqual(expected, actual)
 
     def test_split_with_weight(self):
-        weigths = dict([('a', 11), ('b', 10), ('c', 100), ('d', 15), ('e', 20),
+        weights = dict([('a', 11), ('b', 10), ('c', 100), ('d', 15), ('e', 20),
                         ('f', 5), ('g', 30), ('h', 17), ('i', 25)])
-        blocks = list(block_splitter('abcdefghi', 50, weigths.get))
+        blocks = list(block_splitter('abcdefghi', 50, weights.get))
         self.assertEqual(repr(blocks), "[<WeightedSequence ['a', 'b'], weight=21>, <WeightedSequence ['c'], weight=100>, <WeightedSequence ['d', 'e', 'f'], weight=40>, <WeightedSequence ['g', 'h'], weight=47>, <WeightedSequence ['i'], weight=25>]")
 
     def test_split_in_blocks(self):
-        weigths = dict([('a', 11), ('b', 10), ('c', 100), ('d', 15), ('e', 20),
+        weights = dict([('a', 11), ('b', 10), ('c', 100), ('d', 15), ('e', 20),
                         ('f', 5), ('g', 30), ('h', 17), ('i', 25)])
-        blocks = list(split_in_blocks('abcdefghi', 1, weigths.get))
+        blocks = list(split_in_blocks('abcdefghi', 1, weights.get))
         self.assertEqual(len(blocks), 1)
-        blocks = list(split_in_blocks('abcdefghi', 2, weigths.get))
+        blocks = list(split_in_blocks('abcdefghi', 2, weights.get))
         self.assertEqual(len(blocks), 3)
         self.assertEqual(repr(blocks), "[<WeightedSequence ['a', 'b'], weight=21>, <WeightedSequence ['c', 'd'], weight=115>, <WeightedSequence ['e', 'f', 'g', 'h', 'i'], weight=97>]")
 
@@ -141,3 +142,31 @@ class SearchModuleTestCase(unittest.TestCase):
     def test_existing_module_in_package(self):
         # this test may fail if oq-risklib is not on top of your PYTHONPATH
         self.assertIsNotNone(search_module('openquake.baselib.general'))
+
+
+class AssertCloseTestCase(unittest.TestCase):
+    def test_different(self):
+        a = [1, 2]
+        b = [1, 2, 3]
+        with self.assertRaises(AssertionError):  # different lenghts
+            assert_close(a, b)
+
+        with self.assertRaises(AssertionError):  # different floats
+            assert_close([1, 2, 3.1], b)
+
+        with self.assertRaises(AssertionError):  # None and float
+            assert_close([1, 2, None], b)
+
+        with self.assertRaises(AssertionError):  # nested dicts
+            gmf1 = {'a': {'PGA': [0.1, 0.2], 'SA(0.1)': [0.3, 0.4]}}
+            gmf2 = {'a': {'PGA': [0.1, 0.2], 'SA(0.1)': [0.3, 0.41]}}
+            assert_close(gmf1, gmf2)
+
+        class C:
+            pass
+
+        c1 = C()
+        c2 = C()
+        c2.a = 1
+        with self.assertRaises(AssertionError):  # different attributes
+            assert_close(c1, c2)
