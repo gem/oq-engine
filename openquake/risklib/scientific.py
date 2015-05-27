@@ -345,8 +345,8 @@ class VulnerabilityFunctionWithPMF(object):
     :param str vf_id: vulnerability function ID
     :param str imt: Intensity Measure Type
     :param imls: intensity measure levels (L)
-    :param ratios: mean ratios (R)
-    :param probs: a matrix of probabilities of shape (R, L)
+    :param ratios: mean ratios (M)
+    :param probs: a matrix of probabilities of shape (M, L)
     """
     def __init__(self, vf_id, imt, imls, ratios, probs):
         self.id = vf_id
@@ -359,13 +359,12 @@ class VulnerabilityFunctionWithPMF(object):
     def apply_to(self, ground_motion_values, epsilons=None):
         """
         :param ground_motion_values:
-           matrix of floats N x R
+           matrix of floats N x M
         :param epsilons:
            not used
-        :returns: a N x R loss matrix
+        :returns: a N x M loss matrix
         """
         # TODO: implement the right logic here
-        return numpy.array(ground_motion_values)
 
     def __repr__(self):
         return '<VulnerabilityFunctionWithPMF(%s, %s)>' % (self.id, self.imt)
