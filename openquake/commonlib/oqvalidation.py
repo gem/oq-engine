@@ -121,7 +121,6 @@ class OqParam(valid.ParamSet):
 
     def __init__(self, **names_vals):
         super(OqParam, self).__init__(**names_vals)
-        self.hazard_imtls = self.risk_imtls = None
         if not self.risk_investigation_time and self.investigation_time:
             self.risk_investigation_time = self.investigation_time
         elif not self.investigation_time and self.hazard_investigation_time:
@@ -160,7 +159,7 @@ class OqParam(valid.ParamSet):
         Returns an OrderedDict with the risk intensity measure types and
         levels, if given, or the hazard ones.
         """
-        imtls = self.hazard_imtls or self.risk_imtls
+        imtls = getattr(self, 'hazard_imtls', None) or self.risk_imtls
         return collections.OrderedDict(sorted(imtls.items()))
 
     def no_imls(self):
@@ -246,7 +245,8 @@ class OqParam(valid.ParamSet):
         if fragility_files(self.inputs) or vulnerability_files(self.inputs):
             return (self.intensity_measure_types is None
                     and self.intensity_measure_types_and_levels is None)
-        elif not self.hazard_imtls and not self.risk_imtls:
+        elif not hasattr(self, 'hazard_imtls') and not hasattr(
+                self, 'risk_imtls'):
             return False
         return True
 
