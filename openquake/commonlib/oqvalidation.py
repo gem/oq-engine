@@ -121,16 +121,17 @@ class OqParam(valid.ParamSet):
 
     def __init__(self, **names_vals):
         super(OqParam, self).__init__(**names_vals)
+        self.hazard_imtls = self.risk_imtls = None
         if not self.risk_investigation_time and self.investigation_time:
             self.risk_investigation_time = self.investigation_time
         elif not self.investigation_time and self.hazard_investigation_time:
             self.investigation_time = self.hazard_investigation_time
-        if 'intensity_measure_types' in names_vals:
-            self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
-            delattr(self, 'intensity_measure_types')
-        elif 'intensity_measure_types_and_levels' in names_vals:
+        if 'intensity_measure_types_and_levels' in names_vals:
             self.hazard_imtls = self.intensity_measure_types_and_levels
             delattr(self, 'intensity_measure_types_and_levels')
+        elif 'intensity_measure_types' in names_vals:
+            self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
+            delattr(self, 'intensity_measure_types')
         if vulnerability_files(self.inputs):
             self.risk_imtls = get_imtls_from_vulnerabilities(self.inputs)
         elif fragility_files(self.inputs):
@@ -139,6 +140,11 @@ class OqParam(valid.ParamSet):
                 fname, self.continuous_fragility_discretization)
             self.risk_imtls = {fset.imt: fset.imls
                                for fset in ffs.itervalues()}
+        if (self.hazard_imtls and self.risk_imtls and
+                set(self.hazard_imtls) != set(self.risk_imtls)):
+            raise ValueError(
+                'hazard_imts=%s but risk_imts=%s!' %
+                (sorted(self.hazard_imtls), sorted(self.risk_imtls)))
 
     @property
     def tses(self):
@@ -155,7 +161,7 @@ class OqParam(valid.ParamSet):
         Returns an OrderedDict with the risk intensity measure types and
         levels, if given, or the hazard ones.
         """
-        imtls = getattr(self, 'hazard_imtls', None) or self.risk_imtls
+        imtls = self.hazard_imtls or self.risk_imtls
         return collections.OrderedDict(sorted(imtls.items()))
 
     def no_imls(self):
