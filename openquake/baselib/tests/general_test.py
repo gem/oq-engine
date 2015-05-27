@@ -124,11 +124,6 @@ class BlockSplitterTestCase(unittest.TestCase):
         self.assertEqual([b.weight for b in blocks], [2, 2, 4, 4])
 
 
-class CodeDependenciesTestCase(unittest.TestCase):
-    def test(self):
-        assert_independent('openquake.commonlib', 'openquake.engine')
-
-
 class SearchModuleTestCase(unittest.TestCase):
     def test_existing_module_simple(self):
         self.assertIsNotNone(search_module('os'))
