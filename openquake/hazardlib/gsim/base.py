@@ -75,6 +75,21 @@ def deprecated(message):
     return _deprecated
 
 
+def gsim_imt_dt(sorted_gsims, sorted_imts):
+    """
+    Build a numpy dtype as a nested record with keys 'idx' and nested
+    (gsim, imt).
+
+    :param sorted_gsims: a list of GSIM instances, sorted lexicographically
+    :param sorted_imts: a list of intensity measure type strings
+    """
+    imt_dt = numpy.dtype([(imt, float) for imt in sorted_imts])
+    gsim_imt_dt = numpy.dtype(
+        [('idx', numpy.uint32)] +
+        [(str(gsim), imt_dt) for gsim in sorted_gsims])
+    return gsim_imt_dt
+
+
 class MetaGSIM(abc.ABCMeta):
     """
     Metaclass providing a warning on instantiation mechanism. A
@@ -177,6 +192,10 @@ class GroundShakingIntensityModel(object):
     #:     Horizontal distance off the end of the rupture measured parallel to
     #      strike. See:
     #:     See :meth:`~openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_ry0_distance`.
+    #: ``rcdpp``
+    #:     Direct point parameter for directivity effect centered on the site- and earthquake-specific
+    #      average DPP used. See:
+    #:     See :meth:`~openquake.hazardlib.source.rupture.ParametricProbabilisticRupture.get_dppvalue`.
     #:
     #: All the distances are available from the :class:`DistancesContext`
     #: object attributes with same names. Values are in kilometers.
@@ -412,6 +431,126 @@ class GroundShakingIntensityModel(object):
         so there is no need to override it in actual GSIM implementations.
         """
 
+    def make_distances_context(self, site_collection, rupture):
+        """
+        Create distances context object for given site collection and rupture.
+
+        :param site_collection:
+            Instance of :class:`openquake.hazardlib.site.SiteCollection`.
+
+        :param rupture:
+            Instance of
+            :class:`~openquake.hazardlib.source.rupture.Rupture` (or
+            subclass of
+            :class:
+            `~openquake.hazardlib.source.rupture.BaseProbabilisticRupture`).
+
+        :returns:
+            Source to site distances as instance of :class:
+            `DistancesContext()`. Only those  values that are required by GSIM
+            are filled in this context.
+
+        :raises ValueError:
+            If any of declared required distance parameters is unknown.
+        """
+        dctx = DistancesContext()
+        for param in self.REQUIRES_DISTANCES:
+            if param == 'rrup':
+                dist = rupture.surface.get_min_distance(site_collection.mesh)
+            elif param == 'rx':
+                dist = rupture.surface.get_rx_distance(site_collection.mesh)
+            elif param == 'ry0':
+                dist = rupture.surface.get_ry0_distance(site_collection.mesh)
+            elif param == 'rjb':
+                dist = rupture.surface.get_joyner_boore_distance(
+                    site_collection.mesh
+                )
+            elif param == 'rhypo':
+                dist = rupture.hypocenter.distance_to_mesh(
+                    site_collection.mesh
+                )
+            elif param == 'repi':
+                dist = rupture.hypocenter.distance_to_mesh(
+                    site_collection.mesh, with_depths=False
+                )
+            elif param == 'rcdpp':
+                dist = rupture.get_cdppvalue(site_collection.mesh)
+            else:
+                raise ValueError('%s requires unknown distance measure %r' %
+                                 (type(self).__name__, param))
+            setattr(dctx, param, dist)
+        return dctx
+
+    def make_sites_context(self, site_collection):
+        """
+        Create context objects for given site collection
+
+        :param site_collection:
+            Instance of :class:`openquake.hazardlib.site.SiteCollection`.
+
+        :returns:
+            Site parameters as instance of :class:
+            `SitesContext()`. Only those  values that are required by GSIM
+            are filled in this context.
+
+        :raises ValueError:
+            If any of declared required site parameters is unknown.
+
+        """
+        sctx = SitesContext()
+        for param in self.REQUIRES_SITES_PARAMETERS:
+            try:
+                value = getattr(site_collection, param)
+            except AttributeError:
+                raise ValueError('%s requires unknown site parameter %r' %
+                                 (type(self).__name__, param))
+            setattr(sctx, param, value)
+        return sctx
+
+    def make_rupture_context(self, rupture):
+        """
+        Create context object for given rupture.
+
+        :param rupture:
+            Instance of
+            :class:`~openquake.hazardlib.source.rupture.Rupture` (or
+            subclass of
+            :class:`~openquake.hazardlib.source.rupture.BaseProbabilisticRupture`).
+
+        :returns:
+            Rupture parameters as instance of :class:
+            `RuptureContext()`. Only those  values that are required by GSIM
+            are filled in this context.
+
+        :raises ValueError:
+            If any of declared required rupture parameters is unknown.
+        """
+        rctx = RuptureContext()
+        for param in self.REQUIRES_RUPTURE_PARAMETERS:
+            if param == 'mag':
+                value = rupture.mag
+            elif param == 'strike':
+                value = rupture.surface.get_strike()
+            elif param == 'dip':
+                value = rupture.surface.get_dip()
+            elif param == 'rake':
+                value = rupture.rake
+            elif param == 'ztor':
+                value = rupture.surface.get_top_edge_depth()
+            elif param == 'hypo_lon':
+                value = rupture.hypocenter.longitude
+            elif param == 'hypo_lat':
+                value = rupture.hypocenter.latitude
+            elif param == 'hypo_depth':
+                value = rupture.hypocenter.depth
+            elif param == 'width':
+                value = rupture.surface.get_width()
+            else:
+                raise ValueError('%s requires unknown rupture parameter %r' %
+                                 (type(self).__name__, param))
+            setattr(rctx, param, value)
+        return rctx
+
     def make_contexts(self, site_collection, rupture):
         """
         Create context objects for given site collection and rupture.
@@ -437,66 +576,9 @@ class GroundShakingIntensityModel(object):
             If any of declared required parameters (that includes site, rupture
             and distance parameters) is unknown.
         """
-        dctx = DistancesContext()
-        for param in self.REQUIRES_DISTANCES:
-            if param == 'rrup':
-                dist = rupture.surface.get_min_distance(site_collection.mesh)
-            elif param == 'rx':
-                dist = rupture.surface.get_rx_distance(site_collection.mesh)
-            elif param == 'ry0':
-                dist = rupture.surface.get_ry0_distance(site_collection.mesh)
-            elif param == 'rjb':
-                dist = rupture.surface.get_joyner_boore_distance(
-                    site_collection.mesh
-                )
-            elif param == 'rhypo':
-                dist = rupture.hypocenter.distance_to_mesh(
-                    site_collection.mesh
-                )
-            elif param == 'repi':
-                dist = rupture.hypocenter.distance_to_mesh(
-                    site_collection.mesh, with_depths=False
-                )
-            else:
-                raise ValueError('%s requires unknown distance measure %r' %
-                                 (type(self).__name__, param))
-            setattr(dctx, param, dist)
-
-        sctx = SitesContext()
-        for param in self.REQUIRES_SITES_PARAMETERS:
-            try:
-                value = getattr(site_collection, param)
-            except AttributeError:
-                raise ValueError('%s requires unknown site parameter %r' %
-                                 (type(self).__name__, param))
-            setattr(sctx, param, value)
-
-        rctx = RuptureContext()
-        for param in self.REQUIRES_RUPTURE_PARAMETERS:
-            if param == 'mag':
-                value = rupture.mag
-            elif param == 'strike':
-                value = rupture.surface.get_strike()
-            elif param == 'dip':
-                value = rupture.surface.get_dip()
-            elif param == 'rake':
-                value = rupture.rake
-            elif param == 'ztor':
-                value = rupture.surface.get_top_edge_depth()
-            elif param == 'hypo_lon':
-                value = rupture.hypocenter.longitude
-            elif param == 'hypo_lat':
-                value = rupture.hypocenter.latitude
-            elif param == 'hypo_depth':
-                value = rupture.hypocenter.depth
-            elif param == 'width':
-                value = rupture.surface.get_width()
-            else:
-                raise ValueError('%s requires unknown rupture parameter %r' %
-                                 (type(self).__name__, param))
-            setattr(rctx, param, value)
-
-        return sctx, rctx, dctx
+        return (self.make_sites_context(site_collection),
+                self.make_rupture_context(rupture),
+                self.make_distances_context(site_collection, rupture))
 
     def _check_imt(self, imt):
         """
@@ -510,15 +592,15 @@ class GroundShakingIntensityModel(object):
 
     def __lt__(self, other):
         """
-        The GSIMs are ordered according to their name
+        The GSIMs are ordered according to string representation
         """
-        return self.__class__.__name__ < other.__class__.__name__
+        return str(self) < str(other)
 
     def __eq__(self, other):
         """
-        The GSIMs are equal if their names are equal
+        The GSIMs are equal if their string representations are equal
         """
-        return self.__class__.__name__ == other.__class__.__name__
+        return str(self) == str(other)
 
     def __str__(self):
         """
@@ -674,7 +756,8 @@ class SitesContext(BaseContext):
     Only those required parameters are made available in a result context
     object.
     """
-    __slots__ = ('vs30', 'vs30measured', 'z1pt0', 'z2pt5', 'lons', 'lats')
+    __slots__ = ('vs30', 'vs30measured', 'z1pt0', 'z2pt5', 'backarc',
+        'lons', 'lats')
 
 
 class DistancesContext(BaseContext):
@@ -689,7 +772,7 @@ class DistancesContext(BaseContext):
     does it need. Only those required values are calculated and made available
     in a result context object.
     """
-    __slots__ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi', 'ry0')
+    __slots__ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi', 'ry0', 'rcdpp')
 
 
 class RuptureContext(BaseContext):
@@ -706,7 +789,7 @@ class RuptureContext(BaseContext):
     """
     __slots__ = (
         'mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
-        'hypo_depth', 'width'
+        'hypo_depth', 'width', 'hypo_loc'
     )
 
 

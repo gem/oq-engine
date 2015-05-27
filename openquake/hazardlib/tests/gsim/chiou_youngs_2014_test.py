@@ -14,7 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from openquake.hazardlib.gsim.chiou_youngs_2014 import (ChiouYoungs2014,
-                                                        ChiouYoungs2014PEER)
+                                                        ChiouYoungs2014PEER,
+                                                        ChiouYoungs2014NearFaultEffect)
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
@@ -22,11 +23,8 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 class ChiouYoungs2014TestCase(BaseGSIMTestCase):
     GSIM_CLASS = ChiouYoungs2014
 
-    # First five tests use data ported from Kenneth Campbell
-    # tables for verifying NGA models, available from OpenSHA, see
-    # http://opensha.usc.edu/docs/opensha/NGA/Campbell_NGA_tests.zip
-    # This data is distributed under different license, see LICENSE.txt
-    # in tests/gsim/data/NGA
+    # Test data were obtained from a tool given by the authorst
+    # in tests/gsim/data/NGA/CY14
 
     def test_mean_hanging_wall_normal_slip(self):
         self.check('NGA/CY14/CY14_MEDIAN_MS_HW_NM.csv',
@@ -75,8 +73,22 @@ class ChiouYoungs2014PEERTestCase(BaseGSIMTestCase):
     def test_mean_hanging_wall_strike_slip(self):
         self.check('NGA/CY14/CY14_MEDIAN_MS_HW_SS.csv',
                    max_discrep_percentage=0.05)
-    
+
     def test_total_event_stddev(self):
         # Total Sigma fixes at 0.65
         self.check('NGA/CY14/CY14_TOTAL_EVENT_SIGMA_PEER.csv',
+                   max_discrep_percentage=0.05)
+
+
+class ChiouYoungs2014NearFaultTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = ChiouYoungs2014NearFaultEffect
+
+    # First five tests use data ported from Kenneth Campbell
+    # tables for verifying NGA models, available from OpenSHA, see
+    # http://opensha.usc.edu/docs/opensha/NGA/Campbell_NGA_tests.zip
+    # This data is distributed under different license, see LICENSE.txt
+    # in tests/gsim/data/NGA
+
+    def test_mean_near_fault(self):
+        self.check('NGA/CY14/CY14_MEDIAN_RCDPP.csv',
                    max_discrep_percentage=0.05)

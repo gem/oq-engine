@@ -22,8 +22,15 @@ Module :mod:`openquake.hazardlib.source.rupture` defines classes
 """
 import abc
 import numpy
+import math
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.slots import with_slots
+from openquake.hazardlib.geo.mesh import RectangularMesh
+from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.geo.geodetic import geodetic_distance
+from openquake.hazardlib.near_fault import (get_plane_equation, projection_pp,
+                                            directp, average_s_rad,
+                                            isochone_ratio)
 
 
 @with_slots
@@ -49,16 +56,21 @@ class Rupture(object):
         Subclass of :class:`~openquake.hazardlib.source.base.BaseSeismicSource`
         (class object, not an instance) referencing the typology
         of the source that produced this rupture.
+    :param rupture_slip_direction:
+        Angle describing rupture propagation direction in decimal degrees.
 
     :raises ValueError:
         If magnitude value is not positive, hypocenter is above the earth
         surface or tectonic region type is unknown.
+
+    NB: if you want to convert the rupture into XML, you should set the
+    attribute surface_nodes to an appropriate value.
     """
     __slots__ = '''mag rake tectonic_region_type hypocenter surface
-    source_typology'''.split()
+    surface_nodes source_typology'''.split()
 
     def __init__(self, mag, rake, tectonic_region_type, hypocenter,
-                 surface, source_typology):
+                 surface, source_typology, surface_nodes=()):
         if not mag > 0:
             raise ValueError('magnitude must be positive')
         if not hypocenter.depth > 0:
@@ -70,6 +82,7 @@ class Rupture(object):
         self.hypocenter = hypocenter
         self.surface = surface
         self.source_typology = source_typology
+        self.surface_nodes = surface_nodes
 
 
 class BaseProbabilisticRupture(Rupture):
@@ -221,7 +234,8 @@ class ParametricProbabilisticRupture(BaseProbabilisticRupture):
         'occurrence_rate', 'temporal_occurrence_model']
 
     def __init__(self, mag, rake, tectonic_region_type, hypocenter, surface,
-                 source_typology, occurrence_rate, temporal_occurrence_model):
+                 source_typology, occurrence_rate, temporal_occurrence_model,
+                 rupture_slip_direction=None):
         if not occurrence_rate > 0:
             raise ValueError('occurrence rate must be positive')
         super(ParametricProbabilisticRupture, self).__init__(
@@ -230,6 +244,7 @@ class ParametricProbabilisticRupture(BaseProbabilisticRupture):
         )
         self.temporal_occurrence_model = temporal_occurrence_model
         self.occurrence_rate = occurrence_rate
+        self.rupture_slip_direction = rupture_slip_direction
 
     def get_probability_one_or_more_occurrences(self):
         """
@@ -280,3 +295,152 @@ class ParametricProbabilisticRupture(BaseProbabilisticRupture):
         tom = self.temporal_occurrence_model
         rate = self.occurrence_rate
         return tom.get_probability_no_exceedance(rate, poes)
+
+    def get_dppvalue(self, site):
+        """
+        Get the directivity prediction value, DPP at
+        a given site as described in Spudich et al. (2013).
+
+        :param site:
+            :class:`~openquake.hazardlib.geo.point.Point` object
+            representing the location of the target site
+        :returns:
+            A float number, directivity prediction value (DPP).
+        """
+
+        origin = self.surface.get_resampled_top_edge()[0]
+        dpp_multi = []
+        index_patch = self.surface.hypocentre_patch_index(
+            self.hypocenter, self.surface.get_resampled_top_edge(),
+            self.surface.mesh.depths[0][0], self.surface.mesh.depths[-1][0],
+            self.surface.get_dip())
+
+        idx_nxtp = True
+        hypocenter = self.hypocenter
+
+        while idx_nxtp:
+
+            # E Plane Calculation
+            p0, p1, p2, p3 = self.surface.get_fault_patch_vertices(
+                self.surface.get_resampled_top_edge(),
+                self.surface.mesh.depths[0][0],
+                self.surface.mesh.depths[-1][0],
+                self.surface.get_dip(), index_patch=index_patch)
+
+            [normal, dist_to_plane] = get_plane_equation(
+                p0, p1, p2, origin)
+
+            pp = projection_pp(site, normal, dist_to_plane, origin)
+            pd, e, idx_nxtp = directp(
+                p0, p1, p2, p3, hypocenter, origin, pp)
+            pd_geo = origin.point_at(
+                (pd[0] ** 2 + pd[1] ** 2) ** 0.5, -pd[2],
+                numpy.degrees(math.atan2(pd[0], pd[1])))
+
+            # determine the lower bound of E path value
+            f1 = geodetic_distance(p0.longitude,
+                                   p0.latitude,
+                                   p1.longitude,
+                                   p1.latitude)
+            f2 = geodetic_distance(p2.longitude,
+                                   p2.latitude,
+                                   p3.longitude,
+                                   p3.latitude)
+
+            if f1 > f2:
+                f = f1
+            else:
+                f = f2
+
+            fs, rd, r_hyp = average_s_rad(site, hypocenter, origin,
+                                          pp, normal, dist_to_plane, e, p0,
+                                          p1, self.rupture_slip_direction)
+            cprime = isochone_ratio(e, rd, r_hyp)
+
+            dpp_exp = cprime * numpy.maximum(e, 0.1 * f) *\
+                numpy.maximum(fs, 0.2)
+            dpp_multi.append(dpp_exp)
+
+            # check if go through the next patch of the fault
+            index_patch = index_patch + 1
+
+            if (len(self.surface.get_resampled_top_edge())
+                <= 2) and (index_patch >=
+                           len(self.surface.get_resampled_top_edge())):
+
+                idx_nxtp = False
+            elif index_patch >= len(self.fault_trace):
+                idx_nxtp = False
+            elif idx_nxtp:
+                hypocenter = pd_geo
+                idx_nxtp = True
+
+        # calculate DPP value of the site.
+        dpp = numpy.log(numpy.sum(dpp_multi))
+
+        return dpp
+
+    def get_cdppvalue(self, target, buf=1.0, delta=0.01, space=2.):
+        """
+        Get the directivity prediction value, centred DPP(cdpp) at
+        a given site as described in Spudich et al. (2013), and this cdpp is
+        used in Chiou and Young(2014) GMPE for near-fault directivity
+        term prediction.
+
+        :param target_site:
+            A mesh object representing the location of the target sites.
+        :param buf:
+            A float vaule presents  the buffer distance in km to extend the
+            mesh borders to.
+        :param delta:
+            A float vaule presents the desired distance between two adjacent
+            points in mesh
+        :param space:
+            A float vaule presents the tolerance for the same distance of the
+            sites (default 2 km)
+        :returns:
+            A float value presents the centreed directivity predication value
+            which used in Chioud and Young(2014) GMPE for directivity term
+        """
+
+        min_lon, max_lon, max_lat, min_lat = self.surface.get_bounding_box()
+
+        min_lon -= buf
+        max_lon += buf
+        min_lat -= buf
+        max_lat += buf
+
+        lons = numpy.arange(min_lon, max_lon + delta, delta)
+        lats = numpy.arange(min_lat, max_lat + delta, delta)
+        lons, lats = numpy.meshgrid(lons, lats)
+
+        target_rup = self.surface.get_min_distance(target)
+        mesh = RectangularMesh(lons=lons, lats=lats, depths=None)
+        mesh_rup = self.surface.get_min_distance(mesh)
+
+        target_lons = target.lons
+        target_lats = target.lats
+        cdpp = numpy.empty(len(target_lons))
+
+        for iloc, (target_lon, target_lat) in enumerate(zip(target_lons,
+                                                        target_lats)):
+
+            cdpp_sites_lats = mesh.lats[(mesh_rup <= target_rup[iloc] + space)
+                                        & (mesh_rup >= target_rup[iloc]
+                                           - space)]
+            cdpp_sites_lons = mesh.lons[(mesh_rup <= target_rup[iloc] + space)
+                                        & (mesh_rup >= target_rup[iloc]
+                                           - space)]
+
+            dpp_sum = []
+            dpp_target = self.get_dppvalue(Point(target_lon, target_lat))
+
+            for lon, lat in zip(cdpp_sites_lons, cdpp_sites_lats):
+                site = Point(lon, lat, 0.)
+                dpp_one = self.get_dppvalue(site)
+                dpp_sum.append(dpp_one)
+
+            mean_dpp = numpy.mean(dpp_sum)
+            cdpp[iloc] = dpp_target - mean_dpp
+
+        return cdpp

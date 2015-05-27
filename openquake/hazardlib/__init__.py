@@ -19,9 +19,9 @@ hazardlib stands for Hazard Library.
 
 from openquake.hazardlib import (
     calc, geo, gsim, mfd, scalerel, source, const, correlation, imt, pmf, site,
-    tom, general
+    tom, general, near_fault
 )
 
 # the version is managed by packager.sh with a sed
-__version__ = '0.14.0'
+__version__ = '0.15.0'
 __version__ += general.git_suffix(__file__)

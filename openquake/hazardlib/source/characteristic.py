@@ -44,18 +44,23 @@ class CharacteristicFaultSource(ParametricSeismicSource):
     :param rake:
         Angle describing rupture propagation direction in decimal degrees.
 
-    See also :class:`openquake.hazardlib.source.base.ParametricSeismicSource` for
-    description of other parameters.
+    See also :class:`openquake.hazardlib.source.base.ParametricSeismicSource`
+    for description of other parameters.
 
     Note that a ``CharacteristicFaultSource`` does not need any mesh spacing,
     magnitude scaling relationship, and aspect ratio, therefore the constructor
-    set these parameters to ``None``.
+    sets these parameters to ``None``.
+
+    NB: if you want to convert a characteristic source into XML, you must set
+    its attribute `surface_node` to an explicit representation of the surface
+    as a LiteralNode object.
     """
     __slots__ = ParametricSeismicSource.__slots__ + (
-        'surface rake').split()
+        'surface surface_node rake').split()
 
     def __init__(self, source_id, name, tectonic_region_type,
-                 mfd, temporal_occurrence_model, surface, rake):
+                 mfd, temporal_occurrence_model, surface, rake,
+                 surface_node=None):
         super(CharacteristicFaultSource, self).__init__(
             source_id, name, tectonic_region_type, mfd, None, None, None,
             temporal_occurrence_model
@@ -63,6 +68,7 @@ class CharacteristicFaultSource(ParametricSeismicSource):
         NodalPlane.check_rake(rake)
         self.surface = surface
         self.rake = rake
+        self.surface_node = surface_node
 
     def get_rupture_enclosing_polygon(self, dilation=0):
         """

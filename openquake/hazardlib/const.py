@@ -46,6 +46,7 @@ class TRT(ConstantContainer):
     SUBDUCTION_INTRASLAB = 'Subduction IntraSlab'
     VOLCANIC = 'Volcanic'
     GEOTHERMAL = 'Geothermal'
+    INDUCED = 'Induced'
 
 
 class IMC(ConstantContainer):
@@ -66,6 +67,9 @@ class IMC(ConstantContainer):
     #: Defined at Boore et al. (2006, Bull. Seism. Soc. Am. 96, 1502-1511)
     #: and is used for all the NGA GMPEs.
     GMRotI50 = 'Average Horizontal (GMRotI50)'
+    #: The geometric mean of the records rotated into the most adverse
+    #: direction for the structure.
+    GMRotD100 = "Average Horizontal (GMRotD100)"
     #: An orientation-independent alternative to :attr:`AVERAGE_HORIZONTAL`.
     #: Defined at Boore et al. (2006, Bull. Seism. Soc. Am. 96, 1502-1511)
     #: and is used for all the NGA GMPEs.

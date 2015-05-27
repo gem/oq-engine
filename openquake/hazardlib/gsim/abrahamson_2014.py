@@ -232,25 +232,25 @@ class AbrahamsonEtAl2014(GMPE):
         else:
             Fhw = np.zeros_like(dists.rx)
             Fhw[dists.rx > 0] = 1.
-            # compute t1
+            # Compute taper t1
             T1 = np.ones_like(dists.rx)
             T1 *= 60./45. if rup.dip <= 30. else (90.-rup.dip)/45.0
-            # compute t2 (eq 12 at page 1039) - a2hw set to 0.2 as indicated
-            # at page 1041
+            # Compute taper t2 (eq 12 at page 1039) - a2hw set to 0.2 as 
+            # indicated at page 1041
             T2 = np.zeros_like(dists.rx)
             a2hw = 0.2
             if rup.mag > 6.5:
-                T2 += (1 + a2hw * (rup.mag - 6.5))
+                T2 += (1. + a2hw * (rup.mag - 6.5))
             elif rup.mag > 5.5:
-                T2 += (1 + a2hw * (rup.mag - 6.5) - (1 - a2hw) *
+                T2 += (1. + a2hw * (rup.mag - 6.5) - (1. - a2hw) *
                        (rup.mag - 6.5)**2)
             else:
                 T2 *= 0.
-            # compute t3 (eq. 13 at page 1039) - r1 and r2 specified at
+            # Compute taper t3 (eq. 13 at page 1039) - r1 and r2 specified at
             # page 1040
             T3 = np.zeros_like(dists.rx)
             r1 = rup.width * np.cos(np.radians(rup.dip))
-            r2 = 3 * r1
+            r2 = 3. * r1
             #
             idx = dists.rx < r1
             T3[idx] = (np.ones_like(dists.rx)[idx] * self.CONSTS['h1'] +
@@ -258,13 +258,13 @@ class AbrahamsonEtAl2014(GMPE):
                        self.CONSTS['h3'] * (dists.rx[idx] / r1)**2)
             #
             idx = ((dists.rx >= r1) & (dists.rx <= r2))
-            T3[idx] += 1. - (dists.rx[idx] - r1) / (r2 - r1)
-            # compute t4 (eq. 14 at page 1040)
+            T3[idx] = 1. - (dists.rx[idx] - r1) / (r2 - r1)
+            # Compute taper t4 (eq. 14 at page 1040)
             T4 = np.zeros_like(dists.rx)
             #
             if rup.ztor <= 10.:
                 T4 += (1. - rup.ztor**2. / 100.)
-            # compute t5 (eq 15a at page 1040) - ry1 computed according to
+            # Compute T5 (eq 15a at page 1040) - ry1 computed according to
             # suggestions provided at page 1040
             T5 = np.zeros_like(dists.rx)
             ry1 = dists.rx * np.tan(np.radians(20.))
