@@ -475,9 +475,7 @@ def get_filtered_source_models(oqparam, source_model_lt, sitecol,
                     'sm_lt_path=%s, maximum_distance=%s km, TRT=%s',
                     source_model.name, source_model.path,
                     oqparam.maximum_distance, trt_model.trt)
-        if source_model.trt_models:
-            yield source_model
-            parallel.TaskManager.restart()  # hack to save memory
+        yield source_model
 
 
 def get_composite_source_model(oqparam, sitecol=None, prefilter=False,
