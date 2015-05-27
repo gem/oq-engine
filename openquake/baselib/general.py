@@ -399,14 +399,6 @@ def assert_independent(package, *packages):
     :param packages: Python names of modules/packages
 
     Make sure the `package` does not depend from the `packages`.
-    For instance
-
-    >>> assert_independent('openquake.hazardlib',
-    ...                    'openquake.risklib', 'openquake.commonlib')
-    >>> assert_independent('openquake.risklib.tests', 'openquake.risklib')
-    Traceback (most recent call last):
-    ...
-    CodeDependencyError: openquake.risklib.tests depends on openquake.risklib
     """
     assert packages, 'At least one package must be specified'
     import_package = 'from openquake.baselib.general import import_all\n' \
@@ -461,7 +453,7 @@ class CallableDict(collections.OrderedDict):
     what to return if the key is missing.
 
     For a more practical example see the implementation of the exporters
-    in :module:`openquake.commonlib.export`
+    in openquake.commonlib.export
     """
     def __init__(self, keyfunc=lambda key: key, keymissing=None):
         super(CallableDict, self).__init__()
