@@ -126,6 +126,10 @@ class OqParam(valid.ParamSet):
             self.risk_investigation_time = self.investigation_time
         elif not self.investigation_time and self.hazard_investigation_time:
             self.investigation_time = self.hazard_investigation_time
+        if ('intensity_measure_types_and_levels' in names_vals and
+                'intensity_measure_types' in names_vals):
+            logging.warn('Ignoring intensity_measure_types since '
+                         'intensity_measure_types_and_levels is set')
         if 'intensity_measure_types_and_levels' in names_vals:
             self.hazard_imtls = self.intensity_measure_types_and_levels
             delattr(self, 'intensity_measure_types_and_levels')
