@@ -96,10 +96,10 @@ setup(
     keywords="seismic hazard",
     license="GNU AGPL v3",
     platforms=["any"],
+    package_data={"openquake.hazardlib": [
+        "README.md", "LICENSE", "CONTRIBUTORS.txt"]},
     namespace_packages=['openquake'],
-
     include_package_data=True,
-
     zip_safe=False,
 
 )
