@@ -49,7 +49,7 @@ if [ -f /usr/sbin/rabbitmqctl ]; then
     fi
 fi
 
-HDIR=/usr/openquake/engine
+HDIR=/usr/share/openquake/engine
 IDIR=/usr/lib/python2.7/dist-packages/openquake/engine
 mkdir -p $HDIR
 chmod 1777 $HDIR
@@ -169,7 +169,7 @@ if [ -f /usr/lib/postgresql/$PG_VERSION/bin/postgres ]; then
 fi
 
 # Last but not least delete obsolete .pyc files in /usr/openquake/engine
-find /usr/openquake/engine -type f -name \*.pyc -exec rm -f {} \;
+find /usr/share/openquake/engine -type f -name \*.pyc -exec rm -f {} \;
 
 #touch /tmp/mop-pause
 #while [ 1 ]; do
