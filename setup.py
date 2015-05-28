@@ -1,5 +1,5 @@
-# oq-risklib: The Risk Library
-# Copyright (C) 2013-2014, GEM Foundation
+# oq-risklib: The OpenQuake Risk Library
+# Copyright (C) 2013-2015, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
