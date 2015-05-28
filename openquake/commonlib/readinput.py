@@ -34,7 +34,7 @@ from openquake.risklib import workflows, riskinput
 
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.node import read_nodes, LiteralNode, context
-from openquake.commonlib import nrml, valid, logictree, InvalidFile, parallel
+from openquake.commonlib import nrml, valid, logictree, InvalidFile
 from openquake.commonlib.oqvalidation import vulnerability_files
 from openquake.commonlib.riskmodels import \
     get_fragility_functions, get_vfs
@@ -885,18 +885,19 @@ def get_sitecol_hcurves(oqparam):
     return sitecol, hcurves_by_imt
 
 
-def get_sitecol_gmfs(oqparam):
+def get_gmfs(oqparam, sitecol):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param sitecol:
+        a SiteCollection instance with sites consistent with the CSV file
     :returns:
-        a dictionary IMT -> array(N, R) read from a CSV file with format
+        a composite array of shape (N, R) read from a CSV file with format
         `tag indices [gmv1 ... gmvN] * num_imts`
     """
     imts = oqparam.imtls.keys()
     imt_dt = numpy.dtype([(imt, float) for imt in imts])
     num_gmfs = oqparam.number_of_ground_motion_fields
-    sitecol = get_site_collection(oqparam)  # extract it from inputs['sites']
     gmf_by_imt = numpy.zeros((num_gmfs, len(sitecol)), imt_dt)
     tags = []
     fname = oqparam.inputs['gmfs']
@@ -927,7 +928,7 @@ def get_sitecol_gmfs(oqparam):
             fname, lineno, num_gmfs))
     if tags != sorted(tags):
         raise InvalidFile('The tags in %s are not ordered: %s' % (fname, tags))
-    return sitecol, gmf_by_imt.T
+    return gmf_by_imt.T
 
 
 def get_mesh_hcurves(oqparam):

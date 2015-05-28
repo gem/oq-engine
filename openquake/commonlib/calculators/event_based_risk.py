@@ -121,6 +121,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
     event_loss_asset = datastore.persistent_attribute('event_loss_asset')
     event_loss = datastore.persistent_attribute('event_loss')
+    is_stochastic = True
 
     def riskinput_key(self, ri):
         """
@@ -154,8 +155,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         logging.info('Generated %d epsilons', num_samples * len(eps_dict))
 
         self.riskinputs = list(self.riskmodel.build_inputs_from_ruptures(
-            self.sitecol, all_ruptures, gsims_by_col, oq.truncation_level,
-            correl_model, eps_dict, oq.concurrent_tasks or 1))
+            self.sitecol.complete, all_ruptures, gsims_by_col,
+            oq.truncation_level, correl_model, eps_dict,
+            oq.concurrent_tasks or 1))
         logging.info('Built %d risk inputs', len(self.riskinputs))
 
     def zeros(self, shape, dtype):

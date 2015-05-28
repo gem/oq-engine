@@ -263,6 +263,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
     """
     core_func = compute_ruptures
     sescollection = datastore.persistent_attribute('sescollection')
+    is_stochastic = True
 
     def pre_execute(self):
         """
@@ -355,7 +356,8 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
     correl_model = readinput.get_correl_model(oq)
     num_sites = len(sitecol)
     dic = make_gmf_by_tag(
-        ses_ruptures, sitecol, oq.imtls, gsims, trunc_level, correl_model)
+        ses_ruptures, sitecol.complete, oq.imtls, gsims,
+        trunc_level, correl_model)
     zero = zero_curves(num_sites, oq.imtls)
     result = AccumDict({(trt_id, str(gsim)): [dic, zero] for gsim in gsims})
     gmfs = [dic[tag] for tag in sorted(dic)]
@@ -405,6 +407,7 @@ class EventBasedCalculator(ClassicalCalculator):
     pre_calculator = 'event_based_rupture'
     core_func = compute_gmfs_and_curves
     gmf_by_trt_gsim = datastore.persistent_attribute('gmf_by_trt_gsim')
+    is_stochastic = True
 
     def pre_execute(self):
         """
