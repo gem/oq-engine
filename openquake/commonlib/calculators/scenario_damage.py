@@ -80,4 +80,3 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
     def post_execute(self, result):
         self.damages_by_key = result
-

@@ -69,6 +69,7 @@ class ScenarioCalculator(base.HazardCalculator):
         n_gmfs = self.oqparam.number_of_ground_motion_fields
         rupture = readinput.get_rupture(self.oqparam)
         self.gsims = readinput.get_gsims(self.oqparam)
+        self.rlzs_assoc = readinput.get_rlzs_assoc(self.oqparam)
 
         # filter the sites
         self.sitecol = filters.filter_sites_by_distance_to_rupture(

@@ -44,7 +44,10 @@ def build_asset_collection(assets_by_site):
     :params assets_by_site: a list of lists of assets
     :returns: an array with composite dtype
     """
-    first_asset = assets_by_site[0][0]
+    for assets in assets_by_site:
+        if assets:
+            first_asset = assets[0]
+            break
     loss_types = first_asset.values.keys()
     deductible_d = first_asset.deductibles or {}
     limit_d = first_asset.insurance_limits or {}

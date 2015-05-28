@@ -24,7 +24,7 @@ import collections
 import numpy
 
 from openquake.hazardlib.geo import geodetic
-
+from openquake.hazardlib.geo.mesh import Mesh
 from openquake.baselib import general
 from openquake.commonlib import readinput, datastore, logictree, export
 from openquake.commonlib.parallel import apply_reduce, DummyMonitor
@@ -184,8 +184,7 @@ class HazardCalculator(BaseCalculator):
                 'Could not associate any site to any assets within the '
                 'maximum distance of %s km' % maximum_distance)
         mask = numpy.array([sid in assets_by_sid for sid in sitecol.sids])
-        assets_by_site = [assets_by_sid[sid] for sid in sitecol.sids
-                          if sid in assets_by_sid]
+        assets_by_site = [assets_by_sid.get(sid, []) for sid in sitecol.sids]
         filteredcol = sitecol.filter(mask)
         return filteredcol, numpy.array(assets_by_site)
 
@@ -225,6 +224,7 @@ class HazardCalculator(BaseCalculator):
                     self.oqparam.investigation_time)
             if '/taxonomies' not in self.datastore:  # not read already
                 self.read_exposure_sitecol()
+
         else:  # we are in a basic calculator
             self.read_exposure_sitecol()
             self.read_sources()
@@ -245,6 +245,10 @@ class HazardCalculator(BaseCalculator):
                     sorted(self.exposure.taxonomies), '|S100')
             num_assets = self.count_assets()
             mesh = readinput.get_mesh(self.oqparam)
+            if self.datastore.parent:
+                parent_mesh = self.datastore.parent['/sitemesh'].value
+                if mesh is None:
+                    mesh = Mesh(parent_mesh['lon'], parent_mesh['lat'])
             if mesh is not None:
                 sites = readinput.get_site_collection(self.oqparam, mesh)
                 with self.monitor('assoc_assets_sites'):
@@ -257,7 +261,7 @@ class HazardCalculator(BaseCalculator):
 
             if (self.is_stochastic and self.datastore.parent and
                     self.datastore.parent['sitecol'] != self.sitecol):
-                raise ValueError(
+                logging.warn(
                     'The hazard sites are different from the risk sites %s!=%s'
                     % (self.datastore.parent['sitecol'], self.sitecol))
         else:  # no exposure
@@ -287,13 +291,12 @@ class HazardCalculator(BaseCalculator):
                 self.composite_source_model = (
                     readinput.get_composite_source_model(
                         self.oqparam, self.sitecol, self.prefilter))
-            self.job_info = readinput.get_job_info(
-                self.oqparam, self.composite_source_model, self.sitecol)
-            # we could manage limits here
-            if self.prefilter:
-                self.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
-        else:  # calculators without sources, i.e. scenario
-            self.rlzs_assoc = readinput.get_rlzs_assoc(self.oqparam)
+                self.job_info = readinput.get_job_info(
+                    self.oqparam, self.composite_source_model, self.sitecol)
+                # we could manage limits here
+                if self.prefilter:
+                    self.rlzs_assoc = (self.composite_source_model.
+                                       get_rlzs_assoc())
 
 
 class RiskCalculator(HazardCalculator):
@@ -350,7 +353,6 @@ class RiskCalculator(HazardCalculator):
                         hazards_by_site = hazards_by_imt[imt]
                         for i, haz in enumerate(hazards_by_site[indices]):
                             hdata[imt][i][key] = haz
-
                 # build the riskinputs
                 for imt in hdata:
                     ri = self.riskmodel.build_input(
@@ -423,9 +425,11 @@ def get_gmfs(calc):
     if 'gmfs' in calc.oqparam.inputs:  # from file
         gmfs = read_gmfs_from_csv(calc)
     else:  # from rupture
-        sitecol = calc.sitecol
-        gmfs = {k: expand(gmf, sitecol)
-                for k, gmf in calc.gmf_by_trt_gsim.iteritems()}
+        if calc.datastore.parent:  # gmfs from hazard calculation
+            gmfs = calc.gmf_by_trt_gsim
+        else:  # just computed gmfs
+            gmfs = {k: expand(gmf, calc.sitecol)
+                    for k, gmf in calc.gmf_by_trt_gsim.iteritems()}
     return gmfs
 
 
