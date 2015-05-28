@@ -152,7 +152,7 @@ class VulnerabilityFunction(object):
             self.distribution = DISTRIBUTIONS[self.distribution_name]()
         else:
             self.distribution = DegenerateDistribution()
-        self.distribution.epsilons = epsilons
+        self.distribution.epsilons = numpy.array(epsilons)
 
     def apply_to(self, ground_motion_values, epsilons):
         """
@@ -285,14 +285,14 @@ class VulnerabilityFunction(object):
 
         # for imls such that iml > min(iml) we get a mean loss ratio
         # by interpolation and sample the distribution
-
         idxs, = numpy.where(imls_curve >= self.imls[0])
         imls_curve = numpy.array(imls_curve)[idxs]
         means = self._mlr_i1d(imls_curve)
 
         # apply uncertainty
         covs = self._cov_for(imls_curve)
-        ret[idxs] = self.distribution.sample(means, covs, covs * imls_curve)
+        ret[idxs] = self.distribution.sample(
+            means, covs, covs * imls_curve, idxs)
         return ret
 
     @utils.memoized
@@ -444,7 +444,7 @@ class Distribution(object):
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
-    def sample(self, means, covs, stddevs):
+    def sample(self, means, covs, stddevs, idx):
         """
         :returns: sample a set of losses
         :param means: an array of mean losses
@@ -467,7 +467,7 @@ class DegenerateDistribution(Distribution):
     The degenerate distribution. E.g. a distribution with a delta
     corresponding to the mean.
     """
-    def sample(self, means, _covs, _stddev):
+    def sample(self, means, _covs, _stddev, _idx):
         return means
 
     def survival(self, loss_ratio, mean, _stddev):
@@ -570,16 +570,14 @@ class LogNormalDistribution(Distribution):
         self.epsilons = epsilons
         self.asset_idx = 0
 
-    def sample(self, means, covs, _stddevs):
+    def sample(self, means, covs, _stddevs, idx=slice(None)):
         if self.epsilons is None:
             raise ValueError("A LogNormalDistribution must be initialized "
                              "before you can use it")
-        epsilons = self.epsilons[self.asset_idx]
+        eps = self.epsilons[self.asset_idx][idx]
         self.asset_idx += 1
-        if isinstance(epsilons, (numpy.ndarray, list, tuple)):
-            epsilons = epsilons[0:len(covs)]
         sigma = numpy.sqrt(numpy.log(covs ** 2.0 + 1.0))
-        probs = means / numpy.sqrt(1 + covs ** 2) * numpy.exp(epsilons * sigma)
+        probs = means / numpy.sqrt(1 + covs ** 2) * numpy.exp(eps * sigma)
         return probs
 
     def survival(self, loss_ratio, mean, stddev):
@@ -600,7 +598,7 @@ class LogNormalDistribution(Distribution):
 
 @DISTRIBUTIONS.add('BT')
 class BetaDistribution(Distribution):
-    def sample(self, means, _covs, stddevs):
+    def sample(self, means, _covs, stddevs, idx=slice(None)):
         alpha = self._alpha(means, stddevs)
         beta = self._beta(means, stddevs)
         return numpy.random.beta(alpha, beta, size=None)
