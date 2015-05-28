@@ -48,6 +48,8 @@ def build_asset_collection(assets_by_site):
         if len(assets):
             first_asset = assets[0]
             break
+    else:  # no break
+        raise ValueError('There are no assets!')
     loss_types = first_asset.values.keys()
     deductible_d = first_asset.deductibles or {}
     limit_d = first_asset.insurance_limits or {}
