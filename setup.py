@@ -13,14 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""
-oq-risklib needs a description.
 
-Comments, suggestions and criticisms from the community are always
-very welcome.
-
-Copyright (C) 2013-2014, GEM Foundation.
-"""
 import os
 import re
 import sys
@@ -44,6 +37,16 @@ def get_version():
 version = get_version()
 
 url = "http://github.com/gem/oq-risklib"
+
+README = """
+oq-risklib needs a description.
+
+Comments, suggestions and criticisms from the community are always
+very welcome.
+
+Copyright (C) 2013-2015, GEM Foundation.
+"""
+
 cd = os.path.dirname(os.path.join(__file__))
 
 setup(
@@ -57,10 +60,12 @@ setup(
         'numpy',
         'scipy'
     ],
-    maintainer='GEM',
-    maintainer_email='info@openquake.org',
+    author='GEM Foundation',
+    author_email='devops@openquake.org',
+    maintainer='GEM Foundation',
+    maintainer_email='devops@openquake.org',
     classifiers=(
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'Intended Audience :: Education',
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: GNU Affero General Public License v3',
@@ -71,8 +76,10 @@ setup(
     keywords="seismic risk",
     license="GNU AGPL v3",
     platforms=["any"],
+    package_data={"openquake.risklib": [
+        "README.md", "LICENSE"]},
     scripts=["bin/oq-lite"],
     namespace_packages=['openquake'],
-
+    include_package_data=True,
     zip_safe=False,
 )
