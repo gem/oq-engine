@@ -25,12 +25,14 @@ class ScenarioDamageTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_1c(self):
+        # this is a case with more hazard sites than exposure sites
         test_dir = os.path.dirname(case_1c.__file__)
         self.run_calc(test_dir, 'job_haz.ini')
         hc_id = self.calc.datastore.calc_id
         out = self.run_calc(test_dir, 'job_risk.ini',
-                            hazard_calculation_id=hc_id)
-        import pdb; pdb.set_trace()
+                            hazard_calculation_id=hc_id, exports='xml')
+        total = out['damages_by_key', 'xml'][3]
+        self.assertEqualFiles('expected/dmg_dist_total.xml', total)
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_2(self):

@@ -45,7 +45,7 @@ def build_asset_collection(assets_by_site):
     :returns: an array with composite dtype
     """
     for assets in assets_by_site:
-        if assets:
+        if len(assets):
             first_asset = assets[0]
             break
     loss_types = first_asset.values.keys()

@@ -174,11 +174,11 @@ class HazardCalculator(BaseCalculator):
         siteobjects = geodetic.GeographicObjects(sitecol, getlon, getlat)
         assets_by_sid = general.AccumDict()
         for assets in self.assets_by_site:
-            # assets is a non-empty list of assets on the same location
-            lon, lat = assets[0].location
-            site = siteobjects.get_closest(lon, lat, maximum_distance)
-            if site:
-                assets_by_sid += {site.id: list(assets)}
+            if len(assets):
+                lon, lat = assets[0].location
+                site = siteobjects.get_closest(lon, lat, maximum_distance)
+                if site:
+                    assets_by_sid += {site.id: list(assets)}
         if not assets_by_sid:
             raise AssetSiteAssociationError(
                 'Could not associate any site to any assets within the '
@@ -270,13 +270,19 @@ class HazardCalculator(BaseCalculator):
                 self.sitecol = readinput.get_site_collection(self.oqparam)
 
         # save mesh and asset collection
-        if '/sitemesh' not in self.datastore:
-            mesh_dt = numpy.dtype([('lon', float), ('lat', float)])
-            self.sitemesh = numpy.array(
-                zip(self.sitecol.lons, self.sitecol.lats), mesh_dt)
-            if hasattr(self, 'assets_by_site'):
-                self.assetcol = riskinput.build_asset_collection(
-                    self.assets_by_site)
+        if ('/sitemesh' not in self.datastore and
+                '/sitemesh' not in self.datastore.parent):
+            self.save_mesh(self.sitecol.complete)
+        if hasattr(self, 'assets_by_site'):
+            self.assetcol = riskinput.build_asset_collection(
+                self.assets_by_site)
+
+    def save_mesh(self, sitecol):
+        """
+        Save the mesh associated to the complete sitecol in the HDF5 file
+        """
+        mesh_dt = numpy.dtype([('lon', float), ('lat', float)])
+        self.sitemesh = numpy.array(zip(sitecol.lons, sitecol.lats), mesh_dt)
 
     def read_sources(self):
         """
@@ -439,12 +445,7 @@ def read_gmfs_from_csv(calc):
     :returns: riskinputs
     """
     logging.info('Reading hazard curves from CSV')
-    sitecol, gmfs_by_imt = readinput.get_sitecol_gmfs(calc.oqparam)
-
-    # filter the hazard sites by taking the closest to the assets
-    with calc.monitor('assoc_assets_sites'):
-        calc.sitecol, calc.assets_by_site = calc.assoc_assets_sites(
-            sitecol)
+    gmfs_by_imt = readinput.get_gmfs(calc.oqparam, calc.sitecol.complete)
 
     # reduce the gmfs matrices to the filtered sites
     for imt in calc.oqparam.imtls:
