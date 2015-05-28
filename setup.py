@@ -87,6 +87,7 @@ setup(
     package_data={"openquake.engine": [
         "openquake.cfg", "openquake_worker.cfg",
         "README.md", "LICENSE", "CONTRIBUTORS.txt"]},
+    namespace_packages=['openquake'],
     scripts=["openquake/engine/bin/oq_create_db",
              "openquake/engine/bin/openquake"],
     zip_safe=False,
