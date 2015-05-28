@@ -270,19 +270,20 @@ class HazardCalculator(BaseCalculator):
                 self.sitecol = readinput.get_site_collection(self.oqparam)
 
         # save mesh and asset collection
-        if ('/sitemesh' not in self.datastore and
-                '/sitemesh' not in self.datastore.parent):
-            self.save_mesh(self.sitecol.complete)
+        self.save_mesh()
         if hasattr(self, 'assets_by_site'):
             self.assetcol = riskinput.build_asset_collection(
                 self.assets_by_site)
 
-    def save_mesh(self, sitecol):
+    def save_mesh(self):
         """
         Save the mesh associated to the complete sitecol in the HDF5 file
         """
-        mesh_dt = numpy.dtype([('lon', float), ('lat', float)])
-        self.sitemesh = numpy.array(zip(sitecol.lons, sitecol.lats), mesh_dt)
+        if ('/sitemesh' not in self.datastore and
+                '/sitemesh' not in self.datastore.parent):
+            col = self.sitecol.complete
+            mesh_dt = numpy.dtype([('lon', float), ('lat', float)])
+            self.sitemesh = numpy.array(zip(col.lons, col.lats), mesh_dt)
 
     def read_sources(self):
         """
