@@ -82,8 +82,10 @@ setup(
     ext_modules=[geodetic_speedups, geoutils_speedups],
     include_dirs=include_dirs,
     scripts=['openquake/hazardlib/tests/gsim/check_gsim.py'],
-    maintainer='GEM',
-    maintainer_email='info@openquake.org',
+    author='GEM Foundation',
+    author_email='devops@openquake.org',
+    maintainer='GEM Foundation',
+    maintainer_email='devops@openquake.org',
     classifiers=(
         'Development Status :: 4 - Beta',
         'Intended Audience :: Education',
@@ -101,5 +103,4 @@ setup(
     namespace_packages=['openquake'],
     include_package_data=True,
     zip_safe=False,
-
 )
