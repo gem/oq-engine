@@ -32,6 +32,8 @@ celeryconfig.py file works with your python-celery setup.
 
 Feel free to copy /usr/share/engine/celeryconfig.py and revise it
 as needed.
+
+Copyright (C) 2010-2015, GEM Foundation.
 """
 
 PY_MODULES = ['openquake.engine.bin.openquake_cli']
