@@ -30,7 +30,7 @@ Please note: the /usr/bin/oq-engine script requires a celeryconfig.py
 file in the PYTHONPATH.  Please make sure this is the case and that your
 celeryconfig.py file works with your python-celery setup.
 
-Feel free to copy /usr/share/engine/celeryconfig.py and revise it
+Feel free to copy /usr/share/openquake/engine/celeryconfig.py and revise it
 as needed.
 
 Copyright (C) 2010-2015, GEM Foundation.
