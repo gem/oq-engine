@@ -238,14 +238,8 @@ class HazardCalculator(BaseCalculator):
             logging.info('Reading the exposure')
             with self.monitor('reading exposure', autoflush=True):
                 self.exposure = readinput.get_exposure(self.oqparam)
-                sitecol, assets_by_site = (
+                self.sitecol, self.assets_by_site = (
                     readinput.get_sitecol_assets(self.oqparam, self.exposure))
-                if (self.datastore.parent and self.datastore.parent['sitecol']
-                        != sitecol and self.is_stochastic):
-                    raise ValueError(
-                        'The hazard sites are different from the risk sites '
-                        '%s!=%s' % (self.datastore.parent['sitecol'], sitecol))
-                self.sitecol, self.assets_by_site = sitecol, assets_by_site
                 self.cost_types = self.exposure.cost_types
                 self.taxonomies = numpy.array(
                     sorted(self.exposure.taxonomies), '|S100')
@@ -261,7 +255,12 @@ class HazardCalculator(BaseCalculator):
                 logging.warn('Associated %d assets to %d sites, %d discarded',
                              ok_assets, num_sites, num_assets - ok_assets)
 
-        else:
+            if (self.is_stochastic and self.datastore.parent and
+                    self.datastore.parent['sitecol'] != self.sitecol):
+                raise ValueError(
+                    'The hazard sites are different from the risk sites %s!=%s'
+                    % (self.datastore.parent['sitecol'], self.sitecol))
+        else:  # no exposure
             logging.info('Reading the site collection')
             with self.monitor('reading site collection', autoflush=True):
                 self.sitecol = readinput.get_site_collection(self.oqparam)
