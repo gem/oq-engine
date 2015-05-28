@@ -28,6 +28,11 @@ from openquake.engine.utils import config
 
 config.abort_if_no_config_available()
 
+try:
+    import celeryconfig
+except ImportError:
+    sys.path.append('/usr/share/openquake/engine')
+
 import openquake.engine
 
 from openquake.engine import __version__
