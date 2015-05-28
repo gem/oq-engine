@@ -96,6 +96,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
     losses_by_key = datastore.persistent_attribute('losses_by_key')
     gmf_by_trt_gsim = datastore.persistent_attribute('gmf_by_trt_gsim')
     pre_calculator = 'scenario'
+    is_stochastic = True
 
     def pre_execute(self):
         """

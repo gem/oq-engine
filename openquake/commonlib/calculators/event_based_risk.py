@@ -121,6 +121,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
     event_loss_asset = datastore.persistent_attribute('event_loss_asset')
     event_loss = datastore.persistent_attribute('event_loss')
+    is_stochastic = True
 
     def riskinput_key(self, ri):
         """

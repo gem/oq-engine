@@ -263,6 +263,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
     """
     core_func = compute_ruptures
     sescollection = datastore.persistent_attribute('sescollection')
+    is_stochastic = True
 
     def pre_execute(self):
         """
@@ -405,6 +406,7 @@ class EventBasedCalculator(ClassicalCalculator):
     pre_calculator = 'event_based_rupture'
     core_func = compute_gmfs_and_curves
     gmf_by_trt_gsim = datastore.persistent_attribute('gmf_by_trt_gsim')
+    is_stochastic = True
 
     def pre_execute(self):
         """

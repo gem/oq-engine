@@ -62,6 +62,7 @@ class BaseCalculator(object):
     taxonomies = datastore.persistent_attribute('/taxonomies')
 
     pre_calculator = None  # to be overridden
+    is_stochastic = False  # True for scenario and event based calculators
 
     def __init__(self, oqparam, monitor=DummyMonitor(), calc_id=None,
                  persistent=True):
@@ -221,8 +222,8 @@ class HazardCalculator(BaseCalculator):
                 self.oqparam = self.oqparam
             if self.oqparam.hazard_investigation_time is None:
                 self.oqparam.hazard_investigation_time = (
-                    self.datastore['oqparam'].investigation_time)
-            if '/taxonomies' not in self.datastore:
+                    self.oqparam.investigation_time)
+            if '/taxonomies' not in self.datastore:  # not read already
                 self.read_exposure_sitecol()
         else:  # we are in a basic calculator
             self.read_exposure_sitecol()
@@ -237,8 +238,14 @@ class HazardCalculator(BaseCalculator):
             logging.info('Reading the exposure')
             with self.monitor('reading exposure', autoflush=True):
                 self.exposure = readinput.get_exposure(self.oqparam)
-                self.sitecol, self.assets_by_site = (
+                sitecol, assets_by_site = (
                     readinput.get_sitecol_assets(self.oqparam, self.exposure))
+                if (self.datastore.parent and self.datastore.parent['sitecol']
+                        != sitecol and self.is_stochastic):
+                    raise ValueError(
+                        'The hazard sites are different from the risk sites '
+                        '%s!=%s' % (self.datastore.parent['sitecol'], sitecol))
+                self.sitecol, self.assets_by_site = sitecol, assets_by_site
                 self.cost_types = self.exposure.cost_types
                 self.taxonomies = numpy.array(
                     sorted(self.exposure.taxonomies), '|S100')

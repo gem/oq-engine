@@ -57,6 +57,7 @@ class ScenarioCalculator(base.HazardCalculator):
     core_func = calc_gmfs
     sescollection = datastore.persistent_attribute('sescollection')
     gmf_by_trt_gsim = datastore.persistent_attribute('gmf_by_trt_gsim')
+    is_stochastic = True
 
     def pre_execute(self):
         """
