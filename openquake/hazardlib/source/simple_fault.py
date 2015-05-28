@@ -18,7 +18,6 @@ Module :mod:`openquake.hazardlib.source.simple_fault` defines
 :class:`SimpleFaultSource`.
 """
 import math
-import numpy
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
@@ -90,8 +89,7 @@ class SimpleFaultSource(ParametricSeismicSource):
                  temporal_occurrence_model,
                  # simple fault specific parameters
                  upper_seismogenic_depth, lower_seismogenic_depth,
-                 fault_trace, dip, rake, hypo_list=numpy.array(None),
-                 slip_list=numpy.array(None)):
+                 fault_trace, dip, rake, hypo_list=(), slip_list=()):
         super(SimpleFaultSource, self).__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
             magnitude_scaling_relationship, rupture_aspect_ratio,
@@ -115,10 +113,10 @@ class SimpleFaultSource(ParametricSeismicSource):
         self.slip_list = slip_list
         self.hypo_list = hypo_list
 
-        if (self.hypo_list.size != 1 and self.slip_list.size == 1 or
-           self.hypo_list.size == 1 and self.slip_list.size != 1):
-            raise ValueError('hypo_list and slip_list have to be both given or\
-                neither given')
+        if (len(self.hypo_list) and not len(self.slip_list) or
+           not len(self.hypo_list) and len(self.slip_list)):
+            raise ValueError('hypo_list and slip_list have to be both given '
+                             'or neither given')
 
         if 1 in cols_rows:
             raise ValueError('mesh spacing %s is too high to represent '
@@ -181,8 +179,7 @@ class SimpleFaultSource(ParametricSeismicSource):
                     mesh = whole_fault_mesh[first_row: first_row + rup_rows,
                                             first_col: first_col + rup_cols]
 
-                    if (self.hypo_list.size == 1 and
-                            self.slip_list.size == 1):
+                    if not len(self.hypo_list) and not len(self.slip_list):
 
                         hypocenter = mesh.get_middle_point()
                         occurrence_rate_hypo = occurrence_rate
@@ -199,8 +196,7 @@ class SimpleFaultSource(ParametricSeismicSource):
                             for slip in self.slip_list:
                                 surface = SimpleFaultSurface(mesh)
                                 hypocenter = surface.get_hypo_location(
-                                    self.rupture_mesh_spacing,
-                                    hypo[:2])
+                                    self.rupture_mesh_spacing, hypo[:2])
                                 occurrence_rate_hypo = occurrence_rate * \
                                     hypo[2] * slip[1]
                                 rupture_slip_direction = slip[0]
