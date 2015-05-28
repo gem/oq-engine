@@ -1,0 +1,7 @@
+include openquake.cfg  openquake_worker.cfg
+include README.md  LICENSE  contributors.txt
+
+recursive-include openquake/engine/db *.sql
+recursive-include openquake/engine/tests *.xml *.ini *.sql
+
+recursive-include openquake/server *.html *.css *.png *.js *.map *.ttf
