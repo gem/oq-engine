@@ -601,7 +601,7 @@ if [ 0 -eq 1 ]; then
 
     # mods pre-packaging
     mv LICENSE         openquake
-    mv README.md       openquake/README
+    mv README.rst      openquake/README
     mv celeryconfig.py openquake
     mv openquake.cfg   openquake
 
