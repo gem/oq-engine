@@ -54,8 +54,10 @@ setup(
     },
     name="openquake.engine",
     version=version,
-    author="The OpenQuake team",
+    author="GEM Foundation",
     author_email="devops@openquake.org",
+    maintainer='GEM Foundation',
+    maintainer_email='devops@openquake.org',
     description=("Computes hazard, risk and socio-economic impact of "
                  "earthquakes."),
     license="GNU AGPL v3",
