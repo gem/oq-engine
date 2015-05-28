@@ -356,7 +356,8 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
     correl_model = readinput.get_correl_model(oq)
     num_sites = len(sitecol)
     dic = make_gmf_by_tag(
-        ses_ruptures, sitecol, oq.imtls, gsims, trunc_level, correl_model)
+        ses_ruptures, sitecol.complete, oq.imtls, gsims,
+        trunc_level, correl_model)
     zero = zero_curves(num_sites, oq.imtls)
     result = AccumDict({(trt_id, str(gsim)): [dic, zero] for gsim in gsims})
     gmfs = [dic[tag] for tag in sorted(dic)]
