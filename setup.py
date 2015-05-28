@@ -76,16 +76,12 @@ setup(
                                     "openquake.engine.bin",
                                     "openquake.engine.bin.*"]),
     py_modules=PY_MODULES,
-
     include_package_data=True,
     scripts=["openquake/engine/bin/oq_create_db",
              "openquake/engine/bin/openquake"],
-
     package_data={"openquake.engine": [
         "openquake.cfg", "openquake_worker.cfg",
-        "README.md", "LICENSE", "contributors.txt"]},
-
+        "README.md", "LICENSE", "CONTRIBUTORS.txt"]},
     namespace_packages=['openquake'],
-
     zip_safe=False,
     )
