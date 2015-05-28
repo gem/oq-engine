@@ -1,3 +1,18 @@
+# The OpenQuake Engine
+# Copyright (C) 2012-2015, GEM Foundation
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import re
 import sys
 from setuptools import setup, find_packages
@@ -43,13 +58,18 @@ setup(
     author_email="devops@openquake.org",
     description=("Computes hazard, risk and socio-economic impact of "
                  "earthquakes."),
-    license="AGPL3",
+    license="GNU AGPL v3",
     keywords="earthquake seismic hazard risk",
     url=url,
     long_description=README,
     classifiers=[
-        "Development Status :: 4 - Beta",
-        "Topic :: Scientific/Engineering",
+        'Development Status :: 4 - Beta',
+        'Intended Audience :: Education',
+        'Intended Audience :: Science/Research',
+        'Programming Language :: Python :: 2',
+        'License :: OSI Approved :: GNU Affero General Public License v3',
+        'Operating System :: OS Independent',
+        'Topic :: Scientific/Engineering',
     ],
     packages=find_packages(exclude=["qa_tests", "qa_tests.*",
                                     "tools",
