@@ -28,9 +28,11 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         test_dir = os.path.dirname(case_1c.__file__)
         self.run_calc(test_dir, 'job_haz.ini')
         hc_id = self.calc.datastore.calc_id
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as ctx:
             self.run_calc(test_dir, 'job_risk.ini',
                           hazard_calculation_id=hc_id)
+        self.assertIn('The hazard sites are different from the risk sites',
+                      str(ctx.exception))
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_2(self):
