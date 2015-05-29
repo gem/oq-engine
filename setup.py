@@ -71,7 +71,7 @@ setup(
     name='openquake.hazardlib',
     version=version,
     description="hazardlib is a library for performing seismic hazard analysis",
-    long_description=__doc__,
+    long_description=README,
     url=url,
     packages=find_packages(exclude=['tests', 'tests.*']),
     install_requires=[
