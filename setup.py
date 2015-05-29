@@ -74,7 +74,7 @@ setup(
         'Topic :: Scientific/Engineering',
     ),
     keywords="seismic risk",
-    license="GNU AGPL v3",
+    license="AGPL3",
     platforms=["any"],
     package_data={"openquake.risklib": [
         "README.md", "LICENSE"]},
