@@ -94,7 +94,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
             self.COVS_GOOD)
 
         epsilons = scientific.make_epsilons(
-            numpy.zeros((1, 1)), seed=3, correlation=0)
+            numpy.zeros((1, 3)), seed=3, correlation=0)
         self.test_func.set_distribution(epsilons)
 
     def test_vuln_func_constructor_raises_on_bad_imls(self):
@@ -161,7 +161,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
             self.COVS_GOOD)
 
     def test_loss_ratio_interp_many_values(self):
-        expected_lrs = numpy.array([0.0161928, 0.07685701, 4.64095499])
+        expected_lrs = numpy.array([0.0161928, 0.05880167, 0.12242504])
         test_input = [0.005, 0.006, 0.0269]
 
         numpy.testing.assert_allclose(
@@ -172,9 +172,8 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         # of loss ratios (ordinates).
         # This test also ensures that input IML values are 'clipped' to the IML
         # range defined for the vulnerability function.
-        expected_lrs = numpy.array([0.0, 0.07685701, 4.64095499])
+        expected_lrs = numpy.array([0., 0.05880167, 0.12242504])
         test_input = [0.00049, 0.006, 2.7]
-
         numpy.testing.assert_allclose(
             expected_lrs, self.test_func._apply(test_input))
 
@@ -192,7 +191,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         # range defined for the vulnerability function.
         expected_covs = numpy.array([0.3, 0.2, 10])
         test_input = [0.0049, 0.006, 0.027]
-
+        print self.test_func._cov_for(test_input)
         numpy.testing.assert_allclose(
             expected_covs, self.test_func._cov_for(test_input))
 

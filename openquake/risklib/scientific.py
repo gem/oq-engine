@@ -152,7 +152,8 @@ class VulnerabilityFunction(object):
             self.distribution = DISTRIBUTIONS[self.distribution_name]()
         else:
             self.distribution = DegenerateDistribution()
-        self.distribution.epsilons = numpy.array(epsilons)
+        self.distribution.epsilons = (numpy.array(epsilons)
+                                      if epsilons is not None else None)
 
     def apply_to(self, ground_motion_values, epsilons):
         """
