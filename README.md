@@ -1,4 +1,5 @@
 OpenQuake Risk Library (oq-risklib)
+-----------------------------------
 
 OpenQuake Risklib is an open source library for seismic risk assessment,
 which includes several modules capable of calculating losses and damage
@@ -13,3 +14,5 @@ The GEM Foundation (http://www.globalquakemodel.org/) supports the development
 of this library by adding the most common methodologies used by seismic risk
 modellers. Comments, suggestions and criticisms from the community are always
 very welcome.
+
+Copyright (C) 2013-2015, GEM Foundation.

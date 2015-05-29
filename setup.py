@@ -38,22 +38,13 @@ version = get_version()
 
 url = "http://github.com/gem/oq-risklib"
 
-README = """
-oq-risklib needs a description.
-
-Comments, suggestions and criticisms from the community are always
-very welcome.
-
-Copyright (C) 2013-2015, GEM Foundation.
-"""
-
 cd = os.path.dirname(os.path.join(__file__))
 
 setup(
     name='openquake.risklib',
     version=version,
     description="oq-risklib is a library for performing seismic risk analysis",
-    long_description=__doc__,
+    long_description=open(os.path.join(cd, 'README.md')).read(),
     url=url,
     packages=find_packages(),
     install_requires=[
