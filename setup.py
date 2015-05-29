@@ -96,7 +96,7 @@ setup(
         'Topic :: Scientific/Engineering',
     ),
     keywords="seismic hazard",
-    license="GNU AGPL v3",
+    license="AGPL3",
     platforms=["any"],
     package_data={"openquake.hazardlib": [
         "README.rst", "LICENSE", "CONTRIBUTORS.txt"]},
