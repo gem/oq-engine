@@ -571,11 +571,11 @@ class LogNormalDistribution(Distribution):
         self.epsilons = epsilons
         self.asset_idx = 0
 
-    def sample(self, means, covs, _stddevs, idx=slice(None)):
+    def sample(self, means, covs, _stddevs, idx):
         if self.epsilons is None:
             raise ValueError("A LogNormalDistribution must be initialized "
                              "before you can use it")
-        eps = self.epsilons[self.asset_idx][idx]
+        eps = self.epsilons[self.asset_idx, idx]
         self.asset_idx += 1
         sigma = numpy.sqrt(numpy.log(covs ** 2.0 + 1.0))
         probs = means / numpy.sqrt(1 + covs ** 2) * numpy.exp(eps * sigma)
@@ -599,7 +599,7 @@ class LogNormalDistribution(Distribution):
 
 @DISTRIBUTIONS.add('BT')
 class BetaDistribution(Distribution):
-    def sample(self, means, _covs, stddevs, idx=slice(None)):
+    def sample(self, means, _covs, stddevs, idx):
         alpha = self._alpha(means, stddevs)
         beta = self._beta(means, stddevs)
         return numpy.random.beta(alpha, beta, size=None)

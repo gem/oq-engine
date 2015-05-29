@@ -52,7 +52,7 @@ class BetaDistributionTestCase(unittest.TestCase):
         numpy.random.seed(0)
         numpy.testing.assert_allclose(
             [0.057241368], scientific.BetaDistribution().sample(
-                numpy.array([0.1]), None, numpy.array([0.1])))
+                numpy.array([0.1]), None, numpy.array([0.1]), [0]))
 
 
 class TestMemoize(unittest.TestCase):
@@ -191,7 +191,6 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         # range defined for the vulnerability function.
         expected_covs = numpy.array([0.3, 0.2, 10])
         test_input = [0.0049, 0.006, 0.027]
-        print self.test_func._cov_for(test_input)
         numpy.testing.assert_allclose(
             expected_covs, self.test_func._cov_for(test_input))
 
@@ -386,7 +385,7 @@ class LogNormalDistributionTestCase(unittest.TestCase):
         self.dist = scientific.LogNormalDistribution(epsilons)
         samples = self.dist.sample(numpy.array([0., 0., .1, .1]),
                                    numpy.array([0., .1, 0., .1]),
-                                   None)
+                                   None, slice(None))
         numpy.testing.assert_allclose([0., 0., 0.1, 0.10228396], samples)
 
 
