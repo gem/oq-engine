@@ -41,11 +41,10 @@ README = """
 OpenQuake is an open source application that allows users to
 compute seismic hazard and seismic risk of earthquakes on a global scale.
 
-Please note: the /usr/bin/oq-engine script requires a celeryconfig.py
-file in the PYTHONPATH.  Please make sure this is the case and that your
-celeryconfig.py file works with your python-celery setup.
-Feel free to copy /usr/share/openquake/engine/celeryconfig.py and revise it
-as needed.
+Please note: the /usr/bin/oq-engine script requires a celeryconfig.py file in
+the PYTHONPATH; when using binary packages, if a celeryconfig.py is not
+available the OpenQuake Engine default celeryconfig.py, located in
+/usr/share/openquake/engine, is used.
 
 Copyright (C) 2010-2015, GEM Foundation.
 """
