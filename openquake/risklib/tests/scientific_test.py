@@ -52,7 +52,7 @@ class BetaDistributionTestCase(unittest.TestCase):
         numpy.random.seed(0)
         numpy.testing.assert_allclose(
             [0.057241368], scientific.BetaDistribution().sample(
-                numpy.array([0.1]), None, numpy.array([0.1]), [0]))
+                numpy.array([0.1]), None, numpy.array([0.1])))
 
 
 class TestMemoize(unittest.TestCase):

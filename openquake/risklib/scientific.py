@@ -445,7 +445,7 @@ class Distribution(object):
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
-    def sample(self, means, covs, stddevs, idx):
+    def sample(self, means, covs, stddevs, idxs):
         """
         :returns: sample a set of losses
         :param means: an array of mean losses
@@ -468,7 +468,7 @@ class DegenerateDistribution(Distribution):
     The degenerate distribution. E.g. a distribution with a delta
     corresponding to the mean.
     """
-    def sample(self, means, _covs, _stddev, _idx):
+    def sample(self, means, _covs, _stddev, _idxs):
         return means
 
     def survival(self, loss_ratio, mean, _stddev):
@@ -571,11 +571,11 @@ class LogNormalDistribution(Distribution):
         self.epsilons = epsilons
         self.asset_idx = 0
 
-    def sample(self, means, covs, _stddevs, idx):
+    def sample(self, means, covs, _stddevs, idxs):
         if self.epsilons is None:
             raise ValueError("A LogNormalDistribution must be initialized "
                              "before you can use it")
-        eps = self.epsilons[self.asset_idx, idx]
+        eps = self.epsilons[self.asset_idx, idxs]
         self.asset_idx += 1
         sigma = numpy.sqrt(numpy.log(covs ** 2.0 + 1.0))
         probs = means / numpy.sqrt(1 + covs ** 2) * numpy.exp(eps * sigma)
@@ -599,7 +599,7 @@ class LogNormalDistribution(Distribution):
 
 @DISTRIBUTIONS.add('BT')
 class BetaDistribution(Distribution):
-    def sample(self, means, _covs, stddevs, idx):
+    def sample(self, means, _covs, stddevs, _idxs=None):
         alpha = self._alpha(means, stddevs)
         beta = self._beta(means, stddevs)
         return numpy.random.beta(alpha, beta, size=None)
