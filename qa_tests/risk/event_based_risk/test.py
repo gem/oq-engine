@@ -16,7 +16,7 @@
 import os
 import collections
 
-from nose.plugins.attrib import attr as noseattr
+from nose.plugins.attrib import attr
 import numpy
 from numpy.testing import assert_almost_equal as aae
 
@@ -33,7 +33,7 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
 
     hazard_calculation_fixture = "PEB QA test 1"
 
-    @noseattr('qa', 'risk', 'event_based')
+    @attr('qa', 'risk', 'event_based')
     def test(self):
         self._run_test()
 
@@ -171,7 +171,7 @@ class EventBaseQATestCase2(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
     module = case_2
     hazard_calculation_fixture = "PEB QA test 2"
 
-    @noseattr('qa', 'risk', 'event_based')
+    @attr('qa', 'risk', 'event_based')
     def test(self):
         self._run_test()
 
