@@ -14,7 +14,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
-from nose.plugins.attrib import attr as noseattr
+from nose.plugins.attrib import attr
 from qa_tests import risk
 
 
@@ -26,7 +26,7 @@ class EventBaseDumpRestoreSESTestCase(
                                   "Based from Stochastic Event Set")
     dump_restore = True
 
-    @noseattr('qa', 'risk', 'event_based')
+    @attr('qa', 'risk', 'event_based')
     def test(self):
         raise unittest.SkipTest
         self._run_test()
