@@ -335,7 +335,7 @@ class BaseHazardCalculator(base.Calculator):
 
             with self.monitor('building curves per realization'):
                 all_curves = models.build_curves(rlz, self.acc)
-                if all_curves:
+                if all_curves.any():
                     for imt, curves in zip(sorted_imts, all_curves):
                         if individual_curves:
                             self.save_curves_for_rlz_imt(
@@ -501,7 +501,7 @@ class BaseHazardCalculator(base.Calculator):
                             location=wkt))
 
                 # then means
-                if self.mean_hazard_curves:
+                if self.mean_hazard_curves and len(curve_poes):
                     m_curve = scientific.mean_curve(curve_poes, weights)
                     inserter.add(
                         models.HazardCurveData(

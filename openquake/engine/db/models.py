@@ -215,7 +215,7 @@ def build_curves(rlz, curves_by_trt_model_gsim):
     """
     # fixed a realization, there are T associations where T is the
     # number of TrtModels
-    curves = 0
+    curves = numpy.array([0])
     for art in AssocLtRlzTrtModel.objects.filter(rlz=rlz):
         pnes = 1. - curves_by_trt_model_gsim.get(
             (art.trt_model_id, art.gsim), 0)
