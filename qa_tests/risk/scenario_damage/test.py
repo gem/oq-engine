@@ -33,8 +33,7 @@ class ScenarioDamageTestCase(risk.BaseRiskQATestCase):
         job = testcase._run_test()
         testcase.compare_xml_outputs(
             job,
-            ['expected/dmg_dist_per_asset.xml',
-             'expected/collapse_map.xml',
+            ['expected/collapse_map.xml',
              'expected/dmg_dist_per_taxonomy.xml',
              'expected/dmg_dist_total.xml'])
 
