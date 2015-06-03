@@ -30,7 +30,14 @@ exit 0
 psql_batch_options='--set ON_ERROR_STOP=1'
 
 # Where do the table spaces live?
-tspace_path='/var/lib/postgresql/ts'
+if [ -f /etc/redhat-release ]; then
+    # On RedHat derivates (CentOS/Scientific/RHEL, Fedora) we need a custom path for ts
+    tspace_path='/var/lib/pgsql/ts'
+else
+    # As default we use the Debian and derivates (including Ubuntu) default path
+    tspace_path='/var/lib/postgresql/ts'
+fi
+
 # What table spaces should be created?
 tspace_list="hzrdi hzrdr riski riskr uiapi"
 
