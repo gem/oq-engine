@@ -28,10 +28,16 @@ from openquake.engine.utils import config
 
 config.abort_if_no_config_available()
 
+"""
+Please note: the /usr/bin/oq-engine script requires a celeryconfig.py file in
+the PYTHONPATH; when using binary packages, if a celeryconfig.py is not
+available the OpenQuake Engine default celeryconfig.py, located in
+/usr/share/openquake/engine, is used.
+"""
 try:
     import celeryconfig
 except ImportError:
-    sys.path.append('/usr/openquake/engine')
+    sys.path.append('/usr/share/openquake/engine')
 
 import openquake.engine
 

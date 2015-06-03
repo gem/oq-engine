@@ -493,7 +493,7 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "set -e; oq-engine --upgrade-db --yes"
 
     # run celeryd daemon
-    ssh $lxc_ip "cd /usr/openquake/engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
+    ssh $lxc_ip "cd /usr/share/openquake/engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
 
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
         # run all of the hazard and risk demos
