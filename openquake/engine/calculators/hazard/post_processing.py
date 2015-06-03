@@ -63,8 +63,6 @@ def hazard_curves_to_hazard_map(hazard_curves, poes, monitor):
         hcd = list(models.HazardCurveData.objects.all_curves_simple(
             filter_args=dict(hazard_curve=hc.id), order_by='location'
         ))
-        if not hcd:
-            continue
         imt = hc.imt
         if imt == 'SA':
             # if it's SA, include the period using the standard notation
