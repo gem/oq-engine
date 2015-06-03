@@ -140,7 +140,7 @@ def plot_magnitude_depth_density(catalogue, mag_int, depth_int, logscale=False,
     if logscale:
         normaliser = LogNorm(vmin=vmin_val, vmax=np.max(mag_depth_dist))
     else:
-        normaliser = Normalise(vmin=0, vmax=np.max(mag_depth_dist))
+        normaliser = Normalize(vmin=0, vmax=np.max(mag_depth_dist))
     plt.figure(figsize=DEFAULT_SIZE)
     plt.pcolor(mag_bins[:-1],
                depth_bins[:-1],
@@ -282,7 +282,7 @@ def get_completeness_adjusted_table(catalogue, completeness, dmag, end_year):
 
             idx = np.logical_and(mag_idx,
                                  catalogue.data['year'] >= comp_year - inc)
-            obs_idx = np.logical_and(mag_bins >= low_mag,
+            obs_idx = np.logical_and(mag_bins >= low_mag - dmag /2.,
                                      mag_bins < high_mag + dmag)
         temp_rates = np.histogram(catalogue.data['magnitude'][idx],
                                   mag_bins[obs_idx])[0]
@@ -294,8 +294,8 @@ def get_completeness_adjusted_table(catalogue, completeness, dmag, end_year):
         else:
             obs_rates[obs_idx[:-1]] = temp_rates
     selector = np.where(obs_rates > 0.)[0]
-    mag_bins = mag_bins[selector[0]:selector[-1]]
-    obs_rates = obs_rates[selector[0]:selector[-1]]
+    mag_bins = mag_bins[selector[0]:selector[-1] + 1]
+    obs_rates = obs_rates[selector[0]:selector[-1] + 1]
     # Get cumulative rates
     cum_rates = np.array([sum(obs_rates[iloc:])
                                 for iloc in range(0, len(obs_rates))])
@@ -325,6 +325,7 @@ def plot_observed_recurrence(catalogue, completeness, dmag, end_year=None,
     plt.figure(figsize=DEFAULT_SIZE)
     plt.semilogy(recurrence[:, 0], recurrence[:, 1], 'bo')
     plt.semilogy(recurrence[:, 0], recurrence[:, 2], 'rs')
+    plt.xlim([recurrence[0, 0] - 0.1, recurrence[-1, 0] + 0.1])
     plt.xlabel('Magnitude', fontsize='large')
     plt.ylabel('Annual Rate', fontsize='large')
     plt.legend(['Incremental', 'Cumulative'])
