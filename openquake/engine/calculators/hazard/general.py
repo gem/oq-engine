@@ -334,9 +334,9 @@ class BaseHazardCalculator(base.Calculator):
                     investigation_time=self.oqparam.investigation_time)
 
             with self.monitor('building curves per realization'):
-                all_curves = models.build_curves(rlz, self.acc)
-                if all_curves.any():
-                    for imt, curves in zip(sorted_imts, all_curves):
+                the_curves = models.build_curves(rlz, self.acc)
+                if the_curves != 0:
+                    for imt, curves in zip(sorted_imts, the_curves):
                         if individual_curves:
                             self.save_curves_for_rlz_imt(
                                 rlz, imt, imtls[imt], points, curves)
