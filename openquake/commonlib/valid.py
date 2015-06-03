@@ -548,11 +548,15 @@ def intensity_measure_types_and_levels(value):
     :param value: input string
     :returns: Intensity Measure Type and Levels dictionary
 
-    >>> intensity_measure_types_and_levels('{"PGA": [0.1, 0.2]}')
-    {'PGA': [0.1, 0.2]}
+    >>> intensity_measure_types_and_levels('{"SA(0.10)": [0.1, 0.2]}')
+    {'SA(0.1)': [0.1, 0.2]}
     """
     dic = dictionary(value)
-    for imt_str, imls in dic.iteritems():
+    for imt_str, imls in dic.items():
+        norm_imt = str(imt.from_string(imt_str))
+        if norm_imt != imt_str:
+            dic[norm_imt] = imls
+            del dic[imt_str]
         check_levels(imls, imt_str)  # ValueError if the levels are invalid
     return dic
 
