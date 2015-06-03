@@ -395,7 +395,7 @@ class TestMagnitudeTimeDistribution(unittest.TestCase):
         self.catalogue.data['second'] = np.ones_like(x, dtype=float)
 
 
-    def test_magnitide_time_distribution_no_uncertainties(self):
+    def test_magnitude_time_distribution_no_uncertainties(self):
         """
         Tests the magnitude-depth distribution without uncertainties
         """
@@ -413,3 +413,40 @@ class TestMagnitudeTimeDistribution(unittest.TestCase):
             self.catalogue.get_magnitude_time_distribution(mag_range,
                                                            time_range,
                                                            normalisation=True))
+
+class TestCatalogueConcatenate(unittest.TestCase):
+
+    def setUp(self):
+        cat1 = Catalogue()
+        cat1.end_year = 2000
+        cat1.start_year = 1900
+        cat1.data['eventID'] = [1.0, 2.0, 3.0]
+        cat1.data['magnitude'] = np.array([1.0, 2.0, 3.0])
+
+        cat2 = Catalogue()
+        cat2.end_year = 1990
+        cat2.start_year = 1910
+        cat2.data['eventID'] = [1.0, 2.0, 3.0]
+        cat2.data['magnitude'] = np.array([1.0, 2.0, 3.0])
+
+        self.cat1 = cat1
+        self.cat2 = cat2
+
+    def test_concatenate(self):
+        """
+        Tests concatenation for correct case - catalogues the same
+        """
+        self.cat1.concatenate(self.cat2)
+        self.assertEqual(self.cat1.end_year, 2000)
+        self.assertEqual(self.cat1.start_year, 1900)
+        self.assertEqual(len(self.cat1.data['magnitude']), 6)
+
+    def test_warning_merge_data(self):
+        """
+        Tests concatenation for the case when catalogues contain different
+        attributes
+        """
+        self.cat2.data['month'] = np.array([1.0, 2.0, 3.0])
+        with self.assertRaises(Warning):
+            self.cat1.concatenate(self.cat2)
+
