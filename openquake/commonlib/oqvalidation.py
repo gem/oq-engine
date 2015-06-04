@@ -19,7 +19,7 @@
 import os
 import logging
 import collections
-from openquake.commonlib import valid, parallel
+from openquake.commonlib import valid, parallel, logictree
 from openquake.commonlib.riskmodels import (
     get_fragility_functions, get_imtls_from_vulnerabilities,
     vulnerability_files, fragility_files)
@@ -143,6 +143,30 @@ class OqParam(valid.ParamSet):
                 fname, self.continuous_fragility_discretization)
             self.risk_imtls = {fset.imt: fset.imls
                                for fset in ffs.itervalues()}
+
+        # check the IMTs vs the GSIMs
+        if 'gsim_logic_tree' in self.inputs:
+            path = os.path.join(
+                self.base_path, self.inputs['gsim_logic_tree'])
+            for gsims in logictree.GsimLogicTree(path, []).values.itervalues():
+                self.check_imts_gsims(map(valid.gsim, gsims))
+        elif self.gsim is not None:
+            self.check_imts_gsims([self.gsim])
+
+    def check_imts_gsims(self, gsims):
+        """
+        :param gsims: a sequence of GSIM instances
+        """
+        imts = set('SA' if imt.startswith('SA') else imt for imt in self.imtls)
+        for gsim in gsims:
+            restrict_imts = gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES
+            if restrict_imts:
+                names = set(cls.__name__ for cls in restrict_imts)
+                invalid_imts = ', '.join(imts - names)
+                if invalid_imts:
+                    raise ValueError(
+                        'The IMT %s is not accepted by the GSIM %s' %
+                        (invalid_imts, gsim))
 
     @property
     def tses(self):
