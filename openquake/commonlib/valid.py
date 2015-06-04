@@ -781,7 +781,7 @@ class Param(object):
     """
     NODEFAULT = object()
 
-    def __init__(self, validator, default=NODEFAULT):
+    def __init__(self, validator, default=NODEFAULT, name=None):
         if not callable(validator):
             raise ValueError(
                 '%r for %s is not a validator: it is not callable'
@@ -793,11 +793,12 @@ class Param(object):
 
         self.validator = validator
         self.default = default
+        self.name = name  # set by ParamSet.__metaclass__
 
     def __get__(self, obj, objclass):
         if obj is not None:
             if self.default is self.NODEFAULT:
-                raise AttributeError
+                raise AttributeError(self.name)
             return self.default
         return self
 
@@ -836,6 +837,12 @@ class ParamSet(object):
     '2'
     """
     params = {}
+
+    class __metaclass__(type):
+        def __init__(cls, name, bases, dic):
+            for name, val in dic.iteritems():
+                if isinstance(val, Param):
+                    val.name = name
 
     def __init__(self, **names_vals):
         for name, val in names_vals.iteritems():

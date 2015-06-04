@@ -43,7 +43,7 @@ class OqParam(valid.ParamSet):
         valid.NoneOr(valid.positivefloat), None)
     asset_correlation = valid.Param(valid.NoneOr(valid.FloatRange(0, 1)), 0)
     asset_life_expectancy = valid.Param(valid.positivefloat)
-    base_path = valid.Param(valid.utf8)
+    base_path = valid.Param(valid.utf8, '.')
     calculation_mode = valid.Param(valid.Choice(*CALCULATORS), '')
     concurrent_tasks = valid.Param(
         valid.positiveint, parallel.executor.num_tasks_hint)
@@ -146,6 +146,9 @@ class OqParam(valid.ParamSet):
 
         # check the IMTs vs the GSIMs
         if 'gsim_logic_tree' in self.inputs:
+            if self.gsim:
+                raise ValueError('If `gsim_logic_tree_file` is set, there '
+                                 'must be no `gsim` key')
             path = os.path.join(
                 self.base_path, self.inputs['gsim_logic_tree'])
             for gsims in logictree.GsimLogicTree(path, []).values.itervalues():
@@ -353,13 +356,4 @@ class OqParam(valid.ParamSet):
         rms = getattr(self, 'rupture_mesh_spacing', None)
         if rms and not getattr(self, 'complex_fault_mesh_spacing', None):
             self.complex_fault_mesh_spacing = self.rupture_mesh_spacing
-        return True
-
-    def is_valid_gsim(self):
-        """
-        If `gsim_logic_tree_file` is set, there must be no `gsim` key in
-        the configuration file.
-        """
-        if 'gsim_logic_tree' in self.inputs:
-            return self.gsim is None
         return True
