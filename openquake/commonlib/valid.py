@@ -548,11 +548,15 @@ def intensity_measure_types_and_levels(value):
     :param value: input string
     :returns: Intensity Measure Type and Levels dictionary
 
-    >>> intensity_measure_types_and_levels('{"PGA": [0.1, 0.2]}')
-    {'PGA': [0.1, 0.2]}
+    >>> intensity_measure_types_and_levels('{"SA(0.10)": [0.1, 0.2]}')
+    {'SA(0.1)': [0.1, 0.2]}
     """
     dic = dictionary(value)
-    for imt_str, imls in dic.iteritems():
+    for imt_str, imls in dic.items():
+        norm_imt = str(imt.from_string(imt_str))
+        if norm_imt != imt_str:
+            dic[norm_imt] = imls
+            del dic[imt_str]
         check_levels(imls, imt_str)  # ValueError if the levels are invalid
     return dic
 
@@ -777,7 +781,7 @@ class Param(object):
     """
     NODEFAULT = object()
 
-    def __init__(self, validator, default=NODEFAULT):
+    def __init__(self, validator, default=NODEFAULT, name=None):
         if not callable(validator):
             raise ValueError(
                 '%r for %s is not a validator: it is not callable'
@@ -789,11 +793,12 @@ class Param(object):
 
         self.validator = validator
         self.default = default
+        self.name = name  # set by ParamSet.__metaclass__
 
     def __get__(self, obj, objclass):
         if obj is not None:
             if self.default is self.NODEFAULT:
-                raise AttributeError
+                raise AttributeError(self.name)
             return self.default
         return self
 
@@ -832,6 +837,16 @@ class ParamSet(object):
     '2'
     """
     params = {}
+
+    class __metaclass__(type):
+        """
+        Set the `.name` attribute of every Param instance defined inside
+        any subclass of ParamSet.
+        """
+        def __init__(cls, name, bases, dic):
+            for name, val in dic.iteritems():
+                if isinstance(val, Param):
+                    val.name = name
 
     def __init__(self, **names_vals):
         for name, val in names_vals.iteritems():
