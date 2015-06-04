@@ -1,5 +1,5 @@
-# oq-risklib: The Risk Library
-# Copyright (C) 2013-2014, GEM Foundation
+# oq-risklib: The OpenQuake Risk Library
+# Copyright (C) 2013-2015, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -13,14 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""
-oq-risklib needs a description.
 
-Comments, suggestions and criticisms from the community are always
-very welcome.
-
-Copyright (C) 2013-2014, GEM Foundation.
-"""
 import os
 import re
 import sys
@@ -44,23 +37,26 @@ def get_version():
 version = get_version()
 
 url = "http://github.com/gem/oq-risklib"
+
 cd = os.path.dirname(os.path.join(__file__))
 
 setup(
     name='openquake.risklib',
     version=version,
     description="oq-risklib is a library for performing seismic risk analysis",
-    long_description=__doc__,
+    long_description=open(os.path.join(cd, 'README.md')).read(),
     url=url,
     packages=find_packages(),
     install_requires=[
         'numpy',
         'scipy'
     ],
-    maintainer='GEM',
-    maintainer_email='info@openquake.org',
+    author='GEM Foundation',
+    author_email='devops@openquake.org',
+    maintainer='GEM Foundation',
+    maintainer_email='devops@openquake.org',
     classifiers=(
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'Intended Audience :: Education',
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: GNU Affero General Public License v3',
@@ -69,10 +65,12 @@ setup(
         'Topic :: Scientific/Engineering',
     ),
     keywords="seismic risk",
-    license="GNU AGPL v3",
+    license="AGPL3",
     platforms=["any"],
+    package_data={"openquake.risklib": [
+        "README.md", "LICENSE"]},
     scripts=["bin/oq-lite"],
     namespace_packages=['openquake'],
-
+    include_package_data=True,
     zip_safe=False,
 )
