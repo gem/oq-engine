@@ -510,14 +510,14 @@ def main():
 
         if len(job_inis) == 2:
             # run hazard
-            job = run_job([job_inis[0]], args.log_level,
+            job = run_job(job_inis[0], args.log_level,
                           log_file, args.exports)
             # run risk
-            run_job([job_inis[1]], args.log_level, log_file,
+            run_job(job_inis[1], args.log_level, log_file,
                     args.exports, hazard_calculation_id=job.id)
         else:
             run_job(
-                [expanduser(args.run)], args.log_level, log_file,
+                expanduser(args.run), args.log_level, log_file,
                 args.exports, hazard_output_id=args.hazard_output_id,
                 hazard_calculation_id=args.hazard_calculation_id)
     # hazard
@@ -526,7 +526,7 @@ def main():
     elif args.run_hazard is not None:
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
-        run_job([expanduser(args.run_hazard)], args.log_level,
+        run_job(expanduser(args.run_hazard), args.log_level,
                 log_file, args.exports)
     elif args.delete_hazard_calculation is not None:
         del_calc(args.delete_hazard_calculation, args.yes)
@@ -540,7 +540,7 @@ def main():
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
         run_job(
-            [expanduser(args.run_risk)],
+            expanduser(args.run_risk),
             args.log_level, log_file, args.exports,
             hazard_output_id=args.hazard_output_id,
             hazard_calculation_id=args.hazard_calculation_id)
