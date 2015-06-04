@@ -839,6 +839,10 @@ class ParamSet(object):
     params = {}
 
     class __metaclass__(type):
+        """
+        Set the `.name` attribute of every Param instance defined inside
+        any subclass of ParamSet.
+        """
         def __init__(cls, name, bases, dic):
             for name, val in dic.iteritems():
                 if isinstance(val, Param):
