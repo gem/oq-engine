@@ -222,7 +222,9 @@ class HazardCalculator(BaseCalculator):
             if self.oqparam.hazard_investigation_time is None:
                 self.oqparam.hazard_investigation_time = (
                     self.oqparam.investigation_time)
-            if '/taxonomies' not in self.datastore:  # not read already
+            try:
+                self.datastore['/taxonomies']
+            except KeyError:  # not read already
                 self.read_exposure_sitecol()
 
         else:  # we are in a basic calculator
