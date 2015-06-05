@@ -532,6 +532,14 @@ ini_suf="" # currently not included into the version array structure
 
 # version info from debian/changelog
 h="$(grep "^$GEM_DEB_PACKAGE" debian/changelog | head -n 1)"
+
+# is it the first item of changelog ?
+h_first="$(cat debian/changelog | head -n 1)"
+h_is_first=0
+if [ "$h" = "$h_first" ]; then
+    h_is_first=1
+fi
+
 # pkg_vers="$(echo "$h" | cut -d ' ' -f 2 | cut -d '(' -f 2 | cut -d ')' -f 1 | sed -n 's/[-+].*//gp')"
 pkg_name="$(echo "$h" | cut -d ' ' -f 1)"
 pkg_vers="$(echo "$h" | cut -d ' ' -f 2 | cut -d '(' -f 2 | cut -d ')' -f 1)"
@@ -549,8 +557,13 @@ if [ $BUILD_DEVEL -eq 1 ]; then
 
     if [ "$pkg_maj" = "$ini_maj" -a "$pkg_min" = "$ini_min" -a \
          "$pkg_bfx" = "$ini_bfx" -a "$pkg_deb" != "" ]; then
-        deb_ct="$(echo "$pkg_deb" | sed 's/^-//g')"
-        pkg_deb="-$(( deb_ct ))"
+        if [ $h_is_first -eq 1 ]; then
+            pkg_deb="$pkg_deb"
+        else
+            deb_ct="$(echo "$pkg_deb" | sed 's/^-//g;s/~.*//g')"
+            deb_sfx="$(echo "$pkg_deb" | sed -n 's/.*~\(.*\)/~\1/gp')"
+            pkg_deb="-$(( deb_ct + 1))$deb_sfx"
+        fi
     else
         pkg_maj="$ini_maj"
         pkg_min="$ini_min"
