@@ -512,8 +512,11 @@ def get_composite_source_model(oqparam, sitecol=None, prefilter=False,
                     oqparam.area_source_discretization)
             else:
                 for src in trt_model:
-                    if hasattr(src, 'count_ruptures'):
+                    if hasattr(src, 'count_ruptures'):  # regular case
                         src.weight = trt_model.update_num_ruptures(src)
+                    # for performance reasons the `info` command does not
+                    # convert XML sources into hazardlib sources, so the
+                    # .count_ruptures method is absent in that case
             logging.info('Processed %s', trt_model)
         smodels.append(source_model)
     csm = source.CompositeSourceModel(source_model_lt, smodels)
