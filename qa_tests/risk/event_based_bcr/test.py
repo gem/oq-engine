@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-from nose.plugins.attrib import attr as noseattr
+from nose.plugins.attrib import attr
 
 from qa_tests import risk
 from openquake.qa_tests_data.event_based_bcr import case_1
@@ -29,7 +29,7 @@ class EventBasedBCRCase1TestCase(risk.BaseRiskQATestCase):
 
     output_type = "gmf"
 
-    @noseattr('qa', 'risk', 'event_based_bcr')
+    @attr('qa', 'risk', 'event_based_bcr')
     def test(self):
         self._run_test()
 
