@@ -1660,7 +1660,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         # the percentages will be close to 40% and 60%
         self.assertEqual(counter, {('b1',): 414, ('b2',): 586})
 
-    def test_SHARE_tricky(self):  # this was broken in release 1.4
+    def test_get_gsim_by_trt(self):
         xml = _make_nrml("""\
     <logicTree logicTreeID='lt1'>
 <!-- 1.0 Logic Tree for Active Shallow Crust -->
@@ -1742,9 +1742,15 @@ class GsimLogicTreeTestCase(unittest.TestCase):
 
     </logicTree>""")
         gsim_lt = self.parse_valid(xml, ["Stable Shallow Crust"])
-        self.assertEqual(str(gsim_lt), '''\
-<GsimLogicTree
-Stable Shallow Crust,AkkarBommer2010,AkkarBommer2010,w=1.0>''')
+        [rlz] = gsim_lt
+        gsim = gsim_lt.get_gsim_by_trt(rlz, 'Stable Shallow Crust')
+        self.assertEqual(gsim, 'AkkarBommer2010')
+        # this test was broken in release 1.4, a wrong ordering
+        # of the value gave back LinLee2008SSlab instead of AkkarBommer2010
+        self.assertEqual(rlz.value, (
+            'AkkarBommer2010', 'AkkarBommer2010', 'ToroEtAl2002SHARE',
+            'ZhaoEtAl2006SInter', 'ZhaoEtAl2006SSlab', 'FaccioliEtAl2010',
+            'LinLee2008SSlab'))
 
 
 class LogicTreeProcessorTestCase(unittest.TestCase):
