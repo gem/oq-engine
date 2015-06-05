@@ -492,6 +492,8 @@ def main():
         print upgrade_manager.what_if_I_upgrade(conn)
         sys.exit(0)
 
+    run_job = engine.run_job_lite if args.lite else engine.run_job
+
     if args.list_inputs:
         list_inputs(args.list_inputs)
 
@@ -505,26 +507,27 @@ def main():
             open(job_ini).read()  # raise an IOError if the file does not exist
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
-        if args.lite:
-            # run hazard and risk together
-            engine.run_job_lite(job_inis, args.log_level,
-                                log_file, args.exports)
-        else:
+
+        if len(job_inis) == 2:
             # run hazard
-            job = engine.run_job(job_inis[0], args.log_level,
-                                 log_file, args.exports)
+            job = run_job(job_inis[0], args.log_level,
+                          log_file, args.exports)
             # run risk
-            if len(job_inis) == 2:
-                engine.run_job(job_inis[1], args.log_level, log_file,
-                               args.exports, hazard_calculation_id=job.id)
+            run_job(job_inis[1], args.log_level, log_file,
+                    args.exports, hazard_calculation_id=job.id)
+        else:
+            run_job(
+                expanduser(args.run), args.log_level, log_file,
+                args.exports, hazard_output_id=args.hazard_output_id,
+                hazard_calculation_id=args.hazard_calculation_id)
     # hazard
     elif args.list_hazard_calculations:
         list_calculations('hazard')
     elif args.run_hazard is not None:
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
-        engine.run_job(expanduser(args.run_hazard), args.log_level,
-                       log_file, args.exports)
+        run_job(expanduser(args.run_hazard), args.log_level,
+                log_file, args.exports)
     elif args.delete_hazard_calculation is not None:
         del_calc(args.delete_hazard_calculation, args.yes)
     # risk
@@ -536,9 +539,9 @@ def main():
             sys.exit(MISSING_HAZARD_MSG)
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
-        engine.run_job(
-            expanduser(args.run_risk), args.log_level, log_file,
-            args.exports,
+        run_job(
+            expanduser(args.run_risk),
+            args.log_level, log_file, args.exports,
             hazard_output_id=args.hazard_output_id,
             hazard_calculation_id=args.hazard_calculation_id)
     elif args.delete_risk_calculation is not None:
