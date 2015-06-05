@@ -1,9 +1,12 @@
 python-oq-risklib (0.7.2-0~precise01) precise; urgency=low
 
+  [Matteo Nastasi]
+  * Packaging system improvement
+
   [Michele Simionato]
   * Fixed an ordering bug in the GSIM logic tree
 
- -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Fri, 05 Jun 2015 09:58:09 +0200
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Fri, 05 Jun 2015 11:55:09 +0200
 
 python-oq-risklib (0.7.1-0~precise01) precise; urgency=low
 

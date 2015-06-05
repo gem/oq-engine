@@ -758,12 +758,11 @@ if [ $BUILD_DEVEL -eq 1 ]; then
 
     if [ "$pkg_maj" = "$ini_maj" -a "$pkg_min" = "$ini_min" -a \
          "$pkg_bfx" = "$ini_bfx" -a "$pkg_deb" != "" ]; then
+        deb_ct="$(echo "$pkg_deb" | sed 's/^-//g;s/~.*//g')"
         if [ $h_is_first -eq 1 ]; then
-            pkg_deb="$pkg_deb"
+            pkg_deb="-$(( deb_ct ))"
         else
-            deb_ct="$(echo "$pkg_deb" | sed 's/^-//g;s/~.*//g')"
-            deb_sfx="$(echo "$pkg_deb" | sed -n 's/.*~\(.*\)/~\1/gp')"
-            pkg_deb="-$(( deb_ct + 1))$deb_sfx"
+            pkg_deb="-$(( deb_ct + 1))"
         fi
     else
         pkg_maj="$ini_maj"
