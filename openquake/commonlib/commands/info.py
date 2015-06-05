@@ -36,7 +36,7 @@ def info(name, filtersources=False):
             print gs
     elif name.endswith('.xml'):
         print nrml.read(name).to_str()
-    elif name.endswith('.ini'):
+    elif name.endswith(('.ini', '.zip')):
         oqparam = readinput.get_oqparam(name)
         if 'exposure' in oqparam.inputs:
             expo = readinput.get_exposure(oqparam)

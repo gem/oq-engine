@@ -510,7 +510,11 @@ def get_composite_source_model(oqparam, sitecol=None, prefilter=False,
             if prefilter:
                 trt_model.split_sources_and_count_ruptures(
                     oqparam.area_source_discretization)
-                logging.info('Processed %s', trt_model)
+            else:
+                for src in trt_model:
+                    if hasattr(src, 'count_ruptures'):
+                        src.weight = trt_model.update_num_ruptures(src)
+            logging.info('Processed %s', trt_model)
         smodels.append(source_model)
     csm = source.CompositeSourceModel(source_model_lt, smodels)
     return csm
