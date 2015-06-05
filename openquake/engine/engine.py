@@ -174,7 +174,7 @@ def run_calc(job, log_level, log_file, exports, lite=False):
     # time if the PYTHONPATH is not set and commonlib is not visible
     if lite:
         from openquake.commonlib.calculators import base
-        calculator = base.calculators(job.get_oqparam())
+        calculator = base.calculators(job.get_oqparam(), calc_id=job.id)
         calculator.job = job
         calculator.monitor = EnginePerformanceMonitor('', job.id)
     else:
@@ -356,8 +356,8 @@ def run_job(cfg_file, log_level, log_file, exports='', hazard_output_id=None,
     upgrader.check_versions(django_db.connections['admin'])
     with CeleryNodeMonitor(openquake.engine.no_distribute(), interval=3):
         job = job_from_file(
-            cfg_file, getpass.getuser(), log_level, exports, hazard_output_id,
-            hazard_calculation_id)
+            cfg_file, getpass.getuser(), log_level, exports,
+            hazard_output_id, hazard_calculation_id)
         # instantiate the calculator and run the calculation
         t0 = time.time()
         run_calc(job, log_level, log_file, exports)
@@ -370,11 +370,12 @@ def run_job(cfg_file, log_level, log_file, exports='', hazard_output_id=None,
 
 
 # this function is called only by openquake_cli.py, not by the engine server
-def run_job_lite(cfg_files, log_level, log_file, exports=''):
+def run_job_lite(cfg_file, log_level, log_file, exports='',
+                 hazard_output_id=None, hazard_calculation_id=None):
     """
     Run a job using the specified config file and other options.
 
-    :param str cfg_files:
+    :param str cfg_file:
         Path to calculation config (INI-style) files.
     :param str log_level:
         'debug', 'info', 'warn', 'error', or 'critical'
@@ -387,7 +388,10 @@ def run_job_lite(cfg_files, log_level, log_file, exports=''):
     # first of all check the database version and exit if the db is outdated
     upgrader.check_versions(django_db.connections['admin'])
     with CeleryNodeMonitor(openquake.engine.no_distribute(), interval=3):
-        job = job_from_files(cfg_files, getpass.getuser(), log_level, exports)
+        job = job_from_file_lite(
+            cfg_file, getpass.getuser(), log_level, exports,
+            hazard_output_id=hazard_output_id,
+            hazard_calculation_id=hazard_calculation_id)
         job.ds_calc_dir = datastore.DataStore(job.id).calc_dir
         job.save()
         t0 = time.time()
@@ -557,12 +561,12 @@ def job_from_file(cfg_file_path, username, log_level='info', exports='',
 
 # called only when the --lite flag is passed
 @django_db.transaction.atomic
-def job_from_files(cfg_files, username, log_level='info', exports='',
-                   **extras):
+def job_from_file_lite(cfg_file, username, log_level='info', exports='',
+                       **extras):
     """
     Create a full job profile from a job config file.
 
-    :param str cfg_files_path:
+    :param str cfg_file:
         Path to the job.ini files.
     :param str username:
         The user who will own this job profile and all results.
@@ -584,9 +588,7 @@ def job_from_files(cfg_files, username, log_level='info', exports='',
     models.JobStats.objects.create(oq_job=job)
     with logs.handle(job, log_level):
         # read calculation params and create the calculation profile
-        params = readinput.get_params(cfg_files)
-        params['hazard_output_id'] = None
-        params['hazard_calculation_id'] = None
+        params = readinput.get_params([cfg_file])
         params.update(extras)
         # build and validate an OqParam object
         oqparam = readinput.get_oqparam(params, calculators=base.calculators)
