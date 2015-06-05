@@ -198,3 +198,16 @@ class OqParamTestCase(unittest.TestCase):
                 intensity_measure_types='PGA',
             ).validate()
         self.assertIn('there must be no `gsim` key', str(ctx.exception))
+
+    def test_not_accepted_IMT(self):
+        with self.assertRaises(ValueError) as ctx:
+            OqParam(
+                calculation_mode='scenario',
+                gsim='ToroEtAl2002',
+                sites='0.1 0.2',
+                maximum_distance=400,
+                intensity_measure_types='PGV',
+            ).validate()
+        self.assertIn('The IMT PGV is not accepted by the GSIM ToroEtAl2002',
+                      str(ctx.exception))
+
