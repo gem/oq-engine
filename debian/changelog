@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed an ordering bug in the GSIM logic tree
   * Fixed a bug in apply_reduce when the first argument is a numpy array
   * Added a functionality `write_source_model` to serialize sources in XML
 
