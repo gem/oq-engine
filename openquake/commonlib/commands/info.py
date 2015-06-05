@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
 import textwrap
 from openquake.commonlib import sap, readinput, nrml
 from openquake.commonlib.calculators import base
@@ -30,12 +31,12 @@ def info(name, filtersources=False):
     a job.ini file, or a zip archive with the input files.
     """
     if name in base.calculators:
-        print textwrap.dedent(base.calculators[name].__doc__.strip())
+        print(textwrap.dedent(base.calculators[name].__doc__.strip()))
     elif name == 'gsims':
         for gs in gsim.get_available_gsims():
-            print gs
+            print(gs)
     elif name.endswith('.xml'):
-        print nrml.read(name).to_str()
+        print(nrml.read(name).to_str())
     elif name.endswith(('.ini', '.zip')):
         oqparam = readinput.get_oqparam(name)
         if 'exposure' in oqparam.inputs:
@@ -48,23 +49,24 @@ def info(name, filtersources=False):
         else:
             sitecol, assets_by_site = None, []
         if 'source_model_logic_tree' in oqparam.inputs:
-            print 'Reading the source model...'
+            print('Reading the source model...')
             csm = readinput.get_composite_source_model(
                 oqparam, sitecol, prefilter=filtersources,
                 in_memory=filtersources)
             assoc = csm.get_rlzs_assoc()
-            print assoc.csm_info
+            print(assoc.csm_info)
             print('See https://github.com/gem/oq-risklib/blob/master/docs/'
                   'effective-realizations.rst for an explanation')
-            print assoc
+            print(assoc)
             if filtersources:
                 info = readinput.get_job_info(oqparam, csm, sitecol)
                 for k in sorted(info):
-                    print k, info[k]
+                    print(k, info[k])
         if len(assets_by_site):
-            print 'assets = %d' % sum(len(assets) for assets in assets_by_site)
+            print('assets = %d' %
+                  sum(len(assets) for assets in assets_by_site))
     else:
-        print "No info for '%s'" % name
+        print("No info for '%s'" % name)
 
 parser = sap.Parser(info)
 parser.arg('name', 'calculator name, job.ini file or zip archive')
