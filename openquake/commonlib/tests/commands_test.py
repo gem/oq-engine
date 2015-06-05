@@ -27,7 +27,7 @@ class InfoTestCase(unittest.TestCase):
 b1, x15.xml, trt=[0]: 1 realization(s)>
 See https://github.com/gem/oq-risklib/blob/master/docs/effective-realizations.rst for an explanation
 <RlzsAssoc
-0,LinLee2008SSlab: ['<0,b1,*_*_*_AkkarBommer2010_*_*_*,w=1.0>']>'''
+0,AkkarBommer2010: ['<0,b1,*_AkkarBommer2010_*_*_*_*_*,w=1.0>']>'''
 
     EXTRA = '''
 input_weight 43.05
