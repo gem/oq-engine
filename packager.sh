@@ -971,6 +971,14 @@ ini_suf="$(echo "$ini_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.[0-9]\+\(.*\)/\1/gp')
 
 # version info from debian/changelog
 h="$(grep "^$GEM_DEB_PACKAGE" debian/changelog | head -n 1)"
+
+# is it the first item of changelog ?
+h_first="$(cat debian/changelog | head -n 1)"
+h_is_first=0
+if [ "$h" = "$h_first" ]; then
+    h_is_first=1
+fi
+
 # pkg_vers="$(echo "$h" | cut -d ' ' -f 2 | cut -d '(' -f 2 | cut -d ')' -f 1 | sed -n 's/[-+].*//gp')"
 pkg_name="$(echo "$h" | cut -d ' ' -f 1)"
 pkg_vers="$(echo "$h" | cut -d ' ' -f 2 | cut -d '(' -f 2 | cut -d ')' -f 1)"
