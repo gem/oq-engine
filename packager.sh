@@ -34,8 +34,8 @@
 # file system (in-memory or disk)
 #
 
-# export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
-if [ $GEM_SET_DEBUG ]; then
+if [ -n "$GEM_SET_DEBUG" -a "$GEM_SET_DEBUG" != "false" ]; then
+    export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
     set -x
 fi
 set -e
@@ -992,8 +992,12 @@ if [ $BUILD_DEVEL -eq 1 ]; then
 
     if [ "$pkg_maj" = "$ini_maj" -a "$pkg_min" = "$ini_min" -a \
          "$pkg_bfx" = "$ini_bfx" -a "$pkg_deb" != "" ]; then
-        deb_ct="$(echo "$pkg_deb" | sed 's/^-//g')"
-        pkg_deb="-$(( deb_ct ))"
+        deb_ct="$(echo "$pkg_deb" | sed 's/^-//g;s/~.*//g')"
+        if [ $h_is_first -eq 1 ]; then
+            pkg_deb="-$(( deb_ct ))"
+        else
+            pkg_deb="-$(( deb_ct + 1))"
+        fi
     else
         pkg_maj="$ini_maj"
         pkg_min="$ini_min"
