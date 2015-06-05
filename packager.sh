@@ -248,7 +248,7 @@ _devtest_innervm_run () {
 }
 
 _pkgtest_innervm_run () {
-    local lxc_ip="$1" custom_path
+    local lxc_ip="$1"
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
@@ -287,12 +287,10 @@ _pkgtest_innervm_run () {
             branch="master"
         fi
 
-        GEM_DEB_SERIE="master"
-        if [ "$repo" != "$GEM_GIT_REPO" -o "$branch" != "master" ]; then
-            custom_path="devel/$(echo "$repo" | sed 's@^.*://@@g;s@/@__@g;s/\./-/g')__${branch}"
-            if [ -d "${GEM_DEB_REPO}/${BUILD_UBUVER}/${custom_path}/python-${dep}" ]; then
-                GEM_DEB_SERIE="$custom_path"
-            fi
+        if [ "$repo" = "$GEM_GIT_REPO" -a "$branch" = "master" ]; then
+            GEM_DEB_SERIE="master"
+        else
+            GEM_DEB_SERIE="devel/$(echo "$repo" | sed 's@^.*://@@g;s@/@__@g;s/\./-/g')__${branch}"
         fi
         scp -r ${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/python-${dep} $lxc_ip:repo/
         ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-${dep} ./\""
