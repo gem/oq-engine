@@ -1,6 +1,6 @@
 #!/bin/bash
 # export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
-if [ $GEM_SET_DEBUG ]; then
+if [ -n "$GEM_SET_DEBUG" -a "$GEM_SET_DEBUG" != "false" ]; then
     set -x
 fi
 set -e
