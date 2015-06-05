@@ -1154,20 +1154,17 @@ class GsimLogicTree(object):
         Yield :class:`openquake.commonlib.logictree.Realization` instances
         """
         groups = []
-        tectonic_region_types = []
         # NB: branches are already sorted
-        for branchset, branches in itertools.groupby(
-                self.branches, operator.attrgetter('bset')):
-            tectonic_region_types.append(
-                branchset['applyToTectonicRegionType'])
-            groups.append(list(branches))
+        for trt in self.all_trts:
+            groups.append([b for b in self.branches
+                           if b.bset['applyToTectonicRegionType'] == trt])
         # with T tectonic region types there are T groups and T branches
         for i, branches in enumerate(itertools.product(*groups)):
             weight = 1
             lt_path = []
             lt_uid = []
             value = []
-            for trt, branch in zip(tectonic_region_types, branches):
+            for trt, branch in zip(self.all_trts, branches):
                 assert branch.uncertainty in self.values[trt], \
                     branch.uncertainty  # sanity check
                 lt_path.append(branch.id)
