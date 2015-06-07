@@ -13,15 +13,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import time
 import logging
 import operator
+import itertools
 import collections
 import random
 from lxml import etree
 
 from openquake.baselib.general import AccumDict, groupby
 from openquake.commonlib.node import read_nodes
-from openquake.commonlib import valid, logictree, sourceconverter
+from openquake.commonlib import valid, logictree, sourceconverter, parallel
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
 
 
@@ -80,6 +82,17 @@ def get_skeleton(sm):
 
 SourceModel = collections.namedtuple(
     'SourceModel', 'name weight path trt_models gsim_lt ordinal samples')
+
+
+def get_weight(src, point_source_weight=1/40., num_ruptures=None):
+    """
+    :returns: the weight of the given source
+    """
+    num_ruptures = num_ruptures or src.count_ruptures()
+    weight = (num_ruptures * point_source_weight
+              if src.__class__.__name__ == 'PointSource'
+              else num_ruptures)
+    return weight
 
 
 class TrtModel(collections.Sequence):
@@ -176,9 +189,7 @@ class TrtModel(collections.Sequence):
         """
         num_ruptures = src.count_ruptures()
         self.num_ruptures += num_ruptures
-        weight = (num_ruptures * self.POINT_SOURCE_WEIGHT
-                  if src.__class__.__name__ == 'PointSource'
-                  else num_ruptures)
+        weight = get_weight(src, self.POINT_SOURCE_WEIGHT, num_ruptures)
         return weight
 
     def split_sources_and_count_ruptures(self, area_source_discretization):
@@ -565,6 +576,10 @@ class CompositeSourceModel(collections.Sequence):
                     src.trt_model_id = trt_model.id
                 yield src
 
+    def count_sources(self):
+        """:returns: the total number of sources in the model"""
+        return sum(1 for src in self.sources)
+
     def get_rlzs_assoc(self, get_weight=lambda tm: tm.num_ruptures):
         """
         Return a RlzsAssoc with fields realizations, gsim_by_trt,
@@ -650,3 +665,101 @@ def _collect_source_model_paths(smlt):
                     namespaces=PARSE_NS_MAP):
                 src_paths.append(branch.text)
     return sorted(set(src_paths))
+
+
+# ######################################################################### #
+
+def filter_and_split(src, sourceprocessor):
+    """
+    :param src: a hazardlib source object
+    :param sourceprocessor: a SourceProcessor object
+    :returns: a named tuple of type SourceOut
+    """
+    if sourceprocessor.sitecol:  # filter
+        t0 = time.time()
+        sites = src.filter_sites_by_distance_to_source(
+            sourceprocessor.maxdist, sourceprocessor.sitecol)
+        f_time = t0 - time.time()
+        if sites is None:
+            return SourceOut(src.trt_model_id, src.source_id, [], f_time, 0)
+    else:  # only split
+        f_time = 0
+    t1 = time.time()
+    out = []
+    for ss in sourceconverter.split_source(src, sourceprocessor.asd):
+        ss.weight = get_weight(ss)
+        out.append(ss)
+    s_time = time.time() - t1
+    return SourceOut(src.trt_model_id, src.source_id, out, f_time, s_time)
+
+
+SourceOut = collections.namedtuple(
+    'SourceOut', 'trt_model_id source_id sources f_time s_time')
+
+
+class SourceProcessor(object):
+    """
+    When the .process method is called, the given CompositeSourceModel
+    sources are processed, i.e. filtered and split in parallel.
+
+    :param sitecol: a SiteCollection instance
+    :param maxdist: maximum distance for the filtering
+    :param asd: area source discretization
+    :param forking: use forking (default True)
+    """
+
+    def __init__(self, sitecol, maxdist, area_source_discretization):
+        self.sitecol = sitecol
+        self.maxdist = maxdist
+        self.asd = area_source_discretization
+
+    def agg_source_out(self, acc, out):
+        """
+        :param acc: a dictionary {trt_model_id: sources}
+        :param out: a SourceOut instance
+        """
+        self.outs.append(out)
+        return acc + {out.trt_model_id: out.sources}
+
+    def process(self, csm):
+        """
+        :param csm: a CompositeSourceModel instance
+        """
+        fast_sources = [(src, self) for src in csm.sources
+                        if src.__class__.__name__ in
+                        ('PointSource', 'AreaSource')]
+        slow_sources = [(src, self) for src in csm.sources
+                        if src.__class__.__name__ not in
+                        ('PointSource', 'AreaSource')]
+        self.outs = []
+
+        # start multicore processing
+        if slow_sources:
+            logging.warn('Parallel filtering of %d sources...',
+                         len(slow_sources))
+            ss = parallel.starmap(filter_and_split, slow_sources)
+
+        # single core processing
+        logging.warn('Sequential filtering of %d sources...',
+                     len(fast_sources))
+        sources_by_trt = reduce(
+            self.agg_source_out,
+            itertools.starmap(filter_and_split, fast_sources), AccumDict())
+
+        # finish multicore processing
+        sources_by_trt += (ss.reduce(self.agg_source_out)
+                           if slow_sources else AccumDict())
+
+        for source_model in csm:
+            for trt_model in source_model.trt_models:
+                trt_model.sources = sorted(
+                    sources_by_trt.get(trt_model.id, []),
+                    key=operator.attrgetter('source_id'))
+                trt_model.num_ruptures = sum(src.count_ruptures()
+                                             for src in trt_model)
+                if not trt_model.sources:
+                    logging.warn(
+                        'Could not find sources close to the sites in %s '
+                        'sm_lt_path=%s, maximum_distance=%s km, TRT=%s',
+                        source_model.name, source_model.path,
+                        self.maxdist, trt_model.trt)
