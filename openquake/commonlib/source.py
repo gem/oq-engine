@@ -701,7 +701,8 @@ class SourceProcessor(object):
         :param acc: a dictionary {trt_model_id: sources}
         :param out: a SourceOut instance
         """
-        self.outs.append(out)
+        self.outs.append(
+            (out.trt_model_id, out.source_id, out.f_time, out.s_time))
         return acc + {out.trt_model_id: out.sources}
 
     def process(self, csm):
@@ -718,12 +719,12 @@ class SourceProcessor(object):
 
         # start multicore processing
         if slow_sources:
-            logging.warn('Parallel filtering of %d sources...',
+            logging.warn('Parallel processing of %d sources...',
                          len(slow_sources))
             ss = parallel.starmap(filter_and_split, slow_sources)
 
         # single core processing
-        logging.warn('Sequential filtering of %d sources...',
+        logging.warn('Sequential processing of %d sources...',
                      len(fast_sources))
         sources_by_trt = reduce(
             self.agg_source_out,
@@ -739,11 +740,8 @@ class SourceProcessor(object):
              ('source_id', (str, 20)),
              ('f_time', float),
              ('s_time', float)])
-        self.outs.sort(key=lambda o: o.s_time + o.f_time, reverse=True)
-        csm.proctimes = numpy.array(
-            [(o.trt_model_id, o.source_id, o.f_time, o.s_time)
-             for o in self.outs],
-            source_out_dt)
+        self.outs.sort(key=lambda o: o[2] + o[3], reverse=True)
+        csm.proctimes = numpy.array(self.outs, source_out_dt)
         del self.outs[:]
 
         # update trt_model.sources

@@ -297,7 +297,7 @@ class HazardCalculator(BaseCalculator):
         to filter to sources according to the site collection.
         """
         if 'source' in self.oqparam.inputs:
-            logging.info('Reading the composite source models')
+            logging.info('Reading the composite source model')
             with self.monitor(
                     'reading composite source model', autoflush=True):
                 self.composite_source_model = (

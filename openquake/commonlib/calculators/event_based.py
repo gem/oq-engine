@@ -471,7 +471,7 @@ class EventBasedCalculator(ClassicalCalculator):
                                                for tag in gmf_by_tag}
             self.gmf_by_trt_gsim = self.gmf_dict
             self.gmf_dict.clear()
-        if self.mean_curves is not None:  # compute classical ones
+        if oq.mean_hazard_curves:  # compute classical ones
             export_dir = os.path.join(oq.export_dir, 'cl')
             if not os.path.exists(export_dir):
                 os.makedirs(export_dir)
