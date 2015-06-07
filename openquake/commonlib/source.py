@@ -521,7 +521,7 @@ class CompositeSourceModel(collections.Sequence):
     def __init__(self, source_model_lt, source_models):
         self.source_model_lt = source_model_lt
         self.source_models = list(source_models)
-        if len(list(self.sources)) == 0:
+        if len(self.get_sources()) == 0:
             raise RuntimeError('All sources were filtered away')
         self.info = CompositionInfo(source_models)
         self.proctimes = ()  # set by the SourceProcessor
@@ -535,23 +535,24 @@ class CompositeSourceModel(collections.Sequence):
             for trt_model in sm.trt_models:
                 yield trt_model
 
-    @property
-    def sources(self):
+    def get_sources(self):
         """
-        Yield the sources contained in the internal source models.
+        Extract the sources contained in the internal source models.
         """
+        sources = []
         for trt_model in self.trt_models:
             for src in trt_model:
                 if hasattr(src, 'trt_model_id'):
                     # .trt_model_id is missing for source nodes
                     src.trt_model_id = trt_model.id
-                yield src
+                sources.append(src)
+        return sources
 
     def get_num_sources(self):
         """
         :returns: the total number of sources in the model
         """
-        return sum(1 for src in self.sources)
+        return sum(1 for src in self.get_sources())
 
     def count_ruptures(self, really=False):
         """
@@ -650,10 +651,13 @@ def _collect_source_model_paths(smlt):
     return sorted(set(src_paths))
 
 
-# ######################################################################### #
+# ########################## SourceProcessor ############################# #
 
 def filter_and_split(src, sourceprocessor):
     """
+    Filter and split the source by using the source processor.
+    Also, sets the sub sources `.weight` attribute.
+
     :param src: a hazardlib source object
     :param sourceprocessor: a SourceProcessor object
     :returns: a named tuple of type SourceOut
@@ -682,13 +686,13 @@ SourceOut = collections.namedtuple(
 
 class SourceProcessor(object):
     """
-    When the .process method is called, the given CompositeSourceModel
-    sources are processed, i.e. filtered and split in parallel.
+    Filter and split in parallel the sources of the given CompositeSourceModel
+    instance. An array `.proctimes` is added to the instance, containing
+    information about the processing times and the splitting process.
 
     :param sitecol: a SiteCollection instance
     :param maxdist: maximum distance for the filtering
     :param asd: area source discretization
-    :param forking: use forking (default True)
     """
 
     def __init__(self, sitecol, maxdist, area_source_discretization):
@@ -702,17 +706,19 @@ class SourceProcessor(object):
         :param out: a SourceOut instance
         """
         self.outs.append(
-            (out.trt_model_id, out.source_id, out.f_time, out.s_time))
+            (out.trt_model_id, out.source_id, len(out.sources),
+             out.f_time, out.s_time))
         return acc + {out.trt_model_id: out.sources}
 
     def process(self, csm):
         """
         :param csm: a CompositeSourceModel instance
         """
-        fast_sources = [(src, self) for src in csm.sources
+        sources = csm.get_sources()
+        fast_sources = [(src, self) for src in sources
                         if src.__class__.__name__ in
                         ('PointSource', 'AreaSource')]
-        slow_sources = [(src, self) for src in csm.sources
+        slow_sources = [(src, self) for src in sources
                         if src.__class__.__name__ not in
                         ('PointSource', 'AreaSource')]
         self.outs = []
@@ -738,9 +744,10 @@ class SourceProcessor(object):
         source_out_dt = numpy.dtype(
             [('trt_model_id', int),
              ('source_id', (str, 20)),
+             ('split_num', int),
              ('f_time', float),
              ('s_time', float)])
-        self.outs.sort(key=lambda o: o[2] + o[3], reverse=True)
+        self.outs.sort(key=lambda o: o[3] + o[4], reverse=True)
         csm.proctimes = numpy.array(self.outs, source_out_dt)
         del self.outs[:]
 

@@ -272,7 +272,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         super(EventBasedRuptureCalculator, self).pre_execute()
         rnd = random.Random()
         rnd.seed(self.oqparam.random_seed)
-        for src in self.composite_source_model.sources:
+        for src in self.composite_source_model.get_sources():
             src.seed = rnd.randint(0, MAX_INT)
 
     def execute(self):
@@ -284,7 +284,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = self.oqparam
         csm = self.composite_source_model
-        sources = list(csm.sources)
+        sources = csm.get_sources()
         ruptures_by_trt = parallel.apply_reduce(
             self.core_func.__func__,
             (sources, self.sitecol, csm.info, monitor),
