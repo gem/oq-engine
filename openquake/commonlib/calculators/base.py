@@ -60,6 +60,7 @@ class BaseCalculator(object):
     assetcol = datastore.persistent_attribute('/assetcol')
     cost_types = datastore.persistent_attribute('cost_types')
     taxonomies = datastore.persistent_attribute('/taxonomies')
+    orig_sources = datastore.persistent_attribute('/orig_sources')
     #composite_source_model = datastore.persistent_attribute('csm')
 
     pre_calculator = None  # to be overridden
@@ -231,6 +232,7 @@ class HazardCalculator(BaseCalculator):
         else:  # we are in a basic calculator
             self.read_exposure_sitecol()
             self.read_sources()
+        self.datastore.hdf5.flush()
 
     def read_exposure_sitecol(self):
         """
@@ -301,10 +303,12 @@ class HazardCalculator(BaseCalculator):
                 self.composite_source_model = (
                     readinput.get_composite_source_model(
                         self.oqparam, self.sitecol))
+                self.orig_sources = self.composite_source_model.proctimes
                 self.job_info = readinput.get_job_info(
                     self.oqparam, self.composite_source_model, self.sitecol)
                 # we could manage limits here
                 if self.prefilter:
+                    self.composite_source_model.count_ruptures()
                     self.rlzs_assoc = (self.composite_source_model.
                                        get_rlzs_assoc())
 

@@ -474,6 +474,7 @@ def get_composite_source_model(
     csm = source.CompositeSourceModel(source_model_lt, smodels)
     if in_memory:
         processor.process(csm)
+        csm.count_ruptures()
     return csm
 
 
