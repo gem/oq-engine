@@ -658,7 +658,7 @@ def filter_and_split(src, sourceprocessor):
 
     :param src: a hazardlib source object
     :param sourceprocessor: a SourceProcessor object
-    :returns: a named tuple of type SourceOut
+    :returns: a named tuple of type SourceInfo
     """
     if sourceprocessor.sitecol:  # filter
         t0 = time.time()
@@ -666,7 +666,8 @@ def filter_and_split(src, sourceprocessor):
             sourceprocessor.maxdist, sourceprocessor.sitecol)
         f_time = time.time() - t0
         if sites is None:
-            return SourceOut(src.trt_model_id, src.source_id, [], f_time, 0)
+            return SourceInfo(src.trt_model_id, src.source_id,
+                             src.__class__.__name__, [], f_time, 0)
     else:  # only split
         f_time = 0
     t1 = time.time()
@@ -675,11 +676,12 @@ def filter_and_split(src, sourceprocessor):
         ss.weight = get_weight(ss)
         out.append(ss)
     s_time = time.time() - t1
-    return SourceOut(src.trt_model_id, src.source_id, out, f_time, s_time)
+    return SourceInfo(src.trt_model_id, src.source_id,
+                     src.__class__.__name__, out, f_time, s_time)
 
 
-SourceOut = collections.namedtuple(
-    'SourceOut', 'trt_model_id source_id sources f_time s_time')
+SourceInfo = collections.namedtuple(
+    'SourceInfo', 'trt_model_id source_id source_class sources f_time s_time')
 
 
 class SourceProcessor(object):
@@ -698,14 +700,14 @@ class SourceProcessor(object):
         self.maxdist = maxdist
         self.asd = area_source_discretization
 
-    def agg_source_out(self, acc, out):
+    def agg_source_info(self, acc, out):
         """
         :param acc: a dictionary {trt_model_id: sources}
-        :param out: a SourceOut instance
+        :param out: a SourceInfo instance
         """
         self.outs.append(
-            (out.trt_model_id, out.source_id, len(out.sources),
-             out.f_time, out.s_time))
+            (out.trt_model_id, out.source_id, out.source_class,
+             len(out.sources), out.f_time, out.s_time))
         return acc + {out.trt_model_id: out.sources}
 
     def process(self, csm):
@@ -731,22 +733,23 @@ class SourceProcessor(object):
         logging.warn('Sequential processing of %d sources...',
                      len(fast_sources))
         sources_by_trt = reduce(
-            self.agg_source_out,
+            self.agg_source_info,
             itertools.starmap(filter_and_split, fast_sources), AccumDict())
 
         # finish multicore processing
-        sources_by_trt += (ss.reduce(self.agg_source_out)
+        sources_by_trt += (ss.reduce(self.agg_source_info)
                            if slow_sources else AccumDict())
 
         # store csm.proctimes
-        source_out_dt = numpy.dtype(
+        source_info_dt = numpy.dtype(
             [('trt_model_id', int),
              ('source_id', (str, 20)),
+             ('source_class', (str, 20)),
              ('split_num', int),
              ('f_time', float),
              ('s_time', float)])
-        self.outs.sort(key=lambda o: o[3] + o[4], reverse=True)
-        csm.proctimes = numpy.array(self.outs, source_out_dt)
+        self.outs.sort(key=lambda o: o[4] + o[5], reverse=True)
+        csm.proctimes = numpy.array(self.outs, source_info_dt)
         del self.outs[:]
 
         # update trt_model.sources

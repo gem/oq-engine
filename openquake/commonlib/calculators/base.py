@@ -60,7 +60,7 @@ class BaseCalculator(object):
     assetcol = datastore.persistent_attribute('/assetcol')
     cost_types = datastore.persistent_attribute('cost_types')
     taxonomies = datastore.persistent_attribute('/taxonomies')
-    orig_sources = datastore.persistent_attribute('/orig_sources')
+    source_info = datastore.persistent_attribute('/source_info')
     #composite_source_model = datastore.persistent_attribute('csm')
 
     pre_calculator = None  # to be overridden
@@ -305,7 +305,7 @@ class HazardCalculator(BaseCalculator):
                 self.composite_source_model = (
                     readinput.get_composite_source_model(
                         self.oqparam, self.sitecol))
-                self.orig_sources = self.composite_source_model.proctimes
+                self.source_info = self.composite_source_model.proctimes
                 self.job_info = readinput.get_job_info(
                     self.oqparam, self.composite_source_model, self.sitecol)
                 # we could manage limits here
