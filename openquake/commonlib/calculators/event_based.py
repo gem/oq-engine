@@ -415,10 +415,7 @@ class EventBasedCalculator(ClassicalCalculator):
         prepare some empty files in the export directory to store the gmfs
         (if any). If there were pre-existing files, they will be erased.
         """
-        oq = self.oqparam
-        if not oq.hazard_curves_from_gmfs and not oq.ground_motion_fields:
-            return
-        ClassicalCalculator.pre_execute(self)
+        super(EventBasedCalculator, self).pre_execute()
         rupture_by_tag = sum(self.datastore['sescollection'], AccumDict())
         self.sesruptures = [rupture_by_tag[tag]
                             for tag in sorted(rupture_by_tag)]
