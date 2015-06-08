@@ -51,8 +51,7 @@ def info(name, filtersources=False):
         if 'source_model_logic_tree' in oqparam.inputs:
             print('Reading the source model...')
             csm = readinput.get_composite_source_model(
-                oqparam, sitecol, prefilter=filtersources,
-                in_memory=filtersources)
+                oqparam, sitecol, in_memory=filtersources)
             assoc = csm.get_rlzs_assoc()
             print(assoc.csm_info)
             print('See https://github.com/gem/oq-risklib/blob/master/docs/'
@@ -60,6 +59,7 @@ def info(name, filtersources=False):
             print(assoc)
             if filtersources:
                 info = readinput.get_job_info(oqparam, csm, sitecol)
+                info['n_sources'] = csm.get_num_sources()
                 for k in sorted(info):
                     print(k, info[k])
         if len(assets_by_site):
