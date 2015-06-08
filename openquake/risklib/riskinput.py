@@ -185,8 +185,8 @@ class RiskModel(collections.Mapping):
         :param rlzs_assoc: a RlzsAssoc instance
         :param monitor: a monitor object used to measure the performance
         """
-        mon_hazard = monitor('getting hazard')
-        mon_risk = monitor('computing individual risk')
+        mon_hazard = monitor('getting hazard', autoflush=False)
+        mon_risk = monitor('computing individual risk', autoflush=False)
         for riskinput in riskinputs:
             try:
                 assets_by_site = riskinput.assets_by_site
