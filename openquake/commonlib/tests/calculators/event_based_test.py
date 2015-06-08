@@ -81,7 +81,7 @@ class EventBasedTestCase(CalculatorTestCase):
                     sc3: [0.99, 0.22]}
 
         for case in expected:
-            out = self.run_calc(case.__file__, 'job.ini')
+            out = self.run_calc(case.__file__, 'job.ini', exports='csv')
             oq = self.calc.oqparam
             self.assertEqual(list(oq.imtls), ['PGA'])
             [fname] = out['gmf_by_trt_gsim', 'csv']
