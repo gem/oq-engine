@@ -379,7 +379,7 @@ def get_source_models(oqparam, source_model_lt, sitecol=None, in_memory=True):
     :param source_model_lt:
         a :class:`openquake.commonlib.logictree.SourceModelLogicTree` instance
     :param in_memory:
-        if True, keep in memory the sources
+        if True, keep in memory the sources, else just collect the TRTs
     :returns:
         an iterator over :class:`openquake.commonlib.source.SourceModel`
         tuples

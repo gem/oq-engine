@@ -765,8 +765,7 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         oqparam = tests.get_oqparam('classical_job.ini')
         oqparam.number_of_logic_tree_samples = 0
         sitecol = readinput.get_site_collection(oqparam)
-        csm = readinput.get_composite_source_model(
-            oqparam, sitecol, prefilter=True)
+        csm = readinput.get_composite_source_model(oqparam, sitecol)
         self.assertEqual(len(csm), 9)  # the smlt example has 1 x 3 x 3 paths;
         # there are 2 distinct tectonic region types, so 18 trt_models
         rlzs_assoc = csm.get_rlzs_assoc()
@@ -823,12 +822,11 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
             os.path.join(os.path.dirname(case_17.__file__), 'job.ini'))
         sitecol = readinput.get_site_collection(oq)
         with mock.patch('logging.warn') as warn:
-            csm = readinput.get_composite_source_model(
-                oq, sitecol, prefilter=True)
-        args = warn.call_args[0]
-        msg = args[0] % args[1:]
+            csm = readinput.get_composite_source_model(oq, sitecol)
+        messages = [args[0][0] % args[0][1:] for args in warn.call_args_list]
         self.assertEqual(
-            msg, "The source path ('b2',) was sampled 4 times")
+            messages, ["The source path ('b2',) was sampled 4 times",
+                       "Sequential processing of 2 sources..."])
         assoc = csm.get_rlzs_assoc()
         self.assertEqual(
             str(assoc),

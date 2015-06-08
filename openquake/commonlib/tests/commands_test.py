@@ -35,6 +35,7 @@ max_realizations 1
 n_imts 1
 n_levels 29.0
 n_sites 1
+n_sources 41
 output_weight 29.0'''
 
     def test_zip(self):
