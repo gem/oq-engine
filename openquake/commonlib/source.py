@@ -727,7 +727,7 @@ class SourceProcessor(object):
         if slow_sources:
             logging.warn('Parallel processing of %d sources...',
                          len(slow_sources))
-            ss = parallel.starmap(filter_and_split, slow_sources)
+            ss = parallel.TaskManager.starmap(filter_and_split, slow_sources)
 
         # single core processing
         logging.warn('Sequential processing of %d sources...',
