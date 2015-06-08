@@ -60,6 +60,7 @@ class BaseCalculator(object):
     assetcol = datastore.persistent_attribute('/assetcol')
     cost_types = datastore.persistent_attribute('cost_types')
     taxonomies = datastore.persistent_attribute('/taxonomies')
+    source_info = datastore.persistent_attribute('/source_info')
 
     pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
@@ -128,6 +129,8 @@ class BaseCalculator(object):
         exported = {}
         individual_curves = self.oqparam.individual_curves
         for fmt in self.oqparam.exports:
+            if not fmt:
+                continue
             for key in self.datastore:
                 if 'rlzs' in key and not individual_curves:
                     continue  # skip individual curves
@@ -222,12 +225,15 @@ class HazardCalculator(BaseCalculator):
             if self.oqparam.hazard_investigation_time is None:
                 self.oqparam.hazard_investigation_time = (
                     self.oqparam.investigation_time)
-            if '/taxonomies' not in self.datastore:  # not read already
+            try:
+                self.datastore['/taxonomies']
+            except KeyError:  # not read already
                 self.read_exposure_sitecol()
 
         else:  # we are in a basic calculator
             self.read_exposure_sitecol()
             self.read_sources()
+        self.datastore.hdf5.flush()
 
     def read_exposure_sitecol(self):
         """
@@ -292,16 +298,18 @@ class HazardCalculator(BaseCalculator):
         to filter to sources according to the site collection.
         """
         if 'source' in self.oqparam.inputs:
-            logging.info('Reading the composite source models')
+            logging.info('Reading the composite source model')
             with self.monitor(
                     'reading composite source model', autoflush=True):
                 self.composite_source_model = (
                     readinput.get_composite_source_model(
-                        self.oqparam, self.sitecol, self.prefilter))
+                        self.oqparam, self.sitecol))
+                self.source_info = self.composite_source_model.source_info
                 self.job_info = readinput.get_job_info(
                     self.oqparam, self.composite_source_model, self.sitecol)
                 # we could manage limits here
                 if self.prefilter:
+                    self.composite_source_model.count_ruptures()
                     self.rlzs_assoc = (self.composite_source_model.
                                        get_rlzs_assoc())
 
