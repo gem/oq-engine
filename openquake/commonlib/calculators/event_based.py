@@ -306,6 +306,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         for trt_id in result:
             for sr in result[trt_id]:
                 sescollection[sr.col_id][sr.tag] = sr
+        logging.info('Saving the SES collection')
         self.sescollection = sescollection
 
 # ######################## GMF calculator ############################ #
