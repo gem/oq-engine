@@ -88,6 +88,9 @@ SourceModel = collections.namedtuple(
 
 def get_weight(src, point_source_weight=1/40., num_ruptures=None):
     """
+    :param src: a hazardlib source object
+    :param point_source_weight: default 1/40
+    :param num_ruptures: if None it is recomputed
     :returns: the weight of the given source
     """
     num_ruptures = num_ruptures or src.count_ruptures()
