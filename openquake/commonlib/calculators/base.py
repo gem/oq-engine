@@ -61,7 +61,6 @@ class BaseCalculator(object):
     cost_types = datastore.persistent_attribute('cost_types')
     taxonomies = datastore.persistent_attribute('/taxonomies')
     source_info = datastore.persistent_attribute('/source_info')
-    #composite_source_model = datastore.persistent_attribute('csm')
 
     pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
