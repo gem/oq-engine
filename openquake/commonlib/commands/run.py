@@ -25,7 +25,7 @@ from openquake.commonlib.calculators import base
 
 
 def run(job_ini, concurrent_tasks=executor.num_tasks_hint,
-        loglevel='info', hc=None, exports='csv'):
+        loglevel='info', hc=None, exports=''):
     """
     Run a calculation. Optionally, set the number of concurrent_tasks
     (0 to disable the parallelization).
