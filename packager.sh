@@ -297,7 +297,11 @@ _devtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
 
     # build oq-hazardlib speedups and put in the right place
-    ssh $lxc_ip "set -e
+    ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
+                 set -e
+                 if [ \$GEM_SET_DEBUG ]; then
+                      set -x
+                 fi
                  cd oq-hazardlib
                  python ./setup.py build
                  for i in \$(find build/ -name *.so); do
@@ -350,7 +354,12 @@ celeryd_wait $GEM_MAXLOOP"
         fi
 
         # run tests (in this case we omit 'set -e' to be able to read all tests outputs)
-        ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ;
+        ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
+                 set -e
+                 if [ \$GEM_SET_DEBUG ]; then
+                     set -x
+                 fi
+                 export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ;
                  cd oq-engine
                  nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-server.xml --with-coverage --cover-package=openquake.server --with-doctest openquake/server/tests/
                  nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-engine.xml --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine/tests/
@@ -497,7 +506,12 @@ _pkgtest_innervm_run () {
 
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
         # run all of the hazard and risk demos
-        ssh $lxc_ip "set -e ; cd /usr/share/doc/python-oq-risklib/examples/demos
+        ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
+        set -e
+        if [ \$GEM_SET_DEBUG ]; then
+            set -x
+        fi
+        cd /usr/share/doc/python-oq-risklib/examples/demos
         for ini in \$(find . -name job.ini | sort); do
             echo \"Running \$ini\"
             for loop in \$(seq 1 $GEM_MAXLOOP); do
