@@ -369,7 +369,7 @@ class ParametricProbabilisticRupture(BaseProbabilisticRupture):
                            len(self.surface.get_resampled_top_edge())):
 
                 idx_nxtp = False
-            elif index_patch >= len(self.fault_trace):
+            elif index_patch >= len(self.surface.get_resampled_top_edge()):
                 idx_nxtp = False
             elif idx_nxtp:
                 hypocenter = pd_geo

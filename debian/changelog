@@ -1,3 +1,7 @@
+
+  [Yen-Shin Chen]
+  * Rupture: fix a bug in get_dppvalue
+
   [Matteo Nastasi]
   * Packaging system improvement
 
