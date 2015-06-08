@@ -525,7 +525,7 @@ class CompositeSourceModel(collections.Sequence):
         self.source_model_lt = source_model_lt
         self.source_models = list(source_models)
         self.info = CompositionInfo(source_models)
-        self.proctimes = ()  # set by the SourceProcessor
+        self.source_info = ()  # set by the SourceProcessor
 
     @property
     def trt_models(self):
@@ -553,12 +553,13 @@ class CompositeSourceModel(collections.Sequence):
         """
         :returns: the total number of sources in the model
         """
-        return sum(1 for src in self.get_sources())
+        return len(self.get_sources())
 
     def count_ruptures(self, really=False):
         """
-        If `really` is True, or if .num_ruptures is zero, update
-        the attribute .num_ruptures in each TRT model.
+        Update the attribute .num_ruptures in each TRT model.
+        This method is lazy, i.e. the number is not updated if it is already
+        set and nonzero, unless `really` is True.
         """
         for trt_model in self.trt_models:
             if trt_model.num_ruptures == 0 or really:
@@ -667,30 +668,31 @@ def filter_and_split(src, sourceprocessor):
         t0 = time.time()
         sites = src.filter_sites_by_distance_to_source(
             sourceprocessor.maxdist, sourceprocessor.sitecol)
-        f_time = time.time() - t0
+        filter_time = time.time() - t0
         if sites is None:
             return SourceInfo(src.trt_model_id, src.source_id,
-                             src.__class__.__name__, [], f_time, 0)
+                              src.__class__.__name__, [], filter_time, 0)
     else:  # only split
-        f_time = 0
+        filter_time = 0
     t1 = time.time()
     out = []
     for ss in sourceconverter.split_source(src, sourceprocessor.asd):
         ss.weight = get_weight(ss)
         out.append(ss)
-    s_time = time.time() - t1
+    split_time = time.time() - t1
     return SourceInfo(src.trt_model_id, src.source_id,
-                     src.__class__.__name__, out, f_time, s_time)
+                      src.__class__.__name__, out, filter_time, split_time)
 
 
 SourceInfo = collections.namedtuple(
-    'SourceInfo', 'trt_model_id source_id source_class sources f_time s_time')
+    'SourceInfo', 'trt_model_id source_id source_class sources '
+    'filter_time split_time')
 
 
 class SourceProcessor(object):
     """
     Filter and split in parallel the sources of the given CompositeSourceModel
-    instance. An array `.proctimes` is added to the instance, containing
+    instance. An array `.source_info` is added to the instance, containing
     information about the processing times and the splitting process.
 
     :param sitecol: a SiteCollection instance
@@ -710,7 +712,7 @@ class SourceProcessor(object):
         """
         self.outs.append(
             (out.trt_model_id, out.source_id, out.source_class,
-             len(out.sources), out.f_time, out.s_time))
+             len(out.sources), out.filter_time, out.split_time))
         return acc + {out.trt_model_id: out.sources}
 
     def process(self, csm):
@@ -743,16 +745,16 @@ class SourceProcessor(object):
         sources_by_trt += (ss.reduce(self.agg_source_info)
                            if slow_sources else AccumDict())
 
-        # store csm.proctimes
+        # store csm.source_info
         source_info_dt = numpy.dtype(
             [('trt_model_id', int),
              ('source_id', (str, 20)),
              ('source_class', (str, 20)),
              ('split_num', int),
-             ('f_time', float),
-             ('s_time', float)])
+             ('filter_time', float),
+             ('split_time', float)])
         self.outs.sort(key=lambda o: o[4] + o[5], reverse=True)
-        csm.proctimes = numpy.array(self.outs, source_info_dt)
+        csm.source_info = numpy.array(self.outs, source_info_dt)
         del self.outs[:]
 
         # update trt_model.sources

@@ -304,7 +304,7 @@ class HazardCalculator(BaseCalculator):
                 self.composite_source_model = (
                     readinput.get_composite_source_model(
                         self.oqparam, self.sitecol))
-                self.source_info = self.composite_source_model.proctimes
+                self.source_info = self.composite_source_model.source_info
                 self.job_info = readinput.get_job_info(
                     self.oqparam, self.composite_source_model, self.sitecol)
                 # we could manage limits here

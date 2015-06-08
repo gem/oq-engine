@@ -361,7 +361,7 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
     zero = zero_curves(num_sites, oq.imtls)
     result = AccumDict({(trt_id, str(gsim)): [dic, zero] for gsim in gsims})
     gmfs = [dic[tag] for tag in sorted(dic)]
-    if getattr(oq, 'hazard_curves_from_gmfs', None):
+    if oq.hazard_curves_from_gmfs:
         duration = oq.investigation_time * oq.ses_per_logic_tree_path * (
             oq.number_of_logic_tree_samples or 1)
         for gsim in gsims:
@@ -415,6 +415,9 @@ class EventBasedCalculator(ClassicalCalculator):
         prepare some empty files in the export directory to store the gmfs
         (if any). If there were pre-existing files, they will be erased.
         """
+        oq = self.oqparam
+        if not oq.hazard_curves_from_gmfs and not oq.ground_motion_fields:
+            return
         ClassicalCalculator.pre_execute(self)
         rupture_by_tag = sum(self.datastore['sescollection'], AccumDict())
         self.sesruptures = [rupture_by_tag[tag]
@@ -444,8 +447,11 @@ class EventBasedCalculator(ClassicalCalculator):
         parallelizing on the ruptures according to their weight and
         tectonic region type.
         """
+        oq = self.oqparam
+        if not oq.hazard_curves_from_gmfs and not oq.ground_motion_fields:
+            return
         monitor = self.monitor(self.core_func.__name__)
-        monitor.oqparam = self.oqparam
+        monitor.oqparam = oq
         zc = zero_curves(len(self.sitecol), self.oqparam.imtls)
         zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
         self.gmf_dict = collections.defaultdict(AccumDict)
@@ -463,6 +469,8 @@ class EventBasedCalculator(ClassicalCalculator):
         and hazard curves (if any).
         """
         oq = self.oqparam
+        if not oq.hazard_curves_from_gmfs and not oq.ground_motion_fields:
+            return
         if oq.hazard_curves_from_gmfs:
             ClassicalCalculator.post_execute.__func__(self, result)
         if oq.ground_motion_fields:
