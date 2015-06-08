@@ -102,12 +102,14 @@ class EventBasedTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test_blocksize(self):
-        out = self.run_calc(blocksize.__file__, 'job.ini', concurrent_tasks=4)
+        out = self.run_calc(blocksize.__file__, 'job.ini', concurrent_tasks=4,
+                            exports='csv')
         [fname] = out['gmf_by_trt_gsim', 'csv']
         self.assertEqualFiles('expected/0-ChiouYoungs2008.csv',
                               fname, sorted)
 
-        out = self.run_calc(blocksize.__file__, 'job.ini', concurrent_tasks=8)
+        out = self.run_calc(blocksize.__file__, 'job.ini', concurrent_tasks=8,
+                            exports='csv')
         [fname] = out['gmf_by_trt_gsim', 'csv']
         self.assertEqualFiles('expected/0-ChiouYoungs2008.csv',
                               fname, sorted)
