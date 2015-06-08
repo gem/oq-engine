@@ -474,6 +474,8 @@ def get_composite_source_model(
     csm = source.CompositeSourceModel(source_model_lt, smodels)
     if in_memory:
         processor.process(csm)
+        if not csm.get_sources():
+            raise RuntimeError('All sources were filtered away')
         csm.count_ruptures()
     return csm
 

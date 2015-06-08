@@ -521,8 +521,6 @@ class CompositeSourceModel(collections.Sequence):
     def __init__(self, source_model_lt, source_models):
         self.source_model_lt = source_model_lt
         self.source_models = list(source_models)
-        if len(self.get_sources()) == 0:
-            raise RuntimeError('All sources were filtered away')
         self.info = CompositionInfo(source_models)
         self.proctimes = ()  # set by the SourceProcessor
 
