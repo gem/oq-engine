@@ -188,8 +188,6 @@ class HelpersTestCase(unittest.TestCase):
         self.assertAlmostEqual(0.44, result)
 
     def test_update_result_matrix_numpy_arrays(self):
-        # MOP FIXME
-        mop_ret = 1 / 0
         init = numpy.zeros((4, 4))
         first = numpy.array([0.2] * 16).reshape((4, 4))
 
