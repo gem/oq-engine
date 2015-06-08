@@ -102,7 +102,7 @@ class BaseHazardCalculator(base.Calculator):
         csm = self.composite_model
         self.acc = tasks.apply_reduce(
             self.core_calc_task,
-            (list(csm.sources), self.site_collection, csm.info, self.monitor),
+            (csm.get_sources(), self.site_collection, csm.info, self.monitor),
             agg=self.agg_curves, acc=self.acc,
             weight=attrgetter('weight'), key=attrgetter('trt_model_id'),
             concurrent_tasks=self.concurrent_tasks)
@@ -209,7 +209,7 @@ class BaseHazardCalculator(base.Calculator):
         """
         logs.LOG.progress("initializing sources")
         self.composite_model = readinput.get_composite_source_model(
-            self.oqparam, self.site_collection, self.prefilter)
+            self.oqparam, self.site_collection, in_memory=self.prefilter)
         for sm in self.composite_model:
             # create an LtSourceModel for each distinct source model
             lt_model = models.LtSourceModel.objects.create(
