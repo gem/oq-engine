@@ -26,7 +26,7 @@ import numpy
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.baselib import general
-from openquake.baselib.performance import Monitor
+from openquake.baselib.performance import DummyMonitor
 from openquake.commonlib import readinput, datastore, logictree, export
 from openquake.commonlib.parallel import apply_reduce
 from openquake.risklib import riskinput
@@ -67,7 +67,7 @@ class BaseCalculator(object):
     pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
 
-    def __init__(self, oqparam, monitor=Monitor('dummy'), calc_id=None,
+    def __init__(self, oqparam, monitor=DummyMonitor(), calc_id=None,
                  persistent=True):
         self.monitor = monitor
         if persistent:
