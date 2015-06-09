@@ -198,7 +198,7 @@ class DummyMonitor(Monitor):
     """
     def __init__(self, operation='dummy', *args, **kw):
         self.operation = operation
-        self.monitor_dir = self.monitor_csv = None
+        self.monitor_dir = None
 
     def write(self, row):
         """Do nothing"""
