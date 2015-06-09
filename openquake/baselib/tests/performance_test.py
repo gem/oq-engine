@@ -31,4 +31,6 @@ class MonitorTestCase(unittest.TestCase):
     def tearDownClass(cls):
         data = cls.mon.collect_performance()
         assert len(data) == 2
+        assert data['time_sec'].sum() > 0
+        assert data['memory_mb'].sum() >= 0
         shutil.rmtree(cls.mon.monitor_dir)
