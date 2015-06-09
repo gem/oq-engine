@@ -153,8 +153,10 @@ class Monitor(object):
         """
         :returns: a composite array (operation, time, memory, counts)
         """
+        perf_dt = numpy.dtype([('operation', (str, 50)), ('time_sec', float),
+                               ('memory_mb', float), ('counts', int)])
         if self.monitor_dir is None:  # no monitoring info
-            return numpy.array([])
+            return numpy.array([], perf_dt)
         data = collections.defaultdict(lambda: numpy.zeros(3))
         for f in os.listdir(self.monitor_dir):
             mo = re.match(r'performance-(\d+)\.csv', f)
@@ -164,8 +166,6 @@ class Monitor(object):
                     operation, time, memory = line.split('\t')
                     data[operation] += numpy.array(
                         [float(time), float(memory), 1])
-        perf_dt = numpy.dtype([('operation', (str, 50)), ('time_sec', float),
-                               ('memory_mb', float), ('counts', int)])
         rows = []
         for operation, rec in data.iteritems():
             rows.append((operation, rec[0], rec[1], rec[2]))
