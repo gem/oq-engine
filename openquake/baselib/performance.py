@@ -171,3 +171,31 @@ class Monitor(object):
             rows.append((operation, rec[0], rec[1], rec[2]))
         rows.sort(key=operator.itemgetter(1), reverse=True)
         return numpy.array(rows, perf_dt)
+
+
+class DummyMonitor(Monitor):
+    """
+    This class makes it easy to disable the monitoring in client code.
+    Disabling the monitor can improve the performance.
+    """
+    def __init__(self, operation='dummy', *args, **kw):
+        self.operation = operation
+        self.monitor_dir = self.monitor_csv = None
+
+    def write(self, row):
+        """Do nothing"""
+
+    def __call__(self, operation, **kw):
+        return self.__class__(operation)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, etype, exc, tb):
+        pass
+
+    def flush(self):
+        """Do nothing"""
+
+    def collect_performance(self):
+        """Do nothing"""
