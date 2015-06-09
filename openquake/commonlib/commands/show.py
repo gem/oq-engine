@@ -29,7 +29,7 @@ def show(calc_id, key=None, rlzs=None):
     """
     Show the content of a datastore.
 
-    :param id: numeric calculation ID
+    :param calc_id: numeric calculation ID; if 0, show all calculations
     :param key: key of the datastore
     :param rlzs: flag; if given, print out the realizations in order
     """
