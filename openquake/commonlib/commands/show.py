@@ -36,7 +36,7 @@ def show(calc_id, key=None, rlzs=None):
     if not calc_id:
         if not os.path.exists(datastore.DATADIR):
             return
-        for name in os.listdir(datastore.DATADIR):
+        for name in sorted(os.listdir(datastore.DATADIR)):
             mo = re.match('calc_(\d+)', name)
             if mo:
                 calc_id = int(mo.group(1))
