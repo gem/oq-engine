@@ -26,8 +26,9 @@ import numpy
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.baselib import general
+from openquake.baselib.performance import Monitor
 from openquake.commonlib import readinput, datastore, logictree, export
-from openquake.commonlib.parallel import apply_reduce, DummyMonitor
+from openquake.commonlib.parallel import apply_reduce
 from openquake.risklib import riskinput
 
 get_taxonomy = operator.attrgetter('taxonomy')
@@ -61,11 +62,12 @@ class BaseCalculator(object):
     cost_types = datastore.persistent_attribute('cost_types')
     taxonomies = datastore.persistent_attribute('/taxonomies')
     source_info = datastore.persistent_attribute('/source_info')
+    performance = datastore.persistent_attribute('/performance')
 
     pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
 
-    def __init__(self, oqparam, monitor=DummyMonitor(), calc_id=None,
+    def __init__(self, oqparam, monitor=Monitor('dummy'), calc_id=None,
                  persistent=True):
         self.monitor = monitor
         if persistent:
@@ -81,16 +83,17 @@ class BaseCalculator(object):
 
     def run(self, pre_execute=True, **kw):
         """
-        Run the calculation and return the saved output.
+        Run the calculation and return the exported outputs.
         """
-        self.monitor.write('operation pid time_sec memory_mb'.split())
         vars(self.oqparam).update(kw)
-        if pre_execute:
-            self.pre_execute()
-        result = self.execute()
-        self.post_execute(result)
-        exported = self.export()
-        self.clean_up()
+        try:
+            if pre_execute:
+                self.pre_execute()
+            result = self.execute()
+            self.post_execute(result)
+            exported = self.export()
+        finally:
+            self.clean_up()
         return exported
 
     def core_func(*args):
@@ -145,8 +148,9 @@ class BaseCalculator(object):
 
     def clean_up(self):
         """
-        Close the datastore and possibly other resources
+        Collect the monitoring information, then close the datastore.
         """
+        self.performance = self.monitor.collect_performance()
         self.datastore.close()
 
 

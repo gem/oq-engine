@@ -16,11 +16,11 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import logging
 
+from openquake.baselib import performance
 from openquake.commonlib import sap, readinput, valid
-from openquake.commonlib.parallel import executor, PerformanceMonitor
+from openquake.commonlib.parallel import executor
 from openquake.commonlib.calculators import base
 
 
@@ -35,10 +35,9 @@ def run(job_ini, concurrent_tasks=executor.num_tasks_hint,
     oqparam.concurrent_tasks = concurrent_tasks
     oqparam.hazard_calculation_id = hc
     oqparam.exports = exports
-    monitor = PerformanceMonitor('total', autoflush=True)
+    monitor = performance.Monitor('total', autoflush=True)
     calc = base.calculators(oqparam, monitor)
-    monitor.monitor_csv = os.path.join(
-        calc.datastore.calc_dir, 'performance.csv')
+    monitor.monitor_dir = calc.datastore.calc_dir
     with monitor:
         calc.run()
     logging.info('Calculation %s saved in %s',
