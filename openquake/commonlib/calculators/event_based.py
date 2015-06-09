@@ -25,7 +25,7 @@ import collections
 
 import numpy
 
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, humansize
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib.calc.hazard_curve import zero_curves
@@ -39,6 +39,32 @@ from openquake.commonlib.calculators.classical import (
     ClassicalCalculator, agg_dicts)
 
 # ######################## rupture calculator ############################ #
+
+
+def event_loss_size(dstore):
+    """
+    Determine the size of the event_loss matrix
+    (to be multiplied by the loss_types).
+    """
+    n = 0
+    num_imts = len(dstore['oqparam'].imtls)
+    for sescol in dstore['sescollection']:
+        for tag, sesrup in sescol.iteritems():
+            n += num_imts * 8
+    return humansize(n)
+
+
+def event_loss_asset_size(dstore):
+    """
+    Determine the size of the event_loss_asset matrix
+    (to be multiplied by the loss_types).
+    """
+    n = 0
+    num_imts = len(dstore['oqparam'].imtls)
+    for sescol in dstore['sescollection']:
+        for tag, sesrup in sescol.iteritems():
+            n += len(sesrup.indices) * num_imts * 8
+    return humansize(n)
 
 
 def get_geom(surface, is_from_fault_source, is_multi_surface):
@@ -308,6 +334,9 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
                 sescollection[sr.col_id][sr.tag] = sr
         logging.info('Saving the SES collection')
         self.sescollection = sescollection
+        self.datastore['event_loss_size'] = event_loss_size
+        self.datastore['event_loss_asset_size'] = event_loss_asset_size
+
 
 # ######################## GMF calculator ############################ #
 
