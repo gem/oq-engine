@@ -217,3 +217,6 @@ class DummyMonitor(Monitor):
 
     def collect_performance(self):
         """Do nothing"""
+
+    def __repr__(self):
+        return '<%s>' % self.__class__.___name__
