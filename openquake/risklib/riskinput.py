@@ -58,8 +58,15 @@ def build_asset_collection(assets_by_site):
 
     limits = ['insurance_limit~%s' % name for name in limit_d]
     retrofittings = ['retrofitted~%s' % n for n in retrofitting_d]
+    taxonomies = set()
+    for assets in assets_by_site:
+        for asset in assets:
+            taxonomies.add(asset.taxonomy)
+    sorted_taxonomies = sorted(taxonomies)
     asset_dt = numpy.dtype(
-        [('asset_ref', '|S20'), ('site_id', numpy.uint32)] +
+        [('asset_ref', '|S20'),
+         ('taxonomy', numpy.uint32),
+         ('site_id', numpy.uint32)] +
         [(name, float) for name in
          loss_types + deductibles + limits + retrofittings])
     num_assets = sum(len(assets) for assets in assets_by_site)
@@ -70,7 +77,9 @@ def build_asset_collection(assets_by_site):
             record = assetcol[asset_ordinal]
             asset_ordinal += 1
             for field in asset_dt.fields:
-                if field == 'asset_ref':
+                if field == 'taxonomy':
+                    value = sorted_taxonomies.index(asset.taxonomy)
+                elif field == 'asset_ref':
                     value = asset.id
                 elif field == 'site_id':
                     value = sid

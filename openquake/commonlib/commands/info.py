@@ -18,9 +18,12 @@
 
 from __future__ import print_function
 import textwrap
+import operator
 from openquake.commonlib import sap, readinput, nrml
 from openquake.commonlib.calculators import base
+from openquake.risklib import riskinput
 from openquake.hazardlib import gsim
+from openquake.baselib.general import groupby
 
 
 # the documentation about how to use this feature can be found
@@ -63,8 +66,11 @@ def info(name, filtersources=False):
                 for k in sorted(info):
                     print(k, info[k])
         if len(assets_by_site):
-            print('assets = %d' %
-                  sum(len(assets) for assets in assets_by_site))
+            assetcol = riskinput.build_asset_collection(assets_by_site)
+            dic = groupby(assetcol, operator.attrgetter('taxonomy'))
+            for taxo, num in dic.iteritems():
+                print('taxonomy #%d, %d assets' % (taxo, num))
+            print('total assets = %d' % len(assetcol))
     else:
         print("No info for '%s'" % name)
 
