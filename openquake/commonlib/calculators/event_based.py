@@ -272,7 +272,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         super(EventBasedRuptureCalculator, self).pre_execute()
         rnd = random.Random()
         rnd.seed(self.oqparam.random_seed)
-        for src in self.composite_source_model.sources:
+        for src in self.composite_source_model.get_sources():
             src.seed = rnd.randint(0, MAX_INT)
 
     def execute(self):
@@ -284,7 +284,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = self.oqparam
         csm = self.composite_source_model
-        sources = list(csm.sources)
+        sources = csm.get_sources()
         ruptures_by_trt = parallel.apply_reduce(
             self.core_func.__func__,
             (sources, self.sitecol, csm.info, monitor),
@@ -306,6 +306,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         for trt_id in result:
             for sr in result[trt_id]:
                 sescollection[sr.col_id][sr.tag] = sr
+        logging.info('Saving the SES collection')
         self.sescollection = sescollection
 
 # ######################## GMF calculator ############################ #
@@ -361,7 +362,7 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
     zero = zero_curves(num_sites, oq.imtls)
     result = AccumDict({(trt_id, str(gsim)): [dic, zero] for gsim in gsims})
     gmfs = [dic[tag] for tag in sorted(dic)]
-    if getattr(oq, 'hazard_curves_from_gmfs', None):
+    if oq.hazard_curves_from_gmfs:
         duration = oq.investigation_time * oq.ses_per_logic_tree_path * (
             oq.number_of_logic_tree_samples or 1)
         for gsim in gsims:
@@ -415,7 +416,7 @@ class EventBasedCalculator(ClassicalCalculator):
         prepare some empty files in the export directory to store the gmfs
         (if any). If there were pre-existing files, they will be erased.
         """
-        ClassicalCalculator.pre_execute(self)
+        super(EventBasedCalculator, self).pre_execute()
         rupture_by_tag = sum(self.datastore['sescollection'], AccumDict())
         self.sesruptures = [rupture_by_tag[tag]
                             for tag in sorted(rupture_by_tag)]
@@ -444,8 +445,11 @@ class EventBasedCalculator(ClassicalCalculator):
         parallelizing on the ruptures according to their weight and
         tectonic region type.
         """
+        oq = self.oqparam
+        if not oq.hazard_curves_from_gmfs and not oq.ground_motion_fields:
+            return
         monitor = self.monitor(self.core_func.__name__)
-        monitor.oqparam = self.oqparam
+        monitor.oqparam = oq
         zc = zero_curves(len(self.sitecol), self.oqparam.imtls)
         zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
         self.gmf_dict = collections.defaultdict(AccumDict)
@@ -463,6 +467,8 @@ class EventBasedCalculator(ClassicalCalculator):
         and hazard curves (if any).
         """
         oq = self.oqparam
+        if not oq.hazard_curves_from_gmfs and not oq.ground_motion_fields:
+            return
         if oq.hazard_curves_from_gmfs:
             ClassicalCalculator.post_execute.__func__(self, result)
         if oq.ground_motion_fields:
@@ -471,7 +477,7 @@ class EventBasedCalculator(ClassicalCalculator):
                                                for tag in gmf_by_tag}
             self.gmf_by_trt_gsim = self.gmf_dict
             self.gmf_dict.clear()
-        if self.mean_curves is not None:  # compute classical ones
+        if oq.mean_hazard_curves:  # compute classical ones
             export_dir = os.path.join(oq.export_dir, 'cl')
             if not os.path.exists(export_dir):
                 os.makedirs(export_dir)

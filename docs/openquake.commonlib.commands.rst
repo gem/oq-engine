@@ -27,7 +27,7 @@ commands Package
 
 
 :mod:`export` Module
--------------------
+--------------------
 
 .. automodule:: openquake.commonlib.commands.export
     :members:
