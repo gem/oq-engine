@@ -88,10 +88,14 @@ class BaseCalculator(object):
         vars(self.oqparam).update(kw)
         try:
             if pre_execute:
-                self.pre_execute()
-            result = self.execute()
-            self.post_execute(result)
-            exported = self.export()
+                with self.monitor('pre_execute', autoflush=True):
+                    self.pre_execute()
+            with self.monitor('execute', autoflush=True):
+                result = self.execute()
+            with self.monitor('post_execute', autoflush=True):
+                self.post_execute(result)
+            with self.monitor('export', autoflush=True):
+                exported = self.export()
         finally:
             self.clean_up()
         return exported
