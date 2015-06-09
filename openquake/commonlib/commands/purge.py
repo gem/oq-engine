@@ -27,8 +27,11 @@ def purge(calc_id):
     """
     if not calc_id:
         shutil.rmtree(datastore.DATADIR)
+        print('Removed %s' % datastore.DATADIR)
     else:
-        shutil.rmtree(datastore.DataStore(calc_id).calc_dir)
+        calc_dir = datastore.DataStore(calc_id).calc_dir
+        shutil.rmtree(calc_dir)
+        print('Removed %s' % calc_dir)
 
 
 parser = sap.Parser(purge)
