@@ -35,7 +35,7 @@ def run(job_ini, concurrent_tasks=executor.num_tasks_hint,
     oqparam.concurrent_tasks = concurrent_tasks
     oqparam.hazard_calculation_id = hc
     oqparam.exports = exports
-    monitor = performance.Monitor('total', autoflush=True)
+    monitor = performance.Monitor('total')
     calc = base.calculators(oqparam, monitor)
     monitor.monitor_dir = calc.datastore.calc_dir
     with monitor:
@@ -44,6 +44,7 @@ def run(job_ini, concurrent_tasks=executor.num_tasks_hint,
                  calc.datastore.calc_id, calc.datastore.calc_dir)
     logging.info('Total time spent: %s s', monitor.duration)
     logging.info('Memory allocated: %s M', monitor.mem / 1024. / 1024.)
+    monitor.flush()
 
 parser = sap.Parser(run)
 parser.arg('job_ini', 'calculation configuration file '
