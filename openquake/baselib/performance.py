@@ -219,4 +219,4 @@ class DummyMonitor(Monitor):
         """Do nothing"""
 
     def __repr__(self):
-        return '<%s>' % self.__class__.___name__
+        return '<%s>' % self.__class__.__name__
