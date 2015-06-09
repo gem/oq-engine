@@ -299,8 +299,9 @@ _devtest_innervm_run () {
     # build oq-hazardlib speedups and put in the right place
     ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
                  set -e
-                 if [ \$GEM_SET_DEBUG ]; then
-                      set -x
+                 if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
+                     export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
+                     set -x
                  fi
                  cd oq-hazardlib
                  python ./setup.py build
@@ -356,7 +357,8 @@ celeryd_wait $GEM_MAXLOOP"
         # run tests (in this case we omit 'set -e' to be able to read all tests outputs)
         ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
                  set -e
-                 if [ \$GEM_SET_DEBUG ]; then
+                 if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
+                     export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
                      set -x
                  fi
                  export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ;
@@ -508,7 +510,8 @@ _pkgtest_innervm_run () {
         # run all of the hazard and risk demos
         ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
         set -e
-        if [ \$GEM_SET_DEBUG ]; then
+        if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
+            export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
             set -x
         fi
         cd /usr/share/doc/python-oq-risklib/examples/demos
