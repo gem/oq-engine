@@ -150,7 +150,9 @@ class BaseCalculator(object):
         """
         Collect the monitoring information, then close the datastore.
         """
-        self.performance = self.monitor.collect_performance()
+        performance = self.monitor.collect_performance()
+        if performance is not None:
+            self.performance = performance
         self.datastore.close()
 
 
