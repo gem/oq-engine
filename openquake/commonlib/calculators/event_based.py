@@ -41,25 +41,40 @@ from openquake.commonlib.calculators.classical import (
 # ######################## rupture calculator ############################ #
 
 
-def event_loss_asset_sizes(dstore):
+def gmf_sizes(num_sites, rlzs_assoc, sescollection):
     """
-    Determine the size of the event_loss_asset matrix
+    :returns: the numbers of nonzero GMFs, for each realization
+    """
+    rlzs = rlzs_assoc.realizations
+    counts = [0] * len(rlzs)
+    for rlz in rlzs:
+        col_ids = rlzs_assoc.csm_info.get_col_ids(rlz)
+        for col_id, sc in enumerate(sescollection):
+            if col_id in col_ids:
+                for rup in sc.itervalues():
+                    counts[rlz.ordinal] += (
+                        len(rup.indices) if rup.indices is not None
+                        else num_sites)
+    return numpy.array(counts)
+
+
+def event_loss_asset_sizes(assets_by_site, rlzs_assoc, sescollection):
+    """
+    Determine the size of the event_loss_asset matrix, for each realization
     (to be multiplied by the loss_types).
 
     :returns: an array of sizes, one for each realization
     """
-    sescollection = dstore['sescollection']
-    assets_by_site = dstore['assets_by_site']
-    rlzs_assoc = dstore['rlzs_assoc']
+    num_assets_by_site = numpy.array(map(len, assets_by_site))
     rlzs = rlzs_assoc.realizations
     counts = [0] * len(rlzs)
-    for col_id, sc in enumerate(sescollection):
-        for rlz in rlzs_assoc.realizations:
-            if col_id in rlzs_assoc.csm_info.get_col_ids(rlz):
+    for rlz in rlzs:
+        col_ids = rlzs_assoc.csm_info.get_col_ids(rlz)
+        for col_id, sc in enumerate(sescollection):
+            if col_id in col_ids:
                 for rup in sc.itervalues():
-                    for assets in assets_by_site[rup.indices]:
-                        for asset in list(assets):
-                            counts[rlz.ordinal] += 1
+                    for num_assets in num_assets_by_site[rup.indices]:
+                        counts[rlz.ordinal] += num_assets
     return numpy.array(counts)
 
 
@@ -285,6 +300,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
     """
     core_func = compute_ruptures
     sescollection = datastore.persistent_attribute('sescollection')
+    gmf_sizes = datastore.persistent_attribute('/gmf_sizes')
     event_loss_asset_sizes = datastore.persistent_attribute(
         '/event_loss_asset_sizes')
     is_stochastic = True
@@ -325,6 +341,10 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         return ruptures_by_trt
 
     def post_execute(self, result):
+        """
+        Save the SES collection and the arrays gmf_sizes and
+        event_loss_asset_sizes
+        """
         nc = self.rlzs_assoc.csm_info.num_collections
         sescollection = [{} for col_id in range(nc)]
         for trt_id in result:
@@ -332,10 +352,12 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
                 sescollection[sr.col_id][sr.tag] = sr
         logging.info('Saving the SES collection')
         self.sescollection = sescollection
+        self.gmf_sizes = gmf_sizes(
+            len(self.sitecol), self.rlzs_assoc, sescollection)
         if 'assets_by_site' in self.datastore:
             self.event_loss_asset_sizes = event_loss_asset_sizes(
-                self.datastore)
-    
+                self.assets_by_site, self.rlzs_assoc, sescollection)
+
 
 # ######################## GMF calculator ############################ #
 
