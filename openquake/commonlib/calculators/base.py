@@ -156,7 +156,7 @@ class BaseCalculator(object):
         """
         performance = self.monitor.collect_performance()
         if performance is not None:
-            self.performance = performance
+            self.datastore['/performance'] = performance
         self.datastore.close()
 
 
