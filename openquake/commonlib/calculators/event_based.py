@@ -25,7 +25,7 @@ import collections
 
 import numpy
 
-from openquake.baselib.general import AccumDict, humansize
+from openquake.baselib.general import AccumDict
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib.calc.hazard_curve import zero_curves
@@ -41,30 +41,26 @@ from openquake.commonlib.calculators.classical import (
 # ######################## rupture calculator ############################ #
 
 
-def event_loss_size(dstore):
-    """
-    Determine the size of the event_loss matrix
-    (to be multiplied by the loss_types).
-    """
-    n = 0
-    num_imts = len(dstore['oqparam'].imtls)
-    for sescol in dstore['sescollection']:
-        for tag, sesrup in sescol.iteritems():
-            n += num_imts * 8
-    return humansize(n)
-
-
-def event_loss_asset_size(dstore):
+def event_loss_asset_sizes(dstore):
     """
     Determine the size of the event_loss_asset matrix
     (to be multiplied by the loss_types).
+
+    :returns: an array of sizes, one for each realization
     """
-    n = 0
-    num_imts = len(dstore['oqparam'].imtls)
-    for sescol in dstore['sescollection']:
-        for tag, sesrup in sescol.iteritems():
-            n += len(sesrup.indices) * num_imts * 8
-    return humansize(n)
+    sescollection = dstore['sescollection']
+    assets_by_site = dstore['assets_by_site']
+    rlzs_assoc = dstore['rlzs_assoc']
+    rlzs = rlzs_assoc.realizations
+    counts = [0] * len(rlzs)
+    for col_id, sc in enumerate(sescollection):
+        for rlz in rlzs_assoc.realizations:
+            if col_id in rlzs_assoc.csm_info.get_col_ids(rlz):
+                for rup in sc.itervalues():
+                    for assets in assets_by_site[rup.indices]:
+                        for asset in list(assets):
+                            counts[rlz.ordinal] += 1
+    return numpy.array(counts)
 
 
 def get_geom(surface, is_from_fault_source, is_multi_surface):
@@ -289,6 +285,8 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
     """
     core_func = compute_ruptures
     sescollection = datastore.persistent_attribute('sescollection')
+    event_loss_asset_sizes = datastore.persistent_attribute(
+        '/event_loss_asset_sizes')
     is_stochastic = True
 
     def pre_execute(self):
@@ -334,9 +332,10 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
                 sescollection[sr.col_id][sr.tag] = sr
         logging.info('Saving the SES collection')
         self.sescollection = sescollection
-        self.datastore['event_loss_size'] = event_loss_size
-        self.datastore['event_loss_asset_size'] = event_loss_asset_size
-
+        if 'assets_by_site' in self.datastore:
+            self.event_loss_asset_sizes = event_loss_asset_sizes(
+                self.datastore)
+    
 
 # ######################## GMF calculator ############################ #
 
