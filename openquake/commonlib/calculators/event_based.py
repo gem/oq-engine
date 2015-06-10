@@ -356,7 +356,8 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             for sr in result[trt_id]:
                 sescollection[sr.col_id][sr.tag] = sr
         logging.info('Saving the SES collection')
-        self.sescollection = sescollection
+        with self.monitor('saving ses', autoflush=True):
+            self.sescollection = sescollection
         with self.monitor('gmf_sizes'):
             self.gmf_sizes = gmf_sizes(
                 len(self.sitecol), self.rlzs_assoc, sescollection)
@@ -371,21 +372,27 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
 
 # NB: this will be replaced by hazardlib.calc.gmf.build_gmf_by_tag
 def make_gmf_by_tag(ses_ruptures, sitecol, imts, gsims,
-                    trunc_level, correl_model):
+                    trunc_level, correl_model, monitor):
     """
     :returns: a dictionary tag -> (r_sites, gmf_array)
     """
     dic = {}
+    ctx_mon = monitor('make contexts')
+    gmf_mon = monitor('compute poes')
     for rupture, group in itertools.groupby(
             ses_ruptures, operator.attrgetter('rupture')):
         sesruptures = list(group)
         indices = sesruptures[0].indices
         r_sites = (sitecol if indices is None else
                    site.FilteredSiteCollection(indices, sitecol))
-        computer = calc.gmf.GmfComputer(
-            rupture, r_sites, imts, gsims, trunc_level, correl_model)
-        for sr in sesruptures:
-            dic[sr.tag] = computer.compute([sr.seed])[0]
+        with ctx_mon:
+            computer = calc.gmf.GmfComputer(
+                rupture, r_sites, imts, gsims, trunc_level, correl_model)
+        with gmf_mon:
+            for sr in sesruptures:
+                dic[sr.tag] = computer.compute([sr.seed])[0]
+    ctx_mon.flush()
+    gmf_mon.flush()
     return dic
 
 
@@ -415,7 +422,7 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
     num_sites = len(sitecol)
     dic = make_gmf_by_tag(
         ses_ruptures, sitecol.complete, oq.imtls, gsims,
-        trunc_level, correl_model)
+        trunc_level, correl_model, monitor)
     zero = zero_curves(num_sites, oq.imtls)
     result = AccumDict({(trt_id, str(gsim)): [dic, zero] for gsim in gsims})
     gmfs = [dic[tag] for tag in sorted(dic)]
@@ -545,7 +552,7 @@ class EventBasedCalculator(ClassicalCalculator):
             self.cl.composite_source_model = self.csm
             self.cl.sitecol = self.sitecol
             self.cl.rlzs_assoc = self.csm.get_rlzs_assoc()
-            result = self.cl.run(pre_execute=False)
+            result = self.cl.run(pre_execute=False, clean_up=False)
             for imt in self.mean_curves.dtype.fields:
                 rdiff, index = max_rel_diff_index(
                     self.cl.mean_curves[imt], self.mean_curves[imt])

@@ -26,8 +26,9 @@ import numpy
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.baselib import general
+from openquake.baselib.performance import DummyMonitor
 from openquake.commonlib import readinput, datastore, logictree, export
-from openquake.commonlib.parallel import apply_reduce, DummyMonitor
+from openquake.commonlib.parallel import apply_reduce
 from openquake.risklib import riskinput
 
 get_taxonomy = operator.attrgetter('taxonomy')
@@ -61,6 +62,7 @@ class BaseCalculator(object):
     cost_types = datastore.persistent_attribute('cost_types')
     taxonomies = datastore.persistent_attribute('/taxonomies')
     source_info = datastore.persistent_attribute('/source_info')
+    performance = datastore.persistent_attribute('/performance')
 
     pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
@@ -79,18 +81,24 @@ class BaseCalculator(object):
         # else we are doing a precalculation; oqparam has been already stored
         self.persistent = persistent
 
-    def run(self, pre_execute=True, **kw):
+    def run(self, pre_execute=True, clean_up=True, **kw):
         """
-        Run the calculation and return the saved output.
+        Run the calculation and return the exported outputs.
         """
-        self.monitor.write('operation pid time_sec memory_mb'.split())
         vars(self.oqparam).update(kw)
-        if pre_execute:
-            self.pre_execute()
-        result = self.execute()
-        self.post_execute(result)
-        exported = self.export()
-        self.clean_up()
+        try:
+            if pre_execute:
+                with self.monitor('pre_execute', autoflush=True):
+                    self.pre_execute()
+            with self.monitor('execute', autoflush=True):
+                result = self.execute()
+            with self.monitor('post_execute', autoflush=True):
+                self.post_execute(result)
+            with self.monitor('export', autoflush=True):
+                exported = self.export()
+        finally:
+            if clean_up:
+                self.clean_up()
         return exported
 
     def core_func(*args):
@@ -145,8 +153,11 @@ class BaseCalculator(object):
 
     def clean_up(self):
         """
-        Close the datastore and possibly other resources
+        Collect the monitoring information, then close the datastore.
         """
+        performance = self.monitor.collect_performance()
+        if performance is not None:
+            self.performance = performance
         self.datastore.close()
 
 
@@ -211,7 +222,7 @@ class HazardCalculator(BaseCalculator):
                 precalc = calculators[self.pre_calculator](
                     self.oqparam, self.monitor('precalculator'),
                     self.datastore.calc_id)
-                precalc.run()
+                precalc.run(clean_up=False)
                 if 'composite_source_model' in vars(precalc):
                     self.csm = precalc.composite_source_model
             else:  # read previously computed data

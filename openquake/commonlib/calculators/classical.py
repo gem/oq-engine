@@ -60,7 +60,8 @@ def classical(sources, sitecol, gsims_assoc, monitor):
     curves_by_gsim = hazard_curves_per_trt(
         sources, sitecol, imtls, gsims, truncation_level,
         source_site_filter=source_site_distance_filter(max_dist),
-        rupture_site_filter=rupture_site_distance_filter(max_dist))
+        rupture_site_filter=rupture_site_distance_filter(max_dist),
+        monitor=monitor)
     return {(trt_model_id, str(gsim)): curves
             for gsim, curves in zip(gsims, curves_by_gsim)}
 
