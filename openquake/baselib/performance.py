@@ -111,7 +111,7 @@ class Monitor(object):
         """
         The path to the .csv where the monitor will write, or None.
         """
-        if self.monitor_dir:
+        if self.monitor_dir and self.pid:
             return os.path.join(
                 self.monitor_dir, 'performance-%d.csv' % self.pid)
 
@@ -199,6 +199,7 @@ class DummyMonitor(Monitor):
     def __init__(self, operation='dummy', *args, **kw):
         self.operation = operation
         self.monitor_dir = None
+        self.pid = None
 
     def write(self, row):
         """Do nothing"""
