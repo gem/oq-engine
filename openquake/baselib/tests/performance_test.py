@@ -21,8 +21,10 @@ class MonitorTestCase(unittest.TestCase):
 
     def test_mem(self):
         mon = self.mon('test_mem', measuremem=True)
+        ls = []
         for i in range(3):
             with mon:
+                ls.append(range(100000))  # allocate some RAM
                 time.sleep(0.1)
         self.assertGreaterEqual(mon.mem, 0)
         mon.flush()

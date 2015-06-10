@@ -64,7 +64,7 @@ class Monitor(object):
 
     .start_time: when the monitor started (a datetime object)
     .duration: time elapsed between start and stop (in seconds)
-    .exc: None unless an exception happened inside the block of code
+    .exc: usually None; otherwise the exception happened in the `with` block
     .mem: the memory delta in bytes
 
     The behaviour of the PerformanceMonitor can be customized by subclassing it
