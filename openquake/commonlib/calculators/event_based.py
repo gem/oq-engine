@@ -43,6 +43,9 @@ from openquake.commonlib.calculators.classical import (
 
 def gmf_sizes(num_sites, rlzs_assoc, sescollection):
     """
+    :param num_sites: the total number of hazard sites
+    :param rlzs_assoc: an instance of RlzsAssoc
+    :param sescollection: a list of dictionaries tag -> SESRupture
     :returns: the numbers of nonzero GMFs, for each realization
     """
     rlzs = rlzs_assoc.realizations
@@ -63,6 +66,9 @@ def event_loss_asset_sizes(assets_by_site, rlzs_assoc, sescollection):
     Determine the size of the event_loss_asset matrix, for each realization
     (to be multiplied by the loss_types).
 
+    :param assets_by_site: a list of list of assets (for each site)
+    :param rlzs_assoc: an instance of RlzsAssoc
+    :param sescollection: a list of dictionaries tag -> SESRupture
     :returns: an array of sizes, one for each realization
     """
     num_assets_by_site = numpy.array(map(len, assets_by_site))
