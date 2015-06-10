@@ -1,0 +1,11 @@
+#!/bin/sh
+set -e
+# set -x
+# echo "ARGS POSTRM: $@"
+PKGNAME=python-oq-hazardlib
+
+if [ "$1" = "remove" ]; then
+    for i in $(dpkg-divert --list "$PKGNAME" | sed 's/^.* of //g;s/ to .*$//g') ; do
+        dpkg-divert --package "$PKGNAME" --remove --rename "$i"
+    done
+fi

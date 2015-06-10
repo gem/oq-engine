@@ -1,0 +1,18 @@
+#!/bin/sh
+set -e
+# set -x
+# echo "ARGS PREINST: $@"
+PKGNAME=python-oq-hazardlib
+
+ownpkg="$(dpkg -S openquake/baselib/__init__.py | grep -v '^diversion by ' | head -n 1 | sed 's/:.*//g' || true)"
+# if file not already owned by this package
+if ! echo "$ownpkg" | grep -q  "$PKGNAME"; then
+    for p in /usr/share/pyshared/openquake/baselib /usr/lib/python2.7/dist-packages/openquake/baselib; do
+        if [ ! -d "$p" ]; then
+            continue
+        fi
+        for i in $(find $p \( -type f -o -type l \) -a -not -name '*.pyc' 2>/dev/null); do
+            dpkg-divert --package "$PKGNAME" --add --rename --divert "${i}.oq-haz" "${i}"
+        done
+    done
+fi
