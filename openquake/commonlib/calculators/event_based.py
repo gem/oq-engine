@@ -71,7 +71,7 @@ def event_loss_asset_sizes(assets_by_site, rlzs_assoc, sescollection):
     :param sescollection: a list of dictionaries tag -> SESRupture
     :returns: an array of sizes, one for each realization
     """
-    num_assets_by_site = numpy.array(map(len, assets_by_site))
+    num_assets = numpy.array(map(len, assets_by_site))
     rlzs = rlzs_assoc.realizations
     counts = [0] * len(rlzs)
     for rlz in rlzs:
@@ -79,8 +79,7 @@ def event_loss_asset_sizes(assets_by_site, rlzs_assoc, sescollection):
         for col_id, sc in enumerate(sescollection):
             if col_id in col_ids:
                 for rup in sc.itervalues():
-                    for num_assets in num_assets_by_site[rup.indices]:
-                        counts[rlz.ordinal] += num_assets
+                    counts[rlz.ordinal] += num_assets[rup.indices].sum()
     return numpy.array(counts)
 
 
@@ -358,11 +357,13 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
                 sescollection[sr.col_id][sr.tag] = sr
         logging.info('Saving the SES collection')
         self.sescollection = sescollection
-        self.gmf_sizes = gmf_sizes(
-            len(self.sitecol), self.rlzs_assoc, sescollection)
+        with self.monitor('gmf_sizes'):
+            self.gmf_sizes = gmf_sizes(
+                len(self.sitecol), self.rlzs_assoc, sescollection)
         if 'assets_by_site' in self.datastore:
-            self.event_loss_asset_sizes = event_loss_asset_sizes(
-                self.assets_by_site, self.rlzs_assoc, sescollection)
+            with self.monitor('event_loss_asset_sizes'):
+                self.event_loss_asset_sizes = event_loss_asset_sizes(
+                    self.assets_by_site, self.rlzs_assoc, sescollection)
 
 
 # ######################## GMF calculator ############################ #
