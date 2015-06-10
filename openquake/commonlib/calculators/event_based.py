@@ -495,7 +495,7 @@ class EventBasedCalculator(ClassicalCalculator):
             self.cl.composite_source_model = self.csm
             self.cl.sitecol = self.sitecol
             self.cl.rlzs_assoc = self.csm.get_rlzs_assoc()
-            result = self.cl.run(pre_execute=False)
+            result = self.cl.run(pre_execute=False, clean_up=False)
             for imt in self.mean_curves.dtype.fields:
                 rdiff, index = max_rel_diff_index(
                     self.cl.mean_curves[imt], self.mean_curves[imt])

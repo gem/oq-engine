@@ -81,7 +81,7 @@ class BaseCalculator(object):
         # else we are doing a precalculation; oqparam has been already stored
         self.persistent = persistent
 
-    def run(self, pre_execute=True, **kw):
+    def run(self, pre_execute=True, clean_up=True, **kw):
         """
         Run the calculation and return the exported outputs.
         """
@@ -97,7 +97,8 @@ class BaseCalculator(object):
             with self.monitor('export', autoflush=True):
                 exported = self.export()
         finally:
-            self.clean_up()
+            if clean_up:
+                self.clean_up()
         return exported
 
     def core_func(*args):
@@ -156,7 +157,7 @@ class BaseCalculator(object):
         """
         performance = self.monitor.collect_performance()
         if performance is not None:
-            self.datastore['/performance'] = performance
+            self.performance = performance
         self.datastore.close()
 
 
@@ -221,7 +222,7 @@ class HazardCalculator(BaseCalculator):
                 precalc = calculators[self.pre_calculator](
                     self.oqparam, self.monitor('precalculator'),
                     self.datastore.calc_id)
-                precalc.run()
+                precalc.run(clean_up=False)
                 if 'composite_source_model' in vars(precalc):
                     self.csm = precalc.composite_source_model
             else:  # read previously computed data
