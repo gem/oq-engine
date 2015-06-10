@@ -481,7 +481,11 @@ def get_result(request, result_id):
             download = True
 
     tmpdir = tempfile.mkdtemp()
-    exported = core.export(result_id, tmpdir, export_type=export_type)
+    try:
+        exported = core.export(result_id, tmpdir, export_type=export_type)
+    except Exception as exc:
+        return HttpResponse(content='%s: %s' % (exc.__class__.__name__, exc),
+                            content_type='text/plain', status=500)
     if exported is None:
         # Throw back a 404 if the exact export parameters are not supported
         return HttpResponseNotFound(

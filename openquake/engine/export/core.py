@@ -28,11 +28,26 @@ from openquake.commonlib.datastore import DataStore
 export_output = CallableDict()
 
 
+class DataStoreExportError(Exception):
+    pass
+
+
 @export_output.add(('datastore', 'csv'), ('datastore', 'xml'))
 def export_from_datastore(key, output, target):
     fmt = key[1]
     dstore = DataStore(output.oq_job.id)
-    return ds_export((output.ds_key, fmt), dstore)
+    try:
+        exported = ds_export((output.ds_key, fmt), dstore)
+    except KeyError:
+        raise DataStoreExportError(
+            'Could not export %s in %s' % (output.ds_key, fmt))
+    if not exported:
+        raise DataStoreExportError(
+            'Nothing to export for %s' % output.ds_key)
+    elif len(exported) > 1:
+        raise DataStoreExportError(
+            '%s produces more than one file: %s' % (output.ds_key, exported))
+    return exported[0]
 
 
 def export(output_id, target, export_type='xml,geojson,csv'):
