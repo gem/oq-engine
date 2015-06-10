@@ -321,7 +321,7 @@ def make_gmf_by_tag(ses_ruptures, sitecol, imts, gsims,
     """
     dic = {}
     ctx_mon = monitor('make contexts')
-    gmf_mon = monitor('compute gmfs')
+    gmf_mon = monitor('compute poes')
     for rupture, group in itertools.groupby(
             ses_ruptures, operator.attrgetter('rupture')):
         sesruptures = list(group)

@@ -40,8 +40,8 @@ def run(job_ini, concurrent_tasks=executor.num_tasks_hint,
     monitor.monitor_dir = calc.datastore.calc_dir
     with monitor:
         calc.run()
-    logging.info('Calculation %s saved in %s',
-                 calc.datastore.calc_id, calc.datastore.calc_dir)
+    logging.info('See the output with hdfview %s/output.hdf5',
+                 calc.datastore.calc_dir)
     logging.info('Total time spent: %s s', monitor.duration)
     logging.info('Memory allocated: %s M', monitor.mem / 1024. / 1024.)
     monitor.flush()
