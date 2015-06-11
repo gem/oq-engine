@@ -41,46 +41,43 @@ from openquake.commonlib.calculators.classical import (
 # ######################## rupture calculator ############################ #
 
 
-def gmf_sizes(num_sites, rlzs_assoc, sescollection):
+# a numpy record storing the sizes of ground motion fields, event loss table
+# and event loss per assets; there is a record for each realization
+sizes_dt = numpy.dtype([('rup', int), ('gmf', int), ('ela', int)])
+
+
+def calc_sizes(assets_by_site, num_imts, rlzs_assoc, sescollection, ela=False):
     """
-    :param num_sites: the total number of hazard sites
+    :param assets_by_site: list of list of assets
+    :param num_imts: the number of IMTs
     :param rlzs_assoc: an instance of RlzsAssoc
     :param sescollection: a list of dictionaries tag -> SESRupture
+    :param ela: set it True to total number of event losses (slow)
     :returns: the numbers of nonzero GMFs, for each realization
     """
-    rlzs = rlzs_assoc.realizations
-    counts = [0] * len(rlzs)
-    for rlz in rlzs:
-        col_ids = rlzs_assoc.csm_info.get_col_ids(rlz)
-        for col_id, sc in enumerate(sescollection):
-            if col_id in col_ids:
-                for rup in sc.itervalues():
-                    counts[rlz.ordinal] += (
-                        len(rup.indices) if rup.indices is not None
-                        else num_sites)
-    return numpy.array(counts)
-
-
-def event_loss_asset_sizes(assets_by_site, rlzs_assoc, sescollection):
-    """
-    Determine the size of the event_loss_asset matrix, for each realization
-    (to be multiplied by the loss_types).
-
-    :param assets_by_site: a list of list of assets (for each site)
-    :param rlzs_assoc: an instance of RlzsAssoc
-    :param sescollection: a list of dictionaries tag -> SESRupture
-    :returns: an array of sizes, one for each realization
-    """
+    num_sites = len(assets_by_site)
     num_assets = numpy.array(map(len, assets_by_site))
     rlzs = rlzs_assoc.realizations
-    counts = [0] * len(rlzs)
+    counts = numpy.zeros(len(rlzs), sizes_dt)
     for rlz in rlzs:
         col_ids = rlzs_assoc.csm_info.get_col_ids(rlz)
         for col_id, sc in enumerate(sescollection):
             if col_id in col_ids:
+                i = rlz.ordinal
+
+                # ruptures per realization
+                counts['rup'][i] += len(sc)
+
+                # gmvs per realization
                 for rup in sc.itervalues():
-                    counts[rlz.ordinal] += num_assets[rup.indices].sum()
-    return numpy.array(counts)
+                    counts['gmf'][i] += (
+                        len(rup.indices) if rup.indices is not None
+                        else num_sites) * num_imts
+
+                    # losses per realization
+                    if ela:  # this part is slow when enabled
+                        counts['ela'][i] += num_assets[rup.indices].sum()
+    return counts
 
 
 def get_geom(surface, is_from_fault_source, is_multi_surface):
@@ -305,9 +302,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
     """
     core_func = compute_ruptures
     sescollection = datastore.persistent_attribute('sescollection')
-    gmf_sizes = datastore.persistent_attribute('/gmf_sizes')
-    event_loss_asset_sizes = datastore.persistent_attribute(
-        '/event_loss_asset_sizes')
+    counts_per_rlz = datastore.persistent_attribute('/counts_per_rlz')
     is_stochastic = True
 
     def pre_execute(self):
@@ -347,8 +342,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
 
     def post_execute(self, result):
         """
-        Save the SES collection and the arrays gmf_sizes and
-        event_loss_asset_sizes
+        Save the SES collection and the array counts_per_rlz
         """
         nc = self.rlzs_assoc.csm_info.num_collections
         sescollection = [{} for col_id in range(nc)]
@@ -358,14 +352,12 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         logging.info('Saving the SES collection')
         with self.monitor('saving ses', autoflush=True):
             self.sescollection = sescollection
-        with self.monitor('gmf_sizes'):
-            self.gmf_sizes = gmf_sizes(
-                len(self.sitecol), self.rlzs_assoc, sescollection)
-        if 'assets_by_site' in self.datastore:
-            with self.monitor('event_loss_asset_sizes'):
-                self.event_loss_asset_sizes = event_loss_asset_sizes(
-                    self.assets_by_site, self.rlzs_assoc, sescollection)
-
+        with self.monitor('counts_per_rlz'):
+            assets_by_site = self.datastore.get('assets_by_site',
+                                                [(1,)] * len(self.sitecol))
+            self.counts_per_rlz = calc_sizes(
+                assets_by_site, len(self.oqparam.imtls), self.rlzs_assoc,
+                sescollection, ela=bool(self.oqparam.specific_assets))
 
 # ######################## GMF calculator ############################ #
 
