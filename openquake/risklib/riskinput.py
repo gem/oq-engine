@@ -24,6 +24,7 @@ import collections
 import numpy
 
 from openquake.baselib.general import groupby, split_in_blocks_2
+from openquake.baselib.performance import DummyMonitor
 from openquake.hazardlib.gsim.base import gsim_imt_dt
 from openquake.risklib import scientific
 
@@ -185,8 +186,8 @@ class RiskModel(collections.Mapping):
         :param rlzs_assoc: a RlzsAssoc instance
         :param monitor: a monitor object used to measure the performance
         """
-        mon_hazard = monitor('getting hazard')
-        mon_risk = monitor('computing individual risk')
+        mon_hazard = monitor('getting hazard', autoflush=False)
+        mon_risk = monitor('computing individual risk', autoflush=False)
         for riskinput in riskinputs:
             try:
                 assets_by_site = riskinput.assets_by_site
@@ -358,7 +359,7 @@ class RiskInputFromRuptures(object):
         from openquake.commonlib.calculators.event_based import make_gmf_by_tag
         gmf_by_tag = make_gmf_by_tag(
             self.ses_ruptures, self.sitecol, self.imts,
-            self.gsims, self.trunc_level, self.correl_model)
+            self.gsims, self.trunc_level, self.correl_model, DummyMonitor())
         gmf_dt = gsim_imt_dt(self.gsims, self.imts)
         n = len(self.sitecol.complete)
         gmfs = numpy.zeros((len(gmf_by_tag), n), gmf_dt)

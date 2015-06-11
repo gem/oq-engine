@@ -415,7 +415,8 @@ def litetask(func):
     must be a monitor object.
     """
     def w(*args):  # the last argument is assumed to be a monitor
-        with args[-1]('total ' + func.__name__, autoflush=True):
+        with args[-1]('total ' + func.__name__,
+                      autoflush=True, measuremem=True):
             return func(*args)
     wrapped = functools.wraps(func)(lambda *a: safely_call(w, a, pickle=True))
     wrapped.task_func = func

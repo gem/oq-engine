@@ -22,7 +22,7 @@ import unittest
 import numpy
 
 from openquake.commonlib.calculators import base
-from openquake.commonlib.parallel import PerformanceMonitor
+from openquake.baselib.performance import Monitor
 from openquake.commonlib import readinput, oqvalidation
 
 
@@ -52,7 +52,7 @@ class CalculatorTestCase(unittest.TestCase):
         oq = oqvalidation.OqParam(**params)
         oq.validate()
         # change this when debugging the test
-        monitor = PerformanceMonitor(self.testdir)
+        monitor = Monitor(self.testdir)
         return base.calculators(oq, monitor)
 
     def run_calc(self, testfile, job_ini, **kw):

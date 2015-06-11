@@ -60,7 +60,8 @@ def classical(sources, sitecol, gsims_assoc, monitor):
     curves_by_gsim = hazard_curves_per_trt(
         sources, sitecol, imtls, gsims, truncation_level,
         source_site_filter=source_site_distance_filter(max_dist),
-        rupture_site_filter=rupture_site_distance_filter(max_dist))
+        rupture_site_filter=rupture_site_distance_filter(max_dist),
+        monitor=monitor)
     return {(trt_model_id, str(gsim)): curves
             for gsim, curves in zip(gsims, curves_by_gsim)}
 
@@ -90,7 +91,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = self.oqparam
-        sources = list(self.composite_source_model.sources)
+        sources = self.composite_source_model.get_sources()
         zc = zero_curves(len(self.sitecol), self.oqparam.imtls)
         zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
         gsims_assoc = self.rlzs_assoc.get_gsims_by_trt_id()
