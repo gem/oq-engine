@@ -38,9 +38,10 @@ def random_filter(objects, reduction_factor, seed=42):
     return out
 
 
-def main(fname, reduction_factor):
+def reduce(fname, reduction_factor):
     """
     Produce a submodel from `fname` by sampling the nodes randomly.
+    Supports source models and exposure models.
     This is a debugging utility to reduce large computations to small ones.
     """
     factor = float(reduction_factor)
@@ -55,14 +56,14 @@ def main(fname, reduction_factor):
         num_nodes = len(model)
     else:
         raise RuntimeError('Unknown model tag: %s' % model.tag)
-    shutil.copy(fname, fname + '~')
-    print 'Copied the original file in %s~' % fname
+    shutil.copy(fname, fname + '.bak')
+    print 'Copied the original file in %s.bak' % fname
     with open(fname, 'w') as f:
         nrml.write([model], f)
     print 'Extracted %d nodes out of %d' % (num_nodes, total)
 
-if __name__ == '__main__':
-    parser = sap.Parser(main)
-    parser.arg('fname', 'path to the model file')
-    parser.arg('reduction_factor', 'reduction factor in the range 0..1')
-    parser.callfunc()
+
+parser = sap.Parser(reduce)
+parser.arg('fname', 'path to the model file')
+parser.arg('reduction_factor', 'reduction factor in the range 0..1')
+parser.callfunc()
