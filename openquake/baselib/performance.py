@@ -162,10 +162,11 @@ class Monitor(object):
 
     def __repr__(self):
         if self.measuremem:
-            return '<%s duration=%ss, memory=%dM>' % (
-                self.__class__.__name__, self.duration,
+            return '<%s %s, duration=%ss, memory=%dM>' % (
+                self.__class__.__name__, self.operation, self.duration,
                 self.mem / 1024. / 1024.)
-        return '<%s duration=%ss>' % (self.__class__.__name__, self.duration)
+        return '<%s %s, duration=%ss>' % (self.__class__.__name__,
+                                          self.operation, self.duration)
 
     def collect_performance(self):
         """
