@@ -43,20 +43,17 @@ from openquake.commonlib.calculators.classical import (
 
 # a numpy record storing the sizes of ground motion fields, event loss table
 # and event loss per assets; there is a record for each realization
-sizes_dt = numpy.dtype([('rup', int), ('gmf', int), ('ela', int)])
+sizes_dt = numpy.dtype([('rup', int), ('gmf', int)])
 
 
-def calc_sizes(assets_by_site, num_imts, rlzs_assoc, sescollection, ela=False):
+def counts_per_rlz(num_sites, num_imts, rlzs_assoc, sescollection):
     """
-    :param assets_by_site: list of list of assets
+    :param num_sites: the number of sites
     :param num_imts: the number of IMTs
     :param rlzs_assoc: an instance of RlzsAssoc
     :param sescollection: a list of dictionaries tag -> SESRupture
-    :param ela: set it True to total number of event losses (slow)
     :returns: the numbers of nonzero GMFs, for each realization
     """
-    num_sites = len(assets_by_site)
-    num_assets = numpy.array(map(len, assets_by_site))
     rlzs = rlzs_assoc.realizations
     counts = numpy.zeros(len(rlzs), sizes_dt)
     for rlz in rlzs:
@@ -73,10 +70,6 @@ def calc_sizes(assets_by_site, num_imts, rlzs_assoc, sescollection, ela=False):
                     counts['gmf'][i] += (
                         len(rup.indices) if rup.indices is not None
                         else num_sites) * num_imts
-
-                    # losses per realization
-                    if ela:  # this part is slow when enabled
-                        counts['ela'][i] += num_assets[rup.indices].sum()
     return counts
 
 
@@ -353,11 +346,9 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         with self.monitor('saving ses', autoflush=True):
             self.sescollection = sescollection
         with self.monitor('counts_per_rlz'):
-            assets_by_site = self.datastore.get('assets_by_site',
-                                                [(1,)] * len(self.sitecol))
-            self.counts_per_rlz = calc_sizes(
-                assets_by_site, len(self.oqparam.imtls), self.rlzs_assoc,
-                sescollection, ela=bool(self.oqparam.specific_assets))
+            self.counts_per_rlz = counts_per_rlz(
+                len(self.sitecol), len(self.oqparam.imtls),
+                self.rlzs_assoc, sescollection)
 
 # ######################## GMF calculator ############################ #
 
