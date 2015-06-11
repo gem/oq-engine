@@ -35,7 +35,7 @@ def run(job_ini, concurrent_tasks=executor.num_tasks_hint,
     oqparam.concurrent_tasks = concurrent_tasks
     oqparam.hazard_calculation_id = hc
     oqparam.exports = exports
-    monitor = performance.Monitor('total')
+    monitor = performance.Monitor('total', measuremem=True)
     calc = base.calculators(oqparam, monitor)
     monitor.monitor_dir = calc.datastore.calc_dir
     with monitor:
