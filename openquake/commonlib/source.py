@@ -735,8 +735,9 @@ class SourceProcessor(object):
             ss = parallel.TaskManager.starmap(filter_and_split, slow_sources)
 
         # single core processing
-        logging.warn('Sequential processing of %d sources...',
-                     len(fast_sources))
+        if fast_sources:
+            logging.warn('Sequential processing of %d sources...',
+                         len(fast_sources))
         sources_by_trt = reduce(
             self.agg_source_info,
             itertools.starmap(filter_and_split, fast_sources), AccumDict())
