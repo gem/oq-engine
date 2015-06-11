@@ -16,7 +16,7 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-
+from __future__ import print_function
 import random
 import shutil
 from openquake.commonlib import nrml
@@ -57,13 +57,12 @@ def reduce(fname, reduction_factor):
     else:
         raise RuntimeError('Unknown model tag: %s' % model.tag)
     shutil.copy(fname, fname + '.bak')
-    print 'Copied the original file in %s.bak' % fname
+    print('Copied the original file in %s.bak' % fname)
     with open(fname, 'w') as f:
         nrml.write([model], f)
-    print 'Extracted %d nodes out of %d' % (num_nodes, total)
+    print('Extracted %d nodes out of %d' % (num_nodes, total))
 
 
 parser = sap.Parser(reduce)
 parser.arg('fname', 'path to the model file')
 parser.arg('reduction_factor', 'reduction factor in the range 0..1')
-parser.callfunc()

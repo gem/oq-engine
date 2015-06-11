@@ -1,7 +1,9 @@
 import os
 import mock
+import shutil
+import tempfile
 import unittest
-from openquake.commonlib.commands.info import info
+from openquake.commonlib.commands.info import info, reduce
 
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
@@ -49,3 +51,21 @@ output_weight 29.0'''
         with Print.patch() as p:
             info(path, filtersources=True)
         self.assertEqual(self.EXPECTED + self.EXTRA, str(p))
+
+
+class ReduceTestCase(unittest.TestCase):
+    def test_exposure(self):
+        tempdir = tempfile.mkdtemp()
+        path = shutil.copy(src, tempdir)
+        with Print.patch() as p:
+            reduce(path, 0.5)
+        self.assertEqual(self.EXPECTED, str(p))
+        shutil.rmtree(tempdir)
+
+    def test_source_model(self):
+        tempdir = tempfile.mkdtemp()
+        path = shutil.copy(src, tempdir)
+        with Print.patch() as p:
+            reduce(path, 0.5)
+        self.assertEqual(self.EXPECTED, str(p))
+        shutil.rmtree(tempdir)
