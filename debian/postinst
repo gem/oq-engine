@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
-# set -x
-# echo "ARGS POSTINST: $@"
+set -x
+echo "ARGS POSTINST: $@"
 PKGNAME=python-oq-hazardlib
 
 ownpkg="$(dpkg -S openquake/baselib/__init__.py | grep -v '^diversion by ' | head -n 1 | sed 's/:.*//g' || true)"
