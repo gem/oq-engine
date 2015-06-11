@@ -40,10 +40,9 @@ from openquake.commonlib.calculators.classical import (
 
 # ######################## rupture calculator ############################ #
 
-
-# a numpy record storing the sizes of ground motion fields, event loss table
-# and event loss per assets; there is a record for each realization
-sizes_dt = numpy.dtype([('rup', int), ('gmf', int)])
+# a numpy record storing the number of ruptures and ground motion fields
+# for each realization
+counts_dt = numpy.dtype([('rup', int), ('gmf', int)])
 
 
 def counts_per_rlz(num_sites, num_imts, rlzs_assoc, sescollection):
@@ -55,7 +54,7 @@ def counts_per_rlz(num_sites, num_imts, rlzs_assoc, sescollection):
     :returns: the numbers of nonzero GMFs, for each realization
     """
     rlzs = rlzs_assoc.realizations
-    counts = numpy.zeros(len(rlzs), sizes_dt)
+    counts = numpy.zeros(len(rlzs), counts_dt)
     for rlz in rlzs:
         col_ids = rlzs_assoc.csm_info.get_col_ids(rlz)
         for col_id, sc in enumerate(sescollection):
