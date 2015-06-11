@@ -718,6 +718,8 @@ class SourceProcessor(object):
     def process(self, csm):
         """
         :param csm: a CompositeSourceModel instance
+        :param monitor: a monitor object
+        :returns: the times spent in sequential and parallel processing
         """
         sources = csm.get_sources()
         fast_sources = [(src, self) for src in sources
@@ -727,9 +729,12 @@ class SourceProcessor(object):
                         if src.__class__.__name__ not in
                         ('PointSource', 'AreaSource')]
         self.outs = []
+        seqtime, partime = 0, 0
+        sources_by_trt = AccumDict()
 
         # start multicore processing
         if slow_sources:
+            t0 = time.time()
             logging.warn('Parallel processing of %d sources...',
                          len(slow_sources))
             ss = parallel.TaskManager.starmap(filter_and_split, slow_sources)
@@ -738,14 +743,17 @@ class SourceProcessor(object):
         if fast_sources:
             logging.warn('Sequential processing of %d sources...',
                          len(fast_sources))
-        sources_by_trt = reduce(
-            self.agg_source_info,
-            itertools.starmap(filter_and_split, fast_sources), AccumDict())
+            t1 = time.time()
+            sources_by_trt += reduce(
+                self.agg_source_info,
+                itertools.starmap(filter_and_split, fast_sources), AccumDict())
+            seqtime = time.time() - t1
 
         # finish multicore processing
         sources_by_trt += (ss.reduce(self.agg_source_info)
-                           if slow_sources else AccumDict())
-
+                           if slow_sources else {})
+        if slow_sources:
+            partime = time.time() - t0
         # store csm.source_info
         source_info_dt = numpy.dtype(
             [('trt_model_id', int),
@@ -770,3 +778,5 @@ class SourceProcessor(object):
                         'sm_lt_path=%s, maximum_distance=%s km, TRT=%s',
                         source_model.name, source_model.path,
                         self.maxdist, trt_model.trt)
+
+        return seqtime, partime

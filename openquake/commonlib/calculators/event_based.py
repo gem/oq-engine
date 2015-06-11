@@ -40,6 +40,37 @@ from openquake.commonlib.calculators.classical import (
 
 # ######################## rupture calculator ############################ #
 
+# a numpy record storing the number of ruptures and ground motion fields
+# for each realization
+counts_dt = numpy.dtype([('rup', int), ('gmf', int)])
+
+
+def counts_per_rlz(num_sites, num_imts, rlzs_assoc, sescollection):
+    """
+    :param num_sites: the number of sites
+    :param num_imts: the number of IMTs
+    :param rlzs_assoc: an instance of RlzsAssoc
+    :param sescollection: a list of dictionaries tag -> SESRupture
+    :returns: the numbers of nonzero GMFs, for each realization
+    """
+    rlzs = rlzs_assoc.realizations
+    counts = numpy.zeros(len(rlzs), counts_dt)
+    for rlz in rlzs:
+        col_ids = rlzs_assoc.csm_info.get_col_ids(rlz)
+        for col_id, sc in enumerate(sescollection):
+            if col_id in col_ids:
+                i = rlz.ordinal
+
+                # ruptures per realization
+                counts['rup'][i] += len(sc)
+
+                # gmvs per realization
+                for rup in sc.itervalues():
+                    counts['gmf'][i] += (
+                        len(rup.indices) if rup.indices is not None
+                        else num_sites) * num_imts
+    return counts
+
 
 def get_geom(surface, is_from_fault_source, is_multi_surface):
     """
@@ -263,6 +294,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
     """
     core_func = compute_ruptures
     sescollection = datastore.persistent_attribute('sescollection')
+    counts_per_rlz = datastore.persistent_attribute('/counts_per_rlz')
     is_stochastic = True
 
     def pre_execute(self):
@@ -301,6 +333,9 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         return ruptures_by_trt
 
     def post_execute(self, result):
+        """
+        Save the SES collection and the array counts_per_rlz
+        """
         nc = self.rlzs_assoc.csm_info.num_collections
         sescollection = [{} for col_id in range(nc)]
         for trt_id in result:
@@ -309,6 +344,10 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         logging.info('Saving the SES collection')
         with self.monitor('saving ses', autoflush=True):
             self.sescollection = sescollection
+        with self.monitor('counts_per_rlz'):
+            self.counts_per_rlz = counts_per_rlz(
+                len(self.sitecol), len(self.oqparam.imtls),
+                self.rlzs_assoc, sescollection)
 
 # ######################## GMF calculator ############################ #
 

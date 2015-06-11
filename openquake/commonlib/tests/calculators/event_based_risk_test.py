@@ -7,7 +7,7 @@ from openquake.qa_tests_data.event_based_risk import case_1, case_2, case_3
 
 def is_ok(fname):
     return 'rlz-' not in fname and any(x in fname for x in (
-        'loss_curve', 'loss_map', 'event_loss'))
+        'loss_curve', 'loss_map', 'event_loss', 'counts_per_rlz'))
 
 
 class EventBasedRiskTestCase(CalculatorTestCase):

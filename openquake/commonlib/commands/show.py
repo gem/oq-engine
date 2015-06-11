@@ -19,6 +19,7 @@
 from __future__ import print_function
 import os
 import re
+import shutil
 from openquake.commonlib import sap, datastore
 from openquake.baselib.general import humansize
 from openquake.commonlib.commands.plot import combined_curves
@@ -36,13 +37,19 @@ def show(calc_id, key=None, rlzs=None):
     if not calc_id:
         if not os.path.exists(datastore.DATADIR):
             return
+        rows = []
         for name in sorted(os.listdir(datastore.DATADIR)):
             mo = re.match('calc_(\d+)', name)
             if mo:
                 calc_id = int(mo.group(1))
-                oq = datastore.DataStore(calc_id)['oqparam']
-                print('#%d %s: %s' %
-                      (calc_id, oq.calculation_mode, oq.description))
+                try:
+                    oq = datastore.DataStore(calc_id)['oqparam']
+                except:  # invalid datastore directory
+                    shutil.rmtree(os.path.join(
+                        datastore.DATADIR, 'calc_%s' % calc_id))
+                rows.append((calc_id, oq.calculation_mode, oq.description))
+        for row in sorted(rows, key=lambda row: row[0]):  # by calc_id
+            print('#%d %s: %s' % row)
         return
     ds = datastore.DataStore(calc_id)
     if key:
