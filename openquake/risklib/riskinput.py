@@ -216,7 +216,8 @@ class RiskModel(collections.Mapping):
                         for out_by_rlz in workflow.gen_out_by_rlz(
                                 assets, hazards, epsilons, riskinput.tags):
                             # this is ugly, but we must cope with that
-                            out_by_rlz.rup_slice = riskinput.rup_slice
+                            if hasattr(riskinput, 'rup_slice'):
+                                out_by_rlz.rup_slice = riskinput.rup_slice
                             yield out_by_rlz
         mon_hazard.flush()
         mon_risk.flush()
