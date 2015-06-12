@@ -29,23 +29,10 @@ from openquake.risklib import riskinput
 from openquake.commonlib.parallel import apply_reduce
 
 
-def losses_dt(riskmodel, dtype=float):
-    """
-    Build a composite dtype from the loss types in the given
-    riskmodel and dtype.
-
-    :param riskmodel: a RiskModel instance
-    :param dtype: a basic loss type (default float)
-    """
-    loss_types = riskmodel.get_loss_types()
-    descr = []
-    for lt in loss_types:
-        descr.append(('rup_id~' + lt, numpy.uint32))
-        descr.append(('loss~' + lt, dtype))
-    return numpy.dtype(descr)
+elt_dt = numpy.dtype([('rup_id', numpy.uint32), ('loss', numpy.float32)])
 
 
-def convert(loss_dict, dt):
+def aggregate(loss_dict):
     # loss_dict has a triple key (loss_type, rlz_uid, rup_id)
     arraydict = {}  # rlz_uid -> composite array with rup_ids, losses
     loss_group = groupby(loss_dict, operator.itemgetter(0, 1))
@@ -55,10 +42,10 @@ def convert(loss_dict, dt):
         for key in keys:
             losses.append(loss_dict[key])
             rup_ids.append(key[2])
-        if arraydict.get(uid) is None:
-            arraydict[uid] = numpy.zeros(len(rup_ids), dt)
-        arraydict[uid]['rup_id~' + lt] = rup_ids
-        arraydict[uid]['loss~' + lt] = losses
+        if arraydict.get((lt, uid)) is None:
+            arraydict[lt, uid] = numpy.zeros(len(rup_ids), elt_dt)
+        arraydict[lt, uid]['rup_id'] = rup_ids
+        arraydict[lt, uid]['loss'] = losses
     return arraydict
 
 
@@ -76,7 +63,6 @@ def event_based_agg(riskinputs, riskmodel, rlzs_assoc, monitor):
     :returns:
         a dictionary rlz.ordinal -> (loss_type, tag) -> AccumDict()
     """
-    lt_dt = losses_dt(riskmodel)
     rlzs = rlzs_assoc.realizations
     losses = collections.defaultdict(float)  # loss_type, rlz, rup_id -> list
     ins_losses = collections.defaultdict(float)  # idem
@@ -93,7 +79,8 @@ def event_based_agg(riskinputs, riskmodel, rlzs_assoc, monitor):
                     losses[lt, rlz.uid, rup_id] += loss
                 if ins_loss > 0:
                     ins_losses[lt, rlz.uid, rup_id] += ins_loss
-    return convert(losses, lt_dt), convert(ins_losses, lt_dt)
+    return dict(losses=AccumDict(losses),
+                ins_losses=AccumDict(ins_losses))
 
 
 def _mean_quantiles(quantiles):
@@ -153,15 +140,16 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             oq.concurrent_tasks or 1))
         logging.info('Built %d risk inputs', len(self.riskinputs))
 
-        dt = losses_dt(self.riskmodel)
-        for rlz in self.rlzs_assoc.realizations:
-            self.datastore.hdf5.create_dataset(
-                '/event_loss_table-rlzs/%s' % rlz.uid, (0,), dt,
-                chunks=True, maxshape=(None,))
-            if oq.insured_losses:
+        for loss_type in self.riskmodel.get_loss_types():
+            for rlz in self.rlzs_assoc.realizations:
+                key = '/%s/%s' % (loss_type, rlz.uid)
                 self.datastore.hdf5.create_dataset(
-                    '/insured_loss_table-rlzs/%s' % rlz.uid, (0,), dt,
+                    '/event_loss_table-rlzs' + key, (0,), elt_dt,
                     chunks=True, maxshape=(None,))
+                if oq.insured_losses:
+                    self.datastore.hdf5.create_dataset(
+                        '/insured_loss_table-rlzs' + key, (0,), elt_dt,
+                        chunks=True, maxshape=(None,))
 
     def execute(self):
         with self.monitor('execute risk', autoflush=True) as monitor:
@@ -169,44 +157,45 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             if self.pre_calculator == 'event_based_rupture':
                 monitor.assets_by_site = self.assets_by_site
                 monitor.num_assets = self.count_assets()
-            counts_by_rlz = {rlz.uid: [0, 0]
-                             for rlz in self.rlzs_assoc.realizations}
-            apply_reduce(
+            return apply_reduce(
                 self.core_func.__func__,
                 (self.riskinputs, self.riskmodel, self.rlzs_assoc, monitor),
                 concurrent_tasks=oq.concurrent_tasks,
-                agg=self.agg, acc=counts_by_rlz,
                 weight=operator.attrgetter('weight'),
                 key=operator.attrgetter('col_id'))
 
     def post_execute(self, result):
-        pass
-
-    def agg(self, acc, result):
-        """
-        Save the elt and ilt matrices on the HDF5 output as soon as they
-        arrive from the worker.
-
-        :param acc: dictionary rlz_uid -> slice
-        """
-        losses_by_rlz, ins_losses_by_rlz = result
-        oq = self.oqparam
-        with self.monitor('saving aggregated losses',
+        with self.monitor('reordering result',
                           autoflush=True, measuremem=True):
-            for uid, losses in losses_by_rlz.iteritems():
-                n = acc[uid][0]
-                elt = self.event_loss_table[uid]
+            loss_types = self.riskmodel.get_loss_types()
+            acc = {(lt, rlz.uid): [0, 0]
+                   for lt in loss_types
+                   for rlz in self.rlzs_assoc.realizations}
+            losses_dict = aggregate(result['losses'])
+            ins_losses_dict = aggregate(result['ins_losses'])
+
+        oq = self.oqparam
+        saved_mb = 0
+        with self.monitor('saving loss table',
+                          autoflush=True, measuremem=True):
+            for (lt, uid), losses in losses_dict.iteritems():
+                n = acc[lt, uid][0]
+                elt = self.event_loss_table['%s/%s' % (lt, uid)]
                 n1 = n + len(losses)
                 elt.resize((n1,))
+                saved_mb += losses.nbytes / 1024.
                 elt[n:n1] = losses
-                acc[uid][0] = n1
+                acc[lt, uid][0] = n1
             if oq.insured_losses:
-                for uid, ins_losses in ins_losses_by_rlz.iteritems():
-                    m = acc[uid][1]
-                    ilt = self.insured_loss_table[uid]
+                for (lt, uid), ins_losses in ins_losses_dict.iteritems():
+                    m = acc[lt, uid][1]
+                    ilt = self.insured_loss_table['%s/%s' % (lt, uid)]
                     m1 = m + len(ins_losses)
                     ilt.resize((m1,))
+                    saved_mb += ins_losses.nbytes / 1024.
                     ilt[m:m1] = ins_losses
-                    acc[uid][1] = m1
+                    acc[lt, uid][1] = m1
             self.datastore.hdf5.flush()
-        return acc
+            if saved_mb > 1:
+                logging.info('Saved %d K of data', saved_mb)
+        return {}

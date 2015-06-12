@@ -38,6 +38,7 @@ def run(job_ini, concurrent_tasks=executor.num_tasks_hint,
     monitor = performance.Monitor('total', measuremem=True)
     calc = base.calculators(oqparam, monitor)
     monitor.monitor_dir = calc.datastore.calc_dir
+    logging.info('Started job with output in %s', calc.datastore.calc_dir)
     with monitor:
         calc.run()
     logging.info('See the output with hdfview %s/output.hdf5',
