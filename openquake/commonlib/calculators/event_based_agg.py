@@ -93,6 +93,9 @@ def event_based_agg(riskinputs, riskmodel, rlzs_assoc, monitor):
                 if ins_loss > 0:
                     losses[1, lt, rlz.ordinal].append(
                         numpy.array([(rup_id, ins_loss)], elt_dt))
+    for idx, arrays in numpy.ndenumerate(losses):
+        if arrays:
+            losses[idx] = [numpy.concatenate(arrays)]
     return losses
 
 
@@ -169,10 +172,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 key=operator.attrgetter('col_id'))
 
     def agg(self, acc, losses):
-        for i in [0, 1]:
-            for l in range(self.L):
-                for r in range(self.R):
-                    acc[i, l, r].extend(losses[i, l, r])
+        for idx, arrays in numpy.ndenumerate(losses):
+            acc[idx].extend(arrays)
         return acc
 
     def post_execute(self, result):
@@ -195,9 +196,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     elt = self.insured_loss_table['%s/%s' % (lt, uid)]
                 else:
                     continue
-                n1 = n + len(data)
-                elt.resize((n1,))
                 losses = numpy.concatenate(data)
+                n1 = n + len(losses)
+                elt.resize((n1,))
                 saved_mb += losses.nbytes / 1024.
                 elt[n:n1] = losses
                 acc[i, l, r] = n1
