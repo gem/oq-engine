@@ -21,7 +21,7 @@ import operator
 
 import numpy
 
-from openquake.baselib.general import AccumDict, groupby
+from openquake.baselib.general import AccumDict, groupby, humansize
 from openquake.commonlib.calculators import base
 from openquake.commonlib import readinput, parallel, datastore
 from openquake.risklib import riskinput
@@ -201,10 +201,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 losses = numpy.concatenate(arrays)
                 n1 = n + len(losses)
                 elt.resize((n1,))
-                saved_mb += losses.nbytes / 1024.
+                saved_mb += losses.nbytes
                 elt[n:n1] = losses
                 acc[i, l, r] = n1
             self.datastore.hdf5.flush()
             if saved_mb > 1:
-                logging.info('Saved %d K of data', saved_mb)
+                logging.info('Saved %s of data', humansize(saved_mb))
         return {}
