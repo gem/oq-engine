@@ -18,7 +18,6 @@
 
 import logging
 import operator
-import collections
 
 import numpy
 
@@ -49,6 +48,20 @@ def aggregate(loss_dict):
     return arraydict
 
 
+def zero_losses(L, R):
+    """
+    :param L: the number of loss types
+    :param R: the number of realizations
+    :returns: a numpy array of empty lists of shape (2, L, R)
+    """
+    losses = numpy.zeros((2, L, R), object)
+    for l in range(L):
+        for r in range(R):
+            losses[0, l, r] = []  # losses
+            losses[1, l, r] = []  # ins_losses
+    return losses
+
+
 @parallel.litetask
 def event_based_agg(riskinputs, riskmodel, rlzs_assoc, monitor):
     """
@@ -63,37 +76,24 @@ def event_based_agg(riskinputs, riskmodel, rlzs_assoc, monitor):
     :returns:
         a dictionary rlz.ordinal -> (loss_type, tag) -> AccumDict()
     """
-    rlzs = rlzs_assoc.realizations
-    losses = collections.defaultdict(float)  # loss_type, rlz, rup_id -> list
-    ins_losses = collections.defaultdict(float)  # idem
+    lt_idx = {lt: i for i, lt in enumerate(riskmodel.get_loss_types())}
+    losses = zero_losses(len(lt_idx), len(rlzs_assoc.realizations))
     for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
         rup_slice = out_by_rlz.rup_slice
         rup_ids = range(rup_slice.start, rup_slice.stop)
-        for rlz, out in zip(rlzs, out_by_rlz):
-            lt = out.loss_type
+        for rlz, out in zip(rlzs_assoc.realizations, out_by_rlz):
+            lt = lt_idx[out.loss_type]
             agg_losses = out.event_loss_per_asset.sum(axis=1)
             agg_ins_losses = out.insured_loss_per_asset.sum(axis=1)
             for rup_id, loss, ins_loss in zip(
                     rup_ids, agg_losses, agg_ins_losses):
                 if loss > 0:
-                    losses[lt, rlz.uid, rup_id] += loss
+                    losses[0, lt, rlz.ordinal].append(
+                        numpy.array([(rup_id, loss)], elt_dt))
                 if ins_loss > 0:
-                    ins_losses[lt, rlz.uid, rup_id] += ins_loss
-    return dict(losses=AccumDict(losses),
-                ins_losses=AccumDict(ins_losses))
-
-
-def _mean_quantiles(quantiles):
-    yield 'mean'
-    for q in quantiles:
-        yield 'quantile-%s' % q
-
-
-def _loss_map_names(conditional_loss_poes):
-    names = []
-    for clp in conditional_loss_poes:
-        names.append('poe~%s' % clp)
-    return names
+                    losses[1, lt, rlz.ordinal].append(
+                        numpy.array([(rup_id, ins_loss)], elt_dt))
+    return losses
 
 
 @base.calculators.add('event_based_agg')
@@ -140,7 +140,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             oq.concurrent_tasks or 1))
         logging.info('Built %d risk inputs', len(self.riskinputs))
 
-        for loss_type in self.riskmodel.get_loss_types():
+        loss_types = self.riskmodel.get_loss_types()
+        self.L = len(loss_types)
+        self.R = len(self.rlzs_assoc.realizations)
+        for loss_type in loss_types:
             for rlz in self.rlzs_assoc.realizations:
                 key = '/%s/%s' % (loss_type, rlz.uid)
                 self.datastore.hdf5.create_dataset(
@@ -161,40 +164,43 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 self.core_func.__func__,
                 (self.riskinputs, self.riskmodel, self.rlzs_assoc, monitor),
                 concurrent_tasks=oq.concurrent_tasks,
+                agg=self.agg, acc=zero_losses(self.L, self.R),
                 weight=operator.attrgetter('weight'),
                 key=operator.attrgetter('col_id'))
 
-    def post_execute(self, result):
-        with self.monitor('reordering result',
-                          autoflush=True, measuremem=True):
-            loss_types = self.riskmodel.get_loss_types()
-            acc = {(lt, rlz.uid): [0, 0]
-                   for lt in loss_types
-                   for rlz in self.rlzs_assoc.realizations}
-            losses_dict = aggregate(result['losses'])
-            ins_losses_dict = aggregate(result['ins_losses'])
+    def agg(self, acc, losses):
+        for i in [0, 1]:
+            for l in range(self.L):
+                for r in range(self.R):
+                    acc[i, l, r].extend(losses[i, l, r])
+        return acc
 
-        oq = self.oqparam
+    def post_execute(self, result):
+        acc = {(i, l, r): 0
+               for i in [0, 1]
+               for l in range(self.L)
+               for r in range(self.R)}
         saved_mb = 0
+        rlzs = self.rlzs_assoc.realizations
+        loss_types = self.riskmodel.get_loss_types()
         with self.monitor('saving loss table',
                           autoflush=True, measuremem=True):
-            for (lt, uid), losses in losses_dict.iteritems():
-                n = acc[lt, uid][0]
-                elt = self.event_loss_table['%s/%s' % (lt, uid)]
-                n1 = n + len(losses)
+            for (i, l, r), data in numpy.ndenumerate(result):
+                lt = loss_types[l]
+                uid = rlzs[r].uid
+                n = acc[i, l, r]
+                if i == 0:
+                    elt = self.event_loss_table['%s/%s' % (lt, uid)]
+                elif self.oqparam.insured_losses:
+                    elt = self.insured_loss_table['%s/%s' % (lt, uid)]
+                else:
+                    continue
+                n1 = n + len(data)
                 elt.resize((n1,))
+                losses = numpy.concatenate(data)
                 saved_mb += losses.nbytes / 1024.
                 elt[n:n1] = losses
-                acc[lt, uid][0] = n1
-            if oq.insured_losses:
-                for (lt, uid), ins_losses in ins_losses_dict.iteritems():
-                    m = acc[lt, uid][1]
-                    ilt = self.insured_loss_table['%s/%s' % (lt, uid)]
-                    m1 = m + len(ins_losses)
-                    ilt.resize((m1,))
-                    saved_mb += ins_losses.nbytes / 1024.
-                    ilt[m:m1] = ins_losses
-                    acc[lt, uid][1] = m1
+                acc[i, l, r] = n1
             self.datastore.hdf5.flush()
             if saved_mb > 1:
                 logging.info('Saved %d K of data', saved_mb)
