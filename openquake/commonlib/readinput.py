@@ -38,8 +38,8 @@ from openquake.commonlib import nrml, valid, logictree, InvalidFile
 from openquake.commonlib.oqvalidation import vulnerability_files
 from openquake.commonlib.riskmodels import \
     get_fragility_functions, get_vfs
-from openquake.baselib.general import groupby, AccumDict
-from openquake.baselib.general import writetmp
+from openquake.baselib.general import groupby, AccumDict, writetmp
+from openquake.baselib.performance import DummyMonitor
 
 from openquake.commonlib import source, sourceconverter
 
@@ -443,7 +443,7 @@ def get_source_models(oqparam, source_model_lt, sitecol=None, in_memory=True):
 
 def get_composite_source_model(
         oqparam, sitecol=None, SourceProcessor=source.SourceProcessor,
-        in_memory=True):
+        in_memory=True, monitor=DummyMonitor()):
     """
     Build the source models by splitting the sources. If prefiltering is
     enabled, also reduce the GSIM logic trees in the underlying source models.
@@ -473,7 +473,9 @@ def get_composite_source_model(
         smodels.append(source_model)
     csm = source.CompositeSourceModel(source_model_lt, smodels)
     if in_memory:
-        processor.process(csm)
+        seqtime, partime = processor.process(csm)
+        monitor.write(['sequential filtering/splitting', str(seqtime), '0'])
+        monitor.write(['parallel filtering/splitting', str(partime), '0'])
         if not csm.get_sources():
             raise RuntimeError('All sources were filtered away')
         csm.count_ruptures()
