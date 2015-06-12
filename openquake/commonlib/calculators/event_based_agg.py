@@ -186,7 +186,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         loss_types = self.riskmodel.get_loss_types()
         with self.monitor('saving loss table',
                           autoflush=True, measuremem=True):
-            for (i, l, r), data in numpy.ndenumerate(result):
+            for (i, l, r), arrays in numpy.ndenumerate(result):
+                if not arrays:  # empty list
+                    continue
                 lt = loss_types[l]
                 uid = rlzs[r].uid
                 n = acc[i, l, r]
@@ -196,7 +198,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     elt = self.insured_loss_table['%s/%s' % (lt, uid)]
                 else:
                     continue
-                losses = numpy.concatenate(data)
+                losses = numpy.concatenate(arrays)
                 n1 = n + len(losses)
                 elt.resize((n1,))
                 saved_mb += losses.nbytes / 1024.

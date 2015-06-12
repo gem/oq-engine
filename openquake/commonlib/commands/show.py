@@ -47,7 +47,8 @@ def show(calc_id, key=None, rlzs=None):
                 except:  # invalid datastore directory
                     shutil.rmtree(os.path.join(
                         datastore.DATADIR, 'calc_%s' % calc_id))
-                rows.append((calc_id, oq.calculation_mode, oq.description))
+                else:
+                    rows.append((calc_id, oq.calculation_mode, oq.description))
         for row in sorted(rows, key=lambda row: row[0]):  # by calc_id
             print('#%d %s: %s' % row)
         return
