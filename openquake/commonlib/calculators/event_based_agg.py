@@ -21,44 +21,30 @@ import operator
 
 import numpy
 
-from openquake.baselib.general import AccumDict, groupby, humansize
+from openquake.baselib.general import AccumDict, humansize
 from openquake.commonlib.calculators import base
 from openquake.commonlib import readinput, parallel, datastore
 from openquake.risklib import riskinput
 from openquake.commonlib.parallel import apply_reduce
 
+NUM_OUTPUTS = 2  # event loss table and insured loss table
 
 elt_dt = numpy.dtype([('rup_id', numpy.uint32), ('loss', numpy.float32)])
 
 
-def aggregate(loss_dict):
-    # loss_dict has a triple key (loss_type, rlz_uid, rup_id)
-    arraydict = {}  # rlz_uid -> composite array with rup_ids, losses
-    loss_group = groupby(loss_dict, operator.itemgetter(0, 1))
-    for (lt, uid), keys in loss_group.iteritems():
-        rup_ids = []
-        losses = []
-        for key in keys:
-            losses.append(loss_dict[key])
-            rup_ids.append(key[2])
-        if arraydict.get((lt, uid)) is None:
-            arraydict[lt, uid] = numpy.zeros(len(rup_ids), elt_dt)
-        arraydict[lt, uid]['rup_id'] = rup_ids
-        arraydict[lt, uid]['loss'] = losses
-    return arraydict
-
-
-def zero_losses(L, R):
+def cube(O, L, R, factory):
     """
+    :param O: the number of different outputs
     :param L: the number of loss types
     :param R: the number of realizations
-    :returns: a numpy array of empty lists of shape (2, L, R)
+    :param factory: factory used to initialize the elements (int or list)
+    :returns: a numpy array of shape (O, L, R)
     """
-    losses = numpy.zeros((2, L, R), object)
-    for l in range(L):
-        for r in range(R):
-            losses[0, l, r] = []  # losses
-            losses[1, l, r] = []  # ins_losses
+    losses = numpy.zeros((O, L, R), object)
+    for o in range(O):
+        for l in range(L):
+            for r in range(R):
+                losses[o, l, r] = factory()
     return losses
 
 
@@ -77,7 +63,8 @@ def event_based_agg(riskinputs, riskmodel, rlzs_assoc, monitor):
         a dictionary rlz.ordinal -> (loss_type, tag) -> AccumDict()
     """
     lt_idx = {lt: i for i, lt in enumerate(riskmodel.get_loss_types())}
-    losses = zero_losses(len(lt_idx), len(rlzs_assoc.realizations))
+    losses = cube(
+        NUM_OUTPUTS, len(lt_idx), len(rlzs_assoc.realizations), list)
     for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
         rup_slice = out_by_rlz.rup_slice
         rup_ids = range(rup_slice.start, rup_slice.stop)
@@ -166,7 +153,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             self.core_func.__func__,
             (self.riskinputs, self.riskmodel, self.rlzs_assoc, self.monitor),
             concurrent_tasks=oq.concurrent_tasks,
-            agg=self.agg, acc=zero_losses(self.L, self.R),
+            agg=self.agg, acc=cube(NUM_OUTPUTS, self.L, self.R, list),
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('col_id'))
 
@@ -176,10 +163,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         return acc
 
     def post_execute(self, result):
-        acc = {(i, l, r): 0
-               for i in [0, 1]
-               for l in range(self.L)
-               for r in range(self.R)}
+        acc = cube(NUM_OUTPUTS, self.L, self.R, int)
         saved_mb = 0
         rlzs = self.rlzs_assoc.realizations
         loss_types = self.riskmodel.get_loss_types()

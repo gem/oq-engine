@@ -52,3 +52,15 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_3(self):
         self.assert_stats_ok(case_3)
+
+
+class EventBasedAggTestCase(CalculatorTestCase):
+    @attr('qa', 'risk', 'event_based_agg')
+    def test_case_2(self):
+        out = self.run_calc(case_2.__file__, 'job_haz.ini,job_loss.ini',
+                            concurrent_tasks=0, exports='csv')
+        return
+        # TODO: add an exporter for /event_loss_table-rlzs or the mean
+        [fname] = out['event_loss', 'csv']
+        self.assertEqualFiles(
+            'expected/rlz-000-structural-event_loss.csv', fname)
