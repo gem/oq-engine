@@ -4,7 +4,6 @@ set -e
 #echo "ARGS POSTRM: $@"
 PKGNAME=python-oq-hazardlib
 
-# remove purge upgrade
 divert_list="$(dpkg-divert --list "$PKGNAME" | sed 's/^.* of //g;s/ to .*$//g')"
 risklib_owned="$(dpkg -S openquake/baselib/__init__.py | grep -v '^diversion by ' | head -n 1 | sed 's/:.*//g' | grep 'python-oq-risklib' || true)"
 
@@ -44,4 +43,6 @@ case $1 in
             done
         fi
         ;;
+#    purge)
+#        ;;
 esac

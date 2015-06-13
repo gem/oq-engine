@@ -7,6 +7,8 @@ PKGNAME=python-oq-hazardlib
 
 # remove 'undivert' divertions if exists
 for dvt in $(dpkg-divert --list "python-oq-risklib" | grep "\.undivert\.oq-haz by python-oq-risklib" | sed 's/^.* of //g;s/ to .*$//g'); do
+    # here we are using a trick because divert is assigned to another package
+    # without 'sudo' this operation is denied
     sudo dpkg-divert --package "python-oq-risklib" --remove "$dvt"
 done
 
