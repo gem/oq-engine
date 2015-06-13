@@ -23,5 +23,8 @@ if ! echo "$ownpkg" | grep -q  "$PKGNAME"; then
         for i in $(find $p \( -type f -o -type l \) -a -not -name '*.pyc' 2>/dev/null); do
             dpkg-divert --package "$PKGNAME" --add --rename --divert "${i}.oq-haz" "${i}"
         done
+        for i in $(find $p -type f -a -name '*.pyc' 2>/dev/null); do
+            rm $i
+        done
     done
 fi

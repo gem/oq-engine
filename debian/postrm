@@ -22,6 +22,11 @@ case $1 in
             for i in $divert_list ; do
                 mv "$i" "${i}.postrm"
                 dpkg-divert --package "$PKGNAME" --remove --rename --divert "${i}.oq-haz" "$i"
+                if echo "$i" | grep -q '\.py$'; then
+                    if [ -e "${i}c" ]; then
+                        rm "${i}c"
+                    fi
+                fi
             done
             # here generic.py is from risklib and no divert
             read -p "MOP: pre pycompile" mop
