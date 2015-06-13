@@ -1,9 +1,8 @@
 #!/bin/sh
 set -e
-set -x
-echo "ARGS POSTRM: $@"
+#set -x
+#echo "ARGS POSTRM: $@"
 PKGNAME=python-oq-hazardlib
-
 
 # remove purge upgrade
 divert_list="$(dpkg-divert --list "$PKGNAME" | sed 's/^.* of //g;s/ to .*$//g')"
@@ -16,9 +15,8 @@ case $1 in
                 is_downgrade="true"
             fi
         fi
-        # tutto sto casino SOLO se i divertiti dipendono anche da risklib (da verificare)
+       
         if [ "$is_downgrade" ]; then
-            read -p "MOP: pre remove .oq-haz" mop
             for i in $divert_list ; do
                 mv "$i" "${i}.postrm"
                 dpkg-divert --package "$PKGNAME" --remove --rename --divert "${i}.oq-haz" "$i"
@@ -28,18 +26,14 @@ case $1 in
                     fi
                 fi
             done
-            # here generic.py is from risklib and no divert
-            read -p "MOP: pre pycompile" mop
             ownpkg="python-oq-risklib"
             if which pycompile >/dev/null 2>&1; then
                 pycompile -p "$ownpkg"
             fi
-            read -p "MOP: post pycompile" mop
             for i in $divert_list ; do
                 dpkg-divert --package "python-oq-risklib" --add --divert "${i}.undivert.oq-haz" "${i}"
                 mv "${i}.postrm" "${i}.undivert.oq-haz"
             done
-            read -p "MOP: post .divert.oq-haz" mop
         fi
         ;;
 
