@@ -189,13 +189,13 @@ def is_effective_trt_model(result_dict, trt_model):
 
 
 @parallel.litetask
-def classical_tiling(calculator, sitecol, site_ids, tileno, monitor):
+def classical_tiling(calculator, sites, indices, tileno, monitor):
     """
     :param calculator:
         a ClassicalCalculator instance
-    :param sitecol:
-        the site collection of the current tile
-    :param site_ids:
+    :param sites:
+        the sites of the current tile
+    :param indices:
         the indices of the sites in the current tile
     :param tileno:
         the ordinal of the current tile
@@ -204,10 +204,10 @@ def classical_tiling(calculator, sitecol, site_ids, tileno, monitor):
     :returns:
         a dictionary file name -> full path for each exported file
     """
-    calculator.sitecol = sitecol
+    calculator.sitecol = SiteCollection(sites)
     calculator.tileno = '.%04d' % tileno
     curves_by_trt_gsim = calculator.execute()
-    curves_by_trt_gsim.site_ids = site_ids
+    curves_by_trt_gsim.indices = indices
     # build the correct realizations from the (reduced) logic tree
     calculator.rlzs_assoc = calculator.composite_source_model.get_rlzs_assoc(
         partial(is_effective_trt_model, curves_by_trt_gsim))
@@ -219,9 +219,16 @@ def classical_tiling(calculator, sitecol, site_ids, tileno, monitor):
     return curves_by_trt_gsim
 
 
-def agg_curves_by_trt_gsim(acc, curves):
-    for trt_gsim in curves:
-        acc[trt_gsim][curves.site_ids] = curves[trt_gsim]
+def agg_curves_by_trt_gsim(acc, curves_by_trt_gsim):
+    """
+    :param acc: AccumDict (trt_id, gsim) -> N curves
+    :param curves_by_trt_gsim: AccumDict (trt_id, gsim) -> T curves
+
+    where N is the total number of sites and T the number of sites
+    in the current tile. Works by side effect, by updating the accumulator.
+    """
+    for k in curves_by_trt_gsim:
+        acc[k][curves_by_trt_gsim.indices] = curves_by_trt_gsim[k]
     return acc
 
 
@@ -239,7 +246,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = oq = self.oqparam
         self.tiles = split_in_blocks(
-            range(len(self.sitecol)), self.oqparam.concurrent_tasks or 1)
+            self.sitecol, self.oqparam.concurrent_tasks or 1)
         oq.concurrent_tasks = 0
         calculator = ClassicalCalculator(
             self.oqparam, monitor, persistent=False)
@@ -250,11 +257,11 @@ class ClassicalTilingCalculator(ClassicalCalculator):
 
         # parallelization
         all_args = []
+        n = 0
         for (i, tile) in enumerate(self.tiles):
-            siteids = numpy.array(list(tile))
-            sites = numpy.array(list(self.sitecol))[siteids]
-            sitecol = SiteCollection(sites)
-            all_args.append((calculator, sitecol, siteids, i, monitor))
+            indices = range(n, n + len(tile))
+            all_args.append((calculator, tile, indices, i, monitor))
+            n += len(tile)
         acc = {trt_gsim: zero_curves(len(self.sitecol), oq.imtls)
                for trt_gsim in calculator.rlzs_assoc}
         return parallel.starmap(classical_tiling, all_args).reduce(
