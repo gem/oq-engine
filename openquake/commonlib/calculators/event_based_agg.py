@@ -158,18 +158,17 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         chunks=True, maxshape=(None,))
 
     def execute(self):
-        with self.monitor('execute risk', autoflush=True) as monitor:
-            monitor.oqparam = oq = self.oqparam
-            if self.pre_calculator == 'event_based_rupture':
-                monitor.assets_by_site = self.assets_by_site
-                monitor.num_assets = self.count_assets()
-            return apply_reduce(
-                self.core_func.__func__,
-                (self.riskinputs, self.riskmodel, self.rlzs_assoc, monitor),
-                concurrent_tasks=oq.concurrent_tasks,
-                agg=self.agg, acc=zero_losses(self.L, self.R),
-                weight=operator.attrgetter('weight'),
-                key=operator.attrgetter('col_id'))
+        self.monitor.oqparam = oq = self.oqparam
+        if self.pre_calculator == 'event_based_rupture':
+            self.monitor.assets_by_site = self.assets_by_site
+            self.monitor.num_assets = self.count_assets()
+        return apply_reduce(
+            self.core_func.__func__,
+            (self.riskinputs, self.riskmodel, self.rlzs_assoc, self.monitor),
+            concurrent_tasks=oq.concurrent_tasks,
+            agg=self.agg, acc=zero_losses(self.L, self.R),
+            weight=operator.attrgetter('weight'),
+            key=operator.attrgetter('col_id'))
 
     def agg(self, acc, losses):
         for idx, arrays in numpy.ndenumerate(losses):
