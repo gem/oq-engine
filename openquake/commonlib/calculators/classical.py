@@ -189,12 +189,12 @@ def is_effective_trt_model(result_dict, trt_model):
 
 
 @parallel.litetask
-def classical_tiling(calculator, sites, position, tileno, monitor):
+def classical_tiling(calculator, sitecol, position, tileno, monitor):
     """
     :param calculator:
         a ClassicalCalculator instance
-    :param sites:
-        the sites of the current tile
+    :param sitecol:
+        the site collection of the current tile
     :param indices:
         the indices of the sites in the current tile
     :param position:
@@ -204,10 +204,10 @@ def classical_tiling(calculator, sites, position, tileno, monitor):
     :returns:
         a dictionary file name -> full path for each exported file
     """
-    calculator.sitecol = SiteCollection(sites)
+    calculator.sitecol = sitecol
     calculator.tileno = '.%04d' % tileno
     curves_by_trt_gsim = calculator.execute()
-    curves_by_trt_gsim.indices = range(position, position + len(sites))
+    curves_by_trt_gsim.indices = range(position, position + len(sitecol))
     # build the correct realizations from the (reduced) logic tree
     calculator.rlzs_assoc = calculator.composite_source_model.get_rlzs_assoc(
         partial(is_effective_trt_model, curves_by_trt_gsim))
@@ -259,7 +259,8 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         all_args = []
         position = 0
         for (i, tile) in enumerate(self.tiles):
-            all_args.append((calculator, tile, position, i, monitor))
+            all_args.append((calculator, SiteCollection(tile),
+                             position, i, monitor))
             position += len(tile)
         acc = {trt_gsim: zero_curves(len(self.sitecol), oq.imtls)
                for trt_gsim in calculator.rlzs_assoc}
