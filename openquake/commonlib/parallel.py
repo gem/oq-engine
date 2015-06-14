@@ -159,7 +159,7 @@ class Pickled(object):
 
     def __repr__(self):
         """String representation of the pickled object"""
-        return '<Pickled %s>' % (self.clsname, humansize(len(self)))
+        return '<Pickled %s %s>' % (self.clsname, humansize(len(self)))
 
     def __len__(self):
         """Length of the pickled bytestring"""
