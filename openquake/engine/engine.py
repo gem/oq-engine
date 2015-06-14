@@ -176,8 +176,8 @@ def run_calc(job, log_level, log_file, exports, lite=False):
     if lite:
         calc_dir = os.path.join(datastore.DATADIR, 'calc_%d' % job.id)
         if os.path.exists(calc_dir):
-            shutil.rmtree(calc_dir)
-            print 'Removed pre-existing', calc_dir
+            os.rename(calc_dir, calc_dir + '.bak')
+            print 'Generated %s.bak' % calc_dir
         from openquake.commonlib.calculators import base
         calculator = base.calculators(job.get_oqparam(), calc_id=job.id)
         calculator.job = job
