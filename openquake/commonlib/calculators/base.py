@@ -27,7 +27,7 @@ from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.baselib import general
 from openquake.baselib.performance import DummyMonitor
-from openquake.commonlib import readinput, datastore, logictree, export
+from openquake.commonlib import readinput, datastore, logictree, export, source
 from openquake.commonlib.parallel import apply_reduce
 from openquake.risklib import riskinput
 
@@ -165,8 +165,8 @@ class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
-    prefilter = True  # filter the sources before splitting them
     mean_curves = None  # to be overridden
+    SourceProcessor = source.SourceFilterSplitter
 
     def assoc_assets_sites(self, sitecol):
         """
@@ -314,17 +314,14 @@ class HazardCalculator(BaseCalculator):
                     'reading composite source model', autoflush=True):
                 self.composite_source_model = (
                     readinput.get_composite_source_model(
-                        self.oqparam, self.sitecol if self.prefilter else None,
-                        monitor=self.monitor))
+                        self.oqparam, self.sitecol, self.SourceProcessor,
+                        self.monitor))
                 # we could manage limits here
-                if self.prefilter:
-                    self.source_info = self.composite_source_model.source_info
-                    self.job_info = readinput.get_job_info(
-                        self.oqparam, self.composite_source_model,
-                        self.sitecol)
-                    self.composite_source_model.count_ruptures()
-                    self.rlzs_assoc = (self.composite_source_model.
-                                       get_rlzs_assoc())
+                self.source_info = self.composite_source_model.source_info
+                self.job_info = readinput.get_job_info(
+                    self.oqparam, self.composite_source_model, self.sitecol)
+                self.composite_source_model.count_ruptures()
+                self.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
 
 
 class RiskCalculator(HazardCalculator):
