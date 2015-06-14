@@ -251,8 +251,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         calculator = ClassicalCalculator(
             self.oqparam, monitor, persistent=False)
         calculator.composite_source_model = self.composite_source_model
-        rlzs_assoc = self.composite_source_model.get_rlzs_assoc(
-            lambda tm: True)  # build the full logic tree
+        rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
         self.rlzs_assoc = calculator.rlzs_assoc = rlzs_assoc
 
         # parallelization
