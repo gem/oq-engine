@@ -5,7 +5,7 @@ set -e
 PKGNAME=python-oq-hazardlib
 
 divert_list="$(dpkg-divert --list "$PKGNAME" | sed 's/^.* of //g;s/ to .*$//g')"
-risklib_owned="$(dpkg -S openquake/baselib/__init__.py | grep -v '^diversion by ' | head -n 1 | sed 's/:.*//g' | grep 'python-oq-risklib' || true)"
+risklib_owned="$(dpkg -S openquake/baselib/__init__.py 2>/dev/null | grep -v '^diversion by ' | head -n 1 | sed 's/:.*//g' | grep 'python-oq-risklib' || true)"
 
 case $1 in
     upgrade)

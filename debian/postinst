@@ -4,7 +4,7 @@ set -e
 #echo "ARGS POSTINST: $@"
 PKGNAME=python-oq-hazardlib
 
-ownpkg="$(dpkg -S openquake/baselib/__init__.py | grep -v '^diversion by ' | head -n 1 | sed 's/:.*//g' || true)"
+ownpkg="$(dpkg -S openquake/baselib/__init__.py 2>/dev/null | grep -v '^diversion by ' | head -n 1 | sed 's/:.*//g' || true)"
 
 if [ "$ownpkg" = "$PKGNAME" ]; then
     for i in $(dpkg-divert --list "$PKGNAME" | sed 's/^.* of //g;s/ to .*$//g') ; do
