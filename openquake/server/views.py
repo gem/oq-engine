@@ -37,7 +37,7 @@ from openquake.engine import engine as oq_engine, __version__ as oqversion
 from openquake.engine.db import models as oqe_models
 from openquake.engine.export import core
 from openquake.engine.utils.tasks import safely_call
-from openquake.engine.export.core import export_output
+from openquake.engine.export.core import export_output, DataStoreExportError
 from openquake.server import tasks, executor, utils
 
 METHOD_NOT_ALLOWED = 405
@@ -483,7 +483,8 @@ def get_result(request, result_id):
     tmpdir = tempfile.mkdtemp()
     try:
         exported = core.export(result_id, tmpdir, export_type=export_type)
-    except Exception as exc:
+    except DataStoreExportError as exc:
+        # TODO: there should be a better error page
         return HttpResponse(content='%s: %s' % (exc.__class__.__name__, exc),
                             content_type='text/plain', status=500)
     if exported is None:
