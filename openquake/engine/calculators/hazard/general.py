@@ -78,7 +78,6 @@ class BaseHazardCalculator(base.Calculator):
     Abstract base class for hazard calculators. Contains a bunch of common
     functionality, like initialization procedures.
     """
-    prefilter = True
     tilepath = ()  # set only by the tiling calculator
 
     def __init__(self, job):
@@ -209,7 +208,7 @@ class BaseHazardCalculator(base.Calculator):
         """
         logs.LOG.progress("initializing sources")
         self.composite_model = readinput.get_composite_source_model(
-            self.oqparam, self.site_collection, in_memory=self.prefilter)
+            self.oqparam, self.site_collection)
         for sm in self.composite_model:
             # create an LtSourceModel for each distinct source model
             lt_model = models.LtSourceModel.objects.create(
