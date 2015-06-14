@@ -15,7 +15,7 @@ done
 ownpkg="$(dpkg -S openquake/baselib/__init__.py 2>/dev/null | grep -v '^diversion by ' | head -n 1 | sed 's/:.*//g' || true)"
 # if file not already owned by this package
 if ! echo "$ownpkg" | grep -q  "$PKGNAME"; then
-    for p in /usr/share/pyshared/openquake/baselib /usr/lib/python2.7/dist-packages/openquake/baselib /usr/lib/python2.7/dist-packages/openquake/baselib; do
+    for p in /usr/share/pyshared/openquake/baselib /usr/lib/python2.7/dist-packages/openquake/baselib; do
         if [ ! -d "$p" ]; then
             continue
         fi
