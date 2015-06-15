@@ -3,7 +3,9 @@ import mock
 import shutil
 import tempfile
 import unittest
-from openquake.commonlib.commands.info import info, reduce
+from openquake.commonlib.commands.info import info
+from openquake.commonlib.commands.reduce import reduce
+from openquake.qa_tests_data.classical_risk import case_3
 
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
@@ -54,18 +56,22 @@ output_weight 29.0'''
 
 
 class ReduceTestCase(unittest.TestCase):
+    TESTDIR = os.path.dirname(case_3.__file__)
+
     def test_exposure(self):
         tempdir = tempfile.mkdtemp()
-        path = shutil.copy(src, tempdir)
+        dest = os.path.join(tempdir, 'exposure_model.xml')
+        shutil.copy(os.path.join(self.TESTDIR, 'exposure_model.xml'), dest)
         with Print.patch() as p:
-            reduce(path, 0.5)
-        self.assertEqual(self.EXPECTED, str(p))
+            reduce(dest, 0.5)
+        self.assertIn('Extracted 182 nodes out of 375', str(p))
         shutil.rmtree(tempdir)
 
     def test_source_model(self):
         tempdir = tempfile.mkdtemp()
-        path = shutil.copy(src, tempdir)
+        dest = os.path.join(tempdir, 'source_model.xml')
+        shutil.copy(os.path.join(self.TESTDIR, 'source_model.xml'), tempdir)
         with Print.patch() as p:
-            reduce(path, 0.5)
-        self.assertEqual(self.EXPECTED, str(p))
+            reduce(dest, 0.5)
+        self.assertIn('Extracted 196 nodes out of 398', str(p))
         shutil.rmtree(tempdir)
