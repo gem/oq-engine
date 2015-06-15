@@ -653,7 +653,7 @@ def _collect_source_model_paths(smlt):
     return sorted(set(src_paths))
 
 
-# ########################## SourceFilterSplitter ############################# #
+# ########################## SourceFilterSplitter ########################### #
 
 def filter_and_split(src, sourceprocessor):
     """
@@ -694,7 +694,21 @@ source_info_dt = numpy.dtype(
      ('split_time', float)])
 
 
-class SourceFilter(object):
+class BaseSourceProcessor(object):
+    """
+    Do nothing source processor.
+
+    :param sitecol: a SiteCollection instance
+    :param maxdist: dummy parameter (ignored)
+    :param area_source_discretization: dummy parameter (ignored)
+    """
+    def __init__(self, sitecol, maxdist, area_source_discretization=None):
+        self.sitecol = sitecol
+        self.maxdist = maxdist
+        self.asd = area_source_discretization
+
+
+class SourceFilter(BaseSourceProcessor):
     """
     Filter sequentially the sources of the given CompositeSourceModel
     instance. An array `.source_info` is added to the instance, containing
@@ -704,11 +718,6 @@ class SourceFilter(object):
     :param maxdist: maximum distance for the filtering
     :param area_source_discretization: dummy parameter (ignored)
     """
-
-    def __init__(self, sitecol, maxdist, area_source_discretization=None):
-        self.sitecol = sitecol
-        self.maxdist = maxdist
-        self.asd = area_source_discretization
 
     def filter(self, src):
         t0 = time.time()
@@ -773,6 +782,39 @@ class SourceFilter(object):
                         'sm_lt_path=%s, maximum_distance=%s km, TRT=%s',
                         source_model.name, source_model.path,
                         self.maxdist, trt_model.trt)
+
+
+class SourceWeighter(SourceFilter):
+    """
+    Split in parallel the sources of the given CompositeSourceModel
+    instance. An array `.source_info` is added to the instance, containing
+    information about the processing times and the splitting process.
+
+    :param sitecol: a SiteCollection instance
+    :param maxdist: maximum distance for the filtering
+    :param asd: area source discretization
+    """
+    def process(self, csm):
+        """
+        :param csm: a CompositeSourceModel instance
+        :param monitor: a monitor object
+        :returns: the times spent in sequential and parallel processing
+        """
+        sources = csm.get_sources()
+        self.infos = []
+        seqtime, partime = 0, 0
+        sources_by_trt = AccumDict()
+
+        logging.warn('Sequential rupture counting for %d sources...',
+                     len(sources))
+        t1 = time.time()
+        for src in sources:
+            weight = get_weight(src)
+            src.weight = weight
+            sources_by_trt = self.agg_source_info(sources_by_trt, weight)
+        seqtime = time.time() - t1
+        self.update(csm, sources_by_trt)
+        return seqtime, partime
 
 
 class SourceFilterSplitter(SourceFilter):

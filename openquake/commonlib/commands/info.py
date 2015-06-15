@@ -20,14 +20,14 @@ from __future__ import print_function
 import textwrap
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import humansize
-from openquake.commonlib import sap, readinput, nrml
+from openquake.commonlib import sap, readinput, nrml, source
 from openquake.commonlib.calculators import base
 from openquake.hazardlib import gsim
 
 
 # the documentation about how to use this feature can be found
 # in the file effective-realizations.rst
-def _info(name, filtersources):
+def _info(name, filtersources, splitsources):
     if name in base.calculators:
         print(textwrap.dedent(base.calculators[name].__doc__.strip()))
     elif name == 'gsims':
@@ -41,21 +41,28 @@ def _info(name, filtersources):
             expo = readinput.get_exposure(oqparam)
             sitecol, assets_by_site = readinput.get_sitecol_assets(
                 oqparam, expo)
-        elif filtersources:
+        elif filtersources or splitsources:
             sitecol, assets_by_site = readinput.get_site_collection(
                 oqparam), []
         else:
             sitecol, assets_by_site = None, []
         if 'source_model_logic_tree' in oqparam.inputs:
             print('Reading the source model...')
-            csm = readinput.get_composite_source_model(
-                oqparam, sitecol, in_memory=filtersources)
+            if filtersources and splitsources:
+                sp = source.SourceFilterSplitter
+            elif filtersources:
+                sp = source.SourceFilter
+            elif splitsources:
+                sp = source.SourceWeighter
+            else:
+                sp = source.BaseSourceProcessor  # do nothing
+            csm = readinput.get_composite_source_model(oqparam, sitecol, sp)
             assoc = csm.get_rlzs_assoc()
             print(assoc.csm_info)
             print('See https://github.com/gem/oq-risklib/blob/master/docs/'
                   'effective-realizations.rst for an explanation')
             print(assoc)
-            if filtersources:
+            if filtersources or splitsources:
                 info = readinput.get_job_info(oqparam, csm, sitecol)
                 info['n_sources'] = csm.get_num_sources()
                 info['c_matrix'] = humansize(
@@ -70,13 +77,13 @@ def _info(name, filtersources):
         print("No info for '%s'" % name)
 
 
-def info(name, filtersources=False):
+def info(name, filtersources=False, splitsources=False):
     """
     Give information. You can pass the name of an available calculator,
     a job.ini file, or a zip archive with the input files.
     """
     with Monitor('info', measuremem=True) as mon:
-        _info(name, filtersources)
+        _info(name, filtersources, splitsources)
     if mon.duration > 1:
         print(mon)
 
@@ -84,3 +91,4 @@ def info(name, filtersources=False):
 parser = sap.Parser(info)
 parser.arg('name', 'calculator name, job.ini file or zip archive')
 parser.flg('filtersources', 'flag to enable filtering of the source models')
+parser.flg('splitsources', 'flag to enable splitting of the source models')

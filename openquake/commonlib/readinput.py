@@ -443,7 +443,7 @@ def get_source_models(oqparam, source_model_lt, sitecol=None, in_memory=True):
 
 def get_composite_source_model(
         oqparam, sitecol=None, SourceProcessor=source.SourceFilterSplitter,
-        in_memory=True, monitor=DummyMonitor()):
+        monitor=DummyMonitor()):
     """
     Build the source models by splitting the sources. If prefiltering is
     enabled, also reduce the GSIM logic trees in the underlying source models.
@@ -452,10 +452,8 @@ def get_composite_source_model(
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param in_memory:
-        if True, keep in memory the sources
-    :param SourceFilterSplitter:
-        a SourceFilterSplitter class
+    :param SourceProcessor:
+        the class used to process the sources
     :returns:
         an iterator over :class:`openquake.commonlib.source.SourceModel`
         tuples skipping the empty models
@@ -466,19 +464,20 @@ def get_composite_source_model(
     smodels = []
     trt_id = 0
     for source_model in get_source_models(
-            oqparam, source_model_lt, processor.sitecol, in_memory):
+            oqparam, source_model_lt, processor.sitecol,
+            in_memory=hasattr(processor, 'process')):
         for trt_model in source_model.trt_models:
             trt_model.id = trt_id
             trt_id += 1
         smodels.append(source_model)
     csm = source.CompositeSourceModel(source_model_lt, smodels)
-    if in_memory and sitecol is not None:
+    if sitecol is not None and hasattr(processor, 'process'):
         seqtime, partime = processor.process(csm)
         monitor.write(['sequential filtering/splitting', str(seqtime), '0'])
         monitor.write(['parallel filtering/splitting', str(partime), '0'])
         if not csm.get_sources():
             raise RuntimeError('All sources were filtered away')
-        csm.count_ruptures()
+    csm.count_ruptures()
     return csm
 
 
@@ -503,7 +502,7 @@ def get_job_info(oqparam, source_models, sitecol):
                        for src in trt_model)
 
     imtls = oqparam.imtls
-    n_sites = len(sitecol)
+    n_sites = len(sitecol) if sitecol else 0
 
     # the imtls dictionary has values None when the levels are unknown
     # (this is a valid case for the event based hazard calculator)
