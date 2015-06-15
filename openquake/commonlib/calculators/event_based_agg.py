@@ -49,7 +49,7 @@ def cube(O, L, R, factory):
 
 
 @parallel.litetask
-def event_based_agg(riskinputs, riskmodel, rlzs_assoc, monitor):
+def ebr(riskinputs, riskmodel, rlzs_assoc, monitor):
     """
     :param riskinputs:
         a list of :class:`openquake.risklib.riskinput.RiskInput` objects
@@ -86,13 +86,13 @@ def event_based_agg(riskinputs, riskmodel, rlzs_assoc, monitor):
     return losses
 
 
-@base.calculators.add('event_based_agg')
+@base.calculators.add('ebr')
 class EventBasedRiskCalculator(base.RiskCalculator):
     """
     Event based PSHA calculator generating the ruptures only
     """
     pre_calculator = 'event_based_rupture'
-    core_func = event_based_agg
+    core_func = ebr
 
     epsilon_matrix = datastore.persistent_attribute('/epsilon_matrix')
     event_loss_table = datastore.persistent_attribute(
