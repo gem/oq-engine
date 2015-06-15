@@ -758,7 +758,7 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         self.assertEqual(rlz.weight, 1.)
         self.assertEqual(
             str(assoc),
-            "<RlzsAssoc\n0,SadighEtAl1997: ['<0,b1_b5_b8,b2_b3,w=1.0>']\n"
+            "<RlzsAssoc(2)\n0,SadighEtAl1997: ['<0,b1_b5_b8,b2_b3,w=1.0>']\n"
             "1,ChiouYoungs2008: ['<0,b1_b5_b8,b2_b3,w=1.0>']>")
 
     def test_many_rlzs(self):
@@ -788,7 +788,7 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         assoc = csm.get_rlzs_assoc()
 
         expected_assoc = """\
-<RlzsAssoc
+<RlzsAssoc(18)
 0,SadighEtAl1997: ['<0,b1_b3_b6,*_b3,w=0.04>']
 1,SadighEtAl1997: ['<0,b1_b3_b6,*_b3,w=0.04>']
 2,SadighEtAl1997: ['<1,b1_b3_b7,*_b3,w=0.12>']
@@ -830,7 +830,7 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         assoc = csm.get_rlzs_assoc()
         self.assertEqual(
             str(assoc),
-            "<RlzsAssoc\n"
+            "<RlzsAssoc(2)\n"
             "0,SadighEtAl1997: ['<0,b1,b1,w=0.2>']\n"
             "1,SadighEtAl1997: ['<1,b2,b1,w=0.2,col=1>', '<2,b2,b1,w=0.2,col=2>', '<3,b2,b1,w=0.2,col=3>', '<4,b2,b1,w=0.2,col=4>']>")
 

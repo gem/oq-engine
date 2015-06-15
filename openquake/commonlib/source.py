@@ -423,8 +423,8 @@ class RlzsAssoc(collections.Mapping):
             if len(rlzs) > 10:  # short representation
                 rlzs = ['%d realizations' % len(rlzs)]
             pairs.append(('%s,%s' % key, rlzs))
-        return '<%s\n%s>' % (self.__class__.__name__,
-                             '\n'.join('%s: %s' % pair for pair in pairs))
+        return '<%s(%d)\n%s>' % (self.__class__.__name__, len(self),
+                                 '\n'.join('%s: %s' % pair for pair in pairs))
 
 
 class CompositionInfo(object):
