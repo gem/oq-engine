@@ -18,6 +18,7 @@
 
 from __future__ import print_function
 import textwrap
+from openquake.baselib.performance import Monitor
 from openquake.commonlib import sap, readinput, nrml
 from openquake.commonlib.calculators import base
 from openquake.hazardlib import gsim
@@ -25,11 +26,7 @@ from openquake.hazardlib import gsim
 
 # the documentation about how to use this feature can be found
 # in the file effective-realizations.rst
-def info(name, filtersources=False):
-    """
-    Give information. You can pass the name of an available calculator,
-    a job.ini file, or a zip archive with the input files.
-    """
+def _info(name, filtersources):
     if name in base.calculators:
         print(textwrap.dedent(base.calculators[name].__doc__.strip()))
     elif name == 'gsims':
@@ -67,6 +64,18 @@ def info(name, filtersources=False):
                   sum(len(assets) for assets in assets_by_site))
     else:
         print("No info for '%s'" % name)
+
+
+def info(name, filtersources=False):
+    """
+    Give information. You can pass the name of an available calculator,
+    a job.ini file, or a zip archive with the input files.
+    """
+    with Monitor('info', measuremem=True) as mon:
+        _info(name, filtersources)
+    if mon.duration > 1:
+        print(mon)
+
 
 parser = sap.Parser(info)
 parser.arg('name', 'calculator name, job.ini file or zip archive')
