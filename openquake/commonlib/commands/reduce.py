@@ -19,7 +19,7 @@
 from __future__ import print_function
 import random
 import shutil
-from openquake.commonlib import nrml
+from openquake.commonlib import nrml, valid
 from openquake.commonlib import sap
 
 
@@ -44,15 +44,14 @@ def reduce(fname, reduction_factor):
     Supports source models and exposure models.
     This is a debugging utility to reduce large computations to small ones.
     """
-    factor = float(reduction_factor)
     model, = nrml.read(fname)
     if model.tag.endswith('exposureModel'):
         total = len(model.assets)
-        model.assets.nodes = random_filter(model.assets, factor)
+        model.assets.nodes = random_filter(model.assets, reduction_factor)
         num_nodes = len(model.assets)
     elif model.tag.endswith('sourceModel'):
         total = len(model)
-        model.nodes = random_filter(model, factor)
+        model.nodes = random_filter(model, reduction_factor)
         num_nodes = len(model)
     else:
         raise RuntimeError('Unknown model tag: %s' % model.tag)
@@ -65,4 +64,5 @@ def reduce(fname, reduction_factor):
 
 parser = sap.Parser(reduce)
 parser.arg('fname', 'path to the model file')
-parser.arg('reduction_factor', 'reduction factor in the range 0..1')
+parser.arg('reduction_factor', 'reduction factor in the range 0..1',
+           type=valid.probability)
