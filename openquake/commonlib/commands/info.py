@@ -19,6 +19,7 @@
 from __future__ import print_function
 import textwrap
 from openquake.baselib.performance import Monitor
+from openquake.baselib.general import humansize
 from openquake.commonlib import sap, readinput, nrml
 from openquake.commonlib.calculators import base
 from openquake.hazardlib import gsim
@@ -57,6 +58,9 @@ def _info(name, filtersources):
             if filtersources:
                 info = readinput.get_job_info(oqparam, csm, sitecol)
                 info['n_sources'] = csm.get_num_sources()
+                info['c_matrix'] = humansize(
+                    info['n_sites'] * info['n_levels'] *
+                    info['n_imts'] * len(assoc) * 8)
                 for k in sorted(info):
                     print(k, info[k])
         if len(assets_by_site):
