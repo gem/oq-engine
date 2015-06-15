@@ -91,19 +91,19 @@ class CalculatorTestCase(unittest.TestCase):
         """
         expected = os.path.join(self.testdir, fname1)
         actual = os.path.join(self.calc.oqparam.export_dir, fname2)
-        expected_content = ''.join(
-            make_comparable(open(expected).readlines()))
-        actual_content = ''.join(make_comparable(open(actual).readlines()))
+        expected_lines = make_comparable(open(expected))
+        actual_lines = make_comparable(open(actual))
         try:
-            if delta:
-                self.practicallyEqual(expected_content, actual_content, delta)
-            else:
-                self.assertEqual(expected_content, actual_content)
+            for exp, got in zip(expected_lines, actual_lines):
+                if delta:
+                    self.practicallyEqual(exp, got, delta)
+                else:
+                    self.assertEqual(exp, got)
         except AssertionError:
             if self.OVERWRITE_EXPECTED:
                 # use this path when the expected outputs have changed
                 # for a good reason
-                open(expected, 'w').write(actual_content)
+                open(expected, 'w').write(''.join(actual_lines))
             else:
                 # normally raise an exception
                 raise DifferentFiles('%s %s' % (expected, actual))

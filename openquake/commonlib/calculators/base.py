@@ -314,12 +314,14 @@ class HazardCalculator(BaseCalculator):
                     'reading composite source model', autoflush=True):
                 self.composite_source_model = (
                     readinput.get_composite_source_model(
-                        self.oqparam, self.sitecol, monitor=self.monitor))
-                self.source_info = self.composite_source_model.source_info
-                self.job_info = readinput.get_job_info(
-                    self.oqparam, self.composite_source_model, self.sitecol)
+                        self.oqparam, self.sitecol if self.prefilter else None,
+                        monitor=self.monitor))
                 # we could manage limits here
                 if self.prefilter:
+                    self.source_info = self.composite_source_model.source_info
+                    self.job_info = readinput.get_job_info(
+                        self.oqparam, self.composite_source_model,
+                        self.sitecol)
                     self.composite_source_model.count_ruptures()
                     self.rlzs_assoc = (self.composite_source_model.
                                        get_rlzs_assoc())

@@ -472,7 +472,7 @@ def get_composite_source_model(
             trt_id += 1
         smodels.append(source_model)
     csm = source.CompositeSourceModel(source_model_lt, smodels)
-    if in_memory:
+    if in_memory and sitecol is not None:
         seqtime, partime = processor.process(csm)
         monitor.write(['sequential filtering/splitting', str(seqtime), '0'])
         monitor.write(['parallel filtering/splitting', str(partime), '0'])
