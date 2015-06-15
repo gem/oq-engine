@@ -696,13 +696,13 @@ source_info_dt = numpy.dtype(
 
 class SourceFilter(object):
     """
-    Filter in parallel the sources of the given CompositeSourceModel
+    Filter sequentially the sources of the given CompositeSourceModel
     instance. An array `.source_info` is added to the instance, containing
     information about the processing times.
 
     :param sitecol: a SiteCollection instance
     :param maxdist: maximum distance for the filtering
-    :param asd: area source discretization (ignored)
+    :param area_source_discretization: dummy parameter (ignored)
     """
 
     def __init__(self, sitecol, maxdist, area_source_discretization=None):
