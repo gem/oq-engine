@@ -64,7 +64,7 @@ def ebr(riskinputs, riskmodel, rlzs_assoc, monitor):
     """
     lt_idx = {lt: i for i, lt in enumerate(riskmodel.get_loss_types())}
     losses = cube(
-        NUM_OUTPUTS, len(lt_idx), len(rlzs_assoc.realizations), list)
+        NUM_OUTPUTS, len(lt_idx), len(rlzs_assoc.realizations), AccumDict)
     for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
         rup_slice = out_by_rlz.rup_slice
         rup_ids = range(rup_slice.start, rup_slice.stop)
@@ -75,14 +75,14 @@ def ebr(riskinputs, riskmodel, rlzs_assoc, monitor):
             for rup_id, loss, ins_loss in zip(
                     rup_ids, agg_losses, agg_ins_losses):
                 if loss > 0:
-                    losses[0, lt, rlz.ordinal].append(
-                        numpy.array([(rup_id, loss)], elt_dt))
+                    losses[0, lt, rlz.ordinal] += {rup_id: loss}
                 if ins_loss > 0:
-                    losses[1, lt, rlz.ordinal].append(
-                        numpy.array([(rup_id, ins_loss)], elt_dt))
-    for idx, arrays in numpy.ndenumerate(losses):
-        if arrays:
-            losses[idx] = [numpy.concatenate(arrays)]
+                    losses[1, lt, rlz.ordinal] += {rup_id: ins_loss}
+    for idx, dic in numpy.ndenumerate(losses):
+        if dic:
+            losses[idx] = [numpy.array(dic.items(), elt_dt)]
+        else:
+            losses[idx] = []
     return losses
 
 
