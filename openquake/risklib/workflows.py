@@ -131,6 +131,11 @@ def get_values(loss_type, assets):
     return values
 
 
+class List(list):
+    """List subclass to which you can add attribute"""
+    # this is ugly, but we already did that, and there is no other easy way
+
+
 def out_by_rlz(workflow, assets, hazards, epsilons, tags, loss_type):
     """
     :param workflow: a Workflow instance
@@ -141,7 +146,7 @@ def out_by_rlz(workflow, assets, hazards, epsilons, tags, loss_type):
 
     Yield lists out_by_rlz
     """
-    out_by_rlz = []
+    out_by_rlz = List()
     for rlz in hazards[0]:  # extract the realizations from the first asset
         hazs = [haz[rlz] for haz in hazards]  # hazard per each asset
         out = workflow(loss_type, assets, hazs, epsilons, tags)
@@ -180,8 +185,6 @@ class Workflow(object):
         for loss_type in self.loss_types:
             assets_ = assets
             epsilons_ = epsilons
-            tags_ = tags
-
             values = get_values(loss_type, assets)
             ok = ~numpy.isnan(values)
             if not ok.any():
@@ -193,9 +196,8 @@ class Workflow(object):
                 assets_ = assets[ok]
                 hazards = hazards[ok]
                 epsilons_ = epsilons[ok]
-                tags_ = tags[ok]
             yield out_by_rlz(
-                self, assets_, hazards, epsilons_, tags_, loss_type)
+                self, assets_, hazards, epsilons_, tags, loss_type)
 
     def __repr__(self):
         return '<%s%s>' % (self.__class__.__name__, self.risk_functions.keys())
@@ -378,11 +380,11 @@ class ProbabilisticEventBased(Workflow):
       an iterable over N assets the outputs refer to
 
     :attr loss_matrix:
-      an array of losses shaped N x E (where E is the number of events)
+      an array of losses shaped N x T (where T is the number of events)
 
     :attr loss_curves:
-      a numpy array of N loss curves. If the curve resolution is R, the final
-      shape of the array will be (N, 2, R), where the `two` accounts for
+      a numpy array of N loss curves. If the curve resolution is C, the final
+      shape of the array will be (N, 2, C), where the `two` accounts for
       the losses/poes dimensions
 
     :attr average_losses:
@@ -392,7 +394,7 @@ class ProbabilisticEventBased(Workflow):
       a numpy array holding N standard deviation of losses
 
     :attr insured_curves:
-      a numpy array of N insured loss curves, shaped (N, 2, R)
+      a numpy array of N insured loss curves, shaped (N, 2, C)
 
     :attr average_insured_losses:
       a numpy array of N average insured loss values
@@ -440,7 +442,7 @@ class ProbabilisticEventBased(Workflow):
     def event_loss(self, loss_matrix, event_ids):
         """
         :param loss_matrix:
-           a numpy array of losses shaped N x E, where E is the number
+           a numpy array of losses shaped N x T, where T is the number
            of events and N the number of samplings
 
         :param event_ids:
@@ -479,13 +481,13 @@ class ProbabilisticEventBased(Workflow):
         loss_matrix = self.risk_functions[loss_type].apply_to(
             ground_motion_values, epsilons)
         values = utils.numpy_map(lambda a: a.value(loss_type), assets)
-        ela = loss_matrix.T * values  # matrix with R x N elements
+        ela = loss_matrix.T * values  # matrix with T x N elements
         if self.insured_losses and loss_type != 'fatalities':
             deductibles = [a.deductible(loss_type) for a in assets]
             limits = [a.insurance_limit(loss_type) for a in assets]
             ila = utils.numpy_map(
                 scientific.insured_losses, loss_matrix, deductibles, limits)
-        else:  # build a zero matrix of size R x N
+        else:  # build a zero matrix of size T x N
             ila = numpy.zeros((len(ground_motion_values[0]), len(assets)))
         if isinstance(assets[0].id, basestring):
             # in oq-lite return early, with just the losses per asset
