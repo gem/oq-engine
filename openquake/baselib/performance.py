@@ -47,6 +47,8 @@ else:  # Ubuntu 12.04
     def memory_info(proc):
         return proc.get_memory_info()
 
+from openquake.baselib.general import humansize
+
 
 # this is not thread-safe
 class Monitor(object):
@@ -162,9 +164,9 @@ class Monitor(object):
 
     def __repr__(self):
         if self.measuremem:
-            return '<%s %s, duration=%ss, memory=%dM>' % (
+            return '<%s %s, duration=%ss, memory=%s>' % (
                 self.__class__.__name__, self.operation, self.duration,
-                self.mem / 1024. / 1024.)
+                humansize(self.mem))
         return '<%s %s, duration=%ss>' % (self.__class__.__name__,
                                           self.operation, self.duration)
 
