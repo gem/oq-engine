@@ -16,7 +16,7 @@
 from decimal import Decimal
 
 import unittest
-
+import numpy as np
 from openquake.hazardlib.pmf import PMF
 
 
@@ -40,3 +40,40 @@ class PMFTestCase(unittest.TestCase):
         # 0 probs are accepted
         data = [(0, 0)] + [(Decimal('0.5'), 1), (Decimal('0.5'), 2)]
         PMF(data)
+
+    def test_sample_pmf_numerical(self):
+        """
+        Tests the sampling function for numerical data - using a random
+        seed approach
+        """
+        pmf = PMF([(0.3, 1), (0.5, 2), (0.2, 4)])
+        np.random.seed(22)
+        self.assertListEqual(pmf.sample(10),
+                             [1, 2, 2, 4, 1, 2, 1, 2, 1, 4])
+
+    def test_sample_pmf_non_numerical(self):
+        """
+        Tests the sampling function for non-numerical data - using a random
+        seed approach
+        """
+        pmf = PMF([(0.3, "apples"),
+                   (0.1, "oranges"),
+                   (0.4, "bananas"),
+                   (0.2, "lemons")])
+        np.random.seed(22)
+        expected = ['apples', 'bananas', 'bananas', 'lemons', 'apples',
+                    'oranges', 'apples', 'bananas', 'apples', 'lemons']
+        self.assertListEqual(pmf.sample(10), expected)
+
+    def test_sample_pmf_convergence(self):
+        """
+        Tests the PMF sampling function for numerical convergence
+        """
+        pmf = PMF([(0.3, 1.), (0.5, 2.), (0.2, 4.)])
+        # Take 100000 samples of the PMF and find the density of the results
+        output = np.histogram(pmf.sample(100000),
+                              np.array([0.5, 1.5, 2.5, 3.5, 4.5]),
+                              density=True)[0]
+        np.testing.assert_array_almost_equal(output,
+                                             np.array([0.3, 0.5, 0.0, 0.2]),
+                                             2)  # Tests to 2 decimal places
