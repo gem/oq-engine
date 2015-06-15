@@ -195,10 +195,10 @@ def classical_tiling(calculator, sitecol, position, tileno, monitor):
         a ClassicalCalculator instance
     :param sitecol:
         the site collection of the current tile
-    :param indices:
-        the indices of the sites in the current tile
     :param position:
         position of the current tile in the full site collection
+    :param tileno:
+        the tile ordinal
     :param monitor:
         a monitor instance
     :returns:
