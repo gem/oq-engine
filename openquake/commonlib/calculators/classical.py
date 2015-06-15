@@ -28,7 +28,7 @@ from openquake.hazardlib.calc.hazard_curve import (
 from openquake.hazardlib.calc.filters import source_site_distance_filter, \
     rupture_site_distance_filter
 from openquake.risklib import scientific
-from openquake.commonlib import parallel, datastore
+from openquake.commonlib import parallel, datastore, source
 from openquake.baselib.general import AccumDict, split_in_blocks
 
 from openquake.commonlib.calculators import base, calc
@@ -237,7 +237,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
     """
     Classical Tiling calculator
     """
-    prefilter = False
+    SourceProcessor = source.SourceFilter
 
     def execute(self):
         """
@@ -251,8 +251,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         calculator = ClassicalCalculator(
             self.oqparam, monitor, persistent=False)
         calculator.composite_source_model = self.composite_source_model
-        rlzs_assoc = self.composite_source_model.get_rlzs_assoc(
-            lambda tm: True)  # build the full logic tree
+        rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
         self.rlzs_assoc = calculator.rlzs_assoc = rlzs_assoc
 
         # parallelization

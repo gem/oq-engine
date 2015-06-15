@@ -442,7 +442,7 @@ def get_source_models(oqparam, source_model_lt, sitecol=None, in_memory=True):
 
 
 def get_composite_source_model(
-        oqparam, sitecol=None, SourceProcessor=source.SourceProcessor,
+        oqparam, sitecol=None, SourceProcessor=source.SourceFilterSplitter,
         in_memory=True, monitor=DummyMonitor()):
     """
     Build the source models by splitting the sources. If prefiltering is
@@ -454,8 +454,8 @@ def get_composite_source_model(
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param in_memory:
         if True, keep in memory the sources
-    :param SourceProcessor:
-        a SourceProcessor class
+    :param SourceFilterSplitter:
+        a SourceFilterSplitter class
     :returns:
         an iterator over :class:`openquake.commonlib.source.SourceModel`
         tuples skipping the empty models
