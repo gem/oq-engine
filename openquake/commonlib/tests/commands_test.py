@@ -30,10 +30,11 @@ class InfoTestCase(unittest.TestCase):
 <CompositionInfo
 b1, x15.xml, trt=[0]: 1 realization(s)>
 See https://github.com/gem/oq-risklib/blob/master/docs/effective-realizations.rst for an explanation
-<RlzsAssoc
+<RlzsAssoc(1)
 0,AkkarBommer2010: ['<0,b1,*_AkkarBommer2010_*_*_*_*_*,w=1.0>']>'''
 
     EXTRA = '''
+c_matrix 232 B
 input_weight 43.05
 max_realizations 1
 n_imts 1
