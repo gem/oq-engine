@@ -68,6 +68,6 @@ class PMF(object):
         :returns:
             Samples from PMF as a list
         """
-        probs = np.cumsum(np.array([val[0] for val in self.data]))
+        probs = np.cumsum([val[0] for val in self.data])
         sampler = np.random.uniform(0., 1., number_samples)
         return [self.data[ival][1] for ival in np.searchsorted(probs, sampler)]
