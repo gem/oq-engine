@@ -69,6 +69,12 @@ n_sources 1
 output_weight 29.0'''
         self.assertEqual(exp, str(p))
 
+    def test_data_transfer(self):
+        path = os.path.join(DATADIR, 'frenchbug.zip')
+        with Print.patch() as p:
+            info(path, datatransfer=True)
+        print p
+
 
 class ReduceTestCase(unittest.TestCase):
     TESTDIR = os.path.dirname(case_3.__file__)
