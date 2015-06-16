@@ -19,6 +19,7 @@
 from __future__ import print_function
 import textwrap
 import operator
+import logging
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import humansize, split_in_blocks, groupby
 from openquake.commonlib import sap, readinput, nrml, source, parallel
@@ -52,7 +53,9 @@ def data_transfer(calc):
         args = (block, calc.sitecol, gsims_assoc, calc.monitor)
         to_send_forward += sum(len(p) for p in parallel.pickle_sequence(args))
         n_tasks += 1
+        logging.info('Considered task %d', n_tasks)
     return n_tasks, to_send_forward, to_send_back
+
 
 # the documentation about how to use this feature can be found
 # in the file effective-realizations.rst
@@ -109,13 +112,14 @@ def info(name, filtersources=False, weightsources=False, datatransfer=False):
     Give information. You can pass the name of an available calculator,
     a job.ini file, or a zip archive with the input files.
     """
+    logging.basicConfig(level=logging.INFO)
     with Monitor('info', measuremem=True) as mon:
         if datatransfer:
             oq = readinput.get_oqparam(name)
             calc = base.calculators(oq)
             calc.pre_execute()
             n_tasks, to_send_forward, to_send_back = data_transfer(calc)
-            print('Number of tasks to generate: %d' % n_tasks)
+            print('Number of tasks to be generated: %d' % n_tasks)
             print('Estimated data to send forward: %s' %
                   humansize(to_send_forward))
             print('Estimated data to send back: %s' %

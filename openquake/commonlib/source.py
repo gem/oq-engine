@@ -767,7 +767,7 @@ class SourceFilter(BaseSourceProcessor):
         seqtime, partime = 0, 0
         sources_by_trt = AccumDict()
 
-        logging.warn('Sequential processing of %d sources...', len(sources))
+        logging.info('Sequential processing of %d sources...', len(sources))
         t1 = time.time()
         for src in sources:
             sources_by_trt = self.agg_source_info(
@@ -847,7 +847,7 @@ class SourceFilterSplitter(SourceFilter):
 
         # single core processing
         if fast_sources:
-            logging.warn('Sequential processing of %d sources...',
+            logging.info('Sequential processing of %d sources...',
                          len(fast_sources))
             t1 = time.time()
             sources_by_trt += reduce(
