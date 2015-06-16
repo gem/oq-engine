@@ -29,8 +29,6 @@ from openquake.engine.db import models
 from openquake.engine.utils import config
 from openquake.engine.writer import CacheInserter
 
-CONCURRENT_TASKS = int(config.get('celery', 'concurrent_tasks'))
-
 SOFT_MEM_LIMIT = int(config.get('memory', 'soft_mem_limit'))
 HARD_MEM_LIMIT = int(config.get('memory', 'hard_mem_limit'))
 check_mem_usage.__defaults__ = (SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
