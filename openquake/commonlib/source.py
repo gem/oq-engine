@@ -674,15 +674,17 @@ def filter_and_split(src, sourceprocessor):
     t1 = time.time()
     out = []
     weight_time = 0
+    weight = 0
     for ss in sourceconverter.split_source(src, sourceprocessor.asd):
         if sourceprocessor.weight:
             t = time.time()
             ss.weight = get_weight(ss)
             weight_time += time.time() - t
+            weight += ss.weight
         out.append(ss)
     split_time = time.time() - t1 - weight_time
     return SourceInfo(src.trt_model_id, src.source_id, src.__class__.__name__,
-                      out, filter_time, weight_time, split_time)
+                      weight, out, filter_time, weight_time, split_time)
 
 
 SourceInfo = collections.namedtuple(

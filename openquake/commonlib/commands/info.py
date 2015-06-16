@@ -18,12 +18,41 @@
 
 from __future__ import print_function
 import textwrap
+import operator
 from openquake.baselib.performance import Monitor
-from openquake.baselib.general import humansize
-from openquake.commonlib import sap, readinput, nrml, source
+from openquake.baselib.general import humansize, split_in_blocks, groupby
+from openquake.commonlib import sap, readinput, nrml, source, parallel
 from openquake.commonlib.calculators import base
 from openquake.hazardlib import gsim
 
+
+def data_transfer(calc):
+    """
+    Determine the amount of data transferred from the controller node
+    to the workers and back in a classical calculation.
+
+    :returns: a triple (num_tasks, to_send_forward, to_send_back)
+    """
+    oq = calc.oqparam
+    info = calc.job_info
+    calc.monitor.oqparam = oq
+    sources = calc.composite_source_model.get_sources()
+    num_gsims_by_trt = groupby(calc.rlzs_assoc, operator.itemgetter(0),
+                               lambda group: sum(1 for row in group))
+    gsims_assoc = calc.rlzs_assoc.get_gsims_by_trt_id()
+    to_send_forward = 0
+    to_send_back = 0
+    n_tasks = 0
+    for block in split_in_blocks(sources, oq.concurrent_tasks,
+                                 operator.attrgetter('weight'),
+                                 operator.attrgetter('trt_model_id')):
+        num_gsims = num_gsims_by_trt[block[0].trt_model_id]
+        back = info['n_sites'] * info['n_levels'] * info['n_imts'] * num_gsims
+        to_send_back += back * 8  # 8 bytes per float
+        args = (block, calc.sitecol, gsims_assoc, calc.monitor)
+        to_send_forward += sum(len(p) for p in parallel.pickle_sequence(args))
+        n_tasks += 1
+    return n_tasks, to_send_forward, to_send_back
 
 # the documentation about how to use this feature can be found
 # in the file effective-realizations.rst
@@ -75,13 +104,24 @@ def _info(name, filtersources, weightsources):
         print("No info for '%s'" % name)
 
 
-def info(name, filtersources=False, weightsources=False):
+def info(name, filtersources=False, weightsources=False, datatransfer=False):
     """
     Give information. You can pass the name of an available calculator,
     a job.ini file, or a zip archive with the input files.
     """
     with Monitor('info', measuremem=True) as mon:
-        _info(name, filtersources, weightsources)
+        if datatransfer:
+            oq = readinput.get_oqparam(name)
+            calc = base.calculators(oq)
+            calc.pre_execute()
+            n_tasks, to_send_forward, to_send_back = data_transfer(calc)
+            print('Number of tasks to generate: %d' % n_tasks)
+            print('Estimated data to send forward: %s' %
+                  humansize(to_send_forward))
+            print('Estimated data to send back: %s' %
+                  humansize(to_send_back))
+        else:
+            _info(name, filtersources, weightsources)
     if mon.duration > 1:
         print(mon)
 
@@ -90,3 +130,4 @@ parser = sap.Parser(info)
 parser.arg('name', 'calculator name, job.ini file or zip archive')
 parser.flg('filtersources', 'flag to enable filtering of the source models')
 parser.flg('weightsources', 'flag to enable weighting of the source models')
+parser.flg('datatransfer', 'flag to enable data transfer calculation')
