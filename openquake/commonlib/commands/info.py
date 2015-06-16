@@ -27,7 +27,7 @@ from openquake.hazardlib import gsim
 
 # the documentation about how to use this feature can be found
 # in the file effective-realizations.rst
-def _info(name, filtersources, splitsources):
+def _info(name, filtersources, weightsources):
     if name in base.calculators:
         print(textwrap.dedent(base.calculators[name].__doc__.strip()))
     elif name == 'gsims':
@@ -41,19 +41,17 @@ def _info(name, filtersources, splitsources):
             expo = readinput.get_exposure(oqparam)
             sitecol, assets_by_site = readinput.get_sitecol_assets(
                 oqparam, expo)
-        elif filtersources or splitsources:
+        elif filtersources or weightsources:
             sitecol, assets_by_site = readinput.get_site_collection(
                 oqparam), []
         else:
             sitecol, assets_by_site = None, []
         if 'source_model_logic_tree' in oqparam.inputs:
             print('Reading the source model...')
-            if filtersources and splitsources:
-                sp = source.SourceFilterSplitter
+            if weightsources:
+                sp = source.SourceFilterWeighter
             elif filtersources:
                 sp = source.SourceFilter
-            elif splitsources:
-                sp = source.SourceWeighter
             else:
                 sp = source.BaseSourceProcessor  # do nothing
             csm = readinput.get_composite_source_model(oqparam, sitecol, sp)
@@ -62,7 +60,7 @@ def _info(name, filtersources, splitsources):
             print('See https://github.com/gem/oq-risklib/blob/master/docs/'
                   'effective-realizations.rst for an explanation')
             print(assoc)
-            if filtersources or splitsources:
+            if filtersources or weightsources:
                 info = readinput.get_job_info(oqparam, csm, sitecol)
                 info['n_sources'] = csm.get_num_sources()
                 info['c_matrix'] = humansize(
@@ -77,13 +75,13 @@ def _info(name, filtersources, splitsources):
         print("No info for '%s'" % name)
 
 
-def info(name, filtersources=False, splitsources=False):
+def info(name, filtersources=False, weightsources=False):
     """
     Give information. You can pass the name of an available calculator,
     a job.ini file, or a zip archive with the input files.
     """
     with Monitor('info', measuremem=True) as mon:
-        _info(name, filtersources, splitsources)
+        _info(name, filtersources, weightsources)
     if mon.duration > 1:
         print(mon)
 
@@ -91,4 +89,4 @@ def info(name, filtersources=False, splitsources=False):
 parser = sap.Parser(info)
 parser.arg('name', 'calculator name, job.ini file or zip archive')
 parser.flg('filtersources', 'flag to enable filtering of the source models')
-parser.flg('splitsources', 'flag to enable splitting of the source models')
+parser.flg('weightsources', 'flag to enable weighting of the source models')

@@ -673,35 +673,46 @@ def filter_and_split(src, sourceprocessor):
         filter_time = 0
     t1 = time.time()
     out = []
+    weight_time = 0
     for ss in sourceconverter.split_source(src, sourceprocessor.asd):
-        ss.weight = get_weight(ss)
+        if sourceprocessor.weight:
+            t = time.time()
+            ss.weight = get_weight(ss)
+            weight_time += time.time() - t
         out.append(ss)
-    split_time = time.time() - t1
-    return SourceInfo(src.trt_model_id, src.source_id,
-                      src.__class__.__name__, out, filter_time, split_time)
+    split_time = time.time() - t1 - weight_time
+    return SourceInfo(src.trt_model_id, src.source_id, src.__class__.__name__,
+                      out, filter_time, weight_time, split_time)
 
 
 SourceInfo = collections.namedtuple(
-    'SourceInfo', 'trt_model_id source_id source_class sources '
-    'filter_time split_time')
+    'SourceInfo', 'trt_model_id source_id source_class weight sources '
+    'filter_time weight_time split_time')
 
 source_info_dt = numpy.dtype(
-    [('trt_model_id', int),
+    [('trt_model_id', numpy.uint32),
      ('source_id', (str, 20)),
      ('source_class', (str, 20)),
-     ('split_num', int),
-     ('filter_time', float),
-     ('split_time', float)])
+     ('weight', numpy.float32),
+     ('split_num', numpy.uint32),
+     ('filter_time', numpy.float32),
+     ('weight_time', numpy.float32),
+     ('split_time', numpy.float32)])
 
 
 class BaseSourceProcessor(object):
     """
     Do nothing source processor.
 
-    :param sitecol: a SiteCollection instance
-    :param maxdist: dummy parameter (ignored)
-    :param area_source_discretization: dummy parameter (ignored)
+    :param sitecol:
+        a SiteCollection instance
+    :param maxdist:
+        maximum distance for the filtering
+    :param area_source_discretization:
+        area source discretization
     """
+    weight = False  # when True, set the weight on each source
+
     def __init__(self, sitecol, maxdist, area_source_discretization=None):
         self.sitecol = sitecol
         self.maxdist = maxdist
@@ -713,21 +724,25 @@ class SourceFilter(BaseSourceProcessor):
     Filter sequentially the sources of the given CompositeSourceModel
     instance. An array `.source_info` is added to the instance, containing
     information about the processing times.
-
-    :param sitecol: a SiteCollection instance
-    :param maxdist: maximum distance for the filtering
-    :param area_source_discretization: dummy parameter (ignored)
     """
-
     def filter(self, src):
         t0 = time.time()
         sites = src.filter_sites_by_distance_to_source(
             self.maxdist, self.sitecol)
-        filter_time = time.time() - t0
+        t1 = time.time()
+        filter_time = t1 - t0
+        if sites is not None and self.weight:
+            t2 = time.time()
+            weight = get_weight(src)
+            src.weight = weight
+            weight_time = time.time() - t2
+        else:
+            weight = numpy.nan
+            weight_time = 0
         sources = [] if sites is None else [src]
         return SourceInfo(
             src.trt_model_id, src.source_id, src.__class__.__name__,
-            sources, filter_time, 0)
+            weight, sources, filter_time, weight_time, 0)
 
     def agg_source_info(self, acc, info):
         """
@@ -736,7 +751,8 @@ class SourceFilter(BaseSourceProcessor):
         """
         self.infos.append(
             (info.trt_model_id, info.source_id, info.source_class,
-             len(info.sources), info.filter_time, info.split_time))
+             info.weight, len(info.sources), info.filter_time,
+             info.weight_time, info.split_time))
         return acc + {info.trt_model_id: info.sources}
 
     def process(self, csm):
@@ -784,37 +800,13 @@ class SourceFilter(BaseSourceProcessor):
                         self.maxdist, trt_model.trt)
 
 
-class SourceWeighter(SourceFilter):
+class SourceFilterWeighter(SourceFilter):
     """
-    Split in parallel the sources of the given CompositeSourceModel
-    instance. An array `.source_info` is added to the instance, containing
-    information about the processing times and the splitting process.
-
-    :param sitecol: a SiteCollection instance
-    :param maxdist: maximum distance for the filtering
-    :param asd: area source discretization
+    Filter sequentially the sources of the given CompositeSourceModel
+    instance and compute their weights. An array `.source_info` is added
+    to the instance, containing information about the processing times.
     """
-    def process(self, csm):
-        """
-        :param csm: a CompositeSourceModel instance
-        :param monitor: a monitor object
-        :returns: the times spent in sequential and parallel processing
-        """
-        sources = csm.get_sources()
-        self.infos = []
-        seqtime, partime = 0, 0
-        sources_by_trt = AccumDict()
-
-        logging.warn('Sequential rupture counting for %d sources...',
-                     len(sources))
-        t1 = time.time()
-        for src in sources:
-            weight = get_weight(src)
-            src.weight = weight
-            sources_by_trt = self.agg_source_info(sources_by_trt, weight)
-        seqtime = time.time() - t1
-        self.update(csm, sources_by_trt)
-        return seqtime, partime
+    weight = True
 
 
 class SourceFilterSplitter(SourceFilter):

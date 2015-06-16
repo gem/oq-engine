@@ -54,13 +54,13 @@ n_sources 1
 output_weight 29.0'''
         self.assertEqual(exp, str(p))
 
-    def test_zip_splitting(self):
+    def test_zip_weighting(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
         with Print.patch() as p:
-            info(path, splitsources=True)
+            info(path, weightsources=True)
         exp = self.EXPECTED + '''
 c_matrix 232 B
-input_weight 1
+input_weight 1722
 max_realizations 1
 n_imts 1
 n_levels 29.0
