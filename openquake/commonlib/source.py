@@ -820,7 +820,7 @@ class SourceFilterSplitter(SourceFilter):
 
     :param sitecol: a SiteCollection instance
     :param maxdist: maximum distance for the filtering
-    :param asd: area source discretization
+    :param area_source_discretization: area source discretization
     """
     def process(self, csm):
         """
