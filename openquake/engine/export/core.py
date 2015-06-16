@@ -39,13 +39,11 @@ def zipfiles(fnames, archive):
 
     :param fnames: list of path names
     :param archive: path of the archive
-    :returns: the given archive path
     """
     z = zipfile.ZipFile(archive, 'w')
     for f in fnames:
         z.write(f)
     z.close()
-    return archive
 
 
 @export_output.add(('datastore', 'csv'), ('datastore', 'xml'))
@@ -67,7 +65,8 @@ def export_from_datastore(output_key, output, target):
             'Nothing to export for %s' % output.ds_key)
     elif len(exported) > 1:
         archname = output.ds_key.lstrip('/') + '-' + fmt + '.zip'
-        return zipfiles(exported, os.path.join(target, archname))
+        zipfiles(exported, os.path.join(target, archname))
+        return archname
     else:  # single file
         return exported[0]
 
