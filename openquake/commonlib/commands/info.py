@@ -51,9 +51,9 @@ def data_transfer(calc):
         back = info['n_sites'] * info['n_levels'] * info['n_imts'] * num_gsims
         to_send_back += back * 8  # 8 bytes per float
         args = (block, calc.sitecol, gsims_assoc, calc.monitor)
+        logging.info('Pickling task args #%d', n_tasks)
         to_send_forward += sum(len(p) for p in parallel.pickle_sequence(args))
         n_tasks += 1
-        logging.info('Considered task %d', n_tasks)
     return n_tasks, to_send_forward, to_send_back
 
 
