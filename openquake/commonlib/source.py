@@ -752,9 +752,9 @@ class SourceFilter(BaseSourceProcessor):
         :param info: a SourceInfo instance
         """
         self.infos.append(
-            (info.trt_model_id, info.source_id, info.source_class,
-             info.weight, len(info.sources), info.filter_time,
-             info.weight_time, info.split_time))
+            SourceInfo(info.trt_model_id, info.source_id, info.source_class,
+                       info.weight, len(info.sources), info.filter_time,
+                       info.weight_time, info.split_time))
         return acc + {info.trt_model_id: info.sources}
 
     def process(self, csm):
@@ -783,7 +783,9 @@ class SourceFilter(BaseSourceProcessor):
         :param csm: a CompositeSourceModel instance
         :param sources_by_trt: a dictionary trt_model_id -> sources
         """
-        self.infos.sort(key=lambda o: o[4] + o[5], reverse=True)
+        self.infos.sort(
+            key=lambda info: info.filter_time + info.weight_time +
+            info.split_time, reverse=True)
         csm.source_info = numpy.array(self.infos, source_info_dt)
         del self.infos[:]
 
