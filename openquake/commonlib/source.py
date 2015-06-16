@@ -733,7 +733,6 @@ class SourceFilter(object):
     def process(self, csm):
         """
         :param csm: a CompositeSourceModel instance
-        :param monitor: a monitor object
         :returns: the times spent in sequential and parallel processing
         """
         sources = csm.get_sources()
@@ -785,7 +784,6 @@ class SourceFilterSplitter(SourceFilter):
     def process(self, csm):
         """
         :param csm: a CompositeSourceModel instance
-        :param monitor: a monitor object
         :returns: the times spent in sequential and parallel processing
         """
         sources = csm.get_sources()
