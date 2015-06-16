@@ -288,7 +288,7 @@ classical/case_7; you can run the command and get::
    <CompositionInfo
    b1, source_model_1.xml, trt=[0]: 1 realization(s)
    b2, source_model_2.xml, trt=[1]: 1 realization(s)>
-   <RlzsAssoc
+   <RlzsAssoc(2)
    0,SadighEtAl1997: ['<0,b1,b1,w=0.7>']
    1,SadighEtAl1997: ['<1,b2,b1,w=0.3>']>
 
@@ -304,7 +304,7 @@ the SHARE model with just a simplified area source model::
    $ oq-lite info classical/case_19/job.ini -f
    <CompositionInfo
    b1, simple_area_source_model.xml, trt=[0, 1, 2, 3, 4]: 4 realization(s)>
-   <RlzsAssoc
+   <RlzsAssoc(8)
    0,AtkinsonBoore2003SInter: ['<0,b1,*_*_*_*_b51_*_*,w=0.2>', '<1,b1,*_*_*_*_b52_*_*,w=0.2>', '<2,b1,*_*_*_*_b53_*_*,w=0.2>', '<3,b1,*_*_*_*_b54_*_*,w=0.4>']
    1,FaccioliEtAl2010: ['<0,b1,*_*_*_*_b51_*_*,w=0.2>', '<1,b1,*_*_*_*_b52_*_*,w=0.2>', '<2,b1,*_*_*_*_b53_*_*,w=0.2>', '<3,b1,*_*_*_*_b54_*_*,w=0.4>']
    2,ToroEtAl2002SHARE: ['<0,b1,*_*_*_*_b51_*_*,w=0.2>', '<1,b1,*_*_*_*_b52_*_*,w=0.2>', '<2,b1,*_*_*_*_b53_*_*,w=0.2>', '<3,b1,*_*_*_*_b54_*_*,w=0.4>']

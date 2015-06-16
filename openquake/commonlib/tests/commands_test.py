@@ -30,17 +30,8 @@ class InfoTestCase(unittest.TestCase):
 <CompositionInfo
 b1, x15.xml, trt=[0]: 1 realization(s)>
 See https://github.com/gem/oq-risklib/blob/master/docs/effective-realizations.rst for an explanation
-<RlzsAssoc
+<RlzsAssoc(1)
 0,AkkarBommer2010: ['<0,b1,*_AkkarBommer2010_*_*_*_*_*,w=1.0>']>'''
-
-    EXTRA = '''
-input_weight 43.05
-max_realizations 1
-n_imts 1
-n_levels 29.0
-n_sites 1
-n_sources 41
-output_weight 29.0'''
 
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
@@ -52,7 +43,40 @@ output_weight 29.0'''
         path = os.path.join(DATADIR, 'frenchbug.zip')
         with Print.patch() as p:
             info(path, filtersources=True)
-        self.assertEqual(self.EXPECTED + self.EXTRA, str(p))
+        exp = self.EXPECTED + '''
+c_matrix 232 B
+input_weight 1
+max_realizations 1
+n_imts 1
+n_levels 29.0
+n_sites 1
+n_sources 1
+output_weight 29.0'''
+        self.assertEqual(exp, str(p))
+
+    def test_zip_weighting(self):
+        path = os.path.join(DATADIR, 'frenchbug.zip')
+        with Print.patch() as p:
+            info(path, weightsources=True)
+        exp = self.EXPECTED + '''
+c_matrix 232 B
+input_weight 1722
+max_realizations 1
+n_imts 1
+n_levels 29.0
+n_sites 1
+n_sources 1
+output_weight 29.0'''
+        self.assertEqual(exp, str(p))
+
+    def test_data_transfer(self):
+        path = os.path.join(DATADIR, 'frenchbug.zip')
+        with Print.patch() as p:
+            info(path, datatransfer=True)
+        self.assertEqual(str(p), '''\
+Number of tasks to be generated: 11
+Estimated data to send forward: 43.02 KB
+Estimated data to send back: 2.49 KB''')
 
 
 class ReduceTestCase(unittest.TestCase):
