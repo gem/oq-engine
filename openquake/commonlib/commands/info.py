@@ -34,9 +34,9 @@ def data_transfer(calc):
 
     :returns: a triple (num_tasks, to_send_forward, to_send_back)
     """
-    oq = calc.oqparam
+    oqparam = calc.oqparam
     info = calc.job_info
-    calc.monitor.oqparam = oq
+    calc.monitor.oqparam = oqparam
     sources = calc.composite_source_model.get_sources()
     num_gsims_by_trt = groupby(calc.rlzs_assoc, operator.itemgetter(0),
                                lambda group: sum(1 for row in group))
@@ -44,7 +44,7 @@ def data_transfer(calc):
     to_send_forward = 0
     to_send_back = 0
     n_tasks = 0
-    for block in split_in_blocks(sources, oq.concurrent_tasks,
+    for block in split_in_blocks(sources, oqparam.concurrent_tasks,
                                  operator.attrgetter('weight'),
                                  operator.attrgetter('trt_model_id')):
         num_gsims = num_gsims_by_trt[block[0].trt_model_id]
@@ -115,8 +115,8 @@ def info(name, filtersources=False, weightsources=False, datatransfer=False):
     logging.basicConfig(level=logging.INFO)
     with Monitor('info', measuremem=True) as mon:
         if datatransfer:
-            oq = readinput.get_oqparam(name)
-            calc = base.calculators(oq)
+            oqparam = readinput.get_oqparam(name)
+            calc = base.calculators(oqparam)
             calc.pre_execute()
             n_tasks, to_send_forward, to_send_back = data_transfer(calc)
             print('Number of tasks to be generated: %d' % n_tasks)
