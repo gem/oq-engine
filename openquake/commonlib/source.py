@@ -766,7 +766,7 @@ class SourceFilter(BaseSourceProcessor):
         seqtime, partime = 0, 0
         sources_by_trt = AccumDict()
 
-        logging.warn('Sequential filtering of %d sources...', len(sources))
+        logging.warn('Sequential processing of %d sources...', len(sources))
         t1 = time.time()
         for src in sources:
             sources_by_trt = self.agg_source_info(
