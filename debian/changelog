@@ -1,3 +1,6 @@
+  [Yen-Shin Chen]
+  * Rupture: fix bug in get_dppvalue
+
   [Graeme Weatherill]
   * Adds 'sample' method to PMF class
 
