@@ -1,6 +1,5 @@
-
-  [Yen-Shin Chen]
-  * Rupture: fix a bug in get_dppvalue
+  [Graeme Weatherill]
+  * Adds 'sample' method to PMF class
 
   [Matteo Nastasi]
   * Packaging system improvement
