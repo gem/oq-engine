@@ -825,8 +825,7 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
             csm = readinput.get_composite_source_model(oq, sitecol)
         messages = [args[0][0] % args[0][1:] for args in warn.call_args_list]
         self.assertEqual(
-            messages, ["The source path ('b2',) was sampled 4 times",
-                       "Sequential processing of 2 sources..."])
+            messages, ["The source path ('b2',) was sampled 4 times"])
         assoc = csm.get_rlzs_assoc()
         self.assertEqual(
             str(assoc),
