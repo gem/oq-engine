@@ -41,8 +41,7 @@ class Calculator(object):
         self.num_tasks = None
         self._task_args = []
         # parameters from openquake.cfg
-        self.concurrent_tasks = int(
-            config.get('celery', 'concurrent_tasks'))
+        self.concurrent_tasks = self.oqparam.concurrent_tasks
         self.max_input_weight = float(
             config.get('hazard', 'max_input_weight'))
         self.max_output_weight = float(
