@@ -1,4 +1,10 @@
-  [Matteo Nastasi]
+[Daniele Viganò]
+  * setup.py improvements
+  * Added MANIFEST.in
+  * celeryconfig.py moved from /usr/openquake/engine to
+    /usr/share/openquake/engine
+
+[Matteo Nastasi]
   * Packaging system improvement
 
 python-oq-engine (1.4.1-0~precise01) precise; urgency=low
@@ -6,6 +12,7 @@ python-oq-engine (1.4.1-0~precise01) precise; urgency=low
   [Michele Simionato]
   * Fixed the engine core export: now it can export datastore outputs as
     zip files
+  * Now the parameter concurrent_tasks is read from the .ini file
   * Parallelized the source splitting procedure
   * Fixed a bug in the hazard calculators which were not using the parameter
     concurrent_tasks from the configuration file

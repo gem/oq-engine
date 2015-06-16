@@ -597,8 +597,6 @@ def job_from_file_lite(cfg_file, username, log_level='info', exports='',
         params.update(extras)
         # build and validate an OqParam object
         oqparam = readinput.get_oqparam(params, calculators=base.calculators)
-        oqparam.concurrent_tasks = int(
-            config.get('celery', 'concurrent_tasks'))
         job.save_params(vars(oqparam))
         job.save()
     return job
