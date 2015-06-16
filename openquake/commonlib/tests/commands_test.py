@@ -73,7 +73,10 @@ output_weight 29.0'''
         path = os.path.join(DATADIR, 'frenchbug.zip')
         with Print.patch() as p:
             info(path, datatransfer=True)
-        print p
+        self.assertEqual(str(p), '''\
+Number of tasks to generate: 11
+Estimated data to send forward: 43.02 KB
+Estimated data to send back: 2.49 KB''')
 
 
 class ReduceTestCase(unittest.TestCase):
