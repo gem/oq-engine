@@ -4,6 +4,8 @@
 python-oq-engine (1.4.1-0~precise01) precise; urgency=low
 
   [Michele Simionato]
+  * Fixed the engine core export: now it can export datastore outputs as
+    zip files
   * Parallelized the source splitting procedure
   * Fixed a bug in the hazard calculators which were not using the parameter
     concurrent_tasks from the configuration file
