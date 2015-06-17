@@ -323,6 +323,13 @@ class HazardCalculator(BaseCalculator):
                 self.composite_source_model.count_ruptures()
                 self.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
 
+                logging.info(
+                    'Total weight of the sources=%s',
+                    self.job_info['input_weight'])
+                logging.info(
+                    'Expected output size=%s',
+                    self.job_info['output_weight'])
+
 
 class RiskCalculator(HazardCalculator):
     """

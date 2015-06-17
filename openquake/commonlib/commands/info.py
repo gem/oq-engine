@@ -57,6 +57,21 @@ def data_transfer(calc):
     return n_tasks, to_send_forward, to_send_back
 
 
+def _print_info(assoc, oqparam, csm, sitecol, info=True):
+    print(assoc.csm_info)
+    print('See https://github.com/gem/oq-risklib/blob/master/docs/'
+          'effective-realizations.rst for an explanation')
+    print(assoc)
+    if info:
+        info = readinput.get_job_info(oqparam, csm, sitecol)
+        info['n_sources'] = csm.get_num_sources()
+        info['c_matrix'] = humansize(
+            info['n_sites'] * info['n_levels'] *
+            info['n_imts'] * len(assoc) * 8)
+        for k in sorted(info):
+            print(k, info[k])
+
+
 # the documentation about how to use this feature can be found
 # in the file effective-realizations.rst
 def _info(name, filtersources, weightsources):
@@ -88,18 +103,8 @@ def _info(name, filtersources, weightsources):
                 sp = source.BaseSourceProcessor  # do nothing
             csm = readinput.get_composite_source_model(oqparam, sitecol, sp)
             assoc = csm.get_rlzs_assoc()
-            print(assoc.csm_info)
-            print('See https://github.com/gem/oq-risklib/blob/master/docs/'
-                  'effective-realizations.rst for an explanation')
-            print(assoc)
-            if filtersources or weightsources:
-                info = readinput.get_job_info(oqparam, csm, sitecol)
-                info['n_sources'] = csm.get_num_sources()
-                info['c_matrix'] = humansize(
-                    info['n_sites'] * info['n_levels'] *
-                    info['n_imts'] * len(assoc) * 8)
-                for k in sorted(info):
-                    print(k, info[k])
+            _print_info(assoc, oqparam, csm, sitecol,
+                        filtersources or weightsources)
         if len(assets_by_site):
             print('assets = %d' %
                   sum(len(assets) for assets in assets_by_site))
@@ -119,6 +124,8 @@ def info(name, filtersources=False, weightsources=False, datatransfer=False):
             calc = base.calculators(oqparam)
             calc.pre_execute()
             n_tasks, to_send_forward, to_send_back = data_transfer(calc)
+            _print_info(calc.rlzs_assoc, oqparam,
+                        calc.composite_source_model, calc.sitecol)
             print('Number of tasks to be generated: %d' % n_tasks)
             print('Estimated data to send forward: %s' %
                   humansize(to_send_forward))
