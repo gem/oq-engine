@@ -27,8 +27,6 @@ from openquake.commonlib import readinput, parallel, datastore
 from openquake.risklib import riskinput
 from openquake.commonlib.parallel import apply_reduce
 
-NUM_OUTPUTS = 2  # event loss table and insured loss table
-
 elt_dt = numpy.dtype([('rup_id', numpy.uint32), ('loss', numpy.float32)])
 
 
@@ -64,7 +62,8 @@ def ebr(riskinputs, riskmodel, rlzs_assoc, monitor):
     """
     lt_idx = {lt: i for i, lt in enumerate(riskmodel.get_loss_types())}
     losses = cube(
-        NUM_OUTPUTS, len(lt_idx), len(rlzs_assoc.realizations), AccumDict)
+        monitor.num_outputs, len(lt_idx), len(rlzs_assoc.realizations),
+        AccumDict)
     for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
         rup_slice = out_by_rlz.rup_slice
         rup_ids = range(rup_slice.start, rup_slice.stop)
@@ -145,7 +144,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         chunks=True, maxshape=(None,))
 
     def execute(self):
+        """
+        Run the ebr calculator in parallel and aggregate the results
+        """
         self.monitor.oqparam = oq = self.oqparam
+        self.monitor.num_outputs = 2 if oq.insured_losses else 1
         if self.pre_calculator == 'event_based_rupture':
             self.monitor.assets_by_site = self.assets_by_site
             self.monitor.num_assets = self.count_assets()
@@ -153,17 +156,30 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             self.core_func.__func__,
             (self.riskinputs, self.riskmodel, self.rlzs_assoc, self.monitor),
             concurrent_tasks=oq.concurrent_tasks,
-            agg=self.agg, acc=cube(NUM_OUTPUTS, self.L, self.R, list),
+            agg=self.agg,
+            acc=cube(self.monitor.num_outputs, self.L, self.R, list),
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('col_id'))
 
     def agg(self, acc, losses):
+        """
+        Aggregate list of arrays in longer lists.
+
+        :param acc: accumulator array of shape (O, L, R)
+        :param losses: a numpy array of shape (O, L, R)
+        """
         for idx, arrays in numpy.ndenumerate(losses):
             acc[idx].extend(arrays)
         return acc
 
     def post_execute(self, result):
-        acc = cube(NUM_OUTPUTS, self.L, self.R, int)
+        """
+        Save the event loss table in the datastore.
+
+        :param result:
+            a numpy array of shape (O, L, R) containing lists of arrays
+        """
+        pos = cube(self.monitor.num_outputs, self.L, self.R, int)
         saved_mb = 0
         rlzs = self.rlzs_assoc.realizations
         loss_types = self.riskmodel.get_loss_types()
@@ -174,7 +190,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     continue
                 lt = loss_types[l]
                 uid = rlzs[r].uid
-                n = acc[i, l, r]
+                n = pos[i, l, r]
                 if i == 0:
                     elt = self.event_loss_table['%s/%s' % (lt, uid)]
                 elif self.oqparam.insured_losses:
@@ -182,11 +198,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 else:
                     continue
                 losses = numpy.concatenate(arrays)
+
+                # appending rows to the event loss table
                 n1 = n + len(losses)
                 elt.resize((n1,))
                 saved_mb += losses.nbytes
                 elt[n:n1] = losses
-                acc[i, l, r] = n1
+                pos[i, l, r] = n1  # update position in the elt
             self.datastore.hdf5.flush()
             if saved_mb > 1:
                 logging.info('Saved %s of data', humansize(saved_mb))
