@@ -35,7 +35,7 @@ def cube(O, L, R, factory):
     :param O: the number of different outputs
     :param L: the number of loss types
     :param R: the number of realizations
-    :param factory: factory used to initialize the elements (int or list)
+    :param factory: thunk used to initialize the elements
     :returns: a numpy array of shape (O, L, R)
     """
     losses = numpy.zeros((O, L, R), object)
@@ -58,9 +58,10 @@ def ebr(riskinputs, riskmodel, rlzs_assoc, monitor):
     :param monitor:
         :class:`openquake.commonlib.parallel.PerformanceMonitor` instance
     :returns:
-        a dictionary rlz.ordinal -> (loss_type, tag) -> AccumDict()
+        a numpy array of shape (O, L, R); each element is a list containing
+        a single array of dtype elt_dt, or an empty list
     """
-    lt_idx = {lt: i for i, lt in enumerate(riskmodel.get_loss_types())}
+    lt_idx = {lt: lti for lti, lt in enumerate(riskmodel.get_loss_types())}
     losses = cube(
         monitor.num_outputs, len(lt_idx), len(rlzs_assoc.realizations),
         AccumDict)
@@ -68,15 +69,15 @@ def ebr(riskinputs, riskmodel, rlzs_assoc, monitor):
         rup_slice = out_by_rlz.rup_slice
         rup_ids = range(rup_slice.start, rup_slice.stop)
         for rlz, out in zip(rlzs_assoc.realizations, out_by_rlz):
-            lt = lt_idx[out.loss_type]
+            lti = lt_idx[out.loss_type]
             agg_losses = out.event_loss_per_asset.sum(axis=1)
             agg_ins_losses = out.insured_loss_per_asset.sum(axis=1)
             for rup_id, loss, ins_loss in zip(
                     rup_ids, agg_losses, agg_ins_losses):
                 if loss > 0:
-                    losses[0, lt, rlz.ordinal] += {rup_id: loss}
+                    losses[0, lti, rlz.ordinal] += {rup_id: loss}
                 if ins_loss > 0:
-                    losses[1, lt, rlz.ordinal] += {rup_id: ins_loss}
+                    losses[1, lti, rlz.ordinal] += {rup_id: ins_loss}
     for idx, dic in numpy.ndenumerate(losses):
         if dic:
             losses[idx] = [numpy.array(dic.items(), elt_dt)]
@@ -88,7 +89,7 @@ def ebr(riskinputs, riskmodel, rlzs_assoc, monitor):
 @base.calculators.add('ebr')
 class EventBasedRiskCalculator(base.RiskCalculator):
     """
-    Event based PSHA calculator generating the ruptures only
+    Event based PSHA calculator generating the event loss table only.
     """
     pre_calculator = 'event_based_rupture'
     core_func = ebr
@@ -103,8 +104,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
     def pre_execute(self):
         """
         Read the precomputed ruptures (or compute them on the fly) and
-        prepare some empty files in the export directory to store the gmfs
-        (if any). If there were pre-existing files, they will be erased.
+        prepare some datasets in the datastore.
         """
         super(EventBasedRiskCalculator, self).pre_execute()
 
@@ -129,6 +129,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             oq.concurrent_tasks or 1))
         logging.info('Built %d risk inputs', len(self.riskinputs))
 
+        # preparing empty datasets
         loss_types = self.riskmodel.get_loss_types()
         self.L = len(loss_types)
         self.R = len(self.rlzs_assoc.realizations)
@@ -149,9 +150,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
         self.monitor.oqparam = oq = self.oqparam
         self.monitor.num_outputs = 2 if oq.insured_losses else 1
-        if self.pre_calculator == 'event_based_rupture':
-            self.monitor.assets_by_site = self.assets_by_site
-            self.monitor.num_assets = self.count_assets()
         return apply_reduce(
             self.core_func.__func__,
             (self.riskinputs, self.riskmodel, self.rlzs_assoc, self.monitor),
@@ -205,7 +203,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 saved_mb += losses.nbytes
                 elt[n:n1] = losses
                 pos[i, l, r] = n1  # update position in the elt
-            self.datastore.hdf5.flush()
-            if saved_mb > 1:
-                logging.info('Saved %s of data', humansize(saved_mb))
+                self.datastore.hdf5.flush()
+            logging.info('Saved %s of data', humansize(saved_mb))
         return {}

@@ -347,6 +347,11 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             for sr in result[trt_id]:
                 sescollection[sr.col_id][sr.tag] = sr
                 tags.append(sr.tag)
+                if len(sr.tag) > 100:
+                    logging.error(
+                        'The tag %s is long %d characters, it will be '
+                        'truncated to 100 characters in the /tags array',
+                        sr.tag, len(sr.tag))
         logging.info('Saving the SES collection')
         with self.monitor('saving ses', autoflush=True):
             self.tags = numpy.array(sorted(tags), (str, 100))

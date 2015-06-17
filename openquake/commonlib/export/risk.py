@@ -229,6 +229,8 @@ def export_event_loss_table(ekey, dstore):
         for rlz_uid in elt[loss_type]:
             data = [[tags[e['rup_id']], e['loss']]
                     for e in elt[loss_type][rlz_uid]]
+            # the name is extracted from '/event_loss_table-rlzs' by removing
+            # the first character and the the last 5: 'event_loss_table'
             fname = '%s-%s-%s.csv' % (name[1:-5], rlz_uid, loss_type)
             dest = os.path.join(dstore.export_dir, fname)
             writers.write_csv(dest, sorted(data), fmt='%10.6E')
