@@ -41,14 +41,30 @@ def random_filter(objects, reduction_factor, seed=42):
 def reduce(fname, reduction_factor):
     """
     Produce a submodel from `fname` by sampling the nodes randomly.
-    Supports source models and exposure models.
+    Supports source models, site models and exposure models. As a special
+    case, it is also able to reduce .csv files by sampling the lines.
     This is a debugging utility to reduce large computations to small ones.
     """
+    if fname.endswith('.csv'):
+        with open(fname) as f:
+            all_lines = f.readlines()
+        lines = random_filter(all_lines, reduction_factor)
+        shutil.copy(fname, fname + '.bak')
+        print('Copied the original file in %s.bak' % fname)
+        with open(fname, 'w') as f:
+            for line in lines:
+                f.write(line)
+        print('Extracted %d lines out of %d' % (len(lines), len(all_lines)))
+        return
     model, = nrml.read(fname)
     if model.tag.endswith('exposureModel'):
         total = len(model.assets)
         model.assets.nodes = random_filter(model.assets, reduction_factor)
         num_nodes = len(model.assets)
+    elif model.tag.endswith('siteModel'):
+        total = len(model)
+        model.nodes = random_filter(model, reduction_factor)
+        num_nodes = len(model)
     elif model.tag.endswith('sourceModel'):
         total = len(model)
         model.nodes = random_filter(model, reduction_factor)

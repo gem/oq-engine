@@ -754,7 +754,7 @@ SiteParam = collections.namedtuple(
     'SiteParam', 'z1pt0 z2pt5 measured vs30 lon lat backarc'.split())
 
 
-def site_param(value, z1pt0, z2pt5, vs30Type, vs30, lon, lat, backarc="false"):
+def site_param(z1pt0, z2pt5, vs30Type, vs30, lon, lat, backarc="false"):
     """
     Used to convert a node like
 
