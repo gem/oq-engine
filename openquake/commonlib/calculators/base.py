@@ -42,6 +42,8 @@ calculators = general.CallableDict(operator.attrgetter('calculation_mode'))
 class AssetSiteAssociationError(Exception):
     """Raised when there are no hazard sites close enough to any asset"""
 
+rlz_dt = numpy.dtype([('uid', (str, 200)), ('weight', float)])
+
 
 class BaseCalculator(object):
     """
@@ -57,6 +59,7 @@ class BaseCalculator(object):
     sitemesh = datastore.persistent_attribute('/sitemesh')
     sitecol = datastore.persistent_attribute('sitecol')
     rlzs_assoc = datastore.persistent_attribute('rlzs_assoc')
+    realizations = datastore.persistent_attribute('/realizations')
     assets_by_site = datastore.persistent_attribute('assets_by_site')
     assetcol = datastore.persistent_attribute('/assetcol')
     cost_types = datastore.persistent_attribute('cost_types')
@@ -153,8 +156,11 @@ class BaseCalculator(object):
 
     def clean_up(self):
         """
-        Collect the monitoring information, then close the datastore.
+        Collect the realizations and the monitoring information,
+        then close the datastore.
         """
+        self.realizations = numpy.array(
+            [(r.uid, r.weight) for r in self.rlzs_assoc.realizations], rlz_dt)
         performance = self.monitor.collect_performance()
         if performance is not None:
             self.performance = performance
