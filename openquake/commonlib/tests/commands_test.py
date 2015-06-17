@@ -72,7 +72,9 @@ output_weight 29.0'''
         path = os.path.join(DATADIR, 'frenchbug.zip')
         with Print.patch() as p:
             info(path, datatransfer=True)
-        self.assertIn('Number of tasks to be generated: 14', str(p))
+        got = str(p)
+        self.assertIn('RlzsAssoc', got)
+        self.assertIn('Number of tasks to be generated: 14', got)
 
 
 class ReduceTestCase(unittest.TestCase):

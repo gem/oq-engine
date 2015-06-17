@@ -129,7 +129,8 @@ def info(name, filtersources=False, weightsources=False, datatransfer=False):
             calc.pre_execute()
             n_tasks, to_send_forward, to_send_back = data_transfer(calc)
             _print_info(calc.rlzs_assoc, oqparam,
-                        calc.composite_source_model, calc.sitecol)
+                        calc.composite_source_model, calc.sitecol,
+                        weightsources=True)
             print('Number of tasks to be generated: %d' % n_tasks)
             print('Estimated data to send forward: %s' %
                   humansize(to_send_forward))
