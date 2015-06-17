@@ -57,19 +57,23 @@ def data_transfer(calc):
     return n_tasks, to_send_forward, to_send_back
 
 
-def _print_info(assoc, oqparam, csm, sitecol, info=True):
+def _print_info(assoc, oqparam, csm, sitecol,
+                filtersources=True, weightsources=True):
     print(assoc.csm_info)
     print('See https://github.com/gem/oq-risklib/blob/master/docs/'
           'effective-realizations.rst for an explanation')
     print(assoc)
-    if info:
+    if filtersources or weightsources:
         info = readinput.get_job_info(oqparam, csm, sitecol)
         info['n_sources'] = csm.get_num_sources()
         info['c_matrix'] = humansize(
             info['n_sites'] * info['n_levels'] *
             info['n_imts'] * len(assoc) * 8)
         for k in sorted(info):
-            print(k, info[k])
+            if k == 'input_weight' and not weightsources:
+                pass
+            else:
+                print(k, info[k])
 
 
 # the documentation about how to use this feature can be found
@@ -104,7 +108,7 @@ def _info(name, filtersources, weightsources):
             csm = readinput.get_composite_source_model(oqparam, sitecol, sp)
             assoc = csm.get_rlzs_assoc()
             _print_info(assoc, oqparam, csm, sitecol,
-                        filtersources or weightsources)
+                        filtersources, weightsources)
         if len(assets_by_site):
             print('assets = %d' %
                   sum(len(assets) for assets in assets_by_site))

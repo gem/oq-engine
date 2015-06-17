@@ -45,7 +45,6 @@ See https://github.com/gem/oq-risklib/blob/master/docs/effective-realizations.rs
             info(path, filtersources=True)
         exp = self.EXPECTED + '''
 c_matrix 232 B
-input_weight 1
 max_realizations 1
 n_imts 1
 n_levels 29.0
