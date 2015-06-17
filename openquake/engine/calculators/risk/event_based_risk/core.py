@@ -24,11 +24,12 @@ import numpy
 from openquake.hazardlib.geo import mesh
 from openquake.risklib import scientific
 from openquake.risklib.utils import numpy_map
+from openquake.commonlib.calculators import ebr
 
 from openquake.engine.calculators.risk import (
     base, hazard_getters, validation, writers)
 from openquake.engine.db import models
-from openquake.engine import writer, logs
+from openquake.engine import engine, writer, logs
 from openquake.engine.calculators import calculators
 from openquake.engine.performance import EnginePerformanceMonitor
 
@@ -447,3 +448,21 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                             average_loss=scientific.average_loss(
                                 aggregate_loss),
                             stddev_loss=numpy.std(aggregate_losses))
+
+
+@calculators.add('ebr')
+class EBRCalculator(ebr.EventBasedRiskCalculator):
+    """
+    Smaller Event Based risk calculator for the event loss table.
+    """
+    def __init__(self, job):
+        self.job = job
+        oq = job.get_oqparam()
+        monitor = EnginePerformanceMonitor('ebr', job.id)
+        super(EBRCalculator, self).__init__(oq, monitor, job.id)
+        job.ds_calc_dir = self.datastore.calc_dir
+        job.save()
+
+    def clean_up(self):
+        engine.expose_outputs(self.datastore, self.job)
+        super(EBRCalculator, self).clean_up()
