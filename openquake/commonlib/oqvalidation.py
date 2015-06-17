@@ -33,7 +33,7 @@ HAZARD_CALCULATORS = [
 RISK_CALCULATORS = [
     'classical_risk', 'event_based_risk', 'scenario_risk',
     'classical_bcr', 'event_based_bcr', 'scenario_damage',
-    'classical_damage', 'event_based_agg']
+    'classical_damage', 'ebr']
 
 CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS
 
