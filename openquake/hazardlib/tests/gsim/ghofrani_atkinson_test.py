@@ -15,10 +15,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Implements the set of tests for the Boore, Stewart, Seyhan and Atkinson (2014)
-GMPE
-Test data are generated from the Fortran implementation provided by
-David M. Boore (Jul, 2014)
+Implements the set of tests for the Ghofrani & Atkinson (2014) Subduction
+Interface GMPE
+
+Test data are generated from tables supplied by Gail Atkinson
+(2015, personal communication)
 """
 from openquake.hazardlib.gsim.ghofrani_atkinson_2014 import (
     GhofraniAtkinson2014,

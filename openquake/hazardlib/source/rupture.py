@@ -67,10 +67,10 @@ class Rupture(object):
     attribute surface_nodes to an appropriate value.
     """
     __slots__ = '''mag rake tectonic_region_type hypocenter surface
-    surface_nodes source_typology'''.split()
+    surface_nodes source_typology rupture_slip_direction'''.split()
 
     def __init__(self, mag, rake, tectonic_region_type, hypocenter,
-                 surface, source_typology, surface_nodes=()):
+                 surface, source_typology, rupture_slip_direction=None, surface_nodes=()):
         if not mag > 0:
             raise ValueError('magnitude must be positive')
         if not hypocenter.depth > 0:
@@ -83,6 +83,7 @@ class Rupture(object):
         self.surface = surface
         self.source_typology = source_typology
         self.surface_nodes = surface_nodes
+        self.rupture_slip_direction = rupture_slip_direction
 
 
 class BaseProbabilisticRupture(Rupture):
@@ -156,7 +157,7 @@ class NonParametricProbabilisticRupture(BaseProbabilisticRupture):
         in increasing order, and if they are not defined with unit step
     """
     def __init__(self, mag, rake, tectonic_region_type, hypocenter, surface,
-                 source_typology, pmf):
+                 source_typology, pmf, rupture_slip_direction=None):
         x = numpy.array([x for (y, x) in pmf.data])
         if not x[0] == 0:
             raise ValueError('minimum number of ruptures must be zero')
@@ -168,7 +169,7 @@ class NonParametricProbabilisticRupture(BaseProbabilisticRupture):
                 'numbers of ruptures must be defined with unit step')
         super(NonParametricProbabilisticRupture, self).__init__(
             mag, rake, tectonic_region_type, hypocenter, surface,
-            source_typology
+            source_typology, rupture_slip_direction
         )
         self.pmf = pmf
 
@@ -240,11 +241,10 @@ class ParametricProbabilisticRupture(BaseProbabilisticRupture):
             raise ValueError('occurrence rate must be positive')
         super(ParametricProbabilisticRupture, self).__init__(
             mag, rake, tectonic_region_type, hypocenter, surface,
-            source_typology
+            source_typology, rupture_slip_direction
         )
         self.temporal_occurrence_model = temporal_occurrence_model
         self.occurrence_rate = occurrence_rate
-        self.rupture_slip_direction = rupture_slip_direction
 
     def get_probability_one_or_more_occurrences(self):
         """
@@ -369,7 +369,7 @@ class ParametricProbabilisticRupture(BaseProbabilisticRupture):
                            len(self.surface.get_resampled_top_edge())):
 
                 idx_nxtp = False
-            elif index_patch >= len(self.fault_trace):
+            elif index_patch >= len(self.surface.get_resampled_top_edge()):
                 idx_nxtp = False
             elif idx_nxtp:
                 hypocenter = pd_geo
