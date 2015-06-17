@@ -19,6 +19,7 @@ calculations."""
 import os
 import sys
 import time
+import shutil
 import getpass
 import itertools
 import operator
@@ -168,11 +169,15 @@ def run_calc(job, log_level, log_file, exports, lite=False):
     :param lite:
         Flag set when the oq-lite calculators are used
     """
-    # let's import the calculator classes here, when they are needed
+    # let's import the calculator classes here, when they are needed;
     # the reason is that the command `$ oq-engine --upgrade-db`
     # does not need them and would raise strange errors during installation
     # time if the PYTHONPATH is not set and commonlib is not visible
     if lite:
+        calc_dir = os.path.join(datastore.DATADIR, 'calc_%d' % job.id)
+        if os.path.exists(calc_dir):
+            os.rename(calc_dir, calc_dir + '.bak')
+            print 'Generated %s.bak' % calc_dir
         from openquake.commonlib.calculators import base
         calculator = base.calculators(job.get_oqparam(), calc_id=job.id)
         calculator.job = job
@@ -592,8 +597,6 @@ def job_from_file_lite(cfg_file, username, log_level='info', exports='',
         params.update(extras)
         # build and validate an OqParam object
         oqparam = readinput.get_oqparam(params, calculators=base.calculators)
-        oqparam.concurrent_tasks = int(
-            config.get('celery', 'concurrent_tasks'))
         job.save_params(vars(oqparam))
         job.save()
     return job
