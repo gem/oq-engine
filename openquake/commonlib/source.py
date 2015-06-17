@@ -682,6 +682,7 @@ def filter_and_split(src, sourceprocessor):
             weight_time += time.time() - t
             weight += ss.weight
         out.append(ss)
+    src.weight = weight
     split_time = time.time() - t1 - weight_time
     return SourceInfo(src.trt_model_id, src.source_id, src.__class__.__name__,
                       weight, out, filter_time, weight_time, split_time)
@@ -812,7 +813,7 @@ class SourceFilterWeighter(SourceFilter):
     weight = True
 
 
-class SourceFilterSplitter(SourceFilter):
+class SourceFilterSplitter(SourceFilterWeighter):
     """
     Filter and split in parallel the sources of the given CompositeSourceModel
     instance. An array `.source_info` is added to the instance, containing
