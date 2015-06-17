@@ -215,6 +215,29 @@ def export_event_loss(ekey, dstore):
     return fnames
 
 
+@export.add(('/event_loss_table-rlzs', 'csv'))
+def export_event_loss_table(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    name, fmt = ekey
+    fnames = []
+    elt = dstore[name]
+    tags = dstore['/tags']
+    for loss_type in elt:
+        for rlz_uid in elt[loss_type]:
+            data = [[tags[e['rup_id']], e['loss']]
+                    for e in elt[loss_type][rlz_uid]]
+            # the name is extracted from '/event_loss_table-rlzs' by removing
+            # the first character and the the last 5: 'event_loss_table'
+            fname = '%s-%s-%s.csv' % (name[1:-5], rlz_uid, loss_type)
+            dest = os.path.join(dstore.export_dir, fname)
+            writers.write_csv(dest, sorted(data), fmt='%10.6E')
+            fnames.append(dest)
+    return fnames
+
+
 # TODO: the export is doing too much; probably we should store
 # a better data structure
 @export.add(('damages_by_key', 'xml'))

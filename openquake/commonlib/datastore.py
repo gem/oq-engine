@@ -184,7 +184,7 @@ class DataStore(collections.MutableMapping):
                 if self.parent:
                     return self.parent.hdf5[key]
                 else:
-                    raise
+                    raise KeyError(key)
         path = self.path(key)
         if not os.path.exists(path) and self.parent:
             path = self.parent.path(key)

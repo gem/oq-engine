@@ -184,6 +184,9 @@ class SESRupture(object):
             new.lons[3], new.lats[3], new.depths[3])
         return new
 
+    def __lt__(self, other):
+        return self.tag < other.tag
+
 
 @parallel.litetask
 def compute_ruptures(sources, sitecol, info, monitor):
@@ -293,6 +296,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
     Event based PSHA calculator generating the ruptures only
     """
     core_func = compute_ruptures
+    tags = datastore.persistent_attribute('/tags')
     sescollection = datastore.persistent_attribute('sescollection')
     counts_per_rlz = datastore.persistent_attribute('/counts_per_rlz')
     is_stochastic = True
@@ -338,11 +342,19 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         """
         nc = self.rlzs_assoc.csm_info.num_collections
         sescollection = [{} for col_id in range(nc)]
+        tags = []
         for trt_id in result:
             for sr in result[trt_id]:
                 sescollection[sr.col_id][sr.tag] = sr
+                tags.append(sr.tag)
+                if len(sr.tag) > 100:
+                    logging.error(
+                        'The tag %s is long %d characters, it will be '
+                        'truncated to 100 characters in the /tags array',
+                        sr.tag, len(sr.tag))
         logging.info('Saving the SES collection')
         with self.monitor('saving ses', autoflush=True):
+            self.tags = numpy.array(sorted(tags), (str, 100))
             self.sescollection = sescollection
         with self.monitor('counts_per_rlz'):
             self.counts_per_rlz = counts_per_rlz(

@@ -66,7 +66,7 @@ def scientificformat(value, fmt='%13.9E', sep=' ', sep2=':'):
         return str(value)
     elif hasattr(value, '__len__'):
         return sep.join((scientificformat(f, fmt, sep2) for f in value))
-    elif isinstance(value, float):
+    elif isinstance(value, (float, numpy.float64, numpy.float32)):
         fmt_value = fmt % value
         if set(fmt_value) <= zeroset:
             # '-0.0000000E+00' is converted into '0.0000000E+00

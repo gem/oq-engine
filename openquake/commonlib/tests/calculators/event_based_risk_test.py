@@ -52,3 +52,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_3(self):
         self.assert_stats_ok(case_3)
+
+
+class EBRTestCase(CalculatorTestCase):
+    @attr('qa', 'risk', 'ebr')
+    def test_case_2(self):
+        out = self.run_calc(case_2.__file__, 'job_haz.ini,job_loss.ini',
+                            concurrent_tasks=0, exports='csv')
+        [fname] = out['/event_loss_table-rlzs', 'csv']
+        self.assertEqualFiles(
+            'expected/event_loss_table-b1,b1-structural.csv', fname)
