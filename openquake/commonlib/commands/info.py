@@ -132,9 +132,9 @@ def info(name, filtersources=False, weightsources=False, datatransfer=False):
                         calc.composite_source_model, calc.sitecol,
                         weightsources=True)
             print('Number of tasks to be generated: %d' % n_tasks)
-            print('Estimated data to send forward: %s' %
+            print('Estimated data to be sent forward: %s' %
                   humansize(to_send_forward))
-            print('Estimated data to send back: %s' %
+            print('Estimated data to be sent back: %s' %
                   humansize(to_send_back))
         else:
             _info(name, filtersources, weightsources)
