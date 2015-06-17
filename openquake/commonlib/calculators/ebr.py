@@ -149,7 +149,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         Run the ebr calculator in parallel and aggregate the results
         """
         self.monitor.oqparam = oq = self.oqparam
+        # ugly: attaching an attribute needed in the task function
         self.monitor.num_outputs = 2 if oq.insured_losses else 1
+        # attaching two other attributes used in riskinput.gen_outputs
+        self.monitor.assets_by_site = self.assets_by_site
+        self.monitor.num_assets = self.count_assets()
         return apply_reduce(
             self.core_func.__func__,
             (self.riskinputs, self.riskmodel, self.rlzs_assoc, self.monitor),
