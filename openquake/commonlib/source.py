@@ -423,8 +423,8 @@ class RlzsAssoc(collections.Mapping):
             if len(rlzs) > 10:  # short representation
                 rlzs = ['%d realizations' % len(rlzs)]
             pairs.append(('%s,%s' % key, rlzs))
-        return '<%s\n%s>' % (self.__class__.__name__,
-                             '\n'.join('%s: %s' % pair for pair in pairs))
+        return '<%s(%d)\n%s>' % (self.__class__.__name__, len(self),
+                                 '\n'.join('%s: %s' % pair for pair in pairs))
 
 
 class CompositionInfo(object):
@@ -525,7 +525,7 @@ class CompositeSourceModel(collections.Sequence):
         self.source_model_lt = source_model_lt
         self.source_models = list(source_models)
         self.info = CompositionInfo(source_models)
-        self.source_info = ()  # set by the SourceProcessor
+        self.source_info = ()  # set by the SourceFilterSplitter
 
     @property
     def trt_models(self):
@@ -653,7 +653,7 @@ def _collect_source_model_paths(smlt):
     return sorted(set(src_paths))
 
 
-# ########################## SourceProcessor ############################# #
+# ########################## SourceFilterSplitter ########################### #
 
 def filter_and_split(src, sourceprocessor):
     """
@@ -661,110 +661,134 @@ def filter_and_split(src, sourceprocessor):
     Also, sets the sub sources `.weight` attribute.
 
     :param src: a hazardlib source object
-    :param sourceprocessor: a SourceProcessor object
+    :param sourceprocessor: a SourceFilterSplitter object
     :returns: a named tuple of type SourceInfo
     """
     if sourceprocessor.sitecol:  # filter
-        t0 = time.time()
-        sites = src.filter_sites_by_distance_to_source(
-            sourceprocessor.maxdist, sourceprocessor.sitecol)
-        filter_time = time.time() - t0
-        if sites is None:
-            return SourceInfo(src.trt_model_id, src.source_id,
-                              src.__class__.__name__, [], filter_time, 0)
+        info = sourceprocessor.filter(src)
+        if not info.sources:
+            return info  # filtered away
+        filter_time = info.filter_time
     else:  # only split
         filter_time = 0
     t1 = time.time()
     out = []
+    weight_time = 0
+    weight = 0
     for ss in sourceconverter.split_source(src, sourceprocessor.asd):
-        ss.weight = get_weight(ss)
+        if sourceprocessor.weight:
+            t = time.time()
+            ss.weight = get_weight(ss)
+            weight_time += time.time() - t
+            weight += ss.weight
         out.append(ss)
-    split_time = time.time() - t1
-    return SourceInfo(src.trt_model_id, src.source_id,
-                      src.__class__.__name__, out, filter_time, split_time)
+    src.weight = weight
+    split_time = time.time() - t1 - weight_time
+    return SourceInfo(src.trt_model_id, src.source_id, src.__class__.__name__,
+                      weight, out, filter_time, weight_time, split_time)
 
 
 SourceInfo = collections.namedtuple(
-    'SourceInfo', 'trt_model_id source_id source_class sources '
-    'filter_time split_time')
+    'SourceInfo', 'trt_model_id source_id source_class weight sources '
+    'filter_time weight_time split_time')
+
+source_info_dt = numpy.dtype(
+    [('trt_model_id', numpy.uint32),
+     ('source_id', (str, 20)),
+     ('source_class', (str, 20)),
+     ('weight', numpy.float32),
+     ('split_num', numpy.uint32),
+     ('filter_time', numpy.float32),
+     ('weight_time', numpy.float32),
+     ('split_time', numpy.float32)])
 
 
-class SourceProcessor(object):
+class BaseSourceProcessor(object):
     """
-    Filter and split in parallel the sources of the given CompositeSourceModel
-    instance. An array `.source_info` is added to the instance, containing
-    information about the processing times and the splitting process.
+    Do nothing source processor.
 
-    :param sitecol: a SiteCollection instance
-    :param maxdist: maximum distance for the filtering
-    :param asd: area source discretization
+    :param sitecol:
+        a SiteCollection instance
+    :param maxdist:
+        maximum distance for the filtering
+    :param area_source_discretization:
+        area source discretization
     """
+    weight = False  # when True, set the weight on each source
 
-    def __init__(self, sitecol, maxdist, area_source_discretization):
+    def __init__(self, sitecol, maxdist, area_source_discretization=None):
         self.sitecol = sitecol
         self.maxdist = maxdist
         self.asd = area_source_discretization
 
-    def agg_source_info(self, acc, out):
+
+class SourceFilter(BaseSourceProcessor):
+    """
+    Filter sequentially the sources of the given CompositeSourceModel
+    instance. An array `.source_info` is added to the instance, containing
+    information about the processing times.
+    """
+    def filter(self, src):
+        t0 = time.time()
+        sites = src.filter_sites_by_distance_to_source(
+            self.maxdist, self.sitecol)
+        t1 = time.time()
+        filter_time = t1 - t0
+        if sites is not None and self.weight:
+            t2 = time.time()
+            weight = get_weight(src)
+            src.weight = weight
+            weight_time = time.time() - t2
+        else:
+            weight = numpy.nan
+            weight_time = 0
+        sources = [] if sites is None else [src]
+        return SourceInfo(
+            src.trt_model_id, src.source_id, src.__class__.__name__,
+            weight, sources, filter_time, weight_time, 0)
+
+    def agg_source_info(self, acc, info):
         """
         :param acc: a dictionary {trt_model_id: sources}
-        :param out: a SourceInfo instance
+        :param info: a SourceInfo instance
         """
-        self.outs.append(
-            (out.trt_model_id, out.source_id, out.source_class,
-             len(out.sources), out.filter_time, out.split_time))
-        return acc + {out.trt_model_id: out.sources}
+        self.infos.append(
+            SourceInfo(info.trt_model_id, info.source_id, info.source_class,
+                       info.weight, len(info.sources), info.filter_time,
+                       info.weight_time, info.split_time))
+        return acc + {info.trt_model_id: info.sources}
 
     def process(self, csm):
         """
         :param csm: a CompositeSourceModel instance
-        :param monitor: a monitor object
         :returns: the times spent in sequential and parallel processing
         """
         sources = csm.get_sources()
-        fast_sources = [(src, self) for src in sources
-                        if src.__class__.__name__ in
-                        ('PointSource', 'AreaSource')]
-        slow_sources = [(src, self) for src in sources
-                        if src.__class__.__name__ not in
-                        ('PointSource', 'AreaSource')]
-        self.outs = []
+        self.infos = []
         seqtime, partime = 0, 0
         sources_by_trt = AccumDict()
 
-        # start multicore processing
-        if slow_sources:
-            t0 = time.time()
-            logging.warn('Parallel processing of %d sources...',
-                         len(slow_sources))
-            ss = parallel.TaskManager.starmap(filter_and_split, slow_sources)
+        logging.info('Sequential processing of %d sources...', len(sources))
+        t1 = time.time()
+        for src in sources:
+            sources_by_trt = self.agg_source_info(
+                sources_by_trt, self.filter(src))
+        seqtime = time.time() - t1
+        self.update(csm, sources_by_trt)
+        return seqtime, partime
 
-        # single core processing
-        if fast_sources:
-            logging.warn('Sequential processing of %d sources...',
-                         len(fast_sources))
-            t1 = time.time()
-            sources_by_trt += reduce(
-                self.agg_source_info,
-                itertools.starmap(filter_and_split, fast_sources), AccumDict())
-            seqtime = time.time() - t1
+    def update(self, csm, sources_by_trt):
+        """
+        Store the `source_info` array in the composite source model.
 
-        # finish multicore processing
-        sources_by_trt += (ss.reduce(self.agg_source_info)
-                           if slow_sources else {})
-        if slow_sources:
-            partime = time.time() - t0
-        # store csm.source_info
-        source_info_dt = numpy.dtype(
-            [('trt_model_id', int),
-             ('source_id', (str, 20)),
-             ('source_class', (str, 20)),
-             ('split_num', int),
-             ('filter_time', float),
-             ('split_time', float)])
-        self.outs.sort(key=lambda o: o[4] + o[5], reverse=True)
-        csm.source_info = numpy.array(self.outs, source_info_dt)
-        del self.outs[:]
+        :param csm: a CompositeSourceModel instance
+        :param sources_by_trt: a dictionary trt_model_id -> sources
+        """
+        self.infos.sort(
+            key=lambda info: info.filter_time + info.weight_time +
+            info.split_time, reverse=True)
+        csm.source_info = numpy.array(self.infos, source_info_dt)
+        del self.infos[:]
 
         # update trt_model.sources
         for source_model in csm:
@@ -778,5 +802,66 @@ class SourceProcessor(object):
                         'sm_lt_path=%s, maximum_distance=%s km, TRT=%s',
                         source_model.name, source_model.path,
                         self.maxdist, trt_model.trt)
+
+
+class SourceFilterWeighter(SourceFilter):
+    """
+    Filter sequentially the sources of the given CompositeSourceModel
+    instance and compute their weights. An array `.source_info` is added
+    to the instance, containing information about the processing times.
+    """
+    weight = True
+
+
+class SourceFilterSplitter(SourceFilterWeighter):
+    """
+    Filter and split in parallel the sources of the given CompositeSourceModel
+    instance. An array `.source_info` is added to the instance, containing
+    information about the processing times and the splitting process.
+
+    :param sitecol: a SiteCollection instance
+    :param maxdist: maximum distance for the filtering
+    :param area_source_discretization: area source discretization
+    """
+    def process(self, csm):
+        """
+        :param csm: a CompositeSourceModel instance
+        :returns: the times spent in sequential and parallel processing
+        """
+        sources = csm.get_sources()
+        fast_sources = [(src, self) for src in sources
+                        if src.__class__.__name__ in
+                        ('PointSource', 'AreaSource')]
+        slow_sources = [(src, self) for src in sources
+                        if src.__class__.__name__ not in
+                        ('PointSource', 'AreaSource')]
+        self.infos = []
+        seqtime, partime = 0, 0
+        sources_by_trt = AccumDict()
+
+        # start multicore processing
+        if slow_sources:
+            t0 = time.time()
+            logging.warn('Parallel processing of %d sources...',
+                         len(slow_sources))
+            ss = parallel.TaskManager.starmap(filter_and_split, slow_sources)
+
+        # single core processing
+        if fast_sources:
+            logging.info('Sequential processing of %d sources...',
+                         len(fast_sources))
+            t1 = time.time()
+            sources_by_trt += reduce(
+                self.agg_source_info,
+                itertools.starmap(filter_and_split, fast_sources), AccumDict())
+            seqtime = time.time() - t1
+
+        # finish multicore processing
+        sources_by_trt += (ss.reduce(self.agg_source_info)
+                           if slow_sources else {})
+        if slow_sources:
+            partime = time.time() - t0
+
+        self.update(csm, sources_by_trt)
 
         return seqtime, partime

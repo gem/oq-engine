@@ -20,11 +20,10 @@ import logging
 
 from openquake.baselib import performance
 from openquake.commonlib import sap, readinput, valid
-from openquake.commonlib.parallel import executor
 from openquake.commonlib.calculators import base
 
 
-def run(job_ini, concurrent_tasks=executor.num_tasks_hint,
+def run(job_ini, concurrent_tasks=None,
         loglevel='info', hc=None, exports=''):
     """
     Run a calculation. Optionally, set the number of concurrent_tasks
@@ -32,7 +31,8 @@ def run(job_ini, concurrent_tasks=executor.num_tasks_hint,
     """
     logging.basicConfig(level=getattr(logging, loglevel.upper()))
     oqparam = readinput.get_oqparam(job_ini)
-    oqparam.concurrent_tasks = concurrent_tasks
+    if concurrent_tasks is not None:
+        oqparam.concurrent_tasks = concurrent_tasks
     oqparam.hazard_calculation_id = hc
     oqparam.exports = exports
     monitor = performance.Monitor('total', measuremem=True)
