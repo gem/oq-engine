@@ -68,6 +68,15 @@ def get_assets(dstore):
 
 # ############################### exporters ############################## #
 
+@export.add(('gmf_view', 'csv'))
+def export_gmf_view(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    return dstore['gmf_view']
+
+
 # this is used by classical_risk from csv
 @export.add(('/avg_losses', 'csv'))
 def export_avg_losses(ekey, dstore):

@@ -458,6 +458,14 @@ def to_haz_curves(num_sites, gmfs, indices, imtls,
     return curves
 
 
+def gmf_view(dstore):
+    """
+    This is mean for tests, so the array is small
+    """
+    gmf_by_tag = dstore['/_gmf']
+    return numpy.array([gmf_by_tag[tag].value for tag in sorted(gmf_by_tag)])
+
+
 @base.calculators.add('event_based')
 class EventBasedCalculator(ClassicalCalculator):
     """
@@ -494,8 +502,9 @@ class EventBasedCalculator(ClassicalCalculator):
             if gsim is None:
                 with sav_mon:
                     for tag, gmf in res[trt_id, None].iteritems():
-                        dataset = '/gmf/trt%d/%s' % (trt_id, tag)
+                        dataset = '/_gmf/' + tag
                         self.datastore[dataset] = gmf
+                        self.datastore[dataset].attrs['trt_model_id'] = trt_id
                         self.datastore.hdf5.flush()
             else:
                 with agg_mon:
@@ -529,12 +538,15 @@ class EventBasedCalculator(ClassicalCalculator):
 
     def post_execute(self, result):
         """
-        Return a dictionary with the output files, i.e. gmfs (if any)
-        and hazard curves (if any).
+        :param result:
+            a dictionary (trt_model_id, gsim) -> haz_curves or an empty
+            dictionary if hazard_curves_from_gmfs is false
         """
         oq = self.oqparam
         if not oq.hazard_curves_from_gmfs and not oq.ground_motion_fields:
             return
+        if oq.ground_motion_fields:
+            self.datastore['gmf_view'] = gmf_view
         if oq.hazard_curves_from_gmfs:
             ClassicalCalculator.post_execute.__func__(self, result)
         if oq.mean_hazard_curves:  # compute classical ones
