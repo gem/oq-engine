@@ -107,7 +107,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         prepare some datasets in the datastore.
         """
         super(EventBasedRiskCalculator, self).pre_execute()
-
+        if not self.riskmodel:  # there is no riskmodel, exit early
+            self.execute = lambda: None
+            self.post_execute = lambda result: None
+            return
         oq = self.oqparam
         epsilon_sampling = oq.epsilon_sampling
         correl_model = readinput.get_correl_model(oq)

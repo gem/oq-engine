@@ -214,7 +214,7 @@ def get_site_model(oqparam):
     for node in read_nodes(oqparam.inputs['site_model'],
                            lambda el: el.tag.endswith('site'),
                            source.nodefactory['siteModel']):
-        yield ~node
+        yield valid.site_param(**node.attrib)
 
 
 def get_site_collection(oqparam, mesh=None, site_ids=None,
@@ -533,8 +533,6 @@ def get_job_info(oqparam, source_models, sitecol):
     else:
         output_weight *= n_levels
 
-    logging.info('Total weight of the sources=%s', input_weight)
-    logging.info('Expected output size=%s', output_weight)
     return dict(input_weight=input_weight, output_weight=output_weight,
                 n_imts=n_imts, n_levels=n_levels, n_sites=n_sites,
                 max_realizations=max_realizations)

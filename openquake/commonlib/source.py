@@ -436,10 +436,14 @@ class CompositionInfo(object):
     """
     An object to collect information about the composition of
     a composite source model.
+
+    :param source_model_lt: a SourceModelLogicTree object
+    :param source_models: a list of SourceModel instances
     """
-    def __init__(self, source_models):
+    def __init__(self, source_model_lt, source_models=()):
         self._col_dict = {}  # dictionary trt_id, idx -> col_id
         self._num_samples = {}  # trt_id -> num_samples
+        self.source_model_lt = source_model_lt
         self.source_models = map(get_skeleton, source_models)
         col_id = 0
         for sm in source_models:
@@ -452,6 +456,17 @@ class CompositionInfo(object):
                     col_id += 1
                 trt_id += 1
         self.num_collections = col_id
+
+    def get_num_rlzs(self, source_model=None):
+        """
+        :param source_model: a SourceModel instance (or None)
+        :returns: the number of realizations per source model (or all)
+        """
+        if source_model is None:
+            return sum(self.get_num_rlzs(sm) for sm in self.source_models)
+        if self.source_model_lt.num_samples:
+            return source_model.samples
+        return source_model.gsim_lt.get_num_paths()
 
     def get_max_samples(self):
         """Return the maximum number of samples of the source model"""
@@ -511,7 +526,7 @@ class CompositionInfo(object):
         info_by_model = collections.OrderedDict(
             (sm.path, ('_'.join(sm.path), sm.name,
                        [tm.id for tm in sm.trt_models],
-                       sm.gsim_lt.get_num_paths() * sm.samples))
+                       self.get_num_rlzs(sm)))
             for sm in self.source_models)
         summary = ['%s, %s, trt=%s: %d realization(s)' % ibm
                    for ibm in info_by_model.itervalues()]
@@ -529,7 +544,7 @@ class CompositeSourceModel(collections.Sequence):
     def __init__(self, source_model_lt, source_models):
         self.source_model_lt = source_model_lt
         self.source_models = list(source_models)
-        self.info = CompositionInfo(source_models)
+        self.info = CompositionInfo(source_model_lt, source_models)
         self.source_info = ()  # set by the SourceFilterSplitter
 
     @property

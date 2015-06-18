@@ -6,6 +6,8 @@ import unittest
 from openquake.commonlib.commands.info import info
 from openquake.commonlib.commands.reduce import reduce
 from openquake.qa_tests_data.classical_risk import case_3
+from openquake.qa_tests_data.scenario import case_4
+from openquake.qa_tests_data.event_based import case_5
 
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
@@ -45,7 +47,6 @@ See https://github.com/gem/oq-risklib/blob/master/docs/effective-realizations.rs
             info(path, filtersources=True)
         exp = self.EXPECTED + '''
 c_matrix 232 B
-input_weight 1
 max_realizations 1
 n_imts 1
 n_levels 29.0
@@ -73,7 +74,9 @@ output_weight 29.0'''
         path = os.path.join(DATADIR, 'frenchbug.zip')
         with Print.patch() as p:
             info(path, datatransfer=True)
-        self.assertIn('Number of tasks to be generated: 14', str(p))
+        got = str(p)
+        self.assertIn('RlzsAssoc', got)
+        self.assertIn('Number of tasks to be generated: 14', got)
 
 
 class ReduceTestCase(unittest.TestCase):
@@ -95,4 +98,24 @@ class ReduceTestCase(unittest.TestCase):
         with Print.patch() as p:
             reduce(dest, 0.5)
         self.assertIn('Extracted 196 nodes out of 398', str(p))
+        shutil.rmtree(tempdir)
+
+    def test_site_model(self):
+        testdir = os.path.dirname(case_4.__file__)
+        tempdir = tempfile.mkdtemp()
+        dest = os.path.join(tempdir, 'site_model.xml')
+        shutil.copy(os.path.join(testdir, 'site_model.xml'), tempdir)
+        with Print.patch() as p:
+            reduce(dest, 0.5)
+        self.assertIn('Extracted 2 nodes out of 3', str(p))
+        shutil.rmtree(tempdir)
+
+    def test_sites_csv(self):
+        testdir = os.path.dirname(case_5.__file__)
+        tempdir = tempfile.mkdtemp()
+        dest = os.path.join(tempdir, 'sites.csv')
+        shutil.copy(os.path.join(testdir, 'sites.csv'), tempdir)
+        with Print.patch() as p:
+            reduce(dest, 0.5)
+        self.assertIn('Extracted 50 lines out of 100', str(p))
         shutil.rmtree(tempdir)
