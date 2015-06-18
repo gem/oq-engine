@@ -18,7 +18,7 @@
 
 import logging
 
-from openquake.baselib import performance
+from openquake.baselib import performance, general
 from openquake.commonlib import sap, readinput, valid
 from openquake.commonlib.calculators import base
 
@@ -44,7 +44,7 @@ def run(job_ini, concurrent_tasks=None,
     logging.info('See the output with hdfview %s/output.hdf5',
                  calc.datastore.calc_dir)
     logging.info('Total time spent: %s s', monitor.duration)
-    logging.info('Memory allocated: %s M', monitor.mem / 1024. / 1024.)
+    logging.info('Memory allocated: %s', general.humansize(monitor.mem))
     monitor.flush()
 
 parser = sap.Parser(run)
