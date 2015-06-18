@@ -537,8 +537,6 @@ class EventBasedCalculator(ClassicalCalculator):
         oq = self.oqparam
         if not oq.hazard_curves_from_gmfs and not oq.ground_motion_fields:
             return
-        if oq.ground_motion_fields:
-            self.datastore['gmf_view'] = gmf_view
         if oq.hazard_curves_from_gmfs:
             ClassicalCalculator.post_execute.__func__(self, result)
         if oq.mean_hazard_curves:  # compute classical ones
