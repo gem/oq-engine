@@ -402,7 +402,8 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
     :param monitor:
         a Monitor instance
     :returns:
-        a dictionary (trt_model_id, gsim) -> [gmf_by_tag, haz_curves]
+        a dictionary (trt_model_id, gsim) -> haz_curves and
+        (trt_model_id, None) -> gmf_by_tag
    """
     oq = monitor.oqparam
     # NB: by construction each block is a non-empty list with
@@ -416,19 +417,17 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
     gmf_by_tag = make_gmf_by_tag(
         ses_ruptures, sitecol.complete, oq.imtls, gsims,
         trunc_level, correl_model, monitor)
-    tags = sorted(gmf_by_tag)
-    zero = zero_curves(num_sites, oq.imtls)
-    result = AccumDict({(trt_id, str(gsim)): [{}, zero] for gsim in gsims})
-    duration = oq.investigation_time * oq.ses_per_logic_tree_path * (
-        oq.number_of_logic_tree_samples or 1)
-    for gsim in gsims:
-        gs = str(gsim)
-        if oq.ground_motion_fields:
-            result[trt_id, gs][0] = {tag: gmf_by_tag[tag][gs] for tag in tags}
-        if oq.hazard_curves_from_gmfs:
+    result = {(trt_id, None): gmf_by_tag
+              if oq.ground_motion_fields else {}}
+    if oq.hazard_curves_from_gmfs:
+        tags = sorted(gmf_by_tag)
+        duration = oq.investigation_time * oq.ses_per_logic_tree_path * (
+            oq.number_of_logic_tree_samples or 1)
+        for gsim in gsims:
+            gs = str(gsim)
             gmfs = [gmf_by_tag[tag][gs] for tag in tags]
             indices = [gmf_by_tag[tag]['idx'] for tag in tags]
-            result[trt_id, gs][1] = to_haz_curves(
+            result[trt_id, gs] = to_haz_curves(
                 num_sites, gmfs, indices, oq.imtls,
                 oq.investigation_time, duration)
     return result
@@ -452,8 +451,10 @@ def to_haz_curves(num_sites, gmfs, indices, imtls,
     curves = zero_curves(num_sites, imtls)
     for imt in imtls:
         curves[imt] = numpy.array([
-            gmvs_to_haz_curve([gmv[imt] for gmv in gmvs], imtls[imt],
-                              investigation_time, duration) for gmvs in data])
+            gmvs_to_haz_curve(
+                [gmv[imt] for gmv in gmvs],
+                imtls[imt], investigation_time, duration)
+            for gmvs in data])
     return curves
 
 
@@ -464,7 +465,6 @@ class EventBasedCalculator(ClassicalCalculator):
     """
     pre_calculator = 'event_based_rupture'
     core_func = compute_gmfs_and_curves
-    gmf_by_trt_gsim = datastore.persistent_attribute('gmf_by_trt_gsim')
     is_stochastic = True
 
     def pre_execute(self):
@@ -481,19 +481,29 @@ class EventBasedCalculator(ClassicalCalculator):
     def combine_curves_and_save_gmfs(self, acc, res):
         """
         Combine the hazard curves (if any) and save the gmfs (if any)
-        sequentially; however, notice that the gmfs may come from
+        sequentially; notice that the gmfs may come from
         different tasks in any order.
 
         :param acc: an accumulator for the hazard curves
-        :param res: a dictionary trt_id, gsim -> (gmfs, curves_by_imt)
+        :param res: a dictionary trt_id, gsim -> gmf_by_tag or curves_by_imt
         :returns: a new accumulator
         """
-        gen_gmf = self.oqparam.ground_motion_fields
+        sav_mon = self.monitor('saving gmfs')
+        agg_mon = self.monitor('aggregating hcurves')
         for trt_id, gsim in res:
-            gmf_by_tag, curves_by_imt = res[trt_id, gsim]
-            if gen_gmf:
-                self.gmf_dict[trt_id, gsim] += gmf_by_tag
-            acc = agg_dicts(acc, AccumDict({(trt_id, gsim): curves_by_imt}))
+            if gsim is None:
+                with sav_mon:
+                    for tag, gmf in res[trt_id, None].iteritems():
+                        dataset = '/gmf/trt%d/%s' % (trt_id, tag)
+                        self.datastore[dataset] = gmf
+                        self.datastore.hdf5.flush()
+            else:
+                with agg_mon:
+                    curves_by_imt = res[trt_id, gsim]
+                    acc = agg_dicts(
+                        acc, AccumDict({(trt_id, gsim): curves_by_imt}))
+        sav_mon.flush()
+        agg_mon.flush()
         return acc
 
     def execute(self):
@@ -509,7 +519,6 @@ class EventBasedCalculator(ClassicalCalculator):
         monitor.oqparam = oq
         zc = zero_curves(len(self.sitecol), self.oqparam.imtls)
         zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
-        self.gmf_dict = collections.defaultdict(AccumDict)
         curves_by_trt_gsim = parallel.apply_reduce(
             self.core_func.__func__,
             (self.sesruptures, self.sitecol, self.rlzs_assoc, monitor),
@@ -528,9 +537,6 @@ class EventBasedCalculator(ClassicalCalculator):
             return
         if oq.hazard_curves_from_gmfs:
             ClassicalCalculator.post_execute.__func__(self, result)
-        if oq.ground_motion_fields:
-            self.gmf_by_trt_gsim = self.gmf_dict
-            self.gmf_dict.clear()
         if oq.mean_hazard_curves:  # compute classical ones
             export_dir = os.path.join(oq.export_dir, 'cl')
             if not os.path.exists(export_dir):
