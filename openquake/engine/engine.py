@@ -68,7 +68,8 @@ RISK_HAZARD_MAP = dict(
     classical_bcr=['classical'],
     classical_damage=['classical'],
     event_based_risk=['event_based'],
-    event_based_bcr=['event_based'])
+    event_based_bcr=['event_based'],
+    ebr=['ebr'])
 
 
 def cleanup_after_job(job, terminate):
