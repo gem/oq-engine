@@ -368,7 +368,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
 def make_gmf_by_tag(ses_ruptures, sitecol, imts, gsims,
                     trunc_level, correl_model, monitor):
     """
-    :returns: a dictionary tag -> (r_sites, gmf_array)
+    :returns: a dictionary tag -> gmf_array
     """
     dic = {}
     ctx_mon = monitor('make contexts')
@@ -402,8 +402,7 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
     :param monitor:
         a Monitor instance
     :returns:
-        a dictionary trt_model_id -> curves_by_gsim
-        where the list of bounding boxes is empty
+        a dictionary (trt_model_id, gsim) -> [gmf_by_tag, haz_curves]
    """
     oq = monitor.oqparam
     # NB: by construction each block is a non-empty list with
@@ -411,44 +410,44 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
     col_id = ses_ruptures[0].col_id
     trt_id = rlzs_assoc.csm_info.get_trt_id(col_id)
     gsims = rlzs_assoc.get_gsims_by_col()[col_id]
-    trunc_level = getattr(oq, 'truncation_level', None)
+    trunc_level = oq.truncation_level
     correl_model = readinput.get_correl_model(oq)
     num_sites = len(sitecol)
-    dic = make_gmf_by_tag(
+    gmf_by_tag = make_gmf_by_tag(
         ses_ruptures, sitecol.complete, oq.imtls, gsims,
         trunc_level, correl_model, monitor)
+    tags = sorted(gmf_by_tag)
     zero = zero_curves(num_sites, oq.imtls)
-    result = AccumDict({(trt_id, str(gsim)): [dic, zero] for gsim in gsims})
-    gmfs = [dic[tag] for tag in sorted(dic)]
-    if oq.hazard_curves_from_gmfs:
-        duration = oq.investigation_time * oq.ses_per_logic_tree_path * (
-            oq.number_of_logic_tree_samples or 1)
-        for gsim in gsims:
-            gs = str(gsim)
+    result = AccumDict({(trt_id, str(gsim)): [{}, zero] for gsim in gsims})
+    duration = oq.investigation_time * oq.ses_per_logic_tree_path * (
+        oq.number_of_logic_tree_samples or 1)
+    for gsim in gsims:
+        gs = str(gsim)
+        if oq.ground_motion_fields:
+            result[trt_id, gs][0] = {tag: gmf_by_tag[tag][gs] for tag in tags}
+        if oq.hazard_curves_from_gmfs:
+            gmfs = [gmf_by_tag[tag][gs] for tag in tags]
+            indices = [gmf_by_tag[tag]['idx'] for tag in tags]
             result[trt_id, gs][1] = to_haz_curves(
-                num_sites, gs, gmfs, oq.imtls,
+                num_sites, gmfs, indices, oq.imtls,
                 oq.investigation_time, duration)
-    if not oq.ground_motion_fields:
-        # reset the gmf_by_tag dictionary to avoid
-        # transferring a lot of unused data
-        for key in result:
-            result[key][0].clear()
     return result
 
 
-def to_haz_curves(num_sites, gs, gmfs, imtls, investigation_time, duration):
+def to_haz_curves(num_sites, gmfs, indices, imtls,
+                  investigation_time, duration):
     """
     :param num_sites: length of the full site collection
-    :param gs: a GSIM string
     :param gmfs: gmf arrays
+    :param indices: list of list of site indices
     :param imtls: ordered dictionary {IMT: intensity measure levels}
     :param investigation_time: investigation time
     :param duration: investigation_time * number of Stochastic Event Sets
     """
     # group gmvs by site index
     data = [[] for idx in range(num_sites)]
-    for gmf in gmfs:
-        for idx, gmv in zip(gmf['idx'], gmf[gs]):
+    for site_ids, gmf in zip(indices, gmfs):
+        for idx, gmv in zip(site_ids, gmf):
             data[idx].append(gmv)
     curves = zero_curves(num_sites, imtls)
     for imt in imtls:
@@ -530,9 +529,6 @@ class EventBasedCalculator(ClassicalCalculator):
         if oq.hazard_curves_from_gmfs:
             ClassicalCalculator.post_execute.__func__(self, result)
         if oq.ground_motion_fields:
-            for (trt_id, gsim), gmf_by_tag in self.gmf_dict.items():
-                self.gmf_dict[trt_id, gsim] = {tag: gmf_by_tag[tag][gsim]
-                                               for tag in gmf_by_tag}
             self.gmf_by_trt_gsim = self.gmf_dict
             self.gmf_dict.clear()
         if oq.mean_hazard_curves:  # compute classical ones
