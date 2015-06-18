@@ -460,10 +460,20 @@ def to_haz_curves(num_sites, gmfs, indices, imtls,
 
 def gmf_view(dstore):
     """
-    This is mean for tests, so the array is small
+    Return a list of rows with format (tag, indices, gmv1, ... gmvN).
+	It exports all realizations in a single file, without duplications.
+    This utility is meant for tests, when there are few GMFs.
     """
-    gmf_by_tag = dstore['/_gmf']
-    return numpy.array([gmf_by_tag[tag].value for tag in sorted(gmf_by_tag)])
+    gmf_by_tag = dstore['/gmf']
+    rows = []
+    for tag in sorted(gmf_by_tag):
+        data = gmf_by_tag[tag].value
+        row = [tag, data['idx']]
+        for field in sorted(data.dtype.fields):
+            if field != 'idx':
+                row.append(data[field])
+        rows.append(row)
+    return rows
 
 
 @base.calculators.add('event_based')
@@ -502,7 +512,7 @@ class EventBasedCalculator(ClassicalCalculator):
             if gsim is None:
                 with sav_mon:
                     for tag, gmf in res[trt_id, None].iteritems():
-                        dataset = '/_gmf/' + tag
+                        dataset = '/gmf/' + tag
                         self.datastore[dataset] = gmf
                         self.datastore[dataset].attrs['trt_model_id'] = trt_id
                         self.datastore.hdf5.flush()
