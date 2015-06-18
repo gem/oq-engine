@@ -295,18 +295,6 @@ def export_gmf_csv(key, export_dir, fname, sitecol, ruptures, gmfs, rlz,
     save_csv(dest, rows)
     return {key: [dest]}
 
-
-# this is used in a couple of tests
-@export.add(('gmf_view', 'csv'))
-def export_gmf_view(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
-    dest = os.path.join(dstore.export_dir, '%s.%s' % ekey)
-    save_csv(dest, dstore['gmf_view'])
-    return [dest]
-
 # ####################### export hazard curves ############################ #
 
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')

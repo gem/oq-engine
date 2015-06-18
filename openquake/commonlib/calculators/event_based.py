@@ -458,24 +458,6 @@ def to_haz_curves(num_sites, gmfs, indices, imtls,
     return curves
 
 
-def gmf_view(dstore):
-    """
-    Return a list of rows with format (tag, indices, gmv1, ... gmvN).
-	It exports all realizations in a single file, without duplications.
-    This utility is meant for tests, when there are few GMFs.
-    """
-    gmf_by_tag = dstore['/gmf']
-    rows = []
-    for tag in sorted(gmf_by_tag):
-        data = gmf_by_tag[tag].value
-        row = [tag, data['idx']]
-        for field in sorted(data.dtype.fields):
-            if field != 'idx':
-                row.append(data[field])
-        rows.append(row)
-    return rows
-
-
 @base.calculators.add('event_based')
 class EventBasedCalculator(ClassicalCalculator):
     """
