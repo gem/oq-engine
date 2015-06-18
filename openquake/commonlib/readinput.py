@@ -214,7 +214,7 @@ def get_site_model(oqparam):
     for node in read_nodes(oqparam.inputs['site_model'],
                            lambda el: el.tag.endswith('site'),
                            source.nodefactory['siteModel']):
-        yield ~node
+        yield valid.site_param(**node.attrib)
 
 
 def get_site_collection(oqparam, mesh=None, site_ids=None,

@@ -6,6 +6,8 @@ import unittest
 from openquake.commonlib.commands.info import info
 from openquake.commonlib.commands.reduce import reduce
 from openquake.qa_tests_data.classical_risk import case_3
+from openquake.qa_tests_data.scenario import case_4
+from openquake.qa_tests_data.event_based import case_5
 
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
@@ -95,4 +97,24 @@ class ReduceTestCase(unittest.TestCase):
         with Print.patch() as p:
             reduce(dest, 0.5)
         self.assertIn('Extracted 196 nodes out of 398', str(p))
+        shutil.rmtree(tempdir)
+
+    def test_site_model(self):
+        testdir = os.path.dirname(case_4.__file__)
+        tempdir = tempfile.mkdtemp()
+        dest = os.path.join(tempdir, 'site_model.xml')
+        shutil.copy(os.path.join(testdir, 'site_model.xml'), tempdir)
+        with Print.patch() as p:
+            reduce(dest, 0.5)
+        self.assertIn('Extracted 2 nodes out of 3', str(p))
+        shutil.rmtree(tempdir)
+
+    def test_sites_csv(self):
+        testdir = os.path.dirname(case_5.__file__)
+        tempdir = tempfile.mkdtemp()
+        dest = os.path.join(tempdir, 'sites.csv')
+        shutil.copy(os.path.join(testdir, 'sites.csv'), tempdir)
+        with Print.patch() as p:
+            reduce(dest, 0.5)
+        self.assertIn('Extracted 50 lines out of 100', str(p))
         shutil.rmtree(tempdir)
