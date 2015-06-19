@@ -17,6 +17,8 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import print_function
 import os
+import logging
+
 from openquake.baselib import general, performance
 from openquake.commonlib import sap, datastore
 from openquake.commonlib.export import export as export_
@@ -27,6 +29,7 @@ def export(calc_id, datastore_key, format='csv'):
     """
     Export an output from the datastore.
     """
+    logging.basicConfig(level=logging.INFO)
     dstore = datastore.DataStore(calc_id)
     hc_id = dstore['oqparam'].hazard_calculation_id
     if hc_id:

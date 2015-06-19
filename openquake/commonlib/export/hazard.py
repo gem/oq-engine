@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2014, GEM Foundation
+#  Copyright (c) 2014-2015, GEM Foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -23,13 +23,18 @@ import collections
 
 import numpy
 
-from openquake.baselib.general import AccumDict, groupby
+from openquake.baselib.general import AccumDict, groupby, humansize
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import FilteredSiteCollection
 from openquake.commonlib.export import export
 from openquake.commonlib.writers import (
     scientificformat, floatformat, save_csv)
 from openquake.commonlib import hazard_writers
+
+GMF_MAX_SIZE = 10 * 1024 * 1024  # 10 MB
+GMF_WARNING = '''\
+There are a lot of ground motion fields; the export will be slow.
+Consider canceling the operation and accessing directly %s.'''
 
 
 class SES(object):
@@ -407,8 +412,13 @@ def export_gmf(ekey, dstore):
     oq = dstore['oqparam']
     samples = oq.number_of_logic_tree_samples
     fmt = ekey[-1]
+    gmf = dstore[ekey[0]]
+    nbytes = gmf.attrs['nbytes']
+    logging.info('Internal size of the GMFs: %s', humansize(nbytes))
+    if nbytes > GMF_MAX_SIZE:
+        logging.warn(GMF_WARNING, dstore.hdf5path)
     fnames = []
-    gmf_by_rlz = rlzs_assoc.combine_gmfs(dstore[ekey[0]])
+    gmf_by_rlz = rlzs_assoc.combine_gmfs(gmf)
     for rlz, gmf_by_tag in sorted(gmf_by_rlz.iteritems()):
         if isinstance(gmf_by_tag, dict):  # event based
             tags = sorted(gmf_by_tag)
