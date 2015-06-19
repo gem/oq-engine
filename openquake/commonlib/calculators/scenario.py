@@ -20,8 +20,6 @@ import random
 import logging
 import collections
 
-import numpy
-
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.commonlib import readinput, parallel, datastore
