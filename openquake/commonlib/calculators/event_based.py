@@ -493,13 +493,11 @@ class EventBasedCalculator(ClassicalCalculator):
         for trt_id, gsim in res:
             if gsim is None:  # save gmfs
                 with sav_mon:
-                    nbytes = 0
                     for tag, gmf in res[trt_id, None].iteritems():
                         dataset = '/gmf/' + tag
                         self.datastore[dataset] = gmf
                         self.datastore[dataset].attrs['trt_model_id'] = trt_id
-                        nbytes += gmf.nbytes
-                    self.datastore['/gmf'].attrs['nbytes'] = nbytes
+                        self.nbytes += gmf.nbytes
                     self.datastore.hdf5.flush()
             else:  # aggregate hcurves
                 with agg_mon:
@@ -523,12 +521,15 @@ class EventBasedCalculator(ClassicalCalculator):
         monitor.oqparam = oq
         zc = zero_curves(len(self.sitecol), self.oqparam.imtls)
         zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
+        self.nbytes = 0
         curves_by_trt_gsim = parallel.apply_reduce(
             self.core_func.__func__,
             (self.sesruptures, self.sitecol, self.rlzs_assoc, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
             acc=zerodict, agg=self.combine_curves_and_save_gmfs,
             key=operator.attrgetter('col_id'))
+        if oq.ground_motion_fields:
+            self.datastore['/gmf'].attrs['nbytes'] = self.nbytes
         return curves_by_trt_gsim
 
     def post_execute(self, result):
