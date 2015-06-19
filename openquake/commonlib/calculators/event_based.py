@@ -45,6 +45,17 @@ from openquake.commonlib.calculators.classical import (
 counts_dt = numpy.dtype([('rup', int), ('gmf', int)])
 
 
+def num_affected_sites(rupture, num_sites):
+    """
+    Return the number of sites affected by the rupture
+
+    :param rupture: a SESRupture object
+    :param num_sites: the total number of sites
+    """
+    return (len(rupture.indices) if rupture.indices is not None
+            else num_sites)
+
+
 def counts_per_rlz(num_sites, num_imts, rlzs_assoc, sescollection):
     """
     :param num_sites: the number of sites
@@ -66,10 +77,26 @@ def counts_per_rlz(num_sites, num_imts, rlzs_assoc, sescollection):
 
                 # gmvs per realization
                 for rup in sc.itervalues():
-                    counts['gmf'][i] += (
-                        len(rup.indices) if rup.indices is not None
-                        else num_sites) * num_imts
+                    counts['gmf'][i] += num_affected_sites(
+                        rup, num_sites) * num_imts
     return counts
+
+
+# this is tested in the sanity check in the execute method
+def get_gmfs_nbytes(num_sites, num_imts, rlzs_assoc, sescollection):
+    """
+    :param num_sites: the number of sites
+    :param num_imts: the number of IMTs
+    :param rlzs_assoc: an instance of RlzsAssoc
+    :param sescollection: a list of dictionaries tag -> SESRupture
+    :returns: the number of bytes required to store the GMFs
+    """
+    nbytes = 0
+    for sescol, gsims in zip(sescollection, rlzs_assoc.get_gsims_by_col()):
+        bytes_per_gmf = 4 + 8 * len(gsims) * num_imts
+        for tag, rup in sescol.iteritems():
+            nbytes += bytes_per_gmf * num_affected_sites(rup, num_sites)
+    return nbytes
 
 
 def get_geom(surface, is_from_fault_source, is_multi_surface):
@@ -360,6 +387,11 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             self.counts_per_rlz = counts_per_rlz(
                 len(self.sitecol), len(self.oqparam.imtls),
                 self.rlzs_assoc, sescollection)
+            self.datastore['/counts_per_rlz'].attrs[
+                'gmfs_nbytes'] = get_gmfs_nbytes(
+                    len(self.sitecol), len(self.oqparam.imtls),
+                    self.rlzs_assoc, sescollection)
+
 
 # ######################## GMF calculator ############################ #
 
@@ -494,7 +526,7 @@ class EventBasedCalculator(ClassicalCalculator):
             if gsim is None:  # save gmfs
                 with sav_mon:
                     for tag, gmf in res[trt_id, None].iteritems():
-                        dataset = '/gmf/' + tag
+                        dataset = '/gmfs/' + tag
                         self.datastore[dataset] = gmf
                         self.datastore[dataset].attrs['trt_model_id'] = trt_id
                         self.nbytes += gmf.nbytes
@@ -529,7 +561,12 @@ class EventBasedCalculator(ClassicalCalculator):
             acc=zerodict, agg=self.combine_curves_and_save_gmfs,
             key=operator.attrgetter('col_id'))
         if oq.ground_motion_fields:
-            self.datastore['/gmf'].attrs['nbytes'] = self.nbytes
+            # sanity check on the saved gmfs size
+            expected_nbytes = self.datastore[
+                '/counts_per_rlz'].attrs['gmfs_nbytes']
+            self.datastore['/gmfs'].attrs['nbytes'] = self.nbytes
+            assert self.nbytes == expected_nbytes, (
+                self.nbytes, expected_nbytes)
         return curves_by_trt_gsim
 
     def post_execute(self, result):

@@ -400,7 +400,7 @@ def export_hcurves_csv(ekey, dstore):
     return fnames
 
 
-@export.add(('/gmf', 'xml'), ('/gmf', 'csv'))
+@export.add(('/gmfs', 'xml'), ('/gmfs', 'csv'))
 def export_gmf(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -412,13 +412,13 @@ def export_gmf(ekey, dstore):
     oq = dstore['oqparam']
     samples = oq.number_of_logic_tree_samples
     fmt = ekey[-1]
-    gmf = dstore[ekey[0]]
-    nbytes = gmf.attrs['nbytes']
+    gmfs = dstore[ekey[0]]
+    nbytes = gmfs.attrs['nbytes']
     logging.info('Internal size of the GMFs: %s', humansize(nbytes))
     if nbytes > GMF_MAX_SIZE:
         logging.warn(GMF_WARNING, dstore.hdf5path)
     fnames = []
-    gmf_by_rlz = rlzs_assoc.combine_gmfs(gmf)
+    gmf_by_rlz = rlzs_assoc.combine_gmfs(gmfs)
     for rlz, gmf_by_tag in sorted(gmf_by_rlz.iteritems()):
         if isinstance(gmf_by_tag, dict):  # event based
             tags = sorted(gmf_by_tag)
