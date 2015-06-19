@@ -348,11 +348,11 @@ class VulnerabilityFunctionWithPMF(object):
     :param ratios: mean ratios (R)
     :param probs: a matrix of probabilities of shape (R, L)
     """
-    def __init__(self, vf_id, imt, imls, ratios, probs):
+    def __init__(self, vf_id, imt, imls, loss_ratios, probs):
         self.id = vf_id
         self.imt = imt
         self.imls = imls
-        self.mean_loss_ratios = ratios
+        self.loss_ratios = ratios
         self.probs = probs
         self.distribution = "PM"
 
@@ -365,7 +365,51 @@ class VulnerabilityFunctionWithPMF(object):
         :returns: a N x R loss matrix
         """
         # TODO: implement the right logic here
-        return numpy.array(ground_motion_values)
+        vulnerability_function = copy.copy(self)
+        vulnerability_function.set_distribution(epsilons)
+        return utils.numpy_map(
+            vulnerability_function._apply, ground_motion_values)
+
+    def __getstate__(self):
+        return (self.id, self.imt, self.imls, self.loss_ratios,
+                self.probs, self.distribution_name)
+
+    def __setstate__(self, state):
+        self.id = state[0]
+        self.imt = state[1]
+        self.imls = state[2]
+        self.loss_ratios = state[3]
+        self.probs = state[4]
+        self.distribution = state[5]
+        self.init()
+
+    def _check_vulnerability_data(self, imls, loss_ratios, probs, distribution):
+
+
+    def _apply(self, imls):
+        """
+        Given IML values, interpolate the corresponding loss ratio
+        value(s) on the curve.
+
+        Input IML value(s) is/are clipped to IML range defined for this
+        vulnerability function.
+
+        :param float array iml: IML value
+
+        :returns: :py:class:`numpy.ndarray` containing a number of interpolated
+            values equal to the size of the input (1 or many)
+        """
+        # for imls < min(iml) we return a loss of 0 (default)
+
+
+    @utils.memoized
+    def loss_ratio_exceedance_matrix(self, steps):
+        """Compute the LREM (Loss Ratio Exceedance Matrix).
+        Currently left unimplemented as the PMF format is used only for the
+        Scenario and Event Based Risk Calculators
+        :param int steps:
+            Number of steps between loss ratios.
+        """
 
     def __repr__(self):
         return '<VulnerabilityFunctionWithPMF(%s, %s)>' % (self.id, self.imt)
