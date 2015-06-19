@@ -441,17 +441,19 @@ class RiskCalculator(HazardCalculator):
 # functions useful for the calculators ScenarioDamage and ScenarioRisk
 
 
-def expand(gmf, sitecol):
+def expand(gmf, haz_sitecol, risk_sitecol):
     """
     :param gmf: a GMF matrix of shape (N', R) with N' <= N
-    :param sitecol: a site collection of N elements
+    :param haz_sitecol: a site collection of N elements
+    :param risk_sitecol: a site collection of N'' <= N' elements
     :returns: a GMF matrix of shape (N, R) filled with zeros
     """
-    if sitecol is sitecol.complete:
-        return gmf  # do nothing
+    risk_indices = set(risk_sitecol.indices)
     n, r = gmf.shape
-    zeros = numpy.zeros((len(sitecol.complete), r), gmf.dtype)
-    zeros[sitecol.indices] = gmf
+    zeros = numpy.zeros((len(haz_sitecol.complete), r), gmf.dtype)
+    for i, gmvs in zip(haz_sitecol.indices, gmf):
+        if i in risk_indices:
+            zeros[i, :] = gmvs
     return zeros
 
 
@@ -463,11 +465,10 @@ def get_gmfs(calc):
     if 'gmfs' in calc.oqparam.inputs:  # from file
         gmfs = read_gmfs_from_csv(calc)
     else:  # from rupture
-        if calc.datastore.parent:  # gmfs from hazard calculation
-            gmfs = calc.gmf_by_trt_gsim
-        else:  # just computed gmfs
-            gmfs = {k: expand(gmf, calc.sitecol)
-                    for k, gmf in calc.gmf_by_trt_gsim.iteritems()}
+        haz_sitecol = calc.datastore.parent['sitecol']
+        risk_sitecol = calc.sitecol
+        gmfs = {k: expand(gmf, haz_sitecol, risk_sitecol)
+                for k, gmf in calc.gmf_by_trt_gsim.iteritems()}
     return gmfs
 
 
