@@ -67,16 +67,27 @@ class ByteCounter(object):
         self.nbytes += get_nbytes(dset_or_group)
 
 
+def get_calc_ids(datadir=DATADIR):
+    """
+    Extract the available calculation IDs from the datadir, in order.
+    """
+    calc_ids = []
+    for f in os.listdir(DATADIR):
+        mo = re.match('calc_(\d+)', f)
+        if mo:
+            calc_ids.append(int(mo.group(1)))
+    return sorted(calc_ids)
+
+
 def get_last_calc_id(datadir=DATADIR):
     """
     Extract the latest calculation ID from the given directory.
     If none is found, return 0.
     """
-    calcs = [f for f in os.listdir(DATADIR) if re.match('calc_\d+', f)]
+    calcs = get_calc_ids(datadir)
     if not calcs:
         return 0
-    calc_ids = [int(calc[5:]) for calc in calcs]  # strip calc_
-    return max(calc_ids)
+    return calcs[-1]
 
 
 class Hdf5Dataset(object):
@@ -150,8 +161,13 @@ class DataStore(collections.MutableMapping):
             os.makedirs(datadir)
         if calc_id is None:  # use a new datastore
             self.calc_id = get_last_calc_id(datadir) + 1
-        elif calc_id == -1:  # use the last datastore
-            self.calc_id = get_last_calc_id(datadir)
+        elif calc_id < 0:  # use an old datastore
+            calc_ids = get_calc_ids(datadir)
+            try:
+                self.calc_id = calc_ids[calc_id]
+            except IndexError:
+                raise IndexError('There are %d old calculations, cannot '
+                                 'retrieve the %s' % (len(calc_ids), calc_id))
         else:  # use the given datastore
             self.calc_id = calc_id
         self.parent = parent  # parent datastore (if any)
