@@ -24,6 +24,7 @@ import collections
 import numpy
 
 from openquake.baselib.general import groupby, split_in_blocks_2
+from openquake.baselib.performance import DummyMonitor
 from openquake.hazardlib.gsim.base import gsim_imt_dt
 from openquake.risklib import scientific
 
@@ -44,7 +45,12 @@ def build_asset_collection(assets_by_site):
     :params assets_by_site: a list of lists of assets
     :returns: an array with composite dtype
     """
-    first_asset = assets_by_site[0][0]
+    for assets in assets_by_site:
+        if len(assets):
+            first_asset = assets[0]
+            break
+    else:  # no break
+        raise ValueError('There are no assets!')
     loss_types = first_asset.values.keys()
     deductible_d = first_asset.deductibles or {}
     limit_d = first_asset.insurance_limits or {}
@@ -162,13 +168,17 @@ class RiskModel(collections.Mapping):
         imt_taxonomies = list(self.get_imt_taxonomies())
         num_epsilons = len(eps_dict.itervalues().next())
         by_col = operator.attrgetter('col_id')
+        rup_start = rup_stop = 0
         for ses_ruptures, indices in split_in_blocks_2(
                 all_ruptures, range(num_epsilons), hint or 1, key=by_col):
+            rup_stop += len(ses_ruptures)
             gsims = gsims_by_col[ses_ruptures[0].col_id]
             edic = {asset: eps[indices] for asset, eps in eps_dict.iteritems()}
             yield RiskInputFromRuptures(
                 imt_taxonomies, sitecol, ses_ruptures,
-                gsims, trunc_level, correl_model, edic)
+                gsims, trunc_level, correl_model, edic,
+                slice(rup_start, rup_stop))
+            rup_start = rup_stop
 
     def gen_outputs(self, riskinputs, rlzs_assoc, monitor):
         """
@@ -180,8 +190,8 @@ class RiskModel(collections.Mapping):
         :param rlzs_assoc: a RlzsAssoc instance
         :param monitor: a monitor object used to measure the performance
         """
-        mon_hazard = monitor('getting hazard')
-        mon_risk = monitor('computing individual risk')
+        mon_hazard = monitor('getting hazard', autoflush=False)
+        mon_risk = monitor('computing individual risk', autoflush=False)
         for riskinput in riskinputs:
             try:
                 assets_by_site = riskinput.assets_by_site
@@ -205,6 +215,9 @@ class RiskModel(collections.Mapping):
                         workflow = self[imt, taxonomy]
                         for out_by_rlz in workflow.gen_out_by_rlz(
                                 assets, hazards, epsilons, riskinput.tags):
+                            # this is ugly, but we must cope with that
+                            if hasattr(riskinput, 'rup_slice'):
+                                out_by_rlz.rup_slice = riskinput.rup_slice
                             yield out_by_rlz
         mon_hazard.flush()
         mon_risk.flush()
@@ -321,9 +334,10 @@ class RiskInputFromRuptures(object):
     :param trunc_level: truncation level for the GSIMs
     :param correl_model: correlation model for the GSIMs
     :params eps_dict: a dictionary asset_id -> epsilons
+    :param rup_slice: a slice object specifying which ruptures are in
     """
     def __init__(self, imt_taxonomies, sitecol, ses_ruptures,
-                 gsims, trunc_level, correl_model, eps_dict):
+                 gsims, trunc_level, correl_model, eps_dict, rup_slice):
         self.imt_taxonomies = imt_taxonomies
         self.sitecol = sitecol
         self.ses_ruptures = numpy.array(ses_ruptures)
@@ -333,6 +347,7 @@ class RiskInputFromRuptures(object):
         self.correl_model = correl_model
         self.weight = len(ses_ruptures)
         self.eps_dict = eps_dict
+        self.rup_slice = rup_slice
         self.imts = sorted(set(imt for imt, _ in imt_taxonomies))
 
     @property
@@ -353,7 +368,7 @@ class RiskInputFromRuptures(object):
         from openquake.commonlib.calculators.event_based import make_gmf_by_tag
         gmf_by_tag = make_gmf_by_tag(
             self.ses_ruptures, self.sitecol, self.imts,
-            self.gsims, self.trunc_level, self.correl_model)
+            self.gsims, self.trunc_level, self.correl_model, DummyMonitor())
         gmf_dt = gsim_imt_dt(self.gsims, self.imts)
         n = len(self.sitecol.complete)
         gmfs = numpy.zeros((len(gmf_by_tag), n), gmf_dt)

@@ -16,7 +16,6 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import numpy
 import logging
 import operator
@@ -29,8 +28,8 @@ from openquake.hazardlib.calc.hazard_curve import (
 from openquake.hazardlib.calc.filters import source_site_distance_filter, \
     rupture_site_distance_filter
 from openquake.risklib import scientific
-from openquake.commonlib import parallel, datastore
-from openquake.baselib.general import AccumDict, split_in_blocks, groupby
+from openquake.commonlib import parallel, datastore, source
+from openquake.baselib.general import AccumDict, split_in_blocks
 
 from openquake.commonlib.calculators import base, calc
 
@@ -60,7 +59,8 @@ def classical(sources, sitecol, gsims_assoc, monitor):
     curves_by_gsim = hazard_curves_per_trt(
         sources, sitecol, imtls, gsims, truncation_level,
         source_site_filter=source_site_distance_filter(max_dist),
-        rupture_site_filter=rupture_site_distance_filter(max_dist))
+        rupture_site_filter=rupture_site_distance_filter(max_dist),
+        monitor=monitor)
     return {(trt_model_id, str(gsim)): curves
             for gsim, curves in zip(gsims, curves_by_gsim)}
 
@@ -90,7 +90,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = self.oqparam
-        sources = list(self.composite_source_model.sources)
+        sources = self.composite_source_model.get_sources()
         zc = zero_curves(len(self.sitecol), self.oqparam.imtls)
         zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
         gsims_assoc = self.rlzs_assoc.get_gsims_by_trt_id()
@@ -189,14 +189,16 @@ def is_effective_trt_model(result_dict, trt_model):
 
 
 @parallel.litetask
-def classical_tiling(calculator, sitecol, tileno, monitor):
+def classical_tiling(calculator, sitecol, position, tileno, monitor):
     """
     :param calculator:
         a ClassicalCalculator instance
     :param sitecol:
-        a SiteCollection instance
+        the site collection of the current tile
+    :param position:
+        position of the current tile in the full site collection
     :param tileno:
-        the number of the current tile
+        the tile ordinal
     :param monitor:
         a monitor instance
     :returns:
@@ -204,16 +206,30 @@ def classical_tiling(calculator, sitecol, tileno, monitor):
     """
     calculator.sitecol = sitecol
     calculator.tileno = '.%04d' % tileno
-    result = calculator.execute()
+    curves_by_trt_gsim = calculator.execute()
+    curves_by_trt_gsim.indices = range(position, position + len(sitecol))
     # build the correct realizations from the (reduced) logic tree
     calculator.rlzs_assoc = calculator.composite_source_model.get_rlzs_assoc(
-        partial(is_effective_trt_model, result))
+        partial(is_effective_trt_model, curves_by_trt_gsim))
     n_levels = sum(len(imls) for imls in calculator.oqparam.imtls.itervalues())
-    tup = len(calculator.sitecol), n_levels, len(calculator.rlzs_assoc)
-    logging.info('Processed tile %d, (sites, levels, keys)=%s', tileno, tup)
-    # export the calculator outputs
-    saved = calculator.post_execute(result)
-    return saved
+    tup = (len(calculator.sitecol), n_levels, len(calculator.rlzs_assoc),
+           len(calculator.rlzs_assoc.realizations))
+    logging.info('Processed tile %d, (sites, levels, keys, rlzs)=%s',
+                 tileno, tup)
+    return curves_by_trt_gsim
+
+
+def agg_curves_by_trt_gsim(acc, curves_by_trt_gsim):
+    """
+    :param acc: AccumDict (trt_id, gsim) -> N curves
+    :param curves_by_trt_gsim: AccumDict (trt_id, gsim) -> T curves
+
+    where N is the total number of sites and T the number of sites
+    in the current tile. Works by side effect, by updating the accumulator.
+    """
+    for k in curves_by_trt_gsim:
+        acc[k][curves_by_trt_gsim.indices] = curves_by_trt_gsim[k]
+    return acc
 
 
 @base.calculators.add('classical_tiling')
@@ -221,51 +237,31 @@ class ClassicalTilingCalculator(ClassicalCalculator):
     """
     Classical Tiling calculator
     """
-    prefilter = False
-    pathname_by_fname = datastore.persistent_attribute('pathname_by_fname')
+    SourceProcessor = source.SourceFilter
 
     def execute(self):
         """
         Split the computation by tiles which are run in parallel.
         """
         monitor = self.monitor(self.core_func.__name__)
-        monitor.oqparam = self.oqparam
-        self.tiles = map(SiteCollection, split_in_blocks(
-            self.sitecol, self.oqparam.concurrent_tasks or 1))
-        self.oqparam.concurrent_tasks = 0
+        monitor.oqparam = oq = self.oqparam
+        self.tiles = split_in_blocks(
+            self.sitecol, self.oqparam.concurrent_tasks or 1)
+        oq.concurrent_tasks = 0
         calculator = ClassicalCalculator(
             self.oqparam, monitor, persistent=False)
         calculator.composite_source_model = self.composite_source_model
-        calculator.rlzs_assoc = self.composite_source_model.get_rlzs_assoc(
-            lambda tm: True)  # build the full logic tree
-        all_args = [(calculator, tile, i, monitor)
-                    for (i, tile) in enumerate(self.tiles)]
-        return parallel.starmap(classical_tiling, all_args).reduce()
+        rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
+        self.rlzs_assoc = calculator.rlzs_assoc = rlzs_assoc
 
-    def post_execute(self, result):
-        """
-        Merge together the exported files for each tile.
-
-        :param result: a dictionary key -> exported filename
-        """
-        self.pathname_by_fname = result
-        # group files by name; for instance the file names
-        # ['quantile_curve-0.1.csv.0000', 'quantile_curve-0.1.csv.0001',
-        # 'hazard_map-mean.csv.0000', 'hazard_map-mean.csv.0001']
-        # are grouped in the dictionary
-        # {'quantile_curve-0.1.csv': ['quantile_curve-0.1.csv.0000',
-        #                             'quantile_curve-0.1.csv.0001'],
-        # 'hazard_map-mean.csv': ['hazard_map-mean.csv.0000',
-        #                         'hazard_map-mean.csv.0001'],
-        # }
-        dic = groupby((fname for fname in result.itervalues()),
-                      lambda fname: fname.rsplit('.', 1)[0])
-        # merge together files coming from different tiles in order
-        d = {}
-        for fname in dic:
-            with open(fname, 'w') as f:
-                for tilename in sorted(dic[fname]):
-                    f.write(open(tilename).read())
-                    os.remove(tilename)
-            d[os.path.basename(fname)] = fname
-        return d
+        # parallelization
+        all_args = []
+        position = 0
+        for (i, tile) in enumerate(self.tiles):
+            all_args.append((calculator, SiteCollection(tile),
+                             position, i, monitor))
+            position += len(tile)
+        acc = {trt_gsim: zero_curves(len(self.sitecol), oq.imtls)
+               for trt_gsim in calculator.rlzs_assoc}
+        return parallel.starmap(classical_tiling, all_args).reduce(
+            agg_curves_by_trt_gsim, acc)

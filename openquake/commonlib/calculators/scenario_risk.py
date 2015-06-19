@@ -19,6 +19,8 @@
 import os
 import logging
 
+import numpy
+
 from openquake.baselib import general
 from openquake.commonlib import parallel, datastore
 from openquake.commonlib.calculators import base
@@ -93,9 +95,11 @@ class ScenarioRiskCalculator(base.RiskCalculator):
     Run a scenario risk calculation
     """
     core_func = scenario_risk
+    epsilon_matrix = datastore.persistent_attribute('/epsilon_matrix')
     losses_by_key = datastore.persistent_attribute('losses_by_key')
     gmf_by_trt_gsim = datastore.persistent_attribute('gmf_by_trt_gsim')
     pre_calculator = 'scenario'
+    is_stochastic = True
 
     def pre_execute(self):
         """
@@ -109,7 +113,8 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         logging.info('Building the epsilons')
         eps_dict = self.make_eps_dict(
             self.oqparam.number_of_ground_motion_fields)
-
+        self.epsilon_matrix = numpy.array(
+            [eps_dict[a['asset_ref']] for a in self.assetcol])
         self.riskinputs = self.build_riskinputs(base.get_gmfs(self), eps_dict)
 
     def post_execute(self, result):

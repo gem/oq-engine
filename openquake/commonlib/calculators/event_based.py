@@ -40,6 +40,37 @@ from openquake.commonlib.calculators.classical import (
 
 # ######################## rupture calculator ############################ #
 
+# a numpy record storing the number of ruptures and ground motion fields
+# for each realization
+counts_dt = numpy.dtype([('rup', int), ('gmf', int)])
+
+
+def counts_per_rlz(num_sites, num_imts, rlzs_assoc, sescollection):
+    """
+    :param num_sites: the number of sites
+    :param num_imts: the number of IMTs
+    :param rlzs_assoc: an instance of RlzsAssoc
+    :param sescollection: a list of dictionaries tag -> SESRupture
+    :returns: the numbers of nonzero GMFs, for each realization
+    """
+    rlzs = rlzs_assoc.realizations
+    counts = numpy.zeros(len(rlzs), counts_dt)
+    for rlz in rlzs:
+        col_ids = rlzs_assoc.csm_info.get_col_ids(rlz)
+        for col_id, sc in enumerate(sescollection):
+            if col_id in col_ids:
+                i = rlz.ordinal
+
+                # ruptures per realization
+                counts['rup'][i] += len(sc)
+
+                # gmvs per realization
+                for rup in sc.itervalues():
+                    counts['gmf'][i] += (
+                        len(rup.indices) if rup.indices is not None
+                        else num_sites) * num_imts
+    return counts
+
 
 def get_geom(surface, is_from_fault_source, is_multi_surface):
     """
@@ -153,6 +184,9 @@ class SESRupture(object):
             new.lons[3], new.lats[3], new.depths[3])
         return new
 
+    def __lt__(self, other):
+        return self.tag < other.tag
+
 
 @parallel.litetask
 def compute_ruptures(sources, sitecol, info, monitor):
@@ -262,7 +296,10 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
     Event based PSHA calculator generating the ruptures only
     """
     core_func = compute_ruptures
+    tags = datastore.persistent_attribute('/tags')
     sescollection = datastore.persistent_attribute('sescollection')
+    counts_per_rlz = datastore.persistent_attribute('/counts_per_rlz')
+    is_stochastic = True
 
     def pre_execute(self):
         """
@@ -271,7 +308,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         super(EventBasedRuptureCalculator, self).pre_execute()
         rnd = random.Random()
         rnd.seed(self.oqparam.random_seed)
-        for src in self.composite_source_model.sources:
+        for src in self.composite_source_model.get_sources():
             src.seed = rnd.randint(0, MAX_INT)
 
     def execute(self):
@@ -283,7 +320,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = self.oqparam
         csm = self.composite_source_model
-        sources = list(csm.sources)
+        sources = csm.get_sources()
         ruptures_by_trt = parallel.apply_reduce(
             self.core_func.__func__,
             (sources, self.sitecol, csm.info, monitor),
@@ -300,33 +337,56 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         return ruptures_by_trt
 
     def post_execute(self, result):
+        """
+        Save the SES collection and the array counts_per_rlz
+        """
         nc = self.rlzs_assoc.csm_info.num_collections
         sescollection = [{} for col_id in range(nc)]
+        tags = []
         for trt_id in result:
             for sr in result[trt_id]:
                 sescollection[sr.col_id][sr.tag] = sr
-        self.sescollection = sescollection
+                tags.append(sr.tag)
+                if len(sr.tag) > 100:
+                    logging.error(
+                        'The tag %s is long %d characters, it will be '
+                        'truncated to 100 characters in the /tags array',
+                        sr.tag, len(sr.tag))
+        logging.info('Saving the SES collection')
+        with self.monitor('saving ses', autoflush=True):
+            self.tags = numpy.array(sorted(tags), (str, 100))
+            self.sescollection = sescollection
+        with self.monitor('counts_per_rlz'):
+            self.counts_per_rlz = counts_per_rlz(
+                len(self.sitecol), len(self.oqparam.imtls),
+                self.rlzs_assoc, sescollection)
 
 # ######################## GMF calculator ############################ #
 
 
 # NB: this will be replaced by hazardlib.calc.gmf.build_gmf_by_tag
 def make_gmf_by_tag(ses_ruptures, sitecol, imts, gsims,
-                    trunc_level, correl_model):
+                    trunc_level, correl_model, monitor):
     """
     :returns: a dictionary tag -> (r_sites, gmf_array)
     """
     dic = {}
+    ctx_mon = monitor('make contexts')
+    gmf_mon = monitor('compute poes')
     for rupture, group in itertools.groupby(
             ses_ruptures, operator.attrgetter('rupture')):
         sesruptures = list(group)
         indices = sesruptures[0].indices
         r_sites = (sitecol if indices is None else
                    site.FilteredSiteCollection(indices, sitecol))
-        computer = calc.gmf.GmfComputer(
-            rupture, r_sites, imts, gsims, trunc_level, correl_model)
-        for sr in sesruptures:
-            dic[sr.tag] = computer.compute([sr.seed])[0]
+        with ctx_mon:
+            computer = calc.gmf.GmfComputer(
+                rupture, r_sites, imts, gsims, trunc_level, correl_model)
+        with gmf_mon:
+            for sr in sesruptures:
+                dic[sr.tag] = computer.compute([sr.seed])[0]
+    ctx_mon.flush()
+    gmf_mon.flush()
     return dic
 
 
@@ -355,11 +415,12 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
     correl_model = readinput.get_correl_model(oq)
     num_sites = len(sitecol)
     dic = make_gmf_by_tag(
-        ses_ruptures, sitecol, oq.imtls, gsims, trunc_level, correl_model)
+        ses_ruptures, sitecol.complete, oq.imtls, gsims,
+        trunc_level, correl_model, monitor)
     zero = zero_curves(num_sites, oq.imtls)
     result = AccumDict({(trt_id, str(gsim)): [dic, zero] for gsim in gsims})
     gmfs = [dic[tag] for tag in sorted(dic)]
-    if getattr(oq, 'hazard_curves_from_gmfs', None):
+    if oq.hazard_curves_from_gmfs:
         duration = oq.investigation_time * oq.ses_per_logic_tree_path * (
             oq.number_of_logic_tree_samples or 1)
         for gsim in gsims:
@@ -405,6 +466,7 @@ class EventBasedCalculator(ClassicalCalculator):
     pre_calculator = 'event_based_rupture'
     core_func = compute_gmfs_and_curves
     gmf_by_trt_gsim = datastore.persistent_attribute('gmf_by_trt_gsim')
+    is_stochastic = True
 
     def pre_execute(self):
         """
@@ -412,7 +474,7 @@ class EventBasedCalculator(ClassicalCalculator):
         prepare some empty files in the export directory to store the gmfs
         (if any). If there were pre-existing files, they will be erased.
         """
-        ClassicalCalculator.pre_execute(self)
+        super(EventBasedCalculator, self).pre_execute()
         rupture_by_tag = sum(self.datastore['sescollection'], AccumDict())
         self.sesruptures = [rupture_by_tag[tag]
                             for tag in sorted(rupture_by_tag)]
@@ -441,8 +503,11 @@ class EventBasedCalculator(ClassicalCalculator):
         parallelizing on the ruptures according to their weight and
         tectonic region type.
         """
+        oq = self.oqparam
+        if not oq.hazard_curves_from_gmfs and not oq.ground_motion_fields:
+            return
         monitor = self.monitor(self.core_func.__name__)
-        monitor.oqparam = self.oqparam
+        monitor.oqparam = oq
         zc = zero_curves(len(self.sitecol), self.oqparam.imtls)
         zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
         self.gmf_dict = collections.defaultdict(AccumDict)
@@ -460,6 +525,8 @@ class EventBasedCalculator(ClassicalCalculator):
         and hazard curves (if any).
         """
         oq = self.oqparam
+        if not oq.hazard_curves_from_gmfs and not oq.ground_motion_fields:
+            return
         if oq.hazard_curves_from_gmfs:
             ClassicalCalculator.post_execute.__func__(self, result)
         if oq.ground_motion_fields:
@@ -468,7 +535,7 @@ class EventBasedCalculator(ClassicalCalculator):
                                                for tag in gmf_by_tag}
             self.gmf_by_trt_gsim = self.gmf_dict
             self.gmf_dict.clear()
-        if self.mean_curves is not None:  # compute classical ones
+        if oq.mean_hazard_curves:  # compute classical ones
             export_dir = os.path.join(oq.export_dir, 'cl')
             if not os.path.exists(export_dir):
                 os.makedirs(export_dir)
@@ -479,7 +546,7 @@ class EventBasedCalculator(ClassicalCalculator):
             self.cl.composite_source_model = self.csm
             self.cl.sitecol = self.sitecol
             self.cl.rlzs_assoc = self.csm.get_rlzs_assoc()
-            result = self.cl.run(pre_execute=False)
+            result = self.cl.run(pre_execute=False, clean_up=False)
             for imt in self.mean_curves.dtype.fields:
                 rdiff, index = max_rel_diff_index(
                     self.cl.mean_curves[imt], self.mean_curves[imt])

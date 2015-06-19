@@ -16,25 +16,23 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
 from openquake.commonlib import sap, datastore
-from openquake.commonlib.export import export as export_
+import shutil
 
 
-# TODO: add some nontrivial export test
-def export(calc_id, datastore_key, format='csv'):
+def purge(calc_id):
     """
-    Export an output from the datastore.
+    Remove the given calculation. If calc_id is 0, remove all calculations.
     """
-    dstore = datastore.DataStore(calc_id)
-    hc_id = dstore['oqparam'].hazard_calculation_id
-    if hc_id:
-        dstore.parent = datastore.DataStore(hc_id)
-    for fmt in format.split(','):
-        fnames = export_((datastore_key, fmt), dstore)
-        print 'Exported %s' % fnames
+    if not calc_id:
+        shutil.rmtree(datastore.DATADIR)
+        print('Removed %s' % datastore.DATADIR)
+    else:
+        calc_dir = datastore.DataStore(calc_id).calc_dir
+        shutil.rmtree(calc_dir)
+        print('Removed %s' % calc_dir)
 
 
-parser = sap.Parser(export)
-parser.arg('calc_id', 'number of the calculation', type=int)
-parser.arg('datastore_key', 'datastore key')
-parser.arg('format', 'export formats (comma separated)')
+parser = sap.Parser(purge)
+parser.arg('calc_id', 'calculation ID', type=int)

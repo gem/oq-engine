@@ -215,6 +215,29 @@ def export_event_loss(ekey, dstore):
     return fnames
 
 
+@export.add(('/event_loss_table-rlzs', 'csv'))
+def export_event_loss_table(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    name, fmt = ekey
+    fnames = []
+    elt = dstore[name]
+    tags = dstore['/tags']
+    for loss_type in elt:
+        for rlz_uid in elt[loss_type]:
+            data = [[tags[e['rup_id']], e['loss']]
+                    for e in elt[loss_type][rlz_uid]]
+            # the name is extracted from '/event_loss_table-rlzs' by removing
+            # the first character and the the last 5: 'event_loss_table'
+            fname = '%s-%s-%s.csv' % (name[1:-5], rlz_uid, loss_type)
+            dest = os.path.join(dstore.export_dir, fname)
+            writers.write_csv(dest, sorted(data), fmt='%10.6E')
+            fnames.append(dest)
+    return fnames
+
+
 # TODO: the export is doing too much; probably we should store
 # a better data structure
 @export.add(('damages_by_key', 'xml'))
@@ -227,6 +250,9 @@ def export_damage(ekey, dstore):
     riskmodel = dstore['riskmodel']
     rlzs = dstore['rlzs_assoc'].realizations
     damages_by_key = dstore['damages_by_key']
+    assetcol = dstore['/assetcol']
+    sitemesh = dstore['/sitemesh']
+    assetno = dict((ref, i) for i, ref in enumerate(assetcol['asset_ref']))
     dmg_states = [DmgState(s, i)
                   for i, s in enumerate(riskmodel.damage_states)]
     fnames = []
@@ -247,11 +273,12 @@ def export_damage(ekey, dstore):
                         DmgDistPerTaxonomy(key, dmg_state, mean, std))
             elif key_type == 'asset':
                 means, stddevs = values
+                point = sitemesh[assetcol[assetno[key]]['site_id']]
+                site = Site(point['lon'], point['lat'])
                 for dmg_state, mean, std in zip(dmg_states, means, stddevs):
                     dd_asset.append(
                         DmgDistPerAsset(
-                            ExposureData(key.id, Site(*key.location)),
-                            dmg_state, mean, std))
+                            ExposureData(key, site), dmg_state, mean, std))
         dd_total = []
         for dmg_state, total in zip(dmg_states, totals.T):
             mean, std = scientific.mean_std(total)
@@ -328,9 +355,9 @@ def _export_classical_damage_csv(export_dir, fname, damage_states,
     with open(dest, 'w') as csvfile:
         writer = csv.writer(csvfile, delimiter='|', lineterminator='\n')
         writer.writerow(['asset_ref'] + [ds.dmg_state for ds in damage_states])
-        for asset in sorted(fractions_by_asset):
-            writer.writerow(
-                [asset.id] + map(scientificformat, fractions_by_asset[asset]))
+        for asset_ref in sorted(fractions_by_asset):
+            data = fractions_by_asset[asset_ref]
+            writer.writerow([asset_ref] + map(scientificformat, data))
     return dest
 
 
