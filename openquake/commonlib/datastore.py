@@ -85,7 +85,7 @@ class Hdf5Dataset(object):
     :param dtype: dtype of the dataset (usually composite)
     :param size: size of the dataset (if None, the dataset is extendable)
     """
-    def __init__(self, hdf5, key, dtype, size=None):
+    def __init__(self, hdf5, key, dtype, size):
         self.hdf5 = hdf5
         self.key = key
         self.dtype = dtype
@@ -159,12 +159,12 @@ class DataStore(collections.MutableMapping):
         mode = 'r+' if os.path.exists(self.hdf5path) else 'w'
         self.hdf5 = h5py.File(self.hdf5path, mode, libver='latest')
 
-    def create_dset(self, key, dtype):
+    def create_dset(self, key, dtype, size=None):
         """
         Create a one-dimensional extend-able HDF5 dataset
         """
         assert key.startswith('/'), key
-        return Hdf5Dataset(self.hdf5, key, dtype)
+        return Hdf5Dataset(self.hdf5, key, dtype, size)
 
     def path(self, key):
         """
