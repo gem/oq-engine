@@ -231,6 +231,7 @@ class BaseHazardCalculator(base.Calculator):
                     gsims=gsims_by_trt[trt_mod.trt]).id
         # rebuild the info object with the trt_ids coming from the db
         self.composite_model.info = source.CompositionInfo(
+            self.composite_model.source_model_lt,
             self.composite_model.source_models)
 
     @EnginePerformanceMonitor.monitor
