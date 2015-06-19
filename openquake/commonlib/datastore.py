@@ -23,14 +23,7 @@ import cPickle
 import collections
 
 import numpy
-
-try:
-    import h5py
-except ImportError:
-    class mock_h5py(object):
-        def __getattr__(self, name):
-            raise ImportError('Could not import h5py.%s' % name)
-    h5py = mock_h5py()
+import h5py
 
 from openquake.commonlib.writers import write_csv
 
@@ -51,7 +44,7 @@ class ByteCounter(object):
         # look if the dataset has an attribute nbytes
         try:
             self.nbytes += dset_or_group.attrs['nbytes']
-            return
+            return self.nbytes
         except KeyError:
             pass
         # else extract the underlying array and get nbytes
@@ -97,6 +90,7 @@ class Hdf5Dataset(object):
             self.dset = self.hdf5.create_dataset(key, (size,), dtype)
             self.size = size
             self.dset.attrs['nbytes'] = size * numpy.zeros(1, dtype).nbytes
+        self.attrs = self.dset.attrs
 
     def extend(self, array):
         """
