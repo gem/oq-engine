@@ -56,10 +56,9 @@ def num_affected_sites(rupture, num_sites):
             else num_sites)
 
 
-def counts_per_rlz(num_sites, num_imts, rlzs_assoc, sescollection):
+def counts_per_rlz(num_sites, rlzs_assoc, sescollection):
     """
     :param num_sites: the number of sites
-    :param num_imts: the number of IMTs
     :param rlzs_assoc: an instance of RlzsAssoc
     :param sescollection: a list of dictionaries tag -> SESRupture
     :returns: the numbers of nonzero GMFs, for each realization
@@ -77,8 +76,7 @@ def counts_per_rlz(num_sites, num_imts, rlzs_assoc, sescollection):
 
                 # gmvs per realization
                 for rup in sc.itervalues():
-                    counts['gmf'][i] += num_affected_sites(
-                        rup, num_sites) * num_imts
+                    counts['gmf'][i] += num_affected_sites(rup, num_sites)
     return counts
 
 
@@ -385,8 +383,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             self.sescollection = sescollection
         with self.monitor('counts_per_rlz'):
             self.counts_per_rlz = counts_per_rlz(
-                len(self.sitecol), len(self.oqparam.imtls),
-                self.rlzs_assoc, sescollection)
+                len(self.sitecol), self.rlzs_assoc, sescollection)
             self.datastore['/counts_per_rlz'].attrs[
                 'gmfs_nbytes'] = get_gmfs_nbytes(
                     len(self.sitecol), len(self.oqparam.imtls),
