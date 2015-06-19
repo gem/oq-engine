@@ -438,22 +438,8 @@ class RiskCalculator(HazardCalculator):
                 weight=get_weight, key=self.riskinput_key)
         return res
 
+
 # functions useful for the calculators ScenarioDamage and ScenarioRisk
-
-
-def expand(gmf, sitecol):
-    """
-    :param gmf: a GMF matrix of shape (N', R) with N' <= N
-    :param sitecol: a site collection of N elements
-    :returns: a GMF matrix of shape (N, R) filled with zeros
-    """
-    if sitecol is sitecol.complete:
-        return gmf  # do nothing
-    n, r = gmf.shape
-    zeros = numpy.zeros((len(sitecol.complete), r), gmf.dtype)
-    zeros[sitecol.indices] = gmf
-    return zeros
-
 
 def get_gmfs(calc):
     """
@@ -461,13 +447,22 @@ def get_gmfs(calc):
     :returns: a dictionary of gmfs
     """
     if 'gmfs' in calc.oqparam.inputs:  # from file
-        gmfs = read_gmfs_from_csv(calc)
-    else:  # from rupture
-        if calc.datastore.parent:  # gmfs from hazard calculation
-            gmfs = calc.gmf_by_trt_gsim
-        else:  # just computed gmfs
-            gmfs = {k: expand(gmf, calc.sitecol)
-                    for k, gmf in calc.gmf_by_trt_gsim.iteritems()}
+        return read_gmfs_from_csv(calc)
+    # else from rupture
+    gmf_by_tag = calc.datastore['/gmfs']
+    N, R = len(calc.sitecol.complete), len(gmf_by_tag)
+    if calc.sitecol is calc.sitecol.complete:
+        indices = range(len(calc.sitecol))
+    else:
+        indices = calc.sitecol.indices
+    imt_dt = numpy.dtype([(imt, float) for imt in calc.oqparam.imtls])
+    gmfs = {}
+    for trt_id, gsim in calc.rlzs_assoc:
+        # build a matrix N x R for each GSIM realization
+        gmf = numpy.zeros((N, R), imt_dt)
+        for rupid, tag in enumerate(sorted(gmf_by_tag)):
+            gmf[indices, rupid] = gmf_by_tag[tag].value[gsim]
+        gmfs[trt_id, gsim] = gmf
     return gmfs
 
 

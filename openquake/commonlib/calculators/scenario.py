@@ -56,7 +56,6 @@ class ScenarioCalculator(base.HazardCalculator):
     """
     core_func = calc_gmfs
     sescollection = datastore.persistent_attribute('sescollection')
-    gmf_by_trt_gsim = datastore.persistent_attribute('gmf_by_trt_gsim')
     is_stochastic = True
 
     def pre_execute(self):
@@ -90,28 +89,21 @@ class ScenarioCalculator(base.HazardCalculator):
 
     def execute(self):
         """
-        Compute the GMFs in parallel and return a dictionary gmf_by_trt_gsim
+        Compute the GMFs in parallel and return a dictionary gmf_by_tag
         """
         logging.info('Computing the GMFs')
         args = (self.tag_seed_pairs, self.computer, self.monitor('calc_gmfs'))
-        gmf_by_tag = parallel.apply_reduce(
+        return parallel.apply_reduce(
             self.core_func.__func__, args,
             concurrent_tasks=self.oqparam.concurrent_tasks)
 
-        rlzs = self.rlzs_assoc.realizations
-        imt_dt = numpy.dtype([(imt, float) for imt in self.oqparam.imtls])
-        dic = collections.defaultdict(list)
+    def post_execute(self, gmf_by_tag):
+        """
+        :param gmf_by_tag: a dictionary tag -> gmf
+        """
+        nbytes = 0
         for tag in sorted(gmf_by_tag):
-            for rlz in rlzs:
-                gsim = str(rlz)
-                dic[0, gsim].append(gmf_by_tag[tag][gsim])
-
-        # (trt_id, gsim) -> N x R matrix
-        return {key: numpy.array(dic[key], imt_dt).T for key in dic}
-
-    def post_execute(self, gmf_by_trt_gsim):
-        """
-        :param gmf_by_tag: a dictionary (trt_id, gsim) -> gmf
-        :returns: a dictionary {('gmf', 'xml'): <gmf.xml filename>}
-        """
-        self.gmf_by_trt_gsim = gmf_by_trt_gsim
+            gmf = gmf_by_tag[tag]
+            self.datastore['/gmfs/' + tag] = gmf
+            nbytes += gmf.nbytes
+        self.datastore['/gmfs'].attrs['nbytes'] = nbytes
