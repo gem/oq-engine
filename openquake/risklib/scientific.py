@@ -352,9 +352,21 @@ class VulnerabilityFunctionWithPMF(object):
         self.id = vf_id
         self.imt = imt
         self.imls = imls
-        self.loss_ratios = ratios
+        self.loss_ratios = loss_ratios
         self.probs = probs
-        self.distribution = "PM"
+        self.distribution_name = "PM"
+
+        # to be set in .init(), called also by __setstate__
+        (self._probs_i1d, self.distribution) = None, None
+        self.init()
+
+    def init(self):
+        self._probs_i1d = interpolate.interp1d(self.imls, self.probs)
+        self.set_distribution(None)
+
+    def set_distribution(self, epsilons=None):
+        self.distribution = DISTRIBUTIONS[self.distribution_name]()
+        self.distribution.epsilons = epsilons
 
     def apply_to(self, ground_motion_values, epsilons=None):
         """
@@ -380,10 +392,11 @@ class VulnerabilityFunctionWithPMF(object):
         self.imls = state[2]
         self.loss_ratios = state[3]
         self.probs = state[4]
-        self.distribution = state[5]
+        self.distribution_name = state[5]
         self.init()
 
     def _check_vulnerability_data(self, imls, loss_ratios, probs, distribution):
+        return
 
 
     def _apply(self, imls):
@@ -400,7 +413,24 @@ class VulnerabilityFunctionWithPMF(object):
             values equal to the size of the input (1 or many)
         """
         # for imls < min(iml) we return a loss of 0 (default)
+        ret = numpy.zeros(len(imls))
 
+        # imls are clipped to max(iml)
+        imls_curve = numpy.piecewise(
+            imls,
+            [imls > self.imls[-1]],
+            [self.imls[-1], lambda x: x])
+
+        # for imls such that iml > min(iml) we get a mean loss ratio
+        # by interpolation and sample the distribution
+
+        idxs, = numpy.where(imls_curve >= self.imls[0])
+        imls_curve = numpy.array(imls_curve)[idxs]
+        probs = self._probs_i1d(imls_curve)
+
+        # apply uncertainty
+        ret[idxs] = self.distribution.sample(self.loss_ratios, probs)
+        return ret
 
     @utils.memoized
     def loss_ratio_exceedance_matrix(self, steps):
@@ -695,6 +725,19 @@ class BetaDistribution(Distribution):
     def _beta(mean, stddev):
         return ((1 - mean) / stddev ** 2 - 1 / mean) * (mean - mean ** 2)
 
+@DISTRIBUTIONS.add('PM')
+class DiscreteDistribution(Distribution):
+    def sample(self, loss_ratios, probs):
+        res = []
+        for i in range(probs.shape[1]):
+            pmf = stats.rv_discrete(name='pmf',
+                                values=(numpy.arange(len(loss_ratios)), probs[:,i]))
+
+            res.append(loss_ratios[pmf.rvs()])
+        return res
+
+    def survival(self, loss_ratios, probs):
+        return
 
 #
 # Event Based
