@@ -496,7 +496,9 @@ class EventBasedCalculator(ClassicalCalculator):
                     for tag, gmf in res[trt_id, None].iteritems():
                         dataset = '/gmf/' + tag
                         self.datastore[dataset] = gmf
-                        self.datastore[dataset].attrs['trt_model_id'] = trt_id
+                        attrs = self.datastore[dataset].attrs
+                        attrs['trt_model_id'] = trt_id
+                        attrs['nbytes'] = gmf.nbytes
                     self.datastore.hdf5.flush()
             else:  # aggregate hcurves
                 with agg_mon:
