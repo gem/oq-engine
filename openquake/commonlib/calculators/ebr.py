@@ -136,16 +136,16 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         loss_types = self.riskmodel.get_loss_types()
         self.L = len(loss_types)
         self.R = len(self.rlzs_assoc.realizations)
-        for loss_type in loss_types:
-            for rlz in self.rlzs_assoc.realizations:
-                key = '/%s/%s' % (loss_type, rlz.uid)
-                self.datastore.hdf5.create_dataset(
-                    '/event_loss_table-rlzs' + key, (0,), elt_dt,
-                    chunks=True, maxshape=(None,))
-                if oq.insured_losses:
-                    self.datastore.hdf5.create_dataset(
-                        '/insured_loss_table-rlzs' + key, (0,), elt_dt,
-                        chunks=True, maxshape=(None,))
+        outs = ['/event_loss_table-rlzs']
+        if oq.insured_losses:
+            outs.append('/insured_loss_table-rlzs')
+        self.datasets = {}
+        for o, out in enumerate(outs):
+            for l, loss_type in enumerate(loss_types):
+                for r, rlz in enumerate(self.rlzs_assoc.realizations):
+                    key = '/%s/%s' % (loss_type, rlz.uid)
+                    dset = self.datastore.create_dset(out + key, elt_dt)
+                    self.datasets[o, l, r] = dset
 
     def execute(self):
         """
@@ -184,32 +184,14 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         :param result:
             a numpy array of shape (O, L, R) containing lists of arrays
         """
-        pos = cube(self.monitor.num_outputs, self.L, self.R, int)
         saved_mb = 0
-        rlzs = self.rlzs_assoc.realizations
-        loss_types = self.riskmodel.get_loss_types()
         with self.monitor('saving loss table',
                           autoflush=True, measuremem=True):
-            for (i, l, r), arrays in numpy.ndenumerate(result):
+            for idx, arrays in numpy.ndenumerate(result):
                 if not arrays:  # empty list
                     continue
-                lt = loss_types[l]
-                uid = rlzs[r].uid
-                n = pos[i, l, r]
-                if i == 0:
-                    elt = self.event_loss_table['%s/%s' % (lt, uid)]
-                elif self.oqparam.insured_losses:
-                    elt = self.insured_loss_table['%s/%s' % (lt, uid)]
-                else:
-                    continue
                 losses = numpy.concatenate(arrays)
-
-                # appending rows to the event loss table
-                n1 = n + len(losses)
-                elt.resize((n1,))
-                saved_mb += losses.nbytes
-                elt[n:n1] = losses
-                pos[i, l, r] = n1  # update position in the elt
+                self.datasets[idx].extend(losses)
                 self.datastore.hdf5.flush()
+                saved_mb += losses.nbytes
             logging.info('Saved %s of data', humansize(saved_mb))
-        return {}

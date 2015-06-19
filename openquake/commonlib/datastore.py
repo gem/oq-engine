@@ -48,6 +48,13 @@ class ByteCounter(object):
         self.nbytes = nbytes
 
     def __call__(self, name, dset_or_group):
+        # look if the dataset has an attribute nbytes
+        try:
+            self.nbytes += dset_or_group.attrs['nbytes']
+            return
+        except KeyError:
+            pass
+        # else extract the underlying array and get nbytes
         try:
             value = dset_or_group.value
         except AttributeError:
@@ -66,6 +73,36 @@ def get_last_calc_id(datadir=DATADIR):
         return 0
     calc_ids = [int(calc[5:]) for calc in calcs]  # strip calc_
     return max(calc_ids)
+
+
+class Hdf5Dataset(object):
+    """
+    Little wrapper around a one-dimensional HDF5 dataset which can grown
+    via the `extend` method.
+
+    :param hdf5: a h5py.File object
+    :param key: an hdf5 key string
+    :param dtype: dtype of the dataset (usually composite)
+    """
+    def __init__(self, hdf5, key, dtype):
+        self.hdf5 = hdf5
+        self.key = key
+        self.dtype = dtype
+        self.dset = self.hdf5.create_dataset(
+            key, (0,), dtype, chunks=True, maxshape=(None,))
+        self.size = 0
+        self.dset.attrs['nbytes'] = 0
+
+    def extend(self, array):
+        """
+        Extend the dataset with the given array, which must have
+        the expected dtype.
+        """
+        newsize = self.size + len(array)
+        self.dset.resize((newsize,))
+        self.dset[self.size:newsize] = array
+        self.size = newsize
+        self.dset.attrs['nbytes'] += array.nbytes
 
 
 class DataStore(collections.MutableMapping):
@@ -114,6 +151,13 @@ class DataStore(collections.MutableMapping):
         self.hdf5path = os.path.join(self.calc_dir, 'output.hdf5')
         mode = 'r+' if os.path.exists(self.hdf5path) else 'w'
         self.hdf5 = h5py.File(self.hdf5path, mode, libver='latest')
+
+    def create_dset(self, key, dtype):
+        """
+        Create a one-dimensional extend-able HDF5 dataset
+        """
+        assert key.startswith('/'), key
+        return Hdf5Dataset(self.hdf5, key, dtype)
 
     def path(self, key):
         """
