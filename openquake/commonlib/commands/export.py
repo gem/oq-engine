@@ -15,12 +15,14 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-
+from __future__ import print_function
+import os
+from openquake.baselib import general, performance
 from openquake.commonlib import sap, datastore
 from openquake.commonlib.export import export as export_
 
 
-# TODO: add some nontrivial export test
+# the export is tested in the demos
 def export(calc_id, datastore_key, format='csv'):
     """
     Export an output from the datastore.
@@ -29,9 +31,13 @@ def export(calc_id, datastore_key, format='csv'):
     hc_id = dstore['oqparam'].hazard_calculation_id
     if hc_id:
         dstore.parent = datastore.DataStore(hc_id)
-    for fmt in format.split(','):
-        fnames = export_((datastore_key, fmt), dstore)
-        print 'Exported %s' % fnames
+    with performance.Monitor('export', measuremem=True) as mon:
+        for fmt in format.split(','):
+            fnames = export_((datastore_key, fmt), dstore)
+            nbytes = sum(os.path.getsize(f) for f in fnames)
+            print('Exported %s in %s' % (general.humansize(nbytes), fnames))
+    if mon.duration > 1:
+        print(mon)
 
 
 parser = sap.Parser(export)
