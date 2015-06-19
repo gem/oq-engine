@@ -491,14 +491,14 @@ class EventBasedCalculator(ClassicalCalculator):
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
         for trt_id, gsim in res:
-            if gsim is None:
+            if gsim is None:  # save gmfs
                 with sav_mon:
                     for tag, gmf in res[trt_id, None].iteritems():
                         dataset = '/gmf/' + tag
                         self.datastore[dataset] = gmf
                         self.datastore[dataset].attrs['trt_model_id'] = trt_id
-                        self.datastore.hdf5.flush()
-            else:
+                    self.datastore.hdf5.flush()
+            else:  # aggregate hcurves
                 with agg_mon:
                     curves_by_imt = res[trt_id, gsim]
                     acc = agg_dicts(
