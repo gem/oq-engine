@@ -77,8 +77,7 @@ def get_last_calc_id(datadir=DATADIR):
 
 class Hdf5Dataset(object):
     """
-    Little wrapper around a one-dimensional HDF5 dataset which can grown
-    via the `extend` method.
+    Little wrapper around a one-dimensional HDF5 dataset.
 
     :param hdf5: a h5py.File object
     :param key: an hdf5 key string
@@ -161,7 +160,11 @@ class DataStore(collections.MutableMapping):
 
     def create_dset(self, key, dtype, size=None):
         """
-        Create a one-dimensional extend-able HDF5 dataset
+        Create a one-dimensional HDF5 dataset.
+
+        :param key: a string starting with '/'
+        :param dtype: dtype of the dataset (usually composite)
+        :param size: size of the dataset (if None, the dataset is extendable)
         """
         assert key.startswith('/'), key
         return Hdf5Dataset(self.hdf5, key, dtype, size)
