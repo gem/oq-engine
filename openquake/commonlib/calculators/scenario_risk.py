@@ -39,7 +39,9 @@ def losses_per_asset(tag, loss_type, assets, means, stddevs,
             # to return the already multiplied insured_loss_matrix;
             # we postpone the fix to the future when the engine
             # scenario_risk calculator will be removed
-            v = a.value(loss_type)
+            # v = a.value(loss_type)
+            v = a.fatalities if loss_type == 'fatalities' else a.value(
+                loss_type)
         else:
             v = 1
         lst.append((a.id, m * v, s * v))
@@ -78,7 +80,7 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
             result[out.hid] += losses_per_asset(
                 'asset-loss', out.loss_type, assets, means, stddevs)
             result[out.hid] += {('agg', out.loss_type): out.aggregate_losses}
-
+            
             if out.insured_loss_matrix is not None:
                 means = out.insured_loss_matrix.mean(axis=1),
                 stddevs = out.insured_loss_matrix.std(ddof=1, axis=1)

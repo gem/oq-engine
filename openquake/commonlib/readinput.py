@@ -654,7 +654,6 @@ def get_exposure(oqparam):
     all_cost_types = set(vulnerability_files(oqparam.inputs))
     relevant_cost_types = all_cost_types - set(['occupants'])
     asset_refs = set()
-    time_event = oqparam.time_event
     ignore_missing_costs = set(oqparam.ignore_missing_costs)
 
     def asset_gen():
@@ -688,8 +687,7 @@ def get_exposure(oqparam):
                     number = 1
                 else:
                     if 'occupants' in all_cost_types:
-                        values['fatalities'] = number
-
+                        values['fatalities_None'] = number
             location = asset.location['lon'], asset.location['lat']
             if region and not geometry.Point(*location).within(region):
                 out_of_region += 1
@@ -724,12 +722,10 @@ def get_exposure(oqparam):
                                  "Missing cost %s for asset %s" % (
                                      missing, asset_id))
 
-        if time_event:
-            for occupancy in asset.occupancies:
-                with context(fname, occupancy):
-                    if occupancy['period'] == time_event:
-                        values['fatalities'] = occupancy['occupants']
-                        break
+        for occupancy in asset.occupancies:
+            with context(fname, occupancy):
+                fatalities = 'fatalities_%s' % occupancy['period']
+                values[fatalities] = occupancy['occupants']
 
         area = float(asset.attrib.get('area', 1))
         ass = workflows.Asset(

@@ -125,7 +125,7 @@ def get_values(loss_type, assets):
     """
     if loss_type == 'fatalities' and hasattr(assets[0], 'values'):
         # this is called only in oq-lite, return naked value
-        values = numpy.array([a.values['fatalities'] for a in assets])
+        values = numpy.array([a.fatalities for a in assets])
     else:  # return dressed value
         values = numpy.array([a.value(loss_type) for a in assets])
     return values

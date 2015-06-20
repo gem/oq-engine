@@ -101,7 +101,10 @@ class BaseCalculator(object):
                 exported = self.export()
         finally:
             if clean_up:
-                self.clean_up()
+                try:
+                    self.clean_up()
+                except:
+                    logging.error('Cleanup error', exc_info=True)
         return exported
 
     def core_func(*args):
@@ -239,6 +242,7 @@ class HazardCalculator(BaseCalculator):
                     if name not in new:  # add missing parameter
                         new[name] = value
                 self.oqparam = self.oqparam
+
             if self.oqparam.hazard_investigation_time is None:
                 self.oqparam.hazard_investigation_time = (
                     self.oqparam.investigation_time)
@@ -296,7 +300,7 @@ class HazardCalculator(BaseCalculator):
         self.save_mesh()
         if hasattr(self, 'assets_by_site'):
             self.assetcol = riskinput.build_asset_collection(
-                self.assets_by_site)
+                self.assets_by_site, self.oqparam.time_event)
 
     def save_mesh(self):
         """
@@ -426,6 +430,9 @@ class RiskCalculator(HazardCalculator):
         Require a `.core_func` to be defined with signature
         (riskinputs, riskmodel, rlzs_assoc, monitor).
         """
+        # add fatalities as side effect
+        riskinput.build_asset_collection(
+            self.assets_by_site, self.oqparam.time_event)
         with self.monitor('execute risk', autoflush=True) as monitor:
             monitor.oqparam = self.oqparam
             if self.pre_calculator == 'event_based_rupture':
