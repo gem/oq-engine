@@ -420,12 +420,8 @@ def export_gmf(ekey, dstore):
     fnames = []
     gmf_by_rlz = rlzs_assoc.combine_gmfs(gmfs)
     for rlz, gmf_by_tag in sorted(gmf_by_rlz.iteritems()):
-        if isinstance(gmf_by_tag, dict):  # event based
-            tags = sorted(gmf_by_tag)
-            gmfs = [gmf_by_tag[tag] for tag in tags]
-        else:  # scenario calculator, gmf_by_tag is a matrix N x R
-            tags = sorted(rupture_by_tag)
-            gmfs = gmf_by_tag.T
+        tags = sorted(gmf_by_tag)
+        gmfs = [gmf_by_tag[tag] for tag in tags]
         ruptures = [rupture_by_tag[tag] for tag in tags]
         fname = build_name(rlz, 'gmf', fmt, samples)
         if len(gmfs) == 0:

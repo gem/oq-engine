@@ -68,7 +68,9 @@ class RlzsAssoc(collections.Mapping):
         """
         return {self.rlzs_assoc[key][0]: result[key] for key in result}
 
-    combine_gmfs = combine  # this is used in the export
+    def combine_gmfs(self, result):  # this is used in the export
+        return {rlz: {tag: result[tag][str(rlz)] for tag in sorted(result)}
+                for rlz in self.realizations}
 
     def __iter__(self):
         return self.rlzs_assoc.iterkeys()
