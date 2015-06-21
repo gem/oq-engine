@@ -6,6 +6,7 @@ import numpy.testing
 
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib.site import FilteredSiteCollection
+from openquake.commonlib.datastore import DataStore
 from openquake.commonlib.util import max_rel_diff_index
 from openquake.commonlib.tests.calculators import CalculatorTestCase
 from openquake.qa_tests_data.event_based import (
@@ -49,29 +50,6 @@ def joint_prob_of_occurrence(gmvs_site_1, gmvs_site_2, gmv, time_span,
     return prob
 
 
-def get_gmfs_by_imt(fname, sitecol, imts):
-    """
-    Return a list of dictionaries with a ground motion field per IMT,
-    one dictionary per rupture.
-
-    :param fname: path to the CSV file
-    :param sitecol: the underlying site collection
-    :param imts: the IMTs corresponding to the columns in the CSV file
-    """
-    dicts = []
-    with open(fname) as f:
-        for row in csv.reader(f):
-            indices = map(int, row[1].split())
-            sc = FilteredSiteCollection(indices, sitecol)
-            dic = AccumDict()
-            for imt, col in zip(imts, row[2:]):
-                gmf = numpy.array(map(float, col.split()))
-                dic[imt] = sc.expand(gmf, 0)
-            dic.tag = row[0]
-            dicts.append(dic)
-    return sorted(dicts, key=lambda dic: dic.tag)
-
-
 class EventBasedTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'event_based')
@@ -81,14 +59,18 @@ class EventBasedTestCase(CalculatorTestCase):
                     sc3: [0.99, 0.22]}
 
         for case in expected:
-            out = self.run_calc(case.__file__, 'job.ini', exports='csv')
+            self.run_calc(case.__file__, 'job.ini')
             oq = self.calc.oqparam
             self.assertEqual(list(oq.imtls), ['PGA'])
-            [fname] = out['/gmfs', 'csv']
-            gmfs = get_gmfs_by_imt(fname, self.calc.sitecol, oq.imtls)
-            gmvs_site_1 = [gmf['PGA'][0] for gmf in gmfs]
-            gmvs_site_2 = [gmf['PGA'][1] for gmf in gmfs]
-
+            dstore = DataStore(self.calc.datastore.calc_id)
+            gmfs = dstore['/gmfs']
+            gmvs_site_1 = []
+            gmvs_site_2 = []
+            for dataset in gmfs.itervalues():
+                gmv1, gmv2 = dataset.value['BooreAtkinson2008']['PGA']
+                gmvs_site_1.append(gmv1)
+                gmvs_site_2.append(gmv2)
+            dstore.close()
             joint_prob_0_5 = joint_prob_of_occurrence(
                 gmvs_site_1, gmvs_site_2, 0.5, oq.investigation_time,
                 oq.ses_per_logic_tree_path)
