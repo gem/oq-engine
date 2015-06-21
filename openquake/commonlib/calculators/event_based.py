@@ -57,6 +57,12 @@ def num_affected_sites(rupture, num_sites):
             else num_sites)
 
 
+def get_indices(rupture, num_sites):
+    if rupture.indices is None:
+        return range(num_sites)
+    return rupture.indices
+
+
 def counts_per_rlz(num_sites, rlzs_assoc, sescollection):
     """
     :param num_sites: the number of sites
@@ -398,9 +404,9 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
 def make_gmfs(ses_ruptures, sitecol, imts, gsims,
               trunc_level, correl_model, monitor):
     """
-    :returns: a dictionary rup_ordinal -> gmf_array
+    :returns: a gmf array
     """
-    dic = {}
+    gmfs = []
     ctx_mon = monitor('make contexts')
     gmf_mon = monitor('compute poes')
     for rupture, group in itertools.groupby(
@@ -414,10 +420,12 @@ def make_gmfs(ses_ruptures, sitecol, imts, gsims,
                 rupture, r_sites, imts, gsims, trunc_level, correl_model)
         with gmf_mon:
             for sr in sesruptures:
-                dic[sr.ordinal] = computer.compute([sr.seed])[0]
+                gmf = computer.compute([sr.seed])[0]
+                gmf['idx'] = sr.ordinal
+                gmfs.append(gmf)
     ctx_mon.flush()
     gmf_mon.flush()
-    return dic
+    return numpy.concatenate(gmfs)
 
 
 @parallel.litetask
@@ -433,7 +441,7 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
         a Monitor instance
     :returns:
         a dictionary (trt_model_id, gsim) -> haz_curves and
-        (trt_model_id, None) -> gmf_by_tag
+        (trt_model_id, None) -> gmfs
    """
     oq = monitor.oqparam
     # NB: by construction each block is a non-empty list with
@@ -444,22 +452,21 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
     trunc_level = oq.truncation_level
     correl_model = readinput.get_correl_model(oq)
     num_sites = len(sitecol)
-    gmf_dict = make_gmfs(
+    gmfs = make_gmfs(
         ses_ruptures, sitecol.complete, oq.imtls, gsims,
         trunc_level, correl_model, monitor)
-    result = {(trt_id, col_id): gmf_dict
+    result = {(trt_id, col_id): gmfs
               if oq.ground_motion_fields else {}}
     if oq.hazard_curves_from_gmfs:
         with monitor('bulding hazard curves', measuremem=False) as mon:
-            rupids = sorted(gmf_dict)
+            ses_ruptures = sorted(ses_ruptures, key=operator.attrgetter('tag'))
             duration = oq.investigation_time * oq.ses_per_logic_tree_path * (
                 oq.number_of_logic_tree_samples or 1)
             for gsim in gsims:
                 gs = str(gsim)
-                gmfs = [gmf_dict[rupid][gs] for rupid in rupids]
-                indices = [gmf_dict[rupid]['idx'] for rupid in rupids]
+                indices = [get_indices(sr, num_sites) for sr in ses_ruptures]
                 result[trt_id, gs] = to_haz_curves(
-                    num_sites, gmfs, indices, oq.imtls,
+                    num_sites, gmfs[gs], indices, oq.imtls,
                     oq.investigation_time, duration)
         mon.flush()
     return result
@@ -508,16 +515,17 @@ class EventBasedCalculator(ClassicalCalculator):
         super(EventBasedCalculator, self).pre_execute()
         self.sesruptures = []
         gsims_by_col = self.rlzs_assoc.get_gsims_by_col()
+        ordinal = 0
+        self.datasets = []
         for col_id, sescol in enumerate(self.datastore['sescollection']):
             gmf_dt = gsim_imt_dt(gsims_by_col[col_id], self.oqparam.imtls)
-
-            tags = sorted(sescol)
-            for i, tag in enumerate(tags):
+            for tag, sesrup in sorted(sescol.iteritems()):
                 sesrup = sescol[tag]
                 self.sesruptures.append(sesrup)
-                sesrup.ordinal = i
-            self.datastore.create_dset(
-                '/gmfs/col%02d' % col_id, gmf_dt, len(sescol))
+                sesrup.ordinal = ordinal
+                ordinal += 1
+            self.datasets.append(
+                self.datastore.create_dset('/gmfs/col%02d' % col_id, gmf_dt))
 
     def combine_curves_and_save_gmfs(self, acc, res):
         """
@@ -534,12 +542,11 @@ class EventBasedCalculator(ClassicalCalculator):
         for trt_id, gsim_or_col in res:
             if isinstance(gsim_or_col, int):  # save gmfs
                 with sav_mon:
-                    dataset = self.datastore['/gmfs/col%02d' % gsim_or_col]
+                    gmfa = res[trt_id, gsim_or_col]
+                    dataset = self.datasets[gsim_or_col]
                     dataset.attrs['trt_model_id'] = trt_id
-                    import pdb; pdb.set_trace()
-                    for i, gmf in res[trt_id, gsim_or_col].iteritems():
-                        dataset[i, :] = gmf
-                        self.nbytes += gmf.nbytes
+                    dataset.extend(gmfa)
+                    self.nbytes += gmfa.nbytes
                     self.datastore.hdf5.flush()
             else:  # aggregate hcurves
                 with agg_mon:

@@ -4,7 +4,7 @@ from nose.plugins.attrib import attr
 
 import numpy.testing
 
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, groupby
 from openquake.hazardlib.site import FilteredSiteCollection
 from openquake.commonlib.datastore import DataStore
 from openquake.commonlib.util import max_rel_diff_index
@@ -63,10 +63,16 @@ class EventBasedTestCase(CalculatorTestCase):
             oq = self.calc.oqparam
             self.assertEqual(list(oq.imtls), ['PGA'])
             dstore = DataStore(self.calc.datastore.calc_id)
-            gmfs = dstore['/gmfs/col00'].value['BooreAtkinson2008']['PGA']
+            gmf_by_rupid = groupby(
+                dstore['/gmfs/col00'].value,
+                lambda row: row['idx'],
+                lambda rows: [row['BooreAtkinson2008']['PGA'] for row in rows])
+            dstore.close()
             gmvs_site_1 = []
             gmvs_site_2 = []
-            dstore.close()
+            for rupid, gmf in gmf_by_rupid.iteritems():
+                gmvs_site_1.append(gmf[0])
+                gmvs_site_2.append(gmf[1])
             joint_prob_0_5 = joint_prob_of_occurrence(
                 gmvs_site_1, gmvs_site_2, 0.5, oq.investigation_time,
                 oq.ses_per_logic_tree_path)
