@@ -409,6 +409,7 @@ def export_gmf(ekey, dstore):
     sitecol = dstore['sitecol']
     rlzs_assoc = dstore['rlzs_assoc']
     rupture_by_tag = sum(dstore['sescollection'], AccumDict())
+    all_tags = dstore['/tags']
     oq = dstore['oqparam']
     samples = oq.number_of_logic_tree_samples
     fmt = ekey[-1]
@@ -419,9 +420,9 @@ def export_gmf(ekey, dstore):
         logging.warn(GMF_WARNING, dstore.hdf5path)
     fnames = []
     gmf_by_rlz = rlzs_assoc.combine_gmfs(gmfs)
-    for rlz, gmf_by_tag in sorted(gmf_by_rlz.iteritems()):
-        tags = sorted(gmf_by_tag)
-        gmfs = [gmf_by_tag[tag] for tag in tags]
+    for rlz, gmf_by_idx in sorted(gmf_by_rlz.iteritems()):
+        tags = all_tags[gmf_by_idx.keys()]
+        gmfs = gmf_by_idx.values()
         ruptures = [rupture_by_tag[tag] for tag in tags]
         fname = build_name(rlz, 'gmf', fmt, samples)
         if len(gmfs) == 0:

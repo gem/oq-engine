@@ -340,25 +340,24 @@ class RlzsAssoc(collections.Mapping):
                 ad[rlz] = agg(ad[rlz], value)
         return ad
 
-    def combine_gmfs(self, gmf_by_tag):
+    def combine_gmfs(self, gmfs):
         """
-        :param results: a dataset gmf_by_tag
+        :param results: a dataset gmf_by_idx
         """
-        gsims_by_trt_id = self.get_gsims_by_trt_id()
+        gsims_by_col = self.get_gsims_by_col()
         ad = {rlz: AccumDict() for rlz in self.realizations}
-        for tag, dataset in gmf_by_tag.iteritems():
-            value = dataset.value
+        for col_id, gsims in enumerate(gsims_by_col):
+            dataset = gmfs['col%02d' % col_id]
             trt_id = dataset.attrs['trt_model_id']
-            for gsim in gsims_by_trt_id[trt_id]:
+            gmfs_by_rupid = groupby(dataset.value, lambda row: row['idx'],
+                                    lambda rows: [row for row in rows])
+            for gsim in gsims:
                 gs = str(gsim)
-                gmf_by_imt = value[gs]
                 for rlz in self.rlzs_assoc[trt_id, gs]:
-                    if not rlz.col_ids:
-                        ad[rlz] += {tag: gmf_by_imt}
-                    else:
-                        # if the rupture contributes to the given realization
-                        if get_col_id(tag) in rlz.col_ids:
-                            ad[rlz][tag] = gmf_by_imt
+                    if not rlz.col_ids or col_id in rlz.col_ids:
+                        for rupid, rows in gmfs_by_rupid.iteritems():
+                            ad[rlz][rupid] = numpy.array(
+                                [r[gs] for r in rows], rows[0][gs].dtype)
         return ad
 
     def combine(self, results, agg=agg_prob):

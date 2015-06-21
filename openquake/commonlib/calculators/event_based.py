@@ -25,7 +25,7 @@ import collections
 
 import numpy
 
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, groupby
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib.calc.hazard_curve import zero_curves
@@ -48,16 +48,20 @@ counts_dt = numpy.dtype([('rup', int), ('gmf', int)])
 
 def num_affected_sites(rupture, num_sites):
     """
-    Return the number of sites affected by the rupture
-
     :param rupture: a SESRupture object
     :param num_sites: the total number of sites
+    :returns: the number of sites affected by the rupture
     """
     return (len(rupture.indices) if rupture.indices is not None
             else num_sites)
 
 
-def get_indices(rupture, num_sites):
+def get_site_ids(rupture, num_sites):
+    """
+    :param rupture: a SESRupture object
+    :param num_sites: the total number of sites
+    :returns: the indices of the sites affected by the rupture
+    """
     if rupture.indices is None:
         return range(num_sites)
     return rupture.indices
@@ -459,20 +463,26 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
               if oq.ground_motion_fields else {}}
     if oq.hazard_curves_from_gmfs:
         with monitor('bulding hazard curves', measuremem=False) as mon:
+            # NB: operator.attrgetter('idx') does not work
+            gmfs_by_rup = groupby(gmfs, lambda gmf: gmf['idx'])
             ses_ruptures = sorted(ses_ruptures, key=operator.attrgetter('tag'))
             duration = oq.investigation_time * oq.ses_per_logic_tree_path * (
                 oq.number_of_logic_tree_samples or 1)
             for gsim in gsims:
                 gs = str(gsim)
-                indices = [get_indices(sr, num_sites) for sr in ses_ruptures]
+                gmvs_by_sid = collections.defaultdict(list)
+                for sr in ses_ruptures:
+                    site_ids = get_site_ids(sr, num_sites)
+                    for sid, gmv in zip(site_ids, gmfs_by_rup[sr.ordinal]):
+                        gmvs_by_sid[sid].append(gmv[gs])
                 result[trt_id, gs] = to_haz_curves(
-                    num_sites, gmfs[gs], indices, oq.imtls,
+                    num_sites, gmvs_by_sid, oq.imtls,
                     oq.investigation_time, duration)
         mon.flush()
     return result
 
 
-def to_haz_curves(num_sites, gmfs, indices, imtls,
+def to_haz_curves(num_sites, gmvs_by_sid, imtls,
                   investigation_time, duration):
     """
     :param num_sites: length of the full site collection
@@ -482,18 +492,13 @@ def to_haz_curves(num_sites, gmfs, indices, imtls,
     :param investigation_time: investigation time
     :param duration: investigation_time * number of Stochastic Event Sets
     """
-    # group gmvs by site index
-    data = [[] for idx in range(num_sites)]
-    for site_ids, gmf in zip(indices, gmfs):
-        for idx, gmv in zip(site_ids, gmf):
-            data[idx].append(gmv)
     curves = zero_curves(num_sites, imtls)
     for imt in imtls:
         curves[imt] = numpy.array([
             gmvs_to_haz_curve(
-                [gmv[imt] for gmv in gmvs],
+                [gmv[imt] for gmv in gmvs_by_sid[sid]],
                 imtls[imt], investigation_time, duration)
-            for gmvs in data])
+            for sid in range(num_sites)])
     return curves
 
 
