@@ -38,10 +38,11 @@ class ScenarioHazardTestCase(CalculatorTestCase):
     def medians(self, case):
         result = self.execute(case.__file__, 'job.ini')
         [gsim] = map(str, self.calc.gsims)
-        gmfs = numpy.array([result[tag][gsim] for tag in sorted(result)]).T
         median = self.calc.oqparam.imtls.copy()
         for imt in median:
-            median[imt] = map(numpy.median, gmfs[imt])
+            gmfs = numpy.array([result[tag][gsim][imt]  # shape (N, R)
+                                for tag in sorted(result)]).T
+            median[imt] = map(numpy.median, gmfs)  # shape N
         return median
 
     @attr('qa', 'hazard', 'scenario')
