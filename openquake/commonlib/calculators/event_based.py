@@ -449,16 +449,18 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
     result = {(trt_id, None): gmf_by_tag
               if oq.ground_motion_fields else {}}
     if oq.hazard_curves_from_gmfs:
-        tags = sorted(gmf_by_tag)
-        duration = oq.investigation_time * oq.ses_per_logic_tree_path * (
-            oq.number_of_logic_tree_samples or 1)
-        for gsim in gsims:
-            gs = str(gsim)
-            gmfs = [gmf_by_tag[tag][gs] for tag in tags]
-            indices = [gmf_by_tag[tag]['idx'] for tag in tags]
-            result[trt_id, gs] = to_haz_curves(
-                num_sites, gmfs, indices, oq.imtls,
-                oq.investigation_time, duration)
+        with monitor('bulding hazard curves', measuremem=False) as mon:
+            tags = sorted(gmf_by_tag)
+            duration = oq.investigation_time * oq.ses_per_logic_tree_path * (
+                oq.number_of_logic_tree_samples or 1)
+            for gsim in gsims:
+                gs = str(gsim)
+                gmfs = [gmf_by_tag[tag][gs] for tag in tags]
+                indices = [gmf_by_tag[tag]['idx'] for tag in tags]
+                result[trt_id, gs] = to_haz_curves(
+                    num_sites, gmfs, indices, oq.imtls,
+                    oq.investigation_time, duration)
+        mon.flush()
     return result
 
 
