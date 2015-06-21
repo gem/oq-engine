@@ -25,7 +25,7 @@ import collections
 
 import numpy
 
-from openquake.baselib.general import AccumDict, groupby
+from openquake.baselib.general import AccumDict
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib.calc.hazard_curve import zero_curves
@@ -408,7 +408,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
 def make_gmfs(ses_ruptures, sitecol, imts, gsims,
               trunc_level, correl_model, monitor):
     """
-    :returns: a gmf array
+    :returns: a list of arrays
     """
     gmfs = []
     ctx_mon = monitor('make contexts')
@@ -429,7 +429,7 @@ def make_gmfs(ses_ruptures, sitecol, imts, gsims,
                 gmfs.append(gmf)
     ctx_mon.flush()
     gmf_mon.flush()
-    return numpy.concatenate(gmfs)
+    return gmfs
 
 
 @parallel.litetask
@@ -459,35 +459,32 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
     gmfs = make_gmfs(
         ses_ruptures, sitecol.complete, oq.imtls, gsims,
         trunc_level, correl_model, monitor)
-    result = {(trt_id, col_id): gmfs
-              if oq.ground_motion_fields else {}}
+    result = {(trt_id, col_id): numpy.concatenate(gmfs)
+              if oq.ground_motion_fields else None}
     if oq.hazard_curves_from_gmfs:
         with monitor('bulding hazard curves', measuremem=False) as mon:
-            # NB: operator.attrgetter('idx') does not work
-            gmfs_by_rup = groupby(gmfs, lambda gmf: gmf['idx'])
-            ses_ruptures = sorted(ses_ruptures, key=operator.attrgetter('tag'))
             duration = oq.investigation_time * oq.ses_per_logic_tree_path * (
                 oq.number_of_logic_tree_samples or 1)
+            gmvs_by_sid = collections.defaultdict(list)
+            for sr, gmf in zip(ses_ruptures, gmfs):
+                site_ids = get_site_ids(sr, num_sites)
+                for sid, gmv in zip(site_ids, gmf):
+                    gmvs_by_sid[sid].append(gmv)
             for gsim in gsims:
                 gs = str(gsim)
-                gmvs_by_sid = collections.defaultdict(list)
-                for sr in ses_ruptures:
-                    site_ids = get_site_ids(sr, num_sites)
-                    for sid, gmv in zip(site_ids, gmfs_by_rup[sr.ordinal]):
-                        gmvs_by_sid[sid].append(gmv[gs])
                 result[trt_id, gs] = to_haz_curves(
-                    num_sites, gmvs_by_sid, oq.imtls,
+                    num_sites, gmvs_by_sid, gs, oq.imtls,
                     oq.investigation_time, duration)
         mon.flush()
     return result
 
 
-def to_haz_curves(num_sites, gmvs_by_sid, imtls,
+def to_haz_curves(num_sites, gmvs_by_sid, gs, imtls,
                   investigation_time, duration):
     """
     :param num_sites: length of the full site collection
-    :param gmfs: gmf arrays
-    :param indices: list of list of site indices
+    :param gmvs_by_sid: dictionary site_id -> gmvs
+    :param gs: GSIM string
     :param imtls: ordered dictionary {IMT: intensity measure levels}
     :param investigation_time: investigation time
     :param duration: investigation_time * number of Stochastic Event Sets
@@ -496,7 +493,7 @@ def to_haz_curves(num_sites, gmvs_by_sid, imtls,
     for imt in imtls:
         curves[imt] = numpy.array([
             gmvs_to_haz_curve(
-                [gmv[imt] for gmv in gmvs_by_sid[sid]],
+                [gmv[gs][imt] for gmv in gmvs_by_sid[sid]],
                 imtls[imt], investigation_time, duration)
             for sid in range(num_sites)])
     return curves
