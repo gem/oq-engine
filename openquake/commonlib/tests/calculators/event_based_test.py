@@ -63,13 +63,9 @@ class EventBasedTestCase(CalculatorTestCase):
             oq = self.calc.oqparam
             self.assertEqual(list(oq.imtls), ['PGA'])
             dstore = DataStore(self.calc.datastore.calc_id)
-            gmfs = dstore['/gmfs']
+            gmfs = dstore['/gmfs/col00'].value['BooreAtkinson2008']['PGA']
             gmvs_site_1 = []
             gmvs_site_2 = []
-            for dataset in gmfs.itervalues():
-                gmv1, gmv2 = dataset.value['BooreAtkinson2008']['PGA']
-                gmvs_site_1.append(gmv1)
-                gmvs_site_2.append(gmv2)
             dstore.close()
             joint_prob_0_5 = joint_prob_of_occurrence(
                 gmvs_site_1, gmvs_site_2, 0.5, oq.investigation_time,

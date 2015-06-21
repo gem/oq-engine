@@ -365,15 +365,15 @@ class RiskInputFromRuptures(object):
             an array R x N where N is the number of sites and
             R is the number of ruptures.
         """
-        from openquake.commonlib.calculators.event_based import make_gmf_by_tag
-        gmf_by_tag = make_gmf_by_tag(
+        from openquake.commonlib.calculators.event_based import make_gmfs
+        gmf_dict = make_gmfs(
             self.ses_ruptures, self.sitecol, self.imts,
             self.gsims, self.trunc_level, self.correl_model, DummyMonitor())
         gmf_dt = gsim_imt_dt(self.gsims, self.imts)
         n = len(self.sitecol.complete)
-        gmfs = numpy.zeros((len(gmf_by_tag), n), gmf_dt)
-        for r, tag in enumerate(sorted(gmf_by_tag)):
-            gmfa = gmf_by_tag[tag]
+        gmfs = numpy.zeros((len(gmf_dict), n), gmf_dt)
+        for r, rupid in enumerate(sorted(gmf_dict)):
+            gmfa = gmf_dict[rupid]
             expanded_gmf = numpy.zeros(n, gmf_dt)
             expanded_gmf[gmfa['idx']] = gmfa
             gmfs[r] = expanded_gmf

@@ -30,6 +30,7 @@ from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.hazardlib import geo, site, calc
+from openquake.hazardlib.gsim.base import gsim_imt_dt
 from openquake.commonlib import readinput, parallel, datastore
 from openquake.commonlib.util import max_rel_diff_index
 
@@ -394,10 +395,10 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
 
 
 # NB: this will be replaced by hazardlib.calc.gmf.build_gmf_by_tag
-def make_gmf_by_tag(ses_ruptures, sitecol, imts, gsims,
-                    trunc_level, correl_model, monitor):
+def make_gmfs(ses_ruptures, sitecol, imts, gsims,
+              trunc_level, correl_model, monitor):
     """
-    :returns: a dictionary tag -> gmf_array
+    :returns: a dictionary rup_ordinal -> gmf_array
     """
     dic = {}
     ctx_mon = monitor('make contexts')
@@ -413,7 +414,7 @@ def make_gmf_by_tag(ses_ruptures, sitecol, imts, gsims,
                 rupture, r_sites, imts, gsims, trunc_level, correl_model)
         with gmf_mon:
             for sr in sesruptures:
-                dic[sr.tag] = computer.compute([sr.seed])[0]
+                dic[sr.ordinal] = computer.compute([sr.seed])[0]
     ctx_mon.flush()
     gmf_mon.flush()
     return dic
@@ -443,20 +444,20 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
     trunc_level = oq.truncation_level
     correl_model = readinput.get_correl_model(oq)
     num_sites = len(sitecol)
-    gmf_by_tag = make_gmf_by_tag(
+    gmf_dict = make_gmfs(
         ses_ruptures, sitecol.complete, oq.imtls, gsims,
         trunc_level, correl_model, monitor)
-    result = {(trt_id, None): gmf_by_tag
+    result = {(trt_id, col_id): gmf_dict
               if oq.ground_motion_fields else {}}
     if oq.hazard_curves_from_gmfs:
         with monitor('bulding hazard curves', measuremem=False) as mon:
-            tags = sorted(gmf_by_tag)
+            rupids = sorted(gmf_dict)
             duration = oq.investigation_time * oq.ses_per_logic_tree_path * (
                 oq.number_of_logic_tree_samples or 1)
             for gsim in gsims:
                 gs = str(gsim)
-                gmfs = [gmf_by_tag[tag][gs] for tag in tags]
-                indices = [gmf_by_tag[tag]['idx'] for tag in tags]
+                gmfs = [gmf_dict[rupid][gs] for rupid in rupids]
+                indices = [gmf_dict[rupid]['idx'] for rupid in rupids]
                 result[trt_id, gs] = to_haz_curves(
                     num_sites, gmfs, indices, oq.imtls,
                     oq.investigation_time, duration)
@@ -505,9 +506,18 @@ class EventBasedCalculator(ClassicalCalculator):
         (if any). If there were pre-existing files, they will be erased.
         """
         super(EventBasedCalculator, self).pre_execute()
-        rupture_by_tag = sum(self.datastore['sescollection'], AccumDict())
-        self.sesruptures = [rupture_by_tag[tag]
-                            for tag in sorted(rupture_by_tag)]
+        self.sesruptures = []
+        gsims_by_col = self.rlzs_assoc.get_gsims_by_col()
+        for col_id, sescol in enumerate(self.datastore['sescollection']):
+            gmf_dt = gsim_imt_dt(gsims_by_col[col_id], self.oqparam.imtls)
+
+            tags = sorted(sescol)
+            for i, tag in enumerate(tags):
+                sesrup = sescol[tag]
+                self.sesruptures.append(sesrup)
+                sesrup.ordinal = i
+            self.datastore.create_dset(
+                '/gmfs/col%02d' % col_id, gmf_dt, len(sescol))
 
     def combine_curves_and_save_gmfs(self, acc, res):
         """
@@ -521,20 +531,21 @@ class EventBasedCalculator(ClassicalCalculator):
         """
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
-        for trt_id, gsim in res:
-            if gsim is None:  # save gmfs
+        for trt_id, gsim_or_col in res:
+            if isinstance(gsim_or_col, int):  # save gmfs
                 with sav_mon:
-                    for tag, gmf in res[trt_id, None].iteritems():
-                        dataset = '/gmfs/' + tag
-                        self.datastore[dataset] = gmf
-                        self.datastore[dataset].attrs['trt_model_id'] = trt_id
+                    dataset = self.datastore['/gmfs/col%02d' % gsim_or_col]
+                    dataset.attrs['trt_model_id'] = trt_id
+                    import pdb; pdb.set_trace()
+                    for i, gmf in res[trt_id, gsim_or_col].iteritems():
+                        dataset[i, :] = gmf
                         self.nbytes += gmf.nbytes
                     self.datastore.hdf5.flush()
             else:  # aggregate hcurves
                 with agg_mon:
-                    curves_by_imt = res[trt_id, gsim]
+                    curves_by_imt = res[trt_id, gsim_or_col]
                     acc = agg_dicts(
-                        acc, AccumDict({(trt_id, gsim): curves_by_imt}))
+                        acc, AccumDict({(trt_id, gsim_or_col): curves_by_imt}))
         sav_mon.flush()
         agg_mon.flush()
         return acc
