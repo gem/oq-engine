@@ -541,8 +541,9 @@ class EventBasedCalculator(ClassicalCalculator):
         """
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
+        save_gmfs = self.oqparam.ground_motion_fields
         for trt_id, gsim_or_col in res:
-            if isinstance(gsim_or_col, int):  # save gmfs
+            if isinstance(gsim_or_col, int) and save_gmfs:
                 with sav_mon:
                     gmfa = res[trt_id, gsim_or_col]
                     dataset = self.datasets[gsim_or_col]
@@ -550,7 +551,7 @@ class EventBasedCalculator(ClassicalCalculator):
                     dataset.extend(gmfa)
                     self.nbytes += gmfa.nbytes
                     self.datastore.hdf5.flush()
-            else:  # aggregate hcurves
+            elif isinstance(gsim_or_col, str):  # aggregate hcurves
                 with agg_mon:
                     curves_by_imt = res[trt_id, gsim_or_col]
                     acc = agg_dicts(
