@@ -139,6 +139,7 @@ class SingleRuptureSource(object):
         self.source_id = source_id
         self.tectonic_region_type = tectonic_region_type
         self.trt_model_id = trt_model_id
+        self.weight = 1
 
     def iter_ruptures(self):
         """Yield the rupture"""

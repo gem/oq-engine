@@ -348,13 +348,26 @@ class VulnerabilityFunctionWithPMF(object):
     :param ratios: mean ratios (M)
     :param probs: a matrix of probabilities of shape (M, L)
     """
-    def __init__(self, vf_id, imt, imls, ratios, probs):
+    def __init__(self, vf_id, imt, imls, loss_ratios, probs):
         self.id = vf_id
         self.imt = imt
+        self._check_vulnerability_data(imls, loss_ratios, probs)
         self.imls = imls
-        self.mean_loss_ratios = ratios
+        self.loss_ratios = loss_ratios
         self.probs = probs
-        self.distribution = "PM"
+        self.distribution_name = "PM"
+
+        # to be set in .init(), called also by __setstate__
+        (self._probs_i1d, self.distribution) = None, None
+        self.init()
+
+    def init(self):
+        self._probs_i1d = interpolate.interp1d(self.imls, self.probs)
+        self.set_distribution(None)
+
+    def set_distribution(self, epsilons=None):
+        self.distribution = DISTRIBUTIONS[self.distribution_name]()
+        self.distribution.epsilons = epsilons
 
     def apply_to(self, ground_motion_values, epsilons=None):
         """
@@ -364,7 +377,75 @@ class VulnerabilityFunctionWithPMF(object):
            not used
         :returns: a N x M loss matrix
         """
-        # TODO: implement the right logic here
+        vulnerability_function = copy.copy(self)
+        vulnerability_function.set_distribution(epsilons)
+        return utils.numpy_map(
+            vulnerability_function._apply, ground_motion_values)
+
+    def __getstate__(self):
+        return (self.id, self.imt, self.imls, self.loss_ratios,
+                self.probs, self.distribution_name)
+
+    def __setstate__(self, state):
+        self.id = state[0]
+        self.imt = state[1]
+        self.imls = state[2]
+        self.loss_ratios = state[3]
+        self.probs = state[4]
+        self.distribution_name = state[5]
+        self.init()
+
+    def _check_vulnerability_data(self, imls, loss_ratios, probs):
+        assert all(x >= 0.0 for x in imls)
+        assert all(x >= 0.0 for x in loss_ratios)
+        assert all([1.0 >= x >= 0.0 for x in y] for y in probs)
+        assert probs.shape[0] == len(loss_ratios)
+        assert probs.shape[1] == len(imls)
+
+    def _apply(self, imls):
+        """
+        Given IML values, interpolate the corresponding loss ratio
+        value(s) on the curve.
+
+        Input IML value(s) is/are clipped to IML range defined for this
+        vulnerability function.
+
+        :param float array iml: IML value
+
+        :returns: :py:class:`numpy.ndarray` containing a number of interpolated
+            values equal to the size of the input (1 or many)
+        """
+        # for imls < min(iml) we return a loss of 0 (default)
+        ret = numpy.zeros(len(imls))
+
+        # imls are clipped to max(iml)
+        imls_curve = numpy.piecewise(
+            imls,
+            [imls > self.imls[-1]],
+            [self.imls[-1], lambda x: x])
+
+        # for imls such that iml > min(iml) we get a mean loss ratio
+        # by interpolation and sample the distribution
+        idxs, = numpy.where(imls_curve >= self.imls[0])
+        imls_curve = numpy.array(imls_curve)[idxs]
+        probs = self._probs_i1d(imls_curve)
+
+        # apply uncertainty
+        ret[idxs] = self.distribution.sample(self.loss_ratios, probs)
+        return ret
+
+    @utils.memoized
+    def loss_ratio_exceedance_matrix(self, steps):
+        """Compute the LREM (Loss Ratio Exceedance Matrix).
+        Required for the Classical Risk and BCR Calculators.
+        Currently left unimplemented as the PMF format is used only for the
+        Scenario and Event Based Risk Calculators
+        :param int steps:
+            Number of steps between loss ratios.
+        """
+        # TODO: to be implemented if the classical risk calculator
+        # needs to support the pmf vulnerability format
+
 
     def __repr__(self):
         return '<VulnerabilityFunctionWithPMF(%s, %s)>' % (self.id, self.imt)
@@ -469,7 +550,7 @@ class Distribution(object):
     """
     A Distribution class models continuous probability distribution of
     random variables used to sample losses of a set of assets. It is
-    usually registered with a name (e.g. LN, BT) by using
+    usually registered with a name (e.g. LN, BT, PM) by using
     :class:`openquake.baselib.general.CallableDict`
     """
 
@@ -650,6 +731,26 @@ class BetaDistribution(Distribution):
     def _beta(mean, stddev):
         return ((1 - mean) / stddev ** 2 - 1 / mean) * (mean - mean ** 2)
 
+
+@DISTRIBUTIONS.add('PM')
+class DiscreteDistribution(Distribution):
+    def sample(self, loss_ratios, probs):
+        ret = []
+        for i in range(probs.shape[1]):
+            pmf = stats.rv_discrete(values=(range(len(loss_ratios)), probs[:,i]))
+            ret.append(loss_ratios[pmf.rvs()])
+        return ret
+
+    def survival(self, loss_ratios, probs):
+        """Required for the Classical Risk and BCR Calculators.
+        Currently left unimplemented as the PMF format is used only for the
+        Scenario and Event Based Risk Calculators
+        :param int steps:
+            Number of steps between loss ratios.
+        """
+        # TODO: to be implemented if the classical risk calculator
+        # needs to support the pmf vulnerability format
+        return
 
 #
 # Event Based

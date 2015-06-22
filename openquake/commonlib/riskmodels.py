@@ -134,14 +134,14 @@ def get_vulnerability_functions(fname):
             imt = vfun.imls['imt']
             imls = numpy.array(~vfun.imls)
             taxonomy = vfun['id']
-            ratios, probs = [], []
+            loss_ratios, probs = [], []
             for probabilities in vfun[1:]:
-                ratios.append(probabilities['lr'])
+                loss_ratios.append(probabilities['lr'])
                 probs.append(valid.probabilities(~probabilities))
             probs = numpy.array(probs)
-            assert probs.shape == (len(ratios), len(imls))
+            assert probs.shape == (len(loss_ratios), len(imls))
             vf_dict[imt, taxonomy] = scientific.VulnerabilityFunctionWithPMF(
-                taxonomy, imt, imls, numpy.array(ratios), probs)
+                taxonomy, imt, imls, numpy.array(loss_ratios), probs)
         return vf_dict
     # otherwise, read the old format (NRML 0.4)
     for vset in read_nodes(fname, filter_vset,

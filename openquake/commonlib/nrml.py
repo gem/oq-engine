@@ -153,9 +153,7 @@ class ValidNode(LiteralNode):
         )
 
 
-@nodefactory.add('siteModel')
-class SiteModelNode(LiteralNode):
-    validators = dict(site=valid.site_param)
+nodefactory.add('siteModel')(LiteralNode)
 
 
 # insuranceLimit and deductible can be either tags or attributes!

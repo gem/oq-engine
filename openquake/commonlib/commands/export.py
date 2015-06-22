@@ -20,11 +20,15 @@ from openquake.commonlib import sap, datastore
 from openquake.commonlib.export import export as export_
 
 
+# TODO: add some nontrivial export test
 def export(calc_id, datastore_key, format='csv'):
     """
     Export an output from the datastore.
     """
     dstore = datastore.DataStore(calc_id)
+    hc_id = dstore['oqparam'].hazard_calculation_id
+    if hc_id:
+        dstore.parent = datastore.DataStore(hc_id)
     for fmt in format.split(','):
         fnames = export_((datastore_key, fmt), dstore)
         print 'Exported %s' % fnames

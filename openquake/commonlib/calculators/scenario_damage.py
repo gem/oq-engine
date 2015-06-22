@@ -54,7 +54,7 @@ def scenario_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
             for asset, fraction in zip(out.assets, out.damages):
                 damages = fraction * asset.number
                 result[out.hid] += {
-                    ('asset', asset): scientific.mean_std(damages)}
+                    ('asset', asset.id): scientific.mean_std(damages)}
                 result[out.hid] += {
                     ('taxonomy', asset.taxonomy): damages}
     return result
@@ -69,6 +69,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
     core_func = scenario_damage
     damages_by_key = datastore.persistent_attribute('damages_by_key')
     gmf_by_trt_gsim = datastore.persistent_attribute('gmf_by_trt_gsim')
+    is_stochastic = True
 
     def pre_execute(self):
         if 'gmfs' in self.oqparam.inputs:
