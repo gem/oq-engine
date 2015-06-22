@@ -119,11 +119,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         logging.info('Populating the risk inputs')
         rup_by_tag = sum(self.datastore['sescollection'], AccumDict())
-        all_ruptures = []
-        for i, tag in enumerate(sorted(rup_by_tag)):
-            rup = rup_by_tag[tag]
-            rup.ordinal = i
-            all_ruptures.append(rup)
+        all_ruptures = [rup_by_tag[tag] for tag in sorted(rup_by_tag)]
         num_samples = min(len(all_ruptures), epsilon_sampling)
         eps_dict = riskinput.make_eps_dict(
             assets_by_site, num_samples, oq.master_seed, oq.asset_correlation)

@@ -379,8 +379,11 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         nc = self.rlzs_assoc.csm_info.num_collections
         sescollection = [{} for col_id in range(nc)]
         tags = []
-        for trt_id in result:
-            for sr in result[trt_id]:
+        ordinal = 0
+        for trt_id in sorted(result):
+            for sr in sorted(result[trt_id]):
+                sr.ordinal = ordinal
+                ordinal += 1
                 sescollection[sr.col_id][sr.tag] = sr
                 tags.append(sr.tag)
                 if len(sr.tag) > 100:
@@ -390,7 +393,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
                         sr.tag, len(sr.tag))
         logging.info('Saving the SES collection')
         with self.monitor('saving ses', autoflush=True):
-            self.tags = numpy.array(sorted(tags), (str, 100))
+            self.tags = numpy.array(tags, (str, 100))
             self.sescollection = sescollection
         with self.monitor('counts_per_rlz'):
             self.counts_per_rlz = counts_per_rlz(
@@ -517,15 +520,12 @@ class EventBasedCalculator(ClassicalCalculator):
         super(EventBasedCalculator, self).pre_execute()
         self.sesruptures = []
         gsims_by_col = self.rlzs_assoc.get_gsims_by_col()
-        ordinal = 0
         self.datasets = []
         for col_id, sescol in enumerate(self.datastore['sescollection']):
             gmf_dt = gsim_imt_dt(gsims_by_col[col_id], self.oqparam.imtls)
             for tag, sesrup in sorted(sescol.iteritems()):
                 sesrup = sescol[tag]
                 self.sesruptures.append(sesrup)
-                sesrup.ordinal = ordinal
-                ordinal += 1
             self.datasets.append(
                 self.datastore.create_dset('/gmfs/col%02d' % col_id, gmf_dt))
 
