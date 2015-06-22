@@ -449,20 +449,22 @@ def get_gmfs(calc):
     if 'gmfs' in calc.oqparam.inputs:  # from file
         return read_gmfs_from_csv(calc)
     # else from rupture
-    gmf_by_tag = calc.datastore['/gmfs']
+    gmf = calc.datastore['/gmfs/col00'].value
     if calc.datastore.parent:
         haz_sitecol = calc.datastore.parent['sitecol']
     else:
         haz_sitecol = calc.sitecol
     risk_indices = set(calc.sitecol.indices)  # N'' values
-    N, R = len(haz_sitecol.complete), len(gmf_by_tag)
+    N = len(haz_sitecol.complete)
     imt_dt = numpy.dtype([(imt, float) for imt in calc.oqparam.imtls])
+    gmf_by_idx = general.groupby(gmf, lambda row: row['idx'])
+    R = len(gmf_by_idx)
     gmfs = {}
     for trt_id, gsim in calc.rlzs_assoc:
         # build a matrix N x R for each GSIM realization
         gmf = numpy.zeros((N, R), imt_dt)
-        for rupid, tag in enumerate(sorted(gmf_by_tag)):
-            gmvs = gmf_by_tag[tag].value[gsim]  # array of lenght N'
+        for rupid, rows in sorted(gmf_by_idx.iteritems()):
+            gmvs = numpy.array([row[gsim] for row in rows])  # lenght N'
             for sid, gmv in zip(haz_sitecol.indices, gmvs):
                 if sid in risk_indices:
                     gmf[sid, rupid] = gmv
