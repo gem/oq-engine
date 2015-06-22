@@ -20,6 +20,8 @@ import random
 import logging
 import collections
 
+import numpy
+
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.commonlib import readinput, parallel, datastore
@@ -53,6 +55,7 @@ class ScenarioCalculator(base.HazardCalculator):
     Scenario hazard calculator
     """
     core_func = calc_gmfs
+    tags = datastore.persistent_attribute('/tags')
     sescollection = datastore.persistent_attribute('sescollection')
     is_stochastic = True
 
@@ -75,13 +78,14 @@ class ScenarioCalculator(base.HazardCalculator):
             raise RuntimeError(
                 'All sites were filtered out! '
                 'maximum_distance=%s km' % self.oqparam.maximum_distance)
-        tags = ['scenario-%010d' % i for i in xrange(n_gmfs)]
+        self.tags = numpy.array(
+            sorted(['scenario-%010d' % i for i in xrange(n_gmfs)]))
         self.computer = GmfComputer(
             rupture, self.sitecol, self.oqparam.imtls, self.gsims,
             trunc_level, correl_model)
         rnd = random.Random(self.oqparam.random_seed)
         self.tag_seed_pairs = [(tag, rnd.randint(0, calc.MAX_INT))
-                               for tag in tags]
+                               for tag in self.tags]
         self.sescollection = [{tag: Rupture(tag, seed, rupture)
                                for tag, seed in self.tag_seed_pairs}]
 
@@ -99,9 +103,11 @@ class ScenarioCalculator(base.HazardCalculator):
         """
         :param gmf_by_tag: a dictionary tag -> gmf
         """
-        nbytes = 0
-        for tag in sorted(gmf_by_tag):
+        data = []
+        for ordinal, tag in enumerate(sorted(gmf_by_tag)):
             gmf = gmf_by_tag[tag]
-            self.datastore['/gmfs/' + tag] = gmf
-            nbytes += gmf.nbytes
-        self.datastore['/gmfs'].attrs['nbytes'] = nbytes
+            gmf['idx'] = ordinal
+            data.append(gmf)
+        gmfa = numpy.concatenate(data)
+        self.datastore['/gmfs/col00'] = gmfa
+        self.datastore['/gmfs'].attrs['nbytes'] = gmfa.nbytes
