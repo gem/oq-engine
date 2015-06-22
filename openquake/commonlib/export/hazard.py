@@ -409,7 +409,7 @@ def export_gmf(ekey, dstore):
     sitecol = dstore['sitecol']
     rlzs_assoc = dstore['rlzs_assoc']
     rupture_by_tag = sum(dstore['sescollection'], AccumDict())
-    all_tags = dstore['/tags']
+    all_tags = dstore['/tags'].value
     oq = dstore['oqparam']
     samples = oq.number_of_logic_tree_samples
     fmt = ekey[-1]

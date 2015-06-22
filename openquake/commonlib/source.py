@@ -348,7 +348,7 @@ class RlzsAssoc(collections.Mapping):
         ad = {rlz: AccumDict() for rlz in self.realizations}
         for col_id, gsims in enumerate(gsims_by_col):
             dataset = gmfs['col%02d' % col_id]
-            trt_id = dataset.attrs['trt_model_id']
+            trt_id = self.csm_info.get_trt_id(col_id)
             gmfs_by_rupid = groupby(dataset.value, lambda row: row['idx'],
                                     lambda rows: [row for row in rows])
             for gsim in gsims:
@@ -597,14 +597,15 @@ class CompositeSourceModel(collections.Sequence):
         num_samples = self.source_model_lt.num_samples
         idx = 0
         for smodel in self.source_models:
-            # count the number of ruptures per tectonic region type
-            trts = set()
-            for trt_model in smodel.trt_models:
-                if get_weight(trt_model) > 0:
-                    trts.add(trt_model.trt)
+            # collect the effective tectonic region types
+            trts = set(tm.trt for tm in smodel.trt_models if get_weight(tm))
             # recompute the GSIM logic tree if needed
             if trts != set(smodel.gsim_lt.tectonic_region_types):
+                before = smodel.gsim_lt.get_num_paths()
                 smodel.gsim_lt.reduce(trts)
+                after = smodel.gsim_lt.get_num_paths()
+                logging.warn('Reducing the logic tree of %s from %d to %d '
+                             'realizations', smodel.name, before, after)
             if num_samples:  # sampling
                 rnd = random.Random(random_seed + idx)
                 rlzs = logictree.sample(smodel.gsim_lt, smodel.samples, rnd)
