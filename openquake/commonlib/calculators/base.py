@@ -459,16 +459,14 @@ def get_gmfs(calc):
     imt_dt = numpy.dtype([(imt, float) for imt in calc.oqparam.imtls])
     gmf_by_idx = general.groupby(gmf, lambda row: row['idx'])
     R = len(gmf_by_idx)
-    gmfs = {}
-    for trt_id, gsim in calc.rlzs_assoc:
-        # build a matrix N x R for each GSIM realization
-        gmf = numpy.zeros((N, R), imt_dt)
-        for rupid, rows in sorted(gmf_by_idx.iteritems()):
-            gmvs = numpy.array([row[gsim] for row in rows])  # lenght N'
-            for sid, gmv in zip(haz_sitecol.indices, gmvs):
-                if sid in risk_indices:
-                    gmf[sid, rupid] = gmv
-        gmfs[trt_id, gsim] = gmf
+    # build a matrix N x R for each GSIM realization
+    gmfs = {(trt_id, gsim): numpy.zeros((N, R), imt_dt)
+            for trt_id, gsim in calc.rlzs_assoc}
+    for rupid, rows in sorted(gmf_by_idx.iteritems()):
+        for sid, gmv in zip(haz_sitecol.indices, rows):
+            if sid in risk_indices:
+                for trt_id, gsim in gmfs:
+                    gmfs[trt_id, gsim][sid, rupid] = gmv[gsim]
     return gmfs
 
 
