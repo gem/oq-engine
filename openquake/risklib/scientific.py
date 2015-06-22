@@ -737,7 +737,7 @@ class DiscreteDistribution(Distribution):
     def sample(self, loss_ratios, probs):
         ret = []
         for i in range(probs.shape[1]):
-            pmf = stats.rv_discrete(values=(range(len(loss_ratios)), probs[:,i]))
+            pmf = stats.rv_discrete(name='pmf', values=(range(len(loss_ratios)), probs[:,i]))
             ret.append(loss_ratios[pmf.rvs()])
         return ret
 
