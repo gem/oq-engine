@@ -419,8 +419,8 @@ def export_gmf(ekey, dstore):
     if nbytes > GMF_MAX_SIZE:
         logging.warn(GMF_WARNING, dstore.hdf5path)
     fnames = []
-    gmf_by_rlz = rlzs_assoc.combine_gmfs(gmfs)
-    for rlz, gmf_by_idx in sorted(gmf_by_rlz.iteritems()):
+    for rlz, gmf_by_idx in zip(
+            rlzs_assoc.realizations, rlzs_assoc.combine_gmfs(gmfs)):
         tags = all_tags[gmf_by_idx.keys()]
         gmfs = gmf_by_idx.values()
         ruptures = [rupture_by_tag[tag] for tag in tags]
