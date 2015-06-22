@@ -315,6 +315,7 @@ def read(source):
     """
     nrml = parse(source).getroot()
     assert striptag(nrml.tag) == 'nrml', nrml.tag
+    # extract the XML namespace URL ('http://openquake.org/xmlns/nrml/0.5')
     xmlns = nrml.tag.split('}')[0][1:]
     subnodes = []
     for elem in nrml:
