@@ -342,23 +342,26 @@ class RlzsAssoc(collections.Mapping):
 
     def combine_gmfs(self, gmfs):
         """
-        :param results: a dataset gmf_by_idx
+        :param gmfs: datastore /gmfs object
+        :returns: a list of dictionaries rupid -> gmf array
         """
         gsims_by_col = self.get_gsims_by_col()
-        ad = {rlz: AccumDict() for rlz in self.realizations}
+        dicts = [{} for rlz in self.realizations]
         for col_id, gsims in enumerate(gsims_by_col):
             dataset = gmfs['col%02d' % col_id]
+            if len(dataset) == 0:
+                continue
             trt_id = self.csm_info.get_trt_id(col_id)
-            gmfs_by_rupid = groupby(dataset.value, lambda row: row['idx'],
-                                    lambda rows: [row for row in rows])
+            gmfs_by_rupid = groupby(
+                dataset.value, lambda row: row['idx'], list)
             for gsim in gsims:
                 gs = str(gsim)
                 for rlz in self.rlzs_assoc[trt_id, gs]:
                     if not rlz.col_ids or col_id in rlz.col_ids:
                         for rupid, rows in gmfs_by_rupid.iteritems():
-                            ad[rlz][rupid] = numpy.array(
+                            dicts[rlz.ordinal][rupid] = numpy.array(
                                 [r[gs] for r in rows], rows[0][gs].dtype)
-        return ad
+        return dicts
 
     def combine(self, results, agg=agg_prob):
         """

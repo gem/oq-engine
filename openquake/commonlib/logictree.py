@@ -34,6 +34,8 @@ from collections import namedtuple
 from decimal import Decimal
 from lxml import etree
 
+import numpy
+
 from openquake.baselib.general import groupby
 from openquake.commonlib import nrml, valid
 from openquake.commonlib.node import node_from_xml
@@ -68,9 +70,20 @@ class RlzsAssoc(collections.Mapping):
         """
         return {self.rlzs_assoc[key][0]: result[key] for key in result}
 
-    def combine_gmfs(self, result):  # this is used in the export
-        return {rlz: {tag: result[tag][str(rlz)] for tag in sorted(result)}
-                for rlz in self.realizations}
+    def combine_gmfs(self, gmfs):  # this is used in the export
+        """
+        :param gmfs: datastore /gmfs object
+        :returns: a list of dictionaries rupid -> gmf array
+        """
+        gmfs_by_rupid = groupby(
+            gmfs['col00'].value, lambda row: row['idx'], list)
+        dicts = [{} for rlz in self.realizations]
+        for rlz in self.realizations:
+            gs = str(rlz)
+            for rupid, rows in gmfs_by_rupid.iteritems():
+                dicts[rlz.ordinal][rupid] = numpy.array(
+                    [r[gs] for r in rows], rows[0][gs].dtype)
+        return dicts
 
     def __iter__(self):
         return self.rlzs_assoc.iterkeys()
