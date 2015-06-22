@@ -349,6 +349,8 @@ class RlzsAssoc(collections.Mapping):
         dicts = [{} for rlz in self.realizations]
         for col_id, gsims in enumerate(gsims_by_col):
             dataset = gmfs['col%02d' % col_id]
+            if len(dataset) == 0:
+                continue
             trt_id = self.csm_info.get_trt_id(col_id)
             gmfs_by_rupid = groupby(
                 dataset.value, lambda row: row['idx'], list)
