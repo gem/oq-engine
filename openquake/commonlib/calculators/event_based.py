@@ -91,7 +91,7 @@ def counts_per_rlz(num_sites, rlzs_assoc, sescollection):
     return counts
 
 
-# this is tested in the sanity check in the execute method
+# this is used in the sanity check in the execute method
 def get_gmfs_nbytes(num_sites, num_imts, rlzs_assoc, sescollection):
     """
     :param num_sites: the number of sites
@@ -400,18 +400,23 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
                 len(self.sitecol), self.rlzs_assoc, sescollection)
             self.datastore['/counts_per_rlz'].attrs[
                 'gmfs_nbytes'] = get_gmfs_nbytes(
-                    len(self.sitecol), len(self.oqparam.imtls),
-                    self.rlzs_assoc, sescollection)
+                len(self.sitecol), len(self.oqparam.imtls),
+                self.rlzs_assoc, sescollection)
 
 
 # ######################## GMF calculator ############################ #
 
-
-# NB: this will be replaced by hazardlib.calc.gmf.build_gmf_by_tag
 def make_gmfs(ses_ruptures, sitecol, imts, gsims,
               trunc_level, correl_model, monitor):
     """
-    :returns: a list of arrays
+    :param ses_ruptures: a list of SESRuptures
+    :param sitecol: a SiteCollection instance
+    :param imts: an ordered list of intensity measure type strings
+    :param gsims: an order list of GSIM instance
+    :param trunc_level: truncation level
+    :param correl_model: correlation model instance
+    :param monitor: a monitor instance
+    :returns: a list of arrays, one for each rupture
     """
     gmfs = []
     ctx_mon = monitor('make contexts')
@@ -468,11 +473,13 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
         with monitor('bulding hazard curves', measuremem=False) as mon:
             duration = oq.investigation_time * oq.ses_per_logic_tree_path * (
                 oq.number_of_logic_tree_samples or 1)
+            # collect the gmvs by site
             gmvs_by_sid = collections.defaultdict(list)
             for sr, gmf in zip(ses_ruptures, gmfs):
                 site_ids = get_site_ids(sr, num_sites)
                 for sid, gmv in zip(site_ids, gmf):
                     gmvs_by_sid[sid].append(gmv)
+            # build the hazard curves for each GSIM
             for gsim in gsims:
                 gs = str(gsim)
                 result[trt_id, gs] = to_haz_curves(
@@ -536,7 +543,7 @@ class EventBasedCalculator(ClassicalCalculator):
         different tasks in any order.
 
         :param acc: an accumulator for the hazard curves
-        :param res: a dictionary trt_id, gsim -> gmf_by_tag or curves_by_imt
+        :param res: a dictionary trt_id, gsim -> gmf_array or curves_by_imt
         :returns: a new accumulator
         """
         sav_mon = self.monitor('saving gmfs')
