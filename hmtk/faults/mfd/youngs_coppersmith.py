@@ -334,7 +334,7 @@ class YoungsCoppersmithCharacteristic(BaseMFDfromSlip):
         self.model = YoungsCoppersmith1985MFD.from_total_moment_rate(
             self.mmin - (self.bin_width / 2.),
             self.b_value,
-            self.mmax,
+            self.mmax - 0.25,
             moment_rate,
             self.bin_width)
         temp_data = self.model.get_annual_occurrence_rates()
