@@ -68,6 +68,7 @@ def get_assets(dstore):
 
 # ############################### exporters ############################## #
 
+
 # this is used by classical_risk from csv
 @export.add(('/avg_losses', 'csv'))
 def export_avg_losses(ekey, dstore):

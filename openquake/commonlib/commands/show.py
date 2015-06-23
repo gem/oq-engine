@@ -18,7 +18,6 @@
 
 from __future__ import print_function
 import os
-import re
 import shutil
 from openquake.commonlib import sap, datastore
 from openquake.baselib.general import humansize
@@ -38,17 +37,14 @@ def show(calc_id, key=None, rlzs=None):
         if not os.path.exists(datastore.DATADIR):
             return
         rows = []
-        for name in sorted(os.listdir(datastore.DATADIR)):
-            mo = re.match('calc_(\d+)', name)
-            if mo:
-                calc_id = int(mo.group(1))
-                try:
-                    oq = datastore.DataStore(calc_id)['oqparam']
-                except:  # invalid datastore directory
-                    shutil.rmtree(os.path.join(
-                        datastore.DATADIR, 'calc_%s' % calc_id))
-                else:
-                    rows.append((calc_id, oq.calculation_mode, oq.description))
+        for calc_id in datastore.get_calc_ids(datastore.DATADIR):
+            try:
+                oq = datastore.DataStore(calc_id)['oqparam']
+            except:  # invalid datastore directory
+                shutil.rmtree(os.path.join(
+                    datastore.DATADIR, 'calc_%s' % calc_id))
+            else:
+                rows.append((calc_id, oq.calculation_mode, oq.description))
         for row in sorted(rows, key=lambda row: row[0]):  # by calc_id
             print('#%d %s: %s' % row)
         return

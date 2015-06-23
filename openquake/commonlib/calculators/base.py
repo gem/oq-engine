@@ -438,22 +438,8 @@ class RiskCalculator(HazardCalculator):
                 weight=get_weight, key=self.riskinput_key)
         return res
 
+
 # functions useful for the calculators ScenarioDamage and ScenarioRisk
-
-
-def expand(gmf, sitecol):
-    """
-    :param gmf: a GMF matrix of shape (N', R) with N' <= N
-    :param sitecol: a site collection of N elements
-    :returns: a GMF matrix of shape (N, R) filled with zeros
-    """
-    if sitecol is sitecol.complete:
-        return gmf  # do nothing
-    n, r = gmf.shape
-    zeros = numpy.zeros((len(sitecol.complete), r), gmf.dtype)
-    zeros[sitecol.indices] = gmf
-    return zeros
-
 
 def get_gmfs(calc):
     """
@@ -461,13 +447,30 @@ def get_gmfs(calc):
     :returns: a dictionary of gmfs
     """
     if 'gmfs' in calc.oqparam.inputs:  # from file
-        gmfs = read_gmfs_from_csv(calc)
-    else:  # from rupture
-        if calc.datastore.parent:  # gmfs from hazard calculation
-            gmfs = calc.gmf_by_trt_gsim
-        else:  # just computed gmfs
-            gmfs = {k: expand(gmf, calc.sitecol)
-                    for k, gmf in calc.gmf_by_trt_gsim.iteritems()}
+        return read_gmfs_from_csv(calc)
+    # else from rupture
+    gmf = calc.datastore['/gmfs/col00'].value
+    if calc.datastore.parent:
+        haz_sitecol = calc.datastore.parent['sitecol']
+    else:
+        haz_sitecol = calc.sitecol
+    # NB: if the hazard site collection has N sites, the hazard
+    # filtered site collection for the nonzero GMFs has N' <= N sites
+    # whereas the risk site collection associated to the assets
+    # has N'' <= N' sites
+    risk_indices = set(calc.sitecol.indices)  # N'' values
+    N = len(haz_sitecol.complete)
+    imt_dt = numpy.dtype([(imt, float) for imt in calc.oqparam.imtls])
+    gmf_by_idx = general.groupby(gmf, lambda row: row['idx'])
+    R = len(gmf_by_idx)
+    # build a matrix N x R for each GSIM realization
+    gmfs = {(trt_id, gsim): numpy.zeros((N, R), imt_dt)
+            for trt_id, gsim in calc.rlzs_assoc}
+    for rupid, rows in sorted(gmf_by_idx.iteritems()):
+        for sid, gmv in zip(haz_sitecol.indices, rows):
+            if sid in risk_indices:
+                for trt_id, gsim in gmfs:
+                    gmfs[trt_id, gsim][sid, rupid] = gmv[gsim]
     return gmfs
 
 

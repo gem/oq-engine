@@ -136,11 +136,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         loss_types = self.riskmodel.get_loss_types()
         self.L = len(loss_types)
         self.R = len(self.rlzs_assoc.realizations)
-        outs = ['/event_loss_table-rlzs']
+        self.outs = ['/event_loss_table-rlzs']
         if oq.insured_losses:
-            outs.append('/insured_loss_table-rlzs')
+            self.outs.append('/insured_loss_table-rlzs')
         self.datasets = {}
-        for o, out in enumerate(outs):
+        for o, out in enumerate(self.outs):
             for l, loss_type in enumerate(loss_types):
                 for r, rlz in enumerate(self.rlzs_assoc.realizations):
                     key = '/%s/%s' % (loss_type, rlz.uid)
@@ -184,14 +184,16 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         :param result:
             a numpy array of shape (O, L, R) containing lists of arrays
         """
-        saved_mb = 0
+        saved = {out: 0 for out in self.outs}
         with self.monitor('saving loss table',
                           autoflush=True, measuremem=True):
-            for idx, arrays in numpy.ndenumerate(result):
+            for (o, l, r), arrays in numpy.ndenumerate(result):
                 if not arrays:  # empty list
                     continue
                 losses = numpy.concatenate(arrays)
-                self.datasets[idx].extend(losses)
+                self.datasets[o, l, r].extend(losses)
                 self.datastore.hdf5.flush()
-                saved_mb += losses.nbytes
-            logging.info('Saved %s of data', humansize(saved_mb))
+                saved[self.outs[o]] += losses.nbytes
+        for out in self.outs:
+            self.datastore[out].attrs['nbytes'] = saved[out]
+            logging.info('Saved %s in %s', humansize(saved[out]), out)
