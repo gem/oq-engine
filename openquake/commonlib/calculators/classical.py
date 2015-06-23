@@ -176,7 +176,7 @@ class ClassicalCalculator(base.HazardCalculator):
             if oq.hazard_maps:
                 h5['/hmaps/' + dset] = hmaps
             if oq.uniform_hazard_spectra:
-                # uhs is an array of shape (N, P)
+                # uhs is an array of shape (N, I, P)
                 self.datastore.hdf5['/uhs/' + dset] = calc.make_uhs(hmaps)
 
 
