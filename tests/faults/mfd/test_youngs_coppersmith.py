@@ -298,6 +298,5 @@ class TestYoungsCoppersmithCharacteristic(unittest.TestCase):
         self.model.setUp(self.config)
         self.model.get_mmax(self.config, self.msr, 0., 7200.)
         output1 = self.model.get_mfd(1.0, 7200.)
-        print output1[2]
         np.testing.assert_array_almost_equal(expected_rates, output1[2])
         self.assertAlmostEqual(output1[0], 5.05)
