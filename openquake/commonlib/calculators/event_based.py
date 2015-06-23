@@ -396,7 +396,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
                         'truncated to 100 characters in the /tags array',
                         sr.tag, len(sr.tag))
         logging.info('Saving the SES collection')
-        with self.monitor('saving ses', autoflush=True):
+        with self.monitor('saving ruptures', autoflush=True):
             self.tags = numpy.array(tags, (str, 100))
             self.sescollection = sescollection
         with self.monitor('counts_per_rlz'):
