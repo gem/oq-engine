@@ -422,7 +422,8 @@ _pkgtest_innervm_run () {
         # run selected risk demos
         ssh $lxc_ip "set -e; cd /usr/share/doc/python-oq-risklib/examples/demos
         echo 'running ClassicalPSHA...'
-        oq-lite run ClassicalPSHA/job_hazard.ini,ClassicalPSHA/job_risk.ini
+        oq-lite run ClassicalPSHA/job_hazard.ini
+        oq-lite run ClassicalPSHA/job_risk.ini --hc -1
         echo 'running ScenarioDamage...'
         oq-lite run ScenarioDamage/job_hazard.ini,ScenarioDamage/job_risk.ini
         echo 'running ProbabilisticEventBased...'
