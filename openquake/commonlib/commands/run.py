@@ -19,7 +19,7 @@
 import logging
 
 from openquake.baselib import performance, general
-from openquake.commonlib import sap, readinput, valid
+from openquake.commonlib import sap, readinput, valid, datastore
 from openquake.commonlib.calculators import base
 
 
@@ -33,6 +33,13 @@ def run(job_ini, concurrent_tasks=None,
     oqparam = readinput.get_oqparam(job_ini)
     if concurrent_tasks is not None:
         oqparam.concurrent_tasks = concurrent_tasks
+    if hc and hc < 0:  # interpret negative calculation ids
+        calc_ids = datastore.get_calc_ids()
+        try:
+            hc = calc_ids[hc]
+        except IndexError:
+            raise SystemExit('There are %d old calculations, cannot '
+                             'retrieve the %s' % (len(calc_ids), hc))
     oqparam.hazard_calculation_id = hc
     oqparam.exports = exports
     monitor = performance.Monitor('total', measuremem=True)
