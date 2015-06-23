@@ -696,6 +696,10 @@ def get_exposure(oqparam):
             costs = asset.costs
         except NameError:
             costs = LiteralNode('costs', [])
+        try:
+            occupancies = asset.occupancies
+        except NameError:
+            occupancies = LiteralNode('occupancies', [])
         with context(fname, costs):
             for cost in costs:
                 cost_type = cost['type']
@@ -721,8 +725,8 @@ def get_exposure(oqparam):
                 raise ValueError("Invalid Exposure. "
                                  "Missing cost %s for asset %s" % (
                                      missing, asset_id))
-
-        for occupancy in asset.occupancies:
+                
+        for occupancy in occupancies:
             with context(fname, occupancy):
                 fatalities = 'fatalities_%s' % occupancy['period']
                 values[fatalities] = occupancy['occupants']

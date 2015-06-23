@@ -40,9 +40,10 @@ def sorted_assets(assets_by_site):
     return sorted(all_assets, key=operator.attrgetter('id'))
 
 
-def build_asset_collection(assets_by_site, time_event):
+def build_asset_collection(assets_by_site, time_event=None):
     """
-    :params assets_by_site: a list of lists of assets
+    :param assets_by_site: a list of lists of assets
+    :param time_event: a time event string (or None)
     :returns: an array with composite dtype
     """
     for assets in assets_by_site:
@@ -65,17 +66,16 @@ def build_asset_collection(assets_by_site, time_event):
     limit_d = first_asset.insurance_limits or {}
     retrofitting_d = first_asset.retrofitting_values or {}
     deductibles = ['deductible~%s' % name for name in deductible_d]
-
     limits = ['insurance_limit~%s' % name for name in limit_d]
     retrofittings = ['retrofitted~%s' % n for n in retrofitting_d]
+    float_fields = loss_types + deductibles + limits + retrofittings
     asset_dt = numpy.dtype(
         [('asset_ref', '|S20'), ('site_id', numpy.uint32)] +
-        [(name, float) for name in
-         loss_types + deductibles + limits + retrofittings])
+        [(name, float) for name in float_fields])
     num_assets = sum(len(assets) for assets in assets_by_site)
     assetcol = numpy.zeros(num_assets, asset_dt)
     asset_ordinal = 0
-    fields = ['asset_ref', 'site_id'] + loss_types
+    fields = ['asset_ref', 'site_id'] + float_fields
     for sid, assets_ in enumerate(assets_by_site):
         for asset in sorted(assets_, key=operator.attrgetter('id')):
             record = assetcol[asset_ordinal]
