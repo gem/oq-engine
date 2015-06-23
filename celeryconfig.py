@@ -59,7 +59,7 @@ else:
 # See https://bugs.launchpad.net/oq-engine/+bug/1250402
 BROKER_POOL_LIMIT = None
 
-CELERY_RESULT_BACKEND = 'redis://%(host)s:6379/0'
+CELERY_RESULT_BACKEND = 'redis://%(host)s:6379/0' % amqp
 
 # CELERY_ACKS_LATE and CELERYD_PREFETCH_MULTIPLIER settings help evenly
 # distribute tasks across the cluster. This configuration is intended
