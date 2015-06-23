@@ -23,7 +23,15 @@ import cPickle
 import collections
 
 import numpy
-import h5py
+try:
+    import h5py
+except ImportError:
+    # there is no need of h5py in the workers
+    class mock_h5py(object):
+        def __getattr__(self, name):
+            raise ImportError('Could not import h5py.%s' % name)
+    h5py = mock_h5py()
+
 
 from openquake.commonlib.writers import write_csv
 
