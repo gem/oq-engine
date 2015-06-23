@@ -34,6 +34,8 @@ from collections import namedtuple
 from decimal import Decimal
 from lxml import etree
 
+import numpy
+
 from openquake.baselib.general import groupby
 from openquake.commonlib import nrml, valid
 from openquake.commonlib.node import node_from_xml
@@ -68,7 +70,20 @@ class RlzsAssoc(collections.Mapping):
         """
         return {self.rlzs_assoc[key][0]: result[key] for key in result}
 
-    combine_gmfs = combine  # this is used in the export
+    def combine_gmfs(self, gmfs):  # this is used in the export
+        """
+        :param gmfs: datastore /gmfs object
+        :returns: a list of dictionaries rupid -> gmf array
+        """
+        gmfs_by_rupid = groupby(
+            gmfs['col00'].value, lambda row: row['idx'], list)
+        dicts = [{} for rlz in self.realizations]
+        for rlz in self.realizations:
+            gs = str(rlz)
+            for rupid, rows in gmfs_by_rupid.iteritems():
+                dicts[rlz.ordinal][rupid] = numpy.array(
+                    [r[gs] for r in rows], rows[0][gs].dtype)
+        return dicts
 
     def __iter__(self):
         return self.rlzs_assoc.iterkeys()
@@ -1081,8 +1096,11 @@ class GsimLogicTree(object):
         """
         # NB: the algorithm assume a symmetric logic tree for the GSIMs;
         # in the future we may relax such assumption
+        num_branches = self.get_num_branches()
+        if not sum(num_branches.itervalues()):
+            return 0
         num = 1
-        for val in self.get_num_branches().itervalues():
+        for val in num_branches.itervalues():
             if val:  # the branch is effective
                 num *= val
         return num
@@ -1156,20 +1174,17 @@ class GsimLogicTree(object):
         Yield :class:`openquake.commonlib.logictree.Realization` instances
         """
         groups = []
-        tectonic_region_types = []
         # NB: branches are already sorted
-        for branchset, branches in itertools.groupby(
-                self.branches, operator.attrgetter('bset')):
-            tectonic_region_types.append(
-                branchset['applyToTectonicRegionType'])
-            groups.append(list(branches))
+        for trt in self.all_trts:
+            groups.append([b for b in self.branches
+                           if b.bset['applyToTectonicRegionType'] == trt])
         # with T tectonic region types there are T groups and T branches
         for i, branches in enumerate(itertools.product(*groups)):
             weight = 1
             lt_path = []
             lt_uid = []
             value = []
-            for trt, branch in zip(tectonic_region_types, branches):
+            for trt, branch in zip(self.all_trts, branches):
                 assert branch.uncertainty in self.values[trt], \
                     branch.uncertainty  # sanity check
                 lt_path.append(branch.id)

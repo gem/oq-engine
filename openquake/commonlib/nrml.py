@@ -153,9 +153,7 @@ class ValidNode(LiteralNode):
         )
 
 
-@nodefactory.add('siteModel')
-class SiteModelNode(LiteralNode):
-    validators = dict(site=valid.site_param)
+nodefactory.add('siteModel')(LiteralNode)
 
 
 # insuranceLimit and deductible can be either tags or attributes!
@@ -198,6 +196,8 @@ class VulnerabilityNode(LiteralNode):
         # in the exposure model and it is not used by the engine
         lossCategory=valid.utf8,  # a description field
         IML=valid.IML,
+        imls=lambda text, imt: valid.positivefloats(text),
+        lr=valid.probability,
         lossRatio=valid.positivefloats,
         coefficientsVariation=valid.positivefloats,
         probabilisticDistribution=valid.Choice('LN', 'BT'),
@@ -315,12 +315,14 @@ def read(source):
     """
     nrml = parse(source).getroot()
     assert striptag(nrml.tag) == 'nrml', nrml.tag
+    # extract the XML namespace URL ('http://openquake.org/xmlns/nrml/0.5')
+    xmlns = nrml.tag.split('}')[0][1:]
     subnodes = []
     for elem in nrml:
         nodecls = nodefactory[striptag(elem.tag)]
         subnodes.append(node_from_elem(elem, nodecls))
     return LiteralNode(
-        'nrml', {'xmlns': NAMESPACE, 'xmlns:gml': GML_NAMESPACE},
+        'nrml', {'xmlns': xmlns, 'xmlns:gml': GML_NAMESPACE},
         nodes=subnodes)
 
 

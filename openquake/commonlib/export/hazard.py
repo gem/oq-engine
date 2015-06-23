@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2014, GEM Foundation
+#  Copyright (c) 2014-2015, GEM Foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -23,13 +23,18 @@ import collections
 
 import numpy
 
-from openquake.baselib.general import AccumDict, groupby
+from openquake.baselib.general import AccumDict, groupby, humansize
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import FilteredSiteCollection
 from openquake.commonlib.export import export
 from openquake.commonlib.writers import (
     scientificformat, floatformat, save_csv)
 from openquake.commonlib import hazard_writers
+
+GMF_MAX_SIZE = 10 * 1024 * 1024  # 10 MB
+GMF_WARNING = '''\
+There are a lot of ground motion fields; the export will be slow.
+Consider canceling the operation and accessing directly %s.'''
 
 
 class SES(object):
@@ -395,7 +400,7 @@ def export_hcurves_csv(ekey, dstore):
     return fnames
 
 
-@export.add(('gmf_by_trt_gsim', 'xml'), ('gmf_by_trt_gsim', 'csv'))
+@export.add(('/gmfs', 'xml'), ('/gmfs', 'csv'))
 def export_gmf(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -404,18 +409,20 @@ def export_gmf(ekey, dstore):
     sitecol = dstore['sitecol']
     rlzs_assoc = dstore['rlzs_assoc']
     rupture_by_tag = sum(dstore['sescollection'], AccumDict())
+    all_tags = dstore['/tags'].value
     oq = dstore['oqparam']
     samples = oq.number_of_logic_tree_samples
     fmt = ekey[-1]
+    gmfs = dstore[ekey[0]]
+    nbytes = gmfs.attrs['nbytes']
+    logging.info('Internal size of the GMFs: %s', humansize(nbytes))
+    if nbytes > GMF_MAX_SIZE:
+        logging.warn(GMF_WARNING, dstore.hdf5path)
     fnames = []
-    gmf_by_rlz = rlzs_assoc.combine_gmfs(dstore[ekey[0]])
-    for rlz, gmf_by_tag in sorted(gmf_by_rlz.iteritems()):
-        if isinstance(gmf_by_tag, dict):  # event based
-            tags = sorted(gmf_by_tag)
-            gmfs = [gmf_by_tag[tag] for tag in tags]
-        else:  # scenario calculator, gmf_by_tag is a matrix N x R
-            tags = sorted(rupture_by_tag)
-            gmfs = gmf_by_tag.T
+    for rlz, gmf_by_idx in zip(
+            rlzs_assoc.realizations, rlzs_assoc.combine_gmfs(gmfs)):
+        tags = all_tags[gmf_by_idx.keys()]
+        gmfs = gmf_by_idx.values()
         ruptures = [rupture_by_tag[tag] for tag in tags]
         fname = build_name(rlz, 'gmf', fmt, samples)
         if len(gmfs) == 0:

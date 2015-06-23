@@ -25,6 +25,14 @@ commonlib Package
     :undoc-members:
     :show-inheritance:
 
+:mod:`datastore` Module
+------------------------
+
+.. automodule:: openquake.commonlib.datastore
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 :mod:`hazard_writers` Module
 ----------------------------
 

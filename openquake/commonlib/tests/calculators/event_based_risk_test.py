@@ -5,6 +5,11 @@ from openquake.commonlib.tests.calculators import CalculatorTestCase
 from openquake.qa_tests_data.event_based_risk import case_1, case_2, case_3
 
 
+def is_ok(fname):
+    return 'rlz-' not in fname and any(x in fname for x in (
+        'loss_curve', 'loss_map', 'event_loss', 'counts_per_rlz'))
+
+
 class EventBasedRiskTestCase(CalculatorTestCase):
 
     def assert_stats_ok(self, pkg):
@@ -14,8 +19,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         all_csv = []
         for fnames in out.itervalues():
             for fname in fnames:
-                if ('rlz-' not in fname and fname.endswith('.csv')
-                        and 'sitecol' not in fname and 'ses-'not in fname):
+                if fname.endswith('.csv') and is_ok(fname):
                     all_csv.append(fname)
         for fname in all_csv:
             self.assertEqualFiles(
@@ -48,3 +52,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_3(self):
         self.assert_stats_ok(case_3)
+
+
+class EBRTestCase(CalculatorTestCase):
+    @attr('qa', 'risk', 'ebr')
+    def test_case_2(self):
+        out = self.run_calc(case_2.__file__, 'job_haz.ini,job_loss.ini',
+                            concurrent_tasks=0, exports='csv')
+        [fname] = out['/event_loss_table-rlzs', 'csv']
+        self.assertEqualFiles(
+            'expected/event_loss_table-b1,b1-structural.csv', fname)

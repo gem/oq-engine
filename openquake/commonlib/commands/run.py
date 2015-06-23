@@ -16,35 +16,36 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import logging
 
+from openquake.baselib import performance, general
 from openquake.commonlib import sap, readinput, valid
-from openquake.commonlib.parallel import executor, PerformanceMonitor
 from openquake.commonlib.calculators import base
 
 
-def run(job_ini, concurrent_tasks=executor.num_tasks_hint,
-        loglevel='info', hc=None, exports='csv'):
+def run(job_ini, concurrent_tasks=None,
+        loglevel='info', hc=None, exports=''):
     """
     Run a calculation. Optionally, set the number of concurrent_tasks
     (0 to disable the parallelization).
     """
     logging.basicConfig(level=getattr(logging, loglevel.upper()))
     oqparam = readinput.get_oqparam(job_ini)
-    oqparam.concurrent_tasks = concurrent_tasks
+    if concurrent_tasks is not None:
+        oqparam.concurrent_tasks = concurrent_tasks
     oqparam.hazard_calculation_id = hc
     oqparam.exports = exports
-    monitor = PerformanceMonitor('total', autoflush=True)
+    monitor = performance.Monitor('total', measuremem=True)
     calc = base.calculators(oqparam, monitor)
-    monitor.monitor_csv = os.path.join(
-        calc.datastore.calc_dir, 'performance.csv')
+    monitor.monitor_dir = calc.datastore.calc_dir
+    logging.info('Started job with output in %s', calc.datastore.calc_dir)
     with monitor:
         calc.run()
-    logging.info('Calculation %s saved in %s',
-                 calc.datastore.calc_id, calc.datastore.calc_dir)
+    logging.info('See the output with hdfview %s/output.hdf5',
+                 calc.datastore.calc_dir)
     logging.info('Total time spent: %s s', monitor.duration)
-    logging.info('Memory allocated: %s M', monitor.mem / 1024. / 1024.)
+    logging.info('Memory allocated: %s', general.humansize(monitor.mem))
+    monitor.flush()
 
 parser = sap.Parser(run)
 parser.arg('job_ini', 'calculation configuration file '
