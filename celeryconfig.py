@@ -50,8 +50,7 @@ if celery.__version__ < '3.0.0':  # old version in Ubuntu 12.04
     BROKER_PASSWORD = amqp.get("password")
     BROKER_VHOST = amqp.get("vhost")
 else:
-    BROKER_URL = 'amqp://%(user)s:%(password)s@%(host)s:%(port)s/%(vhost)s' % \
-                 amqp
+    BROKER_URL = 'redis://%(host)s/%(vhost)s' % amqp
 
 # BROKER_POOL_LIMIT enables a connections pool so Celery can reuse
 # a single connection to RabbitMQ. Value 10 is the default from
@@ -60,7 +59,7 @@ else:
 # See https://bugs.launchpad.net/oq-engine/+bug/1250402
 BROKER_POOL_LIMIT = None
 
-CELERY_RESULT_BACKEND = "amqp"
+CELERY_RESULT_BACKEND = "redis"
 
 # CELERY_ACKS_LATE and CELERYD_PREFETCH_MULTIPLIER settings help evenly
 # distribute tasks across the cluster. This configuration is intended
