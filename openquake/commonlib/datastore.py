@@ -33,8 +33,8 @@ DATADIR = os.environ.get('OQ_DATADIR', os.path.expanduser('~/oqdata'))
 
 def get_nbytes(dset):
     """
-    Extract the size in bytes of a dataset, without dipping in the tree.
-    Returns None if the dataset is actually a group.
+    If the dataset has an attribute 'nbytes', return it. Otherwise get the size
+    of the underlying array. Returns None if the dataset is actually a group.
     """
     if 'nbytes' in dset.attrs:
         # look if the dataset has an attribute nbytes

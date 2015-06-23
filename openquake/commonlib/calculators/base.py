@@ -454,6 +454,10 @@ def get_gmfs(calc):
         haz_sitecol = calc.datastore.parent['sitecol']
     else:
         haz_sitecol = calc.sitecol
+    # NB: if the hazard site collection has N sites, the hazard
+    # filtered site collection for the nonzero GMFs has N' <= N sites
+    # whereas the risk site collection associated to the assets
+    # has N'' <= N' sites
     risk_indices = set(calc.sitecol.indices)  # N'' values
     N = len(haz_sitecol.complete)
     imt_dt = numpy.dtype([(imt, float) for imt in calc.oqparam.imtls])
