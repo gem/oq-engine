@@ -421,7 +421,7 @@ _pkgtest_innervm_run () {
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
         # run selected demos
         ssh $lxc_ip "set -e; cd /usr/share/doc/python-oq-risklib/examples/demos
-        echo 'running SimpleFaultSourceClassicalPSHA...
+        echo 'running SimpleFaultSourceClassicalPSHA...'
         oq-lite run SimpleFaultSourceClassicalPSHA/job.ini
         echo 'running ClassicalPSHA...'
         oq-lite run ClassicalPSHA/job_hazard.ini,ClassicalPSHA/job_risk.ini
