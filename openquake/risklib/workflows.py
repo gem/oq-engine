@@ -163,11 +163,12 @@ class Workflow(object):
     """
     Base class. Can be used in the tests as a mock.
     """
+    time_event = None  # used in scenario_risk
+
     def __init__(self, imt, taxonomy, risk_functions):
         self.imt = imt
         self.taxonomy = taxonomy
         self.risk_functions = risk_functions
-        self.time_event = None
 
     @property
     def loss_types(self):
