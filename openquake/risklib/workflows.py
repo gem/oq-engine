@@ -675,25 +675,19 @@ class Scenario(Workflow):
 
     def __call__(self, loss_type, assets, ground_motion_values, epsilons,
                  _tags=None):
-        values = get_values(loss_type, assets)
-
         # a matrix of N x R elements
         loss_ratio_matrix = self.risk_functions[loss_type].apply_to(
             ground_motion_values, epsilons)
-        loss_matrix = (loss_ratio_matrix.T * values).T
 
         # aggregating per asset, getting a vector of R elements
         if loss_type == 'fatalities' and hasattr(assets[0], 'values'):
-            # special case only in oq-lite; it does not make sense,
-            # since how can the values for the aggregates (vals) be different
-            # than the values for the matrix (values)?? nevertheless, it is the
-            # only way to reproduce the engine numbers in the occupants
-            # test; to be investigated
-            # NB: the values are multiplied by the number, the vals not
-            vals = numpy.array([a.values['fatalities'] for a in assets])
-            aggregate_losses = (loss_ratio_matrix.T * vals).sum(axis=1)
+            # special case only in oq-lite
+            values = numpy.array([a.values['fatalities'] for a in assets])
         else:
-            aggregate_losses = loss_matrix.sum(axis=0)
+            values = get_values(loss_type, assets)
+
+        loss_matrix = (loss_ratio_matrix.T * values).T
+        aggregate_losses = loss_matrix.sum(axis=0)
 
         if self.insured_losses and loss_type != "fatalities":
             deductibles = [a.deductible(loss_type) for a in assets]
