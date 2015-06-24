@@ -84,11 +84,12 @@ class Asset(object):
         self.insurance_limits = insurance_limits
         self.aggregated = aggregated or {}
 
-    def value(self, loss_type):
+    def value(self, loss_type, time_event=None):
         """
         :returns: the total asset value for `loss_type`
         """
-        # don't multiply by the number for fatalities
+        if loss_type == 'fatalities':
+            return self.values['fatalities_' + str(time_event)]
         value = self.values[loss_type]
         number = 1 if self.aggregated.get(loss_type) else self.number
         return numpy.nan if value is None else value * number * self.area
@@ -121,14 +122,14 @@ class Asset(object):
 
 def get_values(loss_type, assets, time_event=None):
     """
-    A numpy array with the values for the given assets, depending on the
-    loss_type.
+    :returns:
+        a numpy array with the values for the given assets, depending on the
+        loss_type.
     """
-    if loss_type == 'fatalities' and hasattr(assets[0], 'values'):
-        # special case for oq-lite
-        fatalities = 'fatalities_' + str(time_event)
-        values = numpy.array([a.values[fatalities] for a in assets])
-    else:
+    if hasattr(assets[0], 'values'):  # special case for oq-lite
+        values = numpy.array([a.value(loss_type, time_event)
+                              for a in assets])
+    else:  # in the engine
         values = numpy.array([a.value(loss_type) for a in assets])
     return values
 
@@ -685,7 +686,7 @@ class Scenario(Workflow):
 
     def __call__(self, loss_type, assets, ground_motion_values, epsilons,
                  _tags=None):
-        values = get_values(loss_type, assets)
+        values = get_values(loss_type, assets, self.time_event)
 
         # a matrix of N x R elements
         loss_ratio_matrix = self.risk_functions[loss_type].apply_to(
