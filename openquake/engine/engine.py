@@ -19,7 +19,6 @@ calculations."""
 import os
 import sys
 import time
-import shutil
 import getpass
 import itertools
 import operator
@@ -55,7 +54,8 @@ INPUT_TYPES = set(dict(models.INPUT_TYPE_CHOICES))
 UNABLE_TO_DEL_HC_FMT = 'Unable to delete hazard calculation: %s'
 UNABLE_TO_DEL_RC_FMT = 'Unable to delete risk calculation: %s'
 
-TERMINATE = valid.boolean(config.get('celery', 'terminate_workers_on_revoke'))
+TERMINATE = valid.boolean(
+    config.get('celery', 'terminate_workers_on_revoke') or 'false')
 
 
 class InvalidHazardCalculationID(Exception):
