@@ -485,7 +485,9 @@ class ProbabilisticEventBased(Workflow):
         """
         loss_matrix = self.risk_functions[loss_type].apply_to(
             ground_motion_values, epsilons)
-        values = utils.numpy_map(lambda a: a.value(loss_type), assets)
+        values = get_values(loss_type, assets)
+        if loss_type == 'fatalities':
+            import pdb; pdb.set_trace()
         ela = loss_matrix.T * values  # matrix with T x N elements
         if self.insured_losses and loss_type != 'fatalities':
             deductibles = [a.deductible(loss_type) for a in assets]
