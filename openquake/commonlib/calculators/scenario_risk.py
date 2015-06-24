@@ -26,23 +26,12 @@ from openquake.commonlib import parallel, datastore
 from openquake.commonlib.calculators import base
 
 
-def losses_per_asset(tag, loss_type, assets, means, stddevs,
-                     multiply_by_value=True):
+def losses_per_asset(tag, loss_type, assets, means, stddevs):
     """
     :returns: a dictionary {
     (tag, loss_type): [(asset_ref, mean_value, stddev), ...]}
     """
-    lst = []
-    for a, m, s in zip(assets, means, stddevs):
-        if multiply_by_value:
-            # this is really ugly: we should change workflow.Scenario
-            # to return the already multiplied insured_loss_matrix;
-            # we postpone the fix to the future when the engine
-            # scenario_risk calculator will be removed
-            v = a.value(loss_type)
-        else:
-            v = 1
-        lst.append((a.id, m * v, s * v))
+    lst = [(a.id, m, s) for a, m, s in zip(assets, means, stddevs)]
     return {(tag, loss_type): lst}
 
 
@@ -83,8 +72,7 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
                 means = out.insured_loss_matrix.mean(axis=1),
                 stddevs = out.insured_loss_matrix.std(ddof=1, axis=1)
                 result[out.hid] += losses_per_asset(
-                    'asset-ins', out.loss_type, assets, means, stddevs,
-                    multiply_by_value=False)
+                    'asset-ins', out.loss_type, assets, means, stddevs)
                 result[out.hid] += {('ins', out.loss_type): out.insured_losses}
     return result
 
