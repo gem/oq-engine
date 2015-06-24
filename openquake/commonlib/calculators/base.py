@@ -101,7 +101,10 @@ class BaseCalculator(object):
                 exported = self.export()
         finally:
             if clean_up:
-                self.clean_up()
+                try:
+                    self.clean_up()
+                except:
+                    logging.error('Cleanup error', exc_info=True)
         return exported
 
     def core_func(*args):
