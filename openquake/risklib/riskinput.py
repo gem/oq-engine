@@ -87,7 +87,6 @@ def build_asset_collection(assets_by_site, time_event=None):
                     value = sid
                 elif field == 'fatalities':
                     value = asset.values[the_fatalities]
-                    asset.fatalities = value
                 else:
                     try:
                         name, lt = field.split('~')
