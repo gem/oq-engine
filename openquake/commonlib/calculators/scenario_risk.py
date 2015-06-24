@@ -26,13 +26,9 @@ from openquake.commonlib import parallel, datastore
 from openquake.commonlib.calculators import base
 
 
-def losses_per_asset(tag, loss_type, assets, means, stddevs):
-    """
-    :returns: a dictionary {
-    (tag, loss_type): [(asset_ref, mean_value, stddev), ...]}
-    """
-    lst = [(a.id, m, s) for a, m, s in zip(assets, means, stddevs)]
-    return {(tag, loss_type): lst}
+def lpa(assets, means, stddevs):
+    """Losses per asset"""
+    return [(a.id, m, s) for a, m, s in zip(assets, means, stddevs)]
 
 
 @parallel.litetask
@@ -64,15 +60,15 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
             assets = out.assets
             means = out.loss_matrix.mean(axis=1),
             stddevs = out.loss_matrix.std(ddof=1, axis=1)
-            result[out.hid] += losses_per_asset(
-                'asset-loss', out.loss_type, assets, means, stddevs)
+            result[out.hid] += {
+                ('asset-loss', out.loss_type): lpa(assets, means, stddevs)}
             result[out.hid] += {('agg', out.loss_type): out.aggregate_losses}
 
             if out.insured_loss_matrix is not None:
                 means = out.insured_loss_matrix.mean(axis=1),
                 stddevs = out.insured_loss_matrix.std(ddof=1, axis=1)
-                result[out.hid] += losses_per_asset(
-                    'asset-ins', out.loss_type, assets, means, stddevs)
+                result[out.hid] += {
+                    ('asset-ins', out.loss_type): lpa(assets, means, stddevs)}
                 result[out.hid] += {('ins', out.loss_type): out.insured_losses}
     return result
 

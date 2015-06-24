@@ -684,9 +684,14 @@ class Scenario(Workflow):
 
         # aggregating per asset, getting a vector of R elements
         if loss_type == 'fatalities' and hasattr(assets[0], 'values'):
-            # special case only in oq-lite
-            values = numpy.array([a.values['fatalities'] for a in assets])
-            aggregate_losses = (loss_ratio_matrix.T * values).sum(axis=1)
+            # special case only in oq-lite; it does not make sense,
+            # since how can the values for the aggregates (vals) be different
+            # than the values for the matrix (values)?? nevertheless, it is the
+            # only way to reproduce the engine numbers in the occupants
+            # test; to be investigated
+            # NB: the values are multiplied by the number, the vals not
+            vals = numpy.array([a.values['fatalities'] for a in assets])
+            aggregate_losses = (loss_ratio_matrix.T * vals).sum(axis=1)
         else:
             aggregate_losses = loss_matrix.sum(axis=0)
 
