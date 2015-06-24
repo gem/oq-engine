@@ -123,12 +123,7 @@ def get_values(loss_type, assets):
     A numpy array with the values for the given assets, depending on the
     loss_type.
     """
-    if loss_type == 'fatalities' and hasattr(assets[0], 'values'):
-        # this is called only in oq-lite, return naked value
-        values = numpy.array([a.values['fatalities'] for a in assets])
-    else:  # return dressed value
-        values = numpy.array([a.value(loss_type) for a in assets])
-    return values
+    return numpy.array([a.value(loss_type) for a in assets])
 
 
 class List(list):
@@ -685,26 +680,37 @@ class Scenario(Workflow):
         # a matrix of N x R elements
         loss_ratio_matrix = self.risk_functions[loss_type].apply_to(
             ground_motion_values, epsilons)
+        loss_matrix = (loss_ratio_matrix.T * values).T
 
         # aggregating per asset, getting a vector of R elements
-        aggregate_losses = numpy.sum(
-            loss_ratio_matrix.transpose() * values, axis=1)
+        if loss_type == 'fatalities' and hasattr(assets[0], 'values'):
+            # special case only in oq-lite; it does not make sense,
+            # since how can the values for the aggregates (vals) be different
+            # than the values for the matrix (values)?? nevertheless, it is the
+            # only way to reproduce the engine numbers in the occupants
+            # test; to be investigated
+            # NB: the values are multiplied by the number, the vals not
+            vals = numpy.array([a.values['fatalities'] for a in assets])
+            aggregate_losses = (loss_ratio_matrix.T * vals).sum(axis=1)
+        else:
+            aggregate_losses = loss_matrix.sum(axis=0)
+
         if self.insured_losses and loss_type != "fatalities":
             deductibles = [a.deductible(loss_type) for a in assets]
             limits = [a.insurance_limit(loss_type) for a in assets]
             insured_loss_ratio_matrix = utils.numpy_map(
                 scientific.insured_losses,
                 loss_ratio_matrix, deductibles, limits)
+            insured_loss_matrix = (insured_loss_ratio_matrix.T * values).T
 
-            insured_loss_matrix = (
-                insured_loss_ratio_matrix.transpose() * values).transpose()
-
-            insured_losses = numpy.array(insured_loss_matrix).sum(axis=0)
+            # aggregating per asset, getting a vector of R elements
+            insured_losses = insured_loss_matrix.sum(axis=0)
         else:
             insured_loss_matrix = None
             insured_losses = None
         return scientific.Output(
-            assets, loss_type, loss_matrix=loss_ratio_matrix,
+            assets, loss_type, loss_matrix=loss_matrix,
+            loss_ratio_matrix=loss_ratio_matrix,
             aggregate_losses=aggregate_losses,
             insured_loss_matrix=insured_loss_matrix,
             insured_losses=insured_losses)
