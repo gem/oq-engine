@@ -88,10 +88,8 @@ class Asset(object):
         """
         :returns: the total asset value for `loss_type`
         """
-        if loss_type == 'fatalities':
-            value = self.values[loss_type + '_None']
-        else:
-            value = self.values[loss_type]
+        # don't multiply by the number for fatalities
+        value = self.values[loss_type]
         number = 1 if self.aggregated.get(loss_type) else self.number
         return numpy.nan if value is None else value * number * self.area
 
@@ -121,12 +119,18 @@ class Asset(object):
         return self.id
 
 
-def get_values(loss_type, assets):
+def get_values(loss_type, assets, time_event=None):
     """
     A numpy array with the values for the given assets, depending on the
     loss_type.
     """
-    return numpy.array([a.value(loss_type) for a in assets])
+    if loss_type == 'fatalities' and hasattr(assets[0], 'values'):
+        # special case for oq-lite
+        fatalities = 'fatalities_' + str(time_event)
+        values = numpy.array([a.values[fatalities] for a in assets])
+    else:
+        values = numpy.array([a.value(loss_type) for a in assets])
+    return values
 
 
 class List(list):
@@ -162,6 +166,7 @@ class Workflow(object):
         self.imt = imt
         self.taxonomy = taxonomy
         self.risk_functions = risk_functions
+        self.time_event = None
 
     @property
     def loss_types(self):
@@ -183,7 +188,7 @@ class Workflow(object):
         for loss_type in self.loss_types:
             assets_ = assets
             epsilons_ = epsilons
-            values = get_values(loss_type, assets)
+            values = get_values(loss_type, assets, self.time_event)
             ok = ~numpy.isnan(values)
             if not ok.any():
                 # there are no assets with a value
@@ -680,30 +685,15 @@ class Scenario(Workflow):
 
     def __call__(self, loss_type, assets, ground_motion_values, epsilons,
                  _tags=None):
-        if loss_type == 'fatalities' and hasattr(assets[0], 'values'):
-            fatalities = 'fatalities_' + str(self.time_event)
-            values = numpy.array([a.values[fatalities] * a.number
-                                  for a in assets])
-        else:
-            values = get_values(loss_type, assets)
+        values = get_values(loss_type, assets)
 
         # a matrix of N x R elements
         loss_ratio_matrix = self.risk_functions[loss_type].apply_to(
             ground_motion_values, epsilons)
+        # another matrix of N x R elements
         loss_matrix = (loss_ratio_matrix.T * values).T
-
-        # aggregating per asset, getting a vector of R elements
-        if loss_type == 'fatalities' and hasattr(assets[0], 'values'):
-            # special case only in oq-lite; it does not make sense,
-            # since how can the values for the aggregates (vals) be different
-            # than the values for the matrix (values)?? nevertheless, it is the
-            # only way to reproduce the engine numbers in the occupants
-            # test; to be investigated
-            # NB: the values are multiplied by the number, the vals not
-            vals = numpy.array([a.values[fatalities] for a in assets])
-            aggregate_losses = (loss_ratio_matrix.T * vals).sum(axis=1)
-        else:
-            aggregate_losses = loss_matrix.sum(axis=0)
+        # an array of R elements
+        aggregate_losses = loss_matrix.sum(axis=0)
 
         if self.insured_losses and loss_type != "fatalities":
             deductibles = [a.deductible(loss_type) for a in assets]

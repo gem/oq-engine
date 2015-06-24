@@ -652,7 +652,6 @@ def get_exposure(oqparam):
                      exposure.area['type'] == 'aggregated')
         for ct in exposure.cost_types}
     all_cost_types = set(vulnerability_files(oqparam.inputs))
-    assert all_cost_types, 'No vulnerability files given!'
     relevant_cost_types = all_cost_types - set(['occupants'])
     asset_refs = set()
     ignore_missing_costs = set(oqparam.ignore_missing_costs)
@@ -746,8 +745,8 @@ def get_exposure(oqparam):
         logging.info('Read %d assets', len(exposure.assets))
 
     # sanity check
-    num_values = sum(len(ass.values) for ass in exposure.assets)
-    assert num_values, 'Could not find any value??'
+    values = any(len(ass.values) + ass.number for ass in exposure.assets)
+    assert values, 'Could not find any value??'
     return exposure
 
 
