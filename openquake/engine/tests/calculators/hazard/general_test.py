@@ -18,8 +18,6 @@
 import unittest
 import mock
 
-from openquake.commonlib.valid import SiteParam
-
 from openquake.engine import engine
 from openquake.engine.calculators.hazard import general
 from openquake.engine.calculators import calculators

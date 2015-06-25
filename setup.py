@@ -1,3 +1,18 @@
+# The OpenQuake Engine
+# Copyright (C) 2010-2015, GEM Foundation
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import re
 import sys
 from setuptools import setup, find_packages
@@ -20,18 +35,18 @@ def get_version():
 
 version = get_version()
 
-url = "http://openquake.org/"
+url = "https://github.com/gem/oq-engine"
 
 README = """
 OpenQuake is an open source application that allows users to
 compute seismic hazard and seismic risk of earthquakes on a global scale.
 
-Please note: the /usr/bin/openquake script requires a celeryconfig.py
-file in the PYTHONPATH.  Please make sure this is the case and that your
-celeryconfig.py file works with your python-celery setup.
+Please note: the /usr/bin/oq-engine script requires a celeryconfig.py file in
+the PYTHONPATH; when using binary packages, if a celeryconfig.py is not
+available the OpenQuake Engine default celeryconfig.py, located in
+/usr/share/openquake/engine, is used.
 
-Feel free to copy /usr/openquake/engine/celeryconfig.py and revise it
-as needed.
+Copyright (C) 2010-2015, GEM Foundation.
 """
 
 PY_MODULES = ['openquake.engine.bin.openquake_cli']
@@ -44,8 +59,10 @@ setup(
     },
     name="openquake.engine",
     version=version,
-    author="The OpenQuake team",
+    author="GEM Foundation",
     author_email="devops@openquake.org",
+    maintainer='GEM Foundation',
+    maintainer_email='devops@openquake.org',
     description=("Computes hazard, risk and socio-economic impact of "
                  "earthquakes."),
     license="AGPL3",
@@ -53,28 +70,25 @@ setup(
     url=url,
     long_description=README,
     classifiers=[
-        "Development Status :: 3 - Alpha",
-        "Topic :: Utilities",
+        'Development Status :: 4 - Beta',
+        'Intended Audience :: Education',
+        'Intended Audience :: Science/Research',
+        'Programming Language :: Python :: 2',
+        'License :: OSI Approved :: GNU Affero General Public License v3',
+        'Operating System :: OS Independent',
+        'Topic :: Scientific/Engineering',
     ],
     packages=find_packages(exclude=["qa_tests", "qa_tests.*",
                                     "tools",
                                     "openquake.engine.bin",
                                     "openquake.engine.bin.*"]),
     py_modules=PY_MODULES,
-
     include_package_data=True,
     package_data={"openquake.engine": [
-        "db/schema/upgrades/*.sql",
-        "openquake.cfg", "openquake_worker.cfg", "README", "LICENSE"],
-        "openquake.server": [
-        "templates/*.html", "templates/*/*.html", "static/css/*.css",
-        "static/*/*.js", "static/*/*/*.js", "static/*/*/*/*.js",
-        "static/*/*.map", "static/*/*/*.map", "static/*/*/*/*.map",
-        "static/font/*.ttf", "static/font/*.css", "static/img/*.png"]},
+        "openquake.cfg", "openquake_worker.cfg",
+        "README.md", "LICENSE", "CONTRIBUTORS.txt"]},
+    namespace_packages=['openquake'],
     scripts=["openquake/engine/bin/oq_create_db",
              "openquake/engine/bin/openquake"],
-
-    namespace_packages=['openquake'],
-
     zip_safe=False,
     )

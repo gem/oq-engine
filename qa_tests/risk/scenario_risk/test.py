@@ -151,6 +151,7 @@ class ScenarioOccupantsQATestCase(risk.FixtureBasedQATestCase):
         return data
 
     def expected_data(self):
+        # see scenario_risk/occupants/expected/asset-loss.csv
         return [(0.36863306563175, 0.198942735032192),
                 (1.58950924789158, 1.8570835311939),
                 (1.12788692684151, 0.698151682472273),

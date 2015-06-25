@@ -33,8 +33,7 @@ class ScenarioDamageTestCase(risk.BaseRiskQATestCase):
         job = testcase._run_test()
         testcase.compare_xml_outputs(
             job,
-            ['expected/dmg_dist_per_asset.xml',
-             'expected/collapse_map.xml',
+            ['expected/collapse_map.xml',
              'expected/dmg_dist_per_taxonomy.xml',
              'expected/dmg_dist_total.xml'])
 
@@ -46,12 +45,15 @@ class ScenarioDamageTestCase(risk.BaseRiskQATestCase):
         helpers.create_gmf_from_csv(job, fname, 'gmf_scenario')
         return job
 
+    @attr('qa', 'risk', 'scenario_damage')
     def test_case_1(self):
         self._test(case_1)
 
+    @attr('qa', 'risk', 'scenario_damage')
     def test_case_2(self):
         self._test(case_2)
 
+    @attr('qa', 'risk', 'scenario_damage')
     def test_case_3(self):
         self._test(case_3)
 
