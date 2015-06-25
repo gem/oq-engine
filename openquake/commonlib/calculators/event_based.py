@@ -25,7 +25,7 @@ import collections
 
 import numpy
 
-from openquake.baselib.general import AccumDict, humansize
+from openquake.baselib.general import AccumDict, groupby, humansize
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib.calc.hazard_curve import zero_curves
@@ -124,6 +124,30 @@ def view_gmfs_total_size(key, dstore):
     for counts in dstore['/counts_per_rlz']:
         nbytes += 8 * counts['gmf'] * (num_imts + 1)
     return humansize(nbytes)
+
+
+rlz_col_dt = numpy.dtype([('rlz', numpy.uint32), ('col', numpy.uint32)])
+
+
+def build_rlz_col_assocs(rlzs_assoc):
+    """
+    Build the association array rlz.ordinal -> col_id
+    """
+    assocs = []
+    for rlz in rlzs_assoc.realizations:
+        for col_id in sorted(rlzs_assoc.csm_info.get_col_ids(rlz)):
+            assocs.append((rlz.ordinal, col_id))
+    return numpy.array(assocs, rlz_col_dt)
+
+
+@datastore.view.add('rlzs_by_col')
+def view_rlzs_by_col(key, dstore):
+    return groupby(dstore['/rlz_col_assocs'],
+                   lambda x: x['col'],
+                   lambda rows: [row['rlz'] for row in rows])
+
+
+# #################################################################### #
 
 
 def get_geom(surface, is_from_fault_source, is_multi_surface):
@@ -353,6 +377,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
     tags = datastore.persistent_attribute('/tags')
     sescollection = datastore.persistent_attribute('sescollection')
     counts_per_rlz = datastore.persistent_attribute('/counts_per_rlz')
+    rlz_col_assocs = datastore.persistent_attribute('/rlz_col_assocs')
     is_stochastic = True
 
     def pre_execute(self):
@@ -420,6 +445,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
                 'gmfs_nbytes'] = get_gmfs_nbytes(
                 len(self.sitecol), len(self.oqparam.imtls),
                 self.rlzs_assoc, sescollection)
+            self.rlz_col_assocs = build_rlz_col_assocs(self.rlzs_assoc)
 
 
 # ######################## GMF calculator ############################ #
