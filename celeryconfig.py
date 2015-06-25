@@ -59,9 +59,10 @@ BROKER_POOL_LIMIT = None
 # CELERY_RESULT_BACKEND = 'amqp'
 
 # Redis result backend
+import celery
 if celery.__version__ < '3.0.0':
     CELERY_RESULT_BACKEND = 'redis://%(host)s:6379/0' % amqp
-else
+else:
     CELERY_RESULT_BACKEND = 'redis'
     CELERY_REDIS_HOST = amqp.get("host")
     CELERY_REDIS_PORT = 6379
