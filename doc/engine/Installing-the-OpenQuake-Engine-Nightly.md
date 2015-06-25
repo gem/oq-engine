@@ -32,7 +32,7 @@ To compare cfg versions the ```diff``` utility is your friend:
 ```bash
 sudo diff -urN /etc/openquake/openquake.cfg /etc/openquake/openquake.cfg.new_in_this_release
 ```
-See an [example](https://github.com/gem/oq-engine/wiki/openquake.cfg-diff-example).
+See an [example](openquake.cfg-diff-example.md).
 
 Same must be done with ```/usr/openquake/engine/celeryconfig.py``` and ```/usr/openquake/engine/celeryconfig.py.new_in_this_release```. Usually you can replace ```celeryconfig.py``` with ```celeryconfig.py.new_in_this_release```.
 
