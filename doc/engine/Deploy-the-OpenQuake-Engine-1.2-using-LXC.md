@@ -24,7 +24,7 @@ For RedHat based distros (RHEL, CentOS, Fedora) use ```yum``` instead of ```apt-
 ```bash
 $ sudo apt-get install lxc
 ```
-Download the OpenQuake LXC archive (current released version is [[http://ftp.openquake.org/oq-1.2/lxc/Ubuntu_lxc_12.04_64_oq_1.2-2.tar.bz2]])
+Download the OpenQuake LXC archive (current released version is [http://ftp.openquake.org/oq-1.2/lxc/Ubuntu_lxc_12.04_64_oq_1.2-2.tar.bz2])
 ```bash
 $ cd ~ && wget http://ftp.openquake.org/oq-1.2/lxc/Ubuntu_lxc_12.04_64_oq_1.2-2.tar.bz2
 ```

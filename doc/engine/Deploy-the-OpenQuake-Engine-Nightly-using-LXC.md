@@ -22,7 +22,7 @@ For RedHat based distros (RHEL, CentOS, Fedora) use ```yum``` instead of ```apt-
 ```bash
 $ sudo apt-get install lxc
 ```
-Download the OpenQuake LXC archive (current released version is [[http://ftp.openquake.org/oq-master/lxc/Ubuntu_lxc_12.04_64_oq_master_nightly-141116.tar.bz2]])
+Download the OpenQuake LXC archive (current released version is http://ftp.openquake.org/oq-master/lxc/Ubuntu_lxc_12.04_64_oq_master_nightly-141116.tar.bz2)
 ```bash
 $ cd ~ && wget http://ftp.openquake.org/oq-master/lxc/Ubuntu_lxc_12.04_64_oq_master_nightly-141116.tar.bz2
 ```
@@ -62,7 +62,7 @@ $ sudo apt-get update && sudo apt-get upgrade
 Be careful: the upgrade will destroy all the data saved in the OpenQuake DB!
 
 ### Using GIT instead of the nightly packages
-A version of the container which provides the OpenQuake Engine installed via GIT instead of the nightly packages is available at [[http://ftp.openquake.org/oq-master/lxc/Ubuntu_lxc_12.04_64_oq_master_git-141116.tar.bz2]]
+A version of the container which provides the OpenQuake Engine installed via GIT instead of the nightly packages is available at http://ftp.openquake.org/oq-master/lxc/Ubuntu_lxc_12.04_64_oq_master_git-141116.tar.bz2
 
 ### Useful links
 * [Installing-the-OpenQuake-Engine-from-source-code.md](Installing-the-OpenQuake-Engine-from-source-code.md)
