@@ -33,7 +33,6 @@ if os.environ.get("OQ_ENGINE_USE_SRCDIR"):
     sys.modules['openquake'].__dict__["__path__"].insert(
         0, os.path.join(os.path.dirname(__file__), "openquake"))
 
-import celery
 from openquake.engine.utils import config, get_core_modules
 from openquake import engine
 
@@ -43,14 +42,9 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 amqp = config.get_section("amqp")
 
-if celery.__version__ < '3.0.0':  # old version in Ubuntu 12.04
-    BROKER_HOST = amqp.get("host")
-    BROKER_PORT = int(amqp.get("port"))
-    BROKER_USER = amqp.get("user")
-    BROKER_PASSWORD = amqp.get("password")
-    BROKER_VHOST = amqp.get("vhost")
-else:
-    BROKER_URL = 'redis://%(host)s:6379/0' % amqp
+# BROKER_URL = 'amqp://%(user)s:%(password)s@%(host)s:%(port)s/%(vhost)s' % \
+#              amqp
+BROKER_URL = 'redis://%(host)s:6379/0' % amqp
 
 # BROKER_POOL_LIMIT enables a connections pool so Celery can reuse
 # a single connection to RabbitMQ. Value 10 is the default from
@@ -59,6 +53,7 @@ else:
 # See https://bugs.launchpad.net/oq-engine/+bug/1250402
 BROKER_POOL_LIMIT = None
 
+#CELERY_RESULT_BACKEND = 'amqp'
 CELERY_RESULT_BACKEND = 'redis://%(host)s:6379/0' % amqp
 
 # CELERY_ACKS_LATE and CELERYD_PREFETCH_MULTIPLIER settings help evenly
