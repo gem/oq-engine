@@ -1,0 +1,416 @@
+AlessandroNotes
+
+Great Experience, IHMO it was about the time to have such a cross domain/religion/philosophy meeting related to the IT developments within the seismological community, with the support of an extremely updated group of experts with different backgrounds and experience. Hence, first of all, thanks to the GEM group that made it happen!
+
+
+h2. The Requirements
+
+It seems that one of the topics where the reviewers reached a general consensus is the need for the accomplishment of an important target: The Definition of  Use Cases and Functional Requirements. And this point is crucial.
+
+Accordingly on my personal experience as a software developer on big projects having as a customer a scientific community, quite often we are requested to have the role of the user, the coder, the designer, the architect, the tester, and last but not the least, the sales manager.
+We have to realize whether there`s a need or a problem, solve it and then sell either the problem or the solution :-). 
+
+There`s an interesting article talking about scientific portals or VREs (Virtual Research Enviroment) which says:
+
+<i>
+"The development and presentation of a VRE must be embedded and owned by the communities served and cannot realistically be developed for the research communities by others in isolation. Since the intention is to improve the research process and not simply to pilot technologies for their own sake, the research must drive the requirements”
+
+“A VRE which stands isolated from existing infrastructure and the research way of life will not be a research environment but probably only another underused Web portal”
+
+</i>
+
+Michael Fraser Co-ordinator, Research Technologies Service, University of Oxford
+"http://www.ariadne.ac.uk/issue44/fraser/":http://www.ariadne.ac.uk/issue44/fraser/
+
+The approach of GEM should consider to involve as much as possible the users community in the process of defining the requirements. This will help the developers on focusing on the right solution adopting the technique that more fits their needs and their skills. Moreover in the light of the extremely useful tips and guidelines proposed by the reviewers, those skills that are currently lacking can be quickly improved whether an accurate analysis of the problem and the understanding of the available technologies motivates a change of direction.
+
+h2. GEM1
+
+The design of the GEM1 project depicts an extreme modularization and independence of each piece of the architecture, from the database design to the service and presentation layer. A database expert might not be as good on front end or UI development, so "sometimes" the decoupling is a good thing. This obviously required the ability to gain a deep knowledge on a wide and sometimes complex stack of technologies, standards and formats.. the question is, does this lead to the over-engineering of the project? Is over-engineering always bad? IMHO, the lack of clear requirements leads to over-engineered software. 
+
+In general, for all the Java developments I`d suggest to consider the adoption of the <b>Spring framework</b> which helps in keeping the code clean, modular, testable and lightweight thanks to massive adoption of the IOC and singleton patterns. It provides the glue to integrate several small components in a bigger architecture, keeping the small things.. small and testable. unit testing with spring and the available IDEs works just great.
+
+h2. The webservice approach
+
+Given the Use Cases, there`s the need to understand which of them has to be implemented as a webservice (in its general definition of a programming API available on the web) and which on the other hand doesn`t need to be a webservice. 
+For instance, talking about a browser based product, most of the user interaction could be implemented through a normal MVC pattern where the front end is "directly" connected with the database, better saying to the objects stored in it. Would it be possible and worthwhile to model every use cases as an aggregation of REST webservices? Probably if you start a project from the scratch that`s the way to go..
+
+Some different considerations have to be done in respect of asynchronous call to processing facilities. It`s advisable to use a queue based system where the fire and forget approach is given by definition and the queue can retry a number of times if the delivery fails, submitting a certain number of job in parallel or in a chain. A webservice communication over HTTP implies that the requester needs a response back., Do you want to model such a protocol from the scratch? Is there anything already available?
+A combination of the two might require to get into a better understanding of the <b>WPS OGC</b> specs. This link provides some interesting thoughts 
+"http://www.cadmaps.com/gisblog/?p=28":http://www.cadmaps.com/gisblog/?p=28.
+
+
+h2. To Portal or Not To Portal
+
+JSR portlets are complex stuff if you don`t rely on the proper framework, but the general concepts  behind a JSR portal, such as personalization, component-based development and the reuse of tools are spreading among several web frameworks implemented also with other technologies, which is worthwhile to investigate better. 
+On the other hand, several successful projects and teams in e-science adopt the JSR-168 solution, suggesting that this approach might enable a better integration of external expertise on scientific portal development.
+
+Portals provide the ability to aggregate access to applications. In many development environment or collaboration, these applications are owned and maintained by disparate groups where the coordination of release schedules can be difficult or impossible. In such a scenario, WSRP provides the advantage of allowing a portlet or group of portlets to be released independently of the main portal application. This, together with the opportunity of cross domain collaborations, was a fundamental feature within the NERIES project.
+OpenSource project like Jetspeed provides a very lightweight stack, while Liferay is moving towards a cross platform solution which is extremely interesting, besides many new social features provided on the shelf.
+
+If the mentioned motivations are not an issue in GEM, probably considering a framework such as <b>GeoNode</b>, where many interactive features related to a collaborative manipulation of GIS products are implemented out of the box, could be helpful, also in terms of future collaboration and contributions to the Risk Assessment web development community. 
+I`d suggest though to wait for a stable release rather than rely to the existing Beta. 
+
+h2. Interoperable Metadata
+
+To what extent some data product should made publicly available on the web, and in which format?
+Investigating on proper metadata and publication philosophies such as LinkedData  "http://linkeddata.org/":http://linkeddata.org/ might lead to a cross domain interoperability and discovery of public data products.
+This is also related to some concerns expressed by Fabian during the QuakeML talk. 
+
+h2. Being Social within and beyond GEM
+
+Datasets, data-products, discussions, GEM portal activities. Might be useful to push all these meaningful information outside the fences of the GEM infrastructure, in order to achieve ease of access to interesting results and wider visibility among the domain field community and beyond. 
+
+For this purpose consider beside the  implementation of a professional network within the GEM portal, the adoption of well established web2.0 platforms and tools widely used by millions of users, such as iGoogle and Twitter.
+
+AndreasNotes
+
+h2. Data Storage
+
+Well established file formats for spatial data:
+ * vector: Shapefiles
+ * raster (generic): GeoTIFF
+ * raster (hazard related): AME
+
+h2. Developer Community
+
+After talking with some of the team members, it seems that most of them are not expecting to attract developers.
+
+One important thing to consider here is: setting up a FOSS style software development process is a win no matter what. And once this process is in place, accepting external contributions is not a burden, but a help.
+
+
+FrankNotes
+
+h2. Gridded Data Management.
+ * Keep gridded data products outside the database (ie. hazard maps, hazard curves).
+ * Keep gridded data products as managed raster files, with references by filename in the database.
+ * Support accessing gridded data products by WCS, including implementation of shaML support in one or both of GeoServer and MapServer, and clients like GDAL.  
+ * WCS "references" could be the primary means by which gridded data products are used from remote locations when copying is discouraged.
+
+h2. Processing Engine
+
+The existing risk processing engine does not seem to address some concerns I have:
+ * approaches to distributing the work over a cluster.  Try to avoid complexity, or deep ties into specific clustering technology.
+ * Look into an engine capability to split up large product calcuations into chunks (ie. great a global calculation into smaller tiles) 
+ * How to integrate existing processing algorithms (possibly like OpenSHA) that do not work at the same fine grained level as the processing engine.  For instance, some algorithms may not be easily broken down into stackable filters, and may not support the virtualized access to input data. 
+ * I think they need to have a distinct configuration file input format to drive the processing engine(s) so the processing engine is quite distinct from the web services.  The configuration file (referencing other input files) becomes the definition of a processing run.
+ * For local processing what they should distribute is the engine + modest tools to prepare the "run" configuration file.
+
+h2. Portal, Web Services
+
+Not my area of specialty, but I am doubtful about the use of SOAP/WSDL for the web services.  It is a heavy approach which is clumsy for clients.  I would contemplate a lighter weight ReST approach for the web services *instead* of the SOAP/WSDL approach.  
+
+Further, I would consider a portal development approach that is more organized around JavaScript client technology (as was done in the Pavia prototyping) built against the ReST API for web services rather than the Java Portlet approach.   
+
+I do think that an effort be made to avoid passing large objects (like whole hazard maps, complex logic trees, etc) between web services.  Instead identified large objects should be referenced, possibly from the database or from files on disk.
+
+h2. Data Formats
+
+ * Spend time defining, and documenting file formats to be used for import/export of data with the GEM system, including the formats used as input to the processing engine(s).  
+ * Utilize pixel interleaved GeoTIFF with specific metadata extensions (possibly parts of shaml in a tag) as a working, interchange and archive format for hazard curves and hazard maps.  Such a format is compact (binary), efficiently accessable, and already supported by many existing software packages.  I can assist. 
+ * Use of shaml as-is for  processing inputs seems ok.
+ * Try to avoid creating specific formats where a simple/specific profile of an existing format (like GML) would do (for faults, etc)
+ * Put some effort into identifying existing adhoc tools for preparing system inputs, and visualizing system output products.  
+ * Put some effort into developing additional adhoc tools for working with the data formats, possibly including development of GDAL/OGR drivers (for the C/C++ stack), and GeoTools format handlers (for the Java stack). 
+
+h2. Building Modelling
+
+Future work around capturing information on building characteristics globally was not discussed in any depth during the IT review, but I believe there needs to be some thought applied to how the information is stored, accessed, and managed. 
+
+ * Consider developing a simple GML profile for building models.
+ * Consider storing in a distinct building model database lest the volume of building models eventually collected eventually overwhelms the general purpose GEM database. 
+ * Consider offering WFS access for read and update to the building model database.
+
+h2. Strong Points
+
+ * For the most part the normalized database structure seems sensible (bulky data notwithstanding).
+ * The LDAP auth architecture with users/groups seems good.
+ * The development of shaML as a core working format for interchange, and data input/output from the calculation engine seems good.
+ * It looks like excellent work was done building on OpenSHA. 
+
+h2. Auxiliary Points
+ 
+ * LGPL is an ok license for the developed code, though a non-reciprocal license (like BSD, MIT, etc) would allow folks like insurance companies to make proprietary improvements to the modelling code without an obligation to release them. 
+ *  SVN is adequate for source control, though a distributed VCS like Git has some minor advantages.
+ * I don't see any compelling reason to move development from Java to Python with the possible exception of adopting a technology like Django.  In any event, having the processing engine in Java is fine.
+
+h2. MapServer vs. GeoServer
+
+ * Both are ok, so it would likely be best to let the team pick whichever seems like the best fit. 
+ * Be prepared to invest some effort back in support for GEM oriented file formats for whichever server technology is selected.
+ * Note that GeoServer is well suited to web based feature update vis WFS-T and a client like OpenLayers. MapServer does *not* support WFS-T (update via WFS).
+ * It is possible it will make sense to deploy both GeoServer and MapServer for particular purposes.  
+ * Ensure that service deployment is based off the product definition within the GEM DB, not having to dump all the data to disk in duplicated forms.  For instance, via some appropriate wrappers it should be possible to access any hazard map in the GEM DB without having to constantly dump the GEM DB map list out to some particular file format (MapServer .map, or GeoServer configuration file).  In MapServer this would normally be accomplished with dynamic map technology using MapServer to lookup details in the GEM DB.  Some similar mechanism no doubt exists for GeoServer. 
+
+h2. Open Source Contribution
+
+ * It is unlikely that there will be a great deal of outside contribution to the core DB and webservices of OpenGEM.
+ * There might be some contribution of portlets for the web site.
+ * There will almost certainly be some contribution of adhoc tools for preparing, visualizing, translating and managing the various inputs and outputs of GEM.  Some should be "captured" by GEM, while others will exist in other homes (ie. GDAL/OGR) and should just be referenced as available resources.
+* Likely there will be scientists wishing to development experimental/local variations on the modelling code and configurations.  These cannot be upstreamed without great care (to avoid invalidating the global modelling code), but it would nice to be able to share these effectively. Use of a distributed source control system likeMercurial or git might be helpful in this regard. 
+* Some contributions will come as improvements to packages like GeoServer, and GDAL used by GEM. 
+
+AgileVsWaterfall
+
+This page has been started by Steve (who wants others to contribute) and is intended to capture some thoughts about agile methods vs. the more traditional "waterfall" model of software engineering, but focused on the context of the GEM requirements for both "openness" and scientific verification.  Although agile methods hold the promise of both rapid development and a way of handling evolving/unknown requirements, a more traditional approach to requirements engineering, including some form of verification and validation of the software, may lend itself better to the goals of V&V in the context of GEM.  The key from my point of view will be integrating a solid V&V effort with an appropriately "agile" project environment.
+
+Areas of emphasis that should always be included:
+
+* Frequent communication among relevant project members (up, down, and sideways).
+* Use of the proper tools to understand (and document) source code.  Someone else will struggle to figure it out at some point (and it may even be you).  See the [[StaticCodeAnalysis]] page for details.
+* Don't let anyone struggle alone; hold peer reviews, assign mentors and/or partners, and make sure your co-workers aren't stuck on something or waiting for something (and don't be afraid to throw away painful code and re-implement it to get it right).
+
+
+DataSchema
+
+h1. OpenGEM Database Model Ver 1.5
+
+h2. Overview
+
+ORM mapping using Hibernate in JAVA.
+ERD Deconstruction
+Classic 3rd Normal Form
+
+DB SERVER: gemsun01.ethz.ch
+
+h3. Tools:
+
+ * Java Topology Suite
+ * QuantumGIS
+ * PgAdmin III
+ * Hibernate Tools, including Hibernate Spatial
+
+h2. Concerns
+
+ * System-level tuning (e.g. complex sharding schemes, postgres-specific DB tuning efforts, expensive hardware, etc) is not necessarily portable for software that should be also run locally.
+ * The GEM system data may be best expressed in a combination of SQL and NoSQL formats. Innovative approaches to data representation may be necessary, esp. for the (potentially large sets of) point data.
+
+
+
+h3. References
+
+ * "LTree Module":http://www.sai.msu.su/~megera/postgres/gist/ltree/
+
+
+HeinerNotes
+
+- My comments on HPC (and regarding benchmarking, reproducibility)  are well incorporated in the general review.
+
+Some general comments  (not directly IT related)
+
+- make sure that the portals offer specific applications for students (or even make specific reference to tutorials for students) this may help developing a generation of young Earth scientists who know the project/structures from the begining and can actas multipliers
+
+- GEM is extremely ambitious as is with the specific goals set in connection with attenuation relations  etc.  In my view real progress  in preparing  societies  for impending earthquakes will come more and more from  time-dependent hazard analysis in all it s various forms (fault interaction, remote triggering, stress transfer, superswarms). I can not give specific recommendations on how to incorporate this somehow, but maybe GEM can over the years also develop in this direction. Some of the things I was wondering about during the meeting are now addressed in a paper just publishedi n SRL:
+Opinion: Operational Earthquake Forecasting: Some Thoughts on Why and How <http://www.seismosoc.org/publications/SRL/SRL_81/srl_81-4_op.html>(Thomas H. Jordan and Lucile M. Jones)
+
+
+JanoNotes
+
+h1. Background of Jano van Hemert
+
+Dr Jano van Hemert has a PhD in Mathematics and Physical Sciences from the Leiden University, The Netherlands (2002). Since 2007, he is a Research Fellow in the School of Informatics of the University of Edinburgh and since 2005, a visiting researcher at the Human Genetics Unit in Edinburgh of the United Kingdom's Medical Research Council. He leads the UK's "National e-Science Centre":http://www.nesc.ac.uk/, supported by an EPSRC Platform Grant.
+
+His personal research group, "Edinburgh Data-Intensive Research":http://research.nesc.ac.uk/, comprises 6 post-doctoral researchers and 5 PhD students. He currently leads 4 projects and is involved in 6 more, all of which are national and international projects, with active collaborations in seismology, brain imaging, developmental and evolutionary biology, fire safety engineering, nano-engineering, urban water management, molecular medicine and neuro-informatics, funded by the Engineering and Physical Sciences Research Council (EPSRC), the Biotechnology and Biological Sciences Research Council (BBSRC), the European Commission (EC), the Scottish Funding Council and the Joint Information Systems Council (JISC).
+
+van Hemert has held research positions at the Leiden University (NL), the Vienna University of Technology (AT) and the National Research Institute for Mathematics and Computer Science (NL). In 2004, he was awarded the Talented Young Researcher Fellowship by the Netherlands Organization for Scientific Research. In 2009, he was recognised as a promising young research leader with a Scottish Crucicible. All of his projects are interdisciplinary collaborations and many of his research projects have included partners from industry.
+
+van Hemert is an editor of five international computer science journals. In the past five years, he was the programme chair of five international conferences and workshops in computer science. In 2008, he has published a book on Recent Advances in Evolutionary Computation for Combinatorial Optimization as part of Springer's Studies in Computational Intelligence series.
+
+His research output includes over eighty published papers and software on optimisation, constraint satisfaction, evolutionary computation, data mining, scheduling, problem difficulty, dynamic optimisation, distributed computing, web portals, experiment design, e-Infrastructures and e-Science applications.
+
+Data-intensive refers to huge volumes of data, complex patterns of data integration and analysis and intricate interactions between combinations of users and systems that deal with these data. The mission of my research group is to advance methods that harness the power of data and computation in collaborative environments. The goal is to support the life cycle of data to information to knowledge in a multi-disciplinary and multi-organisational context. To achieve this we pursue research in e-Science and Informatics and apply our methods in several scientific and industrial domains.
+
+
+h1. High-level recommendations
+
+h2. JSR168/286 Portal Frameworks
+
+I am a big supporter of the JSR portal framework, it is tried and tested in many scientific communities and is already in operation in NERIES. The standard has been around since 2001. Good tools available to speed up the development, which are not used here yet. See for example this "video on producing portlets in minutes":http://research.nesc.ac.uk/node/509
+
+There are plenty of papers that describe successful use cases with JSR. Two examples, an "American-based one":http://iopscience.iop.org/1742-6596/16/1/083/pdf/jpconf5_16_083.pdf and "European-based one":http://www.springerlink.com/content/v0380u25vtj53146/ 
+
+The National e-Science Centre has much expertise in this area. They also use JSR as the preferred framework for development. The actual solution (implementation of the framework) used has changed over time, previously we used GridSphere, now we use LifeRay. Fortunately, any developed portlets can fit into any of these, so when the solution changes, no additional effort is needed. They have several projects based around scientific portals (sometimes called gateways) for instance on "Hazard forecasting":http://research.nesc.ac.uk/node/604 , "Microscopy":http://research.nesc.ac.uk/node/590 , "Genetics":http://research.nesc.ac.uk/node/469 , "Supercomputing":http://research.nesc.ac.uk/node/595 , "Seismology":http://research.nesc.ac.uk/node/423 , "Developmental Biology":http://research.nesc.ac.uk/node/400 , "Chemistry":http://research.nesc.ac.uk/node/335  and "Brain Imaging":http://research.nesc.ac.uk/node/450
+
+Modern implementations of the JSR framework offer many social networking features. Try installing "LifeRay":http://www.liferay.com (it takes less than a minute to try out). On the first page is shows many of its features; which include direct use of Facebook and Google features. 
+
+h2. Data scaling
+
+The right solutions must be chosen to address the data scaling, user demand scaling, heterogeneous user base and distributed data requirements in terms of computing models and technology. How much compute/data power is needed here? How much distribution due to politics/licenses? How many users will use the system at the same time? What processes/tasks will each user want to fulfill? We will advocate (possibly conflicting solutions), but the project must choose. Perhaps an ICT board is required to influence decision making.
+
+h3. Openness
+
+Openness of everything (not just code!) SHAML schemas, Postgress DB schema, tutorials on use, minutes, etc. in a well-organised place. (now there are multiple places, wiki, file server, svn, trac, etc.). Especially open services to the outside world. Look at Biocatalogue for inspiration
+
+h3. Working closer with the community
+
+Report on the use of existing apps in the community and working processes and decide which ones must and can realistically be supported in GEM. The final presentation was just that! "I use this Matlab toolbox regurarly to do task X and I want it supported in a web-based environment so that more people can do it".
+
+Real agile development that incorporates actual users. Build feature-light apps quickly using appropriate tools (CLIs to services, portal development tools) then keep have weekly feedback cycles; travel around! Visit users and ICT experts. Get more embedded.
+
+Identify the most important aspects to be addressed in ICT (pursuing use cases) and then hire the appropriate *dedicated* team manager to drive the development and especially the agile process
+
+
+h1. More specific recommendations
+
+Recommend to choose one computational model, now OpenSHA works with Condor/Globus, risk engine uses multithreading. What is the scaling required and what is the best model, e.g., HPC-like parallel messaging, Grid/Cloud-like distributed computing, GPGPUs, data-optimised architectures.
+
+Recommend to use "OGSA-DAI":http://www.ogsadai.org.uk/ in the systems architecture for data access (and integration)! Can solve the data size scaling problem. Also a problem exists when trying to use WS in workflows as they overwhelm the workflow engine (as they have the pattern of query/answer only). Last, a solution for a federated data model is needed, which OGSA-DAI offers in the form of distributed query processing.
+
+Recommend to look at  "Web Services Resources Framework (WSRF)":http://en.wikipedia.org/wiki/Web_Services_Resource_Framework to deal with the type of services on offer here. Many open-source solutions out there that support it (e.g., Globus, 
+
+Recommend to look at frameworks that turn command-line programs into web services. Many are around. This could speed up the production of web services. Also, make use of tools to build portlets rather than by manually programming (e.g., "Rapid":http://research.nesc.ac.uk/rapid was used for RapidSeis)
+
+Recommend to open the services to the outside. That is the academic dream of service-oriented. Look at MyGRID's "Biocatalogue":http://www.biocatalogue.org/ for example. By building a small community of developers that build modular services, they can then serve a large community of service users.
+
+Recommend to look as "Shibboleth":http://shibboleth.internet2.edu/ for federated authentication and authorisations.
+
+Recommend to use quick-win rapid-prototyping tools to build prototypes that are then evaluated by *REAL* end-users (agile programming). This requires a good definition of the these users are and a realistic view on whether these users can be drawn into the agile development process.
+
+Recommend to look into column-store databases to deal with the large amount of data from models, e.g., "MonetDB":http://monetdb.cwi.nl/ has OpenGIS included. It is unlikely Postgress can handle the amount of data expected. Building a home-grown balanced set of databases is a nightmare.
+
+Recommend a more open and coordinated effort of the development. Not only for the source code, but for all artifacts, e.g., database schema, postgress sql code, wsdl files, XML definitions of SHAML, QuakeML, etc. All these should be put somewhere that is easy to navigate by external parties to see a)  GEM is very active in certain directions and b) allow feedback on all artifiacts (e.g., the database schema misses this field).
+
+Recommend unit testing all over the project's code base. Codes (portal, portlets, DB-code, OpenSHA, OpenGEM, etc.) are now loosely coupled (even in different svn modules), so how are the processes tested of the integration of these codes?
+
+
+h1. Notes on the fly
+
+09:30–09:45 (Dominico)
+- Seismology funded by Oil exploration, nuclear detection and hazard risk (building and social).
+- Distance within the community, seismic hazard (including theoretical physics) to socio-economic impact (world bank)
+- GEM1 is the result of the first 15 month of GEM, 3 months of discussion + 12 months implementation
+- "Dealing with 1000s of databases all over the world"
+
+09:45–10:30 (Helen Crowley, Marco Pagani)
+- Model for risk and hazard should be developed and accessed via a web-based user interface (portal). Will use a number of databases
+? How are these databases accessed? Standards?
+? What does building a model mean
+- Model builders: current focus = global component and regional programmes
+- Mode users: current focus hazard and risk experts
+- Federated database model (to allow ownership)
+- IPR issues (for example when using existing software and services, e.g., Google's geocodes)
+- Regional programmes can access the computing infrastructure at GEM Model Facility
+? Who pays for this? What infrastructure will be provided?
+
+10:30–13:00 (Andrea Cerisara)
+- engine is a loop with 'listeners', listeners are communicating via 'pipes', what is a pipe?
+- Python or Java?
+- SOA useful here? Not looked at yet. Hard to decide as it is not clear how tight the components fit together.
+- Make sure to discourage WSDL and encourage OGSA standards, also mention OGC standards, implementations exist
+- computation can take longs (weeks?), so push scientific portals hard
+- service level agreements and queueing systems? What about emergency computing and violating SLAs?
+- should create service (computer) interface and web-based user interface.
+
+14:00–15:00 (? San Diego SC)
+- unclear what the system/model/comp.engine architecture is, so what would be the best ICT architecture is?
+
+15:00–16:00 (Rui Pinho)
+- IPR and responsibility
+- data and software licensing should be separately discussed (but are linked!)
+- differentiate between GEM validated data and non-validated data created with GEM tools.
+
+16:00-17: (Philipp Kästi)
+- Lots of use cases for different groups
+? Some portlets exist, but what cases do these serve?
+- SHARE project on Seismic Hazard http://www.share-eu.org/ is co-resourcing the effort in the Hazard direction
+! development of service may not be the forteit of the community!
+
+
+09:00–10:00 (Moemke)
+- http://gemwiki.ethz.ch/wiki/doku.php
+- database design
+- Is Postgres able to handle this amount of data? Why not go column-store? Problematic with GIS-aspects
+
+10:30–11:30 
+- Web service architecture
+? Why go this route if you are not planning to make these services public? Makes extra overhead and potential problems 
+
+11:30–13:00
+- Existing solutions
+
+14:00–17:00
+- More portlets. 
+- Portal framework is the typical framework used in scientific computing communities
+
+Josh Notes
+
+h1. Objective: Avoid D ^3^ - "Death, Destruction, Downtime"
+
+!http://www.google.com/trends/viz?q=django+python,+portlets&graph=weekly_img&sa=N!
+
+h2. Software / Architecture:
+ * Consider Concurrent Collections (Intel) for engine internals.
+ * Consider storing decision trees internally in B-trees (ala partial MapReduce in CouchDB)
+ * Consider KVS with MapReduce
+ * In similar fashion, invalidate computed products when new source data is available (ala Make/SCons), using hash of input files
+ * Support annotation of data, controllers, etc. (Meta-data as a first-class object).
+
+h2. Scheduling / Batch Queue
+
+ * Make sure jobs run with priority
+
+h2. Auth and Identity
+
+ * Consider SAML / OAuth / OpenID for auth and tokens, with (LDAP or another federated scheme)
+ * Define Admin as a first-class user type
+ * Require API keys for developed applications (for quota and priority enforcement, if required).
+
+h2. Open Source Community Management:
+
+ * Consider Canonical-style developer's summits (UDS)
+ * Keep community collaboration tools limited in scope to encourage rich discussion
+
+h2. Requirements and Users
+
+ * Consider a modern browser (HTML5 / WebSockets) as a minimum requirement
+ * Draw a clear line between what is "configuration" (what format should be applied for which region), and what is "code" (the parsing logic for a particular format).
+
+h2. Metadata, Attribution, and Validation
+
+ * System configuration needs to be baked into all system output. 
+ * GEM needs to "sign" validated and authoritative data products. Don't do this in the data product itself, do it in a separate metadata document (referencing the data by SHA), and sign it with PPK.
+
+h2. Nits (small comments)
+
+ * Make sure ulimit is running on all the compute nodes (limit users from crashing nodes by running out of ram)
+
+h2. Testing and Validation
+
+ * Use Grinder (or something similar) to load test, at least ad-hoc if not within a CI system.
+
+h3. Referenced Architectures
+
+ * NERIES
+ * ORCHESTRA
+ * QUAKEML
+ * GML
+
+h3. Existing Hardware
+
+ * Four - Sun Fire X4600
+
+
+LinusNotes
+
+It is quite clear that a lot of good work has been done, even in the stated absence of requirements.  My over-arching comment is that there needs to be a clear, consistent, and shared vision of the fundamental purpose, and its supporting requirements and use cases, of the GEM project.
+
+It is good to see management buy-in to the notion of a true prototype development, although perhaps it was a bit heavy-weight for a true prototype. The willingness to throw it away is commendable, although you should not necessarily throw it all away just because.  Take what works, and be willing to throw what has proved unworkable.
+
+There was considerable discussion among the reviewers about the technology choice for the web interface, and very little on the underlying core systems. This was unfortunate, as this core is a vitally important component.  If the core abilities to provide hazard and risk calculations and to include as appropriate the regional component contributions are not adequately met, the project will not be a success, and no amount of User Interface dressing will conceal that.
+
+It appears that there could be fairly divergent requirements and UI needs for the different categories of users.  It may be that different user classes will need their own largely distinct interfaces.  Whether this can be achieved within a single UI architecture and technology choice is something to bear in mind.  This does, however, increase the importance of a well designed core and API.
+ 
+It is an intriguing idea to enable and capture discussion and input from expert users, but I think that the notion that you will gather significant and reliable information from the average public is flawed.  That comment is perhaps outside the scope of IT review, but I would encourage you not to make technology decisions driven by that particular target.
+
+It was not clear to me how the regional components will interact with the GEM site / application suite.  Are they to provide their own models? their own databases? web interfaces to their local implementations ?  Are their data and/or model services or outputs to be integrated into the main GEM process chain?  Is this to be an architecture of pluggable models and remote databases? This is very different from the capture of user comments and contributions.
+
+There appears to be a lack of explicit requirements and use cases, at least as expressed in the presentations and discussions.  You must understand your requirements as best you can, and the prioritize them to manage the incremental development of the system.  The user needs, requirements, and use cases – derived from actual users and not speculated by the GEM team – should drive the technology and design decisions.  It seems the biggest issues relate to the lack of a uniform, clearly understood and communicated – and shared – vision of the GEM project interface requirements and use cases.
+
+Along the same lines, it is important to understand your scalability requirements.  Is there a real need for HPC, and if so, in what form?
+However, that being said, it is also import to not spend ages developing these requirements, especially if that occurs in a vacuum devoid of user feedback.  And it is very hard to get reliable user feedback without examples to discuss.  Thus the agile/iterative development approach of quick development cycles and mandatory user feedback.
+
+Although I cannot gauge what level of user contributors there would be to GEM as an open-source project, as was mentioned in the meeting even without such a significant contributing user base there are advantages to managing the project in a FOSS manner, particularly in light of the distributed development environment.  I also think, if you do have a larger number of contributors, it will require greater diligence in vetting/verifying the software.
+
+There are certainly use cases that would be well served by semi-interactive, user-based contributions such as discussion threads and comments, and similar sorts of things, I don’t believe that any of the proposed users are going to have a need for a full-blown “social site.”  The true need for such social elements must be clearly understood and real before you embark down the path of developing a site based on social networking components.  It is true there are a lot of available components, and as demonstrated, it is possible to quickly put together something that looks flashy and appealing.  But will it serve the core user base?
+
+This may have been covered in the database schema that was presented, I’m not sure, but I would like to emphasize the need, particularly for GEM, to reliably and definitively track the provenance metadata for all generated products and artifacts.  If you intend to provide “officially sanctioned” GEM products, I think it would be prudent to also consider watermarking and other sorts of authentication and validation techniques. 
