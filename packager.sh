@@ -423,8 +423,9 @@ _pkgtest_innervm_run () {
         ssh $lxc_ip "set -e; cd /usr/share/doc/python-oq-risklib/examples/demos
         echo 'running SimpleFaultSourceClassicalPSHA...'
         oq-lite run SimpleFaultSourceClassicalPSHA/job.ini
-        echo 'running ClassicalPSHA...'
+        echo 'running ClassicalPSHA hazard...'
         oq-lite run ClassicalPSHA/job_hazard.ini
+        echo 'running ClassicalPSHA risk...'
         oq-lite run ClassicalPSHA/job_risk.ini --hc -1
         echo 'running ScenarioDamage...'
         oq-lite run ScenarioDamage/job_hazard.ini,ScenarioDamage/job_risk.ini

@@ -40,9 +40,10 @@ def sorted_assets(assets_by_site):
     return sorted(all_assets, key=operator.attrgetter('id'))
 
 
-def build_asset_collection(assets_by_site):
+def build_asset_collection(assets_by_site, time_event=None):
     """
-    :params assets_by_site: a list of lists of assets
+    :param assets_by_site: a list of lists of assets
+    :param time_event: a time event string (or None)
     :returns: an array with composite dtype
     """
     for assets in assets_by_site:
@@ -51,32 +52,41 @@ def build_asset_collection(assets_by_site):
             break
     else:  # no break
         raise ValueError('There are no assets!')
-    loss_types = first_asset.values.keys()
+    candidate_loss_types = first_asset.values.keys()
+    loss_types = []
+    the_fatalities = 'fatalities_%s' % time_event
+    for candidate in candidate_loss_types:
+        if candidate.startswith('fatalities'):
+            if candidate == the_fatalities:
+                loss_types.append('fatalities')
+            # discard fatalities for different time periods
+        else:
+            loss_types.append(candidate)
     deductible_d = first_asset.deductibles or {}
     limit_d = first_asset.insurance_limits or {}
     retrofitting_d = first_asset.retrofitting_values or {}
     deductibles = ['deductible~%s' % name for name in deductible_d]
-
     limits = ['insurance_limit~%s' % name for name in limit_d]
     retrofittings = ['retrofitted~%s' % n for n in retrofitting_d]
+    float_fields = loss_types + deductibles + limits + retrofittings
     asset_dt = numpy.dtype(
         [('asset_ref', '|S20'), ('site_id', numpy.uint32)] +
-        [(name, float) for name in
-         loss_types + deductibles + limits + retrofittings])
+        [(name, float) for name in float_fields])
     num_assets = sum(len(assets) for assets in assets_by_site)
     assetcol = numpy.zeros(num_assets, asset_dt)
     asset_ordinal = 0
+    fields = ['asset_ref', 'site_id'] + float_fields
     for sid, assets_ in enumerate(assets_by_site):
         for asset in sorted(assets_, key=operator.attrgetter('id')):
             record = assetcol[asset_ordinal]
             asset_ordinal += 1
-            for field in asset_dt.fields:
+            for field in fields:
                 if field == 'asset_ref':
                     value = asset.id
                 elif field == 'site_id':
                     value = sid
                 elif field == 'fatalities':
-                    value = asset.values[field]
+                    value = asset.values[the_fatalities]
                 else:
                     try:
                         name, lt = field.split('~')

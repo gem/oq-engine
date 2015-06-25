@@ -63,7 +63,6 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
             result[out.hid] += {
                 ('asset-loss', out.loss_type): lpa(assets, means, stddevs)}
             result[out.hid] += {('agg', out.loss_type): out.aggregate_losses}
-
             if out.insured_loss_matrix is not None:
                 means = out.insured_loss_matrix.mean(axis=1),
                 stddevs = out.insured_loss_matrix.std(ddof=1, axis=1)
