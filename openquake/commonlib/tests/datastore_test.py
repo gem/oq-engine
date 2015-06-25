@@ -1,9 +1,10 @@
 import unittest
 import numpy
-from openquake.commonlib.datastore import DataStore
+from openquake.commonlib.datastore import DataStore, view
 
 
-def key1_upper(dstore):
+@view.add('key1_upper')
+def view_key1_upper(key, dstore):
     return dstore['key1'].upper()
 
 
@@ -24,9 +25,8 @@ class DataStoreTestCase(unittest.TestCase):
         self.assertEqual(list(self.dstore), ['key1'])
         self.assertEqual(self.dstore['key1'], 'value1')
 
-        # store and retrieve a callable
-        self.dstore['key1_upper'] = key1_upper
-        self.assertEqual(self.dstore['key1_upper'], 'VALUE1')
+        # test a datastore view
+        self.assertEqual(view('key1_upper', self.dstore), 'VALUE1')
 
     def test_hdf5(self):
         # optional test, run only if h5py is available

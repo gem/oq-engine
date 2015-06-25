@@ -25,7 +25,7 @@ import collections
 
 import numpy
 
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, humansize
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib.calc.hazard_curve import zero_curves
@@ -77,17 +77,16 @@ def counts_per_rlz(num_sites, rlzs_assoc, sescollection):
     rlzs = rlzs_assoc.realizations
     counts = numpy.zeros(len(rlzs), counts_dt)
     for rlz in rlzs:
-        col_ids = rlzs_assoc.csm_info.get_col_ids(rlz)
-        for col_id, sc in enumerate(sescollection):
-            if col_id in col_ids:
-                i = rlz.ordinal
+        col_ids = list(rlzs_assoc.csm_info.get_col_ids(rlz))
+        for sc in sescollection[col_ids]:
+            i = rlz.ordinal
 
-                # ruptures per realization
-                counts['rup'][i] += len(sc)
+            # ruptures per realization
+            counts['rup'][i] += len(sc)
 
-                # gmvs per realization
-                for rup in sc.itervalues():
-                    counts['gmf'][i] += num_affected_sites(rup, num_sites)
+            # gmvs per realization
+            for rup in sc.itervalues():
+                counts['gmf'][i] += num_affected_sites(rup, num_sites)
     return counts
 
 
@@ -110,6 +109,21 @@ def get_gmfs_nbytes(num_sites, num_imts, rlzs_assoc, sescollection):
         for tag, rup in sescol.iteritems():
             nbytes += bytes_per_record * num_affected_sites(rup, num_sites)
     return nbytes
+
+
+@datastore.view.add('gmfs_total_size')
+def view_gmfs_total_size(key, dstore):
+    """
+    :returns:
+        the total size of the GMFs as human readable string; it assumes
+        4 bytes for the rupture index, 4 bytes for the realization index
+        and 8 bytes for each float (there are num_imts floats per gmf)
+    """
+    nbytes = 0
+    num_imts = len(dstore['oqparam'].imtls)
+    for counts in dstore['/counts_per_rlz']:
+        nbytes += 8 * counts['gmf'] * (num_imts + 1)
+    return humansize(nbytes)
 
 
 def get_geom(surface, is_from_fault_source, is_multi_surface):
@@ -381,7 +395,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         Save the SES collection and the array counts_per_rlz
         """
         nc = self.rlzs_assoc.csm_info.num_collections
-        sescollection = [{} for col_id in range(nc)]
+        sescollection = numpy.array([{} for col_id in range(nc)])
         tags = []
         ordinal = 0
         for trt_id in sorted(result):
