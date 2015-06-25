@@ -42,11 +42,11 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 amqp = config.get_section("amqp")
 
-# RabbitMQ broker
-# BROKER_URL = 'amqp://%(user)s:%(password)s@%(host)s:%(port)s/%(vhost)s' % \
-#              amqp
-# Redis broker
-BROKER_URL = 'redis://%(host)s:6379/0' % amqp
+# RabbitMQ broker (default)
+BROKER_URL = 'amqp://%(user)s:%(password)s@%(host)s:%(port)s/%(vhost)s' % \
+             amqp
+# Redis broker (works only on Trusty)
+# BROKER_URL = 'redis://%(host)s:6379/0' % amqp
 
 # BROKER_POOL_LIMIT enables a connections pool so Celery can reuse
 # a single connection to RabbitMQ. Value 10 is the default from
@@ -55,18 +55,11 @@ BROKER_URL = 'redis://%(host)s:6379/0' % amqp
 # See https://bugs.launchpad.net/oq-engine/+bug/1250402
 BROKER_POOL_LIMIT = None
 
-# RabbitMQ result backend
-# CELERY_RESULT_BACKEND = 'amqp'
+# RabbitMQ result backend (default)
+CELERY_RESULT_BACKEND = 'amqp'
 
-# Redis result backend
-import celery
-if celery.__version__ < '3.0.0':
-    CELERY_RESULT_BACKEND = 'redis'
-    CELERY_REDIS_HOST = amqp.get("host")
-    CELERY_REDIS_PORT = 6379
-    CELERY_REDIS_DB = 0
-else:
-    CELERY_RESULT_BACKEND = 'redis://%(host)s:6379/0' % amqp
+# Redis result backend (works only on Trusty)
+# CELERY_RESULT_BACKEND = 'redis://%(host)s:6379/0' % amqp
 
 # CELERY_ACKS_LATE and CELERYD_PREFETCH_MULTIPLIER settings help evenly
 # distribute tasks across the cluster. This configuration is intended
