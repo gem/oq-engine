@@ -327,7 +327,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                            for site in self.site_collection)
         all_args = []
         for trt_model_id, srcs in groupby(
-                self.composite_model.sources,
+                self.composite_model.get_sources(),
                 attrgetter('trt_model_id')).iteritems():
             lt_model = models.TrtModel.objects.get(pk=trt_model_id).lt_model
             trt_num = dict((trt, i) for i, trt in enumerate(
@@ -370,7 +370,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
             all_args.append((sitecol, srcs, trt_model_id, trt_num,
                              curves_dict, self.bin_edges, self.monitor))
 
-        res = tasks.starmap(compute_disagg, all_args, logs.LOG.progress)
+        res = tasks.starmap(compute_disagg, all_args)
         self.save_disagg_results(res.reduce(self.agg_result))
 
     def post_execute(self, result=None):
