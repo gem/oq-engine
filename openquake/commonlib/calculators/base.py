@@ -84,10 +84,13 @@ class BaseCalculator(object):
         # else we are doing a precalculation; oqparam has been already stored
         self.persistent = persistent
 
-    def run(self, pre_execute=True, clean_up=True, **kw):
+    def run(self, pre_execute=True, clean_up=True, concurrent_tasks=None,
+            **kw):
         """
         Run the calculation and return the exported outputs.
         """
+        if concurrent_tasks is not None:
+            self.oqparam.concurrent_tasks = concurrent_tasks
         vars(self.oqparam).update(kw)
         try:
             if pre_execute:
@@ -433,16 +436,15 @@ class RiskCalculator(HazardCalculator):
         # add fatalities as side effect
         riskinput.build_asset_collection(
             self.assets_by_site, self.oqparam.time_event)
-        with self.monitor('execute risk', autoflush=True) as monitor:
-            monitor.oqparam = self.oqparam
-            if self.pre_calculator == 'event_based_rupture':
-                monitor.assets_by_site = self.assets_by_site
-                monitor.num_assets = self.count_assets()
-            res = apply_reduce(
-                self.core_func.__func__,
-                (self.riskinputs, self.riskmodel, self.rlzs_assoc, monitor),
-                concurrent_tasks=self.oqparam.concurrent_tasks,
-                weight=get_weight, key=self.riskinput_key)
+        self.monitor.oqparam = self.oqparam
+        if self.pre_calculator == 'event_based_rupture':
+            self.monitor.assets_by_site = self.assets_by_site
+            self.monitor.num_assets = self.count_assets()
+        res = apply_reduce(
+            self.core_func.__func__,
+            (self.riskinputs, self.riskmodel, self.rlzs_assoc, self.monitor),
+            concurrent_tasks=self.oqparam.concurrent_tasks,
+            weight=get_weight, key=self.riskinput_key)
         return res
 
 

@@ -135,7 +135,7 @@ def get_params(job_inis):
 
 def get_oqparam(job_ini, pkg=None, calculators=None):
     """
-    Parse a dictionary of parameters from one or more INI-style config file.
+    Parse a dictionary of parameters from an INI-style config file.
 
     :param job_ini:
         Path to configuration file/archive or dictionary of parameters
@@ -161,8 +161,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None):
         oqparam = OqParam(**job_ini)
     else:
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
-        inis = [os.path.join(basedir, ini) for ini in job_ini.split(',')]
-        oqparam = OqParam(**get_params(inis))
+        oqparam = OqParam(**get_params([os.path.join(basedir, job_ini)]))
 
     oqparam.validate()
     return oqparam
