@@ -7,13 +7,13 @@
 
 From http://en.wikipedia.org/wiki/LXC
 
-**GEM** provides a ready-to-use LXC container with Ubuntu 12.04 and the OpenQuake engine. The LXC is available with OpenQuake installed using Ubuntu packages (for users). If you need to work with GIT sources (for developers and advanced users) see https://github.com/gem/oq-engine/wiki/Deploy-the-OpenQuake-Engine-Nightly-using-LXC.
+**GEM** provides a ready-to-use LXC container with Ubuntu 12.04 and the OpenQuake engine. The LXC is available with OpenQuake installed using Ubuntu packages (for users). If you need to work with GIT sources (for developers and advanced users) see [Deploy-the-OpenQuake-Engine-Nightly-using-LXC.md](Deploy-the-OpenQuake-Engine-Nightly-using-LXC.md).
 
 ### Host prerequisites
 * Ubuntu >= 12.04 64bit
 * Fedora >= 17 64bit
 * RHEL/CentOS 7 (using the [EPEL](http://mirror.switch.ch/ftp/mirror/epel/7/x86_64/repoview/epel-release.html) repo)
-* [RHEL/CentOS 6](https://github.com/gem/oq-engine/wiki/Installing-LXC-on-CentOS)
+* [RHEL/CentOS 6](Installing-LXC-on-CentOS.md)
 * Should works with other distributions supporting LXC (Debian, ArchLinux, OpenSUSE, Gentoo...)
 * sudo
 * wget
@@ -64,5 +64,4 @@ $ sudo apt-get update && sudo apt-get upgrade
 Be careful: the upgrade will destroy all the data saved in the OpenQuake DB!
 
 ### Useful links
-* https://github.com/gem/oq-engine/wiki/Installing-the-OpenQuake-Engine-1.2
 * https://help.ubuntu.com/12.04/serverguide/lxc.html
