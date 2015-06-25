@@ -21,6 +21,12 @@ LOCKDOWN = True
 ```bash
 DJANGO_SETTINGS_MODULE="openquake.server.settings" python manage.py syncdb --database=auth_db
 ```
+
+### Add a new local superuser
+```bash
+DJANGO_SETTINGS_MODULE="openquake.server.settings" python manage.py createsuperuser --database=auth_db
+```
+
 ### PAM
 Process owner must be member of the `shadow` group.
 
@@ -39,4 +45,16 @@ AUTHENTICATION_BACKENDS = (
 [OpenQuake Engine WebUI supervisord configuration](supervisord.md)
 
 ### Nginx
+To `local_settings.py` add:
+
+```python
+STATIC_ROOT = '/var/www/webui'
+```
+
+Collect static files:
+
+```bash
+DJANGO_SETTINGS_MODULE="openquake.server.settings" python manage.py collectstatic
+```
+
 [OpenQuake Engine WebUI nginx configuration](nginx.md)
