@@ -22,8 +22,6 @@ import itertools
 import collections
 from operator import attrgetter
 
-from django.contrib.gis.geos.point import Point
-
 import numpy
 
 from openquake.hazardlib.imt import from_string
@@ -33,8 +31,7 @@ from openquake.engine.db import models
 
 from openquake.baselib import general
 from openquake.commonlib import readinput, risk_parsers, source
-from openquake.commonlib.readinput import (
-    get_site_collection, get_site_model)
+from openquake.commonlib.readinput import get_site_collection
 
 from openquake.engine.input import exposure
 from openquake.engine import logs
@@ -81,7 +78,6 @@ class BaseHazardCalculator(base.Calculator):
     Abstract base class for hazard calculators. Contains a bunch of common
     functionality, like initialization procedures.
     """
-    prefilter = True
     tilepath = ()  # set only by the tiling calculator
 
     def __init__(self, job):
@@ -105,9 +101,10 @@ class BaseHazardCalculator(base.Calculator):
         csm = self.composite_model
         self.acc = tasks.apply_reduce(
             self.core_calc_task,
-            (list(csm.sources), self.site_collection, csm.info, self.monitor),
+            (csm.get_sources(), self.site_collection, csm.info, self.monitor),
             agg=self.agg_curves, acc=self.acc,
-            weight=attrgetter('weight'), key=attrgetter('trt_model_id'))
+            weight=attrgetter('weight'), key=attrgetter('trt_model_id'),
+            concurrent_tasks=self.concurrent_tasks)
 
     @EnginePerformanceMonitor.monitor
     def agg_curves(self, acc, result):
@@ -211,7 +208,7 @@ class BaseHazardCalculator(base.Calculator):
         """
         logs.LOG.progress("initializing sources")
         self.composite_model = readinput.get_composite_source_model(
-            self.oqparam, self.site_collection, self.prefilter)
+            self.oqparam, self.site_collection)
         for sm in self.composite_model:
             # create an LtSourceModel for each distinct source model
             lt_model = models.LtSourceModel.objects.create(
@@ -234,6 +231,7 @@ class BaseHazardCalculator(base.Calculator):
                     gsims=gsims_by_trt[trt_mod.trt]).id
         # rebuild the info object with the trt_ids coming from the db
         self.composite_model.info = source.CompositionInfo(
+            self.composite_model.source_model_lt,
             self.composite_model.source_models)
 
     @EnginePerformanceMonitor.monitor
@@ -266,8 +264,7 @@ class BaseHazardCalculator(base.Calculator):
 
         logs.LOG.progress("initializing site collection")
         oqparam = self.job.get_oqparam()
-        self.site_collection = get_site_collection(
-            oqparam, points, site_ids)
+        self.site_collection = get_site_collection(oqparam, points, site_ids)
 
     def initialize_realizations(self):
         """
@@ -292,7 +289,7 @@ class BaseHazardCalculator(base.Calculator):
                           '%s, %s', len(rlzs), lt_model.sm_name,
                           '_'.join(lt_model.sm_lt_path))
             for rlz in rlzs:
-                gsim_by_trt = self.rlzs_assoc.gsim_by_trt[rlz]
+                gsim_by_trt = self.rlzs_assoc.gsim_by_trt[rlz.ordinal]
                 lt_rlz = models.LtRealization.objects.create(
                     lt_model=lt_model, gsim_lt_path=rlz.gsim_rlz.lt_uid,
                     weight=rlz.weight, ordinal=rlz.ordinal)
@@ -337,13 +334,14 @@ class BaseHazardCalculator(base.Calculator):
                     investigation_time=self.oqparam.investigation_time)
 
             with self.monitor('building curves per realization'):
-                imt_curves = zip(
-                    sorted_imts, models.build_curves(rlz, self.acc))
-            for imt, curves in imt_curves:
-                if individual_curves:
-                    self.save_curves_for_rlz_imt(
-                        rlz, imt, imtls[imt], points, curves)
-                curves_by_imt[imt].append(curves)
+                the_curves = models.build_curves(rlz, self.acc)
+                if isinstance(the_curves, float) and the_curves == 0:
+                    the_curves = self.zeros
+                for imt, curves in zip(sorted_imts, the_curves):
+                    if individual_curves:
+                        self.save_curves_for_rlz_imt(
+                            rlz, imt, imtls[imt], points, curves)
+                    curves_by_imt[imt].append(curves)
 
         self.acc = {}  # save memory for the post-processing phase
         if self.mean_hazard_curves or self.quantile_hazard_curves:
@@ -504,7 +502,7 @@ class BaseHazardCalculator(base.Calculator):
                             location=wkt))
 
                 # then means
-                if self.mean_hazard_curves:
+                if self.mean_hazard_curves and len(curve_poes):
                     m_curve = scientific.mean_curve(curve_poes, weights)
                     inserter.add(
                         models.HazardCurveData(
@@ -530,6 +528,7 @@ class BaseHazardCalculator(base.Calculator):
             with self.monitor('generating hazard maps', autoflush=True) as mon:
                 tasks.apply_reduce(
                     hazard_curves_to_hazard_map,
-                    (self._hazard_curves, self.oqparam.poes, mon))
+                    (self._hazard_curves, self.oqparam.poes, mon),
+                    concurrent_tasks=self.concurrent_tasks)
         if self.oqparam.uniform_hazard_spectra:
             do_uhs_post_proc(self.job)

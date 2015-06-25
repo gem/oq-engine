@@ -19,11 +19,11 @@ Functions for exporting risk artifacts from the database.
 
 import os
 import csv
+import collections
 
 from openquake.engine.db import models
 from openquake.engine.export import core
 from openquake.engine.utils import FileWrapper
-from openquake.risklib import scientific
 from openquake.commonlib import risk_writers, writers
 from openquake.baselib.general import block_splitter
 
@@ -43,6 +43,11 @@ DAMAGE = dict(
     dmg_dist_per_asset=models.DmgDistPerAsset,
     dmg_dist_per_taxonomy=models.DmgDistPerTaxonomy,
     dmg_dist_total=models.DmgDistTotal)
+
+LossCurvePerAsset = collections.namedtuple(
+    'LossCurvePerAsset', 'asset losses poes average_loss')
+
+LossMapPerAsset = collections.namedtuple('LossMapPerAsset', 'asset loss')
 
 
 def _get_result_export_dest(target, output, file_ext='xml'):
@@ -183,7 +188,7 @@ def export_loss_curve_csv(key, output, target):
     dest = _get_result_export_dest(target, output)[:-3] + 'csv'
     data = []
     for row in output.loss_curve.losscurvedata_set.all().order_by('asset_ref'):
-        lca = scientific.LossCurvePerAsset(
+        lca = LossCurvePerAsset(
             row.asset_ref, row.losses, row.poes, row.average_loss)
         data.append(lca)
     header = [lca._fields]
@@ -191,7 +196,7 @@ def export_loss_curve_csv(key, output, target):
     return dest
 
 
-@core.export_output.add(('loss_curve', 'csv'))
+@core.export_output.add(('loss_curve', 'csv'), ('event_loss_curve', 'csv'))
 def export_avgloss_csv(key, output, target):
     """
     Export `output` to `target` in csv format for a given loss type
@@ -235,7 +240,7 @@ def export_loss_map_csv(key, output, target):
     data = []
     for row in models.order_by_location(
             output.loss_map.lossmapdata_set.all().order_by('asset_ref')):
-        data.append(scientific.LossMapPerAsset(row.asset_ref, row.value))
+        data.append(LossMapPerAsset(row.asset_ref, row.value))
     header = [data[0]._fields]
     writers.save_csv(dest, header + data, fmt='%10.6E')
     return dest
