@@ -61,12 +61,12 @@ BROKER_POOL_LIMIT = None
 # Redis result backend
 import celery
 if celery.__version__ < '3.0.0':
-    CELERY_RESULT_BACKEND = 'redis://%(host)s:6379/0' % amqp
-else:
     CELERY_RESULT_BACKEND = 'redis'
     CELERY_REDIS_HOST = amqp.get("host")
     CELERY_REDIS_PORT = 6379
     CELERY_REDIS_DB = 0
+else:
+    CELERY_RESULT_BACKEND = 'redis://%(host)s:6379/0' % amqp
 
 # CELERY_ACKS_LATE and CELERYD_PREFETCH_MULTIPLIER settings help evenly
 # distribute tasks across the cluster. This configuration is intended
