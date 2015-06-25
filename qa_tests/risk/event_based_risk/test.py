@@ -16,7 +16,7 @@
 import os
 import collections
 
-from nose.plugins.attrib import attr as noseattr
+from nose.plugins.attrib import attr
 import numpy
 from numpy.testing import assert_almost_equal as aae
 
@@ -24,6 +24,7 @@ from qa_tests import risk
 from openquake.qa_tests_data.event_based_risk import case_1, case_2
 
 from openquake.engine.db import models
+from openquake.commonlib.readers import read_composite_array
 from openquake.commonlib.writers import scientificformat
 
 
@@ -32,7 +33,7 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
 
     hazard_calculation_fixture = "PEB QA test 1"
 
-    @noseattr('qa', 'risk', 'event_based')
+    @attr('qa', 'risk', 'event_based')
     def test(self):
         self._run_test()
 
@@ -148,16 +149,19 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
                 dataset = qm.lossmapdata_set.order_by('asset_ref')
                 data[j][i] = [d.value for d in dataset]
 
-        stat = data.transpose(2, 1, 0)  # to shape (N, Q + 1, P)
-        expected_data = []
-        lines = open(self._test_path('expected/loss_map_stats-structural.csv'))
-        next(lines)  # skip header
-        for line in lines:
-            values = line.split(',')[1]
-            vals = [map(float, piece.split(':'))
-                    for piece in values.split(' ')]
-            expected_data.append(vals)
-        aae(numpy.array(expected_data), stat, decimal=1)
+        # compare with oq-lite means
+        means = read_composite_array(
+            self._test_path('expected/mean-structural-loss_maps.csv'))
+        aae(means['poe~0.1'], data[0, 0], decimal=4)  # (P, 0, N)
+        aae(means['poe~0.5'], data[1, 0])
+        aae(means['poe~0.9'], data[2, 0])
+
+        # compare with oq-lite first quantile
+        q025 = read_composite_array(
+            self._test_path('expected/quantile-0.25-structural-loss_maps.csv'))
+        aae(q025['poe~0.1'], data[0, 1], decimal=4)  # (P, 1, N)
+        aae(q025['poe~0.5'], data[1, 1], decimal=4)
+        aae(q025['poe~0.9'], data[2, 1], decimal=4)
 
 
 class EventBaseQATestCase2(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
@@ -167,7 +171,7 @@ class EventBaseQATestCase2(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
     module = case_2
     hazard_calculation_fixture = "PEB QA test 2"
 
-    @noseattr('qa', 'risk', 'event_based')
+    @attr('qa', 'risk', 'event_based')
     def test(self):
         self._run_test()
 

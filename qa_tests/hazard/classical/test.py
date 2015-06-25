@@ -21,6 +21,7 @@ import tempfile
 
 from nose.plugins.attrib import attr
 
+from openquake.commonlib.writers import write_csv
 from openquake.commonlib.tests import check_equal
 from openquake.engine.db import models
 from openquake.engine.export import core as hazard_export
@@ -550,35 +551,39 @@ class ClassicalHazardCase12TestCase(qa_utils.BaseQATestCase):
         shutil.rmtree(result_dir)
 
 
-# this test is described in https://bugs.launchpad.net/oq-engine/+bug/1226061
-# the CSV files with the expected hazard_curves were provided by Damiano
-class ClassicalHazardCase13TestCase(BaseQATestCase):
+def get_mean_curves(job, imt, period=None):
+    curves = models.HazardCurveData.objects.filter(
+        hazard_curve__output__oq_job=job, hazard_curve__statistics='mean',
+        hazard_curve__imt=imt, hazard_curve__sa_period=period)
+    data = []
+    for hazard_curve_data in curves:
+        loc = hazard_curve_data.location
+        data.append([loc.x, loc.y] + hazard_curve_data.poes)
+    return sorted(data)  # by lon, lat
 
+
+# this test is described in https://bugs.launchpad.net/oq-engine/+bug/1226061
+# I am only comparing the mean curves
+class ClassicalHazardCase13TestCase(BaseQATestCase):
     CURRENTDIR = os.path.dirname(case_13.__file__)
 
     @attr('qa', 'hazard', 'classical')
     def test(self):
+        result_dir = tempfile.mkdtemp()
+
         cfg = os.path.join(self.CURRENTDIR, 'job.ini')
         job = self.run_hazard(cfg)
 
-        lt_paths = [
-            ['aFault_aPriori_D2.1', 'BooreAtkinson2008'],
-            ['aFault_aPriori_D2.1', 'ChiouYoungs2008'],
-            ['bFault_stitched_D2.1_Char', 'BooreAtkinson2008'],
-            ['bFault_stitched_D2.1_Char', 'ChiouYoungs2008']]
+        curves_PGA = get_mean_curves(job, 'PGA')
+        actual = write_csv(os.path.join(result_dir, 'PGA.csv'), curves_PGA)
 
-        csvdir = os.path.join(self.CURRENTDIR, 'expected_results')
-        for sm_path, gsim_path in lt_paths:
+        check_equal(case_13.__file__, 'expected/mean-PGA.csv', actual)
 
-            fname = '%s_%s_expected_curves_PGA.dat' % (sm_path, gsim_path)
-            compare_hazard_curve_with_csv(
-                job, [sm_path], [gsim_path], 'PGA', None, None,
-                os.path.join(csvdir, fname), ' ', rtol=0.3)
+        curves_SA = get_mean_curves(job, 'SA', 0.2)
+        actual = write_csv(os.path.join(result_dir, 'SA.csv'), curves_SA)
+        check_equal(case_13.__file__, 'expected/mean-SA.csv', actual)
 
-            fname = '%s_%s_expected_curves_SA02.dat' % (sm_path, gsim_path)
-            compare_hazard_curve_with_csv(
-                job, [sm_path], [gsim_path], 'SA', 0.2, 5.0,
-                os.path.join(csvdir, fname), ' ', rtol=0.3)
+        shutil.rmtree(result_dir)
 
 
 # this test is described in https://bugs.launchpad.net/oq-engine/+bug/1226102

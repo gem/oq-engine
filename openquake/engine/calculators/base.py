@@ -41,8 +41,7 @@ class Calculator(object):
         self.num_tasks = None
         self._task_args = []
         # parameters from openquake.cfg
-        self.concurrent_tasks = int(
-            config.get('celery', 'concurrent_tasks'))
+        self.concurrent_tasks = self.oqparam.concurrent_tasks
         self.max_input_weight = float(
             config.get('hazard', 'max_input_weight'))
         self.max_output_weight = float(
@@ -109,19 +108,16 @@ class Calculator(object):
         """
         exported_files = []
 
-        with logs.tracing('exports'):
+        with self.monitor('exports', autoflush=True):
             export_dir = self.job.get_param('export_dir')
             export_type = kwargs['exports']
             if export_type:
                 outputs = self._get_outputs_for_export()
                 for output in outputs:
-                    with self.monitor('exporting %s to %s'
-                                      % (output.output_type, export_type)):
-                        fname = core.export(output.id, export_dir, export_type)
-                        if fname:
-                            logs.LOG.info('exported %s', fname)
-                            exported_files.append(fname)
-
+                    fname = core.export(output.id, export_dir, export_type)
+                    if fname:
+                        logs.LOG.info('exported %s', fname)
+                        exported_files.append(fname)
         return exported_files
 
     def clean_up(self, *args, **kwargs):

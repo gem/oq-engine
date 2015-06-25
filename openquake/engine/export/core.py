@@ -19,11 +19,56 @@ file formats."""
 
 
 import os
+import zipfile
 from openquake.engine.db import models
 from openquake.engine.logs import LOG
 from openquake.baselib.general import CallableDict
+from openquake.commonlib.export import export as ds_export
+from openquake.commonlib.datastore import DataStore
 
 export_output = CallableDict()
+
+
+class DataStoreExportError(Exception):
+    pass
+
+
+def zipfiles(fnames, archive):
+    """
+    Build a zip archive from the given file names.
+
+    :param fnames: list of path names
+    :param archive: path of the archive
+    """
+    z = zipfile.ZipFile(archive, 'w')
+    for f in fnames:
+        z.write(f)
+    z.close()
+
+
+@export_output.add(('datastore', 'csv'), ('datastore', 'xml'))
+def export_from_datastore(output_key, output, target):
+    """
+    :param output_key: a pair ('datastore', fmt)
+    :param output: an Output instance
+    :param target: a directory, temporary when called from the engine server
+    """
+    fmt = output_key[1]
+    dstore = DataStore(output.oq_job.id)
+    try:
+        exported = ds_export((output.ds_key, fmt), dstore)
+    except KeyError:
+        raise DataStoreExportError(
+            'Could not export %s in %s' % (output.ds_key, fmt))
+    if not exported:
+        raise DataStoreExportError(
+            'Nothing to export for %s' % output.ds_key)
+    elif len(exported) > 1:
+        archname = output.ds_key.lstrip('/') + '-' + fmt + '.zip'
+        zipfiles(exported, os.path.join(target, archname))
+        return archname
+    else:  # single file
+        return exported[0]
 
 
 def export(output_id, target, export_type='xml,geojson,csv'):

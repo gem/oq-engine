@@ -88,8 +88,8 @@ def scenario(workflow, getter, outputdict, params, monitor):
         with monitor('saving risk', autoflush=True):
             outputdict.write(
                 assets,
-                out.loss_matrix.mean(axis=1),
-                out.loss_matrix.std(ddof=1, axis=1),
+                out.loss_ratio_matrix.mean(axis=1),
+                out.loss_ratio_matrix.std(ddof=1, axis=1),
                 hazard_output_id=getter.hid,
                 insured=False)
 
