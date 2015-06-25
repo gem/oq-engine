@@ -33,10 +33,8 @@ server {
     }
 
     location /static {
-        # With sources
-        # alias /usr/local/openquake/oq-engine/openquake/server/static;
-        # From package
-        alias /usr/lib/python2.7/dist-packages/openquake/server/static;
+        # Run 'python manage.py collectstatic' first
+        alias /var/www/webui;
     }
 
     error_page   500 502 503 504  /50x.html;
