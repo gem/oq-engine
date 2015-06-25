@@ -156,7 +156,9 @@ if [ -f /usr/lib/postgresql/$PG_VERSION/bin/postgres ]; then
     fi
 
     # Restart the remaining services just to be on the safe side.
-    /etc/init.d/rabbitmq-server restart
+    if [ -f /usr/sbin/rabbitmqctl ]; then
+        /etc/init.d/rabbitmq-server restart
+    fi
 
     # Restart celeryd
     if [ -x /etc/init.d/celeryd ]; then
