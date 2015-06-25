@@ -11,7 +11,7 @@ http://en.wikipedia.org/wiki/LXC
 * Ubuntu >= 12.04 64bit
 * Fedora >= 17 64bit
 * RHEL/CentOS 7 (using the [EPEL](http://mirror.switch.ch/ftp/mirror/epel/7/x86_64/repoview/epel-release.html) repo)
-* [RHEL/CentOS 6](https://github.com/gem/oq-engine/wiki/Installing-LXC-on-CentOS)
+* [RHEL/CentOS 6](Installing-LXC-on-CentOS.md)
 * Should works with other distributions supporting LXC (Debian, ArchLinux, OpenSUSE, Gentoo...)
 * sudo
 * wget
@@ -65,5 +65,5 @@ Be careful: the upgrade will destroy all the data saved in the OpenQuake DB!
 A version of the container which provides the OpenQuake Engine installed via GIT instead of the nightly packages is available at [[http://ftp.openquake.org/oq-master/lxc/Ubuntu_lxc_12.04_64_oq_master_git-141116.tar.bz2]]
 
 ### Useful links
-* https://github.com/gem/oq-engine/wiki/Installing-the-OpenQuake-Engine-from-source-code
+* [Installing-the-OpenQuake-Engine-from-source-code.md](Installing-the-OpenQuake-Engine-from-source-code.md)
 * https://help.ubuntu.com/12.04/serverguide/lxc.html

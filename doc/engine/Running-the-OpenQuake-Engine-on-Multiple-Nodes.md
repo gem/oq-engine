@@ -1,11 +1,9 @@
 ## Initial install
-On all nodes, install Ubuntu and the python-oq package as described in [OpenQuake Engine 1.4 installation](https://github.com/gem/oq-engine/wiki/Installing-the-OpenQuake-Engine-1.4) or [OpenQuake Engine Master installation](https://github.com/gem/oq-engine/wiki/Installing-the-OpenQuake-Engine-Nightly).
+On all nodes, install Ubuntu and the python-oq package as described in [OpenQuake Engine 1.4 installation](Installing-the-OpenQuake-Engine-1.4.md) or [OpenQuake Engine Master installation](Installing-the-OpenQuake-Engine-Nightly.md).
 
 ## Overall architecture 
 The nodes must all be able to communicate with a single Redis Key-Value store (only for OpenQuake <= 1.0), a single PostresSQL database and a single RabbitMQ server.
 One common configuration is to install and deploy all three services on a single "control node" server, but other configurations are possible.  It is not necessary and not normally recommended to install redis, postres or RabbitMQ on the worker nodes.
-
-https://github.com/gem/oq-engine/wiki/GEM-IT-System-Architecture
 
 ## Postgres configuration
 The default Postgres configuration does not permit access from other machines: the file /etc/postgresql/9.1/main/pg_hba.conf should be modified to allow access to the "openquake" database from the worker nodes, an example excerpt follows:  
