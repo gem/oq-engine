@@ -67,6 +67,7 @@ class OqTaskManager(TaskManager):
         if not self.results:
             return acc
         backend = current_app().backend
+        amqp_backend = backend.__class__.__name__.startswith('AMQP')
         rset = ResultSet(self.results)
         for task_id, result_dict in rset.iter_native():
             check_mem_usage()  # warn if too much memory is used
@@ -75,7 +76,9 @@ class OqTaskManager(TaskManager):
                 raise result
             self.received += len(result)
             acc = agg(acc, result.unpickle())
-            del backend._cache[task_id]  # work around a celery bug
+            if amqp_backend:
+                # work around a celery bug
+                del backend._cache[task_id]
         return acc
 
 # convenient aliases
