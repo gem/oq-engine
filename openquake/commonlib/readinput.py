@@ -135,7 +135,7 @@ def get_params(job_inis):
 
 def get_oqparam(job_ini, pkg=None, calculators=None):
     """
-    Parse a dictionary of parameters from one or more INI-style config file.
+    Parse a dictionary of parameters from an INI-style config file.
 
     :param job_ini:
         Path to configuration file/archive or dictionary of parameters
@@ -161,8 +161,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None):
         oqparam = OqParam(**job_ini)
     else:
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
-        inis = [os.path.join(basedir, ini) for ini in job_ini.split(',')]
-        oqparam = OqParam(**get_params(inis))
+        oqparam = OqParam(**get_params([os.path.join(basedir, job_ini)]))
 
     oqparam.validate()
     return oqparam
@@ -654,7 +653,6 @@ def get_exposure(oqparam):
     all_cost_types = set(vulnerability_files(oqparam.inputs))
     relevant_cost_types = all_cost_types - set(['occupants'])
     asset_refs = set()
-    time_event = oqparam.time_event
     ignore_missing_costs = set(oqparam.ignore_missing_costs)
 
     def asset_gen():
@@ -688,8 +686,7 @@ def get_exposure(oqparam):
                     number = 1
                 else:
                     if 'occupants' in all_cost_types:
-                        values['fatalities'] = number
-
+                        values['fatalities_None'] = number
             location = asset.location['lon'], asset.location['lat']
             if region and not geometry.Point(*location).within(region):
                 out_of_region += 1
@@ -698,6 +695,10 @@ def get_exposure(oqparam):
             costs = asset.costs
         except NameError:
             costs = LiteralNode('costs', [])
+        try:
+            occupancies = asset.occupancies
+        except NameError:
+            occupancies = LiteralNode('occupancies', [])
         with context(fname, costs):
             for cost in costs:
                 cost_type = cost['type']
@@ -724,12 +725,10 @@ def get_exposure(oqparam):
                                  "Missing cost %s for asset %s" % (
                                      missing, asset_id))
 
-        if time_event:
-            for occupancy in asset.occupancies:
-                with context(fname, occupancy):
-                    if occupancy['period'] == time_event:
-                        values['fatalities'] = occupancy['occupants']
-                        break
+        for occupancy in occupancies:
+            with context(fname, occupancy):
+                fatalities = 'fatalities_%s' % occupancy['period']
+                values[fatalities] = occupancy['occupants']
 
         area = float(asset.attrib.get('area', 1))
         ass = workflows.Asset(
@@ -744,6 +743,9 @@ def get_exposure(oqparam):
     else:
         logging.info('Read %d assets', len(exposure.assets))
 
+    # sanity check
+    values = any(len(ass.values) + ass.number for ass in exposure.assets)
+    assert values, 'Could not find any value??'
     return exposure
 
 

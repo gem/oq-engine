@@ -84,10 +84,13 @@ class BaseCalculator(object):
         # else we are doing a precalculation; oqparam has been already stored
         self.persistent = persistent
 
-    def run(self, pre_execute=True, clean_up=True, **kw):
+    def run(self, pre_execute=True, clean_up=True, concurrent_tasks=None,
+            **kw):
         """
         Run the calculation and return the exported outputs.
         """
+        if concurrent_tasks is not None:
+            self.oqparam.concurrent_tasks = concurrent_tasks
         vars(self.oqparam).update(kw)
         try:
             if pre_execute:
@@ -242,6 +245,7 @@ class HazardCalculator(BaseCalculator):
                     if name not in new:  # add missing parameter
                         new[name] = value
                 self.oqparam = self.oqparam
+
             if self.oqparam.hazard_investigation_time is None:
                 self.oqparam.hazard_investigation_time = (
                     self.oqparam.investigation_time)
@@ -299,7 +303,7 @@ class HazardCalculator(BaseCalculator):
         self.save_mesh()
         if hasattr(self, 'assets_by_site'):
             self.assetcol = riskinput.build_asset_collection(
-                self.assets_by_site)
+                self.assets_by_site, self.oqparam.time_event)
 
     def save_mesh(self):
         """
@@ -429,16 +433,18 @@ class RiskCalculator(HazardCalculator):
         Require a `.core_func` to be defined with signature
         (riskinputs, riskmodel, rlzs_assoc, monitor).
         """
-        with self.monitor('execute risk', autoflush=True) as monitor:
-            monitor.oqparam = self.oqparam
-            if self.pre_calculator == 'event_based_rupture':
-                monitor.assets_by_site = self.assets_by_site
-                monitor.num_assets = self.count_assets()
-            res = apply_reduce(
-                self.core_func.__func__,
-                (self.riskinputs, self.riskmodel, self.rlzs_assoc, monitor),
-                concurrent_tasks=self.oqparam.concurrent_tasks,
-                weight=get_weight, key=self.riskinput_key)
+        # add fatalities as side effect
+        riskinput.build_asset_collection(
+            self.assets_by_site, self.oqparam.time_event)
+        self.monitor.oqparam = self.oqparam
+        if self.pre_calculator == 'event_based_rupture':
+            self.monitor.assets_by_site = self.assets_by_site
+            self.monitor.num_assets = self.count_assets()
+        res = apply_reduce(
+            self.core_func.__func__,
+            (self.riskinputs, self.riskmodel, self.rlzs_assoc, self.monitor),
+            concurrent_tasks=self.oqparam.concurrent_tasks,
+            weight=get_weight, key=self.riskinput_key)
         return res
 
 
@@ -453,14 +459,11 @@ def get_gmfs(calc):
         return read_gmfs_from_csv(calc)
     # else from rupture
     gmf = calc.datastore['/gmfs/col00'].value
-    if calc.datastore.parent:
-        haz_sitecol = calc.datastore.parent['sitecol']
-    else:
-        haz_sitecol = calc.sitecol
     # NB: if the hazard site collection has N sites, the hazard
     # filtered site collection for the nonzero GMFs has N' <= N sites
     # whereas the risk site collection associated to the assets
     # has N'' <= N' sites
+    haz_sitecol = calc.datastore.parent['sitecol']  # N' values
     risk_indices = set(calc.sitecol.indices)  # N'' values
     N = len(haz_sitecol.complete)
     imt_dt = numpy.dtype([(imt, float) for imt in calc.oqparam.imtls])

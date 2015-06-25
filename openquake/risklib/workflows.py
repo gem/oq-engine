@@ -84,10 +84,12 @@ class Asset(object):
         self.insurance_limits = insurance_limits
         self.aggregated = aggregated or {}
 
-    def value(self, loss_type):
+    def value(self, loss_type, time_event=None):
         """
         :returns: the total asset value for `loss_type`
         """
+        if loss_type == 'fatalities':
+            return self.values['fatalities_' + str(time_event)]
         value = self.values[loss_type]
         number = 1 if self.aggregated.get(loss_type) else self.number
         return numpy.nan if value is None else value * number * self.area
@@ -118,12 +120,18 @@ class Asset(object):
         return self.id
 
 
-def get_values(loss_type, assets):
+def get_values(loss_type, assets, time_event=None):
     """
-    A numpy array with the values for the given assets, depending on the
-    loss_type.
+    :returns:
+        a numpy array with the values for the given assets, depending on the
+        loss_type.
     """
-    return numpy.array([a.value(loss_type) for a in assets])
+    if hasattr(assets[0], 'values'):  # special case for oq-lite
+        values = numpy.array([a.value(loss_type, time_event)
+                              for a in assets])
+    else:  # in the engine
+        values = numpy.array([a.value(loss_type) for a in assets])
+    return values
 
 
 class List(list):
@@ -155,6 +163,8 @@ class Workflow(object):
     """
     Base class. Can be used in the tests as a mock.
     """
+    time_event = None  # used in scenario_risk
+
     def __init__(self, imt, taxonomy, risk_functions):
         self.imt = imt
         self.taxonomy = taxonomy
@@ -180,7 +190,7 @@ class Workflow(object):
         for loss_type in self.loss_types:
             assets_ = assets
             epsilons_ = epsilons
-            values = get_values(loss_type, assets)
+            values = get_values(loss_type, assets, self.time_event)
             ok = ~numpy.isnan(values)
             if not ok.any():
                 # there are no assets with a value
@@ -475,7 +485,7 @@ class ProbabilisticEventBased(Workflow):
         """
         loss_matrix = self.risk_functions[loss_type].apply_to(
             ground_motion_values, epsilons)
-        values = utils.numpy_map(lambda a: a.value(loss_type), assets)
+        values = get_values(loss_type, assets)
         ela = loss_matrix.T * values  # matrix with T x N elements
         if self.insured_losses and loss_type != 'fatalities':
             deductibles = [a.deductible(loss_type) for a in assets]
@@ -667,26 +677,24 @@ class Scenario(Workflow):
     """
     Implements the Scenario workflow
     """
-    def __init__(self, imt, taxonomy, vulnerability_functions, insured_losses):
+    def __init__(self, imt, taxonomy, vulnerability_functions,
+                 insured_losses, time_event=None):
         self.imt = imt
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
         self.insured_losses = insured_losses
+        self.time_event = time_event
 
     def __call__(self, loss_type, assets, ground_motion_values, epsilons,
                  _tags=None):
+        values = get_values(loss_type, assets, self.time_event)
+
         # a matrix of N x R elements
         loss_ratio_matrix = self.risk_functions[loss_type].apply_to(
             ground_motion_values, epsilons)
-
-        # aggregating per asset, getting a vector of R elements
-        if loss_type == 'fatalities' and hasattr(assets[0], 'values'):
-            # special case only in oq-lite
-            values = numpy.array([a.values['fatalities'] for a in assets])
-        else:
-            values = get_values(loss_type, assets)
-
+        # another matrix of N x R elements
         loss_matrix = (loss_ratio_matrix.T * values).T
+        # an array of R elements
         aggregate_losses = loss_matrix.sum(axis=0)
 
         if self.insured_losses and loss_type != "fatalities":

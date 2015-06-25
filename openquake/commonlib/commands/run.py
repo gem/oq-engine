@@ -23,6 +23,22 @@ from openquake.commonlib import sap, readinput, valid, datastore
 from openquake.commonlib.calculators import base
 
 
+def run2(job_haz, job_risk, concurrent_tasks, exports, monitor):
+    """
+    Run both hazard and risk, one after the other
+    """
+    hcalc = base.calculators(readinput.get_oqparam(job_haz), monitor)
+    with monitor:
+        monitor.monitor_dir = hcalc.datastore.calc_dir
+        hcalc.run(concurrent_tasks=concurrent_tasks, exports=exports)
+        oq = readinput.get_oqparam(job_risk)
+        rcalc = base.calculators(oq, monitor)
+        monitor.monitor_dir = rcalc.datastore.calc_dir
+        rcalc.run(concurrent_tasks=concurrent_tasks, exports=exports,
+                  hazard_calculation_id=hcalc.datastore.calc_id)
+    return rcalc
+
+
 def run(job_ini, concurrent_tasks=None,
         loglevel='info', hc=None, exports=''):
     """
@@ -30,24 +46,28 @@ def run(job_ini, concurrent_tasks=None,
     (0 to disable the parallelization).
     """
     logging.basicConfig(level=getattr(logging, loglevel.upper()))
-    oqparam = readinput.get_oqparam(job_ini)
-    if concurrent_tasks is not None:
-        oqparam.concurrent_tasks = concurrent_tasks
-    if hc and hc < 0:  # interpret negative calculation ids
-        calc_ids = datastore.get_calc_ids()
-        try:
-            hc = calc_ids[hc]
-        except IndexError:
-            raise SystemExit('There are %d old calculations, cannot '
-                             'retrieve the %s' % (len(calc_ids), hc))
-    oqparam.hazard_calculation_id = hc
-    oqparam.exports = exports
+    job_inis = job_ini.split(',')
+    assert len(job_inis) in (1, 2), job_inis
     monitor = performance.Monitor('total', measuremem=True)
-    calc = base.calculators(oqparam, monitor)
-    monitor.monitor_dir = calc.datastore.calc_dir
-    logging.info('Started job with output in %s', calc.datastore.calc_dir)
-    with monitor:
-        calc.run()
+
+    if len(job_inis) == 1:  # run hazard or risk
+        oqparam = readinput.get_oqparam(job_inis[0])
+        if hc and hc < 0:  # interpret negative calculation ids
+            calc_ids = datastore.get_calc_ids()
+            try:
+                hc = calc_ids[hc]
+            except IndexError:
+                raise SystemExit('There are %d old calculations, cannot '
+                                 'retrieve the %s' % (len(calc_ids), hc))
+        calc = base.calculators(oqparam, monitor)
+        monitor.monitor_dir = calc.datastore.calc_dir
+        with monitor:
+            calc.run(concurrent_tasks=concurrent_tasks, exports=exports,
+                     hazard_calculation_id=hc)
+    else:  # run hazard + risk
+        calc = run2(
+            job_inis[0], job_inis[1], concurrent_tasks, exports, monitor)
+
     logging.info('See the output with hdfview %s/output.hdf5',
                  calc.datastore.calc_dir)
     logging.info('Total time spent: %s s', monitor.duration)
