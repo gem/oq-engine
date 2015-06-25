@@ -60,7 +60,7 @@ def data_transfer(calc):
 def _print_info(assoc, oqparam, csm, sitecol,
                 filtersources=True, weightsources=True):
     print(assoc.csm_info)
-    print('See https://github.com/gem/oq-risklib/blob/master/docs/'
+    print('See https://github.com/gem/oq-risklib/blob/master/doc/'
           'effective-realizations.rst for an explanation')
     print(assoc)
     if filtersources or weightsources:
