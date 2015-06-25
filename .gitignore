@@ -1,7 +1,7 @@
 *.pyc
 *.DS_Store
 local_settings.py
-docs/build/**/*
+doc/build/**/*
 build
 .metadata/
 build-stamp

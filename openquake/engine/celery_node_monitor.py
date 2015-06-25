@@ -127,7 +127,8 @@ class CeleryNodeMonitor(object):
                 logs.LOG.critical(
                     'Cluster nodes not accessible: %s', dead_nodes)
                 terminate = boolean(
-                    config.get('celery', 'terminate_job_when_celery_is_down'))
+                    config.get('celery', 'terminate_job_when_celery_is_down')
+                    or 'false')
                 if terminate:
                     os.kill(os.getpid(), signal.SIGABRT)  # commit suicide
 
