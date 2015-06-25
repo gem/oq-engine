@@ -27,8 +27,7 @@ rlzs_assoc = MockAssoc()
 class RiskInputTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.oqparam = readinput.get_oqparam(
-            'job_haz.ini,job_risk.ini', pkg=case_2)
+        cls.oqparam = readinput.get_oqparam('job_loss.ini', pkg=case_2)
         cls.sitecol, cls.assets_by_site = readinput.get_sitecol_assets(
             cls.oqparam, readinput.get_exposure(cls.oqparam))
         cls.riskmodel = readinput.get_risk_model(cls.oqparam)
