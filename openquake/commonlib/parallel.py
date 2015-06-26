@@ -288,8 +288,8 @@ class TaskManager(object):
             for chunk in chunks:
                 acc = agg(acc, task_func(chunk, *args))
             return acc
-        tm = cls.starmap(task, [(chunk,) + args for chunk in chunks], name)
-        return tm.reduce(agg, acc)
+        self = cls.starmap(task, [(chunk,) + args for chunk in chunks], name)
+        return self.reduce(agg, acc)
 
     def __init__(self, oqtask, name=None):
         self.oqtask = oqtask
@@ -298,6 +298,7 @@ class TaskManager(object):
         self.results = []
         self.sent = 0
         self.received = 0
+        self.no_distribute = no_distribute()
 
     def submit(self, *args):
         """
@@ -308,7 +309,7 @@ class TaskManager(object):
         """
         check_mem_usage()
         # log a warning if too much memory is used
-        if no_distribute():
+        if self.no_distribute:
             res = safely_call(self.task_func, args)
         else:
             piks = pickle_sequence(args)
@@ -365,7 +366,7 @@ class TaskManager(object):
             log_percent.next()
             return res
 
-        if no_distribute():
+        if self.no_distribute:
             agg_result = reduce(agg_and_percent, self.results, acc)
         else:
             self.progress('Sent %s of data', humansize(self.sent))
