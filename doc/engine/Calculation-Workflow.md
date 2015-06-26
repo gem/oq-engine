@@ -7,11 +7,10 @@ Calculation workflows are broken into 6 distinct phases. In order of execution, 
 The pre-execution phase in intended for:
 - parsing and preparing inputs (“unzipping” input XML files into the database, for example)
 - initialising the calculation “work packages” (and saving them to the database)
-- initialising “container” DB records to hold computed results
 
 ### Execute
 
-The execution phase is where the bulk of the calculation work happens. During this phase, the control node manages task queuing and waits all of the workers to finish the calculation. In this phase the majority of the control node’s time is spent waiting for “completed task” signals from the worker, which indicates that a new task can be enqueued. When there are no more tasks left to enqueue, the control node will simply wait for all of the tasks to finish. (By convention, all calculation results are saved directly to the database by the workers.)
+The execution phase is where the bulk of the calculation work happens. During this phase, the control node manages task queuing and waits all of the workers to finish the calculation. In this phase the majority of the control node’s time is spent waiting for “completed task” signals from the worker, which indicates that a new task can be enqueued. When there are no more tasks left to enqueue, the control node will simply wait for all of the tasks to finish.
 
 ### Post-execute
 
@@ -30,8 +29,8 @@ The post-processing options available depend on the calculation mode. Here are s
 
 If a user specifies the `--exports` option on the command line, all calculation results will automatically be exported from the database to NRML XML.
 
-If the user does not specify this option, it is still possible to export results manually using the `--export-hazard` command line option. (Note: Support will be added in the future for export Risk results as well.)
+If the user does not specify this option, it is still possible to export results manually using the `--export-output` command line option.
 
 ### Cleanup
 
-Perform any kind of clean required once all calculations and exports have concluded. Things to clean up might include KVS data, temporary files, or temporary database records.
+Perform any kind of cleanup required once all calculations and exports have concluded.
