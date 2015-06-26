@@ -248,16 +248,6 @@ def agg_prob(acc, prob):
     return 1. - (1. - acc) * (1. - prob)
 
 
-def get_col_id(tag):
-    """
-    Extract the ses collection index from the tag:
-
-    >>> get_col_id('col=01|...')
-    1
-    """
-    return int(tag.split('|', 1)[0].split('=')[1])
-
-
 class RlzsAssoc(collections.Mapping):
     """
     Realization association class. It should not be instantiated directly,
@@ -328,7 +318,7 @@ class RlzsAssoc(collections.Mapping):
                 self.rlzs_assoc[trt_model.id, gsim].append(rlz)
                 trt_model.gsims = gsim_lt.values[trt]
                 if lt_model.samples > 1:  # oversampling
-                    col_id = self.csm_info.get_col_id(trt_model.id, i)
+                    col_id = self.csm_info.col_ids_by_trt_id[trt_model.id][i]
                     rlz.col_ids.add(col_id)
             idx += 1
             rlzs.append(rlz)
@@ -440,6 +430,9 @@ class RlzsAssoc(collections.Mapping):
         return '<%s(%d)\n%s>' % (self.__class__.__name__, len(self),
                                  '\n'.join('%s: %s' % pair for pair in pairs))
 
+# collection <-> trt model associations
+col_dt = numpy.dtype([('trt_id', numpy.uint32), ('sample', numpy.uint32)])
+
 
 class CompositionInfo(object):
     """
@@ -450,21 +443,26 @@ class CompositionInfo(object):
     :param source_models: a list of SourceModel instances
     """
     def __init__(self, source_model_lt, source_models=()):
-        self._col_dict = {}  # dictionary trt_id, idx -> col_id
-        self._num_samples = {}  # trt_id -> num_samples
         self.source_model_lt = source_model_lt
         self.source_models = map(get_skeleton, source_models)
+        cols = []
         col_id = 0
+        self.col_ids_by_trt_id = collections.defaultdict(list)
         for sm in source_models:
             for trt_model in sm.trt_models:
                 trt_id = trt_model.id
-                if sm.samples > 1:
-                    self._num_samples[trt_id] = sm.samples
                 for idx in range(sm.samples):
-                    self._col_dict[trt_id, idx] = col_id
+                    cols.append((trt_id, idx))
+                    self.col_ids_by_trt_id[trt_id].append(col_id)
                     col_id += 1
-                trt_id += 1
-        self.num_collections = col_id
+        self.cols = numpy.array(cols, col_dt)
+
+    @property
+    def num_collections(self):
+        """
+        Return the number of underlying collections
+        """
+        return len(self.cols)
 
     def get_num_rlzs(self, source_model=None):
         """
@@ -478,18 +476,17 @@ class CompositionInfo(object):
         return source_model.gsim_lt.get_num_paths()
 
     def get_max_samples(self):
-        """Return the maximum number of samples of the source model"""
-        values = self._num_samples.values()
-        if not values:
-            return 1
-        return max(values)
+        """
+        Return the maximum number of samples of the source model
+        """
+        return max(len(col_ids) for col_ids in self.col_ids_by_trt_id.values())
 
     def get_num_samples(self, trt_id):
         """
         :param trt_id: tectonic region type object ID
         :returns: how many times the sources of that TRT are to be sampled
         """
-        return self._num_samples.get(trt_id, 1)
+        return len(self.col_ids_by_trt_id[trt_id])
 
     # this useful to extract the ruptures affecting a given realization
     def get_col_ids(self, rlz):
@@ -505,22 +502,14 @@ class CompositionInfo(object):
         return set(tm.id for sm in self.source_models
                    for tm in sm.trt_models if sm.path == rlz.sm_lt_path)
 
-    def get_col_id(self, trt_id, idx):
-        """
-        :param trt_id: tectonic region type object ID
-        :param idx: an integer index from 0 to num_samples
-        :returns: the SESCollection ordinal
-        """
-        return self._col_dict[trt_id, idx]
-
     def get_trt_id(self, col_id):
         """
         :param col_id: the ordinal of a SESCollection
         :returns: the ID of the associated TrtModel
         """
-        for (trt_id, idx), cid in self._col_dict.iteritems():
+        for cid, col in enumerate(self.cols):
             if cid == col_id:
-                return trt_id
+                return col['trt_id']
         raise KeyError('There is no TrtModel associated to the collection %d!'
                        % col_id)
 
@@ -528,8 +517,8 @@ class CompositionInfo(object):
         """
         Yield triples (trt_id, idx, col_id) in order
         """
-        for (trt_id, idx), col_id in sorted(self._col_dict.iteritems()):
-            yield trt_id, idx, col_id
+        for col_id, col in self.cols:
+            yield col['trt_id'], col['sample'], col_id
 
     def __repr__(self):
         info_by_model = collections.OrderedDict(

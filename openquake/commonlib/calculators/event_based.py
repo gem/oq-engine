@@ -317,7 +317,7 @@ def sample_ruptures(src, num_ses, info):
               {(col_id, ses_id): num_occurrences}
     """
     rnd = random.Random(src.seed)
-
+    col_ids = info.col_ids_by_trt_id[src.trt_model_id]
     # the dictionary `num_occ_by_rup` contains a dictionary
     # (col_id, ses_id) -> num_occurrences
     # for each occurring rupture
@@ -325,8 +325,7 @@ def sample_ruptures(src, num_ses, info):
     # generating ruptures for the given source
     for rup_no, rup in enumerate(src.iter_ruptures(), 1):
         rup.rup_no = rup_no
-        for idx in range(info.get_num_samples(src.trt_model_id)):
-            col_id = info.get_col_id(src.trt_model_id, idx)
+        for col_id in col_ids:
             for ses_idx in range(1, num_ses + 1):
                 numpy.random.seed(rnd.randint(0, MAX_INT))
                 num_occurrences = rup.sample_number_of_occurrences()
