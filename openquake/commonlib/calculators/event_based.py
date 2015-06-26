@@ -537,8 +537,10 @@ class EventBasedCalculator(ClassicalCalculator):
             for tag, sesrup in sorted(sescol.iteritems()):
                 sesrup = sescol[tag]
                 self.sesruptures.append(sesrup)
-            self.datasets.append(
-                self.datastore.create_dset('/gmfs/col%02d' % col_id, gmf_dt))
+            if self.oqparam.ground_motion_fields:
+                self.datasets.append(
+                    self.datastore.create_dset(
+                        '/gmfs/col%02d' % col_id, gmf_dt))
 
     def combine_curves_and_save_gmfs(self, acc, res):
         """
