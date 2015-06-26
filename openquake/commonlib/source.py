@@ -850,6 +850,7 @@ class SourceFilterSplitter(SourceFilterWeighter):
     def process(self, csm, no_distribute=False):
         """
         :param csm: a CompositeSourceModel instance
+        :param no_distribute: flag to disable parallel processing
         :returns: the times spent in sequential and parallel processing
         """
         sources = csm.get_sources()
