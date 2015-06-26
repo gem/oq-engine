@@ -867,7 +867,8 @@ class SourceFilterSplitter(SourceFilterWeighter):
         if slow_sources:
             t0 = time.time()
             logging.warn('Processing %d slow sources...', len(slow_sources))
-            with mock.patch(parallel.no_distribute, lambda: no_distribute):
+            with mock.patch.object(
+                    parallel, 'no_distribute', lambda: no_distribute):
                 ss = parallel.TaskManager.starmap(
                     filter_and_split, slow_sources)
 
