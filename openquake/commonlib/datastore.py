@@ -246,7 +246,10 @@ class DataStore(collections.MutableMapping):
             val = self.hdf5[key]
         except KeyError:
             if self.parent:
-                val = self.parent.hdf5[key]
+                try:
+                    val = self.parent.hdf5[key]
+                except KeyError:
+                    raise KeyError(key)
             else:
                 raise KeyError(key)
         try:

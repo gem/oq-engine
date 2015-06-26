@@ -95,10 +95,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
     core_func = ebr
 
     epsilon_matrix = datastore.persistent_attribute('epsilon_matrix')
-    event_loss_table = datastore.persistent_attribute(
-        'event_loss_table-rlzs')
-    insured_loss_table = datastore.persistent_attribute(
-        'insured_loss_table-rlzs')
     is_stochastic = True
 
     def pre_execute(self):
@@ -141,9 +137,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             self.outs.append('insured_loss_table-rlzs')
         self.datasets = {}
         for o, out in enumerate(self.outs):
+            self.datastore.hdf5.create_group(out)
             for l, loss_type in enumerate(loss_types):
                 for r, rlz in enumerate(self.rlzs_assoc.realizations):
-                    key = '%s/%s' % (loss_type, rlz.uid)
+                    key = '/%s/%s' % (loss_type, rlz.uid)
                     dset = self.datastore.create_dset(out + key, elt_dt)
                     self.datasets[o, l, r] = dset
 

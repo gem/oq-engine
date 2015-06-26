@@ -150,7 +150,7 @@ def export_loss_curves_rlzs(ekey, dstore):
     for dset, curves in dstore.get(ekey[0], {}).iteritems():
         prefix = 'rlz-%03d' % rlz_by_dset[dset].ordinal
         fnames.extend(
-            _export_curves_csv(name[1:], assets, curves[:], dstore.export_dir,
+            _export_curves_csv(name, assets, curves[:], dstore.export_dir,
                                prefix, columns))
     return fnames
 
@@ -180,7 +180,7 @@ def export_loss_curves_stats(ekey, dstore):
     fnames = []
     for dset, curves in dstore.get(ekey[0], {}).iteritems():
         fnames.extend(
-            _export_curves_csv(name[1:], assets, curves[:], dstore.export_dir,
+            _export_curves_csv(name, assets, curves[:], dstore.export_dir,
                                dset, columns))
     return fnames
 
@@ -231,8 +231,8 @@ def export_event_loss_table(ekey, dstore):
             data = [[tags[e['rup_id']], e['loss']]
                     for e in elt[loss_type][rlz_uid]]
             # the name is extracted from 'event_loss_table-rlzs' by removing
-            # the first character and the the last 5: 'event_loss_table'
-            fname = '%s-%s-%s.csv' % (name[1:-5], rlz_uid, loss_type)
+            # the last 5 characters: 'event_loss_table'
+            fname = '%s-%s-%s.csv' % (name[:-5], rlz_uid, loss_type)
             dest = os.path.join(dstore.export_dir, fname)
             writers.write_csv(dest, sorted(data), fmt='%10.6E')
             fnames.append(dest)

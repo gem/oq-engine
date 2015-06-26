@@ -23,7 +23,7 @@ import numpy
 
 from openquake.commonlib.calculators import base
 from openquake.baselib.performance import Monitor
-from openquake.commonlib import readinput, oqvalidation
+from openquake.commonlib import readinput, oqvalidation, datastore
 
 
 class DifferentFiles(Exception):
@@ -69,6 +69,13 @@ class CalculatorTestCase(unittest.TestCase):
                 testfile, inis[1], hazard_calculation_id=hc_id, **kw)
             result = self.calc.run()
         return result
+
+    def get_datastore(self):
+        ds = datastore.DataStore(self.calc.datastore.calc_id)
+        hc_id = ds['oqparam'].hazard_calculation_id
+        if hc_id:
+            ds.parent = datastore.DataStore(hc_id)
+        return ds
 
     def execute(self, testfile, job_ini):
         """
