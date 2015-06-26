@@ -57,6 +57,7 @@ import unittest
 import numpy as np
 from math import log
 from openquake.hazardlib.scalerel import WC1994
+from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
 from hmtk.faults.mfd.base import _scale_moment
 from hmtk.faults.mfd.youngs_coppersmith import (YoungsCoppersmithExponential,
                                                 YoungsCoppersmithCharacteristic)
@@ -178,6 +179,32 @@ class TestYoungsCoppersmithExponential(unittest.TestCase):
         _, _, _ = self.model.get_mfd(1.0, 7200.)
         self.assertTrue(np.all(np.isnan(self.model.occurrence_rate)))
 
+    def test_return_oq_mfd(self):
+        """
+        Tests the function to return the mfd as an instance of the openquake
+        EvenlyDiscretizedMFD class
+        """
+        self.model = YoungsCoppersmithExponential()
+        self.config = {'MFD_spacing': 0.1,
+                       'Maximum_Magnitude': 8.0,
+                       'Maximum_Magnitude_Uncertainty': None,
+                       'Minimum_Magnitude': 5.0,
+                       'Model_Weight': 1.0,
+                       'b_value': [1.0, 0.1]}
+        self.model.setUp(self.config)
+        # Same fault case as for test_cumulative_value - now comparing incremenetal
+        # rates
+        self.model.get_mmax(self.config, self.msr, 0., 7200.)
+        _ = self.model.get_mfd(1.0, 7200.)
+        oq_mfd = self.model.to_evenly_discretized_mfd()
+        self.assertTrue(isinstance(oq_mfd, EvenlyDiscretizedMFD))
+        self.assertAlmostEqual(oq_mfd.min_mag, 5.05)
+        self.assertAlmostEqual(oq_mfd.bin_width, 0.1)
+        np.testing.assert_array_almost_equal(YC_EXP_DATA[:, 2],
+                                             np.array(oq_mfd.occurrence_rates))
+
+
+
 
 class TestYoungsCoppersmithCharacteristic(unittest.TestCase):
     '''
@@ -255,17 +282,16 @@ class TestYoungsCoppersmithCharacteristic(unittest.TestCase):
         # Area = Length x Width (120 km x 60 km)
         # Slip = 1.0 mm/yr
         expected_rates = np.array(
-            [1.60861975e-03, 1.27777208e-03, 1.01497044e-03,
-             8.06219681e-04, 6.40403056e-04, 5.08690229e-04,
-             4.04067011e-04, 3.20961836e-04, 2.54949049e-04,
-             2.02513228e-04, 1.60861975e-04, 1.27777208e-04,
-             1.01497044e-04, 8.06219681e-05, 6.40403056e-05,
-             5.08690229e-05, 4.04067011e-05, 3.20961836e-05,
-             2.54949049e-05, 2.02513228e-05, 1.60861975e-05,
-             1.27777208e-05, 1.01497044e-05, 8.06219681e-06,
-             6.40403056e-06, 5.08690229e-06, 4.04067011e-06,
-             3.20961836e-06, 3.20253886e-05, 3.20253886e-05,
-             3.20253886e-05, 3.20253886e-05, 3.20253886e-05])
+            [2.14512891e-03, 1.70393646e-03, 1.35348484e-03,
+             1.07511122e-03, 8.53991200e-04, 6.78349322e-04, 
+             5.38832020e-04, 4.28009487e-04, 3.39980020e-04,
+             2.70055729e-04, 2.14512891e-04, 1.70393646e-04,
+             1.35348484e-04, 1.07511122e-04, 8.53991200e-05, 
+             6.78349322e-05, 5.38832020e-05, 4.28009487e-05, 
+             3.39980020e-05, 2.70055729e-05, 2.14512891e-05,
+             1.70393646e-05, 1.35348484e-05, 1.07511122e-05,
+             8.53991200e-06, 7.59441645e-05, 7.59441645e-05, 
+             7.59441645e-05, 7.59441645e-05, 7.59441645e-05])
         self.model = YoungsCoppersmithCharacteristic()
         self.config['Maximum_Magnitude'] = 8.0
         self.config['Maximum_Magnitude_Uncertainty'] = None

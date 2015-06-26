@@ -3,7 +3,7 @@ Module :mod:`mfd.base` defines an abstract base classes
 for :class:`BaseMFDfromSlip>`
 """
 import abc
-
+from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
 
 def _scale_moment(magnitude, in_nm=False):
     '''Returns the moment for a given magnitude.
@@ -36,3 +36,12 @@ class BaseMFDfromSlip(object):
     @abc.abstractmethod
     def get_mfd(self):
         '''Calculates the magnitude frequency distribution'''
+
+    def to_evenly_discretized_mfd(self):
+        """
+        Returns the activity rate as an instance of the :class:
+        openquake.hazardlib.mfd.evenly_discretized.EvenlyDiscretizedMFD
+        """
+        return EvenlyDiscretizedMFD(self.mmin + self.bin_width / 2.,
+                                    self.bin_width,
+                                    self.occurrence_rate.tolist())
