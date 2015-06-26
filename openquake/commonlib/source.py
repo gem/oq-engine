@@ -782,7 +782,7 @@ class SourceFilter(BaseSourceProcessor):
                        info.weight_time, info.split_time))
         return acc + {info.trt_model_id: info.sources}
 
-    def process(self, csm):
+    def process(self, csm, dummy=None):
         """
         :param csm: a CompositeSourceModel instance
         :returns: the times spent in sequential and parallel processing
