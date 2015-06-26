@@ -160,6 +160,7 @@ class TrtModel(collections.Sequence):
         self.id = id
         for src in self.sources:
             self.update(src)
+        self.source_model = None  # to be set later, in CompositionInfo
 
     def update(self, src):
         """
@@ -300,9 +301,23 @@ class RlzsAssoc(collections.Mapping):
 
     def get_gsims_by_col(self):
         """Return a list of lists of GSIMs of length num_collections"""
-        gsims = self.get_gsims_by_trt_id()
-        return [gsims.get(self.csm_info.get_trt_id(col), [])
-                for col in range(self.csm_info.num_collections)]
+        if self.num_samples:
+            rlz_by_col_id = {}
+            for rlz in self.realizations:
+                for col_id in self.csm_info.get_col_ids(rlz):
+                    rlz_by_col_id[col_id] = rlz
+            out = []
+            for i, col in enumerate(self.csm_info.cols):
+                rlz = rlz_by_col_id[i]
+                trtmod = self.csm_info.tmdict[col['trt_id']]
+                gsim = trtmod.source_model.gsim_lt.get_gsim_by_trt(
+                    rlz.gsim_rlz, trtmod.trt)
+                out.append([valid.gsim(gsim)])
+            return out
+        # else full enumeration
+        gsims_by_trt_id = self.get_gsims_by_trt_id()
+        return [gsims_by_trt_id.get(col['trt_id'], [])
+                for col in self.csm_info.cols]
 
     def _add_realizations(self, idx, lt_model, realizations):
         gsim_lt = lt_model.gsim_lt
@@ -313,10 +328,8 @@ class RlzsAssoc(collections.Mapping):
             self.gsim_by_trt.append(dict(
                 zip(gsim_lt.all_trts, gsim_rlz.value)))
             for trt_model in lt_model.trt_models:
-                trt = trt_model.trt
-                gsim = gsim_lt.get_gsim_by_trt(gsim_rlz, trt)
-                self.rlzs_assoc[trt_model.id, gsim].append(rlz)
-                trt_model.gsims = gsim_lt.values[trt]
+                gs = gsim_lt.get_gsim_by_trt(gsim_rlz, trt_model.trt)
+                self.rlzs_assoc[trt_model.id, gs].append(rlz)
                 if lt_model.samples > 1:  # oversampling
                     col_id = self.csm_info.col_ids_by_trt_id[trt_model.id][i]
                     rlz.col_ids.add(col_id)
@@ -448,9 +461,12 @@ class CompositionInfo(object):
         cols = []
         col_id = 0
         self.col_ids_by_trt_id = collections.defaultdict(list)
+        self.tmdict = {}  # trt_id -> trt_model
         for sm in source_models:
             for trt_model in sm.trt_models:
+                trt_model.source_model = sm
                 trt_id = trt_model.id
+                self.tmdict[trt_id] = trt_model
                 for idx in range(sm.samples):
                     cols.append((trt_id, idx))
                     self.col_ids_by_trt_id[trt_id].append(col_id)
@@ -612,6 +628,8 @@ class CompositeSourceModel(collections.Sequence):
                 rlzs = logictree.get_effective_rlzs(smodel.gsim_lt)
             if rlzs:
                 idx = assoc._add_realizations(idx, smodel, rlzs)
+                for trt_model in smodel.trt_models:
+                    trt_model.gsims = smodel.gsim_lt.values[trt_model.trt]
             else:
                 logging.warn('No realizations for %s, %s',
                              '_'.join(smodel.path), smodel.name)
