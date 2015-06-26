@@ -144,7 +144,7 @@ def build_rlz_col_assocs(rlzs_assoc):
 @datastore.view.add('rlzs_by_col')
 def view_rlzs_by_col(name, dstore):
     """
-    :returns: a dictionary col_id -> realizations
+    :returns: a dictionary col_id -> realization ordinals
     """
     return groupby(dstore['/rlz_col_assocs'],
                    lambda x: x['col'],
