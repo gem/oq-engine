@@ -327,8 +327,8 @@ class RlzsAssoc(collections.Mapping):
                 gsim = gsim_lt.get_gsim_by_trt(gsim_rlz, trt)
                 self.rlzs_assoc[trt_model.id, gsim].append(rlz)
                 trt_model.gsims = gsim_lt.values[trt]
-                col_id = self.csm_info.get_col_id(trt_model.id, i)
                 if lt_model.samples > 1:  # oversampling
+                    col_id = self.csm_info.get_col_id(trt_model.id, i)
                     rlz.col_ids.add(col_id)
             idx += 1
             rlzs.append(rlz)
