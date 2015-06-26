@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import mock
 import time
 import logging
 import operator
@@ -788,7 +789,7 @@ class SourceFilter(BaseSourceProcessor):
                        info.weight_time, info.split_time))
         return acc + {info.trt_model_id: info.sources}
 
-    def process(self, csm):
+    def process(self, csm, dummy=None):
         """
         :param csm: a CompositeSourceModel instance
         :returns: the times spent in sequential and parallel processing
@@ -853,9 +854,10 @@ class SourceFilterSplitter(SourceFilterWeighter):
     :param maxdist: maximum distance for the filtering
     :param area_source_discretization: area source discretization
     """
-    def process(self, csm):
+    def process(self, csm, no_distribute=False):
         """
         :param csm: a CompositeSourceModel instance
+        :param no_distribute: flag to disable parallel processing
         :returns: the times spent in sequential and parallel processing
         """
         sources = csm.get_sources()
@@ -872,14 +874,15 @@ class SourceFilterSplitter(SourceFilterWeighter):
         # start multicore processing
         if slow_sources:
             t0 = time.time()
-            logging.warn('Parallel processing of %d sources...',
-                         len(slow_sources))
-            ss = parallel.TaskManager.starmap(filter_and_split, slow_sources)
+            logging.warn('Processing %d slow sources...', len(slow_sources))
+            with mock.patch.object(
+                    parallel, 'no_distribute', lambda: no_distribute):
+                ss = parallel.TaskManager.starmap(
+                    filter_and_split, slow_sources)
 
         # single core processing
         if fast_sources:
-            logging.info('Sequential processing of %d sources...',
-                         len(fast_sources))
+            logging.info('Processing %d fast sources...', len(fast_sources))
             t1 = time.time()
             sources_by_trt += reduce(
                 self.agg_source_info,

@@ -442,7 +442,7 @@ def get_source_models(oqparam, source_model_lt, sitecol=None, in_memory=True):
 
 def get_composite_source_model(
         oqparam, sitecol=None, SourceProcessor=source.SourceFilterSplitter,
-        monitor=DummyMonitor()):
+        monitor=DummyMonitor(), no_distribute=False):
     """
     Build the source models by splitting the sources. If prefiltering is
     enabled, also reduce the GSIM logic trees in the underlying source models.
@@ -453,9 +453,12 @@ def get_composite_source_model(
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param SourceProcessor:
         the class used to process the sources
+    :param monitor:
+        a monitor instance
+    :param no_distribute:
+        used to disable parallel splitting of the sources
     :returns:
         an iterator over :class:`openquake.commonlib.source.SourceModel`
-        tuples skipping the empty models
     """
     processor = SourceProcessor(sitecol, oqparam.maximum_distance,
                                 oqparam.area_source_discretization)
@@ -471,9 +474,9 @@ def get_composite_source_model(
         smodels.append(source_model)
     csm = source.CompositeSourceModel(source_model_lt, smodels)
     if sitecol is not None and hasattr(processor, 'process'):
-        seqtime, partime = processor.process(csm)
-        monitor.write(['sequential filtering/splitting', str(seqtime), '0'])
-        monitor.write(['parallel filtering/splitting', str(partime), '0'])
+        seqtime, partime = processor.process(csm, no_distribute)
+        monitor.write(['fast sources filtering/splitting', str(seqtime), '0'])
+        monitor.write(['slow sources filtering/splitting', str(partime), '0'])
         if not csm.get_sources():
             raise RuntimeError('All sources were filtered away')
     csm.count_ruptures()
