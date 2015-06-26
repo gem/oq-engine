@@ -287,7 +287,6 @@ class RlzsAssoc(collections.Mapping):
         self.csm_info = csm_info
         self.rlzs_assoc = rlzs_assoc or collections.defaultdict(list)
         self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
-        self.gsim_by_col = {}
         self.rlzs_by_smodel = collections.OrderedDict()
 
     @property
@@ -311,10 +310,6 @@ class RlzsAssoc(collections.Mapping):
 
     def get_gsims_by_col(self):
         """Return a list of lists of GSIMs of length num_collections"""
-        if self.num_samples:
-            return [[self.gsim_by_col[col]] for col in range(
-                self.csm_info.num_collections)]
-
         gsims = self.get_gsims_by_trt_id()
         return [gsims.get(self.csm_info.get_trt_id(col), [])
                 for col in range(self.csm_info.num_collections)]
@@ -334,7 +329,6 @@ class RlzsAssoc(collections.Mapping):
                 trt_model.gsims = gsim_lt.values[trt]
                 col_id = self.csm_info.get_col_id(trt_model.id, i)
                 if lt_model.samples > 1:  # oversampling
-                    self.gsim_by_col[col_id] = valid.gsim(gsim)
                     rlz.col_ids.add(col_id)
             idx += 1
             rlzs.append(rlz)
