@@ -338,8 +338,8 @@ def hazard_curve_name(ekey, kind, rlzs_assoc, sampling):
     :param sampling: if sampling is enabled or not
     """
     key, fmt = ekey
-    prefix = {'/hcurves': 'hazard_curve', '/hmaps': 'hazard_map',
-              '/uhs': 'hazard_uhs'}[key]
+    prefix = {'hcurves': 'hazard_curve', 'hmaps': 'hazard_map',
+              'uhs': 'hazard_uhs'}[key]
     if kind.startswith('rlz-'):
         rlz_no = int(kind[4:])
         rlz = rlzs_assoc.realizations[rlz_no]
@@ -375,7 +375,7 @@ def build_name(rlz, prefix, fmt, sampling):
     return fname
 
 
-@export.add(('/hcurves', 'csv'), ('/hmaps', 'csv'), ('/uhs', 'csv'))
+@export.add(('hcurves', 'csv'), ('hmaps', 'csv'), ('uhs', 'csv'))
 def export_hcurves_csv(ekey, dstore):
     """
     Exports the hazard curves into several .csv files
@@ -392,7 +392,7 @@ def export_hcurves_csv(ekey, dstore):
         fname = hazard_curve_name(
             ekey, kind, rlzs_assoc, oq.number_of_logic_tree_samples)
         fnames.append(os.path.join(dstore.export_dir, fname))
-        if key == '/uhs':
+        if key == 'uhs':
             export_uhs_csv(ekey, dstore.export_dir, fname, sitecol, hcurves)
         else:
             export_hazard_curves_csv(ekey, dstore.export_dir, fname, sitecol,
@@ -400,7 +400,7 @@ def export_hcurves_csv(ekey, dstore):
     return fnames
 
 
-@export.add(('/gmfs', 'xml'), ('/gmfs', 'csv'))
+@export.add(('gmfs', 'xml'), ('gmfs', 'csv'))
 def export_gmf(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -409,7 +409,7 @@ def export_gmf(ekey, dstore):
     sitecol = dstore['sitecol']
     rlzs_assoc = dstore['rlzs_assoc']
     rupture_by_tag = sum(dstore['sescollection'], AccumDict())
-    all_tags = dstore['/tags'].value
+    all_tags = dstore['tags'].value
     oq = dstore['oqparam']
     samples = oq.number_of_logic_tree_samples
     fmt = ekey[-1]

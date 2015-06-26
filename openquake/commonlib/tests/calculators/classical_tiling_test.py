@@ -21,9 +21,9 @@ class ClassicalTestCase(CalculatorTestCase):
             'hazard_uhs-smltp_b1-gsimltp_b2.csv',
             'quantile_uhs-0.1.csv',
         ]
-        got = (out['/hcurves', 'csv'] +
-               out.get(('/hmaps', 'csv'), []) +
-               out.get(('/uhs', 'csv'), []))
+        got = (out['hcurves', 'csv'] +
+               out.get(('hmaps', 'csv'), []) +
+               out.get(('uhs', 'csv'), []))
         self.assertEqual(len(expected), len(got))
         for fname, actual in zip(expected, got):
             self.assertEqualFiles('expected/%s' % fname, actual, delta=1E-6)

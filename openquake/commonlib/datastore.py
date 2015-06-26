@@ -249,9 +249,11 @@ class DataStore(collections.MutableMapping):
                 val = self.parent.hdf5[key]
             else:
                 raise KeyError(key)
-        if key.startswith('/'):
+        try:
+            shape = val.shape
+        except AttributeError:  # val is a group
             return val
-        if str(val.dtype).startswith('|S'):
+        if not shape:
             val = cPickle.loads(val.value)
         return val
 
@@ -274,7 +276,7 @@ class DataStore(collections.MutableMapping):
 
     def __iter__(self):
         for path in sorted(self.hdf5):
-            yield '/' + path
+            yield path
 
     def __contains__(self, key):
         return key in self.hdf5

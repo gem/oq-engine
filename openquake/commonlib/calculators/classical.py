@@ -169,15 +169,15 @@ class ClassicalCalculator(base.HazardCalculator):
             return
         oq = self.oqparam
         h5 = self.datastore.hdf5
-        h5['/hcurves/' + dset] = curves
+        h5['hcurves/' + dset] = curves
         if oq.hazard_maps or oq.uniform_hazard_spectra:
             # hmaps is a composite array of shape (N, P)
             hmaps = self.hazard_maps(curves)
             if oq.hazard_maps:
-                h5['/hmaps/' + dset] = hmaps
+                h5['hmaps/' + dset] = hmaps
             if oq.uniform_hazard_spectra:
                 # uhs is an array of shape (N, I, P)
-                self.datastore.hdf5['/uhs/' + dset] = calc.make_uhs(hmaps)
+                self.datastore.hdf5['uhs/' + dset] = calc.make_uhs(hmaps)
 
 
 def is_effective_trt_model(result_dict, trt_model):

@@ -94,11 +94,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
     pre_calculator = 'event_based_rupture'
     core_func = ebr
 
-    epsilon_matrix = datastore.persistent_attribute('/epsilon_matrix')
+    epsilon_matrix = datastore.persistent_attribute('epsilon_matrix')
     event_loss_table = datastore.persistent_attribute(
-        '/event_loss_table-rlzs')
+        'event_loss_table-rlzs')
     insured_loss_table = datastore.persistent_attribute(
-        '/insured_loss_table-rlzs')
+        'insured_loss_table-rlzs')
     is_stochastic = True
 
     def pre_execute(self):
@@ -136,14 +136,14 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         loss_types = self.riskmodel.get_loss_types()
         self.L = len(loss_types)
         self.R = len(self.rlzs_assoc.realizations)
-        self.outs = ['/event_loss_table-rlzs']
+        self.outs = ['event_loss_table-rlzs']
         if oq.insured_losses:
-            self.outs.append('/insured_loss_table-rlzs')
+            self.outs.append('insured_loss_table-rlzs')
         self.datasets = {}
         for o, out in enumerate(self.outs):
             for l, loss_type in enumerate(loss_types):
                 for r, rlz in enumerate(self.rlzs_assoc.realizations):
-                    key = '/%s/%s' % (loss_type, rlz.uid)
+                    key = '%s/%s' % (loss_type, rlz.uid)
                     dset = self.datastore.create_dset(out + key, elt_dt)
                     self.datasets[o, l, r] = dset
 

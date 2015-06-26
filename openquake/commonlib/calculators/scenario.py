@@ -55,7 +55,7 @@ class ScenarioCalculator(base.HazardCalculator):
     Scenario hazard calculator
     """
     core_func = calc_gmfs
-    tags = datastore.persistent_attribute('/tags')
+    tags = datastore.persistent_attribute('tags')
     sescollection = datastore.persistent_attribute('sescollection')
     is_stochastic = True
 
@@ -109,5 +109,5 @@ class ScenarioCalculator(base.HazardCalculator):
             gmf['idx'] = ordinal
             data.append(gmf)
         gmfa = numpy.concatenate(data)
-        self.datastore['/gmfs/col00'] = gmfa
-        self.datastore['/gmfs'].attrs['nbytes'] = gmfa.nbytes
+        self.datastore['gmfs/col00'] = gmfa
+        self.datastore['gmfs'].attrs['nbytes'] = gmfa.nbytes
