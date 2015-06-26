@@ -30,12 +30,13 @@ from openquake.hazardlib.imt import from_string
 from openquake.engine.db import models
 
 from openquake.baselib import general
-from openquake.commonlib import readinput, risk_parsers, source
+from openquake.commonlib import readinput, risk_parsers, source, valid
 from openquake.commonlib.readinput import get_site_collection
 
 from openquake.engine.input import exposure
 from openquake.engine import logs
 from openquake.engine import writer
+from openquake.engine.utils import config
 from openquake.engine.calculators import base
 from openquake.risklib import scientific
 
@@ -207,8 +208,11 @@ class BaseHazardCalculator(base.Calculator):
         trees. Save in the database LtSourceModel and TrtModel objects.
         """
         logs.LOG.progress("initializing sources")
+        parallel_source_splitting = valid.boolean(
+            config.get('hazard', 'parallel_source_splitting') or 'false')
         self.composite_model = readinput.get_composite_source_model(
-            self.oqparam, self.site_collection, no_distribute=True)
+            self.oqparam, self.site_collection,
+            no_distribute=not parallel_source_splitting)
         for sm in self.composite_model:
             # create an LtSourceModel for each distinct source model
             lt_model = models.LtSourceModel.objects.create(
