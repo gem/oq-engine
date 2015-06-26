@@ -154,7 +154,7 @@ class DataStore(collections.MutableMapping):
     >>> ds = DataStore()
     >>> ds['example'] = 'hello world'
     >>> ds.items()
-    [('example', 'hello world')]
+    [(u'example', 'hello world')]
     >>> ds.clear()
 
     It possible to store numpy arrays in HDF5 format, if the library h5py is
