@@ -54,7 +54,7 @@ def show(calc_id, key=None, rlzs=None):
             print(datastore.view(key, ds))
             return
         obj = ds[key]
-        if key.startswith('/') and hasattr(obj, 'value'):
+        if hasattr(obj, 'value'):
             print(obj.value)
         else:
             print(obj)
