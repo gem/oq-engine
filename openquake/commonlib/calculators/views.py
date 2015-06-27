@@ -48,14 +48,16 @@ def classify_gsim_lt(gsim_lt):
         return "complex"
 
 
-@view.add('composite_source_model')
-def view_composite_source_model(token, dstore):
-    csm_info = dstore['rlzs_assoc'].csm_info
+@view.add('csm_info')
+def view_csm_info(token, dstore):
+    rlzs_assoc = dstore['rlzs_assoc']
+    csm_info = rlzs_assoc.csm_info
     rows = [['source_model', 'num_trts', 'num_samples',
-             'gsim_logic_tree', 'num_realizations']]
+             'gsim_logic_tree', 'num_paths', 'num_realizations']]
     for sm in csm_info.source_models:
+        num_rlzs = len(rlzs_assoc.rlzs_by_smodel[sm.ordinal])
         row = (sm.name, len(sm.trt_models), sm.samples,
                classify_gsim_lt(sm.gsim_lt),
-               sm.gsim_lt.get_num_paths())
+               sm.gsim_lt.get_num_paths(), num_rlzs)
         rows.append(row)
     return rst_table(rows)
