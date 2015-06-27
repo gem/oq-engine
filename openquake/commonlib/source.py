@@ -258,7 +258,7 @@ class RlzsAssoc(collections.Mapping):
     :attr realizations: list of LtRealization objects
     :attr gsim_by_trt: list of dictionaries {trt: gsim}
     :attr rlzs_assoc: dictionary {trt_model_id, gsim: rlzs}
-    :attr rlzs_by_smodel: dictionary {source_model_ordinal: rlzs}
+    :attr rlzs_by_smodel: list of lists of realizations
 
     For instance, for the non-trivial logic tree in
     :mod:`openquake.qa_tests_data.classical.case_15`, which has 4 tectonic
@@ -278,7 +278,7 @@ class RlzsAssoc(collections.Mapping):
         self.csm_info = csm_info
         self.rlzs_assoc = rlzs_assoc or collections.defaultdict(list)
         self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
-        self.rlzs_by_smodel = collections.OrderedDict()
+        self.rlzs_by_smodel = [[] for _ in range(len(csm_info.source_models))]
 
     @property
     def num_samples(self):
@@ -290,7 +290,7 @@ class RlzsAssoc(collections.Mapping):
     @property
     def realizations(self):
         """Flat list with all the realizations"""
-        return sum(self.rlzs_by_smodel.itervalues(), [])
+        return sum(self.rlzs_by_smodel, [])
 
     def get_gsims_by_trt_id(self):
         """Returns associations trt_id -> [GSIM instance, ...]"""

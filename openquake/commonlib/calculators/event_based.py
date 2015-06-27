@@ -112,7 +112,7 @@ def get_gmfs_nbytes(num_sites, num_imts, rlzs_assoc, sescollection):
 
 
 @datastore.view.add('gmfs_total_size')
-def view_gmfs_total_size(key, dstore):
+def view_gmfs_total_size(name, dstore):
     """
     :returns:
         the total size of the GMFs as human readable string; it assumes
@@ -131,7 +131,8 @@ rlz_col_dt = numpy.dtype([('rlz', numpy.uint32), ('col', numpy.uint32)])
 
 def build_rlz_col_assocs(rlzs_assoc):
     """
-    Build the association array rlz.ordinal -> col_id
+    :param rlzs_assoc: a RlzsAssoc instance
+    :returns: an array with the association array rlz.ordinal -> col_id
     """
     assocs = []
     for rlz in rlzs_assoc.realizations:
@@ -141,7 +142,10 @@ def build_rlz_col_assocs(rlzs_assoc):
 
 
 @datastore.view.add('rlzs_by_col')
-def view_rlzs_by_col(key, dstore):
+def view_rlzs_by_col(name, dstore):
+    """
+    :returns: a dictionary col_id -> realization ordinals
+    """
     return groupby(dstore['/rlz_col_assocs'],
                    lambda x: x['col'],
                    lambda rows: [row['rlz'] for row in rows])
@@ -576,8 +580,10 @@ class EventBasedCalculator(ClassicalCalculator):
             for tag, sesrup in sorted(sescol.iteritems()):
                 sesrup = sescol[tag]
                 self.sesruptures.append(sesrup)
-            self.datasets.append(
-                self.datastore.create_dset('/gmfs/col%02d' % col_id, gmf_dt))
+            if self.oqparam.ground_motion_fields:
+                self.datasets.append(
+                    self.datastore.create_dset(
+                        '/gmfs/col%02d' % col_id, gmf_dt))
 
     def combine_curves_and_save_gmfs(self, acc, res):
         """
