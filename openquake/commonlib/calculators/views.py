@@ -38,11 +38,12 @@ def classify_gsim_lt(gsim_lt):
     """
     :returns: "trivial", "simple" or "complex"
     """
-    num_gsims = sum(map(len, gsim_lt.values.itervalues()))
-    num_trts = len(gsim_lt.values)
-    if num_gsims == num_trts:  # one gsim per TRT
+    trt_gsims = gsim_lt.values.items()
+    num_gsims = map(len, gsim_lt.values.itervalues())
+    complex_trts = [trt for trt, gsims in trt_gsims if len(gsims) > 1]
+    if all(n == 1 for n in num_gsims):  # one gsim per TRT
         return "trivial"
-    elif num_trts == 1:
+    elif len(complex_trts) == 1:
         return "simple"
     else:
         return "complex"
@@ -52,12 +53,17 @@ def classify_gsim_lt(gsim_lt):
 def view_csm_info(token, dstore):
     rlzs_assoc = dstore['rlzs_assoc']
     csm_info = rlzs_assoc.csm_info
-    rows = [['source_model', 'num_trts', 'num_samples',
-             'gsim_logic_tree', 'num_paths', 'num_realizations']]
+    rows = [['source_model', 'num_trts',
+             'gsim_logic_tree', 'num_gsims', 'num_realizations']]
     for sm in csm_info.source_models:
-        num_rlzs = len(rlzs_assoc.rlzs_by_smodel[sm.ordinal])
-        row = (sm.name, len(sm.trt_models), sm.samples,
-               classify_gsim_lt(sm.gsim_lt),
-               sm.gsim_lt.get_num_paths(), num_rlzs)
+        rlzs = rlzs_assoc.rlzs_by_smodel[sm.ordinal]
+        num_rlzs = len(rlzs)
+        num_branches = [n for n in sm.gsim_lt.get_num_branches().values() if n]
+        num_paths = sm.gsim_lt.get_num_paths()
+        num_gsims = ','.join(map(str, num_branches))
+        tmodels = [tm for tm in sm.trt_models  # effective
+                   if tm.trt in sm.gsim_lt.tectonic_region_types]
+        row = (sm.name, len(tmodels), classify_gsim_lt(sm.gsim_lt),
+               num_gsims, '%d/%d' % (num_rlzs, num_paths))
         rows.append(row)
     return rst_table(rows)
