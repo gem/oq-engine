@@ -199,7 +199,7 @@ def _build_header(dtype, root):
         if not root:
             return []
         return [root + (str(dtype), dtype.shape)]
-    for field in dtype.fields:
+    for field in dtype.names:
         dt = dtype.fields[field][0]
         if dt.subdtype is None:  # nested
             header.extend(_build_header(dt, root + (field,)))
