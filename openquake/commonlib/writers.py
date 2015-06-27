@@ -216,11 +216,11 @@ def build_header(dtype):
 
     >>> imt_dt = numpy.dtype([('PGA', float, 3), ('PGV', float, 4)])
     >>> build_header(imt_dt)
-    ['PGV:float64:4', 'PGA:float64:3']
+    ['PGA:float64:3', 'PGV:float64:4']
     >>> gmf_dt = numpy.dtype([('A', imt_dt), ('B', imt_dt),
     ...                       ('idx', numpy.uint32)])
     >>> build_header(gmf_dt)
-    ['A-PGV:float64:4', 'A-PGA:float64:3', 'B-PGV:float64:4', 'B-PGA:float64:3', 'idx:uint32:']
+    ['A-PGA:float64:3', 'A-PGV:float64:4', 'B-PGA:float64:3', 'B-PGV:float64:4', 'idx:uint32:']
     """
     header = _build_header(dtype, ())
     h = []
