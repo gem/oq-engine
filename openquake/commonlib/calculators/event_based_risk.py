@@ -18,7 +18,6 @@
 
 import logging
 import operator
-import functools
 import collections
 
 import numpy
@@ -93,21 +92,25 @@ def _loss_map_names(conditional_loss_poes):
     return names
 
 
-def extract_avglosses(dstore, pattern):
+@datastore.view.add('avglosses_rlzs', 'agg_avgloss_rlzs')
+def view_avglosses(name, dstore):
     """
     Function extracting the average losses from the loss curves
     for each realization.
 
+    :param name: 'avglosses_rlzs' or 'agg_avgloss_rlzs'
     :param dstore: a datastore object
-    :param pattern: '/loss_curves-rlzs/%s' or '/agg_loss_curve-rlzs/%s'
     :returns: list of dictionaries loss_type -> avg losses per asset
     """
+    key = {'avglosses_rlzs': '/loss_curves-rlzs/',
+           'agg_avgloss_rlzs':  '/agg_loss_curve-rlzs/'}[name]
     rlzs = dstore['rlzs_assoc'].realizations
     loss_types = dstore['riskmodel'].get_loss_types()
     data = []
     for rlz in rlzs:
-        curves = dstore[pattern % rlz.uid]
-        data.append({lt: curves[lt]['avg'] for lt in loss_types})
+        curves = dstore[key + rlz.uid]
+        data.append([(lt, rlz.uid, curves[lt]['avg'])
+                     for lt in loss_types])
     return data
 
 
@@ -283,11 +286,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         if specific_assets:
             self.event_loss_asset = event_loss_asset
         self.event_loss = event_loss
-
-        self.datastore['avglosses_rlzs'] = functools.partial(
-            extract_avglosses, pattern='/loss_curves-rlzs/%s')
-        self.datastore['agg_avgloss_rlzs'] = functools.partial(
-            extract_avglosses, pattern='/agg_loss_curve-rlzs/%s')
 
         # store statistics (i.e. mean and quantiles) for curves and maps
         if len(self.rlzs_assoc.realizations) > 1:

@@ -32,9 +32,12 @@ except ImportError:
             raise ImportError('Could not import h5py.%s' % name)
     h5py = mock_h5py()
 
-
+from openquake.baselib.general import CallableDict
 from openquake.commonlib.writers import write_csv
 
+
+# a dictionary of views datastore -> array
+view = CallableDict()
 
 DATADIR = os.environ.get('OQ_DATADIR', os.path.expanduser('~/oqdata'))
 
@@ -154,9 +157,6 @@ class DataStore(collections.MutableMapping):
     [('example', 'hello world')]
     >>> ds.clear()
 
-    It is also possible to store callables taking in input the datastore.
-    They will be automatically invoked when the key is accessed.
-
     It possible to store numpy arrays in HDF5 format, if the library h5py is
     installed and if the last field of the key is 'h5'. It is also possible
     to store items of the form (name, value) where name is a string and value
@@ -267,10 +267,7 @@ class DataStore(collections.MutableMapping):
         if not os.path.exists(path) and self.parent:
             path = self.parent.path(key)
         with open(path) as df:
-            value = cPickle.load(df)
-            if callable(value):
-                return value(self)
-            return value
+            return cPickle.load(df)
 
     def __setitem__(self, key, value):
         if key.startswith('/'):
