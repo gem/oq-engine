@@ -5,8 +5,8 @@ Calculation workflows are broken into 6 distinct phases. In order of execution, 
 ### Pre-execute
 
 The pre-execution phase in intended for:
-- parsing and preparing inputs (“unzipping” input XML files into the database, for example)
-- initialising the calculation “work packages” (and saving them to the database)
+- parsing and preparing inputs (“unzipping” input XML files, for example)
+- initialising the calculation “work packages”
 
 ### Execute
 
@@ -27,7 +27,7 @@ The post-processing options available depend on the calculation mode. Here are s
 
 ### Export
 
-If a user specifies the `--exports` option on the command line, all calculation results will automatically be exported from the database to NRML XML.
+If a user specifies the `--exports` option on the command line, all calculation results will automatically be exported from the storage to NRML XML.
 
 If the user does not specify this option, it is still possible to export results manually using the `--export-output` command line option.
 
