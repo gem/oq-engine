@@ -146,18 +146,25 @@ class JobFromFileTestCase(unittest.TestCase):
 
 class RunCalcTestCase(unittest.TestCase):
     """
-    Test engine.run_calc in case of error
+    Test engine.run_calc in case of errors
     """
     def test(self):
         cfg = helpers.get_data_path('event_based_hazard/job.ini')
         job = engine.job_from_file(cfg, 'test_user')
         with tempfile.NamedTemporaryFile() as temp:
             with self.assertRaises(ZeroDivisionError), mock.patch(
-                    'openquake.engine.engine._do_run_calc', lambda *args: 1/0):
+                    'openquake.engine.engine._do_run_calc', lambda *args: 1/0
+            ), mock.patch('openquake.engine.engine.cleanup_after_job',
+                          lambda job: None):
                 engine.run_calc(job, 'info', temp.name, exports=[])
-            # make sure the error has been logged
-            self.assertIn('integer division or modulo by zero',
-                          open(temp.name).read())
+            logged = open(temp.name).read()
+
+            # make sure the real error has been logged
+            self.assertIn('integer division or modulo by zero', logged)
+
+            # also check the spurious cleanup error
+            self.assertIn('TypeError: <lambda>() got an unexpected keyword '
+                          "argument 'terminate'",  logged)
 
 
 class OpenquakeCliTestCase(unittest.TestCase):
