@@ -19,8 +19,7 @@ import os
 import sys
 from openquake.risklib.scientific import (
     VulnerabilityFunction, DegenerateDistribution, classical)
-from openquake.baselib.general import search_module
-from openquake.hazardlib.general import git_suffix
+from openquake.baselib.general import search_module, git_suffix
 
 __all__ = ["VulnerabilityFunction", "DegenerateDistribution", "classical"]
 
