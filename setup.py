@@ -69,7 +69,9 @@ setup(
     platforms=["any"],
     package_data={"openquake.risklib": [
         "README.md", "LICENSE"]},
-    scripts=["bin/oq-lite"],
+    entry_points={
+    'console_scripts': [    
+        'oq-lite = openquake.commonlib.commands:oq_lite']},
     namespace_packages=['openquake'],
     include_package_data=True,
     zip_safe=False,
