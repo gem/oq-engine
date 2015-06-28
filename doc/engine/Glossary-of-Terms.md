@@ -14,7 +14,7 @@
 	- status (i.e., “Is it running?”, as well as the calculation phase)
 	- logging level
 	- the user who initiated/owns this job
-	- engine and supervisor process IDs
+	- engine process IDs
 
   If in the future calculation resumability is supported, there could be more than 1 job associated with a calculation.
 
@@ -54,14 +54,6 @@
   A machine dedicated to run worker processes.
 
   The concepts of “worker machines” and “worker processes” are often referred to synonymously (as “workers”, for short). Technically, there can be many worker processes running on a single worker machine. The number of worker processes per machine is typically equal to the number of CPU cores available.
-
-* **supervisor**
-
-  A process which is launched when a calculation is started for the purpose of monitoring and controlling the engine process.
-
-  The supervisor is responsible for recording job statistics (such as execution time), collecting and consolidating log messages, monitoring the engine process, and responding to critical errors.
-
-  The most critical roles of the supervisor are logging and error response. Because calculations can be carried out by the combined effort of many machines, it is important to be able to collect all log messages for all machines (control node and workers) and store them in a single place. To do this, workers transmit log messages through RabbitMQ (using AMQP). The supervisor collects all log messages, then either a) prints the messages to standard output or b) saves them to a file. Additionally, the supervisor sifts through incoming log messages and looks for ‘error’ or ‘critical’ level messages. If such a message is detected, the supervisor will kill the engine process, abort the calculation, record the failed status in the database, and clean up. At this time, the supervisor is not capable of halting tasks which are currently in progress, but there are mechanisms which exist to abort in-queue tasks in the case of a failure.
 
 * **NRML**
 
