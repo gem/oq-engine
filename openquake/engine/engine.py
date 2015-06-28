@@ -109,23 +109,34 @@ def job_stats(job):
     js = job.jobstats
     try:
         yield
-    except:
-        conn = django_db.connections['job_init']
-        if conn.is_dirty():
-            conn.rollback()
-        raise
     finally:
+        tb = traceback.format_exc()  # get the traceback of the error, if any
         job.is_running = False
-        job.save()
+        if tb != 'None\n':
+            # rollback the transactions; unfortunately, for mysterious reasons,
+            # this is not enough and an OperationError may still show up in the
+            # finalization phase when forks are involved
+            for conn in django_db.connections.all():
+                conn.rollback()
+        # try to save the job stats on the database and then clean up;
+        # if there was an error in the calculation, this part may fail;
+        # in such a situation, we simply log the cleanup error without
+        # taking further action, so that the real error can propagate
+        try:
+            job.save()
+            curs.execute("select pg_database_size(%s)", (dbname,))
+            new_dbsize = curs.fetchall()[0][0]
+            js.disk_space = new_dbsize - dbsize
+            js.stop_time = datetime.utcnow()
+            js.save()
+            cleanup_after_job(job, terminate=TERMINATE)
+        except:
+            # log the non-interesting error
+            logs.LOG.error('finalizing', exc_info=True)
 
-        # save job stats
-        curs.execute("select pg_database_size(%s)", (dbname,))
-        new_dbsize = curs.fetchall()[0][0]
-        js.disk_space = new_dbsize - dbsize
-        js.stop_time = datetime.utcnow()
-        js.save()
-
-        cleanup_after_job(job, terminate=TERMINATE)
+        # log the real error, if any
+        if tb != 'None\n':
+            logs.LOG.critical(tb)
 
 
 def create_job(user_name="openquake", log_level='progress'):
@@ -190,12 +201,7 @@ def run_calc(job, log_level, log_file, exports, lite=False):
     # first of all check the database version and exit if the db is outdated
     upgrader.check_versions(django_db.connections['admin'])
     with logs.handle(job, log_level, log_file), job_stats(job):  # run the job
-        try:
-            _do_run_calc(calculator, exports)
-        except:
-            tb = traceback.format_exc()
-            logs.LOG.critical(tb)
-            raise
+        _do_run_calc(calculator, exports)
     return calculator
 
 
