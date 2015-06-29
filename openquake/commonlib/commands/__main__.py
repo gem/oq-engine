@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
@@ -20,11 +21,12 @@ import os
 import importlib
 
 from openquake.commonlib import sap, __version__
+from openquake.commonlib import commands
 
 
 def oq_lite():
     modnames = ['openquake.commonlib.commands.%s' % mod[:-3]
-                for mod in os.listdir(os.path.dirname(__file__))
+                for mod in os.listdir(commands.__path__[0])
                 if mod.endswith('.py') and not mod.startswith('_')]
     parsers = [importlib.import_module(modname).parser for modname in modnames]
     parser = sap.compose(parsers, version=__version__)
