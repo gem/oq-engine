@@ -23,7 +23,7 @@ import numpy
 
 from openquake.commonlib.calculators import base
 from openquake.baselib.performance import Monitor
-from openquake.commonlib import readinput, oqvalidation
+from openquake.commonlib import readinput, oqvalidation, datastore
 
 
 class DifferentFiles(Exception):
@@ -35,6 +35,14 @@ def columns(line):
     for column in line.split(','):
         data.append(numpy.array(map(float, column.split(' '))))
     return data
+
+
+def get_datastore(calc):
+    ds = datastore.DataStore(calc.datastore.calc_id)
+    hc_id = ds['oqparam'].hazard_calculation_id
+    if hc_id:
+        ds.parent = datastore.DataStore(hc_id)
+    return ds
 
 
 class CalculatorTestCase(unittest.TestCase):

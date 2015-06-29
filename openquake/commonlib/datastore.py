@@ -32,9 +32,12 @@ except ImportError:
             raise ImportError('Could not import h5py.%s' % name)
     h5py = mock_h5py()
 
-
+from openquake.baselib.general import CallableDict
 from openquake.commonlib.writers import write_csv
 
+
+# a dictionary of views datastore -> array
+view = CallableDict()
 
 DATADIR = os.environ.get('OQ_DATADIR', os.path.expanduser('~/oqdata'))
 
@@ -151,11 +154,8 @@ class DataStore(collections.MutableMapping):
     >>> ds = DataStore()
     >>> ds['example'] = 'hello world'
     >>> ds.items()
-    [('example', 'hello world')]
+    [(u'example', 'hello world')]
     >>> ds.clear()
-
-    It is also possible to store callables taking in input the datastore.
-    They will be automatically invoked when the key is accessed.
 
     It possible to store numpy arrays in HDF5 format, if the library h5py is
     installed and if the last field of the key is 'h5'. It is also possible
@@ -195,16 +195,7 @@ class DataStore(collections.MutableMapping):
         :param dtype: dtype of the dataset (usually composite)
         :param size: size of the dataset (if None, the dataset is extendable)
         """
-        assert key.startswith('/'), key
         return Hdf5Dataset(self.hdf5, key, dtype, size)
-
-    def path(self, key):
-        """
-        Return the full path name associated to the given key
-        """
-        if key.startswith('/'):
-            return key
-        return os.path.join(self.calc_dir, key + '.pik')
 
     def export_path(self, key, fmt):
         """
@@ -238,12 +229,8 @@ class DataStore(collections.MutableMapping):
         If no key is given, returns the total size of all files.
         """
         if key is None:
-            piksize = sum(self.getsize(key) for key in self
-                          if not key.startswith('/'))
-            return piksize + os.path.getsize(self.hdf5path)
-        elif key.startswith('/'):
-            return ByteCounter.get_nbytes(self.hdf5[key])
-        return os.path.getsize(self.path(key))
+            return os.path.getsize(self.hdf5path)
+        return ByteCounter.get_nbytes(self.hdf5[key])
 
     def get(self, key, default):
         """
@@ -251,55 +238,54 @@ class DataStore(collections.MutableMapping):
         """
         try:
             return self[key]
-        except (KeyError, IOError):
+        except KeyError:
             return default
 
     def __getitem__(self, key):
-        if key.startswith('/'):
-            try:
-                return self.hdf5[key]
-            except KeyError:
-                if self.parent:
-                    return self.parent.hdf5[key]
-                else:
+        try:
+            val = self.hdf5[key]
+        except KeyError:
+            if self.parent:
+                try:
+                    val = self.parent.hdf5[key]
+                except KeyError:
                     raise KeyError(key)
-        path = self.path(key)
-        if not os.path.exists(path) and self.parent:
-            path = self.parent.path(key)
-        with open(path) as df:
-            value = cPickle.load(df)
-            if callable(value):
-                return value(self)
-            return value
+            else:
+                raise KeyError(key)
+        try:
+            shape = val.shape
+        except AttributeError:  # val is a group
+            return val
+        if not shape:
+            val = cPickle.loads(val.value)
+        return val
 
     def __setitem__(self, key, value):
-        if key.startswith('/'):
-            if not isinstance(value, numpy.ndarray):
-                raise ValueError('not an array: %r' % value)
-            try:
-                self.hdf5[key] = value
-            except RuntimeError as exc:
-                raise RuntimeError('Could not save %s: %s in %s' %
-                                   (key, exc, self.hdf5path))
+        if (not isinstance(value, numpy.ndarray) or
+                value.dtype is numpy.dtype(object)):
+            val = numpy.array(cPickle.dumps(value, cPickle.HIGHEST_PROTOCOL))
         else:
-            with open(self.path(key), 'w') as df:
-                return cPickle.dump(value, df, cPickle.HIGHEST_PROTOCOL)
+            val = value
+        if key in self.hdf5:
+            # there is a bug in the current version of HDF5 for composite
+            # arrays: is impossible to save twice the same key; so we remove
+            # the key first, then it is possible to save it again
+            del self[key]
+        try:
+            self.hdf5[key] = val
+        except RuntimeError as exc:
+            raise RuntimeError('Could not save %s: %s in %s' %
+                               (key, exc, self.hdf5path))
 
     def __delitem__(self, key):
-        if key.startswith('/'):
-            del self.hdf5[key]
-        else:
-            os.remove(self.path(key))
+        del self.hdf5[key]
 
     def __iter__(self):
-        for f in sorted(os.listdir(self.calc_dir)):
-            if f.endswith('.pik'):
-                yield f[:-4]
         for path in sorted(self.hdf5):
-            yield '/' + path
+            yield path
 
     def __contains__(self, key):
-        return key in set(self)
+        return key in self.hdf5
 
     def __len__(self):
         return sum(1 for f in self)

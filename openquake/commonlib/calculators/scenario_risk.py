@@ -78,7 +78,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
     Run a scenario risk calculation
     """
     core_func = scenario_risk
-    epsilon_matrix = datastore.persistent_attribute('/epsilon_matrix')
+    epsilon_matrix = datastore.persistent_attribute('epsilon_matrix')
     losses_by_key = datastore.persistent_attribute('losses_by_key')
     gmf_by_trt_gsim = datastore.persistent_attribute('gmf_by_trt_gsim')
     pre_calculator = 'scenario'

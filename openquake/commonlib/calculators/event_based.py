@@ -25,7 +25,7 @@ import collections
 
 import numpy
 
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, groupby, humansize
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib.calc.hazard_curve import zero_curves
@@ -77,17 +77,16 @@ def counts_per_rlz(num_sites, rlzs_assoc, sescollection):
     rlzs = rlzs_assoc.realizations
     counts = numpy.zeros(len(rlzs), counts_dt)
     for rlz in rlzs:
-        col_ids = rlzs_assoc.csm_info.get_col_ids(rlz)
-        for col_id, sc in enumerate(sescollection):
-            if col_id in col_ids:
-                i = rlz.ordinal
+        col_ids = list(rlzs_assoc.csm_info.get_col_ids(rlz))
+        for sc in sescollection[col_ids]:
+            i = rlz.ordinal
 
-                # ruptures per realization
-                counts['rup'][i] += len(sc)
+            # ruptures per realization
+            counts['rup'][i] += len(sc)
 
-                # gmvs per realization
-                for rup in sc.itervalues():
-                    counts['gmf'][i] += num_affected_sites(rup, num_sites)
+            # gmvs per realization
+            for rup in sc.itervalues():
+                counts['gmf'][i] += num_affected_sites(rup, num_sites)
     return counts
 
 
@@ -110,6 +109,49 @@ def get_gmfs_nbytes(num_sites, num_imts, rlzs_assoc, sescollection):
         for tag, rup in sescol.iteritems():
             nbytes += bytes_per_record * num_affected_sites(rup, num_sites)
     return nbytes
+
+
+@datastore.view.add('gmfs_total_size')
+def view_gmfs_total_size(name, dstore):
+    """
+    :returns:
+        the total size of the GMFs as human readable string; it assumes
+        4 bytes for the rupture index, 4 bytes for the realization index
+        and 8 bytes for each float (there are num_imts floats per gmf)
+    """
+    nbytes = 0
+    num_imts = len(dstore['oqparam'].imtls)
+    for counts in dstore['counts_per_rlz']:
+        nbytes += 8 * counts['gmf'] * (num_imts + 1)
+    return humansize(nbytes)
+
+
+rlz_col_dt = numpy.dtype([('rlz', numpy.uint32), ('col', numpy.uint32)])
+
+
+def build_rlz_col_assocs(rlzs_assoc):
+    """
+    :param rlzs_assoc: a RlzsAssoc instance
+    :returns: an array with the association array rlz.ordinal -> col_id
+    """
+    assocs = []
+    for rlz in rlzs_assoc.realizations:
+        for col_id in sorted(rlzs_assoc.csm_info.get_col_ids(rlz)):
+            assocs.append((rlz.ordinal, col_id))
+    return numpy.array(assocs, rlz_col_dt)
+
+
+@datastore.view.add('rlzs_by_col')
+def view_rlzs_by_col(name, dstore):
+    """
+    :returns: a dictionary col_id -> realization ordinals
+    """
+    return groupby(dstore['rlz_col_assocs'],
+                   lambda x: x['col'],
+                   lambda rows: [row['rlz'] for row in rows])
+
+
+# #################################################################### #
 
 
 def get_geom(surface, is_from_fault_source, is_multi_surface):
@@ -336,9 +378,10 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
     Event based PSHA calculator generating the ruptures only
     """
     core_func = compute_ruptures
-    tags = datastore.persistent_attribute('/tags')
+    tags = datastore.persistent_attribute('tags')
     sescollection = datastore.persistent_attribute('sescollection')
-    counts_per_rlz = datastore.persistent_attribute('/counts_per_rlz')
+    counts_per_rlz = datastore.persistent_attribute('counts_per_rlz')
+    rlz_col_assocs = datastore.persistent_attribute('rlz_col_assocs')
     is_stochastic = True
 
     def pre_execute(self):
@@ -381,7 +424,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         Save the SES collection and the array counts_per_rlz
         """
         nc = self.rlzs_assoc.csm_info.num_collections
-        sescollection = [{} for col_id in range(nc)]
+        sescollection = numpy.array([{} for col_id in range(nc)])
         tags = []
         ordinal = 0
         for trt_id in sorted(result):
@@ -402,10 +445,11 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         with self.monitor('counts_per_rlz'):
             self.counts_per_rlz = counts_per_rlz(
                 len(self.sitecol), self.rlzs_assoc, sescollection)
-            self.datastore['/counts_per_rlz'].attrs[
+            self.datastore['counts_per_rlz'].attrs[
                 'gmfs_nbytes'] = get_gmfs_nbytes(
                 len(self.sitecol), len(self.oqparam.imtls),
                 self.rlzs_assoc, sescollection)
+            self.rlz_col_assocs = build_rlz_col_assocs(self.rlzs_assoc)
 
 
 # ######################## GMF calculator ############################ #
@@ -538,7 +582,7 @@ class EventBasedCalculator(ClassicalCalculator):
                 sesrup = sescol[tag]
                 self.sesruptures.append(sesrup)
             self.datasets.append(
-                self.datastore.create_dset('/gmfs/col%02d' % col_id, gmf_dt))
+                self.datastore.create_dset('gmfs/col%02d' % col_id, gmf_dt))
 
     def combine_curves_and_save_gmfs(self, acc, res):
         """
@@ -594,8 +638,8 @@ class EventBasedCalculator(ClassicalCalculator):
         if oq.ground_motion_fields:
             # sanity check on the saved gmfs size
             expected_nbytes = self.datastore[
-                '/counts_per_rlz'].attrs['gmfs_nbytes']
-            self.datastore['/gmfs'].attrs['nbytes'] = self.nbytes
+                'counts_per_rlz'].attrs['gmfs_nbytes']
+            self.datastore['gmfs'].attrs['nbytes'] = self.nbytes
             assert self.nbytes == expected_nbytes, (
                 self.nbytes, expected_nbytes)
         return curves_by_trt_gsim

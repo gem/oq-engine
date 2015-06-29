@@ -291,6 +291,13 @@ class RlzsAssoc(collections.Mapping):
         self.rlzs_by_smodel = collections.OrderedDict()
 
     @property
+    def num_samples(self):
+        """
+        Underlying number_of_logic_tree_samples
+        """
+        return self.csm_info.source_model_lt.num_samples
+
+    @property
     def realizations(self):
         """Flat list with all the realizations"""
         return sum(self.rlzs_by_smodel.itervalues(), [])

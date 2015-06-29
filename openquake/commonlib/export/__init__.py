@@ -47,7 +47,7 @@ def get_export_csv(ekey):
     return the default csv exporter, otherwise raise a KeyError.
     """
     key, fmt = ekey
-    if key.startswith('/') and fmt == 'csv':
+    if fmt == 'csv':
         return export_csv
     raise KeyError(ekey)
 
