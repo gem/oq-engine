@@ -104,7 +104,7 @@ def get_effective_rlzs(rlzs):
     ordinal = 0
     for uid, group in groupby(rlzs, operator.attrgetter('uid')).iteritems():
         rlz = group[0]
-        if all(path == 'X' for path in rlz.lt_uid):  # empty realization
+        if all(path == '@' for path in rlz.lt_uid):  # empty realization
             continue
         effective.append(
             Realization(rlz.value, sum(r.weight for r in group),
@@ -1188,7 +1188,7 @@ class GsimLogicTree(object):
                 assert branch.uncertainty in self.values[trt], \
                     branch.uncertainty  # sanity check
                 lt_path.append(branch.id)
-                lt_uid.append(branch.id if branch.effective else 'X')
+                lt_uid.append(branch.id if branch.effective else '@')
                 weight *= branch.weight
                 value.append(branch.uncertainty)
             yield Realization(tuple(value), weight, tuple(lt_path),
