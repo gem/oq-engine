@@ -1,8 +1,7 @@
-#!/usr/bin/env python
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2014, GEM Foundation
+#  Copyright (c) 2015, GEM Foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -19,18 +18,18 @@
 
 import os
 import importlib
+
 from openquake.commonlib import sap, __version__
-from openquake.commonlib import commands
 
 
-if __name__ == '__main__':
+def oq_lite():
     modnames = ['openquake.commonlib.commands.%s' % mod[:-3]
-                for mod in os.listdir(commands.__path__[0])
+                for mod in os.listdir(os.path.dirname(__file__))
                 if mod.endswith('.py') and not mod.startswith('_')]
     parsers = [importlib.import_module(modname).parser for modname in modnames]
     parser = sap.compose(parsers, version=__version__)
-    try:
-        parser.callfunc()
-    except NotImplementedError as exc:
-        print 'Sorry, not implemented yet: %s' % exc
-        raise
+    parser.parentparser.prog = 'oq-lite'
+    parser.callfunc()
+
+if __name__ == '__main__':
+    oq_lite()
