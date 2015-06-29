@@ -267,6 +267,9 @@ class DataStore(collections.MutableMapping):
         else:
             val = value
         if key in self.hdf5:
+            # there is a bug in the current version of HDF5 for composite
+            # arrays: is impossible to save twice the same key; so we remove
+            # the key first, then it is possible to save it again
             del self[key]
         try:
             self.hdf5[key] = val
