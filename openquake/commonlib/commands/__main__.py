@@ -20,8 +20,7 @@
 import os
 import importlib
 
-from openquake.commonlib import sap, __version__
-from openquake.commonlib import commands
+from openquake.commonlib import commands, sap, __version__
 
 
 def oq_lite():
