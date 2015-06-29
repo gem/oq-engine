@@ -210,23 +210,23 @@ class StatsTestCase(unittest.TestCase):
             quantiles=[0.1, 0.9],
             conditional_loss_poes=[0.35, 0.24, 0.13],
             poes_disagg=[]).build(outputs)
-        cls.tempdir = tempfile.mkdtemp()
 
     def test_get_stat_curves(self):
+        tempdir = tempfile.mkdtemp()
         curves, ins_curves, maps = scientific.get_stat_curves(self.stats)
 
-        actual = os.path.join(self.tempdir, 'expected_loss_curves.csv')
+        actual = os.path.join(tempdir, 'expected_loss_curves.csv')
         writers.write_csv(actual, curves, fmt='%05.2f')
+
         tests.check_equal(__file__, 'expected_loss_curves.csv', actual)
 
-        actual = os.path.join(self.tempdir, 'expected_ins_curves.csv')
+        actual = os.path.join(tempdir, 'expected_ins_curves.csv')
         writers.write_csv(actual, ins_curves, fmt='%05.2f')
         tests.check_equal(__file__, 'expected_ins_curves.csv', actual)
 
-        actual = os.path.join(self.tempdir, 'expected_loss_maps.csv')
+        actual = os.path.join(tempdir, 'expected_loss_maps.csv')
         writers.write_csv(actual, maps, fmt='%05.2f')
         tests.check_equal(__file__, 'expected_loss_maps.csv', actual)
 
-    @classmethod
-    def tearDownClass(cls):
-        shutil.rmtree(cls.tempdir)
+        # remove only if the test pass
+        shutil.rmtree(tempdir)
