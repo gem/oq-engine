@@ -122,28 +122,28 @@ hazard_curve-smltp_SM1-gsimltp_BA2008_C2003.csv
 hazard_curve-smltp_SM1-gsimltp_BA2008_T2002.csv
 hazard_curve-smltp_SM1-gsimltp_CB2008_C2003.csv
 hazard_curve-smltp_SM1-gsimltp_CB2008_T2002.csv
-hazard_curve-smltp_SM2_a3b1-gsimltp_BA2008_*.csv
-hazard_curve-smltp_SM2_a3b1-gsimltp_CB2008_*.csv
-hazard_curve-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008_*.csv
-hazard_curve-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_*.csv
+hazard_curve-smltp_SM2_a3b1-gsimltp_BA2008_@.csv
+hazard_curve-smltp_SM2_a3b1-gsimltp_CB2008_@.csv
+hazard_curve-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008_@.csv
+hazard_curve-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv
 hazard_map-mean.csv
 hazard_map-smltp_SM1-gsimltp_BA2008_C2003.csv
 hazard_map-smltp_SM1-gsimltp_BA2008_T2002.csv
 hazard_map-smltp_SM1-gsimltp_CB2008_C2003.csv
 hazard_map-smltp_SM1-gsimltp_CB2008_T2002.csv
-hazard_map-smltp_SM2_a3b1-gsimltp_BA2008_*.csv
-hazard_map-smltp_SM2_a3b1-gsimltp_CB2008_*.csv
-hazard_map-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008_*.csv
-hazard_map-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_*.csv
+hazard_map-smltp_SM2_a3b1-gsimltp_BA2008_@.csv
+hazard_map-smltp_SM2_a3b1-gsimltp_CB2008_@.csv
+hazard_map-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008_@.csv
+hazard_map-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv
 hazard_uhs-mean.csv
 hazard_uhs-smltp_SM1-gsimltp_BA2008_C2003.csv
 hazard_uhs-smltp_SM1-gsimltp_BA2008_T2002.csv
 hazard_uhs-smltp_SM1-gsimltp_CB2008_C2003.csv
 hazard_uhs-smltp_SM1-gsimltp_CB2008_T2002.csv
-hazard_uhs-smltp_SM2_a3b1-gsimltp_BA2008_*.csv
-hazard_uhs-smltp_SM2_a3b1-gsimltp_CB2008_*.csv
-hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008_*.csv
-hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_*.csv'''.split(),
+hazard_uhs-smltp_SM2_a3b1-gsimltp_BA2008_@.csv
+hazard_uhs-smltp_SM2_a3b1-gsimltp_CB2008_@.csv
+hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008_@.csv
+hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
                               case_15.__file__)
 
     @attr('qa', 'hazard', 'classical')
@@ -168,8 +168,8 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_*.csv'''.split(),
     def test_case_19(self):
         self.assert_curves_ok([
             'hazard_curve-mean.csv',
-            'hazard_curve-smltp_b1-gsimltp_*_*_*_*_b51_*_*.csv',
-            'hazard_curve-smltp_b1-gsimltp_*_*_*_*_b52_*_*.csv',
-            'hazard_curve-smltp_b1-gsimltp_*_*_*_*_b53_*_*.csv',
-            'hazard_curve-smltp_b1-gsimltp_*_*_*_*_b54_*_*.csv',
+            'hazard_curve-smltp_b1-gsimltp_@_@_@_@_b51_@_@.csv',
+            'hazard_curve-smltp_b1-gsimltp_@_@_@_@_b52_@_@.csv',
+            'hazard_curve-smltp_b1-gsimltp_@_@_@_@_b53_@_@.csv',
+            'hazard_curve-smltp_b1-gsimltp_@_@_@_@_b54_@_@.csv',
         ], case_19.__file__, delta=1E-7)

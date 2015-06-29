@@ -168,12 +168,12 @@ class EventBasedTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'event_based')
     def test_case_5(self):
         expected = '''\
-gmf-smltp_b2-gsimltp_*_b2_1_*_*.csv
-gmf-smltp_b2-gsimltp_*_b2_2_*_*.csv
-gmf-smltp_b2-gsimltp_*_b2_3_*_*.csv
-gmf-smltp_b2-gsimltp_*_b2_4_*_*.csv
-gmf-smltp_b2-gsimltp_*_b2_5_*_*.csv
-gmf-smltp_b3-gsimltp_*_*_*_b4_1.csv'''.split()
+gmf-smltp_b2-gsimltp_@_b2_1_@_@.csv
+gmf-smltp_b2-gsimltp_@_b2_2_@_@.csv
+gmf-smltp_b2-gsimltp_@_b2_3_@_@.csv
+gmf-smltp_b2-gsimltp_@_b2_4_@_@.csv
+gmf-smltp_b2-gsimltp_@_b2_5_@_@.csv
+gmf-smltp_b3-gsimltp_@_@_@_b4_1.csv'''.split()
         out = self.run_calc(case_5.__file__, 'job.ini', exports='csv')
         fnames = out['/gmfs', 'csv']
         for exp, got in zip(expected, fnames):
@@ -231,7 +231,7 @@ gmf-smltp_b3-gsimltp_*_*_*_b4_1.csv'''.split()
     @attr('qa', 'hazard', 'event_based')
     def test_case_17(self):  # oversampling
         expected = [
-            'hazard_curve-smltp_b1-gsimltp_*-ltr_0.csv',
+            'hazard_curve-smltp_b1-gsimltp_@-ltr_0.csv',
             'hazard_curve-smltp_b2-gsimltp_b1-ltr_1.csv',
             'hazard_curve-smltp_b2-gsimltp_b1-ltr_2.csv',
             'hazard_curve-smltp_b2-gsimltp_b1-ltr_3.csv',
