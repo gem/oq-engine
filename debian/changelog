@@ -1,3 +1,7 @@
+[Daniele Viganò]
+  * Remove the bin/openquake wrapper: now only bin/oq-engine is
+    available
+
 [Michele Simionato]
   * Added parameter parallel_source_splitting in openquake.cfg
 
