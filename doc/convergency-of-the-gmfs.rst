@@ -3,11 +3,11 @@ Event based computations with complex logic trees
 
 Previously we discussed the concept of effective realizations and
 logic tree reduction. All we said was correct for the case of
-classical calculations. However, in the case of event based calculations
+classical calculations. However, in the case of an event based calculation
 there is an additional complication:
 
 *because of the stochasticity of the rupture-generation process, a tectonic
-region type which contains sources, could produce zero ruptures*.
+region type which contains sources could still produce zero ruptures*.
 
 In other words, depending on the parameters of the calculation, notably
 the investigation time and the number of stochastic event sets, a logic

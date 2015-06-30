@@ -55,7 +55,7 @@ if the tectonic region type with multiple branches is not present in the
 underlying source model. This is the key to logic tree reduction concept.
 
 
-Reduction of the logic tree (full enumeration)
+Reduction of the logic tree
 -----------------------------------------------
 
 The simplest case of logic tree reduction is when the actual
@@ -97,7 +97,8 @@ region types in the logic tree file, but the engine contains only
 sources of one tectonic region type.  Let us assume that for the first
 tectonic region type (T1) the GMPE logic tree file contains 3 GMPEs (A,
 B, C) and that for the second tectonic region type (T2) the GMPE logic tree
-file contains 2 GMPEs (D, E). The total number of realizations is
+file contains 2 GMPEs (D, E). The total number of realizations (assuming
+full enumeration) is
 
   `total_num_rlzs = 3 * 2 = 6`
 
@@ -230,7 +231,7 @@ Depending on the location of the points and the maximum distance, one
 or more submodels could be completely filtered out and could produce
 zero effective realizations, so the reduction effect could be even
 stronger. Such a situation is covered by our tests
-and will be discussed in the next paragraph. Notice that already in
+and will be discussed later on. Notice that already in
 this case we reduced the computation from 1280 + 1280 + 640 = 3200
 potential realizations to only 80 + 80 + 80 = 240 effective
 realizations.
@@ -271,14 +272,14 @@ the SHARE model with just a simplified area source model::
    <CompositionInfo
    b1, simple_area_source_model.xml, trt=[0, 1, 2, 3, 4]: 4 realization(s)>
    <RlzsAssoc(8)
-   0,AtkinsonBoore2003SInter: ['<0,b1,*_*_*_*_b51_*_*,w=0.2>', '<1,b1,*_*_*_*_b52_*_*,w=0.2>', '<2,b1,*_*_*_*_b53_*_*,w=0.2>', '<3,b1,*_*_*_*_b54_*_*,w=0.4>']
-   1,FaccioliEtAl2010: ['<0,b1,*_*_*_*_b51_*_*,w=0.2>', '<1,b1,*_*_*_*_b52_*_*,w=0.2>', '<2,b1,*_*_*_*_b53_*_*,w=0.2>', '<3,b1,*_*_*_*_b54_*_*,w=0.4>']
-   2,ToroEtAl2002SHARE: ['<0,b1,*_*_*_*_b51_*_*,w=0.2>', '<1,b1,*_*_*_*_b52_*_*,w=0.2>', '<2,b1,*_*_*_*_b53_*_*,w=0.2>', '<3,b1,*_*_*_*_b54_*_*,w=0.4>']
-   3,AkkarBommer2010: ['<0,b1,*_*_*_*_b51_*_*,w=0.2>', '<1,b1,*_*_*_*_b52_*_*,w=0.2>', '<2,b1,*_*_*_*_b53_*_*,w=0.2>', '<3,b1,*_*_*_*_b54_*_*,w=0.4>']
-   4,AtkinsonBoore2003SSlab: ['<0,b1,*_*_*_*_b51_*_*,w=0.2>']
-   4,LinLee2008SSlab: ['<1,b1,*_*_*_*_b52_*_*,w=0.2>']
-   4,YoungsEtAl1997SSlab: ['<2,b1,*_*_*_*_b53_*_*,w=0.2>']
-   4,ZhaoEtAl2006SSlab: ['<3,b1,*_*_*_*_b54_*_*,w=0.4>']>
+   0,AtkinsonBoore2003SInter: ['<0,b1,@_@_@_@_b51_@_@,w=0.2>', '<1,b1,@_@_@_@_b52_@_@,w=0.2>', '<2,b1,@_@_@_@_b53_@_@,w=0.2>', '<3,b1,@_@_@_@_b54_@_@,w=0.4>']
+   1,FaccioliEtAl2010: ['<0,b1,@_@_@_@_b51_@_@,w=0.2>', '<1,b1,@_@_@_@_b52_@_@,w=0.2>', '<2,b1,@_@_@_@_b53_@_@,w=0.2>', '<3,b1,@_@_@_@_b54_@_@,w=0.4>']
+   2,ToroEtAl2002SHARE: ['<0,b1,@_@_@_@_b51_@_@,w=0.2>', '<1,b1,@_@_@_@_b52_@_@,w=0.2>', '<2,b1,@_@_@_@_b53_@_@,w=0.2>', '<3,b1,@_@_@_@_b54_@_@,w=0.4>']
+   3,AkkarBommer2010: ['<0,b1,@_@_@_@_b51_@_@,w=0.2>', '<1,b1,@_@_@_@_b52_@_@,w=0.2>', '<2,b1,@_@_@_@_b53_@_@,w=0.2>', '<3,b1,@_@_@_@_b54_@_@,w=0.4>']
+   4,AtkinsonBoore2003SSlab: ['<0,b1,@_@_@_@_b51_@_@,w=0.2>']
+   4,LinLee2008SSlab: ['<1,b1,@_@_@_@_b52_@_@,w=0.2>']
+   4,YoungsEtAl1997SSlab: ['<2,b1,@_@_@_@_b53_@_@,w=0.2>']
+   4,ZhaoEtAl2006SSlab: ['<3,b1,@_@_@_@_b54_@_@,w=0.4>']>
 
 This is a case where a lot of tectonic region types have been completely
 filtered out, so the original 160 realizations have been reduced to merely 4 for
