@@ -25,7 +25,6 @@ import numpy
 
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo.mesh import Mesh
-from openquake.hazardlib.site import SiteCollection
 from openquake.baselib import general
 from openquake.baselib.performance import DummyMonitor
 from openquake.commonlib import readinput, datastore, logictree, export, source
@@ -212,8 +211,7 @@ class HazardCalculator(BaseCalculator):
                 'maximum distance of %s km' % maximum_distance)
         mask = numpy.array([sid in assets_by_sid for sid in sitecol.sids])
         assets_by_site = [assets_by_sid.get(sid, []) for sid in sitecol.sids]
-        sc = SiteCollection([site for site in sitecol.filter(mask)])
-        return sc, numpy.array(assets_by_site)
+        return sitecol.filter(mask), numpy.array(assets_by_site)
 
     def count_assets(self):
         """
