@@ -513,7 +513,7 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
     correl_model = readinput.get_correl_model(oq)
     num_sites = len(sitecol)
     gmfs = make_gmfs(
-        ses_ruptures, sitecol.complete, oq.imtls, gsims,
+        ses_ruptures, sitecol, oq.imtls, gsims,
         trunc_level, correl_model, monitor)
     result = {(trt_id, col_id): numpy.concatenate(gmfs)
               if oq.ground_motion_fields else None}

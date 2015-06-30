@@ -3,7 +3,7 @@ from nose.plugins.attrib import attr
 
 from openquake.commonlib.tests.calculators import CalculatorTestCase
 from openquake.qa_tests_data.event_based_risk import (
-    case_1, case_2, case_3, case_4)
+    case_1, case_2, case_3, case_4, case_4a)
 
 
 def is_ok(fname):
@@ -72,3 +72,12 @@ class EBRTestCase(CalculatorTestCase):
         fnames = out['event_loss_table-rlzs', 'csv']
         for fname in fnames:
             self.assertEqualFiles('expected/' + os.path.basename(fname), fname)
+
+    @attr('qa', 'risk', 'event_based')
+    def test_case_4a(self):
+        # the case of a site_model.xml with 7 sites but only 1 asset
+        out = self.run_calc(case_4a.__file__, 'job_hazard.ini',
+                            concurrent_tasks=0, exports='csv')
+        [fname] = out['gmfs', 'csv']
+        self.assertEqualFiles(
+            'expected/gmf-smltp_b1-gsimltp_b1.csv', fname)
