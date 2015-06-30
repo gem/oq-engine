@@ -121,7 +121,7 @@ def view_gmfs_total_size(name, dstore):
     """
     nbytes = 0
     num_imts = len(dstore['oqparam'].imtls)
-    for counts in dstore['/counts_per_rlz']:
+    for counts in dstore['counts_per_rlz']:
         nbytes += 8 * counts['gmf'] * (num_imts + 1)
     return humansize(nbytes)
 
@@ -146,7 +146,7 @@ def view_rlzs_by_col(name, dstore):
     """
     :returns: a dictionary col_id -> realization ordinals
     """
-    return groupby(dstore['/rlz_col_assocs'],
+    return groupby(dstore['rlz_col_assocs'],
                    lambda x: x['col'],
                    lambda rows: [row['rlz'] for row in rows])
 
@@ -377,10 +377,10 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
     Event based PSHA calculator generating the ruptures only
     """
     core_func = compute_ruptures
-    tags = datastore.persistent_attribute('/tags')
+    tags = datastore.persistent_attribute('tags')
     sescollection = datastore.persistent_attribute('sescollection')
-    counts_per_rlz = datastore.persistent_attribute('/counts_per_rlz')
-    rlz_col_assocs = datastore.persistent_attribute('/rlz_col_assocs')
+    counts_per_rlz = datastore.persistent_attribute('counts_per_rlz')
+    rlz_col_assocs = datastore.persistent_attribute('rlz_col_assocs')
     is_stochastic = True
 
     def pre_execute(self):
@@ -444,7 +444,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         with self.monitor('counts_per_rlz'):
             self.counts_per_rlz = counts_per_rlz(
                 len(self.sitecol), self.rlzs_assoc, sescollection)
-            self.datastore['/counts_per_rlz'].attrs[
+            self.datastore['counts_per_rlz'].attrs[
                 'gmfs_nbytes'] = get_gmfs_nbytes(
                 len(self.sitecol), len(self.oqparam.imtls),
                 self.rlzs_assoc, sescollection)
@@ -583,7 +583,7 @@ class EventBasedCalculator(ClassicalCalculator):
             if self.oqparam.ground_motion_fields:
                 self.datasets.append(
                     self.datastore.create_dset(
-                        '/gmfs/col%02d' % col_id, gmf_dt))
+                        'gmfs/col%02d' % col_id, gmf_dt))
 
     def combine_curves_and_save_gmfs(self, acc, res):
         """
@@ -639,8 +639,8 @@ class EventBasedCalculator(ClassicalCalculator):
         if oq.ground_motion_fields:
             # sanity check on the saved gmfs size
             expected_nbytes = self.datastore[
-                '/counts_per_rlz'].attrs['gmfs_nbytes']
-            self.datastore['/gmfs'].attrs['nbytes'] = self.nbytes
+                'counts_per_rlz'].attrs['gmfs_nbytes']
+            self.datastore['gmfs'].attrs['nbytes'] = self.nbytes
             assert self.nbytes == expected_nbytes, (
                 self.nbytes, expected_nbytes)
         return curves_by_trt_gsim

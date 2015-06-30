@@ -56,16 +56,16 @@ class BaseCalculator(object):
     __metaclass__ = abc.ABCMeta
 
     oqparam = datastore.persistent_attribute('oqparam')
-    sitemesh = datastore.persistent_attribute('/sitemesh')
+    sitemesh = datastore.persistent_attribute('sitemesh')
     sitecol = datastore.persistent_attribute('sitecol')
     rlzs_assoc = datastore.persistent_attribute('rlzs_assoc')
-    realizations = datastore.persistent_attribute('/realizations')
+    realizations = datastore.persistent_attribute('realizations')
     assets_by_site = datastore.persistent_attribute('assets_by_site')
-    assetcol = datastore.persistent_attribute('/assetcol')
+    assetcol = datastore.persistent_attribute('assetcol')
     cost_types = datastore.persistent_attribute('cost_types')
-    taxonomies = datastore.persistent_attribute('/taxonomies')
-    source_info = datastore.persistent_attribute('/source_info')
-    performance = datastore.persistent_attribute('/performance')
+    taxonomies = datastore.persistent_attribute('taxonomies')
+    source_info = datastore.persistent_attribute('source_info')
+    performance = datastore.persistent_attribute('performance')
 
     pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
@@ -250,7 +250,7 @@ class HazardCalculator(BaseCalculator):
                 self.oqparam.hazard_investigation_time = (
                     self.oqparam.investigation_time)
             try:
-                self.datastore['/taxonomies']
+                self.datastore['taxonomies']
             except KeyError:  # not read already
                 self.read_exposure_sitecol()
 
@@ -276,7 +276,7 @@ class HazardCalculator(BaseCalculator):
             num_assets = self.count_assets()
             mesh = readinput.get_mesh(self.oqparam)
             if self.datastore.parent:
-                parent_mesh = self.datastore.parent['/sitemesh'].value
+                parent_mesh = self.datastore.parent['sitemesh'].value
                 if mesh is None:
                     mesh = Mesh(parent_mesh['lon'], parent_mesh['lat'])
             if mesh is not None:
@@ -309,8 +309,8 @@ class HazardCalculator(BaseCalculator):
         """
         Save the mesh associated to the complete sitecol in the HDF5 file
         """
-        if ('/sitemesh' not in self.datastore and
-                '/sitemesh' not in self.datastore.parent):
+        if ('sitemesh' not in self.datastore and
+                'sitemesh' not in self.datastore.parent):
             col = self.sitecol.complete
             mesh_dt = numpy.dtype([('lon', float), ('lat', float)])
             self.sitemesh = numpy.array(zip(col.lons, col.lats), mesh_dt)
@@ -458,7 +458,7 @@ def get_gmfs(calc):
     if 'gmfs' in calc.oqparam.inputs:  # from file
         return read_gmfs_from_csv(calc)
     # else from rupture
-    gmf = calc.datastore['/gmfs/col00'].value
+    gmf = calc.datastore['gmfs/col00'].value
     # NB: if the hazard site collection has N sites, the hazard
     # filtered site collection for the nonzero GMFs has N' <= N sites
     # whereas the risk site collection associated to the assets

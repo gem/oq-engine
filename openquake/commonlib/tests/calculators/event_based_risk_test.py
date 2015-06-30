@@ -33,11 +33,11 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job_haz.ini,job_risk.ini',
                             concurrent_tasks=0, exports='csv')
-        [fname] = out['/loss_curves-rlzs', 'csv']
+        [fname] = out['loss_curves-rlzs', 'csv']
         self.assertEqualFiles(
             'expected/rlz-000-structural-loss_curves.csv', fname)
 
-        [fname] = out['/agg_loss_curve-rlzs', 'csv']
+        [fname] = out['agg_loss_curve-rlzs', 'csv']
         self.assertEqualFiles(
             'expected/rlz-000-structural-agg_loss_curve.csv', fname)
 
@@ -59,6 +59,6 @@ class EBRTestCase(CalculatorTestCase):
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job_haz.ini,job_loss.ini',
                             concurrent_tasks=0, exports='csv')
-        [fname] = out['/event_loss_table-rlzs', 'csv']
+        [fname] = out['event_loss_table-rlzs', 'csv']
         self.assertEqualFiles(
             'expected/event_loss_table-b1,b1-structural.csv', fname)
