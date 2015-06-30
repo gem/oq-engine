@@ -301,7 +301,7 @@ class RlzsAssoc(collections.Mapping):
                                  for trt_id, gsim in group))
 
     def get_gsims_by_col(self):
-        """Return a list of lists of GSIMs of length num_collections"""
+        """Return a list of lists of GSIMs of length num_collections
         if self.num_samples:
             rlz_by_col_id = {}
             for rlz in self.realizations:
@@ -314,7 +314,7 @@ class RlzsAssoc(collections.Mapping):
                 gsim = trtmod.source_model.gsim_lt.get_gsim_by_trt(
                     rlz.gsim_rlz, trtmod.trt)
                 out.append([valid.gsim(gsim)])
-            return out
+            return out"""
         # else full enumeration
         gsims_by_trt_id = self.get_gsims_by_trt_id()
         return [gsims_by_trt_id.get(col['trt_id'], [])

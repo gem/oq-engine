@@ -2,22 +2,67 @@ The concept of effective realizations
 ==============================================
 
 The management of the logic trees is the most complex thing in the
-OpenQuake libraries. The problem is that it is necessary to implement logic
-trees in an efficient way, otherwise the engine will not be able to
-cope with large computations.
-To this aim we introduced the concept of *effective
-realizations*. There are common situations where it is
-possible to reduce the full logic tree of a computation to a much
-smaller one. The engine takes full advantage of such situations.
+OpenQuake libraries. The issue is that it is necessary to manage them
+in an efficient way, by avoiding redundant computation and storage,
+otherwise the engine will not be able to cope with large computations.
+
+Historically the engine did not fare well in the case of complex logic
+trees. In recent years we improved the situation by introducing the
+concept of *effective realizations*. After realizing that in many
+calculations it is possible to reduce the full logic tree (the tree of
+the potential realizations) of a computation to a much smaller one
+(the tree of the effective realizations), we implemented an engine
+optimization to take advantage of such situations. Here I will
+explain how the optimization work.
+
+First, it is best to give some terminology.
+
+1. for each source model in the source model logic tree there is a
+   different GMPE logic tree
+2. the total number of realizations is the sum of the number of realizations
+   of each GMPE logic tree
+3. a GMPE logic tree is *trivial* if has no tectonic region types with
+   multiple GMPEs
+4. a GMPE logic tree is *simple* if has at most one tectonic region type
+   with multiple GMPEs
+5. a GMPE logic tree is *complex* if it has more than one tectonic region
+   type with multiple GMPEs.
+
+Here is an example of trivial GMPE logic tree, in its XML input representation::
+  
+  <?xml version="1.0" encoding="UTF-8"?>
+  <nrml xmlns:gml="http://www.opengis.net/gml"
+        xmlns="http://openquake.org/xmlns/nrml/0.4">
+      <logicTree logicTreeID='lt1'>
+          <logicTreeBranchingLevel branchingLevelID="bl1">
+              <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
+                      applyToTectonicRegionType="active shallow crust">
+  
+                  <logicTreeBranch branchID="b1">
+                      <uncertaintyModel>SadighEtAl1997</uncertaintyModel>
+                      <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+  
+              </logicTreeBranchSet>
+          </logicTreeBranchingLevel>
+      </logicTree>
+  </nrml>
+
+The logic tree is trivial since there is a single branch with branchID="b1"
+and GMPE "SadighEtAl1997" for the tectonic region type "active shallow crust".
+A logic tree with multiple branches can be simple, complex, or even trivial
+if the tectonic region type with multiple branches is not present in the
+underlying source model. This is the key to logic tree reduction concept.
+
 
 Reduction of the logic tree (full enumeration)
 -----------------------------------------------
 
-The reduction of the logic tree happens when the actual
+The simplest case of logic tree reduction is when the actual
 sources do not span the full range of tectonic region types in the
 GMPE logic tree file. This happens very often in SHARE calculations.
-The GMPE logic tree potentially contains 1280 realizations per each
-of the three source models contained in the SHARE model,
+The GMPE logic tree (actually there are three of them, one for each
+source model) potentially contains 1280 realizations
 coming from 7 different tectonic region types:
 
 Active_Shallow:
@@ -36,14 +81,14 @@ Deep:
  2 GMPEs (b71, b72)
 
 The number of paths in the logic tree is 4 * 5 * 2 * 4 * 4 * 1 * 2 =
-1280, pretty large. We say that there are 1280 *potential realizations*.
-However, in most computations the user will be interested
-only in a subset of them. For instance, if the sources contributing to
-your region of interest are only of kind **Active_Shallow** and
-**Stable_Shallow**, you would consider only 4 * 5 = 20 effective
-realizations instead of 1280. Doing so will improve the computation
-time and the neeed storage by a factor of 1280 / 20 = 64, which is
-very significant.
+1280, pretty large. We say that there are 1280 *potential
+realizations* per source model. However, in most computations, the
+user will be interested only in a subset of them. For instance, if the
+sources contributing to your region of interest are only of kind
+**Active_Shallow** and **Stable_Shallow**, you would consider only 4 *
+5 = 20 effective realizations instead of 1280. Doing so will improve
+the computation time and the needed storage by a factor of 1280 / 20 =
+64, which is very significant.
 
 Having motivated the need for the concept of effective realizations,
 let explain how it works in practice. For sake of simplicity let us
@@ -51,7 +96,7 @@ consider the simplest possible situation, when there are two tectonic
 region types in the logic tree file, but the engine contains only
 sources of one tectonic region type.  Let us assume that for the first
 tectonic region type (T1) the GMPE logic tree file contains 3 GMPEs (A,
-B, C) and for the second tectonic region type (T2) the GMPE logic tree
+B, C) and that for the second tectonic region type (T2) the GMPE logic tree
 file contains 2 GMPEs (D, E). The total number of realizations is
 
   `total_num_rlzs = 3 * 2 = 6`
@@ -95,50 +140,13 @@ In such situation the engine will perform the computation only for the 2
 effective realizations, not for the 6 potential realizations; moreover,
 it will export only two files with names like::
 
-  hazard_curve-smltp_sm-gsimltp_*_D-ltr_0.csv
-  hazard_curve-smltp_sm-gsimltp_*_E-ltr_1.csv
+  hazard_curve-smltp_sm-gsimltp_@_D-ltr_0.csv
+  hazard_curve-smltp_sm-gsimltp_@_E-ltr_1.csv
 
-
-Reduction of the logic tree when sampling is enabled
-----------------------------------------------------
-
-There are real life examples of very complex logic trees, even with
-more than 400,000 branches. In such situations it is impossible to perform
-a full computation. However, the engine allows to
-sample the branches of the complete logic tree. More precisely,
-for each branch sampled from the source model logic
-tree a branch of the GMPE logic tree is chosen randomly,
-by taking into account the weights in the GMPE logic tree file.
-
-Suppose for instance that we set
-
-  `number_of_logic_tree_samples = 4000`
-
-to sample 4,000 branches instead of 400,000. The expectation is that
-the computation will be 100 times faster. This is indeed the case for
-the classical calculator. However, for the event based calculator
-things are different. The point is that each sample of the source
-model must produce different ruptures, even if there is only one
-source model repeated 4,000 times, because of the inherent
-stochasticity of the process. Therefore the time spent in generating
-the needed amount of ruptures could make the calculator slower than
-using full enumeration: remember than when using full enumeration the
-ruptures of a given source model are generated exactly once, since
-each path is taken exactly once.
-
-Notice that even if source model path is
-sampled several times, the model is parsed and sent to the workers *only
-once*. In particular if there is a single source model and
-`number_of_logic_tree_samples = 4000`, we generate effectively
-1 source model realization and not 4,000 equivalent source model
-realizations, as we did in past (actually in the engine version 1.3).
-Then engine keeps track of how many times a model has
-been sampled (say `N`) and in the event based case it produce ruptures
-(*with different seeds*)
-by calling the appropriate hazardlib function `N` times. This is done
-inside the worker nodes. In the classical case, all the ruptures are
-identical and there are no seeds, so the computation is done only once,
-in an efficient way.
+The "@" character should be read as "any", meaning that for the first
+tectonic region type any path (i.e. both "A", "B" and "C") will give
+the same contribution, i.e. there is independence from the GMPE
+combinations coming from the first tectonic region type.
 
 
 How to analyze the logic tree of a calculation without running the calculation
