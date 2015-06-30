@@ -148,7 +148,7 @@ if [ -f /usr/lib/postgresql/$PG_VERSION/bin/postgres ]; then
         echo "authentication configuration)"
         echo ""
         echo "Please ask the system administrator to grant access to the"
-        echo "'openquake' database to the following users:"
+        echo "'openquake2' database to the following users:"
         echo ""
         echo "      oq_admin oq_job_init"
         echo "============================================================"
