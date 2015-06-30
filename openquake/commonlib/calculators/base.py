@@ -211,8 +211,7 @@ class HazardCalculator(BaseCalculator):
                 'maximum distance of %s km' % maximum_distance)
         mask = numpy.array([sid in assets_by_sid for sid in sitecol.sids])
         assets_by_site = [assets_by_sid.get(sid, []) for sid in sitecol.sids]
-        filteredcol = sitecol.filter(mask)
-        return filteredcol, numpy.array(assets_by_site)
+        return sitecol.filter(mask), numpy.array(assets_by_site)
 
     def count_assets(self):
         """
