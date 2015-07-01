@@ -193,7 +193,7 @@ class BaseHazardCalculator(base.Calculator):
                 'of sites, the number of IMTs, the number of realizations '
                 'or the number of stochastic event sets; otherwise, '
                 'raise the parameter max_output_weight in openquake.cfg'
-                % (self.max_input_weight, input_weight))
+                % (self.max_output_weight, output_weight))
 
     def post_execute(self, result=None):
         """Inizialize realizations"""
