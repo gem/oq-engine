@@ -20,7 +20,7 @@
 """
 Utility functions of general interest.
 """
-from __future__ import print_function
+from __future__ import division, print_function
 import os
 import sys
 import imp
@@ -302,7 +302,7 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
             assert_close(getattr(a, x), getattr(b, y), rtol, atol, x)
         return
     if isinstance(a, collections.Mapping):  # dict-like objects
-        assert_close_seq(list(a), list(b), rtol, atol, a)
+        assert_close_seq(a.keys(), b.keys(), rtol, atol, a)
         assert_close_seq(a.values(), b.values(), rtol, atol, a)
         return
     if hasattr(a, '__iter__'):  # iterable objects
