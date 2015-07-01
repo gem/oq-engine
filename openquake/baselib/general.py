@@ -20,7 +20,7 @@
 """
 Utility functions of general interest.
 """
-from __future__ import division
+from __future__ import print_function
 import os
 import sys
 import imp
@@ -95,10 +95,11 @@ class WeightedSequence(collections.MutableSequence):
         new.weight = self.weight + other.weight
         return new
 
-    def insert(self, i, (item, weight)):
+    def insert(self, i, item_weight):
         """
         Insert an item with the given weight in the sequence
         """
+        item, weight = item_weight
         self._seq.insert(i, item)
         self.weight += weight
 
@@ -301,7 +302,7 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
             assert_close(getattr(a, x), getattr(b, y), rtol, atol, x)
         return
     if isinstance(a, collections.Mapping):  # dict-like objects
-        assert_close_seq(a.keys(), b.keys(), rtol, atol, a)
+        assert_close_seq(list(a), list(b), rtol, atol, a)
         assert_close_seq(a.values(), b.values(), rtol, atol, a)
         return
     if hasattr(a, '__iter__'):  # iterable objects
@@ -367,7 +368,7 @@ def run_in_process(code, *args):
     try:
         out = subprocess.check_output([sys.executable, '-c', code])
     except subprocess.CalledProcessError as exc:
-        print >> sys.stderr, exc.cmd[-1]
+        print(exc.cmd[-1], file=sys.stderr)
         raise
     if out:
         return eval(out, {}, {})
@@ -404,8 +405,8 @@ def import_all(module_or_package):
                 try:
                     importlib.import_module(modname)
                 except Exception as exc:
-                    print >> sys.stderr, 'Could not import %s: %s: %s' % (
-                        modname, exc.__class__.__name__, exc)
+                    print('Could not import %s: %s: %s' % (
+                        modname, exc.__class__.__name__, exc), file=sys.stderr)
     return set(sys.modules) - already_imported
 
 
@@ -529,7 +530,7 @@ class AccumDict(dict):
 
     def __iadd__(self, other):
         if hasattr(other, 'iteritems'):
-            for k, v in other.iteritems():
+            for k, v in other.items():
                 try:
                     self[k] = self[k] + v
                 except KeyError:
@@ -548,7 +549,7 @@ class AccumDict(dict):
 
     def __isub__(self, other):
         if hasattr(other, 'iteritems'):
-            for k, v in other.iteritems():
+            for k, v in other.items():
                 try:
                     self[k] = self[k] - v
                 except KeyError:
@@ -567,11 +568,11 @@ class AccumDict(dict):
         return - self.__sub__(other)
 
     def __neg__(self):
-        return self.__class__({k: -v for k, v in self.iteritems()})
+        return self.__class__({k: -v for k, v in self.items()})
 
     def __imul__(self, other):
         if hasattr(other, 'iteritems'):
-            for k, v in other.iteritems():
+            for k, v in other.items():
                 try:
                     self[k] = self[k] * v
                 except KeyError:
@@ -598,7 +599,7 @@ class AccumDict(dict):
         {'a': 3, 'b': 5}
         """
         return self.__class__({key: func(value, *extras)
-                               for key, value in self.iteritems()})
+                               for key, value in self.items()})
 
 
 def groupby(objects, key, reducegroup=list):

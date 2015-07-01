@@ -188,7 +188,7 @@ class Monitor(object):
         perf_dt = numpy.dtype([('operation', (str, 50)), ('time_sec', float),
                                ('memory_mb', float), ('counts', int)])
         rows = []
-        for operation, rec in data.iteritems():
+        for operation, rec in data.items():
             rows.append((operation, rec[0], rec[1], rec[2]))
         rows.sort(key=operator.itemgetter(1), reverse=True)
         return numpy.array(rows, perf_dt)

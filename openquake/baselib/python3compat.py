@@ -6,6 +6,12 @@ import subprocess
 
 
 def check_syntax(pkg):
+    """
+    Recursively check all modules in the given package for compatibility with
+    Python 3 syntax. No imports are performed.
+
+    :param pkg: a Python package
+    """
     ok, err = 0, 0
     for cwd, dirs, files in os.walk(pkg.__path__[0]):
         for f in files:
