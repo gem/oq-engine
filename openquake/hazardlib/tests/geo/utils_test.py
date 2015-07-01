@@ -224,7 +224,8 @@ class GetMiddlePointTestCase(unittest.TestCase):
 
 
 class SphericalToCartesianAndBackTestCase(unittest.TestCase):
-    def _test(self, (lons, lats, depths), vectors):
+    def _test(self, lons_lats_depths, vectors):
+        (lons, lats, depths) = lons_lats_depths
         res_cart = utils.spherical_to_cartesian(lons, lats, depths)
         self.assertIsInstance(res_cart, numpy.ndarray)
         self.assertTrue(numpy.allclose(vectors, res_cart), str(res_cart))
