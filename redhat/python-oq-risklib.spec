@@ -16,6 +16,10 @@ BuildArch: noarch
 Vendor: GEM Foundation <devops@openquake.org>
 Url: http://github.com/gem/oq-risklib
 
+BuildRequires: python
+BuildRequires: python-setuptools
+
+Requires: python
 Requires: numpy
 Requires: scipy
 Requires: python-lxml
@@ -62,4 +66,4 @@ rm -rf %{buildroot}
 
 %files -f INSTALLED_FILES
 %defattr(-,root,root)
-%doc LICENSE README.md docs demos
+%doc LICENSE README.md doc demos
