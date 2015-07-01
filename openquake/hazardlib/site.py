@@ -414,13 +414,14 @@ class FilteredSiteCollection(object):
             len(self.indices), self.total_sites)
 
 
-def extract_site_param(fsc, name):
+def _extract_site_param(fsc, name):
+    # extract the site parameter 'name' from the filtered site collection
     return getattr(fsc.complete, name).take(fsc.indices)
 
 
 # attach a number of properties filtering the arrays
 for name in 'vs30 vs30measured z1pt0 z2pt5 backarc lons lats sids'.split():
     prop = property(
-        lambda fsc, name=name: extract_site_param(fsc, name),
+        lambda fsc, name=name: _extract_site_param(fsc, name),
         doc='Extract %s array from FilteredSiteCollection' % name)
     setattr(FilteredSiteCollection, name, prop)
