@@ -23,7 +23,7 @@ BASE=$(cd `dirname "${BASH_SOURCE[0]}"` && pwd)/builddir
 rm -Rf $BASE
 
 REPO=oq-hazardlib
-EXTRA='--no-check'
+EXTRA='--nocheck'
 
 if [ -n "$1" ];
 then
