@@ -4,6 +4,36 @@ import sys
 import importlib
 import subprocess
 
+PY3 = sys.version_info[0] == 3
+PY2 = sys.version_info[0] == 2
+
+if PY3:
+    range = range
+
+    def raise_(tp, value=None, tb=None):
+        """
+        A function that matches the Python 2.x ``raise`` statement. This
+        allows re-raising exceptions with the cls value and traceback on
+        Python 2 and 3.
+        """
+        if value is not None and isinstance(tp, Exception):
+            raise TypeError("instance exception may not have a separate value")
+        if value is not None:
+            exc = tp(value)
+        else:
+            exc = tp
+        if exc.__traceback__ is not tb:
+            raise exc.with_traceback(tb)
+        raise exc
+
+else:
+    range = xrange
+   
+    exec('''
+def raise_(tp, value=None, tb=None):
+    raise tp, value, tb
+''')
+
 
 def check_syntax(pkg):
     """

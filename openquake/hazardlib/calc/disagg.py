@@ -22,7 +22,7 @@ import sys
 import numpy
 import warnings
 import collections
-from future.utils import raise_
+from openquake.baselib.python3compat import raise_
 
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.geo.geodetic import npoints_between

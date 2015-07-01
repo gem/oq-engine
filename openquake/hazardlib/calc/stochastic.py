@@ -18,7 +18,7 @@
 :func:`stochastic_event_set`.
 """
 import sys
-from future.utils import raise_
+from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.calc import filters
 
 
