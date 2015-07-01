@@ -35,9 +35,13 @@ from datetime import datetime
 import numpy
 from scipy import interpolate
 
+import django
+try:
+    django.setup()  # for Django >= 1.7
+except AttributeError:
+    pass  # there is not django.setup in old Django versions
 from django.db import connections
 from django.core.exceptions import ObjectDoesNotExist
-
 from django.contrib.gis.db import models as djm
 
 from openquake.hazardlib.imt import from_string
