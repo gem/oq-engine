@@ -35,9 +35,11 @@ from datetime import datetime
 import numpy
 from scipy import interpolate
 
+import django
+if hasattr(django, 'setup'):
+    django.setup()  # for Django >= 1.7
 from django.db import connections
 from django.core.exceptions import ObjectDoesNotExist
-
 from django.contrib.gis.db import models as djm
 
 from openquake.hazardlib.imt import from_string
