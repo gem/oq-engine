@@ -23,6 +23,7 @@ BASE=$(cd `dirname "${BASH_SOURCE[0]}"` && pwd)/builddir
 rm -Rf $BASE
 
 REPO=oq-hazardlib
+EXTRA='--no-check'
 
 if [ -n "$1" ];
 then
@@ -55,4 +56,4 @@ git archive --format=tar --prefix=${REPO}-${VER}-git${SHA}/ $BRANCH | pigz > ../
 cd ..
 
 mock -r openquake --buildsrpm --spec $BASE/SPECS/python-${REPO}.spec --source $BASE/SOURCES --resultdir=$BASE/SRPMS/
-mock -r openquake $BASE/SRPMS/python-${REPO}-${VER}-git${SHA}.src.rpm --resultdir=$BASE/RPMS
+mock -r openquake $BASE/SRPMS/python-${REPO}-${VER}-git${SHA}.src.rpm --resultdir=$BASE/RPMS $EXTRA

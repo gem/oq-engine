@@ -18,6 +18,7 @@ Url: http://github.com/gem/oq-hazardlib
 BuildRequires: gcc
 BuildRequires: python
 BuildRequires: python-devel
+BuildRequires: python-nose
 BuildRequires: python-setuptools
 BuildRequires: numpy
 
@@ -52,6 +53,9 @@ Copyright (C) 2012-2015, GEM Foundation.
 
 %build
 env CFLAGS="$RPM_OPT_FLAGS" python setup.py build
+
+%check
+nosetests -v -a '!slow' --with-doctest --with-coverage --cover-package=openquake.hazardlib"
 
 %install
 python setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --record=INSTALLED_FILES
