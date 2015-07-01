@@ -235,13 +235,13 @@ def split_in_blocks_2(long_sequence, short_sequence, hint,
     A few examples will explain how it works:
 
     >>> for b1, b2 in split_in_blocks_2(range(10), 'ABC', 3):
-    ...      print b1, b2
+    ...      print(b1, b2)
     [0, 1, 2, 3] ['A']
     [4, 5, 6, 7] ['B']
     [8, 9] ['C']
 
     >>> for b1, b2 in split_in_blocks_2(range(10), 'ABC', 2):
-    ...      print b1, b2
+    ...      print(b1, b2)
     [0, 1, 2, 3, 4] ['A', 'B']
     [5, 6, 7, 8, 9] ['C']
 
@@ -250,7 +250,7 @@ def split_in_blocks_2(long_sequence, short_sequence, hint,
     number of blocks equal to the number of blocks of the first sequence:
 
     >>> for b1, b2 in split_in_blocks_2(range(10), 'ABC', 4):
-    ...      print b1, b2
+    ...      print(b1, b2)
     [0, 1, 2] ['A']
     [3, 4, 5] ['B']
     [6, 7, 8] ['C']

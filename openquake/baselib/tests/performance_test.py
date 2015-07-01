@@ -1,4 +1,3 @@
-from builtins import range
 import time
 import unittest
 import tempfile
