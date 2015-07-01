@@ -1,14 +1,14 @@
-[Michele Simionato]
+  [Michele Simionato]
   * Initial support for Django 1.7
 
-[Daniele Viganò]
+  [Daniele Viganò]
   * Remove the bin/openquake wrapper: now only bin/oq-engine is
     available
 
-[Michele Simionato]
+  [Michele Simionato]
   * Added parameter parallel_source_splitting in openquake.cfg
 
-[Daniele Viganò]
+  [Daniele Viganò]
   * setup.py improvements
   * Added MANIFEST.in
   * celeryconfig.py moved from /usr/openquake/engine to
