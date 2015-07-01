@@ -14,7 +14,7 @@
   * celeryconfig.py moved from /usr/openquake/engine to
     /usr/share/openquake/engine
 
-[Matteo Nastasi]
+  [Matteo Nastasi]
   * Packaging system improvement
 
 python-oq-engine (1.4.1-0~precise01) precise; urgency=low
