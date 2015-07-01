@@ -16,6 +16,10 @@ BuildArch: noarch
 Vendor: The GEM OpenQuake team <devops@openquake.org>
 Url: http://github.com/gem/oq-engine
 
+BuildRequires: python
+BuildRequires: python-setuptools
+
+Requires: python
 Requires: sudo
 Requires: numpy
 Requires: scipy
@@ -67,7 +71,7 @@ rm -rf %{buildroot}
 
 %files -f INSTALLED_FILES
 %defattr(-,root,root)
-%doc README.md LICENSE CONTRIBUTORS.txt docs
+%doc README.md LICENSE CONTRIBUTORS.txt doc
 %{_datadir}/openquake/engine/celeryconfig.py*
 %{_sysconfdir}/openquake/openquake.cfg
 
