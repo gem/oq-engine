@@ -112,7 +112,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         self.curves_by_trt_gsim = curves_by_trt_gsim
         oq = self.oqparam
-        zc = zero_curves(len(self.sitecol), oq.imtls)
+        zc = zero_curves(len(self.sitecol.complete), oq.imtls)
         curves_by_rlz = self.rlzs_assoc.combine_curves(
             curves_by_trt_gsim, agg_curves, zc)
         rlzs = self.rlzs_assoc.realizations
