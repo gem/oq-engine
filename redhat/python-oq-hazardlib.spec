@@ -15,15 +15,16 @@ Prefix: %{_prefix}
 Vendor: The GEM OpenQuake team <devops@openquake.org>
 Url: http://github.com/gem/oq-hazardlib
 
-%define common_deps python numpy scipy python-lxml python-shapely python-setuptools python-mock python-psutil
+%define common_deps python numpy scipy python-shapely python-psutil
 Requires: %{common_deps}
 
 BuildRequires: %{common_deps}
 BuildRequires: gcc
-BuildRequires: python
 BuildRequires: python-devel
 BuildRequires: python-nose
 BuildRequires: python-setuptools
+BuildRequires: python-mock
+BuildRequires: python-coverage
 
 %description
 
