@@ -235,7 +235,7 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
     lon_extent = get_longitudinal_extent(west, east)
     lon_bins, _, _ = npoints_between(
         west, 0, 0, east, 0, 0,
-        numpy.round(old_div(lon_extent, coord_bin_width)) + 1
+        numpy.round(lon_extent / coord_bin_width + 1)
     )
 
     lat_bins = coord_bin_width * numpy.arange(
