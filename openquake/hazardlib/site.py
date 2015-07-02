@@ -291,6 +291,9 @@ class FilteredSiteCollection(object):
     __slots__ = 'indices complete'.split()
 
     def __init__(self, indices, complete):
+        if complete is not complete.complete:
+            raise ValueError(
+                'You should pass a full site collection, not %s' % complete)
         self.indices = indices
         self.complete = complete
 
@@ -410,9 +413,15 @@ class FilteredSiteCollection(object):
         return '<FilteredSiteCollection with %d of %d sites>' % (
             len(self.indices), self.total_sites)
 
+
+def _extract_site_param(fsc, name):
+    # extract the site parameter 'name' from the filtered site collection
+    return getattr(fsc.complete, name).take(fsc.indices)
+
+
 # attach a number of properties filtering the arrays
 for name in 'vs30 vs30measured z1pt0 z2pt5 backarc lons lats sids'.split():
     prop = property(
-        lambda fsc, name=name: getattr(fsc.complete, name).take(fsc.indices),
+        lambda fsc, name=name: _extract_site_param(fsc, name),
         doc='Extract %s array from FilteredSiteCollection' % name)
     setattr(FilteredSiteCollection, name, prop)
