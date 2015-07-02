@@ -53,6 +53,9 @@ Copyright (C) 2013-2015, GEM Foundation.
 %build
 python setup.py build
 
+%check
+nosetests -a '!slow,' -v --with-doctest --with-coverage --cover-package=openquake.baselib --cover-package=openquake.risklib --cover-package=openquake.commonlib
+
 %install
 python setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --record=INSTALLED_FILES
 
