@@ -16,20 +16,15 @@ BuildArch: noarch
 Vendor: GEM Foundation <devops@openquake.org>
 Url: http://github.com/gem/oq-risklib
 
-BuildRequires: python
-BuildRequires: python-setuptools
-
-Requires: python
-Requires: numpy
-Requires: scipy
-Requires: python-lxml
-Requires: python-shapely
-Requires: python-setuptools
-Requires: python-psutil
-Requires: python-mock
-Requires: python-futures
-
+%define common_deps python numpy scipy python-shapely python-psutil python-lxml python-futures
+Requires: %{common_deps}
 Requires: python-oq-hazardlib >= 0.15.0
+
+BuildRequires: python-setuptools
+BuildRequires: python-nose
+BuildRequires: python-mock
+BuildRequires: python-coverage
+
 
 %description
 OpenQuake Risk Library (oq-risklib)
