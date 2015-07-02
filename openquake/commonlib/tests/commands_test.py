@@ -85,15 +85,18 @@ output_weight 29.0'''
         self.assertIn('Number of tasks to be generated: 14', got)
 
 
-# also tests the `run` command
-class ShowExportTestCase(unittest.TestCase):
+class RunShowExportTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """
         Build a datastore instance to show what it is inside
         """
         job_ini = os.path.join(os.path.dirname(case_1.__file__), 'job.ini')
-        cls.datastore = run(job_ini).datastore
+        with Print.patch() as cls.p:
+            cls.datastore = run(job_ini).datastore
+
+    def test_run_calc(self):
+        self.assertIn('See the output with hdfview', str(self.p))
 
     def test_show_calc(self):
         with Print.patch() as p:

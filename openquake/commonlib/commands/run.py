@@ -15,7 +15,7 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-
+from __future__ import print_function
 import logging
 
 from openquake.baselib import performance, general
@@ -68,11 +68,11 @@ def run(job_ini, concurrent_tasks=None,
         calc = run2(
             job_inis[0], job_inis[1], concurrent_tasks, exports, monitor)
 
-    logging.info('See the output with hdfview %s/output.hdf5',
-                 calc.datastore.calc_dir)
     logging.info('Total time spent: %s s', monitor.duration)
     logging.info('Memory allocated: %s', general.humansize(monitor.mem))
     monitor.flush()
+    print('See the output with hdfview %s/output.hdf5',
+          calc.datastore.calc_dir)
     return calc
 
 parser = sap.Parser(run)
