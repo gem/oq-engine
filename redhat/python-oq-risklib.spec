@@ -20,6 +20,7 @@ Url: http://github.com/gem/oq-risklib
 Requires: %{common_deps}
 Requires: python-oq-hazardlib >= 0.15.0
 
+BuildRequires: %{common_deps}
 BuildRequires: python-setuptools
 BuildRequires: python-nose
 BuildRequires: python-mock
