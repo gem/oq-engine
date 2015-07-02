@@ -420,6 +420,7 @@ class ProbabilisticEventBased(Workflow):
     def __init__(
             self, imt, taxonomy,
             vulnerability_functions,
+            investigation_time,
             risk_investigation_time,
             number_of_logic_tree_samples,
             ses_per_logic_tree_path,
@@ -430,7 +431,7 @@ class ProbabilisticEventBased(Workflow):
         See :func:`openquake.risklib.scientific.event_based` for a description
         of the input parameters.
         """
-        tses = (risk_investigation_time *
+        tses = ((risk_investigation_time or investigation_time) *
                 ses_per_logic_tree_path * (number_of_logic_tree_samples or 1))
         self.imt = imt
         self.taxonomy = taxonomy
@@ -826,4 +827,5 @@ def get_workflow(imt, taxonomy, oqparam, **extra):
     missing = set(argnames) - set(all_args)
     if missing:
         raise TypeError('Missing parameter: %s' % ', '.join(missing))
+
     return workflow_class(imt, taxonomy, **all_args)
