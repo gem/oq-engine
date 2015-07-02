@@ -75,9 +75,8 @@ class OqParam(valid.ParamSet):
     intensity_measure_types_and_levels = valid.Param(
         valid.intensity_measure_types_and_levels, None)
     # hazard_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
-    hazard_investigation_time = valid.Param(valid.positivefloat, None)
     interest_rate = valid.Param(valid.positivefloat)
-    investigation_time = valid.Param(valid.positivefloat, None)
+    investigation_time = valid.Param(valid.positivefloat, 50.)
     loss_curve_resolution = valid.Param(valid.positiveint, 50)
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 0)
@@ -121,10 +120,8 @@ class OqParam(valid.ParamSet):
 
     def __init__(self, **names_vals):
         super(OqParam, self).__init__(**names_vals)
-        if not self.risk_investigation_time and self.investigation_time:
-            self.risk_investigation_time = self.investigation_time
-        elif not self.investigation_time and self.hazard_investigation_time:
-            self.investigation_time = self.hazard_investigation_time
+        self.risk_investigation_time = (
+            self.risk_investigation_time or self.investigation_time)
         if ('intensity_measure_types_and_levels' in names_vals and
                 'intensity_measure_types' in names_vals):
             logging.warn('Ignoring intensity_measure_types since '
@@ -177,7 +174,7 @@ class OqParam(valid.ParamSet):
         Return the total time as investigation_time * ses_per_logic_tree_path *
         (number_of_logic_tree_samples or 1)
         """
-        return (self.hazard_investigation_time * self.ses_per_logic_tree_path *
+        return (self.investigation_time * self.ses_per_logic_tree_path *
                 (self.number_of_logic_tree_samples or 1))
 
     @property

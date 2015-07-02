@@ -245,10 +245,6 @@ class HazardCalculator(BaseCalculator):
                     if name not in new:  # add missing parameter
                         new[name] = value
                 self.oqparam = self.oqparam
-
-            if self.oqparam.hazard_investigation_time is None:
-                self.oqparam.hazard_investigation_time = (
-                    self.oqparam.investigation_time)
             try:
                 self.datastore['taxonomies']
             except KeyError:  # not read already
