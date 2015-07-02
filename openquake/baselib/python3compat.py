@@ -58,12 +58,21 @@ def raise_(tp, value=None, tb=None):
 ''')
 
 
+# copied from http://lucumr.pocoo.org/2013/5/21/porting-to-python-3-redux/
 def with_metaclass(meta, *bases):
     """
     Returns an instance of meta inheriting from the given bases.
     To be used to replace the __metaclass__ syntax.
     """
-    return meta('%sInstance' % meta.__name__, bases, {})
+    class metaclass(meta):
+        __call__ = type.__call__
+        __init__ = type.__init__
+
+        def __new__(mcl, name, this_bases, d):
+            if this_bases is None:
+                return type.__new__(mcl, name, (), d)
+            return meta(name, bases, d)
+    return metaclass('temporary_class', None, {})
 
 
 def check_syntax(pkg):
