@@ -3,8 +3,13 @@ import mock
 import shutil
 import tempfile
 import unittest
+
+from openquake.commonlib.datastore import DataStore
 from openquake.commonlib.commands.info import info
+from openquake.commonlib.commands.show import show
 from openquake.commonlib.commands.reduce import reduce
+from openquake.commonlib.commands.run import run
+from openquake.qa_tests_data.classical import case_1
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
 from openquake.qa_tests_data.event_based import case_5
@@ -77,6 +82,22 @@ output_weight 29.0'''
         got = str(p)
         self.assertIn('RlzsAssoc', got)
         self.assertIn('Number of tasks to be generated: 14', got)
+
+
+# also tests run
+class ShowTestCase(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        """
+        Build a datastore instance to show what it is inside
+        """
+        job_ini = os.path.join(os.path.dirname(case_1.__file__), 'job.ini')
+        cls.datastore = run(job_ini).datastore
+
+    def test_1(self):
+        with Print.patch() as p:
+            show(self.datastore.calc_id, 'sitemesh')
+        self.assertEqual(str(p), '[(0.0, 0.0)]')
 
 
 class ReduceTestCase(unittest.TestCase):

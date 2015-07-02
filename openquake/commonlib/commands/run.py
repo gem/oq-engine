@@ -73,6 +73,7 @@ def run(job_ini, concurrent_tasks=None,
     logging.info('Total time spent: %s s', monitor.duration)
     logging.info('Memory allocated: %s', general.humansize(monitor.mem))
     monitor.flush()
+    return calc
 
 parser = sap.Parser(run)
 parser.arg('job_ini', 'calculation configuration file '
