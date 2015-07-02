@@ -7,6 +7,7 @@ import unittest
 from openquake.commonlib.datastore import DataStore
 from openquake.commonlib.commands.info import info
 from openquake.commonlib.commands.show import show
+from openquake.commonlib.commands.export import export
 from openquake.commonlib.commands.reduce import reduce
 from openquake.commonlib.commands.run import run
 from openquake.qa_tests_data.classical import case_1
@@ -84,8 +85,8 @@ output_weight 29.0'''
         self.assertIn('Number of tasks to be generated: 14', got)
 
 
-# also tests run
-class ShowTestCase(unittest.TestCase):
+# also tests the `run` command
+class ShowExportTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """
@@ -94,10 +95,19 @@ class ShowTestCase(unittest.TestCase):
         job_ini = os.path.join(os.path.dirname(case_1.__file__), 'job.ini')
         cls.datastore = run(job_ini).datastore
 
-    def test_1(self):
+    def test_show_calc(self):
+        with Print.patch() as p:
+            show(self.datastore.calc_id)
+        self.assertIn('sitemesh', str(p))
+
         with Print.patch() as p:
             show(self.datastore.calc_id, 'sitemesh')
         self.assertEqual(str(p), '[(0.0, 0.0)]')
+
+    def test_export_calc(self):
+        with Print.patch() as p:
+            export(self.datastore.calc_id, 'sitemesh', export_dir='/tmp')
+        self.assertIn("['/tmp/sitemesh.csv']", str(p))
 
 
 class ReduceTestCase(unittest.TestCase):
