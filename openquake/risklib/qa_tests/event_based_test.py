@@ -66,6 +66,7 @@ class EventBasedTestCase(unittest.TestCase):
         wf = workflows.ProbabilisticEventBased(
             'PGA', 'SOME-TAXONOMY',
             vulnerability_functions={self.loss_type: vf},
+            investigation_time=50,
             risk_investigation_time=50,
             ses_per_logic_tree_path=200,
             number_of_logic_tree_samples=0,
@@ -104,6 +105,7 @@ class EventBasedTestCase(unittest.TestCase):
         wf = workflows.ProbabilisticEventBased(
             'PGA', 'SOME-TAXONOMY',
             vulnerability_functions={self.loss_type: vf},
+            investigation_time=50,
             risk_investigation_time=50,
             ses_per_logic_tree_path=200,
             number_of_logic_tree_samples=0,
@@ -144,6 +146,7 @@ class EventBasedTestCase(unittest.TestCase):
         wf = workflows.ProbabilisticEventBased(
             'PGA', 'SOME-TAXONOMY',
             vulnerability_functions={self.loss_type: vf},
+            investigation_time=50,
             risk_investigation_time=50,
             ses_per_logic_tree_path=200,
             number_of_logic_tree_samples=0,
@@ -236,6 +239,7 @@ class EventBasedTestCase(unittest.TestCase):
         wf = workflows.ProbabilisticEventBased(
             'PGA', 'SOME-TAXONOMY',
             vulnerability_functions={self.loss_type: vf},
+            investigation_time=50,
             risk_investigation_time=50,
             ses_per_logic_tree_path=200,
             number_of_logic_tree_samples=0,
