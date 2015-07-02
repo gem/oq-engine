@@ -18,7 +18,7 @@
 :func:`stochastic_event_set`.
 """
 import sys
-from openquake.baselib.python3compat range
+from openquake.baselib.python3compat import range
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.calc import filters
 
