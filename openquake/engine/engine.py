@@ -556,7 +556,6 @@ def job_from_file(cfg_file_path, username, log_level='info', exports='',
         for name, value in hc:
             if name not in params:
                 params[name] = value
-        params['hazard_investigation_time'] = hc.investigation_time
         params['hazard_imtls'] = dict(hc.imtls)
         cfd = hc.continuous_fragility_discretization
         if cfd and cfd != oqparam.continuous_fragility_discretization:
