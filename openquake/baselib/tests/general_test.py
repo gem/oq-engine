@@ -25,8 +25,7 @@ from operator import attrgetter
 from collections import namedtuple
 
 from openquake.baselib.general import (
-    block_splitter, split_in_blocks, assert_independent, search_module,
-    assert_close)
+    block_splitter, split_in_blocks, search_module, assert_close)
 
 
 class BlockSplitterTestCase(unittest.TestCase):
@@ -115,14 +114,14 @@ class BlockSplitterTestCase(unittest.TestCase):
             block_splitter([s1, s2, s3, s4, s5], max_weight=6,
                            weight=attrgetter('weight'),
                            kind=attrgetter('typology')))
-        self.assertEqual(map(len, blocks), [2, 2, 1])
+        self.assertEqual(list(map(len, blocks)), [2, 2, 1])
         self.assertEqual([b.weight for b in blocks], [2, 6, 4])
 
         blocks = list(
             split_in_blocks([s1, s2, s3, s4, s5], hint=6,
                             weight=attrgetter('weight'),
                             key=attrgetter('typology')))
-        self.assertEqual(map(len, blocks), [2, 1, 1, 1])
+        self.assertEqual(list(map(len, blocks)), [2, 1, 1, 1])
         self.assertEqual([b.weight for b in blocks], [2, 2, 4, 4])
 
 
