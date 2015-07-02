@@ -76,7 +76,7 @@ class OqParam(valid.ParamSet):
         valid.intensity_measure_types_and_levels, None)
     # hazard_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
     interest_rate = valid.Param(valid.positivefloat)
-    investigation_time = valid.Param(valid.positivefloat, 50.)
+    investigation_time = valid.Param(valid.positivefloat, None)
     loss_curve_resolution = valid.Param(valid.positiveint, 50)
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 0)
