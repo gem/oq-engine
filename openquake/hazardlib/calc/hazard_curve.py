@@ -18,6 +18,7 @@
 :mod:`openquake.hazardlib.calc.hazard_curve` implements
 :func:`hazard_curves`.
 """
+from openquake.baselib.python3compat range
 from openquake.baselib.python3compat import raise_
 import sys
 import collections

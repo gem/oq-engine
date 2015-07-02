@@ -1,3 +1,26 @@
+#  -*- coding: utf-8 -*-
+#  vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+#  Copyright (c) 2015, GEM Foundation
+
+#  OpenQuake is free software: you can redistribute it and/or modify it
+#  under the terms of the GNU Affero General Public License as published
+#  by the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+
+#  OpenQuake is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+
+#  You should have received a copy of the GNU Affero General Public License
+#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
+Compatibility layer for Python 2 and 3. Mostly copied from six and future,
+but reduced to the subset of utilities needed by GEM. This is done to
+avoid an external dependency.
+"""
 from __future__ import print_function
 import os
 import sys
@@ -26,13 +49,21 @@ if PY3:
             raise exc.with_traceback(tb)
         raise exc
 
-else:
+else:  # Python 2
     range = xrange
-   
+
     exec('''
 def raise_(tp, value=None, tb=None):
     raise tp, value, tb
 ''')
+
+
+def with_metaclass(meta, *bases):
+    """
+    Returns an instance of meta inheriting from the given bases.
+    To be used to replace the __metaclass__ syntax.
+    """
+    return meta('%sInstance' % meta.__name__, bases, {})
 
 
 def check_syntax(pkg):

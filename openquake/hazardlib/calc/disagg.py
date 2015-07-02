@@ -18,6 +18,8 @@
 :func:`disaggregation` as well as several aggregation functions for
 extracting a specific PMF from the result of :func:`disaggregation`.
 """
+from __future__ import division
+from openquake.baselib.python3compat import range
 import sys
 import numpy
 import warnings
@@ -233,7 +235,7 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
     lon_extent = get_longitudinal_extent(west, east)
     lon_bins, _, _ = npoints_between(
         west, 0, 0, east, 0, 0,
-        numpy.round(lon_extent / coord_bin_width) + 1
+        numpy.round(old_div(lon_extent, coord_bin_width)) + 1
     )
 
     lat_bins = coord_bin_width * numpy.arange(
