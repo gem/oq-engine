@@ -625,6 +625,7 @@ class ProbabilisticEventBasedBCR(Workflow):
     def __init__(self, imt, taxonomy,
                  vulnerability_functions_orig,
                  vulnerability_functions_retro,
+                 investigation_time,
                  risk_investigation_time,
                  number_of_logic_tree_samples,
                  ses_per_logic_tree_path,
@@ -638,10 +639,10 @@ class ProbabilisticEventBasedBCR(Workflow):
         self.asset_life_expectancy = asset_life_expectancy
         self.vf_orig = vulnerability_functions_orig
         self.vf_retro = vulnerability_functions_retro
+        time_span = risk_investigation_time or investigation_time
         self.curves = functools.partial(
             scientific.event_based, curve_resolution=loss_curve_resolution,
-            time_span=risk_investigation_time, tses=(
-                risk_investigation_time * ses_per_logic_tree_path))
+            time_span=time_span, tses=time_span * ses_per_logic_tree_path)
         # TODO: add multiplication by number_of_logic_tree_samples or 1
 
     def __call__(self, loss_type, assets, gmfs, epsilons, event_ids):
