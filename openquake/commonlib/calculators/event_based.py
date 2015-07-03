@@ -655,7 +655,7 @@ class EventBasedCalculator(ClassicalCalculator):
             return
         if oq.hazard_curves_from_gmfs:
             ClassicalCalculator.post_execute.__func__(self, result)
-        if oq.mean_hazard_curves:  # compute classical ones
+        if oq.compare_with_classical:  # compute classical curves
             export_dir = os.path.join(oq.export_dir, 'cl')
             if not os.path.exists(export_dir):
                 os.makedirs(export_dir)
