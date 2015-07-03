@@ -431,15 +431,16 @@ class ProbabilisticEventBased(Workflow):
         See :func:`openquake.risklib.scientific.event_based` for a description
         of the input parameters.
         """
-        tses = ((risk_investigation_time or investigation_time) *
-                ses_per_logic_tree_path * (number_of_logic_tree_samples or 1))
+        time_span = risk_investigation_time or investigation_time
+        tses = (time_span * ses_per_logic_tree_path * (
+            number_of_logic_tree_samples or 1))
         self.imt = imt
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
         self.loss_curve_resolution = loss_curve_resolution
         self.curves = functools.partial(
             scientific.event_based, curve_resolution=loss_curve_resolution,
-            time_span=risk_investigation_time, tses=tses)
+            time_span=time_span, tses=tses)
         self.conditional_loss_poes = conditional_loss_poes
         self.insured_losses = insured_losses
         self.return_loss_matrix = True
