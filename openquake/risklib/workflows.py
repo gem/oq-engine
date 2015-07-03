@@ -420,7 +420,7 @@ class ProbabilisticEventBased(Workflow):
     def __init__(
             self, imt, taxonomy,
             vulnerability_functions,
-            hazard_investigation_time,
+            investigation_time,
             risk_investigation_time,
             number_of_logic_tree_samples,
             ses_per_logic_tree_path,
@@ -431,15 +431,16 @@ class ProbabilisticEventBased(Workflow):
         See :func:`openquake.risklib.scientific.event_based` for a description
         of the input parameters.
         """
-        tses = ((hazard_investigation_time or risk_investigation_time) *
-                ses_per_logic_tree_path * (number_of_logic_tree_samples or 1))
+        time_span = risk_investigation_time or investigation_time
+        tses = (time_span * ses_per_logic_tree_path * (
+            number_of_logic_tree_samples or 1))
         self.imt = imt
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
         self.loss_curve_resolution = loss_curve_resolution
         self.curves = functools.partial(
             scientific.event_based, curve_resolution=loss_curve_resolution,
-            time_span=risk_investigation_time, tses=tses)
+            time_span=time_span, tses=tses)
         self.conditional_loss_poes = conditional_loss_poes
         self.insured_losses = insured_losses
         self.return_loss_matrix = True
@@ -624,7 +625,7 @@ class ProbabilisticEventBasedBCR(Workflow):
     def __init__(self, imt, taxonomy,
                  vulnerability_functions_orig,
                  vulnerability_functions_retro,
-                 hazard_investigation_time,
+                 investigation_time,
                  risk_investigation_time,
                  number_of_logic_tree_samples,
                  ses_per_logic_tree_path,
@@ -638,11 +639,10 @@ class ProbabilisticEventBasedBCR(Workflow):
         self.asset_life_expectancy = asset_life_expectancy
         self.vf_orig = vulnerability_functions_orig
         self.vf_retro = vulnerability_functions_retro
+        time_span = risk_investigation_time or investigation_time
         self.curves = functools.partial(
             scientific.event_based, curve_resolution=loss_curve_resolution,
-            time_span=risk_investigation_time, tses=(
-                (hazard_investigation_time or risk_investigation_time) *
-                ses_per_logic_tree_path))
+            time_span=time_span, tses=time_span * ses_per_logic_tree_path)
         # TODO: add multiplication by number_of_logic_tree_samples or 1
 
     def __call__(self, loss_type, assets, gmfs, epsilons, event_ids):
@@ -762,7 +762,7 @@ class ClassicalDamage(Damage):
     Implements the ClassicalDamage workflow
     """
     def __init__(self, imt, taxonomy, fragility_functions,
-                 hazard_imtls, hazard_investigation_time,
+                 hazard_imtls, investigation_time,
                  risk_investigation_time):
         self.imt = imt
         self.taxonomy = taxonomy
@@ -770,7 +770,7 @@ class ClassicalDamage(Damage):
         self.curves = functools.partial(
             scientific.classical_damage,
             fragility_functions['damage'], hazard_imtls[imt],
-            hazard_investigation_time=hazard_investigation_time,
+            investigation_time=investigation_time,
             risk_investigation_time=risk_investigation_time)
 
     def __call__(self, loss_type, assets, hazard_curves, _epsilons=None,
@@ -829,4 +829,5 @@ def get_workflow(imt, taxonomy, oqparam, **extra):
     missing = set(argnames) - set(all_args)
     if missing:
         raise TypeError('Missing parameter: %s' % ', '.join(missing))
+
     return workflow_class(imt, taxonomy, **all_args)

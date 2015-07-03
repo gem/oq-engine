@@ -133,7 +133,7 @@ def get_params(job_inis):
     return params
 
 
-def get_oqparam(job_ini, pkg=None, calculators=None):
+def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None):
     """
     Parse a dictionary of parameters from an INI-style config file.
 
@@ -144,6 +144,8 @@ def get_oqparam(job_ini, pkg=None, calculators=None):
     :param calculators:
         Sequence of calculator names (optional) used to restrict the
         valid choices for `calculation_mode`
+    :param hc_id:
+        Not None only when called from a post calculation
     :returns:
         An :class:`openquake.commonlib.oqvalidation.OqParam` instance
         containing the validate and casted parameters/values parsed from
@@ -157,12 +159,16 @@ def get_oqparam(job_ini, pkg=None, calculators=None):
     OqParam.calculation_mode.validator.choices = tuple(
         calculators or base.calculators)
 
-    if isinstance(job_ini, dict):
-        oqparam = OqParam(**job_ini)
-    else:
+    if not isinstance(job_ini, dict):
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
-        oqparam = OqParam(**get_params([os.path.join(basedir, job_ini)]))
+        job_ini = get_params([os.path.join(basedir, job_ini)])
 
+    if 'investigation_time' in job_ini and hc_id:
+        raise NameError(
+            'You cannot use the name `investigation_time` in a risk '
+            'configuration file. Use `risk_investigation_time` instead.')
+
+    oqparam = OqParam(**job_ini)
     oqparam.validate()
     return oqparam
 
