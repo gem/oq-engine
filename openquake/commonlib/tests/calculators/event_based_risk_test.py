@@ -66,7 +66,7 @@ class EBRTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_4_hazard(self):
-        # Turkey with SHARE logic tree
+        # Turkey with SHARE logic tree; TODO: add site model
         out = self.run_calc(case_4.__file__, 'job_hazard.ini',
                             exports='csv')
         [fname] = out['hcurves', 'csv']
