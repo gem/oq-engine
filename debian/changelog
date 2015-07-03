@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * `investigation_time` has been replaced by `risk_investigation_time` in
+    risk configuration files
   * Initial support for Django 1.7
 
   [Daniele Viganò]
