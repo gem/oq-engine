@@ -64,6 +64,14 @@ class EBRTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/event_loss_table-b1,b1-structural.csv', fname)
 
+    @attr('qa', 'hazard', 'event_based')
+    def test_case_4_hazard(self):
+        # Turkey with SHARE logic tree
+        out = self.run_calc(case_4.__file__, 'job_hazard.ini',
+                            exports='csv')
+        [fname] = out['hcurves', 'csv']
+        self.assertEqualFiles('expected/hazard_curve-mean.csv', fname)
+
     @attr('qa', 'risk', 'ebr')
     def test_case_4(self):
         # Turkey with SHARE logic tree

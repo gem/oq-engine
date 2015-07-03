@@ -46,7 +46,7 @@ class OqParam(valid.ParamSet):
     base_path = valid.Param(valid.utf8, '.')
     calculation_mode = valid.Param(valid.Choice(*CALCULATORS), '')
     coordinate_bin_width = valid.Param(valid.positivefloat)
-    compare_with_classical = valid.param(valid.boolean, False)
+    compare_with_classical = valid.Param(valid.boolean, False)
     concurrent_tasks = valid.Param(
         valid.positiveint, parallel.executor.num_tasks_hint)
     conditional_loss_poes = valid.Param(valid.probabilities, [])
