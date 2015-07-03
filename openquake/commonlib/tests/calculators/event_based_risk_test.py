@@ -68,7 +68,7 @@ class EBRTestCase(CalculatorTestCase):
     def test_case_4_hazard(self):
         # Turkey with SHARE logic tree; TODO: add site model
         out = self.run_calc(case_4.__file__, 'job_hazard.ini',
-                            exports='csv')
+                            ground_motion_fields='false', exports='csv')
         [fname] = out['hcurves', 'csv']
         self.assertEqualFiles('expected/hazard_curve-mean.csv', fname)
 
