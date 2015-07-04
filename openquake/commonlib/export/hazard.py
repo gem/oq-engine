@@ -425,6 +425,8 @@ def export_gmf(ekey, dstore):
             rlzs_assoc.realizations, rlzs_assoc.combine_gmfs(gmfs)):
         tags = all_tags[gmf_by_idx.keys()]
         gmfs = gmf_by_idx.values()
+        if not gmfs:
+            continue
         ruptures = [rupture_by_tag[tag] for tag in tags]
         fname = build_name(rlz, 'gmf', fmt, samples)
         fnames.append(os.path.join(dstore.export_dir, fname))

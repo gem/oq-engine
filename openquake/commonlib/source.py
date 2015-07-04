@@ -534,7 +534,7 @@ class CompositionInfo(object):
         """
         Yield triples (trt_id, idx, col_id) in order
         """
-        for col_id, col in self.cols:
+        for col_id, col in enumerate(self.cols):
             yield col['trt_id'], col['sample'], col_id
 
     def __repr__(self):
