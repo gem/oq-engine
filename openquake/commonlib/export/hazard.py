@@ -507,7 +507,7 @@ def export_uhs_csv(key, export_dir, fname, sitecol, hmaps):
         I the number of IMTs of SA type, and P the number of poes
     """
     dest = os.path.join(export_dir, fname)
-    rows = ([[lon, lat]] + list(row)
-            for lon, lat, row in zip(sitecol.lons, sitecol.lats, hmaps))
+    rows = [[[lon, lat]] + list(row)
+            for lon, lat, row in zip(sitecol.lons, sitecol.lats, hmaps)]
     write_csv(dest, rows)
     return {fname: dest}
