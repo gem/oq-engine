@@ -31,11 +31,12 @@ def run2(job_haz, job_risk, concurrent_tasks, exports, monitor):
     with monitor:
         monitor.monitor_dir = hcalc.datastore.calc_dir
         hcalc.run(concurrent_tasks=concurrent_tasks, exports=exports)
-        oq = readinput.get_oqparam(job_risk)
+        hc_id = hcalc.datastore.calc_id
+        oq = readinput.get_oqparam(job_risk, hc_id=hc_id)
         rcalc = base.calculators(oq, monitor)
         monitor.monitor_dir = rcalc.datastore.calc_dir
         rcalc.run(concurrent_tasks=concurrent_tasks, exports=exports,
-                  hazard_calculation_id=hcalc.datastore.calc_id)
+                  hazard_calculation_id=hc_id)
     return rcalc
 
 
@@ -51,7 +52,7 @@ def run(job_ini, concurrent_tasks=None,
     monitor = performance.Monitor('total', measuremem=True)
 
     if len(job_inis) == 1:  # run hazard or risk
-        oqparam = readinput.get_oqparam(job_inis[0])
+        oqparam = readinput.get_oqparam(job_inis[0], hc_id=hc)
         if hc and hc < 0:  # interpret negative calculation ids
             calc_ids = datastore.get_calc_ids()
             try:

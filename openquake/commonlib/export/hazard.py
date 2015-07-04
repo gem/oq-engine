@@ -411,6 +411,8 @@ def export_gmf(ekey, dstore):
     rupture_by_tag = sum(dstore['sescollection'], AccumDict())
     all_tags = dstore['tags'].value
     oq = dstore['oqparam']
+    investigation_time = (None if oq.calculation_mode == 'scenario'
+                          else oq.investigation_time)
     samples = oq.number_of_logic_tree_samples
     fmt = ekey[-1]
     gmfs = dstore[ekey[0]]
@@ -431,7 +433,7 @@ def export_gmf(ekey, dstore):
         fnames.append(os.path.join(dstore.export_dir, fname))
         globals()['export_gmf_%s' % fmt](
             ('gmf', fmt), dstore.export_dir, fname, sitecol,
-            ruptures, gmfs, rlz, oq.investigation_time)
+            ruptures, gmfs, rlz, investigation_time)
     return fnames
 
 
