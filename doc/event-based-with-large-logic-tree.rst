@@ -2,7 +2,7 @@ Event based computations with complex logic trees
 -------------------------------------------------
 
 Previously_ we discussed the concept of effective realizations and
-logic tree reduction. All we said was correct for the case of
+logic tree reduction. All we said was correct and complete for the case of
 classical calculations. However, in the case of event based calculations
 there is an additional complication:
 
@@ -123,9 +123,9 @@ composition of the composite source model, after filtering and rupture
 generation becomes::
 
   <CompositionInfo
-  AreaSource, models/src/as_model.xml, trt=[0, 1, 2, 3, 4, 5], weigth=0.500: 4 realization(s)
-  FaultSourceAndBackground, models/src/fsbg_model.xml, trt=[6, 7, 8, 9], weigth=0.200: 4 realization(s)
-  SeiFaCrust, models/src/ss_model.xml, trt=[10], weigth=0.300: 0 realization(s)>
+  AreaSource, models/src/as_model.xml, trt=[0, 1, 2, 3, 4, 5], weight=0.500: 4 realization(s)
+  FaultSourceAndBackground, models/src/fsbg_model.xml, trt=[6, 7, 8, 9], weight=0.200: 4 realization(s)
+  SeiFaCrust, models/src/ss_model.xml, trt=[10], weight=0.300: 0 realization(s)>
 
 
 An example with sampling

@@ -36,7 +36,7 @@ class Print(object):
 class InfoTestCase(unittest.TestCase):
     EXPECTED = '''Reading the source model...
 <CompositionInfo
-b1, x15.xml, trt=[0], weigth=1.00: 1 realization(s)>
+b1, x15.xml, trt=[0], weight=1.00: 1 realization(s)>
 See https://github.com/gem/oq-risklib/blob/master/doc/effective-realizations.rst for an explanation
 <RlzsAssoc(1)
 0,AkkarBommer2010: ['<0,b1,@_AkkarBommer2010_@_@_@_@_@,w=1.0>']>'''
@@ -54,7 +54,7 @@ See https://github.com/gem/oq-risklib/blob/master/doc/effective-realizations.rst
         exp = self.EXPECTED + '''
 n_sites 1
 n_sources 1
-max_realizations 1
+n_realizations 1
 n_levels 29
 output_weight 29.0
 n_imts 1
@@ -68,7 +68,7 @@ curve_matrix_size 232 B'''
         exp = self.EXPECTED + '''
 n_sites 1
 n_sources 1
-max_realizations 1
+n_realizations 1
 input_weight 1722.0
 n_levels 29
 output_weight 29.0

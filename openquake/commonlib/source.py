@@ -543,7 +543,7 @@ class CompositionInfo(object):
                        [tm.id for tm in sm.trt_models],
                        sm.weight, self.get_num_rlzs(sm)))
             for sm in self.source_models)
-        summary = ['%s, %s, trt=%s, weigth=%s: %d realization(s)' % ibm
+        summary = ['%s, %s, trt=%s, weight=%s: %d realization(s)' % ibm
                    for ibm in info_by_model.itervalues()]
         return '<%s\n%s>' % (
             self.__class__.__name__, '\n'.join(summary))

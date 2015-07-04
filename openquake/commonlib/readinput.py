@@ -52,7 +52,7 @@ info_dt = numpy.dtype([('input_weight', float),
                        ('n_levels', numpy.uint32),
                        ('n_sites', numpy.uint32),
                        ('n_sources', numpy.uint32),
-                       ('max_realizations', numpy.uint32)])
+                       ('n_realizations', numpy.uint32)])
 
 
 class DuplicatedPoint(Exception):
@@ -530,9 +530,9 @@ def get_job_info(oqparam, source_models, sitecol):
         n_imts = len(imtls)
         n_levels = sum(len(ls) for ls in imtls.itervalues()) / float(n_imts)
 
-    max_realizations = oqparam.number_of_logic_tree_samples or sum(
+    n_realizations = oqparam.number_of_logic_tree_samples or sum(
         sm.gsim_lt.get_num_paths() for sm in source_models)
-    # NB: in the event based case `max_realizations` can be over-estimated,
+    # NB: in the event based case `n_realizations` can be over-estimated,
     # if the method is called in the pre_execute phase, because
     # some tectonic region types may have no occurrencies.
 
@@ -542,7 +542,7 @@ def get_job_info(oqparam, source_models, sitecol):
     # n_sites * n_realizations * n_imts * n_levels;
     # for the event based calculator is given by n_sites * n_realizations
     # * n_levels * n_imts * (n_ses * investigation_time) * NORMALIZATION_FACTOR
-    output_weight = n_sites * n_imts * max_realizations
+    output_weight = n_sites * n_imts * n_realizations
     if oqparam.calculation_mode == 'event_based':
         total_time = (oqparam.investigation_time *
                       oqparam.ses_per_logic_tree_path)
@@ -553,7 +553,7 @@ def get_job_info(oqparam, source_models, sitecol):
     n_sources = 0  # to be set later
     return numpy.array([
         (input_weight, output_weight, n_imts, n_levels, n_sites, n_sources,
-         max_realizations)], info_dt)
+         n_realizations)], info_dt)
 
 
 def get_imts(oqparam):
