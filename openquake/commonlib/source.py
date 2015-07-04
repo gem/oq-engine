@@ -558,7 +558,7 @@ class CompositeSourceModel(collections.Sequence):
     """
     def __init__(self, source_model_lt, source_models):
         self.source_model_lt = source_model_lt
-        self.source_models = list(source_models)
+        self.source_models = source_models
         self.info = CompositionInfo(source_model_lt, source_models)
         self.source_info = ()  # set by the SourceFilterSplitter
 
@@ -656,7 +656,7 @@ class CompositeSourceModel(collections.Sequence):
         """
         models = ['%d-%s-%s,w=%s [%d trt_model(s)]' % (
             sm.ordinal, sm.name, '_'.join(sm.path), sm.weight,
-            len(sm.trt_models)) for sm in self]
+            len(sm.trt_models)) for sm in self.source_models]
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(models))
 
     def __getitem__(self, i):

@@ -37,7 +37,7 @@ def data_transfer(calc):
     oqparam = calc.oqparam
     info = calc.job_info
     calc.monitor.oqparam = oqparam
-    sources = calc.composite_source_model.get_sources()
+    sources = calc.csm.get_sources()
     num_gsims_by_trt = groupby(calc.rlzs_assoc, operator.itemgetter(0),
                                lambda group: sum(1 for row in group))
     gsims_assoc = calc.rlzs_assoc.get_gsims_by_trt_id()
@@ -66,14 +66,15 @@ def _print_info(assoc, oqparam, csm, sitecol,
     if filtersources or weightsources:
         info = readinput.get_job_info(oqparam, csm, sitecol)
         info['n_sources'] = csm.get_num_sources()
-        info['c_matrix'] = humansize(
+        curve_matrix_size = (
             info['n_sites'] * info['n_levels'] *
             info['n_imts'] * len(assoc) * 8)
-        for k in sorted(info):
+        for k in info.dtype.fields:
             if k == 'input_weight' and not weightsources:
                 pass
             else:
                 print(k, info[k])
+        print('curve_matrix_size', humansize(curve_matrix_size))
 
 
 # the documentation about how to use this feature can be found
@@ -128,8 +129,7 @@ def info(name, filtersources=False, weightsources=False, datatransfer=False):
             calc = base.calculators(oqparam)
             calc.pre_execute()
             n_tasks, to_send_forward, to_send_back = data_transfer(calc)
-            _print_info(calc.rlzs_assoc, oqparam,
-                        calc.composite_source_model, calc.sitecol,
+            _print_info(calc.rlzs_assoc, oqparam, calc.csm, calc.sitecol,
                         weightsources=True)
             print('Number of tasks to be generated: %d' % n_tasks)
             print('Estimated data to be sent forward: %s' %

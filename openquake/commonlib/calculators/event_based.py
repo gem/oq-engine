@@ -390,7 +390,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         super(EventBasedRuptureCalculator, self).pre_execute()
         rnd = random.Random()
         rnd.seed(self.oqparam.random_seed)
-        for src in self.composite_source_model.get_sources():
+        for src in self.csm.get_sources():
             src.seed = rnd.randint(0, MAX_INT)
 
     def execute(self):
@@ -401,11 +401,10 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         """
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = self.oqparam
-        csm = self.composite_source_model
-        sources = csm.get_sources()
+        sources = self.csm.get_sources()
         ruptures_by_trt = parallel.apply_reduce(
             self.core_func.__func__,
-            (sources, self.sitecol, csm.info, monitor),
+            (sources, self.sitecol, self.csm.info, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_model_id'))
@@ -413,7 +412,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         logging.info('Generated %d SESRuptures',
                      sum(len(v) for v in ruptures_by_trt.itervalues()))
 
-        self.rlzs_assoc = csm.get_rlzs_assoc(
+        self.rlzs_assoc = self.csm.get_rlzs_assoc(
             lambda trt: len(ruptures_by_trt.get(trt.id, [])))
 
         return ruptures_by_trt
@@ -664,7 +663,7 @@ class EventBasedCalculator(ClassicalCalculator):
             # use a different datastore
             self.cl = ClassicalCalculator(oq, self.monitor)
             # copy the relevant attributes
-            self.cl.composite_source_model = self.csm
+            self.cl.csm = self.csm
             self.cl.sitecol = self.sitecol.complete
             self.cl.rlzs_assoc = self.csm.get_rlzs_assoc()
             result = self.cl.run(pre_execute=False, clean_up=False)

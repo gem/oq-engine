@@ -1,7 +1,7 @@
 The concept of effective realizations
 ==============================================
 
-The management of the logic trees is the most complex thing in the
+The management of the logic trees is the most complicated thing in the
 OpenQuake libraries. The issue is that it is necessary to manage them
 in an efficient way, by avoiding redundant computation and storage,
 otherwise the engine will not be able to cope with large computations.
@@ -10,7 +10,7 @@ Historically the engine did not fare well in the case of complex logic
 trees. In recent years we improved the situation by introducing the
 concept of *effective realizations*. After realizing that in many
 calculations it is possible to reduce the full logic tree (the tree of
-the potential realizations) of a computation to a much smaller one
+the potential realizations) to a much smaller one
 (the tree of the effective realizations), we implemented an engine
 optimization to take advantage of such situations. Here I will
 explain how the optimization work.
@@ -48,14 +48,15 @@ Here is an example of trivial GMPE logic tree, in its XML input representation::
       </logicTree>
   </nrml>
 
-The logic tree is trivial since there is a single branch with branchID="b1"
-and GMPE "SadighEtAl1997" for the tectonic region type "active shallow crust".
-A logic tree with multiple branches can be simple, complex, or even trivial
-if the tectonic region type with multiple branches is not present in the
-underlying source model. This is the key to logic tree reduction concept.
+The logic tree is trivial since there is a single branch
+("b1") and GMPE ("SadighEtAl1997") for each tectonic region
+type ("active shallow crust").  A logic tree with multiple branches
+can be simple, complex, or even trivial if the tectonic region type
+with multiple branches is not present in the underlying source
+model. This is the key to the logic tree reduction concept.
 
 
-Reduction of the logic tree (full enumeration)
+Reduction of the logic tree
 -----------------------------------------------
 
 The simplest case of logic tree reduction is when the actual
@@ -127,33 +128,33 @@ three different paths in the first tectonic region type will produce
 exactly the same result.  It is not important which GMPE was chosen
 for the first tectonic region type because there are no sources of
 kind T1; so let's denote the path of the effective realizations with
-the notation `*_<GMPE of second region type>`:
+the notation `@_<GMPE of second region type>`:
 
 == ======
 #   path
 == ======
-0  `*_D`
-1  `*_E`
+0  `@_D`
+1  `@_E`
 == ======
-
-In such situation the engine will perform the computation only for the 2
-effective realizations, not for the 6 potential realizations; moreover,
-it will export only two files with names like::
-
-  hazard_curve-smltp_sm-gsimltp_@_D-ltr_0.csv
-  hazard_curve-smltp_sm-gsimltp_@_E-ltr_1.csv
 
 The "@" character should be read as "any", meaning that for the first
 tectonic region type any path (i.e. both "A", "B" and "C") will give
 the same contribution, i.e. there is independence from the GMPE
 combinations coming from the first tectonic region type.
 
+In such a situation the engine will perform the computation only for the 2
+effective realizations, not for the 6 potential realizations; moreover,
+it will export only two files with names like::
+
+  hazard_curve-smltp_sm-gsimltp_@_D-ltr_0.csv
+  hazard_curve-smltp_sm-gsimltp_@_E-ltr_1.csv
+
 
 How to analyze the logic tree of a calculation without running the calculation
 ==============================================================================
 
 `oq-lite` provide some facilities to explore the logic tree of a
-computation. The command you need is the *info* command::
+computation without running it. The command you need is the *info* command::
 
    $ oq-lite info -h
    usage: oq-lite info [-h] [-f] [-w] [-d] name
@@ -271,14 +272,14 @@ the SHARE model with just a simplified area source model::
    <CompositionInfo
    b1, simple_area_source_model.xml, trt=[0, 1, 2, 3, 4]: 4 realization(s)>
    <RlzsAssoc(8)
-   0,AtkinsonBoore2003SInter: ['<0,b1,*_*_*_*_b51_*_*,w=0.2>', '<1,b1,*_*_*_*_b52_*_*,w=0.2>', '<2,b1,*_*_*_*_b53_*_*,w=0.2>', '<3,b1,*_*_*_*_b54_*_*,w=0.4>']
-   1,FaccioliEtAl2010: ['<0,b1,*_*_*_*_b51_*_*,w=0.2>', '<1,b1,*_*_*_*_b52_*_*,w=0.2>', '<2,b1,*_*_*_*_b53_*_*,w=0.2>', '<3,b1,*_*_*_*_b54_*_*,w=0.4>']
-   2,ToroEtAl2002SHARE: ['<0,b1,*_*_*_*_b51_*_*,w=0.2>', '<1,b1,*_*_*_*_b52_*_*,w=0.2>', '<2,b1,*_*_*_*_b53_*_*,w=0.2>', '<3,b1,*_*_*_*_b54_*_*,w=0.4>']
-   3,AkkarBommer2010: ['<0,b1,*_*_*_*_b51_*_*,w=0.2>', '<1,b1,*_*_*_*_b52_*_*,w=0.2>', '<2,b1,*_*_*_*_b53_*_*,w=0.2>', '<3,b1,*_*_*_*_b54_*_*,w=0.4>']
-   4,AtkinsonBoore2003SSlab: ['<0,b1,*_*_*_*_b51_*_*,w=0.2>']
-   4,LinLee2008SSlab: ['<1,b1,*_*_*_*_b52_*_*,w=0.2>']
-   4,YoungsEtAl1997SSlab: ['<2,b1,*_*_*_*_b53_*_*,w=0.2>']
-   4,ZhaoEtAl2006SSlab: ['<3,b1,*_*_*_*_b54_*_*,w=0.4>']>
+   0,AtkinsonBoore2003SInter: ['<0,b1,@_@_@_@_b51_@_@,w=0.2>', '<1,b1,@_@_@_@_b52_@_@,w=0.2>', '<2,b1,@_@_@_@_b53_@_@,w=0.2>', '<3,b1,@_@_@_@_b54_@_@,w=0.4>']
+   1,FaccioliEtAl2010: ['<0,b1,@_@_@_@_b51_@_@,w=0.2>', '<1,b1,@_@_@_@_b52_@_@,w=0.2>', '<2,b1,@_@_@_@_b53_@_@,w=0.2>', '<3,b1,@_@_@_@_b54_@_@,w=0.4>']
+   2,ToroEtAl2002SHARE: ['<0,b1,@_@_@_@_b51_@_@,w=0.2>', '<1,b1,@_@_@_@_b52_@_@,w=0.2>', '<2,b1,@_@_@_@_b53_@_@,w=0.2>', '<3,b1,@_@_@_@_b54_@_@,w=0.4>']
+   3,AkkarBommer2010: ['<0,b1,@_@_@_@_b51_@_@,w=0.2>', '<1,b1,@_@_@_@_b52_@_@,w=0.2>', '<2,b1,@_@_@_@_b53_@_@,w=0.2>', '<3,b1,@_@_@_@_b54_@_@,w=0.4>']
+   4,AtkinsonBoore2003SSlab: ['<0,b1,@_@_@_@_b51_@_@,w=0.2>']
+   4,LinLee2008SSlab: ['<1,b1,@_@_@_@_b52_@_@,w=0.2>']
+   4,YoungsEtAl1997SSlab: ['<2,b1,@_@_@_@_b53_@_@,w=0.2>']
+   4,ZhaoEtAl2006SSlab: ['<3,b1,@_@_@_@_b54_@_@,w=0.4>']>
 
 This is a case where a lot of tectonic region types have been completely
 filtered out, so the original 160 realizations have been reduced to merely 4 for

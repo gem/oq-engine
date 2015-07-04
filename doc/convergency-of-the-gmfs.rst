@@ -1,7 +1,7 @@
 Event based computations with complex logic trees
 -------------------------------------------------
 
-Previously we discussed the concept of effective realizations and
+Previously_ we discussed the concept of effective realizations and
 logic tree reduction. All we said was correct for the case of
 classical calculations. However, in the case of event based calculations
 there is an additional complication:
@@ -18,10 +18,10 @@ This has substantial performance implications; for instance a logic
 tree that on the surface looks complex, could actually be simple or
 even trivial, thus computationally much less intensive. This can be
 good or bad: for instance, if you are running a simplified calculation
-with a smaller number of stochastic event sets, as a prototype of a
+with a small number of stochastic event sets, as a prototype of a
 larger calculation, you may run into logic tree reduction and having
 a smaller runtime than expected: the prototype will not be significant
-for the performance of the full computation.
+for the performance of the real computation.
 
 For an event based calculation it is impossible to assess the
 complexity of a logic tree without having computed the ruptures first.
@@ -33,6 +33,10 @@ calculation you should always run
 
 to get the correct reduced logic tree and effective realizations.
 It will be slower than just filtering the sources but reliable.
+As an additional bonus, you will also get some information about
+the expected data transfer.
+
+__ Previously_: effective-realizations.rst
 
 
 The concept of rupture collection

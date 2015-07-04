@@ -46,6 +46,14 @@ from openquake.commonlib import source, sourceconverter
 # the following is quite arbitrary, it gives output weights that I like (MS)
 NORMALIZATION_FACTOR = 1E-2
 
+info_dt = numpy.dtype([('input_weight', float),
+                       ('output_weight', float),
+                       ('n_imts', numpy.uint32),
+                       ('n_levels', numpy.uint32),
+                       ('n_sites', numpy.uint32),
+                       ('n_sources', numpy.uint32),
+                       ('max_realizations', numpy.uint32)])
+
 
 class DuplicatedPoint(Exception):
     """
@@ -542,9 +550,10 @@ def get_job_info(oqparam, source_models, sitecol):
     else:
         output_weight *= n_levels
 
-    return dict(input_weight=input_weight, output_weight=output_weight,
-                n_imts=n_imts, n_levels=n_levels, n_sites=n_sites,
-                max_realizations=max_realizations)
+    n_sources = 0  # to be set later
+    return numpy.array([
+        (input_weight, output_weight, n_imts, n_levels, n_sites, n_sources,
+         max_realizations)], info_dt)
 
 
 def get_imts(oqparam):
