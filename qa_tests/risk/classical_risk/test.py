@@ -267,6 +267,6 @@ class ClassicalRiskCase4TestCase(
             os.close(fd)
             hd = [['asset_ref', 'lon', 'lat', 'avg_loss~structural',
                    'ins_loss~structural']] + data
-            writers.save_csv(fname, hd, fmt='%10.6E')
+            writers.write_csv(fname, hd, fmt='%10.6E')
             expected = self._test_path('expected/%s.csv' % key)
             self.assertEqual(open(fname).read(), open(expected).read())
