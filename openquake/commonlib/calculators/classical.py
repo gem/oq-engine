@@ -253,7 +253,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         calculator = ClassicalCalculator(
             self.oqparam, monitor, persistent=False)
         calculator.csm = self.csm
-        rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
+        rlzs_assoc = self.csm.get_rlzs_assoc()
         self.rlzs_assoc = calculator.rlzs_assoc = rlzs_assoc
 
         # parallelization
