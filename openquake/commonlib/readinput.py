@@ -234,7 +234,8 @@ def get_site_collection(oqparam, mesh=None, site_ids=None,
         object with a method .get_closest returning the closest site
         model parameters
     """
-    mesh = mesh or get_mesh(oqparam)
+    if mesh is None:
+        mesh = get_mesh(oqparam)
     site_ids = site_ids or range(len(mesh))
     if oqparam.inputs.get('site_model'):
         if site_model_params is None:

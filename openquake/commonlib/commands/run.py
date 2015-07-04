@@ -71,7 +71,7 @@ def run(job_ini, concurrent_tasks=None,
     logging.info('Total time spent: %s s', monitor.duration)
     logging.info('Memory allocated: %s', general.humansize(monitor.mem))
     monitor.flush()
-    print('See the output with hdfview %s/output.hdf5',
+    print('See the output with hdfview %s/output.hdf5' %
           calc.datastore.calc_dir)
     return calc
 
