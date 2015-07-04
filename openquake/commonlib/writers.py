@@ -14,6 +14,7 @@
 # along with NRML.  If not, see <http://www.gnu.org/licenses/>.
 
 import cStringIO
+import logging
 from contextlib import contextmanager
 from xml.sax.saxutils import escape, quoteattr
 
@@ -178,20 +179,6 @@ def tostring(node, indent=4):
     return out.getvalue()
 
 
-def save_csv(dest, header_rows, sep=',', fmt='%12.8E', mode='wb'):
-    """
-    :param dest: destination filename
-    :param header_rows: header + rows to save
-    :param sep: separator to use (default comma)
-    :param fmt: formatting string (default '%12.8E')
-    :param mode: file open mode (default 'wb')
-    """
-    with open(dest, mode) as f:
-        for row in header_rows:
-            f.write(sep.join(scientificformat(col, fmt) for col in row) + '\n')
-    return dest
-
-
 # recursive function used internally by build_header
 def _build_header(dtype, root):
     header = []
@@ -264,6 +251,9 @@ def write_csv(dest, data, sep=',', fmt='%12.8E', header=None):
     :param header:
        optional list with the names of the columns to display
     """
+    if len(data) == 0:
+        logging.warn('Not generating %s, it would be empty', dest)
+        return dest
     try:
         # see if data is a composite numpy array
         data.dtype.fields
