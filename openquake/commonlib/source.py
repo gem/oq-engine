@@ -541,9 +541,9 @@ class CompositionInfo(object):
         info_by_model = collections.OrderedDict(
             (sm.path, ('_'.join(sm.path), sm.name,
                        [tm.id for tm in sm.trt_models],
-                       self.get_num_rlzs(sm)))
+                       sm.weight, self.get_num_rlzs(sm)))
             for sm in self.source_models)
-        summary = ['%s, %s, trt=%s: %d realization(s)' % ibm
+        summary = ['%s, %s, trt=%s, weigth=%s: %d realization(s)' % ibm
                    for ibm in info_by_model.itervalues()]
         return '<%s\n%s>' % (
             self.__class__.__name__, '\n'.join(summary))

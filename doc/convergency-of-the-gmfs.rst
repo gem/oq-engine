@@ -43,27 +43,27 @@ The concept of rupture collection
 -----------------------------------------------------------
 
 Event based calculations differ from classical calculations because
-their produce explicitly ruptures, which can be exported and
-made visible to the user. On the contrary, in a classical calculation
+they produce visible ruptures, which can be exported and
+made accessible to the user. On the contrary, in a classical calculation
 the underlying ruptures only live in memory and are never saved in
 the datastore, nor are exportable. The limitation is fundamentally
 a technical one: in the case of an event based calculation only
 a small fraction of the ruptures contained in a source are actually
-generated, so, it is possible to store them. In a classical calculation
+generated, so it is possible to store them. In a classical calculation
 *all* ruptures are generated and there are so many millions of them
-that it is impractical to save them, so they live in memory, they
+that it is impractical to save them. For this reason they live in memory, they
 are used to produce the hazard curves and immediately discarded
 right after. Perhaps in the future we will be able to overcome the
 technical limitations and to store the ruptures also for classical
 calculations; at the moment it is not so. Therefore here we will
 only document how the ruptures are stored for event based calculations.
 
-Because the computation is organized (by tectonic region model)
-the ruptures are naturally organized by tectonic region model
-and in the case of full enumeration there is a one-to-one
+Because the computation is organized by tectonic region model
+the ruptures are naturally organized by tectonic region model.
+In the case of full enumeration there is a one-to-one
 correspondence between rupture collections and tectonic region
 models. In the case of sampling, instead, there is a many-to-one
-correspondence: there are multiple rupture collections associated
+correspondence, i.e. multiple rupture collections are associated
 to the same tectonic region model. The number is given by the
 number of samples for the source model to which the tectonic region
 model belongs. The total number of rupture collections is
@@ -74,6 +74,63 @@ The number of collections is greater (or equal) than the number of
 realizations; it is equal only when the number of tectonic region
 models per source model is 1.
 
+An example with a large logic tree (full enumeration)
+-----------------------------------------------------
+
+Here we will show the concept of rupture collection works in practice
+in a SHARE-like calculation. We will consider the example of our QA
+test *qa_tests_data.event_based_risk.case_4*. This is an artificial
+test, obtained by a real computation for Turkey by reducing a lot
+the source model and the parameters (for instance the investigation
+time is 10 years whereas originally it was 10,000 years) so that
+it can run in less than a minute but still retains some of the
+complexities of the original calculation. It is also a perfect
+example to explain the intricacies of the logic tree reduction.
+
+If you run `oq-lite info -d` on that example you will get a number of
+warning messages, such as::
+  
+  WARNING:root:Could not find sources close to the sites in models/src/as_model.xml sm_lt_path=('AreaSource',), maximum_distance=200.0 km, TRT=Shield
+  WARNING:root:Could not find sources close to the sites in models/src/as_model.xml sm_lt_path=('AreaSource',), maximum_distance=200.0 km, TRT=Subduction Interface
+  WARNING:root:Could not find sources close to the sites in models/src/as_model.xml sm_lt_path=('AreaSource',), maximum_distance=200.0 km, TRT=Subduction IntraSlab
+  WARNING:root:Could not find sources close to the sites in models/src/as_model.xml sm_lt_path=('AreaSource',), maximum_distance=200.0 km, TRT=Volcanic
+  WARNING:root:Could not find sources close to the sites in models/src/as_model.xml sm_lt_path=('AreaSource',), maximum_distance=200.0 km, TRT=Stable Shallow Crust
+
+Such warnings comes from the source filtering routine. They simply tell us that
+a lot of tectonic region types will not contribute to the logic tree because
+they are being filtered away. Later warnings are even more explicit::
+  
+   WARNING:root:Reducing the logic tree of models/src/as_model.xml from 640 to 4 realizations
+   WARNING:root:Reducing the logic tree of models/src/fsbg_model.xml from 40 to 4 realizations
+   WARNING:root:Reducing the logic tree of models/src/ss_model.xml from 4 to 0 realizations
+   WARNING:root:No realizations for SeiFaCrust, models/src/ss_model.xml
+   WARNING:root:Some source models are not contributing, weights are being rescaled
+
+
+This is a case where an apparently complex logic tree has been reduced
+to a simple one. The full logic tree is composed by three GMPE logic
+trees, one for each source model. The first one (for sources coming
+from the file *as_model.xml*) has been reduced from 640 potential
+realizations to 4 effective realizations; the second one (for sources
+coming from the file *fsbg_model.xml*) has been reduced from 40
+potential realizations to 4 effective realizations; the last one (for
+sources coming from the file *ss_model.xml*) has been completely
+removed, since after filtering there are no sources compling from
+*ss_model.xml*, aka the SeiFaCrust model. So, there are no effective
+realizations belonging to it and the weights of the source model logic
+tree have to be rescaled, otherwise their sum would not be one. The
+composition of the composite source model, after filtering and rupture
+generation becomes::
+
+  <CompositionInfo
+  AreaSource, models/src/as_model.xml, trt=[0, 1, 2, 3, 4, 5], weigth=0.500: 4 realization(s)
+  FaultSourceAndBackground, models/src/fsbg_model.xml, trt=[6, 7, 8, 9], weigth=0.200: 4 realization(s)
+  SeiFaCrust, models/src/ss_model.xml, trt=[10], weigth=0.300: 0 realization(s)>
+
+
+An example with sampling
+---------------------------------------------------
+  
 To explain how it works, I will show as an example our test
 `event_based/case_7`_.
 

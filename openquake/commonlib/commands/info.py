@@ -64,7 +64,7 @@ def _print_info(assoc, oqparam, csm, sitecol,
           'effective-realizations.rst for an explanation')
     print(assoc)
     if filtersources or weightsources:
-        info = readinput.get_job_info(oqparam, csm, sitecol)
+        [info] = readinput.get_job_info(oqparam, csm, sitecol)
         info['n_sources'] = csm.get_num_sources()
         curve_matrix_size = (
             info['n_sites'] * info['n_levels'] *

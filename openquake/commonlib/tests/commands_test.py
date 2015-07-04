@@ -36,7 +36,7 @@ class Print(object):
 class InfoTestCase(unittest.TestCase):
     EXPECTED = '''Reading the source model...
 <CompositionInfo
-b1, x15.xml, trt=[0]: 1 realization(s)>
+b1, x15.xml, trt=[0], weigth=1.00: 1 realization(s)>
 See https://github.com/gem/oq-risklib/blob/master/doc/effective-realizations.rst for an explanation
 <RlzsAssoc(1)
 0,AkkarBommer2010: ['<0,b1,@_AkkarBommer2010_@_@_@_@_@,w=1.0>']>'''
@@ -52,13 +52,13 @@ See https://github.com/gem/oq-risklib/blob/master/doc/effective-realizations.rst
         with Print.patch() as p:
             info(path, filtersources=True)
         exp = self.EXPECTED + '''
-c_matrix 232 B
-max_realizations 1
-n_imts 1
-n_levels 29.0
 n_sites 1
 n_sources 1
-output_weight 29.0'''
+max_realizations 1
+n_levels 29
+output_weight 29.0
+n_imts 1
+curve_matrix_size 232 B'''
         self.assertEqual(exp, str(p))
 
     def test_zip_weighting(self):
@@ -66,14 +66,14 @@ output_weight 29.0'''
         with Print.patch() as p:
             info(path, weightsources=True)
         exp = self.EXPECTED + '''
-c_matrix 232 B
-input_weight 1722
-max_realizations 1
-n_imts 1
-n_levels 29.0
 n_sites 1
 n_sources 1
-output_weight 29.0'''
+max_realizations 1
+input_weight 1722.0
+n_levels 29
+output_weight 29.0
+n_imts 1
+curve_matrix_size 232 B'''
         self.assertEqual(exp, str(p))
 
     def test_data_transfer(self):
