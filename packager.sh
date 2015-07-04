@@ -33,7 +33,7 @@
 # but any modifications are stored in another overlayed
 # file system (in-memory or disk)
 #
-if [ "$GEM_SET_DEBUG" = "true" ]; then
+if [ -n "$GEM_SET_DEBUG" -a "$GEM_SET_DEBUG" != "false" ]; then
     export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
     set -x
 fi
@@ -419,14 +419,23 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}"
 
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
-        # run selected risk demos
+        # run selected demos
         ssh $lxc_ip "set -e; cd /usr/share/doc/python-oq-risklib/examples/demos
-        echo 'running ClassicalPSHA...'
-        oq-lite run ClassicalPSHA/job_hazard.ini,ClassicalPSHA/job_risk.ini
+        echo 'running SimpleFaultSourceClassicalPSHA...'
+        oq-lite run SimpleFaultSourceClassicalPSHA/job.ini
+        echo 'running ClassicalPSHA hazard...'
+        oq-lite run ClassicalPSHA/job_hazard.ini
+        echo 'running ClassicalPSHA risk...'
+        oq-lite run ClassicalPSHA/job_risk.ini --hc -1
         echo 'running ScenarioDamage...'
         oq-lite run ScenarioDamage/job_hazard.ini,ScenarioDamage/job_risk.ini
         echo 'running ProbabilisticEventBased...'
         oq-lite run ProbabilisticEventBased/job_hazard.ini,ProbabilisticEventBased/job_risk.ini
+        echo 'running EventLossTableDemo...'        
+        oq-lite run ProbabilisticEventBased/job_agg.ini
+        oq-lite export -1 /event_loss_table-rlzs csv /tmp
+        echo 'Show all the oq-lite calculations'
+        oq-lite show 0
         "
     fi
 
@@ -881,6 +890,14 @@ ini_suf="" # currently not included into the version array structure
 
 # version info from debian/changelog
 h="$(grep "^$GEM_DEB_PACKAGE" debian/changelog | head -n 1)"
+
+# is it the first item of changelog ?
+h_first="$(cat debian/changelog | head -n 1)"
+h_is_first=0
+if [ "$h" = "$h_first" ]; then
+    h_is_first=1
+fi
+
 # pkg_vers="$(echo "$h" | cut -d ' ' -f 2 | cut -d '(' -f 2 | cut -d ')' -f 1 | sed -n 's/[-+].*//gp')"
 pkg_name="$(echo "$h" | cut -d ' ' -f 1)"
 pkg_vers="$(echo "$h" | cut -d ' ' -f 2 | cut -d '(' -f 2 | cut -d ')' -f 1)"
@@ -902,8 +919,12 @@ if [ $BUILD_DEVEL -eq 1 ]; then
 
     if [ "$pkg_maj" = "$ini_maj" -a "$pkg_min" = "$ini_min" -a \
          "$pkg_bfx" = "$ini_bfx" -a "$pkg_deb" != "" ]; then
-        deb_ct="$(echo "$pkg_deb" | sed 's/^-//g')"
-        pkg_deb="-$(( deb_ct ))"
+        deb_ct="$(echo "$pkg_deb" | sed 's/^-//g;s/~.*//g')"
+        if [ $h_is_first -eq 1 ]; then
+            pkg_deb="-$(( deb_ct ))"
+        else
+            pkg_deb="-$(( deb_ct + 1))"
+        fi
     else
         pkg_maj="$ini_maj"
         pkg_min="$ini_min"

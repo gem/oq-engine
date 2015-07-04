@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import abc
 import logging
 import operator
@@ -26,8 +27,9 @@ import numpy
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.baselib import general
-from openquake.commonlib import readinput, datastore, logictree, export
-from openquake.commonlib.parallel import apply_reduce, DummyMonitor
+from openquake.baselib.performance import DummyMonitor
+from openquake.commonlib import readinput, datastore, logictree, export, source
+from openquake.commonlib.parallel import apply_reduce
 from openquake.risklib import riskinput
 
 get_taxonomy = operator.attrgetter('taxonomy')
@@ -41,6 +43,8 @@ calculators = general.CallableDict(operator.attrgetter('calculation_mode'))
 class AssetSiteAssociationError(Exception):
     """Raised when there are no hazard sites close enough to any asset"""
 
+rlz_dt = numpy.dtype([('uid', (str, 200)), ('weight', float)])
+
 
 class BaseCalculator(object):
     """
@@ -53,13 +57,16 @@ class BaseCalculator(object):
     __metaclass__ = abc.ABCMeta
 
     oqparam = datastore.persistent_attribute('oqparam')
-    sitemesh = datastore.persistent_attribute('/sitemesh')
+    sitemesh = datastore.persistent_attribute('sitemesh')
     sitecol = datastore.persistent_attribute('sitecol')
     rlzs_assoc = datastore.persistent_attribute('rlzs_assoc')
+    realizations = datastore.persistent_attribute('realizations')
     assets_by_site = datastore.persistent_attribute('assets_by_site')
-    assetcol = datastore.persistent_attribute('/assetcol')
+    assetcol = datastore.persistent_attribute('assetcol')
     cost_types = datastore.persistent_attribute('cost_types')
-    taxonomies = datastore.persistent_attribute('/taxonomies')
+    taxonomies = datastore.persistent_attribute('taxonomies')
+    source_info = datastore.persistent_attribute('source_info')
+    performance = datastore.persistent_attribute('performance')
 
     pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
@@ -78,18 +85,30 @@ class BaseCalculator(object):
         # else we are doing a precalculation; oqparam has been already stored
         self.persistent = persistent
 
-    def run(self, pre_execute=True, **kw):
+    def run(self, pre_execute=True, clean_up=True, concurrent_tasks=None,
+            **kw):
         """
-        Run the calculation and return the saved output.
+        Run the calculation and return the exported outputs.
         """
-        self.monitor.write('operation pid time_sec memory_mb'.split())
+        if concurrent_tasks is not None:
+            self.oqparam.concurrent_tasks = concurrent_tasks
         vars(self.oqparam).update(kw)
-        if pre_execute:
-            self.pre_execute()
-        result = self.execute()
-        self.post_execute(result)
-        exported = self.export()
-        self.clean_up()
+        try:
+            if pre_execute:
+                with self.monitor('pre_execute', autoflush=True):
+                    self.pre_execute()
+            with self.monitor('execute', autoflush=True):
+                result = self.execute()
+            with self.monitor('post_execute', autoflush=True):
+                self.post_execute(result)
+            with self.monitor('export', autoflush=True):
+                exported = self.export()
+        finally:
+            if clean_up:
+                try:
+                    self.clean_up()
+                except:
+                    logging.error('Cleanup error', exc_info=True)
         return exported
 
     def core_func(*args):
@@ -128,6 +147,8 @@ class BaseCalculator(object):
         exported = {}
         individual_curves = self.oqparam.individual_curves
         for fmt in self.oqparam.exports:
+            if not fmt:
+                continue
             for key in self.datastore:
                 if 'rlzs' in key and not individual_curves:
                     continue  # skip individual curves
@@ -142,17 +163,24 @@ class BaseCalculator(object):
 
     def clean_up(self):
         """
-        Close the datastore and possibly other resources
+        Collect the realizations and the monitoring information,
+        then close the datastore.
         """
+        self.realizations = numpy.array(
+            [(r.uid, r.weight) for r in self.rlzs_assoc.realizations], rlz_dt)
+        performance = self.monitor.collect_performance()
+        if performance is not None:
+            self.performance = performance
         self.datastore.close()
+        self.datastore.symlink(os.path.dirname(self.oqparam.inputs['job_ini']))
 
 
 class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
-    prefilter = True  # filter the sources before splitting them
     mean_curves = None  # to be overridden
+    SourceProcessor = source.SourceFilterSplitter
 
     def assoc_assets_sites(self, sitecol):
         """
@@ -185,8 +213,7 @@ class HazardCalculator(BaseCalculator):
                 'maximum distance of %s km' % maximum_distance)
         mask = numpy.array([sid in assets_by_sid for sid in sitecol.sids])
         assets_by_site = [assets_by_sid.get(sid, []) for sid in sitecol.sids]
-        filteredcol = sitecol.filter(mask)
-        return filteredcol, numpy.array(assets_by_site)
+        return sitecol.filter(mask), numpy.array(assets_by_site)
 
     def count_assets(self):
         """
@@ -208,7 +235,7 @@ class HazardCalculator(BaseCalculator):
                 precalc = calculators[self.pre_calculator](
                     self.oqparam, self.monitor('precalculator'),
                     self.datastore.calc_id)
-                precalc.run()
+                precalc.run(clean_up=False)
                 if 'composite_source_model' in vars(precalc):
                     self.csm = precalc.composite_source_model
             else:  # read previously computed data
@@ -219,17 +246,15 @@ class HazardCalculator(BaseCalculator):
                     if name not in new:  # add missing parameter
                         new[name] = value
                 self.oqparam = self.oqparam
-            if self.oqparam.hazard_investigation_time is None:
-                self.oqparam.hazard_investigation_time = (
-                    self.oqparam.investigation_time)
             try:
-                self.datastore['/taxonomies']
+                self.datastore['taxonomies']
             except KeyError:  # not read already
                 self.read_exposure_sitecol()
 
         else:  # we are in a basic calculator
             self.read_exposure_sitecol()
             self.read_sources()
+        self.datastore.hdf5.flush()
 
     def read_exposure_sitecol(self):
         """
@@ -248,7 +273,7 @@ class HazardCalculator(BaseCalculator):
             num_assets = self.count_assets()
             mesh = readinput.get_mesh(self.oqparam)
             if self.datastore.parent:
-                parent_mesh = self.datastore.parent['/sitemesh'].value
+                parent_mesh = self.datastore.parent['sitemesh'].value
                 if mesh is None:
                     mesh = Mesh(parent_mesh['lon'], parent_mesh['lat'])
             if mesh is not None:
@@ -275,14 +300,14 @@ class HazardCalculator(BaseCalculator):
         self.save_mesh()
         if hasattr(self, 'assets_by_site'):
             self.assetcol = riskinput.build_asset_collection(
-                self.assets_by_site)
+                self.assets_by_site, self.oqparam.time_event)
 
     def save_mesh(self):
         """
         Save the mesh associated to the complete sitecol in the HDF5 file
         """
-        if ('/sitemesh' not in self.datastore and
-                '/sitemesh' not in self.datastore.parent):
+        if ('sitemesh' not in self.datastore and
+                'sitemesh' not in self.datastore.parent):
             col = self.sitecol.complete
             mesh_dt = numpy.dtype([('lon', float), ('lat', float)])
             self.sitemesh = numpy.array(zip(col.lons, col.lats), mesh_dt)
@@ -294,18 +319,26 @@ class HazardCalculator(BaseCalculator):
         to filter to sources according to the site collection.
         """
         if 'source' in self.oqparam.inputs:
-            logging.info('Reading the composite source models')
+            logging.info('Reading the composite source model')
             with self.monitor(
                     'reading composite source model', autoflush=True):
                 self.composite_source_model = (
                     readinput.get_composite_source_model(
-                        self.oqparam, self.sitecol, self.prefilter))
+                        self.oqparam, self.sitecol, self.SourceProcessor,
+                        self.monitor))
+                # we could manage limits here
+                self.source_info = self.composite_source_model.source_info
                 self.job_info = readinput.get_job_info(
                     self.oqparam, self.composite_source_model, self.sitecol)
-                # we could manage limits here
-                if self.prefilter:
-                    self.rlzs_assoc = (self.composite_source_model.
-                                       get_rlzs_assoc())
+                self.composite_source_model.count_ruptures()
+                self.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
+
+                logging.info(
+                    'Total weight of the sources=%s',
+                    self.job_info['input_weight'])
+                logging.info(
+                    'Expected output size=%s',
+                    self.job_info['output_weight'])
 
 
 class RiskCalculator(HazardCalculator):
@@ -397,34 +430,22 @@ class RiskCalculator(HazardCalculator):
         Require a `.core_func` to be defined with signature
         (riskinputs, riskmodel, rlzs_assoc, monitor).
         """
-        with self.monitor('execute risk', autoflush=True) as monitor:
-            monitor.oqparam = self.oqparam
-            if self.pre_calculator == 'event_based_rupture':
-                monitor.assets_by_site = self.assets_by_site
-                monitor.num_assets = self.count_assets()
-            res = apply_reduce(
-                self.core_func.__func__,
-                (self.riskinputs, self.riskmodel, self.rlzs_assoc, monitor),
-                concurrent_tasks=self.oqparam.concurrent_tasks,
-                weight=get_weight, key=self.riskinput_key)
+        # add fatalities as side effect
+        riskinput.build_asset_collection(
+            self.assets_by_site, self.oqparam.time_event)
+        self.monitor.oqparam = self.oqparam
+        if self.pre_calculator == 'event_based_rupture':
+            self.monitor.assets_by_site = self.assets_by_site
+            self.monitor.num_assets = self.count_assets()
+        res = apply_reduce(
+            self.core_func.__func__,
+            (self.riskinputs, self.riskmodel, self.rlzs_assoc, self.monitor),
+            concurrent_tasks=self.oqparam.concurrent_tasks,
+            weight=get_weight, key=self.riskinput_key)
         return res
 
+
 # functions useful for the calculators ScenarioDamage and ScenarioRisk
-
-
-def expand(gmf, sitecol):
-    """
-    :param gmf: a GMF matrix of shape (N', R) with N' <= N
-    :param sitecol: a site collection of N elements
-    :returns: a GMF matrix of shape (N, R) filled with zeros
-    """
-    if sitecol is sitecol.complete:
-        return gmf  # do nothing
-    n, r = gmf.shape
-    zeros = numpy.zeros((len(sitecol.complete), r), gmf.dtype)
-    zeros[sitecol.indices] = gmf
-    return zeros
-
 
 def get_gmfs(calc):
     """
@@ -432,13 +453,27 @@ def get_gmfs(calc):
     :returns: a dictionary of gmfs
     """
     if 'gmfs' in calc.oqparam.inputs:  # from file
-        gmfs = read_gmfs_from_csv(calc)
-    else:  # from rupture
-        if calc.datastore.parent:  # gmfs from hazard calculation
-            gmfs = calc.gmf_by_trt_gsim
-        else:  # just computed gmfs
-            gmfs = {k: expand(gmf, calc.sitecol)
-                    for k, gmf in calc.gmf_by_trt_gsim.iteritems()}
+        return read_gmfs_from_csv(calc)
+    # else from rupture
+    gmf = calc.datastore['gmfs/col00'].value
+    # NB: if the hazard site collection has N sites, the hazard
+    # filtered site collection for the nonzero GMFs has N' <= N sites
+    # whereas the risk site collection associated to the assets
+    # has N'' <= N' sites
+    haz_sitecol = calc.datastore.parent['sitecol']  # N' values
+    risk_indices = set(calc.sitecol.indices)  # N'' values
+    N = len(haz_sitecol.complete)
+    imt_dt = numpy.dtype([(imt, float) for imt in calc.oqparam.imtls])
+    gmf_by_idx = general.groupby(gmf, lambda row: row['idx'])
+    R = len(gmf_by_idx)
+    # build a matrix N x R for each GSIM realization
+    gmfs = {(trt_id, gsim): numpy.zeros((N, R), imt_dt)
+            for trt_id, gsim in calc.rlzs_assoc}
+    for rupid, rows in sorted(gmf_by_idx.iteritems()):
+        for sid, gmv in zip(haz_sitecol.indices, rows):
+            if sid in risk_indices:
+                for trt_id, gsim in gmfs:
+                    gmfs[trt_id, gsim][sid, rupid] = gmv[gsim]
     return gmfs
 
 

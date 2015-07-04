@@ -654,11 +654,11 @@ class ClassicalDamageTestCase(unittest.TestCase):
             0.000127992,
             0.000030350,
         ])
-        hazard_investigation_time = 50.
+        investigation_time = 50.
         risk_investigation_time = 100.
         poos = scientific.classical_damage(
             fragility_functions, hazard_imls, hazard_poes,
-            hazard_investigation_time, risk_investigation_time)
+            investigation_time, risk_investigation_time)
         aaae(poos, [1.0415184E-09, 1.4577245E-06, 1.9585762E-03, 6.9677521E-02,
                     9.2836244E-01])
 
@@ -707,9 +707,9 @@ class ClassicalDamageTestCase(unittest.TestCase):
             0.00004249201524,
             0.00003033694903,
             ])
-        hazard_investigation_time = 50.
+        investigation_time = 50.
         risk_investigation_time = 100.
         poos = scientific.classical_damage(
             fragility_functions, hazard_imls, hazard_poes,
-            hazard_investigation_time, risk_investigation_time)
+            investigation_time, risk_investigation_time)
         aaae(poos, [0.56652127, 0.12513401, 0.1709355, 0.06555033, 0.07185889])

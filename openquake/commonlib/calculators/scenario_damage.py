@@ -68,15 +68,13 @@ class ScenarioDamageCalculator(base.RiskCalculator):
     pre_calculator = 'scenario'
     core_func = scenario_damage
     damages_by_key = datastore.persistent_attribute('damages_by_key')
-    gmf_by_trt_gsim = datastore.persistent_attribute('gmf_by_trt_gsim')
     is_stochastic = True
 
     def pre_execute(self):
         if 'gmfs' in self.oqparam.inputs:
             self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
-        gmfs = base.get_gmfs(self)
-        self.riskinputs = self.build_riskinputs(gmfs)
+        self.riskinputs = self.build_riskinputs(base.get_gmfs(self))
 
     def post_execute(self, result):
         self.damages_by_key = result

@@ -72,17 +72,17 @@ and let's identify the logic tree path with the notation
 5   `C_E`
 == ========
 
-Now assume that the source model does not contain sources of tectonic region
-type T1, or that such sources are filtered away since they are too distant
-to have an effect: in such a situation we would expect to have only 2
-effective realizations corresponding to the GMPEs in the second
-tectonic region type. The weight of each effective realizations will be
-three times the weight of a regular representation, since three different paths
-in the first tectonic region type will produce exactly the same result.
-It is not important which GMPE was chosen for the first tectonic region
-type because there are no sources of kind T1; so let's denote the
-path of the effective realizations with the notation
-`*_<GMPE of second region type>`:
+Now assume that the source model does not contain sources of tectonic
+region type T1, or that such sources are filtered away since they are
+too distant to have an effect: in such a situation we would expect to
+have only 2 effective realizations corresponding to the GMPEs in the
+second tectonic region type. The weight of each effective realizations
+will be three times the weight of a regular representation, since
+three different paths in the first tectonic region type will produce
+exactly the same result.  It is not important which GMPE was chosen
+for the first tectonic region type because there are no sources of
+kind T1; so let's denote the path of the effective realizations with
+the notation `*_<GMPE of second region type>`:
 
 == ======
 #   path
@@ -102,8 +102,8 @@ it will export only two files with names like::
 Reduction of the logic tree when sampling is enabled
 ----------------------------------------------------
 
-There are real life examples of very complex logic trees, even with more
-more than 400,000 branches. In such situation it is impossible to perform
+There are real life examples of very complex logic trees, even with
+more than 400,000 branches. In such situations it is impossible to perform
 a full computation. However, the engine allows to
 sample the branches of the complete logic tree. More precisely,
 for each branch sampled from the source model logic
@@ -115,15 +115,16 @@ Suppose for instance that we set
   `number_of_logic_tree_samples = 4000`
 
 to sample 4,000 branches instead of 400,000. The expectation is that
-the computation will be 100 times faster. This is indeed the case for the
-classical calculator. However, for the event based calculator things
-are trickier: each sample of the source model must produce different
-ruptures, even if there is only one source model repeated 4,000 times,
-because of the inherent stochasticity of the process. Therefore the
-time spent in generating the needed amount of ruptures could make the
-calculator slower than using full enumeration: remember than when
-using full enumeration the ruptures of a given source model are generated
-exactly once, since each path is taken exactly once.
+the computation will be 100 times faster. This is indeed the case for
+the classical calculator. However, for the event based calculator
+things are different. The point is that each sample of the source
+model must produce different ruptures, even if there is only one
+source model repeated 4,000 times, because of the inherent
+stochasticity of the process. Therefore the time spent in generating
+the needed amount of ruptures could make the calculator slower than
+using full enumeration: remember than when using full enumeration the
+ruptures of a given source model are generated exactly once, since
+each path is taken exactly once.
 
 Notice that even if source model path is
 sampled several times, the model is parsed and sent to the workers *only
@@ -140,59 +141,14 @@ identical and there are no seeds, so the computation is done only once,
 in an efficient way.
 
 
-Convergency of the event based hazard calculator
----------------------------------------------------------------------------
-
-In theory, the hazard curves produced by an event based calculation
-should converge to the curves produced by an equivalent classical
-calculation. In practice, if the parameters
-`number_of_logic_tree_samples` and `ses_per_logic_tree_path` (the
-product of them is the relevant one) are not large enough they may be
-different. The `oq-lite` version of the engine is able to compare
-the mean hazard curves and to see how well they converge. This is
-done automatically if the option `mean_hazard_curves = true` is set.
-Here is an example of how to generate and plot the curves for one
-of our QA tests (a case with bad convergence was chosen on purpose)::
-
- $ oq-lite run event_based/case_7/job.ini
- <snip>
- WARNING:root:Relative difference with the classical mean curves for IMT=SA(0.1): 51%
- WARNING:root:Relative difference with the classical mean curves for IMT=PGA: 49%
- <snip>
- $ oq-lite plot /tmp/cl/hazard.pik /tmp/hazard.pik --sites=0,1,2
-
-.. image:: ebcl-convergency.png
-
-The relative different between the classical and event based curves is
-computed by computing the relative difference between each point of
-the curves for each curve, and by taking the maximum, at least
-for probabilities of exceedence larger than 1% (for low values of
-the probability the convergency may be bad). For the details I
-suggest you `to look at the code`_.
-
-.. _to look at the code: ../openquake/commonlib/util.py
-
-I should also notice that the effective realizations produced by an
-event based calculation are not necessarily the same as the one
-produced by an equivalent classical calculation. If you are unlucky,
-for a given set of parameter, a tectonic region type producing
-ruptures in the classical calculation could *not* produce ruptures in the
-corresponding event based calculation.  The consequence is the event
-based calculation can have less effective realizations than the
-classical calculation. However, in the limit of many samples/many SES,
-all tectonic regions which are relevant for the classical calculation
-should produce ruptures for the event based calculation too.
-
- 
 How to analyze the logic tree of a calculation without running the calculation
 ==============================================================================
-
 
 `oq-lite` provide some facilities to explore the logic tree of a
 computation. The command you need is the *info* command::
 
    $ oq-lite info -h
-   usage: oq-lite info [-h] [-f] name
+   usage: oq-lite info [-h] [-f] [-w] [-d] name
    
    positional arguments:
      name                 calculator name, job.ini file or zip archive
@@ -200,7 +156,9 @@ computation. The command you need is the *info* command::
    optional arguments:
      -h, --help           show this help message and exit
      -f, --filtersources  flag to enable filtering of the source models
-
+     -w, --weightsources  flag to enable weighting of the source models
+     -d, --datatransfer   flag to enable data transfer calculation
+   
 Let's assume that you have a zip archive called `SHARE.zip` containing the
 SHARE source model, the SHARE source model logic tree file and the SHARE
 GMPE logic tree file as provided by the SHARE collaboration, as well as
@@ -288,7 +246,7 @@ classical/case_7; you can run the command and get::
    <CompositionInfo
    b1, source_model_1.xml, trt=[0]: 1 realization(s)
    b2, source_model_2.xml, trt=[1]: 1 realization(s)>
-   <RlzsAssoc
+   <RlzsAssoc(2)
    0,SadighEtAl1997: ['<0,b1,b1,w=0.7>']
    1,SadighEtAl1997: ['<1,b2,b1,w=0.3>']>
 
@@ -304,7 +262,7 @@ the SHARE model with just a simplified area source model::
    $ oq-lite info classical/case_19/job.ini -f
    <CompositionInfo
    b1, simple_area_source_model.xml, trt=[0, 1, 2, 3, 4]: 4 realization(s)>
-   <RlzsAssoc
+   <RlzsAssoc(8)
    0,AtkinsonBoore2003SInter: ['<0,b1,*_*_*_*_b51_*_*,w=0.2>', '<1,b1,*_*_*_*_b52_*_*,w=0.2>', '<2,b1,*_*_*_*_b53_*_*,w=0.2>', '<3,b1,*_*_*_*_b54_*_*,w=0.4>']
    1,FaccioliEtAl2010: ['<0,b1,*_*_*_*_b51_*_*,w=0.2>', '<1,b1,*_*_*_*_b52_*_*,w=0.2>', '<2,b1,*_*_*_*_b53_*_*,w=0.2>', '<3,b1,*_*_*_*_b54_*_*,w=0.4>']
    2,ToroEtAl2002SHARE: ['<0,b1,*_*_*_*_b51_*_*,w=0.2>', '<1,b1,*_*_*_*_b52_*_*,w=0.2>', '<2,b1,*_*_*_*_b53_*_*,w=0.2>', '<3,b1,*_*_*_*_b54_*_*,w=0.4>']

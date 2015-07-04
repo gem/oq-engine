@@ -19,29 +19,16 @@
 import os
 import logging
 
+import numpy
+
 from openquake.baselib import general
 from openquake.commonlib import parallel, datastore
 from openquake.commonlib.calculators import base
 
 
-def losses_per_asset(tag, loss_type, assets, means, stddevs,
-                     multiply_by_value=True):
-    """
-    :returns: a dictionary {
-    (tag, loss_type): [(asset_ref, mean_value, stddev), ...]}
-    """
-    lst = []
-    for a, m, s in zip(assets, means, stddevs):
-        if multiply_by_value:
-            # this is really ugly: we should change workflow.Scenario
-            # to return the already multiplied insured_loss_matrix;
-            # we postpone the fix to the future when the engine
-            # scenario_risk calculator will be removed
-            v = a.value(loss_type)
-        else:
-            v = 1
-        lst.append((a.id, m * v, s * v))
-    return {(tag, loss_type): lst}
+def lpa(assets, means, stddevs):
+    """Losses per asset"""
+    return [(a.id, m, s) for a, m, s in zip(assets, means, stddevs)]
 
 
 @parallel.litetask
@@ -73,16 +60,14 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
             assets = out.assets
             means = out.loss_matrix.mean(axis=1),
             stddevs = out.loss_matrix.std(ddof=1, axis=1)
-            result[out.hid] += losses_per_asset(
-                'asset-loss', out.loss_type, assets, means, stddevs)
+            result[out.hid] += {
+                ('asset-loss', out.loss_type): lpa(assets, means, stddevs)}
             result[out.hid] += {('agg', out.loss_type): out.aggregate_losses}
-
             if out.insured_loss_matrix is not None:
                 means = out.insured_loss_matrix.mean(axis=1),
                 stddevs = out.insured_loss_matrix.std(ddof=1, axis=1)
-                result[out.hid] += losses_per_asset(
-                    'asset-ins', out.loss_type, assets, means, stddevs,
-                    multiply_by_value=False)
+                result[out.hid] += {
+                    ('asset-ins', out.loss_type): lpa(assets, means, stddevs)}
                 result[out.hid] += {('ins', out.loss_type): out.insured_losses}
     return result
 
@@ -93,6 +78,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
     Run a scenario risk calculation
     """
     core_func = scenario_risk
+    epsilon_matrix = datastore.persistent_attribute('epsilon_matrix')
     losses_by_key = datastore.persistent_attribute('losses_by_key')
     gmf_by_trt_gsim = datastore.persistent_attribute('gmf_by_trt_gsim')
     pre_calculator = 'scenario'
@@ -110,7 +96,8 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         logging.info('Building the epsilons')
         eps_dict = self.make_eps_dict(
             self.oqparam.number_of_ground_motion_fields)
-
+        self.epsilon_matrix = numpy.array(
+            [eps_dict[a['asset_ref']] for a in self.assetcol])
         self.riskinputs = self.build_riskinputs(base.get_gmfs(self), eps_dict)
 
     def post_execute(self, result):

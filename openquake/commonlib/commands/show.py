@@ -16,6 +16,9 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
+import os
+import shutil
 from openquake.commonlib import sap, datastore
 from openquake.baselib.general import humansize
 from openquake.commonlib.commands.plot import combined_curves
@@ -26,23 +29,44 @@ def show(calc_id, key=None, rlzs=None):
     """
     Show the content of a datastore.
 
-    :param id: numeric calculation ID
+    :param calc_id: numeric calculation ID; if 0, show all calculations
     :param key: key of the datastore
     :param rlzs: flag; if given, print out the realizations in order
     """
+    if not calc_id:
+        if not os.path.exists(datastore.DATADIR):
+            return
+        rows = []
+        for calc_id in datastore.get_calc_ids(datastore.DATADIR):
+            try:
+                oq = datastore.DataStore(calc_id)['oqparam']
+            except:  # invalid datastore directory
+                shutil.rmtree(os.path.join(
+                    datastore.DATADIR, 'calc_%s' % calc_id))
+            else:
+                rows.append((calc_id, oq.calculation_mode, oq.description))
+        for row in sorted(rows, key=lambda row: row[0]):  # by calc_id
+            print('#%d %s: %s' % row)
+        return
     ds = datastore.DataStore(calc_id)
     if key:
+        if key in datastore.view:
+            print(datastore.view(key, ds))
+            return
         obj = ds[key]
-        if key.startswith('/') and hasattr(obj, 'value'):
-            print obj.value
+        if hasattr(obj, 'value'):
+            print(obj.value)
         else:
-            print obj
+            print(obj)
         return
     # print all keys
-    print ds['oqparam'].calculation_mode, \
-        'calculation saved in %s contains:' % ds.calc_dir
+    oq = ds['oqparam']
+    print(oq.calculation_mode, 'calculation (%r) saved in %s contains:' %
+          (oq.description, ds.calc_dir))
     for key in ds:
-        print key, humansize(ds.getsize(key))
+        print(key, humansize(ds.getsize(key)))
+
+    # this part is experimental and not tested on purpose
     if rlzs and 'curves_by_trt_gsim' in ds:
         min_value = 0.01  # used in rmsep
         curves_by_rlz, mean_curves = combined_curves(ds)
@@ -53,7 +77,7 @@ def show(calc_id, key=None, rlzs=None):
                        for imt in mean_curves.dtype.fields)
             dists.append((dist, rlz))
         for dist, rlz in sorted(dists):
-            print 'rlz=%s, rmsep=%s' % (rlz, dist)
+            print('rlz=%s, rmsep=%s' % (rlz, dist))
 
 
 parser = sap.Parser(show)

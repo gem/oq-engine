@@ -1,10 +1,10 @@
 commands Package
 ================
 
-:mod:`check` Module
+:mod:`show` Module
 -------------------
 
-.. automodule:: openquake.commonlib.commands.check
+.. automodule:: openquake.commonlib.commands.show
     :members:
     :undoc-members:
     :show-inheritance:
@@ -25,3 +25,11 @@ commands Package
     :undoc-members:
     :show-inheritance:
 
+
+:mod:`export` Module
+--------------------
+
+.. automodule:: openquake.commonlib.commands.export
+    :members:
+    :undoc-members:
+    :show-inheritance:

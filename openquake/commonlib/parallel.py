@@ -56,17 +56,14 @@ else:  # Ubuntu 12.04
         return proc.get_memory_info()
 
 
-from openquake.baselib.general import split_in_blocks, AccumDict
+from openquake.baselib.general import split_in_blocks, AccumDict, humansize
 
 
 executor = ProcessPoolExecutor()
-# the num_tasks_hint is chosen to be 4 times bigger than the name of
-# cores; it is a heuristic number to get a decent distribution of the
-# load; it has no more significance than that
-executor.num_tasks_hint = executor._max_workers * 4
-
-
-ONE_MB = 1024 * 1024
+# the num_tasks_hint is chosen to be 8 times bigger than the name of
+# cores; it is a heuristic number to get a distribution of the
+# load good for our cluster; it has no more significance than that
+executor.num_tasks_hint = executor._max_workers * 8
 
 
 def no_distribute():
@@ -162,7 +159,7 @@ class Pickled(object):
 
     def __repr__(self):
         """String representation of the pickled object"""
-        return '<Pickled %s %dK>' % (self.clsname, len(self) / 1024)
+        return '<Pickled %s %s>' % (self.clsname, humansize(len(self)))
 
     def __len__(self):
         """Length of the pickled bytestring"""
@@ -291,8 +288,8 @@ class TaskManager(object):
             for chunk in chunks:
                 acc = agg(acc, task_func(chunk, *args))
             return acc
-        tm = cls.starmap(task, [(chunk,) + args for chunk in chunks], name)
-        return tm.reduce(agg, acc)
+        self = cls.starmap(task, [(chunk,) + args for chunk in chunks], name)
+        return self.reduce(agg, acc)
 
     def __init__(self, oqtask, name=None):
         self.oqtask = oqtask
@@ -301,6 +298,7 @@ class TaskManager(object):
         self.results = []
         self.sent = 0
         self.received = 0
+        self.no_distribute = no_distribute()
 
     def submit(self, *args):
         """
@@ -311,7 +309,7 @@ class TaskManager(object):
         """
         check_mem_usage()
         # log a warning if too much memory is used
-        if no_distribute():
+        if self.no_distribute:
             res = safely_call(self.task_func, args)
         else:
             piks = pickle_sequence(args)
@@ -368,12 +366,12 @@ class TaskManager(object):
             log_percent.next()
             return res
 
-        if no_distribute():
+        if self.no_distribute:
             agg_result = reduce(agg_and_percent, self.results, acc)
         else:
-            self.progress('Sent %dM of data', self.sent // ONE_MB)
+            self.progress('Sent %s of data', humansize(self.sent))
             agg_result = self.aggregate_result_set(agg_and_percent, acc)
-            self.progress('Received %dM of data', self.received // ONE_MB)
+            self.progress('Received %s of data', humansize(self.received))
         self.results = []
         return agg_result
 
@@ -415,7 +413,8 @@ def litetask(func):
     must be a monitor object.
     """
     def w(*args):  # the last argument is assumed to be a monitor
-        with args[-1]('total ' + func.__name__, autoflush=True):
+        with args[-1]('total ' + func.__name__,
+                      autoflush=True, measuremem=True):
             return func(*args)
     wrapped = functools.wraps(func)(lambda *a: safely_call(w, a, pickle=True))
     wrapped.task_func = func

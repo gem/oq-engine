@@ -758,15 +758,14 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         self.assertEqual(rlz.weight, 1.)
         self.assertEqual(
             str(assoc),
-            "<RlzsAssoc\n0,SadighEtAl1997: ['<0,b1_b5_b8,b2_b3,w=1.0>']\n"
+            "<RlzsAssoc(2)\n0,SadighEtAl1997: ['<0,b1_b5_b8,b2_b3,w=1.0>']\n"
             "1,ChiouYoungs2008: ['<0,b1_b5_b8,b2_b3,w=1.0>']>")
 
     def test_many_rlzs(self):
         oqparam = tests.get_oqparam('classical_job.ini')
         oqparam.number_of_logic_tree_samples = 0
         sitecol = readinput.get_site_collection(oqparam)
-        csm = readinput.get_composite_source_model(
-            oqparam, sitecol, prefilter=True)
+        csm = readinput.get_composite_source_model(oqparam, sitecol)
         self.assertEqual(len(csm), 9)  # the smlt example has 1 x 3 x 3 paths;
         # there are 2 distinct tectonic region types, so 18 trt_models
         rlzs_assoc = csm.get_rlzs_assoc()
@@ -789,25 +788,25 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         assoc = csm.get_rlzs_assoc()
 
         expected_assoc = """\
-<RlzsAssoc
-0,SadighEtAl1997: ['<0,b1_b3_b6,*_b3,w=0.04>']
-1,SadighEtAl1997: ['<0,b1_b3_b6,*_b3,w=0.04>']
-2,SadighEtAl1997: ['<1,b1_b3_b7,*_b3,w=0.12>']
-3,SadighEtAl1997: ['<1,b1_b3_b7,*_b3,w=0.12>']
-4,SadighEtAl1997: ['<2,b1_b3_b8,*_b3,w=0.04>']
-5,SadighEtAl1997: ['<2,b1_b3_b8,*_b3,w=0.04>']
-6,SadighEtAl1997: ['<3,b1_b4_b6,*_b3,w=0.12>']
-7,SadighEtAl1997: ['<3,b1_b4_b6,*_b3,w=0.12>']
-8,SadighEtAl1997: ['<4,b1_b4_b7,*_b3,w=0.36>']
-9,SadighEtAl1997: ['<4,b1_b4_b7,*_b3,w=0.36>']
-10,SadighEtAl1997: ['<5,b1_b4_b8,*_b3,w=0.12>']
-11,SadighEtAl1997: ['<5,b1_b4_b8,*_b3,w=0.12>']
-12,SadighEtAl1997: ['<6,b1_b5_b6,*_b3,w=0.04>']
-13,SadighEtAl1997: ['<6,b1_b5_b6,*_b3,w=0.04>']
-14,SadighEtAl1997: ['<7,b1_b5_b7,*_b3,w=0.12>']
-15,SadighEtAl1997: ['<7,b1_b5_b7,*_b3,w=0.12>']
-16,SadighEtAl1997: ['<8,b1_b5_b8,*_b3,w=0.04>']
-17,SadighEtAl1997: ['<8,b1_b5_b8,*_b3,w=0.04>']>"""
+<RlzsAssoc(18)
+0,SadighEtAl1997: ['<0,b1_b3_b6,@_b3,w=0.04>']
+1,SadighEtAl1997: ['<0,b1_b3_b6,@_b3,w=0.04>']
+2,SadighEtAl1997: ['<1,b1_b3_b7,@_b3,w=0.12>']
+3,SadighEtAl1997: ['<1,b1_b3_b7,@_b3,w=0.12>']
+4,SadighEtAl1997: ['<2,b1_b3_b8,@_b3,w=0.04>']
+5,SadighEtAl1997: ['<2,b1_b3_b8,@_b3,w=0.04>']
+6,SadighEtAl1997: ['<3,b1_b4_b6,@_b3,w=0.12>']
+7,SadighEtAl1997: ['<3,b1_b4_b6,@_b3,w=0.12>']
+8,SadighEtAl1997: ['<4,b1_b4_b7,@_b3,w=0.36>']
+9,SadighEtAl1997: ['<4,b1_b4_b7,@_b3,w=0.36>']
+10,SadighEtAl1997: ['<5,b1_b4_b8,@_b3,w=0.12>']
+11,SadighEtAl1997: ['<5,b1_b4_b8,@_b3,w=0.12>']
+12,SadighEtAl1997: ['<6,b1_b5_b6,@_b3,w=0.04>']
+13,SadighEtAl1997: ['<6,b1_b5_b6,@_b3,w=0.04>']
+14,SadighEtAl1997: ['<7,b1_b5_b7,@_b3,w=0.12>']
+15,SadighEtAl1997: ['<7,b1_b5_b7,@_b3,w=0.12>']
+16,SadighEtAl1997: ['<8,b1_b5_b8,@_b3,w=0.04>']
+17,SadighEtAl1997: ['<8,b1_b5_b8,@_b3,w=0.04>']>"""
         self.assertEqual(str(assoc), expected_assoc)
         self.assertEqual(len(assoc.realizations), 9)
 
@@ -823,16 +822,14 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
             os.path.join(os.path.dirname(case_17.__file__), 'job.ini'))
         sitecol = readinput.get_site_collection(oq)
         with mock.patch('logging.warn') as warn:
-            csm = readinput.get_composite_source_model(
-                oq, sitecol, prefilter=True)
-        args = warn.call_args[0]
-        msg = args[0] % args[1:]
+            csm = readinput.get_composite_source_model(oq, sitecol)
+        messages = [args[0][0] % args[0][1:] for args in warn.call_args_list]
         self.assertEqual(
-            msg, "The source path ('b2',) was sampled 4 times")
+            messages, ["The source path ('b2',) was sampled 4 times"])
         assoc = csm.get_rlzs_assoc()
         self.assertEqual(
             str(assoc),
-            "<RlzsAssoc\n"
+            "<RlzsAssoc(2)\n"
             "0,SadighEtAl1997: ['<0,b1,b1,w=0.2>']\n"
             "1,SadighEtAl1997: ['<1,b2,b1,w=0.2,col=1>', '<2,b2,b1,w=0.2,col=2>', '<3,b2,b1,w=0.2,col=3>', '<4,b2,b1,w=0.2,col=4>']>")
 

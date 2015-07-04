@@ -118,7 +118,7 @@
       <prob index="10,2" value="2.456909658E-04"/>
       <prob index="10,3" value="1.500503109E-04"/>
       <prob index="10,4" value="1.231510892E-04"/>
-      <prob index="10,5" value="7.530078504E-05"/>
+      <prob index="10,5" value="7.530078503E-05"/>
       <prob index="10,6" value="1.799142592E-05"/>
       <prob index="10,7" value="6.070727958E-06"/>
       <prob index="11,0" value="5.791331183E-05"/>
@@ -127,14 +127,14 @@
       <prob index="11,3" value="1.351855745E-04"/>
       <prob index="11,4" value="1.156018684E-04"/>
       <prob index="11,5" value="7.275928232E-05"/>
-      <prob index="11,6" value="1.767673395E-05"/>
+      <prob index="11,6" value="1.767673394E-05"/>
       <prob index="11,7" value="6.000971485E-06"/>
       <prob index="12,0" value="4.618625641E-05"/>
       <prob index="12,1" value="8.801848678E-05"/>
       <prob index="12,2" value="1.764782273E-04"/>
       <prob index="12,3" value="1.203870832E-04"/>
       <prob index="12,4" value="1.072769199E-04"/>
-      <prob index="12,5" value="6.965220183E-05"/>
+      <prob index="12,5" value="6.965220184E-05"/>
       <prob index="12,6" value="1.726618104E-05"/>
       <prob index="12,7" value="5.920268262E-06"/>
       <prob index="13,0" value="3.681225973E-05"/>
@@ -188,7 +188,7 @@
       <prob index="0,5,0" value="0.000000000E+00"/>
       <prob index="0,5,1" value="0.000000000E+00"/>
       <prob index="0,5,2" value="0.000000000E+00"/>
-      <prob index="0,5,3" value="3.588958239E-06"/>
+      <prob index="0,5,3" value="3.588958238E-06"/>
       <prob index="0,5,4" value="6.091190862E-05"/>
       <prob index="0,5,5" value="1.873058014E-05"/>
       <prob index="0,6,0" value="0.000000000E+00"/>
@@ -409,7 +409,7 @@
       <prob index="5,1,5" value="1.014991455E-05"/>
       <prob index="5,2,0" value="0.000000000E+00"/>
       <prob index="5,2,1" value="0.000000000E+00"/>
-      <prob index="5,2,2" value="1.253062867E-05"/>
+      <prob index="5,2,2" value="1.253062866E-05"/>
       <prob index="5,2,3" value="2.749485830E-04"/>
       <prob index="5,2,4" value="1.611338971E-04"/>
       <prob index="5,2,5" value="2.537459321E-05"/>
@@ -530,7 +530,7 @@
       <prob index="7,6,0" value="0.000000000E+00"/>
       <prob index="7,6,1" value="0.000000000E+00"/>
       <prob index="7,6,2" value="0.000000000E+00"/>
-      <prob index="7,6,3" value="5.655325634E-06"/>
+      <prob index="7,6,3" value="5.655325635E-06"/>
       <prob index="7,6,4" value="5.254010453E-06"/>
       <prob index="7,6,5" value="7.703296898E-06"/>
       <prob index="7,7,0" value="0.000000000E+00"/>
@@ -700,13 +700,13 @@
       <prob index="11,2,2" value="6.051670062E-05"/>
       <prob index="11,2,3" value="1.016616664E-04"/>
       <prob index="11,2,4" value="4.047744704E-05"/>
-      <prob index="11,2,5" value="6.373870196E-06"/>
+      <prob index="11,2,5" value="6.373870195E-06"/>
       <prob index="11,3,0" value="0.000000000E+00"/>
       <prob index="11,3,1" value="0.000000000E+00"/>
       <prob index="11,3,2" value="4.274804110E-06"/>
       <prob index="11,3,3" value="8.406420929E-05"/>
       <prob index="11,3,4" value="4.047744704E-05"/>
-      <prob index="11,3,5" value="6.373870196E-06"/>
+      <prob index="11,3,5" value="6.373870195E-06"/>
       <prob index="11,4,0" value="0.000000000E+00"/>
       <prob index="11,4,1" value="0.000000000E+00"/>
       <prob index="11,4,2" value="3.699150089E-06"/>
@@ -715,7 +715,7 @@
       <prob index="11,4,5" value="8.604715166E-06"/>
       <prob index="11,5,0" value="0.000000000E+00"/>
       <prob index="11,5,1" value="0.000000000E+00"/>
-      <prob index="11,5,2" value="1.422801806E-06"/>
+      <prob index="11,5,2" value="1.422801807E-06"/>
       <prob index="11,5,3" value="1.515764412E-05"/>
       <prob index="11,5,4" value="4.757548365E-05"/>
       <prob index="11,5,5" value="8.604715166E-06"/>
@@ -2090,7 +2090,7 @@
       <prob index="11,0,8" value="2.299985200E-06"/>
       <prob index="11,0,9" value="1.669110851E-06"/>
       <prob index="11,1,0" value="1.628147064E-06"/>
-      <prob index="11,1,1" value="5.911111946E-06"/>
+      <prob index="11,1,1" value="5.911111947E-06"/>
       <prob index="11,1,2" value="4.840630488E-06"/>
       <prob index="11,1,3" value="6.139382761E-06"/>
       <prob index="11,1,4" value="6.936558097E-06"/>
@@ -2110,7 +2110,7 @@
       <prob index="11,2,8" value="4.675119349E-06"/>
       <prob index="11,2,9" value="3.038783674E-06"/>
       <prob index="11,3,0" value="2.447645101E-06"/>
-      <prob index="11,3,1" value="1.029877537E-05"/>
+      <prob index="11,3,1" value="1.029877536E-05"/>
       <prob index="11,3,2" value="9.410575567E-06"/>
       <prob index="11,3,3" value="1.219688035E-05"/>
       <prob index="11,3,4" value="1.352964525E-05"/>
@@ -2240,7 +2240,7 @@
       <prob index="12,5,8" value="6.163891517E-06"/>
       <prob index="12,5,9" value="3.931983873E-06"/>
       <prob index="12,6,0" value="2.393253643E-06"/>
-      <prob index="12,6,1" value="9.571202288E-06"/>
+      <prob index="12,6,1" value="9.571202287E-06"/>
       <prob index="12,6,2" value="8.242956375E-06"/>
       <prob index="12,6,3" value="1.024841018E-05"/>
       <prob index="12,6,4" value="1.109687004E-05"/>
@@ -2290,7 +2290,7 @@
       <prob index="13,0,8" value="2.127616477E-06"/>
       <prob index="13,0,9" value="1.588809507E-06"/>
       <prob index="13,1,0" value="1.552628004E-06"/>
-      <prob index="13,1,1" value="5.294170350E-06"/>
+      <prob index="13,1,1" value="5.294170349E-06"/>
       <prob index="13,1,2" value="4.043239707E-06"/>
       <prob index="13,1,3" value="4.910703146E-06"/>
       <prob index="13,1,4" value="5.413863473E-06"/>
@@ -2430,7 +2430,7 @@
       <prob index="14,4,8" value="4.679378295E-06"/>
       <prob index="14,4,9" value="3.262863463E-06"/>
       <prob index="14,5,0" value="2.306309168E-06"/>
-      <prob index="14,5,1" value="8.322998923E-06"/>
+      <prob index="14,5,1" value="8.322998922E-06"/>
       <prob index="14,5,2" value="6.338204182E-06"/>
       <prob index="14,5,3" value="7.167944813E-06"/>
       <prob index="14,5,4" value="7.336112415E-06"/>
@@ -2664,7 +2664,7 @@
       <prob index="9,0,0" value="1.241052589E-05"/>
       <prob index="9,0,1" value="3.463866599E-06"/>
       <prob index="9,1,0" value="3.182715692E-05"/>
-      <prob index="9,1,1" value="1.542020959E-05"/>
+      <prob index="9,1,1" value="1.542020960E-05"/>
       <prob index="9,2,0" value="1.908249579E-05"/>
       <prob index="9,2,1" value="1.405194418E-05"/>
       <prob index="9,3,0" value="2.058549585E-05"/>

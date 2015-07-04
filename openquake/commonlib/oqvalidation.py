@@ -19,7 +19,7 @@
 import os
 import logging
 import collections
-from openquake.commonlib import valid, parallel
+from openquake.commonlib import valid, parallel, logictree
 from openquake.commonlib.riskmodels import (
     get_fragility_functions, get_imtls_from_vulnerabilities,
     vulnerability_files, fragility_files)
@@ -33,7 +33,7 @@ HAZARD_CALCULATORS = [
 RISK_CALCULATORS = [
     'classical_risk', 'event_based_risk', 'scenario_risk',
     'classical_bcr', 'event_based_bcr', 'scenario_damage',
-    'classical_damage', 'event_loss']
+    'classical_damage', 'ebr']
 
 CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS
 
@@ -43,11 +43,12 @@ class OqParam(valid.ParamSet):
         valid.NoneOr(valid.positivefloat), None)
     asset_correlation = valid.Param(valid.NoneOr(valid.FloatRange(0, 1)), 0)
     asset_life_expectancy = valid.Param(valid.positivefloat)
-    base_path = valid.Param(valid.utf8)
+    base_path = valid.Param(valid.utf8, '.')
     calculation_mode = valid.Param(valid.Choice(*CALCULATORS), '')
+    coordinate_bin_width = valid.Param(valid.positivefloat)
+    compare_with_classical = valid.Param(valid.boolean, False)
     concurrent_tasks = valid.Param(
         valid.positiveint, parallel.executor.num_tasks_hint)
-    coordinate_bin_width = valid.Param(valid.positivefloat)
     conditional_loss_poes = valid.Param(valid.probabilities, [])
     continuous_fragility_discretization = valid.Param(valid.positiveint, 20)
     description = valid.Param(valid.utf8_not_empty)
@@ -56,7 +57,7 @@ class OqParam(valid.ParamSet):
     epsilon_sampling = valid.Param(valid.positiveint, 1000)
     export_dir = valid.Param(valid.utf8, None)
     export_multi_curves = valid.Param(valid.boolean, False)
-    exports = valid.Param(valid.export_formats, ('csv',))
+    exports = valid.Param(valid.export_formats, ())
     ground_motion_correlation_model = valid.Param(
         valid.NoneOr(valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)), None)
     ground_motion_correlation_params = valid.Param(valid.dictionary)
@@ -75,7 +76,6 @@ class OqParam(valid.ParamSet):
     intensity_measure_types_and_levels = valid.Param(
         valid.intensity_measure_types_and_levels, None)
     # hazard_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
-    hazard_investigation_time = valid.Param(valid.positivefloat, None)
     interest_rate = valid.Param(valid.positivefloat)
     investigation_time = valid.Param(valid.positivefloat, None)
     loss_curve_resolution = valid.Param(valid.positiveint, 50)
@@ -121,10 +121,8 @@ class OqParam(valid.ParamSet):
 
     def __init__(self, **names_vals):
         super(OqParam, self).__init__(**names_vals)
-        if not self.risk_investigation_time and self.investigation_time:
-            self.risk_investigation_time = self.investigation_time
-        elif not self.investigation_time and self.hazard_investigation_time:
-            self.investigation_time = self.hazard_investigation_time
+        self.risk_investigation_time = (
+            self.risk_investigation_time or self.investigation_time)
         if ('intensity_measure_types_and_levels' in names_vals and
                 'intensity_measure_types' in names_vals):
             logging.warn('Ignoring intensity_measure_types since '
@@ -144,13 +142,40 @@ class OqParam(valid.ParamSet):
             self.risk_imtls = {fset.imt: fset.imls
                                for fset in ffs.itervalues()}
 
+        # check the IMTs vs the GSIMs
+        if 'gsim_logic_tree' in self.inputs:
+            if self.gsim:
+                raise ValueError('If `gsim_logic_tree_file` is set, there '
+                                 'must be no `gsim` key')
+            path = os.path.join(
+                self.base_path, self.inputs['gsim_logic_tree'])
+            for gsims in logictree.GsimLogicTree(path, []).values.itervalues():
+                self.check_imts_gsims(map(valid.gsim, gsims))
+        elif self.gsim is not None:
+            self.check_imts_gsims([self.gsim])
+
+    def check_imts_gsims(self, gsims):
+        """
+        :param gsims: a sequence of GSIM instances
+        """
+        imts = set('SA' if imt.startswith('SA') else imt for imt in self.imtls)
+        for gsim in gsims:
+            restrict_imts = gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES
+            if restrict_imts:
+                names = set(cls.__name__ for cls in restrict_imts)
+                invalid_imts = ', '.join(imts - names)
+                if invalid_imts:
+                    raise ValueError(
+                        'The IMT %s is not accepted by the GSIM %s' %
+                        (invalid_imts, gsim))
+
     @property
     def tses(self):
         """
         Return the total time as investigation_time * ses_per_logic_tree_path *
         (number_of_logic_tree_samples or 1)
         """
-        return (self.hazard_investigation_time * self.ses_per_logic_tree_path *
+        return (self.investigation_time * self.ses_per_logic_tree_path *
                 (self.number_of_logic_tree_samples or 1))
 
     @property
@@ -329,13 +354,4 @@ class OqParam(valid.ParamSet):
         rms = getattr(self, 'rupture_mesh_spacing', None)
         if rms and not getattr(self, 'complex_fault_mesh_spacing', None):
             self.complex_fault_mesh_spacing = self.rupture_mesh_spacing
-        return True
-
-    def is_valid_gsim(self):
-        """
-        If `gsim_logic_tree_file` is set, there must be no `gsim` key in
-        the configuration file.
-        """
-        if 'gsim_logic_tree' in self.inputs:
-            return self.gsim is None
         return True
