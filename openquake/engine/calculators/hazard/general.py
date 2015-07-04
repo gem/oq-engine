@@ -287,8 +287,8 @@ class BaseHazardCalculator(base.Calculator):
             lambda trt_model: models.TrtModel.objects.get(
                 pk=trt_model.id).num_ruptures)
         gsims_by_trt_id = self.rlzs_assoc.get_gsims_by_trt_id()
-        for lt_model in self._source_models:
-            rlzs = self.rlzs_assoc.rlzs_by_smodel.get(lt_model.ordinal, [])
+        for lt_model, rlzs in zip(
+                self._source_models, self.rlzs_assoc.rlzs_by_smodel):
             logs.LOG.info('Creating %d realization(s) for model '
                           '%s, %s', len(rlzs), lt_model.sm_name,
                           '_'.join(lt_model.sm_lt_path))
