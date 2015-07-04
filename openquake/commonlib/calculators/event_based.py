@@ -656,7 +656,7 @@ class EventBasedCalculator(ClassicalCalculator):
             return
         if oq.hazard_curves_from_gmfs:
             ClassicalCalculator.post_execute.__func__(self, result)
-        if oq.mean_hazard_curves:  # compute classical ones
+        if oq.compare_with_classical:  # compute classical curves
             export_dir = os.path.join(oq.export_dir, 'cl')
             if not os.path.exists(export_dir):
                 os.makedirs(export_dir)
@@ -665,7 +665,7 @@ class EventBasedCalculator(ClassicalCalculator):
             self.cl = ClassicalCalculator(oq, self.monitor)
             # copy the relevant attributes
             self.cl.composite_source_model = self.csm
-            self.cl.sitecol = self.sitecol
+            self.cl.sitecol = self.sitecol.complete
             self.cl.rlzs_assoc = self.csm.get_rlzs_assoc()
             result = self.cl.run(pre_execute=False, clean_up=False)
             for imt in self.mean_curves.dtype.fields:
