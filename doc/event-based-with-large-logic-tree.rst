@@ -74,6 +74,13 @@ The number of collections is greater (or equal) than the number of
 realizations; it is equal only when the number of tectonic region
 models per source model is 1.
 
+It should be noted that one or more collections could be empty in
+the presence of logic tree reduction. Banally, it there are no
+sources for a given tectonic region, even before filtering and
+rupture generation, it is clear the the rupture collection
+corresponding to the tectonic region model will be empty.
+
+
 An example with a large logic tree (full enumeration)
 -----------------------------------------------------
 
@@ -106,7 +113,6 @@ they are being filtered away. Later warnings are even more explicit::
    WARNING:root:No realizations for SeiFaCrust, models/src/ss_model.xml
    WARNING:root:Some source models are not contributing, weights are being rescaled
 
-
 This is a case where an apparently complex logic tree has been reduced
 to a simple one. The full logic tree is composed by three GMPE logic
 trees, one for each source model. The first one (for sources coming
@@ -126,6 +132,19 @@ generation becomes::
   AreaSource, models/src/as_model.xml, trt=[0, 1, 2, 3, 4, 5], weight=0.500: 4 realization(s)
   FaultSourceAndBackground, models/src/fsbg_model.xml, trt=[6, 7, 8, 9], weight=0.200: 4 realization(s)
   SeiFaCrust, models/src/ss_model.xml, trt=[10], weight=0.300: 0 realization(s)>
+
+It is interesting to notice that oq-lite and the engine are smart
+enough to reduce the logic even before filtering and rupture
+generation, by simply looking at the sources. The full SHARE GMPE
+logic tree has potentially 1280 realizations, but by looking at the
+sources contained in the reduced AreaSource source model, oq-lite
+infers that at most only 640 realizations can be relevant; that means
+that there is a missing tectonic region type with 2 GSIMs. For the
+FaultSourceAndBackground model only 40 realizations are expected
+upfront (it means that several tectonic region types are missing in
+the reduced source model) and for the SeiFaCrust model only 4
+realizations are expected upfront (actually that source model has only
+a single source with tectonic region type "Active Shallow Crust").
 
 
 An example with sampling
