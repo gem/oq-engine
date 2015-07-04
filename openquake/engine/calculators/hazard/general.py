@@ -153,7 +153,7 @@ class BaseHazardCalculator(base.Calculator):
         models.JobInfo.objects.create(
             oq_job=self.job,
             num_sites=info['n_sites'],
-            num_realizations=info['max_realizations'],
+            num_realizations=info['n_realizations'],
             num_imts=info['n_imts'],
             num_levels=info['n_levels'],
             input_weight=info['input_weight'],
