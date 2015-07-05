@@ -83,7 +83,7 @@ def classify_gsim_lt(gsim_lt):
 def view_csm_info(token, dstore):
     rlzs_assoc = dstore['rlzs_assoc']
     csm_info = rlzs_assoc.csm_info
-    header = ['source_model_file', 'num_trts',
+    header = ['smlt_path', 'source_model_file', 'num_trts',
               'gsim_logic_tree', 'num_gsims', 'num_realizations',
               'num_sources']
     rows = []
@@ -95,8 +95,9 @@ def view_csm_info(token, dstore):
         num_gsims = ','.join(map(str, num_branches))
         tmodels = [tm for tm in sm.trt_models  # effective
                    if tm.trt in sm.gsim_lt.tectonic_region_types]
-        row = (sm.name, len(tmodels), classify_gsim_lt(sm.gsim_lt),
-               num_gsims, '%d/%d' % (num_rlzs, num_paths), sm.num_sources)
+        row = ('_'.join(sm.path), sm.name, len(tmodels),
+               classify_gsim_lt(sm.gsim_lt), num_gsims,
+               '%d/%d' % (num_rlzs, num_paths), sm.num_sources)
         rows.append(row)
     return rst_table(rows, header)
 

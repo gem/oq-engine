@@ -20,21 +20,21 @@ master_seed                  0
 
 Input files
 -----------
-======================= ==============================================================================================
-Name                    File                                                                                          
-gsim_logic_tree         /home/michele/oq-risklib/openquake/qa_tests_data/classical/case_13/gmpe_logic_tree.xml        
-job_ini                 /home/michele/oq-risklib/openquake/qa_tests_data/classical/case_13/job.ini                    
-sites                   /home/michele/oq-risklib/openquake/qa_tests_data/classical/case_13/qa_sites.csv               
-source_model_logic_tree /home/michele/oq-risklib/openquake/qa_tests_data/classical/case_13/source_model_logic_tree.xml
-source                  /openquake/qa_tests_data/classical/case_13/aFault_aPriori_D2.1.xml                            
-source                  /openquake/qa_tests_data/classical/case_13/bFault_stitched_D2.1_Char.xml                      
-======================= ==============================================================================================
+======================= ========================================================================
+Name                    File                                                                    
+gsim_logic_tree         /openquake/qa_tests_data/classical/case_13/gmpe_logic_tree.xml          
+job_ini                 /openquake/qa_tests_data/classical/case_13/job.ini                      
+sites                   /openquake/qa_tests_data/classical/case_13/qa_sites.csv                 
+source                  /openquake/qa_tests_data/classical/case_13/aFault_aPriori_D2.1.xml      
+source                  /openquake/qa_tests_data/classical/case_13/bFault_stitched_D2.1_Char.xml
+source_model_logic_tree /openquake/qa_tests_data/classical/case_13/source_model_logic_tree.xml  
+======================= ========================================================================
 
 Composite source model
 ----------------------
-============================= ======== =============== ========= ================ ===========
-source_model_file             num_trts gsim_logic_tree num_gsims num_realizations num_sources
-============================= ======== =============== ========= ================ ===========
-aFault_aPriori_D2.1.xml       1        simple          2         2/2              180        
-bFault_stitched_D2.1_Char.xml 1        simple          2         2/2              246        
-============================= ======== =============== ========= ================ ===========
+========================= ============================= ======== =============== ========= ================ ===========
+smlt_path                 source_model_file             num_trts gsim_logic_tree num_gsims num_realizations num_sources
+========================= ============================= ======== =============== ========= ================ ===========
+aFault_aPriori_D2.1       aFault_aPriori_D2.1.xml       1        simple          2         2/2              180        
+bFault_stitched_D2.1_Char bFault_stitched_D2.1_Char.xml 1        simple          2         2/2              246        
+========================= ============================= ======== =============== ========= ================ ===========

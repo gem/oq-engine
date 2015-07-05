@@ -31,9 +31,9 @@ source_model_logic_tree /demos/LogicTreeCase1ClassicalPSHA/source_model_logic_tr
 
 Composite source model
 ----------------------
-================== ======== =============== ========= ================ ===========
-source_model_file  num_trts gsim_logic_tree num_gsims num_realizations num_sources
-================== ======== =============== ========= ================ ===========
-source_model_1.xml 2        complex         2,2       4/4              2          
-source_model_2.xml 2        complex         2,2       4/4              2          
-================== ======== =============== ========= ================ ===========
+========= ================== ======== =============== ========= ================ ===========
+smlt_path source_model_file  num_trts gsim_logic_tree num_gsims num_realizations num_sources
+========= ================== ======== =============== ========= ================ ===========
+b1        source_model_1.xml 2        complex         2,2       4/4              2          
+b2        source_model_2.xml 2        complex         2,2       4/4              2          
+========= ================== ======== =============== ========= ================ ===========

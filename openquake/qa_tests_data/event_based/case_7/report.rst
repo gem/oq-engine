@@ -20,23 +20,23 @@ master_seed                  0
 
 Input files
 -----------
-======================= ===============================================================================================
-Name                    File                                                                                           
-gsim_logic_tree         /home/michele/oq-risklib/openquake/qa_tests_data/event_based/case_7/gmpe_logic_tree.xml        
-job_ini                 /home/michele/oq-risklib/openquake/qa_tests_data/event_based/case_7/job.ini                    
-source_model_logic_tree /home/michele/oq-risklib/openquake/qa_tests_data/event_based/case_7/source_model_logic_tree.xml
-source                  /openquake/qa_tests_data/event_based/case_7/source_model1.xml                                  
-source                  /openquake/qa_tests_data/event_based/case_7/source_model2.xml                                  
-======================= ===============================================================================================
+======================= =======================================================================
+Name                    File                                                                   
+gsim_logic_tree         /openquake/qa_tests_data/event_based/case_7/gmpe_logic_tree.xml        
+job_ini                 /openquake/qa_tests_data/event_based/case_7/job.ini                    
+source                  /openquake/qa_tests_data/event_based/case_7/source_model1.xml          
+source                  /openquake/qa_tests_data/event_based/case_7/source_model2.xml          
+source_model_logic_tree /openquake/qa_tests_data/event_based/case_7/source_model_logic_tree.xml
+======================= =======================================================================
 
 Composite source model
 ----------------------
-================= ======== =============== ========= ================ ===========
-source_model_file num_trts gsim_logic_tree num_gsims num_realizations num_sources
-================= ======== =============== ========= ================ ===========
-source_model1.xml 1        simple          3         63/3             1          
-source_model2.xml 1        simple          3         37/3             1          
-================= ======== =============== ========= ================ ===========
+========= ================= ======== =============== ========= ================ ===========
+smlt_path source_model_file num_trts gsim_logic_tree num_gsims num_realizations num_sources
+========= ================= ======== =============== ========= ================ ===========
+b11       source_model1.xml 1        simple          3         63/3             1          
+b12       source_model2.xml 1        simple          3         37/3             1          
+========= ================= ======== =============== ========= ================ ===========
 
 Collections <-> realizations
 ----------------------------

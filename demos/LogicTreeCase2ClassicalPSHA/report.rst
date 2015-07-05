@@ -30,88 +30,88 @@ source_model_logic_tree /demos/LogicTreeCase2ClassicalPSHA/source_model_logic_tr
 
 Composite source model
 ----------------------
-================= ======== =============== ========= ================ ===========
-source_model_file num_trts gsim_logic_tree num_gsims num_realizations num_sources
-================= ======== =============== ========= ================ ===========
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-source_model.xml  2        complex         2,2       4/4              2          
-================= ======== =============== ========= ================ ===========
+=================== ================= ======== =============== ========= ================ ===========
+smlt_path           source_model_file num_trts gsim_logic_tree num_gsims num_realizations num_sources
+=================== ================= ======== =============== ========= ================ ===========
+b11_b21_b31_b41_b51 source_model.xml  2        complex         2,2       4/4              2          
+b11_b21_b31_b41_b52 source_model.xml  2        complex         2,2       4/4              2          
+b11_b21_b31_b41_b53 source_model.xml  2        complex         2,2       4/4              2          
+b11_b21_b31_b42_b51 source_model.xml  2        complex         2,2       4/4              2          
+b11_b21_b31_b42_b52 source_model.xml  2        complex         2,2       4/4              2          
+b11_b21_b31_b42_b53 source_model.xml  2        complex         2,2       4/4              2          
+b11_b21_b31_b43_b51 source_model.xml  2        complex         2,2       4/4              2          
+b11_b21_b31_b43_b52 source_model.xml  2        complex         2,2       4/4              2          
+b11_b21_b31_b43_b53 source_model.xml  2        complex         2,2       4/4              2          
+b11_b21_b32_b41_b51 source_model.xml  2        complex         2,2       4/4              2          
+b11_b21_b32_b41_b52 source_model.xml  2        complex         2,2       4/4              2          
+b11_b21_b32_b41_b53 source_model.xml  2        complex         2,2       4/4              2          
+b11_b21_b32_b42_b51 source_model.xml  2        complex         2,2       4/4              2          
+b11_b21_b32_b42_b52 source_model.xml  2        complex         2,2       4/4              2          
+b11_b21_b32_b42_b53 source_model.xml  2        complex         2,2       4/4              2          
+b11_b21_b32_b43_b51 source_model.xml  2        complex         2,2       4/4              2          
+b11_b21_b32_b43_b52 source_model.xml  2        complex         2,2       4/4              2          
+b11_b21_b32_b43_b53 source_model.xml  2        complex         2,2       4/4              2          
+b11_b21_b33_b41_b51 source_model.xml  2        complex         2,2       4/4              2          
+b11_b21_b33_b41_b52 source_model.xml  2        complex         2,2       4/4              2          
+b11_b21_b33_b41_b53 source_model.xml  2        complex         2,2       4/4              2          
+b11_b21_b33_b42_b51 source_model.xml  2        complex         2,2       4/4              2          
+b11_b21_b33_b42_b52 source_model.xml  2        complex         2,2       4/4              2          
+b11_b21_b33_b42_b53 source_model.xml  2        complex         2,2       4/4              2          
+b11_b21_b33_b43_b51 source_model.xml  2        complex         2,2       4/4              2          
+b11_b21_b33_b43_b52 source_model.xml  2        complex         2,2       4/4              2          
+b11_b21_b33_b43_b53 source_model.xml  2        complex         2,2       4/4              2          
+b11_b22_b31_b41_b51 source_model.xml  2        complex         2,2       4/4              2          
+b11_b22_b31_b41_b52 source_model.xml  2        complex         2,2       4/4              2          
+b11_b22_b31_b41_b53 source_model.xml  2        complex         2,2       4/4              2          
+b11_b22_b31_b42_b51 source_model.xml  2        complex         2,2       4/4              2          
+b11_b22_b31_b42_b52 source_model.xml  2        complex         2,2       4/4              2          
+b11_b22_b31_b42_b53 source_model.xml  2        complex         2,2       4/4              2          
+b11_b22_b31_b43_b51 source_model.xml  2        complex         2,2       4/4              2          
+b11_b22_b31_b43_b52 source_model.xml  2        complex         2,2       4/4              2          
+b11_b22_b31_b43_b53 source_model.xml  2        complex         2,2       4/4              2          
+b11_b22_b32_b41_b51 source_model.xml  2        complex         2,2       4/4              2          
+b11_b22_b32_b41_b52 source_model.xml  2        complex         2,2       4/4              2          
+b11_b22_b32_b41_b53 source_model.xml  2        complex         2,2       4/4              2          
+b11_b22_b32_b42_b51 source_model.xml  2        complex         2,2       4/4              2          
+b11_b22_b32_b42_b52 source_model.xml  2        complex         2,2       4/4              2          
+b11_b22_b32_b42_b53 source_model.xml  2        complex         2,2       4/4              2          
+b11_b22_b32_b43_b51 source_model.xml  2        complex         2,2       4/4              2          
+b11_b22_b32_b43_b52 source_model.xml  2        complex         2,2       4/4              2          
+b11_b22_b32_b43_b53 source_model.xml  2        complex         2,2       4/4              2          
+b11_b22_b33_b41_b51 source_model.xml  2        complex         2,2       4/4              2          
+b11_b22_b33_b41_b52 source_model.xml  2        complex         2,2       4/4              2          
+b11_b22_b33_b41_b53 source_model.xml  2        complex         2,2       4/4              2          
+b11_b22_b33_b42_b51 source_model.xml  2        complex         2,2       4/4              2          
+b11_b22_b33_b42_b52 source_model.xml  2        complex         2,2       4/4              2          
+b11_b22_b33_b42_b53 source_model.xml  2        complex         2,2       4/4              2          
+b11_b22_b33_b43_b51 source_model.xml  2        complex         2,2       4/4              2          
+b11_b22_b33_b43_b52 source_model.xml  2        complex         2,2       4/4              2          
+b11_b22_b33_b43_b53 source_model.xml  2        complex         2,2       4/4              2          
+b11_b23_b31_b41_b51 source_model.xml  2        complex         2,2       4/4              2          
+b11_b23_b31_b41_b52 source_model.xml  2        complex         2,2       4/4              2          
+b11_b23_b31_b41_b53 source_model.xml  2        complex         2,2       4/4              2          
+b11_b23_b31_b42_b51 source_model.xml  2        complex         2,2       4/4              2          
+b11_b23_b31_b42_b52 source_model.xml  2        complex         2,2       4/4              2          
+b11_b23_b31_b42_b53 source_model.xml  2        complex         2,2       4/4              2          
+b11_b23_b31_b43_b51 source_model.xml  2        complex         2,2       4/4              2          
+b11_b23_b31_b43_b52 source_model.xml  2        complex         2,2       4/4              2          
+b11_b23_b31_b43_b53 source_model.xml  2        complex         2,2       4/4              2          
+b11_b23_b32_b41_b51 source_model.xml  2        complex         2,2       4/4              2          
+b11_b23_b32_b41_b52 source_model.xml  2        complex         2,2       4/4              2          
+b11_b23_b32_b41_b53 source_model.xml  2        complex         2,2       4/4              2          
+b11_b23_b32_b42_b51 source_model.xml  2        complex         2,2       4/4              2          
+b11_b23_b32_b42_b52 source_model.xml  2        complex         2,2       4/4              2          
+b11_b23_b32_b42_b53 source_model.xml  2        complex         2,2       4/4              2          
+b11_b23_b32_b43_b51 source_model.xml  2        complex         2,2       4/4              2          
+b11_b23_b32_b43_b52 source_model.xml  2        complex         2,2       4/4              2          
+b11_b23_b32_b43_b53 source_model.xml  2        complex         2,2       4/4              2          
+b11_b23_b33_b41_b51 source_model.xml  2        complex         2,2       4/4              2          
+b11_b23_b33_b41_b52 source_model.xml  2        complex         2,2       4/4              2          
+b11_b23_b33_b41_b53 source_model.xml  2        complex         2,2       4/4              2          
+b11_b23_b33_b42_b51 source_model.xml  2        complex         2,2       4/4              2          
+b11_b23_b33_b42_b52 source_model.xml  2        complex         2,2       4/4              2          
+b11_b23_b33_b42_b53 source_model.xml  2        complex         2,2       4/4              2          
+b11_b23_b33_b43_b51 source_model.xml  2        complex         2,2       4/4              2          
+b11_b23_b33_b43_b52 source_model.xml  2        complex         2,2       4/4              2          
+b11_b23_b33_b43_b53 source_model.xml  2        complex         2,2       4/4              2          
+=================== ================= ======== =============== ========= ================ ===========

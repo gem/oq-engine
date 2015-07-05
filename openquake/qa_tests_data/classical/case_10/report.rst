@@ -20,19 +20,19 @@ master_seed                  0
 
 Input files
 -----------
-======================= ==============================================================================================
-Name                    File                                                                                          
-gsim_logic_tree         /home/michele/oq-risklib/openquake/qa_tests_data/classical/case_10/gsim_logic_tree.xml        
-job_ini                 /home/michele/oq-risklib/openquake/qa_tests_data/classical/case_10/job.ini                    
-source_model_logic_tree /home/michele/oq-risklib/openquake/qa_tests_data/classical/case_10/source_model_logic_tree.xml
-source                  /openquake/qa_tests_data/classical/case_10/source_model.xml                                   
-======================= ==============================================================================================
+======================= ======================================================================
+Name                    File                                                                  
+gsim_logic_tree         /openquake/qa_tests_data/classical/case_10/gsim_logic_tree.xml        
+job_ini                 /openquake/qa_tests_data/classical/case_10/job.ini                    
+source                  /openquake/qa_tests_data/classical/case_10/source_model.xml           
+source_model_logic_tree /openquake/qa_tests_data/classical/case_10/source_model_logic_tree.xml
+======================= ======================================================================
 
 Composite source model
 ----------------------
-================= ======== =============== ========= ================ ===========
-source_model_file num_trts gsim_logic_tree num_gsims num_realizations num_sources
-================= ======== =============== ========= ================ ===========
-source_model.xml  1        trivial         1         1/1              1          
-source_model.xml  1        trivial         1         1/1              1          
-================= ======== =============== ========= ================ ===========
+========= ================= ======== =============== ========= ================ ===========
+smlt_path source_model_file num_trts gsim_logic_tree num_gsims num_realizations num_sources
+========= ================= ======== =============== ========= ================ ===========
+b1_b2     source_model.xml  1        trivial         1         1/1              1          
+b1_b3     source_model.xml  1        trivial         1         1/1              1          
+========= ================= ======== =============== ========= ================ ===========
