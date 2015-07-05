@@ -80,11 +80,13 @@ def get_skeleton(sm):
     trt_models = [TrtModel(tm.trt, [], tm.num_ruptures, tm.min_mag,
                            tm.max_mag, tm.gsims, tm.id)
                   for tm in sm.trt_models]
+    num_sources = sum(len(tm) for tm in sm.trt_models)
     return SourceModel(sm.name, sm.weight, sm.path, trt_models, sm.gsim_lt,
-                       sm.ordinal, sm.samples)
+                       sm.ordinal, sm.samples, num_sources)
 
 SourceModel = collections.namedtuple(
-    'SourceModel', 'name weight path trt_models gsim_lt ordinal samples')
+    'SourceModel', 'name weight path trt_models gsim_lt ordinal samples '
+    'num_sources')
 
 
 def get_weight(src, point_source_weight=1/40., num_ruptures=None):

@@ -237,7 +237,8 @@ class HazardCalculator(BaseCalculator):
                     self.oqparam, self.monitor('precalculator'),
                     self.datastore.calc_id)
                 precalc.run(clean_up=False)
-                self.csm = precalc.csm
+                if 'scenario' not in self.oqparam.calculation_mode:
+                    self.csm = precalc.csm
             else:  # read previously computed data
                 self.datastore.parent = datastore.DataStore(precalc_id)
                 # merge old oqparam into the new ones, when possible
@@ -459,7 +460,10 @@ def get_gmfs(calc):
     # filtered site collection for the nonzero GMFs has N' <= N sites
     # whereas the risk site collection associated to the assets
     # has N'' <= N' sites
-    haz_sitecol = calc.datastore.parent['sitecol']  # N' values
+    if calc.datastore.parent:
+        haz_sitecol = calc.datastore.parent['sitecol']  # N' values
+    else:
+        haz_sitecol = calc.sitecol
     risk_indices = set(calc.sitecol.indices)  # N'' values
     N = len(haz_sitecol.complete)
     imt_dt = numpy.dtype([(imt, float) for imt in calc.oqparam.imtls])

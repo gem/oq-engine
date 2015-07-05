@@ -118,8 +118,9 @@ def get_params(job_inis):
     cp.read(job_inis)
 
     # drectory containing the config files we're parsing
-    base_path = os.path.dirname(os.path.abspath(job_inis[0]))
-    params = dict(base_path=base_path, inputs={'job_ini': ','.join(job_inis)})
+    job_ini = os.path.abspath(job_inis[0])
+    base_path = os.path.dirname(job_ini)
+    params = dict(base_path=base_path, inputs={'job_ini': job_ini})
 
     for sect in cp.sections():
         for key, value in cp.items(sect):
@@ -452,7 +453,7 @@ def get_source_models(oqparam, source_model_lt, sitecol=None, in_memory=True):
             gsim_lt = logictree.DummyGsimLogicTree()
         weight = rlz.weight / num_samples
         yield source.SourceModel(
-            sm, weight, smpath, trt_models, gsim_lt, i, num_samples)
+            sm, weight, smpath, trt_models, gsim_lt, i, num_samples, None)
 
 
 def get_composite_source_model(

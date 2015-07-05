@@ -1,13 +1,31 @@
+#  -*- coding: utf-8 -*-
+#  vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+#  Copyright (c) 2015, GEM Foundation
+
+#  OpenQuake is free software: you can redistribute it and/or modify it
+#  under the terms of the GNU Affero General Public License as published
+#  by the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+
+#  OpenQuake is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+
+#  You should have received a copy of the GNU Affero General Public License
+#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
 from openquake.commonlib.datastore import view
+from openquake.commonlib.writers import build_header
 
 
-def rst_table(table):
+def rst_table(data, header=None):
     """
-    Build a .rst table from a list of rows. The first row is assumed to be
-    the header. Here is an example:
+    Build a .rst table from a matrix.
     
-    >>> tbl = [['Name', 'Value'], ['a', 1], ['b', 2]]
-    >>> print rst_table(tbl)
+    >>> tbl = [['a', 1], ['b', 2]]
+    >>> print rst_table(tbl, header=['Name', 'Value'])
     ==== =====
     Name Value
     ==== =====
@@ -15,10 +33,20 @@ def rst_table(table):
     b    2    
     ==== =====
     """
-    header = tuple(map(str, table[0]))
-    col_sizes = map(len, header)
+    try:
+        # see if data is a composite numpy array
+        data.dtype.fields
+    except AttributeError:
+        # not a composite array
+        header = header or ()
+    else:
+        header = header or build_header(data.dtype)
+    if header:
+        col_sizes = [len(col) for col in header]
+    else:
+        col_sizes = [len(str(col)) for col in data[0]]
     body = []
-    for row in table[1:]:
+    for row in data:
         row = tuple(map(str, row))
         for (i, col) in enumerate(row):
             col_sizes[i] = max(col_sizes[i], len(col))
@@ -26,10 +54,12 @@ def rst_table(table):
 
     sepline = ' '.join(('=' * size for size in col_sizes))
     fmt = ' '.join(('%-{}s'.format(size) for size in col_sizes))
-    lines = [sepline, fmt % header, sepline]
+    if header:
+        lines = [sepline, fmt % tuple(header), sepline]
+    else:
+        lines = [sepline]
     for row in body:
         lines.append(fmt % row)
-
     lines.append(sepline)
     return '\n'.join(lines)
 
@@ -53,8 +83,10 @@ def classify_gsim_lt(gsim_lt):
 def view_csm_info(token, dstore):
     rlzs_assoc = dstore['rlzs_assoc']
     csm_info = rlzs_assoc.csm_info
-    rows = [['source_model', 'num_trts',
-             'gsim_logic_tree', 'num_gsims', 'num_realizations']]
+    header = ['source_model_file', 'num_trts',
+              'gsim_logic_tree', 'num_gsims', 'num_realizations',
+              'num_sources']
+    rows = []
     for sm in csm_info.source_models:
         rlzs = rlzs_assoc.rlzs_by_smodel[sm.ordinal]
         num_rlzs = len(rlzs)
@@ -64,6 +96,39 @@ def view_csm_info(token, dstore):
         tmodels = [tm for tm in sm.trt_models  # effective
                    if tm.trt in sm.gsim_lt.tectonic_region_types]
         row = (sm.name, len(tmodels), classify_gsim_lt(sm.gsim_lt),
-               num_gsims, '%d/%d' % (num_rlzs, num_paths))
+               num_gsims, '%d/%d' % (num_rlzs, num_paths), sm.num_sources)
         rows.append(row)
-    return rst_table(rows)
+    return rst_table(rows, header)
+
+
+@view.add('params')
+def view_params(token, dstore):
+    oq = dstore['oqparam']
+    params = ('calculation_mode', 'number_of_logic_tree_samples',
+              'maximum_distance', 'investigation_time',
+              'ses_per_logic_tree_path', 'truncation_level',
+              'rupture_mesh_spacing', 'complex_fault_mesh_spacing',
+              'width_of_mfd_bin', 'area_source_discretization',
+              'random_seed', 'master_seed')
+    return rst_table([(param, getattr(oq, param)) for param in params])
+
+
+def hide_fullpath(items):
+    """Strip everything before oq-risklib, if any"""
+    out = []
+    for name, fname in items:
+        splits = fname.split('oq-risklib')
+        out.append((name, splits[1] if len(splits) == 2 else fname))
+    return sorted(out)
+
+
+@view.add('inputs')
+def view_inputs(token, dstore):
+    inputs = dstore['oqparam'].inputs.copy()
+    try:
+        source_models = [('source', fname) for fname in inputs['source']]
+        del inputs['source']
+    except KeyError:  # there is no 'source' in scenario calculations
+        source_models = []
+    return rst_table([['Name', 'File']] + hide_fullpath(
+        inputs.items() + source_models))
