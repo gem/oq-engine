@@ -20,14 +20,14 @@ master_seed                  0
 
 Input files
 -----------
-======================= ==============================================================
-Name                    File                                                          
-gsim_logic_tree         /demos/LogicTreeCase1ClassicalPSHA/gmpe_logic_tree.xml        
-job_ini                 /demos/LogicTreeCase1ClassicalPSHA/job.ini                    
-source                  /demos/LogicTreeCase1ClassicalPSHA/source_model_1.xml         
-source                  /demos/LogicTreeCase1ClassicalPSHA/source_model_2.xml         
-source_model_logic_tree /demos/LogicTreeCase1ClassicalPSHA/source_model_logic_tree.xml
-======================= ==============================================================
+======================= =============================================================
+Name                    File                                                         
+gsim_logic_tree         demos/LogicTreeCase1ClassicalPSHA/gmpe_logic_tree.xml        
+job_ini                 demos/LogicTreeCase1ClassicalPSHA/job.ini                    
+source                  demos/LogicTreeCase1ClassicalPSHA/source_model_1.xml         
+source                  demos/LogicTreeCase1ClassicalPSHA/source_model_2.xml         
+source_model_logic_tree demos/LogicTreeCase1ClassicalPSHA/source_model_logic_tree.xml
+======================= =============================================================
 
 Composite source model
 ----------------------

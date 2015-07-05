@@ -20,13 +20,13 @@ master_seed                  0
 
 Input files
 -----------
-======================= ==============================================================================
-Name                    File                                                                          
-gsim_logic_tree         /demos/CharacteristicFaultSourceCase3ClassicalPSHA/gmpe_logic_tree.xml        
-job_ini                 /demos/CharacteristicFaultSourceCase3ClassicalPSHA/job.ini                    
-source                  /demos/CharacteristicFaultSourceCase3ClassicalPSHA/source_model.xml           
-source_model_logic_tree /demos/CharacteristicFaultSourceCase3ClassicalPSHA/source_model_logic_tree.xml
-======================= ==============================================================================
+======================= =============================================================================
+Name                    File                                                                         
+gsim_logic_tree         demos/CharacteristicFaultSourceCase3ClassicalPSHA/gmpe_logic_tree.xml        
+job_ini                 demos/CharacteristicFaultSourceCase3ClassicalPSHA/job.ini                    
+source                  demos/CharacteristicFaultSourceCase3ClassicalPSHA/source_model.xml           
+source_model_logic_tree demos/CharacteristicFaultSourceCase3ClassicalPSHA/source_model_logic_tree.xml
+======================= =============================================================================
 
 Composite source model
 ----------------------

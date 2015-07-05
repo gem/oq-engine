@@ -20,8 +20,8 @@ master_seed                  0
 
 Input files
 -----------
-============= ======================================
-Name          File                                  
-job_ini       /demos/ScenarioCase2/job.ini          
-rupture_model /demos/ScenarioCase2/rupture_model.xml
-============= ======================================
+============= =====================================
+Name          File                                 
+job_ini       demos/ScenarioCase2/job.ini          
+rupture_model demos/ScenarioCase2/rupture_model.xml
+============= =====================================

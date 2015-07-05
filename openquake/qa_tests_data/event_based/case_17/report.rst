@@ -20,14 +20,14 @@ master_seed                  0
 
 Input files
 -----------
-======================= ========================================================================
-Name                    File                                                                    
-gsim_logic_tree         /openquake/qa_tests_data/event_based/case_17/gsim_logic_tree.xml        
-job_ini                 /openquake/qa_tests_data/event_based/case_17/job.ini                    
-source                  /openquake/qa_tests_data/event_based/case_17/source_model_1.xml         
-source                  /openquake/qa_tests_data/event_based/case_17/source_model_2.xml         
-source_model_logic_tree /openquake/qa_tests_data/event_based/case_17/source_model_logic_tree.xml
-======================= ========================================================================
+======================= =======================================================================
+Name                    File                                                                   
+gsim_logic_tree         openquake/qa_tests_data/event_based/case_17/gsim_logic_tree.xml        
+job_ini                 openquake/qa_tests_data/event_based/case_17/job.ini                    
+source                  openquake/qa_tests_data/event_based/case_17/source_model_1.xml         
+source                  openquake/qa_tests_data/event_based/case_17/source_model_2.xml         
+source_model_logic_tree openquake/qa_tests_data/event_based/case_17/source_model_logic_tree.xml
+======================= =======================================================================
 
 Composite source model
 ----------------------
@@ -37,6 +37,17 @@ smlt_path source_model_file  num_trts gsim_logic_tree num_gsims num_realizations
 b1        source_model_1.xml 0        trivial                   1/0              1          
 b2        source_model_2.xml 1        trivial         1         4/1              1          
 ========= ================== ======== =============== ========= ================ ===========
+
+Non-empty rupture collections
+-----------------------------
+=== ========= ==================== ============
+col smlt_path TRT                  num_ruptures
+=== ========= ==================== ============
+1   b2        active shallow crust 2816        
+2   b2        active shallow crust 2775        
+3   b2        active shallow crust 2736        
+4   b2        active shallow crust 2649        
+=== ========= ==================== ============
 
 Collections <-> realizations
 ----------------------------

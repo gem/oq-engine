@@ -20,11 +20,11 @@ master_seed                  0
 
 Input files
 -----------
-======================== =================================================================================
-Name                     File                                                                             
-contents_vulnerability   /openquake/qa_tests_data/scenario_risk/contents/vulnerability_model_contents.xml 
-exposure                 /openquake/qa_tests_data/scenario_risk/contents/exposure_model.xml               
-job_ini                  /openquake/qa_tests_data/scenario_risk/contents/job.ini                          
-rupture_model            /openquake/qa_tests_data/scenario_risk/contents/fault_rupture.xml                
-structural_vulnerability /openquake/qa_tests_data/scenario_risk/contents/vulnerability_model_structure.xml
-======================== =================================================================================
+======================== ================================================================================
+Name                     File                                                                            
+contents_vulnerability   openquake/qa_tests_data/scenario_risk/contents/vulnerability_model_contents.xml 
+exposure                 openquake/qa_tests_data/scenario_risk/contents/exposure_model.xml               
+job_ini                  openquake/qa_tests_data/scenario_risk/contents/job.ini                          
+rupture_model            openquake/qa_tests_data/scenario_risk/contents/fault_rupture.xml                
+structural_vulnerability openquake/qa_tests_data/scenario_risk/contents/vulnerability_model_structure.xml
+======================== ================================================================================

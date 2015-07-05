@@ -20,13 +20,13 @@ master_seed                  0
 
 Input files
 -----------
-======================= =====================================================================
-Name                    File                                                                 
-gsim_logic_tree         /openquake/qa_tests_data/classical/case_5/gsim_logic_tree.xml        
-job_ini                 /openquake/qa_tests_data/classical/case_5/job.ini                    
-source                  /openquake/qa_tests_data/classical/case_5/source_model.xml           
-source_model_logic_tree /openquake/qa_tests_data/classical/case_5/source_model_logic_tree.xml
-======================= =====================================================================
+======================= ====================================================================
+Name                    File                                                                
+gsim_logic_tree         openquake/qa_tests_data/classical/case_5/gsim_logic_tree.xml        
+job_ini                 openquake/qa_tests_data/classical/case_5/job.ini                    
+source                  openquake/qa_tests_data/classical/case_5/source_model.xml           
+source_model_logic_tree openquake/qa_tests_data/classical/case_5/source_model_logic_tree.xml
+======================= ====================================================================
 
 Composite source model
 ----------------------

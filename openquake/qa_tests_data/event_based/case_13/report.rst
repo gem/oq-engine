@@ -20,13 +20,13 @@ master_seed                  0
 
 Input files
 -----------
-======================= ========================================================================
-Name                    File                                                                    
-gsim_logic_tree         /openquake/qa_tests_data/event_based/case_13/gsim_logic_tree.xml        
-job_ini                 /openquake/qa_tests_data/event_based/case_13/job.ini                    
-source                  /openquake/qa_tests_data/event_based/case_13/source_model.xml           
-source_model_logic_tree /openquake/qa_tests_data/event_based/case_13/source_model_logic_tree.xml
-======================= ========================================================================
+======================= =======================================================================
+Name                    File                                                                   
+gsim_logic_tree         openquake/qa_tests_data/event_based/case_13/gsim_logic_tree.xml        
+job_ini                 openquake/qa_tests_data/event_based/case_13/job.ini                    
+source                  openquake/qa_tests_data/event_based/case_13/source_model.xml           
+source_model_logic_tree openquake/qa_tests_data/event_based/case_13/source_model_logic_tree.xml
+======================= =======================================================================
 
 Composite source model
 ----------------------
@@ -35,6 +35,14 @@ smlt_path source_model_file num_trts gsim_logic_tree num_gsims num_realizations 
 ========= ================= ======== =============== ========= ================ ===========
 b1        source_model.xml  1        trivial         1         1/1              1          
 ========= ================= ======== =============== ========= ================ ===========
+
+Non-empty rupture collections
+-----------------------------
+=== ========= ==================== ============
+col smlt_path TRT                  num_ruptures
+=== ========= ==================== ============
+0   b1        active shallow crust 4966        
+=== ========= ==================== ============
 
 Collections <-> realizations
 ----------------------------

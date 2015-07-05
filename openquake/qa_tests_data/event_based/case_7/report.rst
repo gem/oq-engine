@@ -20,14 +20,14 @@ master_seed                  0
 
 Input files
 -----------
-======================= =======================================================================
-Name                    File                                                                   
-gsim_logic_tree         /openquake/qa_tests_data/event_based/case_7/gmpe_logic_tree.xml        
-job_ini                 /openquake/qa_tests_data/event_based/case_7/job.ini                    
-source                  /openquake/qa_tests_data/event_based/case_7/source_model1.xml          
-source                  /openquake/qa_tests_data/event_based/case_7/source_model2.xml          
-source_model_logic_tree /openquake/qa_tests_data/event_based/case_7/source_model_logic_tree.xml
-======================= =======================================================================
+======================= ======================================================================
+Name                    File                                                                  
+gsim_logic_tree         openquake/qa_tests_data/event_based/case_7/gmpe_logic_tree.xml        
+job_ini                 openquake/qa_tests_data/event_based/case_7/job.ini                    
+source                  openquake/qa_tests_data/event_based/case_7/source_model1.xml          
+source                  openquake/qa_tests_data/event_based/case_7/source_model2.xml          
+source_model_logic_tree openquake/qa_tests_data/event_based/case_7/source_model_logic_tree.xml
+======================= ======================================================================
 
 Composite source model
 ----------------------
@@ -37,6 +37,113 @@ smlt_path source_model_file num_trts gsim_logic_tree num_gsims num_realizations 
 b11       source_model1.xml 1        simple          3         63/3             1          
 b12       source_model2.xml 1        simple          3         37/3             1          
 ========= ================= ======== =============== ========= ================ ===========
+
+Non-empty rupture collections
+-----------------------------
+=== ========= ==================== ============
+col smlt_path TRT                  num_ruptures
+=== ========= ==================== ============
+0   b11       Active Shallow Crust 480         
+1   b11       Active Shallow Crust 535         
+2   b11       Active Shallow Crust 462         
+3   b11       Active Shallow Crust 457         
+4   b11       Active Shallow Crust 473         
+5   b11       Active Shallow Crust 524         
+6   b11       Active Shallow Crust 510         
+7   b11       Active Shallow Crust 512         
+8   b11       Active Shallow Crust 448         
+9   b11       Active Shallow Crust 463         
+10  b11       Active Shallow Crust 486         
+11  b11       Active Shallow Crust 471         
+12  b11       Active Shallow Crust 529         
+13  b11       Active Shallow Crust 515         
+14  b11       Active Shallow Crust 473         
+15  b11       Active Shallow Crust 464         
+16  b11       Active Shallow Crust 457         
+17  b11       Active Shallow Crust 467         
+18  b11       Active Shallow Crust 498         
+19  b11       Active Shallow Crust 483         
+20  b11       Active Shallow Crust 477         
+21  b11       Active Shallow Crust 477         
+22  b11       Active Shallow Crust 462         
+23  b11       Active Shallow Crust 470         
+24  b11       Active Shallow Crust 489         
+25  b11       Active Shallow Crust 476         
+26  b11       Active Shallow Crust 489         
+27  b11       Active Shallow Crust 471         
+28  b11       Active Shallow Crust 466         
+29  b11       Active Shallow Crust 478         
+30  b11       Active Shallow Crust 449         
+31  b11       Active Shallow Crust 484         
+32  b11       Active Shallow Crust 531         
+33  b11       Active Shallow Crust 471         
+34  b11       Active Shallow Crust 483         
+35  b11       Active Shallow Crust 493         
+36  b11       Active Shallow Crust 506         
+37  b11       Active Shallow Crust 461         
+38  b11       Active Shallow Crust 465         
+39  b11       Active Shallow Crust 477         
+40  b11       Active Shallow Crust 481         
+41  b11       Active Shallow Crust 509         
+42  b11       Active Shallow Crust 483         
+43  b11       Active Shallow Crust 491         
+44  b11       Active Shallow Crust 470         
+45  b11       Active Shallow Crust 488         
+46  b11       Active Shallow Crust 451         
+47  b11       Active Shallow Crust 480         
+48  b11       Active Shallow Crust 461         
+49  b11       Active Shallow Crust 470         
+50  b11       Active Shallow Crust 524         
+51  b11       Active Shallow Crust 501         
+52  b11       Active Shallow Crust 504         
+53  b11       Active Shallow Crust 471         
+54  b11       Active Shallow Crust 501         
+55  b11       Active Shallow Crust 495         
+56  b11       Active Shallow Crust 461         
+57  b11       Active Shallow Crust 490         
+58  b11       Active Shallow Crust 498         
+59  b11       Active Shallow Crust 449         
+60  b11       Active Shallow Crust 484         
+61  b11       Active Shallow Crust 497         
+62  b11       Active Shallow Crust 516         
+63  b12       Active Shallow Crust 47          
+64  b12       Active Shallow Crust 57          
+65  b12       Active Shallow Crust 57          
+66  b12       Active Shallow Crust 57          
+67  b12       Active Shallow Crust 48          
+68  b12       Active Shallow Crust 55          
+69  b12       Active Shallow Crust 47          
+70  b12       Active Shallow Crust 50          
+71  b12       Active Shallow Crust 46          
+72  b12       Active Shallow Crust 45          
+73  b12       Active Shallow Crust 45          
+74  b12       Active Shallow Crust 53          
+75  b12       Active Shallow Crust 56          
+76  b12       Active Shallow Crust 35          
+77  b12       Active Shallow Crust 35          
+78  b12       Active Shallow Crust 52          
+79  b12       Active Shallow Crust 41          
+80  b12       Active Shallow Crust 51          
+81  b12       Active Shallow Crust 52          
+82  b12       Active Shallow Crust 36          
+83  b12       Active Shallow Crust 54          
+84  b12       Active Shallow Crust 48          
+85  b12       Active Shallow Crust 46          
+86  b12       Active Shallow Crust 47          
+87  b12       Active Shallow Crust 49          
+88  b12       Active Shallow Crust 49          
+89  b12       Active Shallow Crust 34          
+90  b12       Active Shallow Crust 48          
+91  b12       Active Shallow Crust 43          
+92  b12       Active Shallow Crust 48          
+93  b12       Active Shallow Crust 44          
+94  b12       Active Shallow Crust 44          
+95  b12       Active Shallow Crust 55          
+96  b12       Active Shallow Crust 42          
+97  b12       Active Shallow Crust 52          
+98  b12       Active Shallow Crust 51          
+99  b12       Active Shallow Crust 53          
+=== ========= ==================== ============
 
 Collections <-> realizations
 ----------------------------

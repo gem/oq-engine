@@ -75,7 +75,7 @@ realizations; it is equal only when the number of tectonic region
 models per source model is 1.
 
 It should be noted that one or more collections could be empty in
-the presence of logic tree reduction. Banally, it there are no
+the presence of logic tree reduction. Banally, if there are no
 sources for a given tectonic region, even before filtering and
 rupture generation, it is clear the the rupture collection
 corresponding to the tectonic region model will be empty.
@@ -145,6 +145,33 @@ upfront (it means that several tectonic region types are missing in
 the reduced source model) and for the SeiFaCrust model only 4
 realizations are expected upfront (actually that source model has only
 a single source with tectonic region type "Active Shallow Crust").
+
+Running `oq-lite info -d` returns the reduced RlzsAssoc object, which is
+the following::
+
+  <RlzsAssoc(8)
+  5,AkkarBommer2010: ['<0,AreaSource,AkkarBommer2010asc_@_@_@_@_@_@,w=0.25>']
+  5,CauzziFaccioli2008: ['<1,AreaSource,CauzziFaccioli2008asc_@_@_@_@_@_@,w=0.25>']
+  5,ChiouYoungs2008: ['<2,AreaSource,ChiouYoungs2008asc_@_@_@_@_@_@,w=0.142857142857>']
+  5,ZhaoEtAl2006Asc: ['<3,AreaSource,ZhaoEtAl2006Ascasc_@_@_@_@_@_@,w=0.0714285714286>']
+  9,AkkarBommer2010: ['<4,FaultSourceAndBackground,AkkarBommer2010asc_@_@_@_@_@_@,w=0.1>']
+  9,CauzziFaccioli2008: ['<5,FaultSourceAndBackground,CauzziFaccioli2008asc_@_@_@_@_@_@,w=0.1>']
+  9,ChiouYoungs2008: ['<6,FaultSourceAndBackground,ChiouYoungs2008asc_@_@_@_@_@_@,w=0.0571428571429>']
+  9,ZhaoEtAl2006Asc: ['<7,FaultSourceAndBackground,ZhaoEtAl2006Ascasc_@_@_@_@_@_@,w=0.0285714285714>']>
+
+As you see, only two tectonic region models are relevant, the number 5
+(i.e. the submodel of AreaSource with TRT="Active Shallow Crust") and
+the number 9  (i.e. the submodel of FaultSourceAndBackground
+with TRT="Active Shallow Crust").
+
+Information about the (non-empty) rupture collections can be extracted
+after the computation with the command
+
+  `$ oq-lite show <calc_id> rupture_collections`
+
+and before with
+
+  `$ oq-lite info -d job.ini`
 
 
 An example with sampling

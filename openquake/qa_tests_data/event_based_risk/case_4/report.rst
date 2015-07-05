@@ -20,17 +20,17 @@ master_seed                  0
 
 Input files
 -----------
-======================== ===============================================================================================
-Name                     File                                                                                           
-exposure                 /openquake/qa_tests_data/event_based_risk/case_4/models/exp/exposure.xml                       
-gsim_logic_tree          /openquake/qa_tests_data/event_based_risk/case_4/models/tree/gmpe_logic_tree.xml               
-job_ini                  /openquake/qa_tests_data/event_based_risk/case_4/job_hazard.ini                                
-source                   /openquake/qa_tests_data/event_based_risk/case_4/models/src/as_model.xml                       
-source                   /openquake/qa_tests_data/event_based_risk/case_4/models/src/fsbg_model.xml                     
-source                   /openquake/qa_tests_data/event_based_risk/case_4/models/src/ss_model.xml                       
-source_model_logic_tree  /openquake/qa_tests_data/event_based_risk/case_4/models/tree/source_model_logic_tree.xml       
-structural_vulnerability /openquake/qa_tests_data/event_based_risk/case_4/models/vuln/structural_vulnerability_model.xml
-======================== ===============================================================================================
+======================== ==============================================================================================
+Name                     File                                                                                          
+exposure                 openquake/qa_tests_data/event_based_risk/case_4/models/exp/exposure.xml                       
+gsim_logic_tree          openquake/qa_tests_data/event_based_risk/case_4/models/tree/gmpe_logic_tree.xml               
+job_ini                  openquake/qa_tests_data/event_based_risk/case_4/job_hazard.ini                                
+source                   openquake/qa_tests_data/event_based_risk/case_4/models/src/as_model.xml                       
+source                   openquake/qa_tests_data/event_based_risk/case_4/models/src/fsbg_model.xml                     
+source                   openquake/qa_tests_data/event_based_risk/case_4/models/src/ss_model.xml                       
+source_model_logic_tree  openquake/qa_tests_data/event_based_risk/case_4/models/tree/source_model_logic_tree.xml       
+structural_vulnerability openquake/qa_tests_data/event_based_risk/case_4/models/vuln/structural_vulnerability_model.xml
+======================== ==============================================================================================
 
 Composite source model
 ----------------------
@@ -41,6 +41,15 @@ AreaSource               models/src/as_model.xml   1        complex         4   
 FaultSourceAndBackground models/src/fsbg_model.xml 1        complex         4         4/4              110        
 SeiFaCrust               models/src/ss_model.xml   0        complex                   0/0              1          
 ======================== ========================= ======== =============== ========= ================ ===========
+
+Non-empty rupture collections
+-----------------------------
+=== ======================== ==================== ============
+col smlt_path                TRT                  num_ruptures
+=== ======================== ==================== ============
+5   AreaSource               Active Shallow Crust 24          
+9   FaultSourceAndBackground Active Shallow Crust 13          
+=== ======================== ==================== ============
 
 Collections <-> realizations
 ----------------------------

@@ -322,7 +322,7 @@ class RlzsAssoc(collections.Mapping):
         return [gsims_by_trt_id.get(col['trt_id'], [])
                 for col in self.csm_info.cols]
 
-    def _add_realizations(self, idx, lt_model, realizations):
+    def _add_realizations(self, idx, lt_model, realizations, trts):
         gsim_lt = lt_model.gsim_lt
         rlzs = []
         for i, gsim_rlz in enumerate(realizations):
@@ -331,8 +331,10 @@ class RlzsAssoc(collections.Mapping):
             self.gsim_by_trt.append(dict(
                 zip(gsim_lt.all_trts, gsim_rlz.value)))
             for trt_model in lt_model.trt_models:
-                gs = gsim_lt.get_gsim_by_trt(gsim_rlz, trt_model.trt)
-                self.rlzs_assoc[trt_model.id, gs].append(rlz)
+                if trt_model.trt in trts:
+                    # ignore the associations to discarded TRTs
+                    gs = gsim_lt.get_gsim_by_trt(gsim_rlz, trt_model.trt)
+                    self.rlzs_assoc[trt_model.id, gs].append(rlz)
                 if lt_model.samples > 1:  # oversampling
                     col_id = self.csm_info.col_ids_by_trt_id[trt_model.id][i]
                     rlz.col_ids.add(col_id)
@@ -630,7 +632,7 @@ class CompositeSourceModel(collections.Sequence):
             else:  # full enumeration
                 rlzs = logictree.get_effective_rlzs(smodel.gsim_lt)
             if rlzs:
-                idx = assoc._add_realizations(idx, smodel, rlzs)
+                idx = assoc._add_realizations(idx, smodel, rlzs, trts)
                 for trt_model in smodel.trt_models:
                     trt_model.gsims = smodel.gsim_lt.values[trt_model.trt]
             else:

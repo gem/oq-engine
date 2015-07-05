@@ -9,28 +9,34 @@ from openquake.commonlib.calculators import base
 
 
 class ReportBuilder(object):
+    """
+    A particularly smart view over the datastore
+    """
+    title = dict(
+        params='Parameters',
+        inputs='Input files',
+        csm_info='Composite source model',
+        rupture_collections='Non-empty rupture collections',
+        col_rlz_assocs='Collections <-> realizations',
+    )
     def __init__(self, dstore):
         description = dstore['oqparam'].description
         self.dstore = dstore
-        self.title = dict(
-            params='Parameters',
-            inputs='Input files',
-            csm_info='Composite source model',
-            col_rlz_assocs='Collections <-> realizations',
-        )
         self.text = description + '\n' + '=' * len(description)
 
     def add(self, name):
+        """Add the view named `name` to the report text"""
         title = self.title[name]
         line = '-' * len(title)
         self.text += '\n'.join(
             ['\n\n' + title, line, datastore.view(name, self.dstore)])
-        
+
     def save(self, fname):
+        """Save the report"""
         with open(fname, 'w') as f:
             f.write(self.text)
 
-                                     
+
 def build_report(job_ini, output_dir=None):
     """
     Write a `report.csv` file with information about the calculation.
@@ -52,6 +58,7 @@ def build_report(job_ini, output_dir=None):
     if 'scenario' not in oq.calculation_mode:
         rb.add('csm_info')
     if 'num_ruptures' in ds:
+        rb.add('rupture_collections')
         rb.add('col_rlz_assocs')
     rb.save(report)
 
