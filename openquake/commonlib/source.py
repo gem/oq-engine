@@ -467,7 +467,7 @@ class CompositionInfo(object):
         col_id = 0
         self.col_ids_by_trt_id = collections.defaultdict(list)
         self.tmdict = {}  # trt_id -> trt_model
-        for sm in source_models:
+        for sm in self.source_models:
             for trt_model in sm.trt_models:
                 trt_model.source_model = sm
                 trt_id = trt_model.id
