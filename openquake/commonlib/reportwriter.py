@@ -59,7 +59,7 @@ def build_report(job_ini, output_dir=None):
 def main(directory):
     for cwd, dirs, files in os.walk(directory):
         for f in files:
-            if f == 'job.ini':
+            if f in ('job.ini', 'job_haz.ini', 'job_hazard.ini'):
                 job_ini = os.path.join(cwd, f)
                 print job_ini
                 build_report(job_ini)

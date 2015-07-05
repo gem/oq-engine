@@ -115,10 +115,10 @@ def view_params(token, dstore):
 
 
 def hide_fullpath(items):
-    """Strip everything before oq-risklib, if any"""
+    """Strip everything before oq-risklib/, if any"""
     out = []
     for name, fname in items:
-        splits = fname.split('oq-risklib')
+        splits = fname.split('oq-risklib/')
         out.append((name, splits[1] if len(splits) == 2 else fname))
     return sorted(out)
 
