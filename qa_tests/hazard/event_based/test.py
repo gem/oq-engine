@@ -434,7 +434,8 @@ class EventBasedHazardCase17TestCase(qa_utils.BaseQATestCase):
         for gmf_output in models.Output.objects.filter(
                 output_type='gmf', oq_job=job):
             fname = core.export(gmf_output.id, result_dir, 'csv')
-            countlines += len(open(fname).readlines())
+            if os.path.exists(fname):  # empty files are not written
+                countlines += len(open(fname).readlines())
         self.assertEqual(countlines, len(tags))
 
         curves = [c.poes for c in models.HazardCurveData.objects.filter(
