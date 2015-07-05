@@ -54,9 +54,9 @@ See https://github.com/gem/oq-risklib/blob/master/doc/effective-realizations.rst
         exp = self.EXPECTED + '''
 n_sites 1
 n_sources 1
-n_realizations 1
 n_levels 29
 output_weight 29.0
+n_realizations 1
 n_imts 1
 curve_matrix_size 232 B'''
         self.assertEqual(exp, str(p))
@@ -68,10 +68,10 @@ curve_matrix_size 232 B'''
         exp = self.EXPECTED + '''
 n_sites 1
 n_sources 1
-n_realizations 1
 input_weight 1722.0
 n_levels 29
 output_weight 29.0
+n_realizations 1
 n_imts 1
 curve_matrix_size 232 B'''
         self.assertEqual(exp, str(p))
