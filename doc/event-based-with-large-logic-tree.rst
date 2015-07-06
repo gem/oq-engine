@@ -25,16 +25,15 @@ for the performance of the real computation.
 
 For an event based calculation it is impossible to assess the
 complexity of a logic tree without having computed the ruptures first.
-The `oq-lite info` command does that only if you use it in conjunction
-with the ``-d`` flag. In other words, in the case of an event based
+The `oq-lite info` command does that if you use it in conjunction
+with the ``-r`` flag, which produces a report in `.rst` format
+containing a lot of useful information about the logic tree
+and the ruptures. In the case of an event based
 calculation you should always run
 
-`$ oq-lite info -d job.ini`
+`$ oq-lite info -r job.ini`
 
-to get the correct reduced logic tree and effective realizations.
 It will be slower than just filtering the sources but reliable.
-As an additional bonus, you will also get some information about
-the expected data transfer.
 
 .. _Previously: effective-realizations.rst
 
@@ -94,7 +93,7 @@ it can run in less than a minute but still retains some of the
 complexities of the original calculation. It is also a perfect
 example to explain the intricacies of the logic tree reduction.
 
-If you run `oq-lite info -d` on that example you will get a number of
+If you run `oq-lite info -r` on that example you will get a number of
 warning messages, such as::
   
   WARNING:root:Could not find sources close to the sites in models/src/as_model.xml sm_lt_path=('AreaSource',), maximum_distance=200.0 km, TRT=Shield
@@ -146,7 +145,7 @@ the reduced source model) and for the SeiFaCrust model only 4
 realizations are expected upfront (actually that source model has only
 a single source with tectonic region type "Active Shallow Crust").
 
-Running `oq-lite info -d` returns the reduced RlzsAssoc object, which is
+The report also contains the reduced RlzsAssoc object, which is
 the following::
 
   <RlzsAssoc(8)
@@ -164,49 +163,12 @@ As you see, only two tectonic region models are relevant, the number 5
 the number 9  (i.e. the submodel of FaultSourceAndBackground
 with TRT="Active Shallow Crust").
 
-Information about the (non-empty) rupture collections can be extracted
-after the computation with the command
+The report contains information about the (non-empty) rupture
+collections; the same information can be extracted after the
+computation with the command
 
   `$ oq-lite show <calc_id> rupture_collections`
 
-and before with
-
-  `$ oq-lite info -d job.ini`
-
-
-An example with sampling
----------------------------------------------------
-  
-To explain how it works, I will show as an example our test
-`event_based/case_7`_.
-
-This is a rather simple test. There are two source models; both
-of them contain a single source, which actually is the same area source with
-two different magnitudes. The GMPE logic tree is trivial since
-each model has a single tectonic region type ("Active Shallow Crust").
-The reduction of the complete logic tree can happen if one
-of the source models is not sampled or if one of the source models
-produces no ruptures for some configuration of the parameters.
-
-Given the parameters in the test (number_of_logic_tree_samples=100,
-random_seed=23, weight of the first model 0.6, weight of the second
-model 0.4), the first source model is sampled 63 times and the second
-one 37 times. With 10 stochastic event sets (
-ses_per_logic_tree_path=10) we are generating the following ruptures
-per source model:
-
-source_model1.xml: 30,457
-source_model2.xml: 1,772
-
-Actually there are 100 SES collections, each one generating different
-number of ruptures:
-
-first model: {480,535,462,457,473,524,510,512,448,463,486,471,529,515,473,464,457,467,498,483,477,477,462,470,489,476,489,471,466,478,449,484,531,471,483,493,506,461,465,477,481,509,483,491,470,488,451,480,461,470,524,501,504,471,501,495,461,490,498,449,484,497,516} # 63 col_ids
-second model: {47,57,57,57,48,55,47,50,46,45,45,53,56,35,35,52,41,51,52,36,54,48,46,47,49,49,34,48,43,48,44,44,55,42,52,51,53}  # 37 col_ids
-
-
-
-.. _event_based/case_7: https://github.com/gem/oq-risklib/tree/master/openquake/qa_tests_data/event_based/case_7
 
 Reduction of the logic tree when sampling is enabled
 ----------------------------------------------------

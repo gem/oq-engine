@@ -168,6 +168,7 @@ computation without running it. The command you need is the *info* command::
      -f, --filtersources  flag to enable filtering of the source models
      -w, --weightsources  flag to enable weighting of the source models
      -d, --datatransfer   flag to enable data transfer calculation
+     -r, --report         flag to enable building a report in rst format
    
 Let's assume that you have a zip archive called `SHARE.zip` containing the
 SHARE source model, the SHARE source model logic tree file and the SHARE

@@ -8,6 +8,10 @@ from openquake.commonlib import readinput, datastore
 from openquake.commonlib.calculators import base
 
 
+def indent(text):
+    return '  ' + '\n  '.join(text.splitlines())
+
+
 class ReportBuilder(object):
     """
     A particularly smart view over the datastore
@@ -18,6 +22,7 @@ class ReportBuilder(object):
         csm_info='Composite source model',
         rupture_collections='Non-empty rupture collections',
         col_rlz_assocs='Collections <-> realizations',
+        rlzs_assoc='Realizations per (TRT, GSIM)',
     )
 
     def __init__(self, dstore):
@@ -25,12 +30,15 @@ class ReportBuilder(object):
         self.dstore = dstore
         self.text = description + '\n' + '=' * len(description)
 
-    def add(self, name):
+    def add(self, name, obj=None):
         """Add the view named `name` to the report text"""
         title = self.title[name]
         line = '-' * len(title)
-        self.text += '\n'.join(
-            ['\n\n' + title, line, datastore.view(name, self.dstore)])
+        if obj:
+            text = '\n::\n\n' + indent(str(obj))
+        else:
+            text = datastore.view(name, self.dstore)
+        self.text += '\n'.join(['\n\n' + title, line, text])
 
     def save(self, fname):
         """Save the report"""
@@ -58,6 +66,7 @@ def build_report(job_ini, output_dir=None):
         rb.add(name)
     if 'scenario' not in oq.calculation_mode:
         rb.add('csm_info')
+    rb.add('rlzs_assoc', calc.rlzs_assoc)
     if 'num_ruptures' in ds:
         rb.add('rupture_collections')
         rb.add('col_rlz_assocs')
