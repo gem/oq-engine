@@ -102,7 +102,8 @@ class BaseHazardCalculator(base.Calculator):
         csm = self.composite_model
         self.acc = tasks.apply_reduce(
             self.core_calc_task,
-            (csm.get_sources(), self.site_collection, csm.info, self.monitor),
+            (csm.get_sources(), self.site_collection,
+             self.rlzs_assoc.csm_info, self.monitor),
             agg=self.agg_curves, acc=self.acc,
             weight=attrgetter('weight'), key=attrgetter('trt_model_id'),
             concurrent_tasks=self.concurrent_tasks)
@@ -236,7 +237,7 @@ class BaseHazardCalculator(base.Calculator):
         # rebuild the info object with the trt_ids coming from the db
         self.composite_model.info = source.CompositionInfo(
             self.composite_model.source_model_lt,
-            self.composite_model.source_models)
+            map(source.get_skeleton, self.composite_model.source_models))
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_model(self):
