@@ -87,7 +87,7 @@ starmap = OqTaskManager.starmap
 apply_reduce = OqTaskManager.apply_reduce
 
 
-def do_not_instantiate(gsim):
+def do_not_instantiate(gsim, *args):
     # sanity check: inside the workers, override
     # GroundShakingIntensityModel.__init__ with this, to make sure
     # that GSIMs are not instantiated directly there (they can be
