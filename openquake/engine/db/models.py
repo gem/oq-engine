@@ -729,12 +729,11 @@ class Output(djm.Model):
 
         """
         oq = self.oq_job.get_oqparam()
-        investigation_time = oq.hazard_investigation_time
 
         statistics, quantile = self.statistical_params
         gsim_lt_path, sm_lt_path = self.lt_realization_paths
 
-        return self.HazardMetadata(investigation_time,
+        return self.HazardMetadata(oq.investigation_time,
                                    statistics, quantile,
                                    sm_lt_path, gsim_lt_path)
 
