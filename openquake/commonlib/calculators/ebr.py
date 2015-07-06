@@ -68,16 +68,16 @@ def ebr(riskinputs, riskmodel, rlzs_assoc, monitor):
     for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
         rup_slice = out_by_rlz.rup_slice
         rup_ids = range(rup_slice.start, rup_slice.stop)
-        for rlz, out in zip(rlzs_assoc.realizations, out_by_rlz):
+        for out in out_by_rlz:
             lti = lt_idx[out.loss_type]
             agg_losses = out.event_loss_per_asset.sum(axis=1)
             agg_ins_losses = out.insured_loss_per_asset.sum(axis=1)
             for rup_id, loss, ins_loss in zip(
                     rup_ids, agg_losses, agg_ins_losses):
                 if loss > 0:
-                    losses[0, lti, rlz.ordinal] += {rup_id: loss}
+                    losses[0, lti, out.hid] += {rup_id: loss}
                 if ins_loss > 0:
-                    losses[1, lti, rlz.ordinal] += {rup_id: ins_loss}
+                    losses[1, lti, out.hid] += {rup_id: ins_loss}
     for idx, dic in numpy.ndenumerate(losses):
         if dic:
             losses[idx] = [numpy.array(dic.items(), elt_dt)]

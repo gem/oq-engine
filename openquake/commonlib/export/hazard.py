@@ -28,7 +28,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import FilteredSiteCollection
 from openquake.commonlib.export import export
 from openquake.commonlib.writers import (
-    scientificformat, floatformat, save_csv)
+    scientificformat, floatformat, write_csv)
 from openquake.commonlib import hazard_writers
 
 GMF_MAX_SIZE = 10 * 1024 * 1024  # 10 MB
@@ -109,7 +109,7 @@ def _export_ses_csv(dest, ses_coll):
     for ses in ses_coll:
         for sesrup in ses:
             rows.append([sesrup.tag, sesrup.seed])
-    save_csv(dest, sorted(rows, key=operator.itemgetter(0)))
+    write_csv(dest, sorted(rows, key=operator.itemgetter(0)))
 
 
 @export.add(('sitecol', 'csv'))
@@ -123,7 +123,7 @@ def export_sitecol_csv(ekey, dstore):
     for site in dstore['sitecol']:
         rows.append([site.id, site.location.x, site.location.y, site.vs30,
                      site.vs30measured, site.z1pt0, site.z2pt5, site.backarc])
-    save_csv(dest, sorted(rows, key=operator.itemgetter(0)))
+    write_csv(dest, sorted(rows, key=operator.itemgetter(0)))
     return [dest]
 
 
@@ -297,7 +297,7 @@ def export_gmf_csv(key, export_dir, fname, sitecol, ruptures, gmfs, rlz,
         row = [rupture.tag, ' '.join(map(str, indices))] + \
               [gmf[imt] for imt in imts]
         rows.append(row)
-    save_csv(dest, rows)
+    write_csv(dest, rows)
     return {key: [dest]}
 
 # ####################### export hazard curves ############################ #
@@ -326,7 +326,7 @@ def export_hazard_curves_csv(key, export_dir, fname, sitecol, curves_by_imt,
     for i, imt in enumerate(sorted(curves_by_imt.dtype.fields), 1):
         for sid, curve in zip(range(nsites), curves_by_imt[imt]):
             rows[sid, i] = scientificformat(curve, fmt='%11.7E')
-    save_csv(dest, rows)
+    write_csv(dest, rows)
     return {fname: dest}
 
 
@@ -411,6 +411,8 @@ def export_gmf(ekey, dstore):
     rupture_by_tag = sum(dstore['sescollection'], AccumDict())
     all_tags = dstore['tags'].value
     oq = dstore['oqparam']
+    investigation_time = (None if oq.calculation_mode == 'scenario'
+                          else oq.investigation_time)
     samples = oq.number_of_logic_tree_samples
     fmt = ekey[-1]
     gmfs = dstore[ekey[0]]
@@ -423,15 +425,14 @@ def export_gmf(ekey, dstore):
             rlzs_assoc.realizations, rlzs_assoc.combine_gmfs(gmfs)):
         tags = all_tags[gmf_by_idx.keys()]
         gmfs = gmf_by_idx.values()
+        if not gmfs:
+            continue
         ruptures = [rupture_by_tag[tag] for tag in tags]
         fname = build_name(rlz, 'gmf', fmt, samples)
-        if len(gmfs) == 0:
-            logging.warn('Not generating %s, it would be empty', fname)
-            continue
         fnames.append(os.path.join(dstore.export_dir, fname))
         globals()['export_gmf_%s' % fmt](
             ('gmf', fmt), dstore.export_dir, fname, sitecol,
-            ruptures, gmfs, rlz, oq.investigation_time)
+            ruptures, gmfs, rlz, investigation_time)
     return fnames
 
 
@@ -491,7 +492,7 @@ def export_stats_csv(key, export_dir, fname, sitecol, data_by_imt):
         for col in data_by_imt[imt]:
             row.append(scientificformat(col))
         rows.append(row)
-    save_csv(dest, numpy.array(rows).T)
+    write_csv(dest, numpy.array(rows).T)
     return {fname: dest}
 
 
@@ -508,7 +509,7 @@ def export_uhs_csv(key, export_dir, fname, sitecol, hmaps):
         I the number of IMTs of SA type, and P the number of poes
     """
     dest = os.path.join(export_dir, fname)
-    rows = ([[lon, lat]] + list(row)
-            for lon, lat, row in zip(sitecol.lons, sitecol.lats, hmaps))
-    save_csv(dest, rows)
+    rows = [[[lon, lat]] + list(row)
+            for lon, lat, row in zip(sitecol.lons, sitecol.lats, hmaps)]
+    write_csv(dest, rows)
     return {fname: dest}

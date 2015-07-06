@@ -17,6 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import logging
 import unittest
 
 import numpy
@@ -119,6 +120,7 @@ class CalculatorTestCase(unittest.TestCase):
             if self.OVERWRITE_EXPECTED:
                 # use this path when the expected outputs have changed
                 # for a good reason
+                logging.info('overriding %s', expected)
                 open(expected, 'w').write(''.join(actual_lines))
             else:
                 # normally raise an exception

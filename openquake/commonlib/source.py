@@ -80,11 +80,13 @@ def get_skeleton(sm):
     trt_models = [TrtModel(tm.trt, [], tm.num_ruptures, tm.min_mag,
                            tm.max_mag, tm.gsims, tm.id)
                   for tm in sm.trt_models]
+    num_sources = sum(len(tm) for tm in sm.trt_models)
     return SourceModel(sm.name, sm.weight, sm.path, trt_models, sm.gsim_lt,
-                       sm.ordinal, sm.samples)
+                       sm.ordinal, sm.samples, num_sources)
 
 SourceModel = collections.namedtuple(
-    'SourceModel', 'name weight path trt_models gsim_lt ordinal samples')
+    'SourceModel', 'name weight path trt_models gsim_lt ordinal samples '
+    'num_sources')
 
 
 def get_weight(src, point_source_weight=1/40., num_ruptures=None):
@@ -275,9 +277,9 @@ class RlzsAssoc(collections.Mapping):
     (3, 'BooreAtkinson2008') ['#6-SM2_a3b1-BA2008']
     (3, 'CampbellBozorgnia2008') ['#7-SM2_a3b1-CB2008']
     """
-    def __init__(self, csm_info, rlzs_assoc=None):
+    def __init__(self, csm_info):
         self.csm_info = csm_info
-        self.rlzs_assoc = rlzs_assoc or collections.defaultdict(list)
+        self.rlzs_assoc = collections.defaultdict(list)
         self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
         self.rlzs_by_smodel = [[] for _ in range(len(csm_info.source_models))]
 
@@ -320,7 +322,7 @@ class RlzsAssoc(collections.Mapping):
         return [gsims_by_trt_id.get(col['trt_id'], [])
                 for col in self.csm_info.cols]
 
-    def _add_realizations(self, idx, lt_model, realizations):
+    def _add_realizations(self, idx, lt_model, realizations, trts):
         gsim_lt = lt_model.gsim_lt
         rlzs = []
         for i, gsim_rlz in enumerate(realizations):
@@ -329,8 +331,10 @@ class RlzsAssoc(collections.Mapping):
             self.gsim_by_trt.append(dict(
                 zip(gsim_lt.all_trts, gsim_rlz.value)))
             for trt_model in lt_model.trt_models:
-                gs = gsim_lt.get_gsim_by_trt(gsim_rlz, trt_model.trt)
-                self.rlzs_assoc[trt_model.id, gs].append(rlz)
+                if trt_model.trt in trts:
+                    # ignore the associations to discarded TRTs
+                    gs = gsim_lt.get_gsim_by_trt(gsim_rlz, trt_model.trt)
+                    self.rlzs_assoc[trt_model.id, gs].append(rlz)
                 if lt_model.samples > 1:  # oversampling
                     col_id = self.csm_info.col_ids_by_trt_id[trt_model.id][i]
                     rlz.col_ids.add(col_id)
@@ -383,12 +387,13 @@ class RlzsAssoc(collections.Mapping):
         Example: a case with tectonic region type T1 with GSIMS A, B, C
         and tectonic region type T2 with GSIMS D, E.
 
-        >>> assoc = RlzsAssoc(CompositionInfo([]), {
+        >>> assoc = RlzsAssoc(CompositionInfo([], []))
+        >>> assoc.rlzs_assoc = {
         ... ('T1', 'A'): ['r0', 'r1'],
         ... ('T1', 'B'): ['r2', 'r3'],
         ... ('T1', 'C'): ['r4', 'r5'],
         ... ('T2', 'D'): ['r0', 'r2', 'r4'],
-        ... ('T2', 'E'): ['r1', 'r3', 'r5']})
+        ... ('T2', 'E'): ['r1', 'r3', 'r5']}
         ...
         >>> results = {
         ... ('T1', 'A'): 0.01,
@@ -456,14 +461,14 @@ class CompositionInfo(object):
     :param source_model_lt: a SourceModelLogicTree object
     :param source_models: a list of SourceModel instances
     """
-    def __init__(self, source_model_lt, source_models=()):
+    def __init__(self, source_model_lt, source_models):
         self.source_model_lt = source_model_lt
-        self.source_models = map(get_skeleton, source_models)
+        self.source_models = source_models
         cols = []
         col_id = 0
         self.col_ids_by_trt_id = collections.defaultdict(list)
         self.tmdict = {}  # trt_id -> trt_model
-        for sm in source_models:
+        for sm in self.source_models:
             for trt_model in sm.trt_models:
                 trt_model.source_model = sm
                 trt_id = trt_model.id
@@ -473,6 +478,10 @@ class CompositionInfo(object):
                     self.col_ids_by_trt_id[trt_id].append(col_id)
                     col_id += 1
         self.cols = numpy.array(cols, col_dt)
+
+    def __getnewargs__(self):
+        # with this CompositionInfo instances will be unpickled correctly
+        return self.source_model_lt, self.source_models
 
     @property
     def num_collections(self):
@@ -534,16 +543,16 @@ class CompositionInfo(object):
         """
         Yield triples (trt_id, idx, col_id) in order
         """
-        for col_id, col in self.cols:
+        for col_id, col in enumerate(self.cols):
             yield col['trt_id'], col['sample'], col_id
 
     def __repr__(self):
         info_by_model = collections.OrderedDict(
             (sm.path, ('_'.join(sm.path), sm.name,
                        [tm.id for tm in sm.trt_models],
-                       self.get_num_rlzs(sm)))
+                       sm.weight, self.get_num_rlzs(sm)))
             for sm in self.source_models)
-        summary = ['%s, %s, trt=%s: %d realization(s)' % ibm
+        summary = ['%s, %s, trt=%s, weight=%s: %d realization(s)' % ibm
                    for ibm in info_by_model.itervalues()]
         return '<%s\n%s>' % (
             self.__class__.__name__, '\n'.join(summary))
@@ -558,8 +567,7 @@ class CompositeSourceModel(collections.Sequence):
     """
     def __init__(self, source_model_lt, source_models):
         self.source_model_lt = source_model_lt
-        self.source_models = list(source_models)
-        self.info = CompositionInfo(source_model_lt, source_models)
+        self.source_models = source_models
         self.source_info = ()  # set by the SourceFilterSplitter
 
     @property
@@ -601,6 +609,13 @@ class CompositeSourceModel(collections.Sequence):
                 trt_model.num_ruptures = sum(
                     src.count_ruptures() for src in trt_model)
 
+    def get_info(self):
+        """
+        Return a CompositionInfo instance for the current composite model
+        """
+        return CompositionInfo(
+            self.source_model_lt, map(get_skeleton, self.source_models))
+
     def get_rlzs_assoc(self, get_weight=lambda tm: tm.num_ruptures):
         """
         Return a RlzsAssoc with fields realizations, gsim_by_trt,
@@ -608,7 +623,7 @@ class CompositeSourceModel(collections.Sequence):
 
         :param get_weight: a function trt_model -> positive number
         """
-        assoc = RlzsAssoc(self.info)
+        assoc = RlzsAssoc(self.get_info())
         random_seed = self.source_model_lt.seed
         num_samples = self.source_model_lt.num_samples
         idx = 0
@@ -628,7 +643,7 @@ class CompositeSourceModel(collections.Sequence):
             else:  # full enumeration
                 rlzs = logictree.get_effective_rlzs(smodel.gsim_lt)
             if rlzs:
-                idx = assoc._add_realizations(idx, smodel, rlzs)
+                idx = assoc._add_realizations(idx, smodel, rlzs, trts)
                 for trt_model in smodel.trt_models:
                     trt_model.gsims = smodel.gsim_lt.values[trt_model.trt]
             else:
@@ -656,7 +671,7 @@ class CompositeSourceModel(collections.Sequence):
         """
         models = ['%d-%s-%s,w=%s [%d trt_model(s)]' % (
             sm.ordinal, sm.name, '_'.join(sm.path), sm.weight,
-            len(sm.trt_models)) for sm in self]
+            len(sm.trt_models)) for sm in self.source_models]
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(models))
 
     def __getitem__(self, i):

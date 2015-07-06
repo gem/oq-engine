@@ -3,8 +3,14 @@ import mock
 import shutil
 import tempfile
 import unittest
+
+from openquake.commonlib.datastore import DataStore
 from openquake.commonlib.commands.info import info
+from openquake.commonlib.commands.show import show
+from openquake.commonlib.commands.export import export
 from openquake.commonlib.commands.reduce import reduce
+from openquake.commonlib.commands.run import run
+from openquake.qa_tests_data.classical import case_1
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
 from openquake.qa_tests_data.event_based import case_5
@@ -30,7 +36,7 @@ class Print(object):
 class InfoTestCase(unittest.TestCase):
     EXPECTED = '''Reading the source model...
 <CompositionInfo
-b1, x15.xml, trt=[0]: 1 realization(s)>
+b1, x15.xml, trt=[0], weight=1.00: 1 realization(s)>
 See https://github.com/gem/oq-risklib/blob/master/doc/effective-realizations.rst for an explanation
 <RlzsAssoc(1)
 0,AkkarBommer2010: ['<0,b1,@_AkkarBommer2010_@_@_@_@_@,w=1.0>']>'''
@@ -46,13 +52,13 @@ See https://github.com/gem/oq-risklib/blob/master/doc/effective-realizations.rst
         with Print.patch() as p:
             info(path, filtersources=True)
         exp = self.EXPECTED + '''
-c_matrix 232 B
-max_realizations 1
-n_imts 1
-n_levels 29.0
 n_sites 1
 n_sources 1
-output_weight 29.0'''
+n_levels 29
+output_weight 29.0
+n_realizations 1
+n_imts 1
+curve_matrix_size 232 B'''
         self.assertEqual(exp, str(p))
 
     def test_zip_weighting(self):
@@ -60,14 +66,14 @@ output_weight 29.0'''
         with Print.patch() as p:
             info(path, weightsources=True)
         exp = self.EXPECTED + '''
-c_matrix 232 B
-input_weight 1722
-max_realizations 1
-n_imts 1
-n_levels 29.0
 n_sites 1
 n_sources 1
-output_weight 29.0'''
+input_weight 1722.0
+n_levels 29
+output_weight 29.0
+n_realizations 1
+n_imts 1
+curve_matrix_size 232 B'''
         self.assertEqual(exp, str(p))
 
     def test_data_transfer(self):
@@ -77,6 +83,34 @@ output_weight 29.0'''
         got = str(p)
         self.assertIn('RlzsAssoc', got)
         self.assertIn('Number of tasks to be generated: 14', got)
+
+
+class RunShowExportTestCase(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        """
+        Build a datastore instance to show what it is inside
+        """
+        job_ini = os.path.join(os.path.dirname(case_1.__file__), 'job.ini')
+        with Print.patch() as cls.p:
+            cls.datastore = run(job_ini).datastore
+
+    def test_run_calc(self):
+        self.assertIn('See the output with hdfview', str(self.p))
+
+    def test_show_calc(self):
+        with Print.patch() as p:
+            show(self.datastore.calc_id)
+        self.assertIn('sitemesh', str(p))
+
+        with Print.patch() as p:
+            show(self.datastore.calc_id, 'sitemesh')
+        self.assertEqual(str(p), '[(0.0, 0.0)]')
+
+    def test_export_calc(self):
+        with Print.patch() as p:
+            export(self.datastore.calc_id, 'sitemesh', export_dir='/tmp')
+        self.assertIn("['/tmp/sitemesh.csv']", str(p))
 
 
 class ReduceTestCase(unittest.TestCase):

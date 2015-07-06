@@ -25,7 +25,7 @@ import collections
 
 import numpy
 
-from openquake.baselib.general import AccumDict, groupby, humansize
+from openquake.baselib.general import AccumDict, humansize
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib.calc.hazard_curve import zero_curves
@@ -34,7 +34,7 @@ from openquake.hazardlib.gsim.base import gsim_imt_dt
 from openquake.commonlib import readinput, parallel, datastore
 from openquake.commonlib.util import max_rel_diff_index
 
-from openquake.commonlib.calculators import base
+from openquake.commonlib.calculators import base, views
 from openquake.commonlib.calculators.calc import MAX_INT, gmvs_to_haz_curve
 from openquake.commonlib.calculators.classical import (
     ClassicalCalculator, agg_dicts)
@@ -126,29 +126,24 @@ def view_gmfs_total_size(name, dstore):
     return humansize(nbytes)
 
 
-rlz_col_dt = numpy.dtype([('rlz', numpy.uint32), ('col', numpy.uint32)])
-
-
-def build_rlz_col_assocs(rlzs_assoc):
+@datastore.view.add('col_rlz_assocs')
+def view_col_rlz_assocs(name, dstore):
     """
-    :param rlzs_assoc: a RlzsAssoc instance
     :returns: an array with the association array rlz.ordinal -> col_id
     """
-    assocs = []
+    rlzs_assoc = dstore['rlzs_assoc']
+    num_ruptures = dstore['num_ruptures']
+    num_rlzs = len(rlzs_assoc.realizations)
+    col_ids_list = [[] for _ in range(num_rlzs)]
     for rlz in rlzs_assoc.realizations:
         for col_id in sorted(rlzs_assoc.csm_info.get_col_ids(rlz)):
-            assocs.append((rlz.ordinal, col_id))
-    return numpy.array(assocs, rlz_col_dt)
-
-
-@datastore.view.add('rlzs_by_col')
-def view_rlzs_by_col(name, dstore):
-    """
-    :returns: a dictionary col_id -> realization ordinals
-    """
-    return groupby(dstore['rlz_col_assocs'],
-                   lambda x: x['col'],
-                   lambda rows: [row['rlz'] for row in rows])
+            if num_ruptures[col_id]:
+                col_ids_list[rlz.ordinal].append(col_id)
+    assocs = collections.defaultdict(list)
+    for i, col_ids in enumerate(col_ids_list):
+        assocs[tuple(col_ids)].append(i)
+    tbl = [['Collections', 'Realizations']] + sorted(assocs.iteritems())
+    return views.rst_table(tbl)
 
 
 # #################################################################### #
@@ -379,8 +374,8 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
     core_func = compute_ruptures
     tags = datastore.persistent_attribute('tags')
     sescollection = datastore.persistent_attribute('sescollection')
+    num_ruptures = datastore.persistent_attribute('num_ruptures')
     counts_per_rlz = datastore.persistent_attribute('counts_per_rlz')
-    rlz_col_assocs = datastore.persistent_attribute('rlz_col_assocs')
     is_stochastic = True
 
     def pre_execute(self):
@@ -390,7 +385,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         super(EventBasedRuptureCalculator, self).pre_execute()
         rnd = random.Random()
         rnd.seed(self.oqparam.random_seed)
-        for src in self.composite_source_model.get_sources():
+        for src in self.csm.get_sources():
             src.seed = rnd.randint(0, MAX_INT)
 
     def execute(self):
@@ -401,11 +396,10 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         """
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = self.oqparam
-        csm = self.composite_source_model
-        sources = csm.get_sources()
+        sources = self.csm.get_sources()
         ruptures_by_trt = parallel.apply_reduce(
             self.core_func.__func__,
-            (sources, self.sitecol, csm.info, monitor),
+            (sources, self.sitecol, self.rlzs_assoc.csm_info, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_model_id'))
@@ -413,7 +407,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         logging.info('Generated %d SESRuptures',
                      sum(len(v) for v in ruptures_by_trt.itervalues()))
 
-        self.rlzs_assoc = csm.get_rlzs_assoc(
+        self.rlzs_assoc = self.csm.get_rlzs_assoc(
             lambda trt: len(ruptures_by_trt.get(trt.id, [])))
 
         return ruptures_by_trt
@@ -442,13 +436,13 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             self.tags = numpy.array(tags, (str, 100))
             self.sescollection = sescollection
         with self.monitor('counts_per_rlz'):
+            self.num_ruptures = numpy.array(map(len, sescollection))
             self.counts_per_rlz = counts_per_rlz(
                 len(self.sitecol), self.rlzs_assoc, sescollection)
             self.datastore['counts_per_rlz'].attrs[
                 'gmfs_nbytes'] = get_gmfs_nbytes(
                 len(self.sitecol), len(self.oqparam.imtls),
                 self.rlzs_assoc, sescollection)
-            self.rlz_col_assocs = build_rlz_col_assocs(self.rlzs_assoc)
 
 
 # ######################## GMF calculator ############################ #
@@ -473,7 +467,7 @@ def make_gmfs(ses_ruptures, sitecol, imts, gsims,
         sesruptures = list(group)
         indices = sesruptures[0].indices
         r_sites = (sitecol if indices is None else
-                   site.FilteredSiteCollection(indices, sitecol))
+                   site.FilteredSiteCollection(indices, sitecol.complete))
         with ctx_mon:
             computer = calc.gmf.GmfComputer(
                 rupture, r_sites, imts, gsims, trunc_level, correl_model)
@@ -510,10 +504,10 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
     gsims = rlzs_assoc.get_gsims_by_col()[col_id]
     trunc_level = oq.truncation_level
     correl_model = readinput.get_correl_model(oq)
+    tot_sites = len(sitecol.complete)
     num_sites = len(sitecol)
-    gmfs = make_gmfs(
-        ses_ruptures, sitecol.complete, oq.imtls, gsims,
-        trunc_level, correl_model, monitor)
+    gmfs = make_gmfs(ses_ruptures, sitecol, oq.imtls, gsims,
+                     trunc_level, correl_model, monitor)
     result = {(trt_id, col_id): numpy.concatenate(gmfs)
               if oq.ground_motion_fields else None}
     if oq.hazard_curves_from_gmfs:
@@ -530,7 +524,7 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
             for gsim in gsims:
                 gs = str(gsim)
                 result[trt_id, gs] = to_haz_curves(
-                    num_sites, gmvs_by_sid, gs, oq.imtls,
+                    tot_sites, gmvs_by_sid, gs, oq.imtls,
                     oq.investigation_time, duration)
         mon.flush()
     return result
@@ -627,7 +621,7 @@ class EventBasedCalculator(ClassicalCalculator):
             return
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = oq
-        zc = zero_curves(len(self.sitecol), self.oqparam.imtls)
+        zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
         zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
         self.nbytes = 0
         curves_by_trt_gsim = parallel.apply_reduce(
@@ -656,7 +650,7 @@ class EventBasedCalculator(ClassicalCalculator):
             return
         if oq.hazard_curves_from_gmfs:
             ClassicalCalculator.post_execute.__func__(self, result)
-        if oq.mean_hazard_curves:  # compute classical ones
+        if oq.compare_with_classical:  # compute classical curves
             export_dir = os.path.join(oq.export_dir, 'cl')
             if not os.path.exists(export_dir):
                 os.makedirs(export_dir)
@@ -664,8 +658,8 @@ class EventBasedCalculator(ClassicalCalculator):
             # use a different datastore
             self.cl = ClassicalCalculator(oq, self.monitor)
             # copy the relevant attributes
-            self.cl.composite_source_model = self.csm
-            self.cl.sitecol = self.sitecol
+            self.cl.csm = self.csm
+            self.cl.sitecol = self.sitecol.complete
             self.cl.rlzs_assoc = self.csm.get_rlzs_assoc()
             result = self.cl.run(pre_execute=False, clean_up=False)
             for imt in self.mean_curves.dtype.fields:

@@ -249,7 +249,7 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.csv'''.split()
             'gmf-smltp_b1-gsimltp_AB-ltr_1.csv',
             'gmf-smltp_b1-gsimltp_CF-ltr_2.csv',
         ]
-        out = self.run_calc(case_18.__file__, 'job_3.ini', exports='csv')
+        out = self.run_calc(case_18.__file__, 'job.ini', exports='csv')
         fnames = out['gmfs', 'csv']
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got, sorted)

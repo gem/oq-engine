@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import abc
 import logging
 import operator
@@ -64,9 +65,10 @@ class BaseCalculator(object):
     assetcol = datastore.persistent_attribute('assetcol')
     cost_types = datastore.persistent_attribute('cost_types')
     taxonomies = datastore.persistent_attribute('taxonomies')
+    job_info = datastore.persistent_attribute('job_info')
     source_info = datastore.persistent_attribute('source_info')
     performance = datastore.persistent_attribute('performance')
-
+    csm = datastore.persistent_attribute('composite_source_model')
     pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
 
@@ -171,6 +173,7 @@ class BaseCalculator(object):
         if performance is not None:
             self.performance = performance
         self.datastore.close()
+        self.datastore.symlink(os.path.dirname(self.oqparam.inputs['job_ini']))
 
 
 class HazardCalculator(BaseCalculator):
@@ -211,8 +214,7 @@ class HazardCalculator(BaseCalculator):
                 'maximum distance of %s km' % maximum_distance)
         mask = numpy.array([sid in assets_by_sid for sid in sitecol.sids])
         assets_by_site = [assets_by_sid.get(sid, []) for sid in sitecol.sids]
-        filteredcol = sitecol.filter(mask)
-        return filteredcol, numpy.array(assets_by_site)
+        return sitecol.filter(mask), numpy.array(assets_by_site)
 
     def count_assets(self):
         """
@@ -235,8 +237,8 @@ class HazardCalculator(BaseCalculator):
                     self.oqparam, self.monitor('precalculator'),
                     self.datastore.calc_id)
                 precalc.run(clean_up=False)
-                if 'composite_source_model' in vars(precalc):
-                    self.csm = precalc.composite_source_model
+                if 'scenario' not in self.oqparam.calculation_mode:
+                    self.csm = precalc.csm
             else:  # read previously computed data
                 self.datastore.parent = datastore.DataStore(precalc_id)
                 # merge old oqparam into the new ones, when possible
@@ -245,10 +247,6 @@ class HazardCalculator(BaseCalculator):
                     if name not in new:  # add missing parameter
                         new[name] = value
                 self.oqparam = self.oqparam
-
-            if self.oqparam.hazard_investigation_time is None:
-                self.oqparam.hazard_investigation_time = (
-                    self.oqparam.investigation_time)
             try:
                 self.datastore['taxonomies']
             except KeyError:  # not read already
@@ -325,16 +323,15 @@ class HazardCalculator(BaseCalculator):
             logging.info('Reading the composite source model')
             with self.monitor(
                     'reading composite source model', autoflush=True):
-                self.composite_source_model = (
-                    readinput.get_composite_source_model(
-                        self.oqparam, self.sitecol, self.SourceProcessor,
-                        self.monitor))
+                self.csm = readinput.get_composite_source_model(
+                    self.oqparam, self.sitecol, self.SourceProcessor,
+                    self.monitor)
                 # we could manage limits here
-                self.source_info = self.composite_source_model.source_info
+                self.source_info = self.csm.source_info
                 self.job_info = readinput.get_job_info(
-                    self.oqparam, self.composite_source_model, self.sitecol)
-                self.composite_source_model.count_ruptures()
-                self.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
+                    self.oqparam, self.csm, self.sitecol)
+                self.csm.count_ruptures()
+                self.rlzs_assoc = self.csm.get_rlzs_assoc()
 
                 logging.info(
                     'Total weight of the sources=%s',
@@ -463,7 +460,10 @@ def get_gmfs(calc):
     # filtered site collection for the nonzero GMFs has N' <= N sites
     # whereas the risk site collection associated to the assets
     # has N'' <= N' sites
-    haz_sitecol = calc.datastore.parent['sitecol']  # N' values
+    if calc.datastore.parent:
+        haz_sitecol = calc.datastore.parent['sitecol']  # N' values
+    else:
+        haz_sitecol = calc.sitecol
     risk_indices = set(calc.sitecol.indices)  # N'' values
     N = len(haz_sitecol.complete)
     imt_dt = numpy.dtype([(imt, float) for imt in calc.oqparam.imtls])

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+
+<logicTree logicTreeID="lt_s">
+
+  <logicTreeBranchingLevel branchingLevelID="bl1">
+    <logicTreeBranchSet uncertaintyType="sourceModel" branchSetID="bs1">
+
+      <logicTreeBranch branchID="AreaSource">
+        <uncertaintyModel>models/src/as_model.xml</uncertaintyModel>
+        <uncertaintyWeight>0.50</uncertaintyWeight>
+      </logicTreeBranch>
+
+      <logicTreeBranch branchID="FaultSourceAndBackground">
+        <uncertaintyModel>models/src/fsbg_model.xml</uncertaintyModel>
+        <uncertaintyWeight>0.20</uncertaintyWeight>
+      </logicTreeBranch>
+
+      <logicTreeBranch branchID="SeiFaCrust">
+        <uncertaintyModel>models/src/ss_model.xml</uncertaintyModel>
+        <uncertaintyWeight>0.30</uncertaintyWeight>
+      </logicTreeBranch>
+
+    </logicTreeBranchSet>
+  </logicTreeBranchingLevel>
+
+</logicTree>
+
+</nrml>
