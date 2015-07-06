@@ -105,7 +105,7 @@ class BaseHazardCalculator(base.Calculator):
         if self.__class__.__name__ == 'EventBasedHazardCalculator':
             info = rlzs_assoc.csm_info
         else:
-            info = rlzs_assoc.get_gsims_by_trt_id()
+            info = rlzs_assoc.gsims_by_trt_id
         self.acc = tasks.apply_reduce(
             self.core_calc_task,
             (csm.get_sources(), self.site_collection, info, self.monitor),
@@ -292,7 +292,7 @@ class BaseHazardCalculator(base.Calculator):
         self.rlzs_assoc = cm.get_rlzs_assoc(
             lambda trt_model: models.TrtModel.objects.get(
                 pk=trt_model.id).num_ruptures)
-        gsims_by_trt_id = self.rlzs_assoc.get_gsims_by_trt_id()
+        gsims_by_trt_id = self.rlzs_assoc.gsims_by_trt_id
         for lt_model in self._source_models:
             rlzs = self.rlzs_assoc.rlzs_by_smodel.get(lt_model.ordinal, [])
             logs.LOG.info('Creating %d realization(s) for model '
