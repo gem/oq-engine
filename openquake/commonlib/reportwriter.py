@@ -19,6 +19,7 @@ class ReportBuilder(object):
         rupture_collections='Non-empty rupture collections',
         col_rlz_assocs='Collections <-> realizations',
     )
+
     def __init__(self, dstore):
         description = dstore['oqparam'].description
         self.dstore = dstore
