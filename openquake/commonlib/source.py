@@ -289,6 +289,7 @@ class RlzsAssoc(collections.Mapping):
         self.rlzs_assoc = rlzs_assoc or collections.defaultdict(list)
         self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
         self.rlzs_by_smodel = collections.OrderedDict()
+        self.gsims_by_trt_id = {}
 
     @property
     def num_samples(self):
@@ -302,16 +303,9 @@ class RlzsAssoc(collections.Mapping):
         """Flat list with all the realizations"""
         return sum(self.rlzs_by_smodel.itervalues(), [])
 
-    def get_gsims_by_trt_id(self):
-        """Returns associations trt_id -> [GSIM instance, ...]"""
-        return groupby(
-            self.rlzs_assoc, operator.itemgetter(0),
-            lambda group: sorted(valid.gsim(gsim)
-                                 for trt_id, gsim in group))
-
     def get_gsims_by_col(self):
         """Return a list of lists of GSIMs of length num_collections"""
-        gsims = self.get_gsims_by_trt_id()
+        gsims = self.gsims_by_trt_id
         return [gsims.get(self.csm_info.get_trt_id(col), [])
                 for col in range(self.csm_info.num_collections)]
 
@@ -641,6 +635,11 @@ class CompositeSourceModel(collections.Sequence):
                                  'weights are being rescaled')
                 for rlz in assoc.realizations:
                     rlz.weight = rlz.weight / tot_weight
+
+        assoc.gsims_by_trt_id = groupby(
+            assoc.rlzs_assoc, operator.itemgetter(0),
+            lambda group: sorted(valid.gsim(gsim) for trt_id, gsim in group))
+
         return assoc
 
     def __repr__(self):
