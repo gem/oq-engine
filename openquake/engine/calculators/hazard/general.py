@@ -300,7 +300,8 @@ class BaseHazardCalculator(base.Calculator):
                     weight=rlz.weight, ordinal=rlz.ordinal)
                 rlz.id = lt_rlz.id
                 self._realizations.append(lt_rlz)
-                for trt_model in lt_model.trtmodel_set.all():
+                for trt_model in lt_model.trtmodel_set.filter(
+                        pk__in=gsims_by_trt_id):
                     trt = trt_model.tectonic_region_type
                     # populate the association table rlz <-> trt_model
                     models.AssocLtRlzTrtModel.objects.create(
