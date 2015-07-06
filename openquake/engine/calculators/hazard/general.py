@@ -341,7 +341,7 @@ class BaseHazardCalculator(base.Calculator):
 
             with self.monitor('building curves per realization'):
                 the_curves = models.build_curves(rlz, self.acc)
-                if isinstance(the_curves, float) and the_curves == 0:
+                if all_equal(the_curves, 0):
                     the_curves = self.zeros
                 for imt, curves in zip(sorted_imts, the_curves):
                     if individual_curves:
