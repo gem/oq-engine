@@ -100,9 +100,15 @@ class BaseHazardCalculator(base.Calculator):
         distribution, but it can be overridden in subclasses.
         """
         csm = self.composite_model
+        rlzs_assoc = csm.get_rlzs_assoc()
+        # temporary hack
+        if self.__class__.__name__ == 'EventBasedHazardCalculator':
+            info = rlzs_assoc.csm_info
+        else:
+            info = rlzs_assoc.get_gsims_by_trt_id()
         self.acc = tasks.apply_reduce(
             self.core_calc_task,
-            (csm.get_sources(), self.site_collection, csm.info, self.monitor),
+            (csm.get_sources(), self.site_collection, info, self.monitor),
             agg=self.agg_curves, acc=self.acc,
             weight=attrgetter('weight'), key=attrgetter('trt_model_id'),
             concurrent_tasks=self.concurrent_tasks)
