@@ -303,21 +303,8 @@ class RlzsAssoc(collections.Mapping):
                                  for trt_id, gsim in group))
 
     def get_gsims_by_col(self):
-        """Return a list of lists of GSIMs of length num_collections
-        if self.num_samples:
-            rlz_by_col_id = {}
-            for rlz in self.realizations:
-                for col_id in self.csm_info.get_col_ids(rlz):
-                    rlz_by_col_id[col_id] = rlz
-            out = []
-            for i, col in enumerate(self.csm_info.cols):
-                rlz = rlz_by_col_id[i]
-                trtmod = self.csm_info.tmdict[col['trt_id']]
-                gsim = trtmod.source_model.gsim_lt.get_gsim_by_trt(
-                    rlz.gsim_rlz, trtmod.trt)
-                out.append([valid.gsim(gsim)])
-            return out"""
-        # else full enumeration
+        """Return a list of lists of GSIMs of length num_collections"""
+        # TODO: add a special case for sampling?
         gsims_by_trt_id = self.get_gsims_by_trt_id()
         return [gsims_by_trt_id.get(col['trt_id'], [])
                 for col in self.csm_info.cols]
