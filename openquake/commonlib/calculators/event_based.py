@@ -474,7 +474,7 @@ def make_gmfs(ses_ruptures, sitecol, imts, gsims,
         sesruptures = list(group)
         indices = sesruptures[0].indices
         r_sites = (sitecol if indices is None else
-                   site.FilteredSiteCollection(indices, sitecol))
+                   site.FilteredSiteCollection(indices, sitecol.complete))
         with ctx_mon:
             computer = calc.gmf.GmfComputer(
                 rupture, r_sites, imts, gsims, trunc_level, correl_model)
@@ -511,10 +511,10 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
     gsims = rlzs_assoc.get_gsims_by_col()[col_id]
     trunc_level = oq.truncation_level
     correl_model = readinput.get_correl_model(oq)
+    tot_sites = len(sitecol.complete)
     num_sites = len(sitecol)
-    gmfs = make_gmfs(
-        ses_ruptures, sitecol, oq.imtls, gsims,
-        trunc_level, correl_model, monitor)
+    gmfs = make_gmfs(ses_ruptures, sitecol, oq.imtls, gsims,
+                     trunc_level, correl_model, monitor)
     result = {(trt_id, col_id): numpy.concatenate(gmfs)
               if oq.ground_motion_fields else None}
     if oq.hazard_curves_from_gmfs:
@@ -531,7 +531,7 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
             for gsim in gsims:
                 gs = str(gsim)
                 result[trt_id, gs] = to_haz_curves(
-                    num_sites, gmvs_by_sid, gs, oq.imtls,
+                    tot_sites, gmvs_by_sid, gs, oq.imtls,
                     oq.investigation_time, duration)
         mon.flush()
     return result
@@ -626,7 +626,7 @@ class EventBasedCalculator(ClassicalCalculator):
             return
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = oq
-        zc = zero_curves(len(self.sitecol), self.oqparam.imtls)
+        zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
         zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
         self.nbytes = 0
         curves_by_trt_gsim = parallel.apply_reduce(
@@ -655,7 +655,7 @@ class EventBasedCalculator(ClassicalCalculator):
             return
         if oq.hazard_curves_from_gmfs:
             ClassicalCalculator.post_execute.__func__(self, result)
-        if oq.mean_hazard_curves:  # compute classical ones
+        if oq.compare_with_classical:  # compute classical curves
             export_dir = os.path.join(oq.export_dir, 'cl')
             if not os.path.exists(export_dir):
                 os.makedirs(export_dir)
@@ -664,7 +664,7 @@ class EventBasedCalculator(ClassicalCalculator):
             self.cl = ClassicalCalculator(oq, self.monitor)
             # copy the relevant attributes
             self.cl.composite_source_model = self.csm
-            self.cl.sitecol = self.sitecol
+            self.cl.sitecol = self.sitecol.complete
             self.cl.rlzs_assoc = self.csm.get_rlzs_assoc()
             result = self.cl.run(pre_execute=False, clean_up=False)
             for imt in self.mean_curves.dtype.fields:

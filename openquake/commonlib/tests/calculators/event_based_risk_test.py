@@ -3,7 +3,7 @@ from nose.plugins.attrib import attr
 
 from openquake.commonlib.tests.calculators import CalculatorTestCase
 from openquake.qa_tests_data.event_based_risk import (
-    case_1, case_2, case_3, case_4a)
+    case_1, case_2, case_3, case_4, case_4a)
 
 
 def is_ok(fname):
@@ -63,6 +63,23 @@ class EBRTestCase(CalculatorTestCase):
         [fname] = out['event_loss_table-rlzs', 'csv']
         self.assertEqualFiles(
             'expected/event_loss_table-b1,b1-structural.csv', fname)
+
+    @attr('qa', 'hazard', 'event_based')
+    def test_case_4_hazard(self):
+        # Turkey with SHARE logic tree; TODO: add site model
+        out = self.run_calc(case_4.__file__, 'job_hazard.ini',
+                            ground_motion_fields='false', exports='csv')
+        [fname] = out['hcurves', 'csv']
+        self.assertEqualFiles('expected/hazard_curve-mean.csv', fname)
+
+    @attr('qa', 'risk', 'ebr')
+    def test_case_4(self):
+        # Turkey with SHARE logic tree
+        out = self.run_calc(case_4.__file__, 'job_ebr.ini',
+                            concurrent_tasks=0, exports='csv')
+        fnames = out['event_loss_table-rlzs', 'csv']
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + os.path.basename(fname), fname)
 
     @attr('qa', 'risk', 'event_based')
     def test_case_4a(self):

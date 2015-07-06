@@ -179,6 +179,7 @@ class DataStore(collections.MutableMapping):
         else:  # use the given datastore
             self.calc_id = calc_id
         self.parent = parent  # parent datastore (if any)
+        self.datadir = datadir
         self.calc_dir = os.path.join(datadir, 'calc_%s' % self.calc_id)
         if not os.path.exists(self.calc_dir):
             os.mkdir(self.calc_dir)
@@ -217,6 +218,22 @@ class DataStore(collections.MutableMapping):
     def close(self):
         """Close the underlying hdf5 file"""
         self.hdf5.close()
+
+    def symlink(self, name):
+        """
+        Make a symlink to the hdf5 file (except on Windows)
+
+        :param name:
+            a file or directory name without extensions; the name of
+            the link will be extracted from it by replacing the slashes
+            with dashes; the symlink will be created in the .datadir
+        """
+        if hasattr(os, 'symlink'):  # Unix, Max
+            link_name = os.path.join(
+                self.datadir, name.strip('/').replace('/', '-')) + '.hdf5'
+            if os.path.exists(link_name):
+                os.remove(link_name)
+            os.symlink(self.hdf5path, link_name)
 
     def clear(self):
         """Remove the datastore from the file system"""
