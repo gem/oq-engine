@@ -219,7 +219,7 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
     # ruptures of homogeneous SESCollection
     ses_coll = ses_ruptures[0].rupture.ses_collection
     trt_model = ses_coll.trt_model
-    gsims = rlzs_assoc.get_gsims_by_trt_id()[trt_model.id]
+    gsims = rlzs_assoc.gsims_by_trt_id[trt_model.id]
     calc = GmfCalculator(
         sorted(imts), sorted(gsims), ses_coll,
         hc.truncation_level, models.get_correl_model(job))
