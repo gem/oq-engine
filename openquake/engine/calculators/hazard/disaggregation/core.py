@@ -318,7 +318,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         tl = self.oqparam.truncation_level
         sitecol = self.site_collection
         mag_bin_width = self.oqparam.mag_bin_width
-        gsims_by_trt_id = self.rlzs_assoc.get_gsims_by_trt_id()
+        gsims_by_trt_id = self.rlzs_assoc.gsims_by_trt_id
         eps_edges = numpy.linspace(-tl, tl, self.oqparam.num_epsilon_bins + 1)
         logs.LOG.info('%d epsilon bins from %s to %s', len(eps_edges) - 1,
                       min(eps_edges), max(eps_edges))
