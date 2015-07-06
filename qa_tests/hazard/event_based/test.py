@@ -452,7 +452,7 @@ class EventBasedHazardCase18TestCase(qa_utils.BaseQATestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test(self):
-        cfg = os.path.join(os.path.dirname(case_18.__file__), 'job_3.ini')
+        cfg = os.path.join(os.path.dirname(case_18.__file__), 'job.ini')
         job = self.run_hazard(cfg)
         expected = [
             ('AB', '9.7812E-02 1.1691E-01 2.0018E-01'),
