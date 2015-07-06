@@ -22,6 +22,7 @@ from celery.result import ResultSet
 from celery.app import current_app
 from celery.task import task
 
+from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 from openquake.commonlib.parallel import \
     TaskManager, safely_call, check_mem_usage
 from openquake.engine import logs
@@ -86,6 +87,15 @@ starmap = OqTaskManager.starmap
 apply_reduce = OqTaskManager.apply_reduce
 
 
+def do_not_instantiate(gsim):
+    # sanity check: inside the workers, override
+    # GroundShakingIntensityModel.__init__ with this, to make sure
+    # that GSIMs are not instantiated directly there (they can be
+    # unpickled, though)
+    raise RuntimeError('%s cannot be instantiated inside a worker' %
+                       gsim.__class__)
+
+
 def oqtask(task_func):
     """
     Task function decorator which sets up logging and catches (and logs) any
@@ -101,6 +111,8 @@ def oqtask(task_func):
         code surrounded by a try-except. If any error occurs, log it as a
         critical failure.
         """
+        GroundShakingIntensityModel.__init__ = do_not_instantiate
+
         # the last argument is assumed to be a monitor
         monitor = args[-1]
         job = models.OqJob.objects.get(id=monitor.job_id)
