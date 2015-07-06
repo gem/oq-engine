@@ -33,5 +33,5 @@ Composite source model
 ========= ================= ======== =============== ========= ================ ===========
 smlt_path source_model_file num_trts gsim_logic_tree num_gsims num_realizations num_sources
 ========= ================= ======== =============== ========= ================ ===========
-b1        source_model.xml  1        trivial         1         1/1              398        
+b1        source_model.xml  1        trivial         1         1/1              5171       
 ========= ================= ======== =============== ========= ================ ===========

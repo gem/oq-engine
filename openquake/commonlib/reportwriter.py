@@ -61,6 +61,7 @@ def build_report(job_ini, output_dir=None):
         rb.add('rupture_collections')
         rb.add('col_rlz_assocs')
     rb.save(report)
+    return report
 
 
 def main(directory):

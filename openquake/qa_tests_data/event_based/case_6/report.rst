@@ -34,8 +34,8 @@ Composite source model
 ========= ================= ======== =============== ========= ================ ===========
 smlt_path source_model_file num_trts gsim_logic_tree num_gsims num_realizations num_sources
 ========= ================= ======== =============== ========= ================ ===========
-b11       source_model1.xml 1        simple          3         3/3              1          
-b12       source_model2.xml 1        simple          3         3/3              1          
+b11       source_model1.xml 1        simple          3         3/3              307        
+b12       source_model2.xml 1        simple          3         3/3              307        
 ========= ================= ======== =============== ========= ================ ===========
 
 Non-empty rupture collections

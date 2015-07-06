@@ -33,5 +33,5 @@ Composite source model
 ========= ============================ ======== =============== ========= ================ ===========
 smlt_path source_model_file            num_trts gsim_logic_tree num_gsims num_realizations num_sources
 ========= ============================ ======== =============== ========= ================ ===========
-b1        simple_area_source_model.xml 1        complex         4         4/4              18         
+b1        simple_area_source_model.xml 1        complex         4         4/4              370        
 ========= ============================ ======== =============== ========= ================ ===========

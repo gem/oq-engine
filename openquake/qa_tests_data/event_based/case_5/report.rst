@@ -36,9 +36,9 @@ Composite source model
 ========= ============================================= ======== =============== ========= ================ ===========
 smlt_path source_model_file                             num_trts gsim_logic_tree num_gsims num_realizations num_sources
 ========= ============================================= ======== =============== ========= ================ ===========
-b1        source_models/as_model.xml                    0        complex                   0/0              6          
-b2        source_models/fs_bg_source_model.xml          1        complex         5         5/5              85         
-b3        source_models/ss_model_final_250km_Buffer.xml 1        complex         1         1/1              51         
+b1        source_models/as_model.xml                    0        complex                   0/0              12         
+b2        source_models/fs_bg_source_model.xml          1        complex         5         5/5              25484      
+b3        source_models/ss_model_final_250km_Buffer.xml 1        complex         1         1/1              36         
 ========= ============================================= ======== =============== ========= ================ ===========
 
 Non-empty rupture collections

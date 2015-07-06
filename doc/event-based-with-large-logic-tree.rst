@@ -7,7 +7,7 @@ classical calculations. However, in the case of event based calculations
 there is an additional complication:
 
 *because of the stochasticity of the rupture-generation process, a tectonic
-region type which contains sources, could produce zero ruptures*.
+region type which contains sources, could still produce zero ruptures*.
 
 In other words, depending on the parameters of the calculation, notably
 the investigation time and the number of stochastic event sets, a logic
@@ -36,7 +36,7 @@ It will be slower than just filtering the sources but reliable.
 As an additional bonus, you will also get some information about
 the expected data transfer.
 
-__ Previously_: effective-realizations.rst
+.. _Previously: effective-realizations.rst
 
 
 The concept of rupture collection
@@ -44,7 +44,7 @@ The concept of rupture collection
 
 Event based calculations differ from classical calculations because
 they produce visible ruptures, which can be exported and
-made accessible to the user. On the contrary, in a classical calculation
+made accessible to the user. On the contrary, in a classical calculation,
 the underlying ruptures only live in memory and are never saved in
 the datastore, nor are exportable. The limitation is fundamentally
 a technical one: in the case of an event based calculation only

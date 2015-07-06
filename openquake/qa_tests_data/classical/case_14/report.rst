@@ -34,5 +34,5 @@ Composite source model
 ============ ================= ======== =============== ========= ================ ===========
 smlt_path    source_model_file num_trts gsim_logic_tree num_gsims num_realizations num_sources
 ============ ================= ======== =============== ========= ================ ===========
-simple_fault simple_fault.xml  1        simple          2         2/2              1          
+simple_fault simple_fault.xml  1        simple          2         2/2              15         
 ============ ================= ======== =============== ========= ================ ===========

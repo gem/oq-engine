@@ -399,7 +399,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         sources = self.csm.get_sources()
         ruptures_by_trt = parallel.apply_reduce(
             self.core_func.__func__,
-            (sources, self.sitecol, self.csm.info, monitor),
+            (sources, self.sitecol, self.rlzs_assoc.csm_info, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_model_id'))

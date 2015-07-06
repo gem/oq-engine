@@ -37,9 +37,9 @@ Composite source model
 ======================== ========================= ======== =============== ========= ================ ===========
 smlt_path                source_model_file         num_trts gsim_logic_tree num_gsims num_realizations num_sources
 ======================== ========================= ======== =============== ========= ================ ===========
-AreaSource               models/src/as_model.xml   1        complex         4         4/4              44         
-FaultSourceAndBackground models/src/fsbg_model.xml 1        complex         4         4/4              110        
-SeiFaCrust               models/src/ss_model.xml   0        complex                   0/0              1          
+AreaSource               models/src/as_model.xml   1        complex         4         4/4              1319       
+FaultSourceAndBackground models/src/fsbg_model.xml 1        complex         4         4/4              7060       
+SeiFaCrust               models/src/ss_model.xml   0        complex                   0/0              0          
 ======================== ========================= ======== =============== ========= ================ ===========
 
 Non-empty rupture collections

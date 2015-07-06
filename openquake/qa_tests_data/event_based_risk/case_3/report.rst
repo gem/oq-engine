@@ -36,8 +36,8 @@ Composite source model
 ========= =================== ======== =============== ========= ================ ===========
 smlt_path source_model_file   num_trts gsim_logic_tree num_gsims num_realizations num_sources
 ========= =================== ======== =============== ========= ================ ===========
-b1        SA_RA_CATAL1_00.xml 2        complex         2,2       4/4              11         
-b2        SA_RA_CATAL2_00.xml 2        complex         2,2       4/4              11         
+b1        SA_RA_CATAL1_00.xml 2        complex         2,2       4/4              10191      
+b2        SA_RA_CATAL2_00.xml 2        complex         2,2       4/4              10191      
 ========= =================== ======== =============== ========= ================ ===========
 
 Non-empty rupture collections

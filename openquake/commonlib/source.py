@@ -277,9 +277,9 @@ class RlzsAssoc(collections.Mapping):
     (3, 'BooreAtkinson2008') ['#6-SM2_a3b1-BA2008']
     (3, 'CampbellBozorgnia2008') ['#7-SM2_a3b1-CB2008']
     """
-    def __init__(self, csm_info, rlzs_assoc=None):
+    def __init__(self, csm_info):
         self.csm_info = csm_info
-        self.rlzs_assoc = rlzs_assoc or collections.defaultdict(list)
+        self.rlzs_assoc = collections.defaultdict(list)
         self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
         self.rlzs_by_smodel = [[] for _ in range(len(csm_info.source_models))]
 
@@ -460,9 +460,9 @@ class CompositionInfo(object):
     :param source_model_lt: a SourceModelLogicTree object
     :param source_models: a list of SourceModel instances
     """
-    def __init__(self, source_model_lt, source_models=()):
+    def __init__(self, source_model_lt, source_models):
         self.source_model_lt = source_model_lt
-        self.source_models = map(get_skeleton, source_models)
+        self.source_models = source_models
         cols = []
         col_id = 0
         self.col_ids_by_trt_id = collections.defaultdict(list)
@@ -477,6 +477,10 @@ class CompositionInfo(object):
                     self.col_ids_by_trt_id[trt_id].append(col_id)
                     col_id += 1
         self.cols = numpy.array(cols, col_dt)
+
+    def __getnewargs__(self):
+        # with this CompositionInfo instances will be unpickled correctly
+        return self.source_model_lt, self.source_models
 
     @property
     def num_collections(self):
@@ -563,7 +567,6 @@ class CompositeSourceModel(collections.Sequence):
     def __init__(self, source_model_lt, source_models):
         self.source_model_lt = source_model_lt
         self.source_models = source_models
-        self.info = CompositionInfo(source_model_lt, source_models)
         self.source_info = ()  # set by the SourceFilterSplitter
 
     @property
@@ -605,6 +608,13 @@ class CompositeSourceModel(collections.Sequence):
                 trt_model.num_ruptures = sum(
                     src.count_ruptures() for src in trt_model)
 
+    def get_info(self):
+        """
+        Return a CompositionInfo instance for the current composite model
+        """
+        return CompositionInfo(
+            self.source_model_lt, map(get_skeleton, self.source_models))
+
     def get_rlzs_assoc(self, get_weight=lambda tm: tm.num_ruptures):
         """
         Return a RlzsAssoc with fields realizations, gsim_by_trt,
@@ -612,7 +622,7 @@ class CompositeSourceModel(collections.Sequence):
 
         :param get_weight: a function trt_model -> positive number
         """
-        assoc = RlzsAssoc(self.info)
+        assoc = RlzsAssoc(self.get_info())
         random_seed = self.source_model_lt.seed
         num_samples = self.source_model_lt.num_samples
         idx = 0

@@ -22,7 +22,8 @@ import operator
 import logging
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import humansize, split_in_blocks, groupby
-from openquake.commonlib import sap, readinput, nrml, source, parallel
+from openquake.commonlib import (
+    sap, readinput, nrml, source, parallel, datastore, reportwriter)
 from openquake.commonlib.calculators import base
 from openquake.hazardlib import gsim
 
@@ -57,9 +58,12 @@ def data_transfer(calc):
     return n_tasks, to_send_forward, to_send_back
 
 
-def _print_info(assoc, oqparam, csm, sitecol,
-                filtersources=True, weightsources=True):
-    print(assoc.csm_info)
+def _print_info(dstore, filtersources=True, weightsources=True):
+    assoc = dstore['rlzs_assoc']
+    oqparam = dstore['oqparam']
+    csm = dstore['composite_source_model']
+    sitecol = dstore['sitecol']
+    print(csm.get_info())
     print('See https://github.com/gem/oq-risklib/blob/master/doc/'
           'effective-realizations.rst for an explanation')
     print(assoc)
@@ -75,6 +79,8 @@ def _print_info(assoc, oqparam, csm, sitecol,
             else:
                 print(k, info[k])
         print('curve_matrix_size', humansize(curve_matrix_size))
+    if 'num_ruptures' in dstore:
+        print(datastore.view('rupture_collections', dstore))
 
 
 # the documentation about how to use this feature can be found
@@ -108,8 +114,10 @@ def _info(name, filtersources, weightsources):
                 sp = source.BaseSourceProcessor  # do nothing
             csm = readinput.get_composite_source_model(oqparam, sitecol, sp)
             assoc = csm.get_rlzs_assoc()
-            _print_info(assoc, oqparam, csm, sitecol,
-                        filtersources, weightsources)
+            _print_info(
+                dict(rlzs_assoc=assoc, oqparam=oqparam,
+                     composite_source_model=csm, sitecol=sitecol),
+                filtersources, weightsources)
         if len(assets_by_site):
             print('assets = %d' %
                   sum(len(assets) for assets in assets_by_site))
@@ -117,25 +125,28 @@ def _info(name, filtersources, weightsources):
         print("No info for '%s'" % name)
 
 
-def info(name, filtersources=False, weightsources=False, datatransfer=False):
+def info(name, filtersources=False, weightsources=False,
+         datatransfer=False, report=False):
     """
     Give information. You can pass the name of an available calculator,
     a job.ini file, or a zip archive with the input files.
     """
     logging.basicConfig(level=logging.INFO)
     with Monitor('info', measuremem=True) as mon:
-        if datatransfer:
+        if report:
+            print('Generated', reportwriter.build_report(name, '/tmp'))
+        elif datatransfer:
             oqparam = readinput.get_oqparam(name)
             calc = base.calculators(oqparam)
             calc.pre_execute()
-            n_tasks, to_send_forward, to_send_back = data_transfer(calc)
-            _print_info(calc.rlzs_assoc, oqparam, calc.csm, calc.sitecol,
-                        weightsources=True)
-            print('Number of tasks to be generated: %d' % n_tasks)
-            print('Estimated data to be sent forward: %s' %
-                  humansize(to_send_forward))
-            print('Estimated data to be sent back: %s' %
-                  humansize(to_send_back))
+            _print_info(calc.datastore, weightsources=True)
+            if 'classical' in oqparam.calculation_mode:
+                n_tasks, to_send_forward, to_send_back = data_transfer(calc)
+                print('Number of tasks to be generated: %d' % n_tasks)
+                print('Estimated data to be sent forward: %s' %
+                      humansize(to_send_forward))
+                print('Estimated data to be sent back: %s' %
+                      humansize(to_send_back))
         else:
             _info(name, filtersources, weightsources)
     if mon.duration > 1:
@@ -147,3 +158,4 @@ parser.arg('name', 'calculator name, job.ini file or zip archive')
 parser.flg('filtersources', 'flag to enable filtering of the source models')
 parser.flg('weightsources', 'flag to enable weighting of the source models')
 parser.flg('datatransfer', 'flag to enable data transfer calculation')
+parser.flg('report', 'build a report in rst format')
