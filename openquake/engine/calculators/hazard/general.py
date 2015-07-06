@@ -30,7 +30,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.engine.db import models
 
 from openquake.baselib import general
-from openquake.commonlib import readinput, risk_parsers, source, valid
+from openquake.commonlib import readinput, risk_parsers, valid
 from openquake.commonlib.readinput import get_site_collection
 
 from openquake.engine.input import exposure
@@ -234,10 +234,6 @@ class BaseHazardCalculator(base.Calculator):
                     min_mag=trt_mod.min_mag,
                     max_mag=trt_mod.max_mag,
                     gsims=gsims_by_trt[trt_mod.trt]).id
-        # rebuild the info object with the trt_ids coming from the db
-        self.composite_model.info = source.CompositionInfo(
-            self.composite_model.source_model_lt,
-            map(source.get_skeleton, self.composite_model.source_models))
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_model(self):
