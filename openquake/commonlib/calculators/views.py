@@ -69,11 +69,10 @@ def classify_gsim_lt(gsim_lt):
     :returns: "trivial", "simple" or "complex"
     """
     trt_gsims = gsim_lt.values.items()
-    num_gsims = map(len, gsim_lt.values.itervalues())
-    complex_trts = [trt for trt, gsims in trt_gsims if len(gsims) > 1]
-    if all(n == 1 for n in num_gsims):  # one gsim per TRT
+    multi_gsim_trts = sum(1 for trt, gsims in trt_gsims if len(gsims) > 1)
+    if multi_gsim_trts == 0:
         return "trivial"
-    elif len(complex_trts) == 1:
+    elif multi_gsim_trts == 1:
         return "simple"
     else:
         return "complex"
@@ -148,5 +147,5 @@ def view_inputs(token, dstore):
         del inputs['source']
     except KeyError:  # there is no 'source' in scenario calculations
         source_models = []
-    return rst_table([['Name', 'File']] + hide_fullpath(
-        inputs.items() + source_models))
+    return rst_table(
+        hide_fullpath(inputs.items() + source_models), header=['Name', 'File'])

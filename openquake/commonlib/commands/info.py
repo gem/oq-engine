@@ -20,6 +20,7 @@ from __future__ import print_function
 import textwrap
 import operator
 import logging
+import tempfile
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import humansize, split_in_blocks, groupby
 from openquake.commonlib import (
@@ -134,7 +135,8 @@ def info(name, filtersources=False, weightsources=False,
     logging.basicConfig(level=logging.INFO)
     with Monitor('info', measuremem=True) as mon:
         if report:
-            print('Generated', reportwriter.build_report(name, '/tmp'))
+            tmp = tempfile.gettempdir()
+            print('Generated', reportwriter.build_report(name, tmp))
         elif datatransfer:
             oqparam = readinput.get_oqparam(name)
             calc = base.calculators(oqparam)
