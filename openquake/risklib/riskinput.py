@@ -68,15 +68,16 @@ def build_asset_collection(assets_by_site, time_event=None):
     deductibles = ['deductible~%s' % name for name in deductible_d]
     limits = ['insurance_limit~%s' % name for name in limit_d]
     retrofittings = ['retrofitted~%s' % n for n in retrofitting_d]
+    float_fields = loss_types + deductibles + limits + retrofittings
     taxonomies = set()
     for assets in assets_by_site:
         for asset in assets:
             taxonomies.add(asset.taxonomy)
     sorted_taxonomies = sorted(taxonomies)
     asset_dt = numpy.dtype(
-        [('asset_ref', '|S20'), ('taxonomy', numpy.uint32),
+        [('asset_ref', '|S20'), ('site_id', numpy.uint32),
+         ('taxonomy', numpy.uint32)] +
         [(name, float) for name in float_fields])
-         ('site_id', numpy.uint32)] +
     num_assets = sum(len(assets) for assets in assets_by_site)
     assetcol = numpy.zeros(num_assets, asset_dt)
     asset_ordinal = 0
