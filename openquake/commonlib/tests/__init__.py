@@ -17,6 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+from openquake.baselib.general import assert_independent
 from openquake.commonlib import readinput
 
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
@@ -44,3 +45,7 @@ def check_equal(filepath, expected, actual_path):
     actual_content = open(actual_path).read()
     if expected_content != actual_content:
         raise DifferentFiles('%s %s' % (expected_path, actual_path))
+
+
+def test_independent():
+    assert_independent('openquake.commonlib.parallel', 'openquake.hazardlib')

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="SEDSS SeiFa Crust"
+    >
+        <pointSource
+        id="100041"
+        name="point"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <pointGeometry>
+                <gml:Point>
+                    <gml:pos>
+                        1.955000000E+01 4.775000000E+01
+                    </gml:pos>
+                </gml:Point>
+                <upperSeismoDepth>
+                    0.000000000E+00
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    3.000000000E+01
+                </lowerSeismoDepth>
+            </pointGeometry>
+            <magScaleRel>
+                WC1994
+            </magScaleRel>
+            <ruptAspectRatio>
+                1.000000000E+00
+            </ruptAspectRatio>
+            <incrementalMFD
+            binWidth="2.000000000E-01"
+            minMag="4.600000000E+00"
+            >
+                <occurRates>
+                    3.645418000E-05 2.408504000E-05 1.591283000E-05 1.051350000E-05 6.946201000E-06 4.589309000E-06 3.032127000E-06 2.003306000E-06 1.323571000E-06
+                </occurRates>
+            </incrementalMFD>
+            <nodalPlaneDist>
+                <nodalPlane
+                dip="90.0"
+                probability="0.30"
+                rake="0.0"
+                strike="0.0"
+                >
+                    3.000000000E-01 0.000000000E+00 9.000000000E+01 0.000000000E+00
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.30"
+                rake="90.0"
+                strike="0.0"
+                >
+                    3.000000000E-01 0.000000000E+00 9.000000000E+01 9.000000000E+01
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.40"
+                rake="-90.0"
+                strike="0.0"
+                >
+                    4.000000000E-01 0.000000000E+00 9.000000000E+01 -9.000000000E+01
+                </nodalPlane>
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth
+                depth="13.2"
+                probability="1.0"
+                >
+                    1.000000000E+00 1.320000000E+01
+                </hypoDepth>
+            </hypoDepthDist>
+        </pointSource>
+    </sourceModel>
+</nrml>

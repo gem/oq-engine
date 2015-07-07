@@ -23,37 +23,71 @@ import cPickle
 import collections
 
 import numpy
-
 try:
     import h5py
 except ImportError:
+    # there is no need of h5py in the workers
     class mock_h5py(object):
         def __getattr__(self, name):
             raise ImportError('Could not import h5py.%s' % name)
     h5py = mock_h5py()
 
+from openquake.baselib.general import CallableDict
 from openquake.commonlib.writers import write_csv
 
 
+# a dictionary of views datastore -> array
+view = CallableDict()
+
 DATADIR = os.environ.get('OQ_DATADIR', os.path.expanduser('~/oqdata'))
+
+
+def get_nbytes(dset):
+    """
+    If the dataset has an attribute 'nbytes', return it. Otherwise get the size
+    of the underlying array. Returns None if the dataset is actually a group.
+    """
+    if 'nbytes' in dset.attrs:
+        # look if the dataset has an attribute nbytes
+        return dset.attrs['nbytes']
+    elif hasattr(dset, 'value'):
+        # else extract nbytes from the underlying array
+        return dset.value.nbytes
+    return None
 
 
 class ByteCounter(object):
     """
     A visitor used to measure the dimensions of a HDF5 dataset or group.
-    Build an instance of it, pass it to the .visititems method, and then
-    read the value of the .nbytes attribute.
+    Use it as ByteCounter.get_nbytes(dset_or_group).
     """
+    @classmethod
+    def get_nbytes(cls, dset):
+        nbytes = get_nbytes(dset)
+        if nbytes is not None:
+            return nbytes
+        # else dip in the tree
+        self = cls()
+        dset.visititems(self)
+        return self.nbytes
+
     def __init__(self, nbytes=0):
         self.nbytes = nbytes
 
     def __call__(self, name, dset_or_group):
-        try:
-            value = dset_or_group.value
-        except AttributeError:
-            pass  # .value is only defined for datasets, not groups
-        else:
-            self.nbytes += value.nbytes
+        self.nbytes += get_nbytes(dset_or_group)
+
+
+def get_calc_ids(datadir=DATADIR):
+    """
+    Extract the available calculation IDs from the datadir, in order.
+    """
+    calc_ids = []
+    for f in os.listdir(DATADIR):
+        mo = re.match('calc_(\d+)', f)
+        if mo:
+            calc_ids.append(int(mo.group(1)))
+    return sorted(calc_ids)
 
 
 def get_last_calc_id(datadir=DATADIR):
@@ -61,11 +95,47 @@ def get_last_calc_id(datadir=DATADIR):
     Extract the latest calculation ID from the given directory.
     If none is found, return 0.
     """
-    calcs = [f for f in os.listdir(DATADIR) if re.match('calc_\d+', f)]
+    calcs = get_calc_ids(datadir)
     if not calcs:
         return 0
-    calc_ids = [int(calc[5:]) for calc in calcs]  # strip calc_
-    return max(calc_ids)
+    return calcs[-1]
+
+
+class Hdf5Dataset(object):
+    """
+    Little wrapper around a one-dimensional HDF5 dataset.
+
+    :param hdf5: a h5py.File object
+    :param key: an hdf5 key string
+    :param dtype: dtype of the dataset (usually composite)
+    :param size: size of the dataset (if None, the dataset is extendable)
+    """
+    def __init__(self, hdf5, key, dtype, size):
+        self.hdf5 = hdf5
+        self.key = key
+        self.dtype = dtype
+        if size is None:  # extendable dataset
+            self.dset = self.hdf5.create_dataset(
+                key, (0,), dtype, chunks=True, maxshape=(None,))
+            self.size = 0
+            self.dset.attrs['nbytes'] = 0
+        else:  # fixed-size dataset
+            self.dset = self.hdf5.create_dataset(key, (size,), dtype)
+            self.size = size
+            self.dset.attrs['nbytes'] = size * numpy.zeros(1, dtype).nbytes
+        self.attrs = self.dset.attrs
+
+    def extend(self, array):
+        """
+        Extend the dataset with the given array, which must have
+        the expected dtype. This method will give an error if used
+        with a fixed-size dataset.
+        """
+        newsize = self.size + len(array)
+        self.dset.resize((newsize,))
+        self.dset[self.size:newsize] = array
+        self.size = newsize
+        self.dset.attrs['nbytes'] += array.nbytes
 
 
 class DataStore(collections.MutableMapping):
@@ -84,11 +154,8 @@ class DataStore(collections.MutableMapping):
     >>> ds = DataStore()
     >>> ds['example'] = 'hello world'
     >>> ds.items()
-    [('example', 'hello world')]
+    [(u'example', 'hello world')]
     >>> ds.clear()
-
-    It is also possible to store callables taking in input the datastore.
-    They will be automatically invoked when the key is accessed.
 
     It possible to store numpy arrays in HDF5 format, if the library h5py is
     installed and if the last field of the key is 'h5'. It is also possible
@@ -102,11 +169,17 @@ class DataStore(collections.MutableMapping):
             os.makedirs(datadir)
         if calc_id is None:  # use a new datastore
             self.calc_id = get_last_calc_id(datadir) + 1
-        elif calc_id == -1:  # use the last datastore
-            self.calc_id = get_last_calc_id(datadir)
+        elif calc_id < 0:  # use an old datastore
+            calc_ids = get_calc_ids(datadir)
+            try:
+                self.calc_id = calc_ids[calc_id]
+            except IndexError:
+                raise IndexError('There are %d old calculations, cannot '
+                                 'retrieve the %s' % (len(calc_ids), calc_id))
         else:  # use the given datastore
             self.calc_id = calc_id
         self.parent = parent  # parent datastore (if any)
+        self.datadir = datadir
         self.calc_dir = os.path.join(datadir, 'calc_%s' % self.calc_id)
         if not os.path.exists(self.calc_dir):
             os.mkdir(self.calc_dir)
@@ -115,13 +188,15 @@ class DataStore(collections.MutableMapping):
         mode = 'r+' if os.path.exists(self.hdf5path) else 'w'
         self.hdf5 = h5py.File(self.hdf5path, mode, libver='latest')
 
-    def path(self, key):
+    def create_dset(self, key, dtype, size=None):
         """
-        Return the full path name associated to the given key
+        Create a one-dimensional HDF5 dataset.
+
+        :param key: a string starting with '/'
+        :param dtype: dtype of the dataset (usually composite)
+        :param size: size of the dataset (if None, the dataset is extendable)
         """
-        if key.startswith('/'):
-            return key
-        return os.path.join(self.calc_dir, key + '.pik')
+        return Hdf5Dataset(self.hdf5, key, dtype, size)
 
     def export_path(self, key, fmt):
         """
@@ -144,6 +219,22 @@ class DataStore(collections.MutableMapping):
         """Close the underlying hdf5 file"""
         self.hdf5.close()
 
+    def symlink(self, name):
+        """
+        Make a symlink to the hdf5 file (except on Windows)
+
+        :param name:
+            a file or directory name without extensions; the name of
+            the link will be extracted from it by replacing the slashes
+            with dashes; the symlink will be created in the .datadir
+        """
+        if hasattr(os, 'symlink'):  # Unix, Max
+            link_name = os.path.join(
+                self.datadir, name.strip('/').replace('/', '-')) + '.hdf5'
+            if os.path.exists(link_name):
+                os.remove(link_name)
+            os.symlink(self.hdf5path, link_name)
+
     def clear(self):
         """Remove the datastore from the file system"""
         self.close()
@@ -155,17 +246,8 @@ class DataStore(collections.MutableMapping):
         If no key is given, returns the total size of all files.
         """
         if key is None:
-            piksize = sum(self.getsize(key) for key in self
-                          if not key.startswith('/'))
-            return piksize + os.path.getsize(self.hdf5path)
-        elif key.startswith('/'):
-            dset = self.hdf5[key]
-            if hasattr(dset, 'value'):
-                return dset.value.nbytes
-            bc = ByteCounter()
-            dset.visititems(bc)
-            return bc.nbytes
-        return os.path.getsize(self.path(key))
+            return os.path.getsize(self.hdf5path)
+        return ByteCounter.get_nbytes(self.hdf5[key])
 
     def get(self, key, default):
         """
@@ -173,55 +255,54 @@ class DataStore(collections.MutableMapping):
         """
         try:
             return self[key]
-        except (KeyError, IOError):
+        except KeyError:
             return default
 
     def __getitem__(self, key):
-        if key.startswith('/'):
-            try:
-                return self.hdf5[key]
-            except KeyError:
-                if self.parent:
-                    return self.parent.hdf5[key]
-                else:
-                    raise
-        path = self.path(key)
-        if not os.path.exists(path) and self.parent:
-            path = self.parent.path(key)
-        with open(path) as df:
-            value = cPickle.load(df)
-            if callable(value):
-                return value(self)
-            return value
+        try:
+            val = self.hdf5[key]
+        except KeyError:
+            if self.parent:
+                try:
+                    val = self.parent.hdf5[key]
+                except KeyError:
+                    raise KeyError(key)
+            else:
+                raise KeyError(key)
+        try:
+            shape = val.shape
+        except AttributeError:  # val is a group
+            return val
+        if not shape:
+            val = cPickle.loads(val.value)
+        return val
 
     def __setitem__(self, key, value):
-        if key.startswith('/'):
-            if not isinstance(value, numpy.ndarray):
-                raise ValueError('not an array: %r' % value)
-            try:
-                self.hdf5[key] = value
-            except RuntimeError as exc:
-                raise RuntimeError('Could not save %s: %s in %s' %
-                                   (key, exc, self.hdf5path))
+        if (not isinstance(value, numpy.ndarray) or
+                value.dtype is numpy.dtype(object)):
+            val = numpy.array(cPickle.dumps(value, cPickle.HIGHEST_PROTOCOL))
         else:
-            with open(self.path(key), 'w') as df:
-                return cPickle.dump(value, df, cPickle.HIGHEST_PROTOCOL)
+            val = value
+        if key in self.hdf5:
+            # there is a bug in the current version of HDF5 for composite
+            # arrays: is impossible to save twice the same key; so we remove
+            # the key first, then it is possible to save it again
+            del self[key]
+        try:
+            self.hdf5[key] = val
+        except RuntimeError as exc:
+            raise RuntimeError('Could not save %s: %s in %s' %
+                               (key, exc, self.hdf5path))
 
     def __delitem__(self, key):
-        if key.startswith('/'):
-            del self.hdf5[key]
-        else:
-            os.remove(self.path(key))
+        del self.hdf5[key]
 
     def __iter__(self):
-        for f in sorted(os.listdir(self.calc_dir)):
-            if f.endswith('.pik'):
-                yield f[:-4]
         for path in sorted(self.hdf5):
-            yield '/' + path
+            yield path
 
     def __contains__(self, key):
-        return key in set(self)
+        return key in self.hdf5
 
     def __len__(self):
         return sum(1 for f in self)

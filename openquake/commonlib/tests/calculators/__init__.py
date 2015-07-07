@@ -17,13 +17,14 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import logging
 import unittest
 
 import numpy
 
 from openquake.commonlib.calculators import base
-from openquake.commonlib.parallel import PerformanceMonitor
-from openquake.commonlib import readinput, oqvalidation
+from openquake.baselib.performance import Monitor
+from openquake.commonlib import readinput, oqvalidation, datastore
 
 
 class DifferentFiles(Exception):
@@ -35,6 +36,14 @@ def columns(line):
     for column in line.split(','):
         data.append(numpy.array(map(float, column.split(' '))))
     return data
+
+
+def get_datastore(calc):
+    ds = datastore.DataStore(calc.datastore.calc_id)
+    hc_id = ds['oqparam'].hazard_calculation_id
+    if hc_id:
+        ds.parent = datastore.DataStore(hc_id)
+    return ds
 
 
 class CalculatorTestCase(unittest.TestCase):
@@ -52,15 +61,23 @@ class CalculatorTestCase(unittest.TestCase):
         oq = oqvalidation.OqParam(**params)
         oq.validate()
         # change this when debugging the test
-        monitor = PerformanceMonitor(self.testdir)
+        monitor = Monitor(self.testdir)
         return base.calculators(oq, monitor)
 
     def run_calc(self, testfile, job_ini, **kw):
         """
         Return the outputs of the calculation as a dictionary
         """
-        self.calc = self.get_calc(testfile, job_ini, **kw)
-        return self.calc.run()
+        inis = job_ini.split(',')
+        assert len(inis) in (1, 2), inis
+        self.calc = self.get_calc(testfile, inis[0], **kw)
+        result = self.calc.run()
+        if len(inis) == 2:
+            hc_id = self.calc.datastore.calc_id
+            self.calc = self.get_calc(
+                testfile, inis[1], hazard_calculation_id=hc_id, **kw)
+            result = self.calc.run()
+        return result
 
     def execute(self, testfile, job_ini):
         """
@@ -91,19 +108,20 @@ class CalculatorTestCase(unittest.TestCase):
         """
         expected = os.path.join(self.testdir, fname1)
         actual = os.path.join(self.calc.oqparam.export_dir, fname2)
-        expected_content = ''.join(
-            make_comparable(open(expected).readlines()))
-        actual_content = ''.join(make_comparable(open(actual).readlines()))
+        expected_lines = make_comparable(open(expected))
+        actual_lines = make_comparable(open(actual))
         try:
-            if delta:
-                self.practicallyEqual(expected_content, actual_content, delta)
-            else:
-                self.assertEqual(expected_content, actual_content)
+            for exp, got in zip(expected_lines, actual_lines):
+                if delta:
+                    self.practicallyEqual(exp, got, delta)
+                else:
+                    self.assertEqual(exp, got)
         except AssertionError:
             if self.OVERWRITE_EXPECTED:
                 # use this path when the expected outputs have changed
                 # for a good reason
-                open(expected, 'w').write(actual_content)
+                logging.info('overriding %s', expected)
+                open(expected, 'w').write(''.join(actual_lines))
             else:
                 # normally raise an exception
                 raise DifferentFiles('%s %s' % (expected, actual))

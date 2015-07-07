@@ -5,6 +5,7 @@ from openquake.baselib.general import writetmp
 from openquake.commonlib import readinput, readers
 from openquake.risklib import riskinput
 from openquake.commonlib.calculators import event_based
+from openquake.commonlib.tests.calculators import get_datastore
 from openquake.qa_tests_data.event_based_risk import case_2
 
 
@@ -27,8 +28,7 @@ rlzs_assoc = MockAssoc()
 class RiskInputTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.oqparam = readinput.get_oqparam(
-            'job_haz.ini,job_risk.ini', pkg=case_2)
+        cls.oqparam = readinput.get_oqparam('job_loss.ini', pkg=case_2)
         cls.sitecol, cls.assets_by_site = readinput.get_sitecol_assets(
             cls.oqparam, readinput.get_exposure(cls.oqparam))
         cls.riskmodel = readinput.get_risk_model(cls.oqparam)
@@ -79,9 +79,10 @@ a4,3,500000,1000,3000
         correl_model = readinput.get_correl_model(oq)
         rupcalc = event_based.EventBasedRuptureCalculator(oq)
         rupcalc.run()
+        dstore = get_datastore(rupcalc)
 
         # this is case with a single SES collection
-        ses_ruptures = rupcalc.datastore['sescollection'][0].values()
+        ses_ruptures = dstore['sescollection'][0].values()
 
         gsims_by_trt_id = rupcalc.rlzs_assoc.get_gsims_by_trt_id()
 

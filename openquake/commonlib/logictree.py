@@ -34,6 +34,8 @@ from collections import namedtuple
 from decimal import Decimal
 from lxml import etree
 
+import numpy
+
 from openquake.baselib.general import groupby
 from openquake.commonlib import nrml, valid
 from openquake.commonlib.node import node_from_xml
@@ -68,7 +70,20 @@ class RlzsAssoc(collections.Mapping):
         """
         return {self.rlzs_assoc[key][0]: result[key] for key in result}
 
-    combine_gmfs = combine  # this is used in the export
+    def combine_gmfs(self, gmfs):  # this is used in the export
+        """
+        :param gmfs: datastore /gmfs object
+        :returns: a list of dictionaries rupid -> gmf array
+        """
+        gmfs_by_rupid = groupby(
+            gmfs['col00'].value, lambda row: row['idx'], list)
+        dicts = [{} for rlz in self.realizations]
+        for rlz in self.realizations:
+            gs = str(rlz)
+            for rupid, rows in gmfs_by_rupid.iteritems():
+                dicts[rlz.ordinal][rupid] = numpy.array(
+                    [r[gs] for r in rows], rows[0][gs].dtype)
+        return dicts
 
     def __iter__(self):
         return self.rlzs_assoc.iterkeys()
@@ -89,7 +104,7 @@ def get_effective_rlzs(rlzs):
     ordinal = 0
     for uid, group in groupby(rlzs, operator.attrgetter('uid')).iteritems():
         rlz = group[0]
-        if all(path == '*' for path in rlz.lt_uid):  # empty realization
+        if all(path == '@' for path in rlz.lt_uid):  # empty realization
             continue
         effective.append(
             Realization(rlz.value, sum(r.weight for r in group),
@@ -1081,8 +1096,11 @@ class GsimLogicTree(object):
         """
         # NB: the algorithm assume a symmetric logic tree for the GSIMs;
         # in the future we may relax such assumption
+        num_branches = self.get_num_branches()
+        if not sum(num_branches.itervalues()):
+            return 0
         num = 1
-        for val in self.get_num_branches().itervalues():
+        for val in num_branches.itervalues():
             if val:  # the branch is effective
                 num *= val
         return num
@@ -1170,7 +1188,7 @@ class GsimLogicTree(object):
                 assert branch.uncertainty in self.values[trt], \
                     branch.uncertainty  # sanity check
                 lt_path.append(branch.id)
-                lt_uid.append(branch.id if branch.effective else '*')
+                lt_uid.append(branch.id if branch.effective else '@')
                 weight *= branch.weight
                 value.append(branch.uncertainty)
             yield Realization(tuple(value), weight, tuple(lt_path),

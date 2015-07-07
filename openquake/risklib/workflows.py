@@ -84,10 +84,12 @@ class Asset(object):
         self.insurance_limits = insurance_limits
         self.aggregated = aggregated or {}
 
-    def value(self, loss_type):
+    def value(self, loss_type, time_event=None):
         """
         :returns: the total asset value for `loss_type`
         """
+        if loss_type == 'fatalities':
+            return self.values['fatalities_' + str(time_event)]
         value = self.values[loss_type]
         number = 1 if self.aggregated.get(loss_type) else self.number
         return numpy.nan if value is None else value * number * self.area
@@ -118,17 +120,23 @@ class Asset(object):
         return self.id
 
 
-def get_values(loss_type, assets):
+def get_values(loss_type, assets, time_event=None):
     """
-    A numpy array with the values for the given assets, depending on the
-    loss_type.
+    :returns:
+        a numpy array with the values for the given assets, depending on the
+        loss_type.
     """
-    if loss_type == 'fatalities' and hasattr(assets[0], 'values'):
-        # this is called only in oq-lite, return naked value
-        values = numpy.array([a.values['fatalities'] for a in assets])
-    else:  # return dressed value
+    if hasattr(assets[0], 'values'):  # special case for oq-lite
+        values = numpy.array([a.value(loss_type, time_event)
+                              for a in assets])
+    else:  # in the engine
         values = numpy.array([a.value(loss_type) for a in assets])
     return values
+
+
+class List(list):
+    """List subclass to which you can add attribute"""
+    # this is ugly, but we already did that, and there is no other easy way
 
 
 def out_by_rlz(workflow, assets, hazards, epsilons, tags, loss_type):
@@ -141,7 +149,7 @@ def out_by_rlz(workflow, assets, hazards, epsilons, tags, loss_type):
 
     Yield lists out_by_rlz
     """
-    out_by_rlz = []
+    out_by_rlz = List()
     for rlz in hazards[0]:  # extract the realizations from the first asset
         hazs = [haz[rlz] for haz in hazards]  # hazard per each asset
         out = workflow(loss_type, assets, hazs, epsilons, tags)
@@ -155,6 +163,8 @@ class Workflow(object):
     """
     Base class. Can be used in the tests as a mock.
     """
+    time_event = None  # used in scenario_risk
+
     def __init__(self, imt, taxonomy, risk_functions):
         self.imt = imt
         self.taxonomy = taxonomy
@@ -180,9 +190,7 @@ class Workflow(object):
         for loss_type in self.loss_types:
             assets_ = assets
             epsilons_ = epsilons
-            tags_ = tags
-
-            values = get_values(loss_type, assets)
+            values = get_values(loss_type, assets, self.time_event)
             ok = ~numpy.isnan(values)
             if not ok.any():
                 # there are no assets with a value
@@ -193,9 +201,8 @@ class Workflow(object):
                 assets_ = assets[ok]
                 hazards = hazards[ok]
                 epsilons_ = epsilons[ok]
-                tags_ = tags[ok]
             yield out_by_rlz(
-                self, assets_, hazards, epsilons_, tags_, loss_type)
+                self, assets_, hazards, epsilons_, tags, loss_type)
 
     def __repr__(self):
         return '<%s%s>' % (self.__class__.__name__, self.risk_functions.keys())
@@ -365,7 +372,7 @@ class Classical(Workflow):
         return all_outputs
 
 
-@registry.add('event_based_risk')
+@registry.add('event_based_risk', 'ebr')
 class ProbabilisticEventBased(Workflow):
     """
     Implements the Probabilistic Event Based workflow
@@ -378,11 +385,11 @@ class ProbabilisticEventBased(Workflow):
       an iterable over N assets the outputs refer to
 
     :attr loss_matrix:
-      an array of losses shaped N x E (where E is the number of events)
+      an array of losses shaped N x T (where T is the number of events)
 
     :attr loss_curves:
-      a numpy array of N loss curves. If the curve resolution is R, the final
-      shape of the array will be (N, 2, R), where the `two` accounts for
+      a numpy array of N loss curves. If the curve resolution is C, the final
+      shape of the array will be (N, 2, C), where the `two` accounts for
       the losses/poes dimensions
 
     :attr average_losses:
@@ -392,7 +399,7 @@ class ProbabilisticEventBased(Workflow):
       a numpy array holding N standard deviation of losses
 
     :attr insured_curves:
-      a numpy array of N insured loss curves, shaped (N, 2, R)
+      a numpy array of N insured loss curves, shaped (N, 2, C)
 
     :attr average_insured_losses:
       a numpy array of N average insured loss values
@@ -413,7 +420,7 @@ class ProbabilisticEventBased(Workflow):
     def __init__(
             self, imt, taxonomy,
             vulnerability_functions,
-            hazard_investigation_time,
+            investigation_time,
             risk_investigation_time,
             number_of_logic_tree_samples,
             ses_per_logic_tree_path,
@@ -424,15 +431,16 @@ class ProbabilisticEventBased(Workflow):
         See :func:`openquake.risklib.scientific.event_based` for a description
         of the input parameters.
         """
-        tses = ((hazard_investigation_time or risk_investigation_time) *
-                ses_per_logic_tree_path * (number_of_logic_tree_samples or 1))
+        time_span = risk_investigation_time or investigation_time
+        tses = (time_span * ses_per_logic_tree_path * (
+            number_of_logic_tree_samples or 1))
         self.imt = imt
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
         self.loss_curve_resolution = loss_curve_resolution
         self.curves = functools.partial(
             scientific.event_based, curve_resolution=loss_curve_resolution,
-            time_span=risk_investigation_time, tses=tses)
+            time_span=time_span, tses=tses)
         self.conditional_loss_poes = conditional_loss_poes
         self.insured_losses = insured_losses
         self.return_loss_matrix = True
@@ -440,7 +448,7 @@ class ProbabilisticEventBased(Workflow):
     def event_loss(self, loss_matrix, event_ids):
         """
         :param loss_matrix:
-           a numpy array of losses shaped N x E, where E is the number
+           a numpy array of losses shaped N x T, where T is the number
            of events and N the number of samplings
 
         :param event_ids:
@@ -478,14 +486,14 @@ class ProbabilisticEventBased(Workflow):
         """
         loss_matrix = self.risk_functions[loss_type].apply_to(
             ground_motion_values, epsilons)
-        values = utils.numpy_map(lambda a: a.value(loss_type), assets)
-        ela = loss_matrix.T * values  # matrix with R x N elements
+        values = get_values(loss_type, assets)
+        ela = loss_matrix.T * values  # matrix with T x N elements
         if self.insured_losses and loss_type != 'fatalities':
             deductibles = [a.deductible(loss_type) for a in assets]
             limits = [a.insurance_limit(loss_type) for a in assets]
             ila = utils.numpy_map(
                 scientific.insured_losses, loss_matrix, deductibles, limits)
-        else:  # build a zero matrix of size R x N
+        else:  # build a zero matrix of size T x N
             ila = numpy.zeros((len(ground_motion_values[0]), len(assets)))
         if isinstance(assets[0].id, basestring):
             # in oq-lite return early, with just the losses per asset
@@ -617,7 +625,7 @@ class ProbabilisticEventBasedBCR(Workflow):
     def __init__(self, imt, taxonomy,
                  vulnerability_functions_orig,
                  vulnerability_functions_retro,
-                 hazard_investigation_time,
+                 investigation_time,
                  risk_investigation_time,
                  number_of_logic_tree_samples,
                  ses_per_logic_tree_path,
@@ -631,11 +639,10 @@ class ProbabilisticEventBasedBCR(Workflow):
         self.asset_life_expectancy = asset_life_expectancy
         self.vf_orig = vulnerability_functions_orig
         self.vf_retro = vulnerability_functions_retro
+        time_span = risk_investigation_time or investigation_time
         self.curves = functools.partial(
             scientific.event_based, curve_resolution=loss_curve_resolution,
-            time_span=risk_investigation_time, tses=(
-                (hazard_investigation_time or risk_investigation_time) *
-                ses_per_logic_tree_path))
+            time_span=time_span, tses=time_span * ses_per_logic_tree_path)
         # TODO: add multiplication by number_of_logic_tree_samples or 1
 
     def __call__(self, loss_type, assets, gmfs, epsilons, event_ids):
@@ -670,39 +677,42 @@ class Scenario(Workflow):
     """
     Implements the Scenario workflow
     """
-    def __init__(self, imt, taxonomy, vulnerability_functions, insured_losses):
+    def __init__(self, imt, taxonomy, vulnerability_functions,
+                 insured_losses, time_event=None):
         self.imt = imt
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
         self.insured_losses = insured_losses
+        self.time_event = time_event
 
     def __call__(self, loss_type, assets, ground_motion_values, epsilons,
                  _tags=None):
-        values = get_values(loss_type, assets)
+        values = get_values(loss_type, assets, self.time_event)
 
         # a matrix of N x R elements
         loss_ratio_matrix = self.risk_functions[loss_type].apply_to(
             ground_motion_values, epsilons)
+        # another matrix of N x R elements
+        loss_matrix = (loss_ratio_matrix.T * values).T
+        # an array of R elements
+        aggregate_losses = loss_matrix.sum(axis=0)
 
-        # aggregating per asset, getting a vector of R elements
-        aggregate_losses = numpy.sum(
-            loss_ratio_matrix.transpose() * values, axis=1)
         if self.insured_losses and loss_type != "fatalities":
             deductibles = [a.deductible(loss_type) for a in assets]
             limits = [a.insurance_limit(loss_type) for a in assets]
             insured_loss_ratio_matrix = utils.numpy_map(
                 scientific.insured_losses,
                 loss_ratio_matrix, deductibles, limits)
+            insured_loss_matrix = (insured_loss_ratio_matrix.T * values).T
 
-            insured_loss_matrix = (
-                insured_loss_ratio_matrix.transpose() * values).transpose()
-
-            insured_losses = numpy.array(insured_loss_matrix).sum(axis=0)
+            # aggregating per asset, getting a vector of R elements
+            insured_losses = insured_loss_matrix.sum(axis=0)
         else:
             insured_loss_matrix = None
             insured_losses = None
         return scientific.Output(
-            assets, loss_type, loss_matrix=loss_ratio_matrix,
+            assets, loss_type, loss_matrix=loss_matrix,
+            loss_ratio_matrix=loss_ratio_matrix,
             aggregate_losses=aggregate_losses,
             insured_loss_matrix=insured_loss_matrix,
             insured_losses=insured_losses)
@@ -752,7 +762,7 @@ class ClassicalDamage(Damage):
     Implements the ClassicalDamage workflow
     """
     def __init__(self, imt, taxonomy, fragility_functions,
-                 hazard_imtls, hazard_investigation_time,
+                 hazard_imtls, investigation_time,
                  risk_investigation_time):
         self.imt = imt
         self.taxonomy = taxonomy
@@ -760,7 +770,7 @@ class ClassicalDamage(Damage):
         self.curves = functools.partial(
             scientific.classical_damage,
             fragility_functions['damage'], hazard_imtls[imt],
-            hazard_investigation_time=hazard_investigation_time,
+            investigation_time=investigation_time,
             risk_investigation_time=risk_investigation_time)
 
     def __call__(self, loss_type, assets, hazard_curves, _epsilons=None,
@@ -819,4 +829,5 @@ def get_workflow(imt, taxonomy, oqparam, **extra):
     missing = set(argnames) - set(all_args)
     if missing:
         raise TypeError('Missing parameter: %s' % ', '.join(missing))
+
     return workflow_class(imt, taxonomy, **all_args)

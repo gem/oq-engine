@@ -38,8 +38,8 @@ from openquake.commonlib import nrml, valid, logictree, InvalidFile
 from openquake.commonlib.oqvalidation import vulnerability_files
 from openquake.commonlib.riskmodels import \
     get_fragility_functions, get_vfs
-from openquake.baselib.general import groupby, AccumDict
-from openquake.baselib.general import writetmp
+from openquake.baselib.general import groupby, AccumDict, writetmp
+from openquake.baselib.performance import DummyMonitor
 
 from openquake.commonlib import source, sourceconverter
 
@@ -133,9 +133,9 @@ def get_params(job_inis):
     return params
 
 
-def get_oqparam(job_ini, pkg=None, calculators=None):
+def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None):
     """
-    Parse a dictionary of parameters from one or more INI-style config file.
+    Parse a dictionary of parameters from an INI-style config file.
 
     :param job_ini:
         Path to configuration file/archive or dictionary of parameters
@@ -144,6 +144,8 @@ def get_oqparam(job_ini, pkg=None, calculators=None):
     :param calculators:
         Sequence of calculator names (optional) used to restrict the
         valid choices for `calculation_mode`
+    :param hc_id:
+        Not None only when called from a post calculation
     :returns:
         An :class:`openquake.commonlib.oqvalidation.OqParam` instance
         containing the validate and casted parameters/values parsed from
@@ -157,13 +159,16 @@ def get_oqparam(job_ini, pkg=None, calculators=None):
     OqParam.calculation_mode.validator.choices = tuple(
         calculators or base.calculators)
 
-    if isinstance(job_ini, dict):
-        oqparam = OqParam(**job_ini)
-    else:
+    if not isinstance(job_ini, dict):
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
-        inis = [os.path.join(basedir, ini) for ini in job_ini.split(',')]
-        oqparam = OqParam(**get_params(inis))
+        job_ini = get_params([os.path.join(basedir, job_ini)])
 
+    if 'investigation_time' in job_ini and hc_id:
+        raise NameError(
+            'You cannot use the name `investigation_time` in a risk '
+            'configuration file. Use `risk_investigation_time` instead.')
+
+    oqparam = OqParam(**job_ini)
     oqparam.validate()
     return oqparam
 
@@ -214,7 +219,7 @@ def get_site_model(oqparam):
     for node in read_nodes(oqparam.inputs['site_model'],
                            lambda el: el.tag.endswith('site'),
                            source.nodefactory['siteModel']):
-        yield ~node
+        yield valid.site_param(**node.attrib)
 
 
 def get_site_collection(oqparam, mesh=None, site_ids=None,
@@ -235,7 +240,8 @@ def get_site_collection(oqparam, mesh=None, site_ids=None,
         object with a method .get_closest returning the closest site
         model parameters
     """
-    mesh = mesh or get_mesh(oqparam)
+    if mesh is None:
+        mesh = get_mesh(oqparam)
     site_ids = site_ids or range(len(mesh))
     if oqparam.inputs.get('site_model'):
         if site_model_params is None:
@@ -442,8 +448,8 @@ def get_source_models(oqparam, source_model_lt, sitecol=None, in_memory=True):
 
 
 def get_composite_source_model(
-        oqparam, sitecol=None, SourceProcessor=source.SourceProcessor,
-        in_memory=True):
+        oqparam, sitecol=None, SourceProcessor=source.SourceFilterSplitter,
+        monitor=DummyMonitor(), no_distribute=False):
     """
     Build the source models by splitting the sources. If prefiltering is
     enabled, also reduce the GSIM logic trees in the underlying source models.
@@ -452,13 +458,14 @@ def get_composite_source_model(
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param in_memory:
-        if True, keep in memory the sources
     :param SourceProcessor:
-        a SourceProcessor class
+        the class used to process the sources
+    :param monitor:
+        a monitor instance
+    :param no_distribute:
+        used to disable parallel splitting of the sources
     :returns:
         an iterator over :class:`openquake.commonlib.source.SourceModel`
-        tuples skipping the empty models
     """
     processor = SourceProcessor(sitecol, oqparam.maximum_distance,
                                 oqparam.area_source_discretization)
@@ -466,17 +473,20 @@ def get_composite_source_model(
     smodels = []
     trt_id = 0
     for source_model in get_source_models(
-            oqparam, source_model_lt, processor.sitecol, in_memory):
+            oqparam, source_model_lt, processor.sitecol,
+            in_memory=hasattr(processor, 'process')):
         for trt_model in source_model.trt_models:
             trt_model.id = trt_id
             trt_id += 1
         smodels.append(source_model)
     csm = source.CompositeSourceModel(source_model_lt, smodels)
-    if in_memory:
-        processor.process(csm)
+    if sitecol is not None and hasattr(processor, 'process'):
+        seqtime, partime = processor.process(csm, no_distribute)
+        monitor.write(['fast sources filtering/splitting', str(seqtime), '0'])
+        monitor.write(['slow sources filtering/splitting', str(partime), '0'])
         if not csm.get_sources():
             raise RuntimeError('All sources were filtered away')
-        csm.count_ruptures()
+    csm.count_ruptures()
     return csm
 
 
@@ -501,7 +511,7 @@ def get_job_info(oqparam, source_models, sitecol):
                        for src in trt_model)
 
     imtls = oqparam.imtls
-    n_sites = len(sitecol)
+    n_sites = len(sitecol) if sitecol else 0
 
     # the imtls dictionary has values None when the levels are unknown
     # (this is a valid case for the event based hazard calculator)
@@ -532,8 +542,6 @@ def get_job_info(oqparam, source_models, sitecol):
     else:
         output_weight *= n_levels
 
-    logging.info('Total weight of the sources=%s', input_weight)
-    logging.info('Expected output size=%s', output_weight)
     return dict(input_weight=input_weight, output_weight=output_weight,
                 n_imts=n_imts, n_levels=n_levels, n_sites=n_sites,
                 max_realizations=max_realizations)
@@ -655,7 +663,6 @@ def get_exposure(oqparam):
     all_cost_types = set(vulnerability_files(oqparam.inputs))
     relevant_cost_types = all_cost_types - set(['occupants'])
     asset_refs = set()
-    time_event = oqparam.time_event
     ignore_missing_costs = set(oqparam.ignore_missing_costs)
 
     def asset_gen():
@@ -689,8 +696,7 @@ def get_exposure(oqparam):
                     number = 1
                 else:
                     if 'occupants' in all_cost_types:
-                        values['fatalities'] = number
-
+                        values['fatalities_None'] = number
             location = asset.location['lon'], asset.location['lat']
             if region and not geometry.Point(*location).within(region):
                 out_of_region += 1
@@ -699,6 +705,10 @@ def get_exposure(oqparam):
             costs = asset.costs
         except NameError:
             costs = LiteralNode('costs', [])
+        try:
+            occupancies = asset.occupancies
+        except NameError:
+            occupancies = LiteralNode('occupancies', [])
         with context(fname, costs):
             for cost in costs:
                 cost_type = cost['type']
@@ -725,12 +735,10 @@ def get_exposure(oqparam):
                                  "Missing cost %s for asset %s" % (
                                      missing, asset_id))
 
-        if time_event:
-            for occupancy in asset.occupancies:
-                with context(fname, occupancy):
-                    if occupancy['period'] == time_event:
-                        values['fatalities'] = occupancy['occupants']
-                        break
+        for occupancy in occupancies:
+            with context(fname, occupancy):
+                fatalities = 'fatalities_%s' % occupancy['period']
+                values[fatalities] = occupancy['occupants']
 
         area = float(asset.attrib.get('area', 1))
         ass = workflows.Asset(
@@ -745,6 +753,9 @@ def get_exposure(oqparam):
     else:
         logging.info('Read %d assets', len(exposure.assets))
 
+    # sanity check
+    values = any(len(ass.values) + ass.number for ass in exposure.assets)
+    assert values, 'Could not find any value??'
     return exposure
 
 

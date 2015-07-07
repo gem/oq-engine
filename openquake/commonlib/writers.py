@@ -66,7 +66,7 @@ def scientificformat(value, fmt='%13.9E', sep=' ', sep2=':'):
         return str(value)
     elif hasattr(value, '__len__'):
         return sep.join((scientificformat(f, fmt, sep2) for f in value))
-    elif isinstance(value, float):
+    elif isinstance(value, (float, numpy.float64, numpy.float32)):
         fmt_value = fmt % value
         if set(fmt_value) <= zeroset:
             # '-0.0000000E+00' is converted into '0.0000000E+00
@@ -199,7 +199,7 @@ def _build_header(dtype, root):
         if not root:
             return []
         return [root + (str(dtype), dtype.shape)]
-    for field in dtype.fields:
+    for field in dtype.names:
         dt = dtype.fields[field][0]
         if dt.subdtype is None:  # nested
             header.extend(_build_header(dt, root + (field,)))
@@ -216,11 +216,11 @@ def build_header(dtype):
 
     >>> imt_dt = numpy.dtype([('PGA', float, 3), ('PGV', float, 4)])
     >>> build_header(imt_dt)
-    ['PGV:float64:4', 'PGA:float64:3']
+    ['PGA:float64:3', 'PGV:float64:4']
     >>> gmf_dt = numpy.dtype([('A', imt_dt), ('B', imt_dt),
     ...                       ('idx', numpy.uint32)])
     >>> build_header(gmf_dt)
-    ['A-PGV:float64:4', 'A-PGA:float64:3', 'B-PGV:float64:4', 'B-PGA:float64:3', 'idx:uint32:']
+    ['A-PGA:float64:3', 'A-PGV:float64:4', 'B-PGA:float64:3', 'B-PGV:float64:4', 'idx:uint32:']
     """
     header = _build_header(dtype, ())
     h = []

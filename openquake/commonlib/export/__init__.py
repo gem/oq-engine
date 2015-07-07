@@ -29,7 +29,7 @@ def export_csv(ekey, dstore):
     :param dstore: datastore object
     :returns: a list with the path of the exported file
     """
-    name = ekey[0][1:] + '.csv'
+    name = ekey[0] + '.csv'
     try:
         array = dstore[ekey[0]].value
     except AttributeError:
@@ -47,7 +47,7 @@ def get_export_csv(ekey):
     return the default csv exporter, otherwise raise a KeyError.
     """
     key, fmt = ekey
-    if key.startswith('/') and fmt == 'csv':
+    if fmt == 'csv':
         return export_csv
     raise KeyError(ekey)
 

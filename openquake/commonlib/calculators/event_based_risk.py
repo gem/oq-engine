@@ -18,7 +18,6 @@
 
 import logging
 import operator
-import functools
 import collections
 
 import numpy
@@ -93,21 +92,25 @@ def _loss_map_names(conditional_loss_poes):
     return names
 
 
-def extract_avglosses(dstore, pattern):
+@datastore.view.add('avglosses_rlzs', 'agg_avgloss_rlzs')
+def view_avglosses(name, dstore):
     """
     Function extracting the average losses from the loss curves
     for each realization.
 
+    :param name: 'avglosses_rlzs' or 'agg_avgloss_rlzs'
     :param dstore: a datastore object
-    :param pattern: '/loss_curves-rlzs/%s' or '/agg_loss_curve-rlzs/%s'
     :returns: list of dictionaries loss_type -> avg losses per asset
     """
+    key = {'avglosses_rlzs': 'loss_curves-rlzs/',
+           'agg_avgloss_rlzs':  'agg_loss_curve-rlzs/'}[name]
     rlzs = dstore['rlzs_assoc'].realizations
     loss_types = dstore['riskmodel'].get_loss_types()
     data = []
     for rlz in rlzs:
-        curves = dstore[pattern % rlz.uid]
-        data.append({lt: curves[lt]['avg'] for lt in loss_types})
+        curves = dstore[key + rlz.uid]
+        data.append([(lt, rlz.uid, curves[lt]['avg'])
+                     for lt in loss_types])
     return data
 
 
@@ -119,6 +122,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
     pre_calculator = 'event_based_rupture'
     core_func = event_based_risk
 
+    epsilon_matrix = datastore.persistent_attribute('epsilon_matrix')
     event_loss_asset = datastore.persistent_attribute('event_loss_asset')
     event_loss = datastore.persistent_attribute('event_loss')
     is_stochastic = True
@@ -153,7 +157,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         eps_dict = riskinput.make_eps_dict(
             assets_by_site, num_samples, oq.master_seed, oq.asset_correlation)
         logging.info('Generated %d epsilons', num_samples * len(eps_dict))
-
+        self.epsilon_matrix = numpy.array(
+            [eps_dict[a['asset_ref']] for a in self.assetcol])
         self.riskinputs = list(self.riskmodel.build_inputs_from_ruptures(
             self.sitecol.complete, all_ruptures, gsims_by_col,
             oq.truncation_level, correl_model, eps_dict,
@@ -260,11 +265,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         for lm, lmap in zip(lm_names, lmaps):
                             loss_maps[loss_type][lm] = lmap
 
-            self.store('/loss_curves', rlz, loss_curves)
+            self.store('loss_curves', rlz, loss_curves)
             if oq.insured_losses:
-                self.store('/ins_curves', rlz, ins_curves)
+                self.store('ins_curves', rlz, ins_curves)
             if oq.conditional_loss_poes:
-                self.store('/loss_maps', rlz, loss_maps)
+                self.store('loss_maps', rlz, loss_maps)
 
             if elagg:
                 for loss_type, rows in groupby(
@@ -276,21 +281,16 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     # NB: there is no aggregate insured loss curve
                     agg_loss_curve[loss_type][0] = (losses, poes, avg)
                     # NB: the aggregated loss_map is not stored
-                self.store('/agg_loss_curve', rlz, agg_loss_curve)
+                self.store('agg_loss_curve', rlz, agg_loss_curve)
 
         if specific_assets:
             self.event_loss_asset = event_loss_asset
         self.event_loss = event_loss
 
-        self.datastore['avglosses_rlzs'] = functools.partial(
-            extract_avglosses, pattern='/loss_curves-rlzs/%s')
-        self.datastore['agg_avgloss_rlzs'] = functools.partial(
-            extract_avglosses, pattern='/agg_loss_curve-rlzs/%s')
-
         # store statistics (i.e. mean and quantiles) for curves and maps
         if len(self.rlzs_assoc.realizations) > 1:
-            self.compute_store_stats('/loss_curves')
-            self.compute_store_stats('/agg_loss_curve')
+            self.compute_store_stats('loss_curves')
+            self.compute_store_stats('agg_loss_curve')
 
     def clean_up(self):
         """
@@ -315,8 +315,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         oq = self.oqparam
         clp = oq.conditional_loss_poes
         losses_poes = scientific.event_based(
-            losses, tses=oq.tses, time_span=oq.risk_investigation_time,
-            curve_resolution=oq.loss_curve_resolution)
+            losses, tses=oq.tses, time_span=oq.risk_investigation_time or
+            oq.investigation_time, curve_resolution=oq.loss_curve_resolution)
         loss_map = scientific.loss_map_matrix(
             clp, [losses_poes]).reshape(len(clp)) if clp else None
         return (losses_poes[0], losses_poes[1],
@@ -340,8 +340,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             if all_losses:
                 losses, poes = scientific.event_based(
                     all_losses, tses=oq.tses,
-                    time_span=oq.risk_investigation_time,
-                    curve_resolution=C)
+                    time_span=oq.risk_investigation_time or
+                    oq.investigation_time, curve_resolution=C)
                 avg = scientific.average_loss((losses, poes))
             else:
                 losses, poes = numpy.zeros(C), numpy.zeros(C)
@@ -385,7 +385,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             for rlz in rlzs:
                 key = '%s-rlzs/%s' % (loss_curve_key, rlz.uid)
                 lcs = self.datastore[key][loss_type]
-                assets = [None] if key.startswith('/agg') else self.assets
+                assets = [None] if key.startswith('agg') else self.assets
                 losses_poes = numpy.array(  # -> shape (N, 2, C)
                     [lcs['losses'], lcs['poes']]).transpose(1, 0, 2)
                 out = scientific.Output(
@@ -399,7 +399,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         Compute and store the statistical outputs
         """
         oq = self.oqparam
-        N = 1 if loss_curve_key.startswith('/agg_') else len(self.assets)
+        N = 1 if loss_curve_key.startswith('agg_') else len(self.assets)
         Q = 1 + len(oq.quantile_loss_curves)
         loss_curve_stats = self.zeros((Q, N), self.loss_curve_dt)
         ins_curve_stats = self.zeros((Q, N), self.loss_curve_dt)

@@ -18,7 +18,7 @@
 
 from __future__ import print_function
 import os
-import re
+import shutil
 from openquake.commonlib import sap, datastore
 from openquake.baselib.general import humansize
 from openquake.commonlib.commands.plot import combined_curves
@@ -36,18 +36,25 @@ def show(calc_id, key=None, rlzs=None):
     if not calc_id:
         if not os.path.exists(datastore.DATADIR):
             return
-        for name in sorted(os.listdir(datastore.DATADIR)):
-            mo = re.match('calc_(\d+)', name)
-            if mo:
-                calc_id = int(mo.group(1))
+        rows = []
+        for calc_id in datastore.get_calc_ids(datastore.DATADIR):
+            try:
                 oq = datastore.DataStore(calc_id)['oqparam']
-                print('#%d %s: %s' %
-                      (calc_id, oq.calculation_mode, oq.description))
+            except:  # invalid datastore directory
+                shutil.rmtree(os.path.join(
+                    datastore.DATADIR, 'calc_%s' % calc_id))
+            else:
+                rows.append((calc_id, oq.calculation_mode, oq.description))
+        for row in sorted(rows, key=lambda row: row[0]):  # by calc_id
+            print('#%d %s: %s' % row)
         return
     ds = datastore.DataStore(calc_id)
     if key:
+        if key in datastore.view:
+            print(datastore.view(key, ds))
+            return
         obj = ds[key]
-        if key.startswith('/') and hasattr(obj, 'value'):
+        if hasattr(obj, 'value'):
             print(obj.value)
         else:
             print(obj)
@@ -58,6 +65,8 @@ def show(calc_id, key=None, rlzs=None):
           (oq.description, ds.calc_dir))
     for key in ds:
         print(key, humansize(ds.getsize(key)))
+
+    # this part is experimental and not tested on purpose
     if rlzs and 'curves_by_trt_gsim' in ds:
         min_value = 0.01  # used in rmsep
         curves_by_rlz, mean_curves = combined_curves(ds)

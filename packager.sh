@@ -419,14 +419,21 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}"
 
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
-        # run selected risk demos
+        # run selected demos
         ssh $lxc_ip "set -e; cd /usr/share/doc/python-oq-risklib/examples/demos
-        echo 'running ClassicalPSHA...'
-        oq-lite run ClassicalPSHA/job_hazard.ini,ClassicalPSHA/job_risk.ini
+        echo 'running SimpleFaultSourceClassicalPSHA...'
+        oq-lite run SimpleFaultSourceClassicalPSHA/job.ini
+        echo 'running ClassicalPSHA hazard...'
+        oq-lite run ClassicalPSHA/job_hazard.ini
+        echo 'running ClassicalPSHA risk...'
+        oq-lite run ClassicalPSHA/job_risk.ini --hc -1
         echo 'running ScenarioDamage...'
         oq-lite run ScenarioDamage/job_hazard.ini,ScenarioDamage/job_risk.ini
         echo 'running ProbabilisticEventBased...'
         oq-lite run ProbabilisticEventBased/job_hazard.ini,ProbabilisticEventBased/job_risk.ini
+        echo 'running EventLossTableDemo...'        
+        oq-lite run ProbabilisticEventBased/job_agg.ini
+        oq-lite export -1 /event_loss_table-rlzs csv /tmp
         echo 'Show all the oq-lite calculations'
         oq-lite show 0
         "
