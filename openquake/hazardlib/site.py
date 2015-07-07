@@ -256,6 +256,13 @@ class SiteCollection(object):
         """
         return self.total_sites
 
+    def __eq__(self, other):
+        return (self.lons, self.lats, self.depths) == (
+            other.lons, other.lats, other.depths)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def __repr__(self):
         return '<SiteCollection with %d sites>' % self.total_sites
 
