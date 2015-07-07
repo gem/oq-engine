@@ -24,6 +24,7 @@ import abc
 import math
 import warnings
 import functools
+import contextlib
 
 import scipy.stats
 from scipy.special import ndtr
@@ -31,6 +32,12 @@ import numpy
 
 from openquake.hazardlib import const
 from openquake.hazardlib import imt as imt_module
+
+
+class NonInstantiable(Exception):
+    """
+    Raised when a non callable GSIM is called
+    """
 
 
 class NotVerifiedWarning(UserWarning):
@@ -92,21 +99,41 @@ def gsim_imt_dt(sorted_gsims, sorted_imts):
 
 class MetaGSIM(abc.ABCMeta):
     """
-    Metaclass providing a warning on instantiation mechanism. A
-    GroundShakingIntensityModel subclass with an attribute deprecated=True
-    will print a deprecation warning when instantiated. Moreover, as
-    subclass with an attribute non_verified=True will print a UserWarning.
+    Metaclass controllin the instantiation mechanism.  A subclass with
+    instantiable=False will raise a RuntimeError when directly
+    instantiated. A GroundShakingIntensityModel subclass with an
+    attribute deprecated=True will print a deprecation warning when
+    instantiated. A subclass with an attribute non_verified=True will
+    print a UserWarning.
     """
+    instantiable = True
+    deprecated = False
+    non_verified = False
+
     def __call__(cls, *args, **kw):
-        if getattr(cls, 'deprecated', False):
+        if not cls.instantiable:
+            raise NonInstantiable(
+                '%s cannot be directly instantiated in this context' % cls)
+        if cls.deprecated:
             msg = '%s is deprecated - use %s instead' % (
                 cls.__name__, cls.__base__.__name__)
             warnings.warn(msg, DeprecationWarning)
-        if getattr(cls, 'non_verified', False):
+        if cls.non_verified:
             msg = ('%s is not independently verified - the user is liable '
                    'for their application') % cls.__name__
             warnings.warn(msg, NotVerifiedWarning)
         return super(MetaGSIM, cls).__call__(*args, **kw)
+
+    @contextlib.contextmanager
+    def forbid_instantiation(cls):
+        """
+        Make the class and all its subclassed not directly instantiable
+        """
+        cls.instantiable = False
+        try:
+            yield
+        finally:
+            cls.instantiable = True
 
 
 @functools.total_ordering
