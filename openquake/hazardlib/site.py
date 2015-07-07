@@ -100,6 +100,13 @@ Backarc=False>'
         return self.__str__()
 
 
+def eq(array1, array2):
+    """
+    Compare two numpy arrays for equality and returns a boolean
+    """
+    return array1.shape == array2.shape and (array1 == array2).all()
+
+
 class SiteCollection(object):
     """
     A collection of :class:`sites <Site>`.
@@ -257,8 +264,7 @@ class SiteCollection(object):
         return self.total_sites
 
     def __eq__(self, other):
-        return (self.lons == other.lons).all() and (
-            self.lats == other.lats).all()
+        return eq(self.lons, other.lons) and eq(self.lats, other.lats)
 
     def __ne__(self, other):
         return not self.__eq__(other)
