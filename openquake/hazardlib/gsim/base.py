@@ -124,6 +124,10 @@ class MetaGSIM(abc.ABCMeta):
             warnings.warn(msg, NotVerifiedWarning)
         return super(MetaGSIM, cls).__call__(*args, **kw)
 
+    # NB: the idea is to use this context manager inside the oqtask
+    # decorator in the engine, so that GSIM classes cannot be directly
+    # instantiated in the workers; however, they can still be
+    # instantiated indirectly via __new__, so that unpickling works
     @contextlib.contextmanager
     def forbid_instantiation(cls):
         """
