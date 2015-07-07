@@ -25,7 +25,6 @@ import collections
 import numpy
 
 from openquake.hazardlib.geo import geodetic
-from openquake.hazardlib.geo.mesh import Mesh
 from openquake.baselib import general
 from openquake.baselib.performance import DummyMonitor
 from openquake.commonlib import readinput, datastore, logictree, export, source
@@ -261,7 +260,8 @@ class HazardCalculator(BaseCalculator):
         Read the exposure (if any) and then the site collection, possibly
         extracted from the exposure.
         """
-        if 'exposure' in self.oqparam.inputs:
+        inputs = self.oqparam.inputs
+        if 'exposure' in inputs:
             logging.info('Reading the exposure')
             with self.monitor('reading exposure', autoflush=True):
                 self.exposure = readinput.get_exposure(self.oqparam)
@@ -271,20 +271,20 @@ class HazardCalculator(BaseCalculator):
                 self.taxonomies = numpy.array(
                     sorted(self.exposure.taxonomies), '|S100')
             num_assets = self.count_assets()
-            mesh = readinput.get_mesh(self.oqparam)
             if self.datastore.parent:
-                parent_mesh = self.datastore.parent['sitemesh'].value
-                if mesh is None:
-                    mesh = Mesh(parent_mesh['lon'], parent_mesh['lat'])
-            if mesh is not None:
-                sites = readinput.get_site_collection(self.oqparam, mesh)
+                haz_sitecol = self.datastore.parent['sitecol']
+            elif 'gmfs' in inputs or 'hazard_curves' in inputs:
+                haz_sitecol = readinput.get_site_collection(self.oqparam)
+            else:
+                haz_sitecol = None
+            if haz_sitecol is not None:
                 with self.monitor('assoc_assets_sites'):
                     self.sitecol, self.assets_by_site = \
-                        self.assoc_assets_sites(sites)
-                ok_assets = self.count_assets()
-                num_sites = len(self.sitecol)
-                logging.warn('Associated %d assets to %d sites, %d discarded',
-                             ok_assets, num_sites, num_assets - ok_assets)
+                        self.assoc_assets_sites(haz_sitecol)
+            ok_assets = self.count_assets()
+            num_sites = len(self.sitecol)
+            logging.warn('Associated %d assets to %d sites, %d discarded',
+                         ok_assets, num_sites, num_assets - ok_assets)
 
             if (self.is_stochastic and self.datastore.parent and
                     self.datastore.parent['sitecol'] != self.sitecol):
