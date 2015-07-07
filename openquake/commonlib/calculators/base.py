@@ -273,8 +273,9 @@ class HazardCalculator(BaseCalculator):
             num_assets = self.count_assets()
             if self.datastore.parent:
                 haz_sitecol = self.datastore.parent['sitecol']
-            elif 'gmfs' in inputs or 'hazard_curves' in inputs:
+            elif 'gmfs' in inputs:
                 haz_sitecol = readinput.get_site_collection(self.oqparam)
+            # TODO: think about the case hazard_curves in inputs
             else:
                 haz_sitecol = None
             if haz_sitecol is not None:
