@@ -257,8 +257,8 @@ class SiteCollection(object):
         return self.total_sites
 
     def __eq__(self, other):
-        return (self.lons, self.lats, self.depths) == (
-            other.lons, other.lats, other.depths)
+        return (self.lons == other.lons).all() and (
+            self.lats == other.lats).all()
 
     def __ne__(self, other):
         return not self.__eq__(other)

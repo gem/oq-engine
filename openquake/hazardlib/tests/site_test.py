@@ -255,6 +255,9 @@ class SiteCollectionIterTestCase(unittest.TestCase):
         for i, s in enumerate([exp_s1, exp_s2]):
             self.assertEqual(s, cll_sites[i])
 
+        # test equality of site collections
+        sc = SiteCollection([exp_s1, exp_s2])
+        self.assertEqual(cll, sc)
 
 
 class SitePickleTestCase(unittest.TestCase):
