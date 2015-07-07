@@ -22,7 +22,7 @@ import numpy
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import (
     GMPE, IPE, SitesContext, RuptureContext, DistancesContext,
-    NonInstantiable, NotVerifiedWarning, DeprecationWarning, deprecated)
+    NonInstantiableError, NotVerifiedWarning, DeprecationWarning, deprecated)
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.imt import PGA, PGV
@@ -596,11 +596,11 @@ class GsimInstantiationTestCase(unittest.TestCase):
             'the user is liable for their application')
 
     def test_non_instantiable(self):
-        # check that a NonInstantiable error is raised when a non-instantiable
+        # check that a NonInstantiableError is raised when a non-instantiable
         # GSIM is instantiated
         class MyGMPE(TGMPE):
             pass
-        with self.assertRaises(NonInstantiable):
+        with self.assertRaises(NonInstantiableError):
             with TGMPE.forbid_instantiation():
                 MyGMPE()
 

@@ -34,9 +34,9 @@ from openquake.hazardlib import const
 from openquake.hazardlib import imt as imt_module
 
 
-class NonInstantiable(Exception):
+class NonInstantiableError(Exception):
     """
-    Raised when a non callable GSIM is called
+    Raised when a non instantiable GSIM is called
     """
 
 
@@ -99,8 +99,8 @@ def gsim_imt_dt(sorted_gsims, sorted_imts):
 
 class MetaGSIM(abc.ABCMeta):
     """
-    Metaclass controllin the instantiation mechanism.  A subclass with
-    instantiable=False will raise a RuntimeError when directly
+    Metaclass controlling the instantiation mechanism.  A subclass with
+    instantiable=False will raise a NonInstantiableError when directly
     instantiated. A GroundShakingIntensityModel subclass with an
     attribute deprecated=True will print a deprecation warning when
     instantiated. A subclass with an attribute non_verified=True will
@@ -112,7 +112,7 @@ class MetaGSIM(abc.ABCMeta):
 
     def __call__(cls, *args, **kw):
         if not cls.instantiable:
-            raise NonInstantiable(
+            raise NonInstantiableError(
                 '%s cannot be directly instantiated in this context' % cls)
         if cls.deprecated:
             msg = '%s is deprecated - use %s instead' % (
