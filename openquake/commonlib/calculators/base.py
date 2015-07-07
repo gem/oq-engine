@@ -278,20 +278,14 @@ class HazardCalculator(BaseCalculator):
             # TODO: think about the case hazard_curves in inputs
             else:
                 haz_sitecol = None
-            if haz_sitecol is not None:
+            if haz_sitecol is not None and haz_sitecol != self.sitecol:
                 with self.monitor('assoc_assets_sites'):
                     self.sitecol, self.assets_by_site = \
                         self.assoc_assets_sites(haz_sitecol)
-            ok_assets = self.count_assets()
-            num_sites = len(self.sitecol)
-            logging.warn('Associated %d assets to %d sites, %d discarded',
-                         ok_assets, num_sites, num_assets - ok_assets)
-
-            if (self.is_stochastic and self.datastore.parent and
-                    self.datastore.parent['sitecol'] != self.sitecol):
-                logging.warn(
-                    'The hazard sites are different from the risk sites %s!=%s'
-                    % (self.datastore.parent['sitecol'], self.sitecol))
+                ok_assets = self.count_assets()
+                num_sites = len(self.sitecol)
+                logging.warn('Associated %d assets to %d sites, %d discarded',
+                             ok_assets, num_sites, num_assets - ok_assets)
         else:  # no exposure
             logging.info('Reading the site collection')
             with self.monitor('reading site collection', autoflush=True):
