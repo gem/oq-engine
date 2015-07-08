@@ -24,7 +24,9 @@ from openquake.baselib.performance import Monitor
 from openquake.baselib.general import humansize, split_in_blocks, groupby
 from openquake.commonlib import sap, readinput, nrml, source, parallel
 from openquake.commonlib.calculators import base
+from openquake.risklib import riskinput
 from openquake.hazardlib import gsim
+from openquake.baselib.general import groupby
 
 
 def data_transfer(calc):
@@ -110,8 +112,11 @@ def _info(name, filtersources, weightsources):
             _print_info(assoc, oqparam, csm, sitecol,
                         filtersources, weightsources)
         if len(assets_by_site):
-            print('assets = %d' %
-                  sum(len(assets) for assets in assets_by_site))
+            assetcol = riskinput.build_asset_collection(assets_by_site)
+            dic = groupby(assetcol, operator.attrgetter('taxonomy'))
+            for taxo, num in dic.iteritems():
+                print('taxonomy #%d, %d assets' % (taxo, num))
+            print('total assets = %d' % len(assetcol))
     else:
         print("No info for '%s'" % name)
 
